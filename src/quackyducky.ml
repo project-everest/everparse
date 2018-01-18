@@ -1,0 +1,107 @@
+open Lexing
+open Format
+open Printf
+
+open Rfc_ast
+open Rfc_lexer
+open Rfc_pretty
+open Rfc_fstar_compiler
+open Rfc_ocaml_compiler
+
+type mode =
+  | PrettyPrint
+  | FStarOutput
+  | OCamlOutput
+
+let debug       = ref false
+let ver         = "0.1"
+let mode        = ref FStarOutput
+let module_name = ref ""
+
+let ifile : (string list) ref = ref []
+
+let print_position outx lexbuf =
+	let pos = lexbuf.lex_curr_p in
+	fprintf outx "%s:%d:%d" pos.pos_fname
+	pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
+
+let string_of_pos lexbuf =
+	let s = lexbuf.lex_start_p in
+	let c = lexbuf.lex_curr_p in
+	sprintf "%s(%d,%d)-%s(%d,%d)" s.pos_fname s.pos_lnum (s.pos_cnum-s.pos_bol) c.pos_fname c.pos_lnum (c.pos_cnum-c.pos_bol)
+
+let lexbuf_from_file filename =
+	let channel = open_in filename in
+	let lexbuf = Lexing.from_channel channel in
+	lexbuf.lex_curr_p <- {
+		lexbuf.lex_curr_p with
+		pos_fname = filename;
+		pos_bol = 1;
+		pos_lnum = 1;
+	};
+	lexbuf
+
+let rfc_tokenizer lb =
+	let x = Rfc_lexer.read lb in
+	if (!debug) then (BatPervasives.(print_any stdout x);printf "\n");
+	x
+
+let rfc_pretty ast =
+	let p = rfc_pretty_print ast in
+	print_endline p
+
+let rfc_fstar ast =
+	let p = rfc_generate_fstar !module_name ast in
+	print_endline p
+
+let rfc_ocaml ast =
+	let p = rfc_generate_ocaml !module_name ast in
+	print_endline p
+
+let rfc_load filename =
+	let lexbuf =
+		try lexbuf_from_file filename
+		with | _ -> failwith ("failed to load file: "^filename) in
+	let ast =
+		try Rfc_parser.prog rfc_tokenizer lexbuf
+		with
+		| Rfc_parser.Error -> eprintf
+			"Parsing error near %s\n" (string_of_pos lexbuf); exit 1
+		| Rfc_lexer.SyntaxError s -> eprintf
+			"Lexing error near %s: %s\n" (string_of_pos lexbuf) s; exit 1 in
+	if (!debug) then (
+		(print_endline " ");
+		BatPervasives.(print_any stdout ast)
+	);
+	match !mode with
+  | PrettyPrint -> rfc_pretty ast
+	| FStarOutput -> rfc_fstar ast
+	| OCamlOutput -> rfc_ocaml ast
+
+let load_file fn =
+  let mn = !module_name in
+  if mn = "" then
+    module_name := (try Filename.chop_extension (Filename.basename fn)
+           with Invalid_argument _ -> Filename.basename fn);
+  rfc_load fn;
+  module_name := mn
+
+let _ = Arg.parse [
+	("-d", Arg.Unit (fun () -> debug := true),
+		"enable debug output");
+
+	("-pretty", Arg.Unit (fun () -> mode := PrettyPrint),
+		"Pretty-print input specification");
+
+	("-fstar",  Arg.Unit (fun () -> mode := FStarOutput),
+		"Generate FStar code");
+
+	("-ocaml",  Arg.Unit (fun () -> mode := OCamlOutput),
+		"Generate OCaml code");
+
+	("-name", Arg.String (fun n -> module_name := n),
+		" <module_name> - Set name for generated FStar or OCaml module");
+
+] (fun s -> (ifile := s :: !ifile)) (sprintf "QuackyDucky %s\n%s"
+	ver "Generates certified compilers for RFC templates");
+	List.iter load_file !ifile

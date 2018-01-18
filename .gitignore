@@ -1,0 +1,11 @@
+.*~
+*~
+_build
+*.cmi
+*.cmo
+*.o
+*.cmx
+*.cmxa
+quackyducky.native
+qd
+
