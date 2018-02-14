@@ -16,7 +16,8 @@ type mode =
 let debug       = ref false
 let ver         = "0.1"
 let mode        = ref FStarOutput
-let module_name = ref ""
+let prefix      = ref "Parse_"
+let odir        = ref "."
 
 let ifile : (string list) ref = ref []
 
@@ -43,7 +44,7 @@ let lexbuf_from_file filename =
 
 let rfc_tokenizer lb =
 	let x = Rfc_lexer.read lb in
-	if (!debug) then (BatPervasives.(print_any stdout x);printf "\n");
+	if (!debug) then (BatPervasives.(print_any stdout x); printf "\n");
 	x
 
 let rfc_pretty ast =
@@ -51,12 +52,14 @@ let rfc_pretty ast =
 	print_endline p
 
 let rfc_fstar ast =
-	let p = rfc_generate_fstar !module_name ast in
-	print_endline p
+	rfc_generate_fstar !prefix !odir ast
 
 let rfc_ocaml ast =
+  failwith "OCaml compiler is currently disabled"
+(*
 	let p = rfc_generate_ocaml !module_name ast in
 	print_endline p
+*)
 
 let rfc_load filename =
 	let lexbuf =
@@ -78,14 +81,6 @@ let rfc_load filename =
 	| FStarOutput -> rfc_fstar ast
 	| OCamlOutput -> rfc_ocaml ast
 
-let load_file fn =
-  let mn = !module_name in
-  if mn = "" then
-    module_name := (try Filename.chop_extension (Filename.basename fn)
-           with Invalid_argument _ -> Filename.basename fn);
-  rfc_load fn;
-  module_name := mn
-
 let _ = Arg.parse [
 	("-d", Arg.Unit (fun () -> debug := true),
 		"enable debug output");
@@ -99,9 +94,12 @@ let _ = Arg.parse [
 	("-ocaml",  Arg.Unit (fun () -> mode := OCamlOutput),
 		"Generate OCaml code");
 
-	("-name", Arg.String (fun n -> module_name := n),
-		" <module_name> - Set name for generated FStar or OCaml module");
+	("-prefix", Arg.String (fun n -> prefix := n),
+		" <p> - Prefix generated module names with <p>");
+
+  ("-odir", Arg.String (fun n -> odir := n),
+    " <path> - Write generated modules to <path>");
 
 ] (fun s -> (ifile := s :: !ifile)) (sprintf "QuackyDucky %s\n%s"
-	ver "Generates certified compilers for RFC templates");
-	List.iter load_file !ifile
+	ver "Generates verified parsers and their specification from RFC");
+	List.iter rfc_load !ifile

@@ -1,17 +1,10 @@
 open Printf
 open Rfc_ast
 
-let fst_module_name = ref ""
-let fst_libs = ref (sprintf
-	"%s\n%s\n%s\n%s\n%s\n%s"
-	"open FStar.Heap"
-	"open FStar.HyperHeap"
-	"open FStar.Seq"
-	"open FStar.UInt8"
-	"open FStar.ImmBuffer"
-	"open FStar.Format"
-)
+let pre = ref ""
+let w = Printf.fprintf
 
+(*
 let qd_anon_prefix = "QD_ANONYMOUS_"
 let qd_anon_counter = ref 0
 let qd_bad_names = (Str.regexp ".*\(private_use\)\|\(obsolete\).*")
@@ -34,15 +27,13 @@ and get_byte_length l p =
 	let x = (float_of_int p) -. (float_of_int l) in
 	int_of_float (ceil (x /. 255. /. 255.))
 
-(*
 and get_literal_byte_length l =
 	let pow = Str.search_forward l 0 in
 	(match pow with
 		| Not_found -> l
 		| _ -> (sprintf "pow%s %s" ) (Str.string_before l pow) (Str.string_after l pow))
-*)
 
-and rfc_generate_fstar module_name (p:Rfc_ast.prog) =
+and rfc_generate_fstar prefix odir (p:Rfc_ast.prog) =
 	fst_module_name := module_name;
 	let print ac g = sprintf "%s\n\n%s" ac (match g with
 		| Enum(ef, t) ->
@@ -302,3 +293,111 @@ and select_struct_type n (sf:(Rfc_ast.type_t * Rfc_ast.struct_fields_t list) lis
 	(sprintf "!SELECT!%s\n"
 		(List.fold_left print (sprintf "type %s\n" n) sf)
 	)
+
+*)
+
+let tname (p:gemstone_t) =
+  let aux = function
+		| Enum (_, n) -> n
+		| Struct (n, _, _) -> n
+		| SelectStruct(n, _, _) -> n
+	in String.uncapitalize (aux p)
+
+let abs (n:type_t) =
+  let n = String.uncapitalize n in
+	!pre ^ n ^ "." ^ n
+
+let compile_enum o n (fl: enum_fields_t list) =
+  let repr_t, int_z, parse_t, blen =
+	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
+		        with _ -> failwith ("Enum "^n^" is missing a representation hint") in
+	  match m with
+		| EnumFieldAnonymous 255 -> "UInt8.t", "z", "u8", 1
+		| EnumFieldAnonymous 65535 -> "UInt16.t", "us", "u16", 2
+		| EnumFieldAnonymous 4294967295 -> "UInt32.t", "ul", "u32", 4
+		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32 supported)")
+	in
+	let rec collect_valid_repr int_z acc = function
+	  | [] -> if acc = "" then "True" else acc
+		| (EnumFieldAnonymous _) :: t -> collect_valid_repr int_z acc t
+		| (EnumFieldSimple (_, i)) :: t ->
+		  let acc' =
+			  (if acc = "" then acc else acc^" /\\ ")^
+			  "v <> " ^ (string_of_int i) ^ int_z in
+		  collect_valid_repr int_z acc' t
+		| (EnumFieldRange (_, i, j)) :: t ->
+		  let acc' = acc in (* For now we treat enum ranges as unknown
+			  (if acc = "" then acc else acc^" /\\ ")^
+			  "(v < " ^ (string_of_int i) ^ int_z ^
+				" \\/ v > " ^ (string_of_int j) ^ int_z ^ ")" in *)
+		  collect_valid_repr int_z acc' t
+		in
+	w o "type %s' =\n" n;
+	List.iter (function
+	  | EnumFieldSimple (x, _) ->
+		  w o "  | %s\n" (String.capitalize x)
+		| _ -> ()) fl;
+	w o "  | Unknown of (v:%s{%s})\n\n" repr_t (collect_valid_repr int_z "" fl);
+  w o "type %s = v:%s'{~(Unknown? v)}\n\n" n n;
+	w o "inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n repr_t;
+	w o "  [@inline_let] let e = [\n";
+	List.iter (function
+	  | EnumFieldSimple (x, i) ->
+		  w o "    %s, %d%s;\n" (String.capitalize x) i int_z
+		| _ -> ()) fl;
+	w o "  ] in\n";
+	w o "  [@inline_let] let no_dups =\n";
+	w o "    assert_norm (L.noRepeats (L.map fst e));\n";
+	w o "    assert_norm (L.noRepeats (L.map snd e))\n";
+	w o "  in e\n\n";
+	w o "inline_for_extraction let synth_%s' (x:LP.maybe_enum_key %s_enum) : Tot %s' = \n" n n n;
+	w o "  match x with\n";
+	w o "  | LP.Known k -> k\n";
+	w o "  | LP.Unknown y -> Unknown (y <: %s)\n\n" repr_t;
+	w o "inline_for_extraction let synth_%s'_inv (x:%s') : Tot (LP.maybe_enum_key %s_enum) = \n" n n n;
+	w o "  match x with\n";
+	w o "  | Unknown y -> LP.Unknown y\n";
+	w o "  | x -> LP.Known x\n\n";
+	w o "let parse_maybe_%s_key : LP.parser _ (LP.maybe_enum_key %s_enum) =\n" n n;
+  w o "  LP.parse_maybe_enum_key LP.parse_%s %s_enum\n\n" parse_t n;
+	w o "let serialize_maybe_%s_key : LP.serializer parse_maybe_%s_key =\n" n n;
+  w o "  LP.serialize_maybe_enum_key _ LP.serialize_%s %s_enum\n\n" parse_t n;
+	w o "let parse_%s' : LP.parser _ %s' =\n" n n;
+  w o "  parse_maybe_%s_key `LP.parse_synth` synth_%s'\n\n" n n;
+  w o "let serialize_%s' : LP.serializer parse_%s' =\n" n n;
+	w o "  LP.serialize_synth _ synth_%s' serialize_maybe_%s_key synth_%s'_inv ()\n\n" n n n;
+	w o "inline_for_extraction let parse32_maybe_%s_key : LP.parser32 parse_maybe_%s_key =\n" n n;
+  w o "  FStar.Tactics.synth_by_tactic (LP.parse32_maybe_enum_key_tac LP.parse32_%s %s_enum parse_maybe_%s_key ())\n\n" parse_t n n;
+	w o "inline_for_extraction let parse32_%s' : LP.parser32 parse_%s' =\n" n n;
+  w o "  LP.parse32_synth _ synth_%s' (fun x->synth_%s' x) parse32_maybe_%s_key ()\n\n" n n n;
+	w o "inline_for_extraction let serialize32_maybe_%s_key : LP.serializer32 serialize_maybe_%s_key =\n" n n;
+  w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n";
+  w o "    LP.serialize32_%s %s_enum serialize_maybe_%s_key ())\n\n" n n n;
+  w o "inline_for_extraction let serialize32_%s' : LP.serializer32 serialize_%s' =\n" n n;
+  w o "  LP.serialize32_synth _ synth_%s' _ serialize32_maybe_%s_key synth_%s'_inv (fun x->synth_%s'_inv x) ()\n\n" n n n n;
+	w o "(****** TLS specific, probably hand written *******)\n(*\n";
+  w o "inline_for_extraction let %s_bytes (x:%s') : Tot (lbytes %d) =\n" n n blen;
+  w o "  serialize32_%s' x <: LP.bytes32\n\n" n;
+	w o "inline_for_extraction let parse_%s : pinverse_t %s_bytes =\n" n n;
+  w o "  fun x -> LP.parse32_total parse32_%s' v;\n" n;
+  w o "    let (Some (v, _)) = parse32_%s' x in Correct v\n*)\n" n;
+	()
+
+let compile o (p:gemstone_t) =
+  let n = tname p in
+  w o "module %s%s\n\n" !pre n;
+	w o "module LP = LowParse.SLow\n";
+	w o "module L = FStar.List.Tot\n\n";
+	match p with
+	| Enum(fl, _) -> compile_enum o n fl
+	| _ -> ()
+
+let rfc_generate_fstar prefix odir (p:Rfc_ast.prog) =
+  pre := prefix;
+  let aux (p:gemstone_t) =
+	  let n = tname p in
+		let fn = sprintf "%s/%s%s.fst" odir prefix n in
+	  printf "Writing parsers for type <%s> to <%s>...\n" n fn;
+		let o = try open_out fn with _ -> failwith "Failed to create output file" in
+		compile o p
+	in List.iter aux p
