@@ -337,8 +337,8 @@ let compile_enum o n (fl: enum_fields_t list) =
 	  | EnumFieldSimple (x, _) ->
 		  w o "  | %s\n" (String.capitalize x)
 		| _ -> ()) fl;
-	w o "  | Unknown of (v:%s{%s})\n\n" repr_t (collect_valid_repr int_z "" fl);
-  w o "type %s = v:%s'{~(Unknown? v)}\n\n" n n;
+	w o "  | Unknown_%s of (v:%s{%s})\n\n" n repr_t (collect_valid_repr int_z "" fl);
+  w o "type %s = v:%s'{~(Unknown_%s? v)}\n\n" n n n;
 	w o "inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n repr_t;
 	w o "  [@inline_let] let e = [\n";
 	List.iter (function
@@ -353,29 +353,48 @@ let compile_enum o n (fl: enum_fields_t list) =
 	w o "inline_for_extraction let synth_%s' (x:LP.maybe_enum_key %s_enum) : Tot %s' = \n" n n n;
 	w o "  match x with\n";
 	w o "  | LP.Known k -> k\n";
-	w o "  | LP.Unknown y -> Unknown (y <: %s)\n\n" repr_t;
+	w o "  | LP.Unknown y ->\n";
+	w o "    [@inline_let] let v : %s = y in\n" repr_t;
+	w o "    [@inline_let] let _ = norm_spec LP.norm_steps (LP.list_mem v (LP.list_map snd %s_enum)) in\n" n;
+  w o "    Unknown_%s v\n\n" n;
+	w o "let lemma_synth_%s'_inj () : Lemma\n" n;
+	w o "  (forall (x1 x2: LP.maybe_enum_key %s_enum).\n" n;
+  w o "    synth_%s' x1 == synth_%s' x2 ==> x1 == x2) = ()\n\n" n n;
 	w o "inline_for_extraction let synth_%s'_inv (x:%s') : Tot (LP.maybe_enum_key %s_enum) = \n" n n n;
 	w o "  match x with\n";
-	w o "  | Unknown y -> LP.Unknown y\n";
-	w o "  | x -> LP.Known x\n\n";
+	w o "  | Unknown_%s y ->\n" n;
+	w o "    [@inline_let] let v : %s = y in\n" repr_t;
+	w o "    [@inline_let] let _ = norm_spec LP.norm_steps (LP.list_mem v (LP.list_map snd %s_enum)) in\n" n;
+	w o "    LP.Unknown v\n";
+	w o "  | x ->\n";
+	w o "    [@inline_let] let x1 : protocolVersion = x in\n";
+	w o "    [@inline_let] let _ = norm_spec LP.norm_steps (LP.list_mem x1 (LP.list_map fst %s_enum))\n" n;
+	w o "    LP.Known (x1 <: LP.enum_key %s_enum)\n\n" n;
+	w o "let lemma_synth_%s'_inv () : Lemma\n" n;
+  w o "  (forall (x: LP.maybe_enum_key %s_enum). synth_%s'_inv (synth_%s' x) == x) = ()\n\n" n n n;
 	w o "let parse_maybe_%s_key : LP.parser _ (LP.maybe_enum_key %s_enum) =\n" n n;
   w o "  LP.parse_maybe_enum_key LP.parse_%s %s_enum\n\n" parse_t n;
 	w o "let serialize_maybe_%s_key : LP.serializer parse_maybe_%s_key =\n" n n;
-  w o "  LP.serialize_maybe_enum_key _ LP.serialize_%s %s_enum\n\n" parse_t n;
+  w o "  LP.serialize_maybe_enum_key LP.parse_%s LP.serialize_%s %s_enum\n\n" parse_t parse_t n;
 	w o "let parse_%s' : LP.parser _ %s' =\n" n n;
+	w o "  lemma_synth_%s'_inj ();\n" n;
   w o "  parse_maybe_%s_key `LP.parse_synth` synth_%s'\n\n" n n;
   w o "let serialize_%s' : LP.serializer parse_%s' =\n" n n;
+	w o "  lemma_synth_%s'_inj ();\n  lemma_synth_%s'_inv ();\n" n n;
 	w o "  LP.serialize_synth _ synth_%s' serialize_maybe_%s_key synth_%s'_inv ()\n\n" n n n;
 	w o "inline_for_extraction let parse32_maybe_%s_key : LP.parser32 parse_maybe_%s_key =\n" n n;
   w o "  FStar.Tactics.synth_by_tactic (LP.parse32_maybe_enum_key_tac LP.parse32_%s %s_enum parse_maybe_%s_key ())\n\n" parse_t n n;
 	w o "inline_for_extraction let parse32_%s' : LP.parser32 parse_%s' =\n" n n;
+	w o "  lemma_synth_%s'_inj ();\n" n;
   w o "  LP.parse32_synth _ synth_%s' (fun x->synth_%s' x) parse32_maybe_%s_key ()\n\n" n n n;
 	w o "inline_for_extraction let serialize32_maybe_%s_key : LP.serializer32 serialize_maybe_%s_key =\n" n n;
   w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n";
-  w o "    LP.serialize32_%s %s_enum serialize_maybe_%s_key ())\n\n" n n n;
+	w o "    #_ #_ #_ #LP.parse_%s #LP.serialize_%s // FIXME(implicits for machine int parsers)\n" parse_t parse_t;
+  w o "    LP.serialize32_%s %s_enum serialize_maybe_%s_key ())\n\n" parse_t n n;
   w o "inline_for_extraction let serialize32_%s' : LP.serializer32 serialize_%s' =\n" n n;
+	w o "  lemma_synth_%s'_inj ();\n  lemma_synth_%s'_inv ();\n" n n;
   w o "  LP.serialize32_synth _ synth_%s' _ serialize32_maybe_%s_key synth_%s'_inv (fun x->synth_%s'_inv x) ()\n\n" n n n n;
-	w o "(****** TLS specific, probably hand written *******)\n(*\n";
+	w o "(****** TLS specific, probably hand written *******)\n\n(*\n";
   w o "inline_for_extraction let %s_bytes (x:%s') : Tot (lbytes %d) =\n" n n blen;
   w o "  serialize32_%s' x <: LP.bytes32\n\n" n;
 	w o "inline_for_extraction let parse_%s : pinverse_t %s_bytes =\n" n n;
@@ -388,6 +407,7 @@ let compile o (p:gemstone_t) =
   w o "module %s%s\n\n" !pre n;
 	w o "module LP = LowParse.SLow\n";
 	w o "module L = FStar.List.Tot\n\n";
+	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
 	match p with
 	| Enum(fl, _) -> compile_enum o n fl
 	| _ -> ()
