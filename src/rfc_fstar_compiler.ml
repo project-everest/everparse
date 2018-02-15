@@ -368,7 +368,7 @@ let compile_enum o n (fl: enum_fields_t list) =
 	w o "    LP.Unknown v\n";
 	w o "  | x ->\n";
 	w o "    [@inline_let] let x1 : protocolVersion = x in\n";
-	w o "    [@inline_let] let _ = norm_spec LP.norm_steps (LP.list_mem x1 (LP.list_map fst %s_enum))\n" n;
+	w o "    [@inline_let] let _ = norm_spec LP.norm_steps (LP.list_mem x1 (LP.list_map fst %s_enum)) in\n" n;
 	w o "    LP.Known (x1 <: LP.enum_key %s_enum)\n\n" n;
 	w o "let lemma_synth_%s'_inv () : Lemma\n" n;
   w o "  (forall (x: LP.maybe_enum_key %s_enum). synth_%s'_inv (synth_%s' x) == x) = ()\n\n" n n n;
