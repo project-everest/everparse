@@ -1,7 +1,7 @@
+open Globals
 open Printf
 open Rfc_ast
 
-let pre = ref ""
 let w = Printf.fprintf
 
 (*
@@ -305,9 +305,9 @@ let tname (p:gemstone_t) =
 
 let abs (n:type_t) =
   let n = String.uncapitalize n in
-	!pre ^ n ^ "." ^ n
+	!prefix ^ n ^ "." ^ n
 
-let compile_enum o n (fl: enum_fields_t list) =
+let compile_enum o i n (fl: enum_fields_t list) =
   let repr_t, int_z, parse_t, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
 		        with _ -> failwith ("Enum "^n^" is missing a representation hint") in
@@ -332,13 +332,13 @@ let compile_enum o n (fl: enum_fields_t list) =
 				" \\/ v > " ^ (string_of_int j) ^ int_z ^ ")" in *)
 		  collect_valid_repr int_z acc' t
 		in
-	w o "type %s' =\n" n;
+	w i "type %s' =\n" n;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
-		  w o "  | %s\n" (String.capitalize x)
+		  w i "  | %s\n" (String.capitalize x)
 		| _ -> ()) fl;
-	w o "  | Unknown_%s of (v:%s{%s})\n\n" n repr_t (collect_valid_repr int_z "" fl);
-  w o "type %s = v:%s'{~(Unknown_%s? v)}\n\n" n n n;
+	w i "  | Unknown_%s of (v:%s{%s})\n\n" n repr_t (collect_valid_repr int_z "" fl);
+  w i "type %s = v:%s'{~(Unknown_%s? v)}\n\n" n n n;
 	w o "inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n repr_t;
 	w o "  [@inline_let] let e = [\n";
 	List.iter (function
@@ -394,30 +394,50 @@ let compile_enum o n (fl: enum_fields_t list) =
   w o "inline_for_extraction let serialize32_%s' : LP.serializer32 serialize_%s' =\n" n n;
 	w o "  lemma_synth_%s'_inj ();\n  lemma_synth_%s'_inv ();\n" n n;
   w o "  LP.serialize32_synth _ synth_%s' _ serialize32_maybe_%s_key synth_%s'_inv (fun x->synth_%s'_inv x) ()\n\n" n n n n;
-	w o "(****** TLS specific, probably hand written *******)\n\n(*\n";
-  w o "inline_for_extraction let %s_bytes (x:%s') : Tot (lbytes %d) =\n" n n blen;
-  w o "  serialize32_%s' x <: LP.bytes32\n\n" n;
-	w o "inline_for_extraction let parse_%s : pinverse_t %s_bytes =\n" n n;
-  w o "  fun x -> LP.parse32_total parse32_%s' v;\n" n;
-  w o "    let (Some (v, _)) = parse32_%s' x in Correct v\n*)\n" n;
+  w i "inline_for_extraction val %s_bytes: %s' -> Tot (lbytes %d)\n" n n blen;
+  w o "let %s_bytes x = serialize32_%s' x <: LP.bytes32\n\n" n n;
+  w i "inline_for_extraction val parse_%s': bytes -> %s %s'\n\n" n !opt_type n;
+	w o "let parse_%s' x =\n" n;
+  w o "  LP.parse32_total parse32_%s' v;\n" n;
+  w o "  match parse32_%s' x with\n" n;
+  w o "  | Some (v, _) -> %s v\n\n" !opt_some;
+  w o "  | None -> %s\n\n" !opt_none;
+  w i "inline_for_extraction val parse_%s: bytes -> %s %s\n\n" n !opt_type n;
+  w o "let parse_%s x =\n" n;
+  w o "  LP.parse32_total parse32_%s' v;\n" n;
+  w o "  match parse32_%s' x with\n" n;
+  w o "  | Some (v, _) -> if v = Unknown_%s then %s else %s v\n\n" n !opt_none !opt_some;
+  w o "  | None -> %s\n\n" !opt_none;
 	()
 
-let compile o (p:gemstone_t) =
+let compile o i (p:gemstone_t) =
   let n = tname p in
-  w o "module %s%s\n\n" !pre n;
+  let (fst, fsti) = !headers in
+
+  (* .fsti *)
+  w i "module %s%s\n\n" !prefix n;
+  w i "open %s\n\n" !bytes;
+  (List.iter (w i "%s\n") (List.rev fsti));
+
+  (* .fst *)
+  w o "module %s%s\n\n" !prefix n;
 	w o "module LP = LowParse.SLow\n";
-	w o "module L = FStar.List.Tot\n\n";
+	w o "module L = FStar.List.Tot\n";
+  (List.iter (w o "%s\n") (List.rev fst));
+  w o "\n";
+
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
 	match p with
-	| Enum(fl, _) -> compile_enum o n fl
+	| Enum(fl, _) -> compile_enum o i n fl
 	| _ -> ()
 
-let rfc_generate_fstar prefix odir (p:Rfc_ast.prog) =
-  pre := prefix;
+let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =
 	  let n = tname p in
-		let fn = sprintf "%s/%s%s.fst" odir prefix n in
+		let fn = sprintf "%s/%s%s.fst" !odir !prefix n in
 	  printf "Writing parsers for type <%s> to <%s>...\n" n fn;
-		let o = try open_out fn with _ -> failwith "Failed to create output file" in
-		compile o p
+		let o, i = try open_out fn, open_out (fn^"i")
+               with _ -> failwith "Failed to create output file" in
+		compile o i p;
+    close_out o
 	in List.iter aux p

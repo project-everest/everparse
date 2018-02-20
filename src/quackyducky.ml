@@ -1,3 +1,4 @@
+open Globals
 open Lexing
 open Format
 open Printf
@@ -7,17 +8,6 @@ open Rfc_lexer
 open Rfc_pretty
 open Rfc_fstar_compiler
 open Rfc_ocaml_compiler
-
-type mode =
-  | PrettyPrint
-  | FStarOutput
-  | OCamlOutput
-
-let debug       = ref false
-let ver         = "0.1"
-let mode        = ref FStarOutput
-let prefix      = ref "Parse_"
-let odir        = ref "."
 
 let ifile : (string list) ref = ref []
 
@@ -52,7 +42,7 @@ let rfc_pretty ast =
 	print_endline p
 
 let rfc_fstar ast =
-	rfc_generate_fstar !prefix !odir ast
+	rfc_generate_fstar ast
 
 let rfc_ocaml ast =
   failwith "OCaml compiler is currently disabled"
@@ -96,6 +86,15 @@ let _ = Arg.parse [
 
 	("-prefix", Arg.String (fun n -> prefix := n),
 		" <p> - Prefix generated module names with <p>");
+
+  ("-bytes", Arg.String (fun n -> bytes := n),
+		" <module> - Name of bytes module (must provide [l]bytes, pinverse_t, etc)");
+
+  ("-add_fst", Arg.String (fun n -> headers := (let (u,v) = !headers in (n::u, v))),
+		" <h> - Add <h> to the preamble of implementation files");
+
+  ("-add_fsti", Arg.String (fun n -> headers := (let (u,v) = !headers in (u, n::v))),
+    " <h> - Add <h> to the preamble of interface files");
 
   ("-odir", Arg.String (fun n -> odir := n),
     " <path> - Write generated modules to <path>");
