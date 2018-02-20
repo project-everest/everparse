@@ -396,17 +396,17 @@ let compile_enum o i n (fl: enum_fields_t list) =
   w o "  LP.serialize32_synth _ synth_%s' _ serialize32_maybe_%s_key synth_%s'_inv (fun x->synth_%s'_inv x) ()\n\n" n n n n;
   w i "inline_for_extraction val %s_bytes: %s' -> Tot (lbytes %d)\n" n n blen;
   w o "let %s_bytes x = serialize32_%s' x <: LP.bytes32\n\n" n n;
-  w i "inline_for_extraction val parse_%s': bytes -> %s %s'\n\n" n !opt_type n;
+  w i "inline_for_extraction val parse_%s': bytes -> %s %s'\n" n !opt_type n;
 	w o "let parse_%s' x =\n" n;
   w o "  LP.parse32_total parse32_%s' v;\n" n;
   w o "  match parse32_%s' x with\n" n;
-  w o "  | Some (v, _) -> %s v\n\n" !opt_some;
+  w o "  | Some (v, _) -> %s v\n" !opt_some;
   w o "  | None -> %s\n\n" !opt_none;
-  w i "inline_for_extraction val parse_%s: bytes -> %s %s\n\n" n !opt_type n;
+  w i "inline_for_extraction val parse_%s: bytes -> %s %s\n" n !opt_type n;
   w o "let parse_%s x =\n" n;
   w o "  LP.parse32_total parse32_%s' v;\n" n;
   w o "  match parse32_%s' x with\n" n;
-  w o "  | Some (v, _) -> if v = Unknown_%s then %s else %s v\n\n" n !opt_none !opt_some;
+  w o "  | Some (v, _) -> if v = Unknown_%s then %s else %s v\n" n !opt_none !opt_some;
   w o "  | None -> %s\n\n" !opt_none;
 	()
 
@@ -416,8 +416,9 @@ let compile o i (p:gemstone_t) =
 
   (* .fsti *)
   w i "module %s%s\n\n" !prefix n;
-  w i "open %s\n\n" !bytes;
+  w i "open %s\n" !bytes;
   (List.iter (w i "%s\n") (List.rev fsti));
+  w i "\n";
 
   (* .fst *)
   w o "module %s%s\n\n" !prefix n;

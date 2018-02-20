@@ -96,6 +96,15 @@ let _ = Arg.parse [
   ("-add_fsti", Arg.String (fun n -> headers := (let (u,v) = !headers in (u, n::v))),
     " <h> - Add <h> to the preamble of interface files");
 
+  ("-result_type", Arg.String (fun n -> opt_type := n),
+    " <type_name> - Set parsers' return type (default option)");
+
+  ("-result_some", Arg.String (fun n -> opt_some := n),
+    " <type_name> - Set the successful constructor of parsers' return type (default Some)");
+
+  ("-result_none", Arg.String (fun n -> opt_none := n),
+    " <type_name> - Set the failure constructor of parsers' return type (default None)");
+
   ("-odir", Arg.String (fun n -> odir := n),
     " <path> - Write generated modules to <path>");
 
