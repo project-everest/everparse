@@ -2,6 +2,19 @@ open Globals
 open Printf
 open Rfc_ast
 
+module SM = Map.Make (String)
+
+type len_info = {
+  mutable len_len: int;
+  mutable min_len: int;
+  mutable max_len: int;
+  mutable min_count: int;
+  mutable max_count: int;
+}
+
+(* Recording the boundaries of variable length structures *)
+let linfo : len_info SM.t ref = ref (SM.empty)
+
 let w = Printf.fprintf
 
 (*
@@ -296,6 +309,12 @@ and select_struct_type n (sf:(Rfc_ast.type_t * Rfc_ast.struct_fields_t list) lis
 
 *)
 
+let log256 k =
+  if k <= 255 then 1
+  else if k <= 65535 then 2
+  else if k <= 16777215 then 3
+  else 4
+
 let tname (p:gemstone_t) =
   let aux = function
 		| Enum (_, n) -> n
@@ -303,18 +322,117 @@ let tname (p:gemstone_t) =
 		| SelectStruct(n, _, _) -> n
 	in String.uncapitalize (aux p)
 
+let basic_type = function
+  | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" -> true
+  | _ -> false
+
+let sizeof (t:type_t) =
+  match t with
+  | "opaque"
+  | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; }
+  | "uint16" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; }
+  | "uint24" -> { len_len = 0; min_len = 3; max_len = 3; min_count = 0; max_count = 0; }
+  | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; }
+  | s ->
+    let li = try SM.find (String.uncapitalize t) !linfo
+             with _ -> failwith ("Failed lookup for type "^t) in
+    {li with len_len = li.len_len} (* Copy *)
+
+let li_add (s:string) (li:len_info) =
+  Printf.printf "LINFO<%s>: lenLen=%d minLen=%d maxLen=%d minCount=%d maxCount=%d\n" s li.len_len li.min_len li.max_len li.min_count li.max_count;
+  linfo := SM.add s li !linfo
+
+let add_field (tn:type_t) (v:vector_t) =
+  match v with
+  | VectorSimple (ty, n) ->
+    let li = sizeof ty in
+    li_add (tn^"@"^n) li; ty, li
+  | VectorSize (ty, n, k) ->
+    let li = sizeof ty in
+    li.len_len <- 0;
+    li.min_len <- li.min_len * k;
+    li.max_len <- li.max_len * k;
+    li.min_count <- k;
+    li.max_count <- k;
+    li_add (tn^"@"^n) li; ty, li
+  | VectorSymbolic (ty, n, cst) ->
+    let li = sizeof ty in
+    li_add (tn^"@"^n) li; ty, li
+  | VectorRange (ty, n, (low, high)) ->
+    let li = sizeof ty in
+    let h = log256 high in
+    li.min_count <- low / (li.len_len + li.max_len);
+    li.max_count <- high / (li.len_len + li.min_len);
+    li.len_len <- h;
+    li.min_len <- h + low;
+    li.max_len <- h + high;
+    li_add (tn^"@"^n) li; ty, li
+
+let dep_len (p:gemstone_t) =
+  let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; } in
+  let tn = tname p in
+  let depl = match p with
+    | Enum (fl, n) ->
+      let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
+              with _ -> failwith ("Enum "^n^" is missing a representation hint") in
+      (match m with
+      | EnumFieldAnonymous 255 -> li.min_len <- 1; li.max_len <- 1
+      | EnumFieldAnonymous 65535 -> li.min_len <- 2; li.max_len <- 2
+      | EnumFieldAnonymous 4294967295 -> li.min_len <- 4; li.max_len <- 4);
+      []
+    | Struct (_, _, fl) ->
+      let dep = List.map (function
+        | StructFieldSimple (vec, _) ->
+          let ty, lif = add_field tn vec in
+          li.min_len <- li.min_len + lif.min_len;
+          li.max_len <- li.max_len + lif.max_len;
+          [ty]
+        | StructFieldSelect _ -> []) fl in
+      List.flatten dep
+    | SelectStruct _ -> []
+    in
+  li_add tn li;
+  depl, li
+
 let abs (n:type_t) =
   let n = String.uncapitalize n in
 	!prefix ^ n ^ "." ^ n
+
+let compile_type = function
+  | "uint8" -> "U8.t"
+  | "uint16" -> "U16.t"
+  | "uint24" -> "U32.t"
+  | "uint32" -> "U32.t"
+  | t -> String.uncapitalize t
+
+let compile_struct o i n (fl: struct_fields_t list) =
+  let aux = function
+    | VectorSimple (ty, fn) ->
+      Printf.sprintf "\t%s : %s;\n" fn (compile_type ty)
+    | VectorSize (ty, fn, k) ->
+      w i "type %s_%s = l:list %s\n\n" n fn (compile_type ty);
+      Printf.sprintf "\t%s : %s_%s;\n" n ty n
+    | VectorSymbolic (ty, fn, cst) -> ""
+    | VectorRange (ty, fn, (low, high)) ->
+      w i "type %s_%s = l:list %s\n\n" n fn (compile_type ty);
+      Printf.sprintf "\t%s : %s_%s;\n" n ty n
+    in
+  let fields = List.map (function
+    | StructFieldSimple (vec, _) -> aux vec
+    | StructFieldSelect (_, _, _) -> Printf.printf "WARNING: ignored a select()\n"; "") fl in
+  w i "type %s = {\n" n;
+  List.iter (w i "%s") fields;
+  w i "};\n\n";
+  ()
 
 let compile_enum o i n (fl: enum_fields_t list) =
   let repr_t, int_z, parse_t, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
 		        with _ -> failwith ("Enum "^n^" is missing a representation hint") in
 	  match m with
-		| EnumFieldAnonymous 255 -> "UInt8.t", "z", "u8", 1
-		| EnumFieldAnonymous 65535 -> "UInt16.t", "us", "u16", 2
-		| EnumFieldAnonymous 4294967295 -> "UInt32.t", "ul", "u32", 4
+		| EnumFieldAnonymous 255 -> "U8.t", "z", "u8", 1
+		| EnumFieldAnonymous 65535 -> "U16.t", "us", "u16", 2
+		| EnumFieldAnonymous 4294967295 -> "U32.t", "ul", "u32", 4
 		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32 supported)")
 	in
 	let rec collect_valid_repr int_z acc = function
@@ -322,8 +440,8 @@ let compile_enum o i n (fl: enum_fields_t list) =
 		| (EnumFieldAnonymous _) :: t -> collect_valid_repr int_z acc t
 		| (EnumFieldSimple (_, i)) :: t ->
 		  let acc' =
-			  (if acc = "" then acc else acc^" /\\ ")^
-			  "v <> " ^ (string_of_int i) ^ int_z in
+			  (if acc = "" then acc else acc^"; ")^
+			  (string_of_int i) ^ int_z in
 		  collect_valid_repr int_z acc' t
 		| (EnumFieldRange (_, i, j)) :: t ->
 		  let acc' = acc in (* For now we treat enum ranges as unknown
@@ -332,13 +450,15 @@ let compile_enum o i n (fl: enum_fields_t list) =
 				" \\/ v > " ^ (string_of_int j) ^ int_z ^ ")" in *)
 		  collect_valid_repr int_z acc' t
 		in
+
 	w i "type %s' =\n" n;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
 		  w i "  | %s\n" (String.capitalize x)
 		| _ -> ()) fl;
-	w i "  | Unknown_%s of (v:%s{%s})\n\n" n repr_t (collect_valid_repr int_z "" fl);
+	w i "  | Unknown_%s of (v:%s{not (L.mem v [%s])})\n\n" n repr_t (collect_valid_repr int_z "" fl);
   w i "type %s = v:%s'{~(Unknown_%s? v)}\n\n" n n n;
+
 	w o "inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n repr_t;
 	w o "  [@inline_let] let e = [\n";
 	List.iter (function
@@ -394,20 +514,32 @@ let compile_enum o i n (fl: enum_fields_t list) =
   w o "inline_for_extraction let serialize32_%s' : LP.serializer32 serialize_%s' =\n" n n;
 	w o "  lemma_synth_%s'_inj ();\n  lemma_synth_%s'_inv ();\n" n n;
   w o "  LP.serialize32_synth _ synth_%s' _ serialize32_maybe_%s_key synth_%s'_inv (fun x->synth_%s'_inv x) ()\n\n" n n n n;
-  w i "inline_for_extraction val %s_bytes: %s' -> Tot (lbytes %d)\n" n n blen;
+
+  w i "inline_for_extraction val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n" n;
+
+  w i "inline_for_extraction let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n blen blen n;
+
+  w i "inline_for_extraction val %s_parser: LP.parser %s_parser_kind %s\n" n n n;
+
   w o "let %s_bytes x = serialize32_%s' x <: LP.bytes32\n\n" n n;
-  w i "inline_for_extraction val parse_%s': bytes -> %s %s'\n" n !opt_type n;
+
+  w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
+
 	w o "let parse_%s' x =\n" n;
   w o "  LP.parse32_total parse32_%s' v;\n" n;
   w o "  match parse32_%s' x with\n" n;
   w o "  | Some (v, _) -> %s v\n" !opt_some;
   w o "  | None -> %s\n\n" !opt_none;
-  w i "inline_for_extraction val parse_%s: bytes -> %s %s\n" n !opt_type n;
+
+  w i "inline_for_extraction val %s_serializer: LP.serializer %s_parser\n" n n;
+
   w o "let parse_%s x =\n" n;
   w o "  LP.parse32_total parse32_%s' v;\n" n;
   w o "  match parse32_%s' x with\n" n;
   w o "  | Some (v, _) -> if v = Unknown_%s then %s else %s v\n" n !opt_none !opt_some;
   w o "  | None -> %s\n\n" !opt_none;
+
+  w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
 	()
 
 let compile o i (p:gemstone_t) =
@@ -417,11 +549,31 @@ let compile o i (p:gemstone_t) =
   (* .fsti *)
   w i "module %s%s\n\n" !prefix n;
   w i "open %s\n" !bytes;
+
+  let depl, li = dep_len p in
+  let depl = List.filter (fun x -> not (basic_type x)) depl in
+  let depl = List.map (fun s -> !prefix ^ (String.uncapitalize s)) depl in
+  (List.iter (w i "open %s\n") depl);
+  w i "\n";
+
+  w i "module U8 = FStar.UInt8\n";
+  w i "module U16 = FStar.UInt16\n";
+  w i "module U32 = FStar.UInt32\n";
+  w i "module LP = LowParse.SLow.Base\n";
+  w i "module L = FStar.List.Tot\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
   (* .fst *)
   w o "module %s%s\n\n" !prefix n;
+
+  w o "open %s\n" !bytes;
+  (List.iter (w o "open %s\n") depl);
+  w o "\n";
+
+  w o "module U8 = FStar.UInt8\n";
+  w o "module U16 = FStar.UInt16\n";
+  w o "module U32 = FStar.UInt32\n";
 	w o "module LP = LowParse.SLow\n";
 	w o "module L = FStar.List.Tot\n";
   (List.iter (w o "%s\n") (List.rev fst));
@@ -430,6 +582,7 @@ let compile o i (p:gemstone_t) =
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
 	match p with
 	| Enum(fl, _) -> compile_enum o i n fl
+  | Struct(_, _, fl) -> compile_struct o i n fl
 	| _ -> ()
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =

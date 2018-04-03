@@ -36,8 +36,27 @@ struct {
    } ProtocolVersion;
 
 struct {
+  uint8 cs[2];
+} CipherSuite;
+
+struct {
        opaque random_bytes[32];
    } Random;
+
+enum {
+       supported_groups(10),
+       signature_algorithms(13),
+       key_share(40),
+       pre_shared_key(41),
+       early_data(42),
+       cookie(44),
+       (65535)
+   } ExtensionType;
+
+struct {
+       ExtensionType extension_type;
+       opaque extension_data<0..2^16-1>;
+   } Extension;
 
 struct {
        ProtocolVersion client_version = { 3, 4 };    /* TLS v1.3 */
@@ -55,27 +74,31 @@ struct {
        Extension extensions<0..2^16-1>;
    } ServerHello;
 
+enum {
+       /* Elliptic Curve Groups (ECDHE) */
+       secp256r1 (23), secp384r1 (24), secp521r1 (25),
+       x25519 (29), x448 (30),
+
+       /* Finite Field Groups (DHE) */
+       ffdhe2048 (256), ffdhe3072 (257), ffdhe4096 (258),
+       ffdhe6144 (259), ffdhe8192 (260),
+
+       /* Reserved Code Points */
+       ffdhe_private_use (0x01FC..0x01FF),
+       ecdhe_private_use (0xFE00..0xFEFF),
+       (0xFFFF)
+   } NamedGroup;
+
+struct {
+       NamedGroup named_group_list<1..2^16-1>;
+   } NamedGroupList;
+
 struct {
        ProtocolVersion server_version;
        CipherSuite cipher_suite;
        NamedGroup selected_group;
        Extension extensions<0..2^16-1>;
    } HelloRetryRequest;
-
-struct {
-       ExtensionType extension_type;
-       opaque extension_data<0..2^16-1>;
-   } Extension;
-
-enum {
-       supported_groups(10),
-       signature_algorithms(13),
-       key_share(40),
-       pre_shared_key(41),
-       early_data(42),
-       cookie(44),
-       (65535)
-   } ExtensionType;
 
 struct {
        opaque cookie<0..2^16-1>;
@@ -106,25 +129,6 @@ enum {
        private_use (0xFE00..0xFFFF),
        (0xFFFF)
    } SignatureScheme;
-
-enum {
-       /* Elliptic Curve Groups (ECDHE) */
-       secp256r1 (23), secp384r1 (24), secp521r1 (25),
-       x25519 (29), x448 (30),
-
-       /* Finite Field Groups (DHE) */
-       ffdhe2048 (256), ffdhe3072 (257), ffdhe4096 (258),
-       ffdhe6144 (259), ffdhe8192 (260),
-
-       /* Reserved Code Points */
-       ffdhe_private_use (0x01FC..0x01FF),
-       ecdhe_private_use (0xFE00..0xFEFF),
-       (0xFFFF)
-   } NamedGroup;
-
-struct {
-       NamedGroup named_group_list<1..2^16-1>;
-   } NamedGroupList;
 
 struct {
        NamedGroup group;
@@ -171,12 +175,20 @@ struct {
    } CertificateExtension;
 
 struct {
+  opaque dn<1..2^16-1>;
+} DistinguishedName;
+
+struct {
        opaque certificate_request_context<0..2^8-1>;
        SignatureScheme
          supported_signature_algorithms<2..2^16-2>;
        DistinguishedName certificate_authorities<0..2^16-1>;
        CertificateExtension certificate_extensions<0..2^16-1>;
    } CertificateRequest;
+
+struct {
+  opaque asn1<1..2^24-1>;
+} ASN1Cert;
 
 struct {
        opaque certificate_request_context<0..2^8-1>;
