@@ -10,6 +10,7 @@ type len_info = {
   mutable max_len: int;
   mutable min_count: int;
   mutable max_count: int;
+  mutable vl : bool;
 }
 
 (* Recording the boundaries of variable length structures *)
@@ -322,6 +323,14 @@ let tname (p:gemstone_t) =
 		| SelectStruct(n, _, _) -> n
 	in String.uncapitalize (aux p)
 
+let get_leninfo (t:type_t) =
+  try SM.find (String.uncapitalize t) !linfo
+  with _ -> failwith ("Failed lookup for type "^t)
+
+let li_add (s:string) (li:len_info) =
+  Printf.printf "LINFO<%s>: vl=%s lenLen=%d minLen=%d maxLen=%d minCount=%d maxCount=%d\n" s (if li.vl then "yes" else "no") li.len_len li.min_len li.max_len li.min_count li.max_count;
+  linfo := SM.add s li !linfo
+
 let basic_type = function
   | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" -> true
   | _ -> false
@@ -329,18 +338,13 @@ let basic_type = function
 let sizeof (t:type_t) =
   match t with
   | "opaque"
-  | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; }
-  | "uint16" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; }
-  | "uint24" -> { len_len = 0; min_len = 3; max_len = 3; min_count = 0; max_count = 0; }
-  | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; }
+  | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; vl = false; }
+  | "uint16" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; }
+  | "uint24" -> { len_len = 0; min_len = 3; max_len = 3; min_count = 0; max_count = 0; vl = false; }
+  | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; }
   | s ->
-    let li = try SM.find (String.uncapitalize t) !linfo
-             with _ -> failwith ("Failed lookup for type "^t) in
+    let li = get_leninfo t in
     {li with len_len = li.len_len} (* Copy *)
-
-let li_add (s:string) (li:len_info) =
-  Printf.printf "LINFO<%s>: lenLen=%d minLen=%d maxLen=%d minCount=%d maxCount=%d\n" s li.len_len li.min_len li.max_len li.min_count li.max_count;
-  linfo := SM.add s li !linfo
 
 let add_field (tn:type_t) (v:vector_t) =
   match v with
@@ -357,10 +361,12 @@ let add_field (tn:type_t) (v:vector_t) =
     li_add (tn^"@"^n) li; ty, li
   | VectorSymbolic (ty, n, cst) ->
     let li = sizeof ty in
+    li.vl <- true;
     li_add (tn^"@"^n) li; ty, li
   | VectorRange (ty, n, (low, high)) ->
     let li = sizeof ty in
     let h = log256 high in
+    li.vl <- true;
     li.min_count <- low / (li.len_len + li.max_len);
     li.max_count <- high / (li.len_len + li.min_len);
     li.len_len <- h;
@@ -369,7 +375,7 @@ let add_field (tn:type_t) (v:vector_t) =
     li_add (tn^"@"^n) li; ty, li
 
 let dep_len (p:gemstone_t) =
-  let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; } in
+  let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
   let tn = tname p in
   let depl = match p with
     | Enum (fl, n) ->
@@ -384,6 +390,7 @@ let dep_len (p:gemstone_t) =
       let dep = List.map (function
         | StructFieldSimple (vec, _) ->
           let ty, lif = add_field tn vec in
+          li.vl <- li.vl || lif.vl;
           li.min_len <- li.min_len + lif.min_len;
           li.max_len <- li.max_len + lif.max_len;
           [ty]
@@ -406,16 +413,20 @@ let compile_type = function
   | t -> String.uncapitalize t
 
 let compile_struct o i n (fl: struct_fields_t list) =
+  let li = get_leninfo n in
   let aux = function
     | VectorSimple (ty, fn) ->
       Printf.sprintf "\t%s : %s;\n" fn (compile_type ty)
     | VectorSize (ty, fn, k) ->
       w i "type %s_%s = l:list %s\n\n" n fn (compile_type ty);
-      Printf.sprintf "\t%s : %s_%s;\n" n ty n
+      Printf.sprintf "\t%s : %s_%s;\n" fn n fn
     | VectorSymbolic (ty, fn, cst) -> ""
+    | VectorRange ("opaque", fn, (low, high)) ->
+      Printf.sprintf "\t%s : b:bytes{%d <= length b /\\ length b <= %d};\n" fn low high
     | VectorRange (ty, fn, (low, high)) ->
-      w i "type %s_%s = l:list %s\n\n" n fn (compile_type ty);
-      Printf.sprintf "\t%s : %s_%s;\n" n ty n
+      let li = get_leninfo (n^"@"^fn) in
+      w i "type %s_%s = l:list %s{%d <= L.length l /\\ L.length l <= %d}\n\n" n fn (compile_type ty) li.min_count li.max_count;
+      Printf.sprintf "\t%s : %s_%s;\n" fn n fn
     in
   let fields = List.map (function
     | StructFieldSimple (vec, _) -> aux vec
@@ -423,6 +434,14 @@ let compile_struct o i n (fl: struct_fields_t list) =
   w i "type %s = {\n" n;
   List.iter (w i "%s") fields;
   w i "};\n\n";
+  if li.vl then w i "val bytesize: %s -> nat\n\n" n;
+  w i "inline_for_extraction val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
+  let li = get_leninfo n in
+  w i "inline_for_extraction let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n li.min_len li.max_len n;
+  w i "val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
+  w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
+  w i "val %s_serializer: LP.serializer %s_parser\n\n" n n;
+  w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
   ()
 
 let compile_enum o i n (fl: enum_fields_t list) =
