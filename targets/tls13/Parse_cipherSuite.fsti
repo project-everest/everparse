@@ -26,3 +26,4 @@ val cipherSuite_serializer: LP.serializer cipherSuite_parser
 
 inline_for_extraction val cipherSuite_serializer32: LP.serializer32 cipherSuite_serializer
 
+inline_for_extraction val cipherSuite_size32: LP.size32 cipherSuite_serializer

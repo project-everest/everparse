@@ -25,3 +25,5 @@ val protocolVersion_serializer: LP.serializer protocolVersion_parser
 
 inline_for_extraction val protocolVersion_serializer32: LP.serializer32 protocolVersion_serializer
 
+inline_for_extraction
+val protocolVersion_size32 : LP.size32 protocolVersion_serializer

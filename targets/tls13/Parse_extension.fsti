@@ -28,3 +28,4 @@ val extension_serializer: LP.serializer extension_parser
 
 inline_for_extraction val extension_serializer32: LP.serializer32 extension_serializer
 
+inline_for_extraction val extension_size32: LP.size32 extension_serializer

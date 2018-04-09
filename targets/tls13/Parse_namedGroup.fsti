@@ -32,3 +32,4 @@ inline_for_extraction val namedGroup_parser32: LP.parser32 namedGroup_parser
 inline_for_extraction val namedGroup_serializer: LP.serializer namedGroup_parser
 inline_for_extraction val namedGroup_serializer32: LP.serializer32 namedGroup_serializer
 
+inline_for_extraction val namedGroup_size32: LP.size32 namedGroup_serializer
