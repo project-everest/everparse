@@ -433,7 +433,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
     | StructFieldSelect (_, _, _) -> Printf.printf "WARNING: ignored a select()\n"; "") fl in
   w i "type %s = {\n" n;
   List.iter (w i "%s") fields;
-  w i "};\n\n";
+  w i "}\n\n";
   if li.vl then w i "val bytesize: %s -> nat\n\n" n;
   w i "inline_for_extraction val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
   let li = get_leninfo n in
