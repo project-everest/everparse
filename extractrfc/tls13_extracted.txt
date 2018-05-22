@@ -204,7 +204,10 @@ struct {
        opaque verify_data[Hash.length];
    } Finished;
 
-enum { (65535) } TicketExtensionType;
+enum {
+	test(1),
+	(65535)
+} TicketExtensionType;
 
 struct {
      TicketExtensionType extension_type;
@@ -226,7 +229,7 @@ struct {
      opaque ticket<1..2^16-1>;
  } NewSessionTicket;
 
-struct {} KeyUpdate;
+/*struct {} KeyUpdate;*/
 
 enum {
        alert(21),
@@ -236,7 +239,7 @@ enum {
    } ContentType;
 
 struct {
-       ContentType type;
+       ContentType content_type;
        ProtocolVersion record_version = { 3, 1 };    /* TLS v1.x */
        uint16 length;
        opaque fragment[TLSPlaintext.length];
@@ -244,7 +247,7 @@ struct {
 
 struct {
       opaque content[TLSPlaintext.length];
-      ContentType type;
+      ContentType content_type;
       uint8 zeros[length_of_padding];
    } TLSInnerPlaintext;
 
