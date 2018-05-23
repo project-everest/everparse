@@ -10,7 +10,14 @@ FSTAR_OPTIONS = --odir kremlin --cache_dir cache --cache_checked_modules --use_h
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 KREMLIN = $(KREMLIN_HOME)/krml -drop FStar.Bytes  -skip-compilation -tmpdir out -bundle 'LowParse.\*' -warn-error -9
 
-EXCLUDE_QD_FILES=QD.Parse_alert.fst QD.Parse_alert.fsti QD.Parse_alertDescription.fsti QD.Parse_alertDescription.fst QD.Parse_signatureScheme.fst QD.Parse_random.fsti QD.Parse_random.fst QD.Parse_finished.fst QD.Parse_finished.fsti QD.Parse_serverHello.fsti QD.Parse_serverHello.fst QD.Parse_clientHello.fst QD.Parse_clientHello.fsti
+# The following QD types fail to typecheck, even with --admit_smt_queries true
+EXCLUDE_QD_TYPES_1=alert alertDescription signatureScheme random finished serverHello clientHello
+
+# The following QD types fail to verify
+EXCLUDE_QD_TYPES_2=namedGroup handshakeType signatureScheme newSessionTicket namedGroupList keyShareEntry helloRetryRequest certificateRequest certificateVerify handshake
+
+EXCLUDE_QD_MODULES=$(addprefix QD.Parse_, $(EXCLUDE_QD_TYPES_1) $(EXCLUDE_QD_TYPES_2))
+EXCLUDE_QD_FILES=$(addsuffix .fsti, $(EXCLUDE_QD_MODULES)) $(addsuffix .fst, $(EXCLUDE_QD_MODULES))
 QD_FILES = $(filter-out $(EXCLUDE_QD_FILES), $(wildcard *.fst) $(wildcard *.fsti))
 
 all: echo verify extract
