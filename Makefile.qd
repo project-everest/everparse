@@ -2,32 +2,44 @@ FSTAR_HOME ?= ../../FStar
 MITLS_HOME ?= ../../mitls-fstar
 KREMLIN_HOME ?= ../../kremlin
 
-FSTAR_OPTIONS = --odir kremlin --cache_dir cache --cache_checked_modules --use_hints --include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib
-FSTAR = $(FSTAR_HOME)/bin/fstar --trace_error $(FSTAR_OPTIONS)
-KREMLIN = $(KREMLIN_HOME)/krml
+export FSTAR_HOME
+export MITLS_HOME
+export KREMLIN_HOME
 
-QD_FILES = $(filter-out QD.Parse_alertDescription.fst QD.Parse_signatureScheme.fst, $(wildcard *.fst))
+FSTAR_OPTIONS = --odir kremlin --cache_dir cache --cache_checked_modules --use_hints --include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib --include $(MITLS_HOME)/src/tls
+FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS) --admit_smt_queries true
+KREMLIN = $(KREMLIN_HOME)/krml -drop FStar.Bytes  -skip-compilation -tmpdir out -bundle 'LowParse.\*' -warn-error -9
 
-cache:
-	mkdir cache
+EXCLUDE_QD_FILES=QD.Parse_alert.fst QD.Parse_alert.fsti QD.Parse_alertDescription.fsti QD.Parse_alertDescription.fst QD.Parse_signatureScheme.fst QD.Parse_random.fsti QD.Parse_random.fst QD.Parse_finished.fst QD.Parse_finished.fsti QD.Parse_serverHello.fsti QD.Parse_serverHello.fst QD.Parse_clientHello.fst QD.Parse_clientHello.fsti
+QD_FILES = $(filter-out $(EXCLUDE_QD_FILES), $(wildcard *.fst) $(wildcard *.fsti))
 
-kremlin:
-	mkdir kremlin
+all: echo verify extract
 
-cache/%.checked: cache
-	$(FSTAR) --record_hints $*
+echo:
+	echo $(QD_FILES)
 
-kremlin/%.krml: kremlin
-	$(FSTAR) --admit_smt_queries true --codegen Kremlin $*.fst --extract_module $(subst QD_,QD.,$*)
+cache/%.checked:
+	$(FSTAR) --record_hints $<
 
-.depend: $(QD_FILES)
-	$(FSTAR) --dep full $^ > $@
+kremlin/%.krml:
+	$(FSTAR) --codegen Kremlin $(basename $(notdir $<)) --extract_module $(basename $(basename $(notdir $<))) --warn_error '@241'
+	touch $@
+
+.depend: $(QD_FILES) Makefile
+	$(FSTAR) --dep full $(QD_FILES) > $@
 
 -include .depend
 
-verify: $(patsubst %.fst,cache/%.fst.checked,$(QD_FILES))
+verify: $(patsubst %,cache/%.checked,$(QD_FILES))
 
-extract: $(patsubst %.fst,kremlin/%.krml,$(subst QD.,QD_, $(QD_FILES)))
+extract: $(ALL_KRML_FILES) # from .depend
+	mkdir -p out
+	$(KREMLIN) $^
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
+
+clean:
+	rm -rf cache kremlin .depend out
+
+.PHONY: all verify extract clean echo
