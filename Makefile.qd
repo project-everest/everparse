@@ -7,7 +7,7 @@ export MITLS_HOME
 export KREMLIN_HOME
 
 FSTAR_OPTIONS = --odir kremlin --cache_dir cache --cache_checked_modules --use_hints --include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib --include $(MITLS_HOME)/src/tls
-FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS) --admit_smt_queries true
+FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 KREMLIN = $(KREMLIN_HOME)/krml -drop FStar.Bytes  -skip-compilation -tmpdir out -bundle 'LowParse.\*' -warn-error -9
 
 EXCLUDE_QD_FILES=QD.Parse_alert.fst QD.Parse_alert.fsti QD.Parse_alertDescription.fsti QD.Parse_alertDescription.fst QD.Parse_signatureScheme.fst QD.Parse_random.fsti QD.Parse_random.fst QD.Parse_finished.fst QD.Parse_finished.fsti QD.Parse_serverHello.fsti QD.Parse_serverHello.fst QD.Parse_clientHello.fst QD.Parse_clientHello.fsti
