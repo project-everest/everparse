@@ -2,13 +2,23 @@ FSTAR_HOME ?= ../../FStar
 MITLS_HOME ?= ../../mitls-fstar
 KREMLIN_HOME ?= ../../kremlin
 
-FSTAR_OPTIONS = --cache_dir cache --cache_checked_modules --use_hints --include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib
+FSTAR_OPTIONS = --odir kremlin --cache_dir cache --cache_checked_modules --use_hints --include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib
 FSTAR = $(FSTAR_HOME)/bin/fstar --trace_error $(FSTAR_OPTIONS)
+KREMLIN = $(KREMLIN_HOME)/krml
 
-QD_FILES = $(wildcard *.fst)
+QD_FILES = $(filter-out QD.Parse_alertDescription.fst QD.Parse_signatureScheme.fst, $(wildcard *.fst))
 
-cache/%.checked:
+cache:
+	mkdir cache
+
+kremlin:
+	mkdir kremlin
+
+cache/%.checked: cache
 	$(FSTAR) --record_hints $*
+
+kremlin/%.krml: kremlin
+	$(FSTAR) --admit_smt_queries true --codegen Kremlin $*.fst --extract_module $(subst QD_,QD.,$*)
 
 .depend: $(QD_FILES)
 	$(FSTAR) --dep full $^ > $@
@@ -16,6 +26,8 @@ cache/%.checked:
 -include .depend
 
 verify: $(patsubst %.fst,cache/%.fst.checked,$(QD_FILES))
+
+extract: $(patsubst %.fst,kremlin/%.krml,$(subst QD.,QD_, $(QD_FILES)))
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
