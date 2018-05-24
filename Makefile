@@ -15,5 +15,8 @@ gen: out quackyducky
 verify: gen
 	$(MAKE) -C out verify
 
+test: gen
+	$(MAKE) -C out test
+
 clean:
 	rm -rf *~ src/*~ _build src/*lexer.ml src/*parser.ml src/*parser.mli qd quackyducky.native out
