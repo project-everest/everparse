@@ -451,18 +451,18 @@ let compile_struct o i n (fl: struct_fields_t list) =
     | VectorSize ("opaque", fn0, k) ->
       let fn = if fn0 = n then fn0^"_field" else fn0 in
       w i "type %s = lbytes %d\n\n" fn k;
-      w o "let %s_parser = LP.parse_flbytes %d\n\n" fn k;
-      w o "let %s_serializer = LP.serialize_flbytes %d\n\n" fn k;
-      w o "let %s_bytesize (x:%s) = %d\n\n" fn fn k;
-      w o "let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" fn k k;
-      w o "let %s_serializer32 = LP.serialize32_flbytes %d\n\n" fn k;
-      w o "let %s_size32 = LP.size32_constant %s_serializer %dul\n\n" fn fn k;
+      w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" fn k;
+      w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" fn k;
+      w o "noextract let %s_bytesize (x:%s) = %d\n\n" fn fn k;
+      w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" fn k k;
+      w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" fn k;
+      w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul\n\n" fn fn k;
       fn0, fn
     | VectorSize (ty, fn, k) ->
       let ty0 = compile_type ty in
       let rec aux = function 1 -> ty0 | k -> sprintf "%s * %s" (aux (k-1)) ty0 in
       w i "type %s_vector%d = %s (* FStar.Vector.raw %s %dul *)\n" ty k (aux k) ty0 k;
-      w o "let %s_vector%d_parser : LP.parser _ %s_vector%d =\n" ty k ty k;
+      w o "noextract let %s_vector%d_parser : LP.parser _ %s_vector%d =\n" ty k ty k;
       let c = pcombinator_name ty0 in
       let rec aux k = if k = 1 then c else sprintf "%s\n  `LP.nondep_then` %s" (aux (k-1)) c in
       w o "  %s\n\n" (aux k);
@@ -470,9 +470,18 @@ let compile_struct o i n (fl: struct_fields_t list) =
       let c = pcombinator32_name ty0 in
       let rec aux k = if k = 1 then c else sprintf "%s\n  `LP.parse32_nondep_then` %s" (aux (k-1)) c in
       w o "  %s\n\n" (aux k);
-      w o "inline_for_extraction let %s_vector%d_serializer : LP.serializer %s_vector%d_parser = admit()\n\n" ty k ty k;
-      w o "inline_for_extraction let %s_vector%d_serializer32 : LP.serializer32 %s_vector%d_serializer = admit()\n\n" ty k ty k;
-      w o "inline_for_extraction let %s_vector%d_size32 : LP.size32 %s_vector%d_serializer = admit()\n\n" ty k ty k;
+      w o "noextract let %s_vector%d_serializer : LP.serializer %s_vector%d_parser =\n" ty k ty k;
+      let c = scombinator_name ty0 in
+      let rec aux k = if k = 1 then c else sprintf "LP.serialize_nondep_then _ (%s) ()\n  _ %s" (aux (k-1)) c in
+      w o "  %s\n\n" (aux k);
+      w o "inline_for_extraction let %s_vector%d_serializer32 : LP.serializer32 %s_vector%d_serializer =\n" ty k ty k;
+      let c = scombinator32_name ty0 in
+      let rec aux k = if k = 1 then c else sprintf "LP.serialize32_nondep_then (%s) ()\n  %s ()" (aux (k-1)) c in
+      w o "  %s\n\n" (aux k);
+      w o "inline_for_extraction let %s_vector%d_size32 : LP.size32 %s_vector%d_serializer =\n" ty k ty k;
+      let c = size32_name ty0 in
+      let rec aux k = if k = 1 then c else sprintf "LP.size32_nondep_then (%s)\n  (%s)" (aux (k-1)) c in
+      w o "  %s\n\n" (aux k);
       fn, sprintf "%s_vector%d" ty k (*aux k*)
     | VectorSymbolic (ty, fn, cst) ->
       let ty0 = compile_type ty in
@@ -480,12 +489,12 @@ let compile_struct o i n (fl: struct_fields_t list) =
     | VectorRange ("opaque", fn0, (low, high)) ->
       let fn = if fn0 = n then fn0^"_field" else fn0 in
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" fn low high;
-      w o "let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" fn low high;
-      w o "let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" fn low high;
-      w o "let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" fn fn fn;
-      w o "let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" fn low low high high;
-      w o "let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" fn low high;
-      w o "let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" fn low high (log256 high);
+      w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" fn low high;
+      w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" fn low high;
+      w o "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" fn fn fn;
+      w o "inline_for_extraction let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" fn low low high high;
+      w o "inline_for_extraction let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" fn low high;
+      w o "inline_for_extraction let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" fn low high (log256 high);
       fn0, fn
     | VectorRange (ty, fn, (low, high)) ->
       let li = get_leninfo (n^"@"^fn) in
@@ -496,7 +505,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
        begin
         (* refined field type with variable length constraint *)
         let (min, max) = (li.min_len-li.len_len), (li.max_len-li.len_len) in
-        w i "val %s_bytesize: list %s -> GTot nat\n" fn ty0;
+        w i "noextract val %s_bytesize: list %s -> GTot nat\n" fn ty0;
         w o "let %s_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s_serializer) x)\n\n" fn ty0;
         w i "inline_for_extraction val %s_bytesize32: x:list %s -> y:U32.t{\n" fn ty0;
         w i "  let s = %s_bytesize x in\n  if s > U32.v (LP.u32_max) then y == LP.u32_max else U32.v y == s}\n\n" fn;
@@ -516,15 +525,15 @@ let compile_struct o i n (fl: struct_fields_t list) =
         else *)
 
         w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s_serializer)\n\n" fn min max ty0;
-        w o "let %s'_parser : LP.parser _ %s' =\n" fn fn;
+        w o "noextract let %s'_parser : LP.parser _ %s' =\n" fn fn;
         w o "  LP.parse_bounded_vldata_strong %d %d (LP.serialize_list _ %s_serializer)\n\n" min max ty0;
-        w o "let %s'_serializer : LP.serializer %s'_parser =\n" fn fn;
+        w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" fn fn;
         w o "  LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s_serializer)\n\n" min max ty0;
-        w o "let %s'_parser32 : LP.parser32 %s'_parser =\n" fn fn;
+        w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" fn fn;
         w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s_serializer) (LP.parse32_list %s_parser32)\n\n" min min max max ty0 ty0;
-        w o "let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" fn fn;
+        w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" fn fn;
         w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s_serializer %s_serializer32 ())\n\n" min max ty0 ty0;
-        w o "let %s'_size32 : LP.size32 %s'_serializer =\n" fn fn;
+        w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" fn fn;
         w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s_size32 ()) %dul\n\n" min max ty0 li.len_len;
         fn, fn^"'"
        end
@@ -565,7 +574,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
   w o "  assert_norm (LP.synth_inverse synth_%s synth_%s_recip)\n\n" n n;
 
   (* main parser combinator type *)
-  w o "let %s'_parser : LP.parser _ %s' =\n" n n;
+  w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
   let tuple = List.fold_left (
     fun acc (fn, ty) ->
       let c = pcombinator_name ty in
@@ -574,13 +583,13 @@ let compile_struct o i n (fl: struct_fields_t list) =
   w o "  %s\n\n" tuple;
   let li = get_leninfo n in
 
-  w i "inline_for_extraction val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
-  w o "inline_for_extraction let %s'_parser_kind = LP.get_parser_kind %s'_parser\n\n" n n;
+  w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
+  w o "noextract let %s'_parser_kind = LP.get_parser_kind %s'_parser\n\n" n n;
   w o "let %s_parser_kind_metadata = %s'_parser_kind.LP.parser_kind_metadata\n\n" n n;
-  w i "inline_for_extraction let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n li.min_len li.max_len n;
+  w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n li.min_len li.max_len n;
   let li = get_leninfo n in
 
-  w i "val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
+  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
   w o "let %s_parser =\n  synth_%s_injective ();\n  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n n n;
   w o "  %s'_parser `LP.parse_synth` synth_%s\n\n" n n;
 
@@ -598,8 +607,8 @@ let compile_struct o i n (fl: struct_fields_t list) =
   w o "  LP.parse32_synth _ synth_%s (fun x -> synth_%s x) %s'_parser32 ()\n\n" n n n;
 
   (* main serializer type *)
-  w i "val %s_serializer: LP.serializer %s_parser\n\n" n n;
-  w o "let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+  w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
+  w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = scombinator_name ty in
@@ -678,7 +687,7 @@ let compile_enum o i n (fl: enum_fields_t list) =
 		| _ -> ()) fl;
 	w i "  | Unknown_%s of (v:%s{not (%s)})\n\n" n repr_t (collect_valid_repr int_z "" fl);
 
-  w i "let %s_filter_spec (x:%s') : GTot bool = not (Unknown_%s? x)\n\n" n n n;
+  w i "noextract let %s_filter_spec (x:%s') : GTot bool = not (Unknown_%s? x)\n\n" n n n;
   w i "let %s_filter (x:%s') : b:bool{b == %s_filter_spec x} = not (Unknown_%s? x)\n\n" n n n n;
   w i "type %s = x:%s'{%s_filter_spec x == true}\n\n" n n n;
 
@@ -719,14 +728,14 @@ let compile_enum o i n (fl: enum_fields_t list) =
   w o "  (forall (x: LP.maybe_enum_key %s_enum). synth_%s'_inv (synth_%s' x) == x) = ()\n\n" n n n;
 
   (* Parse *)
-	w o "let parse_maybe_%s_key : LP.parser _ (LP.maybe_enum_key %s_enum) =\n" n n;
+	w o "noextract let parse_maybe_%s_key : LP.parser _ (LP.maybe_enum_key %s_enum) =\n" n n;
   w o "  LP.parse_maybe_enum_key LP.parse_%s %s_enum\n\n" parse_t n;
-	w o "let serialize_maybe_%s_key : LP.serializer parse_maybe_%s_key =\n" n n;
+	w o "noextract let serialize_maybe_%s_key : LP.serializer parse_maybe_%s_key =\n" n n;
   w o "  LP.serialize_maybe_enum_key LP.parse_%s LP.serialize_%s %s_enum\n\n" parse_t parse_t n;
-	w o "let parse_%s' : LP.parser _ %s' =\n" n n;
+	w o "noextract let parse_%s' : LP.parser _ %s' =\n" n n;
 	w o "  lemma_synth_%s'_inj ();\n" n;
   w o "  parse_maybe_%s_key `LP.parse_synth` synth_%s'\n\n" n n;
-  w o "let serialize_%s' : LP.serializer parse_%s' =\n" n n;
+  w o "noextract let serialize_%s' : LP.serializer parse_%s' =\n" n n;
 	w o "  lemma_synth_%s'_inj ();\n  lemma_synth_%s'_inv ();\n" n n;
 	w o "  LP.serialize_synth _ synth_%s' serialize_maybe_%s_key synth_%s'_inv ()\n\n" n n n;
 
@@ -743,18 +752,18 @@ let compile_enum o i n (fl: enum_fields_t list) =
 	w o "  lemma_synth_%s'_inj ();\n  lemma_synth_%s'_inv ();\n" n n;
   w o "  LP.serialize32_synth _ synth_%s' _ serialize32_maybe_%s_key synth_%s'_inv (fun x->synth_%s'_inv x) ()\n\n" n n n n;
 
-  w o "let %s_kind = LP.parse_filter_kind (LP.get_parser_kind parse_%s')\n\n" n n;
-  w i "inline_for_extraction val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
+  w o "noextract let %s_kind = LP.parse_filter_kind (LP.get_parser_kind parse_%s')\n\n" n n;
+  w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
   w o "let %s_parser_kind_metadata = %s_kind.LP.parser_kind_metadata\n\n" n n;
-  w i "inline_for_extraction let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n blen blen n;
+  w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n blen blen n;
 
-  w i "inline_for_extraction val %s_parser: LP.parser %s_parser_kind %s\n" n n n;
+  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n" n n n;
   w o "let %s_parser = LP.parse_filter parse_%s' %s_filter_spec\n\n" n n n;
 
   w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
   w o "let %s_parser32 = LP.parse32_filter parse32_%s' %s_filter_spec %s_filter\n\n" n n n n;
 
-  w i "inline_for_extraction val %s_serializer: LP.serializer %s_parser\n" n n;
+  w i "noextract val %s_serializer: LP.serializer %s_parser\n" n n;
   w o "let %s_serializer = LP.serialize_filter serialize_%s' %s_filter_spec\n\n" n n n;
 
   w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;

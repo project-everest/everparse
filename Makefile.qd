@@ -6,9 +6,19 @@ export FSTAR_HOME
 export MITLS_HOME
 export KREMLIN_HOME
 
-FSTAR_OPTIONS = --odir kremlin --cache_dir cache --cache_checked_modules --use_hints --include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib --include $(MITLS_HOME)/src/tls
+FSTAR_OPTIONS = --odir kremlin --cache_dir cache --cache_checked_modules --use_hints \
+		--include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib --include $(MITLS_HOME)/src/tls --include ../tests
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
-KREMLIN = $(KREMLIN_HOME)/krml -drop FStar.Bytes  -skip-compilation -tmpdir out -bundle 'LowParse.\*' -warn-error -9
+
+HEADERS = $(addprefix -add-include ,'"hacks.h"' \
+  '"kremlin/prims_string.h"' '"kremlin/prims_int.h"' '"kremlin/c_string.h"')
+
+KREMLIN = $(KREMLIN_HOME)/krml \
+	 -drop FStar.Bytes -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
+	 -tmpdir out -I ../tests \
+	 -bundle 'LowParse.\*' \
+	 $(HEADERS) \
+	 -warn-error -9
 
 # The following QD types fail to typecheck, even with --admit_smt_queries true
 EXCLUDE_QD_TYPES_1=alert alertDescription signatureScheme random finished serverHello clientHello
@@ -18,7 +28,7 @@ EXCLUDE_QD_TYPES_2=namedGroup handshakeType signatureScheme newSessionTicket nam
 
 EXCLUDE_QD_MODULES=$(addprefix QD.Parse_, $(EXCLUDE_QD_TYPES_1) $(EXCLUDE_QD_TYPES_2))
 EXCLUDE_QD_FILES=$(addsuffix .fsti, $(EXCLUDE_QD_MODULES)) $(addsuffix .fst, $(EXCLUDE_QD_MODULES))
-QD_FILES = $(filter-out $(EXCLUDE_QD_FILES), $(wildcard *.fst) $(wildcard *.fsti))
+QD_FILES = $(filter-out $(EXCLUDE_QD_FILES), $(wildcard *.fsti) $(wildcard *.fst))
 
 all: echo verify extract
 
@@ -27,26 +37,34 @@ echo:
 
 cache/%.checked:
 	$(FSTAR) --record_hints $<
+	@touch $@
 
 kremlin/%.krml:
 	$(FSTAR) --codegen Kremlin $(basename $(notdir $<)) --extract_module $(basename $(basename $(notdir $<))) --warn_error '@241'
-	touch $@
+	@touch $@
 
 .depend: $(QD_FILES) Makefile
-	$(FSTAR) --dep full $(QD_FILES) > $@
+	$(FSTAR) --dep full $(QD_FILES) Test.fst > $@
 
 -include .depend
 
 verify: $(patsubst %,cache/%.checked,$(QD_FILES))
 
 extract: $(ALL_KRML_FILES) # from .depend
-	mkdir -p out
-	$(KREMLIN) $^
+	-@mkdir out
+	$(KREMLIN) -skip-compilation $^
+
+test.exe: $(ALL_KRML_FILES) kremlin/Test.krml
+	-@mkdir out
+	$(KREMLIN) -no-prefix Test $^ -o test.exe
+
+test: test.exe
+	./test.exe
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
 clean:
-	rm -rf cache kremlin .depend out
+	-rm -rf cache .depend out
 
-.PHONY: all verify extract clean echo
+.PHONY: all verify extract clean echo build
