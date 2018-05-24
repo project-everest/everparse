@@ -21,10 +21,10 @@ KREMLIN = $(KREMLIN_HOME)/krml \
 	 -warn-error -9
 
 # The following QD types fail to typecheck, even with --admit_smt_queries true
-EXCLUDE_QD_TYPES_1=alert alertDescription signatureScheme random finished serverHello clientHello
+EXCLUDE_QD_TYPES_1=finished #serverHello clientHello
 
 # The following QD types fail to verify
-EXCLUDE_QD_TYPES_2=namedGroup handshakeType signatureScheme newSessionTicket namedGroupList keyShareEntry helloRetryRequest certificateRequest certificateVerify handshake
+EXCLUDE_QD_TYPES_2=alertDescription alert
 
 EXCLUDE_QD_MODULES=$(addprefix QD.Parse_, $(EXCLUDE_QD_TYPES_1) $(EXCLUDE_QD_TYPES_2))
 EXCLUDE_QD_FILES=$(addsuffix .fsti, $(EXCLUDE_QD_MODULES)) $(addsuffix .fst, $(EXCLUDE_QD_MODULES))

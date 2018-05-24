@@ -456,7 +456,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
       w o "noextract let %s_bytesize (x:%s) = %d\n\n" fn fn k;
       w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" fn k k;
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" fn k;
-      w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul\n\n" fn fn k;
+      w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" fn fn k;
       fn0, fn
     | VectorSize (ty, fn, k) ->
       let ty0 = compile_type ty in
@@ -480,7 +480,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
       w o "  %s\n\n" (aux k);
       w o "inline_for_extraction let %s_vector%d_size32 : LP.size32 %s_vector%d_serializer =\n" ty k ty k;
       let c = size32_name ty0 in
-      let rec aux k = if k = 1 then c else sprintf "LP.size32_nondep_then (%s)\n  (%s)" (aux (k-1)) c in
+      let rec aux k = if k = 1 then c else sprintf "LP.size32_nondep_then (%s) ()\n  (%s)" (aux (k-1)) c in
       w o "  %s\n\n" (aux k);
       fn, sprintf "%s_vector%d" ty k (*aux k*)
     | VectorSymbolic (ty, fn, cst) ->
@@ -534,6 +534,9 @@ let compile_struct o i n (fl: struct_fields_t list) =
         w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" fn fn;
         w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s_serializer %s_serializer32 ())\n\n" min max ty0 ty0;
         w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" fn fn;
+        w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
+        w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
+        w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
         w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s_size32 ()) %dul\n\n" min max ty0 li.len_len;
         fn, fn^"'"
        end
@@ -638,6 +641,9 @@ let compile_struct o i n (fl: struct_fields_t list) =
   (* size32 *)
   (* FIXME use   assert_norm (LP.size32_constant_precond LP.serialize_X Kul *)
   w o "let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
+  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
+  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = size32_name ty in
@@ -680,12 +686,13 @@ let compile_enum o i n (fl: enum_fields_t list) =
 		  collect_valid_repr int_z acc' t
 		in
 
+  let unknown_formula = collect_valid_repr int_z "" fl in
 	w i "type %s' =\n" n;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
 		  w i "  | %s\n" (String.capitalize x)
 		| _ -> ()) fl;
-	w i "  | Unknown_%s of (v:%s{not (%s)})\n\n" n repr_t (collect_valid_repr int_z "" fl);
+	w i "  | Unknown_%s of (v:%s{not (%s)})\n\n" n repr_t unknown_formula;
 
   w i "noextract let %s_filter_spec (x:%s') : GTot bool = not (Unknown_%s? x)\n\n" n n n;
   w i "let %s_filter (x:%s') : b:bool{b == %s_filter_spec x} = not (Unknown_%s? x)\n\n" n n n n;
@@ -709,7 +716,7 @@ let compile_enum o i n (fl: enum_fields_t list) =
 	w o "  | LP.Known k -> k\n";
 	w o "  | LP.Unknown y ->\n";
 	w o "    [@inline_let] let v : %s = y in\n" repr_t;
-	w o "    [@inline_let] let _ = LP.norm_spec (LP.list_mem v (LP.list_map snd %s_enum)) in\n" n;
+	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == (%s)) in\n" n unknown_formula;
   w o "    Unknown_%s v\n\n" n;
 	w o "let lemma_synth_%s'_inj () : Lemma\n" n;
 	w o "  (forall (x1 x2: LP.maybe_enum_key %s_enum).\n" n;
@@ -718,12 +725,12 @@ let compile_enum o i n (fl: enum_fields_t list) =
 	w o "  match x with\n";
 	w o "  | Unknown_%s y ->\n" n;
 	w o "    [@inline_let] let v : %s = y in\n" repr_t;
-	w o "    [@inline_let] let _ = LP.norm_spec (LP.list_mem v (LP.list_map snd %s_enum)) in\n" n;
+	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == (%s)) in\n" n unknown_formula;
 	w o "    LP.Unknown v\n";
 	w o "  | x ->\n";
-	w o "    [@inline_let] let x1 : %s = x in\n" n;
-	w o "    [@inline_let] let _ = LP.norm_spec (LP.list_mem x1 (LP.list_map fst %s_enum)) in\n" n;
-	w o "    LP.Known (x1 <: LP.enum_key %s_enum)\n\n" n;
+  w o "    [@inline_let] let x1 : %s = x in\n" n;
+  w o "    [@inline_let] let _ = assert_norm(not (Unknown_%s? x1) <==> LP.list_mem x1 (LP.list_map fst %s_enum)) in\n" n n;
+  w o "    LP.Known (x1 <: LP.enum_key %s_enum)\n\n" n;
 	w o "let lemma_synth_%s'_inv () : Lemma\n" n;
   w o "  (forall (x: LP.maybe_enum_key %s_enum). synth_%s'_inv (synth_%s' x) == x) = ()\n\n" n n n;
 
