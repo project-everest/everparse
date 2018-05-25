@@ -21,7 +21,7 @@ KREMLIN = $(KREMLIN_HOME)/krml \
 	 -warn-error -9
 
 # The following QD types fail to typecheck, even with --admit_smt_queries true
-EXCLUDE_QD_TYPES_1=finished #serverHello clientHello
+EXCLUDE_QD_TYPES_1= uncompressedPointRepresentation finished #serverHello clientHello
 
 # The following QD types fail to verify
 EXCLUDE_QD_TYPES_2=alertDescription alert

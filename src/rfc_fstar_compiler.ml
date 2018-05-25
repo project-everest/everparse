@@ -367,6 +367,7 @@ let add_field (tn:type_t) (v:vector_t) =
     let li = sizeof ty in
     let h = log256 high in
     li.vl <- true;
+    (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^ty));
     li.min_count <- low / (li.len_len + li.max_len);
     li.max_count <- high / (li.len_len + li.min_len);
     li.len_len <- h;

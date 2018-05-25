@@ -10,7 +10,7 @@ out:
 	cp Makefile.qd out/Makefile
 
 gen: out quackyducky
-	./qd -prefix "QD.Parse_" -odir out extractrfc/tls13_extracted.txt 
+	./qd -prefix "QD.Parse_" -odir out extractrfc/tls13_draft28.rfc
 
 verify: gen
 	$(MAKE) -C out verify
