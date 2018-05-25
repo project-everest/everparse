@@ -16,6 +16,7 @@ enum {
        max_fragment_length(1),                     /* RFC 6066 */
        status_request(5),                          /* RFC 6066 */
        supported_groups(10),                       /* RFC 4492, 7919 */
+       ec_point_formats(11),
        signature_algorithms(13),                   /* [[this document]] */
        use_srtp(14),                               /* RFC 5764 */
        heartbeat(15),                              /* RFC 6520 */
@@ -24,13 +25,16 @@ enum {
        client_certificate_type(19),                /* RFC 7250 */
        server_certificate_type(20),                /* RFC 7250 */
        padding(21),                                /* RFC 7685 */
+       encrypt_then_mac(22),
+       extended_master_secret(23),
+       session_ticket(35),
        pre_shared_key(41),                         /* [[this document]] */
        early_data(42),                             /* [[this document]] */
        supported_versions(43),                     /* [[this document]] */
        cookie(44),                                 /* [[this document]] */
        psk_key_exchange_modes(45),                 /* [[this document]] */
-       certificate_authorities(47),                /* [[this document]] */
-       oid_filters(48),                            /* [[this document]] */
+       /*certificate_authorities(47),*/                /* [[this document]] */
+       /*oid_filters(48),*/                            /* [[this document]] */
        post_handshake_auth(49),                    /* [[this document]] */
        signature_algorithms_cert(50),              /* [[this document]] */
        key_share(51),                              /* [[this document]] */

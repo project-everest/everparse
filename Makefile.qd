@@ -14,6 +14,7 @@ HEADERS = $(addprefix -add-include ,'"hacks.h"' \
   '"kremlin/prims_string.h"' '"kremlin/prims_int.h"' '"kremlin/c_string.h"')
 
 KREMLIN = $(KREMLIN_HOME)/krml \
+	 -ccopt "-Ofast" \
 	 -drop FStar.Bytes -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I ../tests \
 	 -bundle 'LowParse.\*' \
@@ -56,7 +57,7 @@ extract: $(ALL_KRML_FILES) # from .depend
 
 test.exe: $(ALL_KRML_FILES) kremlin/Test.krml
 	-@mkdir out
-	$(KREMLIN) -no-prefix Test $^ -o test.exe
+	$(KREMLIN) $(KREMLIN_HOME)/kremlib/kremstr.c -no-prefix Test $^ -o test.exe
 
 test: test.exe
 	./test.exe

@@ -1,5 +1,5 @@
 [
-  "p%À\u001d’Ù~\rÑ¹¯Û„`–Ü",
+  "Ëûµ_H+…¬\u001f\u001a=/P¡Í\u0014",
   [
     [
       "Test.main",
@@ -17,11 +17,16 @@
         "equation_FStar.Monotonic.Heap.equal_dom",
         "equation_LowParse.SLow.Base.bytes32",
         "equation_LowParse.SLow.Base.parser32",
+        "equation_QD.Parse_clientHello.clientHello_parser_kind",
+        "equation_QD.Parse_newSessionTicket.newSessionTicket_parser_kind",
         "equation_QD.Parse_serverHello.serverHello_parser_kind",
-        "fuel_guarded_inversion_FStar.Monotonic.HyperStack.mem",
         "function_token_typing_FStar.UInt32.t",
+        "function_token_typing_QD.Parse_clientHello.clientHello_parser32",
+        "function_token_typing_QD.Parse_newSessionTicket.newSessionTicket_parser32",
         "function_token_typing_QD.Parse_serverHello.serverHello_parser32",
         "kinding_FStar.Pervasives.Native.tuple2@tok",
+        "kinding_QD.Parse_clientHello.clientHello@tok",
+        "kinding_QD.Parse_newSessionTicket.newSessionTicket@tok",
         "kinding_QD.Parse_serverHello.serverHello@tok",
         "lemma_FStar.HyperStack.ST.lemma_same_refs_in_stack_regions_intro",
         "lemma_FStar.Pervasives.invertOption",
@@ -31,7 +36,7 @@
         "typing_tok_C.EXIT_FAILURE@tok", "typing_tok_C.EXIT_SUCCESS@tok"
       ],
       0,
-      "319e7d67c31f9be9376027693db5cc84"
+      "a83cbcf134955c3e6dbc3266d94b81f5"
     ]
   ]
 ]
