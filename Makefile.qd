@@ -43,7 +43,7 @@ kremlin/%.krml:
 	$(FSTAR) --codegen Kremlin $(basename $(notdir $<)) --extract_module $(basename $(basename $(notdir $<))) --warn_error '@241'
 	@touch $@
 
-.depend: $(QD_FILES) Makefile
+.depend: $(QD_FILES) Makefile ../tests/Test.fst
 	$(FSTAR) --dep full $(QD_FILES) Test.fst > $@
 
 -include .depend
