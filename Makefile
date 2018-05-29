@@ -1,7 +1,7 @@
 all: quackyducky
 
 quackyducky:
-	-@rm quackyducky.native
+	-@rm -f quackyducky.native
 	ocamlbuild -I src -use-menhir -use-ocamlfind -package batteries -package hex quackyducky.native -classic-display
 	ln -sf quackyducky.native qd
 
