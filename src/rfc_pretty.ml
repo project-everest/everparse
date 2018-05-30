@@ -4,16 +4,16 @@ open Rfc_ast
 
 let rec pad = (fun n -> String.make (n*1) '\t')
 
-and rfc_pretty_print (prog:Rfc_ast.prog) = 
+and rfc_pretty_print (prog:Rfc_ast.prog) =
+  let attrs = List.fold_left (fun acc x->if acc="" then x else sprintf "%s /*@%s*/" acc x) "" in
 	let print ac g = sprintf "%s\n\n%s%s" ac (pad 0) (match g with
 	| SelectStruct(t, sv, alts) ->
 		let cases = print_switch 1 alts in
 		sprintf "struct {\n\tselect(%s) {\n%s\t}\n} %s;\n" sv cases t
-	| Enum(ef, t) ->
-		sprintf "enum {%s\n} %s;" (print_enum_fields 1 ef) t
+	| Enum(ef, t, qual) ->
+		sprintf "%senum {%s\n} %s;" (attrs qual) (print_enum_fields 1 ef) t
 	| Struct(t, qual, sf) ->
-				let qs = match qual with None -> "" | Some q -> q^" " in
-		sprintf "%sstruct {%s\n} %s;" qs (print_struct_fields 1 sf) t)
+		sprintf "%sstruct {%s\n} %s;" (attrs qual) (print_struct_fields 1 sf) t)
 	in List.fold_left print "" prog
 
 and print_switch n = function
@@ -33,7 +33,7 @@ and print_vector (v:Rfc_ast.vector_t) = (match v with
 	| VectorRange(t, n, r) ->
 		sprintf "%s %s <%d..%d>;" t n (fst r) (snd r))
 
-and print_enum_fields p (ef:Rfc_ast.enum_fields_t list) = 
+and print_enum_fields p (ef:Rfc_ast.enum_fields_t list) =
 	let print ac f = sprintf "%s\n%s%s" ac (pad p) (match f with
 		| EnumFieldRange(e, a, b) ->
 			sprintf "%s(%d..%d)" e a b

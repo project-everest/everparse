@@ -1,12 +1,14 @@
 type prog = gemstone_t list
 
+and attr = string
+
 and type_t = string
 
 and sval = int list
 
 and gemstone_t =
-	| Enum of (enum_fields_t list * type_t)
-	| Struct of (type_t * type_t option * struct_fields_t list)
+	| Enum of (enum_fields_t list * type_t * attr list)
+	| Struct of (type_t * attr list * struct_fields_t list)
 	| SelectStruct of (type_t * type_t * (type_t * struct_fields_t list) list)
 
 and vector_t =

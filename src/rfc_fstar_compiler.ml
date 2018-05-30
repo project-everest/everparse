@@ -318,7 +318,7 @@ let log256 k =
 
 let tname (p:gemstone_t) =
   let aux = function
-		| Enum (_, n) -> n
+		| Enum (_, n, _) -> n
 		| Struct (n, _, _) -> n
 		| SelectStruct(n, _, _) -> n
 	in String.uncapitalize (aux p)
@@ -379,7 +379,7 @@ let dep_len (p:gemstone_t) =
   let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
   let tn = tname p in
   let depl = match p with
-    | Enum (fl, n) ->
+    | Enum (fl, n, attr) ->
       let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
               with _ -> failwith ("Enum "^n^" is missing a representation hint") in
       (match m with
@@ -640,7 +640,6 @@ let compile_struct o i n (fl: struct_fields_t list) =
   w o "  LP.serialize32_synth _ synth_%s _ %s'_serializer32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
 
   (* size32 *)
-  (* FIXME use   assert_norm (LP.size32_constant_precond LP.serialize_X Kul *)
   w o "let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
@@ -659,7 +658,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
   w o "  LP.size32_synth _ synth_%s _ %s'_size32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
   ()
 
-let compile_enum o i n (fl: enum_fields_t list) =
+let compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
 
   let repr_t, int_z, parse_t, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
@@ -688,96 +687,115 @@ let compile_enum o i n (fl: enum_fields_t list) =
 		in
 
   let unknown_formula = collect_valid_repr int_z "" fl in
-	w i "type %s' =\n" n;
+  let prime = if is_open then "" else "'" in
+  let notprime = if is_open then "'" else "" in
+
+	w i "type %s%s =\n" n prime;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
 		  w i "  | %s\n" (String.capitalize x)
 		| _ -> ()) fl;
 	w i "  | Unknown_%s of (v:%s{not (%s)})\n\n" n repr_t unknown_formula;
 
-  w i "noextract let %s_filter_spec (x:%s') : GTot bool = not (Unknown_%s? x)\n\n" n n n;
-  w i "let %s_filter (x:%s') : b:bool{b == %s_filter_spec x} = not (Unknown_%s? x)\n\n" n n n n;
-  w i "type %s = x:%s'{%s_filter_spec x == true}\n\n" n n n;
+  (* Filter (for closed enums) *)
+  if is_open then
+    w o "type %s' = x:%s{not (Unknown_%s? x)}\n\n" n n n
+  else
+   begin
+    w i "noextract let %s_filter_spec (x:%s') : GTot bool = not (Unknown_%s? x)\n\n" n n n;
+    w i "let %s_filter (x:%s') : b:bool{b == %s_filter_spec x} = not (Unknown_%s? x)\n\n" n n n n;
+    w i "type %s = x:%s'{%s_filter_spec x == true}\n\n" n n n
+   end;
 
-	w o "inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n repr_t;
+  (* Enum definition *)
+	w o "inline_for_extraction let %s_enum : LP.enum %s%s %s =\n" n n notprime repr_t;
 	w o "  [@inline_let] let e = [\n";
 	List.iter (function
 	  | EnumFieldSimple (x, i) ->
 		  w o "    %s, %d%s;\n" (String.capitalize x) i int_z
 		| _ -> ()) fl;
 	w o "  ] in\n";
-	w o "  [@inline_let] let no_dups =\n";
-	w o "    assert_norm (L.noRepeats (L.map fst e));\n";
-	w o "    assert_norm (L.noRepeats (L.map snd e))\n";
+	w o "  [@inline_let] let _ =\n";
+	w o "    assert_norm (L.noRepeats (LP.list_map fst e));\n";
+	w o "    assert_norm (L.noRepeats (LP.list_map snd e))\n";
 	w o "  in e\n\n";
 
+  (* Interface *)
+  w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
+  w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n blen blen n;
+  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
+  w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
+  w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
+  w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
+  w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n;
+
   (* Synth *)
-	w o "inline_for_extraction let synth_%s' (x:LP.maybe_enum_key %s_enum) : %s' = \n" n n n;
+	w o "inline_for_extraction let synth_%s%s (x:LP.maybe_enum_key %s_enum) : %s%s = \n" n prime n n prime;
 	w o "  match x with\n";
 	w o "  | LP.Known k -> k\n";
 	w o "  | LP.Unknown y ->\n";
 	w o "    [@inline_let] let v : %s = y in\n" repr_t;
 	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == (%s)) in\n" n unknown_formula;
   w o "    Unknown_%s v\n\n" n;
-	w o "let lemma_synth_%s'_inj () : Lemma\n" n;
+	w o "let lemma_synth_%s%s_inj () : Lemma\n" n prime;
 	w o "  (forall (x1 x2: LP.maybe_enum_key %s_enum).\n" n;
-  w o "    synth_%s' x1 == synth_%s' x2 ==> x1 == x2) = ()\n\n" n n;
-	w o "inline_for_extraction let synth_%s'_inv (x:%s') : LP.maybe_enum_key %s_enum = \n" n n n;
+  w o "    synth_%s%s x1 == synth_%s%s x2 ==> x1 == x2) = ()\n\n" n prime n prime;
+	w o "inline_for_extraction let synth_%s%s_inv (x:%s%s) : LP.maybe_enum_key %s_enum = \n" n prime n prime n;
 	w o "  match x with\n";
 	w o "  | Unknown_%s y ->\n" n;
 	w o "    [@inline_let] let v : %s = y in\n" repr_t;
 	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == (%s)) in\n" n unknown_formula;
 	w o "    LP.Unknown v\n";
 	w o "  | x ->\n";
-  w o "    [@inline_let] let x1 : %s = x in\n" n;
+  w o "    [@inline_let] let x1 : %s%s = x in\n" n notprime;
   w o "    [@inline_let] let _ = assert_norm(not (Unknown_%s? x1) <==> LP.list_mem x1 (LP.list_map fst %s_enum)) in\n" n n;
   w o "    LP.Known (x1 <: LP.enum_key %s_enum)\n\n" n;
-	w o "let lemma_synth_%s'_inv () : Lemma\n" n;
-  w o "  (forall (x: LP.maybe_enum_key %s_enum). synth_%s'_inv (synth_%s' x) == x) = ()\n\n" n n n;
+	w o "let lemma_synth_%s%s_inv () : Lemma\n" n prime;
+  w o "  (forall (x: LP.maybe_enum_key %s_enum). synth_%s%s_inv (synth_%s%s x) == x) = ()\n\n" n n prime n prime;
 
   (* Parse *)
 	w o "noextract let parse_maybe_%s_key : LP.parser _ (LP.maybe_enum_key %s_enum) =\n" n n;
   w o "  LP.parse_maybe_enum_key LP.parse_%s %s_enum\n\n" parse_t n;
 	w o "noextract let serialize_maybe_%s_key : LP.serializer parse_maybe_%s_key =\n" n n;
   w o "  LP.serialize_maybe_enum_key LP.parse_%s LP.serialize_%s %s_enum\n\n" parse_t parse_t n;
-	w o "noextract let parse_%s' : LP.parser _ %s' =\n" n n;
-	w o "  lemma_synth_%s'_inj ();\n" n;
-  w o "  parse_maybe_%s_key `LP.parse_synth` synth_%s'\n\n" n n;
-  w o "noextract let serialize_%s' : LP.serializer parse_%s' =\n" n n;
-	w o "  lemma_synth_%s'_inj ();\n  lemma_synth_%s'_inv ();\n" n n;
-	w o "  LP.serialize_synth _ synth_%s' serialize_maybe_%s_key synth_%s'_inv ()\n\n" n n n;
 
-  (* Parse32 *)
-	w o "inline_for_extraction let parse32_maybe_%s_key : LP.parser32 parse_maybe_%s_key =\n" n n;
+  if is_open then (
+    w o "let %s_kind = LP.get_parser_kind parse_maybe_%s_key\n\n" n n;
+    w o "let %s_parser_kind_metadata = %s_kind.LP.parser_kind_metadata\n\n" n n;
+  );
+
+  (* Parser *)
+	w o "noextract let %s%s_parser : LP.parser _ %s%s =\n" n prime n prime;
+	w o "  lemma_synth_%s%s_inj ();\n" n prime;
+  w o "  parse_maybe_%s_key `LP.parse_synth` synth_%s%s\n\n" n n prime;
+  w o "inline_for_extraction let parse32_maybe_%s_key : LP.parser32 parse_maybe_%s_key =\n" n n;
   w o "  FStar.Tactics.synth_by_tactic (LP.parse32_maybe_enum_key_tac LP.parse32_%s %s_enum parse_maybe_%s_key ())\n\n" parse_t n n;
-	w o "inline_for_extraction let parse32_%s' : LP.parser32 parse_%s' =\n" n n;
-	w o "  lemma_synth_%s'_inj ();\n" n;
-  w o "  LP.parse32_synth _ synth_%s' (fun x->synth_%s' x) parse32_maybe_%s_key ()\n\n" n n n;
+  w o "inline_for_extraction let %s%s_parser32 : LP.parser32 %s%s_parser =\n" n prime n prime;
+  w o "  lemma_synth_%s%s_inj ();\n" n prime;
+  w o "  LP.parse32_synth _ synth_%s%s (fun x->synth_%s%s x) parse32_maybe_%s_key ()\n\n" n prime n prime n;
+
+  (* Serializer *)
+  w o "noextract let %s%s_serializer : LP.serializer %s%s_parser =\n" n prime n prime;
+	w o "  lemma_synth_%s%s_inj ();\n  lemma_synth_%s%s_inv ();\n" n prime n prime;
+	w o "  LP.serialize_synth _ synth_%s%s serialize_maybe_%s_key synth_%s%s_inv ()\n\n" n prime n n prime;
 	w o "inline_for_extraction let serialize32_maybe_%s_key : LP.serializer32 serialize_maybe_%s_key =\n" n n;
   w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n";
   w o "    LP.serialize32_%s %s_enum serialize_maybe_%s_key ())\n\n" parse_t n n;
-  w o "inline_for_extraction let serialize32_%s' : LP.serializer32 serialize_%s' =\n" n n;
-	w o "  lemma_synth_%s'_inj ();\n  lemma_synth_%s'_inv ();\n" n n;
-  w o "  LP.serialize32_synth _ synth_%s' _ serialize32_maybe_%s_key synth_%s'_inv (fun x->synth_%s'_inv x) ()\n\n" n n n n;
+  w o "inline_for_extraction let %s%s_serializer32 : LP.serializer32 %s%s_serializer =\n" n prime n prime;
+	w o "  lemma_synth_%s%s_inj ();\n  lemma_synth_%s%s_inv ();\n" n prime n prime;
+  w o "  LP.serialize32_synth _ synth_%s%s _ serialize32_maybe_%s_key synth_%s%s_inv (fun x->synth_%s%s_inv x) ()\n\n" n prime n n prime n prime;
 
-  w o "noextract let %s_kind = LP.parse_filter_kind (LP.get_parser_kind parse_%s')\n\n" n n;
-  w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
-  w o "let %s_parser_kind_metadata = %s_kind.LP.parser_kind_metadata\n\n" n n;
-  w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n blen blen n;
+  (* Filter *)
+  if not is_open then
+   begin
+    w o "noextract let %s_kind = LP.parse_filter_kind (LP.get_parser_kind %s'_parser)\n\n" n n;
+    w o "let %s_parser_kind_metadata = %s_kind.LP.parser_kind_metadata\n\n" n n;
+    w o "let %s_parser = LP.parse_filter %s'_parser %s_filter_spec\n\n" n n n;
+    w o "let %s_parser32 = LP.parse32_filter %s'_parser32 %s_filter_spec %s_filter\n\n" n n n n;
+    w o "let %s_serializer = LP.serialize_filter %s'_serializer %s_filter_spec\n\n" n n n;
+    w o "let %s_serializer32 = LP.serialize32_filter %s'_serializer32 %s_filter_spec\n\n" n n n;
+   end;
 
-  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n" n n n;
-  w o "let %s_parser = LP.parse_filter parse_%s' %s_filter_spec\n\n" n n n;
-
-  w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
-  w o "let %s_parser32 = LP.parse32_filter parse32_%s' %s_filter_spec %s_filter\n\n" n n n n;
-
-  w i "noextract val %s_serializer: LP.serializer %s_parser\n" n n;
-  w o "let %s_serializer = LP.serialize_filter serialize_%s' %s_filter_spec\n\n" n n n;
-
-  w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
-  w o "let %s_serializer32 = LP.serialize32_filter serialize32_%s' %s_filter_spec\n\n" n n n;
-
-  w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n;
   w o "let %s_size32 =\n" n;
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond %s_serializer %dul) in\n" n blen;
   w o "  LP.size32_constant %s_serializer %dul ()\n\n" n blen;
@@ -822,7 +840,7 @@ let compile o i (p:gemstone_t) =
 
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 3 --max_ifuel 3\"\n\n";
 	match p with
-	| Enum(fl, _) -> compile_enum o i n fl
+	| Enum(fl, _, attr) -> compile_enum o i n fl (List.mem "open" attr)
   | Struct(_, _, fl) -> compile_struct o i n fl
 	| _ -> ()
 

@@ -14,6 +14,7 @@ let ectr = ref 0
 %token STRUCT ENUM
 %token SELECT CASE
 
+%token <string>  ATTRIBUTE
 %token <string>  TYPE
 %token <string>  CMMNT
 %token <int>     INT
@@ -27,18 +28,18 @@ prog:
 		{ g }
 ;
 
-qualstruct:
-	| STRUCT { None }
-	| q = TYPE; STRUCT { Some q }
+attrlist:
+	| a = ATTRIBUTE; t=attrlist { a :: t }
+	| {[]}
 ;
 
 gemstone:
-	| ENUM; LBRACE; enum = separated_list(COMMA, enum_fields); RBRACE; t = TYPE; SEMCOL;
-				{ ectr := 0; Enum(enum, t) }
-		| q = qualstruct; LBRACE; SELECT; LPAREN; c = TYPE; RPAREN; LBRACE; s = list(select_case); RBRACE; option(SEMCOL); RBRACE; t = TYPE; SEMCOL;
-				{ SelectStruct(t, c, s) }
-		| q = qualstruct; LBRACE; fields = unambiguous_fields RBRACE; t = TYPE; SEMCOL;
-		{ Struct(t, q, fields) }
+	| ENUM; a=attrlist; LBRACE; enum = separated_list(COMMA, enum_fields); RBRACE; t = TYPE; SEMCOL;
+		{ ectr := 0; Enum(enum, t, a) }
+	| STRUCT; a = attrlist; LBRACE; SELECT; LPAREN; c = TYPE; RPAREN; LBRACE; s = list(select_case); RBRACE; option(SEMCOL); RBRACE; t = TYPE; SEMCOL;
+		{ SelectStruct(t, c, s) }
+	| STRUCT; a = attrlist; LBRACE; fields = unambiguous_fields RBRACE; t = TYPE; SEMCOL;
+		{ Struct(t, a, fields) }
 ;
 
 vector:

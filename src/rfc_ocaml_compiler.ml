@@ -31,7 +31,7 @@ and get_byte_length l p =
 and rfc_generate_ocaml module_name (p:Rfc_ast.prog) =
 	fst_module_name := module_name;
 	let print ac g = sprintf "%s\n\n%s" ac (match g with
-		| Enum(ef, t) ->
+		| Enum(ef, t, _) ->
 			let n = String.uncapitalize t in
 			sprintf "%s\n\n%s\n\n%s" (enum_type n ef) (enum_bytes n ef) (enum_parse n ef)
 		| Struct(t, qual, sf) ->
@@ -133,7 +133,7 @@ and struct_bytes n (sf:Rfc_ast.struct_fields_t list) sz =
 	let vlc1 = ref "" in
 	let vlc2 = ref "" in
 	let vlcadd tt = (match !vlc1 with
-		| "" -> 
+		| "" ->
 			vlc1 := (sprintf "%s_l" tt);
 			vlc2 := (sprintf "%s_b" tt)
 		| _  ->

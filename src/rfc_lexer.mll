@@ -1,7 +1,7 @@
 {
 	open Lexing
 	open Format
-	
+
 	open Rfc_parser
 
 	exception SyntaxError of string
@@ -13,6 +13,7 @@ let newln   = "\r" | "\n" | "\r\n"
 let int     = ['0'-'9']+
 let id      = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_' '-' '.']*
 let hex     = '0' 'x' ['0'-'9' 'a'-'f' 'A'-'F']+
+let attr    = "/*@" ['a'-'z' 'A'-'Z' '_']+ "*/"
 
 rule read = parse
 	| space    { read lexbuf }
@@ -34,6 +35,7 @@ rule read = parse
 	| ']'      { RBRACK }
 	| '('      { LPAREN }
 	| ')'      { RPAREN }
+  | attr as a{ ATTRIBUTE (String.sub a 3 (String.length a - 5)) }
 	| '/' '*'  { comment_start 1 lexbuf }
 	| ','      { COMMA  }
 	| '.' '.'  { DOTDOT }
