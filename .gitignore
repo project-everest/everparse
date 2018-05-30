@@ -1,6 +1,7 @@
 .*~
 *~
 _build
+.depend
 *.cmi
 *.cmo
 *.o
@@ -8,4 +9,4 @@ _build
 *.cmxa
 quackyducky.native
 qd
-out
+**/out
