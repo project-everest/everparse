@@ -6,6 +6,7 @@ qd: $(wildcard src/*.ml*)
 	-@rm -f quackyducky.native
 	ocamlbuild -I src -use-menhir -use-ocamlfind -package batteries -package hex quackyducky.native -classic-display
 	ln -sf quackyducky.native qd
+	touch qd
 
 RFC=extractrfc/tls13_draft28.rfc
 
@@ -14,7 +15,7 @@ out/Makefile: qd $(RFC)
 	./qd -prefix "QD.Parse_" -odir out $(RFC)
 	cp Makefile.qd out/Makefile
 
-gen: out/Makefile quackyducky
+gen: out/Makefile
 
 verify: gen
 	$(MAKE) -C out verify
