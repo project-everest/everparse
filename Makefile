@@ -9,12 +9,12 @@ qd: $(wildcard src/*.ml*)
 
 RFC=extractrfc/tls13_draft28.rfc
 
-out: qd $(RFC)
+out/Makefile: qd $(RFC)
 	mkdir -p out
-	cp Makefile.qd out/Makefile
 	./qd -prefix "QD.Parse_" -odir out $(RFC)
+	cp Makefile.qd out/Makefile
 
-gen: out quackyducky
+gen: out/Makefile quackyducky
 
 verify: gen
 	$(MAKE) -C out verify
