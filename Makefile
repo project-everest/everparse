@@ -7,10 +7,12 @@ qd: $(wildcard src/*.ml*)
 	ocamlbuild -I src -use-menhir -use-ocamlfind -package batteries -package hex quackyducky.native -classic-display
 	ln -sf quackyducky.native qd
 
-out: qd
-	mkdir out
+RFC=extractrfc/tls13_draft28.rfc
+
+out: qd $(RFC)
+	mkdir -p out
 	cp Makefile.qd out/Makefile
-	./qd -prefix "QD.Parse_" -odir out extractrfc/tls13_draft28.rfc
+	./qd -prefix "QD.Parse_" -odir out $(RFC)
 
 gen: out quackyducky
 
