@@ -6,8 +6,21 @@ export FSTAR_HOME
 export MITLS_HOME
 export KREMLIN_HOME
 
-FSTAR_OPTIONS = --odir kremlin --cache_dir cache --cache_checked_modules --use_hints \
+ifdef NO_QD_VERIFY
+LAX_EXT=.lax
+LAX_OPT=--lax
+else
+LAX_EXT=
+LAX_OPT=
+endif
+
+DEPEND_FILE=.depend$(LAX_EXT)
+CACHE_DIR=cache$(LAX_EXT)
+CHECKED_EXT=.checked$(LAX_EXT)
+
+FSTAR_OPTIONS = --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules --use_hints \
 		--include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib --include $(MITLS_HOME)/src/tls --include ../tests
+
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 
 HEADERS = $(addprefix -add-include ,'"hacks.h"' \
@@ -36,20 +49,26 @@ all: echo verify extract
 echo:
 	echo $(QD_FILES)
 
-cache/%.checked:
+$(CACHE_DIR)/%$(CHECKED_EXT):
 	$(FSTAR) --record_hints $<
 	@touch $@
 
 kremlin/%.krml:
-	$(FSTAR) --codegen Kremlin $(basename $(notdir $<)) --extract_module $(basename $(basename $(notdir $<))) --warn_error '@241'
+	$(FSTAR) --codegen Kremlin $(patsubst %$(CHECKED_EXT),%,$(notdir $<)) --extract_module $(basename $(patsubst %$(CHECKED_EXT),%,$(notdir $<))) --warn_error '@241'
 	@touch $@
 
-.depend: $(QD_FILES) Makefile ../tests/Test.fst
+$(DEPEND_FILE): $(QD_FILES) Makefile ../tests/Test.fst
 	$(FSTAR) --dep full $(QD_FILES) Test.fst > $@
 
--include .depend
+-include $(DEPEND_FILE)
 
-verify: $(patsubst %,cache/%.checked,$(QD_FILES))
+ifdef NO_QD_VERIFY
+verify:
+else
+verify: $(patsubst %,$(CACHE_DIR)/%$(CHECKED_EXT),$(QD_FILES))
+endif
+
+ALL_KRML_FILES := $(filter-out kremlin/prims.krml,$(ALL_KRML_FILES))
 
 extract: $(ALL_KRML_FILES) # from .depend
 	-@mkdir out
@@ -66,6 +85,6 @@ test: test.exe
 	@echo $(FSTAR_OPTIONS)
 
 clean:
-	-rm -rf cache .depend out
+	-rm -rf cache cache.lax .depend .depend.lax out
 
 .PHONY: all verify extract clean echo build
