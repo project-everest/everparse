@@ -1,0 +1,5 @@
+PREFIX="Sample.AutoGen_"
+QD_HOME=../..
+
+$(PREFIX)color.fst: sample_rfc.txt
+	$(QD_HOME)/qd -prefix $(PREFIX) $^
