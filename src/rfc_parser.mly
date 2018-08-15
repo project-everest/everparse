@@ -39,7 +39,10 @@ gemstone:
 	| STRUCT; a = attrlist; LBRACE; SELECT; LPAREN; c = TYPE; RPAREN; LBRACE; s = list(select_case); RBRACE; option(SEMCOL); RBRACE; t = TYPE; SEMCOL;
 		{ SelectStruct(t, c, s) }
 	| STRUCT; a = attrlist; LBRACE; fields = unambiguous_fields RBRACE; t = TYPE; SEMCOL;
-		{ Struct(t, a, fields) }
+		{ match fields with
+                  | [StructFieldSimple (v, None)] ->
+                     SingleFieldStruct(t, a, v)
+                  | _ -> Struct(t, a, fields) }
 ;
 
 vector:

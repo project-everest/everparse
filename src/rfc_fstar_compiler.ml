@@ -444,9 +444,8 @@ let size32_name = function
   | "U32.t" -> "LP.size32_constant LP.serialize_u32 4ul ()"
   | t -> t^"_size32"
 
-let compile_struct o i n (fl: struct_fields_t list) =
-  let li = get_leninfo n in
-  let aux = function
+let compile_vector o i n (v:vector_t) =
+    match v with 
     | VectorSimple (ty, fn) ->
       fn, compile_type ty
     | VectorSize ("opaque", fn0, k) ->
@@ -541,11 +540,14 @@ let compile_struct o i n (fl: struct_fields_t list) =
         w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s_size32 ()) %dul\n\n" min max ty0 li.len_len;
         fn, fn^"'"
        end
-    in
+
+
+let compile_struct o i n (fl: struct_fields_t list) =
+  let li = get_leninfo n in
   let fields = List.map (function
-    | StructFieldSimple (vec, _) -> aux vec
+    | StructFieldSimple (vec, _) -> compile_vector o i n vec
     | StructFieldSelect (n, _, _) -> Printf.printf "WARNING: ignored a select()\n"; n, "") fl
-    in
+  in
 
   let fields = List.filter (fun (_, ty) -> ty <> "") fields in
 
@@ -838,11 +840,15 @@ let compile o i (p:gemstone_t) =
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
-	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 3 --max_ifuel 3\"\n\n";
-	match p with
-	| Enum(fl, _, attr) -> compile_enum o i n fl (List.mem "open" attr)
+  w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 3 --max_ifuel 3\"\n\n";
+  match p with
+  | Enum(fl, _, attr) ->
+    print_string ("Attributes of enum are <" ^ (String.concat ", " attr) ^ ">\n");
+    compile_enum o i n fl (List.mem "open" attr)
   | Struct(_, _, fl) -> compile_struct o i n fl
-	| _ -> ()
+  | SingleFieldStruct(name, attrs, vector) ->
+    ignore (compile_vector o i n vector)
+  | _ -> ()
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =

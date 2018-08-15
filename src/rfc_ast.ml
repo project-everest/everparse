@@ -4,12 +4,15 @@ and attr = string
 
 and type_t = string
 
+and fieldName = string
+
 and sval = int list
 
 and gemstone_t =
 	| Enum of (enum_fields_t list * type_t * attr list)
 	| Struct of (type_t * attr list * struct_fields_t list)
 	| SelectStruct of (type_t * type_t * (type_t * struct_fields_t list) list)
+        | SingleFieldStruct of (type_t * attr list * vector_t)
 
 and vector_t =
 	| VectorSimple of (type_t * type_t)
