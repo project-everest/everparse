@@ -320,6 +320,7 @@ let tname (p:gemstone_t) =
   let aux = function
 		| Enum (_, n, _) -> n
 		| Struct (n, _, _) -> n
+                | SingleFieldStruct(n, _, _) -> n
 		| SelectStruct(n, _, _) -> n
 	in String.uncapitalize (aux p)
 
@@ -375,6 +376,13 @@ let add_field (tn:type_t) (v:vector_t) =
     li.max_len <- h + high;
     li_add (tn^"@"^n) li; ty, li
 
+let vec_len li tn vec =
+          let ty, lif = add_field tn vec in
+          li.vl <- li.vl || lif.vl;
+          li.min_len <- li.min_len + lif.min_len;
+          li.max_len <- li.max_len + lif.max_len;
+          ty
+    
 let dep_len (p:gemstone_t) =
   let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
   let tn = tname p in
@@ -390,13 +398,11 @@ let dep_len (p:gemstone_t) =
     | Struct (_, _, fl) ->
       let dep = List.map (function
         | StructFieldSimple (vec, _) ->
-          let ty, lif = add_field tn vec in
-          li.vl <- li.vl || lif.vl;
-          li.min_len <- li.min_len + lif.min_len;
-          li.max_len <- li.max_len + lif.max_len;
-          [ty]
+          [vec_len li tn vec]
         | StructFieldSelect _ -> []) fl in
       List.flatten dep
+    | SingleFieldStruct (_, _, vec) ->
+      [vec_len li tn vec]
     | SelectStruct _ -> []
     in
   li_add tn li;
@@ -660,6 +666,44 @@ let compile_struct o i n (fl: struct_fields_t list) =
   w o "  LP.size32_synth _ synth_%s _ %s'_size32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
   ()
 
+let compile_single_field_struct o i n vec =
+  let li = get_leninfo n in
+  let fd, cfd = compile_vector o i n vec in
+  
+  (* application type *)
+  w i "type %s = %s\n" n fd;
+
+  (* main parser combinator type *)
+  let pname = pcombinator_name cfd in
+  w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
+  w o "noextract let %s_parser_kind' = LP.get_parser_kind %s\n\n" n pname;
+  w o "let %s_parser_kind_metadata = %s_parser_kind'.LP.parser_kind_metadata\n\n" n n;
+  w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n li.min_len li.max_len n;
+
+  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
+  w o "noextract let %s_parser : LP.parser _ %s = %s\n" n n pname;
+
+  (* main parser32 *)
+  let p32name = pcombinator32_name cfd in
+  w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
+  w o "let %s_parser32 = %s\n" n p32name;
+
+  (* main serializer type *)
+  let sname = scombinator_name cfd in
+  w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
+  w o "let %s_serializer = %s\n" n sname;
+
+  (* serialize32 *)
+  let s32name = scombinator32_name cfd in
+  w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
+  w o "let %s_serializer32 = %s\n" n s32name;
+
+  (* size32 *)
+  let s32name = size32_name cfd in
+  w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n;
+  w o "let %s_size32 = %s\n" n s32name;
+  ()
+  
 let compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
 
   let repr_t, int_z, parse_t, blen =
@@ -847,7 +891,7 @@ let compile o i (p:gemstone_t) =
     compile_enum o i n fl (List.mem "open" attr)
   | Struct(_, _, fl) -> compile_struct o i n fl
   | SingleFieldStruct(name, attrs, vector) ->
-    ignore (compile_vector o i n vector)
+    compile_single_field_struct o i n vector
   | _ -> ()
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
