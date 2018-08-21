@@ -557,21 +557,21 @@ let compile_vector o i n (v:vector_t) =
         w o "  LP.parse32_vlarray %d %dul %d %dul %s %s %d %d ()\n\n" min min max max (scombinator_name ty0) (pcombinator_name ty0) li.min_count li.max_count;
         else *)
 
-        w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s_serializer)\n\n" fn min max ty0;
-        w o "noextract let %s'_parser : LP.parser _ %s' =\n" fn fn;
+        (*        w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s_serializer)\n\n" fn min max ty0; *)
+        w o "noextract let %s_parser : LP.parser _ %s =\n" fn fn;
         w o "  LP.parse_bounded_vldata_strong %d %d (LP.serialize_list _ %s_serializer)\n\n" min max ty0;
-        w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" fn fn;
+        w o "noextract let %s_serializer : LP.serializer %s_parser =\n" fn fn;
         w o "  LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s_serializer)\n\n" min max ty0;
-        w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" fn fn;
+        w o "inline_for_extraction let %s_parser32 : LP.parser32 %s_parser =\n" fn fn;
         w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s_serializer) (LP.parse32_list %s_parser32)\n\n" min min max max ty0 ty0;
-        w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" fn fn;
+        w o "inline_for_extraction let %s_serializer32 : LP.serializer32 %s_serializer =\n" fn fn;
         w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s_serializer %s_serializer32 ())\n\n" min max ty0 ty0;
-        w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" fn fn;
+        w o "inline_for_extraction let %s_size32 : LP.size32 %s_serializer =\n" fn fn;
         w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
         w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
         w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
         w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s_size32 ()) %dul\n\n" min max ty0 li.len_len;
-        fn, fn^"'"
+        fn, fn
        end
 
 
@@ -693,10 +693,10 @@ let compile_struct o i n (fl: struct_fields_t list) =
 
 let compile_single_field_struct o i n vec =
   let li = get_leninfo n in
-  let fd, cfd = compile_vector o i n vec in
+  let _, cfd = compile_vector o i n vec in
   
   (* application type *)
-  w i "type %s = %s\n" n fd;
+  w i "type %s = %s\n" n cfd;
 
   (* main parser combinator type *)
   let pname = pcombinator_name cfd in
@@ -917,7 +917,7 @@ let compile o i (p:gemstone_t) =
   | Struct(_, _, fl) -> compile_struct o i n fl
   | SingleFieldStruct(name, attrs, vector) ->
     compile_single_field_struct o i n vector
-  | Abstract (name, _attrs, min, max) -> ()
+  | _ -> ()
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =
