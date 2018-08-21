@@ -13,6 +13,7 @@ and gemstone_t =
 	| Struct of (type_t * attr list * struct_fields_t list)
 	| SelectStruct of (type_t * type_t * (type_t * struct_fields_t list) list)
         | SingleFieldStruct of (type_t * attr list * vector_t)
+        | Abstract of (type_t * attr list * int * int)
 
 and vector_t =
 	| VectorSimple of (type_t * type_t)

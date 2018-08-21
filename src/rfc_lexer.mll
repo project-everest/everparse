@@ -18,6 +18,7 @@ let attr    = "/*@" ['a'-'z' 'A'-'Z' '_']+ "*/"
 rule read = parse
 	| space    { read lexbuf }
 	| newln    { new_line lexbuf; read lexbuf }
+	| "abstract" { ABSTRACT }
 	| "struct" { STRUCT }
 	| "enum"   { ENUM }
 	| "select" { SELECT }

@@ -11,7 +11,7 @@ let ectr = ref 0
 %token COMMA  EOF
 %token EQUALS DOTDOT
 
-%token STRUCT ENUM
+%token STRUCT ENUM ABSTRACT
 %token SELECT CASE
 
 %token <string>  ATTRIBUTE
@@ -43,6 +43,10 @@ gemstone:
                   | [StructFieldSimple (v, None)] ->
                      SingleFieldStruct(t, a, v)
                   | _ -> Struct(t, a, fields) }
+        | ABSTRACT; a = attrlist; t=TYPE; FULCOL; min=INT; DOTDOT; max=INT; SEMCOL;
+                {
+                    Abstract(t, a, min, max)    
+                }
 ;
 
 vector:

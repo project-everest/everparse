@@ -322,6 +322,7 @@ let tname (p:gemstone_t) =
 		| Struct (n, _, _) -> n
                 | SingleFieldStruct(n, _, _) -> n
 		| SelectStruct(n, _, _) -> n
+                | Abstract(n, _, _, _) -> n
 	in String.uncapitalize (aux p)
 
 let get_leninfo (t:type_t) =
@@ -404,6 +405,10 @@ let dep_len (p:gemstone_t) =
     | SingleFieldStruct (_, _, vec) ->
       [vec_len li tn vec]
     | SelectStruct _ -> []
+    | Abstract (_type_name, _attrs, min, max) ->
+      li.min_len <- min;
+      li.max_len <- max;
+      []
     in
   li_add tn li;
   depl, li
@@ -450,24 +455,46 @@ let size32_name = function
   | "U32.t" -> "LP.size32_constant LP.serialize_u32 4ul ()"
   | t -> t^"_size32"
 
+(*  compile_vector o i n v:
+       where o: output stream for the .fst
+             i: output stream for the .fsti       
+             n: the name of the enclosing type,
+                used to mangle field names that may shadow
+                the type name
+             v: the field spec to be compiled
+             
+      returns: field_name : string * (original unmangled field name)
+               type_name  : string
+
+        emits: definition of type_name in the .fsti
+               and corresponding parser/serializer for the type in .fst
+*)
 let compile_vector o i n (v:vector_t) =
     match v with 
     | VectorSimple (ty, fn) ->
       fn, compile_type ty
+      
     | VectorSize ("opaque", fn0, k) ->
       let fn = if fn0 = n then fn0^"_field" else fn0 in
-      w i "type %s = lbytes %d\n\n" fn k;
-      w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" fn k;
+      w i "type %s = lbytes %d\n\n" fn k; (* the type alias in the interface for this field *)
+      
+      w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" fn k; (* every type gets a parser/serializer spec *)
       w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" fn k;
-      w o "noextract let %s_bytesize (x:%s) = %d\n\n" fn fn k;
+      
+      w o "noextract let %s_bytesize (x:%s) = %d\n\n" fn fn k; (* byte size is specific to opaque *)
+
+      (* the "intermediate" level implementation of the parser/serializer *)
       w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" fn k k;
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" fn k;
+      
+      (* the size of serialized data, without actually serializing *)
       w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" fn fn k;
       fn0, fn
     | VectorSize (ty, fn, k) ->
       let ty0 = compile_type ty in
       let rec aux = function 1 -> ty0 | k -> sprintf "%s * %s" (aux (k-1)) ty0 in
       w i "type %s_vector%d = %s (* FStar.Vector.raw %s %dul *)\n" ty k (aux k) ty0 k;
+
       w o "noextract let %s_vector%d_parser : LP.parser _ %s_vector%d =\n" ty k ty k;
       let c = pcombinator_name ty0 in
       let rec aux k = if k = 1 then c else sprintf "%s\n  `LP.nondep_then` %s" (aux (k-1)) c in
@@ -555,13 +582,13 @@ let compile_struct o i n (fl: struct_fields_t list) =
     | StructFieldSelect (n, _, _) -> Printf.printf "WARNING: ignored a select()\n"; n, "") fl
   in
 
-  let fields = List.filter (fun (_, ty) -> ty <> "") fields in
+  let fields = List.filter (fun (_, ty) -> ty <> "") fields in (* Drops empty fields; why permit them in the grammar anyway? *)
 
   (* application type *)
   w i "type %s = {\n" n;
   List.iter (fun (fn, ty) ->
     let ty =
-      if ty = "" then "" else
+      if ty = "" then "" else (* Why emit an empty type? This is ill-formed in F* *)
       (if Str.last_chars ty 1 = "'" then Str.first_chars ty (String.length ty - 1) else ty) in
     w i "\t%s: %s;\n" fn ty) fields;
   w i "}\n\n";
@@ -593,13 +620,11 @@ let compile_struct o i n (fl: struct_fields_t list) =
       if acc="" then c else sprintf "%s\n  `LP.nondep_then` %s" acc c
     ) "" fields in
   w o "  %s\n\n" tuple;
-  let li = get_leninfo n in
 
   w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
   w o "noextract let %s'_parser_kind = LP.get_parser_kind %s'_parser\n\n" n n;
   w o "let %s_parser_kind_metadata = %s'_parser_kind.LP.parser_kind_metadata\n\n" n n;
   w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n li.min_len li.max_len n;
-  let li = get_leninfo n in
 
   w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
   w o "let %s_parser =\n  synth_%s_injective ();\n  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n n n;
@@ -858,7 +883,7 @@ let compile o i (p:gemstone_t) =
   let depl, li = dep_len p in
   let depl = List.filter (fun x -> not (basic_type x)) depl in
   let depl = List.map (fun s -> !prefix ^ (String.uncapitalize s)) depl in
-  (List.iter (w i "open %s\n") depl);
+  (List.iter (w i "open %s\n") depl); (* NS: remove duplicate opens here *)
   w i "\n";
 
   w i "module U8 = FStar.UInt8\n";
@@ -892,15 +917,22 @@ let compile o i (p:gemstone_t) =
   | Struct(_, _, fl) -> compile_struct o i n fl
   | SingleFieldStruct(name, attrs, vector) ->
     compile_single_field_struct o i n vector
-  | _ -> ()
+  | Abstract (name, _attrs, min, max) -> ()
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =
-	  let n = tname p in
-		let fn = sprintf "%s/%s%s.fst" !odir !prefix n in
-	  printf "Writing parsers for type <%s> to <%s>...\n" n fn;
-		let o, i = try open_out fn, open_out (fn^"i")
-               with _ -> failwith "Failed to create output file" in
-		compile o i p;
-    close_out o
-	in List.iter aux p
+    match p with
+    | Abstract _ ->
+      ignore (dep_len p)
+    | _ ->
+      let n = tname p in
+      let fn = sprintf "%s/%s%s.fst" !odir !prefix n in
+      printf "Writing parsers for type <%s> to <%s>...\n" n fn;
+      let o, i =
+        try open_out fn, open_out (fn^"i")
+        with _ -> failwith "Failed to create output file"
+      in
+      compile o i p;
+      close_out o
+  in
+  List.iter aux p

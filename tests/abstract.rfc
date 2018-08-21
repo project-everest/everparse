@@ -1,0 +1,5 @@
+abstract color : 2..3;
+struct {
+   color first;
+   color second;
+} two_colors;
