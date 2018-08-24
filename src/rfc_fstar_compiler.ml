@@ -586,7 +586,7 @@ let compile_vector o i n (v:vector_t) =
         w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
         w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s_size32 ()) %dul\n\n" min max ty0 li.len_len;
         w o "inline_for_extraction let %s_validator32 : LL.validator32 %s_parser =\n" fn fn;
-        w o "  LL.validate32_bounded_vldata_strong %d %dul %d %dul %s_serializer %s_validator32 %dl ()\n" min min max max ty0 ty0 (log256 max);
+        w o "  LL.validate32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s_serializer) (LL.validate32_list %s_validator32) %dl ()\n" min min max max ty0 ty0 (log256 max);
         fn, fn
        end
 
@@ -908,6 +908,7 @@ let compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
   (* Validator *)
   if is_open then begin
     w o "let %s_validator32 =\n" n;
+    w o "  lemma_synth_%s_inj ();\n" n;
     w o "  LL.validate32_synth\n";
     w o "    (LL.validate32_maybe_enum_key LL.validate32_%s %s_enum)\n" parse_t n;
     w o "    synth_%s\n" n;
@@ -916,15 +917,16 @@ let compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
   end else begin
     w o "let %s_validator32 = \n" n;
     w o "  [@inline_let] let destr : LP.maybe_enum_destr_t bool %s_enum = FStar.Tactics.synth_by_tactic LP.maybe_enum_destr_t_tac in\n" n;
+    w o "  lemma_synth_%s'_inj ();\n" n;
     w o "  LL.validate32_flat_maybe_enum_key\n";
     w o "    LL.validate32_%s\n" parse_t;
     w o "    LL.parse32_%s\n" parse_t;
     w o "    %s_enum\n" n;
     w o "    synth_%s'\n" n;
-    w o "    Unknown_%s?\n" n;
+    w o "    %s_filter_spec\n" n;
     w o "    destr\n";
     w o "    ()\n";
-    w o "    (fun x -> admit ())// FIXME: Unknown <==> unknown \n";
+    w o "    (fun x -> admit ()) // FIXME: Unknown <==> unknown\n";
     w o "\n"
   end;
   ()
