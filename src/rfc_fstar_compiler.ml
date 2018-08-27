@@ -708,7 +708,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
 
   (* validator32 *)
   w i "inline_for_extraction val %s_validator32: LL.validator32 %s_parser\n\n" n n;
-  w o "noextract let %s'_validator32 : LL.validator32 %s'_parser =\n" n n;
+  w o "inline_for_extraction let %s'_validator32 : LL.validator32 %s'_parser =\n" n n;
   let tuple = List.fold_left (
     fun acc (fn, ty) ->
       let c = vcombinator32_name ty in
