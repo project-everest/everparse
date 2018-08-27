@@ -34,21 +34,21 @@ let test_validate_aux
     let _ = print (!$"failed.\n") in
     C.EXIT_FAILURE
   else
-//    let _ = print_string ("OK, validated " ^ I32.to_string (client_hello_len `I32.sub` r) ^ " bytes\n") in
+    let _ = print_string ("OK, validated " ^ I32.to_string (client_hello_len `I32.sub` r) ^ " bytes\n") in
     let r = SH.serverHello_validator32 server_hello server_hello_len in
     if r `I32.lt` 0l
     then
       let _ = print (!$"failed.\n") in
       C.EXIT_FAILURE
     else
-//      let _ = print_string ("OK, validated " ^ I32.to_string (server_hello_len `I32.sub` r) ^ " bytes\n") in
+      let _ = print_string ("OK, validated " ^ I32.to_string (server_hello_len `I32.sub` r) ^ " bytes\n") in
       let r = NST.newSessionTicket_validator32 new_session_ticket new_session_ticket_len in
       if r `I32.lt` 0l
       then
         let _ = print (!$"failed.\n") in
         C.EXIT_FAILURE
       else
-//        let _ = print_string ("OK, validated " ^ I32.to_string (new_session_ticket_len `I32.sub` r) ^ " bytes\n") in
+        let _ = print_string ("OK, validated " ^ I32.to_string (new_session_ticket_len `I32.sub` r) ^ " bytes\n") in
         C.EXIT_SUCCESS
 
 let test_validate () : St C.exit_code =
@@ -67,21 +67,21 @@ let test_parse () : St C.exit_code =
     print (!$"failed.\n");
     C.EXIT_FAILURE
   | Some (ch, r) ->
-//    print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
+    print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
     print (!$"Parsing server hello... ");
     match SH.serverHello_parser32 server_hello with
     | None ->
       print (!$"failed.\n");
       C.EXIT_FAILURE
     | Some (sh, r) ->
-//      print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
+      print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
       print (!$"Parsing new session ticket... ");
       match NST.newSessionTicket_parser32 new_session_ticket with
       | None ->
         print (!$"failed.\n");
 	C.EXIT_FAILURE
       | Some (nst, r) ->
-//        print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
+        print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
         C.EXIT_SUCCESS
 
 let main () : St C.exit_code = test_parse ()
