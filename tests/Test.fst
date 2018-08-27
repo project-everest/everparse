@@ -84,4 +84,7 @@ let test_parse () : St C.exit_code =
         print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
         C.EXIT_SUCCESS
 
-let main () : St C.exit_code = test_parse ()
+let main () : St C.exit_code =
+  match test_parse () with
+  | C.EXIT_SUCCESS -> test_validate ()
+  | x -> x

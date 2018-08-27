@@ -79,7 +79,13 @@ test.exe: $(ALL_KRML_FILES) kremlin/Test.krml
 	-@mkdir out
 	$(KREMLIN) $(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c $^ -o test.exe
 
-test: test.exe
+INPUT_FILES=test_client_hello.input test_server_hello.input test_new_session_ticket.input
+
+# Condition the rule on INPUT_FILES to avoid dependency loop
+$(INPUT_FILES): %.input: ../tests/%.input
+	cp $< $@
+
+test: test.exe $(INPUT_FILES)
 	./test.exe
 
 %.fst-in %.fsti-in:
