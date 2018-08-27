@@ -1,6 +1,7 @@
 FSTAR_HOME ?= ../../FStar
 MITLS_HOME ?= ../../mitls-fstar
 KREMLIN_HOME ?= ../../kremlin
+LOWPARSE_HOME ?= $(MITLS_HOME)/src/lowparse
 
 export FSTAR_HOME
 export MITLS_HOME
@@ -19,19 +20,19 @@ CACHE_DIR=cache$(LAX_EXT)
 CHECKED_EXT=.checked$(LAX_EXT)
 
 FSTAR_OPTIONS = --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules --use_hints \
-		--include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib --include $(MITLS_HOME)/src/tls --include ../tests
+		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include $(MITLS_HOME)/src/tls --include ../tests
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 
-HEADERS = $(addprefix -add-include ,'"hacks.h"' \
-  '"kremlin/prims_string.h"' '"kremlin/prims_int.h"' '"kremlin/c_string.h"')
+#HEADERS = $(addprefix -add-include ,'"hacks.h"' \
+#  '"kremlin/prims_string.h"' '"kremlin/prims_int.h"' '"kremlin/c_string.h"')
 
 KREMLIN = $(KREMLIN_HOME)/krml \
 	 -ccopt "-Ofast" \
-	 -drop FStar.Bytes -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I ../tests \
 	 -bundle 'LowParse.\*' \
-	 $(HEADERS) \
+	 -add-include '"kremlin/internal/compat.h"' \
+	 -no-prefix Test \
 	 -warn-error -9
 
 # The following QD types fail to typecheck, even with --admit_smt_queries true
@@ -44,7 +45,7 @@ EXCLUDE_QD_MODULES=$(addprefix QD.Parse_, $(EXCLUDE_QD_TYPES_1) $(EXCLUDE_QD_TYP
 EXCLUDE_QD_FILES=$(addsuffix .fsti, $(EXCLUDE_QD_MODULES)) $(addsuffix .fst, $(EXCLUDE_QD_MODULES))
 QD_FILES = $(filter-out $(EXCLUDE_QD_FILES), $(wildcard *.fsti) $(wildcard *.fst))
 
-all: echo verify extract
+all: echo verify extract test
 
 echo:
 	echo $(QD_FILES)
@@ -76,7 +77,7 @@ extract: $(ALL_KRML_FILES) # from .depend
 
 test.exe: $(ALL_KRML_FILES) kremlin/Test.krml
 	-@mkdir out
-	$(KREMLIN) $(KREMLIN_HOME)/kremlib/kremstr.c -no-prefix Test $^ -o test.exe
+	$(KREMLIN) $(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c $^ -o test.exe
 
 test: test.exe
 	./test.exe
