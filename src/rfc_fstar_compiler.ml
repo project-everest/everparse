@@ -18,298 +18,6 @@ let linfo : len_info SM.t ref = ref (SM.empty)
 
 let w = fprintf
 
-(*
-let qd_anon_prefix = "QD_ANONYMOUS_"
-let qd_anon_counter = ref 0
-let qd_bad_names = (Str.regexp ".*\(private_use\)\|\(obsolete\).*")
-
-let rec pad = (fun n -> String.make (n*1) '\t')
-
-and get_short_type x = (match x with
-	| "uint8" -> ("u8", 1)
-	| "uint16" -> ("u16", 2)
-	| "uint32" -> ("u32", 4)
-	| _ -> (x, 1))
-
-and get_type x = (match x with
-	| "uint8" -> ("UInt8.t", 1)
-	| "uint16" -> ("UInt16.t", 2)
-	| "uint32" -> ("UInt32.t", 4)
-	| _ -> (x, 1))
-
-and get_byte_length l p =
-	let x = (float_of_int p) -. (float_of_int l) in
-	int_of_float (ceil (x /. 255. /. 255.))
-
-and get_literal_byte_length l =
-	let pow = Str.search_forward l 0 in
-	(match pow with
-		| Not_found -> l
-		| _ -> (sprintf "pow%s %s" ) (Str.string_before l pow) (Str.string_after l pow))
-
-and rfc_generate_fstar prefix odir (p:Rfc_ast.prog) =
-	fst_module_name := module_name;
-	let print ac g = sprintf "%s\n\n%s" ac (match g with
-		| Enum(ef, t) ->
-			let n = String.uncapitalize t in
-			sprintf "%s\n\n%s\n\n%s" (enum_type n ef) (enum_bytes n ef) (enum_parse n ef)
-		| Struct(t, qual, sf) ->
-			let n = String.uncapitalize t in
-			let st = struct_type n sf in
-			(sprintf "%s\n\n%s\n\n%s"
-				(fst st)
-				(* (struct_bytes n sf (snd st)) *)
-				(struct_parse n sf (snd st))
-				(struct_validate n sf (snd st))
-			)
-		| SelectStruct(e, m, l) ->
-			let n = String.uncapitalize e in
-			(sprintf "%s\n\n"
-				(select_struct_type n l)
-			)
-		) in
-		List.fold_left print
-		(sprintf "module FStar.%s\n\n%s" !fst_module_name !fst_libs) p
-
-and enum_type n (ef:Rfc_ast.enum_fields_t list) =
-	let print ac f = sprintf "%s%s%s" ac (pad 1) (match f with
-		| EnumFieldSimple(e, w) ->
-			sprintf "| %s\n" (String.uppercase e)
-		| EnumFieldAnonymous(l) -> ""
-		| EnumFieldRange(e, l, m) ->
-			(match (Str.string_match qd_bad_names e 0) with
-				| true  -> sprintf ""
-				| false -> sprintf "Incomplete:EnumFieldRange\n")) in
-	List.fold_left print (sprintf "type %s =\n" n) ef
-
-and enum_bytes n (ef:Rfc_ast.enum_fields_t list) =
-	let tl = ref 0 in
-	let ls = ref "" in
-	let print ac f = sprintf "%s%s%s" ac (pad 1) (match f with
-		| EnumFieldSimple(e, l) ->
-			tl := !tl + (int_of_float (ceil ((float_of_int l) /. 255.)));
-			sprintf "| %s ->%s %duy;\n" (String.uppercase e) !ls l
-		| EnumFieldRange(e, l, m) ->
-			(match (Str.string_match qd_bad_names e 0) with
-				| true  -> sprintf ""
-				| false -> sprintf "Incomplete:EnumFieldRange\n")
-		| EnumFieldAnonymous(l) ->
-			tl := !tl + (int_of_float (ceil ((float_of_int l) /. 255.)));
-			(* ls := (match l with
-				| 255 -> "le_uint8_serializer"
-				| 65535 -> "le_uint16_serializer"
-				| _ -> failwith "Enum length must be either 255 or 65535\n"); *)
-			"") in
-	(List.fold_left print "" ef);
-	(sprintf "%s\n%s"
-		(List.fold_left print
-			(sprintf "let %s_as_enum : enum %s UInt8.t = [\n" n n) ef)
-		(sprintf "]\nassume SizeOf%s: sizeof %s = %d"
-			(String.capitalize n) n !tl))
-
-and enum_parse n (ef:Rfc_ast.enum_fields_t list) =
-	let print ac f = sprintf "%s%s%s" ac (pad 1) (match f with
-		| EnumFieldSimple(e, l) ->
-			sprintf "| (%dz) -> Correct %s\n" l (String.uppercase e)
-		| EnumFieldAnonymous(l) ->
-			qd_anon_counter := !qd_anon_counter + 1;
-			sprintf "| (%dz) -> Correct %s%d\n" l qd_anon_prefix !qd_anon_counter
-		| EnumFieldRange(e, l, m) ->
-			(match (Str.string_match qd_bad_names e 0) with
-				| true  -> sprintf ""
-				| false -> sprintf "Incomplete:EnumFieldRange")) in
-	(List.fold_left print "" ef);
-	(List.fold_left print (sprintf "let parse_%s : parser %s_bytes\n" n n) ef)
-
-and struct_type n (sf:Rfc_ast.struct_fields_t list) =
-	let un = String.uncapitalize n in
-	let bn = String.capitalize n in
-	let sz = ref 0 in
-	let print ac f = sprintf "%s\n%s%s" ac (pad 1) (match f with
-		| StructFieldSimple(v, dv) -> (match v with
-			| VectorSimple(t, y) ->
-				let gt = get_type t in
-				sz := !sz + (snd gt);
-				(sprintf "%s: %s;" y (fst gt))
-			| VectorSize(t, y, l) ->
-				let gt = get_type t in
-				sz := !sz + l;
-				(sprintf "%s: buff %s %d;" y (fst gt) l)
-			| VectorSymbolic(t, y, l) ->
-				sprintf "Incomplete:VectorSymbolic"
-			| VectorRange(t, y, (l, p)) ->
-				let fl = float_of_int l in
-				let fp = float_of_int p in
-				let bl = get_byte_length l p in
-				sz := !sz + bl;
-				(sprintf "%s: bytes32 { let l = Seq.length identity in %d <= l /\\ l <= %d };" y l p))
-		| StructFieldSelect(e, se, t) ->
-			sprintf "%s" "SelectFields")
-	in ((sprintf "%s" (sprintf "%s\n}\n" (List.fold_left print (sprintf "type %s = {" un) sf))), !sz)
-
-and struct_bytes n (sf:Rfc_ast.struct_fields_t list) sz =
-	let vlc1 = ref "" in
-	let vlc2 = ref "" in
-	let vlcadd tt = (match !vlc1 with
-		| "" ->
-			vlc1 := (sprintf "%s_l" tt);
-			vlc2 := (sprintf "%s_b" tt)
-		| _  ->
-			vlc1 := (sprintf "%s +^ %s_l" !vlc1 tt);
-			vlc2 := (sprintf "%s @| %s_b" !vlc2 tt)) in
-	let print ac f = sprintf "%s\n%s%s" ac (pad 1) (match f with
-		| StructFieldSimple(v, dv) -> (match v with
-			| VectorSimple(t, y) ->
-				let tt = String.uncapitalize t in
-				let gt = (get_type t) in
-				vlcadd y;
-				(sprintf "%s\n%s%s"
-					(sprintf "let %s_b = %s_bytes %s.%s in" y tt n y)
-					(pad 1)
-					(sprintf "let %s_l = sizeof %s in" y (fst gt)))
-			| VectorSize(t, y, l) ->
-				vlcadd y;
-				sprintf ""
-			| VectorSymbolic(t, y, l) ->
-				sprintf "Incomplete:VectorSymbolic"
-			| VectorRange(t, y, (l, p)) ->
-				vlcadd y;
-				(sprintf "let (%s_l, %s_b) = %s.%s in" y y n y))
-		| StructFieldSelect(e, se, t) ->
-			sprintf "%s" "SelectFields")
-	in (List.fold_left print "" sf);
-	(sprintf "%s\n%s%s"
-		(List.fold_left print (sprintf "let %s_bytes (%s:%s) : lserializer %s = " n n n n) sf)
-		(pad 1)
-		(sprintf "vlcreate (%s) (%s)" !vlc1 !vlc2))
-
-and struct_parse n (sf:Rfc_ast.struct_fields_t list) sz =
-	let ul = ref 0 in
-	let cc = ref 0 in
-	let cr = ref "" in
-	let ce = ref "" in
-	let cl = ref "0" in
-	let cs = ref "" in
-	let print ac f = sprintf "%s\n%s%s" ac (pad 2) (match f with
-		| StructFieldSimple(v, dv) -> (match v with
-			| VectorSimple(t, y) ->
-				let gt = get_type t in
-				let ol = !ul in
-				ul := !ul + (snd gt);
-				cc := !cc + 1;
-				cr := (sprintf "parse_%s" (fst (get_short_type t)));
-				ce := (sprintf "%s\n%s%s = %s;" !ce (pad 1) y y);
-				cs := (sprintf "%s%s, " !cs y);
-				cl := (sprintf "%s+%dul" !cl (snd gt));
-				(sprintf "%s%s\n%s%s"
-					(pad 0) (sprintf "%s" !cr)
-          (pad 2) (sprintf "`parse_nondep_pair`"))
-			| VectorSize(t, y, l) ->
-				let gt = get_type t in
-				let ol = !ul in
-				ul := !ul + l;
-				cc := !cc + 1;
-				ce := (sprintf "%s\n%s%s = %s;" !ce (pad 1) y y);
-				cr := (sprintf "%s\n%s%s = %s;" !cr (pad 4) y y);
-				cs := (sprintf "%s%s, " !cs y);
-				cl := (sprintf "%s+%dul" !cl l);
-				(sprintf "%s\n%s%s\n%s%s"
-					(sprintf "let c%d = sub bytes %dul %dul in" !cc ol !ul)
-					(pad 2) (sprintf "let c%d = cast %s c%d in" !cc (fst gt) !cc)
-					(pad 2) (sprintf "let c%d = read c%d %dul in" !cc !cc ol))
-			| VectorSymbolic(t, y, l) ->
-				sprintf "Incomplete:VectorSymbolic"
-			| VectorRange(t, y, (l, p)) ->
-				cc := !cc + 1;
-				ce := (sprintf "%s\n%s%s = %s;" !ce (pad 1) y y);
-				cr := (sprintf "%s\n%s%s = %s;" !cr (pad 4) y y);
-				cs := (sprintf "%s%s, " !cs y);
-				(sprintf "%s\n%s%s"
-					(sprintf "(parse_opaque_vlbytes %d %d)" l p)
-					(pad 2) (sprintf "`parse_nondep_pair`")))
-		| StructFieldSelect(e, se, t) ->
-			sprintf "%s" "SelectFields")
-	in (List.fold_left print "" sf); (ul := 0; cc := 0); (sprintf "%s\n%s"
-		(List.fold_left print (sprintf "%s"
-			(sprintf "let parse_%s: parser (%s) = (" n n)) sf)
-			(sprintf ") `parse_synth`\n%s%s\n\n"
-				(pad 0) (sprintf "(fun (%s) -> {%s\n})"
-					(Str.string_before !cs ((String.length !cs) - 2))
-					!ce
-				)
-			)
-		)
-
-and struct_validate n (sf:Rfc_ast.struct_fields_t list) sz =
-	let ul = ref 0 in
-	let cc = ref 0 in
-	let cr = ref "" in
-	let ce = ref "" in
-	let cl = ref "0" in
-	let cs = ref "" in
-	let print ac f = sprintf "%s\n%s%s" ac (pad 2) (match f with
-		| StructFieldSimple(v, dv) -> (match v with
-			| VectorSimple(t, y) ->
-				let gt = get_type t in
-				let ol = !ul in
-				ul := !ul + (snd gt);
-				cc := !cc + 1;
-				cr := (sprintf "validate_%s" (fst (get_short_type t)));
-				ce := (sprintf "%s\n%s%s = %s;" !ce (pad 1) y y);
-				cs := (sprintf "%s%s, " !cs y);
-				cl := (sprintf "%s+%dul" !cl (snd gt));
-				(sprintf "%s%s\n%s%s"
-					(pad 0) (sprintf "%s" !cr)
-          (pad 2) (sprintf "`validate_nondep_pair`"))
-			| VectorSize(t, y, l) ->
-				let gt = get_type t in
-				let ol = !ul in
-				ul := !ul + l;
-				cc := !cc + 1;
-				ce := (sprintf "%s\n%s%s = %s;" !ce (pad 1) y y);
-				cr := (sprintf "%s\n%s%s = %s;" !cr (pad 4) y y);
-				cs := (sprintf "%s%s, " !cs y);
-				cl := (sprintf "%s+%dul" !cl l);
-				(sprintf "%s\n%s%s\n%s%s"
-					(sprintf "let c%d = sub bytes %dul %dul in" !cc ol !ul)
-					(pad 2) (sprintf "let c%d = cast %s c%d in" !cc (fst gt) !cc)
-					(pad 2) (sprintf "let c%d = read c%d %dul in" !cc !cc ol))
-			| VectorSymbolic(t, y, l) ->
-				sprintf "Incomplete:VectorSymbolic"
-			| VectorRange(t, y, (l, p)) ->
-				cc := !cc + 1;
-				ce := (sprintf "%s\n%s%s = %s;" !ce (pad 1) y y);
-				cr := (sprintf "%s\n%s%s = %s;" !cr (pad 4) y y);
-				cs := (sprintf "%s%s, " !cs y);
-				(sprintf "%s\n%s%s"
-					(sprintf "(validate_opaque_vlbytes %d %d)" l p)
-					(pad 2) (sprintf "`validate_nondep_pair`")))
-		| StructFieldSelect(e, se, t) ->
-			sprintf "%s" "SelectFields")
-	in (List.fold_left print "" sf); (ul := 0; cc := 0); (sprintf "%s\n%s"
-		(List.fold_left print (sprintf "%s"
-			(sprintf "let validate_%s: stateful_validator (parse_%s) = (" n n)) sf)
-			(sprintf ") `validate_synth`\n%s%s\n\n"
-				(pad 0) (sprintf "(fun (%s) -> {%s\n})"
-					(Str.string_before !cs ((String.length !cs) - 2))
-					!ce
-				)
-			)
-		)
-
-and select_struct_type n (sf:(Rfc_ast.type_t * Rfc_ast.struct_fields_t list) list) =
-  let print ac (c, q) = (sprintf "%s%s| %s:\n%s\n" ac (pad 0) (String.capitalize c) (
-		List.fold_left (fun bc sft -> (sprintf "%s%s" bc (match sft with
-			| StructFieldSimple(_) -> (sprintf "%s%s" (pad 1) "StructFieldSimple")
-			| StructFieldSelect(tt, sftl, ttt) -> (sprintf "%s%s" (pad 1) "StructFieldSelect")))
-		) "" q
-	)) in
-	(sprintf "!SELECT!%s\n"
-		(List.fold_left print (sprintf "type %s\n" n) sf)
-	)
-
-*)
-
 let log256 k =
   if k <= 255 then 1
   else if k <= 65535 then 2
@@ -320,9 +28,7 @@ let tname (p:gemstone_t) =
   let aux = function
 		| Enum (_, n, _) -> n
 		| Struct (n, _, _) -> n
-                | SingleFieldStruct(n, _, _) -> n
 		| SelectStruct(n, _, _) -> n
-                | Abstract(n, _, _, _) -> n
 	in String.uncapitalize (aux p)
 
 let get_leninfo (t:type_t) =
@@ -377,13 +83,6 @@ let add_field (tn:type_t) (v:vector_t) =
     li.max_len <- h + high;
     li_add (tn^"@"^n) li; ty, li
 
-let vec_len li tn vec =
-          let ty, lif = add_field tn vec in
-          li.vl <- li.vl || lif.vl;
-          li.min_len <- li.min_len + lif.min_len;
-          li.max_len <- li.max_len + lif.max_len;
-          ty
-    
 let dep_len (p:gemstone_t) =
   let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
   let tn = tname p in
@@ -399,16 +98,14 @@ let dep_len (p:gemstone_t) =
     | Struct (_, _, fl) ->
       let dep = List.map (function
         | StructFieldSimple (vec, _) ->
-          [vec_len li tn vec]
+          let ty, lif = add_field tn vec in
+          li.vl <- li.vl || lif.vl;
+          li.min_len <- li.min_len + lif.min_len;
+          li.max_len <- li.max_len + lif.max_len;
+          [ty]
         | StructFieldSelect _ -> []) fl in
       List.flatten dep
-    | SingleFieldStruct (_, _, vec) ->
-      [vec_len li tn vec]
     | SelectStruct _ -> []
-    | Abstract (_type_name, _attrs, min, max) ->
-      li.min_len <- min;
-      li.max_len <- max;
-      []
     in
   li_add tn li;
   depl, li
@@ -455,46 +152,25 @@ let size32_name = function
   | "U32.t" -> "LP.size32_constant LP.serialize_u32 4ul ()"
   | t -> t^"_size32"
 
-(*  compile_vector o i n v:
-       where o: output stream for the .fst
-             i: output stream for the .fsti       
-             n: the name of the enclosing type,
-                used to mangle field names that may shadow
-                the type name
-             v: the field spec to be compiled
-             
-      returns: field_name : string * (original unmangled field name)
-               type_name  : string
-
-        emits: definition of type_name in the .fsti
-               and corresponding parser/serializer for the type in .fst
-*)
-let compile_vector o i n (v:vector_t) =
-    match v with 
+let rec compile_struct o i n (fl: struct_fields_t list) =
+  let li = get_leninfo n in
+  let aux = function
     | VectorSimple (ty, fn) ->
       fn, compile_type ty
-      
     | VectorSize ("opaque", fn0, k) ->
       let fn = if fn0 = n then fn0^"_field" else fn0 in
-      w i "type %s = lbytes %d\n\n" fn k; (* the type alias in the interface for this field *)
-      
-      w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" fn k; (* every type gets a parser/serializer spec *)
+      w i "type %s = lbytes %d\n\n" fn k;
+      w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" fn k;
       w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" fn k;
-      
-      w o "noextract let %s_bytesize (x:%s) = %d\n\n" fn fn k; (* byte size is specific to opaque *)
-
-      (* the "intermediate" level implementation of the parser/serializer *)
+      w o "noextract let %s_bytesize (x:%s) = %d\n\n" fn fn k;
       w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" fn k k;
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" fn k;
-      
-      (* the size of serialized data, without actually serializing *)
       w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" fn fn k;
       fn0, fn
     | VectorSize (ty, fn, k) ->
       let ty0 = compile_type ty in
       let rec aux = function 1 -> ty0 | k -> sprintf "%s * %s" (aux (k-1)) ty0 in
       w i "type %s_vector%d = %s (* FStar.Vector.raw %s %dul *)\n" ty k (aux k) ty0 k;
-
       w o "noextract let %s_vector%d_parser : LP.parser _ %s_vector%d =\n" ty k ty k;
       let c = pcombinator_name ty0 in
       let rec aux k = if k = 1 then c else sprintf "%s\n  `LP.nondep_then` %s" (aux (k-1)) c in
@@ -557,55 +233,71 @@ let compile_vector o i n (v:vector_t) =
         w o "  LP.parse32_vlarray %d %dul %d %dul %s %s %d %d ()\n\n" min min max max (scombinator_name ty0) (pcombinator_name ty0) li.min_count li.max_count;
         else *)
 
-        (*        w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s_serializer)\n\n" fn min max ty0; *)
-        w o "noextract let %s_parser : LP.parser _ %s =\n" fn fn;
+        w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s_serializer)\n\n" fn min max ty0;
+        w o "noextract let %s'_parser : LP.parser _ %s' =\n" fn fn;
         w o "  LP.parse_bounded_vldata_strong %d %d (LP.serialize_list _ %s_serializer)\n\n" min max ty0;
-        w o "noextract let %s_serializer : LP.serializer %s_parser =\n" fn fn;
+        w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" fn fn;
         w o "  LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s_serializer)\n\n" min max ty0;
-        w o "inline_for_extraction let %s_parser32 : LP.parser32 %s_parser =\n" fn fn;
+        w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" fn fn;
         w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s_serializer) (LP.parse32_list %s_parser32)\n\n" min min max max ty0 ty0;
-        w o "inline_for_extraction let %s_serializer32 : LP.serializer32 %s_serializer =\n" fn fn;
+        w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" fn fn;
         w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s_serializer %s_serializer32 ())\n\n" min max ty0 ty0;
-        w o "inline_for_extraction let %s_size32 : LP.size32 %s_serializer =\n" fn fn;
+        w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" fn fn;
         w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
         w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
         w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
         w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s_size32 ()) %dul\n\n" min max ty0 li.len_len;
-        fn, fn
+        fn, fn^"'"
        end
+    in
 
-
-let compile_struct o i n (fl: struct_fields_t list) =
-  let li = get_leninfo n in
   let fields = List.map (function
-    | StructFieldSimple (vec, _) -> compile_vector o i n vec
-    | StructFieldSelect (n, _, _) -> Printf.printf "WARNING: ignored a select()\n"; n, "") fl
-  in
+    | StructFieldSimple (vec, _) -> aux vec
+    | StructFieldSelect (sel, fl, fn0) ->
+      let fn = if n=fn0 then n^"_field" else fn0 in
+      w i "type %s =\n" fn;
+      List.iter (fun (SelectField (case, ty)) -> w i "  | %s of %s\n" (String.uppercase case) (compile_type ty)) fl;
+      w i "\n";
+      (fn0, fn)) fl
+    in
 
-  let fields = List.filter (fun (_, ty) -> ty <> "") fields in (* Drops empty fields; why permit them in the grammar anyway? *)
+  let fields = List.filter (fun (_, ty) -> ty <> "") fields in
 
   (* application type *)
-  w i "type %s = {\n" n;
-  List.iter (fun (fn, ty) ->
-    let ty =
-      if ty = "" then "" else (* Why emit an empty type? This is ill-formed in F* *)
-      (if Str.last_chars ty 1 = "'" then Str.first_chars ty (String.length ty - 1) else ty) in
-    w i "\t%s: %s;\n" fn ty) fields;
-  w i "}\n\n";
+  if fields = [] then
+    w i "type %s = lbytes 0\n\n" n
+  else
+   begin
+    w i "type %s = {\n" n;
+    List.iter (fun (fn, ty) ->
+      let ty =
+        if ty = "" then "" else
+        (if Str.last_chars ty 1 = "'" then Str.first_chars ty (String.length ty - 1) else ty) in
+      w i "\t%s: %s;\n" fn ty) fields;
+    w i "}\n\n"
+   end;
 
   (* Tuple type for nondep_then combination *)
   let tuple = List.fold_left (fun acc (_, ty) -> if acc="" then ty else sprintf "(%s * %s)" acc ty) "" fields in
+  let tuple = if fields = [] then "lbytes 0" else tuple in
+  
   w o "type %s' = %s\n\n" n tuple;
 
   (* synthethizer for tuple type *)
   w o "inline_for_extraction let synth_%s (x: %s') : %s =\n" n n n;
-  let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then fn else sprintf "(%s, %s)" acc fn) "" fields in
-  w o "  let %s = x in\n  {\n" tuple;
-  let tuple = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
-  w o "%s  }\n\n" tuple;
-  w o "inline_for_extraction let synth_%s_recip (x: %s) : %s' =\n" n n n;
-  let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then "x."^fn else sprintf "(%s, x.%s)" acc fn) "" fields in
-  w o "  %s\n\n" tuple;
+
+  if fields = [] then
+    w o "  x\n\n"
+  else
+   begin
+    let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then fn else sprintf "(%s, %s)" acc fn) "" fields in
+    w o "  let %s = x in\n  {\n" tuple;
+    let tuple = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
+    w o "%s  }\n\n" tuple;
+    w o "inline_for_extraction let synth_%s_recip (x: %s) : %s' =\n" n n n;
+    let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then "x."^fn else sprintf "(%s, x.%s)" acc fn) "" fields in
+    w o "  %s\n\n" tuple
+   end;
 
   (* synthetizer injectivity and inversion lemmas *)
   w o "let synth_%s_injective ()\n  : Lemma (LP.synth_injective synth_%s) = admit() // FIXME \n\n" n n;
@@ -614,17 +306,20 @@ let compile_struct o i n (fl: struct_fields_t list) =
 
   (* main parser combinator type *)
   w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
+  if fields = [] then w o "  LP.parse_flbytes 0";
   let tuple = List.fold_left (
     fun acc (fn, ty) ->
       let c = pcombinator_name ty in
       if acc="" then c else sprintf "%s\n  `LP.nondep_then` %s" acc c
     ) "" fields in
   w o "  %s\n\n" tuple;
+  let li = get_leninfo n in
 
   w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
   w o "noextract let %s'_parser_kind = LP.get_parser_kind %s'_parser\n\n" n n;
   w o "let %s_parser_kind_metadata = %s'_parser_kind.LP.parser_kind_metadata\n\n" n n;
   w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n li.min_len li.max_len n;
+  let li = get_leninfo n in
 
   w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
   w o "let %s_parser =\n  synth_%s_injective ();\n  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n n n;
@@ -633,6 +328,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
   (* main parser32 *)
   w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
   w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+  if fields = [] then w o "  LP.parse32_flbytes 0 0ul";
   let tuple = List.fold_left (
     fun acc (fn, ty) ->
       let c = pcombinator32_name ty in
@@ -646,6 +342,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
   (* main serializer type *)
   w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
   w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+  if fields = [] then w o "  LP.serialize_flbytes 0";
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = scombinator_name ty in
@@ -660,6 +357,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
   (* serialize32 *)
   w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
   w o "let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+  if fields = [] then w o "  LP.serialize32_flbytes 0";
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = scombinator32_name ty in
@@ -677,6 +375,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
+  if fields = [] then w o "  LP.size32_constant %s'_serializer 0ul ()" n;
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = size32_name ty in
@@ -691,46 +390,7 @@ let compile_struct o i n (fl: struct_fields_t list) =
   w o "  LP.size32_synth _ synth_%s _ %s'_size32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
   ()
 
-let compile_single_field_struct o i n vec =
-  let li = get_leninfo n in
-  let _, cfd = compile_vector o i n vec in
-  
-  (* application type *)
-  w i "type %s = %s\n" n cfd;
-
-  (* main parser combinator type *)
-  let pname = pcombinator_name cfd in
-  w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
-  w o "noextract let %s_parser_kind' = LP.get_parser_kind %s\n\n" n pname;
-  w o "let %s_parser_kind_metadata = %s_parser_kind'.LP.parser_kind_metadata\n\n" n n;
-  w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n li.min_len li.max_len n;
-
-  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
-  w o "noextract let %s_parser : LP.parser _ %s = %s\n" n n pname;
-
-  (* main parser32 *)
-  let p32name = pcombinator32_name cfd in
-  w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
-  w o "let %s_parser32 = %s\n" n p32name;
-
-  (* main serializer type *)
-  let sname = scombinator_name cfd in
-  w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
-  w o "let %s_serializer = %s\n" n sname;
-
-  (* serialize32 *)
-  let s32name = scombinator32_name cfd in
-  w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
-  w o "let %s_serializer32 = %s\n" n s32name;
-
-  (* size32 *)
-  let s32name = size32_name cfd in
-  w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n;
-  w o "let %s_size32 = %s\n" n s32name;
-  ()
-  
-let compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
-
+and compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
   let repr_t, int_z, parse_t, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
 		        with _ -> failwith ("Enum "^n^" is missing a representation hint") in
@@ -840,7 +500,7 @@ let compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
 	w o "  lemma_synth_%s%s_inj ();\n" n prime;
   w o "  parse_maybe_%s_key `LP.parse_synth` synth_%s%s\n\n" n n prime;
   w o "inline_for_extraction let parse32_maybe_%s_key : LP.parser32 parse_maybe_%s_key =\n" n n;
-  w o "  FStar.Tactics.synth_by_tactic (LP.parse32_maybe_enum_key_tac LP.parse32_%s %s_enum)\n\n" parse_t n;
+  w o "  FStar.Tactics.synth_by_tactic (LP.parse32_maybe_enum_key_tac LP.parse32_%s %s_enum parse_maybe_%s_key ())\n\n" parse_t n n;
   w o "inline_for_extraction let %s%s_parser32 : LP.parser32 %s%s_parser =\n" n prime n prime;
   w o "  lemma_synth_%s%s_inj ();\n" n prime;
   w o "  LP.parse32_synth _ synth_%s%s (fun x->synth_%s%s x) parse32_maybe_%s_key ()\n\n" n prime n prime n;
@@ -851,7 +511,7 @@ let compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
 	w o "  LP.serialize_synth _ synth_%s%s serialize_maybe_%s_key synth_%s%s_inv ()\n\n" n prime n n prime;
 	w o "inline_for_extraction let serialize32_maybe_%s_key : LP.serializer32 serialize_maybe_%s_key =\n" n n;
   w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n";
-  w o "    LP.serialize32_%s %s_enum)\n\n" parse_t n;
+  w o "    LP.serialize32_%s %s_enum serialize_maybe_%s_key ())\n\n" parse_t n n;
   w o "inline_for_extraction let %s%s_serializer32 : LP.serializer32 %s%s_serializer =\n" n prime n prime;
 	w o "  lemma_synth_%s%s_inj ();\n  lemma_synth_%s%s_inv ();\n" n prime n prime;
   w o "  LP.serialize32_synth _ synth_%s%s _ serialize32_maybe_%s_key synth_%s%s_inv (fun x->synth_%s%s_inv x) ()\n\n" n prime n n prime n prime;
@@ -872,6 +532,17 @@ let compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
   w o "  LP.size32_constant %s_serializer %dul ()\n\n" n blen;
 	()
 
+and compile_select o i n sel fl =
+  let fcase (case, ctx) =
+    let n = n ^ "_" ^ case in
+    let depl, li = dep_len (Struct (n, [], ctx)) in
+    compile_struct o i n ctx
+    in
+  List.iter fcase fl;
+  w i "type %s =\n" n;
+  List.iter (fun (case, _) -> w i "  | %s of %s_%s\n" (String.capitalize case) n case) fl;
+  w i "\n"
+
 let compile o i (p:gemstone_t) =
   let n = tname p in
   let (fst, fsti) = !headers in
@@ -883,7 +554,7 @@ let compile o i (p:gemstone_t) =
   let depl, li = dep_len p in
   let depl = List.filter (fun x -> not (basic_type x)) depl in
   let depl = List.map (fun s -> !prefix ^ (String.uncapitalize s)) depl in
-  (List.iter (w i "open %s\n") depl); (* NS: remove duplicate opens here *)
+  (List.iter (w i "open %s\n") depl);
   w i "\n";
 
   w i "module U8 = FStar.UInt8\n";
@@ -909,30 +580,19 @@ let compile o i (p:gemstone_t) =
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
-  w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 3 --max_ifuel 3\"\n\n";
-  match p with
-  | Enum(fl, _, attr) ->
-    print_string ("Attributes of enum are <" ^ (String.concat ", " attr) ^ ">\n");
-    compile_enum o i n fl (List.mem "open" attr)
+	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
+	match p with
+	| Enum(fl, _, attr) -> compile_enum o i n fl (List.mem "open" attr)
   | Struct(_, _, fl) -> compile_struct o i n fl
-  | SingleFieldStruct(name, attrs, vector) ->
-    compile_single_field_struct o i n vector
-  | _ -> ()
+  | SelectStruct(_, sel, fl) -> compile_select o i n sel fl
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =
-    match p with
-    | Abstract _ ->
-      ignore (dep_len p)
-    | _ ->
-      let n = tname p in
-      let fn = sprintf "%s/%s%s.fst" !odir !prefix n in
-      printf "Writing parsers for type <%s> to <%s>...\n" n fn;
-      let o, i =
-        try open_out fn, open_out (fn^"i")
-        with _ -> failwith "Failed to create output file"
-      in
-      compile o i p;
-      close_out o
-  in
-  List.iter aux p
+	  let n = tname p in
+		let fn = sprintf "%s/%s%s.fst" !odir !prefix n in
+	  printf "Writing parsers for type <%s> to <%s>...\n" n fn;
+		let o, i = try open_out fn, open_out (fn^"i")
+               with _ -> failwith "Failed to create output file" in
+		compile o i p;
+    close_out o
+	in List.iter aux p
