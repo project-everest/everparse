@@ -45,7 +45,7 @@ EXCLUDE_QD_MODULES=$(addprefix QD.Parse_, $(EXCLUDE_QD_TYPES_1) $(EXCLUDE_QD_TYP
 EXCLUDE_QD_FILES=$(addsuffix .fsti, $(EXCLUDE_QD_MODULES)) $(addsuffix .fst, $(EXCLUDE_QD_MODULES))
 QD_FILES = $(filter-out $(EXCLUDE_QD_FILES), $(wildcard *.fsti) $(wildcard *.fst))
 
-all: echo verify extract test
+all: echo verify test
 
 echo:
 	echo $(QD_FILES)
@@ -71,10 +71,6 @@ endif
 
 ALL_KRML_FILES := $(filter-out kremlin/prims.krml,$(ALL_KRML_FILES))
 
-extract: $(ALL_KRML_FILES) # from .depend
-	-@mkdir out
-	$(KREMLIN) -skip-compilation $^
-
 test.exe: $(ALL_KRML_FILES) kremlin/Test.krml
 	-@mkdir out
 	$(KREMLIN) $(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c $^ -o test.exe
@@ -94,4 +90,4 @@ test: test.exe $(INPUT_FILES)
 clean:
 	-rm -rf cache cache.lax .depend .depend.lax out
 
-.PHONY: all verify extract clean echo build
+.PHONY: all verify test clean echo build
