@@ -1,34 +1,28 @@
 type prog = gemstone_t list
 
 and attr = string
-
-and type_t = string
-
-and fieldName = string
-
+and typ = string
+and field = string
 and sval = int list
 
 and gemstone_t =
-	| Enum of (enum_fields_t list * type_t * attr list)
-	| Struct of (type_t * attr list * struct_fields_t list)
-	| SelectStruct of (type_t * type_t * (type_t * struct_fields_t list) list)
-        | SingleFieldStruct of (type_t * attr list * vector_t)
-        | Abstract of (type_t * attr list * int * int)
+	| Enum of attr list * enum_field_t list * typ
+	| Struct of attr list * struct_field_t list * typ
+	| Typedef of struct_field_t
+
+and type_t =
+  | TypeSimple of typ
+  | TypeSelect of field * (typ * typ) list * typ option
 
 and vector_t =
-	| VectorSimple of (type_t * type_t)
-	| VectorSize of (type_t * type_t * int)
-	| VectorSymbolic of (type_t * type_t * type_t)
-	| VectorRange of (type_t * type_t * (int * int))
+	| VectorNone
+	| VectorFixed of int
+	| VectorSymbolic of field
+	| VectorRange of int * int
 
-and enum_fields_t =
-	| EnumFieldSimple of (type_t * int)
-	| EnumFieldRange of (type_t * int * int)
+and enum_field_t =
+	| EnumFieldSimple of (typ * int)
+	| EnumFieldRange of (typ * int * int)
 	| EnumFieldAnonymous of int
 
-and struct_fields_t =
-	| StructFieldSimple of (vector_t * sval option)
-	| StructFieldSelect of (type_t * select_fields_t list * type_t)
-
-and select_fields_t =
-	| SelectField of (type_t * type_t)
+and struct_field_t = attr list * type_t * field * vector_t * sval option

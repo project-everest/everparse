@@ -24,17 +24,18 @@ let log256 k =
   else if k <= 16777215 then 3
   else 4
 
-let tname (p:gemstone_t) =
+let tname (p:gemstone_t) : string =
   let aux = function
-		| Enum (_, n, _) -> n
-		| Struct (n, _, _) -> n
-		| SelectStruct(n, _, _) -> n
+		| Enum (_, _, n) -> n
+		| Struct (_, _, n) -> n
+    | Typedef (_, _, n, _, _) -> n
 	in String.uncapitalize (aux p)
 
-let get_leninfo (t:type_t) =
+let get_leninfo (t:typ) =
   try SM.find (String.uncapitalize t) !linfo
   with _ -> failwith ("Failed lookup for type "^t)
 
+(*
 let li_add (s:string) (li:len_info) =
   printf "LINFO<%s>: vl=%s lenLen=%d minLen=%d maxLen=%d minCount=%d maxCount=%d\n" s (if li.vl then "yes" else "no") li.len_len li.min_len li.max_len li.min_count li.max_count;
   linfo := SM.add s li !linfo
@@ -43,7 +44,7 @@ let basic_type = function
   | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" -> true
   | _ -> false
 
-let sizeof (t:type_t) =
+let sizeof (t:typ) =
   match t with
   | "opaque"
   | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; vl = false; }
@@ -280,7 +281,7 @@ let rec compile_struct o i n (fl: struct_fields_t list) =
   (* Tuple type for nondep_then combination *)
   let tuple = List.fold_left (fun acc (_, ty) -> if acc="" then ty else sprintf "(%s * %s)" acc ty) "" fields in
   let tuple = if fields = [] then "lbytes 0" else tuple in
-  
+
   w o "type %s' = %s\n\n" n tuple;
 
   (* synthethizer for tuple type *)
@@ -542,6 +543,7 @@ and compile_select o i n sel fl =
   w i "type %s =\n" n;
   List.iter (fun (case, _) -> w i "  | %s of %s_%s\n" (String.capitalize case) n case) fl;
   w i "\n"
+*)
 
 let compile o i (p:gemstone_t) =
   let n = tname p in
@@ -551,11 +553,13 @@ let compile o i (p:gemstone_t) =
   w i "module %s%s\n\n" !prefix n;
   w i "open %s\n" !bytes;
 
+(*
   let depl, li = dep_len p in
   let depl = List.filter (fun x -> not (basic_type x)) depl in
   let depl = List.map (fun s -> !prefix ^ (String.uncapitalize s)) depl in
   (List.iter (w i "open %s\n") depl);
   w i "\n";
+*)
 
   w i "module U8 = FStar.UInt8\n";
   w i "module U16 = FStar.UInt16\n";
@@ -569,7 +573,7 @@ let compile o i (p:gemstone_t) =
   w o "module %s%s\n\n" !prefix n;
 
   w o "open %s\n" !bytes;
-  (List.iter (w o "open %s\n") depl);
+  (* (List.iter (w o "open %s\n") depl); *)
   w o "\n";
 
   w o "module U8 = FStar.UInt8\n";
@@ -582,9 +586,9 @@ let compile o i (p:gemstone_t) =
 
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
 	match p with
-	| Enum(fl, _, attr) -> compile_enum o i n fl (List.mem "open" attr)
-  | Struct(_, _, fl) -> compile_struct o i n fl
-  | SelectStruct(_, sel, fl) -> compile_select o i n sel fl
+	| Enum(attr, fl, n) ->  () (*compile_enum o i n fl (List.mem "open" attr)*)
+  | Struct(attr, fl, n) -> () (*compile_struct o i n fl *)
+  | Typedef(attr, ty, n, vec, def) -> () (*compile_select o i n sel fl*)
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =

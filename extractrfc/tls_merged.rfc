@@ -18,6 +18,8 @@ this can happen for one of the following reasons:
     (e.g. capturing more precise dependency, such as extension body)
 */
 
+struct {} Empty;
+
 /**
 Protocol version
 The RFC defines this as
@@ -39,7 +41,6 @@ enum /*@open*/ {
   TLS_1p1 (0x0302),
   TLS_1p2 (0x0303),
   TLS_1p3 (0x0304),
-  TLS_1p3_draft28 (0x7f1c),
   (65535)
 } ProtocolVersion;
 
@@ -73,7 +74,6 @@ enum /*@open*/ /*@abstract*/ {
 } ServerRandom
 
 struct {
-
   HRRExtensions ext;
 } HRRBody;
 
@@ -158,7 +158,7 @@ struct {
 } ServerName;
 
 struct {
-  ServerName server_name_list<1..2^16-1>
+  ServerName server_name_list<1..2^16-1>;
 } ServerNameList;
 
 /**
@@ -175,7 +175,7 @@ Certificate Status request (OCSP)
 https://tools.ietf.org/html/rfc6066#section-8
 **/
 
-enum /*@open*/ {
+enum {
   ocsp(1), (255)
 } CertificateStatusType;
 
@@ -252,7 +252,7 @@ enum /*@open*/ {
 } ECPointFormat;
 
 struct {
-  ECPointFormat ec_point_format_list<1..2^8-1>
+  ECPointFormat ec_point_format_list<1..2^8-1>;
 } ECPointFormatList;
 
 /**
@@ -336,7 +336,7 @@ https://tools.ietf.org/html/rfc7301#section-3.1
 opaque ProtocolName<1..2^8-1>;
 
 struct {
-    ProtocolName protocol_name_list<2..2^16-1>
+    ProtocolName protocol_name_list<2..2^16-1>;
 } ProtocolNameList;
 
 /**
@@ -347,7 +347,7 @@ https://tools.ietf.org/html/rfc6962#section-3.3.1
 opaque SerializedSCT<1..2^16-1>;
 
 struct {
-    SerializedSCT sct_list <1..2^16-1>;
+    SerializedSCT sct_list<1..2^16-1>;
 } SignedCertificateTimestampList;
 
 /**
@@ -386,7 +386,7 @@ struct {
 } ZeroByte;
 
 struct {
-  ZeroByte padding<0..2^16-1>
+  ZeroByte padding<0..2^16-1>;
 } PaddingExtension;
 
 /**
@@ -487,8 +487,8 @@ https://tools.ietf.org/html/rfc8446#section-4.2.5
 **/
 
 struct {
-    opaque certificate_extension_oid<1..2^8-1>;
-    opaque certificate_extension_values<0..2^16-1>;
+  opaque certificate_extension_oid<1..2^8-1>;
+  opaque certificate_extension_values<0..2^16-1>;
 } OIDFilter;
 
 struct {
@@ -506,9 +506,9 @@ https://tools.ietf.org/html/rfc8446#section-4.2.8
 **/
 
 struct {
-    uint8 legacy_form = 4;
-    opaque X[32];
-    opaque Y[32];
+  uint8 legacy_form = 4;
+  opaque X[32];
+  opaque Y[32];
 } UncompressedPointRepresentation32;
 
 struct {
@@ -614,6 +614,40 @@ opaque UnknownExtension<0..2^16-1>;
 
 struct {
   ExtensionType extension_type;
+  uint16 body_len;
+  select(extension_type)
+  {
+    case server_name: Empty; /* Acknowledge, for TLS 1.2 SH */
+    case max_fragment_length: MaxFragmentLength; /* Must echo back the same offer */
+    case status_request: Empty; /* Actual data sent in protocol message */
+    case ec_point_formats: ECPointFormatList;
+    case use_srtp: UseSRTPData;
+    case heartbeat: HeartbeatMode;
+    case application_layer_protocol_negotiation: ProtocolNameList;
+    case signed_certificate_timestamp: SignedCertificateTimestampList;
+    case client_certificate_type: ClientCertTypeClientExtension;
+    case server_certificate_type: ServerCertTypeClientExtension;
+    case padding: PaddingExtension;
+    case encrypt_then_mac: Empty;
+    case extended_master_secret: Empty;
+    case session_ticket: SessionTicket;
+    case pre_shared_key: PreSharedKeyClientExtension;
+    case early_data: Empty;
+    case supported_versions: SupportedVersionsClient;
+    case cookie: Cookie;
+    case psk_key_exchange_modes: PskKeyExchangeModes;
+    case certificate_authorities: CertificateAuthoritiesExtension;
+    case oid_filters: OIDFilterExtension;
+    case post_handshake_auth: Empty;
+    case signature_algorithms_cert: SignatureSchemeList;
+    case key_share: KeyShareClientHello;
+    default: UnknownExtension;
+  } extension_data[body_len];
+} ClientHelloExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 body_len;
   select(extension_type)
   {
     case server_name: ServerNameList;
@@ -643,8 +677,14 @@ struct {
     case signature_algorithms_cert: SignatureSchemeList;
     case key_share: KeyShareClientHello;
     default: UnknownExtension;
-  } extension_data;
-} ClientHelloExtension;
+  } extension_data[body_len];
+} ServerHelloExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 body_len;
+  opqaue body[body_len];
+} NewSessionTicketExtension;
 
 /* End of extensions */
 /* Alert Types */
@@ -690,47 +730,38 @@ struct {
 /* Record Types */
 
 enum {
-          invalid(0),
-          change_cipher_spec(20),
-          alert(21),
-          handshake(22),
-          application_data(23),
-          (255)
-      } ContentType;
+  invalid(0),
+  change_cipher_spec(20),
+  alert(21),
+  handshake(22),
+  application_data(23),
+  (255)
+} ContentType;
 
 struct {
-          ContentType content_type;
-          ProtocolVersion legacy_record_version;
-          opaque fragment<0..2^16-1>;
-/*
-          uint16 length;
-          opaque fragment[TLSPlaintext.length];
-*/
-      } TLSPlaintext;
+  ContentType content_type;
+  ProtocolVersion legacy_record_version;
+  uint16 length;
+  opaque fragment[length];
+} TLSPlaintext;
 
 /*
 struct {
-          opaque content[TLSPlaintext.length];
-          ContentType type;
-          uint8 zeros[length_of_padding];
-      } TLSInnerPlaintext;
+  opaque content[TLSPlaintext.length];
+  ContentType type;
+  uint8 zeros[length_of_padding];
+} TLSInnerPlaintext;
 */
 
 struct {
-          ContentType opaque_type = application_data(23); /* 23 */
-          ProtocolVersion legacy_record_version = { 3, 3 }; /* TLS v1.2 */
-          opaque encrypted_record<0..2^16-1>;
-/*
-          uint16 length;
-          opaque encrypted_record[TLSCiphertext.length];
-*/
-      } TLSCiphertext;
+  ContentType opaque_type;
+  ProtocolVersion version;
+  opaque encrypted_record<0..2^16-1>;
+} TLSCiphertext;
 
 /* HANDSHAKE TYPES */
 
-struct {
-  opaque random_bytes[32];
-} Random;
+opaque Random[32];
 
 /**
 Cipher suites are defined as
@@ -756,7 +787,7 @@ enum /*@open*/ {
   TLS_RSA_WITH_IDEA_CBC_SHA(0x0007),
   TLS_RSA_EXPORT_WITH_DES40_CBC_SHA(0x0008),
   TLS_RSA_WITH_DES_CBC_SHA(0x0009),
-  TLS_RSA_WITH_3DES_EDE_CBC_SHA(0x000A)
+  TLS_RSA_WITH_3DES_EDE_CBC_SHA(0x000A),
   TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA(0x000B),
   TLS_DH_DSS_WITH_DES_CBC_SHA(0x000C),
   TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA(0x000D),
@@ -1088,70 +1119,65 @@ enum /*@open*/ {
   (65535)
 } CipherSuite;
 
+opaque SessionID<0..32>;
+
+enum /*@open*/ { null(0), (255) } CompressionMethod;
+
+/** Shared Handshake Message Types **/
+
 struct {
-  ProtocolVersion legacy_version = { 3, 3 };    /* TLS v1.2 */
+  ProtocolVersion version;
   Random random;
-  opaque session_id<0..32>;
+  SessionID session_id;
   CipherSuite cipher_suites<2..2^16-2>;
-  opaque legacy_compression_methods<1..2^8-1>;
-  ClientHelloExtension extensions<8..2^16-1>;
+  CompressionMethod compression_method<1..2^8-1>;
+  /*@option*/ ClientHelloExtension extensions<2..2^16-1>;
  } ClientHello;
 
 struct {
-  ProtocolVersion legacy_version = { 3, 3};     /* TLS v1.2 */
+  ProtocolVersion version;
   Random random;
-  opaque session_id<0..32>;
+  SessionID session_id;
   CipherSuite cipher_suite;
-  uint8 legacy_compression_method = { 0 };
-  ServerHelloExtension extensions<6..2^16-1>;
+  CompressionMethod compression_method;
+  ServerHelloExtension extensions<2..2^16-1>;
 } ServerHello;
 
-struct {
-  EncryptedExtension extensions<0..2^16-1>;
-} EncryptedExtensions;
+/** TLS 1.3 Handshake Messages */
+
+EncryptedExtension EncryptedExtensions<0..2^16-1>;
 
 struct {
   opaque certificate_request_context<0..2^8-1>;
   Extension extensions<2..2^16-1>;
-} CertificateRequest;
+} CertificateRequest13;
 
 struct {
-/*
-          select (certificate_type) {
-              case RawPublicKey:
-                opaque ASN1_subjectPublicKeyInfo<1..2^24-1>;
-		Extension extensions<0..2^16-1>;
-
-              case X509:
-*/
-                opaque cert_data<1..2^24-1>;
-		Extension extensions<0..2^16-1>;
-/*          }; */
-      } CertificateEntry;
+  opaque cert_data<1..2^24-1>;
+	CertificateExtension extensions<0..2^16-1>;
+} CertificateEntry13;
 
 struct {
-          opaque certificate_request_context<0..2^8-1>;
-          CertificateEntry certificate_list<0..2^24-1>;
-      } Certificate;
+  opaque certificate_request_context<0..2^8-1>;
+  CertificateEntry13 certificate_list<0..2^24-1>;
+} Certificate13;
 
 struct {
-          SignatureScheme algorithm;
-          opaque signature<0..2^16-1>;
-      } CertificateVerify;
+  SignatureScheme algorithm;
+  opaque signature<0..2^16-1>;
+} CertificateVerify13;
 
 struct {
-          opaque verify_data[Hash.length];
-      } Finished;
-
-/* struct {} EndOfEarlyData; */
+  opaque verify_data[Hash.length];
+} Finished;
 
 struct {
   uint32 ticket_lifetime;
   uint32 ticket_age_add;
   opaque ticket_nonce<0..255>;
   opaque ticket<1..2^16-1>;
-  Extension extensions<0..2^16-2>;
-} NewSessionTicket;
+  NewSessionTicketExtension extensions<0..2^16-2>;
+} NewSessionTicket13;
 
 enum {
   update_not_requested(0), update_requested(1), (255)
@@ -1183,18 +1209,102 @@ enum {
 } HandshakeType;
 
 struct {
-  HandshakeType msg_type;    /* handshake type */
-  uint24 length;             /* bytes in message */
+  HandshakeType msg_type;
+  uint24 length;
   select (Handshake.msg_type) {
     case client_hello:          ClientHello;
     case server_hello:          ServerHello;
-    case end_of_early_data:     EndOfEarlyData;
-    case encrypted_extensions:  EncryptedExtensions;
-    case certificate_request:   CertificateRequest;
-    case certificate:           Certificate;
-    case certificate_verify:    CertificateVerify;
-    case finished:              Finished;
-    case new_session_ticket:    NewSessionTicket;
-    case key_update:            KeyUpdate;
-  } body;
+  } body[length];
 } Handshake;
+
+struct {
+  HandshakeType msg_type;
+  uint24 length;
+  select (Handshake.msg_type) {
+    case end_of_early_data:     Empty;
+    case encrypted_extensions:  EncryptedExtensions;
+    case certificate_request:   CertificateRequest13;
+    case certificate:           Certificate13;
+    case certificate_verify:    CertificateVerify13;
+    case finished:              Finished;
+    case new_session_ticket:    NewSessionTicket13;
+    case key_update:            KeyUpdate;
+  } body[length];
+} Handshake13;
+
+struct {
+  opaque signature<0..2^16-1>;
+} CertificateVerify12;
+
+opaque ASN1Cert<1..2^24-1>;
+
+struct {
+  ASN1Cert certificate_list<0..2^24-1>;
+} Certificate12;
+
+enum { dhe_dss, dhe_rsa, dh_anon, rsa, dh_dss, dh_rsa } KeyExchangeAlgorithm;
+
+struct {
+  ServerDHParams params;
+} DHAnonServerKeyExchange;
+
+struct {
+  opaque client_random[32];
+  opaque server_random[32];
+  ServerDHParams params;
+} SignedDHParams;
+
+struct {
+  SignedDHParams params;
+  SignatureAndHashAlgorithm algorithm;
+  opaque signature<0..2^16-1>;
+} SignedDHKeyExchange;
+
+struct {
+  /*@implicit*/ KeyExchangeAlgorithm kex;
+  select (kex) {
+    case dh_anon: DHAnonServerKeyExchange;
+    case dhe_dss: SignedDHKeyExchange;
+    case dhe_rsa: SignedDHKeyExchange;
+  } key_exchange;
+} ServerKeyExchange;
+
+struct {
+  ProtocolVersion client_version;
+  opaque pms[46];
+} PreMasterSecret;
+
+struct {
+  opaque encrypted_pms<0..2^16-1>;
+} EncryptedPreMasterSecret;
+
+struct {
+  opaque dh_Yc<1..2^16-1>;
+} ClientDiffieHellmanPublic;
+
+struct {
+  /*@implicit*/ KeyExchangeAlgorithm kex;
+  select (kex) {
+      case rsa:     EncryptedPreMasterSecret;
+      case dhe_dss: ClientDiffieHellmanPublic;
+      case dhe_rsa: ClientDiffieHellmanPublic;
+      case dh_dss:  Empty;
+      case dh_rsa:  Empty;
+      case dh_anon: Empty;
+  } exchange_keys;
+} ClientKeyExchange;
+
+struct {
+  HandshakeType msg_type;
+  uint24 length;
+  select (HandshakeType) {
+    case hello_request:       Empty;
+    case certificate:         Certificate12;
+    case server_key_exchange: ServerKeyExchange;
+    case certificate_request: CertificateRequest12;
+    case server_hello_done:   Empty;
+    case certificate_verify:  CertificateVerify12;
+    case client_key_exchange: ClientKeyExchange;
+    case finished:            Finished;
+  } body[length];
+} Handshake12;
