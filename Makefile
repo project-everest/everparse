@@ -8,7 +8,7 @@ qd: $(wildcard src/*.ml*)
 	ln -sf quackyducky.native qd
 	touch qd
 
-RFC=extractrfc/tls13_draft28.rfc
+RFC=extractrfc/tls_merged.rfc
 
 out/Makefile: qd $(RFC)
 	mkdir -p out

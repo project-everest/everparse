@@ -19,6 +19,7 @@ and vector_t =
 	| VectorFixed of int
 	| VectorSymbolic of field
 	| VectorRange of int * int
+	| VectorVldata of typ
 
 and enum_field_t =
 	| EnumFieldSimple of (typ * int)

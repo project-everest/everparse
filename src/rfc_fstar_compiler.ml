@@ -14,7 +14,10 @@ type len_info = {
 }
 
 (* Recording the boundaries of variable length structures *)
-let linfo : len_info SM.t ref = ref (SM.empty)
+let linfo : len_info SM.t ref = ref SM.empty
+
+(* Storage of inlined types *)
+let inliners: gemstone_t SM.t ref = ref SM.empty
 
 let w = fprintf
 
@@ -31,89 +34,50 @@ let tname (p:gemstone_t) : string =
     | Typedef (_, _, n, _, _) -> n
 	in String.uncapitalize (aux p)
 
+let attr_of = function
+  | Enum (a, _, _) -> a
+  | Struct (a, _, _) -> a
+  | Typedef (a, _, _, _, _) -> a
+
+let has_attr (a:attr list) (s:attr) = List.mem s a
+
 let get_leninfo (t:typ) =
   try SM.find (String.uncapitalize t) !linfo
   with _ -> failwith ("Failed lookup for type "^t)
 
-(*
 let li_add (s:string) (li:len_info) =
-  printf "LINFO<%s>: vl=%s lenLen=%d minLen=%d maxLen=%d minCount=%d maxCount=%d\n" s (if li.vl then "yes" else "no") li.len_len li.min_len li.max_len li.min_count li.max_count;
+  printf "LINFO<%s>: vl=%s lenLen=%d minLen=%d maxLen=%d minCount=%d maxCount=%d\n"
+    s (if li.vl then "yes" else "no") li.len_len li.min_len li.max_len li.min_count li.max_count;
+  if SM.mem s !linfo then failwith (sprintf "Duplicate type definition: %s\n" s);
   linfo := SM.add s li !linfo
 
 let basic_type = function
   | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" -> true
   | _ -> false
 
-let sizeof (t:typ) =
-  match t with
-  | "opaque"
-  | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; vl = false; }
-  | "uint16" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; }
-  | "uint24" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; }
-  | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; }
-  | s ->
-    let li = get_leninfo t in
-    {li with len_len = li.len_len} (* Copy *)
+let rec sizeof = function
+  | TypeSelect(n, cl, def) ->
+    let lil = (List.map (fun (_,ty) -> get_leninfo ty) cl)
+              @ (match def with None -> [] | Some ty -> [get_leninfo ty]) in
+    let li = { len_len = 0; min_len = max_int; max_len = 0; min_count = 0; max_count = 0; vl = false; } in
+    List.iter (fun l ->
+      li.min_len <- min li.min_len l.min_len;
+      li.max_len <- max li.max_len l.max_len;
+      if l.vl then li.vl <- true;
+    ) lil; li
+  | TypeSimple typ ->
+    match typ with
+    | "opaque"
+    | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; vl = false; }
+    | "uint16" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; }
+    | "uint24" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; }
+    | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; }
+    | s ->
+      let li = get_leninfo s in
+      {li with len_len = li.len_len} (* shallow copy *)
 
-let add_field (tn:type_t) (v:vector_t) =
-  match v with
-  | VectorSimple (ty, n) ->
-    let li = sizeof ty in
-    li_add (tn^"@"^n) li; ty, li
-  | VectorSize (ty, n, k) ->
-    let li = sizeof ty in
-    li.len_len <- 0;
-    li.min_len <- li.min_len * k;
-    li.max_len <- li.max_len * k;
-    li.min_count <- k;
-    li.max_count <- k;
-    li_add (tn^"@"^n) li; ty, li
-  | VectorSymbolic (ty, n, cst) ->
-    let li = sizeof ty in
-    li.vl <- true;
-    li_add (tn^"@"^n) li; ty, li
-  | VectorRange (ty, n, (low, high)) ->
-    let li = sizeof ty in
-    let h = log256 high in
-    li.vl <- true;
-    (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^ty));
-    li.min_count <- low / (li.len_len + li.max_len);
-    li.max_count <- high / (li.len_len + li.min_len);
-    li.len_len <- h;
-    li.min_len <- h + low;
-    li.max_len <- h + high;
-    li_add (tn^"@"^n) li; ty, li
-
-let dep_len (p:gemstone_t) =
-  let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
-  let tn = tname p in
-  let depl = match p with
-    | Enum (fl, n, attr) ->
-      let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
-              with _ -> failwith ("Enum "^n^" is missing a representation hint") in
-      (match m with
-      | EnumFieldAnonymous 255 -> li.min_len <- 1; li.max_len <- 1
-      | EnumFieldAnonymous 65535 -> li.min_len <- 2; li.max_len <- 2
-      | EnumFieldAnonymous 4294967295 -> li.min_len <- 4; li.max_len <- 4);
-      []
-    | Struct (_, _, fl) ->
-      let dep = List.map (function
-        | StructFieldSimple (vec, _) ->
-          let ty, lif = add_field tn vec in
-          li.vl <- li.vl || lif.vl;
-          li.min_len <- li.min_len + lif.min_len;
-          li.max_len <- li.max_len + lif.max_len;
-          [ty]
-        | StructFieldSelect _ -> []) fl in
-      List.flatten dep
-    | SelectStruct _ -> []
-    in
-  li_add tn li;
-  depl, li
-
-let abs (n:type_t) =
-  let n = String.uncapitalize n in
-	!prefix ^ n ^ "." ^ n
+let abs (n:typ) =
+	!prefix ^ (String.uncapitalize n)
 
 let compile_type = function
   | "opaque"
@@ -153,245 +117,94 @@ let size32_name = function
   | "U32.t" -> "LP.size32_constant LP.serialize_u32 4ul ()"
   | t -> t^"_size32"
 
-let rec compile_struct o i n (fl: struct_fields_t list) =
-  let li = get_leninfo n in
-  let aux = function
-    | VectorSimple (ty, fn) ->
-      fn, compile_type ty
-    | VectorSize ("opaque", fn0, k) ->
-      let fn = if fn0 = n then fn0^"_field" else fn0 in
-      w i "type %s = lbytes %d\n\n" fn k;
-      w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" fn k;
-      w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" fn k;
-      w o "noextract let %s_bytesize (x:%s) = %d\n\n" fn fn k;
-      w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" fn k k;
-      w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" fn k;
-      w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" fn fn k;
-      fn0, fn
-    | VectorSize (ty, fn, k) ->
-      let ty0 = compile_type ty in
-      let rec aux = function 1 -> ty0 | k -> sprintf "%s * %s" (aux (k-1)) ty0 in
-      w i "type %s_vector%d = %s (* FStar.Vector.raw %s %dul *)\n" ty k (aux k) ty0 k;
-      w o "noextract let %s_vector%d_parser : LP.parser _ %s_vector%d =\n" ty k ty k;
-      let c = pcombinator_name ty0 in
-      let rec aux k = if k = 1 then c else sprintf "%s\n  `LP.nondep_then` %s" (aux (k-1)) c in
-      w o "  %s\n\n" (aux k);
-      w o "inline_for_extraction let %s_vector%d_parser32 : LP.parser32 %s_vector%d_parser =\n" ty k ty k;
-      let c = pcombinator32_name ty0 in
-      let rec aux k = if k = 1 then c else sprintf "%s\n  `LP.parse32_nondep_then` %s" (aux (k-1)) c in
-      w o "  %s\n\n" (aux k);
-      w o "noextract let %s_vector%d_serializer : LP.serializer %s_vector%d_parser =\n" ty k ty k;
-      let c = scombinator_name ty0 in
-      let rec aux k = if k = 1 then c else sprintf "LP.serialize_nondep_then _ (%s) ()\n  _ %s" (aux (k-1)) c in
-      w o "  %s\n\n" (aux k);
-      w o "inline_for_extraction let %s_vector%d_serializer32 : LP.serializer32 %s_vector%d_serializer =\n" ty k ty k;
-      let c = scombinator32_name ty0 in
-      let rec aux k = if k = 1 then c else sprintf "LP.serialize32_nondep_then (%s) ()\n  %s ()" (aux (k-1)) c in
-      w o "  %s\n\n" (aux k);
-      w o "inline_for_extraction let %s_vector%d_size32 : LP.size32 %s_vector%d_serializer =\n" ty k ty k;
-      let c = size32_name ty0 in
-      let rec aux k = if k = 1 then c else sprintf "LP.size32_nondep_then (%s) ()\n  (%s)" (aux (k-1)) c in
-      w o "  %s\n\n" (aux k);
-      fn, sprintf "%s_vector%d" ty k (*aux k*)
-    | VectorSymbolic (ty, fn, cst) ->
-      let ty0 = compile_type ty in
-      fn, sprintf "FStar.Vector.raw %s %s" ty0 cst
-    | VectorRange ("opaque", fn0, (low, high)) ->
-      let fn = if fn0 = n then fn0^"_field" else fn0 in
-      w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" fn low high;
-      w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" fn low high;
-      w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" fn low high;
-      w o "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" fn fn fn;
-      w o "inline_for_extraction let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" fn low low high high;
-      w o "inline_for_extraction let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" fn low high;
-      w o "inline_for_extraction let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" fn low high (log256 high);
-      fn0, fn
-    | VectorRange (ty, fn, (low, high)) ->
-      let li = get_leninfo (n^"@"^fn) in
-      let ty0 = compile_type ty in
-      if li.min_len = li.max_len then
-        (fn, sprintf "l:list %s{%d <= L.length l /\\ L.length l <= %d}" ty0 li.min_count li.max_count)
-      else
-       begin
-        (* refined field type with variable length constraint *)
-        let (min, max) = (li.min_len-li.len_len), (li.max_len-li.len_len) in
-        w i "noextract val %s_bytesize: list %s -> GTot nat\n" fn ty0;
-        w o "let %s_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s_serializer) x)\n\n" fn ty0;
-        w i "inline_for_extraction val %s_bytesize32: x:list %s -> y:U32.t{\n" fn ty0;
-        w i "  let s = %s_bytesize x in\n  if s > U32.v (LP.u32_max) then y == LP.u32_max else U32.v y == s}\n\n" fn;
-        w o "let %s_bytesize32 x = LP.size32_list %s_size32 () x\n\n" fn ty0;
-        w i "type %s = l:list %s{let x = %s_bytesize l in %d <= x /\\ x <= %d}\n\n" fn ty0 fn min max;
+let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
+  let qname = if tn = "" then n else tn^"@"^n in
+  let li = sizeof ty in
+  let li' =
+    match v with
+    | VectorNone -> li
+    | VectorFixed k ->
+      {li with
+        min_len = k;
+        max_len = k;
+        min_count = k / li.min_len;
+        max_count = k / li.max_len;
+      }
+    | VectorVldata tn ->
+      let (len_len, max_len) = match tn with
+        | "uint8" -> 1, 256 | "uint16" -> 2, 65536
+        | "uint24" -> 3, 16777216 | "uint32" -> 4, 4294967296
+        | _ -> failwith "bad vldata" in
+      {li with min_len = len_len; max_len = max_len; vl = true; }
+    | VectorSymbolic cst ->
+      if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
+      get_leninfo (tn^"@"^cst)
+    | VectorRange (low, high) ->
+      let h = log256 high in
+      (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^tn));
+      { li with
+        vl = true;
+        min_count = low / (li.len_len + li.max_len);
+        max_count = high / (li.len_len + li.min_len);
+        len_len = h;
+        min_len = h + low;
+        max_len = h + high; }
+      in
+    li_add qname li'
 
-        (* vldata list parser *)
-        (** TODO replace parse_bounded_vldata_strong with parse32_vlarray *)
-        (* if li.max_len = li.min_len then
-        w o "let %s_parser : LP.parser _ %s =\n" fn fn;
-        w o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" min max (pcombinator_name ty0) li.min_count li.max_count;
-        w o "  LP.parse_vlarray %d %d %s %d %d ()\n\n" min max (scombinator_name ty0) li.min_count li.max_count;
-        w o "let %s_serializer : LP.serializer %s_parser =\n" fn fn;
-        w o "  LP.serialize_vlarray %d %d %s %d %d ()\n\n" min max (scombinator_name ty0) li.min_count li.max_count;
-        w o "let %s_parser32 : LP.parser32 %s =\n" fn fn;
-        w o "  LP.parse32_vlarray %d %dul %d %dul %s %s %d %d ()\n\n" min min max max (scombinator_name ty0) (pcombinator_name ty0) li.min_count li.max_count;
-        else *)
+let typedep = function
+  | TypeSimple ty -> [ty]
+  | TypeSelect (_, l, o) ->
+    let l = List.map (fun (_, ty)->ty) l in
+    match o with None -> l | Some ty -> ty :: l
 
-        w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s_serializer)\n\n" fn min max ty0;
-        w o "noextract let %s'_parser : LP.parser _ %s' =\n" fn fn;
-        w o "  LP.parse_bounded_vldata_strong %d %d (LP.serialize_list _ %s_serializer)\n\n" min max ty0;
-        w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" fn fn;
-        w o "  LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s_serializer)\n\n" min max ty0;
-        w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" fn fn;
-        w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s_serializer) (LP.parse32_list %s_parser32)\n\n" min min max max ty0 ty0;
-        w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" fn fn;
-        w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s_serializer %s_serializer32 ())\n\n" min max ty0 ty0;
-        w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" fn fn;
-        w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
-        w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
-        w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
-        w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s_size32 ()) %dul\n\n" min max ty0 li.len_len;
-        fn, fn^"'"
-       end
+let dedup l =
+  let r = ref [] in
+  List.iter (fun x -> if not (List.mem x !r) then r := x::!r) l;
+  List.rev !r
+
+let getdep (p:gemstone_t) : typ list =
+  let tn = tname p in
+  let dep =
+    match p with
+    | Enum (_, fl, n) ->
+      let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
+              with _ -> failwith ("Enum "^n^" is missing a representation hint") in
+      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
+      (match m with
+      | EnumFieldAnonymous 255 -> li.min_len <- 1; li.max_len <- 1
+      | EnumFieldAnonymous 65535 -> li.min_len <- 2; li.max_len <- 2
+      | EnumFieldAnonymous 4294967295 -> li.min_len <- 4; li.max_len <- 4);
+      li_add tn li; ([]:typ list list)
+    | Struct (_, fl, _) ->
+      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
+      let dep = List.map (fun (al, ty, n, vec, def) ->
+        add_field tn n ty vec;
+        let lif = get_leninfo (tn^"@"^n) in
+        li.vl <- li.vl || lif.vl;
+        li.min_len <- li.min_len + lif.min_len;
+        li.max_len <- li.max_len + lif.max_len;
+        typedep ty) fl in
+      li_add tn li; dep
+    | Typedef (al, ty, n, vec, def) ->
+      add_field "" (String.uncapitalize n) ty vec;
+      [typedep ty]
     in
+  dedup (List.flatten dep)
 
-  let fields = List.map (function
-    | StructFieldSimple (vec, _) -> aux vec
-    | StructFieldSelect (sel, fl, fn0) ->
-      let fn = if n=fn0 then n^"_field" else fn0 in
-      w i "type %s =\n" fn;
-      List.iter (fun (SelectField (case, ty)) -> w i "  | %s of %s\n" (String.uppercase case) (compile_type ty)) fl;
-      w i "\n";
-      (fn0, fn)) fl
-    in
+let write_api c n bmin bmax =
+  w c "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
+  w c "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n bmin bmax n;
+  w c "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
+  w c "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
+  w c "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" n n n;
+  w c "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
+  w c "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
+  w c "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n
 
-  let fields = List.filter (fun (_, ty) -> ty <> "") fields in
+let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
+  let is_open = has_attr al "open" in
 
-  (* application type *)
-  if fields = [] then
-    w i "type %s = lbytes 0\n\n" n
-  else
-   begin
-    w i "type %s = {\n" n;
-    List.iter (fun (fn, ty) ->
-      let ty =
-        if ty = "" then "" else
-        (if Str.last_chars ty 1 = "'" then Str.first_chars ty (String.length ty - 1) else ty) in
-      w i "\t%s: %s;\n" fn ty) fields;
-    w i "}\n\n"
-   end;
-
-  (* Tuple type for nondep_then combination *)
-  let tuple = List.fold_left (fun acc (_, ty) -> if acc="" then ty else sprintf "(%s * %s)" acc ty) "" fields in
-  let tuple = if fields = [] then "lbytes 0" else tuple in
-
-  w o "type %s' = %s\n\n" n tuple;
-
-  (* synthethizer for tuple type *)
-  w o "inline_for_extraction let synth_%s (x: %s') : %s =\n" n n n;
-
-  if fields = [] then
-    w o "  x\n\n"
-  else
-   begin
-    let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then fn else sprintf "(%s, %s)" acc fn) "" fields in
-    w o "  let %s = x in\n  {\n" tuple;
-    let tuple = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
-    w o "%s  }\n\n" tuple;
-    w o "inline_for_extraction let synth_%s_recip (x: %s) : %s' =\n" n n n;
-    let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then "x."^fn else sprintf "(%s, x.%s)" acc fn) "" fields in
-    w o "  %s\n\n" tuple
-   end;
-
-  (* synthetizer injectivity and inversion lemmas *)
-  w o "let synth_%s_injective ()\n  : Lemma (LP.synth_injective synth_%s) = admit() // FIXME \n\n" n n;
-  w o "let synth_%s_inverse ()\n  : Lemma (LP.synth_inverse synth_%s synth_%s_recip) =\n" n n n;
-  w o "  assert_norm (LP.synth_inverse synth_%s synth_%s_recip)\n\n" n n;
-
-  (* main parser combinator type *)
-  w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
-  if fields = [] then w o "  LP.parse_flbytes 0";
-  let tuple = List.fold_left (
-    fun acc (fn, ty) ->
-      let c = pcombinator_name ty in
-      if acc="" then c else sprintf "%s\n  `LP.nondep_then` %s" acc c
-    ) "" fields in
-  w o "  %s\n\n" tuple;
-  let li = get_leninfo n in
-
-  w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
-  w o "noextract let %s'_parser_kind = LP.get_parser_kind %s'_parser\n\n" n n;
-  w o "let %s_parser_kind_metadata = %s'_parser_kind.LP.parser_kind_metadata\n\n" n n;
-  w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n li.min_len li.max_len n;
-  let li = get_leninfo n in
-
-  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
-  w o "let %s_parser =\n  synth_%s_injective ();\n  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n n n;
-  w o "  %s'_parser `LP.parse_synth` synth_%s\n\n" n n;
-
-  (* main parser32 *)
-  w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
-  w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-  if fields = [] then w o "  LP.parse32_flbytes 0 0ul";
-  let tuple = List.fold_left (
-    fun acc (fn, ty) ->
-      let c = pcombinator32_name ty in
-      if acc="" then c else sprintf "%s\n  `LP.parse32_nondep_then` %s" acc c
-    ) "" fields in
-  w o "  %s\n\n" tuple;
-  w o "let %s_parser32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LP.parse32_synth _ synth_%s (fun x -> synth_%s x) %s'_parser32 ()\n\n" n n n;
-
-  (* main serializer type *)
-  w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
-  w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
-  if fields = [] then w o "  LP.serialize_flbytes 0";
-  let tuple = List.fold_right (
-    fun (fn, ty) acc ->
-      let c = scombinator_name ty in
-      if acc="" then c else sprintf "LP.serialize_nondep_then _ (%s) ()\n  _ %s" acc c
-    ) (List.rev fields) "" in
-  w o "  %s\n\n" tuple;
-  w o "let %s_serializer =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n;
-
-  (* serialize32 *)
-  w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
-  w o "let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-  if fields = [] then w o "  LP.serialize32_flbytes 0";
-  let tuple = List.fold_right (
-    fun (fn, ty) acc ->
-      let c = scombinator32_name ty in
-      if acc="" then c else sprintf "LP.serialize32_nondep_then (%s) ()\n  %s ()" acc c
-    ) (List.rev fields) "" in
-  w o "  %s\n\n" tuple;
-
-  w o "let %s_serializer32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LP.serialize32_synth _ synth_%s _ %s'_serializer32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
-
-  (* size32 *)
-  w o "let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
-  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
-  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
-  if fields = [] then w o "  LP.size32_constant %s'_serializer 0ul ()" n;
-  let tuple = List.fold_right (
-    fun (fn, ty) acc ->
-      let c = size32_name ty in
-      if acc="" then c else sprintf "LP.size32_nondep_then (%s) ()\n  (%s)" acc c
-    ) (List.rev fields) "" in
-  w o "  %s\n\n" tuple;
-
-  w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n;
-  w o "let %s_size32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LP.size32_synth _ synth_%s _ %s'_size32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
-  ()
-
-and compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
   let repr_t, int_z, parse_t, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
 		        with _ -> failwith ("Enum "^n^" is missing a representation hint") in
@@ -451,15 +264,9 @@ and compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
 	w o "    assert_norm (L.noRepeats (LP.list_map fst e));\n";
 	w o "    assert_norm (L.noRepeats (LP.list_map snd e))\n";
 	w o "  in e\n\n";
+  w o "noextract let %s_repr_parser = %s\n\n" n (pcombinator_name repr_t);
 
-  (* Interface *)
-  w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
-  w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n blen blen n;
-  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
-  w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
-  w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
-  w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
-  w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n;
+  write_api i n blen blen;
 
   (* Synth *)
 	w o "inline_for_extraction let synth_%s%s (x:LP.maybe_enum_key %s_enum) : %s%s = \n" n prime n n prime;
@@ -496,23 +303,23 @@ and compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
     w o "let %s_parser_kind_metadata = %s_kind.LP.parser_kind_metadata\n\n" n n;
   );
 
-  (* Parser *)
+  (* Spec *)
 	w o "noextract let %s%s_parser : LP.parser _ %s%s =\n" n prime n prime;
 	w o "  lemma_synth_%s%s_inj ();\n" n prime;
   w o "  parse_maybe_%s_key `LP.parse_synth` synth_%s%s\n\n" n n prime;
-  w o "inline_for_extraction let parse32_maybe_%s_key : LP.parser32 parse_maybe_%s_key =\n" n n;
-  w o "  FStar.Tactics.synth_by_tactic (LP.parse32_maybe_enum_key_tac LP.parse32_%s %s_enum parse_maybe_%s_key ())\n\n" parse_t n n;
-  w o "inline_for_extraction let %s%s_parser32 : LP.parser32 %s%s_parser =\n" n prime n prime;
-  w o "  lemma_synth_%s%s_inj ();\n" n prime;
-  w o "  LP.parse32_synth _ synth_%s%s (fun x->synth_%s%s x) parse32_maybe_%s_key ()\n\n" n prime n prime n;
-
-  (* Serializer *)
   w o "noextract let %s%s_serializer : LP.serializer %s%s_parser =\n" n prime n prime;
 	w o "  lemma_synth_%s%s_inj ();\n  lemma_synth_%s%s_inv ();\n" n prime n prime;
 	w o "  LP.serialize_synth _ synth_%s%s serialize_maybe_%s_key synth_%s%s_inv ()\n\n" n prime n n prime;
+
+  (* Intermediate *)
+  w o "inline_for_extraction let parse32_maybe_%s_key : LP.parser32 parse_maybe_%s_key =\n" n n;
+  w o "  FStar.Tactics.synth_by_tactic (LP.parse32_maybe_enum_key_tac LP.parse32_%s %s_enum)\n\n" parse_t n;
+  w o "inline_for_extraction let %s%s_parser32 : LP.parser32 %s%s_parser =\n" n prime n prime;
+  w o "  lemma_synth_%s%s_inj ();\n" n prime;
+  w o "  LP.parse32_synth _ synth_%s%s (fun x->synth_%s%s x) parse32_maybe_%s_key ()\n\n" n prime n prime n;
 	w o "inline_for_extraction let serialize32_maybe_%s_key : LP.serializer32 serialize_maybe_%s_key =\n" n n;
   w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n";
-  w o "    LP.serialize32_%s %s_enum serialize_maybe_%s_key ())\n\n" parse_t n n;
+  w o "    LP.serialize32_%s %s_enum)\n\n" parse_t n;
   w o "inline_for_extraction let %s%s_serializer32 : LP.serializer32 %s%s_serializer =\n" n prime n prime;
 	w o "  lemma_synth_%s%s_inj ();\n  lemma_synth_%s%s_inv ();\n" n prime n prime;
   w o "  LP.serialize32_synth _ synth_%s%s _ serialize32_maybe_%s_key synth_%s%s_inv (fun x->synth_%s%s_inv x) ()\n\n" n prime n n prime n prime;
@@ -521,10 +328,10 @@ and compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
   if not is_open then
    begin
     w o "noextract let %s_kind = LP.parse_filter_kind (LP.get_parser_kind %s'_parser)\n\n" n n;
-    w o "let %s_parser_kind_metadata = %s_kind.LP.parser_kind_metadata\n\n" n n;
-    w o "let %s_parser = LP.parse_filter %s'_parser %s_filter_spec\n\n" n n n;
+    w o "noextract let %s_parser_kind_metadata = %s_kind.LP.parser_kind_metadata\n\n" n n;
+    w o "noextract let %s_parser = LP.parse_filter %s'_parser %s_filter_spec\n\n" n n n;
+    w o "noextract let %s_serializer = LP.serialize_filter %s'_serializer %s_filter_spec\n\n" n n n;
     w o "let %s_parser32 = LP.parse32_filter %s'_parser32 %s_filter_spec %s_filter\n\n" n n n n;
-    w o "let %s_serializer = LP.serialize_filter %s'_serializer %s_filter_spec\n\n" n n n;
     w o "let %s_serializer32 = LP.serialize32_filter %s'_serializer32 %s_filter_spec\n\n" n n n;
    end;
 
@@ -533,17 +340,477 @@ and compile_enum o i n (fl: enum_fields_t list) (is_open:bool) =
   w o "  LP.size32_constant %s_serializer %dul ()\n\n" n blen;
 	()
 
-and compile_select o i n sel fl =
-  let fcase (case, ctx) =
-    let n = n ^ "_" ^ case in
-    let depl, li = dep_len (Struct (n, [], ctx)) in
-    compile_struct o i n ctx
-    in
-  List.iter fcase fl;
+and compile_select o i n tagn tagt taga cl def al =
+  let ip = if has_attr al "private" then o else i in
+  let isopen = not (def = None) in
+  let li = get_leninfo n in
+  w o "friend %s\n\n" (abs tagt);
   w i "type %s =\n" n;
-  List.iter (fun (case, _) -> w i "  | %s of %s_%s\n" (String.capitalize case) n case) fl;
-  w i "\n"
+  List.iter (fun (case, ty) -> w i "  | Case_%s of %s\n" case (compile_type ty)) cl;
+  w i "\n\ninline_for_extraction let tag_of_%s (x:%s) : Tot %s = match x with\n" n n (compile_type tagt);
+  List.iter (fun (case, ty) -> w i "  | Case_%s _ -> %s\n" case (String.capitalize case)) cl;
+  w i "\n";
+  write_api ip n li.min_len li.max_len;
+  w o "let %s_sum = LP.make_sum %s_enum tag_of_%s\n\n" n (compile_type tagt) n;
+
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize case in
+    let ty0 = compile_type ty in
+    w o "inline_for_extraction let synth_case_%s (z:%s) : Tot (LP.sum_cases %s_sum %s) =\n" cn ty0 n cn;
+    w o "  [@inline_let] let res : %s = Case_%s z in\n" n case;
+    w o "  [@inline_let] let _ = assert_norm (LP.sum_tag_of_data %s_sum res == %s) in\n" n cn;
+    w o "  res\n\n";
+    w o "let synth_case_%s_inj () : Lemma (LP.synth_injective synth_case_%s) = ()\n\n" cn cn;
+    w o "let parse_case_%s : LP.parser _ (LP.sum_cases %s_sum %s) =\n" cn n cn;
+    w o "  synth_case_%s_inj (); LP.parse_synth %s synth_case_%s\n\n" cn (pcombinator_name ty0) cn
+  ) cl;
+
+  w o "let parse_%s_cases' (x:LP.sum_key %s_sum)\n" n n;
+  w o "  : Tot (k:LP.parser_kind & LP.parser k  (LP.sum_cases %s_sum x))\n" n;
+  w o "  = match x with\n";
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize case in
+    w o "  | %s -> (| _, parse_case_%s |)\n" cn cn;
+    w o "  | %s -> (| _, parse_case_%s |)\n" cn cn;
+  ) cl;
+
+  w o "\nprivate let parse_%s_cases: x:LP.sum_key %s_sum -> LP.parser _ (LP.sum_cases %s_sum x)\n" n n n;
+  w o "  = LP.parse_sum_cases %s_sum parse_%s_cases'\n\n" n n;
+  w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+  w o "let %s_parser' = LP.parse_sum %s_sum %s_repr_parser parse_%s_cases\n\n" n n (compile_type tagt) n;
+  w o "let %s_parser =\n" n;
+  w o "  assert_norm (LP.get_parser_kind %s_parser' == %s_parser_kind);\n" n n;
+  w o "  %s_parser'\n\n" n;
+
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize case in
+    let ty0 = compile_type ty in
+    w o "inline_for_extraction let synth_case_%s_inv (z:LP.sum_cases %s_sum %s) : %s =\n" cn n cn ty0;
+    w o "  [@inline_let] let z' : %s = z in\n" n;
+    w o "  assert(Case_%s? z' <==> tag_of_%s z' == %s);\n" case n cn;
+    w o "  match z' with | Case_%s res -> res\n\n" case
+  ) cl;
+
+(*
+
+  let lemma_A (z':test') : Lemma (A? z' <==> tag_of_test z' == T.A) = ()
+  let lemma_B (z':test') : Lemma (B? z' <==> tag_of_test z' == T.B) = ()
+
+  inline_for_extraction
+  let synth_case_B_inv (z: LP.sum_cases t_sum T.B) : Tot (Parse_b.b) =
+    [@inline_let]
+    let z' : test' = z in
+    let _ = lemma_B z' in
+    match z' with
+    | B res -> res
+
+  inline_for_extraction
+  let synth_case_A_inv (z: LP.sum_cases t_sum T.A) : Tot (Parse_a.a) =
+    [@inline_let]
+    let z' : test' = z in
+    let _ = lemma_A z' in
+    match z' with
+    | A res -> res
+
+  //#set-options "--z3rlimit 30"
+  let synth_case_A_inv_correct () : Lemma
+    (LP.synth_inverse synth_case_A synth_case_A_inv)
+  = ()
+
+  let synth_case_B_inv_correct () : Lemma
+    (LP.synth_inverse synth_case_B synth_case_B_inv)
+  = ()
+  //#reset-options
+
+  let serialize_case_A
+  : LP.serializer parse_case_A
+  =
+      synth_case_A_inj ();
+      synth_case_A_inv_correct ();
+        (LP.serialize_synth
+          Parse_a.a_parser
+          synth_case_A
+          Parse_a.a_serializer
+          synth_case_A_inv
+          ()
+        )
+
+  let serialize_case_B
+  : LP.serializer parse_case_B
+  =
+      synth_case_B_inj ();
+      synth_case_B_inv_correct ();
+        (LP.serialize_synth
+          Parse_b.b_parser
+          synth_case_B
+          Parse_b.b_serializer
+          synth_case_B_inv
+          ()
+        )
+
+  #set-options "--z3rlimit 24"
+  let serialize_cases' (x:LP.sum_key t_sum)
+    : Tot (LP.serializer (dsnd (parse_cases' x)))
+    = match x with
+    | T.A -> serialize_case_A
+    | T.B -> serialize_case_B
+
+  let serialize_cases: x:LP.sum_key t_sum -> Tot (LP.serializer (parse_cases x))
+    = LP.serialize_sum_cases t_sum parse_cases' serialize_cases'
+
+  let test'_serializer : LP.serializer test_parser' =
+    LP.serialize_sum t_sum LP.serialize_u8 serialize_cases
+
+  let synth_test_injective ()
+    : Lemma (LP.synth_injective synth_test) = admit() // FIXME
+
+  let synth_test_inverse ()
+    : Lemma (LP.synth_inverse synth_test synth_test_recip) =
+    assert_norm (LP.synth_inverse synth_test synth_test_recip)
+
+  noextract let test'_parser : LP.parser _ test' =
+    tag_parser
+    `LP.nondep_then` x_parser
+
+  noextract let test'_parser_kind = LP.get_parser_kind test'_parser
+
+  let test_parser_kind_metadata = test'_parser_kind.LP.parser_kind_metadata
+
+  let test_parser =
+    synth_test_injective ();
+    assert_norm (test_parser_kind == test'_parser_kind);
+    test'_parser `LP.parse_synth` synth_test
 *)
+  ()
+
+and compile_typedef o i tn fn (ty:type_t) vec def al =
+  let n = if tn = "" then String.uncapitalize fn else tn^"_"^fn in
+  let qname = if tn = "" then String.uncapitalize fn else tn^"@"^fn in
+  let ip = if has_attr al "private" then o else i in
+  let li = get_leninfo qname in
+  match ty with
+  | TypeSelect (sn, cl, def) ->  () (*failwith "Unsupported select"*)
+  | TypeSimple ty ->
+    let ty0 = compile_type ty in
+    match vec with
+    (* Type aliasing *)
+    | VectorNone ->
+      w i "type %s = %s\n\n" n ty0;
+      write_api ip n li.min_len li.max_len;
+      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+      w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty0);
+      w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty0);
+      w o "inline_for_extraction let %s_parser32 = %s\n\n" n (pcombinator32_name ty0);
+      w o "inline_for_extraction let %s_serializer32 = %s\n\n" n (scombinator32_name ty0);
+      w o "inline_for_extraction let %s_size32 = %s\n\n" n (size32_name ty0)
+
+    (* Should be replaced with Vldata during normalization *)
+    | VectorSymbolic cst -> failwith "not supported"
+
+    | VectorVldata vl ->
+      let (min, max) = (li.min_len-li.len_len), (li.max_len-li.len_len) in
+      w i "noextract val %s_bytesize: %s -> GTot nat\n\n" n ty0;
+      w o "let %s_bytesize x = Seq.length (LP.serialize %s x)\n\n" n (scombinator_name ty0);
+      w i "type %s = x:%s{let l = %s_bytesize x in %d <= l /\\ l <= %d}\n\n" n ty0 n min max;
+      write_api ip n li.min_len li.max_len;
+      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+      w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n min max (scombinator_name ty0);
+      w o "let _ = assert_norm (%s' == %s)\n\n" n n;
+      w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
+      w o "  LP.parse_bounded_vldata_strong %d %d %s\n\n" min max (scombinator_name ty0);
+      w o "let %s_parser = %s'_parser\n\n" n n;
+      w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+      w o "  LP.serialize_bounded_vldata_strong %d %d %s\n\n" min max (scombinator_name ty0);
+      w o "let %s_serializer = %s'_serializer\n\n" n n;
+      w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+      w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul %s %s\n\n" min min max max (scombinator_name ty0) (pcombinator32_name ty0);
+      w o "let %s_parser32 = %s'_parser32\n\n" n n;
+      w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+      w o "  LP.serialize32_bounded_vldata_strong %d %d %s\n\n" min max (scombinator32_name ty0);
+      w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
+      w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+      (* assert_norm to be removed when moved to LowParse *)
+      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
+      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
+      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
+      w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" min max (size32_name ty0) li.len_len;
+      w o "let %s_size32 = %s'_size32\n\n" n n
+
+    (* Fixed-length bytes *)
+    | VectorFixed k when ty0 = "U8.t" ->
+      w i "type %s = lbytes %d\n\n" n k;
+      write_api ip n li.min_len li.max_len;
+      w o "noextract let %s_parser_kind_metadata = {LP.parser_kind_metadata_total = true}\n\n" n;
+      w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" n k;
+      w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" n k;
+      w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" n k k;
+      w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" n k;
+      w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" n n k;
+
+    (* Fixed length list *)
+    | VectorFixed k when li.min_len = li.max_len ->
+      w i "type %s = l:list %s{L.length l == %d}\n\n" n ty0 li.min_count;
+      write_api ip n li.min_len li.max_len;
+      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+      w o "type %s' = LP.array %s %d\n\n" n ty0 li.min_count;
+      w o "private let eq () : Lemma (%s' == %s) =\n" n n;
+      w o "  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]])\n\n" n n n n;
+      w o "noextract let %s'_parser = LP.parse_array %s %d %d\n\n" n (scombinator_name ty0) k li.min_count;
+      w o "let %s_parser = eq(); LP.coerce _ %s'_parser\n\n" n n;
+      w o "noextract let %s'_serializer = LP.serialize_array %s %d %d ()\n\n" n (scombinator_name ty0) k li.min_count;
+      w o "let %s_serializer = eq(); LP.coerce _ %s'_serializer\n\n" n n;
+      w o "inline_for_extraction let %s'_parser32 = LP.parse32_array %s %s %d %dul %d ()\n\n"
+        n (scombinator_name ty0) (pcombinator32_name ty0) k k li.min_count;
+      w o "let %s_parser32 = eq(); LP.coerce _ %s'_parser32\n\n" n n;
+      w o "inline_for_extraction let %s'_serializer32 =\n" n;
+      w o "  LP.serialize32_array #_ #_ #_ #%s %s %d %d ()\n\n" (scombinator_name ty0) (scombinator32_name ty0) k li.min_count;
+      w o "let %s_serializer32 = eq(); LP.coerce _ %s'_serializer32\n\n" n n;
+      w o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty0) k k li.min_count
+
+    (* Fixed bytelen list of variable length elements *)
+    | VectorFixed(k) ->
+      w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n ty0;
+      w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
+      w i "type %s = l:list %s{%s_list_bytesize == %d}\n\n" n ty0 n k;
+      write_api ip n li.min_len li.max_len;
+      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+      w o "type %s' = LP.parse_fldata_strong_t (LP.serialize_list _ %s) %d\n\n" n (scombinator_name ty0) k;
+      w o "let _ = assert_norm (%s' == %s)\n\n" n n;
+      w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
+      w o "  LP.parse_fldata_strong (LP.serialize_list _ %s) %d\n\n" (scombinator_name ty0) k;
+      w o "let %s_parser = %s'_parser\n\n" n n;
+      w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+      w o "  LP.serialize_fldata_strong (LP.serialize_list _ %s) %d\n\n" (scombinator_name ty0) k;
+      w o "let %s_serializer = %s'_serializer\n\n" n n;
+      w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+      w o "  LP.parse32_fldata_strong (LP.serialize_list _ %s) (LP.parse32_list %s) %d %dul\n\n" (scombinator_name ty0) (pcombinator32_name ty0) k k;
+      w o "let %s_parser32 = %s'_parser32\n\n" n n;
+      w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+      w o "  LP.serialize32_fldata_strong (LP.partial_serialize32_list _ %s %s ()) %d\n\n" (scombinator_name ty0) (scombinator32_name ty0) k;
+      w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
+      w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+      w o "  LP.size32_fldata_strong (LP.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty0) k k;
+      w o "let %s_size32 = %s'_size32\n\n" n n
+
+    (* Variable length bytes *)
+    | VectorRange (low, high) when ty0 = "U8.t" ->
+      w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
+      write_api ip n li.min_len li.max_len;
+      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+      w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" n low high;
+      w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" n low high;
+      w o "inline_for_extraction let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
+      w o "inline_for_extraction let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
+      w o "inline_for_extraction let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" n low high (log256 high)
+
+    (* Variable length list of fixed-length elements *)
+    | VectorRange (low, high) when li.min_len = li.max_len ->
+      w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}" n ty0 li.min_count li.max_count;
+      write_api ip n li.min_len li.max_len;
+      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+      w o "let %s_parser =\n" n;
+      w o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" low high (pcombinator_name ty0) li.min_count li.max_count;
+      w o "  LP.parse_vlarray %d %d %s %d %d ()\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
+      w o "let %s_serializer =\n" n;
+      w o "  LP.serialize_vlarray %d %d %s %d %d ()\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
+      w o "let %s_parser32 =\n" n;
+      w o "  LP.parse32_vlarray %d %dul %d %dul %s %s %d %d ()\n\n" low low high high (scombinator_name ty0) (pcombinator32_name ty0) li.min_count li.max_count;
+      w o "let %s_serializer32 =\n" n;
+      w o "  LP.serialize32_vlarray %d %d %s %d %d ()\n\n" low high (scombinator32_name ty0) li.min_count li.max_count;
+      w o "let %s_size32 =\n" n;
+      w o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len li.min_len
+
+    (* Variable length list of variable length elements *)
+    | VectorRange(low, high) ->
+      let (min, max) = (li.min_len-li.len_len), (li.max_len-li.len_len) in
+      w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n ty0;
+      w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
+      w i "type %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" n ty0 n min max;
+      write_api ip n li.min_len li.max_len;
+      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+      w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty0);
+      w o "let _ = assert_norm (%s' == %s)\n\n" n n;
+      w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
+      w o "  LP.parse_bounded_vldata_strong %d %d (LP.serialize_list _ %s)\n\n" min max (scombinator_name ty0);
+      w o "let %s_parser = %s'_parser\n\n" n n;
+      w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+      w o "  LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s)\n\n" min max (scombinator_name ty0);
+      w o "let %s_serializer = %s'_serializer\n\n" n n;
+      w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+      w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s) (LP.parse32_list %s)\n\n" min min max max (scombinator_name ty0) (pcombinator32_name ty0);
+      w o "let %s_parser32 = %s'_parser32\n\n" n n;
+      w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+      w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s %s ())\n\n" min max (scombinator_name ty0) (scombinator32_name ty0);
+      w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
+      w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+      (* assert_norm to be removed when moved to LowParse *)
+      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
+      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
+      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
+      w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s ()) %dul\n\n" min max (size32_name ty0) li.len_len;
+      w o "let %s_size32 = %s'_size32\n\n" n n
+
+and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
+  let li = get_leninfo n in
+
+  (* Hoist all constructed types (select, vector, etc) into
+     sub-definitions using private attribute in implementation *)
+  let fields = List.map (fun (al, ty, fn, vec, def) ->
+    let fn0 = String.uncapitalize fn in
+    match ty, vec with
+    | TypeSimple ty0, VectorNone ->
+      (fn0, compile_type ty0)
+    | _ ->
+      compile_typedef o i n fn ty vec def ("private"::al);
+      (fn0, sprintf "%s_%s" n fn)) fl in
+
+  (* application type *)
+  if fields = [] then
+    w i "type %s = lbytes 0\n\n" n
+  else
+   begin
+    w i "type %s = {\n" n;
+    List.iter (fun (fn, ty) ->
+      w i "  %s : %s;\n" fn ty) fields;
+    w i "}\n\n"
+   end;
+
+  (* Tuple type for nondep_then combination *)
+  let tuple = List.fold_left (fun acc (_, ty) -> if acc="" then ty else sprintf "(%s * %s)" acc ty) "" fields in
+  let tuple = if fields = [] then "lbytes 0" else tuple in
+
+  w o "type %s' = %s\n\n" n tuple;
+
+  (* synthethizer for tuple type *)
+  w o "inline_for_extraction let synth_%s (x: %s') : %s =\n" n n n;
+
+  if fields = [] then
+    w o "  x\n\n"
+  else
+   begin
+    let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then fn else sprintf "(%s, %s)" acc fn) "" fields in
+    w o "  let %s = x in\n  {\n" tuple;
+    let tuple = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
+    w o "%s  }\n\n" tuple;
+    w o "inline_for_extraction let synth_%s_recip (x: %s) : %s' =\n" n n n;
+    let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then "x."^fn else sprintf "(%s, x.%s)" acc fn) "" fields in
+    w o "  %s\n\n" tuple
+   end;
+
+  (* Write parser API *)
+  write_api i n li.min_len li.max_len;
+
+  (* synthetizer injectivity and inversion lemmas *)
+  w o "let synth_%s_injective ()\n  : Lemma (LP.synth_injective synth_%s) = admit() // FIXME \n\n" n n;
+  w o "let synth_%s_inverse ()\n  : Lemma (LP.synth_inverse synth_%s synth_%s_recip) =\n" n n n;
+  w o "  assert_norm (LP.synth_inverse synth_%s synth_%s_recip)\n\n" n n;
+
+  (* main parser combinator type *)
+  w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
+  if fields = [] then w o "  LP.parse_flbytes 0";
+  let tuple = List.fold_left (
+    fun acc (fn, ty) ->
+      let c = pcombinator_name ty in
+      if acc="" then c else sprintf "%s\n  `LP.nondep_then` %s" acc c
+    ) "" fields in
+  w o "  %s\n\n" tuple;
+
+  w o "noextract let %s'_parser_kind = LP.get_parser_kind %s'_parser\n\n" n n;
+  w o "let %s_parser_kind_metadata = %s'_parser_kind.LP.parser_kind_metadata\n\n" n n;
+  w o "let %s_parser =\n  synth_%s_injective ();\n  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n n n;
+  w o "  %s'_parser `LP.parse_synth` synth_%s\n\n" n n;
+
+  (* main parser32 *)
+  w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+  if fields = [] then w o "  LP.parse32_flbytes 0 0ul";
+  let tuple = List.fold_left (
+    fun acc (fn, ty) ->
+      let c = pcombinator32_name ty in
+      if acc="" then c else sprintf "%s\n  `LP.parse32_nondep_then` %s" acc c
+    ) "" fields in
+  w o "  %s\n\n" tuple;
+  w o "inline_for_extraction let %s_parser32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  w o "  LP.parse32_synth _ synth_%s (fun x -> synth_%s x) %s'_parser32 ()\n\n" n n n;
+
+  (* main serializer type *)
+  w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+  if fields = [] then w o "  LP.serialize_flbytes 0";
+  let tuple = List.fold_right (
+    fun (fn, ty) acc ->
+      let c = scombinator_name ty in
+      if acc="" then c else sprintf "LP.serialize_nondep_then _ (%s) ()\n  _ %s" acc c
+    ) (List.rev fields) "" in
+  w o "  %s\n\n" tuple;
+  w o "let %s_serializer =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
+  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  w o "  LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n;
+
+  (* serialize32 *)
+  w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+  if fields = [] then w o "  LP.serialize32_flbytes 0";
+  let tuple = List.fold_right (
+    fun (fn, ty) acc ->
+      let c = scombinator32_name ty in
+      if acc="" then c else sprintf "LP.serialize32_nondep_then (%s) ()\n  %s ()" acc c
+    ) (List.rev fields) "" in
+  w o "  %s\n\n" tuple;
+
+  w o "inline_for_extraction let %s_serializer32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
+  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  w o "  LP.serialize32_synth _ synth_%s _ %s'_serializer32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
+
+  (* size32, the assert_norms should move to LP *)
+  w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
+  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
+  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
+
+  if fields = [] then w o "  LP.size32_constant %s'_serializer 0ul ()" n;
+  let tuple = List.fold_right (
+    fun (fn, ty) acc ->
+      let c = size32_name ty in
+      if acc="" then c else sprintf "LP.size32_nondep_then (%s) ()\n  (%s)" acc c
+    ) (List.rev fields) "" in
+  w o "  %s\n\n" tuple;
+
+  w o "let %s_size32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
+  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  w o "  LP.size32_synth _ synth_%s _ %s'_size32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
+  ()
+
+(* Rewrite {... uintX len; t value[len]; ...} into VectorVldata *)
+let rec normalize_symboliclen o i sn (fl:struct_field_t list) : struct_field_t list =
+  match fl with
+  | [] -> []
+  | (al, TypeSimple(tagt), tagn, VectorNone, None)
+    :: (al', ty, n, VectorSymbolic k, None) :: r
+    when tagn = k ->
+      let h =
+        match ty with
+        | TypeSimple ty -> (al @ al', TypeSimple ty, n, VectorVldata tagt, None)
+        | TypeSelect (sel, cl, def) ->
+          let cl' = List.map (fun (c,t)->
+            let etyp = sprintf "%s_%s_case_%s" sn n c in
+            add_field "" etyp (TypeSimple t) (VectorVldata tagt);
+            compile_typedef o i "" etyp (TypeSimple t) (VectorVldata tagt) None ("private"::al);
+            (c, etyp)
+          ) cl in
+          let def' = match def with
+            | None -> None
+            | Some ty ->
+              let etyp = sprintf "%s_%s_default" sn n in
+              add_field "" etyp (TypeSimple ty) (VectorVldata tagt);
+              compile_typedef o i "" etyp (TypeSimple ty) (VectorVldata tagt) None ("private"::al);
+              Some etyp
+            in
+          (al @ al', TypeSelect(sel, cl', def'), n, VectorNone, None)
+        in
+      h :: (normalize_symboliclen o i sn r)
+  | h :: t -> h :: (normalize_symboliclen o i sn t)
 
 let compile o i (p:gemstone_t) =
   let n = tname p in
@@ -553,13 +820,11 @@ let compile o i (p:gemstone_t) =
   w i "module %s%s\n\n" !prefix n;
   w i "open %s\n" !bytes;
 
-(*
-  let depl, li = dep_len p in
+  let depl = getdep p in
   let depl = List.filter (fun x -> not (basic_type x)) depl in
   let depl = List.map (fun s -> !prefix ^ (String.uncapitalize s)) depl in
   (List.iter (w i "open %s\n") depl);
   w i "\n";
-*)
 
   w i "module U8 = FStar.UInt8\n";
   w i "module U16 = FStar.UInt16\n";
@@ -586,9 +851,21 @@ let compile o i (p:gemstone_t) =
 
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
 	match p with
-	| Enum(attr, fl, n) ->  () (*compile_enum o i n fl (List.mem "open" attr)*)
-  | Struct(attr, fl, n) -> () (*compile_struct o i n fl *)
-  | Typedef(attr, ty, n, vec, def) -> () (*compile_select o i n sel fl*)
+	| Enum(al, fl, _) ->  compile_enum o i n fl al
+  | Struct(al, fl, _) ->
+    let fl = normalize_symboliclen o i n fl in
+    (match fl with
+    | [ (al, TypeSimple(tagt), tagn, VectorNone, None);
+        (al', TypeSelect (tagn', cases, def), seln, VectorNone, None) ] ->
+        compile_select o i n tagn tagt al cases def al'
+    | fl -> compile_struct o i n fl al)
+  | Typedef(al, ty, _, vec, def) -> compile_typedef o i "" n ty vec def al
+
+let compile_inline o i (p:gemstone_t) =
+  if has_attr (attr_of p) "inline" then (
+    printf "Warning: type %s will be inlined at use site!\n" (tname p);
+    inliners := SM.add (tname p) p !inliners
+  ) else compile o i p
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =
@@ -597,6 +874,6 @@ let rfc_generate_fstar (p:Rfc_ast.prog) =
 	  printf "Writing parsers for type <%s> to <%s>...\n" n fn;
 		let o, i = try open_out fn, open_out (fn^"i")
                with _ -> failwith "Failed to create output file" in
-		compile o i p;
+		compile_inline o i p;
     close_out o
 	in List.iter aux p

@@ -304,14 +304,15 @@ struct {
 SRTP extension (for DTLS)
 https://tools.ietf.org/html/rfc5764#section-4.1.1
 **/
+
 uint8 SRTPProtectionProfile[2];
 
+SRTPProtectionProfile SRTPProtectionProfiles<2..2^16-1>;
+
 struct {
-   SRTPProtectionProfiles SRTPProtectionProfiles;
+   SRTPProtectionProfiles profiles;
    opaque srtp_mki<0..255>;
 } UseSRTPData;
-
-SRTPProtectionProfile SRTPProtectionProfiles<2..2^16-1>;
 
 /**
 Heartbeat extension (for DTLS and Heartbleed)
@@ -614,7 +615,7 @@ opaque UnknownExtension<0..2^16-1>;
 
 struct {
   ExtensionType extension_type;
-  uint16 body_len;
+  uint16 ext_len;
   select(extension_type)
   {
     case server_name: Empty; /* Acknowledge, for TLS 1.2 SH */
@@ -642,12 +643,12 @@ struct {
     case signature_algorithms_cert: SignatureSchemeList;
     case key_share: KeyShareClientHello;
     default: UnknownExtension;
-  } extension_data[body_len];
+  } extension_data[ext_len];
 } ClientHelloExtension;
 
 struct {
   ExtensionType extension_type;
-  uint16 body_len;
+  uint16 ext_len;
   select(extension_type)
   {
     case server_name: ServerNameList;
@@ -677,14 +678,44 @@ struct {
     case signature_algorithms_cert: SignatureSchemeList;
     case key_share: KeyShareClientHello;
     default: UnknownExtension;
-  } extension_data[body_len];
+  } extension_data[ext_len];
 } ServerHelloExtension;
 
 struct {
   ExtensionType extension_type;
-  uint16 body_len;
-  opqaue body[body_len];
+  uint16 ext_len;
+  select(extension_type)
+  {
+    default: UnknownExtension;
+  } extension_data[ext_len];
+} EncryptedExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 ext_len;
+  select(extension_type)
+  {
+    default: UnknownExtension;
+  } extension_data[ext_len];
 } NewSessionTicketExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 ext_len;
+  select(extension_type)
+  {
+    default: UnknownExtension;
+  } extension_data[ext_len];
+} CertificateRequestExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 body_len;
+  select(extension_type)
+  {
+    default: UnknownExtension;
+  } extension_data[body_len];
+} CertificateExtension;
 
 /* End of extensions */
 /* Alert Types */
@@ -741,8 +772,7 @@ enum {
 struct {
   ContentType content_type;
   ProtocolVersion legacy_record_version;
-  uint16 length;
-  opaque fragment[length];
+  opaque fragment<0..2^16-1>;
 } TLSPlaintext;
 
 /*
@@ -1149,7 +1179,7 @@ EncryptedExtension EncryptedExtensions<0..2^16-1>;
 
 struct {
   opaque certificate_request_context<0..2^8-1>;
-  Extension extensions<2..2^16-1>;
+  CertificateRequestExtension extensions<2..2^16-1>;
 } CertificateRequest13;
 
 struct {
@@ -1167,8 +1197,21 @@ struct {
   opaque signature<0..2^16-1>;
 } CertificateVerify13;
 
+enum {
+  hash_32, hash_48, hash_64, (255)
+} DigestSize;
+
+opaque Finished32[32];
+opaque Finished48[48];
+opaque Finished64[64];
+
 struct {
-  opaque verify_data[Hash.length];
+  /*@erased*/ DigestSize hlen;
+  select(hlen) {
+    case hash_32: Finished32;
+    case hash_48: Finished48;
+    case hash_64: Finished64;
+  } verify_data;
 } Finished;
 
 struct {
@@ -1211,16 +1254,16 @@ enum {
 struct {
   HandshakeType msg_type;
   uint24 length;
-  select (Handshake.msg_type) {
-    case client_hello:          ClientHello;
-    case server_hello:          ServerHello;
+  select (msg_type) {
+    case client_hello: ClientHello;
+    case server_hello: ServerHello;
   } body[length];
 } Handshake;
 
 struct {
   HandshakeType msg_type;
   uint24 length;
-  select (Handshake.msg_type) {
+  select (msg_type) {
     case end_of_early_data:     Empty;
     case encrypted_extensions:  EncryptedExtensions;
     case certificate_request:   CertificateRequest13;
@@ -1238,11 +1281,26 @@ struct {
 
 opaque ASN1Cert<1..2^24-1>;
 
+enum /*@open*/ {
+  rsa_sign(1), dss_sign(2), rsa_fixed_dh(3), dss_fixed_dh(4),
+  rsa_ephemeral_dh_RESERVED(5), dss_ephemeral_dh_RESERVED(6),
+  fortezza_dms_RESERVED(20), (255)
+} ClientCertificateType;
+
+struct {
+  ClientCertificateType certificate_types<1..2^8-1>;
+  SignatureScheme supported_signature_algorithms<2..2^16-1>;
+  DistinguishedName certificate_authorities<0..2^16-1>;
+} CertificateRequest12;
+
 struct {
   ASN1Cert certificate_list<0..2^24-1>;
 } Certificate12;
 
-enum { dhe_dss, dhe_rsa, dh_anon, rsa, dh_dss, dh_rsa } KeyExchangeAlgorithm;
+enum {
+  dhe_dss, dhe_rsa, dh_anon, rsa, dh_dss, dh_rsa,
+  (255)
+} KeyExchangeAlgorithm;
 
 struct {
   ServerDHParams params;
@@ -1256,7 +1314,7 @@ struct {
 
 struct {
   SignedDHParams params;
-  SignatureAndHashAlgorithm algorithm;
+  SignatureScheme algorithm;
   opaque signature<0..2^16-1>;
 } SignedDHKeyExchange;
 
@@ -1297,7 +1355,7 @@ struct {
 struct {
   HandshakeType msg_type;
   uint24 length;
-  select (HandshakeType) {
+  select (msg_type) {
     case hello_request:       Empty;
     case certificate:         Certificate12;
     case server_key_exchange: ServerKeyExchange;

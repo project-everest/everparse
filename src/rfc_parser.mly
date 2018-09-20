@@ -37,7 +37,7 @@ gemstone:
 		{ ectr := 0; Enum(a, enum, t) }
 	| STRUCT; a = attrlist; LBRACE; fields = list(struct_field); RBRACE; t = TYPE; SEMCOL;
 		{ match fields with
-		  | [(al, ty, n, vec, def)] -> Typedef("inline"::al, ty, t, vec, def)
+		  | [(al, ty, n, vec, def)] -> Typedef(al, ty, t, vec, def)
 			| l -> Struct(a, fields, t) }
 	| t = struct_field; { Typedef(t) }
 ;
