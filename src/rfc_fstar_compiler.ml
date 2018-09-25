@@ -130,15 +130,15 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         min_count = k / li.min_len;
         max_count = k / li.max_len;
       }
-    | VectorVldata tn ->
-      let (len_len, max_len) = match tn with
-        | "uint8" -> 1, 256 | "uint16" -> 2, 65536
-        | "uint24" -> 3, 16777216 | "uint32" -> 4, 4294967296
-        | _ -> failwith "bad vldata" in
-      {li with min_len = len_len; max_len = max_len; vl = true; }
+    | VectorVldata tn -> failwith "Cannot appear in source syntax"
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
-      get_leninfo (tn^"@"^cst)
+      let li = get_leninfo (tn^"@"^cst) in
+      let (len_len, min, max) = match li.min_len with
+      | 1 -> 1, 0, 255 | 2 -> 2, 0, 065535
+      | 3 -> 3, 0, 16777215 | 4 -> 4, 0, 4294967295
+      | _ -> failwith "bad vldata" in
+      {li with len_len=len_len; min_len=len_len+min; max_len = len_len+max; vl = true; }
     | VectorRange (low, high) ->
       let h = log256 high in
       (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^tn));
@@ -192,18 +192,26 @@ let getdep (p:gemstone_t) : typ list =
     in
   dedup (List.flatten dep)
 
-let write_api c n bmin bmax =
-  w c "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
-  w c "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n bmin bmax n;
-  w c "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
-  w c "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
-  w c "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" n n n;
-  w c "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
-  w c "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
-  w c "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n
+let write_api o i is_private n bmin bmax =
+  if is_private then
+   begin
+    w o "noextract let %s_parser_kind = LP.strong_parser_kind %d %d LP.default_parser_kind.LP.parser_kind_metadata\n\n" n bmin bmax
+   end
+  else
+   begin
+    w i "noextract val %s_parser_kind_metadata : LP.parser_kind_metadata_t\n\n" n;
+    w i "noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s_parser_kind_metadata\n\n" n bmin bmax n;
+    w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
+    w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
+    w i "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" n n n;
+    w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
+    w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
+    w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n
+   end
 
 let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   let is_open = has_attr al "open" in
+  let is_private = has_attr al "private" in
 
   let repr_t, int_z, parse_t, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
@@ -271,7 +279,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   w o "noextract let %s_repr_parser32 = %s\n\n" n (pcombinator32_name repr_t);
   w o "noextract let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
 
-  write_api i n blen blen;
+  write_api o i is_private n blen blen;
 
   (* Synth *)
 	w o "inline_for_extraction let synth_%s%s (x:LP.maybe_enum_key %s_enum) : %s%s = \n" n prime n n prime;
@@ -346,17 +354,17 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 	()
 
 and compile_select o i n tagn tagt taga cl def al =
-  let ip = if has_attr al "private" then o else i in
-  let isopen = not (def = None) in
+  let is_private = has_attr al "private" in
+  let is_open = not (def = None) in
   let li = get_leninfo n in
   w o "friend %s\n\n" (abs tagt);
   w i "type %s =\n" n;
   List.iter (fun (case, ty) -> w i "  | Case_%s of %s\n" case (compile_type ty)) cl;
   w i "\n\ninline_for_extraction let tag_of_%s (x:%s) : %s = match x with\n" n n (compile_type tagt);
   List.iter (fun (case, ty) -> w i "  | Case_%s _ -> %s\n" case (String.capitalize case)) cl;
-  (match def with Some t -> w o "let " | None -> ());
+  (match def with Some t -> w o "" | None -> ());
   w i "\n";
-  write_api ip n li.min_len li.max_len;
+  write_api o i is_private n li.min_len li.max_len;
   w o "let %s_sum = LP.make_sum %s_enum tag_of_%s\n\n" n (compile_type tagt) n;
 
   List.iter (fun (case, ty) ->
@@ -383,7 +391,8 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "  = LP.parse_sum_cases %s_sum parse_%s_cases'\n\n" n n;
   w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
   w o "let %s_parser' = LP.parse_sum %s_sum %s_repr_parser parse_%s_cases\n\n" n n (compile_type tagt) n;
-  w o "let %s_parser =\n" n;
+  let annot = if is_private then " : LP.parser "^n^"_parser_kind "^n else "" in
+  w o "let %s_parser%s =\n" n annot;
   w o "  assert_norm (LP.get_parser_kind %s_parser' == %s_parser_kind);\n" n n;
   w o "  %s_parser'\n\n" n;
 
@@ -418,7 +427,8 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "  = LP.serialize_sum_cases %s_sum parse_%s_cases' serialize_%s_cases'\n\n" n n n;
   w o "let %s_serializer' : LP.serializer %s_parser' =\n" n n;
   w o "  LP.serialize_sum %s_sum %s_repr_serializer serialize_%s_cases\n\n" n (compile_type tagt) n;
-  w o "let %s_serializer =\n" n;
+  let annot = if is_private then " : LP.serializer "^(pcombinator_name n) else "" in
+  w o "let %s_serializer%s =\n" n annot;
   w o "  assert_norm (LP.get_parser_kind %s_parser' == %s_parser_kind);\n" n n;
   w o "  %s_serializer'\n\n" n;
 
@@ -478,8 +488,9 @@ and compile_select o i n tagn tagt taga cl def al =
 
   w o "let %s_parser32' =\n" n;
   w o "  LP.parse32_sum_gen' #_ %s_sum %s_repr_parser parse32_%s_cases\n" n (compile_type tagt) n;
-  w o "    parse32_%s_key (destr_tag_enum (LP.parse32_sum_t %s_sum))\n\n" (compile_type tagt) n;
-  w o "let %s_parser32 =\n" n;
+  w o "    parse32_%s_key (destr_%s_enum (LP.parse32_sum_t %s_sum))\n\n" (compile_type tagt) n;
+  let annot = if is_private then " : LP.parser32 "^(pcombinator_name n) else "" in
+  w o "let %s_parser32%s =\n" n annot;
   w o "  assert_norm (LP.get_parser_kind %s_parser' == %s_parser_kind);\n" n n;
   w o "  %s_parser32'\n\n" n;
 
@@ -487,16 +498,28 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser)" (compile_type tagt);
   w o " (LP.weaken_parse_cases_kind %s_sum parse_%s_cases'));\n" n n;
   w o "  LP.serialize32_sum_gen' %s_sum serialize32_%s_key\n" n (compile_type tagt);
-  w o "    serialize32_%s_cases () (fun x -> %s_of_%s x)\n\n" n (compile_type tagt) n;
-  w o "let %s_serializer32 =\n" n;
+  w o "    serialize32_%s_cases () (fun x -> tag_of_%s x)\n\n" n n;
+
+  let annot = if is_private then " : LP.serializer32 "^(scombinator_name n) else "" in
+  w o "let %s_serializer32%s =\n" n annot;
   w o "  assert_norm (LP.get_parser_kind %s_parser' == %s_parser_kind);\n" n n;
   w o "  %s_serializer32'\n\n" n;
+
+  w o "let %s_size32' = assume false;\n" n;
+  w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser)" (compile_type tagt);
+  w o " (LP.weaken_parse_cases_kind %s_sum parse_%s_cases'));\n" n n;
+  w o "  LP.size32_sum_gen' %s_sum serialize32_%s_key\n" n (compile_type tagt);
+  w o "    serialize32_%s_cases () (fun x -> tag_of_%s x)\n\n" n n;
+  let annot = if is_private then " : LP.size32 "^n else "" in
+  w o "let %s_size32%s = assume false;\n" n annot;
+  w o "  assert_norm (LP.get_parser_kind %s_parser' == %s_parser_kind);\n" n n;
+  w o "  %s_size32'\n\n" n;
   ()
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize fn else tn^"_"^fn in
   let qname = if tn = "" then String.uncapitalize fn else tn^"@"^fn in
-  let ip = if has_attr al "private" then o else i in
+  let is_private = has_attr al "private" in
   let li = get_leninfo qname in
   match ty with
   | TypeSelect (sn, cl, def) ->  () (*failwith "Unsupported select"*)
@@ -506,7 +529,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     (* Type aliasing *)
     | VectorNone ->
       w i "type %s = %s\n\n" n ty0;
-      write_api ip n li.min_len li.max_len;
+      write_api o i is_private n li.min_len li.max_len;
       w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty0);
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty0);
@@ -522,7 +545,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "noextract val %s_bytesize: %s -> GTot nat\n\n" n ty0;
       w o "let %s_bytesize x = Seq.length (LP.serialize %s x)\n\n" n (scombinator_name ty0);
       w i "type %s = x:%s{let l = %s_bytesize x in %d <= l /\\ l <= %d}\n\n" n ty0 n min max;
-      write_api ip n li.min_len li.max_len;
+      write_api o i is_private n li.min_len li.max_len;
       w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n min max (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
@@ -549,7 +572,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     (* Fixed-length bytes *)
     | VectorFixed k when ty0 = "U8.t" ->
       w i "type %s = lbytes %d\n\n" n k;
-      write_api ip n li.min_len li.max_len;
+      write_api o i is_private n li.min_len li.max_len;
       w o "noextract let %s_parser_kind_metadata = {LP.parser_kind_metadata_total = true}\n\n" n;
       w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" n k;
       w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" n k;
@@ -560,11 +583,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     (* Fixed length list *)
     | VectorFixed k when li.min_len = li.max_len ->
       w i "type %s = l:list %s{L.length l == %d}\n\n" n ty0 li.min_count;
-      write_api ip n li.min_len li.max_len;
+      write_api o i is_private n li.min_len li.max_len;
       w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "type %s' = LP.array %s %d\n\n" n ty0 li.min_count;
-      w o "private let eq () : Lemma (%s' == %s) =\n" n n;
-      w o "  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]])\n\n" n n n n;
+      w o "private let eq () : Lemma (%s' == %s) = admit()\n" n n;
+      w o "//  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]])\n\n" n n n n;
       w o "noextract let %s'_parser = LP.parse_array %s %d %d\n\n" n (scombinator_name ty0) k li.min_count;
       w o "let %s_parser = eq(); LP.coerce _ %s'_parser\n\n" n n;
       w o "noextract let %s'_serializer = LP.serialize_array %s %d %d ()\n\n" n (scombinator_name ty0) k li.min_count;
@@ -582,7 +605,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n ty0;
       w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
       w i "type %s = l:list %s{%s_list_bytesize == %d}\n\n" n ty0 n k;
-      write_api ip n li.min_len li.max_len;
+      write_api o i is_private n li.min_len li.max_len;
       w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "type %s' = LP.parse_fldata_strong_t (LP.serialize_list _ %s) %d\n\n" n (scombinator_name ty0) k;
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
@@ -605,7 +628,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     (* Variable length bytes *)
     | VectorRange (low, high) when ty0 = "U8.t" ->
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
-      write_api ip n li.min_len li.max_len;
+      write_api o i is_private n li.min_len li.max_len;
       w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" n low high;
       w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" n low high;
@@ -616,7 +639,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     (* Variable length list of fixed-length elements *)
     | VectorRange (low, high) when li.min_len = li.max_len ->
       w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}" n ty0 li.min_count li.max_count;
-      write_api ip n li.min_len li.max_len;
+      write_api o i is_private n li.min_len li.max_len;
       w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "let %s_parser =\n" n;
       w o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" low high (pcombinator_name ty0) li.min_count li.max_count;
@@ -636,7 +659,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n ty0;
       w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
       w i "type %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" n ty0 n min max;
-      write_api ip n li.min_len li.max_len;
+      write_api o i is_private n li.min_len li.max_len;
       w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
@@ -662,6 +685,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
 
 and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   let li = get_leninfo n in
+  let is_private = has_attr al "private" in
 
   (* Hoist all constructed types (select, vector, etc) into
      sub-definitions using private attribute in implementation *)
@@ -708,7 +732,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
    end;
 
   (* Write parser API *)
-  write_api i n li.min_len li.max_len;
+  write_api o i is_private n li.min_len li.max_len;
 
   (* synthetizer injectivity and inversion lemmas *)
   w o "let synth_%s_injective ()\n  : Lemma (LP.synth_injective synth_%s) = admit() // FIXME \n\n" n n;
@@ -730,19 +754,6 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "let %s_parser =\n  synth_%s_injective ();\n  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n n n;
   w o "  %s'_parser `LP.parse_synth` synth_%s\n\n" n n;
 
-  (* main parser32 *)
-  w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-  if fields = [] then w o "  LP.parse32_flbytes 0 0ul";
-  let tuple = List.fold_left (
-    fun acc (fn, ty) ->
-      let c = pcombinator32_name ty in
-      if acc="" then c else sprintf "%s\n  `LP.parse32_nondep_then` %s" acc c
-    ) "" fields in
-  w o "  %s\n\n" tuple;
-  w o "inline_for_extraction let %s_parser32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LP.parse32_synth _ synth_%s (fun x -> synth_%s x) %s'_parser32 ()\n\n" n n n;
-
   (* main serializer type *)
   w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
   if fields = [] then w o "  LP.serialize_flbytes 0";
@@ -756,6 +767,19 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   w o "  LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n;
+
+  (* main parser32 *)
+  w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+  if fields = [] then w o "  LP.parse32_flbytes 0 0ul";
+  let tuple = List.fold_left (
+    fun acc (fn, ty) ->
+      let c = pcombinator32_name ty in
+      if acc="" then c else sprintf "%s\n  `LP.parse32_nondep_then` %s" acc c
+    ) "" fields in
+  w o "  %s\n\n" tuple;
+  w o "inline_for_extraction let %s_parser32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  w o "  LP.parse32_synth _ synth_%s (fun x -> synth_%s x) %s'_parser32 ()\n\n" n n n;
 
   (* serialize32 *)
   w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;

@@ -4,6 +4,12 @@ opaque t3[2];
 t3 t4[8];
 t3 t5<0..255>;
 
+struct {
+  t4 x;
+  t5 y;
+  t1 z<0..255>;
+} t8;
+
 enum { a, b, (255) } tag;
 
 struct {
@@ -26,3 +32,10 @@ struct {
     default: t2;
   } body;
 } t7;
+
+struct {
+  t1 a;
+  uint16 l;
+  t5 b[l];
+} t9;
+
