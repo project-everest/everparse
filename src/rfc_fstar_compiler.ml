@@ -55,6 +55,11 @@ let basic_type = function
   | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" -> true
   | _ -> false
 
+let basic_bounds = function
+  | "uint8" -> 1, 255 | "uint16" -> 2, 65535
+  | "uint24" -> 3, 16777215 | "uint32" -> 4, 4294967295
+  | _ -> failwith "not a base type"
+
 let rec sizeof = function
   | TypeSelect(n, cl, def) ->
     let lil = (List.map (fun (_,ty) -> get_leninfo ty) cl)
@@ -130,15 +135,18 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         min_count = k / li.min_len;
         max_count = k / li.max_len;
       }
-    | VectorVldata tn -> failwith "Cannot appear in source syntax"
+    | VectorVldata tn ->
+      let (len_len, max_len) = basic_bounds tn in
+      {li with len_len = len_len; min_len = len_len; max_len = len_len+max_len; vl = true; }
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
       let li = get_leninfo (tn^"@"^cst) in
-      let (len_len, min, max) = match li.min_len with
-      | 1 -> 1, 0, 255 | 2 -> 2, 0, 065535
-      | 3 -> 3, 0, 16777215 | 4 -> 4, 0, 4294967295
+      let (min, max) = match li.min_len with
+      | 1 -> 0, 255 | 2 -> 0, 065535
+      | 3 -> 0, 16777215 | 4 -> 0, 4294967295
       | _ -> failwith "bad vldata" in
-      {li with len_len=len_len; min_len=len_len+min; max_len = len_len+max; vl = true; }
+      (* N.B. the len_len will be counted in the explicit length field *)
+      {li with len_len=0; min_len=min; max_len = max; vl = true; }
     | VectorRange (low, high) ->
       let h = log256 high in
       (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^tn));
@@ -474,21 +482,21 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "inline_for_extraction let destr_%s_enum (t:Type)\n" (compile_type tagt);
   w o "  : LP.enum_destr_t t %s_enum = _ by (LP.enum_destr_tac %s_enum)\n\n" (compile_type tagt) (compile_type tagt);
 
-  w o "let parse_%s_key : LP.parser _ (LP.enum_key %s_enum) =\n" (compile_type tagt) (compile_type tagt);
+  w o "let parse_%s_key : LP.parser _ (LP.enum_key %s_enum) =\n" n (compile_type tagt);
   w o "  LP.parse_enum_key %s_repr_parser %s_enum\n\n" (compile_type tagt) (compile_type tagt);
 
-  w o "inline_for_extraction let parse32_%s_key : LP.parser32 parse_%s_key =\n" (compile_type tagt) (compile_type tagt);
+  w o "inline_for_extraction let parse32_%s_key : LP.parser32 parse_%s_key =\n" n n;
   w o "  FStar.Tactics.synth_by_tactic (LP.parse32_enum_key_tac %s_repr_parser32 %s_enum)\n\n" (compile_type tagt) (compile_type tagt);
 
-  w o "let serialize_%s_key : LP.serializer parse_%s_key =\n" (compile_type tagt) (compile_type tagt);
+  w o "let serialize_%s_key : LP.serializer parse_%s_key =\n" n n;
   w o "  LP.serialize_enum_key _ %s_repr_serializer %s_enum\n\n" (compile_type tagt) (compile_type tagt);
 
-  w o "inline_for_extraction let serialize32_%s_key : LP.serializer32 serialize_%s_key =\n" (compile_type tagt) (compile_type tagt);
+  w o "inline_for_extraction let serialize32_%s_key : LP.serializer32 serialize_%s_key =\n" n n;
   w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_enum_key_gen_tac %s_repr_serializer32 %s_enum)\n\n" (compile_type tagt) (compile_type tagt);
 
   w o "let %s_parser32' =\n" n;
   w o "  LP.parse32_sum_gen' #_ %s_sum %s_repr_parser parse32_%s_cases\n" n (compile_type tagt) n;
-  w o "    parse32_%s_key (destr_%s_enum (LP.parse32_sum_t %s_sum))\n\n" (compile_type tagt) n;
+  w o "    parse32_%s_key (destr_%s_enum (LP.parse32_sum_t %s_sum))\n\n" n (compile_type tagt) n;
   let annot = if is_private then " : LP.parser32 "^(pcombinator_name n) else "" in
   w o "let %s_parser32%s =\n" n annot;
   w o "  assert_norm (LP.get_parser_kind %s_parser' == %s_parser_kind);\n" n n;
@@ -497,7 +505,7 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "let %s_serializer32' =\n" n;
   w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser)" (compile_type tagt);
   w o " (LP.weaken_parse_cases_kind %s_sum parse_%s_cases'));\n" n n;
-  w o "  LP.serialize32_sum_gen' %s_sum serialize32_%s_key\n" n (compile_type tagt);
+  w o "  LP.serialize32_sum_gen' %s_sum serialize32_%s_key\n" n n;
   w o "    serialize32_%s_cases () (fun x -> tag_of_%s x)\n\n" n n;
 
   let annot = if is_private then " : LP.serializer32 "^(scombinator_name n) else "" in
@@ -505,15 +513,19 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "  assert_norm (LP.get_parser_kind %s_parser' == %s_parser_kind);\n" n n;
   w o "  %s_serializer32'\n\n" n;
 
-  w o "let %s_size32' = assume false;\n" n;
+(* FIXME
+  w o "let %s_size32' =\n" n;
   w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser)" (compile_type tagt);
   w o " (LP.weaken_parse_cases_kind %s_sum parse_%s_cases'));\n" n n;
-  w o "  LP.size32_sum_gen' %s_sum serialize32_%s_key\n" n (compile_type tagt);
+  w o "  LP.size32_sum_gen' %s_sum serialize32_%s_key\n" n n;
   w o "    serialize32_%s_cases () (fun x -> tag_of_%s x)\n\n" n n;
+  *)
   let annot = if is_private then " : LP.size32 "^n else "" in
-  w o "let %s_size32%s = assume false;\n" n annot;
+  w o "let %s_size32%s = magic()\n" n annot;
+  (*
   w o "  assert_norm (LP.get_parser_kind %s_parser' == %s_parser_kind);\n" n n;
   w o "  %s_size32'\n\n" n;
+  *)
   ()
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
@@ -541,11 +553,13 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorSymbolic cst -> failwith "not supported"
 
     | VectorVldata vl ->
-      let (min, max) = (li.min_len-li.len_len), (li.max_len-li.len_len) in
+      (* N.B. for VectorVldata the size of the length is accounted outside the leninfo, unlike VectorRange *)
+      let (len_len, _) = basic_bounds vl in
+      let (min, max) = li.min_len, li.max_len in
       w i "noextract val %s_bytesize: %s -> GTot nat\n\n" n ty0;
       w o "let %s_bytesize x = Seq.length (LP.serialize %s x)\n\n" n (scombinator_name ty0);
       w i "type %s = x:%s{let l = %s_bytesize x in %d <= l /\\ l <= %d}\n\n" n ty0 n min max;
-      write_api o i is_private n li.min_len li.max_len;
+      write_api o i is_private n (len_len+li.min_len) (len_len+li.max_len);
       w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n min max (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
@@ -566,7 +580,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
       w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
       w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
-      w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" min max (size32_name ty0) li.len_len;
+      w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" min max (size32_name ty0) len_len;
       w o "let %s_size32 = %s'_size32\n\n" n n
 
     (* Fixed-length bytes *)

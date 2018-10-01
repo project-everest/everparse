@@ -20,6 +20,10 @@ gen: out/Makefile
 verify: gen
 	$(MAKE) -C out verify
 
+unit: qd
+	./qd -odir tests/unit tests/unittests.rfc
+	$(MAKE) -C tests/unit
+
 test: gen
 	$(MAKE) -C out test
 
