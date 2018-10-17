@@ -92,6 +92,12 @@ let compile_type = function
   | "uint32" -> "U32.t"
   | t -> String.uncapitalize t
 
+let metadata_combinator_name = function
+  | "U8.t" -> "(LP.get_parser_kind LP.parse_u8).LP.parser_kind_metadata"
+  | "U16.t" -> "(LP.get_parser_kind LP.parse_u16).LP.parser_kind_metadata"
+  | "U32.t" -> "(LP.get_parser_kind LP.parse_u32).LP.parser_kind_metadata"
+  | t -> t ^ "_parser_kind_metadata"
+
 let pcombinator_name = function
   | "U8.t" -> "LP.parse_u8"
   | "U16.t" -> "LP.parse_u16"
@@ -422,7 +428,7 @@ and compile_select o i n tagn tagt taga cl def al =
       case n tn (String.capitalize case)
   ) cl;
   w o "\n#set-options \"--z3rlimit 30\" // From there on verification can be linear in the enum size\n\n";
-  w o "inline_for_extraction let t6_sum = LP.make_sum %s_enum key_of_%s\n" tn n;
+  w o "inline_for_extraction let %s_sum = LP.make_sum %s_enum key_of_%s\n" n tn n;
   w o "  %s_case_of_%s synth_%s_cases synth_%s_cases_recip (fun x y -> ()) (fun x -> ())\n\n" n tn n n;
   w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
 
@@ -519,7 +525,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorNone ->
       w i "type %s = %s\n\n" n ty0;
       write_api o i is_private n li.min_len li.max_len;
-      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+      w o "noextract let %s_parser_kind_metadata = %s\n\n" n (metadata_combinator_name ty0);
       w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty0);
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty0);
       w o "inline_for_extraction let %s_parser32 = %s\n\n" n (pcombinator32_name ty0);
