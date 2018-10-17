@@ -24,6 +24,7 @@ enum /*@open*/ {
 x, y, (255)
 } tag2;
 
+/*
 struct {
   tag2 t;
   select(t) {
@@ -32,6 +33,7 @@ struct {
     default: t2;
   } body;
 } t7;
+*/
 
 struct {
   t1 a;

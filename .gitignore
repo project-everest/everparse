@@ -9,4 +9,5 @@ _build
 *.cmxa
 quackyducky.native
 qd
+tests/unit
 **/out

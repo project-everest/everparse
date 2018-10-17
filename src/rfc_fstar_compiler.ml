@@ -251,12 +251,14 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   let prime = if is_open then "" else "'" in
   let notprime = if is_open then "'" else "" in
 
+  w i "let %s_repr = %s\n" n repr_t;
+  w i "let known_%s_repr (v:%s) : bool = %s\n\n" n repr_t unknown_formula;
 	w i "type %s%s =\n" n prime;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
 		  w i "  | %s\n" (String.capitalize x)
 		| _ -> ()) fl;
-	w i "  | Unknown_%s of (v:%s{not (%s)})\n\n" n repr_t unknown_formula;
+	w i "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n repr_t n;
 
   (* Filter (for closed enums) *)
   if is_open then
@@ -370,8 +372,11 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "friend %s\n\n" (abs tagt);
   w i "type %s =\n" n;
   List.iter (fun (case, ty) -> w i "  | Case_%s of %s\n" case (compile_type ty)) cl;
+  (match def with Some d -> w i "  | Case_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> %s -> %s\n" tn tn tn (compile_type d) n | _ -> ());
+
   w i "\ninline_for_extraction let tag_of_%s (x:%s) : %s = match x with\n" n n (compile_type tagt);
   List.iter (fun (case, ty) -> w i "  | Case_%s _ -> %s\n" case (String.capitalize case)) cl;
+  (match def with Some d -> w i "  | Case_Unknown_%s v _ -> Unknown_%s v\n" tn tn | _ -> ());
   w i "\n";
   write_api o i is_private n li.min_len li.max_len;
 
