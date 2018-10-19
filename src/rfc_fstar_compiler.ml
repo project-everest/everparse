@@ -249,8 +249,8 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 		| (EnumFieldAnonymous _) :: t -> collect_valid_repr int_z acc t
 		| (EnumFieldSimple (_, i)) :: t ->
 		  let acc' =
-			  if acc = "" then sprintf "v = %d%s" i int_z
-        else sprintf "%s || v = %d%s" acc i int_z in
+			  if acc = "" then sprintf "v `%s_repr_eq` %d%s" n i int_z
+        else sprintf "%s || v `%s_repr_eq` %d%s" acc n i int_z in
 		  collect_valid_repr int_z acc' t
 		| (EnumFieldRange (_, i, j)) :: t ->
 		  let acc' = acc in (* For now we treat enum ranges as unknown
@@ -265,6 +265,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   let notprime = if is_open then "'" else "" in
 
   w i "let %s_repr = %s\n" n repr_t;
+  w i "inline_for_extraction let %s_repr_eq (x1 x2: %s_repr) : Tot bool = (x1 = x2)\n" n n;
   w i "let known_%s_repr (v:%s) : bool = %s\n\n" n repr_t unknown_formula;
 	w i "type %s%s =\n" n prime;
 	List.iter (function
