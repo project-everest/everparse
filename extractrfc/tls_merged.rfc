@@ -1366,3 +1366,37 @@ struct {
     case finished:            Finished;
   } body[length];
 } Handshake12;
+
+/*
+This file defines the internal format of tickets in miTLS.
+*/
+
+enum {
+  ticket12, ticket13, (255)
+} TicketVersion;
+
+enum { false, true, (255)} bool;
+
+struct {
+  ProtocolVersion pv;
+  CipherSuite cs;
+  bool ems;
+  opaque master_secret[48];
+} TicketContents12;
+
+struct {
+  CipherSuite cs;
+  opaque rms<32..255>;
+  opaque nonce<0..255>;
+  uint32 creation_time;
+  uint32 age_add;
+  opaque custom_data<0..2^16-1>;
+} TicketContents13;
+
+struct {
+  TicketVersion version;
+  select(v) {
+    case ticket12: TicketContents12;
+    case ticket13: TicketContents13;
+  } contents;
+} TicketContents;

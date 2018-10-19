@@ -209,7 +209,7 @@ let getdep (p:gemstone_t) : typ list =
 type parser_kind_metadata =
   | MetadataTotal
   | MetadataDefault
-    
+
 let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
   if is_private then
    begin
@@ -392,53 +392,154 @@ and compile_select o i n tagn tagt taga cl def al =
   w i "\n";
   write_api o i is_private MetadataDefault n li.min_len li.max_len;
 
-  w o "inline_for_extraction unfold let %s_as_enum_key (x:%s) : Pure (LP.enum_key %s_enum)\n" tn tn tn;
-  w o "  (requires norm [delta; zeta; iota; primops] (LP.list_mem x (LP.list_map fst %s_enum)) == true)" tn;
-  w o " (ensures fun _ -> True) =\n";
-  w o "  [@inline_let] let _ = norm_spec [delta; zeta; iota; primops] (LP.list_mem x (LP.list_map fst %s_enum)) in x\n\n" tn;
+  (** FIXME(adl) for now the t_sum of open and closed sums are independently generated,
+  we may try to share more of the declarations between the two cases **)
+  (match def with
+  | None ->
+    (*** Closed Enum ***)
+    w o "inline_for_extraction unfold let %s_as_enum_key (x:%s) : Pure (LP.enum_key %s_enum)\n" tn tn tn;
+    w o "  (requires norm [delta; zeta; iota; primops] (LP.list_mem x (LP.list_map fst %s_enum)) == true)" tn;
+    w o " (ensures fun _ -> True) =\n";
+    w o "  [@inline_let] let _ = norm_spec [delta; zeta; iota; primops] (LP.list_mem x (LP.list_map fst %s_enum)) in x\n\n" tn;
 
-  w o "inline_for_extraction let key_of_%s (x:%s) : LP.enum_key %s_enum =\n" n n tn;
-  w o "  match x with\n";
-  List.iter (fun (case, ty) -> w o "  | Case_%s _ -> %s_as_enum_key %s\n" case tn (String.capitalize case)) cl;
-  w o "\ninline_for_extraction let %s_case_of_%s (x:%s) : Type0 =\n" n tn tn;
-  w o "  match x with\n";
-  List.iter (fun (case, ty) -> w o "  | %s -> %s\n" (String.capitalize case) (compile_type ty)) cl;
-  w o "\nunfold inline_for_extraction let to_%s_case_of_%s (x:%s) (#x':%s) (y:%s_case_of_%s x')" n tn tn tn n tn;
-  w o "  : Pure (norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
-  w o "  (requires (x == x')) (ensures (fun y' -> y' == y)) =\n";
-  w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)] ; iota] (%s_case_of_%s x) in y\n\n" n tn n tn;
-  w o "unfold inline_for_extraction let %s_refine (k:LP.enum_key %s_enum) (x:%s)\n" n tn n;
-  w o "  : Pure (LP.refine_with_tag key_of_%s k)" n;
-  w o "  (requires norm [delta; iota; zeta] (key_of_%s x) == k) (ensures (fun y -> y == x)) =\n" n;
-  w o "  [@inline_let] let _ = norm_spec [delta; iota; zeta] (key_of_%s x) in x\n\n" n;
-  w o "inline_for_extraction let synth_%s_cases (x:LP.enum_key %s_enum) (y:%s_case_of_%s x)\n" n tn n tn;
-  w o "  : LP.refine_with_tag key_of_%s x =\n  match x with\n" n;
-  List.iter (fun (case, ty) -> w o "  | %s -> %s_refine x (Case_%s (to_%s_case_of_%s %s y))\n"
-    (String.capitalize case) n case n tn (String.capitalize case)) cl;
-  w o "\nunfold inline_for_extraction let from_%s_case_of_%s (#x':%s) (x:%s)\n" n tn tn tn;
-  w o "  (y: norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
-  w o "  : Pure (%s_case_of_%s x') (requires (x == x')) (ensures (fun y' -> y' == y)) =\n" n tn;
-  w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)] ; iota] (%s_case_of_%s x) in y\n\n" n tn n tn;
-  w o "let synth_%s_cases_recip_pre (k:LP.enum_key %s_enum)\n" n tn;
-  w o "  (x:LP.refine_with_tag key_of_%s k) : GTot bool =\n  match k with\n" n;
-  List.iter (fun (case, ty) -> w o "  | %s -> Case_%s? x\n" (String.capitalize case) case) cl;
-  w o "\nlet synth_%s_cases_recip_pre_intro (k:LP.enum_key %s_enum) (x:LP.refine_with_tag key_of_%s k)\n" n tn n;
-  w o "  : Lemma (synth_%s_cases_recip_pre k x == true) =\n" n;
-  w o "  norm_spec [delta; iota] (synth_%s_cases_recip_pre k x)\n\n" n;
-  w o "inline_for_extraction let synth_%s_cases_recip (k:LP.enum_key %s_enum)\n" n tn;
-  w o "  (x:LP.refine_with_tag key_of_%s k) : (%s_case_of_%s k) =\n  match k with\n" n n tn;
-  List.iter (fun (case, ty) ->
-    w o "  | %s -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro %s x in\n"
-      (String.capitalize case) n (String.capitalize case);
-    w o "    (match x with Case_%s y -> (from_%s_case_of_%s %s y))\n"
-      case n tn (String.capitalize case)
-  ) cl;
-  w o "\n#set-options \"--z3rlimit 30\" // From there on verification can be linear in the enum size\n\n";
-  w o "inline_for_extraction let %s_sum = LP.make_sum %s_enum key_of_%s\n" n tn n;
-  w o "  %s_case_of_%s synth_%s_cases synth_%s_cases_recip (fun x y -> ()) (fun x -> ())\n\n" n tn n n;
-  w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
+    w o "inline_for_extraction let key_of_%s (x:%s) : LP.enum_key %s_enum =\n" n n tn;
+    w o "  match x with\n";
+    List.iter (fun (case, ty) -> w o "  | Case_%s _ -> %s_as_enum_key %s\n" case tn (String.capitalize case)) cl;
+    w o "\ninline_for_extraction let %s_case_of_%s (x:%s) : Type0 =\n" n tn tn;
+    w o "  match x with\n";
+    List.iter (fun (case, ty) -> w o "  | %s -> %s\n" (String.capitalize case) (compile_type ty)) cl;
+    w o "\nunfold inline_for_extraction let to_%s_case_of_%s (x:%s) (#x':%s) (y:%s_case_of_%s x')" n tn tn tn n tn;
+    w o "  : Pure (norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
+    w o "  (requires (x == x')) (ensures (fun y' -> y' == y)) =\n";
+    w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)] ; iota] (%s_case_of_%s x) in y\n\n" n tn n tn;
+    w o "unfold inline_for_extraction let %s_refine (k:LP.enum_key %s_enum) (x:%s)\n" n tn n;
+    w o "  : Pure (LP.refine_with_tag key_of_%s k)" n;
+    w o "  (requires norm [delta; iota; zeta] (key_of_%s x) == k) (ensures (fun y -> y == x)) =\n" n;
+    w o "  [@inline_let] let _ = norm_spec [delta; iota; zeta] (key_of_%s x) in x\n\n" n;
+    w o "inline_for_extraction let synth_%s_cases (x:LP.enum_key %s_enum) (y:%s_case_of_%s x)\n" n tn n tn;
+    w o "  : LP.refine_with_tag key_of_%s x =\n  match x with\n" n;
+    List.iter (fun (case, ty) -> w o "  | %s -> %s_refine x (Case_%s (to_%s_case_of_%s %s y))\n"
+      (String.capitalize case) n case n tn (String.capitalize case)) cl;
+    w o "\nunfold inline_for_extraction let from_%s_case_of_%s (#x':%s) (x:%s)\n" n tn tn tn;
+    w o "  (y: norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
+    w o "  : Pure (%s_case_of_%s x') (requires (x == x')) (ensures (fun y' -> y' == y)) =\n" n tn;
+    w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)] ; iota] (%s_case_of_%s x) in y\n\n" n tn n tn;
+    w o "let synth_%s_cases_recip_pre (k:LP.enum_key %s_enum)\n" n tn;
+    w o "  (x:LP.refine_with_tag key_of_%s k) : GTot bool =\n  match k with\n" n;
+    List.iter (fun (case, ty) -> w o "  | %s -> Case_%s? x\n" (String.capitalize case) case) cl;
+    w o "\nlet synth_%s_cases_recip_pre_intro (k:LP.enum_key %s_enum) (x:LP.refine_with_tag key_of_%s k)\n" n tn n;
+    w o "  : Lemma (synth_%s_cases_recip_pre k x == true) =\n" n;
+    w o "  norm_spec [delta; iota] (synth_%s_cases_recip_pre k x)\n\n" n;
+    w o "inline_for_extraction let synth_%s_cases_recip (k:LP.enum_key %s_enum)\n" n tn;
+    w o "  (x:LP.refine_with_tag key_of_%s k) : (%s_case_of_%s k) =\n  match k with\n" n n tn;
+    List.iter (fun (case, ty) ->
+      w o "  | %s -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro %s x in\n"
+        (String.capitalize case) n (String.capitalize case);
+      w o "    (match x with Case_%s y -> (from_%s_case_of_%s %s y))\n"
+        case n tn (String.capitalize case)
+    ) cl;
+    w o "\n#set-options \"--z3rlimit 30\" // From there on verification can be linear in the enum size\n\n";
+    w o "inline_for_extraction let %s_sum = LP.make_sum %s_enum key_of_%s\n" n tn n;
+    w o "  %s_case_of_%s synth_%s_cases synth_%s_cases_recip (fun x y -> ()) (fun x -> ())\n\n" n tn n n;
+    ()
 
-  w o "let parse_%s_cases (x:LP.sum_key %s_sum)\n" n n;
+  | Some def ->
+    (*** Open enum ***)
+    let tyd = compile_type def in
+    w o "inline_for_extraction unfold let known_%s_as_enum_key\n" tn;
+    w o "  (x: %s { norm [delta; zeta; iota; primops] (LP.list_mem x (LP.list_map fst %s_enum)) == true })\n" tn tn;
+    w o "  : LP.enum_key %s_enum =\n" tn;
+    w o "  [@inline_let] let _ = norm_spec [delta; zeta; iota; primops] (LP.list_mem x (LP.list_map fst %s_enum)) in x\n\n" tn;
+    w o "let unknown_tag2_as_enum_key (r:%s_repr) : Pure (LP.unknown_enum_repr %s_enum)\n" tn tn;
+    w o "  (requires known_%s_repr r == false) (ensures fun _ -> True) =\n" tn;
+    w o "  [@inline_let] let _ = assert_norm(LP.list_mem r (LP.list_map snd %s_enum) == known_%s_repr r) in r\n\n" tn tn;
+
+    w o "inline_for_extraction let key_of_%s (x:%s) : LP.maybe_enum_key %s_enum =\n  match x with\n" n n tn;
+    List.iter (fun (case, ty) ->
+      let cn, ty0 = String.capitalize case, compile_type ty in
+      w o "  | Case_%s _ -> LP.Known (known_tag2_as_enum_key %s)\n" case cn
+    ) cl;
+    w o "  | Case_Unknown_%s v _ -> LP.Unknown (unknown_%s_as_enum_key v)\n\n" tn tn;
+
+    w o "inline_for_extraction let %s_case_of_%s (x:%s') : Type0 =\n  match x with\n" n tn tn;
+    List.iter (fun (case, ty) ->
+      let cn, ty0 = String.capitalize case, compile_type ty in
+      w o "  | %s -> %s\n" cn ty0
+    ) cl;
+
+    w o "\nunfold inline_for_extraction let %s_value_type (x:LP.maybe_enum_key %s_enum) =\n" n tn;
+    w o "  LP.dsum_type_of_tag' %s_enum %s_case_of_%s %s x\n\n" tn n tn tyd;
+    w o "unfold inline_for_extraction let %s_refine (k:LP.maybe_enum_key %s_enum) (x:%s)\n" n tn n;
+    w o "  : Pure (LP.refine_with_tag key_of_%s k)\n" n;
+    w o "  (requires key_of_%s x == k) (ensures fun y -> y == x) =\n" n;
+    w o "  [@inline_let] let _ = norm_spec [delta; iota; zeta] (key_of_%s x) in x\n\n" n;
+    w o "unfold inline_for_extraction let %s_type_of_known_case (k: LP.enum_key %s_enum)\n" n tn;
+    w o "  (x:%s') (q: squash ((k <: %s') == x))\n" tn tn;
+    w o "  (#x' : LP.maybe_enum_key %s_enum) (y: %s_value_type x')\n" tn n;
+    w o "  : Pure (norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
+    w o "  (requires (LP.Known k == x')) (ensures (fun y' -> y' == y)) =\n";
+    w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s k) in y\n\n" n tn n tn;
+    w o "unfold inline_for_extraction let %s_known_case (k: LP.enum_key %s_enum)\n" n tn;
+    w o "  (x: %s') (y: norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" tn n tn n tn;
+    w o "  : Pure (%s_case_of_%s k) (requires (k == x)) (ensures (fun y' -> y' == y)) =\n" n tn;
+    w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)] ; iota] (%s_case_of_%s x) in y\n\n" n tn n tn;
+
+    w o "inline_for_extraction let synth_known_%s_cases (k:LP.enum_key %s_enum)\n" n tn;
+    w o "  (y:%s_value_type (LP.Known k)) : LP.refine_with_tag key_of_%s (LP.Known k) =\n  match k with\n" n n;
+    List.iter (fun (case, ty) ->
+      let cn, ty0 = String.capitalize case, compile_type ty in
+      w o "  | %s ->\n    [@inline_let] let x : %s = Case_%s (%s_type_of_known_case k %s () y) in\n" cn n case n cn;
+      w o "    [@inline_let] let _ = assert_norm (key_of_%s x == LP.Known %s) in\n" n cn;
+      w o "    %s_refine (LP.Known %s) x\n" n cn
+    ) cl;
+    w o "\ninline_for_extraction let synth_%s_cases (x:LP.maybe_enum_key %s_enum)\n" n tn;
+    w o "  (y:%s_value_type x) : LP.refine_with_tag key_of_%s x =\n  match x with\n" n n;
+    w o "  | LP.Unknown v ->\n";
+    w o "    [@inline_let] let x : %s = Case_Unknown_%s v y in\n" n tn;
+    w o "    [@inline_let] let _ = assert_norm (key_of_%s x == LP.Unknown v) in\n" n;
+    w o "    %s_refine (LP.Unknown v) x\n" n;
+    w o "  | LP.Known k -> synth_known_%s_cases k y\n\n" n;
+
+    w o "unfold inline_for_extraction let from_%s_case_of_%s (#x':%s') (x:%s')\n" n tn tn tn;
+    w o "  (y: norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
+    w o "  : Pure (%s_case_of_%s x') (requires (x == x')) (ensures (fun y' -> y' == y)) =\n" n tn;
+    w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)] ; iota] (%s_case_of_%s x) in y\n\n" n tn n tn;
+
+    w o "let synth_%s_cases_recip_pre (k:LP.maybe_enum_key %s_enum)\n" n tn;
+    w o "  (x:LP.refine_with_tag key_of_%s k) : GTot bool =\n  match k with\n" n;
+    List.iter (fun (case, ty) ->
+      let cn, ty0 = String.capitalize case, compile_type ty in
+      w o "  | LP.Known %s -> Case_%s? x\n" cn case
+    ) cl;
+    w o "  | LP.Unknown _ -> Case_Unknown_tag2? x\n\n";
+    w o "let synth_%s_cases_recip_pre_intro (k:LP.maybe_enum_key %s_enum)\n" n tn;
+    w o "  (x:LP.refine_with_tag key_of_%s k)\n" n;
+    w o "  : Lemma (synth_%s_cases_recip_pre k x == true) =\n" n;
+    w o "  norm_spec [delta; iota] (synth_%s_cases_recip_pre k x)\n\n" n;
+    w o "inline_for_extraction let synth_%s_cases_recip (k:LP.maybe_enum_key %s_enum)\n" n tn;
+    w o "  (x:LP.refine_with_tag key_of_%s k) : (%s_value_type k) =\n  match k with\n" n n;
+    w o "  | LP.Unknown z ->\n    [@inline_let] let _ = synth_%s_cases_recip_pre_intro (LP.Unknown z) x in\n" n;
+    w o "    (match x with Case_Unknown_%s _ y ->  (y <: %s_value_type k))\n" tn n;
+    w o "  | LP.Known k' ->\n    match k' with\n";
+    List.iter (fun (case, ty) ->
+      let cn, ty0 = String.capitalize case, compile_type ty in
+      w o "    | %s -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro (LP.Known %s) x in\n" cn n cn;
+      w o "      (match x with Case_%s y -> %s_known_case k' %s y)\n" case n cn
+    ) cl;
+
+    w o "\ninline_for_extraction let %s_sum : LP.dsum = LP.make_dsum' %s_enum key_of_%s\n" n tn n;
+    w o "  %s_case_of_%s %s synth_%s_cases synth_%s_cases_recip\n" n tn tyd n n;
+    w o "  (magic()) //  (_ by (LP.make_dsum_synth_case_recip_synth_case_known_tac ()))\n";
+    w o "  (_ by (LP.make_dsum_synth_case_recip_synth_case_unknown_tac ()))\n";
+    w o "  (_ by (LP.synth_case_synth_case_recip_tac ()))\n\n";
+    ()
+  ); (* End of open/close specialization *)
+
+  let ktype = match def with
+    | None -> sprintf "LP.sum_key %s_sum" n
+    | Some def -> sprintf "LP.dsum_known_key %s_sum" n in
+
+  w o "let parse_%s_cases (x:%s)\n" n ktype;
   w o "  : k:LP.parser_kind & LP.parser k (%s_case_of_%s x) =\n  match x with\n" n tn;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize case in
@@ -446,7 +547,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | %s -> (| _, %s |)\n" cn (pcombinator_name ty0)
   ) cl;
 
-  w o "\nlet serialize_%s_cases (x:LP.sum_key %s_sum)\n" n n;
+  w o "\nlet serialize_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.serializer (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize case in
@@ -454,7 +555,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | %s -> %s\n" cn (scombinator_name ty0)
   ) cl;
 
-  w o "\nlet parse32_%s_cases (x:LP.sum_key %s_sum)\n" n n;
+  w o "\nlet parse32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.parser32 (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize case in
@@ -462,7 +563,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | %s -> %s\n" cn (pcombinator32_name ty0)
   ) cl;
 
-  w o "\nlet serialize32_%s_cases (x:LP.sum_key %s_sum)\n" n n;
+  w o "\nlet serialize32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize case in
@@ -470,7 +571,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | %s -> %s\n" cn (scombinator32_name ty0)
   ) cl;
 
-  w o "\nlet size32_%s_cases (x:LP.sum_key %s_sum)\n" n n;
+  w o "\nlet size32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.size32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize case in
@@ -478,43 +579,53 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | %s -> %s\n" cn (size32_name ty0)
   ) cl;
 
+  (* FIXME(adl) can't prove by normalization because of opaque kinds in interfaces *)
+  let same_kind = match def with
+    | None -> sprintf "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n
+    | Some dt -> sprintf "  assume(LP.parse_dsum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases %s_parser_kind == %s_parser_kind);\n" tn n n (compile_type dt) n
+    in
+
   let annot = if is_private then " : LP.parser "^n^"_parser_kind "^n else "" in
-  w o "\nlet %s_parser%s =\n" n annot;
-  w o "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n;
-  w o "  LP.parse_sum %s_sum %s_repr_parser parse_%s_cases\n\n" n tn n;
+  w o "\nlet %s_parser%s =\n%s" n annot same_kind;
+  (match def with
+  | None -> w o "  LP.parse_sum %s_sum %s_repr_parser parse_%s_cases\n\n" n tn n
+  | Some dt -> w o "  LP.parse_dsum %s_sum %s_repr_parser parse_%s_cases %s\n\n" n tn n (pcombinator_name (compile_type dt)));
 
   let annot = if is_private then " : LP.serializer "^(pcombinator_name n) else "" in
-  w o "let %s_serializer%s =\n" n annot;
-  w o "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n;
-  w o "  LP.serialize_sum %s_sum %s_repr_serializer serialize_%s_cases\n\n" n tn n;
-
-  w o "let parse32_%s_key : LP.parser32 (LP.parse_enum_key %s_repr_parser %s_enum)\n" n tn tn;
-  w o "  = _ by (LP.parse32_enum_key_tac %s_repr_parser32 %s_enum ())\n\n" tn tn;
-  w o "inline_for_extraction let parse32_%s_destr: LP.enum_destr_t (option (%s * FStar.UInt32.t)) %s_enum\n" n n tn;
-  w o "  = _ by (LP.enum_destr_tac %s_enum)\n\n" tn;
+  w o "let %s_serializer%s =\n%s" n annot same_kind;
+  (match def with
+  | None -> w o "  LP.serialize_sum %s_sum %s_repr_serializer serialize_%s_cases\n\n" n tn n
+  | Some dt -> w o "  LP.serialize_dsum %s_sum %s_repr_serializer _ serialize_%s_cases _ %s\n\n" n tn n (scombinator_name (compile_type dt)));
 
   let annot = if is_private then " : LP.parser32 "^(pcombinator_name n) else "" in
-  w o "let %s_parser32%s =\n" n annot;
-  w o "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n;
-  w o "  LP.parse32_sum %s_sum _ parse32_%s_key _ parse32_%s_cases parse32_%s_destr\n\n" n n n n;
-
-  w o "let serialize32_%s_key: LP.serializer32 (LP.serialize_enum_key _ %s_repr_serializer %s_enum)\n" n tn tn;
-  w o "  = _ by (LP.serialize32_enum_key_gen_tac %s_repr_serializer32 %s_enum ())\n\n" tn tn;
-  w o "inline_for_extraction let serialize32_%s_destr: LP.dep_enum_destr %s_enum (LP.serialize32_sum_destr_codom %s_sum)\n" n tn n;
-  w o "  = _ by (LP.dep_enum_destr_tac ())\n\n";
+  w o "let %s_parser32%s =\n%s" n annot same_kind;
+  (match def with
+  | None ->
+    w o "  LP.parse32_sum %s_sum _ (_ by (LP.parse32_enum_key_tac %s_repr_parser32 %s_enum ()))\n" n tn tn;
+    w o "    _ parse32_%s_cases (_ by (LP.enum_destr_tac %s_enum))\n\n" n tn
+  | Some dt ->
+    w o "  LP.parse32_dsum %s_sum %s_repr_parser32\n" n tn;
+    w o "    _ parse32_%s_cases %s (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n (pcombinator32_name (compile_type dt)));
 
   let annot = if is_private then " : LP.serializer32 "^(scombinator_name n) else "" in
-  w o "let %s_serializer32%s =\n" n annot;
-  w o "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n;
-  w o "  LP.serialize32_sum %s_sum _ serialize32_%s_key _ serialize32_%s_cases serialize32_%s_destr ()\n\n" n n n n;
-
-  w o "let size32_%s_key : LP.size32 (LP.serialize_enum_key _ %s_repr_serializer %s_enum)\n" n tn tn;
-  w o "  = _ by (LP.size32_enum_key_gen_tac %s_repr_size32 %s_enum ())\n\n" tn tn;
+  w o "let %s_serializer32%s =\n%s" n annot same_kind;
+  (match def with
+  | None ->
+    w o "  LP.serialize32_sum %s_sum _ (_ by (LP.serialize32_enum_key_gen_tac %s_repr_serializer32 %s_enum ()))" n tn tn;
+    w o "    _ serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n
+  | Some dt ->
+    w o "  LP.serialize32_dsum %s_sum _ (_ by (LP.serialize32_maybe_enum_key_tac %s_repr_serializer32 %s_enum ()))" n tn tn;
+    w o "    _ _ serialize32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (scombinator32_name (compile_type dt)));
 
   let annot = if is_private then " : LP.size32 "^n else "" in
-  w o "let %s_size32%s =\n" n annot;
-  w o "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n;
-  w o "  LP.size32_sum %s_sum _ size32_%s_key _ size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n n n;
+  w o "let %s_size32%s =\n%s" n annot same_kind;
+  (match def with
+  | None ->
+    w o "  LP.size32_sum %s_sum _ (_ by (LP.size32_enum_key_gen_tac %s_repr_size32 %s_enum ()))" n tn tn;
+    w o "    _ size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n
+  | Some dt ->
+    w o "  LP.size32_dsum %s_sum _ (_ by (LP.size32_maybe_enum_key_tac %s_repr_size32 %s_enum ()))\n" n tn tn;
+    w o "    _ _ size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (size32_name (compile_type dt)));
   ()
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
