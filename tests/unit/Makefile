@@ -24,7 +24,7 @@ FSTAR_OPTIONS = --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_check
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 
-HEADERS = $(addprefix -add-include ,'"hacks.h"' '"kremlin/internal/compat.h"')
+HEADERS = $(addprefix -add-include ,'"kremlin/internal/compat.h"')
 
 KREMLIN = $(KREMLIN_HOME)/krml \
 	 -ccopt "-Ofast" \
