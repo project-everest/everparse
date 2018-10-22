@@ -32,7 +32,13 @@ let tname (p:gemstone_t) : string =
 		| Enum (_, _, n) -> n
 		| Struct (_, _, n) -> n
     | Typedef (_, _, n, _, _) -> n
-	in String.uncapitalize (aux p)
+	in String.uncapitalize_ascii (aux p)
+
+let module_name (s:string) =
+  if !prefix = "" || Str.last_chars !prefix 1 = "." then
+    !prefix ^ (String.capitalize_ascii s)
+  else
+    !prefix ^ s
 
 let attr_of = function
   | Enum (a, _, _) -> a
@@ -42,7 +48,7 @@ let attr_of = function
 let has_attr (a:attr list) (s:attr) = List.mem s a
 
 let get_leninfo (t:typ) =
-  try SM.find (String.uncapitalize t) !linfo
+  try SM.find (String.uncapitalize_ascii t) !linfo
   with _ -> failwith ("Failed lookup for type "^t)
 
 let li_add (s:string) (li:len_info) =
@@ -81,16 +87,13 @@ let rec sizeof = function
       let li = get_leninfo s in
       {li with len_len = li.len_len} (* shallow copy *)
 
-let abs (n:typ) =
-	!prefix ^ (String.uncapitalize n)
-
 let compile_type = function
   | "opaque"
   | "uint8" -> "U8.t"
   | "uint16" -> "U16.t"
   | "uint24" -> "U32.t"
   | "uint32" -> "U32.t"
-  | t -> String.uncapitalize t
+  | t -> String.uncapitalize_ascii t
 
 let metadata_combinator_name = function
   | "U8.t" -> "(LP.get_parser_kind LP.parse_u8).LP.parser_kind_metadata"
@@ -143,21 +146,21 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       }
     | VectorVldata tn ->
       let (len_len, max_len) = basic_bounds tn in
-      {li with len_len = len_len; min_len = len_len; max_len = len_len+max_len; vl = true; }
+      (*let min', max' = li.min_len, min li.max_len max_len in*)
+      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = len_len + li.max_len; vl = true; }
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
-      let li = get_leninfo (tn^"@"^cst) in
-      let (min, max) = match li.min_len with
-      | 1 -> 0, 255 | 2 -> 0, 065535
-      | 3 -> 0, 16777215 | 4 -> 0, 4294967295
-      | _ -> failwith "bad vldata" in
+      let li' = get_leninfo (tn^"@"^cst) in
+      (* Important: must reflect parse_bounded_vldata_strong_kind computation *)
+      let max' = min li.max_len (match li'.max_len with
+      | 1 -> 255 | 2 ->  65535 | 3 -> 16777215 | 4 -> 4294967295
+      | _ -> failwith "bad vldata") in
       (* N.B. the len_len will be counted in the explicit length field *)
-      {li with len_len=0; min_len=min; max_len = max; vl = true; }
+      {li' with vl = true; len_len = 0; min_len = li.min_len; max_len = max'; }
     | VectorRange (low, high) ->
       let h = log256 high in
       (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^tn));
-      { li with
-        vl = true;
+      { vl = true;
         min_count = low / (li.len_len + li.max_len);
         max_count = high / (li.len_len + li.min_len);
         len_len = h;
@@ -188,7 +191,9 @@ let getdep (p:gemstone_t) : typ list =
       (match m with
       | EnumFieldAnonymous 255 -> li.min_len <- 1; li.max_len <- 1
       | EnumFieldAnonymous 65535 -> li.min_len <- 2; li.max_len <- 2
-      | EnumFieldAnonymous 4294967295 -> li.min_len <- 4; li.max_len <- 4);
+      | EnumFieldAnonymous 4294967295 -> li.min_len <- 4; li.max_len <- 4
+      | EnumFieldAnonymous d -> failwith ("unsupported enum representation: "^string_of_int d)
+      | _ -> failwith "impossible");
       li_add tn li; ([]:typ list list)
     | Struct (_, fl, _) ->
       let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
@@ -201,7 +206,7 @@ let getdep (p:gemstone_t) : typ list =
         typedep ty) fl in
       li_add tn li; dep
     | Typedef (al, ty, n, vec, def) ->
-      add_field "" (String.uncapitalize n) ty vec;
+      add_field "" (String.uncapitalize_ascii n) ty vec;
       [typedep ty]
     in
   dedup (List.flatten dep)
@@ -270,7 +275,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 	w i "type %s%s =\n" n prime;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
-		  w i "  | %s\n" (String.capitalize x)
+		  w i "  | %s\n" (String.capitalize_ascii x)
 		| _ -> ()) fl;
 	w i "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n repr_t n;
 
@@ -289,7 +294,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 	w o "  [@inline_let] let e = [\n";
 	List.iter (function
 	  | EnumFieldSimple (x, i) ->
-		  w o "    %s, %d%s;\n" (String.capitalize x) i int_z
+		  w o "    %s, %d%s;\n" (String.capitalize_ascii x) i int_z
 		| _ -> ()) fl;
 	w o "  ] in\n";
 	w o "  [@inline_let] let _ =\n";
@@ -361,7 +366,6 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   if not is_open then
    begin
     w o "noextract let %s_kind = LP.parse_filter_kind (LP.get_parser_kind %s'_parser)\n\n" n n;
-    w o "noextract let %s_parser_kind_metadata = %s_kind.LP.parser_kind_metadata\n\n" n n;
     w o "noextract let %s_parser = LP.parse_filter %s'_parser %s_filter_spec\n\n" n n n;
     w o "noextract let %s_serializer = LP.serialize_filter %s'_serializer %s_filter_spec\n\n" n n n;
     w o "let %s_parser32 = LP.parse32_filter %s'_parser32 %s_filter_spec %s_filter\n\n" n n n n;
@@ -375,16 +379,15 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 
 and compile_select o i n tagn tagt taga cl def al =
   let is_private = has_attr al "private" in
-  let is_open = not (def = None) in
   let li = get_leninfo n in
   let tn = compile_type tagt in
-  w o "friend %s\n\n" (abs tagt);
+  w o "friend %s\n\n" (module_name tagt);
   w i "type %s =\n" n;
   List.iter (fun (case, ty) -> w i "  | Case_%s of %s\n" case (compile_type ty)) cl;
   (match def with Some d -> w i "  | Case_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> %s -> %s\n" tn tn tn (compile_type d) n | _ -> ());
 
   w i "\ninline_for_extraction let tag_of_%s (x:%s) : %s = match x with\n" n n (compile_type tagt);
-  List.iter (fun (case, ty) -> w i "  | Case_%s _ -> %s\n" case (String.capitalize case)) cl;
+  List.iter (fun (case, ty) -> w i "  | Case_%s _ -> %s\n" case (String.capitalize_ascii case)) cl;
   (match def with Some d -> w i "  | Case_Unknown_%s v _ -> Unknown_%s v\n" tn tn | _ -> ());
   w i "\n";
   write_api o i is_private MetadataDefault n li.min_len li.max_len;
@@ -401,10 +404,10 @@ and compile_select o i n tagn tagt taga cl def al =
 
     w o "inline_for_extraction let key_of_%s (x:%s) : LP.enum_key %s_enum =\n" n n tn;
     w o "  match x with\n";
-    List.iter (fun (case, ty) -> w o "  | Case_%s _ -> %s_as_enum_key %s\n" case tn (String.capitalize case)) cl;
+    List.iter (fun (case, ty) -> w o "  | Case_%s _ -> %s_as_enum_key %s\n" case tn (String.capitalize_ascii case)) cl;
     w o "\ninline_for_extraction let %s_case_of_%s (x:%s) : Type0 =\n" n tn tn;
     w o "  match x with\n";
-    List.iter (fun (case, ty) -> w o "  | %s -> %s\n" (String.capitalize case) (compile_type ty)) cl;
+    List.iter (fun (case, ty) -> w o "  | %s -> %s\n" (String.capitalize_ascii case) (compile_type ty)) cl;
     w o "\nunfold inline_for_extraction let to_%s_case_of_%s (x:%s) (#x':%s) (y:%s_case_of_%s x')" n tn tn tn n tn;
     w o "  : Pure (norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
     w o "  (requires (x == x')) (ensures (fun y' -> y' == y)) =\n";
@@ -416,14 +419,14 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "inline_for_extraction let synth_%s_cases (x:LP.enum_key %s_enum) (y:%s_case_of_%s x)\n" n tn n tn;
     w o "  : LP.refine_with_tag key_of_%s x =\n  match x with\n" n;
     List.iter (fun (case, ty) -> w o "  | %s -> %s_refine x (Case_%s (to_%s_case_of_%s %s y))\n"
-      (String.capitalize case) n case n tn (String.capitalize case)) cl;
+      (String.capitalize_ascii case) n case n tn (String.capitalize_ascii case)) cl;
     w o "\nunfold inline_for_extraction let from_%s_case_of_%s (#x':%s) (x:%s)\n" n tn tn tn;
     w o "  (y: norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
     w o "  : Pure (%s_case_of_%s x') (requires (x == x')) (ensures (fun y' -> y' == y)) =\n" n tn;
     w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)] ; iota] (%s_case_of_%s x) in y\n\n" n tn n tn;
     w o "let synth_%s_cases_recip_pre (k:LP.enum_key %s_enum)\n" n tn;
     w o "  (x:LP.refine_with_tag key_of_%s k) : GTot bool =\n  match k with\n" n;
-    List.iter (fun (case, ty) -> w o "  | %s -> Case_%s? x\n" (String.capitalize case) case) cl;
+    List.iter (fun (case, ty) -> w o "  | %s -> Case_%s? x\n" (String.capitalize_ascii case) case) cl;
     w o "\nlet synth_%s_cases_recip_pre_intro (k:LP.enum_key %s_enum) (x:LP.refine_with_tag key_of_%s k)\n" n tn n;
     w o "  : Lemma (synth_%s_cases_recip_pre k x == true) =\n" n;
     w o "  norm_spec [delta; iota] (synth_%s_cases_recip_pre k x)\n\n" n;
@@ -431,9 +434,9 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  (x:LP.refine_with_tag key_of_%s k) : (%s_case_of_%s k) =\n  match k with\n" n n tn;
     List.iter (fun (case, ty) ->
       w o "  | %s -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro %s x in\n"
-        (String.capitalize case) n (String.capitalize case);
+        (String.capitalize_ascii case) n (String.capitalize_ascii case);
       w o "    (match x with Case_%s y -> (from_%s_case_of_%s %s y))\n"
-        case n tn (String.capitalize case)
+        case n tn (String.capitalize_ascii case)
     ) cl;
     w o "\n#set-options \"--z3rlimit 30\" // From there on verification can be linear in the enum size\n\n";
     w o "inline_for_extraction let %s_sum = LP.make_sum %s_enum key_of_%s\n" n tn n;
@@ -453,14 +456,14 @@ and compile_select o i n tagn tagt taga cl def al =
 
     w o "inline_for_extraction let key_of_%s (x:%s) : LP.maybe_enum_key %s_enum =\n  match x with\n" n n tn;
     List.iter (fun (case, ty) ->
-      let cn, ty0 = String.capitalize case, compile_type ty in
+      let cn, ty0 = String.capitalize_ascii case, compile_type ty in
       w o "  | Case_%s _ -> LP.Known (known_tag2_as_enum_key %s)\n" case cn
     ) cl;
     w o "  | Case_Unknown_%s v _ -> LP.Unknown (unknown_%s_as_enum_key v)\n\n" tn tn;
 
     w o "inline_for_extraction let %s_case_of_%s (x:%s') : Type0 =\n  match x with\n" n tn tn;
     List.iter (fun (case, ty) ->
-      let cn, ty0 = String.capitalize case, compile_type ty in
+      let cn, ty0 = String.capitalize_ascii case, compile_type ty in
       w o "  | %s -> %s\n" cn ty0
     ) cl;
 
@@ -484,7 +487,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "inline_for_extraction let synth_known_%s_cases (k:LP.enum_key %s_enum)\n" n tn;
     w o "  (y:%s_value_type (LP.Known k)) : LP.refine_with_tag key_of_%s (LP.Known k) =\n  match k with\n" n n;
     List.iter (fun (case, ty) ->
-      let cn, ty0 = String.capitalize case, compile_type ty in
+      let cn, ty0 = String.capitalize_ascii case, compile_type ty in
       w o "  | %s ->\n    [@inline_let] let x : %s = Case_%s (%s_type_of_known_case k %s () y) in\n" cn n case n cn;
       w o "    [@inline_let] let _ = assert_norm (key_of_%s x == LP.Known %s) in\n" n cn;
       w o "    %s_refine (LP.Known %s) x\n" n cn
@@ -505,7 +508,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "let synth_%s_cases_recip_pre (k:LP.maybe_enum_key %s_enum)\n" n tn;
     w o "  (x:LP.refine_with_tag key_of_%s k) : GTot bool =\n  match k with\n" n;
     List.iter (fun (case, ty) ->
-      let cn, ty0 = String.capitalize case, compile_type ty in
+      let cn, ty0 = String.capitalize_ascii case, compile_type ty in
       w o "  | LP.Known %s -> Case_%s? x\n" cn case
     ) cl;
     w o "  | LP.Unknown _ -> Case_Unknown_tag2? x\n\n";
@@ -519,7 +522,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "    (match x with Case_Unknown_%s _ y ->  (y <: %s_value_type k))\n" tn n;
     w o "  | LP.Known k' ->\n    match k' with\n";
     List.iter (fun (case, ty) ->
-      let cn, ty0 = String.capitalize case, compile_type ty in
+      let cn, ty0 = String.capitalize_ascii case, compile_type ty in
       w o "    | %s -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro (LP.Known %s) x in\n" cn n cn;
       w o "      (match x with Case_%s y -> %s_known_case k' %s y)\n" case n cn
     ) cl;
@@ -539,7 +542,7 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "let parse_%s_cases (x:%s)\n" n ktype;
   w o "  : k:LP.parser_kind & LP.parser k (%s_case_of_%s x) =\n  match x with\n" n tn;
   List.iter (fun (case, ty) ->
-    let cn = String.capitalize case in
+    let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
     w o "  | %s -> (| _, %s |)\n" cn (pcombinator_name ty0)
   ) cl;
@@ -547,7 +550,7 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "\nlet serialize_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.serializer (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
-    let cn = String.capitalize case in
+    let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
     w o "  | %s -> %s\n" cn (scombinator_name ty0)
   ) cl;
@@ -555,7 +558,7 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "\nlet parse32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.parser32 (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
-    let cn = String.capitalize case in
+    let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
     w o "  | %s -> %s\n" cn (pcombinator32_name ty0)
   ) cl;
@@ -563,7 +566,7 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "\nlet serialize32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
-    let cn = String.capitalize case in
+    let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
     w o "  | %s -> %s\n" cn (scombinator32_name ty0)
   ) cl;
@@ -571,7 +574,7 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "\nlet size32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.size32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
-    let cn = String.capitalize case in
+    let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
     w o "  | %s -> %s\n" cn (size32_name ty0)
   ) cl;
@@ -626,8 +629,8 @@ and compile_select o i n tagn tagt taga cl def al =
   ()
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
-  let n = if tn = "" then String.uncapitalize fn else tn^"_"^fn in
-  let qname = if tn = "" then String.uncapitalize fn else tn^"@"^fn in
+  let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
+  let qname = if tn = "" then String.uncapitalize_ascii fn else tn^"@"^fn in
   let is_private = has_attr al "private" in
   let li = get_leninfo qname in
   match ty with
@@ -639,7 +642,6 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorNone ->
       w i "type %s = %s\n\n" n ty0;
       write_api o i is_private MetadataDefault n li.min_len li.max_len;
-      w o "noextract let %s_parser_kind_metadata = %s\n\n" n (metadata_combinator_name ty0);
       w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty0);
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty0);
       w o "inline_for_extraction let %s_parser32 = %s\n\n" n (pcombinator32_name ty0);
@@ -657,7 +659,6 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_bytesize x = Seq.length (LP.serialize %s x)\n\n" n (scombinator_name ty0);
       w i "type %s = x:%s{let l = %s_bytesize x in %d <= l /\\ l <= %d}\n\n" n ty0 n min max;
       write_api o i is_private MetadataDefault n (len_len+li.min_len) (len_len+li.max_len);
-      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n min max (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -692,9 +693,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
 
     (* Fixed length list *)
     | VectorFixed k when li.min_len = li.max_len ->
-      w i "type %s = l:list %s{L.length l == %d}\n\n" n ty0 li.min_count;
+      w i "unfold let %s_pred (l:list %s) (n:nat) : GTot Type0 = L.length l == n\n" n ty0;
+      w i "type %s = l:list %s{%s_pred l %d}\n\n" n ty0 n li.min_count;
       write_api o i is_private MetadataDefault n li.min_len li.max_len;
-      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "type %s' = LP.array %s %d\n\n" n ty0 li.min_count;
       w o "private let eq () : Lemma (%s' == %s) = admit()\n" n n;
       w o "//  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]])\n\n" n n n n;
@@ -716,7 +717,6 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
       w i "type %s = l:list %s{%s_list_bytesize == %d}\n\n" n ty0 n k;
       write_api o i is_private MetadataDefault n li.min_len li.max_len;
-      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "type %s' = LP.parse_fldata_strong_t (LP.serialize_list _ %s) %d\n\n" n (scombinator_name ty0) k;
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -739,7 +739,6 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorRange (low, high) when ty0 = "U8.t" ->
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
       write_api o i is_private MetadataDefault n li.min_len li.max_len;
-      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" n low high;
       w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" n low high;
       w o "inline_for_extraction let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
@@ -750,7 +749,6 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorRange (low, high) when li.min_len = li.max_len ->
       w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}" n ty0 li.min_count li.max_count;
       write_api o i is_private MetadataDefault n li.min_len li.max_len;
-      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "let %s_parser =\n" n;
       w o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" low high (pcombinator_name ty0) li.min_count li.max_count;
       w o "  LP.parse_vlarray %d %d %s %d %d ()\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
@@ -770,7 +768,6 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
       w i "type %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" n ty0 n min max;
       write_api o i is_private MetadataDefault n li.min_len li.max_len;
-      w o "noextract let %s_parser_kind_metadata = LP.default_parser_kind.LP.parser_kind_metadata\n\n" n;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -800,7 +797,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   (* Hoist all constructed types (select, vector, etc) into
      sub-definitions using private attribute in implementation *)
   let fields = List.map (fun (al, ty, fn, vec, def) ->
-    let fn0 = String.uncapitalize fn in
+    let fn0 = String.uncapitalize_ascii fn in
     match ty, vec with
     | TypeSimple ty0, VectorNone ->
       (fn0, compile_type ty0)
@@ -860,7 +857,6 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "  %s\n\n" tuple;
 
   w o "noextract let %s'_parser_kind = LP.get_parser_kind %s'_parser\n\n" n n;
-  w o "let %s_parser_kind_metadata = %s'_parser_kind.LP.parser_kind_metadata\n\n" n n;
   w o "let %s_parser =\n  synth_%s_injective ();\n  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n n n;
   w o "  %s'_parser `LP.parse_synth` synth_%s\n\n" n n;
 
@@ -961,12 +957,12 @@ let compile o i (p:gemstone_t) =
   let (fst, fsti) = !headers in
 
   (* .fsti *)
-  w i "module %s%s\n\n" !prefix n;
+  w i "module %s\n\n" (module_name n);
   w i "open %s\n" !bytes;
 
   let depl = getdep p in
   let depl = List.filter (fun x -> not (basic_type x)) depl in
-  let depl = List.map (fun s -> !prefix ^ (String.uncapitalize s)) depl in
+  let depl = List.map module_name depl in
   (List.iter (w i "open %s\n") depl);
   w i "\n";
 
@@ -979,12 +975,8 @@ let compile o i (p:gemstone_t) =
   w i "\n";
 
   (* .fst *)
-  w o "module %s%s\n\n" !prefix n;
-
+  w o "module %s\n\n" (module_name n);
   w o "open %s\n" !bytes;
-  (* (List.iter (w o "open %s\n") depl); *)
-  w o "\n";
-
   w o "module U8 = FStar.UInt8\n";
   w o "module U16 = FStar.UInt16\n";
   w o "module U32 = FStar.UInt32\n";
@@ -1014,7 +1006,7 @@ let compile_inline o i (p:gemstone_t) =
 let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =
 	  let n = tname p in
-		let fn = sprintf "%s/%s%s.fst" !odir !prefix n in
+		let fn = sprintf "%s/%s.fst" !odir (module_name n) in
 	  printf "Writing parsers for type <%s> to <%s>...\n" n fn;
 		let o, i = try open_out fn, open_out (fn^"i")
                with _ -> failwith "Failed to create output file" in

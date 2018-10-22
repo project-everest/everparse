@@ -21,6 +21,7 @@ verify: gen
 	$(MAKE) -C out verify
 
 unit: qd
+	-rm tests/unit/*.{fst,fsti} || true
 	./qd -odir tests/unit tests/unittests.rfc
 	$(MAKE) -C tests/unit
 

@@ -9,5 +9,6 @@ _build
 *.cmxa
 quackyducky.native
 qd
-tests/unit
+tests/unit/*
+!tests/unit/Makefile
 **/out
