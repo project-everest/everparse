@@ -11,7 +11,7 @@ qd: $(wildcard src/*.ml*)
 test: qd
 	-rm tests/unit/*.{fst,fsti} || true
 	./qd -odir tests/unit tests/unittests.rfc
-	$(MAKE) -C tests/unit
+	+$(MAKE) -C tests/unit
 
 clean:
 	rm -rf *~ src/*~ _build src/*lexer.ml src/*parser.ml src/*parser.mli qd quackyducky.native
