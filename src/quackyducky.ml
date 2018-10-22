@@ -7,7 +7,6 @@ open Rfc_ast
 open Rfc_lexer
 open Rfc_pretty
 open Rfc_fstar_compiler
-open Rfc_ocaml_compiler
 
 let ifile : (string list) ref = ref []
 

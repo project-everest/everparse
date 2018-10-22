@@ -1,0 +1,1402 @@
+/*
+This is the main QuackyDucky input file for generating miTLS parsers.
+
+This file is a hand-written merge of several sources that define the format
+of TLS messages:
+  - TLS 1.2: https://tools.ietf.org/html/rfc5246
+  - TLS 1.3: https://tools.ietf.org/html/rfc8446
+  - TLS extensions: https://tools.ietf.org/html/rfc6066
+
+Some types have been edited compared to their original definitions in the RFC,
+this can happen for one of the following reasons:
+  - there was a mistake in the original type definition
+  - for protocol version agnostic messages we need to merge the formats of
+    the same message
+  - for protocol version specific types we may have to rename conflicting type
+    names to distinguish the variants
+  - we give a network-equivalent but more precise description of the type
+    (e.g. capturing more precise dependency, such as extension body)
+*/
+
+struct {} Empty;
+
+/**
+Protocol version
+The RFC defines this as
+
+struct {
+  uint8 major;
+  uint8 minor;
+} ProtocolVersion;
+
+however, we find it much more convenient to define
+this as an enum for the merged RFC file, because
+it makes it possible to write version-dependent
+types with select()
+**/
+
+enum /*@open*/ {
+  SSL_3p0 (0x0300),
+  TLS_1p0 (0x0301),
+  TLS_1p1 (0x0302),
+  TLS_1p2 (0x0303),
+  TLS_1p3 (0x0304),
+  (65535)
+} ProtocolVersion;
+
+/*
+Notes on style rewrite for extensions and HelloRetryRequest
+
+struct {
+  ExtensionType type;
+  select(type)
+  {
+    case server_name: NameList;
+    case cert_status: CertificateStatus;
+  } body;
+} Extensions_clientHello
+
+opaque ExtBody<1..2^16-1>;
+
+struct {
+  ExtensionType type;
+  select(type)
+  {
+    case server_name: NameList;
+    case cert_status: CertificateStatusRequest;
+    default: ExtBody;
+  } body;
+} Extensions_serverHello
+
+enum /*@open*/ /*@abstract*/ {
+  hello_retry_request(0xcf21ad74e59a6111be1d8c021e65b891c2a211167abb8c5e079e09e2c8a8339c),
+  (2^256-1)
+} ServerRandom
+
+struct {
+  HRRExtensions ext;
+} HRRBody;
+
+struct {
+  //...
+  // Extension ext<1..2^16-1>
+  Extensions_serverHello ext;
+} ServerHelloBody
+
+struct {
+  ServerRandom server_random;
+  select(server_random)
+  {
+    case hello_retry_request: HRRBody;
+    default: ServerHelloBody;
+  }
+} ServerHello;
+
+struct {
+  Extensions_serverHello ext;
+} ServerHello;
+*/
+
+/**
+TLS extensions are defined in many sources:
+
+RFC 4492, RFC 5764, RFC 6066, RFC 6962, RFC 7250
+RFC 7366, RFC 7627, RFC 7919, RFC 8446.
+
+We try to include references to the original RFC
+type declaration together with each type declaration
+**/
+
+enum /*@open*/ {
+   server_name(0),                             /* RFC 6066 */
+   max_fragment_length(1),                     /* RFC 6066 */
+   status_request(5),                          /* RFC 6066 */
+   supported_groups(10),                       /* RFC 4492, 7919 */
+   ec_point_formats(11),                       /* RFC 4492 */
+   signature_algorithms(13),                   /* RFC 8446 */
+   use_srtp(14),                               /* RFC 5764 */
+   heartbeat(15),                              /* RFC 6520 */
+   application_layer_protocol_negotiation(16), /* RFC 7301 */
+   signed_certificate_timestamp(18),           /* RFC 6962 */
+   client_certificate_type(19),                /* RFC 7250 */
+   server_certificate_type(20),                /* RFC 7250 */
+   padding(21),                                /* RFC 7685 */
+   encrypt_then_mac(22),                       /* RFC 7366 */
+   extended_master_secret(23),                 /* RFC 7627 */
+   session_ticket(35),                         /* RFC 6066 */
+   pre_shared_key(41),                         /* RFC 8446 */
+   early_data(42),                             /* RFC 8446 */
+   supported_versions(43),                     /* RFC 8446 */
+   cookie(44),                                 /* RFC 8446 */
+   psk_key_exchange_modes(45),                 /* RFC 8446 */
+   certificate_authorities(47),                /* RFC 8446 */
+   oid_filters(48),                            /* RFC 8446 */
+   post_handshake_auth(49),                    /* RFC 8446 */
+   signature_algorithms_cert(50),              /* RFC 8446 */
+   key_share(51),                              /* RFC 8446 */
+   (65535)
+} ExtensionType;
+
+/**
+Server Name indication
+https://tools.ietf.org/html/rfc6066#section-3
+*/
+
+enum /*@open*/ {
+  host_name(0), (255)
+} NameType;
+
+opaque HostName<1..2^16-1>;
+opaque UnknownName<1..2^16-1>;
+
+struct {
+  NameType name_type;
+  select (name_type) {
+    case host_name: HostName;
+    default: UnknownName;
+  } name;
+} ServerName;
+
+struct {
+  ServerName server_name_list<1..2^16-1>;
+} ServerNameList;
+
+/**
+Max fragment length
+https://tools.ietf.org/html/rfc6066#section-4
+**/
+
+enum /*@open*/ {
+  two_9(1), two_10(2), two_11(3), two_12(4), (255)
+} MaxFragmentLength;
+
+/**
+Certificate Status request (OCSP)
+https://tools.ietf.org/html/rfc6066#section-8
+**/
+
+enum {
+  ocsp(1), (255)
+} CertificateStatusType;
+
+opaque ResponderID<1..2^16-1>;
+opaque OCSPExtensions<0..2^16-1>;
+
+struct {
+  ResponderID responder_id_list<0..2^16-1>;
+  OCSPExtensions request_extensions;
+} OCSPStatusRequest;
+
+struct {
+  CertificateStatusType status_type;
+  select (status_type) {
+    case ocsp: OCSPStatusRequest;
+  } request;
+} CertificateStatusRequest;
+
+opaque OCSPResponse<1..2^24-1>;
+
+struct {
+  CertificateStatusType status_type;
+  select (status_type) {
+    case ocsp: OCSPResponse;
+  } response;
+} CertificateStatus;
+
+/**
+Supported groups (merged type)
+Collecting all named groups from 1.3 and 1.2
+Negotiation may need to filter version-specific groups
+https://tools.ietf.org/html/rfc4492#section-5.1.1
+https://tools.ietf.org/html/rfc8446#section-4.2.7
+**/
+
+enum /*@open*/ {
+  /* Old curves (RFC 4492) */
+  sect163k1 (1), sect163r1 (2), sect163r2 (3),
+  sect193r1 (4), sect193r2 (5), sect233k1 (6),
+  sect233r1 (7), sect239k1 (8), sect283k1 (9),
+  sect283r1 (10), sect409k1 (11), sect409r1 (12),
+  sect571k1 (13), sect571r1 (14), secp160k1 (15),
+  secp160r1 (16), secp160r2 (17), secp192k1 (18),
+  secp192r1 (19), secp224k1 (20), secp224r1 (21),
+  secp256k1 (22),
+
+  /* Elliptic Curve Groups (ECDHE) */
+  secp256r1(0x0017), secp384r1(0x0018), secp521r1(0x0019),
+  x25519(0x001D), x448(0x001E),
+
+  /* Finite Field Groups (DHE) */
+  ffdhe2048(0x0100), ffdhe3072(0x0101), ffdhe4096(0x0102),
+  ffdhe6144(0x0103), ffdhe8192(0x0104),
+
+  /* Reserved Code Points */
+  ffdhe_private_use(0x01FC..0x01FF),
+  ecdhe_private_use(0xFE00..0xFEFF),
+  (0xFFFF)
+} NamedGroup;
+
+struct {
+  NamedGroup named_group_list<2..2^16-1>;
+} NamedGroupList;
+
+/**
+EC point format https://tools.ietf.org/html/rfc4492#section-5.1.2
+**/
+
+enum /*@open*/ {
+  uncompressed (0),
+  ansiX962_compressed_prime (1),
+  ansiX962_compressed_char2 (2),
+  (255)
+} ECPointFormat;
+
+struct {
+  ECPointFormat ec_point_format_list<1..2^8-1>;
+} ECPointFormatList;
+
+/**
+  Signature algorithms, This re-interprets the RFC5246 type into the RFC8446 one
+  https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
+  https://tools.ietf.org/html/rfc8446#section-4.2.3
+**/
+
+enum /*@open*/ {
+  /* Legacy */
+  rsa_pkcs1_md5(0x0101),
+  rsa_pkcs1_sha1(0x0201),
+  ecdsa_md5(0x0103),
+  ecdsa_sha1(0x0203),
+
+  /* RSASSA-PKCS1-v1_5 algorithms */
+  rsa_pkcs1_sha256(0x0401),
+  rsa_pkcs1_sha384(0x0501),
+  rsa_pkcs1_sha512(0x0601),
+
+  /* ECDSA algorithms */
+  ecdsa_secp256r1_sha256(0x0403),
+  ecdsa_secp384r1_sha384(0x0503),
+  ecdsa_secp521r1_sha512(0x0603),
+
+  /* RSASSA-PSS algorithms with public key OID rsaEncryption */
+  rsa_pss_rsae_sha256(0x0804),
+  rsa_pss_rsae_sha384(0x0805),
+  rsa_pss_rsae_sha512(0x0806),
+
+  /* EdDSA algorithms */
+  ed25519(0x0807),
+  ed448(0x0808),
+
+  /* RSASSA-PSS algorithms with public key OID RSASSA-PSS */
+  rsa_pss_pss_sha256(0x0809),
+  rsa_pss_pss_sha384(0x080a),
+  rsa_pss_pss_sha512(0x080b),
+
+  /* Reserved Code Points */
+  (0xFFFF)
+} SignatureScheme;
+
+struct {
+  SignatureScheme supported_signature_algorithms<2..2^16-2>;
+} SignatureSchemeList;
+
+/**
+SRTP extension (for DTLS)
+https://tools.ietf.org/html/rfc5764#section-4.1.1
+**/
+
+uint8 SRTPProtectionProfile[2];
+
+SRTPProtectionProfile SRTPProtectionProfiles<2..2^16-1>;
+
+struct {
+   SRTPProtectionProfiles profiles;
+   opaque srtp_mki<0..255>;
+} UseSRTPData;
+
+/**
+Heartbeat extension (for DTLS and Heartbleed)
+https://tools.ietf.org/html/rfc6520#section-2
+**/
+
+enum /*@open*/ {
+   peer_allowed_to_send(1),
+   peer_not_allowed_to_send(2),
+   (255)
+} HeartbeatMode;
+
+struct {
+   HeartbeatMode mode;
+} HeartbeatExtension;
+
+/**
+Application-level protocol negotiation (ALPN)
+https://tools.ietf.org/html/rfc7301#section-3.1
+**/
+
+opaque ProtocolName<1..2^8-1>;
+
+struct {
+    ProtocolName protocol_name_list<2..2^16-1>;
+} ProtocolNameList;
+
+/**
+Signed certificate timestamp
+https://tools.ietf.org/html/rfc6962#section-3.3.1
+**/
+
+opaque SerializedSCT<1..2^16-1>;
+
+struct {
+    SerializedSCT sct_list<1..2^16-1>;
+} SignedCertificateTimestampList;
+
+/**
+Client certificate type
+https://tools.ietf.org/html/rfc7250#section-3
+**/
+
+enum /*@open*/ {
+  X509(0),
+  RawPublicKey(2),
+  (255)
+} CertificateType;
+
+struct {
+  CertificateType client_certificate_types<1..2^8-1>;
+} ClientCertTypeClientExtension;
+
+struct {
+  CertificateType client_certificate_type;
+} ClientCertTypeServerExtension;
+
+struct {
+  CertificateType server_certificate_types<1..2^8-1>;
+} ServerCertTypeClientExtension;
+
+struct {
+  CertificateType server_certificate_type;
+} ServerCertTypeServerExtension;
+
+/**
+Padding
+**/
+
+struct {
+  uint8 zero = 0;
+} ZeroByte;
+
+struct {
+  ZeroByte padding<0..2^16-1>;
+} PaddingExtension;
+
+/**
+Ticket
+**/
+
+struct {
+  opaque ticket_data<0..2^16-1>;
+} SessionTicket;
+
+/**
+Pre-shared key extension
+https://tools.ietf.org/html/rfc8446#section-4.2.11
+**/
+
+struct {
+  opaque identity<1..2^16-1>;
+  uint32 obfuscated_ticket_age;
+} PskIdentity;
+
+struct {
+  opaque entries<32..255>;
+} PskBinderEntry;
+
+struct {
+  PskIdentity identities<7..2^16-1>;
+  PskBinderEntry binders<33..2^16-1>;
+} OfferedPsks;
+
+struct {
+  OfferedPsks offers;
+} PreSharedKeyClientExtension;
+
+struct {
+  uint16 selected_identity;
+} PreSharedKeyServerExtension;
+
+/**
+Early data indication
+https://tools.ietf.org/html/rfc8446#section-4.2.10
+**/
+
+struct {
+  uint32 max_early_data_size;
+} EarlyDataIndicationNewSessionTicket;
+
+/**
+TLS 1.3 version negotiation
+https://tools.ietf.org/html/rfc8446#section-4.2.1
+**/
+
+struct {
+  ProtocolVersion versions<2..254>;
+} SupportedVersionsClient;
+
+struct {
+  ProtocolVersion selected_version;
+} SupportedVersionsServer;
+
+/**
+Cookie (TLS 1.3 HelloRetryRequest and ClientHello)
+https://tools.ietf.org/html/rfc8446#section-4.2.2
+**/
+
+struct {
+  opaque cookie<1..2^16-1>;
+} Cookie;
+
+/**
+Pre-Shared Key Exchange Modes
+https://tools.ietf.org/html/rfc8446#section-4.2.9
+**/
+
+enum /*@open*/ {
+  psk_ke(0),
+  psk_dhe_ke(1),
+  (255)
+} PskKeyExchangeMode;
+
+struct {
+  PskKeyExchangeMode ke_modes<1..255>;
+} PskKeyExchangeModes;
+
+/**
+Certificate Authorities
+https://tools.ietf.org/html/rfc8446#section-4.2.4
+**/
+
+opaque DistinguishedName<1..2^16-1>;
+
+struct {
+  DistinguishedName authorities<3..2^16-1>;
+} CertificateAuthoritiesExtension;
+
+/**
+OID Filters (may only appear in CertificateRequest, not hellos)
+https://tools.ietf.org/html/rfc8446#section-4.2.5
+**/
+
+struct {
+  opaque certificate_extension_oid<1..2^8-1>;
+  opaque certificate_extension_values<0..2^16-1>;
+} OIDFilter;
+
+struct {
+    OIDFilter filters<0..2^16-1>;
+} OIDFilterExtension;
+
+/**
+Key share. These types have been rewritten to make the
+group element representation dependent on the group.
+
+Please note that some types are shared with the ServerKeyExchange
+contents in TLS 1.2.
+
+https://tools.ietf.org/html/rfc8446#section-4.2.8
+**/
+
+struct {
+  uint8 legacy_form = 4;
+  opaque X[32];
+  opaque Y[32];
+} UncompressedPointRepresentation32;
+
+struct {
+    uint8 legacy_form = 4;
+    opaque X[48];
+    opaque Y[48];
+} UncompressedPointRepresentation48;
+
+struct {
+    uint8 legacy_form = 4;
+    opaque X[66];
+    opaque Y[66];
+} UncompressedPointRepresentation66;
+
+struct {
+    uint8 legacy_form = 4;
+    opaque point[32];
+} MontgomeryPoint32;
+
+struct {
+    uint8 legacy_form = 4;
+    opaque point[56];
+} MontgomeryPoint56;
+
+/* https://tools.ietf.org/html/rfc5246#section-7.4.3 */
+struct {
+    opaque dh_p<1..2^16-1>;
+    opaque dh_g<1..2^16-1>;
+    opaque dh_Ys<1..2^16-1>;
+} ServerDHParams;
+
+opaque KeyExchangeData<1..2^16-1>;
+
+struct {
+  NamedGroup group;
+  select(group)
+  {
+    case secp256r1: UncompressedPointRepresentation32;
+    case secp384r1: UncompressedPointRepresentation48;
+    case secp521r1: UncompressedPointRepresentation66;
+
+    case x25519: MontgomeryPoint32;
+    case x448:   MontgomeryPoint56;
+
+    case ffdhe2048: ServerDHParams;
+    case ffdhe3072: ServerDHParams;
+    case ffdhe4096: ServerDHParams;
+    case ffdhe6144: ServerDHParams;
+    case ffdhe8192: ServerDHParams;
+
+    default: KeyExchangeData;
+  } key_exchange;
+} KeyShareEntry;
+
+struct {
+  KeyShareEntry client_shares<0..2^16-1>;
+} KeyShareClientHello;
+
+/**
+ Top-level extension types.
+
+ Instead of the opaque extension data we introduce a
+ select to parse extensions in depth during message parsing.
+
+struct {
+   ExtensionType extension_type;
+   opaque extension_data<0..2^16-1>;
+} Extension;
+
+The split by message type is driven by the table in
+https://tools.ietf.org/html/rfc8446#section-4.2
+
++--------------------------------------------------+-------------+
+| Extension                                        |     TLS 1.3 |
++--------------------------------------------------+-------------+
+| server_name [RFC6066]                            |      CH, EE |
+| max_fragment_length [RFC6066]                    |      CH, EE |
+| status_request [RFC6066]                         |  CH, CR, CT |
+| supported_groups [RFC7919]                       |      CH, EE |
+| signature_algorithms (RFC 8446)                  |      CH, CR |
+| use_srtp [RFC5764]                               |      CH, EE |
+| heartbeat [RFC6520]                              |      CH, EE |
+| application_layer_protocol_negotiation [RFC7301] |      CH, EE |
+| signed_certificate_timestamp [RFC6962]           |  CH, CR, CT |
+| client_certificate_type [RFC7250]                |      CH, EE |
+| server_certificate_type [RFC7250]                |      CH, EE |
+| padding [RFC7685]                                |          CH |
+| key_share (RFC 8446)                             | CH, SH, HRR |
+| pre_shared_key (RFC 8446)                        |      CH, SH |
+| psk_key_exchange_modes (RFC 8446)                |          CH |
+| early_data (RFC 8446)                            | CH, EE, NST |
+| cookie (RFC 8446)                                |     CH, HRR |
+| supported_versions (RFC 8446)                    | CH, SH, HRR |
+| certificate_authorities (RFC 8446)               |      CH, CR |
+| oid_filters (RFC 8446)                           |          CR |
+| post_handshake_auth (RFC 8446)                   |          CH |
+| signature_algorithms_cert (RFC 8446)             |      CH, CR |
++--------------------------------------------------+-------------+
+
+**/
+
+opaque UnknownExtension<0..2^16-1>;
+
+struct {
+  ExtensionType extension_type;
+  uint16 ext_len;
+  select(extension_type)
+  {
+    case server_name: Empty; /* Acknowledge, for TLS 1.2 SH */
+    case max_fragment_length: MaxFragmentLength; /* Must echo back the same offer */
+    case status_request: Empty; /* Actual data sent in protocol message */
+    case ec_point_formats: ECPointFormatList;
+    case use_srtp: UseSRTPData;
+    case heartbeat: HeartbeatMode;
+    case application_layer_protocol_negotiation: ProtocolNameList;
+    case signed_certificate_timestamp: SignedCertificateTimestampList;
+    case client_certificate_type: ClientCertTypeClientExtension;
+    case server_certificate_type: ServerCertTypeClientExtension;
+    case padding: PaddingExtension;
+    case encrypt_then_mac: Empty;
+    case extended_master_secret: Empty;
+    case session_ticket: SessionTicket;
+    case pre_shared_key: PreSharedKeyClientExtension;
+    case early_data: Empty;
+    case supported_versions: SupportedVersionsClient;
+    case cookie: Cookie;
+    case psk_key_exchange_modes: PskKeyExchangeModes;
+    case certificate_authorities: CertificateAuthoritiesExtension;
+    case oid_filters: OIDFilterExtension;
+    case post_handshake_auth: Empty;
+    case signature_algorithms_cert: SignatureSchemeList;
+    case key_share: KeyShareClientHello;
+    default: UnknownExtension;
+  } extension_data[ext_len];
+} ClientHelloExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 ext_len;
+  select(extension_type)
+  {
+    case server_name: ServerNameList;
+    case max_fragment_length: MaxFragmentLength;
+    case status_request: CertificateStatusRequest;
+    case supported_groups: NamedGroupList;
+    case ec_point_formats: ECPointFormatList;
+    case signature_algorithms: SignatureSchemeList;
+    case use_srtp: SRTPProtectionProfiles;
+    case heartbeat: HeartbeatMode;
+    case application_layer_protocol_negotiation: ProtocolNameList;
+    case signed_certificate_timestamp: SignedCertificateTimestampList;
+    case client_certificate_type: ClientCertTypeClientExtension;
+    case server_certificate_type: ServerCertTypeClientExtension;
+    case padding: PaddingExtension;
+    case encrypt_then_mac: Empty;
+    case extended_master_secret: Empty;
+    case session_ticket: SessionTicket;
+    case pre_shared_key: PreSharedKeyClientExtension;
+    case early_data: Empty;
+    case supported_versions: SupportedVersionsClient;
+    case cookie: Cookie;
+    case psk_key_exchange_modes: PskKeyExchangeModes;
+    case certificate_authorities: CertificateAuthoritiesExtension;
+    case oid_filters: OIDFilterExtension;
+    case post_handshake_auth: Empty;
+    case signature_algorithms_cert: SignatureSchemeList;
+    case key_share: KeyShareClientHello;
+    default: UnknownExtension;
+  } extension_data[ext_len];
+} ServerHelloExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 ext_len;
+  select(extension_type)
+  {
+    default: UnknownExtension;
+  } extension_data[ext_len];
+} EncryptedExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 ext_len;
+  select(extension_type)
+  {
+    default: UnknownExtension;
+  } extension_data[ext_len];
+} NewSessionTicketExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 ext_len;
+  select(extension_type)
+  {
+    default: UnknownExtension;
+  } extension_data[ext_len];
+} CertificateRequestExtension;
+
+struct {
+  ExtensionType extension_type;
+  uint16 body_len;
+  select(extension_type)
+  {
+    default: UnknownExtension;
+  } extension_data[body_len];
+} CertificateExtension;
+
+/* End of extensions */
+/* Alert Types */
+
+enum { warning(1), fatal(2), (255) } AlertLevel;
+
+enum {
+  close_notify(0),
+  unexpected_message(10),
+  bad_record_mac(20),
+  record_overflow(22),
+  handshake_failure(40),
+  bad_certificate(42),
+  unsupported_certificate(43),
+  certificate_revoked(44),
+  certificate_expired(45),
+  certificate_unknown(46),
+  illegal_parameter(47),
+  unknown_ca(48),
+  access_denied(49),
+  decode_error(50),
+  decrypt_error(51),
+  protocol_version(70),
+  insufficient_security(71),
+  internal_error(80),
+  inappropriate_fallback(86),
+  user_canceled(90),
+  missing_extension(109),
+  unsupported_extension(110),
+  unrecognized_name(112),
+  bad_certificate_status_response(113),
+  unknown_psk_identity(115),
+  certificate_required(116),
+  no_application_protocol(120),
+  (255)
+} AlertDescription;
+
+struct {
+  AlertLevel level;
+  AlertDescription description;
+} Alert;
+
+/* Record Types */
+
+enum {
+  invalid(0),
+  change_cipher_spec(20),
+  alert(21),
+  handshake(22),
+  application_data(23),
+  (255)
+} ContentType;
+
+struct {
+  ContentType content_type;
+  ProtocolVersion legacy_record_version;
+  opaque fragment<0..2^16-1>;
+} TLSPlaintext;
+
+/*
+struct {
+  opaque content[TLSPlaintext.length];
+  ContentType type;
+  uint8 zeros[length_of_padding];
+} TLSInnerPlaintext;
+*/
+
+struct {
+  ContentType opaque_type;
+  ProtocolVersion version;
+  opaque encrypted_record<0..2^16-1>;
+} TLSCiphertext;
+
+/* HANDSHAKE TYPES */
+
+opaque Random[32];
+
+/**
+Cipher suites are defined as
+
+struct {
+  uint8 cs[2];
+} CipherSuite;
+
+However, it is more convenient to define them as an
+enum (to give them the same names as the IANA register)
+
+Dumped from https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
+*/
+
+enum /*@open*/ {
+  TLS_NULL_WITH_NULL_NULL(0x0000),
+  TLS_RSA_WITH_NULL_MD5(0x0001),
+  TLS_RSA_WITH_NULL_SHA(0x0002),
+  TLS_RSA_EXPORT_WITH_RC4_40_MD5(0x0003),
+  TLS_RSA_WITH_RC4_128_MD5(0x0004),
+  TLS_RSA_WITH_RC4_128_SHA(0x0005),
+  TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5(0x0006),
+  TLS_RSA_WITH_IDEA_CBC_SHA(0x0007),
+  TLS_RSA_EXPORT_WITH_DES40_CBC_SHA(0x0008),
+  TLS_RSA_WITH_DES_CBC_SHA(0x0009),
+  TLS_RSA_WITH_3DES_EDE_CBC_SHA(0x000A),
+  TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA(0x000B),
+  TLS_DH_DSS_WITH_DES_CBC_SHA(0x000C),
+  TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA(0x000D),
+  TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA(0x000E),
+  TLS_DH_RSA_WITH_DES_CBC_SHA(0x000F),
+  TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA(0x0010),
+  TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA(0x0011),
+  TLS_DHE_DSS_WITH_DES_CBC_SHA(0x0012),
+  TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA(0x0013),
+  TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA(0x0014),
+  TLS_DHE_RSA_WITH_DES_CBC_SHA(0x0015),
+  TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA(0x0016),
+  TLS_DH_anon_EXPORT_WITH_RC4_40_MD5(0x0017),
+  TLS_DH_anon_WITH_RC4_128_MD5(0x0018),
+  TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA(0x0019),
+  TLS_DH_anon_WITH_DES_CBC_SHA(0x001A),
+  TLS_DH_anon_WITH_3DES_EDE_CBC_SHA(0x001B),
+  TLS_KRB5_WITH_DES_CBC_SHA(0x001E),
+  TLS_KRB5_WITH_3DES_EDE_CBC_SHA(0x001F),
+  TLS_KRB5_WITH_RC4_128_SHA(0x0020),
+  TLS_KRB5_WITH_IDEA_CBC_SHA(0x0021),
+  TLS_KRB5_WITH_DES_CBC_MD5(0x0022),
+  TLS_KRB5_WITH_3DES_EDE_CBC_MD5(0x0023),
+  TLS_KRB5_WITH_RC4_128_MD5(0x0024),
+  TLS_KRB5_WITH_IDEA_CBC_MD5(0x0025),
+  TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA(0x0026),
+  TLS_KRB5_EXPORT_WITH_RC2_CBC_40_SHA(0x0027),
+  TLS_KRB5_EXPORT_WITH_RC4_40_SHA(0x0028),
+  TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5(0x0029),
+  TLS_KRB5_EXPORT_WITH_RC2_CBC_40_MD5(0x002A),
+  TLS_KRB5_EXPORT_WITH_RC4_40_MD5(0x002B),
+  TLS_PSK_WITH_NULL_SHA(0x002C),
+  TLS_DHE_PSK_WITH_NULL_SHA(0x002D),
+  TLS_RSA_PSK_WITH_NULL_SHA(0x002E),
+  TLS_RSA_WITH_AES_128_CBC_SHA(0x002F),
+  TLS_DH_DSS_WITH_AES_128_CBC_SHA(0x0030),
+  TLS_DH_RSA_WITH_AES_128_CBC_SHA(0x0031),
+  TLS_DHE_DSS_WITH_AES_128_CBC_SHA(0x0032),
+  TLS_DHE_RSA_WITH_AES_128_CBC_SHA(0x0033),
+  TLS_DH_anon_WITH_AES_128_CBC_SHA(0x0034),
+  TLS_RSA_WITH_AES_256_CBC_SHA(0x0035),
+  TLS_DH_DSS_WITH_AES_256_CBC_SHA(0x0036),
+  TLS_DH_RSA_WITH_AES_256_CBC_SHA(0x0037),
+  TLS_DHE_DSS_WITH_AES_256_CBC_SHA(0x0038),
+  TLS_DHE_RSA_WITH_AES_256_CBC_SHA(0x0039),
+  TLS_DH_anon_WITH_AES_256_CBC_SHA(0x003A),
+  TLS_RSA_WITH_NULL_SHA256(0x003B),
+  TLS_RSA_WITH_AES_128_CBC_SHA256(0x003C),
+  TLS_RSA_WITH_AES_256_CBC_SHA256(0x003D),
+  TLS_DH_DSS_WITH_AES_128_CBC_SHA256(0x003E),
+  TLS_DH_RSA_WITH_AES_128_CBC_SHA256(0x003F),
+  TLS_DHE_DSS_WITH_AES_128_CBC_SHA256(0x0040),
+  TLS_RSA_WITH_CAMELLIA_128_CBC_SHA(0x0041),
+  TLS_DH_DSS_WITH_CAMELLIA_128_CBC_SHA(0x0042),
+  TLS_DH_RSA_WITH_CAMELLIA_128_CBC_SHA(0x0043),
+  TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA(0x0044),
+  TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA(0x0045),
+  TLS_DH_anon_WITH_CAMELLIA_128_CBC_SHA(0x0046),
+  TLS_DHE_RSA_WITH_AES_128_CBC_SHA256(0x0067),
+  TLS_DH_DSS_WITH_AES_256_CBC_SHA256(0x0068),
+  TLS_DH_RSA_WITH_AES_256_CBC_SHA256(0x0069),
+  TLS_DHE_DSS_WITH_AES_256_CBC_SHA256(0x006A),
+  TLS_DHE_RSA_WITH_AES_256_CBC_SHA256(0x006B),
+  TLS_DH_anon_WITH_AES_128_CBC_SHA256(0x006C),
+  TLS_DH_anon_WITH_AES_256_CBC_SHA256(0x006D),
+  TLS_RSA_WITH_CAMELLIA_256_CBC_SHA(0x0084),
+  TLS_DH_DSS_WITH_CAMELLIA_256_CBC_SHA(0x0085),
+  TLS_DH_RSA_WITH_CAMELLIA_256_CBC_SHA(0x0086),
+  TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA(0x0087),
+  TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA(0x0088),
+  TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA(0x0089),
+  TLS_PSK_WITH_RC4_128_SHA(0x008A),
+  TLS_PSK_WITH_3DES_EDE_CBC_SHA(0x008B),
+  TLS_PSK_WITH_AES_128_CBC_SHA(0x008C),
+  TLS_PSK_WITH_AES_256_CBC_SHA(0x008D),
+  TLS_DHE_PSK_WITH_RC4_128_SHA(0x008E),
+  TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA(0x008F),
+  TLS_DHE_PSK_WITH_AES_128_CBC_SHA(0x0090),
+  TLS_DHE_PSK_WITH_AES_256_CBC_SHA(0x0091),
+  TLS_RSA_PSK_WITH_RC4_128_SHA(0x0092),
+  TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA(0x0093),
+  TLS_RSA_PSK_WITH_AES_128_CBC_SHA(0x0094),
+  TLS_RSA_PSK_WITH_AES_256_CBC_SHA(0x0095),
+  TLS_RSA_WITH_SEED_CBC_SHA(0x0096),
+  TLS_DH_DSS_WITH_SEED_CBC_SHA(0x0097),
+  TLS_DH_RSA_WITH_SEED_CBC_SHA(0x0098),
+  TLS_DHE_DSS_WITH_SEED_CBC_SHA(0x0099),
+  TLS_DHE_RSA_WITH_SEED_CBC_SHA(0x009A),
+  TLS_DH_anon_WITH_SEED_CBC_SHA(0x009B),
+  TLS_RSA_WITH_AES_128_GCM_SHA256(0x009C),
+  TLS_RSA_WITH_AES_256_GCM_SHA384(0x009D),
+  TLS_DHE_RSA_WITH_AES_128_GCM_SHA256(0x009E),
+  TLS_DHE_RSA_WITH_AES_256_GCM_SHA384(0x009F),
+  TLS_DH_RSA_WITH_AES_128_GCM_SHA256(0x00A0),
+  TLS_DH_RSA_WITH_AES_256_GCM_SHA384(0x00A1),
+  TLS_DHE_DSS_WITH_AES_128_GCM_SHA256(0x00A2),
+  TLS_DHE_DSS_WITH_AES_256_GCM_SHA384(0x00A3),
+  TLS_DH_DSS_WITH_AES_128_GCM_SHA256(0x00A4),
+  TLS_DH_DSS_WITH_AES_256_GCM_SHA384(0x00A5),
+  TLS_DH_anon_WITH_AES_128_GCM_SHA256(0x00A6),
+  TLS_DH_anon_WITH_AES_256_GCM_SHA384(0x00A7),
+  TLS_PSK_WITH_AES_128_GCM_SHA256(0x00A8),
+  TLS_PSK_WITH_AES_256_GCM_SHA384(0x00A9),
+  TLS_DHE_PSK_WITH_AES_128_GCM_SHA256(0x00AA),
+  TLS_DHE_PSK_WITH_AES_256_GCM_SHA384(0x00AB),
+  TLS_RSA_PSK_WITH_AES_128_GCM_SHA256(0x00AC),
+  TLS_RSA_PSK_WITH_AES_256_GCM_SHA384(0x00AD),
+  TLS_PSK_WITH_AES_128_CBC_SHA256(0x00AE),
+  TLS_PSK_WITH_AES_256_CBC_SHA384(0x00AF),
+  TLS_PSK_WITH_NULL_SHA256(0x00B0),
+  TLS_PSK_WITH_NULL_SHA384(0x00B1),
+  TLS_DHE_PSK_WITH_AES_128_CBC_SHA256(0x00B2),
+  TLS_DHE_PSK_WITH_AES_256_CBC_SHA384(0x00B3),
+  TLS_DHE_PSK_WITH_NULL_SHA256(0x00B4),
+  TLS_DHE_PSK_WITH_NULL_SHA384(0x00B5),
+  TLS_RSA_PSK_WITH_AES_128_CBC_SHA256(0x00B6),
+  TLS_RSA_PSK_WITH_AES_256_CBC_SHA384(0x00B7),
+  TLS_RSA_PSK_WITH_NULL_SHA256(0x00B8),
+  TLS_RSA_PSK_WITH_NULL_SHA384(0x00B9),
+  TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256(0x00BA),
+  TLS_DH_DSS_WITH_CAMELLIA_128_CBC_SHA256(0x00BB),
+  TLS_DH_RSA_WITH_CAMELLIA_128_CBC_SHA256(0x00BC),
+  TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA256(0x00BD),
+  TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256(0x00BE),
+  TLS_DH_anon_WITH_CAMELLIA_128_CBC_SHA256(0x00BF),
+  TLS_RSA_WITH_CAMELLIA_256_CBC_SHA256(0x00C0),
+  TLS_DH_DSS_WITH_CAMELLIA_256_CBC_SHA256(0x00C1),
+  TLS_DH_RSA_WITH_CAMELLIA_256_CBC_SHA256(0x00C2),
+  TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA256(0x00C3),
+  TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA256(0x00C4),
+  TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA256(0x00C5),
+  TLS_EMPTY_RENEGOTIATION_INFO_SCSV(0x00FF),
+  TLS_AES_128_GCM_SHA256(0x1301),
+  TLS_AES_256_GCM_SHA384(0x1302),
+  TLS_CHACHA20_POLY1305_SHA256(0x1303),
+  TLS_AES_128_CCM_SHA256(0x1304),
+  TLS_AES_128_CCM_8_SHA256(0x1305),
+  TLS_FALLBACK_SCSV(0x5600),
+  TLS_ECDH_ECDSA_WITH_NULL_SHA(0xC001),
+  TLS_ECDH_ECDSA_WITH_RC4_128_SHA(0xC002),
+  TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA(0xC003),
+  TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA(0xC004),
+  TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA(0xC005),
+  TLS_ECDHE_ECDSA_WITH_NULL_SHA(0xC006),
+  TLS_ECDHE_ECDSA_WITH_RC4_128_SHA(0xC007),
+  TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA(0xC008),
+  TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA(0xC009),
+  TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA(0xC00A),
+  TLS_ECDH_RSA_WITH_NULL_SHA(0xC00B),
+  TLS_ECDH_RSA_WITH_RC4_128_SHA(0xC00C),
+  TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA(0xC00D),
+  TLS_ECDH_RSA_WITH_AES_128_CBC_SHA(0xC00E),
+  TLS_ECDH_RSA_WITH_AES_256_CBC_SHA(0xC00F),
+  TLS_ECDHE_RSA_WITH_NULL_SHA(0xC010),
+  TLS_ECDHE_RSA_WITH_RC4_128_SHA(0xC011),
+  TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA(0xC012),
+  TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA(0xC013),
+  TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA(0xC014),
+  TLS_ECDH_anon_WITH_NULL_SHA(0xC015),
+  TLS_ECDH_anon_WITH_RC4_128_SHA(0xC016),
+  TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA(0xC017),
+  TLS_ECDH_anon_WITH_AES_128_CBC_SHA(0xC018),
+  TLS_ECDH_anon_WITH_AES_256_CBC_SHA(0xC019),
+  TLS_SRP_SHA_WITH_3DES_EDE_CBC_SHA(0xC01A),
+  TLS_SRP_SHA_RSA_WITH_3DES_EDE_CBC_SHA(0xC01B),
+  TLS_SRP_SHA_DSS_WITH_3DES_EDE_CBC_SHA(0xC01C),
+  TLS_SRP_SHA_WITH_AES_128_CBC_SHA(0xC01D),
+  TLS_SRP_SHA_RSA_WITH_AES_128_CBC_SHA(0xC01E),
+  TLS_SRP_SHA_DSS_WITH_AES_128_CBC_SHA(0xC01F),
+  TLS_SRP_SHA_WITH_AES_256_CBC_SHA(0xC020),
+  TLS_SRP_SHA_RSA_WITH_AES_256_CBC_SHA(0xC021),
+  TLS_SRP_SHA_DSS_WITH_AES_256_CBC_SHA(0xC022),
+  TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256(0xC023),
+  TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384(0xC024),
+  TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256(0xC025),
+  TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384(0xC026),
+  TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256(0xC027),
+  TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384(0xC028),
+  TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256(0xC029),
+  TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384(0xC02A),
+  TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256(0xC02B),
+  TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384(0xC02C),
+  TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256(0xC02D),
+  TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384(0xC02E),
+  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256(0xC02F),
+  TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384(0xC030),
+  TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256(0xC031),
+  TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384(0xC032),
+  TLS_ECDHE_PSK_WITH_RC4_128_SHA(0xC033),
+  TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA(0xC034),
+  TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA(0xC035),
+  TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA(0xC036),
+  TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256(0xC037),
+  TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384(0xC038),
+  TLS_ECDHE_PSK_WITH_NULL_SHA(0xC039),
+  TLS_ECDHE_PSK_WITH_NULL_SHA256(0xC03A),
+  TLS_ECDHE_PSK_WITH_NULL_SHA384(0xC03B),
+  TLS_RSA_WITH_ARIA_128_CBC_SHA256(0xC03C),
+  TLS_RSA_WITH_ARIA_256_CBC_SHA384(0xC03D),
+  TLS_DH_DSS_WITH_ARIA_128_CBC_SHA256(0xC03E),
+  TLS_DH_DSS_WITH_ARIA_256_CBC_SHA384(0xC03F),
+  TLS_DH_RSA_WITH_ARIA_128_CBC_SHA256(0xC040),
+  TLS_DH_RSA_WITH_ARIA_256_CBC_SHA384(0xC041),
+  TLS_DHE_DSS_WITH_ARIA_128_CBC_SHA256(0xC042),
+  TLS_DHE_DSS_WITH_ARIA_256_CBC_SHA384(0xC043),
+  TLS_DHE_RSA_WITH_ARIA_128_CBC_SHA256(0xC044),
+  TLS_DHE_RSA_WITH_ARIA_256_CBC_SHA384(0xC045),
+  TLS_DH_anon_WITH_ARIA_128_CBC_SHA256(0xC046),
+  TLS_DH_anon_WITH_ARIA_256_CBC_SHA384(0xC047),
+  TLS_ECDHE_ECDSA_WITH_ARIA_128_CBC_SHA256(0xC048),
+  TLS_ECDHE_ECDSA_WITH_ARIA_256_CBC_SHA384(0xC049),
+  TLS_ECDH_ECDSA_WITH_ARIA_128_CBC_SHA256(0xC04A),
+  TLS_ECDH_ECDSA_WITH_ARIA_256_CBC_SHA384(0xC04B),
+  TLS_ECDHE_RSA_WITH_ARIA_128_CBC_SHA256(0xC04C),
+  TLS_ECDHE_RSA_WITH_ARIA_256_CBC_SHA384(0xC04D),
+  TLS_ECDH_RSA_WITH_ARIA_128_CBC_SHA256(0xC04E),
+  TLS_ECDH_RSA_WITH_ARIA_256_CBC_SHA384(0xC04F),
+  TLS_RSA_WITH_ARIA_128_GCM_SHA256(0xC050),
+  TLS_RSA_WITH_ARIA_256_GCM_SHA384(0xC051),
+  TLS_DHE_RSA_WITH_ARIA_128_GCM_SHA256(0xC052),
+  TLS_DHE_RSA_WITH_ARIA_256_GCM_SHA384(0xC053),
+  TLS_DH_RSA_WITH_ARIA_128_GCM_SHA256(0xC054),
+  TLS_DH_RSA_WITH_ARIA_256_GCM_SHA384(0xC055),
+  TLS_DHE_DSS_WITH_ARIA_128_GCM_SHA256(0xC056),
+  TLS_DHE_DSS_WITH_ARIA_256_GCM_SHA384(0xC057),
+  TLS_DH_DSS_WITH_ARIA_128_GCM_SHA256(0xC058),
+  TLS_DH_DSS_WITH_ARIA_256_GCM_SHA384(0xC059),
+  TLS_DH_anon_WITH_ARIA_128_GCM_SHA256(0xC05A),
+  TLS_DH_anon_WITH_ARIA_256_GCM_SHA384(0xC05B),
+  TLS_ECDHE_ECDSA_WITH_ARIA_128_GCM_SHA256(0xC05C),
+  TLS_ECDHE_ECDSA_WITH_ARIA_256_GCM_SHA384(0xC05D),
+  TLS_ECDH_ECDSA_WITH_ARIA_128_GCM_SHA256(0xC05E),
+  TLS_ECDH_ECDSA_WITH_ARIA_256_GCM_SHA384(0xC05F),
+  TLS_ECDHE_RSA_WITH_ARIA_128_GCM_SHA256(0xC060),
+  TLS_ECDHE_RSA_WITH_ARIA_256_GCM_SHA384(0xC061),
+  TLS_ECDH_RSA_WITH_ARIA_128_GCM_SHA256(0xC062),
+  TLS_ECDH_RSA_WITH_ARIA_256_GCM_SHA384(0xC063),
+  TLS_PSK_WITH_ARIA_128_CBC_SHA256(0xC064),
+  TLS_PSK_WITH_ARIA_256_CBC_SHA384(0xC065),
+  TLS_DHE_PSK_WITH_ARIA_128_CBC_SHA256(0xC066),
+  TLS_DHE_PSK_WITH_ARIA_256_CBC_SHA384(0xC067),
+  TLS_RSA_PSK_WITH_ARIA_128_CBC_SHA256(0xC068),
+  TLS_RSA_PSK_WITH_ARIA_256_CBC_SHA384(0xC069),
+  TLS_PSK_WITH_ARIA_128_GCM_SHA256(0xC06A),
+  TLS_PSK_WITH_ARIA_256_GCM_SHA384(0xC06B),
+  TLS_DHE_PSK_WITH_ARIA_128_GCM_SHA256(0xC06C),
+  TLS_DHE_PSK_WITH_ARIA_256_GCM_SHA384(0xC06D),
+  TLS_RSA_PSK_WITH_ARIA_128_GCM_SHA256(0xC06E),
+  TLS_RSA_PSK_WITH_ARIA_256_GCM_SHA384(0xC06F),
+  TLS_ECDHE_PSK_WITH_ARIA_128_CBC_SHA256(0xC070),
+  TLS_ECDHE_PSK_WITH_ARIA_256_CBC_SHA384(0xC071),
+  TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_CBC_SHA256(0xC072),
+  TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_CBC_SHA384(0xC073),
+  TLS_ECDH_ECDSA_WITH_CAMELLIA_128_CBC_SHA256(0xC074),
+  TLS_ECDH_ECDSA_WITH_CAMELLIA_256_CBC_SHA384(0xC075),
+  TLS_ECDHE_RSA_WITH_CAMELLIA_128_CBC_SHA256(0xC076),
+  TLS_ECDHE_RSA_WITH_CAMELLIA_256_CBC_SHA384(0xC077),
+  TLS_ECDH_RSA_WITH_CAMELLIA_128_CBC_SHA256(0xC078),
+  TLS_ECDH_RSA_WITH_CAMELLIA_256_CBC_SHA384(0xC079),
+  TLS_RSA_WITH_CAMELLIA_128_GCM_SHA256(0xC07A),
+  TLS_RSA_WITH_CAMELLIA_256_GCM_SHA384(0xC07B),
+  TLS_DHE_RSA_WITH_CAMELLIA_128_GCM_SHA256(0xC07C),
+  TLS_DHE_RSA_WITH_CAMELLIA_256_GCM_SHA384(0xC07D),
+  TLS_DH_RSA_WITH_CAMELLIA_128_GCM_SHA256(0xC07E),
+  TLS_DH_RSA_WITH_CAMELLIA_256_GCM_SHA384(0xC07F),
+  TLS_DHE_DSS_WITH_CAMELLIA_128_GCM_SHA256(0xC080),
+  TLS_DHE_DSS_WITH_CAMELLIA_256_GCM_SHA384(0xC081),
+  TLS_DH_DSS_WITH_CAMELLIA_128_GCM_SHA256(0xC082),
+  TLS_DH_DSS_WITH_CAMELLIA_256_GCM_SHA384(0xC083),
+  TLS_DH_anon_WITH_CAMELLIA_128_GCM_SHA256(0xC084),
+  TLS_DH_anon_WITH_CAMELLIA_256_GCM_SHA384(0xC085),
+  TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_GCM_SHA256(0xC086),
+  TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_GCM_SHA384(0xC087),
+  TLS_ECDH_ECDSA_WITH_CAMELLIA_128_GCM_SHA256(0xC088),
+  TLS_ECDH_ECDSA_WITH_CAMELLIA_256_GCM_SHA384(0xC089),
+  TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256(0xC08A),
+  TLS_ECDHE_RSA_WITH_CAMELLIA_256_GCM_SHA384(0xC08B),
+  TLS_ECDH_RSA_WITH_CAMELLIA_128_GCM_SHA256(0xC08C),
+  TLS_ECDH_RSA_WITH_CAMELLIA_256_GCM_SHA384(0xC08D),
+  TLS_PSK_WITH_CAMELLIA_128_GCM_SHA256(0xC08E),
+  TLS_PSK_WITH_CAMELLIA_256_GCM_SHA384(0xC08F),
+  TLS_DHE_PSK_WITH_CAMELLIA_128_GCM_SHA256(0xC090),
+  TLS_DHE_PSK_WITH_CAMELLIA_256_GCM_SHA384(0xC091),
+  TLS_RSA_PSK_WITH_CAMELLIA_128_GCM_SHA256(0xC092),
+  TLS_RSA_PSK_WITH_CAMELLIA_256_GCM_SHA384(0xC093),
+  TLS_PSK_WITH_CAMELLIA_128_CBC_SHA256(0xC094),
+  TLS_PSK_WITH_CAMELLIA_256_CBC_SHA384(0xC095),
+  TLS_DHE_PSK_WITH_CAMELLIA_128_CBC_SHA256(0xC096),
+  TLS_DHE_PSK_WITH_CAMELLIA_256_CBC_SHA384(0xC097),
+  TLS_RSA_PSK_WITH_CAMELLIA_128_CBC_SHA256(0xC098),
+  TLS_RSA_PSK_WITH_CAMELLIA_256_CBC_SHA384(0xC099),
+  TLS_ECDHE_PSK_WITH_CAMELLIA_128_CBC_SHA256(0xC09A),
+  TLS_ECDHE_PSK_WITH_CAMELLIA_256_CBC_SHA384(0xC09B),
+  TLS_RSA_WITH_AES_128_CCM(0xC09C),
+  TLS_RSA_WITH_AES_256_CCM(0xC09D),
+  TLS_DHE_RSA_WITH_AES_128_CCM(0xC09E),
+  TLS_DHE_RSA_WITH_AES_256_CCM(0xC09F),
+  TLS_RSA_WITH_AES_128_CCM_8(0xC0A0),
+  TLS_RSA_WITH_AES_256_CCM_8(0xC0A1),
+  TLS_DHE_RSA_WITH_AES_128_CCM_8(0xC0A2),
+  TLS_DHE_RSA_WITH_AES_256_CCM_8(0xC0A3),
+  TLS_PSK_WITH_AES_128_CCM(0xC0A4),
+  TLS_PSK_WITH_AES_256_CCM(0xC0A5),
+  TLS_DHE_PSK_WITH_AES_128_CCM(0xC0A6),
+  TLS_DHE_PSK_WITH_AES_256_CCM(0xC0A7),
+  TLS_PSK_WITH_AES_128_CCM_8(0xC0A8),
+  TLS_PSK_WITH_AES_256_CCM_8(0xC0A9),
+  TLS_PSK_DHE_WITH_AES_128_CCM_8(0xC0AA),
+  TLS_PSK_DHE_WITH_AES_256_CCM_8(0xC0AB),
+  TLS_ECDHE_ECDSA_WITH_AES_128_CCM(0xC0AC),
+  TLS_ECDHE_ECDSA_WITH_AES_256_CCM(0xC0AD),
+  TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8(0xC0AE),
+  TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8(0xC0AF),
+  TLS_ECCPWD_WITH_AES_128_GCM_SHA256(0xC0B0),
+  TLS_ECCPWD_WITH_AES_256_GCM_SHA384(0xC0B1),
+  TLS_ECCPWD_WITH_AES_128_CCM_SHA256(0xC0B2),
+  TLS_ECCPWD_WITH_AES_256_CCM_SHA384(0xC0B3),
+  TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256(0xCCA8),
+  TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256(0xCCA9),
+  TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256(0xCCAA),
+  TLS_PSK_WITH_CHACHA20_POLY1305_SHA256(0xCCAB),
+  TLS_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256(0xCCAC),
+  TLS_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256(0xCCAD),
+  TLS_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256(0xCCAE),
+  TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256(0xD001),
+  TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384(0xD002),
+  TLS_ECDHE_PSK_WITH_AES_128_CCM_8_SHA256(0xD003),
+  TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256(0xD005),
+  (65535)
+} CipherSuite;
+
+opaque SessionID<0..32>;
+
+enum /*@open*/ { null(0), (255) } CompressionMethod;
+
+/** Shared Handshake Message Types **/
+
+struct {
+  ProtocolVersion version;
+  Random random;
+  SessionID session_id;
+  CipherSuite cipher_suites<2..2^16-2>;
+  CompressionMethod compression_method<1..2^8-1>;
+  /*@option*/ ClientHelloExtension extensions<2..2^16-1>;
+ } ClientHello;
+
+struct {
+  ProtocolVersion version;
+  Random random;
+  SessionID session_id;
+  CipherSuite cipher_suite;
+  CompressionMethod compression_method;
+  ServerHelloExtension extensions<2..2^16-1>;
+} ServerHello;
+
+/** TLS 1.3 Handshake Messages */
+
+EncryptedExtension EncryptedExtensions<0..2^16-1>;
+
+struct {
+  opaque certificate_request_context<0..2^8-1>;
+  CertificateRequestExtension extensions<2..2^16-1>;
+} CertificateRequest13;
+
+struct {
+  opaque cert_data<1..2^24-1>;
+	CertificateExtension extensions<0..2^16-1>;
+} CertificateEntry13;
+
+struct {
+  opaque certificate_request_context<0..2^8-1>;
+  CertificateEntry13 certificate_list<0..2^24-1>;
+} Certificate13;
+
+struct {
+  SignatureScheme algorithm;
+  opaque signature<0..2^16-1>;
+} CertificateVerify13;
+
+enum {
+  hash_32, hash_48, hash_64, (255)
+} DigestSize;
+
+opaque Finished32[32];
+opaque Finished48[48];
+opaque Finished64[64];
+
+struct {
+  /*@erased*/ DigestSize hlen;
+  select(hlen) {
+    case hash_32: Finished32;
+    case hash_48: Finished48;
+    case hash_64: Finished64;
+  } verify_data;
+} Finished;
+
+struct {
+  uint32 ticket_lifetime;
+  uint32 ticket_age_add;
+  opaque ticket_nonce<0..255>;
+  opaque ticket<1..2^16-1>;
+  NewSessionTicketExtension extensions<0..2^16-2>;
+} NewSessionTicket13;
+
+enum {
+  update_not_requested(0), update_requested(1), (255)
+} KeyUpdateRequest;
+
+struct {
+  KeyUpdateRequest request_update;
+} KeyUpdate;
+
+enum {
+  hello_request_RESERVED(0),
+  client_hello(1),
+  server_hello(2),
+  hello_verify_request_RESERVED(3),
+  new_session_ticket(4),
+  end_of_early_data(5),
+  hello_retry_request_RESERVED(6),
+  encrypted_extensions(8),
+  certificate(11),
+  server_key_exchange_RESERVED(12),
+  certificate_request(13),
+  server_hello_done_RESERVED(14),
+  certificate_verify(15),
+  client_key_exchange_RESERVED(16),
+  finished(20),
+  key_update(24),
+  message_hash(254),
+  (255)
+} HandshakeType;
+
+struct {
+  HandshakeType msg_type;
+  uint24 length;
+  select (msg_type) {
+    case client_hello: ClientHello;
+    case server_hello: ServerHello;
+  } body[length];
+} Handshake;
+
+struct {
+  HandshakeType msg_type;
+  uint24 length;
+  select (msg_type) {
+    case end_of_early_data:     Empty;
+    case encrypted_extensions:  EncryptedExtensions;
+    case certificate_request:   CertificateRequest13;
+    case certificate:           Certificate13;
+    case certificate_verify:    CertificateVerify13;
+    case finished:              Finished;
+    case new_session_ticket:    NewSessionTicket13;
+    case key_update:            KeyUpdate;
+  } body[length];
+} Handshake13;
+
+struct {
+  opaque signature<0..2^16-1>;
+} CertificateVerify12;
+
+opaque ASN1Cert<1..2^24-1>;
+
+enum /*@open*/ {
+  rsa_sign(1), dss_sign(2), rsa_fixed_dh(3), dss_fixed_dh(4),
+  rsa_ephemeral_dh_RESERVED(5), dss_ephemeral_dh_RESERVED(6),
+  fortezza_dms_RESERVED(20), (255)
+} ClientCertificateType;
+
+struct {
+  ClientCertificateType certificate_types<1..2^8-1>;
+  SignatureScheme supported_signature_algorithms<2..2^16-1>;
+  DistinguishedName certificate_authorities<0..2^16-1>;
+} CertificateRequest12;
+
+struct {
+  ASN1Cert certificate_list<0..2^24-1>;
+} Certificate12;
+
+enum {
+  dhe_dss, dhe_rsa, dh_anon, rsa, dh_dss, dh_rsa,
+  (255)
+} KeyExchangeAlgorithm;
+
+struct {
+  ServerDHParams params;
+} DHAnonServerKeyExchange;
+
+struct {
+  opaque client_random[32];
+  opaque server_random[32];
+  ServerDHParams params;
+} SignedDHParams;
+
+struct {
+  SignedDHParams params;
+  SignatureScheme algorithm;
+  opaque signature<0..2^16-1>;
+} SignedDHKeyExchange;
+
+struct {
+  /*@implicit*/ KeyExchangeAlgorithm kex;
+  select (kex) {
+    case dh_anon: DHAnonServerKeyExchange;
+    case dhe_dss: SignedDHKeyExchange;
+    case dhe_rsa: SignedDHKeyExchange;
+  } key_exchange;
+} ServerKeyExchange;
+
+struct {
+  ProtocolVersion client_version;
+  opaque pms[46];
+} PreMasterSecret;
+
+struct {
+  opaque encrypted_pms<0..2^16-1>;
+} EncryptedPreMasterSecret;
+
+struct {
+  opaque dh_Yc<1..2^16-1>;
+} ClientDiffieHellmanPublic;
+
+struct {
+  /*@implicit*/ KeyExchangeAlgorithm kex;
+  select (kex) {
+      case rsa:     EncryptedPreMasterSecret;
+      case dhe_dss: ClientDiffieHellmanPublic;
+      case dhe_rsa: ClientDiffieHellmanPublic;
+      case dh_dss:  Empty;
+      case dh_rsa:  Empty;
+      case dh_anon: Empty;
+  } exchange_keys;
+} ClientKeyExchange;
+
+struct {
+  HandshakeType msg_type;
+  uint24 length;
+  select (msg_type) {
+    case hello_request:       Empty;
+    case certificate:         Certificate12;
+    case server_key_exchange: ServerKeyExchange;
+    case certificate_request: CertificateRequest12;
+    case server_hello_done:   Empty;
+    case certificate_verify:  CertificateVerify12;
+    case client_key_exchange: ClientKeyExchange;
+    case finished:            Finished;
+  } body[length];
+} Handshake12;
+
+/*
+This file defines the internal format of tickets in miTLS.
+*/
+
+enum {
+  ticket12, ticket13, (255)
+} TicketVersion;
+
+enum { false, true, (255)} bool;
+
+struct {
+  ProtocolVersion pv;
+  CipherSuite cs;
+  bool ems;
+  opaque master_secret[48];
+} TicketContents12;
+
+struct {
+  CipherSuite cs;
+  opaque rms<32..255>;
+  opaque nonce<0..255>;
+  uint32 creation_time;
+  uint32 age_add;
+  opaque custom_data<0..2^16-1>;
+} TicketContents13;
+
+struct {
+  TicketVersion version;
+  select(v) {
+    case ticket12: TicketContents12;
+    case ticket13: TicketContents13;
+  } contents;
+} TicketContents;

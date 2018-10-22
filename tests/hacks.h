@@ -4,6 +4,8 @@
 
 #include "Prims.h"
 #include "FStar.h"
+
+/*
 #include "kremlin/prims_int.h"
 #include "kremlin/prims_string.h"
 
@@ -42,6 +44,7 @@ FStar_Pervasives_Native_option__Prims_string;
 #undef K___uint8_t_uint8_t
 #undef FStar_Pervasives_Native_Some
 #undef FStar_Pervasives_Native_None
+*/
 
 #define __Hacks_H_DEFINED
 #endif

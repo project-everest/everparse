@@ -18,11 +18,11 @@ let attr    = "/*@" ['a'-'z' 'A'-'Z' '_']+ "*/"
 rule read = parse
 	| space    { read lexbuf }
 	| newln    { new_line lexbuf; read lexbuf }
-	| "abstract" { ABSTRACT }
 	| "struct" { STRUCT }
 	| "enum"   { ENUM }
 	| "select" { SELECT }
 	| "case"   { CASE }
+	| "default" { DEFAULT }
 	| int as i { INT (int_of_string i) }
 	| hex as i { INT (int_of_string i) }
 	| id as i  { TYPE i }

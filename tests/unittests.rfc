@@ -1,0 +1,41 @@
+opaque t1<0..255>;
+t1 t2<0..255>;
+opaque t3[2];
+t3 t4[8];
+t3 t5<0..255>;
+
+struct {
+  t4 x;
+  t5 y;
+  t1 z<0..255>;
+} t8;
+
+enum { a, b, (255) } tag;
+
+struct {
+  tag t;
+  select(t) {
+   case a: t3;
+   case b: t4;
+  } body;
+} t6;
+
+enum /*@open*/ {
+x, y, (255)
+} tag2;
+
+struct {
+  tag2 t;
+  select(t) {
+    case x: t3;
+    case y: t4;
+    default: t2;
+  } body;
+} t7;
+
+struct {
+  t1 a;
+  uint16 l;
+  t5 b[l];
+} t9;
+

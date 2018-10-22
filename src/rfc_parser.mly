@@ -11,8 +11,8 @@ let ectr = ref 0
 %token COMMA  EOF
 %token EQUALS DOTDOT
 
-%token STRUCT ENUM ABSTRACT
-%token SELECT CASE
+%token STRUCT ENUM
+%token SELECT CASE DEFAULT
 
 %token <string>  ATTRIBUTE
 %token <string>  TYPE
@@ -24,8 +24,7 @@ let ectr = ref 0
 %%
 
 prog:
-	| g = list(gemstone); EOF;
-		{ g }
+	| g = list(gemstone); EOF; { g }
 ;
 
 attrlist:
@@ -34,67 +33,51 @@ attrlist:
 ;
 
 gemstone:
-	| ENUM; a=attrlist; LBRACE; enum = separated_list(COMMA, enum_fields); RBRACE; t = TYPE; SEMCOL;
-		{ ectr := 0; Enum(enum, t, a) }
-	| STRUCT; a = attrlist; LBRACE; SELECT; LPAREN; c = TYPE; RPAREN; LBRACE; s = list(select_case); RBRACE; option(SEMCOL); RBRACE; t = TYPE; SEMCOL;
-		{ SelectStruct(t, c, s) }
-	| STRUCT; a = attrlist; LBRACE; fields = unambiguous_fields RBRACE; t = TYPE; SEMCOL;
+	| ENUM; a=attrlist; LBRACE; enum = separated_list(COMMA, enum_field); RBRACE; t = TYPE; SEMCOL;
+		{ ectr := 0; Enum(a, enum, t) }
+	| STRUCT; a = attrlist; LBRACE; fields = list(struct_field); RBRACE; t = TYPE; SEMCOL;
 		{ match fields with
-                  | [StructFieldSimple (v, None)] ->
-                     SingleFieldStruct(t, a, v)
-                  | _ -> Struct(t, a, fields) }
-        | ABSTRACT; a = attrlist; t=TYPE; FULCOL; min=INT; DOTDOT; max=INT; SEMCOL;
-                {
-                    Abstract(t, a, min, max)    
-                }
+		  | [(al, ty, n, vec, def)] -> Typedef(al, ty, t, vec, def)
+			| l -> Struct(a, fields, t) }
+	| t = struct_field; { Typedef(t) }
 ;
 
 vector:
-	| t = TYPE; n = TYPE;
-		{ VectorSimple(t, n) }
-	| t = TYPE; n = TYPE; LBRACK; l = INT; RBRACK;
-		{ VectorSize(t, n, l) }
-	| t = TYPE; n = TYPE; LBRACK; s = TYPE; RBRACK;
-		{ VectorSymbolic(t, n, s) }
-	| t = TYPE; n = TYPE; r = RANGE;
-		{ VectorRange(t, n, r) }
+	|	{ VectorNone }
+	| LBRACK; l = INT; RBRACK; { VectorFixed(l) }
+	| LBRACK; s = TYPE; RBRACK;	{ VectorSymbolic(s) }
+	| r = RANGE; { let (min,max)=r in VectorRange(min,max) }
 ;
 
-enum_fields:
-		| e = TYPE
-				{let c = !ectr in incr ectr; EnumFieldSimple(e, c)}
-	| e = TYPE; LPAREN; l = INT; RPAREN;
-		{ EnumFieldSimple(e, l) }
+enum_field:
+	| e = TYPE {let c = !ectr in incr ectr; EnumFieldSimple(e, c)}
+	| e = TYPE; LPAREN; l = INT; RPAREN; { EnumFieldSimple(e, l) }
 	| e = TYPE; LPAREN; a = INT; DOTDOT; b = INT; RPAREN
 		{ EnumFieldRange(e, a, b) }
-	| LPAREN; l = INT; RPAREN;
-		{ EnumFieldAnonymous(l) }
+	| LPAREN; l = INT; RPAREN; { EnumFieldAnonymous(l) }
 ;
 
 default_val:
 	| { None }
+	| EQUALS l = INT { Some [l] }
 	| EQUALS LBRACE vl = separated_list(COMMA, INT) RBRACE { Some vl }
 	| EQUALS e = TYPE; LPAREN; l = INT; RPAREN { Some  [l] }
 
-unambiguous_fields:
-	| { [] }
-		| v = vector; dv = default_val; SEMCOL; l = list(struct_fields)
-				{ StructFieldSimple(v, dv) :: l }
-;
+struct_field:
+	|  a=attrlist; ty = field_type; n = TYPE; v = vector; dv = default_val; SEMCOL;
+	  { (a, ty, n, v, dv) }
 
-struct_fields:
-		| v = vector; dv = default_val; SEMCOL;
-		{ StructFieldSimple(v, dv) }
-		| SELECT; LPAREN; t = TYPE; RPAREN; LBRACE; sele = list(select_ty_case); RBRACE; y = TYPE; SEMCOL;
-		{ StructFieldSelect(t, sele, y) }
+field_type:
+  | t = TYPE; { TypeSimple t }
+	| SELECT; LPAREN; n = TYPE; RPAREN; LBRACE; cases = list(select_case); def = default_case; RBRACE;
+	  { TypeSelect(n, cases, def) }
 ;
 
 select_case:
-	| CASE; e = TYPE; FULCOL; fields = list(struct_fields);
-				{ (e, fields) }
+	| CASE; e = TYPE; FULCOL; t = TYPE; SEMCOL;	{ (e,t) }
 ;
 
-select_ty_case:
-	| CASE; e = TYPE; FULCOL; t = TYPE; SEMCOL;
-		{ SelectField(e, t) }
+default_case:
+  | { None }
+	| DEFAULT; FULCOL; t = TYPE; SEMCOL; { Some t }
 ;

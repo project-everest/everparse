@@ -2,38 +2,26 @@ open Printf
 
 open Rfc_ast
 
-let rec pad = (fun n -> String.make (n*1) '\t')
+let rec pad = (fun n -> String.make (n*2) ' ')
+
+and attrs = List.fold_left (fun acc x -> sprintf "%s/*@%s*/ " acc x) ""
 
 and rfc_pretty_print (prog:Rfc_ast.prog) =
-  let attrs = List.fold_left (fun acc x->if acc="" then x else sprintf "%s /*@%s*/" acc x) "" in
-	let print ac g = sprintf "%s\n\n%s%s" ac (pad 0) (match g with
-	| SelectStruct(t, sv, alts) ->
-		let cases = print_switch 1 alts in
-		sprintf "struct {\n\tselect(%s) {\n%s\t}\n} %s;\n" sv cases t
-	| Enum(ef, t, qual) ->
-		sprintf "%senum {%s\n} %s;" (attrs qual) (print_enum_fields 1 ef) t
-	| Struct(t, qual, sf) ->
-		sprintf "%sstruct {%s\n} %s;" (attrs qual) (print_struct_fields 1 sf) t)
+	let print ac g = sprintf "%s\n%s" ac (match g with
+	| Enum(attr, fl, n) ->
+		sprintf "\n%senum {%s\n} %s;" (attrs attr) (print_enum_fields 1 fl) n
+	| Struct(attr, fl, n) ->
+		sprintf "\n%sstruct {%s\n} %s;" (attrs attr) (print_struct_fields 1 fl) n
+  | Typedef(td) -> print_struct_fields 0 [td])
 	in List.fold_left print "" prog
 
-and print_switch n = function
-	| [] -> ""
-	| (case, defs) :: t ->
-		let casehdr = sprintf "%scase(%s):" (pad n) case in
-		let defs = print_struct_fields (n+1) defs in
-		casehdr ^ defs ^ "\n" ^ (print_switch n t)
+and print_vector = function
+  | VectorNone -> ""
+	| VectorFixed(n) -> sprintf "[%d]" n
+	| VectorSymbolic(k) -> sprintf "[%s]" k
+	| VectorRange(a,b) -> sprintf "<%d..%d>" a b
 
-and print_vector (v:Rfc_ast.vector_t) = (match v with
-	| VectorSimple(t, n) ->
-		sprintf "%s %s;" t n
-	| VectorSymbolic(t, n, k) ->
-		sprintf "%s %s[%s];" t n k
-	| VectorSize(t, n, l) ->
-		sprintf "%s %s[%d];" t n l
-	| VectorRange(t, n, r) ->
-		sprintf "%s %s <%d..%d>;" t n (fst r) (snd r))
-
-and print_enum_fields p (ef:Rfc_ast.enum_fields_t list) =
+and print_enum_fields p (fl:enum_field_t list) =
 	let print ac f = sprintf "%s\n%s%s" ac (pad p) (match f with
 		| EnumFieldRange(e, a, b) ->
 			sprintf "%s(%d..%d)" e a b
@@ -41,18 +29,29 @@ and print_enum_fields p (ef:Rfc_ast.enum_fields_t list) =
 			sprintf "%s(%d)," e l
 		| EnumFieldAnonymous(l) ->
 			sprintf "(%d)" l)
-	in List.fold_left print "" ef
+	in List.fold_left print "" fl
 
-and print_struct_fields p (sf:Rfc_ast.struct_fields_t list) =
-	let print ac f = sprintf "%s\n%s%s" ac (pad p) (match f with
-		| StructFieldSimple(v, dv) ->
-			print_vector v
-		| StructFieldSelect(t, sel, y) ->
-			sprintf "select(%s) {%s\n\t} %s;" t (print_select_fields (p+1) sel) y)
-	in List.fold_left print "" sf
+and print_struct_fields p (fl:struct_field_t list) =
+	let print ac (attr, ty, n, v, def) =
+    sprintf "%s\n%s%s%s %s%s%s;" ac (pad p) (attrs attr)
+      (print_type p ty) n (print_vector v)
+      (match def with None -> ""
+      | Some [singl] -> sprintf " = %d" singl
+      | Some il -> sprintf " = { %s }"
+        (List.fold_left (fun acc i ->
+          if acc = "" then sprintf "%d" i
+          else sprintf "%s, %d" acc i) "" il))
+	in List.fold_left print "" fl
 
-and print_select_fields p (sf:Rfc_ast.select_fields_t list) =
-	let print ac f = sprintf "%s\n%s%s" ac (pad p) (match f with
-		| SelectField(e, t) ->
-			sprintf "case %s: %s;" e t)
-	in List.fold_left print "" sf
+and print_type p = function
+	| TypeSimple t -> t
+  | TypeSelect (n, cl, def) ->
+    sprintf "select(%s) {\n%s%s%s}" n
+    (print_select_fields (p+1) cl)
+    (match def with None -> ""
+    | Some dt -> sprintf "%sdefault: %s\n" (pad p) dt)
+    (pad p)
+
+and print_select_fields p (cl:(typ * typ) list) =
+	let print ac (k,t) = sprintf "%s%scase %s: %s\n" ac (pad p) k t
+	in List.fold_left print "" cl
