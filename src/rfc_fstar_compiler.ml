@@ -38,7 +38,7 @@ let module_name (s:string) =
   if !prefix = "" || Str.last_chars !prefix 1 = "." then
     !prefix ^ (String.capitalize_ascii s)
   else
-    !prefix ^ s
+    !prefix ^ (String.uncapitalize_ascii s)
 
 let attr_of = function
   | Enum (a, _, _) -> a
@@ -303,11 +303,11 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 	w o "  in e\n\n";
 
   (* Used in select() *)
-  w o "noextract let %s_repr_parser = %s\n\n" n (pcombinator_name repr_t);
-  w o "noextract let %s_repr_serializer = %s\n\n" n (scombinator_name repr_t);
-  w o "noextract let %s_repr_parser32 = %s\n\n" n (pcombinator32_name repr_t);
-  w o "noextract let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
-  w o "noextract let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
+  w o "inline_for_extraction let %s_repr_parser = %s\n\n" n (pcombinator_name repr_t);
+  w o "inline_for_extraction let %s_repr_serializer = %s\n\n" n (scombinator_name repr_t);
+  w o "inline_for_extraction let %s_repr_parser32 = %s\n\n" n (pcombinator32_name repr_t);
+  w o "inline_for_extraction let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
+  w o "inline_for_extraction let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
 
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
@@ -539,7 +539,7 @@ and compile_select o i n tagn tagt taga cl def al =
     | None -> sprintf "LP.sum_key %s_sum" n
     | Some def -> sprintf "LP.dsum_known_key %s_sum" n in
 
-  w o "let parse_%s_cases (x:%s)\n" n ktype;
+  w o "noextract let parse_%s_cases (x:%s)\n" n ktype;
   w o "  : k:LP.parser_kind & LP.parser k (%s_case_of_%s x) =\n  match x with\n" n tn;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -547,7 +547,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | %s -> (| _, %s |)\n" cn (pcombinator_name ty0)
   ) cl;
 
-  w o "\nlet serialize_%s_cases (x:%s)\n" n ktype;
+  w o "\nnoextract let serialize_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.serializer (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -555,7 +555,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | %s -> %s\n" cn (scombinator_name ty0)
   ) cl;
 
-  w o "\nlet parse32_%s_cases (x:%s)\n" n ktype;
+  w o "\ninline_for_extraction let parse32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.parser32 (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -563,7 +563,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | %s -> %s\n" cn (pcombinator32_name ty0)
   ) cl;
 
-  w o "\nlet serialize32_%s_cases (x:%s)\n" n ktype;
+  w o "\ninline_for_extraction let serialize32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -571,7 +571,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | %s -> %s\n" cn (scombinator32_name ty0)
   ) cl;
 
-  w o "\nlet size32_%s_cases (x:%s)\n" n ktype;
+  w o "\ninline_for_extraction let size32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.size32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in

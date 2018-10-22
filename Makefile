@@ -8,27 +8,12 @@ qd: $(wildcard src/*.ml*)
 	ln -sf quackyducky.native qd
 	touch qd
 
-RFC=extractrfc/tls_merged.rfc
-
-out/Makefile: qd $(RFC)
-	mkdir -p out
-	./qd -prefix "QD.Parse_" -odir out $(RFC)
-	cp Makefile.qd out/Makefile
-
-gen: out/Makefile
-
-verify: gen
-	$(MAKE) -C out verify
-
-unit: qd
+test: qd
 	-rm tests/unit/*.{fst,fsti} || true
 	./qd -odir tests/unit tests/unittests.rfc
 	$(MAKE) -C tests/unit
 
-test: gen
-	$(MAKE) -C out test
-
 clean:
-	rm -rf *~ src/*~ _build src/*lexer.ml src/*parser.ml src/*parser.mli qd quackyducky.native out
+	rm -rf *~ src/*~ _build src/*lexer.ml src/*parser.ml src/*parser.mli qd quackyducky.native
 
 .PHONY: all gen verify test clean quackyducky
