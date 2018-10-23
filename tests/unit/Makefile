@@ -36,6 +36,8 @@ KREMLIN = $(KREMLIN_HOME)/krml \
 
 QD_FILES = $(wildcard *.fst *.fsti)
 
+all: depend verify test
+
 # Don't re-verify standard library
 $(CACHE_DIR)/FStar.%$(CHECKED_EXT) \
 $(CACHE_DIR)/LowStar.%$(CHECKED_EXT) \
@@ -55,7 +57,7 @@ kremlin/%.krml:
 $(DEPEND_FILE): $(QD_FILES) Makefile hints ../Test.fst
 	$(FSTAR) --dep full $(QD_FILES) Test.fst > $@
 
-all: $(DEPEND_FILE) verify test
+depend: $(DEPEND_FILE)
 
 hints:
 	-@mkdir hints
@@ -88,4 +90,4 @@ test: test.exe
 clean:
 	-rm -rf cache cache.lax .depend .depend.lax out
 
-.PHONY: all verify extract clean build test
+.PHONY: all depend verify extract clean build test
