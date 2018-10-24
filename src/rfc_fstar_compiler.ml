@@ -513,13 +513,11 @@ and compile_select o i n tagn tagt taga cl def al =
     ) cl;
     w o "  | LP.Known _ -> false\n";
     w o "  | LP.Unknown _ -> Case_Unknown_%s? x\n\n" tn;
+    w o "let synth_%s_cases_recip_pre_intro' (x: %s) : Lemma (synth_%s_cases_recip_pre (key_of_%s x) x) = ()\n" n n n n;
     w o "let synth_%s_cases_recip_pre_intro (k:LP.maybe_enum_key %s_enum)\n" n tn;
     w o "  (x:LP.refine_with_tag key_of_%s k)\n" n;
     w o "  : Lemma (synth_%s_cases_recip_pre k x == true) =\n" n;
-(*
-    w o "  norm_spec [delta; iota] (synth_%s_cases_recip_pre k x)\n\n" n;
- *)
-    w o "  admit ()\n\n";
+    w o "  synth_%s_cases_recip_pre_intro' x\n\n" n;
     w o "inline_for_extraction let synth_%s_cases_recip (k:LP.maybe_enum_key %s_enum)\n" n tn;
     w o "  (x:LP.refine_with_tag key_of_%s k) : (%s_value_type k) =\n  match k with\n" n n;
     w o "  | LP.Unknown z ->\n    [@inline_let] let _ = synth_%s_cases_recip_pre_intro (LP.Unknown z) x in\n" n;
