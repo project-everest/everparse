@@ -9,7 +9,7 @@ qd: $(wildcard src/*.ml*)
 	touch qd
 
 test: qd
-	-rm tests/unit/*.{fst,fsti} || true
+	-rm tests/unit/*.fst tests/unit/*.fsti || true
 	./qd -odir tests/unit tests/unittests.rfc
 	+$(MAKE) -C tests/unit
 
