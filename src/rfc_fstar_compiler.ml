@@ -126,9 +126,9 @@ let scombinator32_name = function
   | t -> t^"_serializer32"
 
 let size32_name = function
-  | "U8.t" -> "LP.size32_constant LP.serialize_u8 1ul ()"
-  | "U16.t" -> "LP.size32_constant LP.serialize_u16 2ul ()"
-  | "U32.t" -> "LP.size32_constant LP.serialize_u32 4ul ()"
+  | "U8.t" -> "LP.size32_u8"
+  | "U16.t" -> "LP.size32_u16"
+  | "U32.t" -> "LP.size32_u32"
   | t -> t^"_size32"
 
 let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
