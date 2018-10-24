@@ -249,23 +249,24 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32 supported)")
 	in
 
-	let rec collect_valid_repr int_z acc = function
-	  | [] -> if acc = "" then "True" else acc
-		| (EnumFieldAnonymous _) :: t -> collect_valid_repr int_z acc t
+	let rec collect_valid_repr int_z acc acc_rparen = function
+	  | [] -> sprintf "%sfalse%s" acc acc_rparen
+		| (EnumFieldAnonymous _) :: t -> collect_valid_repr int_z acc acc_rparen t
 		| (EnumFieldSimple (_, i)) :: t ->
 		  let acc' =
-			  if acc = "" then sprintf "v `%s_repr_eq` %d%s" n i int_z
-        else sprintf "%s || v `%s_repr_eq` %d%s" acc n i int_z in
-		  collect_valid_repr int_z acc' t
+			  sprintf "%sv `%s_repr_eq` %d%s || (" acc n i int_z in
+                  let acc_rparen' = sprintf ")%s" acc_rparen in
+		  collect_valid_repr int_z acc' acc_rparen' t
 		| (EnumFieldRange (_, i, j)) :: t ->
 		  let acc' = acc in (* For now we treat enum ranges as unknown
 			  (if acc = "" then acc else acc^" /\\ ")^
 			  "(v < " ^ (string_of_int i) ^ int_z ^
 				" \\/ v > " ^ (string_of_int j) ^ int_z ^ ")" in *)
-		  collect_valid_repr int_z acc' t
+                  let acc_rparen' = acc_rparen in
+		  collect_valid_repr int_z acc' acc_rparen' t
 		in
 
-  let unknown_formula = collect_valid_repr int_z "" fl in
+  let unknown_formula = collect_valid_repr int_z "" "" fl in
   let prime = if is_open then "" else "'" in
 
   w i "let %s_repr = %s\n" n repr_t;
@@ -297,7 +298,9 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 		| _ -> ()) fl;
 	w o "  ] in\n";
 	w o "  [@inline_let] let _ =\n";
-	w o "    assert_norm (L.noRepeats (LP.list_map fst e));\n";
+	w o "    assert_norm (L.noRepeats (LP.list_map fst e))\n";
+        w o "  in\n";
+        w o "  [@inline_let] let _ = \n";
 	w o "    assert_norm (L.noRepeats (LP.list_map snd e))\n";
 	w o "  in e\n\n";
 
@@ -316,23 +319,41 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 	w o "  | LP.Known k -> k\n";
 	w o "  | LP.Unknown y ->\n";
 	w o "    [@inline_let] let v : %s = y in\n" repr_t;
-	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == (%s)) in\n" n unknown_formula;
+	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == known_%s_repr v) in\n" n n;
   w o "    Unknown_%s v\n\n" n;
-	w o "let lemma_synth_%s%s_inj () : Lemma\n" n prime;
-	w o "  (forall (x1 x2: LP.maybe_enum_key %s_enum).\n" n;
-  w o "    synth_%s%s x1 == synth_%s%s x2 ==> x1 == x2) = ()\n\n" n prime n prime;
 	w o "inline_for_extraction let synth_%s%s_inv (x:%s%s) : LP.maybe_enum_key %s_enum = \n" n prime n prime n;
 	w o "  match x with\n";
 	w o "  | Unknown_%s y ->\n" n;
 	w o "    [@inline_let] let v : %s = y in\n" repr_t;
-	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == (%s)) in\n" n unknown_formula;
+	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == known_%s_repr v) in\n" n n;
 	w o "    LP.Unknown v\n";
 	w o "  | x ->\n";
-  w o "    [@inline_let] let x1 : %s = x in\n" n;
+  w o "    [@inline_let] let x1 : %s%s = x in\n" n prime;
+(*  if is_open then begin *)
+        w o "    [@inline_let] let _ : squash(not (Unknown_%s? x1) ==> LP.list_mem x1 (LP.list_map fst %s_enum)) =\n" n n;
+        w o "      _ by (LP.synth_maybe_enum_key_inv_unknown_tac x1)\n";
+        w o "    in\n";
+(*
+        ()
+  end else begin
   w o "    [@inline_let] let _ = assert_norm(not (Unknown_%s? x1) <==> LP.list_mem x1 (LP.list_map fst %s_enum)) in\n" n n;
+  ()
+  end;
+*)
   w o "    LP.Known (x1 <: LP.enum_key %s_enum)\n\n" n;
+        w o "let lemma_synth_%s%s_inv' () : Lemma\n" n prime;
+        w o "  (LP.synth_inverse synth_%s%s_inv synth_%s%s)\n" n prime n prime;
+        w o "= LP.forall_maybe_enum_key %s_enum (fun x -> synth_%s%s_inv (synth_%s%s x) == x)\n" n n prime n prime;
+        w o "    (_ by (LP.forall_maybe_enum_key_known_tac ()))\n";
+        w o "    (_ by (LP.forall_maybe_enum_key_unknown_tac ()))\n\n";
+	w o "let lemma_synth_%s%s_inj () : Lemma\n" n prime;
+	w o "  (LP.synth_injective synth_%s%s) = \n" n prime;
+        w o "  lemma_synth_%s%s_inv' ();\n" n prime;
+        w o "  LP.synth_inverse_synth_injective synth_%s%s synth_%s%s_inv\n\n" n prime n prime;
+  w o "#push-options \"--max_ifuel 0 --initial_ifuel 0 --max_fuel 0 --max_ifuel 0\"\n";
 	w o "let lemma_synth_%s%s_inv () : Lemma\n" n prime;
-  w o "  (forall (x: LP.maybe_enum_key %s_enum). synth_%s%s_inv (synth_%s%s x) == x) = ()\n\n" n n prime n prime;
+  w o "  (LP.synth_inverse synth_%s%s synth_%s%s_inv) = allow_inversion %s%s; ()\n\n" n prime n prime n prime;
+  w o "#pop-options\n";
 
   (* Parse *)
 	w o "noextract let parse_maybe_%s_key : LP.parser _ (LP.maybe_enum_key %s_enum) =\n" n n;
