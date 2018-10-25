@@ -459,7 +459,6 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  %s_case_of_%s synth_%s_cases synth_%s_cases_recip\n" n tn n n;
     w o "  (_ by (LP.make_sum_synth_case_recip_synth_case_tac ()))\n";
     w o "  (_ by (LP.synth_case_synth_case_recip_tac ()))\n\n";
-    w o "\n#set-options \"--z3rlimit 30\" // From there on verification can be linear in the enum size\n\n";
     ()
 
   | Some def ->
@@ -567,7 +566,7 @@ and compile_select o i n tagn tagt taga cl def al =
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
-    w o "  | %s -> (| _, %s |)\n" cn (pcombinator_name ty0)
+    w o "  | %s -> let u : (k: LP.parser_kind & LP.parser k (%s_case_of_%s %s)) = (| _, %s |) in u\n" cn n tn cn (pcombinator_name ty0)
   ) cl;
   w o "  | _ -> (| _, LP.parse_false |)\n\n";
 
@@ -576,7 +575,7 @@ and compile_select o i n tagn tagt taga cl def al =
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
-    w o "  | %s -> %s\n" cn (scombinator_name ty0)
+    w o "  | %s -> let u : LP.serializer (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (scombinator_name ty0)
   ) cl;
   w o "  | _ -> LP.serialize_false\n\n";
 
@@ -585,7 +584,7 @@ and compile_select o i n tagn tagt taga cl def al =
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
-    w o "  | %s -> %s\n" cn (pcombinator32_name ty0)
+    w o "  | %s -> [@inline_let] let u : LP.parser32 (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (pcombinator32_name ty0)
   ) cl;
   w o "  | _ -> LP.parse32_false\n\n";
 
@@ -594,7 +593,7 @@ and compile_select o i n tagn tagt taga cl def al =
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
-    w o "  | %s -> %s\n" cn (scombinator32_name ty0)
+    w o "  | %s -> [@inline_let] let u : LP.serializer32 (serialize_%s_cases %s) = %s in u\n" cn n cn (scombinator32_name ty0)
   ) cl;
   w o "  | _ -> LP.serialize32_false\n\n";
 
@@ -603,7 +602,7 @@ and compile_select o i n tagn tagt taga cl def al =
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
-    w o "  | %s -> %s\n" cn (size32_name ty0)
+    w o "  | %s -> [@inline_let] let u : LP.size32 (serialize_%s_cases %s) = %s in u\n" cn n cn (size32_name ty0)
   ) cl;
   w o "  | _ -> LP.size32_false\n\n";
 
