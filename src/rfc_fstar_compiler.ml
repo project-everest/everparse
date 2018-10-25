@@ -249,6 +249,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32 supported)")
 	in
 
+begin if is_open then
 	let rec collect_valid_repr int_z acc acc_rparen = function
 	  | [] -> sprintf "%sfalse%s" acc acc_rparen
 		| (EnumFieldAnonymous _) :: t -> collect_valid_repr int_z acc acc_rparen t
@@ -267,27 +268,22 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 		in
 
   let unknown_formula = collect_valid_repr int_z "" "" fl in
-  let prime = if is_open then "" else "'" in
 
   w i "let %s_repr = %s\n" n repr_t;
   w i "inline_for_extraction let %s_repr_eq (x1 x2: %s_repr) : Tot bool = (x1 = x2)\n" n n;
   w i "let known_%s_repr (v:%s) : bool = %s\n\n" n repr_t unknown_formula;
-	w i "type %s%s =\n" n prime;
+  ()
+end;
+	w i "type %s =\n" n;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
 		  w i "  | %s\n" (String.capitalize_ascii x)
 		| _ -> ()) fl;
+  begin if is_open then
 	w i "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n repr_t n;
-
-  (* Filter (for closed enums) *)
-  if is_open then
-    ()
-  else
-   begin
-    w i "noextract let %s_filter_spec (x:%s') : GTot bool = not (Unknown_%s? x)\n\n" n n n;
-    w i "let %s_filter (x:%s') : b:bool{b == %s_filter_spec x} = not (Unknown_%s? x)\n\n" n n n n;
-    w i "type %s = x:%s'{%s_filter_spec x == true}\n\n" n n n
-   end;
+        ()
+  end;
+        
 
   (* Enum definition *)
 	w o "inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n repr_t;
@@ -314,83 +310,84 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
   (* Synth *)
-	w o "inline_for_extraction let synth_%s%s (x:LP.maybe_enum_key %s_enum) : %s%s = \n" n prime n n prime;
+  if is_open then begin
+	w o "inline_for_extraction let synth_%s (x:LP.maybe_enum_key %s_enum) : %s = \n" n n n;
 	w o "  match x with\n";
 	w o "  | LP.Known k -> k\n";
 	w o "  | LP.Unknown y ->\n";
 	w o "    [@inline_let] let v : %s = y in\n" repr_t;
 	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == known_%s_repr v) in\n" n n;
   w o "    Unknown_%s v\n\n" n;
-	w o "inline_for_extraction let synth_%s%s_inv (x:%s%s) : LP.maybe_enum_key %s_enum = \n" n prime n prime n;
+	w o "inline_for_extraction let synth_%s_inv (x:%s) : LP.maybe_enum_key %s_enum = \n" n n n;
 	w o "  match x with\n";
 	w o "  | Unknown_%s y ->\n" n;
 	w o "    [@inline_let] let v : %s = y in\n" repr_t;
 	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == known_%s_repr v) in\n" n n;
 	w o "    LP.Unknown v\n";
 	w o "  | x ->\n";
-  w o "    [@inline_let] let x1 : %s%s = x in\n" n prime;
-(*  if is_open then begin *)
+  w o "    [@inline_let] let x1 : %s = x in\n" n;
         w o "    [@inline_let] let _ : squash(not (Unknown_%s? x1) ==> LP.list_mem x1 (LP.list_map fst %s_enum)) =\n" n n;
         w o "      _ by (LP.synth_maybe_enum_key_inv_unknown_tac x1)\n";
         w o "    in\n";
-(*
-        ()
-  end else begin
-  w o "    [@inline_let] let _ = assert_norm(not (Unknown_%s? x1) <==> LP.list_mem x1 (LP.list_map fst %s_enum)) in\n" n n;
-  ()
-  end;
-*)
   w o "    LP.Known (x1 <: LP.enum_key %s_enum)\n\n" n;
-        w o "let lemma_synth_%s%s_inv' () : Lemma\n" n prime;
-        w o "  (LP.synth_inverse synth_%s%s_inv synth_%s%s)\n" n prime n prime;
-        w o "= LP.forall_maybe_enum_key %s_enum (fun x -> synth_%s%s_inv (synth_%s%s x) == x)\n" n n prime n prime;
+        w o "let lemma_synth_%s_inv' () : Lemma\n" n;
+        w o "  (LP.synth_inverse synth_%s_inv synth_%s)\n" n n;
+        w o "= LP.forall_maybe_enum_key %s_enum (fun x -> synth_%s_inv (synth_%s x) == x)\n" n n n;
         w o "    (_ by (LP.forall_maybe_enum_key_known_tac ()))\n";
         w o "    (_ by (LP.forall_maybe_enum_key_unknown_tac ()))\n\n";
-	w o "let lemma_synth_%s%s_inj () : Lemma\n" n prime;
-	w o "  (LP.synth_injective synth_%s%s) = \n" n prime;
-        w o "  lemma_synth_%s%s_inv' ();\n" n prime;
-        w o "  LP.synth_inverse_synth_injective synth_%s%s synth_%s%s_inv\n\n" n prime n prime;
+	w o "let lemma_synth_%s_inj () : Lemma\n" n;
+	w o "  (LP.synth_injective synth_%s) = \n" n;
+        w o "  lemma_synth_%s_inv' ();\n" n;
+        w o "  LP.synth_inverse_synth_injective synth_%s synth_%s_inv\n\n" n n;
   w o "#push-options \"--max_ifuel 0 --initial_ifuel 0 --max_fuel 0 --max_ifuel 0\"\n";
-	w o "let lemma_synth_%s%s_inv () : Lemma\n" n prime;
-  w o "  (LP.synth_inverse synth_%s%s synth_%s%s_inv) = allow_inversion %s%s; ()\n\n" n prime n prime n prime;
+	w o "let lemma_synth_%s_inv () : Lemma\n" n;
+  w o "  (LP.synth_inverse synth_%s synth_%s_inv) = allow_inversion %s; ()\n\n" n n n;
   w o "#pop-options\n";
+        ()
+  end else begin
+        w o "inline_for_extraction let synth_%s (x: LP.enum_key %s_enum) : Tot %s = x\n\n" n n n;
+        w o "inline_for_extraction let synth_%s_inv (x: %s) : Tot (LP.enum_key %s_enum) =\n" n n n;
+        w o "  [@inline_let] let _ : squash (LP.list_mem x (LP.list_map fst %s_enum)) =\n" n;
+        w o "    _ by (LP.synth_maybe_enum_key_inv_unknown_tac x)\n";
+        w o "  in\n";
+        w o "  x\n\n";
+	w o "let lemma_synth_%s_inj () : Lemma\n" n;
+	w o "  (LP.synth_injective synth_%s) = ()\n\n" n;
+	w o "let lemma_synth_%s_inv () : Lemma\n" n;
+        w o "  (LP.synth_inverse synth_%s synth_%s_inv) = ()\n\n" n n;
+  end;
 
   (* Parse *)
-	w o "noextract let parse_maybe_%s_key : LP.parser _ (LP.maybe_enum_key %s_enum) =\n" n n;
-  w o "  LP.parse_maybe_enum_key LP.parse_%s %s_enum\n\n" parse_t n;
-	w o "noextract let serialize_maybe_%s_key : LP.serializer parse_maybe_%s_key =\n" n n;
-  w o "  LP.serialize_maybe_enum_key LP.parse_%s LP.serialize_%s %s_enum\n\n" parse_t parse_t n;
+  let maybe = if is_open then "maybe_" else "" in
+	w o "noextract let parse_%s%s_key : LP.parser _ (LP.%senum_key %s_enum) =\n" maybe n maybe n;
+  w o "  LP.parse_%senum_key LP.parse_%s %s_enum\n\n" maybe parse_t n;
+	w o "noextract let serialize_%s%s_key : LP.serializer parse_%s%s_key =\n" maybe n maybe n;
+  w o "  LP.serialize_%senum_key LP.parse_%s LP.serialize_%s %s_enum\n\n" maybe parse_t parse_t n;
 
   (* Spec *)
-	w o "noextract let %s%s_parser : LP.parser _ %s%s =\n" n prime n prime;
-	w o "  lemma_synth_%s%s_inj ();\n" n prime;
-  w o "  parse_maybe_%s_key `LP.parse_synth` synth_%s%s\n\n" n n prime;
-  w o "noextract let %s%s_serializer : LP.serializer %s%s_parser =\n" n prime n prime;
-	w o "  lemma_synth_%s%s_inj ();\n  lemma_synth_%s%s_inv ();\n" n prime n prime;
-	w o "  LP.serialize_synth _ synth_%s%s serialize_maybe_%s_key synth_%s%s_inv ()\n\n" n prime n n prime;
+	w o "noextract let %s_parser : LP.parser _ %s =\n" n n;
+	w o "  lemma_synth_%s_inj ();\n" n;
+  w o "  parse_%s%s_key `LP.parse_synth` synth_%s\n\n" maybe n n;
+  w o "noextract let %s_serializer : LP.serializer %s_parser =\n" n n;
+	w o "  lemma_synth_%s_inj ();\n  lemma_synth_%s_inv ();\n" n n;
+	w o "  LP.serialize_synth _ synth_%s serialize_%s%s_key synth_%s_inv ()\n\n" n maybe n n;
 
   (* Intermediate *)
-  w o "inline_for_extraction let parse32_maybe_%s_key : LP.parser32 parse_maybe_%s_key =\n" n n;
-  w o "  FStar.Tactics.synth_by_tactic (LP.parse32_maybe_enum_key_tac LP.parse32_%s %s_enum)\n\n" parse_t n;
-  w o "inline_for_extraction let %s%s_parser32 : LP.parser32 %s%s_parser =\n" n prime n prime;
-  w o "  lemma_synth_%s%s_inj ();\n" n prime;
-  w o "  LP.parse32_synth _ synth_%s%s (fun x->synth_%s%s x) parse32_maybe_%s_key ()\n\n" n prime n prime n;
-	w o "inline_for_extraction let serialize32_maybe_%s_key : LP.serializer32 serialize_maybe_%s_key =\n" n n;
-  w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n";
+  w o "inline_for_extraction let parse32_%s%s_key : LP.parser32 parse_%s%s_key =\n" maybe n maybe n;
+  w o "  FStar.Tactics.synth_by_tactic (LP.parse32_%senum_key_tac LP.parse32_%s %s_enum)\n\n" maybe parse_t n;
+  w o "inline_for_extraction let %s_parser32 : LP.parser32 %s_parser =\n" n n ;
+  w o "  lemma_synth_%s_inj ();\n" n;
+  w o "  LP.parse32_synth _ synth_%s (fun x->synth_%s x) parse32_%s%s_key ()\n\n" n n maybe n;
+	w o "inline_for_extraction let serialize32_%s%s_key : LP.serializer32 serialize_%s%s_key =\n" maybe n maybe n;
+  begin if is_open then (* FIXME: harmonize the tactic name in LowParse *)
+  w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n"
+  else
+  w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_enum_key_gen_tac\n"
+  end;
   w o "    LP.serialize32_%s %s_enum)\n\n" parse_t n;
-  w o "inline_for_extraction let %s%s_serializer32 : LP.serializer32 %s%s_serializer =\n" n prime n prime;
-	w o "  lemma_synth_%s%s_inj ();\n  lemma_synth_%s%s_inv ();\n" n prime n prime;
-  w o "  LP.serialize32_synth _ synth_%s%s _ serialize32_maybe_%s_key synth_%s%s_inv (fun x->synth_%s%s_inv x) ()\n\n" n prime n n prime n prime;
-
-  (* Filter *)
-  if not is_open then
-   begin
-    w o "noextract let %s_kind = LP.parse_filter_kind (LP.get_parser_kind %s'_parser)\n\n" n n;
-    w o "noextract let %s_parser = LP.parse_filter %s'_parser %s_filter_spec\n\n" n n n;
-    w o "noextract let %s_serializer = LP.serialize_filter %s'_serializer %s_filter_spec\n\n" n n n;
-    w o "let %s_parser32 = LP.parse32_filter %s'_parser32 %s_filter_spec %s_filter\n\n" n n n n;
-    w o "let %s_serializer32 = LP.serialize32_filter %s'_serializer32 %s_filter_spec\n\n" n n n;
-   end;
+  w o "inline_for_extraction let %s_serializer32 : LP.serializer32 %s_serializer =\n" n n;
+	w o "  lemma_synth_%s_inj ();\n  lemma_synth_%s_inv ();\n" n n;
+  w o "  LP.serialize32_synth _ synth_%s _ serialize32_%s%s_key synth_%s_inv (fun x->synth_%s_inv x) ()\n\n" n maybe n n n;
 
   w o "let %s_size32 =\n" n;
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond %s_serializer %dul) in\n" n blen;
