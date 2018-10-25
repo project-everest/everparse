@@ -63,16 +63,25 @@ function fetch_lowparse() {
     export_home LOWPARSE "$(pwd)/mitls-fstar/src/lowparse"
 }
 
+function make_lowparse () {
+    # NOTE: we assume that we are already in LOWPARSE_HOME
+    env OTHERFLAGS='--admit_smt_queries true' make -f Makefile.LowParse -j $threads
+}
+
 function fetch_and_make_lowparse() {
     fetch_lowparse &&
 
     pushd "$LOWPARSE_HOME" && {
-        env OTHERFLAGS='--admit_smt_queries true' make -f Makefile.LowParse -j $threads || {
-            git clean -fdx &&
-            env OTHERFLAGS='--admit_smt_queries true' make -f Makefile.LowParse -j $threads
+        {
+            make_lowparse || {
+                git clean -fdx &&
+                make_lowparse
+            }
         }
-    } &&
-    popd
+        local exitcode=$?
+        popd
+        return $exitcode
+    }
 }
 
 function build_and_test_quackyducky() {
@@ -94,9 +103,7 @@ function exec_build() {
     fi
 
     # Ignore $target for now
-    local old_dir=$(PWD)
     build_and_test_quackyducky && echo -n true >$status_file
-    cd "$old_dir"
 
     if [[ $(cat $status_file) != "true" ]]; then
         echo "Build failed"
