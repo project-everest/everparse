@@ -455,9 +455,11 @@ and compile_select o i n tagn tagt taga cl def al =
       w o "    (match x with Case_%s y -> (from_%s_case_of_%s %s y))\n"
         case n tn (String.capitalize_ascii case)
     ) cl;
+    w o "inline_for_extraction let %s_sum = LP.make_sum' %s_enum key_of_%s\n" n tn n;
+    w o "  %s_case_of_%s synth_%s_cases synth_%s_cases_recip\n" n tn n n;
+    w o "  (_ by (LP.make_sum_synth_case_recip_synth_case_tac ()))\n";
+    w o "  (_ by (LP.synth_case_synth_case_recip_tac ()))\n\n";
     w o "\n#set-options \"--z3rlimit 30\" // From there on verification can be linear in the enum size\n\n";
-    w o "inline_for_extraction let %s_sum = LP.make_sum %s_enum key_of_%s\n" n tn n;
-    w o "  %s_case_of_%s synth_%s_cases synth_%s_cases_recip (fun x y -> ()) (fun x -> ())\n\n" n tn n n;
     ()
 
   | Some def ->
