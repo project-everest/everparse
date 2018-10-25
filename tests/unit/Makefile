@@ -1,9 +1,9 @@
 FSTAR_HOME ?= ../../../FStar
-MITLS_HOME ?= ../../../mitls-fstar
+LOWPARSE_HOME ?= ../../../mitls-fstar/src/lowparse
 KREMLIN_HOME ?= ../../../kremlin
 
 export FSTAR_HOME
-export MITLS_HOME
+export LOWPARSE_HOME
 export KREMLIN_HOME
 
 ifdef NO_QD_VERIFY
@@ -20,7 +20,7 @@ CHECKED_EXT=.checked$(LAX_EXT)
 
 HINT_FILE=--hint_file hints/$(notdir $(subst .checked,,$<)).hints
 FSTAR_OPTIONS = --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules --use_hints \
-		--include $(MITLS_HOME)/src/lowparse --include $(KREMLIN_HOME)/kremlib --include ..
+		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include ..
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 
