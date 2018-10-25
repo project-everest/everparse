@@ -51,7 +51,7 @@ function fetch_and_make_kremlin() {
 # By default, mitls-fstar master works against F* stable. Can also be overridden.
 function fetch_lowparse() {
     if [ ! -d mitls-fstar ] ; then
-        git clone https://github.com/project-everest/mitls-fstar mitls-fstar
+        git clone https://github.com/mitls/mitls-fstar mitls-fstar
     fi
     cd mitls-fstar
     git fetch origin
