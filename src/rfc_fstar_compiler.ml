@@ -284,7 +284,7 @@ end;
 	w i "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n repr_t n;
         ()
   end;
-        
+
 
   (* Enum definition *)
 	w o "inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n repr_t;
@@ -681,32 +681,28 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
 
     | VectorVldata vl ->
       (* N.B. for VectorVldata the size of the length is accounted outside the leninfo, unlike VectorRange *)
-      let (len_len, _) = basic_bounds vl in
-      let (min, max) = li.min_len - len_len, li.max_len - len_len in
+      let (len_len, smax) = basic_bounds vl in
+      let (min, max) = li.min_len, li.max_len in
       w i "noextract val %s_bytesize: %s -> GTot nat\n\n" n ty0;
       w o "let %s_bytesize x = Seq.length (LP.serialize %s x)\n\n" n (scombinator_name ty0);
-      w i "type %s = x:%s{let l = %s_bytesize x in %d <= l /\\ l <= %d}\n\n" n ty0 n min max;
+      w i "type %s = x:%s{let l = %s_bytesize x in %d <= l /\\ l <= %d}\n\n" n ty0 n 0 smax;
       write_api o i is_private MetadataDefault n (len_len+min) (len_len+max);
-      w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n min max (scombinator_name ty0);
+      w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
-      w o "  LP.parse_bounded_vldata_strong %d %d %s\n\n" min max (scombinator_name ty0);
+      w o "  LP.parse_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty0);
       w o "let %s_parser = %s'_parser\n\n" n n;
       w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
-      w o "  LP.serialize_bounded_vldata_strong %d %d %s\n\n" min max (scombinator_name ty0);
+      w o "  LP.serialize_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty0);
       w o "let %s_serializer = %s'_serializer\n\n" n n;
       w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-      w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul %s %s\n\n" min min max max (scombinator_name ty0) (pcombinator32_name ty0);
+      w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul %s %s\n\n" 0 0 smax smax (scombinator_name ty0) (pcombinator32_name ty0);
       w o "let %s_parser32 = %s'_parser32\n\n" n n;
       w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-      w o "  LP.serialize32_bounded_vldata_strong %d %d %s\n\n" min max (scombinator32_name ty0);
+      w o "  LP.serialize32_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator32_name ty0);
       w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
       w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-      (* assert_norm to be removed when moved to LowParse *)
-      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
-      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
-      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
-      w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" min max (size32_name ty0) (log256 max);
+      w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
       w o "let %s_size32 = %s'_size32\n\n" n n
 
     (* Fixed-length bytes *)
@@ -811,10 +807,6 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s %s ())\n\n" min max (scombinator_name ty0) (scombinator32_name ty0);
       w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
       w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-      (* assert_norm to be removed when moved to LowParse *)
-      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
-      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
-      w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
       w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s ()) %dul\n\n" min max (size32_name ty0) li.len_len;
       w o "let %s_size32 = %s'_size32\n\n" n n
 
@@ -861,10 +853,14 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     w o "  let %s = x in\n  {\n" tuple;
     let tuple = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
     w o "%s  }\n\n" tuple;
-    w o "inline_for_extraction let synth_%s_recip (x: %s) : %s' =\n" n n n;
-    let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then "x."^fn else sprintf "(%s, x.%s)" acc fn) "" fields in
-    w o "  %s\n\n" tuple
    end;
+
+  w o "inline_for_extraction let synth_%s_recip (x: %s) : %s' =\n" n n n;
+  let tuple =
+    if fields = [] then "x"
+    else List.fold_left (fun acc (fn, ty) ->
+      if acc="" then "x."^fn else sprintf "(%s, x.%s)" acc fn) "" fields in
+  w o "  %s\n\n" tuple;
 
   (* Write parser API *)
   write_api o i is_private MetadataDefault n li.min_len li.max_len;
@@ -930,12 +926,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   w o "  LP.serialize32_synth _ synth_%s _ %s'_serializer32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
 
-  (* size32, the assert_norms should move to LP *)
   w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
-  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
-  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
-
   if fields = [] then w o "  LP.size32_constant %s'_serializer 0ul ()" n;
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
