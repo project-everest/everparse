@@ -146,8 +146,9 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       }
     | VectorVldata tn ->
       let (len_len, max_len) = basic_bounds tn in
+      let max' = min max_len (len_len + li.max_len) in
       (*let min', max' = li.min_len, min li.max_len max_len in*)
-      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = len_len + li.max_len; vl = true; }
+      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = max'; vl = true; }
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
       let li' = get_leninfo (tn^"@"^cst) in
@@ -681,11 +682,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorVldata vl ->
       (* N.B. for VectorVldata the size of the length is accounted outside the leninfo, unlike VectorRange *)
       let (len_len, _) = basic_bounds vl in
-      let (min, max) = li.min_len, li.max_len in
+      let (min, max) = li.min_len - len_len, li.max_len - len_len in
       w i "noextract val %s_bytesize: %s -> GTot nat\n\n" n ty0;
       w o "let %s_bytesize x = Seq.length (LP.serialize %s x)\n\n" n (scombinator_name ty0);
       w i "type %s = x:%s{let l = %s_bytesize x in %d <= l /\\ l <= %d}\n\n" n ty0 n min max;
-      write_api o i is_private MetadataDefault n (len_len+li.min_len) (len_len+li.max_len);
+      write_api o i is_private MetadataDefault n (len_len+min) (len_len+max);
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n min max (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -705,7 +706,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u32 4ul) in\n";
       w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u16 2ul) in\n";
       w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond LP.serialize_u8 1ul) in\n";
-      w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" min max (size32_name ty0) len_len;
+      w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" min max (size32_name ty0) (log256 max);
       w o "let %s_size32 = %s'_size32\n\n" n n
 
     (* Fixed-length bytes *)
