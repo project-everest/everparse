@@ -504,8 +504,11 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  (x: %s { norm [delta; zeta; iota; primops] (LP.list_mem x (LP.list_map fst %s_enum)) == true })\n" tn tn;
     w o "  : LP.enum_key %s_enum =\n" tn;
     w o "  [@inline_let] let _ = norm_spec [delta; zeta; iota; primops] (LP.list_mem x (LP.list_map fst %s_enum)) in x\n\n" tn;
-    w o "let unknown_%s_as_enum_key (r:%s_repr) : Pure (LP.unknown_enum_repr %s_enum)\n" tn tn tn;
+    w o "inline_for_extraction let unknown_%s_as_enum_key (r:%s_repr) : Pure (LP.unknown_enum_repr %s_enum)\n" tn tn tn;
     w o "  (requires known_%s_repr r == false) (ensures fun _ -> True) =\n" tn;
+    w o "  [@inline_let] let _ = assert_norm(LP.list_mem r (LP.list_map snd %s_enum) == known_%s_repr r) in r\n\n" tn tn;
+    w o "inline_for_extraction let unknown_enum_repr_%s_as_repr (r:LP.unknown_enum_repr %s_enum) : Pure %s_repr\n" tn tn tn;
+    w o "  (requires True) (ensures fun r -> known_%s_repr r == false) =\n" tn;
     w o "  [@inline_let] let _ = assert_norm(LP.list_mem r (LP.list_map snd %s_enum) == known_%s_repr r) in r\n\n" tn tn;
 
     w o "inline_for_extraction let key_of_%s (x:%s) : LP.maybe_enum_key %s_enum =\n  match x with\n" n n tn;
@@ -550,7 +553,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "\ninline_for_extraction let synth_%s_cases (x:LP.maybe_enum_key %s_enum)\n" n tn;
     w o "  (y:%s_value_type x) : LP.refine_with_tag key_of_%s x =\n  match x with\n" n n;
     w o "  | LP.Unknown v ->\n";
-    w o "    [@inline_let] let x : %s = Case_Unknown_%s v y in\n" n tn;
+    w o "    [@inline_let] let x : %s = Case_Unknown_%s (unknown_enum_repr_%s_as_repr v) y in\n" n tn tn;
     w o "    [@inline_let] let _ = assert_norm (key_of_%s x == LP.Unknown v) in\n" n;
     w o "    %s_refine (LP.Unknown v) x\n" n;
     w o "  | LP.Known k -> synth_known_%s_cases k y\n\n" n;
