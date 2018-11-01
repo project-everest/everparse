@@ -28,7 +28,7 @@ struct {
 } t6;
 
 enum /*@open*/ {
-x, y, (255)
+x, y, z, w, (255)
 } tag2;
 
 struct {
@@ -36,6 +36,7 @@ struct {
   select(t) {
     case x: t3;
     case y: t4;
+    case w: Empty;
     default: t2;
   } body;
 } t7;

@@ -28,6 +28,9 @@ let linfo : len_info SM.t ref = ref SM.empty
 (* Storage of inlined types *)
 let inliners: gemstone_t SM.t ref = ref SM.empty
 
+(* Storage of enum fields for select *)
+let fields: (enum_field_t list) SM.t ref = ref SM.empty
+
 let w = fprintf
 
 let log256 k =
@@ -69,6 +72,7 @@ let li_add (s:string) (li:len_info) =
 
 let basic_type = function
   | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" -> true
+  | "Empty" | "Fail" -> true
   | _ -> false
 
 let basic_bounds = function
@@ -78,7 +82,7 @@ let basic_bounds = function
 
 let rec sizeof = function
   | TypeSelect(n, cl, def) ->
-    let lil = (List.map (fun (_,ty) -> get_leninfo ty) cl)
+    let lil = (List.map (fun (_,ty) -> sizeof (TypeSimple ty)) cl)
               @ (match def with None -> [] | Some ty -> [get_leninfo ty]) in
     let li = { len_len = 0; min_len = max_int; max_len = 0; min_count = 0; max_count = 0; vl = false;
       meta = match def with None -> MetadataDefault | Some _ -> MetadataTotal } in
@@ -95,6 +99,8 @@ let rec sizeof = function
     | "uint16" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "uint24" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
+    | "Empty" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
+    | "Fail" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataDefault }
     | s ->
       let li = get_leninfo s in
       {li with len_len = li.len_len} (* shallow copy *)
@@ -105,36 +111,48 @@ let compile_type = function
   | "uint16" -> "U16.t"
   | "uint24" -> "U32.t"
   | "uint32" -> "U32.t"
+  | "Empty" -> "unit"
+  | "Fail" -> "squash False"
   | t -> String.uncapitalize_ascii t
 
 let pcombinator_name = function
   | "U8.t" -> "LP.parse_u8"
   | "U16.t" -> "LP.parse_u16"
   | "U32.t" -> "LP.parse_u32"
+  | "unit" -> "LP.parse_empty"
+  | "squash False" -> "LP.parse_false"
   | t -> t^"_parser"
 
 let scombinator_name = function
   | "U8.t" -> "LP.serialize_u8"
   | "U16.t" -> "LP.serialize_u16"
   | "U32.t" -> "LP.serialize_u32"
+  | "unit" -> "LP.serialize_empty"
+  | "squash False" -> "LP.serialize_false"
   | t -> t^"_serializer"
 
 let pcombinator32_name = function
   | "U8.t" -> "LP.parse32_u8"
   | "U16.t" -> "LP.parse32_u16"
   | "U32.t" -> "LP.parse32_u32"
+  | "unit" -> "LP.parse32_empty"
+  | "squash False" -> "LP.parse32_false"
   | t -> t^"_parser32"
 
 let scombinator32_name = function
   | "U8.t" -> "LP.serialize32_u8"
   | "U16.t" -> "LP.serialize32_u16"
   | "U32.t" -> "LP.serialize32_u32"
+  | "unit" -> "LP.serialize32_empty"
+  | "squash False" -> "LP.serialize32_false"
   | t -> t^"_serializer32"
 
 let size32_name = function
   | "U8.t" -> "LP.size32_u8"
   | "U16.t" -> "LP.size32_u16"
   | "U32.t" -> "LP.size32_u32"
+  | "unit" -> "LP.size32_empty"
+  | "squash False" -> "LP.size32_false"
   | t -> t^"_size32"
 
 let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
@@ -244,6 +262,7 @@ let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
    end
 
 let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
+  fields := SM.add n fl !fields; (* Record fields for select() auto-completion *)
   let is_open = has_attr al "open" in
   let is_private = has_attr al "private" in
 
@@ -406,6 +425,15 @@ and compile_select o i n tagn tagt taga cl def al =
   let is_private = has_attr al "private" in
   let li = get_leninfo n in
   let tn = compile_type tagt in
+
+  (* Complete undefined cases in enum with Fail *)
+  let enum_fields = try SM.find tn !fields with
+    | _ -> failwith ("Type "^tn^" is not an enum and cannot be used in select()") in
+  let cl = (fun l -> let r = ref [] in
+    List.iter (function
+      | EnumFieldSimple(cn, _) -> if not (List.mem_assoc cn l) then r := (cn, "Fail") :: !r
+      | _ -> ()) enum_fields; l @ !r) cl in
+
   w o "friend %s\n\n" (module_name tagt);
   w i "type %s =\n" n;
   List.iter (fun (case, ty) -> w i "  | Case_%s of %s\n" case (compile_type ty)) cl;
@@ -492,7 +520,7 @@ and compile_select o i n tagn tagt taga cl def al =
       let cn, ty0 = String.capitalize_ascii case, compile_type ty in
       w o "  | %s -> %s\n" cn ty0
     ) cl;
-    w o "  | Unknown_%s _ -> False\n" tn;
+    w o "  | Unknown_%s _ -> squash False\n" tn;
 
     w o "\nunfold inline_for_extraction let %s_value_type (x:LP.maybe_enum_key %s_enum) =\n" n tn;
     w o "  LP.dsum_type_of_tag' %s_enum %s_case_of_%s %s x\n\n" tn n tn tyd;
