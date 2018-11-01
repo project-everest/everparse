@@ -4,6 +4,14 @@ open Rfc_ast
 
 module SM = Map.Make (String)
 
+type parser_kind_metadata =
+  | MetadataTotal
+  | MetadataDefault
+
+let string_of_parser_kind_metadata = function
+  | MetadataTotal -> "total"
+  | MetadataDefault -> "default"
+
 type len_info = {
   mutable len_len: int;
   mutable min_len: int;
@@ -11,6 +19,7 @@ type len_info = {
   mutable min_count: int;
   mutable max_count: int;
   mutable vl : bool;
+  mutable meta: parser_kind_metadata;
 }
 
 (* Recording the boundaries of variable length structures *)
@@ -52,8 +61,9 @@ let get_leninfo (t:typ) =
   with _ -> failwith ("Failed lookup for type "^t)
 
 let li_add (s:string) (li:len_info) =
-  printf "LINFO<%s>: vl=%s lenLen=%d minLen=%d maxLen=%d minCount=%d maxCount=%d\n"
-    s (if li.vl then "yes" else "no") li.len_len li.min_len li.max_len li.min_count li.max_count;
+  printf "LINFO<%s>: vl=%s lenLen=%d minLen=%d maxLen=%d minCount=%d maxCount=%d meta=%s\n"
+    s (if li.vl then "yes" else "no") li.len_len li.min_len li.max_len li.min_count li.max_count
+    (string_of_parser_kind_metadata li.meta);
   if SM.mem s !linfo then failwith (sprintf "Duplicate type definition: %s\n" s);
   linfo := SM.add s li !linfo
 
@@ -70,19 +80,21 @@ let rec sizeof = function
   | TypeSelect(n, cl, def) ->
     let lil = (List.map (fun (_,ty) -> get_leninfo ty) cl)
               @ (match def with None -> [] | Some ty -> [get_leninfo ty]) in
-    let li = { len_len = 0; min_len = max_int; max_len = 0; min_count = 0; max_count = 0; vl = false; } in
+    let li = { len_len = 0; min_len = max_int; max_len = 0; min_count = 0; max_count = 0; vl = false;
+      meta = match def with None -> MetadataDefault | Some _ -> MetadataTotal } in
     List.iter (fun l ->
       li.min_len <- min li.min_len l.min_len;
       li.max_len <- max li.max_len l.max_len;
       if l.vl then li.vl <- true;
+      if l.meta = MetadataDefault then li.meta <- MetadataDefault
     ) lil; li
   | TypeSimple typ ->
     match typ with
     | "opaque"
-    | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; vl = false; }
-    | "uint16" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; }
-    | "uint24" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; }
-    | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; }
+    | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
+    | "uint16" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
+    | "uint24" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
+    | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | s ->
       let li = get_leninfo s in
       {li with len_len = li.len_len} (* shallow copy *)
@@ -94,12 +106,6 @@ let compile_type = function
   | "uint24" -> "U32.t"
   | "uint32" -> "U32.t"
   | t -> String.uncapitalize_ascii t
-
-let metadata_combinator_name = function
-  | "U8.t" -> "(LP.get_parser_kind LP.parse_u8).LP.parser_kind_metadata"
-  | "U16.t" -> "(LP.get_parser_kind LP.parse_u16).LP.parser_kind_metadata"
-  | "U32.t" -> "(LP.get_parser_kind LP.parse_u32).LP.parser_kind_metadata"
-  | t -> t ^ "_parser_kind_metadata"
 
 let pcombinator_name = function
   | "U8.t" -> "LP.parse_u8"
@@ -143,12 +149,14 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         max_len = k;
         min_count = k / li.min_len;
         max_count = k / li.max_len;
+        (* FIXME: should be li.meta but only bytes are total in LowParse currently *)
+        meta = match ty with TypeSimple ("uint8") | TypeSimple ("opaque") -> MetadataTotal | _ -> MetadataDefault;
       }
     | VectorVldata tn ->
       let (len_len, max_len) = basic_bounds tn in
       let max' = min max_len (len_len + li.max_len) in
       (*let min', max' = li.min_len, min li.max_len max_len in*)
-      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = max'; vl = true; }
+      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = max'; vl = true; meta = MetadataDefault }
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
       let li' = get_leninfo (tn^"@"^cst) in
@@ -157,7 +165,7 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       | 1 -> 255 | 2 ->  65535 | 3 -> 16777215 | 4 -> 4294967295
       | _ -> failwith "bad vldata") in
       (* N.B. the len_len will be counted in the explicit length field *)
-      {li' with vl = true; len_len = 0; min_len = li.min_len; max_len = max'; }
+      {li' with vl = true; len_len = 0; min_len = li.min_len; max_len = max'; meta = MetadataDefault }
     | VectorRange (low, high) ->
       let h = log256 high in
       (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^tn));
@@ -166,8 +174,9 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         max_count = high / (li.len_len + li.min_len);
         len_len = h;
         min_len = h + low;
-        max_len = h + high; }
-      in
+        max_len = h + high;
+        meta = MetadataDefault;
+      } in
     li_add qname li'
 
 let typedep = function
@@ -185,10 +194,11 @@ let getdep (p:gemstone_t) : typ list =
   let tn = tname p in
   let dep =
     match p with
-    | Enum (_, fl, n) ->
+    | Enum (a, fl, n) ->
+      let meta = if has_attr a "open" then MetadataTotal else MetadataDefault in
       let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
               with _ -> failwith ("Enum "^n^" is missing a representation hint") in
-      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
+      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; meta = meta; } in
       (match m with
       | EnumFieldAnonymous 255 -> li.min_len <- 1; li.max_len <- 1
       | EnumFieldAnonymous 65535 -> li.min_len <- 2; li.max_len <- 2
@@ -197,13 +207,14 @@ let getdep (p:gemstone_t) : typ list =
       | _ -> failwith "impossible");
       li_add tn li; ([]:typ list list)
     | Struct (_, fl, _) ->
-      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; } in
+      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; meta = MetadataTotal } in
       let dep = List.map (fun (al, ty, n, vec, def) ->
         add_field tn n ty vec;
         let lif = get_leninfo (tn^"@"^n) in
         li.vl <- li.vl || lif.vl;
         li.min_len <- li.min_len + lif.min_len;
         li.max_len <- li.max_len + lif.max_len;
+        if lif.meta = MetadataDefault then li.meta <- MetadataDefault;
         typedep ty) fl in
       li_add tn li; dep
     | Typedef (al, ty, n, vec, def) ->
@@ -211,10 +222,6 @@ let getdep (p:gemstone_t) : typ list =
       [typedep ty]
     in
   dedup (List.flatten dep)
-
-type parser_kind_metadata =
-  | MetadataTotal
-  | MetadataDefault
 
 let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
   let parser_kind = match md with
@@ -408,7 +415,7 @@ and compile_select o i n tagn tagt taga cl def al =
   List.iter (fun (case, ty) -> w i "  | Case_%s _ -> %s\n" case (String.capitalize_ascii case)) cl;
   (match def with Some d -> w i "  | Case_Unknown_%s v _ -> Unknown_%s v\n" tn tn | _ -> ());
   w i "\n";
-  write_api o i is_private MetadataDefault n li.min_len li.max_len;
+  write_api o i is_private li.meta n li.min_len li.max_len;
 
   (** FIXME(adl) for now the t_sum of open and closed sums are independently generated,
   we may try to share more of the declarations between the two cases **)
@@ -669,7 +676,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     (* Type aliasing *)
     | VectorNone ->
       w i "type %s = %s\n\n" n ty0;
-      write_api o i is_private MetadataDefault n li.min_len li.max_len;
+      write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty0);
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty0);
       w o "inline_for_extraction let %s_parser32 = %s\n\n" n (pcombinator32_name ty0);
@@ -686,7 +693,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "noextract val %s_bytesize: %s -> GTot nat\n\n" n ty0;
       w o "let %s_bytesize x = Seq.length (LP.serialize %s x)\n\n" n (scombinator_name ty0);
       w i "type %s = x:%s{let l = %s_bytesize x in %d <= l /\\ l <= %d}\n\n" n ty0 n 0 smax;
-      write_api o i is_private MetadataDefault n (len_len+min) (len_len+max);
+      write_api o i is_private li.meta n (len_len+min) (len_len+max);
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -708,7 +715,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     (* Fixed-length bytes *)
     | VectorFixed k when ty0 = "U8.t" ->
       w i "type %s = lbytes %d\n\n" n k;
-      write_api o i is_private MetadataTotal n li.min_len li.max_len;
+      write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" n k;
       w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" n k;
       w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" n k k;
@@ -719,7 +726,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorFixed k when li.min_len = li.max_len ->
       w i "unfold let %s_pred (l:list %s) (n:nat) : GTot Type0 = L.length l == n\n" n ty0;
       w i "type %s = l:list %s{%s_pred l %d}\n\n" n ty0 n li.min_count;
-      write_api o i is_private MetadataDefault n li.min_len li.max_len;
+      write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.array %s %d\n\n" n ty0 li.min_count;
       w o "private let eq () : Lemma (%s' == %s) = admit()\n" n n;
       w o "//  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]])\n\n" n n n n;
@@ -740,7 +747,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n ty0;
       w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
       w i "type %s = l:list %s{%s_list_bytesize == %d}\n\n" n ty0 n k;
-      write_api o i is_private MetadataDefault n li.min_len li.max_len;
+      write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.parse_fldata_strong_t (LP.serialize_list _ %s) %d\n\n" n (scombinator_name ty0) k;
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -762,7 +769,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     (* Variable length bytes *)
     | VectorRange (low, high) when ty0 = "U8.t" ->
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
-      write_api o i is_private MetadataDefault n li.min_len li.max_len;
+      write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" n low high;
       w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" n low high;
       w o "inline_for_extraction let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
@@ -772,7 +779,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     (* Variable length list of fixed-length elements *)
     | VectorRange (low, high) when li.min_len = li.max_len ->
       w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}" n ty0 li.min_count li.max_count;
-      write_api o i is_private MetadataDefault n li.min_len li.max_len;
+      write_api o i is_private li.meta n li.min_len li.max_len;
       w o "let %s_parser =\n" n;
       w o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" low high (pcombinator_name ty0) li.min_count li.max_count;
       w o "  LP.parse_vlarray %d %d %s %d %d ()\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
@@ -791,7 +798,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n ty0;
       w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
       w i "type %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" n ty0 n min max;
-      write_api o i is_private MetadataDefault n li.min_len li.max_len;
+      write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -863,7 +870,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "  %s\n\n" tuple;
 
   (* Write parser API *)
-  write_api o i is_private MetadataDefault n li.min_len li.max_len;
+  write_api o i is_private li.meta n li.min_len li.max_len;
 
   (* synthetizer injectivity and inversion lemmas *)
   w o "let synth_%s_injective ()\n  : Lemma (LP.synth_injective synth_%s) = admit() // FIXME \n\n" n n;
