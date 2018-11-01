@@ -22,7 +22,7 @@ let test_open_enum () : St bool =
   ] in
   let tmp : list T1.t1 = [create 10ul 7z; create 12ul 9z] in
   assume(T2.t2_list_bytesize tmp == 22);
-  let y = T7.Case_Unknown_tag2 3z tmp in
+  let y = T7.Case_Unknown_tag2 33z tmp in
   let xb = T7.t7_serializer32 x in
   let yb = T7.t7_serializer32 y in
   bprint ("Serialized (case Y): "^hex_of_bytes xb);
