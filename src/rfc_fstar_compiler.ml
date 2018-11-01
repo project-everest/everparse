@@ -617,7 +617,7 @@ and compile_select o i n tagn tagt taga cl def al =
   (* FIXME(adl) can't prove by normalization because of opaque kinds in interfaces *)
   let same_kind = match def with
     | None -> sprintf "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n
-    | Some dt -> sprintf "  assume(LP.parse_dsum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases %s_parser_kind == %s_parser_kind);\n" tn n n (compile_type dt) n
+    | Some dt -> sprintf "  assert_norm (LP.parse_dsum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases %s_parser_kind == %s_parser_kind);\n" tn n n (compile_type dt) n
     in
 
   let annot = if is_private then " : LP.parser "^n^"_parser_kind "^n else "" in
@@ -728,8 +728,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "type %s = l:list %s{%s_pred l %d}\n\n" n ty0 n li.min_count;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.array %s %d\n\n" n ty0 li.min_count;
-      w o "private let eq () : Lemma (%s' == %s) = admit()\n" n n;
-      w o "//  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]])\n\n" n n n n;
+      w o "private let eq () : Lemma (%s' == %s) =\n" n n;
+      w o "  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]]; FStar.Tactics.trefl ())\n\n" n n n n;
       w o "noextract let %s'_parser = LP.parse_array %s %d %d\n\n" n (scombinator_name ty0) k li.min_count;
       w o "let %s_parser = eq(); LP.coerce _ %s'_parser\n\n" n n;
       w o "noextract let %s'_serializer = LP.serialize_array %s %d %d ()\n\n" n (scombinator_name ty0) k li.min_count;
@@ -873,8 +873,13 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   write_api o i is_private li.meta n li.min_len li.max_len;
 
   (* synthetizer injectivity and inversion lemmas *)
-  w o "let synth_%s_injective ()\n  : Lemma (LP.synth_injective synth_%s) = admit() // FIXME \n\n" n n;
-  w o "let synth_%s_inverse ()\n  : Lemma (LP.synth_inverse synth_%s synth_%s_recip) =\n" n n n;
+  let case_count = List.length fields in
+  w o "#push-options \"--initial_ifuel %d --max_ifuel %d\"\n" case_count case_count;
+  w o "let synth_%s_injective' (x x':%s') : Lemma (synth_%s x == synth_%s x' ==> x == x') = ()\n" n n n n;
+  w o "#pop-options\n\n";
+  w o "let synth_%s_injective () : Lemma (LP.synth_injective synth_%s) =\n" n n;
+  w o "  FStar.Classical.forall_intro_2 synth_%s_injective'\n\n" n;
+  w o "let synth_%s_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) =\n" n n n;
   w o "  assert_norm (LP.synth_inverse synth_%s synth_%s_recip)\n\n" n n;
 
   (* main parser combinator type *)

@@ -8,6 +8,13 @@ struct {
   t4 x;
   t5 y;
   t1 z<0..255>;
+  uint16 x1;
+  uint16 x2;
+  uint16 x3;
+  uint16 x4;
+  uint16 x5;
+  uint16 x6;
+  uint32 x7;
 } t8;
 
 enum { a, b, (255) } tag;
@@ -38,4 +45,3 @@ struct {
   uint16 l;
   t5 b[l];
 } t9;
-
