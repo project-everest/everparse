@@ -83,7 +83,7 @@ let basic_bounds = function
 let rec sizeof = function
   | TypeSelect(n, cl, def) ->
     let lil = (List.map (fun (_,ty) -> sizeof (TypeSimple ty)) cl)
-              @ (match def with None -> [] | Some ty -> [get_leninfo ty]) in
+              @ (match def with None -> [] | Some ty -> [sizeof (TypeSimple ty)]) in
     let li = { len_len = 0; min_len = max_int; max_len = 0; min_count = 0; max_count = 0; vl = false;
       meta = match def with None -> MetadataDefault | Some _ -> MetadataTotal } in
     List.iter (fun l ->
