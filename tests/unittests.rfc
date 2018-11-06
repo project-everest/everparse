@@ -28,14 +28,15 @@ struct {
 } t6;
 
 enum /*@open*/ {
-x, y, (255)
+x, y, z, t, v, w, (255)
 } tag2;
 
 struct {
   tag2 t;
   select(t) {
-    case x: Empty;
+    case x: t3;
     case y: t4;
+    case w: Empty;
     default: t2;
   } body;
 } t7;
