@@ -909,11 +909,13 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
 
   (* synthetizer injectivity and inversion lemmas *)
   let case_count = List.length fields in
-  w o "#push-options \"--initial_ifuel %d --max_ifuel %d\"\n" case_count case_count;
-  w o "let synth_%s_injective' (x x':%s') : Lemma (synth_%s x == synth_%s x' ==> x == x') = ()\n" n n n n;
-  w o "#pop-options\n\n";
+
+  w o "let synth_%s_injective' () : Tot (squash (LP.synth_injective synth_%s)) =\n" n n;
+  if case_count = 0
+  then w o "  ()\n\n"
+  else w o "  _ by (LP.synth_pairs_to_struct_to_pairs_tac synth_%s_recip %d)\n\n" n (case_count - 1);
   w o "let synth_%s_injective () : Lemma (LP.synth_injective synth_%s) =\n" n n;
-  w o "  FStar.Classical.forall_intro_2 synth_%s_injective'\n\n" n;
+  w o "  synth_%s_injective' ()\n\n" n;
   w o "let synth_%s_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) =\n" n n n;
   w o "  assert_norm (LP.synth_inverse synth_%s synth_%s_recip)\n\n" n n;
 
