@@ -163,6 +163,14 @@ let validator_name = function
   | "squash False" -> "(LL.validate_false ())"
   | t -> t^"_validator"
 
+let jumper_name = function
+  | "U8.t" -> "LL.jump_u8"
+  | "U16.t" -> "LL.jump_u16"
+  | "U32.t" -> "LL.jump_u32"
+  | "unit" -> "LL.jump_empty"
+  | "squash False" -> "LL.jump_false"
+  | t -> t^"_jumper"
+       
 let leaf_reader_name = function
   | "U8.t" -> "LL.read_u8"
   | "U16.t" -> "LL.read_u16"
@@ -274,6 +282,7 @@ let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
     w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
     w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n;
     w i "inline_for_extraction val %s_validator: LL.validator %s_parser\n\n" n n;
+    w i "inline_for_extraction val %s_jumper: LL.jumper %s_parser\n\n" n n;
     ()
    end
 
@@ -350,6 +359,7 @@ end;
   w o "inline_for_extraction let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
   w o "inline_for_extraction let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
   w o "inline_for_extraction let %s_repr_validator = %s\n\n" n (validator_name repr_t);
+  w o "inline_for_extraction let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
   w o "inline_for_extraction let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
 
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
@@ -449,6 +459,12 @@ end;
   w o "inline_for_extraction let %s_validator =\n" n;
   w o "  lemma_synth_%s_inj ();\n" n;
   w o "  LL.validate_synth validate_%s%s_key synth_%s ()\n\n" maybe n n;
+
+  w o "inline_for_extraction let jump_%s%s_key : LL.jumper parse_%s%s_key =\n" maybe n maybe n;
+  w o "  LL.jump_%senum_key %s_repr_jumper %s_enum\n\n" maybe n n;
+  w o "inline_for_extraction let %s_jumper =\n" n;
+  w o "  lemma_synth_%s_inj ();\n" n;
+  w o "  LL.jump_synth jump_%s%s_key synth_%s ()\n\n" maybe n n;
 	()
 
 and compile_select o i n tagn tagt taga cl def al =
@@ -684,6 +700,15 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LL.validate_false ()\n\n";
 
+  w o "\ninline_for_extraction let jump_%s_cases (x:%s)\n" n ktype;
+  w o "  : LL.jumper (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize_ascii case in
+    let ty0 = compile_type ty in
+    w o "  | %s -> [@inline_let] let u : LL.jumper (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (jumper_name ty0)
+  ) cl;
+  w o "  | _ -> LL.jump_false\n\n";
+
   (* FIXME(adl) can't prove by normalization because of opaque kinds in interfaces *)
   let same_kind = match def with
     | None -> sprintf "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n
@@ -744,6 +769,14 @@ and compile_select o i n tagn tagt taga cl def al =
   | Some dt ->
     w o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name (compile_type dt)));
 
+  let annot = if is_private then " : LL.jumper "^(pcombinator_name n) else "" in
+  w o "let %s_jumper%s =\n%s" n annot same_kind;
+  (match def with
+  | None ->
+    w o "  LL.jump_sum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+  | Some dt ->
+    w o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name (compile_type dt)));
+
   ()
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
@@ -766,6 +799,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s_serializer32 = %s\n\n" n (scombinator32_name ty0);
       w o "inline_for_extraction let %s_size32 = %s\n\n" n (size32_name ty0);
       w o "inline_for_extraction let %s_validator = %s\n\n" n (validator_name ty0);
+      w o "inline_for_extraction let %s_jumper = %s\n\n" n (jumper_name ty0);
       ()
 
     (* Should be replaced with Vldata during normalization *)
@@ -799,6 +833,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
       w o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty0) (validator_name ty0);
       w o "let %s_validator = %s'_validator\n\n" n n;
+      w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+      w o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty0);
+      w o "let %s_jumper = %s'_jumper\n\n" n n;
       ()
 
     (* Fixed-length bytes *)
@@ -811,6 +848,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" n k;
       w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" n n k;
       w o "inline_for_extraction let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
+      w o "inline_for_extraction let %s_jumper = LL.jump_flbytes %d %dul\n\n" n k k;
       ()
 
     (* Fixed length list *)
@@ -833,6 +871,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_serializer32 = eq(); LP.coerce _ %s'_serializer32\n\n" n n;
       w o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty0) k k li.min_count;
       w o "let %s_validator = LL.validate_array %s %s %d %dul %d ()\n\n" n (scombinator_name ty0) (validator_name ty0) k k li.min_count;
+      w o "let %s_jumper = LL.jump_array %s %d %dul %d ()\n\n" n (scombinator_name ty0) k k li.min_count;
       ()
 
     (* Fixed bytelen list of variable length elements *)
@@ -861,6 +900,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
       w o "  LL.validate_fldata_strong (LL.serialize_list _ %s) (LL.validate_list %s ()) %d %dul\n\n" (scombinator_name ty0) (validator_name ty0) k k;
       w o "let %s_validator = %s'_validator\n\n" n n;
+      w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+      w o "  LL.jump_fldata_strong (LL.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty0) k k;
+      w o "let %s_jumper = %s'_jumper\n\n" n n;
       ()
 
     (* Variable length bytes *)
@@ -873,6 +915,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
       w o "inline_for_extraction let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" n low high (log256 high);
       w o "inline_for_extraction let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
+      w o "inline_for_extraction let %s_jumper = LL.jump_bounded_vlbytes %d %d\n\n" n low high;
       ()
 
     (* Variable length list of fixed-length elements *)
@@ -892,6 +935,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len li.min_len;
       w o "let %s_validator =\n" n;
       w o " LL.validate_vlarray %d %d %s %s %d %d ()\n\n" low high (scombinator_name ty0) (validator_name ty0) li.min_count li.max_count;
+      w o "let %s_jumper =\n" n;
+      w o " LL.jump_vlarray %d %d %s %d %d ()\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
       ()
 
     (* Variable length list of variable length elements *)
@@ -921,6 +966,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
       w o "  LL.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (LL.validate_list %s ()) ()\n\n" min max (scombinator_name ty0) (validator_name ty0);
       w o "let %s_validator = %s'_validator\n\n" n n;
+      w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+      w o "  LL.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) ()\n\n" min max (scombinator_name ty0);
+      w o "let %s_jumper = %s'_jumper\n\n" n n;
       ()
 
 and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
@@ -1072,6 +1120,19 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "let %s_validator =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   w o "  LL.validate_synth %s'_validator synth_%s ()\n\n" n n;
+
+  (* jumper *)
+  w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+  if fields = [] then w o "  LL.jump_flbytes 0 0ul";
+  let tuple = List.fold_left (
+    fun acc (fn, ty) ->
+      let c = jumper_name ty in
+      if acc="" then c else sprintf "%s\n  `LL.jump_nondep_then` %s" acc c
+    ) "" fields in
+  w o "  %s\n\n" tuple;
+  w o "let %s_jumper =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  w o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n;
   
   ()
 
