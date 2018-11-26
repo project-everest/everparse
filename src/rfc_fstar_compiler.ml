@@ -155,6 +155,20 @@ let size32_name = function
   | "squash False" -> "LP.size32_false"
   | t -> t^"_size32"
 
+let validator_name = function
+  | "U8.t" -> "(LL.validate_u8 ())"
+  | "U16.t" -> "(LL.validate_u16 ())"
+  | "U32.t" -> "(LL.validate_u32 ())"
+  | "unit" -> "(LL.validate_empty ())"
+  | "squash False" -> "(LL.validate_false ())"
+  | t -> t^"_validator"
+
+let leaf_reader_name = function
+  | "U8.t" -> "LL.read_u8"
+  | "U16.t" -> "LL.read_u16"
+  | "U32.t" -> "LL.read_u32"
+  | _ -> failwith "leaf_reader_name: should only be called for enum repr"
+
 let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -258,7 +272,9 @@ let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
     w i "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" n n n;
     w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
     w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
-    w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n
+    w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n;
+    w i "inline_for_extraction val %s_validator: LL.validator %s_parser\n\n" n n;
+    ()
    end
 
 let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
@@ -333,6 +349,8 @@ end;
   w o "inline_for_extraction let %s_repr_parser32 = %s\n\n" n (pcombinator32_name repr_t);
   w o "inline_for_extraction let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
   w o "inline_for_extraction let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
+  w o "inline_for_extraction let %s_repr_validator = %s\n\n" n (validator_name repr_t);
+  w o "inline_for_extraction let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
 
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
@@ -419,6 +437,18 @@ end;
   w o "let %s_size32 =\n" n;
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond %s_serializer %dul) in\n" n blen;
   w o "  LP.size32_constant %s_serializer %dul ()\n\n" n blen;
+
+  (* Low *)
+  w o "inline_for_extraction let validate_%s%s_key : LL.validator parse_%s%s_key =\n" maybe n maybe n;
+  begin
+    if is_open then
+      w o "  LL.validate_maybe_enum_key %s_repr_validator %s_enum\n\n" n n
+    else
+      w o "  LL.validate_enum_key %s_repr_validator %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n n
+  end;
+  w o "inline_for_extraction let %s_validator =\n" n;
+  w o "  lemma_synth_%s_inj ();\n" n;
+  w o "  LL.validate_synth validate_%s%s_key synth_%s ()\n\n" maybe n n;
 	()
 
 and compile_select o i n tagn tagt taga cl def al =
@@ -645,6 +675,15 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LP.size32_false\n\n";
 
+  w o "\ninline_for_extraction let validate_%s_cases (x:%s)\n" n ktype;
+  w o "  : LL.validator (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize_ascii case in
+    let ty0 = compile_type ty in
+    w o "  | %s -> [@inline_let] let u : LL.validator (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (validator_name ty0)
+  ) cl;
+  w o "  | _ -> LL.validate_false ()\n\n";
+
   (* FIXME(adl) can't prove by normalization because of opaque kinds in interfaces *)
   let same_kind = match def with
     | None -> sprintf "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n
@@ -696,6 +735,15 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));" tn n n n;
     w o "  LP.size32_dsum %s_sum _ (_ by (LP.size32_maybe_enum_key_tac %s_repr_size32 %s_enum ()))\n" n tn tn;
     w o "    _ _ size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (size32_name (compile_type dt)));
+
+  let annot = if is_private then " : LL.validator "^(pcombinator_name n) else "" in
+  w o "let %s_validator%s =\n%s" n annot same_kind;
+  (match def with
+  | None ->
+    w o "  LL.validate_sum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+  | Some dt ->
+    w o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name (compile_type dt)));
+
   ()
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
@@ -716,7 +764,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty0);
       w o "inline_for_extraction let %s_parser32 = %s\n\n" n (pcombinator32_name ty0);
       w o "inline_for_extraction let %s_serializer32 = %s\n\n" n (scombinator32_name ty0);
-      w o "inline_for_extraction let %s_size32 = %s\n\n" n (size32_name ty0)
+      w o "inline_for_extraction let %s_size32 = %s\n\n" n (size32_name ty0);
+      w o "inline_for_extraction let %s_validator = %s\n\n" n (validator_name ty0);
+      ()
 
     (* Should be replaced with Vldata during normalization *)
     | VectorSymbolic cst -> failwith "not supported"
@@ -745,7 +795,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
       w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
-      w o "let %s_size32 = %s'_size32\n\n" n n
+      w o "let %s_size32 = %s'_size32\n\n" n n;
+      w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+      w o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty0) (validator_name ty0);
+      w o "let %s_validator = %s'_validator\n\n" n n;
+      ()
 
     (* Fixed-length bytes *)
     | VectorFixed k when ty0 = "U8.t" ->
@@ -756,6 +810,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" n k k;
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" n k;
       w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" n n k;
+      w o "inline_for_extraction let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
+      ()
 
     (* Fixed length list *)
     | VectorFixed k when li.min_len = li.max_len ->
@@ -775,7 +831,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s'_serializer32 =\n" n;
       w o "  LP.serialize32_array #_ #_ #_ #%s %s %d %d ()\n\n" (scombinator_name ty0) (scombinator32_name ty0) k li.min_count;
       w o "let %s_serializer32 = eq(); LP.coerce _ %s'_serializer32\n\n" n n;
-      w o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty0) k k li.min_count
+      w o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty0) k k li.min_count;
+      w o "let %s_validator = LL.validate_array %s %s %d %dul %d ()\n\n" n (scombinator_name ty0) (validator_name ty0) k k li.min_count;
+      ()
 
     (* Fixed bytelen list of variable length elements *)
     | VectorFixed(k) ->
@@ -799,7 +857,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
       w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_fldata_strong (LP.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty0) k k;
-      w o "let %s_size32 = %s'_size32\n\n" n n
+      w o "let %s_size32 = %s'_size32\n\n" n n;
+      w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+      w o "  LL.validate_fldata_strong (LL.serialize_list _ %s) (LL.validate_list %s ()) %d %dul\n\n" (scombinator_name ty0) (validator_name ty0) k k;
+      w o "let %s_validator = %s'_validator\n\n" n n;
+      ()
 
     (* Variable length bytes *)
     | VectorRange (low, high) when ty0 = "U8.t" ->
@@ -809,7 +871,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" n low high;
       w o "inline_for_extraction let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
-      w o "inline_for_extraction let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" n low high (log256 high)
+      w o "inline_for_extraction let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" n low high (log256 high);
+      w o "inline_for_extraction let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
+      ()
 
     (* Variable length list of fixed-length elements *)
     | VectorRange (low, high) when li.min_len = li.max_len ->
@@ -825,7 +889,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_serializer32 =\n" n;
       w o "  LP.serialize32_vlarray %d %d %s %d %d ()\n\n" low high (scombinator32_name ty0) li.min_count li.max_count;
       w o "let %s_size32 =\n" n;
-      w o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len li.min_len
+      w o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len li.min_len;
+      w o "let %s_validator =\n" n;
+      w o " LL.validate_vlarray %d %d %s %s %d %d ()\n\n" low high (scombinator_name ty0) (validator_name ty0) li.min_count li.max_count;
+      ()
 
     (* Variable length list of variable length elements *)
     | VectorRange(low, high) ->
@@ -850,7 +917,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
       w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s ()) %dul\n\n" min max (size32_name ty0) li.len_len;
-      w o "let %s_size32 = %s'_size32\n\n" n n
+      w o "let %s_size32 = %s'_size32\n\n" n n;
+      w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+      w o "  LL.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (LL.validate_list %s ()) ()\n\n" min max (scombinator_name ty0) (validator_name ty0);
+      w o "let %s_validator = %s'_validator\n\n" n n;
+      ()
 
 and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   let li = get_leninfo n in
@@ -988,6 +1059,20 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   w o "  LP.size32_synth _ synth_%s _ %s'_size32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
+
+  (* validator *)
+  w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+  if fields = [] then w o "  LL.validate_flbytes 0 0ul";
+  let tuple = List.fold_left (
+    fun acc (fn, ty) ->
+      let c = validator_name ty in
+      if acc="" then c else sprintf "%s\n  `LL.validate_nondep_then` %s" acc c
+    ) "" fields in
+  w o "  %s\n\n" tuple;
+  w o "let %s_validator =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  w o "  LL.validate_synth %s'_validator synth_%s ()\n\n" n n;
+  
   ()
 
 (* Rewrite {... uintX len; t value[len]; ...} into VectorVldata *)
@@ -1038,6 +1123,7 @@ let compile o i (p:gemstone_t) =
   w i "module U16 = FStar.UInt16\n";
   w i "module U32 = FStar.UInt32\n";
   w i "module LP = LowParse.SLow.Base\n";
+  w i "module LL = LowParse.Low.Base\n";
   w i "module L = FStar.List.Tot\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
@@ -1049,6 +1135,7 @@ let compile o i (p:gemstone_t) =
   w o "module U16 = FStar.UInt16\n";
   w o "module U32 = FStar.UInt32\n";
 	w o "module LP = LowParse.SLow\n";
+        w o "module LL = LowParse.Low\n";
 	w o "module L = FStar.List.Tot\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
