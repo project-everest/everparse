@@ -268,14 +268,14 @@ let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
     | MetadataDefault -> "LP.default_parser_kind.LP.parser_kind_metadata"
     | MetadataTotal   -> "({ LP.parser_kind_metadata_total = true })"
     in
+  w i "inline_for_extraction noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s\n\n" n bmin bmax parser_kind;
+  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
   if is_private then
    begin
-    w o "inline_for_extraction noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s\n\n" n bmin bmax parser_kind
+     ()
    end
   else
    begin
-    w i "inline_for_extraction noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s\n\n" n bmin bmax parser_kind;
-    w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
     w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
     w i "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" n n n;
     w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
