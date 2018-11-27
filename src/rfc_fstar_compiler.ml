@@ -947,28 +947,29 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "type %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" n ty0 n min max;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty0);
-      w o "let _ = assert_norm (%s' == %s)\n\n" n n;
+      w o "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
+      w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' = x\n\n" n n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
       w o "  LP.parse_bounded_vldata_strong %d %d (LP.serialize_list _ %s)\n\n" min max (scombinator_name ty0);
-      w o "let %s_parser = %s'_parser\n\n" n n;
+      w o "let %s_parser = %s'_parser `LP.parse_synth` synth_%s \n\n" n n n;
       w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
       w o "  LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s)\n\n" min max (scombinator_name ty0);
-      w o "let %s_serializer = %s'_serializer\n\n" n n;
+      w o "let %s_serializer = LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n n;
       w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
       w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s) (LP.parse32_list %s)\n\n" min min max max (scombinator_name ty0) (pcombinator32_name ty0);
-      w o "let %s_parser32 = %s'_parser32\n\n" n n;
+      w o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
       w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
       w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s %s ())\n\n" min max (scombinator_name ty0) (scombinator32_name ty0);
-      w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
+      w o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
       w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s ()) %dul\n\n" min max (size32_name ty0) li.len_len;
-      w o "let %s_size32 = %s'_size32\n\n" n n;
+      w o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
       w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
       w o "  LL.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (LL.validate_list %s ()) ()\n\n" min max (scombinator_name ty0) (validator_name ty0);
-      w o "let %s_validator = %s'_validator\n\n" n n;
+      w o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n;
       w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
       w o "  LL.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) ()\n\n" min max (scombinator_name ty0);
-      w o "let %s_jumper = %s'_jumper\n\n" n n;
+      w o "let %s_jumper = LL.jump_synth %s'_jumper synth_%s ()\n\n" n n n;
       ()
 
 and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
