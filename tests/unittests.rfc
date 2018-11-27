@@ -46,3 +46,12 @@ struct {
   uint16 l;
   t5 b[l];
 } t9;
+
+struct {
+  t3 essai;
+} t10;
+
+struct {
+  uint8 u;
+  t1 z<0..255>;
+} t11;
