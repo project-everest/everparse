@@ -116,9 +116,9 @@ let compile_type = function
   | t -> String.uncapitalize_ascii t
 
 let pcombinator_name = function
-  | "U8.t" -> "LP.parse_u8"
-  | "U16.t" -> "LP.parse_u16"
-  | "U32.t" -> "LP.parse_u32"
+  | "U8.t" -> "LPI.parse_u8"
+  | "U16.t" -> "LPI.parse_u16"
+  | "U32.t" -> "LPI.parse_u32"
   | "unit" -> "LP.parse_empty"
   | "squash False" -> "LP.parse_false"
   | t -> t^"_parser"
@@ -1216,6 +1216,7 @@ let compile o i (p:gemstone_t) =
   w i "module U16 = FStar.UInt16\n";
   w i "module U32 = FStar.UInt32\n";
   w i "module LP = LowParse.SLow.Base\n";
+  w i "module LPI = LowParse.Spec.Int\n";
   w i "module LL = LowParse.Low.Base\n";
   w i "module L = FStar.List.Tot\n";
   (List.iter (w i "%s\n") (List.rev fsti));
@@ -1228,6 +1229,7 @@ let compile o i (p:gemstone_t) =
   w o "module U16 = FStar.UInt16\n";
   w o "module U32 = FStar.UInt32\n";
 	w o "module LP = LowParse.SLow\n";
+        w o "module LPI = LowParse.Spec.Int\n";
         w o "module LL = LowParse.Low\n";
 	w o "module L = FStar.List.Tot\n";
   (List.iter (w o "%s\n") (List.rev fst));
