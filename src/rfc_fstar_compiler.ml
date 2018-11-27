@@ -1144,7 +1144,8 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     in
     List.iter
       (fun (fn, ty) ->
-        w i "let clens_%s_%s : LL.clens (fun (x: %s) -> True) %s = {\n" n fn n ty;
+        w i "let clens_%s_%s : LL.clens %s %s = {\n" n fn n ty;
+        w i "  LL.clens_cond = (fun _ -> True);\n";
         w i "  LL.clens_get = (fun x -> x.%s);\n" fn;
         w i "}\n\n";
       )
@@ -1161,9 +1162,11 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
        w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
        w o "  synth_%s_recip_inverse (); synth_%s_inverse ();\n" n n;
        w o "  LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip () `LL.gaccessor_compose` %s\n\n" n n n leftmost_gaccessor;
+       w o "let clens'_%s_%s : LL.clens %s %s = LL.get_gaccessor_clens gaccessor'_%s_%s\n\n" n fn1 n ty1 n fn1;
+       w o "let clens_%s_%s_eq : squash (LL.clens_eq clens'_%s_%s clens_%s_%s) =\n" n fn1 n fn1 n fn1;
+       w o "  (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; trivial ()))))\n\n";
        w o "let gaccessor_%s_%s =\n" n fn1;
-       w o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_injective ();\n" n n n;
-       w o "  LL.gaccessor_ext gaccessor'_%s_%s clens_%s_%s (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; trivial ()))))\n\n" n fn1 n fn1;
+       w o "  LL.gaccessor_ext gaccessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn1 n fn1 n fn1;
        ()
   end;
   ()
