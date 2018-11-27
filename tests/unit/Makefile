@@ -19,7 +19,7 @@ CACHE_DIR=cache$(LAX_EXT)
 CHECKED_EXT=.checked$(LAX_EXT)
 
 HINT_FILE=--hint_file hints/$(notdir $(subst .checked,,$<)).hints
-FSTAR_OPTIONS = $(OTHERFLAGS) --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules --use_hints \
+FSTAR_OPTIONS = --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules --use_hints \
 		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include ..
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
@@ -47,7 +47,7 @@ $(CACHE_DIR)/LowParse.%$(CHECKED_EXT):
 	@touch $@
 
 $(CACHE_DIR)/%$(CHECKED_EXT):
-	$(FSTAR) $(HINT_FILE) --record_hints $<
+	$(FSTAR) $(OTHERFLAGS) $(HINT_FILE) --record_hints $<
 	@touch $@
 
 kremlin/%.krml:
