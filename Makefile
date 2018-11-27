@@ -8,12 +8,14 @@ qd: $(wildcard src/*.ml*)
 	ln -sf quackyducky.native qd
 	touch qd
 
-test: qd
+gen-test: qd
 	-rm tests/unit/*.fst tests/unit/*.fsti || true
 	./qd -odir tests/unit tests/unittests.rfc
+
+test: gen-test
 	+$(MAKE) -C tests/unit
 
 clean:
 	rm -rf *~ src/*~ _build src/*lexer.ml src/*parser.ml src/*parser.mli qd quackyducky.native
 
-.PHONY: all gen verify test clean quackyducky
+.PHONY: all gen verify test gen-test clean quackyducky
