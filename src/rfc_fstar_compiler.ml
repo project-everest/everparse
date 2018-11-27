@@ -1168,7 +1168,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
        w o "  LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip () `LL.gaccessor_compose` %s\n\n" n n n leftmost_gaccessor;
        w o "let clens'_%s_%s : LL.clens %s %s = LL.get_gaccessor_clens gaccessor'_%s_%s\n\n" n fn1 n ty1 n fn1;
        w o "let clens_%s_%s_eq : squash (LL.clens_eq clens'_%s_%s clens_%s_%s) =\n" n fn1 n fn1 n fn1;
-       w o "  (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; trivial ()))))\n\n";
+       w o "  (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))))\n\n";
        w o "let gaccessor_%s_%s =\n" n fn1;
        w o "  LL.gaccessor_ext gaccessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn1 n fn1 n fn1;
        let leftmost_accessor = List.fold_left (fun g p -> Printf.sprintf "(LL.accessor_fst_then %s %s ())" g p) (Printf.sprintf "(LL.accessor_id %s)" (pcombinator_name ty1)) parsers_tl in
