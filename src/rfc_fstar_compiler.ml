@@ -1029,12 +1029,15 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   (* synthetizer injectivity and inversion lemmas *)
   let case_count = List.length fields in
 
-  w o "let synth_%s_injective' () : Tot (squash (LP.synth_injective synth_%s)) =\n" n n;
+  w o "let synth_%s_recip_inverse' () : Tot (squash (LP.synth_inverse synth_%s_recip synth_%s)) =\n" n n n;
   if case_count = 0
   then w o "  ()\n\n"
-  else w o "  _ by (LP.synth_pairs_to_struct_to_pairs_tac synth_%s_recip %d)\n\n" n (case_count - 1);
+  else w o "  _ by (LP.synth_pairs_to_struct_to_pairs_tac' %d)\n\n" (case_count - 1);
+  w o "let synth_%s_recip_inverse () : Lemma (LP.synth_inverse synth_%s_recip synth_%s) =\n" n n n;
+  w o "  synth_%s_recip_inverse' ()\n\n" n;
   w o "let synth_%s_injective () : Lemma (LP.synth_injective synth_%s) =\n" n n;
-  w o "  synth_%s_injective' ()\n\n" n;
+  w o "  LP.synth_inverse_synth_injective synth_%s_recip synth_%s;\n" n n;
+  w o "  synth_%s_recip_inverse ()\n\n" n;
   w o "let synth_%s_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) =\n" n n n;
   w o "  assert_norm (LP.synth_inverse synth_%s synth_%s_recip)\n\n" n n;
 
@@ -1133,7 +1136,36 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "let %s_jumper =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   w o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n;
-  
+
+  (* accessors for fields *)
+  begin
+    let w_i_val_gaccessor fn ty =
+      w i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn
+    in
+    List.iter
+      (fun (fn, ty) ->
+        w i "let clens_%s_%s : LL.clens (fun (x: %s) -> True) %s = {\n" n fn n ty;
+        w i "  LL.clens_get = (fun x -> x.%s);\n" fn;
+        w i "}\n\n";
+      )
+      fields;
+    match fields with
+    | [] -> ()
+    | [(fn, ty)] -> w i  "// 1 field is weird, we'll do it later\n"
+    | (fn1, ty1) :: fields_tl ->
+       (* build the sequence of all parsers *)
+       let parsers_tl = List.map (fun (_, ty) -> pcombinator_name ty) fields_tl in
+       w_i_val_gaccessor fn1 ty1;
+       let leftmost_gaccessor = List.fold_left (fun g p -> Printf.sprintf "(LL.gaccessor_fst_then %s %s ())" g p) (Printf.sprintf "(LL.gaccessor_id %s)" (pcombinator_name ty1)) parsers_tl in
+       w o "let gaccessor'_%s_%s : LL.gaccessor %s_parser %s _ =\n" n fn1 n (pcombinator_name ty1);
+       w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+       w o "  synth_%s_recip_inverse (); synth_%s_inverse ();\n" n n;
+       w o "  LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip () `LL.gaccessor_compose` %s\n\n" n n n leftmost_gaccessor;
+       w o "let gaccessor_%s_%s =\n" n fn1;
+       w o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_injective ();\n" n n n;
+       w o "  LL.gaccessor_ext gaccessor'_%s_%s clens_%s_%s (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; trivial ()))))\n\n" n fn1 n fn1;
+       ()
+  end;
   ()
 
 (* Rewrite {... uintX len; t value[len]; ...} into VectorVldata *)
