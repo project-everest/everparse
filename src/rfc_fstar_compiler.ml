@@ -1038,6 +1038,9 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "  synth_%s_recip_inverse ()\n\n" n;
   w o "let synth_%s_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) =\n" n n n;
   w o "  assert_norm (LP.synth_inverse synth_%s synth_%s_recip)\n\n" n n;
+  w o "let synth_%s_recip_injective () : Lemma (LP.synth_injective synth_%s_recip) =\n" n n;
+  w o "  LP.synth_inverse_synth_injective synth_%s synth_%s_recip;\n" n n;
+  w o "  synth_%s_inverse ()\n\n" n;
 
   (* main parser combinator type *)
   w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -1139,11 +1142,12 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   begin
     let write_accessor fn ty g_before_synth a_before_synth =
       w i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn;
-      w o "let gaccessor'_%s_%s : LL.gaccessor %s_parser %s _ =\n" n fn n (pcombinator_name ty);
+      w o "let gaccessor''_%s_%s : LL.gaccessor %s_parser %s _ =\n" n fn n (pcombinator_name ty);
       w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
-      w o "  synth_%s_recip_inverse (); synth_%s_inverse ();\n" n n;
+      w o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_recip_injective (); synth_%s_injective ();\n" n n n n;
       w o "  LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip () `LL.gaccessor_compose` %s\n\n" n n n g_before_synth;
-      w o "let clens'_%s_%s : LL.clens %s %s = LL.get_gaccessor_clens gaccessor'_%s_%s\n\n" n fn n ty n fn;
+      w o "let clens'_%s_%s : LL.clens %s %s = LL.get_gaccessor_clens gaccessor''_%s_%s\n\n" n fn n ty n fn;
+      w o "let gaccessor'_%s_%s : LL.gaccessor %s_parser %s clens'_%s_%s = gaccessor''_%s_%s\n\n" n fn n (pcombinator_name ty) n fn n fn;
       w o "let clens_%s_%s_eq : squash (LL.clens_eq clens'_%s_%s clens_%s_%s) =\n" n fn n fn n fn;
       w o "  (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))))\n\n";
       w o "let gaccessor_%s_%s =\n" n fn;
@@ -1151,7 +1155,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
       w i "inline_for_extraction val accessor_%s_%s : LL.accessor gaccessor_%s_%s\n\n" n fn n fn;
       w o "inline_for_extraction let accessor'_%s_%s : LL.accessor gaccessor'_%s_%s =\n" n fn n fn;
       w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
-      w o "  synth_%s_recip_inverse (); synth_%s_inverse ();\n" n n;
+      w o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_recip_injective (); synth_%s_injective ();\n" n n n n;
       w o "  LL.accessor_compose (LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()) %s ()\n\n" n n n a_before_synth;
       w o "let accessor_%s_%s =\n" n fn;
       w o "  LL.accessor_ext accessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn n fn n fn;
