@@ -1140,12 +1140,27 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
 
   (* accessors for fields *)
   begin
-    let w_i_val_gaccessor fn ty =
-      w i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn
+    let write_accessor fn ty g_before_synth a_before_synth =
+      w i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn;
+      w o "let gaccessor'_%s_%s : LL.gaccessor %s_parser %s _ =\n" n fn n (pcombinator_name ty);
+      w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+      w o "  synth_%s_recip_inverse (); synth_%s_inverse ();\n" n n;
+      w o "  LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip () `LL.gaccessor_compose` %s\n\n" n n n g_before_synth;
+      w o "let clens'_%s_%s : LL.clens %s %s = LL.get_gaccessor_clens gaccessor'_%s_%s\n\n" n fn n ty n fn;
+      w o "let clens_%s_%s_eq : squash (LL.clens_eq clens'_%s_%s clens_%s_%s) =\n" n fn n fn n fn;
+      w o "  (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))))\n\n";
+      w o "let gaccessor_%s_%s =\n" n fn;
+      w o "  LL.gaccessor_ext gaccessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn n fn n fn;
+      w i "inline_for_extraction val accessor_%s_%s : LL.accessor gaccessor_%s_%s\n\n" n fn n fn;
+      w o "inline_for_extraction let accessor'_%s_%s : LL.accessor gaccessor'_%s_%s =\n" n fn n fn;
+      w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+      w o "  synth_%s_recip_inverse (); synth_%s_inverse ();\n" n n;
+      w o "  LL.accessor_compose (LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()) %s ()\n\n" n n n a_before_synth;
+      w o "let accessor_%s_%s =\n" n fn;
+      w o "  LL.accessor_ext accessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn n fn n fn;
+      ()
     in
-    let w_i_val_accessor fn ty =
-      w i "inline_for_extraction val accessor_%s_%s : LL.accessor gaccessor_%s_%s\n\n" n fn n fn
-    in
+    (* write the lenses *)
     List.iter
       (fun (fn, ty) ->
         w i "let clens_%s_%s : LL.clens %s %s = {\n" n fn n ty;
@@ -1156,29 +1171,47 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
       fields;
     match fields with
     | [] -> ()
-    | [(fn, ty)] -> w i  "// 1 field is weird, we'll do it later\n"
+    | [(fn, ty)] -> failwith "1-field struct should have been turned into its field"
     | (fn1, ty1) :: fields_tl ->
-       (* build the sequence of all parsers *)
-       let parsers_tl = List.map (fun (_, ty) -> pcombinator_name ty) fields_tl in
-       w_i_val_gaccessor fn1 ty1;
-       let leftmost_gaccessor = List.fold_left (fun g p -> Printf.sprintf "(LL.gaccessor_fst_then %s %s ())" g p) (Printf.sprintf "(LL.gaccessor_id %s)" (pcombinator_name ty1)) parsers_tl in
-       w o "let gaccessor'_%s_%s : LL.gaccessor %s_parser %s _ =\n" n fn1 n (pcombinator_name ty1);
-       w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
-       w o "  synth_%s_recip_inverse (); synth_%s_inverse ();\n" n n;
-       w o "  LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip () `LL.gaccessor_compose` %s\n\n" n n n leftmost_gaccessor;
-       w o "let clens'_%s_%s : LL.clens %s %s = LL.get_gaccessor_clens gaccessor'_%s_%s\n\n" n fn1 n ty1 n fn1;
-       w o "let clens_%s_%s_eq : squash (LL.clens_eq clens'_%s_%s clens_%s_%s) =\n" n fn1 n fn1 n fn1;
-       w o "  (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))))\n\n";
-       w o "let gaccessor_%s_%s =\n" n fn1;
-       w o "  LL.gaccessor_ext gaccessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn1 n fn1 n fn1;
-       let leftmost_accessor = List.fold_left (fun g p -> Printf.sprintf "(LL.accessor_fst_then %s %s ())" g p) (Printf.sprintf "(LL.accessor_id %s)" (pcombinator_name ty1)) parsers_tl in
-       w o "inline_for_extraction let accessor'_%s_%s : LL.accessor gaccessor'_%s_%s =\n" n fn1 n fn1;
-       w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
-       w o "  synth_%s_recip_inverse (); synth_%s_inverse ();\n" n n;
-       w o "  LL.accessor_compose (LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()) %s ()\n\n" n n n leftmost_accessor;
-       w_i_val_accessor fn1 ty1;
-       w o "let accessor_%s_%s =\n" n fn1;
-       w o "  LL.accessor_ext accessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn1 n fn1 n fn1;
+       (* produce the accessor for the first field *)
+       let leftmost_gaccessor = List.fold_left (fun g (_, ty) -> Printf.sprintf "(LL.gaccessor_fst_then %s %s ())" g (pcombinator_name ty)) (Printf.sprintf "(LL.gaccessor_id %s)" (pcombinator_name ty1)) fields_tl in
+       let leftmost_accessor = List.fold_left (fun g (_, ty) -> Printf.sprintf "(LL.accessor_fst_then %s %s ())" g (pcombinator_name ty)) (Printf.sprintf "(LL.accessor_id %s)" (pcombinator_name ty1)) fields_tl in
+       write_accessor fn1 ty1 leftmost_gaccessor leftmost_accessor;
+       (* for each field starting from the second one, build the left-hand-side parser and jumper at the time accessor_snd will be called *)
+       let (_, pj_lhs_tl_rev) =
+         List.fold_left
+           (fun ((parser_lhs, jumper_lhs) as pj_lhs, pj_lhs_tl_rev) ((_, ty) as fd) ->
+             let parser_lhs' = Printf.sprintf "(%s `LP.nondep_then` %s)" parser_lhs (pcombinator_name ty) in
+             let jumper_lhs' = Printf.sprintf "(%s `LL.jump_nondep_then` %s)" jumper_lhs (jumper_name ty) in
+             let pj_lhs_tl_rev' = (fd, pj_lhs) :: pj_lhs_tl_rev in
+             ((parser_lhs', jumper_lhs'), pj_lhs_tl_rev')
+           )
+           ((pcombinator_name ty1, jumper_name ty1), [])
+           fields_tl
+       in
+       let pj_lhs_tl = List.rev pj_lhs_tl_rev in
+       (* produce the accessors for the other fields *)
+       let rec produce_accessors = function
+         | [] -> ()
+         | ((fn, ty), (parser_lhs, jumper_lhs)) :: q ->
+            let gaccessor_before_synth =
+              List.fold_left
+                (fun g ((_, ty'), _) ->
+                  Printf.sprintf "(LL.gaccessor_fst_then %s %s ())" g (pcombinator_name ty'))
+                (Printf.sprintf "(LL.gaccessor_snd %s %s)" parser_lhs (pcombinator_name ty))
+                q
+            in
+            let accessor_before_synth =
+              List.fold_left
+                (fun g ((_, ty'), _) ->
+                  Printf.sprintf "(LL.accessor_fst_then %s %s ())" g (pcombinator_name ty'))
+                (Printf.sprintf "(LL.accessor_snd %s %s)" jumper_lhs (pcombinator_name ty))
+                q
+            in
+            write_accessor fn ty gaccessor_before_synth accessor_before_synth;
+            produce_accessors q
+       in
+       produce_accessors pj_lhs_tl;
        ()
   end;
   ()
