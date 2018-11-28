@@ -731,8 +731,7 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "let %s_parser32%s =\n%s" n annot same_kind;
   (match def with
   | None ->
-    w o "  LP.parse32_sum %s_sum _ (_ by (LP.parse32_enum_key_tac %s_repr_parser32 %s_enum ()))\n" n tn tn;
-    w o "    _ parse32_%s_cases (_ by (LP.enum_destr_tac %s_enum))\n\n" n tn
+    w o "  LP.parse32_sum2 %s_sum %s_repr_parser %s_repr_parser32 parse_%s_cases parse32_%s_cases (_ by (LP.enum_destr_tac %s_enum)) (_ by (LP.maybe_enum_key_of_repr_tac %s_enum))\n\n" n tn tn n n tn tn;
   | Some dt ->
     w o "  LP.parse32_dsum %s_sum %s_repr_parser32\n" n tn;
     w o "    _ parse32_%s_cases %s (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n (pcombinator32_name (compile_type dt)));
@@ -741,11 +740,10 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "let %s_serializer32%s =\n%s" n annot same_kind;
   (match def with
   | None ->
-    w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));" tn n n;
-    w o "  LP.serialize32_sum %s_sum %s_repr_serializer (_ by (LP.serialize32_enum_key_gen_tac %s_repr_serializer32 %s_enum ()))" n tn tn tn;
-    w o "    _ serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n
+    w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
+    w o "  LP.serialize32_sum2 %s_sum %s_repr_serializer %s_repr_serializer32 serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
   | Some dt ->
-    w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));" tn n n n;
+    w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
     w o "  LP.serialize32_dsum %s_sum %s_repr_serializer (_ by (LP.serialize32_maybe_enum_key_tac %s_repr_serializer32 %s_enum ()))" n tn tn tn;
     w o "    _ _ serialize32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (scombinator32_name (compile_type dt)));
 
@@ -753,11 +751,10 @@ and compile_select o i n tagn tagt taga cl def al =
   w o "let %s_size32%s =\n%s" n annot same_kind;
   (match def with
   | None ->
-    w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));" tn n n;
-    w o "  LP.size32_sum %s_sum _ (_ by (LP.size32_enum_key_gen_tac %s_repr_size32 %s_enum ()))" n tn tn;
-    w o "    _ size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n
+    w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
+    w o "  LP.size32_sum2 %s_sum %s_repr_serializer %s_repr_size32 serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
   | Some dt ->
-    w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));" tn n n n;
+    w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
     w o "  LP.size32_dsum %s_sum _ (_ by (LP.size32_maybe_enum_key_tac %s_repr_size32 %s_enum ()))\n" n tn tn;
     w o "    _ _ size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (size32_name (compile_type dt)));
 
