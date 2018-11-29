@@ -806,6 +806,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
   let qname = if tn = "" then String.uncapitalize_ascii fn else tn^"@"^fn in
   let is_private = has_attr al "private" in
+  let elem_li = sizeof ty in
   let li = get_leninfo qname in
   let need_validator = is_private || need_validator li.meta li.min_len li.max_len in
   let need_jumper = is_private || need_jumper li.min_len li.max_len in
@@ -885,23 +886,23 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       ()
 
     (* Fixed length list *)
-    | VectorFixed k when li.min_len = li.max_len ->
+    | VectorFixed k when elem_li.min_len = elem_li.max_len ->
       w i "unfold let %s_pred (l:list %s) (n:nat) : GTot Type0 = L.length l == n\n" n ty0;
       w i "type %s = l:list %s{%s_pred l %d}\n\n" n ty0 n li.min_count;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.array %s %d\n\n" n ty0 li.min_count;
-      w o "private let eq () : Lemma (%s' == %s) =\n" n n;
+      w o "private let %s_eq () : Lemma (%s' == %s) =\n" n n n;
       w o "  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]]; FStar.Tactics.trefl ())\n\n" n n n n;
       w o "noextract let %s'_parser = LP.parse_array %s %d %d\n\n" n (scombinator_name ty0) k li.min_count;
-      w o "let %s_parser = eq(); LP.coerce (LP.parser %s_parser_kind %s) %s'_parser\n\n" n n n n;
+      w o "let %s_parser = %s_eq(); LP.coerce (LP.parser %s_parser_kind %s) %s'_parser\n\n" n n n n n;
       w o "noextract let %s'_serializer = LP.serialize_array %s %d %d ()\n\n" n (scombinator_name ty0) k li.min_count;
-      w o "let %s_serializer = eq(); LP.coerce (LP.serializer %s_parser) %s'_serializer\n\n" n n n;
+      w o "let %s_serializer = %s_eq(); LP.coerce (LP.serializer %s_parser) %s'_serializer\n\n" n n n n;
       w o "inline_for_extraction let %s'_parser32 = LP.parse32_array %s %s %d %dul %d ()\n\n"
         n (scombinator_name ty0) (pcombinator32_name ty0) k k li.min_count;
-      w o "let %s_parser32 = eq(); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n;
+      w o "let %s_parser32 = %s_eq(); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n n;
       w o "inline_for_extraction let %s'_serializer32 =\n" n;
       w o "  LP.serialize32_array #_ #_ #_ #%s %s %d %d ()\n\n" (scombinator_name ty0) (scombinator32_name ty0) k li.min_count;
-      w o "let %s_serializer32 = eq(); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n;
+      w o "let %s_serializer32 = %s_eq(); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n n;
       w o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty0) k k li.min_count;
       (if need_validator then w o "let %s_validator = LL.validate_array %s %s %d %dul %d ()\n\n" n (scombinator_name ty0) (validator_name ty0) k k li.min_count);
       (* jumper not needed unless private, we are constant size *)
@@ -912,33 +913,33 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorFixed(k) ->
       w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n ty0;
       w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
-      w i "type %s = l:list %s{%s_list_bytesize == %d}\n\n" n ty0 n k;
+      w i "type %s = l:list %s{%s_list_bytesize l == %d}\n\n" n ty0 n k;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.parse_fldata_strong_t (LP.serialize_list _ %s) %d\n\n" n (scombinator_name ty0) k;
-      w o "let _ = assert_norm (%s' == %s)\n\n" n n;
+      w o "let %s_eq () : Lemma (%s' == %s) = assert_norm (%s' == %s)\n\n" n n n n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
       w o "  LP.parse_fldata_strong (LP.serialize_list _ %s) %d\n\n" (scombinator_name ty0) k;
-      w o "let %s_parser = %s'_parser\n\n" n n;
+      w o "let %s_parser = %s_eq (); LP.coerce (LP.parser %s_parser_kind %s) %s'_parser\n\n" n n n n n;
       w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
       w o "  LP.serialize_fldata_strong (LP.serialize_list _ %s) %d\n\n" (scombinator_name ty0) k;
-      w o "let %s_serializer = %s'_serializer\n\n" n n;
+      w o "let %s_serializer = %s_eq () ; LP.coerce (LP.serializer %s_parser) %s'_serializer\n\n" n n n n;
       w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
       w o "  LP.parse32_fldata_strong (LP.serialize_list _ %s) (LP.parse32_list %s) %d %dul\n\n" (scombinator_name ty0) (pcombinator32_name ty0) k k;
-      w o "let %s_parser32 = %s'_parser32\n\n" n n;
+      w o "let %s_parser32 = %s_eq (); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n n;
       w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
       w o "  LP.serialize32_fldata_strong (LP.partial_serialize32_list _ %s %s ()) %d\n\n" (scombinator_name ty0) (scombinator32_name ty0) k;
-      w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
+      w o "let %s_serializer32 = %s_eq (); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n n;
       w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_fldata_strong (LP.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty0) k k;
-      w o "let %s_size32 = %s'_size32\n\n" n n;
+      w o "let %s_size32 = %s_eq (); LP.coerce (LP.size32 %s_serializer) %s'_size32\n\n" n n n n;
       w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
       w o "  LL.validate_fldata_strong (LL.serialize_list _ %s) (LL.validate_list %s ()) %d %dul\n\n" (scombinator_name ty0) (validator_name ty0) k k;
-      w o "let %s_validator = %s'_validator\n\n" n n;
+      w o "let %s_validator = %s_eq (); LP.coerce (LL.validator %s_parser) %s'_validator\n\n" n n n n;
       (* jumper not needed unless private, we are constant size *)
       begin if is_private then begin
         w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
         w o "  LL.jump_fldata_strong (LL.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty0) k k;
-        w o "let %s_jumper : LL.jumper %s_parser = %s'_jumper\n\n" n n n;
+        w o "let %s_jumper : LL.jumper %s_parser = %s_eq (); LP.coerce (LL.jumper %s_parser) %s'_jumper\n\n" n n n n n;
         ()
       end end;
       ()
