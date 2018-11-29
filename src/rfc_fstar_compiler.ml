@@ -464,7 +464,7 @@ end;
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond %s_serializer %dul) in\n" n blen;
   w o "  LP.size32_constant %s_serializer %dul ()\n\n" n blen;
 
-  (* Low *)
+  (* Low: validator *)
   begin
     if is_open then
       () (* validator not needed, since maybe_enum_key is total constant size *)
@@ -476,6 +476,24 @@ end;
       w o "  LL.validate_synth validate_%s%s_key synth_%s ()\n\n" maybe n n
       end
   end;
+
+  (* Low: reader *)
+  begin
+    if is_open then
+      begin
+        w o "inline_for_extraction let read_maybe_%s_key : LL.leaf_reader parse_maybe_%s_key =\n" n n;
+        w o "  LL.read_maybe_enum_key %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n
+      end
+    else
+      begin
+        w o "inline_for_extraction let read_%s_key : LL.leaf_reader parse_%s_key =\n" n n;
+        w o "  LL.read_enum_key %s_repr_reader %s_enum (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n n
+      end
+  end;
+  w i "inline_for_extraction val %s_reader: LL.leaf_reader %s_parser\n\n" n n;
+          w o "let %s_reader =\n" n;
+  w o " [@inline_let] let _ = lemma_synth_%s_inj () in\n" n;
+  w o " LL.read_synth' parse_%s%s_key synth_%s read_%s%s_key ()\n\n" maybe n n maybe n;
 
   ()
 
