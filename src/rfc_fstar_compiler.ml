@@ -1218,7 +1218,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     (* write the lenses *)
     List.iter
       (fun (fn, ty) ->
-        w i "let clens_%s_%s : LL.clens %s %s = {\n" n fn n ty;
+        w i "noextract let clens_%s_%s : LL.clens %s %s = {\n" n fn n ty;
         w i "  LL.clens_cond = (fun _ -> True);\n";
         w i "  LL.clens_get = (fun x -> x.%s);\n" fn;
         w i "}\n\n";
