@@ -893,15 +893,15 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "private let eq () : Lemma (%s' == %s) =\n" n n;
       w o "  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]]; FStar.Tactics.trefl ())\n\n" n n n n;
       w o "noextract let %s'_parser = LP.parse_array %s %d %d\n\n" n (scombinator_name ty0) k li.min_count;
-      w o "let %s_parser = eq(); LP.coerce _ %s'_parser\n\n" n n;
+      w o "let %s_parser = eq(); LP.coerce (LP.parser %s_parser_kind %s) %s'_parser\n\n" n n n n;
       w o "noextract let %s'_serializer = LP.serialize_array %s %d %d ()\n\n" n (scombinator_name ty0) k li.min_count;
-      w o "let %s_serializer = eq(); LP.coerce _ %s'_serializer\n\n" n n;
+      w o "let %s_serializer = eq(); LP.coerce (LP.serializer %s_parser) %s'_serializer\n\n" n n n;
       w o "inline_for_extraction let %s'_parser32 = LP.parse32_array %s %s %d %dul %d ()\n\n"
         n (scombinator_name ty0) (pcombinator32_name ty0) k k li.min_count;
-      w o "let %s_parser32 = eq(); LP.coerce _ %s'_parser32\n\n" n n;
+      w o "let %s_parser32 = eq(); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n;
       w o "inline_for_extraction let %s'_serializer32 =\n" n;
       w o "  LP.serialize32_array #_ #_ #_ #%s %s %d %d ()\n\n" (scombinator_name ty0) (scombinator32_name ty0) k li.min_count;
-      w o "let %s_serializer32 = eq(); LP.coerce _ %s'_serializer32\n\n" n n;
+      w o "let %s_serializer32 = eq(); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n;
       w o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty0) k k li.min_count;
       (if need_validator then w o "let %s_validator = LL.validate_array %s %s %d %dul %d ()\n\n" n (scombinator_name ty0) (validator_name ty0) k k li.min_count);
       (* jumper not needed unless private, we are constant size *)
