@@ -177,6 +177,12 @@ let leaf_reader_name = function
   | "U32.t" -> "LL.read_u32"
   | _ -> failwith "leaf_reader_name: should only be called for enum repr"
 
+let leaf_writer_name = function
+  | "U8.t" -> "LL.write_u8"
+  | "U16.t" -> "LL.write_u16"
+  | "U32.t" -> "LL.write_u32"
+  | _ -> failwith "leaf_writer_name: should only be called for enum repr"
+
 let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -377,6 +383,7 @@ end;
   w o "inline_for_extraction let %s_repr_validator = %s\n\n" n (validator_name repr_t);
   w o "inline_for_extraction let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
   w o "inline_for_extraction let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
+  w o "inline_for_extraction let %s_repr_writer = %s\n\n" n (leaf_writer_name repr_t);
 
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
@@ -494,6 +501,14 @@ end;
           w o "let %s_reader =\n" n;
   w o " [@inline_let] let _ = lemma_synth_%s_inj () in\n" n;
   w o " LL.read_synth' parse_%s%s_key synth_%s read_%s%s_key ()\n\n" maybe n n maybe n;
+
+  (* Low: writer *)
+  w o "inline_for_extraction let write_%s%s_key : LL.leaf_writer_strong serialize_%s%s_key =\n" maybe n maybe n;
+  w o "  LL.write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
+  w i "inline_for_extraction val %s_writer: LL.leaf_writer_strong %s_serializer\n\n" n n;
+  w o "let %s_writer =\n" n;
+  w o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
+  w o "  LL.write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x) ()\n\n" maybe n n n n;
 
   ()
 
