@@ -940,6 +940,14 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (if need_validator then w o "let %s_validator = LL.validate_array %s %s %d %dul %d ()\n\n" n (scombinator_name ty0) (validator_name ty0) k k li.min_count);
       (* jumper not needed unless private, we are constant size *)
       (if is_private then w o "let %s_jumper : LL.jumper %s_parser = LL.jump_array %s %d %dul %d ()\n\n" n n (scombinator_name ty0) k k li.min_count);
+      w i "noextract let clens_%s_nth (i: nat { i < %d } ) : LL.clens %s %s = {\n" n li.min_count n ty0;
+      w i "  LL.clens_cond = (fun _ -> True);\n";
+      w i "  LL.clens_get = (fun (l: %s) -> L.index l i);\n" n;
+      w i "}\n\n";
+      w i "val %s_nth_ghost (i: nat {i < %d}) : LL.gaccessor %s_parser %s (clens_%s_nth i)\n\n" n li.max_count n (pcombinator_name ty0) n;
+      w o "let %s_nth_ghost i = LL.array_nth_ghost %s %d %d i\n\n" n (scombinator_name ty0) li.max_len li.max_count;
+      w i "inline_for_extraction val %s_nth (i: U32.t { U32.v i < %d } ) : LL.accessor (%s_nth_ghost (U32.v i))\n\n" n li.max_count n;
+      w o "let %s_nth i = LL.array_nth %s %d %d i\n\n" n (scombinator_name ty0) li.max_len li.max_count;
       ()
 
     (* Fixed bytelen list of variable length elements *)
