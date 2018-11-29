@@ -873,7 +873,12 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" n k k;
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" n k;
       w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" n n k;
-      (* validator and jumper not needed, we are total constant size *)
+      (* validator and jumper not needed unless private, we are total constant size *)
+     begin if is_private then begin
+       w o "inline_for_extraction let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
+       w o "inline_for_extraction let %s_jumper = LL.jump_flbytes %d %dul\n\n" n k k;
+       ()
+     end end;
       ()
 
     (* Fixed length list *)
@@ -896,7 +901,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_serializer32 = eq(); LP.coerce _ %s'_serializer32\n\n" n n;
       w o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty0) k k li.min_count;
       (if need_validator then w o "let %s_validator = LL.validate_array %s %s %d %dul %d ()\n\n" n (scombinator_name ty0) (validator_name ty0) k k li.min_count);
-      (* jumper not needed, we are constant size *)
+      (* jumper not needed unless private, we are constant size *)
+      (if is_private then w o "let %s_jumper = LL.jump_array %s %d %dul %d ()\n\n" n (scombinator_name ty0) k k li.min_count);
       ()
 
     (* Fixed bytelen list of variable length elements *)
@@ -925,7 +931,13 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
       w o "  LL.validate_fldata_strong (LL.serialize_list _ %s) (LL.validate_list %s ()) %d %dul\n\n" (scombinator_name ty0) (validator_name ty0) k k;
       w o "let %s_validator = %s'_validator\n\n" n n;
-      (* jumper not needed, we are constant size *)
+      (* jumper not needed unless private, we are constant size *)
+      begin if is_private then begin
+        w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+        w o "  LL.jump_fldata_strong (LL.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty0) k k;
+        w o "let %s_jumper = %s'_jumper\n\n" n n;
+        ()
+      end end;
       ()
 
     (* Variable length bytes *)
