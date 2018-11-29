@@ -55,3 +55,38 @@ struct {
   uint8 u;
   t1 z<0..255>;
 } t11;
+
+struct {
+  uint8 u;
+  t1 z[18];
+} t12;
+
+struct {
+  uint8 u;
+  opaque x<0..255>;
+} t13;
+
+struct {
+  uint8 u;
+  opaque x[18]; 
+} t14;
+
+struct {
+  uint8 u;
+  t3 z<0..255>;
+} t15;
+
+struct {
+  uint8 u;
+  t3 z[18];
+} t16;
+
+struct {
+  uint8 u;
+  uint16 z<0..255>;
+} t17;
+
+struct {
+  uint8 u;
+  uint16 z[18];
+} t18;
