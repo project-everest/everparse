@@ -960,7 +960,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       ()
 
     (* Variable length list of fixed-length elements *)
-    | VectorRange (low, high) when li.min_len = li.max_len ->
+    | VectorRange (low, high) when elem_li.min_len = elem_li.max_len ->
       w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}" n ty0 li.min_count li.max_count;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "let %s_parser =\n" n;
@@ -971,15 +971,15 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_parser32 =\n" n;
       w o "  LP.parse32_vlarray %d %dul %d %dul %s %s %d %d ()\n\n" low low high high (scombinator_name ty0) (pcombinator32_name ty0) li.min_count li.max_count;
       w o "let %s_serializer32 =\n" n;
-      w o "  LP.serialize32_vlarray %d %d %s %d %d ()\n\n" low high (scombinator32_name ty0) li.min_count li.max_count;
+      w o "  LP.serialize32_vlarray %d %d #_ #_ #_ #%s %s %d %d ()\n\n" low high (scombinator_name ty0) (scombinator32_name ty0) li.min_count li.max_count;
       w o "let %s_size32 =\n" n;
-      w o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len li.min_len;
+      w o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len elem_li.min_len;
       (* validator and jumper always needed, we are variable size *)
       w o "let %s_validator =\n" n;
-      w o " LL.validate_vlarray %d %d %s %s %d %d ()\n\n" low high (scombinator_name ty0) (validator_name ty0) li.min_count li.max_count;
+      w o " LL.validate_vlarray %d %d %s %s %d %d () %dul\n\n" low high (scombinator_name ty0) (validator_name ty0) li.min_count li.max_count li.len_len;
       let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
       w o "let %s_jumper%s =\n" n jumper_annot;
-      w o " LL.jump_vlarray %d %d %s %d %d ()\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
+      w o " LL.jump_vlarray %d %d %s %d %d () %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len;
       ()
 
     (* Variable length list of variable length elements *)
