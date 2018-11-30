@@ -8,6 +8,10 @@ type parser_kind_metadata =
   | MetadataTotal
   | MetadataDefault
 
+(* Special case of select over a tag *)
+type tag_select_t =
+  attr list * attr list * typ * field * field * typ * (typ * typ) list * typ option
+
 let string_of_parser_kind_metadata = function
   | MetadataTotal -> "total"
   | MetadataDefault -> "default"
@@ -25,9 +29,6 @@ type len_info = {
 (* Recording the boundaries of variable length structures *)
 let linfo : len_info SM.t ref = ref SM.empty
 
-(* Storage of inlined types *)
-let inliners: gemstone_t SM.t ref = ref SM.empty
-
 (* Storage of enum fields for select *)
 let fields: (enum_field_t list) SM.t ref = ref SM.empty
 
@@ -39,18 +40,28 @@ let log256 k =
   else if k <= 16777215 then 3
   else 4
 
-let tname (p:gemstone_t) : string =
-  let aux = function
+let tname (lower:bool) (p:gemstone_t) : string =
+  let n = match p with
 		| Enum (_, _, n) -> n
 		| Struct (_, _, n) -> n
     | Typedef (_, _, n, _, _) -> n
-	in String.uncapitalize_ascii (aux p)
+	  in
+  if lower then String.uncapitalize_ascii n else n
 
 let module_name (s:string) =
   if !prefix = "" || Str.last_chars !prefix 1 = "." then
     !prefix ^ (String.capitalize_ascii s)
   else
     !prefix ^ (String.uncapitalize_ascii s)
+
+let open_files n =
+  let fn = sprintf "%s/%s.fst" !odir (module_name n) in
+  printf "Writing parsers for type <%s> to <%s>...\n" n fn;
+  try open_out fn, open_out (fn^"i")
+  with _ -> failwith "Failed to create output file"
+
+let close_files o i =
+  close_out o; close_out i
 
 let attr_of = function
   | Enum (a, _, _) -> a
@@ -112,7 +123,7 @@ let compile_type = function
   | "uint24" -> "U32.t"
   | "uint32" -> "U32.t"
   | "Empty" -> "unit"
-  | "Fail" -> "squash False"
+  | "Fail" -> "(squash False)"
   | t -> String.uncapitalize_ascii t
 
 let pcombinator_name = function
@@ -120,7 +131,7 @@ let pcombinator_name = function
   | "U16.t" -> "LPI.parse_u16"
   | "U32.t" -> "LPI.parse_u32"
   | "unit" -> "LP.parse_empty"
-  | "squash False" -> "LP.parse_false"
+  | "(squash False)" -> "LP.parse_false"
   | t -> t^"_parser"
 
 let scombinator_name = function
@@ -128,7 +139,7 @@ let scombinator_name = function
   | "U16.t" -> "LP.serialize_u16"
   | "U32.t" -> "LP.serialize_u32"
   | "unit" -> "LP.serialize_empty"
-  | "squash False" -> "LP.serialize_false"
+  | "(squash False)" -> "LP.serialize_false"
   | t -> t^"_serializer"
 
 let pcombinator32_name = function
@@ -136,7 +147,7 @@ let pcombinator32_name = function
   | "U16.t" -> "LP.parse32_u16"
   | "U32.t" -> "LP.parse32_u32"
   | "unit" -> "LP.parse32_empty"
-  | "squash False" -> "LP.parse32_false"
+  | "(squash False)" -> "LP.parse32_false"
   | t -> t^"_parser32"
 
 let scombinator32_name = function
@@ -144,7 +155,7 @@ let scombinator32_name = function
   | "U16.t" -> "LP.serialize32_u16"
   | "U32.t" -> "LP.serialize32_u32"
   | "unit" -> "LP.serialize32_empty"
-  | "squash False" -> "LP.serialize32_false"
+  | "(squash False)" -> "LP.serialize32_false"
   | t -> t^"_serializer32"
 
 let size32_name = function
@@ -152,7 +163,7 @@ let size32_name = function
   | "U16.t" -> "LP.size32_u16"
   | "U32.t" -> "LP.size32_u32"
   | "unit" -> "LP.size32_empty"
-  | "squash False" -> "LP.size32_false"
+  | "(squash False)" -> "LP.size32_false"
   | t -> t^"_size32"
 
 let validator_name = function
@@ -160,7 +171,7 @@ let validator_name = function
   | "U16.t" -> "(LL.validate_u16 ())"
   | "U32.t" -> "(LL.validate_u32 ())"
   | "unit" -> "(LL.validate_empty ())"
-  | "squash False" -> "(LL.validate_false ())"
+  | "(squash False)" -> "(LL.validate_false ())"
   | t -> t^"_validator"
 
 let jumper_name = function
@@ -168,9 +179,9 @@ let jumper_name = function
   | "U16.t" -> "LL.jump_u16"
   | "U32.t" -> "LL.jump_u32"
   | "unit" -> "LL.jump_empty"
-  | "squash False" -> "LL.jump_false"
+  | "(squash False)" -> "LL.jump_false"
   | t -> t^"_jumper"
-       
+
 let leaf_reader_name = function
   | "U8.t" -> "LL.read_u8"
   | "U16.t" -> "LL.read_u16"
@@ -230,11 +241,12 @@ let dedup l =
   List.iter (fun x -> if not (List.mem x !r) then r := x::!r) l;
   List.rev !r
 
-let getdep (p:gemstone_t) : typ list =
-  let tn = tname p in
+let getdep (toplevel:bool) (p:gemstone_t) : typ list =
+  let tn = tname toplevel p in
   let dep =
     match p with
     | Enum (a, fl, n) ->
+      if not toplevel then failwith "Invalid internal rewrite of an enum";
       let meta = if has_attr a "open" then MetadataTotal else MetadataDefault in
       let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
               with _ -> failwith ("Enum "^n^" is missing a representation hint") in
@@ -247,6 +259,7 @@ let getdep (p:gemstone_t) : typ list =
       | _ -> failwith "impossible");
       li_add tn li; ([]:typ list list)
     | Struct (_, fl, _) ->
+      if not toplevel then failwith "invalid internal rewrite of a struct";
       let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; meta = MetadataTotal } in
       let dep = List.map (fun (al, ty, n, vec, def) ->
         add_field tn n ty vec;
@@ -258,7 +271,7 @@ let getdep (p:gemstone_t) : typ list =
         typedep ty) fl in
       li_add tn li; dep
     | Typedef (al, ty, n, vec, def) ->
-      add_field "" (String.uncapitalize_ascii n) ty vec;
+      if toplevel then add_field "" (String.uncapitalize_ascii n) ty vec;
       [typedep ty]
     in
   dedup (List.flatten dep)
@@ -504,7 +517,7 @@ and compile_select o i n tagn tagt taga cl def al =
   write_api o i is_private li.meta n li.min_len li.max_len;
   let need_validator = need_validator li.meta li.min_len li.max_len in
   let need_jumper = need_jumper li.min_len li.max_len in
-  
+
   (** FIXME(adl) for now the t_sum of open and closed sums are independently generated,
   we may try to share more of the declarations between the two cases **)
   (match def with
@@ -705,31 +718,30 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LP.size32_false\n\n";
 
- begin if need_validator then begin
-  w o "\ninline_for_extraction let validate_%s_cases (x:%s)\n" n ktype;
-  w o "  : LL.validator (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
-  List.iter (fun (case, ty) ->
-    let cn = String.capitalize_ascii case in
-    let ty0 = compile_type ty in
-    w o "  | %s -> [@inline_let] let u : LL.validator (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (validator_name ty0)
-  ) cl;
-  w o "  | _ -> LL.validate_false ()\n\n";
-  ()
- end end;
+  if need_validator then
+   begin
+    w o "\ninline_for_extraction let validate_%s_cases (x:%s)\n" n ktype;
+    w o "  : LL.validator (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+    List.iter (fun (case, ty) ->
+      let cn = String.capitalize_ascii case in
+      let ty0 = compile_type ty in
+      w o "  | %s -> [@inline_let] let u : LL.validator (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (validator_name ty0)
+    ) cl;
+    w o "  | _ -> LL.validate_false ()\n\n"
+   end;
 
- begin if need_jumper then begin
-  w o "\ninline_for_extraction let jump_%s_cases (x:%s)\n" n ktype;
-  w o "  : LL.jumper (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
-  List.iter (fun (case, ty) ->
-    let cn = String.capitalize_ascii case in
-    let ty0 = compile_type ty in
-    w o "  | %s -> [@inline_let] let u : LL.jumper (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (jumper_name ty0)
-  ) cl;
-  w o "  | _ -> LL.jump_false\n\n";
-  ()
- end end;
-  
-  (* FIXME(adl) can't prove by normalization because of opaque kinds in interfaces *)
+  if need_jumper then
+   begin
+    w o "\ninline_for_extraction let jump_%s_cases (x:%s)\n" n ktype;
+    w o "  : LL.jumper (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+    List.iter (fun (case, ty) ->
+      let cn = String.capitalize_ascii case in
+      let ty0 = compile_type ty in
+      w o "  | %s -> [@inline_let] let u : LL.jumper (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (jumper_name ty0)
+    ) cl;
+    w o "  | _ -> LL.jump_false\n\n"
+   end;
+
   let same_kind = match def with
     | None -> sprintf "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n
     | Some dt -> sprintf "  assert_norm (LP.parse_dsum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases (LP.get_parser_kind %s) == %s_parser_kind);\n" tn n n (pcombinator_name (compile_type dt)) n
@@ -778,28 +790,28 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  LP.size32_dsum %s_sum _ (_ by (LP.size32_maybe_enum_key_tac %s_repr_size32 %s_enum ()))\n" n tn tn;
     w o "    _ _ size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (size32_name (compile_type dt)));
 
- begin if need_validator then begin  
-  let annot = if is_private then " : LL.validator "^(pcombinator_name n) else "" in
-  w o "let %s_validator%s =\n%s" n annot same_kind;
-  (match def with
-  | None ->
-    w o "  LL.validate_sum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
-  | Some dt ->
-    w o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name (compile_type dt)));
-  ()
- end end;
+  if need_validator then
+   begin
+    let annot = if is_private then " : LL.validator "^(pcombinator_name n) else "" in
+    w o "let %s_validator%s =\n%s" n annot same_kind;
+    (match def with
+    | None ->
+      w o "  LL.validate_sum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+    | Some dt ->
+      w o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name (compile_type dt)))
+   end;
 
- begin if need_jumper then begin
-  let annot = if is_private then " : LL.jumper "^(pcombinator_name n) else "" in
-  w o "let %s_jumper%s =\n%s" n annot same_kind;
-  (match def with
-  | None ->
-    w o "  LL.jump_sum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
-  | Some dt ->
-    w o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name (compile_type dt)));
-  ()
- end end;
-  
+  if need_jumper then
+   begin
+    let annot = if is_private then " : LL.jumper "^(pcombinator_name n) else "" in
+    w o "let %s_jumper%s =\n%s" n annot same_kind;
+    (match def with
+    | None ->
+      w o "  LL.jump_sum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+    | Some dt ->
+      w o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name (compile_type dt)))
+   end;
+
   ()
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
@@ -837,9 +849,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (* N.B. for VectorVldata the size of the length is accounted outside the leninfo, unlike VectorRange *)
       let (len_len, smax) = basic_bounds vl in
       let (min, max) = li.min_len, li.max_len in
-      w i "noextract val %s_bytesize: %s -> GTot nat\n\n" n ty0;
-      w o "let %s_bytesize x = Seq.length (LP.serialize %s x)\n\n" n (scombinator_name ty0);
-      w i "type %s = x:%s{let l = %s_bytesize x in %d <= l /\\ l <= %d}\n\n" n ty0 n 0 smax;
+      let sizef =
+        if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty0)
+        else sprintf "%s_bytesize x" ty0 in
+      w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n ty0 sizef 0 smax;
       write_api o i is_private li.meta n (len_len+min) (len_len+max);
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty0);
       w o "let _ = assert_norm (%s' == %s)\n\n" n n;
@@ -878,11 +891,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" n k;
       w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" n n k;
       (* validator and jumper not needed unless private, we are total constant size *)
-     begin if is_private then begin
-       w o "inline_for_extraction let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
-       w o "inline_for_extraction let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k;
-       ()
-     end end;
+      if is_private then
+       begin
+        w o "inline_for_extraction let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
+        w o "inline_for_extraction let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k
+       end;
       ()
 
     (* Fixed length list *)
@@ -936,12 +949,12 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  LL.validate_fldata_strong (LL.serialize_list _ %s) (LL.validate_list %s ()) %d %dul\n\n" (scombinator_name ty0) (validator_name ty0) k k;
       w o "let %s_validator = %s_eq (); LP.coerce (LL.validator %s_parser) %s'_validator\n\n" n n n n;
       (* jumper not needed unless private, we are constant size *)
-      begin if is_private then begin
+      if is_private then
+       begin
         w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
         w o "  LL.jump_fldata_strong (LL.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty0) k k;
-        w o "let %s_jumper : LL.jumper %s_parser = %s_eq (); LP.coerce (LL.jumper %s_parser) %s'_jumper\n\n" n n n n n;
-        ()
-      end end;
+        w o "let %s_jumper : LL.jumper %s_parser = %s_eq (); LP.coerce (LL.jumper %s_parser) %s'_jumper\n\n" n n n n n
+       end;
       ()
 
     (* Variable length bytes *)
@@ -1029,8 +1042,14 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     | TypeSimple ty0, VectorNone ->
       (fn0, compile_type ty0)
     | _ ->
-      compile_typedef o i n fn ty vec def ("private"::al);
-      (fn0, sprintf "%s_%s" n fn)) fl in
+      let n' = sprintf "%s_%s" n fn in
+      let p = Typedef (al, ty, fn, vec, def) in
+      let (o', i') = open_files n' in
+      compile o' i' n p;
+      w i "(* Type of field %s*)\ninclude %s\n\n" fn (module_name n');
+      w o "(* Type of field %s*)\nopen %s\n\n" fn (module_name n');
+      (* compile_typedef o i n fn ty vec def ("private"::al); *)
+      (fn0, n')) fl in
 
   (* application type *)
   if fields = [] then
@@ -1161,36 +1180,36 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "  LP.size32_synth _ synth_%s _ %s'_size32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
 
   (* validator *)
- begin if need_validator li.meta li.min_len li.max_len then begin
-  w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-  if fields = [] then w o "  LL.validate_flbytes 0 0ul";
-  let tuple = List.fold_left (
-    fun acc (fn, ty) ->
-      let c = validator_name ty in
-      if acc="" then c else sprintf "%s\n  `LL.validate_nondep_then` %s" acc c
-    ) "" fields in
-  w o "  %s\n\n" tuple;
-  w o "let %s_validator =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LL.validate_synth %s'_validator synth_%s ()\n\n" n n;
-  ()
- end end;
+  if need_validator li.meta li.min_len li.max_len then
+   begin
+    w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+    if fields = [] then w o "  LL.validate_flbytes 0 0ul";
+    let tuple = List.fold_left (
+      fun acc (fn, ty) ->
+        let c = validator_name ty in
+        if acc="" then c else sprintf "%s\n  `LL.validate_nondep_then` %s" acc c
+      ) "" fields in
+    w o "  %s\n\n" tuple;
+    w o "let %s_validator =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+    w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+    w o "  LL.validate_synth %s'_validator synth_%s ()\n\n" n n
+   end;
 
   (* jumper *)
- begin if need_jumper li.min_len li.max_len then begin
-  w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-  if fields = [] then w o "  LL.jump_flbytes 0 0ul";
-  let tuple = List.fold_left (
-    fun acc (fn, ty) ->
-      let c = jumper_name ty in
-      if acc="" then c else sprintf "%s\n  `LL.jump_nondep_then` %s" acc c
-    ) "" fields in
-  w o "  %s\n\n" tuple;
-  w o "let %s_jumper =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n;
-  ()
- end end;
+  if need_jumper li.min_len li.max_len then
+   begin
+    w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+    if fields = [] then w o "  LL.jump_flbytes 0 0ul";
+    let tuple = List.fold_left (
+      fun acc (fn, ty) ->
+        let c = jumper_name ty in
+        if acc="" then c else sprintf "%s\n  `LL.jump_nondep_then` %s" acc c
+      ) "" fields in
+    w o "  %s\n\n" tuple;
+    w o "let %s_jumper =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+    w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+    w o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n
+   end;
 
   (* accessors for fields *)
   begin
@@ -1272,7 +1291,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   ()
 
 (* Rewrite {... uintX len; t value[len]; ...} into VectorVldata *)
-let rec normalize_symboliclen o i sn (fl:struct_field_t list) : struct_field_t list =
+and normalize_symboliclen o i sn (fl:struct_field_t list) : struct_field_t list =
   match fl with
   | [] -> []
   | (al, TypeSimple(tagt), tagn, VectorNone, None)
@@ -1282,34 +1301,59 @@ let rec normalize_symboliclen o i sn (fl:struct_field_t list) : struct_field_t l
         match ty with
         | TypeSimple ty -> (al @ al', TypeSimple ty, n, VectorVldata tagt, None)
         | TypeSelect (sel, cl, def) ->
+          let r = ref [] in
           let cl' = List.map (fun (c,t)->
-            let etyp = sprintf "%s_%s_case_%s" sn n c in
-            add_field "" etyp (TypeSimple t) (VectorVldata tagt);
-            compile_typedef o i "" etyp (TypeSimple t) (VectorVldata tagt) None ("private"::al);
-            (c, etyp)
-          ) cl in
+              let etyp = sprintf "%s_%s_case_%s" sn n c in
+              r := (etyp, t) :: !r; (c, etyp)
+            ) cl in
           let def' = match def with
             | None -> None
             | Some ty ->
               let etyp = sprintf "%s_%s_default" sn n in
-              add_field "" etyp (TypeSimple ty) (VectorVldata tagt);
-              compile_typedef o i "" etyp (TypeSimple ty) (VectorVldata tagt) None ("private"::al);
-              Some etyp
+              r := (etyp, ty) :: !r; Some etyp
             in
+          List.iter (fun (etyp, t) ->
+            (*
+            add_field "" etyp (TypeSimple t) (VectorVldata tagt);
+            compile_typedef o i "" etyp (TypeSimple t) (VectorVldata tagt) None ("private"::al);
+            *)
+            let p = Typedef(al @ al', TypeSimple t, etyp, VectorVldata tagt, None) in
+            let (o', i') = open_files etyp in
+            compile o' i' "" p;
+            w i "(* Rewritten from vldata %s *)\ninclude %s\n\n" etyp (module_name etyp);
+            w o "(* Rewritten from vldata %s *)\nopen %s\n\n" etyp (module_name etyp);
+          ) !r;
           (al @ al', TypeSelect(sel, cl', def'), n, VectorNone, None)
         in
       h :: (normalize_symboliclen o i sn r)
   | h :: t -> h :: (normalize_symboliclen o i sn t)
 
-let compile o i (p:gemstone_t) =
-  let n = tname p in
+(* Hoist {... tag t; select(t){} ...} when other fields are present *)
+and normalize_select sn (fl:struct_field_t list)
+  (acc:struct_field_t list) (acc':tag_select_t list)
+  : struct_field_t list * tag_select_t list =
+  match fl with
+  | [] -> List.rev acc, List.rev acc'
+  | (al, TypeSimple(tagt), tagn, VectorNone, None)
+    :: (al', TypeSelect (tagn', cases, def), seln, VectorNone, None)
+    :: r when tagn = tagn' ->
+    let etyp = sprintf "%s_%s" sn seln in
+    let sel' = (al, al', etyp, tagn, seln, tagt, cases, def) in
+    let f' = (al, TypeSimple etyp, seln, VectorNone, None) in
+    normalize_select sn r (f'::acc) (sel'::acc')
+  | (_, TypeSelect (_, _, _), seln, _, _) :: t ->
+    failwith (sprintf "Field %s contains an invalid select in struct %s" seln sn)
+  | h :: t -> normalize_select sn t (h::acc) acc'
+
+and compile o i (tn:typ) (p:gemstone_t) =
+  let n = if tn = "" then tname true p else tn^"_"^(tname false p) in
   let (fst, fsti) = !headers in
 
   (* .fsti *)
   w i "module %s\n\n" (module_name n);
   w i "open %s\n" !bytes;
 
-  let depl = getdep p in
+  let depl = getdep (tn = "") p in
   let depl = List.filter (fun x -> not (basic_type x)) depl in
   let depl = List.map module_name depl in
   (List.iter (w i "open %s\n") depl);
@@ -1339,30 +1383,32 @@ let compile o i (p:gemstone_t) =
   w o "\n";
 
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
-	match p with
-	| Enum(al, fl, _) ->  compile_enum o i n fl al
-  | Struct(al, fl, _) ->
-    let fl = normalize_symboliclen o i n fl in
-    (match fl with
-    | [ (al, TypeSimple(tagt), tagn, VectorNone, None);
-        (al', TypeSelect (tagn', cases, def), seln, VectorNone, None) ] ->
-        compile_select o i n tagn tagt al cases def al'
-    | fl -> compile_struct o i n fl al)
-  | Typedef(al, ty, _, vec, def) -> compile_typedef o i "" n ty vec def al
 
-let compile_inline o i (p:gemstone_t) =
-  if has_attr (attr_of p) "inline" then (
-    printf "Warning: type %s will be inlined at use site!\n" (tname p);
-    inliners := SM.add (tname p) p !inliners
-  ) else compile o i p
+  try let _ =
+    match p with
+  	| Enum(al, fl, _) ->  compile_enum o i n fl al
+    | Typedef(al, ty, n', vec, def) -> compile_typedef o i tn n' ty vec def al
+    | Struct(al, fl, _) ->
+      let fl = normalize_symboliclen o i n fl in
+      match normalize_select n fl [] [] with
+      | [_, TypeSimple etyp', seln', VectorNone, None], [al, al', etyp, tagn, seln, tagt, cases, def] ->
+        if etyp' <> etyp || seln' <> seln then failwith "Invalid rewrite of a select (QD bug)";
+        compile_select o i n tagn tagt al cases def al'
+      | fl, sell ->
+        List.iter (fun (al, al', etyp, tagn, seln, tagt, cases, def) ->
+          let p = Struct([], [(al, TypeSimple(tagt), tagn, VectorNone, None);
+            (al', TypeSelect (tagn, cases, def), seln, VectorNone, None)], etyp) in
+          let (o', i') = open_files etyp in
+          compile o' i' "" p;
+          w i "(* Internal select() for %s *)\ninclude %s\n\n" etyp (module_name etyp);
+          w o "(* Internal select() for %s *)\nopen %s\n\n" etyp (module_name etyp);
+        ) sell;
+        compile_struct o i n fl al
+  in close_files o i with e -> close_files o i; raise e
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =
-	  let n = tname p in
-		let fn = sprintf "%s/%s.fst" !odir (module_name n) in
-	  printf "Writing parsers for type <%s> to <%s>...\n" n fn;
-		let o, i = try open_out fn, open_out (fn^"i")
-               with _ -> failwith "Failed to create output file" in
-		compile_inline o i p;
-    close_out o
+	  let n = tname true p in
+    let (o, i) = open_files n in
+		compile o i "" p
 	in List.iter aux p

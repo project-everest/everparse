@@ -48,7 +48,7 @@ struct {
 } t9;
 
 struct {
-  t3 essai;
+  t3 simplify;
 } t10;
 
 struct {
@@ -64,29 +64,32 @@ struct {
 struct {
   uint8 u;
   opaque x<0..255>;
+  uint16 y;
 } t13;
 
 struct {
   uint8 u;
   opaque x[18]; 
+  uint16 y;
 } t14;
 
 struct {
-  uint8 u;
-  t3 z<0..255>;
+  t1 start;
+  tag2 t;
+  select(t) {
+    case x: uint16;
+    case y: uint32;
+    case w: Empty;
+    default: Fail;
+  } body;
 } t15;
 
 struct {
-  uint8 u;
-  t3 z[18];
+  uint16 len;
+  tag t;
+  select(t)
+  {
+    case a: Empty;
+    case b: t13;
+  } x;
 } t16;
-
-struct {
-  uint8 u;
-  uint16 z<0..255>;
-} t17;
-
-struct {
-  uint8 u;
-  uint16 z[18];
-} t18;
