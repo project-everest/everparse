@@ -93,3 +93,23 @@ struct {
     case b: t13;
   } x;
 } t16;
+
+struct {
+  tag t;
+  uint16 len;
+  select(t)
+  {
+    case a: Empty;
+    case b: t13;
+  } x[len];
+} t17;
+
+struct {
+  tag t;
+  uint8 len;
+  select(t)
+  {
+    case a: uint32;
+    case b: t13;
+  } x[len];
+} t18;
