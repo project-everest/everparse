@@ -871,14 +871,17 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
       w o "let %s_size32 = %s'_size32\n\n" n n;
-      (* validator and jumper always needed, we are variable size *)
-      w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-      w o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty0) (validator_name ty0);
-      w o "let %s_validator = %s'_validator\n\n" n n;
-      w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-      w o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty0);
-      let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-      w o "let %s_jumper%s = %s'_jumper\n\n" n jumper_annot n;
+      if need_validator then begin
+        w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+        w o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty0) (validator_name ty0);
+        w o "let %s_validator = %s'_validator\n\n" n n
+      end;
+      if need_jumper then begin
+        w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+        w o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty0);
+        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+        w o "let %s_jumper%s = %s'_jumper\n\n" n jumper_annot n
+      end;
       ()
 
     (* Fixed-length bytes *)
@@ -966,10 +969,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
       w o "inline_for_extraction let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
       w o "inline_for_extraction let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" n low high (log256 high);
-      (* validator and jumper always needed, we are variable size *)
-      w o "inline_for_extraction let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
-      let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-      w o "inline_for_extraction let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high;
+      if need_validator then  w o "inline_for_extraction let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
+      if need_jumper then begin
+        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+        w o "inline_for_extraction let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
+      end;
       ()
 
     (* Variable length list of fixed-length elements *)
@@ -987,12 +991,15 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  LP.serialize32_vlarray %d %d #_ #_ #_ #%s %s %d %d ()\n\n" low high (scombinator_name ty0) (scombinator32_name ty0) li.min_count li.max_count;
       w o "let %s_size32 =\n" n;
       w o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len elem_li.min_len;
-      (* validator and jumper always needed, we are variable size *)
-      w o "let %s_validator =\n" n;
-      w o " LL.validate_vlarray %d %d %s %s %d %d () %dul\n\n" low high (scombinator_name ty0) (validator_name ty0) li.min_count li.max_count li.len_len;
-      let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-      w o "let %s_jumper%s =\n" n jumper_annot;
-      w o " LL.jump_vlarray %d %d %s %d %d () %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len;
+      if need_validator then begin
+        w o "let %s_validator =\n" n;
+        w o " LL.validate_vlarray %d %d %s %s %d %d () %dul\n\n" low high (scombinator_name ty0) (validator_name ty0) li.min_count li.max_count li.len_len
+      end;
+      if need_jumper then begin
+        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+        w o "let %s_jumper%s =\n" n jumper_annot;
+        w o " LL.jump_vlarray %d %d %s %d %d () %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len
+      end;
       ()
 
     (* Variable length list of variable length elements *)
@@ -1020,14 +1027,17 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s ()) %dul\n\n" min max (size32_name ty0) li.len_len;
       w o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
-      (* validator and jumper always needed, we are variable size *)
-      w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-      w o "  LL.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (LL.validate_list %s ()) ()\n\n" min max (scombinator_name ty0) (validator_name ty0);
-      w o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n;
-      w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-      w o "  LL.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) ()\n\n" min max (scombinator_name ty0);
-      let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-      w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n;
+      if need_validator then begin
+        w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+        w o "  LL.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (LL.validate_list %s ()) ()\n\n" min max (scombinator_name ty0) (validator_name ty0);
+        w o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
+      end;
+      if need_jumper then begin
+        w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+        w o "  LL.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) ()\n\n" min max (scombinator_name ty0);
+        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+        w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
+      end;
       ()
 
 and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
