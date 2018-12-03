@@ -205,9 +205,9 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       }
     | VectorVldata tn ->
       let (len_len, max_len) = basic_bounds tn in
-      let max' = min max_len (len_len + li.max_len) in
+      let max' = min max_len li.max_len in
       (*let min', max' = li.min_len, min li.max_len max_len in*)
-      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = max'; vl = true; meta = MetadataDefault }
+      {li with len_len = len_len; min_len = li.min_len; max_len = max'; vl = true; meta = MetadataDefault }
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
       let li' = get_leninfo (tn^"@"^cst) in
@@ -847,8 +847,33 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
 
     | VectorVldata vl ->
       (* N.B. for VectorVldata the size of the length is accounted outside the leninfo, unlike VectorRange *)
-      let (len_len, smax) = basic_bounds vl in
-      let (min, max) = li.min_len, li.max_len in
+    let (len_len, smax) = basic_bounds vl in
+    let (min, max) = li.min_len, li.max_len in
+    if elem_li.max_len <= smax
+    then begin
+      w i "type %s = %s\n\n" n ty0;
+      write_api o i is_private li.meta n (len_len+min) (len_len+max);
+      w o "let %s_parser =\n" n;
+      w o "  LP.parse_bounded_vldata %d %d %s\n\n" 0 smax (pcombinator_name ty0);
+      w o "let %s_serializer =\n" n;
+      w o "  LP.serialize_bounded_vldata %d %d %s\n\n" 0 smax (scombinator_name ty0);
+      w o "let %s_parser32 =\n" n;
+      w o "  LP.parse32_bounded_vldata %d %dul %d %dul %s\n\n" 0 0 smax smax (pcombinator32_name ty0);
+      w o "let %s_serializer32 =\n" n;
+      w o "  LP.serialize32_bounded_vldata %d %d %s\n\n" 0 smax (scombinator32_name ty0);
+      w o "let %s_size32 =\n" n;
+      w o "  LP.size32_bounded_vldata %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
+      if need_validator then begin
+        w o "let %s_validator =\n" n;
+        w o "  LL.validate_bounded_vldata %d %d %s ()\n\n" 0 smax (validator_name ty0);
+      end;
+      if need_jumper then begin
+        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+        w o "let %s_jumper%s =\n\n" n jumper_annot;
+        w o "  LL.jump_bounded_vldata %d %d %s ()\n\n" 0 smax (pcombinator_name ty0)
+      end;
+      ()
+    end else begin
       let sizef =
         if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty0)
         else sprintf "%s_bytesize x" ty0 in
@@ -883,6 +908,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         w o "let %s_jumper%s = %s'_jumper\n\n" n jumper_annot n
       end;
       ()
+    end
 
     (* Fixed-length bytes *)
     | VectorFixed k when ty0 = "U8.t" ->
