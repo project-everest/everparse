@@ -188,6 +188,12 @@ let leaf_reader_name = function
   | "U32.t" -> "LL.read_u32"
   | _ -> failwith "leaf_reader_name: should only be called for enum repr"
 
+let leaf_writer_name = function
+  | "U8.t" -> "LL.write_u8"
+  | "U16.t" -> "LL.write_u16"
+  | "U32.t" -> "LL.write_u32"
+  | _ -> failwith "leaf_writer_name: should only be called for enum repr"
+
 let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -390,6 +396,7 @@ end;
   w o "inline_for_extraction let %s_repr_validator = %s\n\n" n (validator_name repr_t);
   w o "inline_for_extraction let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
   w o "inline_for_extraction let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
+  w o "inline_for_extraction let %s_repr_writer = %s\n\n" n (leaf_writer_name repr_t);
 
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
@@ -477,7 +484,7 @@ end;
   w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond %s_serializer %dul) in\n" n blen;
   w o "  LP.size32_constant %s_serializer %dul ()\n\n" n blen;
 
-  (* Low *)
+  (* Low: validator *)
   begin
     if is_open then
       () (* validator not needed, since maybe_enum_key is total constant size *)
@@ -489,6 +496,32 @@ end;
       w o "  LL.validate_synth validate_%s%s_key synth_%s ()\n\n" maybe n n
       end
   end;
+
+  (* Low: reader *)
+  begin
+    if is_open then
+      begin
+        w o "inline_for_extraction let read_maybe_%s_key : LL.leaf_reader parse_maybe_%s_key =\n" n n;
+        w o "  LL.read_maybe_enum_key %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n
+      end
+    else
+      begin
+        w o "inline_for_extraction let read_%s_key : LL.leaf_reader parse_%s_key =\n" n n;
+        w o "  LL.read_enum_key %s_repr_reader %s_enum (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n n
+      end
+  end;
+  w i "inline_for_extraction val %s_reader: LL.leaf_reader %s_parser\n\n" n n;
+          w o "let %s_reader =\n" n;
+  w o " [@inline_let] let _ = lemma_synth_%s_inj () in\n" n;
+  w o " LL.read_synth' parse_%s%s_key synth_%s read_%s%s_key ()\n\n" maybe n n maybe n;
+
+  (* Low: writer *)
+  w o "inline_for_extraction let write_%s%s_key : LL.leaf_writer_strong serialize_%s%s_key =\n" maybe n maybe n;
+  w o "  LL.write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
+  w i "inline_for_extraction val %s_writer: LL.leaf_writer_strong %s_serializer\n\n" n n;
+  w o "let %s_writer =\n" n;
+  w o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
+  w o "  LL.write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x) ()\n\n" maybe n n n n;
 
   ()
 
@@ -949,6 +982,14 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (if need_validator then w o "let %s_validator = LL.validate_array %s %s %d %dul %d ()\n\n" n (scombinator_name ty0) (validator_name ty0) k k li.min_count);
       (* jumper not needed unless private, we are constant size *)
       (if is_private then w o "let %s_jumper : LL.jumper %s_parser = LL.jump_array %s %d %dul %d ()\n\n" n n (scombinator_name ty0) k k li.min_count);
+      w i "noextract let clens_%s_nth (i: nat { i < %d } ) : LL.clens %s %s = {\n" n li.min_count n ty0;
+      w i "  LL.clens_cond = (fun _ -> True);\n";
+      w i "  LL.clens_get = (fun (l: %s) -> L.index l i);\n" n;
+      w i "}\n\n";
+      w i "val %s_nth_ghost (i: nat {i < %d}) : LL.gaccessor %s_parser %s (clens_%s_nth i)\n\n" n li.max_count n (pcombinator_name ty0) n;
+      w o "let %s_nth_ghost i = LL.array_nth_ghost %s %d %d i\n\n" n (scombinator_name ty0) li.max_len li.max_count;
+      w i "inline_for_extraction val %s_nth (i: U32.t { U32.v i < %d } ) : LL.accessor (%s_nth_ghost (U32.v i))\n\n" n li.max_count n;
+      w o "let %s_nth i = LL.array_nth %s %d %d i\n\n" n (scombinator_name ty0) li.max_len li.max_count;
       ()
 
     (* Fixed bytelen list of variable length elements *)
