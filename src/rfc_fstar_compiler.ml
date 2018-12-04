@@ -211,9 +211,9 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       }
     | VectorVldata tn ->
       let (len_len, max_len) = basic_bounds tn in
-      let max' = min max_len li.max_len in
+      let max' = len_len + min max_len li.max_len in
       (*let min', max' = li.min_len, min li.max_len max_len in*)
-      {li with len_len = len_len; min_len = li.min_len; max_len = max'; vl = true; meta = MetadataDefault }
+      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = max'; vl = true; meta = MetadataDefault }
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
       let li' = get_leninfo (tn^"@"^cst) in
@@ -534,8 +534,9 @@ and compile_select o i n tagn tagt taga cl def al =
   let enum_fields = try SM.find tn !fields with
     | _ -> failwith ("Type "^tn^" is not an enum and cannot be used in select()") in
   let cl = (fun l -> let r = ref [] in
+    let dty = match def with Some d -> d | None -> "Fail" in
     List.iter (function
-      | EnumFieldSimple(cn, _) -> if not (List.mem_assoc cn l) then r := (cn, "Fail") :: !r
+      | EnumFieldSimple(cn, _) -> if not (List.mem_assoc cn l) then r := (cn, dty) :: !r
       | _ -> ()) enum_fields; l @ !r) cl in
 
   w o "friend %s\n\n" (module_name tagt);
@@ -547,9 +548,13 @@ and compile_select o i n tagn tagt taga cl def al =
   List.iter (fun (case, ty) -> w i "  | Case_%s _ -> %s\n" case (String.capitalize_ascii case)) cl;
   (match def with Some d -> w i "  | Case_Unknown_%s v _ -> Unknown_%s v\n" tn tn | _ -> ());
   w i "\n";
+
   write_api o i is_private li.meta n li.min_len li.max_len;
   let need_validator = need_validator li.meta li.min_len li.max_len in
   let need_jumper = need_jumper li.min_len li.max_len in
+
+  (* FIXME(adl) scalability is still not great *)
+  w o "// Need high Z3 limits for large sum types\n#set-options \"--z3rlimit 120\"\n\n";
 
   (** FIXME(adl) for now the t_sum of open and closed sums are independently generated,
   we may try to share more of the declarations between the two cases **)
@@ -879,69 +884,68 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorSymbolic cst -> failwith "not supported"
 
     | VectorVldata vl ->
-      (* N.B. for VectorVldata the size of the length is accounted outside the leninfo, unlike VectorRange *)
-    let (len_len, smax) = basic_bounds vl in
-    let (min, max) = li.min_len, li.max_len in
-    if elem_li.max_len <= smax
-    then begin
-      w i "type %s = %s\n\n" n ty0;
-      write_api o i is_private li.meta n (len_len+min) (len_len+max);
-      w o "let %s_parser =\n" n;
-      w o "  LP.parse_bounded_vldata %d %d %s\n\n" 0 smax (pcombinator_name ty0);
-      w o "let %s_serializer =\n" n;
-      w o "  LP.serialize_bounded_vldata %d %d %s\n\n" 0 smax (scombinator_name ty0);
-      w o "let %s_parser32 =\n" n;
-      w o "  LP.parse32_bounded_vldata %d %dul %d %dul %s\n\n" 0 0 smax smax (pcombinator32_name ty0);
-      w o "let %s_serializer32 =\n" n;
-      w o "  LP.serialize32_bounded_vldata %d %d %s\n\n" 0 smax (scombinator32_name ty0);
-      w o "let %s_size32 =\n" n;
-      w o "  LP.size32_bounded_vldata %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
-      if need_validator then begin
-        w o "let %s_validator =\n" n;
-        w o "  LL.validate_bounded_vldata %d %d %s ()\n\n" 0 smax (validator_name ty0);
-      end;
-      if need_jumper then begin
-        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-        w o "let %s_jumper%s =\n\n" n jumper_annot;
-        w o "  LL.jump_bounded_vldata %d %d %s ()\n\n" 0 smax (pcombinator_name ty0)
-      end;
-      ()
-    end else begin
-      let sizef =
-        if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty0)
-        else sprintf "%s_bytesize x" ty0 in
-      w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n ty0 sizef 0 smax;
-      write_api o i is_private li.meta n (len_len+min) (len_len+max);
-      w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty0);
-      w o "let _ = assert_norm (%s' == %s)\n\n" n n;
-      w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
-      w o "  LP.parse_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty0);
-      w o "let %s_parser = %s'_parser\n\n" n n;
-      w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
-      w o "  LP.serialize_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty0);
-      w o "let %s_serializer = %s'_serializer\n\n" n n;
-      w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-      w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul %s %s\n\n" 0 0 smax smax (scombinator_name ty0) (pcombinator32_name ty0);
-      w o "let %s_parser32 = %s'_parser32\n\n" n n;
-      w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-      w o "  LP.serialize32_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator32_name ty0);
-      w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
-      w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-      w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
-      w o "let %s_size32 = %s'_size32\n\n" n n;
-      if need_validator then begin
-        w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-        w o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty0) (validator_name ty0);
-        w o "let %s_validator = %s'_validator\n\n" n n
-      end;
-      if need_jumper then begin
-        w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-        w o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty0);
-        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-        w o "let %s_jumper%s = %s'_jumper\n\n" n jumper_annot n
-      end;
-      ()
-    end
+      let (len_len, smax) = basic_bounds vl in
+      let (min, max) = li.min_len, li.max_len in
+      if elem_li.max_len <= smax then
+       begin
+        w i "type %s = %s\n\n" n ty0;
+        write_api o i is_private li.meta n min max;
+        w o "let %s_parser =\n" n;
+        w o "  LP.parse_bounded_vldata %d %d %s\n\n" 0 smax (pcombinator_name ty0);
+        w o "let %s_serializer =\n" n;
+        w o "  LP.serialize_bounded_vldata %d %d %s\n\n" 0 smax (scombinator_name ty0);
+        w o "let %s_parser32 =\n" n;
+        w o "  LP.parse32_bounded_vldata %d %dul %d %dul %s\n\n" 0 0 smax smax (pcombinator32_name ty0);
+        w o "let %s_serializer32 =\n" n;
+        w o "  LP.serialize32_bounded_vldata %d %d %s\n\n" 0 smax (scombinator32_name ty0);
+        w o "let %s_size32 =\n" n;
+        w o "  LP.size32_bounded_vldata %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
+        if need_validator then (
+          w o "let %s_validator =\n" n;
+          w o "  LL.validate_bounded_vldata %d %d %s ()\n\n" 0 smax (validator_name ty0);
+        );
+        if need_jumper then (
+          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+          w o "let %s_jumper%s =\n\n" n jumper_annot;
+          w o "  LL.jump_bounded_vldata %d %d %s ()\n\n" 0 smax (pcombinator_name ty0)
+        )
+       end
+      else
+       begin
+        let sizef =
+          if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty0)
+          else sprintf "%s_bytesize x" ty0 in
+        w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n ty0 sizef 0 smax;
+        write_api o i is_private li.meta n min max;
+        w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty0);
+        w o "let _ = assert_norm (%s' == %s)\n\n" n n;
+        w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
+        w o "  LP.parse_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty0);
+        w o "let %s_parser = %s'_parser\n\n" n n;
+        w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+        w o "  LP.serialize_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty0);
+        w o "let %s_serializer = %s'_serializer\n\n" n n;
+        w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+        w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul %s %s\n\n" 0 0 smax smax (scombinator_name ty0) (pcombinator32_name ty0);
+        w o "let %s_parser32 = %s'_parser32\n\n" n n;
+        w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+        w o "  LP.serialize32_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator32_name ty0);
+        w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
+        w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+        w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
+        w o "let %s_size32 = %s'_size32\n\n" n n;
+        if need_validator then (
+          w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+          w o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty0) (validator_name ty0);
+          w o "let %s_validator = %s'_validator\n\n" n n
+        );
+        if need_jumper then (
+          w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+          w o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty0);
+          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+          w o "let %s_jumper%s = %s'_jumper\n\n" n jumper_annot n
+        )
+       end
 
     (* Fixed-length bytes *)
     | VectorFixed k when ty0 = "U8.t" ->
@@ -1387,7 +1391,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   ()
 
 (* Rewrite {... uintX len; t value[len]; ...} into VectorVldata *)
-and normalize_symboliclen o i sn (fl:struct_field_t list) : struct_field_t list =
+and normalize_symboliclen sn (fl:struct_field_t list) : struct_field_t list =
   match fl with
   | [] -> []
   | (al, TypeSimple(tagt), tagn, VectorNone, None)
@@ -1409,20 +1413,14 @@ and normalize_symboliclen o i sn (fl:struct_field_t list) : struct_field_t list 
               r := (etyp, ty) :: !r; Some etyp
             in
           List.iter (fun (etyp, t) ->
-            (*
-            add_field "" etyp (TypeSimple t) (VectorVldata tagt);
-            compile_typedef o i "" etyp (TypeSimple t) (VectorVldata tagt) None ("private"::al);
-            *)
             let p = Typedef(al @ al', TypeSimple t, etyp, VectorVldata tagt, None) in
             let (o', i') = open_files etyp in
-            compile o' i' "" p;
-            w i "(* Rewritten from vldata %s *)\ninclude %s\n\n" etyp (module_name etyp);
-            w o "(* Rewritten from vldata %s *)\nopen %s\n\n" etyp (module_name etyp);
+            compile o' i' "" p
           ) !r;
           (al @ al', TypeSelect(sel, cl', def'), n, VectorNone, None)
         in
-      h :: (normalize_symboliclen o i sn r)
-  | h :: t -> h :: (normalize_symboliclen o i sn t)
+      h :: (normalize_symboliclen sn r)
+  | h :: t -> h :: (normalize_symboliclen sn t)
 
 (* Hoist {... tag t; select(t){} ...} when other fields are present *)
 and normalize_select sn (fl:struct_field_t list)
@@ -1443,18 +1441,12 @@ and normalize_select sn (fl:struct_field_t list)
 
 and compile o i (tn:typ) (p:gemstone_t) =
   let n = if tn = "" then tname true p else tn^"_"^(tname false p) in
+  let mn = module_name n in
   let (fst, fsti) = !headers in
 
   (* .fsti *)
-  w i "module %s\n\n" (module_name n);
+  w i "module %s\n\n" mn;
   w i "open %s\n" !bytes;
-
-  let depl = getdep (tn = "") p in
-  let depl = List.filter (fun x -> not (basic_type x)) depl in
-  let depl = List.map module_name depl in
-  (List.iter (w i "open %s\n") depl);
-  w i "\n";
-
   w i "module U8 = FStar.UInt8\n";
   w i "module U16 = FStar.UInt16\n";
   w i "module U32 = FStar.UInt32\n";
@@ -1468,19 +1460,32 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w i "\n";
 
   (* .fst *)
-  w o "module %s\n\n" (module_name n);
+  w o "module %s\n\n" mn;
   w o "open %s\n" !bytes;
   w o "module U8 = FStar.UInt8\n";
   w o "module U16 = FStar.UInt16\n";
   w o "module U32 = FStar.UInt32\n";
 	w o "module LP = LowParse.SLow\n";
-        w o "module LPI = LowParse.Spec.Int\n";
-        w o "module LL = LowParse.Low\n";
+  w o "module LPI = LowParse.Spec.Int\n";
+  w o "module LL = LowParse.Low\n";
 	w o "module L = FStar.List.Tot\n";
   w o "module B = LowStar.Buffer\n";
   w o "module HST = FStar.HyperStack.ST\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
+
+  (* Rewrite synbolic vldata before computing length *)
+  let p = match p with
+    | Struct(al, fl, nn) -> Struct(al, normalize_symboliclen n fl, nn)
+    | p -> p in
+
+  let depl = getdep (tn = "") p in
+  let depl = List.filter (fun x -> not (basic_type x)) depl in
+  let depl = List.map module_name depl in
+  (List.iter (fun dep ->
+    if BatString.starts_with dep (mn^"_") then w i "include %s\n" dep
+    else w i "open %s\n" dep) depl);
+  w i "\n";
 
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
 
@@ -1489,7 +1494,6 @@ and compile o i (tn:typ) (p:gemstone_t) =
   	| Enum(al, fl, _) ->  compile_enum o i n fl al
     | Typedef(al, ty, n', vec, def) -> compile_typedef o i tn n' ty vec def al
     | Struct(al, fl, _) ->
-      let fl = normalize_symboliclen o i n fl in
       match normalize_select n fl [] [] with
       | [_, TypeSimple etyp', seln', VectorNone, None], [al, al', etyp, tagn, seln, tagt, cases, def] ->
         if etyp' <> etyp || seln' <> seln then failwith "Invalid rewrite of a select (QD bug)";
