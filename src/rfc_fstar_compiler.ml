@@ -1067,6 +1067,24 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         w o "let %s_jumper%s =\n" n jumper_annot;
         w o " LL.jump_vlarray %d %d %s %d %d () %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len
       end;
+      (* finalizer *)
+      w i "inline_for_extraction val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
+      w i "(requires (fun h ->\n";
+      w i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
+      w i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty0) li.len_len;
+      w i "  let count = L.length (LL.contents_list %s h sl (pos `U32.add` %dul) pos') in\n" (pcombinator_name ty0) li.len_len;
+      w i "  let len = U32.v pos' - (U32.v pos + %d) in\n" li.len_len;
+      w i "  ((%d <= len /\\ len <= %d) \\/ (%d <= count /\\ count <= %d))\n" low high li.min_count li.max_count;
+      w i ")))\n";
+      w i "(ensures (fun h _ h' ->\n";
+      w i "  B.modifies (LL.loc_slice_from_to sl pos (pos `U32.add` %dul)) h h' /\\ (\n" li.len_len;
+      w i "  let l = LL.contents_list %s h sl (pos `U32.add` %dul) pos' in\n" (pcombinator_name ty0) li.len_len;
+      w i "  %d <= L.length l /\\ L.length l <= %d /\\\n" li.min_count li.max_count;
+      w i "  LL.valid_content_pos %s_parser h' sl pos l pos'\n" n;
+      w i ")))\n\n";
+      w o "let _ : squash (%s == LL.vlarray %s %d %d) = _ by (FStar.Tactics.trefl ())\n\n" n ty0 li.min_count li.max_count;
+      w o "let finalize_%s sl pos pos' =\n" n;
+      w o "  LL.finalize_vlarray %d %d %s %d %d sl pos pos'\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
       ()
 
     (* Variable length list of variable length elements *)
@@ -1443,6 +1461,8 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w i "module LPI = LowParse.Spec.Int\n";
   w i "module LL = LowParse.Low.Base\n";
   w i "module L = FStar.List.Tot\n";
+  w i "module B = LowStar.Buffer\n";
+  w i "module HST = FStar.HyperStack.ST\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -1456,6 +1476,8 @@ and compile o i (tn:typ) (p:gemstone_t) =
         w o "module LPI = LowParse.Spec.Int\n";
         w o "module LL = LowParse.Low\n";
 	w o "module L = FStar.List.Tot\n";
+  w o "module B = LowStar.Buffer\n";
+  w o "module HST = FStar.HyperStack.ST\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
