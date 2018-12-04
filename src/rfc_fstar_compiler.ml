@@ -305,9 +305,9 @@ let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
    begin
     w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
     w i "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" n n n;
-    w i "inline_for_extraction val %s_parser32: LP.parser32 %s_parser\n\n" n n;
-    w i "inline_for_extraction val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
-    w i "inline_for_extraction val %s_size32: LP.size32 %s_serializer\n\n" n n;
+    w i "val %s_parser32: LP.parser32 %s_parser\n\n" n n;
+    w i "val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
+    w i "val %s_size32: LP.size32 %s_serializer\n\n" n n;
     begin if need_validator md bmin bmax then
       w i "inline_for_extraction val %s_validator: LL.validator %s_parser\n\n" n n
     else
@@ -388,15 +388,15 @@ end;
 	w o "  in e\n\n";
 
   (* Used in select() *)
-  w o "inline_for_extraction let %s_repr_parser = %s\n\n" n (pcombinator_name repr_t);
-  w o "inline_for_extraction let %s_repr_serializer = %s\n\n" n (scombinator_name repr_t);
-  w o "inline_for_extraction let %s_repr_parser32 = %s\n\n" n (pcombinator32_name repr_t);
-  w o "inline_for_extraction let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
-  w o "inline_for_extraction let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
-  w o "inline_for_extraction let %s_repr_validator = %s\n\n" n (validator_name repr_t);
-  w o "inline_for_extraction let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
-  w o "inline_for_extraction let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
-  w o "inline_for_extraction let %s_repr_writer = %s\n\n" n (leaf_writer_name repr_t);
+  w o "noextract let %s_repr_parser = %s\n\n" n (pcombinator_name repr_t);
+  w o "noextract let %s_repr_serializer = %s\n\n" n (scombinator_name repr_t);
+  w o "inline_for_extraction noextract let %s_repr_parser32 = %s\n\n" n (pcombinator32_name repr_t);
+  w o "inline_for_extraction noextract let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
+  w o "inline_for_extraction noextract let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
+  w o "inline_for_extraction noextract let %s_repr_validator = %s\n\n" n (validator_name repr_t);
+  w o "inline_for_extraction noextract let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
+  w o "inline_for_extraction noextract let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
+  w o "inline_for_extraction noextract let %s_repr_writer = %s\n\n" n (leaf_writer_name repr_t);
 
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
@@ -464,19 +464,19 @@ end;
 	w o "  LP.serialize_synth _ synth_%s serialize_%s%s_key synth_%s_inv ()\n\n" n maybe n n;
 
   (* Intermediate *)
-  w o "inline_for_extraction let parse32_%s%s_key : LP.parser32 parse_%s%s_key =\n" maybe n maybe n;
+  w o "let parse32_%s%s_key : LP.parser32 parse_%s%s_key =\n" maybe n maybe n;
   w o "  FStar.Tactics.synth_by_tactic (LP.parse32_%senum_key_tac LP.parse32_%s %s_enum)\n\n" maybe parse_t n;
-  w o "inline_for_extraction let %s_parser32 : LP.parser32 %s_parser =\n" n n ;
+  w o "let %s_parser32 : LP.parser32 %s_parser =\n" n n ;
   w o "  lemma_synth_%s_inj ();\n" n;
   w o "  LP.parse32_synth _ synth_%s (fun x->synth_%s x) parse32_%s%s_key ()\n\n" n n maybe n;
-	w o "inline_for_extraction let serialize32_%s%s_key : LP.serializer32 serialize_%s%s_key =\n" maybe n maybe n;
+	w o "let serialize32_%s%s_key : LP.serializer32 serialize_%s%s_key =\n" maybe n maybe n;
   begin if is_open then (* FIXME: harmonize the tactic name in LowParse *)
   w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n"
   else
   w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_enum_key_gen_tac\n"
   end;
   w o "    LP.serialize32_%s %s_enum)\n\n" parse_t n;
-  w o "inline_for_extraction let %s_serializer32 : LP.serializer32 %s_serializer =\n" n n;
+  w o "let %s_serializer32 : LP.serializer32 %s_serializer =\n" n n;
 	w o "  lemma_synth_%s_inj ();\n  lemma_synth_%s_inv ();\n" n n;
   w o "  LP.serialize32_synth _ synth_%s _ serialize32_%s%s_key synth_%s_inv (fun x->synth_%s_inv x) ()\n\n" n maybe n n n;
 
@@ -724,7 +724,7 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LP.serialize_false\n\n";
 
-  w o "\ninline_for_extraction let parse32_%s_cases (x:%s)\n" n ktype;
+  w o "\ninline_for_extraction noextract let parse32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.parser32 (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -733,7 +733,7 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LP.parse32_false\n\n";
 
-  w o "\ninline_for_extraction let serialize32_%s_cases (x:%s)\n" n ktype;
+  w o "\ninline_for_extraction noextract let serialize32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -742,7 +742,7 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LP.serialize32_false\n\n";
 
-  w o "\ninline_for_extraction let size32_%s_cases (x:%s)\n" n ktype;
+  w o "\ninline_for_extraction noextract let size32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.size32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -753,7 +753,7 @@ and compile_select o i n tagn tagt taga cl def al =
 
   if need_validator then
    begin
-    w o "\ninline_for_extraction let validate_%s_cases (x:%s)\n" n ktype;
+    w o "\ninline_for_extraction noextract let validate_%s_cases (x:%s)\n" n ktype;
     w o "  : LL.validator (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
     List.iter (fun (case, ty) ->
       let cn = String.capitalize_ascii case in
@@ -765,7 +765,7 @@ and compile_select o i n tagn tagt taga cl def al =
 
   if need_jumper then
    begin
-    w o "\ninline_for_extraction let jump_%s_cases (x:%s)\n" n ktype;
+    w o "\ninline_for_extraction noextract let jump_%s_cases (x:%s)\n" n ktype;
     w o "  : LL.jumper (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
     List.iter (fun (case, ty) ->
       let cn = String.capitalize_ascii case in
@@ -866,9 +866,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty0);
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty0);
-      w o "inline_for_extraction let %s_parser32 = %s\n\n" n (pcombinator32_name ty0);
-      w o "inline_for_extraction let %s_serializer32 = %s\n\n" n (scombinator32_name ty0);
-      w o "inline_for_extraction let %s_size32 = %s\n\n" n (size32_name ty0);
+      w o "let %s_parser32 = %s\n\n" n (pcombinator32_name ty0);
+      w o "let %s_serializer32 = %s\n\n" n (scombinator32_name ty0);
+      w o "let %s_size32 = %s\n\n" n (size32_name ty0);
       (if need_validator then w o "inline_for_extraction let %s_validator = %s\n\n" n (validator_name ty0));
       (if need_jumper then
          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
@@ -923,10 +923,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
       w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul %s %s\n\n" 0 0 smax smax (scombinator_name ty0) (pcombinator32_name ty0);
       w o "let %s_parser32 = %s'_parser32\n\n" n n;
-      w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+      w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
       w o "  LP.serialize32_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator32_name ty0);
       w o "let %s_serializer32 = %s'_serializer32\n\n" n n;
-      w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+      w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
       w o "let %s_size32 = %s'_size32\n\n" n n;
       if need_validator then begin
@@ -949,9 +949,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" n k;
       w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" n k;
-      w o "inline_for_extraction let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" n k k;
-      w o "inline_for_extraction let %s_serializer32 = LP.serialize32_flbytes %d\n\n" n k;
-      w o "inline_for_extraction let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" n n k;
+      w o "let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" n k k;
+      w o "let %s_serializer32 = LP.serialize32_flbytes %d\n\n" n k;
+      w o "let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" n n k;
       (* validator and jumper not needed unless private, we are total constant size *)
       if is_private then
        begin
@@ -975,7 +975,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "inline_for_extraction let %s'_parser32 = LP.parse32_array %s %s %d %dul %d ()\n\n"
         n (scombinator_name ty0) (pcombinator32_name ty0) k k li.min_count;
       w o "let %s_parser32 = %s_eq(); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n n;
-      w o "inline_for_extraction let %s'_serializer32 =\n" n;
+      w o "inline_for_extraction noextract let %s'_serializer32 =\n" n;
       w o "  LP.serialize32_array #_ #_ #_ #%s %s %d %d ()\n\n" (scombinator_name ty0) (scombinator32_name ty0) k li.min_count;
       w o "let %s_serializer32 = %s_eq(); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n n;
       w o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty0) k k li.min_count;
@@ -1006,13 +1006,13 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
       w o "  LP.serialize_fldata_strong (LP.serialize_list _ %s) %d\n\n" (scombinator_name ty0) k;
       w o "let %s_serializer = %s_eq () ; LP.coerce (LP.serializer %s_parser) %s'_serializer\n\n" n n n n;
-      w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+      w o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
       w o "  LP.parse32_fldata_strong (LP.serialize_list _ %s) (LP.parse32_list %s) %d %dul\n\n" (scombinator_name ty0) (pcombinator32_name ty0) k k;
       w o "let %s_parser32 = %s_eq (); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n n;
-      w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+      w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
       w o "  LP.serialize32_fldata_strong (LP.partial_serialize32_list _ %s %s ()) %d\n\n" (scombinator_name ty0) (scombinator32_name ty0) k;
       w o "let %s_serializer32 = %s_eq (); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n n;
-      w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+      w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_fldata_strong (LP.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty0) k k;
       w o "let %s_size32 = %s_eq (); LP.coerce (LP.size32 %s_serializer) %s'_size32\n\n" n n n n;
       w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
@@ -1033,9 +1033,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" n low high;
       w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" n low high;
-      w o "inline_for_extraction let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
-      w o "inline_for_extraction let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
-      w o "inline_for_extraction let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" n low high (log256 high);
+      w o "let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
+      w o "let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
+      w o "let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" n low high (log256 high);
       if need_validator then  w o "inline_for_extraction let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
       if need_jumper then begin
         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
@@ -1057,6 +1057,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_serializer32 =\n" n;
       w o "  LP.serialize32_vlarray %d %d #_ #_ #_ #%s %s %d %d ()\n\n" low high (scombinator_name ty0) (scombinator32_name ty0) li.min_count li.max_count;
       w o "let %s_size32 =\n" n;
+      w o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" low high (pcombinator_name ty0) li.min_count li.max_count;
       w o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty0) li.min_count li.max_count li.len_len elem_li.min_len;
       if need_validator then begin
         w o "let %s_validator =\n" n;
@@ -1103,13 +1104,13 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
       w o "  LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s)\n\n" min max (scombinator_name ty0);
       w o "let %s_serializer = LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n n;
-      w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+      w o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
       w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s) (LP.parse32_list %s)\n\n" min min max max (scombinator_name ty0) (pcombinator32_name ty0);
       w o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
-      w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+      w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
       w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s %s ())\n\n" min max (scombinator_name ty0) (scombinator32_name ty0);
       w o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
-      w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+      w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
       w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s ()) %dul\n\n" min max (size32_name ty0) li.len_len;
       w o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
       if need_validator then begin
@@ -1241,7 +1242,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
       if acc="" then c else sprintf "%s\n  `LP.parse32_nondep_then` %s" acc c
     ) "" fields in
   w o "  %s\n\n" tuple;
-  w o "inline_for_extraction let %s_parser32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  w o "let %s_parser32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   w o "  LP.parse32_synth _ synth_%s (fun x -> synth_%s x) %s'_parser32 ()\n\n" n n n;
 
@@ -1255,7 +1256,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     ) (List.rev fields) "" in
   w o "  %s\n\n" tuple;
 
-  w o "inline_for_extraction let %s_serializer32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  w o "let %s_serializer32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
   w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   w o "  LP.serialize32_synth _ synth_%s _ %s'_serializer32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
