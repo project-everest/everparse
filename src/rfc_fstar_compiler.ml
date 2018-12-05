@@ -716,7 +716,7 @@ and compile_select o i n tagn tagt taga cl def al =
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
-    w o "  | %s -> let u : (k: LP.parser_kind & LP.parser k (%s_case_of_%s %s)) = (| _, %s |) in u\n" cn n tn cn (pcombinator_name ty0)
+    w o "  | %s -> [@inline_let] let u : (k: LP.parser_kind & LP.parser k (%s_case_of_%s %s)) = (| _, %s |) in u\n" cn n tn cn (pcombinator_name ty0)
   ) cl;
   w o "  | _ -> (| _, LP.parse_false |)\n\n";
 
@@ -725,7 +725,7 @@ and compile_select o i n tagn tagt taga cl def al =
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
     let ty0 = compile_type ty in
-    w o "  | %s -> let u : LP.serializer (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (scombinator_name ty0)
+    w o "  | %s -> [@inline_let] let u : LP.serializer (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (scombinator_name ty0)
   ) cl;
   w o "  | _ -> LP.serialize_false\n\n";
 
