@@ -6,6 +6,7 @@ module SM = Map.Make (String)
 
 type parser_kind_metadata =
   | MetadataTotal
+  | MetadataFail
   | MetadataDefault
 
 (* Special case of select over a tag *)
@@ -14,6 +15,7 @@ type tag_select_t =
 
 let string_of_parser_kind_metadata = function
   | MetadataTotal -> "total"
+  | MetadataFail -> "fail"
   | MetadataDefault -> "default"
 
 type len_info = {
@@ -96,13 +98,21 @@ let rec sizeof = function
     let lil = (List.map (fun (_,ty) -> sizeof (TypeSimple ty)) cl)
       @ (match def with None -> [] | Some ty -> [sizeof (TypeSimple ty)]) in
     let li = { len_len = 0; min_len = max_int; max_len = 0; min_count = 0; max_count = 0; vl = false;
-      meta = match def with None -> MetadataDefault | Some _ -> MetadataTotal } in
+      meta = match def with None -> MetadataDefault
+             | Some t -> if t = "Fail" then MetadataFail else MetadataTotal } in
     List.iter (fun l ->
-      li.min_len <- min li.min_len l.min_len;
-      li.max_len <- max li.max_len l.max_len;
-      if l.vl then li.vl <- true;
-      if l.meta = MetadataDefault then li.meta <- MetadataDefault
-    ) lil; li
+      match l.meta with
+      | MetadataFail -> (* Ignore size for the length boundaries *)
+        if li.meta <> MetadataFail then li.meta <- MetadataDefault
+      | md ->
+        li.min_len <- min li.min_len l.min_len;
+        li.max_len <- max li.max_len l.max_len;
+        if l.vl then li.vl <- true;
+        if li.meta = MetadataFail || md = MetadataDefault then li.meta <- md
+    ) lil;
+    (* Propagating Fail outside of select() is not supported in LowParse *)
+    if li.meta = MetadataFail then failwith (sprintf "Type select(%s) cannot parse any data" n);
+    li
   | TypeSimple typ ->
     match typ with
     | "opaque"
@@ -111,7 +121,7 @@ let rec sizeof = function
     | "uint24" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "Empty" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
-    | "Fail" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataDefault }
+    | "Fail" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataFail }
     | s ->
       let li = get_leninfo s in
       {li with len_len = li.len_len} (* shallow copy *)
@@ -207,13 +217,17 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         min_count = k / li.min_len;
         max_count = k / li.max_len;
         (* FIXME: should be li.meta but only bytes are total in LowParse currently *)
-        meta = match ty with TypeSimple ("uint8") | TypeSimple ("opaque") -> MetadataTotal | _ -> MetadataDefault;
+        meta = match ty with
+               | TypeSimple ("uint8") | TypeSimple ("opaque") -> MetadataTotal
+               | TypeSimple ("Fail") -> MetadataFail
+               | _ -> MetadataDefault;
       }
     | VectorVldata tn ->
       let (len_len, max_len) = basic_bounds tn in
       let max' = len_len + min max_len li.max_len in
       (*let min', max' = li.min_len, min li.max_len max_len in*)
-      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = max'; vl = true; meta = MetadataDefault }
+      let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
+      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = max'; vl = true; meta = meta' }
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
       let li' = get_leninfo (tn^"@"^cst) in
@@ -221,8 +235,9 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       let max' = min li.max_len (match li'.max_len with
       | 1 -> 255 | 2 ->  65535 | 3 -> 16777215 | 4 -> 4294967295
       | _ -> failwith "bad vldata") in
+      let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
       (* N.B. the len_len will be counted in the explicit length field *)
-      {li' with vl = true; len_len = 0; min_len = li.min_len; max_len = max'; meta = MetadataDefault }
+      {li' with vl = true; len_len = 0; min_len = li.min_len; max_len = max'; meta = meta' }
     | VectorRange (low, high) ->
       let h = log256 high in
       (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^tn));
@@ -232,7 +247,7 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         len_len = h;
         min_len = h + low;
         max_len = h + high;
-        meta = MetadataDefault;
+        meta = if li.meta = MetadataFail then li.meta else MetadataDefault;
       } in
     li_add qname li'
 
@@ -292,15 +307,13 @@ let need_jumper bmin bmax =
 
 let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
   let parser_kind = match md with
-    | MetadataDefault -> "LP.default_parser_kind.LP.parser_kind_metadata"
-    | MetadataTotal   -> "({ LP.parser_kind_metadata_total = true })"
+    | MetadataTotal   -> "(Some LP.ParserKindMetadataTotal)"
+    | MetadataFail -> "(Some LP.ParserKindMetadataFail)"
+    | MetadataDefault -> "None"
     in
   w i "inline_for_extraction noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s\n\n" n bmin bmax parser_kind;
   w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
-  if is_private then
-   begin
-     ()
-   end
+  if is_private then ()
   else
    begin
     w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
@@ -308,16 +321,14 @@ let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
     w i "val %s_parser32: LP.parser32 %s_parser\n\n" n n;
     w i "val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
     w i "val %s_size32: LP.size32 %s_serializer\n\n" n n;
-    begin if need_validator md bmin bmax then
+    if need_validator md bmin bmax then
       w i "inline_for_extraction val %s_validator: LL.validator %s_parser\n\n" n n
     else
-      w i "inline_for_extraction let %s_validator: LL.validator %s_parser = LL.validate_total_constant_size %s_parser %dul ()\n\n" n n n bmin
-    end;
-    begin if need_jumper bmin bmax then
+      w i "inline_for_extraction let %s_validator: LL.validator %s_parser = LL.validate_total_constant_size %s_parser %dul ()\n\n" n n n bmin;
+    if need_jumper bmin bmax then
       w i "inline_for_extraction val %s_jumper: LL.jumper %s_parser\n\n" n n
     else
-      w i "inline_for_extraction let %s_jumper: LL.jumper %s_parser = LL.jump_constant_size %s_parser %dul ()\n\n" n n n bmin
-    end;
+      w i "inline_for_extraction let %s_jumper: LL.jumper %s_parser = LL.jump_constant_size %s_parser %dul ()\n\n" n n n bmin;
     ()
    end
 
@@ -1039,7 +1050,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" n low high;
       w o "let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
       w o "let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
-      w o "let %s_size32 = LP.size32_bounded_vlbytes %d %d %dul\n\n" n low high (log256 high);
+      w o "let %s_size32 = LP.size32_bounded_vlbytes %d %d\n\n" n low high;
       if need_validator then  w o "inline_for_extraction let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
       if need_jumper then begin
         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in

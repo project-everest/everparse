@@ -69,7 +69,7 @@ struct {
 
 struct {
   uint8 u;
-  opaque x[18]; 
+  opaque x[18];
   uint16 y;
 } t14;
 
@@ -109,7 +109,7 @@ struct {
   uint8 len;
   select(t)
   {
-    case a: uint32;
+    case a: Fail;
     case b: t13;
   } x[len];
 } t18;
