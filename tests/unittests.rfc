@@ -113,3 +113,42 @@ struct {
     case b: t13;
   } x[len];
 } t18;
+
+struct {
+  /*@implicit*/ tag t;
+  uint16 len;
+  select(t)
+  {
+    case a: Fail;
+    case b: t13;
+  } x[len];
+} t19;
+
+struct {
+  /*@implicit*/ tag2 t;
+  uint16 len;
+  select(t)
+  {
+    case x: Fail;
+    case y: t4;
+    default: uint16;
+  } x[len];
+} t20;
+
+/*
+ Types constructed from implicit sums will
+ cause QD to stage the parsing using vlbytes
+*/
+struct {
+  t19 first;
+  t20 second;
+} t21;
+
+struct {
+  tag t;
+  select(t)
+  {
+    case a: t19;
+    case b: t20;
+  } body;
+} t22;

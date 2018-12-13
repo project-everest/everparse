@@ -46,7 +46,7 @@ vector:
 	|	{ VectorNone }
 	| LBRACK; l = INT; RBRACK; { VectorFixed(l) }
 	| LBRACK; s = TYPE; RBRACK;	{ VectorSymbolic(s) }
-	| r = RANGE; { let (min,max)=r in VectorRange(min,max) }
+	| r = RANGE; { let (min,max)=r in VectorRange(min,max,0) }
 ;
 
 enum_field:

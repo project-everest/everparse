@@ -19,7 +19,7 @@ and print_vector = function
   | VectorNone -> ""
 	| VectorFixed(n) -> sprintf "[%d]" n
 	| VectorSymbolic(k) -> sprintf "[%s]" k
-	| VectorRange(a,b) -> sprintf "<%d..%d>" a b
+	| VectorRange(a,b,_) -> sprintf "<%d..%d>" a b
 
 and print_enum_fields p (fl:enum_field_t list) =
 	let print ac f = sprintf "%s\n%s%s" ac (pad p) (match f with

@@ -32,7 +32,10 @@ type len_info = {
 let linfo : len_info SM.t ref = ref SM.empty
 
 (* Storage of enum fields for select *)
-let fields: (enum_field_t list) SM.t ref = ref SM.empty
+let fields: (enum_field_t list * bool) SM.t ref = ref SM.empty
+
+(* Substitution map for global type rewriting *)
+let subst: typ SM.t ref = ref SM.empty
 
 let w = fprintf
 
@@ -91,15 +94,14 @@ let basic_type = function
 let basic_bounds = function
   | "uint8" -> 1, 255 | "uint16" -> 2, 65535
   | "uint24" -> 3, 16777215 | "uint32" -> 4, 4294967295
-  | _ -> failwith "not a base type"
+  | s -> failwith (s^" is not a base type and can't be used as symbolic length")
 
 let rec sizeof = function
   | TypeSelect(n, cl, def) ->
     let lil = (List.map (fun (_,ty) -> sizeof (TypeSimple ty)) cl)
       @ (match def with None -> [] | Some ty -> [sizeof (TypeSimple ty)]) in
-    let li = { len_len = 0; min_len = max_int; max_len = 0; min_count = 0; max_count = 0; vl = false;
-      meta = match def with None -> MetadataDefault
-             | Some t -> if t = "Fail" then MetadataFail else MetadataTotal } in
+    let li = { len_len = 0; min_len = max_int; max_len = 0; min_count = 0; max_count = 0;
+      vl = true; meta = MetadataTotal } in
     List.iter (fun l ->
       match l.meta with
       | MetadataFail -> (* Ignore size for the length boundaries *)
@@ -107,7 +109,10 @@ let rec sizeof = function
       | md ->
         li.min_len <- min li.min_len l.min_len;
         li.max_len <- max li.max_len l.max_len;
-        if l.vl then li.vl <- true;
+        (if l.vl then
+          (if li.len_len = 0 then li.len_len <- l.len_len;
+          if l.len_len <> li.len_len then li.vl <- false)
+        else li.vl <- false);
         if li.meta = MetadataFail || md = MetadataDefault then li.meta <- md
     ) lil;
     (* Propagating Fail outside of select() is not supported in LowParse *)
@@ -204,10 +209,11 @@ let leaf_writer_name = function
   | "U32.t" -> "LL.write_u32"
   | _ -> failwith "leaf_writer_name: should only be called for enum repr"
 
-let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
+let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
   let li' =
+    if has_attr al "implicit" then sizeof (TypeSimple "Empty") else
     match v with
     | VectorNone -> li
     | VectorFixed k ->
@@ -238,8 +244,9 @@ let add_field (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
       (* N.B. the len_len will be counted in the explicit length field *)
       {li' with vl = true; len_len = 0; min_len = li.min_len; max_len = max'; meta = meta' }
-    | VectorRange (low, high) ->
-      let h = log256 high in
+    | VectorRange (low, high, repr) ->
+      let h = if repr = 0 then log256 high else repr in
+      (if h < log256 high then failwith (sprintf "Can't represent <%d..%d> over %d bytes" low high repr));
       (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^tn));
       { vl = true;
         min_count = low / (li.len_len + li.max_len);
@@ -283,16 +290,15 @@ let getdep (toplevel:bool) (p:gemstone_t) : typ list =
       if not toplevel then failwith "invalid internal rewrite of a struct";
       let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; meta = MetadataTotal } in
       let dep = List.map (fun (al, ty, n, vec, def) ->
-        add_field tn n ty vec;
+        add_field al tn n ty vec;
         let lif = get_leninfo (tn^"@"^n) in
-        li.vl <- li.vl || lif.vl;
         li.min_len <- li.min_len + lif.min_len;
         li.max_len <- li.max_len + lif.max_len;
         if lif.meta = MetadataDefault then li.meta <- MetadataDefault;
         typedep ty) fl in
       li_add tn li; dep
     | Typedef (al, ty, n, vec, def) ->
-      if toplevel then add_field "" (String.uncapitalize_ascii n) ty vec;
+      if toplevel then add_field al "" (String.uncapitalize_ascii n) ty vec;
       [typedep ty]
     in
   dedup (List.flatten dep)
@@ -305,37 +311,46 @@ let need_validator (md: parser_kind_metadata) bmin bmax =
 let need_jumper bmin bmax =
   bmin <> bmax
 
-let write_api o i is_private (md: parser_kind_metadata) n bmin bmax =
+let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin bmax =
+  let (parg, ptyp, pparse, pser) = match p with
+    | None -> "", n, sprintf "%s_parser" n, sprintf "%s_serializer" n
+    | Some t ->
+      sprintf " (k:%s)" (compile_type t), sprintf "(%s k)" n,
+      sprintf "(%s_parser k)" n, sprintf "(%s_serializer k)" n
+    in
   let parser_kind = match md with
     | MetadataTotal   -> "(Some LP.ParserKindMetadataTotal)"
     | MetadataFail -> "(Some LP.ParserKindMetadataFail)"
     | MetadataDefault -> "None"
     in
   w i "inline_for_extraction noextract let %s_parser_kind = LP.strong_parser_kind %d %d %s\n\n" n bmin bmax parser_kind;
-  w i "noextract val %s_parser: LP.parser %s_parser_kind %s\n\n" n n n;
+  w i "noextract val %s_parser%s: LP.parser %s_parser_kind %s\n\n" n parg n ptyp;
   if is_private then ()
   else
    begin
-    w i "noextract val %s_serializer: LP.serializer %s_parser\n\n" n n;
-    w i "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s_serializer x)\n\n" n n n;
-    w i "val %s_parser32: LP.parser32 %s_parser\n\n" n n;
-    w i "val %s_serializer32: LP.serializer32 %s_serializer\n\n" n n;
-    w i "val %s_size32: LP.size32 %s_serializer\n\n" n n;
+    w i "noextract val %s_serializer%s: LP.serializer %s\n\n" n parg pparse;
+    if p = None then
+      w i "noextract let %s_bytesize (x:%s) : GTot nat = Seq.length (%s x)\n\n" n n pser
+    else
+      w i "noextract let %s_bytesize%s (x:%s k) : GTot nat = let s = %s in Seq.length (s x)\n\n" n parg n pser;
+    w i "val %s_parser32%s: LP.parser32 %s\n\n" n parg pparse;
+    w i "val %s_serializer32%s: LP.serializer32 %s\n\n" n parg pser;
+    w i "val %s_size32%s: LP.size32 %s\n\n" n parg pser;
     if need_validator md bmin bmax then
-      w i "inline_for_extraction val %s_validator: LL.validator %s_parser\n\n" n n
+      w i "inline_for_extraction val %s_validator%s: LL.validator %s\n\n" n parg pparse
     else
-      w i "inline_for_extraction let %s_validator: LL.validator %s_parser = LL.validate_total_constant_size %s_parser %dul ()\n\n" n n n bmin;
+      w i "inline_for_extraction let %s_validator%s: LL.validator %s = LL.validate_total_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
     if need_jumper bmin bmax then
-      w i "inline_for_extraction val %s_jumper: LL.jumper %s_parser\n\n" n n
+      w i "inline_for_extraction val %s_jumper%s: LL.jumper %s\n\n" n parg pparse
     else
-      w i "inline_for_extraction let %s_jumper: LL.jumper %s_parser = LL.jump_constant_size %s_parser %dul ()\n\n" n n n bmin;
+      w i "inline_for_extraction let %s_jumper%s: LL.jumper %s = LL.jump_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
     ()
    end
 
 let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
-  fields := SM.add n fl !fields; (* Record fields for select() auto-completion *)
   let is_open = has_attr al "open" in
   let is_private = has_attr al "private" in
+  fields := SM.add n (fl, is_open) !fields;
 
   let repr_t, int_z, parse_t, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
@@ -536,31 +551,59 @@ end;
 
   ()
 
-and compile_select o i n tagn tagt taga cl def al =
+and compile_select o i n seln tagn tagt taga cl def al =
   let is_private = has_attr al "private" in
+  let is_implicit = has_attr taga "implicit" in
   let li = get_leninfo n in
   let tn = compile_type tagt in
 
+  (* We need to substitute the whole type for encapsulating vlbytes *)
+  if is_implicit then
+   begin
+    let li' = get_leninfo (n^"@"^seln) in
+    if not li'.vl then failwith (sprintf "Cannot make tag %s implicit in %s because some cases are not VLData" tagt n);
+    let n' = sprintf "%s_implicit" n in
+    subst := SM.add n n' !subst;
+    let p = Typedef (al, TypeSimple("opaque"), n', VectorRange(li'.min_len-li'.len_len, li'.max_len-li'.len_len, li'.len_len), None) in
+    let (o', i') = open_files n' in
+    compile o' i' "" p
+   end;
+
   (* Complete undefined cases in enum with Fail *)
-  let enum_fields = try SM.find tn !fields with
+  let (enum_fields, is_open) = try SM.find tn !fields with
     | _ -> failwith ("Type "^tn^" is not an enum and cannot be used in select()") in
+
+  (* Auto-complete omitted cases, with default case if provided *)
   let cl = (fun l -> let r = ref [] in
     let dty = match def with Some d -> d | None -> "Fail" in
+    let li_dty = sizeof (TypeSimple dty) in
     List.iter (function
-      | EnumFieldSimple(cn, _) -> if not (List.mem_assoc cn l) then r := (cn, dty) :: !r
+      | EnumFieldSimple(cn, _) ->
+        if not (List.mem_assoc cn l) then (
+          if li_dty.meta <> MetadataTotal then li.meta <- MetadataDefault;
+          r := (cn, dty) :: !r
+        )
       | _ -> ()) enum_fields; l @ !r) cl in
 
-  w o "friend %s\n\n" (module_name tagt);
-  w i "type %s =\n" n;
-  List.iter (fun (case, ty) -> w i "  | Case_%s of %s\n" case (compile_type ty)) cl;
-  (match def with Some d -> w i "  | Case_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> %s -> %s\n" tn tn tn (compile_type d) n | _ -> ());
+  let def = if is_open then
+    (if def = None then failwith ("Missing default case of open sum "^n) else def)
+    else None in
 
-  w i "\ninline_for_extraction let tag_of_%s (x:%s) : %s = match x with\n" n n (compile_type tagt);
+  let prime = if is_implicit then "'" else "" in
+  w o "friend %s\n\n" (module_name tagt);
+  w i "type %s%s =\n" n prime;
+  List.iter (fun (case, ty) -> w i "  | Case_%s of %s\n" case (compile_type ty)) cl;
+  (match def with Some d -> w i "  | Case_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> x:%s -> %s%s\n" tn tn tn (compile_type d) n prime | _ -> ());
+
+  w i "\ninline_for_extraction let tag_of_%s (x:%s%s) : %s = match x with\n" n n prime (compile_type tagt);
   List.iter (fun (case, ty) -> w i "  | Case_%s _ -> %s\n" case (String.capitalize_ascii case)) cl;
   (match def with Some d -> w i "  | Case_Unknown_%s v _ -> Unknown_%s v\n" tn tn | _ -> ());
   w i "\n";
 
-  write_api o i is_private li.meta n li.min_len li.max_len;
+  if is_implicit then
+    w i "type %s (k:%s) = x:%s'{tag_of_%s x == k}\n\n" n (compile_type tagt) n n;
+
+  write_api o i is_private li.meta n li.min_len li.max_len ~param:(if is_implicit then Some tagt else None);
   let need_validator = need_validator li.meta li.min_len li.max_len in
   let need_jumper = need_jumper li.min_len li.max_len in
 
@@ -577,7 +620,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o " (ensures fun _ -> True) =\n";
     w o "  [@inline_let] let _ = norm_spec [delta; zeta; iota; primops] (LP.list_mem x (LP.list_map fst %s_enum)) in x\n\n" tn;
 
-    w o "inline_for_extraction let key_of_%s (x:%s) : LP.enum_key %s_enum =\n" n n tn;
+    w o "inline_for_extraction let key_of_%s (x:%s%s) : LP.enum_key %s_enum =\n" n n prime tn;
     w o "  match x with\n";
     List.iter (fun (case, ty) -> w o "  | Case_%s _ -> %s_as_enum_key %s\n" case tn (String.capitalize_ascii case)) cl;
     w o "\ninline_for_extraction let %s_case_of_%s (x:%s) : Type0 =\n" n tn tn;
@@ -587,7 +630,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  : Pure (norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
     w o "  (requires (x == x')) (ensures (fun y' -> y' == y)) =\n";
     w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)] ; iota] (%s_case_of_%s x) in y\n\n" n tn n tn;
-    w o "unfold inline_for_extraction let %s_refine (k:LP.enum_key %s_enum) (x:%s)\n" n tn n;
+    w o "unfold inline_for_extraction let %s_refine (k:LP.enum_key %s_enum) (x:%s%s)\n" n tn n prime;
     w o "  : Pure (LP.refine_with_tag key_of_%s k)" n;
     w o "  (requires norm [delta; iota; zeta] (key_of_%s x) == k) (ensures (fun y -> y == x)) =\n" n;
     w o "  [@inline_let] let _ = norm_spec [delta; iota; zeta] (key_of_%s x) in x\n\n" n;
@@ -613,7 +656,7 @@ and compile_select o i n tagn tagt taga cl def al =
       w o "    (match x with Case_%s y -> (from_%s_case_of_%s %s y))\n"
         case n tn (String.capitalize_ascii case)
     ) cl;
-    w o "inline_for_extraction let %s_sum = LP.make_sum' %s_enum key_of_%s\n" n tn n;
+    w o "\ninline_for_extraction let %s_sum = LP.make_sum' %s_enum key_of_%s\n" n tn n;
     w o "  %s_case_of_%s synth_%s_cases synth_%s_cases_recip\n" n tn n n;
     w o "  (_ by (LP.make_sum_synth_case_recip_synth_case_tac ()))\n";
     w o "  (_ by (LP.synth_case_synth_case_recip_tac ()))\n\n";
@@ -633,7 +676,7 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  (requires True) (ensures fun r -> known_%s_repr r == false) =\n" tn;
     w o "  [@inline_let] let _ = assert_norm(LP.list_mem r (LP.list_map snd %s_enum) == known_%s_repr r) in r\n\n" tn tn;
 
-    w o "inline_for_extraction let key_of_%s (x:%s) : LP.maybe_enum_key %s_enum =\n  match x with\n" n n tn;
+    w o "inline_for_extraction let key_of_%s (x:%s%s) : LP.maybe_enum_key %s_enum =\n  match x with\n" n n prime tn;
     List.iter (fun (case, ty) ->
       let cn, ty0 = String.capitalize_ascii case, compile_type ty in
       w o "  | Case_%s _ -> LP.Known (known_%s_as_enum_key %s)\n" case tn cn
@@ -649,7 +692,7 @@ and compile_select o i n tagn tagt taga cl def al =
 
     w o "\nunfold inline_for_extraction let %s_value_type (x:LP.maybe_enum_key %s_enum) =\n" n tn;
     w o "  LP.dsum_type_of_tag' %s_enum %s_case_of_%s %s x\n\n" tn n tn tyd;
-    w o "unfold inline_for_extraction let %s_refine (k:LP.maybe_enum_key %s_enum) (x:%s)\n" n tn n;
+    w o "unfold inline_for_extraction let %s_refine (k:LP.maybe_enum_key %s_enum) (x:%s%s)\n" n tn n prime;
     w o "  : Pure (LP.refine_with_tag key_of_%s k)\n" n;
     w o "  (requires key_of_%s x == k) (ensures fun y -> y == x) =\n" n;
     w o "  [@inline_let] let _ = norm_spec [delta; iota; zeta] (key_of_%s x) in x\n\n" n;
@@ -668,14 +711,14 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  (y:%s_value_type (LP.Known k)) : LP.refine_with_tag key_of_%s (LP.Known k) =\n  match k with\n" n n;
     List.iter (fun (case, ty) ->
       let cn, ty0 = String.capitalize_ascii case, compile_type ty in
-      w o "  | %s ->\n    [@inline_let] let x : %s = Case_%s (%s_type_of_known_case k %s () y) in\n" cn n case n cn;
+      w o "  | %s ->\n    [@inline_let] let x : %s%s = Case_%s (%s_type_of_known_case k %s () y) in\n" cn n prime case n cn;
       w o "    [@inline_let] let _ = assert_norm (key_of_%s x == LP.Known %s) in\n" n cn;
       w o "    %s_refine (LP.Known %s) x\n" n cn
     ) cl;
     w o "\ninline_for_extraction let synth_%s_cases (x:LP.maybe_enum_key %s_enum)\n" n tn;
     w o "  (y:%s_value_type x) : LP.refine_with_tag key_of_%s x =\n  match x with\n" n n;
     w o "  | LP.Unknown v ->\n";
-    w o "    [@inline_let] let x : %s = Case_Unknown_%s (unknown_enum_repr_%s_as_repr v) y in\n" n tn tn;
+    w o "    [@inline_let] let x : %s%s = Case_Unknown_%s (unknown_enum_repr_%s_as_repr v) y in\n" n prime tn tn;
     w o "    [@inline_let] let _ = assert_norm (key_of_%s x == LP.Unknown v) in\n" n;
     w o "    %s_refine (LP.Unknown v) x\n" n;
     w o "  | LP.Known k -> synth_known_%s_cases k y\n\n" n;
@@ -693,7 +736,7 @@ and compile_select o i n tagn tagt taga cl def al =
     ) cl;
     w o "  | LP.Known _ -> false\n";
     w o "  | LP.Unknown _ -> Case_Unknown_%s? x\n\n" tn;
-    w o "let synth_%s_cases_recip_pre_intro' (x: %s) : Lemma (synth_%s_cases_recip_pre (key_of_%s x) x) = ()\n" n n n n;
+    w o "let synth_%s_cases_recip_pre_intro' (x: %s%s)\n  : Lemma (synth_%s_cases_recip_pre (key_of_%s x) x) = ()\n\n" n n prime n n;
     w o "let synth_%s_cases_recip_pre_intro (k:LP.maybe_enum_key %s_enum)\n" n tn;
     w o "  (x:LP.refine_with_tag key_of_%s k)\n" n;
     w o "  : Lemma (synth_%s_cases_recip_pre k x == true) =\n" n;
@@ -710,7 +753,7 @@ and compile_select o i n tagn tagt taga cl def al =
     ) cl;
     w o  "   | _ -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro (LP.Known k') in false_elim ()\n\n" n;
 
-    w o "\ninline_for_extraction let %s_sum : LP.dsum = LP.make_dsum' %s_enum key_of_%s\n" n tn n;
+    w o "inline_for_extraction let %s_sum : LP.dsum = LP.make_dsum' %s_enum key_of_%s\n" n tn n;
     w o "  %s_case_of_%s %s synth_%s_cases synth_%s_cases_recip\n" n tn tyd n n;
     w o "  (_ by (LP.make_dsum_synth_case_recip_synth_case_known_tac ()))\n";
     w o "  (_ by (LP.make_dsum_synth_case_recip_synth_case_unknown_tac ()))\n";
@@ -731,7 +774,7 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> (| _, LP.parse_false |)\n\n";
 
-  w o "\nnoextract let serialize_%s_cases (x:%s)\n" n ktype;
+  w o "noextract let serialize_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.serializer (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -740,7 +783,7 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LP.serialize_false\n\n";
 
-  w o "\ninline_for_extraction noextract let parse32_%s_cases (x:%s)\n" n ktype;
+  w o "inline_for_extraction noextract let parse32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.parser32 (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -749,7 +792,7 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LP.parse32_false\n\n";
 
-  w o "\ninline_for_extraction noextract let serialize32_%s_cases (x:%s)\n" n ktype;
+  w o "inline_for_extraction noextract let serialize32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -758,7 +801,7 @@ and compile_select o i n tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LP.serialize32_false\n\n";
 
-  w o "\ninline_for_extraction noextract let size32_%s_cases (x:%s)\n" n ktype;
+  w o "inline_for_extraction noextract let size32_%s_cases (x:%s)\n" n ktype;
   w o "  : LP.size32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
@@ -769,7 +812,7 @@ and compile_select o i n tagn tagt taga cl def al =
 
   if need_validator then
    begin
-    w o "\ninline_for_extraction noextract let validate_%s_cases (x:%s)\n" n ktype;
+    w o "inline_for_extraction noextract let validate_%s_cases (x:%s)\n" n ktype;
     w o "  : LL.validator (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
     List.iter (fun (case, ty) ->
       let cn = String.capitalize_ascii case in
@@ -781,7 +824,7 @@ and compile_select o i n tagn tagt taga cl def al =
 
   if need_jumper then
    begin
-    w o "\ninline_for_extraction noextract let jump_%s_cases (x:%s)\n" n ktype;
+    w o "inline_for_extraction noextract let jump_%s_cases (x:%s)\n" n ktype;
     w o "  : LL.jumper (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
     List.iter (fun (case, ty) ->
       let cn = String.capitalize_ascii case in
@@ -791,77 +834,124 @@ and compile_select o i n tagn tagt taga cl def al =
     w o "  | _ -> LL.jump_false\n\n"
    end;
 
-  let same_kind = match def with
-    | None -> sprintf "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n
-    | Some dt -> sprintf "  assert_norm (LP.parse_dsum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases (LP.get_parser_kind %s) == %s_parser_kind);\n" tn n n (pcombinator_name (compile_type dt)) n
-    in
-
-  let annot = if is_private then " : LP.parser "^n^"_parser_kind "^n else "" in
-  w o "\nlet %s_parser%s =\n%s" n annot same_kind;
-  (match def with
-  | None -> w o "  LP.parse_sum %s_sum %s_repr_parser parse_%s_cases\n\n" n tn n
-  | Some dt -> w o "  LP.parse_dsum %s_sum %s_repr_parser parse_%s_cases %s\n\n" n tn n (pcombinator_name (compile_type dt)));
-
-  let annot = if is_private then " : LP.serializer "^(pcombinator_name n) else "" in
-  w o "let %s_serializer%s =\n%s" n annot same_kind;
-  (match def with
-  | None -> w o "  LP.serialize_sum %s_sum %s_repr_serializer serialize_%s_cases\n\n" n tn n
-  | Some dt -> w o "  LP.serialize_dsum %s_sum %s_repr_serializer _ serialize_%s_cases _ %s\n\n" n tn n (scombinator_name (compile_type dt)));
-
-  let annot = if is_private then " : LP.parser32 "^(pcombinator_name n) else "" in
-  w o "let %s_parser32%s =\n%s" n annot same_kind;
-  (match def with
-  | None ->
-    w o "  LP.parse32_sum2 %s_sum %s_repr_parser %s_repr_parser32 parse_%s_cases parse32_%s_cases (_ by (LP.enum_destr_tac %s_enum)) (_ by (LP.maybe_enum_key_of_repr_tac %s_enum))\n\n" n tn tn n n tn tn;
-  | Some dt ->
-    w o "  LP.parse32_dsum %s_sum %s_repr_parser32\n" n tn;
-    w o "    _ parse32_%s_cases %s (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n (pcombinator32_name (compile_type dt)));
-
-  let annot = if is_private then " : LP.serializer32 "^(scombinator_name n) else "" in
-  w o "let %s_serializer32%s =\n%s" n annot same_kind;
-  (match def with
-  | None ->
-    w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
-    w o "  LP.serialize32_sum2 %s_sum %s_repr_serializer %s_repr_serializer32 serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
-  | Some dt ->
-    w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
-    w o "  LP.serialize32_dsum %s_sum %s_repr_serializer (_ by (LP.serialize32_maybe_enum_key_tac %s_repr_serializer32 %s_enum ()))" n tn tn tn;
-    w o "    _ _ serialize32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (scombinator32_name (compile_type dt)));
-
-  let annot = if is_private then " : LP.size32 "^n else "" in
-  w o "let %s_size32%s =\n%s" n annot same_kind;
-  (match def with
-  | None ->
-    w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
-    w o "  LP.size32_sum2 %s_sum %s_repr_serializer %s_repr_size32 serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
-  | Some dt ->
-    w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
-    w o "  LP.size32_dsum %s_sum _ (_ by (LP.size32_maybe_enum_key_tac %s_repr_size32 %s_enum ()))\n" n tn tn;
-    w o "    _ _ size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (size32_name (compile_type dt)));
-
-  if need_validator then
+  if is_implicit then (
+    match def with
+    | None ->
+      w o "let _ : squash (%s_parser_kind == LP.weaken_parse_cases_kind %s_sum parse_%s_cases) =\n" n n n;
+      w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
+      w o "let %s_eq_lemma (k:%s) : Lemma (%s k == LP.sum_cases %s_sum (tag_as_enum_key k)) [SMTPat (%s k)] =\n" n tn n n n;
+      w o "  match k with\n";
+      List.iter (fun (case, ty) ->
+        let cn, ty0 = String.capitalize_ascii case, compile_type ty in
+        w o "  | %s -> assert_norm (%s %s == LP.sum_cases %s_sum (tag_as_enum_key %s))\n" cn n cn n cn
+      ) cl;
+      w o "\nlet %s_parser k =\n  LP.parse_sum_cases %s_sum parse_%s_cases (tag_as_enum_key k)\n\n" n n n;
+      w o "let %s_serializer k =\n  LP.serialize_sum_cases %s_sum parse_%s_cases serialize_%s_cases (tag_as_enum_key k)\n\n" n n n n;
+      w o "let %s_parser32 k =\n  LP.parse32_sum_cases %s_sum parse_%s_cases parse32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
+      w o "let %s_serializer32 k =\n  LP.serialize32_sum_cases %s_sum serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
+      w o "let %s_size32 k =\n  LP.size32_sum_cases %s_sum serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
+      if need_validator then
+        w o "let %s_validator k =\n  LL.validate_sum_cases %s_sum parse_%s_cases validate_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
+      if need_jumper then
+        w o "let %s_jumper k =\n  LL.jump_sum_cases %s_sum parse_%s_cases jump_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
+    | Some def -> (* Horible synth boilerplate to deal with refine_with_tag *)
+      let dt = compile_type def in
+      w o "let _ : squash (%s_parser_kind == LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases (LP.get_parser_kind %s)) =\n" n n n (pcombinator_name dt);
+      w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
+      w o "inline_for_extraction let synth_%s (k:%s) (x:LP.refine_with_tag key_of_%s (synth_%s_inv k)) : %s k = x\n\n" n tn n tn n;
+      w o "inline_for_extraction let synth_%s_recip (k:%s) (x:%s k) : LP.refine_with_tag key_of_%s (synth_%s_inv k) = x\n\n" n tn n n tn;
+      w o "let synth_%s_inj (k:%s) : Lemma (LP.synth_injective (synth_%s k)) = ()\n\n" n tn n;
+      w o "let synth_%s_inv (k:%s) : Lemma (LP.synth_inverse (synth_%s k) (synth_%s_recip k)) = ()\n\n" n tn n n;
+      w o "noextract inline_for_extraction let %s_parser' = LP.parse_dsum_cases %s_sum parse_%s_cases %s\n\n" n n n (pcombinator_name dt);
+      w o "let %s_parser k = %s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k\n\n" n n tn n;
+      w o "noextract let %s_serializer' = LP.serialize_dsum_cases %s_sum parse_%s_cases serialize_%s_cases %s %s\n\n" n n n n (pcombinator_name dt) (scombinator_name dt);
+      w o "let %s_serializer k = LP.serialize_synth _ (synth_%s k) (%s_serializer' (synth_%s_inv k)) (synth_%s_recip k) ()\n\n" n n n tn n;
+      w o "noextract inline_for_extraction let %s_parser32' = LP.parse32_dsum_cases %s_sum parse_%s_cases parse32_%s_cases %s %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (pcombinator_name dt) (pcombinator32_name dt);
+      w o "let %s_parser32 k = LP.parse32_synth' (%s_parser' (synth_%s_inv k)) (synth_%s k) (LP.parse32_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_parser32' k) ()\n\n" n n tn n tn n n n;
+      w o "noextract inline_for_extraction let %s_serializer32' = LP.serialize32_dsum_cases %s_sum parse_%s_cases serialize_%s_cases serialize32_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n n (scombinator32_name dt);
+      w o "let %s_serializer32 k = LP.serialize32_synth' (%s_parser' (synth_%s_inv k)) (synth_%s k) (%s_serializer' (synth_%s_inv k))\n" n n tn n n tn;
+      w o "   (LP.serialize32_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_serializer' %s_serializer32' k) (synth_%s_recip k) ()\n\n" tn n n n n n;
+      w o "noextract inline_for_extraction let %s_size32' = LP.size32_dsum_cases %s_sum parse_%s_cases serialize_%s_cases size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n n (size32_name dt);
+      w o "let %s_size32 k = LP.size32_synth' (%s_parser' (synth_%s_inv k)) (synth_%s k) (%s_serializer' (synth_%s_inv k)) (LP.size32_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_serializer' %s_size32' k) (synth_%s_recip k) ()\n\n" n n tn n n tn tn n n n n n;
+      if need_validator then (
+        w o "noextract inline_for_extraction let %s_validator' = LL.validate_dsum_cases %s_sum parse_%s_cases validate_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (validator_name dt);
+        w o "let %s_validator k = LL.validate_synth (LL.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k) ()\n\n" n tn n n n n
+      );
+      if need_jumper then (
+        w o "noextract inline_for_extraction let %s_jumper' = LL.jump_dsum_cases %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (jumper_name dt);
+        w o "let %s_jumper k = LL.jump_synth (LL.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k) ()\n\n" n tn n n n n
+      )
+  ) else (* tag is not erased *)
    begin
-    let annot = if is_private then " : LL.validator "^(pcombinator_name n) else "" in
-    w o "let %s_validator%s =\n%s" n annot same_kind;
+    let same_kind = match def with
+      | None -> sprintf "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n
+      | Some dt -> sprintf "  assert_norm (LP.parse_dsum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases (LP.get_parser_kind %s) == %s_parser_kind);\n" tn n n (pcombinator_name (compile_type dt)) n
+      in
+    let annot = if is_private then " : LP.parser "^n^"_parser_kind "^n else "" in
+    w o "let %s_parser%s =\n%s" n annot same_kind;
+    (match def with
+    | None -> w o "  LP.parse_sum %s_sum %s_repr_parser parse_%s_cases\n\n" n tn n
+    | Some dt -> w o "  LP.parse_dsum %s_sum %s_repr_parser parse_%s_cases %s\n\n" n tn n (pcombinator_name (compile_type dt)));
+
+    let annot = if is_private then " : LP.serializer "^(pcombinator_name n) else "" in
+    w o "let %s_serializer%s =\n%s" n annot same_kind;
+    (match def with
+    | None -> w o "  LP.serialize_sum %s_sum %s_repr_serializer serialize_%s_cases\n\n" n tn n
+    | Some dt -> w o "  LP.serialize_dsum %s_sum %s_repr_serializer _ serialize_%s_cases _ %s\n\n" n tn n (scombinator_name (compile_type dt)));
+
+    let annot = if is_private then " : LP.parser32 "^(pcombinator_name n) else "" in
+    w o "let %s_parser32%s =\n%s" n annot same_kind;
     (match def with
     | None ->
-      w o "  LL.validate_sum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+      w o "  LP.parse32_sum2 %s_sum %s_repr_parser %s_repr_parser32 parse_%s_cases parse32_%s_cases (_ by (LP.enum_destr_tac %s_enum)) (_ by (LP.maybe_enum_key_of_repr_tac %s_enum))\n\n" n tn tn n n tn tn;
     | Some dt ->
-      w o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name (compile_type dt)))
-   end;
+      w o "  LP.parse32_dsum %s_sum %s_repr_parser32\n" n tn;
+      w o "    _ parse32_%s_cases %s (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n (pcombinator32_name (compile_type dt)));
 
-  if need_jumper then
-   begin
-    let annot = if is_private then " : LL.jumper "^(pcombinator_name n) else "" in
-    w o "let %s_jumper%s =\n%s" n annot same_kind;
+    let annot = if is_private then " : LP.serializer32 "^(scombinator_name n) else "" in
+    w o "let %s_serializer32%s =\n%s" n annot same_kind;
     (match def with
     | None ->
-      w o "  LL.jump_sum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+      w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
+      w o "  LP.serialize32_sum2 %s_sum %s_repr_serializer %s_repr_serializer32 serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
     | Some dt ->
-      w o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name (compile_type dt)))
-   end;
+      w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
+      w o "  LP.serialize32_dsum %s_sum %s_repr_serializer (_ by (LP.serialize32_maybe_enum_key_tac %s_repr_serializer32 %s_enum ()))" n tn tn tn;
+      w o "    _ _ serialize32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (scombinator32_name (compile_type dt)));
 
-  ()
+    let annot = if is_private then " : LP.size32 "^n else "" in
+    w o "let %s_size32%s =\n%s" n annot same_kind;
+    (match def with
+    | None ->
+      w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
+      w o "  LP.size32_sum2 %s_sum %s_repr_serializer %s_repr_size32 serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
+    | Some dt ->
+      w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
+      w o "  LP.size32_dsum %s_sum _ (_ by (LP.size32_maybe_enum_key_tac %s_repr_size32 %s_enum ()))\n" n tn tn;
+      w o "    _ _ size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (size32_name (compile_type dt)));
+
+    if need_validator then
+     begin
+      let annot = if is_private then " : LL.validator "^(pcombinator_name n) else "" in
+      w o "let %s_validator%s =\n%s" n annot same_kind;
+      (match def with
+      | None ->
+        w o "  LL.validate_sum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+      | Some dt ->
+        w o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name (compile_type dt)))
+     end;
+
+    if need_jumper then
+     begin
+      let annot = if is_private then " : LL.jumper "^(pcombinator_name n) else "" in
+      w o "let %s_jumper%s =\n%s" n annot same_kind;
+      (match def with
+      | None ->
+        w o "  LL.jump_sum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+      | Some dt ->
+        w o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name (compile_type dt)))
+     end;
+  end
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
@@ -1043,7 +1133,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       ()
 
     (* Variable length bytes *)
-    | VectorRange (low, high) when ty0 = "U8.t" ->
+    | VectorRange (low, high, repr) when ty0 = "U8.t" && (repr = 0 || repr = log256 high) ->
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" n low high;
@@ -1055,11 +1145,25 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       if need_jumper then begin
         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
         w o "inline_for_extraction let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
-      end;
-      ()
+      end
+
+    (* Variable length bytes *)
+    | VectorRange (low, high, repr) when ty0 = "U8.t" ->
+      w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
+      write_api o i is_private li.meta n li.min_len li.max_len;
+      w o "noextract let %s_parser = LP.parse_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      w o "let %s_parser32 = LP.parse32_bounded_vlbytes' %d %dul %d %dul %d\n\n" n low low high high repr;
+      w o "let %s_serializer32 = LP.serialize32_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      w o "let %s_size32 = LP.size32_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      if need_validator then  w o "inline_for_extraction let %s_validator = LL.validate_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      if need_jumper then begin
+        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+        w o "inline_for_extraction let %s_jumper%s = LL.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
+      end
 
     (* Variable length list of fixed-length elements *)
-    | VectorRange (low, high) when elem_li.min_len = elem_li.max_len ->
+    | VectorRange (low, high, _) when elem_li.min_len = elem_li.max_len ->
       w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}" n ty0 li.min_count li.max_count;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "let %s_parser =\n" n;
@@ -1104,7 +1208,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       ()
 
     (* Variable length list of variable length elements *)
-    | VectorRange(low, high) ->
+    | VectorRange(low, high, _) ->
       let (min, max) = (li.min_len-li.len_len), (li.max_len-li.len_len) in
       w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n ty0;
       w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
@@ -1148,6 +1252,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   (* Hoist all constructed types (select, vector, etc) into
      sub-definitions using private attribute in implementation *)
   let fields = List.map (fun (al, ty, fn, vec, def) ->
+    if has_attr al "implicit" then failwith "Only tags of select() can be implicit currently";
     let fn0 = String.uncapitalize_ascii fn in
     match ty, vec with
     | TypeSimple ty0, VectorNone ->
@@ -1450,7 +1555,26 @@ and normalize_select sn (fl:struct_field_t list)
     failwith (sprintf "Field %s contains an invalid select in struct %s" seln sn)
   | h :: t -> normalize_select sn t (h::acc) acc'
 
+(* Global type Substitution, this is use for staging sums on implicit tags *)
+and subst_of (x:typ) = try SM.find x !subst with _ -> x
+and apply_subst_t (t:type_t) =
+  match t with
+  | TypeSimple(ty) -> TypeSimple(subst_of ty)
+  | TypeSelect(sel, cl, def) ->
+    let cl' = List.map (fun (case, ty) -> case, subst_of ty) cl in
+    let def' = match def with None -> None | Some ty -> Some (subst_of ty) in
+    TypeSelect(sel, cl', def')
+and apply_subst_field (al, ty, n, vec, def) = al, apply_subst_t ty, n, vec, def
+and apply_subst (p:gemstone_t) =
+  match p with
+  | Enum _ -> p
+  | Typedef tdef -> Typedef (apply_subst_field tdef)
+  | Struct(al, fl, n) ->
+    let fl' = List.map apply_subst_field fl in
+    Struct(al, fl', n)
+
 and compile o i (tn:typ) (p:gemstone_t) =
+  let p = apply_subst p in
   let n = if tn = "" then tname true p else tn^"_"^(tname false p) in
   let mn = module_name n in
   let (fst, fsti) = !headers in
@@ -1508,7 +1632,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
       match normalize_select n fl [] [] with
       | [_, TypeSimple etyp', seln', VectorNone, None], [al, al', etyp, tagn, seln, tagt, cases, def] ->
         if etyp' <> etyp || seln' <> seln then failwith "Invalid rewrite of a select (QD bug)";
-        compile_select o i n tagn tagt al cases def al'
+        compile_select o i n seln tagn tagt al cases def al'
       | fl, sell ->
         List.iter (fun (al, al', etyp, tagn, seln, tagt, cases, def) ->
           let p = Struct([], [(al, TypeSimple(tagt), tagn, VectorNone, None);
