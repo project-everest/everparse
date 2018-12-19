@@ -362,41 +362,48 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32 supported)")
 	in
 
-begin if is_open then
-	let rec collect_valid_repr int_z acc acc_rparen = function
-	  | [] -> sprintf "%sfalse%s" acc acc_rparen
-		| (EnumFieldAnonymous _) :: t -> collect_valid_repr int_z acc acc_rparen t
-		| (EnumFieldSimple (_, i)) :: t ->
-		  let acc' =
-			  sprintf "%sv `%s_repr_eq` %d%s || (" acc n i int_z in
-                  let acc_rparen' = sprintf ")%s" acc_rparen in
-		  collect_valid_repr int_z acc' acc_rparen' t
-		| (EnumFieldRange (_, i, j)) :: t ->
-		  let acc' = acc in (* For now we treat enum ranges as unknown
-			  (if acc = "" then acc else acc^" /\\ ")^
-			  "(v < " ^ (string_of_int i) ^ int_z ^
-				" \\/ v > " ^ (string_of_int j) ^ int_z ^ ")" in *)
-                  let acc_rparen' = acc_rparen in
-		  collect_valid_repr int_z acc' acc_rparen' t
-		in
+  if is_open then
+   begin
+  	let rec collect_valid_repr int_z acc acc_rparen = function
+  	  | [] -> sprintf "%sfalse%s" acc acc_rparen
+  		| (EnumFieldAnonymous _) :: t -> collect_valid_repr int_z acc acc_rparen t
+  		| (EnumFieldSimple (_, i)) :: t ->
+  		  let acc' =
+  			  sprintf "%sv `%s_repr_eq` %d%s || (" acc n i int_z in
+                    let acc_rparen' = sprintf ")%s" acc_rparen in
+  		  collect_valid_repr int_z acc' acc_rparen' t
+  		| (EnumFieldRange (_, i, j)) :: t ->
+  		  let acc' = acc in (* For now we treat enum ranges as unknown
+  			  (if acc = "" then acc else acc^" /\\ ")^
+  			  "(v < " ^ (string_of_int i) ^ int_z ^
+  				" \\/ v > " ^ (string_of_int j) ^ int_z ^ ")" in *)
+                    let acc_rparen' = acc_rparen in
+  		  collect_valid_repr int_z acc' acc_rparen' t
+  		in
+    let unknown_formula = collect_valid_repr int_z "" "" fl in
 
-  let unknown_formula = collect_valid_repr int_z "" "" fl in
+    w i "let %s_repr = %s\n" n repr_t;
+    w i "inline_for_extraction let %s_repr_eq (x1 x2: %s_repr) : Tot bool = (x1 = x2)\n" n n;
+    w i "let known_%s_repr (v:%s) : bool = %s\n\n" n repr_t unknown_formula
+   end;
 
-  w i "let %s_repr = %s\n" n repr_t;
-  w i "inline_for_extraction let %s_repr_eq (x1 x2: %s_repr) : Tot bool = (x1 = x2)\n" n n;
-  w i "let known_%s_repr (v:%s) : bool = %s\n\n" n repr_t unknown_formula;
-  ()
-end;
 	w i "type %s =\n" n;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
 		  w i "  | %s\n" (String.capitalize_ascii x)
 		| _ -> ()) fl;
-  begin if is_open then
-	w i "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n repr_t n;
-        ()
-  end;
+  if is_open then
+	  w i "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n repr_t n
+  else w i "\n";
 
+	w i "let string_of_%s = function\n" n;
+  List.iter (function
+	  | EnumFieldSimple (x, _) ->
+		  w i "  | %s -> \"%s\"\n" (String.capitalize_ascii x) x
+		| _ -> ()) fl;
+  if is_open then
+	  w i "  | Unknown_%s _ -> \"Unknown_%s\"\n\n" n n
+  else w i "\n";
 
   (* Enum definition *)
 	w o "inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n repr_t;
