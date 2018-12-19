@@ -1141,6 +1141,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
 
     (* Variable length bytes *)
     | VectorRange (low, high, repr) when ty0 = "U8.t" && (repr = 0 || repr = log256 high) ->
+      w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" n low high;
@@ -1156,6 +1157,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
 
     (* Variable length bytes *)
     | VectorRange (low, high, repr) when ty0 = "U8.t" ->
+      w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_bounded_vlbytes' %d %d %d\n\n" n low high repr;
@@ -1171,7 +1173,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
 
     (* Variable length list of fixed-length elements *)
     | VectorRange (low, high, _) when elem_li.min_len = elem_li.max_len ->
-      w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}" n ty0 li.min_count li.max_count;
+      w i "inline_for_extraction noextract let min_count = %d\ninline_for_extraction noextract let max_count = %d\n" li.min_count li.max_count;
+      w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}\n\n" n ty0 li.min_count li.max_count;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "let %s_parser =\n" n;
       w o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" low high (pcombinator_name ty0) li.min_count li.max_count;
