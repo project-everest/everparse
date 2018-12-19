@@ -945,7 +945,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
       | None ->
         w o "  LL.validate_sum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
       | Some dt ->
-        w o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name (compile_type dt)))
+        w o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name (compile_type dt)));
      end;
 
     if need_jumper then
@@ -958,6 +958,15 @@ and compile_select o i n seln tagn tagt taga cl def al =
       | Some dt ->
         w o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name (compile_type dt)))
      end;
+
+    if need_validator then
+     begin
+      w i "val lemma_valid_%s_valid_%s: s:LL.slice -> pos:U32.t -> h:HyperStack.mem -> Lemma\n" n tn;
+      w i "  (requires LL.valid %s_parser h s pos)\n" n;
+      w i "  (ensures LL.valid %s_parser h s pos)\n" tn;
+      w i "  [SMTPat (LL.valid %s_parser h s pos)]\n\n" n;
+      w o "let lemma_valid_%s_valid_%s s pos h = admit()\n\n" n tn
+     end
   end
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
