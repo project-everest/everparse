@@ -961,11 +961,24 @@ and compile_select o i n seln tagn tagt taga cl def al =
 
     if need_validator then
      begin
+      let maybe = match def with
+        | None -> ""
+        | _ -> "maybe_"
+      in
       w i "val lemma_valid_%s_valid_%s: s:LL.slice -> pos:U32.t -> h:HyperStack.mem -> Lemma\n" n tn;
       w i "  (requires LL.valid %s_parser h s pos)\n" n;
       w i "  (ensures LL.valid %s_parser h s pos)\n" tn;
       w i "  [SMTPat (LL.valid %s_parser h s pos)]\n\n" n;
-      w o "let lemma_valid_%s_valid_%s s pos h = admit()\n\n" n tn
+      w o "let lemma_valid_%s_valid_%s s pos h =\n%s" n tn same_kind;
+      begin match def with
+      | None ->
+         w o "  LL.valid_sum_elim_tag h %s_sum %s_repr_parser parse_%s_cases s pos;\n" n tn n
+      | Some dt ->
+         w o "  LL.valid_dsum_elim_tag h %s_sum %s_repr_parser parse_%s_cases %s s pos;\n" n tn n (pcombinator_name (compile_type dt))
+      end;
+      w o "  lemma_synth_%s_inj ();\n" tn;
+      w o "  LL.valid_synth h parse_%s%s_key synth_%s s pos\n" maybe tn tn;
+      w o "\n"
      end
   end
 
