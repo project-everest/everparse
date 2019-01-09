@@ -967,7 +967,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
       in
       w i "val lemma_valid_%s_valid_%s: s:LL.slice -> pos:U32.t -> h:HyperStack.mem -> Lemma\n" n tn;
       w i "  (requires LL.valid %s_parser h s pos)\n" n;
-      w i "  (ensures LL.valid %s_parser h s pos)\n" tn;
+      w i "  (ensures (LL.valid %s_parser h s pos /\\ LL.contents %s_parser h s pos == tag_of_%s (LL.contents %s_parser h s pos)))\n" tn tn n n;
       w i "  [SMTPat (LL.valid %s_parser h s pos)]\n\n" n;
       w o "let lemma_valid_%s_valid_%s s pos h =\n%s" n tn same_kind;
       begin match def with
