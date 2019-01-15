@@ -1561,7 +1561,11 @@ and normalize_symboliclen sn (fl:struct_field_t list) : struct_field_t list =
               r := (etyp, ty) :: !r; Some etyp
             in
           List.iter (fun (etyp, t) ->
-            let p = Typedef(al @ al', TypeSimple t, etyp, VectorVldata tagt, None) in
+            let range =
+              (* Special case: rewrite uintX len; opaque[len] to opaque<0..2^X-1> *)
+              if t = "opaque" then VectorRange(0, snd (basic_bounds tagt), 0)
+              else VectorVldata tagt in
+            let p = Typedef(al @ al', TypeSimple t, etyp, range, None) in
             let (o', i') = open_files etyp in
             compile o' i' "" p
           ) !r;
