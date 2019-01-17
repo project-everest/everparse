@@ -36,9 +36,7 @@ gemstone:
 	| ENUM; a=attrlist; LBRACE; enum = separated_list(COMMA, enum_field); RBRACE; t = TYPE; SEMCOL;
 		{ ectr := 0; Enum(a, enum, t) }
 	| STRUCT; a = attrlist; LBRACE; fields = list(struct_field); RBRACE; t = TYPE; SEMCOL;
-		{ match fields with
-		  | [(al, ty, n, vec, def)] -> Typedef(al, ty, t, vec, def)
-			| l -> Struct(a, fields, t) }
+		{ Struct(a, fields, t) }
 	| t = struct_field; { Typedef(t) }
 ;
 

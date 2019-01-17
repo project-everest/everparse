@@ -37,6 +37,9 @@ let fields: (enum_field_t list * bool) SM.t ref = ref SM.empty
 (* Substitution map for global type rewriting *)
 let subst: typ SM.t ref = ref SM.empty
 
+(* Storage of types that require staged parsing (e.g. implicit tag) *)
+let erased: unit SM.t ref = ref SM.empty
+
 let w = fprintf
 
 let log256 k =
@@ -566,16 +569,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
   let cprefix = String.capitalize_ascii seln in
 
   (* We need to substitute the whole type for encapsulating vlbytes *)
-  if is_implicit then
-   begin
-    let li' = get_leninfo (n^"@"^seln) in
-    if not li'.vl then failwith (sprintf "Cannot make tag %s implicit in %s because some cases are not VLData" tagt n);
-    let n' = sprintf "%s_implicit" n in
-    subst := SM.add n n' !subst;
-    let p = Typedef (al, TypeSimple("opaque"), n', VectorRange(li'.min_len-li'.len_len, li'.max_len-li'.len_len, li'.len_len), None) in
-    let (o', i') = open_files n' in
-    compile o' i' "" p
-   end;
+  if is_implicit then erased := SM.add n () !erased;
 
   (* Complete undefined cases in enum with Fail *)
   let (enum_fields, is_open) = try SM.find tn !fields with
@@ -847,21 +841,21 @@ and compile_select o i n seln tagn tagt taga cl def al =
     | None ->
       w o "let _ : squash (%s_parser_kind == LP.weaken_parse_cases_kind %s_sum parse_%s_cases) =\n" n n n;
       w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
-      w o "let %s_eq_lemma (k:%s) : Lemma (%s k == LP.sum_cases %s_sum (tag_as_enum_key k)) [SMTPat (%s k)] =\n" n tn n n n;
+      w o "let %s_eq_lemma (k:%s) : Lemma (%s k == LP.sum_cases %s_sum (%s_as_enum_key k)) [SMTPat (%s k)] =\n" n tn n n tn n;
       w o "  match k with\n";
       List.iter (fun (case, ty) ->
         let cn, ty0 = String.capitalize_ascii case, compile_type ty in
-        w o "  | %s -> assert_norm (%s %s == LP.sum_cases %s_sum (tag_as_enum_key %s))\n" cn n cn n cn
+        w o "  | %s -> assert_norm (%s %s == LP.sum_cases %s_sum (%s_as_enum_key %s))\n" cn n cn n tn cn
       ) cl;
-      w o "\nlet %s_parser k =\n  LP.parse_sum_cases %s_sum parse_%s_cases (tag_as_enum_key k)\n\n" n n n;
-      w o "let %s_serializer k =\n  LP.serialize_sum_cases %s_sum parse_%s_cases serialize_%s_cases (tag_as_enum_key k)\n\n" n n n n;
-      w o "let %s_parser32 k =\n  LP.parse32_sum_cases %s_sum parse_%s_cases parse32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
-      w o "let %s_serializer32 k =\n  LP.serialize32_sum_cases %s_sum serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
-      w o "let %s_size32 k =\n  LP.size32_sum_cases %s_sum serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
+      w o "\nlet %s_parser k =\n  LP.parse_sum_cases %s_sum parse_%s_cases (%s_as_enum_key k)\n\n" n n n tn;
+      w o "let %s_serializer k =\n  LP.serialize_sum_cases %s_sum parse_%s_cases serialize_%s_cases (%s_as_enum_key k)\n\n" n n n n tn;
+      w o "let %s_parser32 k =\n  LP.parse32_sum_cases %s_sum parse_%s_cases parse32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+      w o "let %s_serializer32 k =\n  LP.serialize32_sum_cases %s_sum serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+      w o "let %s_size32 k =\n  LP.size32_sum_cases %s_sum serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
       if need_validator then
-        w o "let %s_validator k =\n  LL.validate_sum_cases %s_sum parse_%s_cases validate_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
+        w o "let %s_validator k =\n  LL.validate_sum_cases %s_sum parse_%s_cases validate_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
       if need_jumper then
-        w o "let %s_jumper k =\n  LL.jump_sum_cases %s_sum parse_%s_cases jump_%s_cases (_ by (LP.dep_enum_destr_tac ())) (tag_as_enum_key k)\n\n" n n n n;
+        w o "let %s_jumper k =\n  LL.jump_sum_cases %s_sum parse_%s_cases jump_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
     | Some def -> (* Horible synth boilerplate to deal with refine_with_tag *)
       let dt = compile_type def in
       w o "let _ : squash (%s_parser_kind == LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases (LP.get_parser_kind %s)) =\n" n n n (pcombinator_name dt);
@@ -991,6 +985,12 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
   let li = get_leninfo qname in
   let need_validator = is_private || need_validator li.meta li.min_len li.max_len in
   let need_jumper = is_private || need_jumper li.min_len li.max_len in
+  let (ty, vec) =
+    match ty, vec with
+    | TypeSimple(ty), VectorVldata vl when SM.mem ty !erased ->
+      let (len_len, max_len) = basic_bounds vl in
+      TypeSimple("opaque"), VectorRange(max 0 (li.min_len-len_len), min max_len (max 0 (li.max_len-len_len)), len_len)
+    | _ -> ty, vec in
   match ty with
   | TypeSelect (sn, cl, def) ->  () (*failwith "Unsupported select"*)
   | TypeSimple ty ->
@@ -1562,11 +1562,7 @@ and normalize_symboliclen sn (fl:struct_field_t list) : struct_field_t list =
               r := (etyp, ty) :: !r; Some etyp
             in
           List.iter (fun (etyp, t) ->
-            let range =
-              (* Special case: rewrite uintX len; opaque[len] to opaque<0..2^X-1> *)
-              if t = "opaque" then VectorRange(0, snd (basic_bounds tagt), 0)
-              else VectorVldata tagt in
-            let p = Typedef(al @ al', TypeSimple t, etyp, range, None) in
+            let p = Typedef(al @ al', TypeSimple t, etyp, VectorVldata tagt, None) in
             let (o', i') = open_files etyp in
             compile o' i' "" p
           ) !r;
@@ -1679,7 +1675,10 @@ and compile o i (tn:typ) (p:gemstone_t) =
           w i "(* Internal select() for %s *)\ninclude %s\n\n" etyp (module_name etyp);
           w o "(* Internal select() for %s *)\nopen %s\n\n" etyp (module_name etyp);
         ) sell;
-        compile_struct o i n fl al
+        match fl with
+        | [] -> compile_typedef o i tn n (TypeSimple "empty") VectorNone None al
+        | [(al, ty, _, vec, def)] -> compile_typedef o i tn n ty vec def al
+        | _ -> compile_struct o i n fl al
   in close_files o i with e -> close_files o i; raise e
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
