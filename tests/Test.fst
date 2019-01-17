@@ -14,7 +14,7 @@ let bprint s = discard (FStar.IO.debug_print_string (s^"\n"))
 
 let test_open_enum () : St bool =
   print (!$"Testing open enum parser.\n");
-  let x = T7.Case_y [
+  let x = T7.Body_y [
     twobytes (0z,1z);
     twobytes (3z,5z);
     twobytes (2z,6z);
@@ -22,7 +22,7 @@ let test_open_enum () : St bool =
   ] in
   let tmp : list T1.t1 = [create 10ul 7z; create 12ul 9z] in
   assume(T2.t2_list_bytesize tmp == 22);
-  let y = T7.Case_Unknown_tag2 33z tmp in
+  let y = T7.Body_Unknown_tag2 33z tmp in
   let xb = T7.t7_serializer32 x in
   let yb = T7.t7_serializer32 y in
   bprint ("Serialized (case Y): "^hex_of_bytes xb);
@@ -40,7 +40,7 @@ let test_open_enum () : St bool =
 
 let test_closed_enum () : St bool =
   print (!$"Testing closed enum parser.\n");
-  let x = T6.Case_a (twobytes (127z, 63z)) in
+  let x = T6.Body_a (twobytes (127z, 63z)) in
   let xb = T6.t6_serializer32 x in
   bprint ("Serialized: "^hex_of_bytes xb);
   match T6.t6_parser32 xb with

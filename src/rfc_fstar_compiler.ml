@@ -563,6 +563,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
   let is_implicit = has_attr taga "implicit" in
   let li = get_leninfo n in
   let tn = compile_type tagt in
+  let cprefix = String.capitalize_ascii seln in
 
   (* We need to substitute the whole type for encapsulating vlbytes *)
   if is_implicit then
@@ -599,12 +600,12 @@ and compile_select o i n seln tagn tagt taga cl def al =
   let prime = if is_implicit then "'" else "" in
   w o "friend %s\n\n" (module_name tagt);
   w i "type %s%s =\n" n prime;
-  List.iter (fun (case, ty) -> w i "  | Case_%s of %s\n" case (compile_type ty)) cl;
-  (match def with Some d -> w i "  | Case_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> x:%s -> %s%s\n" tn tn tn (compile_type d) n prime | _ -> ());
+  List.iter (fun (case, ty) -> w i "  | %s_%s of %s\n" cprefix case (compile_type ty)) cl;
+  (match def with Some d -> w i "  | %s_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> x:%s -> %s%s\n" cprefix tn tn tn (compile_type d) n prime | _ -> ());
 
   w i "\ninline_for_extraction let tag_of_%s (x:%s%s) : %s = match x with\n" n n prime (compile_type tagt);
-  List.iter (fun (case, ty) -> w i "  | Case_%s _ -> %s\n" case (String.capitalize_ascii case)) cl;
-  (match def with Some d -> w i "  | Case_Unknown_%s v _ -> Unknown_%s v\n" tn tn | _ -> ());
+  List.iter (fun (case, ty) -> w i "  | %s_%s _ -> %s\n" cprefix case (String.capitalize_ascii case)) cl;
+  (match def with Some d -> w i "  | %s_Unknown_%s v _ -> Unknown_%s v\n" cprefix tn tn | _ -> ());
   w i "\n";
 
   if is_implicit then
@@ -629,7 +630,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
 
     w o "inline_for_extraction let key_of_%s (x:%s%s) : LP.enum_key %s_enum =\n" n n prime tn;
     w o "  match x with\n";
-    List.iter (fun (case, ty) -> w o "  | Case_%s _ -> %s_as_enum_key %s\n" case tn (String.capitalize_ascii case)) cl;
+    List.iter (fun (case, ty) -> w o "  | %s_%s _ -> %s_as_enum_key %s\n" cprefix case tn (String.capitalize_ascii case)) cl;
     w o "\ninline_for_extraction let %s_case_of_%s (x:%s) : Type0 =\n" n tn tn;
     w o "  match x with\n";
     List.iter (fun (case, ty) -> w o "  | %s -> %s\n" (String.capitalize_ascii case) (compile_type ty)) cl;
@@ -643,15 +644,15 @@ and compile_select o i n seln tagn tagt taga cl def al =
     w o "  [@inline_let] let _ = norm_spec [delta; iota; zeta] (key_of_%s x) in x\n\n" n;
     w o "inline_for_extraction let synth_%s_cases (x:LP.enum_key %s_enum) (y:%s_case_of_%s x)\n" n tn n tn;
     w o "  : LP.refine_with_tag key_of_%s x =\n  match x with\n" n;
-    List.iter (fun (case, ty) -> w o "  | %s -> %s_refine x (Case_%s (to_%s_case_of_%s %s y))\n"
-      (String.capitalize_ascii case) n case n tn (String.capitalize_ascii case)) cl;
+    List.iter (fun (case, ty) -> w o "  | %s -> %s_refine x (%s_%s (to_%s_case_of_%s %s y))\n"
+      (String.capitalize_ascii case) n cprefix case n tn (String.capitalize_ascii case)) cl;
     w o "\nunfold inline_for_extraction let from_%s_case_of_%s (#x':%s) (x:%s)\n" n tn tn tn;
     w o "  (y: norm [delta_only [(`%%%s_case_of_%s)]; iota] (%s_case_of_%s x))\n" n tn n tn;
     w o "  : Pure (%s_case_of_%s x') (requires (x == x')) (ensures (fun y' -> y' == y)) =\n" n tn;
     w o "  [@inline_let] let _ = norm_spec [delta_only [(`%%%s_case_of_%s)] ; iota] (%s_case_of_%s x) in y\n\n" n tn n tn;
     w o "let synth_%s_cases_recip_pre (k:LP.enum_key %s_enum)\n" n tn;
     w o "  (x:LP.refine_with_tag key_of_%s k) : GTot bool =\n  match k with\n" n;
-    List.iter (fun (case, ty) -> w o "  | %s -> Case_%s? x\n" (String.capitalize_ascii case) case) cl;
+    List.iter (fun (case, ty) -> w o "  | %s -> %s_%s? x\n" (String.capitalize_ascii case) cprefix case) cl;
     w o "\nlet synth_%s_cases_recip_pre_intro (k:LP.enum_key %s_enum) (x:LP.refine_with_tag key_of_%s k)\n" n tn n;
     w o "  : Lemma (synth_%s_cases_recip_pre k x == true) =\n" n;
     w o "  norm_spec [delta; iota] (synth_%s_cases_recip_pre k x)\n\n" n;
@@ -660,8 +661,8 @@ and compile_select o i n seln tagn tagt taga cl def al =
     List.iter (fun (case, ty) ->
       w o "  | %s -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro %s x in\n"
         (String.capitalize_ascii case) n (String.capitalize_ascii case);
-      w o "    (match x with Case_%s y -> (from_%s_case_of_%s %s y))\n"
-        case n tn (String.capitalize_ascii case)
+      w o "    (match x with %s_%s y -> (from_%s_case_of_%s %s y))\n"
+        cprefix case n tn (String.capitalize_ascii case)
     ) cl;
     w o "\ninline_for_extraction let %s_sum = LP.make_sum' %s_enum key_of_%s\n" n tn n;
     w o "  %s_case_of_%s synth_%s_cases synth_%s_cases_recip\n" n tn n n;
@@ -686,9 +687,9 @@ and compile_select o i n seln tagn tagt taga cl def al =
     w o "inline_for_extraction let key_of_%s (x:%s%s) : LP.maybe_enum_key %s_enum =\n  match x with\n" n n prime tn;
     List.iter (fun (case, ty) ->
       let cn, ty0 = String.capitalize_ascii case, compile_type ty in
-      w o "  | Case_%s _ -> LP.Known (known_%s_as_enum_key %s)\n" case tn cn
+      w o "  | %s_%s _ -> LP.Known (known_%s_as_enum_key %s)\n" cprefix case tn cn
     ) cl;
-    w o "  | Case_Unknown_%s v _ -> LP.Unknown (unknown_%s_as_enum_key v)\n\n" tn tn;
+    w o "  | %s_Unknown_%s v _ -> LP.Unknown (unknown_%s_as_enum_key v)\n\n" cprefix tn tn;
 
     w o "inline_for_extraction let %s_case_of_%s (x:%s) : Type0 =\n  match x with\n" n tn tn;
     List.iter (fun (case, ty) ->
@@ -718,14 +719,14 @@ and compile_select o i n seln tagn tagt taga cl def al =
     w o "  (y:%s_value_type (LP.Known k)) : LP.refine_with_tag key_of_%s (LP.Known k) =\n  match k with\n" n n;
     List.iter (fun (case, ty) ->
       let cn, ty0 = String.capitalize_ascii case, compile_type ty in
-      w o "  | %s ->\n    [@inline_let] let x : %s%s = Case_%s (%s_type_of_known_case k %s () y) in\n" cn n prime case n cn;
+      w o "  | %s ->\n    [@inline_let] let x : %s%s = %s_%s (%s_type_of_known_case k %s () y) in\n" cn n prime cprefix case n cn;
       w o "    [@inline_let] let _ = assert_norm (key_of_%s x == LP.Known %s) in\n" n cn;
       w o "    %s_refine (LP.Known %s) x\n" n cn
     ) cl;
     w o "\ninline_for_extraction let synth_%s_cases (x:LP.maybe_enum_key %s_enum)\n" n tn;
     w o "  (y:%s_value_type x) : LP.refine_with_tag key_of_%s x =\n  match x with\n" n n;
     w o "  | LP.Unknown v ->\n";
-    w o "    [@inline_let] let x : %s%s = Case_Unknown_%s (unknown_enum_repr_%s_as_repr v) y in\n" n prime tn tn;
+    w o "    [@inline_let] let x : %s%s = %s_Unknown_%s (unknown_enum_repr_%s_as_repr v) y in\n" n prime cprefix tn tn;
     w o "    [@inline_let] let _ = assert_norm (key_of_%s x == LP.Unknown v) in\n" n;
     w o "    %s_refine (LP.Unknown v) x\n" n;
     w o "  | LP.Known k -> synth_known_%s_cases k y\n\n" n;
@@ -739,10 +740,10 @@ and compile_select o i n seln tagn tagt taga cl def al =
     w o "  (x:LP.refine_with_tag key_of_%s k) : GTot bool =\n  match k with\n" n;
     List.iter (fun (case, ty) ->
       let cn, ty0 = String.capitalize_ascii case, compile_type ty in
-      w o "  | LP.Known %s -> Case_%s? x\n" cn case
+      w o "  | LP.Known %s -> %s_%s? x\n" cn cprefix case
     ) cl;
     w o "  | LP.Known _ -> false\n";
-    w o "  | LP.Unknown _ -> Case_Unknown_%s? x\n\n" tn;
+    w o "  | LP.Unknown _ -> %s_Unknown_%s? x\n\n" cprefix tn;
     w o "let synth_%s_cases_recip_pre_intro' (x: %s%s)\n  : Lemma (synth_%s_cases_recip_pre (key_of_%s x) x) = ()\n\n" n n prime n n;
     w o "let synth_%s_cases_recip_pre_intro (k:LP.maybe_enum_key %s_enum)\n" n tn;
     w o "  (x:LP.refine_with_tag key_of_%s k)\n" n;
@@ -751,12 +752,12 @@ and compile_select o i n seln tagn tagt taga cl def al =
     w o "inline_for_extraction let synth_%s_cases_recip (k:LP.maybe_enum_key %s_enum)\n" n tn;
     w o "  (x:LP.refine_with_tag key_of_%s k) : (%s_value_type k) =\n  match k with\n" n n;
     w o "  | LP.Unknown z ->\n    [@inline_let] let _ = synth_%s_cases_recip_pre_intro (LP.Unknown z) x in\n" n;
-    w o "    (match x with Case_Unknown_%s _ y ->  (y <: %s_value_type k))\n" tn n;
+    w o "    (match x with %s_Unknown_%s _ y ->  (y <: %s_value_type k))\n" cprefix tn n;
     w o "  | LP.Known k' ->\n    match k' with\n";
     List.iter (fun (case, ty) ->
       let cn, ty0 = String.capitalize_ascii case, compile_type ty in
       w o "    | %s -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro (LP.Known %s) x in\n" cn n cn;
-      w o "      (match x with Case_%s y -> %s_known_case k' %s y)\n" case n cn
+      w o "      (match x with %s_%s y -> %s_known_case k' %s y)\n" cprefix case n cn
     ) cl;
     w o  "   | _ -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro (LP.Known k') in false_elim ()\n\n" n;
 
@@ -1551,7 +1552,7 @@ and normalize_symboliclen sn (fl:struct_field_t list) : struct_field_t list =
         | TypeSelect (sel, cl, def) ->
           let r = ref [] in
           let cl' = List.map (fun (c,t)->
-              let etyp = sprintf "%s_%s_case_%s" sn n c in
+              let etyp = sprintf "%s_%s_%s" sn n c in
               r := (etyp, t) :: !r; (c, etyp)
             ) cl in
           let def' = match def with
