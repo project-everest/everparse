@@ -289,6 +289,10 @@ let getdep (toplevel:bool) (p:gemstone_t) : typ list =
       | EnumFieldAnonymous d -> failwith ("unsupported enum representation: "^string_of_int d)
       | _ -> failwith "impossible");
       li_add tn li; ([]:typ list list)
+    | Struct (_, [(al, ty, _, vec, def)], n)
+    | Typedef (al, ty, n, vec, def) ->
+      if toplevel then add_field al "" (String.uncapitalize_ascii n) ty vec;
+      [typedep ty]
     | Struct (_, fl, _) ->
       if not toplevel then failwith "invalid internal rewrite of a struct";
       let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; meta = MetadataTotal } in
@@ -300,9 +304,6 @@ let getdep (toplevel:bool) (p:gemstone_t) : typ list =
         if lif.meta = MetadataDefault then li.meta <- MetadataDefault;
         typedep ty) fl in
       li_add tn li; dep
-    | Typedef (al, ty, n, vec, def) ->
-      if toplevel then add_field al "" (String.uncapitalize_ascii n) ty vec;
-      [typedep ty]
     in
   dedup (List.flatten dep)
 
