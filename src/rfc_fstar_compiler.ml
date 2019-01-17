@@ -987,7 +987,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
   let need_jumper = is_private || need_jumper li.min_len li.max_len in
   let (ty, vec) =
     match ty, vec with
-    | TypeSimple(ty), VectorVldata vl when SM.mem ty !erased ->
+    | TypeSimple(t), VectorVldata vl when SM.mem (compile_type t) !erased ->
       let (len_len, max_len) = basic_bounds vl in
       TypeSimple("opaque"), VectorRange(max 0 (li.min_len-len_len), min max_len (max 0 (li.max_len-len_len)), len_len)
     | _ -> ty, vec in
