@@ -200,6 +200,23 @@ let jumper_name = function
   | "(squash False)" -> "LL.jump_false"
   | t -> t^"_jumper"
 
+let bytesize_call t x = match t with
+  | "U8.t" -> "1"
+  | "U16.t" -> "2"
+  | "U32.t" -> "4"
+  | "unit" -> "0"
+  | "(squash False)" -> "0"
+  | _ -> sprintf "(%s_bytesize (%s))" t x
+
+let bytesize_eq_call t x = match t with
+  | "U8.t"
+  | "U16.t"
+  | "U32.t"
+  | "unit"
+  | "(squash False)"
+    -> "()"
+  | _ -> sprintf "(%s_bytesize_eq (%s))" t x
+
 let leaf_reader_name = function
   | "U8.t" -> "LL.read_u8"
   | "U16.t" -> "LL.read_u16"
@@ -1282,6 +1299,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n ty0;
       w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty0);
       w i "type %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" n ty0 n min max;
+      w i "val %s_list_bytesize_nil : squash (%s_list_bytesize [] == 0)\n\n" n n;
+      w o "let %s_list_bytesize_nil = LP.serialize_list_nil %s %s\n\n" n (pcombinator_name ty0) (scombinator_name ty0);
+      w i "val %s_list_bytesize_cons (x: %s) (y: list %s) : Lemma (%s_list_bytesize (x :: y) == %s + %s_list_bytesize y) [SMTPat (%s_list_bytesize (x :: y))]\n\n" n ty0 ty0 n (bytesize_call ty0 "x") n n;
+      w o "let %s_list_bytesize_cons x y = LP.serialize_list_cons %s %s x y; %s\n\n" n (pcombinator_name ty0) (scombinator_name ty0) (bytesize_eq_call ty0 "x");
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty0);
       w o "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
