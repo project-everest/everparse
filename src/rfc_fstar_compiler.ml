@@ -329,9 +329,11 @@ let write_bytesize o ?param:(p=None) is_private n =
   if is_private then ()
   else
     if p = None then begin
-      w o "let %s_bytesize (x:%s) : GTot nat = Seq.length (%s x)\n\n" n n pser
+        w o "let %s_bytesize (x:%s) : GTot nat = Seq.length (%s x)\n\n" n n pser;
+        w o "let %s_bytesize_eq x = ()\n\n" n;
     end else begin
-      w o "let %s_bytesize%s (x:%s k) : GTot nat = let s = %s in Seq.length (s x)\n\n" n parg n pser
+        w o "let %s_bytesize%s (x:%s k) : GTot nat = let s = %s in Seq.length (s x)\n\n" n parg n pser;
+        w o "let %s_bytesize_eq k x = ()\n\n" n;
     end
     
 let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin bmax =
@@ -349,8 +351,12 @@ let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin b
     w i "noextract val %s_serializer%s: LP.serializer %s\n\n" n parg pparse;
     if p = None then begin
       w i "noextract val %s_bytesize (x:%s) : GTot nat\n\n" n n;
+      w i "noextract val %s_bytesize_eq (x:%s) : Lemma (%s_bytesize x == Seq.length (LP.serialize %s x))\n\n" n n n pser;
+      ()
     end else begin
       w i "noextract val %s_bytesize%s (x:%s k) : GTot nat\n\n" n parg n;
+      w i "noextract val %s_bytesize_eq%s (x: %s k) : Lemma (%s_bytesize k x == Seq.length (LP.serialize (%s) x))\n\n" n parg n n pser;
+      ()
     end;
     w i "val %s_parser32%s: LP.parser32 %s\n\n" n parg pparse;
     w i "val %s_serializer32%s: LP.serializer32 %s\n\n" n parg pser;
