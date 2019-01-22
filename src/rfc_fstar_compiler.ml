@@ -1123,7 +1123,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
           let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
           w o "let %s_jumper%s = %s %s'_jumper\n\n" n jumper_annot eqtypes n
         )
-       end
+       end;
+      (* lemma about bytesize: works in both cases *)
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + %s) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len (bytesize_call ty0 "x") n;
+      w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty0 "x");
+      ()
 
     (* Fixed-length bytes *)
     | VectorFixed k when ty0 = "U8.t" ->
