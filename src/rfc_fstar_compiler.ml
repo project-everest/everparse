@@ -607,6 +607,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
   let is_private = has_attr al "private" in
   let is_implicit = has_attr taga "implicit" in
   let li = get_leninfo n in
+  let taglen = (get_leninfo tagt).max_len in (* assume tag is constant-sized *)
   let tn = compile_type tagt in
   let cprefix = String.capitalize_ascii seln in
 
@@ -1019,7 +1020,23 @@ and compile_select o i n seln tagn tagt taga cl def al =
       w o "  lemma_synth_%s_inj ();\n" tn;
       w o "  LL.valid_synth h parse_%s%s_key synth_%s s pos\n" maybe tn tn;
       w o "\n"
-     end
+     end;
+
+    (* bytesize *)
+    begin match def with
+    | None ->
+       List.iter
+         (fun (case, ty) ->
+           let ty0 = compile_type ty in
+           let constr = sprintf "%s_%s" cprefix case in
+           w i "val %s_bytesize_eqn_%s (x: %s) : Lemma (%s_bytesize (%s x) == %d + %s) [SMTPat (%s_bytesize (%s x))]\n\n" n case ty0 n constr taglen (bytesize_call ty0 "x") n constr;
+           w o "let %s_bytesize_eqn_%s x =\n\n" n case;
+           w o "  LP.serialize_sum_eq %s_sum %s_repr_serializer serialize_%s_cases (%s x);\n" n tn n constr;
+           w o "  %s\n\n" (bytesize_eq_call ty0 "x")
+         )
+         cl
+    | _ -> ()
+    end
   end
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
