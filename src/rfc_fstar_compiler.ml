@@ -1035,7 +1035,18 @@ and compile_select o i n seln tagn tagt taga cl def al =
            w o "  %s\n\n" (bytesize_eq_call ty0 "x")
          )
          cl
-    | _ -> ()
+    | Some dt ->
+       let dt0 = compile_type dt in
+       let write_constr vbind vvar (case, ty) =
+           let ty0 = compile_type ty in
+           let constr = sprintf "%s_%s" cprefix case in
+           w i "val %s_bytesize_eqn_%s %s (x: %s) : Lemma (%s_bytesize (%s %s x) == %d + %s) [SMTPat (%s_bytesize (%s %s x))]\n\n" n case vbind ty0 n constr vvar taglen (bytesize_call ty0 "x") n constr vvar;
+           w o "let %s_bytesize_eqn_%s %s x =\n" n case vvar;
+           w o "  LP.serialize_dsum_eq %s_sum %s_repr_serializer parse_%s_cases serialize_%s_cases %s %s (%s %s x) ;\n" n tn n n (pcombinator_name dt0) (scombinator_name dt0) constr vvar;
+           w o "  %s\n\n" (bytesize_eq_call ty0 "x")
+       in
+       List.iter (write_constr "" "") cl;
+       write_constr (sprintf "(v: %s_repr { not (known_%s_repr v) } )" tn tn) "v" (sprintf "Unknown_%s" tn, dt)
     end
   end
 
