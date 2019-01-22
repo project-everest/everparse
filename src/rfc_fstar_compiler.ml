@@ -1291,6 +1291,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let _ : squash (%s == LL.vlarray %s %d %d) = _ by (FStar.Tactics.trefl ())\n\n" n ty0 li.min_count li.max_count;
       w o "let finalize_%s sl pos pos' =\n" n;
       w o "  LL.finalize_vlarray %d %d %s %d %d sl pos pos'\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
+      (* lemmas about bytesize *)
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + (L.length x `FStar.Mul.op_Star` %d)) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len elem_li.min_len n;
+      w o "let %s_bytesize_eqn x = LP.length_serialize_vlarray %d %d %s %d %d () x\n\n" n low high (scombinator_name ty0) li.min_count li.max_count;
       ()
 
     (* Variable length list of variable length elements *)
