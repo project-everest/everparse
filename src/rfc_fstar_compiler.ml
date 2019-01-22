@@ -599,6 +599,9 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   w o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
   w o "  LL.write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x) ()\n\n" maybe n n n n;
 
+  (* bytesize lemma *)
+  w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
+  w o "let %s_bytesize_eqn x = %s_bytesize_eq x\n\n" n n;
   ()
 
 and compile_select o i n seln tagn tagt taga cl def al =
