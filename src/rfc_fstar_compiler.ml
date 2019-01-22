@@ -1334,6 +1334,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
         w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
       end;
+      (* lemmas about bytesize *)
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + %s_list_bytesize x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n n;
+      w o "let %s_bytesize_eqn x = LP.serialize_synth_eq %s'_parser synth_%s %s'_serializer synth_%s_recip () x" n n n n n;
       ()
 
 and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
