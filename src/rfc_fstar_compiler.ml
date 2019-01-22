@@ -1174,6 +1174,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_nth_ghost i = LL.array_nth_ghost %s %d %d i\n\n" n (scombinator_name ty0) li.max_len li.max_count;
       w i "inline_for_extraction val %s_nth (i: U32.t { U32.v i < %d } ) : LL.accessor (%s_nth_ghost (U32.v i))\n\n" n li.max_count n;
       w o "let %s_nth i = LL.array_nth %s %d %d i\n\n" n (scombinator_name ty0) li.max_len li.max_count;
+      (* lemmas about bytesize *)
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == L.length x `FStar.Mul.op_Star` %d) [SMTPat (%s_bytesize x)]\n\n" n n n elem_li.min_len n;
+      w o "let %s_bytesize_eqn x =\n" n;
+      w o "  assert_norm (LP.fldata_array_precond %s %d %d == true);\n" (pcombinator_name ty0) li.max_len li.max_count;
+      w o "  LP.length_serialize_array %s %d %d () x\n\n"(scombinator_name ty0) li.max_len li.max_count;
       ()
 
     (* Fixed bytelen list of variable length elements *)
