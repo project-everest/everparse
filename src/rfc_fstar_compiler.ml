@@ -1056,6 +1056,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (if need_jumper then
          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
          w o "inline_for_extraction let %s_jumper%s = %s\n\n" n jumper_annot (jumper_name ty0));
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty0 "x") n;
+      w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty0 "x");
       ()
 
     (* Should be replaced with Vldata during normalization *)
@@ -1148,6 +1150,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         w o "inline_for_extraction let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
         w o "inline_for_extraction let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k
        end;
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
+      w o "let %s_bytesize_eqn x = ()\n\n" n;
       ()
 
     (* Fixed length list *)
@@ -1239,7 +1243,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       if need_jumper then begin
         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
         w o "inline_for_extraction let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
-      end
+      end;
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
+      w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
+      ()
 
     (* Variable length bytes *)
     | VectorRange (low, high, repr) when ty0 = "U8.t" ->
@@ -1256,8 +1263,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       if need_jumper then begin
         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
         w o "inline_for_extraction let %s_jumper%s = LL.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
-      end
-
+      end;
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
+      w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
+      ()
+      
     (* Variable length list of fixed-length elements *)
     | VectorRange (low, high, _) when elem_li.min_len = elem_li.max_len ->
       w i "inline_for_extraction noextract let min_count = %d\ninline_for_extraction noextract let max_count = %d\n" li.min_count li.max_count;
@@ -1700,6 +1710,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w i "module LL = LowParse.Low.Base\n";
   w i "module L = FStar.List.Tot\n";
   w i "module B = LowStar.Buffer\n";
+  w i "module BY = FStar.Bytes\n";
   w i "module HST = FStar.HyperStack.ST\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
@@ -1715,6 +1726,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w o "module LL = LowParse.Low\n";
 	w o "module L = FStar.List.Tot\n";
   w o "module B = LowStar.Buffer\n";
+  w o "module BY = FStar.Bytes\n";
   w o "module HST = FStar.HyperStack.ST\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
