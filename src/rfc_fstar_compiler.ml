@@ -209,12 +209,11 @@ let bytesize_call t x = match t with
   | _ -> sprintf "(%s_bytesize (%s))" t x
 
 let bytesize_eq_call t x = match t with
-  | "U8.t"
-  | "U16.t"
-  | "U32.t"
-  | "unit"
-  | "(squash False)"
-    -> "()"
+  | "U8.t" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u8 (%s)) == 1))" x
+  | "U16.t" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u16 (%s)) == 2))" x
+  | "U32.t" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u32 (%s)) == 4))" x
+  | "unit" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_empty (%s)) == 0))" x
+  | "(squash False)" -> sprintf "(assert False)"
   | _ -> sprintf "(%s_bytesize_eq (%s))" t x
 
 let leaf_reader_name = function
@@ -1546,6 +1545,48 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
     w o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n
    end;
+
+  (* bytesize *)
+  w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n"
+    n n n
+    (List.fold_left
+       (fun acc (fn, ty) ->
+         let x' = sprintf "x.%s" fn in
+         let bs = bytesize_call ty x' in
+         if acc = "" then bs else sprintf "%s + %s" acc bs
+       )
+       ""
+       fields
+    )
+    n
+  ;
+  w o "let %s_bytesize_eqn x =\n" n;
+  w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
+  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  w o "  LP.serialize_synth_eq _ synth_%s %s'_serializer synth_%s_recip () x" n n n;
+  begin match fields with
+  | [] -> ()
+  | (fn1, ty1) :: qf ->
+     List.fold_left
+       (fun (lhs, arg) (fn, ty) ->
+         let s = scombinator_name ty in
+         let arg' = sprintf "(%s, x.%s)" arg fn in
+         w o ";\n  LP.serialize_nondep_then_eq _ %s () _ %s %s" lhs s arg';
+         let lhs' = sprintf "(LP.serialize_nondep_then _ %s () _ %s)" lhs s in
+         (lhs', arg')
+       )
+       (scombinator_name ty1, sprintf "x.%s" fn1)
+       qf
+     ;
+     List.iter
+       (fun (fn, ty) ->
+         let bseq = bytesize_eq_call ty (sprintf "x.%s" fn) in
+         if bseq <> "()" then w o ";\n  %s" bseq
+       )
+       fields
+     ;
+     w o "\n\n"
+  end;
 
   (* accessors for fields *)
   begin
