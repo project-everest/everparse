@@ -1054,13 +1054,24 @@ and compile_select o i n seln tagn tagt taga cl def al =
     | None ->
        List.iter
          (fun (case, ty) ->
+           let ty0 = compile_type ty in
+           let constr = sprintf "%s_%s" cprefix case in
+           let casep = pcombinator_name ty0 in
            match ty with
            | "Fail" -> () (* impossible case *)
-           | "Empty" -> ()
+           | "Empty" -> (* parse_empty is not in the user context, so we need to "inline" it here *)
+              w i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
+              w i "  (requires (fun h -> LL.live_slice h input /\\ U32.v pos + %d <= U32.v input.LL.len))\n" taglen;
+              w i "  (ensures (fun h _ h' ->\n";
+              w i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
+              w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
+              w i "    LL.valid_content_pos %s_parser h' input pos (%s ()) pos_payload\n" n constr;
+              w i "  ))\n\n";
+              w o "let finalize_%s_%s input pos =\n" n case;
+              w o "  let h = HST.get () in\n";
+              w o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" taglen;
+              w o "  LL.finalize_sum_case %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases (_ by (LP.enum_repr_of_key_tac %s_enum)) %s input pos\n\n" n tn tn n tn (String.capitalize_ascii case)
            | _ ->
-              let ty0 = compile_type ty in
-              let constr = sprintf "%s_%s" cprefix case in
-              let casep = pcombinator_name ty0 in
               w i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
               w i "  (requires (fun h -> U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul)))\n" taglen casep taglen;
               w i "  (ensures (fun h _ h' ->\n";
