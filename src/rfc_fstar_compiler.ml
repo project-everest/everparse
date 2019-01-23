@@ -1343,6 +1343,16 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
+      w i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
+      w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
+      w i "  (ensures (fun h res h' ->\n";
+      w i "    B.modifies B.loc_none h h' /\\\n";
+      w i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" li.len_len n;
+      w i "    res == BY.len (LL.contents %s_parser h input pos)\n" n;
+      w i "  ))\n\n";
+      w o "let %s_length input pos =\n" n;
+      w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
+      w o "  LL.bounded_vlbytes_payload_length %d %d input pos\n\n" low high;
       ()
 
     (* Variable length bytes *)
@@ -1363,6 +1373,16 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
+      w i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
+      w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
+      w i "  (ensures (fun h res h' ->\n";
+      w i "    B.modifies B.loc_none h h' /\\\n";
+      w i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" repr n;
+      w i "    res == BY.len (LL.contents %s_parser h input pos)\n" n;
+      w i "  ))\n\n";
+      w o "let %s_length input pos =\n" n;
+      w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
+      w o "  LL.bounded_vlbytes'_payload_length %d %d %d input pos\n\n" low high repr;
       ()
       
     (* Variable length list of fixed-length elements *)
