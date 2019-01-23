@@ -600,7 +600,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 
   (* bytesize lemma *)
   w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
-  w o "let %s_bytesize_eqn x = %s_bytesize_eq x\n\n" n n;
+  w o "let %s_bytesize_eqn x = %s_bytesize_eq x; assert (FStar.Seq.length (LP.serialize %s_serializer x) <= %d); assert (%d <= FStar.Seq.length (LP.serialize %s_serializer x))\n\n" n n n blen blen n;
   ()
 
 and compile_select o i n seln tagn tagt taga cl def al =
