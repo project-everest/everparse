@@ -1089,6 +1089,35 @@ and compile_select o i n seln tagn tagt taga cl def al =
               write_finalizer case
          )
          cl
+     ;
+       (* finalizer for unknown case *)
+       begin match def with
+       | Some dt when dt <> "Fail" ->
+          let dp = pcombinator_name (compile_type dt) in
+          w i "val finalize_%s_Unknown_%s (v: %s_repr) (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n tn tn;
+          if dt = "Empty" then
+            w i "  (requires (fun h -> U32.v pos + %d <= U32.v input.LL.len /\\ LL.live_slice h input /\\ not (known_%s_repr v)))\n" taglen tn
+          else
+            w i "  (requires (fun h -> U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul) /\\ not (known_%s_repr v)))\n" taglen dp taglen tn
+          ;
+          w i "  (ensures (fun h _ h' ->\n";
+          w i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
+          w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
+          if dt = "Empty" then
+            w i "    LL.valid_content_pos %s_parser h' input pos (%s_Unknown_%s v ()) pos_payload\n" n cprefix tn
+          else
+            w i "    LL.valid_content_pos %s_parser h' input pos (%s_Unknown_%s v (LL.contents %s h input pos_payload)) (LL.get_valid_pos %s h input pos_payload)\n" n cprefix tn dp dp
+          ;
+          w i "  ))\n\n";
+          w o "let finalize_%s_Unknown_%s v input pos =\n" n tn;
+          w o "  [@inline_let] let _ = (%s ()) in\n" same_kind;
+          if dt = "Empty" then begin
+            w o "  let h = HST.get () in\n";
+            w o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" taglen;
+          end;
+          w o "  LL.finalize_dsum_case_unknown %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases %s (unknown_%s_as_enum_key v) input pos\n\n" n tn tn n dp tn
+       | _ -> ()
+       end
   end
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
