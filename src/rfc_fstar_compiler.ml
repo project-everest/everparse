@@ -1050,8 +1050,14 @@ and compile_select o i n seln tagn tagt taga cl def al =
     end;
 
     (* finalizers *)
-    begin match def with
-    | None ->
+    let write_finalizer case =
+      match def with
+      | None ->
+         w o "  LL.finalize_sum_case %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases (_ by (LP.enum_repr_of_key_tac %s_enum)) %s input pos\n\n" n tn tn n tn (String.capitalize_ascii case)
+      | Some dt ->
+         w o "  [@inline_let] let _ = %s () in\n" same_kind;
+         w o "  LL.finalize_dsum_case_known %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases %s (_ by (LP.enum_repr_of_key_tac %s_enum)) (known_%s_as_enum_key %s) input pos\n\n" n tn tn n (pcombinator_name (compile_type dt)) tn tn (String.capitalize_ascii case)
+    in
        List.iter
          (fun (case, ty) ->
            let ty0 = compile_type ty in
@@ -1070,7 +1076,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
               w o "let finalize_%s_%s input pos =\n" n case;
               w o "  let h = HST.get () in\n";
               w o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" taglen;
-              w o "  LL.finalize_sum_case %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases (_ by (LP.enum_repr_of_key_tac %s_enum)) %s input pos\n\n" n tn tn n tn (String.capitalize_ascii case)
+              write_finalizer case
            | _ ->
               w i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
               w i "  (requires (fun h -> U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul)))\n" taglen casep taglen;
@@ -1079,11 +1085,10 @@ and compile_select o i n seln tagn tagt taga cl def al =
               w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
               w i "    LL.valid_content_pos %s_parser h' input pos (%s (LL.contents %s h input pos_payload)) (LL.get_valid_pos %s h input pos_payload)\n" n constr casep casep;
               w i "  ))\n\n";
-              w o "let finalize_%s_%s input pos = LL.finalize_sum_case %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases (_ by (LP.enum_repr_of_key_tac %s_enum)) %s input pos\n\n" n case n tn tn n tn (String.capitalize_ascii case)
+              w o "let finalize_%s_%s input pos =\n" n case;
+              write_finalizer case
          )
          cl
-    | Some dt -> ()
-    end
   end
 
 and compile_typedef o i tn fn (ty:type_t) vec def al =
