@@ -1476,6 +1476,27 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
         w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
       end;
+      (* finalizer *)
+      w i "inline_for_extraction val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
+      w i "(requires (fun h ->\n";
+      w i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
+      w i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty0) li.len_len;
+      w i "  let len = U32.v pos' - (U32.v pos + %d) in\n" li.len_len;
+      w i "  (%d <= len /\\ len <= %d)\n" low high;
+      w i ")))\n";
+      w i "(ensures (fun h _ h' ->\n";
+      w i "  B.modifies (LL.loc_slice_from_to sl pos (pos `U32.add` %dul)) h h' /\\ (\n" li.len_len;
+      w i "  let l = LL.contents_list %s h sl (pos `U32.add` %dul) pos' in\n" (pcombinator_name ty0) li.len_len;
+      w i "  %s_list_bytesize l == U32.v pos' - (U32.v pos + %d) /\\\n" n li.len_len;
+      w i "  LL.valid_content_pos %s_parser h' sl pos l pos'\n" n;
+      w i ")))\n\n";
+      (*
+      w o "let _ : squash (%s == LL.parse_bound %s %d %d) = _ by (FStar.Tactics.trefl ())\n\n" n ty0 li.min_count li.max_count;
+       *)
+      w o "let finalize_%s sl pos pos' =\n" n;
+      w o "  LL.finalize_bounded_vldata_strong_list %d %d %s sl pos pos';\n" low high (scombinator_name ty0);
+      w o "  let h = HST.get () in\n";
+      w o "  LL.valid_synth h %s'_parser synth_%s sl pos\n\n" n n;
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + %s_list_bytesize x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n n;
       w o "let %s_bytesize_eqn x = LP.serialize_synth_eq %s'_parser synth_%s %s'_serializer synth_%s_recip () x" n n n n n;
