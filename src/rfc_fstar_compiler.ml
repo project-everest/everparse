@@ -1343,6 +1343,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
+      (* length *)
       w i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
       w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
       w i "  (ensures (fun h res h' ->\n";
@@ -1353,9 +1354,25 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_length input pos =\n" n;
       w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
       w o "  LL.bounded_vlbytes_payload_length %d %d input pos\n\n" low high;
+      (* finalizer *)
+      w i "val %s_finalize (input: LL.slice) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
+      w i "  (requires (fun h ->\n";
+      w i "    LL.live_slice h input /\\\n";
+      w i "    %d <= U32.v len /\\ U32.v len <= %d /\\\n" low high;
+      w i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len\n" li.len_len;
+      w i "  ))\n";
+      w i "  (ensures (fun h pos' h' ->\n";
+      w i "    let pos_payload = pos `U32.add` %dul in\n" li.len_len;
+      w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
+      w i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos_payload len))) pos' /\\\n" n;
+      w i "    U32.v pos' == U32.v pos_payload + U32.v len\n";
+      w i "  ))\n\n";
+      w o "let %s_finalize input pos len =\n" n;
+      w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
+      w o "  LL.finalize_bounded_vlbytes %d %d input pos len\n\n" low high;
       ()
 
-    (* Variable length bytes *)
+    (* Variable length bytes where the size of the length is explicit *)
     | VectorRange (low, high, repr) when ty0 = "U8.t" ->
       w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
@@ -1373,6 +1390,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
+      (* length *)
       w i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
       w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
       w i "  (ensures (fun h res h' ->\n";
@@ -1383,6 +1401,22 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_length input pos =\n" n;
       w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
       w o "  LL.bounded_vlbytes'_payload_length %d %d %d input pos\n\n" low high repr;
+      (* finalizer *)
+      w i "val %s_finalize (input: LL.slice) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
+      w i "  (requires (fun h ->\n";
+      w i "    LL.live_slice h input /\\\n";
+      w i "    %d <= U32.v len /\\ U32.v len <= %d /\\\n" low high;
+      w i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len\n" repr;
+      w i "  ))\n";
+      w i "  (ensures (fun h pos' h' ->\n";
+      w i "    let pos_payload = pos `U32.add` %dul in\n" repr;
+      w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
+      w i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos_payload len))) pos' /\\\n" n;
+      w i "    U32.v pos' == U32.v pos_payload + U32.v len\n";
+      w i "  ))\n\n";
+      w o "let %s_finalize input pos len =\n" n;
+      w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
+      w o "  LL.finalize_bounded_vlbytes' %d %d %d input pos len\n\n" low high repr;
       ()
       
     (* Variable length list of fixed-length elements *)
