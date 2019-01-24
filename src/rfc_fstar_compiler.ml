@@ -1249,6 +1249,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
        end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
       w o "let %s_bytesize_eqn x = ()\n\n" n;
+      (* intro *)
       w i "val %s_intro (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
       w i "  (requires (\n";
       w i "    LL.live_slice h input /\\\n";
@@ -1259,6 +1260,15 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "  ))\n";
       w o "let %s_intro h input pos =\n" n;
       w o "  LL.valid_flbytes_intro h %d input pos\n\n" k;
+      (* elim *)
+      w i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      w i "  (requires (LL.valid %s_parser h input pos))\n" n;
+      w i "  (ensures (\n";
+      w i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" k;
+      w i "    LL.valid_content_pos %s_parser h input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos %dul))) (pos `U32.add` %dul)\n" n k k;
+      w i "  ))\n";
+      w o "let %s_elim h input pos =\n" n;
+      w o "  LL.valid_flbytes_elim h %d input pos\n\n" k;      
       ()
 
     (* Fixed length list *)
