@@ -1186,7 +1186,16 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
           let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
           w o "let %s_jumper%s =\n\n" n jumper_annot;
           w o "  LL.jump_bounded_vldata %d %d %s ()\n\n" 0 smax (pcombinator_name ty0)
-        )
+        );
+        (* accessor *)
+        if ty <> "Empty" && ty <> "Fail" then begin
+            w i "val %s_gaccessor : LL.gaccessor %s_parser %s (LL.clens_id %s)\n\n" n n (pcombinator_name ty0) ty0;
+            w o "let %s_gaccessor = LL.gaccessor_bounded_vldata_payload %d %d %s\n\n" n 0 smax (pcombinator_name ty0);
+            w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+            w o "let %s_accessor = LL.accessor_bounded_vldata_payload %d %d %s\n\n" n 0 smax (pcombinator_name ty0);
+            ()
+        end;
+        ()
        end
       else
        begin
@@ -1224,7 +1233,20 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
           w o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty0);
           let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
           w o "let %s_jumper%s = %s %s'_jumper\n\n" n jumper_annot eqtypes n
-        )
+        );
+        (* accessor *)
+        if ty <> "Empty" && ty <> "Fail" then begin
+            w i "let %s_clens : LL.clens %s %s = {\n" n n ty0;
+            w i "  LL.clens_cond = (fun _ -> True);\n";
+            w i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n ty0;
+            w i "}\n\n";
+            w i "val %s_gaccessor : LL.gaccessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty0) n;
+            w o "let %s_gaccessor = %s LL.gaccessor_bounded_vldata_strong_payload %d %d %s\n\n" n eqtypes 0 smax (scombinator_name ty0);
+            w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+            w o "let %s_accessor = %s LL.accessor_bounded_vldata_strong_payload %d %d %s\n\n" n eqtypes 0 smax (scombinator_name ty0);
+            ()
+        end;
+        ()
        end;
       (* lemma about bytesize: works in both cases *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + %s) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len (bytesize_call ty0 "x") n;
