@@ -1337,6 +1337,16 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "    LL.valid_content_pos %s_parser h input pos x pos'\n" n;
       w i "  ))\n\n";
       w o "let %s_intro h input pos pos' = %s_eq (); LL.valid_list_valid_array %s %d %dul %d () h input pos pos'\n\n" n n (scombinator_name ty0) li.max_len li.max_len li.max_count;
+      (* elim lemma *)
+      w i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      w i "  (requires (LL.valid %s_parser h input pos))\n" n;
+      w i "  (ensures (\n";
+      w i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
+      w i "    U32.v pos' - U32.v pos == %d /\\\n" li.max_len;
+      w i "    LL.valid_list %s h input pos pos' /\\\n" (pcombinator_name ty0);
+      w i "    LL.contents_list %s h input pos pos' == LL.contents %s_parser h input pos\n" (pcombinator_name ty0) n;
+      w i "  ))\n";
+      w o "let %s_elim h input pos = %s_eq (); LL.valid_array_valid_list %s %d %dul %d () h input pos\n\n" n n (scombinator_name ty0) li.max_len li.max_len li.max_count;
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == L.length x `FStar.Mul.op_Star` %d) [SMTPat (%s_bytesize x)]\n\n" n n n elem_li.min_len n;
       w o "let %s_bytesize_eqn x =\n" n;
