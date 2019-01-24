@@ -1347,9 +1347,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
       w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
       w i "  (ensures (fun h res h' ->\n";
+      w i "    let x = LL.contents %s_parser h input pos in\n" n;
       w i "    B.modifies B.loc_none h h' /\\\n";
       w i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" li.len_len n;
-      w i "    res == BY.len (LL.contents %s_parser h input pos)\n" n;
+      w i "    res == BY.len x /\\\n";
+      w i "    B.as_seq h (B.gsub input.LL.base (pos `U32.add` %dul) res) == BY.reveal x\n" li.len_len;
       w i "  ))\n\n";
       w o "let %s_length input pos =\n" n;
       w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
@@ -1394,9 +1396,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
       w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
       w i "  (ensures (fun h res h' ->\n";
+      w i "    let x = LL.contents %s_parser h input pos in\n" n;
       w i "    B.modifies B.loc_none h h' /\\\n";
       w i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" repr n;
-      w i "    res == BY.len (LL.contents %s_parser h input pos)\n" n;
+      w i "    res == BY.len x /\\\n";
+      w i "    B.as_seq h (B.gsub input.LL.base (pos `U32.add` %dul) res) == BY.reveal x\n" repr;
       w i "  ))\n\n";
       w o "let %s_length input pos =\n" n;
       w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
