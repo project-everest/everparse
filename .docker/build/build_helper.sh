@@ -15,7 +15,6 @@ ssh-add .ssh/id_rsa
 eval $(opam config env)
 
 echo $(date -u "+%Y-%m-%d %H:%M:%S") >> $out_file
-echo "FStar source version: $fstarVersion" >> $out_file
 
 tail -f $out_file &
 tail_pd=$!
