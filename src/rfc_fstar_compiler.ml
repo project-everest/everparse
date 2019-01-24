@@ -1612,6 +1612,19 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  LL.finalize_bounded_vldata_strong_list %d %d %s sl pos pos';\n" low high (scombinator_name ty0);
       w o "  let h = HST.get () in\n";
       w o "  LL.valid_synth h %s'_parser synth_%s sl pos\n\n" n n;
+      (* elim *)
+      w i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      w i "  (requires (LL.valid %s_parser h input pos))\n" n;
+      w i "  (ensures (\n";
+      w i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
+      w i "    U32.v pos + %d <= U32.v pos' /\\ (\n" li.len_len;
+      w i "    let pos1 = pos `U32.add` %dul in\n" li.len_len;
+      w i "    LL.valid_list %s h input pos1 pos' /\\\n" (pcombinator_name ty0);
+      w i "    LL.contents_list %s h input pos1 pos' == LL.contents %s_parser h input pos\n" (pcombinator_name ty0) n;
+      w i "  )))\n\n";
+      w o "let %s_elim h input pos =\n" n;
+      w o "  LL.valid_synth h %s'_parser synth_%s input pos;\n" n n;
+      w o "  LL.valid_bounded_vldata_strong_list_valid_list %d %d %s %s input pos h\n\n" low high (pcombinator_name ty0) (scombinator_name ty0);
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + %s_list_bytesize x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n n;
       w o "let %s_bytesize_eqn x = LP.serialize_synth_eq %s'_parser synth_%s %s'_serializer synth_%s_recip () x" n n n n n;
