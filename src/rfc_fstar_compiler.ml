@@ -1282,6 +1282,19 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_nth_ghost i = LL.array_nth_ghost %s %d %d i\n\n" n (scombinator_name ty0) li.max_len li.max_count;
       w i "inline_for_extraction val %s_nth (i: U32.t { U32.v i < %d } ) : LL.accessor (%s_nth_ghost (U32.v i))\n\n" n li.max_count n;
       w o "let %s_nth i = LL.array_nth %s %d %d i\n\n" n (scombinator_name ty0) li.max_len li.max_count;
+      (* intro lemma *)
+      w i "val %s_intro (h: HS.mem) (input: LL.slice) (pos pos' : U32.t) : Lemma\n" n;
+      w i "  (requires (\n";
+      w i "     LL.valid_list %s h input pos pos' /\\\n" (pcombinator_name ty0);
+      w i "     (L.length (LL.contents_list %s h input pos pos') == %d \\/ U32.v pos' - U32.v pos == %d)\n" (pcombinator_name ty0) li.max_count li.max_len;
+      w i "  ))\n";
+      w i "  (ensures (\n";
+      w i "    let x = LL.contents_list %s h input pos pos' in\n" (pcombinator_name ty0);
+      w i "    L.length x = %d /\\\n" li.max_count;
+      w i "    U32.v pos' - U32.v pos == %d /\\\n" li.max_len;
+      w i "    LL.valid_content_pos %s_parser h input pos x pos'\n" n;
+      w i "  ))\n\n";
+      w o "let %s_intro h input pos pos' = %s_eq (); LL.valid_list_valid_array %s %d %dul %d () h input pos pos'\n\n" n n (scombinator_name ty0) li.max_len li.max_len li.max_count;
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == L.length x `FStar.Mul.op_Star` %d) [SMTPat (%s_bytesize x)]\n\n" n n n elem_li.min_len n;
       w o "let %s_bytesize_eqn x =\n" n;
@@ -1929,6 +1942,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w i "module L = FStar.List.Tot\n";
   w i "module B = LowStar.Buffer\n";
   w i "module BY = FStar.Bytes\n";
+  w i "module HS = FStar.HyperStack\n";
   w i "module HST = FStar.HyperStack.ST\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
@@ -1945,6 +1959,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
 	w o "module L = FStar.List.Tot\n";
   w o "module B = LowStar.Buffer\n";
   w o "module BY = FStar.Bytes\n";
+  w o "module HS = FStar.HyperStack\n";
   w o "module HST = FStar.HyperStack.ST\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
