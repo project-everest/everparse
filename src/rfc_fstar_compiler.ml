@@ -1545,6 +1545,15 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "    LL.contents_list %s h input (pos `U32.add` %dul) pos' == x\n" (pcombinator_name ty0) li.len_len;
       w i "  ))\n";
       w o "let %s_count input pos = LL.vlarray_list_length %d %d %s %d %d input pos\n\n" n low high (scombinator_name ty0) li.min_count li.max_count;
+      (* nth *)
+      w i "let %s_clens_nth (i: nat) : Tot (LL.clens %s %s) = {\n" n n ty0;
+      w i "  LL.clens_cond = (fun (l: %s) -> i < L.length l);\n" n;
+      w i "  LL.clens_get = (fun (l: %s) -> L.index l i);\n" n;
+      w i "}\n\n";
+      w i "val %s_nth_ghost (i: nat) : Tot (LL.gaccessor %s_parser %s (%s_clens_nth i))\n\n" n n (pcombinator_name ty0) n;
+      w o "let %s_nth_ghost i = LL.vlarray_nth_ghost %d %d %s %d %d i\n\n" n low high (scombinator_name ty0) li.min_count li.max_count;
+      w i "val %s_nth (i: U32.t) : Tot (LL.accessor (%s_nth_ghost (U32.v i)))\n\n" n n;
+      w o "let %s_nth i = LL.vlarray_nth %d %d %s %d %d i\n\n" n low high (scombinator_name ty0) li.min_count li.max_count;
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + (L.length x `FStar.Mul.op_Star` %d)) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len elem_li.min_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_vlarray %d %d %s %d %d () x\n\n" n low high (scombinator_name ty0) li.min_count li.max_count;
