@@ -1523,6 +1523,18 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let _ : squash (%s == LL.vlarray %s %d %d) = _ by (FStar.Tactics.trefl ())\n\n" n ty0 li.min_count li.max_count;
       w o "let finalize_%s sl pos pos' =\n" n;
       w o "  LL.finalize_vlarray %d %d %s %d %d sl pos pos'\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
+      (* length (elem count) and elim *)
+      w i "val %s_count (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
+      w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
+      w i "  (ensures (fun h res h' ->\n";
+      w i "    let x = LL.contents %s_parser h input pos in\n" n;
+      w i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
+      w i "    U32.v res == L.length x /\\\n";
+      w i "    U32.v pos' == U32.v pos + %d + (U32.v res `FStar.Mul.op_Star` %d) /\\\n" li.len_len elem_li.min_len;
+      w i "    LL.valid_list %s h input (pos `U32.add` %dul) pos' /\\\n" (pcombinator_name ty0) li.len_len;
+      w i "    LL.contents_list %s h input (pos `U32.add` %dul) pos' == x\n" (pcombinator_name ty0) li.len_len;
+      w i "  ))\n";
+      w o "let %s_count input pos = LL.vlarray_list_length %d %d %s %d %d input pos\n\n" n low high (scombinator_name ty0) li.min_count li.max_count;
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + (L.length x `FStar.Mul.op_Star` %d)) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len elem_li.min_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_vlarray %d %d %s %d %d () x\n\n" n low high (scombinator_name ty0) li.min_count li.max_count;
