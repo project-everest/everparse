@@ -1606,7 +1606,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
       w i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty0) li.len_len;
       w i "  let len = U32.v pos' - (U32.v pos + %d) in\n" li.len_len;
-      w i "  (%d <= len /\\ len <= %d)\n" low high;
+      w i "  let len_ser = %s_list_bytesize (LL.contents_list %s h sl (pos `U32.add` %dul) pos') in\n" n (pcombinator_name ty0) li.len_len;
+      w i "  ((%d <= len /\\ len <= %d) \\/ (%d <= len_ser /\\ len_ser <= %d))\n" low high low high;
       w i ")))\n";
       w i "(ensures (fun h _ h' ->\n";
       w i "  B.modifies (LL.loc_slice_from_to sl pos (pos `U32.add` %dul)) h h' /\\ (\n" li.len_len;
