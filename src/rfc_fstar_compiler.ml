@@ -1264,8 +1264,34 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
           let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
           w o "let %s_jumper%s = %s %s'_jumper\n\n" n jumper_annot eqtypes n
         );
+        (* finalizer *)
+        if ty = "Empty" || ty = "Fail" then failwith "vldata empty/fail should have been in the 'bounds OK' case";
+        w i "val %s_finalize (input: LL.slice) (pos: U32.t) (pos'  : U32.t) : HST.Stack unit\n"  n;
+        w i "  (requires (fun h ->\n" ;
+        w i "     U32.v pos + %d < 4294967296 /\\ (\n" len_len;
+        w i "     let pos_payload = pos `U32.add` %dul in\n" len_len;
+        w i "     LL.valid_pos %s h input pos_payload pos' /\\ (\n" (pcombinator_name ty0);
+        w i "     let len_payload = U32.v pos' - U32.v pos_payload in\n";
+        w i "     let x = LL.contents %s h input pos_payload in\n" (pcombinator_name ty0);
+        w i "     let len_ser = %s in\n" (bytesize_call ty0 "x");
+        w i "     ((%d <= len_payload /\\ len_payload <= %d) \\/ (%d <= len_ser /\\ len_ser <= %d))\n" 0 smax 0 smax;
+        w i "  ))))\n";
+        w i "  (ensures (fun h _ h' ->\n";
+        w i "    let x = LL.contents %s h input (pos `U32.add` %dul) in\n" (pcombinator_name ty0) len_len;
+        w i "    let len_ser = %s in\n" (bytesize_call ty0 "x");
+        w i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len;
+        w i "    %d <= len_ser /\\ len_ser <= %d /\\\n" 0 smax;
+        w i "    LL.valid_content_pos %s_parser h' input pos x pos'\n" n;
+        w i "  ))\n\n";
+        w o "let %s_finalize input pos pos' =\n" n;
+        w o "  let h = HST.get () in\n";
+        w o "  %s\n" eqtypes;
+        w o "  [@inline_let] let _ =\n";
+        w o "    let x = LL.contents %s h input (pos `U32.add` %dul) in\n" (pcombinator_name ty0) len_len;
+        w o "    %s\n" (bytesize_eq_call ty0 "x");
+        w o "  in\n";
+        w o "  LL.finalize_bounded_vldata_strong %d %d %s input pos pos'\n\n" 0 smax (scombinator_name ty0);
         (* accessor *)
-        if ty <> "Empty" && ty <> "Fail" then begin
             w i "let %s_clens : LL.clens %s %s = {\n" n n ty0;
             w i "  LL.clens_cond = (fun _ -> True);\n";
             w i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n ty0;
@@ -1274,8 +1300,6 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
             w o "let %s_gaccessor = %s LL.gaccessor_bounded_vldata_strong_payload %d %d %s\n\n" n eqtypes 0 smax (scombinator_name ty0);
             w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
             w o "let %s_accessor = %s LL.accessor_bounded_vldata_strong_payload %d %d %s\n\n" n eqtypes 0 smax (scombinator_name ty0);
-            ()
-        end;
         ()
        end;
       (* lemma about bytesize: works in both cases *)
