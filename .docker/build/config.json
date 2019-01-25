@@ -1,0 +1,28 @@
+{
+    "ProjectName" : "quackyducky",
+
+    "BaseContainerIsEverestImage" : true,
+    "BaseContainerImageName" : "fstar",
+    "BaseContainerImageTagOrCommitId": "latest",
+    "BranchName" : "master",
+    "GithubCommitUrl" : "https://github.com/FStarLang/FStar/commit",
+    "OnDemandBuildDefinition" : "FStar\\FStar-{agentOS}",
+
+    "DockerFile": ".docker/build/{agentOS}/Dockerfile",
+    "DependencyFiles" : [
+        ".docker/build/build_helper.sh",
+        ".docker/build/build.sh"
+    ],
+
+    "DockerCacheEnabled" : true,
+    "CIBuildTarget" : "quackyducky_test",
+    "NightlyBuildTarget" : "quackyducky_test",
+    "HasLogsToExtract" : true,
+
+    "NotificationEnabled" : true,
+    "NotificationChannel" : "#quackyducky-build",
+    "PublicBranches" : [ "master" ],
+
+    "kremlin_version" : "origin/master",
+    "mitls_version" : "origin/master"
+}
