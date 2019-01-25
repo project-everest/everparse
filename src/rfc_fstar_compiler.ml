@@ -351,7 +351,7 @@ let write_bytesize o ?param:(p=None) is_private n =
         w o "let %s_bytesize%s (x:%s k) : GTot nat = let s = %s in Seq.length (s x)\n\n" n parg n pser;
         w o "let %s_bytesize_eq k x = ()\n\n" n;
     end
-    
+
 let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin bmax =
   let (parg, ptyp, pparse, pser) = get_api_params p n in
   let parser_kind = match md with
@@ -1294,7 +1294,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
       ()
-      
+
     (* Variable length list of fixed-length elements *)
     | VectorRange (low, high, _) when elem_li.min_len = elem_li.max_len ->
       w i "inline_for_extraction noextract let min_count = %d\ninline_for_extraction noextract let max_count = %d\n" li.min_count li.max_count;
@@ -1693,6 +1693,38 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
        produce_accessors pj_lhs_tl;
        ()
   end;
+  (* valid intro lemma *)
+  w i "val %s_valid (h:HS.mem) (input:LL.slice) (pos0:U32.t) : Lemma\n  (requires\n" n;
+  let (valid, getpos, _) = List.fold_left (fun (acc, posacc, i) (fn, ty) ->
+    let v = sprintf "%s    LL.valid %s h input pos%d" acc (pcombinator_name ty) i in
+    let pos = sprintf "    let pos%d = LL.get_valid_pos %s h input pos%d in\n" (i+1) (pcombinator_name ty) i in
+    let acc' = v^(if i+1 = List.length fields then String.make i ')' else " /\\ (\n"^pos) in
+    (acc', posacc^pos, i+1)
+  ) ("", "", 0) fields in
+  w i "%s\n  )\n  (ensures (\n%s    LL.valid_content_pos %s_parser h input pos0\n      ({\n" valid getpos n;
+  List.iteri (fun j (fn, ty) ->
+    w i "        %s = LL.contents %s h input pos%d;\n" fn (pcombinator_name ty) j
+  ) fields;
+  w i "      }) pos%d\n  ))\n\n" (List.length fields);
+  w o "let %s_valid h input pos0 =\n%s" n getpos;
+  List.iteri (fun j (fn, ty) ->
+    w o "  let %s = LL.contents %s h input pos%d in\n" fn (pcombinator_name ty) j
+  ) fields;
+  let get_prefix i = fst (List.fold_left (
+    fun (acc, j) (fn, ty) ->
+      let acc' = if j > i then acc else
+        let c = pcombinator_name ty in
+        (if acc="" then c else sprintf "%s\n    `LP.nondep_then` %s" acc c) in
+      (acc', j+1)
+    ) ("", 0) fields) in
+  List.iteri (fun j (fn, ty) ->
+    if j > 0 then
+      w o "  LL.valid_nondep_then_intro h (%s) %s input pos0;\n" (get_prefix (j-1)) (pcombinator_name ty)
+  ) fields;
+  w o "  assert_norm (%s' == LP.get_parser_type %s'_parser);\n" n n;
+  w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+  w o "  synth_%s_injective ();\n" n;
+  w o "  LL.valid_synth_intro h %s'_parser synth_%s input pos0\n\n" n n;
   ()
 
 (* Rewrite {... uintX len; t value[len]; ...} into VectorVldata *)
@@ -1780,6 +1812,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w i "module L = FStar.List.Tot\n";
   w i "module B = LowStar.Buffer\n";
   w i "module BY = FStar.Bytes\n";
+  w i "module HS = FStar.HyperStack\n";
   w i "module HST = FStar.HyperStack.ST\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
@@ -1796,6 +1829,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
 	w o "module L = FStar.List.Tot\n";
   w o "module B = LowStar.Buffer\n";
   w o "module BY = FStar.Bytes\n";
+  w i "module HS = FStar.HyperStack\n";
   w o "module HST = FStar.HyperStack.ST\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
