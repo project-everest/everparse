@@ -1195,6 +1195,36 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
             w o "let %s_accessor = LL.accessor_bounded_vldata_payload %d %d %s\n\n" n 0 smax (pcombinator_name ty0);
             ()
         end;
+        (* finalizer *)
+        begin match ty with
+        | "Fail" -> () (* impossible *)
+        | "Empty" ->
+            w i "val %s_finalize (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n;
+            w i "  (requires (fun h ->\n";
+            w i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" len_len;
+            w i "    LL.live_slice h input\n";
+            w i "  ))\n";
+            w i "  (ensures (fun h _ h' ->\n";
+            w i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len;
+            w i "    LL.valid_pos %s_parser h' input pos (pos `U32.add` %dul)\n" n len_len;
+            w i "  ))\n\n";
+            w o "let %s_finalize input pos =\n" n;
+            w o "  let h = HST.get () in\n";
+            w o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" len_len;
+            w o "  LL.finalize_bounded_vldata %d %d LL.parse_empty input pos (pos `U32.add` %dul) \n\n" 0 smax len_len
+        | _ ->
+            w i "val %s_finalize (input: LL.slice) (pos: U32.t) (pos' : U32.t) : HST.Stack unit\n" n;
+            w i "  (requires (fun h ->\n";
+            w i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" len_len;
+            w i "    LL.valid_pos %s h input (pos `U32.add` %dul) pos'\n" (pcombinator_name ty0) len_len;
+            w i "  ))\n";
+            w i "  (ensures (fun h _ h' ->\n";
+            w i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len;
+            w i "    LL.valid_content_pos %s_parser h' input pos (LL.contents %s h input (pos `U32.add` %dul)) pos'\n" n (pcombinator_name ty0) len_len;
+            w i "  ))\n\n";
+            w o "let %s_finalize input pos pos' =\n" n;
+            w o "  LL.finalize_bounded_vldata %d %d %s input pos pos'\n\n" 0 smax (pcombinator_name ty0)
+        end;
         ()
        end
       else
