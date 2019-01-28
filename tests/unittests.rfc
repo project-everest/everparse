@@ -151,3 +151,8 @@ struct {
     case b: t20;
   } body[len];
 } t22;
+
+struct {
+  uint8 len;
+  t18 data[len];
+} t23;
