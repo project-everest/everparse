@@ -1163,7 +1163,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorVldata vl ->
       let (len_len, smax) = basic_bounds vl in
       let (min, max) = li.min_len, li.max_len in
-      if elem_li.max_len <= smax then
+      let fits_in_bounds = elem_li.max_len <= smax in
+      let needs_synth = not fits_in_bounds in
+      if fits_in_bounds then
        begin
         w i "type %s = %s\n\n" n ty0;
         write_api o i is_private li.meta n min max;
@@ -1232,37 +1234,39 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         let sizef =
           if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty0)
           else sprintf "%s_bytesize x" ty0 in
-        (if not (basic_type ty) then w o "friend %s\n\n" (module_name ty0));
         w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n ty0 sizef 0 smax;
         write_api o i is_private li.meta n min max;
         w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty0);
-        let eqtypes = sprintf "[@inline_let] let _ = assert_norm (%s' == %s) in" n n in
+        w o "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
+        w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty0 "x");
+        w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
+        w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty0 "x");
         w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
         w o "  LP.parse_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty0);
-        w o "let %s_parser = %s %s'_parser\n\n" n eqtypes n;
+        w o "let %s_parser = LP.parse_synth %s'_parser synth_%s\n\n" n n n;
         w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
         w o "  LP.serialize_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty0);
-        w o "let %s_serializer = %s %s'_serializer\n\n" n eqtypes n;
+        w o "let %s_serializer = LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n n;
         write_bytesize o is_private n;
         w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
         w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul %s %s\n\n" 0 0 smax smax (scombinator_name ty0) (pcombinator32_name ty0);
-        w o "let %s_parser32 = %s %s'_parser32\n\n" n eqtypes n;
+        w o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
         w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
         w o "  LP.serialize32_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator32_name ty0);
-        w o "let %s_serializer32 = %s %s'_serializer32\n\n" n eqtypes n;
+        w o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
         w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
         w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" 0 smax (size32_name ty0) (log256 smax);
-        w o "let %s_size32 = %s %s'_size32\n\n" n eqtypes n;
+        w o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
         if need_validator then (
           w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
           w o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty0) (validator_name ty0);
-          w o "let %s_validator = %s %s'_validator\n\n" n eqtypes n
+          w o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
         );
         if need_jumper then (
           w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
           w o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty0);
           let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-          w o "let %s_jumper%s = %s %s'_jumper\n\n" n jumper_annot eqtypes n
+          w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
         );
         (* finalizer *)
         if ty = "Empty" || ty = "Fail" then failwith "vldata empty/fail should have been in the 'bounds OK' case";
@@ -1285,26 +1289,41 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         w i "  ))\n\n";
         w o "let %s_finalize input pos pos' =\n" n;
         w o "  let h = HST.get () in\n";
-        w o "  %s\n" eqtypes;
         w o "  [@inline_let] let _ =\n";
         w o "    let x = LL.contents %s h input (pos `U32.add` %dul) in\n" (pcombinator_name ty0) len_len;
         w o "    %s\n" (bytesize_eq_call ty0 "x");
         w o "  in\n";
-        w o "  LL.finalize_bounded_vldata_strong %d %d %s input pos pos'\n\n" 0 smax (scombinator_name ty0);
+        w o "  LL.finalize_bounded_vldata_strong %d %d %s input pos pos';\n" 0 smax (scombinator_name ty0);
+        w o "  let h = HST.get () in\n";
+        w o "  LL.valid_synth h %s'_parser synth_%s input pos\n\n" n n;
         (* accessor *)
             w i "let %s_clens : LL.clens %s %s = {\n" n n ty0;
             w i "  LL.clens_cond = (fun _ -> True);\n";
             w i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n ty0;
             w i "}\n\n";
             w i "val %s_gaccessor : LL.gaccessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty0) n;
-            w o "let %s_gaccessor = %s LL.gaccessor_bounded_vldata_strong_payload %d %d %s\n\n" n eqtypes 0 smax (scombinator_name ty0);
+            let write_accessor g compose_needs_unit =
+              w o "let %s_%saccessor =\n" n g;
+              w o "  LL.%saccessor_ext\n" g;
+              w o "    (LL.%saccessor_compose\n" g;
+              w o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
+              w o "      (LL.%saccessor_bounded_vldata_strong_payload %d %d %s)\n" g 0 smax (scombinator_name ty0);
+              (if compose_needs_unit then w o "      ()\n");
+              w o "    )\n";
+              w o "    %s_clens\n" n;
+              w o "    ()\n\n";
+              ()
+            in
+            write_accessor "g" false;
             w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
-            w o "let %s_accessor = %s LL.accessor_bounded_vldata_strong_payload %d %d %s\n\n" n eqtypes 0 smax (scombinator_name ty0);
+            write_accessor "" true;
         ()
        end;
-      (* lemma about bytesize: works in both cases *)
+      (* lemma about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + %s) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len (bytesize_call ty0 "x") n;
-      w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty0 "x");
+      w o "let %s_bytesize_eqn x =\n" n;
+      (if needs_synth then w o "  LP.serialize_synth_eq _ synth_%s %s'_serializer synth_%s_recip () x;\n" n n n);
+      w o "  %s\n\n" (bytesize_eq_call ty0 "x");
       ()
 
     (* Fixed-length bytes *)
