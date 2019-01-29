@@ -1082,6 +1082,68 @@ and compile_select o i n seln tagn tagt taga cl def al =
          )
          cl
     | _ -> ()
+(*
+
+
+let t7_clens_x : LL.clens t7 t3 = {
+  LL.clens_cond = (fun (x: t7) -> tag_of_t7 x == X);
+  LL.clens_get = (fun (x: t7) -> (match x with Body_x y -> y) <: (Ghost t3 (requires (tag_of_t7 x == X)) (ensures (fun y -> True))));
+}
+
+val t7_gaccessor_x : LL.gaccessor t7_parser t3_parser t7_clens_x
+
+val t7_accessor_x : LL.accessor t7_gaccessor_x
+
+let t7_clens_Unknown : LL.clens t7 t2 = {
+  LL.clens_cond = (fun (x: t7) -> Body_Unknown_tag2? x);
+  LL.clens_get = (fun (x: t7) -> (match x with Body_Unknown_tag2 _ y -> y) <: (Ghost t2 (requires (Body_Unknown_tag2? x)) (ensures (fun y -> True))));
+}
+
+val t7_gaccessor_Unknown : LL.gaccessor t7_parser t2_parser t7_clens_Unknown
+
+val t7_accessor_Unknown : LL.accessor t7_gaccessor_Unknown
+
+let t7_gaccessor'_x : LL.gaccessor t7_parser t3_parser _ =
+  [@inline_let]
+  let _ =
+    assert_norm (LP.parse_dsum_kind (LP.get_parser_kind tag2_repr_parser) t7_sum parse_t7_cases (LP.get_parser_kind t2_parser) == t7_parser_kind)
+  in
+    (LL.gaccessor_clens_dsum_payload
+      t7_sum
+      tag2_repr_parser
+      parse_t7_cases
+      t2_parser
+      (LL.Known (known_tag2_as_enum_key X))
+    )
+
+let t7_gaccessor_x =
+  LL.gaccessor_ext
+    t7_gaccessor'_x
+    t7_clens_x
+    ()
+
+inline_for_extraction
+let t7_accessor'_x : LL.accessor t7_gaccessor'_x =
+  [@inline_let]
+  let _ =
+    assert_norm (LP.parse_dsum_kind (LP.get_parser_kind tag2_repr_parser) t7_sum parse_t7_cases (LP.get_parser_kind t2_parser) == t7_parser_kind)
+  in
+    (LL.accessor_clens_dsum_payload
+      t7_sum
+      tag2_repr_jumper
+      parse_t7_cases
+      t2_parser
+      (LL.Known (known_tag2_as_enum_key X))
+    )
+
+let t7_accessor_x =
+  LL.accessor_ext
+    t7_accessor'_x
+    t7_clens_x
+    ()
+
+ *)
+         
     end;
     (* finalizers *)
     let write_finalizer case =
