@@ -1049,8 +1049,9 @@ and compile_select o i n seln tagn tagt taga cl def al =
        write_constr (sprintf "(v: %s_repr { not (known_%s_repr v) } )" tn tn) "v" (sprintf "Unknown_%s" tn, dt)
     end;
     (* accessors *)
-    begin match def with
-    | None ->
+    begin
+      let d = match def with None -> "" | _ -> "d" in
+      let unknown_parser = match def with None -> "" | Some dt -> pcombinator_name (compile_type dt) in
        List.iter
          (fun (case, ty) ->
            if ty <> "Fail" && ty <> "Empty" then
@@ -1063,12 +1064,19 @@ and compile_select o i n seln tagn tagt taga cl def al =
                w i "val %s_gaccessor_%s : LL.gaccessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty0) n case;
                let write_accessor g parser_or_jumper =
                  w o "let %s_%saccessor_%s =\n" n g case;
+                 (if d = "d" then
+                   w o "[@inline_let] let _ = %s () in\n" same_kind);
                  w o "  LL.%saccessor_ext\n" g;
-                 w o "    (LL.%saccessor_clens_sum_payload\n" g;
+                 w o "    (LL.%saccessor_clens_%ssum_payload\n" g d;
                  w o "      %s_sum\n" n;
                  w o "      %s_repr_%s\n" tn parser_or_jumper;
                  w o "      parse_%s_cases\n" n;
-                 w o "      %s\n" (String.capitalize_ascii case);
+                 if d = "" then
+                   w o "      %s\n" (String.capitalize_ascii case)
+                 else begin
+                   w o "      %s\n" unknown_parser;
+                   w o "      (LL.Known (known_%s_as_enum_key %s))\n" tn (String.capitalize_ascii case)
+                 end;
                  w o "    )\n";
                  w o "    %s_clens_%s\n" n case;
                  w o "    ()\n\n";
@@ -1080,8 +1088,33 @@ and compile_select o i n seln tagn tagt taga cl def al =
                ()
              end
          )
-         cl
-    | _ -> ()
+         cl;
+       match def with
+       | Some dt when dt <> "Empty" && dt <> "Fail" ->
+          (* accessor to the default case payload *)
+          let dt0 = compile_type dt in
+          w i "let %s_clens_Unknown : LL.clens %s %s = {\n" n n dt0;
+          w i "  LL.clens_cond = (fun (x: %s) -> %s_Unknown_%s? x);\n" n cprefix tn;
+          w i "  LL.clens_get = (fun (x: %s) -> (match x with %s_Unknown_%s _ y -> y) <: (Ghost %s (requires (%s_Unknown_%s? x)) (ensures (fun y -> True))));\n" n cprefix tn dt0 cprefix tn;
+          w i "}\n\n";
+          let write_accessor g parser_or_jumper =
+            w o "let %s_%saccessor_Unknown =\n" n g;
+            w o "  [@inline_let] let _ = %s () in\n" same_kind;
+            w o "  LL.%saccessor_ext\n" g;
+            w o "    (LL.%saccessor_clens_dsum_unknown_payload\n" g;
+            w o "      %s_sum\n" n;
+            w o "      %s_repr_%s\n" tn parser_or_jumper;
+            w o "      parse_%s_cases\n" n;
+            w o "      %s\n" (pcombinator_name dt0);
+            w o "    )\n";
+            w o "    %s_clens_Unknown" n;
+            w o "    ()\n\n"
+          in
+          w i "val %s_gaccessor_Unknown : LL.gaccessor %s_parser %s %s_clens_Unknown\n\n" n n (pcombinator_name dt0) n;
+          write_accessor "g" "parser";
+          w i "val %s_accessor_Unknown : LL.accessor %s_gaccessor_Unknown\n\n" n n;
+          write_accessor "" "jumper"
+       | _ -> ()
     end;
     (* finalizers *)
     let write_finalizer case =
