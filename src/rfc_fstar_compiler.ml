@@ -1200,6 +1200,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | TypeSimple(t), VectorVldata vl when SM.mem (compile_type t) !erased ->
       let (len_len, max_len) = basic_bounds vl in
       TypeSimple("opaque"), VectorRange(max 0 (li.min_len-len_len), min max_len (max 0 (li.max_len-len_len)), len_len)
+    | TypeSimple("opaque"), VectorVldata vl ->
+      let (len_len, max_len) = basic_bounds vl in
+      TypeSimple("opaque"), VectorRange(0, max_len, len_len)
     | _ -> ty, vec in
   match ty with
   | TypeSelect (sn, cl, def) ->  () (*failwith "Unsupported select"*)
@@ -1430,7 +1433,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "    LL.valid_content_pos %s_parser h input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos %dul))) (pos `U32.add` %dul)\n" n k k;
       w i "  ))\n";
       w o "let %s_elim h input pos =\n" n;
-      w o "  LL.valid_flbytes_elim h %d input pos\n\n" k;      
+      w o "  LL.valid_flbytes_elim h %d input pos\n\n" k;
       ()
 
     (* Fixed length list *)
