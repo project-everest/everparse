@@ -1117,11 +1117,11 @@ and compile_select o i n seln tagn tagt taga cl def al =
     end;
     (* finalizers *)
     let write_finalizer case =
+      w o "  [@inline_let] let _ = %s () in\n" same_kind;
       match def with
       | None ->
          w o "  LL.finalize_sum_case %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases (_ by (LP.enum_repr_of_key_tac %s_enum)) %s input pos\n\n" n tn tn n tn (String.capitalize_ascii case)
       | Some dt ->
-         w o "  [@inline_let] let _ = %s () in\n" same_kind;
          w o "  LL.finalize_dsum_case_known %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases %s (_ by (LP.enum_repr_of_key_tac %s_enum)) (known_%s_as_enum_key %s) input pos\n\n" n tn tn n (pcombinator_name (compile_type dt)) tn tn (String.capitalize_ascii case)
     in
        List.iter
