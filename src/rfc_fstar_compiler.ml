@@ -1064,8 +1064,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
                w i "val %s_gaccessor_%s : LL.gaccessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty0) n case;
                let write_accessor g parser_or_jumper =
                  w o "let %s_%saccessor_%s =\n" n g case;
-                 (if d = "d" then
-                   w o "[@inline_let] let _ = %s () in\n" same_kind);
+                 w o "[@inline_let] let _ = %s () in\n" same_kind;
                  w o "  LL.%saccessor_ext\n" g;
                  w o "    (LL.%saccessor_clens_%ssum_payload\n" g d;
                  w o "      %s_sum\n" n;
