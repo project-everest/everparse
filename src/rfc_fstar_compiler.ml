@@ -1026,24 +1026,31 @@ and compile_select o i n seln tagn tagt taga cl def al =
     begin match def with
     | None ->
        List.iter
-         (fun (case, ty) ->
+         (function (case, ty) when ty <> "Fail" ->
            let ty0 = compile_type ty in
            let constr = sprintf "%s_%s" cprefix case in
            w i "val %s_bytesize_eqn_%s (x: %s) : Lemma (%s_bytesize (%s x) == %d + %s) [SMTPat (%s_bytesize (%s x))]\n\n" n case ty0 n constr taglen (bytesize_call ty0 "x") n constr;
-           w o "let %s_bytesize_eqn_%s x =\n\n" n case;
+           w o "let %s_bytesize_eqn_%s x =\n" n case;
+           w o "  %s\n" same_kind;
            w o "  LP.serialize_sum_eq %s_sum %s_repr_serializer serialize_%s_cases (%s x);\n" n tn n constr;
+           w o "  (let ln = FStar.Seq.length (LP.serialize (LP.serialize_enum_key _ %s_repr_serializer (LP.sum_enum %s_sum)) (key_of_%s (%s x))) in assert (%d <= ln /\\ ln <= %d));\n" tn n n constr taglen taglen;
            w o "  %s\n\n" (bytesize_eq_call ty0 "x")
+                 | _ -> ()
          )
          cl
     | Some dt ->
        let dt0 = compile_type dt in
        let write_constr vbind vvar (case, ty) =
+         if ty <> "Fail" then begin
            let ty0 = compile_type ty in
            let constr = sprintf "%s_%s" cprefix case in
            w i "val %s_bytesize_eqn_%s %s (x: %s) : Lemma (%s_bytesize (%s %s x) == %d + %s) [SMTPat (%s_bytesize (%s %s x))]\n\n" n case vbind ty0 n constr vvar taglen (bytesize_call ty0 "x") n constr vvar;
            w o "let %s_bytesize_eqn_%s %s x =\n" n case vvar;
+           w o "  %s\n" same_kind;
            w o "  LP.serialize_dsum_eq %s_sum %s_repr_serializer parse_%s_cases serialize_%s_cases %s %s (%s %s x) ;\n" n tn n n (pcombinator_name dt0) (scombinator_name dt0) constr vvar;
+           w o "  (let ln = FStar.Seq.length (LP.serialize (LP.serialize_maybe_enum_key _ %s_repr_serializer (LP.dsum_enum %s_sum)) (key_of_%s (%s %s x))) in assert (%d <= ln /\\ ln <= %d));\n" tn n n constr vvar taglen taglen;
            w o "  %s\n\n" (bytesize_eq_call ty0 "x")
+         end
        in
        List.iter (write_constr "" "") cl;
        write_constr (sprintf "(v: %s_repr { not (known_%s_repr v) } )" tn tn) "v" (sprintf "Unknown_%s" tn, dt)
