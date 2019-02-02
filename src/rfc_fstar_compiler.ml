@@ -1100,10 +1100,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
                w o "let %s_accessor'_%s : LL.accessor %s_gaccessor'_%s =\n" n case n case;
                write_accessor' "" "jumper";
                w o "let %s_clens_eq_%s : squash (LL.clens_eq %s_clens'_%s %s_clens_%s) =\n" n case n case n case;
-               if d = "" then
-                 w o "    (_ by (LL.sum_accessor_ext (`%s)))\n\n" n
-               else
-                 w o "  ()\n\n";
+               w o "    (_ by (LL.sum_accessor_ext (`%s)))\n\n" n;
                let write_accessor g =
                  w o "let %s_%saccessor_%s =\n" n g case;
                  w o "  LL.%saccessor_ext\n" g;
@@ -1126,7 +1123,8 @@ and compile_select o i n seln tagn tagt taga cl def al =
           w i "  LL.clens_cond = (fun (x: %s) -> %s_Unknown_%s? x);\n" n cprefix tn;
           w i "  LL.clens_get = (fun (x: %s) -> (match x with %s_Unknown_%s _ y -> y) <: (Ghost %s (requires (%s_Unknown_%s? x)) (ensures (fun y -> True))));\n" n cprefix tn dt0 cprefix tn;
           w i "}\n\n";
-          w o "let %s_clens_eq_Unknown : squash (LL.clens_eq (LL.clens_dsum_unknown_payload %s_sum) %s_clens_Unknown) = ()\n\n" n n n;
+          w o "let %s_clens_eq_Unknown : squash (LL.clens_eq (LL.clens_dsum_unknown_payload %s_sum) %s_clens_Unknown) =\n" n n n;
+          w o "    (_ by (LL.sum_accessor_ext (`%s)))\n\n" n;
           let write_accessor g parser_or_jumper =
             w o "let %s_%saccessor_Unknown =\n" n g;
             w o "  [@inline_let] let _ = %s () in\n" same_kind;
