@@ -249,10 +249,11 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       }
     | VectorVldata tn ->
       let (len_len, max_len) = basic_bounds tn in
-      let max' = len_len + min max_len li.max_len in
+      let (li_min_len, li_max_len) = if ty = TypeSimple "opaque" then (0, max_len) else (li.min_len, li.max_len) in  
+      let max' = len_len + min max_len li_max_len in
       (*let min', max' = li.min_len, min li.max_len max_len in*)
       let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
-      {li with len_len = len_len; min_len = len_len + li.min_len; max_len = max'; vl = true; meta = meta' }
+      {li with len_len = len_len; min_len = len_len + li_min_len; max_len = max'; vl = true; meta = meta' }
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
       let li' = get_leninfo (tn^"@"^cst) in
