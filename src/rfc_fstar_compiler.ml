@@ -1049,7 +1049,12 @@ and compile_select o i n seln tagn tagt taga cl def al =
            w o "let %s_bytesize_eqn_%s %s x =\n" n case vvar;
            w o "  %s\n" same_kind;
            w o "  LP.serialize_dsum_eq %s_sum %s_repr_serializer parse_%s_cases serialize_%s_cases %s %s (%s %s x) ;\n" n tn n n (pcombinator_name dt0) (scombinator_name dt0) constr vvar;
-           w o "  (let ln = FStar.Seq.length (LP.serialize (LP.serialize_maybe_enum_key _ %s_repr_serializer (LP.dsum_enum %s_sum)) (key_of_%s (%s %s x))) in assert (%d <= ln /\\ ln <= %d));\n" tn n n constr vvar taglen taglen;
+           w o "  let tg = LL.dsum_tag_of_data %s_sum (%s %s x) in\n" n constr vvar;
+           if vvar = "" then
+             w o "  assert_norm (tg == LL.Known (known_%s_as_enum_key %s));\n" tn (String.capitalize_ascii case)
+           else
+             w o "  assert_norm (tg == LL.Unknown (unknown_%s_as_enum_key %s));\n" tn vvar;
+           w o "  (let ln = FStar.Seq.length (LP.serialize (LP.serialize_maybe_enum_key _ %s_repr_serializer (LP.dsum_enum %s_sum)) tg) in assert (%d <= ln /\\ ln <= %d));\n" tn n taglen taglen;
            w o "  %s\n\n" (bytesize_eq_call ty0 "x")
          end
        in
