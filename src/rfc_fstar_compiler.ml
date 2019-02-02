@@ -1121,6 +1121,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
           w i "  LL.clens_cond = (fun (x: %s) -> %s_Unknown_%s? x);\n" n cprefix tn;
           w i "  LL.clens_get = (fun (x: %s) -> (match x with %s_Unknown_%s _ y -> y) <: (Ghost %s (requires (%s_Unknown_%s? x)) (ensures (fun y -> True))));\n" n cprefix tn dt0 cprefix tn;
           w i "}\n\n";
+          w o "let %s_clens_eq_Unknown : squash (LL.clens_eq (LL.clens_dsum_unknown_payload %s_sum) %s_clens_Unknown) = ()\n\n" n n n;
           let write_accessor g parser_or_jumper =
             w o "let %s_%saccessor_Unknown =\n" n g;
             w o "  [@inline_let] let _ = %s () in\n" same_kind;
@@ -1131,8 +1132,8 @@ and compile_select o i n seln tagn tagt taga cl def al =
             w o "      parse_%s_cases\n" n;
             w o "      %s\n" (pcombinator_name dt0);
             w o "    )\n";
-            w o "    %s_clens_Unknown" n;
-            w o "    ()\n\n"
+            w o "    %s_clens_Unknown\n" n;
+            w o "    %s_clens_eq_Unknown\n\n" n
           in
           w i "val %s_gaccessor_Unknown : LL.gaccessor %s_parser %s %s_clens_Unknown\n\n" n n (pcombinator_name dt0) n;
           write_accessor "g" "parser";
