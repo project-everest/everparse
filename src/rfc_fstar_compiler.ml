@@ -1142,11 +1142,25 @@ and compile_select o i n seln tagn tagt taga cl def al =
     end;
     (* finalizers *)
     let write_finalizer case =
-      w o "  [@inline_let] let _ = %s () in\n" same_kind;
+      w o "  [@inline_let] let _ = %s" same_kind;
       match def with
       | None ->
-         w o "  LL.finalize_sum_case %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases (_ by (LP.enum_repr_of_key_tac %s_enum)) %s input pos\n\n" n tn tn n tn (String.capitalize_ascii case)
+         w o "    let tg = %s_as_enum_key %s in\n" tn (String.capitalize_ascii case);
+         w o "    let len = LL.serialized_length (LP.serialize_enum_key _ %s_repr_serializer (LP.sum_enum %s_sum)) tg in\n" tn n;
+         w o "    let pk = LP.get_parser_kind (LP.parse_enum_key %s_repr_parser (LP.sum_enum %s_sum)) in\n" tn n;
+         w o "    assert_norm (pk.LP.parser_kind_low == %d /\\ pk.LP.parser_kind_high == Some %d);\n" taglen taglen;
+         w o "    assert (%d <= len /\\ len <= %d);\n" taglen taglen;
+         w o "    assert_norm (pow2 32 == 4294967296)\n";
+         w o "  in\n";
+         w o "  LL.finalize_sum_case %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases (_ by (LP.enum_repr_of_key_tac %s_enum)) (%s_as_enum_key %s) input pos\n\n" n tn tn n tn tn (String.capitalize_ascii case)
       | Some dt ->
+         w o "    let tg = known_%s_as_enum_key %s in\n" tn (String.capitalize_ascii case);
+         w o "    let len = LL.serialized_length (LP.serialize_enum_key _ %s_repr_serializer (LP.dsum_enum %s_sum)) tg in\n" tn n;
+         w o "    let pk = LP.get_parser_kind (LP.parse_enum_key %s_repr_parser (LP.dsum_enum %s_sum)) in\n" tn n;
+         w o "    assert_norm (pk.LP.parser_kind_low == %d /\\ pk.LP.parser_kind_high == Some %d);\n" taglen taglen;
+         w o "    assert (%d <= len /\\ len <= %d);\n" taglen taglen;
+         w o "    assert_norm (pow2 32 == 4294967296)\n";
+         w o "  in\n";
          w o "  LL.finalize_dsum_case_known %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases %s (_ by (LP.enum_repr_of_key_tac %s_enum)) (known_%s_as_enum_key %s) input pos\n\n" n tn tn n (pcombinator_name (compile_type dt)) tn tn (String.capitalize_ascii case)
     in
        List.iter
@@ -1158,8 +1172,11 @@ and compile_select o i n seln tagn tagt taga cl def al =
            | "Fail" -> () (* impossible case *)
            | "Empty" -> (* parse_empty is not in the user context, so we need to "inline" it here *)
               w i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
-              w i "  (requires (fun h -> LL.live_slice h input /\\ U32.v pos + %d <= U32.v input.LL.len))\n" taglen;
+              w i "  (requires (fun h ->\n";
+              w i "    assert_norm (pow2 32 == 4294967296);\n";
+              w i "    LL.live_slice h input /\\ U32.v pos + %d <= U32.v input.LL.len))\n" taglen;
               w i "  (ensures (fun h _ h' ->\n";
+              w i "    assert_norm (pow2 32 == 4294967296);\n";
               w i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
               w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
               w i "    LL.valid_content_pos %s_parser h' input pos (%s ()) pos_payload\n" n constr;
@@ -1170,8 +1187,11 @@ and compile_select o i n seln tagn tagt taga cl def al =
               write_finalizer case
            | _ ->
               w i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
-              w i "  (requires (fun h -> U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul)))\n" taglen casep taglen;
+              w i "  (requires (fun h ->\n";
+              w i "    assert_norm (pow2 32 == 4294967296);\n";
+              w i "U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul)))\n" taglen casep taglen;
               w i "  (ensures (fun h _ h' ->\n";
+              w i "    assert_norm (pow2 32 == 4294967296);\n";
               w i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
               w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
               w i "    LL.valid_content_pos %s_parser h' input pos (%s (LL.contents %s h input pos_payload)) (LL.get_valid_pos %s h input pos_payload)\n" n constr casep casep;
@@ -1186,12 +1206,15 @@ and compile_select o i n seln tagn tagt taga cl def al =
        | Some dt when dt <> "Fail" ->
           let dp = pcombinator_name (compile_type dt) in
           w i "val finalize_%s_Unknown_%s (v: %s_repr) (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n tn tn;
+          w i "  (requires (fun h ->\n";
+          w i "    assert_norm (pow2 32 == 4294967296);\n";
           if dt = "Empty" then
-            w i "  (requires (fun h -> U32.v pos + %d <= U32.v input.LL.len /\\ LL.live_slice h input /\\ not (known_%s_repr v)))\n" taglen tn
+            w i "    U32.v pos + %d <= U32.v input.LL.len /\\ LL.live_slice h input /\\ not (known_%s_repr v)))\n" taglen tn
           else
-            w i "  (requires (fun h -> U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul) /\\ not (known_%s_repr v)))\n" taglen dp taglen tn
+            w i "  U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul) /\\ not (known_%s_repr v)))\n" taglen dp taglen tn
           ;
           w i "  (ensures (fun h _ h' ->\n";
+          w i "    assert_norm (pow2 32 == 4294967296);\n";
           w i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
           w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
           if dt = "Empty" then
@@ -1201,7 +1224,13 @@ and compile_select o i n seln tagn tagt taga cl def al =
           ;
           w i "  ))\n\n";
           w o "let finalize_%s_Unknown_%s v input pos =\n" n tn;
-          w o "  [@inline_let] let _ = (%s ()) in\n" same_kind;
+          w o "  [@inline_let] let _ =\n";
+          w o "    %s\n" same_kind;
+          w o "    let tg = unknown_%s_as_enum_key v in\n" tn;
+          w o "    let len = LL.serialized_length %s_repr_serializer tg in\n" tn;
+          w o "    assert (%d <= len /\\ len <= %d);\n" taglen taglen;
+          w o "    assert_norm (pow2 32 == 4294967296)\n";
+          w o "  in\n";
           if dt = "Empty" then begin
             w o "  let h = HST.get () in\n";
             w o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" taglen;
