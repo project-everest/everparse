@@ -654,7 +654,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
   let need_jumper = need_jumper li.min_len li.max_len in
 
   (* FIXME(adl) scalability is still not great *)
-  w o "// Need high Z3 limits for large sum types\n#set-options \"--z3rlimit 120\"\n\n";
+  w o "// Need high Z3 limits for large sum types\n#set-options \"--z3rlimit %d\"\n\n" (60 * List.length cl);
 
   (** FIXME(adl) for now the t_sum of open and closed sums are independently generated,
   we may try to share more of the declarations between the two cases **)
