@@ -1069,28 +1069,45 @@ and compile_select o i n seln tagn tagt taga cl def al =
                w i "  LL.clens_get = (fun (x: %s) -> (match x with %s_%s y -> y) <: (Ghost %s (requires (tag_of_%s x == %s)) (ensures (fun y -> True))));\n" n cprefix case ty0 n (String.capitalize_ascii case);
                w i "}\n\n";
                w i "val %s_gaccessor_%s : LL.gaccessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty0) n case;
-               let write_accessor g parser_or_jumper =
-                 w o "let %s_%saccessor_%s =\n" n g case;
+               w o "let %s_clens'_%s : LL.clens %s %s = LL.clens_%ssum_payload %s_sum " n case n ty0 d n;
+               if d = "" then
+                 w o "(%s_as_enum_key %s)\n\n" tn (String.capitalize_ascii case)
+               else
+                 w o "(LL.Known (known_%s_as_enum_key %s))\n\n" tn (String.capitalize_ascii case);
+               w o "let %s_gaccessor'_%s : LL.gaccessor %s_parser %s %s_clens'_%s =\n" n case n (pcombinator_name ty0) n case;
+               let write_accessor' g parser_or_jumper =
                  w o "[@inline_let] let _ = %s () in\n" same_kind;
-                 w o "  LL.%saccessor_ext\n" g;
-                 w o "    (LL.%saccessor_clens_%ssum_payload\n" g d;
-                 w o "      %s_sum\n" n;
-                 w o "      %s_repr_%s\n" tn parser_or_jumper;
-                 w o "      parse_%s_cases\n" n;
+                 w o "  LL.%saccessor_clens_%ssum_payload\n" g d;
+                 w o "    %s_sum\n" n;
+                 w o "    %s_repr_%s\n" tn parser_or_jumper;
+                 w o "    parse_%s_cases\n" n;
                  if d = "" then
-                   w o "      %s\n" (String.capitalize_ascii case)
+                   w o "    (%s_as_enum_key %s)\n" tn (String.capitalize_ascii case)
                  else begin
-                   w o "      %s\n" unknown_parser;
-                   w o "      (LL.Known (known_%s_as_enum_key %s))\n" tn (String.capitalize_ascii case)
+                   w o "    %s\n" unknown_parser;
+                   w o "    (LL.Known (known_%s_as_enum_key %s))\n" tn (String.capitalize_ascii case)
                  end;
-                 w o "    )\n";
-                 w o "    %s_clens_%s\n" n case;
-                 w o "    ()\n\n";
-                 ()
+                 w o "\n"
                in
-               write_accessor "g" "parser";
+               write_accessor' "g" "parser";
+               w o "inline_for_extraction\n";
+               w o "let %s_accessor'_%s : LL.accessor %s_gaccessor'_%s =\n" n case n case;
+               write_accessor' "" "jumper";
+               w o "let %s_clens_eq_%s : squash (LL.clens_eq %s_clens'_%s %s_clens_%s) =\n" n case n case n case;
+               if d = "" then
+                 w o "    (_ by (LL.sum_accessor_ext (`%s)))\n\n" n
+               else
+                 w o "  ()\n\n";
+               let write_accessor g =
+                 w o "let %s_%saccessor_%s =\n" n g case;
+                 w o "  LL.%saccessor_ext\n" g;
+                 w o "    %s_%saccessor'_%s\n" n g case;
+                 w o "    %s_clens_%s\n" n case;
+                 w o "    %s_clens_eq_%s\n\n" n case
+               in
+               write_accessor "g";
                w i "val %s_accessor_%s : LL.accessor %s_gaccessor_%s\n\n" n case n case;
-               write_accessor "" "jumper";
+               write_accessor "";
                ()
              end
          )
