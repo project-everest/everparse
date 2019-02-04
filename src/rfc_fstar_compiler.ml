@@ -1739,6 +1739,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "  (ensures (fun h res h' ->\n";
       w i "    let x = LL.contents %s_parser h input pos in\n" n;
       w i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
+      w i "    B.modifies B.loc_none h h' /\\\n";
       w i "    U32.v res == L.length x /\\\n";
       w i "    U32.v pos' == U32.v pos + %d + (U32.v res `FStar.Mul.op_Star` %d) /\\\n" li.len_len elem_li.min_len;
       w i "    LL.valid_list %s h input (pos `U32.add` %dul) pos' /\\\n" (pcombinator_name ty0) li.len_len;
