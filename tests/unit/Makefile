@@ -19,7 +19,7 @@ CACHE_DIR=cache$(LAX_EXT)
 CHECKED_EXT=.checked$(LAX_EXT)
 
 FSTAR_OPTIONS = --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
-		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include ..
+		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include .. --protect_top_level_axioms true
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 
@@ -71,7 +71,7 @@ ALL_KRML_FILES := $(filter-out kremlin/prims.krml,$(ALL_KRML_FILES))
 
 extract: $(ALL_KRML_FILES) # from .depend
 	-@mkdir out
-	$(KREMLIN) -skip-compilation $^
+	$(KREMLIN) -warn-error '@2' -skip-compilation $^
 
 test.exe: $(ALL_KRML_FILES) kremlin/Test.krml
 	-@mkdir out
