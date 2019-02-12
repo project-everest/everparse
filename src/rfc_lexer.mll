@@ -25,8 +25,12 @@ rule read = parse
 	| "default" { DEFAULT }
 	| int as i { INT (int_of_string i) }
 	| hex as i { INT (int_of_string i) }
+	| '2' '^' (int as pow) '-' (int as sub)
+		{ INT (let p, m = int_of_string pow, int_of_string sub in
+			    (1 lsl p) - m ) }
 	| id as i  { TYPE i }
-	| '<'      { RANGE (range_min lexbuf) }
+	| '<'      { LT }
+	| '>'      { GT }
 	| '='      { EQUALS }
 	| ';'      { SEMCOL }
 	| ':'      { FULCOL }
@@ -40,19 +44,9 @@ rule read = parse
 	| '/' '*'  { comment_start 1 lexbuf }
 	| ','      { COMMA  }
 	| '.' '.'  { DOTDOT }
+	| ':'      { COLON }
 	| eof      { EOF }
 	| _        { raise (SyntaxError ("Unexpected " ^ Lexing.lexeme lexbuf)) }
-
-and range_min = parse
-		| space {range_min lexbuf}
-	| int as min space? '.' '.' { range_max (int_of_string min) lexbuf }
-	| _ { raise (SyntaxError ("Invalid range start " ^ Lexing.lexeme lexbuf)) }
-
-and range_max min = parse
-	| ospace (int as max) ospace '>' { (min, int_of_string max) }
-	| '2' '^' (int as pow) '-' (int as sub) '>'
-		{ (min, let p, m = int_of_string pow, int_of_string sub in (1 lsl p) - m ) }
-	| _ { raise (SyntaxError ("Invalid range end " ^ Lexing.lexeme lexbuf)) }
 
 and comment_start depth = parse
 		| newln { new_line lexbuf; comment_start depth lexbuf }

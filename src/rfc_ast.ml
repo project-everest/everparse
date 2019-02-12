@@ -18,7 +18,8 @@ and vector_t =
 	| VectorNone
 	| VectorFixed of int
 	| VectorSymbolic of field
-	| VectorRange of int * int * int
+	| VectorRange of int * int * typ option
+	| VectorCount of int * int * typ option
 	| VectorVldata of typ
 
 and enum_field_t =

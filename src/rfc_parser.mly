@@ -8,9 +8,9 @@ let ectr = ref 0
 %token LBRACE RBRACE
 %token LBRACK RBRACK
 %token LPAREN RPAREN
-%token COMMA  EOF
-%token EQUALS DOTDOT
+%token LT     GT
 
+%token COMMA COLON EQUALS DOTDOT EOF
 %token STRUCT ENUM
 %token SELECT CASE DEFAULT
 
@@ -18,7 +18,6 @@ let ectr = ref 0
 %token <string>  TYPE
 %token <string>  CMMNT
 %token <int>     INT
-%token <int*int> RANGE
 
 %start <Rfc_ast.prog> prog
 %%
@@ -40,11 +39,18 @@ gemstone:
 	| t = struct_field; { Typedef(t) }
 ;
 
+vector_repr:
+  | {None}
+	| COLON; t = TYPE; {Some t}
+
 vector:
 	|	{ VectorNone }
 	| LBRACK; l = INT; RBRACK; { VectorFixed(l) }
 	| LBRACK; s = TYPE; RBRACK;	{ VectorSymbolic(s) }
-	| r = RANGE; { let (min,max)=r in VectorRange(min,max,0) }
+	| LT; max = INT; orepr = vector_repr; GT; {VectorRange(0, max, orepr)}
+	| LT; min = INT; DOTDOT; max = INT; orepr = vector_repr; GT; {VectorRange(min, max, orepr)}
+	| LBRACE; max = INT; orepr = vector_repr; RBRACE; {VectorCount(0,max,orepr)}
+	| LBRACE; min = INT; DOTDOT; max = INT; orepr = vector_repr; RBRACE; {VectorCount(min,max,orepr)}
 ;
 
 enum_field:

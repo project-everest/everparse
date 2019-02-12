@@ -91,7 +91,7 @@ let li_add (s:string) (li:len_info) =
 
 let basic_type = function
   | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" -> true
-  | "Empty" | "Fail" -> true
+  | "bitcoin_varint" | "Empty" | "Fail" -> true
   | _ -> false
 
 let basic_bounds = function
@@ -128,6 +128,7 @@ let rec sizeof = function
     | "uint16" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "uint24" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "uint32" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
+    | "bitcoin_varint" -> { len_len = 0; min_len = 1; max_len = 5; min_count = 0; max_count = 0; vl = true; meta = MetadataDefault }
     | "Empty" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "Fail" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataFail }
     | s ->
@@ -140,6 +141,7 @@ let compile_type = function
   | "uint16" -> "U16.t"
   | "uint24" -> "U32.t"
   | "uint32" -> "U32.t"
+  | "bitcoin_varint" -> "Uint32.t"
   | "Empty" -> "unit"
   | "Fail" -> "(squash False)"
   | t -> String.uncapitalize_ascii t
@@ -148,6 +150,7 @@ let pcombinator_name = function
   | "U8.t" -> "LPI.parse_u8"
   | "U16.t" -> "LPI.parse_u16"
   | "U32.t" -> "LPI.parse_u32"
+  | "UInt32.t" -> "LP.parse_bcvli"
   | "unit" -> "LP.parse_empty"
   | "(squash False)" -> "LP.parse_false"
   | t -> t^"_parser"
@@ -156,6 +159,7 @@ let scombinator_name = function
   | "U8.t" -> "LP.serialize_u8"
   | "U16.t" -> "LP.serialize_u16"
   | "U32.t" -> "LP.serialize_u32"
+  | "UInt32.t" -> "LP.serialize_bcvli"
   | "unit" -> "LP.serialize_empty"
   | "(squash False)" -> "LP.serialize_false"
   | t -> t^"_serializer"
@@ -164,6 +168,7 @@ let pcombinator32_name = function
   | "U8.t" -> "LP.parse32_u8"
   | "U16.t" -> "LP.parse32_u16"
   | "U32.t" -> "LP.parse32_u32"
+  | "UInt32.t" -> "LP.parse32_bcvli"
   | "unit" -> "LP.parse32_empty"
   | "(squash False)" -> "LP.parse32_false"
   | t -> t^"_parser32"
@@ -172,6 +177,7 @@ let scombinator32_name = function
   | "U8.t" -> "LP.serialize32_u8"
   | "U16.t" -> "LP.serialize32_u16"
   | "U32.t" -> "LP.serialize32_u32"
+  | "UInt32.t" -> "LP.serialize32_bcvli"
   | "unit" -> "LP.serialize32_empty"
   | "(squash False)" -> "LP.serialize32_false"
   | t -> t^"_serializer32"
@@ -181,6 +187,7 @@ let size32_name = function
   | "U16.t" -> "LP.size32_u16"
   | "U32.t" -> "LP.size32_u32"
   | "unit" -> "LP.size32_empty"
+  | "UInt32.t" -> "LP.size32_bcvli"
   | "(squash False)" -> "LP.size32_false"
   | t -> t^"_size32"
 
@@ -188,6 +195,7 @@ let validator_name = function
   | "U8.t" -> "(LL.validate_u8 ())"
   | "U16.t" -> "(LL.validate_u16 ())"
   | "U32.t" -> "(LL.validate_u32 ())"
+  | "UInt32.t" -> "(LL.validate_bcvli ())"
   | "unit" -> "(LL.validate_empty ())"
   | "(squash False)" -> "(LL.validate_false ())"
   | t -> t^"_validator"
@@ -196,6 +204,7 @@ let jumper_name = function
   | "U8.t" -> "LL.jump_u8"
   | "U16.t" -> "LL.jump_u16"
   | "U32.t" -> "LL.jump_u32"
+  | "UInt32.t" -> "LL.jump_bcvli"
   | "unit" -> "LL.jump_empty"
   | "(squash False)" -> "LL.jump_false"
   | t -> t^"_jumper"
@@ -220,12 +229,14 @@ let leaf_reader_name = function
   | "U8.t" -> "LL.read_u8"
   | "U16.t" -> "LL.read_u16"
   | "U32.t" -> "LL.read_u32"
+  | "UInt32.t" -> "LL.read_bcvli"
   | _ -> failwith "leaf_reader_name: should only be called for enum repr"
 
 let leaf_writer_name = function
   | "U8.t" -> "LL.write_u8"
   | "U16.t" -> "LL.write_u16"
   | "U32.t" -> "LL.write_u32"
+  | "UInt32.t" -> "LL.write_bcvli"
   | _ -> failwith "leaf_writer_name: should only be called for enum repr"
 
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
@@ -249,7 +260,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       }
     | VectorVldata tn ->
       let (len_len, max_len) = basic_bounds tn in
-      let (li_min_len, li_max_len) = if ty = TypeSimple "opaque" then (0, max_len) else (li.min_len, li.max_len) in  
+      let (li_min_len, li_max_len) = if ty = TypeSimple "opaque" then (0, max_len) else (li.min_len, li.max_len) in
       let max' = len_len + min max_len li_max_len in
       (*let min', max' = li.min_len, min li.max_len max_len in*)
       let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
@@ -265,8 +276,10 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       (* N.B. the len_len will be counted in the explicit length field *)
       {li' with vl = true; len_len = 0; min_len = li.min_len; max_len = max'; meta = meta' }
     | VectorRange (low, high, repr) ->
-      let h = if repr = 0 then log256 high else repr in
-      (if h < log256 high then failwith (sprintf "Can't represent <%d..%d> over %d bytes" low high repr));
+      let h = match repr with
+        | None -> log256 high
+        | Some t -> fst (basic_bounds t) in
+      (if h < log256 high then failwith (sprintf "Can't represent <%d..%d> over %d bytes" low high h));
       (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^tn));
       { vl = true;
         min_count = low / (li.len_len + li.max_len);
@@ -1256,10 +1269,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     match ty, vec with
     | TypeSimple(t), VectorVldata vl when SM.mem (compile_type t) !erased ->
       let (len_len, max_len) = basic_bounds vl in
-      TypeSimple("opaque"), VectorRange(max 0 (li.min_len-len_len), min max_len (max 0 (li.max_len-len_len)), len_len)
+      TypeSimple("opaque"), VectorRange(max 0 (li.min_len-len_len), min max_len (max 0 (li.max_len-len_len)), Some vl)
     | TypeSimple("opaque"), VectorVldata vl ->
       let (len_len, max_len) = basic_bounds vl in
-      TypeSimple("opaque"), VectorRange(0, max_len, len_len)
+      TypeSimple("opaque"), VectorRange(0, max_len, Some vl)
     | _ -> ty, vec in
   match ty with
   | TypeSelect (sn, cl, def) ->  () (*failwith "Unsupported select"*)
@@ -1591,7 +1604,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       ()
 
     (* Variable length bytes *)
-    | VectorRange (low, high, repr) when ty0 = "U8.t" && (repr = 0 || repr = log256 high) ->
+    | VectorRange (low, high, repr)
+      when ty0 = "U8.t" && (match repr with None -> true
+        | Some t -> fst (basic_bounds t) = log256 high) ->
       w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
       write_api o i is_private li.meta n li.min_len li.max_len;
@@ -1641,6 +1656,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
 
     (* Variable length bytes where the size of the length is explicit *)
     | VectorRange (low, high, repr) when ty0 = "U8.t" ->
+      let (Some trepr) = repr in
+      let repr = fst (basic_bounds trepr) in
       w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
       write_api o i is_private li.meta n li.min_len li.max_len;
