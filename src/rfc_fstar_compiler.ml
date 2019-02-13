@@ -1693,8 +1693,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "inline_for_extraction noextract let min_count = %d\ninline_for_extraction noextract let max_count = %d\n" li.min_count li.max_count;
       w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}\n\n" n ty0 li.min_count li.max_count;
       write_api o i is_private li.meta n li.min_len li.max_len;
+      let vlarray_precond = sprintf "(LP.vldata_vlarray_precond %d %d %s %d %d == true)" low high (pcombinator_name ty0) li.min_count li.max_count in
+      w o "let %s_precond : squash %s = assert_norm %s\n\n" n vlarray_precond vlarray_precond;
       w o "let %s_parser =\n" n;
-      w o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" low high (pcombinator_name ty0) li.min_count li.max_count;
       w o "  LP.parse_vlarray %d %d %s %d %d ()\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
       w o "let %s_serializer =\n" n;
       w o "  LP.serialize_vlarray %d %d %s %d %d ()\n\n" low high (scombinator_name ty0) li.min_count li.max_count;
