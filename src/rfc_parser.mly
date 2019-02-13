@@ -10,7 +10,7 @@ let ectr = ref 0
 %token LPAREN RPAREN
 %token LT     GT
 
-%token COMMA COLON EQUALS DOTDOT EOF
+%token COMMA EQUALS DOTDOT EOF
 %token STRUCT ENUM
 %token SELECT CASE DEFAULT
 
@@ -41,7 +41,7 @@ gemstone:
 
 vector_repr:
   | {None}
-	| COLON; t = TYPE; {Some t}
+	| FULCOL; t = TYPE; {Some t}
 
 vector:
 	|	{ VectorNone }
@@ -49,7 +49,7 @@ vector:
 	| LBRACK; s = TYPE; RBRACK;	{ VectorSymbolic(s) }
 	| LT; max = INT; orepr = vector_repr; GT; {VectorRange(0, max, orepr)}
 	| LT; min = INT; DOTDOT; max = INT; orepr = vector_repr; GT; {VectorRange(min, max, orepr)}
-	| LBRACE; max = INT; orepr = vector_repr; RBRACE; {VectorCount(0,max,orepr)}
+	| LBRACE; k = INT; RBRACE; {VectorFixedCount(k)}
 	| LBRACE; min = INT; DOTDOT; max = INT; orepr = vector_repr; RBRACE; {VectorCount(min,max,orepr)}
 ;
 

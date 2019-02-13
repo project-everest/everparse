@@ -28,6 +28,10 @@ rule read = parse
 	| '2' '^' (int as pow) '-' (int as sub)
 		{ INT (let p, m = int_of_string pow, int_of_string sub in
 			    (1 lsl p) - m ) }
+	| '2' '^' (int as pow) '+' (int as sub)
+		{ INT (let p, m = int_of_string pow, int_of_string sub in
+			    (1 lsl p) + m ) }
+	| '2' '^' (int as pow) {INT (let p = int_of_string pow in 1 lsl p)}
 	| id as i  { TYPE i }
 	| '<'      { LT }
 	| '>'      { GT }
@@ -44,7 +48,6 @@ rule read = parse
 	| '/' '*'  { comment_start 1 lexbuf }
 	| ','      { COMMA  }
 	| '.' '.'  { DOTDOT }
-	| ':'      { COLON }
 	| eof      { EOF }
 	| _        { raise (SyntaxError ("Unexpected " ^ Lexing.lexeme lexbuf)) }
 

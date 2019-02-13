@@ -156,3 +156,44 @@ struct {
   uint8 len;
   t18 data[len];
 } t23;
+
+/*
+Bitcoin types
+*/
+
+struct {
+  bitcoin_varint x;
+  uint16_le y{12..32 : bitcoin_varint};
+} t24;
+
+opaque sha256[32];
+uint32_le amount{2};
+
+struct {
+  sha256 prev_hash;
+  uint32_le prev_idx;
+  opaque scriptSig{0..2^10 : bitcoin_varint};
+  uint32_le seq_no;
+} txin;
+
+struct {
+  amount value;
+  opaque scriptPubKey{0..2^10 : bitcoin_varint};
+} txout;
+
+struct {
+  uint32_le version;
+  txin inputs{0..2^10 : bitcoin_varint};
+  txout outputs{0..2^10 : bitcoin_varint};
+  uint32_le lock_time;
+} transaction;
+
+struct {
+  uint32_le version;
+  sha256 prev_block;
+  sha256 merkle_root;
+  uint32_le timestamp;
+  uint32_le bits;
+  uint32_le nonce;
+  transaction tx{0..2^9 : bitcoin_varint};
+} block;

@@ -17,6 +17,7 @@ and type_t =
 and vector_t =
 	| VectorNone
 	| VectorFixed of int
+	| VectorFixedCount of int
 	| VectorSymbolic of field
 	| VectorRange of int * int * typ option
 	| VectorCount of int * int * typ option

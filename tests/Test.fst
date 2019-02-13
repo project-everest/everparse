@@ -5,12 +5,29 @@ open FStar.HyperStack.IO
 open C
 open C.String
 open FStar.Bytes
+module LB = LowStar.Buffer
+module LPL = LowParse.Low.Base
 
 val discard: bool -> ST unit
   (requires (fun _ -> True))
   (ensures (fun h0 _ h1 -> h0 == h1))
 let discard _ = ()
 let bprint s = discard (FStar.IO.debug_print_string (s^"\n"))
+
+let from_bytes (b:bytes{length b <> 0}) : StackInline LPL.buffer8
+  (requires (fun h0 -> True))
+  (ensures  (fun h0 buf h1 ->
+    LB.(modifies loc_none h0 h1) /\
+    LB.live h1 buf /\ LB.unused_in buf h0 /\
+    LB.length buf = length b /\
+    reveal b `Seq.equal` LB.as_seq h1 buf))
+  =
+  let h0 = FStar.HyperStack.ST.get () in
+  let lb = LB.alloca 0uy (len b) in
+  store_bytes b lb;
+  let h1 = FStar.HyperStack.ST.get () in
+  LB.(modifies_only_not_unused_in loc_none h0 h1);
+  lb
 
 let test_open_enum () : St bool =
   print (!$"Testing open enum parser.\n");
@@ -55,12 +72,23 @@ let test_closed_enum () : St bool =
     )
 
 let test_bitcoin () : St bool =
+  assume false;
   let block = bytes_of_hex   "030000009185dbc5e60723af6b4cdcdb5ceea505bc1cf7fe85097d02000000000000000001fef45c2701088577dffd37927b20da129acce6303f2ba3116ce032b4f8a5018de2dd55c4431418cb638acc0201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff5703a7ab052f4249503130302f048fe2dd550850030f240c3900003c5b4254434368696e612e636f6d5d20e5b9b8e7a68fe4b88de59ca8e5be97e588b0e5a49a20e8808ce59ca8e8aea1e8be83e5b0912d2de4b99de6809d000000000100f90295000000001976a9142c30a6aaac6d96687291475d7d52f4b469f665a688ac000000000100000001f71c1cd429d1800080147ef63b2aa7440273d1ecdb2b0a1da01aded965e2ca8e000000006b483045022100de5bdb5a365fb16cc4057f1b1c1d9aabf130e85a9da6c184f186d0d0fbe7afd7022024321c4a53c4f5017153a666e10c65e4d790eb100fb4d66eaac8f9417699351c012102163e80de410646145142636833d8a92de4bb5c99e49bd52be5346fb1030628d4ffffffff02f05e3102000000001976a9145ca26d65ee83f441ef98b624763a305d50eb36cf88aca0860100000000001976a914838eb1034b719f9c47ab853aee63d505e4176a8388ac00000000" in
-  true
+  let open FStar.UInt32 in
+  let open FStar.Bytes in
+  let lb = from_bytes block in
+  let slice = { LPL.base = lb; LPL.len = len block } in
+  if Block.block_validator slice 0ul >^ LPL.validator_max_length then
+    (print !$"Validator failed on Bitcoin block!\n"; false)
+  else
+    let pos_random = Block.accessor_block_prev_block slice 0ul in
+    let p_random = LB.sub lb pos_random 32ul in
+    bprint (" The previous block hash is: " ^(hex_of_bytes (of_buffer 32ul p_random))); true
 
 let main () : St C.exit_code =
   let b = test_closed_enum () in
   let b = if b then test_open_enum () else false in
+  let b = if b then test_bitcoin () else false in
   if b then C.EXIT_SUCCESS else C.EXIT_FAILURE
 
 (*
