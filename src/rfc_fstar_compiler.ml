@@ -289,7 +289,7 @@ let bytesize_eq_call t x = match t with
   | "uint24" | "uint24_le" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u32 (%s)) == 4))" x
   | "uint32" | "uint32_le" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u32 (%s)) == 4))" x
   | "asn1_len" -> sprintf "(LP.serialize_bounded_der_length32_size 0 4294967295 %s)" x
-  | "bitcoin_varint" -> "()"
+  | "bitcoin_varint" -> sprintf "(LP.serialize_bcvli_eq %s)" x
   | "Empty" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_empty (%s)) == 0))" x
   | "Fail" -> sprintf "(assert False)"
   | _ -> sprintf "(%s_bytesize_eq (%s))" (String.uncapitalize_ascii t) x
