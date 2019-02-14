@@ -187,7 +187,7 @@ let pcombinator_name = function
   | "bitcoin_varint" -> "LPI.parse_bcvli"
   | "Empty" -> "LP.parse_empty"
   | "Fail" -> "LP.parse_false"
-  | t -> t^"_parser"
+  | t -> String.uncapitalize_ascii t^"_parser"
 
 let scombinator_name = function
   | "opaque" | "uint8" -> "LPI.serialize_u8"
@@ -201,7 +201,7 @@ let scombinator_name = function
   | "bitcoin_varint" -> "LPI.serialize_bcvli"
   | "Empty" -> "LP.serialize_empty"
   | "Fail" -> "LP.serialize_false"
-  | t -> t^"_serializer"
+  | t -> String.uncapitalize_ascii t^"_serializer"
 
 let pcombinator32_name = function
   | "opaque" | "uint8" -> "LP.parse32_u8"
@@ -215,7 +215,7 @@ let pcombinator32_name = function
   | "bitcoin_varint" -> "LP.parse32_bcvli"
   | "Empty" -> "LP.parse32_empty"
   | "Fail" -> "LP.parse32_false"
-  | t -> t^"_parser32"
+  | t -> String.uncapitalize_ascii t^"_parser32"
 
 let scombinator32_name = function
   | "opaque" | "uint8" -> "LP.serialize32_u8"
@@ -229,7 +229,7 @@ let scombinator32_name = function
   | "bitcoin_varint" -> "LP.serialize32_bcvli"
   | "Empty" -> "LP.serialize32_empty"
   | "Fail" -> "LP.serialize32_false"
-  | t -> t^"_serializer32"
+  | t -> String.uncapitalize_ascii  t^"_serializer32"
 
 let size32_name = function
   | "opaque" | "uint8" -> "LP.size32_u8"
@@ -243,7 +243,7 @@ let size32_name = function
   | "bitcoin_varint" -> "LP.size32_bcvli"
   | "Empty" -> "LP.size32_empty"
   | "Fail" -> "LP.size32_false"
-  | t -> t^"_size32"
+  | t -> String.uncapitalize_ascii t^"_size32"
 
 let validator_name = function
   | "opaque" | "uint8" -> "(LL.validate_u8 ())"
@@ -257,7 +257,7 @@ let validator_name = function
   | "bitcoin_varint" -> "LL.validate_bcvli"
   | "Empty" -> "(LL.validate_empty ())"
   | "Fail" -> "(LL.validate_false ())"
-  | t -> t^"_validator"
+  | t -> String.uncapitalize_ascii t^"_validator"
 
 let jumper_name = function
   | "opaque" | "uint8" -> "LL.jump_u8"
@@ -271,7 +271,7 @@ let jumper_name = function
   | "bitcoin_varint" -> "LL.jump_bcvli"
   | "Empty" -> "LL.jump_empty"
   | "Fail" -> "LL.jump_false"
-  | t -> t^"_jumper"
+  | t -> String.uncapitalize_ascii t^"_jumper"
 
 let bytesize_call t x = match t with
   | "opaque" | "uint8" -> "1"
@@ -281,7 +281,7 @@ let bytesize_call t x = match t with
   | "asn1_len" -> sprintf "(if U32.v %s < 128 then 1 else if U32.v %s < 256 then 2 else if U32.v %s < 65536 then 3 else if U32.v %s < 16777216 then 4 else 5)" x x x x
   | "bitcoin_varint" -> sprintf "(if U32.v %s <= 252 then 1 else if U32.v %s <= 65535 then 3 else 5)" x x
   | "Empty" | "Fail" -> "0"
-  | _ -> sprintf "(%s_bytesize (%s))" t x
+  | _ -> sprintf "(%s_bytesize (%s))" (String.uncapitalize_ascii t) x
 
 let bytesize_eq_call t x = match t with
   | "opaque" | "uint8" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u8 (%s)) == 1))" x
@@ -292,7 +292,7 @@ let bytesize_eq_call t x = match t with
   | "bitcoin_varint" -> "()"
   | "Empty" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_empty (%s)) == 0))" x
   | "Fail" -> sprintf "(assert False)"
-  | _ -> sprintf "(%s_bytesize_eq (%s))" t x
+  | _ -> sprintf "(%s_bytesize_eq (%s))" (String.uncapitalize_ascii t) x
 
 let leaf_reader_name = function
   | "opaque" | "uint8" -> "LL.read_u8"
@@ -1403,7 +1403,7 @@ and compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max 
        begin
         let sizef =
           if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty)
-          else sprintf "%s_bytesize x" ty in
+          else bytesize_call ty "x" in
         w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n (compile_type ty) sizef smin smax;
         write_api o i is_private li.meta n min max;
         w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n smin smax (scombinator_name ty);
@@ -1619,7 +1619,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
        begin
         let sizef =
           if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty)
-          else sprintf "%s_bytesize x" ty in
+          else bytesize_call ty "x" in
         w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n (compile_type ty) sizef 0 smax;
         write_api o i is_private li.meta n min max;
         w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty);
