@@ -157,14 +157,26 @@ struct {
   t18 data[len];
 } t23;
 
-/*
-Bitcoin types
-*/
-
 struct {
   bitcoin_varint x;
   uint16_le y{12..32 : bitcoin_varint};
 } t24;
+
+struct {
+  asn1_len len;
+  t24 payload[len];
+  uint16 blen;
+  opaque bpayload[blen];
+} t25;
+
+struct {
+  asn1_len8 len;
+  t25 payload[len];
+} t26;
+
+/*
+Bitcoin types
+*/
 
 opaque sha256[32];
 uint32_le amount{2};

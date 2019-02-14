@@ -92,6 +92,7 @@ let li_add (s:string) (li:len_info) =
 let basic_type = function
   | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" -> true
   | "uint16_le" | "uint24_le" | "uint32_le" -> true
+  | "asn1_len"
   | "bitcoin_varint" | "Empty" | "Fail" -> true
   | _ -> false
 
@@ -100,6 +101,8 @@ let basic_bounds = function
   | "uint16" | "uint16_le" -> 2, 2, 65535
   | "uint24" | "uint24_le" -> 3, 3, 16777215
   | "uint32" | "uint32_le" -> 4, 4, 4294967295
+  | "asn1_len8" -> 1, 2, 255
+  | "asn1_len"
   | "bitcoin_varint" -> 1, 5, 4294967295
   | s -> failwith (s^" is not a base type and can't be used as symbolic length")
 
@@ -132,6 +135,8 @@ let rec sizeof = function
     | "uint16" | "uint16_le" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "uint24" | "uint24_le" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "uint32" | "uint32_le" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
+    | "asn1_len8" -> { len_len = 0; min_len = 1; max_len = 2; min_count = 0; max_count = 0; vl = true; meta = MetadataDefault }
+    | "asn1_len"
     | "bitcoin_varint" -> { len_len = 0; min_len = 1; max_len = 5; min_count = 0; max_count = 0; vl = true; meta = MetadataDefault }
     | "Empty" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "Fail" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataFail }
@@ -145,11 +150,31 @@ let compile_type = function
   | "uint16" | "uint16_le" -> "U16.t"
   | "uint24" | "uint24_le" -> "(LP.bounded_integer 3)"
   | "uint32" | "uint32_le" -> "U32.t"
+  | (( "asn1_len8" | "asn1_len") as s) -> failwith (sprintf "compile_type: for now %s not standalone" s)
   | "bitcoin_varint" -> "U32.t"
   | "Empty" -> "unit"
   | "Fail" -> "(squash False)"
   | t -> String.uncapitalize_ascii t
 
+(* for size headers with bounds *)
+let make_combinator_length_header_name combino dup x min max =
+  let typename = match x with
+    | "asn1_len8"
+    | "asn1_len" -> "bounded_der_length32"
+    | _ -> failwith (sprintf "make_combinator_length_header_name: %s not found" x)
+  in
+  let lengths = if dup then sprintf "%d %dul %d %dul" min min max max else sprintf "%d %d" min max in
+  sprintf "(%s_%s %s)" combino typename lengths
+
+let pcombinator_length_header_name = make_combinator_length_header_name "LPI.parse" false
+let scombinator_length_header_name = make_combinator_length_header_name "LPI.serialize" false
+let pcombinator32_length_header_name = make_combinator_length_header_name "LP.parse32" true
+let scombinator32_length_header_name = make_combinator_length_header_name "LP.serialize32" false
+let size32_length_header_name = make_combinator_length_header_name "LP.size32" false
+let validator_length_header_name = make_combinator_length_header_name "LL.validate" true
+let jumper_length_header_name = make_combinator_length_header_name "LL.jump" false
+let reader_length_header_name = make_combinator_length_header_name "LL.read" false
+                              
 let pcombinator_name = function
   | "opaque" | "uint8" -> "LPI.parse_u8"
   | "uint16" -> "LPI.parse_u16"
@@ -158,6 +183,7 @@ let pcombinator_name = function
   | "uint24_le" -> "(LPI.parse_bounded_integer_le 3)"
   | "uint32" -> "LPI.parse_u32"
   | "uint32_le" -> "LPI.parse_u32_le"
+  | "asn1_len" -> failwith "pcombinator_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LPI.parse_bcvli"
   | "Empty" -> "LP.parse_empty"
   | "Fail" -> "LP.parse_false"
@@ -171,6 +197,7 @@ let scombinator_name = function
   | "uint24_le" -> "(LPI.serialize_bounded_integer_le 3)"
   | "uint32" -> "LPI.serialize_u32"
   | "uint32_le" -> "LPI.serialize_u32_le"
+  | "asn1_len" -> failwith "scombinator_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LPI.serialize_bcvli"
   | "Empty" -> "LP.serialize_empty"
   | "Fail" -> "LP.serialize_false"
@@ -184,6 +211,7 @@ let pcombinator32_name = function
   | "uint24_le" -> "LP.parse32_bounded_integer_le_3"
   | "uint32" -> "LP.parse32_u32"
   | "uint32_le" -> "LP.parse32_u32_le"
+  | "asn1_len" -> failwith "pcombinator32_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LP.parse32_bcvli"
   | "Empty" -> "LP.parse32_empty"
   | "Fail" -> "LP.parse32_false"
@@ -197,6 +225,7 @@ let scombinator32_name = function
   | "uint24_le" -> "LP.serialize32_bounded_integer_le_3"
   | "uint32" -> "LP.serialize32_u32"
   | "uint32_le" -> "LP.serialize32_u32_le"
+  | "asn1_len" -> failwith "scombinator32_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LP.serialize32_bcvli"
   | "Empty" -> "LP.serialize32_empty"
   | "Fail" -> "LP.serialize32_false"
@@ -210,6 +239,7 @@ let size32_name = function
   | "uint24_le" -> "(LP.size32_constant (LP.serialize_bounded_integer_le 3) 3ul ())"
   | "uint32" -> "LP.size32_u32"
   | "uint32_le" -> "LP.size32_u32_le"
+  | "asn1_len" -> failwith "size32_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LP.size32_bcvli"
   | "Empty" -> "LP.size32_empty"
   | "Fail" -> "LP.size32_false"
@@ -223,6 +253,7 @@ let validator_name = function
   | "uint24_le" -> "(magic())"
   | "uint32" -> "(LL.validate_u32 ())"
   | "uint32_le" -> "(LL.validate_u32_le ())"
+  | "asn1_len" -> failwith "validator_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LL.validate_bcvli"
   | "Empty" -> "(LL.validate_empty ())"
   | "Fail" -> "(LL.validate_false ())"
@@ -236,6 +267,7 @@ let jumper_name = function
   | "uint24_le" -> "(LL.jump_constant_size LP.parse_bounded_integer_le_3 3ul)"
   | "uint32" -> "LL.jump_u32"
   | "uint32_le" -> "LL.jump_u32_le"
+  | "asn1_len" -> failwith "jumper_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LL.jump_bcvli"
   | "Empty" -> "LL.jump_empty"
   | "Fail" -> "LL.jump_false"
@@ -246,6 +278,7 @@ let bytesize_call t x = match t with
   | "uint16" | "uint16_le" -> "2"
   | "uint24" | "uint24_le" -> "3"
   | "uint32" | "uint32_le" -> "4"
+  | "asn1_len" -> sprintf "(if U32.v %s < 128 then 1 else if U32.v %s < 256 then 2 else if U32.v %s < 65536 then 3 else if U32.v %s < 16777216 then 4 else 5)" x x x x
   | "bitcoin_varint" -> sprintf "(if U32.v %s <= 252 then 1 else if U32.v %s <= 65535 then 3 else 5)" x x
   | "Empty" | "Fail" -> "0"
   | _ -> sprintf "(%s_bytesize (%s))" t x
@@ -255,6 +288,7 @@ let bytesize_eq_call t x = match t with
   | "uint16" | "uint16_le" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u16 (%s)) == 2))" x
   | "uint24" | "uint24_le" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u32 (%s)) == 4))" x
   | "uint32" | "uint32_le" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u32 (%s)) == 4))" x
+  | "asn1_len" -> sprintf "(LP.serialize_bounded_der_length32_size 0 4294967295 %s)" x
   | "bitcoin_varint" -> "()"
   | "Empty" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_empty (%s)) == 0))" x
   | "Fail" -> sprintf "(assert False)"
@@ -268,6 +302,7 @@ let leaf_reader_name = function
   | "uint24_le" -> "LL.read_u32_le"
   | "uint32" -> "LL.read_u32"
   | "uint32_le" -> "LL.read_u32_le"
+  | "asn1_len" -> "(LL.read_bounded_der_length32 0 4294967295)"
   | "bitcoin_varint" -> "LL.read_bcvli"
   | t -> failwith "leaf_reader_name: should only be called for enum repr"
 
@@ -279,6 +314,7 @@ let leaf_writer_name = function
   | "uint24_le" -> "LL.write_u32_le"
   | "uint32" -> "LL.write_u32"
   | "uint32_le" -> "LL.write_u32_le"
+  | "asn1_len" -> "(LL.write_bounded_der_length32 0 4294967295)"
   | "bitcoin_varint" -> "LL.write_bcvli"
   | _ -> failwith "leaf_writer_name: should only be called for enum repr"
 
@@ -463,13 +499,13 @@ let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin b
     w i "val %s_serializer32%s: LP.serializer32 %s\n\n" n parg pser;
     w i "val %s_size32%s: LP.size32 %s\n\n" n parg pser;
     if need_validator md bmin bmax then
-      w i "inline_for_extraction val %s_validator%s: LL.validator %s\n\n" n parg pparse
+      w i "val %s_validator%s: LL.validator %s\n\n" n parg pparse
     else
-      w i "inline_for_extraction let %s_validator%s: LL.validator %s = LL.validate_total_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
+      w i "let %s_validator%s: LL.validator %s = LL.validate_total_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
     if need_jumper bmin bmax then
-      w i "inline_for_extraction val %s_jumper%s: LL.jumper %s\n\n" n parg pparse
+      w i "val %s_jumper%s: LL.jumper %s\n\n" n parg pparse
     else
-      w i "inline_for_extraction let %s_jumper%s: LL.jumper %s = LL.jump_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
+      w i "let %s_jumper%s: LL.jumper %s = LL.jump_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
     ()
    end
 
@@ -651,7 +687,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
     else begin
       w o "inline_for_extraction let validate_%s%s_key : LL.validator parse_%s%s_key =\n" maybe n maybe n;
       w o "  LL.validate_enum_key %s_repr_validator %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n n;
-      w o "inline_for_extraction let %s_validator =\n" n;
+      w o "let %s_validator =\n" n;
       w o "  lemma_synth_%s_inj ();\n" n;
       w o "  LL.validate_synth validate_%s%s_key synth_%s ()\n\n" maybe n n
       end
@@ -670,7 +706,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
         w o "  LL.read_enum_key %s_repr_reader %s_enum (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n n
       end
   end;
-  w i "inline_for_extraction val %s_reader: LL.leaf_reader %s_parser\n\n" n n;
+  w i "val %s_reader: LL.leaf_reader %s_parser\n\n" n n;
           w o "let %s_reader =\n" n;
   w o " [@inline_let] let _ = lemma_synth_%s_inj () in\n" n;
   w o " LL.read_synth' parse_%s%s_key synth_%s read_%s%s_key ()\n\n" maybe n n maybe n;
@@ -678,7 +714,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   (* Low: writer *)
   w o "inline_for_extraction let write_%s%s_key : LL.leaf_writer_strong serialize_%s%s_key =\n" maybe n maybe n;
   w o "  LL.write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
-  w i "inline_for_extraction val %s_writer: LL.leaf_writer_strong %s_serializer\n\n" n n;
+  w i "val %s_writer: LL.leaf_writer_strong %s_serializer\n\n" n n;
   w o "let %s_writer =\n" n;
   w o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
   w o "  LL.write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x) ()\n\n" maybe n n n n;
@@ -1320,6 +1356,117 @@ and compile_select o i n seln tagn tagt taga cl def al =
        end
   end
 
+and compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max smin smax =
+      let (min, max) = li.min_len, li.max_len in
+      let fits_in_bounds = smin <= elem_li.min_len && elem_li.max_len <= smax in
+      let need_validator = is_private || need_validator li.meta li.min_len li.max_len in
+      let need_jumper = is_private || need_jumper li.min_len li.max_len in
+      if fits_in_bounds then
+       begin
+        w i "type %s = %s\n\n" n (compile_type ty);
+        write_api o i is_private li.meta n min max;
+        w o "let %s_parser' =\n" n;
+        w o "  LP.parse_vlgen %d %d %s %s\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
+        let kind_eq = sprintf "(LP.get_parser_kind %s_parser' == %s_parser_kind)" n n in
+        w o "let %s_kind_eq : squash %s = assert_norm %s\n\n" n kind_eq kind_eq;
+        w o "let %s_parser = %s_parser'\n\n" n n;
+        w o "let %s_serializer =\n" n;
+        w o "  LP.serialize_vlgen %d %d %s %s\n\n" smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
+        write_bytesize o is_private n;
+        w o "let %s_parser32 =\n" n;
+        w o "  LP.parse32_vlgen %d %dul %d %dul %s %s %s\n\n" smin smin smax smax (pcombinator32_length_header_name lenty smin smax) (scombinator_name ty) (pcombinator32_name ty);
+        w o "let %s_serializer32 =\n" n;
+        w o "  LP.serialize32_vlgen %d %d %s %s\n\n" smin smax (scombinator32_length_header_name lenty smin smax) (scombinator32_name ty);
+        w o "let %s_size32 =\n" n;
+        w o "  LP.size32_vlgen %d %d %s %s\n\n" smin smax (size32_length_header_name lenty smin smax) (size32_name ty);
+        if need_validator then (
+          w o "let %s_validator =\n" n;
+          w o "  LL.validate_vlgen %d %dul %d %dul %s %s %s %s\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
+        );
+        if need_jumper then (
+          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+          w o "let %s_jumper%s =\n\n" n jumper_annot;
+          w o "  LL.jump_vlgen %d %d %s %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (jumper_name ty)
+        );
+        (* accessor *)
+        if ty <> "Empty" && ty <> "Fail" then begin
+          w i "val %s_gaccessor : LL.gaccessor %s_parser %s (LL.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
+          w o "let %s_gaccessor = LL.gaccessor_vlgen_payload %d %d %s %s\n\n" n smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
+          w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+          w o "let %s_accessor = LL.accessor_vlgen_payload %d %d %s %s\n\n" n smin smax (jumper_length_header_name lenty smin smax) (scombinator_name ty);
+          ()
+        end;
+        (* TODO: intro lemmas *)
+       ()
+       end
+      else
+       begin
+        let sizef =
+          if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty)
+          else sprintf "%s_bytesize x" ty in
+        w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n (compile_type ty) sizef smin smax;
+        write_api o i is_private li.meta n min max;
+        w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n smin smax (scombinator_name ty);
+        w o "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
+        w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
+        w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
+        w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
+        w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
+        w o "  LP.parse_bounded_vlgen %d %d %s %s\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
+        let kind_eq = sprintf "(LP.get_parser_kind %s'_parser == %s_parser_kind)" n n in
+        w o "let %s_kind_eq : squash %s = assert_norm %s\n\n" n kind_eq kind_eq;
+        w o "let %s_parser = LP.parse_synth %s'_parser synth_%s\n\n" n n n;
+        w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+        w o "  LP.serialize_bounded_vlgen %d %d %s %s\n\n" smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
+        w o "let %s_serializer = LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n n;
+        write_bytesize o is_private n;
+        w o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+        w o "  LP.parse32_bounded_vlgen %d %dul %d %dul %s %s %s\n\n" smin smin smax smax (pcombinator32_length_header_name lenty smin smax) (scombinator_name ty) (pcombinator32_name ty);
+        w o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
+        w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+        w o "  LP.serialize32_bounded_vlgen %d %d %s %s\n\n" smin smax (scombinator32_length_header_name lenty smin smax) (scombinator32_name ty);
+        w o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
+        w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+        w o "  LP.size32_bounded_vlgen %d %d %s %s\n\n" smin smax (size32_length_header_name lenty smin smax) (size32_name ty);
+        w o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
+        if need_validator then (
+          w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+          w o "  LL.validate_bounded_vlgen %d %dul %d %dul %s %s %s %s\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
+          w o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
+        );
+        if need_jumper then (
+          w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+          w o "  LL.jump_bounded_vlgen %d %d %s %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (jumper_name ty);
+          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
+          w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
+        );
+        (* TODO: intro lemmas *)
+        (* accessor *)
+            w i "let %s_clens : LL.clens %s %s = {\n" n n (compile_type ty);
+            w i "  LL.clens_cond = (fun _ -> True);\n";
+            w i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
+            w i "}\n\n";
+            w i "val %s_gaccessor : LL.gaccessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
+            let write_accessor g compose_needs_unit jumper_or_parser =
+              w o "let %s_%saccessor =\n" n g;
+              w o "  LL.%saccessor_ext\n" g;
+              w o "    (LL.%saccessor_compose\n" g;
+              w o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
+              w o "      (LL.%saccessor_bounded_vlgen_payload %d %d %s %s)\n" g smin smax jumper_or_parser (scombinator_name ty);
+              (if compose_needs_unit then w o "      ()\n");
+              w o "    )\n";
+              w o "    %s_clens\n" n;
+              w o "    ()\n\n";
+              ()
+            in
+            write_accessor "g" false (pcombinator_length_header_name lenty smin smax);
+            w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+            write_accessor "" true (jumper_length_header_name lenty smin smax);
+        ()
+       end;
+      (* TODO: lemma about bytesize *)
+      ()
+  
 and compile_typedef o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
   let qname = if tn = "" then String.uncapitalize_ascii fn else tn^"@"^fn in
@@ -1358,10 +1505,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_parser32 = %s\n\n" n (pcombinator32_name ty);
       w o "let %s_serializer32 = %s\n\n" n (scombinator32_name ty);
       w o "let %s_size32 = %s\n\n" n (size32_name ty);
-      (if need_validator then w o "inline_for_extraction let %s_validator = %s\n\n" n (validator_name ty));
+      (if need_validator then w o "let %s_validator = %s\n\n" n (validator_name ty));
       (if need_jumper then
          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-         w o "inline_for_extraction let %s_jumper%s = %s\n\n" n jumper_annot (jumper_name ty));
+         w o "let %s_jumper%s = %s\n\n" n jumper_annot (jumper_name ty));
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
       ()
@@ -1392,6 +1539,12 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  LL.jump_vclist %d %d %s %s %s\n\n" low high (jumper_name repr_t) (leaf_reader_name repr_t) (jumper_name ty);
       (* finalizer, count, i-th accessor TODO *)
       ()
+
+    | VectorVldata (("asn1_len" | "asn1_len8") as lenty) -> (* TODO: generalize once parse_bounded_integer is refactored into a parser to bounded_int32 in LowParse *)
+       let (len_len_min, len_len_max, smax) = basic_bounds lenty in
+       compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max 0 smax
+
+    | VectorVldata "bitcoin_varint" -> failwith "VectorVldata bitcoin_varint is unsupported for now"
 
     | VectorVldata vl ->
       let (len_len_min, len_len_max, smax) = basic_bounds vl in
@@ -1572,8 +1725,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (* validator and jumper not needed unless private, we are total constant size *)
       if is_private then
        begin
-        w o "inline_for_extraction let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
-        w o "inline_for_extraction let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k
+        w o "let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
+        w o "let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k
        end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
       w o "let %s_bytesize_eqn x = ()\n\n" n;
@@ -1710,10 +1863,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
       w o "let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
       w o "let %s_size32 = LP.size32_bounded_vlbytes %d %d\n\n" n low high;
-      if need_validator then  w o "inline_for_extraction let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
+      if need_validator then  w o "let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
       if need_jumper then begin
         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-        w o "inline_for_extraction let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
+        w o "let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
@@ -1761,10 +1914,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_parser32 = LP.parse32_bounded_vlbytes' %d %dul %d %dul %d\n\n" n low low high high repr;
       w o "let %s_serializer32 = LP.serialize32_bounded_vlbytes' %d %d %d\n\n" n low high repr;
       w o "let %s_size32 = LP.size32_bounded_vlbytes' %d %d %d\n\n" n low high repr;
-      if need_validator then  w o "inline_for_extraction let %s_validator = LL.validate_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      if need_validator then  w o "let %s_validator = LL.validate_bounded_vlbytes' %d %d %d\n\n" n low high repr;
       if need_jumper then begin
         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-        w o "inline_for_extraction let %s_jumper%s = LL.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
+        w o "let %s_jumper%s = LL.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
@@ -1913,7 +2066,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
       end;
       (* finalizer *)
-      w i "inline_for_extraction val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
+      w i "val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
       w i "(requires (fun h ->\n";
       w i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
       w i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty) li.len_len;
