@@ -53,31 +53,33 @@ cb638acc nonce
 */
 
 opaque sha256[32];
-uint32 amount[2];
+uint32_le amount{2};
 
 struct {
   sha256 prev_hash;
-  opaque scriptSig<0..2^8-1>;
+  uint32_le prev_idx;
+  opaque scriptSig{0..2^10 : bitcoin_varint};
+  uint32_le seq_no;
 } txin;
 
 struct {
   amount value;
-  opaque scriptPubKey<0..2^8-1>;
+  opaque scriptPubKey{0..2^10 : bitcoin_varint};
 } txout;
 
 struct {
-  uint32 version;
-  txin inputs{0..2^8-1};
-  txout outputs{0..2^8-1};
-  uint32 lock_time;
+  uint32_le version;
+  txin inputs{0..2^9 : bitcoin_varint};
+  txout outputs{0..2^9 : bitcoin_varint};
+  uint32_le lock_time;
 } transaction;
 
 struct {
-  uint32 version;
+  uint32_le version;
   sha256 prev_block;
   sha256 merkle_root;
-  uint32 timestamp;
-  uint32 bits;
-  uint32 nonce;
-  transaction tx{0..2^8-1};
+  uint32_le timestamp;
+  uint32_le bits;
+  uint32_le nonce;
+  transaction tx{0..2^12 : bitcoin_varint};
 } block;

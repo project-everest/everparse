@@ -74,6 +74,9 @@ let _ = Arg.parse [
 	("-d", Arg.Unit (fun () -> debug := true),
 		"enable debug output");
 
+  ("-odir", Arg.String (fun n -> odir := n),
+    " <path> - Write generated modules to <path>");
+
 	("-pretty", Arg.Unit (fun () -> mode := PrettyPrint),
 		"Pretty-print input specification");
 
@@ -104,8 +107,11 @@ let _ = Arg.parse [
   ("-result_none", Arg.String (fun n -> opt_none := n),
     " <type_name> - Set the failure constructor of parsers' return type (default None)");
 
-  ("-odir", Arg.String (fun n -> odir := n),
-    " <path> - Write generated modules to <path>");
+	("-low", Arg.Unit (fun () -> emit_high := false),
+		" Generate Low* implementation only");
+
+  ("-high", Arg.Unit (fun () -> emit_low := false),
+    " Generate functional implementation only");
 
 ] (fun s -> (ifile := s :: !ifile)) (sprintf "QuackyDucky %s\n%s"
 	ver "Generates verified parsers and their specification from RFC");

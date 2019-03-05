@@ -12,6 +12,8 @@ let odir        = ref "."
 let opt_none    = ref "None"
 let opt_some    = ref "Some"
 let opt_type    = ref "option"
+let emit_high   = ref true
+let emit_low    = ref true
 
 let headers : (string list * string list) ref
   = ref ([], [])

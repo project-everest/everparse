@@ -41,6 +41,8 @@ let subst: typ SM.t ref = ref SM.empty
 let erased: unit SM.t ref = ref SM.empty
 
 let w = fprintf
+let wh x = if !emit_high then fprintf x else ifprintf x
+let wl x = if !emit_low then fprintf x else ifprintf x
 
 let log256 k =
   if k <= 255 then 1
@@ -90,10 +92,10 @@ let li_add (s:string) (li:len_info) =
   linfo := SM.add s li !linfo
 
 let basic_type = function
-  | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" -> true
-  | "uint16_le" | "uint24_le" | "uint32_le" -> true
-  | "asn1_len"
-  | "bitcoin_varint" | "Empty" | "Fail" -> true
+  | "opaque" | "uint8" | "uint16" | "uint24" | "uint32"
+  | "uint16_le" | "uint24_le" | "uint32_le"
+  | "asn1_len" | "asn1_len8" | "bitcoin_varint"
+  | "Empty" | "Fail" -> true
   | _ -> false
 
 let basic_bounds = function
@@ -102,8 +104,7 @@ let basic_bounds = function
   | "uint24" | "uint24_le" -> 3, 3, 16777215
   | "uint32" | "uint32_le" -> 4, 4, 4294967295
   | "asn1_len8" -> 1, 2, 255
-  | "asn1_len"
-  | "bitcoin_varint" -> 1, 5, 4294967295
+  | "asn1_len" | "bitcoin_varint" -> 1, 5, 4294967295
   | s -> failwith (s^" is not a base type and can't be used as symbolic length")
 
 let rec sizeof = function
@@ -148,7 +149,7 @@ let compile_type = function
   | "opaque"
   | "uint8" -> "U8.t"
   | "uint16" | "uint16_le" -> "U16.t"
-  | "uint24" | "uint24_le" -> "(LP.bounded_integer 3)"
+  | "uint24" | "uint24_le" -> "(LPI.bounded_integer 3)"
   | "uint32" | "uint32_le" -> "U32.t"
   | (( "asn1_len8" | "asn1_len") as s) -> failwith (sprintf "compile_type: for now %s not standalone" s)
   | "bitcoin_varint" -> "U32.t"
@@ -174,7 +175,7 @@ let size32_length_header_name = make_combinator_length_header_name "LP.size32" f
 let validator_length_header_name = make_combinator_length_header_name "LL.validate" true
 let jumper_length_header_name = make_combinator_length_header_name "LL.jump" false
 let reader_length_header_name = make_combinator_length_header_name "LL.read" false
-                              
+
 let pcombinator_name = function
   | "opaque" | "uint8" -> "LPI.parse_u8"
   | "uint16" -> "LPI.parse_u16"
@@ -495,17 +496,17 @@ let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin b
       w i "noextract val %s_bytesize_eq%s (x: %s k) : Lemma (%s_bytesize k x == Seq.length (LP.serialize (%s) x))\n\n" n parg n n pser;
       ()
     end;
-    w i "val %s_parser32%s: LP.parser32 %s\n\n" n parg pparse;
-    w i "val %s_serializer32%s: LP.serializer32 %s\n\n" n parg pser;
-    w i "val %s_size32%s: LP.size32 %s\n\n" n parg pser;
+    wh i "val %s_parser32%s: LP.parser32 %s\n\n" n parg pparse;
+    wh i "val %s_serializer32%s: LP.serializer32 %s\n\n" n parg pser;
+    wh i "val %s_size32%s: LP.size32 %s\n\n" n parg pser;
     if need_validator md bmin bmax then
-      w i "val %s_validator%s: LL.validator %s\n\n" n parg pparse
+      wl i "val %s_validator%s: LL.validator %s\n\n" n parg pparse
     else
-      w i "let %s_validator%s: LL.validator %s = LL.validate_total_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
+      wl i "let %s_validator%s: LL.validator %s = LL.validate_total_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
     if need_jumper bmin bmax then
-      w i "val %s_jumper%s: LL.jumper %s\n\n" n parg pparse
+      wl i "val %s_jumper%s: LL.jumper %s\n\n" n parg pparse
     else
-      w i "let %s_jumper%s: LL.jumper %s = LL.jump_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
+      wl i "let %s_jumper%s: LL.jumper %s = LL.jump_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
     ()
    end
 
@@ -596,52 +597,54 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
   (* Synth *)
-  if is_open then begin
-	w o "inline_for_extraction let synth_%s (x:LP.maybe_enum_key %s_enum) : %s = \n" n n n;
-	w o "  match x with\n";
-	w o "  | LP.Known k -> k\n";
-	w o "  | LP.Unknown y ->\n";
-	w o "    [@inline_let] let v : %s = y in\n" (compile_type repr_t);
-	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == known_%s_repr v) in\n" n n;
-  w o "    Unknown_%s v\n\n" n;
-	w o "inline_for_extraction let synth_%s_inv (x:%s) : LP.maybe_enum_key %s_enum = \n" n n n;
-	w o "  match x with\n";
-	w o "  | Unknown_%s y ->\n" n;
-	w o "    [@inline_let] let v : %s = y in\n" (compile_type repr_t);
-	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == known_%s_repr v) in\n" n n;
-	w o "    LP.Unknown v\n";
-	w o "  | x ->\n";
-  w o "    [@inline_let] let x1 : %s = x in\n" n;
-        w o "    [@inline_let] let _ : squash(not (Unknown_%s? x1) ==> LP.list_mem x1 (LP.list_map fst %s_enum)) =\n" n n;
-        w o "      _ by (LP.synth_maybe_enum_key_inv_unknown_tac x1)\n";
-        w o "    in\n";
-  w o "    LP.Known (x1 <: LP.enum_key %s_enum)\n\n" n;
-        w o "let lemma_synth_%s_inv' () : Lemma\n" n;
-        w o "  (LP.synth_inverse synth_%s_inv synth_%s)\n" n n;
-        w o "= LP.forall_maybe_enum_key %s_enum (fun x -> synth_%s_inv (synth_%s x) == x)\n" n n n;
-        w o "    (_ by (LP.forall_maybe_enum_key_known_tac ()))\n";
-        w o "    (_ by (LP.forall_maybe_enum_key_unknown_tac ()))\n\n";
-	w o "let lemma_synth_%s_inj () : Lemma\n" n;
-	w o "  (LP.synth_injective synth_%s) = \n" n;
-        w o "  lemma_synth_%s_inv' ();\n" n;
-        w o "  LP.synth_inverse_synth_injective synth_%s synth_%s_inv\n\n" n n;
-  w o "#push-options \"--max_ifuel 0 --initial_ifuel 0 --max_fuel 0 --max_ifuel 0\"\n";
-	w o "let lemma_synth_%s_inv () : Lemma\n" n;
-  w o "  (LP.synth_inverse synth_%s synth_%s_inv) = allow_inversion %s; ()\n\n" n n n;
-  w o "#pop-options\n";
-        ()
-  end else begin
-        w o "inline_for_extraction let synth_%s (x: LP.enum_key %s_enum) : Tot %s = x\n\n" n n n;
-        w o "inline_for_extraction let synth_%s_inv (x: %s) : Tot (LP.enum_key %s_enum) =\n" n n n;
-        w o "  [@inline_let] let _ : squash (LP.list_mem x (LP.list_map fst %s_enum)) =\n" n;
-        w o "    _ by (LP.synth_maybe_enum_key_inv_unknown_tac x)\n";
-        w o "  in\n";
-        w o "  x\n\n";
-	w o "let lemma_synth_%s_inj () : Lemma\n" n;
-	w o "  (LP.synth_injective synth_%s) = ()\n\n" n;
-	w o "let lemma_synth_%s_inv () : Lemma\n" n;
-        w o "  (LP.synth_inverse synth_%s synth_%s_inv) = ()\n\n" n n;
-  end;
+  if is_open then
+   begin
+  	w o "inline_for_extraction let synth_%s (x:LP.maybe_enum_key %s_enum) : %s = \n" n n n;
+  	w o "  match x with\n";
+  	w o "  | LP.Known k -> k\n";
+  	w o "  | LP.Unknown y ->\n";
+  	w o "    [@inline_let] let v : %s = y in\n" (compile_type repr_t);
+  	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == known_%s_repr v) in\n" n n;
+    w o "    Unknown_%s v\n\n" n;
+  	w o "inline_for_extraction let synth_%s_inv (x:%s) : LP.maybe_enum_key %s_enum = \n" n n n;
+  	w o "  match x with\n";
+  	w o "  | Unknown_%s y ->\n" n;
+  	w o "    [@inline_let] let v : %s = y in\n" (compile_type repr_t);
+  	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == known_%s_repr v) in\n" n n;
+  	w o "    LP.Unknown v\n";
+  	w o "  | x ->\n";
+    w o "    [@inline_let] let x1 : %s = x in\n" n;
+    w o "    [@inline_let] let _ : squash(not (Unknown_%s? x1) ==> LP.list_mem x1 (LP.list_map fst %s_enum)) =\n" n n;
+    w o "      _ by (LP.synth_maybe_enum_key_inv_unknown_tac x1)\n";
+    w o "    in\n";
+    w o "    LP.Known (x1 <: LP.enum_key %s_enum)\n\n" n;
+    w o "let lemma_synth_%s_inv' () : Lemma\n" n;
+    w o "  (LP.synth_inverse synth_%s_inv synth_%s)\n" n n;
+    w o "= LP.forall_maybe_enum_key %s_enum (fun x -> synth_%s_inv (synth_%s x) == x)\n" n n n;
+    w o "    (_ by (LP.forall_maybe_enum_key_known_tac ()))\n";
+    w o "    (_ by (LP.forall_maybe_enum_key_unknown_tac ()))\n\n";
+  	w o "let lemma_synth_%s_inj () : Lemma\n" n;
+  	w o "  (LP.synth_injective synth_%s) = \n" n;
+    w o "  lemma_synth_%s_inv' ();\n" n;
+    w o "  LP.synth_inverse_synth_injective synth_%s synth_%s_inv\n\n" n n;
+    w o "#push-options \"--max_ifuel 0 --initial_ifuel 0 --max_fuel 0 --max_ifuel 0\"\n";
+  	w o "let lemma_synth_%s_inv () : Lemma\n" n;
+    w o "  (LP.synth_inverse synth_%s synth_%s_inv) = allow_inversion %s; ()\n\n" n n n;
+    w o "#pop-options\n";
+   end
+  else
+   begin
+    w o "inline_for_extraction let synth_%s (x: LP.enum_key %s_enum) : Tot %s = x\n\n" n n n;
+    w o "inline_for_extraction let synth_%s_inv (x: %s) : Tot (LP.enum_key %s_enum) =\n" n n n;
+    w o "  [@inline_let] let _ : squash (LP.list_mem x (LP.list_map fst %s_enum)) =\n" n;
+    w o "    _ by (LP.synth_maybe_enum_key_inv_unknown_tac x)\n";
+    w o "  in\n";
+    w o "  x\n\n";
+  	w o "let lemma_synth_%s_inj () : Lemma\n" n;
+  	w o "  (LP.synth_injective synth_%s) = ()\n\n" n;
+  	w o "let lemma_synth_%s_inv () : Lemma\n" n;
+    w o "  (LP.synth_inverse synth_%s synth_%s_inv) = ()\n\n" n n;
+   end;
 
   (* Parse *)
   let maybe = if is_open then "maybe_" else "" in
@@ -660,68 +663,66 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   write_bytesize o is_private n;
 
   (* Intermediate *)
-  w o "let parse32_%s%s_key : LP.parser32 parse_%s%s_key =\n" maybe n maybe n;
-  w o "  FStar.Tactics.synth_by_tactic (LP.parse32_%senum_key_tac LP.parse32_%s %s_enum)\n\n" maybe parse_t n;
-  w o "let %s_parser32 : LP.parser32 %s_parser =\n" n n ;
-  w o "  lemma_synth_%s_inj ();\n" n;
-  w o "  LP.parse32_synth _ synth_%s (fun x->synth_%s x) parse32_%s%s_key ()\n\n" n n maybe n;
-	w o "let serialize32_%s%s_key : LP.serializer32 serialize_%s%s_key =\n" maybe n maybe n;
-  begin if is_open then (* FIXME: harmonize the tactic name in LowParse *)
-  w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n"
+  wh o "let parse32_%s%s_key : LP.parser32 parse_%s%s_key =\n" maybe n maybe n;
+  wh o "  FStar.Tactics.synth_by_tactic (LP.parse32_%senum_key_tac LP.parse32_%s %s_enum)\n\n" maybe parse_t n;
+  wh o "let %s_parser32 : LP.parser32 %s_parser =\n" n n ;
+  wh o "  lemma_synth_%s_inj ();\n" n;
+  wh o "  LP.parse32_synth _ synth_%s (fun x->synth_%s x) parse32_%s%s_key ()\n\n" n n maybe n;
+	wh o "let serialize32_%s%s_key : LP.serializer32 serialize_%s%s_key =\n" maybe n maybe n;
+  (if is_open then (* FIXME: harmonize the tactic name in LowParse *)
+    wh o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n"
   else
-  w o "  FStar.Tactics.synth_by_tactic (LP.serialize32_enum_key_gen_tac\n"
-  end;
-  w o "    LP.serialize32_%s %s_enum)\n\n" parse_t n;
-  w o "let %s_serializer32 : LP.serializer32 %s_serializer =\n" n n;
-	w o "  lemma_synth_%s_inj ();\n  lemma_synth_%s_inv ();\n" n n;
-  w o "  LP.serialize32_synth _ synth_%s _ serialize32_%s%s_key synth_%s_inv (fun x->synth_%s_inv x) ()\n\n" n maybe n n n;
+    wh o "  FStar.Tactics.synth_by_tactic (LP.serialize32_enum_key_gen_tac\n");
+  wh o "    LP.serialize32_%s %s_enum)\n\n" parse_t n;
+  wh o "let %s_serializer32 : LP.serializer32 %s_serializer =\n" n n;
+	wh o "  lemma_synth_%s_inj ();\n  lemma_synth_%s_inv ();\n" n n;
+  wh o "  LP.serialize32_synth _ synth_%s _ serialize32_%s%s_key synth_%s_inv (fun x->synth_%s_inv x) ()\n\n" n maybe n n n;
 
-  w o "let %s_size32 =\n" n;
-  w o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond %s_serializer %dul) in\n" n blen;
-  w o "  LP.size32_constant %s_serializer %dul ()\n\n" n blen;
+  wh o "let %s_size32 =\n" n;
+  wh o "  [@inline_let] let _ = assert_norm (LP.size32_constant_precond %s_serializer %dul) in\n" n blen;
+  wh o "  LP.size32_constant %s_serializer %dul ()\n\n" n blen;
 
   (* Low: validator *)
-  begin
-    if is_open then
-      () (* validator not needed, since maybe_enum_key is total constant size *)
-    else begin
-      w o "inline_for_extraction let validate_%s%s_key : LL.validator parse_%s%s_key =\n" maybe n maybe n;
-      w o "  LL.validate_enum_key %s_repr_validator %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n n;
-      w o "let %s_validator =\n" n;
-      w o "  lemma_synth_%s_inj ();\n" n;
-      w o "  LL.validate_synth validate_%s%s_key synth_%s ()\n\n" maybe n n
-      end
-  end;
+  if is_open then
+    () (* validator not needed, since maybe_enum_key is total constant size *)
+  else
+   begin
+    wl o "inline_for_extraction let validate_%s%s_key : LL.validator parse_%s%s_key =\n" maybe n maybe n;
+    wl o "  LL.validate_enum_key %s_repr_validator %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n n;
+    wl o "let %s_validator =\n" n;
+    wl o "  lemma_synth_%s_inj ();\n" n;
+    wl o "  LL.validate_synth validate_%s%s_key synth_%s ()\n\n" maybe n n
+   end;
 
   (* Low: reader *)
   begin
     if is_open then
       begin
-        w o "inline_for_extraction let read_maybe_%s_key : LL.leaf_reader parse_maybe_%s_key =\n" n n;
-        w o "  LL.read_maybe_enum_key %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n
+        wl o "inline_for_extraction let read_maybe_%s_key : LL.leaf_reader parse_maybe_%s_key =\n" n n;
+        wl o "  LL.read_maybe_enum_key %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n
       end
     else
       begin
-        w o "inline_for_extraction let read_%s_key : LL.leaf_reader parse_%s_key =\n" n n;
-        w o "  LL.read_enum_key %s_repr_reader %s_enum (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n n
+        wl o "inline_for_extraction let read_%s_key : LL.leaf_reader parse_%s_key =\n" n n;
+        wl o "  LL.read_enum_key %s_repr_reader %s_enum (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n n
       end
   end;
-  w i "val %s_reader: LL.leaf_reader %s_parser\n\n" n n;
+  wl i "val %s_reader: LL.leaf_reader %s_parser\n\n" n n;
           w o "let %s_reader =\n" n;
-  w o " [@inline_let] let _ = lemma_synth_%s_inj () in\n" n;
-  w o " LL.read_synth' parse_%s%s_key synth_%s read_%s%s_key ()\n\n" maybe n n maybe n;
+  wl o " [@inline_let] let _ = lemma_synth_%s_inj () in\n" n;
+  wl o " LL.read_synth' parse_%s%s_key synth_%s read_%s%s_key ()\n\n" maybe n n maybe n;
 
   (* Low: writer *)
-  w o "inline_for_extraction let write_%s%s_key : LL.leaf_writer_strong serialize_%s%s_key =\n" maybe n maybe n;
-  w o "  LL.write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
-  w i "val %s_writer: LL.leaf_writer_strong %s_serializer\n\n" n n;
-  w o "let %s_writer =\n" n;
-  w o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
-  w o "  LL.write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x) ()\n\n" maybe n n n n;
+  wl o "inline_for_extraction let write_%s%s_key : LL.leaf_writer_strong serialize_%s%s_key =\n" maybe n maybe n;
+  wl o "  LL.write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
+  wl i "val %s_writer: LL.leaf_writer_strong %s_serializer\n\n" n n;
+  wl o "let %s_writer =\n" n;
+  wl o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
+  wl o "  LL.write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x) ()\n\n" maybe n n n n;
 
   (* bytesize lemma *)
-  w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
-  w o "let %s_bytesize_eqn x = %s_bytesize_eq x; assert (FStar.Seq.length (LP.serialize %s_serializer x) <= %d); assert (%d <= FStar.Seq.length (LP.serialize %s_serializer x))\n\n" n n n blen blen n;
+  wl i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
+  wl o "let %s_bytesize_eqn x = %s_bytesize_eq x; assert (FStar.Seq.length (LP.serialize %s_serializer x) <= %d); assert (%d <= FStar.Seq.length (LP.serialize %s_serializer x))\n\n" n n n blen blen n;
   ()
 
 and compile_select o i n seln tagn tagt taga cl def al =
@@ -947,50 +948,50 @@ and compile_select o i n seln tagn tagt taga cl def al =
   ) cl;
   w o "  | _ -> LP.serialize_false\n\n";
 
-  w o "inline_for_extraction noextract let parse32_%s_cases (x:%s)\n" n ktype;
-  w o "  : LP.parser32 (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+  wh o "inline_for_extraction noextract let parse32_%s_cases (x:%s)\n" n ktype;
+  wh o "  : LP.parser32 (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
-    w o "  | %s -> [@inline_let] let u : LP.parser32 (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (pcombinator32_name ty)
+    wh o "  | %s -> [@inline_let] let u : LP.parser32 (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (pcombinator32_name ty)
   ) cl;
-  w o "  | _ -> LP.parse32_false\n\n";
+  wh o "  | _ -> LP.parse32_false\n\n";
 
-  w o "inline_for_extraction noextract let serialize32_%s_cases (x:%s)\n" n ktype;
-  w o "  : LP.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
+  wh o "inline_for_extraction noextract let serialize32_%s_cases (x:%s)\n" n ktype;
+  wh o "  : LP.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
-    w o "  | %s -> [@inline_let] let u : LP.serializer32 (serialize_%s_cases %s) = %s in u\n" cn n cn (scombinator32_name ty)
+    wh o "  | %s -> [@inline_let] let u : LP.serializer32 (serialize_%s_cases %s) = %s in u\n" cn n cn (scombinator32_name ty)
   ) cl;
-  w o "  | _ -> LP.serialize32_false\n\n";
+  wh o "  | _ -> LP.serialize32_false\n\n";
 
-  w o "inline_for_extraction noextract let size32_%s_cases (x:%s)\n" n ktype;
-  w o "  : LP.size32 (serialize_%s_cases x) =\n  match x with\n" n;
+  wh o "inline_for_extraction noextract let size32_%s_cases (x:%s)\n" n ktype;
+  wh o "  : LP.size32 (serialize_%s_cases x) =\n  match x with\n" n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
-    w o "  | %s -> [@inline_let] let u : LP.size32 (serialize_%s_cases %s) = %s in u\n" cn n cn (size32_name ty)
+    wh o "  | %s -> [@inline_let] let u : LP.size32 (serialize_%s_cases %s) = %s in u\n" cn n cn (size32_name ty)
   ) cl;
-  w o "  | _ -> LP.size32_false\n\n";
+  wh o "  | _ -> LP.size32_false\n\n";
 
   if need_validator then
    begin
-    w o "inline_for_extraction noextract let validate_%s_cases (x:%s)\n" n ktype;
-    w o "  : LL.validator (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+    wl o "inline_for_extraction noextract let validate_%s_cases (x:%s)\n" n ktype;
+    wl o "  : LL.validator (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
     List.iter (fun (case, ty) ->
       let cn = String.capitalize_ascii case in
-      w o "  | %s -> [@inline_let] let u : LL.validator (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (validator_name ty)
+      wl o "  | %s -> [@inline_let] let u : LL.validator (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (validator_name ty)
     ) cl;
-    w o "  | _ -> LL.validate_false ()\n\n"
+    wl o "  | _ -> LL.validate_false ()\n\n"
    end;
 
   if need_jumper then
    begin
-    w o "inline_for_extraction noextract let jump_%s_cases (x:%s)\n" n ktype;
-    w o "  : LL.jumper (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+    wl o "inline_for_extraction noextract let jump_%s_cases (x:%s)\n" n ktype;
+    wl o "  : LL.jumper (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
     List.iter (fun (case, ty) ->
       let cn = String.capitalize_ascii case in
-      w o "  | %s -> [@inline_let] let u : LL.jumper (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (jumper_name ty)
+      wl o "  | %s -> [@inline_let] let u : LL.jumper (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (jumper_name ty)
     ) cl;
-    w o "  | _ -> LL.jump_false\n\n"
+    wl o "  | _ -> LL.jump_false\n\n"
    end;
 
   if is_implicit then (
@@ -1007,13 +1008,13 @@ and compile_select o i n seln tagn tagt taga cl def al =
       w o "\nlet %s_parser k =\n  LP.parse_sum_cases %s_sum parse_%s_cases (%s_as_enum_key k)\n\n" n n n tn;
       w o "let %s_serializer k =\n  LP.serialize_sum_cases %s_sum parse_%s_cases serialize_%s_cases (%s_as_enum_key k)\n\n" n n n n tn;
       write_bytesize o is_private n  ~param:(if is_implicit then Some tagt else None);
-      w o "let %s_parser32 k =\n  LP.parse32_sum_cases %s_sum parse_%s_cases parse32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
-      w o "let %s_serializer32 k =\n  LP.serialize32_sum_cases %s_sum serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
-      w o "let %s_size32 k =\n  LP.size32_sum_cases %s_sum serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+      wh o "let %s_parser32 k =\n  LP.parse32_sum_cases %s_sum parse_%s_cases parse32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+      wh o "let %s_serializer32 k =\n  LP.serialize32_sum_cases %s_sum serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+      wh o "let %s_size32 k =\n  LP.size32_sum_cases %s_sum serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
       if need_validator then
-        w o "let %s_validator k =\n  LL.validate_sum_cases %s_sum parse_%s_cases validate_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+        wl o "let %s_validator k =\n  LL.validate_sum_cases %s_sum parse_%s_cases validate_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
       if need_jumper then
-        w o "let %s_jumper k =\n  LL.jump_sum_cases %s_sum parse_%s_cases jump_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+        wl o "let %s_jumper k =\n  LL.jump_sum_cases %s_sum parse_%s_cases jump_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
     | Some def -> (* Horible synth boilerplate to deal with refine_with_tag *)
       w o "let _ : squash (%s_parser_kind == LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases (LP.get_parser_kind %s)) =\n" n n n (pcombinator_name def);
       w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
@@ -1026,20 +1027,20 @@ and compile_select o i n seln tagn tagt taga cl def al =
       w o "noextract let %s_serializer' = LP.serialize_dsum_cases %s_sum parse_%s_cases serialize_%s_cases %s %s\n\n" n n n n (pcombinator_name def) (scombinator_name def);
       w o "let %s_serializer k = LP.serialize_synth _ (synth_%s k) (%s_serializer' (synth_%s_inv k)) (synth_%s_recip k) ()\n\n" n n n tn n;
       write_bytesize o is_private n  ~param:(if is_implicit then Some tagt else None);
-      w o "noextract inline_for_extraction let %s_parser32' = LP.parse32_dsum_cases %s_sum parse_%s_cases parse32_%s_cases %s %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (pcombinator_name def) (pcombinator32_name def);
-      w o "let %s_parser32 k = LP.parse32_synth' (%s_parser' (synth_%s_inv k)) (synth_%s k) (LP.parse32_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_parser32' k) ()\n\n" n n tn n tn n n n;
-      w o "noextract inline_for_extraction let %s_serializer32' = LP.serialize32_dsum_cases %s_sum parse_%s_cases serialize_%s_cases serialize32_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n n (scombinator32_name def);
-      w o "let %s_serializer32 k = LP.serialize32_synth' (%s_parser' (synth_%s_inv k)) (synth_%s k) (%s_serializer' (synth_%s_inv k))\n" n n tn n n tn;
-      w o "   (LP.serialize32_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_serializer' %s_serializer32' k) (synth_%s_recip k) ()\n\n" tn n n n n n;
-      w o "noextract inline_for_extraction let %s_size32' = LP.size32_dsum_cases %s_sum parse_%s_cases serialize_%s_cases size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n n (size32_name def);
-      w o "let %s_size32 k = LP.size32_synth' (%s_parser' (synth_%s_inv k)) (synth_%s k) (%s_serializer' (synth_%s_inv k)) (LP.size32_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_serializer' %s_size32' k) (synth_%s_recip k) ()\n\n" n n tn n n tn tn n n n n n;
+      wh o "noextract inline_for_extraction let %s_parser32' = LP.parse32_dsum_cases %s_sum parse_%s_cases parse32_%s_cases %s %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (pcombinator_name def) (pcombinator32_name def);
+      wh o "let %s_parser32 k = LP.parse32_synth' (%s_parser' (synth_%s_inv k)) (synth_%s k) (LP.parse32_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_parser32' k) ()\n\n" n n tn n tn n n n;
+      wh o "noextract inline_for_extraction let %s_serializer32' = LP.serialize32_dsum_cases %s_sum parse_%s_cases serialize_%s_cases serialize32_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n n (scombinator32_name def);
+      wh o "let %s_serializer32 k = LP.serialize32_synth' (%s_parser' (synth_%s_inv k)) (synth_%s k) (%s_serializer' (synth_%s_inv k))\n" n n tn n n tn;
+      wh o "   (LP.serialize32_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_serializer' %s_serializer32' k) (synth_%s_recip k) ()\n\n" tn n n n n n;
+      wh o "noextract inline_for_extraction let %s_size32' = LP.size32_dsum_cases %s_sum parse_%s_cases serialize_%s_cases size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n n (size32_name def);
+      wh o "let %s_size32 k = LP.size32_synth' (%s_parser' (synth_%s_inv k)) (synth_%s k) (%s_serializer' (synth_%s_inv k)) (LP.size32_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_serializer' %s_size32' k) (synth_%s_recip k) ()\n\n" n n tn n n tn tn n n n n n;
       if need_validator then (
-        w o "noextract inline_for_extraction let %s_validator' = LL.validate_dsum_cases %s_sum parse_%s_cases validate_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (validator_name def);
-        w o "let %s_validator k = LL.validate_synth (LL.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k) ()\n\n" n tn n n n n
+        wl o "noextract inline_for_extraction let %s_validator' = LL.validate_dsum_cases %s_sum parse_%s_cases validate_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (validator_name def);
+        wl o "let %s_validator k = LL.validate_synth (LL.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k) ()\n\n" n tn n n n n
       );
       if need_jumper then (
-        w o "noextract inline_for_extraction let %s_jumper' = LL.jump_dsum_cases %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (jumper_name def);
-        w o "let %s_jumper k = LL.jump_synth (LL.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k) ()\n\n" n tn n n n n
+        wl o "noextract inline_for_extraction let %s_jumper' = LL.jump_dsum_cases %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (jumper_name def);
+        wl o "let %s_jumper k = LL.jump_synth (LL.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k) ()\n\n" n tn n n n n
       )
   ) else (* tag is not erased *)
    begin
@@ -1061,56 +1062,56 @@ and compile_select o i n seln tagn tagt taga cl def al =
     write_bytesize o is_private n  ~param:(if is_implicit then Some tagt else None);
 
     let annot = if is_private then " : LP.parser32 "^(pcombinator_name n) else "" in
-    w o "let %s_parser32%s =\n%s" n annot same_kind;
+    wh o "let %s_parser32%s =\n%s" n annot same_kind;
     (match def with
     | None ->
-      w o "  LP.parse32_sum2 %s_sum %s_repr_parser %s_repr_parser32 parse_%s_cases parse32_%s_cases (_ by (LP.enum_destr_tac %s_enum)) (_ by (LP.maybe_enum_key_of_repr_tac %s_enum))\n\n" n tn tn n n tn tn;
+      wh o "  LP.parse32_sum2 %s_sum %s_repr_parser %s_repr_parser32 parse_%s_cases parse32_%s_cases (_ by (LP.enum_destr_tac %s_enum)) (_ by (LP.maybe_enum_key_of_repr_tac %s_enum))\n\n" n tn tn n n tn tn;
     | Some dt ->
-      w o "  LP.parse32_dsum %s_sum %s_repr_parser32\n" n tn;
-      w o "    _ parse32_%s_cases %s (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n (pcombinator32_name dt));
+      wh o "  LP.parse32_dsum %s_sum %s_repr_parser32\n" n tn;
+      wh o "    _ parse32_%s_cases %s (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n (pcombinator32_name dt));
 
     let annot = if is_private then " : LP.serializer32 "^(scombinator_name n) else "" in
-    w o "let %s_serializer32%s =\n%s" n annot same_kind;
+    wh o "let %s_serializer32%s =\n%s" n annot same_kind;
     (match def with
     | None ->
-      w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
-      w o "  LP.serialize32_sum2 %s_sum %s_repr_serializer %s_repr_serializer32 serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
+      wh o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
+      wh o "  LP.serialize32_sum2 %s_sum %s_repr_serializer %s_repr_serializer32 serialize_%s_cases serialize32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
     | Some dt ->
-      w o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
-      w o "  LP.serialize32_dsum %s_sum %s_repr_serializer (_ by (LP.serialize32_maybe_enum_key_tac %s_repr_serializer32 %s_enum ()))" n tn tn tn;
-      w o "    _ _ serialize32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (scombinator32_name dt));
+      wh o "  assert_norm (LP.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
+      wh o "  LP.serialize32_dsum %s_sum %s_repr_serializer (_ by (LP.serialize32_maybe_enum_key_tac %s_repr_serializer32 %s_enum ()))" n tn tn tn;
+      wh o "    _ _ serialize32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (scombinator32_name dt));
 
     let annot = if is_private then " : LP.size32 "^n else "" in
-    w o "let %s_size32%s =\n%s" n annot same_kind;
+    wh o "let %s_size32%s =\n%s" n annot same_kind;
     (match def with
     | None ->
-      w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
-      w o "  LP.size32_sum2 %s_sum %s_repr_serializer %s_repr_size32 serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
+      wh o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_cases_kind %s_sum parse_%s_cases));\n" tn n n;
+      wh o "  LP.size32_sum2 %s_sum %s_repr_serializer %s_repr_size32 serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n tn
     | Some dt ->
-      w o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
-      w o "  LP.size32_dsum %s_sum _ (_ by (LP.size32_maybe_enum_key_tac %s_repr_size32 %s_enum ()))\n" n tn tn;
-      w o "    _ _ size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (size32_name dt));
+      wh o "  assert_norm (LP.size32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
+      wh o "  LP.size32_dsum %s_sum _ (_ by (LP.size32_maybe_enum_key_tac %s_repr_size32 %s_enum ()))\n" n tn tn;
+      wh o "    _ _ size32_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n (size32_name dt));
 
     if need_validator then
      begin
       let annot = if is_private then " : LL.validator "^(pcombinator_name n) else "" in
-      w o "let %s_validator%s =\n%s" n annot same_kind;
+      wl o "let %s_validator%s =\n%s" n annot same_kind;
       (match def with
       | None ->
-        w o "  LL.validate_sum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+        wl o "  LL.validate_sum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
       | Some dt ->
-        w o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name dt));
+        wl o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name dt));
      end;
 
     if need_jumper then
      begin
       let annot = if is_private then " : LL.jumper "^(pcombinator_name n) else "" in
-      w o "let %s_jumper%s =\n%s" n annot same_kind;
+      wl o "let %s_jumper%s =\n%s" n annot same_kind;
       (match def with
       | None ->
-        w o "  LL.jump_sum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
+        wl o "  LL.jump_sum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
       | Some dt ->
-        w o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name dt))
+        wl o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name dt))
      end;
 
     if need_validator then
@@ -1119,20 +1120,20 @@ and compile_select o i n seln tagn tagt taga cl def al =
         | None -> ""
         | _ -> "maybe_"
       in
-      w i "val lemma_valid_%s_valid_%s: s:LL.slice -> pos:U32.t -> h:HyperStack.mem -> Lemma\n" n tn;
-      w i "  (requires LL.valid %s_parser h s pos)\n" n;
-      w i "  (ensures (LL.valid %s_parser h s pos /\\ LL.contents %s_parser h s pos == tag_of_%s (LL.contents %s_parser h s pos)))\n" tn tn n n;
-      w i "  [SMTPat (LL.valid %s_parser h s pos)]\n\n" n;
-      w o "let lemma_valid_%s_valid_%s s pos h =\n%s" n tn same_kind;
+      wl i "val lemma_valid_%s_valid_%s: s:LL.slice -> pos:U32.t -> h:HyperStack.mem -> Lemma\n" n tn;
+      wl i "  (requires LL.valid %s_parser h s pos)\n" n;
+      wl i "  (ensures (LL.valid %s_parser h s pos /\\ LL.contents %s_parser h s pos == tag_of_%s (LL.contents %s_parser h s pos)))\n" tn tn n n;
+      wl i "  [SMTPat (LL.valid %s_parser h s pos)]\n\n" n;
+      wl o "let lemma_valid_%s_valid_%s s pos h =\n%s" n tn same_kind;
       begin match def with
       | None ->
-         w o "  LL.valid_sum_elim_tag h %s_sum %s_repr_parser parse_%s_cases s pos;\n" n tn n
+         wl o "  LL.valid_sum_elim_tag h %s_sum %s_repr_parser parse_%s_cases s pos;\n" n tn n
       | Some dt ->
-         w o "  LL.valid_dsum_elim_tag h %s_sum %s_repr_parser parse_%s_cases %s s pos;\n" n tn n (pcombinator_name dt)
+         wl o "  LL.valid_dsum_elim_tag h %s_sum %s_repr_parser parse_%s_cases %s s pos;\n" n tn n (pcombinator_name dt)
       end;
-      w o "  lemma_synth_%s_inj ();\n" tn;
-      w o "  LL.valid_synth h parse_%s%s_key synth_%s s pos\n" maybe tn tn;
-      w o "\n"
+      wl o "  lemma_synth_%s_inj ();\n" tn;
+      wl o "  LL.valid_synth h parse_%s%s_key synth_%s s pos\n" maybe tn tn;
+      wl o "\n"
      end;
 
     (* bytesize *)
@@ -1183,46 +1184,46 @@ and compile_select o i n seln tagn tagt taga cl def al =
            if ty <> "Fail" && ty <> "Empty" then
              begin
                let ty0 = compile_type ty in
-               w i "let %s_clens_%s : LL.clens %s %s = {\n" n case n ty0;
-               w i "  LL.clens_cond = (fun (x: %s) -> tag_of_%s x == %s);\n" n n (String.capitalize_ascii case);
-               w i "  LL.clens_get = (fun (x: %s) -> (match x with %s_%s y -> y) <: (Ghost %s (requires (tag_of_%s x == %s)) (ensures (fun y -> True))));\n" n cprefix case ty0 n (String.capitalize_ascii case);
-               w i "}\n\n";
-               w i "val %s_gaccessor_%s : LL.gaccessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty) n case;
-               w o "let %s_clens'_%s : LL.clens %s %s = LL.clens_%ssum_payload %s_sum " n case n ty0 d n;
+               wl i "let %s_clens_%s : LL.clens %s %s = {\n" n case n ty0;
+               wl i "  LL.clens_cond = (fun (x: %s) -> tag_of_%s x == %s);\n" n n (String.capitalize_ascii case);
+               wl i "  LL.clens_get = (fun (x: %s) -> (match x with %s_%s y -> y) <: (Ghost %s (requires (tag_of_%s x == %s)) (ensures (fun y -> True))));\n" n cprefix case ty0 n (String.capitalize_ascii case);
+               wl i "}\n\n";
+               wl i "val %s_gaccessor_%s : LL.gaccessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty) n case;
+               wl o "let %s_clens'_%s : LL.clens %s %s = LL.clens_%ssum_payload %s_sum " n case n ty0 d n;
                if d = "" then
-                 w o "(%s_as_enum_key %s)\n\n" tn (String.capitalize_ascii case)
+                 wl o "(%s_as_enum_key %s)\n\n" tn (String.capitalize_ascii case)
                else
-                 w o "(LL.Known (known_%s_as_enum_key %s))\n\n" tn (String.capitalize_ascii case);
-               w o "let %s_gaccessor'_%s : LL.gaccessor %s_parser %s %s_clens'_%s =\n" n case n (pcombinator_name ty) n case;
+                 wl o "(LL.Known (known_%s_as_enum_key %s))\n\n" tn (String.capitalize_ascii case);
+               wl o "let %s_gaccessor'_%s : LL.gaccessor %s_parser %s %s_clens'_%s =\n" n case n (pcombinator_name ty) n case;
                let write_accessor' g parser_or_jumper =
-                 w o "[@inline_let] let _ = %s () in\n" same_kind;
-                 w o "  LL.%saccessor_clens_%ssum_payload\n" g d;
-                 w o "    %s_sum\n" n;
-                 w o "    %s_repr_%s\n" tn parser_or_jumper;
-                 w o "    parse_%s_cases\n" n;
+                 wl o "[@inline_let] let _ = %s () in\n" same_kind;
+                 wl o "  LL.%saccessor_clens_%ssum_payload\n" g d;
+                 wl o "    %s_sum\n" n;
+                 wl o "    %s_repr_%s\n" tn parser_or_jumper;
+                 wl o "    parse_%s_cases\n" n;
                  if d = "" then
-                   w o "    (%s_as_enum_key %s)\n" tn (String.capitalize_ascii case)
+                   wl o "    (%s_as_enum_key %s)\n" tn (String.capitalize_ascii case)
                  else begin
-                   w o "    %s\n" unknown_parser;
-                   w o "    (LL.Known (known_%s_as_enum_key %s))\n" tn (String.capitalize_ascii case)
+                   wl o "    %s\n" unknown_parser;
+                   wl o "    (LL.Known (known_%s_as_enum_key %s))\n" tn (String.capitalize_ascii case)
                  end;
-                 w o "\n"
+                 wl o "\n"
                in
                write_accessor' "g" "parser";
-               w o "inline_for_extraction\n";
-               w o "let %s_accessor'_%s : LL.accessor %s_gaccessor'_%s =\n" n case n case;
+               wl o "inline_for_extraction\n";
+               wl o "let %s_accessor'_%s : LL.accessor %s_gaccessor'_%s =\n" n case n case;
                write_accessor' "" "jumper";
-               w o "let %s_clens_eq_%s : squash (LL.clens_eq %s_clens'_%s %s_clens_%s) =\n" n case n case n case;
-               w o "    (_ by (LL.sum_accessor_ext (`%s)))\n\n" n;
+               wl o "let %s_clens_eq_%s : squash (LL.clens_eq %s_clens'_%s %s_clens_%s) =\n" n case n case n case;
+               wl o "    (_ by (LL.sum_accessor_ext (`%s)))\n\n" n;
                let write_accessor g =
-                 w o "let %s_%saccessor_%s =\n" n g case;
-                 w o "  LL.%saccessor_ext\n" g;
-                 w o "    %s_%saccessor'_%s\n" n g case;
-                 w o "    %s_clens_%s\n" n case;
-                 w o "    %s_clens_eq_%s\n\n" n case
+                 wl o "let %s_%saccessor_%s =\n" n g case;
+                 wl o "  LL.%saccessor_ext\n" g;
+                 wl o "    %s_%saccessor'_%s\n" n g case;
+                 wl o "    %s_clens_%s\n" n case;
+                 wl o "    %s_clens_eq_%s\n\n" n case
                in
                write_accessor "g";
-               w i "val %s_accessor_%s : LL.accessor %s_gaccessor_%s\n\n" n case n case;
+               wl i "val %s_accessor_%s : LL.accessor %s_gaccessor_%s\n\n" n case n case;
                write_accessor "";
                ()
              end
@@ -1232,53 +1233,53 @@ and compile_select o i n seln tagn tagt taga cl def al =
        | Some dt when dt <> "Empty" && dt <> "Fail" ->
           (* accessor to the default case payload *)
           let dt0 = compile_type dt in
-          w i "let %s_clens_Unknown : LL.clens %s %s = {\n" n n dt0;
-          w i "  LL.clens_cond = (fun (x: %s) -> %s_Unknown_%s? x);\n" n cprefix tn;
-          w i "  LL.clens_get = (fun (x: %s) -> (match x with %s_Unknown_%s _ y -> y) <: (Ghost %s (requires (%s_Unknown_%s? x)) (ensures (fun y -> True))));\n" n cprefix tn dt0 cprefix tn;
-          w i "}\n\n";
-          w o "let %s_clens_eq_Unknown : squash (LL.clens_eq (LL.clens_dsum_unknown_payload %s_sum) %s_clens_Unknown) =\n" n n n;
-          w o "    (_ by (LL.sum_accessor_ext (`%s)))\n\n" n;
+          wl i "let %s_clens_Unknown : LL.clens %s %s = {\n" n n dt0;
+          wl i "  LL.clens_cond = (fun (x: %s) -> %s_Unknown_%s? x);\n" n cprefix tn;
+          wl i "  LL.clens_get = (fun (x: %s) -> (match x with %s_Unknown_%s _ y -> y) <: (Ghost %s (requires (%s_Unknown_%s? x)) (ensures (fun y -> True))));\n" n cprefix tn dt0 cprefix tn;
+          wl i "}\n\n";
+          wl o "let %s_clens_eq_Unknown : squash (LL.clens_eq (LL.clens_dsum_unknown_payload %s_sum) %s_clens_Unknown) =\n" n n n;
+          wl o "    (_ by (LL.sum_accessor_ext (`%s)))\n\n" n;
           let write_accessor g parser_or_jumper =
-            w o "let %s_%saccessor_Unknown =\n" n g;
-            w o "  [@inline_let] let _ = %s () in\n" same_kind;
-            w o "  LL.%saccessor_ext\n" g;
-            w o "    (LL.%saccessor_clens_dsum_unknown_payload\n" g;
-            w o "      %s_sum\n" n;
-            w o "      %s_repr_%s\n" tn parser_or_jumper;
-            w o "      parse_%s_cases\n" n;
-            w o "      %s\n" (pcombinator_name dt);
-            w o "    )\n";
-            w o "    %s_clens_Unknown\n" n;
-            w o "    %s_clens_eq_Unknown\n\n" n
+            wl o "let %s_%saccessor_Unknown =\n" n g;
+            wl o "  [@inline_let] let _ = %s () in\n" same_kind;
+            wl o "  LL.%saccessor_ext\n" g;
+            wl o "    (LL.%saccessor_clens_dsum_unknown_payload\n" g;
+            wl o "      %s_sum\n" n;
+            wl o "      %s_repr_%s\n" tn parser_or_jumper;
+            wl o "      parse_%s_cases\n" n;
+            wl o "      %s\n" (pcombinator_name dt);
+            wl o "    )\n";
+            wl o "    %s_clens_Unknown\n" n;
+            wl o "    %s_clens_eq_Unknown\n\n" n
           in
-          w i "val %s_gaccessor_Unknown : LL.gaccessor %s_parser %s %s_clens_Unknown\n\n" n n (pcombinator_name dt) n;
+          wl i "val %s_gaccessor_Unknown : LL.gaccessor %s_parser %s %s_clens_Unknown\n\n" n n (pcombinator_name dt) n;
           write_accessor "g" "parser";
-          w i "val %s_accessor_Unknown : LL.accessor %s_gaccessor_Unknown\n\n" n n;
+          wl i "val %s_accessor_Unknown : LL.accessor %s_gaccessor_Unknown\n\n" n n;
           write_accessor "" "jumper"
        | _ -> ()
     end;
     (* finalizers *)
     let write_finalizer case =
-      w o "  [@inline_let] let _ = %s" same_kind;
+      wl o "  [@inline_let] let _ = %s" same_kind;
       match def with
       | None ->
-         w o "    let tg = %s_as_enum_key %s in\n" tn (String.capitalize_ascii case);
-         w o "    let len = LL.serialized_length (LP.serialize_enum_key _ %s_repr_serializer (LP.sum_enum %s_sum)) tg in\n" tn n;
-         w o "    let pk = LP.get_parser_kind (LP.parse_enum_key %s_repr_parser (LP.sum_enum %s_sum)) in\n" tn n;
-         w o "    assert_norm (pk.LP.parser_kind_low == %d /\\ pk.LP.parser_kind_high == Some %d);\n" taglen taglen;
-         w o "    assert (%d <= len /\\ len <= %d);\n" taglen taglen;
-         w o "    assert_norm (pow2 32 == 4294967296)\n";
-         w o "  in\n";
-         w o "  LL.finalize_sum_case %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases (_ by (LP.enum_repr_of_key_tac %s_enum)) (%s_as_enum_key %s) input pos\n\n" n tn tn n tn tn (String.capitalize_ascii case)
+         wl o "    let tg = %s_as_enum_key %s in\n" tn (String.capitalize_ascii case);
+         wl o "    let len = LL.serialized_length (LP.serialize_enum_key _ %s_repr_serializer (LP.sum_enum %s_sum)) tg in\n" tn n;
+         wl o "    let pk = LP.get_parser_kind (LP.parse_enum_key %s_repr_parser (LP.sum_enum %s_sum)) in\n" tn n;
+         wl o "    assert_norm (pk.LP.parser_kind_low == %d /\\ pk.LP.parser_kind_high == Some %d);\n" taglen taglen;
+         wl o "    assert (%d <= len /\\ len <= %d);\n" taglen taglen;
+         wl o "    assert_norm (pow2 32 == 4294967296)\n";
+         wl o "  in\n";
+         wl o "  LL.finalize_sum_case %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases (_ by (LP.enum_repr_of_key_tac %s_enum)) (%s_as_enum_key %s) input pos\n\n" n tn tn n tn tn (String.capitalize_ascii case)
       | Some dt ->
-         w o "    let tg = known_%s_as_enum_key %s in\n" tn (String.capitalize_ascii case);
-         w o "    let len = LL.serialized_length (LP.serialize_enum_key _ %s_repr_serializer (LP.dsum_enum %s_sum)) tg in\n" tn n;
-         w o "    let pk = LP.get_parser_kind (LP.parse_enum_key %s_repr_parser (LP.dsum_enum %s_sum)) in\n" tn n;
-         w o "    assert_norm (pk.LP.parser_kind_low == %d /\\ pk.LP.parser_kind_high == Some %d);\n" taglen taglen;
-         w o "    assert (%d <= len /\\ len <= %d);\n" taglen taglen;
-         w o "    assert_norm (pow2 32 == 4294967296)\n";
-         w o "  in\n";
-         w o "  LL.finalize_dsum_case_known %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases %s (_ by (LP.enum_repr_of_key_tac %s_enum)) (known_%s_as_enum_key %s) input pos\n\n" n tn tn n (pcombinator_name dt) tn tn (String.capitalize_ascii case)
+         wl o "    let tg = known_%s_as_enum_key %s in\n" tn (String.capitalize_ascii case);
+         wl o "    let len = LL.serialized_length (LP.serialize_enum_key _ %s_repr_serializer (LP.dsum_enum %s_sum)) tg in\n" tn n;
+         wl o "    let pk = LP.get_parser_kind (LP.parse_enum_key %s_repr_parser (LP.dsum_enum %s_sum)) in\n" tn n;
+         wl o "    assert_norm (pk.LP.parser_kind_low == %d /\\ pk.LP.parser_kind_high == Some %d);\n" taglen taglen;
+         wl o "    assert (%d <= len /\\ len <= %d);\n" taglen taglen;
+         wl o "    assert_norm (pow2 32 == 4294967296)\n";
+         wl o "  in\n";
+         wl o "  LL.finalize_dsum_case_known %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases %s (_ by (LP.enum_repr_of_key_tac %s_enum)) (known_%s_as_enum_key %s) input pos\n\n" n tn tn n (pcombinator_name dt) tn tn (String.capitalize_ascii case)
     in
        List.iter
          (fun (case, ty) ->
@@ -1287,32 +1288,32 @@ and compile_select o i n seln tagn tagt taga cl def al =
            match ty with
            | "Fail" -> () (* impossible case *)
            | "Empty" -> (* parse_empty is not in the user context, so we need to "inline" it here *)
-              w i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
-              w i "  (requires (fun h ->\n";
-              w i "    assert_norm (pow2 32 == 4294967296);\n";
-              w i "    LL.live_slice h input /\\ U32.v pos + %d <= U32.v input.LL.len))\n" taglen;
-              w i "  (ensures (fun h _ h' ->\n";
-              w i "    assert_norm (pow2 32 == 4294967296);\n";
-              w i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
-              w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
-              w i "    LL.valid_content_pos %s_parser h' input pos (%s ()) pos_payload\n" n constr;
-              w i "  ))\n\n";
-              w o "let finalize_%s_%s input pos =\n" n case;
-              w o "  let h = HST.get () in\n";
-              w o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" taglen;
+              wl i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
+              wl i "  (requires (fun h ->\n";
+              wl i "    assert_norm (pow2 32 == 4294967296);\n";
+              wl i "    LL.live_slice h input /\\ U32.v pos + %d <= U32.v input.LL.len))\n" taglen;
+              wl i "  (ensures (fun h _ h' ->\n";
+              wl i "    assert_norm (pow2 32 == 4294967296);\n";
+              wl i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
+              wl i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
+              wl i "    LL.valid_content_pos %s_parser h' input pos (%s ()) pos_payload\n" n constr;
+              wl i "  ))\n\n";
+              wl o "let finalize_%s_%s input pos =\n" n case;
+              wl o "  let h = HST.get () in\n";
+              wl o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" taglen;
               write_finalizer case
            | _ ->
-              w i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
-              w i "  (requires (fun h ->\n";
-              w i "    assert_norm (pow2 32 == 4294967296);\n";
-              w i "U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul)))\n" taglen casep taglen;
-              w i "  (ensures (fun h _ h' ->\n";
-              w i "    assert_norm (pow2 32 == 4294967296);\n";
-              w i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
-              w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
-              w i "    LL.valid_content_pos %s_parser h' input pos (%s (LL.contents %s h input pos_payload)) (LL.get_valid_pos %s h input pos_payload)\n" n constr casep casep;
-              w i "  ))\n\n";
-              w o "let finalize_%s_%s input pos =\n" n case;
+              wl i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
+              wl i "  (requires (fun h ->\n";
+              wl i "    assert_norm (pow2 32 == 4294967296);\n";
+              wl i "U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul)))\n" taglen casep taglen;
+              wl i "  (ensures (fun h _ h' ->\n";
+              wl i "    assert_norm (pow2 32 == 4294967296);\n";
+              wl i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
+              wl i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
+              wl i "    LL.valid_content_pos %s_parser h' input pos (%s (LL.contents %s h input pos_payload)) (LL.get_valid_pos %s h input pos_payload)\n" n constr casep casep;
+              wl i "  ))\n\n";
+              wl o "let finalize_%s_%s input pos =\n" n case;
               write_finalizer case
          )
          cl
@@ -1321,152 +1322,151 @@ and compile_select o i n seln tagn tagt taga cl def al =
        begin match def with
        | Some dt when dt <> "Fail" ->
           let dp = pcombinator_name dt in
-          w i "val finalize_%s_Unknown_%s (v: %s_repr) (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n tn tn;
-          w i "  (requires (fun h ->\n";
-          w i "    assert_norm (pow2 32 == 4294967296);\n";
+          wl i "val finalize_%s_Unknown_%s (v: %s_repr) (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n tn tn;
+          wl i "  (requires (fun h ->\n";
+          wl i "    assert_norm (pow2 32 == 4294967296);\n";
           if dt = "Empty" then
-            w i "    U32.v pos + %d <= U32.v input.LL.len /\\ LL.live_slice h input /\\ not (known_%s_repr v)))\n" taglen tn
+            wl i "    U32.v pos + %d <= U32.v input.LL.len /\\ LL.live_slice h input /\\ not (known_%s_repr v)))\n" taglen tn
           else
-            w i "  U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul) /\\ not (known_%s_repr v)))\n" taglen dp taglen tn
+            wl i "  U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul) /\\ not (known_%s_repr v)))\n" taglen dp taglen tn
           ;
-          w i "  (ensures (fun h _ h' ->\n";
-          w i "    assert_norm (pow2 32 == 4294967296);\n";
-          w i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
-          w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
+          wl i "  (ensures (fun h _ h' ->\n";
+          wl i "    assert_norm (pow2 32 == 4294967296);\n";
+          wl i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
+          wl i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
           if dt = "Empty" then
-            w i "    LL.valid_content_pos %s_parser h' input pos (%s_Unknown_%s v ()) pos_payload\n" n cprefix tn
+            wl i "    LL.valid_content_pos %s_parser h' input pos (%s_Unknown_%s v ()) pos_payload\n" n cprefix tn
           else
-            w i "    LL.valid_content_pos %s_parser h' input pos (%s_Unknown_%s v (LL.contents %s h input pos_payload)) (LL.get_valid_pos %s h input pos_payload)\n" n cprefix tn dp dp
+            wl i "    LL.valid_content_pos %s_parser h' input pos (%s_Unknown_%s v (LL.contents %s h input pos_payload)) (LL.get_valid_pos %s h input pos_payload)\n" n cprefix tn dp dp
           ;
-          w i "  ))\n\n";
-          w o "let finalize_%s_Unknown_%s v input pos =\n" n tn;
-          w o "  [@inline_let] let _ =\n";
-          w o "    %s\n" same_kind;
-          w o "    let tg = unknown_%s_as_enum_key v in\n" tn;
-          w o "    let len = LL.serialized_length %s_repr_serializer tg in\n" tn;
-          w o "    assert (%d <= len /\\ len <= %d);\n" taglen taglen;
-          w o "    assert_norm (pow2 32 == 4294967296)\n";
-          w o "  in\n";
+          wl i "  ))\n\n";
+          wl o "let finalize_%s_Unknown_%s v input pos =\n" n tn;
+          wl o "  [@inline_let] let _ =\n";
+          wl o "    %s\n" same_kind;
+          wl o "    let tg = unknown_%s_as_enum_key v in\n" tn;
+          wl o "    let len = LL.serialized_length %s_repr_serializer tg in\n" tn;
+          wl o "    assert (%d <= len /\\ len <= %d);\n" taglen taglen;
+          wl o "    assert_norm (pow2 32 == 4294967296)\n";
+          wl o "  in\n";
           if dt = "Empty" then begin
-            w o "  let h = HST.get () in\n";
-            w o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" taglen;
+            wl o "  let h = HST.get () in\n";
+            wl o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" taglen;
           end;
-          w o "  LL.finalize_dsum_case_unknown %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases %s (unknown_%s_as_enum_key v) input pos\n\n" n tn tn n dp tn
+          wl o "  LL.finalize_dsum_case_unknown %s_sum %s_repr_serializer %s_repr_writer parse_%s_cases %s (unknown_%s_as_enum_key v) input pos\n\n" n tn tn n dp tn
        | _ -> ()
        end
   end
 
 and compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max smin smax =
-      let (min, max) = li.min_len, li.max_len in
-      let fits_in_bounds = smin <= elem_li.min_len && elem_li.max_len <= smax in
-      let need_validator = is_private || need_validator li.meta li.min_len li.max_len in
-      let need_jumper = is_private || need_jumper li.min_len li.max_len in
-      if fits_in_bounds then
-       begin
-        w i "type %s = %s\n\n" n (compile_type ty);
-        write_api o i is_private li.meta n min max;
-        w o "let %s_parser' =\n" n;
-        w o "  LP.parse_vlgen %d %d %s %s\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
-        let kind_eq = sprintf "(LP.get_parser_kind %s_parser' == %s_parser_kind)" n n in
-        w o "let %s_kind_eq : squash %s = assert_norm %s\n\n" n kind_eq kind_eq;
-        w o "let %s_parser = %s_parser'\n\n" n n;
-        w o "let %s_serializer =\n" n;
-        w o "  LP.serialize_vlgen %d %d %s %s\n\n" smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
-        write_bytesize o is_private n;
-        w o "let %s_parser32 =\n" n;
-        w o "  LP.parse32_vlgen %d %dul %d %dul %s %s %s\n\n" smin smin smax smax (pcombinator32_length_header_name lenty smin smax) (scombinator_name ty) (pcombinator32_name ty);
-        w o "let %s_serializer32 =\n" n;
-        w o "  LP.serialize32_vlgen %d %d %s %s\n\n" smin smax (scombinator32_length_header_name lenty smin smax) (scombinator32_name ty);
-        w o "let %s_size32 =\n" n;
-        w o "  LP.size32_vlgen %d %d %s %s\n\n" smin smax (size32_length_header_name lenty smin smax) (size32_name ty);
-        if need_validator then (
-          w o "let %s_validator =\n" n;
-          w o "  LL.validate_vlgen %d %dul %d %dul %s %s %s %s\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
-        );
-        if need_jumper then (
-          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-          w o "let %s_jumper%s =\n\n" n jumper_annot;
-          w o "  LL.jump_vlgen %d %d %s %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (jumper_name ty)
-        );
-        (* accessor *)
-        if ty <> "Empty" && ty <> "Fail" then begin
-          w i "val %s_gaccessor : LL.gaccessor %s_parser %s (LL.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
-          w o "let %s_gaccessor = LL.gaccessor_vlgen_payload %d %d %s %s\n\n" n smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
-          w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
-          w o "let %s_accessor = LL.accessor_vlgen_payload %d %d %s %s\n\n" n smin smax (jumper_length_header_name lenty smin smax) (scombinator_name ty);
-          ()
-        end;
-        (* TODO: intro lemmas *)
-       ()
-       end
-      else
-       begin
-        let sizef =
-          if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty)
-          else bytesize_call ty "x" in
-        w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n (compile_type ty) sizef smin smax;
-        write_api o i is_private li.meta n min max;
-        w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n smin smax (scombinator_name ty);
-        w o "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
-        w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
-        w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
-        w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
-        w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
-        w o "  LP.parse_bounded_vlgen %d %d %s %s\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
-        let kind_eq = sprintf "(LP.get_parser_kind %s'_parser == %s_parser_kind)" n n in
-        w o "let %s_kind_eq : squash %s = assert_norm %s\n\n" n kind_eq kind_eq;
-        w o "let %s_parser = LP.parse_synth %s'_parser synth_%s\n\n" n n n;
-        w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
-        w o "  LP.serialize_bounded_vlgen %d %d %s %s\n\n" smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
-        w o "let %s_serializer = LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n n;
-        write_bytesize o is_private n;
-        w o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-        w o "  LP.parse32_bounded_vlgen %d %dul %d %dul %s %s %s\n\n" smin smin smax smax (pcombinator32_length_header_name lenty smin smax) (scombinator_name ty) (pcombinator32_name ty);
-        w o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
-        w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-        w o "  LP.serialize32_bounded_vlgen %d %d %s %s\n\n" smin smax (scombinator32_length_header_name lenty smin smax) (scombinator32_name ty);
-        w o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
-        w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-        w o "  LP.size32_bounded_vlgen %d %d %s %s\n\n" smin smax (size32_length_header_name lenty smin smax) (size32_name ty);
-        w o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
-        if need_validator then (
-          w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-          w o "  LL.validate_bounded_vlgen %d %dul %d %dul %s %s %s %s\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
-          w o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
-        );
-        if need_jumper then (
-          w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-          w o "  LL.jump_bounded_vlgen %d %d %s %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (jumper_name ty);
-          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-          w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
-        );
-        (* TODO: intro lemmas *)
-        (* accessor *)
-            w i "let %s_clens : LL.clens %s %s = {\n" n n (compile_type ty);
-            w i "  LL.clens_cond = (fun _ -> True);\n";
-            w i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
-            w i "}\n\n";
-            w i "val %s_gaccessor : LL.gaccessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
-            let write_accessor g compose_needs_unit jumper_or_parser =
-              w o "let %s_%saccessor =\n" n g;
-              w o "  LL.%saccessor_ext\n" g;
-              w o "    (LL.%saccessor_compose\n" g;
-              w o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
-              w o "      (LL.%saccessor_bounded_vlgen_payload %d %d %s %s)\n" g smin smax jumper_or_parser (scombinator_name ty);
-              (if compose_needs_unit then w o "      ()\n");
-              w o "    )\n";
-              w o "    %s_clens\n" n;
-              w o "    ()\n\n";
-              ()
-            in
-            write_accessor "g" false (pcombinator_length_header_name lenty smin smax);
-            w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
-            write_accessor "" true (jumper_length_header_name lenty smin smax);
-        ()
-       end;
-      (* TODO: lemma about bytesize *)
+  let (min, max) = li.min_len, li.max_len in
+  let fits_in_bounds = smin <= elem_li.min_len && elem_li.max_len <= smax in
+  let need_validator = is_private || need_validator li.meta li.min_len li.max_len in
+  let need_jumper = is_private || need_jumper li.min_len li.max_len in
+  if fits_in_bounds then
+   begin
+    w i "type %s = %s\n\n" n (compile_type ty);
+    write_api o i is_private li.meta n min max;
+    w o "let %s_parser' =\n" n;
+    w o "  LP.parse_vlgen %d %d %s %s\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
+    let kind_eq = sprintf "(LP.get_parser_kind %s_parser' == %s_parser_kind)" n n in
+    w o "let %s_kind_eq : squash %s = assert_norm %s\n\n" n kind_eq kind_eq;
+    w o "let %s_parser = %s_parser'\n\n" n n;
+    w o "let %s_serializer =\n" n;
+    w o "  LP.serialize_vlgen %d %d %s %s\n\n" smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
+    write_bytesize o is_private n;
+    wh o "let %s_parser32 =\n" n;
+    wh o "  LP.parse32_vlgen %d %dul %d %dul %s %s %s\n\n" smin smin smax smax (pcombinator32_length_header_name lenty smin smax) (scombinator_name ty) (pcombinator32_name ty);
+    wh o "let %s_serializer32 =\n" n;
+    wh o "  LP.serialize32_vlgen %d %d %s %s\n\n" smin smax (scombinator32_length_header_name lenty smin smax) (scombinator32_name ty);
+    wh o "let %s_size32 =\n" n;
+    wh o "  LP.size32_vlgen %d %d %s %s\n\n" smin smax (size32_length_header_name lenty smin smax) (size32_name ty);
+    if need_validator then (
+      wl o "let %s_validator =\n" n;
+      wl o "  LL.validate_vlgen %d %dul %d %dul %s %s %s %s\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
+    );
+    if need_jumper then (
+      let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+      wl o "let %s_jumper%s =\n\n" n jumper_annot;
+      wl o "  LL.jump_vlgen %d %d %s %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (jumper_name ty)
+    );
+    (* accessor *)
+    if ty <> "Empty" && ty <> "Fail" then begin
+      wl i "val %s_gaccessor : LL.gaccessor %s_parser %s (LL.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
+      wl o "let %s_gaccessor = LL.gaccessor_vlgen_payload %d %d %s %s\n\n" n smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
+      wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+      wl o "let %s_accessor = LL.accessor_vlgen_payload %d %d %s %s\n\n" n smin smax (jumper_length_header_name lenty smin smax) (scombinator_name ty);
       ()
-  
+    end;
+    (* TODO: intro lemmas *)
+   ()
+   end
+  else
+   begin
+    let sizef =
+      if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty)
+      else bytesize_call ty "x" in
+    w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n (compile_type ty) sizef smin smax;
+    write_api o i is_private li.meta n min max;
+    w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n smin smax (scombinator_name ty);
+    w o "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
+    w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
+    w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
+    w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
+    w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
+    w o "  LP.parse_bounded_vlgen %d %d %s %s\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
+    let kind_eq = sprintf "(LP.get_parser_kind %s'_parser == %s_parser_kind)" n n in
+    w o "let %s_kind_eq : squash %s = assert_norm %s\n\n" n kind_eq kind_eq;
+    w o "let %s_parser = LP.parse_synth %s'_parser synth_%s\n\n" n n n;
+    w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+    w o "  LP.serialize_bounded_vlgen %d %d %s %s\n\n" smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
+    w o "let %s_serializer = LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n n;
+    write_bytesize o is_private n;
+    wh o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+    wh o "  LP.parse32_bounded_vlgen %d %dul %d %dul %s %s %s\n\n" smin smin smax smax (pcombinator32_length_header_name lenty smin smax) (scombinator_name ty) (pcombinator32_name ty);
+    wh o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
+    wh o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+    wh o "  LP.serialize32_bounded_vlgen %d %d %s %s\n\n" smin smax (scombinator32_length_header_name lenty smin smax) (scombinator32_name ty);
+    wh o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
+    wh o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+    wh o "  LP.size32_bounded_vlgen %d %d %s %s\n\n" smin smax (size32_length_header_name lenty smin smax) (size32_name ty);
+    wh o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
+    if need_validator then (
+      wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+      wl o "  LL.validate_bounded_vlgen %d %dul %d %dul %s %s %s %s\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
+      wl o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
+    );
+    if need_jumper then (
+      wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+      wl o "  LL.jump_bounded_vlgen %d %d %s %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (jumper_name ty);
+      let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+      wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
+    );
+    (* TODO: intro lemmas *)
+    (* accessor *)
+    wl i "let %s_clens : LL.clens %s %s = {\n" n n (compile_type ty);
+    wl i "  LL.clens_cond = (fun _ -> True);\n";
+    wl i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
+    wl i "}\n\n";
+    wl i "val %s_gaccessor : LL.gaccessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
+    let write_accessor g compose_needs_unit jumper_or_parser =
+      wl o "let %s_%saccessor =\n" n g;
+      wl o "  LL.%saccessor_ext\n" g;
+      wl o "    (LL.%saccessor_compose\n" g;
+      wl o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
+      wl o "      (LL.%saccessor_bounded_vlgen_payload %d %d %s %s)\n" g smin smax jumper_or_parser (scombinator_name ty);
+      (if compose_needs_unit then w o "      ()\n");
+      wl o "    )\n";
+      wl o "    %s_clens\n" n;
+      wl o "    ()\n\n";
+      () in
+    write_accessor "g" false (pcombinator_length_header_name lenty smin smax);
+    wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+    write_accessor "" true (jumper_length_header_name lenty smin smax);
+    ()
+   end;
+  (* TODO: lemma about bytesize *)
+  ()
+
 and compile_typedef o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
   let qname = if tn = "" then String.uncapitalize_ascii fn else tn^"@"^fn in
@@ -1502,13 +1502,14 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty);
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty);
       write_bytesize o is_private n;
-      w o "let %s_parser32 = %s\n\n" n (pcombinator32_name ty);
-      w o "let %s_serializer32 = %s\n\n" n (scombinator32_name ty);
-      w o "let %s_size32 = %s\n\n" n (size32_name ty);
-      (if need_validator then w o "let %s_validator = %s\n\n" n (validator_name ty));
+      wh o "let %s_parser32 = %s\n\n" n (pcombinator32_name ty);
+      wh o "let %s_serializer32 = %s\n\n" n (scombinator32_name ty);
+      wh o "let %s_size32 = %s\n\n" n (size32_name ty);
+      (if need_validator then
+        wl o "let %s_validator = %s\n\n" n (validator_name ty));
       (if need_jumper then
-         let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-         w o "let %s_jumper%s = %s\n\n" n jumper_annot (jumper_name ty));
+         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+         wl o "let %s_jumper%s = %s\n\n" n jumper_annot (jumper_name ty));
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
       ()
@@ -1528,15 +1529,15 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_parser = %s_parser'\n" n n;
       w o "let %s_serializer = LL.serialize_vclist %d %d %s %s\n\n" n low high (scombinator_name repr_t) (scombinator_name ty);
       write_bytesize o is_private n;
-      w o "let %s_parser32 = LP.parse32_vclist %dul %dul %s %s\n\n" n low high (pcombinator32_name repr_t) (pcombinator32_name ty);
-      w o "let %s_serializer32 =\n  [@inline_let] let _ = assert_norm (LP.serialize32_vclist_precond %d %d (LP.get_parser_kind %s) (LP.get_parser_kind %s)) in\n" n low high (pcombinator_name repr_t) (pcombinator_name ty);
-      w o "  LP.serialize32_vclist %d %d %s %s\n\n" low high (scombinator32_name repr_t) (scombinator32_name ty);
-      w o "let %s_size32 =\n  [@inline_let] let _ = assert_norm (LP.serialize32_vclist_precond %d %d (LP.get_parser_kind %s) (LP.get_parser_kind %s)) in\n" n low high (pcombinator_name repr_t) (pcombinator_name ty);
-      w o "  LP.size32_vclist %d %d %s %s\n\n" low high (size32_name repr_t) (size32_name ty);
-      w o "let %s_validator = LL.validate_vclist %dul %dul %s %s %s\n\n" n low high (validator_name repr_t) (leaf_reader_name repr_t) (validator_name ty);
-      let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-      w o "let %s_jumper%s =\n" n jumper_annot;
-      w o "  LL.jump_vclist %d %d %s %s %s\n\n" low high (jumper_name repr_t) (leaf_reader_name repr_t) (jumper_name ty);
+      wh o "let %s_parser32 = LP.parse32_vclist %dul %dul %s %s\n\n" n low high (pcombinator32_name repr_t) (pcombinator32_name ty);
+      wh o "let %s_serializer32 =\n  [@inline_let] let _ = assert_norm (LP.serialize32_vclist_precond %d %d (LP.get_parser_kind %s) (LP.get_parser_kind %s)) in\n" n low high (pcombinator_name repr_t) (pcombinator_name ty);
+      wh o "  LP.serialize32_vclist %d %d %s %s\n\n" low high (scombinator32_name repr_t) (scombinator32_name ty);
+      wh o "let %s_size32 =\n  [@inline_let] let _ = assert_norm (LP.serialize32_vclist_precond %d %d (LP.get_parser_kind %s) (LP.get_parser_kind %s)) in\n" n low high (pcombinator_name repr_t) (pcombinator_name ty);
+      wh o "  LP.size32_vclist %d %d %s %s\n\n" low high (size32_name repr_t) (size32_name ty);
+      wl o "let %s_validator = LL.validate_vclist %dul %dul %s %s %s\n\n" n low high (validator_name repr_t) (leaf_reader_name repr_t) (validator_name ty);
+      let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+      wl o "let %s_jumper%s =\n" n jumper_annot;
+      wl o "  LL.jump_vclist %d %d %s %s %s\n\n" low high (jumper_name repr_t) (leaf_reader_name repr_t) (jumper_name ty);
       (* finalizer, count, i-th accessor TODO *)
       ()
 
@@ -1560,58 +1561,59 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         w o "let %s_serializer =\n" n;
         w o "  LP.serialize_bounded_vldata %d %d %s\n\n" 0 smax (scombinator_name ty);
         write_bytesize o is_private n;
-        w o "let %s_parser32 =\n" n;
-        w o "  LP.parse32_bounded_vldata %d %dul %d %dul %s\n\n" 0 0 smax smax (pcombinator32_name ty);
-        w o "let %s_serializer32 =\n" n;
-        w o "  LP.serialize32_bounded_vldata %d %d %s\n\n" 0 smax (scombinator32_name ty);
-        w o "let %s_size32 =\n" n;
-        w o "  LP.size32_bounded_vldata %d %d %s %dul\n\n" 0 smax (size32_name ty) (log256 smax);
+        wh o "let %s_parser32 =\n" n;
+        wh o "  LP.parse32_bounded_vldata %d %dul %d %dul %s\n\n" 0 0 smax smax (pcombinator32_name ty);
+        wh o "let %s_serializer32 =\n" n;
+        wh o "  LP.serialize32_bounded_vldata %d %d %s\n\n" 0 smax (scombinator32_name ty);
+        wh o "let %s_size32 =\n" n;
+        wh o "  LP.size32_bounded_vldata %d %d %s %dul\n\n" 0 smax (size32_name ty) (log256 smax);
         if need_validator then (
-          w o "let %s_validator =\n" n;
-          w o "  LL.validate_bounded_vldata %d %d %s ()\n\n" 0 smax (validator_name ty);
+          wl o "let %s_validator =\n" n;
+          wl o "  LL.validate_bounded_vldata %d %d %s ()\n\n" 0 smax (validator_name ty);
         );
         if need_jumper then (
-          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-          w o "let %s_jumper%s =\n\n" n jumper_annot;
-          w o "  LL.jump_bounded_vldata %d %d %s ()\n\n" 0 smax (pcombinator_name ty)
+          let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+          wl o "let %s_jumper%s =\n\n" n jumper_annot;
+          wl o "  LL.jump_bounded_vldata %d %d %s ()\n\n" 0 smax (pcombinator_name ty)
         );
         (* accessor *)
-        if ty <> "Empty" && ty <> "Fail" then begin
-          w i "val %s_gaccessor : LL.gaccessor %s_parser %s (LL.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
-          w o "let %s_gaccessor = LL.gaccessor_bounded_vldata_payload %d %d %s\n\n" n 0 smax (pcombinator_name ty);
-          w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
-          w o "let %s_accessor = LL.accessor_bounded_vldata_payload %d %d %s\n\n" n 0 smax (pcombinator_name ty);
+        if ty <> "Empty" && ty <> "Fail" then
+         begin
+          wl i "val %s_gaccessor : LL.gaccessor %s_parser %s (LL.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
+          wl o "let %s_gaccessor = LL.gaccessor_bounded_vldata_payload %d %d %s\n\n" n 0 smax (pcombinator_name ty);
+          wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+          wl o "let %s_accessor = LL.accessor_bounded_vldata_payload %d %d %s\n\n" n 0 smax (pcombinator_name ty);
           ()
-        end;
+         end;
         (* finalizer *)
         begin match ty with
         | "Fail" -> () (* impossible *)
         | "Empty" ->
-            w i "val %s_finalize (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n;
-            w i "  (requires (fun h ->\n";
-            w i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" len_len_max;
-            w i "    LL.live_slice h input\n";
-            w i "  ))\n";
-            w i "  (ensures (fun h _ h' ->\n";
-            w i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len_max;
-            w i "    LL.valid_pos %s_parser h' input pos (pos `U32.add` %dul)\n" n len_len_max;
-            w i "  ))\n\n";
-            w o "let %s_finalize input pos =\n" n;
-            w o "  let h = HST.get () in\n";
-            w o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" len_len_max;
-            w o "  LL.finalize_bounded_vldata %d %d LL.parse_empty input pos (pos `U32.add` %dul) \n\n" 0 smax len_len_max
+            wl i "val %s_finalize (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n;
+            wl i "  (requires (fun h ->\n";
+            wl i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" len_len_max;
+            wl i "    LL.live_slice h input\n";
+            wl i "  ))\n";
+            wl i "  (ensures (fun h _ h' ->\n";
+            wl i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len_max;
+            wl i "    LL.valid_pos %s_parser h' input pos (pos `U32.add` %dul)\n" n len_len_max;
+            wl i "  ))\n\n";
+            wl o "let %s_finalize input pos =\n" n;
+            wl o "  let h = HST.get () in\n";
+            wl o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" len_len_max;
+            wl o "  LL.finalize_bounded_vldata %d %d LL.parse_empty input pos (pos `U32.add` %dul) \n\n" 0 smax len_len_max
         | _ ->
-            w i "val %s_finalize (input: LL.slice) (pos: U32.t) (pos' : U32.t) : HST.Stack unit\n" n;
-            w i "  (requires (fun h ->\n";
-            w i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" len_len_max;
-            w i "    LL.valid_pos %s h input (pos `U32.add` %dul) pos'\n" (pcombinator_name ty) len_len_max;
-            w i "  ))\n";
-            w i "  (ensures (fun h _ h' ->\n";
-            w i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len_max;
-            w i "    LL.valid_content_pos %s_parser h' input pos (LL.contents %s h input (pos `U32.add` %dul)) pos'\n" n (pcombinator_name ty) len_len_max;
-            w i "  ))\n\n";
-            w o "let %s_finalize input pos pos' =\n" n;
-            w o "  LL.finalize_bounded_vldata %d %d %s input pos pos'\n\n" 0 smax (pcombinator_name ty)
+            wl i "val %s_finalize (input: LL.slice) (pos: U32.t) (pos' : U32.t) : HST.Stack unit\n" n;
+            wl i "  (requires (fun h ->\n";
+            wl i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" len_len_max;
+            wl i "    LL.valid_pos %s h input (pos `U32.add` %dul) pos'\n" (pcombinator_name ty) len_len_max;
+            wl i "  ))\n";
+            wl i "  (ensures (fun h _ h' ->\n";
+            wl i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len_max;
+            wl i "    LL.valid_content_pos %s_parser h' input pos (LL.contents %s h input (pos `U32.add` %dul)) pos'\n" n (pcombinator_name ty) len_len_max;
+            wl i "  ))\n\n";
+            wl o "let %s_finalize input pos pos' =\n" n;
+            wl o "  LL.finalize_bounded_vldata %d %d %s input pos pos'\n\n" 0 smax (pcombinator_name ty)
         end;
         ()
        end
@@ -1634,75 +1636,75 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         w o "  LP.serialize_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty);
         w o "let %s_serializer = LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n n;
         write_bytesize o is_private n;
-        w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-        w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul %s %s\n\n" 0 0 smax smax (scombinator_name ty) (pcombinator32_name ty);
-        w o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
-        w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-        w o "  LP.serialize32_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator32_name ty);
-        w o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
-        w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-        w o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" 0 smax (size32_name ty) (log256 smax);
-        w o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
+        wh o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+        wh o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul %s %s\n\n" 0 0 smax smax (scombinator_name ty) (pcombinator32_name ty);
+        wh o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
+        wh o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+        wh o "  LP.serialize32_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator32_name ty);
+        wh o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
+        wh o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+        wh o "  LP.size32_bounded_vldata_strong %d %d %s %dul\n\n" 0 smax (size32_name ty) (log256 smax);
+        wh o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
         if need_validator then (
-          w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-          w o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty) (validator_name ty);
-          w o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
+          wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+          wl o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty) (validator_name ty);
+          wl o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
         );
         if need_jumper then (
-          w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-          w o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty);
-          let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-          w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
+          wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+          wl o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty);
+          let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+          wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
         );
         (* finalizer *)
         if ty = "Empty" || ty = "Fail" then failwith "vldata empty/fail should have been in the 'bounds OK' case";
-        w i "val %s_finalize (input: LL.slice) (pos: U32.t) (pos'  : U32.t) : HST.Stack unit\n"  n;
-        w i "  (requires (fun h ->\n" ;
-        w i "     U32.v pos + %d < 4294967296 /\\ (\n" len_len_max;
-        w i "     let pos_payload = pos `U32.add` %dul in\n" len_len_max;
-        w i "     LL.valid_pos %s h input pos_payload pos' /\\ (\n" (pcombinator_name ty);
-        w i "     let len_payload = U32.v pos' - U32.v pos_payload in\n";
-        w i "     let x = LL.contents %s h input pos_payload in\n" (pcombinator_name ty);
-        w i "     let len_ser = %s in\n" (bytesize_call ty "x");
-        w i "     ((%d <= len_payload /\\ len_payload <= %d) \\/ (%d <= len_ser /\\ len_ser <= %d))\n" 0 smax 0 smax;
-        w i "  ))))\n";
-        w i "  (ensures (fun h _ h' ->\n";
-        w i "    let x = LL.contents %s h input (pos `U32.add` %dul) in\n" (pcombinator_name ty) len_len_max;
-        w i "    let len_ser = %s in\n" (bytesize_call ty "x");
-        w i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len_max;
-        w i "    %d <= len_ser /\\ len_ser <= %d /\\\n" 0 smax;
-        w i "    LL.valid_content_pos %s_parser h' input pos x pos'\n" n;
-        w i "  ))\n\n";
-        w o "let %s_finalize input pos pos' =\n" n;
-        w o "  let h = HST.get () in\n";
-        w o "  [@inline_let] let _ =\n";
-        w o "    let x = LL.contents %s h input (pos `U32.add` %dul) in\n" (pcombinator_name ty) len_len_max;
-        w o "    %s\n" (bytesize_eq_call ty "x");
-        w o "  in\n";
-        w o "  LL.finalize_bounded_vldata_strong %d %d %s input pos pos';\n" 0 smax (scombinator_name ty);
-        w o "  let h = HST.get () in\n";
-        w o "  LL.valid_synth h %s'_parser synth_%s input pos\n\n" n n;
+        wl i "val %s_finalize (input: LL.slice) (pos: U32.t) (pos'  : U32.t) : HST.Stack unit\n"  n;
+        wl i "  (requires (fun h ->\n" ;
+        wl i "     U32.v pos + %d < 4294967296 /\\ (\n" len_len_max;
+        wl i "     let pos_payload = pos `U32.add` %dul in\n" len_len_max;
+        wl i "     LL.valid_pos %s h input pos_payload pos' /\\ (\n" (pcombinator_name ty);
+        wl i "     let len_payload = U32.v pos' - U32.v pos_payload in\n";
+        wl i "     let x = LL.contents %s h input pos_payload in\n" (pcombinator_name ty);
+        wl i "     let len_ser = %s in\n" (bytesize_call ty "x");
+        wl i "     ((%d <= len_payload /\\ len_payload <= %d) \\/ (%d <= len_ser /\\ len_ser <= %d))\n" 0 smax 0 smax;
+        wl i "  ))))\n";
+        wl i "  (ensures (fun h _ h' ->\n";
+        wl i "    let x = LL.contents %s h input (pos `U32.add` %dul) in\n" (pcombinator_name ty) len_len_max;
+        wl i "    let len_ser = %s in\n" (bytesize_call ty "x");
+        wl i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len_max;
+        wl i "    %d <= len_ser /\\ len_ser <= %d /\\\n" 0 smax;
+        wl i "    LL.valid_content_pos %s_parser h' input pos x pos'\n" n;
+        wl i "  ))\n\n";
+        wl o "let %s_finalize input pos pos' =\n" n;
+        wl o "  let h = HST.get () in\n";
+        wl o "  [@inline_let] let _ =\n";
+        wl o "    let x = LL.contents %s h input (pos `U32.add` %dul) in\n" (pcombinator_name ty) len_len_max;
+        wl o "    %s\n" (bytesize_eq_call ty "x");
+        wl o "  in\n";
+        wl o "  LL.finalize_bounded_vldata_strong %d %d %s input pos pos';\n" 0 smax (scombinator_name ty);
+        wl o "  let h = HST.get () in\n";
+        wl o "  LL.valid_synth h %s'_parser synth_%s input pos\n\n" n n;
         (* accessor *)
-            w i "let %s_clens : LL.clens %s %s = {\n" n n (compile_type ty);
-            w i "  LL.clens_cond = (fun _ -> True);\n";
-            w i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
-            w i "}\n\n";
-            w i "val %s_gaccessor : LL.gaccessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
-            let write_accessor g compose_needs_unit =
-              w o "let %s_%saccessor =\n" n g;
-              w o "  LL.%saccessor_ext\n" g;
-              w o "    (LL.%saccessor_compose\n" g;
-              w o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
-              w o "      (LL.%saccessor_bounded_vldata_strong_payload %d %d %s)\n" g 0 smax (scombinator_name ty);
-              (if compose_needs_unit then w o "      ()\n");
-              w o "    )\n";
-              w o "    %s_clens\n" n;
-              w o "    ()\n\n";
-              ()
-            in
-            write_accessor "g" false;
-            w i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
-            write_accessor "" true;
+        wl i "let %s_clens : LL.clens %s %s = {\n" n n (compile_type ty);
+        wl i "  LL.clens_cond = (fun _ -> True);\n";
+        wl i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
+        wl i "}\n\n";
+        wl i "val %s_gaccessor : LL.gaccessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
+        let write_accessor g compose_needs_unit =
+          wl o "let %s_%saccessor =\n" n g;
+          wl o "  LL.%saccessor_ext\n" g;
+          wl o "    (LL.%saccessor_compose\n" g;
+          wl o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
+          wl o "      (LL.%saccessor_bounded_vldata_strong_payload %d %d %s)\n" g 0 smax (scombinator_name ty);
+          (if compose_needs_unit then w o "      ()\n");
+          wl o "    )\n";
+          wl o "    %s_clens\n" n;
+          wl o "    ()\n\n";
+          ()
+        in
+        write_accessor "g" false;
+        wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+        write_accessor "" true;
         ()
        end;
       (* lemma about bytesize *)
@@ -1719,37 +1721,37 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" n k;
       w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" n k;
       write_bytesize o is_private n;
-      w o "let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" n k k;
-      w o "let %s_serializer32 = LP.serialize32_flbytes %d\n\n" n k;
-      w o "let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" n n k;
+      wh o "let %s_parser32 = LP.parse32_flbytes %d %dul\n\n" n k k;
+      wh o "let %s_serializer32 = LP.serialize32_flbytes %d\n\n" n k;
+      wh o "let %s_size32 = LP.size32_constant %s_serializer %dul ()\n\n" n n k;
       (* validator and jumper not needed unless private, we are total constant size *)
       if is_private then
        begin
-        w o "let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
-        w o "let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k
+        wl o "let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
+        wl o "let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k
        end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
       w o "let %s_bytesize_eqn x = ()\n\n" n;
       (* intro *)
-      w i "val %s_intro (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
-      w i "  (requires (\n";
-      w i "    LL.live_slice h input /\\\n";
-      w i "    U32.v pos + %d <= U32.v input.LL.len\n" k;
-      w i "  ))\n";
-      w i "  (ensures (\n";
-      w i "    LL.valid_content_pos %s_parser h input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos %dul))) (pos `U32.add` %dul)\n" n k k;
-      w i "  ))\n";
-      w o "let %s_intro h input pos =\n" n;
-      w o "  LL.valid_flbytes_intro h %d input pos\n\n" k;
+      wl i "val %s_intro (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      wl i "  (requires (\n";
+      wl i "    LL.live_slice h input /\\\n";
+      wl i "    U32.v pos + %d <= U32.v input.LL.len\n" k;
+      wl i "  ))\n";
+      wl i "  (ensures (\n";
+      wl i "    LL.valid_content_pos %s_parser h input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos %dul))) (pos `U32.add` %dul)\n" n k k;
+      wl i "  ))\n";
+      wl o "let %s_intro h input pos =\n" n;
+      wl o "  LL.valid_flbytes_intro h %d input pos\n\n" k;
       (* elim *)
-      w i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
-      w i "  (requires (LL.valid %s_parser h input pos))\n" n;
-      w i "  (ensures (\n";
-      w i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" k;
-      w i "    LL.valid_content_pos %s_parser h input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos %dul))) (pos `U32.add` %dul)\n" n k k;
-      w i "  ))\n";
-      w o "let %s_elim h input pos =\n" n;
-      w o "  LL.valid_flbytes_elim h %d input pos\n\n" k;
+      wl i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      wl i "  (requires (LL.valid %s_parser h input pos))\n" n;
+      wl i "  (ensures (\n";
+      wl i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" k;
+      wl i "    LL.valid_content_pos %s_parser h input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos %dul))) (pos `U32.add` %dul)\n" n k k;
+      wl i "  ))\n";
+      wl o "let %s_elim h input pos =\n" n;
+      wl o "  LL.valid_flbytes_elim h %d input pos\n\n" k;
       ()
 
     (* Fixed length list *)
@@ -1765,47 +1767,49 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s'_serializer = LP.serialize_array %s %d %d ()\n\n" n (scombinator_name ty) k li.min_count;
       w o "let %s_serializer = %s_eq(); LP.coerce (LP.serializer %s_parser) %s'_serializer\n\n" n n n n;
       write_bytesize o is_private n;
-      w o "inline_for_extraction let %s'_parser32 = LP.parse32_array %s %s %d %dul %d ()\n\n"
+      wh o "inline_for_extraction let %s'_parser32 = LP.parse32_array %s %s %d %dul %d ()\n\n"
         n (scombinator_name ty) (pcombinator32_name ty) k k li.min_count;
-      w o "let %s_parser32 = %s_eq(); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n n;
-      w o "inline_for_extraction noextract let %s'_serializer32 =\n" n;
-      w o "  LP.serialize32_array #_ #_ #_ #%s %s %d %d ()\n\n" (scombinator_name ty) (scombinator32_name ty) k li.min_count;
-      w o "let %s_serializer32 = %s_eq(); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n n;
-      w o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty) k k li.min_count;
-      (if need_validator then w o "let %s_validator = LL.validate_array %s %s %d %dul %d ()\n\n" n (scombinator_name ty) (validator_name ty) k k li.min_count);
+      wh o "let %s_parser32 = %s_eq(); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n n;
+      wh o "inline_for_extraction noextract let %s'_serializer32 =\n" n;
+      wh o "  LP.serialize32_array #_ #_ #_ #%s %s %d %d ()\n\n" (scombinator_name ty) (scombinator32_name ty) k li.min_count;
+      wh o "let %s_serializer32 = %s_eq(); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n n;
+      wh o "let %s_size32 = LP.size32_array %s %d %dul %d ()\n" n (scombinator_name ty) k k li.min_count;
+      (if need_validator then
+        wl o "let %s_validator = LL.validate_array %s %s %d %dul %d ()\n\n" n (scombinator_name ty) (validator_name ty) k k li.min_count);
       (* jumper not needed unless private, we are constant size *)
-      (if is_private then w o "let %s_jumper : LL.jumper %s_parser = LL.jump_array %s %d %dul %d ()\n\n" n n (scombinator_name ty) k k li.min_count);
-      w i "noextract let clens_%s_nth (i: nat { i < %d } ) : LL.clens %s %s = {\n" n li.min_count n (compile_type ty);
-      w i "  LL.clens_cond = (fun _ -> True);\n";
-      w i "  LL.clens_get = (fun (l: %s) -> L.index l i);\n" n;
-      w i "}\n\n";
-      w i "val %s_nth_ghost (i: nat {i < %d}) : LL.gaccessor %s_parser %s (clens_%s_nth i)\n\n" n li.max_count n (pcombinator_name ty) n;
-      w o "let %s_nth_ghost i = LL.array_nth_ghost %s %d %d i\n\n" n (scombinator_name ty) li.max_len li.max_count;
-      w i "inline_for_extraction val %s_nth (i: U32.t { U32.v i < %d } ) : LL.accessor (%s_nth_ghost (U32.v i))\n\n" n li.max_count n;
-      w o "let %s_nth i = LL.array_nth %s %d %d i\n\n" n (scombinator_name ty) li.max_len li.max_count;
+      (if is_private then
+        wl o "let %s_jumper : LL.jumper %s_parser = LL.jump_array %s %d %dul %d ()\n\n" n n (scombinator_name ty) k k li.min_count);
+      wl i "noextract let clens_%s_nth (i: nat { i < %d } ) : LL.clens %s %s = {\n" n li.min_count n (compile_type ty);
+      wl i "  LL.clens_cond = (fun _ -> True);\n";
+      wl i "  LL.clens_get = (fun (l: %s) -> L.index l i);\n" n;
+      wl i "}\n\n";
+      wl i "val %s_nth_ghost (i: nat {i < %d}) : LL.gaccessor %s_parser %s (clens_%s_nth i)\n\n" n li.max_count n (pcombinator_name ty) n;
+      wl o "let %s_nth_ghost i = LL.array_nth_ghost %s %d %d i\n\n" n (scombinator_name ty) li.max_len li.max_count;
+      wl i "inline_for_extraction val %s_nth (i: U32.t { U32.v i < %d } ) : LL.accessor (%s_nth_ghost (U32.v i))\n\n" n li.max_count n;
+      wl o "let %s_nth i = LL.array_nth %s %d %d i\n\n" n (scombinator_name ty) li.max_len li.max_count;
       (* intro lemma *)
-      w i "val %s_intro (h: HS.mem) (input: LL.slice) (pos pos' : U32.t) : Lemma\n" n;
-      w i "  (requires (\n";
-      w i "     LL.valid_list %s h input pos pos' /\\\n" (pcombinator_name ty);
-      w i "     (L.length (LL.contents_list %s h input pos pos') == %d \\/ U32.v pos' - U32.v pos == %d)\n" (pcombinator_name ty) li.max_count li.max_len;
-      w i "  ))\n";
-      w i "  (ensures (\n";
-      w i "    let x = LL.contents_list %s h input pos pos' in\n" (pcombinator_name ty);
-      w i "    L.length x = %d /\\\n" li.max_count;
-      w i "    U32.v pos' - U32.v pos == %d /\\\n" li.max_len;
-      w i "    LL.valid_content_pos %s_parser h input pos x pos'\n" n;
-      w i "  ))\n\n";
-      w o "let %s_intro h input pos pos' = %s_eq (); LL.valid_list_valid_array %s %d %dul %d () h input pos pos'\n\n" n n (scombinator_name ty) li.max_len li.max_len li.max_count;
+      wl i "val %s_intro (h: HS.mem) (input: LL.slice) (pos pos' : U32.t) : Lemma\n" n;
+      wl i "  (requires (\n";
+      wl i "     LL.valid_list %s h input pos pos' /\\\n" (pcombinator_name ty);
+      wl i "     (L.length (LL.contents_list %s h input pos pos') == %d \\/ U32.v pos' - U32.v pos == %d)\n" (pcombinator_name ty) li.max_count li.max_len;
+      wl i "  ))\n";
+      wl i "  (ensures (\n";
+      wl i "    let x = LL.contents_list %s h input pos pos' in\n" (pcombinator_name ty);
+      wl i "    L.length x = %d /\\\n" li.max_count;
+      wl i "    U32.v pos' - U32.v pos == %d /\\\n" li.max_len;
+      wl i "    LL.valid_content_pos %s_parser h input pos x pos'\n" n;
+      wl i "  ))\n\n";
+      wl o "let %s_intro h input pos pos' = %s_eq (); LL.valid_list_valid_array %s %d %dul %d () h input pos pos'\n\n" n n (scombinator_name ty) li.max_len li.max_len li.max_count;
       (* elim lemma *)
-      w i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
-      w i "  (requires (LL.valid %s_parser h input pos))\n" n;
-      w i "  (ensures (\n";
-      w i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
-      w i "    U32.v pos' - U32.v pos == %d /\\\n" li.max_len;
-      w i "    LL.valid_list %s h input pos pos' /\\\n" (pcombinator_name ty);
-      w i "    LL.contents_list %s h input pos pos' == LL.contents %s_parser h input pos\n" (pcombinator_name ty) n;
-      w i "  ))\n";
-      w o "let %s_elim h input pos = %s_eq (); LL.valid_array_valid_list %s %d %dul %d () h input pos\n\n" n n (scombinator_name ty) li.max_len li.max_len li.max_count;
+      wl i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      wl i "  (requires (LL.valid %s_parser h input pos))\n" n;
+      wl i "  (ensures (\n";
+      wl i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
+      wl i "    U32.v pos' - U32.v pos == %d /\\\n" li.max_len;
+      wl i "    LL.valid_list %s h input pos pos' /\\\n" (pcombinator_name ty);
+      wl i "    LL.contents_list %s h input pos pos' == LL.contents %s_parser h input pos\n" (pcombinator_name ty) n;
+      wl i "  ))\n";
+      wl o "let %s_elim h input pos = %s_eq (); LL.valid_array_valid_list %s %d %dul %d () h input pos\n\n" n n (scombinator_name ty) li.max_len li.max_len li.max_count;
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == L.length x `FStar.Mul.op_Star` %d) [SMTPat (%s_bytesize x)]\n\n" n n n elem_li.min_len n;
       w o "let %s_bytesize_eqn x =\n" n;
@@ -1828,24 +1832,24 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  LP.serialize_fldata_strong (LP.serialize_list _ %s) %d\n\n" (scombinator_name ty) k;
       w o "let %s_serializer = %s_eq () ; LP.coerce (LP.serializer %s_parser) %s'_serializer\n\n" n n n n;
       write_bytesize o is_private n;
-      w o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-      w o "  LP.parse32_fldata_strong (LP.serialize_list _ %s) (LP.parse32_list %s) %d %dul\n\n" (scombinator_name ty) (pcombinator32_name ty) k k;
-      w o "let %s_parser32 = %s_eq (); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n n;
-      w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-      w o "  LP.serialize32_fldata_strong (LP.partial_serialize32_list _ %s %s ()) %d\n\n" (scombinator_name ty) (scombinator32_name ty) k;
-      w o "let %s_serializer32 = %s_eq (); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n n;
-      w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-      w o "  LP.size32_fldata_strong (LP.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty) k k;
-      w o "let %s_size32 = %s_eq (); LP.coerce (LP.size32 %s_serializer) %s'_size32\n\n" n n n n;
-      w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-      w o "  LL.validate_fldata_strong (LL.serialize_list _ %s) (LL.validate_list %s ()) %d %dul\n\n" (scombinator_name ty) (validator_name ty) k k;
-      w o "let %s_validator = %s_eq (); LP.coerce (LL.validator %s_parser) %s'_validator\n\n" n n n n;
+      wh o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+      wh o "  LP.parse32_fldata_strong (LP.serialize_list _ %s) (LP.parse32_list %s) %d %dul\n\n" (scombinator_name ty) (pcombinator32_name ty) k k;
+      wh o "let %s_parser32 = %s_eq (); LP.coerce (LP.parser32 %s_parser) %s'_parser32\n\n" n n n n;
+      wh o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+      wh o "  LP.serialize32_fldata_strong (LP.partial_serialize32_list _ %s %s ()) %d\n\n" (scombinator_name ty) (scombinator32_name ty) k;
+      wh o "let %s_serializer32 = %s_eq (); LP.coerce (LP.serializer32 %s_serializer) %s'_serializer32\n\n" n n n n;
+      wh o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+      wh o "  LP.size32_fldata_strong (LP.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty) k k;
+      wh o "let %s_size32 = %s_eq (); LP.coerce (LP.size32 %s_serializer) %s'_size32\n\n" n n n n;
+      wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+      wl o "  LL.validate_fldata_strong (LL.serialize_list _ %s) (LL.validate_list %s ()) %d %dul\n\n" (scombinator_name ty) (validator_name ty) k k;
+      wl o "let %s_validator = %s_eq (); LP.coerce (LL.validator %s_parser) %s'_validator\n\n" n n n n;
       (* jumper not needed unless private, we are constant size *)
       if is_private then
        begin
-        w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-        w o "  LL.jump_fldata_strong (LL.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty) k k;
-        w o "let %s_jumper : LL.jumper %s_parser = %s_eq (); LP.coerce (LL.jumper %s_parser) %s'_jumper\n\n" n n n n n
+        wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+        wl o "  LL.jump_fldata_strong (LL.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty) k k;
+        wl o "let %s_jumper : LL.jumper %s_parser = %s_eq (); LP.coerce (LL.jumper %s_parser) %s'_jumper\n\n" n n n n n
        end;
       ()
 
@@ -1853,52 +1857,53 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorRange (low, high, repr)
       when compile_type ty = "U8.t" &&
         (match repr with None -> true
-        | Some t -> let (_,lm,_) = basic_bounds t in lm = log256 high) ->
+        | Some t -> let (_,lm,_) = basic_bounds t in lm = log256 high && lm <> 3) ->
       w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" n low high;
       w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" n low high;
       write_bytesize o is_private n;
-      w o "let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
-      w o "let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
-      w o "let %s_size32 = LP.size32_bounded_vlbytes %d %d\n\n" n low high;
-      if need_validator then  w o "let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
+      wh o "let %s_parser32 = LP.parse32_bounded_vlbytes %d %dul %d %dul\n\n" n low low high high;
+      wh o "let %s_serializer32 = LP.serialize32_bounded_vlbytes %d %d\n\n" n low high;
+      wh o "let %s_size32 = LP.size32_bounded_vlbytes %d %d\n\n" n low high;
+      if need_validator then
+        wl o "let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
       if need_jumper then begin
-        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-        w o "let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
+        let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+        wl o "let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
       (* length *)
-      w i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
-      w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
-      w i "  (ensures (fun h res h' ->\n";
-      w i "    let x = LL.contents %s_parser h input pos in\n" n;
-      w i "    B.modifies B.loc_none h h' /\\\n";
-      w i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" li.len_len n;
-      w i "    res == BY.len x /\\\n";
-      w i "    B.as_seq h (B.gsub input.LL.base (pos `U32.add` %dul) res) == BY.reveal x\n" li.len_len;
-      w i "  ))\n\n";
-      w o "let %s_length input pos =\n" n;
-      w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
-      w o "  LL.bounded_vlbytes_payload_length %d %d input pos\n\n" low high;
+      wl i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
+      wl i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
+      wl i "  (ensures (fun h res h' ->\n";
+      wl i "    let x = LL.contents %s_parser h input pos in\n" n;
+      wl i "    B.modifies B.loc_none h h' /\\\n";
+      wl i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" li.len_len n;
+      wl i "    res == BY.len x /\\\n";
+      wl i "    B.as_seq h (B.gsub input.LL.base (pos `U32.add` %dul) res) == BY.reveal x\n" li.len_len;
+      wl i "  ))\n\n";
+      wl o "let %s_length input pos =\n" n;
+      wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
+      wl o "  LL.bounded_vlbytes_payload_length %d %d input pos\n\n" low high;
       (* finalizer *)
-      w i "val %s_finalize (input: LL.slice) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
-      w i "  (requires (fun h ->\n";
-      w i "    LL.live_slice h input /\\\n";
-      w i "    %d <= U32.v len /\\ U32.v len <= %d /\\\n" low high;
-      w i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len\n" li.len_len;
-      w i "  ))\n";
-      w i "  (ensures (fun h pos' h' ->\n";
-      w i "    let pos_payload = pos `U32.add` %dul in\n" li.len_len;
-      w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
-      w i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos_payload len))) pos' /\\\n" n;
-      w i "    U32.v pos' == U32.v pos_payload + U32.v len\n";
-      w i "  ))\n\n";
-      w o "let %s_finalize input pos len =\n" n;
-      w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
-      w o "  LL.finalize_bounded_vlbytes %d %d input pos len\n\n" low high;
+      wl i "val %s_finalize (input: LL.slice) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
+      wl i "  (requires (fun h ->\n";
+      wl i "    LL.live_slice h input /\\\n";
+      wl i "    %d <= U32.v len /\\ U32.v len <= %d /\\\n" low high;
+      wl i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len\n" li.len_len;
+      wl i "  ))\n";
+      wl i "  (ensures (fun h pos' h' ->\n";
+      wl i "    let pos_payload = pos `U32.add` %dul in\n" li.len_len;
+      wl i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
+      wl i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos_payload len))) pos' /\\\n" n;
+      wl i "    U32.v pos' == U32.v pos_payload + U32.v len\n";
+      wl i "  ))\n\n";
+      wl o "let %s_finalize input pos len =\n" n;
+      wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
+      wl o "  LL.finalize_bounded_vlbytes %d %d input pos len\n\n" low high;
       ()
 
     (* Variable length bytes where the size of the length is explicit *)
@@ -1911,45 +1916,46 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s_parser = LP.parse_bounded_vlbytes' %d %d %d\n\n" n low high repr;
       w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes' %d %d %d\n\n" n low high repr;
       write_bytesize o is_private n;
-      w o "let %s_parser32 = LP.parse32_bounded_vlbytes' %d %dul %d %dul %d\n\n" n low low high high repr;
-      w o "let %s_serializer32 = LP.serialize32_bounded_vlbytes' %d %d %d\n\n" n low high repr;
-      w o "let %s_size32 = LP.size32_bounded_vlbytes' %d %d %d\n\n" n low high repr;
-      if need_validator then  w o "let %s_validator = LL.validate_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      wh o "let %s_parser32 = LP.parse32_bounded_vlbytes' %d %dul %d %dul %d\n\n" n low low high high repr;
+      wh o "let %s_serializer32 = LP.serialize32_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      wh o "let %s_size32 = LP.size32_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      if need_validator then
+        wl o "let %s_validator = LL.validate_bounded_vlbytes' %d %d %d\n\n" n low high repr;
       if need_jumper then begin
-        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-        w o "let %s_jumper%s = LL.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
+        let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+        wl o "let %s_jumper%s = LL.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
       (* length *)
-      w i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
-      w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
-      w i "  (ensures (fun h res h' ->\n";
-      w i "    let x = LL.contents %s_parser h input pos in\n" n;
-      w i "    B.modifies B.loc_none h h' /\\\n";
-      w i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" repr n;
-      w i "    res == BY.len x /\\\n";
-      w i "    B.as_seq h (B.gsub input.LL.base (pos `U32.add` %dul) res) == BY.reveal x\n" repr;
-      w i "  ))\n\n";
-      w o "let %s_length input pos =\n" n;
-      w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
-      w o "  LL.bounded_vlbytes'_payload_length %d %d %d input pos\n\n" low high repr;
+      wl i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
+      wl i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
+      wl i "  (ensures (fun h res h' ->\n";
+      wl i "    let x = LL.contents %s_parser h input pos in\n" n;
+      wl i "    B.modifies B.loc_none h h' /\\\n";
+      wl i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" repr n;
+      wl i "    res == BY.len x /\\\n";
+      wl i "    B.as_seq h (B.gsub input.LL.base (pos `U32.add` %dul) res) == BY.reveal x\n" repr;
+      wl i "  ))\n\n";
+      wl o "let %s_length input pos =\n" n;
+      wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
+      wl o "  LL.bounded_vlbytes'_payload_length %d %d %d input pos\n\n" low high repr;
       (* finalizer *)
-      w i "val %s_finalize (input: LL.slice) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
-      w i "  (requires (fun h ->\n";
-      w i "    LL.live_slice h input /\\\n";
-      w i "    %d <= U32.v len /\\ U32.v len <= %d /\\\n" low high;
-      w i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len\n" repr;
-      w i "  ))\n";
-      w i "  (ensures (fun h pos' h' ->\n";
-      w i "    let pos_payload = pos `U32.add` %dul in\n" repr;
-      w i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
-      w i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos_payload len))) pos' /\\\n" n;
-      w i "    U32.v pos' == U32.v pos_payload + U32.v len\n";
-      w i "  ))\n\n";
-      w o "let %s_finalize input pos len =\n" n;
-      w o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
-      w o "  LL.finalize_bounded_vlbytes' %d %d %d input pos len\n\n" low high repr;
+      wl i "val %s_finalize (input: LL.slice) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
+      wl i "  (requires (fun h ->\n";
+      wl i "    LL.live_slice h input /\\\n";
+      wl i "    %d <= U32.v len /\\ U32.v len <= %d /\\\n" low high;
+      wl i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len\n" repr;
+      wl i "  ))\n";
+      wl i "  (ensures (fun h pos' h' ->\n";
+      wl i "    let pos_payload = pos `U32.add` %dul in\n" repr;
+      wl i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
+      wl i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos_payload len))) pos' /\\\n" n;
+      wl i "    U32.v pos' == U32.v pos_payload + U32.v len\n";
+      wl i "  ))\n\n";
+      wl o "let %s_finalize input pos len =\n" n;
+      wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
+      wl o "  LL.finalize_bounded_vlbytes' %d %d %d input pos len\n\n" low high repr;
       ()
 
     (* Variable length list of fixed-length elements *)
@@ -1963,62 +1969,62 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_serializer =\n" n;
       w o "  LP.serialize_vlarray %d %d %s %d %d ()\n\n" low high (scombinator_name ty) li.min_count li.max_count;
       write_bytesize o is_private n;
-      w o "let %s_parser32 =\n" n;
-      w o "  LP.parse32_vlarray %d %dul %d %dul %s %s %d %d ()\n\n" low low high high (scombinator_name ty) (pcombinator32_name ty) li.min_count li.max_count;
-      w o "let %s_serializer32 =\n" n;
-      w o "  LP.serialize32_vlarray %d %d #_ #_ #_ #%s %s %d %d ()\n\n" low high (scombinator_name ty) (scombinator32_name ty) li.min_count li.max_count;
-      w o "let %s_size32 =\n" n;
-      w o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" low high (pcombinator_name ty) li.min_count li.max_count;
-      w o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty) li.min_count li.max_count li.len_len elem_li.min_len;
+      wh o "let %s_parser32 =\n" n;
+      wh o "  LP.parse32_vlarray %d %dul %d %dul %s %s %d %d ()\n\n" low low high high (scombinator_name ty) (pcombinator32_name ty) li.min_count li.max_count;
+      wh o "let %s_serializer32 =\n" n;
+      wh o "  LP.serialize32_vlarray %d %d #_ #_ #_ #%s %s %d %d ()\n\n" low high (scombinator_name ty) (scombinator32_name ty) li.min_count li.max_count;
+      wh o "let %s_size32 =\n" n;
+      wh o "  [@inline_let] let _ = assert_norm (LP.vldata_vlarray_precond %d %d %s %d %d == true) in\n" low high (pcombinator_name ty) li.min_count li.max_count;
+      wh o "  LP.size32_vlarray %d %d %s %d %d () %dul %dul\n\n" low high (scombinator_name ty) li.min_count li.max_count li.len_len elem_li.min_len;
       if need_validator then begin
-        w o "let %s_validator =\n" n;
-        w o " LL.validate_vlarray %d %d %s %s %d %d () %dul\n\n" low high (scombinator_name ty) (validator_name ty) li.min_count li.max_count li.len_len
+        wl o "let %s_validator =\n" n;
+        wl o " LL.validate_vlarray %d %d %s %s %d %d () %dul\n\n" low high (scombinator_name ty) (validator_name ty) li.min_count li.max_count li.len_len
       end;
       if need_jumper then begin
-        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-        w o "let %s_jumper%s =\n" n jumper_annot;
-        w o " LL.jump_vlarray %d %d %s %d %d () %dul\n\n" low high (scombinator_name ty) li.min_count li.max_count li.len_len
+        let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+        wl o "let %s_jumper%s =\n" n jumper_annot;
+        wl o " LL.jump_vlarray %d %d %s %d %d () %dul\n\n" low high (scombinator_name ty) li.min_count li.max_count li.len_len
       end;
       (* finalizer *)
-      w i "inline_for_extraction val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
-      w i "(requires (fun h ->\n";
-      w i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
-      w i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty) li.len_len;
-      w i "  let count = L.length (LL.contents_list %s h sl (pos `U32.add` %dul) pos') in\n" (pcombinator_name ty) li.len_len;
-      w i "  let len = U32.v pos' - (U32.v pos + %d) in\n" li.len_len;
-      w i "  ((%d <= len /\\ len <= %d) \\/ (%d <= count /\\ count <= %d))\n" low high li.min_count li.max_count;
-      w i ")))\n";
-      w i "(ensures (fun h _ h' ->\n";
-      w i "  B.modifies (LL.loc_slice_from_to sl pos (pos `U32.add` %dul)) h h' /\\ (\n" li.len_len;
-      w i "  let l = LL.contents_list %s h sl (pos `U32.add` %dul) pos' in\n" (pcombinator_name ty) li.len_len;
-      w i "  %d <= L.length l /\\ L.length l <= %d /\\\n" li.min_count li.max_count;
-      w i "  LL.valid_content_pos %s_parser h' sl pos l pos'\n" n;
-      w i ")))\n\n";
-      w o "let _ : squash (%s == LL.vlarray %s %d %d) = _ by (FStar.Tactics.trefl ())\n\n" n (compile_type ty) li.min_count li.max_count;
-      w o "let finalize_%s sl pos pos' =\n" n;
-      w o "  LL.finalize_vlarray %d %d %s %d %d sl pos pos'\n\n" low high (scombinator_name ty) li.min_count li.max_count;
+      wl i "inline_for_extraction val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
+      wl i "(requires (fun h ->\n";
+      wl i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
+      wl i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty) li.len_len;
+      wl i "  let count = L.length (LL.contents_list %s h sl (pos `U32.add` %dul) pos') in\n" (pcombinator_name ty) li.len_len;
+      wl i "  let len = U32.v pos' - (U32.v pos + %d) in\n" li.len_len;
+      wl i "  ((%d <= len /\\ len <= %d) \\/ (%d <= count /\\ count <= %d))\n" low high li.min_count li.max_count;
+      wl i ")))\n";
+      wl i "(ensures (fun h _ h' ->\n";
+      wl i "  B.modifies (LL.loc_slice_from_to sl pos (pos `U32.add` %dul)) h h' /\\ (\n" li.len_len;
+      wl i "  let l = LL.contents_list %s h sl (pos `U32.add` %dul) pos' in\n" (pcombinator_name ty) li.len_len;
+      wl i "  %d <= L.length l /\\ L.length l <= %d /\\\n" li.min_count li.max_count;
+      wl i "  LL.valid_content_pos %s_parser h' sl pos l pos'\n" n;
+      wl i ")))\n\n";
+      wl o "let _ : squash (%s == LL.vlarray %s %d %d) = _ by (FStar.Tactics.trefl ())\n\n" n (compile_type ty) li.min_count li.max_count;
+      wl o "let finalize_%s sl pos pos' =\n" n;
+      wl o "  LL.finalize_vlarray %d %d %s %d %d sl pos pos'\n\n" low high (scombinator_name ty) li.min_count li.max_count;
       (* length (elem count) and elim *)
-      w i "val %s_count (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
-      w i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
-      w i "  (ensures (fun h res h' ->\n";
-      w i "    let x = LL.contents %s_parser h input pos in\n" n;
-      w i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
-      w i "    B.modifies B.loc_none h h' /\\\n";
-      w i "    U32.v res == L.length x /\\\n";
-      w i "    U32.v pos' == U32.v pos + %d + (U32.v res `FStar.Mul.op_Star` %d) /\\\n" li.len_len elem_li.min_len;
-      w i "    LL.valid_list %s h input (pos `U32.add` %dul) pos' /\\\n" (pcombinator_name ty) li.len_len;
-      w i "    LL.contents_list %s h input (pos `U32.add` %dul) pos' == x\n" (pcombinator_name ty) li.len_len;
-      w i "  ))\n";
-      w o "let %s_count input pos = LL.vlarray_list_length %d %d %s %d %d input pos\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
+      wl i "val %s_count (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
+      wl i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
+      wl i "  (ensures (fun h res h' ->\n";
+      wl i "    let x = LL.contents %s_parser h input pos in\n" n;
+      wl i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
+      wl i "    B.modifies B.loc_none h h' /\\\n";
+      wl i "    U32.v res == L.length x /\\\n";
+      wl i "    U32.v pos' == U32.v pos + %d + (U32.v res `FStar.Mul.op_Star` %d) /\\\n" li.len_len elem_li.min_len;
+      wl i "    LL.valid_list %s h input (pos `U32.add` %dul) pos' /\\\n" (pcombinator_name ty) li.len_len;
+      wl i "    LL.contents_list %s h input (pos `U32.add` %dul) pos' == x\n" (pcombinator_name ty) li.len_len;
+      wl i "  ))\n";
+      wl o "let %s_count input pos = LL.vlarray_list_length %d %d %s %d %d input pos\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
       (* nth *)
-      w i "let %s_clens_nth (i: nat) : Tot (LL.clens %s %s) = {\n" n n (compile_type ty);
-      w i "  LL.clens_cond = (fun (l: %s) -> i < L.length l);\n" n;
-      w i "  LL.clens_get = (fun (l: %s) -> L.index l i);\n" n;
-      w i "}\n\n";
-      w i "val %s_nth_ghost (i: nat) : Tot (LL.gaccessor %s_parser %s (%s_clens_nth i))\n\n" n n (pcombinator_name ty) n;
-      w o "let %s_nth_ghost i = LL.vlarray_nth_ghost %d %d %s %d %d i\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
-      w i "val %s_nth (i: U32.t) : Tot (LL.accessor (%s_nth_ghost (U32.v i)))\n\n" n n;
-      w o "let %s_nth i = LL.vlarray_nth %d %d %s %d %d i\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
+      wl i "let %s_clens_nth (i: nat) : Tot (LL.clens %s %s) = {\n" n n (compile_type ty);
+      wl i "  LL.clens_cond = (fun (l: %s) -> i < L.length l);\n" n;
+      wl i "  LL.clens_get = (fun (l: %s) -> L.index l i);\n" n;
+      wl i "}\n\n";
+      wl i "val %s_nth_ghost (i: nat) : Tot (LL.gaccessor %s_parser %s (%s_clens_nth i))\n\n" n n (pcombinator_name ty) n;
+      wl o "let %s_nth_ghost i = LL.vlarray_nth_ghost %d %d %s %d %d i\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
+      wl i "val %s_nth (i: U32.t) : Tot (LL.accessor (%s_nth_ghost (U32.v i)))\n\n" n n;
+      wl o "let %s_nth i = LL.vlarray_nth %d %d %s %d %d i\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + (L.length x `FStar.Mul.op_Star` %d)) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len elem_li.min_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_vlarray %d %d %s %d %d () x\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
@@ -2045,58 +2051,58 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "  LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s)\n\n" min max (scombinator_name ty);
       w o "let %s_serializer = LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n n;
       write_bytesize o is_private n;
-      w o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-      w o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s) (LP.parse32_list %s)\n\n" min min max max (scombinator_name ty) (pcombinator32_name ty);
-      w o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
-      w o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-      w o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s %s ())\n\n" min max (scombinator_name ty) (scombinator32_name ty);
-      w o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
-      w o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-      w o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s ()) %dul\n\n" min max (size32_name ty) li.len_len;
-      w o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
+      wh o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+      wh o "  LP.parse32_bounded_vldata_strong %d %dul %d %dul (LP.serialize_list _ %s) (LP.parse32_list %s)\n\n" min min max max (scombinator_name ty) (pcombinator32_name ty);
+      wh o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
+      wh o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+      wh o "  LP.serialize32_bounded_vldata_strong %d %d (LP.partial_serialize32_list _ %s %s ())\n\n" min max (scombinator_name ty) (scombinator32_name ty);
+      wh o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
+      wh o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+      wh o "  LP.size32_bounded_vldata_strong %d %d (LP.size32_list %s ()) %dul\n\n" min max (size32_name ty) li.len_len;
+      wh o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
       if need_validator then begin
-        w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-        w o "  LL.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (LL.validate_list %s ()) ()\n\n" min max (scombinator_name ty) (validator_name ty);
-        w o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
+        wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+        wl o "  LL.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (LL.validate_list %s ()) ()\n\n" min max (scombinator_name ty) (validator_name ty);
+        wl o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
       end;
       if need_jumper then begin
-        w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-        w o "  LL.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) ()\n\n" min max (scombinator_name ty);
-        let jumper_annot = if is_private then Printf.sprintf " : LL.jumper %s_parser" n else "" in
-        w o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
+        wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+        wl o "  LL.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) ()\n\n" min max (scombinator_name ty);
+        let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+        wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
       end;
       (* finalizer *)
-      w i "val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
-      w i "(requires (fun h ->\n";
-      w i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
-      w i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty) li.len_len;
-      w i "  let len = U32.v pos' - (U32.v pos + %d) in\n" li.len_len;
-      w i "  let len_ser = %s_list_bytesize (LL.contents_list %s h sl (pos `U32.add` %dul) pos') in\n" n (pcombinator_name ty) li.len_len;
-      w i "  ((%d <= len /\\ len <= %d) \\/ (%d <= len_ser /\\ len_ser <= %d))\n" low high low high;
-      w i ")))\n";
-      w i "(ensures (fun h _ h' ->\n";
-      w i "  B.modifies (LL.loc_slice_from_to sl pos (pos `U32.add` %dul)) h h' /\\ (\n" li.len_len;
-      w i "  let l = LL.contents_list %s h sl (pos `U32.add` %dul) pos' in\n" (pcombinator_name ty) li.len_len;
-      w i "  %s_list_bytesize l == U32.v pos' - (U32.v pos + %d) /\\\n" n li.len_len;
-      w i "  LL.valid_content_pos %s_parser h' sl pos l pos'\n" n;
-      w i ")))\n\n";
-      w o "let finalize_%s sl pos pos' =\n" n;
-      w o "  LL.finalize_bounded_vldata_strong_list %d %d %s sl pos pos';\n" low high (scombinator_name ty);
-      w o "  let h = HST.get () in\n";
-      w o "  LL.valid_synth h %s'_parser synth_%s sl pos\n\n" n n;
+      wl i "val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
+      wl i "(requires (fun h ->\n";
+      wl i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
+      wl i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty) li.len_len;
+      wl i "  let len = U32.v pos' - (U32.v pos + %d) in\n" li.len_len;
+      wl i "  let len_ser = %s_list_bytesize (LL.contents_list %s h sl (pos `U32.add` %dul) pos') in\n" n (pcombinator_name ty) li.len_len;
+      wl i "  ((%d <= len /\\ len <= %d) \\/ (%d <= len_ser /\\ len_ser <= %d))\n" low high low high;
+      wl i ")))\n";
+      wl i "(ensures (fun h _ h' ->\n";
+      wl i "  B.modifies (LL.loc_slice_from_to sl pos (pos `U32.add` %dul)) h h' /\\ (\n" li.len_len;
+      wl i "  let l = LL.contents_list %s h sl (pos `U32.add` %dul) pos' in\n" (pcombinator_name ty) li.len_len;
+      wl i "  %s_list_bytesize l == U32.v pos' - (U32.v pos + %d) /\\\n" n li.len_len;
+      wl i "  LL.valid_content_pos %s_parser h' sl pos l pos'\n" n;
+      wl i ")))\n\n";
+      wl o "let finalize_%s sl pos pos' =\n" n;
+      wl o "  LL.finalize_bounded_vldata_strong_list %d %d %s sl pos pos';\n" low high (scombinator_name ty);
+      wl o "  let h = HST.get () in\n";
+      wl o "  LL.valid_synth h %s'_parser synth_%s sl pos\n\n" n n;
       (* elim *)
-      w i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
-      w i "  (requires (LL.valid %s_parser h input pos))\n" n;
-      w i "  (ensures (\n";
-      w i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
-      w i "    U32.v pos + %d <= U32.v pos' /\\ (\n" li.len_len;
-      w i "    let pos1 = pos `U32.add` %dul in\n" li.len_len;
-      w i "    LL.valid_list %s h input pos1 pos' /\\\n" (pcombinator_name ty);
-      w i "    LL.contents_list %s h input pos1 pos' == LL.contents %s_parser h input pos\n" (pcombinator_name ty) n;
-      w i "  )))\n\n";
-      w o "let %s_elim h input pos =\n" n;
-      w o "  LL.valid_synth h %s'_parser synth_%s input pos;\n" n n;
-      w o "  LL.valid_bounded_vldata_strong_list_valid_list %d %d %s %s input pos h\n\n" low high (pcombinator_name ty) (scombinator_name ty);
+      wl i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      wl i "  (requires (LL.valid %s_parser h input pos))\n" n;
+      wl i "  (ensures (\n";
+      wl i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
+      wl i "    U32.v pos + %d <= U32.v pos' /\\ (\n" li.len_len;
+      wl i "    let pos1 = pos `U32.add` %dul in\n" li.len_len;
+      wl i "    LL.valid_list %s h input pos1 pos' /\\\n" (pcombinator_name ty);
+      wl i "    LL.contents_list %s h input pos1 pos' == LL.contents %s_parser h input pos\n" (pcombinator_name ty) n;
+      wl i "  )))\n\n";
+      wl o "let %s_elim h input pos =\n" n;
+      wl o "  LL.valid_synth h %s'_parser synth_%s input pos;\n" n n;
+      wl o "  LL.valid_bounded_vldata_strong_list_valid_list %d %d %s %s input pos h\n\n" low high (pcombinator_name ty) (scombinator_name ty);
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + %s_list_bytesize x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n n;
       w o "let %s_bytesize_eqn x = LP.serialize_synth_eq %s'_parser synth_%s %s'_serializer synth_%s_recip () x" n n n n n;
@@ -2214,77 +2220,77 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   write_bytesize o is_private n;
 
   (* main parser32 *)
-  w o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-  if fields = [] then w o "  LP.parse32_flbytes 0 0ul";
+  wh o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+  if fields = [] then wh o "  LP.parse32_flbytes 0 0ul";
   let tuple = List.fold_left (
     fun acc (fn, ty) ->
       let c = pcombinator32_name ty in
       if acc="" then c else sprintf "%s\n  `LP.parse32_nondep_then` %s" acc c
     ) "" fields in
-  w o "  %s\n\n" tuple;
-  w o "let %s_parser32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LP.parse32_synth _ synth_%s (fun x -> synth_%s x) %s'_parser32 ()\n\n" n n n;
+  wh o "  %s\n\n" tuple;
+  wh o "let %s_parser32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  wh o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  wh o "  LP.parse32_synth _ synth_%s (fun x -> synth_%s x) %s'_parser32 ()\n\n" n n n;
 
   (* serialize32 *)
-  w o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-  if fields = [] then w o "  LP.serialize32_flbytes 0";
+  wh o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+  if fields = [] then wh o "  LP.serialize32_flbytes 0";
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = scombinator32_name ty in
       if acc="" then c else sprintf "LP.serialize32_nondep_then (%s) ()\n  %s ()" acc c
     ) (List.rev fields) "" in
-  w o "  %s\n\n" tuple;
+  wh o "  %s\n\n" tuple;
 
-  w o "let %s_serializer32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LP.serialize32_synth _ synth_%s _ %s'_serializer32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
+  wh o "let %s_serializer32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  wh o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
+  wh o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  wh o "  LP.serialize32_synth _ synth_%s _ %s'_serializer32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
 
-  w o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-  if fields = [] then w o "  LP.size32_constant %s'_serializer 0ul ()" n;
+  wh o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+  if fields = [] then wh o "  LP.size32_constant %s'_serializer 0ul ()" n;
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = size32_name ty in
       if acc="" then c else sprintf "LP.size32_nondep_then (%s) ()\n  (%s)" acc c
     ) (List.rev fields) "" in
-  w o "  %s\n\n" tuple;
+  wh o "  %s\n\n" tuple;
 
-  w o "let %s_size32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-  w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
-  w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LP.size32_synth _ synth_%s _ %s'_size32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
+  wh o "let %s_size32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+  wh o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
+  wh o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+  wh o "  LP.size32_synth _ synth_%s _ %s'_size32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
 
   (* validator *)
   if need_validator li.meta li.min_len li.max_len then
    begin
-    w o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-    if fields = [] then w o "  LL.validate_flbytes 0 0ul";
+    wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+    if fields = [] then wl o "  LL.validate_flbytes 0 0ul";
     let tuple = List.fold_left (
       fun acc (fn, ty) ->
         let c = validator_name ty in
         if acc="" then c else sprintf "%s\n  `LL.validate_nondep_then` %s" acc c
       ) "" fields in
-    w o "  %s\n\n" tuple;
-    w o "let %s_validator =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-    w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-    w o "  LL.validate_synth %s'_validator synth_%s ()\n\n" n n
+    wl o "  %s\n\n" tuple;
+    wl o "let %s_validator =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+    wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+    wl o "  LL.validate_synth %s'_validator synth_%s ()\n\n" n n
    end;
 
   (* jumper *)
   if need_jumper li.min_len li.max_len then
    begin
-    w o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-    if fields = [] then w o "  LL.jump_flbytes 0 0ul";
+    wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+    if fields = [] then wl o "  LL.jump_flbytes 0 0ul";
     let tuple = List.fold_left (
       fun acc (fn, ty) ->
         let c = jumper_name ty in
         if acc="" then c else sprintf "%s\n  `LL.jump_nondep_then` %s" acc c
       ) "" fields in
-    w o "  %s\n\n" tuple;
-    w o "let %s_jumper =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
-    w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-    w o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n
+    wl o "  %s\n\n" tuple;
+    wl o "let %s_jumper =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+    wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+    wl o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n
    end;
 
   (* bytesize *)
@@ -2338,33 +2344,33 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   (* accessors for fields *)
   begin
     let write_accessor fn ty g_before_synth a_before_synth =
-      w i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn;
-      w o "let gaccessor''_%s_%s : LL.gaccessor %s_parser %s _ =\n" n fn n (pcombinator_name ty);
-      w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
-      w o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_recip_injective (); synth_%s_injective ();\n" n n n n;
-      w o "  LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip () `LL.gaccessor_compose` %s\n\n" n n n g_before_synth;
-      w o "let clens'_%s_%s : LL.clens %s %s = LL.get_gaccessor_clens gaccessor''_%s_%s\n\n" n fn n (compile_type ty) n fn;
-      w o "let gaccessor'_%s_%s : LL.gaccessor %s_parser %s clens'_%s_%s = gaccessor''_%s_%s\n\n" n fn n (pcombinator_name ty) n fn n fn;
-      w o "let clens_%s_%s_eq : squash (LL.clens_eq clens'_%s_%s clens_%s_%s) =\n" n fn n fn n fn;
-      w o "  (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))))\n\n";
-      w o "let gaccessor_%s_%s =\n" n fn;
-      w o "  LL.gaccessor_ext gaccessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn n fn n fn;
-      w i "inline_for_extraction val accessor_%s_%s : LL.accessor gaccessor_%s_%s\n\n" n fn n fn;
-      w o "inline_for_extraction let accessor'_%s_%s : LL.accessor gaccessor'_%s_%s =\n" n fn n fn;
-      w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
-      w o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_recip_injective (); synth_%s_injective ();\n" n n n n;
-      w o "  LL.accessor_compose (LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()) %s ()\n\n" n n n a_before_synth;
-      w o "let accessor_%s_%s =\n" n fn;
-      w o "  LL.accessor_ext accessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn n fn n fn;
+      wl i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn;
+      wl o "let gaccessor''_%s_%s : LL.gaccessor %s_parser %s _ =\n" n fn n (pcombinator_name ty);
+      wl o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+      wl o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_recip_injective (); synth_%s_injective ();\n" n n n n;
+      wl o "  LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip () `LL.gaccessor_compose` %s\n\n" n n n g_before_synth;
+      wl o "let clens'_%s_%s : LL.clens %s %s = LL.get_gaccessor_clens gaccessor''_%s_%s\n\n" n fn n (compile_type ty) n fn;
+      wl o "let gaccessor'_%s_%s : LL.gaccessor %s_parser %s clens'_%s_%s = gaccessor''_%s_%s\n\n" n fn n (pcombinator_name ty) n fn n fn;
+      wl o "let clens_%s_%s_eq : squash (LL.clens_eq clens'_%s_%s clens_%s_%s) =\n" n fn n fn n fn;
+      wl o "  (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))))\n\n";
+      wl o "let gaccessor_%s_%s =\n" n fn;
+      wl o "  LL.gaccessor_ext gaccessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn n fn n fn;
+      wl i "inline_for_extraction val accessor_%s_%s : LL.accessor gaccessor_%s_%s\n\n" n fn n fn;
+      wl o "inline_for_extraction let accessor'_%s_%s : LL.accessor gaccessor'_%s_%s =\n" n fn n fn;
+      wl o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+      wl o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_recip_injective (); synth_%s_injective ();\n" n n n n;
+      wl o "  LL.accessor_compose (LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()) %s ()\n\n" n n n a_before_synth;
+      wl o "let accessor_%s_%s =\n" n fn;
+      wl o "  LL.accessor_ext accessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn n fn n fn;
       ()
     in
     (* write the lenses *)
     List.iter
       (fun (fn, ty) ->
-        w i "noextract let clens_%s_%s : LL.clens %s %s = {\n" n fn n (compile_type ty);
-        w i "  LL.clens_cond = (fun _ -> True);\n";
-        w i "  LL.clens_get = (fun x -> x.%s);\n" fn;
-        w i "}\n\n";
+        wl i "noextract let clens_%s_%s : LL.clens %s %s = {\n" n fn n (compile_type ty);
+        wl i "  LL.clens_cond = (fun _ -> True);\n";
+        wl i "  LL.clens_get = (fun x -> x.%s);\n" fn;
+        wl i "}\n\n";
       )
       fields;
     match fields with
@@ -2372,15 +2378,15 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     | [(fn, ty)] -> failwith "1-field struct should have been turned into its field"
     | (fn1, ty1) :: fields_tl ->
        (* produce the accessor for the first field *)
-       let leftmost_gaccessor = List.fold_left (fun g (_, ty) -> Printf.sprintf "(LL.gaccessor_fst_then %s %s ())" g (pcombinator_name ty)) (Printf.sprintf "(LL.gaccessor_id %s)" (pcombinator_name ty1)) fields_tl in
-       let leftmost_accessor = List.fold_left (fun g (_, ty) -> Printf.sprintf "(LL.accessor_fst_then %s %s ())" g (pcombinator_name ty)) (Printf.sprintf "(LL.accessor_id %s)" (pcombinator_name ty1)) fields_tl in
+       let leftmost_gaccessor = List.fold_left (fun g (_, ty) -> sprintf "(LL.gaccessor_fst_then %s %s ())" g (pcombinator_name ty)) (Printf.sprintf "(LL.gaccessor_id %s)" (pcombinator_name ty1)) fields_tl in
+       let leftmost_accessor = List.fold_left (fun g (_, ty) -> sprintf "(LL.accessor_fst_then %s %s ())" g (pcombinator_name ty)) (Printf.sprintf "(LL.accessor_id %s)" (pcombinator_name ty1)) fields_tl in
        write_accessor fn1 ty1 leftmost_gaccessor leftmost_accessor;
        (* for each field starting from the second one, build the left-hand-side parser and jumper at the time accessor_snd will be called *)
        let (_, pj_lhs_tl_rev) =
          List.fold_left
            (fun ((parser_lhs, jumper_lhs) as pj_lhs, pj_lhs_tl_rev) ((_, ty) as fd) ->
-             let parser_lhs' = Printf.sprintf "(%s `LP.nondep_then` %s)" parser_lhs (pcombinator_name ty) in
-             let jumper_lhs' = Printf.sprintf "(%s `LL.jump_nondep_then` %s)" jumper_lhs (jumper_name ty) in
+             let parser_lhs' = sprintf "(%s `LP.nondep_then` %s)" parser_lhs (pcombinator_name ty) in
+             let jumper_lhs' = sprintf "(%s `LL.jump_nondep_then` %s)" jumper_lhs (jumper_name ty) in
              let pj_lhs_tl_rev' = (fd, pj_lhs) :: pj_lhs_tl_rev in
              ((parser_lhs', jumper_lhs'), pj_lhs_tl_rev')
            )
@@ -2395,15 +2401,15 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
             let gaccessor_before_synth =
               List.fold_left
                 (fun g ((_, ty'), _) ->
-                  Printf.sprintf "(LL.gaccessor_fst_then %s %s ())" g (pcombinator_name ty'))
-                (Printf.sprintf "(LL.gaccessor_snd %s %s)" parser_lhs (pcombinator_name ty))
+                  sprintf "(LL.gaccessor_fst_then %s %s ())" g (pcombinator_name ty'))
+                (sprintf "(LL.gaccessor_snd %s %s)" parser_lhs (pcombinator_name ty))
                 q
             in
             let accessor_before_synth =
               List.fold_left
                 (fun g ((_, ty'), _) ->
-                  Printf.sprintf "(LL.accessor_fst_then %s %s ())" g (pcombinator_name ty'))
-                (Printf.sprintf "(LL.accessor_snd %s %s)" jumper_lhs (pcombinator_name ty))
+                  sprintf "(LL.accessor_fst_then %s %s ())" g (pcombinator_name ty'))
+                (sprintf "(LL.accessor_snd %s %s)" jumper_lhs (pcombinator_name ty))
                 q
             in
             write_accessor fn ty gaccessor_before_synth accessor_before_synth;
@@ -2413,21 +2419,21 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
        ()
   end;
   (* valid intro lemma *)
-  w i "val %s_valid (h:HS.mem) (input:LL.slice) (pos0:U32.t) : Lemma\n  (requires\n" n;
+  wl i "val %s_valid (h:HS.mem) (input:LL.slice) (pos0:U32.t) : Lemma\n  (requires\n" n;
   let (valid, getpos, _) = List.fold_left (fun (acc, posacc, i) (fn, ty) ->
     let v = sprintf "%s    LL.valid %s h input pos%d" acc (pcombinator_name ty) i in
     let pos = sprintf "    let pos%d = LL.get_valid_pos %s h input pos%d in\n" (i+1) (pcombinator_name ty) i in
     let acc' = v^(if i+1 = List.length fields then String.make i ')' else " /\\ (\n"^pos) in
     (acc', posacc^pos, i+1)
   ) ("", "", 0) fields in
-  w i "%s\n  )\n  (ensures (\n%s    LL.valid_content_pos %s_parser h input pos0\n      ({\n" valid getpos n;
+  wl i "%s\n  )\n  (ensures (\n%s    LL.valid_content_pos %s_parser h input pos0\n      ({\n" valid getpos n;
   List.iteri (fun j (fn, ty) ->
-    w i "        %s = LL.contents %s h input pos%d;\n" fn (pcombinator_name ty) j
+    wl i "        %s = LL.contents %s h input pos%d;\n" fn (pcombinator_name ty) j
   ) fields;
-  w i "      }) pos%d\n  ))\n\n" (List.length fields);
-  w o "let %s_valid h input pos0 =\n%s" n getpos;
+  wl i "      }) pos%d\n  ))\n\n" (List.length fields);
+  wl o "let %s_valid h input pos0 =\n%s" n getpos;
   List.iteri (fun j (fn, ty) ->
-    w o "  let %s = LL.contents %s h input pos%d in\n" fn (pcombinator_name ty) j
+    wl o "  let %s = LL.contents %s h input pos%d in\n" fn (pcombinator_name ty) j
   ) fields;
   let get_prefix i = fst (List.fold_left (
     fun (acc, j) (fn, ty) ->
@@ -2438,12 +2444,12 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     ) ("", 0) fields) in
   List.iteri (fun j (fn, ty) ->
     if j > 0 then
-      w o "  LL.valid_nondep_then_intro h (%s) %s input pos0;\n" (get_prefix (j-1)) (pcombinator_name ty)
+      wl o "  LL.valid_nondep_then_intro h (%s) %s input pos0;\n" (get_prefix (j-1)) (pcombinator_name ty)
   ) fields;
-  w o "  assert_norm (%s' == LP.get_parser_type %s'_parser);\n" n n;
-  w o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
-  w o "  synth_%s_injective ();\n" n;
-  w o "  LL.valid_synth_intro h %s'_parser synth_%s input pos0\n\n" n n;
+  wl o "  assert_norm (%s' == LP.get_parser_type %s'_parser);\n" n n;
+  wl o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+  wl o "  synth_%s_injective ();\n" n;
+  wl o "  LL.valid_synth_intro h %s'_parser synth_%s input pos0\n\n" n n;
   ()
 
 (* Rewrite {... uintX len; t value[len]; ...} into VectorVldata *)

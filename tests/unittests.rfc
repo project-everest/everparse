@@ -1,3 +1,4 @@
+/*
 opaque t1<0..255>;
 t1 t2<0..255>;
 opaque t3[2];
@@ -173,11 +174,7 @@ struct {
   asn1_len8 len;
   t25 payload[len];
 } t26;
-
-/*
-Bitcoin types
 */
-
 opaque sha256[32];
 uint32_le amount{2};
 
@@ -195,8 +192,8 @@ struct {
 
 struct {
   uint32_le version;
-  txin inputs{0..2^10 : bitcoin_varint};
-  txout outputs{0..2^10 : bitcoin_varint};
+  txin inputs{0..2^9 : bitcoin_varint};
+  txout outputs{0..2^9 : bitcoin_varint};
   uint32_le lock_time;
 } transaction;
 
@@ -207,5 +204,5 @@ struct {
   uint32_le timestamp;
   uint32_le bits;
   uint32_le nonce;
-  transaction tx{0..2^9 : bitcoin_varint};
+  transaction tx{0..2^12 : bitcoin_varint};
 } block;
