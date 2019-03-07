@@ -11,6 +11,7 @@ qd: $(wildcard src/*.ml*)
 gen-test: qd
 	-rm tests/unit/*.fst tests/unit/*.fsti || true
 	./qd -odir tests/unit tests/unittests.rfc
+	./qd -low -odir tests/unit tests/bitcoin.rfc
 
 test: gen-test
 	+$(MAKE) -C tests/unit
