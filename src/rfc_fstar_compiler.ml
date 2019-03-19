@@ -708,7 +708,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
       end
   end;
   wl i "val %s_reader: LL.leaf_reader %s_parser\n\n" n n;
-          w o "let %s_reader =\n" n;
+  wl o "let %s_reader =\n" n;
   wl o " [@inline_let] let _ = lemma_synth_%s_inj () in\n" n;
   wl o " LL.read_synth' parse_%s%s_key synth_%s read_%s%s_key ()\n\n" maybe n n maybe n;
 
