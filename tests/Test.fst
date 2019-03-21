@@ -14,7 +14,7 @@ val discard: bool -> ST unit
 let discard _ = ()
 let bprint s = discard (FStar.IO.debug_print_string (s^"\n"))
 
-let from_bytes (b:bytes{length b <> 0}) : StackInline LPL.buffer8
+let from_bytes (b:bytes{length b <> 0}) : StackInline (LB.buffer LPL.byte)
   (requires (fun h0 -> True))
   (ensures  (fun h0 buf h1 ->
     LB.(modifies loc_none h0 h1) /\
@@ -77,7 +77,7 @@ let test_bitcoin () : St bool =
   let open FStar.UInt32 in
   let open FStar.Bytes in
   let lb = from_bytes block in
-  let slice = { LPL.base = lb; LPL.len = len block } in
+  let slice = LPL.make_slice lb (len block) in
   if Block.block_validator slice 0ul >^ LPL.validator_max_length then
     (print !$"Validator failed on Bitcoin block!\n"; false)
   else

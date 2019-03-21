@@ -1120,11 +1120,11 @@ and compile_select o i n seln tagn tagt taga cl def al =
         | None -> ""
         | _ -> "maybe_"
       in
-      wl i "val lemma_valid_%s_valid_%s: s:LL.slice -> pos:U32.t -> h:HyperStack.mem -> Lemma\n" n tn;
+      wl i "val lemma_valid_%s_valid_%s: #rrel: _ -> #rel: _ -> s:LL.slice rrel rel -> pos:U32.t -> h:HyperStack.mem -> Lemma\n" n tn;
       wl i "  (requires LL.valid %s_parser h s pos)\n" n;
       wl i "  (ensures (LL.valid %s_parser h s pos /\\ LL.contents %s_parser h s pos == tag_of_%s (LL.contents %s_parser h s pos)))\n" tn tn n n;
       wl i "  [SMTPat (LL.valid %s_parser h s pos)]\n\n" n;
-      wl o "let lemma_valid_%s_valid_%s s pos h =\n%s" n tn same_kind;
+      wl o "let lemma_valid_%s_valid_%s #_ #_ s pos h =\n%s" n tn same_kind;
       begin match def with
       | None ->
          wl o "  LL.valid_sum_elim_tag h %s_sum %s_repr_parser parse_%s_cases s pos;\n" n tn n
@@ -1288,32 +1288,32 @@ and compile_select o i n seln tagn tagt taga cl def al =
            match ty with
            | "Fail" -> () (* impossible case *)
            | "Empty" -> (* parse_empty is not in the user context, so we need to "inline" it here *)
-              wl i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
+              wl i "val finalize_%s_%s (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack unit\n" n case;
               wl i "  (requires (fun h ->\n";
               wl i "    assert_norm (pow2 32 == 4294967296);\n";
-              wl i "    LL.live_slice h input /\\ U32.v pos + %d <= U32.v input.LL.len))\n" taglen;
+              wl i "    LL.live_slice h input /\\ U32.v pos + %d <= U32.v input.LL.len /\\ LL.writable input.LL.base (U32.v pos) (U32.v pos + %d) h))\n" taglen taglen;
               wl i "  (ensures (fun h _ h' ->\n";
               wl i "    assert_norm (pow2 32 == 4294967296);\n";
               wl i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
               wl i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
               wl i "    LL.valid_content_pos %s_parser h' input pos (%s ()) pos_payload\n" n constr;
               wl i "  ))\n\n";
-              wl o "let finalize_%s_%s input pos =\n" n case;
+              wl o "let finalize_%s_%s #_ #_ input pos =\n" n case;
               wl o "  let h = HST.get () in\n";
               wl o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" taglen;
               write_finalizer case
            | _ ->
-              wl i "val finalize_%s_%s (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n case;
+              wl i "val finalize_%s_%s (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack unit\n" n case;
               wl i "  (requires (fun h ->\n";
               wl i "    assert_norm (pow2 32 == 4294967296);\n";
-              wl i "U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul)))\n" taglen casep taglen;
+              wl i "U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul) /\\ LL.writable input.LL.base (U32.v pos) (U32.v pos + %d) h))\n" taglen casep taglen taglen;
               wl i "  (ensures (fun h _ h' ->\n";
               wl i "    assert_norm (pow2 32 == 4294967296);\n";
               wl i "    let pos_payload = pos `U32.add` %dul in\n" taglen;
               wl i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
               wl i "    LL.valid_content_pos %s_parser h' input pos (%s (LL.contents %s h input pos_payload)) (LL.get_valid_pos %s h input pos_payload)\n" n constr casep casep;
               wl i "  ))\n\n";
-              wl o "let finalize_%s_%s input pos =\n" n case;
+              wl o "let finalize_%s_%s #_ #_ input pos =\n" n case;
               write_finalizer case
          )
          cl
@@ -1322,13 +1322,13 @@ and compile_select o i n seln tagn tagt taga cl def al =
        begin match def with
        | Some dt when dt <> "Fail" ->
           let dp = pcombinator_name dt in
-          wl i "val finalize_%s_Unknown_%s (v: %s_repr) (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n tn tn;
+          wl i "val finalize_%s_Unknown_%s (v: %s_repr) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack unit\n" n tn tn;
           wl i "  (requires (fun h ->\n";
           wl i "    assert_norm (pow2 32 == 4294967296);\n";
           if dt = "Empty" then
-            wl i "    U32.v pos + %d <= U32.v input.LL.len /\\ LL.live_slice h input /\\ not (known_%s_repr v)))\n" taglen tn
+            wl i "    U32.v pos + %d <= U32.v input.LL.len /\\ LL.live_slice h input /\\ not (known_%s_repr v) /\\ LL.writable input.LL.base (U32.v pos) (U32.v pos + %d) h))\n" taglen tn taglen
           else
-            wl i "  U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul) /\\ not (known_%s_repr v)))\n" taglen dp taglen tn
+            wl i "  U32.v pos + %d < 4294967296 /\\ LL.valid %s h input (pos `U32.add` %dul) /\\ not (known_%s_repr v) /\\ LL.writable input.LL.base (U32.v pos) (U32.v pos + %d) h))\n" taglen dp taglen tn taglen
           ;
           wl i "  (ensures (fun h _ h' ->\n";
           wl i "    assert_norm (pow2 32 == 4294967296);\n";
@@ -1340,7 +1340,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
             wl i "    LL.valid_content_pos %s_parser h' input pos (%s_Unknown_%s v (LL.contents %s h input pos_payload)) (LL.get_valid_pos %s h input pos_payload)\n" n cprefix tn dp dp
           ;
           wl i "  ))\n\n";
-          wl o "let finalize_%s_Unknown_%s v input pos =\n" n tn;
+          wl o "let finalize_%s_Unknown_%s v #_ #_ input pos =\n" n tn;
           wl o "  [@inline_let] let _ =\n";
           wl o "    %s\n" same_kind;
           wl o "    let tg = unknown_%s_as_enum_key v in\n" tn;
@@ -1589,30 +1589,32 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         begin match ty with
         | "Fail" -> () (* impossible *)
         | "Empty" ->
-            wl i "val %s_finalize (input: LL.slice) (pos: U32.t) : HST.Stack unit\n" n;
+            wl i "val %s_finalize (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack unit\n" n;
             wl i "  (requires (fun h ->\n";
             wl i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" len_len_max;
+            wl i "    LL.writable input.LL.base (U32.v pos) (U32.v pos + %d) h /\\\n" len_len_max;
             wl i "    LL.live_slice h input\n";
             wl i "  ))\n";
             wl i "  (ensures (fun h _ h' ->\n";
             wl i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len_max;
             wl i "    LL.valid_pos %s_parser h' input pos (pos `U32.add` %dul)\n" n len_len_max;
             wl i "  ))\n\n";
-            wl o "let %s_finalize input pos =\n" n;
+            wl o "let %s_finalize #_ #_ input pos =\n" n;
             wl o "  let h = HST.get () in\n";
             wl o "  [@inline_let] let _ = LL.valid_facts LL.parse_empty h input (pos `U32.add` %dul) in\n" len_len_max;
             wl o "  LL.finalize_bounded_vldata %d %d LL.parse_empty input pos (pos `U32.add` %dul) \n\n" 0 smax len_len_max
         | _ ->
-            wl i "val %s_finalize (input: LL.slice) (pos: U32.t) (pos' : U32.t) : HST.Stack unit\n" n;
+            wl i "val %s_finalize (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) (pos' : U32.t) : HST.Stack unit\n" n;
             wl i "  (requires (fun h ->\n";
             wl i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" len_len_max;
+            wl i "    LL.writable input.LL.base (U32.v pos) (U32.v pos + %d) h /\\\n" len_len_max;
             wl i "    LL.valid_pos %s h input (pos `U32.add` %dul) pos'\n" (pcombinator_name ty) len_len_max;
             wl i "  ))\n";
             wl i "  (ensures (fun h _ h' ->\n";
             wl i "    B.modifies (LL.loc_slice_from_to input pos (pos `U32.add` %dul)) h h' /\\\n" len_len_max;
             wl i "    LL.valid_content_pos %s_parser h' input pos (LL.contents %s h input (pos `U32.add` %dul)) pos'\n" n (pcombinator_name ty) len_len_max;
             wl i "  ))\n\n";
-            wl o "let %s_finalize input pos pos' =\n" n;
+            wl o "let %s_finalize #_ #_ input pos pos' =\n" n;
             wl o "  LL.finalize_bounded_vldata %d %d %s input pos pos'\n\n" 0 smax (pcombinator_name ty)
         end;
         ()
@@ -1658,10 +1660,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         );
         (* finalizer *)
         if ty = "Empty" || ty = "Fail" then failwith "vldata empty/fail should have been in the 'bounds OK' case";
-        wl i "val %s_finalize (input: LL.slice) (pos: U32.t) (pos'  : U32.t) : HST.Stack unit\n"  n;
+        wl i "val %s_finalize (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) (pos'  : U32.t) : HST.Stack unit\n"  n;
         wl i "  (requires (fun h ->\n" ;
         wl i "     U32.v pos + %d < 4294967296 /\\ (\n" len_len_max;
         wl i "     let pos_payload = pos `U32.add` %dul in\n" len_len_max;
+        wl i "     LL.writable input.LL.base (U32.v pos) (U32.v pos + %d) h /\\\n"  len_len_max;
         wl i "     LL.valid_pos %s h input pos_payload pos' /\\ (\n" (pcombinator_name ty);
         wl i "     let len_payload = U32.v pos' - U32.v pos_payload in\n";
         wl i "     let x = LL.contents %s h input pos_payload in\n" (pcombinator_name ty);
@@ -1675,7 +1678,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         wl i "    %d <= len_ser /\\ len_ser <= %d /\\\n" 0 smax;
         wl i "    LL.valid_content_pos %s_parser h' input pos x pos'\n" n;
         wl i "  ))\n\n";
-        wl o "let %s_finalize input pos pos' =\n" n;
+        wl o "let %s_finalize #_ #_ input pos pos' =\n" n;
         wl o "  let h = HST.get () in\n";
         wl o "  [@inline_let] let _ =\n";
         wl o "    let x = LL.contents %s h input (pos `U32.add` %dul) in\n" (pcombinator_name ty) len_len_max;
@@ -1733,24 +1736,24 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
       w o "let %s_bytesize_eqn x = ()\n\n" n;
       (* intro *)
-      wl i "val %s_intro (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      wl i "val %s_intro (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
       wl i "  (requires (\n";
       wl i "    LL.live_slice h input /\\\n";
       wl i "    U32.v pos + %d <= U32.v input.LL.len\n" k;
       wl i "  ))\n";
       wl i "  (ensures (\n";
-      wl i "    LL.valid_content_pos %s_parser h input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos %dul))) (pos `U32.add` %dul)\n" n k k;
+      wl i "    LL.valid_content_pos %s_parser h input pos (BY.hide (LL.bytes_of_slice_from_to h input pos (pos `U32.add` %dul))) (pos `U32.add` %dul)\n" n k k;
       wl i "  ))\n";
-      wl o "let %s_intro h input pos =\n" n;
+      wl o "let %s_intro h #_ #_ input pos =\n" n;
       wl o "  LL.valid_flbytes_intro h %d input pos\n\n" k;
       (* elim *)
-      wl i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      wl i "val %s_elim (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
       wl i "  (requires (LL.valid %s_parser h input pos))\n" n;
       wl i "  (ensures (\n";
       wl i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" k;
-      wl i "    LL.valid_content_pos %s_parser h input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos %dul))) (pos `U32.add` %dul)\n" n k k;
+      wl i "    LL.valid_content_pos %s_parser h input pos (BY.hide (LL.bytes_of_slice_from_to h input pos (pos `U32.add` %dul))) (pos `U32.add` %dul)\n" n k k;
       wl i "  ))\n";
-      wl o "let %s_elim h input pos =\n" n;
+      wl o "let %s_elim h #_ #_ input pos =\n" n;
       wl o "  LL.valid_flbytes_elim h %d input pos\n\n" k;
       ()
 
@@ -1788,7 +1791,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "inline_for_extraction val %s_nth (i: U32.t { U32.v i < %d } ) : LL.accessor (%s_nth_ghost (U32.v i))\n\n" n li.max_count n;
       wl o "let %s_nth i = LL.array_nth %s %d %d i\n\n" n (scombinator_name ty) li.max_len li.max_count;
       (* intro lemma *)
-      wl i "val %s_intro (h: HS.mem) (input: LL.slice) (pos pos' : U32.t) : Lemma\n" n;
+      wl i "val %s_intro (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos pos' : U32.t) : Lemma\n" n;
       wl i "  (requires (\n";
       wl i "     LL.valid_list %s h input pos pos' /\\\n" (pcombinator_name ty);
       wl i "     (L.length (LL.contents_list %s h input pos pos') == %d \\/ U32.v pos' - U32.v pos == %d)\n" (pcombinator_name ty) li.max_count li.max_len;
@@ -1799,9 +1802,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "    U32.v pos' - U32.v pos == %d /\\\n" li.max_len;
       wl i "    LL.valid_content_pos %s_parser h input pos x pos'\n" n;
       wl i "  ))\n\n";
-      wl o "let %s_intro h input pos pos' = %s_eq (); LL.valid_list_valid_array %s %d %dul %d () h input pos pos'\n\n" n n (scombinator_name ty) li.max_len li.max_len li.max_count;
+      wl o "let %s_intro h #_ #_ input pos pos' = %s_eq (); LL.valid_list_valid_array %s %d %dul %d () h input pos pos'\n\n" n n (scombinator_name ty) li.max_len li.max_len li.max_count;
       (* elim lemma *)
-      wl i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      wl i "val %s_elim (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
       wl i "  (requires (LL.valid %s_parser h input pos))\n" n;
       wl i "  (ensures (\n";
       wl i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
@@ -1809,7 +1812,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "    LL.valid_list %s h input pos pos' /\\\n" (pcombinator_name ty);
       wl i "    LL.contents_list %s h input pos pos' == LL.contents %s_parser h input pos\n" (pcombinator_name ty) n;
       wl i "  ))\n";
-      wl o "let %s_elim h input pos = %s_eq (); LL.valid_array_valid_list %s %d %dul %d () h input pos\n\n" n n (scombinator_name ty) li.max_len li.max_len li.max_count;
+      wl o "let %s_elim h #_ #_ input pos = %s_eq (); LL.valid_array_valid_list %s %d %dul %d () h input pos\n\n" n n (scombinator_name ty) li.max_len li.max_len li.max_count;
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == L.length x `FStar.Mul.op_Star` %d) [SMTPat (%s_bytesize x)]\n\n" n n n elem_li.min_len n;
       w o "let %s_bytesize_eqn x =\n" n;
@@ -1876,32 +1879,33 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
       (* length *)
-      wl i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
+      wl i "val %s_length (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack U32.t\n" n;
       wl i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
       wl i "  (ensures (fun h res h' ->\n";
       wl i "    let x = LL.contents %s_parser h input pos in\n" n;
       wl i "    B.modifies B.loc_none h h' /\\\n";
       wl i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" li.len_len n;
       wl i "    res == BY.len x /\\\n";
-      wl i "    B.as_seq h (B.gsub input.LL.base (pos `U32.add` %dul) res) == BY.reveal x\n" li.len_len;
+      wl i "    LL.bytes_of_slice_from_to h input (pos `U32.add` %dul) ((pos `U32.add` %dul) `U32.add` res) == BY.reveal x\n" li.len_len li.len_len;
       wl i "  ))\n\n";
-      wl o "let %s_length input pos =\n" n;
+      wl o "let %s_length #_ #_ input pos =\n" n;
       wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
       wl o "  LL.bounded_vlbytes_payload_length %d %d input pos\n\n" low high;
       (* finalizer *)
-      wl i "val %s_finalize (input: LL.slice) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
+      wl i "val %s_finalize (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
       wl i "  (requires (fun h ->\n";
       wl i "    LL.live_slice h input /\\\n";
       wl i "    %d <= U32.v len /\\ U32.v len <= %d /\\\n" low high;
-      wl i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len\n" li.len_len;
+      wl i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len /\\\n" li.len_len;
+      wl i "    LL.writable input.LL.base (U32.v pos) (U32.v pos + %d) h\n" li.len_len;
       wl i "  ))\n";
       wl i "  (ensures (fun h pos' h' ->\n";
       wl i "    let pos_payload = pos `U32.add` %dul in\n" li.len_len;
       wl i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
-      wl i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos_payload len))) pos' /\\\n" n;
+      wl i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (LL.bytes_of_slice_from_to h input pos_payload (pos_payload `U32.add` len))) pos' /\\\n" n;
       wl i "    U32.v pos' == U32.v pos_payload + U32.v len\n";
       wl i "  ))\n\n";
-      wl o "let %s_finalize input pos len =\n" n;
+      wl o "let %s_finalize #_ #_ input pos len =\n" n;
       wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
       wl o "  LL.finalize_bounded_vlbytes %d %d input pos len\n\n" low high;
       ()
@@ -1928,32 +1932,33 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
       (* length *)
-      wl i "val %s_length (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
+      wl i "val %s_length (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack U32.t\n" n;
       wl i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
       wl i "  (ensures (fun h res h' ->\n";
       wl i "    let x = LL.contents %s_parser h input pos in\n" n;
       wl i "    B.modifies B.loc_none h h' /\\\n";
       wl i "    U32.v pos + %d + U32.v res == U32.v (LL.get_valid_pos %s_parser h input pos) /\\\n" repr n;
       wl i "    res == BY.len x /\\\n";
-      wl i "    B.as_seq h (B.gsub input.LL.base (pos `U32.add` %dul) res) == BY.reveal x\n" repr;
+      wl i "    LL.bytes_of_slice_from_to h input (pos `U32.add` %dul) ((pos `U32.add` %dul) `U32.add` res) == BY.reveal x\n" repr repr;
       wl i "  ))\n\n";
-      wl o "let %s_length input pos =\n" n;
+      wl o "let %s_length #_ #_ input pos =\n" n;
       wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
       wl o "  LL.bounded_vlbytes'_payload_length %d %d %d input pos\n\n" low high repr;
       (* finalizer *)
-      wl i "val %s_finalize (input: LL.slice) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
+      wl i "val %s_finalize (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
       wl i "  (requires (fun h ->\n";
       wl i "    LL.live_slice h input /\\\n";
       wl i "    %d <= U32.v len /\\ U32.v len <= %d /\\\n" low high;
-      wl i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len\n" repr;
+      wl i "    U32.v pos + %d + U32.v len <= U32.v input.LL.len /\\\n" repr;
+      wl i "    LL.writable input.LL.base (U32.v pos) (U32.v pos + %d) h\n" repr;
       wl i "  ))\n";
       wl i "  (ensures (fun h pos' h' ->\n";
       wl i "    let pos_payload = pos `U32.add` %dul in\n" repr;
       wl i "    B.modifies (LL.loc_slice_from_to input pos pos_payload) h h' /\\\n";
-      wl i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (B.as_seq h (B.gsub input.LL.base pos_payload len))) pos' /\\\n" n;
+      wl i "    LL.valid_content_pos %s_parser h' input pos (BY.hide (LL.bytes_of_slice_from_to h input pos_payload (pos_payload `U32.add` len))) pos' /\\\n" n;
       wl i "    U32.v pos' == U32.v pos_payload + U32.v len\n";
       wl i "  ))\n\n";
-      wl o "let %s_finalize input pos len =\n" n;
+      wl o "let %s_finalize #_ #_ input pos len =\n" n;
       wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
       wl o "  LL.finalize_bounded_vlbytes' %d %d %d input pos len\n\n" low high repr;
       ()
@@ -1986,9 +1991,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         wl o " LL.jump_vlarray %d %d %s %d %d () %dul\n\n" low high (scombinator_name ty) li.min_count li.max_count li.len_len
       end;
       (* finalizer *)
-      wl i "inline_for_extraction val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
+      wl i "inline_for_extraction val finalize_%s (#rrel: _) (#rel: _) (sl: LL.slice rrel rel) (pos pos' : U32.t) : HST.Stack unit\n" n;
       wl i "(requires (fun h ->\n";
       wl i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
+      wl i "  LL.writable sl.LL.base (U32.v pos) (U32.v pos + %d) h /\\\n" li.len_len;
       wl i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty) li.len_len;
       wl i "  let count = L.length (LL.contents_list %s h sl (pos `U32.add` %dul) pos') in\n" (pcombinator_name ty) li.len_len;
       wl i "  let len = U32.v pos' - (U32.v pos + %d) in\n" li.len_len;
@@ -2001,10 +2007,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "  LL.valid_content_pos %s_parser h' sl pos l pos'\n" n;
       wl i ")))\n\n";
       wl o "let _ : squash (%s == LL.vlarray %s %d %d) = _ by (FStar.Tactics.trefl ())\n\n" n (compile_type ty) li.min_count li.max_count;
-      wl o "let finalize_%s sl pos pos' =\n" n;
+      wl o "let finalize_%s #_ #_ sl pos pos' =\n" n;
       wl o "  LL.finalize_vlarray %d %d %s %d %d sl pos pos'\n\n" low high (scombinator_name ty) li.min_count li.max_count;
       (* length (elem count) and elim *)
-      wl i "val %s_count (input: LL.slice) (pos: U32.t) : HST.Stack U32.t\n" n;
+      wl i "val %s_count (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack U32.t\n" n;
       wl i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
       wl i "  (ensures (fun h res h' ->\n";
       wl i "    let x = LL.contents %s_parser h input pos in\n" n;
@@ -2015,7 +2021,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "    LL.valid_list %s h input (pos `U32.add` %dul) pos' /\\\n" (pcombinator_name ty) li.len_len;
       wl i "    LL.contents_list %s h input (pos `U32.add` %dul) pos' == x\n" (pcombinator_name ty) li.len_len;
       wl i "  ))\n";
-      wl o "let %s_count input pos = LL.vlarray_list_length %d %d %s %d %d input pos\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
+      wl o "let %s_count #_ #_ input pos = LL.vlarray_list_length %d %d %s %d %d input pos\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
       (* nth *)
       wl i "let %s_clens_nth (i: nat) : Tot (LL.clens %s %s) = {\n" n n (compile_type ty);
       wl i "  LL.clens_cond = (fun (l: %s) -> i < L.length l);\n" n;
@@ -2072,9 +2078,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
       end;
       (* finalizer *)
-      wl i "val finalize_%s (sl: LL.slice) (pos pos' : U32.t) : HST.Stack unit\n" n;
+      wl i "val finalize_%s (#rrel: _) (#rel: _) (sl: LL.slice rrel rel) (pos pos' : U32.t) : HST.Stack unit\n" n;
       wl i "(requires (fun h ->\n";
       wl i "  U32.v pos + %d < 4294967296 /\\\n" li.len_len;
+      wl i "  LL.writable sl.LL.base (U32.v pos) (U32.v pos + %d) h /\\\n" li.len_len;
       wl i "  LL.valid_list %s h sl (pos `U32.add` %dul) pos' /\\ (\n" (pcombinator_name ty) li.len_len;
       wl i "  let len = U32.v pos' - (U32.v pos + %d) in\n" li.len_len;
       wl i "  let len_ser = %s_list_bytesize (LL.contents_list %s h sl (pos `U32.add` %dul) pos') in\n" n (pcombinator_name ty) li.len_len;
@@ -2086,12 +2093,12 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "  %s_list_bytesize l == U32.v pos' - (U32.v pos + %d) /\\\n" n li.len_len;
       wl i "  LL.valid_content_pos %s_parser h' sl pos l pos'\n" n;
       wl i ")))\n\n";
-      wl o "let finalize_%s sl pos pos' =\n" n;
+      wl o "let finalize_%s #_ #_ sl pos pos' =\n" n;
       wl o "  LL.finalize_bounded_vldata_strong_list %d %d %s sl pos pos';\n" low high (scombinator_name ty);
       wl o "  let h = HST.get () in\n";
       wl o "  LL.valid_synth h %s'_parser synth_%s sl pos\n\n" n n;
       (* elim *)
-      wl i "val %s_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma\n" n;
+      wl i "val %s_elim (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
       wl i "  (requires (LL.valid %s_parser h input pos))\n" n;
       wl i "  (ensures (\n";
       wl i "    let pos' = LL.get_valid_pos %s_parser h input pos in\n" n;
@@ -2100,7 +2107,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "    LL.valid_list %s h input pos1 pos' /\\\n" (pcombinator_name ty);
       wl i "    LL.contents_list %s h input pos1 pos' == LL.contents %s_parser h input pos\n" (pcombinator_name ty) n;
       wl i "  )))\n\n";
-      wl o "let %s_elim h input pos =\n" n;
+      wl o "let %s_elim h #_ #_ input pos =\n" n;
       wl o "  LL.valid_synth h %s'_parser synth_%s input pos;\n" n n;
       wl o "  LL.valid_bounded_vldata_strong_list_valid_list %d %d %s %s input pos h\n\n" low high (pcombinator_name ty) (scombinator_name ty);
       (* lemmas about bytesize *)
@@ -2419,7 +2426,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
        ()
   end;
   (* valid intro lemma *)
-  wl i "val %s_valid (h:HS.mem) (input:LL.slice) (pos0:U32.t) : Lemma\n  (requires\n" n;
+  wl i "val %s_valid (h:HS.mem) (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos0:U32.t) : Lemma\n  (requires\n" n;
   let (valid, getpos, _) = List.fold_left (fun (acc, posacc, i) (fn, ty) ->
     let v = sprintf "%s    LL.valid %s h input pos%d" acc (pcombinator_name ty) i in
     let pos = sprintf "    let pos%d = LL.get_valid_pos %s h input pos%d in\n" (i+1) (pcombinator_name ty) i in
@@ -2431,7 +2438,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     wl i "        %s = LL.contents %s h input pos%d;\n" fn (pcombinator_name ty) j
   ) fields;
   wl i "      }) pos%d\n  ))\n\n" (List.length fields);
-  wl o "let %s_valid h input pos0 =\n%s" n getpos;
+  wl o "let %s_valid h #_ #_ input pos0 =\n%s" n getpos;
   List.iteri (fun j (fn, ty) ->
     wl o "  let %s = LL.contents %s h input pos%d in\n" fn (pcombinator_name ty) j
   ) fields;
