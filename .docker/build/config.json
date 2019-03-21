@@ -23,6 +23,8 @@
     "NotificationChannel" : "#quackyducky-build",
     "PublicBranches" : [ "master" ],
 
-    "kremlin_version" : "origin/master",
-    "mitls_version" : "origin/taramana_lowparse_ci_mono_merge"
+    "RepoVersions" : {
+        "kremlin_version" : "origin/master",
+        "mitls_version" : "origin/taramana_lowparse_ci_mono_merge"
+    }
 }
