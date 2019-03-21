@@ -121,5 +121,6 @@ export MAKEFLAGS="$MAKEFLAGS -Otarget"
 
 export_home FSTAR "$(pwd)/FStar"
 cd quackyducky
+rootPath=$(pwd)
 exec_build
 cd ..
