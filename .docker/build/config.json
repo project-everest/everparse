@@ -21,7 +21,7 @@
 
     "NotificationEnabled" : true,
     "NotificationChannel" : "#quackyducky-build",
-    "PublicBranches" : [ "master" ],
+    "PublicBranches" : [ "master", "dev" ],
 
     "RepoVersions" : {
         "kremlin_version" : "origin/master",
