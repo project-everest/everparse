@@ -27,34 +27,27 @@ ifdef KREMLIN_HOME
 endif
 INCLUDE_KREMLIN=--include $(KREMLIB)
 
-FSTAR_OPTIONS += --use_hints --use_two_phase_tc true --protect_top_level_axioms true
+FSTAR_OPTIONS += --use_hints --use_two_phase_tc true --protect_top_level_axioms true --already_cached '* -LowParse'
 
 MY_FSTAR=$(FSTAR_EXE) --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN)
 
-LOWPARSE_FILES=$(wildcard LowParse.*fst) $(wildcard LowParse.*fsti)
+LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
 
 clean:
 	rm -rf *.checked *.source LowParse.depend
 
-LowParse.depend: $(LOWPARSE_FILES) Makefile.LowParse
+LowParse.depend: $(LOWPARSE_FILES)
 	$(MY_FSTAR) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@
 
 include LowParse.depend
 
-ALL_CHECKED_FILES=$(addsuffix .checked, $(ALL_FST_FILES))
-
-LOWPARSE_CHECKED_FILES=$(addsuffix .checked, $(LOWPARSE_FILES))
-
-OTHER_CHECKED_FILES=$(filter-out $(LOWPARSE_CHECKED_FILES), $(ALL_CHECKED_FILES))
-
 verify-all: $(ALL_CHECKED_FILES)
 
-$(LOWPARSE_CHECKED_FILES): %.checked:
+$(ALL_CHECKED_FILES): %.checked:
 	$(MY_FSTAR) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-$(OTHER_CHECKED_FILES): %.checked:
-	test -f $@
-	$(MY_FSTAR) $(FSTAR_OPTIONS) $(OTHERFLAGS) --warn_error '@241@247' $<
+.PHONY: all verify-all clean %.fst-in %.fsti-in
 
-.PHONY: all verify-all clean
+%.fst-in %.fsti-in:
+	@echo $FSTAR_OPTIONS) $(OTHERFLAGS)

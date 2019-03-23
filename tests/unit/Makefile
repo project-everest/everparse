@@ -1,5 +1,5 @@
 FSTAR_HOME ?= ../../../FStar
-LOWPARSE_HOME ?= ../../../mitls-fstar/src/lowparse
+LOWPARSE_HOME ?= ../../src/lowparse
 KREMLIN_HOME ?= ../../../kremlin
 
 export FSTAR_HOME
@@ -19,6 +19,7 @@ CACHE_DIR=cache$(LAX_EXT)
 CHECKED_EXT=.checked$(LAX_EXT)
 
 FSTAR_OPTIONS = --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
+		--already_cached '+Prims +FStar +LowStar +C +Spec.Loops +LowParse' \
 		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include .. --protect_top_level_axioms true
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)

@@ -180,6 +180,7 @@ let serialize32_nlist
 : Tot (serializer32 (serialize_nlist (n) s))
 = fun (input: nlist (n) t) -> ((
     [@inline_let] let _ =
+      assert_norm (pow2 32 == 4294967296);
       B32.reveal_empty ();
       parse_nlist_kind_high (n) k;
       Seq.append_empty_l (serialize (serialize_nlist (n) s) input)
@@ -214,6 +215,10 @@ let serialize32_nlist
       res
   ) <: (res: _ { serializer32_correct (serialize_nlist (n) s) input res }))
 
+#pop-options
+
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 let size32_nlist
   (n: nat)
@@ -228,6 +233,7 @@ let size32_nlist
 : Tot (size32 (serialize_nlist (n) s))
 = fun (input: nlist (n) t) -> ((
     [@inline_let] let _ =
+      assert_norm (pow2 32 == 4294967296);
       B32.reveal_empty ();
       parse_nlist_kind_high (n) k
     in

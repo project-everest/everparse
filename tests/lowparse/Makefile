@@ -1,5 +1,7 @@
 all: verify-all extract-all
 
+LOWPARSE_HOME ?= ../../src/lowparse
+
 FSTAR_OUT_DIR?=.fstar-out
 
 ifndef FSTAR_HOME
@@ -27,37 +29,34 @@ endif
 
 INCLUDE_KREMLIN=--include $(KREMLIB)
 
-FSTAR_OPTIONS += --use_hints --use_two_phase_tc true --include . # --use_extracted_interfaces
+FSTAR_OPTIONS += --use_hints --use_two_phase_tc true --include $(LOWPARSE_HOME) --already_cached '+Prims +FStar +LowStar +C +Spec.Loops +LowParse' --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN)
 
 # NOTE: the cache dir and out dir for F* MUST be the same, because the
 # .krml files should be generated only once.
 
-MY_FSTAR=$(FSTAR_EXE) --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN)
+INTERMEDIATE_LEVEL=$(LOWPARSE_HOME)/LowParse_TestLib_SLow_c.c -ccopt -Wno-error-tautological-compare
 
-INTERMEDIATE_LEVEL=LowParse_TestLib_SLow_c.c -ccopt -Wno-error-tautological-compare
-
-LOW_LEVEL=LowParse_TestLib_Low_c.c
+LOW_LEVEL=$(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c
 
 MY_KREMLIN=$(KREMLIN_EXE) -bundle 'LowParse.\*'  -add-include '"kremlin/internal/compat.h"'
 
 EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair
 
 NOEXTRACT_EXAMPLES=ExamplePair
-
-ROOT_FILES=LowParse.SLow.fst LowParse.Low.fst $(addprefix LowParse, $(addsuffix .fst, $(EXAMPLES))) LowParse.TestLib.SLow.fst LowParse.TestLib.Low.fst
+ROOT_FILES=$(addprefix LowParse, $(addsuffix .fst, $(EXAMPLES)))
 
 EXCLUDE_KRML_FILES=$(FSTAR_OUT_DIR)/prims.krml
 
 EXAMPLE_DEPEND_FILES=$(addsuffix .depend,$(EXAMPLES))
 
 $(EXAMPLE_DEPEND_FILES): %.depend: *.fst *.fsti
-	$(MY_FSTAR) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full LowParse$(basename $@).fst > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full LowParse$(basename $@).fst > $@
 
 clean:
 	rm -rf $(FSTAR_OUT_DIR) $(EXAMPLES) $(addsuffix .depend, $(EXAMPLES)) .depend
 
 .depend: $(EXAMPLE_DEPEND_FILES)
-	$(MY_FSTAR) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(ROOT_FILES) > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(ROOT_FILES) > $@
 	for f in $(EXAMPLES) ; do \
 	 $(MAKE) EXCLUDE_KRML_FILES='$(EXCLUDE_KRML_FILES)' EXAMPLE=$$f -f Makefile.example ; \
 	done
@@ -67,13 +66,8 @@ include .depend
 verify-all: $(ALL_CHECKED_FILES)
 
 $(FSTAR_OUT_DIR)/%.checked:
-	$(MY_FSTAR) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
-
-ifdef ADMIT_LOWPARSE
-$(FSTAR_OUT_DIR)/LowParse.%.checked: FSTAR_OPTIONS += --admit_smt_queries true
-$(FSTAR_OUT_DIR)/LowParse.%.checked: OTHERFLAGS := $(filter-out --record_hints,$(OTHERFLAGS))
-endif
 
 # No need to specify the path to the .fst file, since it will be
 # recovered by the --include path
@@ -82,7 +76,7 @@ endif
 # '--extract LowParse.SLow' would actually extract the whole
 # namespace, not only the module.
 $(FSTAR_OUT_DIR)/%.krml:
-	$(MY_FSTAR) $(FSTAR_OPTIONS) $(OTHERFLAGS) --codegen Kremlin $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --codegen Kremlin $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
 	touch $@
 
 $(EXAMPLES): %: %/a.out
@@ -107,12 +101,10 @@ Example12: KREMLIN_ARGS=
 ExampleMono: KREMLIN_ARGS=
 ExamplePair: KREMLIN_ARGS=
 
-.PHONY: all verify-all clean extract-all $(EXAMPLES)
-
-$(FSTAR_OUT_DIR)/FStar.Math.Lemmas.fst.checked: FSTAR_OPTIONS += --use_extracted_interfaces true
+.PHONY: all verify-all clean extract-all $(EXAMPLES) %.fst-in %.fsti-in
 
 %.fst-in:
-	@echo $(INCLUDE_KREMLIN) --cache_dir .fstar-out
+	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
 
 %.fsti-in:
-	@echo $(INCLUDE_KREMLIN)
+	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
