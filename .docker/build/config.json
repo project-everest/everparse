@@ -24,6 +24,7 @@
     "PublicBranches" : [ "master", "dev" ],
 
     "RepoVersions" : {
+        "mitls_version" : "origin/dev", // for nightly builds only
         "kremlin_version" : "origin/master"
     }
 }
