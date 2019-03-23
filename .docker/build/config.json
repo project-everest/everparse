@@ -25,6 +25,6 @@
 
     "RepoVersions" : {
         "kremlin_version" : "origin/master",
-        "mitls_version" : "origin/dev"
+        "mitls_version" : "origin/taramana_lowparse_ci_mono_merge"
     }
 }
