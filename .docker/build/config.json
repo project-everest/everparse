@@ -16,7 +16,7 @@
 
     "DockerCacheEnabled" : true,
     "CIBuildTarget" : "quackyducky_test",
-    "NightlyBuildTarget" : "quackyducky_test",
+    "NightlyBuildTarget" : "quackyducky_nightly_test",
     "HasLogsToExtract" : true,
 
     "NotificationEnabled" : true,

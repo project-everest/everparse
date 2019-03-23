@@ -47,6 +47,28 @@ function fetch_and_make_kremlin() {
     export PATH="$(pwd)/kremlin:$PATH"
 }
 
+# Nightly build: verify miTLS parsers
+# (necessary since miTLS builds check them with "--admit_smt_queries true")
+function fetch_mitls() {
+    if [ ! -d mitls-fstar ]; then
+        git clone https://github.com/project-everest/mitls-fstar mitls-fstar
+    fi
+    cd mitls-fstar
+    git fetch origin
+    local ref=$(jq -c -r '.RepoVersions["mitls_version"]' "$rootPath/.docker/build/config.json" )
+    echo Switching to miTLS $ref
+    git reset --hard $ref
+    cd ..
+    export_home MITLS "$(pwd)/mitls-fstar"
+}
+
+function nightly_test_quackyducky () {
+    fetch_and_make_kremlin &&
+    OTHERFLAGS='--admit_smt_queries true' make -j $threads &&
+    fetch_mitls &&
+    make -j $threads -C $MITLS_HOME/src/parsers verify
+}
+
 function build_and_test_quackyducky() {
     fetch_and_make_kremlin &&
     make -j $threads -k test
@@ -64,8 +86,12 @@ function exec_build() {
         return
     fi
 
-    # Ignore $target for now
-    build_and_test_quackyducky && echo -n true >$status_file
+    if [[ $target == "quackyducky_nightly_test" ]]
+    then
+        nightly_test_quackyducky
+    else
+        build_and_test_quackyducky
+    fi && { echo -n true >$status_file ; }
 
     if [[ $(cat $status_file) != "true" ]]; then
         echo "Build failed"
