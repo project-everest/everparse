@@ -65,6 +65,7 @@ function fetch_mitls() {
 function nightly_test_quackyducky () {
     fetch_and_make_kremlin &&
     OTHERFLAGS='--admit_smt_queries true' make -j $threads &&
+    export_home QD "$(pwd)" &&
     fetch_mitls &&
     make -j $threads -C $MITLS_HOME/src/parsers verify
 }
