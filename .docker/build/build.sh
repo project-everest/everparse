@@ -47,46 +47,8 @@ function fetch_and_make_kremlin() {
     export PATH="$(pwd)/kremlin:$PATH"
 }
 
-# NOTE: LowParse is currently part of miTLS
-# By default, mitls-fstar master works against F* stable. Can also be overridden.
-function fetch_lowparse() {
-    if [ ! -d mitls-fstar ] ; then
-        git clone https://github.com/project-everest/mitls-fstar mitls-fstar
-    fi
-    cd mitls-fstar
-    git fetch origin
-    local ref=$(jq -c -r '.RepoVersions["mitls_version"]' "$rootPath/.docker/build/config.json" )
-    echo "Switching to LowParse (mitls-fstar) $ref"
-    git reset --hard $ref
-    git clean -fdx
-    cd ..
-    export_home LOWPARSE "$(pwd)/mitls-fstar/src/lowparse"
-}
-
-function make_lowparse () {
-    # NOTE: we assume that we are already in LOWPARSE_HOME
-    env OTHERFLAGS='--admit_smt_queries true' make -f Makefile.LowParse -j $threads
-}
-
-function fetch_and_make_lowparse() {
-    fetch_lowparse &&
-
-    pushd "$LOWPARSE_HOME" && {
-        {
-            make_lowparse || {
-                git clean -fdx &&
-                make_lowparse
-            }
-        }
-        local exitcode=$?
-        popd
-        return $exitcode
-    }
-}
-
 function build_and_test_quackyducky() {
     fetch_and_make_kremlin &&
-    fetch_and_make_lowparse &&
     make -j $threads -k test
 }
 
