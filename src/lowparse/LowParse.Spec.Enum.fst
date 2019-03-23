@@ -477,7 +477,7 @@ inline_for_extraction
 let r_reflexive_t
   (t: Type)
   (r: (t -> t -> GTot Type0))
-: Tot Type0
+: Tot Type
 = (x: t) -> Lemma (r x x)
 
 let r_reflexive_t_elim
@@ -498,7 +498,7 @@ inline_for_extraction
 let r_transitive_t
   (t: Type)
   (r: (t -> t -> GTot Type0))
-: Tot Type0
+: Tot Type
 = (x: t) -> (y: t) -> (z: t) -> Lemma ((r x y /\ r y z) ==> r x z)
 
 let r_transitive_t_elim
@@ -704,8 +704,8 @@ inline_for_extraction
 let dep_enum_destr
   (#key #repr: eqtype)
   (e: enum key repr)
-  (v: (enum_key e -> Tot Type))
-: Tot Type
+  (v: (enum_key e -> Tot (Type u#a)))
+: Tot (Type)
 = (v_eq: ((k: enum_key e) -> v k -> v k -> GTot Type0)) ->
   (v_if: ((k: enum_key e) -> Tot (if_combinator (v k) (v_eq k)))) ->
   (v_eq_refl: ((k: enum_key e) -> Tot (r_reflexive_t _ (v_eq k)))) ->
@@ -1143,7 +1143,7 @@ let destruct_maybe_enum_key
 let forall_maybe_enum_key
   (#key #value: eqtype)
   (e: enum key value)
-  (f: maybe_enum_key e -> Tot Type0)
+  (f: maybe_enum_key e -> GTot Type0)
   (f_known: squash (list_forallp (fun (x: key) -> list_mem x (list_map fst e) /\ f (Known x)) (list_map fst e)))
   (f_unknown: (
     (x: value) ->

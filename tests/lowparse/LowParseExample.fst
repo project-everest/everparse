@@ -34,8 +34,11 @@ let j (input: FStar.Bytes.bytes) : Tot (option (LowParse.SLow.vlarray LowParseEx
 let m (x: LowParseExample.Aux.t) : Tot FStar.Bytes.bytes =
   LowParseExample.Aux.serialize32_t x
 
+inline_for_extraction
+let slice = LowParse.Low.slice (LowParse.Low.srel_of_buffer_srel (LowStar.Buffer.trivial_preorder _)) (LowParse.Low.srel_of_buffer_srel (LowStar.Buffer.trivial_preorder _))
+
 // For now, extract the validator for compilation purposes only
-let v (x: LowParse.Low.slice) : FStar.HyperStack.ST.Stack FStar.UInt32.t
+let v (x: slice) : FStar.HyperStack.ST.Stack FStar.UInt32.t
   (requires (fun _ -> False))
   (ensures (fun _ _ _ -> True))
 = LowParseExample.Aux.validate_t x 0ul

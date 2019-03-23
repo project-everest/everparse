@@ -30,9 +30,12 @@ val parse_inner: LP.parser parse_inner_kind inner
 
 val serialize_inner: LP.serializer parse_inner
 
+inline_for_extraction
+let slice = LP.slice (LP.srel_of_buffer_srel (B.trivial_preorder _)) (LP.srel_of_buffer_srel (B.trivial_preorder _))
+
 val serialize_inner_intro
   (h: HS.mem)
-  (b: LP.slice)
+  (b: slice)
   (lo: U32.t)
 : Lemma
   (requires (
@@ -56,7 +59,7 @@ val serialize_t : LP.serializer parse_t
 
 val serialize_t_intro
   (h: HS.mem)
-  (b: LP.slice)
+  (b: slice)
   (lo: U32.t)
 : Lemma
   (requires (

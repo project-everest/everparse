@@ -92,7 +92,7 @@ let size32_t =
 
 inline_for_extraction
 let test_HelloRetryRequest : LL.test_ifthenelse_tag parse_t_param
-= fun input pos ->
+= fun #_ #_ input pos ->
   LL.valid_slice_equals_bytes msg_type_HelloRetryRequest input pos
 
 let validate_t = LL.validate_ifthenelse parse_t_param (LL.validate_flbytes 3 3ul) test_HelloRetryRequest (fun b -> if b then LL.validate_u32 () else LL.validate_u16 ())

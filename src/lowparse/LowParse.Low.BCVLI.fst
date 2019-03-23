@@ -13,11 +13,11 @@ module U32 = FStar.UInt32
 #push-options "--z3rlimit 16"
 
 let validate_bcvli : validator parse_bcvli =
-  fun input pos ->
+  fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
     valid_facts parse_bcvli h input pos;
-    parse_bcvli_eq (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
+    parse_bcvli_eq (bytes_of_slice_from h input pos);
     valid_facts (parse_bounded_integer_le 1) h input pos
   in
   let pos1 = validate_total_constant_size (parse_bounded_integer_le 1) 1ul () input pos in
@@ -56,11 +56,11 @@ let validate_bcvli : validator parse_bcvli =
     else validator_error_generic
 
 let jump_bcvli : jumper parse_bcvli =
-  fun input pos ->
+  fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
     valid_facts parse_bcvli h input pos;
-    parse_bcvli_eq (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
+    parse_bcvli_eq (bytes_of_slice_from h input pos);
     valid_facts (parse_bounded_integer_le 1) h input pos
   in
   let pos1 = jump_constant_size (parse_bounded_integer_le 1) 1ul () input pos in
@@ -78,11 +78,11 @@ let jump_bcvli : jumper parse_bcvli =
     jump_constant_size (parse_bounded_integer_le 4) 4ul () input pos1
 
 let read_bcvli : leaf_reader parse_bcvli =
-  fun input pos ->
+  fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
     valid_facts parse_bcvli h input pos;
-    parse_bcvli_eq (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
+    parse_bcvli_eq (bytes_of_slice_from h input pos);
     valid_facts (parse_bounded_integer_le 1) h input pos
   in
   let r = read_bounded_integer_le_1 input pos in
@@ -102,22 +102,30 @@ let read_bcvli : leaf_reader parse_bcvli =
 
 module U8 = FStar.UInt8
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction
 let serialize32_bcvli'
   (x: U32.t)
-  (b: buffer8)
+  (#rrel #rel: _)
+  (b: B.mbuffer U8.t rrel rel)
+  (pos: U32.t)
 : HST.Stack U32.t
-  (requires (fun h -> B.live h b /\ Seq.length (serialize serialize_bcvli x) <= B.length b))
+  (requires (fun h ->
+    let len = Seq.length (serialize serialize_bcvli x) in
+    B.live h b /\
+    U32.v pos + len <= B.length b /\
+    writable b (U32.v pos) (U32.v pos + len) h
+  ))
   (ensures (fun h len h' ->
     Seq.length (serialize serialize_bcvli x) == U32.v len /\ (
-    let b' = B.gsub b 0ul len in
-    B.modifies (B.loc_buffer b') h h' /\
+    B.modifies (B.loc_buffer_from_to b pos (pos `U32.add` len)) h h' /\
     B.live h b /\
-    B.as_seq h' b' `Seq.equal` serialize serialize_bcvli x
+    Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + U32.v len) `Seq.equal` serialize serialize_bcvli x
   )))
-= [@inline_let] let _ = serialize_bcvli_eq x in
+= // [@inline_let] let _ = 
+    serialize_bcvli_eq x
+;  // in
   let c : bounded_integer 1 =
     if x `U32.lt` 253ul
     then x
@@ -125,24 +133,46 @@ let serialize32_bcvli'
     then 253ul
     else 254ul
   in
-  let len1 = serialize32_bounded_integer_le_1 c b in
+  [@inline_let]
+  let pos' = Ghost.hide (U32.v pos + Seq.length (serialize serialize_bcvli x)) in
+  let h = HST.get () in
+  [@inline_let]
+  let _ = writable_weaken b (U32.v pos) (Ghost.reveal pos') h (U32.v pos) (U32.v pos + 1) in
+  let len1 = serialize32_bounded_integer_le_1 c b pos in
+  let h1 = HST.get () in
+  [@inline_let]
+  let _ = writable_modifies b (U32.v pos) (Ghost.reveal pos') h B.loc_none h1 in
   if c `U32.lt` 253ul
-  then len1
-  else if c = 253ul
-  then
+  then begin
+    len1
+  end else if c = 253ul
+  then begin
+    [@inline_let]
     let _ = assert (U32.v x < 65536) in
-    let len2 = serialize32_bounded_integer_le_2 x (B.offset b len1) in
-    len1 `U32.add` len2
-  else begin
-    let len2 = serialize32_bounded_integer_le_4 x (B.offset b len1) in
-    len1 `U32.add` len2
+    [@inline_let]
+    let _ = writable_weaken b (U32.v pos) (Ghost.reveal pos') h1 (U32.v pos + U32.v len1) ((U32.v pos + U32.v len1) + 2) in
+    let len2 = serialize32_bounded_integer_le_2 x b (pos `U32.add` len1) in
+    let h'  = HST.get () in
+    [@inline_let]
+    let len = len1 `U32.add` len2 in
+    B.modifies_buffer_from_to_elim b pos (pos `U32.add` len1) (B.loc_buffer_from_to b (pos `U32.add` len1) (pos `U32.add` len)) h1 h';    
+    len
+  end else begin
+    [@inline_let]
+    let _ = writable_weaken b (U32.v pos) (Ghost.reveal pos') h1 (U32.v pos + U32.v len1) ((U32.v pos + U32.v len1) + 4) in
+    let len2 = serialize32_bounded_integer_le_4 x b (pos `U32.add` len1) in
+    let h' = HST.get () in
+    [@inline_let]
+    let len = len1 `U32.add` len2 in
+    B.modifies_buffer_from_to_elim b pos (pos `U32.add` len1) (B.loc_buffer_from_to b (pos `U32.add` len1) (pos `U32.add` len)) h1 h';
+    len
   end
 
 #pop-options
 
 inline_for_extraction
 let serialize32_bcvli : serializer32 serialize_bcvli =
-  fun (x: U32.t) (b: buffer8) -> serialize32_bcvli' x b
+  fun (x: U32.t) #rrel #rel b pos -> serialize32_bcvli' x b pos
 
 let write_bcvli : leaf_writer_strong serialize_bcvli =
   leaf_writer_strong_of_serializer32 serialize32_bcvli ()

@@ -12,6 +12,9 @@ module Cast = FStar.Int.Cast
 
 // #reset-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --using_facts_from '* -LowParse.Low.VLData'"
 
+inline_for_extraction
+let slice = LowParse.Low.slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _))
+
 #set-options "--z3rlimit 32"
 
 let dummy
@@ -42,7 +45,7 @@ let dummy
 #reset-options "--using_facts_from '* -LowParse'"
 
 (** Test parser 'f' and formatter 'm' *)
-let test_f_m : testbuffer_t = fun input ->
+let test_f_m : testbuffer_t = fun #rrel #rel input ->
 (* BUGBUG:  Complete this when low-level formatting is ready
   let result = f input in
   match result with
@@ -54,15 +57,15 @@ let test_f_m : testbuffer_t = fun input ->
 *)
   None
 
-#reset-options "--z3cliopt smt.arith.nl=false --using_facts_from '* -LowParse +LowParse.Low.Base'"
+#reset-options "--z3cliopt smt.arith.nl=false --z3rlimit 16"
 
 (** Run all unit tests, by calling test_buffer and test_file_buffer
     multiple times, with different parser+formatter pairs and 
     input data *)
 let test (_:unit): ST unit (requires (fun _ -> true)) (ensures (fun _ _ _ -> true)) =
   push_frame();
-  let testbuffer:buffer8 = B.alloca_of_list [ 0x01uy; 0x02uy; 0x55uy; 0xaauy; 0x34uy; 0x45uy; 0xbauy; 0xabuy ] in
-  test_buffer test_f_m "Example3 expect fail" ({ base = testbuffer; len = 8ul; });
+  let testbuffer: B.buffer byte = B.alloca_of_list [ 0x01uy; 0x02uy; 0x55uy; 0xaauy; 0x34uy; 0x45uy; 0xbauy; 0xabuy ] in
+  test_buffer test_f_m "Example3 expect fail" (make_slice testbuffer 8ul);
 (*  
   test_file_buffer test_f_m "Example3_pass.bin";
   test_file_buffer test_f_m "Example3_fail.bin";  

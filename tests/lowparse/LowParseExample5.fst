@@ -17,7 +17,7 @@ module B = LowStar.Buffer
 
 let vltest () : HST.Stack unit (fun _ -> True) (fun _ _ _ -> True) =
   HST.push_frame ();
-  let b : LP.buffer8 = B.alloca 0uy 12ul in
+  let b = B.alloca 0uy 12ul in
   let sl = { LP.base = b; LP.len = 12ul; } in
   let j = LPI.write_u16 18us sl 2ul in
   let j = LPI.write_u16 42us sl j in

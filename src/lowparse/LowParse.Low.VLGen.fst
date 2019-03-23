@@ -23,7 +23,7 @@ let validate_bounded_vlgen
   (s: serializer p)
   (v: validator p)
 : Tot (validator (parse_bounded_vlgen (vmin) (vmax) pk s))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
     valid_facts (parse_bounded_vlgen (U32.v min) (U32.v max) pk s) h input pos;
@@ -74,7 +74,7 @@ let jump_bounded_vlgen
   (s: serializer p)
   (v: jumper p)
 : Tot (jumper (parse_bounded_vlgen (vmin) (vmax) pk s))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
     valid_facts (parse_bounded_vlgen (vmin) (vmax) pk s) h input pos;
@@ -140,7 +140,7 @@ let accessor_bounded_vlgen_payload
   (#p: parser k t)
   (s: serializer p)
 : Tot (accessor (gaccessor_bounded_vlgen_payload min max pk s))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ =
@@ -148,7 +148,7 @@ let accessor_bounded_vlgen_payload
     valid_facts (parse_bounded_vlgen min max pk s) h input pos;
     parse_bounded_vlgen_unfold_aux min max pk s (bytes_of_slice_from h input pos);
     valid_facts pk h input pos;
-    parse_strong_prefix pk (bytes_of_slice_from h input pos) (B.as_seq h (B.gsub input.base pos (U32.uint_to_t (content_length (parse_bounded_vlgen min max pk s) h input pos))))
+    parse_strong_prefix pk (bytes_of_slice_from h input pos) (bytes_of_slice_from_to h input pos (pos `U32.add` U32.uint_to_t (content_length (parse_bounded_vlgen min max pk s) h input pos)))
   in
   jk input pos
 
@@ -184,7 +184,7 @@ let accessor_vlgen_payload
   (#p: parser k t)
   (s: serializer p { parse_vlgen_precond min max k } )
 : Tot (accessor (gaccessor_vlgen_payload min max pk s))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ =
@@ -192,7 +192,7 @@ let accessor_vlgen_payload
     valid_facts (parse_vlgen min max pk s) h input pos;
     parse_vlgen_unfold min max pk s (bytes_of_slice_from h input pos);
     valid_facts pk h input pos;
-    parse_strong_prefix pk (bytes_of_slice_from h input pos) (B.as_seq h (B.gsub input.base pos (U32.uint_to_t (content_length (parse_vlgen min max pk s) h input pos))))
+    parse_strong_prefix pk (bytes_of_slice_from h input pos) (bytes_of_slice_from_to h input pos (pos `U32.add` U32.uint_to_t (content_length (parse_vlgen min max pk s) h input pos)))
   in
   jk input pos
 
@@ -208,7 +208,8 @@ let valid_bounded_vlgen_intro
   (#p: parser k t)
   (s: serializer p)
   (h: HS.mem)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -246,7 +247,8 @@ let valid_bounded_vlgen_intro_strong_prefix
   (#p: parser k t)
   (s: serializer p)
   (h: HS.mem)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -283,7 +285,8 @@ let valid_vlgen_intro
   (#p: parser k t)
   (s: serializer p)
   (h: HS.mem)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -321,7 +324,8 @@ let valid_vlgen_intro_strong_prefix
   (#p: parser k t)
   (s: serializer p)
   (h: HS.mem)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (

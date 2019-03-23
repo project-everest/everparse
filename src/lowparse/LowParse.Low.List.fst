@@ -15,7 +15,8 @@ let valid_exact_list_nil
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos : U32.t)
 : Lemma
   (requires (U32.v pos <= U32.v sl.len /\ live_slice h sl))
@@ -23,7 +24,7 @@ let valid_exact_list_nil
     valid_exact (parse_list p) h sl pos pos /\
     contents_exact (parse_list p) h sl pos pos == []
   ))
-= parse_list_eq p (B.as_seq h (B.gsub sl.base pos 0ul));
+= parse_list_eq p (bytes_of_slice_from_to h sl pos pos);
   valid_exact_equiv (parse_list p) h sl pos pos;
   contents_exact_eq (parse_list p) h sl pos pos
 
@@ -32,7 +33,8 @@ let valid_exact_list_cons
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos : U32.t)
   (pos' : U32.t)
 : Lemma
@@ -50,12 +52,12 @@ let valid_exact_list_cons
     valid_exact (parse_list p) h sl pos pos' /\
     contents_exact (parse_list p) h sl pos pos' == contents p h sl pos :: contents_exact (parse_list p) h sl (get_valid_pos p h sl pos) pos'
   ))
-= let sq = B.as_seq h (B.gsub sl.base pos (pos' `U32.sub` pos)) in
+= let sq = bytes_of_slice_from_to h sl pos pos' in
   parse_list_eq' p sq;
   let pos1 = get_valid_pos p h sl pos in
   valid_exact_equiv (parse_list p) h sl pos pos';
   valid_facts p h sl pos;
-  let sq0 = B.as_seq h (B.gsub sl.base pos (sl.len `U32.sub` pos)) in
+  let sq0 = bytes_of_slice_from h sl pos in
   parser_kind_prop_equiv k p;
   assert (no_lookahead_on p sq0 sq);
   assert (injective_postcond p sq0 sq);
@@ -69,7 +71,8 @@ let rec valid_list_valid_exact_list
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos : U32.t)
   (pos' : U32.t)
 : Lemma
@@ -96,7 +99,8 @@ let valid_exact_list_cons_recip
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos : U32.t)
   (pos' : U32.t)
 : Lemma
@@ -114,11 +118,11 @@ let valid_exact_list_cons_recip
     valid_exact (parse_list p) h sl pos1 pos' /\
     contents_exact (parse_list p) h sl pos pos' == contents p h sl pos :: contents_exact (parse_list p) h sl pos1 pos'
   )))
-= let sq = B.as_seq h (B.gsub sl.base pos (pos' `U32.sub` pos)) in
+= let sq = bytes_of_slice_from_to h sl pos pos' in
   parse_list_eq p sq;
   valid_exact_equiv (parse_list p) h sl pos pos';
   valid_facts p h sl pos;
-  let sq0 = B.as_seq h (B.gsub sl.base pos (sl.len `U32.sub` pos)) in
+  let sq0 = bytes_of_slice_from h sl pos in
   parser_kind_prop_equiv k p;
   assert (no_lookahead_on p sq sq0);
   assert (injective_postcond p sq sq0);
@@ -133,7 +137,8 @@ let rec valid_exact_list_valid_list
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos : U32.t)
   (pos' : U32.t)
 : Lemma
@@ -166,7 +171,8 @@ let rec valid_exact_list_append
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos1 pos2 pos3 : U32.t)
 : Lemma
   (requires (
@@ -196,7 +202,8 @@ let validate_list_inv
   (#t: Type0)
   (p: parser k t)
   (g0 g1: G.erased HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos0: U32.t)
   (bpos: B.pointer U32.t)
   (h: HS.mem)
@@ -233,7 +240,8 @@ let validate_list_body
   (#p: parser k t)
   (v: validator p)
   (g0 g1: G.erased HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos0: U32.t)
   (bpos: B.pointer U32.t)
 : HST.Stack bool
@@ -260,7 +268,8 @@ let validate_list'
   (#t: Type0)
   (#p: parser k t)
   (v: validator p)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
@@ -303,7 +312,8 @@ let validate_list
   ))
 : Tot (validator (parse_list p))
 = fun
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t) ->
   let h = HST.get () in
   valid_valid_exact_consumes_all (parse_list p) h sl pos;

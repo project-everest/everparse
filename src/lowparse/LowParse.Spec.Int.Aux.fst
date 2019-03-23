@@ -102,6 +102,15 @@ let serialize_u16 : serializer parse_u16 =
 
 #reset-options
 
+let serialize_u16_eq (x: U16.t) : Lemma
+  (serialize #_ #_ #parse_u16 serialize_u16 x `Seq.equal` (
+    let b1 = U8.uint_to_t (U16.v x % 256) in
+    let d0 = U16.v x / 256 in
+    let b0 = U8.uint_to_t (d0 % 256) in
+    Seq.append (Seq.create 1 b0) (Seq.create 1 b1)
+  ))
+= ()
+
 let decode_u32
   (b: bytes { Seq.length b == 4 } )
 : GTot U32.t

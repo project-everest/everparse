@@ -1,8 +1,8 @@
-module LowParse.Low.Combinators
-include LowParse.Low.Base
+module LowParse.MLow.Combinators
+include LowParse.MLow.Base
 include LowParse.Spec.Combinators
 
-module B = LowStar.Monotonic.Buffer
+module B = LowStar.Buffer
 module U32 = FStar.UInt32
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
@@ -10,7 +10,7 @@ module HST = FStar.HyperStack.ST
 #set-options "--z3rlimit 16"
 
 let valid_nondep_then
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k1: parser_kind)
   (#t1: Type0)
@@ -44,7 +44,7 @@ let valid_nondep_then
   end
 
 let valid_nondep_then_intro
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k1: parser_kind)
   (#t1: Type0)
@@ -73,7 +73,7 @@ let validate_nondep_then
   (#p2: parser k2 t2)
   (p2' : validator p2)
 : Tot (validator (nondep_then p1 p2))
-= fun   (#rrel #rel: _)
+= fun   (#rrel #rel: B.srel byte)
   (input: slice rrel rel) (pos: U32.t) ->
   let h = HST.get () in
   [@inline_let] let _ = valid_nondep_then h p1 p2 input pos in
@@ -97,14 +97,14 @@ let jump_nondep_then
   (#p2: parser k2 t2)
   (p2' : jumper p2)
 : Tot (jumper (nondep_then p1 p2))
-= fun  (#rrel #rel: _)
+= fun  (#rrel #rel: B.srel byte)
   (input: slice rrel rel) (pos: U32.t) ->
   let h = HST.get () in
   [@inline_let] let _ = valid_nondep_then h p1 p2 input pos in
   p2' input (p1' input pos)
 
 let valid_synth
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k: parser_kind)
   (#t1: Type0)
@@ -128,7 +128,7 @@ let valid_synth
   then parse_synth_eq p1 f2 (bytes_of_slice_from h input pos)
 
 let valid_synth_intro
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k: parser_kind)
   (#t1: Type0)
@@ -159,7 +159,7 @@ let validate_synth
     synth_injective f2
   })
 : Tot (validator (parse_synth p1 f2))
-= fun   (#rrel #rel: _)
+= fun   (#rrel #rel: B.srel byte)
   (input: slice rrel rel) (pos: U32.t) ->
   let h = HST.get () in
   [@inline_let] let _ = valid_synth h p1 f2 input pos in
@@ -177,7 +177,7 @@ let jump_synth
     synth_injective f2
   })
 : Tot (jumper (parse_synth p1 f2))
-= fun   (#rrel #rel: _)
+= fun   (#rrel #rel: B.srel byte)
   (input: slice rrel rel) (pos: U32.t) ->
   let h = HST.get () in
   [@inline_let] let _ = valid_synth h p1 f2 input pos in
@@ -504,6 +504,7 @@ let accessor_snd
   in
   res
 
+(*
 inline_for_extraction
 let make_total_constant_size_reader
   (sz: nat)
@@ -513,20 +514,21 @@ let make_total_constant_size_reader
   (u: unit {
     make_total_constant_size_parser_precond sz t f
   })
-  (f' : ((#rrel: _) -> (#rel: _) -> (s: B.mbuffer byte rrel rel) -> (pos: U32.t) -> HST.Stack t
-    (requires (fun h -> B.live h s /\ U32.v pos + sz <= B.length s))
+  (f' : ((s: buffer8) -> HST.Stack t
+    (requires (fun h -> B.live h s /\ B.length s == sz))
     (ensures (fun h res h' ->
-      B.modifies B.loc_none h h' /\
-      res == f (Seq.slice (B.as_seq h s) (U32.v pos) (U32.v pos + sz))
+      h == h' /\
+      res == f (B.as_seq h s)
   ))))
 : Tot (leaf_reader (make_total_constant_size_parser sz t f))
-= fun #rrel #rel sl pos ->
+= fun sl pos ->
   let h = HST.get () in
   [@inline_let] let _ = valid_facts (make_total_constant_size_parser sz t f) h sl pos in
-  f' sl.base pos
+  f' (B.sub sl.base pos sz')
+*)
 
 let valid_filter
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k: parser_kind)
   (#t: Type0)
@@ -611,6 +613,7 @@ let write_filter
   [@inline_let] let _ = valid_filter h p f input pos in
   res
 
+(*
 inline_for_extraction
 let write_filter_weak
   (#k: parser_kind)
@@ -627,6 +630,7 @@ let write_filter_weak
   let h = HST.get () in
   [@inline_let] let _ = valid_filter h p f input pos in
   res
+*)
 
 inline_for_extraction
 let read_synth
@@ -683,6 +687,7 @@ let write_synth
   [@inline_let] let _ = valid_synth h p1 f2 input pos in
   pos'
 
+(*
 inline_for_extraction
 let write_synth_weak
   (#k: parser_kind)
@@ -704,6 +709,7 @@ let write_synth_weak
   let h = HST.get () in
   [@inline_let] let _ = valid_synth h p1 f2 input pos in
   pos'
+*)
 
 (* Special case for vldata and maybe also sum types *)
 

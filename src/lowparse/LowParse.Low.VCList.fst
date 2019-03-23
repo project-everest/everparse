@@ -13,26 +13,28 @@ let valid_nlist_nil
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (live_slice h sl /\ U32.v pos <= U32.v sl.len))
   (ensures (valid_content_pos (parse_nlist 0 p) h sl pos [] pos))
 = valid_facts (parse_nlist 0 p) h sl pos;
-  parse_nlist_eq 0 p (B.as_seq h (B.gsub sl.base pos (sl.len `U32.sub` pos)))
+  parse_nlist_eq 0 p (bytes_of_slice_from h sl pos)
 
 let valid_nlist_nil_recip
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (valid (parse_nlist 0 p) h sl pos))
   (ensures (valid_content_pos (parse_nlist 0 p) h sl pos [] pos))
 = valid_facts (parse_nlist 0 p) h sl pos;
-  parse_nlist_eq 0 p (B.as_seq h (B.gsub sl.base pos (sl.len `U32.sub` pos)))
+  parse_nlist_eq 0 p (bytes_of_slice_from h sl pos)
 
 let valid_nlist_cons
   (n: nat)
@@ -40,7 +42,8 @@ let valid_nlist_cons
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -63,7 +66,7 @@ let valid_nlist_cons
   valid_facts p h sl pos;
   valid_facts (parse_nlist n p) h sl pos1;
   valid_facts (parse_nlist (n + 1) p) h sl pos;
-  parse_nlist_eq (n + 1) p (B.as_seq h (B.gsub sl.base pos (sl.len `U32.sub` pos)))
+  parse_nlist_eq (n + 1) p (bytes_of_slice_from h sl pos)
 
 #push-options "--z3rlimit 16"
 
@@ -73,7 +76,8 @@ let valid_nlist_cons_recip
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -93,7 +97,7 @@ let valid_nlist_cons_recip
       (get_valid_pos (parse_nlist (n - 1) p) h sl pos1)
   )))
 = valid_facts (parse_nlist n p) h sl pos;
-  parse_nlist_eq n p (B.as_seq h (B.gsub sl.base pos (sl.len `U32.sub` pos)));
+  parse_nlist_eq n p (bytes_of_slice_from h sl pos);
   valid_facts p h sl pos;
   let pos1 = get_valid_pos p h sl pos in
   valid_facts (parse_nlist (n - 1) p) h sl pos1
@@ -106,7 +110,8 @@ let valid_nlist_cons'
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -127,7 +132,8 @@ let valid_nlist_cons_not
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -140,7 +146,7 @@ let valid_nlist_cons_not
 = Classical.move_requires (valid_nlist_cons (n - 1) p h sl) pos;
   Classical.move_requires (valid_nlist_cons_recip n p h sl) pos
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction
 let validate_nlist
@@ -150,7 +156,7 @@ let validate_nlist
   (#p: parser k t)
   (v: validator p)
 : Tot (validator (parse_nlist (U32.v n) p))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h0 = HST.get () in
   HST.push_frame ();
   let bpos1 = B.alloca pos 1ul in
@@ -208,7 +214,7 @@ let jump_nlist
   (#p: parser k t)
   (v: jumper p)
 : Tot (jumper (parse_nlist (U32.v n) p))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h0 = HST.get () in
   HST.push_frame ();
   let bpos1 = B.alloca pos 1ul in
@@ -257,7 +263,8 @@ let rec valid_nlist_valid_list
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -287,7 +294,8 @@ let rec valid_list_valid_nlist
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : Lemma
@@ -327,11 +335,11 @@ let validate_vclist
   (#p: parser k t)
   (v: validator p)
 : Tot (validator (parse_vclist (U32.v min) (U32.v max) lp p))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
     valid_facts (parse_vclist (U32.v min) (U32.v max) lp p) h input pos;
-    parse_vclist_eq (U32.v min) (U32.v max) lp p (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
+    parse_vclist_eq (U32.v min) (U32.v max) lp p (bytes_of_slice_from h input pos);
     valid_facts lp h input pos
   in
   let pos1 = lv input pos in
@@ -359,11 +367,11 @@ let jump_vclist
   (#p: parser k t)
   (v: jumper p)
 : Tot (jumper (parse_vclist min max lp p))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
     valid_facts (parse_vclist min max lp p) h input pos;
-    parse_vclist_eq min max lp p (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
+    parse_vclist_eq min max lp p (bytes_of_slice_from h input pos);
     valid_facts lp h input pos
   in
   let pos1 = lv input pos in
@@ -383,7 +391,8 @@ let valid_vclist_elim
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (valid (parse_vclist min max lp p) h input pos))
@@ -396,7 +405,7 @@ let valid_vclist_elim
     valid_content_pos (parse_nlist (U32.v len) p) h input pos1 x (get_valid_pos (parse_vclist min max lp p) h input pos)
   )))
 = valid_facts (parse_vclist min max lp p) h input pos;
-  parse_vclist_eq min max lp p (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
+  parse_vclist_eq min max lp p (bytes_of_slice_from h input pos);
   valid_facts lp h input pos;
   let len = contents lp h input pos in
   let pos1 = get_valid_pos lp h input pos in
@@ -411,7 +420,8 @@ let valid_vclist_intro
   (#t: Type0)
   (p: parser k t)
   (h: HS.mem)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -427,7 +437,7 @@ let valid_vclist_intro
     valid_content_pos (parse_vclist min max lp p) h input pos (contents (parse_nlist (U32.v len) p) h input pos1) (get_valid_pos (parse_nlist (U32.v len) p) h input pos1)
   ))
 = valid_facts (parse_vclist min max lp p) h input pos;
-  parse_vclist_eq min max lp p (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
+  parse_vclist_eq min max lp p (bytes_of_slice_from h input pos);
   valid_facts lp h input pos;
   let len = contents lp h input pos in
   let pos1 = get_valid_pos lp h input pos in

@@ -50,7 +50,8 @@ let valid_vldata_gen_elim
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -68,7 +69,7 @@ let valid_vldata_gen_elim
   ))))
 = valid_facts (parse_vldata_gen sz f p) h input pos;
   valid_facts (parse_bounded_integer sz) h input pos;
-  parse_vldata_gen_eq sz f p (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
+  parse_vldata_gen_eq sz f p (bytes_of_slice_from h input pos);
   let len_payload = contents (parse_bounded_integer sz) h input pos in
   let pos_payload = pos `U32.add` U32.uint_to_t sz in
   valid_exact_equiv p h input pos_payload (pos_payload `U32.add` len_payload);
@@ -84,7 +85,7 @@ let jump_vldata_gen
   (#t: Type0)
   (p: parser k t)
 : Tot (jumper (parse_vldata_gen sz f p))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ = valid_vldata_gen_elim h sz f p input pos in
   pos `U32.add` (U32.uint_to_t sz `U32.add` read_bounded_integer sz input pos)
@@ -141,7 +142,7 @@ let jump_bounded_vldata'
   (#t: Type0)
   (p: parser k t)
 : Tot (jumper (parse_bounded_vldata' min max l p))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let sz = l in
   [@inline_let] let _ = valid_facts (parse_bounded_vldata' min max l p) h input pos in
@@ -176,7 +177,7 @@ let validate_bounded_vldata_strong'
   (s: serializer p)
   (v: validator p)
 : Tot (validator (parse_bounded_vldata_strong' min max l s))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ = valid_facts (parse_bounded_vldata_strong' min max l s) h input pos in
@@ -211,7 +212,7 @@ let jump_bounded_vldata_strong'
   (#p: parser k t)
   (s: serializer p)
 : Tot (jumper (parse_bounded_vldata_strong' min max l s))
-= fun (input: slice) pos ->
+= fun #rrel #rel (input: slice rrel rel) pos ->
   let h = HST.get () in
   [@inline_let] let _ = valid_facts (parse_bounded_vldata_strong' min max l s) h input pos in
   [@inline_let] let _ = valid_facts (parse_bounded_vldata' min max l p) h input pos in
@@ -240,7 +241,8 @@ let valid_vldata_gen_intro
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : Lemma
@@ -259,7 +261,7 @@ let valid_vldata_gen_intro
   ))
 = valid_facts (parse_vldata_gen sz f p) h input pos;
   valid_facts (parse_bounded_integer sz) h input pos;
-  parse_vldata_gen_eq sz f p (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
+  parse_vldata_gen_eq sz f p (bytes_of_slice_from h input pos);
   contents_exact_eq p h input (pos `U32.add` U32.uint_to_t sz) pos'
 
 #pop-options
@@ -271,7 +273,8 @@ let finalize_vldata_gen
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack unit
@@ -281,6 +284,7 @@ let finalize_vldata_gen
     valid_exact p h input pos_payload pos' /\ (
     let len_payload = pos' `U32.sub` pos_payload in
     bounded_integer_prop sz len_payload /\
+    writable input.base (U32.v pos) (U32.v pos + sz) h /\
     f len_payload == true
   ))))
   (ensures (fun h _ h' ->
@@ -301,7 +305,8 @@ let valid_bounded_vldata'_elim
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -330,7 +335,8 @@ let valid_bounded_vldata_elim
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -356,7 +362,8 @@ let valid_bounded_vldata_intro
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : Lemma
@@ -387,7 +394,8 @@ let valid_bounded_vldata_strong'_elim
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -416,7 +424,8 @@ let valid_bounded_vldata_strong_elim
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -443,7 +452,8 @@ let valid_bounded_vldata_strong_intro
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : Lemma
@@ -477,7 +487,8 @@ let finalize_bounded_vldata_strong_exact
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack unit
@@ -488,6 +499,7 @@ let finalize_bounded_vldata_strong_exact
     valid_exact p h input pos_payload pos' /\ (
     let len_payload = pos' `U32.sub` pos_payload in
     let len_ser = Seq.length (serialize s (contents_exact p h input pos_payload pos')) in
+    writable input.base (U32.v pos) (U32.v pos + sz) h /\
     ((min <= U32.v len_payload /\ U32.v len_payload <= max) \/ (min <= len_ser /\ len_ser <= max))
   ))))
   (ensures (fun h _ h' ->
@@ -520,7 +532,8 @@ let finalize_bounded_vldata_strong
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack unit
@@ -532,6 +545,7 @@ let finalize_bounded_vldata_strong
     k.parser_kind_subkind == Some ParserStrong /\ (
     let len_payload = pos' `U32.sub` pos_payload in
     let len_ser = Seq.length (serialize s (contents p h input pos_payload)) in
+    writable input.base (U32.v pos) (U32.v pos + sz) h /\
     ((min <= U32.v len_payload /\ U32.v len_payload <= max) \/ (min <= len_ser /\ len_ser <= max))
   ))))
   (ensures (fun h _ h' ->
@@ -557,7 +571,8 @@ let finalize_bounded_vldata_exact
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack unit
@@ -566,6 +581,7 @@ let finalize_bounded_vldata_exact
     U32.v pos + sz <= U32.v input.len /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
     valid_exact p h input pos_payload pos' /\
+    writable input.base (U32.v pos) (U32.v pos + sz) h /\
     min <= k.parser_kind_low /\
     Some? k.parser_kind_high /\
     Some?.v k.parser_kind_high <= max
@@ -592,7 +608,8 @@ let finalize_bounded_vldata
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack unit
@@ -602,6 +619,7 @@ let finalize_bounded_vldata
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
     valid_pos p h input pos_payload pos' /\
     k.parser_kind_subkind == Some ParserStrong /\
+    writable input.base (U32.v pos) (U32.v pos + sz) h /\
     min <= k.parser_kind_low /\
     Some? k.parser_kind_high /\
     Some?.v k.parser_kind_high <= max
@@ -622,7 +640,8 @@ let weak_finalize_bounded_vldata_strong_exact
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack bool
@@ -630,6 +649,7 @@ let weak_finalize_bounded_vldata_strong_exact
     let sz = log256' max in
     U32.v pos + sz <= U32.v input.len /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
+    writable input.base (U32.v pos) (U32.v pos + sz) h /\
     valid_exact p h input pos_payload pos'
   )))
   (ensures (fun h res h' ->
@@ -661,7 +681,8 @@ let weak_finalize_bounded_vldata_strong
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack bool
@@ -670,6 +691,7 @@ let weak_finalize_bounded_vldata_strong
     U32.v pos + sz <= U32.v input.len /\
     k.parser_kind_subkind == Some ParserStrong /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
+    writable input.base (U32.v pos) (U32.v pos + sz) h /\
     valid_pos p h input pos_payload pos'
   )))
   (ensures (fun h res h' ->
@@ -730,7 +752,7 @@ let accessor_bounded_vldata_payload
   (#t: Type0)
   (p: parser k t)
 : Tot (accessor (gaccessor_bounded_vldata_payload min max p))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ = slice_access_eq h (gaccessor_bounded_vldata_payload min max p) input pos in
@@ -770,7 +792,7 @@ let accessor_bounded_vldata_strong_payload
   (#p: parser k t)
   (s: serializer p)
 : Tot (accessor (gaccessor_bounded_vldata_strong_payload min max s))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ = slice_access_eq h (gaccessor_bounded_vldata_strong_payload min max s) input pos in

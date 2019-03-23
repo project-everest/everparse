@@ -18,7 +18,7 @@ inline_for_extraction
 let validate_der_length_payload32
   (x: U8.t { der_length_payload_size_of_tag x <= 4 } )
 : Tot (validator (parse_der_length_payload32 x))
-= fun input pos ->
+= fun #rrel #rel input pos ->
     let h = HST.get () in
     [@inline_let] let _ =
       valid_facts (parse_der_length_payload32 x) h input pos;
@@ -81,7 +81,7 @@ inline_for_extraction
 let jump_der_length_payload32
   (x: U8.t { der_length_payload_size_of_tag x <= 4 } )
 : Tot (jumper (parse_der_length_payload32 x))
-= fun input pos ->
+= fun #rrel #rel input pos ->
     let h = HST.get () in
     [@inline_let] let _ =
       valid_facts (parse_der_length_payload32 x) h input pos;
@@ -108,7 +108,7 @@ inline_for_extraction
 let read_der_length_payload32
   (x: U8.t { der_length_payload_size_of_tag x <= 4 } )
 : Tot (leaf_reader (parse_der_length_payload32 x))
-= fun input pos ->
+= fun #rrel #rel input pos ->
     let h = HST.get () in
     [@inline_let] let _ =
       valid_facts (parse_der_length_payload32 x) h input pos;
@@ -157,7 +157,7 @@ let validate_bounded_der_length32
   (max: U32.t { U32.v max == vmax /\ U32.v min <= U32.v max } )
 : Tot (
   validator (parse_bounded_der_length32 (vmin) (vmax)))
-= fun input pos ->
+= fun #rrel #rel input pos ->
     let h = HST.get () in
     [@inline_let]
     let _ =
@@ -194,7 +194,7 @@ let jump_bounded_der_length32
   (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
 : Tot (
   jumper (parse_bounded_der_length32 (vmin) (vmax)))
-= fun input pos ->
+= fun #rrel #rel input pos ->
     let h = HST.get () in
     [@inline_let]
     let _ =
@@ -214,7 +214,7 @@ let read_bounded_der_length32
   (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
 : Tot (
   leaf_reader (parse_bounded_der_length32 (vmin) (vmax)))
-= fun input pos ->
+= fun #rrel #rel input pos ->
     let h = HST.get () in
     [@inline_let]
     let _ =
@@ -238,64 +238,72 @@ let serialize32_bounded_der_length32'
   (min: der_length_t)
   (max: der_length_t { min <= max /\ max < 4294967296 } )
   (y' : bounded_int32 (min) (max))
-  (b: buffer8) 
+  (#rrel #rel: _)
+  (b: B.mbuffer U8.t rrel rel)
+  (pos: U32.t)
 : HST.Stack U32.t
-  (requires (fun h -> B.live h b /\ Seq.length (serialize (serialize_bounded_der_length32 ( min) (max)) y') <= B.length b))
+  (requires (fun h ->
+    let len = Seq.length (serialize (serialize_bounded_der_length32 ( min) (max)) y') in
+    B.live h b /\
+    U32.v pos + len <= B.length b /\
+    writable b (U32.v pos) (U32.v pos + len) h
+  ))
   (ensures (fun h len h' ->
     let sx = serialize (serialize_bounded_der_length32 (min) (max)) y' in
     Seq.length sx == U32.v len /\ (
-    let b' = B.gsub b 0ul len in
-    B.modifies (B.loc_buffer b') h h' /\
+    B.modifies (B.loc_buffer_from_to b pos (pos `U32.add` len)) h h' /\
     B.live h b /\
-    B.as_seq h' b' `Seq.equal` sx
+    Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + U32.v len) `Seq.equal` sx
   )))
 = [@inline_let]
+  let gpos = Ghost.hide (U32.v pos) in
+  [@inline_let]
+  let gpos' = Ghost.hide (U32.v pos + Seq.length (serialize (serialize_bounded_der_length32 min max) y')) in
+  [@inline_let]
   let _ =
     serialize_bounded_der_length32_unfold (min) (max) y'
   in
   let x = tag_of_der_length32_impl y' in
   if x `U8.lt` 128uy
   then begin
-    let b' = B.sub b 0ul 1ul in
-    B.upd b' 0ul x;
+    mbuffer_upd b gpos gpos' pos x;
     1ul
   end else
   if x = 129uy
   then begin
-    let b' = B.sub b 0ul 2ul in
-    B.upd b' 0ul x;
-    B.upd b' 1ul (Cast.uint32_to_uint8 y');
+    mbuffer_upd b gpos gpos' pos x;
+    mbuffer_upd b gpos gpos' (pos `U32.add`  1ul) (Cast.uint32_to_uint8 y');
     2ul
   end else
   if x = 130uy
   then begin
-    let b0 = B.sub b 0ul 3ul in
-    let b05 = B.sub b0 0ul 1ul in
-    B.upd b05 0ul x;
-    let b1 = B.offset b0 1ul in
-    let z = serialize32_bounded_integer_2 () y' b1 in
+    mbuffer_upd b gpos gpos' pos x;
     let h = HST.get () in
-    assert (B.as_seq h b0 `Seq.equal` (B.as_seq h b05 `Seq.append` B.as_seq h b1));
+    writable_weaken  b (Ghost.reveal gpos) (Ghost.reveal gpos') h (U32.v pos + 1) (U32.v pos + 3);
+    let z = serialize32_bounded_integer_2 () y' b (pos `U32.add` 1ul) in
+    let h' = HST.get () in
+    Seq.lemma_split (Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + 3)) 1;
+    B.modifies_buffer_from_to_elim b pos (pos `U32.add` 1ul) (B.loc_buffer_from_to b (pos `U32.add` 1ul) (pos `U32.add` 3ul)) h h' ;
     3ul // 1ul `U32.add` z
   end else
   if x = 131uy
   then begin
-    let b0 = B.sub b 0ul 4ul in
-    let b05 = B.sub b0 0ul 1ul in
-    B.upd b05 0ul x;
-    let b1 = B.offset b0 1ul in
-    let z = serialize32_bounded_integer_3 () y' b1 in
+    mbuffer_upd b gpos gpos' pos x;
     let h = HST.get () in
-    assert (B.as_seq h b0 `Seq.equal` (B.as_seq h b05 `Seq.append` B.as_seq h b1));
+    writable_weaken b (Ghost.reveal gpos) (Ghost.reveal gpos') h (U32.v pos + 1) (U32.v pos + 4);
+    let z = serialize32_bounded_integer_3 () y' b (pos `U32.add` 1ul) in
+    let h' = HST.get () in
+    Seq.lemma_split (Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + 4)) 1;
+    B.modifies_buffer_from_to_elim b pos (pos `U32.add` 1ul) (B.loc_buffer_from_to b (pos `U32.add` 1ul) (pos `U32.add` 4ul)) h h' ;
     4ul // 1ul `U32.add` z
   end else begin
-    let b0 = B.sub b 0ul 5ul in
-    let b05 = B.sub b0 0ul 1ul in
-    B.upd b05 0ul x;
-    let b1 = B.offset b0 1ul in
-    let z = serialize32_bounded_integer_4 () y' b1 in
+    mbuffer_upd b gpos gpos' pos x;
     let h = HST.get () in
-    assert (B.as_seq h b0 `Seq.equal` (B.as_seq h b05 `Seq.append` B.as_seq h b1));
+    writable_weaken b (Ghost.reveal gpos) (Ghost.reveal gpos') h (U32.v pos + 1) (U32.v pos + 5);
+    let z = serialize32_bounded_integer_4 () y' b (pos `U32.add` 1ul) in
+    let h' = HST.get () in
+    Seq.lemma_split (Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + 5)) 1;
+    B.modifies_buffer_from_to_elim b pos (pos `U32.add` 1ul) (B.loc_buffer_from_to b (pos `U32.add` 1ul) (pos `U32.add` 5ul)) h h' ;
     5ul // 1ul `U32.add` z
   end
 
@@ -306,8 +314,8 @@ let serialize32_bounded_der_length32
   (vmin: der_length_t)
   (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
 : Tot (serializer32 (serialize_bounded_der_length32 (vmin) (vmax)))
-= fun (y' : bounded_int32 (vmin) (vmax)) b ->
-  serialize32_bounded_der_length32' vmin vmax y' b
+= fun (y' : bounded_int32 (vmin) (vmax)) #rrel #rel b pos ->
+  serialize32_bounded_der_length32' vmin vmax y' b pos
 
 let write_bounded_der_length32
   (vmin: der_length_t)

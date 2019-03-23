@@ -803,6 +803,23 @@ let serialize_not_fail
   [SMTPat (serialize s x)]
 = assert (Some? (parse p (serialize s x)))
 
+let serialize_strong_prefix
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (x1 x2: t)
+  (q1 q2: bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    serialize s x1 `Seq.append` q1 == serialize s x2 `Seq.append` q2
+  ))
+  (ensures (x1 == x2 /\ q1 == q2))
+= parse_strong_prefix p (serialize s x1) (serialize s x1 `Seq.append` q1);
+  parse_strong_prefix p (serialize s x2) (serialize s x2 `Seq.append` q2);
+  Seq.lemma_append_inj (serialize s x1) q1 (serialize s x2) q2
+
 let seq_upd_seq
   (#t: Type)
   (s: Seq.seq t)

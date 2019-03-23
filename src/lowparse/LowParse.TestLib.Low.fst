@@ -6,6 +6,7 @@ open FStar.Printf
 open LowParse.Low.Base
 
 module B = LowStar.Buffer
+module IB = LowStar.ImmutableBuffer
 module U32 = FStar.UInt32
 module M = LowStar.Modifies
 
@@ -15,7 +16,8 @@ module M = LowStar.Modifies
 (** The type of a unit test.  It takes an input buffer8, parses it,
     and returns a newly formatted buffer8.  Or it returns None if
     there is a fail to parse. *)
-type testbuffer_t = (input: slice) -> ST (option slice) 
+inline_for_extraction
+type testbuffer_t = (#rrel: _) -> (#rel: _) -> (input: slice rrel rel) -> ST (option (slice rrel rel))
   (requires(fun h -> live_slice h input))
   (ensures(fun h0 y h1 ->
     M.modifies M.loc_none h0 h1 /\ (
@@ -26,7 +28,7 @@ type testbuffer_t = (input: slice) -> ST (option slice)
       live_slice h1 out
   )))
 
-assume val load_file_buffer: (filename:string) -> ST slice
+assume val load_file_buffer: (filename:string) -> ST (slice (srel_of_buffer_srel (IB.immutable_preorder _)) (srel_of_buffer_srel (IB.immutable_preorder _)))
   (requires (fun h -> True))
   (ensures (fun h out h' ->
     M.modifies M.loc_none h h' /\ B.unused_in out.base h /\ live_slice h' out
@@ -38,7 +40,7 @@ module U32 = FStar.UInt32
 
 (** Corresponds to memcmp for `eqtype` *)
 assume
-val beqb: b1:buffer8 -> b2:buffer8
+val beqb: (#rrel1: _) -> (#rel1: _) -> (#rrel2: _) -> (#rel2: _) -> b1:B.mbuffer byte (buffer_srel_of_srel rrel1) (buffer_srel_of_srel rel1) -> b2:B.mbuffer byte (buffer_srel_of_srel rrel2) (buffer_srel_of_srel rel2)
   -> len:U32.t{U32.v len <= B.length b1 /\ U32.v len <= B.length b2}
   -> Stack bool
     (requires (fun h ->
@@ -46,10 +48,10 @@ val beqb: b1:buffer8 -> b2:buffer8
       B.live h b2
     ))
     (ensures  (fun h0 z h1 -> h1 == h0 /\
-      (z <==> Seq.equal (B.as_seq h0 (B.gsub b1 0ul len)) (B.as_seq h0 (B.gsub b2 0ul len)))))
+      (z <==> Seq.equal (Seq.slice (B.as_seq h0 b1) 0 (U32.v len)) (Seq.slice (B.as_seq h0 b2) 0 (U32.v len)))))
 
 (** Test one parser+formatter pair against an in-memory buffer of UInt8.t *)
-let test_buffer (t:testbuffer_t) (testname:string) (input:slice)
+let test_buffer (t:testbuffer_t) (testname:string) (#rrel #rel: _) (input:slice rrel rel)
 : ST unit 
 (requires (fun h -> live_slice h input))
 (ensures (fun _ _ _ -> true)) =

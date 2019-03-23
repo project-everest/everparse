@@ -1,4 +1,4 @@
-module LowParse.Low.Base
+module LowParse.MLow.Base
 include LowParse.Spec.Base
 
 module B = LowStar.Monotonic.Buffer
@@ -9,55 +9,36 @@ module Seq = FStar.Seq
 
 #reset-options "--z3cliopt smt.arith.nl=false"
 
-inline_for_extraction
-type srel (a: Type) = Ghost.erased (B.srel a)
-
-inline_for_extraction
-let buffer_srel_of_srel (#a: Type) (s: srel a) : Tot (B.srel a) =
-  fun x1 x2 -> Ghost.reveal s x1 x2
-
-inline_for_extraction
-let srel_of_buffer_srel (#a: Type) (s: B.srel a) : Tot (srel a) =
-  Ghost.hide s
-
-assume
-val buffer_srel_of_srel_of_buffer_srel (#a: Type) (s: B.srel a) : Lemma
-  (buffer_srel_of_srel (srel_of_buffer_srel s) == s)
-  [SMTPat (buffer_srel_of_srel (srel_of_buffer_srel s))]
-
 noeq
-type slice (rrel rel: srel byte) = {
-  base: B.mbuffer byte (buffer_srel_of_srel rrel) (buffer_srel_of_srel rel);
-  len: (len: U32.t { U32.v len <= B.length base } );
+type slice (rrel rel: B.srel byte) = {
+  base: B.mbuffer byte rrel rel;
+  len: (len: U32.t { len == B.len base } );
 }
 
-inline_for_extraction
-let make_slice
-  (#rrel #rel: _)
-  (b: B.mbuffer byte rrel rel)
-  (len: U32.t { U32.v len <= B.length b } )
-: Tot (slice (srel_of_buffer_srel rrel) (srel_of_buffer_srel rel))
-= {
-  base = b;
-  len = len;
-}
+let live_slice  (#rrel #rel: B.srel byte) (h: HS.mem) (s: slice rrel rel) : GTot Type0 = B.live h s.base
 
-let live_slice  (#rrel #rel: _) (h: HS.mem) (s: slice rrel rel) : GTot Type0 = B.live h s.base
+(*
+let buffer_of_slice_from (s: slice) (pos: U32.t) : Ghost buffer8 (requires (U32.v pos <= U32.v s.len)) (ensures (fun _ -> True)) =
+  B.gsub s.base pos (s.len `U32.sub` pos)
 
-let bytes_of_slice_from   (#rrel #rel: _)
+let bytes_of_slice_from (h: HS.mem) (s: slice) (pos: U32.t) : Ghost bytes (requires  (U32.v pos <= U32.v s.len)) (ensures (fun _ -> True)) =
+  B.as_seq h (buffer_of_slice_from s pos)
+*)
+
+let bytes_of_slice_from   (#rrel #rel: B.srel byte)
   (h: HS.mem) (s: slice rrel rel) (pos: U32.t) : GTot bytes =
   if (U32.v pos <= U32.v s.len)
   then Seq.slice (B.as_seq h s.base) (U32.v pos) (U32.v s.len)  
   else Seq.empty
 
-let loc_slice_from_to (#rrel #rel: _) (s: slice rrel rel) (pos pos' : U32.t) : GTot B.loc =
+let loc_slice_from_to (#rrel #rel: B.srel byte) (s: slice rrel rel) (pos pos' : U32.t) : GTot B.loc =
   B.loc_buffer_from_to s.base pos pos'
 
-let loc_slice_from (#rrel #rel: _) (s: slice rrel rel) (pos: U32.t) : GTot B.loc =
+let loc_slice_from (#rrel #rel: B.srel byte) (s: slice rrel rel) (pos: U32.t) : GTot B.loc =
   loc_slice_from_to s pos s.len
 
 let valid'
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -72,7 +53,7 @@ let valid'
 [@"opaque_to_smt"]
 abstract
 let valid
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -84,7 +65,7 @@ let valid
 
 abstract
 let valid_equiv
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -97,7 +78,7 @@ let valid_equiv
 
 abstract
 let valid_dec
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -114,7 +95,7 @@ let valid_dec
 
 abstract
 let valid_elim
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -129,7 +110,7 @@ let valid_elim
 
 abstract
 let valid_elim'
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -145,7 +126,7 @@ let valid_elim'
   valid_equiv p h s pos
 
 let contents'
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -161,7 +142,7 @@ let contents'
 [@"opaque_to_smt"]
 abstract
 let contents
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -176,7 +157,7 @@ let contents
 
 abstract
 let contents_eq
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -190,7 +171,7 @@ let contents_eq
   assert_norm (contents p h s pos == contents' p h s pos)
 
 let content_length'
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -213,7 +194,7 @@ let content_length'
 [@"opaque_to_smt"]
 abstract
 let content_length
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -262,7 +243,7 @@ let serialized_length_eq
 
 abstract
 let content_length_eq_gen
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -277,7 +258,7 @@ let content_length_eq_gen
 
 abstract
 let valid_facts
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -296,7 +277,7 @@ let valid_facts
 
 abstract
 let content_length_eq
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -320,7 +301,7 @@ let content_length_eq
   assert (injective_precond p b (serialize s x))
 
 let valid_pos
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -333,7 +314,7 @@ let valid_pos
 
 abstract
 let get_valid_pos
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -347,7 +328,7 @@ let get_valid_pos
 
 abstract
 let valid_pos_get_valid_pos
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -362,7 +343,7 @@ let valid_pos_get_valid_pos
 = ()
 
 let valid_content
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -374,7 +355,7 @@ let valid_content
   contents p h sl pos == x
 
 let valid_content_pos
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -388,7 +369,7 @@ let valid_content_pos
 
 abstract
 let valid_frame
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -427,12 +408,12 @@ let valid_frame
 
 (* Case where we do not have the strong prefix property (e.g. lists): we need an extra length *)
 
-let bytes_of_slice_from_to  (#rrel #rel: _)
+let bytes_of_slice_from_to  (#rrel #rel: B.srel byte)
   (h: HS.mem) (s: slice rrel rel) (pos pos': U32.t) : Ghost bytes (requires  (U32.v pos <= U32.v pos' /\ U32.v pos' <= U32.v s.len)) (ensures (fun _ -> True)) =
   Seq.slice (B.as_seq h s.base) (U32.v pos) (U32.v pos')
 
 let valid_exact'
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -453,7 +434,7 @@ let valid_exact'
 [@"opaque_to_smt"]
 abstract
 let valid_exact
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -466,7 +447,7 @@ let valid_exact
 
 abstract
 let valid_exact_equiv
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -480,7 +461,7 @@ let valid_exact_equiv
 
 abstract
 let valid_exact_elim
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -496,7 +477,7 @@ let valid_exact_elim
 
 abstract
 let valid_exact_elim'
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -521,7 +502,7 @@ let valid_exact_elim'
   valid_exact_equiv p h s pos pos'
 
 let contents_exact'
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -538,7 +519,7 @@ let contents_exact'
 [@"opaque_to_smt"]
 abstract
 let contents_exact
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -554,7 +535,7 @@ let contents_exact
 
 abstract
 let contents_exact_eq
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -570,7 +551,7 @@ let contents_exact_eq
 
 abstract
 let valid_exact_serialize
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -591,7 +572,7 @@ let valid_exact_serialize
 
 abstract
 let valid_exact_frame
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -633,7 +614,7 @@ let valid_exact_frame
 
 abstract
 let valid_valid_exact_consumes_all
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -654,7 +635,7 @@ let valid_valid_exact_consumes_all
 
 abstract
 let valid_valid_exact
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -679,7 +660,7 @@ let valid_valid_exact
 
 abstract
 let valid_pos_valid_exact
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -696,7 +677,7 @@ let valid_pos_valid_exact
 = valid_valid_exact p h s pos
 
 let valid_pos_valid_exact_pat
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -715,7 +696,7 @@ let valid_pos_valid_exact_pat
 
 abstract
 let valid_exact_valid
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -734,7 +715,7 @@ let valid_exact_valid
   parse_strong_prefix p (bytes_of_slice_from_to h s pos pos') (bytes_of_slice_from h s pos)
 
 let valid_exact_valid_pat
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -751,7 +732,7 @@ let valid_exact_valid_pat
 = valid_exact_valid p h s pos pos'
 
 let valid_pos_frame_strong_1
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -773,7 +754,7 @@ let valid_pos_frame_strong_1
   valid_exact_valid p h' sl pos pos'
 
 let valid_pos_frame_strong_2
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -797,7 +778,7 @@ let valid_pos_frame_strong_2
   valid_exact_valid p h sl pos pos'
 
 let valid_pos_frame_strong
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -820,7 +801,7 @@ let valid_pos_frame_strong
   Classical.move_requires (valid_pos_frame_strong_2 p h sl pos pos' l) h'
 
 let valid_frame_strong
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -847,7 +828,7 @@ let valid_frame_strong
 
 abstract
 let valid_exact_ext_intro
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -878,7 +859,7 @@ let valid_exact_ext_intro
 
 abstract
 let valid_exact_ext_elim
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -1530,7 +1511,7 @@ let gaccessor_compose_strong_eq
 = ()
 
 let slice_access'
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k1: parser_kind)
   (#t1: Type)
@@ -1558,7 +1539,7 @@ let slice_access'
 [@"opaque_to_smt"]
 abstract
 let slice_access
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k1: parser_kind)
   (#t1: Type)
@@ -1602,7 +1583,7 @@ let slice_access
 
 abstract
 let slice_access_eq
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k1: parser_kind)
   (#t1: Type)
@@ -1633,7 +1614,7 @@ let slice_access_eq
 
 abstract
 let slice_access_eq_inv
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k1: parser_kind)
   (#t1: Type)
@@ -1672,7 +1653,7 @@ let slice_access_eq_inv
 
 abstract
 let slice_access_frame
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (h: HS.mem)
   (#k1: parser_kind)
   (#t1: Type)
@@ -1722,8 +1703,8 @@ let accessor
   (#cl: clens t1 t2)
   ($g: gaccessor p1 p2 cl)
 : Tot Type
-= (#rrel: _) ->
-  (#rel: _) ->
+= (#rrel: B.srel byte) ->
+  (#rel: B.srel byte) ->
   (sl: slice rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
@@ -1732,32 +1713,6 @@ let accessor
     B.modifies B.loc_none h h' /\
     pos' == slice_access h g sl pos
   ))
-
-inline_for_extraction
-let make_accessor_from_pure
-  (#k1: parser_kind)
-  (#t1: Type)
-  (#p1: parser k1 t1)
-  (#k2: parser_kind)
-  (#t2: Type)
-  (#p2: parser k2 t2)
-  (#cl: clens t1 t2)
-  ($g: gaccessor p1 p2 cl)
-  (f: (
-    (input: Ghost.erased bytes) ->
-    Pure U32.t
-    (requires (Seq.length (Ghost.reveal input) < 4294967296 /\ gaccessor_pre p1 p2 cl (Ghost.reveal input)))
-    (ensures (fun y -> U32.v y == fst (g (Ghost.reveal input))))
-  ))
-: Tot (accessor g)
-= fun #rrel #rel sl (pos: U32.t) ->
-  let h = HST.get () in
-  [@inline_let] let _ =
-    slice_access_eq_inv h g sl pos;
-    valid_facts p1 h sl pos;
-    parse_strong_prefix p1 (bytes_of_slice_from h sl pos) (bytes_of_slice_from_to h sl pos (get_valid_pos p1 h sl pos))
-  in
-  pos `U32.add` f (Ghost.hide (bytes_of_slice_from_to h sl pos (get_valid_pos p1 h sl pos)))
 
 inline_for_extraction
 let accessor_id
@@ -1890,7 +1845,7 @@ let validator_error_not_enough_data : validator_error = validator_max_length `U3
 [@unifier_hint_injective]
 inline_for_extraction
 let validator (#k: parser_kind) (#t: Type) (p: parser k t) : Tot Type =
-  (#rrel: _) -> (#rel: _) ->
+  (#rrel: B.srel byte) -> (#rel: B.srel byte) ->
   (sl: slice rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
@@ -1910,7 +1865,7 @@ let valid_total_constant_size
   (#t: Type0)
   (p: parser k t)
   (sz: U32.t)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
@@ -1954,7 +1909,7 @@ let jumper
   (#t: Type)
   (p: parser k t)
 : Tot Type
-= (#rrel: _) -> (#rel: _) ->
+= (#rrel: B.srel byte) -> (#rel: B.srel byte) ->
   (sl: slice rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
@@ -1987,7 +1942,7 @@ let leaf_reader
   (#t: Type)
   (p: parser k t)
 : Tot Type
-= (#rrel: _) -> (#rel: _) ->
+= (#rrel: B.srel byte) -> (#rel: B.srel byte) ->
   (sl: slice rrel rel) ->
   (pos: U32.t) ->
   HST.Stack t
@@ -2021,9 +1976,33 @@ let leaf_reader_ext
   in
   p32 sl pos
 
+(*
+[@unifier_hint_injective]
+inline_for_extraction
+let leaf_writer_weak
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+: Tot Type
+= (x: t) ->
+  (#rrel: B.srel byte) -> (#rel: B.srel byte) ->
+  (sl: slice rrel rel) ->
+  (pos: U32.t) ->
+  HST.Stack U32.t
+  (requires (fun h -> live_slice h sl /\ U32.v pos <= U32.v sl.len /\ U32.v sl.len < U32.v max_uint32))
+  (ensures (fun h pos' h' ->
+    B.modifies (loc_slice_from sl pos) h h' /\
+    (
+    if pos' = max_uint32
+    then U32.v pos + serialized_length s x > U32.v sl.len
+    else valid_content_pos p h' sl pos x pos'
+  )))
+*)
+
 let writable
   (#t: Type)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel t)
   (b: B.mbuffer t rrel rel)
   (pos pos' : nat)
   (h: HS.mem)
@@ -2038,7 +2017,7 @@ let writable
 
 let writable_intro
   (#t: Type)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel t)
   (b: B.mbuffer t rrel rel)
   (pos pos' : nat)
   (h: HS.mem)
@@ -2058,7 +2037,7 @@ let writable_intro
 
 let writable_weaken
   (#t: Type)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel t)
   (b: B.mbuffer t rrel rel)
   (pos pos' : nat)
   (h: HS.mem)
@@ -2080,7 +2059,7 @@ let writable_weaken
 
 let writable_replace_subseq_elim
   (#t: Type)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel t)
   (b: B.mbuffer t rrel rel)
   (pos pos' : nat)
   (h: HS.mem)
@@ -2103,7 +2082,7 @@ let writable_replace_subseq_elim
 
 let writable_replace_subseq
   (#t: Type)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel t)
   (b: B.mbuffer t rrel rel)
   (pos pos' : nat)
   (h: HS.mem)
@@ -2136,7 +2115,7 @@ let writable_replace_subseq
 
 let writable_ext
   (#t: Type)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel t)
   (b: B.mbuffer t rrel rel)
   (pos pos' : nat)
   (h: HS.mem)
@@ -2156,7 +2135,7 @@ let writable_ext
 
 let writable_upd_seq
   (#t: Type)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel t)
   (b: B.mbuffer t rrel rel)
   (pos pos' : nat)
   (sl' : Seq.seq t)
@@ -2177,7 +2156,7 @@ let writable_upd_seq
 
 let writable_upd
   (#t: Type)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel t)
   (b: B.mbuffer t rrel rel)
   (pos pos' : nat)
   (h: HS.mem)
@@ -2195,81 +2174,6 @@ let writable_upd
   writable_upd_seq b pos pos' sl' h;
   assert (Seq.upd s i v `Seq.equal` Seq.replace_subseq s pos pos' sl')
 
-let writable_modifies
-  (#t: Type)
-  (#rrel #rel: _)
-  (b: B.mbuffer t rrel rel)
-  (pos pos' : nat)
-  (h: HS.mem)
-  (l: B.loc)
-  (h' : HS.mem)
-: Lemma
-  (requires (
-    writable b pos pos' h /\
-    pos <= pos' /\ pos' <= B.length b /\
-    B.modifies (l `B.loc_union` B.loc_buffer_from_to b (U32.uint_to_t pos) (U32.uint_to_t pos')) h h' /\
-    B.loc_disjoint l (B.loc_buffer b)
-  ))
-  (ensures (
-    writable b pos pos' h'
-  ))
-= B.modifies_buffer_from_to_elim b 0ul (U32.uint_to_t pos) (l `B.loc_union` B.loc_buffer_from_to b (U32.uint_to_t pos) (U32.uint_to_t pos')) h h';
-  B.modifies_buffer_from_to_elim b (U32.uint_to_t pos') (B.len b) (l `B.loc_union` B.loc_buffer_from_to b (U32.uint_to_t pos) (U32.uint_to_t pos')) h h';
-  writable_replace_subseq b pos pos' h (Seq.slice (B.as_seq h' b) pos pos') h'
-
-inline_for_extraction
-noextract
-let mbuffer_upd
-  (#t: Type)
-  (#rrel #rel: _)
-  (b: B.mbuffer t rrel rel)
-  (pos pos' : Ghost.erased nat)
-  (i: U32.t)
-  (v: t)
-: HST.Stack unit
-  (requires (fun h ->
-    writable b (Ghost.reveal pos) (Ghost.reveal pos') h /\
-    Ghost.reveal pos <= U32.v i /\
-    U32.v i + 1 <= Ghost.reveal pos' /\
-    Ghost.reveal pos' <= B.length b
-  ))
-  (ensures (fun h _ h' ->
-    B.modifies (B.loc_buffer_from_to b i (i `U32.add` 1ul)) h h' /\
-    writable b (Ghost.reveal pos) (Ghost.reveal pos') h' /\
-    B.as_seq h' b == Seq.upd (B.as_seq h b) (U32.v i) v
-  ))
-= let h = HST.get () in
-  writable_upd b (Ghost.reveal pos) (Ghost.reveal pos') h (U32.v i) v;
-  B.g_upd_modifies_strong b (U32.v i) v h;
-  B.g_upd_seq_as_seq b (Seq.upd (B.as_seq h b) (U32.v i) v) h;
-  B.upd' b i v
-
-[@unifier_hint_injective]
-inline_for_extraction
-let leaf_writer_weak
-  (#k: parser_kind)
-  (#t: Type)
-  (#p: parser k t)
-  (s: serializer p)
-: Tot Type
-= (x: t) ->
-  (#rrel: _) -> (#rel: _) ->
-  (sl: slice rrel rel) ->
-  (pos: U32.t) ->
-  HST.Stack U32.t
-  (requires (fun h ->
-    live_slice h sl /\
-    U32.v pos <= U32.v sl.len /\
-    U32.v sl.len < U32.v max_uint32 /\
-    writable sl.base (U32.v pos) (U32.v sl.len) h
-  ))
-  (ensures (fun h pos' h' ->
-    B.modifies (loc_slice_from sl pos) h h' /\ (
-    if pos' = max_uint32
-    then U32.v pos + serialized_length s x > U32.v sl.len
-    else valid_content_pos p h' sl pos x pos'
-  )))
-
 [@unifier_hint_injective]
 inline_for_extraction
 let leaf_writer_strong
@@ -2279,7 +2183,7 @@ let leaf_writer_strong
   (s: serializer p)
 : Tot Type
 = (x: t) ->
-  (#rrel: _) -> (#rel: _) ->
+  (#rrel: B.srel byte) -> (#rel: B.srel byte) ->
   (sl: slice rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
@@ -2304,7 +2208,7 @@ let serializer32
   (s: serializer p)
 : Tot Type
 = (x: t) ->
-  (#rrel: _) -> (#rel: _) ->
+  (#rrel: B.srel byte) -> (#rel: B.srel byte) ->
   (b: B.mbuffer byte rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
@@ -2315,11 +2219,11 @@ let serializer32
     U32.v pos + len <= B.length b /\
     writable b (U32.v pos) (U32.v pos + len) h
   ))
-  (ensures (fun h len h' ->
-    Seq.length (serialize s x) == U32.v len /\ (
-    B.modifies (B.loc_buffer_from_to b pos (pos `U32.add` len)) h h' /\
+  (ensures (fun h pos' h' ->
+    U32.v pos + Seq.length (serialize s x) == U32.v pos' /\ (
+    B.modifies (B.loc_buffer_from_to b pos pos') h h' /\
     B.live h b /\
-    Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + U32.v len) `Seq.equal` serialize s x
+    Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos') `Seq.equal` serialize s x
   )))
 
 inline_for_extraction
@@ -2333,9 +2237,7 @@ let leaf_writer_strong_of_serializer32
 : Tot (leaf_writer_strong s)
 = fun x #rrel #rel input pos ->
   let h0 = HST.get () in
-  let len = s32 x input.base pos in
-  [@inline_let]
-  let pos' = pos `U32.add` len in
+  let pos' = s32 x input.base pos in
   let h = HST.get () in
   [@inline_let] let _ =
     let large = bytes_of_slice_from h input pos in
@@ -2345,6 +2247,7 @@ let leaf_writer_strong_of_serializer32
   in
   pos'
 
+(*
 inline_for_extraction
 let leaf_writer_weak_of_strong_constant_size
   (#k: parser_kind)
@@ -2362,15 +2265,12 @@ let leaf_writer_weak_of_strong_constant_size
 = fun x #rrel #rel input pos ->
   if (input.len `U32.sub` pos) `U32.lt` sz
   then max_uint32
-  else begin
-    let h = HST.get () in
-    writable_weaken input.base (U32.v pos) (U32.v input.len) h (U32.v pos) (U32.v pos + U32.v sz);
-    s32 x input pos
-  end
+  else s32 x input pos
+*)
 
 inline_for_extraction
 let blit_strong
-  (#a:Type0) (#rrel1 #rrel2 #rel1 #rel2: _)
+  (#a:Type0) (#rrel1 #rrel2 #rel1 #rel2: B.srel a)
   (src: B.mbuffer a rrel1 rel1)
   (idx_src:U32.t)
   (dst: B.mbuffer a rrel2 rel2)
@@ -2400,7 +2300,7 @@ let blit_strong
 
 inline_for_extraction
 let copy_strong
-  (#rrel1 #rrel2 #rel1 #rel2: _)
+  (#rrel1 #rrel2 #rel1 #rel2: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2437,7 +2337,7 @@ let copy_strong
 
 inline_for_extraction
 let copy_strong'
-  (#rrel1 #rrel2 #rel1 #rel2: _)
+  (#rrel1 #rrel2 #rel1 #rel2: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -2465,7 +2365,7 @@ let copy_strong'
 
 inline_for_extraction
 let copy_weak_with_length
-  (#rrel1 #rrel2 #rel1 #rel2: _)
+  (#rrel1 #rrel2 #rel1 #rel2: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2497,7 +2397,7 @@ let copy_weak_with_length
 
 inline_for_extraction
 let copy_weak
-  (#rrel1 #rrel2 #rel1 #rel2: _)
+  (#rrel1 #rrel2 #rel1 #rel2: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2527,13 +2427,12 @@ let copy_weak
 = let spos' = jmp src spos in
   copy_weak_with_length p src spos spos' dst dpos
 
-
 (* lists, to avoid putting LowParse.*.List into the user context *)
 
 [@"opaque_to_smt"]
 abstract
 let rec valid_list
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2558,7 +2457,7 @@ let rec valid_list
 
 abstract
 let rec valid_list_equiv
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2596,7 +2495,7 @@ let rec valid_list_equiv
 
 abstract
 let valid_list_elim
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2619,7 +2518,7 @@ let valid_list_elim
 [@"opaque_to_smt"]
 abstract
 let rec contents_list
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2639,7 +2538,7 @@ let rec contents_list
 
 abstract
 let contents_list_eq
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2666,7 +2565,7 @@ let contents_list_eq
 
 abstract
 let valid_list_nil
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -2684,7 +2583,7 @@ let valid_list_nil
 
 abstract
 let valid_list_cons
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -2710,7 +2609,7 @@ module L = FStar.List.Tot
 
 abstract
 let valid_list_cons_recip
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -2737,7 +2636,7 @@ let valid_list_cons_recip
 [@"opaque_to_smt"]
 abstract
 let rec valid_list_frame_1
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2768,7 +2667,7 @@ let rec valid_list_frame_1
 [@"opaque_to_smt"]
 abstract
 let rec valid_list_frame_2
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2800,7 +2699,7 @@ let rec valid_list_frame_2
 
 abstract
 let valid_list_frame
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2828,7 +2727,7 @@ let valid_list_frame
 
 abstract
 let rec valid_list_append
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -2857,7 +2756,7 @@ let rec valid_list_append
 
 abstract
 let valid_list_snoc
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -2883,10 +2782,11 @@ let valid_list_snoc
 
 module BF = LowStar.Buffer
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 20"
 inline_for_extraction
+private
 let list_fold_left_gen
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -2900,57 +2800,48 @@ let list_fold_left_gen
     B.modifies (B.loc_unused_in h0) h h' /\
     inv h l1 l2 pos1
   )) (ensures (inv h' l1 l2 pos1)))
-  (post_interrupt: ((h: HS.mem) -> GTot Type0))
-  (post_interrupt_frame: (h: HS.mem) -> (h' : HS.mem) -> Lemma (requires (
-    B.modifies (B.loc_unused_in h0) h h' /\
-    post_interrupt h
-  )) (ensures (post_interrupt h')))
   (body: (
     (pos1: U32.t) ->
     (pos2: U32.t) ->
-    HST.Stack bool
+    HST.Stack unit
     (requires (fun h ->
       valid_list p h sl pos pos1 /\
       valid_pos p h sl pos1 pos2 /\
       valid_list p h sl pos2 pos' /\
       inv h (contents_list p h sl pos pos1) (contents p h sl pos1 :: contents_list p h sl pos2 pos') pos1
     ))
-    (ensures (fun h ctinue h' ->
+    (ensures (fun h _ h' ->
       B.modifies (Ghost.reveal l) h h' /\
-      (if ctinue then inv h' (contents_list p h sl pos pos1 `L.append` [contents p h sl pos1]) (contents_list p h sl pos2 pos') pos2 else post_interrupt h')
+      inv h' (contents_list p h sl pos pos1 `L.append` [contents p h sl pos1]) (contents_list p h sl pos2 pos') pos2
     ))
   ))
-: HST.Stack bool
+: HST.Stack unit
   (requires (fun h ->
     h == h0 /\
     valid_list p h sl pos pos' /\
     inv h [] (contents_list p h sl pos pos') pos
   ))
-  (ensures (fun h res h' ->
+  (ensures (fun h _ h' ->
     B.modifies (Ghost.reveal l) h h' /\
-    (if res then inv h' (contents_list p h sl pos pos') [] pos' else post_interrupt h')
+    inv h' (contents_list p h sl pos pos') [] pos'
   ))
 = HST.push_frame ();
   let h1 = HST.get () in
   //B.fresh_frame_modifies h0 h1;
   let bpos : BF.pointer U32.t = BF.alloca pos 1ul in
-  let bctinue : BF.pointer bool = BF.alloca true 1ul in
-  let btest: BF.pointer bool = BF.alloca (pos `U32.lt` pos') 1ul in
   let h2 = HST.get () in
   let test_pre (h: HS.mem) : GTot Type0 =
-    B.live h bpos /\ B.live h bctinue /\ B.live h btest /\ (
+    B.live h bpos /\ (
     let pos1 = Seq.index (B.as_seq h bpos) 0 in
-    let ctinue = Seq.index (B.as_seq h bctinue) 0 in
     valid_list p h0 sl pos pos1 /\
     valid_list p h0 sl pos1 pos' /\
-    B.modifies (Ghost.reveal l `B.loc_union` B.loc_region_only true (HS.get_tip h1)) h2 h /\
-    Seq.index (B.as_seq h btest) 0 == ((U32.v (Seq.index (B.as_seq h bpos) 0) < U32.v pos') && Seq.index (B.as_seq h bctinue) 0) /\
-    (if ctinue then inv h (contents_list p h0 sl pos pos1) (contents_list p h0 sl pos1 pos') pos1 else post_interrupt h)
+    B.modifies (Ghost.reveal l `B.loc_union` B.loc_buffer bpos) h2 h /\
+    inv h (contents_list p h0 sl pos pos1) (contents_list p h0 sl pos1 pos') pos1
   )
   in
   let test_post (cond: bool) (h: HS.mem) : GTot Type0 =
     test_pre h /\
-    cond == Seq.index (B.as_seq h btest) 0
+    cond == (U32.v (Seq.index (B.as_seq h bpos) 0) < U32.v pos')
   in
   valid_list_nil p h0 sl pos;
   inv_frame h0 [] (contents_list p h0 sl pos pos') pos h1;
@@ -2970,48 +2861,29 @@ let list_fold_left_gen
       let pos2 = j sl pos1 in
       let h52 = HST.get () in
       inv_frame h51 (contents_list p h0 sl pos pos1) (contents_list p h1 sl pos1 pos') pos1 h52;
-      let ctinue = body pos1 pos2 in
+      body pos1 pos2;
       let h53 = HST.get () in
       //assert (B.loc_includes (loc_slice_from_to sl pos pos') (loc_slice_from_to sl pos1 pos2));
       //assert (B.loc_includes (loc_slice_from_to sl pos pos') (loc_slice_from_to sl pos2 pos'));
-      B.loc_regions_unused_in h0 (Set.singleton (HS.get_tip h1));
-      B.modifies_only_not_unused_in (Ghost.reveal l) h0 h53;
-      valid_pos_frame_strong p h0 sl pos1 pos2 (Ghost.reveal l) h53;
+      valid_pos_frame_strong p h0 sl pos1 pos2 (Ghost.reveal l `B.loc_union` B.loc_buffer bpos) h53;
       valid_list_snoc p h0 sl pos pos1;
       B.upd bpos 0ul pos2;
-      B.upd bctinue 0ul ctinue;
-      B.upd btest 0ul ((pos2 `U32.lt` pos') && ctinue);
       let h54 = HST.get () in
-      [@inline_let]
-      let _ =
-        if ctinue
-        then inv_frame h53 (contents_list p h0 sl pos pos2) (contents_list p h0 sl pos2 pos') pos2 h54
-        else post_interrupt_frame h53 h54
-      in
-      ()
+      inv_frame h53 (contents_list p h0 sl pos pos2) (contents_list p h0 sl pos2 pos') pos2 h54
   in
   C.Loops.while
     #test_pre
     #test_post
-    (fun (_: unit) -> (
-      B.index btest 0ul) <: HST.Stack bool (requires (fun h -> test_pre h)) (ensures (fun h x h1 -> test_post x h1)))
+    (fun (_: unit) -> B.index bpos 0ul `U32.lt` pos' <: HST.Stack bool (requires (fun h -> test_pre h)) (ensures (fun h x h1 -> test_post x h1)))
     while_body
     ;
   valid_list_nil p h0 sl pos';
-  let res = B.index bctinue 0ul in
   let h3 = HST.get () in
   HST.pop_frame ();
   let h4 = HST.get () in
   //B.popped_modifies h3 h4;
-  B.loc_regions_unused_in h0 (Set.singleton (HS.get_tip h3));
-  [@inline_let]
-  let _ =
-    if res
-    then inv_frame h3 (contents_list p h0 sl pos pos') [] pos' h4
-    else post_interrupt_frame h3 h4
-  in
-  res
-  
+  B.loc_regions_unused_in h0 (Set.singleton (HS.get_tip h3));  
+  inv_frame h3 (contents_list p h0 sl pos pos') [] pos' h4
   //B.loc_includes_union_l (B.loc_all_regions_from false (HS.get_tip h1)) (Ghost.reveal l) (Ghost.reveal l)
   //B.modifies_fresh_frame_popped h0 h1 (Ghost.reveal l) h3 h4
 #pop-options
@@ -3020,7 +2892,7 @@ module G = FStar.Ghost
 
 inline_for_extraction
 let list_fold_left
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -3064,7 +2936,7 @@ let list_fold_left
     B.modifies (Ghost.reveal l) h h' /\
     inv h' (contents_list p h sl pos pos') [] pos'
   ))
-= let _ = list_fold_left_gen
+= list_fold_left_gen
     p
     j
     sl
@@ -3073,8 +2945,6 @@ let list_fold_left
     l
     inv
     inv_frame
-    (fun _ -> False)
-    (fun _ _ -> ())
     (fun pos1 pos2 ->
       let h = HST.get () in
       valid_list_cons p h sl pos1 pos';
@@ -3085,17 +2955,13 @@ let list_fold_left
         (Ghost.hide (contents_list p h sl pos pos1))
         (Ghost.hide (contents p h sl pos1))
         (Ghost.hide (contents_list p h sl pos2 pos'))
-        ;
-      true
     )
-  in
-  ()
 
 let list_length_append (#t: Type) (l1 l2: list t) : Lemma (L.length (l1 `L.append` l2) == L.length l1 + L.length l2) = L.append_length l1 l2
 
 inline_for_extraction
 let list_length
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -3156,18 +3022,18 @@ let rec list_filter_append
   | a :: q ->
     list_filter_append f q l2
 
-#push-options "--z3rlimit 32"
+(*
+#push-options "--z3rlimit 16"
 
 inline_for_extraction
 let list_filter
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
   (j: jumper p)
   (f: (t -> Tot bool))
   (f' : (
-    (#rrel: _) ->
-    (#rel: _) ->
     (sl: slice rrel rel) ->
     (pos: U32.t) ->
     (x: Ghost.erased t) ->
@@ -3175,18 +3041,15 @@ let list_filter
     (requires (fun h -> valid_content p h sl pos (G.reveal x)))
     (ensures (fun h res h' -> B.modifies B.loc_none h h' /\ res == f (G.reveal x)))
   ))
-  (#rrel #rel: _)
   (sl: slice rrel rel)
   (pos pos' : U32.t)
-  (#rrel_out #rel_out: _)
-  (sl_out : slice rrel_out rel_out)
+  (sl_out : slice)
   (pos_out : U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
     U32.v pos_out + U32.v pos' - U32.v pos <= U32.v sl_out.len /\
     valid_list p h sl pos pos' /\
     B.loc_disjoint (loc_slice_from_to sl pos pos') (loc_slice_from_to sl_out pos_out (pos_out `U32.add` (pos' `U32.sub` pos))) /\
-    writable sl_out.base (U32.v pos_out) (U32.v pos_out + (U32.v pos' - U32.v pos)) h /\
     live_slice h sl_out
   ))
   (ensures (fun h pos_out' h' ->
@@ -3205,7 +3068,6 @@ let list_filter
     B.live h bpos_out' /\ (
       let pos_out' = Seq.index (B.as_seq h bpos_out') 0 in
       B.modifies (B.loc_buffer bpos_out' `B.loc_union` loc_slice_from_to sl_out pos_out pos_out') h2 h /\
-      writable sl_out.base (U32.v pos_out) (U32.v pos_out + (U32.v pos' - U32.v pos)) h /\
       valid_list p h sl_out pos_out pos_out' /\
       contents_list p h sl_out pos_out pos_out' == L.filter f l1 /\
       U32.v pos_out' - U32.v pos1 <= U32.v pos_out - U32.v pos // necessary to prove that length computations do not overflow
@@ -3232,12 +3094,9 @@ let list_filter
       if f' sl pos1 x
       then begin
         assert (B.loc_includes (loc_slice_from_to sl_out pos_out (pos_out `U32.add` (pos' `U32.sub` pos))) (loc_slice_from_to sl_out pos_out1 (pos_out1 `U32.add` (pos2 `U32.sub` pos1))));
-        let h = HST.get () in
-        writable_weaken sl_out.base (U32.v pos_out) (U32.v pos_out + (U32.v pos' - U32.v pos)) h (U32.v pos_out1) (U32.v pos_out1 + (U32.v pos2 - U32.v pos1));
         let pos_out2 = copy_strong p sl pos1 pos2 sl_out pos_out1 in
         B.upd bpos_out' 0ul pos_out2;
         let h' = HST.get () in
-        writable_modifies sl_out.base (U32.v pos_out) (U32.v pos_out + (U32.v pos' - U32.v pos)) h (B.loc_region_only true (HS.get_tip h1)) h';
         valid_list_nil p h' sl_out pos_out2;
         valid_list_cons p h' sl_out pos_out1 pos_out2;
         valid_list_append p h' sl_out pos_out pos_out1 pos_out2
@@ -3250,23 +3109,13 @@ let list_filter
   pos_out'
 
 #pop-options
-
-let rec list_index_append (#t: Type) (l1 l2: list t) (i: int) : Lemma
-  (requires (L.length l1 <= i /\ i < L.length l1 + L.length l2))
-  (ensures (
-    L.length (L.append l1 l2) == L.length l1 + L.length l2 /\
-    L.index (L.append l1 l2) i == L.index l2 (i - L.length l1)
-  ))
-= list_length_append l1 l2;
-  match l1 with
-  | [] -> ()
-  | a :: q -> list_index_append q l2 (i - 1)
+*)
 
 #push-options "--z3rlimit 32"
 
 inline_for_extraction
 let list_nth
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -3289,108 +3138,46 @@ let list_nth
   ))
 = let h0 = HST.get () in
   HST.push_frame ();
-  let h1 = HST.get () in
   let bpos1 = BF.alloca pos 1ul in
-  let bk = BF.alloca 0ul 1ul in
-  let h2 = HST.get () in
+  let bi1 = BF.alloca 0ul 1ul in
+  let h1 = HST.get () in
   valid_list_nil p h0 sl pos;
-  let _ : bool = list_fold_left_gen
-    p
-    j
-    sl
-    pos pos'
-    h2
-    (Ghost.hide (B.loc_region_only true (HS.get_tip h1)))
-    (fun h l1 l2 pos1 ->
-      let k = Seq.index (B.as_seq h bk) 0 in
-      B.modifies (B.loc_region_only true (HS.get_tip h1)) h2 h /\
-      B.live h bpos1 /\
-      B.live h bk /\
+  C.Loops.do_while
+    (fun h b ->
+      B.modifies (B.loc_union (B.loc_buffer bpos1) (B.loc_buffer bi1)) h1 h /\ (
+      let pos1 = B.get h bpos1 0 in
+      let i1 = B.get h bi1 0 in
+      U32.v i1 <= U32.v i /\
       valid_list p h0 sl pos pos1 /\
       valid_list p h0 sl pos1 pos' /\
-      L.length (contents_list p h0 sl pos pos1) == U32.v k /\
-      U32.v k <= U32.v i
-    )
-    (fun h _ _ _ h' ->
-//      assert (B.loc_not_unused_in h2 `B.loc_includes` B.loc_buffer bpos1);
-//      assert (B.loc_not_unused_in h2 `B.loc_includes` B.loc_buffer bk);
-      B.loc_unused_in_not_unused_in_disjoint h2;
-      B.modifies_only_not_unused_in (B.loc_region_only true (HS.get_tip h1)) h2 h'
-    )
-    (fun h ->
-      let pos1 = Seq.index (B.as_seq h bpos1) 0 in
-      B.live h bpos1 /\
-      valid p h0 sl pos1 /\
-      valid_list p h0 sl pos pos1 /\
-      valid_list p h0 sl (get_valid_pos p h0 sl pos1) pos' /\
-      L.length (contents_list p h0 sl pos pos1) == U32.v i /\
-      contents p h0 sl pos1 == L.index (contents_list p h0 sl pos pos') (U32.v i)
-    )
-    (fun _ _ -> 
-      B.loc_unused_in_not_unused_in_disjoint h2
-    )
-    (fun pos1 pos2 ->
-      let k = B.index bk 0ul in
-      if k = i
-      then begin
-        B.upd bpos1 0ul pos1;
-        valid_list_cons_recip p h0 sl pos1 pos';
-        list_index_append (contents_list p h0 sl pos pos1) (contents_list p h0 sl pos1 pos') (U32.v i);
-        valid_list_append p h0 sl pos pos1 pos' ;
-        assert (contents p h0 sl pos1 == L.index (contents_list p h0 sl pos pos') (U32.v i));
-        false
-      end else begin
-        B.upd bk 0ul (k `U32.add` 1ul);
-        let h = HST.get () in
-        B.modifies_only_not_unused_in B.loc_none h0 h;
-        valid_list_snoc p h0 sl pos pos1;
-        assert (valid p h0 sl pos1);
-        assert (pos2 == get_valid_pos p h0 sl pos1);
-        assert (valid_list p h0 sl pos pos2);
-        list_length_append (contents_list p h0 sl pos pos1) [contents p h0 sl pos1];
-        true
-      end
-    )
-  in
+      L.length (contents_list p h0 sl pos pos1) == U32.v i1 /\ (
+      let tl = contents_list p h0 sl pos1 pos' in
+      U32.v i - U32.v i1 < L.length tl /\
+      L.index (contents_list p h0 sl pos pos') (U32.v i) == L.index tl (U32.v i - U32.v i1) /\
+      (b == true ==> i == i1)
+    )))
+    (fun _ ->
+      let i1 = B.index bi1 0ul in
+      if i1 = i
+      then true
+      else
+        let pos1 = B.index bpos1 0ul in
+        let _ = valid_list_cons_recip p h0 sl pos1 pos' in
+        let _ = valid_list_snoc p h0 sl pos pos1 in
+        let pos2 = j sl pos1 in
+        let _ = assert (pos2 == get_valid_pos p h0 sl pos1) in
+        let _ = list_length_append (contents_list p h0 sl pos pos1) [contents p h0 sl pos1] in
+        let i2 = i1 `U32.add` 1ul in
+        let _ = B.upd bpos1 0ul pos2 in
+        let _ = B.upd bi1 0ul i2 in
+        i2 = i
+    );
   let res = B.index bpos1 0ul in
+  let _ = valid_list_cons_recip p h0 sl res pos' in
   HST.pop_frame ();
   res
 
 #pop-options
-
-(* Example: trivial printers *)
-
-inline_for_extraction
-let print_list
-  (#k: parser_kind)
-  (#t: Type0)
-  (#p: parser k t)
-  (j: jumper p)
-  (print: ((#rrel: _) -> (#rel: _) -> (sl: slice rrel rel) -> (pos: U32.t) -> HST.Stack unit (requires (fun h -> valid p h sl pos)) (ensures (fun h _ h' -> B.modifies B.loc_none h h'))))
-  (#rrel #rel: _)
-  (sl: slice rrel rel)
-  (pos pos' : U32.t)
-: HST.Stack unit
-  (requires (fun h ->
-    valid_list p h sl pos pos'
-  ))
-  (ensures (fun h _ h' ->
-    B.modifies B.loc_none h h'
-  ))
-= let h0 = HST.get () in
-  list_fold_left
-    p
-    j
-    sl
-    pos pos'
-    h0
-    (Ghost.hide B.loc_none)
-    (fun _ _ _ _ -> True)
-    (fun _ _ _ _ _ -> ())
-    (fun pos1 _ _ _ _ ->
-      print sl pos1
-    )
-
 
 (* Monotonicity *)
 
@@ -3398,7 +3185,7 @@ inline_for_extraction
 let compl_t (t: Type) = U32.t -> t -> U32.t -> Tot (B.spred byte)
 
 let wvalid 
-  (#t: Type) (#k: parser_kind) (p: parser k t) (#rrel #rel: _) (s: slice rrel rel)
+  (#t: Type) (#k: parser_kind) (p: parser k t) (#rrel #rel: B.srel byte) (s: slice rrel rel)
   (compl: compl_t t)
   (pos: U32.t)
   (gpos' : Ghost.erased U32.t)
@@ -3408,13 +3195,13 @@ let wvalid
 = 
   U32.v pos <= U32.v (Ghost.reveal gpos') /\
   U32.v (Ghost.reveal gpos') <= U32.v s.len /\
-  U32.v s.len <= Seq.length x /\
+  Seq.length x == U32.v s.len /\
   parse p (Seq.slice x (U32.v pos) (U32.v s.len)) == Some (Ghost.reveal gv, U32.v (Ghost.reveal gpos') - U32.v pos) /\
   compl pos (Ghost.reveal gv) (Ghost.reveal gpos') x
 
 inline_for_extraction
 noeq
-type irepr (#t: Type) (#k: parser_kind) (p: parser k t) (#rrel #rel: _) (s: slice rrel rel) (compl: compl_t t) =
+type irepr (#t: Type) (#k: parser_kind) (p: parser k t) (#rrel #rel: B.srel byte) (s: slice rrel rel) (compl: compl_t t) =
   | IRepr:
       (pos: U32.t) ->
       (gpos' : Ghost.erased U32.t) ->
@@ -3428,17 +3215,17 @@ type irepr (#t: Type) (#k: parser_kind) (p: parser k t) (#rrel #rel: _) (s: slic
 
 inline_for_extraction
 let irepr_pos
-  (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: _) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : Tot U32.t =
+  (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: B.srel byte) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : Tot U32.t =
   IRepr?.pos x
 
 let irepr_pos'
-  (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: _) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : Ghost U32.t
+  (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: B.srel byte) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : Ghost U32.t
   (requires True)
   (ensures (fun y -> U32.v (irepr_pos x) <= U32.v y /\ U32.v y <= U32.v s.len))
 = Ghost.reveal (IRepr?.gpos' x)
 
 let irepr_v
-  (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: _) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : GTot t
+  (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: B.srel byte) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : GTot t
 = Ghost.reveal (IRepr?.gv x)
 
 inline_for_extraction
@@ -3446,14 +3233,14 @@ let witness_valid_gen
   (#t: Type)
   (#k: parser_kind)
   (#p: parser k t)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (s: slice rrel rel)
   (compl: compl_t t)
   (pos: U32.t)
 : HST.Stack (irepr p s compl)
   (requires (fun h ->
     valid p h s pos /\
-    B.stable_on (wvalid p s compl pos (Ghost.hide (get_valid_pos p h s pos)) (Ghost.hide (contents p h s pos))) (buffer_srel_of_srel rel) /\
+    B.stable_on (wvalid p s compl pos (Ghost.hide (get_valid_pos p h s pos)) (Ghost.hide (contents p h s pos))) rel /\
     compl pos (contents p h s pos) (get_valid_pos p h s pos) (B.as_seq h s.base)
   ))
   (ensures (fun h res h' ->
@@ -3476,7 +3263,7 @@ let recall_valid_gen
   (#t: Type)
   (#k: parser_kind)
   (#p: parser k t)
-  (#rrel #rel: _)
+  (#rrel #rel: B.srel byte)
   (#s: slice rrel rel)
   (#compl: compl_t t)
   (i: irepr p s compl)

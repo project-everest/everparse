@@ -16,24 +16,23 @@ let validate_fldata_gen
   (sz: nat)
   (sz32: U32.t { U32.v sz32 == sz } )
 : Tot (validator (parse_fldata p sz))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ = valid_facts (parse_fldata p sz) h input pos in
   if (input.len `U32.sub` pos) `U32.lt` sz32
   then validator_error_not_enough_data
   else
-    let base' = B.sub input.base pos sz32 in
-    [@inline_let] let input' = { base = base'; len = sz32; } in
-    [@inline_let] let _ = valid_facts p h input' 0ul in
-    let pos' = v input' 0ul in
+    [@inline_let] let input' = { base = input.base; len = pos `U32.add` sz32; } in
+    [@inline_let] let _ = valid_facts p h input' pos in
+    let pos' = v input' pos in
     if validator_max_length `U32.lt` pos'
     then
       if pos' = validator_error_not_enough_data
       then validator_error_generic (* the size was fixed ahead of time, so if the parser runs out of data, then that size was wrong in the first place. *) 
       else pos' // error propagation
-    else if pos' <> sz32
+    else if pos' `U32.sub` pos <> sz32
     then validator_error_generic
-    else pos `U32.add` pos'
+    else pos'
 
 inline_for_extraction
 let validate_fldata_consumes_all
@@ -45,25 +44,24 @@ let validate_fldata_consumes_all
   (sz32: U32.t { U32.v sz32 == sz } )
   (sq: squash (k.parser_kind_subkind == Some ParserConsumesAll))
 : Tot (validator (parse_fldata p sz))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
     valid_facts (parse_fldata p sz) h input pos;
-    parse_fldata_consumes_all_correct p sz (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)))
+    parse_fldata_consumes_all_correct p sz (bytes_of_slice_from h input pos)
   in
   if (input.len `U32.sub` pos) `U32.lt` sz32
   then validator_error_not_enough_data
   else
-    let base' = B.sub input.base pos sz32 in
-    [@inline_let] let input' = { base = base'; len = sz32; } in
-    [@inline_let] let _ = valid_facts p h input' 0ul in
-    let pos' = v input' 0ul in
+    [@inline_let] let input' = { base = input.base; len = pos `U32.add` sz32; } in
+    [@inline_let] let _ = valid_facts p h input' pos in
+    let pos' = v input' pos in
     if validator_max_length `U32.lt` pos'
     then
       if pos' = validator_error_not_enough_data
       then validator_error_generic (* the size was fixed ahead of time, so if the parser runs out of data, then that size was wrong in the first place. *) 
       else pos' // error propagation
-    else pos `U32.add` pos'
+    else pos'
 
 inline_for_extraction
 let validate_fldata
@@ -88,7 +86,7 @@ let validate_fldata_strong
   (sz: nat)
   (sz32: U32.t { U32.v sz32 == sz } )
 : Tot (validator (parse_fldata_strong s sz))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ = valid_facts (parse_fldata p sz) h input pos in
   [@inline_let] let _ = valid_facts (parse_fldata_strong s sz) h input pos in
@@ -130,7 +128,7 @@ let accessor_fldata
   (p: parser k t)
   (sz: nat)
 : Tot (accessor (gaccessor_fldata p sz))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ = slice_access_eq h (gaccessor_fldata p sz) input pos in
   pos
@@ -167,7 +165,7 @@ let accessor_fldata_strong
   (s: serializer p)
   (sz: nat)
 : Tot (accessor (gaccessor_fldata_strong s sz))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ = slice_access_eq h (gaccessor_fldata_strong s sz) input pos in
   pos

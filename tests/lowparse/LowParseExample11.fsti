@@ -8,6 +8,9 @@ module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
 module L = FStar.List.Tot
 
+inline_for_extraction
+let slice = LowParse.Low.slice (LL.srel_of_buffer_srel (B.trivial_preorder _)) (LL.srel_of_buffer_srel (B.trivial_preorder _))
+
 type elem = U32.t
 
 type t = (l: list elem { let ln = L.length l in 10 <= ln /\ ln <= 1000 })
@@ -29,7 +32,7 @@ val validate_t : LL.validator parse_t
 
 val jump_t : LL.jumper parse_t
 
-val read_6th: (sl: LL.slice) -> (pos: U32.t) -> HST.Stack U32.t
+val read_6th: (sl: slice) -> (pos: U32.t) -> HST.Stack U32.t
   (requires (fun h -> LL.valid parse_t h sl pos))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\

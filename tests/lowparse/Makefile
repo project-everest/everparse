@@ -40,7 +40,10 @@ LOW_LEVEL=LowParse_TestLib_Low_c.c
 
 MY_KREMLIN=$(KREMLIN_EXE) -bundle 'LowParse.\*'  -add-include '"kremlin/internal/compat.h"'
 
-EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12
+EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair
+
+NOEXTRACT_EXAMPLES=ExamplePair
+
 ROOT_FILES=LowParse.SLow.fst LowParse.Low.fst $(addprefix LowParse, $(addsuffix .fst, $(EXAMPLES))) LowParse.TestLib.SLow.fst LowParse.TestLib.Low.fst
 
 EXCLUDE_KRML_FILES=$(FSTAR_OUT_DIR)/prims.krml
@@ -88,7 +91,7 @@ $(EXAMPLES): %: %/a.out
 	$(MY_KREMLIN) $(KREMLIN_ARGS) -tmpdir $(EXAMPLE) -bundle LowParse$(EXAMPLE)'.Aux' -warn-error '@2' -no-prefix LowParse$(EXAMPLE) $(EXAMPLE_KRML_FILES) -o $@
 	$@
 
-extract-all: $(EXAMPLES)
+extract-all: $(filter-out $(NOEXTRACT_EXAMPLES), $(EXAMPLES))
 
 Example: KREMLIN_ARGS=$(INTERMEDIATE_LEVEL)
 Example2: KREMLIN_ARGS=$(INTERMEDIATE_LEVEL)
@@ -101,6 +104,8 @@ Example9: KREMLIN_ARGS=$(LOW_LEVEL)
 Example10: KREMLIN_ARGS=
 Example11: KREMLIN_ARGS=
 Example12: KREMLIN_ARGS=
+ExampleMono: KREMLIN_ARGS=
+ExamplePair: KREMLIN_ARGS=
 
 .PHONY: all verify-all clean extract-all $(EXAMPLES)
 

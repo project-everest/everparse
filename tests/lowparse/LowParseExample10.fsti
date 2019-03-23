@@ -11,6 +11,9 @@ module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
 
+inline_for_extraction
+let slice = LowParse.Low.slice (LL.srel_of_buffer_srel (B.trivial_preorder _)) (LL.srel_of_buffer_srel (B.trivial_preorder _))
+
 (* Ideal output for something like:
 
 struct {
@@ -58,7 +61,7 @@ val validate_t : LL.validator parse_t
 
 val jump_t : LL.jumper parse_t
 
-val t_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma
+val t_elim (h: HS.mem) (input: slice) (pos: U32.t) : Lemma
   (requires (LL.valid parse_t h input pos))
   (ensures (
     LL.valid (LPB.parse_flbytes 3) h input pos /\ (
@@ -69,7 +72,7 @@ val t_elim (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma
     | Other m -> m.msg_type
   ))))
 
-val t_test_HelloRetryRequest (input: LL.slice) (pos: U32.t) : HST.Stack bool
+val t_test_HelloRetryRequest (input: slice) (pos: U32.t) : HST.Stack bool
   (requires (fun h -> LL.valid parse_t h input pos))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
@@ -94,7 +97,7 @@ val t_gaccessor_other: LL.gaccessor parse_t LPI.parse_u16 clens_other
 
 val t_accessor_other: LL.accessor t_gaccessor_other
 
-val t_intro_HelloRetryRequest (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma
+val t_intro_HelloRetryRequest (h: HS.mem) (input: slice) (pos: U32.t) : Lemma
   (requires (
     LL.valid (LPB.parse_flbytes 3) h input pos /\ (
     let x = LL.contents (LPB.parse_flbytes 3) h input pos in
@@ -107,7 +110,7 @@ val t_intro_HelloRetryRequest (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma
     LL.valid_content_pos parse_t h input pos (HelloRetryRequest (LL.contents LPI.parse_u32 h input pos1)) (LL.get_valid_pos LPI.parse_u32 h input pos1)
   ))
 
-val t_intro_other (h: HS.mem) (input: LL.slice) (pos: U32.t) : Lemma
+val t_intro_other (h: HS.mem) (input: slice) (pos: U32.t) : Lemma
   (requires (
     LL.valid (LPB.parse_flbytes 3) h input pos /\ (
     let x = LL.contents (LPB.parse_flbytes 3) h input pos in

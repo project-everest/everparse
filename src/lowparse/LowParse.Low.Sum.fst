@@ -46,7 +46,7 @@ let validate_sum_cases_t_if
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: sum_key t)
 : Tot (if_combinator _ (validate_sum_cases_t_eq t pc k))
-= fun cond (sv_true: cond_true cond -> Tot (validate_sum_cases_t t pc k)) (sv_false: cond_false cond -> Tot (validate_sum_cases_t t pc k)) input pos ->
+= fun cond (sv_true: cond_true cond -> Tot (validate_sum_cases_t t pc k)) (sv_false: cond_false cond -> Tot (validate_sum_cases_t t pc k)) #rrel #rel input pos ->
   if cond
   then sv_true () input pos
   else sv_false () input pos
@@ -73,7 +73,8 @@ let validate_sum_aux_payload_t
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: maybe_enum_key (sum_enum t))
 : Tot Type
-= (input: slice) ->
+= (#rrel: _) -> (#rel: _) ->
+  (input: slice rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
   (requires (fun h -> live_slice h input /\ U32.v pos <= U32.v input.len /\ U32.v input.len <= U32.v validator_max_length))
@@ -105,7 +106,7 @@ let validate_sum_aux_payload_if'
   (ift: ((cond_true cond) -> Tot (validate_sum_aux_payload_t t pc k)))
   (iff: ((cond_false cond) -> Tot (validate_sum_aux_payload_t t pc k)))
 : Tot (validate_sum_aux_payload_t t pc k)
-= fun input pos ->
+= fun #rrel #rel input pos ->
   if cond
   then begin
     (ift () <: validate_sum_aux_payload_t t pc k) input pos
@@ -133,10 +134,10 @@ let validate_sum_aux
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (v_payload: ((k: sum_repr_type t)) -> Tot (validate_sum_aux_payload_t t pc (maybe_enum_key_of_repr (sum_enum t) k)))
 : Tot (validator (parse_sum t p pc))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
-  let _ = parse_sum_eq'' t p pc (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos))) in
+  let _ = parse_sum_eq'' t p pc (bytes_of_slice_from h input pos) in
   [@inline_let]
   let _ = valid_facts (parse_sum t p pc) h input pos in
   [@inline_let]
@@ -165,7 +166,7 @@ let validate_sum_aux_payload'
   (pc32: ((x: sum_key t) -> Tot (validator (dsnd (pc x)))))
   (k: maybe_enum_key (sum_enum t))
 : Tot (validate_sum_aux_payload_t t pc k)
-= fun input pos ->
+= fun #rrel #rel input pos ->
     match k with
     | Known k ->
       [@inline_let]
@@ -207,7 +208,8 @@ let valid_sum_intro
   (#kt: parser_kind)
   (p: parser kt (sum_repr_type t))
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -228,7 +230,7 @@ let valid_sum_intro
   let pos_payload = get_valid_pos (parse_enum_key p (sum_enum t)) h input pos in
   valid_facts (dsnd (pc k)) h input pos_payload;
   valid_facts (parse_sum t p pc) h input pos;
-  parse_sum_eq t p pc (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)))
+  parse_sum_eq t p pc (bytes_of_slice_from h input pos)
 
 #reset-options
 
@@ -242,14 +244,16 @@ let finalize_sum_case
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (destr: enum_repr_of_key'_t (sum_enum t))
   (k: sum_key t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack unit
   (requires (fun h ->
     let len_tag = serialized_length (serialize_enum_key _ s (sum_enum t)) k in
     U32.v pos + len_tag < 4294967296 /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t len_tag in
-    valid (dsnd (pc k)) h input pos_payload
+    valid (dsnd (pc k)) h input pos_payload /\
+    writable input.base (U32.v pos) (U32.v pos_payload) h
   )))
   (ensures (fun h _ h' ->
     let len_tag = serialized_length (serialize_enum_key _ s (sum_enum t)) k in
@@ -303,7 +307,7 @@ let jump_sum_cases_t_if
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: sum_key t)
 : Tot (if_combinator _ (jump_sum_cases_t_eq t pc k))
-= fun cond (sv_true: cond_true cond -> Tot (jump_sum_cases_t t pc k)) (sv_false: cond_false cond -> Tot (jump_sum_cases_t t pc k)) input pos ->
+= fun cond (sv_true: cond_true cond -> Tot (jump_sum_cases_t t pc k)) (sv_false: cond_false cond -> Tot (jump_sum_cases_t t pc k)) #rrel #rel input pos ->
   if cond
   then sv_true () input pos
   else sv_false () input pos
@@ -330,7 +334,8 @@ let jump_sum_aux_payload_t
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: maybe_enum_key (sum_enum t))
 : Tot Type
-= (input: slice) ->
+= (#rrel: _) -> (#rel: _) ->
+  (input: slice rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
   (requires (fun h -> live_slice h input /\ U32.v pos <= U32.v input.len /\ (
@@ -362,7 +367,7 @@ let jump_sum_aux_payload_if'
   (ift: ((cond_true cond) -> Tot (jump_sum_aux_payload_t t pc k)))
   (iff: ((cond_false cond) -> Tot (jump_sum_aux_payload_t t pc k)))
 : Tot (jump_sum_aux_payload_t t pc k)
-= fun input pos ->
+= fun #rrel #rel input pos ->
   if cond
   then begin
     (ift () <: jump_sum_aux_payload_t t pc k) input pos
@@ -434,7 +439,8 @@ let valid_sum_elim
   (#kt: parser_kind)
   (p: parser kt (sum_repr_type t))
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
-  (input: slice)
+  (#rrel: _) (#rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -453,10 +459,10 @@ let valid_sum_elim
         (get_valid_pos (dsnd (pc k)) h input pos_payload)
     | _ -> False
   )))
-= let _ = parse_sum_eq'' t p pc (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos))) in
+= let sinput = bytes_of_slice_from h input pos in
+  let _ = parse_sum_eq'' t p pc sinput in
   [@inline_let]
   let _ = valid_facts (parse_sum t p pc) h input pos in
-  let sinput = B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)) in
   let Some (k', consumed_k) = parse p sinput in
   let pos_after_tag = U32.uint_to_t (U32.v pos + consumed_k) in
   [@inline_let]
@@ -474,7 +480,8 @@ let valid_sum_elim_tag
   (#kt: parser_kind)
   (p: parser kt (sum_repr_type t))
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -484,7 +491,7 @@ let valid_sum_elim_tag
     valid (parse_enum_key p (sum_enum t)) h input pos /\
     contents (parse_enum_key p (sum_enum t)) h input pos == sum_tag_of_data t (contents (parse_sum t p pc) h input pos)
   ))
-= let _ = parse_sum_eq' t p pc (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos))) in
+= let _ = parse_sum_eq' t p pc (bytes_of_slice_from h input pos) in
   let _ = valid_facts (parse_sum t p pc) h input pos in
   let _ = valid_facts (parse_enum_key p (sum_enum t)) h input pos in
   ()
@@ -496,8 +503,9 @@ let read_sum_tag
   (#p: parser kt (sum_repr_type t))
   (p32: leaf_reader p)
   (destr: dep_maybe_enum_destr_t (sum_enum t) (read_enum_key_t (sum_enum t)))
-  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))  
-  (input: slice)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack (sum_key t)
   (requires (fun h ->
@@ -521,7 +529,7 @@ let jump_sum_aux
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (v_payload: ((k: sum_repr_type t)) -> Tot (jump_sum_aux_payload_t t pc (maybe_enum_key_of_repr (sum_enum t) k)))
 : Tot (jumper (parse_sum t p pc))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ = valid_sum_elim h t p pc input pos in
@@ -536,7 +544,7 @@ let jump_sum_aux_payload'
   (pc32: ((x: sum_key t) -> Tot (jumper (dsnd (pc x)))))
   (k: maybe_enum_key (sum_enum t))
 : Tot (jump_sum_aux_payload_t t pc k)
-= fun input pos ->
+= fun #rrel #rel input pos ->
     match k with
     | Known k ->
       [@inline_let]
@@ -606,7 +614,8 @@ let accessor_clens_sum_payload'
   (j: jumper p { kt.parser_kind_subkind == Some ParserStrong })
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: sum_key t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
@@ -624,8 +633,8 @@ let accessor_clens_sum_payload'
   [@inline_let]
   let _ =
     let pos' = get_valid_pos (parse_sum t p pc) h input pos in
-    let small = B.as_seq h (B.gsub input.base pos (pos' `U32.sub` pos)) in
-    let large = B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)) in
+    let small = bytes_of_slice_from_to h input pos pos' in
+    let large = bytes_of_slice_from h input pos in
     slice_access_eq h (gaccessor_clens_sum_payload t p pc k) input pos;
     valid_facts (parse_sum t p pc) h input pos;
     parse_sum_eq'' t p pc large;
@@ -645,7 +654,7 @@ let accessor_clens_sum_payload
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: sum_key t)
 : Tot (accessor (gaccessor_clens_sum_payload t p pc k))
-= accessor_clens_sum_payload' t j pc k
+= fun #rrel #rel -> accessor_clens_sum_payload' t j pc k #rrel #rel
 
 let clens_sum_cases_payload
   (s: sum)
@@ -717,7 +726,7 @@ let validate_dsum_cases_if'
   (ift: (cond_true cond -> Tot (validate_dsum_cases_t s f g x)))
   (iff: (cond_false cond -> Tot (validate_dsum_cases_t s f g x)))
 : Tot (validate_dsum_cases_t s f g x)
-= fun input len ->
+= fun #rrel #rel input len ->
   if cond
   then (ift () <: validate_dsum_cases_t s f g x) input len
   else (iff () <: validate_dsum_cases_t s f g x) input len
@@ -759,7 +768,7 @@ let validate_dsum_cases'_destr
   (destr: dep_enum_destr _ (fun k -> validate_dsum_cases_t s f g (Known k)))
   (x: dsum_key s)
 : Tot (validate_dsum_cases_t s f g x)
-= fun input pos ->
+= fun #rrel #rel input pos ->
   match x with
   | Known k ->
     destr
@@ -784,13 +793,13 @@ let validate_dsum_cases
   (destr: dep_enum_destr _ (fun k -> validate_dsum_cases_t s f g (Known k)))
   (x: dsum_key s)
 : Tot (validator (parse_dsum_cases s f g x))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ =
     valid_facts (parse_dsum_cases' s f g x) h input pos;
     valid_facts (parse_dsum_cases s f g x) h input pos;
-    parse_dsum_cases_eq' s f g x (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)))
+    parse_dsum_cases_eq' s f g x (bytes_of_slice_from h input pos)
   in
   validate_dsum_cases'_destr s f f' g' destr x input pos
 
@@ -808,10 +817,10 @@ let validate_dsum
   (g32: validator g)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (validate_dsum_cases_t t f g))
 : Tot (validator (parse_dsum t p f g))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
-  let _ = parse_dsum_eq' t p f g (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos))) in
+  let _ = parse_dsum_eq' t p f g (bytes_of_slice_from h input pos) in
   [@inline_let]
   let _ = valid_facts (parse_dsum t p f g) h input pos in
   [@inline_let]
@@ -836,7 +845,8 @@ let valid_dsum_intro_known
   (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -859,7 +869,7 @@ let valid_dsum_intro_known
   let pos_payload = get_valid_pos (parse_maybe_enum_key p (dsum_enum t)) h input pos in
   valid_facts (dsnd (f k)) h input pos_payload;
   valid_facts (parse_dsum t p f g) h input pos;
-  parse_dsum_eq t p f g (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)))
+  parse_dsum_eq t p f g (bytes_of_slice_from h input pos)
 
 let valid_dsum_intro_unknown
   (h: HS.mem)
@@ -869,7 +879,8 @@ let valid_dsum_intro_unknown
   (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -891,7 +902,7 @@ let valid_dsum_intro_unknown
   let pos_payload = get_valid_pos (parse_maybe_enum_key p (dsum_enum t)) h input pos in
   valid_facts g h input pos_payload;
   valid_facts (parse_dsum t p f g) h input pos;
-  parse_dsum_eq t p f g (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)))
+  parse_dsum_eq t p f g (bytes_of_slice_from h input pos)
 
 #reset-options
 
@@ -907,14 +918,16 @@ let finalize_dsum_case_known
   (g: parser ku (dsum_type_of_unknown_tag t))
   (destr: enum_repr_of_key'_t (dsum_enum t))
   (k: dsum_known_key t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack unit
   (requires (fun h ->
     let len_tag = serialized_length (serialize_enum_key _ s (dsum_enum t)) k in
     U32.v pos + len_tag < 4294967296 /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t len_tag in
-    valid (dsnd (f k)) h input pos_payload
+    valid (dsnd (f k)) h input pos_payload /\
+    writable input.base (U32.v pos) (U32.v pos_payload) h
   )))
   (ensures (fun h _ h' ->
     let len_tag = serialized_length (serialize_enum_key _ s (dsum_enum t)) k in
@@ -928,7 +941,7 @@ let finalize_dsum_case_known
   let _ =
     valid_facts (parse_enum_key p (dsum_enum t)) h input pos;
     valid_facts (parse_maybe_enum_key p (dsum_enum t)) h input pos;
-    let sq = (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos))) in
+    let sq = bytes_of_slice_from h input pos in
     parse_enum_key_eq p (dsum_enum t) sq;
     parse_maybe_enum_key_eq p (dsum_enum t) sq;
     valid_dsum_intro_known h t p f g input pos
@@ -946,14 +959,16 @@ let finalize_dsum_case_unknown
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
   (r: unknown_enum_repr (dsum_enum t))
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack unit
   (requires (fun h ->
     let len_tag = serialized_length s r in
     U32.v pos + len_tag < 4294967296 /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t len_tag in
-    valid g h input pos_payload
+    valid g h input pos_payload /\
+    writable input.base (U32.v pos) (U32.v pos_payload) h
   )))
   (ensures (fun h _ h' ->
     let len_tag = serialized_length s r in
@@ -967,7 +982,7 @@ let finalize_dsum_case_unknown
   let _ =
     valid_facts (parse_maybe_enum_key p (dsum_enum t)) h input pos;
     valid_facts p h input pos;
-    let sq = (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos))) in
+    let sq = bytes_of_slice_from h input pos in
     parse_maybe_enum_key_eq p (dsum_enum t) sq;
     valid_dsum_intro_unknown h t p f g input pos
   in
@@ -981,7 +996,8 @@ let valid_dsum_elim_tag
   (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -991,7 +1007,7 @@ let valid_dsum_elim_tag
     valid (parse_maybe_enum_key p (dsum_enum t)) h input pos /\
     contents (parse_maybe_enum_key p (dsum_enum t)) h input pos == dsum_tag_of_data t (contents (parse_dsum t p f g) h input pos)
   ))
-= let _ = parse_dsum_eq_ t p f g (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos))) in
+= let _ = parse_dsum_eq_ t p f g (bytes_of_slice_from h input pos) in
   let _ = valid_facts (parse_dsum t p f g) h input pos in
   let _ = valid_facts (parse_maybe_enum_key p (dsum_enum t)) h input pos in
   ()
@@ -1006,7 +1022,8 @@ let read_dsum_tag
   (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack (dsum_key t)
   (requires (fun h ->
@@ -1051,7 +1068,7 @@ let jump_dsum_cases_if'
   (ift: (cond_true cond -> Tot (jump_dsum_cases_t s f g x)))
   (iff: (cond_false cond -> Tot (jump_dsum_cases_t s f g x)))
 : Tot (jump_dsum_cases_t s f g x)
-= fun input len ->
+= fun #rrel #rel input len ->
   if cond
   then (ift () <: jump_dsum_cases_t s f g x) input len
   else (iff () <: jump_dsum_cases_t s f g x) input len
@@ -1092,7 +1109,7 @@ let jump_dsum_cases'_destr
   (destr: dep_enum_destr _ (fun k -> jump_dsum_cases_t s f g (Known k)))
   (x: dsum_key s)
 : Tot (jump_dsum_cases_t s f g x)
-= fun input pos ->
+= fun #rrel #rel input pos ->
   match x with
   | Known k ->
     destr
@@ -1117,13 +1134,13 @@ let jump_dsum_cases
   (destr: dep_enum_destr _ (fun k -> jump_dsum_cases_t s f g (Known k)))
   (x: dsum_key s)
 : Tot (jumper (parse_dsum_cases s f g x))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ =
     valid_facts (parse_dsum_cases' s f g x) h input pos;
     valid_facts (parse_dsum_cases s f g x) h input pos;
-    parse_dsum_cases_eq' s f g x (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)))
+    parse_dsum_cases_eq' s f g x (bytes_of_slice_from h input pos)
   in
   jump_dsum_cases'_destr s f f' g' destr x input pos
 
@@ -1143,10 +1160,10 @@ let jump_dsum
   (g32: jumper g)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (jump_dsum_cases_t t f g))
 : Tot (jumper (parse_dsum t p f g))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
-  let _ = parse_dsum_eq' t p f g (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos))) in
+  let _ = parse_dsum_eq' t p f g (bytes_of_slice_from h input pos) in
   [@inline_let]
   let _ = valid_facts (parse_dsum t p f g) h input pos in
   [@inline_let]
@@ -1210,7 +1227,8 @@ let accessor_clens_dsum_payload'
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
   (k: dsum_key t)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
@@ -1228,8 +1246,8 @@ let accessor_clens_dsum_payload'
   [@inline_let]
   let _ =
     let pos' = get_valid_pos (parse_dsum t p f g) h input pos in
-    let small = B.as_seq h (B.gsub input.base pos (pos' `U32.sub` pos)) in
-    let large = B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)) in
+    let small = bytes_of_slice_from_to h input pos pos' in
+    let large = bytes_of_slice_from h input pos in
     slice_access_eq h (gaccessor_clens_dsum_payload t p f g k) input pos;
     valid_facts (parse_dsum t p f g) h input pos;
     parse_dsum_eq3 t p f g large;
@@ -1251,7 +1269,7 @@ let accessor_clens_dsum_payload
   (g: parser ku (dsum_type_of_unknown_tag t))
   (k: dsum_key t)
 : Tot (accessor (gaccessor_clens_dsum_payload t p f g k))
-= accessor_clens_dsum_payload' t j f g k
+= fun #rrel #rel -> accessor_clens_dsum_payload' t j f g k #rrel #rel
 
 #push-options "--z3rlimit 16"
 
@@ -1286,7 +1304,8 @@ let accessor_clens_dsum_unknown_payload'
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
@@ -1304,8 +1323,8 @@ let accessor_clens_dsum_unknown_payload'
   [@inline_let]
   let _ =
     let pos' = get_valid_pos (parse_dsum t p f g) h input pos in
-    let small = B.as_seq h (B.gsub input.base pos (pos' `U32.sub` pos)) in
-    let large = B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)) in
+    let small = bytes_of_slice_from_to h input pos pos' in
+    let large = bytes_of_slice_from h input pos in
     slice_access_eq h (gaccessor_clens_dsum_unknown_payload t p f g) input pos;
     valid_facts (parse_dsum t p f g) h input pos;
     parse_dsum_eq3 t p f g large;
@@ -1326,7 +1345,7 @@ let accessor_clens_dsum_unknown_payload
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
 : Tot (accessor (gaccessor_clens_dsum_unknown_payload t p f g))
-= accessor_clens_dsum_unknown_payload' t j f g
+= fun #rrel #rel -> accessor_clens_dsum_unknown_payload' t j f g #rrel #rel
 
 let clens_dsum_cases_payload
   (s: dsum)

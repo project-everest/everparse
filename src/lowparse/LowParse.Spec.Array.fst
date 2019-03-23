@@ -241,6 +241,20 @@ let vldata_vlarray_precond
      elem_count_max * k.parser_kind_low <= array_byte_size_max &&
      array_byte_size_max < elem_count_max * k.parser_kind_low + k.parser_kind_low
 
+let vldata_vlarray_precond_parser_kind_low
+  (array_byte_size_min: nat)
+  (array_byte_size_max: nat)
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (elem_count_min: nat)
+  (elem_count_max: nat)
+: Lemma
+  (requires (vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max))
+  (ensures (k.parser_kind_low < 4294967296))
+  [SMTPat (k.parser_kind_low); SMTPat (vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max)]
+= M.lemma_mult_le_right k.parser_kind_low 1 elem_count_max
+
 let vldata_to_vlarray_correct
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
@@ -337,45 +351,6 @@ let parse_vlarray
   parse_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s)
   `parse_synth`
   vldata_to_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u
-
-let some_parse_vlarray_eq
-  (array_byte_size_min: nat)
-  (array_byte_size_max: nat)
-  (#k: parser_kind)
-  (#t: Type0)
-  (#p: parser k t)
-  (s: serializer p)
-  (elem_count_min: nat)
-  (elem_count_max: nat)
-  (u: unit {
-    vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max == true  
-  })
-  (input: bytes)
-: Lemma
-  (Some? (parse (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u) input) == (
-    let sz = log256' array_byte_size_max in
-    match parse (parse_bounded_integer sz) input with
-    | None -> false // None
-    | Some (len, c_len) ->
-      if U32.v len < array_byte_size_min || array_byte_size_max < U32.v len
-      then false
-      else
-      let input1 = Seq.slice input c_len (Seq.length input) in
-      if Seq.length input1 < U32.v len
-      then false // None
-      else
-        let input2 = Seq.slice input1 0 (U32.v len) in
-        begin match parse (parse_list p) input2 with
-        | Some (l, c_l) -> true // Some (l, c_len + c_l)
-        | _ -> false // None
-        end
-  ))
-= 
-  parser_kind_prop_equiv k p;
-  vldata_to_vlarray_inj array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ();
-  parse_synth_eq (parse_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s)) (vldata_to_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) input;
-  parse_vldata_gen_eq (log256' array_byte_size_max) (in_bounds array_byte_size_min array_byte_size_max) (parse_list p) input;
-  parser_kind_prop_equiv parse_list_kind (parse_list p)
 
 let parse_vlarray_eq_some
   (array_byte_size_min: nat)

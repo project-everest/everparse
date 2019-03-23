@@ -160,15 +160,15 @@ let array_nth
     U32.v i < elem_count
   })
 : Tot (accessor (array_nth_ghost s (array_byte_size) (elem_count) (U32.v i)))
-= fun input pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
     parser_kind_prop_equiv k p;
     valid_facts (parse_array s (array_byte_size) (elem_count)) h input pos;
     slice_access_eq h (array_nth_ghost s (array_byte_size) (elem_count) (U32.v i)) input pos;
     fldata_to_array_inj s (array_byte_size) (elem_count) ();
-    parse_synth_eq (parse_fldata_strong (serialize_list _ s) (array_byte_size)) (fldata_to_array s array_byte_size elem_count ()) (B.as_seq h (B.gsub input.base pos (input.len `U32.sub` pos)));
-    list_nth_constant_size_parser_correct p (B.as_seq h (B.gsub (B.gsub input.base pos (input.len `U32.sub` pos)) 0ul (U32.uint_to_t array_byte_size))) (U32.v i)
+    parse_synth_eq (parse_fldata_strong (serialize_list _ s) (array_byte_size)) (fldata_to_array s array_byte_size elem_count ()) (bytes_of_slice_from h input pos);
+    list_nth_constant_size_parser_correct p (Seq.slice (bytes_of_slice_from h input pos) 0 array_byte_size) (U32.v i)
   in
   pos `U32.add` (i `U32.mul` U32.uint_to_t k.parser_kind_low)
 
@@ -187,7 +187,8 @@ let valid_list_valid_array
     U32.v array_byte_size32 == array_byte_size
   })
   (h: HS.mem)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : Lemma
@@ -201,7 +202,7 @@ let valid_list_valid_array
 = valid_list_valid_exact_list p h input pos pos' ;
   valid_exact_equiv (parse_list p) h input pos pos' ;
   let len32 = pos' `U32.sub` pos in
-  list_length_constant_size_parser_correct p (B.as_seq h (B.gsub (B.gsub input.base pos (input.len `U32.sub` pos)) 0ul len32));
+  list_length_constant_size_parser_correct p (Seq.slice (bytes_of_slice_from h input pos) 0 (U32.v len32));
   contents_exact_eq (parse_list p) h input pos pos';
   valid_facts (parse_fldata_strong (serialize_list _ s) array_byte_size) h input pos;
   valid_synth h (parse_fldata_strong (serialize_list _ s) array_byte_size) (fldata_to_array s array_byte_size elem_count ()) input pos
@@ -219,7 +220,8 @@ let valid_array_valid_list
     U32.v array_byte_size32 == array_byte_size
   })
   (h: HS.mem)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
@@ -330,7 +332,8 @@ let finalize_vlarray
   (s: serializer p)
   (elem_count_min: nat)
   (elem_count_max: nat)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos pos' : U32.t)
 : HST.Stack unit
   (requires (fun h ->
@@ -341,6 +344,7 @@ let finalize_vlarray
     let len = U32.v pos' - vpos1 in
     valid_list p h sl pos1 pos' /\ (
     let count = L.length (contents_list p h sl pos1 pos') in
+    writable sl.base (U32.v pos) vpos1 h /\
     ((array_byte_size_min <= len /\ len <= array_byte_size_max) \/ (elem_count_min <= count /\ count <= elem_count_max))
   )))))
   (ensures (fun h _ h' ->
@@ -373,10 +377,6 @@ let clens_vlarray_nth
   clens_get = (fun (l: vlarray t min max) -> L.index l i);
 }
 
-#reset-options // we need non-linear arithmetic here
-
-#push-options "--z3rlimit 512"
-
 inline_for_extraction
 let vlarray_list_length
   (array_byte_size_min: nat)
@@ -387,7 +387,8 @@ let vlarray_list_length
   (s: serializer p)
   (elem_count_min: nat)
   (elem_count_max: nat)
-  (sl: slice)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
@@ -407,7 +408,7 @@ let vlarray_list_length
   [@inline_let]
   let _ : unit =
     let l = contents (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) h sl pos in
-    let sq = B.as_seq h (B.gsub sl.base pos (sl.len `U32.sub` pos)) in
+    let sq = bytes_of_slice_from h sl pos in
     valid_facts (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) h sl pos;
     valid_facts (parse_bounded_integer (log256' array_byte_size_max)) h sl pos;
     vldata_to_vlarray_inj array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ();
@@ -426,10 +427,12 @@ let vlarray_list_length
     contents_exact_eq (parse_list p) h sl pos_payload pos';
     valid_exact_list_valid_list p h sl pos_payload pos'
   in
+  [@inline_let]
+  let klow : U32.t =
+    U32.uint_to_t k.parser_kind_low
+  in
   let blen = read_bounded_integer (log256' array_byte_size_max) sl pos in
-  blen `U32.div` U32.uint_to_t k.parser_kind_low
-
-#pop-options
+  blen `U32.div` klow
 
 #push-options "--z3rlimit 16"
 
@@ -449,7 +452,7 @@ let vlarray_nth_ghost'
   (input: bytes)
 : GTot (nat * nat)
 = if (log256' array_byte_size_max + (i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low) <= Seq.length input
-  then (log256' array_byte_size_max + (i `Prims.op_Multiply` k.parser_kind_low), k.parser_kind_low)
+  then (log256' array_byte_size_max + (i `M.mult_nat` k.parser_kind_low), k.parser_kind_low)
   else (0, 0) // dummy
 
 #pop-options
@@ -542,9 +545,7 @@ let vlarray_nth_ghost
   vlarray_nth_ghost_correct array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input;
   vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input) <: Ghost (nat & nat) (requires True) (ensures (fun res -> gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input res)))
 
-module B = LowStar.Buffer
-
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction
 let vlarray_nth
@@ -569,7 +570,8 @@ let vlarray_nth
         let lc = Some?.v pi in
         let len = fst lc in
         let c_len = snd lc in
-        list_nth_constant_size_parser_correct p (Seq.slice (Ghost.reveal input) (log256' array_byte_size_max) (Seq.length (Ghost.reveal input))) (U32.v i)
+        let sq = Seq.slice (Ghost.reveal input) (log256' array_byte_size_max) (Seq.length (Ghost.reveal input)) in
+        list_nth_constant_size_parser_correct p sq (U32.v i)
       in
       [@inline_let]
       let res = U32.uint_to_t (log256' array_byte_size_max) `U32.add` (i `U32.mul` U32.uint_to_t k.parser_kind_low) in
@@ -587,7 +589,8 @@ let valid_bounded_vldata_strong_list_valid_list
   (#t: Type0)
   (p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 } )
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (h: HS.mem)
 : Lemma
@@ -615,7 +618,8 @@ let bounded_vldata_strong_list_payload_size
   (#t: Type0)
   (p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 } )
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
@@ -650,7 +654,8 @@ let finalize_bounded_vldata_strong_list
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
-  (input: slice)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack unit
@@ -661,6 +666,7 @@ let finalize_bounded_vldata_strong_list
     valid_list p h input pos_payload pos' /\ (
     let len_payload = pos' `U32.sub` pos_payload in
     let len_ser = Seq.length (serialize (serialize_list _ s) (contents_list p h input pos_payload pos')) in
+    writable input.base (U32.v pos) (U32.v pos_payload) h /\
     ((min <= U32.v len_payload /\ U32.v len_payload <= max) \/ (min <= len_ser /\ len_ser <= max))
   ))))
   (ensures (fun h _ h' ->
