@@ -3361,6 +3361,154 @@ let list_nth
 
 #pop-options
 
+#push-options "--z3rlimit 16"
+
+inline_for_extraction
+let list_find
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (f: (t -> Tot bool)) // should be GTot, but List.find requires Tot
+  (f' : (
+    (#rrel: _) ->
+    (#rel: _) ->
+    (sl: slice rrel rel) ->
+    (pos: U32.t) ->
+    HST.Stack bool
+    (requires (fun h ->
+      valid p h sl pos
+    ))
+    (ensures (fun h res h' ->
+      B.modifies B.loc_none h h' /\
+      res == f (contents p h sl pos)
+    ))
+  ))
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
+  (pos pos' : U32.t)
+: HST.Stack U32.t
+  (requires (fun h -> valid_list p h sl pos pos'))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\ (
+    let l = contents_list p h sl pos pos' in
+    if res = pos'
+    then L.find f l == None
+    else
+      U32.v pos <= U32.v res /\
+      valid p h sl res /\ (
+        let x = contents p h sl res in
+        U32.v res + content_length p h sl res <= U32.v pos' /\
+        f x == true /\
+        L.find f l == Some x
+      )
+  )))
+= let h0 = HST.get () in
+  HST.push_frame ();
+  let h1 = HST.get () in
+  let bres = BF.alloca 0ul 1ul in
+  let h2 = HST.get () in
+  let not_found = list_fold_left_gen
+    p
+    j
+    sl
+    pos pos'
+    h2
+    (Ghost.hide (B.loc_region_only true (HS.get_tip h1)))
+    (fun h l1 l2 pos1 ->
+      B.modifies (B.loc_region_only true (HS.get_tip h1)) h2 h /\
+      B.live h bres /\
+      valid_list p h0 sl pos1 pos' /\
+      l2 == contents_list p h0 sl pos1 pos' /\
+      L.find f (contents_list p h0 sl pos pos') == L.find f l2
+    )
+    (fun h _ _ _ h' ->
+      B.loc_unused_in_not_unused_in_disjoint h2;
+      B.modifies_only_not_unused_in (B.loc_region_only true (HS.get_tip h1)) h2 h'
+    )
+    (fun h ->
+      B.modifies (B.loc_region_only true (HS.get_tip h1)) h2 h /\
+      B.live h bres /\ (
+      let res = Seq.index (B.as_seq h bres) 0 in
+      U32.v pos <= U32.v res /\
+      valid p h0 sl res /\ (
+        let x = contents p h0 sl res in
+        U32.v res + content_length p h0 sl res <= U32.v pos' /\
+        f x == true /\
+        L.find f (contents_list p h0 sl pos pos') == Some x
+    )))
+    (fun h h' ->
+      B.loc_unused_in_not_unused_in_disjoint h2;
+      B.modifies_only_not_unused_in (B.loc_region_only true (HS.get_tip h1)) h2 h'
+    )
+    (fun pos1 pos2 ->
+      if f' sl pos1
+      then begin
+        B.upd bres 0ul pos1;
+        false
+      end
+      else true
+    )
+  in
+  let res =
+    if not_found
+    then pos'
+    else B.index bres 0ul
+  in
+  HST.pop_frame ();
+  res
+
+#pop-options
+
+let rec list_existsb_find
+  (#a: Type)
+  (f: (a -> Tot bool))
+  (l: list a)
+: Lemma
+  (L.existsb f l == Some? (L.find f l))
+= match l with
+  | [] -> ()
+  | x :: q ->
+    if f x
+    then ()
+    else list_existsb_find f q
+
+inline_for_extraction
+noextract
+let list_existsb
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (f: (t -> Tot bool)) // should be GTot, but List.find requires Tot
+  (f' : (
+    (#rrel: _) ->
+    (#rel: _) ->
+    (sl: slice rrel rel) ->
+    (pos: U32.t) ->
+    HST.Stack bool
+    (requires (fun h ->
+      valid p h sl pos
+    ))
+    (ensures (fun h res h' ->
+      B.modifies B.loc_none h h' /\
+      res == f (contents p h sl pos)
+    ))
+  ))
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
+  (pos pos' : U32.t)
+: HST.Stack bool
+  (requires (fun h -> valid_list p h sl pos pos'))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\
+    res == L.existsb f (contents_list p h sl pos pos')
+  ))
+= let h = HST.get () in
+  list_existsb_find f (contents_list p h sl pos pos');
+  let posn = list_find j f f' sl pos pos' in
+  posn <> pos'
+
 (* Example: trivial printers *)
 
 inline_for_extraction
