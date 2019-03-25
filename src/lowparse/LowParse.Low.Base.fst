@@ -2910,14 +2910,15 @@ let list_fold_left_gen
     (pos2: U32.t) ->
     HST.Stack bool
     (requires (fun h ->
-      valid_list p h sl pos pos1 /\
-      valid_pos p h sl pos1 pos2 /\
-      valid_list p h sl pos2 pos' /\
-      inv h (contents_list p h sl pos pos1) (contents p h sl pos1 :: contents_list p h sl pos2 pos') pos1
+      B.modifies (Ghost.reveal l) h0 h /\
+      valid_list p h0 sl pos pos1 /\
+      valid_pos p h0 sl pos1 pos2 /\
+      valid_list p h0 sl pos2 pos' /\
+      inv h (contents_list p h0 sl pos pos1) (contents p h0 sl pos1 :: contents_list p h0 sl pos2 pos') pos1
     ))
     (ensures (fun h ctinue h' ->
       B.modifies (Ghost.reveal l) h h' /\
-      (if ctinue then inv h' (contents_list p h sl pos pos1 `L.append` [contents p h sl pos1]) (contents_list p h sl pos2 pos') pos2 else post_interrupt h')
+      (if ctinue then inv h' (contents_list p h0 sl pos pos1 `L.append` [contents p h0 sl pos1]) (contents_list p h0 sl pos2 pos') pos2 else post_interrupt h')
     ))
   ))
 : HST.Stack bool
@@ -2932,11 +2933,12 @@ let list_fold_left_gen
   ))
 = HST.push_frame ();
   let h1 = HST.get () in
-  //B.fresh_frame_modifies h0 h1;
+//  B.fresh_frame_modifies h0 h1;
   let bpos : BF.pointer U32.t = BF.alloca pos 1ul in
   let bctinue : BF.pointer bool = BF.alloca true 1ul in
   let btest: BF.pointer bool = BF.alloca (pos `U32.lt` pos') 1ul in
   let h2 = HST.get () in
+  assert (B.modifies B.loc_none h0 h2);
   let test_pre (h: HS.mem) : GTot Type0 =
     B.live h bpos /\ B.live h bctinue /\ B.live h btest /\ (
     let pos1 = Seq.index (B.as_seq h bpos) 0 in
@@ -2969,13 +2971,13 @@ let list_fold_left_gen
       valid_list_cons_recip p h51 sl pos1 pos';
       let pos2 = j sl pos1 in
       let h52 = HST.get () in
-      inv_frame h51 (contents_list p h0 sl pos pos1) (contents_list p h1 sl pos1 pos') pos1 h52;
+      inv_frame h51 (contents_list p h0 sl pos pos1) (contents_list p h0 sl pos1 pos') pos1 h52;
+      B.modifies_only_not_unused_in (Ghost.reveal l) h0 h52;
       let ctinue = body pos1 pos2 in
       let h53 = HST.get () in
       //assert (B.loc_includes (loc_slice_from_to sl pos pos') (loc_slice_from_to sl pos1 pos2));
       //assert (B.loc_includes (loc_slice_from_to sl pos pos') (loc_slice_from_to sl pos2 pos'));
       B.loc_regions_unused_in h0 (Set.singleton (HS.get_tip h1));
-      B.modifies_only_not_unused_in (Ghost.reveal l) h0 h53;
       valid_pos_frame_strong p h0 sl pos1 pos2 (Ghost.reveal l) h53;
       valid_list_snoc p h0 sl pos pos1;
       B.upd bpos 0ul pos2;
@@ -3042,16 +3044,17 @@ let list_fold_left
     (l2: Ghost.erased (list t)) ->
     HST.Stack unit
     (requires (fun h ->
-      valid_list p h sl pos pos' /\
-      valid_content_pos p h sl pos1 (G.reveal x) pos2 /\
+      B.modifies (Ghost.reveal l) h0 h /\
+      valid_list p h0 sl pos pos' /\
+      valid_content_pos p h0 sl pos1 (G.reveal x) pos2 /\
       U32.v pos <= U32.v pos1 /\ U32.v pos2 <= U32.v pos' /\
       B.loc_includes (loc_slice_from_to sl pos pos') (loc_slice_from_to sl pos1 pos2) /\
       inv h (Ghost.reveal l1) (Ghost.reveal x :: Ghost.reveal l2) pos1 /\
-      contents_list p h sl pos pos' == Ghost.reveal l1 `L.append` (Ghost.reveal x :: Ghost.reveal l2)
+      contents_list p h0 sl pos pos' == Ghost.reveal l1 `L.append` (Ghost.reveal x :: Ghost.reveal l2)
     ))
     (ensures (fun h _ h' ->
       B.modifies (Ghost.reveal l) h h' /\
-      inv h' (Ghost.reveal l1 `L.append` [contents p h sl pos1]) (Ghost.reveal l2) pos2
+      inv h' (Ghost.reveal l1 `L.append` [contents p h0 sl pos1]) (Ghost.reveal l2) pos2
     ))
   ))
 : HST.Stack unit
