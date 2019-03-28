@@ -36,6 +36,8 @@ let valid_nlist_nil_recip
 = valid_facts (parse_nlist 0 p) h sl pos;
   parse_nlist_eq 0 p (bytes_of_slice_from h sl pos)
 
+#push-options "--z3rlimit 16"
+
 let valid_nlist_cons
   (n: nat)
   (#k: parser_kind)
@@ -67,8 +69,6 @@ let valid_nlist_cons
   valid_facts (parse_nlist n p) h sl pos1;
   valid_facts (parse_nlist (n + 1) p) h sl pos;
   parse_nlist_eq (n + 1) p (bytes_of_slice_from h sl pos)
-
-#push-options "--z3rlimit 16"
 
 let valid_nlist_cons_recip
   (n: nat)

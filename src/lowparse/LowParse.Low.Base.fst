@@ -176,13 +176,7 @@ let content_length
   (pos: U32.t)
 : Ghost nat
   (requires (valid p h sl pos))
-  (ensures (fun res ->
-    U32.v pos + res <= U32.v sl.len /\
-    k.parser_kind_low <= res /\ (
-    match k.parser_kind_high with
-    | None -> True
-    | Some max -> res <= max
-  )))
+  (ensures (fun res -> True))
 = valid_equiv p h sl pos;
   content_length' p h sl pos
 
@@ -228,6 +222,28 @@ let content_length_eq_gen
   (ensures (valid p h sl pos /\ valid' p h sl pos /\ content_length p h sl pos == content_length' p h sl pos))
 = valid_equiv p h sl pos;
   assert_norm (content_length p h sl pos == content_length' p h sl pos)
+
+abstract
+let content_length_post
+  (#rrel #rel: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (valid p h sl pos))
+  (ensures (
+    let res = content_length p h sl pos in
+    U32.v pos + res <= U32.v sl.len /\
+    k.parser_kind_low <= res /\ (
+    match k.parser_kind_high with
+    | None -> True
+    | Some max -> res <= max
+  )))
+  [SMTPat (content_length p h sl pos)]
+= content_length_eq_gen p h sl pos
 
 abstract
 let valid_facts
@@ -296,8 +312,26 @@ let get_valid_pos
   (pos: U32.t)
 : Ghost U32.t
   (requires (valid p h sl pos))
-  (ensures (fun pos' -> valid_pos p h sl pos pos'))
+  (ensures (fun pos' -> True))
 = pos `U32.add` U32.uint_to_t (content_length p h sl pos)
+
+abstract
+let get_valid_pos_post
+  (#rrel #rel: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (valid p h sl pos))
+  (ensures (
+    let pos' = get_valid_pos p h sl pos in
+    valid_pos p h sl pos pos'
+  ))
+  [SMTPat (get_valid_pos p h sl pos)]
+= ()
 
 abstract
 let valid_pos_get_valid_pos
@@ -1505,10 +1539,6 @@ let slice_access'
   let small = bytes_of_slice_from_to h sl pos (pos `U32.add` U32.uint_to_t (content_length' p1 h sl pos)) in
   pos `U32.add` U32.uint_to_t (fst (g small))
 
-// #push-options "--z3rlimit 512 --max_fuel 0 --max_ifuel 6 --initial_ifuel 6"
-
-#push-options "--z3rlimit 32"
-
 [@"opaque_to_smt"]
 abstract
 let slice_access
@@ -1531,28 +1561,9 @@ let slice_access
     valid p1 h sl pos /\
     cl.clens_cond (contents p1 h sl pos)
   ))
-  (ensures (fun pos' ->
-    valid p2 h sl pos' /\
-    contents p2 h sl pos' == cl.clens_get (contents p1 h sl pos) /\
-    // useful for framing
-    U32.v pos <= U32.v pos' /\
-    U32.v pos' + content_length p2 h sl pos' <= U32.v pos + content_length p1 h sl pos
-  ))
-= assert_norm (pow2 32 == 4294967296);
-  valid_facts p1 h sl pos;
-  let res = slice_access' h g sl pos in
-  valid_facts p2 h sl res;
-  let _ =
-    let input_large = bytes_of_slice_from h sl pos in
-    let input_small = bytes_of_slice_from_to h sl pos (pos `U32.add` U32.uint_to_t (content_length' p1 h sl pos)) in
-    parse_strong_prefix p1 input_large input_small;
-    let output_small = bytes_of_slice_from_to h sl res (res `U32.add` U32.uint_to_t (snd (g input_small))) in
-    let output_large = bytes_of_slice_from h sl res in
-    parse_strong_prefix p2 output_small output_large
-  in
-  res
-
-#pop-options
+  (ensures (fun pos' -> True))
+= valid_facts p1 h sl pos;
+  slice_access' h g sl pos
 
 abstract
 let slice_access_eq
@@ -1582,6 +1593,52 @@ let slice_access_eq
   ))
 = valid_facts p1 h sl pos;
   assert_norm (slice_access h g sl pos == slice_access' h g sl pos)
+
+#push-options "--z3rlimit 32"
+
+abstract
+let slice_access_post
+  (#rrel #rel: _)
+  (h: HS.mem)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (g: gaccessor p1 p2 cl)
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    valid p1 h sl pos /\
+    cl.clens_cond (contents p1 h sl pos)
+  ))
+  (ensures (
+    let pos' = slice_access h g sl pos in
+    valid p2 h sl pos' /\
+    contents p2 h sl pos' == cl.clens_get (contents p1 h sl pos) /\
+    // useful for framing
+    U32.v pos <= U32.v pos' /\
+    U32.v pos' + content_length p2 h sl pos' <= U32.v pos + content_length p1 h sl pos
+  ))
+  [SMTPat (slice_access h g sl pos)]
+= slice_access_eq h g sl pos;
+  valid_facts p1 h sl pos;
+  assert_norm (pow2 32 == 4294967296);
+  let res = slice_access' h g sl pos in
+  valid_facts p2 h sl res;
+  let input_large = bytes_of_slice_from h sl pos in
+  let input_small = bytes_of_slice_from_to h sl pos (pos `U32.add` U32.uint_to_t (content_length' p1 h sl pos)) in
+  parse_strong_prefix p1 input_large input_small;
+  let output_small = bytes_of_slice_from_to h sl res (res `U32.add` U32.uint_to_t (snd (g input_small))) in
+  let output_large = bytes_of_slice_from h sl res in
+  parse_strong_prefix p2 output_small output_large
+
+#pop-options
 
 #push-options "--z3rlimit 256 --max_fuel 0 --max_ifuel 6 --initial_ifuel 6"
 
@@ -3832,8 +3889,18 @@ let irepr_pos
 let irepr_pos'
   (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: _) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : Ghost U32.t
   (requires True)
-  (ensures (fun y -> U32.v (irepr_pos x) <= U32.v y /\ U32.v y <= U32.v s.len))
+  (ensures (fun y -> True))
 = Ghost.reveal (IRepr?.gpos' x)
+
+let irepr_pos'_post
+  (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: _) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : Lemma
+  (requires True)
+  (ensures (
+    let y = irepr_pos' x in
+    U32.v (irepr_pos x) <= U32.v y /\ U32.v y <= U32.v s.len
+  ))
+  [SMTPat (irepr_pos' x)]
+= ()
 
 let irepr_v
   (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: _) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : GTot t
