@@ -3709,6 +3709,99 @@ let list_flatten_map
 
 #pop-options
 
+let rec list_map_list_flatten_map
+  (#a #b: Type)
+  (f: a -> Tot b)
+  (l: list a)
+: Lemma
+  (L.map f l == L.flatten (L.map (fun x -> [f x]) l))
+= match l with
+  | [] -> ()
+  | a :: q -> list_map_list_flatten_map f q
+
+inline_for_extraction
+noextract
+let list_map
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_low > 0 } )
+  (f: (t1 -> Tot t2)) // should be GTot, but List.Tot.map requires Tot
+  (f' : (
+    (#rrel1: _) ->
+    (#rel1: _) ->
+    (sl1: slice rrel1 rel1) ->
+    (pos1: U32.t) ->
+    (#rrel2: _) ->
+    (#rel2: _) ->
+    (sl2: slice rrel2 rel2) ->
+    (pos2: U32.t) ->
+    HST.Stack U32.t
+    (requires (fun h ->
+      valid p1 h sl1 pos1 /\
+      live_slice h sl2 /\
+      B.loc_disjoint (loc_slice_from_to sl1 pos1 (get_valid_pos p1 h sl1 pos1)) (loc_slice_from sl2 pos2) /\
+      U32.v pos2 <= U32.v sl2.len /\
+      U32.v sl2.len < U32.v max_uint32 /\
+      writable sl2.base (U32.v pos2) (U32.v sl2.len) h
+    ))
+    (ensures (fun h res h' ->
+      B.modifies (loc_slice_from sl2 pos2) h h' /\ (
+      let y = f (contents p1 h sl1 pos1) in
+      if res = max_uint32
+      then U32.v pos2 + serialized_length s2 y > U32.v sl2.len
+      else
+        valid_content_pos p2 h' sl2 pos2 y res
+    )))
+  ))
+  (#rrel1 #rel1: _)
+  (sl1: slice rrel1 rel1)
+  (pos1 pos1' : U32.t)
+  (#rrel2 #rel2: _)
+  (sl2: slice rrel2 rel2)
+  (pos2: U32.t)
+: HST.Stack U32.t
+  (requires (fun h ->
+    valid_list p1 h sl1 pos1 pos1' /\
+    live_slice h sl2 /\
+    B.loc_disjoint (loc_slice_from_to sl1 pos1 pos1') (loc_slice_from sl2 pos2) /\
+    U32.v pos2 <= U32.v sl2.len /\
+    U32.v sl2.len < U32.v max_uint32 /\
+    writable sl2.base (U32.v pos2) (U32.v sl2.len) h
+  ))
+  (ensures (fun h res h' ->
+    B.modifies (loc_slice_from sl2 pos2) h h' /\ (
+    let y = List.Tot.map f (contents_list p1 h sl1 pos1 pos1') in
+    if res = max_uint32
+    then U32.v pos2 + serialized_list_length s2 y > U32.v sl2.len
+    else
+      valid_list p2 h' sl2 pos2 res /\
+      contents_list p2 h' sl2 pos2 res == y
+  )))
+= let h = HST.get () in
+  list_map_list_flatten_map f (contents_list p1 h sl1 pos1 pos1');
+  list_flatten_map
+    j1
+    s2
+    (fun x -> [f x])
+    (fun #rrel1 #rel1 sl1 pos1 #rrel2 #rel2 sl2 pos2 ->
+      let res = f' sl1 pos1 sl2 pos2 in
+      let h = HST.get () in
+      if res <> max_uint32
+      then begin
+        valid_list_nil p2 h sl2 res;
+        valid_list_cons p2 h sl2 pos2 res
+      end;
+      res
+    )
+    sl1 pos1 pos1'
+    sl2 pos2
+
+
 (* Example: trivial printers *)
 
 inline_for_extraction
