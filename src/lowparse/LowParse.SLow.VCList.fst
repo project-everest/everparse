@@ -164,7 +164,7 @@ let serialize32_nlist_precond
     | Some hi -> n `FStar.Mul.op_Star` hi < 4294967296
   )
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction
 let serialize32_nlist

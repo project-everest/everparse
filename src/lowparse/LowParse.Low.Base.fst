@@ -2833,6 +2833,48 @@ let valid_list_snoc
   valid_list_cons p h sl pos2 pos3;
   valid_list_append p h sl pos1 pos2 pos3
 
+(* size of a list of serialized data (should be taken from serialize_list) *)
+
+abstract
+let rec serialized_list_length (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (l: list t) : GTot nat =
+  match l with
+  | [] -> 0
+  | x :: q -> serialized_length s x + serialized_list_length s q
+
+abstract
+let serialized_list_length_nil (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) : Lemma
+  (serialized_list_length s [] == 0)
+= ()
+
+abstract
+let serialized_list_length_cons (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (x: t) (q: list t) : Lemma
+  (serialized_list_length s (x :: q) == serialized_length s x + serialized_list_length s q)
+= ()
+
+abstract
+let rec serialized_list_length_append (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (l1 l2: list t) : Lemma
+  (serialized_list_length s (List.Tot.append l1 l2) == serialized_list_length s l1 + serialized_list_length s l2)
+= match l1 with
+  | [] -> ()
+  | _ :: q -> serialized_list_length_append s q l2
+
+abstract
+let rec valid_list_serialized_list_length (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (h: HS.mem) (#rrel #rel: _) (input: slice rrel rel) (pos pos' : U32.t) : Lemma
+  (requires (
+    valid_list p h input pos pos'
+  ))
+  (ensures (
+    serialized_list_length s (contents_list p h input pos pos') == U32.v pos' - U32.v pos
+  ))
+  (decreases (U32.v pos' - U32.v pos))
+= if pos = pos'
+  then valid_list_nil p h input pos
+  else begin
+    valid_list_cons_recip p h input pos pos' ;
+    let pos1 = get_valid_pos p h input pos in
+    valid_list_serialized_list_length s h input pos1 pos'
+  end
+
 (* fold_left on lists *)
 
 module BF = LowStar.Buffer
@@ -2864,14 +2906,15 @@ let list_fold_left_gen
     (pos2: U32.t) ->
     HST.Stack bool
     (requires (fun h ->
-      valid_list p h sl pos pos1 /\
-      valid_pos p h sl pos1 pos2 /\
-      valid_list p h sl pos2 pos' /\
-      inv h (contents_list p h sl pos pos1) (contents p h sl pos1 :: contents_list p h sl pos2 pos') pos1
+      B.modifies (Ghost.reveal l) h0 h /\
+      valid_list p h0 sl pos pos1 /\
+      valid_pos p h0 sl pos1 pos2 /\
+      valid_list p h0 sl pos2 pos' /\
+      inv h (contents_list p h0 sl pos pos1) (contents p h0 sl pos1 :: contents_list p h0 sl pos2 pos') pos1
     ))
     (ensures (fun h ctinue h' ->
       B.modifies (Ghost.reveal l) h h' /\
-      (if ctinue then inv h' (contents_list p h sl pos pos1 `L.append` [contents p h sl pos1]) (contents_list p h sl pos2 pos') pos2 else post_interrupt h')
+      (if ctinue then inv h' (contents_list p h0 sl pos pos1 `L.append` [contents p h0 sl pos1]) (contents_list p h0 sl pos2 pos') pos2 else post_interrupt h')
     ))
   ))
 : HST.Stack bool
@@ -2886,11 +2929,12 @@ let list_fold_left_gen
   ))
 = HST.push_frame ();
   let h1 = HST.get () in
-  //B.fresh_frame_modifies h0 h1;
+//  B.fresh_frame_modifies h0 h1;
   let bpos : BF.pointer U32.t = BF.alloca pos 1ul in
   let bctinue : BF.pointer bool = BF.alloca true 1ul in
   let btest: BF.pointer bool = BF.alloca (pos `U32.lt` pos') 1ul in
   let h2 = HST.get () in
+  assert (B.modifies B.loc_none h0 h2);
   let test_pre (h: HS.mem) : GTot Type0 =
     B.live h bpos /\ B.live h bctinue /\ B.live h btest /\ (
     let pos1 = Seq.index (B.as_seq h bpos) 0 in
@@ -2923,13 +2967,13 @@ let list_fold_left_gen
       valid_list_cons_recip p h51 sl pos1 pos';
       let pos2 = j sl pos1 in
       let h52 = HST.get () in
-      inv_frame h51 (contents_list p h0 sl pos pos1) (contents_list p h1 sl pos1 pos') pos1 h52;
+      inv_frame h51 (contents_list p h0 sl pos pos1) (contents_list p h0 sl pos1 pos') pos1 h52;
+      B.modifies_only_not_unused_in (Ghost.reveal l) h0 h52;
       let ctinue = body pos1 pos2 in
       let h53 = HST.get () in
       //assert (B.loc_includes (loc_slice_from_to sl pos pos') (loc_slice_from_to sl pos1 pos2));
       //assert (B.loc_includes (loc_slice_from_to sl pos pos') (loc_slice_from_to sl pos2 pos'));
       B.loc_regions_unused_in h0 (Set.singleton (HS.get_tip h1));
-      B.modifies_only_not_unused_in (Ghost.reveal l) h0 h53;
       valid_pos_frame_strong p h0 sl pos1 pos2 (Ghost.reveal l) h53;
       valid_list_snoc p h0 sl pos pos1;
       B.upd bpos 0ul pos2;
@@ -2996,16 +3040,17 @@ let list_fold_left
     (l2: Ghost.erased (list t)) ->
     HST.Stack unit
     (requires (fun h ->
-      valid_list p h sl pos pos' /\
-      valid_content_pos p h sl pos1 (G.reveal x) pos2 /\
+      B.modifies (Ghost.reveal l) h0 h /\
+      valid_list p h0 sl pos pos' /\
+      valid_content_pos p h0 sl pos1 (G.reveal x) pos2 /\
       U32.v pos <= U32.v pos1 /\ U32.v pos2 <= U32.v pos' /\
       B.loc_includes (loc_slice_from_to sl pos pos') (loc_slice_from_to sl pos1 pos2) /\
       inv h (Ghost.reveal l1) (Ghost.reveal x :: Ghost.reveal l2) pos1 /\
-      contents_list p h sl pos pos' == Ghost.reveal l1 `L.append` (Ghost.reveal x :: Ghost.reveal l2)
+      contents_list p h0 sl pos pos' == Ghost.reveal l1 `L.append` (Ghost.reveal x :: Ghost.reveal l2)
     ))
     (ensures (fun h _ h' ->
       B.modifies (Ghost.reveal l) h h' /\
-      inv h' (Ghost.reveal l1 `L.append` [contents p h sl pos1]) (Ghost.reveal l2) pos2
+      inv h' (Ghost.reveal l1 `L.append` [contents p h0 sl pos1]) (Ghost.reveal l2) pos2
     ))
   ))
 : HST.Stack unit
@@ -3311,6 +3356,405 @@ let list_nth
   res
 
 #pop-options
+
+#push-options "--z3rlimit 16"
+
+inline_for_extraction
+let list_find
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (f: (t -> Tot bool)) // should be GTot, but List.find requires Tot
+  (f' : (
+    (#rrel: _) ->
+    (#rel: _) ->
+    (sl: slice rrel rel) ->
+    (pos: U32.t) ->
+    HST.Stack bool
+    (requires (fun h ->
+      valid p h sl pos
+    ))
+    (ensures (fun h res h' ->
+      B.modifies B.loc_none h h' /\
+      res == f (contents p h sl pos)
+    ))
+  ))
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
+  (pos pos' : U32.t)
+: HST.Stack U32.t
+  (requires (fun h -> valid_list p h sl pos pos'))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\ (
+    let l = contents_list p h sl pos pos' in
+    if res = pos'
+    then L.find f l == None
+    else
+      U32.v pos <= U32.v res /\
+      valid p h sl res /\ (
+        let x = contents p h sl res in
+        U32.v res + content_length p h sl res <= U32.v pos' /\
+        f x == true /\
+        L.find f l == Some x
+      )
+  )))
+= let h0 = HST.get () in
+  HST.push_frame ();
+  let h1 = HST.get () in
+  let bres = BF.alloca 0ul 1ul in
+  let h2 = HST.get () in
+  let not_found = list_fold_left_gen
+    p
+    j
+    sl
+    pos pos'
+    h2
+    (Ghost.hide (B.loc_region_only true (HS.get_tip h1)))
+    (fun h l1 l2 pos1 ->
+      B.modifies (B.loc_region_only true (HS.get_tip h1)) h2 h /\
+      B.live h bres /\
+      valid_list p h0 sl pos1 pos' /\
+      l2 == contents_list p h0 sl pos1 pos' /\
+      L.find f (contents_list p h0 sl pos pos') == L.find f l2
+    )
+    (fun h _ _ _ h' ->
+      B.loc_unused_in_not_unused_in_disjoint h2;
+      B.modifies_only_not_unused_in (B.loc_region_only true (HS.get_tip h1)) h2 h'
+    )
+    (fun h ->
+      B.modifies (B.loc_region_only true (HS.get_tip h1)) h2 h /\
+      B.live h bres /\ (
+      let res = Seq.index (B.as_seq h bres) 0 in
+      U32.v pos <= U32.v res /\
+      valid p h0 sl res /\ (
+        let x = contents p h0 sl res in
+        U32.v res + content_length p h0 sl res <= U32.v pos' /\
+        f x == true /\
+        L.find f (contents_list p h0 sl pos pos') == Some x
+    )))
+    (fun h h' ->
+      B.loc_unused_in_not_unused_in_disjoint h2;
+      B.modifies_only_not_unused_in (B.loc_region_only true (HS.get_tip h1)) h2 h'
+    )
+    (fun pos1 pos2 ->
+      if f' sl pos1
+      then begin
+        B.upd bres 0ul pos1;
+        false
+      end
+      else true
+    )
+  in
+  let res =
+    if not_found
+    then pos'
+    else B.index bres 0ul
+  in
+  HST.pop_frame ();
+  res
+
+#pop-options
+
+let rec list_existsb_find
+  (#a: Type)
+  (f: (a -> Tot bool))
+  (l: list a)
+: Lemma
+  (L.existsb f l == Some? (L.find f l))
+= match l with
+  | [] -> ()
+  | x :: q ->
+    if f x
+    then ()
+    else list_existsb_find f q
+
+inline_for_extraction
+noextract
+let list_existsb
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (f: (t -> Tot bool)) // should be GTot, but List.find requires Tot
+  (f' : (
+    (#rrel: _) ->
+    (#rel: _) ->
+    (sl: slice rrel rel) ->
+    (pos: U32.t) ->
+    HST.Stack bool
+    (requires (fun h ->
+      valid p h sl pos
+    ))
+    (ensures (fun h res h' ->
+      B.modifies B.loc_none h h' /\
+      res == f (contents p h sl pos)
+    ))
+  ))
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
+  (pos pos' : U32.t)
+: HST.Stack bool
+  (requires (fun h -> valid_list p h sl pos pos'))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\
+    res == L.existsb f (contents_list p h sl pos pos')
+  ))
+= let h = HST.get () in
+  list_existsb_find f (contents_list p h sl pos pos');
+  let posn = list_find j f f' sl pos pos' in
+  posn <> pos'
+
+let rec list_flatten_append
+  (#a: Type)
+  (l1 l2: list (list a))
+: Lemma
+  (L.flatten (l1 `L.append` l2) == L.flatten l1 `L.append` L.flatten l2)
+= match l1 with
+  | [] -> ()
+  | a :: q ->
+    list_flatten_append q l2;
+    L.append_assoc a (L.flatten q) (L.flatten l2)
+
+let list_flatten_map_append
+  (#a #b: Type)
+  (f: a -> Tot (list b))
+  (l1 l2: list a)
+: Lemma
+  (L.flatten (L.map f (l1 `L.append` l2)) == L.flatten (L.map f l1) `L.append` L.flatten (L.map f l2))
+= L.map_append f l1 l2;
+  list_flatten_append (L.map f l1) (L.map f l2)
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+noextract
+let list_flatten_map
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_low > 0 } )
+  (f: (t1 -> Tot (list t2))) // should be GTot, but List.Tot.map requires Tot
+  (f' : (
+    (#rrel1: _) ->
+    (#rel1: _) ->
+    (sl1: slice rrel1 rel1) ->
+    (pos1: U32.t) ->
+    (#rrel2: _) ->
+    (#rel2: _) ->
+    (sl2: slice rrel2 rel2) ->
+    (pos2: U32.t) ->
+    HST.Stack U32.t
+    (requires (fun h ->
+      valid p1 h sl1 pos1 /\
+      live_slice h sl2 /\
+      B.loc_disjoint (loc_slice_from_to sl1 pos1 (get_valid_pos p1 h sl1 pos1)) (loc_slice_from sl2 pos2) /\
+      U32.v pos2 <= U32.v sl2.len /\
+      U32.v sl2.len < U32.v max_uint32 /\
+      writable sl2.base (U32.v pos2) (U32.v sl2.len) h
+    ))
+    (ensures (fun h res h' ->
+      B.modifies (loc_slice_from sl2 pos2) h h' /\ (
+      let y = f (contents p1 h sl1 pos1) in
+      if res = max_uint32
+      then U32.v pos2 + serialized_list_length s2 y > U32.v sl2.len
+      else
+        valid_list p2 h' sl2 pos2 res /\
+        contents_list p2 h' sl2 pos2 res == y
+    )))
+  ))
+  (#rrel1 #rel1: _)
+  (sl1: slice rrel1 rel1)
+  (pos1 pos1' : U32.t)
+  (#rrel2 #rel2: _)
+  (sl2: slice rrel2 rel2)
+  (pos2: U32.t)
+: HST.Stack U32.t
+  (requires (fun h ->
+    valid_list p1 h sl1 pos1 pos1' /\
+    live_slice h sl2 /\
+    B.loc_disjoint (loc_slice_from_to sl1 pos1 pos1') (loc_slice_from sl2 pos2) /\
+    U32.v pos2 <= U32.v sl2.len /\
+    U32.v sl2.len < U32.v max_uint32 /\
+    writable sl2.base (U32.v pos2) (U32.v sl2.len) h
+  ))
+  (ensures (fun h res h' ->
+    B.modifies (loc_slice_from sl2 pos2) h h' /\ (
+    let y = List.Tot.flatten (List.Tot.map f (contents_list p1 h sl1 pos1 pos1')) in
+    if res = max_uint32
+    then U32.v pos2 + serialized_list_length s2 y > U32.v sl2.len
+    else
+      valid_list p2 h' sl2 pos2 res /\
+      contents_list p2 h' sl2 pos2 res == y
+  )))
+= let h0 = HST.get () in
+  HST.push_frame ();
+  let h1 = HST.get () in
+  let bpos2_ = BF.alloca pos2 1ul in
+  let h2 = HST.get () in
+  valid_list_nil p2 h0 sl2 pos2;
+  let fits = list_fold_left_gen
+    p1
+    j1
+    sl1
+    pos1 pos1'
+    h2
+    (Ghost.hide (B.loc_region_only true (HS.get_tip h1) `B.loc_union` loc_slice_from sl2 pos2))
+    (fun h ll lr _ ->
+      B.modifies (B.loc_region_only true (HS.get_tip h1) `B.loc_union` loc_slice_from sl2 pos2) h2 h /\
+      B.live h bpos2_ /\ (
+      let pos2_ = Seq.index (B.as_seq h bpos2_) 0 in
+      contents_list p1 h0 sl1 pos1 pos1' == ll `List.Tot.append` lr /\
+      valid_list p2 h sl2 pos2 pos2_ /\
+      contents_list p2 h sl2 pos2 pos2_ == List.Tot.flatten (List.Tot.map f ll) /\
+      writable sl2.base (U32.v pos2) (U32.v sl2.len) h
+    ))
+    (fun h _ _ _ h' ->
+      B.modifies_only_not_unused_in (B.loc_region_only true (HS.get_tip h1) `B.loc_union` loc_slice_from sl2 pos2) h2 h';
+      B.loc_unused_in_not_unused_in_disjoint h2
+    )
+    (fun h ->
+      B.modifies (B.loc_region_only true (HS.get_tip h1) `B.loc_union` loc_slice_from sl2 pos2) h2 h /\
+      U32.v pos2 + serialized_list_length s2 (List.Tot.flatten (List.Tot.map f (contents_list p1 h0 sl1 pos1 pos1'))) > U32.v sl2.len
+    )
+    (fun h h' -> 
+      B.modifies_only_not_unused_in (B.loc_region_only true (HS.get_tip h1) `B.loc_union` loc_slice_from sl2 pos2) h2 h';
+      B.loc_unused_in_not_unused_in_disjoint h2
+    )
+    (fun pos1l pos1r ->
+      let pos2_ = B.index bpos2_ 0ul in
+      let h = HST.get () in
+      writable_weaken sl2.base (U32.v pos2) (U32.v sl2.len) h (U32.v pos2_) (U32.v sl2.len);
+      let res = f' sl1 pos1l sl2 pos2_ in
+      let fits = not (res = max_uint32) in
+      if fits then begin
+        B.upd bpos2_ 0ul res;
+        let h' = HST.get () in
+        writable_modifies sl2.base (U32.v pos2) (U32.v sl2.len) h (B.loc_region_only true (HS.get_tip h1)) h' ;
+        List.Tot.append_assoc (contents_list p1 h0 sl1 pos1 pos1l) [contents p1 h0 sl1 pos1l] (contents_list p1 h0 sl1 pos1r pos1');
+        list_flatten_map_append f (contents_list p1 h0 sl1 pos1 pos1l) [contents p1 h0 sl1 pos1l];
+        valid_list_snoc p1 h0 sl1 pos1 pos1l;
+        valid_list_append p2 h' sl2 pos2 pos2_ res;
+        valid_list_nil p2 h' sl2 res;
+        valid_list_append p2 h' sl2 pos2_ res res
+      end else begin
+        let h' = HST.get () in
+        valid_list_cons p1 h0 sl1 pos1l pos1' ;
+        valid_list_append p1 h0 sl1 pos1 pos1l pos1' ;
+        list_flatten_map_append f (contents_list p1 h0 sl1 pos1 pos1l) (contents_list p1 h0 sl1 pos1l pos1');
+        serialized_list_length_append s2 (L.flatten (L.map f (contents_list p1 h0 sl1 pos1 pos1l))) (L.flatten (L.map f (contents_list p1 h0 sl1 pos1l pos1')));
+        serialized_list_length_append s2 (f (contents p1 h0 sl1 pos1l)) (L.flatten (L.map f (contents_list p1 h0 sl1 pos1r pos1')));
+        valid_list_serialized_list_length s2 h' sl2 pos2 pos2_
+      end;
+      fits
+    )
+  in
+  let res =
+    if fits
+    then B.index bpos2_ 0ul
+    else max_uint32
+  in
+  HST.pop_frame ();
+  res
+
+#pop-options
+
+let rec list_map_list_flatten_map
+  (#a #b: Type)
+  (f: a -> Tot b)
+  (l: list a)
+: Lemma
+  (L.map f l == L.flatten (L.map (fun x -> [f x]) l))
+= match l with
+  | [] -> ()
+  | a :: q -> list_map_list_flatten_map f q
+
+inline_for_extraction
+noextract
+let list_map
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_low > 0 } )
+  (f: (t1 -> Tot t2)) // should be GTot, but List.Tot.map requires Tot
+  (f' : (
+    (#rrel1: _) ->
+    (#rel1: _) ->
+    (sl1: slice rrel1 rel1) ->
+    (pos1: U32.t) ->
+    (#rrel2: _) ->
+    (#rel2: _) ->
+    (sl2: slice rrel2 rel2) ->
+    (pos2: U32.t) ->
+    HST.Stack U32.t
+    (requires (fun h ->
+      valid p1 h sl1 pos1 /\
+      live_slice h sl2 /\
+      B.loc_disjoint (loc_slice_from_to sl1 pos1 (get_valid_pos p1 h sl1 pos1)) (loc_slice_from sl2 pos2) /\
+      U32.v pos2 <= U32.v sl2.len /\
+      U32.v sl2.len < U32.v max_uint32 /\
+      writable sl2.base (U32.v pos2) (U32.v sl2.len) h
+    ))
+    (ensures (fun h res h' ->
+      B.modifies (loc_slice_from sl2 pos2) h h' /\ (
+      let y = f (contents p1 h sl1 pos1) in
+      if res = max_uint32
+      then U32.v pos2 + serialized_length s2 y > U32.v sl2.len
+      else
+        valid_content_pos p2 h' sl2 pos2 y res
+    )))
+  ))
+  (#rrel1 #rel1: _)
+  (sl1: slice rrel1 rel1)
+  (pos1 pos1' : U32.t)
+  (#rrel2 #rel2: _)
+  (sl2: slice rrel2 rel2)
+  (pos2: U32.t)
+: HST.Stack U32.t
+  (requires (fun h ->
+    valid_list p1 h sl1 pos1 pos1' /\
+    live_slice h sl2 /\
+    B.loc_disjoint (loc_slice_from_to sl1 pos1 pos1') (loc_slice_from sl2 pos2) /\
+    U32.v pos2 <= U32.v sl2.len /\
+    U32.v sl2.len < U32.v max_uint32 /\
+    writable sl2.base (U32.v pos2) (U32.v sl2.len) h
+  ))
+  (ensures (fun h res h' ->
+    B.modifies (loc_slice_from sl2 pos2) h h' /\ (
+    let y = List.Tot.map f (contents_list p1 h sl1 pos1 pos1') in
+    if res = max_uint32
+    then U32.v pos2 + serialized_list_length s2 y > U32.v sl2.len
+    else
+      valid_list p2 h' sl2 pos2 res /\
+      contents_list p2 h' sl2 pos2 res == y
+  )))
+= let h = HST.get () in
+  list_map_list_flatten_map f (contents_list p1 h sl1 pos1 pos1');
+  list_flatten_map
+    j1
+    s2
+    (fun x -> [f x])
+    (fun #rrel1 #rel1 sl1 pos1 #rrel2 #rel2 sl2 pos2 ->
+      let res = f' sl1 pos1 sl2 pos2 in
+      let h = HST.get () in
+      if res <> max_uint32
+      then begin
+        valid_list_nil p2 h sl2 res;
+        valid_list_cons p2 h sl2 pos2 res
+      end;
+      res
+    )
+    sl1 pos1 pos1'
+    sl2 pos2
+
 
 (* Example: trivial printers *)
 
