@@ -322,6 +322,28 @@ let validate_list
   then sl.len
   else error
 
+abstract
+let rec serialized_list_length_eq_length_serialize_list
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (l: list t)
+: Lemma
+  (requires (
+    serialize_list_precond k
+  ))
+  (ensures (serialized_list_length s l == Seq.length (serialize (serialize_list _ s) l)))
+= match l with
+  | [] ->
+    serialize_list_nil _ s;
+    serialized_list_length_nil s
+  | a :: q ->
+    serialize_list_cons _ s a q;
+    serialized_list_length_cons s a q;
+    serialized_list_length_eq_length_serialize_list s q;
+    serialized_length_eq s a
+
 (*
 #reset-options "--z3rlimit 128 --max_fuel 16 --max_ifuel 16 --z3cliopt smt.arith.nl=false"
 
