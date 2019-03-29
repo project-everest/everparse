@@ -2525,7 +2525,7 @@ let copy_weak
     U32.v dpos <= U32.v dst.len /\
     U32.v dst.len < U32.v max_uint32 /\
     writable dst.base (U32.v dpos) (U32.v dpos + (content_length p h src spos)) h /\
-    B.loc_disjoint (loc_slice_from src spos) (loc_slice_from dst dpos)
+    B.loc_disjoint (loc_slice_from_to src spos (get_valid_pos p h src spos)) (loc_slice_from dst dpos)
   ))
   (ensures (fun h dpos' h' ->
     B.modifies (loc_slice_from dst dpos) h h' /\ (
