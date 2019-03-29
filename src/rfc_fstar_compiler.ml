@@ -2046,6 +2046,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_list_bytesize_nil = LP.serialize_list_nil %s %s\n\n" n (pcombinator_name ty) (scombinator_name ty);
       w i "val %s_list_bytesize_cons (x: %s) (y: list %s) : Lemma (%s_list_bytesize (x :: y) == %s + %s_list_bytesize y) [SMTPat (%s_list_bytesize (x :: y))]\n\n" n (compile_type ty) (compile_type ty) n (bytesize_call ty "x") n n;
       w o "let %s_list_bytesize_cons x y = LP.serialize_list_cons %s %s x y; %s\n\n" n (pcombinator_name ty) (scombinator_name ty) (bytesize_eq_call ty "x");
+      w i "val %s_list_bytesize_eq (l: list %s) : Lemma (%s_list_bytesize l == LL.serialized_list_length %s l)\n\n" n (compile_type ty) n (scombinator_name ty);
+      w o "let %s_list_bytesize_eq l = LL.serialized_list_length_eq_length_serialize_list %s l\n\n" n (scombinator_name ty);
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty);
       w o "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
