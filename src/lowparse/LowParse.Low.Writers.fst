@@ -508,7 +508,7 @@ let owriter_of_writer
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_high == Some k.parser_kind_low /\ k.parser_kind_low < 4294967296 } )
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
   (#h0: HS.mem)
   (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (#pout_from0: U32.t)
