@@ -1512,6 +1512,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
          wl o "let %s_jumper%s = %s\n\n" n jumper_annot (jumper_name ty));
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
+      w i "val %s_parser_serializer_eq (_: unit) : Lemma (%s_parser == %s /\\ %s_serializer == %s)\n\n" n n (pcombinator_name ty) n (scombinator_name ty);
+      w o "let %s_parser_serializer_eq _ = ()\n\n" n;
       ()
 
     (* Should be rewritten during normalization *)
