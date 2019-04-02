@@ -323,6 +323,52 @@ let lwriter_ifthenelse
 = LWriter (if cond then (wtrue ()).v else (wfalse ()).v)
   (fun pout_from -> if cond then lwrite (wtrue ()) pout_from else lwrite (wfalse ()) pout_from)
 
+inline_for_extraction
+noextract
+let lwriter_list_map
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_low > 0 } )
+  (f: t1 -> Tot t2)
+  (#rrel #rel: _)
+  (sin: slice rrel rel)
+  (pin_from pin_to: U32.t)
+  (h0: HS.mem)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t {
+    B.loc_disjoint (loc_slice_from sout pout_from0) (loc_slice_from_to sin pin_from pin_to) /\
+    valid_list p1 h0 sin pin_from pin_to
+  })
+  (f' : (
+    (pos: U32.t {
+      U32.v pin_from <= U32.v pos /\
+      valid p1 h0 sin pos /\
+      U32.v pos + content_length p1 h0 sin pos <= U32.v pin_to
+    }) ->
+    Tot (y: writer s2 h0 sout pout_from0 { wvalue y == f (contents p1 h0 sin pos) })
+  ))
+: Tot (x: lwriter s2 h0 sout pout_from0 { lwvalue x == List.Tot.map f (contents_list p1 h0 sin pin_from pin_to) } )
+= LWriter (Ghost.hide (List.Tot.map f (contents_list p1 h0 sin pin_from pin_to))) (fun pout_from ->
+    assert (k1.parser_kind_subkind == Some ParserStrong);
+    let h = HST.get () in
+    list_map
+      j1
+      s2
+      f
+      h
+      sin pin_from pin_to
+      sout pout_from
+      (fun pin_ pout_ ->
+        valid_pos_frame_strong p1 h0 sin pin_ (get_valid_pos p1 h sin pin_) (loc_slice_from sout pout_from0) h;
+        write (f' pin_) pout_
+      )
+  )
+
 
 (* With options (other failures) *)
 
