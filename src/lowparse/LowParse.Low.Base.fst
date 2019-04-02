@@ -2,6 +2,7 @@ module LowParse.Low.Base
 include LowParse.Spec.Base
 include LowParse.Slice
 
+module M = LowParse.Math
 module B = LowStar.Monotonic.Buffer
 module U32 = FStar.UInt32
 module HS = FStar.HyperStack
@@ -2931,6 +2932,27 @@ let rec valid_list_serialized_list_length (#k: parser_kind) (#t: Type) (#p: pars
     let pos1 = get_valid_pos p h input pos in
     valid_list_serialized_list_length s h input pos1 pos'
   end
+
+abstract
+let rec serialized_list_length_constant_size
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p {k.parser_kind_high == Some k.parser_kind_low})
+  (l: list t)
+: Lemma
+  (ensures (
+    serialized_list_length s l == L.length l `Prims.op_Multiply` k.parser_kind_low
+  ))
+= match l with
+  | [] ->
+    assert (serialized_list_length s l == 0);
+    assert (L.length l == 0)
+  | a :: q ->
+    serialized_list_length_constant_size s q;
+    serialized_length_eq s a;
+    assert (serialized_length s a == k.parser_kind_low);
+    M.distributivity_add_left 1 (L.length q) k.parser_kind_low
 
 (* fold_left on lists *)
 
