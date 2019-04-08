@@ -3,7 +3,7 @@ module P = Pair
 module U8 = FStar.UInt8
 module FB = LowStar.PrefixFreezableBuffer
 module LM = LowParseExampleMono
-module LMI = LowParse.MLow.Int
+module LMI = LowParse.Low.Int
 
 assume val buf :
   s: LM.slice{

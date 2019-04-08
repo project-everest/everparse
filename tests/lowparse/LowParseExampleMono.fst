@@ -1,5 +1,5 @@
 module LowParseExampleMono
-include LowParse.MLow.Base
+include LowParse.Low.Base
 open LowStar.PrefixFreezableBuffer
 
 module U32 = FStar.UInt32
@@ -23,7 +23,7 @@ let compl
   )
 
 inline_for_extraction
-type slice = (s: slice prefix_freezable_preorder prefix_freezable_preorder {
+type slice = (s: slice (srel_of_buffer_srel prefix_freezable_preorder) (srel_of_buffer_srel prefix_freezable_preorder) {
   B.length s.base >= 4 /\
   B.witnessed s.base (frozen_until_at_least 4)
 })
@@ -287,11 +287,11 @@ let iwrite
 inline_for_extraction
 noextract
 let icopy
-  (#rrel #rel: B.srel byte)
+  (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: LowParse.MLow.Base.slice rrel rel)
+  (src: LowParse.Low.Base.slice rrel rel)
   (spos spos' : U32.t)
   (dst: slice)
   (dpos: U32.t)
