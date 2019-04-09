@@ -723,3 +723,26 @@ let olwriter_of_lwriter
   (w: lwriter s h0 sout pout_from0)
 : Tot (olwriter s h0 sout pout_from0)
 = OLWriter (Ghost.hide (Some (lwvalue w))) (fun pout_from -> lwrite w pout_from)
+
+inline_for_extraction
+noextract
+let wcopy
+  (#k: _)
+  (#t: _)
+  (#p: parser k t)
+  (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
+  (#rrel #rel: _)
+  (sin: slice rrel rel)
+  (pin_from pin_to: U32.t)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (sout_from0: U32.t)
+  (h0: HS.mem {
+    B.loc_disjoint (loc_slice_from_to sin pin_from pin_to) (loc_slice_from sout sout_from0) /\
+    valid_pos p h0 sin pin_from pin_to
+  })
+: Tot (w: writer s h0 sout sout_from0 {
+    wvalue w == contents p h0 sin pin_from
+  })
+= Writer (Ghost.hide (contents p h0 sin pin_from)) (fun sout_from ->
+    copy_weak_with_length p sin pin_from pin_to sout sout_from
+  )
