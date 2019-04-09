@@ -134,7 +134,7 @@ let rec sizeof = function
     | "opaque"
     | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "uint16" | "uint16_le" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
-    | "uint24" | "uint24_le" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
+    | "uint24" | "uint24_le" -> { len_len = 0; min_len = 3; max_len = 3; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "uint32" | "uint32_le" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
     | "asn1_len8" -> { len_len = 0; min_len = 1; max_len = 2; min_count = 0; max_count = 0; vl = true; meta = MetadataDefault }
     | "asn1_len"

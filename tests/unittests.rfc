@@ -173,3 +173,8 @@ struct {
   asn1_len8 len;
   t25 payload[len];
 } t26;
+
+struct {
+  tag msg_type;
+  uint24 length;
+} t27;
