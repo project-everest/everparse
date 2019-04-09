@@ -1,7 +1,9 @@
-## QuackyDucky
+# EverParse
 
-QuackyDucky is a small tool to translate informal specification of message formats found in RFC (in particular for TLS 1.3)
-into formal F* specifications, which are in turn transformed into efficient and verified parser implementations.
+EverParse is a framework for generating verified secure parsers from DSL format specification languages.
+It consists of LowParse, a verified combinator library (in `src/lowparse`), and QuackyDucky, an untrusted message format specification language compiler.
+
+## QuackyDucky
 
 ### Usage
 
