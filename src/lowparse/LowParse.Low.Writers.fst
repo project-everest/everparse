@@ -746,3 +746,195 @@ let wcopy
 = Writer (Ghost.hide (contents p h0 sin pin_from)) (fun sout_from ->
     copy_weak_with_length p sin pin_from pin_to sout sout_from
   )
+
+(* monadic-style bind to read contents from h0 *)
+
+inline_for_extraction
+noextract
+noeq
+type greader
+  (h0: HS.mem)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+  (t: Type)
+= | GReader:
+    (v: Ghost.erased t) ->
+    (f: (
+      unit ->
+      HST.Stack t
+      (requires (fun h ->
+        B.modifies (loc_slice_from sout pout_from0) h0 h
+      ))
+      (ensures (fun h res h' ->
+        B.modifies B.loc_none h h' /\
+        res == Ghost.reveal v
+    )))) ->
+    greader h0 sout pout_from0 t
+
+let grvalue
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (#t: Type)
+  (r: greader h0 sout pout_from0 t)
+: GTot t
+= Ghost.reveal (GReader?.v r)
+
+inline_for_extraction
+noextract
+let gread
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (#t: Type)
+  (r: greader h0 sout pout_from0 t)
+: HST.Stack t
+  (requires (fun h ->
+    B.modifies (loc_slice_from sout pout_from0) h0 h
+  ))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\
+    res == grvalue r
+  ))
+= match r with
+  | GReader _ f -> f ()
+
+inline_for_extraction
+noextract
+let wbind
+  (#tr: Type)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (r: greader h0 sout pout_from0 tr)
+  (w: ((x: tr) -> Pure (writer s h0 sout pout_from0) (requires (x == grvalue r)) (ensures (fun _ -> True))))
+: Tot (w' : writer s h0 sout pout_from0 { wvalue w' == wvalue (w (grvalue r)) } )
+= Writer (Ghost.hide (wvalue (w (grvalue r)))) (fun pout_from ->
+    let v = gread r in
+    write (w v) pout_from
+  )
+
+inline_for_extraction
+noextract
+let owbind
+  (#tr: Type)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (r: greader h0 sout pout_from0 tr)
+  (w: ((x: tr) -> Pure (owriter s h0 sout pout_from0) (requires (x == grvalue r)) (ensures (fun _ -> True))))
+: Tot (w' : owriter s h0 sout pout_from0 { owvalue w' == owvalue (w (grvalue r))})
+= OWriter (Ghost.hide (owvalue (w (grvalue r)))) (fun pout_from ->
+    let v = gread r in
+    owrite (w v) pout_from
+  )
+
+inline_for_extraction
+noextract
+let lwbind
+  (#tr: Type)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 } )
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (r: greader h0 sout pout_from0 tr)
+  (w: ((x: tr) -> Pure (lwriter s h0 sout pout_from0) (requires (x == grvalue r)) (ensures (fun _ -> True))))
+: Tot (w' : lwriter s h0 sout pout_from0 { lwvalue w' == lwvalue (w (grvalue r)) } )
+= LWriter (Ghost.hide (lwvalue (w (grvalue r)))) (fun pout_from ->
+    let v = gread r in
+    lwrite (w v) pout_from
+  )
+
+inline_for_extraction
+noextract
+let olwbind
+  (#tr: Type)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 } )
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (r: greader h0 sout pout_from0 tr)
+  (w: ((x: tr) -> Pure (olwriter s h0 sout pout_from0) (requires (x == grvalue r)) (ensures (fun _ -> True))))  
+: Pure (olwriter s h0 sout pout_from0)
+  (requires True)
+  (ensures (fun w' -> olwvalue w' == olwvalue (w (grvalue r))))
+= OLWriter (Ghost.hide (olwvalue (w (grvalue r)))) (fun pout_from ->
+    let v = gread r in
+    olwrite (w v) pout_from
+  )
+
+inline_for_extraction
+noextract
+let greader_tot
+  (h0: HS.mem)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+  (#t: Type)
+  (x: t)
+: Tot (r: greader h0 sout pout_from0 t { grvalue r == x } )
+= GReader (Ghost.hide x) (fun _ -> x)
+
+inline_for_extraction
+noextract
+let graccess
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (#g: gaccessor p1 p2 cl)
+  (a: accessor g)
+  (#rrel #rel: _)
+  (sin: slice rrel rel)
+  (pin: U32.t)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+  (h0: HS.mem {
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    valid p1 h0 sin pin /\
+    cl.clens_cond (contents p1 h0 sin pin) /\
+    B.loc_disjoint (loc_slice_from_to sin pin (get_valid_pos p1 h0 sin pin)) (loc_slice_from sout pout_from0)
+  })
+: Tot (r: greader h0 sout pout_from0 U32.t { grvalue r == slice_access h0 g sin pin } )
+= GReader (Ghost.hide (slice_access h0 g sin pin)) (fun _ ->
+    a sin pin
+  )
+  
+inline_for_extraction
+noextract
+let read_leaf
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (r: leaf_reader p)
+  (#rrel #rel: _)
+  (sin: slice rrel rel)
+  (pin: U32.t)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+  (h0: HS.mem {
+    k.parser_kind_subkind == Some ParserStrong /\
+    valid p h0 sin pin /\
+    B.loc_disjoint (loc_slice_from_to sin pin (get_valid_pos p h0 sin pin)) (loc_slice_from sout pout_from0)
+  })
+: Tot (r' : greader h0 sout pout_from0 t { grvalue r' == contents p h0 sin pin } )
+= GReader (Ghost.hide (contents p h0 sin pin)) (fun _ ->
+    r sin pin
+  )
