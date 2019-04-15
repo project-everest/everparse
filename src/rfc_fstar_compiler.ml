@@ -728,6 +728,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 and compile_select o i n seln tagn tagt taga cl def al =
   let is_private = has_attr al "private" in
   let is_implicit = has_attr taga "implicit" in
+  let has_fail_missing = has_attr al "failmissing" in (* autocomplete missing cases with Fail even if default is provided *)
   let li = get_leninfo n in
   let taglen = (get_leninfo tagt).max_len in (* assume tag is constant-sized *)
   let tn = compile_type tagt in
@@ -742,7 +743,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
 
   (* Auto-complete omitted cases, with default case if provided *)
   let cl = (fun l -> let r = ref [] in
-    let dty = match def with Some d -> d | None -> "Fail" in
+    let dty = match def with Some d when not has_fail_missing -> d | _ -> "Fail" in
     let li_dty = sizeof (TypeSimple dty) in
     List.iter (function
       | EnumFieldSimple(cn, _) ->
