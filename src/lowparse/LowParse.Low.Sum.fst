@@ -1037,6 +1037,78 @@ let read_dsum_tag
   [@inline_let] let _ = valid_dsum_elim_tag h t p f g input pos in
   read_maybe_enum_key p32 (dsum_enum t) destr input pos 
 
+let valid_dsum_elim_known
+  (h: HS.mem)
+  (t: dsum)
+  (#kt: parser_kind)
+  (p: parser kt (dsum_repr_type t))
+  (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#ku: parser_kind)
+  (g: parser ku (dsum_type_of_unknown_tag t))
+  (#rrel #rel: _)
+  (input: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (
+    valid (parse_dsum t p f g) h input pos /\
+    Known? (dsum_tag_of_data t (contents (parse_dsum t p f g) h input pos))
+  ))
+  (ensures (
+    valid (parse_maybe_enum_key p (dsum_enum t)) h input pos /\ (
+    let k' = contents (parse_maybe_enum_key p (dsum_enum t)) h input pos in
+    let pos_payload = get_valid_pos (parse_maybe_enum_key p (dsum_enum t)) h input pos in
+    Known? k' /\ (
+    let Known k = k' in
+    valid (dsnd (f k)) h input pos_payload /\
+    valid_content_pos
+      (parse_dsum t p f g) h input pos
+      (synth_dsum_case t (Known k) (contents (dsnd (f k)) h input pos_payload))
+      (get_valid_pos (dsnd (f k)) h input pos_payload)
+  ))))
+= 
+  valid_facts (parse_dsum t p f g) h input pos;
+  parse_dsum_eq t p f g (bytes_of_slice_from h input pos);
+  valid_facts (parse_maybe_enum_key p (dsum_enum t)) h input pos;
+  let Known k = contents (parse_maybe_enum_key p (dsum_enum t)) h input pos in
+  let pos_payload = get_valid_pos (parse_maybe_enum_key p (dsum_enum t)) h input pos in
+  valid_facts (dsnd (f k)) h input pos_payload
+
+let valid_dsum_elim_unknown
+  (h: HS.mem)
+  (t: dsum)
+  (#kt: parser_kind)
+  (p: parser kt (dsum_repr_type t))
+  (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#ku: parser_kind)
+  (g: parser ku (dsum_type_of_unknown_tag t))
+  (#rrel #rel: _)
+  (input: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (
+    valid (parse_dsum t p f g) h input pos /\
+    Unknown? (dsum_tag_of_data t (contents (parse_dsum t p f g) h input pos))
+  ))
+  (ensures (
+    valid (parse_maybe_enum_key p (dsum_enum t)) h input pos /\ (
+    let k' = contents (parse_maybe_enum_key p (dsum_enum t)) h input pos in
+    let pos_payload = get_valid_pos (parse_maybe_enum_key p (dsum_enum t)) h input pos in
+    Unknown? k' /\ (
+    let Unknown r = contents (parse_maybe_enum_key p (dsum_enum t)) h input pos in
+    valid g h input pos_payload /\
+    valid_content_pos
+      (parse_dsum t p f g) h input pos
+      (synth_dsum_case t (Unknown r) (contents g h input pos_payload))
+      (get_valid_pos g h input pos_payload)
+  ))))
+= 
+  valid_facts (parse_dsum t p f g) h input pos;
+  parse_dsum_eq t p f g (bytes_of_slice_from h input pos);
+  valid_facts (parse_maybe_enum_key p (dsum_enum t)) h input pos;
+  let Unknown r = contents (parse_maybe_enum_key p (dsum_enum t)) h input pos in
+  let pos_payload = get_valid_pos (parse_maybe_enum_key p (dsum_enum t)) h input pos in
+  valid_facts g h input pos_payload
+
 inline_for_extraction
 let jump_dsum_cases_t
   (s: dsum)
