@@ -5,6 +5,7 @@ module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
 module U32 = FStar.UInt32
+module L = FStar.List.Tot
 
 inline_for_extraction
 noextract
@@ -937,4 +938,56 @@ let read_leaf
 : Tot (r' : greader h0 sout pout_from0 t { grvalue r' == contents p h0 sin pin } )
 = GReader (Ghost.hide (contents p h0 sin pin)) (fun _ ->
     r sin pin
+  )
+
+inline_for_extraction
+noextract
+let grlexistsb
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (f: (t -> Tot bool)) // should be GTot, but List.find requires Tot
+  (f' : (
+    (#rrel: _) ->
+    (#rel: _) ->
+    (sl: slice rrel rel) ->
+    (pos: U32.t) ->
+    HST.Stack bool
+    (requires (fun h ->
+      valid p h sl pos
+    ))
+    (ensures (fun h res h' ->
+      B.modifies B.loc_none h h' /\
+      res == f (contents p h sl pos)
+    ))
+  ))
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
+  (pos pos' : U32.t)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+  (h0: HS.mem {
+    k.parser_kind_subkind == Some ParserStrong /\
+    valid_list p h0 sl pos pos' /\
+    B.loc_disjoint (loc_slice_from_to sl pos pos') (loc_slice_from sout pout_from0)
+  })
+: Tot (r' : greader h0 sout pout_from0 bool { grvalue r' == L.existsb f (contents_list p h0 sl pos pos') } )
+= GReader (Ghost.hide (L.existsb f (contents_list p h0 sl pos pos'))) (fun _ ->
+    list_existsb j f f' sl pos pos'
+  )
+
+inline_for_extraction
+noextract
+let grifthenelse
+  (#h0: HS.mem)  
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (#t: Type)
+  (cond: bool)
+  (grtrue: (squash (cond == true) -> Tot (greader h0 sout pout_from0 t)))
+  (grfalse: (squash (cond == false) -> Tot (greader h0 sout pout_from0 t)))
+: Tot (r' : greader h0 sout pout_from0 t { grvalue r' == (if cond then grvalue (grtrue ()) else grvalue (grfalse ())) } )
+= GReader (Ghost.hide (if cond then grvalue (grtrue ()) else grvalue (grfalse ()))) (fun _ ->
+    if cond then gread (grtrue ()) else gread (grfalse ())
   )
