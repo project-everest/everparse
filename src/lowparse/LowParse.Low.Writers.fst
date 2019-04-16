@@ -748,6 +748,30 @@ let wcopy
     copy_weak_with_length p sin pin_from pin_to sout sout_from
   )
 
+inline_for_extraction
+noextract
+let wjcopy
+  (#k: _)
+  (#t: _)
+  (#p: parser k t)
+  (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
+  (j: jumper p)
+  (#rrel #rel: _)
+  (sin: slice rrel rel)
+  (pin_from: U32.t)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (sout_from0: U32.t)
+  (h0: HS.mem {
+    valid p h0 sin pin_from /\
+    B.loc_disjoint (loc_slice_from_to sin pin_from (get_valid_pos p h0 sin pin_from)) (loc_slice_from sout sout_from0)
+  })
+: Tot (w: writer s h0 sout sout_from0 {
+    wvalue w == contents p h0 sin pin_from
+  })
+= Writer (Ghost.hide (contents p h0 sin pin_from)) (fun sout_from ->
+    copy_weak p j sin pin_from sout sout_from
+  )
+
 (* monadic-style bind to read contents from h0 *)
 
 inline_for_extraction
