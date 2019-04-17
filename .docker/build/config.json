@@ -23,6 +23,10 @@
     "NotificationChannel" : "#quackyducky-build",
     "PublicBranches" : [ "master", "dev" ],
 
+    "CompressBuildFolder": true,
+    "FolderToCompress" : "quackyducky",
+    "FoldersToExclude" : [ ],
+
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
         "kremlin_version" : "origin/master"
