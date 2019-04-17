@@ -1455,7 +1455,7 @@ and compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max 
       wl o "    (LL.%saccessor_compose\n" g;
       wl o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
       wl o "      (LL.%saccessor_bounded_vlgen_payload %d %d %s %s)\n" g smin smax jumper_or_parser (scombinator_name ty);
-      (if compose_needs_unit then w o "      ()\n");
+      (if compose_needs_unit then wl o "      ()\n");
       wl o "    )\n";
       wl o "    %s_clens\n" n;
       wl o "    ()\n\n";
@@ -1707,7 +1707,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
           wl o "    (LL.%saccessor_compose\n" g;
           wl o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
           wl o "      (LL.%saccessor_bounded_vldata_strong_payload %d %d %s)\n" g 0 smax (scombinator_name ty);
-          (if compose_needs_unit then w o "      ()\n");
+          (if compose_needs_unit then wl o "      ()\n");
           wl o "    )\n";
           wl o "    %s_clens\n" n;
           wl o "    ()\n\n";
