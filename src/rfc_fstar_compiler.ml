@@ -13,6 +13,10 @@ type parser_kind_metadata =
 type tag_select_t =
   attr list * attr list * typ * field * field * typ * (typ * typ) list * typ option
 
+(* If-then-else over a tag *)
+type tag_ite_t =
+  attr list * attr list * typ * field * string * typ * typ
+
 let string_of_parser_kind_metadata = function
   | MetadataTotal -> "total"
   | MetadataFail -> "fail"
@@ -108,6 +112,15 @@ let basic_bounds = function
   | s -> failwith (s^" is not a base type and can't be used as symbolic length")
 
 let rec sizeof = function
+  | TypeIfeq(tag, v, t, f) ->
+    let lit = sizeof (TypeSimple t) in
+    let lif = sizeof (TypeSimple f) in
+    {len_len = 0; min_len = min lit.min_len lif.min_len; max_len = max lit.max_len lif.max_len;
+      min_count = 0; max_count = 0; vl = lit.vl || lif.vl; meta =
+      match lit.meta, lif.meta with
+      | MetadataTotal, MetadataTotal -> MetadataTotal
+      | MetadataFail, MetadataFail -> MetadataFail
+      | _ -> MetadataDefault}
   | TypeSelect(n, cl, def) ->
     let lil = (List.map (fun (_,ty) -> sizeof (TypeSimple ty)) cl)
       @ (match def with None -> [] | Some ty -> [sizeof (TypeSimple ty)]) in
@@ -401,6 +414,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
 
 let typedep = function
   | TypeSimple ty -> [ty]
+  | TypeIfeq (tag, v, t, f) -> [t; f]
   | TypeSelect (_, l, o) ->
     let l = List.map (fun (_, ty)->ty) l in
     match o with None -> l | Some ty -> ty :: l
@@ -723,6 +737,9 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   (* bytesize lemma *)
   wl i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
   wl o "let %s_bytesize_eqn x = %s_bytesize_eq x; assert (FStar.Seq.length (LP.serialize %s_serializer x) <= %d); assert (%d <= FStar.Seq.length (LP.serialize %s_serializer x))\n\n" n n n blen blen n;
+  ()
+
+and compile_ite o i n =
   ()
 
 and compile_select o i n seln tagn tagt taga cl def al =
@@ -1493,7 +1510,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       TypeSimple("opaque"), VectorRange(0, max_len, Some vl)
     | _ -> ty, vec in
   match ty with
-  | TypeSelect (sn, cl, def) ->  () (*failwith "Unsupported select"*)
+  | TypeSelect (sn, cl, def) -> failwith "Unsupported select"
   | TypeSimple ty ->
     match vec with
     (* Type aliasing *)
@@ -2527,6 +2544,7 @@ and subst_of (x:typ) = try SM.find x !subst with _ -> x
 and apply_subst_t (t:type_t) =
   match t with
   | TypeSimple(ty) -> TypeSimple(subst_of ty)
+  | TypeIfeq(tag, v, t, f) -> TypeIfeq(tag, v, subst_of t, subst_of f)
   | TypeSelect(sel, cl, def) ->
     let cl' = List.map (fun (case, ty) -> case, subst_of ty) cl in
     let def' = match def with None -> None | Some ty -> Some (subst_of ty) in

@@ -13,10 +13,12 @@ let ectr = ref 0
 %token COMMA EQUALS DOTDOT EOF
 %token STRUCT ENUM
 %token SELECT CASE DEFAULT
+%token IF ELSE
 
 %token <string>  ATTRIBUTE
 %token <string>  TYPE
 %token <string>  CMMNT
+%token <string>  LITERAL
 %token <int>     INT
 
 %start <Rfc_ast.prog> prog
@@ -73,6 +75,10 @@ struct_field:
 
 field_type:
   | t = TYPE; { TypeSimple t }
+	| LPAREN; IF; n = TYPE; EQUALS; c = LITERAL; t = TYPE; ELSE; f = TYPE; RPAREN;
+	  { TypeIfeq(n, c, t, f) }
+	| LPAREN; IF; n = TYPE; EQUALS; c = LITERAL; t = TYPE; RPAREN;
+	  { TypeIfeq(n, c, t, "Fail") }
 	| SELECT; LPAREN; n = TYPE; RPAREN; LBRACE; cases = list(select_case); def = default_case; RBRACE;
 	  { TypeSelect(n, cases, def) }
 ;

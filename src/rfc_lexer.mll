@@ -12,6 +12,7 @@ let space   = [' ' '\t']+
 let newln   = "\r" | "\n" | "\r\n"
 let int     = ['0'-'9']+
 let id      = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_' '-' '.']*
+let hexb    = ['0'-'9' 'a'-'f' 'A'-'F'] ['0'-'9' 'a'-'f' 'A'-'F']
 let hex     = '0' 'x' ['0'-'9' 'a'-'f' 'A'-'F']+
 let attr    = "/*@" ['a'-'z' 'A'-'Z' '_']+ "*/"
 
@@ -21,6 +22,8 @@ rule read = parse
 	| "struct" { STRUCT }
 	| "enum"   { ENUM }
 	| "select" { SELECT }
+	| "if"     { IF }
+	| "else"   { ELSE }
 	| "case"   { CASE }
 	| "default" { DEFAULT }
 	| int as i { INT (int_of_string i) }
@@ -46,14 +49,21 @@ rule read = parse
 	| ')'      { RPAREN }
   | attr as a{ ATTRIBUTE (String.sub a 3 (String.length a - 5)) }
 	| '/' '*'  { comment_start 1 lexbuf }
+	| '"'      { string_start "" lexbuf }
 	| ','      { COMMA  }
 	| '.' '.'  { DOTDOT }
 	| eof      { EOF }
 	| _        { raise (SyntaxError ("Unexpected " ^ Lexing.lexeme lexbuf)) }
 
 and comment_start depth = parse
-		| newln { new_line lexbuf; comment_start depth lexbuf }
-		| "*/"  { if depth=1 then read lexbuf else comment_start (depth-1) lexbuf }
-		| "/*"  { comment_start (depth+1) lexbuf } (*Nested comments*)
-		| eof   { Printf.eprintf "Warning: reached EOF before comment closure\n"; EOF }
-		| _     { comment_start depth lexbuf }
+	| newln { new_line lexbuf; comment_start depth lexbuf }
+	| "*/"  { if depth=1 then read lexbuf else comment_start (depth-1) lexbuf }
+	| "/*"  { comment_start (depth+1) lexbuf } (*Nested comments*)
+	| eof   { Printf.eprintf "Warning: reached EOF before comment closure\n"; EOF }
+	| _     { comment_start depth lexbuf }
+
+and string_start acc = parse
+  | "\\\"" {string_start (acc^"\"") lexbuf}
+	| "\"" { LITERAL acc }
+	| hexb as b { string_start (acc^b) lexbuf }
+  | _ { raise (SyntaxError ("Invalid hex literal" ^ Lexing.lexeme lexbuf)) }

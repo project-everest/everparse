@@ -175,6 +175,6 @@ struct {
 } t26;
 
 struct {
-  tag msg_type;
-  uint24 length;
+  opaque tag[3];
+  (if tag = "000000" uint32 else t3) value;
 } t27;
