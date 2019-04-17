@@ -7,6 +7,14 @@ module B = LowStar.Buffer
 module U32 = FStar.UInt32
 module L = FStar.List.Tot
 
+let ifthenelse
+  (#t: Type)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> Tot t))
+  (iffalse: (squash (cond == false) -> Tot t))
+: Tot t
+= if cond then iftrue () else iffalse ()
+
 inline_for_extraction
 noextract
 let fwriter
@@ -48,8 +56,8 @@ type writer
   (pout_from0: U32.t)
 : Type
 = | Writer:
-    (v: Ghost.erased t) ->
-    (w: fwriter s h0 sout pout_from0 (Ghost.reveal v)) ->
+    (v: (unit -> GTot t)) ->
+    (w: fwriter s h0 sout pout_from0 (v ())) ->
     writer s h0 sout pout_from0
 
 let wvalue
@@ -62,7 +70,7 @@ let wvalue
   (#pout_from0: U32.t)
   (w: writer s h0 sout pout_from0)
 : GTot t
-= Ghost.reveal w.v
+= w.v ()
 
 inline_for_extraction
 noextract
@@ -110,7 +118,7 @@ let writer_ifthenelse
   (wtrue: (squash (cond == true) -> Tot (writer s h0 sout pout_from0)))
   (wfalse: (squash (cond == false) -> Tot (writer s h0 sout pout_from0)))
 : Tot (x: writer s h0 sout pout_from0 { wvalue x == (if cond then wvalue (wtrue ()) else wvalue (wfalse ())) } )
-= Writer (if cond then Writer?.v (wtrue ()) else Writer?.v (wfalse ()))
+= Writer (ifthenelse cond (fun _ -> Writer?.v (wtrue ())) (fun _ -> Writer?.v (wfalse ())))
   (fun pout_from -> if cond then write (wtrue ()) pout_from else write (wfalse ()) pout_from)
 
 inline_for_extraction
@@ -126,7 +134,7 @@ let write_leaf_cs
   (pout_from0: U32.t)
   (x: t)
 : Tot (y: writer s h0 sout pout_from0 { wvalue y == x } )
-= Writer (Ghost.hide x)
+= Writer (fun _ -> x)
   (fun pout_from ->
     if U32.uint_to_t k.parser_kind_low `U32.gt` (sout.len `U32.sub` pout_from)
     then max_uint32
@@ -176,8 +184,8 @@ type lwriter
   (pout_from0: U32.t)
 : Type
 = | LWriter:
-      (v: Ghost.erased (list t)) ->
-      (w: flwriter s h0 sout pout_from0 (Ghost.reveal v)) ->
+      (v: (unit -> GTot (list t))) ->
+      (w: flwriter s h0 sout pout_from0 (v ())) ->
       lwriter s h0 sout pout_from0
 
 inline_for_extraction
@@ -192,7 +200,7 @@ let lwvalue
   (#pout_from0: U32.t)
   (w: lwriter s h0 sout pout_from0)
 : GTot (list t)
-= Ghost.reveal w.v
+= w.v ()
 
 inline_for_extraction
 noextract
@@ -237,7 +245,7 @@ let lwriter_nil
   (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (pout_from0: U32.t)
 : Tot (x: lwriter s h0 sout pout_from0 { lwvalue x == [] })
-= LWriter (Ghost.hide  [])
+= LWriter (fun _ -> [])
   (fun pout_from ->
     let h = HST.get () in
     valid_list_nil p h sout pout_from;
@@ -256,7 +264,7 @@ let lwriter_singleton
   (#pout_from0: U32.t)
   (w: writer s h0 sout pout_from0)
 : Tot (x: lwriter s h0 sout pout_from0 { lwvalue x == [wvalue w] } )
-= LWriter (Ghost.hide [wvalue w])
+= LWriter (fun _ -> [wvalue w])
   (fun pout_from ->
     let res = write w pout_from in
     if res `U32.lt` max_uint32
@@ -287,7 +295,7 @@ let lwriter_append
   (#pout_from0: U32.t)
   (w1 w2: lwriter s h0 sout pout_from0)
 : Tot (x: lwriter s h0 sout pout_from0 { lwvalue x == lwvalue w1 `List.Tot.append` lwvalue w2 } )
-= LWriter (Ghost.hide (lwvalue w1 `List.Tot.append` lwvalue w2)) (fun pout_from ->
+= LWriter (fun _ -> (lwvalue w1 `List.Tot.append` lwvalue w2)) (fun pout_from ->
     let res1 = lwrite w1 pout_from in
     Classical.forall_intro_2 (serialized_list_length_append s);
     if res1 = max_uint32
@@ -321,7 +329,7 @@ let lwriter_ifthenelse
   (wtrue: (squash (cond == true) -> Tot (lwriter s h0 sout pout_from0)))
   (wfalse: (squash (cond == false) -> Tot (lwriter s h0 sout pout_from0)))
 : Tot (x: lwriter s h0 sout pout_from0 { lwvalue x == (if cond then lwvalue (wtrue ()) else lwvalue (wfalse ())) } )
-= LWriter (if cond then (wtrue ()).v else (wfalse ()).v)
+= LWriter (ifthenelse cond (fun _ -> (wtrue ()).v) (fun _ -> (wfalse ()).v))
   (fun pout_from -> if cond then lwrite (wtrue ()) pout_from else lwrite (wfalse ()) pout_from)
 
 inline_for_extraction
@@ -354,7 +362,7 @@ let lwriter_list_map
     Tot (y: writer s2 h0 sout pout_from0 { wvalue y == f (contents p1 h0 sin pos) })
   ))
 : Tot (x: lwriter s2 h0 sout pout_from0 { lwvalue x == List.Tot.map f (contents_list p1 h0 sin pin_from pin_to) } )
-= LWriter (Ghost.hide (List.Tot.map f (contents_list p1 h0 sin pin_from pin_to))) (fun pout_from ->
+= LWriter (fun _ -> (List.Tot.map f (contents_list p1 h0 sin pin_from pin_to))) (fun pout_from ->
     assert (k1.parser_kind_subkind == Some ParserStrong);
     let h = HST.get () in
     list_map
@@ -418,8 +426,8 @@ type owriter
   (pout_from0: U32.t)
 : Type
 = | OWriter:
-    (v: Ghost.erased (option t)) ->
-    (w: fowriter s h0 sout pout_from0 (Ghost.reveal v)) ->
+    (v: (unit -> GTot (option t))) ->
+    (w: fowriter s h0 sout pout_from0 (v ())) ->
     owriter s h0 sout pout_from0
 
 let owvalue
@@ -432,7 +440,7 @@ let owvalue
   (#pout_from0: U32.t)
   (w: owriter s h0 sout pout_from0)
 : GTot (option t)
-= Ghost.reveal w.v
+= w.v ()
 
 inline_for_extraction
 noextract
@@ -480,7 +488,7 @@ let owriter_ifthenelse
   (wtrue: (squash (cond == true) -> Tot (owriter s h0 sout pout_from0)))
   (wfalse: (squash (cond == false) -> Tot (owriter s h0 sout pout_from0)))
 : Tot (x: owriter s h0 sout pout_from0 { owvalue x == (if cond then owvalue (wtrue ()) else owvalue (wfalse ())) } )
-= OWriter (if cond then OWriter?.v (wtrue ()) else OWriter?.v (wfalse ()))
+= OWriter (ifthenelse cond (fun _ -> OWriter?.v (wtrue ())) (fun _ -> OWriter?.v (wfalse ())))
   (fun pout_from -> if cond then owrite (wtrue ()) pout_from else owrite (wfalse ()) pout_from)
 
 inline_for_extraction
@@ -496,7 +504,7 @@ let owrite_leaf_cs
   (pout_from0: U32.t)
   (x: t)
 : Tot (y: owriter s h0 sout pout_from0 { owvalue y == Some x } )
-= OWriter (Ghost.hide (Some x))
+= OWriter (fun _ -> (Some x))
   (fun pout_from ->
     if U32.uint_to_t k.parser_kind_low `U32.gt` (sout.len `U32.sub` pout_from)
     then max_uint32
@@ -515,7 +523,7 @@ let owriter_of_writer
   (#pout_from0: U32.t)
   (w: writer s h0 sout pout_from0)
 : Tot (x: owriter s h0 sout pout_from0 { owvalue x == Some (wvalue w) })
-= OWriter (Ghost.hide (Some (wvalue w))) (fun pout_from -> write w pout_from)
+= OWriter (fun _ -> (Some (wvalue w))) (fun pout_from -> write w pout_from)
 
 inline_for_extraction
 noextract
@@ -563,8 +571,8 @@ type olwriter
   (pout_from0: U32.t)
 : Type
 = | OLWriter:
-      (v: Ghost.erased (option (list t))) ->
-      (w: folwriter s h0 sout pout_from0 (Ghost.reveal v)) ->
+      (v: (unit -> GTot (option (list t)))) ->
+      (w: folwriter s h0 sout pout_from0 (v ())) ->
       olwriter s h0 sout pout_from0
 
 inline_for_extraction
@@ -579,7 +587,7 @@ let olwvalue
   (#pout_from0: U32.t)
   (w: olwriter s h0 sout pout_from0)
 : GTot (option (list t))
-= Ghost.reveal w.v
+= w.v ()
 
 inline_for_extraction
 noextract
@@ -624,7 +632,7 @@ let olwriter_nil
   (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (pout_from0: U32.t)
 : Tot (x: olwriter s h0 sout pout_from0 { olwvalue x == Some [] })
-= OLWriter (Ghost.hide (Some []))
+= OLWriter (fun _ -> (Some []))
   (fun pout_from ->
     let h = HST.get () in
     valid_list_nil p h sout pout_from;
@@ -643,7 +651,7 @@ let olwriter_singleton
   (#pout_from0: U32.t)
   (w: owriter s h0 sout pout_from0)
 : Tot (x: olwriter s h0 sout pout_from0 { olwvalue x == (match owvalue w with None -> None | Some x -> Some [x]) })
-= OLWriter (Ghost.hide (match owvalue w with None -> None | Some x -> Some [x]))
+= OLWriter (fun _ -> (match owvalue w with None -> None | Some x -> Some [x]))
   (fun pout_from ->
     let res = owrite w pout_from in
     if res `U32.lt` (max_uint32 `U32.sub` 1ul)
@@ -674,7 +682,7 @@ let olwriter_append
   (#pout_from0: U32.t)
   (w1 w2: olwriter s h0 sout pout_from0)
 : Tot (x: olwriter s h0 sout pout_from0 { olwvalue x == (match olwvalue w1, olwvalue w2 with | Some l1, Some l2 -> Some (l1 `List.Tot.append` l2) | _ -> None) } )
-= OLWriter (Ghost.hide (match olwvalue w1, olwvalue w2 with | Some l1, Some l2 -> Some (l1 `List.Tot.append` l2) | _ -> None)) (fun pout_from ->
+= OLWriter (fun _ -> (match olwvalue w1, olwvalue w2 with | Some l1, Some l2 -> Some (l1 `List.Tot.append` l2) | _ -> None)) (fun pout_from ->
     let res1 = olwrite w1 pout_from in
     Classical.forall_intro_2 (serialized_list_length_append s);
     if (max_uint32 `U32.sub` 1ul) `U32.lte` res1
@@ -708,7 +716,7 @@ let olwriter_ifthenelse
   (wtrue: (squash (cond == true) -> Tot (olwriter s h0 sout pout_from0)))
   (wfalse: (squash (cond == false) -> Tot (olwriter s h0 sout pout_from0)))
 : Tot (x: olwriter s h0 sout pout_from0 { olwvalue x == (if cond then olwvalue (wtrue ()) else olwvalue (wfalse ())) } )
-= OLWriter (if cond then (wtrue ()).v else (wfalse ()).v)
+= OLWriter (ifthenelse cond (fun _ -> (wtrue ()).v) (fun _ -> (wfalse ()).v))
   (fun pout_from -> if cond then olwrite (wtrue ()) pout_from else olwrite (wfalse ()) pout_from)
 
 inline_for_extraction
@@ -723,7 +731,7 @@ let olwriter_of_lwriter
   (#pout_from0: U32.t)
   (w: lwriter s h0 sout pout_from0)
 : Tot (olwriter s h0 sout pout_from0)
-= OLWriter (Ghost.hide (Some (lwvalue w))) (fun pout_from -> lwrite w pout_from)
+= OLWriter (fun _ -> (Some (lwvalue w))) (fun pout_from -> lwrite w pout_from)
 
 inline_for_extraction
 noextract
@@ -744,7 +752,7 @@ let wcopy
 : Tot (w: writer s h0 sout sout_from0 {
     wvalue w == contents p h0 sin pin_from
   })
-= Writer (Ghost.hide (contents p h0 sin pin_from)) (fun sout_from ->
+= Writer (fun _ -> (contents p h0 sin pin_from)) (fun sout_from ->
     copy_weak_with_length p sin pin_from pin_to sout sout_from
   )
 
@@ -768,7 +776,7 @@ let wjcopy
 : Tot (w: writer s h0 sout sout_from0 {
     wvalue w == contents p h0 sin pin_from
   })
-= Writer (Ghost.hide (contents p h0 sin pin_from)) (fun sout_from ->
+= Writer (fun _ -> (contents p h0 sin pin_from)) (fun sout_from ->
     copy_weak p j sin pin_from sout sout_from
   )
 
@@ -783,7 +791,7 @@ type greader
   (pout_from0: U32.t)
   (t: Type)
 = | GReader:
-    (v: Ghost.erased t) ->
+    (v: (unit -> GTot t)) ->
     (f: (
       unit ->
       HST.Stack t
@@ -792,7 +800,7 @@ type greader
       ))
       (ensures (fun h res h' ->
         B.modifies B.loc_none h h' /\
-        res == Ghost.reveal v
+        res == v ()
     )))) ->
     greader h0 sout pout_from0 t
 
@@ -803,7 +811,7 @@ let grvalue
   (#t: Type)
   (r: greader h0 sout pout_from0 t)
 : GTot t
-= Ghost.reveal (GReader?.v r)
+= (GReader?.v r) ()
 
 inline_for_extraction
 noextract
@@ -838,7 +846,7 @@ let wbind
   (r: greader h0 sout pout_from0 tr)
   (w: ((x: tr) -> Pure (writer s h0 sout pout_from0) (requires (x == grvalue r)) (ensures (fun _ -> True))))
 : Tot (w' : writer s h0 sout pout_from0 { wvalue w' == wvalue (w (grvalue r)) } )
-= Writer (Ghost.hide (wvalue (w (grvalue r)))) (fun pout_from ->
+= Writer (fun _ -> (wvalue (w (grvalue r)))) (fun pout_from ->
     let v = gread r in
     write (w v) pout_from
   )
@@ -857,7 +865,7 @@ let owbind
   (r: greader h0 sout pout_from0 tr)
   (w: ((x: tr) -> Pure (owriter s h0 sout pout_from0) (requires (x == grvalue r)) (ensures (fun _ -> True))))
 : Tot (w' : owriter s h0 sout pout_from0 { owvalue w' == owvalue (w (grvalue r))})
-= OWriter (Ghost.hide (owvalue (w (grvalue r)))) (fun pout_from ->
+= OWriter (fun _ -> (owvalue (w (grvalue r)))) (fun pout_from ->
     let v = gread r in
     owrite (w v) pout_from
   )
@@ -876,7 +884,7 @@ let lwbind
   (r: greader h0 sout pout_from0 tr)
   (w: ((x: tr) -> Pure (lwriter s h0 sout pout_from0) (requires (x == grvalue r)) (ensures (fun _ -> True))))
 : Tot (w' : lwriter s h0 sout pout_from0 { lwvalue w' == lwvalue (w (grvalue r)) } )
-= LWriter (Ghost.hide (lwvalue (w (grvalue r)))) (fun pout_from ->
+= LWriter (fun _ -> (lwvalue (w (grvalue r)))) (fun pout_from ->
     let v = gread r in
     lwrite (w v) pout_from
   )
@@ -897,7 +905,7 @@ let olwbind
 : Pure (olwriter s h0 sout pout_from0)
   (requires True)
   (ensures (fun w' -> olwvalue w' == olwvalue (w (grvalue r))))
-= OLWriter (Ghost.hide (olwvalue (w (grvalue r)))) (fun pout_from ->
+= OLWriter (fun _ -> (olwvalue (w (grvalue r)))) (fun pout_from ->
     let v = gread r in
     olwrite (w v) pout_from
   )
@@ -911,7 +919,7 @@ let greader_tot
   (#t: Type)
   (x: t)
 : Tot (r: greader h0 sout pout_from0 t { grvalue r == x } )
-= GReader (Ghost.hide x) (fun _ -> x)
+= GReader (fun _ -> x) (fun _ -> x)
 
 inline_for_extraction
 noextract
@@ -938,7 +946,7 @@ let graccess
     B.loc_disjoint (loc_slice_from_to sin pin (get_valid_pos p1 h0 sin pin)) (loc_slice_from sout pout_from0)
   })
 : Tot (r: greader h0 sout pout_from0 U32.t { grvalue r == slice_access h0 g sin pin } )
-= GReader (Ghost.hide (slice_access h0 g sin pin)) (fun _ ->
+= GReader (fun _ -> (slice_access h0 g sin pin)) (fun _ ->
     a sin pin
   )
   
@@ -960,7 +968,7 @@ let read_leaf
     B.loc_disjoint (loc_slice_from_to sin pin (get_valid_pos p h0 sin pin)) (loc_slice_from sout pout_from0)
   })
 : Tot (r' : greader h0 sout pout_from0 t { grvalue r' == contents p h0 sin pin } )
-= GReader (Ghost.hide (contents p h0 sin pin)) (fun _ ->
+= GReader (fun _ -> (contents p h0 sin pin)) (fun _ ->
     r sin pin
   )
 
@@ -997,7 +1005,7 @@ let grlexistsb
     B.loc_disjoint (loc_slice_from_to sl pos pos') (loc_slice_from sout pout_from0)
   })
 : Tot (r' : greader h0 sout pout_from0 bool { grvalue r' == L.existsb f (contents_list p h0 sl pos pos') } )
-= GReader (Ghost.hide (L.existsb f (contents_list p h0 sl pos pos'))) (fun _ ->
+= GReader (fun _ -> (L.existsb f (contents_list p h0 sl pos pos'))) (fun _ ->
     list_existsb j f f' sl pos pos'
   )
 
@@ -1012,6 +1020,6 @@ let grifthenelse
   (grtrue: (squash (cond == true) -> Tot (greader h0 sout pout_from0 t)))
   (grfalse: (squash (cond == false) -> Tot (greader h0 sout pout_from0 t)))
 : Tot (r' : greader h0 sout pout_from0 t { grvalue r' == (if cond then grvalue (grtrue ()) else grvalue (grfalse ())) } )
-= GReader (Ghost.hide (if cond then grvalue (grtrue ()) else grvalue (grfalse ()))) (fun _ ->
+= GReader (ifthenelse cond (fun _ _ -> grvalue (grtrue ())) (fun _ _ -> grvalue (grfalse ()))) (fun _ ->
     if cond then gread (grtrue ()) else gread (grfalse ())
   )
