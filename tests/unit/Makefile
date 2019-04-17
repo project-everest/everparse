@@ -19,7 +19,7 @@ CACHE_DIR=cache$(LAX_EXT)
 CHECKED_EXT=.checked$(LAX_EXT)
 
 FSTAR_OPTIONS = --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
-		--already_cached '+Prims +FStar +LowStar +C +Spec.Loops +LowParse' \
+		--already_cached +Prims+FStar+LowStar+C+Spec.Loops+LowParse \
 		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include ..
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)

@@ -26,6 +26,9 @@ rule read = parse
 	| "else"   { ELSE }
 	| "case"   { CASE }
 	| "default" { DEFAULT }
+	| ((int | hex) as i) 'u' 'y' { LITERAL (Printf.sprintf "%02x" (int_of_string i)) }
+	| ((int | hex) as i) 'u' 's' { LITERAL (Printf.sprintf "%04x" (int_of_string i)) }
+	| ((int | hex) as i) 'u' 'l' { LITERAL (Printf.sprintf "%08x" (int_of_string i)) }
 	| int as i { INT (int_of_string i) }
 	| hex as i { INT (int_of_string i) }
 	| '2' '^' (int as pow) '-' (int as sub)

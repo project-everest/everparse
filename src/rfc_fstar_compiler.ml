@@ -13,9 +13,8 @@ type parser_kind_metadata =
 type tag_select_t =
   attr list * attr list * typ * field * field * typ * (typ * typ) list * typ option
 
-(* If-then-else over a tag *)
-type tag_ite_t =
-  attr list * attr list * typ * field * string * typ * typ
+type ite_t =
+  attr list * attr list * typ * typ * typ * int * string * typ * typ
 
 let string_of_parser_kind_metadata = function
   | MetadataTotal -> "total"
@@ -739,7 +738,112 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   wl o "let %s_bytesize_eqn x = %s_bytesize_eq x; assert (FStar.Seq.length (LP.serialize %s_serializer x) <= %d); assert (%d <= FStar.Seq.length (LP.serialize %s_serializer x))\n\n" n n n blen blen n;
   ()
 
-and compile_ite o i n =
+and compile_ite o i n sn fn tagn clen cval tt tf al  =
+  let is_private = has_attr al "private" in
+  let li = get_leninfo (sn^"@"^fn) in
+  let ncap = String.capitalize_ascii n in
+  let tagt = sprintf "%s_%s" sn tagn in
+  if clen = 0 then failwith "Tag cannot be empty in if-then-else.";
+  compile_typedef o i sn tagn (TypeSimple "opaque") (VectorFixed clen) None al;
+
+  w i "let %s_cst : %s_%s =\n  let b = BY.bytes_of_hex \"%s\" in\n  assume(BY.length b == %d); b\n\n" n sn tagn cval clen;
+  w i "type %s_false = {\n  tag: t:%s_tag{t <> %s_cst};\n  value: %s\n}\n\n" n n n (compile_type tf);
+  w i "type %s =\n  | %s_true of %s\n  | %s_false of %s_false\n\n" n ncap (compile_type tt) ncap n;
+  write_api o i is_private li.meta n (clen+li.min_len) (clen+li.max_len);
+
+  (* Spec *)
+  w o "inline_for_extraction let %s_cond (x:%s_tag) : Tot bool = x = %s_cst\n\n" n n n;
+  w o "inline_for_extraction let %s_payload (b:bool) : Tot Type =\n  if b then %s else %s\n\n" n (compile_type tt) (compile_type tf);
+  w o "inline_for_extraction let parse_%s_payload (b:bool) : Tot (k: LP.parser_kind & LP.parser k (%s_payload b)) =\n" n n;
+  w o "  if b then (| _ , %s |) else (| _, %s |)\n\n" (pcombinator_name tt) (pcombinator_name tf);
+  w o "inline_for_extraction let %s_synth (x:%s_tag) (y:%s_payload (%s_cond x)) : Tot %s =\n" n n n n n;
+  w o "  if %s_cond x then %s_true y else %s_false ({ tag = x; value = y })\n\n" n ncap ncap;
+  w o "inline_for_extraction noextract let parse_%s_param = {\n" n;
+  w o "  LP.parse_ifthenelse_tag_kind = _; LP.parse_ifthenelse_tag_t = _;\n";
+  w o "  LP.parse_ifthenelse_tag_parser = %s; LP.parse_ifthenelse_tag_cond = %s_cond;\n" (pcombinator_name tagt) n;
+  w o "  LP.parse_ifthenelse_payload_t = %s_payload; LP.parse_ifthenelse_payload_parser = parse_%s_payload;\n" n n;
+  w o "  LP.parse_ifthenelse_t = _;  LP.parse_ifthenelse_synth = %s_synth;\n" n;
+  w o "  LP.parse_ifthenelse_synth_injective = (fun t1 x1 t2 x2 -> ());\n}\n\n";
+  w o "let _ : squash (LP.parse_ifthenelse_kind parse_%s_param == %s_parser_kind) =\n" n n;
+  w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
+  w o "let %s_parser = LP.parse_ifthenelse parse_%s_param\n\n" n n;
+  w o "inline_for_extraction let serialize_%s_payload (b:bool) : Tot (LP.serializer (dsnd (parse_%s_param.LP.parse_ifthenelse_payload_parser b))) =\n" n n;
+  w o "  if b then %s else %s\n\n" (scombinator_name tt) (scombinator_name tf);
+  w o "inline_for_extraction let %s_synth_recip (x:%s) : GTot (t:%s_tag & (%s_payload (%s_cond t))) =\n" n n n n n;
+  w o "  match x with\n  | %s_true y -> (| %s_cst, y |)\n  | %s_false m -> (| m.tag, m.value |)\n\n" ncap n ncap;
+  w o "inline_for_extraction noextract let serialize_%s_param : LP.serialize_ifthenelse_param parse_%s_param = {\n" n n;
+  w o "  LP.serialize_ifthenelse_tag_serializer = %s;\n" (scombinator_name tagt);
+  w o "  LP.serialize_ifthenelse_payload_serializer = serialize_%s_payload;\n" n;
+  w o "  LP.serialize_ifthenelse_synth_recip = %s_synth_recip;\n" n;
+  w o "  LP.serialize_ifthenelse_synth_inverse = (fun x -> ());\n}\n\n";
+  w o "let %s_serializer = LP.serialize_ifthenelse serialize_%s_param\n\n" n n;
+  write_bytesize o is_private n;
+
+  (* Intermediate *)
+  wh o "let %s_parser32 = LP.parse32_ifthenelse parse_%s_param %s\n" n n (pcombinator32_name tagt);
+  wh o "  (fun x -> %s_cond x) (fun b -> if b then %s else %s)\n" n (pcombinator32_name tt) (pcombinator32_name tf);
+  wh o "  (fun b -> if b then (fun _ pl -> %s_true pl) else (fun t pl -> %s_false ({ tag = t; value = pl; })))\n\n" ncap ncap;
+  wh o "let %s_serializer32 = LP.serialize32_ifthenelse serialize_%s_param %s\n" n n (scombinator32_name tagt);
+  wh o "  (fun x -> match x with %s_true _ -> %s_cst | %s_false m -> m.tag)\n" ncap n ncap;
+  wh o "  (fun x -> %s_cond x) (fun b -> if b then (fun (%s_true y) -> y) else (fun (%s_false m) -> m.value))\n" n ncap ncap;
+  wh o "  (fun b -> if b then %s else %s)\n\n" (scombinator32_name tt) (scombinator32_name tf);
+  wh o "let %s_size32 = LP.size32_ifthenelse serialize_%s_param %s\n" n n (size32_name tagt);
+  wh o "  (fun x -> match x with %s_true _ -> %s_cst | %s_false m -> m.tag)" ncap n ncap;
+  wh o "  (fun x -> %s_cond x) (fun b -> if b then (fun (%s_true y) -> y) else (fun (%s_false m) -> m.value))\n" n ncap ncap;
+  wh o "  (fun b -> if b then %s else %s)\n\n" (size32_name tt) (size32_name tf);
+
+  (* Low *)
+  wl o "inline_for_extraction let test_%s : LL.test_ifthenelse_tag parse_%s_param =" n n;
+  wl o "  fun #_ #_ input pos -> LL.valid_slice_equals_bytes %s_cst input pos\n\n" n;
+  wl o "let %s_validator = LL.validate_ifthenelse parse_%s_param %s\n" n n (validator_name tagt);
+  wl o "  test_%s (fun b -> if b then %s else %s)\n\n" n (validator_name tt) (validator_name tf);
+  wl o "let %s_jumper = LL.jump_ifthenelse parse_%s_param %s\n" n n (jumper_name tagt);
+  wl o "  test_%s (fun b -> if b then %s else %s)\n\n" n (jumper_name tt) (jumper_name tf);
+  wl i "val %s_elim (h:HS.mem) (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
+  wl i "  (requires (LL.valid %s_parser h input pos))\n" n;
+  wl i "  (ensures (\n    LL.valid %s h input pos /\\ (\n" (pcombinator_name tagt);
+  wl i "    let x = LL.contents %s_parser h input pos in\n" n;
+  wl i "    let y = LL.contents %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    y == (match x with | %s_true _ -> %s_cst | %s_false m -> m.tag))))\n\n" ncap n ncap;
+  wl o "let %s_elim h #_ #_ input pos = LL.valid_ifthenelse_elim parse_%s_param h input pos\n\n" n n;
+  wl i "val %s_test (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos: U32.t) : HST.Stack bool\n" n;
+  wl i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
+  wl i "  (ensures (fun h res h' -> B.modifies B.loc_none h h' /\\\n";
+  wl i "    (res == true <==> %s_true? (LL.contents %s_parser h input pos))))\n\n" ncap n;
+  wl o "let %s_test #_ #_ input pos = let h = HST.get () in %s_elim h input pos; test_%s input pos\n\n" n n n;
+  wl i "let %s_clens_true : LL.clens %s %s = {\n" n n (compile_type tt);
+  wl i "  LL.clens_cond = (fun x -> %s_true? x);\n" ncap;
+  wl i "  LL.clens_get = (fun x -> (match x with %s_true y -> y) <: Ghost %s (requires (%s_true? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tt) ncap;
+  wl i "val %s_gaccessor_true: LL.gaccessor %s_parser %s %s_clens_true\n\n" n n (pcombinator_name tt) n;
+  wl i "val %s_accessor_true: LL.accessor %s_gaccessor_true\n\n" n n;
+  wl i "let %s_clens_false : LL.clens %s %s = {\n" n n (compile_type tf);
+  wl i "  LL.clens_cond = (fun x -> %s_false? x);\n" ncap;
+  wl i "  LL.clens_get = (fun x -> (match x with %s_false m -> m.value) <: Ghost %s (requires (%s_false? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tf) ncap;
+  wl i "val %s_gaccessor_false: LL.gaccessor %s_parser %s %s_clens_false\n\n" n n (pcombinator_name tf) n;
+  wl i "val %s_accessor_false: LL.accessor %s_gaccessor_false\n\n" n n;
+  wl o "let %s_gaccessor_true = LL.gaccessor_ext (LL.gaccessor_ifthenelse_payload serialize_%s_param true) %s_clens_true ()\n\n" n n n;
+  wl o "let %s_accessor_true = LL.accessor_ext (LL.accessor_ifthenelse_payload serialize_%s_param %s true) %s_clens_true ()\n\n" n n (jumper_name tagt) n;
+  wl o "let %s_gaccessor_false = LL.gaccessor_ext (LL.gaccessor_ifthenelse_payload serialize_%s_param false) %s_clens_false ()\n\n" n n n;
+  wl o "let %s_accessor_false = LL.accessor_ext (LL.accessor_ifthenelse_payload serialize_%s_param %s false) %s_clens_false ()\n\n" n n (jumper_name tagt) n;
+  wl i "val %s_intro_true (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
+  wl i "  (requires (LL.valid %s h input pos /\\ (\n" (pcombinator_name tagt);
+  wl i "    let x = LL.contents %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    x == %s_cst /\\ LL.valid %s h input pos1\n" n (pcombinator_name tt);
+  wl i "  ))) (ensures (\n";
+  wl i "    let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    LL.valid_content_pos %s_parser h input pos (%s_true (LL.contents %s h input pos1)) (LL.get_valid_pos %s h input pos1)\n  ))\n\n" n ncap (pcombinator_name tt) (pcombinator_name tt);
+  wl o "let %s_intro_true h #_ #_ input pos = LL.valid_ifthenelse_intro parse_%s_param h input pos\n\n" n n;
+  wl i "val %s_intro_false (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
+  wl i "  (requires (LL.valid %s h input pos /\\ (\n" (pcombinator_name tagt);
+  wl i "    let x = LL.contents %s h input pos in\n" (pcombinator_name tagt);
+  wl i "   let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    x =!= %s_cst /\\ LL.valid %s h input pos1\n" n (pcombinator_name tf);
+  wl i "  ))) (ensures (\n";
+  wl i "    let x = LL.contents %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    LL.valid_content_pos %s_parser h input pos (%s_false ({ tag = x; value = (LL.contents %s h input pos1) })) (LL.get_valid_pos %s h input pos1)\n  ))\n\n" n ncap (pcombinator_name tf) (pcombinator_name tf);
+  wl o "let %s_intro_false h #_ #_ input pos = LL.valid_ifthenelse_intro parse_%s_param h input pos\n\n" n n;
   ()
 
 and compile_select o i n seln tagn tagt taga cl def al =
@@ -1510,7 +1614,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       TypeSimple("opaque"), VectorRange(0, max_len, Some vl)
     | _ -> ty, vec in
   match ty with
-  | TypeSelect (sn, cl, def) -> failwith "Unsupported select"
+  | TypeIfeq _ -> failwith "Unsupported if-then-else, must to appear in a struct after a tag"
+  | TypeSelect _ -> failwith "Unsupported select, must appear in a struct after an enum tag"
   | TypeSimple ty ->
     match vec with
     (* Type aliasing *)
@@ -1768,7 +1873,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "  ))\n";
       wl i "  (ensures (\n";
       wl i "    LL.valid_content_pos %s_parser h input pos (BY.hide (LL.bytes_of_slice_from_to h input pos (pos `U32.add` %dul))) (pos `U32.add` %dul)\n" n k k;
-      wl i "  ))\n";
+      wl i "  ))\n\n";
       wl o "let %s_intro h #_ #_ input pos =\n" n;
       wl o "  LL.valid_flbytes_intro h %d input pos\n\n" k;
       (* elim *)
@@ -1777,7 +1882,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "  (ensures (\n";
       wl i "    U32.v pos + %d <= U32.v input.LL.len /\\\n" k;
       wl i "    LL.valid_content_pos %s_parser h input pos (BY.hide (LL.bytes_of_slice_from_to h input pos (pos `U32.add` %dul))) (pos `U32.add` %dul)\n" n k k;
-      wl i "  ))\n";
+      wl i "  ))\n\n";
       wl o "let %s_elim h #_ #_ input pos =\n" n;
       wl o "  LL.valid_flbytes_elim h %d input pos\n\n" k;
       ()
@@ -1937,7 +2042,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
 
     (* Variable length bytes where the size of the length is explicit *)
     | VectorRange (low, high, repr) when (compile_type ty = "U8.t") ->
-      let (Some trepr) = repr in
+      let trepr = match repr with Some t -> t | None -> failwith "Missing vlbytes size repr (QD bug?)" in
       let (_, repr, _) = basic_bounds trepr in
       w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
@@ -2500,6 +2605,14 @@ and normalize_symboliclen sn (fl:struct_field_t list) : struct_field_t list =
       let h =
         match ty with
         | TypeSimple ty -> (al @ al', TypeSimple ty, n, VectorVldata tagt, None)
+        | TypeIfeq (itag, cst, tt, tf) ->
+          let et = sprintf "%s_%s_true" sn n in
+          let ef = sprintf "%s_%s_false" sn n in
+          let (o, i) = open_files et in
+          let (o', i') = open_files ef in
+          compile o i "" (Typedef (al', TypeSimple tt, et, VectorVldata tagt, None));
+          compile o' i' "" (Typedef (al', TypeSimple tf, ef, VectorVldata tagt, None));
+          (al @ al', TypeIfeq(itag, cst, et, ef), n, VectorNone, None)
         | TypeSelect (sel, cl, def) ->
           let r = ref [] in
           let cl' = List.map (fun (c,t)->
@@ -2522,22 +2635,30 @@ and normalize_symboliclen sn (fl:struct_field_t list) : struct_field_t list =
       h :: (normalize_symboliclen sn r)
   | h :: t -> h :: (normalize_symboliclen sn t)
 
-(* Hoist {... tag t; select(t){} ...} when other fields are present *)
+(* Hoist {... tag t; select(t){} ...} when other fields are present,
+  also rewrites { ... tag t[x]; (if t = v then ttrue else tfalse) y ... *)
 and normalize_select sn (fl:struct_field_t list)
-  (acc:struct_field_t list) (acc':tag_select_t list)
-  : struct_field_t list * tag_select_t list =
+  (acc:struct_field_t list) (acc':tag_select_t list) (acc'':ite_t list)
+  : struct_field_t list * tag_select_t list * ite_t list =
   match fl with
-  | [] -> List.rev acc, List.rev acc'
+  | [] -> List.rev acc, List.rev acc', List.rev acc''
+  | (al, TypeSimple("opaque"), tagn, VectorFixed d, None)
+    :: (al', TypeIfeq(tagn', tagv, tt, tf), ifn, vec, def)
+    :: r when tagn = tagn' ->
+    let etyp = sprintf "%s_%s" sn ifn in
+    let ite : ite_t = (al, al', sn, ifn, tagn, d, tagv, tt, tf) in
+    let f' = (al', TypeSimple etyp, ifn, vec, def) in
+    normalize_select sn r (f'::acc) acc' (ite::acc'')
   | (al, TypeSimple(tagt), tagn, VectorNone, None)
     :: (al', TypeSelect (tagn', cases, def), seln, VectorNone, None)
     :: r when tagn = tagn' ->
     let etyp = sprintf "%s_%s" sn seln in
     let sel' = (al, al', etyp, tagn, seln, tagt, cases, def) in
     let f' = (al, TypeSimple etyp, seln, VectorNone, None) in
-    normalize_select sn r (f'::acc) (sel'::acc')
+    normalize_select sn r (f'::acc) (sel'::acc') acc''
   | (_, TypeSelect (_, _, _), seln, _, _) :: t ->
     failwith (sprintf "Field %s contains an invalid select in struct %s" seln sn)
-  | h :: t -> normalize_select sn t (h::acc) acc'
+  | h :: t -> normalize_select sn t (h::acc) acc' acc''
 
 (* Global type Substitution, this is use for staging sums on implicit tags *)
 and subst_of (x:typ) = try SM.find x !subst with _ -> x
@@ -2618,11 +2739,13 @@ and compile o i (tn:typ) (p:gemstone_t) =
   	| Enum(al, fl, _) ->  compile_enum o i n fl al
     | Typedef(al, ty, n', vec, def) -> compile_typedef o i tn n' ty vec def al
     | Struct(al, fl, _) ->
-      match normalize_select n fl [] [] with
-      | [_, TypeSimple etyp', seln', VectorNone, None], [al, al', etyp, tagn, seln, tagt, cases, def] ->
+      match normalize_select n fl [] [] [] with
+      | [_, TypeSimple etyp', seln', VectorNone, None], [], [al, al', sn, ifn, tagn, d, tagv, tt, tf] ->
+        compile_ite o i n sn ifn tagn d tagv tt tf al
+      | [_, TypeSimple etyp', seln', VectorNone, None], [al, al', etyp, tagn, seln, tagt, cases, def], [] ->
         if etyp' <> etyp || seln' <> seln then failwith "Invalid rewrite of a select (QD bug)";
         compile_select o i n seln tagn tagt al cases def al'
-      | fl, sell ->
+      | fl, sell, itel ->
         List.iter (fun (al, al', etyp, tagn, seln, tagt, cases, def) ->
           let p = Struct([], [(al, TypeSimple(tagt), tagn, VectorNone, None);
             (al', TypeSelect (tagn, cases, def), seln, VectorNone, None)], etyp) in
@@ -2631,6 +2754,15 @@ and compile o i (tn:typ) (p:gemstone_t) =
           w i "(* Internal select() for %s *)\ninclude %s\n\n" etyp (module_name etyp);
           w o "(* Internal select() for %s *)\nopen %s\n\n" etyp (module_name etyp);
         ) sell;
+        List.iter (fun (al, al', sn, ifn, tagn, d, tagv, tt, tf) ->
+          let etyp = sprintf "%s_%s" sn ifn in
+          let p = Struct([], [(al, TypeSimple("opaque"), tagn, VectorFixed d, None);
+            (al', TypeIfeq(tagn, tagv, tt, tf), ifn, VectorNone, None)], etyp) in
+          let (o', i') = open_files etyp in
+          compile o' i' "" p;
+          w i "include %s\n\n" (module_name etyp);
+          w o "open %s\n\n" (module_name etyp);
+        ) itel;
         match fl with
         | [] -> compile_typedef o i tn n (TypeSimple "empty") VectorNone None al
         | [(al, ty, _, vec, def)] -> compile_typedef o i tn n ty vec def al
