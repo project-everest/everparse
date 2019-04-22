@@ -39,8 +39,9 @@ assume val load_file_buffer: (filename:string) -> ST (slice (srel_of_buffer_srel
 module U32 = FStar.UInt32
 
 (** Corresponds to memcmp for `eqtype` *)
+(* dirty trick: the additional unit arg prevents F* and KReMLin from viewing preorder arguments as sources of polymorphism *)
 assume
-val beqb: (#rrel1: _) -> (#rel1: _) -> (#rrel2: _) -> (#rel2: _) -> b1:B.mbuffer byte (buffer_srel_of_srel rrel1) (buffer_srel_of_srel rel1) -> b2:B.mbuffer byte (buffer_srel_of_srel rrel2) (buffer_srel_of_srel rel2)
+val beqb: unit -> (#rrel1: _) -> (#rel1: _) -> (#rrel2: _) -> (#rel2: _) -> b1:B.mbuffer byte (buffer_srel_of_srel rrel1) (buffer_srel_of_srel rel1) -> b2:B.mbuffer byte (buffer_srel_of_srel rrel2) (buffer_srel_of_srel rel2)
   -> len:U32.t{U32.v len <= B.length b1 /\ U32.v len <= B.length b2}
   -> Stack bool
     (requires (fun h ->
@@ -61,7 +62,7 @@ let test_buffer (t:testbuffer_t) (testname:string) (#rrel #rel: _) (input:slice 
   (match result with
   | Some output -> (
     if U32.lte output.len input.len then (
-      if beqb input.base output.base output.len then
+      if beqb () input.base output.base output.len then
         print_string "Formatted data matches original input data\n"
       else (
         print_string "FAIL:  formatted data does not match original input data\n"
