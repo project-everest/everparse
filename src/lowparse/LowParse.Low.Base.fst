@@ -836,16 +836,17 @@ let valid_frame_strong
 
 abstract
 let valid_exact_ext_intro
-  (#rrel #rel: _)
+  (#rrel1 #rel1: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (h1: HS.mem)
-  (s1: slice rrel rel)
+  (s1: slice rrel1 rel1)
   (pos1: U32.t)
   (pos1' : U32.t)
   (h2: HS.mem)
-  (s2: slice rrel rel)
+  (#rrel2 #rel2: _)
+  (s2: slice rrel2 rel2)
   (pos2: U32.t)
   (pos2' : U32.t)
 : Lemma
@@ -867,16 +868,17 @@ let valid_exact_ext_intro
 
 abstract
 let valid_exact_ext_elim
-  (#rrel #rel: _)
+  (#rrel1 #rel1: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (h1: HS.mem)
-  (s1: slice rrel rel)
+  (s1: slice rrel1 rel1)
   (pos1: U32.t)
   (pos1' : U32.t)
   (h2: HS.mem)
-  (s2: slice rrel rel)
+  (#rrel2 #rel2: _)
+  (s2: slice rrel2 rel2)
   (pos2: U32.t)
   (pos2' : U32.t)
 : Lemma
