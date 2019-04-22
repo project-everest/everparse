@@ -899,6 +899,71 @@ let valid_exact_ext_elim
   assert (injective_precond p (bytes_of_slice_from_to h1 s1 pos1 pos1') (bytes_of_slice_from_to h2 s2 pos2 pos2'));
   assert (injective_postcond p (bytes_of_slice_from_to h1 s1 pos1 pos1') (bytes_of_slice_from_to h2 s2 pos2 pos2'))
 
+abstract
+let valid_ext_intro
+  (#rrel1 #rel1: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h1: HS.mem)
+  (s1: slice rrel1 rel1)
+  (pos1: U32.t)
+  (h2: HS.mem)
+  (#rrel2 #rel2: _)
+  (s2: slice rrel2 rel2)
+  (pos2: U32.t)
+: Lemma
+  (requires (
+    valid p h1 s1 pos1 /\
+    k.parser_kind_subkind == Some ParserStrong /\ (
+    let pos1' = get_valid_pos p h1 s1 pos1 in
+    live_slice h2 s2 /\
+    U32.v pos2 + (U32.v pos1' - U32.v pos1) <= U32.v s2.len /\ (
+    let pos2' = pos2 `U32.add` (pos1' `U32.sub` pos1) in
+    bytes_of_slice_from_to h1 s1 pos1 pos1' `Seq.equal` bytes_of_slice_from_to h2 s2 pos2 pos2'
+  ))))
+  (ensures (
+    valid_content_pos p h2 s2 pos2 (contents p h1 s1 pos1) (pos2 `U32.add` (get_valid_pos p h1 s1 pos1 `U32.sub` pos1))
+  ))
+= let pos1' = get_valid_pos p h1 s1 pos1 in
+  let pos2' = pos2 `U32.add` (pos1' `U32.sub` pos1) in
+  valid_pos_valid_exact p h1 s1 pos1 pos1' ;
+  valid_exact_ext_intro p h1 s1 pos1 pos1' h2 s2 pos2 pos2' ;
+  valid_exact_valid p h2 s2 pos2 pos2'
+
+abstract
+let valid_ext_elim
+  (#rrel1 #rel1: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h1: HS.mem)
+  (s1: slice rrel1 rel1)
+  (pos1: U32.t)
+  (h2: HS.mem)
+  (#rrel2 #rel2: _)
+  (s2: slice rrel2 rel2)
+  (pos2: U32.t)
+: Lemma
+  (requires (
+    valid p h1 s1 pos1 /\
+    valid p h2 s2 pos2 /\
+    k.parser_kind_subkind == Some ParserStrong /\
+    contents p h1 s1 pos1 == contents p h2 s2 pos2
+  ))
+  (ensures (
+    let pos1' = get_valid_pos p h1 s1 pos1 in
+    let pos2' = get_valid_pos p h2 s2 pos2 in
+    U32.v pos2' - U32.v pos2 == U32.v pos1' - U32.v pos1 /\
+    bytes_of_slice_from_to h1 s1 pos1 pos1' == bytes_of_slice_from_to h2 s2 pos2 pos2'
+  ))
+= let pos1' = get_valid_pos p h1 s1 pos1 in
+  let pos2' = get_valid_pos p h2 s2 pos2 in
+  valid_valid_exact p h1 s1 pos1;
+  valid_valid_exact p h2 s2 pos2;
+  valid_exact_ext_elim p h1 s1 pos1 pos1' h2 s2 pos2 pos2'
+
+
 (* Accessors for reading only (no in-place serialization yet) *)
 
 noeq
