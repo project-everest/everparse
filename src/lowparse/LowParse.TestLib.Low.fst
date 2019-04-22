@@ -52,6 +52,8 @@ val beqb: unit -> (#rrel1: _) -> (#rel1: _) -> (#rrel2: _) -> (#rel2: _) -> b1:B
       (z <==> Seq.equal (Seq.slice (B.as_seq h0 b1) 0 (U32.v len)) (Seq.slice (B.as_seq h0 b2) 0 (U32.v len)))))
 
 (** Test one parser+formatter pair against an in-memory buffer of UInt8.t *)
+inline_for_extraction
+noextract
 let test_buffer (t:testbuffer_t) (testname:string) (#rrel #rel: _) (input:slice rrel rel)
 : ST unit 
 (requires (fun h -> live_slice h input))
@@ -76,6 +78,8 @@ let test_buffer (t:testbuffer_t) (testname:string) (#rrel #rel: _) (input:slice 
   pop_frame()
 
 (** Test one parser+formatter pair against a disk file, using buffer *)
+inline_for_extraction
+noextract
 let test_file_buffer (t:testbuffer_t) (filename:string): ST unit (fun _ -> true) (fun _ _ _ -> true) =
   push_frame();
   let input = load_file_buffer filename in
