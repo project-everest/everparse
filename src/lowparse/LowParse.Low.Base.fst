@@ -579,6 +579,33 @@ let valid_exact_serialize
   ()
 
 abstract
+let serialize_valid_exact
+  (#rrel #rel: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (h: HS.mem)
+  (sl: slice rrel rel)
+  (x: t)
+  (pos: U32.t)
+  (pos' : U32.t)
+: Lemma
+  (requires (
+    live_slice h sl /\
+    U32.v pos + Seq.length (serialize s x) == U32.v pos' /\
+    U32.v pos' <= U32.v sl.len /\
+    bytes_of_slice_from_to h sl pos pos' `Seq.equal` serialize s x
+  ))
+  (ensures (
+    valid_exact p h sl pos pos' /\
+    contents_exact p h sl pos pos' == x
+  ))
+= serializer_correct_implies_complete p s;
+  valid_exact_equiv p h sl pos pos' ;
+  contents_exact_eq p h sl pos pos'
+
+abstract
 let valid_exact_frame
   (#rrel #rel: _)
   (#k: parser_kind)
