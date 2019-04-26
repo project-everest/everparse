@@ -308,6 +308,39 @@ let rec serialize_list_append
   | [] ->
     Seq.append_empty_l (serialize (serialize_list p s) l2)
 
+let rec serialize_list_eq_parser_fail
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 })
+  (l1 l2: list t)
+  (b1 b2: bytes)
+: Lemma
+  (requires (
+    serialize (serialize_list _ s) l1 `Seq.append` b1 == serialize (serialize_list _ s) l2 `Seq.append` b2 /\
+    parse p b1 == None /\
+    parse p b2 == None
+  ))
+  (ensures (l1 == l2 /\ b1 == b2))
+  (decreases (L.length l1))
+= serialize_list_nil _ s;
+  assert (b1 `Seq.equal` (Seq.append Seq.empty b1));
+  assert (b2 `Seq.equal` (Seq.append Seq.empty b2));
+  if L.length l2 < L.length l1
+  then serialize_list_eq_parser_fail s l2 l1 b2 b1
+  else match l1, l2 with
+  | [], [] -> ()
+  | x1 :: l1', x2 :: l2' ->
+    serialize_list_cons _ s x1 l1' ;
+    serialize_list_cons _ s x2 l2' ;
+    Seq.append_assoc (serialize s x1) (serialize (serialize_list _ s) l1') b1;
+    Seq.append_assoc (serialize s x2) (serialize (serialize_list _ s) l2') b2;
+    serialize_strong_prefix s x1 x2 (serialize (serialize_list _ s) l1' `Seq.append` b1) (serialize (serialize_list _ s) l2' `Seq.append` b2);
+    serialize_list_eq_parser_fail s l1' l2' b1 b2
+  | [], x2 :: l2' ->
+    serialize_list_cons _ s x2 l2' ;
+    parse_strong_prefix p (serialize s x2) b1
+
 abstract
 let serialize_list_cons_upd
   (#k: parser_kind)

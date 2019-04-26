@@ -820,6 +820,27 @@ let serialize_strong_prefix
   parse_strong_prefix p (serialize s x2) (serialize s x2 `Seq.append` q2);
   Seq.lemma_append_inj (serialize s x1) q1 (serialize s x2) q2
 
+let parse_truncate
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (x: t)
+  (n: nat)
+: Lemma
+  (requires (
+    n < Seq.length (serialize s x)
+  ))
+  (ensures (
+    parse p (Seq.slice (serialize s x) 0 n) == None
+  ))
+= let sq0 = serialize s x in
+  let sq1 = Seq.slice sq0 0 n in
+  match parse p sq1 with
+  | None -> ()
+  | Some (x', consumed) ->
+    parse_strong_prefix p sq1 sq0
+
 let seq_upd_seq
   (#t: Type)
   (s: Seq.seq t)
