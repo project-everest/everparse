@@ -6,20 +6,20 @@ module U32 = FStar.UInt32
 module HS = FStar.HyperStack
 
 inline_for_extraction
-type srel (a: Type) = (B.srel a)
+type srel (a: Type) = Ghost.erased (B.srel a)
 
 inline_for_extraction
 let buffer_srel_of_srel (#a: Type) (s: srel a) : Tot (B.srel a) =
-  s
+  fun x1 x2 -> Ghost.reveal s x1 x2
 
 inline_for_extraction
 let srel_of_buffer_srel (#a: Type) (s: B.srel a) : Tot (srel a) =
-  s
+  Ghost.hide s
 
-let buffer_srel_of_srel_of_buffer_srel (#a: Type) (s: B.srel a) : Lemma
+assume
+val buffer_srel_of_srel_of_buffer_srel (#a: Type) (s: B.srel a) : Lemma
   (buffer_srel_of_srel (srel_of_buffer_srel s) == s)
   [SMTPat (buffer_srel_of_srel (srel_of_buffer_srel s))]
-= ()
 
 noeq
 type slice (rrel rel: srel byte) = {
