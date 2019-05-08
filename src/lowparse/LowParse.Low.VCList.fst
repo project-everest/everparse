@@ -402,6 +402,7 @@ let valid_vclist_elim
   let pos1 = get_valid_pos lp h input pos in
   valid_facts (parse_nlist (U32.v len) p) h input pos1
 
+#push-options "--z3rlimit 20"
 let valid_vclist_intro
   (min: nat)
   (max: nat { min <= max /\ max < 4294967296 } )
@@ -432,3 +433,4 @@ let valid_vclist_intro
   let len = contents lp h input pos in
   let pos1 = get_valid_pos lp h input pos in
   valid_facts (parse_nlist (U32.v len) p) h input pos1
+#pop-options
