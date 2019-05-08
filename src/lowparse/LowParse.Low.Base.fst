@@ -9,7 +9,6 @@ module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module Seq = FStar.Seq
 
-#reset-options "--z3cliopt smt.arith.nl=false"
 
 let valid'
   (#rrel #rel: _)
@@ -1959,7 +1958,7 @@ let accessor_compose_strong
 
 (* Validators *)
 
-inline_for_extraction
+[@ CMacro ]
 let max_uint32 : U32.t = 4294967295ul
 
 let max_uint32_correct
@@ -1981,17 +1980,17 @@ let default_validator_cls : validator_cls = {
 
 *)
 
-inline_for_extraction
+[@ CMacro ]
 let validator_max_length : (u: U32.t { 4 <= U32.v u /\ U32.v u < U32.v max_uint32 } ) = 4294967279ul
 
-inline_for_extraction
+[@ CMacro ]
 type validator_error = (u: U32.t { U32.v u > U32.v validator_max_length } )
 
-inline_for_extraction
-let validator_error_generic : validator_error = validator_max_length `U32.add` 1ul
+[@ CMacro ]
+let validator_error_generic : validator_error = normalize_term (validator_max_length `U32.add` 1ul)
 
-inline_for_extraction
-let validator_error_not_enough_data : validator_error = validator_max_length `U32.add` 2ul
+[@ CMacro ]
+let validator_error_not_enough_data : validator_error = normalize_term (validator_max_length `U32.add` 2ul)
 
 [@unifier_hint_injective]
 inline_for_extraction

@@ -74,12 +74,21 @@ let read_maybe_enum_key
     ()
 
 inline_for_extraction
+let read_enum_key_prop
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (k: maybe_enum_key e)
+  (k' : enum_key e)
+: GTot Type0
+= match k with Known k_ -> (k_ <: key) == (k' <: key) | _ -> False
+
+inline_for_extraction
 let read_enum_key_t
   (#key #repr: eqtype)
   (e: enum key repr)
   (k: maybe_enum_key e)
 : Tot Type
-= squash (Known? k) -> Tot (k' : enum_key e { match k with Known k_ -> k_ == k' } )
+= squash (Known? k) -> Tot (k' : enum_key e { read_enum_key_prop e k k' } )
 
 inline_for_extraction
 let read_enum_key_f
@@ -88,9 +97,13 @@ let read_enum_key_f
   (k: maybe_enum_key e)
 : Tot (read_enum_key_t e k)
 = fun (sq: squash (Known? k)) ->
-    match k with
-    | Known k_ -> (k_ <: (k_ : enum_key e { match k with Known k' -> k' == k_ } ))
-    | _ -> (match e with (k, _) :: _ -> k) // dummy, but needed to make extraction work
+  match k with
+  | Known k_ ->
+    (k_ <: (k_ : enum_key e { read_enum_key_prop e k k_ } ))
+  | _ ->
+    (match e with (k_, _) :: _ ->
+    [@inline_let] let _ = assert False; assert (read_enum_key_prop e k k_) in
+    (k_ <: (k_ : enum_key e { read_enum_key_prop e k k_ } ))) // dummy, but needed to make extraction work
 
 inline_for_extraction
 let read_enum_key_eq
