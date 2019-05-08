@@ -1825,7 +1825,7 @@ let accessor
   (#t2: Type)
   (#p2: parser k2 t2)
   (#cl: clens t1 t2)
-  ($g: gaccessor p1 p2 cl)
+  (g: gaccessor p1 p2 cl)
 : Tot Type
 = (#rrel: _) ->
   (#rel: _) ->

@@ -215,7 +215,7 @@ let clens_synth
   (#t2: Type)
   (f: t1 -> GTot t2)
   (g: t2 -> GTot t1)
-  (u: unit { synth_inverse f g /\ synth_injective f } )
+  (u: squash (synth_inverse f g /\ synth_injective f))
 : Tot (clens t1 t2)
 = {
   clens_cond = (fun (x: t1) -> True);
@@ -251,8 +251,8 @@ let gaccessor_synth
   (#t2: Type)
   (f: t1 -> GTot t2)
   (g: t2 -> GTot t1)
-  (u: unit { synth_inverse f g /\ synth_inverse g f } )
-: Tot (gaccessor (parse_synth p1 f) p1 (clens_synth g f ()))
+  (u: squash (synth_inverse f g /\ synth_injective f /\ synth_inverse g f))
+: Tot (gaccessor (parse_synth p1 f) p1 (clens_synth g f u))
 = gaccessor_synth' p1 f g u
 
 abstract

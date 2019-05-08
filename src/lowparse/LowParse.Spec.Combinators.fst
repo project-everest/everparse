@@ -1120,6 +1120,23 @@ let serialize_nondep_then_eq
 = ()
 
 abstract
+let length_serialize_nondep_then
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (p1: parser k1 t1)
+  (s1: serializer p1)
+  (u: unit { k1.parser_kind_subkind == Some ParserStrong } )
+  (#k2: parser_kind)
+  (#t2: Type0)
+  (p2: parser k2 t2)
+  (s2: serializer p2)
+  (input1: t1)
+  (input2: t2)
+: Lemma
+  (Seq.length (serialize (serialize_nondep_then p1 s1 u p2 s2) (input1, input2)) == Seq.length (serialize s1 input1) + Seq.length (serialize s2 input2))
+= ()
+
+abstract
 let serialize_nondep_then_upd_left
   (#k1: parser_kind)
   (#t1: Type0)

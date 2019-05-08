@@ -2255,6 +2255,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   let li = get_leninfo n in
   let is_private = has_attr al "private" in
 
+  
   (* Hoist all constructed types (select, vector, etc) into
      sub-definitions using private attribute in implementation *)
   let fields = List.map (fun (al, ty, fn, vec, def) ->
@@ -2330,8 +2331,8 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "let synth_%s_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) =\n" n n n;
   w o "  assert_norm (LP.synth_inverse synth_%s synth_%s_recip)\n\n" n n;
   w o "let synth_%s_recip_injective () : Lemma (LP.synth_injective synth_%s_recip) =\n" n n;
-  w o "  LP.synth_inverse_synth_injective synth_%s synth_%s_recip;\n" n n;
-  w o "  synth_%s_inverse ()\n\n" n;
+  w o "  synth_%s_recip_inverse ();\n" n;
+  w o "  LP.synth_inverse_synth_injective synth_%s synth_%s_recip\n\n" n n;
 
   (* main parser combinator type *)
   w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -2451,6 +2452,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     n
   ;
   w o "let %s_bytesize_eqn x =\n" n;
+  w o "  [@inline_let] let _ = synth_%s_injective () in\n" n;
   w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   w o "  LP.serialize_synth_eq _ synth_%s %s'_serializer synth_%s_recip () x" n n n;
@@ -2461,7 +2463,8 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
        (fun (lhs, arg) (fn, ty) ->
          let s = scombinator_name ty in
          let arg' = sprintf "(%s, x.%s)" arg fn in
-         w o ";\n  LP.serialize_nondep_then_eq _ %s () _ %s %s" lhs s arg';
+         let arg_sp = sprintf "%s x.%s" arg fn in
+         w o ";\n  LP.length_serialize_nondep_then _ %s () _ %s %s" lhs s arg_sp;
          let lhs' = sprintf "(LP.serialize_nondep_then _ %s () _ %s)" lhs s in
          (lhs', arg')
        )
