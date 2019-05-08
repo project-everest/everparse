@@ -81,7 +81,6 @@ let read_enum_key_t
 : Tot Type
 = squash (Known? k) -> Tot (k' : enum_key e { match k with Known k_ -> k_ == k' } )
 
-#push-options "--z3rlimit 20 --max_fuel 0 --max_ifuel 0 --z3refresh"
 inline_for_extraction
 let read_enum_key_f
   (#key #repr: eqtype)
@@ -92,7 +91,6 @@ let read_enum_key_f
     match k with
     | Known k_ -> (k_ <: (k_ : enum_key e { match k with Known k' -> k' == k_ } ))
     | _ -> (match e with (k, _) :: _ -> k) // dummy, but needed to make extraction work
-#pop-options
 
 inline_for_extraction
 let read_enum_key_eq
