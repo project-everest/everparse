@@ -22,6 +22,7 @@ let buffer_srel_of_srel_of_buffer_srel (#a: Type) (s: B.srel a) : Lemma
 = ()
 
 noeq
+inline_for_extraction
 type slice (rrel rel: srel byte) = {
   base: B.mbuffer byte (buffer_srel_of_srel rrel) (buffer_srel_of_srel rel);
   len: (len: U32.t { U32.v len <= B.length base } );
