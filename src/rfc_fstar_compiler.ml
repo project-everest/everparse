@@ -747,16 +747,16 @@ and compile_ite o i n sn fn tagn clen cval tt tf al  =
   compile_typedef o i sn tagn (TypeSimple "opaque") (VectorFixed clen) None al;
 
   w i "let %s_cst : %s_%s =\n  let b = BY.bytes_of_hex \"%s\" in\n  assume(BY.length b == %d); b\n\n" n sn tagn cval clen;
-  w i "type %s_false = {\n  tag: t:%s_tag{t <> %s_cst};\n  value: %s\n}\n\n" n n n (compile_type tf);
+  w i "type %s_false = {\n  tag: t:%s_%s{t <> %s_cst};\n  value: %s\n}\n\n" n n tagn n (compile_type tf);
   w i "type %s =\n  | %s_true of %s\n  | %s_false of %s_false\n\n" n ncap (compile_type tt) ncap n;
   write_api o i is_private li.meta n (clen+li.min_len) (clen+li.max_len);
 
   (* Spec *)
-  w o "inline_for_extraction let %s_cond (x:%s_tag) : Tot bool = x = %s_cst\n\n" n n n;
+  w o "inline_for_extraction let %s_cond (x:%s_%s) : Tot bool = x = %s_cst\n\n" n n tagn n;
   w o "inline_for_extraction let %s_payload (b:bool) : Tot Type =\n  if b then %s else %s\n\n" n (compile_type tt) (compile_type tf);
   w o "inline_for_extraction let parse_%s_payload (b:bool) : Tot (k: LP.parser_kind & LP.parser k (%s_payload b)) =\n" n n;
   w o "  if b then (| _ , %s |) else (| _, %s |)\n\n" (pcombinator_name tt) (pcombinator_name tf);
-  w o "inline_for_extraction let %s_synth (x:%s_tag) (y:%s_payload (%s_cond x)) : Tot %s =\n" n n n n n;
+  w o "inline_for_extraction let %s_synth (x:%s_%s) (y:%s_payload (%s_cond x)) : Tot %s =\n" n n tagn n n n;
   w o "  if %s_cond x then %s_true y else %s_false ({ tag = x; value = y })\n\n" n ncap ncap;
   w o "inline_for_extraction noextract let parse_%s_param = {\n" n;
   w o "  LP.parse_ifthenelse_tag_kind = _; LP.parse_ifthenelse_tag_t = _;\n";
@@ -769,7 +769,7 @@ and compile_ite o i n sn fn tagn clen cval tt tf al  =
   w o "let %s_parser = LP.parse_ifthenelse parse_%s_param\n\n" n n;
   w o "inline_for_extraction let serialize_%s_payload (b:bool) : Tot (LP.serializer (dsnd (parse_%s_param.LP.parse_ifthenelse_payload_parser b))) =\n" n n;
   w o "  if b then %s else %s\n\n" (scombinator_name tt) (scombinator_name tf);
-  w o "inline_for_extraction let %s_synth_recip (x:%s) : GTot (t:%s_tag & (%s_payload (%s_cond t))) =\n" n n n n n;
+  w o "inline_for_extraction let %s_synth_recip (x:%s) : GTot (t:%s_%s & (%s_payload (%s_cond t))) =\n" n n n tagn n n;
   w o "  match x with\n  | %s_true y -> (| %s_cst, y |)\n  | %s_false m -> (| m.tag, m.value |)\n\n" ncap n ncap;
   w o "inline_for_extraction noextract let serialize_%s_param : LP.serialize_ifthenelse_param parse_%s_param = {\n" n n;
   w o "  LP.serialize_ifthenelse_tag_serializer = %s;\n" (scombinator_name tagt);
