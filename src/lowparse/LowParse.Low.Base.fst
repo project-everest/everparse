@@ -11,6 +11,7 @@ inline_for_extraction
 type buffer8 = B.buffer FStar.UInt8.t
 
 noeq
+inline_for_extraction
 type slice = {
   base: buffer8;
   len: (len: U32.t { len == B.len base } );
