@@ -102,20 +102,18 @@ let serialize32_nondep_then
   (#t1: Type0)
   (#p1: parser k1 t1)
   (#s1: serializer p1)
-  (s1' : serializer32 s1)
-  (u: unit { k1.parser_kind_subkind == Some ParserStrong } )
+  (s1' : serializer32 s1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
   (#t2: Type0)
   (#p2: parser k2 t2)
   (#s2: serializer p2)
-  (s2' : serializer32 s2)
-  (u' : unit {
+  (s2' : serializer32 s2 {
     serialize32_kind_precond k1 k2
   })
-: Tot (serializer32 (serialize_nondep_then p1 s1 u p2 s2))
+: Tot (serializer32 (serialize_nondep_then s1 s2))
 = fun (input: t1 * t2) ->
   [@inline_let]
-  let _ = serialize_nondep_then_eq p1 s1 u p2 s2 input in
+  let _ = serialize_nondep_then_eq s1 s2 input in
   match input with
   | (fs, sn) ->
     let output1 = s1' fs in
@@ -125,7 +123,7 @@ let serialize32_nondep_then
     [@inline_let]
     let _ = assert (B32.length output2 == Seq.length (serialize s2 sn)) in
   ((B32.append output1 output2) <:
-    (res: bytes32 { serializer32_correct (serialize_nondep_then p1 s1 u p2 s2) input res } ))
+    (res: bytes32 { serializer32_correct (serialize_nondep_then s1 s2) input res } ))
 
 inline_for_extraction
 let parse32_strengthen
@@ -301,22 +299,21 @@ let size32_nondep_then
   (#t1: Type0)
   (#p1: parser k1 t1)
   (#s1: serializer p1)
-  (s1' : size32 s1)
-  (u: unit { k1.parser_kind_subkind == Some ParserStrong } )
+  (s1' : size32 s1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
   (#t2: Type0)
   (#p2: parser k2 t2)
   (#s2: serializer p2)
   (s2' : size32 s2)
-: Tot (size32 (serialize_nondep_then _ s1 u _ s2))
+: Tot (size32 (serialize_nondep_then s1 s2))
 = fun x ->
-  [@inline_let] let _ = serialize_nondep_then_eq p1 s1 u p2 s2 x in
+  [@inline_let] let _ = serialize_nondep_then_eq s1 s2 x in
   match x with
   | (x1, x2) ->
     let v1 = s1' x1 in
     let v2 = s2' x2 in
     let res = add_overflow v1 v2 in
-    (res <: (z : U32.t { size32_postcond (serialize_nondep_then _ s1 u _ s2) x z } ))
+    (res <: (z : U32.t { size32_postcond (serialize_nondep_then s1 s2) x z } ))
 
 inline_for_extraction
 let size32_filter

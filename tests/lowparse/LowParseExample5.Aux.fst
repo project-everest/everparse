@@ -27,10 +27,7 @@ let synth_inner_recip (x: inner) : Tot (U16.t * U16.t) =
 
 let serialize_inner_raw : LP.serializer parse_inner_raw =
   LPC.serialize_nondep_then
-    _
     LPI.serialize_u16
-    ()
-    _
     LPI.serialize_u16
 
 let serialize_inner = LPC.serialize_synth _ synth_inner serialize_inner_raw synth_inner_recip ()
@@ -61,10 +58,7 @@ let synth_t_recip (x: t) : Tot (inner * U32.t) =
 
 let serialize_t_raw : LP.serializer parse_t_raw =
   LPC.serialize_nondep_then
-    _
     serialize_inner
-    ()
-    _
     LPI.serialize_u32
 
 let serialize_t = LPC.serialize_synth _ synth_t serialize_t_raw synth_t_recip ()

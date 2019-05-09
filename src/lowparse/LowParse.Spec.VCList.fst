@@ -203,7 +203,7 @@ let rec serialize_nlist'
   else begin
     synth_inverse_1 t (n - 1);
     synth_inverse_2 t (n - 1);
-    serialize_synth _ (synth_nlist (n - 1)) (serialize_nondep_then _ s () _ (serialize_nlist' (n - 1) s)) (synth_nlist_recip (n - 1)) ()
+    serialize_synth _ (synth_nlist (n - 1)) (serialize_nondep_then s (serialize_nlist' (n - 1) s)) (synth_nlist_recip (n - 1)) ()
   end
 
 abstract
@@ -237,8 +237,8 @@ let serialize_nlist_cons
   (ensures (
     serialize (serialize_nlist (n + 1) s) (a :: q) == Seq.append (serialize s a) (serialize (serialize_nlist n s) q)
   ))
-= serialize_synth_eq _ (synth_nlist n) (serialize_nondep_then _ s () _ (serialize_nlist' n s)) (synth_nlist_recip n) () (a :: q);
-  serialize_nondep_then_eq _ s () _ (serialize_nlist' n s) (a, q)
+= serialize_synth_eq _ (synth_nlist n) (serialize_nondep_then s (serialize_nlist' n s)) (synth_nlist_recip n) () (a :: q);
+  serialize_nondep_then_eq s (serialize_nlist' n s) (a, q)
 
 (* variable-count lists proper *)
 

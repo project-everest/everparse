@@ -343,7 +343,7 @@ let serialize_cases
   (x: LP.sum_key t_sum)
 : Tot (LP.serializer (dsnd (parse_cases x)))
 = match x with
-  | Case_A -> (LP.serialize_nondep_then _ LP.serialize_u8 () _ LP.serialize_u8 <: LP.serializer (dsnd (parse_cases x)))
+  | Case_A -> (LP.serialize_nondep_then LP.serialize_u8 LP.serialize_u8 <: LP.serializer (dsnd (parse_cases x)))
   | Case_B -> (serialize_case_B <: LP.serializer (dsnd (parse_cases x)))
   | _ -> (LP.serialize_u16 <: LP.serializer (dsnd (parse_cases x)))
 
@@ -361,7 +361,7 @@ let serialize32_cases
   (x: LP.sum_key t_sum)
 : Tot (LP.serializer32 (serialize_cases x))
 = match x with
-  | Case_A -> (LP.serialize32_nondep_then LP.serialize32_u8 () LP.serialize32_u8 () <: LP.serializer32 (serialize_cases x))
+  | Case_A -> (LP.serialize32_nondep_then LP.serialize32_u8 LP.serialize32_u8 <: LP.serializer32 (serialize_cases x))
   | Case_B -> (serialize32_case_B <: LP.serializer32 (serialize_cases x))
   | _ -> (LP.serialize32_u16 <: LP.serializer32 (serialize_cases x))
 

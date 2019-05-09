@@ -309,7 +309,7 @@ let serialize_known_cases
   (x: LP.dsum_known_key t_sum)
 : Tot (LP.serializer (dsnd (parse_known_cases x)))
 = match x with
-  | Case_A -> LP.serialize_nondep_then _ LP.serialize_u8 () _ LP.serialize_u8
+  | Case_A -> LP.serialize_nondep_then LP.serialize_u8 LP.serialize_u8
   | Case_B -> serialize_case_B
   | _ -> LP.serialize_u16
 
@@ -327,7 +327,7 @@ let serialize32_known_cases
   (x: LP.dsum_known_key t_sum)
 : Tot (LP.serializer32 (serialize_known_cases x))
 = match x with
-  | Case_A -> LP.serialize32_nondep_then LP.serialize32_u8 () LP.serialize32_u8 ()
+  | Case_A -> LP.serialize32_nondep_then LP.serialize32_u8 LP.serialize32_u8
   | Case_B -> serialize32_case_B
   | _ -> LP.serialize32_u16
 
@@ -353,7 +353,7 @@ let size32_known_cases
 : Tot (LP.size32 (serialize_known_cases x))
 = match x with
   | Case_A ->
-    LP.coerce (LP.size32 (serialize_known_cases x)) (LP.size32_nondep_then LP.size32_u8 () LP.size32_u8)
+    LP.coerce (LP.size32 (serialize_known_cases x)) (LP.size32_nondep_then LP.size32_u8 LP.size32_u8)
   | Case_B -> LP.coerce (LP.size32 (serialize_known_cases x)) size32_case_B
   | _ -> LP.coerce (LP.size32 (serialize_known_cases x)) LP.size32_u16
 
