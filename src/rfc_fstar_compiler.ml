@@ -1635,8 +1635,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
          wl o "let %s_jumper%s = %s\n\n" n jumper_annot (jumper_name ty));
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
-      w i "val %s_parser_serializer_eq (_: unit) : Lemma (%s_parser == %s /\\ %s_serializer == %s)\n\n" n n (pcombinator_name ty) n (scombinator_name ty);
-      w o "let %s_parser_serializer_eq _ = ()\n\n" n;
+      if ty <> "Empty" && ty <> "Fail"
+      then begin
+          w i "val %s_parser_serializer_eq (_: unit) : Lemma (%s_parser == %s /\\ %s_serializer == %s)\n\n" n n (pcombinator_name ty) n (scombinator_name ty);
+          w o "let %s_parser_serializer_eq _ = ()\n\n" n
+        end;
       ()
 
     (* Should be rewritten during normalization *)
@@ -2273,43 +2276,34 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
       (* compile_typedef o i n fn ty vec def ("private"::al); *)
       (fn0, n')) fl in
 
+  (* we assume that the 0 and 1 cases have already normalized by `compile` *)
+  assert (List.length fields >= 2);
+
   (* application type *)
-  if fields = [] then
-    w i "type %s = lbytes 0\n\n" n
-  else
-   begin
     w i "type %s = {\n" n;
     List.iter (fun (fn, ty) ->
       w i "  %s : %s;\n" fn (compile_type ty)) fields;
-    w i "}\n\n"
-   end;
+    w i "}\n\n";
 
   (* Tuple type for nondep_then combination *)
   let tuple = List.fold_left (fun acc (_, ty) ->
       let ty0 = compile_type ty in
       if acc="" then ty0 else sprintf "(%s * %s)" acc ty0
     ) "" fields in
-  let tuple = if fields = [] then "lbytes 0" else tuple in
 
   w o "type %s' = %s\n\n" n tuple;
 
   (* synthethizer for tuple type *)
   w o "inline_for_extraction let synth_%s (x: %s') : %s =\n" n n n;
 
-  if fields = [] then
-    w o "  x\n\n"
-  else
-   begin
     let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then fn else sprintf "(%s, %s)" acc fn) "" fields in
     w o "  let %s = x in\n  {\n" tuple;
     let tuple = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
     w o "%s  }\n\n" tuple;
-   end;
 
   w o "inline_for_extraction let synth_%s_recip (x: %s) : %s' =\n" n n n;
   let tuple =
-    if fields = [] then "x"
-    else List.fold_left (fun acc (fn, ty) ->
+    List.fold_left (fun acc (fn, ty) ->
       if acc="" then "x."^fn else sprintf "(%s, x.%s)" acc fn) "" fields in
   w o "  %s\n\n" tuple;
 
@@ -2320,9 +2314,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   let case_count = List.length fields in
 
   w o "let synth_%s_recip_inverse' () : Tot (squash (LP.synth_inverse synth_%s_recip synth_%s)) =\n" n n n;
-  if case_count = 0
-  then w o "  ()\n\n"
-  else w o "  _ by (LP.synth_pairs_to_struct_to_pairs_tac' %d)\n\n" (case_count - 1);
+  w o "  _ by (LP.synth_pairs_to_struct_to_pairs_tac' %d)\n\n" (case_count - 1);
   w o "let synth_%s_recip_inverse () : Lemma (LP.synth_inverse synth_%s_recip synth_%s) =\n" n n n;
   w o "  synth_%s_recip_inverse' ()\n\n" n;
   w o "let synth_%s_injective () : Lemma (LP.synth_injective synth_%s) =\n" n n;
@@ -2336,7 +2328,6 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
 
   (* main parser combinator type *)
   w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
-  if fields = [] then w o "  LP.parse_flbytes 0";
   let tuple = List.fold_left (
     fun acc (fn, ty) ->
       let c = pcombinator_name ty in
@@ -2350,7 +2341,6 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
 
   (* main serializer type *)
   w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
-  if fields = [] then w o "  LP.serialize_flbytes 0";
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = scombinator_name ty in
@@ -2365,7 +2355,6 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
 
   (* main parser32 *)
   wh o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-  if fields = [] then wh o "  LP.parse32_flbytes 0 0ul";
   let tuple = List.fold_left (
     fun acc (fn, ty) ->
       let c = pcombinator32_name ty in
@@ -2378,7 +2367,6 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
 
   (* serialize32 *)
   wh o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-  if fields = [] then wh o "  LP.serialize32_flbytes 0";
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = scombinator32_name ty in
@@ -2392,7 +2380,6 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   wh o "  LP.serialize32_synth _ synth_%s _ %s'_serializer32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
 
   wh o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-  if fields = [] then wh o "  LP.size32_constant %s'_serializer 0ul ()" n;
   let tuple = List.fold_right (
     fun (fn, ty) acc ->
       let c = size32_name ty in
@@ -2409,7 +2396,6 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   if need_validator li.meta li.min_len li.max_len then
    begin
     wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-    if fields = [] then wl o "  LL.validate_flbytes 0 0ul";
     let tuple = List.fold_left (
       fun acc (fn, ty) ->
         let c = validator_name ty in
@@ -2425,7 +2411,6 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   if need_jumper li.min_len li.max_len then
    begin
     wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-    if fields = [] then wl o "  LL.jump_flbytes 0 0ul";
     let tuple = List.fold_left (
       fun acc (fn, ty) ->
         let c = jumper_name ty in
@@ -2767,7 +2752,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
           w o "open %s\n\n" (module_name etyp);
         ) itel;
         match fl with
-        | [] -> compile_typedef o i tn n (TypeSimple "empty") VectorNone None al
+        | [] -> compile_typedef o i tn n (TypeSimple "Empty") VectorNone None al
         | [(al, ty, _, vec, def)] -> compile_typedef o i tn n ty vec def al
         | _ -> compile_struct o i n fl al
   in close_files o i with e -> close_files o i; raise e

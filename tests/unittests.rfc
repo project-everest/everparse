@@ -178,3 +178,5 @@ struct {
   opaque tag[3];
   (if tag = "000000" uint32 else t3) value;
 } t27;
+
+struct {} t28;
