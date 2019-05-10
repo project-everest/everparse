@@ -383,6 +383,21 @@ let gaccessor_fst_then
 : Tot (gaccessor (p1 `nondep_then` p2) p' (clens_fst _ _ `clens_compose` cl))
 = gaccessor_fst p1 u p2 `gaccessor_compose` g
 
+let gaccessor_then_fst
+  (#k0: parser_kind)
+  (#t0: Type)
+  (#p0: parser k0 t0)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t0 (t1 & t2))
+  (g: gaccessor p0 (p1 `nondep_then` p2) cl { k1.parser_kind_subkind == Some ParserStrong } )
+: Tot (gaccessor p0 p1 (cl `clens_compose` clens_fst _ _))
+= g `gaccessor_compose` gaccessor_fst _ () _
+
 let gaccessor_snd'
   (#k1: parser_kind)
   (#t1: Type)
@@ -422,6 +437,22 @@ let gaccessor_snd_eq
 : Lemma
   (gaccessor_snd p1 p2 input == gaccessor_snd' p1 p2 input)
 = ()
+
+let gaccessor_then_snd
+  (#k0: parser_kind)
+  (#t0: Type)
+  (#p0: parser k0 t0)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t0 (t1 & t2))
+  (g: gaccessor p0 (p1 `nondep_then` p2) cl)
+: Tot (gaccessor p0 p2 (cl `clens_compose` clens_snd _ _))
+= g `gaccessor_compose` gaccessor_snd _ _
+
 
 (*
 let clens_fst_snd_disjoint
@@ -480,6 +511,23 @@ let accessor_fst_then
 = accessor_compose (accessor_fst p1 u p2) a u
 
 inline_for_extraction
+let accessor_then_fst
+  (#k0: parser_kind)
+  (#t0: Type)
+  (#p0: parser k0 t0)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t0 (t1 & t2))
+  (#g: gaccessor p0 (p1 `nondep_then` p2) cl)
+  (a: accessor g { k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_subkind == Some ParserStrong } )
+: Tot (accessor (gaccessor_then_fst g))
+= accessor_compose a (accessor_fst p1 () p2) ()
+
+inline_for_extraction
 let accessor_snd
   (#k1: parser_kind)
   (#t1: Type)
@@ -503,6 +551,24 @@ let accessor_snd
     assert (injective_postcond p1 large small)
   in
   res
+
+inline_for_extraction
+let accessor_then_snd
+  (#k0: parser_kind)
+  (#t0: Type)
+  (#p0: parser k0 t0)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t0 (t1 & t2))
+  (#g: gaccessor p0 (p1 `nondep_then` p2) cl)
+  (a: accessor g { (and_then_kind k1 k2).parser_kind_subkind == Some ParserStrong} )
+  (j1: jumper p1)
+: Tot (accessor (gaccessor_then_snd g))
+= accessor_compose a (accessor_snd j1 p2) ()
 
 inline_for_extraction
 let make_total_constant_size_reader

@@ -523,6 +523,35 @@ let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin b
     ()
    end
 
+(* binary trees to compile struct fields into log nesting instead of a comb *)
+
+type 'a btree =
+  | TLeaf of 'a
+  | TNode of (int * ('a btree) * ('a btree))
+
+let rec btree_count (t: 'a btree) =
+  match t with
+  | TLeaf _ -> 1
+  | TNode (n, _, _) -> n
+
+let rec btree_insert (t: 'a btree) (x: 'a) =
+  (* always insert to the right-hand-side, leaving the left-hand-side complete *)
+  match t with
+  | TLeaf y -> TNode (2, t, TLeaf x)
+  | TNode (n, left, right) ->
+     if btree_count left = btree_count right
+     then TNode (n + 1, t, TLeaf x)
+     else TNode (n + 1, left, btree_insert right x)
+
+let rec btree_fold
+          (f: 'global -> 'local -> 'elem -> 'global) pushl plpr popr (* : 'global -> 'global *) left right (* : 'local -> 'local *) (ginit: 'global) (linit: 'local) (t: 'elem btree) : 'global =
+  match t with
+  | TLeaf x -> f ginit linit x
+  | TNode (_, tleft, tright) ->
+     let g1 = btree_fold f pushl plpr popr left right (pushl ginit) (left linit) tleft in
+     let g2 = btree_fold f pushl plpr popr left right (plpr g1) (right linit) tright in
+     popr g2
+  
 let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   let is_open = has_attr al "open" in
   let is_private = has_attr al "private" in
@@ -2278,7 +2307,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
 
   (* we assume that the 0 and 1 cases have already normalized by `compile` *)
   assert (List.length fields >= 2);
-
+  
   (* application type *)
     w i "type %s = {\n" n;
     List.iter (fun (fn, ty) ->
@@ -2286,37 +2315,59 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     w i "}\n\n";
 
   (* Tuple type for nondep_then combination *)
-  let tuple = List.fold_left (fun acc (_, ty) ->
-      let ty0 = compile_type ty in
-      if acc="" then ty0 else sprintf "(%s * %s)" acc ty0
-    ) "" fields in
-
+  let tfields = List.fold_left btree_insert (TLeaf (List.hd fields)) (List.tl fields) in
+  let tuple =
+    btree_fold
+      (fun s _ (_, ty) -> sprintf "%s%s" s (compile_type ty))
+      (fun s -> sprintf "%s(" s)
+      (fun s -> sprintf "%s & " s)
+      (fun s -> sprintf "%s)" s)
+      (fun _ -> ())
+      (fun _ -> ())
+      ""
+      ()
+      tfields
+  in
   w o "type %s' = %s\n\n" n tuple;
 
   (* synthethizer for tuple type *)
+  let synth_arg =
+    btree_fold
+      (fun s _ (fn, _) -> sprintf "%s%s" s fn)
+      (fun s -> sprintf "%s(" s)
+      (fun s -> sprintf "%s," s)
+      (fun s -> sprintf "%s)" s)
+      (fun _ -> ())
+      (fun _ -> ())
+      ""
+      ()
+      tfields
+  in
+  let synth_body = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
   w o "inline_for_extraction let synth_%s (x: %s') : %s =\n" n n n;
-
-    let tuple = List.fold_left (fun acc (fn, ty) -> if acc="" then fn else sprintf "(%s, %s)" acc fn) "" fields in
-    w o "  let %s = x in\n  {\n" tuple;
-    let tuple = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
-    w o "%s  }\n\n" tuple;
-
-  w o "inline_for_extraction let synth_%s_recip (x: %s) : %s' =\n" n n n;
-  let tuple =
-    List.fold_left (fun acc (fn, ty) ->
-      if acc="" then "x."^fn else sprintf "(%s, x.%s)" acc fn) "" fields in
-  w o "  %s\n\n" tuple;
+  w o "  match x with %s -> {\n" synth_arg;
+  w o "%s" synth_body;
+  w o "  }\n\n";
+  
+  let synth_recip_body =
+    btree_fold
+      (fun s _ (fn, _) -> sprintf "%sx.%s" s fn)
+      (fun s -> sprintf "%s(" s)
+      (fun s -> sprintf "%s," s)
+      (fun s -> sprintf "%s)" s)
+      (fun _ -> ())
+      (fun _ -> ())
+      ""
+      ()
+      tfields
+  in
+  w o "inline_for_extraction let synth_%s_recip (x: %s) : %s' = %s\n\n" n n n synth_recip_body;
 
   (* Write parser API *)
   write_api o i is_private li.meta n li.min_len li.max_len;
 
   (* synthetizer injectivity and inversion lemmas *)
-  let case_count = List.length fields in
-
-  w o "let synth_%s_recip_inverse' () : Tot (squash (LP.synth_inverse synth_%s_recip synth_%s)) =\n" n n n;
-  w o "  _ by (LP.synth_pairs_to_struct_to_pairs_tac' %d)\n\n" (case_count - 1);
-  w o "let synth_%s_recip_inverse () : Lemma (LP.synth_inverse synth_%s_recip synth_%s) =\n" n n n;
-  w o "  synth_%s_recip_inverse' ()\n\n" n;
+  w o "let synth_%s_recip_inverse () : Lemma (LP.synth_inverse synth_%s_recip synth_%s) = ()\n\n" n n n;
   w o "let synth_%s_injective () : Lemma (LP.synth_injective synth_%s) =\n" n n;
   w o "  LP.synth_inverse_synth_injective synth_%s_recip synth_%s;\n" n n;
   w o "  synth_%s_recip_inverse ()\n\n" n;
@@ -2327,26 +2378,28 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   w o "  LP.synth_inverse_synth_injective synth_%s synth_%s_recip\n\n" n n;
 
   (* main parser combinator type *)
-  w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
-  let tuple = List.fold_left (
-    fun acc (fn, ty) ->
-      let c = pcombinator_name ty in
-      if acc="" then c else sprintf "%s\n  `LP.nondep_then` %s" acc c
-    ) "" fields in
-  w o "  %s\n\n" tuple;
+  let combinator ret bind =
+    btree_fold
+      (fun s _ (_, ty) -> sprintf "%s%s" s (ret ty))
+      (fun s -> sprintf "%s(" s)
+      (fun s -> sprintf "%s `%s` " s bind)
+      (fun s -> sprintf "%s)" s)
+      (fun _ -> ())
+      (fun _ -> ())
+      ""
+      ()
+      tfields
+  in
+  let parser = combinator pcombinator_name "LP.nondep_then" in
+  w o "noextract let %s'_parser : LP.parser _ %s' = %s\n\n" n n parser;
 
   w o "noextract let %s'_parser_kind = LP.get_parser_kind %s'_parser\n\n" n n;
   w o "let %s_parser =\n  synth_%s_injective ();\n  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n n n;
   w o "  %s'_parser `LP.parse_synth` synth_%s\n\n" n n;
 
   (* main serializer type *)
-  w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
-  let tuple = List.fold_right (
-    fun (fn, ty) acc ->
-      let c = scombinator_name ty in
-      if acc="" then c else sprintf "LP.serialize_nondep_then _ (%s) ()\n  _ %s" acc c
-    ) (List.rev fields) "" in
-  w o "  %s\n\n" tuple;
+  let serializer = combinator scombinator_name "LP.serialize_nondep_then" in
+  w o "noextract let %s'_serializer : LP.serializer %s'_parser = %s\n\n" n n serializer;
   w o "let %s_serializer =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
   w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
@@ -2354,39 +2407,22 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   write_bytesize o is_private n;
 
   (* main parser32 *)
-  wh o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
-  let tuple = List.fold_left (
-    fun acc (fn, ty) ->
-      let c = pcombinator32_name ty in
-      if acc="" then c else sprintf "%s\n  `LP.parse32_nondep_then` %s" acc c
-    ) "" fields in
-  wh o "  %s\n\n" tuple;
+  let parser32 = combinator pcombinator32_name "LP.parse32_nondep_then" in
+  wh o "inline_for_extraction let %s'_parser32 : LP.parser32 %s'_parser = %s\n\n" n n parser32;
   wh o "let %s_parser32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
   wh o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   wh o "  LP.parse32_synth _ synth_%s (fun x -> synth_%s x) %s'_parser32 ()\n\n" n n n;
 
   (* serialize32 *)
-  wh o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
-  let tuple = List.fold_right (
-    fun (fn, ty) acc ->
-      let c = scombinator32_name ty in
-      if acc="" then c else sprintf "LP.serialize32_nondep_then (%s) ()\n  %s ()" acc c
-    ) (List.rev fields) "" in
-  wh o "  %s\n\n" tuple;
-
+  let serializer32 = combinator scombinator32_name "LP.serialize32_nondep_then" in
+  wh o "inline_for_extraction let %s'_serializer32 : LP.serializer32 %s'_serializer = %s\n\n" n n serializer32;
   wh o "let %s_serializer32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
   wh o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
   wh o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
   wh o "  LP.serialize32_synth _ synth_%s _ %s'_serializer32 synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
 
-  wh o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
-  let tuple = List.fold_right (
-    fun (fn, ty) acc ->
-      let c = size32_name ty in
-      if acc="" then c else sprintf "LP.size32_nondep_then (%s) ()\n  (%s)" acc c
-    ) (List.rev fields) "" in
-  wh o "  %s\n\n" tuple;
-
+  let size32 = combinator size32_name "LP.size32_nondep_then" in
+  wh o "inline_for_extraction let %s'_size32 : LP.size32 %s'_serializer = %s\n\n" n n size32;
   wh o "let %s_size32 =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
   wh o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
   wh o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
@@ -2395,13 +2431,8 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   (* validator *)
   if need_validator li.meta li.min_len li.max_len then
    begin
-    wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
-    let tuple = List.fold_left (
-      fun acc (fn, ty) ->
-        let c = validator_name ty in
-        if acc="" then c else sprintf "%s\n  `LL.validate_nondep_then` %s" acc c
-      ) "" fields in
-    wl o "  %s\n\n" tuple;
+    let validator = combinator validator_name "LL.validate_nondep_then" in
+    wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser = %s\n\n" n n validator;
     wl o "let %s_validator =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
     wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
     wl o "  LL.validate_synth %s'_validator synth_%s ()\n\n" n n
@@ -2410,13 +2441,8 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   (* jumper *)
   if need_jumper li.min_len li.max_len then
    begin
-    wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-    let tuple = List.fold_left (
-      fun acc (fn, ty) ->
-        let c = jumper_name ty in
-        if acc="" then c else sprintf "%s\n  `LL.jump_nondep_then` %s" acc c
-      ) "" fields in
-    wl o "  %s\n\n" tuple;
+    let jumper = combinator jumper_name "LL.jump_nondep_then" in
+    wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser = %s\n\n" n n jumper;
     wl o "let %s_jumper =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
     wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
     wl o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n
@@ -2436,26 +2462,23 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     )
     n
   ;
+  let rec bytesize accu = function
+  | TLeaf (fn, ty) ->
+       (accu, scombinator_name ty, sprintf "x.%s" fn)
+  | TNode (_, left, right) ->
+     let (accu1, sleft, argleft) = bytesize accu left in
+     let (accu2, sright, argright) = bytesize accu1 right in
+     let accu = sprintf "%s;\nLP.length_serialize_nondep_then %s %s %s %s" accu2 sleft sright argleft argright in
+     let s = sprintf "(%s `LP.serialize_nondep_then` %s)" sleft sright in
+     let arg = sprintf "(%s, %s)" argleft argright in
+     (accu, s, arg)
+  in
+  let (body, _, _) = bytesize "" tfields in
   w o "let %s_bytesize_eqn x =\n" n;
   w o "  [@inline_let] let _ = synth_%s_injective () in\n" n;
   w o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
   w o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
-  w o "  LP.serialize_synth_eq _ synth_%s %s'_serializer synth_%s_recip () x" n n n;
-  begin match fields with
-  | [] -> ()
-  | (fn1, ty1) :: qf ->
-     let _ = List.fold_left
-       (fun (lhs, arg) (fn, ty) ->
-         let s = scombinator_name ty in
-         let arg' = sprintf "(%s, x.%s)" arg fn in
-         let arg_sp = sprintf "%s x.%s" arg fn in
-         w o ";\n  LP.length_serialize_nondep_then _ %s () _ %s %s" lhs s arg_sp;
-         let lhs' = sprintf "(LP.serialize_nondep_then _ %s () _ %s)" lhs s in
-         (lhs', arg')
-       )
-       (scombinator_name ty1, sprintf "x.%s" fn1)
-       qf
-     in
+  w o "  LP.serialize_synth_eq _ synth_%s %s'_serializer synth_%s_recip () x%s" n n n body;
      List.iter
        (fun (fn, ty) ->
          let bseq = bytesize_eq_call ty (sprintf "x.%s" fn) in
@@ -2469,32 +2492,36 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
          let cur = sprintf "Seq.length (LP.serialize %s x.%s)" s fn in
          if acc = "" then cur else sprintf "%s + %s" acc cur
        ) "" fields in
-     w o ";\n  assert(%s_bytesize x == %s)\n\n" n seq_sum
-  end;
+     w o ";\n  assert(%s_bytesize x == %s)\n\n" n seq_sum;
 
   (* accessors for fields *)
-  begin
-    let write_accessor fn ty g_before_synth a_before_synth =
-      wl i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn;
-      wl o "let gaccessor''_%s_%s : LL.gaccessor %s_parser %s _ =\n" n fn n (pcombinator_name ty);
-      wl o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
-      wl o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_recip_injective (); synth_%s_injective ();\n" n n n n;
-      wl o "  LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip () `LL.gaccessor_compose` %s\n\n" n n n g_before_synth;
-      wl o "let clens'_%s_%s : LL.clens %s %s = LL.get_gaccessor_clens gaccessor''_%s_%s\n\n" n fn n (compile_type ty) n fn;
-      wl o "let gaccessor'_%s_%s : LL.gaccessor %s_parser %s clens'_%s_%s = gaccessor''_%s_%s\n\n" n fn n (pcombinator_name ty) n fn n fn;
-      wl o "let clens_%s_%s_eq : squash (LL.clens_eq clens'_%s_%s clens_%s_%s) =\n" n fn n fn n fn;
-      wl o "  (LL.clens_eq_intro' _ _ (fun x -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))) (fun x h -> _ by (FStar.Tactics.(norm [delta; iota; primops]; smt ()))))\n\n";
-      wl o "let gaccessor_%s_%s =\n" n fn;
-      wl o "  LL.gaccessor_ext gaccessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn n fn n fn;
-      wl i "inline_for_extraction val accessor_%s_%s : LL.accessor gaccessor_%s_%s\n\n" n fn n fn;
-      wl o "inline_for_extraction let accessor'_%s_%s : LL.accessor gaccessor'_%s_%s =\n" n fn n fn;
-      wl o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
-      wl o "  synth_%s_recip_inverse (); synth_%s_inverse (); synth_%s_recip_injective (); synth_%s_injective ();\n" n n n n;
-      wl o "  LL.accessor_compose (LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()) %s ()\n\n" n n n a_before_synth;
-      wl o "let accessor_%s_%s =\n" n fn;
-      wl o "  LL.accessor_ext accessor'_%s_%s clens_%s_%s clens_%s_%s_eq\n\n" n fn n fn n fn;
-      ()
-    in
+     let gacc =
+       btree_fold
+         (fun output path (fn, ty) -> sprintf "%slet gaccessor'_%s_%s : LL.gaccessor %s'_parser %s _ = %s\n\n" output n fn n (pcombinator_name ty) path)
+         (fun x -> x)
+         (fun x -> x)
+         (fun x -> x)
+         (fun path -> sprintf "(LL.gaccessor_then_fst %s)" path)
+         (fun path -> sprintf "(LL.gaccessor_then_snd %s)" path)
+         ""
+         (sprintf "(LL.gaccessor_id %s'_parser)" n)
+         tfields
+     in
+     wl o "%s" gacc;
+     let rec accessors (output: string) (path: string) = function
+       | TLeaf (fn, ty) ->
+          let output' = sprintf "%sinline_for_extraction noextract let accessor'_%s_%s : LL.accessor gaccessor'_%s_%s = %s\n\n" output n fn n fn path in
+          (output', jumper_name ty)
+       | TNode (_, left, right) ->
+          let (output1, jumper1) = accessors output (sprintf "(LL.accessor_then_fst %s)" path) left in
+          let (output2, jumper2) = accessors output1 (sprintf "(LL.accessor_then_snd %s %s)" path jumper1) right in
+          (output2, sprintf "(%s `LL.jump_nondep_then` %s)" jumper1 jumper2)
+     in
+     let (acc, _) = accessors "" (sprintf "(LL.accessor_id %s'_parser)" n) tfields in
+     wl o "%s" acc;
+     wl o "let clens_%s_%s' : LL.clens %s %s' = synth_%s_recip_inverse (); synth_%s_recip_injective (); LL.clens_synth synth_%s_recip synth_%s ()\n\n" n n n n n n n n;
+     wl o "let gaccessor_%s_%s' : LL.gaccessor %s_parser %s'_parser clens_%s_%s' = synth_%s_inverse (); synth_%s_injective (); synth_%s_recip_inverse (); LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip ()\n\n" n n n n n n n n n n n n;
+     wl o "inline_for_extraction noextract let accessor_%s_%s' : LL.accessor gaccessor_%s_%s' = synth_%s_inverse (); synth_%s_injective (); synth_%s_recip_inverse (); LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()\n\n" n n n n n n n n n n;
     (* write the lenses *)
     List.iter
       (fun (fn, ty) ->
@@ -2504,79 +2531,46 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
         wl i "}\n\n";
       )
       fields;
-    match fields with
-    | [] -> ()
-    | [(fn, ty)] -> failwith "1-field struct should have been turned into its field"
-    | (fn1, ty1) :: fields_tl ->
-       (* produce the accessor for the first field *)
-       let leftmost_gaccessor = List.fold_left (fun g (_, ty) -> sprintf "(LL.gaccessor_fst_then %s %s ())" g (pcombinator_name ty)) (Printf.sprintf "(LL.gaccessor_id %s)" (pcombinator_name ty1)) fields_tl in
-       let leftmost_accessor = List.fold_left (fun g (_, ty) -> sprintf "(LL.accessor_fst_then %s %s ())" g (pcombinator_name ty)) (Printf.sprintf "(LL.accessor_id %s)" (pcombinator_name ty1)) fields_tl in
-       write_accessor fn1 ty1 leftmost_gaccessor leftmost_accessor;
-       (* for each field starting from the second one, build the left-hand-side parser and jumper at the time accessor_snd will be called *)
-       let (_, pj_lhs_tl_rev) =
-         List.fold_left
-           (fun ((parser_lhs, jumper_lhs) as pj_lhs, pj_lhs_tl_rev) ((_, ty) as fd) ->
-             let parser_lhs' = sprintf "(%s `LP.nondep_then` %s)" parser_lhs (pcombinator_name ty) in
-             let jumper_lhs' = sprintf "(%s `LL.jump_nondep_then` %s)" jumper_lhs (jumper_name ty) in
-             let pj_lhs_tl_rev' = (fd, pj_lhs) :: pj_lhs_tl_rev in
-             ((parser_lhs', jumper_lhs'), pj_lhs_tl_rev')
-           )
-           ((pcombinator_name ty1, jumper_name ty1), [])
-           fields_tl
-       in
-       let pj_lhs_tl = List.rev pj_lhs_tl_rev in
-       (* produce the accessors for the other fields *)
-       let rec produce_accessors = function
-         | [] -> ()
-         | ((fn, ty), (parser_lhs, jumper_lhs)) :: q ->
-            let gaccessor_before_synth =
-              List.fold_left
-                (fun g ((_, ty'), _) ->
-                  sprintf "(LL.gaccessor_fst_then %s %s ())" g (pcombinator_name ty'))
-                (sprintf "(LL.gaccessor_snd %s %s)" parser_lhs (pcombinator_name ty))
-                q
-            in
-            let accessor_before_synth =
-              List.fold_left
-                (fun g ((_, ty'), _) ->
-                  sprintf "(LL.accessor_fst_then %s %s ())" g (pcombinator_name ty'))
-                (sprintf "(LL.accessor_snd %s %s)" jumper_lhs (pcombinator_name ty))
-                q
-            in
-            write_accessor fn ty gaccessor_before_synth accessor_before_synth;
-            produce_accessors q
-       in
-       produce_accessors pj_lhs_tl;
-       ()
-  end;
+    (* write the accessors *)
+    List.iter
+      (fun (fn, ty) ->
+        wl i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn;
+        wl o "let gaccessor_%s_%s = LL.gaccessor_ext (gaccessor_%s_%s' `LL.gaccessor_compose` gaccessor'_%s_%s) clens_%s_%s ()\n\n" n fn n n n fn n fn;
+        wl i "val accessor_%s_%s : LL.accessor gaccessor_%s_%s\n\n" n fn n fn;
+        wl o "let accessor_%s_%s = LL.accessor_ext (LL.accessor_compose accessor_%s_%s' accessor'_%s_%s ()) clens_%s_%s ()\n\n" n fn n n n fn n fn
+      )
+      fields;
+
   (* valid intro lemma *)
-  wl i "val %s_valid (h:HS.mem) (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos0:U32.t) : Lemma\n  (requires\n" n;
-  let (valid, getpos, _) = List.fold_left (fun (acc, posacc, i) (fn, ty) ->
-    let v = sprintf "%s    LL.valid %s h input pos%d" acc (pcombinator_name ty) i in
-    let pos = sprintf "    let pos%d = LL.get_valid_pos %s h input pos%d in\n" (i+1) (pcombinator_name ty) i in
-    let acc' = v^(if i+1 = List.length fields then String.make i ')' else " /\\ (\n"^pos) in
-    (acc', posacc^pos, i+1)
-  ) ("", "", 0) fields in
-  wl i "%s\n  )\n  (ensures (\n%s    LL.valid_content_pos %s_parser h input pos0\n      ({\n" valid getpos n;
-  List.iteri (fun j (fn, ty) ->
-    wl i "        %s = LL.contents %s h input pos%d;\n" fn (pcombinator_name ty) j
-  ) fields;
-  wl i "      }) pos%d\n  ))\n\n" (List.length fields);
-  wl o "let %s_valid h #_ #_ input pos0 =\n%s" n getpos;
-  List.iteri (fun j (fn, ty) ->
-    wl o "  let %s = LL.contents %s h input pos%d in\n" fn (pcombinator_name ty) j
-  ) fields;
-  let get_prefix i = fst (List.fold_left (
-    fun (acc, j) (fn, ty) ->
-      let acc' = if j > i then acc else
-        let c = pcombinator_name ty in
-        (if acc="" then c else sprintf "%s\n    `LP.nondep_then` %s" acc c) in
-      (acc', j+1)
-    ) ("", 0) fields) in
-  List.iteri (fun j (fn, ty) ->
-    if j > 0 then
-      wl o "  LL.valid_nondep_then_intro h (%s) %s input pos0;\n" (get_prefix (j-1)) (pcombinator_name ty)
-  ) fields;
+  let rec valid ((count, (precond_l, precond_r, postcond), body) as accu) = function
+    | TLeaf (fn, ty) ->
+       let p = pcombinator_name ty in
+       let count' = count + 1 in
+       let letpos' = sprintf "  let pos%d = LL.get_valid_pos %s h input pos%d in\n" count' p count in
+       let precond_l' = sprintf "%s  LL.valid %s h input pos%d /\\ (\n%s" precond_l p count letpos' in
+       let precond_r' = sprintf "%s)" precond_r in
+       let postcond' = sprintf "%s  let %s = LL.contents %s h input pos%d in\n%s" postcond fn p count letpos' in
+       ((count', (precond_l', precond_r', postcond'), body), p)
+    | TNode (_, left, right) ->
+       let (accu1, pleft) = valid accu left in
+       let ((count', cond', body2), pright) = valid accu1 right in
+       let body' = sprintf "%s  LL.valid_nondep_then_intro h %s %s input pos%d;\n" body2 pleft pright count in
+       let p' = sprintf "(%s `LP.nondep_then` %s)" pleft pright in
+       ((count', cond', body'), p')
+  in
+  let ((count, (precond_l, precond_r, postcond), body), _) = valid (0, ("", "", ""), "") tfields in
+  wl i "val %s_valid (h:HS.mem) (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos0:U32.t) : Lemma\n  (requires (\n" n;
+  wl i "%s  True\n  %s))\n" precond_l precond_r;
+  wl i "  (ensures (\n";
+  wl i "%s" postcond;
+  wl i "  LL.valid_content_pos %s_parser h input pos0 ({\n" n;
+  List.iter
+    (fun (fn, _) ->
+      wl i "      %s = %s;\n" fn fn;
+    )
+    fields;
+  wl i "    }) pos%d))\n\n" count;
+  wl o "let %s_valid h #_ #_ input pos0 =\n%s%s" n postcond body;
   wl o "  assert_norm (%s' == LP.get_parser_type %s'_parser);\n" n n;
   wl o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
   wl o "  synth_%s_injective ();\n" n;
