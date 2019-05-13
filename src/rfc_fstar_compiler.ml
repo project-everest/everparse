@@ -840,12 +840,12 @@ and compile_ite o i n sn fn tagn clen cval tt tf al  =
   wl i "  (ensures (fun h res h' -> B.modifies B.loc_none h h' /\\\n";
   wl i "    (res == true <==> %s_true? (LL.contents %s_parser h input pos))))\n\n" ncap n;
   wl o "let %s_test #_ #_ input pos = let h = HST.get () in %s_elim h input pos; test_%s input pos\n\n" n n n;
-  wl i "let %s_clens_true : LL.clens %s %s = {\n" n n (compile_type tt);
+  wl i "noextract let %s_clens_true : LL.clens %s %s = {\n" n n (compile_type tt);
   wl i "  LL.clens_cond = (fun x -> %s_true? x);\n" ncap;
   wl i "  LL.clens_get = (fun x -> (match x with %s_true y -> y) <: Ghost %s (requires (%s_true? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tt) ncap;
   wl i "val %s_gaccessor_true: LL.gaccessor %s_parser %s %s_clens_true\n\n" n n (pcombinator_name tt) n;
   wl i "val %s_accessor_true: LL.accessor %s_gaccessor_true\n\n" n n;
-  wl i "let %s_clens_false : LL.clens %s %s = {\n" n n (compile_type tf);
+  wl i "noextract let %s_clens_false : LL.clens %s %s = {\n" n n (compile_type tf);
   wl i "  LL.clens_cond = (fun x -> %s_false? x);\n" ncap;
   wl i "  LL.clens_get = (fun x -> (match x with %s_false m -> m.value) <: Ghost %s (requires (%s_false? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tf) ncap;
   wl i "val %s_gaccessor_false: LL.gaccessor %s_parser %s %s_clens_false\n\n" n n (pcombinator_name tf) n;
@@ -1335,12 +1335,12 @@ and compile_select o i n seln tagn tagt taga cl def al =
            if ty <> "Fail" && ty <> "Empty" then
              begin
                let ty0 = compile_type ty in
-               wl i "let %s_clens_%s : LL.clens %s %s = {\n" n case n ty0;
+               wl i "noextract let %s_clens_%s : LL.clens %s %s = {\n" n case n ty0;
                wl i "  LL.clens_cond = (fun (x: %s) -> tag_of_%s x == %s);\n" n n (String.capitalize_ascii case);
                wl i "  LL.clens_get = (fun (x: %s) -> (match x with %s_%s y -> y) <: (Ghost %s (requires (tag_of_%s x == %s)) (ensures (fun y -> True))));\n" n cprefix case ty0 n (String.capitalize_ascii case);
                wl i "}\n\n";
                wl i "val %s_gaccessor_%s : LL.gaccessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty) n case;
-               wl o "let %s_clens'_%s : LL.clens %s %s = LL.clens_%ssum_payload %s_sum " n case n ty0 d n;
+               wl o "noextract let %s_clens'_%s : LL.clens %s %s = LL.clens_%ssum_payload %s_sum " n case n ty0 d n;
                if d = "" then
                  wl o "(%s_as_enum_key %s)\n\n" tn (String.capitalize_ascii case)
                else
@@ -1384,7 +1384,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
        | Some dt when dt <> "Empty" && dt <> "Fail" ->
           (* accessor to the default case payload *)
           let dt0 = compile_type dt in
-          wl i "let %s_clens_Unknown : LL.clens %s %s = {\n" n n dt0;
+          wl i "noextract let %s_clens_Unknown : LL.clens %s %s = {\n" n n dt0;
           wl i "  LL.clens_cond = (fun (x: %s) -> %s_Unknown_%s? x);\n" n cprefix tn;
           wl i "  LL.clens_get = (fun (x: %s) -> (match x with %s_Unknown_%s _ y -> y) <: (Ghost %s (requires (%s_Unknown_%s? x)) (ensures (fun y -> True))));\n" n cprefix tn dt0 cprefix tn;
           wl i "}\n\n";
@@ -1594,7 +1594,7 @@ and compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max 
     );
     (* TODO: intro lemmas *)
     (* accessor *)
-    wl i "let %s_clens : LL.clens %s %s = {\n" n n (compile_type ty);
+    wl i "noextract let %s_clens : LL.clens %s %s = {\n" n n (compile_type ty);
     wl i "  LL.clens_cond = (fun _ -> True);\n";
     wl i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
     wl i "}\n\n";
@@ -1850,7 +1850,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         wl o "  let h = HST.get () in\n";
         wl o "  LL.valid_synth h %s'_parser synth_%s input pos\n\n" n n;
         (* accessor *)
-        wl i "let %s_clens : LL.clens %s %s = {\n" n n (compile_type ty);
+        wl i "noextract let %s_clens : LL.clens %s %s = {\n" n n (compile_type ty);
         wl i "  LL.clens_cond = (fun _ -> True);\n";
         wl i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
         wl i "}\n\n";
@@ -2185,7 +2185,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "  ))\n";
       wl o "let %s_count #_ #_ input pos = LL.vlarray_list_length %d %d %s %d %d input pos\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
       (* nth *)
-      wl i "let %s_clens_nth (i: nat) : Tot (LL.clens %s %s) = {\n" n n (compile_type ty);
+      wl i "noextract let %s_clens_nth (i: nat) : Tot (LL.clens %s %s) = {\n" n n (compile_type ty);
       wl i "  LL.clens_cond = (fun (l: %s) -> i < L.length l);\n" n;
       wl i "  LL.clens_get = (fun (l: %s) -> L.index l i);\n" n;
       wl i "}\n\n";
@@ -2519,7 +2519,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
      in
      let (acc, _) = accessors "" (sprintf "(LL.accessor_id %s'_parser)" n) tfields in
      wl o "%s" acc;
-     wl o "let clens_%s_%s' : LL.clens %s %s' = synth_%s_recip_inverse (); synth_%s_recip_injective (); LL.clens_synth synth_%s_recip synth_%s ()\n\n" n n n n n n n n;
+     wl o "noextract let clens_%s_%s' : LL.clens %s %s' = synth_%s_recip_inverse (); synth_%s_recip_injective (); LL.clens_synth synth_%s_recip synth_%s ()\n\n" n n n n n n n n;
      wl o "let gaccessor_%s_%s' : LL.gaccessor %s_parser %s'_parser clens_%s_%s' = synth_%s_inverse (); synth_%s_injective (); synth_%s_recip_inverse (); LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip ()\n\n" n n n n n n n n n n n n;
      wl o "inline_for_extraction noextract let accessor_%s_%s' : LL.accessor gaccessor_%s_%s' = synth_%s_inverse (); synth_%s_injective (); synth_%s_recip_inverse (); LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()\n\n" n n n n n n n n n n;
     (* write the lenses *)
