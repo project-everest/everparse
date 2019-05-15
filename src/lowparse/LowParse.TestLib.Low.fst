@@ -34,6 +34,12 @@ assume val load_file_buffer: (filename:string) -> ST (slice (srel_of_buffer_srel
     M.modifies M.loc_none h h' /\ B.unused_in out.base h /\ live_slice h' out
   ))
 
+assume val load_file_buffer_c: (filename:C.String.t) -> ST (slice (srel_of_buffer_srel (IB.immutable_preorder _)) (srel_of_buffer_srel (IB.immutable_preorder _)))
+  (requires (fun h -> True))
+  (ensures (fun h out h' ->
+    M.modifies M.loc_none h h' /\ B.unused_in out.base h /\ live_slice h' out
+  ))
+
 (* TODO: implement in LowStar.Buffer *)
 
 module U32 = FStar.UInt32

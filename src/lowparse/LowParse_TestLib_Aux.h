@@ -2,13 +2,12 @@
 #define __LOWPARSE_TESTLIB_AUX_H
 
 #include <kremlib.h>
-#include <kremlin/internal/compat.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 
-void LowParse_TestLib_Aux_load_file(Prims_string x0, uint8_t** buf, int32_t * len)
+void LowParse_TestLib_Aux_load_file(const char * x0, uint8_t** buf, int32_t * len)
 {
     FILE *fp = fopen(x0, "rb");
     if (!fp) {

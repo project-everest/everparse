@@ -85,7 +85,16 @@ let test_bitcoin () : St bool =
     let p_random = LB.sub lb pos_random 32ul in
     bprint (" The previous block hash is: " ^(hex_of_bytes (of_buffer 32ul p_random))); true
 
-let main () : St C.exit_code =
+let main
+  (argc: Int32.t)
+  (argv: LowStar.Buffer.buffer C.String.t)
+: ST C.exit_code
+    (requires (fun h ->
+      LowStar.Buffer.live h argv /\
+      Int32.v argc == LowStar.Buffer.length argv
+    ))
+    (ensures (fun _ _ _ -> True))
+=
   let b = true in
   let b = test_closed_enum () in
   let b = if b then test_open_enum () else false in
