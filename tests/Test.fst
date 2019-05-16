@@ -92,25 +92,25 @@ let test_zeroarg () : St C.exit_code =
   let b = if b then test_bitcoin () else false in
   if b then C.EXIT_SUCCESS else C.EXIT_FAILURE
 
-let test_bitcoin_file (filename: C.String.t) : St C.exit_code =
+let test_bitcoin_file (filename: C.String.t) : St unit =
   let slice = LowParse.TestLib.Low.load_file_buffer_c filename in
   if slice.LPL.len `FStar.UInt32.gt` LPL.validator_max_length
   then
     let _ = print !$"Input data is too large\n" in
-    C.EXIT_FAILURE
+    ()
   else
     let consumed = Block.block_validator slice 0ul in
     if consumed `FStar.UInt32.gt` LPL.validator_max_length
     then
       let _ = print !$"Validation failed\n" in
-      C.EXIT_FAILURE
+      ()
     else if consumed = slice.LPL.len
     then
       let _ = print !$"Validation succeeded, everything consumed\n" in
-      C.EXIT_SUCCESS
+      ()
     else
       let _ = print !$"Validation succeeded, but some data left over\n" in
-      C.EXIT_FAILURE
+      ()
 
 let main
   (argc: Int32.t)
@@ -128,7 +128,8 @@ let main
     let filename = LowStar.Buffer.index argv 1ul in
     let _ = print filename in
     let _ = print !$"\n" in
-    test_bitcoin_file filename
+    let _ = test_bitcoin_file filename in
+    C.EXIT_SUCCESS
 
 (*
 Old test for TLS parsers. This has been moved to mitls-fstar
