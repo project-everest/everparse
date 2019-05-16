@@ -85,6 +85,33 @@ let test_bitcoin () : St bool =
     let p_random = LB.sub lb pos_random 32ul in
     bprint (" The previous block hash is: " ^(hex_of_bytes (of_buffer 32ul p_random))); true
 
+let test_zeroarg () : St C.exit_code =
+  let b = true in
+  let b = test_closed_enum () in
+  let b = if b then test_open_enum () else false in
+  let b = if b then test_bitcoin () else false in
+  if b then C.EXIT_SUCCESS else C.EXIT_FAILURE
+
+let test_bitcoin_file (filename: C.String.t) : St C.exit_code =
+  let slice = LowParse.TestLib.Low.load_file_buffer_c filename in
+  if slice.LPL.len `FStar.UInt32.gt` LPL.validator_max_length
+  then
+    let _ = print !$"Input data is too large\n" in
+    C.EXIT_FAILURE
+  else
+    let consumed = Block.block_validator slice 0ul in
+    if consumed `FStar.UInt32.gt` LPL.validator_max_length
+    then
+      let _ = print !$"Validation failed\n" in
+      C.EXIT_FAILURE
+    else if consumed = slice.LPL.len
+    then
+      let _ = print !$"Validation succeeded, everything consumed\n" in
+      C.EXIT_SUCCESS
+    else
+      let _ = print !$"Validation succeeded, but some data left over\n" in
+      C.EXIT_FAILURE
+
 let main
   (argc: Int32.t)
   (argv: LowStar.Buffer.buffer C.String.t)
@@ -94,12 +121,14 @@ let main
       Int32.v argc == LowStar.Buffer.length argv
     ))
     (ensures (fun _ _ _ -> True))
-=
-  let b = true in
-  let b = test_closed_enum () in
-  let b = if b then test_open_enum () else false in
-  let b = if b then test_bitcoin () else false in
-  if b then C.EXIT_SUCCESS else C.EXIT_FAILURE
+= if argc `Int32.lt` 2l
+  then
+    test_zeroarg ()
+  else
+    let filename = LowStar.Buffer.index argv 1ul in
+    let _ = print filename in
+    let _ = print !$"\n" in
+    test_bitcoin_file filename
 
 (*
 Old test for TLS parsers. This has been moved to mitls-fstar

@@ -76,7 +76,7 @@ extract: $(ALL_KRML_FILES) # from .depend
 
 test.exe: $(ALL_KRML_FILES) kremlin/Test.krml
 	-@mkdir out
-	$(KREMLIN) -no-prefix Test $^ -o test.exe
+	$(KREMLIN) $(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c -no-prefix Test $^ -o test.exe
 
 test: test.exe
 	./test.exe
