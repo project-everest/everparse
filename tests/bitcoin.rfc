@@ -58,19 +58,20 @@ uint32_le amount{2};
 struct {
   sha256 prev_hash;
   uint32_le prev_idx;
-  opaque scriptSig{0..2^10 : bitcoin_varint};
+  /* MAX_SCRIPT_SIZE=10000 */
+  opaque scriptSig<0..10000 : bitcoin_varint>;
   uint32_le seq_no;
 } txin;
 
 struct {
   amount value;
-  opaque scriptPubKey{0..2^10 : bitcoin_varint};
+  opaque scriptPubKey<0..10000 : bitcoin_varint>;
 } txout;
 
 struct {
   uint32_le version;
-  txin inputs{0..2^9 : bitcoin_varint};
-  txout outputs{0..2^9 : bitcoin_varint};
+  txin inputs{0..1000 : bitcoin_varint};
+  txout outputs{0..11110 : bitcoin_varint};
   uint32_le lock_time;
 } transaction;
 
@@ -81,5 +82,5 @@ struct {
   uint32_le timestamp;
   uint32_le bits;
   uint32_le nonce;
-  transaction tx{0..2^12 : bitcoin_varint};
+  transaction tx{0..2^16 : bitcoin_varint};
 } block;
