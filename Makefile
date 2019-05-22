@@ -16,6 +16,10 @@ gen-test: qd
 	./qd -odir tests/unit tests/unittests.rfc
 	./qd -low -odir tests/unit tests/bitcoin.rfc
 
+gen-test2: qd
+	-rm tests2/qdout/*.fst tests2/qdout/*.fsti || true
+	./qd -low -odir tests2/qdout tests2/student.rfc
+
 lowparse-test: lowparse
 	+$(MAKE) -C tests/lowparse
 

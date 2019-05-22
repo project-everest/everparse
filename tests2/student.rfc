@@ -1,0 +1,7 @@
+enum /*@open*/ {male, female, (255)} Gender;
+
+struct {
+	opaque name[20];
+	Gender gender;
+	uint32 age;
+} Student;
