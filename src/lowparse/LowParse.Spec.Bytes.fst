@@ -1,5 +1,5 @@
 module LowParse.Spec.Bytes
-include LowParse.Spec.VLData
+include LowParse.Spec.VLGen
 
 module B32 = FStar.Bytes
 module Seq = FStar.Seq
@@ -267,6 +267,28 @@ let length_serialize_bounded_vlbytes
 : Lemma
   (Seq.length (serialize (serialize_bounded_vlbytes min max) x) == log256' max + B32.length x)
 = length_serialize_bounded_vlbytes' min max (log256' max) x
+
+let parse_bounded_vlgenbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 min max))
+: Tot (parser (parse_bounded_vlgen_kind sk min max parse_all_bytes_kind) (parse_bounded_vlbytes_t min max))
+= parse_bounded_vlgen min max pk serialize_all_bytes `parse_synth` (fun x -> (x <: parse_bounded_vlbytes_t min max))
+
+let serialize_bounded_vlgenbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 min max))
+  (sk: serializer pk { kk.parser_kind_subkind == Some ParserStrong })
+: Tot (serializer (parse_bounded_vlgenbytes min max pk))
+= serialize_synth
+    (parse_bounded_vlgen min max pk serialize_all_bytes)
+    (fun x -> (x <: parse_bounded_vlbytes_t min max))
+    (serialize_bounded_vlgen min max sk serialize_all_bytes)
+    (fun x -> x)
+    ()
 
 (*
 let serialize_bounded_vlbytes_upd

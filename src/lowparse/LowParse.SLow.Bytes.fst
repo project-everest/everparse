@@ -1,6 +1,7 @@
 module LowParse.SLow.Bytes
 include LowParse.Spec.Bytes
 include LowParse.SLow.VLData
+include LowParse.SLow.VLGen
 
 module B32 = FStar.Bytes
 module Seq = FStar.Seq
@@ -168,3 +169,57 @@ let size32_bounded_vlbytes
   (max: nat { min <= max /\ max > 0 /\ max < 4294967292 } ) // max MUST BE less than 2^32 - 4
 : Tot (size32 (serialize_bounded_vlbytes min max))
 = size32_bounded_vlbytes' min max (log256' max)
+
+inline_for_extraction
+let parse32_bounded_vlgenbytes
+  (min: nat)
+  (min32: U32.t { U32.v min32 == min })
+  (max: nat{  min <= max /\ max > 0 })
+  (max32: U32.t { U32.v max32 == max })
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 min max))
+  (pk32: parser32 pk)
+: Tot (parser32 (parse_bounded_vlgenbytes min max pk))
+= parse32_synth
+    (parse_bounded_vlgen min max pk serialize_all_bytes)
+    (fun x -> (x <: parse_bounded_vlbytes_t min max))
+    (fun x -> (x <: parse_bounded_vlbytes_t min max))
+    (parse32_bounded_vlgen min min32 max max32 pk32 serialize_all_bytes parse32_all_bytes)
+    ()
+
+inline_for_extraction
+let serialize32_bounded_vlgenbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 min max))
+  (#sk: serializer pk)
+  (sk32: serializer32 sk {kk.parser_kind_subkind == Some ParserStrong /\ Some? kk.parser_kind_high /\ Some?.v kk.parser_kind_high + max < 4294967296 })
+: Tot (serializer32 (serialize_bounded_vlgenbytes min max sk))
+= serialize32_synth
+    (parse_bounded_vlgen min max pk serialize_all_bytes)
+    (fun x -> (x <: parse_bounded_vlbytes_t min max))
+    (serialize_bounded_vlgen min max sk serialize_all_bytes)
+    (serialize32_bounded_vlgen min max sk32 serialize32_all_bytes)
+    (fun x -> x)
+    (fun x -> x)
+    ()
+
+inline_for_extraction
+let size32_bounded_vlgenbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 min max))
+  (#sk: serializer pk)
+  (sk32: size32 sk {kk.parser_kind_subkind == Some ParserStrong /\ Some? kk.parser_kind_high /\ Some?.v kk.parser_kind_high + max < 4294967296 })
+: Tot (size32 (serialize_bounded_vlgenbytes min max sk))
+= size32_synth
+    (parse_bounded_vlgen min max pk serialize_all_bytes)
+    (fun x -> (x <: parse_bounded_vlbytes_t min max))
+    (serialize_bounded_vlgen min max sk serialize_all_bytes)
+    (size32_bounded_vlgen min max sk32 size32_all_bytes)
+    (fun x -> x)
+    (fun x -> x)
+    ()
+

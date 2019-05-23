@@ -2,6 +2,7 @@ module LowParse.Low.Bytes
 include LowParse.Spec.Bytes
 include LowParse.Low.Combinators
 include LowParse.Low.VLData
+include LowParse.Low.VLGen
 include LowParse.Low.Int
 
 module U32 = FStar.UInt32
@@ -901,3 +902,49 @@ let finalize_bounded_vlbytes
     valid_content_pos (parse_bounded_vlbytes min max) h' input pos (BY.hide (bytes_of_slice_from_to h input pos_payload pos')) pos'
   ))
 = finalize_bounded_vlbytes' min max (log256' max) input pos len
+
+inline_for_extraction
+let validate_bounded_vlgenbytes
+  (vmin: der_length_t)
+  (min: U32.t { U32.v min == vmin } )
+  (vmax: der_length_t { vmax > 0 })
+  (max: U32.t { U32.v max == vmax /\ U32.v min <= U32.v max } )
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 (vmin) (vmax)))
+  (vk: validator pk)
+  (rk: leaf_reader pk)
+: Tot (validator (parse_bounded_vlgenbytes vmin vmax pk))
+= validate_synth
+    (validate_bounded_vlgen
+      vmin
+      min
+      vmax
+      max
+      vk
+      rk
+      serialize_all_bytes
+      (validate_all_bytes ())
+    )
+    (fun x -> (x <: parse_bounded_vlbytes_t vmin vmax))
+    ()
+
+inline_for_extraction
+let jump_bounded_vlgenbytes
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmax > 0 /\ vmin <= vmax /\ vmax < 4294967296 })
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 (vmin) (vmax)))
+  (vk: jumper pk)
+  (rk: leaf_reader pk)
+: Tot (jumper (parse_bounded_vlgenbytes vmin vmax pk))
+= jump_synth
+    (jump_bounded_vlgen
+      vmin
+      vmax
+      vk
+      rk
+      serialize_all_bytes
+      (jump_all_bytes ())
+    )
+    (fun x -> (x <: parse_bounded_vlbytes_t vmin vmax))
+    ()
