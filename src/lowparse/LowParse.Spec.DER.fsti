@@ -143,12 +143,6 @@ val log256_eq
   (requires (x > 0 /\ x < 4294967296))
   (ensures (log256 x == log256' x))
 
-let bounded_int32
-  (min: der_length_t)
-  (max: der_length_t { min <= max })
-: Tot Type0
-= (x: U32.t { in_bounds min max x } )
-
 inline_for_extraction
 let tag_of_der_length32'
   (x: der_length_t { x < 4294967296 } )

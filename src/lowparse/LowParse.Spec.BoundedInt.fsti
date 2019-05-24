@@ -161,3 +161,10 @@ let in_bounds
   (x: U32.t)
 : GTot bool
 = not (U32.v x < min || max < U32.v x)
+
+inline_for_extraction
+let bounded_int32
+  (min: nat)
+  (max: nat { min <= max })
+: Tot Type0
+= (x: U32.t { in_bounds min max x } )
