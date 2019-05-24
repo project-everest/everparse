@@ -98,3 +98,52 @@ let bare_serialize_bcvli_correct : squash
 let serialize_bcvli : serializer parse_bcvli = bare_serialize_bcvli
 
 let serialize_bcvli_eq x = ()
+
+let parse_bounded_bcvli'
+  (min: nat)
+  (max: nat { min <= max })
+: Tot (parser (parse_filter_kind parse_bcvli_kind) (bounded_int32 min max))
+= parse_filter parse_bcvli (in_bounds min max)
+
+let parse_bounded_bcvli_size_correct
+  (min: nat)
+  (max: nat { min <= max })
+: Lemma
+  (parse_bounded_bcvli_size min `parses_at_least` parse_bounded_bcvli' min max /\
+    parse_bounded_bcvli_size max `parses_at_most` parse_bounded_bcvli' min max)
+= Classical.forall_intro (parse_filter_eq parse_bcvli (in_bounds min max));
+  Classical.forall_intro parse_bcvli_eq;
+  parser_kind_prop_equiv (parse_bounded_integer_kind 1) (parse_bounded_integer_le 1);
+  parser_kind_prop_equiv (parse_bounded_integer_kind 2) (parse_bounded_integer_le 2);
+  parser_kind_prop_equiv (parse_bounded_integer_kind 4) (parse_bounded_integer_le 4)
+
+let parse_bounded_bcvli_kind_correct
+  (min: nat)
+  (max: nat { min <= max })
+: Lemma
+  (parser_kind_prop (parse_bounded_bcvli_kind min max) (parse_bounded_bcvli' min max))
+= parse_bounded_bcvli_size_correct min max;
+  parser_kind_prop_equiv (parse_filter_kind parse_bcvli_kind) (parse_bounded_bcvli' min max);
+  parser_kind_prop_equiv (parse_bounded_bcvli_kind min max) (parse_bounded_bcvli' min max)
+
+let parse_bounded_bcvli
+  min max
+= parse_bounded_bcvli_kind_correct min max;
+  strengthen (parse_bounded_bcvli_kind min max) (parse_bounded_bcvli' min max)
+
+let parse_bounded_bcvli_eq
+  min max input
+= parse_filter_eq parse_bcvli (in_bounds min max) input;
+  parse_bcvli_eq input
+
+let serialize_bounded_bcvli
+  min max
+= assert_norm (parse_filter_refine (in_bounds min max) == bounded_int32 min max);
+  serialize_ext
+    _
+    (serialize_filter serialize_bcvli (in_bounds min max))
+    (parse_bounded_bcvli min max)
+
+let serialize_bounded_bcvli_eq
+  min max x
+= ()

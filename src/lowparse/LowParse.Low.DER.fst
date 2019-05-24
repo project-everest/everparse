@@ -317,6 +317,7 @@ let serialize32_bounded_der_length32
 = fun (y' : bounded_int32 (vmin) (vmax)) #rrel #rel b pos ->
   serialize32_bounded_der_length32' vmin vmax y' b pos
 
+inline_for_extraction
 let write_bounded_der_length32
   (vmin: der_length_t)
   (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )

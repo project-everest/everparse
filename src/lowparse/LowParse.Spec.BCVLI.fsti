@@ -54,3 +54,56 @@ val serialize_bcvli_eq (x: U32.t) : Lemma
       serialize (serialize_bounded_integer_le 4) x
     )
   ))
+
+inline_for_extraction
+let parse_bounded_bcvli_size
+  (max: nat)
+: Tot nat
+= if max <= 252
+  then 1
+  else if max <= 65535
+  then 3
+  else 5
+
+inline_for_extraction
+let parse_bounded_bcvli_kind
+  (min: nat)
+  (max: nat { min <= max })
+: Tot parser_kind
+= {
+  parser_kind_low = parse_bounded_bcvli_size min;
+  parser_kind_high = Some (parse_bounded_bcvli_size max);
+  parser_kind_subkind = Some ParserStrong;
+  parser_kind_metadata = None;
+}
+
+val parse_bounded_bcvli
+  (min: nat)
+  (max: nat { min <= max })
+: Tot (parser (parse_bounded_bcvli_kind min max) (bounded_int32 min max))
+
+val parse_bounded_bcvli_eq
+  (min: nat)
+  (max: nat { min <= max })
+  (input: bytes)
+: Lemma
+  (parse (parse_bounded_bcvli min max) input == (
+    match parse parse_bcvli input with
+    | Some (n, consumed) ->
+      if in_bounds min max n
+      then Some (n, consumed)
+      else None
+    | _ -> None
+  ))
+
+val serialize_bounded_bcvli
+  (min: nat)
+  (max: nat { min <= max })
+: Tot (serializer (parse_bounded_bcvli min max))
+
+val serialize_bounded_bcvli_eq
+  (min: nat)
+  (max: nat { min <= max })
+  (x: bounded_int32 min max)
+: Lemma
+  (serialize (serialize_bounded_bcvli min max) x == serialize serialize_bcvli x)
