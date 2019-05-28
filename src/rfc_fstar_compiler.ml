@@ -174,6 +174,7 @@ let make_combinator_length_header_name combino dup x min max =
   let typename = match x with
     | "asn1_len8"
     | "asn1_len" -> "bounded_der_length32"
+    | "bitcoin_varint" -> "bounded_bcvli"
     | _ -> failwith (sprintf "make_combinator_length_header_name: %s not found" x)
   in
   let lengths = if dup then sprintf "%d %dul %d %dul" min min max max else sprintf "%d %d" min max in
@@ -1698,11 +1699,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (* finalizer, count, i-th accessor TODO *)
       ()
 
-    | VectorVldata (("asn1_len" | "asn1_len8") as lenty) -> (* TODO: generalize once parse_bounded_integer is refactored into a parser to bounded_int32 in LowParse *)
+    | VectorVldata (("asn1_len" | "asn1_len8" | "bitcoin_varint") as lenty) -> (* TODO: generalize once parse_bounded_integer is refactored into a parser to bounded_int32 in LowParse *)
        let (len_len_min, len_len_max, smax) = basic_bounds lenty in
        compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max 0 smax
-
-    | VectorVldata "bitcoin_varint" -> failwith "VectorVldata bitcoin_varint is unsupported for now"
 
     | VectorVldata vl ->
       let (len_len_min, len_len_max, smax) = basic_bounds vl in

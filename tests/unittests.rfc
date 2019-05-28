@@ -180,3 +180,13 @@ struct {
 } t27;
 
 struct {} t28;
+
+struct {
+  bitcoin_varint len;
+  t13 payload[len];
+} t29;
+
+struct {
+  bitcoin_varint len;
+  t14 payload[len];
+} t30;
