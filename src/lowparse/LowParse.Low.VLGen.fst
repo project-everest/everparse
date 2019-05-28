@@ -74,7 +74,6 @@ let jump_bounded_vlgen
   (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-  (v: jumper p)
 : Tot (jumper (parse_bounded_vlgen (vmin) (vmax) pk s))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
@@ -101,10 +100,9 @@ let jump_vlgen
   (#t: Type)
   (#p: parser k t)
   (s: serializer p { parse_vlgen_precond (vmin) (vmax) k })
-  (v: jumper p)
 : Tot (jumper (parse_vlgen (vmin) (vmax) pk s))
 = jump_synth
-    (jump_bounded_vlgen vmin vmax vk rk s v)
+    (jump_bounded_vlgen vmin vmax vk rk s)
     (synth_vlgen (vmin) (vmax) s)
     ()
 

@@ -81,7 +81,7 @@ let serialize32_bounded_vlgen
   (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
-  (s32: serializer32 s { serialize32_bounded_vlgen_precond min max sk k } )
+  (s32: partial_serializer32 s { serialize32_bounded_vlgen_precond min max sk k } )
 : Tot (serializer32 (serialize_bounded_vlgen min max ssk s))
 = fun (input: parse_bounded_vldata_strong_t min max s) -> ((
     [@inline_let]
@@ -103,7 +103,7 @@ let serialize32_vlgen
   (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
-  (s32: serializer32 s { parse_vlgen_precond min max k /\ serialize32_bounded_vlgen_precond min max sk k } )
+  (s32: partial_serializer32 s { parse_vlgen_precond min max k /\ serialize32_bounded_vlgen_precond min max sk k } )
 : Tot (serializer32 (serialize_vlgen min max ssk s))
 = serialize32_synth'
     _

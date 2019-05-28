@@ -944,7 +944,6 @@ let jump_bounded_vlgenbytes
       vk
       rk
       serialize_all_bytes
-      (jump_all_bytes ())
     )
     (fun x -> (x <: parse_bounded_vlbytes_t vmin vmax))
     ()

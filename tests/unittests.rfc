@@ -65,7 +65,7 @@ struct {
   uint8 u;
   opaque x<0..255>;
   uint16 y;
-} T13;
+} t13;
 
 struct {
   uint8 u;
@@ -190,3 +190,15 @@ struct {
   bitcoin_varint len;
   t14 payload[len];
 } t30;
+
+t13 t31<12..131072 : bitcoin_varint>;
+
+t14 t32<12..131072 : bitcoin_varint>;
+
+t13 t33<100000..131072 : bitcoin_varint>;
+
+t14 t34<100000..131072 : bitcoin_varint>;
+
+opaque t35<12..131072 : bitcoin_varint>;
+
+opaque t36<100000..131072 : bitcoin_varint>;

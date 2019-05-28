@@ -109,7 +109,7 @@ let basic_bounds = function
   | "asn1_len8" -> 1, 2, 255
   | "asn1_len" | "bitcoin_varint" -> 1, 5, 4294967295
   | s -> failwith (s^" is not a base type and can't be used as symbolic length")
-
+       
 let rec sizeof = function
   | TypeIfeq(tag, v, t, f) ->
     let lit = sizeof (TypeSimple t) in
@@ -170,6 +170,27 @@ let compile_type = function
   | t -> String.uncapitalize_ascii t
 
 (* for size headers with bounds *)
+
+let has_bounded_length_parsers = function
+  | "asn1_len8"
+  | "asn1_len"
+  | "bitcoin_varint" -> true
+  | _ -> false
+
+let size_of_bounded_length bound = function
+  | "asn1_len8"
+  | "asn1_len" ->
+     if bound < 128
+     then 1
+     else 1 + log256 bound
+  | "bitcoin_varint" ->
+     if bound < 253
+     then 1
+     else if bound < 65536
+     then 3
+     else 5
+  | _ -> failwith "not a has_bounded_length_parsers type"     
+       
 let make_combinator_length_header_name combino dup x min max =
   let typename = match x with
     | "asn1_len8"
@@ -397,16 +418,22 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
                | d -> if high = 0 then meta else MetadataDefault;
       }
     | VectorRange (low, high, repr) ->
-      let h = match repr with
-        | None -> log256 high
-        | Some t -> let (_, l, _) = basic_bounds t in l in
+      let l, h = match repr with
+        | None -> let z = log256 high in (z, z)
+        | Some t ->
+           if has_bounded_length_parsers t
+           then (size_of_bounded_length low t, size_of_bounded_length high t)
+           else 
+             let (l, h, _) = basic_bounds t in
+             (l, h)
+      in
       (if h < log256 high then failwith (sprintf "Can't represent <%d..%d> over %d bytes" low high h));
       (if li.len_len + li.max_len = 0 then failwith ("Can't compute count bound on "^tn));
       { vl = true;
         min_count = low / (li.len_len + li.max_len);
         max_count = high / (li.len_len + li.min_len);
         len_len = h;
-        min_len = h + low;
+        min_len = l + low;
         max_len = h + high;
         meta = if li.meta = MetadataFail then li.meta else MetadataDefault;
       } in
@@ -1509,7 +1536,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
        end
   end
 
-and compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max smin smax =
+and compile_vldata o i is_private n ty li elem_li lenty smin smax =
   let (min, max) = li.min_len, li.max_len in
   let fits_in_bounds = smin <= elem_li.min_len && elem_li.max_len <= smax in
   let need_validator = is_private || need_validator li.meta li.min_len li.max_len in
@@ -1539,7 +1566,7 @@ and compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max 
     if need_jumper then (
       let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
       wl o "let %s_jumper%s =\n\n" n jumper_annot;
-      wl o "  LL.jump_vlgen %d %d %s %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (jumper_name ty)
+      wl o "  LL.jump_vlgen %d %d %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty)
     );
     (* accessor *)
     if ty <> "Empty" && ty <> "Fail" then begin
@@ -1589,7 +1616,7 @@ and compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max 
     );
     if need_jumper then (
       wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
-      wl o "  LL.jump_bounded_vlgen %d %d %s %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (jumper_name ty);
+      wl o "  LL.jump_bounded_vlgen %d %d %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty);
       let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
       wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
     );
@@ -1619,6 +1646,78 @@ and compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max 
   (* TODO: lemma about bytesize *)
   ()
 
+and compile_vllist o i is_private n ty li elem_li lenty smin smax =
+  let need_validator = is_private || need_validator li.meta li.min_len li.max_len in
+  let need_jumper = is_private || need_jumper li.min_len li.max_len in
+  w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n (compile_type ty);
+  w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty);
+  w i "type %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" n (compile_type ty) n smin smax;
+  w i "val %s_list_bytesize_nil : squash (%s_list_bytesize [] == 0)\n\n" n n;
+  w o "let %s_list_bytesize_nil = LP.serialize_list_nil %s %s\n\n" n (pcombinator_name ty) (scombinator_name ty);
+  w i "val %s_list_bytesize_cons (x: %s) (y: list %s) : Lemma (%s_list_bytesize (x :: y) == %s + %s_list_bytesize y) [SMTPat (%s_list_bytesize (x :: y))]\n\n" n (compile_type ty) (compile_type ty) n (bytesize_call ty "x") n n;
+  w o "let %s_list_bytesize_cons x y = LP.serialize_list_cons %s %s x y; %s\n\n" n (pcombinator_name ty) (scombinator_name ty) (bytesize_eq_call ty "x");
+  w i "val %s_list_bytesize_eq (l: list %s) : Lemma (%s_list_bytesize l == LL.serialized_list_length %s l)\n\n" n (compile_type ty) n (scombinator_name ty);
+  w o "let %s_list_bytesize_eq l = LL.serialized_list_length_eq_length_serialize_list %s l\n\n" n (scombinator_name ty);
+  w i "val check_%s_list_bytesize (l: list %s) : Tot (b: bool {b == (let x = %s_list_bytesize l in %d <= x && x <= %d)})\n\n" n (compile_type ty) n smin smax;
+  w o "let check_%s_list_bytesize l =\n" n;
+  w o "  let x = LP.size32_list %s () l in\n" (size32_name ty);
+  w o "  %dul `U32.lte` x && x `U32.lte` %dul\n\n" smin smax;
+  write_api o i is_private li.meta n li.min_len li.max_len;
+  w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n smin smax (scombinator_name ty);
+  w o "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
+  w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' = x\n\n" n n n;
+  w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
+  w o "  LP.parse_bounded_vlgen %d %d %s (LP.serialize_list _ %s)\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
+  let kind_eq = sprintf "(LP.get_parser_kind %s'_parser == %s_parser_kind)" n n in
+  w o "let %s_kind_eq : squash %s = assert_norm %s\n\n" n kind_eq kind_eq;
+  w o "let %s_parser = LP.parse_synth %s'_parser synth_%s\n\n" n n n;
+  w o "noextract let %s'_serializer : LP.serializer %s'_parser =\n" n n;
+  w o "  LP.serialize_bounded_vlgen %d %d %s (LP.serialize_list _ %s)\n\n" smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
+  w o "let %s_serializer = LP.serialize_synth _ synth_%s %s'_serializer synth_%s_recip ()\n\n" n n n n;
+  write_bytesize o is_private n;
+  wh o "inline_for_extraction noextract let %s'_parser32 : LP.parser32 %s'_parser =\n" n n;
+  wh o "  LP.parse32_bounded_vlgen %d %dul %d %dul %s (LP.serialize_list _ %s) (LP.parse32_list %s)\n\n" smin smin smax smax (pcombinator32_length_header_name lenty smin smax) (scombinator_name ty) (pcombinator32_name ty);
+  wh o "let %s_parser32 = LP.parse32_synth' _ synth_%s %s'_parser32 ()\n\n" n n n;
+  wh o "inline_for_extraction noextract let %s'_serializer32 : LP.serializer32 %s'_serializer =\n" n n;
+  wh o "  LP.serialize32_bounded_vlgen %d %d %s (LP.partial_serialize32_list _ %s %s ())\n\n" smin smax (scombinator32_length_header_name lenty smin smax) (scombinator_name ty) (scombinator32_name ty);
+  wh o "let %s_serializer32 = LP.serialize32_synth' _ synth_%s _ %s'_serializer32 synth_%s_recip ()\n\n" n n n n;
+  wh o "inline_for_extraction noextract let %s'_size32 : LP.size32 %s'_serializer =\n" n n;
+  wh o "  LP.size32_bounded_vlgen %d %d %s (LP.size32_list %s ())\n\n" smin smax (size32_length_header_name lenty smin smax) (size32_name ty);
+  wh o "let %s_size32 = LP.size32_synth' _ synth_%s _ %s'_size32 synth_%s_recip ()\n\n" n n n n;
+  if need_validator then (
+    wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
+    wl o "  LL.validate_bounded_vlgen %d %dul %d %dul %s %s (LP.serialize_list _ %s) (LL.validate_list %s ())\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
+    wl o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
+  );
+  if need_jumper then (
+    wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
+    wl o "  LL.jump_bounded_vlgen %d %d %s %s (LP.serialize_list _ %s)\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty);
+    let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+    wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
+  );
+  (* TODO: intro lemmas *)
+  (* TODO: accessor *)
+  ()
+  
+and compile_vlbytes o i is_private n li lenty smin smax =
+  let (min, max) = li.min_len, li.max_len in
+  let need_validator = is_private || need_validator li.meta li.min_len li.max_len in
+  let need_jumper = is_private || need_jumper li.min_len li.max_len in
+  w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n smin smax;
+  write_api o i is_private li.meta n min max;
+  w o "noextract let %s_parser = LP.parse_bounded_vlgenbytes %d %d %s\n\n" n smin smax (pcombinator_length_header_name lenty smin smax);
+  w o "noextract let %s_serializer = LP.serialize_bounded_vlgenbytes %d %d %s\n\n" n smin smax (scombinator_length_header_name lenty smin smax);
+  write_bytesize o is_private n;
+  wh o "let %s_parser32 = LP.parse32_bounded_vlgenbytes %d %dul %d %dul %s\n\n" n smin smin smax smax (pcombinator32_length_header_name lenty smin smax);
+  wh o "let %s_serializer32 = LP.serialize32_bounded_vlgenbytes %d %d %s\n\n" n smin smax (scombinator32_length_header_name lenty smin smax);
+  wh o "let %s_size32 = LP.size32_bounded_vlgenbytes %d %d %s\n\n" n smin smax (size32_length_header_name lenty smin smax);
+  if need_validator then
+    wl o "let %s_validator = LL.validate_bounded_vlgenbytes %d %dul %d %dul %s %s\n\n" n smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax);
+  if need_jumper then begin
+      let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
+      wl o "let %s_jumper%s = LL.jump_bounded_vlgenbytes %d %d %s %s\n\n" n jumper_annot smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax)
+    end
+  
 and compile_typedef o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
   let qname = if tn = "" then String.uncapitalize_ascii fn else tn^"@"^fn in
@@ -1699,9 +1798,13 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (* finalizer, count, i-th accessor TODO *)
       ()
 
-    | VectorVldata (("asn1_len" | "asn1_len8" | "bitcoin_varint") as lenty) -> (* TODO: generalize once parse_bounded_integer is refactored into a parser to bounded_int32 in LowParse *)
-       let (len_len_min, len_len_max, smax) = basic_bounds lenty in
-       compile_vldata o i is_private n ty li elem_li lenty len_len_min len_len_max 0 smax
+    | VectorVldata lenty when has_bounded_length_parsers lenty -> (* TODO: generalize once parse_bounded_integer is refactored into a parser to bounded_int32 in LowParse *)
+       let (_, _, smax) = basic_bounds lenty in
+       if compile_type ty = "U8.t"
+       then
+         compile_vlbytes o i is_private n li lenty 0 smax
+       else
+         compile_vldata o i is_private n ty li elem_li lenty 0 smax
 
     | VectorVldata vl ->
       let (len_len_min, len_len_max, smax) = basic_bounds vl in
@@ -2017,6 +2120,14 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
        end;
       ()
 
+    (* Variable length bytes *)
+    | VectorRange (low, high, Some lenty) when has_bounded_length_parsers lenty -> (* TODO: generalize once parse_bounded_integer is refactored into a parser to bounded_int32 in LowParse *)
+       if compile_type ty = "U8.t"
+       then
+         compile_vlbytes o i is_private n li lenty low high
+       else
+         compile_vllist o i is_private n ty li elem_li lenty low high
+      
     (* Variable length bytes *)
     | VectorRange (low, high, repr)
       when compile_type ty = "U8.t" &&
