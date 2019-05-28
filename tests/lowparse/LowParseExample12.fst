@@ -25,6 +25,6 @@ let validate_t =
   LL.validate_vlgen 0 0ul 1023 1023ul (LL.validate_bounded_der_length32 0 0ul 1023 1023ul) (LL.read_bounded_der_length32 0 1023) (LP.serialize_bounded_vlbytes 0 512) (LL.validate_bounded_vlbytes 0 512)
 
 let jump_t =
-  LL.jump_vlgen 0 1023 (LL.jump_bounded_der_length32 0 1023) (LL.read_bounded_der_length32 0 1023) (LP.serialize_bounded_vlbytes 0 512) (LL.jump_bounded_vlbytes 0 512)
+  LL.jump_vlgen 0 1023 (LL.jump_bounded_der_length32 0 1023) (LL.read_bounded_der_length32 0 1023) (LP.serialize_bounded_vlbytes 0 512)
 
 let main _ _ = C.EXIT_SUCCESS
