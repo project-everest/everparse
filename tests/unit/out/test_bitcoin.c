@@ -45,7 +45,7 @@ do {                                                                    \
 
 int main () {
   // mmap'ing all the blocks
-  int fd = open("../../bitcoin/blocks/all", O_RDONLY);
+  int fd = open("../../bitcoin/blocks/all.raw", O_RDONLY);
   struct stat sb;
   fstat(fd, &sb);
   uint8_t *block = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
@@ -56,20 +56,17 @@ int main () {
   char title[128];
   sprintf(title, "%d bitcoin blocks[%lldM]", n_blocks, sb.st_size / 1048576);
 
-  TIME_AND_TSC(title, sizeof(block),
+  TIME_AND_TSC(title, sb.st_size,
     LowParse_Slice_slice slice1;
     slice1.base = block;
     slice1.len = sb.st_size;
-    printf("\n");
+    uint32_t ofs = 0;
     for (int i = 0; i < n_blocks; ++i) {
-      uint32_t diff = Block_block_validator(slice1, (uint32_t)0U);
-      if (diff >= LOWPARSE_LOW_BASE_VALIDATOR_ERROR_GENERIC) {
+      ofs = Block_block_validator(slice1, ofs);
+      if (ofs > LOWPARSE_LOW_BASE_VALIDATOR_MAX_LENGTH) {
         printf("Block %d is invalid!\n", i);
         exit(1);
       }
-      slice1.base += diff;
-      slice1.len -= diff;
-      printf("base=%08"PRIx32"\t len=%08"PRIx32"\t diff=%08"PRIu32"\n", slice1.base, slice1.len, diff);
     }
   );
 
