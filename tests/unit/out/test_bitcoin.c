@@ -43,6 +43,9 @@ do {                                                                    \
                      ( timing_hardclock() - tsc ) / ( jj * BUFSIZE ) ); \
 } while( 0 )
 
+//#define TEST_STRUCT_PASSING 1
+//#define TEST_EXPLODED 1
+
 int main () {
   // mmap'ing all the blocks
   int fd = open("../../bitcoin/blocks/all.raw", O_RDONLY);
@@ -62,7 +65,13 @@ int main () {
     slice1.len = sb.st_size;
     uint32_t ofs = 0;
     for (int i = 0; i < n_blocks; ++i) {
+#if TEST_STRUCT_PASSING
+      ofs = Block_block_validator(&slice1, ofs);
+#elif TEST_EXPLODED
+      ofs = Block_block_validator(block, sb.st_size, ofs);
+#else
       ofs = Block_block_validator(slice1, ofs);
+#endif
       if (ofs > LOWPARSE_LOW_BASE_VALIDATOR_MAX_LENGTH) {
         printf("Block %d is invalid!\n", i);
         exit(1);
