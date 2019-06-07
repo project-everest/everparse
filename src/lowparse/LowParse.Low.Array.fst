@@ -293,7 +293,7 @@ let validate_vlarray
   (u: unit {
     vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max == true
   })
-  (sz32: U32.t { U32.v sz32 == log256' array_byte_size_max /\ array_byte_size_max <= U32.v validator_max_length } )
+  (sz32: U32.t { U32.v sz32 == log256' array_byte_size_max /\ array_byte_size_max < 4294967296 } )
 : Tot (validator (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u))
 = vldata_to_vlarray_inj array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u;
   validate_synth

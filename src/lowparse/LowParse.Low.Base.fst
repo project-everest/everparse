@@ -2038,7 +2038,6 @@ let validate_total_constant_size
   (p: parser k t)
   (sz: U32.t)
   (u: unit {
-    U32.v sz <= U32.v validator_max_length /\
     k.parser_kind_high == Some k.parser_kind_low /\
     k.parser_kind_low == U32.v sz /\
     k.parser_kind_metadata == Some ParserKindMetadataTotal

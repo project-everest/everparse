@@ -16,7 +16,7 @@ module U8 = FStar.UInt8
 inline_for_extraction
 let validate_flbytes
   (sz: nat)
-  (sz32: U32.t { U32.v sz32 == sz /\ sz <= U32.v validator_max_length } )
+  (sz32: U32.t { U32.v sz32 == sz } )
 : Tot (validator (parse_flbytes sz))
 = validate_total_constant_size (parse_flbytes sz) sz32 ()
 
@@ -327,7 +327,7 @@ let validate_all_bytes
 inline_for_extraction
 let validate_bounded_vlbytes'
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (l: nat { l >= log256' max /\ l <= 4 } )
 : Tot (validator (parse_bounded_vlbytes' min max l))
 = validate_synth
@@ -338,7 +338,7 @@ let validate_bounded_vlbytes'
 inline_for_extraction
 let validate_bounded_vlbytes
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
 : Tot (validator (parse_bounded_vlbytes min max))
 = validate_bounded_vlbytes' min max (log256' max)
 
@@ -644,7 +644,7 @@ let accessor_vlbytes
 
 let clens_vlbytes_slice
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (from: U32.t)
   (to: U32.t {U32.v from <= U32.v to /\ U32.v to <= max } )
 : Tot (clens (parse_bounded_vlbytes_t min max) (BY.lbytes (U32.v to - U32.v from)))
@@ -657,7 +657,7 @@ let clens_vlbytes_slice
 
 let gaccessor_vlbytes'_slice
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (l: nat { l >= log256' max /\ l <= 4 } )
   (from: U32.t)
   (to: U32.t {U32.v from <= U32.v to /\ U32.v to <= max } )
@@ -672,7 +672,7 @@ let gaccessor_vlbytes'_slice
 
 let gaccessor_vlbytes_slice
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (from: U32.t)
   (to: U32.t {U32.v from <= U32.v to /\ U32.v to <= max } )
 : Tot (gaccessor (parse_bounded_vlbytes min max) (parse_flbytes (U32.v to - U32.v from)) (clens_vlbytes_slice min max from to))
@@ -686,7 +686,7 @@ let gaccessor_vlbytes_slice
 inline_for_extraction
 let accessor_vlbytes'_slice
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (l: nat { l >= log256' max /\ l <= 4 } )
   (from: U32.t)
   (to: U32.t {U32.v from <= U32.v to /\ U32.v to <= max } )
@@ -705,7 +705,7 @@ let accessor_vlbytes'_slice
 inline_for_extraction
 let accessor_vlbytes_slice
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (from: U32.t)
   (to: U32.t {U32.v from <= U32.v to /\ U32.v to <= max } )
 : Tot (accessor (gaccessor_vlbytes_slice min max from to))
@@ -713,7 +713,7 @@ let accessor_vlbytes_slice
 
 let clens_vlbytes_get
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (i: U32.t)
 : Tot (clens (parse_bounded_vlbytes_t min max) byte)
 = {
@@ -725,7 +725,7 @@ let clens_vlbytes_get
 
 let gaccessor_vlbytes'_get
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (l: nat { l >= log256' max /\ l <= 4 } )
   (i: U32.t)
 : Tot (gaccessor (parse_bounded_vlbytes' min max l) (parse_u8) (clens_vlbytes_get min max i))
@@ -751,7 +751,7 @@ let gaccessor_vlbytes'_get
 inline_for_extraction
 let accessor_vlbytes'_get
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (l: nat { l >= log256' max /\ l <= 4 } )
   (i: U32.t)
 : Tot (accessor (gaccessor_vlbytes'_get min max l i))
@@ -768,7 +768,7 @@ let accessor_vlbytes'_get
 
 let gaccessor_vlbytes_get
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (i: U32.t)
 : Tot (gaccessor (parse_bounded_vlbytes min max) (parse_u8) (clens_vlbytes_get min max i))
 = gaccessor_vlbytes'_get min max (log256' max) i
@@ -776,7 +776,7 @@ let gaccessor_vlbytes_get
 inline_for_extraction
 let accessor_vlbytes_get
   (min: nat) // must be a constant
-  (max: nat { min <= max /\ max > 0 /\ max <= U32.v validator_max_length  } )
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
   (i: U32.t)
 : Tot (accessor (gaccessor_vlbytes_get min max i))
 = accessor_vlbytes'_get min max (log256' max) i

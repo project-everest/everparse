@@ -96,7 +96,7 @@ let validate_bounded_vldata'
   (max: nat {
     min <= max /\
     max > 0 /\
-    max <= U32.v validator_max_length
+    max < 4294967296
   }) // must be a constant
   (l: nat { l >= log256' max /\ l <= 4 } )
   (#k: parser_kind)
@@ -124,7 +124,7 @@ let validate_bounded_vldata
   (u: unit {
     min <= max /\
     max > 0 /\
-    max <= U32.v validator_max_length
+    max < 4294967296
   })
 : Tot (validator (parse_bounded_vldata min max p))
 = validate_bounded_vldata' min max (log256' max) v
@@ -168,7 +168,7 @@ inline_for_extraction
 let validate_bounded_vldata_strong'
   (min: nat) // must be a constant
   (max: nat {
-    min <= max /\ max > 0 /\ max <= U32.v validator_max_length
+    min <= max /\ max > 0 /\ max < 4294967296
   })
   (l: nat { l >= log256' max /\ l <= 4 } )
   (#k: parser_kind)
@@ -195,7 +195,7 @@ let validate_bounded_vldata_strong
   (s: serializer p)
   (v: validator p)
   (u: unit {
-    min <= max /\ max > 0 /\ max <= U32.v validator_max_length
+    min <= max /\ max > 0 /\ max < 4294967296
   })
 : Tot (validator (parse_bounded_vldata_strong min max s))
 = validate_bounded_vldata_strong' min max (log256' max) s v
