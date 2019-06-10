@@ -410,14 +410,14 @@ let vlarray_list_length
     let l = contents (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) h sl pos in
     let sq = bytes_of_slice_from h sl pos in
     valid_facts (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) h sl pos;
-    valid_facts (parse_bounded_integer (log256' array_byte_size_max)) h sl pos;
+    valid_facts (parse_bounded_integer_le (log256' array_byte_size_max)) h sl pos;
     vldata_to_vlarray_inj array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ();
     parse_synth_eq
       (parse_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s))
       (vldata_to_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ())
       sq;
     parse_vldata_gen_eq (log256' array_byte_size_max) (in_bounds array_byte_size_min array_byte_size_max) (parse_list p) sq;
-    let psq = parse (parse_bounded_integer (log256' array_byte_size_max)) sq in
+    let psq = parse (parse_bounded_integer_le (log256' array_byte_size_max)) sq in
     let Some (ln, _) = psq in
     list_length_constant_size_parser_correct p (Seq.slice sq (log256' array_byte_size_max) (log256' array_byte_size_max + U32.v ln));
     LowParse.Math.multiple_division_lemma (L.length l) k.parser_kind_low;
@@ -431,7 +431,7 @@ let vlarray_list_length
   let klow : U32.t =
     U32.uint_to_t k.parser_kind_low
   in
-  let blen = read_bounded_integer (log256' array_byte_size_max) sl pos in
+  let blen = read_bounded_integer_le (log256' array_byte_size_max) sl pos in
   blen `U32.div` klow
 
 #push-options "--z3rlimit 16"
@@ -566,7 +566,7 @@ let vlarray_nth
     (fun input ->
       [@inline_let] let _ =
         parse_vlarray_eq_some array_byte_size_min array_byte_size_max s elem_count_min elem_count_max () (Ghost.reveal input);
-        let pi = parse (parse_bounded_integer (log256' array_byte_size_max)) (Ghost.reveal input) in
+        let pi = parse (parse_bounded_integer_le (log256' array_byte_size_max)) (Ghost.reveal input) in
         let lc = Some?.v pi in
         let len = fst lc in
         let c_len = snd lc in

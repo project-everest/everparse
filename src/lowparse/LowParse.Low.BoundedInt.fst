@@ -101,6 +101,10 @@ let read_bounded_integer_le_2 =
     Cast.uint8_to_uint32 r0 `U32.add` (256ul `U32.mul` Cast.uint8_to_uint32 r1)
   )
 
+let read_bounded_integer_le_3
+  #rrel #rel sl pos
+= admit ()
+
 let read_bounded_integer_le_4 =
   [@inline_let] let _ = bounded_integer_of_le_injective 4 in
   make_total_constant_size_reader 4 4ul #(bounded_integer 4) (bounded_integer_of_le 4) () (fun #rrel #rel b pos ->
@@ -156,6 +160,10 @@ let serialize32_bounded_integer_le_2
   2ul
 
 let write_bounded_integer_le_2 = leaf_writer_strong_of_serializer32 serialize32_bounded_integer_le_2 ()
+
+let write_bounded_integer_le_3
+  x #rrel #rel b pos
+= admit ()
 
 let serialize32_bounded_integer_le_4
 = fun x #rrel #rel b pos ->

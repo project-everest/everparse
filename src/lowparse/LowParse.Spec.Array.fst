@@ -371,7 +371,7 @@ let parse_vlarray_eq_some
   ))
   (ensures (
     let sz = log256' array_byte_size_max in
-    let pi = parse (parse_bounded_integer sz) input in
+    let pi = parse (parse_bounded_integer_le sz) input in
     Some? pi /\ (
     let Some (len, c_len) = pi in
     c_len == sz /\

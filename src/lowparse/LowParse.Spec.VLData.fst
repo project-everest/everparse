@@ -108,7 +108,7 @@ let parse_vldata_gen
   and_then
     #_
     #(parse_filter_refine #(bounded_integer sz) f)
-    (parse_filter #_ #(bounded_integer sz) (parse_bounded_integer sz) f)
+    (parse_filter #_ #(bounded_integer sz) (parse_bounded_integer_le sz) f)
     #_
     #t
     (parse_vldata_payload sz f p)
@@ -127,7 +127,7 @@ let parse_vldata_gen_eq_def
   and_then
     #_
     #(parse_filter_refine #(bounded_integer sz) f)
-    (parse_filter #_ #(bounded_integer sz) (parse_bounded_integer sz) f)
+    (parse_filter #_ #(bounded_integer sz) (parse_bounded_integer_le sz) f)
     #_
     #t
     (parse_vldata_payload sz f p))
@@ -143,7 +143,7 @@ let parse_vldata_gen_eq
   (input: bytes)
 : Lemma
   (let res = parse (parse_vldata_gen sz f p) input in
-    match parse (parse_bounded_integer sz) input with
+    match parse (parse_bounded_integer_le sz) input with
   | None -> res == None
   | Some (len, consumed_len) ->
     consumed_len == sz /\ (
@@ -163,9 +163,9 @@ let parse_vldata_gen_eq
     else res == None
   ))
 = parse_vldata_gen_eq_def sz f p;
-  and_then_eq #_ #(parse_filter_refine f) (parse_filter (parse_bounded_integer sz) f) #_ #t (parse_vldata_payload sz f p) input;
-  parse_filter_eq #_ #(bounded_integer sz) (parse_bounded_integer sz) f input;
-  parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer sz);
+  and_then_eq #_ #(parse_filter_refine f) (parse_filter (parse_bounded_integer_le sz) f) #_ #t (parse_vldata_payload sz f p) input;
+  parse_filter_eq #_ #(bounded_integer sz) (parse_bounded_integer_le sz) f input;
+  parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer_le sz);
   ()
 
 let parse_vldata_gen_eq_some_elim
@@ -178,7 +178,7 @@ let parse_vldata_gen_eq_some_elim
 : Lemma
   (requires (Some? (parse (parse_vldata_gen sz f p) input)))
   (ensures (
-    let pbi = parse (parse_bounded_integer sz) input in
+    let pbi = parse (parse_bounded_integer_le sz) input in
     Some? pbi /\ (
     let Some (len, consumed_len) = pbi in
     consumed_len == sz /\
@@ -214,7 +214,7 @@ let parse_vldata_eq
   (p: parser k t)
   (input: bytes)
 : Lemma
-  (parse (parse_vldata sz p) input == (match parse (parse_bounded_integer sz) input with
+  (parse (parse_vldata sz p) input == (match parse (parse_bounded_integer_le sz) input with
   | None -> None
   | Some (len, _) ->
     begin
@@ -277,7 +277,7 @@ let parse_bounded_vldata_elim'
   (requires (parse (parse_vldata_gen l (in_bounds min max) p) xbytes == Some (x, consumed)))
   (ensures (
     let sz : integer_size = l in
-    let plen = parse (parse_bounded_integer sz) xbytes in
+    let plen = parse (parse_bounded_integer_le sz) xbytes in
     Some? plen /\ (
     let (Some (len, consumed_len)) = plen in
     (consumed_len <: nat) == (sz <: nat) /\
@@ -292,7 +292,7 @@ let parse_bounded_vldata_elim'
     (consumed <: nat) == sz + U32.v len
   )))))
 = parse_vldata_gen_eq l (in_bounds min max) p xbytes;
-  parser_kind_prop_equiv (parse_bounded_integer_kind l) (parse_bounded_integer l)
+  parser_kind_prop_equiv (parse_bounded_integer_kind l) (parse_bounded_integer_le l)
 
 let parse_bounded_vldata_correct
   (min: nat)
@@ -359,7 +359,7 @@ let parse_bounded_vldata_elim
   (requires (parse (parse_bounded_vldata' min max l p) xbytes == Some (x, consumed)))
   (ensures (
     let sz : integer_size = l in
-    let plen = parse (parse_bounded_integer sz) xbytes in
+    let plen = parse (parse_bounded_integer_le sz) xbytes in
     Some? plen /\ (
     let (Some (len, consumed_len)) = plen in
     (consumed_len <: nat) == (sz <: nat) /\
@@ -388,7 +388,7 @@ let parse_bounded_vldata_elim_forall
   (ensures (
     let (Some (x, consumed)) = parse (parse_bounded_vldata' min max l p) xbytes in
     let sz : integer_size = l in
-    let plen = parse (parse_bounded_integer sz) xbytes in
+    let plen = parse (parse_bounded_integer_le sz) xbytes in
     Some? plen /\ (
     let (Some (len, consumed_len)) = plen in
     (consumed_len <: nat) == (sz <: nat) /\
@@ -445,7 +445,7 @@ let parse_bounded_vldata_strong_correct
   (ensures (parse_bounded_vldata_strong_pred min max s x))
 = parse_bounded_vldata_elim min max l p xbytes x consumed;
   let sz : integer_size = l in
-  let plen = parse (parse_bounded_integer sz) xbytes in
+  let plen = parse (parse_bounded_integer_le sz) xbytes in
   let f () : Lemma (Some? plen) =
     parse_bounded_vldata_elim min max l p xbytes x consumed
   in
@@ -498,7 +498,7 @@ let serialize_bounded_vldata_strong_aux
   let nlen = Seq.length pl in
   assert (min <= nlen /\ nlen <= max);
   let len = U32.uint_to_t nlen in
-  let slen = serialize (serialize_bounded_integer sz) len in
+  let slen = serialize (serialize_bounded_integer_le sz) len in
   seq_slice_append_l slen pl;
   seq_slice_append_r slen pl;
   Seq.append slen pl
@@ -514,7 +514,7 @@ val serialize_vldata_gen_correct_aux
 : Lemma
   (requires (
     Seq.length b1 == sz /\ (
-    let vlen = parse (parse_bounded_integer sz) b1 in
+    let vlen = parse (parse_bounded_integer_le sz) b1 in
     Some? vlen /\ (
     let (Some (len, _)) = vlen in
     f len == true /\
@@ -540,12 +540,12 @@ val serialize_vldata_gen_correct_aux
   ))))
 
 let serialize_vldata_gen_correct_aux sz f #k #t p b b1 b2 =
-  let (Some (len, consumed1)) = parse (parse_bounded_integer sz) b1 in
-  parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer sz);
+  let (Some (len, consumed1)) = parse (parse_bounded_integer_le sz) b1 in
+  parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer_le sz);
   assert (consumed1 == sz);
-  assert (no_lookahead_on (parse_bounded_integer sz) b1 b);
-  assert (injective_postcond (parse_bounded_integer sz) b1 b);
-  assert (parse (parse_bounded_integer sz) b == Some (len, sz));
+  assert (no_lookahead_on (parse_bounded_integer_le sz) b1 b);
+  assert (injective_postcond (parse_bounded_integer_le sz) b1 b);
+  assert (parse (parse_bounded_integer_le sz) b == Some (len, sz));
   assert (sz + U32.v len == Seq.length b);
   assert (b2 == Seq.slice b sz (sz + U32.v len));
   parse_vldata_gen_eq sz f p b
@@ -560,7 +560,7 @@ val serialize_vldata_gen_correct
 : Lemma
   (requires (
     Seq.length b1 == sz /\ (
-    let vlen = parse (parse_bounded_integer sz) b1 in
+    let vlen = parse (parse_bounded_integer_le sz) b1 in
     Some? vlen /\ (
     let (Some (len, _)) = vlen in
     f len == true /\
@@ -607,9 +607,9 @@ let serialize_bounded_vldata_strong_correct
   M.pow2_le_compat (FStar.Mul.op_Star 8 sz)  (FStar.Mul.op_Star 8 (log256' max));
   assert (U32.v len < pow2 (FStar.Mul.op_Star 8 sz));
   let (len: bounded_integer sz) = len in
-  let slen = serialize (serialize_bounded_integer sz) len in
+  let slen = serialize (serialize_bounded_integer_le sz) len in
   assert (Seq.length slen == sz);
-  let pslen = parse (parse_bounded_integer sz) slen in
+  let pslen = parse (parse_bounded_integer_le sz) slen in
   assert (Some? pslen);
   let (Some (len', consumed_len')) = pslen in
   assert (len == len');
@@ -720,7 +720,7 @@ let serialize_bounded_vldata_strong_upd
     let sy = serialize s y in
     let sy' = serialize (serialize_bounded_vldata_strong min max s) y in
     let lm = log256' max in
-    let sz = serialize (serialize_bounded_integer lm) (U32.uint_to_t (Seq.length sx)) in
+    let sz = serialize (serialize_bounded_integer_le lm) (U32.uint_to_t (Seq.length sx)) in
     assert (lm + Seq.length sy == Seq.length sx');
     seq_upd_seq_right sx' sy;
     Seq.lemma_split sx' lm;
@@ -780,7 +780,7 @@ let serialize_bounded_vldata_strong_upd_chain
   let sx = serialize s x in
   let sx' = serialize (serialize_bounded_vldata_strong min max s) x in
   let lm = log256' max in
-  let sz = serialize (serialize_bounded_integer lm) (U32.uint_to_t (Seq.length sx)) in
+  let sz = serialize (serialize_bounded_integer_le lm) (U32.uint_to_t (Seq.length sx)) in
   seq_upd_seq_right_to_left sx' lm sx i' s';
   Seq.lemma_split sx' lm;
   Seq.lemma_append_inj (Seq.slice sx' 0 lm) (Seq.slice sx' lm (Seq.length sx')) sz sx;

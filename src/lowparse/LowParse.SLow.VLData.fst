@@ -35,7 +35,7 @@ let parse32_vldata_gen
 = [@inline_let]
   let _ = parse_vldata_gen_eq_def sz f p in
   parse32_and_then
-    (parse32_filter (parse32_bounded_integer sz) f f')
+    (parse32_filter (parse32_bounded_integer_le sz) f f')
     (parse_vldata_payload sz f p)
     ()
     (parse32_vldata_payload sz f p32)
@@ -195,7 +195,7 @@ let serialize32_bounded_vldata_strong_aux
 = [@inline_let]
   let sz : integer_size = l in
   [@inline_let]
-  let ser : serializer32 (serialize_bounded_integer sz) = serialize32_bounded_integer sz in
+  let ser : serializer32 (serialize_bounded_integer_le sz) = serialize32_bounded_integer_le sz in
   (fun (input: parse_bounded_vldata_strong_t min max s) ->
     let pl = s32 input in
     let len = B32.len pl in
@@ -219,14 +219,14 @@ let serialize32_bounded_vldata_strong_correct
 : Lemma
   (serializer32_correct (serialize_bounded_vldata_strong' min max l s) input (serialize32_bounded_vldata_strong_aux min max l s32 input))
 = let sz : integer_size = l in
-  let ser : serializer32 (serialize_bounded_integer sz) = serialize32_bounded_integer sz in
+  let ser : serializer32 (serialize_bounded_integer_le sz) = serialize32_bounded_integer_le sz in
   let pl = s32 input in
   assert (B32.reveal pl == s input);
   let len = B32.len pl in
   let nlen = U32.v len in
   assert (min <= nlen /\ nlen <= max);
   let slen = ser (len <: bounded_integer sz) in
-  assert (B32.reveal slen == serialize (serialize_bounded_integer sz) len);
+  assert (B32.reveal slen == serialize (serialize_bounded_integer_le sz) len);
   seq_slice_append_l (B32.reveal slen) (B32.reveal pl);
   seq_slice_append_r (B32.reveal slen) (B32.reveal pl);
   let res : bytes32 = B32.b32append slen pl in

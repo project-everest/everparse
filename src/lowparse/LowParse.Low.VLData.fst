@@ -31,8 +31,8 @@ let validate_vldata_gen
 : Tot (validator (parse_vldata_gen sz f p))
 = parse_vldata_gen_eq_def sz f p;
   validate_filter_and_then
-    (validate_bounded_integer sz)
-    (read_bounded_integer sz)
+    (validate_bounded_integer_le sz)
+    (read_bounded_integer_le sz)
     f
     f'
     #_ #_ #(parse_vldata_payload sz f p)
@@ -58,8 +58,8 @@ let valid_vldata_gen_elim
     valid (parse_vldata_gen sz f p) h input pos
   ))
   (ensures (
-    valid (parse_bounded_integer sz) h input pos /\ (
-    let len_payload = contents (parse_bounded_integer sz) h input pos in
+    valid (parse_bounded_integer_le sz) h input pos /\ (
+    let len_payload = contents (parse_bounded_integer_le sz) h input pos in
     f len_payload == true /\
     sz + U32.v len_payload == content_length (parse_vldata_gen sz f p) h input pos /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
@@ -68,9 +68,9 @@ let valid_vldata_gen_elim
     contents_exact p h input pos_payload (pos_payload `U32.add` len_payload) == contents (parse_vldata_gen sz f p) h input pos
   ))))
 = valid_facts (parse_vldata_gen sz f p) h input pos;
-  valid_facts (parse_bounded_integer sz) h input pos;
+  valid_facts (parse_bounded_integer_le sz) h input pos;
   parse_vldata_gen_eq sz f p (bytes_of_slice_from h input pos);
-  let len_payload = contents (parse_bounded_integer sz) h input pos in
+  let len_payload = contents (parse_bounded_integer_le sz) h input pos in
   let pos_payload = pos `U32.add` U32.uint_to_t sz in
   valid_exact_equiv p h input pos_payload (pos_payload `U32.add` len_payload);
   contents_exact_eq p h input pos_payload (pos_payload `U32.add` len_payload)
@@ -88,7 +88,7 @@ let jump_vldata_gen
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ = valid_vldata_gen_elim h sz f p input pos in
-  pos `U32.add` (U32.uint_to_t sz `U32.add` read_bounded_integer sz input pos)
+  pos `U32.add` (U32.uint_to_t sz `U32.add` read_bounded_integer_le sz input pos)
 
 inline_for_extraction
 let validate_bounded_vldata'
@@ -253,14 +253,14 @@ let valid_vldata_gen_intro
     let len_payload = pos' `U32.sub` pos_payload in
     bounded_integer_prop sz len_payload /\
     f len_payload == true /\
-    valid (parse_bounded_integer sz) h input pos /\
-    contents (parse_bounded_integer sz) h input pos == len_payload
+    valid (parse_bounded_integer_le sz) h input pos /\
+    contents (parse_bounded_integer_le sz) h input pos == len_payload
   ))))
   (ensures (
     valid_content_pos (parse_vldata_gen sz f p) h input pos (contents_exact p h input (pos `U32.add` U32.uint_to_t sz) pos') pos'
   ))
 = valid_facts (parse_vldata_gen sz f p) h input pos;
-  valid_facts (parse_bounded_integer sz) h input pos;
+  valid_facts (parse_bounded_integer_le sz) h input pos;
   parse_vldata_gen_eq sz f p (bytes_of_slice_from h input pos);
   contents_exact_eq p h input (pos `U32.add` U32.uint_to_t sz) pos'
 
@@ -293,7 +293,7 @@ let finalize_vldata_gen
   ))
 = [@inline_let]
   let len_payload = pos' `U32.sub` (pos `U32.add` U32.uint_to_t sz) in
-  let _ = write_bounded_integer sz len_payload input pos in
+  let _ = write_bounded_integer_le sz len_payload input pos in
   let h = HST.get () in
   valid_vldata_gen_intro h sz f p input pos pos'
 
@@ -314,8 +314,8 @@ let valid_bounded_vldata'_elim
   ))
   (ensures (
     let sz = l in
-    valid (parse_bounded_integer sz) h input pos /\ (
-    let len_payload = contents (parse_bounded_integer sz) h input pos in
+    valid (parse_bounded_integer_le sz) h input pos /\ (
+    let len_payload = contents (parse_bounded_integer_le sz) h input pos in
     min <= U32.v len_payload /\ U32.v len_payload <= max /\
     sz + U32.v len_payload == content_length (parse_bounded_vldata' min max l p) h input pos /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
@@ -344,8 +344,8 @@ let valid_bounded_vldata_elim
   ))
   (ensures (
     let sz = log256' max in
-    valid (parse_bounded_integer sz) h input pos /\ (
-    let len_payload = contents (parse_bounded_integer sz) h input pos in
+    valid (parse_bounded_integer_le sz) h input pos /\ (
+    let len_payload = contents (parse_bounded_integer_le sz) h input pos in
     min <= U32.v len_payload /\ U32.v len_payload <= max /\
     sz + U32.v len_payload == content_length (parse_bounded_vldata min max p) h input pos /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
@@ -374,8 +374,8 @@ let valid_bounded_vldata_intro
     valid_exact p h input pos_payload pos' /\ (
     let len_payload = pos' `U32.sub` pos_payload in
     min <= U32.v len_payload /\ U32.v len_payload <= max /\
-    valid (parse_bounded_integer sz) h input pos /\
-    contents (parse_bounded_integer sz) h input pos == len_payload
+    valid (parse_bounded_integer_le sz) h input pos /\
+    contents (parse_bounded_integer_le sz) h input pos == len_payload
   ))))
   (ensures (
     let sz = log256' max in
@@ -403,8 +403,8 @@ let valid_bounded_vldata_strong'_elim
   ))
   (ensures (
     let sz = l in
-    valid (parse_bounded_integer sz) h input pos /\ (
-    let len_payload = contents (parse_bounded_integer sz) h input pos in
+    valid (parse_bounded_integer_le sz) h input pos /\ (
+    let len_payload = contents (parse_bounded_integer_le sz) h input pos in
     min <= U32.v len_payload /\ U32.v len_payload <= max /\
     sz + U32.v len_payload == content_length (parse_bounded_vldata_strong' min max l s) h input pos /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
@@ -433,8 +433,8 @@ let valid_bounded_vldata_strong_elim
   ))
   (ensures (
     let sz = log256' max in
-    valid (parse_bounded_integer sz) h input pos /\ (
-    let len_payload = contents (parse_bounded_integer sz) h input pos in
+    valid (parse_bounded_integer_le sz) h input pos /\ (
+    let len_payload = contents (parse_bounded_integer_le sz) h input pos in
     min <= U32.v len_payload /\ U32.v len_payload <= max /\
     sz + U32.v len_payload == content_length (parse_bounded_vldata_strong min max s) h input pos /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
@@ -464,8 +464,8 @@ let valid_bounded_vldata_strong_intro
     valid_exact p h input pos_payload pos' /\ (
     let len_payload = pos' `U32.sub` pos_payload in
     min <= U32.v len_payload /\ U32.v len_payload <= max /\
-    valid (parse_bounded_integer sz) h input pos /\
-    contents (parse_bounded_integer sz) h input pos == len_payload
+    valid (parse_bounded_integer_le sz) h input pos /\
+    contents (parse_bounded_integer_le sz) h input pos == len_payload
   ))))
   (ensures (
     let sz = log256' max in
@@ -520,7 +520,7 @@ let finalize_bounded_vldata_strong_exact
     serialized_length_eq s (contents_exact p h input (pos `U32.add` U32.uint_to_t sz) pos');
     valid_exact_serialize s h input (pos `U32.add` U32.uint_to_t sz) pos'
   in
-  let _ = write_bounded_integer sz len_payload input pos in
+  let _ = write_bounded_integer_le sz len_payload input pos in
   let h = HST.get () in
   valid_bounded_vldata_strong_intro h min max s input pos pos'
 
@@ -597,7 +597,7 @@ let finalize_bounded_vldata_exact
   [@inline_let]
   let len_payload = pos' `U32.sub` (pos `U32.add` U32.uint_to_t sz) in
   let h = HST.get () in
-  let _ = write_bounded_integer sz len_payload input pos in
+  let _ = write_bounded_integer_le sz len_payload input pos in
   let h = HST.get () in
   valid_bounded_vldata_intro h min max p input pos pos'
 
@@ -731,11 +731,11 @@ let gaccessor_bounded_vldata_payload
   parse_vldata_gen_eq sz (in_bounds min max) p input;
   let res =
     if Seq.length input < sz
-    then (assert (None? (parse (parse_bounded_integer sz) input)); (0, 0)) // dummy
+    then (assert (None? (parse (parse_bounded_integer_le sz) input)); (0, 0)) // dummy
     else begin
-      parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer sz);
-      assert (Some? (parse (parse_bounded_integer sz) input));
-      let Some (_, consumed) = parse (parse_bounded_integer sz) input in
+      parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer_le sz);
+      assert (Some? (parse (parse_bounded_integer_le sz) input));
+      let Some (_, consumed) = parse (parse_bounded_integer_le sz) input in
       assert (consumed == sz);
       (sz, Seq.length input - sz)
     end

@@ -199,7 +199,7 @@ let parse_bounded_vlbytes_eq
   (input: bytes)
 : Lemma
   (let res = parse (parse_bounded_vlbytes' min max l) input in
-    match parse (parse_bounded_integer l) input with
+    match parse (parse_bounded_integer_le l) input with
     | None -> res == None
     | Some (header, consumed_header) ->
       if min <= U32.v header && U32.v header <= max && l + U32.v header <= Seq.length input
@@ -212,7 +212,7 @@ let parse_bounded_vlbytes_eq
 = let sz = l in
   parse_synth_eq (parse_bounded_vlbytes_aux min max l) (synth_bounded_vlbytes min max) input;
   parse_vldata_gen_eq sz (in_bounds min max) parse_all_bytes input;
-  parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer sz)
+  parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer_le sz)
 
 #reset-options
 

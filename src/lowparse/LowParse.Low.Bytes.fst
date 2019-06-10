@@ -405,8 +405,8 @@ let valid_bounded_vlbytes'_elim
   ))
   (ensures (
     let sz = l in
-    valid (parse_bounded_integer sz) h input pos /\ (
-    let len_payload = contents (parse_bounded_integer sz) h input pos in
+    valid (parse_bounded_integer_le sz) h input pos /\ (
+    let len_payload = contents (parse_bounded_integer_le sz) h input pos in
     min <= U32.v len_payload /\ U32.v len_payload <= max /\
     sz + U32.v len_payload == content_length (parse_bounded_vlbytes' min max l) h input pos /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
@@ -418,7 +418,7 @@ let valid_bounded_vlbytes'_elim
 = valid_synth h (parse_bounded_vlbytes_aux min max l) (synth_bounded_vlbytes min max) input pos;
   valid_bounded_vldata_strong'_elim h min max l serialize_all_bytes input pos;
   let sz = l in
-  let len_payload = contents (parse_bounded_integer sz) h input pos in
+  let len_payload = contents (parse_bounded_integer_le sz) h input pos in
   let pos_payload = pos `U32.add` U32.uint_to_t sz in
   valid_exact_all_bytes_elim h input pos_payload (pos_payload `U32.add` len_payload);
   ()
@@ -438,8 +438,8 @@ let valid_bounded_vlbytes_elim
   ))
   (ensures (
     let sz = log256' max in
-    valid (parse_bounded_integer sz) h input pos /\ (
-    let len_payload = contents (parse_bounded_integer sz) h input pos in
+    valid (parse_bounded_integer_le sz) h input pos /\ (
+    let len_payload = contents (parse_bounded_integer_le sz) h input pos in
     min <= U32.v len_payload /\ U32.v len_payload <= max /\
     sz + U32.v len_payload == content_length (parse_bounded_vlbytes min max) h input pos /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
@@ -488,7 +488,7 @@ let bounded_vlbytes'_payload_length
   )))
 = let h = HST.get () in
   [@inline_let] let _ = valid_bounded_vlbytes'_elim h min max l input pos in
-  let len = read_bounded_integer l input pos in
+  let len = read_bounded_integer_le l input pos in
   [@inline_let] let _ = valid_flbytes_elim h (U32.v len) input (pos `U32.add` U32.uint_to_t l) in
   len
 
@@ -535,7 +535,7 @@ let get_vlbytes'_contents
 = 
   let h = HST.get () in
   [@inline_let] let _ = valid_bounded_vlbytes'_elim h min max l input pos in
-  let len = read_bounded_integer l input pos in
+  let len = read_bounded_integer_le l input pos in
   [@inline_let] let _ = valid_facts (parse_flbytes (U32.v len)) h input (pos `U32.add` U32.uint_to_t l) in
   BF.sub input.base (pos `U32.add` U32.uint_to_t l) len
 
@@ -796,8 +796,8 @@ let valid_bounded_vlbytes'_intro
   (requires (
     let sz = l in
     min <= U32.v len /\ U32.v len <= max /\
-    valid (parse_bounded_integer sz) h input pos /\
-    contents (parse_bounded_integer sz) h input pos == len /\
+    valid (parse_bounded_integer_le sz) h input pos /\
+    contents (parse_bounded_integer_le sz) h input pos == len /\
     U32.v pos + sz <= 4294967295 /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
     valid (parse_flbytes (U32.v len)) h input pos_payload
@@ -810,7 +810,7 @@ let valid_bounded_vlbytes'_intro
 = valid_facts (parse_bounded_vlbytes' min max l) h input pos;
   parse_bounded_vlbytes_eq min max l (bytes_of_slice_from h input pos);
   let sz = l in
-  valid_facts (parse_bounded_integer sz) h input pos;
+  valid_facts (parse_bounded_integer_le sz) h input pos;
   valid_facts (parse_flbytes (U32.v len)) h input (pos `U32.add` U32.uint_to_t sz)
 
 #pop-options
@@ -827,8 +827,8 @@ let valid_bounded_vlbytes_intro
   (requires (
     let sz = log256' max in
     min <= U32.v len /\ U32.v len <= max /\
-    valid (parse_bounded_integer sz) h input pos /\
-    contents (parse_bounded_integer sz) h input pos == len /\
+    valid (parse_bounded_integer_le sz) h input pos /\
+    contents (parse_bounded_integer_le sz) h input pos == len /\
     U32.v pos + sz <= 4294967295 /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
     valid (parse_flbytes (U32.v len)) h input pos_payload
@@ -870,7 +870,7 @@ let finalize_bounded_vlbytes'
 = let h0 = HST.get () in
   [@inline_let]
   let sz = l in
-  let pos_payload = write_bounded_integer sz len input pos in
+  let pos_payload = write_bounded_integer_le sz len input pos in
   let h = HST.get () in
   [@inline_let] let _ =
     valid_flbytes_intro h0 (U32.v len) input pos_payload;

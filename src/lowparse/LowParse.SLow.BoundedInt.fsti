@@ -67,8 +67,21 @@ val parse32_bounded_integer_le_2
 : parser32 (parse_bounded_integer_le 2)
 
 inline_for_extraction
+val parse32_bounded_integer_le_3
+: parser32 (parse_bounded_integer_le 3)
+
+inline_for_extraction
 val parse32_bounded_integer_le_4
 : parser32 (parse_bounded_integer_le 4)
+
+inline_for_extraction
+noextract
+let parse32_bounded_integer_le (sz: integer_size) : Tot (parser32 (parse_bounded_integer_le sz))
+= match sz with
+  | 1 -> parse32_bounded_integer_le_1
+  | 2 -> parse32_bounded_integer_le_2
+  | 3 -> parse32_bounded_integer_le_3
+  | 4 -> parse32_bounded_integer_le_4
 
 inline_for_extraction
 val parse32_u16_le : parser32 parse_u16_le
@@ -85,7 +98,19 @@ inline_for_extraction
 val serialize32_bounded_integer_le_2  : serializer32 (serialize_bounded_integer_le 2)
 
 inline_for_extraction
+val serialize32_bounded_integer_le_3  : serializer32 (serialize_bounded_integer_le 3)
+
+inline_for_extraction
 val serialize32_bounded_integer_le_4  : serializer32 (serialize_bounded_integer_le 4)
+
+inline_for_extraction
+let serialize32_bounded_integer_le
+  (sz: integer_size) : Tot (serializer32 (serialize_bounded_integer_le sz))
+= match sz with
+  | 1 -> serialize32_bounded_integer_le_1
+  | 2 -> serialize32_bounded_integer_le_2
+  | 3 -> serialize32_bounded_integer_le_3
+  | 4 -> serialize32_bounded_integer_le_4
 
 inline_for_extraction
 val serialize32_u16_le : serializer32 serialize_u16_le

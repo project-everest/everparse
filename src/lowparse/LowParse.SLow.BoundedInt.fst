@@ -152,6 +152,10 @@ let parse32_bounded_integer_le_2
     ()
     bounded_integer_of_le_32_2
 
+let parse32_bounded_integer_le_3
+  input
+= admit ()
+
 let parse32_bounded_integer_le_4
 = [@inline_let] let _ =
     bounded_integer_of_le_injective 4
@@ -192,6 +196,10 @@ let serialize32_bounded_integer_le_2
     in
     B32.create 1ul (Cast.uint32_to_uint8 x) `B32.append` B32.create 1ul (Cast.uint32_to_uint8 (x `U32.div` 256ul))
   ) <: (res: bytes32 { serializer32_correct' (serialize_bounded_integer_le 2) x res } ))
+
+let serialize32_bounded_integer_le_3
+  x
+= admit ()
 
 let serialize32_bounded_integer_le_4
 = fun (x: bounded_integer 4) -> ((

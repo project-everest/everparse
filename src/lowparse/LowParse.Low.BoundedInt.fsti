@@ -121,13 +121,32 @@ let jump_u32_le : jumper parse_u32_le =
   jump_constant_size parse_u32_le 4ul ()
 
 inline_for_extraction
+noextract
+let validate_bounded_integer_le
+  (i: integer_size) // must be a constant
+: Tot (validator (parse_bounded_integer_le i))
+= validate_total_constant_size (parse_bounded_integer_le i) (U32.uint_to_t i) ()
+
+inline_for_extraction
 val read_bounded_integer_le_1 : leaf_reader (parse_bounded_integer_le 1)
 
 inline_for_extraction
 val read_bounded_integer_le_2 : leaf_reader (parse_bounded_integer_le 2)
 
 inline_for_extraction
+val read_bounded_integer_le_3 : leaf_reader (parse_bounded_integer_le 3)
+
+inline_for_extraction
 val read_bounded_integer_le_4 : leaf_reader (parse_bounded_integer_le 4)
+
+inline_for_extraction
+let read_bounded_integer_le
+  (sz: integer_size) : Tot (leaf_reader (parse_bounded_integer_le sz))
+= match sz with
+  | 1 -> read_bounded_integer_le_1
+  | 2 -> read_bounded_integer_le_2
+  | 3 -> read_bounded_integer_le_3
+  | 4 -> read_bounded_integer_le_4
 
 inline_for_extraction
 val read_u16_le : leaf_reader parse_u16_le
@@ -148,10 +167,22 @@ inline_for_extraction
 val write_bounded_integer_le_2 : leaf_writer_strong (serialize_bounded_integer_le 2)
 
 inline_for_extraction
+val write_bounded_integer_le_3 : leaf_writer_strong (serialize_bounded_integer_le 3)
+
+inline_for_extraction
 val serialize32_bounded_integer_le_4 : serializer32 (serialize_bounded_integer_le 4)
 
 inline_for_extraction
 val write_bounded_integer_le_4 : leaf_writer_strong (serialize_bounded_integer_le 4)
+ 
+inline_for_extraction
+let write_bounded_integer_le
+  (sz: integer_size) : Tot (leaf_writer_strong (serialize_bounded_integer_le sz))
+= match sz with
+  | 1 -> write_bounded_integer_le_1
+  | 2 -> write_bounded_integer_le_2
+  | 3 -> write_bounded_integer_le_3
+  | 4 -> write_bounded_integer_le_4
 
 inline_for_extraction
 val write_u16_le : leaf_writer_strong serialize_u16_le
