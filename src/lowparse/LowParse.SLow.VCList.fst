@@ -341,6 +341,8 @@ let list_length32
     (0ul, l)
   with (len, _) -> len
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 let serialize32_vclist
   (min: nat)
@@ -362,8 +364,6 @@ let serialize32_vclist
     let sl = serialize32_nlist (U32.v ln) s32 () x in
     sn `B32.append` sl
   ) <: (res: _ { serializer32_correct (serialize_vclist min max ls s) x res } ))
-
-#push-options "--z3rlimit 16"
 
 inline_for_extraction
 let size32_vclist
