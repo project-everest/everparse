@@ -107,6 +107,7 @@ let clens_flbytes_get
   clens_get = (fun (x: BY.lbytes sz) -> (BY.get x i <: byte));
 }
 
+#push-options "--z3rlimit 16 --max_fuel 1"
 let gaccessor_flbytes_get
   (sz: nat { sz < 4294967296 } )
   (i: U32.t { U32.v i < sz } )
@@ -128,6 +129,7 @@ let gaccessor_flbytes_get
     Classical.move_requires g ();
     res
   end <: Ghost (nat & nat) (requires True) (ensures (fun res -> gaccessor_post' (parse_flbytes sz) parse_u8 (clens_flbytes_get sz i) input res )))
+#pop-options
 
 inline_for_extraction
 let accessor_flbytes_get
