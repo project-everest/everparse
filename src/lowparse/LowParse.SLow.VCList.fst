@@ -365,8 +365,6 @@ let serialize32_vclist
   ) <: (res: _ { serializer32_correct (serialize_vclist min max ls s) x res } ))
 #pop-options
 
-#pop-options
-
 #push-options "--z3rlimit 16"
 
 inline_for_extraction
