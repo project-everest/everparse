@@ -45,7 +45,20 @@ $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in
+.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
+
+
+# For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
+
+FSTAR_TEST_FILES= LowParse.Bytes.fst LowParse.Bytes32.fst		  \
+	     LowParse.Spec.Base.fst LowParse.SLow.Base.fst	  \
+	     LowParse.Spec.Combinators.fst			  \
+	     LowParse.SLow.Combinators.fst LowParse.Spec.Enum.fst \
+	     LowParse.SLow.Enum.fst
+
+FSTAR_TEST_CHECKED_FILES=$(addsuffix .checked, $(FSTAR_TEST_FILES))
+
+fstar-test: $(FSTAR_TEST_CHECKED_FILES)
