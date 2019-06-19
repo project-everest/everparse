@@ -1070,7 +1070,7 @@ let nondep_then_eq
     end
   | _ -> None
   ))
-= ()
+= admit ()  //AR: 06/19: #1750 (FStar)
 
 let bare_serialize_nondep_then
   (#k1: parser_kind)
