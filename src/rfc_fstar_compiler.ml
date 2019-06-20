@@ -586,7 +586,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   let is_little_endian = has_attr al "little_endian" in
   fields := SM.add n (fl, is_open) !fields;
 
-  let patch_little_endian s = if is_little_endian then s else sprintf "%s_le" s in
+  let patch_little_endian s = if not is_little_endian then s else sprintf "%s_le" s in
   let repr_t, int_z, parse_t, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
 		        with _ -> failwith ("Enum "^n^" is missing a representation hint") in
