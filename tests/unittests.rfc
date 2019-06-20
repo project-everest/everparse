@@ -202,3 +202,13 @@ t14 t34<100000..131072 : bitcoin_varint>;
 opaque t35<12..131072 : bitcoin_varint>;
 
 opaque t36<100000..131072 : bitcoin_varint>;
+
+enum /*@little_endian*/ { a, b, (255) } tagle;
+
+struct {
+  tagle t;
+  select(t) {
+   case a: t3;
+   case b: t4;
+  } body;
+} t6le;

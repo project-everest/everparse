@@ -583,15 +583,17 @@ let rec btree_fold
 let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   let is_open = has_attr al "open" in
   let is_private = has_attr al "private" in
+  let is_little_endian = has_attr al "little_endian" in
   fields := SM.add n (fl, is_open) !fields;
 
+  let patch_little_endian s = if is_little_endian then s else sprintf "%s_le" s in
   let repr_t, int_z, parse_t, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
 		        with _ -> failwith ("Enum "^n^" is missing a representation hint") in
 	  match m with
 		| EnumFieldAnonymous 255 -> "uint8", "z", "u8", 1
-		| EnumFieldAnonymous 65535 -> "uint16", "us", "u16", 2
-		| EnumFieldAnonymous 4294967295 -> "uint32", "ul", "u32", 4
+		| EnumFieldAnonymous 65535 -> patch_little_endian "uint16", "us", "u16", 2
+		| EnumFieldAnonymous 4294967295 -> patch_little_endian "uint32", "ul", "u32", 4
 		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32 supported)")
 	in
 
