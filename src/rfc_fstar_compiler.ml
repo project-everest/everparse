@@ -1660,10 +1660,10 @@ and compile_vllist o i is_private n ty li elem_li lenty smin smax =
   w o "let %s_list_bytesize_cons x y = LP.serialize_list_cons %s %s x y; %s\n\n" n (pcombinator_name ty) (scombinator_name ty) (bytesize_eq_call ty "x");
   w i "val %s_list_bytesize_eq (l: list %s) : Lemma (%s_list_bytesize l == LL.serialized_list_length %s l)\n\n" n (compile_type ty) n (scombinator_name ty);
   w o "let %s_list_bytesize_eq l = LL.serialized_list_length_eq_length_serialize_list %s l\n\n" n (scombinator_name ty);
-  w i "val check_%s_list_bytesize (l: list %s) : Tot (b: bool {b == (let x = %s_list_bytesize l in %d <= x && x <= %d)})\n\n" n (compile_type ty) n smin smax;
-  w o "let check_%s_list_bytesize l =\n" n;
-  w o "  let x = LP.size32_list %s () l in\n" (size32_name ty);
-  w o "  %dul `U32.lte` x && x `U32.lte` %dul\n\n" smin smax;
+  wh i "val check_%s_list_bytesize (l: list %s) : Tot (b: bool {b == (let x = %s_list_bytesize l in %d <= x && x <= %d)})\n\n" n (compile_type ty) n smin smax;
+  wh o "let check_%s_list_bytesize l =\n" n;
+  wh o "  let x = LP.size32_list %s () l in\n" (size32_name ty);
+  wh o "  %dul `U32.lte` x && x `U32.lte` %dul\n\n" smin smax;
   write_api o i is_private li.meta n li.min_len li.max_len;
   w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n smin smax (scombinator_name ty);
   w o "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
@@ -1886,11 +1886,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
           if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty)
           else bytesize_call ty "x" in
         w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n (compile_type ty) sizef 0 smax;
-        w i "val check_%s_bytesize (x: %s) : Tot (b: bool {b == (let l = %s in %d <= l && l <= %d)})\n\n" n (compile_type ty) sizef 0 smax;
-        w o "let check_%s_bytesize x =\n" n;
-        w o "  [@inline_let] let _ = %s in\n" (bytesize_eq_call (compile_type ty) "x");
-        w o "  let l = %s x in\n" (size32_name ty);
-        w o "  %dul `U32.lte` l && l `U32.lte` %dul\n\n" 0 smax;
+        wh i "val check_%s_bytesize (x: %s) : Tot (b: bool {b == (let l = %s in %d <= l && l <= %d)})\n\n" n (compile_type ty) sizef 0 smax;
+        wh o "let check_%s_bytesize x =\n" n;
+        wh o "  [@inline_let] let _ = %s in\n" (bytesize_eq_call (compile_type ty) "x");
+        wh o "  let l = %s x in\n" (size32_name ty);
+        wh o "  %dul `U32.lte` l && l `U32.lte` %dul\n\n" 0 smax;
         write_api o i is_private li.meta n min max;
         w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty);
         w o "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
@@ -2322,10 +2322,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_list_bytesize_cons x y = LP.serialize_list_cons %s %s x y; %s\n\n" n (pcombinator_name ty) (scombinator_name ty) (bytesize_eq_call ty "x");
       w i "val %s_list_bytesize_eq (l: list %s) : Lemma (%s_list_bytesize l == LL.serialized_list_length %s l)\n\n" n (compile_type ty) n (scombinator_name ty);
       w o "let %s_list_bytesize_eq l = LL.serialized_list_length_eq_length_serialize_list %s l\n\n" n (scombinator_name ty);
-      w i "val check_%s_list_bytesize (l: list %s) : Tot (b: bool {b == (let x = %s_list_bytesize l in %d <= x && x <= %d)})\n\n" n (compile_type ty) n min max;
-      w o "let check_%s_list_bytesize l =\n" n;
-      w o "  let x = LP.size32_list %s () l in\n" (size32_name ty);
-      w o "  %dul `U32.lte` x && x `U32.lte` %dul\n\n" min max;
+      wh i "val check_%s_list_bytesize (l: list %s) : Tot (b: bool {b == (let x = %s_list_bytesize l in %d <= x && x <= %d)})\n\n" n (compile_type ty) n min max;
+      wh o "let check_%s_list_bytesize l =\n" n;
+      wh o "  let x = LP.size32_list %s () l in\n" (size32_name ty);
+      wh o "  %dul `U32.lte` x && x `U32.lte` %dul\n\n" min max;
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty);
       w o "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
