@@ -1,0 +1,5 @@
+USER_TARGET=
+USER_CFLAGS=
+USER_C_FILES=
+ALL_C_FILES=LowParse.c WasmSupport.c T3.c T10.c T1.c T11_z.c T11.c T12_z.c T12.c Tag2.c T15_body.c T15.c T13_x.c T13.c Tag.c T16_x.c T16.c T17_x_b.c T17_x_a.c T17.c T19.c T4.c T20.c T21.c T22_body_b.c T22_body_a.c T22.c T18_x_b.c T18_x_a.c T18.c T23.c T25_bpayload.c T24_y.c T24.c T25_payload.c T25.c T26.c T27.c T28.c T29.c T14_x.c T14.c T30.c T31.c T32.c T33.c T34.c T35.c T36.c T6.c Tagle.c T6le.c T2.c T7.c T5.c T8_z.c T8.c T9_b.c T9.c kremlinit.c
+ALL_H_FILES=FStar.h LowParse.h WasmSupport.h T3.h T10.h T1.h T11_z.h T11.h T12_z.h T12.h Tag2.h T15_body.h T15.h T13_x.h T13.h Tag.h T16_x.h T16.h T17_x_b.h T17_x_a.h T17.h T19.h T4.h T20.h T21.h T22_body_b.h T22_body_a.h T22.h T18_x_b.h T18_x_a.h T18.h T23.h T25_bpayload.h T24_y.h T24.h T25_payload.h T25.h T26.h T27.h T28.h T29.h T14_x.h T14.h T30.h T31.h T32.h T33.h T34.h T35.h T36.h T6.h Tagle.h T6le.h T2.h T7.h T5.h T8_z.h T8.h T9_b.h T9.h kremlinit.h
