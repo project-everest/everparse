@@ -5,6 +5,10 @@ module Seq = FStar.Seq
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
 
+module T = FStar.Tactics
+
+#reset-options "--using_facts_from '* -FStar.Tactis -FStar.Reflection'"
+
 (** Constant-size parsers *)
 
 let make_constant_size_parser_aux
@@ -444,7 +448,7 @@ let and_then_correct
   and_then_injective p p';
   and_then_no_lookahead p p'
 
-#reset-options
+#reset-options "--using_facts_from '* -FStar.Tactis -FStar.Reflection'"
 
 abstract
 val and_then
@@ -1070,7 +1074,10 @@ let nondep_then_eq
     end
   | _ -> None
   ))
-= admit ()  //AR: 06/19: #1750 (FStar)
+
+  by (T.norm [delta_only [`%nondep_then;]])
+  
+= ()
 
 let bare_serialize_nondep_then
   (#k1: parser_kind)
@@ -1214,7 +1221,7 @@ let serialize_nondep_then_upd_bw_left
   ))
 = serialize_nondep_then_upd_left s1 s2 x y
 
-#reset-options "--z3refresh --z3rlimit 64 --z3cliopt smt.arith.nl=false"
+#reset-options "--z3refresh --z3rlimit 64 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactis -FStar.Reflection'"
 
 abstract
 let serialize_nondep_then_upd_bw_left_chain
@@ -1364,7 +1371,7 @@ let serialize_nondep_then_upd_bw_right_chain
   assert (Seq.length (serialize s1 (fst x)) + j' == Seq.length s - i' - Seq.length s');
   ()
 
-#reset-options "--z3rlimit 32"
+#reset-options "--z3rlimit 32 --using_facts_from '* -FStar.Tactis -FStar.Reflection'"
 
 (** Apply a total transformation on parsed data *)
 
