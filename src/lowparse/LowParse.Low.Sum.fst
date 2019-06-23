@@ -803,6 +803,7 @@ let validate_dsum_cases
   in
   validate_dsum_cases'_destr s f f' g' destr x input pos
 
+#push-options "--z3rlimit 40"
 inline_for_extraction
 let validate_dsum
   (#kt: parser_kind)
@@ -833,7 +834,7 @@ let validate_dsum
     [@inline_let]
     let _ = valid_facts (parse_dsum_cases' t f g (maybe_enum_key_of_repr (dsum_enum t) tg)) h input pos_after_tag in
     destr (validate_dsum_cases_eq t f g) (validate_dsum_cases_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (validate_dsum_cases' t f f32 g32) tg input pos_after_tag
-
+#pop-options
 
 #reset-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2"
 

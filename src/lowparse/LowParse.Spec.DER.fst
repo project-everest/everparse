@@ -923,6 +923,7 @@ let parse_bounded_der_length32
 : Tot (parser (parse_bounded_der_length32_kind min max) (bounded_int32 min max))
 = parse_bounded_der_length min max `parse_synth` synth_bounded_der_length32 min max
 
+#push-options "--z3rlimit 50"
 let parse_bounded_der_length32_unfold
 min
 max
@@ -950,6 +951,7 @@ input
           assert (U8.v (tag_of_der_length y) == 128 + log256 y)
         end
      else ()
+#pop-options
 
 let synth_bounded_der_length32_recip
   (min: der_length_t)

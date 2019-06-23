@@ -101,6 +101,7 @@ let read_bounded_integer_le_2 =
     Cast.uint8_to_uint32 r0 `U32.add` (256ul `U32.mul` Cast.uint8_to_uint32 r1)
   )
 
+#push-options "--z3rlimit 40"
 let read_bounded_integer_le_4 =
   [@inline_let] let _ = bounded_integer_of_le_injective 4 in
   make_total_constant_size_reader 4 4ul #(bounded_integer 4) (bounded_integer_of_le 4) () (fun #rrel #rel b pos ->
@@ -112,6 +113,7 @@ let read_bounded_integer_le_4 =
     let r3 = B.index b (pos `U32.add` 3ul) in
     Cast.uint8_to_uint32 r0 `U32.add` (256ul `U32.mul` (Cast.uint8_to_uint32 r1 `U32.add` (256ul `U32.mul` (Cast.uint8_to_uint32 r2 `U32.add` (256ul `U32.mul` Cast.uint8_to_uint32 r3)))))
   )
+#pop-options
 
 let read_u16_le =
   [@inline_let] let _ = synth_u16_le_injective in
