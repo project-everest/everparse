@@ -32,12 +32,12 @@ FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(I
 LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
 
 clean:
-	rm -rf *.checked *.source LowParse.depend
+	rm -rf *.checked *.source .depend
 
-LowParse.depend: $(LOWPARSE_FILES)
+.depend: $(LOWPARSE_FILES)
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@
 
-include LowParse.depend
+include .depend
 
 verify-all: $(ALL_CHECKED_FILES)
 
