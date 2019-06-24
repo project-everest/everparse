@@ -587,13 +587,13 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   fields := SM.add n (fl, is_open) !fields;
 
   let patch_little_endian s = if not is_little_endian then s else sprintf "%s_le" s in
-  let repr_t, int_z, parse_t, blen =
+  let repr_t, int_z, blen =
 	  let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
 		        with _ -> failwith ("Enum "^n^" is missing a representation hint") in
 	  match m with
-		| EnumFieldAnonymous 255 -> "uint8", "z", "u8", 1
-		| EnumFieldAnonymous 65535 -> patch_little_endian "uint16", "us", "u16", 2
-		| EnumFieldAnonymous 4294967295 -> patch_little_endian "uint32", "ul", "u32", 4
+		| EnumFieldAnonymous 255 -> "uint8", "z", 1
+		| EnumFieldAnonymous 65535 -> patch_little_endian "uint16", "us", 2
+		| EnumFieldAnonymous 4294967295 -> patch_little_endian "uint32", "ul", 4
 		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32 supported)")
 	in
 
@@ -721,9 +721,9 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   (* Parse *)
   let maybe = if is_open then "maybe_" else "" in
 	w o "noextract let parse_%s%s_key : LP.parser _ (LP.%senum_key %s_enum) =\n" maybe n maybe n;
-  w o "  LP.parse_%senum_key LP.parse_%s %s_enum\n\n" maybe parse_t n;
+  w o "  LP.parse_%senum_key %s_repr_parser %s_enum\n\n" maybe n n;
 	w o "noextract let serialize_%s%s_key : LP.serializer parse_%s%s_key =\n" maybe n maybe n;
-  w o "  LP.serialize_%senum_key LP.parse_%s LP.serialize_%s %s_enum\n\n" maybe parse_t parse_t n;
+  w o "  LP.serialize_%senum_key %s_repr_parser %s_repr_serializer %s_enum\n\n" maybe n n n;
 
   (* Spec *)
 	w o "noextract let %s_parser : LP.parser _ %s =\n" n n;
@@ -736,7 +736,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 
   (* Intermediate *)
   wh o "let parse32_%s%s_key : LP.parser32 parse_%s%s_key =\n" maybe n maybe n;
-  wh o "  FStar.Tactics.synth_by_tactic (LP.parse32_%senum_key_tac LP.parse32_%s %s_enum)\n\n" maybe parse_t n;
+  wh o "  FStar.Tactics.synth_by_tactic (LP.parse32_%senum_key_tac %s_repr_parser32 %s_enum)\n\n" maybe n n;
   wh o "let %s_parser32 : LP.parser32 %s_parser =\n" n n ;
   wh o "  lemma_synth_%s_inj ();\n" n;
   wh o "  LP.parse32_synth _ synth_%s (fun x->synth_%s x) parse32_%s%s_key ()\n\n" n n maybe n;
@@ -745,7 +745,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
     wh o "  FStar.Tactics.synth_by_tactic (LP.serialize32_maybe_enum_key_tac\n"
   else
     wh o "  FStar.Tactics.synth_by_tactic (LP.serialize32_enum_key_gen_tac\n");
-  wh o "    LP.serialize32_%s %s_enum)\n\n" parse_t n;
+  wh o "    %s_repr_serializer32 %s_enum)\n\n" n n;
   wh o "let %s_serializer32 : LP.serializer32 %s_serializer =\n" n n;
 	wh o "  lemma_synth_%s_inj ();\n  lemma_synth_%s_inv ();\n" n n;
   wh o "  LP.serialize32_synth _ synth_%s _ serialize32_%s%s_key synth_%s_inv (fun x->synth_%s_inv x) ()\n\n" n maybe n n n;
