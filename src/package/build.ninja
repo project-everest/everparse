@@ -1,0 +1,14 @@
+# This is the base build file to verify the code produced by EverParse
+# and to extract the .krml files, using ninja instead of make
+
+FSTAR_OPTIONS = --cache_checked_modules --include $LOWPARSE_HOME --include $KREMLIN_HOME/kremlib --warn_error +241
+
+FSTAR = $FSTAR_HOME/bin/fstar.exe --trace_error $FSTAR_OPTIONS
+
+rule checked
+  command = $FSTAR $in
+
+rule krml
+  command = $FSTAR --codegen Kremlin --extract_module $module $source
+
+include deps.ninja
