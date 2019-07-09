@@ -81,6 +81,42 @@ let validate_bounded_vlgen
     let _ = valid_facts (parse_fldata_strong s (U32.v len)) h input n in
     validate_fldata_strong s v (U32.v len) len input n
 
+let valid_vlgen
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 (vmin) (vmax)))
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { parse_vlgen_precond (vmin) (vmax) k })
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    U32.v pos1 + U32.v len < 4294967296 /\
+    valid_exact p h input pos1 (pos1 `U32.add` len)
+  )))
+  (ensures (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    let x = contents_exact p h input pos1 (pos1 `U32.add` len) in
+    Seq.length (serialize s x) == U32.v len /\
+    valid_content_pos (parse_vlgen vmin vmax pk s) h input pos x (pos1 `U32.add` len)
+  ))
+= valid_bounded_vlgen vmin vmax pk s input pos h;
+  valid_synth
+    h
+    (parse_bounded_vlgen vmin vmax pk s)
+    (synth_vlgen (vmin) (vmax) s)
+    input
+    pos
+
 inline_for_extraction
 let validate_vlgen
   (vmin: der_length_t)
