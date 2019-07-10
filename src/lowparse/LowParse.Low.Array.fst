@@ -545,7 +545,7 @@ let vlarray_nth_ghost
   vlarray_nth_ghost_correct array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input;
   vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input) <: Ghost (nat & nat) (requires True) (ensures (fun res -> gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input res)))
 
-#push-options "--z3rlimit 256 --initial_fuel 2 --max_fuel 2 --initial_ifuel 2 --max_ifuel 2"
+#push-options "--z3rlimit 512 --initial_fuel 2 --max_fuel 2 --initial_ifuel 2 --max_ifuel 2"
 
 inline_for_extraction
 let vlarray_nth

@@ -104,6 +104,76 @@ let write_bounded_integer_weak
   | 3 -> write_bounded_integer_3_weak ()
   | 4 -> write_bounded_integer_4_weak ()
 
+val write_bounded_int32_1
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 256 })
+: Tot (leaf_writer_strong (serialize_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val write_bounded_int32_2
+  (min32: U32.t)
+  (max32: U32.t { 256 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 65536 })
+: Tot (leaf_writer_strong (serialize_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val write_bounded_int32_3
+  (min32: U32.t)
+  (max32: U32.t { 65536 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 16777216 })
+: Tot (leaf_writer_strong (serialize_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val write_bounded_int32_4
+  (min32: U32.t)
+  (max32: U32.t { 16777216 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (leaf_writer_strong (serialize_bounded_int32 (U32.v min32) (U32.v max32)))
+
+inline_for_extraction
+let write_bounded_int32
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (leaf_writer_strong (serialize_bounded_int32 (U32.v min32) (U32.v max32)))
+= fun input #rrel #rel out pos -> (
+  if max32 `U32.lt` 256ul
+  then write_bounded_int32_1 min32 max32 input out pos
+  else if max32 `U32.lt` 65536ul
+  then write_bounded_int32_2 min32 max32 input out pos
+  else if max32 `U32.lt` 16777216ul
+  then write_bounded_int32_3 min32 max32 input out pos
+  else write_bounded_int32_4 min32 max32 input out pos
+  )
+
+val read_bounded_int32_1
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 256 })
+: Tot (leaf_reader (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val read_bounded_int32_2
+  (min32: U32.t)
+  (max32: U32.t { 256 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 65536 })
+: Tot (leaf_reader (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val read_bounded_int32_3
+  (min32: U32.t)
+  (max32: U32.t { 65536 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 16777216 })
+: Tot (leaf_reader (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val read_bounded_int32_4
+  (min32: U32.t)
+  (max32: U32.t { 16777216 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (leaf_reader (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+inline_for_extraction
+let read_bounded_int32
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (leaf_reader (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= fun #rrel #rel sl pos -> (
+  if max32 `U32.lt` 256ul
+  then read_bounded_int32_1 min32 max32 sl pos
+  else if max32 `U32.lt` 65536ul
+  then read_bounded_int32_2 min32 max32 sl pos
+  else if max32 `U32.lt` 16777216ul
+  then read_bounded_int32_3 min32 max32 sl pos
+  else read_bounded_int32_4 min32 max32 sl pos
+  )
+
 inline_for_extraction
 let validate_u16_le () : validator parse_u16_le =
   validate_total_constant_size parse_u16_le 2ul ()
