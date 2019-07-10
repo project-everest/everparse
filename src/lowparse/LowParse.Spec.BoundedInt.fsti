@@ -168,3 +168,27 @@ let bounded_int32
   (max: nat { min <= max })
 : Tot Type0
 = (x: U32.t { in_bounds min max x } )
+
+// unfold
+inline_for_extraction
+let parse_bounded_int32_kind
+  (max: nat { 0 < max /\ max < 4294967296 })
+: Tot parser_kind =
+  [@inline_let]
+  let sz = log256' max in
+  {
+    parser_kind_low = sz;
+    parser_kind_high = Some sz;
+    parser_kind_metadata = None;
+    parser_kind_subkind = Some ParserStrong;
+  }
+
+val parse_bounded_int32
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+: Tot (parser (parse_bounded_int32_kind max) (bounded_int32 min max))
+
+val serialize_bounded_int32
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+: Tot (serializer (parse_bounded_int32 min max))

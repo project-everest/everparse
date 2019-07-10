@@ -229,3 +229,75 @@ let serialize32_u32_le =
     serialize32_bounded_integer_le_4
     synth_u32_le_recip
     ()
+
+inline_for_extraction
+let parse32_bounded_int32'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz32: U32.t { log256' (U32.v max32) == U32.v sz32 })
+: Tot (parser32 (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= [@inline_let]
+  let sz = U32.v sz32 in
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  parse32_synth
+    (parse_bounded_integer sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    (fun x -> x)
+    (parse32_filter (parse32_bounded_integer sz) (in_bounds min max) (fun x -> not (x `U32.lt` min32 || max32 `U32.lt` x)))
+    ()
+
+let parse32_bounded_int32_1
+  min max
+= parse32_bounded_int32' min max 1ul
+
+let parse32_bounded_int32_2
+  min max
+= parse32_bounded_int32' min max 2ul
+
+let parse32_bounded_int32_3
+  min max
+= parse32_bounded_int32' min max 3ul
+
+let parse32_bounded_int32_4
+  min max
+= parse32_bounded_int32' min max 4ul
+
+inline_for_extraction
+let serialize32_bounded_int32'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz32: U32.t { log256' (U32.v max32) == U32.v sz32 })
+: Tot (serializer32 (serialize_bounded_int32 (U32.v min32) (U32.v max32)))
+= [@inline_let]
+  let sz = U32.v sz32 in
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  serialize32_synth
+    (parse_bounded_integer sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    _
+    (serialize32_filter (serialize32_bounded_integer sz) (in_bounds min max))
+    (fun x -> x)
+    (fun x -> x)
+    ()
+
+let serialize32_bounded_int32_1
+  min max
+= serialize32_bounded_int32' min max 1ul
+
+let serialize32_bounded_int32_2
+  min max
+= serialize32_bounded_int32' min max 2ul
+
+let serialize32_bounded_int32_3
+  min max
+= serialize32_bounded_int32' min max 3ul
+
+let serialize32_bounded_int32_4
+  min max
+= serialize32_bounded_int32' min max 4ul

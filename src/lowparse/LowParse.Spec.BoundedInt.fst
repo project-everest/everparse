@@ -288,3 +288,18 @@ let serialize_bounded_integer_le_4_eq
 = assert_norm (pow2 8 == 256)
 
 #pop-options
+
+let parse_bounded_int32
+  min max
+= let sz = log256' max in
+  (parse_bounded_integer sz `parse_filter` in_bounds min max) `parse_synth` (fun x -> (x <: bounded_int32 min max))
+
+let serialize_bounded_int32
+  min max
+= let sz = log256' max in
+  serialize_synth
+    (parse_bounded_integer sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    (serialize_filter (serialize_bounded_integer sz) (in_bounds min max))
+    (fun x -> x)
+    ()
