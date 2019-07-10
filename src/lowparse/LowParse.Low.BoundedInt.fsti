@@ -39,6 +39,13 @@ let validate_bounded_integer
 = validate_total_constant_size (parse_bounded_integer i) (U32.uint_to_t i) ()
 
 inline_for_extraction
+noextract
+let jump_bounded_integer
+  (i: integer_size) // must be a constant
+: Tot (jumper (parse_bounded_integer i))
+= jump_constant_size (parse_bounded_integer i) (U32.uint_to_t i) ()
+
+inline_for_extraction
 val serialize32_bounded_integer_1 : unit -> Tot (serializer32 (serialize_bounded_integer 1))
 
 inline_for_extraction
@@ -172,6 +179,76 @@ let read_bounded_int32
   else if max32 `U32.lt` 16777216ul
   then read_bounded_int32_3 min32 max32 sl pos
   else read_bounded_int32_4 min32 max32 sl pos
+  )
+
+val validate_bounded_int32_1
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 256 })
+: Tot (validator (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val validate_bounded_int32_2
+  (min32: U32.t)
+  (max32: U32.t { 256 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 65536 })
+: Tot (validator (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val validate_bounded_int32_3
+  (min32: U32.t)
+  (max32: U32.t { 65536 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 16777216 })
+: Tot (validator (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val validate_bounded_int32_4
+  (min32: U32.t)
+  (max32: U32.t { 16777216 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (validator (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+inline_for_extraction
+let validate_bounded_int32
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (validator (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= fun #rrel #rel sl pos -> (
+  if max32 `U32.lt` 256ul
+  then validate_bounded_int32_1 min32 max32 sl pos
+  else if max32 `U32.lt` 65536ul
+  then validate_bounded_int32_2 min32 max32 sl pos
+  else if max32 `U32.lt` 16777216ul
+  then validate_bounded_int32_3 min32 max32 sl pos
+  else validate_bounded_int32_4 min32 max32 sl pos
+  )
+
+val jump_bounded_int32_1
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 256 })
+: Tot (jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val jump_bounded_int32_2
+  (min32: U32.t)
+  (max32: U32.t { 256 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 65536 })
+: Tot (jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val jump_bounded_int32_3
+  (min32: U32.t)
+  (max32: U32.t { 65536 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 16777216 })
+: Tot (jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+val jump_bounded_int32_4
+  (min32: U32.t)
+  (max32: U32.t { 16777216 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+
+inline_for_extraction
+let jump_bounded_int32
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= fun #rrel #rel sl pos -> (
+  if max32 `U32.lt` 256ul
+  then jump_bounded_int32_1 min32 max32 sl pos
+  else if max32 `U32.lt` 65536ul
+  then jump_bounded_int32_2 min32 max32 sl pos
+  else if max32 `U32.lt` 16777216ul
+  then jump_bounded_int32_3 min32 max32 sl pos
+  else jump_bounded_int32_4 min32 max32 sl pos
   )
 
 inline_for_extraction
