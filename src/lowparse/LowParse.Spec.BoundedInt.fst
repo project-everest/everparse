@@ -88,7 +88,11 @@ sz
 = serialize_bounded_integer_correct sz;
   serialize_bounded_integer' sz
 
+#push-options "--max_ifuel 4 --z3rlimit 32"
+
 let serialize_bounded_integer_spec sz x = ()
+
+#pop-options
 
 let bounded_integer_of_le
   (i: integer_size)
