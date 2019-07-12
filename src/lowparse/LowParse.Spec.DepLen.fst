@@ -413,3 +413,121 @@ let unit_test_lemma1
         let input'' = Seq.slice input (consumed + consumed') (Seq.length input) in
         parse_deplen_payload_unfold 0 4200000000 unit_test_dependent_length_f unit_test_payload_serializer (len, foo) input'';
         ()
+
+(* serializer spec *)
+
+let synth_deplen_data_recip
+  (min : nat)
+  (max : nat { min <= max /\ max < 4294967296 } )
+  (#ht : Type)
+  (#pt : Type)
+  (dlf : ht -> Tot (bounded_int32 min max) )
+  (#pk : parser_kind)
+  (#pp : parser pk pt)
+  (ps : serializer pp)
+  (h : ht)
+  (x : refine_with_tag (calc_tag_of_deplen_data min max dlf ps) h)
+: Tot (parse_fldata_strong_t ps (U32.v (dlf h)))
+= snd x
+
+let serialize_deplen_payload
+  (min : nat)
+  (max : nat { min <= max /\ max < 4294967296 } )
+  (#ht : Type)
+  (#pt : Type)
+  (dlf : ht -> Tot (bounded_int32 min max) )
+  (#pk : parser_kind)
+  (#pp : parser pk pt)
+  (ps : serializer pp)
+  (h : ht)
+: Tot (serializer (parse_deplen_payload min max dlf ps h))
+= let sz = U32.v (dlf h) in
+  let bounds_off =
+    pk.parser_kind_low > sz || 
+    ( match pk.parser_kind_high with
+      | None -> false
+      | Some pkmax -> pkmax < sz
+  )
+  in
+  if bounds_off
+  then fail_serializer (parse_deplen_payload_kind min max pk) (refine_with_tag (calc_tag_of_deplen_data min max dlf ps) h) (fun _ -> ())
+  else
+    serialize_weaken (parse_deplen_payload_kind min max pk)
+      (serialize_synth
+        (parse_fldata_strong ps sz)
+        (synth_deplen_data min max dlf ps h)
+        (serialize_fldata_strong ps sz)
+        (synth_deplen_data_recip min max dlf ps h)
+        ()
+      )
+
+(* the lemma says serializing the payload from the data (header + payload) is the same as serializing only the payload *)
+
+let serialize_deplen_payload_unfold
+  (min : nat)
+  (max : nat { min <= max /\ max < 4294967296 } )
+  (#ht : Type)
+  (#pt : Type)
+  (dlf : ht -> Tot (bounded_int32 min max) )
+  (#pk : parser_kind)
+  (#pp : parser pk pt)
+  (ps : serializer pp)
+  (h : ht)
+  (input : refine_with_tag (calc_tag_of_deplen_data min max dlf ps) h)
+: Lemma
+  (serialize (serialize_deplen_payload min max dlf ps h) input == serialize ps (synth_deplen_data_recip min max dlf ps h input))
+= let sz = U32.v (dlf h) in
+  serialize_synth_eq
+    (parse_fldata_strong ps sz)
+    (synth_deplen_data min max dlf ps h)
+    (serialize_fldata_strong ps sz)
+    (synth_deplen_data_recip min max dlf ps h)
+    ()
+    input
+
+let serialize_deplen
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#hk: parser_kind)
+  (#ht: Type)
+  (#hp: parser hk ht)
+  (hs: serializer hp { hk.parser_kind_subkind == Some ParserStrong } )
+  (dlf: ht -> Tot (bounded_int32 min max))
+  (#pk: parser_kind)
+  (#pt: Type)
+  (#pp: parser pk pt)
+  (ps: serializer pp)
+: Tot (serializer (parse_deplen min max hp dlf ps))
+= serialize_tagged_union
+    hs
+    (calc_tag_of_deplen_data min max dlf ps)
+    (serialize_deplen_payload min max dlf ps)
+
+(* the lemma says serializing the data is the same as first serializing the header then the payload *)
+
+let serialize_deplen_unfold
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#hk: parser_kind)
+  (#ht: Type)
+  (#hp: parser hk ht)
+  (hs: serializer hp { hk.parser_kind_subkind == Some ParserStrong } )
+  (dlf: ht -> Tot (bounded_int32 min max))
+  (#pk: parser_kind)
+  (#pt: Type)
+  (#pp: parser pk pt)
+  (ps: serializer pp)
+  (input: parse_deplen_data_t min max dlf ps)
+: Lemma
+  (serialize (serialize_deplen min max hs dlf ps) input == (
+    let sh = serialize hs (fst input) in
+    let sp = serialize ps (snd input) in
+      sh `Seq.append` sp
+  ))
+= serialize_tagged_union_eq
+    hs
+    (calc_tag_of_deplen_data min max dlf ps)
+    (serialize_deplen_payload min max dlf ps)
+    input;
+  let h : ht = calc_tag_of_deplen_data min max dlf ps input in
+  serialize_deplen_payload_unfold min max dlf ps h input
