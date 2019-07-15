@@ -993,6 +993,8 @@ min max y'
       serialize_bounded_integer_spec len y'
     end
 
+#push-options "--z3rlimit 20"
 let serialize_bounded_der_length32_size
 min max y'
 = serialize_bounded_der_length32_unfold min max y'
+#pop-options

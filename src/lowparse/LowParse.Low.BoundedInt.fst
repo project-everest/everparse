@@ -72,7 +72,7 @@ let serialize32_bounded_integer_2 () =
   E.n_to_be_2 _ _ (E.u32 ()) v out pos;
   2ul
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 50"
 let serialize32_bounded_integer_3 () =
   fun (v: bounded_integer 3) #rrel #rel out pos ->
   E.n_to_be_3 _ _ (E.u32 ()) v out pos;
