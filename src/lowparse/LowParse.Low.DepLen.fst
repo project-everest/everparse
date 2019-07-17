@@ -199,7 +199,21 @@ let validate_deplen
           pos_end'
         else
           validator_error_generic 
+
+(* the unit test *)
+
+inline_for_extraction
+let unit_test_deplen_func_type = deplen_func unit_test_min unit_test_max unit_test_header_parser unit_test_dependent_length_f
+
+inline_for_extraction
+let unit_test_deplen_func : unit_test_deplen_func_type
+= fun #rrel #rel input pos ->
+  let pos_len = accessor_fst (parse_bounded_int32 0 100) () (parse_bounded_int32 0 100) input pos in
+  read_bounded_integer_1 input pos_len
+
 (*
-      let _ = valid_facts (parse_fldata_strong ps (U32.v len)) h input pos_payload in
-    validate_fldata_strong ps pv (U32.v len) len input pos_payload
+inline_for_extraction
+let unit_test_validate
+(* TODO *)
+: Tot (validator (parse_deplen min max hp dlf ps))
 *)

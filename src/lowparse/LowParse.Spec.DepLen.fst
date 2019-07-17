@@ -330,7 +330,11 @@ let unit_test_payload_serializer = serialize_all_bytes
 
 (* 5. parser for this type *)
 
-let unit_test_data_parser = parse_deplen 0 4200000000 unit_test_header_parser unit_test_dependent_length_f unit_test_payload_serializer
+let unit_test_min = 0
+
+let unit_test_max = 4200000000
+
+let unit_test_data_parser = parse_deplen unit_test_min unit_test_max unit_test_header_parser unit_test_dependent_length_f unit_test_payload_serializer
 
 let unit_test_struct_parser = unit_test_data_parser `parse_synth` unit_test_synth_struct
 
@@ -395,7 +399,7 @@ let unit_test_lemma1
                 None)
   )
 = unit_test_struct_parser_unfold input;
-  parse_deplen_unfold2 0 4200000000 unit_test_header_parser unit_test_dependent_length_f unit_test_payload_serializer input;
+  parse_deplen_unfold2 unit_test_min unit_test_max unit_test_header_parser unit_test_dependent_length_f unit_test_payload_serializer input;
   unit_test_lemma1_aux1 input;
   let res_len = parse (parse_bounded_int32 0 100) input in
   match res_len with
@@ -411,7 +415,7 @@ let unit_test_lemma1
         ()
       else
         let input'' = Seq.slice input (consumed + consumed') (Seq.length input) in
-        parse_deplen_payload_unfold 0 4200000000 unit_test_dependent_length_f unit_test_payload_serializer (len, foo) input'';
+        parse_deplen_payload_unfold unit_test_min unit_test_max unit_test_dependent_length_f unit_test_payload_serializer (len, foo) input'';
         ()
 
 (* serializer spec *)
