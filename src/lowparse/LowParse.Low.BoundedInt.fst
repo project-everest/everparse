@@ -153,6 +153,77 @@ let read_bounded_int32_4
   min32 max32
 = read_bounded_int32' min32 max32 4
 
+inline_for_extraction
+let validate_bounded_int32'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz: nat { sz == log256' (U32.v max32) })
+: Tot (validator (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= 
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  validate_synth
+    (validate_filter
+      (validate_bounded_integer sz)
+      (read_bounded_integer sz)
+      (in_bounds min max)
+      (fun x -> not (x `U32.lt` min32 || max32 `U32.lt` x))
+      )
+    (fun x -> (x <: bounded_int32 min max))
+    ()
+
+let validate_bounded_int32_1
+  min32 max32
+= validate_bounded_int32' min32 max32 1
+
+let validate_bounded_int32_2
+  min32 max32
+= validate_bounded_int32' min32 max32 2
+
+let validate_bounded_int32_3
+  min32 max32
+= validate_bounded_int32' min32 max32 3
+
+let validate_bounded_int32_4
+  min32 max32
+= validate_bounded_int32' min32 max32 4
+
+inline_for_extraction
+let jump_bounded_int32'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz: nat { sz == log256' (U32.v max32) })
+: Tot (jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= 
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  jump_synth
+    (jump_filter
+      (jump_bounded_integer sz)
+      (in_bounds min max))
+    (fun x -> (x <: bounded_int32 min max))
+    ()
+
+let jump_bounded_int32_1
+  min32 max32
+= jump_bounded_int32' min32 max32 1
+
+let jump_bounded_int32_2
+  min32 max32
+= jump_bounded_int32' min32 max32 2
+
+let jump_bounded_int32_3
+  min32 max32
+= jump_bounded_int32' min32 max32 3
+
+let jump_bounded_int32_4
+  min32 max32
+= jump_bounded_int32' min32 max32 4
+
 
 let read_bounded_integer_le_1 =
   [@inline_let] let _ = bounded_integer_of_le_injective 1 in
