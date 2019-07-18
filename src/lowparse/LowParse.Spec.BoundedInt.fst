@@ -52,7 +52,7 @@ let parse_bounded_integer
 = decode_bounded_integer_injective i;
   make_total_constant_size_parser i (bounded_integer i) (decode_bounded_integer i)
 
-#push-options "--max_ifuel 4 --z3rlimit 32"
+#push-options "--max_ifuel 1 --initial_ifuel 1 --max_fuel 5 --initial_fuel 5 --z3rlimit 32"
 
 let parse_bounded_integer_spec i input = ()
 
