@@ -247,6 +247,18 @@ let read_bounded_integer_le_2 =
   )
 
 #push-options "--z3rlimit 40"
+
+let read_bounded_integer_le_3 =
+  [@inline_let] let _ = bounded_integer_of_le_injective 3 in
+  make_total_constant_size_reader 3 3ul #(bounded_integer 3) (bounded_integer_of_le 3) () (fun #rrel #rel b pos ->
+    let h = HST.get () in
+    [@inline_let] let _ = bounded_integer_of_le_3_eq (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 3)) in
+    let r0 = B.index b pos in
+    let r1 = B.index b (pos `U32.add` 1ul) in
+    let r2 = B.index b (pos `U32.add` 2ul) in
+    Cast.uint8_to_uint32 r0 `U32.add` (256ul `U32.mul` (Cast.uint8_to_uint32 r1 `U32.add` (256ul `U32.mul` Cast.uint8_to_uint32 r2)))
+  )
+
 let read_bounded_integer_le_4 =
   [@inline_let] let _ = bounded_integer_of_le_injective 4 in
   make_total_constant_size_reader 4 4ul #(bounded_integer 4) (bounded_integer_of_le 4) () (fun #rrel #rel b pos ->
@@ -304,6 +316,26 @@ let serialize32_bounded_integer_le_2
 
 let write_bounded_integer_le_2 = leaf_writer_strong_of_serializer32 serialize32_bounded_integer_le_2 ()
 
+let serialize32_bounded_integer_le_3
+= fun x #rrel #rel b pos ->
+  [@inline_let]
+  let _ =
+    serialize_bounded_integer_le_3_eq x 0;
+    serialize_bounded_integer_le_3_eq x 1;
+    serialize_bounded_integer_le_3_eq x 2
+  in
+  let r0 = (Cast.uint32_to_uint8 x <: U8.t) in
+  let d0 = x `U32.div` 256ul in
+  let r1 = (Cast.uint32_to_uint8 d0 <: U8.t) in
+  let d1 = d0 `U32.div` 256ul in
+  let r2 = (Cast.uint32_to_uint8 d1<: U8.t) in
+  mbuffer_upd b (Ghost.hide (U32.v pos)) (Ghost.hide (U32.v pos + 3)) pos r0;
+  mbuffer_upd b (Ghost.hide (U32.v pos)) (Ghost.hide (U32.v pos + 3)) (pos `U32.add` 1ul) r1;
+  mbuffer_upd b (Ghost.hide (U32.v pos)) (Ghost.hide (U32.v pos + 3)) (pos `U32.add` 2ul) r2;
+  3ul
+
+let write_bounded_integer_le_3 = leaf_writer_strong_of_serializer32 serialize32_bounded_integer_le_3 ()
+
 let serialize32_bounded_integer_le_4
 = fun x #rrel #rel b pos ->
   [@inline_let]
@@ -336,3 +368,74 @@ let write_u16_le =
 
 let write_u32_le =
   write_synth write_bounded_integer_le_4 synth_u32_le synth_u32_le_recip (fun x -> synth_u32_le_recip x) ()
+
+inline_for_extraction
+let validate_bounded_int32_le'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz: nat { sz == log256' (U32.v max32) })
+: Tot (validator (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
+= 
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  validate_synth
+    (validate_filter
+      (validate_bounded_integer_le sz)
+      (read_bounded_integer_le sz)
+      (in_bounds min max)
+      (fun x -> not (x `U32.lt` min32 || max32 `U32.lt` x))
+      )
+    (fun x -> (x <: bounded_int32 min max))
+    ()
+
+let validate_bounded_int32_le_1
+  min32 max32
+= validate_bounded_int32_le' min32 max32 1
+
+let validate_bounded_int32_le_2
+  min32 max32
+= validate_bounded_int32_le' min32 max32 2
+
+let validate_bounded_int32_le_3
+  min32 max32
+= validate_bounded_int32_le' min32 max32 3
+
+let validate_bounded_int32_le_4
+  min32 max32
+= validate_bounded_int32_le' min32 max32 4
+
+inline_for_extraction
+let jump_bounded_int32_le'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz: nat { sz == log256' (U32.v max32) })
+: Tot (jumper (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
+= 
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  jump_synth
+    (jump_filter
+      (jump_bounded_integer_le sz)
+      (in_bounds min max))
+    (fun x -> (x <: bounded_int32 min max))
+    ()
+
+let jump_bounded_int32_le_1
+  min32 max32
+= jump_bounded_int32_le' min32 max32 1
+
+let jump_bounded_int32_le_2
+  min32 max32
+= jump_bounded_int32_le' min32 max32 2
+
+let jump_bounded_int32_le_3
+  min32 max32
+= jump_bounded_int32_le' min32 max32 3
+
+let jump_bounded_int32_le_4
+  min32 max32
+= jump_bounded_int32_le' min32 max32 4
