@@ -457,6 +457,59 @@ let vlarray_nth_ghost'
 
 #pop-options
 
+let uint32_size_intro
+  (x: nat)
+: Lemma
+  (requires (x < 4294967296))
+  (ensures (FStar.UInt.size x 32))
+= ()
+
+inline_for_extraction
+let vlarray_nth_compute
+  (a: nat)
+  (b: U32.t)
+  (c: U32.t)
+  (bound: Ghost.erased nat {
+    a + (U32.v b `Prims.op_Multiply` U32.v c) <= Ghost.reveal bound /\
+    Ghost.reveal bound < 4294967296
+  })
+: Tot (z: U32.t { U32.v z == a + (U32.v b `Prims.op_Multiply` U32.v c)})
+= FStar.Math.Lemmas.nat_times_nat_is_nat (U32.v b) (U32.v c);
+  uint32_size_intro (U32.v b `Prims.op_Multiply` U32.v c);
+  U32.uint_to_t a `U32.add` (b `U32.mul` c)
+
+inline_for_extraction
+let vlarray_nth_body
+  (array_byte_size_min: nat)
+  (array_byte_size_max: nat)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (elem_count_min: nat)
+  (elem_count_max: nat)
+  (i: U32.t {
+    vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max == true
+  })
+  (input: Ghost.erased bytes)
+: Pure U32.t
+  (requires (Seq.length (Ghost.reveal input) < 4294967296 /\ gaccessor_pre 
+(parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max (U32.v i)) (Ghost.reveal input)))
+  (ensures (fun y ->
+    U32.v y == fst (vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max (U32.v i) (Ghost.reveal input))))
+=
+      [@inline_let]
+      let _ : squash ((log256' array_byte_size_max + (U32.v i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low) <= Seq.length (Ghost.reveal input)) =
+        parse_vlarray_eq_some array_byte_size_min array_byte_size_max s elem_count_min elem_count_max () (Ghost.reveal input);
+        let pi = parse (parse_bounded_integer (log256' array_byte_size_max)) (Ghost.reveal input) in
+        let lc = Some?.v pi in
+        let len = fst lc in
+        let c_len = snd lc in
+        let sq = Seq.slice (Ghost.reveal input) (log256' array_byte_size_max) (Seq.length (Ghost.reveal input)) in
+        list_nth_constant_size_parser_correct p sq (U32.v i)
+      in
+      vlarray_nth_compute (log256' array_byte_size_max)  i (U32.uint_to_t k.parser_kind_low) (Ghost.hide (Seq.length (Ghost.reveal input)))
+
 #reset-options "--z3cliopt smt.arith.nl=false --z3refresh --using_facts_from '* -FStar.Tactics -FStar.Reflection'"
 
 #push-options "--z3rlimit 16"
@@ -545,9 +598,6 @@ let vlarray_nth_ghost
   vlarray_nth_ghost_correct array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input;
   vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input) <: Ghost (nat & nat) (requires True) (ensures (fun res -> gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input res)))
 
-
-#push-options "--z3rlimit 512 --initial_fuel 2 --max_fuel 2 --initial_ifuel 2 --max_ifuel 2"
-#restart-solver
 inline_for_extraction
 let vlarray_nth
   (array_byte_size_min: nat)
@@ -565,21 +615,8 @@ let vlarray_nth
 = make_accessor_from_pure 
     (vlarray_nth_ghost array_byte_size_min array_byte_size_max s elem_count_min elem_count_max (U32.v i))
     (fun input ->
-      [@inline_let] let _ =
-        parse_vlarray_eq_some array_byte_size_min array_byte_size_max s elem_count_min elem_count_max () (Ghost.reveal input);
-        let pi = parse (parse_bounded_integer (log256' array_byte_size_max)) (Ghost.reveal input) in
-        let lc = Some?.v pi in
-        let len = fst lc in
-        let c_len = snd lc in
-        let sq = Seq.slice (Ghost.reveal input) (log256' array_byte_size_max) (Seq.length (Ghost.reveal input)) in
-        list_nth_constant_size_parser_correct p sq (U32.v i)
-      in
-      [@inline_let]
-      let res = U32.uint_to_t (log256' array_byte_size_max) `U32.add` (i `U32.mul` U32.uint_to_t k.parser_kind_low) in
-      res
+      vlarray_nth_body array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input
     )
-
-#pop-options
 
 module HS = FStar.HyperStack
 
