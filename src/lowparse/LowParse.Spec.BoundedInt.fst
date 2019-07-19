@@ -52,7 +52,7 @@ let parse_bounded_integer
 = decode_bounded_integer_injective i;
   make_total_constant_size_parser i (bounded_integer i) (decode_bounded_integer i)
 
-#push-options "--max_ifuel 4 --z3rlimit 32"
+#push-options "--max_ifuel 1 --initial_ifuel 1 --max_fuel 5 --initial_fuel 5 --z3rlimit 32"
 
 let parse_bounded_integer_spec i input = ()
 
@@ -88,7 +88,11 @@ sz
 = serialize_bounded_integer_correct sz;
   serialize_bounded_integer' sz
 
+#push-options "--max_ifuel 4 --z3rlimit 50"
+
 let serialize_bounded_integer_spec sz x = ()
+
+#pop-options
 
 let bounded_integer_of_le
   (i: integer_size)
@@ -230,6 +234,14 @@ let bounded_integer_of_le_2_eq
   E.lemma_le_to_n_is_bounded b;
   M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` 2)
 
+let bounded_integer_of_le_3_eq
+  (b: bytes { Seq.length b == 3 } )
+: Lemma
+  (U32.v (bounded_integer_of_le 3 b) == U8.v (Seq.index b 0) + 256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1) + 256 `FStar.Mul.op_Star` U8.v (Seq.index b 2)))
+= assert_norm (pow2 8 == 256);
+  E.lemma_le_to_n_is_bounded b;
+  M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` 3)
+
 let bounded_integer_of_le_4_eq
   (b: bytes { Seq.length b == 4 } )
 : Lemma
@@ -259,6 +271,28 @@ let serialize_bounded_integer_le_2_eq
     if i = 0
     then rem
     else div % 256
+  ))
+= assert_norm (pow2 8 == 256)
+
+#pop-options
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+let serialize_bounded_integer_le_3_eq
+  (x: bounded_integer 3)
+  (i: nat { i < 3 } )
+: Lemma
+  (U8.v (Seq.index (serialize (serialize_bounded_integer_le 3) x) i) == (
+    let rem0 = U32.v x % 256 in
+    let div0 = U32.v x / 256 in
+    let rem1 = div0 % 256 in
+    let div1 = div0 / 256 in
+    if i = 0
+    then rem0
+    else if i = 1
+    then rem1
+    else div1 % 256
   ))
 = assert_norm (pow2 8 == 256)
 
@@ -301,5 +335,20 @@ let serialize_bounded_int32
     (parse_bounded_integer sz `parse_filter` in_bounds min max)
     (fun x -> (x <: bounded_int32 min max))
     (serialize_filter (serialize_bounded_integer sz) (in_bounds min max))
+    (fun x -> x)
+    ()
+
+let parse_bounded_int32_le
+  min max
+= let sz = log256' max in
+  (parse_bounded_integer_le sz `parse_filter` in_bounds min max) `parse_synth` (fun x -> (x <: bounded_int32 min max))
+
+let serialize_bounded_int32_le
+  min max
+= let sz = log256' max in
+  serialize_synth
+    (parse_bounded_integer_le sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    (serialize_filter (serialize_bounded_integer_le sz) (in_bounds min max))
     (fun x -> x)
     ()

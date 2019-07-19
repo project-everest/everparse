@@ -192,3 +192,13 @@ val serialize_bounded_int32
   (min: nat)
   (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
 : Tot (serializer (parse_bounded_int32 min max))
+
+val parse_bounded_int32_le
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+: Tot (parser (parse_bounded_int32_kind max) (bounded_int32 min max))
+
+val serialize_bounded_int32_le
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+: Tot (serializer (parse_bounded_int32_le min max))
