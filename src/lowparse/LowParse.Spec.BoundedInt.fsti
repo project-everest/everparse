@@ -55,11 +55,13 @@ val serialize_bounded_integer
   (sz: integer_size)
 : Tot (serializer (parse_bounded_integer sz))
 
+#push-options "--initial_fuel 8 --max_fuel 8 --initial_ifuel 0 --max_ifuel 0 --z3rlimit 20"
 val serialize_bounded_integer_spec
   (sz: integer_size)
   (x: bounded_integer sz)
 : Lemma
   (serialize (serialize_bounded_integer sz) x == E.n_to_be'' sz (U32.v x))
+#pop-options
 
 val parse_bounded_integer_le
   (i: integer_size)
