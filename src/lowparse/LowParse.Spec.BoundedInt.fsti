@@ -59,7 +59,8 @@ val serialize_bounded_integer_spec
   (sz: integer_size)
   (x: bounded_integer sz)
 : Lemma
-  (serialize (serialize_bounded_integer sz) x == E.n_to_be'' sz (U32.v x))
+  (let (bx : nat {bx < pow2 (8 `FStar.Mul.op_Star` sz)}) = U32.v x in
+    serialize (serialize_bounded_integer sz) x == E.n_to_be'' sz bx)
 
 val parse_bounded_integer_le
   (i: integer_size)
