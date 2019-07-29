@@ -16,7 +16,9 @@ include LowParse.Spec.Combinators
 include LowParse.Spec.BoundedInt
 
 module U32 = FStar.UInt32
+module U8 = FStar.UInt8
 module Seq = FStar.Seq
+module M = LowParse.Math
 
 let constint32
   (v: nat { 0 <= v /\ v < 4294967296 } )
@@ -28,13 +30,57 @@ let parse_constint32le_kind
 : parser_kind
 = strong_parser_kind 4 4 None
 
+let decode_int32_le
+  (b: bytes { Seq.length b == 4 } )
+: Tot (v: U32.t { 0 <= U32.v v /\ U32.v v < 4294967296 /\ U32.v v == le_to_n b} )
+= lemma_le_to_n_is_bounded b;
+  M.pow2_le_compat 32 32;
+  let res = le_to_n b in
+  assert (0 <= res /\ res < 4294967296);
+  U32.uint_to_t res
+
+let decode_int32_le_injective
+  (b1 : bytes { Seq.length b1 == 4 } )
+  (b2 : bytes { Seq.length b2 == 4 } )
+: Lemma (decode_int32_le b1 == decode_int32_le b2
+        ==>
+        b1 == b2)
+= if (decode_int32_le b1) = (decode_int32_le b2) then
+    le_to_n_inj b1 b2
+  else
+    ()
+
+let decode_int32_le_total_constant () : Lemma (make_total_constant_size_parser_precond 4 U32.t decode_int32_le)
+= Classical.forall_intro_2 decode_int32_le_injective
+
+let parse_int32_le () : Tot (parser (total_constant_size_parser_kind 4) U32.t)
+= decode_int32_le_total_constant () ;
+  make_total_constant_size_parser 4 U32.t decode_int32_le
+
+#push-options "--max_fuel 20 --z3rlimit 128"
+
+let decode_int32_le_eq
+  (b : bytes { Seq.length b == 4 } )
+: Lemma
+  (U32.v (bounded_integer_of_le 4 b) ==
+    U8.v (Seq.index b 0) + 
+    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1) + 
+    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 2) + 
+    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 3)))))
+= assert_norm (pow2 8 == 256);
+  assert_norm (8 `FStar.Mul.op_Star` 4 == 32);
+  lemma_le_to_n_is_bounded b;
+  M.pow2_le_compat 32 32
+
+#pop-options
+
 let decode_constint32_le
   (v: nat {0 <= v /\ v < 4294967296 } )
   (b: bytes { Seq.length b == 4 } )
 : Tot (option (constint32 v))
-= let v' = (le_to_n b) in
-    if v' = v then
-      Some (U32.uint_to_t v')
+= let v' = decode_int32_le b in
+    if U32.v v' = v then
+      Some v'
     else
       None
 
@@ -53,8 +99,9 @@ let decode_constint32_le_injective'
     assert ( U32.v v1 == v );
     (match res2 with
     | Some v2 ->
-      assert ( U32.v v2 == v /\ v1 == v2 );
-      le_to_n_inj b1 b2
+      assert ( U32.v v2 == v );
+      assert ( v1 == v2 );
+      decode_int32_le_injective b1 b2
     | None -> ())
   | None -> ()
 
@@ -71,27 +118,26 @@ let parse_constint32le
   make_constant_size_parser 4 (constint32 v) (decode_constint32_le v)
 
 let parse_constint32le_unfold
-  (v: nat { 0 <= v /\ v < 4294967276 } )
+  (v: nat { 0 <= v /\ v < 4294967296 } )
   (input: bytes)
 : Lemma 
   (parse (parse_constint32le v) input ==
-  (let res = parse 
-       (make_t otal_constant_size_parser 4 U32.t (fun b -> U32.uint_to_t (le_to_n b))) 
-       input in
+  (let res = parse (parse_int32_le ()) input in
      match res with
      | Some (x, consumed) ->
        if U32.v x = v && consumed = 4 then
-         res
+         Some (x, consumed)
        else
          None
      | None -> None))
-= ()
-
-(*let res = parse (make_total_constant_size_parser 4 U32.t le_to_n) input  in
-  match res with
-  | Some (x, consumed) -> ()
-  | None -> ()
-*)
+= let res = parse (parse_int32_le ()) input in
+    match res with
+    | Some (x, consumed) ->
+      if U32.v x = v && consumed = 4 then
+        ()
+      else
+        ()
+    | None -> ()
 
 let serialize_constint32le'
   (v: nat { 0 <= v /\ v < 4294967296 } )
