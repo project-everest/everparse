@@ -32,7 +32,7 @@ let parse_constint32le_kind
 
 let decode_int32_le
   (b: bytes { Seq.length b == 4 } )
-: Tot (v: U32.t { 0 <= U32.v v /\ U32.v v < 4294967296 /\ U32.v v == le_to_n b} )
+: Tot (v: U32.t { 0 <= U32.v v /\ U32.v v < 4294967296 } )
 = lemma_le_to_n_is_bounded b;
   M.pow2_le_compat 32 32;
   let res = le_to_n b in
@@ -46,7 +46,14 @@ let decode_int32_le_injective
         ==>
         b1 == b2)
 = if (decode_int32_le b1) = (decode_int32_le b2) then
+  begin
+    lemma_le_to_n_is_bounded b1;
+    lemma_le_to_n_is_bounded b2;
+    assert (U32.v (U32.uint_to_t (le_to_n b1)) == le_to_n b1);
+    assert (U32.v (U32.uint_to_t (le_to_n b2)) == le_to_n b2);
+    assert (le_to_n b1 == le_to_n b2);
     le_to_n_inj b1 b2
+  end
   else
     ()
 
@@ -57,22 +64,60 @@ let parse_int32_le () : Tot (parser (total_constant_size_parser_kind 4) U32.t)
 = decode_int32_le_total_constant () ;
   make_total_constant_size_parser 4 U32.t decode_int32_le
 
-#push-options "--max_fuel 20 --z3rlimit 128"
+let le_to_n_0_eq
+  (b : bytes { Seq.length b == 0 } )
+: Lemma (le_to_n b == 0)
+= reveal_le_to_n b
 
-let decode_int32_le_eq
+let le_to_n_1_eq
+  (b : bytes { Seq.length b == 1 } )
+: Lemma (le_to_n b == 
+    U8.v (Seq.index b 0))
+= assert_norm (pow2 8 == 256);
+  reveal_le_to_n b;
+  le_to_n_0_eq (Seq.tail b)
+
+let le_to_n_2_eq
+  (b : bytes { Seq.length b == 2 } )
+: Lemma (le_to_n b == 
+    U8.v (Seq.index b 0) + 
+    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1)))
+= assert_norm (pow2 8 == 256);
+  reveal_le_to_n b;
+  le_to_n_1_eq (Seq.tail b)
+
+let le_to_n_3_eq
+  (b : bytes { Seq.length b == 3 } )
+: Lemma (le_to_n b == 
+    U8.v (Seq.index b 0) + 
+    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1) + 
+    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 2))))
+= assert_norm (pow2 8 == 256);
+  reveal_le_to_n b;
+  le_to_n_2_eq (Seq.tail b)
+
+let le_to_n_4_eq
   (b : bytes { Seq.length b == 4 } )
-: Lemma
-  (U32.v (bounded_integer_of_le 4 b) ==
+: Lemma (le_to_n b == 
     U8.v (Seq.index b 0) + 
     256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1) + 
     256 `FStar.Mul.op_Star` (U8.v (Seq.index b 2) + 
     256 `FStar.Mul.op_Star` (U8.v (Seq.index b 3)))))
 = assert_norm (pow2 8 == 256);
-  assert_norm (8 `FStar.Mul.op_Star` 4 == 32);
-  lemma_le_to_n_is_bounded b;
-  M.pow2_le_compat 32 32
+  reveal_le_to_n b;
+  le_to_n_3_eq (Seq.tail b)
 
-#pop-options
+let decode_int32_le_eq
+  (b : bytes { Seq.length b == 4 } )
+: Lemma
+  (U32.v (decode_int32_le b) ==
+    U8.v (Seq.index b 0) + 
+    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1) + 
+    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 2) + 
+    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 3)))))
+= lemma_le_to_n_is_bounded b;
+  assert (U32.v (decode_int32_le b) == le_to_n b);
+  le_to_n_4_eq b
 
 let decode_constint32_le
   (v: nat {0 <= v /\ v < 4294967296 } )
