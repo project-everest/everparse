@@ -439,3 +439,74 @@ let jump_bounded_int32_le_3
 let jump_bounded_int32_le_4
   min32 max32
 = jump_bounded_int32_le' min32 max32 4
+
+inline_for_extraction
+let write_bounded_int32_le'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz: nat { sz == log256' (U32.v max32) })
+: Tot (leaf_writer_strong (serialize_bounded_int32_le (U32.v min32) (U32.v max32)))
+= [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  write_synth
+    (write_filter
+      (write_bounded_integer_le sz)
+      (in_bounds min max))
+    (fun x -> (x <: bounded_int32 min max))
+    (fun x -> x)
+    (fun x -> x)
+    ()
+
+let write_bounded_int32_le_1
+  min32 max32
+= write_bounded_int32_le' min32 max32 1
+
+let write_bounded_int32_le_2
+  min32 max32
+= write_bounded_int32_le' min32 max32 2
+
+let write_bounded_int32_le_3
+  min32 max32
+= write_bounded_int32_le' min32 max32 3
+
+let write_bounded_int32_le_4
+  min32 max32
+= write_bounded_int32_le' min32 max32 4
+
+inline_for_extraction
+let read_bounded_int32_le'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz: nat { sz == log256' (U32.v max32) })
+: Tot (leaf_reader (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
+= 
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  read_synth
+    (parse_filter (parse_bounded_integer_le sz) (in_bounds min max))
+    (fun x -> (x <: bounded_int32 min max))
+    (fun x -> x)
+    (read_filter
+      (read_bounded_integer_le sz)
+      (in_bounds min max))
+    ()
+
+let read_bounded_int32_le_1
+  min32 max32
+= read_bounded_int32_le' min32 max32 1
+
+let read_bounded_int32_le_2
+  min32 max32
+= read_bounded_int32_le' min32 max32 2
+
+let read_bounded_int32_le_3
+  min32 max32
+= read_bounded_int32_le' min32 max32 3
+
+let read_bounded_int32_le_4
+  min32 max32
+= read_bounded_int32_le' min32 max32 4
