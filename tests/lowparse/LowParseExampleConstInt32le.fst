@@ -53,6 +53,10 @@ let unit_test_constint32le_b_reader : leaf_reader (parse_constint32le 2147483647
 = fun #rrel #rel input pos ->
     read_constint32le 2147483647ul input pos
 
+inline_for_extraction
+let unit_test_constint32le_b_reader2 : leaf_reader (parse_constint32le 2147483647)
+= read_constint32le 2147483647ul
+
 val main: FStar.Int32.t -> LowStar.Buffer.buffer (LowStar.Buffer.buffer C.char) ->
   FStar.HyperStack.ST.Stack C.exit_code (fun _ -> true) (fun _ _ _ -> true)
 

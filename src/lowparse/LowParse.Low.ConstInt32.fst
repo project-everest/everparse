@@ -5,9 +5,9 @@ module LowParse.Low.ConstInt32
 include FStar.Endianness
 
 include LowParse.Spec.ConstInt32
+include LowParse.Spec.Int32le
 include LowParse.Low.Combinators
-
-include LowParse.Low.BoundedInt
+include LowParse.Low.Int32le
 
 module U32 = FStar.UInt32
 module U8 = FStar.UInt8
@@ -24,23 +24,11 @@ let valid_constint32le
   (pos: U32.t)
 : Lemma (valid (parse_constint32le v) h input pos 
     <==> 
-    (valid (parse_int32_le ()) h input pos /\
-    U32.v (contents (parse_int32_le ()) h input pos) == v))
+    (valid parse_int32le h input pos /\
+    U32.v (contents parse_int32le h input pos) == v))
 = valid_facts (parse_constint32le v) h input pos;
-  valid_facts (parse_int32_le ()) h input pos;
+  valid_facts parse_int32le h input pos;
   parse_constint32le_unfold v (bytes_of_slice_from h input pos)
-
-inline_for_extraction
-let read_int32_le : (leaf_reader (parse_int32_le ()))
-= make_total_constant_size_reader 4 4ul decode_int32_le (decode_int32_le_total_constant ()) (fun #rrel #rel b pos ->
-    let h = HST.get () in
-    [@inline_let] let _ = decode_int32_le_eq (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 4)) in
-    let r0 = B.index b pos in
-    let r1 = B.index b (pos `U32.add` 1ul) in
-    let r2 = B.index b (pos `U32.add` 2ul) in
-    let r3 = B.index b (pos `U32.add` 3ul) in
-    Cast.uint8_to_uint32 r0 `U32.add` (256ul `U32.mul` (Cast.uint8_to_uint32 r1 `U32.add` (256ul `U32.mul` (Cast.uint8_to_uint32 r2 `U32.add` (256ul `U32.mul` Cast.uint8_to_uint32 r3)))))
-  )
 
 inline_for_extraction
 let validate_constint32le_slow
@@ -50,13 +38,13 @@ let validate_constint32le_slow
   let h = HST.get() in
     let _ =
       valid_constint32le (U32.v v) h input pos;    
-      valid_equiv (parse_int32_le ()) h input pos
+      valid_equiv parse_int32le h input pos
     in
   if U32.lt (input.len `U32.sub` pos) 4ul
   then
     validator_error_not_enough_data
   else
-    let v' = read_int32_le input pos in
+    let v' = read_int32le input pos in
     if U32.eq v v' then
       pos `U32.add` 4ul
     else
@@ -70,30 +58,30 @@ let read_constint32le
     v
 
 inline_for_extraction
-let decompose_int32_le_0
+let decompose_int32le_0
   (v: nat { 0 <= v /\ v < 4294967296 } )
 : Tot (b0: nat { 0 <= b0 /\ b0 < 256 } )
 = v % 256
 
 inline_for_extraction
-let decompose_int32_le_1
+let decompose_int32le_1
   (v: nat { 0 <= v /\ v < 4294967296 } )
 : Tot (b1: nat { 0 <= b1 /\ b1 < 256 } )
 = v / 256 % 256
 
 inline_for_extraction
-let decompose_int32_le_2
+let decompose_int32le_2
   (v: nat { 0 <= v /\ v < 4294967296 } )
 : Tot (b2: nat { 0 <= b2 /\ b2 < 256 } )
 = v / 65536 % 256
 
 inline_for_extraction
-let decompose_int32_le_3
+let decompose_int32le_3
   (v: nat { 0 <= v /\ v < 4294967296 } )
 : Tot (b3: nat { 0 <= b3 /\ b3 < 256 } )
 = v / 16777216
 
-let compose_int32_le
+let compose_int32le
   (b0: nat { 0 <= b0 /\ b0 < 256 } )
   (b1: nat { 0 <= b1 /\ b1 < 256 } )
   (b2: nat { 0 <= b2 /\ b2 < 256 } )
@@ -106,7 +94,7 @@ let compose_int32_le
 
 let decompose_compose_equiv
   (v: nat { 0 <= v /\ v < 4294967296 } )
-: Lemma (compose_int32_le (decompose_int32_le_0 v) (decompose_int32_le_1 v) (decompose_int32_le_2 v) (decompose_int32_le_3 v) == v)
+: Lemma (compose_int32le (decompose_int32le_0 v) (decompose_int32le_1 v) (decompose_int32le_2 v) (decompose_int32le_3 v) == v)
 = ()
 
 inline_for_extraction
@@ -130,8 +118,8 @@ let compare_by_bytes'
   (b1: U8.t { 0 <= U8.v b1 /\ U8.v b1 < 256 } )
   (b2: U8.t { 0 <= U8.v b2 /\ U8.v b2 < 256 } )
   (b3: U8.t { 0 <= U8.v b3 /\ U8.v b3 < 256 } )
-= (compose_int32_le (U8.v a0) (U8.v a1) (U8.v a2) (U8.v a3)) =
-  (compose_int32_le (U8.v b0) (U8.v b1) (U8.v b2) (U8.v b3))
+= (compose_int32le (U8.v a0) (U8.v a1) (U8.v a2) (U8.v a3)) =
+  (compose_int32le (U8.v b0) (U8.v b1) (U8.v b2) (U8.v b3))
 
 #push-options "--max_fuel 5 --z3rlimit 16"
 
@@ -147,8 +135,8 @@ let compare_by_bytes_equiv
 : Lemma 
   ((compare_by_bytes a0 a1 a2 a3 b0 b1 b2 b3) ==
     compare_by_bytes' a0 a1 a2 a3 b0 b1 b2 b3)
-= let a = compose_int32_le (U8.v a0) (U8.v a1) (U8.v a2) (U8.v a3) in
-  let b = compose_int32_le (U8.v b0) (U8.v b1) (U8.v b2) (U8.v b3) in
+= let a = compose_int32le (U8.v a0) (U8.v a1) (U8.v a2) (U8.v a3) in
+  let b = compose_int32le (U8.v b0) (U8.v b1) (U8.v b2) (U8.v b3) in
   decompose_compose_equiv a;
   decompose_compose_equiv b
 
@@ -159,22 +147,22 @@ let decompose_compare
   (v2 : nat { 0 <= v2 /\ v2 < 4294967296 } )
 : Lemma ( (v1 = v2) 
     == (compare_by_bytes
-      (U8.uint_to_t (decompose_int32_le_0 v1))
-      (U8.uint_to_t (decompose_int32_le_1 v1))
-      (U8.uint_to_t (decompose_int32_le_2 v1))
-      (U8.uint_to_t (decompose_int32_le_3 v1))
-      (U8.uint_to_t (decompose_int32_le_0 v2))
-      (U8.uint_to_t (decompose_int32_le_1 v2))
-      (U8.uint_to_t (decompose_int32_le_2 v2))
-      (U8.uint_to_t (decompose_int32_le_3 v2))))
-= let a0 = U8.uint_to_t (decompose_int32_le_0 v1) in
-  let a1 = U8.uint_to_t (decompose_int32_le_1 v1) in
-  let a2 = U8.uint_to_t (decompose_int32_le_2 v1) in
-  let a3 = U8.uint_to_t (decompose_int32_le_3 v1) in
-  let b0 = U8.uint_to_t (decompose_int32_le_0 v2) in
-  let b1 = U8.uint_to_t (decompose_int32_le_1 v2) in
-  let b2 = U8.uint_to_t (decompose_int32_le_2 v2) in
-  let b3 = U8.uint_to_t (decompose_int32_le_3 v2) in
+      (U8.uint_to_t (decompose_int32le_0 v1))
+      (U8.uint_to_t (decompose_int32le_1 v1))
+      (U8.uint_to_t (decompose_int32le_2 v1))
+      (U8.uint_to_t (decompose_int32le_3 v1))
+      (U8.uint_to_t (decompose_int32le_0 v2))
+      (U8.uint_to_t (decompose_int32le_1 v2))
+      (U8.uint_to_t (decompose_int32le_2 v2))
+      (U8.uint_to_t (decompose_int32le_3 v2))))
+= let a0 = U8.uint_to_t (decompose_int32le_0 v1) in
+  let a1 = U8.uint_to_t (decompose_int32le_1 v1) in
+  let a2 = U8.uint_to_t (decompose_int32le_2 v1) in
+  let a3 = U8.uint_to_t (decompose_int32le_3 v1) in
+  let b0 = U8.uint_to_t (decompose_int32le_0 v2) in
+  let b1 = U8.uint_to_t (decompose_int32le_1 v2) in
+  let b2 = U8.uint_to_t (decompose_int32le_2 v2) in
+  let b3 = U8.uint_to_t (decompose_int32le_3 v2) in
   compare_by_bytes_equiv a0 a1 a2 a3 b0 b1 b2 b3;
   decompose_compose_equiv v1;
   decompose_compose_equiv v2
@@ -190,17 +178,17 @@ let inplace_compare
   (input: slice rrel rel)
   (pos: U32.t)
 : HST.Stack bool
-  (requires (fun h -> valid (parse_int32_le ()) h input pos))
+  (requires (fun h -> valid parse_int32le h input pos))
   (ensures (fun h res h' -> 
     B.modifies B.loc_none h h' /\
-    res == (U32.eq (contents (parse_int32_le ()) h input pos) v)))
+    res == (U32.eq (contents parse_int32le h input pos) v)))
 = let h = HST.get () in
   let b = input.base in
   [@inline_let] let _ = 
-    decode_int32_le_eq (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 4));
-    decode_int32_le_total_constant ();
-    valid_facts (parse_int32_le ()) h input pos;
-    [@inline_let] let v' = contents (parse_int32_le ()) h input pos in
+    decode_int32le_eq (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 4));
+    decode_int32le_total_constant ();
+    valid_facts parse_int32le h input pos;
+    [@inline_let] let v' = contents parse_int32le h input pos in
     decompose_compose_equiv (U32.v v);
     decompose_compose_equiv (U32.v v');
     decompose_compare (U32.v v) (U32.v v')
@@ -209,10 +197,10 @@ let inplace_compare
   let r1 = B.index b (pos `U32.add` 1ul) in
   let r2 = B.index b (pos `U32.add` 2ul) in
   let r3 = B.index b (pos `U32.add` 3ul) in
-  [@inline_let] let b0 = U8.uint_to_t (decompose_int32_le_0 (U32.v v)) in
-  [@inline_let] let b1 = U8.uint_to_t (decompose_int32_le_1 (U32.v v)) in
-  [@inline_let] let b2 = U8.uint_to_t (decompose_int32_le_2 (U32.v v)) in
-  [@inline_let] let b3 = U8.uint_to_t (decompose_int32_le_3 (U32.v v)) in
+  [@inline_let] let b0 = U8.uint_to_t (decompose_int32le_0 (U32.v v)) in
+  [@inline_let] let b1 = U8.uint_to_t (decompose_int32le_1 (U32.v v)) in
+  [@inline_let] let b2 = U8.uint_to_t (decompose_int32le_2 (U32.v v)) in
+  [@inline_let] let b3 = U8.uint_to_t (decompose_int32le_3 (U32.v v)) in
   compare_by_bytes r0 r1 r2 r3 b0 b1 b2 b3
 
 #pop-options
@@ -225,7 +213,7 @@ let validate_constint32le
   let h = HST.get() in
     let _ =
       valid_constint32le (U32.v v) h input pos;    
-      valid_equiv (parse_int32_le ()) h input pos
+      valid_equiv parse_int32le h input pos
     in
   if U32.lt (input.len `U32.sub` pos) 4ul
   then
