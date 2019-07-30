@@ -202,7 +202,32 @@ inline_for_extraction
 let unit_test_struct_validator : validator unit_test_struct_parser
 = validate_synth unit_test_data_validator unit_test_synth_struct ()
 
+(* Testing inline mechanisms *)
+
+inline_for_extraction
+noextract
+let fancy_math
+  (x : nat)
+: Tot nat
+= x + x + 256 - x - x
+
+inline_for_extraction
+noextract
+let fancy_math2
+  (x : U32.t)
+: Tot U32.t
+= U32.uint_to_t ((U32.v x) + 1 - 1)
+
+inline_for_extraction
+let unit_test_bounded_int_validator : validator (parse_bounded_int32 0 100)
+= fun #rrel #rel input pos -> 
+  if (U32.v 100ul) < (fancy_math 100) then
+    validate_bounded_int32_1 0ul (fancy_math2 100ul) input pos
+  else
+    validate_bounded_int32 0ul 100ul input pos
+    
 val main: FStar.Int32.t -> LowStar.Buffer.buffer (LowStar.Buffer.buffer C.char) ->
   FStar.HyperStack.ST.Stack C.exit_code (fun _ -> true) (fun _ _ _ -> true)
 
 let main _ _ = C.EXIT_SUCCESS
+

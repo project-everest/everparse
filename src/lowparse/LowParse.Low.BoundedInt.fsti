@@ -151,11 +151,11 @@ let write_bounded_int32
   (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
 : Tot (leaf_writer_strong (serialize_bounded_int32 (U32.v min32) (U32.v max32)))
 = fun input #rrel #rel out pos -> (
-  if max32 `U32.lt` 256ul
+  if (U32.v max32) < 256
   then write_bounded_int32_1 min32 max32 input out pos
-  else if max32 `U32.lt` 65536ul
+  else if (U32.v max32) < 65536
   then write_bounded_int32_2 min32 max32 input out pos
-  else if max32 `U32.lt` 16777216ul
+  else if (U32.v max32) < 16777216
   then write_bounded_int32_3 min32 max32 input out pos
   else write_bounded_int32_4 min32 max32 input out pos
   )
@@ -186,11 +186,11 @@ let read_bounded_int32
   (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
 : Tot (leaf_reader (parse_bounded_int32 (U32.v min32) (U32.v max32)))
 = fun #rrel #rel sl pos -> (
-  if max32 `U32.lt` 256ul
+  if (U32.v max32) < 256
   then read_bounded_int32_1 min32 max32 sl pos
-  else if max32 `U32.lt` 65536ul
+  else if (U32.v max32) < 65536
   then read_bounded_int32_2 min32 max32 sl pos
-  else if max32 `U32.lt` 16777216ul
+  else if (U32.v max32) < 16777216
   then read_bounded_int32_3 min32 max32 sl pos
   else read_bounded_int32_4 min32 max32 sl pos
   )
@@ -221,11 +221,11 @@ let validate_bounded_int32
   (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
 : Tot (validator (parse_bounded_int32 (U32.v min32) (U32.v max32)))
 = fun #rrel #rel sl pos -> (
-  if max32 `U32.lt` 256ul
+  if (U32.v max32) < 256
   then validate_bounded_int32_1 min32 max32 sl pos
-  else if max32 `U32.lt` 65536ul
+  else if (U32.v max32) < 65536
   then validate_bounded_int32_2 min32 max32 sl pos
-  else if max32 `U32.lt` 16777216ul
+  else if (U32.v max32) < 16777216
   then validate_bounded_int32_3 min32 max32 sl pos
   else validate_bounded_int32_4 min32 max32 sl pos
   )
@@ -256,11 +256,11 @@ let jump_bounded_int32
   (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
 : Tot (jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
 = fun #rrel #rel sl pos -> (
-  if max32 `U32.lt` 256ul
+  if (U32.v max32) < 256
   then jump_bounded_int32_1 min32 max32 sl pos
-  else if max32 `U32.lt` 65536ul
+  else if (U32.v max32) < 65536
   then jump_bounded_int32_2 min32 max32 sl pos
-  else if max32 `U32.lt` 16777216ul
+  else if (U32.v max32) < 16777216
   then jump_bounded_int32_3 min32 max32 sl pos
   else jump_bounded_int32_4 min32 max32 sl pos
   )
@@ -369,11 +369,11 @@ let validate_bounded_int32_le
   (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
 : Tot (validator (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
 = fun #rrel #rel sl pos -> (
-  if max32 `U32.lt` 256ul
+  if (U32.v max32) < 256
   then validate_bounded_int32_le_1 min32 max32 sl pos
-  else if max32 `U32.lt` 65536ul
+  else if (U32.v max32) < 65536
   then validate_bounded_int32_le_2 min32 max32 sl pos
-  else if max32 `U32.lt` 16777216ul
+  else if (U32.v max32) < 16777216
   then validate_bounded_int32_le_3 min32 max32 sl pos
   else validate_bounded_int32_le_4 min32 max32 sl pos
   )
@@ -404,11 +404,11 @@ let jump_bounded_int32_le
   (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
 : Tot (jumper (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
 = fun #rrel #rel sl pos -> (
-  if max32 `U32.lt` 256ul
+  if (U32.v max32) < 256
   then jump_bounded_int32_le_1 min32 max32 sl pos
-  else if max32 `U32.lt` 65536ul
+  else if (U32.v max32) < 65536
   then jump_bounded_int32_le_2 min32 max32 sl pos
-  else if max32 `U32.lt` 16777216ul
+  else if (U32.v max32) < 16777216
   then jump_bounded_int32_le_3 min32 max32 sl pos
   else jump_bounded_int32_le_4 min32 max32 sl pos
   )
