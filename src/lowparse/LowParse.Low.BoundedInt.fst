@@ -510,3 +510,15 @@ let read_bounded_int32_le_3
 let read_bounded_int32_le_4
   min32 max32
 = read_bounded_int32_le' min32 max32 4
+
+let validate_bounded_int32_le_fixed_size
+  min32 max32
+= validate_filter (validate_u32_le ()) read_u32_le (in_bounds (U32.v min32) (U32.v max32)) (fun x -> not (x `U32.lt` min32 || max32 `U32.lt` x))
+
+let read_bounded_int32_le_fixed_size
+  min32 max32
+= read_filter read_u32_le (in_bounds (U32.v min32) (U32.v max32))
+
+let write_bounded_int32_le_fixed_size
+  min32 max32
+= write_filter write_u32_le (in_bounds (U32.v min32) (U32.v max32))

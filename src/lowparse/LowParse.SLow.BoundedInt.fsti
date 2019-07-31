@@ -270,3 +270,14 @@ let serialize32_bounded_int32_le
   then serialize32_bounded_int32_le_3 min32 max32 input
   else serialize32_bounded_int32_le_4 min32 max32 input
   )
+
+val parse32_bounded_int32_le_fixed_size
+  (min32: U32.t)
+  (max32: U32.t { U32.v min32 <= U32.v max32 })
+: Tot (parser32 (parse_bounded_int32_le_fixed_size (U32.v min32) (U32.v max32)))
+
+val serialize32_bounded_int32_le_fixed_size
+  (min32: U32.t)
+  (max32: U32.t { U32.v min32 <= U32.v max32 })
+: Tot (serializer32 (serialize_bounded_int32_le_fixed_size (U32.v min32) (U32.v max32)))
+  

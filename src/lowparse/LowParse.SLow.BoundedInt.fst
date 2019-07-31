@@ -411,3 +411,11 @@ let serialize32_bounded_int32_le_3
 let serialize32_bounded_int32_le_4
   min max
 = serialize32_bounded_int32_le' min max 4ul
+
+let parse32_bounded_int32_le_fixed_size
+  min32 max32
+= parse32_filter parse32_u32_le (in_bounds (U32.v min32) (U32.v max32)) (fun x -> not (x `U32.lt` min32 || max32 `U32.lt` x))
+
+let serialize32_bounded_int32_le_fixed_size
+  min32 max32
+= serialize32_filter serialize32_u32_le (in_bounds (U32.v min32) (U32.v max32))
