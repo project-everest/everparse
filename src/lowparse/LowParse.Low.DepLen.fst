@@ -188,7 +188,7 @@ let validate_deplen
     else
       let pos_end = pos_payload `U32.add` payload_len in
       let _ = valid_exact_valid_pos_equiv pp h input pos_payload pos_end in
-      let input' = { base = input.base; len = pos_end; } in
+      [@inline_let] let input' = { base = input.base; len = pos_end; } in
       let pos_end' = pv input' pos_payload in
       if validator_max_length `U32.lt` pos_end' then
         pos_end'
