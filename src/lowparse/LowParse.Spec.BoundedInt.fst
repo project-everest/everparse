@@ -92,7 +92,6 @@ sz
 
 let serialize_bounded_integer_spec sz x = ()
 
-#pop-options
 
 let bounded_integer_of_le
   (i: integer_size)
@@ -117,6 +116,8 @@ let bounded_integer_of_le_injective'
     assert (E.le_to_n b1 == E.le_to_n b2);
     E.le_to_n_inj b1 b2
   end else ()
+
+#pop-options
 
 let bounded_integer_of_le_injective
   (i: integer_size)

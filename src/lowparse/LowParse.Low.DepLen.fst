@@ -160,7 +160,7 @@ let deplen_func
 inline_for_extraction
 let validate_deplen
   (min: nat)
-  (max: nat { min <= max /\ max < 4294967276 })
+  (max: nat { min <= max /\ max < 4294967296 })
   (#hk: parser_kind)
   (#ht: Type)
   (#hp: parser hk ht)
