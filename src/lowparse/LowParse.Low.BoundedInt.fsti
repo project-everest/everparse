@@ -495,3 +495,25 @@ let read_bounded_int32_le
   then read_bounded_int32_le_3 min32 max32 sl pos
   else read_bounded_int32_le_4 min32 max32 sl pos
   )
+
+val validate_bounded_int32_le_fixed_size
+  (min32: U32.t)
+  (max32: U32.t { U32.v min32 <= U32.v max32 })
+: Tot (validator (parse_bounded_int32_le_fixed_size (U32.v min32) (U32.v max32)))
+
+inline_for_extraction
+let jump_bounded_int32_le_fixed_size
+  (min32: U32.t)
+  (max32: U32.t { U32.v min32 <= U32.v max32 })
+: Tot (jumper (parse_bounded_int32_le_fixed_size (U32.v min32) (U32.v max32)))
+= jump_constant_size (parse_bounded_int32_le_fixed_size (U32.v min32) (U32.v max32)) 4ul ()
+
+val read_bounded_int32_le_fixed_size
+  (min32: U32.t)
+  (max32: U32.t { U32.v min32 <= U32.v max32 })
+: Tot (leaf_reader (parse_bounded_int32_le_fixed_size (U32.v min32) (U32.v max32)))
+
+val write_bounded_int32_le_fixed_size
+  (min32: U32.t)
+  (max32: U32.t { U32.v min32 <= U32.v max32 })
+: Tot (leaf_writer_strong (serialize_bounded_int32_le_fixed_size (U32.v min32) (U32.v max32)))

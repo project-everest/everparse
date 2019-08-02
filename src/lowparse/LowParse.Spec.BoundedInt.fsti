@@ -204,3 +204,24 @@ val serialize_bounded_int32_le
   (min: nat)
   (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
 : Tot (serializer (parse_bounded_int32_le min max))
+
+// unfold
+inline_for_extraction
+let parse_bounded_int32_fixed_size_kind
+: parser_kind =
+  {
+    parser_kind_low = 4;
+    parser_kind_high = Some 4;
+    parser_kind_metadata = None;
+    parser_kind_subkind = Some ParserStrong;
+  }
+
+val parse_bounded_int32_le_fixed_size
+  (min: nat)
+  (max: nat { min <= max })
+: Tot (parser parse_bounded_int32_fixed_size_kind (bounded_int32 min max))
+
+val serialize_bounded_int32_le_fixed_size
+  (min: nat)
+  (max: nat { min <= max })
+: Tot (serializer (parse_bounded_int32_le_fixed_size min max))

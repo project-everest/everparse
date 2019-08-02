@@ -353,3 +353,11 @@ let serialize_bounded_int32_le
     (serialize_filter (serialize_bounded_integer_le sz) (in_bounds min max))
     (fun x -> x)
     ()
+
+let parse_bounded_int32_le_fixed_size
+  min max
+= parse_filter parse_u32_le (in_bounds min max)
+
+let serialize_bounded_int32_le_fixed_size
+  min max
+= serialize_filter serialize_u32_le (in_bounds min max)
