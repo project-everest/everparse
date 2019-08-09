@@ -230,6 +230,8 @@ let serialize32_bounded_integer_le_3
     B32.create 1ul rem2
   ) <: (res: bytes32 { serializer32_correct' (serialize_bounded_integer_le 3) x res } ))
 
+#push-options "--z3rlimit 16"
+
 let serialize32_bounded_integer_le_4
 = fun (x: bounded_integer 4) -> ((
     [@inline_let] let _ =
@@ -248,6 +250,8 @@ let serialize32_bounded_integer_le_4
     (B32.create 1ul rem0 `B32.append` B32.create 1ul rem1) `B32.append`
     (B32.create 1ul rem2 `B32.append` B32.create 1ul rem3)
   ) <: (res: bytes32 { serializer32_correct' (serialize_bounded_integer_le 4) x res } ))
+
+#pop-options
 
 let serialize32_u16_le =
   serialize32_synth' 
