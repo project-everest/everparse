@@ -1998,10 +1998,82 @@ let validator_error_not_enough_data : validator_error = normalize_term (validato
 
 [@"opaque_to_smt"] // to hide the modulo operation
 inline_for_extraction
+abstract
 let uint64_to_uint32
   (x: U64.t { U64.v x <= U64.v validator_max_length } )
 : Tot (y: U32.t { U32.v y == U64.v x })
 = Cast.uint64_to_uint32 x
+
+private
+noextract
+inline_for_extraction
+abstract
+noeq
+type _uint64_as_uint32_pair = {
+  _uint64_to_uint32_low: U64.t -> Tot U32.t;
+  _uint64_to_uint32_high: U64.t -> Tot U32.t;
+  _uint32_pair_to_uint64: (low: U32.t) -> (high: U32.t) -> Tot U64.t;
+  _uint32_pair_to_uint64_high_zero: (low: U32.t) -> Lemma (U64.v (_uint32_pair_to_uint64 low 0ul) == U32.v low);
+  _uint32_pair_to_uint64_high_pos: (low: U32.t) -> (high: U32.t) -> Lemma (U32.v high > 0 ==> U64.v (_uint32_pair_to_uint64 low high) > U64.v validator_max_length);
+  _uint32_pair_to_uint64_correct: (x: U64.t) -> Lemma (_uint32_pair_to_uint64 (_uint64_to_uint32_low x) (_uint64_to_uint32_high x) == x);
+  _uint64_to_uint32_low_correct: (low: U32.t) -> (high: U32.t) -> Lemma (_uint64_to_uint32_low (_uint32_pair_to_uint64 low high) == low);
+  _uint64_to_uint32_high_correct: (low: U32.t) -> (high: U32.t) -> Lemma (_uint64_to_uint32_high (_uint32_pair_to_uint64 low high) == high);
+  _uint64_to_uint32_low_uint64_to_uint32: (x: U64.t { U64.v x <= U64.v validator_max_length }) -> Lemma (_uint64_to_uint32_low x == uint64_to_uint32 x);
+}
+
+[@"opaque_to_smt"]
+private
+noextract
+inline_for_extraction
+abstract
+let uint64_as_uint32_pair : _uint64_as_uint32_pair =
+  [@inline_let]
+  let low (x: U64.t) : Tot U32.t = Cast.uint64_to_uint32 x in
+  [@inline_let]
+  let high (x: U64.t) : Tot U32.t = Cast.uint64_to_uint32 (x `U64.div` 4294967296uL) in
+  [@inline_let]
+  let pair (low high: U32.t) : Tot U64.t = Cast.uint32_to_uint64 low `U64.add` (Cast.uint32_to_uint64 high `U64.mul` 4294967296uL) in
+  {
+    _uint64_to_uint32_low = low;
+    _uint64_to_uint32_high = high;
+    _uint32_pair_to_uint64 = pair;
+    _uint32_pair_to_uint64_high_zero = (fun low -> ());
+    _uint32_pair_to_uint64_high_pos = (fun low high -> ());
+    _uint32_pair_to_uint64_correct = (fun x -> ());
+    _uint64_to_uint32_low_correct = (fun low high -> ());
+    _uint64_to_uint32_high_correct = (fun low high -> ());
+    _uint64_to_uint32_low_uint64_to_uint32 = (fun x -> ());
+  }
+
+inline_for_extraction
+abstract
+let uint64_to_uint32_low: U64.t -> Tot U32.t = uint64_as_uint32_pair._uint64_to_uint32_low
+
+inline_for_extraction
+abstract
+let uint64_to_uint32_high: U64.t -> Tot U32.t = uint64_as_uint32_pair._uint64_to_uint32_high
+
+inline_for_extraction
+abstract
+let uint32_pair_to_uint64: U32.t -> U32.t -> Tot U64.t = uint64_as_uint32_pair._uint32_pair_to_uint64
+
+abstract
+let uint32_pair_to_uint64_high_zero: (low: U32.t) -> Lemma (U64.v (uint32_pair_to_uint64 low 0ul) == U32.v low) = uint64_as_uint32_pair._uint32_pair_to_uint64_high_zero
+
+abstract
+let uint32_pair_to_uint64_high_pos: (low: U32.t) -> (high: U32.t) -> Lemma (U32.v high > 0 ==> U64.v (uint32_pair_to_uint64 low high) > U64.v validator_max_length) = uint64_as_uint32_pair._uint32_pair_to_uint64_high_pos
+
+abstract
+let uint32_pair_to_uint64_correct: (x: U64.t) -> Lemma (uint32_pair_to_uint64 (uint64_to_uint32_low x) (uint64_to_uint32_high x) == x) = uint64_as_uint32_pair._uint32_pair_to_uint64_correct
+
+abstract
+let uint64_to_uint32_low_correct: (low: U32.t) -> (high: U32.t) -> Lemma (uint64_to_uint32_low (uint32_pair_to_uint64 low high) == low) = uint64_as_uint32_pair._uint64_to_uint32_low_correct
+
+abstract
+let uint64_to_uint32_high_correct: (low: U32.t) -> (high: U32.t) -> Lemma (uint64_to_uint32_high (uint32_pair_to_uint64 low high) == high) = uint64_as_uint32_pair._uint64_to_uint32_high_correct
+
+abstract
+let uint64_to_uint32_low_uint64_to_uint32: (x: U64.t { U64.v x <= U64.v validator_max_length }) -> Lemma (uint64_to_uint32_low x == uint64_to_uint32 x) = uint64_as_uint32_pair._uint64_to_uint32_low_uint64_to_uint32
 
 [@unifier_hint_injective]
 inline_for_extraction
