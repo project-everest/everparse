@@ -2009,6 +2009,33 @@ let validator (#k: parser_kind) (#t: Type) (p: parser k t) : Tot Type =
       (~ (valid p h sl pos))
   )))
 
+inline_for_extraction
+let validate
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v: validator p)
+  (#rrel: _)
+  (#rel: _)
+  (b: B.mbuffer byte rrel rel)
+  (len: U32.t)
+: HST.Stack bool
+  (requires (fun h ->
+    B.live h b /\
+    U32.v len <= B.length b
+  ))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\ (
+    let sl = make_slice b len in
+    (res == true <==> (U32.v len <= U32.v validator_max_length /\ valid p h sl 0ul))
+  )))
+= if validator_max_length `U32.lt` len
+  then false
+  else
+    [@inline_let]
+    let sl = make_slice b len in
+    v sl 0ul `U32.lte` validator_max_length
+
 let valid_total_constant_size
   (h: HS.mem)
   (#k: parser_kind)
