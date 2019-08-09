@@ -17,4 +17,6 @@ Example11
 Example12
 ExampleMono
 ExamplePair
+ExampleConstInt32le
+ExampleDepLen
 .fstar-out
