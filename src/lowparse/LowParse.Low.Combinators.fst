@@ -6,6 +6,8 @@ module B = LowStar.Monotonic.Buffer
 module U32 = FStar.UInt32
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
+module U64 = FStar.UInt64
+module Cast = FStar.Int.Cast
 
 #set-options "--z3rlimit 16"
 
@@ -78,11 +80,12 @@ let validate_nondep_then
   let h = HST.get () in
   [@inline_let] let _ = valid_nondep_then h p1 p2 input pos in
   let pos1 = p1' input pos in
-  if pos1 `U32.gt` validator_max_length
+  if pos1 `U64.gt` validator_max_length
   then begin
     pos1
   end
   else
+    let pos1 = uint64_to_uint32 pos1 in
     [@inline_let] let _ = valid_facts p2 h input pos1 in
     p2' input pos1
 
@@ -626,7 +629,7 @@ let validate_filter
   let h = HST.get () in
   [@inline_let] let _ = valid_filter h p f input pos in
   let res = v32 input pos in
-  if res `U32.gt` validator_max_length
+  if res `U64.gt` validator_max_length
   then res
   else
     let va = p32 input pos in
@@ -801,12 +804,13 @@ let validate_filter_and_then
     valid_facts p1 h input pos
   in
   let res = v1 input pos in
-  if validator_max_length `U32.lt` res
+  if validator_max_length `U64.lt` res
   then res
   else
     let va = p1' input pos in
     if f' va
     then
+      let res = uint64_to_uint32 res in
       [@inline_let]
       let _ = valid_facts (p2 va) h input res in
       v2 va input res

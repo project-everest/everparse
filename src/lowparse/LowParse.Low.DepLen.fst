@@ -8,6 +8,8 @@ module B = LowStar.Monotonic.Buffer
 module U32 = FStar.UInt32
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
+module Cast = FStar.Int.Cast
+module U64 = FStar.UInt64
 
 let valid_exact_valid_pos_equiv
   (#k: parser_kind)
@@ -179,9 +181,10 @@ let validate_deplen
       valid_deplen min max hp dlf ps input pos h
     in
   let pos_payload = hv input pos in
-  if validator_max_length `U32.lt` pos_payload then
+  if validator_max_length `U64.lt` pos_payload then
     pos_payload
   else
+    let pos_payload = uint64_to_uint32 pos_payload in
     let payload_len = dlfc input pos in
     if (input.len `U32.sub` pos_payload) `U32.lt` payload_len then
       validator_error_not_enough_data
@@ -190,10 +193,10 @@ let validate_deplen
       let _ = valid_exact_valid_pos_equiv pp h input pos_payload pos_end in
       [@inline_let] let input' = { base = input.base; len = pos_end; } in
       let pos_end' = pv input' pos_payload in
-      if validator_max_length `U32.lt` pos_end' then
+      if validator_max_length `U64.lt` pos_end' then
         pos_end'
       else
-        if pos_end' = pos_end then
+        if uint64_to_uint32 pos_end' = pos_end then
           let _ = valid_deplen_len min max hp dlf ps input pos h in
           pos_end'
         else

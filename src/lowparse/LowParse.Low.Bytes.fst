@@ -12,6 +12,8 @@ module BF = LowStar.Buffer // for local variables in store_bytes
 module BY = LowParse.Bytes32
 module HST = FStar.HyperStack.ST
 module U8 = FStar.UInt8
+module Cast = FStar.Int.Cast
+module U64 = FStar.UInt64
 
 inline_for_extraction
 let validate_flbytes
@@ -324,7 +326,7 @@ let validate_all_bytes
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ = valid_facts parse_all_bytes h input pos in
-  input.len
+  Cast.uint32_to_uint64 input.len
 
 inline_for_extraction
 let validate_bounded_vlbytes'

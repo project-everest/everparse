@@ -9,6 +9,7 @@ module U32 = FStar.UInt32
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
 module Cast = FStar.Int.Cast
+module U64 = FStar.UInt64
 
 #reset-options "--z3cliopt smt.arith.nl=false --max_fuel 0 --max_ifuel 0"
 
@@ -30,14 +31,14 @@ let validate_der_length_payload32
       assert_norm (pow2 (8 * 4) == 4294967296)
     in
     if x `U8.lt` 128uy
-    then pos
+    then Cast.uint32_to_uint64 pos
     else if x = 128uy || x = 255uy
     then validator_error_generic
     else if x = 129uy
     then
       [@inline_let] let _ = valid_facts parse_u8 h input pos in
       let v = validate_u8 () input pos in
-      if validator_max_length `U32.lt` v
+      if validator_max_length `U64.lt` v
       then v
       else
         let z = read_u8 input pos in
@@ -50,7 +51,7 @@ let validate_der_length_payload32
       if len = 2uy
       then
         let v = validate_bounded_integer 2 input pos in
-        if validator_max_length `U32.lt` v
+        if validator_max_length `U64.lt` v
         then v
         else
           let y = read_bounded_integer_2 () input pos in
@@ -60,7 +61,7 @@ let validate_der_length_payload32
       else if len = 3uy
       then
         let v = validate_bounded_integer 3 input pos in
-        if validator_max_length `U32.lt` v
+        if validator_max_length `U64.lt` v
         then v
         else
           let y = read_bounded_integer_3 () input pos in
@@ -69,7 +70,7 @@ let validate_der_length_payload32
           else v
       else
         let v = validate_bounded_integer 4 input pos in
-        if validator_max_length `U32.lt` v
+        if validator_max_length `U64.lt` v
         then v
         else
           let y = read_bounded_integer_4 () input pos in
@@ -166,7 +167,7 @@ let validate_bounded_der_length32
       valid_facts parse_u8 h input pos
     in
     let v = validate_u8 () input pos in
-    if validator_max_length `U32.lt` v
+    if validator_max_length `U64.lt` v
     then v
     else
       let x = read_u8 input pos in
@@ -178,9 +179,10 @@ let validate_bounded_der_length32
       if (len `U8.lt` l1) || ( l2 `U8.lt` len)
       then validator_error_generic
       else
+        let v = uint64_to_uint32 v in
         [@inline_let] let _ = valid_facts (parse_der_length_payload32 x) h input v in
         let v2 = validate_der_length_payload32 x input v in
-        if validator_max_length `U32.lt` v2
+        if validator_max_length `U64.lt` v2
         then v2
         else
           let y = read_der_length_payload32 x input v in

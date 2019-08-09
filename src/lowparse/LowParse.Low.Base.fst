@@ -5,10 +5,11 @@ include LowParse.Slice
 module M = LowParse.Math
 module B = LowStar.Monotonic.Buffer
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module Seq = FStar.Seq
-
+module Cast = FStar.Int.Cast
 
 let valid'
   (#rrel #rel: _)
@@ -1967,6 +1968,9 @@ let max_uint32_correct
   (U32.v x <= U32.v max_uint32)
 = ()
 
+[@ CMacro ]
+let max_uint32_as_uint64 : U64.t = 4294967295uL
+
 (*
 
 Error codes for validators
@@ -1981,16 +1985,23 @@ let default_validator_cls : validator_cls = {
 *)
 
 [@ CMacro ]
-let validator_max_length : (u: U32.t { 4 <= U32.v u /\ U32.v u < U32.v max_uint32 } ) = 4294967279ul
+let validator_max_length : (u: U64.t { 4 <= U64.v u /\ U64.v u <= U64.v max_uint32_as_uint64 } ) = max_uint32_as_uint64
 
 [@ CMacro ]
-type validator_error = (u: U32.t { U32.v u > U32.v validator_max_length } )
+type validator_error = (u: U64.t { U64.v u > U64.v validator_max_length } )
 
 [@ CMacro ]
-let validator_error_generic : validator_error = normalize_term (validator_max_length `U32.add` 1ul)
+let validator_error_generic : validator_error = normalize_term (validator_max_length `U64.add` 1uL)
 
 [@ CMacro ]
-let validator_error_not_enough_data : validator_error = normalize_term (validator_max_length `U32.add` 2ul)
+let validator_error_not_enough_data : validator_error = normalize_term (validator_max_length `U64.add` 2uL)
+
+[@"opaque_to_smt"] // to hide the modulo operation
+inline_for_extraction
+let uint64_to_uint32
+  (x: U64.t { U64.v x <= U64.v validator_max_length } )
+: Tot (y: U32.t { U32.v y == U64.v x })
+= Cast.uint64_to_uint32 x
 
 [@unifier_hint_injective]
 inline_for_extraction
@@ -1998,13 +2009,13 @@ let validator (#k: parser_kind) (#t: Type) (p: parser k t) : Tot Type =
   (#rrel: _) -> (#rel: _) ->
   (sl: slice rrel rel) ->
   (pos: U32.t) ->
-  HST.Stack U32.t
-  (requires (fun h -> live_slice h sl /\ U32.v pos <= U32.v sl.len /\ U32.v sl.len <= U32.v validator_max_length))
+  HST.Stack U64.t
+  (requires (fun h -> live_slice h sl /\ U32.v pos <= U32.v sl.len))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
-    if U32.v res <= U32.v validator_max_length
+    if U64.v res <= U64.v validator_max_length
     then
-      valid_pos p h sl pos res
+      valid_pos p h sl pos (uint64_to_uint32 res)
     else
       (~ (valid p h sl pos))
   )))
@@ -2027,14 +2038,11 @@ let validate
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
     let sl = make_slice b len in
-    (res == true <==> (U32.v len <= U32.v validator_max_length /\ valid p h sl 0ul))
+    (res == true <==> (valid p h sl 0ul))
   )))
-= if validator_max_length `U32.lt` len
-  then false
-  else
-    [@inline_let]
-    let sl = make_slice b len in
-    v sl 0ul `U32.lte` validator_max_length
+= [@inline_let]
+  let sl = make_slice b len in
+  v sl 0ul `U64.lte` validator_max_length
 
 let valid_total_constant_size
   (h: HS.mem)
@@ -2076,7 +2084,7 @@ let validate_total_constant_size
   if U32.lt (input.len `U32.sub` pos) sz
   then validator_error_not_enough_data
   else
-    pos `U32.add` sz
+    Cast.uint32_to_uint64 (pos `U32.add` sz)
 
 [@unifier_hint_injective]
 inline_for_extraction

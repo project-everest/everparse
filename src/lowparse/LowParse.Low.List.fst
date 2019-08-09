@@ -9,6 +9,8 @@ module CL = C.Loops
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module G = FStar.Ghost
+module U64 = FStar.UInt64
+module Cast = FStar.Int.Cast
 
 let valid_exact_list_nil
   (#k: parser_kind)
@@ -205,7 +207,7 @@ let validate_list_inv
   (#rrel #rel: _)
   (sl: slice rrel rel)
   (pos0: U32.t)
-  (bpos: B.pointer U32.t)
+  (bpos: B.pointer U64.t)
   (h: HS.mem)
   (stop: bool)
 : GTot Type0
@@ -215,22 +217,21 @@ let validate_list_inv
   k.parser_kind_subkind == Some ParserStrong /\
   k.parser_kind_low > 0 /\
   U32.v pos0 <= U32.v sl.len /\
-  U32.v sl.len <= U32.v validator_max_length /\
   live_slice h0 sl /\
   B.live h1 bpos /\
   B.modifies B.loc_none h0 h1 /\
   B.modifies (B.loc_buffer bpos) h1 h /\ (
   let pos1 = Seq.index (B.as_seq h bpos) 0 in
   if
-    U32.v pos1 > U32.v validator_max_length
+    U64.v pos1 > U64.v validator_max_length
   then
     stop == true /\
     (~ (valid_exact (parse_list p) h0 sl pos0 sl.len))
   else
-    U32.v pos0 <= U32.v pos1 /\
-    U32.v pos1 <= U32.v sl.len /\
-    (valid_exact (parse_list p) h0 sl pos0 sl.len <==> valid_exact (parse_list p) h0 sl pos1 sl.len) /\
-    (stop == true ==> pos1 == sl.len)
+    U32.v pos0 <= U64.v pos1 /\
+    U64.v pos1 <= U32.v sl.len /\
+    (valid_exact (parse_list p) h0 sl pos0 sl.len <==> valid_exact (parse_list p) h0 sl (uint64_to_uint32 pos1) sl.len) /\
+    (stop == true ==> U64.v pos1 == U32.v sl.len)
   )
 
 inline_for_extraction
@@ -243,7 +244,7 @@ let validate_list_body
   (#rrel #rel: _)
   (sl: slice rrel rel)
   (pos0: U32.t)
-  (bpos: B.pointer U32.t)
+  (bpos: B.pointer U64.t)
 : HST.Stack bool
   (requires (fun h -> validate_list_inv p g0 g1 sl pos0 bpos h false))
   (ensures (fun h res h' ->
@@ -251,6 +252,7 @@ let validate_list_body
     validate_list_inv p g0 g1 sl pos0 bpos h' res
   ))
 = let pos1 = B.index bpos 0ul in
+  let pos1 = uint64_to_uint32 pos1 in
   assert (U32.v pos1 <= U32.v sl.len);
   if pos1 = sl.len
   then true
@@ -259,7 +261,7 @@ let validate_list_body
     Classical.move_requires (valid_exact_list_cons_recip p (G.reveal g0) sl pos1) sl.len;
     let pos1 = v sl pos1 in
     B.upd bpos 0ul pos1;
-    pos1 `U32.gt` validator_max_length
+    pos1 `U64.gt` validator_max_length
   end
 
 inline_for_extraction
@@ -271,12 +273,11 @@ let validate_list'
   (#rrel #rel: _)
   (sl: slice rrel rel)
   (pos: U32.t)
-: HST.Stack U32.t
+: HST.Stack U64.t
   (requires (fun h ->
     k.parser_kind_subkind == Some ParserStrong /\
     k.parser_kind_low > 0 /\
     U32.v pos <= U32.v sl.len /\
-    U32.v sl.len <= U32.v validator_max_length /\
     live_slice h sl
   ))
   (ensures (fun h res h' ->
@@ -284,14 +285,14 @@ let validate_list'
     (* we could return a boolean, but we would like to return the last
        validation error code if it fails. (alas, we cannot capture
        that fact in the spec.) *)
-    (U32.v res <= U32.v validator_max_length <==> valid_exact (parse_list p) h sl pos sl.len)
+    (U64.v res <= U64.v validator_max_length <==> valid_exact (parse_list p) h sl pos sl.len)
   ))
 = let h0 = HST.get () in
   let g0 = G.hide h0 in
   HST.push_frame ();
   let h02 = HST.get () in
   B.fresh_frame_modifies h0 h02;
-  let bpos = B.alloca pos 1ul in
+  let bpos = B.alloca (Cast.uint32_to_uint64 pos) 1ul in
   let h1 = HST.get () in
   let g1 = G.hide h1 in
   C.Loops.do_while (validate_list_inv p g0 g1 sl pos bpos) (fun _ -> validate_list_body v g0 g1 sl pos bpos);
@@ -318,8 +319,8 @@ let validate_list
   let h = HST.get () in
   valid_valid_exact_consumes_all (parse_list p) h sl pos;
   let error = validate_list' v sl pos in 
-  if error `U32.lte` validator_max_length
-  then sl.len
+  if error `U64.lte` validator_max_length
+  then Cast.uint32_to_uint64 sl.len
   else error
 
 abstract

@@ -15,6 +15,7 @@ module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
 module Cast = FStar.Int.Cast
+module U64 = FStar.UInt64
 
 let valid_constint32le
   (v: nat { 0 <= v /\ v < 4294967296 } )
@@ -46,7 +47,7 @@ let validate_constint32le_slow
   else
     let v' = read_int32le input pos in
     if U32.eq v v' then
-      pos `U32.add` 4ul
+      Cast.uint32_to_uint64 (pos `U32.add` 4ul)
     else
       validator_error_generic
 
@@ -220,6 +221,6 @@ let validate_constint32le
     validator_error_not_enough_data
   else
     if inplace_compare v input pos then
-      pos `U32.add` 4ul
+      Cast.uint32_to_uint64 (pos `U32.add` 4ul)
     else
       validator_error_generic

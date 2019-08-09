@@ -6,6 +6,8 @@ module B = LowStar.Buffer
 module U32 = FStar.UInt32
 module HST = FStar.HyperStack.ST
 module HS = FStar.HyperStack
+module Cast = FStar.Int.Cast
+module U64 = FStar.UInt64
 
 let valid_fldata_gen
   (#k: parser_kind)
@@ -50,12 +52,13 @@ let validate_fldata_gen
     [@inline_let] let input' = { base = input.base; len = pos `U32.add` sz32; } in
     [@inline_let] let _ = valid_facts p h input' pos in
     let pos' = v input' pos in
-    if validator_max_length `U32.lt` pos'
+    if validator_max_length `U64.lt` pos'
     then
       if pos' = validator_error_not_enough_data
       then validator_error_generic (* the size was fixed ahead of time, so if the parser runs out of data, then that size was wrong in the first place. *) 
       else pos' // error propagation
-    else if pos' `U32.sub` pos <> sz32
+    else
+    if uint64_to_uint32 pos' `U32.sub` pos <> sz32
     then validator_error_generic
     else pos'
 
@@ -81,7 +84,7 @@ let validate_fldata_consumes_all
     [@inline_let] let input' = { base = input.base; len = pos `U32.add` sz32; } in
     [@inline_let] let _ = valid_facts p h input' pos in
     let pos' = v input' pos in
-    if validator_max_length `U32.lt` pos'
+    if validator_max_length `U64.lt` pos'
     then
       if pos' = validator_error_not_enough_data
       then validator_error_generic (* the size was fixed ahead of time, so if the parser runs out of data, then that size was wrong in the first place. *) 

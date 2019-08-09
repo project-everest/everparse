@@ -6,6 +6,8 @@ module U32 = FStar.UInt32
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
+module Cast = FStar.Int.Cast
+module U64 = FStar.UInt64
 
 #reset-options "--z3cliopt smt.arith.nl=false"
 
@@ -169,9 +171,10 @@ let validate_bounded_vlgen
     valid_facts pk h input pos
   in
   let n = vk input pos in
-  if validator_max_length `U32.lt` n
+  if validator_max_length `U64.lt` n
   then n
   else
+    let n = uint64_to_uint32 n in
     let len = rk input pos in
     [@inline_let]
     let _ = valid_facts (parse_fldata_strong s (U32.v len)) h input n in
