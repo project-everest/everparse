@@ -1,0 +1,13 @@
+enum {
+  FALSE(0),
+  TRUE(1),
+  (255)
+} boolean;
+
+struct {
+  boolean tag;
+  select(tag) {
+    case TRUE: uint32;
+    case FALSE: uint16;
+  } payloads;
+} data;
