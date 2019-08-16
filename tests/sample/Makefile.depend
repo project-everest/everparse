@@ -1,10 +1,8 @@
 include Makefile.common
 include .qd_files
 
-all: .depend
-
-.depend: .qd_files $(QD_FILES)
-	cat .qd_files > $@
-	$(FSTAR) --dep full $(QD_FILES) >> $@
+all:
+	cat .qd_files > .depend
+	$(FSTAR) --dep full $(QD_FILES) >> .depend
 
 .PHONY: all

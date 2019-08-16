@@ -14,12 +14,12 @@ kremlin/%.krml:
 	$(QD) $(RFC)
 	+$(MAKE) -f Makefile.qd_files
 
+-include .depend
+
 .depend: $(QD_FILES) .qd_files
 	+$(MAKE) -f Makefile.depend
 
 depend: .depend
-
--include .depend
 
 verify: $(patsubst %,cache/%.checked,$(QD_FILES))
 	echo $*
