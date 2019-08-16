@@ -22,7 +22,7 @@ lowparse-test: lowparse
 quackyducky-unit-test: gen-test lowparse
 	+$(MAKE) -C tests/unit
 
-quackyducky-sample-test: gen-test lowparse
+quackyducky-sample-test: quackyducky lowparse
 	+$(MAKE) -C tests/sample
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test
