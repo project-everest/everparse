@@ -33,6 +33,7 @@ type field = {
 }
 
 type decl =
+| Comment of string
 | Define of name * constant
 | Record of param list * field list
 
