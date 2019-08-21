@@ -168,7 +168,7 @@ let decompose_compare
   decompose_compose_equiv v2
 
 
-#push-options " --max_fuel 5 --z3rlimit 16 "
+#push-options " --max_fuel 5 --z3rlimit 32 "
 
 inline_for_extraction
 let inplace_compare
