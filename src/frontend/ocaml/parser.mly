@@ -1,5 +1,11 @@
 %{
   open Ast
+  let mk_td i j k = {
+    typedef_name = i;
+    typedef_abbrev = j;
+    typedef_ptr_abbrev = k
+  }
+
 %}
 
 %token<int>     INT
@@ -29,7 +35,7 @@ right_flexible_nonempty_list(SEP, X):
   | x=X SEP xs=right_flexible_list(SEP, X) { x :: xs }
 
 constant:
-  | i=INT { Int i }
+  | i=INT { Int (Z.of_int i) }
   | x=XINT { XInt x }
 
 rel_op:
@@ -94,14 +100,14 @@ decl:
   | TYPEDEF STRUCT i=IDENT ps=parameters
     LBRACE fields=right_flexible_nonempty_list(SEMICOLON, struct_field)
     RBRACE j=IDENT COMMA STAR k=IDENT SEMICOLON
-    { Record(i, ps, fields, j, k) }
+    { Record(mk_td i j k, ps, fields) }
   | CASETYPE i=IDENT ps=parameters
     LBRACE SWITCH LPAREN e=IDENT RPAREN
            LBRACE cs=cases
            comms=list(COMMENT)
            RBRACE
     RBRACE j=IDENT COMMA STAR k=IDENT SEMICOLON
-    { CaseType(i, ps, (e, cs), j, k) }
+    { let td = mk_td i j k in CaseType(td, ps, (e, cs)) }
 
 expr_top:
   | e=expr EOF { e }

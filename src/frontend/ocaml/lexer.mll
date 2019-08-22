@@ -48,7 +48,6 @@ rule token =
   parse
   | "#define"         { locate lexbuf DEFINE }
   | ident as i        { 
-       Printf.printf "Matched <%s>\n" i;
        locate lexbuf (H.find_option keywords i |> Option.default (IDENT i))
     }
   | line_comment as c { locate lexbuf (COMMENT c) }

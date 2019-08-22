@@ -7,7 +7,7 @@ let print_position filename outx lexbuf =
     pos.pos_lnum
     (pos.pos_cnum - pos.pos_bol + 1)
 
-let test filename =
+let parse filename =
   let p = MenhirLib.Convert.Simplified.traditional2revised Parser.prog in
   let lexbuf = Lexing.from_channel (open_in filename) in
   try
@@ -16,6 +16,3 @@ let test filename =
   with e ->
     Printf.fprintf stderr "%a: syntax error\n" (print_position filename) lexbuf;
     raise e
-;;
-
-test (Sys.argv.(1))
