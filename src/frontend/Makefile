@@ -1,4 +1,4 @@
-test.native: ast.ml parser.mly test.ml
+test.native: ast.ml lexer.mll parser.mly test.ml
 	rm -f test.native
 	ocamlbuild -use-menhir -tag thread -use-ocamlfind -quiet -pkg batteries -pkg menhirLib $@
 

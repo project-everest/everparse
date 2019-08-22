@@ -1,6 +1,7 @@
 {
 
 open Parser
+module Option  = BatOption
 module H = BatHashtbl
 
 let locate lb tok =
@@ -17,9 +18,7 @@ let () =
   H.add keywords "casetype" CASETYPE;
   H.add keywords "switch" SWITCH;
   H.add keywords "case" CASE;
-  H.add keywords "this" THIS;
-  H.add keywords "UINT32" UINT32
-
+  H.add keywords "this" THIS
 }
 
 let space = " " | "\t"
@@ -42,20 +41,36 @@ let uident = up_alpha any*
 let ident_start = low_alpha | up_alpha | "_"
 let ident = ident_start any*
 
-let line_comment = "//" any*  newline
+let line_comment = "//" [ ^ '\r' '\n']*
 
 
 rule token =
   parse
   | "#define"         { locate lexbuf DEFINE }
-  | ident as i        { locate lexbuf (IDENT i) }
+  | ident as i        { 
+       Printf.printf "Matched <%s>\n" i;
+       locate lexbuf (H.find_option keywords i |> Option.default (IDENT i))
+    }
   | line_comment as c { locate lexbuf (COMMENT c) }
   | "("            { locate lexbuf LPAREN }
+  | ")"            { locate lexbuf RPAREN }  
   | "="            { locate lexbuf EQ }
   | "&&"           { locate lexbuf AND }
   | "||"           { locate lexbuf OR }
+  | ","            { locate lexbuf COMMA }
+  | ";"            { locate lexbuf SEMICOLON }
+  | ":"            { locate lexbuf COLON }  
+  | "{"            { locate lexbuf LBRACE }
+  | "}"            { locate lexbuf RBRACE }  
+  | "["            { locate lexbuf LBRACK }
+  | "]"            { locate lexbuf RBRACK }  
+  | "*"            { locate lexbuf STAR }  
+  | "+"            { locate lexbuf PLUS }  
+  | "-"            { locate lexbuf MINUS }    
   | integer as i   { locate lexbuf (INT (int_of_string i) ) }
-  | " "            { token lexbuf }
+  | xinteger as x  { locate lexbuf (XINT x) }
+  | space+         { token lexbuf }
+  | newline        { Lexing.new_line lexbuf; token lexbuf }
   | eof            { locate lexbuf EOF }
   | _              { assert false }
 

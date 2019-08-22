@@ -1,12 +1,8 @@
-type name = string
-
-type typ =
-| U32
+type ident = string
 
 type constant =
 | Int of int
-
-type param = name * typ
+| XInt of string
 
 type op =
 | Eq
@@ -21,31 +17,53 @@ type op =
 | GE
 | SizeOf
 | This
-| Constant of constant
 
 type expr =
-  | Expr of op * expr list
+| Constant of constant
+| Identifier of ident
+| This
+| App of op * expr list
 
-type field = {
-  field_name:string;
+type typ =
+| Type_name of string
+| Type_app of string * expr list
+
+type param = typ * ident
+
+type struct_field = {
+  field_ident:string;
   field_type:typ;
-  field_constraint:expr;
+  field_constraint:expr option;
 }
+
+type field = 
+ | Field of struct_field
+ | FieldComment of string
+
+type atomic_type = ident
+
+type case = ident * field
+type switch_case = ident * case list
 
 type decl =
 | Comment of string
-| Define of name * constant
-| Record of param list * field list
+| Define of ident * constant
+| Enum of atomic_type * ident * ident list
+| Record of ident * param list * field list * ident * ident
+| CaseType of ident * param list * switch_case * ident * ident
 
 let rec print_expr e =
-  let Expr (op, es) = e in
-  match op, es with
-  | Eq, [e1; e2] -> 
-    Printf.sprintf "(%s = %s)" (print_expr e1) (print_expr e2)
-  | And, [e1; e2] -> 
-    Printf.sprintf "(%s && %s)" (print_expr e1) (print_expr e2)  
-  | Or, [e1; e2] -> 
-    Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
-  | Constant (Int i), [] -> 
+  match e with
+  | Constant (Int i) -> 
     Printf.sprintf "%d" i
+  | Identifier i -> 
+    i
+  | This -> 
+    "this"
+  | App (Eq, [e1; e2]) -> 
+    Printf.sprintf "(%s = %s)" (print_expr e1) (print_expr e2)
+  | App (And, [e1; e2]) -> 
+    Printf.sprintf "(%s && %s)" (print_expr e1) (print_expr e2)  
+  | App (Or, [e1; e2]) -> 
+    Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
   | _ -> "??"
