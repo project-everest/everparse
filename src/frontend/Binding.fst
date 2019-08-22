@@ -14,7 +14,6 @@ let with_dummy_range x = with_range x dummy_range
 let tbool = with_dummy_range (Type_app (with_dummy_range "Bool") [])
 let tuint32 = with_dummy_range (Type_app (with_dummy_range "UInt32") [])
 let tunknown = with_dummy_range (Type_app (with_dummy_range "?") [])
-let eq_typ (t t':typ) = t.v = t'.v
 let pos_of_ident i = i.range
 
 noeq
@@ -102,7 +101,7 @@ let rec check_typ (env:env) (t:typ)
         let es =
           List.map2 (fun (t, _) e ->
             let e, t' = check_expr env e in
-            if t.v <> t'.v
+            if not (eq_typ t t')
             then error "Argument type mismatch" e.range;
             e)
             params
@@ -131,7 +130,7 @@ and check_expr (env:env) (e:expr)
         begin
         match op with
         | Not ->
-          if t1.v <> tbool.v
+          if not (eq_typ t1 tbool)
           then error "Expected bool" e1.range;
           w (App Not [e1]), t1
 
@@ -147,21 +146,21 @@ and check_expr (env:env) (e:expr)
         begin
         match op with
         | Eq ->
-          if t1.v <> t2.v
+          if not (eq_typ t1 t2)
           then error "Equality on unequal types" e.range;
           w (App Eq [e1; e2]), tbool
 
         | And
         | Or ->
-          if t1.v <> tbool.v
-           || t2.v <> tbool.v
+          if not (eq_typ t1 tbool)
+           || not (eq_typ t2 tbool)
           then error "Binary boolean op on non booleans" e.range;
           w (App op [e1; e2]), tbool
 
         | Plus
         | Minus ->
-          if t1.v <> tuint32.v
-           || t2.v <> tuint32.v
+          if not (eq_typ t1 tuint32)
+           || not (eq_typ t2 tuint32)
           then error "Binary integer op on non-integers" e.range;
           w (App op [e1; e2]), tuint32
 
@@ -170,8 +169,8 @@ and check_expr (env:env) (e:expr)
         | GT
         | LE
         | GE ->
-          if t1.v <> tuint32.v
-           || t2.v <> tuint32.v
+          if not (eq_typ t1 tuint32)
+           || not (eq_typ t2 tuint32)
           then error "Binary integer op on non integers" e.range;
           w (App op [e1; e2]), tbool
 
@@ -229,8 +228,11 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     let env = mk_env e in
     cases |> List.iter (fun i ->
       let _, t' = check_expr env (with_dummy_range (Identifier i)) in
-      if t.v <> t'.v
-      then error "Inconsistent type of enumeration identifier" d.range);
+      if not (eq_typ t t')
+      then error (Printf.sprintf "Inconsistent type of enumeration identifier: Expected %s, got %s"
+                   (print_typ t)
+                   (print_typ t'))
+                 d.range);
     add_global e i d None;
     d
 
