@@ -1,7 +1,31 @@
 module Ast
 open FStar.All
 
-type ident = string
+type pos = {
+  filename: string;
+  line:int;
+  col:int
+}
+
+let range = pos * pos
+
+let string_of_pos p =
+  Printf.sprintf "%s:(%d,%d)" p.filename p.line p.col
+
+let dummy_pos = {
+  filename="";
+  line=0;
+  col=0;
+}
+
+noeq
+type withrange 'a = {
+  v:'a;
+  range:range
+}
+
+type ident' = string
+let ident = withrange ident'
 
 type constant =
   | Int of int
@@ -20,32 +44,33 @@ type op =
   | GE
   | SizeOf
 
-type expr =
+type expr' =
   | Constant of constant
   | Identifier of ident
   | This
-  | App : op -> list expr -> expr
+  | App : op -> list expr -> expr'
 
-type typ =
-  | Type_name of string
-  | Type_app : string -> list expr -> typ
+and expr = withrange expr'
+
+type typ' =
+  | Type_app : ident -> list expr -> typ'
+and typ = withrange typ'
 
 type param = typ & ident
 
 type struct_field = {
-  field_ident:string;
+  field_dependence:bool;
+  field_ident:ident;
   field_type:typ;
   field_constraint:option expr;
 }
 
-type field =
+type field' =
  | Field of struct_field
  | FieldComment of string
-
-type atomic_type = ident
-
-type case = ident & field
-type switch_case = ident & list case
+and field = withrange field'
+type case = expr & field
+type switch_case = expr & list case
 
 type typedef_names = {
   typedef_name: ident;
@@ -53,19 +78,20 @@ type typedef_names = {
   typedef_ptr_abbrev: ident
 }
 
-type decl =
+type decl' =
   | Comment of string
-  | Define: ident -> constant -> decl
-  | Enum: atomic_type -> ident -> list ident -> decl
-  | Record: typedef_names -> list param -> list field -> decl
-  | CaseType: typedef_names -> list param -> switch_case -> decl
+  | Define: ident -> constant -> decl'
+  | Enum: typ -> ident -> list ident -> decl'
+  | Record: typedef_names -> list param -> list field -> decl'
+  | CaseType: typedef_names -> list param -> switch_case -> decl'
+and decl = withrange decl'
 
 let rec print_expr (e:expr) : Tot string =
-  match e with
+  match e.v with
   | Constant (Int i) ->
     Printf.sprintf "%d" i
   | Identifier i ->
-    i
+    i.v
   | This ->
     "this"
   | App Eq [e1; e2] ->

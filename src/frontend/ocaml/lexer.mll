@@ -1,8 +1,24 @@
 {
 
 open Parser
+open Ast
 module Option  = BatOption
 module H = BatHashtbl
+
+
+let mk_pos (l:Lexing.position) =
+    let open Lexing in
+      let col = (l.pos_cnum - l.pos_bol + 1) in
+      {
+        filename=l.pos_fname;
+        line=Z.of_int l.pos_lnum;
+        col=Z.of_int col;
+      }
+
+let with_range (x:'a) (l:Lexing.position) : 'a withrange =
+      { v = x;
+        range = (mk_pos l, mk_pos l)
+      }
 
 let locate lb tok =
   tok,
@@ -19,6 +35,7 @@ let () =
   H.add keywords "switch" SWITCH;
   H.add keywords "case" CASE;
   H.add keywords "this" THIS
+
 }
 
 let space = " " | "\t"
@@ -47,8 +64,8 @@ let line_comment = "//" [ ^ '\r' '\n']*
 rule token =
   parse
   | "#define"         { locate lexbuf DEFINE }
-  | ident as i        { 
-       locate lexbuf (H.find_option keywords i |> Option.default (IDENT i))
+  | ident as i        {
+       locate lexbuf (H.find_option keywords i |> Option.default (IDENT (with_range i (Lexing.lexeme_start_p lexbuf))))  
     }
   | line_comment as c { locate lexbuf (COMMENT c) }
   | "("            { locate lexbuf LPAREN }
