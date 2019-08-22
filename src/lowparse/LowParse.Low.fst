@@ -18,3 +18,6 @@ include LowParse.Low.DER
 include LowParse.Low.VLGen
 
 let inversion_tuple2 (a b: Type) : Lemma (inversion (tuple2 a b)) [SMTPat (tuple2 a b)] = allow_inversion (tuple2 a b)
+
+// other modules that SHOULD NOT be exported, but should be loaded for dependency purposes
+open LowParse.Low.DepAcc
