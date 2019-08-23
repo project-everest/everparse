@@ -12,12 +12,13 @@ let dummy_range = dummy_pos, dummy_pos
 let with_range x r = { v = x; range = r}
 let with_dummy_range x = with_range x dummy_range
 let tbool = with_dummy_range (Type_app (with_dummy_range "Bool") [])
-let tuint32 = with_dummy_range (Type_app (with_dummy_range "UInt32") [])
+let tuint32 = with_dummy_range (Type_app (with_dummy_range "UINT32") [])
 let tunknown = with_dummy_range (Type_app (with_dummy_range "?") [])
 let pos_of_ident i = i.range
 
 noeq
 type env = {
+  this_typ: typ;
   locals: local_env;
   globals: global_env
 }
@@ -42,9 +43,25 @@ let check_shadow (e:H.t ident' 'a) (i:ident) (r:range) =
   | _ ->
     ()
 
+let typedef_names (d:decl) : option typedef_names =
+  match d.v with
+  | Record td _ _
+  | CaseType td _ _ -> Some td
+  | _ -> None
+
 let add_global (e:global_env) (i:ident) (d:decl) (t:option typ) =
   check_shadow e i d.range;
-  H.insert e i.v (d, t)
+  H.insert e i.v (d, t);
+  match typedef_names d with
+  | None -> ()
+  | Some td ->
+    if td.typedef_abbrev.v <> i.v
+    then begin
+      check_shadow e td.typedef_abbrev d.range;
+      H.insert e td.typedef_abbrev.v (d, t)
+    end
+//    check_shadow e td.typedef_ptr_abbrev d.range;
+
 
 let add_local (e:env) (i:ident) (t:typ) =
   check_shadow e.globals i t.range;
@@ -70,6 +87,13 @@ let lookup_expr_name (e:env) (i:ident) : ML typ =
   | Inr (_, Some t) -> t
   | Inr _ ->
     error (Printf.sprintf "Variable %s is not an expression identifier" i.v) i.range
+
+let lookup_enum_cases (e:env) (i:ident)
+  : ML (list ident * typ)
+  = match lookup e i with
+    | Inr ({v=Enum t _ tags}, _) -> tags, t
+    | _ ->
+      error (Printf.sprintf "Type %s is not an enumeration" i.v) i.range
 
 let is_used (e:env) (i:ident) : ML bool =
   match H.try_find e.locals i.v with
@@ -121,7 +145,7 @@ and check_expr (env:env) (e:expr)
       e, t
 
     | This ->
-      e, tunknown
+      e, env.this_typ
 
     | App op es ->
       let ets = List.map (check_expr env) es in
@@ -147,7 +171,11 @@ and check_expr (env:env) (e:expr)
         match op with
         | Eq ->
           if not (eq_typ t1 t2)
-          then error "Equality on unequal types" e.range;
+          then error
+                 (Printf.sprintf "Equality on unequal types: %s and %s"
+                   (print_typ t1)
+                   (print_typ t2))
+               e.range;
           w (App Eq [e1; e2]), tbool
 
         | And
@@ -186,7 +214,17 @@ let check_field (env:env) (extend_scope: bool) (f:field)
     | FieldComment _ -> f
     | Field sf ->
       check_typ env sf.field_type;
+      let fa = sf.field_array_opt |> map_opt (fun e ->
+        let e, t = check_expr env e in
+        if not (eq_typ t tuint32)
+        then error (Printf.sprintf "Array expression %s has type %s instead of UInt32"
+                          (print_expr e)
+                          (print_typ t))
+                   e.range;
+        e)
+      in
       let fc = sf.field_constraint |> map_opt (fun e ->
+        let env = { env with this_typ=sf.field_type } in
         fst (check_expr env e)) in
       if extend_scope then add_local env sf.field_ident sf.field_type;
       let sf = { sf with field_constraint = fc } in
@@ -195,12 +233,28 @@ let check_field (env:env) (extend_scope: bool) (f:field)
 let check_switch (env:env) (s:switch_case)
   : ML switch_case
   = let head, cases = s in
-    let head, t = check_expr env head in
+    let head, enum_t = check_expr env head in
+    let enum_tags, t = lookup_enum_cases env (Type_app?._0 enum_t.v) in
     let check_case (c:case) : ML case =
       let pat, f = c in
-      let pat, t' = check_expr env pat in
-      if not (eq_typ t t')
-      then error "Type of case does not match type of switch expression" pat.range;
+      let pat, pat_t = check_expr env pat in
+      let case_exists =
+          match pat.v with
+          | Identifier pat ->
+            Some? (List.tryFind (fun (case:ident) -> case.v = pat.v) enum_tags)
+          | _ ->
+            false
+      in
+      if not (eq_typ pat_t t)
+      then error (Printf.sprintf "Type of case (%s) does not match type of switch expression (%s)"
+                     (print_typ pat_t)
+                     (print_typ t))
+                 pat.range;
+      if not case_exists
+      then error (Printf.sprintf "Case (%s) is not in the enumerated type %s"
+                    (print_expr pat)
+                    (print_typ enum_t))
+           pat.range;
       let f = check_field env false f in
       pat, f
     in
@@ -208,7 +262,8 @@ let check_switch (env:env) (s:switch_case)
     head, cases
 
 let mk_env (g:global_env) =
-  { locals = H.create 10;
+  { this_typ = tunknown;
+    locals = H.create 10;
     globals = g }
 
 let check_params (env:env) (ps:list param) : ML unit =
@@ -226,6 +281,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
 
   | Enum t i cases ->
     let env = mk_env e in
+    check_typ env t;
     cases |> List.iter (fun i ->
       let _, t' = check_expr env (with_dummy_range (Identifier i)) in
       if not (eq_typ t t')
@@ -261,5 +317,26 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     d
 
 let prog = list decl
+
+let initial_global_env () =
+  let e = H.create 10 in
+  let nullary_decl i =
+    let td_name = {
+      typedef_name = i;
+      typedef_abbrev = i;
+      typedef_ptr_abbrev = i
+    }
+    in
+    { v = Record td_name [] [];
+      range = dummy_range }
+  in
+  [ "UINT32"; "RNDIS_REQUEST_ID"; "RNDIS_OID";
+    "RNDIS_HANDLE"; "RNDIS_PACKET"; "opaque" ]
+  |> List.iter (fun i ->
+    let i = { v = i; range=dummy_range} in
+    add_global e i (nullary_decl i) None);
+  e
+
 let bind_prog (p:prog) : ML prog =
-  List.map (bind_decl (H.create 10)) p
+  let e = initial_global_env() in
+  List.map (bind_decl e) p

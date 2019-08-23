@@ -15,10 +15,8 @@ let parse filename =
     pos_cnum = 0;
     pos_bol = 0;
     pos_lnum = 1 };
-try
-    let decls = p (fun _ -> Lexer.token lexbuf) in
-    Printf.printf "Parsed\n"; (* (Ast.print_expr s) *)
-    decls
+  try
+    p (fun _ -> Lexer.token lexbuf)
   with e ->
     Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf;
     raise e

@@ -64,6 +64,7 @@ type struct_field = {
   field_dependence:bool;
   field_ident:ident;
   field_type:typ;
+  field_array_opt:option expr;
   field_constraint:option expr;
 }
 
@@ -112,13 +113,19 @@ let eq_typ (t1 t2:typ) : Tot bool =
   hd1.v = hd2.v
   && eq_exprs es1 es2
 
+let print_constant (c:constant) =
+  match c with
+  | Int i -> Printf.sprintf "%d" i
+  | XInt x -> Printf.sprintf "%s" x
+
+let print_ident (i:ident) = i.v
 
 let rec print_expr (e:expr) : Tot string =
   match e.v with
-  | Constant (Int i) ->
-    Printf.sprintf "%d" i
+  | Constant c ->
+    print_constant c
   | Identifier i ->
-    i.v
+    print_ident i
   | This ->
     "this"
   | App Eq [e1; e2] ->
@@ -137,3 +144,75 @@ let print_typ t : ML string =
     Printf.sprintf "%s(%s)"
       i.v
       (String.concat ", " (List.map print_expr es))
+
+let print_params (ps:list param) =
+  match ps with
+  | [] -> ""
+  | _ ->
+    Printf.sprintf "(%s)"
+      (String.concat ", "
+        (ps |> List.map
+          (fun (t, p) ->
+             Printf.sprintf "%s %s"
+               (print_typ t)
+               (print_ident p))))
+
+let print_opt (o:option 'a) (f:'a -> string) : string =
+  match o with
+  | None -> ""
+  | Some x -> f x
+
+let print_field (f:field) : ML string =
+  match f.v with
+  | FieldComment c -> c
+  | Field sf ->
+    Printf.sprintf "%s%s %s%s%s;"
+      (if sf.field_dependence then "dependent " else "")
+      (print_typ sf.field_type)
+      (print_ident sf.field_ident)
+      (print_opt sf.field_array_opt (fun e -> Printf.sprintf "[%s]" (print_expr e)))
+      (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
+
+let print_switch_case (s:switch_case) : ML string =
+  let head, cases = s in
+  let print_case (c:case) : ML string =
+    Printf.sprintf "case %s: %s;"
+      (print_expr (fst c))
+      (print_field (snd c))
+  in
+  Printf.sprintf "switch (%s) {\n
+                  %s\n\
+                 }"
+                 (print_expr head)
+                 (String.concat "\n" (List.map print_case cases))
+
+let print_decl (d:decl) : ML string =
+  match d.v with
+  | Comment s -> s
+  | Define i c ->
+    Printf.sprintf "#define %s %s" (print_ident i) (print_constant c)
+  | Enum t i ls ->
+    Printf.sprintf "%s enum %s {\n\
+                       %s \n\
+                   }"
+                   (print_typ t)
+                   i.v
+                   (String.concat "\n" (List.map print_ident ls))
+  | Record td params fields ->
+    Printf.sprintf "typedef struct %s%s {\n\
+                        %s \n\
+                    } %s, *%s"
+                    td.typedef_name.v
+                    (print_params params)
+                    (String.concat "\n" (List.map print_field fields))
+                    td.typedef_abbrev.v
+                    td.typedef_ptr_abbrev.v
+  | CaseType td params switch_case ->
+    Printf.sprintf "casetype %s%s {\n\
+                        %s \n\
+                    } %s, *%s"
+                    td.typedef_name.v
+                    (print_params params)
+                    (print_switch_case switch_case)
+                    td.typedef_abbrev.v
+                    td.typedef_ptr_abbrev.v

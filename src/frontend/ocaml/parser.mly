@@ -96,7 +96,7 @@ array_size_opt:
   | LBRACK e=expr RBRACK { Some e }
 
 struct_field:
-  | t=typ fn=IDENT aopt=array_size_opt c=constraint_opt { {field_dependence=false; field_ident=fn; field_type=t; field_constraint=c} }
+  | t=typ fn=IDENT aopt=array_size_opt c=constraint_opt { {field_dependence=false; field_ident=fn; field_type=t; field_array_opt=aopt; field_constraint=c} }
 
 field_no_range:
   | l=COMMENT { FieldComment l }
