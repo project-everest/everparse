@@ -1,4 +1,5 @@
 module Target
+open FStar.All
 module A = Ast
 open Binding
 
@@ -17,19 +18,17 @@ type op =
 
 /// Same as A.expr, but with `This` removed
 noeq
-type expr' =
-  | Constant   : c:A.constant -> expr'
-  | Identifier : i:A.ident -> expr'
-  | App        : hd:op -> args:list expr' -> expr'
-  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr'
-
-and expr = A.withrange expr'
+type expr =
+  | Constant   : c:A.constant -> expr
+  | Identifier : i:A.ident -> expr
+  | App        : hd:op -> args:list expr -> expr
+  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr
 
 (* A subset of F* types that the translation targets *)
 noeq
 type typ =
   | T_app   : hd:A.ident -> args:list index -> typ
-  | T_refine: base:typ -> refinement:expr -> typ
+  | T_refine: base:typ -> refinement:(A.ident -> ML expr) -> typ
   | T_match : scrutinee:expr -> list case -> typ
 
 (* One arm of a match *)
@@ -48,7 +47,7 @@ type field = A.ident & typ
 noeq
 type typedef_body =
   | TD_abbrev : typ -> typedef_body
-  | TD_strcut : list field -> typedef_body
+  | TD_struct : list (bool * field) -> typedef_body
 
 type typedef_name = A.ident & list param
 type typedef = typedef_name & typedef_body
@@ -61,11 +60,12 @@ noeq
 type parser' =
   | Parse_app       : hd:A.ident -> args:list index -> parser'
   | Parse_return    : v:expr -> parser'
-  | Parse_and_then  : p:parser -> k:(A.ident -> parser) -> parser'
   | Parse_seq       : p:parser -> q:parser -> parser'
-  | Parse_map       : p:parser -> f:(A.ident -> expr) -> parser'
-  | Parse_filter    : p:parser -> f:(A.ident -> expr) -> parser'
+  | Parse_and_then  : p:parser -> k:(A.ident -> ML parser) -> parser'
+  | Parse_map       : p:parser -> f:(A.ident -> ML expr) -> parser'
+  | Parse_filter    : p:parser -> f:(A.ident -> ML expr) -> parser'
   | Parse_with_kind : p:parser -> k:parser_kind -> parser'
+  | Parse_cases     : e:expr -> list (expr * parser) -> parser'
 
 and parser = {
   p_kind:parser_kind;
@@ -78,17 +78,19 @@ type reader =
   | Read_u8
   | Read_u16
   | Read_u32
-  | Read_filter : r:reader -> f:(A.ident -> expr) -> reader
+  | Read_filter : r:reader -> f:(A.ident -> ML expr) -> reader
 
 noeq
 type validator' =
   | Validate_app      : hd:A.ident -> args:list index -> validator'
   | Validate_return   : validator'
   | Validate_seq      : v1:validator -> v2:validator -> validator'
-  | Validate_map      : p:validator -> f:(A.ident -> expr) -> validator'
-  | Validate_and_read : v:validator -> r:reader -> k:(A.ident -> validator) -> validator'
-  | Validate_filter   : v:validator -> r:reader -> f:(A.ident -> expr) -> validator'
-  | Validate_filter_and_read : v:validator -> r:reader -> f:(A.ident -> expr) -> k:(A.ident -> validator) -> validator'
+  | Validate_and_read : v:validator -> r:reader -> k:(A.ident -> ML validator) -> validator'
+  | Validate_map      : p:validator -> f:(A.ident -> ML expr) -> validator'
+  | Validate_filter   : v:validator -> r:reader -> f:(A.ident -> ML expr) -> validator'
+  | Validate_filter_and_read : v:validator -> r:reader -> f:(A.ident -> ML expr) -> k:(A.ident -> ML validator) -> validator'
+  | Validate_with_kind : v:validator -> validator'
+  | Validate_cases    : e:expr -> list (expr * validator) -> validator'
 
 and validator = {
   v_parser:parser;

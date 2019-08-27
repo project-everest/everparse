@@ -7,15 +7,6 @@ module H = Hashtable
 let global_env = H.t ident' (decl * option typ)
 let local_env = H.t ident' (typ * bool)
 
-let dummy_range = dummy_pos, dummy_pos
-
-let with_range x r = { v = x; range = r}
-let with_dummy_range x = with_range x dummy_range
-let tbool = with_dummy_range (Type_app (with_dummy_range "Bool") [])
-let tuint32 = with_dummy_range (Type_app (with_dummy_range "UINT32") [])
-let tunknown = with_dummy_range (Type_app (with_dummy_range "?") [])
-let pos_of_ident i = i.range
-
 noeq
 type env = {
   this_typ: typ;

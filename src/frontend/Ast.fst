@@ -29,6 +29,7 @@ let ident = withrange ident'
 type constant =
   | Int of int
   | XInt of string
+  | Bool of bool
 
 type op =
   | Eq
@@ -42,6 +43,7 @@ type op =
   | LE
   | GE
   | SizeOf
+ //OffsetOf
 
 noeq
 type expr' =
@@ -112,6 +114,14 @@ let eq_typ (t1 t2:typ) : Tot bool =
   let Type_app hd1 es1, Type_app hd2 es2 = t1.v, t2.v in
   hd1.v = hd2.v
   && eq_exprs es1 es2
+
+let dummy_range = dummy_pos, dummy_pos
+let with_range x r = { v = x; range = r}
+let with_dummy_range x = with_range x dummy_range
+let tbool = with_dummy_range (Type_app (with_dummy_range "Bool") [])
+let tuint32 = with_dummy_range (Type_app (with_dummy_range "UINT32") [])
+let tunknown = with_dummy_range (Type_app (with_dummy_range "?") [])
+let pos_of_ident i = i.range
 
 let print_constant (c:constant) =
   match c with
