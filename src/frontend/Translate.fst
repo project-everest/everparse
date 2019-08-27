@@ -1,9 +1,27 @@
+(*
+   Copyright 2019 Microsoft Research
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*)
 module Translate
+(* This module translates type definitions from the source Ast
+   to types, parsers and validators in the Target language *)
 open Ast
 module A = Ast
 module T = Target
 open FStar.All
 
+/// gensym (top-level effect, safe to ignore)
 let gen_ident : unit -> St ident =
   let open FStar.ST in
   let ctr : ref int = alloc 0 in
@@ -15,6 +33,7 @@ let gen_ident : unit -> St ident =
   in
   next
 
+(** Some utilities **)
 let mk_lam (f:(A.ident -> ML 'a)) : ML (T.lam 'a) =
   let x = gen_ident () in
   x, f x
@@ -72,6 +91,7 @@ let translate_op : A.op -> ML T.op = function
   | GT -> T.GT
   | LE -> T.LE
   | GE -> T.LE
+  | SizeOf -> T.Ext "SizeOf" //TODO
   | _ -> failwith "Operator should have been eliminated already"
 
 let rec translate_expr (e:A.expr) : ML T.expr =
@@ -129,19 +149,22 @@ let pv p v = T.({
 
 let rec make_reader (t:T.typ) : ML T.reader =
   match t with
-  | T.T_app {v="UInt8"} [] ->
+  | T.T_app {v="UINT8"} [] ->
     T.Read_u8
 
-  | T.T_app {v="UInt16"} [] ->
+  | T.T_app {v="UINT16"} [] ->
     T.Read_u16
 
-  | T.T_app {v="UInt32"} [] ->
+  | T.T_app {v="UINT32"} [] ->
     T.Read_u32
 
   | T.T_refine base refinement ->
     T.Read_filter (make_reader base) refinement
 
-  | _ -> failwith "Unsupported reader type"
+  | _ ->
+    FStar.IO.print_string
+      (Printf.sprintf "//Unsupported reader type: %s\n" (T.print_typ t));
+    T.Read_u32
 
 let rec make_validator (p:T.parser) : ML T.validator =
   let open T in
@@ -188,28 +211,6 @@ let rec make_validator (p:T.parser) : ML T.validator =
 //       parse_t6) `map` (fun x56 -> y, x56))))
 //  `map` (fun x_2_3_4_5_6 -> {x = x; y .... }))
 
-// let rec translate_grouped_fields
-//          (gfs:grouped_fields) =
-//   let translate_one_field sf =
-//       let t = translate_typ sf.field_typ in
-//       let t =
-//         match sf.field_array_opt with
-//         | None -> t
-//         | Some e ->
-//           let e = translate_expr e in
-//           T.T_app "lseq" [Inl t; Inr e]
-//       in
-//       let t =
-//         match sf.constraint with
-//         | None -> t
-//         | Some e ->
-//           T.T_refine t (fun x -> translate_expr e)
-//   in
-//   match gfs with
-//   | [] -> failwith "Empty fields"
-//   | Inl sf::tl ->
-
-
 let translate_struct_field (sf:A.struct_field) : ML T.struct_field =
     let t = translate_typ sf.field_type in
     let t =
@@ -236,7 +237,7 @@ let translate_field (f:A.field) : ML T.field =
   | Field sf ->
     T.Field (translate_struct_field sf)
 
-let nondep_group = nat & list T.struct_field
+let nondep_group = list T.struct_field
 let grouped_fields = list (either T.struct_field nondep_group)
 let make_grouped_fields (fs:list T.field) : ML grouped_fields =
   let open T in
@@ -248,24 +249,24 @@ let make_grouped_fields (fs:list T.field) : ML grouped_fields =
         | _ -> None)
       fs
   in
-  let add_run (out, run) =
-      match snd run with
+  let add_run (out, run) : grouped_fields =
+      match run with
       | [] -> out
       | _ -> Inr run :: out
   in
   let extend_run sf (run:nondep_group) : nondep_group =
-    (fst run + 1, sf::snd run)
+    sf::run
   in
   let group_non_dependent_fields
           (sf:struct_field)
           (out, run)
     : grouped_fields & nondep_group
     = if sf.sf_dependence
-      then Inl sf :: add_run (out, run), (0, [])
+      then Inl sf::add_run (out, run), []
       else out, extend_run sf run
   in
   let gfs : grouped_fields =
-    add_run (List.fold_right group_non_dependent_fields sfs ([], (0, [])))
+    add_run (List.fold_right group_non_dependent_fields sfs ([], []))
   in
   gfs
 
@@ -294,7 +295,7 @@ let parse_grouped_fields (gfs:grouped_fields)
       | Inl sf::gfs ->
         dep_pair_parser (parse_typ sf.sf_typ) (sf.sf_ident, aux gfs)
 
-      | Inr (_, gf)::gfs ->
+      | Inr gf::gfs ->
         List.fold_right
           (fun (sf:struct_field) (p_tl:parser) ->
             pair_parser (parse_typ sf.sf_typ) p_tl)
@@ -303,7 +304,8 @@ let parse_grouped_fields (gfs:grouped_fields)
     in
     aux gfs
 
-let parse_fields (tdn:T.typedef_name) (fs:list T.field) =
+let parse_fields (tdn:T.typedef_name) (fs:list T.field)
+  : ML T.parser =
   let open T in
   let td_name, td_params = tdn in
   let gfs = make_grouped_fields fs in
@@ -312,12 +314,14 @@ let parse_fields (tdn:T.typedef_name) (fs:list T.field) =
   let dsnd (e:T.expr) = App (Ext "dsnd") [e] in
   let fst (e:T.expr) = App (Ext "fst") [e] in
   let snd (e:T.expr) = App (Ext "snd") [e] in
-  let rec make_non_dep_record_fields (e:T.expr) (fs:list struct_field)
-    : Tot  (list (A.ident * T.expr)) (decreases fs) =
+  let rec make_non_dep_record_fields (more:bool) (e:T.expr) (fs:list struct_field)
+    : Tot  (list (A.ident * T.expr) & T.expr) (decreases fs) =
     match fs with
-    | [] -> []
-    | [hd] -> [hd.sf_ident, e]
-    | hd::tl -> (hd.sf_ident, fst e) :: make_non_dep_record_fields (snd e) tl
+    | [] -> [], e
+    | [hd] -> if more then [hd.sf_ident, fst e], e else [hd.sf_ident, e], e
+    | hd::tl ->
+      let tl, last = make_non_dep_record_fields more (snd e) tl in
+      (hd.sf_ident, fst e) :: tl, last
   in
   let rec make_record_fields (e:T.expr) (gfs:grouped_fields)
     : Tot  (list (A.ident * T.expr)) (decreases gfs) =
@@ -325,9 +329,9 @@ let parse_fields (tdn:T.typedef_name) (fs:list T.field) =
     | [] -> []
     | Inl hd::gfs ->
       (hd.sf_ident, dfst e) :: make_record_fields (dsnd e) gfs
-    | Inr (_,gf)::gfs ->
-      let tl = make_record_fields (snd e) gfs in
-      let head = make_non_dep_record_fields (fst e) gf in
+    | Inr gf::gfs ->
+      let head, last = make_non_dep_record_fields (Cons? gfs) e gf in
+      let tl = make_record_fields last gfs in
       head @ tl
   in
   let make_record (x:A.ident) =

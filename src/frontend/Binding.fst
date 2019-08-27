@@ -9,7 +9,7 @@ let local_env = H.t ident' (typ * bool)
 
 noeq
 type env = {
-  this_typ: typ;
+  this_typ: (typ * ident);
   locals: local_env;
   globals: global_env
 }
@@ -136,7 +136,8 @@ and check_expr (env:env) (e:expr)
       e, t
 
     | This ->
-      e, env.this_typ
+      w (Identifier (snd env.this_typ)),
+      fst env.this_typ
 
     | App op es ->
       let ets = List.map (check_expr env) es in
@@ -215,10 +216,10 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         e)
       in
       let fc = sf.field_constraint |> map_opt (fun e ->
-        let env = { env with this_typ=sf.field_type } in
+        let env = { env with this_typ=(sf.field_type, sf.field_ident) } in
         fst (check_expr env e)) in
       if extend_scope then add_local env sf.field_ident sf.field_type;
-      let sf = { sf with field_constraint = fc } in
+      let sf = { sf with field_array_opt = fa; field_constraint = fc } in
       with_range (Field sf) f.range
 
 let check_switch (env:env) (s:switch_case)
@@ -253,7 +254,7 @@ let check_switch (env:env) (s:switch_case)
     head, cases
 
 let mk_env (g:global_env) =
-  { this_typ = tunknown;
+  { this_typ = (tunknown, with_dummy_range "");
     locals = H.create 10;
     globals = g }
 

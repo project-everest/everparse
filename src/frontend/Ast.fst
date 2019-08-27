@@ -127,8 +127,22 @@ let print_constant (c:constant) =
   match c with
   | Int i -> Printf.sprintf "%d" i
   | XInt x -> Printf.sprintf "%s" x
+  | Bool b -> Printf.sprintf "%b" b
 
 let print_ident (i:ident) = i.v
+
+let print_op = function
+  | Eq -> "="
+  | And -> "&&"
+  | Or -> "||"
+  | Not -> "not"
+  | Plus -> "+"
+  | Minus -> "-"
+  | LT -> "<"
+  | GT -> ">"
+  | LE -> "<="
+  | GE -> ">="
+  | SizeOf -> "sizeof"
 
 let rec print_expr (e:expr) : Tot string =
   match e.v with
@@ -144,7 +158,31 @@ let rec print_expr (e:expr) : Tot string =
     Printf.sprintf "(%s && %s)" (print_expr e1) (print_expr e2)
   | App Or [e1; e2] ->
     Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
-  | _ -> "??"
+  | App Or [e1; e2] ->
+    Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
+  | App Not [e1] ->
+    Printf.sprintf "(not %s)" (print_expr e1)
+  | App Plus [e1; e2] ->
+    Printf.sprintf "(%s + %s)" (print_expr e1) (print_expr e2)
+  | App Minus [e1; e2] ->
+    Printf.sprintf "(%s - %s)" (print_expr e1) (print_expr e2)
+  | App LT [e1; e2] ->
+    Printf.sprintf "(%s < %s)" (print_expr e1) (print_expr e2)
+  | App GT [e1; e2] ->
+    Printf.sprintf "(%s > %s)" (print_expr e1) (print_expr e2)
+  | App LE [e1; e2] ->
+    Printf.sprintf "(%s <= %s)" (print_expr e1) (print_expr e2)
+  | App GE [e1; e2] ->
+    Printf.sprintf "(%s >= %s)" (print_expr e1) (print_expr e2)
+  | App SizeOf [e1] ->
+    Printf.sprintf "(sizeof %s)" (print_expr e1)
+  | App op es ->
+    Printf.sprintf "(?? %s %s)" (print_op op) (String.concat ", " (print_exprs es))
+
+and print_exprs (es:list expr) : Tot (list string) =
+  match es with
+  | [] -> []
+  | hd::tl -> print_expr hd :: print_exprs tl
 
 let print_typ t : ML string =
   let Type_app i es = t.v in
