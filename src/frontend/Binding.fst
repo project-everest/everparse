@@ -322,7 +322,7 @@ let initial_global_env () =
     { v = Record td_name [] [];
       range = dummy_range }
   in
-  [ "UINT32"; "RNDIS_REQUEST_ID"; "RNDIS_OID";
+  [ "UINT8"; "UINT32"; "RNDIS_REQUEST_ID"; "RNDIS_OID";
     "RNDIS_HANDLE"; "RNDIS_PACKET"; "opaque" ]
   |> List.iter (fun i ->
     let i = { v = i; range=dummy_range} in

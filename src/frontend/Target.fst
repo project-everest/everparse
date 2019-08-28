@@ -75,7 +75,7 @@ type parser' =
   | Parse_app       : hd:A.ident -> args:list index -> parser'
   | Parse_return    : v:expr -> parser'
   | Parse_seq       : p:parser -> q:parser -> parser'
-  | Parse_and_then  : p:parser -> k:lam parser -> parser'
+  | Parse_dep_pair  : p:parser -> k:lam parser -> parser'
   | Parse_map       : p:parser -> f:lam expr -> parser'
   | Parse_filter    : p:parser -> f:lam expr -> parser'
   | Parse_with_kind : p:parser -> k:parser_kind -> parser'
@@ -131,6 +131,16 @@ type decl =
 
 ////////////////////////////////////////////////////////////////////////////////
 
+let print_ident (i:A.ident) =
+  let open A in
+  match String.list_of_string i.v with
+  | [] -> i.v
+  | c0::_ ->
+    if FStar.Char.lowercase c0 = c0
+    then i.v
+    else "_"^i.v
+
+//  if String.starts_with i.v
 let print_op = function
   | Eq -> "="
   | And -> "&&"
@@ -149,9 +159,9 @@ let rec print_expr (e:expr) : Tot string =
   | Constant c ->
     A.print_constant c
   | Identifier i ->
-    A.print_ident i
+    print_ident i
   | Record nm fields ->
-    Printf.sprintf "%s.{ %s }" (A.print_ident nm) (String.concat "; " (print_fields fields))
+    Printf.sprintf "{ %s }" (String.concat "; " (print_fields fields))
   | App Eq [e1; e2] ->
     Printf.sprintf "(%s = %s)" (print_expr e1) (print_expr e2)
   | App And [e1; e2] ->
@@ -174,8 +184,10 @@ let rec print_expr (e:expr) : Tot string =
     Printf.sprintf "(%s <= %s)" (print_expr e1) (print_expr e2)
   | App GE [e1; e2] ->
     Printf.sprintf "(%s >= %s)" (print_expr e1) (print_expr e2)
+  | App op [] ->
+    print_op op
   | App op es ->
-    Printf.sprintf "(%s %s)" (print_op op) (String.concat ", " (print_exprs es))
+    Printf.sprintf "(%s %s)" (print_op op) (String.concat " " (print_exprs es))
 
 and print_exprs (es:list expr) : Tot (list string) =
   match es with
@@ -186,95 +198,95 @@ and print_fields (fs:_) : Tot (list string) =
   match fs with
   | [] -> []
   | (x, e)::tl ->
-    Printf.sprintf "%s = %s" (A.print_ident x) (print_expr e)
+    Printf.sprintf "%s = %s" (print_ident x) (print_expr e)
     :: print_fields tl
 
-let rec print_typ (t:typ) : Tot string =
+let rec print_typ (t:typ) : Tot string (decreases t) =
   match t with
   | T_app hd args ->
-    Printf.sprintf "%s(%s)"
-      (A.print_ident hd)
-      (String.concat ", " (print_indexes args))
+    Printf.sprintf "(%s %s)"
+      (print_ident hd)
+      (String.concat " " (print_indexes args))
   | T_dep_pair t1 (x, t2) ->
     Printf.sprintf "(%s:%s & %s)"
-      (A.print_ident x)
+      (print_ident x)
       (print_typ t1)
       (print_typ t2)
   | T_refine t1 (x, e2) ->
-    Printf.sprintf "%s:%s{%s}"
-      (A.print_ident x)
+    Printf.sprintf "(%s:%s{%s})"
+      (print_ident x)
       (print_typ t1)
       (print_expr e2)
   | T_match sc cases ->
-    Printf.sprintf "(match %s with\n%s)"
-      (print_expr sc)
-      (String.concat "\n" (print_cases cases))
+    let cases = print_cases (print_expr sc) cases in
+    Printf.sprintf "(%s\nelse False)"
+                   (String.concat "\nelse " cases)
 
-and print_cases (cs:list case) : Tot (list string) =
+and print_cases hd (cs:list case) : Tot (list string) (decreases cs) =
   match cs with
   | [] -> []
   | c::cs ->
-    Printf.sprintf "| %s -> %s" (print_expr c.pattern) (print_typ c.branch)::print_cases cs
+    Printf.sprintf "if (%s = %s) then %s" hd (print_expr c.pattern) (print_typ c.branch)::print_cases hd cs
 
-and print_indexes (is:list index) : Tot (list string) =
+and print_indexes (is:list index) : Tot (list string) (decreases is) =
   match is with
   | [] -> []
   | Inl t::is -> print_typ t::print_indexes is
   | Inr e::is -> print_expr e::print_indexes is
 
 
-let rec print_parser (p:parser) : Tot string =
+let rec print_parser (p:parser) : Tot string (decreases p) =
   match p.p_parser with
   | Parse_app hd args ->
-    Printf.sprintf "parse_%s %s" (A.print_ident hd) (String.concat " " (print_indexes args))
+    Printf.sprintf "parse_%s %s" (print_ident hd) (String.concat " " (print_indexes args))
   | Parse_return v ->
     Printf.sprintf "parseReturn %s" (print_expr v)
   | Parse_seq p1 p2 ->
     Printf.sprintf "(%s `seq` %s)" (print_parser p1) (print_parser p2)
-  | Parse_and_then p1 (x, p2) ->
-    Printf.sprintf "(%s `and_then` (fun %s -> %s))" (print_parser p1) (A.print_ident x) (print_parser p2)
+  | Parse_dep_pair p1 (x, p2) ->
+    Printf.sprintf "(%s `dep_pair` (fun %s -> %s))" (print_parser p1) (print_ident x) (print_parser p2)
   | Parse_map p1 (x, e) ->
-    Printf.sprintf "(%s `map` (fun %s -> %s))" (print_parser p1) (A.print_ident x) (print_expr e)
+    Printf.sprintf "(%s `map` (fun %s -> %s))" (print_parser p1) (print_ident x) (print_expr e)
   | Parse_filter p1 (x, e) ->
-    Printf.sprintf "(%s `filter` (fun %s -> %s))" (print_parser p1) (A.print_ident x) (print_expr e)
+    Printf.sprintf "(%s `filter` (fun %s -> %s))" (print_parser p1) (print_ident x) (print_expr e)
   | Parse_with_kind p1 k ->
     Printf.sprintf "weaken_kind %s" (print_parser p1)
   | Parse_cases e cases ->
-    Printf.sprintf "(match %s with\n%s)"
-      (print_expr e)
-      (String.concat "\n" (print_parser_cases cases))
+    let e = print_expr e in
+    Printf.sprintf "(%s\nelse false_elim())"
+      (String.concat "\n else " (print_parser_cases e cases))
 
-and print_parser_cases (cases:list (expr * parser)) : Tot (list string) =
+and print_parser_cases hd (cases:list (expr * parser)) : Tot (list string) (decreases cases) =
   match cases with
   | [] -> []
   | (e, p)::cases ->
-    Printf.sprintf "| %s -> %s" (print_expr e) (print_parser p)
-    :: print_parser_cases cases
-
+    Printf.sprintf "if (%s = %s) then %s"
+      hd (print_expr e) (print_parser p)
+    :: print_parser_cases hd cases
 
 let rec print_validator (v:validator) : Tot string =
   match v.v_validator with
   | Validate_app hd args ->
-    Printf.sprintf "parse_%s %s" (A.print_ident hd) (String.concat " " (print_indexes args))
+    Printf.sprintf "validate_%s %s" (print_ident hd) (String.concat " " (print_indexes args))
   | Validate_return ->
     Printf.sprintf "validateReturn"
   | Validate_seq p1 p2 ->
-    Printf.sprintf "(%s `seq` %s)" (print_validator p1) (print_validator p2)
+    Printf.sprintf "(%s `v_seq` %s)" (print_validator p1) (print_validator p2)
   | Validate_and_read p1 _ (x, p2) ->
-    Printf.sprintf "(%s `and_then` (fun %s -> %s))" (print_validator p1) (A.print_ident x) (print_validator p2)
+    Printf.sprintf "(%s `v_and_read` (fun %s -> %s))" (print_validator p1) (print_ident x) (print_validator p2)
   | Validate_map p1 (x, e) ->
-    Printf.sprintf "(%s `map` (fun %s -> %s))" (print_validator p1) (A.print_ident x) (print_expr e)
+    Printf.sprintf "(%s `v_map` (fun %s -> %s))" (print_validator p1) (print_ident x) (print_expr e)
   | Validate_filter p1 _ (x, e) ->
-    Printf.sprintf "(%s `filter` (fun %s -> %s))" (print_validator p1) (A.print_ident x) (print_expr e)
+    Printf.sprintf "(%s `v_filter` (fun %s -> %s))" (print_validator p1) (print_ident x) (print_expr e)
   | Validate_filter_and_read p1 _ (x, e) (y, v) ->
-    Printf.sprintf "(filter_and_read %s (fun %s -> %s) (fun %s -> %s))"
+    Printf.sprintf "(v_filter_and_read %s (fun %s -> %s) (fun %s -> %s))"
       (print_validator p1)
-      (A.print_ident x)
+      (print_ident x)
       (print_expr e)
-      (A.print_ident y)
+      (print_ident y)
       (print_validator v)
   | Validate_with_kind p1 ->
-    Printf.sprintf "weaken_kind %s" (print_validator p1)
+    Printf.sprintf "v_weaken_kind %s" (print_validator p1)
   | Validate_cases e cases ->
     Printf.sprintf "(match %s with\n%s)"
       (print_expr e)
@@ -289,10 +301,17 @@ and print_validator_cases (cases:list (expr * validator)) : Tot (list string) =
 
 let print_typedef_name (tdn:typedef_name) =
   let name, params = tdn in
-  Printf.sprintf "%s (%s)"
-    (A.print_ident name)
-    (String.concat ", "
-      (List.Tot.map (fun (id, t) -> Printf.sprintf "%s:%s" (A.print_ident id) (print_typ t)) params))
+  Printf.sprintf "%s %s"
+    (print_ident name)
+    (String.concat " "
+      (List.Tot.map (fun (id, t) -> Printf.sprintf "(%s:%s)" (print_ident id) (print_typ t)) params))
+
+let print_typedef_typ (tdn:typedef_name) =
+  let name, params = tdn in
+  Printf.sprintf "%s %s"
+    (print_ident name)
+    (String.concat " "
+      (List.Tot.map (fun (id, t) -> (print_ident id)) params))
 
 let print_typedef_body (b:typedef_body) =
   match b with
@@ -302,27 +321,37 @@ let print_typedef_body (b:typedef_body) =
       match f with
       | FieldComment s -> s
       | Field sf ->
-        Printf.sprintf "%s%s : %s"
-          (if sf.sf_dependence then "dep " else "")
-          (A.print_ident sf.sf_ident)
+        Printf.sprintf "%s : %s%s"
+          (print_ident sf.sf_ident)
           (print_typ sf.sf_typ)
+          (if sf.sf_dependence then " (*dep*)" else "")
     in
     let fields = String.concat ";\n" (List.Tot.map print_field fields) in
-    Printf.sprintf "{%s}" fields
+    Printf.sprintf "{\n%s\n}" fields
 
 let print_decl (d:decl) : Tot string =
   match d with
   | Comment c -> c
   | Definition (x, c) ->
-    Printf.sprintf "let %s = %s" (A.print_ident x) (A.print_constant c)
+    Printf.sprintf "let %s = %s\n" (print_ident x) (A.print_constant c)
   | Type_decl td ->
-    Printf.sprintf "type %s = %s\nlet parse_%s = %s\nlet validate_%s = %s\n"
+    Printf.sprintf "type %s = %s\n"
       (print_typedef_name td.decl_name)
       (print_typedef_body td.decl_typ)
+    `strcat`
+    Printf.sprintf "let parse_%s : parser (%s) = %s\n"
       (print_typedef_name td.decl_name)
+      (print_typedef_typ td.decl_name)
       (print_parser td.decl_parser)
-      (print_typedef_name td.decl_name)
-      (print_validator td.decl_validator)
+    // `strcat`
+    // Printf.sprintf "let validate_%s : validator (parse_%s) = %s\n"
+    //   (print_typedef_name td.decl_name)
+    //   (print_typedef_name td.decl_name)
+    //   (print_validator td.decl_validator)
 
 let print_decls (ds:list decl) =
-  String.concat "\n" (List.Tot.map print_decl ds)
+  Printf.sprintf
+    "module Rndis\n\
+     open Prelude\n\
+     %s"
+     (String.concat "\n" (List.Tot.map print_decl ds))

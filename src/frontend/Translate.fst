@@ -52,7 +52,7 @@ let mk_parser k t p = T.({
 let unit_typ =
     T.T_app (with_dummy_range "unit") []
 let unit_val =
-    T.Record (with_dummy_range "unit") []
+    T.(App (Ext "()") [])
 let unit_parser =
     mk_parser pk unit_typ (T.Parse_return unit_val)
 let pair_typ t1 t2 =
@@ -73,12 +73,9 @@ let dep_pair_value x y : T.expr =
               (with_dummy_range "snd", T.Identifier y)]
 let dep_pair_parser p1 (p2:T.lam T.parser) =
   let open T in
-  let x, p2 = p2 in
-  let t = T_dep_pair p1.p_typ (x, p2.p_typ) in
+  let t = T_dep_pair p1.p_typ (fst p2, (snd p2).p_typ) in
   mk_parser pk t
-      (Parse_and_then
-        p1
-        (x, mk_parser pk t (Parse_map p2 (mk_lam (dep_pair_value x)))))
+      (Parse_dep_pair p1 p2)
 
 let translate_op : A.op -> ML T.op = function
   | Eq -> T.Eq
@@ -91,7 +88,7 @@ let translate_op : A.op -> ML T.op = function
   | GT -> T.GT
   | LE -> T.LE
   | GE -> T.LE
-  | SizeOf -> T.Ext "SizeOf" //TODO
+  | SizeOf -> T.Ext "sizeOf" //TODO
   | _ -> failwith "Operator should have been eliminated already"
 
 let rec translate_expr (e:A.expr) : ML T.expr =
@@ -118,7 +115,6 @@ let make_enum_typ (t:T.typ) (ids:list ident) =
       (T.Constant (Bool false))
   in
   T.T_refine t (mk_lam refinement)
-
 
 let rec parse_typ (t:T.typ) : ML T.parser =
   let open T in
@@ -178,7 +174,7 @@ let rec make_validator (p:T.parser) : ML T.validator =
   | Parse_seq p1 p2 ->
     pv p (Validate_seq (make_validator p1) (make_validator p2))
 
-  | Parse_and_then p1 k ->
+  | Parse_dep_pair p1 k ->
     pv p (Validate_and_read
             (make_validator p1)
             (make_reader p1.p_typ)
@@ -314,13 +310,13 @@ let parse_fields (tdn:T.typedef_name) (fs:list T.field)
   let dsnd (e:T.expr) = App (Ext "dsnd") [e] in
   let fst (e:T.expr) = App (Ext "fst") [e] in
   let snd (e:T.expr) = App (Ext "snd") [e] in
-  let rec make_non_dep_record_fields (more:bool) (e:T.expr) (fs:list struct_field)
+  let rec make_non_dep_record_fields (e:T.expr) (fs:list struct_field)
     : Tot  (list (A.ident * T.expr) & T.expr) (decreases fs) =
     match fs with
     | [] -> [], e
-    | [hd] -> if more then [hd.sf_ident, fst e], e else [hd.sf_ident, e], e
+    | [hd] -> [hd.sf_ident, fst e], e
     | hd::tl ->
-      let tl, last = make_non_dep_record_fields more (snd e) tl in
+      let tl, last = make_non_dep_record_fields (snd e) tl in
       (hd.sf_ident, fst e) :: tl, last
   in
   let rec make_record_fields (e:T.expr) (gfs:grouped_fields)
@@ -330,8 +326,8 @@ let parse_fields (tdn:T.typedef_name) (fs:list T.field)
     | Inl hd::gfs ->
       (hd.sf_ident, dfst e) :: make_record_fields (dsnd e) gfs
     | Inr gf::gfs ->
-      let head, last = make_non_dep_record_fields (Cons? gfs) e gf in
-      let tl = make_record_fields last gfs in
+      let head, last = make_non_dep_record_fields e gf in
+      let tl = make_record_fields (snd last) gfs in
       head @ tl
   in
   let make_record (x:A.ident) =
