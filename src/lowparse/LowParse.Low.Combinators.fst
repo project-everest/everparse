@@ -221,7 +221,6 @@ let valid_dtuple2
 
 inline_for_extraction
 let validate_dtuple2
-  (#rrel #rel: _)
   (#k1: parser_kind)
   (#t1: Type0)
   (#p1: parser k1 t1)
@@ -248,7 +247,6 @@ let validate_dtuple2
 
 inline_for_extraction
 let jump_dtuple2
-  (#rrel #rel: _)
   (#k1: parser_kind)
   (#t1: Type0)
   (#p1: parser k1 t1)
@@ -270,7 +268,6 @@ let jump_dtuple2
 
 inline_for_extraction
 let jump_dtuple2_constant_size_dsnd
-  (#rrel #rel: _)
   (#k1: parser_kind)
   (#t1: Type0)
   (#p1: parser k1 t1)
