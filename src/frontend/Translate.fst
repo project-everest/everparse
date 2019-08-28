@@ -41,20 +41,19 @@ let mk_lam (f:(A.ident -> ML 'a)) : ML (T.lam 'a) =
 let map_lam (x:T.lam 'a) (g: 'a -> ML 'b) : ML (T.lam 'b) =
   fst x, g (snd x)
 
-let pk = ()
-
 let mk_parser k t p = T.({
   p_kind = k;
   p_typ = t;
   p_parser = p
 })
 
+let false_typ = T.T_false
 let unit_typ =
     T.T_app (with_dummy_range "unit") []
 let unit_val =
     T.(App (Ext "()") [])
 let unit_parser =
-    mk_parser pk unit_typ (T.Parse_return unit_val)
+    mk_parser T.PK_return unit_typ (T.Parse_return unit_val)
 let pair_typ t1 t2 =
     T.T_app (with_dummy_range "tuple2") [Inl t1; Inl t2]
 let pair_value x y =
@@ -64,7 +63,7 @@ let pair_value x y =
 let pair_parser p1 p2 =
     let open T in
     let pt = pair_typ p1.p_typ p2.p_typ in
-    mk_parser pk pt (Parse_seq p1 p2)
+    mk_parser (PK_and_then p1.p_kind p2.p_kind) pt (Parse_seq p1 p2)
 let dep_pair_typ t1 (t2:T.lam T.typ) : T.typ =
     T.T_dep_pair t1 t2
 let dep_pair_value x y : T.expr =
@@ -74,7 +73,7 @@ let dep_pair_value x y : T.expr =
 let dep_pair_parser p1 (p2:T.lam T.parser) =
   let open T in
   let t = T_dep_pair p1.p_typ (fst p2, (snd p2).p_typ) in
-  mk_parser pk t
+  mk_parser (PK_and_then p1.p_kind (snd p2).p_kind) t
       (Parse_dep_pair p1 p2)
 
 let translate_op : A.op -> ML T.op = function
@@ -116,24 +115,45 @@ let make_enum_typ (t:T.typ) (ids:list ident) =
   in
   T.T_refine t (mk_lam refinement)
 
+let rec push_weaken (k:T.parser_kind) (p:T.parser) : ML T.parser =
+  let open T in
+  match p.p_parser with
+  | Parse_if_else e p1 p2 ->
+    mk_parser k p.p_typ (Parse_if_else e (push_weaken k p1) (push_weaken k p2))
+
+  | Parse_weaken p _ ->
+    mk_parser k p.p_typ (Parse_weaken p k)
+
+  | _ ->
+    mk_parser k p.p_typ (Parse_weaken p k)
+
 let rec parse_typ (t:T.typ) : ML T.parser =
   let open T in
   match t with
+  | T_false ->
+    mk_parser PK_return T_false Parse_impos
+
   | T.T_app hd args ->
-    mk_parser pk (T.T_app hd args) (T.Parse_app hd args)
+    mk_parser (PK_base hd args) (T.T_app hd args) (T.Parse_app hd args)
 
   | T.T_refine t_base refinement ->
     let base = parse_typ t_base in
     let refined = T.Parse_filter base refinement in
-    mk_parser pk t refined
+    mk_parser (PK_filter base.p_kind) t refined
 
-  | T.T_match head cases ->
-    let cases =
-      List.map
-        (fun c -> c.pattern, parse_typ c.branch)
-        cases
+  | T.T_if_else e t1 t2 ->
+    let p1 = parse_typ t1 in
+    let p2 = parse_typ t2 in
+    let k =
+      if parser_kind_eq p1.p_kind p2.p_kind
+      then p1.p_kind
+      else PK_glb p1.p_kind p2.p_kind
     in
-    mk_parser pk t (T.Parse_cases head cases)
+    mk_parser k t (Parse_if_else e p1 p2)
+
+  | T.T_cases t ->
+    let p = parse_typ t in
+    push_weaken p.p_kind p
 
   | T.T_dep_pair t1 (x, t2) ->
     dep_pair_parser (parse_typ t1) (x, parse_typ t2)
@@ -165,6 +185,9 @@ let rec make_reader (t:T.typ) : ML T.reader =
 let rec make_validator (p:T.parser) : ML T.validator =
   let open T in
   match p.p_parser with
+  | Parse_impos ->
+    pv p Validate_impos
+
   | Parse_app hd args ->
     pv p (Validate_app hd args)
 
@@ -186,11 +209,11 @@ let rec make_validator (p:T.parser) : ML T.validator =
   | Parse_filter p1 f ->
     pv p (Validate_filter (make_validator p1) (make_reader p1.p_typ) f)
 
-  | Parse_with_kind p1 k ->
-    pv p (Validate_with_kind (make_validator p1))
+  | Parse_weaken p k ->
+    pv p (Validate_weaken (make_validator p) k)
 
-  | Parse_cases hd cs ->
-    pv p (Validate_cases hd (List.map (fun (e, p) -> e, make_validator p) cs))
+  | Parse_if_else e p1 p2 ->
+    pv p (Validate_if_else e (make_validator p1) (make_validator p2))
 
 // x:t1;
 // t2;
@@ -335,26 +358,26 @@ let parse_fields (tdn:T.typedef_name) (fs:list T.field)
     Record td_name fields
   in
   let t = T_app td_name (List.map (fun (x, _) -> Inr (T.Identifier x)) td_params) in
-  mk_parser pk t (Parse_map p (mk_lam make_record))
+  mk_parser p.p_kind t (Parse_map p (mk_lam make_record))
 
 let translate_switch_case_type (sw:Ast.switch_case) =
   let sc, cases = sw in
   let sc = translate_expr sc in
-  let translate_case ef : ML (list T.case) =
-    let e, f = ef in
-    let pat = translate_expr e in
-    match f.v with
-    | FieldComment _ -> []
-    | Field sf ->
-      let sf = translate_struct_field sf in
-      let open T in
-      [{
-        pattern = pat;
-        branch = sf.sf_typ
-       }]
+  let t = List.fold_right
+    (fun ef t_else ->
+      let e, f = ef in
+      match f.v with
+      | FieldComment _ ->
+        t_else
+      | Field sf ->
+        let open T in
+        let sf = translate_struct_field sf in
+        let guard = App Eq [sc; translate_expr e] in
+        T_if_else guard sf.sf_typ t_else)
+    cases
+    T.T_false
   in
-  let cases = List.collect translate_case cases in
-  T.T_match sc cases
+  T.T_cases t
 
 let translate_decl (d:A.decl) : ML T.decl =
   match d.v with

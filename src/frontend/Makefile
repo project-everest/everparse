@@ -1,7 +1,10 @@
 ROOT=Main.fst
 FSTAR_HOME?=../../../FStar
+EVERPARSE_HOME?=../..
+KREMLIN_HOME=$(EVERPARSE_HOME)/../kremlin
+
 INCLUDE_PATHS=
-OTHERFLAGS?=--admit_smt_queries true
+OTHERFLAGS?=
 FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS))
 
 .PHONY: ocaml
@@ -30,3 +33,9 @@ test.native: ast.ml lexer.mll parser.mly test.ml
 
 clean:
 	rm -rf *.checked $(ALL_ML_FILES) *~
+
+
+FSTAR_OPTIONS=$(OTHERFLAGS) $(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib)
+
+%.fst-in %.fsti-in:
+	@echo $(FSTAR_OPTIONS)
