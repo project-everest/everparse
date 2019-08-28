@@ -264,7 +264,7 @@ and print_parser_cases hd (cases:list (expr * parser)) : Tot (list string) (decr
       hd (print_expr e) (print_parser p)
     :: print_parser_cases hd cases
 
-let rec print_validator (v:validator) : Tot string =
+let rec print_validator (v:validator) : Tot string (decreases v) =
   match v.v_validator with
   | Validate_app hd args ->
     Printf.sprintf "validate_%s %s" (print_ident hd) (String.concat " " (print_indexes args))
@@ -288,16 +288,18 @@ let rec print_validator (v:validator) : Tot string =
   | Validate_with_kind p1 ->
     Printf.sprintf "v_weaken_kind %s" (print_validator p1)
   | Validate_cases e cases ->
-    Printf.sprintf "(match %s with\n%s)"
-      (print_expr e)
-      (String.concat "\n" (print_validator_cases cases))
+    let e = print_expr e in
+    Printf.sprintf "(%s\nelse false_elim())"
+      (String.concat "\n else " (print_validator_cases e cases))
 
-and print_validator_cases (cases:list (expr * validator)) : Tot (list string) =
+and print_validator_cases hd (cases:list (expr * validator))
+  : Tot (list string) (decreases cases) =
   match cases with
   | [] -> []
   | (e, p)::cases ->
-    Printf.sprintf "| %s -> %s" (print_expr e) (print_validator p)
-    :: print_validator_cases cases
+    Printf.sprintf "if (%s = %s) then %s"
+      hd (print_expr e) (print_validator p)
+    :: print_validator_cases hd cases
 
 let print_typedef_name (tdn:typedef_name) =
   let name, params = tdn in
@@ -343,11 +345,11 @@ let print_decl (d:decl) : Tot string =
       (print_typedef_name td.decl_name)
       (print_typedef_typ td.decl_name)
       (print_parser td.decl_parser)
-    // `strcat`
-    // Printf.sprintf "let validate_%s : validator (parse_%s) = %s\n"
-    //   (print_typedef_name td.decl_name)
-    //   (print_typedef_name td.decl_name)
-    //   (print_validator td.decl_validator)
+    `strcat`
+    Printf.sprintf "let validate_%s : validator (parse_%s) = %s\n"
+      (print_typedef_name td.decl_name)
+      (print_typedef_typ td.decl_name)
+      (print_validator td.decl_validator)
 
 let print_decls (ds:list decl) =
   Printf.sprintf
