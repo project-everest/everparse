@@ -27,13 +27,13 @@
 %token<Ast.ident>   IDENT
 %token          EQ AND OR EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON
-%token          STAR MINUS PLUS LBRACK RBRACK
+%token          STAR MINUS PLUS LBRACK RBRACK LEQ LESS_THAN GEQ GREATER_THAN
 %start <Ast.decl list> prog
 %start <Ast.expr> expr_top
 
-%nonassoc EQ
 %left OR
 %left AND
+%nonassoc EQ
 %left PLUS
 %left MINUS
 
@@ -55,6 +55,10 @@ constant:
 
 rel_op:
   | EQ { Eq }
+  | LEQ { LE }
+  | LESS_THAN { LT }
+  | GEQ { GE }
+  | GREATER_THAN { GT }
 
 expr_no_range:
   | i=IDENT { Identifier i }

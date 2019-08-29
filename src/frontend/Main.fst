@@ -4,6 +4,7 @@ open Ast
 open ParserDriver
 module T = Target
 
+#push-options "--warn_error -272"
 let test =
   let cmdline = FStar.Getopt.cmdline() in
   match cmdline with

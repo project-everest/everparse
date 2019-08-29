@@ -71,6 +71,10 @@ rule token =
   | line_comment as c { locate lexbuf (COMMENT c) }
   | "("            { locate lexbuf LPAREN }
   | ")"            { locate lexbuf RPAREN }  
+  | ">="           { locate lexbuf GEQ }
+  | "<="           { locate lexbuf LEQ }
+  | ">"            { locate lexbuf GREATER_THAN }
+  | "<"            { locate lexbuf LESS_THAN }
   | "="            { locate lexbuf EQ }
   | "&&"           { locate lexbuf AND }
   | "||"           { locate lexbuf OR }

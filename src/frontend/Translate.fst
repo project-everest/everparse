@@ -88,7 +88,7 @@ let translate_op : A.op -> ML T.op = function
   | LT -> T.LT
   | GT -> T.GT
   | LE -> T.LE
-  | GE -> T.LE
+  | GE -> T.GE
   | _ -> failwith "Operator should have been eliminated already"
 
 let rec translate_expr (e:A.expr) : ML T.expr =
@@ -220,8 +220,8 @@ let rec make_validator (p:T.parser) : ML T.validator =
   | Parse_filter p1 f ->
     pv p (Validate_filter (make_validator p1) (make_reader p1.p_typ) f)
 
-  | Parse_weaken p k ->
-    pv p (Validate_weaken (make_validator p) k)
+  | Parse_weaken p1 k ->
+    pv p (Validate_weaken (make_validator p1) k)
 
   | Parse_if_else e p1 p2 ->
     pv p (Validate_if_else e (make_validator p1) (make_validator p2))

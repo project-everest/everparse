@@ -165,12 +165,12 @@ let print_op = function
   | And -> "&&"
   | Or -> "||"
   | Not -> "not"
-  | Plus -> "`FStar.UInt32.add_mod`"
-  | Minus -> "`FStar.UInt32.sub_mod`"
-  | LT -> "<"
-  | GT -> ">"
-  | LE -> "<="
-  | GE -> ">="
+  | Plus -> "`FStar.UInt32.add`"
+  | Minus -> "`FStar.UInt32.sub`"
+  | LT -> "`FStar.UInt32.lt`"
+  | GT -> "`FStar.UInt32.gt`"
+  | LE -> "`FStar.UInt32.lte`"
+  | GE -> "`FStar.UInt32.gte`"
   | Ext s -> s
 
 let rec print_expr (e:expr) : Tot string =
@@ -278,7 +278,7 @@ let rec print_parser (p:parser) : Tot string (decreases p) =
   | Parse_weaken p1 k ->
     Printf.sprintf "(parse_weaken %s _)" (print_parser p1) //(print_kind k)
   | Parse_if_else e p1 p2 ->
-    Printf.sprintf "(if %s then\n%s\nelse\n%s)"
+    Printf.sprintf "(parse_ite %s (fun _ -> %s) (fun _ -> %s))"
       (print_expr e)
       (print_parser p1)
       (print_parser p2)
@@ -331,9 +331,11 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
   | Validate_weaken p1 k ->
     Printf.sprintf "(validate_weaken %s _)" (print_validator p1) // (print_kind k)
   | Validate_if_else e v1 v2 ->
-    Printf.sprintf "(if %s then\n%s else\n%s)"
+    Printf.sprintf "(validate_ite %s (fun _ -> %s) (fun _ -> %s) (fun _ -> %s) (fun _ -> %s))"
       (print_expr e)
+      (print_parser v1.v_parser)
       (print_validator v1)
+      (print_parser v2.v_parser)
       (print_validator v2)
   | Validate_impos -> "(validate_impos())"
 
@@ -373,21 +375,21 @@ let print_decl (d:decl) : Tot string =
   | Definition (x, c) ->
     Printf.sprintf "[@CMacro]\nlet %s = %s\n" (print_ident x) (A.print_constant c)
   | Type_decl td ->
-    Printf.sprintf "type %s = %s\n"
+    Printf.sprintf "noextract\ntype %s = %s\n"
       (print_typedef_name td.decl_name)
       (print_typedef_body td.decl_typ)
     `strcat`
-    Printf.sprintf "let kind_%s : parser_kind = %s\n"
+    Printf.sprintf "noextract\nlet kind_%s : parser_kind = %s\n"
       (print_ident (fst td.decl_name))
       (print_kind td.decl_parser.p_kind)
     `strcat`
-    Printf.sprintf "let parse_%s : parser (kind_%s) (%s) = %s\n"
+    Printf.sprintf "noextract\nlet parse_%s : parser (kind_%s) (%s) = %s\n"
       (print_typedef_name td.decl_name)
       (print_ident (fst td.decl_name))
       (print_typedef_typ td.decl_name)
       (print_parser td.decl_parser)
     `strcat`
-    Printf.sprintf "let validate_%s : validator (parse_%s) = %s\n"
+    Printf.sprintf "inline_for_extraction\nlet validate_%s : validator (parse_%s) = %s\n"
       (print_typedef_name td.decl_name)
       (print_typedef_typ td.decl_name)
       (print_validator td.decl_validator)
@@ -395,7 +397,7 @@ let print_decl (d:decl) : Tot string =
     (match td.decl_reader with
      | None -> ""
      | Some r ->
-       Printf.sprintf "let read_%s : reader (parse_%s) = %s\n"
+       Printf.sprintf "inline_for_extraction\nlet read_%s : reader (parse_%s) = %s\n"
          (print_typedef_name td.decl_name)
          (print_typedef_name td.decl_name)
          (print_reader r))
