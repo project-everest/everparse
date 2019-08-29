@@ -3,8 +3,13 @@ open Ast
 open FStar.All
 module H = Hashtable
 
+type decl_attributes = {
+  size:option size;
+  has_suffix:bool
+}
+let global_env = H.t ident' (decl * either decl_attributes typ)
+
 //the bool signifies that this identifier has been used
-let global_env = H.t ident' (decl * either (option size) typ)
 let local_env = H.t ident' (typ * bool)
 
 noeq
@@ -41,7 +46,7 @@ let typedef_names (d:decl) : option typedef_names =
   | CaseType td _ _ -> Some td
   | _ -> None
 
-let add_global (e:global_env) (i:ident) (d:decl) (t:either (option size) typ) =
+let add_global (e:global_env) (i:ident) (d:decl) (t:either decl_attributes typ) =
   check_shadow e i d.range;
   H.insert e i.v (d, t);
   match typedef_names d with
@@ -54,7 +59,6 @@ let add_global (e:global_env) (i:ident) (d:decl) (t:either (option size) typ) =
     end
 //    check_shadow e td.typedef_ptr_abbrev d.range;
 
-
 let add_local (e:env) (i:ident) (t:typ) =
   check_shadow e.globals i t.range;
   check_shadow e.locals i t.range;
@@ -63,7 +67,7 @@ let add_local (e:env) (i:ident) (t:typ) =
 let remove_local (e:env) (i:ident) =
   H.remove e.locals i.v
 
-let lookup (e:env) (i:ident) : ML (either typ (decl & either (option size) typ)) =
+let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes typ)) =
   match H.try_find e.locals i.v with
   | Some (t, true) ->
     Inl t
@@ -104,8 +108,14 @@ let type_of_constant (c:constant) : typ =
 let size_of_typ (env:env) (t:typ) : ML (option size) =
   let Type_app hd _ = t.v in
   match lookup env hd with
-  | Inr (_, Inl sz_opt) -> sz_opt
+  | Inr (_, Inl attrs) -> attrs.size
   | _ -> None
+
+let typ_has_suffix env (t:typ) : ML bool =
+  let Type_app hd _ = t.v in
+  match lookup env hd with
+  | Inr (d, Inl attrs) -> attrs.has_suffix
+  | _ -> false
 
 let rec value_of_const_expr (env:env) (e:expr) : ML (option (either bool int)) =
   match e.v with
@@ -303,19 +313,23 @@ let check_field (env:env) (extend_scope: bool) (f:field)
       in
       let size = size_of_typ env sf.field_type in
       let size =
-        match sf.field_array_opt with
-        | None -> size
-        | Some e ->
-          match value_of_const_expr env e, size with
-          | Some (Inr n), Some s -> Some (n `op_Multiply` s)
+        match sf.field_array_opt, size with
+        | None, _ -> size
+        | _, Some 0 -> size //this is an opaque field
+        | Some e, Some s ->
+          begin
+          match value_of_const_expr env e with
+          | Some (Inr n) -> Some (n `op_Multiply` s)
           | _ -> None
+          end
+        | _ -> None
       in
       if extend_scope then add_local env sf.field_ident sf.field_type;
       let sf = { sf with field_array_opt = fa; field_constraint = fc; field_size = size } in
       with_range (Field sf) f.range
 
 let check_switch (env:env) (s:switch_case)
-  : ML (switch_case * option size)
+  : ML (switch_case * decl_attributes)
   = let head, cases = s in
     let head, enum_t = check_expr env head in
     let enum_tags, t = lookup_enum_cases env (Type_app?._0 enum_t.v) in
@@ -343,19 +357,23 @@ let check_switch (env:env) (s:switch_case)
       pat, f
     in
     let cases = List.map check_case cases in
-    let size =
+    let size, suffix =
       List.fold_right
-        (fun (_, f) size ->
+        (fun (_, f) (size, suffix) ->
           match f.v with
-          | FieldComment _ -> size
+          | FieldComment _ -> size, suffix
           | Field sf ->
-            match size, sf.field_size with
-            | Some n, Some f -> if f > n then Some f else Some n
-            | _ -> None)
+            let size =
+              match size, sf.field_size with
+              | Some n, Some f -> if f > n then Some f else Some n
+              | _ -> None
+            in
+            size, typ_has_suffix env sf.field_type)
         cases
-        (Some 0)
+        (Some 0, false)
     in
-    (head, cases), size
+    let attrs = { has_suffix = suffix; size = size } in
+    (head, cases), attrs
 
 let mk_env (g:global_env) =
   { this = None;
@@ -366,6 +384,7 @@ let check_params (env:env) (ps:list param) : ML unit =
   ps |> List.iter (fun (t, p) ->
       check_typ env t;
       add_local env p t)
+
 
 let bind_decl (e:global_env) (d:decl) : ML decl =
   match d.v with
@@ -378,7 +397,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
   | TypeAbbrev t i ->
     let env = mk_env e in
     check_typ env t;
-    add_global e i d (Inl (size_of_typ env t));
+    add_global e i d (Inl ({ has_suffix = typ_has_suffix env t; size =size_of_typ env t }));
     d
 
   | Enum t i cases ->
@@ -391,7 +410,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
                    (print_typ t)
                    (print_typ t'))
                  d.range);
-    add_global e i d (Inl (size_of_typ env t));
+    add_global e i d (Inl ({ has_suffix = typ_has_suffix env t; size =size_of_typ env t }));
     d
 
   | Record tdnames params fields ->
@@ -418,7 +437,23 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
             | _ -> None)
         fields (Some 0)
     in
-    add_global e tdnames.typedef_name d (Inl size);
+    let rec check_suffix (f:list struct_field) : ML bool =
+      match f with
+      | [] -> false
+      | [last] ->
+        typ_has_suffix env last.field_type
+      | hd::tl ->
+        if typ_has_suffix env hd.field_type
+        then error "Variable-length fields can only be at the end of a struct" hd.field_type.range
+        else check_suffix tl
+    in
+    let has_suffix = check_suffix (List.filter_map (function {v=FieldComment _} -> None | {v=Field sf} -> Some sf) fields) in
+    let attrs = {
+        size = size;
+        has_suffix = has_suffix
+      }
+    in
+    add_global e tdnames.typedef_name d (Inl attrs);
     d
 
   | CaseType tdnames params switch ->
@@ -443,10 +478,12 @@ let initial_global_env () =
     { v = Record td_name [] [];
       range = dummy_range }
   in
-  [ ("UINT8", 1); ("UINT32", 4); ("opaque", 1) ]
-  |> List.iter (fun (i,n) ->
+  [ ("UINT8", { size = Some 1; has_suffix = false});
+    ("UINT32", { size = Some 4; has_suffix = false});
+    ("suffix", { size = Some 0; has_suffix = true}) ]
+  |> List.iter (fun (i, attrs) ->
     let i = { v = i; range=dummy_range} in
-    add_global e i (nullary_decl i) (Inl (Some n)));
+    add_global e i (nullary_decl i) (Inl attrs));
   e
 
 let bind_prog (p:prog) : ML (prog * global_env) =

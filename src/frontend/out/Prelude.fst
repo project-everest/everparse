@@ -143,7 +143,7 @@ let validate_nlist (n:U32.t) #k #t (#p:parser k t) (v:validator p)
 ////////////////////////////////////////////////////////////////////////////////
 //placeholders
 ////////////////////////////////////////////////////////////////////////////////
-let _UINT8 =_UINT32
-let kind__UINT8 = kind__UINT32
-let parse__UINT8 = parse__UINT32
-let validate__UINT8 = validate__UINT32
+let suffix = FStar.UInt8.t
+let kind_suffix : parser_kind = LowParse.Spec.Int.parse_u8_kind
+let parse_suffix : parser kind_suffix suffix = LowParse.Spec.Int.parse_u8
+let validate_suffix : validator parse_suffix = LowParse.Low.Int.validate_u8 ()

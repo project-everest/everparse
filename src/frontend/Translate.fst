@@ -89,7 +89,6 @@ let translate_op : A.op -> ML T.op = function
   | GT -> T.GT
   | LE -> T.LE
   | GE -> T.LE
-  | SizeOf -> T.Ext "sizeOf" //TODO
   | _ -> failwith "Operator should have been eliminated already"
 
 let rec translate_expr (e:A.expr) : ML T.expr =
