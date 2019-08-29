@@ -398,9 +398,9 @@ let rec read_typ (t:T.typ) : ML (option T.reader) =
   | T_app ({v="UINT16"}) [] -> Some Read_u16
   | T_app ({v="UINT32"}) [] -> Some Read_u32
   | T_refine base ref ->
-    match read_typ base with
-    | None -> None
-    | Some r -> Some (Read_filter r ref)
+    (match read_typ base with
+     | None -> None
+     | Some r -> Some (Read_filter r ref))
   | _ -> None
 
 let translate_decl (d:A.decl) : ML T.decl =
@@ -408,6 +408,27 @@ let translate_decl (d:A.decl) : ML T.decl =
   | Comment s -> T.Comment s
 
   | Define i s -> T.Definition (i, s)
+
+  | TypeAbbrev t i ->
+    let tdn = {
+        typedef_name = i;
+        typedef_abbrev = with_dummy_range "";
+        typedef_ptr_abbrev = with_dummy_range "";
+      }
+    in
+    let t = translate_typ t in
+    let tdn = translate_typedef_name tdn [] in
+    let p = parse_typ t in
+    let open T in
+    Type_decl (
+      {
+        decl_name = tdn;
+        decl_typ = TD_abbrev t;
+        decl_parser = p;
+        decl_validator = make_validator p;
+        decl_reader = read_typ t;
+      }
+    )
 
   | Enum t i ids ->
     let tdn = {

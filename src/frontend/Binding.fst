@@ -18,6 +18,7 @@ let params_of_decl (d:decl) : list param =
   match d.v with
   | Comment _
   | Define _ _
+  | TypeAbbrev _ _
   | Enum _ _ _ -> []
   | Record _ params _
   | CaseType _ params _ -> params
@@ -95,6 +96,7 @@ let type_of_constant (c:constant) : typ =
   match c with
   | Int i -> tuint32
   | XInt x -> tuint32
+  | Bool _ -> tbool
 
 let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
   match o with
@@ -271,6 +273,12 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_global e i d (Some (type_of_constant c));
     d
 
+  | TypeAbbrev t i ->
+    let env = mk_env e in
+    check_typ env t;
+    add_global e i d None;
+    d
+
   | Enum t i cases ->
     let env = mk_env e in
     check_typ env t;
@@ -322,8 +330,7 @@ let initial_global_env () =
     { v = Record td_name [] [];
       range = dummy_range }
   in
-  [ "UINT8"; "UINT32"; "RNDIS_REQUEST_ID"; "RNDIS_OID";
-    "RNDIS_HANDLE"; "RNDIS_PACKET"; "opaque" ]
+  [ "UINT8"; "UINT32"; "opaque" ]
   |> List.iter (fun i ->
     let i = { v = i; range=dummy_range} in
     add_global e i (nullary_decl i) None);

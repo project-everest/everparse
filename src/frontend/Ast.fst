@@ -89,6 +89,7 @@ noeq
 type decl' =
   | Comment of string
   | Define: ident -> constant -> decl'
+  | TypeAbbrev: typ -> ident -> decl'
   | Enum: typ -> ident -> list ident -> decl'
   | Record: typedef_names -> list param -> list field -> decl'
   | CaseType: typedef_names -> list param -> switch_case -> decl'
@@ -238,7 +239,9 @@ let print_decl (d:decl) : ML string =
   match d.v with
   | Comment s -> s
   | Define i c ->
-    Printf.sprintf "#define %s %s" (print_ident i) (print_constant c)
+    Printf.sprintf "#define %s %s;" (print_ident i) (print_constant c)
+  | TypeAbbrev t i ->
+    Printf.sprintf "typedef %s %s;" (print_typ t) (print_ident i)
   | Enum t i ls ->
     Printf.sprintf "%s enum %s {\n\
                        %s \n\

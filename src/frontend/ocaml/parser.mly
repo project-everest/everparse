@@ -123,6 +123,8 @@ decl_no_range:
   | DEFINE i=IDENT c=constant { Define (i, c) }
   | t=IDENT ENUM i=IDENT LBRACE es=right_flexible_nonempty_list(COMMA, IDENT) RBRACE
     { Enum(with_range (Type_app (t, [])) ($startpos(t)), i, es) }
+  | TYPEDEF t=typ i=IDENT SEMICOLON
+    { TypeAbbrev (t, i) }
   | TYPEDEF STRUCT i=IDENT ps=parameters
     LBRACE fields=right_flexible_nonempty_list(SEMICOLON, field)
     RBRACE j=IDENT COMMA STAR k=IDENT SEMICOLON
