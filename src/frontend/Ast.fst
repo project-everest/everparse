@@ -61,9 +61,12 @@ and typ = withrange typ'
 
 type param = typ & ident
 
+let size = int
+
 noeq
 type struct_field = {
   field_dependence:bool;
+  field_size:option size;
   field_ident:ident;
   field_type:typ;
   field_array_opt:option expr;

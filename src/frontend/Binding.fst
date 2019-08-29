@@ -4,12 +4,12 @@ open FStar.All
 module H = Hashtable
 
 //the bool signifies that this identifier has been used
-let global_env = H.t ident' (decl * option typ)
+let global_env = H.t ident' (decl * either (option size) typ)
 let local_env = H.t ident' (typ * bool)
 
 noeq
 type env = {
-  this_typ: (typ * ident);
+  this: option ident;
   locals: local_env;
   globals: global_env
 }
@@ -41,7 +41,7 @@ let typedef_names (d:decl) : option typedef_names =
   | CaseType td _ _ -> Some td
   | _ -> None
 
-let add_global (e:global_env) (i:ident) (d:decl) (t:option typ) =
+let add_global (e:global_env) (i:ident) (d:decl) (t:either (option size) typ) =
   check_shadow e i d.range;
   H.insert e i.v (d, t);
   match typedef_names d with
@@ -60,7 +60,10 @@ let add_local (e:env) (i:ident) (t:typ) =
   check_shadow e.locals i t.range;
   H.insert e.locals i.v (t, false)
 
-let lookup (e:env) (i:ident) : ML (either typ (decl & option typ)) =
+let remove_local (e:env) (i:ident) =
+  H.remove e.locals i.v
+
+let lookup (e:env) (i:ident) : ML (either typ (decl & either (option size) typ)) =
   match H.try_find e.locals i.v with
   | Some (t, true) ->
     Inl t
@@ -76,7 +79,7 @@ let lookup (e:env) (i:ident) : ML (either typ (decl & option typ)) =
 let lookup_expr_name (e:env) (i:ident) : ML typ =
   match lookup e i with
   | Inl t -> t
-  | Inr (_, Some t) -> t
+  | Inr (_, Inr t) -> t
   | Inr _ ->
     error (Printf.sprintf "Variable %s is not an expression identifier" i.v) i.range
 
@@ -98,6 +101,46 @@ let type_of_constant (c:constant) : typ =
   | XInt x -> tuint32
   | Bool _ -> tbool
 
+let size_of_typ (env:env) (t:typ) : ML (option size) =
+  let Type_app hd _ = t.v in
+  match lookup env hd with
+  | Inr (_, Inl sz_opt) -> sz_opt
+  | _ -> None
+
+let rec value_of_const_expr (env:env) (e:expr) : ML (option (either bool int)) =
+  match e.v with
+  | Constant (Int n) -> Some (Inr n)
+  | Constant (Bool b) -> Some (Inl b)
+  | App op [e1; e2] ->
+    let v1 = value_of_const_expr env e1 in
+    let v2 = value_of_const_expr env e2 in
+    begin
+    match op, v1, v2 with
+    | Plus, Some (Inr n1), Some (Inr n2) -> Some (Inr (n1 + n2))
+    | Minus, Some (Inr n1), Some (Inr n2) -> Some (Inr (n1 - n2))
+    | GT, Some (Inr n1), Some (Inr n2) -> Some (Inl (n1 > n2))
+    | LT, Some (Inr n1), Some (Inr n2) -> Some (Inl (n1 < n2))
+    | GE, Some (Inr n1), Some (Inr n2) -> Some (Inl (n1 >= n2))
+    | LE, Some (Inr n1), Some (Inr n2) -> Some (Inl (n1 <= n2))
+    | And, Some (Inl b1), Some (Inl b2) -> Some (Inl (b1 && b2))
+    | Or, Some (Inl b1), Some (Inl b2) -> Some (Inl (b1 || b2))
+    | _ -> None
+    end
+  | App Not [e] ->
+    let v = value_of_const_expr env e in
+    begin
+    match v with
+    | Some (Inl b) -> Some (Inl (not b))
+    | _ -> None
+    end
+  | App SizeOf [{v=Identifier t}] ->
+    begin
+    match size_of_typ env (with_range (Type_app t []) t.range) with
+    | None -> None
+    | Some n -> Some (Inr n)
+    end
+  | _ -> None
+
 let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
   match o with
   | None -> None
@@ -108,7 +151,7 @@ let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
   | Type_app hd [] -> //type abbreviations are not parameterized
     begin
     match lookup env hd with
-    | Inr (d, None) ->
+    | Inr (d, _) ->
       begin
       match d.v with
       | TypeAbbrev t _ -> unfold_typ_abbrevs env t
@@ -161,8 +204,27 @@ and check_expr (env:env) (e:expr)
       e, t
 
     | This ->
-      w (Identifier (snd env.this_typ)),
-      fst env.this_typ
+      error "`this` is not a valid expression" e.range
+
+    | App SizeOf [{v=This;range=r}] ->
+      let e =
+        match env.this with
+        | None ->
+          error "`this` is not in scope" r
+        | Some i ->
+          with_range (App SizeOf [with_range (Identifier i) r]) e.range
+      in
+      e, tuint32
+
+    | App SizeOf [{v=Identifier i;range=r}] ->
+      begin
+      match lookup env i with
+      | Inr ({v=Record _ _ _ }, _)
+      | Inr ({v=CaseType _ _ _}, _) ->
+        e, tuint32
+      | _ ->
+        error "`sizeof` applied to a non-sized-typed" r
+      end
 
     | App op es ->
       let ets = List.map (check_expr env) es in
@@ -174,10 +236,6 @@ and check_expr (env:env) (e:expr)
           if not (eq_typ env t1 tbool)
           then error "Expected bool" e1.range;
           w (App Not [e1]), t1
-
-        | SizeOf ->
-          w (App SizeOf [e1]),
-          tuint32
 
         | _ ->
           error "Not a unary op" e1.range
@@ -238,14 +296,26 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         e)
       in
       let fc = sf.field_constraint |> map_opt (fun e ->
-        let env = { env with this_typ=(sf.field_type, sf.field_ident) } in
-        fst (check_expr env e)) in
+        add_local env sf.field_ident sf.field_type;
+        let e = fst (check_expr env e) in
+        remove_local env sf.field_ident;
+        e)
+      in
+      let size = size_of_typ env sf.field_type in
+      let size =
+        match sf.field_array_opt with
+        | None -> size
+        | Some e ->
+          match value_of_const_expr env e, size with
+          | Some (Inr n), Some s -> Some (n `op_Multiply` s)
+          | _ -> None
+      in
       if extend_scope then add_local env sf.field_ident sf.field_type;
-      let sf = { sf with field_array_opt = fa; field_constraint = fc } in
+      let sf = { sf with field_array_opt = fa; field_constraint = fc; field_size = size } in
       with_range (Field sf) f.range
 
 let check_switch (env:env) (s:switch_case)
-  : ML switch_case
+  : ML (switch_case * option size)
   = let head, cases = s in
     let head, enum_t = check_expr env head in
     let enum_tags, t = lookup_enum_cases env (Type_app?._0 enum_t.v) in
@@ -273,10 +343,22 @@ let check_switch (env:env) (s:switch_case)
       pat, f
     in
     let cases = List.map check_case cases in
-    head, cases
+    let size =
+      List.fold_right
+        (fun (_, f) size ->
+          match f.v with
+          | FieldComment _ -> size
+          | Field sf ->
+            match size, sf.field_size with
+            | Some n, Some f -> if f > n then Some f else Some n
+            | _ -> None)
+        cases
+        (Some 0)
+    in
+    (head, cases), size
 
 let mk_env (g:global_env) =
-  { this_typ = (tunknown, with_dummy_range "");
+  { this = None;
     locals = H.create 10;
     globals = g }
 
@@ -290,13 +372,13 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
   | Comment _ -> d
 
   | Define i c ->
-    add_global e i d (Some (type_of_constant c));
+    add_global e i d (Inr (type_of_constant c));
     d
 
   | TypeAbbrev t i ->
     let env = mk_env e in
     check_typ env t;
-    add_global e i d None;
+    add_global e i d (Inl (size_of_typ env t));
     d
 
   | Enum t i cases ->
@@ -309,11 +391,11 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
                    (print_typ t)
                    (print_typ t'))
                  d.range);
-    add_global e i d None;
+    add_global e i d (Inl (size_of_typ env t));
     d
 
   | Record tdnames params fields ->
-    let env = mk_env e in
+    let env = { mk_env e with this=Some tdnames.typedef_name } in
     check_params env params;
     let fields = fields |> List.map (check_field env true) in
     let fields = fields |> List.map (fun f ->
@@ -325,15 +407,26 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
           f.range)
     in
     let d = with_range (Record tdnames params fields) d.range in
-    add_global e tdnames.typedef_name d None;
+    let size =
+      List.fold_right
+        (fun f size ->
+          match f.v with
+          | FieldComment _ -> size
+          | Field sf ->
+            match size, sf.field_size with
+            | Some size, Some fs -> Some (size + fs)
+            | _ -> None)
+        fields (Some 0)
+    in
+    add_global e tdnames.typedef_name d (Inl size);
     d
 
   | CaseType tdnames params switch ->
-    let env = mk_env e in
+    let env = { mk_env e with this=Some tdnames.typedef_name } in
     check_params env params;
-    let switch = check_switch env switch in
+    let switch, sz_opt = check_switch env switch in
     let d = with_range (CaseType tdnames params switch) d.range in
-    add_global e tdnames.typedef_name d None;
+    add_global e tdnames.typedef_name d (Inl sz_opt);
     d
 
 let prog = list decl
@@ -350,12 +443,12 @@ let initial_global_env () =
     { v = Record td_name [] [];
       range = dummy_range }
   in
-  [ "UINT8"; "UINT32"; "opaque" ]
-  |> List.iter (fun i ->
+  [ ("UINT8", 1); ("UINT32", 4); ("opaque", 1) ]
+  |> List.iter (fun (i,n) ->
     let i = { v = i; range=dummy_range} in
-    add_global e i (nullary_decl i) None);
+    add_global e i (nullary_decl i) (Inl (Some n)));
   e
 
-let bind_prog (p:prog) : ML prog =
+let bind_prog (p:prog) : ML (prog * global_env) =
   let e = initial_global_env() in
-  List.map (bind_decl e) p
+  List.map (bind_decl e) p, e

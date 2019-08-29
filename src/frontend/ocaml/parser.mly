@@ -89,14 +89,24 @@ typ:
 
 constraint_opt:
   |  { None }
-  | LBRACE o=rel_op e=expr RBRACE { Some (with_range (App(o, [with_range This $startpos(o); e])) $startpos($4)) }
+  | LBRACE e=expr RBRACE { Some e }
 
 array_size_opt:
   |  { None }
   | LBRACK e=expr RBRACK { Some e }
 
 struct_field:
-  | t=typ fn=IDENT aopt=array_size_opt c=constraint_opt { {field_dependence=false; field_ident=fn; field_type=t; field_array_opt=aopt; field_constraint=c} }
+  | t=typ fn=IDENT aopt=array_size_opt c=constraint_opt
+    {
+        {
+         field_dependence=false;
+         field_ident=fn;
+         field_type=t;
+         field_array_opt=aopt;
+         field_constraint=c;
+         field_size=None
+        }
+    }
 
 field_no_range:
   | l=COMMENT { FieldComment l }

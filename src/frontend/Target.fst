@@ -69,7 +69,6 @@ type parser_kind =
   | PK_return
   | PK_base     : hd:A.ident -> parser_kind
   | PK_filter   : k:parser_kind -> parser_kind
-  | PK_nlist    : k:parser_kind -> parser_kind
   | PK_and_then : k1:parser_kind -> k2:parser_kind -> parser_kind
   | PK_glb      : k1:parser_kind -> k2:parser_kind -> parser_kind
 
@@ -77,7 +76,6 @@ let rec parser_kind_eq k k' =
   match k, k' with
   | PK_return, PK_return -> true
   | PK_base hd1, PK_base hd2 -> A.(hd1.v = hd2.v)
-  | PK_nlist k, PK_nlist k'
   | PK_filter k, PK_filter k' -> parser_kind_eq k k'
   | PK_and_then k1 k2, PK_and_then k1' k2'
   | PK_glb k1 k2, PK_glb k1' k2' ->
@@ -260,9 +258,6 @@ let rec print_kind (k:parser_kind) : Tot string =
   | PK_filter k ->
     Printf.sprintf "(filter_kind %s)"
       (print_kind k)
-  | PK_nlist k ->
-    Printf.sprintf "(nlist_kind %s)"
-      (print_kind k)
 
 let rec print_parser (p:parser) : Tot string (decreases p) =
   match p.p_parser with
@@ -281,7 +276,7 @@ let rec print_parser (p:parser) : Tot string (decreases p) =
   | Parse_filter p1 (x, e) ->
     Printf.sprintf "(%s `parse_filter` (fun %s -> %s))" (print_parser p1) (print_ident x) (print_expr e)
   | Parse_weaken p1 k ->
-    Printf.sprintf "(parse_weaken %s %s)" (print_parser p1) (print_kind k)
+    Printf.sprintf "(parse_weaken %s _)" (print_parser p1) //(print_kind k)
   | Parse_if_else e p1 p2 ->
     Printf.sprintf "(if %s then\n%s\nelse\n%s)"
       (print_expr e)
@@ -334,7 +329,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
       (print_ident y)
       (print_validator v)
   | Validate_weaken p1 k ->
-    Printf.sprintf "(validate_weaken %s %s)" (print_validator p1) (print_kind k)
+    Printf.sprintf "(validate_weaken %s _)" (print_validator p1) // (print_kind k)
   | Validate_if_else e v1 v2 ->
     Printf.sprintf "(if %s then\n%s else\n%s)"
       (print_expr e)

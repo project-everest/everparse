@@ -7,8 +7,8 @@ module LPLC = LowParse.Low.Combinators
 // Parsers
 ////////////////////////////////////////////////////////////////////////////////
 
-let parser_kind = LP.parser_kind
-let parser = LP.parser
+let parser_kind = k:LP.parser_kind{LP.(k.parser_kind_subkind == Some ParserStrong)}
+let parser (k:parser_kind) (t:Type) = LP.parser k t
 let glb (k1 k2:parser_kind) : parser_kind = LP.glb k1 k2
 
 /// Parser: return
@@ -125,9 +125,20 @@ let read__UINT32 : LPL.leaf_reader parse__UINT32 = LowParse.Low.BoundedInt.read_
 
 /// Lists/arrays
 let nlist (n:U32.t) (t:Type) = LowParse.Spec.VCList.nlist (U32.v n) t
-let nlist_kind (k:LP.parser_kind) = LowParse.Spec.VCList.parse_nlist_kind 1 k
-let parse_nlist (n:U32.t) #k #t (p:parser k t) : parser (nlist_kind k) (nlist n t) = assume false; LowParse.Spec.VCList.parse_nlist (U32.v n) p
-let validate_nlist (n:U32.t) #k #t (#p:parser k t) (v:validator p) : validator (parse_nlist n p) = assume false; LowParse.Low.VCList.validate_nlist n v
+let kind_nlist : parser_kind =
+  let open LP in
+  {
+    parser_kind_low = 0;
+    parser_kind_high = None;
+    parser_kind_subkind = Some ParserStrong;
+    parser_kind_metadata = None
+  }
+let parse_nlist (n:U32.t) #k #t (p:parser k t)
+  : Tot (parser kind_nlist (nlist n t))
+  = parse_weaken (LowParse.Spec.VCList.parse_nlist (U32.v n) p) kind_nlist
+let validate_nlist (n:U32.t) #k #t (#p:parser k t) (v:validator p)
+  : Tot (validator (parse_nlist n p))
+  = validate_weaken (LowParse.Low.VCList.validate_nlist n v) kind_nlist
 
 ////////////////////////////////////////////////////////////////////////////////
 //placeholders
@@ -136,5 +147,3 @@ let _UINT8 =_UINT32
 let kind__UINT8 = kind__UINT32
 let parse__UINT8 = parse__UINT32
 let validate__UINT8 = validate__UINT32
-
-let sizeOf (x:'a) = 0ul

@@ -137,7 +137,7 @@ let rec parse_typ (t:T.typ) : ML T.parser =
 
   | T.T_app {v="nlist"} [Inr e; Inl t] ->
     let pt = parse_typ t in
-    mk_parser (PK_nlist pt.p_kind)
+    mk_parser (PK_base (with_dummy_range "nlist"))
               t
               (T.Parse_nlist e pt)
 
