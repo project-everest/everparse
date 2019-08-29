@@ -103,6 +103,29 @@ let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
   | None -> None
   | Some x -> Some (f x)
 
+let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
+  match t.v with
+  | Type_app hd [] -> //type abbreviations are not parameterized
+    begin
+    match lookup env hd with
+    | Inr (d, None) ->
+      begin
+      match d.v with
+      | TypeAbbrev t _ -> unfold_typ_abbrevs env t
+      | Enum t _ _ -> unfold_typ_abbrevs env t
+      | _ -> t
+      end
+    | _ -> t
+    end
+  | _ -> t
+
+let eq_typ env t1 t2 =
+  if Ast.eq_typ t1 t2 then true
+  else Ast.eq_typ (unfold_typ_abbrevs env t1) (unfold_typ_abbrevs env t1)
+
+let eq_typs env ts =
+  List.for_all (fun (t1, t2) -> eq_typ env t1 t2) ts
+
 let rec check_typ (env:env) (t:typ)
   : ML unit
   = match t.v with
@@ -118,7 +141,7 @@ let rec check_typ (env:env) (t:typ)
         let es =
           List.map2 (fun (t, _) e ->
             let e, t' = check_expr env e in
-            if not (eq_typ t t')
+            if not (eq_typ env t t')
             then error "Argument type mismatch" e.range;
             e)
             params
@@ -148,7 +171,7 @@ and check_expr (env:env) (e:expr)
         begin
         match op with
         | Not ->
-          if not (eq_typ t1 tbool)
+          if not (eq_typ env t1 tbool)
           then error "Expected bool" e1.range;
           w (App Not [e1]), t1
 
@@ -164,7 +187,7 @@ and check_expr (env:env) (e:expr)
         begin
         match op with
         | Eq ->
-          if not (eq_typ t1 t2)
+          if not (eq_typ env t1 t2)
           then error
                  (Printf.sprintf "Equality on unequal types: %s and %s"
                    (print_typ t1)
@@ -174,15 +197,13 @@ and check_expr (env:env) (e:expr)
 
         | And
         | Or ->
-          if not (eq_typ t1 tbool)
-           || not (eq_typ t2 tbool)
+          if not (eq_typs env [(t1,tbool); (t2,tbool)])
           then error "Binary boolean op on non booleans" e.range;
           w (App op [e1; e2]), tbool
 
         | Plus
         | Minus ->
-          if not (eq_typ t1 tuint32)
-           || not (eq_typ t2 tuint32)
+          if not (eq_typs env [(t1,tuint32); (t2,tuint32)])
           then error "Binary integer op on non-integers" e.range;
           w (App op [e1; e2]), tuint32
 
@@ -191,8 +212,7 @@ and check_expr (env:env) (e:expr)
         | GT
         | LE
         | GE ->
-          if not (eq_typ t1 tuint32)
-           || not (eq_typ t2 tuint32)
+          if not (eq_typs env [(t1,tuint32); (t2,tuint32)])
           then error "Binary integer op on non integers" e.range;
           w (App op [e1; e2]), tbool
 
@@ -210,7 +230,7 @@ let check_field (env:env) (extend_scope: bool) (f:field)
       check_typ env sf.field_type;
       let fa = sf.field_array_opt |> map_opt (fun e ->
         let e, t = check_expr env e in
-        if not (eq_typ t tuint32)
+        if not (eq_typ env t tuint32)
         then error (Printf.sprintf "Array expression %s has type %s instead of UInt32"
                           (print_expr e)
                           (print_typ t))
@@ -239,7 +259,7 @@ let check_switch (env:env) (s:switch_case)
           | _ ->
             false
       in
-      if not (eq_typ pat_t t)
+      if not (eq_typ env pat_t t)
       then error (Printf.sprintf "Type of case (%s) does not match type of switch expression (%s)"
                      (print_typ pat_t)
                      (print_typ t))
@@ -284,7 +304,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     check_typ env t;
     cases |> List.iter (fun i ->
       let _, t' = check_expr env (with_dummy_range (Identifier i)) in
-      if not (eq_typ t t')
+      if not (eq_typ env t t')
       then error (Printf.sprintf "Inconsistent type of enumeration identifier: Expected %s, got %s"
                    (print_typ t)
                    (print_typ t'))
