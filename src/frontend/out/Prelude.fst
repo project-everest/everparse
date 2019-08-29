@@ -49,9 +49,15 @@ let parse_filter #k #t (p:parser k t) (f:(t -> bool))
   : Tot (parser (LPC.parse_filter_kind k) (refine t f))
   = LPC.parse_filter #k #t p f
 
+/// Parser: weakening kinds
 let parse_weaken #k #t (p:parser k t) (k':parser_kind{k' `LP.is_weaker_than` k})
   : Tot (parser k' t)
   = LP.weaken k' p
+
+/// Parser: unreachable, for default cases of exhaustive pattern matching
+let parse_impos (_:squash False)
+  : Tot (parser ret_kind False)
+  = false_elim()
 
 ////////////////////////////////////////////////////////////////////////////////
 // Readers
@@ -99,38 +105,34 @@ let validate_weaken #k #t (#p:parser k t) (v:validator p) (k':parser_kind{k' `LP
   : Tot (validator (p `parse_weaken` k'))
   = LPLC.validate_weaken k' v ()
 
+let validate_impos (_:squash False)
+  : Tot (validator (parse_impos ()))
+  = false_elim()
+
 ////////////////////////////////////////////////////////////////////////////////
 // Base types
 ////////////////////////////////////////////////////////////////////////////////
 
 /// UInt32
 module U32 = FStar.UInt32
-let u32 = U32.t
-let u32_kind = LowParse.Spec.BoundedInt.parse_u32_kind
-let parse_u32 : parser u32_kind u32 = LowParse.Spec.BoundedInt.parse_u32_le
-let validate_u32 : validator parse_u32 = LowParse.Low.BoundedInt.validate_u32_le ()
-//let read_u32 : LPL.leaf_reader parse_u32 = LowParse.Low.BoundedInt.read_u32_le
+let _UINT32 = U32.t
+let kind__UINT32 = LowParse.Spec.BoundedInt.parse_u32_kind
+let parse__UINT32 : parser kind__UINT32 _UINT32 = LowParse.Spec.BoundedInt.parse_u32_le
+let validate__UINT32 : validator parse__UINT32 = LowParse.Low.BoundedInt.validate_u32_le ()
+let read__UINT32 : LPL.leaf_reader parse__UINT32 = LowParse.Low.BoundedInt.read_u32_le
 
 /// Lists/arrays
 let nlist (n:U32.t) (t:Type) = LowParse.Spec.VCList.nlist (U32.v n) t
-let nlist_kind (n:U32.t) (k:LP.parser_kind) = LowParse.Spec.VCList.parse_nlist_kind (U32.v n) k
-let parse_nlist (n:U32.t) #k #t (p:parser k t) : parser (nlist_kind n k) (nlist n t) = LowParse.Spec.VCList.parse_nlist (U32.v n) p
-let validate_nlist (n:U32.t) #k #t (#p:parser k t) (v:validator p) : validator (parse_nlist n p) = LowParse.Low.VCList.validate_nlist n v
+let nlist_kind (k:LP.parser_kind) = LowParse.Spec.VCList.parse_nlist_kind 1 k
+let parse_nlist (n:U32.t) #k #t (p:parser k t) : parser (nlist_kind k) (nlist n t) = assume false; LowParse.Spec.VCList.parse_nlist (U32.v n) p
+let validate_nlist (n:U32.t) #k #t (#p:parser k t) (v:validator p) : validator (parse_nlist n p) = assume false; LowParse.Low.VCList.validate_nlist n v
 
 ////////////////////////////////////////////////////////////////////////////////
 //placeholders
 ////////////////////////////////////////////////////////////////////////////////
-
-let _UINT32 = int
-assume val kind__UINT32 : parser_kind
-assume val parse__UINT32 : parser kind__UINT32 _UINT32
-assume val validate__UINT32 : validator parse__UINT32
-assume val read__UINT32 : LPL.leaf_reader parse__UINT32
-let read_u32 = read__UINT32 //TODO, fixme
-
 let _UINT8 =_UINT32
 let kind__UINT8 = kind__UINT32
 let parse__UINT8 = parse__UINT32
 let validate__UINT8 = validate__UINT32
 
-let sizeOf (x:'a) = 0
+let sizeOf (x:'a) = 0ul

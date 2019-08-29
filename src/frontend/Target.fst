@@ -67,15 +67,17 @@ type typedef = typedef_name & typedef_body
 noeq
 type parser_kind =
   | PK_return
-  | PK_base     : hd:A.ident -> args:list index -> parser_kind
-  | PK_and_then : k1:parser_kind -> k2:parser_kind -> parser_kind
+  | PK_base     : hd:A.ident -> parser_kind
   | PK_filter   : k:parser_kind -> parser_kind
+  | PK_nlist    : k:parser_kind -> parser_kind
+  | PK_and_then : k1:parser_kind -> k2:parser_kind -> parser_kind
   | PK_glb      : k1:parser_kind -> k2:parser_kind -> parser_kind
 
 let rec parser_kind_eq k k' =
   match k, k' with
   | PK_return, PK_return -> true
-  | PK_base hd1 args1, PK_base hd2 args2 -> false
+  | PK_base hd1, PK_base hd2 -> A.(hd1.v = hd2.v)
+  | PK_nlist k, PK_nlist k'
   | PK_filter k, PK_filter k' -> parser_kind_eq k k'
   | PK_and_then k1 k2, PK_and_then k1' k2'
   | PK_glb k1 k2, PK_glb k1' k2' ->
@@ -85,8 +87,9 @@ let rec parser_kind_eq k k' =
 
 noeq
 type parser' =
-  | Parse_app       : hd:A.ident -> args:list index -> parser'
   | Parse_return    : v:expr -> parser'
+  | Parse_app       : hd:A.ident -> args:list index -> parser'
+  | Parse_nlist     : n:expr -> t:parser -> parser'
   | Parse_seq       : p:parser -> q:parser -> parser'
   | Parse_dep_pair  : p:parser -> k:lam parser -> parser'
   | Parse_map       : p:parser -> f:lam expr -> parser'
@@ -110,8 +113,9 @@ type reader =
 
 noeq
 type validator' =
-  | Validate_app      : hd:A.ident -> args:list index -> validator'
   | Validate_return   : validator'
+  | Validate_app      : hd:A.ident -> args:list index -> validator'
+  | Validate_nlist    : n:expr -> v:validator -> validator'
   | Validate_seq      : v1:validator -> v2:validator -> validator'
   | Validate_and_read : v:validator -> r:reader -> k:lam validator -> validator'
   | Validate_map      : p:validator -> f:lam expr -> validator'
@@ -161,8 +165,8 @@ let print_op = function
   | And -> "&&"
   | Or -> "||"
   | Not -> "not"
-  | Plus -> "+"
-  | Minus -> "-"
+  | Plus -> "`FStar.UInt32.add_mod`"
+  | Minus -> "`FStar.UInt32.sub_mod`"
   | LT -> "<"
   | GT -> ">"
   | LE -> "<="
@@ -177,28 +181,18 @@ let rec print_expr (e:expr) : Tot string =
     print_ident i
   | Record nm fields ->
     Printf.sprintf "{ %s }" (String.concat "; " (print_fields fields))
-  | App Eq [e1; e2] ->
-    Printf.sprintf "(%s = %s)" (print_expr e1) (print_expr e2)
-  | App And [e1; e2] ->
-    Printf.sprintf "(%s && %s)" (print_expr e1) (print_expr e2)
-  | App Or [e1; e2] ->
-    Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
-  | App Or [e1; e2] ->
-    Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
-  | App Not [e1] ->
-    Printf.sprintf "(not %s)" (print_expr e1)
-  | App Plus [e1; e2] ->
-    Printf.sprintf "(%s + %s)" (print_expr e1) (print_expr e2)
-  | App Minus [e1; e2] ->
-    Printf.sprintf "(%s - %s)" (print_expr e1) (print_expr e2)
-  | App LT [e1; e2] ->
-    Printf.sprintf "(%s < %s)" (print_expr e1) (print_expr e2)
-  | App GT [e1; e2] ->
-    Printf.sprintf "(%s > %s)" (print_expr e1) (print_expr e2)
-  | App LE [e1; e2] ->
-    Printf.sprintf "(%s <= %s)" (print_expr e1) (print_expr e2)
+  | App Eq [e1; e2]
+  | App And [e1; e2]
+  | App Or [e1; e2]
+  | App Plus [e1; e2]
+  | App Minus [e1; e2]
+  | App LT [e1; e2]
+  | App GT [e1; e2]
+  | App LE [e1; e2]
   | App GE [e1; e2] ->
-    Printf.sprintf "(%s >= %s)" (print_expr e1) (print_expr e2)
+    Printf.sprintf "(%s %s %s)" (print_expr e1) (print_op (App?.hd e)) (print_expr e2)
+  | App Not [e1] ->
+    Printf.sprintf "(%s %s)" (print_op (App?.hd e)) (print_expr e1)
   | App op [] ->
     print_op op
   | App op es ->
@@ -248,10 +242,9 @@ and print_indexes (is:list index) : Tot (list string) (decreases is) =
 
 let rec print_kind (k:parser_kind) : Tot string =
   match k with
-  | PK_base hd args ->
-    Printf.sprintf "(kind_%s %s)"
+  | PK_base hd ->
+    Printf.sprintf "kind_%s"
       (print_ident hd)
-      (String.concat " " (print_indexes args))
   | PK_return ->
     "ret_kind"
   | PK_and_then k1 k2 ->
@@ -265,13 +258,18 @@ let rec print_kind (k:parser_kind) : Tot string =
   | PK_filter k ->
     Printf.sprintf "(filter_kind %s)"
       (print_kind k)
+  | PK_nlist k ->
+    Printf.sprintf "(nlist_kind %s)"
+      (print_kind k)
 
 let rec print_parser (p:parser) : Tot string (decreases p) =
   match p.p_parser with
-  | Parse_app hd args ->
-    Printf.sprintf "(parse_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
   | Parse_return v ->
     Printf.sprintf "(parse_ret %s)" (print_expr v)
+  | Parse_app hd args ->
+    Printf.sprintf "(parse_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
+  | Parse_nlist e p ->
+    Printf.sprintf "(parse_nlist %s %s)" (print_expr e) (print_parser p)
   | Parse_seq p1 p2 ->
     Printf.sprintf "(%s `parse_pair` %s)" (print_parser p1) (print_parser p2)
   | Parse_dep_pair p1 (x, p2) ->
@@ -281,19 +279,19 @@ let rec print_parser (p:parser) : Tot string (decreases p) =
   | Parse_filter p1 (x, e) ->
     Printf.sprintf "(%s `parse_filter` (fun %s -> %s))" (print_parser p1) (print_ident x) (print_expr e)
   | Parse_weaken p1 k ->
-    Printf.sprintf "(parse_weaken_l %s %s)" (print_parser p1) (print_kind k)
+    Printf.sprintf "(parse_weaken %s %s)" (print_parser p1) (print_kind k)
   | Parse_if_else e p1 p2 ->
     Printf.sprintf "(if %s then\n%s\nelse\n%s)"
       (print_expr e)
       (print_parser p1)
       (print_parser p2)
-  | Parse_impos -> "(false_elim())"
+  | Parse_impos -> "(parse_impos())"
 
 let rec print_reader (r:reader) : Tot string =
   match r with
   | Read_u8 -> "read_u8"
   | Read_u16 -> "read_u16"
-  | Read_u32 -> "read_u32"
+  | Read_u32 -> "read__UINT32"
   | Read_filter r (x, f) ->
     Printf.sprintf "(read_filter %s (fun %s -> %s))"
       (print_reader r)
@@ -302,10 +300,12 @@ let rec print_reader (r:reader) : Tot string =
 
 let rec print_validator (v:validator) : Tot string (decreases v) =
   match v.v_validator with
-  | Validate_app hd args ->
-    Printf.sprintf "(validate_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
   | Validate_return ->
     Printf.sprintf "validate_ret"
+  | Validate_app hd args ->
+    Printf.sprintf "(validate_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
+  | Validate_nlist e p ->
+    Printf.sprintf "(validate_nlist %s %s)" (print_expr e) (print_validator p)
   | Validate_seq p1 p2 ->
     Printf.sprintf "(%s `validate_pair` %s)" (print_validator p1) (print_validator p2)
   | Validate_and_read p1 r (x, p2) ->
@@ -336,7 +336,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
       (print_expr e)
       (print_validator v1)
       (print_validator v2)
-  | Validate_impos -> "(false_elim())"
+  | Validate_impos -> "(validate_impos())"
 
 let print_typedef_name (tdn:typedef_name) =
   let name, params = tdn in
@@ -379,12 +379,12 @@ let print_decl (d:decl) : Tot string =
       (print_typedef_body td.decl_typ)
     `strcat`
     Printf.sprintf "let kind_%s : parser_kind = %s\n"
-      (print_typedef_name td.decl_name)
+      (print_ident (fst td.decl_name))
       (print_kind td.decl_parser.p_kind)
     `strcat`
     Printf.sprintf "let parse_%s : parser (kind_%s) (%s) = %s\n"
       (print_typedef_name td.decl_name)
-      (print_typedef_typ td.decl_name)
+      (print_ident (fst td.decl_name))
       (print_typedef_typ td.decl_name)
       (print_parser td.decl_parser)
     `strcat`

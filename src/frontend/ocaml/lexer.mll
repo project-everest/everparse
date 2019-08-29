@@ -44,7 +44,8 @@ let skip = space+ | newline+
 
 let digit = ['0'-'9']
 let hex   = digit | ['A'-'F'] | ['a'-'f']
-let xinteger = "0x" hex+
+let sw_suffix = "uy" | "us" | "ul" | "uL" | "y" | "s" | "l" | "L"
+let xinteger = "0x" hex+ sw_suffix
 let integer = digit+
 
 

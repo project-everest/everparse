@@ -133,8 +133,14 @@ let rec parse_typ (t:T.typ) : ML T.parser =
   | T_false ->
     mk_parser PK_return T_false Parse_impos
 
+  | T.T_app {v="nlist"} [Inr e; Inl t] ->
+    let pt = parse_typ t in
+    mk_parser (PK_nlist pt.p_kind)
+              t
+              (T.Parse_nlist e pt)
+
   | T.T_app hd args ->
-    mk_parser (PK_base hd args) (T.T_app hd args) (T.Parse_app hd args)
+    mk_parser (PK_base hd) t (T.Parse_app hd args)
 
   | T.T_refine t_base refinement ->
     let base = parse_typ t_base in
@@ -191,6 +197,9 @@ let rec make_validator (p:T.parser) : ML T.validator =
   | Parse_app hd args ->
     pv p (Validate_app hd args)
 
+  | Parse_nlist n p ->
+    pv p (Validate_nlist n (make_validator p))
+
   | Parse_return e ->
     pv p Validate_return
 
@@ -237,7 +246,7 @@ let translate_struct_field (sf:A.struct_field) : ML T.struct_field =
         | None -> t
         | Some e ->
           let e = translate_expr e in
-          T.T_app (with_range "lseq" sf.field_type.range) [Inl t; Inr e]
+          T.T_app (with_range "nlist" sf.field_type.range) [Inr e; Inl t]
     in
     let t =
       match sf.field_constraint with

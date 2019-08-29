@@ -125,7 +125,7 @@ let pos_of_ident i = i.range
 
 let print_constant (c:constant) =
   match c with
-  | Int i -> Printf.sprintf "%d" i
+  | Int i -> Printf.sprintf "%dul" i
   | XInt x -> Printf.sprintf "%s" x
   | Bool b -> Printf.sprintf "%b" b
 
