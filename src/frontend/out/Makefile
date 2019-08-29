@@ -4,7 +4,7 @@ OTHERFLAGS=
 EVERPARSE_HOME=../../..
 include ../Makefile
 ROOT=Rndis.fst
-FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS)
+FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) --z3rlimit_factor 4 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2
 HEADERS = $(addprefix -add-include ,'"kremlin/internal/compat.h"')
 KREMLIN = $(KREMLIN_HOME)/krml \
 	 -ccopt "-Ofast" \
