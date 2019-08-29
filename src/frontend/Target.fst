@@ -110,6 +110,7 @@ type reader =
   | Read_u16
   | Read_u32
   | Read_filter : r:reader -> f:lam expr -> reader
+  | Read_app : hd:A.ident -> args:list index -> reader
 
 noeq
 type validator' =
@@ -137,7 +138,8 @@ type type_decl = {
   decl_name: typedef_name;
   decl_typ: typedef_body;
   decl_parser: parser;
-  decl_validator: validator
+  decl_validator: validator;
+  decl_reader: option reader
 }
 
 let definition = A.ident * A.constant
@@ -292,6 +294,8 @@ let rec print_reader (r:reader) : Tot string =
   | Read_u8 -> "read_u8"
   | Read_u16 -> "read_u16"
   | Read_u32 -> "read__UINT32"
+  | Read_app hd args ->
+    Printf.sprintf "(read_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
   | Read_filter r (x, f) ->
     Printf.sprintf "(read_filter %s (fun %s -> %s))"
       (print_reader r)
@@ -392,6 +396,14 @@ let print_decl (d:decl) : Tot string =
       (print_typedef_name td.decl_name)
       (print_typedef_typ td.decl_name)
       (print_validator td.decl_validator)
+    `strcat`
+    (match td.decl_reader with
+     | None -> ""
+     | Some r ->
+       Printf.sprintf "let read_%s : reader (parse_%s) = %s\n"
+         (print_typedef_name td.decl_name)
+         (print_typedef_name td.decl_name)
+         (print_reader r))
 
 let print_decls (ds:list decl) =
   Printf.sprintf

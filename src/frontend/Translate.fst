@@ -22,6 +22,7 @@ module T = Target
 open FStar.All
 
 /// gensym (top-level effect, safe to ignore)
+#push-options "--warn_error -272"
 let gen_ident : unit -> St ident =
   let open FStar.ST in
   let ctr : ref int = alloc 0 in
@@ -32,6 +33,7 @@ let gen_ident : unit -> St ident =
     with_dummy_range id
   in
   next
+#pop-options
 
 (** Some utilities **)
 let mk_lam (f:(A.ident -> ML 'a)) : ML (T.lam 'a) =
@@ -183,10 +185,11 @@ let rec make_reader (t:T.typ) : ML T.reader =
   | T.T_refine base refinement ->
     T.Read_filter (make_reader base) refinement
 
+  | T.T_app hd args ->
+    T.Read_app hd args
+
   | _ ->
-    FStar.IO.print_string
-      (Printf.sprintf "//Unsupported reader type: %s\n" (T.print_typ t));
-    T.Read_u32
+    failwith (Printf.sprintf "Unsupported reader type: %s\n" (T.print_typ t))
 
 let rec make_validator (p:T.parser) : ML T.validator =
   let open T in
@@ -388,6 +391,18 @@ let translate_switch_case_type (sw:Ast.switch_case) =
   in
   T.T_cases t
 
+let rec read_typ (t:T.typ) : ML (option T.reader) =
+  let open T in
+  match t with
+  | T_app ({v="UINT8"}) [] -> Some Read_u8
+  | T_app ({v="UINT16"}) [] -> Some Read_u16
+  | T_app ({v="UINT32"}) [] -> Some Read_u32
+  | T_refine base ref ->
+    match read_typ base with
+    | None -> None
+    | Some r -> Some (Read_filter r ref)
+  | _ -> None
+
 let translate_decl (d:A.decl) : ML T.decl =
   match d.v with
   | Comment s -> T.Comment s
@@ -412,6 +427,7 @@ let translate_decl (d:A.decl) : ML T.decl =
         decl_typ = TD_abbrev refined_typ;
         decl_parser = p;
         decl_validator = make_validator p;
+        decl_reader = read_typ refined_typ;
       }
     )
 
@@ -425,7 +441,8 @@ let translate_decl (d:A.decl) : ML T.decl =
         decl_name = tdn;
         decl_typ = TD_struct fields;
         decl_parser = p;
-        decl_validator = make_validator p
+        decl_validator = make_validator p;
+        decl_reader = None
       }
     )
 
@@ -439,6 +456,7 @@ let translate_decl (d:A.decl) : ML T.decl =
         decl_name = tdn;
         decl_typ = TD_abbrev t;
         decl_parser = p;
-        decl_validator = make_validator p
+        decl_validator = make_validator p;
+        decl_reader = None
       }
     )

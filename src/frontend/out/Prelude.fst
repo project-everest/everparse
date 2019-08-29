@@ -63,6 +63,8 @@ let parse_impos (_:squash False)
 // Readers
 ////////////////////////////////////////////////////////////////////////////////
 
+let reader #k #t (p:parser k t) = LPLC.leaf_reader p
+
 let read_filter (#k: parser_kind)
                 (#t: Type0)
                 (#p: parser k t)
