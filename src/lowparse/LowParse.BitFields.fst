@@ -1,7 +1,6 @@
 module LowParse.BitFields
 module U = FStar.UInt
 module M = FStar.Math.Lemmas
-module U32 = FStar.UInt32
 
 open FStar.Mul
 
@@ -13,7 +12,7 @@ let bitfield_mask (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Tot
   in
   normalize_term ((pow2 (hi - lo) - 1) * pow2 lo)
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 let bitfield_mask_eq (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Lemma
   (
@@ -382,6 +381,51 @@ let get_bitfield_full
     nth_get_bitfield x 0 tot i
   )
 
+let lt_pow2_get_bitfield_hi
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (mi: nat {mi <= tot})
+: Lemma
+  (requires (x < pow2 mi))
+  (ensures (get_bitfield x mi tot == 0))
+= if mi = 0
+  then get_bitfield_zero tot mi tot
+  else if mi < tot
+  then begin
+    M.modulo_lemma x (pow2 mi);
+    U.logand_mask x mi;
+    eq_nth (get_bitfield x mi tot) 0 (fun i ->
+      nth_zero tot i;
+      nth_get_bitfield x mi tot i;
+      nth_get_bitfield (x `U.logand` (pow2 mi - 1)) mi tot i;
+      nth_pow2_minus_one #tot mi i
+    )
+  end
+
+let get_bitfield_hi_lt_pow2
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (mi: nat {mi <= tot})
+: Lemma
+  (requires (get_bitfield x mi tot == 0))
+  (ensures (x < pow2 mi))
+= if mi = 0
+  then get_bitfield_full x
+  else if mi < tot
+  then begin
+    M.pow2_le_compat tot mi;
+    eq_nth x (x `U.logand` (pow2 mi - 1)) (fun i ->
+      nth_pow2_minus_one #tot mi i;
+      if mi <= i
+      then begin
+        nth_get_bitfield x mi tot (i - mi);
+        nth_zero tot (i - mi)
+      end
+    );
+    U.logand_mask x mi;
+    M.lemma_mod_lt x (pow2 mi)
+  end
+
 let get_bitfield_get_bitfield
   (#tot: pos)
   (x: U.uint_t tot)
@@ -547,3 +591,29 @@ let get_bitfield_size
       then nth_size tot1 tot2 x (i + lo)
     end
   )
+
+(* Instantiate to UInt64 *)
+
+module U32 = FStar.UInt32
+module U64 = FStar.UInt64
+
+inline_for_extraction
+let bitfield_mask64 (lo: nat) (hi: nat { lo <= hi /\ hi <= 64 }) : Tot U64.t =
+  normalize_term (U64.uint_to_t (bitfield_mask 64 lo hi))
+
+inline_for_extraction
+let get_bitfield64
+  (x: U64.t) (lo: nat { lo < 64 }) (hi: nat {lo <= hi /\ hi <= 64})
+: Tot (y: U64.t { U64.v y == get_bitfield (U64.v x) lo hi })
+= (x `U64.logand` bitfield_mask64 lo hi) `U64.shift_right` (U32.uint_to_t lo)
+
+inline_for_extraction
+let not_bitfield_mask64 (lo: nat) (hi: nat { lo <= hi /\ hi <= 64 }) : Tot U64.t =
+  normalize_term (U64.uint_to_t (not_bitfield_mask 64 lo hi))
+
+inline_for_extraction
+let set_bitfield64
+  (x: U64.t) (lo: nat { lo < 64 }) (hi: nat {lo <= hi /\ hi <= 64})
+  (v: U64.t { U64.v v < pow2 (hi - lo) })
+: Tot (y: U64.t { U64.v y == set_bitfield (U64.v x) lo hi (U64.v v) })
+= (x `U64.logand` not_bitfield_mask64 lo hi) `U64.logor` (v `U64.shift_left` U32.uint_to_t lo)
