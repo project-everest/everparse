@@ -239,11 +239,12 @@ let validate_dtuple2
   let h = HST.get () in
   [@inline_let] let _ = valid_dtuple2 h p1 p2 input pos in
   let pos1 = v1 input pos in
-  if pos1 `U32.gt` validator_max_length
+  if pos1 `U64.gt` validator_max_length
   then begin
     pos1
   end
   else
+    let pos1 = uint64_to_uint32 pos1 in
     let x = r1 input pos in
     [@inline_let] let _ = valid_facts (p2 x) h input pos1 in
     v2 x input pos1

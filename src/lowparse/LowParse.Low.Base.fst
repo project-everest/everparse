@@ -1839,6 +1839,8 @@ let accessor
     pos' == slice_access h g sl pos
   ))
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 let make_accessor_from_pure
   (#k1: parser_kind)
@@ -1864,6 +1866,8 @@ let make_accessor_from_pure
     parse_strong_prefix p1 (bytes_of_slice_from h sl pos) (bytes_of_slice_from_to h sl pos (get_valid_pos p1 h sl pos))
   in
   pos `U32.add` f (Ghost.hide (bytes_of_slice_from_to h sl pos (get_valid_pos p1 h sl pos)))
+
+#pop-options
 
 inline_for_extraction
 let accessor_id
@@ -1990,11 +1994,65 @@ let validator_max_length : (u: U64.t { 4 <= U64.v u /\ U64.v u <= U64.v max_uint
 [@ CMacro ]
 type validator_error = (u: U64.t { U64.v u > U64.v validator_max_length } )
 
-[@ CMacro ]
-let validator_error_generic : validator_error = normalize_term (validator_max_length `U64.add` 1uL)
+module BF = LowParse.BitFields
+
+#push-options "--z3rlimit 16"
+
+inline_for_extraction
+let set_validator_error_field (x: U64.t) (lo: nat) (hi: nat { lo < hi /\ hi <= 32 }) (code: U64.t { 0 < U64.v code /\ U64.v code < pow2 (hi - lo) }) : Tot validator_error =
+  [@inline_let]
+  let res =
+    BF.set_bitfield64 x (32 + lo) (32 + hi) code
+  in
+  [@inline_let]
+  let _ =
+    BF.get_bitfield_set_bitfield_same #64 (U64.v x) (32 + lo) (32 + hi) (U64.v code);
+    BF.get_bitfield_zero_inner (U64.v res) 32 64 (32 + lo) (32 + hi);
+    assert (BF.get_bitfield (U64.v res) 32 64 > 0);
+    Classical.move_requires (BF.lt_pow2_get_bitfield_hi (U64.v res)) 32;
+    assert_norm (pow2 32 == U64.v validator_max_length + 1)
+  in
+  res
+
+inline_for_extraction
+let set_validator_error_pos (x: validator_error) (pos: U32.t) : Tot validator_error =
+  [@inline_let]
+  let res =
+    BF.set_bitfield64 x 0 32 (Cast.uint32_to_uint64 pos)
+  in
+  [@inline_let]
+  let _ =
+    BF.get_bitfield_set_bitfield_other (U64.v x) 0 32 (U32.v pos) 32 64;
+    assert (BF.get_bitfield (U64.v res) 32 64 == BF.get_bitfield (U64.v x) 32 64);
+    Classical.move_requires (BF.get_bitfield_hi_lt_pow2 (U64.v x)) 32;
+    Classical.move_requires (BF.lt_pow2_get_bitfield_hi (U64.v res)) 32;
+    assert_norm (pow2 32 == U64.v validator_max_length + 1)
+  in
+  res
+
+#pop-options
+
+inline_for_extraction
+let get_validator_error_pos (x: U64.t) : Tot U32.t =
+  Cast.uint64_to_uint32 (BF.get_bitfield64 x 0 32)
+
+inline_for_extraction
+let set_validator_error_kind (x: U64.t) (code: U64.t { 0 < U64.v code /\ U64.v code < 4 }) : Tot validator_error =
+  set_validator_error_field x 0 2 code
+
+inline_for_extraction
+let set_validator_error_code (x: U64.t) (code: U64.t { 0 < U64.v code /\ U64.v code < 65536 }) : Tot validator_error =
+  set_validator_error_field x 2 18 code
+
+inline_for_extraction
+let get_validator_error_code (x: U64.t) : Tot (code: U64.t { U64.v code < 65536 }) =
+  BF.get_bitfield64 x 34 50
 
 [@ CMacro ]
-let validator_error_not_enough_data : validator_error = normalize_term (validator_max_length `U64.add` 2uL)
+let validator_error_generic : validator_error = normalize_term (set_validator_error_kind 0uL 1uL)
+
+[@ CMacro ]
+let validator_error_not_enough_data : validator_error = normalize_term (set_validator_error_kind 0uL 2uL)
 
 [@"opaque_to_smt"] // to hide the modulo operation
 inline_for_extraction
@@ -2003,77 +2061,6 @@ let uint64_to_uint32
   (x: U64.t { U64.v x <= U64.v validator_max_length } )
 : Tot (y: U32.t { U32.v y == U64.v x })
 = Cast.uint64_to_uint32 x
-
-private
-noextract
-inline_for_extraction
-abstract
-noeq
-type _uint64_as_uint32_pair = {
-  _uint64_to_uint32_low: U64.t -> Tot U32.t;
-  _uint64_to_uint32_high: U64.t -> Tot U32.t;
-  _uint32_pair_to_uint64: (low: U32.t) -> (high: U32.t) -> Tot U64.t;
-  _uint32_pair_to_uint64_high_zero: (low: U32.t) -> Lemma (U64.v (_uint32_pair_to_uint64 low 0ul) == U32.v low);
-  _uint32_pair_to_uint64_high_pos: (low: U32.t) -> (high: U32.t) -> Lemma (U32.v high > 0 ==> U64.v (_uint32_pair_to_uint64 low high) > U64.v validator_max_length);
-  _uint32_pair_to_uint64_correct: (x: U64.t) -> Lemma (_uint32_pair_to_uint64 (_uint64_to_uint32_low x) (_uint64_to_uint32_high x) == x);
-  _uint64_to_uint32_low_correct: (low: U32.t) -> (high: U32.t) -> Lemma (_uint64_to_uint32_low (_uint32_pair_to_uint64 low high) == low);
-  _uint64_to_uint32_high_correct: (low: U32.t) -> (high: U32.t) -> Lemma (_uint64_to_uint32_high (_uint32_pair_to_uint64 low high) == high);
-  _uint64_to_uint32_low_uint64_to_uint32: (x: U64.t { U64.v x <= U64.v validator_max_length }) -> Lemma (_uint64_to_uint32_low x == uint64_to_uint32 x);
-}
-
-[@"opaque_to_smt"]
-private
-noextract
-inline_for_extraction
-abstract
-let uint64_as_uint32_pair : _uint64_as_uint32_pair =
-  [@inline_let]
-  let low (x: U64.t) : Tot U32.t = Cast.uint64_to_uint32 x in
-  [@inline_let]
-  let high (x: U64.t) : Tot U32.t = Cast.uint64_to_uint32 (x `U64.div` 4294967296uL) in
-  [@inline_let]
-  let pair (low high: U32.t) : Tot U64.t = Cast.uint32_to_uint64 low `U64.add` (Cast.uint32_to_uint64 high `U64.mul` 4294967296uL) in
-  {
-    _uint64_to_uint32_low = low;
-    _uint64_to_uint32_high = high;
-    _uint32_pair_to_uint64 = pair;
-    _uint32_pair_to_uint64_high_zero = (fun low -> ());
-    _uint32_pair_to_uint64_high_pos = (fun low high -> ());
-    _uint32_pair_to_uint64_correct = (fun x -> ());
-    _uint64_to_uint32_low_correct = (fun low high -> ());
-    _uint64_to_uint32_high_correct = (fun low high -> ());
-    _uint64_to_uint32_low_uint64_to_uint32 = (fun x -> ());
-  }
-
-inline_for_extraction
-abstract
-let uint64_to_uint32_low: U64.t -> Tot U32.t = uint64_as_uint32_pair._uint64_to_uint32_low
-
-inline_for_extraction
-abstract
-let uint64_to_uint32_high: U64.t -> Tot U32.t = uint64_as_uint32_pair._uint64_to_uint32_high
-
-inline_for_extraction
-abstract
-let uint32_pair_to_uint64: U32.t -> U32.t -> Tot U64.t = uint64_as_uint32_pair._uint32_pair_to_uint64
-
-abstract
-let uint32_pair_to_uint64_high_zero: (low: U32.t) -> Lemma (U64.v (uint32_pair_to_uint64 low 0ul) == U32.v low) = uint64_as_uint32_pair._uint32_pair_to_uint64_high_zero
-
-abstract
-let uint32_pair_to_uint64_high_pos: (low: U32.t) -> (high: U32.t) -> Lemma (U32.v high > 0 ==> U64.v (uint32_pair_to_uint64 low high) > U64.v validator_max_length) = uint64_as_uint32_pair._uint32_pair_to_uint64_high_pos
-
-abstract
-let uint32_pair_to_uint64_correct: (x: U64.t) -> Lemma (uint32_pair_to_uint64 (uint64_to_uint32_low x) (uint64_to_uint32_high x) == x) = uint64_as_uint32_pair._uint32_pair_to_uint64_correct
-
-abstract
-let uint64_to_uint32_low_correct: (low: U32.t) -> (high: U32.t) -> Lemma (uint64_to_uint32_low (uint32_pair_to_uint64 low high) == low) = uint64_as_uint32_pair._uint64_to_uint32_low_correct
-
-abstract
-let uint64_to_uint32_high_correct: (low: U32.t) -> (high: U32.t) -> Lemma (uint64_to_uint32_high (uint32_pair_to_uint64 low high) == high) = uint64_as_uint32_pair._uint64_to_uint32_high_correct
-
-abstract
-let uint64_to_uint32_low_uint64_to_uint32: (x: U64.t { U64.v x <= U64.v validator_max_length }) -> Lemma (uint64_to_uint32_low x == uint64_to_uint32 x) = uint64_as_uint32_pair._uint64_to_uint32_low_uint64_to_uint32
 
 [@unifier_hint_injective]
 inline_for_extraction
@@ -2091,6 +2078,16 @@ let validator (#k: parser_kind) (#t: Type) (p: parser k t) : Tot Type =
     else
       (~ (valid p h sl pos))
   )))
+
+inline_for_extraction
+let validate_with_error_code
+  (#k: parser_kind) (#t: Type) (#p: parser k t) (v: validator p) (c: U64.t { 0 < U64.v c /\ U64.v c < 65536 })
+: Tot (validator p)
+= fun #rrel #rel sl pos ->
+  let res = v sl pos in
+  if res `U64.gt` validator_max_length && get_validator_error_code res = 0uL
+  then set_validator_error_pos (set_validator_error_code res c) pos
+  else res
 
 inline_for_extraction
 let validate
