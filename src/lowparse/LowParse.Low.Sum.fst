@@ -5,6 +5,8 @@ include LowParse.Spec.Sum
 module U32 = FStar.UInt32
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
+module Cast = FStar.Int.Cast
+module U64 = FStar.UInt64
 
 inline_for_extraction
 let validate_sum_cases_aux
@@ -76,16 +78,16 @@ let validate_sum_aux_payload_t
 = (#rrel: _) -> (#rel: _) ->
   (input: slice rrel rel) ->
   (pos: U32.t) ->
-  HST.Stack U32.t
-  (requires (fun h -> live_slice h input /\ U32.v pos <= U32.v input.len /\ U32.v input.len <= U32.v validator_max_length))
+  HST.Stack U64.t
+  (requires (fun h -> live_slice h input /\ U32.v pos <= U32.v input.len))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
     match k with
-    | Unknown _ -> U32.v res > U32.v validator_max_length
+    | Unknown _ -> U64.v res > U64.v validator_max_length
     | Known k' ->
-      if U32.v res <= U32.v validator_max_length
+      if U64.v res <= U64.v validator_max_length
       then
-        valid_pos (dsnd (pc k')) h input pos res
+        valid_pos (dsnd (pc k')) h input pos (uint64_to_uint32 res)
       else
         (~ (valid (dsnd (pc k')) h input pos))
   )))
@@ -121,7 +123,7 @@ let validate_sum_aux_payload_if
 : Tot (if_combinator _ (validate_sum_aux_payload_eq t pc k))
 = validate_sum_aux_payload_if' t pc k
 
-#reset-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2"
+#reset-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2 --using_facts_from '* -FStar.Int.Cast -LowParse.BitFields'"
 // --query_stats  --smtencoding.elim_box true --smtencoding.l_arith_repr native --z3refresh"
 
 inline_for_extraction
@@ -143,11 +145,12 @@ let validate_sum_aux
   [@inline_let]
   let _ = valid_facts p h input pos in
   let len_after_tag = v input pos in
-  if validator_max_length `U32.lt` len_after_tag
+  if validator_max_length `U64.lt` len_after_tag
   then len_after_tag
   else begin
     let h1 = HST.get () in
     let k' = p32 input pos in
+    let len_after_tag = uint64_to_uint32 len_after_tag in
     [@inline_let]
     let _ =
       match maybe_enum_key_of_repr (sum_enum t) k' with
@@ -827,10 +830,11 @@ let validate_dsum
   [@inline_let]
   let _ = valid_facts p h input pos in
   let pos_after_tag = v input pos in
-  if validator_max_length `U32.lt` pos_after_tag
+  if validator_max_length `U64.lt` pos_after_tag
   then pos_after_tag
   else
     let tg = p32 input pos in
+    let pos_after_tag = uint64_to_uint32 pos_after_tag in
     [@inline_let]
     let _ = valid_facts (parse_dsum_cases' t f g (maybe_enum_key_of_repr (dsum_enum t) tg)) h input pos_after_tag in
     destr (validate_dsum_cases_eq t f g) (validate_dsum_cases_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (validate_dsum_cases' t f f32 g32) tg input pos_after_tag

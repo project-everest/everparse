@@ -94,17 +94,12 @@ let test_zeroarg () : St C.exit_code =
 
 let test_bitcoin_file (filename: C.String.t) : St unit =
   let slice = LowParse.TestLib.Low.load_file_buffer_c filename in
-  if slice.LPL.len `FStar.UInt32.gt` LPL.validator_max_length
-  then
-    let _ = print !$"Input data is too large\n" in
-    ()
-  else
     let consumed = Block.block_validator slice 0ul in
-    if consumed `FStar.UInt32.gt` LPL.validator_max_length
+    if consumed `FStar.UInt64.gt` LPL.validator_max_length
     then
       let _ = print !$"Validation failed\n" in
       ()
-    else if consumed = slice.LPL.len
+    else if LowParse.Low.Base.uint64_to_uint32 consumed = slice.LPL.len
     then
       let _ = print !$"Validation succeeded, everything consumed\n" in
       ()

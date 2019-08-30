@@ -6,6 +6,8 @@ module U32 = FStar.UInt32
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
+module Cast = FStar.Int.Cast
+module U64 = FStar.UInt64
 
 let valid_ifthenelse_intro
   (p: parse_ifthenelse_param)
@@ -100,9 +102,10 @@ let validate_ifthenelse
     Classical.move_requires (valid_ifthenelse_elim p h input) pos
   in
   let pos_after_t = vt input pos in
-  if validator_max_length `U32.lt` pos_after_t
+  if validator_max_length `U64.lt` pos_after_t
   then pos_after_t
   else
+    let pos_after_t = uint64_to_uint32 pos_after_t in
     let b = test input pos in
     if b (* eta-expansion here *)
     then vp true input pos_after_t
