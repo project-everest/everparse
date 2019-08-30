@@ -420,3 +420,79 @@ let print_decls (ds:list decl) =
      open Prelude\n\
      %s"
      (String.concat "\n" (List.Tot.map print_decl ds))
+
+let print_error_map () : ML (string & string) =
+  let errs = Binding.field_num_ops.all_nums() in
+  let struct_names =
+    List.map
+    (fun (kis: (A.field_num * option A.ident * string)) ->
+      let k, i, s = kis in
+      Printf.sprintf "case %d: return \"%s\";"
+        k
+        (match i with
+         | None -> ""
+         | Some i -> A.print_ident i))
+    errs
+ in
+ let field_names =
+    List.map
+    (fun (kis: (A.field_num * option A.ident * string)) ->
+      let k, i, s = kis in
+      Printf.sprintf "case %d: return \"%s\";"
+        k s)
+    errs
+ in
+ let print_switch fname cases =
+   Printf.sprintf
+     "string %s(uint64_t err) {\n\t\
+        switch (err) {\n\t\t\
+          %s \n\t\t\
+          default: return \"\";\n\t\
+       }\n\
+      }\n"
+      fname
+      (String.concat "\n\t\t" cases)
+ in
+ print_switch "struct_name_of_err" struct_names,
+ print_switch "field_name_of_err" field_names
+
+let print_c_entry (ds:list decl) : ML string =
+  let struct_name_map, field_name_map = print_error_map() in
+  let print_one_validator (d:type_decl) =
+    Printf.sprintf
+      "bool Rndis_check_%s(uint8_t *base, uint8_t len) {\n\t\
+         LowParse_Slice_slice s = { base = base; len = len };\n\t\
+         uint64_t result = Rndis_validate_%s(s, 0);\n\t\
+         if (LowParse_Low_result_is_error(result)) {\n\t\t\
+           %s(%s, \"EverParse validation failed on field %%s.%%s because %%s\",\n\t\t\t\
+                  struct_name_of_error(result),\n\t\t\t\
+                  field_name_of_error (result),\n\\t\t\t\
+                  LowParse_Low_error_reason_of_result(result));\n\t\t\
+           return false;\n\t\
+         }\n\t\
+         return true;\n\
+       }"
+       (A.print_ident d.decl_name.td_name)
+       (print_ident d.decl_name.td_name)
+       "fprintf"
+       "stderr"
+  in
+  let validators =
+    List.collect
+      (fun d ->
+        match d with
+        | Type_decl d ->
+          if d.decl_name.td_entrypoint
+          then [print_one_validator d]
+          else []
+        | _ -> [])
+      ds
+  in
+  Printf.sprintf
+    "#include \"Rndis.h\"\n\
+      %s\n\
+      %s\n\
+      %s\n"
+     struct_name_map
+     field_name_map
+     (validators |> String.concat "\n\n")

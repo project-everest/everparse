@@ -6,7 +6,8 @@ module H = Hashtable
 noeq
 type field_num_ops_t = {
   next : (option ident * string) -> ML field_num;
-  lookup : field_num -> ML (option (option ident * string))
+  lookup : field_num -> ML (option (option ident * string));
+  all_nums : unit -> ML (list (field_num * option ident * string))
 }
 
 #push-options "--warn_error -272" //top-level effect; ok
@@ -30,9 +31,14 @@ let field_num_ops : field_num_ops_t =
     : ML (option (option ident * string))
     = H.try_find h f
   in
+  let all_nums () =
+    let entries = H.fold (fun k (i, s) out -> (k, i, s) :: out) h [] in
+    List.sortWith #(field_num & _ & _) (fun (k, _, _) (k', _, _) -> k - k') entries
+  in
   {
     next = next;
-    lookup = lookup
+    lookup = lookup;
+    all_nums = all_nums
   }
 #pop-options
 
@@ -233,7 +239,7 @@ let rec check_typ (env:env) (t:typ)
         let params = params_of_decl d in
         if List.length params <> List.length es
         then error (Printf.sprintf "Not enough arguments to %s" s.v) s.range;
-        let es =
+        let _ =
           List.map2 (fun (t, _) e ->
             let e, t' = check_expr env e in
             if not (eq_typ env t t')
