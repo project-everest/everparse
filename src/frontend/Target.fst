@@ -457,6 +457,7 @@ let print_error_map () : ML (string & string) =
  print_switch "struct_name_of_err" struct_names,
  print_switch "field_name_of_err" field_names
 
+#push-options "--z3rlimit_factor 4"
 let print_c_entry (ds:list decl) : ML string =
   let struct_name_map, field_name_map = print_error_map() in
   let print_one_validator (d:type_decl) =
@@ -477,8 +478,8 @@ let print_c_entry (ds:list decl) : ML string =
        (A.print_ident d.decl_name.td_name)
        (Options.get_module_name())
        (print_ident d.decl_name.td_name)
-       "fprintf"
-       "stderr"
+       (Options.get_error_log_function())
+       (Options.get_error_log())
   in
   let validators =
     List.collect
