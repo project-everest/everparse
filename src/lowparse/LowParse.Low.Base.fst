@@ -2176,6 +2176,22 @@ let jumper
   ))
 
 inline_for_extraction
+let jump_constant_size'
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: (unit -> GTot (parser k t)))
+  (sz: U32.t)
+  (u: unit {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == U32.v sz
+  })
+: Tot (jumper (p ()))
+= fun #rrel #rel (input: slice rrel rel) (pos: U32.t) ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_facts (p ()) h input pos in
+  pos `U32.add` sz
+
+inline_for_extraction
 let jump_constant_size
   (#k: parser_kind)
   (#t: Type0)
@@ -2186,10 +2202,7 @@ let jump_constant_size
     k.parser_kind_low == U32.v sz
   })
 : Tot (jumper p)
-= fun #rrel #rel (input: slice rrel rel) (pos: U32.t) ->
-  let h = HST.get () in
-  [@inline_let] let _ = valid_facts p h input pos in
-  pos `U32.add` sz
+= jump_constant_size' (fun _ -> p) sz u
 
 let seq_starts_with (#t: Type) (slong sshort: Seq.seq t) : GTot Type0 =
   Seq.length sshort <= Seq.length slong /\
