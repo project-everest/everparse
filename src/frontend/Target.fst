@@ -60,7 +60,12 @@ type typedef_body =
   | TD_abbrev : typ -> typedef_body
   | TD_struct : list field  -> typedef_body
 
-type typedef_name = A.ident & list param
+noeq
+type typedef_name = {
+  td_name:A.ident;
+  td_params:list param;
+  td_entrypoint:bool
+}
 type typedef = typedef_name & typedef_body
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -346,18 +351,16 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
     Printf.sprintf "(validate_with_error %duL %s)" f (print_validator v)
 
 let print_typedef_name (tdn:typedef_name) =
-  let name, params = tdn in
   Printf.sprintf "%s %s"
-    (print_ident name)
+    (print_ident tdn.td_name)
     (String.concat " "
-      (List.Tot.map (fun (id, t) -> Printf.sprintf "(%s:%s)" (print_ident id) (print_typ t)) params))
+      (List.Tot.map (fun (id, t) -> Printf.sprintf "(%s:%s)" (print_ident id) (print_typ t)) tdn.td_params))
 
 let print_typedef_typ (tdn:typedef_name) =
-  let name, params = tdn in
   Printf.sprintf "%s %s"
-    (print_ident name)
+    (print_ident tdn.td_name)
     (String.concat " "
-      (List.Tot.map (fun (id, t) -> (print_ident id)) params))
+      (List.Tot.map (fun (id, t) -> (print_ident id)) tdn.td_params))
 
 let print_typedef_body (b:typedef_body) =
   match b with
@@ -387,16 +390,17 @@ let print_decl (d:decl) : Tot string =
       (print_typedef_body td.decl_typ)
     `strcat`
     Printf.sprintf "noextract\nlet kind_%s : parser_kind = %s\n"
-      (print_ident (fst td.decl_name))
+      (print_ident td.decl_name.td_name)
       (print_kind td.decl_parser.p_kind)
     `strcat`
     Printf.sprintf "noextract\nlet parse_%s : parser (kind_%s) (%s) = %s\n"
       (print_typedef_name td.decl_name)
-      (print_ident (fst td.decl_name))
+      (print_ident td.decl_name.td_name)
       (print_typedef_typ td.decl_name)
       (print_parser td.decl_parser)
     `strcat`
-    Printf.sprintf "inline_for_extraction\nlet validate_%s : validator (parse_%s) = %s\n"
+    Printf.sprintf "%sinline_for_extraction\nlet validate_%s : validator (parse_%s) = %s\n"
+      (if td.decl_name.td_entrypoint then "" else "noextract\n")
       (print_typedef_name td.decl_name)
       (print_typedef_typ td.decl_name)
       (print_validator td.decl_validator)
@@ -404,7 +408,8 @@ let print_decl (d:decl) : Tot string =
     (match td.decl_reader with
      | None -> ""
      | Some r ->
-       Printf.sprintf "inline_for_extraction\nlet read_%s : reader (parse_%s) = %s\n"
+       Printf.sprintf "%sinline_for_extraction\nlet read_%s : reader (parse_%s) = %s\n"
+         (if td.decl_name.td_entrypoint then "" else "noextract\n")
          (print_typedef_name td.decl_name)
          (print_typedef_name td.decl_name)
          (print_reader r))

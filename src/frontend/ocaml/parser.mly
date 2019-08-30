@@ -1,10 +1,11 @@
 %{
   open Lexing
   open Ast
-  let mk_td i j k = {
+  let mk_td b i j k = {
     typedef_name = i;
     typedef_abbrev = j;
-    typedef_ptr_abbrev = k
+    typedef_ptr_abbrev = k;
+    typedef_entry_point = b
   }
 
   let mk_pos (l:Lexing.position) =
@@ -25,7 +26,7 @@
 %token<int>     INT
 %token<string>  COMMENT XINT
 %token<Ast.ident>   IDENT
-%token          EQ AND OR EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS
+%token          EQ AND OR EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS ENTRYPOINT
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON
 %token          STAR MINUS PLUS LBRACK RBRACK LEQ LESS_THAN GEQ GREATER_THAN
 %start <Ast.decl list> prog
@@ -33,7 +34,7 @@
 
 %left OR
 %left AND
-%nonassoc EQ
+%nonassoc EQ LEQ LESS_THAN GEQ GREATER_THAN
 %left PLUS
 %left MINUS
 
@@ -133,6 +134,9 @@ case:
 cases:
   | cs=right_flexible_nonempty_list(SEMICOLON, case) { cs }
 
+maybe_entry:
+  |            { false }
+  | ENTRYPOINT { true }
 decl_no_range:
   | l=COMMENT { Comment l }
   | DEFINE i=IDENT c=constant { Define (i, c) }
@@ -140,19 +144,19 @@ decl_no_range:
     { Enum(with_range (Type_app (t, [])) ($startpos(t)), i, es) }
   | TYPEDEF t=typ i=IDENT SEMICOLON
     { TypeAbbrev (t, i) }
-  | TYPEDEF STRUCT i=IDENT ps=parameters
+  | TYPEDEF b=maybe_entry STRUCT i=IDENT ps=parameters
     LBRACE fields=right_flexible_nonempty_list(SEMICOLON, field)
     RBRACE j=IDENT COMMA STAR k=IDENT SEMICOLON
-    { Record(mk_td i j k, ps, fields) }
-  | CASETYPE i=IDENT ps=parameters
+    { Record(mk_td b i j k, ps, fields) }
+  | CASETYPE b=maybe_entry i=IDENT ps=parameters
     LBRACE SWITCH LPAREN e=IDENT RPAREN
            LBRACE cs=cases
            comms=list(COMMENT)
            RBRACE
     RBRACE j=IDENT COMMA STAR k=IDENT SEMICOLON
-    { let td = mk_td i j k in CaseType(td, ps, (with_range (Identifier e) ($startpos(i)), cs)) }
+    { let td = mk_td b i j k in CaseType(td, ps, (with_range (Identifier e) ($startpos(i)), cs)) }
 
-decl:
+ decl:
   | d=decl_no_range { with_range d ($startpos) }
 
 expr_top:

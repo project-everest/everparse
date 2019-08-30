@@ -104,7 +104,10 @@ let translate_typ (t:A.typ) : ML T.typ =
 
 let translate_typedef_name (tdn:A.typedef_names) params : ML T.typedef_name =
   let params = List.map (fun (t, id) -> id, translate_typ t) params in
-  tdn.typedef_name, params
+  let open T in
+  { td_name = tdn.typedef_name;
+    td_params = params;
+    td_entrypoint = tdn.typedef_entry_point }
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
   let refinement i =
@@ -351,7 +354,7 @@ let parse_grouped_fields (gfs:grouped_fields)
 let parse_fields (tdn:T.typedef_name) (fs:list T.field)
   : ML T.parser =
   let open T in
-  let td_name, td_params = tdn in
+  let td_name, td_params = tdn.td_name, tdn.td_params in
   let gfs = make_grouped_fields fs in
   let p = parse_grouped_fields gfs in
   let dfst (e:T.expr) = App (Ext "dfst") [e] in
@@ -416,6 +419,14 @@ let rec read_typ (t:T.typ) : ML (option T.reader) =
      | Some r -> Some (Read_filter r ref))
   | _ -> None
 
+let make_tdn (i:A.ident) =
+  {
+    typedef_name = i;
+    typedef_abbrev = with_dummy_range "";
+    typedef_ptr_abbrev = with_dummy_range "";
+    typedef_entry_point = false
+  }
+
 let translate_decl (d:A.decl) : ML T.decl =
   match d.v with
   | Comment s -> T.Comment s
@@ -423,12 +434,7 @@ let translate_decl (d:A.decl) : ML T.decl =
   | Define i s -> T.Definition (i, s)
 
   | TypeAbbrev t i ->
-    let tdn = {
-        typedef_name = i;
-        typedef_abbrev = with_dummy_range "";
-        typedef_ptr_abbrev = with_dummy_range "";
-      }
-    in
+    let tdn = make_tdn i in
     let t = translate_typ t in
     let tdn = translate_typedef_name tdn [] in
     let p = parse_typ t in
@@ -444,12 +450,7 @@ let translate_decl (d:A.decl) : ML T.decl =
     )
 
   | Enum t i ids ->
-    let tdn = {
-        typedef_name = i;
-        typedef_abbrev = with_dummy_range "";
-        typedef_ptr_abbrev = with_dummy_range "";
-      }
-    in
+    let tdn = make_tdn i in
     let typ = translate_typ t in
     let tdn = translate_typedef_name tdn [] in
     let refined_typ = make_enum_typ typ ids in

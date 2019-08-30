@@ -119,7 +119,8 @@ noeq
 type typedef_names = {
   typedef_name: ident;
   typedef_abbrev: ident;
-  typedef_ptr_abbrev: ident
+  typedef_ptr_abbrev: ident;
+  typedef_entry_point: bool
 }
 
 noeq

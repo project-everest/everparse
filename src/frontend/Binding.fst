@@ -549,7 +549,8 @@ let initial_global_env () =
     let td_name = {
       typedef_name = i;
       typedef_abbrev = i;
-      typedef_ptr_abbrev = i
+      typedef_ptr_abbrev = i;
+      typedef_entry_point = false
     }
     in
     { v = Record td_name [] [];
