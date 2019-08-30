@@ -416,9 +416,10 @@ let print_decl (d:decl) : Tot string =
 
 let print_decls (ds:list decl) =
   Printf.sprintf
-    "module Rndis\n\
+    "module %s\n\
      open Prelude\n\
      %s"
+     (Options.get_module_name())
      (String.concat "\n" (List.Tot.map print_decl ds))
 
 let print_error_map () : ML (string & string) =
@@ -444,7 +445,7 @@ let print_error_map () : ML (string & string) =
  in
  let print_switch fname cases =
    Printf.sprintf
-     "string %s(uint64_t err) {\n\t\
+     "char* %s(uint64_t err) {\n\t\
         switch (err) {\n\t\t\
           %s \n\t\t\
           default: return \"\";\n\t\
@@ -460,19 +461,21 @@ let print_c_entry (ds:list decl) : ML string =
   let struct_name_map, field_name_map = print_error_map() in
   let print_one_validator (d:type_decl) =
     Printf.sprintf
-      "bool Rndis_check_%s(uint8_t *base, uint8_t len) {\n\t\
+      "bool %s_check_%s(uint8_t *base, uint8_t len) {\n\t\
          LowParse_Slice_slice s = { base = base; len = len };\n\t\
-         uint64_t result = Rndis_validate_%s(s, 0);\n\t\
+         uint64_t result = %s_validate_%s(s, 0);\n\t\
          if (LowParse_Low_result_is_error(result)) {\n\t\t\
            %s(%s, \"EverParse validation failed on field %%s.%%s because %%s\",\n\t\t\t\
                   struct_name_of_error(result),\n\t\t\t\
-                  field_name_of_error (result),\n\\t\t\t\
+                  field_name_of_error (result),\n\t\t\t\
                   LowParse_Low_error_reason_of_result(result));\n\t\t\
            return false;\n\t\
          }\n\t\
          return true;\n\
        }"
+       (Options.get_module_name())
        (A.print_ident d.decl_name.td_name)
+       (Options.get_module_name())
        (print_ident d.decl_name.td_name)
        "fprintf"
        "stderr"
@@ -489,10 +492,11 @@ let print_c_entry (ds:list decl) : ML string =
       ds
   in
   Printf.sprintf
-    "#include \"Rndis.h\"\n\
+    "#include \"%s.h\"\n\
       %s\n\
       %s\n\
       %s\n"
+     (Options.get_module_name())
      struct_name_map
      field_name_map
      (validators |> String.concat "\n\n")

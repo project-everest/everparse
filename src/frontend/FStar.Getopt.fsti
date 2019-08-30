@@ -20,9 +20,10 @@ open FStar.BaseTypes
 
 val noshort : char
 val nolong : string
+noeq
 type opt_variant 'a =
-  | ZeroArgs of (unit -> 'a)
-  | OneArg of (string -> 'a) * string
+  | ZeroArgs of (unit -> ML 'a)
+  | OneArg of (string -> ML 'a) * string
 
 type opt' 'a = char * string * opt_variant 'a * string
 type opt = opt' unit
@@ -32,6 +33,6 @@ type parse_cmdline_res =
   | Error of string
   | Success
 
-val parse_cmdline: list opt  -> (string -> 'a) -> parse_cmdline_res
-val parse_string: list opt  -> (string -> 'a) -> string -> parse_cmdline_res
+val parse_cmdline: list opt  -> (string -> ML 'a) -> parse_cmdline_res
+val parse_string: list opt  -> (string -> ML 'a) -> string -> parse_cmdline_res
 val cmdline: unit -> list string
