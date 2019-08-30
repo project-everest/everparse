@@ -385,7 +385,7 @@ let print_decl (d:decl) : Tot string =
   | Definition (x, c) ->
     Printf.sprintf "[@CMacro]\nlet %s = %s\n" (print_ident x) (A.print_constant c)
   | Type_decl td ->
-    Printf.sprintf "noextract\ntype %s = %s\n"
+    Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s\n"
       (print_typedef_name td.decl_name)
       (print_typedef_body td.decl_typ)
     `strcat`
@@ -422,8 +422,17 @@ let print_decls (ds:list decl) =
      (Options.get_module_name())
      (String.concat "\n" (List.Tot.map print_decl ds))
 
-let print_error_map () : ML (string & string) =
+let print_error_map () : ML (string & string & string) =
   let errs = Binding.field_num_ops.all_nums() in
+  let error_reasons =
+    "char* error_reason_of_result (uint64_t code) {\n\t\
+      switch (code) {\n\t\t\
+        case 1: return \"generic error\";\n\t\t\
+        case 2: return \"not enough data\";\n\t\t\
+        default: return \"unspecified\";\n\t\
+      }\n
+     }"
+  in
   let struct_names =
     List.map
     (fun (kis: (A.field_num * option A.ident * string)) ->
@@ -446,7 +455,7 @@ let print_error_map () : ML (string & string) =
  let print_switch fname cases =
    Printf.sprintf
      "char* %s(uint64_t err) {\n\t\
-        switch (err) {\n\t\t\
+        switch (Prelude_field_id_of_result(err)) {\n\t\t\
           %s \n\t\t\
           default: return \"\";\n\t\
        }\n\
@@ -454,22 +463,23 @@ let print_error_map () : ML (string & string) =
       fname
       (String.concat "\n\t\t" cases)
  in
+ error_reasons,
  print_switch "struct_name_of_err" struct_names,
  print_switch "field_name_of_err" field_names
 
 #push-options "--z3rlimit_factor 4"
 let print_c_entry (ds:list decl) : ML string =
-  let struct_name_map, field_name_map = print_error_map() in
+  let error_reasons, struct_name_map, field_name_map = print_error_map() in
   let print_one_validator (d:type_decl) =
     Printf.sprintf
       "bool %s_check_%s(uint8_t *base, uint8_t len) {\n\t\
-         LowParse_Slice_slice s = { base = base; len = len };\n\t\
+         LowParse_Slice_slice s = { .base = base, .len = len };\n\t\
          uint64_t result = %s_validate_%s(s, 0);\n\t\
-         if (LowParse_Low_result_is_error(result)) {\n\t\t\
+         if (Prelude_result_is_error(result)) {\n\t\t\
            %s(%s, \"EverParse validation failed on field %%s.%%s because %%s\",\n\t\t\t\
-                  struct_name_of_error(result),\n\t\t\t\
-                  field_name_of_error (result),\n\t\t\t\
-                  LowParse_Low_error_reason_of_result(result));\n\t\t\
+                  struct_name_of_err(result),\n\t\t\t\
+                  field_name_of_err (result),\n\t\t\t\
+                  error_reason_of_result(result));\n\t\t\
            return false;\n\t\
          }\n\t\
          return true;\n\
@@ -493,11 +503,14 @@ let print_c_entry (ds:list decl) : ML string =
       ds
   in
   Printf.sprintf
-    "#include \"%s.h\"\n\
+    "#include \"Prelude.h\"\n\
+     #include \"%s.h\"\n\
+      %s\n\
       %s\n\
       %s\n\
       %s\n"
      (Options.get_module_name())
+      error_reasons
      struct_name_map
      field_name_map
      (validators |> String.concat "\n\n")

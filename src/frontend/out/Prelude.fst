@@ -121,29 +121,32 @@ let validate_weaken #k #t (#p:parser k t) (v:validator p) (k':parser_kind{k' `LP
 inline_for_extraction noextract
 let validate_impos (_:squash False)
   : Tot (validator (parse_impos ()))
-  = fun #_ #_ _ _ -> 0ul
+  = fun #_ #_ _ _ -> 0uL
 
+module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 let result = U64.t
 let field_id = x:U64.t{ 0 < U64.v x /\ U64.v x < pow2 16}
-assume
-val field_id_of_result (x:result) : field_id
-assume
-val position_of_result (x:result) : U64.t
-assume
-val error_reason_of_result (x:result) : U64.t
+let field_id_of_result (x:result) : U64.t =
+  LowParse.Low.Base.get_validator_error_code x
+let result_is_error(x:result) : bool =
+  let open U64 in
+  x >^ LPL.validator_max_length
+let position_of_result (x:result) : U32.t =
+  LPL.get_validator_error_pos x
+let error_reason_of_result (x:result) : U64.t =
+  LowParse.BitFields.get_bitfield64 x 32 34
 
 inline_for_extraction noextract
 let validate_with_error #k #t (#p:parser k t) (f:field_id) (v:validator p)
   : Tot (validator p)
-  = v
+  = LPL.validate_with_error_code v f
 
 ////////////////////////////////////////////////////////////////////////////////
 // Base types
 ////////////////////////////////////////////////////////////////////////////////
 
 /// UInt32
-module U32 = FStar.UInt32
 let _UINT32 = U32.t
 let kind__UINT32 = LowParse.Spec.BoundedInt.parse_u32_kind
 let parse__UINT32 : parser kind__UINT32 _UINT32 = LowParse.Spec.BoundedInt.parse_u32_le

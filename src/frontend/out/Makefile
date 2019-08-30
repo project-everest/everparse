@@ -21,7 +21,7 @@ KREMLIN = $(KREMLIN_HOME)/krml \
 include .dep
 
 codegen: $(ALL_KRML_FILES)
-	$(KREMLIN) -skip-compilation $^
+	$(KREMLIN) -skip-linking $^ $(subst .fst,,$(ROOT))_wrapper.c
 
 kremlin: $(ALL_KRML_FILES)
 
