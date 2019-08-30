@@ -440,6 +440,29 @@ let get_bitfield_get_bitfield
     then nth_get_bitfield x lo hi (i + lo')
   )
 
+let get_bitfield_zero_inner
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
+  (lo': nat { lo <= lo' }) (hi': nat { lo' <= hi' /\ hi' <= hi })
+: Lemma
+  (ensures (get_bitfield x lo hi == 0 ==> get_bitfield x lo' hi' == 0))
+= let f () : Lemma
+    (requires (get_bitfield x lo hi == 0))
+    (ensures (get_bitfield x lo' hi' == 0))
+  =
+    eq_nth (get_bitfield x lo' hi') 0 (fun i ->
+      nth_get_bitfield x lo' hi' i;
+      nth_zero tot i;
+      if (i < hi' - lo') then begin
+        nth_get_bitfield x lo hi (i + lo' - lo);
+        nth_zero tot (i + lo');
+        nth_zero tot (i + lo' - lo)
+      end
+    )
+  in
+  Classical.move_requires f ()
+
 let set_bitfield_get_bitfield
   (#tot: pos)
   (x: U.uint_t tot)
