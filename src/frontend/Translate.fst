@@ -226,6 +226,9 @@ let rec make_validator (p:T.parser) : ML T.validator =
   | Parse_if_else e p1 p2 ->
     pv p (Validate_if_else e (make_validator p1) (make_validator p2))
 
+  | Parse_with_error f p ->
+    pv p (Validate_with_error f (make_validator p))
+
 // x:t1;
 // t2;
 // t3;
@@ -258,7 +261,8 @@ let translate_struct_field (sf:A.struct_field) : ML T.struct_field =
     in
     T.({sf_dependence=sf.field_dependence;
         sf_ident=sf.field_ident;
-        sf_typ=t})
+        sf_typ=t;
+        sf_field_number=sf.field_number})
 
 let translate_field (f:A.field) : ML T.field =
   match f.v with
@@ -317,18 +321,28 @@ let make_grouped_fields (fs:list T.field) : ML grouped_fields =
 let parse_grouped_fields (gfs:grouped_fields)
   : ML T.parser
   = let open T in
+    let may_fail sf p =
+      match sf.sf_field_number with
+      | None -> p
+      | Some f ->
+        {p with p_parser = Parse_with_error f p}
+    in
     let rec aux (gfs:grouped_fields) : ML parser =
       match gfs with
       | [] ->
         unit_parser
 
       | Inl sf::gfs ->
-        dep_pair_parser (parse_typ sf.sf_typ) (sf.sf_ident, aux gfs)
+        dep_pair_parser
+          (may_fail sf (parse_typ sf.sf_typ))
+          (sf.sf_ident, aux gfs)
 
       | Inr gf::gfs ->
         List.fold_right
           (fun (sf:struct_field) (p_tl:parser) ->
-            pair_parser (parse_typ sf.sf_typ) p_tl)
+            pair_parser
+              (may_fail sf (parse_typ sf.sf_typ))
+              p_tl)
           gf
           (aux gfs)
     in

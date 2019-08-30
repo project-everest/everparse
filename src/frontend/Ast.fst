@@ -1,16 +1,45 @@
+(*
+   Copyright 2019 Microsoft Research
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*)
 module Ast
+(* This module defines the source abstract syntax for the EverParse *)
+(* frontend *)
+
 open FStar.All
 
+/// pos: Source locations
 type pos = {
   filename: string;
   line:int;
   col:int
 }
 
-let range = pos * pos
-
 let string_of_pos p =
   Printf.sprintf "%s:(%d,%d)" p.filename p.line p.col
+
+/// range: A source extent
+let range = pos * pos
+
+let string_of_range r =
+  let p, q = r in
+  if p.filename = q.filename
+  then Printf.sprintf "%s:(%d,%d--%d,%d)"
+              p.filename p.line p.col q.line q.col
+  else Printf.sprintf "%s -- %s"
+              (string_of_pos p)
+              (string_of_pos q)
 
 let dummy_pos = {
   filename="";
@@ -18,12 +47,14 @@ let dummy_pos = {
   col=0;
 }
 
-noeq type withrange 'a = {
+noeq
+type withrange 'a = {
   v:'a;
   range:range
 }
 
 type ident' = string
+
 let ident = withrange ident'
 
 type constant =
@@ -43,7 +74,7 @@ type op =
   | LE
   | GE
   | SizeOf
- //OffsetOf
+ //OffsetOf ?
 
 noeq
 type expr' =
@@ -63,6 +94,8 @@ type param = typ & ident
 
 let size = int
 
+let field_num = n:nat{ 0 < n /\ n < pow2 16 }
+
 noeq
 type struct_field = {
   field_dependence:bool;
@@ -71,6 +104,7 @@ type struct_field = {
   field_type:typ;
   field_array_opt:option expr;
   field_constraint:option expr;
+  field_number:option field_num
 }
 
 noeq

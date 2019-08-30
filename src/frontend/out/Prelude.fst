@@ -123,6 +123,21 @@ let validate_impos (_:squash False)
   : Tot (validator (parse_impos ()))
   = fun #_ #_ _ _ -> 0ul
 
+module U64 = FStar.UInt64
+let result = U64.t
+let field_id = x:U64.t{ 0 < U64.v x /\ U64.v x < pow2 16}
+assume
+val field_id_of_result (x:result) : field_id
+assume
+val position_of_result (x:result) : U64.t
+assume
+val error_reason_of_result (x:result) : U64.t
+
+inline_for_extraction noextract
+let validate_with_error #k #t (#p:parser k t) (f:field_id) (v:validator p)
+  : Tot (validator p)
+  = v
+
 ////////////////////////////////////////////////////////////////////////////////
 // Base types
 ////////////////////////////////////////////////////////////////////////////////

@@ -3,10 +3,46 @@ open Ast
 open FStar.All
 module H = Hashtable
 
+noeq
+type field_num_ops_t = {
+  next : (option ident * string) -> ML field_num;
+  lookup : field_num -> ML (option (option ident * string))
+}
+
+#push-options "--warn_error -272" //top-level effect; ok
+let field_num_ops : field_num_ops_t =
+  let open FStar.ST in
+  let h : H.t field_num (option ident * string) = H.create 100 in
+  let ctr : ref field_num = alloc 1 in
+  let max_field_num = pow2 16 in
+  let next s
+    : ML field_num
+    = let x = !ctr in
+      H.insert h x s;
+      begin
+      if x + 1 = max_field_num
+      then failwith "Exhausted field numbers"
+      else ctr := x + 1
+      end;
+      x
+  in
+  let lookup (f:field_num)
+    : ML (option (option ident * string))
+    = H.try_find h f
+  in
+  {
+    next = next;
+    lookup = lookup
+  }
+#pop-options
+
+
 type decl_attributes = {
   size:option size;
-  has_suffix:bool
+  has_suffix:bool;
+  may_fail:bool
 }
+
 let global_env = H.t ident' (decl * either decl_attributes typ)
 
 //the bool signifies that this identifier has been used
@@ -115,6 +151,12 @@ let typ_has_suffix env (t:typ) : ML bool =
   let Type_app hd _ = t.v in
   match lookup env hd with
   | Inr (d, Inl attrs) -> attrs.has_suffix
+  | _ -> false
+
+let parser_may_fail (env:env) (t:typ) : ML bool =
+  let Type_app hd _ = t.v in
+  match lookup env hd with
+  | Inr (d, Inl attrs) -> attrs.may_fail
   | _ -> false
 
 let rec value_of_const_expr (env:env) (e:expr) : ML (option (either bool int)) =
@@ -325,7 +367,21 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         | _ -> None
       in
       if extend_scope then add_local env sf.field_ident sf.field_type;
-      let sf = { sf with field_array_opt = fa; field_constraint = fc; field_size = size } in
+      let field_number =
+        let may_fail = parser_may_fail env sf.field_type in
+        if may_fail
+        || Some? fc //it has a refinement
+        || Some? fa //it's an array
+        then Some (field_num_ops.next (env.this, sf.field_ident.v))
+        else None
+      in
+      let sf = {
+        sf with
+        field_array_opt = fa;
+        field_constraint = fc;
+        field_size = size;
+        field_number = field_number
+      } in
       with_range (Field sf) f.range
 
 let check_switch (env:env) (s:switch_case)
@@ -372,7 +428,7 @@ let check_switch (env:env) (s:switch_case)
         cases
         (Some 0, false)
     in
-    let attrs = { has_suffix = suffix; size = size } in
+    let attrs = { has_suffix = suffix; size = size; may_fail = false } in
     (head, cases), attrs
 
 let mk_env (g:global_env) =
@@ -385,7 +441,6 @@ let check_params (env:env) (ps:list param) : ML unit =
       check_typ env t;
       add_local env p t)
 
-
 let bind_decl (e:global_env) (d:decl) : ML decl =
   match d.v with
   | Comment _ -> d
@@ -397,7 +452,14 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
   | TypeAbbrev t i ->
     let env = mk_env e in
     check_typ env t;
-    add_global e i d (Inl ({ has_suffix = typ_has_suffix env t; size =size_of_typ env t }));
+    let attrs =
+      {
+        has_suffix = typ_has_suffix env t;
+        size = size_of_typ env t;
+        may_fail = parser_may_fail env t
+      }
+    in
+    add_global e i d (Inl attrs);
     d
 
   | Enum t i cases ->
@@ -410,7 +472,14 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
                    (print_typ t)
                    (print_typ t'))
                  d.range);
-    add_global e i d (Inl ({ has_suffix = typ_has_suffix env t; size =size_of_typ env t }));
+    let attrs =
+      {
+        has_suffix = typ_has_suffix env t;
+        size = size_of_typ env t;
+        may_fail = true
+      }
+    in
+    add_global e i d (Inl attrs);
     d
 
   | Record tdnames params fields ->
@@ -447,10 +516,18 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         then error "Variable-length fields can only be at the end of a struct" hd.field_type.range
         else check_suffix tl
     in
-    let has_suffix = check_suffix (List.filter_map (function {v=FieldComment _} -> None | {v=Field sf} -> Some sf) fields) in
+    let has_suffix =
+      check_suffix
+        (List.filter_map
+          (function
+            | {v=FieldComment _} -> None
+            | {v=Field sf} -> Some sf)
+          fields)
+    in
     let attrs = {
         size = size;
-        has_suffix = has_suffix
+        has_suffix = has_suffix;
+        may_fail = false; //only its fields may fail; not the struct itself
       }
     in
     add_global e tdnames.typedef_name d (Inl attrs);
@@ -459,9 +536,9 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
   | CaseType tdnames params switch ->
     let env = { mk_env e with this=Some tdnames.typedef_name } in
     check_params env params;
-    let switch, sz_opt = check_switch env switch in
+    let switch, attrs = check_switch env switch in
     let d = with_range (CaseType tdnames params switch) d.range in
-    add_global e tdnames.typedef_name d (Inl sz_opt);
+    add_global e tdnames.typedef_name d (Inl attrs);
     d
 
 let prog = list decl
@@ -478,9 +555,9 @@ let initial_global_env () =
     { v = Record td_name [] [];
       range = dummy_range }
   in
-  [ ("UINT8", { size = Some 1; has_suffix = false});
-    ("UINT32", { size = Some 4; has_suffix = false});
-    ("suffix", { size = Some 0; has_suffix = true}) ]
+  [ ("UINT8", { size = Some 1; has_suffix = false; may_fail = true});
+    ("UINT32", { size = Some 4; has_suffix = false; may_fail = true});
+    ("suffix", { size = Some 0; has_suffix = true; may_fail = true}) ]
   |> List.iter (fun (i, attrs) ->
     let i = { v = i; range=dummy_range} in
     add_global e i (nullary_decl i) (Inl attrs));

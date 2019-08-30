@@ -46,7 +46,8 @@ noeq
 type struct_field = {
   sf_dependence: bool;
   sf_ident: A.ident;
-  sf_typ: typ
+  sf_typ: typ;
+  sf_field_number:option A.field_num
 }
 noeq
 type field =
@@ -95,6 +96,7 @@ type parser' =
   | Parse_weaken    : p:parser ->  k:parser_kind -> parser'
   | Parse_if_else   : e:expr -> parser -> parser -> parser'
   | Parse_impos     : parser'
+  | Parse_with_error: f:A.field_num -> parser -> parser'
 
 and parser = {
   p_kind:parser_kind;
@@ -123,6 +125,7 @@ type validator' =
   | Validate_weaken   : v:validator ->  k:parser_kind -> validator'
   | Validate_if_else  : e:expr -> validator -> validator -> validator'
   | Validate_impos    : validator'
+  | Validate_with_error: f:A.field_num -> validator -> validator'
 
 and validator = {
   v_parser:parser;
@@ -283,6 +286,7 @@ let rec print_parser (p:parser) : Tot string (decreases p) =
       (print_parser p1)
       (print_parser p2)
   | Parse_impos -> "(parse_impos())"
+  | Parse_with_error _ p -> print_parser p
 
 let rec print_reader (r:reader) : Tot string =
   match r with
@@ -338,6 +342,8 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
       (print_parser v2.v_parser)
       (print_validator v2)
   | Validate_impos -> "(validate_impos())"
+  | Validate_with_error f v ->
+    Printf.sprintf "(validate_with_error %duL %s)" f (print_validator v)
 
 let print_typedef_name (tdn:typedef_name) =
   let name, params = tdn in
@@ -361,10 +367,11 @@ let print_typedef_body (b:typedef_body) =
       match f with
       | FieldComment s -> s
       | Field sf ->
-        Printf.sprintf "%s : %s%s"
+        Printf.sprintf "%s : %s%s%s"
           (print_ident sf.sf_ident)
           (print_typ sf.sf_typ)
           (if sf.sf_dependence then " (*dep*)" else "")
+          (match sf.sf_field_number with | None -> "" | Some n -> Printf.sprintf "(* %d *)" n)
     in
     let fields = String.concat ";\n" (List.Tot.map print_field fields) in
     Printf.sprintf "{\n%s\n}" fields
