@@ -430,7 +430,7 @@ let print_error_map () : ML (string & string & string) =
         case 1: return \"generic error\";\n\t\t\
         case 2: return \"not enough data\";\n\t\t\
         default: return \"unspecified\";\n\t\
-      }\n
+      }\n\
      }"
   in
   let struct_names =
