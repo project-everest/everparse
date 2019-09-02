@@ -18,7 +18,7 @@ let options =
    ]
 
 let display_usage () : ML unit =
-  FStar.IO.print_string "frontend [options] input_file\n";
+  FStar.IO.print_string "3d [options] input_file\n";
   List.iter (fun (_, m, _, desc) ->
     FStar.IO.print_string (Printf.sprintf "    --%s %s\n" m desc))
     options

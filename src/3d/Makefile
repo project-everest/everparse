@@ -9,10 +9,10 @@ FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUD
 
 .PHONY: ocaml
 
-frontend: ocaml
+3d: ocaml
 	rm -f ocaml/Main.native
 	make -C ocaml Main.native
-	cp ocaml/Main.native frontend
+	cp ocaml/Main.native 3d
 
 .depend: 
 	$(FSTAR) --odir ocaml --dep full $(ROOT) --extract '* -Prims -FStar' > .depend
