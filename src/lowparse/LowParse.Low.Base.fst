@@ -2009,6 +2009,33 @@ let validator (#k: parser_kind) (#t: Type) (p: parser k t) : Tot Type =
       (~ (valid p h sl pos))
   )))
 
+inline_for_extraction
+let validate
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v: validator p)
+  (#rrel: _)
+  (#rel: _)
+  (b: B.mbuffer byte rrel rel)
+  (len: U32.t)
+: HST.Stack bool
+  (requires (fun h ->
+    B.live h b /\
+    U32.v len <= B.length b
+  ))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\ (
+    let sl = make_slice b len in
+    (res == true <==> (U32.v len <= U32.v validator_max_length /\ valid p h sl 0ul))
+  )))
+= if validator_max_length `U32.lt` len
+  then false
+  else
+    [@inline_let]
+    let sl = make_slice b len in
+    v sl 0ul `U32.lte` validator_max_length
+
 let valid_total_constant_size
   (h: HS.mem)
   (#k: parser_kind)
@@ -2069,6 +2096,22 @@ let jumper
   ))
 
 inline_for_extraction
+let jump_constant_size'
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: (unit -> GTot (parser k t)))
+  (sz: U32.t)
+  (u: unit {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == U32.v sz
+  })
+: Tot (jumper (p ()))
+= fun #rrel #rel (input: slice rrel rel) (pos: U32.t) ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_facts (p ()) h input pos in
+  pos `U32.add` sz
+
+inline_for_extraction
 let jump_constant_size
   (#k: parser_kind)
   (#t: Type0)
@@ -2079,10 +2122,7 @@ let jump_constant_size
     k.parser_kind_low == U32.v sz
   })
 : Tot (jumper p)
-= fun #rrel #rel (input: slice rrel rel) (pos: U32.t) ->
-  let h = HST.get () in
-  [@inline_let] let _ = valid_facts p h input pos in
-  pos `U32.add` sz
+= jump_constant_size' (fun _ -> p) sz u
 
 let seq_starts_with (#t: Type) (slong sshort: Seq.seq t) : GTot Type0 =
   Seq.length sshort <= Seq.length slong /\

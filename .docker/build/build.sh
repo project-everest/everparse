@@ -70,9 +70,28 @@ function nightly_test_quackyducky () {
     make -j $threads -C $MITLS_HOME/src/parsers verify
 }
 
+function raise () {
+    return $1
+}
+
 function build_and_test_quackyducky() {
     fetch_and_make_kremlin &&
-    make -j $threads -k test
+    make -j $threads -k test &&
+    # Build incrementality test
+    pushd tests/sample && {
+        {
+            echo 'let foo : FStar.UInt32.t = 42ul' >> Data.fsti &&
+            echo 'let foo : FStar.UInt32.t = Data.foo' >> Test.fst &&
+            make -j $threads &&
+            git checkout Test.fst &&
+            sed -i 's!payloads!payload!g' Test.rfc &&
+            make -j $threads &&
+            git checkout Test.rfc
+        }
+        err=$?
+        popd
+        raise $err
+    }
 }
 
 function exec_build() {

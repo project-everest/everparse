@@ -29,7 +29,7 @@ endif
 
 INCLUDE_KREMLIN=--include $(KREMLIB)
 
-FSTAR_OPTIONS += --use_hints --use_two_phase_tc true --include $(LOWPARSE_HOME) --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN)
+FSTAR_OPTIONS += --use_hints --use_two_phase_tc true --trivial_pre_for_unannotated_effectful_fns false --include $(LOWPARSE_HOME) --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN)
 
 # NOTE: the cache dir and out dir for F* MUST be the same, because the
 # .krml files should be generated only once.
@@ -40,7 +40,7 @@ LOW_LEVEL=$(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c
 
 MY_KREMLIN=$(KREMLIN_EXE) -bundle 'LowParse.\*'  -add-include '"kremlin/internal/compat.h"'
 
-EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair
+EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair ExampleDepLen ExampleConstInt32le
 
 NOEXTRACT_EXAMPLES=ExamplePair
 ROOT_FILES=$(addprefix LowParse, $(addsuffix .fst, $(EXAMPLES)))
@@ -100,6 +100,8 @@ Example11: KREMLIN_ARGS=
 Example12: KREMLIN_ARGS=
 ExampleMono: KREMLIN_ARGS=
 ExamplePair: KREMLIN_ARGS=
+ExampleDepLen: KREMLIN_ARGS=
+ExampleConstInt32le: KREMLIN_ARGS=
 
 .PHONY: all verify-all clean extract-all $(EXAMPLES) %.fst-in %.fsti-in
 

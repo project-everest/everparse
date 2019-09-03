@@ -183,6 +183,109 @@ let jump_synth
   [@inline_let] let _ = valid_synth h p1 f2 input pos in
   p1' input pos
 
+let valid_dtuple2
+  (#rrel #rel: _)
+  (h: HS.mem)
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: t1 -> Type0)
+  (p2: (x: t1) -> parser k2 (t2 x))
+  (s: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (live_slice h s))
+  (ensures ((
+    valid (parse_dtuple2 p1 p2) h s pos \/
+    (valid p1 h s pos /\ valid (p2 (contents p1 h s pos)) h s (get_valid_pos p1 h s pos))
+  ) ==> (
+    valid p1 h s pos /\ (
+    let pos1 = get_valid_pos p1 h s pos in
+    let x = contents p1 h s pos in
+    valid (p2 x) h s (get_valid_pos p1 h s pos) /\
+    valid_content_pos (parse_dtuple2 p1 p2) h s pos (| x, contents (p2 x) h s pos1 |) (get_valid_pos (p2 x) h s pos1)
+  ))))
+= valid_facts p1 h s pos;
+  valid_facts (parse_dtuple2 p1 p2) h s pos;
+  if U32.v pos <= U32.v s.len
+  then begin
+    parse_dtuple2_eq p1 p2 (bytes_of_slice_from h s pos);
+    if valid_dec p1 h s pos
+    then begin
+      let pos1 = get_valid_pos p1 h s pos in
+      let x = contents p1 h s pos in
+      valid_facts (p2 x) h s pos1
+    end
+  end
+
+inline_for_extraction
+let validate_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (v1: validator p1)
+  (r1: leaf_reader p1)
+  (#k2: parser_kind)
+  (#t2: t1 -> Type0)
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (v2: (x: t1) -> Tot (validator (p2 x)))
+: Tot (validator (parse_dtuple2 p1 p2))
+= fun   (#rrel #rel: _)
+  (input: slice rrel rel) (pos: U32.t) ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_dtuple2 h p1 p2 input pos in
+  let pos1 = v1 input pos in
+  if pos1 `U32.gt` validator_max_length
+  then begin
+    pos1
+  end
+  else
+    let x = r1 input pos in
+    [@inline_let] let _ = valid_facts (p2 x) h input pos1 in
+    v2 x input pos1
+
+inline_for_extraction
+let jump_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (v1: jumper p1)
+  (r1: leaf_reader p1)
+  (#k2: parser_kind)
+  (#t2: t1 -> Type0)
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (v2: (x: t1) -> Tot (jumper (p2 x)))
+: Tot (jumper (parse_dtuple2 p1 p2))
+= fun   (#rrel #rel: _)
+  (input: slice rrel rel) (pos: U32.t) ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_dtuple2 h p1 p2 input pos in
+  let pos1 = v1 input pos in
+  let x = r1 input pos in
+  [@inline_let] let _ = valid_facts (p2 x) h input pos1 in
+  v2 x input pos1
+
+inline_for_extraction
+let jump_dtuple2_constant_size_dsnd
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (v1: jumper p1)
+  (#k2: parser_kind)
+  (#t2: t1 -> Type0)
+  (p2: (x: t1) -> parser k2 (t2 x))
+  (sz: U32.t { U32.v sz == k2.parser_kind_low /\ k2.parser_kind_high == Some k2.parser_kind_low })
+: Tot (jumper (parse_dtuple2 p1 p2))
+= fun   (#rrel #rel: _)
+  (input: slice rrel rel) (pos: U32.t) ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_dtuple2 h p1 p2 input pos in
+  let pos1 = v1 input pos in
+  [@inline_let] let p2x = Ghost.hide (p2 (contents p1 h input pos)) in
+  [@inline_let] let _ = valid_facts (Ghost.reveal p2x) h input pos1 in
+  jump_constant_size' (fun _ -> Ghost.reveal p2x) sz () input pos1
+
 inline_for_extraction
 let validate_ret
   (#t: Type)

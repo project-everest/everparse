@@ -55,11 +55,13 @@ val serialize_bounded_integer
   (sz: integer_size)
 : Tot (serializer (parse_bounded_integer sz))
 
+#push-options "--initial_fuel 8 --max_fuel 8 --initial_ifuel 0 --max_ifuel 0 --z3rlimit 20"
 val serialize_bounded_integer_spec
   (sz: integer_size)
   (x: bounded_integer sz)
 : Lemma
-  (serialize (serialize_bounded_integer sz) x == E.n_to_be'' sz (U32.v x))
+  (let (bx : nat {bx < pow2 (8 `FStar.Mul.op_Star` sz)}) = U32.v x in
+    serialize (serialize_bounded_integer sz) x == E.n_to_be'' sz bx)
 
 val parse_bounded_integer_le
   (i: integer_size)
@@ -168,3 +170,58 @@ let bounded_int32
   (max: nat { min <= max })
 : Tot Type0
 = (x: U32.t { in_bounds min max x } )
+
+// unfold
+inline_for_extraction
+let parse_bounded_int32_kind
+  (max: nat { 0 < max /\ max < 4294967296 })
+: Tot parser_kind =
+  [@inline_let]
+  let sz = log256' max in
+  {
+    parser_kind_low = sz;
+    parser_kind_high = Some sz;
+    parser_kind_metadata = None;
+    parser_kind_subkind = Some ParserStrong;
+  }
+
+val parse_bounded_int32
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+: Tot (parser (parse_bounded_int32_kind max) (bounded_int32 min max))
+
+val serialize_bounded_int32
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+: Tot (serializer (parse_bounded_int32 min max))
+
+val parse_bounded_int32_le
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+: Tot (parser (parse_bounded_int32_kind max) (bounded_int32 min max))
+
+val serialize_bounded_int32_le
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+: Tot (serializer (parse_bounded_int32_le min max))
+
+// unfold
+inline_for_extraction
+let parse_bounded_int32_fixed_size_kind
+: parser_kind =
+  {
+    parser_kind_low = 4;
+    parser_kind_high = Some 4;
+    parser_kind_metadata = None;
+    parser_kind_subkind = Some ParserStrong;
+  }
+
+val parse_bounded_int32_le_fixed_size
+  (min: nat)
+  (max: nat { min <= max })
+: Tot (parser parse_bounded_int32_fixed_size_kind (bounded_int32 min max))
+
+val serialize_bounded_int32_le_fixed_size
+  (min: nat)
+  (max: nat { min <= max })
+: Tot (serializer (parse_bounded_int32_le_fixed_size min max))

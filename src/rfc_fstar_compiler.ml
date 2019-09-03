@@ -2134,7 +2134,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     | VectorRange (low, high, repr)
       when compile_type ty = "U8.t" &&
         (match repr with None -> true
-        | Some t -> let (_,lm,_) = basic_bounds t in lm = log256 high && lm <> 3) ->
+        | Some t -> let (_,lm,_) = basic_bounds t in lm = log256 high) ->
       w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
       w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
       write_api o i is_private li.meta n li.min_len li.max_len;

@@ -122,6 +122,15 @@ let bounded_integer_of_le_32_2
   Cast.uint8_to_uint32 (B32.get b 0ul) `U32.add` (256ul `U32.mul` Cast.uint8_to_uint32 (B32.get b 1ul))
 
 inline_for_extraction
+let bounded_integer_of_le_32_3
+  (b: B32.lbytes 3)
+: Tot (y: bounded_integer 3 { y == bounded_integer_of_le 3 (B32.reveal b) } )
+= [@inline_let] let _ =
+    bounded_integer_of_le_3_eq (B32.reveal b)
+  in
+  Cast.uint8_to_uint32 (B32.get b 0ul) `U32.add` (256ul `U32.mul` ( Cast.uint8_to_uint32 (B32.get b 1ul) `U32.add` (256ul `U32.mul` Cast.uint8_to_uint32 (B32.get b 2ul))))
+
+inline_for_extraction
 let bounded_integer_of_le_32_4
   (b: B32.lbytes 4)
 : Tot (y: bounded_integer 4 { y == bounded_integer_of_le 4 (B32.reveal b) } )
@@ -152,6 +161,17 @@ let parse32_bounded_integer_le_2
     ()
     bounded_integer_of_le_32_2
 
+let parse32_bounded_integer_le_3
+= [@inline_let] let _ =
+    bounded_integer_of_le_injective 3
+  in
+  make_total_constant_size_parser32
+    3
+    3ul
+    (bounded_integer_of_le 3)
+    ()
+    bounded_integer_of_le_32_3
+
 let parse32_bounded_integer_le_4
 = [@inline_let] let _ =
     bounded_integer_of_le_injective 4
@@ -162,6 +182,7 @@ let parse32_bounded_integer_le_4
     (bounded_integer_of_le 4)
     ()
     bounded_integer_of_le_32_4
+
 
 let parse32_u16_le =
   parse32_synth'
@@ -193,6 +214,24 @@ let serialize32_bounded_integer_le_2
     B32.create 1ul (Cast.uint32_to_uint8 x) `B32.append` B32.create 1ul (Cast.uint32_to_uint8 (x `U32.div` 256ul))
   ) <: (res: bytes32 { serializer32_correct' (serialize_bounded_integer_le 2) x res } ))
 
+let serialize32_bounded_integer_le_3
+= fun (x: bounded_integer 3) -> ((
+    [@inline_let] let _ =
+      serialize_bounded_integer_le_3_eq x 0;
+      serialize_bounded_integer_le_3_eq x 1;
+      serialize_bounded_integer_le_3_eq x 2
+    in
+    let rem0 = Cast.uint32_to_uint8 x in
+    let div0 = x `U32.div` 256ul in
+    let rem1 = Cast.uint32_to_uint8 div0 in
+    let div1 = div0 `U32.div` 256ul in
+    let rem2 = Cast.uint32_to_uint8 div1 in
+    (B32.create 1ul rem0 `B32.append` B32.create 1ul rem1) `B32.append`
+    B32.create 1ul rem2
+  ) <: (res: bytes32 { serializer32_correct' (serialize_bounded_integer_le 3) x res } ))
+
+#push-options "--z3rlimit 16"
+
 let serialize32_bounded_integer_le_4
 = fun (x: bounded_integer 4) -> ((
     [@inline_let] let _ =
@@ -212,6 +251,8 @@ let serialize32_bounded_integer_le_4
     (B32.create 1ul rem2 `B32.append` B32.create 1ul rem3)
   ) <: (res: bytes32 { serializer32_correct' (serialize_bounded_integer_le 4) x res } ))
 
+#pop-options
+
 let serialize32_u16_le =
   serialize32_synth' 
     _
@@ -229,3 +270,156 @@ let serialize32_u32_le =
     serialize32_bounded_integer_le_4
     synth_u32_le_recip
     ()
+
+inline_for_extraction
+let parse32_bounded_int32'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz32: U32.t { log256' (U32.v max32) == U32.v sz32 })
+: Tot (parser32 (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= [@inline_let]
+  let sz = U32.v sz32 in
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  parse32_synth
+    (parse_bounded_integer sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    (fun x -> x)
+    (parse32_filter (parse32_bounded_integer sz) (in_bounds min max) (fun x -> not (x `U32.lt` min32 || max32 `U32.lt` x)))
+    ()
+
+let parse32_bounded_int32_1
+  min max
+= parse32_bounded_int32' min max 1ul
+
+let parse32_bounded_int32_2
+  min max
+= parse32_bounded_int32' min max 2ul
+
+let parse32_bounded_int32_3
+  min max
+= parse32_bounded_int32' min max 3ul
+
+let parse32_bounded_int32_4
+  min max
+= parse32_bounded_int32' min max 4ul
+
+inline_for_extraction
+let serialize32_bounded_int32'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz32: U32.t { log256' (U32.v max32) == U32.v sz32 })
+: Tot (serializer32 (serialize_bounded_int32 (U32.v min32) (U32.v max32)))
+= [@inline_let]
+  let sz = U32.v sz32 in
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  serialize32_synth
+    (parse_bounded_integer sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    _
+    (serialize32_filter (serialize32_bounded_integer sz) (in_bounds min max))
+    (fun x -> x)
+    (fun x -> x)
+    ()
+
+let serialize32_bounded_int32_1
+  min max
+= serialize32_bounded_int32' min max 1ul
+
+let serialize32_bounded_int32_2
+  min max
+= serialize32_bounded_int32' min max 2ul
+
+let serialize32_bounded_int32_3
+  min max
+= serialize32_bounded_int32' min max 3ul
+
+let serialize32_bounded_int32_4
+  min max
+= serialize32_bounded_int32' min max 4ul
+
+
+inline_for_extraction
+let parse32_bounded_int32_le'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz32: U32.t { log256' (U32.v max32) == U32.v sz32 })
+: Tot (parser32 (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
+= [@inline_let]
+  let sz = U32.v sz32 in
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  parse32_synth
+    (parse_bounded_integer_le sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    (fun x -> x)
+    (parse32_filter (parse32_bounded_integer_le sz) (in_bounds min max) (fun x -> not (x `U32.lt` min32 || max32 `U32.lt` x)))
+    ()
+
+let parse32_bounded_int32_le_1
+  min max
+= parse32_bounded_int32_le' min max 1ul
+
+let parse32_bounded_int32_le_2
+  min max
+= parse32_bounded_int32_le' min max 2ul
+
+let parse32_bounded_int32_le_3
+  min max
+= parse32_bounded_int32_le' min max 3ul
+
+let parse32_bounded_int32_le_4
+  min max
+= parse32_bounded_int32_le' min max 4ul
+
+inline_for_extraction
+let serialize32_bounded_int32_le'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz32: U32.t { log256' (U32.v max32) == U32.v sz32 })
+: Tot (serializer32 (serialize_bounded_int32_le (U32.v min32) (U32.v max32)))
+= [@inline_let]
+  let sz = U32.v sz32 in
+  [@inline_let]
+  let min = U32.v min32 in
+  [@inline_let]
+  let max = U32.v max32 in
+  serialize32_synth
+    (parse_bounded_integer_le sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    _
+    (serialize32_filter (serialize32_bounded_integer_le sz) (in_bounds min max))
+    (fun x -> x)
+    (fun x -> x)
+    ()
+
+let serialize32_bounded_int32_le_1
+  min max
+= serialize32_bounded_int32_le' min max 1ul
+
+let serialize32_bounded_int32_le_2
+  min max
+= serialize32_bounded_int32_le' min max 2ul
+
+let serialize32_bounded_int32_le_3
+  min max
+= serialize32_bounded_int32_le' min max 3ul
+
+let serialize32_bounded_int32_le_4
+  min max
+= serialize32_bounded_int32_le' min max 4ul
+
+let parse32_bounded_int32_le_fixed_size
+  min32 max32
+= parse32_filter parse32_u32_le (in_bounds (U32.v min32) (U32.v max32)) (fun x -> not (x `U32.lt` min32 || max32 `U32.lt` x))
+
+let serialize32_bounded_int32_le_fixed_size
+  min32 max32
+= serialize32_filter serialize32_u32_le (in_bounds (U32.v min32) (U32.v max32))

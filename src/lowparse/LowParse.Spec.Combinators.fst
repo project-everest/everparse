@@ -1036,6 +1036,95 @@ let serialize_tagged_union_eq
   [SMTPat (serialize (serialize_tagged_union st tag_of_data s) input)]
 = ()
 
+(* Dependent pairs *)
+
+inline_for_extraction
+let synth_dtuple2
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (x: t1)
+  (y: t2 x)
+: Tot (refine_with_tag #t1 #(dtuple2 t1 t2) dfst x)
+= (| x, y |)
+
+let parse_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (p2: (x: t1) -> parser k2 (t2 x))
+: Tot (parser (and_then_kind k1 k2) (dtuple2 t1 t2))
+= parse_tagged_union
+    p1
+    dfst
+    (fun (x: t1) -> parse_synth (p2 x) (synth_dtuple2 x))
+
+inline_for_extraction
+let synth_dtuple2_recip
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (x: t1)
+  (y: refine_with_tag #t1 #(dtuple2 t1 t2) dfst x)
+: Tot (t2 x)
+= dsnd y
+
+abstract
+let serialize_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (s2: (x: t1) -> serializer (p2 x))
+: Tot (serializer (parse_dtuple2 p1 p2))
+= serialize_tagged_union
+    s1
+    dfst
+    (fun (x: t1) -> serialize_synth (p2 x) (synth_dtuple2 x) (s2 x) (synth_dtuple2_recip x) ())
+
+abstract
+let parse_dtuple2_eq
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (p2: (x: t1) -> parser k2 (t2 x))
+  (b: bytes)
+: Lemma
+  (parse (parse_dtuple2 p1 p2) b == (match parse p1 b with
+  | Some (x1, consumed1) ->
+    let b' = Seq.slice b consumed1 (Seq.length b) in
+    begin match parse (p2 x1) b' with
+    | Some (x2, consumed2) ->
+      Some ((| x1, x2 |), consumed1 + consumed2)
+    | _ -> None
+    end
+  | _ -> None
+  ))
+
+  by (T.norm [delta_only [`%parse_dtuple2;]])
+  
+= ()
+
+abstract
+let serialize_dtuple2_eq
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (s2: (x: t1) -> serializer (p2 x))
+  (xy: dtuple2 t1 t2)
+: Lemma
+  (serialize (serialize_dtuple2 s1 s2) xy == serialize s1 (dfst xy) `Seq.append` serialize (s2 (dfst xy)) (dsnd xy))
+= ()
+
 (* Special case for non-dependent parsing *)
 
 abstract

@@ -77,10 +77,10 @@ let test_bitcoin () : St bool =
   let open FStar.UInt32 in
   let open FStar.Bytes in
   let lb = from_bytes block in
-  let slice = LPL.make_slice lb (len block) in
-  if Block.block_validator slice 0ul >^ LPL.validator_max_length then
+  if not (LPL.validate Block.block_validator lb (len block)) then
     (print !$"Validator failed on Bitcoin block!\n"; false)
   else
+    let slice = LPL.make_slice lb (len block) in
     let pos_random = Block.accessor_block_prev_block slice 0ul in
     let p_random = LB.sub lb pos_random 32ul in
     bprint (" The previous block hash is: " ^(hex_of_bytes (of_buffer 32ul p_random))); true
