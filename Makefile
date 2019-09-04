@@ -1,7 +1,10 @@
-all: quackyducky lowparse
+all: quackyducky lowparse 3d
 
 lowparse:
 	+$(MAKE) -C src/lowparse
+
+3d: lowparse
+	+$(MAKE) -C src/3d
 
 quackyducky: qd
 
@@ -33,7 +36,7 @@ clean:
 	+$(MAKE) -C src/lowparse clean
 	rm -rf *~ src/*~ _build src/*lexer.ml src/*parser.ml src/*parser.mli qd quackyducky.native
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-unit-test package
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-unit-test package 3d
 
 # Windows binary package
 package:
