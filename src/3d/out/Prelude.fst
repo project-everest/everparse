@@ -7,11 +7,17 @@ module LPLC = LowParse.Low.Combinators
 // Parsers
 ////////////////////////////////////////////////////////////////////////////////
 
+inline_for_extraction
+noextract
 let parser_kind = k:LP.parser_kind{LP.(k.parser_kind_subkind == Some ParserStrong)}
 let parser (k:parser_kind) (t:Type) = LP.parser k t
+inline_for_extraction
+noextract
 let glb (k1 k2:parser_kind) : parser_kind = LP.glb k1 k2
 
 /// Parser: return
+inline_for_extraction
+noextract
 let ret_kind = LPC.parse_ret_kind
 inline_for_extraction noextract
 let parse_ret #t (v:t)
@@ -19,6 +25,8 @@ let parse_ret #t (v:t)
   = LPC.parse_ret #t v
 
 /// Parser: bind
+inline_for_extraction
+noextract
 let and_then_kind k1 k2 = LPC.and_then_kind k1 k2
 inline_for_extraction noextract
 let parse_dep_pair #k1 (#t1: Type0) (p1: parser k1 t1)
@@ -43,6 +51,8 @@ let parse_map #k #t1 #t2 (p:parser k t1)
 
 /// Parser: filter
 let refine t (f:t -> bool) = x:t{f x}
+inline_for_extraction
+noextract
 let filter_kind k = LPC.parse_filter_kind k
 inline_for_extraction noextract
 let parse_filter #k #t (p:parser k t) (f:(t -> bool))
@@ -148,6 +158,8 @@ let validate_with_error #k #t (#p:parser k t) (f:field_id) (v:validator p)
 
 /// UInt32
 let _UINT32 = U32.t
+inline_for_extraction
+noextract
 let kind__UINT32 = LowParse.Spec.BoundedInt.parse_u32_kind
 let parse__UINT32 : parser kind__UINT32 _UINT32 = LowParse.Spec.BoundedInt.parse_u32_le
 inline_for_extraction noextract
@@ -157,6 +169,8 @@ let read__UINT32 : LPL.leaf_reader parse__UINT32 = LowParse.Low.BoundedInt.read_
 
 /// Lists/arrays
 let nlist (n:U32.t) (t:Type) = LowParse.Spec.VCList.nlist (U32.v n) t
+inline_for_extraction
+noextract
 let kind_nlist : parser_kind =
   let open LP in
   {
@@ -178,6 +192,8 @@ let validate_nlist (n:U32.t) #k #t (#p:parser k t) (v:validator p)
 //placeholders
 ////////////////////////////////////////////////////////////////////////////////
 let suffix = FStar.UInt8.t
+inline_for_extraction
+noextract
 let kind_suffix : parser_kind = LowParse.Spec.Int.parse_u8_kind
 let parse_suffix : parser kind_suffix suffix = LowParse.Spec.Int.parse_u8
 inline_for_extraction noextract
