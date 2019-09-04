@@ -1972,8 +1972,13 @@ let max_uint32_correct
   (U32.v x <= U32.v max_uint32)
 = ()
 
+inline_for_extraction
+noextract
+let _max_uint32_as_uint64 : U64.t = 4294967295uL
+
+
 [@ CMacro ]
-let max_uint32_as_uint64 : U64.t = 4294967295uL
+let max_uint32_as_uint64 : U64.t = _max_uint32_as_uint64
 
 (*
 
@@ -1989,7 +1994,7 @@ let default_validator_cls : validator_cls = {
 *)
 
 [@ CMacro ]
-let validator_max_length : (u: U64.t { 4 <= U64.v u /\ U64.v u <= U64.v max_uint32_as_uint64 } ) = max_uint32_as_uint64
+let validator_max_length : (u: U64.t { 4 <= U64.v u /\ U64.v u <= U64.v max_uint32_as_uint64 } ) = _max_uint32_as_uint64
 
 [@ CMacro ]
 type validator_error = (u: U64.t { U64.v u > U64.v validator_max_length } )
