@@ -78,6 +78,8 @@ fi
     mkdir -p everparse/src/package &&
     cp -p -r $QD_HOME/src/package/build.ninja everparse/src/package &&
     cp -p -r $QD_HOME/src/package/everparse.bat everparse/ &&
+    mkdir -p everparse/src/3d &&
+    cp -p -r $QD_HOME/src/3d/out/Prelude.fst everparse/src/3d && # we change the destination directory here, maybe Prelude should be somewhere else at the first place
 
     # Fetch and extract ninja
     NINJA_URL=$(wget -q -nv -O- https://api.github.com/repos/ninja-build/ninja/releases/latest 2>/dev/null | jq -r '.assets[] | select(.browser_download_url | contains("ninja-win")) | .browser_download_url') &&
