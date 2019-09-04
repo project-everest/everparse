@@ -72,6 +72,7 @@ fi
 
     # Copy EverParse
     cp $QD_HOME/quackyducky.native everparse/bin/qd.exe &&
+    cp -p -r $QD_HOME/src/3d/3d everparse/bin/3d.exe &&
     mkdir -p everparse/src &&
     cp -p -r $QD_HOME/src/lowparse everparse/src/ &&
     mkdir -p everparse/src/package &&
