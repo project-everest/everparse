@@ -35,10 +35,14 @@ fi
     if [[ -z "$FSTAR_HOME" ]] ; then
         git clone --branch taramana_dep_ninja https://github.com/FStarLang/FStar &&
         export FSTAR_HOME=$(cygpath -m $PWD/FStar)
+    else
+        export FSTAR_HOME=$(cygpath -m "$FSTAR_HOME")
     fi &&
     if [[ -z "$KREMLIN_HOME" ]] ; then
         git clone https://github.com/FStarLang/kremlin &&
         export KREMLIN_HOME=$(cygpath -m $PWD/kremlin)
+    else
+        export KREMLIN_HOME=$(cygpath -m "$KREMLIN_HOME")
     fi &&
 
     # Rebuild everything
