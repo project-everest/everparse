@@ -182,6 +182,7 @@ let rec value_of_const_expr (env:env) (e:expr) : ML (option (either bool int)) =
     | LE, Some (Inr n1), Some (Inr n2) -> Some (Inl (n1 <= n2))
     | And, Some (Inl b1), Some (Inl b2) -> Some (Inl (b1 && b2))
     | Or, Some (Inl b1), Some (Inl b2) -> Some (Inl (b1 || b2))
+    | UseProof, _, v2' -> v2'
     | _ -> None
     end
   | App Not [e] ->
@@ -263,6 +264,11 @@ and check_expr (env:env) (e:expr)
 
     | This ->
       error "`this` is not a valid expression" e.range
+
+    | App UseProof [dummy; x] ->
+      let (dummy', _) = check_expr env dummy in
+      let (x', t) = check_expr env x in
+      w (App UseProof [dummy'; x']), t
 
     | App SizeOf [{v=This;range=r}] ->
       let e =

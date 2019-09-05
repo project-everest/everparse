@@ -226,3 +226,8 @@ let validate_ite (#k:parser_kind) (#a:Type) (#b:Type) (e:bool)
   : Tot (validator (parse_ite e p1 p2))
   = fun #rrel #rel sl pos ->
       if e then v1 () sl pos else v2 () sl pos
+
+
+inline_for_extraction
+noextract
+let use_proof #t1 #t2 (x1: t1) (x2: t2) : Tot t2 = x2

@@ -28,6 +28,7 @@ let locate lb tok =
 let keywords = H.create 0
 let () =
   H.add keywords "sizeof" SIZEOF;
+  H.add keywords "useproof" USEPROOF;
   H.add keywords "enum" ENUM;
   H.add keywords "typedef" TYPEDEF;
   H.add keywords "struct" STRUCT;

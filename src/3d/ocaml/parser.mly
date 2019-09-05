@@ -26,7 +26,7 @@
 %token<int>     INT
 %token<string>  COMMENT XINT
 %token<Ast.ident>   IDENT
-%token          EQ AND OR EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS ENTRYPOINT
+%token          EQ AND OR EOF SIZEOF USEPROOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS ENTRYPOINT
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON
 %token          STAR MINUS PLUS LBRACK RBRACK LEQ LESS_THAN GEQ GREATER_THAN
 %start <Ast.decl list> prog
@@ -78,6 +78,8 @@ expr_no_range:
     { App (Plus, [l;r]) }
   | SIZEOF LPAREN e=expr RPAREN
     { App (SizeOf, [e]) }
+  | USEPROOF LPAREN e1=expr COMMA e2=expr RPAREN
+    { App (UseProof, [e1; e2]) }
 
 expr:
   | e=expr_no_range { with_range e $startpos }

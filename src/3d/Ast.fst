@@ -74,6 +74,7 @@ type op =
   | LE
   | GE
   | SizeOf
+  | UseProof
  //OffsetOf ?
 
 noeq
@@ -182,6 +183,7 @@ let print_op = function
   | LE -> "<="
   | GE -> ">="
   | SizeOf -> "sizeof"
+  | UseProof -> "useproof"
 
 let rec print_expr (e:expr) : Tot string =
   match e.v with
