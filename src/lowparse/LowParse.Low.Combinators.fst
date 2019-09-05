@@ -317,6 +317,19 @@ inline_for_extraction
 let jump_false : jumper parse_false
 = jump_constant_size parse_false 0ul ()
 
+inline_for_extraction
+let read_ret
+  (#t: Type)
+  (v: t)
+: Tot (leaf_reader (parse_ret v))
+= fun #rrel #rel sl pos ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_facts (parse_ret v) h sl pos in
+  v
+
+inline_for_extraction
+let read_empty : leaf_reader parse_empty = read_ret ()
+
 let clens_synth
   (#t1: Type)
   (#t2: Type)
