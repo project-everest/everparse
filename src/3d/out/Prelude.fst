@@ -188,6 +188,19 @@ let validate_nlist (n:U32.t) #k #t (#p:parser k t) (v:validator p)
   : Tot (validator (parse_nlist n p))
   = validate_weaken (LowParse.Low.VCList.validate_nlist n v) kind_nlist
 
+inline_for_extraction noextract
+let kind_unit : parser_kind = LPC.parse_ret_kind
+
+let parse_unit : parser kind_unit unit = parse_ret ()
+
+inline_for_extraction noextract
+let validate_unit : validator parse_unit = validate_ret
+
+inline_for_extraction noextract
+let read_unit
+  : LPL.leaf_reader (parse_ret ())
+  = LPLC.read_ret ()
+
 ////////////////////////////////////////////////////////////////////////////////
 //placeholders
 ////////////////////////////////////////////////////////////////////////////////

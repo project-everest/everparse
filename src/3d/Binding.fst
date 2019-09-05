@@ -562,7 +562,8 @@ let initial_global_env () =
     { v = Record td_name [] [];
       range = dummy_range }
   in
-  [ ("UINT8", { size = Some 1; has_suffix = false; may_fail = true});
+  [ ("unit",  { size = Some 0; has_suffix = false; may_fail = false});
+    ("UINT8", { size = Some 1; has_suffix = false; may_fail = true});
     ("UINT32", { size = Some 4; has_suffix = false; may_fail = true});
     ("suffix", { size = Some 0; has_suffix = true; may_fail = true}) ]
   |> List.iter (fun (i, attrs) ->
