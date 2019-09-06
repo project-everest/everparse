@@ -283,6 +283,7 @@ and check_expr (env:env) (e:expr)
     | App SizeOf [{v=Identifier i;range=r}] ->
       begin
       match lookup env i with
+      | Inr ({v=Enum _ _ _}, _)
       | Inr ({v=Record _ _ _ }, _)
       | Inr ({v=CaseType _ _ _}, _) ->
         e, tuint32
