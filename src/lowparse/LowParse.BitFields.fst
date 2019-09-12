@@ -309,6 +309,7 @@ let nth_set_bitfield
   end;
   assert (y == (if lo <= i && i < hi then nth v (i - lo) else nth x i))
 
+#push-options "--z3rlimit_factor 2"
 let get_bitfield_set_bitfield_same
   (#tot: pos) (x: U.uint_t tot)
   (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: bitfield tot (hi - lo))
@@ -322,6 +323,7 @@ let get_bitfield_set_bitfield_same
     end else
       nth_le_pow2_m v (hi - lo) i
   )
+#pop-options
 
 let get_bitfield_set_bitfield_other
   (#tot: pos) (x: U.uint_t tot)
@@ -440,6 +442,7 @@ let get_bitfield_get_bitfield
     then nth_get_bitfield x lo hi (i + lo')
   )
 
+#push-options "--z3rlimit_factor 2"
 let get_bitfield_zero_inner
   (#tot: pos)
   (x: U.uint_t tot)
@@ -462,6 +465,7 @@ let get_bitfield_zero_inner
     )
   in
   Classical.move_requires f ()
+#pop-options
 
 let set_bitfield_get_bitfield
   (#tot: pos)
