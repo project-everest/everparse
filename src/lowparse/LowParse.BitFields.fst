@@ -467,6 +467,44 @@ let get_bitfield_zero_inner
   Classical.move_requires f ()
 #pop-options
 
+let bitfield_is_zero
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
+: Lemma
+  (get_bitfield x lo hi == 0 <==>  x `U.logand` bitfield_mask tot lo hi == 0)
+= 
+  let y = x `U.logand` bitfield_mask tot lo hi in
+  let z = get_bitfield x lo hi in
+  let f () : Lemma
+    (requires (y == 0))
+    (ensures (z == 0))
+  = eq_nth z 0 (fun i ->
+      nth_zero tot i;
+      nth_logand x (bitfield_mask tot lo hi) i;
+      nth_bitfield_mask tot lo hi i;
+      nth_get_bitfield x lo hi i;
+      if i < hi - lo
+      then nth_zero tot (i + lo)
+    )
+  in
+  let g () : Lemma
+    (requires (z == 0))
+    (ensures (y == 0))
+  = eq_nth y 0 (fun i ->
+      nth_zero tot i;
+      nth_logand x (bitfield_mask tot lo hi) i;
+      nth_bitfield_mask tot lo hi i;
+      if lo <= i && i < hi
+      then begin
+        nth_get_bitfield x lo hi (i - lo);
+        nth_zero tot (i - lo)
+      end
+    )
+  in
+  Classical.move_requires f ();
+  Classical.move_requires g ()
+
 let set_bitfield_get_bitfield
   (#tot: pos)
   (x: U.uint_t tot)
