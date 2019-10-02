@@ -23,3 +23,15 @@ let parse_u32 = Aux.parse_u32
 let parse_u32_spec = Aux.parse_u32_spec
 
 let serialize_u32 = Aux.serialize_u32
+
+let parse_u64 = Aux.parse_u64
+
+let parse_u64_spec = Aux.parse_u64_spec
+
+let serialize_u64 = Aux.serialize_u64
+
+let parse_u64_le = Aux.parse_u64_le
+
+let parse_u64_le_spec = Aux.parse_u64_le_spec
+
+let serialize_u64_le = Aux.serialize_u64_le

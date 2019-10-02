@@ -6,6 +6,7 @@ module E = LowParse.BigEndian
 module U8  = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 
 inline_for_extraction
 let parse_u8_kind : parser_kind = total_constant_size_parser_kind 1
@@ -78,3 +79,37 @@ val parse_u32_spec
   )))
 
 val serialize_u32 : serializer parse_u32
+
+inline_for_extraction
+let parse_u64_kind : parser_kind =
+  total_constant_size_parser_kind 8
+
+val parse_u64: parser parse_u64_kind U64.t
+
+val parse_u64_spec
+  (b: bytes)
+: Lemma
+  (requires (Seq.length b >= 8))
+  (ensures (
+    let pp = parse parse_u64 b in
+    Some? pp /\ (
+    let (Some (v, consumed)) = pp in
+    U64.v v == E.be_to_n (Seq.slice b 0 8)
+  )))
+
+val serialize_u64 : serializer parse_u64
+
+val parse_u64_le: parser parse_u64_kind U64.t
+
+val parse_u64_le_spec
+  (b: bytes)
+: Lemma
+  (requires (Seq.length b >= 8))
+  (ensures (
+    let pp = parse parse_u64_le b in
+    Some? pp /\ (
+    let (Some (v, consumed)) = pp in
+    U64.v v == E.le_to_n (Seq.slice b 0 8)
+  )))
+
+val serialize_u64_le : serializer parse_u64_le

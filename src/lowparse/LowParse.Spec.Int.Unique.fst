@@ -91,3 +91,57 @@ let serialize_u32_unique
 = Classical.forall_intro parse_u32_unique;
   let s : serializer I.parse_u32 = serialize_ext Aux.parse_u32 Aux.serialize_u32 I.parse_u32 in
   serializer_unique I.parse_u32 I.serialize_u32 s x
+
+module U64 = FStar.UInt64
+
+let parse_u64_unique
+  (b: bytes)
+: Lemma
+  (parse Aux.parse_u64 b == parse I.parse_u64 b)
+= parser_kind_prop_equiv (get_parser_kind Aux.parse_u64) Aux.parse_u64;
+  parser_kind_prop_equiv (get_parser_kind I.parse_u64) I.parse_u64;
+  if Seq.length b < 8
+  then ()
+  else begin
+    I.parse_u64_spec b;
+    Aux.parse_u64_spec b;
+    let (Some (vI, consumedI)) = parse I.parse_u64 b in
+    let (Some (vAux, consumedAux)) = parse Aux.parse_u64 b in
+    le_refl consumedI 8;
+    le_refl consumedAux 8;
+    ()
+  end
+
+let serialize_u64_unique
+  (x: U64.t)
+: Lemma
+  (serialize #_ #_ #Aux.parse_u64 Aux.serialize_u64 x == serialize I.serialize_u64 x)
+= Classical.forall_intro parse_u64_unique;
+  let s : serializer I.parse_u64 = serialize_ext Aux.parse_u64 Aux.serialize_u64 I.parse_u64 in
+  serializer_unique I.parse_u64 I.serialize_u64 s x
+
+let parse_u64_le_unique
+  (b: bytes)
+: Lemma
+  (parse Aux.parse_u64_le b == parse I.parse_u64_le b)
+= parser_kind_prop_equiv (get_parser_kind Aux.parse_u64_le) Aux.parse_u64_le;
+  parser_kind_prop_equiv (get_parser_kind I.parse_u64_le) I.parse_u64_le;
+  if Seq.length b < 8
+  then ()
+  else begin
+    I.parse_u64_le_spec b;
+    Aux.parse_u64_le_spec b;
+    let (Some (vI, consumedI)) = parse I.parse_u64_le b in
+    let (Some (vAux, consumedAux)) = parse Aux.parse_u64_le b in
+    le_refl consumedI 8;
+    le_refl consumedAux 8;
+    ()
+  end
+
+let serialize_u64_le_unique
+  (x: U64.t)
+: Lemma
+  (serialize #_ #_ #Aux.parse_u64_le Aux.serialize_u64_le x == serialize I.serialize_u64_le x)
+= Classical.forall_intro parse_u64_le_unique;
+  let s : serializer I.parse_u64_le = serialize_ext Aux.parse_u64_le Aux.serialize_u64_le I.parse_u64_le in
+  serializer_unique I.parse_u64_le I.serialize_u64_le s x

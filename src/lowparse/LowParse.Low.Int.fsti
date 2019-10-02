@@ -12,6 +12,12 @@ inline_for_extraction
 val read_u32: leaf_reader parse_u32
 
 inline_for_extraction
+val read_u64 : leaf_reader parse_u64
+
+inline_for_extraction
+val read_u64_le : leaf_reader parse_u64_le
+
+inline_for_extraction
 let validate_u8 () : validator parse_u8 =
   validate_total_constant_size parse_u8 1ul ()
 
@@ -24,6 +30,14 @@ let validate_u32 () : validator parse_u32 =
   validate_total_constant_size parse_u32 4ul ()
 
 inline_for_extraction
+let validate_u64 () : validator parse_u64 =
+  validate_total_constant_size parse_u64 8ul ()
+
+inline_for_extraction
+let validate_u64_le () : validator parse_u64_le =
+  validate_total_constant_size parse_u64_le 8ul ()
+
+inline_for_extraction
 let jump_u8 : jumper parse_u8 =
   jump_constant_size parse_u8 1ul ()
 
@@ -34,6 +48,14 @@ let jump_u16 : jumper parse_u16 =
 inline_for_extraction
 let jump_u32 : jumper parse_u32 =
   jump_constant_size parse_u32 4ul ()
+
+inline_for_extraction
+let jump_u64 : jumper parse_u64 =
+  jump_constant_size parse_u64 8ul ()
+
+inline_for_extraction
+let jump_u64_le : jumper parse_u64_le =
+  jump_constant_size parse_u64_le 8ul ()
 
 inline_for_extraction
 val write_u8 : leaf_writer_strong serialize_u8
@@ -55,3 +77,17 @@ val write_u32 : leaf_writer_strong serialize_u32
 inline_for_extraction
 let write_u32_weak : leaf_writer_weak serialize_u32 =
   leaf_writer_weak_of_strong_constant_size write_u32 4ul ()
+
+inline_for_extraction
+val write_u64 : leaf_writer_strong serialize_u64
+
+inline_for_extraction
+let write_u64_weak : leaf_writer_weak serialize_u64 =
+  leaf_writer_weak_of_strong_constant_size write_u64 8ul ()
+
+inline_for_extraction
+val write_u64_le : leaf_writer_strong serialize_u64_le
+
+inline_for_extraction
+let write_u64_le_weak : leaf_writer_weak serialize_u64_le =
+  leaf_writer_weak_of_strong_constant_size write_u64_le 8ul ()
