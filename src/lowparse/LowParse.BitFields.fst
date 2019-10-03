@@ -568,9 +568,9 @@ let get_bitfield_partition_2
 let rec get_bitfield_partition_prop
   (#tot: pos)
   (x y: U.uint_t tot)
-  (hi: nat)
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= tot })
   (l: list nat)
-  (lo: nat { lo <= hi /\ hi <= tot })
 : Tot bool
   (decreases l)
 = match l with
@@ -578,33 +578,24 @@ let rec get_bitfield_partition_prop
     get_bitfield x lo hi = get_bitfield y lo hi
   | mi :: q ->
     lo <= mi && mi <= hi &&
-    get_bitfield_partition_prop x y mi q lo &&
-    get_bitfield x mi hi = get_bitfield y mi hi
-
-#push-options "--z3rlimit 16"
+    get_bitfield_partition_prop x y mi hi q &&
+    get_bitfield x lo mi = get_bitfield y lo mi
 
 let rec get_bitfield_partition
   (#tot: pos)
   (x y: U.uint_t tot)
-  (hi: nat)
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= tot })
   (l: list nat)
-  (lo: nat { lo <= hi /\ hi <= tot })
 : Lemma
-  (requires (get_bitfield_partition_prop x y hi l lo))
+  (requires (get_bitfield_partition_prop x y lo hi l))
   (ensures (get_bitfield x lo hi == get_bitfield y lo hi))
   (decreases l)
 = match l with
   | [] -> ()
   | mi :: q ->
-    if mi = 0
-    then
-      assert (lo == 0)
-    else begin
-      get_bitfield_partition x y mi q lo;
-      get_bitfield_partition_2_gen lo mi hi x y
-    end
-
-#pop-options
+    get_bitfield_partition x y mi hi q;
+    get_bitfield_partition_2_gen lo mi hi x y
 
 let get_bitfield_partition_3
   (#tot: pos)
@@ -618,8 +609,8 @@ let get_bitfield_partition_3
     get_bitfield x hi tot == get_bitfield y hi tot
   ))
   (ensures (x == y))
-= assert (get_bitfield_partition_prop x y tot [hi; lo] 0); // needs fuel
-  get_bitfield_partition x y tot [hi; lo] 0;
+= assert_norm (get_bitfield_partition_prop x y 0 tot [lo; hi]); // does not need fuel, thanks to normalization
+  get_bitfield_partition x y 0 tot [lo; hi];
   get_bitfield_full x;
   get_bitfield_full y
 
