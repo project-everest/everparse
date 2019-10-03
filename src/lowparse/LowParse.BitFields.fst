@@ -383,6 +383,17 @@ let get_bitfield_full
     nth_get_bitfield x 0 tot i
   )
 
+let get_bitfield_empty
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (i: nat { i <= tot })
+: Lemma
+  (get_bitfield x i i == 0)
+= eq_nth (get_bitfield x i i) 0 (fun j ->
+    nth_get_bitfield x i i j;
+    nth_zero tot j
+  )
+
 let lt_pow2_get_bitfield_hi
   (#tot: pos)
   (x: U.uint_t tot)
@@ -517,6 +528,8 @@ let set_bitfield_get_bitfield
     then nth_get_bitfield x lo hi (i - lo)
   )
 
+#push-options "--z3rlimit 16"
+
 let get_bitfield_partition_2_gen
   (#tot: pos)
   (lo: nat)
@@ -548,6 +561,8 @@ let get_bitfield_partition_2_gen
       end
     end
   )
+
+#pop-options
 
 let get_bitfield_partition_2
   (#tot: pos)
