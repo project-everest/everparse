@@ -50,6 +50,24 @@ let rec synth_bitfield_injective (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi 
     synth_bitfield_injective tot (lo + sz) hi q x y;
     BF.get_bitfield_partition_2_gen lo (lo + sz) hi x y
 
+#push-options "--z3rlimit 64"
+
+let rec synth_bitfield_ext (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x y: U.uint_t tot) : Lemma
+  (requires (BF.get_bitfield x lo hi == BF.get_bitfield y lo hi))
+  (ensures (synth_bitfield tot lo hi l x == synth_bitfield tot lo hi l y))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | [_] -> ()    
+  | sz :: q ->
+    BF.get_bitfield_get_bitfield x lo hi 0 sz;
+    BF.get_bitfield_get_bitfield x lo hi sz (hi - lo);
+    BF.get_bitfield_get_bitfield y lo hi 0 sz;
+    BF.get_bitfield_get_bitfield y lo hi sz (hi - lo);
+    synth_bitfield_ext tot (lo + sz) hi q x y
+
+#pop-options
+
 module U32 = FStar.UInt32
 
 let synth_bitfield32 (l: list nat { valid_bitfield_widths 0 32 l }) (x: U32.t) : Tot (bitfields 32 0 32 l) =
@@ -75,15 +93,49 @@ let rec synth_bitfield_recip (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= t
     let (hd, tl) = x <: (BF.bitfield tot sz & bitfields tot (lo + sz) hi q) in
     BF.set_bitfield (synth_bitfield_recip tot (lo + sz) hi q tl) lo (lo + sz) hd
 
-(*
+#push-options "--z3rlimit 16"
+
 let rec synth_bitfield_recip_inverse
   (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields tot lo hi l)
 : Lemma
-  (synth_bitfield tot lo hi l (synth_bitfield_recip tot lo hi l x) == x)
+  (ensures (synth_bitfield tot lo hi l (synth_bitfield_recip tot lo hi l x) == x))
   (decreases l)
 = match l with
   | [] -> ()
-  | [_] -> BF.get_bitfield_set_bitfield_same 0 lo hi x
+  | [sz] ->
+    let x = x <: BF.bitfield tot sz in
+    BF.get_bitfield_set_bitfield_same 0 lo hi x
   | sz :: q ->
     let (hd, tl) = x <: (BF.bitfield tot sz & bitfields tot (lo + sz) hi q) in
-    
+    let y = synth_bitfield_recip tot (lo + sz) hi q tl in
+    BF.get_bitfield_set_bitfield_same y lo (lo + sz) hd;
+    BF.get_bitfield_set_bitfield_other y lo (lo + sz) hd (lo + sz) hi;
+    synth_bitfield_ext tot (lo + sz) hi q y (BF.set_bitfield y lo (lo + sz) hd);
+    synth_bitfield_recip_inverse tot (lo + sz) hi q tl
+
+#pop-options
+
+let synth_bitfield32_recip
+  (l: list nat { valid_bitfield_widths 0 32 l })
+  (x: bitfields 32 0 32 l)
+: Tot U32.t
+= U32.uint_to_t (synth_bitfield_recip 32 0 32 l x)
+
+let synth_bitfield32_inverse
+  (l: list nat { valid_bitfield_widths 0 32 l })
+: Lemma
+  (synth_inverse (synth_bitfield32 l) (synth_bitfield32_recip l))
+  [SMTPat (synth_inverse (synth_bitfield32 l) (synth_bitfield32_recip l))]
+= synth_inverse_intro' (synth_bitfield32 l) (synth_bitfield32_recip l) (fun x ->
+    synth_bitfield_recip_inverse 32 0 32 l x
+  )
+
+let serialize_bitfield32
+  (l: list nat { valid_bitfield_widths 0 32 l })
+: Tot (serializer (parse_bitfield32 l))
+= serialize_synth
+    _
+    (synth_bitfield32 l)
+    serialize_u32
+    (synth_bitfield32_recip l)
+    ()
