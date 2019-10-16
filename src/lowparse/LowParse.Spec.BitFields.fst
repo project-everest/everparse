@@ -173,33 +173,6 @@ let serialize_bitfield
     (synth_bitfield_recip cl 0 tot l)
     ()
 
-(*
-let synth_bitfield32_recip
-  (l: list nat { valid_bitfield_widths 0 32 l })
-  (x: bitfields 32 0 32 l)
-: Tot U32.t
-= U32.uint_to_t (synth_bitfield_recip 32 0 32 l x)
-
-let synth_bitfield32_inverse
-  (l: list nat { valid_bitfield_widths 0 32 l })
-: Lemma
-  (synth_inverse (synth_bitfield32 l) (synth_bitfield32_recip l))
-  [SMTPat (synth_inverse (synth_bitfield32 l) (synth_bitfield32_recip l))]
-= synth_inverse_intro' (synth_bitfield32 l) (synth_bitfield32_recip l) (fun x ->
-    synth_bitfield_recip_inverse 32 0 32 l x
-  )
-
-let serialize_bitfield32
-  (l: list nat { valid_bitfield_widths 0 32 l })
-: Tot (serializer (parse_bitfield32 l))
-= serialize_synth
-    _
-    (synth_bitfield32 l)
-    serialize_u32
-    (synth_bitfield32_recip l)
-    ()
-
-(*
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 
@@ -250,17 +223,26 @@ let uint8 : uint_t 8 U8.t = {
   set_bitfield = (fun x lo hi z -> BF.set_bitfield8 x lo hi z);
 }
 
-let synth_bitfield32 (l: list nat { valid_bitfield_widths 0 32 l }) (x: U32.t) : Tot (bitfields 32 0 32 l) =
-  synth_bitfield 32 0 32 l (U32.v x)
+let parse_bitfield64 (l: list nat { valid_bitfield_widths 0 64 l }) : Tot (parser parse_u64_kind (bitfields uint64 0 64 l)) =
+  parse_bitfield parse_u64 uint64 l
 
-let synth_bitfield32_injective (l: list nat { valid_bitfield_widths 0 32 l }) : Lemma
-  (synth_injective (synth_bitfield32 l))
-  [SMTPat (synth_injective (synth_bitfield32 l))]
-= synth_injective_intro' (synth_bitfield32 l) (fun x y ->
-    synth_bitfield_injective 32 0 32 l (U32.v x) (U32.v y);
-    BF.get_bitfield_full (U32.v x);
-    BF.get_bitfield_full (U32.v y)
-  )
+let serialize_bitfield64 (l: list nat { valid_bitfield_widths 0 64 l }) : Tot (serializer (parse_bitfield64 l)) =
+  serialize_bitfield serialize_u64 uint64 l
 
-let parse_bitfield32 (l: list nat { valid_bitfield_widths 0 32 l }) : Tot (parser parse_u32_kind (bitfields 32 0 32 l)) =
-  parse_u32 `parse_synth` synth_bitfield32 l
+let parse_bitfield32 (l: list nat { valid_bitfield_widths 0 32 l }) : Tot (parser parse_u32_kind (bitfields uint32 0 32 l)) =
+  parse_bitfield parse_u32 uint32 l
+
+let serialize_bitfield32 (l: list nat { valid_bitfield_widths 0 32 l }) : Tot (serializer (parse_bitfield32 l)) =
+  serialize_bitfield serialize_u32 uint32 l
+
+let parse_bitfield16 (l: list nat { valid_bitfield_widths 0 16 l }) : Tot (parser parse_u16_kind (bitfields uint16 0 16 l)) =
+  parse_bitfield parse_u16 uint16 l
+
+let serialize_bitfield16 (l: list nat { valid_bitfield_widths 0 16 l }) : Tot (serializer (parse_bitfield16 l)) =
+  serialize_bitfield serialize_u16 uint16 l
+
+let parse_bitfield8 (l: list nat { valid_bitfield_widths 0 8 l }) : Tot (parser parse_u8_kind (bitfields uint8 0 8 l)) =
+  parse_bitfield parse_u8 uint8 l
+
+let serialize_bitfield8 (l: list nat { valid_bitfield_widths 0 8 l }) : Tot (serializer (parse_bitfield8 l)) =
+  serialize_bitfield serialize_u8 uint8 l
