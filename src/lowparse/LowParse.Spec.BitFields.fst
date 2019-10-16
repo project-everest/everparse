@@ -114,13 +114,15 @@ let rec synth_bitfield_ext (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) 
 let parse_bitfield (#t: Type0) (#k: parser_kind) (p: parser k t) (#tot: pos) (cl: uint_t tot t) (l: list nat { valid_bitfield_widths 0 tot l }) : Tot (parser k (bitfields cl 0 tot l)) =
   p `parse_synth` synth_bitfield cl 0 tot l
 
-let rec synth_bitfield_recip (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields cl lo hi l) : Tot t (decreases l) =
+let rec synth_bitfield_recip' (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields cl lo hi l) : Tot t (decreases l) =
   match l with
   | [] -> cl.uint_to_t 0
   | [_] -> cl.set_bitfield (cl.uint_to_t 0) lo hi x
   | sz :: q ->
     let (hd, tl) = x <: (bitfield cl sz & bitfields cl (lo + sz) hi q) in
-    cl.set_bitfield (synth_bitfield_recip cl (lo + sz) hi q tl) lo (lo + sz) hd
+    cl.set_bitfield (synth_bitfield_recip' cl (lo + sz) hi q tl) lo (lo + sz) hd
+
+let synth_bitfield_recip (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields cl lo hi l) : Tot t = synth_bitfield_recip' cl lo hi l x
 
 #push-options "--z3rlimit 64"
 
@@ -151,6 +153,25 @@ let rec synth_bitfield_recip_inverse'
     assert (synth_bitfield cl lo hi l (synth_bitfield_recip cl lo hi l x) == x)
 
 #pop-options
+
+let synth_bitfield_recip_inverse (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths 0 tot l })
+  : Lemma ((lo == 0 /\ hi == tot) ==> synth_inverse (synth_bitfield cl lo hi l) (synth_bitfield_recip cl lo hi l))
+    [SMTPat (synth_inverse (synth_bitfield #tot #t cl lo hi l) (synth_bitfield_recip #tot #t cl lo hi l))]
+=
+  synth_inverse_intro' (synth_bitfield cl 0 tot l) (synth_bitfield_recip cl 0 tot l) (fun x ->
+    synth_bitfield_recip_inverse' cl 0 tot l x
+  )
+
+let serialize_bitfield
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+  (#tot: pos) (cl: uint_t tot t) (l: list nat { valid_bitfield_widths 0 tot l })
+: Tot (serializer (parse_bitfield p cl l))
+= serialize_synth
+    p
+    (synth_bitfield cl 0 tot l)
+    s
+    (synth_bitfield_recip cl 0 tot l)
+    ()
 
 (*
 let synth_bitfield32_recip
