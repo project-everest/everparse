@@ -1688,7 +1688,7 @@ let slice_access_eq
 = valid_facts p1 h sl pos;
   assert_norm (slice_access h g sl pos == slice_access' h g sl pos)
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 abstract
 let slice_access_post
