@@ -145,13 +145,25 @@ type synth_case_t
   (tag_of_data: (data -> Tot (enum_key bs.e)))
   (bit_payload_of_data: ((k: enum_key bs.e) -> (refine_with_tag tag_of_data k) -> Tot (bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k))))
   (type_of_tag: (enum_key bs.e -> Tot Type0))
-= | SynthCase: (f: (
-    (hd: bitfields bs.cl 0 bs.header_size bs.header) ->
-    (k: enum_key bs.e) ->
-    (bpl: bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k)) ->
-    (pl: type_of_tag k) ->
-    Tot (refine_with_tag (bitsum_btag_of_data' bs data header_of_data tag_of_data bit_payload_of_data) (hd, (| k, bpl |)))
-  )) -> synth_case_t bs data header_of_data tag_of_data bit_payload_of_data type_of_tag
+= | SynthCase:
+    (f: (
+      (hd: bitfields bs.cl 0 bs.header_size bs.header) ->
+      (k: enum_key bs.e) ->
+      (bpl: bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k)) ->
+      (pl: type_of_tag k) ->
+      Tot (refine_with_tag (bitsum_btag_of_data' bs data header_of_data tag_of_data bit_payload_of_data) (hd, (| k, bpl |)))
+    )) ->
+    (f_inj: (
+      (hd: bitfields bs.cl 0 bs.header_size bs.header) ->
+      (k: enum_key bs.e) ->
+      (bpl: bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k)) ->
+      (pl1: type_of_tag k) ->
+      (pl2: type_of_tag k) ->
+      Lemma
+      (requires (f hd k bpl pl1 == f hd k bpl pl2))
+      (ensures (pl1 == pl2))
+    )) ->
+    synth_case_t bs data header_of_data tag_of_data bit_payload_of_data type_of_tag
 
 noeq
 type bitsum =
@@ -176,6 +188,18 @@ let weaken_parse_bitsum_cases_kind
     else default_parser_kind
   ) (List.Tot.map fst b.bs.e)
 
+let synth_bitsum_case_injective
+  (b: bitsum)
+  (hd: bitfields b.bs.cl 0 b.bs.header_size b.bs.header)
+  (k: enum_key b.bs.e)
+  (bpl: bitfields b.bs.cl (b.bs.header_size + b.bs.key_size) b.bs.tot (b.bs.payload k))
+: Lemma
+  (synth_injective (b.synth_case.f hd k bpl))
+//  [SMTPat (synth_injective (b.synth_case.f hd k bpl))] // FIXME: does not trigger. WHY WHY WHY?
+= synth_injective_intro' (b.synth_case.f hd k bpl) (fun x y ->
+    b.synth_case.f_inj hd k bpl x y
+  )
+
 let parse_bitsum_cases
   (b: bitsum)
   (f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
@@ -183,7 +207,7 @@ let parse_bitsum_cases
 : Tot (parser (weaken_parse_bitsum_cases_kind b f) (refine_with_tag (bitsum_btag_of_data' b.bs b.data b.header_of_data b.tag_of_data b.bit_payload_of_data) x))
 = let (hd, (| tg, tl |)) = x in
   let (| _, p |) = f tg in
-  assume (synth_injective (b.synth_case.f hd tg tl));
+  synth_bitsum_case_injective b hd tg tl; // FIXME: WHY WHY WHY does the pattern not trigger?
   weaken (weaken_parse_bitsum_cases_kind b f) (p `parse_synth` b.synth_case.f hd tg tl)
 
 inline_for_extraction
