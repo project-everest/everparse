@@ -124,6 +124,107 @@ let synth_bitsum'_recip'
   let y3 = y2 `b.cl.logor` synth_bitfield_recip b.cl 0 b.header_size b.header hd in
   y3
 
+let rec get_bitfield_synth_bitfield_recip_other
+  (#tot: pos) (#t: Type0) (cl: uint_t tot t)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l })
+  (x: bitfields cl lo hi l)
+  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot /\ (hi' <= lo \/ hi <= lo') })
+: Lemma
+  (ensures (cl.v (cl.get_bitfield (synth_bitfield_recip cl lo hi l x) lo' hi') == 0))
+  (decreases l)
+= match l with
+  | [] ->
+    BF.get_bitfield_zero tot lo' hi'
+  | [_] ->
+    BF.get_bitfield_set_bitfield_other 0 lo hi (cl.v x) lo' hi' ;
+    BF.get_bitfield_zero tot lo' hi'
+  | sz :: q ->
+    let (hd, tl) = x <: (bitfield cl sz & bitfields cl (lo + sz) hi q) in
+    BF.get_bitfield_set_bitfield_other (cl.v (synth_bitfield_recip cl (lo + sz) hi q tl)) lo (lo + sz) (cl.v hd) lo' hi' ;
+    get_bitfield_synth_bitfield_recip_other cl (lo + sz) hi q tl lo' hi'
+
+let synth_bitsum'_recip'_prop
+  (b: bitsum')
+  (x: bitsum'_type b)
+: Lemma
+  (filter_bitsum' b (synth_bitsum'_recip' b x) == true)
+= let (hd, (| k, tl |)) = x in
+  let y = synth_bitsum'_recip' b x in
+  let y1 = synth_bitfield_recip b.cl (b.header_size + b.key_size) b.tot (b.payload k) tl in
+  let y2 = b.cl.set_bitfield y1 b.header_size (b.header_size + b.key_size) (enum_repr_of_key b.e k) in
+  let y2' = synth_bitfield_recip b.cl 0 b.header_size b.header hd in
+  BF.get_bitfield_logor (b.cl.v y2) (b.cl.v y2') b.header_size (b.header_size + b.key_size);
+  get_bitfield_synth_bitfield_recip_other b.cl 0 b.header_size b.header hd b.header_size (b.header_size + b.key_size);
+  let b2 = b.cl.v (b.cl.get_bitfield y2 b.header_size (b.header_size + b.key_size)) in
+  FStar.UInt.logor_lemma_1 b2;
+  BF.get_bitfield_set_bitfield_same (b.cl.v y1) b.header_size (b.header_size + b.key_size) (b.cl.v (enum_repr_of_key b.e k <: b.t));
+  let z = b.cl.get_bitfield y b.header_size (b.header_size + b.key_size) in
+  assert (b.cl.uint_to_t (b.cl.v z) == b.cl.uint_to_t (b.cl.v (enum_repr_of_key b.e k <: b.t)))
+
+inline_for_extraction
+let synth_bitsum'_recip
+  (b: bitsum')
+  (x: bitsum'_type b)
+: Tot (parse_filter_refine (filter_bitsum' b))
+= synth_bitsum'_recip'_prop b x;
+  synth_bitsum'_recip' b x
+
+let synth_bitsum'_recip_inverse'
+  (b: bitsum')
+  (x: bitsum'_type b)
+: Lemma
+  (synth_bitsum' b (synth_bitsum'_recip b x) == x)
+= let (hd, (| k, tl |)) = x in
+  let y = synth_bitsum'_recip b x in
+  let y1 = synth_bitfield_recip b.cl (b.header_size + b.key_size) b.tot (b.payload k) tl in
+  let y2 = b.cl.set_bitfield y1 b.header_size (b.header_size + b.key_size) (enum_repr_of_key b.e k) in
+  let y2' = synth_bitfield_recip b.cl 0 b.header_size b.header hd in
+  (* Part 1/3: synth_bitfield b.cl 0 b.header_size b.header y == hd *)
+  BF.get_bitfield_logor (b.cl.v y2) (b.cl.v y2') 0 b.header_size;
+  BF.get_bitfield_set_bitfield_other (b.cl.v y1) b.header_size (b.header_size + b.key_size) (b.cl.v (enum_repr_of_key b.e k)) 0 b.header_size;
+  get_bitfield_synth_bitfield_recip_other b.cl (b.header_size + b.key_size) b.tot (b.payload k) tl 0 b.header_size ;
+  FStar.UInt.logor_commutative (BF.get_bitfield (b.cl.v y2') 0 b.header_size) (BF.get_bitfield (b.cl.v y2) 0 b.header_size);
+  FStar.UInt.logor_lemma_1 (BF.get_bitfield (b.cl.v y2') 0 b.header_size);
+  synth_bitfield_ext b.cl 0 b.header_size b.header y y2';
+  synth_bitfield_recip_inverse' b.cl 0 b.header_size b.header hd;
+  let f : bitfield b.cl b.key_size = b.cl.get_bitfield y b.header_size (b.header_size + b.key_size) in
+  (* Part 2/3: k == enum_key_of_repr b.e f *)
+  BF.get_bitfield_logor (b.cl.v y2) (b.cl.v y2') b.header_size (b.header_size + b.key_size);
+  BF.get_bitfield_set_bitfield_same (b.cl.v y1) b.header_size (b.header_size + b.key_size) (b.cl.v (enum_repr_of_key b.e k));
+  get_bitfield_synth_bitfield_recip_other b.cl 0 b.header_size b.header hd b.header_size (b.header_size + b.key_size);
+  FStar.UInt.logor_lemma_1 (BF.get_bitfield (b.cl.v y2) b.header_size (b.header_size + b.key_size));
+  assert (b.cl.uint_to_t (b.cl.v f) == b.cl.uint_to_t (b.cl.v (enum_repr_of_key b.e k)));
+  enum_key_of_repr_of_key b.e k;
+  (* Part 3/3: synth_bitfield b.cl (b.header_size + b.key_size) b.tot (b.payload k) y == tl *)
+  BF.get_bitfield_logor (b.cl.v y2) (b.cl.v y2') (b.header_size + b.key_size) b.tot;
+  BF.get_bitfield_set_bitfield_other (b.cl.v y1) b.header_size (b.header_size + b.key_size) (b.cl.v (enum_repr_of_key b.e k)) (b.header_size + b.key_size) b.tot;
+  get_bitfield_synth_bitfield_recip_other b.cl 0 b.header_size b.header hd (b.header_size + b.key_size) b.tot;
+  FStar.UInt.logor_lemma_1 (BF.get_bitfield (b.cl.v y2) (b.header_size + b.key_size) b.tot);
+  synth_bitfield_ext b.cl (b.header_size + b.key_size) b.tot (b.payload k) y y1;
+  synth_bitfield_recip_inverse' b.cl (b.header_size + b.key_size) b.tot (b.payload k) tl
+
+let synth_bitsum'_recip_inverse
+  (b: bitsum')
+: Lemma
+  (synth_inverse (synth_bitsum' b) (synth_bitsum'_recip b))
+  [SMTPat (synth_inverse (synth_bitsum' b) (synth_bitsum'_recip b))]
+= synth_inverse_intro' (synth_bitsum' b) (synth_bitsum'_recip b) (fun x ->
+    synth_bitsum'_recip_inverse' b x
+  )
+
+let serialize_bitsum'
+  (b: bitsum')
+  (#k: parser_kind)
+  (#p: parser k b.t)
+  (s: serializer p)
+: Tot (serializer (parse_bitsum' b p))
+= serialize_synth
+    (p `parse_filter` filter_bitsum' b)
+    (synth_bitsum' b)
+    (s `serialize_filter` filter_bitsum' b)
+    (synth_bitsum'_recip b)
+    ()
+
 let bitsum_btag_of_data'
   (bs: bitsum')
   (data: Type0)
