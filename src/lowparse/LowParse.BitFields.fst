@@ -210,6 +210,16 @@ let nth_get_bitfield (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi 
   (nth (get_bitfield x lo hi) i == (i < hi - lo && nth x (i + lo)))
 = nth_get_bitfield_raw x lo hi i
 
+let get_bitfield_logor
+  (#tot: pos) (x y: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi /\ hi <= tot})
+: Lemma
+  (get_bitfield (x `U.logor` y) lo hi == get_bitfield x lo hi `U.logor` get_bitfield y lo hi)
+= eq_nth (get_bitfield (x `U.logor` y) lo hi) (get_bitfield x lo hi `U.logor` get_bitfield y lo hi) (fun i ->
+    nth_get_bitfield (x `U.logor` y) lo hi i;
+    nth_get_bitfield x lo hi i;
+    nth_get_bitfield y lo hi i
+  )
+
 #push-options "--z3rlimit 16"
 
 let logor_disjoint

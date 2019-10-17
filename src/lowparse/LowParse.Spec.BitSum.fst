@@ -121,5 +121,25 @@ let synth_bitsum'_recip'
 = let (hd, (| k, tl |)) = x in
   let y1 = synth_bitfield_recip b.cl (b.header_size + b.key_size) b.tot (b.payload k) tl in
   let y2 = b.cl.set_bitfield y1 b.header_size (b.header_size + b.key_size) (enum_repr_of_key b.e k) in
-  let y3 = b.cl.set_bitfield y2 0 b.header_size (b.cl.get_bitfield (synth_bitfield_recip b.cl 0 b.header_size b.header hd) 0 b.header_size) in
+  let y3 = y2 `b.cl.logor` synth_bitfield_recip b.cl 0 b.header_size b.header hd in
   y3
+
+(*
+let rec get_bitfield_synth_bitfield_recip_other
+  (#tot: pos) (#t: Type0) (cl: uint_t tot t)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
+  (l: list nat { valid_bitfield_widths lo hi l })
+  (x: bitfields cl lo hi l)
+  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot /\ (hi' <= lo \/ hi <= lo') })
+: Lemma
+  (ensures (cl.v (cl.get_bitfield (synth_bitfield_recip cl lo hi l x) lo' hi') == 0))
+  (decreases l)
+= match l with
+  | [] ->
+    BF.get_bitfield_zero tot lo' hi'
+  | [_] ->
+    BF.get_bitfield_set_bitfield_other #tot 0 lo hi (cl.v x) lo' hi';
+    BF.get_bitfield_zero tot lo' hi'
+  | sz :: q ->
+
+    assume (cl.get_bitfield (synth_bitfield_recip cl lo hi l x) lo' hi' == cl.uint_to_t 0)
