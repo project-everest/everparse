@@ -35,6 +35,7 @@ type uint_t (tot: pos) (t: Type0) = {
   uint_to_t_v: ((x: t) -> Lemma (uint_to_t (v x) == x));
   get_bitfield: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> Tot (y: t { v y == BF.get_bitfield (v x) lo hi }));
   set_bitfield: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> (z: t { v z < pow2 (hi - lo) }) -> Tot (y : t { v y == BF.set_bitfield (v x) lo hi (v z)}));
+  logor: ((x: t) -> (y: t) -> Tot (z: t { v z == v x `U.logor` v y }));
 }
 
 let uint_t_v_uint_to_t #tot #t (cl: uint_t tot t) (x: U.uint_t tot) : Lemma
@@ -185,6 +186,7 @@ let uint64 : uint_t 64 U64.t = {
   uint_to_t_v = (fun _ -> ());
   get_bitfield = (fun x lo hi -> BF.get_bitfield64 x lo hi);
   set_bitfield = (fun x lo hi z -> BF.set_bitfield64 x lo hi z);
+  logor = (fun x y -> U64.logor x y);
 }
 
 inline_for_extraction
@@ -196,6 +198,7 @@ let uint32 : uint_t 32 U32.t = {
   uint_to_t_v = (fun _ -> ());
   get_bitfield = (fun x lo hi -> BF.get_bitfield32 x lo hi);
   set_bitfield = (fun x lo hi z -> BF.set_bitfield32 x lo hi z);
+  logor = (fun x y -> U32.logor x y);
 }
 
 module U16 = FStar.UInt16
@@ -210,6 +213,7 @@ let uint16 : uint_t 16 U16.t = {
   uint_to_t_v = (fun _ -> ());
   get_bitfield = (fun x lo hi -> BF.get_bitfield16 x lo hi);
   set_bitfield = (fun x lo hi z -> BF.set_bitfield16 x lo hi z);
+  logor = (fun x y -> U16.logor x y);
 }
 
 inline_for_extraction
@@ -221,6 +225,7 @@ let uint8 : uint_t 8 U8.t = {
   uint_to_t_v = (fun _ -> ());
   get_bitfield = (fun x lo hi -> BF.get_bitfield8 x lo hi);
   set_bitfield = (fun x lo hi z -> BF.set_bitfield8 x lo hi z);
+  logor = (fun x y -> U8.logor x y);
 }
 
 let parse_bitfield64 (l: list nat { valid_bitfield_widths 0 64 l }) : Tot (parser parse_u64_kind (bitfields uint64 0 64 l)) =

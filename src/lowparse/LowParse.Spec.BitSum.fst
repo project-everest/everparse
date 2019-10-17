@@ -121,5 +121,90 @@ let synth_bitsum'_recip'
 = let (hd, (| k, tl |)) = x in
   let y1 = synth_bitfield_recip b.cl (b.header_size + b.key_size) b.tot (b.payload k) tl in
   let y2 = b.cl.set_bitfield y1 b.header_size (b.header_size + b.key_size) (enum_repr_of_key b.e k) in
-  let y3 = b.cl.set_bitfield y2 0 b.header_size (b.cl.get_bitfield (synth_bitfield_recip b.cl 0 b.header_size b.header hd) 0 b.header_size) in
+  let y3 = y2 `b.cl.logor` synth_bitfield_recip b.cl 0 b.header_size b.header hd in
   y3
+
+let bitsum_btag_of_data'
+  (bs: bitsum')
+  (data: Type0)
+  (header_of_data: (data -> Tot (bitfields bs.cl 0 bs.header_size bs.header)))
+  (tag_of_data: (data -> Tot (enum_key bs.e)))
+  (bit_payload_of_data: ((k: enum_key bs.e) -> (refine_with_tag tag_of_data k) -> Tot (bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k))))
+  (x: data)
+: Tot (bitsum'_type bs)
+= let k = tag_of_data x in
+  (header_of_data x, (| k, bit_payload_of_data k x |))
+
+inline_for_extraction
+noextract
+noeq
+type synth_case_t
+  (bs: bitsum')
+  (data: Type0)
+  (header_of_data: (data -> Tot (bitfields bs.cl 0 bs.header_size bs.header)))
+  (tag_of_data: (data -> Tot (enum_key bs.e)))
+  (bit_payload_of_data: ((k: enum_key bs.e) -> (refine_with_tag tag_of_data k) -> Tot (bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k))))
+  (type_of_tag: (enum_key bs.e -> Tot Type0))
+= | SynthCase: (f: (
+    (hd: bitfields bs.cl 0 bs.header_size bs.header) ->
+    (k: enum_key bs.e) ->
+    (bpl: bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k)) ->
+    (pl: type_of_tag k) ->
+    Tot (refine_with_tag (bitsum_btag_of_data' bs data header_of_data tag_of_data bit_payload_of_data) (hd, (| k, bpl |)))
+  )) -> synth_case_t bs data header_of_data tag_of_data bit_payload_of_data type_of_tag
+
+noeq
+type bitsum =
+| BitSum:
+    (bs: bitsum') ->
+    (data: Type0) ->
+    (header_of_data: (data -> Tot (bitfields bs.cl 0 bs.header_size bs.header))) ->
+    (tag_of_data: (data -> Tot (enum_key bs.e))) ->
+    (bit_payload_of_data: ((k: enum_key bs.e) -> (refine_with_tag tag_of_data k) -> Tot (bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k)))) ->
+    (type_of_tag: (enum_key bs.e -> Tot Type0)) ->
+    (synth_case: synth_case_t bs data header_of_data tag_of_data bit_payload_of_data type_of_tag) ->
+    bitsum
+
+let weaken_parse_bitsum_cases_kind
+  (b: bitsum)
+  (f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+: Tot parser_kind
+= let keys : list b.bs.key = List.Tot.map fst b.bs.e in
+  glb_list_of #(b.bs.key) (fun (x: b.bs.key) ->
+    if List.Tot.mem x keys
+    then let (| k, _ |) = f x in k
+    else default_parser_kind
+  ) (List.Tot.map fst b.bs.e)
+
+let parse_bitsum_cases
+  (b: bitsum)
+  (f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+  (x: bitsum'_type b.bs)
+: Tot (parser (weaken_parse_bitsum_cases_kind b f) (refine_with_tag (bitsum_btag_of_data' b.bs b.data b.header_of_data b.tag_of_data b.bit_payload_of_data) x))
+= let (hd, (| tg, tl |)) = x in
+  let (| _, p |) = f tg in
+  assume (synth_injective (b.synth_case.f hd tg tl));
+  weaken (weaken_parse_bitsum_cases_kind b f) (p `parse_synth` b.synth_case.f hd tg tl)
+
+inline_for_extraction
+let parse_bitsum_kind
+  (kt: parser_kind)
+  (b: bitsum)
+  (f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+: Tot parser_kind
+= and_then_kind (parse_filter_kind kt) (weaken_parse_bitsum_cases_kind b f)
+
+let parse_bitsum
+  (#kt: parser_kind)
+  (b: bitsum)
+  (p: parser kt b.bs.t)
+  (f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+: Tot (parser (parse_bitsum_kind kt b f) b.data)
+= parse_tagged_union
+    #(parse_filter_kind kt)
+    #(bitsum'_type b.bs)
+    (parse_bitsum' b.bs p)
+    #(b.data)
+    (bitsum_btag_of_data' b.bs b.data b.header_of_data b.tag_of_data b.bit_payload_of_data)
+    #(weaken_parse_bitsum_cases_kind b f)
+    (parse_bitsum_cases b f)
