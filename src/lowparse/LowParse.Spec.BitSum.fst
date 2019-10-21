@@ -549,194 +549,213 @@ let serialize_bitsum'
     (synth_bitsum'_recip b)
     ()
 
-(*
-let bitsum_btag_of_data'
-  (bs: bitsum')
-  (data: Type0)
-  (header_of_data: (data -> Tot (bitfields bs.cl 0 bs.header_size bs.header)))
-  (tag_of_data: (data -> Tot (enum_key bs.e)))
-  (bit_payload_of_data: ((k: enum_key bs.e) -> (refine_with_tag tag_of_data k) -> Tot (bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k))))
-  (x: data)
-: Tot (bitsum'_type bs)
-= let k = tag_of_data x in
-  (header_of_data x, (| k, bit_payload_of_data k x |))
+let rec bitsum'_key_of_t
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#from: nat)
+  (b: bitsum' cl from)
+  (x: bitsum'_type b)
+: Tot (bitsum'_key_type b)
+  (decreases (tot - from))
+= match b with
+  | BitFields _ -> ()
+  | BitSum' key header header_size key_size e payload ->
+    begin match bitsum'_type_elim_BitSum' cl from key header header_size key_size e payload x with
+    | (_, (| k, pl |)) ->
+      bitsum'_key_type_intro_BitSum' cl from key header header_size key_size e payload (| k, bitsum'_key_of_t (payload k) pl |)
+    end
 
 inline_for_extraction
 noextract
 noeq
 type synth_case_t
-  (bs: bitsum')
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl 0)
   (data: Type0)
-  (header_of_data: (data -> Tot (bitfields bs.cl 0 bs.header_size bs.header)))
-  (tag_of_data: (data -> Tot (enum_key bs.e)))
-  (bit_payload_of_data: ((k: enum_key bs.e) -> (refine_with_tag tag_of_data k) -> Tot (bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k))))
-  (type_of_tag: (enum_key bs.e -> Tot Type0))
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+: Type0
 = | SynthCase:
     (f: (
-      (hd: bitfields bs.cl 0 bs.header_size bs.header) ->
-      (k: enum_key bs.e) ->
-      (bpl: bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k)) ->
-      (pl: type_of_tag k) ->
-      Tot (refine_with_tag (bitsum_btag_of_data' bs data header_of_data tag_of_data bit_payload_of_data) (hd, (| k, bpl |)))
+      (k' : bitsum'_type b) ->
+      type_of_tag (bitsum'_key_of_t b k') ->
+      Tot (refine_with_tag tag_of_data k')
     )) ->
     (f_inj: (
-      (hd: bitfields bs.cl 0 bs.header_size bs.header) ->
-      (k: enum_key bs.e) ->
-      (bpl: bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k)) ->
-      (pl1: type_of_tag k) ->
-      (pl2: type_of_tag k) ->
+      (k' : bitsum'_type b) ->
+      (pl1: type_of_tag (bitsum'_key_of_t b k')) ->
+      (pl2: type_of_tag (bitsum'_key_of_t b k')) ->
       Lemma
-      (requires (f hd k bpl pl1 == f hd k bpl pl2))
+      (requires (f k' pl1 == f k' pl2))
       (ensures (pl1 == pl2))
     )) ->
     (g: (
-      (k: enum_key bs.e) ->
-      (x: refine_with_tag tag_of_data k) ->
-      Tot (type_of_tag k)
+      (k' : bitsum'_type b) ->
+      refine_with_tag tag_of_data k' ->
+      Tot (type_of_tag (bitsum'_key_of_t b k'))
     )) ->
     (f_g_eq: (
-      (x: data) ->
+      (k: bitsum'_type b) ->
+      (x: refine_with_tag tag_of_data k) ->
       Lemma
-      (let k = tag_of_data x in
-        f (header_of_data x) k (bit_payload_of_data k x) (g k x) == x)
-    )) ->
-    synth_case_t bs data header_of_data tag_of_data bit_payload_of_data type_of_tag
+      (f k (g k x) == x)
+    ))
+    -> synth_case_t b data tag_of_data type_of_tag
 
 inline_for_extraction
 noextract
 noeq
-type bitsum =
+type bitsum : Type u#1 =
 | BitSum:
-    (bs: bitsum') ->
+    (tot: pos) ->
+    (t: eqtype) ->
+    (cl: uint_t tot t) ->
+    (b: bitsum' cl 0) ->
     (data: Type0) ->
-    (header_of_data: (data -> Tot (bitfields bs.cl 0 bs.header_size bs.header))) ->
-    (tag_of_data: (data -> Tot (enum_key bs.e))) ->
-    (bit_payload_of_data: ((k: enum_key bs.e) -> (refine_with_tag tag_of_data k) -> Tot (bitfields bs.cl (bs.header_size + bs.key_size) bs.tot (bs.payload k)))) ->
-    (type_of_tag: (enum_key bs.e -> Tot Type0)) ->
-    (synth_case: synth_case_t bs data header_of_data tag_of_data bit_payload_of_data type_of_tag) ->
+    (tag_of_data: (data -> Tot (bitsum'_type b))) ->
+    (type_of_tag: (bitsum'_key_type b -> Tot Type0)) ->
+    (synth_case: synth_case_t b data tag_of_data type_of_tag) ->
     bitsum
+
+#push-options "--z3rlimit 16 --max_ifuel 3 --initial_ifuel 3"
+
+let rec weaken_parse_bitsum_cases_kind'
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#from: nat)
+  (b: bitsum' cl from)
+  (f: (x: bitsum'_key_type b) -> Tot parser_kind)
+: Tot (k' : parser_kind & ((x: bitsum'_key_type b) -> Lemma (k' `is_weaker_than` f x)))
+  (decreases (tot - from))
+= match b with
+  | BitFields _ -> (| f (), (fun y -> ()) |)
+  | BitSum' key header header_size key_size e payload ->
+    let keys : list key = List.Tot.map fst e in
+    let phi (x: key) : Tot (k: parser_kind & ((y: bitsum'_key_type b) -> Lemma
+      (requires (dfst (bitsum'_key_type_elim_BitSum' cl from key header header_size key_size e payload y) == x))
+      (ensures (k `is_weaker_than` f y)))) =
+      if List.Tot.mem x keys
+      then
+        let (| k, g |) = weaken_parse_bitsum_cases_kind' (payload x) (fun z -> f (bitsum'_key_type_intro_BitSum' cl from key header header_size key_size e payload (| x, z |))) in
+        (| k, (fun y ->
+          let (| y1, y2 |) = bitsum'_key_type_elim_BitSum' cl from key header header_size key_size e payload y in
+          assert (y1 == x);
+          g y2
+        ) |)
+      else (| default_parser_kind, (fun y -> ()) |)
+    in
+    let k = glb_list_of #key (fun x -> dfst (phi x)) keys in
+    (| k, (fun y ->
+      let (| y1, y2 |) = bitsum'_key_type_elim_BitSum' cl from key header header_size key_size e payload y in
+      dsnd (phi y1) y
+    ) |)
 
 let weaken_parse_bitsum_cases_kind
   (b: bitsum)
-  (f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
-: Tot parser_kind
-= let keys : list b.bs.key = List.Tot.map fst b.bs.e in
-  glb_list_of #(b.bs.key) (fun (x: b.bs.key) ->
-    if List.Tot.mem x keys
-    then let (| k, _ |) = f x in k
-    else default_parser_kind
-  ) (List.Tot.map fst b.bs.e)
+  (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+: Tot (k: parser_kind { forall (x: bitsum'_key_type b.b) . k `is_weaker_than` dfst (f x) })
+= let (| k, phi |) = weaken_parse_bitsum_cases_kind' b.b (fun k -> dfst (f k)) in
+  Classical.forall_intro phi;
+  k
 
 let synth_bitsum_case_injective
   (b: bitsum)
-  (hd: bitfields b.bs.cl 0 b.bs.header_size b.bs.header)
-  (k: enum_key b.bs.e)
-  (bpl: bitfields b.bs.cl (b.bs.header_size + b.bs.key_size) b.bs.tot (b.bs.payload k))
+  (x: bitsum'_type b.b)
 : Lemma
-  (synth_injective (b.synth_case.f hd k bpl))
+  (synth_injective (b.synth_case.f x))
 //  [SMTPat (synth_injective (b.synth_case.f hd k bpl))] // FIXME: does not trigger. WHY WHY WHY?
-= synth_injective_intro' (b.synth_case.f hd k bpl) (fun x y ->
-    b.synth_case.f_inj hd k bpl x y
+= synth_injective_intro' (b.synth_case.f x) (fun y z ->
+    b.synth_case.f_inj x y z
   )
+
+inline_for_extraction
+let bitsum_type_of_tag
+  (b: bitsum)
+  (x: bitsum'_key_type b.b)
+: Tot Type0
+= match b with 
+  | BitSum _ _ _ _ _ _ type_of_tag _ -> type_of_tag x
 
 let parse_bitsum_cases
   (b: bitsum)
-  (f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
-  (x: bitsum'_type b.bs)
-: Tot (parser (weaken_parse_bitsum_cases_kind b f) (refine_with_tag (bitsum_btag_of_data' b.bs b.data b.header_of_data b.tag_of_data b.bit_payload_of_data) x))
-= let (hd, (| tg, tl |)) = x in
-  let (| _, p |) = f tg in
-  synth_bitsum_case_injective b hd tg tl; // FIXME: WHY WHY WHY does the pattern not trigger?
-  weaken (weaken_parse_bitsum_cases_kind b f) (p `parse_synth` b.synth_case.f hd tg tl)
+  (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
+  (x: bitsum'_type b.b)
+: Tot (parser (weaken_parse_bitsum_cases_kind b f) (refine_with_tag b.tag_of_data x))
+= let tg : bitsum'_key_type b.b = bitsum'_key_of_t b.b x in
+  let (| k_, p |) = f tg in
+  synth_bitsum_case_injective b x;
+  weaken (weaken_parse_bitsum_cases_kind b f) (p `parse_synth` b.synth_case.f x)
 
 inline_for_extraction
 let parse_bitsum_kind
   (kt: parser_kind)
   (b: bitsum)
-  (f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+  (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
 : Tot parser_kind
 = and_then_kind (parse_filter_kind kt) (weaken_parse_bitsum_cases_kind b f)
 
 let parse_bitsum
   (#kt: parser_kind)
   (b: bitsum)
-  (p: parser kt b.bs.t)
-  (f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+  (p: parser kt b.t)
+  (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
 : Tot (parser (parse_bitsum_kind kt b f) b.data)
 = parse_tagged_union
     #(parse_filter_kind kt)
-    #(bitsum'_type b.bs)
-    (parse_bitsum' b.bs p)
+    #(bitsum'_type b.b)
+    (parse_bitsum' b.b p)
     #(b.data)
-    (bitsum_btag_of_data' b.bs b.data b.header_of_data b.tag_of_data b.bit_payload_of_data)
+    b.tag_of_data
     #(weaken_parse_bitsum_cases_kind b f)
     (parse_bitsum_cases b f)
 
-inline_for_extraction
-let synth_bitsum_case_recip
-  (b: bitsum)
-  (hd: bitfields b.bs.cl 0 b.bs.header_size b.bs.header)
-  (k: enum_key b.bs.e)
-  (bpl: bitfields b.bs.cl (b.bs.header_size + b.bs.key_size) b.bs.tot (b.bs.payload k))
-  (x: refine_with_tag (bitsum_btag_of_data' b.bs b.data b.header_of_data b.tag_of_data b.bit_payload_of_data) (hd, (| k, bpl |)))
-: Tot (b.type_of_tag k)
-= b.synth_case.g k x
-
-let synth_bitsum_case_recip_inverse'
-  (b: bitsum)
-  (hd: bitfields b.bs.cl 0 b.bs.header_size b.bs.header)
-  (k: enum_key b.bs.e)
-  (bpl: bitfields b.bs.cl (b.bs.header_size + b.bs.key_size) b.bs.tot (b.bs.payload k))
-  (x: refine_with_tag (bitsum_btag_of_data' b.bs b.data b.header_of_data b.tag_of_data b.bit_payload_of_data) (hd, (| k, bpl |)))
-: Lemma
-  (b.synth_case.f hd k bpl (synth_bitsum_case_recip b hd k bpl x) == x)
-= b.synth_case.f_g_eq x
-
 let synth_bitsum_case_recip_inverse
   (b: bitsum)
-  (hd: bitfields b.bs.cl 0 b.bs.header_size b.bs.header)
-  (k: enum_key b.bs.e)
-  (bpl: bitfields b.bs.cl (b.bs.header_size + b.bs.key_size) b.bs.tot (b.bs.payload k))
+  (x: bitsum'_type b.b)
 : Lemma
-  (synth_inverse (b.synth_case.f hd k bpl) (synth_bitsum_case_recip b hd k bpl))
+  (synth_inverse (b.synth_case.f x) (b.synth_case.g x))
 //  [SMTPat (synth_inverse (b.synth_case.f hd k bpl) (synth_bitsum_case_recip b hd k bpl))] // FIXME: does not trigger. WHY WHY WHY?
-= synth_inverse_intro' (b.synth_case.f hd k bpl) (synth_bitsum_case_recip b hd k bpl) (fun x ->
-    synth_bitsum_case_recip_inverse' b hd k bpl x
+= synth_inverse_intro' (b.synth_case.f x) (b.synth_case.g x) (fun y ->
+    b.synth_case.f_g_eq x y
   )
 
 let serialize_bitsum_cases
   (b: bitsum)
-  (#f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
-  (g: (x: enum_key b.bs.e) -> Tot (serializer (dsnd (f x))))
-  (x: bitsum'_type b.bs)
+  (#f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
+  (g: (x: bitsum'_key_type b.b) -> Tot (serializer (dsnd (f x))))
+  (x: bitsum'_type b.b)
 : Tot (serializer (parse_bitsum_cases b f x))
-= let (hd, (| tg, tl |)) = x in
+= let tg = bitsum'_key_of_t b.b x in
   let (| _, p |) = f tg in
-  synth_bitsum_case_injective b hd tg tl; // FIXME: WHY WHY WHY does the pattern not trigger?
-  synth_bitsum_case_recip_inverse b hd tg tl; // FIXME: WHY WHY WHY does the pattern not trigger?
+  synth_bitsum_case_injective b x; // FIXME: WHY WHY WHY does the pattern not trigger?
+  synth_bitsum_case_recip_inverse b x; // FIXME: WHY WHY WHY does the pattern not trigger?
   serialize_weaken (weaken_parse_bitsum_cases_kind b f)
     (serialize_synth
       p
-      (b.synth_case.f hd tg tl)
+      (b.synth_case.f x)
       (g tg)
-      (synth_bitsum_case_recip b hd tg tl)
+      (b.synth_case.g x)
       ())
 
 let serialize_bitsum
   (#kt: parser_kind)
   (b: bitsum)
-  (#p: parser kt b.bs.t)
+  (#p: parser kt b.t)
   (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
-  (#f: (x: enum_key b.bs.e) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
-  (g: (x: enum_key b.bs.e) -> Tot (serializer (dsnd (f x))))
+  (#f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+  (g: (x: bitsum'_key_type b.b) -> Tot (serializer (dsnd (f x))))
 : Tot (serializer (parse_bitsum b p f))
 = serialize_tagged_union
     #(parse_filter_kind kt)
-    #(bitsum'_type b.bs)
-    #(parse_bitsum' b.bs p)
-    (serialize_bitsum' b.bs s)
+    #(bitsum'_type b.b)
+    #(parse_bitsum' b.b p)
+    (serialize_bitsum' b.b s)
     #(b.data)
-    (bitsum_btag_of_data' b.bs b.data b.header_of_data b.tag_of_data b.bit_payload_of_data)
+    b.tag_of_data
     #(weaken_parse_bitsum_cases_kind b f)
     #(parse_bitsum_cases b f)
     (serialize_bitsum_cases b #f g)
