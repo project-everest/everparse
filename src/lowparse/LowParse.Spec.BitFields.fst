@@ -251,3 +251,89 @@ let parse_bitfield8 (l: list nat { valid_bitfield_widths 0 8 l }) : Tot (parser 
 
 let serialize_bitfield8 (l: list nat { valid_bitfield_widths 0 8 l }) : Tot (serializer (parse_bitfield8 l)) =
   serialize_bitfield serialize_u8 uint8 l
+
+(* Universal destructor *)
+
+inline_for_extraction
+noextract
+let bitfields_destr_t
+  (#tot: pos)
+  (#t: Type0)
+  (cl: uint_t tot t)
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= tot })
+  (l: list nat { valid_bitfield_widths lo hi l })
+: Tot Type
+=
+  (f_t: (bitfields cl lo hi l -> Tot Type)) ->
+  (f: ((x: bitfields cl lo hi l) -> Tot (f_t x))) ->
+  (x: t) ->
+  Tot (f_t (synth_bitfield cl lo hi l x))
+
+inline_for_extraction
+noextract
+let bitfields_destr_cons
+  (#tot: pos)
+  (#t: Type0)
+  (cl: uint_t tot t)
+  (lo: nat)
+  (sz: nat)
+  (hi: nat { lo + sz <= hi /\ hi <= tot })
+  (l: list nat { valid_bitfield_widths (lo + sz) hi l /\ Cons? l })
+  (phi: bitfields_destr_t cl (lo + sz) hi l)
+: Tot (bitfields_destr_t cl lo hi (sz :: l))
+= fun f_t f x ->
+    phi
+      (fun x' -> f_t (((cl.get_bitfield x lo (lo + sz) <: t) <: bitfield cl sz), x'))
+      (fun x' -> f (((cl.get_bitfield x lo (lo + sz) <: t) <: bitfield cl sz), x'))
+      x
+
+inline_for_extraction
+noextract
+let bitfields_destr_cons_nil
+  (#tot: pos)
+  (#t: Type0)
+  (cl: uint_t tot t)
+  (lo: nat)
+  (sz: nat { lo + sz <= tot })
+: Tot (bitfields_destr_t cl lo (lo + sz) [sz])
+= fun f_t f x ->
+    f (cl.get_bitfield x lo (lo + sz))
+
+inline_for_extraction
+noextract
+let bitfields_destr_nil
+  (#tot: pos)
+  (#t: Type0)
+  (cl: uint_t tot t)
+  (lo: nat { lo <= tot } )
+: Tot (bitfields_destr_t cl lo lo [])
+= fun f_t f x ->
+    f ()
+
+noextract
+let rec mk_bitfields_destr'
+  (#tot: pos)
+  (#t: Type0)
+  (cl: uint_t tot t)
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= tot })
+  (l: list nat { valid_bitfield_widths lo hi l })
+: Tot (bitfields_destr_t cl lo hi l)
+  (decreases l)
+= match l with
+  | [] -> bitfields_destr_nil cl lo
+  | [sz] -> bitfields_destr_cons_nil cl lo sz
+  | sz :: q -> bitfields_destr_cons cl lo sz hi q (mk_bitfields_destr' cl (lo + sz) hi q)
+
+inline_for_extraction
+noextract
+let mk_bitfields_destr
+  (#tot: pos)
+  (#t: Type0)
+  (cl: uint_t tot t)
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= tot })
+  (l: list nat { valid_bitfield_widths lo hi l })
+: Tot (bitfields_destr_t cl lo hi l)
+= norm [delta_only [`%mk_bitfields_destr'; `%bitfields_destr_nil; `%bitfields_destr_cons_nil; `%bitfields_destr_cons]; iota; zeta; primops] (mk_bitfields_destr' cl lo hi l)
