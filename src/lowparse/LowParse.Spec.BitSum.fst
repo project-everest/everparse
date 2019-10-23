@@ -241,10 +241,12 @@ let rec filter_bitsum'
   | BitField _ rest -> filter_bitsum' rest x
   | BitSum' key key_size e payload ->
     let f : bitfield cl key_size = cl.get_bitfield x from (from + key_size) in
-    list_mem f (list_map snd e) && (
+    if list_mem f (list_map snd e)
+    then
       let k = enum_key_of_repr e f in
       filter_bitsum' (payload k) x
-    )
+    else
+      false
 
 let rec synth_bitsum'
   (#tot: pos)
@@ -814,3 +816,214 @@ let serialize_bitsum
     #(weaken_parse_bitsum_cases_kind b f)
     #(parse_bitsum_cases b f)
     (serialize_bitsum_cases b #f g)
+
+
+(* Implementation of filter_bitsum' *)
+
+inline_for_extraction
+let filter_bitsum'_t
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#from: nat)
+  (b: bitsum' cl from)
+: Tot Type0
+= (x: t) ->
+  Tot (y: bool { y == filter_bitsum' b x })
+
+inline_for_extraction
+let filter_bitsum'_bitstop
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+: Tot (filter_bitsum'_t #tot #t #cl #tot (BitStop ()))
+= fun _ -> true
+
+inline_for_extraction
+let filter_bitsum'_bitfield
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (from: nat)
+  (sz: nat { sz > 0 /\ from + sz <= tot })
+  (rest: bitsum' cl (from + sz))
+  (phi: filter_bitsum'_t rest)
+: Tot (filter_bitsum'_t (BitField sz rest))
+= fun x -> phi x
+
+inline_for_extraction
+let filter_bitsum'_bitsum'_t
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (from: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (l1: list (key & bitfield cl key_size))
+  (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
+: Tot Type0
+= (x: t { ~ (list_mem (cl.get_bitfield x from (from + key_size) <: bitfield cl key_size) (list_map snd l1)) }) ->
+  (xr: bitfield cl key_size { xr == cl.get_bitfield x from (from + key_size) }) ->
+  Tot (y: bool { y == filter_bitsum' (BitSum' key key_size e payload) x })
+
+inline_for_extraction
+let filter_bitsum'_bitsum'_intro
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (from: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (phi: filter_bitsum'_bitsum'_t cl from key key_size e payload [] e)
+: Tot (filter_bitsum'_t (BitSum' key key_size e payload))
+= fun x ->
+    let xr = cl.get_bitfield x from (from + key_size) in
+    phi x xr
+
+inline_for_extraction
+let filter_bitsum'_bitsum'_nil
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (from: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (h: squash (e == e `L.append` []))
+: Tot (filter_bitsum'_bitsum'_t  cl from key key_size e payload e [])
+= (fun x xr -> false)
+
+inline_for_extraction
+let filter_bitsum'_bitsum'_cons
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (from: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (l1: list (key & bitfield cl key_size))
+  (k: key)
+  (r: bitfield cl key_size)
+  (l2: list (key & bitfield cl key_size) { e == l1 `L.append` ((k, r) :: l2) })
+  (destr_payload: (squash (list_mem k (list_map fst e) /\ enum_repr_of_key e k == r) -> Tot (filter_bitsum'_t (payload k))))
+  (destr_tail: (squash (e == (l1 `L.append` [(k, r)]) `L.append` l2) -> Tot (filter_bitsum'_bitsum'_t cl from key key_size e payload (l1 `L.append` [(k, r)]) l2)))
+: Tot (filter_bitsum'_bitsum'_t cl from key key_size e payload l1 ((k, r) :: l2))
+= fun x xr ->
+    [@inline_let] let _ =
+      enum_repr_of_key_append_cons e l1 (k, r) l2
+    in
+    if xr = r
+    then
+      destr_payload () x
+    else
+      [@inline_let] let _ =
+        L.append_assoc l1 [(k, r)] l2;
+        L.map_append snd l1 [(k, r)];
+        L.append_mem (L.map snd l1) (L.map snd [(k, r)]) xr
+      in
+      destr_tail () (x <: t) xr
+      
+module WF = FStar.WellFounded (* for axiom1_dep *)
+    
+inline_for_extraction
+noextract
+let wf_apply // because WF.apply is not marked inline_for_extraction
+  (#a:Type) (#b:a -> Type) (f: (x:a -> Tot (b x))) (x:a)
+  : Pure (b x) (requires True) (ensures (fun r -> r == f x /\ f x << f))
+=
+  [@inline_let] let _ = WF.axiom1_dep #a #b f x in
+  f x
+
+let rec mk_filter_bitsum'_t'
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#from: nat)
+  (b: bitsum' cl from)
+: Tot (filter_bitsum'_t b)
+  (decreases (LexCons b (LexCons () LexTop)))
+= match b with
+  | BitStop _ -> filter_bitsum'_bitstop cl
+  | BitField sz rest -> filter_bitsum'_bitfield cl from sz rest (mk_filter_bitsum'_t' rest)
+  | BitSum' key key_size e payload ->
+    filter_bitsum'_bitsum'_intro cl from key key_size e payload (mk_filter_bitsum'_bitsum'_t' cl from key key_size e payload [] e)
+and mk_filter_bitsum'_bitsum'_t'
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (from: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (l1: list (key & bitfield cl key_size))
+  (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
+: Tot (filter_bitsum'_bitsum'_t cl from key key_size e payload l1 l2)
+  (decreases (LexCons payload (LexCons l2 LexTop)))
+= match l2 with
+  | [] ->
+    [@inline_let] let _ =
+      L.append_l_nil l1
+    in
+    filter_bitsum'_bitsum'_nil cl from key key_size e payload ()
+  | (k, r) :: q -> filter_bitsum'_bitsum'_cons cl from key key_size e payload l1 k r q (fun h -> mk_filter_bitsum'_t' (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (from + key_size)) payload k)) (fun h -> mk_filter_bitsum'_bitsum'_t' cl from key key_size e payload (l1 `L.append` [(k, r)]) q)
+
+
+(*
+= (x: t { ~ (list_mem (cl.get_bitfield x from (from + key_size)) (list_map snd l1)) }) ->
+  Tot (y: bool { y == filter_bitsum' (BitSum' key key_size e payload) x })
+
+
+
+
+  (destr_payload: ((k: enum_key e) -> Tot (filter_bitsum'_t (payload k))))
+
+
+inline_for_extraction
+let filter_bitsum'_bitsum'_t
+
+
+inline_for_extraction
+let filter_bitsum'_bitsum'
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (from: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (destr_payload: ((k: enum_key e) -> Tot (filter_bitsum'_t (payload k))))
+  
+
+  (
+  (sz: nat { sz > 0 /\ from + sz <= tot })
+  (rest: bitsum' cl (from + sz))
+  (phi: filter_bitsum'_t rest)
+  (destr: 
+
+let rec filter_bitsum'
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#from: nat)
+  (b: bitsum' cl from)
+  (x: t)
+: Tot bool
+  (decreases (tot - from))
+= match b with
+  | BitStop _ -> true
+  | BitField _ rest -> filter_bitsum' rest x
+  | BitSum' key key_size e payload ->
+    let f : bitfield cl key_size = cl.get_bitfield x from (from + key_size) in
+    list_mem f (list_map snd e) && (
+      let k = enum_key_of_repr e f in
+      filter_bitsum' (payload k) x
+    )

@@ -1221,3 +1221,19 @@ let enum_repr_of_key_cons_nil'
   (u2: unit { Nil? (enum_tail' e) } )
 : Tot (enum_repr_of_key'_t e)
 = enum_repr_of_key_cons_nil e
+
+let enum_repr_of_key_append_cons
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (l1: list (key & repr))
+  (kr: (key & repr))
+  (l2: list (key & repr))
+: Lemma
+  (requires (e == l1 `L.append` (kr :: l2)))
+  (ensures (list_mem (fst kr) (list_map fst e) /\ enum_repr_of_key e (fst kr) == snd kr /\ list_mem (snd kr) (list_map snd e) /\ enum_key_of_repr e (snd kr) == fst kr))
+= L.map_append fst l1 (kr :: l2);
+  L.noRepeats_append_elim (L.map fst l1) (L.map fst (kr :: l2));
+  L.assoc_mem (fst kr) l1;
+  L.assoc_mem (fst kr) e;
+  L.assoc_append_elim_l (fst kr) l1 (kr :: l2);
+  enum_key_of_repr_of_key e (fst kr)
