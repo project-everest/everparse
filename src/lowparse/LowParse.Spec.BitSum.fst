@@ -891,7 +891,7 @@ let filter_bitsum'_bitsum'_t
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
 : Tot Type0
 = (x: t { ~ (list_mem (cl.get_bitfield x from (from + key_size) <: bitfield cl key_size) (list_map snd l1)) }) ->
-  (xr: bitfield cl key_size { xr == cl.get_bitfield x from (from + key_size) }) ->
+  (xr: t { xr == cl.bitfield_eq_lhs x from (from + key_size) }) ->
   Tot (y: bool { y == filter_bitsum' (BitSum' key key_size e payload) x })
 
 inline_for_extraction
@@ -907,7 +907,7 @@ let filter_bitsum'_bitsum'_intro
   (phi: filter_bitsum'_bitsum'_t cl from key key_size e payload [] e)
 : Tot (filter_bitsum'_t (BitSum' key key_size e payload))
 = fun x ->
-    let xr = cl.get_bitfield x from (from + key_size) in
+    let xr = cl.bitfield_eq_lhs x from (from + key_size) in
     phi x xr
 
 inline_for_extraction
@@ -950,14 +950,19 @@ let filter_bitsum'_bitsum'_cons
     [@inline_let] let _ =
       enum_repr_of_key_append_cons e l1 (k, r) l2
     in
-    if xr = r
+    [@inline_let] let yr = cl.bitfield_eq_rhs x from (from + key_size) r in
+    [@inline_let] let cond = (xr <: t) = yr in
+    [@inline_let] let _ = 
+      assert (cond == true <==> (cl.get_bitfield x from (from + key_size) <: bitfield cl key_size) == r)
+    in
+    if cond
     then
       destr_payload x
     else
       [@inline_let] let _ =
         L.append_assoc l1 [(k, r)] l2;
         L.map_append snd l1 [(k, r)];
-        L.append_mem (L.map snd l1) (L.map snd [(k, r)]) xr
+        L.append_mem (L.map snd l1) (L.map snd [(k, r)]) (cl.get_bitfield x from (from + key_size) <: bitfield cl key_size)
       in
       destr_tail (x <: t) xr
 

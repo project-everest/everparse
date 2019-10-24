@@ -36,6 +36,8 @@ type uint_t (tot: pos) (t: Type0) = {
   get_bitfield: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> Tot (y: t { v y == BF.get_bitfield (v x) lo hi }));
   set_bitfield: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> (z: t { v z < pow2 (hi - lo) }) -> Tot (y : t { v y == BF.set_bitfield (v x) lo hi (v z)}));
   logor: ((x: t) -> (y: t) -> Tot (z: t { v z == v x `U.logor` v y }));
+  bitfield_eq_lhs: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> Tot t);
+  bitfield_eq_rhs: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> (z: t { v z < pow2 (hi - lo) }) -> Tot (y: t { bitfield_eq_lhs x lo hi == y <==> (get_bitfield x lo hi <: t) == z }));
 }
 
 let uint_t_v_uint_to_t #tot #t (cl: uint_t tot t) (x: U.uint_t tot) : Lemma
@@ -187,6 +189,8 @@ let uint64 : uint_t 64 U64.t = {
   get_bitfield = (fun x lo hi -> BF.get_bitfield64 x lo hi);
   set_bitfield = (fun x lo hi z -> BF.set_bitfield64 x lo hi z);
   logor = (fun x y -> U64.logor x y);
+  bitfield_eq_lhs = (fun x lo hi -> BF.bitfield_eq64_lhs x lo hi);
+  bitfield_eq_rhs = (fun x lo hi z -> BF.bitfield_eq64_rhs x lo hi z);
 }
 
 inline_for_extraction
@@ -199,6 +203,8 @@ let uint32 : uint_t 32 U32.t = {
   get_bitfield = (fun x lo hi -> BF.get_bitfield32 x lo hi);
   set_bitfield = (fun x lo hi z -> BF.set_bitfield32 x lo hi z);
   logor = (fun x y -> U32.logor x y);
+  bitfield_eq_lhs = (fun x lo hi -> BF.bitfield_eq32_lhs x lo hi);
+  bitfield_eq_rhs = (fun x lo hi z -> BF.bitfield_eq32_rhs x lo hi z);
 }
 
 module U16 = FStar.UInt16
@@ -214,6 +220,8 @@ let uint16 : uint_t 16 U16.t = {
   get_bitfield = (fun x lo hi -> BF.get_bitfield16 x lo hi);
   set_bitfield = (fun x lo hi z -> BF.set_bitfield16 x lo hi z);
   logor = (fun x y -> U16.logor x y);
+  bitfield_eq_lhs = (fun x lo hi -> BF.bitfield_eq16_lhs x lo hi);
+  bitfield_eq_rhs = (fun x lo hi z -> BF.bitfield_eq16_rhs x lo hi z);
 }
 
 inline_for_extraction
@@ -226,6 +234,8 @@ let uint8 : uint_t 8 U8.t = {
   get_bitfield = (fun x lo hi -> BF.get_bitfield8 x lo hi);
   set_bitfield = (fun x lo hi z -> BF.set_bitfield8 x lo hi z);
   logor = (fun x y -> U8.logor x y);
+  bitfield_eq_lhs = (fun x lo hi -> BF.bitfield_eq8_lhs x lo hi);
+  bitfield_eq_rhs = (fun x lo hi z -> BF.bitfield_eq8_rhs x lo hi z);
 }
 
 let parse_bitfield64 (l: list nat { valid_bitfield_widths 0 64 l }) : Tot (parser parse_u64_kind (bitfields uint64 0 64 l)) =
