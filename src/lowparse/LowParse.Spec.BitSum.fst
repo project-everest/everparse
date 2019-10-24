@@ -646,6 +646,14 @@ let rec bitsum'_key_of_t
 
 inline_for_extraction
 noextract
+let id
+  (#t: Type)
+  (x: t)
+: Tot t
+= x
+
+inline_for_extraction
+noextract
 noeq
 type synth_case_t
   (#tot: pos)
@@ -653,14 +661,14 @@ type synth_case_t
   (#cl: uint_t tot t)
   (b: bitsum' cl 0)
   (data: Type0)
-  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (tag_of_data: ((u: Type0) -> (bitsum'_type b -> Tot u) -> data -> Tot u))
   (type_of_tag: (bitsum'_key_type b -> Tot Type0))
 : Type0
 = | SynthCase:
     (f: (
       (k' : bitsum'_type b) ->
       type_of_tag (bitsum'_key_of_t b k') ->
-      Tot (refine_with_tag tag_of_data k')
+      Tot (refine_with_tag (tag_of_data (bitsum'_type b) id) k')
     )) ->
     (f_inj: (
       (k' : bitsum'_type b) ->
@@ -672,12 +680,12 @@ type synth_case_t
     )) ->
     (g: (
       (k' : bitsum'_type b) ->
-      refine_with_tag tag_of_data k' ->
+      refine_with_tag (tag_of_data (bitsum'_type b) id) k' ->
       Tot (type_of_tag (bitsum'_key_of_t b k'))
     )) ->
     (f_g_eq: (
       (k: bitsum'_type b) ->
-      (x: refine_with_tag tag_of_data k) ->
+      (x: refine_with_tag (tag_of_data (bitsum'_type b) id) k) ->
       Lemma
       (f k (g k x) == x)
     ))
@@ -693,7 +701,8 @@ type bitsum : Type u#1 =
     (cl: uint_t tot t) ->
     (b: bitsum' cl 0) ->
     (data: Type0) ->
-    (tag_of_data: (data -> Tot (bitsum'_type b))) ->
+    (tag_of_data: ((u: Type0) -> (bitsum'_type b -> Tot u) -> data -> Tot u)) ->
+    (tag_of_data_eq: ((u: Type0) -> (f: (bitsum'_type b -> Tot u)) -> (x: data) -> Lemma (tag_of_data u f x == f (tag_of_data (bitsum'_type b) id x)))) ->
     (type_of_tag: (bitsum'_key_type b -> Tot Type0)) ->
     (synth_case: synth_case_t b data tag_of_data type_of_tag) ->
     bitsum
@@ -759,13 +768,13 @@ let bitsum_type_of_tag
   (x: bitsum'_key_type b.b)
 : Tot Type0
 = match b with 
-  | BitSum _ _ _ _ _ _ type_of_tag _ -> type_of_tag x
+  | BitSum _ _ _ _ _ _ _ type_of_tag _ -> type_of_tag x
 
 let parse_bitsum_cases
   (b: bitsum)
   (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
   (x: bitsum'_type b.b)
-: Tot (parser (weaken_parse_bitsum_cases_kind b f) (refine_with_tag b.tag_of_data x))
+: Tot (parser (weaken_parse_bitsum_cases_kind b f) (refine_with_tag (b.tag_of_data (bitsum'_type b.b) id) x))
 = let tg : bitsum'_key_type b.b = bitsum'_key_of_t b.b x in
   let (| k_, p |) = f tg in
   synth_bitsum_case_injective b x;
@@ -790,7 +799,7 @@ let parse_bitsum
     #(bitsum'_type b.b)
     (parse_bitsum' b.b p)
     #(b.data)
-    b.tag_of_data
+    (b.tag_of_data (bitsum'_type b.b) id)
     #(weaken_parse_bitsum_cases_kind b f)
     (parse_bitsum_cases b f)
 
@@ -836,7 +845,7 @@ let serialize_bitsum
     #(parse_bitsum' b.b p)
     (serialize_bitsum' b.b s)
     #(b.data)
-    b.tag_of_data
+    (b.tag_of_data (bitsum'_type b.b) id)
     #(weaken_parse_bitsum_cases_kind b f)
     #(parse_bitsum_cases b f)
     (serialize_bitsum_cases b #f g)
