@@ -75,6 +75,8 @@ let clens_flbytes_slice
   clens_get = (fun (x: BY.lbytes sz) -> (BY.slice x from to <: BY.lbytes (U32.v to - U32.v from)));
 }
 
+#push-options "--z3rlimit 16"
+
 let gaccessor_flbytes_slice
   (sz: nat { sz < 4294967296 } )
   (from: U32.t)
@@ -97,6 +99,8 @@ let accessor_flbytes_slice
   let h = HST.get () in
   [@inline_let] let _ = slice_access_eq h (gaccessor_flbytes_slice sz from to) input pos in
   pos `U32.add` from
+
+#pop-options
 
 let clens_flbytes_get
   (sz: nat)

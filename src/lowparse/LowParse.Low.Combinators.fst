@@ -989,3 +989,111 @@ let jump_compose_context
   (k: kt2)
 : Tot (jumper (p (f k)))
 = fun #rrel #rel input pos -> v (f k) input pos
+
+let clens_tagged_union_tag
+  (#tag_t: Type0)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+: Tot (clens data_t tag_t)
+= {
+    clens_cond = (fun _ -> True);
+    clens_get  = tag_of_data;
+  }
+
+let gaccessor_tagged_union_tag
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (pt: parser kt tag_t { kt.parser_kind_subkind == Some ParserStrong })
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+: Tot (gaccessor (parse_tagged_union pt tag_of_data p) pt (clens_tagged_union_tag tag_of_data))
+= fun input ->
+    parse_tagged_union_eq pt tag_of_data p input;
+    (0, (match parse pt input with
+      | Some (_, consumed) ->
+        parser_kind_prop_equiv kt pt;
+        assert (no_lookahead_on pt input (Seq.slice input 0 consumed));
+        assert (injective_postcond pt input (Seq.slice input 0 consumed));
+        consumed
+      | _ -> 0 (* dummy *)
+    ))
+        
+inline_for_extraction
+let accessor_tagged_union_tag
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (pt: parser kt tag_t { kt.parser_kind_subkind == Some ParserStrong })
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+: Tot (accessor (gaccessor_tagged_union_tag pt tag_of_data p))
+= fun #rrel #rel input pos ->
+  let h = HST.get () in
+  [@inline_let] let _ = slice_access_eq h (gaccessor_tagged_union_tag pt tag_of_data p) input pos in
+  pos
+
+let clens_tagged_union_payload
+  (#tag_t: Type0)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (t: tag_t)
+: Tot (clens data_t (refine_with_tag tag_of_data t))
+= {
+    clens_cond = (fun d -> tag_of_data d == t);
+    clens_get  = (fun (d: data_t) -> (d <: refine_with_tag tag_of_data t));
+  }
+
+let gaccessor_tagged_union_payload
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (pt: parser kt tag_t { kt.parser_kind_subkind == Some ParserStrong })
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (t: tag_t)
+: Tot (gaccessor (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t))
+= fun input ->
+    parse_tagged_union_eq pt tag_of_data p input;
+    match parse pt input with
+      | Some (t', consumed_t) ->
+        let input' = Seq.slice input consumed_t (Seq.length input) in
+        (consumed_t, (match parse (p t') input' with
+          | Some (_, consumed_t') ->
+            consumed_t'
+          | _ -> 0 (* dummy *)
+        ))
+      | _ -> (0, 0) (* dummy *)
+
+inline_for_extraction
+let accessor_tagged_union_payload
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (#pt: parser kt tag_t)
+  (jt: jumper pt { kt.parser_kind_subkind == Some ParserStrong })
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (t: tag_t)
+: Tot (accessor (gaccessor_tagged_union_payload pt tag_of_data p t))
+= fun #rrel #rel input pos ->
+  let h = HST.get () in
+  [@inline_let] let _ =
+    valid_facts (parse_tagged_union pt tag_of_data p) h input pos;
+    parse_tagged_union_eq pt tag_of_data p (bytes_of_slice_from h input pos);
+    valid_facts pt h input pos
+  in
+  let res = jt input pos in
+  [@inline_let] let _ =
+    slice_access_eq_inv h (gaccessor_tagged_union_payload pt tag_of_data p t) input pos;
+    let large = bytes_of_slice_from h input pos in
+    let small = bytes_of_slice_from_to h input pos (pos `U32.add` U32.uint_to_t (content_length (parse_tagged_union pt tag_of_data p) h input pos)) in
+    parser_kind_prop_equiv kt pt;
+    assert (no_lookahead_on pt large small);
+    assert (injective_postcond pt large small)
+  in
+  res
