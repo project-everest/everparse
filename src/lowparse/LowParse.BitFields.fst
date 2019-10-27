@@ -467,6 +467,7 @@ let get_bitfield_zero_inner
   Classical.move_requires f ()
 #pop-options
 
+#push-options "--z3rlimit 32"
 let bitfield_is_zero
   (#tot: pos)
   (x: U.uint_t tot)
@@ -504,6 +505,7 @@ let bitfield_is_zero
   in
   Classical.move_requires f ();
   Classical.move_requires g ()
+#pop-options
 
 let set_bitfield_get_bitfield
   (#tot: pos)
