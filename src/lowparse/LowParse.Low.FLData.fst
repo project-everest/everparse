@@ -138,19 +138,36 @@ let jump_fldata_strong
 : Tot (jumper (parse_fldata_strong s sz))
 = jump_constant_size (parse_fldata_strong s sz) sz32 ()
 
+let gaccessor_fldata'
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t { k.parser_kind_subkind == Some ParserStrong } )
+  (sz: nat)
+: Tot (gaccessor' (parse_fldata p sz) p (clens_id _))
+= fun (input: bytes) -> (
+    let _ = match parse (parse_fldata p sz) input with
+    | None -> ()
+    | Some (_, consumed) ->
+      if consumed = sz
+      then parse_strong_prefix p (Seq.slice input 0 sz) input
+      else ()
+    in
+    0
+  )
+
 let gaccessor_fldata
   (#k: parser_kind)
   (#t: Type0)
-  (p: parser k t)
+  (p: parser k t { k.parser_kind_subkind == Some ParserStrong } )
   (sz: nat)
 : Tot (gaccessor (parse_fldata p sz) p (clens_id _))
-= fun (input: bytes) -> ((0, Seq.length input) <: Ghost (nat & nat) (requires (True)) (ensures (fun res -> gaccessor_post' (parse_fldata p sz) p (clens_id _) input res)))
+= gaccessor_fldata' p sz
 
 inline_for_extraction
 let accessor_fldata
   (#k: parser_kind)
   (#t: Type0)
-  (p: parser k t)
+  (p: parser k t { k.parser_kind_subkind == Some ParserStrong } )
   (sz: nat)
 : Tot (accessor (gaccessor_fldata p sz))
 = fun #rrel #rel input pos ->
@@ -171,23 +188,39 @@ let clens_fldata_strong
 }
 
 inline_for_extraction
+let gaccessor_fldata_strong'
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (sz: nat)
+: Tot (gaccessor' (parse_fldata_strong s sz) p (clens_fldata_strong s sz))
+= fun (input: bytes) -> 
+    let _ = match parse (parse_fldata_strong s sz) input with
+    | None -> ()
+    | Some (_, consumed) ->
+      if consumed = sz
+      then parse_strong_prefix p (Seq.slice input 0 sz) input
+      else ()
+    in
+    0
+
+inline_for_extraction
 let gaccessor_fldata_strong
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
-  (s: serializer p)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (sz: nat)
 : Tot (gaccessor (parse_fldata_strong s sz) p (clens_fldata_strong s sz))
-= fun (input: bytes) -> ((0, Seq.length input) <: Ghost (nat & nat)
-    (requires True)
-    (ensures (fun res -> gaccessor_post' (parse_fldata_strong s sz) p (clens_fldata_strong s sz) input res)))
+= gaccessor_fldata_strong' s sz
 
 inline_for_extraction
 let accessor_fldata_strong
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
-  (s: serializer p)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (sz: nat)
 : Tot (accessor (gaccessor_fldata_strong s sz))
 = fun #rrel #rel input pos ->

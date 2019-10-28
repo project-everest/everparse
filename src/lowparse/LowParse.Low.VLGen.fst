@@ -373,7 +373,36 @@ let jump_vlgen
     (synth_vlgen (vmin) (vmax) s)
     ()
 
-let gaccessor_bounded_vlgen_payload
+let gaccessor_bounded_vlgen_payload'
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
+: Tot (gaccessor' (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s))
+= fun input ->
+  parse_bounded_vlgen_unfold min max pk s input;
+  let res =
+    match parse pk input with
+    | None -> (0) // dummy
+    | Some (len, sz)  ->
+      if sz + U32.v len <= Seq.length input
+      then
+        let input' = Seq.slice input sz (sz + U32.v len) in
+        let _ = match parse p input' with
+        | None -> ()
+        | Some _ ->
+          parse_strong_prefix p input' (Seq.slice input sz (Seq.length input))
+        in
+        sz
+      else 0
+  in
+  res
+
+let gaccessor_bounded_vlgen_payload_injective_1
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#sk: parser_kind)
@@ -382,16 +411,114 @@ let gaccessor_bounded_vlgen_payload
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
+  (sl sl' : bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl' /\
+    injective_precond (parse_bounded_vlgen min max pk s) sl sl'
+  ))
+  (ensures (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl' /\
+    injective_precond (parse_bounded_vlgen min max pk s) sl sl' /\
+    gaccessor_bounded_vlgen_payload' min max pk s sl == gaccessor_bounded_vlgen_payload' min max pk s sl'
+  ))
+= parse_bounded_vlgen_unfold min max pk s sl;
+  parse_bounded_vlgen_unfold min max pk s sl' ;
+  parse_injective (parse_bounded_vlgen min max pk s) sl sl' ;
+  parse_injective pk sl sl'
+
+let gaccessor_bounded_vlgen_payload_injective_2
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (sl sl' : bytes)
+: Lemma
+  (ensures ((
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl' /\
+    injective_precond (parse_bounded_vlgen min max pk s) sl sl'
+  ) ==> (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl' /\
+    injective_precond (parse_bounded_vlgen min max pk s) sl sl' /\
+    gaccessor_bounded_vlgen_payload' min max pk s sl == gaccessor_bounded_vlgen_payload' min max pk s sl'
+  )))
+= Classical.move_requires (gaccessor_bounded_vlgen_payload_injective_1 min max pk s sl) sl'
+
+let gaccessor_bounded_vlgen_payload_no_lookahead_1
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (sl sl' : bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    (and_then_kind sk k).parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl' /\
+    no_lookahead_on_precond (parse_bounded_vlgen min max pk s) sl sl'
+  ))
+  (ensures (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_bounded_vlgen_payload' min max pk s sl == gaccessor_bounded_vlgen_payload' min max pk s sl'
+  ))
+= parse_bounded_vlgen_unfold min max pk s sl;
+  parse_bounded_vlgen_unfold min max pk s sl' ;
+  parse_strong_prefix (parse_bounded_vlgen min max pk s) sl sl' ;
+  parse_injective pk sl sl'
+
+let gaccessor_bounded_vlgen_payload_no_lookahead_2
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (sl sl' : bytes)
+: Lemma
+  (ensures ((
+    k.parser_kind_subkind == Some ParserStrong /\
+    (and_then_kind sk k).parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl /\
+    gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl' /\
+    no_lookahead_on_precond (parse_bounded_vlgen min max pk s) sl sl'
+  ) ==> (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_bounded_vlgen_payload' min max pk s sl == gaccessor_bounded_vlgen_payload' min max pk s sl'
+  )))
+= Classical.move_requires (gaccessor_bounded_vlgen_payload_no_lookahead_1 min max pk s sl) sl'
+
+let gaccessor_bounded_vlgen_payload
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
 : Tot (gaccessor (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s))
-= fun input ->
-  parse_bounded_vlgen_unfold min max pk s input;
-  let res =
-    match parse pk input with
-    | None -> (0, 0) // dummy
-    | Some (len, sz)  ->
-      (sz, Seq.length input - sz)
-  in
-  (res <: (res : _ { gaccessor_post' (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) input res } ))
+= Classical.forall_intro_2 (gaccessor_bounded_vlgen_payload_no_lookahead_2 min max pk s);
+  Classical.forall_intro_2 (gaccessor_bounded_vlgen_payload_injective_2 min max pk s);
+  gaccessor_bounded_vlgen_payload' min max pk s
 
 module B = LowStar.Buffer
 
@@ -405,19 +532,151 @@ let accessor_bounded_vlgen_payload
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
-  (s: serializer p)
+  (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
 : Tot (accessor (gaccessor_bounded_vlgen_payload min max pk s))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ =
-    slice_access_eq_inv h (gaccessor_bounded_vlgen_payload min max pk s) input pos;
+    slice_access_eq h (gaccessor_bounded_vlgen_payload min max pk s) input pos;
     valid_facts (parse_bounded_vlgen min max pk s) h input pos;
     parse_bounded_vlgen_unfold_aux min max pk s (bytes_of_slice_from h input pos);
-    valid_facts pk h input pos;
-    parse_strong_prefix pk (bytes_of_slice_from h input pos) (bytes_of_slice_from_to h input pos (pos `U32.add` U32.uint_to_t (content_length (parse_bounded_vlgen min max pk s) h input pos)))
+    valid_facts pk h input pos
   in
   jk input pos
+
+let gaccessor_vlgen_payload'
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { parse_vlgen_precond min max k /\ k.parser_kind_subkind == Some ParserStrong } )
+: Tot (gaccessor' (parse_vlgen min max pk s) p (clens_id _))
+= fun input ->
+  parse_vlgen_unfold min max pk s input;
+  let res =
+    match parse pk input with
+    | None -> (0) // dummy
+    | Some (len, sz)  ->
+      if sz + U32.v len <= Seq.length input
+      then
+        let input' = Seq.slice input sz (sz + U32.v len) in
+        let _ = match parse p input' with
+        | None -> ()
+        | Some _ ->
+          parse_strong_prefix p input' (Seq.slice input sz (Seq.length input))
+        in
+        sz
+      else 0
+  in
+  res
+
+let gaccessor_vlgen_payload_injective_1
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { parse_vlgen_precond min max k })
+  (sl sl' : bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl' /\
+    injective_precond (parse_vlgen min max pk s) sl sl'
+  ))
+  (ensures (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl' /\
+    injective_precond (parse_vlgen min max pk s) sl sl' /\
+    gaccessor_vlgen_payload' min max pk s sl == gaccessor_vlgen_payload' min max pk s sl'
+  ))
+= parse_vlgen_unfold min max pk s sl;
+  parse_vlgen_unfold min max pk s sl' ;
+  parse_injective (parse_vlgen min max pk s) sl sl' ;
+  parse_injective pk sl sl'
+
+let gaccessor_vlgen_payload_injective_2
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { parse_vlgen_precond min max k })
+  (sl sl' : bytes)
+: Lemma
+  (ensures ((
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl' /\
+    injective_precond (parse_vlgen min max pk s) sl sl'
+  ) ==> (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl' /\
+    injective_precond (parse_vlgen min max pk s) sl sl' /\
+    gaccessor_vlgen_payload' min max pk s sl == gaccessor_vlgen_payload' min max pk s sl'
+  )))
+= Classical.move_requires (gaccessor_vlgen_payload_injective_1 min max pk s sl) sl'
+
+let gaccessor_vlgen_payload_no_lookahead_1
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { parse_vlgen_precond min max k })
+  (sl sl' : bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    (and_then_kind sk k).parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl' /\
+    no_lookahead_on_precond (parse_vlgen min max pk s) sl sl'
+  ))
+  (ensures (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_vlgen_payload' min max pk s sl == gaccessor_vlgen_payload' min max pk s sl'
+  ))
+= parse_vlgen_unfold min max pk s sl;
+  parse_vlgen_unfold min max pk s sl' ;
+  parse_strong_prefix (parse_vlgen min max pk s) sl sl' ;
+  parse_injective pk sl sl'
+
+let gaccessor_vlgen_payload_no_lookahead_2
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 ( min) ( max)))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { parse_vlgen_precond min max k })
+  (sl sl' : bytes)
+: Lemma
+  (ensures ((
+    k.parser_kind_subkind == Some ParserStrong /\
+    (and_then_kind sk k).parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl /\
+    gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl' /\
+    no_lookahead_on_precond (parse_vlgen min max pk s) sl sl'
+  ) ==> (
+    k.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_vlgen_payload' min max pk s sl == gaccessor_vlgen_payload' min max pk s sl'
+  )))
+= Classical.move_requires (gaccessor_vlgen_payload_no_lookahead_1 min max pk s sl) sl'
 
 let gaccessor_vlgen_payload
   (min: nat)
@@ -427,17 +686,11 @@ let gaccessor_vlgen_payload
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
-  (s: serializer p { parse_vlgen_precond min max k } )
+  (s: serializer p { parse_vlgen_precond min max k /\ k.parser_kind_subkind == Some ParserStrong})
 : Tot (gaccessor (parse_vlgen min max pk s) p (clens_id _))
-= fun input ->
-  parse_vlgen_unfold min max pk s input;
-  let res =
-    match parse pk input with
-    | None -> (0, 0) // dummy
-    | Some (len, sz)  ->
-      (sz, Seq.length input - sz)
-  in
-  (res <: (res : _ { gaccessor_post' (parse_vlgen min max pk s) p (clens_id _) input res } ))
+= Classical.forall_intro_2 (gaccessor_vlgen_payload_no_lookahead_2 min max pk s);
+  Classical.forall_intro_2 (gaccessor_vlgen_payload_injective_2 min max pk s);
+  gaccessor_vlgen_payload' min max pk s
 
 inline_for_extraction
 let accessor_vlgen_payload
@@ -445,21 +698,20 @@ let accessor_vlgen_payload
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#sk: parser_kind)
   (#pk: parser sk (bounded_int32 ( min) ( max)))
-  (jk: jumper pk { sk.parser_kind_subkind == Some ParserStrong } )
+  (jk: jumper pk)
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
-  (s: serializer p { parse_vlgen_precond min max k } )
+  (s: serializer p { parse_vlgen_precond min max k /\ k.parser_kind_subkind == Some ParserStrong } )
 : Tot (accessor (gaccessor_vlgen_payload min max pk s))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
   let _ =
-    slice_access_eq_inv h (gaccessor_vlgen_payload min max pk s) input pos;
+    slice_access_eq h (gaccessor_vlgen_payload min max pk s) input pos;
     valid_facts (parse_vlgen min max pk s) h input pos;
     parse_vlgen_unfold min max pk s (bytes_of_slice_from h input pos);
-    valid_facts pk h input pos;
-    parse_strong_prefix pk (bytes_of_slice_from h input pos) (bytes_of_slice_from_to h input pos (pos `U32.add` U32.uint_to_t (content_length (parse_vlgen min max pk s) h input pos)))
+    valid_facts pk h input pos
   in
   jk input pos
 

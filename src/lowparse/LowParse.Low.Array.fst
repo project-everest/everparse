@@ -59,7 +59,7 @@ let clens_array_nth
 #reset-options // re-enable non-linear arith to prove that multiplying two nats yields a nat
 
 abstract
-let array_nth_ghost'
+let array_nth_ghost''
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -73,10 +73,10 @@ let array_nth_ghost'
     i < elem_count
   })
   (input: bytes)
-: GTot (nat * nat)
+: GTot (nat)
 = if (i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low <= Seq.length input
-  then (i `Prims.op_Multiply` k.parser_kind_low, k.parser_kind_low)
-  else (0, 0) // dummy
+  then (i `Prims.op_Multiply` k.parser_kind_low)
+  else (0) // dummy
 
 #reset-options "--z3cliopt smt.arith.nl=false"
 
@@ -97,13 +97,15 @@ let array_nth_ghost_correct'
   (input: bytes)
 : Lemma
   (requires (gaccessor_pre (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) input))
-  (ensures (gaccessor_post' (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) input (array_nth_ghost' s array_byte_size elem_count i input)))
+  (ensures (gaccessor_post' (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) input (array_nth_ghost'' s array_byte_size elem_count i input)))
 = parser_kind_prop_equiv k p;
   fldata_to_array_inj s array_byte_size elem_count ();
   parse_synth_eq (parse_fldata_strong (serialize_list _ s) array_byte_size) (fldata_to_array s array_byte_size elem_count ()) input;
-  list_nth_constant_size_parser_correct p input i;
+  let input0 = Seq.slice input 0 array_byte_size in
+  parse_strong_prefix (parse_fldata_strong (serialize_list _ s) array_byte_size) input input0;
+  list_nth_constant_size_parser_correct p input0 i;
   let off = i `Prims.op_Multiply` k.parser_kind_low in
-  parse_strong_prefix p (Seq.slice input off (Seq.length input)) (Seq.slice input off (off + k.parser_kind_low))
+  parse_strong_prefix p (Seq.slice input0 off (Seq.length input0)) (Seq.slice input off (Seq.length input))
 
 abstract
 let array_nth_ghost_correct
@@ -121,8 +123,27 @@ let array_nth_ghost_correct
   })
   (input: bytes)
 : Lemma
-  (gaccessor_post' (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) input (array_nth_ghost' s array_byte_size elem_count i input))
+  (gaccessor_post' (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) input (array_nth_ghost'' s array_byte_size elem_count i input))
 = Classical.move_requires (array_nth_ghost_correct' s array_byte_size elem_count i) input
+
+abstract
+let array_nth_ghost'
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (array_byte_size: nat)
+  (elem_count: nat)
+  (i: nat {
+    fldata_array_precond p array_byte_size elem_count == true /\
+    array_byte_size < 4294967296 /\
+    elem_count < 4294967296 /\
+    i < elem_count
+  })
+: Tot (gaccessor' (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i))
+= fun input ->
+    array_nth_ghost_correct s array_byte_size elem_count i input;
+    array_nth_ghost'' s array_byte_size elem_count i input
 
 abstract
 let array_nth_ghost
@@ -139,9 +160,12 @@ let array_nth_ghost
     i < elem_count
   })
 : Tot (gaccessor (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i))
-= fun input -> ((
-  array_nth_ghost_correct s array_byte_size elem_count i input;
-  array_nth_ghost' s array_byte_size elem_count i input) <: Ghost (nat & nat) (requires True) (ensures (fun res -> gaccessor_post' (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) input res)))
+= M.distributivity_add_left i 1 k.parser_kind_low;
+  M.lemma_mult_le_right k.parser_kind_low (i + 1) elem_count;
+  assert ((i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low <= array_byte_size);
+  parser_kind_prop_equiv (parse_array_kind array_byte_size) (parse_array s array_byte_size elem_count);
+  assert (forall x . gaccessor_pre (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) x ==> (i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low <= Seq.length x);
+  array_nth_ghost' s array_byte_size elem_count i
 
 module B = LowStar.Buffer
 
@@ -437,7 +461,7 @@ let vlarray_list_length
 #push-options "--z3rlimit 16"
 
 abstract
-let vlarray_nth_ghost'
+let vlarray_nth_ghost''
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
@@ -450,10 +474,10 @@ let vlarray_nth_ghost'
     vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max == true
   })
   (input: bytes)
-: GTot (nat * nat)
+: GTot (nat)
 = if (log256' array_byte_size_max + (i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low) <= Seq.length input
-  then (log256' array_byte_size_max + (i `M.mult_nat` k.parser_kind_low), k.parser_kind_low)
-  else (0, 0) // dummy
+  then (log256' array_byte_size_max + (i `M.mult_nat` k.parser_kind_low))
+  else (0) // dummy
 
 #pop-options
 
@@ -496,7 +520,7 @@ let vlarray_nth_body
   (requires (Seq.length (Ghost.reveal input) < 4294967296 /\ gaccessor_pre 
 (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max (U32.v i)) (Ghost.reveal input)))
   (ensures (fun y ->
-    U32.v y == fst (vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max (U32.v i) (Ghost.reveal input))))
+    U32.v y == (vlarray_nth_ghost'' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max (U32.v i) (Ghost.reveal input))))
 =
       [@inline_let]
       let _ : squash ((log256' array_byte_size_max + (U32.v i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low) <= Seq.length (Ghost.reveal input)) =
@@ -505,14 +529,14 @@ let vlarray_nth_body
         let lc = Some?.v pi in
         let len = fst lc in
         let c_len = snd lc in
-        let sq = Seq.slice (Ghost.reveal input) (log256' array_byte_size_max) (Seq.length (Ghost.reveal input)) in
+        let sq = Seq.slice (Ghost.reveal input) (log256' array_byte_size_max) (log256' array_byte_size_max + U32.v len) in
         list_nth_constant_size_parser_correct p sq (U32.v i)
       in
       vlarray_nth_compute (log256' array_byte_size_max)  i (U32.uint_to_t k.parser_kind_low) (Ghost.hide (Seq.length (Ghost.reveal input)))
 
 #reset-options "--z3cliopt smt.arith.nl=false --z3refresh --using_facts_from '* -FStar.Tactics -FStar.Reflection'"
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 abstract
 let vlarray_nth_ghost_correct'
@@ -530,34 +554,16 @@ let vlarray_nth_ghost_correct'
   (input: bytes)
 : Lemma
   (requires (gaccessor_pre (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input))
-  (ensures (gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input (vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input)))
+  (ensures (gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input (vlarray_nth_ghost'' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input)))
 = parse_vlarray_eq_some array_byte_size_min array_byte_size_max s elem_count_min elem_count_max () input;
-  let input' = Seq.slice input (log256' array_byte_size_max) (Seq.length input) in
+  let sz = log256' array_byte_size_max in
+  let Some (len, _) = parse (parse_bounded_integer sz) input in
+  let input' = Seq.slice input (sz) (sz + U32.v len) in
   assert (Some? (parse (parse_list p) input'));
   list_nth_constant_size_parser_correct p input' i;
-  let off = i `Prims.op_Multiply` k.parser_kind_low in
-  let ps = parse p (Seq.slice input' off (Seq.length input')) in
-  assert (Some? ps);
-  let Some (x, consumed) = ps in
-  let f () : Lemma (consumed == k.parser_kind_low) =
-    parser_kind_prop_equiv k p;
-    M.le_antisym consumed k.parser_kind_low
-  in
-  f ();
-  let s2 = Seq.slice input' off (off + k.parser_kind_low) in
-  M.plus_minus_l off k.parser_kind_low;
-  assert (Seq.length s2 == k.parser_kind_low);
-  assert (Seq.slice (Seq.slice input' off (Seq.length input')) 0 consumed `Seq.equal` Seq.slice (Seq.slice input' off (off + k.parser_kind_low)) 0 consumed);
-  parse_strong_prefix p (Seq.slice input' off (Seq.length input')) (Seq.slice input' off (off + k.parser_kind_low));
-  let (pos, len) = vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input in
-  assert (pos == log256' array_byte_size_max + off);
-  assert (len == k.parser_kind_low);
-  Seq.slice_slice input (log256' array_byte_size_max) (Seq.length input) off (off + k.parser_kind_low);
-  M.addition_is_associative (log256' array_byte_size_max) off k.parser_kind_low;
-  assert (log256' array_byte_size_max + (off + k.parser_kind_low) == pos + len);
-  assert ((Seq.slice input pos (pos + len)) == (Seq.slice input' off (off + k.parser_kind_low)));
+  parse_strong_prefix p (Seq.slice input' (i `Prims.op_Multiply` k.parser_kind_low) (Seq.length input')) (Seq.slice input (sz + (i `Prims.op_Multiply` k.parser_kind_low)) (Seq.length input));
   assert (
-    gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input (vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input)
+    gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input (vlarray_nth_ghost'' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input)
   )
 
 #pop-options
@@ -577,8 +583,53 @@ let vlarray_nth_ghost_correct
   })
   (input: bytes)
 : Lemma
-  (gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input (vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input))
+  (gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input (vlarray_nth_ghost'' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input))
 = Classical.move_requires (vlarray_nth_ghost_correct' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i) input
+
+abstract
+let vlarray_nth_ghost'
+  (array_byte_size_min: nat)
+  (array_byte_size_max: nat)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (elem_count_min: nat)
+  (elem_count_max: nat)
+  (i: nat {
+    vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max == true
+  })
+: Tot (gaccessor' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i))
+= fun input ->
+  vlarray_nth_ghost_correct array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input;
+  vlarray_nth_ghost'' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input
+
+let vlarray_nth_bound
+  (array_byte_size_min: nat)
+  (array_byte_size_max: nat)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (elem_count_min: nat)
+  (elem_count_max: nat)
+  (i: nat {
+    vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max == true
+  })
+  (x: bytes)
+: Lemma
+  (requires (
+    gaccessor_pre (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) x
+  ))
+  (ensures (
+    log256' array_byte_size_max + (i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low <= Seq.length x
+  ))
+= parse_vlarray_eq_some array_byte_size_min array_byte_size_max s elem_count_min elem_count_max () x;
+  let sz = log256' array_byte_size_max in
+  let Some (len, _) = parse (parse_bounded_integer sz) x in
+  let input' = Seq.slice x (sz) (sz + U32.v len) in
+  assert (Some? (parse (parse_list p) input'));
+  list_nth_constant_size_parser_correct p input' i
 
 abstract
 let vlarray_nth_ghost
@@ -594,9 +645,8 @@ let vlarray_nth_ghost
     vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max == true
   })
 : Tot (gaccessor (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i))
-= fun input -> ((
-  vlarray_nth_ghost_correct array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input;
-  vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i input) <: Ghost (nat & nat) (requires True) (ensures (fun res -> gaccessor_post' (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) input res)))
+= Classical.forall_intro (Classical.move_requires (vlarray_nth_bound array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i));
+  vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i
 
 inline_for_extraction
 let vlarray_nth

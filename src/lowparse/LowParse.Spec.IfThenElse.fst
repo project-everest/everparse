@@ -139,3 +139,38 @@ let serialize_ifthenelse
 : Tot (serializer (parse_ifthenelse p))
 = bare_serialize_ifthenelse_correct s;
   bare_serialize_ifthenelse s
+
+let serialize_ifthenelse_synth_inverse'
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+  (tg: p.parse_ifthenelse_tag_t)
+  (pl: p.parse_ifthenelse_payload_t (p.parse_ifthenelse_tag_cond tg))
+: Lemma
+  (s.serialize_ifthenelse_synth_recip (p.parse_ifthenelse_synth tg pl) == (| tg, pl |))
+= let (| tg', pl' |) = s.serialize_ifthenelse_synth_recip (p.parse_ifthenelse_synth tg pl) in
+  s.serialize_ifthenelse_synth_inverse (p.parse_ifthenelse_synth tg pl);
+  p.parse_ifthenelse_synth_injective tg pl tg' pl'
+
+let parse_ifthenelse_parse_tag_payload
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+  (input: bytes)
+: Lemma
+  (requires (Some? (parse (parse_ifthenelse p) input)))
+  (ensures (
+    let Some (x, _) = parse (parse_ifthenelse p) input in
+    match parse p.parse_ifthenelse_tag_parser input with
+    | None -> False
+    | Some (tg, consumed) ->
+      let input' = Seq.slice input consumed (Seq.length input) in
+      begin match parse (dsnd (p.parse_ifthenelse_payload_parser (p.parse_ifthenelse_tag_cond tg))) input' with
+      | None -> False
+      | Some (pl, consumed') ->
+        s.serialize_ifthenelse_synth_recip x == (| tg, pl |)
+      end
+  ))
+= parse_ifthenelse_eq p input;
+  let Some (t, consumed) = parse p.parse_ifthenelse_tag_parser input in
+  let input' = Seq.slice input consumed (Seq.length input) in
+  let Some (t1, _) = parse (dsnd (p.parse_ifthenelse_payload_parser (p.parse_ifthenelse_tag_cond t))) input' in
+  serialize_ifthenelse_synth_inverse' s t t1

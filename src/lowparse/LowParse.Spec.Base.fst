@@ -537,6 +537,21 @@ let coerce_parser
   (ensures (fun _ -> True))
 = p
 
+let parse_injective
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (input1: bytes)
+  (input2: bytes)
+: Lemma
+  (requires (
+    injective_precond p input1 input2
+  ))
+  (ensures (
+    injective_postcond p input1 input2
+  ))
+= ()
+
 let parse_strong_prefix
   (#k: parser_kind)
   (#t: Type)

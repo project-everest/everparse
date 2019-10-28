@@ -340,11 +340,11 @@ let gaccessor_synth'
   (g: t2 -> GTot t1)
   (u: unit { synth_inverse f g /\ synth_inverse g f } )
   (input: bytes)
-: Ghost (nat & nat)
+: Ghost (nat)
   (requires (True))
   (ensures (fun pos' -> gaccessor_post' (parse_synth p1 f) p1 (clens_synth g f ()) input pos'))
 = parse_synth_eq p1 f input;
-  (0, Seq.length input)
+  0
 
 abstract
 let gaccessor_synth
@@ -424,32 +424,23 @@ let gaccessor_fst'
   (#k1: parser_kind)
   (#t1: Type)
   (p1: parser k1 t1)
-  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (sq: squash unit)
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
   (input: bytes)
-: Ghost (nat & nat)
+: Ghost (nat)
   (requires True)
   (ensures (fun pos' -> gaccessor_post' (p1 `nondep_then` p2) p1 (clens_fst _ _) input pos'))
 = nondep_then_eq p1 p2 input;
-  (0, (match parse p1 input with
-  | Some (_, consumed) ->
-    let _ =
-      parser_kind_prop_equiv k1 p1;
-      assert (no_lookahead_on p1 input (Seq.slice input 0 consumed));
-      assert (injective_postcond p1 input (Seq.slice input 0 consumed))
-    in
-    consumed
-  | _ -> 0 // dummy
-  ))
+  0
 
 abstract
 let gaccessor_fst
   (#k1: parser_kind)
   (#t1: Type)
   (p1: parser k1 t1)
-  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (sq: squash unit)
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
@@ -461,7 +452,7 @@ let gaccessor_fst_eq
   (#k1: parser_kind)
   (#t1: Type)
   (p1: parser k1 t1)
-  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (sq: squash unit)
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
@@ -482,7 +473,7 @@ let gaccessor_fst_then
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
-  (u: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (u: squash unit)
 : Tot (gaccessor (p1 `nondep_then` p2) p' (clens_fst _ _ `clens_compose` cl))
 = gaccessor_fst p1 u p2 `gaccessor_compose` g
 
@@ -497,7 +488,7 @@ let gaccessor_then_fst
   (#t2: Type)
   (#p2: parser k2 t2)
   (#cl: clens t0 (t1 & t2))
-  (g: gaccessor p0 (p1 `nondep_then` p2) cl { k1.parser_kind_subkind == Some ParserStrong } )
+  (g: gaccessor p0 (p1 `nondep_then` p2) cl)
 : Tot (gaccessor p0 p1 (cl `clens_compose` clens_fst _ _))
 = g `gaccessor_compose` gaccessor_fst _ () _
 
@@ -509,13 +500,45 @@ let gaccessor_snd'
   (#t2: Type)
   (p2: parser k2 t2)
   (input: bytes)
-: Ghost (nat & nat)
+: Ghost (nat)
   (requires (True))
   (ensures (fun pos' -> gaccessor_post' (p1 `nondep_then` p2) p2 (clens_snd _ _) input pos'))
 = nondep_then_eq p1 p2 input;
   match parse p1 input with
-  | None -> (0, 0) // dummy
-  | Some (_, consumed) -> (consumed, Seq.length input - consumed)
+  | None -> 0 // dummy
+  | Some (_, consumed) -> consumed
+
+let gaccessor_snd_injective
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (sl sl' : bytes)
+: Lemma
+  (requires (gaccessor_pre (p1 `nondep_then` p2) p2 (clens_snd _ _) sl /\ gaccessor_pre (p1 `nondep_then` p2) p2 (clens_snd _ _) sl /\ injective_precond (p1 `nondep_then` p2) sl sl'))
+  (ensures (gaccessor_snd' p1 p2 sl == gaccessor_snd' p1 p2 sl'))
+= nondep_then_eq p1 p2 sl;
+  nondep_then_eq p1 p2 sl';
+  parse_injective p1 sl sl'
+
+let gaccessor_snd_no_lookahead
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (sl sl' : bytes)
+: Lemma
+  (requires ((and_then_kind k1 k2).parser_kind_subkind == Some ParserStrong /\ gaccessor_pre (p1 `nondep_then` p2) p2 (clens_snd _ _) sl /\ gaccessor_pre (p1 `nondep_then` p2) p2 (clens_snd _ _) sl /\ no_lookahead_on_precond (p1 `nondep_then` p2) sl sl'))
+  (ensures (gaccessor_snd' p1 p2 sl == gaccessor_snd' p1 p2 sl'))
+= nondep_then_eq p1 p2 sl;
+  nondep_then_eq p1 p2 sl' ;
+  parse_strong_prefix (p1 `nondep_then` p2) sl sl';
+  parse_injective p1 sl sl' ;
+  parse_strong_prefix p1 sl sl'
 
 abstract
 let gaccessor_snd
@@ -526,7 +549,9 @@ let gaccessor_snd
   (#t2: Type)
   (p2: parser k2 t2)
 : Tot (gaccessor (p1 `nondep_then` p2) p2 (clens_snd _ _))
-= gaccessor_snd' p1 p2
+= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_snd_injective p1 p2 x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_snd_no_lookahead p1 p2 x));
+  gaccessor_snd' p1 p2
 
 abstract
 let gaccessor_snd_eq
@@ -566,6 +591,7 @@ let clens_fst_snd_disjoint
   clens_disjoint_l_intro (clens_snd t1 t2) (clens_fst t1 t2) (fun x1 x2 -> ())
 *)
 
+(*
 abstract
 let gaccessor_fst_snd_disjoint
   (#k1: parser_kind)
@@ -579,13 +605,14 @@ let gaccessor_fst_snd_disjoint
   (gaccessors_disjoint (gaccessor_fst p1 sq p2) (gaccessor_snd p1 p2))
 = // clens_fst_snd_disjoint t1 t2;
   gaccessors_disjoint_intro (gaccessor_fst p1 sq p2) (gaccessor_snd p1 p2) (* *) (fun x -> ())
+*)
 
 inline_for_extraction
 let accessor_fst
   (#k1: parser_kind)
   (#t1: Type)
   (p1: parser k1 t1)
-  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (sq: squash unit)
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
@@ -609,7 +636,7 @@ let accessor_fst_then
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
-  (u: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (u: squash unit)
 : Tot (accessor (gaccessor_fst_then g p2 u))
 = accessor_compose (accessor_fst p1 u p2) a u
 
@@ -626,7 +653,7 @@ let accessor_then_fst
   (#p2: parser k2 t2)
   (#cl: clens t0 (t1 & t2))
   (#g: gaccessor p0 (p1 `nondep_then` p2) cl)
-  (a: accessor g { k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_subkind == Some ParserStrong } )
+  (a: accessor g)
 : Tot (accessor (gaccessor_then_fst g))
 = accessor_compose a (accessor_fst p1 () p2) ()
 
@@ -645,13 +672,8 @@ let accessor_snd
   [@inline_let] let _ = valid_nondep_then h p1 p2 input pos in
   let res = j1 input pos in
   [@inline_let] let _ =
-    slice_access_eq_inv h (gaccessor_snd p1 p2) input pos;
-    valid_facts p1 h input pos;
-    let large = bytes_of_slice_from h input pos in
-    let small = bytes_of_slice_from_to h input pos (pos `U32.add` U32.uint_to_t (content_length (nondep_then p1 p2) h input pos)) in
-    parser_kind_prop_equiv k1 p1;
-    assert (no_lookahead_on p1 large small);
-    assert (injective_postcond p1 large small)
+    slice_access_eq h (gaccessor_snd p1 p2) input pos;
+    valid_facts p1 h input pos
   in
   res
 
@@ -668,7 +690,7 @@ let accessor_then_snd
   (#p2: parser k2 t2)
   (#cl: clens t0 (t1 & t2))
   (#g: gaccessor p0 (p1 `nondep_then` p2) cl)
-  (a: accessor g { (and_then_kind k1 k2).parser_kind_subkind == Some ParserStrong} )
+  (a: accessor g)
   (j1: jumper p1)
 : Tot (accessor (gaccessor_then_snd g))
 = accessor_compose a (accessor_snd j1 p2) ()
@@ -1000,31 +1022,35 @@ let clens_tagged_union_tag
     clens_get  = tag_of_data;
   }
 
+let gaccessor_tagged_union_tag'
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (pt: parser kt tag_t)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+: Tot (gaccessor' (parse_tagged_union pt tag_of_data p) pt (clens_tagged_union_tag tag_of_data))
+= fun input ->
+    parse_tagged_union_eq pt tag_of_data p input;
+    0
+
 let gaccessor_tagged_union_tag
   (#kt: parser_kind)
   (#tag_t: Type0)
-  (pt: parser kt tag_t { kt.parser_kind_subkind == Some ParserStrong })
+  (pt: parser kt tag_t)
   (#data_t: Type0)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
 : Tot (gaccessor (parse_tagged_union pt tag_of_data p) pt (clens_tagged_union_tag tag_of_data))
-= fun input ->
-    parse_tagged_union_eq pt tag_of_data p input;
-    (0, (match parse pt input with
-      | Some (_, consumed) ->
-        parser_kind_prop_equiv kt pt;
-        assert (no_lookahead_on pt input (Seq.slice input 0 consumed));
-        assert (injective_postcond pt input (Seq.slice input 0 consumed));
-        consumed
-      | _ -> 0 (* dummy *)
-    ))
-        
+= gaccessor_tagged_union_tag' pt tag_of_data p
+
 inline_for_extraction
 let accessor_tagged_union_tag
   (#kt: parser_kind)
   (#tag_t: Type0)
-  (pt: parser kt tag_t { kt.parser_kind_subkind == Some ParserStrong })
+  (pt: parser kt tag_t)
   (#data_t: Type0)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
@@ -1046,34 +1072,92 @@ let clens_tagged_union_payload
     clens_get  = (fun (d: data_t) -> (d <: refine_with_tag tag_of_data t));
   }
 
+let gaccessor_tagged_union_payload'
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (pt: parser kt tag_t)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (t: tag_t)
+: Tot (gaccessor' (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t))
+= fun input ->
+    parse_tagged_union_eq pt tag_of_data p input;
+    match parse pt input with
+      | Some (t', consumed_t) ->
+        consumed_t
+      | _ -> 0 (* dummy *)
+
+let gaccessor_tagged_union_payload_injective
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (pt: parser kt tag_t)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (t: tag_t)
+  (sl sl' : bytes)
+: Lemma
+  (requires (
+    gaccessor_pre (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t) sl /\
+    gaccessor_pre (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t) sl' /\
+    injective_precond (parse_tagged_union pt tag_of_data p) sl sl'
+  ))
+  (ensures (
+    gaccessor_tagged_union_payload' pt tag_of_data p t sl == gaccessor_tagged_union_payload' pt tag_of_data p t sl'
+  ))
+= parse_injective (parse_tagged_union pt tag_of_data p) sl sl' ;
+  parse_tagged_union_eq pt tag_of_data p sl ;
+  parse_tagged_union_eq pt tag_of_data p sl' ;
+  parse_injective pt sl sl'
+
+let gaccessor_tagged_union_payload_no_lookahead
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (pt: parser kt tag_t)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (t: tag_t)
+  (sl sl' : bytes)
+: Lemma
+  (requires (
+    (and_then_kind kt k).parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t) sl /\
+    gaccessor_pre (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t) sl' /\
+    no_lookahead_on_precond (parse_tagged_union pt tag_of_data p) sl sl'
+  ))
+  (ensures (
+    gaccessor_tagged_union_payload' pt tag_of_data p t sl == gaccessor_tagged_union_payload' pt tag_of_data p t sl'
+  ))
+= parse_strong_prefix (parse_tagged_union pt tag_of_data p) sl sl' ;
+  parse_tagged_union_eq pt tag_of_data p sl ;
+  parse_tagged_union_eq pt tag_of_data p sl' ;
+  parse_injective pt sl sl'
+
 let gaccessor_tagged_union_payload
   (#kt: parser_kind)
   (#tag_t: Type0)
-  (pt: parser kt tag_t { kt.parser_kind_subkind == Some ParserStrong })
+  (pt: parser kt tag_t)
   (#data_t: Type0)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
   (t: tag_t)
 : Tot (gaccessor (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t))
-= fun input ->
-    parse_tagged_union_eq pt tag_of_data p input;
-    match parse pt input with
-      | Some (t', consumed_t) ->
-        let input' = Seq.slice input consumed_t (Seq.length input) in
-        (consumed_t, (match parse (p t') input' with
-          | Some (_, consumed_t') ->
-            consumed_t'
-          | _ -> 0 (* dummy *)
-        ))
-      | _ -> (0, 0) (* dummy *)
+= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_tagged_union_payload_injective pt tag_of_data p t x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_tagged_union_payload_no_lookahead pt tag_of_data p t x));
+  gaccessor_tagged_union_payload' pt tag_of_data p t
 
 inline_for_extraction
 let accessor_tagged_union_payload
   (#kt: parser_kind)
   (#tag_t: Type0)
   (#pt: parser kt tag_t)
-  (jt: jumper pt { kt.parser_kind_subkind == Some ParserStrong })
+  (jt: jumper pt)
   (#data_t: Type0)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
@@ -1089,11 +1173,6 @@ let accessor_tagged_union_payload
   in
   let res = jt input pos in
   [@inline_let] let _ =
-    slice_access_eq_inv h (gaccessor_tagged_union_payload pt tag_of_data p t) input pos;
-    let large = bytes_of_slice_from h input pos in
-    let small = bytes_of_slice_from_to h input pos (pos `U32.add` U32.uint_to_t (content_length (parse_tagged_union pt tag_of_data p) h input pos)) in
-    parser_kind_prop_equiv kt pt;
-    assert (no_lookahead_on pt large small);
-    assert (injective_postcond pt large small)
+    slice_access_eq h (gaccessor_tagged_union_payload pt tag_of_data p t) input pos
   in
   res
