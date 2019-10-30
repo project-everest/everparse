@@ -103,6 +103,39 @@ let jump_nondep_then
   [@inline_let] let _ = valid_nondep_then h p1 p2 input pos in
   p2' input (p1' input pos)
 
+inline_for_extraction
+let serialize32_nondep_then
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1)
+  (s1' : serializer32 s1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#t2: Type0)
+  (#p2: parser k2 t2)
+  (#s2: serializer p2)
+  (s2' : serializer32 s2)
+: Tot (serializer32 (s1 `serialize_nondep_then` s2))
+= fun x #rrel #rel b pos ->
+//  [@inline_let]
+  let (x1, x2) = x in
+  serialize_nondep_then_eq s1 s2 x;
+  let h0 = HST.get () in
+  writable_weaken b (U32.v pos) (U32.v pos + Seq.length (serialize (s1 `serialize_nondep_then` s2) x)) h0 (U32.v pos) (U32.v pos + Seq.length (serialize s1 x1));
+  let len1 = s1' x1 b pos in
+  let h1 = HST.get () in
+  let pos1 = pos `U32.add` len1 in
+  B.loc_includes_loc_buffer_from_to b pos (pos `U32.add` U32.uint_to_t (Seq.length (serialize (s1 `serialize_nondep_then` s2) x))) pos pos1;
+  writable_modifies b (U32.v pos) (U32.v pos + Seq.length (serialize (s1 `serialize_nondep_then` s2) x)) h0 B.loc_none h1;
+  writable_weaken b (U32.v pos) (U32.v pos + Seq.length (serialize (s1 `serialize_nondep_then` s2) x)) h1 (U32.v pos1) (U32.v pos1 + Seq.length (serialize s2 x2));
+  let len2 = s2' x2 b pos1 in
+  let h2 = HST.get () in
+  let res = len1 `U32.add` len2 in
+    B.loc_includes_loc_buffer_from_to b pos (pos `U32.add` res) pos1 (pos1 `U32.add` len2);
+    B.loc_disjoint_loc_buffer_from_to b pos pos1 pos1 (pos1 `U32.add` len2);
+    B.modifies_buffer_from_to_elim b pos pos1 (B.loc_buffer_from_to b pos1 (pos1 `U32.add` len2)) h1 h2;
+  res
+
 let valid_synth
   (#rrel #rel: _)
   (h: HS.mem)
