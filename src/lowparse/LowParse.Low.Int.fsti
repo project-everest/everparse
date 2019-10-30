@@ -58,6 +58,15 @@ let jump_u64_le : jumper parse_u64_le =
   jump_constant_size parse_u64_le 8ul ()
 
 inline_for_extraction
+val serialize32_u8 : serializer32 serialize_u8
+
+inline_for_extraction
+val serialize32_u16 : serializer32 serialize_u16
+
+inline_for_extraction
+val serialize32_u32 : serializer32 serialize_u32
+
+inline_for_extraction
 val write_u8 : leaf_writer_strong serialize_u8
 
 inline_for_extraction
