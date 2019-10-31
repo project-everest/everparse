@@ -2611,6 +2611,55 @@ let serializer32
   )))
 
 inline_for_extraction
+let frame_serializer32
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (s32: serializer32 s)
+  (x: t)
+  (#rrel: _)
+  (#rel: _)
+  (b: B.mbuffer byte rrel rel)
+  (posl: Ghost.erased U32.t)
+  (posr: Ghost.erased U32.t)
+  (pos: U32.t)
+: HST.Stack U32.t
+  (requires (fun h ->
+    let len = Seq.length (serialize s x) in
+    let sq = B.as_seq h b in
+    B.live h b /\
+    U32.v (Ghost.reveal posl) <= U32.v pos /\
+    U32.v pos + len <= U32.v (Ghost.reveal posr) /\
+    U32.v (Ghost.reveal posr) <= B.length b /\
+    writable b (U32.v (Ghost.reveal posl)) (U32.v (Ghost.reveal posr)) h
+  ))
+  (ensures (fun h len h' ->
+    Seq.length (serialize s x) == U32.v len /\ (
+    B.modifies (B.loc_buffer_from_to b (Ghost.reveal posl) (Ghost.reveal posr)) h h' /\
+    B.live h b /\
+    Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + U32.v len) `Seq.equal` serialize s x /\
+    writable b (U32.v (Ghost.reveal posl)) (U32.v (Ghost.reveal posr)) h' /\
+    Seq.slice (B.as_seq h' b) (U32.v (Ghost.reveal posl)) (U32.v pos) `Seq.equal` Seq.slice (B.as_seq h b) (U32.v (Ghost.reveal posl)) (U32.v pos) /\
+    Seq.slice (B.as_seq h' b) (U32.v pos + U32.v len) (U32.v (Ghost.reveal posr)) `Seq.equal` Seq.slice (B.as_seq h b) (U32.v pos + U32.v len) (U32.v (Ghost.reveal posr))
+  )))
+=
+  let h0 = HST.get () in
+  writable_weaken b (U32.v (Ghost.reveal posl)) (U32.v (Ghost.reveal posr)) h0 (U32.v pos) (U32.v pos + Seq.length (serialize s x));
+  let res = s32 x b pos in
+  let h1 = HST.get () in
+  let pos' = pos `U32.add` res in
+  B.loc_includes_loc_buffer_from_to b (Ghost.reveal posl) (Ghost.reveal posr) pos pos';
+  writable_modifies b (U32.v (Ghost.reveal posl)) (U32.v (Ghost.reveal posr)) h0 B.loc_none h1;
+  B.loc_includes_loc_buffer_from_to b (Ghost.reveal posl) (Ghost.reveal posr) (Ghost.reveal posl) pos;
+  B.loc_disjoint_loc_buffer_from_to b (Ghost.reveal posl) pos pos pos';
+  B.modifies_buffer_from_to_elim b (Ghost.reveal posl) pos (B.loc_buffer_from_to b pos pos') h0 h1;
+  B.loc_includes_loc_buffer_from_to b (Ghost.reveal posl) (Ghost.reveal posr) pos' (Ghost.reveal posr);
+  B.loc_disjoint_loc_buffer_from_to b pos pos' pos' (Ghost.reveal posr);
+  B.modifies_buffer_from_to_elim b pos' (Ghost.reveal posr) (B.loc_buffer_from_to b pos pos') h0 h1;
+  res
+
+inline_for_extraction
 let leaf_writer_strong_of_serializer32
   (#k: parser_kind)
   (#t: Type)

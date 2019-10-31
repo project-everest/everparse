@@ -117,24 +117,15 @@ let serialize32_nondep_then
   (s2' : serializer32 s2)
 : Tot (serializer32 (s1 `serialize_nondep_then` s2))
 = fun x #rrel #rel b pos ->
-//  [@inline_let]
+  [@inline_let]
   let (x1, x2) = x in
   serialize_nondep_then_eq s1 s2 x;
-  let h0 = HST.get () in
-  writable_weaken b (U32.v pos) (U32.v pos + Seq.length (serialize (s1 `serialize_nondep_then` s2) x)) h0 (U32.v pos) (U32.v pos + Seq.length (serialize s1 x1));
-  let len1 = s1' x1 b pos in
-  let h1 = HST.get () in
+  let gpos' = Ghost.hide (pos `U32.add` U32.uint_to_t (Seq.length (serialize (s1 `serialize_nondep_then` s2) x))) in
+  let len1 = frame_serializer32 s1' x1 b (Ghost.hide pos) gpos' pos in
   let pos1 = pos `U32.add` len1 in
-  B.loc_includes_loc_buffer_from_to b pos (pos `U32.add` U32.uint_to_t (Seq.length (serialize (s1 `serialize_nondep_then` s2) x))) pos pos1;
-  writable_modifies b (U32.v pos) (U32.v pos + Seq.length (serialize (s1 `serialize_nondep_then` s2) x)) h0 B.loc_none h1;
-  writable_weaken b (U32.v pos) (U32.v pos + Seq.length (serialize (s1 `serialize_nondep_then` s2) x)) h1 (U32.v pos1) (U32.v pos1 + Seq.length (serialize s2 x2));
-  let len2 = s2' x2 b pos1 in
-  let h2 = HST.get () in
-  let res = len1 `U32.add` len2 in
-    B.loc_includes_loc_buffer_from_to b pos (pos `U32.add` res) pos1 (pos1 `U32.add` len2);
-    B.loc_disjoint_loc_buffer_from_to b pos pos1 pos1 (pos1 `U32.add` len2);
-    B.modifies_buffer_from_to_elim b pos pos1 (B.loc_buffer_from_to b pos1 (pos1 `U32.add` len2)) h1 h2;
-  res
+  let len2 = frame_serializer32 s2' x2 b (Ghost.hide pos) gpos' pos1 in
+  let h1 = HST.get () in
+  len1 `U32.add` len2
 
 let valid_synth
   (#rrel #rel: _)
