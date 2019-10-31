@@ -844,6 +844,18 @@ let write_filter_weak
   res
 
 inline_for_extraction
+let serialize32_filter
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (s32: serializer32 s)
+  (f: (t -> GTot bool))
+: Tot (serializer32 (serialize_filter s f))
+= fun x #rrel #rel input pos ->
+  s32 x input pos
+
+inline_for_extraction
 let read_synth
   (#k: parser_kind)
   (#t1: Type0)
@@ -919,6 +931,25 @@ let write_synth_weak
   let h = HST.get () in
   [@inline_let] let _ = valid_synth h p1 f2 input pos in
   pos'
+
+inline_for_extraction
+let serialize32_synth
+  (#k: parser_kind)
+  (#t1: Type)
+  (#p1: parser k t1)
+  (#s1: serializer p1)
+  (s1' : serializer32 s1)
+  (#t2: Type)
+  (f2: t1 -> GTot t2)
+  (g1: t2 -> GTot t1)
+  (g1' : (x2: t2) -> Tot (x1: t1 { x1 == g1 x2 } ))
+  (u: squash (synth_injective f2 /\ synth_inverse f2 g1))
+: Tot (serializer32 (serialize_synth p1 f2 s1 g1 ()))
+= fun x #rrel #rel input pos ->
+  [@inline_let] let _ =
+    serialize_synth_eq p1 f2 s1 g1 () x
+  in
+  s1' (g1' x) input pos
 
 (* Special case for vldata and maybe also sum types *)
 
