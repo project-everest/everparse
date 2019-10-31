@@ -803,6 +803,48 @@ let parse_bitsum
     #(weaken_parse_bitsum_cases_kind b f)
     (parse_bitsum_cases b f)
 
+module Seq = FStar.Seq
+
+#push-options "--z3rlimit 16"
+
+let parse_bitsum_eq
+  (#kt: parser_kind)
+  (b: bitsum)
+  (p: parser kt b.t)
+  (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
+  (x: bytes)
+: Lemma
+  (parse (parse_bitsum b p f) x == (match parse (parse_bitsum' b.b p) x with
+  | None -> None
+  | Some (tg, consumed1) ->
+    let k = bitsum'_key_of_t b.b tg in
+    begin match parse (dsnd (f k)) (Seq.slice x consumed1 (Seq.length x)) with
+    | None -> None
+    | Some (y, consumed2) ->
+      Some ((b.synth_case.f tg y <: b.data), consumed1 + consumed2)
+    end
+  ))
+= parse_tagged_union_eq
+    #(parse_filter_kind kt)
+    #(bitsum'_type b.b)
+    (parse_bitsum' b.b p)
+    #(b.data)
+    (b.tag_of_data (bitsum'_type b.b) id)
+    #(weaken_parse_bitsum_cases_kind b f)
+    (parse_bitsum_cases b f)
+    x;
+  match parse (parse_bitsum' b.b p) x with
+  | None -> ()
+  | Some (tg, consumed1) ->
+    let k = bitsum'_key_of_t b.b tg in
+    synth_bitsum_case_injective b tg;
+    parse_synth_eq
+      (dsnd (f k))
+      (b.synth_case.f tg)
+      (Seq.slice x consumed1 (Seq.length x))
+
+#pop-options
+
 let synth_bitsum_case_recip_inverse
   (b: bitsum)
   (x: bitsum'_type b.b)
