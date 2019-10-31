@@ -272,6 +272,7 @@ let rec filter_bitsum'
     else
       false
 
+[@filter_bitsum'_t_attr]
 let rec synth_bitsum'
   (#tot: pos)
   (#t: eqtype)
@@ -424,6 +425,7 @@ let rec get_bitfield_synth_bitfield_recip_other
     BF.get_bitfield_set_bitfield_other (cl.v (synth_bitfield_recip cl (lo + sz) hi q tl)) lo (lo + sz) (cl.v hd) lo' hi' ;
     get_bitfield_synth_bitfield_recip_other cl (lo + sz) hi q tl lo' hi'
 
+[@filter_bitsum'_t_attr]
 let rec synth_bitsum'_recip'
   (#tot: pos)
   (#t: eqtype)
