@@ -46,29 +46,29 @@ type bitsum'
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
+  (bitsum'_size: nat)
 =
-| BitStop of (squash (from == tot))
+| BitStop of (squash (bitsum'_size == 0))
 | BitField :
-    (sz: nat { sz > 0 /\ from + sz <= tot }) ->
-    (rest: bitsum' cl (from + sz)) ->
-    bitsum' cl from
+    (sz: nat { sz > 0 /\ sz <= bitsum'_size /\ bitsum'_size <= tot }) ->
+    (rest: bitsum' cl (bitsum'_size - sz)) ->
+    bitsum' cl bitsum'_size
 | BitSum' :
     (key: eqtype) ->
-    (key_size: nat { key_size > 0 /\ from + key_size <= tot }) -> // key_size made positive because F* cannot prove that (payload _) is a smaller term wrt. << without FStar.WellFounded.axiom1_dep
+    (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot }) -> // key_size made positive because F* cannot prove that (payload _) is a smaller term wrt. << without FStar.WellFounded.axiom1_dep
     (e: enum key (bitfield cl key_size)) ->
-    (payload: (enum_key e -> Tot (bitsum' cl (from + key_size)))) ->
-    bitsum' cl from
+    (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size)))) ->
+    bitsum' cl bitsum'_size
 
 noextract
 let rec bitsum'_type'
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
 : Tot Type0
-  (decreases (tot - from))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop _ -> unit
   | BitField sz rest -> (bitfield cl sz & bitsum'_type' rest)
@@ -80,8 +80,8 @@ let bitsum'_type
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
 : Tot Type0
 = bitsum'_type' b
 
@@ -90,9 +90,9 @@ let bitsum'_type_bitfield
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (from: nat)
-  (sz: nat { sz > 0 /\ from + sz <= tot })
-  (rest: bitsum' cl (from + sz))
+  (bitsum'_size: nat)
+  (sz: nat { sz > 0 /\ sz <= bitsum'_size /\ bitsum'_size  <= tot })
+  (rest: bitsum' cl (bitsum'_size - sz))
 : Tot Type0
 = bitfield cl sz & bitsum'_type rest
 
@@ -100,11 +100,11 @@ let bitsum'_type_bitsum'
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
+  (bitsum'_size: nat)
   (key: eqtype)
-  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
   (e: enum key (bitfield cl key_size))
-  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
 : Tot Type0
 = (k': enum_key e & bitsum'_type (payload k'))
 
@@ -118,13 +118,13 @@ let bitsum'_type_elim_BitSum'
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
+  (bitsum'_size: nat)
   (key: eqtype)
-  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
   (e: enum key (bitfield cl key_size))
-  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
   (x: bitsum'_type (BitSum' key key_size e payload))
-: Tot (bitsum'_type_bitsum' cl from key key_size e payload)
+: Tot (bitsum'_type_bitsum' cl bitsum'_size key key_size e payload)
 = x
 
 [@filter_bitsum'_t_attr]
@@ -133,12 +133,12 @@ let bitsum'_type_intro_BitSum'
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
+  (bitsum'_size: nat)
   (key: eqtype)
-  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
   (e: enum key (bitfield cl key_size))
-  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
-  (x: bitsum'_type_bitsum' cl from key key_size e payload)
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
+  (x: bitsum'_type_bitsum' cl bitsum'_size key key_size e payload)
 : Tot (bitsum'_type (BitSum' key key_size e payload))
 = x
 
@@ -148,11 +148,11 @@ let bitsum'_type_elim_BitField
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
-  (sz: nat { sz > 0 /\ from + sz <= tot })
-  (rest: bitsum' cl (from + sz))
+  (bitsum'_size: nat)
+  (sz: nat { sz > 0 /\ sz <= bitsum'_size /\ bitsum'_size <= tot })
+  (rest: bitsum' cl (bitsum'_size - sz))
   (x: bitsum'_type (BitField sz rest))
-: Tot (bitsum'_type_bitfield from sz rest)
+: Tot (bitsum'_type_bitfield bitsum'_size sz rest)
 = x
 
 [@filter_bitsum'_t_attr]
@@ -161,10 +161,10 @@ let bitsum'_type_intro_BitField
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
-  (sz: nat { sz > 0 /\ from + sz <= tot })
-  (rest: bitsum' cl (from + sz))
-  (x: bitsum'_type_bitfield from sz rest)
+  (bitsum'_size: nat)
+  (sz: nat { sz > 0 /\ sz <= bitsum'_size /\ bitsum'_size <= tot })
+  (rest: bitsum' cl (bitsum'_size - sz))
+  (x: bitsum'_type_bitfield bitsum'_size sz rest)
 : Tot (bitsum'_type (BitField sz rest))
 = x
 
@@ -173,10 +173,10 @@ let rec bitsum'_key_type
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
 : Tot eqtype
-  (decreases (tot - from))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop _ -> unit
   | BitField sz rest -> bitsum'_key_type rest
@@ -189,11 +189,11 @@ let bitsum'_key_type_elim_BitSum'
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
+  (bitsum'_size: nat)
   (key: eqtype)
-  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
   (e: enum key (bitfield cl key_size))
-  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
   (x: bitsum'_key_type (BitSum' key key_size e payload))
 : Tot (k': enum_key e & bitsum'_key_type (payload k'))
 = x
@@ -204,11 +204,11 @@ let bitsum'_key_type_intro_BitSum'
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
+  (bitsum'_size: nat)
   (key: eqtype)
-  (key_size: nat { key_size > 0 /\ from + key_size <= tot })
+  (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
   (e: enum key (bitfield cl key_size))
-  (payload: (enum_key e -> Tot (bitsum' cl (from + key_size))))
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size)))) 
   (x: (k': enum_key e & bitsum'_key_type (payload k')))
 : Tot (bitsum'_key_type (BitSum' key key_size e payload))
 = x
@@ -231,9 +231,9 @@ let bitsum'_key_type_intro_BitField
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
-  (sz: nat { sz > 0 /\ from + sz <= tot })
-  (rest: bitsum' cl (from + sz))
+  (bitsum'_size: nat)
+  (sz: nat { sz > 0 /\ sz <= bitsum'_size /\ bitsum'_size <= tot })
+  (rest: bitsum' cl (bitsum'_size - sz))
   (x: bitsum'_key_type rest)
 : Tot (bitsum'_key_type (BitField sz rest))
 = coerce (bitsum'_key_type (BitField sz rest)) x
@@ -244,9 +244,9 @@ let bitsum'_key_type_elim_BitField
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-  (from: nat)
-  (sz: nat { sz > 0 /\ from + sz <= tot })
-  (rest: bitsum' cl (from + sz))
+  (bitsum'_size: nat)
+  (sz: nat { sz > 0 /\ sz <= bitsum'_size /\ bitsum'_size <= tot })
+  (rest: bitsum' cl (bitsum'_size - sz))
   (x: bitsum'_key_type (BitField sz rest))
 : Tot (bitsum'_key_type rest)
 = coerce (bitsum'_key_type rest) x
@@ -255,16 +255,16 @@ let rec filter_bitsum'
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
   (x: t)
 : Tot bool
-  (decreases (tot - from))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop _ -> true
   | BitField _ rest -> filter_bitsum' rest x
   | BitSum' key key_size e payload ->
-    let f : bitfield cl key_size = cl.get_bitfield x from (from + key_size) in
+    let f : bitfield cl key_size = cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size in
     if list_mem f (list_map snd e)
     then
       let k = enum_key_of_repr e f in
@@ -277,21 +277,21 @@ let rec synth_bitsum'
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
   (x: parse_filter_refine (filter_bitsum' b))
 : Tot (bitsum'_type b)
-  (decreases (tot - from))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop _ -> ()
   | BitField sz rest ->
-    bitsum'_type_intro_BitField cl from sz rest (cl.get_bitfield x from (from + sz), synth_bitsum' rest x)
+    bitsum'_type_intro_BitField cl bitsum'_size sz rest (cl.get_bitfield x (bitsum'_size - sz) bitsum'_size, synth_bitsum' rest x)
   | BitSum' key key_size e payload ->
-    let f : bitfield cl key_size = cl.get_bitfield x from (from + key_size) in
+    let f : bitfield cl key_size = cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size in
     let k : enum_key e = enum_key_of_repr e f in
     let z : bitsum'_type (payload k) = synth_bitsum' (payload k) x in
     let p : (k' : enum_key e & bitsum'_type (payload k')) = (| k, z |) in
-    bitsum'_type_intro_BitSum' cl from key key_size e payload p
+    bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload p
   
 module BF = LowParse.BitFields
 
@@ -301,34 +301,34 @@ let rec synth_bitsum'_injective'
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
   (x y: parse_filter_refine (filter_bitsum' b))
 : Lemma
   (requires (synth_bitsum' b x == synth_bitsum' b y))
-  (ensures (cl.get_bitfield x from tot == cl.get_bitfield y from tot))
-  (decreases (tot - from))
+  (ensures (cl.get_bitfield x 0 bitsum'_size == cl.get_bitfield y 0 bitsum'_size))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop h ->
-    BF.get_bitfield_empty (cl.v x) tot;
-    BF.get_bitfield_empty (cl.v y) tot;
-    assert (cl.uint_to_t (cl.v (cl.get_bitfield x from tot)) == cl.uint_to_t (cl.v (cl.get_bitfield y from tot)))
+    BF.get_bitfield_empty (cl.v x) 0;
+    BF.get_bitfield_empty (cl.v y) 0;
+    assert (cl.uint_to_t (cl.v (cl.get_bitfield x 0 bitsum'_size)) == cl.uint_to_t (cl.v (cl.get_bitfield y 0 bitsum'_size)))
   | BitField sz rest ->
-    assert (cl.v (cl.get_bitfield x from (from + sz)) == cl.v (cl.get_bitfield y from (from + sz)));
+    assert (cl.v (cl.get_bitfield x (bitsum'_size - sz) (bitsum'_size)) == cl.v (cl.get_bitfield y (bitsum'_size - sz) (bitsum'_size)));
     synth_bitsum'_injective' rest x y;
-    assert (cl.v (cl.get_bitfield x (from + sz) tot) == cl.v (cl.get_bitfield y (from + sz) tot));
-    BF.get_bitfield_partition (cl.v x) (cl.v y) from tot [from + sz];
-    assert (cl.uint_to_t (cl.v (cl.get_bitfield x from tot)) == cl.uint_to_t (cl.v (cl.get_bitfield y from tot)))
+    assert (cl.v (cl.get_bitfield x 0 (bitsum'_size - sz)) == cl.v (cl.get_bitfield y 0 (bitsum'_size - sz)));
+    BF.get_bitfield_partition (cl.v x) (cl.v y) 0 bitsum'_size [bitsum'_size - sz];
+    assert (cl.uint_to_t (cl.v (cl.get_bitfield x 0 bitsum'_size)) == cl.uint_to_t (cl.v (cl.get_bitfield y 0 bitsum'_size)))
   | BitSum' key key_size e payload ->
-    let f : bitfield cl key_size = cl.get_bitfield x (from) (from + key_size) in
-    let g : bitfield cl key_size = cl.get_bitfield y (from) (from + key_size) in
+    let f : bitfield cl key_size = cl.get_bitfield x (bitsum'_size - key_size) (bitsum'_size) in
+    let g : bitfield cl key_size = cl.get_bitfield y (bitsum'_size - key_size) (bitsum'_size) in
     let k = enum_key_of_repr e f in
     enum_repr_of_key_of_repr e f;
     enum_repr_of_key_of_repr e g;
     assert (cl.v f == cl.v g);
     synth_bitsum'_injective' (payload k) x y;
-    BF.get_bitfield_partition (cl.v x) (cl.v y) from tot [from + key_size];
-    assert (cl.uint_to_t (cl.v (cl.get_bitfield x from tot)) == cl.uint_to_t (cl.v (cl.get_bitfield y from tot)))
+    BF.get_bitfield_partition (cl.v x) (cl.v y) 0 bitsum'_size [bitsum'_size - key_size];
+    assert (cl.uint_to_t (cl.v (cl.get_bitfield x 0 bitsum'_size)) == cl.uint_to_t (cl.v (cl.get_bitfield y 0 bitsum'_size)))
 
 #pop-options
 
@@ -336,7 +336,7 @@ let synth_bitsum'_injective
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (b: bitsum' cl 0)
+  (b: bitsum' cl tot)
 : Lemma
   (synth_injective (synth_bitsum' b))
 //  [SMTPat (synth_injective (synth_bitsum' b))]
@@ -355,41 +355,41 @@ let rec synth_bitsum'_ext
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
   (x y: parse_filter_refine (filter_bitsum' b))
 : Lemma
-  (requires (BF.get_bitfield (cl.v x) from tot == BF.get_bitfield (cl.v y) from tot))
+  (requires (BF.get_bitfield (cl.v x) 0 bitsum'_size == BF.get_bitfield (cl.v y) 0 bitsum'_size))
   (ensures (synth_bitsum' b x == synth_bitsum' b y))
-  (decreases (tot - from))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop _ -> ()
   | BitField sz rest ->
-    let f : bitfield cl sz = cl.get_bitfield x from (from + sz) in
-    let g : bitfield cl sz = cl.get_bitfield y from (from + sz) in
-    BF.get_bitfield_get_bitfield (cl.v x) from tot 0 sz;
-    BF.get_bitfield_get_bitfield (cl.v y) from tot 0 sz;
+    let f : bitfield cl sz = cl.get_bitfield x (bitsum'_size - sz) (bitsum'_size) in
+    let g : bitfield cl sz = cl.get_bitfield y (bitsum'_size - sz) (bitsum'_size) in
+    BF.get_bitfield_get_bitfield (cl.v x) 0 bitsum'_size (bitsum'_size - sz) bitsum'_size;
+    BF.get_bitfield_get_bitfield (cl.v y) 0 bitsum'_size (bitsum'_size - sz) bitsum'_size;
     assert (cl.uint_to_t (cl.v f) == cl.uint_to_t (cl.v g));
     assert (f == g);
-    BF.get_bitfield_get_bitfield (cl.v x) from tot sz (tot - from);
-    BF.get_bitfield_get_bitfield (cl.v y) from tot sz (tot - from);
+    BF.get_bitfield_get_bitfield (cl.v x) 0 bitsum'_size 0 (bitsum'_size - sz);
+    BF.get_bitfield_get_bitfield (cl.v y) 0 bitsum'_size 0 (bitsum'_size - sz);
     synth_bitsum'_ext rest x y
   | BitSum' key key_size e payload ->
-    let f : bitfield cl key_size = cl.get_bitfield x (from) (from + key_size) in
-    let g : bitfield cl key_size = cl.get_bitfield y (from) (from + key_size) in
-    BF.get_bitfield_get_bitfield (cl.v x) from tot 0 (key_size);
-    BF.get_bitfield_get_bitfield (cl.v y) from tot 0 (key_size);
+    let f : bitfield cl key_size = cl.get_bitfield x (bitsum'_size - key_size) (bitsum'_size) in
+    let g : bitfield cl key_size = cl.get_bitfield y (bitsum'_size - key_size) (bitsum'_size) in
+    BF.get_bitfield_get_bitfield (cl.v x) 0 bitsum'_size (bitsum'_size - key_size) bitsum'_size;
+    BF.get_bitfield_get_bitfield (cl.v y) 0 bitsum'_size (bitsum'_size - key_size) bitsum'_size;
     assert (cl.uint_to_t (cl.v f) == cl.uint_to_t (cl.v g));
     assert (f == g);
     let k = enum_key_of_repr e f in
     let u = synth_bitsum' (payload k) x in
     let v = synth_bitsum' (payload k) y in
-    assert (synth_bitsum' (BitSum' key key_size e payload) x == bitsum'_type_intro_BitSum' cl from key key_size e payload (| k, u |));
-    assert (synth_bitsum' (BitSum' key key_size e payload) y == bitsum'_type_intro_BitSum' cl from key key_size e payload (| k, v |));
-    BF.get_bitfield_get_bitfield (cl.v x) from tot (key_size) (tot - from);
-    assert (BF.get_bitfield (cl.v x) (from + key_size) tot == BF.get_bitfield (BF.get_bitfield (cl.v x) from tot) (key_size) (tot - from));
-    BF.get_bitfield_get_bitfield (cl.v y) from tot (key_size) (tot - from);
-    assert (BF.get_bitfield (cl.v y) (from + key_size) tot == BF.get_bitfield (BF.get_bitfield (cl.v y) from tot) (key_size) (tot - from));
+    assert (synth_bitsum' (BitSum' key key_size e payload) x == bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, u |));
+    assert (synth_bitsum' (BitSum' key key_size e payload) y == bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, v |));
+    BF.get_bitfield_get_bitfield (cl.v x) 0 bitsum'_size 0 (bitsum'_size - key_size);
+    assert (BF.get_bitfield (cl.v x) 0 (bitsum'_size - key_size) == BF.get_bitfield (BF.get_bitfield (cl.v x) 0 bitsum'_size) (0) (bitsum'_size - key_size));
+    BF.get_bitfield_get_bitfield (cl.v y) 0 bitsum'_size 0 (bitsum'_size - key_size);
+    assert (BF.get_bitfield (cl.v y) 0 (bitsum'_size - key_size) == BF.get_bitfield (BF.get_bitfield (cl.v y) 0 bitsum'_size) (0) (bitsum'_size - key_size));
     synth_bitsum'_ext (payload k) x y;
     assert (u == v)
 
@@ -399,51 +399,32 @@ let parse_bitsum'
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (b: bitsum' cl 0)
+  (b: bitsum' cl tot)
   (#k: parser_kind)
   (p: parser k t)
 : Tot (parser (parse_filter_kind k) (bitsum'_type b))
 = synth_bitsum'_injective b;
   (p `parse_filter` filter_bitsum' b) `parse_synth` synth_bitsum' b
 
-let rec get_bitfield_synth_bitfield_recip_other
-  (#tot: pos) (#t: Type0) (cl: uint_t tot t)
-  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l })
-  (x: bitfields cl lo hi l)
-  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot /\ (hi' <= lo \/ hi <= lo') })
-: Lemma
-  (ensures (cl.v (cl.get_bitfield (synth_bitfield_recip cl lo hi l x) lo' hi') == 0))
-  (decreases l)
-= match l with
-  | [] ->
-    BF.get_bitfield_zero tot lo' hi'
-  | [_] ->
-    BF.get_bitfield_set_bitfield_other 0 lo hi (cl.v x) lo' hi' ;
-    BF.get_bitfield_zero tot lo' hi'
-  | sz :: q ->
-    let (hd, tl) = x <: (bitfield cl sz & bitfields cl (lo + sz) hi q) in
-    BF.get_bitfield_set_bitfield_other (cl.v (synth_bitfield_recip cl (lo + sz) hi q tl)) lo (lo + sz) (cl.v hd) lo' hi' ;
-    get_bitfield_synth_bitfield_recip_other cl (lo + sz) hi q tl lo' hi'
-
 [@filter_bitsum'_t_attr]
 let rec synth_bitsum'_recip'
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
   (x: bitsum'_type b)
 : Tot t
-  (decreases (tot - from))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop _ -> cl.uint_to_t 0
   | BitField sz rest ->
-    let (hd, tl) = bitsum'_type_elim_BitField cl from sz rest x in
-    cl.set_bitfield (synth_bitsum'_recip' rest tl) from (from + sz) hd
+    let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest x in
+    cl.set_bitfield (synth_bitsum'_recip' rest tl) (bitsum'_size - sz) (bitsum'_size) hd
   | BitSum' key key_size e payload ->
-    let (| k, tl |) = bitsum'_type_elim_BitSum' cl from key key_size e payload x in
+    let (| k, tl |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload x in
     let y1 = synth_bitsum'_recip' (payload k) tl in
-    let y2 = cl.set_bitfield y1 (from) (from + key_size) (enum_repr_of_key e k) in
+    let y2 = cl.set_bitfield y1 (bitsum'_size - key_size) bitsum'_size (enum_repr_of_key e k) in
     y2
 
 #push-options "--z3rlimit 16"
@@ -452,24 +433,24 @@ let rec get_bitfield_synth_bitsum'_recip'_other
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
   (x: bitsum'_type b)
   (lo: nat)
-  (hi: nat { lo <= hi /\ hi <= from /\ from <= tot })
+  (hi: nat { bitsum'_size <= lo /\ lo <= hi /\ hi <= tot })
 : Lemma
   (ensures (cl.v (cl.get_bitfield (synth_bitsum'_recip' b x) lo hi) == 0))
-  (decreases (tot - from))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop h ->
     BF.get_bitfield_zero tot lo hi
   | BitField sz rest ->
-    let (hd, tl) = bitsum'_type_elim_BitField cl from sz rest x in
-    BF.get_bitfield_set_bitfield_other (cl.v (synth_bitsum'_recip' rest tl)) from (from + sz) (cl.v hd) lo hi;
+    let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest x in
+    BF.get_bitfield_set_bitfield_other (cl.v (synth_bitsum'_recip' rest tl)) (bitsum'_size - sz) bitsum'_size (cl.v hd) lo hi;
     get_bitfield_synth_bitsum'_recip'_other rest tl lo hi
   | BitSum' key key_size e payload ->
-    let (| k, tl |) = bitsum'_type_elim_BitSum' cl from key key_size e payload x in
-    BF.get_bitfield_set_bitfield_other (cl.v (synth_bitsum'_recip' (payload k) tl)) from (from + key_size) (cl.v (enum_repr_of_key e k)) lo hi;
+    let (| k, tl |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload x in
+    BF.get_bitfield_set_bitfield_other (cl.v (synth_bitsum'_recip' (payload k) tl)) (bitsum'_size - key_size) bitsum'_size (cl.v (enum_repr_of_key e k)) lo hi;
     get_bitfield_synth_bitsum'_recip'_other (payload k) tl lo hi
 
 #pop-options
@@ -480,49 +461,51 @@ let rec filter_bitsum'_ext
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
   (x y: t)
 : Lemma
-  (requires (BF.get_bitfield (cl.v x) from tot == BF.get_bitfield (cl.v y) from tot))
+  (requires (BF.get_bitfield (cl.v x) 0 bitsum'_size == BF.get_bitfield (cl.v y) 0 bitsum'_size))
   (ensures (filter_bitsum' b x == filter_bitsum' b y))
-  (decreases (tot - from))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop _ -> ()
   | BitField sz rest ->
-    BF.get_bitfield_get_bitfield (cl.v x) from tot sz (tot - from);
-    BF.get_bitfield_get_bitfield (cl.v y) from tot sz (tot - from);
+    BF.get_bitfield_get_bitfield (cl.v x) 0 bitsum'_size 0 (bitsum'_size - sz);
+    BF.get_bitfield_get_bitfield (cl.v y) 0 bitsum'_size 0 (bitsum'_size - sz);
     filter_bitsum'_ext rest x y
   | BitSum' key key_size e payload ->
-    let f : bitfield cl key_size = cl.get_bitfield x (from) (from + key_size) in
-    let g : bitfield cl key_size = cl.get_bitfield y (from) (from + key_size) in
-    BF.get_bitfield_get_bitfield (cl.v x) from tot 0 (key_size);
-    BF.get_bitfield_get_bitfield (cl.v y) from tot 0 (key_size);
-    assert (BF.get_bitfield (cl.v x) (from) (from + key_size) == BF.get_bitfield (cl.v y) (from) (from + key_size));
-    assert (cl.v f == BF.get_bitfield (cl.v x) (from) (from + key_size));
-    assert (cl.v g == BF.get_bitfield (cl.v y) (from) (from + key_size));
+    let f : bitfield cl key_size = cl.get_bitfield x (bitsum'_size - key_size) (bitsum'_size) in
+    let g : bitfield cl key_size = cl.get_bitfield y (bitsum'_size - key_size) (bitsum'_size) in
+    BF.get_bitfield_get_bitfield (cl.v x) 0 bitsum'_size (bitsum'_size - key_size) bitsum'_size;
+    BF.get_bitfield_get_bitfield (cl.v y) 0 bitsum'_size (bitsum'_size - key_size) bitsum'_size;
+    assert (BF.get_bitfield (cl.v x) (bitsum'_size - key_size) (bitsum'_size) == BF.get_bitfield (cl.v y) (bitsum'_size - key_size) (bitsum'_size));
+    assert (cl.v f == BF.get_bitfield (cl.v x) (bitsum'_size - key_size) (bitsum'_size));
+    assert (cl.v g == BF.get_bitfield (cl.v y) (bitsum'_size - key_size) (bitsum'_size));
     assert (cl.uint_to_t (cl.v f) == cl.uint_to_t (cl.v g));
     assert (f == g);
     if list_mem f (list_map snd e)
     then begin
       let k = enum_key_of_repr e f in
-      BF.get_bitfield_get_bitfield (cl.v x) from tot (key_size) (tot - from);
-      BF.get_bitfield_get_bitfield (cl.v y) from tot (key_size) (tot - from);
+      BF.get_bitfield_get_bitfield (cl.v x) 0 bitsum'_size 0 (bitsum'_size - key_size);
+      BF.get_bitfield_get_bitfield (cl.v y) 0 bitsum'_size 0 (bitsum'_size - key_size);
       filter_bitsum'_ext (payload k) x y
     end else ()
 
 #pop-options
 
+(* HERE *)
+
 let rec synth_bitsum'_recip'_prop
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)
-  (#from: nat)
-  (b: bitsum' cl from)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
   (x: bitsum'_type b)
 : Lemma
   (ensures (filter_bitsum' b (synth_bitsum'_recip' b x) == true))
-  (decreases (tot - from))
+  (decreases (bitsum'_size))
 = match b with
   | BitStop _ -> ()
   | BitField sz rest ->
