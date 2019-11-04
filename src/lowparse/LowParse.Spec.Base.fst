@@ -711,6 +711,16 @@ let serialize
 : GTot bytes
 = s x
 
+let parse_serialize
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: t)
+: Lemma
+  (parse p (serialize s x) == Some (x, Seq.length (serialize s x)))
+= ()
+
 let serializer_unique
   (#k: parser_kind)
   (#t: Type0)
