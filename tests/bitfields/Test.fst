@@ -76,7 +76,7 @@ let rrpp : bitsum' uint8 4 =
 [@filter_bitsum'_t_attr]
 inline_for_extraction
 noextract
-let header_byte : bitsum' uint8 0 =
+let header_byte : bitsum' uint8 8 =
   BitSum' _ _ header_form (function
     | Short ->
       BitSum' _ _ fixed_bit (fun _ ->
