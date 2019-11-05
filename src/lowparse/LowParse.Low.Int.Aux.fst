@@ -70,6 +70,10 @@ let read_u64 : leaf_reader parse_u64 =
       Cast.uint8_to_uint64 r7
     )))))))))))))))
 
+#pop-options
+
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 let read_u64_le : leaf_reader parse_u64_le =
   decode_u64_le_injective ();
