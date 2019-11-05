@@ -261,7 +261,8 @@ let serialize_u64 : serializer parse_u64 =
 
 #reset-options
 
-#push-options "--max_fuel 9 --initial_fuel 9 --z3rlimit 1024"
+#push-options "--max_fuel 10 --initial_fuel 10 --z3rlimit 2048"
+#restart-solver
 
 let serialize_u64_eq
   (x: U64.t)
@@ -386,7 +387,8 @@ let serialize_u64_le : serializer parse_u64_le =
 
 #reset-options
 
-#push-options "--max_fuel 9 --initial_fuel 9 --z3rlimit 512"
+#push-options "--max_fuel 10 --initial_fuel 10 --z3rlimit 1024"
+#restart-solver
 
 let serialize_u64_le_eq
   (x: U64.t)
