@@ -1,6 +1,7 @@
 module LowParse.Spec.BitFields
 include LowParse.Spec.Combinators
 include LowParse.Spec.Int
+include LowParse.BitFields
 
 module BF = LowParse.BitFields
 
@@ -24,35 +25,6 @@ let rec bounds_of_widths (lo: nat) (hi: nat { lo <= hi }) (l: list nat) : Pure (
   | sz :: q -> (lo + sz) :: bounds_of_widths (lo + sz) hi q
 
 module U = FStar.UInt
-
-inline_for_extraction
-noextract
-noeq
-type uint_t (tot: pos) (t: Type0) = {
-  v: (t -> Tot (U.uint_t tot));
-  uint_to_t: (U.uint_t tot -> Tot t);
-  v_uint_to_t: ((x: U.uint_t tot) -> Lemma (v (uint_to_t x) == x));
-  uint_to_t_v: ((x: t) -> Lemma (uint_to_t (v x) == x));
-  get_bitfield: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> Tot (y: t { v y == BF.get_bitfield (v x) lo hi }));
-  set_bitfield: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> (z: t { v z < pow2 (hi - lo) }) -> Tot (y : t { v y == BF.set_bitfield (v x) lo hi (v z)}));
-  logor: ((x: t) -> (y: t) -> Tot (z: t { v z == v x `U.logor` v y }));
-  bitfield_eq_lhs: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> Tot t);
-  bitfield_eq_rhs: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> (z: t { v z < pow2 (hi - lo) }) -> Tot (y: t { bitfield_eq_lhs x lo hi == y <==> (get_bitfield x lo hi <: t) == z }));
-}
-
-let uint_t_v_uint_to_t #tot #t (cl: uint_t tot t) (x: U.uint_t tot) : Lemma
-  (cl.v (cl.uint_to_t x) == x)
-  [SMTPat (cl.v (cl.uint_to_t x))]
-= cl.v_uint_to_t x
-
-let uint_t_uint_to_t_v #tot #t (cl: uint_t tot t) (x: t) : Lemma
-  (cl.uint_to_t (cl.v x) == x)
-  [SMTPat (cl.uint_to_t (cl.v x))]
-= cl.uint_to_t_v x
-
-inline_for_extraction
-let bitfield (#tot: pos) (#t: Type0) (cl: uint_t tot t) (sz: nat { sz <= tot }) : Tot Type0 =
-  (x: t { cl.v x < pow2 sz })
 
 let uint_get_bitfield_set_bitfield_same
   #tot #t (cl: uint_t tot t)
@@ -195,68 +167,6 @@ let serialize_bitfield
     (synth_bitfield_recip cl 0 tot l)
     ()
 
-module U32 = FStar.UInt32
-module U64 = FStar.UInt64
-
-inline_for_extraction
-noextract
-let uint64 : uint_t 64 U64.t = {
-  v = U64.v;
-  uint_to_t = U64.uint_to_t;
-  v_uint_to_t = (fun _ -> ());
-  uint_to_t_v = (fun _ -> ());
-  get_bitfield = (fun x lo hi -> BF.get_bitfield64 x lo hi);
-  set_bitfield = (fun x lo hi z -> BF.set_bitfield64 x lo hi z);
-  logor = (fun x y -> U64.logor x y);
-  bitfield_eq_lhs = (fun x lo hi -> BF.bitfield_eq64_lhs x lo hi);
-  bitfield_eq_rhs = (fun x lo hi z -> BF.bitfield_eq64_rhs x lo hi z);
-}
-
-inline_for_extraction
-noextract
-let uint32 : uint_t 32 U32.t = {
-  v = U32.v;
-  uint_to_t = U32.uint_to_t;
-  v_uint_to_t = (fun _ -> ());
-  uint_to_t_v = (fun _ -> ());
-  get_bitfield = (fun x lo hi -> BF.get_bitfield32 x lo hi);
-  set_bitfield = (fun x lo hi z -> BF.set_bitfield32 x lo hi z);
-  logor = (fun x y -> U32.logor x y);
-  bitfield_eq_lhs = (fun x lo hi -> BF.bitfield_eq32_lhs x lo hi);
-  bitfield_eq_rhs = (fun x lo hi z -> BF.bitfield_eq32_rhs x lo hi z);
-}
-
-module U16 = FStar.UInt16
-module U8 = FStar.UInt8
-
-inline_for_extraction
-noextract
-let uint16 : uint_t 16 U16.t = {
-  v = U16.v;
-  uint_to_t = U16.uint_to_t;
-  v_uint_to_t = (fun _ -> ());
-  uint_to_t_v = (fun _ -> ());
-  get_bitfield = (fun x lo hi -> BF.get_bitfield16 x lo hi);
-  set_bitfield = (fun x lo hi z -> BF.set_bitfield16 x lo hi z);
-  logor = (fun x y -> U16.logor x y);
-  bitfield_eq_lhs = (fun x lo hi -> BF.bitfield_eq16_lhs x lo hi);
-  bitfield_eq_rhs = (fun x lo hi z -> BF.bitfield_eq16_rhs x lo hi z);
-}
-
-inline_for_extraction
-noextract
-let uint8 : uint_t 8 U8.t = {
-  v = U8.v;
-  uint_to_t = U8.uint_to_t;
-  v_uint_to_t = (fun _ -> ());
-  uint_to_t_v = (fun _ -> ());
-  get_bitfield = (fun x lo hi -> BF.get_bitfield8 x lo hi);
-  set_bitfield = (fun x lo hi z -> BF.set_bitfield8 x lo hi z);
-  logor = (fun x y -> U8.logor x y);
-  bitfield_eq_lhs = (fun x lo hi -> BF.bitfield_eq8_lhs x lo hi);
-  bitfield_eq_rhs = (fun x lo hi z -> BF.bitfield_eq8_rhs x lo hi z);
-}
-
 let parse_bitfield64 (l: list nat { valid_bitfield_widths 0 64 l }) : Tot (parser parse_u64_kind (bitfields uint64 0 64 l)) =
   parse_bitfield parse_u64 uint64 l
 
@@ -366,3 +276,42 @@ let mk_bitfields_destr
   (l: list nat { valid_bitfield_widths lo hi l })
 : Tot (bitfields_destr_t cl lo hi l)
 = norm [delta_only [`%mk_bitfields_destr'; `%bitfields_destr_nil; `%bitfields_destr_cons_nil; `%bitfields_destr_cons]; iota; zeta; primops] (mk_bitfields_destr' cl lo hi l)
+
+module L = FStar.List.Tot
+
+let rec valid_bitfield_widths_inj
+  (lo: nat)
+  (hi1: nat { lo <= hi1 })
+  (hi2: nat { lo <= hi2 })
+  (l: list nat)
+: Lemma
+  (requires (valid_bitfield_widths lo hi1 l /\ valid_bitfield_widths lo hi2 l))
+  (ensures (hi1 == hi2))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | sz :: q -> valid_bitfield_widths_inj (lo + sz) hi1 hi2 q
+
+let rec valid_bitfield_widths_prefix
+  (lo: nat)
+  (hi: nat { lo <= hi })
+  (prefix: list nat)
+  (suffix: list nat { valid_bitfield_widths lo hi (prefix `L.append` suffix) })
+: Tot (mi: nat { lo <= mi /\ mi <= hi /\ valid_bitfield_widths lo mi prefix })
+  (decreases prefix)
+= match prefix with
+  | [] -> lo
+  | sz :: q -> valid_bitfield_widths_prefix (lo + sz) hi q suffix
+
+let rec valid_bitfield_widths_append
+  (lo: nat)
+  (mi: nat { lo <= mi })
+  (hi: nat { mi <= hi })
+  (prefix: list nat { valid_bitfield_widths lo mi prefix })
+  (suffix: list nat { valid_bitfield_widths mi hi suffix })
+: Lemma
+  (ensures (valid_bitfield_widths lo hi (prefix `L.append` suffix)))
+  (decreases prefix)
+= match prefix with
+  | [] -> ()
+  | sz :: q -> valid_bitfield_widths_append (lo + sz) mi hi q suffix

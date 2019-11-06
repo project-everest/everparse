@@ -1,45 +1,8 @@
 module LowParse.Spec.BitSum
-include LowParse.Spec.Sum
-include LowParse.Spec.BitFields
+include LowParse.Spec.Enum
+include LowParse.BitFields
 
 module L = FStar.List.Tot
-
-let rec valid_bitfield_widths_inj
-  (lo: nat)
-  (hi1: nat { lo <= hi1 })
-  (hi2: nat { lo <= hi2 })
-  (l: list nat)
-: Lemma
-  (requires (valid_bitfield_widths lo hi1 l /\ valid_bitfield_widths lo hi2 l))
-  (ensures (hi1 == hi2))
-  (decreases l)
-= match l with
-  | [] -> ()
-  | sz :: q -> valid_bitfield_widths_inj (lo + sz) hi1 hi2 q
-
-let rec valid_bitfield_widths_prefix
-  (lo: nat)
-  (hi: nat { lo <= hi })
-  (prefix: list nat)
-  (suffix: list nat { valid_bitfield_widths lo hi (prefix `L.append` suffix) })
-: Tot (mi: nat { lo <= mi /\ mi <= hi /\ valid_bitfield_widths lo mi prefix })
-  (decreases prefix)
-= match prefix with
-  | [] -> lo
-  | sz :: q -> valid_bitfield_widths_prefix (lo + sz) hi q suffix
-
-let rec valid_bitfield_widths_append
-  (lo: nat)
-  (mi: nat { lo <= mi })
-  (hi: nat { mi <= hi })
-  (prefix: list nat { valid_bitfield_widths lo mi prefix })
-  (suffix: list nat { valid_bitfield_widths mi hi suffix })
-: Lemma
-  (ensures (valid_bitfield_widths lo hi (prefix `L.append` suffix)))
-  (decreases prefix)
-= match prefix with
-  | [] -> ()
-  | sz :: q -> valid_bitfield_widths_append (lo + sz) mi hi q suffix
 
 noeq
 type bitsum'
@@ -896,6 +859,21 @@ let serialize_bitsum
     #(parse_bitsum_cases b f)
     (serialize_bitsum_cases b #f g)
 
+let serialize_bitsum_alt
+  (#kt: parser_kind)
+  (b: bitsum)
+  (#p: parser kt b.t)
+  (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
+  (#f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+  (g: (x: bitsum'_key_type b.b) -> Tot (serializer (dsnd (f x))))
+  (x: b.data)
+: GTot bytes
+= 
+    let tg = b.tag_of_data (bitsum'_type b.b) id x in
+    let k = bitsum'_key_of_t b.b tg in
+    let payload = b.synth_case.g tg x in
+    serialize s (synth_bitsum'_recip b.b tg) `Seq.append` serialize (g k) payload
+
 let serialize_bitsum_eq
   (#kt: parser_kind)
   (b: bitsum)
@@ -905,12 +883,7 @@ let serialize_bitsum_eq
   (g: (x: bitsum'_key_type b.b) -> Tot (serializer (dsnd (f x))))
   (x: b.data)
 : Lemma
-  (serialize (serialize_bitsum b s g) x == (
-    let tg = b.tag_of_data (bitsum'_type b.b) id x in
-    let k = bitsum'_key_of_t b.b tg in
-    let payload = b.synth_case.g tg x in
-    serialize s (synth_bitsum'_recip b.b tg) `Seq.append` serialize (g k) payload
-  ))
+  (serialize (serialize_bitsum b s g) x == serialize_bitsum_alt b s g x)
 = serialize_tagged_union_eq
     #(parse_filter_kind kt)
     #(bitsum'_type b.b)
