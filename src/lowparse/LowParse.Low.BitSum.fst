@@ -225,51 +225,64 @@ and mk_validate_bitsum_cases_bitsum'_t'
 inline_for_extraction
 let validate_bitsum
   (#kt: parser_kind)
-  (b: bitsum)
-  (#p: parser kt b.t)
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#data: Type0)
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (synth_case: synth_case_t b data tag_of_data type_of_tag)
+  (#p: parser kt t)
   (v: validator p)
   (r: leaf_reader p)
-  (phi: filter_bitsum'_t b.b)
-  (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
-  (vf: (x: bitsum'_key_type b.b) -> Tot (validator (dsnd (f x))))
-  (vs: validate_bitsum_cases_t b.b)
-: Tot (validator (parse_bitsum b p f))
+  (phi: filter_bitsum'_t b)
+  (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
+  (vf: (x: bitsum'_key_type b) -> Tot (validator (dsnd (f x))))
+  (vs: validate_bitsum_cases_t b)
+: Tot (validator (parse_bitsum b tag_of_data type_of_tag synth_case p f))
 = fun #rrel #rel sl pos ->
   let h = HST.get () in
   [@inline_let]
   let _ =
-    valid_facts (parse_bitsum b p f) h sl pos;
-    parse_bitsum_eq b p f (bytes_of_slice_from h sl pos);
-    valid_facts (parse_bitsum' b.b p) h sl pos
+    valid_facts (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos;
+    parse_bitsum_eq b tag_of_data type_of_tag synth_case p f (bytes_of_slice_from h sl pos);
+    valid_facts (parse_bitsum' b p) h sl pos
   in
-  let pos1 = validate_bitsum' b.b v r phi sl pos in
+  let pos1 = validate_bitsum' b v r phi sl pos in
   if pos1 `U32.gt` validator_max_length
   then pos1
   else
     [@inline_let] let _ =
-      synth_bitsum'_injective b.b;
-      parse_synth_eq (p `parse_filter` filter_bitsum' b.b) (synth_bitsum' b.b) (bytes_of_slice_from h sl pos);
-      parse_filter_eq p (filter_bitsum' b.b) (bytes_of_slice_from h sl pos);
+      synth_bitsum'_injective b;
+      parse_synth_eq (p `parse_filter` filter_bitsum' b) (synth_bitsum' b) (bytes_of_slice_from h sl pos);
+      parse_filter_eq p (filter_bitsum' b) (bytes_of_slice_from h sl pos);
       valid_facts p h sl pos
     in
     let x = r sl pos in
     [@inline_let]
     let _ =
-      let y = synth_bitsum' b.b x in
-      let tg = bitsum'_key_of_t b.b y in 
-      synth_bitsum_case_injective b y;
-      parse_synth_eq (dsnd (f tg)) (b.synth_case.f y) (bytes_of_slice_from h sl pos1);
+      let y = synth_bitsum' b x in
+      let tg = bitsum'_key_of_t b y in 
+      parse_synth_eq (dsnd (f tg)) (synth_case.f y) (bytes_of_slice_from h sl pos1);
       valid_facts (dsnd (f tg)) h sl pos1
     in
-    vs (bitsum_type_of_tag b) f vf x sl pos1
+    vs (type_of_tag) f vf x sl pos1
 
 #pop-options
 
 let valid_bitsum_intro
   (#kt: parser_kind)
-  (b: bitsum)
-  (p: parser kt b.t)
-  (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#data: Type0)
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (synth_case: synth_case_t b data tag_of_data type_of_tag)
+  (p: parser kt t)
+  (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
   (h: HS.mem)
   (#rrel: _)
   (#rel: _)
@@ -277,33 +290,40 @@ let valid_bitsum_intro
   (pos: U32.t)
 : Lemma
   (requires (
-    valid (parse_bitsum' b.b p) h sl pos /\ (
-    let tg = contents (parse_bitsum' b.b p) h sl pos in
-    let k = bitsum'_key_of_t b.b tg in
-    valid (dsnd (f k)) h sl (get_valid_pos (parse_bitsum' b.b p) h sl pos)
+    valid (parse_bitsum' b p) h sl pos /\ (
+    let tg = contents (parse_bitsum' b p) h sl pos in
+    let k = bitsum'_key_of_t b tg in
+    valid (dsnd (f k)) h sl (get_valid_pos (parse_bitsum' b p) h sl pos)
   )))
   (ensures (
-    let tg = contents (parse_bitsum' b.b p) h sl pos in
-    let k = bitsum'_key_of_t b.b tg in
-    let pos1 = get_valid_pos (parse_bitsum' b.b p) h sl pos in
+    let tg = contents (parse_bitsum' b p) h sl pos in
+    let k = bitsum'_key_of_t b tg in
+    let pos1 = get_valid_pos (parse_bitsum' b p) h sl pos in
     let y = contents (dsnd (f k)) h sl pos1 in
-    valid_content_pos (parse_bitsum b p f) h sl pos (b.synth_case.f tg y) (get_valid_pos (dsnd (f k)) h sl pos1)
+    valid_content_pos (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos (synth_case.f tg y) (get_valid_pos (dsnd (f k)) h sl pos1)
   ))
-= valid_facts (parse_bitsum b p f) h sl pos;
-  parse_bitsum_eq b p f (bytes_of_slice_from h sl pos);
-  valid_facts (parse_bitsum' b.b p) h sl pos;
-  let tg = contents (parse_bitsum' b.b p) h sl pos in
-  let k = bitsum'_key_of_t b.b tg in
-  let pos1 = get_valid_pos (parse_bitsum' b.b p) h sl pos in
+= valid_facts (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos;
+  parse_bitsum_eq b tag_of_data type_of_tag synth_case p f (bytes_of_slice_from h sl pos);
+  valid_facts (parse_bitsum' b p) h sl pos;
+  let tg = contents (parse_bitsum' b p) h sl pos in
+  let k = bitsum'_key_of_t b tg in
+  let pos1 = get_valid_pos (parse_bitsum' b p) h sl pos in
   valid_facts (dsnd (f k)) h sl pos1
 
 #pop-options
 
 let valid_bitsum_elim'
   (#kt: parser_kind)
-  (b: bitsum)
-  (p: parser kt b.t)
-  (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#data: Type0)
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (synth_case: synth_case_t b data tag_of_data type_of_tag)
+  (p: parser kt t)
+  (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
   (h: HS.mem)
   (#rrel: _)
   (#rel: _)
@@ -311,31 +331,38 @@ let valid_bitsum_elim'
   (pos: U32.t)
 : Lemma
   (requires (
-    valid (parse_bitsum b p f) h sl pos
+    valid (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos
   ))
   (ensures (
-    valid (parse_bitsum' b.b p) h sl pos /\ (
-    let tg = contents (parse_bitsum' b.b p) h sl pos in
-    let k = bitsum'_key_of_t b.b tg in
-    let pos1 = get_valid_pos (parse_bitsum' b.b p) h sl pos in
+    valid (parse_bitsum' b p) h sl pos /\ (
+    let tg = contents (parse_bitsum' b p) h sl pos in
+    let k = bitsum'_key_of_t b tg in
+    let pos1 = get_valid_pos (parse_bitsum' b p) h sl pos in
     valid (dsnd (f k)) h sl pos1 /\ (
     let y = contents (dsnd (f k)) h sl pos1 in
-    valid_content_pos (parse_bitsum b p f) h sl pos (b.synth_case.f tg y) (get_valid_pos (dsnd (f k)) h sl pos1)
+    valid_content_pos (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos (synth_case.f tg y) (get_valid_pos (dsnd (f k)) h sl pos1)
   ))))
-= valid_facts (parse_bitsum b p f) h sl pos;
-  parse_bitsum_eq b p f (bytes_of_slice_from h sl pos);
-  valid_facts (parse_bitsum' b.b p) h sl pos;
-  let tg = contents (parse_bitsum' b.b p) h sl pos in
-  let k = bitsum'_key_of_t b.b tg in
-  let pos1 = get_valid_pos (parse_bitsum' b.b p) h sl pos in
+= valid_facts (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos;
+  parse_bitsum_eq b tag_of_data type_of_tag synth_case p f (bytes_of_slice_from h sl pos);
+  valid_facts (parse_bitsum' b p) h sl pos;
+  let tg = contents (parse_bitsum' b p) h sl pos in
+  let k = bitsum'_key_of_t b tg in
+  let pos1 = get_valid_pos (parse_bitsum' b p) h sl pos in
   valid_facts (dsnd (f k)) h sl pos1;
-  valid_bitsum_intro b p f h sl pos
+  valid_bitsum_intro b tag_of_data type_of_tag synth_case p f h sl pos
 
 let valid_bitsum_elim
   (#kt: parser_kind)
-  (b: bitsum)
-  (p: parser kt b.t)
-  (f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (bitsum_type_of_tag b x)))
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#data: Type0)
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (synth_case: synth_case_t b data tag_of_data type_of_tag)
+  (p: parser kt t)
+  (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
   (h: HS.mem)
   (#rrel: _)
   (#rel: _)
@@ -343,30 +370,30 @@ let valid_bitsum_elim
   (pos: U32.t)
 : Lemma
   (requires (
-    valid (parse_bitsum b p f) h sl pos
+    valid (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos
   ))
   (ensures (
-    valid (parse_bitsum' b.b p) h sl pos /\ (
-    let tg = contents (parse_bitsum' b.b p) h sl pos in
-    let k = bitsum'_key_of_t b.b tg in
-    let pos1 = get_valid_pos (parse_bitsum' b.b p) h sl pos in
+    valid (parse_bitsum' b p) h sl pos /\ (
+    let tg = contents (parse_bitsum' b p) h sl pos in
+    let k = bitsum'_key_of_t b tg in
+    let pos1 = get_valid_pos (parse_bitsum' b p) h sl pos in
     valid (dsnd (f k)) h sl pos1 /\
-    valid_pos (parse_bitsum b p f) h sl pos (get_valid_pos (dsnd (f k)) h sl pos1) /\ (
-    let x = contents (parse_bitsum b p f) h sl pos in
+    valid_pos (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos (get_valid_pos (dsnd (f k)) h sl pos1) /\ (
+    let x = contents (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos in
     let y = contents (dsnd (f k)) h sl pos1 in
-    tg == b.tag_of_data x /\
-    x == b.synth_case.f tg y /\
-    y == b.synth_case.g tg x
+    tg == tag_of_data x /\
+    x == synth_case.f tg y /\
+    y == synth_case.g tg x
   ))))
-= valid_bitsum_elim' b p f h sl pos;
-  let tg = contents (parse_bitsum' b.b p) h sl pos in
-  let k = bitsum'_key_of_t b.b tg in
-  let pos1 = get_valid_pos (parse_bitsum' b.b p) h sl pos in
-  let x = contents (parse_bitsum b p f) h sl pos in
+= valid_bitsum_elim' b tag_of_data type_of_tag synth_case p f h sl pos;
+  let tg = contents (parse_bitsum' b p) h sl pos in
+  let k = bitsum'_key_of_t b tg in
+  let pos1 = get_valid_pos (parse_bitsum' b p) h sl pos in
+  let x = contents (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos in
   let y = contents (dsnd (f k)) h sl pos1 in
-  assert (tg == b.tag_of_data x);
-  assert (x == b.synth_case.f tg y);
-  b.synth_case.f_g_eq tg x;
-  b.synth_case.f_inj tg (b.synth_case.g tg x) y
+  assert (tg == tag_of_data x);
+  assert (x == synth_case.f tg y);
+  synth_case.f_g_eq tg x;
+  synth_case.f_inj tg (synth_case.g tg x) y
 
 #pop-options
