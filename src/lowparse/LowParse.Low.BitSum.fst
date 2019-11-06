@@ -219,6 +219,9 @@ and mk_validate_bitsum_cases_bitsum'_t'
     in  
     validate_bitsum_cases_bitsum'_cons cl bitsum'_size key key_size e payload l1 k r q (mk_validate_bitsum_cases_t' (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k)) (mk_validate_bitsum_cases_bitsum'_t' cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q)
 
+#push-options "--z3rlimit 64"
+#restart-solver
+
 inline_for_extraction
 let validate_bitsum
   (#kt: parser_kind)
@@ -259,6 +262,8 @@ let validate_bitsum
       valid_facts (dsnd (f tg)) h sl pos1
     in
     vs (bitsum_type_of_tag b) f vf x sl pos1
+
+#pop-options
 
 let valid_bitsum_intro
   (#kt: parser_kind)

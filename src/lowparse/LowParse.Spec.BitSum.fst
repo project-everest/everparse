@@ -605,6 +605,27 @@ let serialize_bitsum'
     (synth_bitsum'_recip b)
     ()
 
+let serialize_bitsum'_eq
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: bitsum'_type b)
+: Lemma
+  (serialize (serialize_bitsum' b s) x == serialize s (synth_bitsum'_recip b x))
+= synth_bitsum'_injective b;
+  synth_bitsum'_recip_inverse b;
+  serialize_synth_eq
+    (p `parse_filter` filter_bitsum' b)
+    (synth_bitsum' b)
+    (s `serialize_filter` filter_bitsum' b)
+    (synth_bitsum'_recip b)
+    ()
+    x
+
 let rec bitsum'_key_of_t
   (#tot: pos)
   (#t: eqtype)
@@ -875,6 +896,47 @@ let serialize_bitsum
     #(parse_bitsum_cases b f)
     (serialize_bitsum_cases b #f g)
 
+let serialize_bitsum_eq
+  (#kt: parser_kind)
+  (b: bitsum)
+  (#p: parser kt b.t)
+  (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
+  (#f: (x: bitsum'_key_type b.b) -> Tot (k: parser_kind & parser k (b.type_of_tag x)))
+  (g: (x: bitsum'_key_type b.b) -> Tot (serializer (dsnd (f x))))
+  (x: b.data)
+: Lemma
+  (serialize (serialize_bitsum b s g) x == (
+    let tg = b.tag_of_data (bitsum'_type b.b) id x in
+    let k = bitsum'_key_of_t b.b tg in
+    let payload = b.synth_case.g tg x in
+    serialize s (synth_bitsum'_recip b.b tg) `Seq.append` serialize (g k) payload
+  ))
+= serialize_tagged_union_eq
+    #(parse_filter_kind kt)
+    #(bitsum'_type b.b)
+    #(parse_bitsum' b.b p)
+    (serialize_bitsum' b.b s)
+    #(b.data)
+    (b.tag_of_data (bitsum'_type b.b) id)
+    #(weaken_parse_bitsum_cases_kind b f)
+    #(parse_bitsum_cases b f)
+    (serialize_bitsum_cases b #f g)
+    x;
+  let tg = b.tag_of_data (bitsum'_type b.b) id x in
+  let k = bitsum'_key_of_t b.b tg in
+  serialize_bitsum'_eq b.b s tg;
+  let (| _, p |) = f k in
+  synth_bitsum_case_injective b tg; // FIXME: WHY WHY WHY does the pattern not trigger?
+  synth_bitsum_case_recip_inverse b tg; // FIXME: WHY WHY WHY does the pattern not trigger?
+  serialize_synth_eq
+    #_
+    #(bitsum_type_of_tag b k)
+    p
+    (b.synth_case.f tg)
+    (g k)
+    (b.synth_case.g tg)
+    ()
+    x
 
 (* Implementation of filter_bitsum' *)
 
