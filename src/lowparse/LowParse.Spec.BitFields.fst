@@ -26,25 +26,6 @@ let rec bounds_of_widths (lo: nat) (hi: nat { lo <= hi }) (l: list nat) : Pure (
 
 module U = FStar.UInt
 
-let uint_get_bitfield_set_bitfield_same
-  #tot #t (cl: uint_t tot t)
-  (x: t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (z: bitfield cl (hi - lo))
-: Lemma
-  (cl.get_bitfield (cl.set_bitfield x lo hi z) lo hi == z)
-  [SMTPat (cl.get_bitfield (cl.set_bitfield x lo hi z) lo hi)]
-= BF.get_bitfield_set_bitfield_same (cl.v x) lo hi (cl.v z);
-  assert (cl.uint_to_t (cl.v (cl.get_bitfield (cl.set_bitfield x lo hi z) lo hi)) == cl.uint_to_t (cl.v z))
-
-let uint_get_bitfield_set_bitfield_other
-  #tot #t (cl: uint_t tot t)
-  (x: t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (z: bitfield cl (hi - lo))
-  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot /\ (hi' <= lo \/ hi <= lo') })
-: Lemma
-  (cl.get_bitfield (cl.set_bitfield x lo hi z) lo' hi' == cl.get_bitfield x lo' hi')
-  [SMTPat (cl.get_bitfield (cl.set_bitfield x lo hi z) lo' hi')]
-= BF.get_bitfield_set_bitfield_other (cl.v x) lo hi (cl.v z) lo' hi';
-  assert (cl.uint_to_t (cl.v (cl.get_bitfield (cl.set_bitfield x lo hi z) lo' hi')) == cl.uint_to_t (cl.v (cl.get_bitfield x lo' hi')))
-
 noextract
 let rec bitfields (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) : Tot Type0 (decreases l) =
   match l with
