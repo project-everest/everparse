@@ -927,6 +927,9 @@ let uint64 : uint_t 64 U64.t = {
   bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq64_rhs x lo hi z);
 }
 
+let uint64_v_eq x = ()
+let uint64_uint_to_t_eq x = ()
+
 inline_for_extraction
 noextract
 let uint32 : uint_t 32 U32.t = {
@@ -941,6 +944,8 @@ let uint32 : uint_t 32 U32.t = {
   bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq32_rhs x lo hi z);
 }
 
+let uint32_v_eq x = ()
+let uint32_uint_to_t_eq x = ()
 
 inline_for_extraction
 noextract
@@ -956,6 +961,9 @@ let uint16 : uint_t 16 U16.t = {
   bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq16_rhs x lo hi z);
 }
 
+let uint16_v_eq x = ()
+let uint16_uint_to_t_eq x = ()
+
 inline_for_extraction
 noextract
 let uint8 : uint_t 8 U8.t = {
@@ -969,3 +977,6 @@ let uint8 : uint_t 8 U8.t = {
   bitfield_eq_lhs = (fun x lo hi -> bitfield_eq8_lhs x lo hi);
   bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq8_rhs x lo hi z);
 }
+
+let uint8_v_eq x = ()
+let uint8_uint_to_t_eq x = ()

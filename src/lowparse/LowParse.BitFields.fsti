@@ -220,14 +220,62 @@ inline_for_extraction
 noextract
 val uint64 : uint_t 64 U64.t
 
+val uint64_v_eq
+  (x: U64.t)
+: Lemma
+  (uint64.v x == U64.v x)
+  [SMTPat (uint64.v x)]
+
+val uint64_uint_to_t_eq
+  (x: U.uint_t 64)
+: Lemma
+  (uint64.uint_to_t x == U64.uint_to_t x)
+  [SMTPat (uint64.uint_to_t x)]
+
 inline_for_extraction
 noextract
 val uint32 : uint_t 32 U32.t
+
+val uint32_v_eq
+  (x: U32.t)
+: Lemma
+  (uint32.v x == U32.v x)
+  [SMTPat (uint32.v x)]
+
+val uint32_uint_to_t_eq
+  (x: U.uint_t 32)
+: Lemma
+  (uint32.uint_to_t x == U32.uint_to_t x)
+  [SMTPat (uint32.uint_to_t x)]
 
 inline_for_extraction
 noextract
 val uint16 : uint_t 16 U16.t
 
+val uint16_v_eq
+  (x: U16.t)
+: Lemma
+  (uint16.v x == U16.v x)
+  [SMTPat (uint16.v x)]
+
+val uint16_uint_to_t_eq
+  (x: U.uint_t 16)
+: Lemma
+  (uint16.uint_to_t x == U16.uint_to_t x)
+  [SMTPat (uint16.uint_to_t x)]
+
 inline_for_extraction
 noextract
 val uint8 : uint_t 8 U8.t
+
+val uint8_v_eq
+  (x: U8.t)
+: Lemma
+  (uint8.v x == U8.v x)
+  [SMTPat (uint8.v x)]
+
+val uint8_uint_to_t_eq
+  (x: U.uint_t 8)
+: Lemma
+  (uint8.uint_to_t x == U8.uint_to_t x)
+  [SMTPat (uint8.uint_to_t x)]
