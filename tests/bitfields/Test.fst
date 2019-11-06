@@ -292,30 +292,6 @@ let mk_body
 
 #pop-options
 
-#push-options "--z3rlimit 64 --max_fuel 8 --max_ifuel 8 --initial_fuel 8 --initial_ifuel 8"
-
-[@filter_bitsum'_t_attr]
-inline_for_extraction
-noextract
-let message : bitsum = BitSum
-  _
-  _
-  _
-  header_byte
-  _
-  header_of_message
-  (fun _ _ _ -> ())
-  body_type
-  (SynthCase
-    #_ #_ #_ #header_byte #_ #header_of_message #body_type
-    mk_message
-    (fun k x y -> ())
-    mk_body
-    (fun k x -> ())
-  )
-
-#pop-options
-
 let main
   (argc: Int32.t)
   (argv: LowStar.Buffer.buffer C.String.t)
