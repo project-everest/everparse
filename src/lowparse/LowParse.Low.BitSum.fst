@@ -354,7 +354,7 @@ let valid_bitsum_elim
     valid_pos (parse_bitsum b p f) h sl pos (get_valid_pos (dsnd (f k)) h sl pos1) /\ (
     let x = contents (parse_bitsum b p f) h sl pos in
     let y = contents (dsnd (f k)) h sl pos1 in
-    tg == b.tag_of_data (bitsum'_type b.b) id x /\
+    tg == b.tag_of_data x /\
     x == b.synth_case.f tg y /\
     y == b.synth_case.g tg x
   ))))
@@ -364,7 +364,7 @@ let valid_bitsum_elim
   let pos1 = get_valid_pos (parse_bitsum' b.b p) h sl pos in
   let x = contents (parse_bitsum b p f) h sl pos in
   let y = contents (dsnd (f k)) h sl pos1 in
-  assert (tg == b.tag_of_data (bitsum'_type b.b) id x);
+  assert (tg == b.tag_of_data x);
   assert (x == b.synth_case.f tg y);
   b.synth_case.f_g_eq tg x;
   b.synth_case.f_inj tg (b.synth_case.g tg x) y
