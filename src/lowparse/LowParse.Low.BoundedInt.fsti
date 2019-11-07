@@ -31,12 +31,30 @@ let read_bounded_integer
   | 3 -> read_bounded_integer_3 ()
   | 4 -> read_bounded_integer_4 ()
 
+let read_bounded_integer'
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+: Tot (leaf_reader (parse_bounded_integer (U32.v i)))
+= fun #rrel #rel sl pos ->
+  if i = 1ul
+  then read_bounded_integer_1 () sl pos
+  else if i = 2ul
+  then read_bounded_integer_2 () sl pos
+  else if i = 3ul
+  then read_bounded_integer_3 () sl pos
+  else read_bounded_integer_4 () sl pos
+
 inline_for_extraction
 noextract
 let validate_bounded_integer
   (i: integer_size) // must be a constant
 : Tot (validator (parse_bounded_integer i))
 = validate_total_constant_size (parse_bounded_integer i) (U32.uint_to_t i) ()
+
+inline_for_extraction
+let validate_bounded_integer'
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+: Tot (validator (parse_bounded_integer (U32.v i)))
+= validate_total_constant_size (parse_bounded_integer (U32.v i)) (i) ()
 
 inline_for_extraction
 noextract
@@ -51,6 +69,12 @@ let jump_bounded_integer
   (i: integer_size) // must be a constant
 : Tot (jumper (parse_bounded_integer i))
 = jump_constant_size (parse_bounded_integer i) (U32.uint_to_t i) ()
+
+inline_for_extraction
+let jump_bounded_integer'
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+: Tot (jumper (parse_bounded_integer (U32.v i)))
+= jump_constant_size (parse_bounded_integer (U32.v i)) (i) ()
 
 inline_for_extraction
 noextract
