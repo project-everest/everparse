@@ -2167,6 +2167,40 @@ let validate_total_constant_size
   else
     pos `U32.add` sz
 
+let valid_weaken
+  (k1: parser_kind)
+  (#k2: parser_kind)
+  (#t: Type0)
+  (p2: parser k2 t)
+  (h: HS.mem)
+  #rrel #rel
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (k1 `is_weaker_than` k2))
+  (ensures (
+    (valid (weaken k1 p2) h sl pos \/ valid p2 h sl pos) ==> (
+    valid p2 h sl pos /\
+    valid_content_pos (weaken k1 p2) h sl pos (contents p2 h sl pos) (get_valid_pos p2 h sl pos)
+  )))
+= valid_facts (weaken k1 p2) h sl pos;
+  valid_facts p2 h sl pos
+
+inline_for_extraction
+let validate_weaken
+  (k1: parser_kind)
+  (#k2: parser_kind)
+  (#t: Type0)
+  (#p2: parser k2 t)
+  (v2: validator p2 { k1 `is_weaker_than` k2 } )
+: Tot (validator (weaken k1 p2))
+= fun #rrel #rel sl pos ->
+  let h = HST.get () in
+  [@inline_let] let _ =
+    valid_weaken k1 p2 h sl pos
+  in
+  v2 sl pos
+
 [@unifier_hint_injective]
 inline_for_extraction
 let jumper
@@ -2212,6 +2246,21 @@ let jump_constant_size
   })
 : Tot (jumper p)
 = jump_constant_size' (fun _ -> p) sz u
+
+inline_for_extraction
+let jump_weaken
+  (k1: parser_kind)
+  (#k2: parser_kind)
+  (#t: Type0)
+  (#p2: parser k2 t)
+  (v2: jumper p2 { k1 `is_weaker_than` k2 } )
+: Tot (jumper (weaken k1 p2))
+= fun #rrel #rel sl pos ->
+  let h = HST.get () in
+  [@inline_let] let _ =
+    valid_weaken k1 p2 h sl pos
+  in
+  v2 sl pos
 
 let seq_starts_with (#t: Type) (slong sshort: Seq.seq t) : GTot Type0 =
   Seq.length sshort <= Seq.length slong /\
