@@ -373,10 +373,12 @@ let valid_bitsum_elim
     valid (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos
   ))
   (ensures (
-    valid (parse_bitsum' b p) h sl pos /\ (
-    let tg = contents (parse_bitsum' b p) h sl pos in
+    valid p h sl pos /\ (
+    let x = contents p h sl pos in
+    filter_bitsum' b x == true /\ (
+    let tg = synth_bitsum' b x in
     let k = bitsum'_key_of_t b tg in
-    let pos1 = get_valid_pos (parse_bitsum' b p) h sl pos in
+    let pos1 = get_valid_pos p h sl pos in
     valid (dsnd (f k)) h sl pos1 /\
     valid_pos (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos (get_valid_pos (dsnd (f k)) h sl pos1) /\ (
     let x = contents (parse_bitsum b tag_of_data type_of_tag synth_case p f) h sl pos in
@@ -384,8 +386,13 @@ let valid_bitsum_elim
     tg == tag_of_data x /\
     x == synth_case.f tg y /\
     y == synth_case.g tg x
-  ))))
+  )))))
 = valid_bitsum_elim' b tag_of_data type_of_tag synth_case p f h sl pos;
+  synth_bitsum'_injective b;
+  assert (valid ((p `parse_filter` filter_bitsum' b) `parse_synth` synth_bitsum' b) h sl pos);
+  valid_synth h (p `parse_filter` filter_bitsum' b) (synth_bitsum' b) sl pos;
+  valid_filter h p (filter_bitsum' b) sl pos;
+  let tg = synth_bitsum' b (contents p h sl pos) in  
   let tg = contents (parse_bitsum' b p) h sl pos in
   let k = bitsum'_key_of_t b tg in
   let pos1 = get_valid_pos (parse_bitsum' b p) h sl pos in
