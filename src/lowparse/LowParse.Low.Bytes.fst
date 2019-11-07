@@ -1003,3 +1003,77 @@ let jump_bounded_vlgenbytes
     )
     (fun x -> (x <: parse_bounded_vlbytes_t vmin vmax))
     ()
+
+inline_for_extraction
+let bounded_vlgenbytes_payload_length
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmax > 0 /\ vmin <= vmax /\ vmax < 4294967296 })
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 (vmin) (vmax)))
+  (rk: leaf_reader pk)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
+  (pos: U32.t)
+: HST.Stack U32.t
+  (requires (fun h -> valid (parse_bounded_vlgenbytes vmin vmax pk) h input pos))
+  (ensures (fun h len h' ->
+    B.modifies B.loc_none h h' /\
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    U32.v pos1 + U32.v len <= U32.v input.len /\ (
+    let x = contents (parse_bounded_vlgenbytes vmin vmax pk) h input pos in
+    let pos' = get_valid_pos (parse_bounded_vlgenbytes vmin vmax pk) h input pos in
+    BY.len x == len /\
+    valid_content_pos (parse_flbytes (U32.v len)) h input pos1 x pos' /\
+    bytes_of_slice_from_to h input pos1 pos' == BY.reveal x
+  ))))
+= let h = HST.get () in
+  valid_synth
+    h
+    (parse_bounded_vlgen
+      vmin
+      vmax
+      pk
+      serialize_all_bytes
+    )
+    (fun x -> (x <: parse_bounded_vlbytes_t vmin vmax))
+    input
+    pos;
+  valid_bounded_vlgen_elim
+    vmin
+    vmax
+    pk
+    serialize_all_bytes
+    input
+    pos
+    h;
+  let len = rk input pos in
+  let pos1 = Ghost.hide (get_valid_pos pk h input pos) in
+  valid_exact_all_bytes_elim h input (Ghost.reveal pos1) (Ghost.reveal pos1 `U32.add` len);
+  valid_flbytes_elim h (U32.v len) input (Ghost.reveal pos1);
+  len
+
+inline_for_extraction
+let get_bounded_vlgenbytes_contents
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmax > 0 /\ vmin <= vmax /\ vmax < 4294967296 })
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 (vmin) (vmax)))
+  (rk: leaf_reader pk)
+  (jk: jumper pk)
+  (input: slice (BF.trivial_preorder _) (BF.trivial_preorder _))
+  (pos: U32.t)
+: HST.Stack (BF.buffer byte)
+  (requires (fun h -> valid (parse_bounded_vlgenbytes vmin vmax pk) h input pos))
+  (ensures (fun h b h' ->
+    let x = contents (parse_bounded_vlgenbytes vmin vmax pk) h input pos in
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    B.modifies B.loc_none h h' /\
+    U32.v pos1 + BY.length x == U32.v (get_valid_pos (parse_bounded_vlgenbytes vmin vmax pk) h input pos) /\
+    b == BF.gsub input.base pos1 (BY.len x) /\
+    B.as_seq h b == BY.reveal x
+  )))
+= let len = bounded_vlgenbytes_payload_length vmin vmax rk input pos in
+  let pos1 = jk input pos in
+  BF.sub input.base pos1 len

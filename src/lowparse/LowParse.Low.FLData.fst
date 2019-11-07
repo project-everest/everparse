@@ -32,6 +32,32 @@ let valid_fldata_gen
   valid_exact_equiv p h input pos pos';
   contents_exact_eq p h input pos pos'
 
+let valid_fldata_gen_elim
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (sz: nat)
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    valid (parse_fldata p sz) h input pos
+  ))
+  (ensures (
+    U32.v pos + sz < 4294967296 /\ (
+    let pos' = pos `U32.add` U32.uint_to_t sz in
+    valid_exact p h input pos (pos `U32.add` U32.uint_to_t sz) /\
+    valid_content_pos (parse_fldata p sz) h input pos (contents_exact p h input pos pos') pos'
+  )))
+= valid_facts (parse_fldata p sz) h input pos;
+  let pos' = pos `U32.add` U32.uint_to_t sz in
+  let input' = { base = input.base; len = pos'; } in
+  valid_facts p h input' pos;
+  valid_exact_equiv p h input pos pos';
+  contents_exact_eq p h input pos pos'
+
 inline_for_extraction
 let validate_fldata_gen
   (#k: parser_kind)
