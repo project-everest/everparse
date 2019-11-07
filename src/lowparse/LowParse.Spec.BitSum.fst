@@ -1378,6 +1378,12 @@ and mk_destr_bitsum'_bitsum_t
       L.append_l_nil l1
     in
     destr_bitsum'_bitsum_nil cl bitsum'_size key key_size e payload ()
+  | [(k, r)] ->
+    [@inline_let] let _ =
+      enum_repr_of_key_append_cons e l1 (k, r) [];
+      L.append_assoc l1 [(k, r)] []
+    in  
+    destr_bitsum'_bitsum_cons_nil cl bitsum'_size key key_size e payload l1 k r (mk_destr_bitsum'_t (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k))
   | (k, r) :: q ->
     [@inline_let] let _ =
       enum_repr_of_key_append_cons e l1 (k, r) q;
