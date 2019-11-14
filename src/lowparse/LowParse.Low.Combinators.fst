@@ -291,7 +291,10 @@ let validate_ret
   (#t: Type)
   (v: t)
 : Tot (validator (parse_ret v))
-= validate_total_constant_size (parse_ret v) 0ul ()
+= fun #_ #_ input pos ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_facts (parse_ret v) h input pos in
+  pos
 
 inline_for_extraction
 let validate_empty () : Tot (validator parse_empty)
