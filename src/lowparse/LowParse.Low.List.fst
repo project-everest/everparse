@@ -222,7 +222,7 @@ let validate_list_inv
   B.modifies (B.loc_buffer bpos) h1 h /\ (
   let pos1 = Seq.index (B.as_seq h bpos) 0 in
   if
-    U32.v pos1 > U32.v validator_max_length
+    is_error pos1
   then
     stop == true /\
     (~ (valid_exact (parse_list p) h0 sl pos0 sl.len))
@@ -259,7 +259,7 @@ let validate_list_body
     Classical.move_requires (valid_exact_list_cons_recip p (G.reveal g0) sl pos1) sl.len;
     let pos1 = v sl pos1 in
     B.upd bpos 0ul pos1;
-    pos1 `U32.gt` validator_max_length
+    is_error pos1
   end
 
 inline_for_extraction
@@ -284,7 +284,7 @@ let validate_list'
     (* we could return a boolean, but we would like to return the last
        validation error code if it fails. (alas, we cannot capture
        that fact in the spec.) *)
-    (U32.v res <= U32.v validator_max_length <==> valid_exact (parse_list p) h sl pos sl.len)
+    (is_success res <==> valid_exact (parse_list p) h sl pos sl.len)
   ))
 = let h0 = HST.get () in
   let g0 = G.hide h0 in
@@ -318,7 +318,7 @@ let validate_list
   let h = HST.get () in
   valid_valid_exact_consumes_all (parse_list p) h sl pos;
   let error = validate_list' v sl pos in 
-  if error `U32.lte` validator_max_length
+  if is_success error
   then sl.len
   else error
 

@@ -37,7 +37,7 @@ let validate_der_length_payload32
     then
       [@inline_let] let _ = valid_facts parse_u8 h input pos in
       let v = validate_u8 () input pos in
-      if validator_max_length `U32.lt` v
+      if is_error v
       then v
       else
         let z = read_u8 input pos in
@@ -50,7 +50,7 @@ let validate_der_length_payload32
       if len = 2uy
       then
         let v = validate_bounded_integer 2 input pos in
-        if validator_max_length `U32.lt` v
+        if is_error v
         then v
         else
           let y = read_bounded_integer_2 () input pos in
@@ -60,7 +60,7 @@ let validate_der_length_payload32
       else if len = 3uy
       then
         let v = validate_bounded_integer 3 input pos in
-        if validator_max_length `U32.lt` v
+        if is_error v
         then v
         else
           let y = read_bounded_integer_3 () input pos in
@@ -69,7 +69,7 @@ let validate_der_length_payload32
           else v
       else
         let v = validate_bounded_integer 4 input pos in
-        if validator_max_length `U32.lt` v
+        if is_error v
         then v
         else
           let y = read_bounded_integer_4 () input pos in
@@ -166,7 +166,7 @@ let validate_bounded_der_length32
       valid_facts parse_u8 h input pos
     in
     let v = validate_u8 () input pos in
-    if validator_max_length `U32.lt` v
+    if is_error v
     then v
     else
       let x = read_u8 input pos in
@@ -180,7 +180,7 @@ let validate_bounded_der_length32
       else
         [@inline_let] let _ = valid_facts (parse_der_length_payload32 x) h input v in
         let v2 = validate_der_length_payload32 x input v in
-        if validator_max_length `U32.lt` v2
+        if is_error v2
         then v2
         else
           let y = read_der_length_payload32 x input v in

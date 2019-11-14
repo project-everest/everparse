@@ -169,7 +169,7 @@ let validate_nlist
       let r = B.get h br 0 in
       U32.v r <= U32.v n /\
       U32.v pos <= U32.v pos1 /\ (
-      if U32.v pos1 <= U32.v validator_max_length
+      if is_success pos1
       then
         U32.v pos1 <= U32.v input.len /\
         (valid (parse_nlist (U32.v n) p) h0 input pos <==> valid (parse_nlist (U32.v r) p) h0 input pos1) /\
@@ -188,7 +188,7 @@ let validate_nlist
         let _ = B.upd br 0ul (r `U32.sub` 1ul) in
         let _ = B.upd bpos1 0ul pos2 in
         [@inline_let]
-        let stop = validator_max_length `U32.lt` pos2 in
+        let stop = is_error pos2 in
         [@inline_let]
         let _ =
           if stop
@@ -200,7 +200,7 @@ let validate_nlist
   ;
   let res = B.index bpos1 0ul in
   [@inline_let] let _ =
-    if U32.v res <= U32.v validator_max_length
+    if is_success res
     then valid_nlist_nil p h0 input res
   in
   HST.pop_frame ();
@@ -343,7 +343,7 @@ let validate_vclist
     valid_facts lp h input pos
   in
   let pos1 = lv input pos in
-  if validator_max_length `U32.lt` pos1
+  if is_error pos1
   then pos1 // error
   else
     let n = lr input pos in

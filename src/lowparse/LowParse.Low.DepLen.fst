@@ -179,7 +179,7 @@ let validate_deplen
       valid_deplen min max hp dlf ps input pos h
     in
   let pos_payload = hv input pos in
-  if validator_max_length `U32.lt` pos_payload then
+  if is_error pos_payload then
     pos_payload
   else
     let payload_len = dlfc input pos in
@@ -190,7 +190,7 @@ let validate_deplen
       let _ = valid_exact_valid_pos_equiv pp h input pos_payload pos_end in
       [@inline_let] let input' = { base = input.base; len = pos_end; } in
       let pos_end' = pv input' pos_payload in
-      if validator_max_length `U32.lt` pos_end' then
+      if is_error pos_end' then
         pos_end'
       else
         if pos_end' = pos_end then

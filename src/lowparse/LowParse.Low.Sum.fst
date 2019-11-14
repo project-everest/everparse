@@ -81,9 +81,9 @@ let validate_sum_aux_payload_t
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
     match k with
-    | Unknown _ -> U32.v res > U32.v validator_max_length
+    | Unknown _ -> is_error res
     | Known k' ->
-      if U32.v res <= U32.v validator_max_length
+      if is_success res
       then
         valid_pos (dsnd (pc k')) h input pos res
       else
@@ -143,7 +143,7 @@ let validate_sum_aux
   [@inline_let]
   let _ = valid_facts p h input pos in
   let len_after_tag = v input pos in
-  if validator_max_length `U32.lt` len_after_tag
+  if is_error len_after_tag
   then len_after_tag
   else begin
     let h1 = HST.get () in
@@ -827,7 +827,7 @@ let validate_dsum
   [@inline_let]
   let _ = valid_facts p h input pos in
   let pos_after_tag = v input pos in
-  if validator_max_length `U32.lt` pos_after_tag
+  if is_error pos_after_tag
   then pos_after_tag
   else
     let tg = p32 input pos in

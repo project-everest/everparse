@@ -143,7 +143,7 @@ let finalize_bounded_vlgen
   in
   finalize_bounded_vlgen_exact min max sz32 wk s input pos pos'
 
-#push-options "--z3rlimit 32 --max_fuel 8"
+#push-options "--z3rlimit 64 --max_fuel 8"
 
 inline_for_extraction
 let validate_bounded_vlgen
@@ -169,7 +169,7 @@ let validate_bounded_vlgen
     valid_facts pk h input pos
   in
   let n = vk input pos in
-  if validator_max_length `U32.lt` n
+  if is_error n
   then n
   else
     let len = rk input pos in

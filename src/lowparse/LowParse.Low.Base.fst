@@ -1983,8 +1983,14 @@ let default_validator_cls : validator_cls = {
 [@ CMacro ]
 let validator_max_length : (u: U32.t { 4 <= U32.v u /\ U32.v u < U32.v max_uint32 } ) = 4294967279ul
 
+[@ CInline ]
+let is_error (u: U32.t) : Tot bool = u `U32.gt` validator_max_length
+
+[@ CInline ]
+let is_success (u: U32.t) : Tot bool = u `U32.lte` validator_max_length
+
 [@ CMacro ]
-type validator_error = (u: U32.t { U32.v u > U32.v validator_max_length } )
+type validator_error = (u: U32.t { is_error u } )
 
 [@ CMacro ]
 let validator_error_generic : validator_error = normalize_term (validator_max_length `U32.add` 1ul)
@@ -2002,7 +2008,7 @@ let validator (#k: parser_kind) (#t: Type) (p: parser k t) : Tot Type =
   (requires (fun h -> live_slice h sl /\ U32.v pos <= U32.v sl.len /\ U32.v sl.len <= U32.v validator_max_length))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
-    if U32.v res <= U32.v validator_max_length
+    if is_success res
     then
       valid_pos p h sl pos res
     else
@@ -2027,14 +2033,14 @@ let validate
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
     let sl = make_slice b len in
-    (res == true <==> (U32.v len <= U32.v validator_max_length /\ valid p h sl 0ul))
+    (res == true <==> (is_success len /\ valid p h sl 0ul))
   )))
-= if validator_max_length `U32.lt` len
+= if is_error len
   then false
   else
     [@inline_let]
     let sl = make_slice b len in
-    v sl 0ul `U32.lte` validator_max_length
+    is_success (v sl 0ul)
 
 let valid_total_constant_size
   (h: HS.mem)

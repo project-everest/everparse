@@ -100,7 +100,7 @@ let test_bitcoin_file (filename: C.String.t) : St unit =
     ()
   else
     let consumed = Block.block_validator slice 0ul in
-    if consumed `FStar.UInt32.gt` LPL.validator_max_length
+    if LPL.is_error consumed
     then
       let _ = print !$"Validation failed\n" in
       ()

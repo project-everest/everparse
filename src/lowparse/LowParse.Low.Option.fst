@@ -12,6 +12,6 @@ let validate_option (#k: parser_kind) (#t: Type) (#p: parser k t) (v: validator 
   [@inline_let] let _ = valid_facts (parse_option p) h input pos in
   [@inline_let] let _ = valid_facts p h input pos in
   let r = v input pos in
-  if validator_max_length `U32.lt` r
+  if is_error r
   then pos
   else r

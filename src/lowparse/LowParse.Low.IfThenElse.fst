@@ -100,7 +100,7 @@ let validate_ifthenelse
     Classical.move_requires (valid_ifthenelse_elim p h input) pos
   in
   let pos_after_t = vt input pos in
-  if validator_max_length `U32.lt` pos_after_t
+  if is_error pos_after_t
   then pos_after_t
   else
     let b = test input pos in

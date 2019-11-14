@@ -21,7 +21,7 @@ let validate_bcvli : validator parse_bcvli =
     valid_facts (parse_bounded_integer_le 1) h input pos
   in
   let pos1 = validate_total_constant_size (parse_bounded_integer_le 1) 1ul () input pos in
-  if validator_max_length `U32.lt` pos1
+  if is_error pos1
   then pos1
   else
     [@inline_let] let _ =
@@ -34,7 +34,7 @@ let validate_bcvli : validator parse_bcvli =
     else if r = 253ul
     then
       let pos2 = validate_total_constant_size (parse_bounded_integer_le 2) 2ul () input pos1 in
-      if validator_max_length `U32.lt` pos2
+      if is_error pos2
       then pos2
       else
         (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
@@ -45,7 +45,7 @@ let validate_bcvli : validator parse_bcvli =
     else if r = 254ul
     then
       let pos2 = validate_total_constant_size (parse_bounded_integer_le 4) 4ul () input pos1 in
-      if validator_max_length `U32.lt` pos2
+      if is_error pos2
       then pos2
       else
         (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
@@ -188,7 +188,7 @@ let validate_bounded_bcvli'
     valid_facts (parse_bounded_integer_le 1) h input pos
   in
   let pos1 = validate_total_constant_size (parse_bounded_integer_le 1) 1ul () input pos in
-  if validator_max_length `U32.lt` pos1
+  if is_error pos1
   then pos1
   else
     [@inline_let] let _ =
@@ -206,7 +206,7 @@ let validate_bounded_bcvli'
       then validator_error_generic
       else
         let pos2 = validate_total_constant_size (parse_bounded_integer_le 2) 2ul () input pos1 in
-        if validator_max_length `U32.lt` pos2
+        if is_error pos2
         then pos2
         else
           (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
@@ -219,7 +219,7 @@ let validate_bounded_bcvli'
     else if r = 254ul
     then
       let pos2 = validate_total_constant_size (parse_bounded_integer_le 4) 4ul () input pos1 in
-      if validator_max_length `U32.lt` pos2
+      if is_error pos2
       then pos2
       else
         (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
