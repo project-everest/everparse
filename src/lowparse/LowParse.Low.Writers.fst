@@ -9,6 +9,132 @@ module L = FStar.List.Tot
 
 inline_for_extraction
 noextract
+let fswriter
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (h0: HS.mem)
+  (space_beyond: nat)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+  (x: t)
+: Tot Type
+= (pout_from: U32.t) ->
+  HST.Stack U32.t
+  (requires (fun h ->
+    B.modifies (loc_slice_from sout pout_from0) h0 h /\
+    U32.v pout_from0 <= U32.v pout_from /\
+    live_slice h sout /\
+    U32.v pout_from + serialized_length s x + space_beyond <= U32.v sout.len
+  ))
+  (ensures (fun h res h' ->
+    B.modifies (loc_slice_from sout pout_from) h h' /\
+    valid_content_pos p h' sout pout_from x res
+))
+
+inline_for_extraction
+noextract
+noeq
+type swriter
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (h0: HS.mem)
+  (space_beyond: nat)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+: Type
+= | SWriter:
+    (v: Ghost.erased t) ->
+    (w: fswriter s h0 space_beyond sout pout_from0 (Ghost.reveal v)) ->
+    swriter s h0 space_beyond sout pout_from0
+
+let swvalue
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (#h0: HS.mem)
+  (#space_beyond: nat)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (w: swriter s h0 space_beyond sout pout_from0)
+: GTot t
+= Ghost.reveal w.v
+
+inline_for_extraction
+noextract
+let weaken_swriter
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (#h0: HS.mem)
+  (#space_beyond0: nat)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (w: swriter s h0 space_beyond0 sout pout_from0)
+  (h1: HS.mem)
+  (space_beyond1: nat)
+  (pout_from1: U32.t)
+: Pure (w' : swriter s h1 space_beyond1 sout pout_from1 { swvalue w' == swvalue w } )
+  (requires (B.modifies (loc_slice_from sout pout_from0) h0 h1 /\ U32.v pout_from0 <= U32.v pout_from1 /\ space_beyond0 <= space_beyond1))
+  (ensures (fun _ -> True))
+= SWriter w.v (fun pout_from -> w.w pout_from)
+
+inline_for_extraction
+noextract
+let swrite
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (#space_beyond: nat)  
+  (w: swriter s h0 space_beyond sout pout_from0)
+: Tot (fswriter s h0 space_beyond sout pout_from0 (swvalue w))
+= match w with | SWriter _ f -> f
+
+inline_for_extraction
+noextract
+let swriter_ifthenelse
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 } )
+  (#h0: HS.mem)
+  (#space_beyond: nat)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (cond: bool)
+  (wtrue: (squash (cond == true) -> Tot (swriter s h0 space_beyond sout pout_from0)))
+  (wfalse: (squash (cond == false) -> Tot (swriter s h0 space_beyond sout pout_from0)))
+: Tot (x: swriter s h0 space_beyond sout pout_from0 { swvalue x == (if cond then swvalue (wtrue ()) else swvalue (wfalse ())) } )
+= SWriter (if cond then SWriter?.v (wtrue ()) else SWriter?.v (wfalse ()))
+  (fun pout_from -> if cond then swrite (wtrue ()) pout_from else swrite (wfalse ()) pout_from)
+
+inline_for_extraction
+noextract
+let swrite_leaf
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (w: leaf_writer_strong s)
+  (h0: HS.mem)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+  (x: t)
+: Tot (y: swriter s h0 0 sout pout_from0 { swvalue y == x } )
+= SWriter (Ghost.hide x)
+  (fun pout_from -> w x sout pout_from)
+
+inline_for_extraction
+noextract
 let fwriter
   (#k: parser_kind)
   (#t: Type)
@@ -823,6 +949,26 @@ let gread
   ))
 = match r with
   | GReader _ f -> f ()
+
+inline_for_extraction
+noextract
+let swbind
+  (#tr: Type)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (#h0: HS.mem)
+  (#space_beyond: nat)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (r: greader h0 sout pout_from0 tr)
+  (w: ((x: tr) -> Pure (swriter s h0 space_beyond sout pout_from0) (requires (x == grvalue r)) (ensures (fun _ -> True))))
+: Tot (w' : swriter s h0 space_beyond sout pout_from0 { swvalue w' == swvalue (w (grvalue r)) } )
+= SWriter (Ghost.hide (swvalue (w (grvalue r)))) (fun pout_from ->
+    let v = gread r in
+    swrite (w v) pout_from
+  )
 
 inline_for_extraction
 noextract
