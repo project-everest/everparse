@@ -1036,7 +1036,7 @@ let bounded_vlgenbytes_payload_length
       pk
       serialize_all_bytes
     )
-    (fun x -> (x <: parse_bounded_vlbytes_t vmin vmax))
+    (synth_bounded_vlbytes vmin vmax)
     input
     pos;
   valid_bounded_vlgen_elim
@@ -1077,3 +1077,67 @@ let get_bounded_vlgenbytes_contents
 = let len = bounded_vlgenbytes_payload_length vmin vmax rk input pos in
   let pos1 = jk input pos in
   BF.sub input.base pos1 len
+
+let valid_exact_all_bytes_intro
+  (h: HS.mem)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
+  (pos pos' : U32.t)
+: Lemma
+  (requires (
+    U32.v pos <= U32.v pos' /\ (
+    let length = U32.v pos' - U32.v pos in
+    valid (parse_flbytes length) h input pos
+  )))
+  (ensures (
+    valid_exact parse_all_bytes h input pos pos'
+  ))
+= 
+  let length = U32.v pos' - U32.v pos in
+  valid_facts (parse_flbytes length) h input pos ;
+  assert (no_lookahead_on (parse_flbytes length) (bytes_of_slice_from_to h input pos pos') (bytes_of_slice_from h input pos));
+  assert (injective_postcond (parse_flbytes length) (bytes_of_slice_from_to h input pos pos') (bytes_of_slice_from h input pos));
+  valid_exact_equiv parse_all_bytes h input pos pos' ;
+  contents_exact_eq parse_all_bytes h input pos pos'
+
+let valid_bounded_vlgenbytes
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 (vmin) (vmax)))
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    U32.v pos1 + U32.v len <= U32.v input.len
+  )))
+  (ensures (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    let x = BY.hide (bytes_of_slice_from_to h input pos1 (pos1 `U32.add` len)) in
+    valid_content_pos (parse_bounded_vlgenbytes vmin vmax pk) h input pos x (pos1 `U32.add` len)
+  ))
+= 
+  let pos1 = get_valid_pos pk h input pos in
+  let len = contents pk h input pos in
+  valid_flbytes_intro h (U32.v len) input pos1;
+  let pos' = pos1 `U32.add` len in
+  valid_exact_all_bytes_intro h input pos1 pos' ;
+  valid_exact_all_bytes_elim h input pos1 pos' ;
+  valid_bounded_vlgen vmin vmax pk serialize_all_bytes input pos h;
+  valid_synth_intro
+    h
+    (parse_bounded_vlgen
+      vmin
+      vmax
+      pk
+      serialize_all_bytes
+    )
+    (synth_bounded_vlbytes vmin vmax)
+    input
+    pos
