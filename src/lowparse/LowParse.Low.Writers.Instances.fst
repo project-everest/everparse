@@ -11,19 +11,19 @@ module HST = FStar.HyperStack.ST
 inline_for_extraction
 noextract
 let swrite_nondep_then
-  (h0: HS.mem)
-  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
-  (pout_from0: U32.t)
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
   (#k1: parser_kind)
   (#t1: Type0)
   (#p1: parser k1 t1)
   (#s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
-  (w1: swriter s1 h0 0 sout pout_from0)
+  (#space_beyond: nat)
+  (w1: swriter s1 h0 space_beyond sout pout_from0)
   (#k2: parser_kind)
   (#t2: Type0)
   (#p2: parser k2 t2)
   (#s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong })
-  (#space_beyond: nat)
   (w2: swriter s2 h0 space_beyond sout pout_from0)
 : Tot (w: swriter (s1 `serialize_nondep_then` s2) h0 space_beyond sout pout_from0 {
     swvalue w == (swvalue w1, swvalue w2)
@@ -40,8 +40,68 @@ let swrite_nondep_then
     pos2
   )
 
+inline_for_extraction
+noextract
+let swrite_filter
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#space_beyond: nat)
+  (cond: (t1 -> GTot bool)) 
+  (w1: swriter s1 h0 space_beyond sout pout_from0 { cond (swvalue w1) } )
+: Tot (w2: swriter (serialize_filter s1 cond) h0 space_beyond sout pout_from0 {
+    swvalue w2 == swvalue w1
+  })
+= SWriter (Ghost.hide (swvalue w1)) (fun pout_from ->
+    serialized_length_eq (serialize_filter s1 cond) (swvalue w1);
+    serialized_length_eq s1 (swvalue w1);
+    let res = swrite w1 pout_from in
+    let h = HST.get () in
+    valid_filter h p1 cond sout pout_from;
+    res
+  )
+
+inline_for_extraction
+noextract
+let swrite_synth
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#space_beyond: nat)
+  (w1: swriter s1 h0 space_beyond sout pout_from0)
+  (#t2: Type0)
+  (f12: (t1 -> GTot t2))
+  (f21: (t2 -> GTot t1))
+  (prf: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (w2: swriter (serialize_synth p1 f12 s1 f21 ()) h0 space_beyond sout pout_from0 {
+    swvalue w2 == f12 (swvalue w1)
+  })
+= SWriter (Ghost.hide (f12 (swvalue w1))) (fun pout_from ->
+    serialized_length_eq (serialize_synth p1 f12 s1 f21 ()) (f12 (swvalue w1));
+    serialized_length_eq s1 (swvalue w1);
+    serialize_synth_eq p1 f12 s1 f21 () (f12 (swvalue w1));
+    synth_injective_synth_inverse_synth_inverse_recip f12 f21 ();
+    let res = swrite w1 pout_from in
+    let h = HST.get () in
+    valid_synth h p1 f12 sout pout_from;
+    res
+  )
+
 module U8 = FStar.UInt8
 module FB = FStar.Bytes
+
+#push-options "--z3rlimit 16"
 
 inline_for_extraction
 noextract
@@ -67,8 +127,6 @@ let swrite_bounded_vlbytes
     B.blit b 0ul payload 0ul len;
     finalize_bounded_vlbytes min max sout pout_from len
   )
-
-#push-options "--z3rlimit 16"
 
 inline_for_extraction
 noextract
