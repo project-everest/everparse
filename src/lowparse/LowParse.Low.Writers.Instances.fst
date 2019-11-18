@@ -2,6 +2,7 @@ module LowParse.Low.Writers.Instances
 include LowParse.Low.Writers
 include LowParse.Low.Combinators
 include LowParse.Low.Bytes
+include LowParse.Low.BitSum
 
 module HS = FStar.HyperStack
 module B = LowStar.Buffer
@@ -85,13 +86,16 @@ let swrite_synth
     synth_inverse f12 f21
   ))
 : Tot (w2: swriter (serialize_synth p1 f12 s1 f21 ()) h0 space_beyond sout pout_from0 {
-    swvalue w2 == f12 (swvalue w1)
+    swvalue w2 == f12 (swvalue w1) /\
+    swvalue w1 == f21 (swvalue w2)
   })
-= SWriter (Ghost.hide (f12 (swvalue w1))) (fun pout_from ->
+= [@inline_let] let _ =
+    serialize_synth_eq p1 f12 s1 f21 () (f12 (swvalue w1));
+    synth_injective_synth_inverse_synth_inverse_recip f12 f21 ()
+  in
+  SWriter (Ghost.hide (f12 (swvalue w1))) (fun pout_from ->
     serialized_length_eq (serialize_synth p1 f12 s1 f21 ()) (f12 (swvalue w1));
     serialized_length_eq s1 (swvalue w1);
-    serialize_synth_eq p1 f12 s1 f21 () (f12 (swvalue w1));
-    synth_injective_synth_inverse_synth_inverse_recip f12 f21 ();
     let res = swrite w1 pout_from in
     let h = HST.get () in
     valid_synth h p1 f12 sout pout_from;
@@ -158,6 +162,58 @@ let swrite_bounded_vlgenbytes
     let h = HST.get () in
     valid_bounded_vlgenbytes min max pk sout pout_from h;
     pout_payload `U32.add` len
+  )
+
+#pop-options
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+noextract
+let swrite_bitsum
+  (h0: HS.mem)
+  (space_beyond: nat)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+  (#kt: parser_kind)
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#data: Type0)
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (synth_case: synth_case_t b data tag_of_data type_of_tag)
+  (#p: parser kt t)
+  (#s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
+  (w_tg: leaf_writer_strong s)
+  (mk: synth_bitsum'_recip_t b)
+  (#f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
+  (g: (x: bitsum'_key_type b) -> Tot (serializer (dsnd (f x))))
+  (k: bitsum'_type b {
+    (parse_bitsum_kind kt b type_of_tag f).parser_kind_subkind == Some ParserStrong /\
+    (dfst (f (bitsum'_key_of_t b k))).parser_kind_subkind == Some ParserStrong
+  })
+  (w_pl: swriter (g (bitsum'_key_of_t b k)) h0 space_beyond sout pout_from0)
+: Tot (w' : swriter (serialize_bitsum b tag_of_data type_of_tag synth_case s #f g) h0 space_beyond sout pout_from0 {
+    swvalue w' == synth_case.f k (swvalue w_pl)
+  })
+= SWriter (Ghost.hide (synth_case.f k (swvalue w_pl))) (fun pout_from ->
+    serialized_length_eq (serialize_bitsum b tag_of_data type_of_tag synth_case s #f g) (synth_case.f k (swvalue w_pl));
+    serialized_length_eq s (synth_bitsum'_recip b k);
+    serialized_length_eq (g (bitsum'_key_of_t b k)) (swvalue w_pl);
+    serialize_bitsum_eq_2 b tag_of_data type_of_tag synth_case s g k (swvalue w_pl);
+    let pos1 = w_tg (mk k) sout pout_from in
+    let pos2 = swrite w_pl pos1 in
+    let h = HST.get () in
+    valid_filter h p (filter_bitsum' b) sout pout_from;
+    synth_bitsum'_injective b;
+    synth_bitsum'_recip_inverse b;
+    assert (filter_bitsum' b (mk k) == true);
+    assert (synth_bitsum' b (mk k) == k);
+    valid_synth h (p `parse_filter` filter_bitsum' b) (synth_bitsum' b) sout pout_from;
+    valid_bitsum_intro b tag_of_data type_of_tag synth_case p f h sout pout_from;
+    pos2
   )
 
 #pop-options

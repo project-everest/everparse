@@ -656,6 +656,22 @@ type synth_case_t
     ))
     -> synth_case_t b data tag_of_data type_of_tag
 
+let synth_case_g_f_eq
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#b: bitsum' cl tot)
+  (#data: Type0)
+  (#tag_of_data: (data -> Tot (bitsum'_type b)))
+  (#type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (s: synth_case_t b data tag_of_data type_of_tag)
+  (k: bitsum'_type b)
+  (x: type_of_tag (bitsum'_key_of_t b k))
+: Lemma
+  (s.g k (s.f k x) == x)
+= s.f_g_eq k (s.f k x);
+  s.f_inj k (s.g k (s.f k x)) x
+
 #push-options "--z3rlimit 16 --max_ifuel 3 --initial_ifuel 3"
 
 let rec weaken_parse_bitsum_cases_kind'
@@ -971,6 +987,47 @@ let serialize_bitsum_eq'
 : Lemma
   (serialize_bitsum #kt #tot #t #cl b #data tag_of_data type_of_tag synth_case #p s #f g x == serialize_bitsum_alt #kt #tot #t #cl b #data tag_of_data type_of_tag synth_case #p s #f g x)
 = serialize_bitsum_eq b tag_of_data type_of_tag synth_case s g x
+
+let serialize_bitsum_alt_2
+  (#kt: parser_kind)
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#data: Type0)
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (synth_case: synth_case_t b data tag_of_data type_of_tag)
+  (#p: parser kt t)
+  (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
+  (#f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
+  (g: (x: bitsum'_key_type b) -> Tot (serializer (dsnd (f x))))
+  (tg: bitsum'_type b)
+  (payload: type_of_tag (bitsum'_key_of_t b tg))
+: GTot bytes
+= let k = bitsum'_key_of_t b tg in
+  serialize s (synth_bitsum'_recip b tg) `Seq.append` serialize (g k) payload
+
+let serialize_bitsum_eq_2
+  (#kt: parser_kind)
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#data: Type0)
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (synth_case: synth_case_t b data tag_of_data type_of_tag)
+  (#p: parser kt t)
+  (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
+  (#f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
+  (g: (x: bitsum'_key_type b) -> Tot (serializer (dsnd (f x))))
+  (tg: bitsum'_type b)
+  (payload: type_of_tag (bitsum'_key_of_t b tg))
+: Lemma
+  (serialize_bitsum #kt #tot #t #cl b #data tag_of_data type_of_tag synth_case #p s #f g (synth_case.f tg payload) == serialize_bitsum_alt_2 #kt #tot #t #cl b #data tag_of_data type_of_tag synth_case #p s #f g tg payload)
+= serialize_bitsum_eq b tag_of_data type_of_tag synth_case s g (synth_case.f tg payload);
+  synth_case_g_f_eq synth_case tg payload
 
 (* Implementation of filter_bitsum' *)
 
