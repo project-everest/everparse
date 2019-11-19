@@ -11,6 +11,34 @@ module HST = FStar.HyperStack.ST
 
 inline_for_extraction
 noextract
+let swrite_weaken
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#space_beyond: nat)
+  (k2: parser_kind)
+  (w1: swriter s1 h0 space_beyond sout pout_from0 {
+    (k2 `is_weaker_than` k1) /\
+    k2.parser_kind_subkind == Some ParserStrong
+  })
+: Tot (w2: swriter (serialize_weaken k2 s1) h0 space_beyond sout pout_from0 {
+    swvalue w2 == swvalue w1
+  })
+= SWriter (Ghost.hide (swvalue w1)) (fun pout_from ->
+    serialized_length_eq s1 (swvalue w1);
+    serialized_length_eq (serialize_weaken k2 s1) (swvalue w1);
+    let res = swrite w1 pout_from in
+    let h = HST.get () in
+    valid_weaken k2 p1 h sout pout_from;
+    res
+  )
+
+inline_for_extraction
+noextract
 let swrite_nondep_then
   (#h0: HS.mem)
   (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
@@ -109,6 +137,30 @@ module FB = FStar.Bytes
 
 inline_for_extraction
 noextract
+let swrite_flbytes
+  (h0: HS.mem)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (pout_from0: U32.t)
+  (len: U32.t)
+  (b: B.buffer U8.t {
+    B.live h0 b /\
+    B.length b == U32.v len /\
+    B.loc_disjoint (B.loc_buffer b) (loc_slice_from sout pout_from0)
+  })
+: Tot (w: swriter (serialize_flbytes (U32.v len)) h0 0 sout pout_from0 {
+    swvalue w == FB.hide (B.as_seq h0 b)
+  })
+= SWriter (Ghost.hide (FB.hide (B.as_seq h0 b))) (fun pout_from ->
+    serialized_length_eq (serialize_flbytes (U32.v len)) (FB.hide (B.as_seq h0 b));
+    let payload = B.sub sout.base pout_from len in
+    B.blit b 0ul payload 0ul len;
+    let h = HST.get () in
+    valid_flbytes_intro h (U32.v len) sout pout_from;
+    pout_from `U32.add` len
+  )
+
+inline_for_extraction
+noextract
 let swrite_bounded_vlbytes
   (h0: HS.mem)
   (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
@@ -116,7 +168,8 @@ let swrite_bounded_vlbytes
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (len: U32.t { min <= U32.v len /\ U32.v len <= max })
-  (b: B.lbuffer U8.t (U32.v len) {
+  (b: B.buffer U8.t {
+    B.length b == U32.v len /\
     B.live h0 b /\
     B.loc_disjoint (B.loc_buffer b) (loc_slice_from sout pout_from0)
   })
