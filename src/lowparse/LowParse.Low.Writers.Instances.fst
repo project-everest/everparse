@@ -198,8 +198,9 @@ let swrite_bounded_vlgenbytes
   (#sk: serializer pk { kk.parser_kind_subkind == Some ParserStrong })
   (wk: leaf_writer_strong sk)
   (len: U32.t { min <= U32.v len /\ U32.v len <= max })
-  (b: B.lbuffer U8.t (U32.v len) {
+  (b: B.buffer U8.t {
     B.live h0 b /\
+    B.length b == U32.v len /\
     B.loc_disjoint (B.loc_buffer b) (loc_slice_from sout pout_from0)
   })
 : Tot (w: swriter (serialize_bounded_vlgenbytes min max sk) h0 0 sout pout_from0 {
