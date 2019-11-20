@@ -121,6 +121,19 @@ let write_bounded_integer
   | 4 -> write_bounded_integer_4 ()
 
 inline_for_extraction
+let write_bounded_integer'
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+: Tot (leaf_writer_strong (serialize_bounded_integer (U32.v i)))
+= fun v #rrel #rel sl pos ->
+  if i = 1ul
+  then write_bounded_integer_1 () v sl pos
+  else if i = 2ul
+  then write_bounded_integer_2 () v sl pos
+  else if i = 3ul
+  then write_bounded_integer_3 () v sl pos
+  else write_bounded_integer_4 () v sl pos
+
+inline_for_extraction
 let write_bounded_integer_1_weak (_ : unit) : Tot (leaf_writer_weak (serialize_bounded_integer 1)) =
   leaf_writer_weak_of_strong_constant_size (write_bounded_integer_1 ()) 1ul ()
 
