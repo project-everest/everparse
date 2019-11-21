@@ -2104,48 +2104,50 @@ let validate_bounded_strong_prefix
   (v: validator p)
   (#rrel: _) (#rel: _)
   (sl: slice rrel rel)
+  (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
     live_slice h sl /\
     Some? k.parser_kind_high /\
-    Some?.v k.parser_kind_high <= U32.v validator_max_length /\
+    U32.v pos <= U32.v sl.len /\
+    U32.v pos + Some?.v k.parser_kind_high <= U32.v validator_max_length /\
     k.parser_kind_subkind == Some ParserStrong
   ))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
     if U32.v res <= U32.v validator_max_length
     then
-      valid_pos p h sl 0ul res
+      valid_pos p h sl pos res
     else
-      (~ (valid p h sl 0ul))
+      (~ (valid p h sl pos))
   )))
 = if sl.len `U32.lte` validator_max_length
-  then v sl 0ul
+  then v sl pos
   else
     let h = HST.get () in
     let sl' = make_slice sl.base validator_max_length in
-    let res = v sl' 0ul in
+    let res = v sl' pos in
     let phi () : Lemma
       (ensures (
         if U32.v res <= U32.v validator_max_length
         then
-          valid_pos p h sl 0ul res
+          valid_pos p h sl pos res
         else
-          (~ (valid p h sl 0ul))
+          (~ (valid p h sl pos))
       ))
     =
-      valid_facts p h sl 0ul;
-      valid_facts p h sl' 0ul;
+      valid_facts p h sl pos;
+      valid_facts p h sl' pos;
       if U32.v res <= U32.v validator_max_length
       then
-        parse_strong_prefix p (bytes_of_slice_from h sl' 0ul) (bytes_of_slice_from h sl 0ul)
+        parse_strong_prefix p (bytes_of_slice_from h sl' pos) (bytes_of_slice_from h sl pos)
       else
         let psi () : Lemma
-          (requires (valid p h sl 0ul))
+          (requires (valid p h sl pos))
           (ensures False)
-        = let len = get_valid_pos p h sl 0ul in
+        = let len = get_valid_pos p h sl pos in
           assert (U32.v len <= U32.v validator_max_length);
-          parse_strong_prefix p (bytes_of_slice_from h sl 0ul) (bytes_of_slice_from h sl' 0ul)
+          parse_strong_prefix p (bytes_of_slice_from h sl pos) (bytes_of_slice_from h sl' pos)
         in
         Classical.move_requires psi ()
     in
