@@ -2,7 +2,7 @@ module LowParse.Spec.Int
 include LowParse.Spec.Base
 
 module Seq = FStar.Seq
-module E = LowParse.BigEndian
+module E = FStar.Endianness
 module U8  = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32

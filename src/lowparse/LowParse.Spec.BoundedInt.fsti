@@ -2,11 +2,13 @@ module LowParse.Spec.BoundedInt
 include LowParse.Spec.Base
 include LowParse.Spec.Int // for parse_u16_kind
 
+open FStar.Mul
+
 module Seq = FStar.Seq
 module U8  = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
-module E = LowParse.BigEndian
+module E = FStar.Endianness
 
 (* bounded integers *)
 
@@ -20,6 +22,12 @@ let bounded_integer_prop
   (u: U32.t)
 : GTot Type0
 = U32.v u < (match i with 1 -> 256 | 2 -> 65536 | 3 -> 16777216 | 4 -> 4294967296)
+
+val bounded_integer_prop_equiv
+  (i: integer_size)
+  (u: U32.t)
+: Lemma
+  (bounded_integer_prop i u <==> U32.v u < pow2 (8 * i))
 
 inline_for_extraction
 let bounded_integer
@@ -61,7 +69,7 @@ val serialize_bounded_integer_spec
   (x: bounded_integer sz)
 : Lemma
   (let (bx : nat {bx < pow2 (8 `FStar.Mul.op_Star` sz)}) = U32.v x in
-    serialize (serialize_bounded_integer sz) x == E.n_to_be'' sz bx)
+    serialize (serialize_bounded_integer sz) x == E.n_to_be sz bx)
 
 val parse_bounded_integer_le
   (i: integer_size)

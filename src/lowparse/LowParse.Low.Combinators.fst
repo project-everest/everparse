@@ -3,6 +3,7 @@ include LowParse.Low.Base
 include LowParse.Spec.Combinators
 
 module B = LowStar.Monotonic.Buffer
+module B0 = LowStar.Buffer
 module U32 = FStar.UInt32
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST

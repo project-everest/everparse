@@ -136,7 +136,7 @@ let gaccessor_flbytes_get'
       (ensures (gaccessor_post (parse_flbytes sz) parse_u8 (clens_flbytes_get sz i) input res))
     = parser_kind_prop_equiv (get_parser_kind parse_u8) parse_u8;
       assert (res == (U32.v i));
-      parse_u8_spec (Seq.slice input (U32.v i) (U32.v i + 1));
+      parse_u8_spec' (Seq.slice input (U32.v i) (U32.v i + 1));
       parse_strong_prefix parse_u8 (Seq.slice input (U32.v i) (U32.v i + 1)) (Seq.slice input (U32.v i) (Seq.length input))
     in
     Classical.move_requires g ();
@@ -787,7 +787,7 @@ let gaccessor_vlbytes'_get'
     = parse_bounded_vlbytes_eq min max l input;
       parser_kind_prop_equiv (get_parser_kind parse_u8) parse_u8;
       assert (res == (l + U32.v i));
-      parse_u8_spec (Seq.slice input (l + U32.v i) (l + U32.v i + 1));
+      parse_u8_spec' (Seq.slice input (l + U32.v i) (l + U32.v i + 1));
       parse_strong_prefix parse_u8 (Seq.slice input (l + U32.v i) (l + U32.v i + 1)) (Seq.slice input (l + U32.v i) (Seq.length input))
     in
     Classical.move_requires g ();

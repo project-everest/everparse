@@ -8,7 +8,7 @@ open FStar.Mul
 module U8 = FStar.UInt8
 module UInt = FStar.UInt
 module Math = LowParse.Math
-module E = LowParse.BigEndian
+module E = FStar.Endianness
 module Seq = FStar.Seq
 
 #reset-options "--z3cliopt smt.arith.nl=false --max_fuel 0 --max_ifuel 0"
@@ -470,7 +470,7 @@ let synth_be_int_recip
   (len: nat)
   (x: lint len)
 : GTot (b: Seq.lseq byte len)
-= E.n_to_be'' len x
+= E.n_to_be len x
 
 let synth_be_int_inverse
   (len: nat)
@@ -577,7 +577,7 @@ let serialize_der_length_weak_unfold
     then y <= 255 /\ res `Seq.equal` (s1 `Seq.append` Seq.create 1 (U8.uint_to_t y))
     else
       let len = log256 y in
-      res `Seq.equal` (s1 `Seq.append` E.n_to_be'' len y)
+      res `Seq.equal` (s1 `Seq.append` E.n_to_be len y)
   )
 = let x = tag_of_der_length y in
   serialize_u8_spec x;
@@ -719,7 +719,7 @@ let serialize_bounded_der_length_unfold
     then y <= 255 /\ res `Seq.equal` (s1 `Seq.append` Seq.create 1 (U8.uint_to_t y))
     else
       let len = log256 y in
-      res `Seq.equal` (s1 `Seq.append` E.n_to_be'' len y)
+      res `Seq.equal` (s1 `Seq.append` E.n_to_be len y)
   )
 = serialize_synth_eq
     _
