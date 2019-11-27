@@ -182,7 +182,7 @@ let finalize_bounded_vlgen
   in
   finalize_bounded_vlgen_exact min max sz32 wk s input pos pos'
 
-#push-options "--z3rlimit 32 --max_fuel 8"
+#push-options "--z3rlimit 64 --max_fuel 8"
 
 inline_for_extraction
 let validate_bounded_vlgen
