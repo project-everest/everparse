@@ -222,7 +222,7 @@ open LowParse.Spec.BitSum // again, for coerce
 
 #pop-options
 
-#push-options "--z3rlimit 32 --max_fuel 8 --max_ifuel 8 --initial_fuel 8 --initial_ifuel 8"
+#push-options "--z3rlimit 64 --max_fuel 8 --max_ifuel 8 --initial_fuel 8 --initial_ifuel 8"
 
 [@filter_bitsum'_t_attr]
 inline_for_extraction
