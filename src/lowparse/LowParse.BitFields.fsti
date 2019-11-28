@@ -188,6 +188,7 @@ val get_bitfield_eq
 : Lemma
   (get_bitfield x lo hi == (x / pow2 lo) % pow2 (hi - lo))
 
+module U32 = FStar.UInt32
 
 inline_for_extraction
 noextract
@@ -197,6 +198,8 @@ type uint_t (tot: pos) (t: Type0) = {
   uint_to_t: (U.uint_t tot -> Tot t);
   v_uint_to_t: ((x: U.uint_t tot) -> Lemma (v (uint_to_t x) == x));
   uint_to_t_v: ((x: t) -> Lemma (uint_to_t (v x) == x));
+  get_bitfield_gen: ((x: t) -> (lo: U32.t) -> (hi: U32.t { U32.v lo < U32.v hi /\ U32.v hi <= tot }) -> Tot (y: t { v y == get_bitfield (v x) (U32.v lo) (U32.v hi) }));
+  set_bitfield_gen: ((x: t) -> (lo: U32.t) -> (hi: U32.t { U32.v lo < U32.v hi /\ U32.v hi <= tot }) -> (z: t { v z < pow2 (U32.v hi - U32.v lo) }) -> Tot (y : t { v y == set_bitfield (v x) (U32.v lo) (U32.v hi) (v z)}));
   get_bitfield: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> Tot (y: t { v y == get_bitfield (v x) lo hi }));
   set_bitfield: ((x: t) -> (lo: nat) -> (hi: nat { lo <= hi /\ hi <= tot }) -> (z: t { v z < pow2 (hi - lo) }) -> Tot (y : t { v y == set_bitfield (v x) lo hi (v z)}));
   logor: ((x: t) -> (y: t) -> Tot (z: t { v z == v x `U.logor` v y }));
