@@ -13,6 +13,23 @@ module Cast = FStar.Int.Cast
 
 friend LowParse.Spec.BoundedInt
 
+inline_for_extraction
+let mul256 (x: U16.t) : Tot (y: U32.t { U32.v y == 256 `Prims.op_Multiply` U16.v x }) =
+  assert_norm (pow2 8 == 256);
+  FStar.Math.Lemmas.pow2_lt_compat 32 24;
+  FStar.Math.Lemmas.pow2_lt_compat 24 16;
+  FStar.Math.Lemmas.pow2_lt_compat 16 8;
+  FStar.Math.Lemmas.pow2_plus 8 16;
+  FStar.Math.Lemmas.small_mod (U16.v x `Prims.op_Multiply` 256) (pow2 32);
+  FStar.UInt.shift_left_value_lemma #32 (U16.v x) 8;
+  Cast.uint16_to_uint32 x `U32.shift_left` 8ul
+
+inline_for_extraction
+let div256 (x: U32.t) : Tot (y: U32.t { U32.v y == U32.v x / 256 }) =
+  assert_norm (pow2 8 == 256);
+  FStar.UInt.shift_right_value_lemma #32 (U32.v x) 8;
+  x `U32.shift_right` 8ul
+
 (* bounded integers *)
 
 let read_bounded_integer_1 () =
@@ -52,7 +69,7 @@ let read_bounded_integer_3 () =
     E.lemma_be_to_n_is_bounded (Seq.slice (B.as_seq h input) (U32.v pos) (U32.v pos + 2));
     E.lemma_be_to_n_is_bounded (Seq.slice (B.as_seq h input) (U32.v pos) (U32.v pos + 3));
     assert_norm (pow2 8 == 256);
-    Cast.uint8_to_uint32 lo `U32.add` (256ul `U32.mul` Cast.uint16_to_uint32 hi)
+    Cast.uint8_to_uint32 lo `U32.add` (mul256 hi)
   )
 
 let read_bounded_integer_4 () =
@@ -92,7 +109,7 @@ let serialize32_bounded_integer_3 () =
   assert_norm (pow2 8 == 256);
   let lo = Cast.uint32_to_uint8 v in
   mbuffer_upd out (Ghost.hide (U32.v pos)) (Ghost.hide (U32.v pos + 3)) (pos `U32.add` 2ul) lo;
-  let hi' = v `U32.div` 256ul in
+  let hi' = div256 v in
   FStar.Math.Lemmas.small_mod (U32.v hi') (pow2 16);
   let hi = Cast.uint32_to_uint16 hi' in
   let h1 = HST.get () in
@@ -290,7 +307,7 @@ let read_bounded_integer_le_3 =
     E.lemma_le_to_n_is_bounded (Seq.slice (B.as_seq h b) (U32.v pos + 1) (U32.v pos + 3));
     E.lemma_le_to_n_is_bounded (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 3));
     assert_norm (pow2 8 == 256);
-    Cast.uint8_to_uint32 lo `U32.add` (256ul `U32.mul` Cast.uint16_to_uint32 hi)
+    Cast.uint8_to_uint32 lo `U32.add` (mul256 hi)
   )
 
 let read_bounded_integer_le_4 =
@@ -339,6 +356,8 @@ let serialize32_bounded_integer_le_2
 
 let write_bounded_integer_le_2 = leaf_writer_strong_of_serializer32 serialize32_bounded_integer_le_2 ()
 
+#push-options "--z3rlimit 16"
+
 let serialize32_bounded_integer_le_3
 = fun v #rrel #rel out pos ->
   bounded_integer_prop_equiv 3 v;
@@ -346,7 +365,7 @@ let serialize32_bounded_integer_le_3
   assert_norm (pow2 8 == 256);
   let lo = Cast.uint32_to_uint8 v in
   mbuffer_upd out (Ghost.hide (U32.v pos)) (Ghost.hide (U32.v pos + 3)) pos lo;
-  let hi' = v `U32.div` 256ul in
+  let hi' = div256 v in
   FStar.Math.Lemmas.small_mod (U32.v hi') (pow2 16);
   let hi = Cast.uint32_to_uint16 hi' in
   let h1 = HST.get () in
@@ -358,6 +377,8 @@ let serialize32_bounded_integer_le_3
   B.modifies_buffer_from_to_elim out pos (pos `U32.add` 1ul) (B.loc_buffer_from_to out (pos `U32.add` 1ul) (pos `U32.add` 3ul)) h1 h2;
   assert (Seq.slice (B.as_seq h2 out) (U32.v pos) (U32.v pos + 1) `Seq.equal` Seq.create 1 lo);
   3ul
+
+#pop-options
 
 let write_bounded_integer_le_3 = leaf_writer_strong_of_serializer32 serialize32_bounded_integer_le_3 ()
 
