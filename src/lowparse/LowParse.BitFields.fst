@@ -697,6 +697,60 @@ let get_bitfield_size
     end
   )
 
+let mod_1 (x: int) : Lemma
+  (x % 1 == 0)
+= ()
+
+let div_1 (x: int) : Lemma
+  (x / 1 == x)
+= ()
+
+let get_bitfield_eq (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi /\ hi <= tot}) : Lemma
+  (get_bitfield x lo hi == (x / pow2 lo) % pow2 (hi - lo))
+= if hi - lo = 0
+  then begin
+    assert (hi == lo);
+    assert_norm (pow2 0 == 1);
+    mod_1 (x / pow2 lo);
+    get_bitfield_empty #tot x lo 
+  end else if hi - lo = tot
+  then begin
+    assert (hi == tot);
+    assert (lo == 0);
+    assert_norm (pow2 0 == 1);
+    div_1 x;
+    M.small_mod x (pow2 tot);
+    get_bitfield_full #tot x
+  end else begin
+    assert (hi - lo < tot);
+    U.shift_right_logand_lemma #tot x (bitfield_mask tot lo hi) lo;
+    U.shift_right_value_lemma #tot (bitfield_mask tot lo hi) lo;
+    M.multiple_division_lemma (pow2 (hi - lo) - 1) (pow2 lo);
+    U.logand_mask #tot (U.shift_right x lo) (hi - lo);
+    U.shift_right_value_lemma #tot x lo
+  end
+
+let pow2_m_minus_one_eq
+  (n: nat)
+  (m: nat)
+: Lemma
+  (requires (m <= n))
+  (ensures (
+    (pow2 n - 1) / pow2 m == pow2 (n - m) - 1 
+  ))
+= M.pow2_le_compat n m;
+  M.pow2_plus (n - m) m;
+  M.division_definition (pow2 n - 1) (pow2 m) (pow2 (n - m) - 1)
+
+let bitfield_mask_eq_2 (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Lemma
+  (
+    bitfield_mask tot lo hi == U.shift_left #tot (U.lognot 0 `U.shift_right` (tot - (hi - lo))) lo
+  )
+= bitfield_mask_eq tot lo hi;
+  pow2_m_minus_one_eq tot (tot - (hi - lo));
+  U.lemma_lognot_value_mod #tot 0;
+  U.shift_right_value_lemma #tot (pow2 tot - 1) (tot - (hi - lo))
+
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module U16 = FStar.UInt16
