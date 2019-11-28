@@ -3,6 +3,8 @@ include LowParse.Spec.BoundedInt
 include LowParse.Low.Base
 
 module U32 = FStar.UInt32
+module HST = FStar.HyperStack.ST
+module B = LowStar.Monotonic.Buffer
 
 (* bounded integers *)
 
@@ -42,6 +44,23 @@ let read_bounded_integer'
   else if i = 3ul
   then read_bounded_integer_3 () sl pos
   else read_bounded_integer_4 () sl pos
+
+inline_for_extraction
+val read_bounded_integer_ct
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+  (#rrel: _)
+  (#rel: _)
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: HST.Stack (bounded_integer (U32.v i))
+  (requires (fun h ->
+    live_slice h sl /\
+    U32.v pos + 4 <= U32.v sl.len
+  ))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\
+    valid_content (parse_bounded_integer (U32.v i)) h sl pos res
+  ))
 
 inline_for_extraction
 noextract

@@ -7,7 +7,8 @@ module U32 = FStar.UInt32
 module HST = FStar.HyperStack.ST
 module HS = FStar.HyperStack
 module B = LowStar.Buffer
-module E = LowParse.Endianness
+module E = LowParse.Endianness.BitFields
+module BF = LowParse.BitFields
 module LE = LowParse.Low.Endianness
 module Cast = FStar.Int.Cast
 
@@ -56,6 +57,8 @@ let read_bounded_integer_2 () =
     Cast.uint16_to_uint32 r
   )
 
+#push-options "--z3rlimit 16"
+
 let read_bounded_integer_3 () =
   [@inline_let] let _ =
     decode_bounded_integer_injective 3
@@ -72,6 +75,8 @@ let read_bounded_integer_3 () =
     Cast.uint8_to_uint32 lo `U32.add` (mul256 hi)
   )
 
+#pop-options
+
 let read_bounded_integer_4 () =
   [@inline_let] let _ =
     decode_bounded_integer_injective 4
@@ -81,6 +86,19 @@ let read_bounded_integer_4 () =
     E.lemma_be_to_n_is_bounded (Seq.slice (B.as_seq h input) (U32.v pos) (U32.v pos + 4));
     LE.load32_be_i (* #(Ghost.hide rrel) #(Ghost.hide rel) *) input pos
   )
+
+let read_bounded_integer_ct
+  i #rrel #rel sl pos
+= let h = HST.get () in
+  valid_total_constant_size h (parse_bounded_integer (U32.v i)) i sl pos;
+  valid_facts (parse_bounded_integer (U32.v i)) h sl pos;
+  valid_total_constant_size h parse_u32 4ul sl pos;
+  valid_facts parse_u32 h sl pos;
+  decode_bounded_integer_injective (U32.v i);
+  parse_u32_spec (bytes_of_slice_from h sl pos);
+  E.bitfield_be_to_n_slice (Seq.slice (bytes_of_slice_from h sl pos) 0 4) 0 (U32.v i);
+  let r = LE.load32_be_i sl.base pos in
+  BF.uint32.BF.get_bitfield_gen r (8ul `U32.mul` (4ul `U32.sub` i)) 32ul
 
 let serialize32_bounded_integer_1 () =
   fun (v: bounded_integer 1) #rrel #rel out pos ->
@@ -296,6 +314,8 @@ let read_bounded_integer_le_2 =
     Cast.uint16_to_uint32 r
   )
 
+#push-options "--z3rlimit 16"
+
 let read_bounded_integer_le_3 =
   [@inline_let] let _ = bounded_integer_of_le_injective 3 in
   make_total_constant_size_reader 3 3ul #(bounded_integer 3) (bounded_integer_of_le 3) () (fun #rrel #rel b pos ->
@@ -309,6 +329,8 @@ let read_bounded_integer_le_3 =
     assert_norm (pow2 8 == 256);
     Cast.uint8_to_uint32 lo `U32.add` (mul256 hi)
   )
+
+#pop-options
 
 let read_bounded_integer_le_4 =
   [@inline_let] let _ = bounded_integer_of_le_injective 4 in
