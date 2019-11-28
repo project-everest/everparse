@@ -271,3 +271,67 @@ let swrite_bitsum
   )
 
 #pop-options
+
+module BF = LowParse.BitFields
+module E = LowParse.Endianness.BitFields
+module LE = LowStar.Endianness
+
+inline_for_extraction
+let serialize32_bounded_integer_ct
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+  (x: bounded_integer (U32.v i))
+  (b: B.buffer byte)
+  (pos: U32.t)
+: HST.Stack unit
+  (requires (fun h ->
+    B.live h b /\
+    U32.v pos + 4 <= B.length b
+  ))
+  (ensures (fun h _ h' ->
+    B.modifies (B.loc_buffer_from_to b pos (pos `U32.add` i)) h h' /\
+    Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + U32.v i) == serialize (serialize_bounded_integer (U32.v i)) x
+  ))
+= let h = HST.get () in
+  let before = LE.load32_be_i b pos in
+  bounded_integer_prop_equiv (U32.v i) x;
+  let after = BF.uint32.BF.set_bitfield_gen before (8ul `U32.mul` (4ul `U32.sub` i)) 32ul x in
+  LE.store32_be_i b pos after;
+  let h' = HST.get () in
+  parse_bounded_integer_spec (U32.v i) (Seq.slice (B.as_seq h b) (U32.v pos) (B.length b));
+  E.n_to_be_be_to_n 4 (Seq.slice (Seq.slice (B.as_seq h b) (U32.v pos) (B.length b)) 0 4);
+  Seq.slice_slice (B.as_seq h b) (U32.v pos) (B.length b) 0 4;
+  Seq.slice_slice (B.as_seq h' b) (U32.v pos) (B.length b) 0 4;  
+  E.slice_n_to_be_bitfield 4 (U32.v before) (U32.v i) 4;
+  E.slice_n_to_be_bitfield 4 (U32.v after) (U32.v i) 4;
+  Seq.lemma_split (Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + 4)) (U32.v i);
+  Seq.lemma_split (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 4)) (U32.v i);
+  BF.get_bitfield_set_bitfield_other #32 (U32.v before) (8 `op_Multiply` (4 - U32.v i)) 32 (U32.v x) 0 (8 `op_Multiply` (4 - U32.v i));
+  Seq.lemma_split (Seq.slice (B.as_seq h' b) (U32.v pos + U32.v i) (B.length b)) (4 - U32.v i);
+  Seq.lemma_split (Seq.slice (B.as_seq h b) (U32.v pos + U32.v i) (B.length b)) (4 - U32.v i);
+  B.modifies_loc_buffer_from_to_intro b pos (pos `U32.add` i) B.loc_none h h';
+  E.slice_n_to_be_bitfield 4 (U32.v after) 0 (U32.v i);
+  BF.get_bitfield_set_bitfield_same #32 (U32.v before) (8 `op_Multiply` (4 - U32.v i)) 32 (U32.v x);
+  serialize_bounded_integer_spec (U32.v i) x 
+
+inline_for_extraction
+noextract
+let swrite_bounded_integer_ct
+  (h0: HS.mem)
+  (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+  (pout_from0: U32.t)
+  (x: bounded_integer (U32.v i))
+: Tot (y: swriter (serialize_bounded_integer (U32.v i)) h0 (4 - U32.v i) sout pout_from0 { swvalue y == x } )
+= SWriter (Ghost.hide x)
+  (fun pout_from ->
+    serialized_length_eq (serialize_bounded_integer (U32.v i)) x;
+    serialize32_bounded_integer_ct i x sout.base pout_from;
+    let h = HST.get () in
+    [@inline_let] let _ =
+      let large = bytes_of_slice_from h sout pout_from in
+      let small = bytes_of_slice_from_to h sout pout_from (pout_from `U32.add` i) in
+      parse_strong_prefix (parse_bounded_integer (U32.v i)) small large;
+      valid_facts (parse_bounded_integer (U32.v i)) h sout pout_from
+    in
+    pout_from `U32.add` i
+  )
