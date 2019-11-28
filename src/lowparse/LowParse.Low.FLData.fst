@@ -187,7 +187,8 @@ let gaccessor_fldata
   (p: parser k t { k.parser_kind_subkind == Some ParserStrong } )
   (sz: nat)
 : Tot (gaccessor (parse_fldata p sz) p (clens_id _))
-= gaccessor_fldata' p sz
+= gaccessor_prop_equiv (parse_fldata p sz) p (clens_id _) (gaccessor_fldata' p sz);
+  gaccessor_fldata' p sz
 
 inline_for_extraction
 let accessor_fldata
@@ -239,7 +240,8 @@ let gaccessor_fldata_strong
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (sz: nat)
 : Tot (gaccessor (parse_fldata_strong s sz) p (clens_fldata_strong s sz))
-= gaccessor_fldata_strong' s sz
+= gaccessor_prop_equiv (parse_fldata_strong s sz) p (clens_fldata_strong s sz) (gaccessor_fldata_strong' s sz);
+  gaccessor_fldata_strong' s sz
 
 inline_for_extraction
 let accessor_fldata_strong

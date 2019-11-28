@@ -276,6 +276,8 @@ module BF = LowParse.BitFields
 module E = LowParse.Endianness.BitFields
 module LE = LowStar.Endianness
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 let serialize32_bounded_integer_ct
   (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
@@ -312,6 +314,8 @@ let serialize32_bounded_integer_ct
   E.slice_n_to_be_bitfield 4 (U32.v after) 0 (U32.v i);
   BF.get_bitfield_set_bitfield_same #32 (U32.v before) (8 `op_Multiply` (4 - U32.v i)) 32 (U32.v x);
   serialize_bounded_integer_spec (U32.v i) x 
+
+#pop-options
 
 inline_for_extraction
 noextract

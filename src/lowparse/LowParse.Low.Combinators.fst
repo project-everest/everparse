@@ -381,7 +381,8 @@ let gaccessor_synth
   (g: t2 -> GTot t1)
   (u: squash (synth_inverse f g /\ synth_injective f /\ synth_inverse g f))
 : Tot (gaccessor (parse_synth p1 f) p1 (clens_synth g f u))
-= gaccessor_synth' p1 f g u
+= gaccessor_prop_equiv (parse_synth p1 f) p1 (clens_synth g f u) (gaccessor_synth' p1 f g u);
+  gaccessor_synth' p1 f g u
 
 abstract
 let gaccessor_synth_eq
@@ -470,7 +471,8 @@ let gaccessor_fst
   (#t2: Type)
   (p2: parser k2 t2)
 : Tot (gaccessor (p1 `nondep_then` p2) p1 (clens_fst _ _))
-= gaccessor_fst' p1 sq p2
+= gaccessor_prop_equiv (p1 `nondep_then` p2) p1 (clens_fst _ _) (gaccessor_fst' p1 sq p2);
+  gaccessor_fst' p1 sq p2
 
 abstract
 let gaccessor_fst_eq
@@ -576,6 +578,7 @@ let gaccessor_snd
 : Tot (gaccessor (p1 `nondep_then` p2) p2 (clens_snd _ _))
 = Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_snd_injective p1 p2 x));
   Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_snd_no_lookahead p1 p2 x));
+  gaccessor_prop_equiv (p1 `nondep_then` p2) p2 (clens_snd _ _) (gaccessor_snd' p1 p2);
   gaccessor_snd' p1 p2
 
 abstract
@@ -1100,7 +1103,8 @@ let gaccessor_tagged_union_tag
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
 : Tot (gaccessor (parse_tagged_union pt tag_of_data p) pt (clens_tagged_union_tag tag_of_data))
-= gaccessor_tagged_union_tag' pt tag_of_data p
+= gaccessor_prop_equiv (parse_tagged_union pt tag_of_data p) pt (clens_tagged_union_tag tag_of_data) (gaccessor_tagged_union_tag' pt tag_of_data p);
+  gaccessor_tagged_union_tag' pt tag_of_data p
 
 inline_for_extraction
 let accessor_tagged_union_tag
@@ -1206,6 +1210,7 @@ let gaccessor_tagged_union_payload
 : Tot (gaccessor (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t))
 = Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_tagged_union_payload_injective pt tag_of_data p t x));
   Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_tagged_union_payload_no_lookahead pt tag_of_data p t x));
+  gaccessor_prop_equiv (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t) (gaccessor_tagged_union_payload' pt tag_of_data p t);
   gaccessor_tagged_union_payload' pt tag_of_data p t
 
 inline_for_extraction

@@ -211,6 +211,7 @@ let gaccessor_ifthenelse_payload
 : Tot (gaccessor (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b))
 = Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_ifthenelse_payload_injective s b x));
   Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_ifthenelse_payload_no_lookahead s b x));
+  gaccessor_prop_equiv (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b) (gaccessor_ifthenelse_payload' s b);
   gaccessor_ifthenelse_payload' s b
 
 inline_for_extraction

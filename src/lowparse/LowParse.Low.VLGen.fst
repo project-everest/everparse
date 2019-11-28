@@ -183,6 +183,7 @@ let finalize_bounded_vlgen
   finalize_bounded_vlgen_exact min max sz32 wk s input pos pos'
 
 #push-options "--z3rlimit 64 --max_fuel 8"
+#restart-solver
 
 inline_for_extraction
 let validate_bounded_vlgen
@@ -557,6 +558,7 @@ let gaccessor_bounded_vlgen_payload
 : Tot (gaccessor (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s))
 = Classical.forall_intro_2 (gaccessor_bounded_vlgen_payload_no_lookahead_2 min max pk s);
   Classical.forall_intro_2 (gaccessor_bounded_vlgen_payload_injective_2 min max pk s);
+  gaccessor_prop_equiv (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) (gaccessor_bounded_vlgen_payload' min max pk s);
   gaccessor_bounded_vlgen_payload' min max pk s
 
 module B = LowStar.Buffer
@@ -729,6 +731,7 @@ let gaccessor_vlgen_payload
 : Tot (gaccessor (parse_vlgen min max pk s) p (clens_id _))
 = Classical.forall_intro_2 (gaccessor_vlgen_payload_no_lookahead_2 min max pk s);
   Classical.forall_intro_2 (gaccessor_vlgen_payload_injective_2 min max pk s);
+  gaccessor_prop_equiv (parse_vlgen min max pk s) p (clens_id _) (gaccessor_vlgen_payload' min max pk s);
   gaccessor_vlgen_payload' min max pk s
 
 inline_for_extraction

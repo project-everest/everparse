@@ -95,6 +95,7 @@ let gaccessor_flbytes_slice
   (to: U32.t {U32.v from <= U32.v to /\ U32.v to <= sz } )
 : Tot (gaccessor (parse_flbytes sz) (parse_flbytes (U32.v to - U32.v from)) (clens_flbytes_slice sz from to))
 = assert (forall x . gaccessor_pre (parse_flbytes sz) (parse_flbytes (U32.v to - U32.v from)) (clens_flbytes_slice sz from to) x ==> sz <= Seq.length x);
+  gaccessor_prop_equiv (parse_flbytes sz) (parse_flbytes (U32.v to - U32.v from)) (clens_flbytes_slice sz from to) (gaccessor_flbytes_slice' sz from to);
   gaccessor_flbytes_slice' sz from to
 
 inline_for_extraction
@@ -149,6 +150,7 @@ let gaccessor_flbytes_get
   (i: U32.t { U32.v i < sz } )
 : Tot (gaccessor (parse_flbytes sz) (parse_u8) (clens_flbytes_get sz i))
 = assert (forall x . gaccessor_pre (parse_flbytes sz) (parse_u8) (clens_flbytes_get sz i) x ==> U32.v i <= Seq.length x);
+  gaccessor_prop_equiv (parse_flbytes sz) (parse_u8) (clens_flbytes_get sz i) (gaccessor_flbytes_get' sz i);
   gaccessor_flbytes_get' sz i
 
 inline_for_extraction
@@ -635,6 +637,7 @@ let gaccessor_vlbytes'
 : Tot (gaccessor (parse_bounded_vlbytes' min max l) (parse_flbytes length) (clens_vlbytes min max length))
 = parser_kind_prop_equiv (parse_bounded_vldata_strong_kind min max l parse_all_bytes_kind) (parse_bounded_vlbytes' min max l);
   assert (forall x . gaccessor_pre (parse_bounded_vlbytes' min max l) (parse_flbytes length) (clens_vlbytes min max length) x ==> Seq.length x >= l);
+  gaccessor_prop_equiv (parse_bounded_vlbytes' min max l) (parse_flbytes length) (clens_vlbytes min max length) (gaccessor_vlbytes'_aux min max l length);
   gaccessor_vlbytes'_aux min max l length
 
 #pop-options
@@ -713,6 +716,7 @@ let gaccessor_vlbytes'_slice
 = parser_kind_prop_equiv (parse_bounded_vldata_strong_kind min max l parse_all_bytes_kind) (parse_bounded_vlbytes' min max l);
   Classical.forall_intro (parse_bounded_vlbytes_eq min max l);
   assert (forall x . gaccessor_pre (parse_bounded_vlbytes' min max l) (parse_flbytes (U32.v to - U32.v from)) (clens_vlbytes_slice min max from to) x ==> l + U32.v to <= Seq.length x);
+  gaccessor_prop_equiv (parse_bounded_vlbytes' min max l) (parse_flbytes (U32.v to - U32.v from)) (clens_vlbytes_slice min max from to) (gaccessor_vlbytes'_slice_aux min max l from to);
   gaccessor_vlbytes'_slice_aux min max l from to
 
 let gaccessor_vlbytes_slice
@@ -802,6 +806,7 @@ let gaccessor_vlbytes'_get
 : Tot (gaccessor (parse_bounded_vlbytes' min max l) (parse_u8) (clens_vlbytes_get min max i))
 = Classical.forall_intro (parse_bounded_vlbytes_eq min max l);
   assert (forall x . gaccessor_pre (parse_bounded_vlbytes' min max l) (parse_u8) (clens_vlbytes_get min max i) x ==> l + U32.v i < Seq.length x);
+  gaccessor_prop_equiv (parse_bounded_vlbytes' min max l) (parse_u8) (clens_vlbytes_get min max i) (gaccessor_vlbytes'_get' min max l i);
   gaccessor_vlbytes'_get' min max l i
 
 inline_for_extraction

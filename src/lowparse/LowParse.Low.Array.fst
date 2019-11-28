@@ -165,6 +165,7 @@ let array_nth_ghost
   assert ((i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low <= array_byte_size);
   parser_kind_prop_equiv (parse_array_kind array_byte_size) (parse_array s array_byte_size elem_count);
   assert (forall x . gaccessor_pre (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) x ==> (i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low <= Seq.length x);
+  gaccessor_prop_equiv (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) (array_nth_ghost' s array_byte_size elem_count i);
   array_nth_ghost' s array_byte_size elem_count i
 
 module B = LowStar.Buffer
@@ -646,6 +647,7 @@ let vlarray_nth_ghost
   })
 : Tot (gaccessor (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i))
 = Classical.forall_intro (Classical.move_requires (vlarray_nth_bound array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i));
+  gaccessor_prop_equiv (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) p (clens_vlarray_nth t elem_count_min elem_count_max i) (vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i);
   vlarray_nth_ghost' array_byte_size_min array_byte_size_max s elem_count_min elem_count_max i
 
 inline_for_extraction

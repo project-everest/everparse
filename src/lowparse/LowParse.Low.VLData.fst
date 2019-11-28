@@ -751,6 +751,7 @@ let gaccessor_bounded_vldata_payload
 = let sz = log256' max in
   Classical.forall_intro (parse_vldata_gen_eq sz (in_bounds min max) p);
   assert (forall x . gaccessor_pre (parse_bounded_vldata min max p) p (clens_id t) x ==> Seq.length x >= sz);
+  gaccessor_prop_equiv (parse_bounded_vldata min max p) p (clens_id t) (gaccessor_bounded_vldata_payload' min max p);
   gaccessor_bounded_vldata_payload' min max p
 
 inline_for_extraction
@@ -781,6 +782,17 @@ let clens_bounded_vldata_strong_payload
   clens_get = (fun (x: parse_bounded_vldata_strong_t min max s) -> (x <: t));
 }
 
+let gaccessor_bounded_vldata_strong_payload'
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
+: Tot (gaccessor' (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s))
+= fun input ->
+  (gaccessor_bounded_vldata_payload min max p input <: (res : _ { gaccessor_post' (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s) input res } ))
+
 let gaccessor_bounded_vldata_strong_payload
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
@@ -789,8 +801,9 @@ let gaccessor_bounded_vldata_strong_payload
   (#p: parser k t)
   (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
 : Tot (gaccessor (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s))
-= fun input ->
-  (gaccessor_bounded_vldata_payload min max p input <: (res : _ { gaccessor_post' (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s) input res } ))
+= gaccessor_prop_equiv (parse_bounded_vldata min max p) p (clens_id t) (gaccessor_bounded_vldata_payload' min max p);
+  gaccessor_prop_equiv (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s) (gaccessor_bounded_vldata_strong_payload' min max s);
+  gaccessor_bounded_vldata_strong_payload' min max s
 
 inline_for_extraction
 let accessor_bounded_vldata_strong_payload

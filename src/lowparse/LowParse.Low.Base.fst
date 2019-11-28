@@ -1333,6 +1333,45 @@ let gaccessor_injective
   (f: gaccessor' p1 p2 cl)
 = (forall (sl sl' : bytes) . {:pattern (f sl); (f sl')} (gaccessor_pre p1 p2 cl sl /\ gaccessor_pre p1 p2 cl sl' /\ injective_precond p1 sl sl') ==> f sl == f sl')
 
+let gaccessor_prop'
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (f: gaccessor' p1 p2 cl)
+: GTot Type0
+= gaccessor_no_lookahead f /\ gaccessor_injective f
+
+abstract
+let gaccessor_prop
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (f: gaccessor' p1 p2 cl)
+: GTot Type0
+= gaccessor_prop' f
+
+abstract
+let gaccessor_prop_equiv
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (cl: clens t1 t2)
+  (f: gaccessor' p1 p2 cl)
+: Lemma
+  (gaccessor_prop f <==> gaccessor_prop' f)
+= ()
+
 [@unifier_hint_injective]
 let gaccessor
   (#k1: parser_kind)
@@ -1343,7 +1382,7 @@ let gaccessor
   (p2: parser k2 t2)
   (cl: clens t1 t2)
 : Tot Type
-= (f: gaccessor' p1 p2 cl { gaccessor_no_lookahead f /\ gaccessor_injective f })
+= (f: gaccessor' p1 p2 cl { gaccessor_prop f })
 
 let get_gaccessor_clens
   (#k1: parser_kind)
