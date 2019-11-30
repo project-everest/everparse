@@ -74,6 +74,31 @@ let validate_bitsum_cases_bitfield
     sl
     pos
 
+inline_for_extraction
+let validate_bitsum_cases_bitsum_gen
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (bitsum'_size: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (key_of: ((x: enum_repr e) -> Tot (y: enum_key e { y == enum_key_of_repr e x })))
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
+  (destr_payload: ((k: enum_key e) -> Tot (validate_bitsum_cases_t (payload k))))
+: Tot (validate_bitsum_cases_t (BitSum' key key_size e payload))
+= fun u f v x_ #rrel #rel sl pos ->
+      [@inline_let]
+      let r = cl.get_bitfield x_ (bitsum'_size - key_size) bitsum'_size in
+      [@inline_let]
+      let k = key_of r in
+      destr_payload 
+        k
+        (fun x -> u (bitsum'_key_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, x |)))
+        (fun x -> f (bitsum'_key_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, x |)))
+        (fun x -> v (bitsum'_key_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, x |)))
+        x_ sl pos
+
 module L = FStar.List.Tot
 
 inline_for_extraction

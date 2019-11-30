@@ -1064,6 +1064,28 @@ let filter_bitsum'_bitfield
 = fun x -> phi x
 
 inline_for_extraction
+let filter_bitsum'_bitsum_gen
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (bitsum'_size: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
+  (is_valid_repr: ((x: bitfield cl key_size) -> Tot (y: bool { y == list_mem x (list_map snd e) })))
+  (key_of: ((x: enum_repr e) -> Tot (y: enum_key e { y == enum_key_of_repr e x })))
+  (destr_payload: ((k: enum_key e) -> filter_bitsum'_t (payload k)))
+: Tot (filter_bitsum'_t (BitSum' key key_size e payload))
+= fun x ->
+    let r : bitfield cl key_size = cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size in
+    if not (is_valid_repr r)
+    then
+      false
+    else
+      destr_payload (key_of r) x
+
+inline_for_extraction
 noextract
 let filter_bitsum'_bitsum'_t
   (#tot: pos)
@@ -1257,6 +1279,35 @@ let destr_bitsum'_bitfield
     (fun z -> u_if (Ghost.hide (cl.get_bitfield x (bitsum'_size - sz) bitsum'_size, Ghost.reveal z)))
     (fun z -> f (cl.get_bitfield x (bitsum'_size - sz) bitsum'_size, z))
     x
+
+inline_for_extraction
+let destr_bitsum'_bitsum_gen
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (bitsum'_size: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (key_of: (
+    (x: enum_repr e) ->
+    Tot (y: enum_key e {
+      y == enum_key_of_repr e x
+  })))
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
+  (destr_payload: ((k: enum_key e) -> Tot (destr_bitsum'_t (payload k))))
+: Tot (destr_bitsum'_t (BitSum' key key_size e payload))
+= fun u u_if f x ->
+    [@inline_let]
+    let r : enum_repr e = cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size in
+    [@inline_let]
+    let k : enum_key e = key_of r in
+    destr_payload
+      k
+      (fun z -> u (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, z |)))
+      (fun z -> u_if (Ghost.hide (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, Ghost.reveal z |))))
+      (fun z -> f (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, z |)))
+      x
 
 module L = FStar.List.Tot
 
@@ -1481,6 +1532,27 @@ let synth_bitsum'_recip_BitField
   [@inline_let]
   let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest x in
   cl.set_bitfield (ih tl) (bitsum'_size - sz) (bitsum'_size) hd
+
+inline_for_extraction
+let synth_bitsum'_recip_BitSum_gen
+  (#tot: pos)
+  (#t: eqtype)
+  (cl: uint_t tot t)
+  (bitsum'_size: nat)
+  (key: eqtype)
+  (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
+  (e: enum key (bitfield cl key_size))
+  (repr_of: (
+    (k: enum_key e) ->
+    Tot (r: enum_repr e { r == enum_repr_of_key e k })
+  ))
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
+  (synth_payload: ((k: enum_key e) -> Tot (synth_bitsum'_recip_t (payload k))))
+: Tot (synth_bitsum'_recip_t (BitSum' key key_size e payload))
+= fun x ->
+    [@inline_let]
+    let (| k, pl |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload x in
+    cl.set_bitfield (synth_payload k pl) (bitsum'_size - key_size) bitsum'_size (repr_of k)
 
 inline_for_extraction
 noextract
