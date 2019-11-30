@@ -39,7 +39,7 @@ let swrite_weaken
 
 inline_for_extraction
 noextract
-let swrite_nondep_then
+let swrite_nondep_then'
   (#h0: HS.mem)
   (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (#pout_from0: U32.t)
@@ -68,6 +68,33 @@ let swrite_nondep_then
     valid_nondep_then h' p1 p2 sout pout_from;
     pos2
   )
+
+let max (x1 x2: nat) : Tot nat = if x1 > x2 then x1 else x2
+
+inline_for_extraction
+noextract
+let swrite_nondep_then
+  (#h0: HS.mem)
+  (#sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
+  (#pout_from0: U32.t)
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#space_beyond1: nat)
+  (w1: swriter s1 h0 space_beyond1 sout pout_from0)
+  (#k2: parser_kind)
+  (#t2: Type0)
+  (#p2: parser k2 t2)
+  (#s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong })
+  (#space_beyond2: nat)
+  (w2: swriter s2 h0 space_beyond2 sout pout_from0)
+: Tot (w: swriter (s1 `serialize_nondep_then` s2) h0 (space_beyond1 `max` space_beyond2) sout pout_from0 {
+    swvalue w == (swvalue w1, swvalue w2)
+  })
+= [@inline_let]
+  let sbmax = space_beyond1 `max` space_beyond2 in
+  weaken_swriter w1 h0 sbmax pout_from0 `swrite_nondep_then'` weaken_swriter w2 h0 sbmax pout_from0
 
 inline_for_extraction
 noextract
