@@ -13,6 +13,14 @@ function export_home() {
     else
         export $1_HOME="$2"
     fi
+
+    # Update .bashrc file
+    token=$1_HOME=
+    if grep -q "$token" ~/.bashrc; then
+        sed -i -E "s/$token.*/$token$home_path/" ~/.bashrc
+    else
+        echo "export $1_HOME=$home_path" >> ~/.bashrc
+    fi
 }
 
 # By default, kremlin master works against F* stable. Can also be overridden.
