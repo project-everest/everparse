@@ -8,11 +8,14 @@ threads=$3
 branchname=$4
 
 function export_home() {
+    local home_path=""
     if command -v cygpath >/dev/null 2>&1; then
-        export $1_HOME=$(cygpath -m "$2")
+        home_path=$(cygpath -m "$2")
     else
-        export $1_HOME="$2"
+        home_path="$2"
     fi
+
+    export $1_HOME=$home_path
 
     # Update .bashrc file
     token=$1_HOME=
