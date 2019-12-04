@@ -44,13 +44,7 @@ function fetch_kremlin() {
 function fetch_and_make_kremlin() {
     fetch_kremlin
 
-    # Default build target is minimal, unless specified otherwise
-    local target
-    if [[ $1 == "" ]]; then
-        target="minimal"
-    else
-        target="$1"
-    fi
+    local target="$1"
 
     make -C kremlin -j $threads $target ||
         (cd kremlin && git clean -fdx && make -j $threads $target)
