@@ -126,6 +126,42 @@ let jump_ifthenelse
   then vp true input pos_after_t
   else vp false input pos_after_t
 
+let clens_ifthenelse_tag
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Tot (clens p.parse_ifthenelse_t p.parse_ifthenelse_tag_t)
+= {
+    clens_cond = (fun _ -> True);
+    clens_get = (fun (x: p.parse_ifthenelse_t) -> dfst (s.serialize_ifthenelse_synth_recip x));
+  }
+
+let gaccessor_ifthenelse_tag'
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Tot (gaccessor' (parse_ifthenelse p) p.parse_ifthenelse_tag_parser (clens_ifthenelse_tag s))
+= fun input ->
+    parse_ifthenelse_eq p input;
+    if Some? (parse (parse_ifthenelse p) input)
+    then parse_ifthenelse_parse_tag_payload s input;
+    0
+
+let gaccessor_ifthenelse_tag
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Tot (gaccessor (parse_ifthenelse p) p.parse_ifthenelse_tag_parser (clens_ifthenelse_tag s))
+= gaccessor_prop_equiv (parse_ifthenelse p) p.parse_ifthenelse_tag_parser (clens_ifthenelse_tag s) (gaccessor_ifthenelse_tag' s);
+  gaccessor_ifthenelse_tag' s
+
+inline_for_extraction
+let accessor_ifthenelse_tag
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Tot (accessor (gaccessor_ifthenelse_tag s))
+= fun #rrel #rel sl pos -> 
+    let h = HST.get () in
+    slice_access_eq h (gaccessor_ifthenelse_tag s) sl pos;
+    pos
+
 let clens_ifthenelse_payload
   (#p: parse_ifthenelse_param)
   (s: serialize_ifthenelse_param p)

@@ -575,6 +575,37 @@ let jump_sum
 : Tot (jumper (parse_sum t p pc))
 = jump_sum_aux t v p32 pc (jump_sum_aux_payload t pc pc32 destr)
 
+let clens_sum_tag
+  (s: sum)
+: Tot (clens (sum_type s) (sum_key s))
+= {
+    clens_cond = (fun _ -> True);
+    clens_get = (fun (x: sum_type s) -> sum_tag_of_data s x);
+  }
+
+let gaccessor_sum_tag
+  (t: sum)
+  (#kt: parser_kind)
+  (p: parser kt (sum_repr_type t))
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+: Tot (gaccessor (parse_sum t p pc) (parse_enum_key p (sum_enum t)) (clens_sum_tag t))
+= gaccessor_tagged_union_tag
+    (parse_enum_key p (sum_enum t))
+    (sum_tag_of_data t)
+    (parse_sum_cases t pc)
+
+inline_for_extraction
+let accessor_sum_tag
+  (t: sum)
+  (#kt: parser_kind)
+  (p: parser kt (sum_repr_type t))
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+: Tot (accessor (gaccessor_sum_tag t p pc))
+= accessor_tagged_union_tag
+    (parse_enum_key p (sum_enum t))
+    (sum_tag_of_data t)
+    (parse_sum_cases t pc)
+
 let clens_sum_payload
   (s: sum)
   (k: sum_key s)
@@ -1295,6 +1326,41 @@ let jump_dsum
   destr (jump_dsum_cases_eq t f g) (jump_dsum_cases_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (jump_dsum_cases' t f f32 g32) tg input pos_after_tag
 
 #pop-options
+
+let clens_dsum_tag
+  (s: dsum)
+: Tot (clens (dsum_type s) (dsum_key s))
+= {
+    clens_cond = (fun _ -> True);
+    clens_get = (fun (x: dsum_type s) -> dsum_tag_of_data s x);
+  }
+
+let gaccessor_dsum_tag
+  (#kt: parser_kind)
+  (t: dsum)
+  (p: parser kt (dsum_repr_type t))
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#ku: parser_kind)
+  (g: parser ku (dsum_type_of_unknown_tag t))
+: Tot (gaccessor (parse_dsum t p f g) (parse_maybe_enum_key p (dsum_enum t)) (clens_dsum_tag t))
+= gaccessor_tagged_union_tag
+    (parse_maybe_enum_key p (dsum_enum t))
+    (dsum_tag_of_data t)
+    (parse_dsum_cases t f g)
+
+inline_for_extraction
+let accessor_dsum_tag
+  (#kt: parser_kind)
+  (t: dsum)
+  (p: parser kt (dsum_repr_type t))
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#ku: parser_kind)
+  (g: parser ku (dsum_type_of_unknown_tag t))
+: Tot (accessor (gaccessor_dsum_tag t p f g))
+= accessor_tagged_union_tag
+    (parse_maybe_enum_key p (dsum_enum t))
+    (dsum_tag_of_data t)
+    (parse_dsum_cases t f g)
 
 let clens_dsum_payload
   (s: dsum)
