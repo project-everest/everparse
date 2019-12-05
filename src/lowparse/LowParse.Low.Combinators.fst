@@ -417,6 +417,83 @@ let accessor_synth
   in
   pos
 
+let clens_synth_inv
+  (#t1: Type)
+  (#t2: Type)
+  (f: t1 -> GTot t2)
+  (g: t2 -> GTot t1)
+: Tot (clens t2 t1)
+= {
+  clens_cond = (fun (x: t2) -> True);
+  clens_get = (fun (x: t2) -> g x);
+(*  
+  clens_put = (fun (x: t1) (y: t2) -> g y);
+  clens_get_put = (fun (x: t1) (y: t2) -> ());
+  clens_put_put = (fun (x: t1) (y y' : t2) -> ());
+  clens_put_get = (fun (x: t1) -> ());
+*)
+}
+
+let gaccessor_synth_inv'
+  (#k: parser_kind)
+  (#t1: Type)
+  (p1: parser k t1)
+  (#t2: Type)
+  (f: t1 -> GTot t2)
+  (g: t2 -> GTot t1)
+  (u: unit { synth_inverse f g /\ synth_injective f } )
+  (input: bytes)
+: Ghost (nat)
+  (requires (True))
+  (ensures (fun pos' -> gaccessor_post' p1 (parse_synth p1 f) (clens_synth_inv g f) input pos'))
+= parse_synth_eq p1 f input;
+  0
+
+abstract
+let gaccessor_synth_inv
+  (#k: parser_kind)
+  (#t1: Type)
+  (p1: parser k t1)
+  (#t2: Type)
+  (f: t1 -> GTot t2)
+  (g: t2 -> GTot t1)
+  (u: squash (synth_inverse f g /\ synth_injective f))
+: Tot (gaccessor p1 (parse_synth p1 f) (clens_synth_inv g f))
+= gaccessor_prop_equiv p1 (parse_synth p1 f) (clens_synth_inv g f) (gaccessor_synth_inv' p1 f g u);
+  gaccessor_synth_inv' p1 f g u
+
+abstract
+let gaccessor_synth_inv_eq
+  (#k: parser_kind)
+  (#t1: Type)
+  (p1: parser k t1)
+  (#t2: Type)
+  (f: t1 -> GTot t2)
+  (g: t2 -> GTot t1)
+  (u: unit { synth_inverse f g /\ synth_injective f } )
+  (input: bytes)
+: Lemma
+  (gaccessor_synth_inv p1 f g u input == gaccessor_synth_inv' p1 f g u input)
+= ()
+
+inline_for_extraction
+let accessor_synth_inv
+  (#k: parser_kind)
+  (#t1: Type)
+  (#t2: Type)
+  (p1: parser k t1)
+  (f: t1 -> GTot t2)
+  (g: t2 -> GTot t1)
+  (u: unit { synth_inverse f g /\ synth_injective f } )
+: Tot (accessor (gaccessor_synth_inv p1 f g u))
+= fun #rrel #rel input pos ->
+  let h = HST.get () in
+  [@inline_let] let _ =
+    Classical.forall_intro (gaccessor_synth_inv_eq p1 f g u);
+    slice_access_eq h (gaccessor_synth_inv p1 f g u) input pos
+  in
+  pos
+
 let clens_fst
   (t1: Type)
   (t2: Type)
