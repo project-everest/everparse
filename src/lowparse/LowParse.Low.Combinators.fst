@@ -343,7 +343,6 @@ let clens_synth
   (#t2: Type)
   (f: t1 -> GTot t2)
   (g: t2 -> GTot t1)
-  (u: squash (synth_inverse f g /\ synth_injective f))
 : Tot (clens t1 t2)
 = {
   clens_cond = (fun (x: t1) -> True);
@@ -363,12 +362,13 @@ let gaccessor_synth'
   (#t2: Type)
   (f: t1 -> GTot t2)
   (g: t2 -> GTot t1)
-  (u: unit { synth_inverse f g /\ synth_inverse g f } )
+  (u: unit { synth_inverse f g /\ synth_injective f } )
   (input: bytes)
 : Ghost (nat)
   (requires (True))
-  (ensures (fun pos' -> gaccessor_post' (parse_synth p1 f) p1 (clens_synth g f ()) input pos'))
-= parse_synth_eq p1 f input;
+  (ensures (fun pos' -> gaccessor_post' (parse_synth p1 f) p1 (clens_synth g f) input pos'))
+= synth_injective_synth_inverse_synth_inverse_recip f g ();
+  parse_synth_eq p1 f input;
   0
 
 abstract
@@ -379,9 +379,10 @@ let gaccessor_synth
   (#t2: Type)
   (f: t1 -> GTot t2)
   (g: t2 -> GTot t1)
-  (u: squash (synth_inverse f g /\ synth_injective f /\ synth_inverse g f))
-: Tot (gaccessor (parse_synth p1 f) p1 (clens_synth g f u))
-= gaccessor_prop_equiv (parse_synth p1 f) p1 (clens_synth g f u) (gaccessor_synth' p1 f g u);
+  (u: squash (synth_inverse f g /\ synth_injective f))
+: Tot (gaccessor (parse_synth p1 f) p1 (clens_synth g f))
+= synth_injective_synth_inverse_synth_inverse_recip f g ();
+  gaccessor_prop_equiv (parse_synth p1 f) p1 (clens_synth g f) (gaccessor_synth' p1 f g u);
   gaccessor_synth' p1 f g u
 
 abstract
@@ -392,7 +393,7 @@ let gaccessor_synth_eq
   (#t2: Type)
   (f: t1 -> GTot t2)
   (g: t2 -> GTot t1)
-  (u: unit { synth_inverse f g /\ synth_inverse g f } )
+  (u: unit { synth_inverse f g /\ synth_injective f } )
   (input: bytes)
 : Lemma
   (gaccessor_synth p1 f g u input == gaccessor_synth' p1 f g u input)
@@ -406,7 +407,7 @@ let accessor_synth
   (p1: parser k t1)
   (f: t1 -> GTot t2)
   (g: t2 -> GTot t1)
-  (u: unit { synth_inverse f g /\ synth_inverse g f } )
+  (u: unit { synth_inverse f g /\ synth_injective f } )
 : Tot (accessor (gaccessor_synth p1 f g u))
 = fun #rrel #rel input pos ->
   let h = HST.get () in

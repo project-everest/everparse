@@ -2631,7 +2631,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
      in
      let (acc, _) = accessors "" (sprintf "(LL.accessor_id %s'_parser)" n) tfields in
      wl o "%s" acc;
-     wl o "noextract let clens_%s_%s' : LL.clens %s %s' = synth_%s_recip_inverse (); synth_%s_recip_injective (); LL.clens_synth synth_%s_recip synth_%s ()\n\n" n n n n n n n n;
+     wl o "noextract let clens_%s_%s' : LL.clens %s %s' = synth_%s_recip_inverse (); synth_%s_recip_injective (); LL.clens_synth synth_%s_recip synth_%s\n\n" n n n n n n n n;
      wl o "let gaccessor_%s_%s' : LL.gaccessor %s_parser %s'_parser clens_%s_%s' = synth_%s_inverse (); synth_%s_injective (); synth_%s_recip_inverse (); LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip ()\n\n" n n n n n n n n n n n n;
      wl o "inline_for_extraction noextract let accessor_%s_%s' : LL.accessor gaccessor_%s_%s' = synth_%s_inverse (); synth_%s_injective (); synth_%s_recip_inverse (); LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()\n\n" n n n n n n n n n n;
     (* write the lenses *)
