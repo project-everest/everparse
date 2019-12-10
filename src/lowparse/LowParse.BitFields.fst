@@ -1,6 +1,6 @@
 module LowParse.BitFields
 module U = FStar.UInt
-module M = FStar.Math.Lemmas
+module M = LowParse.Math
 
 open FStar.Mul
 
@@ -12,10 +12,9 @@ let bitfield_mask (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Tot
   in
   normalize_term ((pow2 (hi - lo) - 1) * pow2 lo)
 
-#push-options "--z3rlimit 64"
-
 let bitfield_mask_eq (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Lemma
   (
+    0 <= pow2 (hi - lo) - 1 /\
     pow2 (hi - lo) - 1 < pow2 tot /\
     bitfield_mask tot lo hi == U.shift_left #tot (pow2 (hi - lo) - 1) lo
   )
@@ -24,9 +23,11 @@ let bitfield_mask_eq (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : 
   U.shift_left_value_lemma #tot (pow2 (hi - lo) - 1) lo;
   M.pow2_le_compat tot hi;
   M.pow2_plus (hi - lo) lo;
+  M.lemma_mult_nat (pow2 (hi - lo) - 1) (pow2 lo);
+  M.lemma_mult_lt' (pow2 lo) (pow2 (hi - lo) - 1) (pow2 (hi - lo));
+  M.swap_mul (pow2 (hi - lo)) (pow2 lo);
+  M.swap_mul (pow2 (hi - lo) - 1) (pow2 lo);
   M.modulo_lemma ((pow2 (hi - lo) - 1) * pow2 lo) (pow2 tot)
-
-#pop-options
 
 (* Cf. U.index_to_vec_ones; WHY WHY WHY is it private? *)
 val nth_pow2_minus_one' : #n:pos -> m:nat{m <= n} -> i:nat{i < n} ->
