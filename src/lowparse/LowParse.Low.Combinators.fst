@@ -971,6 +971,39 @@ let read_synth'
 = read_synth p1 f2 (fun x -> f2 x) p1' u
 
 inline_for_extraction
+let read_inline_synth
+  (#k: parser_kind)
+  (#t1: Type0)
+  (#t2: Type0)
+  (p1: parser k t1)
+  (f2: t1 -> GTot t2)
+  (f2': (x: t1) -> Tot (y: t2 { y == f2 x } )) 
+  (p1' : leaf_reader p1)
+  (u: unit {
+    synth_injective f2
+  })
+: Tot (leaf_reader (parse_synth p1 f2))
+= fun #rrel #rel input pos ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_synth h p1 f2 input pos in
+  [@inline_let] let f2'' (x: t1) : HST.Stack t2 (requires (fun _ -> True)) (ensures (fun h y h' -> h == h' /\ y == f2 x)) = f2' x in // FIXME: WHY WHY WHY do I need this stateful function here? why can't I directly use f2' ?
+  f2'' (p1' input pos)
+
+inline_for_extraction
+let read_inline_synth'
+  (#k: parser_kind)
+  (#t1: Type0)
+  (#t2: Type0)
+  (p1: parser k t1)
+  (f2: t1 -> Tot t2)
+  (p1' : leaf_reader p1)
+  (u: unit {
+    synth_injective f2
+  })
+: Tot (leaf_reader (parse_synth p1 f2))
+= read_inline_synth p1 f2 (fun x -> f2 x) p1' ()
+
+inline_for_extraction
 let write_synth
   (#k: parser_kind)
   (#t1: Type)

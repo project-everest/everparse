@@ -198,7 +198,7 @@ let read_bounded_int32'
   let min = U32.v min32 in
   [@inline_let]
   let max = U32.v max32 in
-  read_synth
+  read_inline_synth
     (parse_filter (parse_bounded_integer sz) (in_bounds min max))
     (fun x -> (x <: bounded_int32 min max))
     (fun x -> x)
@@ -342,14 +342,14 @@ let read_bounded_integer_le_4 =
 
 let read_u16_le =
   [@inline_let] let _ = synth_u16_le_injective in
-  read_synth'
+  read_inline_synth'
     _
     synth_u16_le
     read_bounded_integer_le_2
     ()
 
 let read_u32_le =
-  read_synth'
+  read_inline_synth'
     _
     synth_u32_le
     read_bounded_integer_le_4
@@ -540,7 +540,7 @@ let read_bounded_int32_le'
   let min = U32.v min32 in
   [@inline_let]
   let max = U32.v max32 in
-  read_synth
+  read_inline_synth
     (parse_filter (parse_bounded_integer_le sz) (in_bounds min max))
     (fun x -> (x <: bounded_int32 min max))
     (fun x -> x)
