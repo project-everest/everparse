@@ -67,7 +67,7 @@ let array_nth_ghost''
   (array_byte_size: nat)
   (elem_count: nat)
   (i: nat {
-    fldata_array_precond p array_byte_size elem_count == true /\
+    fldata_array_precond k array_byte_size elem_count == true /\
     array_byte_size < 4294967296 /\
     elem_count < 4294967296 /\
     i < elem_count
@@ -89,7 +89,7 @@ let array_nth_ghost_correct'
   (array_byte_size: nat)
   (elem_count: nat)
   (i: nat {
-    fldata_array_precond p array_byte_size elem_count == true /\
+    fldata_array_precond k array_byte_size elem_count == true /\
     array_byte_size < 4294967296 /\
     elem_count < 4294967296 /\
     i < elem_count
@@ -116,7 +116,7 @@ let array_nth_ghost_correct
   (array_byte_size: nat)
   (elem_count: nat)
   (i: nat {
-    fldata_array_precond p array_byte_size elem_count == true /\
+    fldata_array_precond k array_byte_size elem_count == true /\
     array_byte_size < 4294967296 /\
     elem_count < 4294967296 /\
     i < elem_count
@@ -135,7 +135,7 @@ let array_nth_ghost'
   (array_byte_size: nat)
   (elem_count: nat)
   (i: nat {
-    fldata_array_precond p array_byte_size elem_count == true /\
+    fldata_array_precond k array_byte_size elem_count == true /\
     array_byte_size < 4294967296 /\
     elem_count < 4294967296 /\
     i < elem_count
@@ -154,7 +154,7 @@ let array_nth_ghost
   (array_byte_size: nat)
   (elem_count: nat)
   (i: nat {
-    fldata_array_precond p array_byte_size elem_count == true /\
+    fldata_array_precond k array_byte_size elem_count == true /\
     array_byte_size < 4294967296 /\
     elem_count < 4294967296 /\
     i < elem_count
@@ -163,7 +163,7 @@ let array_nth_ghost
 = M.distributivity_add_left i 1 k.parser_kind_low;
   M.lemma_mult_le_right k.parser_kind_low (i + 1) elem_count;
   assert ((i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low <= array_byte_size);
-  parser_kind_prop_equiv (parse_array_kind array_byte_size) (parse_array s array_byte_size elem_count);
+  parser_kind_prop_equiv (parse_array_kind' array_byte_size) (parse_array s array_byte_size elem_count);
   assert (forall x . gaccessor_pre (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) x ==> (i `Prims.op_Multiply` k.parser_kind_low) + k.parser_kind_low <= Seq.length x);
   gaccessor_prop_equiv (parse_array s array_byte_size elem_count) p (clens_array_nth t elem_count i) (array_nth_ghost' s array_byte_size elem_count i);
   array_nth_ghost' s array_byte_size elem_count i
@@ -179,7 +179,7 @@ let array_nth
   (array_byte_size: nat)
   (elem_count: nat)
   (i: U32.t {
-    fldata_array_precond p (array_byte_size) (elem_count) == true /\
+    fldata_array_precond k (array_byte_size) (elem_count) == true /\
     array_byte_size < 4294967296 /\
     elem_count < 4294967296 /\
     U32.v i < elem_count
@@ -199,6 +199,39 @@ let array_nth
 
 module HS = FStar.HyperStack
 
+let valid_list_valid_array'
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (array_byte_size: nat)
+  (array_byte_size32: U32.t)
+  (elem_count: nat)
+  (u: unit {
+    fldata_array_precond k array_byte_size elem_count == true /\
+    U32.v array_byte_size32 == array_byte_size
+  })
+  (h: HS.mem)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (pos' : U32.t)
+: Lemma
+  (requires (valid_list p h input pos pos' /\ (L.length (contents_list p h input pos pos') == elem_count \/ U32.v pos' - U32.v pos == array_byte_size)))
+  (ensures (
+    let x = contents_list p h input pos pos' in
+    L.length x == elem_count /\
+    U32.v pos' - U32.v pos == array_byte_size /\    
+    valid_content_pos (parse_array' s array_byte_size elem_count) h input pos x pos'
+  ))
+= valid_list_valid_exact_list p h input pos pos' ;
+  valid_exact_equiv (parse_list p) h input pos pos' ;
+  let len32 = pos' `U32.sub` pos in
+  list_length_constant_size_parser_correct p (Seq.slice (bytes_of_slice_from h input pos) 0 (U32.v len32));
+  contents_exact_eq (parse_list p) h input pos pos';
+  valid_facts (parse_fldata_strong (serialize_list _ s) array_byte_size) h input pos;
+  valid_synth h (parse_fldata_strong (serialize_list _ s) array_byte_size) (fldata_to_array s array_byte_size elem_count ()) input pos
+
 let valid_list_valid_array
   (#k: parser_kind)
   (#t: Type0)
@@ -208,7 +241,7 @@ let valid_list_valid_array
   (array_byte_size32: U32.t)
   (elem_count: nat)
   (u: unit {
-    fldata_array_precond p array_byte_size elem_count == true /\
+    fldata_array_precond k array_byte_size elem_count == true /\
     U32.v array_byte_size32 == array_byte_size
   })
   (h: HS.mem)
@@ -224,13 +257,45 @@ let valid_list_valid_array
     U32.v pos' - U32.v pos == array_byte_size /\    
     valid_content_pos (parse_array s array_byte_size elem_count) h input pos x pos'
   ))
-= valid_list_valid_exact_list p h input pos pos' ;
-  valid_exact_equiv (parse_list p) h input pos pos' ;
-  let len32 = pos' `U32.sub` pos in
-  list_length_constant_size_parser_correct p (Seq.slice (bytes_of_slice_from h input pos) 0 (U32.v len32));
-  contents_exact_eq (parse_list p) h input pos pos';
-  valid_facts (parse_fldata_strong (serialize_list _ s) array_byte_size) h input pos;
-  valid_synth h (parse_fldata_strong (serialize_list _ s) array_byte_size) (fldata_to_array s array_byte_size elem_count ()) input pos
+= valid_list_valid_array' s array_byte_size array_byte_size32 elem_count u h input pos pos' ;
+  valid_facts (parse_array' s array_byte_size elem_count) h input pos;
+  valid_facts (parse_array s array_byte_size elem_count) h input pos
+
+let valid_array_valid_list'
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (array_byte_size: nat)
+  (array_byte_size32: U32.t)
+  (elem_count: nat)
+  (u: unit {
+    fldata_array_precond k array_byte_size elem_count == true /\
+    U32.v array_byte_size32 == array_byte_size
+  })
+  (h: HS.mem)
+  (#rrel #rel: _)
+  (input: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (
+    valid (parse_array' s array_byte_size elem_count) h input pos
+  ))
+  (ensures (
+    let pos' = get_valid_pos (parse_array' s array_byte_size elem_count) h input pos in
+    let x = contents (parse_array' s array_byte_size elem_count) h input pos in
+    U32.v pos' - U32.v pos == array_byte_size /\
+    valid_list p h input pos pos' /\
+    contents_list p h input pos pos' == x
+  ))
+= 
+    let pos' = get_valid_pos (parse_array' s array_byte_size elem_count) h input pos in
+    let x = contents (parse_array' s array_byte_size elem_count) h input pos in
+    valid_synth h (parse_fldata_strong (serialize_list _ s) array_byte_size) (fldata_to_array s array_byte_size elem_count ()) input pos;
+    valid_facts (parse_fldata_strong (serialize_list _ s) array_byte_size) h input pos;
+    valid_exact_equiv (parse_list p) h input pos pos' ;
+    contents_exact_eq (parse_list p) h input pos pos' ;
+    valid_exact_list_valid_list p h input pos pos'
 
 let valid_array_valid_list
   (#k: parser_kind)
@@ -241,7 +306,7 @@ let valid_array_valid_list
   (array_byte_size32: U32.t)
   (elem_count: nat)
   (u: unit {
-    fldata_array_precond p array_byte_size elem_count == true /\
+    fldata_array_precond k array_byte_size elem_count == true /\
     U32.v array_byte_size32 == array_byte_size
   })
   (h: HS.mem)
@@ -259,14 +324,30 @@ let valid_array_valid_list
     valid_list p h input pos pos' /\
     contents_list p h input pos pos' == x
   ))
-= 
-    let pos' = get_valid_pos (parse_array s array_byte_size elem_count) h input pos in
-    let x = contents (parse_array s array_byte_size elem_count) h input pos in
-    valid_synth h (parse_fldata_strong (serialize_list _ s) array_byte_size) (fldata_to_array s array_byte_size elem_count ()) input pos;
-    valid_facts (parse_fldata_strong (serialize_list _ s) array_byte_size) h input pos;
-    valid_exact_equiv (parse_list p) h input pos pos' ;
-    contents_exact_eq (parse_list p) h input pos pos' ;
-    valid_exact_list_valid_list p h input pos pos'
+=
+  valid_facts (parse_array s array_byte_size elem_count) h input pos;
+  valid_facts (parse_array' s array_byte_size elem_count) h input pos;
+  valid_array_valid_list' s array_byte_size array_byte_size32 elem_count u h input pos
+
+inline_for_extraction
+let validate_array'
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (v: validator p)
+  (array_byte_size: nat)
+  (array_byte_size32: U32.t)
+  (elem_count: nat)
+  (u: unit {
+    fldata_array_precond k array_byte_size elem_count == true /\
+    U32.v array_byte_size32 == array_byte_size
+  })
+: Tot (validator (parse_array' s array_byte_size elem_count))
+= validate_synth
+    (validate_fldata_strong (serialize_list _ s) (validate_list v ()) array_byte_size array_byte_size32)
+    (fldata_to_array s array_byte_size elem_count ())
+    ()
 
 inline_for_extraction
 let validate_array
@@ -279,14 +360,13 @@ let validate_array
   (array_byte_size32: U32.t)
   (elem_count: nat)
   (u: unit {
-    fldata_array_precond p array_byte_size elem_count == true /\
+    fldata_array_precond k array_byte_size elem_count == true /\
     U32.v array_byte_size32 == array_byte_size
   })
 : Tot (validator (parse_array s array_byte_size elem_count))
-= validate_synth
-    (validate_fldata_strong (serialize_list _ s) (validate_list v ()) array_byte_size array_byte_size32)
-    (fldata_to_array s array_byte_size elem_count ())
-    ()
+= if k.parser_kind_metadata = Some ParserKindMetadataTotal
+  then validate_total_constant_size (parse_array s array_byte_size elem_count) array_byte_size32 ()
+  else validate_array' s v array_byte_size array_byte_size32 elem_count u
 
 inline_for_extraction
 let jump_array
@@ -298,7 +378,7 @@ let jump_array
   (array_byte_size32: U32.t)
   (elem_count: nat)
   (u: unit {
-    fldata_array_precond p array_byte_size elem_count == true /\
+    fldata_array_precond k array_byte_size elem_count == true /\
     U32.v array_byte_size32 == array_byte_size
   })
 : Tot (jumper (parse_array s array_byte_size elem_count))

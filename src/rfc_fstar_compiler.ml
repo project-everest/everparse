@@ -366,11 +366,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         max_len = k;
         min_count = k / li.min_len;
         max_count = k / li.max_len;
-        (* FIXME: should be li.meta but only bytes are total in LowParse currently *)
-        meta = match ty with
-               | TypeSimple ("uint8") | TypeSimple ("opaque") -> MetadataTotal
-               | TypeSimple ("Fail") -> MetadataFail
-               | _ -> MetadataDefault;
+        meta = (if li.meta = MetadataFail || li.min_len = li.max_len then li.meta else MetadataDefault);
       }
     | VectorFixedCount k ->
       { li with
@@ -378,7 +374,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         max_count = k;
         min_len = k * li.min_len;
         max_len = k * li.max_len;
-        meta = if li.meta = MetadataFail then li.meta else MetadataDefault;
+        meta = (if li.meta = MetadataFail || li.min_len = li.max_len then li.meta else MetadataDefault);
       }
     | VectorVldata tn ->
       let (len_len_min, len_len_max, max_len) = basic_bounds tn in
@@ -2118,7 +2114,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == L.length x `FStar.Mul.op_Star` %d) [SMTPat (%s_bytesize x)]\n\n" n n n elem_li.min_len n;
       w o "let %s_bytesize_eqn x =\n" n;
-      w o "  assert_norm (LP.fldata_array_precond %s %d %d == true);\n" (pcombinator_name ty) li.max_len li.max_count;
+      w o "  assert_norm (LP.fldata_array_precond (LP.get_parser_kind %s) %d %d == true);\n" (pcombinator_name ty) li.max_len li.max_count;
       w o "  LP.length_serialize_array %s %d %d () x\n\n"(scombinator_name ty) li.max_len li.max_count;
       ()
 

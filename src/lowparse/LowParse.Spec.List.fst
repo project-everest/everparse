@@ -195,7 +195,7 @@ let rec bare_serialize_list
 unfold
 let serialize_list_precond
   (k: parser_kind)
-: GTot bool
+: Tot bool
 = k.parser_kind_subkind = Some ParserStrong &&
   k.parser_kind_low > 0
 
@@ -659,4 +659,34 @@ let rec list_length_constant_size_parser_correct #k #t p b =
     list_length_constant_size_parser_correct p b';
     let (Some (l', _)) = parse (parse_list p) b' in
     FStar.Math.Lemmas.distributivity_add_left 1 (L.length l') n
+  end
+
+abstract
+let rec parse_list_total_constant_size
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (elem_count: nat)
+  (x: bytes)
+: Lemma
+  (requires (
+    serialize_list_precond k /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal /\
+    Seq.length x == elem_count `Prims.op_Multiply` k.parser_kind_low
+  ))
+  (ensures (
+    Some? (parse (parse_list p) x)
+  ))
+  (decreases elem_count)
+= parse_list_eq p x;
+  if elem_count = 0
+  then ()
+  else begin
+    assert (Seq.length x == k.parser_kind_low + ((elem_count - 1) `Prims.op_Multiply` k.parser_kind_low));
+    parser_kind_prop_equiv k p;
+    assert (Some? (parse p x));
+    let Some (_, len) = parse p x in
+    assert (len == k.parser_kind_low);
+    parse_list_total_constant_size p (elem_count - 1) (Seq.slice x len (Seq.length x))
   end
