@@ -94,7 +94,7 @@ let test_zeroarg () : St C.exit_code =
 
 let test_bitcoin_file (filename: C.String.t) : St unit =
   let slice = LowParse.TestLib.Low.load_file_buffer_c filename in
-    let consumed = Block.block_validator slice 0ul in
+    let consumed = Block.block_validator slice 0uL in
     if LPL.is_error consumed
     then
       let _ = print !$"Validation failed\n" in

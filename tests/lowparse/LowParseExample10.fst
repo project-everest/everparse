@@ -95,7 +95,7 @@ let test_HelloRetryRequest : LL.test_ifthenelse_tag parse_t_param
 = fun #_ #_ input pos ->
   LL.valid_slice_equals_bytes msg_type_HelloRetryRequest input pos
 
-let validate_t = LL.validate_ifthenelse parse_t_param (LL.validate_flbytes 3 3ul) test_HelloRetryRequest (fun b -> if b then LL.validate_u32 () else LL.validate_u16 ())
+let validate_t = LL.validate_ifthenelse parse_t_param (LL.validate_flbytes 3 3uL) test_HelloRetryRequest (fun b -> if b then LL.validate_u32 () else LL.validate_u16 ())
 
 let jump_t = LL.jump_ifthenelse parse_t_param (LL.jump_flbytes 3 3ul) test_HelloRetryRequest (fun b -> if b then LL.jump_u32 else LL.jump_u16)
 

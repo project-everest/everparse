@@ -35,7 +35,7 @@ val pair_serializer32: LP.serializer32 pair_serializer
 
 val pair_size32: LP.size32 pair_serializer
 
-let pair_validator: LL.validator pair_parser = LL.validate_total_constant_size pair_parser 6ul ()
+let pair_validator: LL.validator pair_parser = LL.validate_total_constant_size pair_parser 6uL ()
 
 let pair_jumper: LL.jumper pair_parser = LL.jump_constant_size pair_parser 6ul ()
 
