@@ -51,7 +51,7 @@ include .dep
 
 codegen: $(ALL_KRML_FILES)
 	$(KREMLIN) -skip-linking $^ $(subst .fst,,$(ROOT))Wrapper.c
-	clang-format -i --style=Microsoft $(subst .fst,,$(ROOT)).c $(subst .fst,,$(ROOT)).h $(subst .fst,,$(ROOT))Wrapper.c $(subst .fst,,$(ROOT))Wrapper.h
+	clang-format -i --style=Microsoft $(subst .fst,,$(ROOT)).c $(subst .fst,,$(ROOT)).h $(subst .fst,,$(ROOT))Wrapper.c $(subst .fst,,$(ROOT))Wrapper.h || true
 
 kremlin: $(ALL_KRML_FILES)
 
