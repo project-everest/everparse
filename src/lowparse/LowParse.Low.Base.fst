@@ -2310,62 +2310,6 @@ let validate_with_error_code
   maybe_set_error_code res pos c
 
 inline_for_extraction
-let validate_bounded_strong_prefix
-  (#k: parser_kind) (#t: Type) (#p: parser k t)
-  (v: validator p)
-  (#rrel: _) (#rel: _)
-  (sl: slice rrel rel)
-  (pos: U32.t)
-: HST.Stack U32.t
-  (requires (fun h ->
-    live_slice h sl /\
-    Some? k.parser_kind_high /\
-    U32.v pos <= U32.v sl.len /\
-    U32.v pos + Some?.v k.parser_kind_high <= U32.v validator_max_length /\
-    k.parser_kind_subkind == Some ParserStrong
-  ))
-  (ensures (fun h res h' ->
-    B.modifies B.loc_none h h' /\ (
-    if U32.v res <= U32.v validator_max_length
-    then
-      valid_pos p h sl pos res
-    else
-      (~ (valid p h sl pos))
-  )))
-= if sl.len `U32.lte` validator_max_length
-  then v sl pos
-  else
-    let h = HST.get () in
-    let sl' = make_slice sl.base validator_max_length in
-    let res = v sl' pos in
-    let phi () : Lemma
-      (ensures (
-        if U32.v res <= U32.v validator_max_length
-        then
-          valid_pos p h sl pos res
-        else
-          (~ (valid p h sl pos))
-      ))
-    =
-      valid_facts p h sl pos;
-      valid_facts p h sl' pos;
-      if U32.v res <= U32.v validator_max_length
-      then
-        parse_strong_prefix p (bytes_of_slice_from h sl' pos) (bytes_of_slice_from h sl pos)
-      else
-        let psi () : Lemma
-          (requires (valid p h sl pos))
-          (ensures False)
-        = let len = get_valid_pos p h sl pos in
-          assert (U32.v len <= U32.v validator_max_length);
-          parse_strong_prefix p (bytes_of_slice_from h sl pos) (bytes_of_slice_from h sl' pos)
-        in
-        Classical.move_requires psi ()
-    in
-    let _ = phi () in
-    res
-
-inline_for_extraction
 let validate
   (#k: parser_kind)
   (#t: Type)
@@ -2485,40 +2429,6 @@ let validate_weaken
   let h = HST.get () in
   [@inline_let] let _ =
     valid_weaken k1 p2 h sl (uint64_to_uint32 pos)
-  in
-  v2 sl pos
-
-let valid_weaken
-  (k1: parser_kind)
-  (#k2: parser_kind)
-  (#t: Type0)
-  (p2: parser k2 t)
-  (h: HS.mem)
-  #rrel #rel
-  (sl: slice rrel rel)
-  (pos: U32.t)
-: Lemma
-  (requires (k1 `is_weaker_than` k2))
-  (ensures (
-    (valid (weaken k1 p2) h sl pos \/ valid p2 h sl pos) ==> (
-    valid p2 h sl pos /\
-    valid_content_pos (weaken k1 p2) h sl pos (contents p2 h sl pos) (get_valid_pos p2 h sl pos)
-  )))
-= valid_facts (weaken k1 p2) h sl pos;
-  valid_facts p2 h sl pos
-
-inline_for_extraction
-let validate_weaken
-  (k1: parser_kind)
-  (#k2: parser_kind)
-  (#t: Type0)
-  (#p2: parser k2 t)
-  (v2: validator p2 { k1 `is_weaker_than` k2 } )
-: Tot (validator (weaken k1 p2))
-= fun #rrel #rel sl pos ->
-  let h = HST.get () in
-  [@inline_let] let _ =
-    valid_weaken k1 p2 h sl pos
   in
   v2 sl pos
 

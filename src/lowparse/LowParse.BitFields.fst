@@ -812,6 +812,8 @@ let bitfield_eq64_lhs
 : Tot U64.t
 = x `U64.logand` bitfield_mask64 lo hi
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 let bitfield_eq64_rhs
   (x: U64.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 64})
@@ -821,6 +823,8 @@ let bitfield_eq64_rhs
     bitfield_eq_shift (U64.v x) lo hi (U64.v v)
   in
   v `u64_shift_left` U32.uint_to_t lo
+
+#pop-options
 
 inline_for_extraction
 let get_bitfield_gen64
