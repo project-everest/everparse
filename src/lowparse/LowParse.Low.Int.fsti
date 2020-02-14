@@ -46,6 +46,14 @@ let validate_u64_le_with_error_code (c: error_code) : validator parse_u64_le =
   validate_total_constant_size_with_error_code parse_u64_le 8uL c
 
 inline_for_extraction
+let validate_u64 () : validator parse_u64 =
+  validate_total_constant_size parse_u64 8ul ()
+
+inline_for_extraction
+let validate_u64_le () : validator parse_u64_le =
+  validate_total_constant_size parse_u64_le 8ul ()
+
+inline_for_extraction
 let jump_u8 : jumper parse_u8 =
   jump_constant_size parse_u8 1ul ()
 
