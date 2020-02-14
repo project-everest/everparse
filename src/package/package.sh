@@ -43,10 +43,7 @@ print_date_utc_of_iso_hr() {
     date --utc --date="$1" '+%Y-%m-%d %H:%M:%S'
 }
 
-commit_id=$(git show --no-patch --format=%h)
-commit_date_iso=$(git show --no-patch --format=%ad --date=iso)
-commit_date=$(date --utc --date="$commit_date_iso" '+%Y%m%d%H%M%S')
-commit_date_hr=$(print_date_utc_of_iso_hr "$commit_date_iso")
+everparse_version=$(cat $QD_HOME/version.txt)
 platform=$(uname --machine)
 
     # Verify if F* and KReMLin are here
@@ -107,7 +104,7 @@ platform=$(uname --machine)
     cp -p -r $QD_HOME/src/3d/EverParseError.h everparse/include/ &&
     cp -p -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
     cp -p -r $QD_HOME/src/package/README.pkg everparse/README &&
-    echo "This is EverParse $commit_id ($commit_date_hr UTC+0000)" >> everparse/README &&
+    echo "This is EverParse $everparse_version" >> everparse/README &&
     echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr UTC+0000)" >> everparse/README &&
     echo "Running with KReMLin $kremlin_commit_id ($kremlin_commit_date_hr UTC+0000)" >> everparse/README &&
     echo -n "Running with $z3_version_string" >> everparse/README &&
@@ -123,7 +120,7 @@ platform=$(uname --machine)
     chmod a+x everparse/bin/*.exe everparse/bin/*.dll &&
     rm -f everparse.zip &&
     zip -r everparse.zip everparse &&
-    mv everparse.zip everparse_"$commit_date"_"$commit_id"_"$OS"_"$platform".zip &&
+    mv everparse.zip everparse_"$everparse_version"_"$OS"_"$platform".zip &&
     
     # END
     true
