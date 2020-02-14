@@ -103,7 +103,7 @@ platform=$(uname --machine)
     cp -p -r $QD_HOME/src/3d/prelude everparse/src/3d &&
     cp -p -r $QD_HOME/src/3d/.clang-format everparse/src/3d &&
     mkdir -p everparse/include/ &&
-    cp -p -r $QD_HOME/src/3d/EverParseEndianness.h everparse/include/ &&
+    cp -p -r $QD_HOME/src/package/EverParseEndianness_$OS.h everparse/include/EverParseEndianness.h &&
     cp -p -r $QD_HOME/src/3d/EverParseError.h everparse/include/ &&
     cp -p -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
     cp -p -r $QD_HOME/src/package/README.pkg everparse/README &&
