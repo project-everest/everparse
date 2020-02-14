@@ -35,19 +35,19 @@ inline_for_extraction
 let validate_constint32le_slow
   (v: U32.t { 0 <= U32.v v /\ U32.v v < 4294967296 } )
 : Tot (validator (parse_constint32le (U32.v v)))
-= fun #rrel #rel (input: slice rrel rel) (pos: U32.t) ->
+= fun #rrel #rel (input: slice rrel rel) pos ->
   let h = HST.get() in
     let _ =
-      valid_constint32le (U32.v v) h input pos;    
-      valid_equiv parse_int32le h input pos
+      valid_constint32le (U32.v v) h input (uint64_to_uint32 pos);    
+      valid_equiv parse_int32le h input (uint64_to_uint32 pos)
     in
-  if U32.lt (input.len `U32.sub` pos) 4ul
+  if U64.lt (Cast.uint32_to_uint64 input.len `U64.sub` pos) 4uL
   then
     validator_error_not_enough_data
   else
-    let v' = read_int32le input pos in
+    let v' = read_int32le input (uint64_to_uint32 pos) in
     if U32.eq v v' then
-      Cast.uint32_to_uint64 (pos `U32.add` 4ul)
+      pos `U64.add` 4uL
     else
       validator_error_generic
 
@@ -122,7 +122,7 @@ let compare_by_bytes'
 = (compose_int32le (U8.v a0) (U8.v a1) (U8.v a2) (U8.v a3)) =
   (compose_int32le (U8.v b0) (U8.v b1) (U8.v b2) (U8.v b3))
 
-#push-options "--max_fuel 5 --z3rlimit 16"
+#push-options "--max_fuel 5 --z3rlimit 32"
 
 let compare_by_bytes_equiv
   (a0: U8.t { 0 <= U8.v a0 /\ U8.v a0 < 256 } )
@@ -210,17 +210,17 @@ inline_for_extraction
 let validate_constint32le
   (v: U32.t { 0 <= U32.v v /\ U32.v v < 4294967296 } )
 : Tot (validator (parse_constint32le (U32.v v)))
-= fun #rrel #rel (input: slice rrel rel) (pos: U32.t) ->
+= fun #rrel #rel (input: slice rrel rel) pos ->
   let h = HST.get() in
     let _ =
-      valid_constint32le (U32.v v) h input pos;    
-      valid_equiv parse_int32le h input pos
+      valid_constint32le (U32.v v) h input (uint64_to_uint32 pos);    
+      valid_equiv parse_int32le h input (uint64_to_uint32 pos)
     in
-  if U32.lt (input.len `U32.sub` pos) 4ul
+  if U64.lt (Cast.uint32_to_uint64 input.len `U64.sub` pos) 4uL
   then
     validator_error_not_enough_data
   else
-    if inplace_compare v input pos then
-      Cast.uint32_to_uint64 (pos `U32.add` 4ul)
+    if inplace_compare v input (uint64_to_uint32 pos) then
+      pos `U64.add` 4uL
     else
       validator_error_generic

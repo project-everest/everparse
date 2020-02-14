@@ -4,7 +4,6 @@ include LowParse.Spec.AllIntegers // for bounded_integer, in_bounds, etc.
 
 module Seq = FStar.Seq
 module U32 = FStar.UInt32
-module E = LowParse.BigEndian
 module M = LowParse.Math
 
 #reset-options "--z3rlimit 64 --max_fuel 64 --max_ifuel 64 --z3refresh --z3cliopt smt.arith.nl=false"

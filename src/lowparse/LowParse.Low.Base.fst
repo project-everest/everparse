@@ -1235,7 +1235,7 @@ let gaccessor_pre
   (sl: bytes)
 : GTot Type0
 = match parse p1 sl with
-  | Some (x1, consumed) -> (consumed <: nat) == Seq.length sl /\ cl.clens_cond x1
+  | Some (x1, _) -> cl.clens_cond x1
   | _ -> False
 
 let gaccessor_post
@@ -1247,18 +1247,16 @@ let gaccessor_post
   (p2: parser k2 t2)
   (cl: clens t1 t2)
   (sl: bytes)
-  (res : nat & nat)
+  (res : nat)
 : GTot Type0
-= let (pos', len) = res in
-  pos' + len <= Seq.length sl /\
+= res <= Seq.length sl /\
   begin match parse p1 sl with
   | Some (x1, consumed1) ->
-    begin match parse p2 (Seq.slice sl pos' (pos' + len)) with
+    begin match parse p2 (Seq.slice sl res (Seq.length sl)) with
     | Some (x2, consumed2) ->
       cl.clens_cond x1 /\
       x2 == cl.clens_get x1 /\
-      pos' + consumed2 <= consumed1 /\
-      consumed2 == len
+      res + consumed2 <= consumed1
     | _ -> False
     end
   | _ -> False
@@ -1273,11 +1271,107 @@ let gaccessor_post'
   (p2: parser k2 t2)
   (cl: clens t1 t2)
   (sl : bytes)
-  (res: nat & nat)
+  (res: nat)
 : GTot Type0
 = 
-    let (pos', len') = res in pos' + len' <= Seq.length sl /\
+    res <= Seq.length sl /\
     (gaccessor_pre p1 p2 cl sl ==> gaccessor_post p1 p2 cl sl res)
+
+let gaccessor'
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (cl: clens t1 t2)
+: Tot Type
+= (sl: bytes) ->
+  Ghost (nat)
+  (requires True)
+  (ensures (fun res ->
+    gaccessor_post' p1 p2 cl sl res
+  ))
+
+let gaccessor_no_lookahead
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (f: gaccessor' p1 p2 cl)
+= (k1.parser_kind_subkind == Some ParserStrong ==> (forall (sl sl' : bytes) . {:pattern (f sl); (f sl')} (gaccessor_pre p1 p2 cl sl /\ gaccessor_pre p1 p2 cl sl' /\ no_lookahead_on_precond p1 sl sl') ==> f sl == f sl'))
+
+let gaccessor_no_lookahead_weaken
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (f: gaccessor' p1 p2 cl)
+  (sl sl' : bytes)
+: Lemma
+  (requires (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre p1 p2 cl sl /\
+    no_lookahead_on_precond p1 sl sl'
+  ))
+  (ensures (gaccessor_pre p1 p2 cl sl'))
+= parse_strong_prefix p1 sl sl'
+
+let gaccessor_injective
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (f: gaccessor' p1 p2 cl)
+= (forall (sl sl' : bytes) . {:pattern (f sl); (f sl')} (gaccessor_pre p1 p2 cl sl /\ gaccessor_pre p1 p2 cl sl' /\ injective_precond p1 sl sl') ==> f sl == f sl')
+
+let gaccessor_prop'
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (f: gaccessor' p1 p2 cl)
+: GTot Type0
+= gaccessor_no_lookahead f /\ gaccessor_injective f
+
+abstract
+let gaccessor_prop
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (f: gaccessor' p1 p2 cl)
+: GTot Type0
+= gaccessor_prop' f
+
+abstract
+let gaccessor_prop_equiv
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (cl: clens t1 t2)
+  (f: gaccessor' p1 p2 cl)
+: Lemma
+  (gaccessor_prop f <==> gaccessor_prop' f)
+= ()
 
 [@unifier_hint_injective]
 let gaccessor
@@ -1289,12 +1383,7 @@ let gaccessor
   (p2: parser k2 t2)
   (cl: clens t1 t2)
 : Tot Type
-= (sl: bytes) ->
-  Ghost (nat & nat)
-  (requires True)
-  (ensures (fun res ->
-    gaccessor_post' p1 p2 cl sl res
-  ))
+= (f: gaccessor' p1 p2 cl { gaccessor_prop f })
 
 let get_gaccessor_clens
   (#k1: parser_kind)
@@ -1308,6 +1397,7 @@ let get_gaccessor_clens
 : Tot (clens t1 t2)
 = cl
 
+(*
 abstract
 let gaccessors_disjoint
   (#k1: parser_kind)
@@ -1334,6 +1424,7 @@ let gaccessors_disjoint
    let (pos3, consumed3) = g3 sl in
    pos2 + consumed2 <= pos3 \/ pos3 + consumed3 <= pos2
   ))
+*)
 
 (*
 abstract
@@ -1360,6 +1451,7 @@ let gaccessors_disjoint_clens_disjoint
 = ()
 *)
 
+(*
 abstract
 let gaccessors_disjoint_elim
   (#k1: parser_kind)
@@ -1439,16 +1531,17 @@ let gaccessors_disjoint_intro
  = Classical.move_requires lem sl
  in
  Classical.forall_intro lem'
+*)
 
 let gaccessor_id'
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (input: bytes)
-: Ghost (nat & nat)
+: Ghost (nat)
   (requires True)
   (ensures (fun res -> gaccessor_post' p p (clens_id _) input res))
-= (0, Seq.length input)
+= 0
 
 abstract
 let gaccessor_id
@@ -1480,7 +1573,7 @@ let gaccessor_ext'
   (cl': clens t1 t2)
   (sq: squash (clens_eq cl cl'))
   (input: bytes)
-: Ghost (nat & nat) (requires True) (ensures (fun res -> gaccessor_post' p1 p2 cl' input res))
+: Ghost (nat) (requires True) (ensures (fun res -> gaccessor_post' p1 p2 cl' input res))
 = g input
 
 abstract
@@ -1530,11 +1623,57 @@ let gaccessor_compose'
   (#cl23: clens t2 t3)
   (a23: gaccessor p2 p3 cl23)
   (input: bytes)
-: Ghost (nat & nat) (requires True) (ensures (fun res -> gaccessor_post' p1 p3 (clens_compose cl12 cl23) input res))
-= let (pos2, consumed2) = a12 input in
-  let input2 = Seq.slice input pos2 (pos2 + consumed2) in
-  let (pos3, consumed3) = a23 input2 in
-  (pos2 + pos3, consumed3)
+: Ghost (nat) (requires True) (ensures (fun res -> gaccessor_post' p1 p3 (clens_compose cl12 cl23) input res))
+= let pos2 = a12 input in
+  let input2 = Seq.slice input pos2 (Seq.length input) in
+  let pos3 = a23 input2 in
+  pos2 + pos3
+
+let gaccessor_compose_injective
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl12: clens t1 t2)
+  (a12: gaccessor p1 p2 cl12)
+  (#k3: parser_kind)
+  (#t3: Type)
+  (#p3: parser k3 t3)
+  (#cl23: clens t2 t3)
+  (a23: gaccessor p2 p3 cl23)
+  (sl sl': bytes)
+: Lemma
+  (requires (gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ injective_precond p1 sl sl'))
+  (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
+= let sl_ = Seq.slice sl (a12 sl) (Seq.length sl) in
+  let sl'_ = Seq.slice sl' (a12 sl') (Seq.length sl') in
+  assert (injective_precond p2 sl_ sl'_)
+
+let gaccessor_compose_no_lookahead
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl12: clens t1 t2)
+  (a12: gaccessor p1 p2 cl12)
+  (#k3: parser_kind)
+  (#t3: Type)
+  (#p3: parser k3 t3)
+  (#cl23: clens t2 t3)
+  (a23: gaccessor p2 p3 cl23)
+  (sl sl': bytes)
+: Lemma
+  (requires (k1.parser_kind_subkind == Some ParserStrong /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ no_lookahead_on_precond p1 sl sl'))
+  (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
+= let sl_ = Seq.slice sl (a12 sl) (Seq.length sl) in
+  let sl'_ = Seq.slice sl' (a12 sl') (Seq.length sl') in
+  parse_strong_prefix p1 sl sl';
+  assert (injective_precond p1 sl sl');
+  assert (injective_precond p2 sl_ sl'_)
 
 abstract
 let gaccessor_compose
@@ -1552,7 +1691,9 @@ let gaccessor_compose
   (#cl23: clens t2 t3)
   (a23: gaccessor p2 p3 cl23)
 : Tot (gaccessor p1 p3 (clens_compose cl12 cl23))
-= gaccessor_compose' a12 a23
+= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_compose_injective a12 a23 x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_compose_no_lookahead a12 a23 x));
+  gaccessor_compose' a12 a23
 
 abstract
 let gaccessor_compose_eq
@@ -1574,6 +1715,7 @@ let gaccessor_compose_eq
   (gaccessor_compose a12 a23 input == gaccessor_compose' a12 a23 input)
 = ()
 
+(*
 abstract
 let gaccessor_compose_strong
   (#k1: parser_kind)
@@ -1611,6 +1753,7 @@ let gaccessor_compose_strong_eq
 : Lemma
   (gaccessor_compose_strong a12 a23 input == gaccessor_compose' a12 a23 input)
 = ()
+*)
 
 let slice_access'
   (#rrel #rel: _)
@@ -1627,12 +1770,12 @@ let slice_access'
   (pos: U32.t)
 : Ghost U32.t
   (requires (
-    valid' p1 h sl pos
+    valid p1 h sl pos
   ))
   (ensures (fun pos' -> True))
-= 
-  let small = bytes_of_slice_from_to h sl pos (pos `U32.add` U32.uint_to_t (content_length' p1 h sl pos)) in
-  pos `U32.add` U32.uint_to_t (fst (g small))
+=
+  let small = bytes_of_slice_from h sl pos in
+  pos `U32.add` U32.uint_to_t (g small)
 
 [@"opaque_to_smt"]
 abstract
@@ -1651,8 +1794,6 @@ let slice_access
   (pos: U32.t)
 : Ghost U32.t
   (requires (
-    k1.parser_kind_subkind == Some ParserStrong /\
-    k2.parser_kind_subkind == Some ParserStrong /\
     valid p1 h sl pos /\
     cl.clens_cond (contents p1 h sl pos)
   ))
@@ -1676,8 +1817,6 @@ let slice_access_eq
   (pos: U32.t)
 : Lemma
   (requires (
-    k1.parser_kind_subkind == Some ParserStrong /\
-    k2.parser_kind_subkind == Some ParserStrong /\
     valid p1 h sl pos /\
     cl.clens_cond (contents p1 h sl pos)
   ))
@@ -1688,8 +1827,6 @@ let slice_access_eq
   ))
 = valid_facts p1 h sl pos;
   assert_norm (slice_access h g sl pos == slice_access' h g sl pos)
-
-#push-options "--z3rlimit 32"
 
 abstract
 let slice_access_post
@@ -1707,8 +1844,6 @@ let slice_access_post
   (pos: U32.t)
 : Lemma
   (requires (
-    k1.parser_kind_subkind == Some ParserStrong /\
-    k2.parser_kind_subkind == Some ParserStrong /\
     valid p1 h sl pos /\
     cl.clens_cond (contents p1 h sl pos)
   ))
@@ -1725,20 +1860,10 @@ let slice_access_post
   valid_facts p1 h sl pos;
   assert_norm (pow2 32 == 4294967296);
   let res = slice_access' h g sl pos in
-  valid_facts p2 h sl res;
-  let input_large = bytes_of_slice_from h sl pos in
-  let input_small = bytes_of_slice_from_to h sl pos (pos `U32.add` U32.uint_to_t (content_length' p1 h sl pos)) in
-  parse_strong_prefix p1 input_large input_small;
-  let output_small = bytes_of_slice_from_to h sl res (res `U32.add` U32.uint_to_t (snd (g input_small))) in
-  let output_large = bytes_of_slice_from h sl res in
-  parse_strong_prefix p2 output_small output_large
-
-#pop-options
-
-#push-options "--z3rlimit 256 --max_fuel 0 --max_ifuel 6 --initial_ifuel 6"
+  valid_facts p2 h sl res
 
 abstract
-let slice_access_eq_inv
+let slice_access_frame_weak
   (#rrel #rel: _)
   (h: HS.mem)
   (#k1: parser_kind)
@@ -1751,33 +1876,32 @@ let slice_access_eq_inv
   (g: gaccessor p1 p2 cl)
   (sl: slice rrel rel)
   (pos: U32.t)
+  (l: B.loc)
+  (h' : HS.mem)
 : Lemma
   (requires (
-    k1.parser_kind_subkind == Some ParserStrong /\
-    k2.parser_kind_subkind == Some ParserStrong /\
     valid p1 h sl pos /\
-    cl.clens_cond (contents p1 h sl pos)
+    cl.clens_cond (contents p1 h sl pos) /\
+    B.modifies l h h' /\
+    B.loc_disjoint l (loc_slice_from sl pos)
   ))
   (ensures (
-    let pos2 = slice_access h g sl pos in
-    g (bytes_of_slice_from_to h sl pos (pos `U32.add` U32.uint_to_t (content_length p1 h sl pos))) ==
-      (U32.v pos2 - U32.v pos, content_length p2 h sl pos2)
+    valid p1 h' sl pos /\
+    cl.clens_cond (contents p1 h' sl pos) /\
+    slice_access h' g sl pos == slice_access h g sl pos
   ))
+  [SMTPatOr [
+    [SMTPat (slice_access h g sl pos); SMTPat (B.modifies l h h')];
+    [SMTPat (slice_access h' g sl pos); SMTPat (B.modifies l h h')];
+  ]]
 = valid_facts p1 h sl pos;
+  valid_facts p1 h' sl pos;
   slice_access_eq h g sl pos;
-  let res = slice_access' h g sl pos in
-  valid_facts p2 h sl res;
-    let input_large = bytes_of_slice_from h sl pos in
-    let input_small = bytes_of_slice_from_to h sl pos (pos `U32.add` U32.uint_to_t (content_length' p1 h sl pos)) in
-    parse_strong_prefix p1 input_large input_small;
-    let output_small = bytes_of_slice_from_to h sl res (res `U32.add` U32.uint_to_t (snd (g input_small))) in
-    let output_large = bytes_of_slice_from h sl res in
-    parse_strong_prefix p2 output_small output_large
-
-#pop-options
+  slice_access_eq h' g sl pos;
+  B.modifies_buffer_from_to_elim sl.base pos sl.len l h h'
 
 abstract
-let slice_access_frame
+let slice_access_frame_strong
   (#rrel #rel: _)
   (h: HS.mem)
   (#k1: parser_kind)
@@ -1795,7 +1919,6 @@ let slice_access_frame
 : Lemma
   (requires (
     k1.parser_kind_subkind == Some ParserStrong /\
-    k2.parser_kind_subkind == Some ParserStrong /\
     valid p1 h sl pos /\
     cl.clens_cond (contents p1 h sl pos) /\
     B.modifies l h h' /\
@@ -1814,7 +1937,10 @@ let slice_access_frame
   valid_facts p1 h' sl pos;
   slice_access_eq h g sl pos;
   slice_access_eq h' g sl pos;
-  B.modifies_buffer_from_to_elim sl.base pos (get_valid_pos p1 h sl pos) l h h'
+  let pos2 = get_valid_pos p1 h sl pos in
+  parse_strong_prefix p1 (bytes_of_slice_from h sl pos) (bytes_of_slice_from_to h sl pos pos2);
+  B.modifies_buffer_from_to_elim sl.base pos (get_valid_pos p1 h sl pos) l h h' ;
+  parse_strong_prefix p1 (bytes_of_slice_from_to h' sl pos pos2) (bytes_of_slice_from h' sl pos)
 
 [@unifier_hint_injective]
 inline_for_extraction
@@ -1833,7 +1959,10 @@ let accessor
   (sl: slice rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
-  (requires (fun h -> k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_subkind == Some ParserStrong /\ valid p1 h sl pos /\ cl.clens_cond (contents p1 h sl pos))) 
+  (requires (fun h ->
+    valid p1 h sl pos /\
+    cl.clens_cond (contents p1 h sl pos)
+  ))
   (ensures (fun h pos' h' ->
     B.modifies B.loc_none h h' /\
     pos' == slice_access h g sl pos
@@ -1855,17 +1984,15 @@ let make_accessor_from_pure
     (input: Ghost.erased bytes) ->
     Pure U32.t
     (requires (Seq.length (Ghost.reveal input) < 4294967296 /\ gaccessor_pre p1 p2 cl (Ghost.reveal input)))
-    (ensures (fun y -> U32.v y == fst (g (Ghost.reveal input))))
+    (ensures (fun y -> U32.v y == (g (Ghost.reveal input))))
   ))
 : Tot (accessor g)
 = fun #rrel #rel sl (pos: U32.t) ->
   let h = HST.get () in
   [@inline_let] let _ =
-    slice_access_eq_inv h g sl pos;
-    valid_facts p1 h sl pos;
-    parse_strong_prefix p1 (bytes_of_slice_from h sl pos) (bytes_of_slice_from_to h sl pos (get_valid_pos p1 h sl pos))
+    slice_access_eq h g sl pos
   in
-  pos `U32.add` f (Ghost.hide (bytes_of_slice_from_to h sl pos (get_valid_pos p1 h sl pos)))
+  pos `U32.add` f (Ghost.hide (bytes_of_slice_from h sl pos))
 
 #pop-options
 
@@ -1899,12 +2026,11 @@ let accessor_ext
   [@inline_let]
   let _ =
     slice_access_eq h (gaccessor_ext g cl' sq) input pos;
-    gaccessor_ext_eq g cl' sq (bytes_of_slice_from_to h input pos (pos `U32.add` U32.uint_to_t (content_length' p1 h input pos)));
     slice_access_eq h g input pos
   in
   a input pos
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 16"
 
 inline_for_extraction
 let accessor_compose
@@ -1923,19 +2049,20 @@ let accessor_compose
   (#cl23: clens t2 t3)
   (#a23: gaccessor p2 p3 cl23)
   (a23' : accessor a23)
-  (sq: squash (k2.parser_kind_subkind == Some ParserStrong))
+  (sq: unit) // squash (k2.parser_kind_subkind == Some ParserStrong))
 : Tot (accessor (gaccessor_compose a12 a23))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   let pos2 = a12' input pos in
   let pos3 = a23' input pos2 in
-  slice_access_eq_inv h a12 input pos;
-  slice_access_eq_inv h a23 input pos2;
-  slice_access_eq_inv h (gaccessor_compose a12 a23) input pos;
+  slice_access_eq h a12 input pos;
+  slice_access_eq h a23 input pos2;
+  slice_access_eq h (gaccessor_compose a12 a23) input pos;
   pos3
 
 #pop-options
 
+(*
 inline_for_extraction
 let accessor_compose_strong
   (#k1: parser_kind)
@@ -1960,6 +2087,7 @@ let accessor_compose_strong
   slice_access_eq h (gaccessor_compose_strong a12 a23) input pos;
   slice_access_eq h (gaccessor_compose a12 a23) input pos;
   accessor_compose a12' a23' () input pos
+*)
 
 (* Validators *)
 
@@ -1996,18 +2124,35 @@ let default_validator_cls : validator_cls = {
 [@ CMacro ]
 let validator_max_length : (u: U64.t { 4 <= U64.v u /\ U64.v u <= U64.v max_uint32_as_uint64 } ) = _max_uint32_as_uint64
 
+[@ CInline ]
+let is_error (positionOrError: U64.t) : Tot bool = positionOrError `U64.gt` validator_max_length
+
+[@ CInline ]
+let is_success (positionOrError: U64.t) : Tot bool = positionOrError `U64.lte` validator_max_length
+
 [@ CMacro ]
-type validator_error = (u: U64.t { U64.v u > U64.v validator_max_length } )
+type validator_error = (u: U64.t { is_error u } )
+
+inline_for_extraction
+let pos_t = (pos: U64.t {is_success pos})
 
 module BF = LowParse.BitFields
 
 #push-options "--z3rlimit 16"
 
 inline_for_extraction
+let get_validator_error_field (x: U64.t) (lo: nat) (hi: nat { lo < hi /\ hi <= 32 }) : Tot (code: U64.t { 0 <= U64.v code /\ U64.v code < pow2 (hi - lo) }) =
+  [@inline_let]
+  let res =
+    BF.uint64.BF.get_bitfield x (32 + lo) (32 + hi)
+  in
+  res
+
+inline_for_extraction
 let set_validator_error_field (x: U64.t) (lo: nat) (hi: nat { lo < hi /\ hi <= 32 }) (code: U64.t { 0 < U64.v code /\ U64.v code < pow2 (hi - lo) }) : Tot validator_error =
   [@inline_let]
   let res =
-    BF.set_bitfield64 x (32 + lo) (32 + hi) code
+    BF.uint64.BF.set_bitfield x (32 + lo) (32 + hi) code
   in
   [@inline_let]
   let _ =
@@ -2019,17 +2164,26 @@ let set_validator_error_field (x: U64.t) (lo: nat) (hi: nat { lo < hi /\ hi <= 3
   in
   res
 
-inline_for_extraction
-let set_validator_error_pos (x: validator_error) (pos: U32.t) : Tot validator_error =
+let get_validator_error_field_set_validator_error_field
+  (x: U64.t)
+  (lo: nat)
+  (hi: nat { lo < hi /\ hi <= 32 })
+  (code: U64.t { 0 < U64.v code /\ U64.v code < pow2 (hi - lo) })
+: Lemma
+  (get_validator_error_field (set_validator_error_field x lo hi code) lo hi == code)
+= ()
+
+[@ CInline ]
+let set_validator_error_pos (error: validator_error) (position: pos_t) : Tot validator_error =
   [@inline_let]
   let res =
-    BF.set_bitfield64 x 0 32 (Cast.uint32_to_uint64 pos)
+    BF.uint64.BF.set_bitfield error 0 32 position
   in
   [@inline_let]
   let _ =
-    BF.get_bitfield_set_bitfield_other (U64.v x) 0 32 (U32.v pos) 32 64;
-    assert (BF.get_bitfield (U64.v res) 32 64 == BF.get_bitfield (U64.v x) 32 64);
-    Classical.move_requires (BF.get_bitfield_hi_lt_pow2 (U64.v x)) 32;
+    BF.get_bitfield_set_bitfield_other (U64.v error) 0 32 (U64.v position) 32 64;
+    assert (BF.get_bitfield (U64.v res) 32 64 == BF.get_bitfield (U64.v error) 32 64);
+    Classical.move_requires (BF.get_bitfield_hi_lt_pow2 (U64.v error)) 32;
     Classical.move_requires (BF.lt_pow2_get_bitfield_hi (U64.v res)) 32;
     assert_norm (pow2 32 == U64.v validator_max_length + 1)
   in
@@ -2037,21 +2191,28 @@ let set_validator_error_pos (x: validator_error) (pos: U32.t) : Tot validator_er
 
 #pop-options
 
-inline_for_extraction
-let get_validator_error_pos (x: U64.t) : Tot U32.t =
-  Cast.uint64_to_uint32 (BF.get_bitfield64 x 0 32)
+[@ CInline ]
+let get_validator_error_pos (x: U64.t) : Tot pos_t =
+  (BF.uint64.BF.get_bitfield x 0 32)
+
+[@ CInline ]
+let set_validator_error_kind (error: U64.t) (code: U64.t { 0 < U64.v code /\ U64.v code < 16384 }) : Tot validator_error =
+  set_validator_error_field error 0 14 code
+
+[@ CInline ]
+let get_validator_error_kind (error: U64.t) : Tot (code: U64.t { 0 <= U64.v code /\ U64.v code < 16384 }) =
+  get_validator_error_field error 0 14
 
 inline_for_extraction
-let set_validator_error_kind (x: U64.t) (code: U64.t { 0 < U64.v code /\ U64.v code < 4 }) : Tot validator_error =
-  set_validator_error_field x 0 2 code
+let error_code = (c: U64.t { 0 < U64.v c /\ U64.v c < 65536 })
 
-inline_for_extraction
-let set_validator_error_code (x: U64.t) (code: U64.t { 0 < U64.v code /\ U64.v code < 65536 }) : Tot validator_error =
-  set_validator_error_field x 2 18 code
+[@ CInline ]
+let set_validator_error_code (error: U64.t) (code: error_code) : Tot validator_error =
+  set_validator_error_field error 16 32 code
 
-inline_for_extraction
-let get_validator_error_code (x: U64.t) : Tot (code: U64.t { U64.v code < 65536 }) =
-  BF.get_bitfield64 x 34 50
+[@ CInline ]
+let get_validator_error_code (error: U64.t) : Tot (code: U64.t { U64.v code < 65536 }) =
+  get_validator_error_field error 16 32
 
 [@ CMacro ]
 let validator_error_generic : validator_error = normalize_term (set_validator_error_kind 0uL 1uL)
@@ -2061,9 +2222,8 @@ let validator_error_not_enough_data : validator_error = normalize_term (set_vali
 
 [@"opaque_to_smt"] // to hide the modulo operation
 inline_for_extraction
-abstract
 let uint64_to_uint32
-  (x: U64.t { U64.v x <= U64.v validator_max_length } )
+  (x: pos_t)
 : Tot (y: U32.t { U32.v y == U64.v x })
 = Cast.uint64_to_uint32 x
 
@@ -2072,27 +2232,82 @@ inline_for_extraction
 let validator (#k: parser_kind) (#t: Type) (p: parser k t) : Tot Type =
   (#rrel: _) -> (#rel: _) ->
   (sl: slice rrel rel) ->
-  (pos: U32.t) ->
+  (pos: U64.t) ->
   HST.Stack U64.t
-  (requires (fun h -> live_slice h sl /\ U32.v pos <= U32.v sl.len))
+  (requires (fun h -> live_slice h sl /\ U64.v pos <= U32.v sl.len))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
-    if U64.v res <= U64.v validator_max_length
+    if is_success res
     then
-      valid_pos p h sl pos (uint64_to_uint32 res)
+      valid_pos p h sl (uint64_to_uint32 pos) (uint64_to_uint32 res)
     else
-      (~ (valid p h sl pos))
+      (~ (valid p h sl (uint64_to_uint32 pos)))
   )))
+
+noextract
+inline_for_extraction
+let comment (s: string) : HST.Stack unit
+  (requires (fun _ -> True))
+  (ensures (fun h _ h' -> h == h'))
+= LowStar.Comment.comment s
+
+noextract
+inline_for_extraction
+let validate_with_comment
+  (s: string)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v: validator p)
+: Tot (validator p)
+= fun #rrel #rel sl pos ->
+  comment s;
+  v sl pos
+  
+
+// [@ CInline ]
+// let maybe_set_error_code (res:U64.t)  (pos:pos_t) (c:U64.t { 0 < U64.v c /\ U64.v c < 65536 })
+//   : Tot U64.t
+//   = if is_error res && get_validator_error_code res = 0uL
+//     then set_validator_error_pos (set_validator_error_code res c) pos
+//     else res
+
+[@ CInline ]
+let set_validator_error_pos_and_code
+  (error: validator_error)
+  (position: pos_t)
+  (code: error_code)
+: Tot validator_error
+= set_validator_error_pos (set_validator_error_code error code) position
+
+[@ CInline ]
+let maybe_set_validator_error_pos_and_code
+  (error: validator_error)
+  (pos: pos_t)
+  (c: error_code)
+: Tot validator_error
+= if get_validator_error_code error = 0uL
+  then set_validator_error_pos_and_code error pos c
+  else error
+
+[@ CInline ]
+let maybe_set_error_code
+  (positionOrError: U64.t)
+  (positionAtError: pos_t)
+  (code: error_code)
+ : Tot U64.t
+  = if is_error positionOrError
+    && get_validator_error_code positionOrError = 0uL
+    then set_validator_error_pos_and_code positionOrError positionAtError code
+    else positionOrError
 
 inline_for_extraction
 let validate_with_error_code
-  (#k: parser_kind) (#t: Type) (#p: parser k t) (v: validator p) (c: U64.t { 0 < U64.v c /\ U64.v c < 65536 })
+  (#k: parser_kind) (#t: Type) (#p: parser k t) (v: validator p) (c: error_code)
 : Tot (validator p)
 = fun #rrel #rel sl pos ->
   let res = v sl pos in
-  if res `U64.gt` validator_max_length && get_validator_error_code res = 0uL
-  then set_validator_error_pos (set_validator_error_code res c) pos
-  else res
+  maybe_set_error_code res pos c
 
 inline_for_extraction
 let validate
@@ -2112,25 +2327,28 @@ let validate
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
     let sl = make_slice b len in
-    (res == true <==> (valid p h sl 0ul))
+    (res == true <==> (is_success (Cast.uint32_to_uint64 len) /\ valid p h sl 0ul))
   )))
-= [@inline_let]
-  let sl = make_slice b len in
-  v sl 0ul `U64.lte` validator_max_length
+= if is_error (Cast.uint32_to_uint64 len)
+  then false
+  else
+    [@inline_let]
+    let sl = make_slice b len in
+    is_success (v sl 0uL)
 
 let valid_total_constant_size
   (h: HS.mem)
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (sz: U32.t)
+  (sz: nat)
   (#rrel #rel: _)
   (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
   (requires (
     k.parser_kind_high == Some k.parser_kind_low /\
-    k.parser_kind_low == U32.v sz /\
+    k.parser_kind_low == sz /\
     k.parser_kind_metadata == Some ParserKindMetadataTotal
   ))
   (ensures (
@@ -2145,20 +2363,74 @@ let validate_total_constant_size
   (#k: parser_kind)
   (#t: Type0)
   (p: parser k t)
-  (sz: U32.t)
+  (sz: U64.t)
   (u: unit {
     k.parser_kind_high == Some k.parser_kind_low /\
-    k.parser_kind_low == U32.v sz /\
+    k.parser_kind_low == U64.v sz /\
     k.parser_kind_metadata == Some ParserKindMetadataTotal
   })
 : Tot (validator p)
-= fun #rrel #rel (input: slice rrel rel) (pos: U32.t) ->
+= fun #rrel #rel (input: slice rrel rel) pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_total_constant_size h p sz input pos in
-  if U32.lt (input.len `U32.sub` pos) sz
+  [@inline_let] let _ = valid_total_constant_size h p (U64.v sz) input (uint64_to_uint32 pos) in
+  if U64.lt (Cast.uint32_to_uint64 input.len `U64.sub` pos) sz
   then validator_error_not_enough_data
   else
-    Cast.uint32_to_uint64 (pos `U32.add` sz)
+    (pos `U64.add` sz)
+
+inline_for_extraction
+let validate_total_constant_size_with_error_code
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (sz: U64.t)
+  (c: error_code {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == U64.v sz /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal
+  })
+: Tot (validator p)
+= fun #rrel #rel (input: slice rrel rel) pos ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_total_constant_size h p (U64.v sz) input (uint64_to_uint32 pos) in
+  if U64.lt (Cast.uint32_to_uint64 input.len `U64.sub` pos) sz
+  then set_validator_error_pos_and_code validator_error_not_enough_data pos c
+  else
+    (pos `U64.add` sz)
+
+let valid_weaken
+  (k1: parser_kind)
+  (#k2: parser_kind)
+  (#t: Type0)
+  (p2: parser k2 t)
+  (h: HS.mem)
+  #rrel #rel
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (k1 `is_weaker_than` k2))
+  (ensures (
+    (valid (weaken k1 p2) h sl pos \/ valid p2 h sl pos) ==> (
+    valid p2 h sl pos /\
+    valid_content_pos (weaken k1 p2) h sl pos (contents p2 h sl pos) (get_valid_pos p2 h sl pos)
+  )))
+= valid_facts (weaken k1 p2) h sl pos;
+  valid_facts p2 h sl pos
+
+inline_for_extraction
+let validate_weaken
+  (k1: parser_kind)
+  (#k2: parser_kind)
+  (#t: Type0)
+  (#p2: parser k2 t)
+  (v2: validator p2 { k1 `is_weaker_than` k2 } )
+: Tot (validator (weaken k1 p2))
+= fun #rrel #rel sl pos ->
+  let h = HST.get () in
+  [@inline_let] let _ =
+    valid_weaken k1 p2 h sl (uint64_to_uint32 pos)
+  in
+  v2 sl pos
 
 [@unifier_hint_injective]
 inline_for_extraction
@@ -2205,6 +2477,21 @@ let jump_constant_size
   })
 : Tot (jumper p)
 = jump_constant_size' (fun _ -> p) sz u
+
+inline_for_extraction
+let jump_weaken
+  (k1: parser_kind)
+  (#k2: parser_kind)
+  (#t: Type0)
+  (#p2: parser k2 t)
+  (v2: jumper p2 { k1 `is_weaker_than` k2 } )
+: Tot (jumper (weaken k1 p2))
+= fun #rrel #rel sl pos ->
+  let h = HST.get () in
+  [@inline_let] let _ =
+    valid_weaken k1 p2 h sl pos
+  in
+  v2 sl pos
 
 let seq_starts_with (#t: Type) (slong sshort: Seq.seq t) : GTot Type0 =
   Seq.length sshort <= Seq.length slong /\
@@ -2277,6 +2564,19 @@ let leaf_reader
     B.modifies B.loc_none h h' /\
     res == contents p h sl pos
   ))
+
+noextract
+inline_for_extraction
+let read_with_comment
+  (s: string)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (r: leaf_reader p)
+: Tot (leaf_reader p)
+= fun #rrel #rel sl pos ->
+    comment s;
+    r sl pos
 
 [@unifier_hint_injective]
 inline_for_extraction
@@ -2602,6 +2902,55 @@ let serializer32
     B.live h b /\
     Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + U32.v len) `Seq.equal` serialize s x
   )))
+
+inline_for_extraction
+let frame_serializer32
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (s32: serializer32 s)
+  (x: t)
+  (#rrel: _)
+  (#rel: _)
+  (b: B.mbuffer byte rrel rel)
+  (posl: Ghost.erased U32.t)
+  (posr: Ghost.erased U32.t)
+  (pos: U32.t)
+: HST.Stack U32.t
+  (requires (fun h ->
+    let len = Seq.length (serialize s x) in
+    let sq = B.as_seq h b in
+    B.live h b /\
+    U32.v (Ghost.reveal posl) <= U32.v pos /\
+    U32.v pos + len <= U32.v (Ghost.reveal posr) /\
+    U32.v (Ghost.reveal posr) <= B.length b /\
+    writable b (U32.v (Ghost.reveal posl)) (U32.v (Ghost.reveal posr)) h
+  ))
+  (ensures (fun h len h' ->
+    Seq.length (serialize s x) == U32.v len /\ (
+    B.modifies (B.loc_buffer_from_to b (Ghost.reveal posl) (Ghost.reveal posr)) h h' /\
+    B.live h b /\
+    Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + U32.v len) `Seq.equal` serialize s x /\
+    writable b (U32.v (Ghost.reveal posl)) (U32.v (Ghost.reveal posr)) h' /\
+    Seq.slice (B.as_seq h' b) (U32.v (Ghost.reveal posl)) (U32.v pos) `Seq.equal` Seq.slice (B.as_seq h b) (U32.v (Ghost.reveal posl)) (U32.v pos) /\
+    Seq.slice (B.as_seq h' b) (U32.v pos + U32.v len) (U32.v (Ghost.reveal posr)) `Seq.equal` Seq.slice (B.as_seq h b) (U32.v pos + U32.v len) (U32.v (Ghost.reveal posr))
+  )))
+=
+  let h0 = HST.get () in
+  writable_weaken b (U32.v (Ghost.reveal posl)) (U32.v (Ghost.reveal posr)) h0 (U32.v pos) (U32.v pos + Seq.length (serialize s x));
+  let res = s32 x b pos in
+  let h1 = HST.get () in
+  let pos' = pos `U32.add` res in
+  B.loc_includes_loc_buffer_from_to b (Ghost.reveal posl) (Ghost.reveal posr) pos pos';
+  writable_modifies b (U32.v (Ghost.reveal posl)) (U32.v (Ghost.reveal posr)) h0 B.loc_none h1;
+  B.loc_includes_loc_buffer_from_to b (Ghost.reveal posl) (Ghost.reveal posr) (Ghost.reveal posl) pos;
+  B.loc_disjoint_loc_buffer_from_to b (Ghost.reveal posl) pos pos pos';
+  B.modifies_buffer_from_to_elim b (Ghost.reveal posl) pos (B.loc_buffer_from_to b pos pos') h0 h1;
+  B.loc_includes_loc_buffer_from_to b (Ghost.reveal posl) (Ghost.reveal posr) pos' (Ghost.reveal posr);
+  B.loc_disjoint_loc_buffer_from_to b pos pos' pos' (Ghost.reveal posr);
+  B.modifies_buffer_from_to_elim b pos' (Ghost.reveal posr) (B.loc_buffer_from_to b pos pos') h0 h1;
+  res
 
 inline_for_extraction
 let leaf_writer_strong_of_serializer32

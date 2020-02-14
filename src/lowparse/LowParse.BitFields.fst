@@ -1,6 +1,6 @@
 module LowParse.BitFields
 module U = FStar.UInt
-module M = FStar.Math.Lemmas
+module M = LowParse.Math
 
 open FStar.Mul
 
@@ -12,10 +12,9 @@ let bitfield_mask (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Tot
   in
   normalize_term ((pow2 (hi - lo) - 1) * pow2 lo)
 
-#push-options "--z3rlimit 64"
-
 let bitfield_mask_eq (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Lemma
   (
+    0 <= pow2 (hi - lo) - 1 /\
     pow2 (hi - lo) - 1 < pow2 tot /\
     bitfield_mask tot lo hi == U.shift_left #tot (pow2 (hi - lo) - 1) lo
   )
@@ -24,9 +23,11 @@ let bitfield_mask_eq (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : 
   U.shift_left_value_lemma #tot (pow2 (hi - lo) - 1) lo;
   M.pow2_le_compat tot hi;
   M.pow2_plus (hi - lo) lo;
+  M.lemma_mult_nat (pow2 (hi - lo) - 1) (pow2 lo);
+  M.lemma_mult_lt' (pow2 lo) (pow2 (hi - lo) - 1) (pow2 (hi - lo));
+  M.swap_mul (pow2 (hi - lo)) (pow2 lo);
+  M.swap_mul (pow2 (hi - lo) - 1) (pow2 lo);
   M.modulo_lemma ((pow2 (hi - lo) - 1) * pow2 lo) (pow2 tot)
-
-#pop-options
 
 (* Cf. U.index_to_vec_ones; WHY WHY WHY is it private? *)
 val nth_pow2_minus_one' : #n:pos -> m:nat{m <= n} -> i:nat{i < n} ->
@@ -198,17 +199,35 @@ let get_bitfield_raw_bounded
   logand_mask (get_bitfield_raw x lo hi) (hi - lo);
   M.lemma_mod_lt x (pow2 (hi - lo))
 
-type bitfield (tot: nat) (sz: nat) = (x: U.uint_t tot { x < pow2 sz })
-
 let get_bitfield 
   (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi /\ hi <= tot})
-: Tot (bitfield tot (hi - lo))
+: Tot (ubitfield tot (hi - lo))
 = get_bitfield_raw_bounded x lo hi;
   get_bitfield_raw x lo hi
 
 let nth_get_bitfield (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi /\ hi <= tot}) (i: nat {i < tot}) : Lemma
   (nth (get_bitfield x lo hi) i == (i < hi - lo && nth x (i + lo)))
 = nth_get_bitfield_raw x lo hi i
+
+let get_bitfield_logor
+  (#tot: pos) (x y: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi /\ hi <= tot})
+: Lemma
+  (get_bitfield (x `U.logor` y) lo hi == get_bitfield x lo hi `U.logor` get_bitfield y lo hi)
+= eq_nth (get_bitfield (x `U.logor` y) lo hi) (get_bitfield x lo hi `U.logor` get_bitfield y lo hi) (fun i ->
+    nth_get_bitfield (x `U.logor` y) lo hi i;
+    nth_get_bitfield x lo hi i;
+    nth_get_bitfield y lo hi i
+  )
+
+let get_bitfield_logxor
+  (#tot: pos) (x y: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi /\ hi <= tot})
+: Lemma
+  (get_bitfield (x `U.logxor` y) lo hi == get_bitfield x lo hi `U.logxor` get_bitfield y lo hi)
+= eq_nth (get_bitfield (x `U.logxor` y) lo hi) (get_bitfield x lo hi `U.logxor` get_bitfield y lo hi) (fun i ->
+    nth_get_bitfield (x `U.logxor` y) lo hi i;
+    nth_get_bitfield x lo hi i;
+    nth_get_bitfield y lo hi i
+  )
 
 #push-options "--z3rlimit 16"
 
@@ -275,16 +294,15 @@ let nth_not_bitfield_mask (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot 
 = nth_lognot (bitfield_mask tot lo hi) i;
   nth_bitfield_mask tot lo hi i
 
-inline_for_extraction
 let set_bitfield
   (#tot: pos) (x: U.uint_t tot)
-  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: bitfield tot (hi - lo))
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
 : Tot (U.uint_t tot)
 = (x `U.logand` not_bitfield_mask tot lo hi) `U.logor` (v `U.shift_left` lo)
 
 let nth_set_bitfield
   (#tot: pos) (x: U.uint_t tot)
-  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: bitfield tot (hi - lo))
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
   (i: nat {i < tot})
 : Lemma
   (nth (set_bitfield x lo hi v) i == (if lo <= i && i < hi then nth v (i - lo) else nth x i))
@@ -309,9 +327,10 @@ let nth_set_bitfield
   end;
   assert (y == (if lo <= i && i < hi then nth v (i - lo) else nth x i))
 
+#push-options "--z3rlimit 32"
 let get_bitfield_set_bitfield_same
   (#tot: pos) (x: U.uint_t tot)
-  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: bitfield tot (hi - lo))
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
 : Lemma
   (get_bitfield (set_bitfield x lo hi v) lo hi == v)
 = eq_nth (get_bitfield (set_bitfield x lo hi v) lo hi) v (fun i ->
@@ -322,10 +341,11 @@ let get_bitfield_set_bitfield_same
     end else
       nth_le_pow2_m v (hi - lo) i
   )
+#pop-options
 
 let get_bitfield_set_bitfield_other
   (#tot: pos) (x: U.uint_t tot)
-  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: bitfield tot (hi - lo))
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
   (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot })
 : Lemma
   (requires (hi' <= lo \/ hi <= lo'))
@@ -341,8 +361,8 @@ let get_bitfield_set_bitfield_other
 
 let set_bitfield_set_bitfield
   (#tot: pos) (x: U.uint_t tot)
-  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: bitfield tot (hi - lo))
-  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot }) (v' : bitfield tot (hi' - lo'))
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
+  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot }) (v' : ubitfield tot (hi' - lo'))
 : Lemma
   (requires (hi' <= lo \/ hi <= lo'))
   (ensures (set_bitfield (set_bitfield x lo hi v) lo' hi' v' == set_bitfield (set_bitfield x lo' hi' v') lo hi v))
@@ -379,6 +399,17 @@ let get_bitfield_full
   (get_bitfield x 0 tot == x)
 = eq_nth (get_bitfield x 0 tot) x (fun i ->
     nth_get_bitfield x 0 tot i
+  )
+
+let get_bitfield_empty
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (i: nat { i <= tot })
+: Lemma
+  (get_bitfield x i i == 0)
+= eq_nth (get_bitfield x i i) 0 (fun j ->
+    nth_get_bitfield x i i j;
+    nth_zero tot j
   )
 
 let lt_pow2_get_bitfield_hi
@@ -440,6 +471,7 @@ let get_bitfield_get_bitfield
     then nth_get_bitfield x lo hi (i + lo')
   )
 
+#push-options "--z3rlimit_factor 2"
 let get_bitfield_zero_inner
   (#tot: pos)
   (x: U.uint_t tot)
@@ -462,6 +494,93 @@ let get_bitfield_zero_inner
     )
   in
   Classical.move_requires f ()
+#pop-options
+
+#push-options "--z3rlimit 32"
+let bitfield_is_zero
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
+: Lemma
+  (get_bitfield x lo hi == 0 <==>  x `U.logand` bitfield_mask tot lo hi == 0)
+= 
+  let y = x `U.logand` bitfield_mask tot lo hi in
+  let z = get_bitfield x lo hi in
+  let f () : Lemma
+    (requires (y == 0))
+    (ensures (z == 0))
+  = eq_nth z 0 (fun i ->
+      nth_zero tot i;
+      nth_logand x (bitfield_mask tot lo hi) i;
+      nth_bitfield_mask tot lo hi i;
+      nth_get_bitfield x lo hi i;
+      if i < hi - lo
+      then nth_zero tot (i + lo)
+    )
+  in
+  let g () : Lemma
+    (requires (z == 0))
+    (ensures (y == 0))
+  = eq_nth y 0 (fun i ->
+      nth_zero tot i;
+      nth_logand x (bitfield_mask tot lo hi) i;
+      nth_bitfield_mask tot lo hi i;
+      if lo <= i && i < hi
+      then begin
+        nth_get_bitfield x lo hi (i - lo);
+        nth_zero tot (i - lo)
+      end
+    )
+  in
+  Classical.move_requires f ();
+  Classical.move_requires g ()
+#pop-options
+
+#push-options "--z3rlimit 16"
+
+let bitfield_eq_shift
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
+  (v: ubitfield tot (hi - lo))
+: Lemma
+  (get_bitfield x lo hi == v <==>  x `U.logand` bitfield_mask tot lo hi == v `U.shift_left` lo)
+= 
+  let y = x `U.logand` bitfield_mask tot lo hi in
+  let z = get_bitfield x lo hi in
+  let w = v `U.shift_left` lo in
+  let f () : Lemma
+    (requires (y == w))
+    (ensures (z == v))
+  = eq_nth z v (fun i ->
+      nth_logand x (bitfield_mask tot lo hi) i;
+      nth_bitfield_mask tot lo hi i;
+      nth_get_bitfield x lo hi i;
+      if hi - lo <= i
+      then nth_le_pow2_m v (hi - lo) i
+      else nth_shift_left v lo (i + lo)
+    )
+  in
+  let g () : Lemma
+    (requires (z == v))
+    (ensures (y == w))
+  = eq_nth y w (fun i ->
+      nth_logand x (bitfield_mask tot lo hi) i;
+      nth_bitfield_mask tot lo hi i;
+      nth_shift_left v lo i;
+      if hi <= i
+      then
+        nth_le_pow2_m v (hi - lo) (i - lo)
+      else if lo <= i
+      then begin
+        nth_get_bitfield x lo hi (i - lo)
+      end
+    )
+  in
+  Classical.move_requires f ();
+  Classical.move_requires g ()
+
+#pop-options
 
 let set_bitfield_get_bitfield
   (#tot: pos)
@@ -474,6 +593,8 @@ let set_bitfield_get_bitfield
     if lo <= i && i < hi
     then nth_get_bitfield x lo hi (i - lo)
   )
+
+#push-options "--z3rlimit 16"
 
 let get_bitfield_partition_2_gen
   (#tot: pos)
@@ -507,6 +628,8 @@ let get_bitfield_partition_2_gen
     end
   )
 
+#pop-options
+
 let get_bitfield_partition_2
   (#tot: pos)
   (mid: nat { mid <= tot })
@@ -523,63 +646,23 @@ let get_bitfield_partition_2
   get_bitfield_full x;
   get_bitfield_full y
 
-let rec get_bitfield_partition_prop
+let rec get_bitfield_partition'
   (#tot: pos)
   (x y: U.uint_t tot)
-  (hi: nat)
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= tot })
   (l: list nat)
-  (lo: nat { lo <= hi /\ hi <= tot })
-: Tot bool
-  (decreases l)
-= match l with
-  | [] ->
-    get_bitfield x lo hi = get_bitfield y lo hi
-  | mi :: q ->
-    lo <= mi && mi <= hi &&
-    get_bitfield_partition_prop x y mi q lo &&
-    get_bitfield x mi hi = get_bitfield y mi hi
-
-#push-options "--z3rlimit 16"
-
-let rec get_bitfield_partition
-  (#tot: pos)
-  (x y: U.uint_t tot)
-  (hi: nat)
-  (l: list nat)
-  (lo: nat { lo <= hi /\ hi <= tot })
 : Lemma
-  (requires (get_bitfield_partition_prop x y hi l lo))
+  (requires (get_bitfield_partition_prop x y lo hi l))
   (ensures (get_bitfield x lo hi == get_bitfield y lo hi))
   (decreases l)
 = match l with
   | [] -> ()
   | mi :: q ->
-    if mi = 0
-    then
-      assert (lo == 0)
-    else begin
-      get_bitfield_partition x y mi q lo;
-      get_bitfield_partition_2_gen lo mi hi x y
-    end
+    get_bitfield_partition' x y mi hi q;
+    get_bitfield_partition_2_gen lo mi hi x y
 
-#pop-options
-
-let get_bitfield_partition_3
-  (#tot: pos)
-  (lo: nat)
-  (hi: nat { lo <= hi /\ hi <= tot })
-  (x y: U.uint_t tot)  
-: Lemma
-  (requires (
-    get_bitfield x 0 lo == get_bitfield y 0 lo /\
-    get_bitfield x lo hi == get_bitfield y lo hi /\
-    get_bitfield x hi tot == get_bitfield y hi tot
-  ))
-  (ensures (x == y))
-= assert (get_bitfield_partition_prop x y tot [hi; lo] 0); // needs fuel
-  get_bitfield_partition x y tot [hi; lo] 0;
-  get_bitfield_full x;
-  get_bitfield_full y
+let get_bitfield_partition = get_bitfield_partition'
 
 let rec nth_size (n1: nat) (n2: nat { n1 <= n2 }) (x: U.uint_t n1) (i: nat { i < n2 }) : Lemma
   (x < pow2 n2 /\ nth #n2 x i == (i < n1 && nth #n1 x i))
@@ -615,28 +698,423 @@ let get_bitfield_size
     end
   )
 
-(* Instantiate to UInt64 *)
+let mod_1 (x: int) : Lemma
+  (x % 1 == 0)
+= ()
+
+let div_1 (x: int) : Lemma
+  (x / 1 == x)
+= ()
+
+let get_bitfield_eq (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi /\ hi <= tot}) : Lemma
+  (get_bitfield x lo hi == (x / pow2 lo) % pow2 (hi - lo))
+= if hi - lo = 0
+  then begin
+    assert (hi == lo);
+    assert_norm (pow2 0 == 1);
+    mod_1 (x / pow2 lo);
+    get_bitfield_empty #tot x lo 
+  end else if hi - lo = tot
+  then begin
+    assert (hi == tot);
+    assert (lo == 0);
+    assert_norm (pow2 0 == 1);
+    div_1 x;
+    M.small_mod x (pow2 tot);
+    get_bitfield_full #tot x
+  end else begin
+    assert (hi - lo < tot);
+    U.shift_right_logand_lemma #tot x (bitfield_mask tot lo hi) lo;
+    U.shift_right_value_lemma #tot (bitfield_mask tot lo hi) lo;
+    M.multiple_division_lemma (pow2 (hi - lo) - 1) (pow2 lo);
+    U.logand_mask #tot (U.shift_right x lo) (hi - lo);
+    U.shift_right_value_lemma #tot x lo
+  end
+
+let pow2_m_minus_one_eq
+  (n: nat)
+  (m: nat)
+: Lemma
+  (requires (m <= n))
+  (ensures (
+    (pow2 n - 1) / pow2 m == pow2 (n - m) - 1 
+  ))
+= M.pow2_le_compat n m;
+  M.pow2_plus (n - m) m;
+  M.division_definition (pow2 n - 1) (pow2 m) (pow2 (n - m) - 1)
+
+let get_bitfield_eq_2
+  (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
+: Lemma
+  (get_bitfield x lo hi == (x `U.shift_left` (tot - hi)) `U.shift_right` (tot - hi + lo))
+= eq_nth (get_bitfield x lo hi) ((x `U.shift_left` (tot - hi)) `U.shift_right` (tot - hi + lo)) (fun i ->
+    nth_get_bitfield x lo hi i;
+    nth_shift_right (x `U.shift_left` (tot - hi)) (tot - hi + lo) i;
+    let j = i + (tot - hi + lo) in
+    if j < tot
+    then nth_shift_left x (tot - hi) j
+  )
+
+let bitfield_mask_eq_2 (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Lemma
+  (
+    bitfield_mask tot lo hi == U.shift_left #tot (U.lognot 0 `U.shift_right` (tot - (hi - lo))) lo
+  )
+= bitfield_mask_eq tot lo hi;
+  pow2_m_minus_one_eq tot (tot - (hi - lo));
+  U.lemma_lognot_value_mod #tot 0;
+  U.shift_right_value_lemma #tot (pow2 tot - 1) (tot - (hi - lo))
 
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
+module U16 = FStar.UInt16
+module U8 = FStar.UInt8
+
+(* Instantiate to UInt64 *)
 
 inline_for_extraction
 let bitfield_mask64 (lo: nat) (hi: nat { lo <= hi /\ hi <= 64 }) : Tot U64.t =
   normalize_term (U64.uint_to_t (bitfield_mask 64 lo hi))
 
 inline_for_extraction
+let u64_shift_right
+  (x: U64.t)
+  (amount: U32.t { U32.v amount <= 64 })
+: Tot (y: U64.t { U64.v y == U64.v x `U.shift_right` U32.v amount })
+= if amount = 64ul then 0uL else x `U64.shift_right` amount
+
+inline_for_extraction
 let get_bitfield64
-  (x: U64.t) (lo: nat { lo < 64 }) (hi: nat {lo <= hi /\ hi <= 64})
+  (x: U64.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 64})
 : Tot (y: U64.t { U64.v y == get_bitfield (U64.v x) lo hi })
-= (x `U64.logand` bitfield_mask64 lo hi) `U64.shift_right` (U32.uint_to_t lo)
+= (x `U64.logand` bitfield_mask64 lo hi) `u64_shift_right` (U32.uint_to_t lo)
 
 inline_for_extraction
 let not_bitfield_mask64 (lo: nat) (hi: nat { lo <= hi /\ hi <= 64 }) : Tot U64.t =
   normalize_term (U64.uint_to_t (not_bitfield_mask 64 lo hi))
 
 inline_for_extraction
+let u64_shift_left
+  (x: U64.t)
+  (amount: U32.t { U32.v amount <= 64 })
+: Tot (y: U64.t { U64.v y == U64.v x `U.shift_left` U32.v amount })
+= if amount = 64ul then 0uL else x `U64.shift_left` amount
+
+inline_for_extraction
 let set_bitfield64
-  (x: U64.t) (lo: nat { lo < 64 }) (hi: nat {lo <= hi /\ hi <= 64})
+  (x: U64.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 64})
   (v: U64.t { U64.v v < pow2 (hi - lo) })
 : Tot (y: U64.t { U64.v y == set_bitfield (U64.v x) lo hi (U64.v v) })
-= (x `U64.logand` not_bitfield_mask64 lo hi) `U64.logor` (v `U64.shift_left` U32.uint_to_t lo)
+= (x `U64.logand` not_bitfield_mask64 lo hi) `U64.logor` (v `u64_shift_left` U32.uint_to_t lo)
+
+inline_for_extraction
+let bitfield_eq64_lhs
+  (x: U64.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 64})
+: Tot U64.t
+= x `U64.logand` bitfield_mask64 lo hi
+
+inline_for_extraction
+let bitfield_eq64_rhs
+  (x: U64.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 64})
+  (v: U64.t { U64.v v < pow2 (hi - lo) })
+: Tot (y: U64.t { bitfield_eq64_lhs x lo hi == y <==> (get_bitfield64 x lo hi <: U64.t) == v })
+= [@inline_let] let _ =
+    bitfield_eq_shift (U64.v x) lo hi (U64.v v)
+  in
+  v `u64_shift_left` U32.uint_to_t lo
+
+inline_for_extraction
+let get_bitfield_gen64
+  (x: U64.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 64})
+: Tot (y: U64.t { U64.v y == get_bitfield (U64.v x) (U32.v lo) (U32.v hi) })
+= get_bitfield_eq_2 #64 (U64.v x) (U32.v lo) (U32.v hi);
+  (x `U64.shift_left` (64ul `U32.sub` hi)) `U64.shift_right` ((64ul `U32.sub` hi) `U32.add` lo)
+
+inline_for_extraction
+let set_bitfield_gen64
+  (x: U64.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 64})
+  (v: U64.t { U64.v v < pow2 (U32.v hi - U32.v lo) })
+: Tot (y: U64.t { U64.v y == set_bitfield (U64.v x) (U32.v lo) (U32.v hi) (U64.v v) })
+= bitfield_mask_eq_2 64 (U32.v lo) (U32.v hi);
+  (x `U64.logand` U64.lognot (((U64.lognot 0uL) `U64.shift_right` (64ul `U32.sub` (hi `U32.sub` lo))) `U64.shift_left` lo)) `U64.logor` (v `U64.shift_left` lo)
+
+(* Instantiate to UInt32 *)
+
+inline_for_extraction
+let bitfield_mask32 (lo: nat) (hi: nat { lo <= hi /\ hi <= 32 }) : Tot U32.t =
+  normalize_term (U32.uint_to_t (bitfield_mask 32 lo hi))
+
+inline_for_extraction
+let u32_shift_right
+  (x: U32.t)
+  (amount: U32.t { U32.v amount <= 32 })
+: Tot (y: U32.t { U32.v y == U32.v x `U.shift_right` U32.v amount })
+= if amount = 32ul then 0ul else x `U32.shift_right` amount
+
+inline_for_extraction
+let get_bitfield32
+  (x: U32.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 32})
+: Tot (y: U32.t { U32.v y == get_bitfield (U32.v x) lo hi })
+= (x `U32.logand` bitfield_mask32 lo hi) `u32_shift_right` (U32.uint_to_t lo)
+
+inline_for_extraction
+let not_bitfield_mask32 (lo: nat) (hi: nat { lo <= hi /\ hi <= 32 }) : Tot U32.t =
+  normalize_term (U32.uint_to_t (not_bitfield_mask 32 lo hi))
+
+inline_for_extraction
+let u32_shift_left
+  (x: U32.t)
+  (amount: U32.t { U32.v amount <= 32 })
+: Tot (y: U32.t { U32.v y == U32.v x `U.shift_left` U32.v amount })
+= if amount = 32ul then 0ul else x `U32.shift_left` amount
+
+inline_for_extraction
+let set_bitfield32
+  (x: U32.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 32})
+  (v: U32.t { U32.v v < pow2 (hi - lo) })
+: Tot (y: U32.t { U32.v y == set_bitfield (U32.v x) lo hi (U32.v v) })
+= (x `U32.logand` not_bitfield_mask32 lo hi) `U32.logor` (v `u32_shift_left` U32.uint_to_t lo)
+
+inline_for_extraction
+let bitfield_eq32_lhs
+  (x: U32.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 32})
+: Tot U32.t
+= x `U32.logand` bitfield_mask32 lo hi
+
+inline_for_extraction
+let bitfield_eq32_rhs
+  (x: U32.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 32})
+  (v: U32.t { U32.v v < pow2 (hi - lo) })
+: Tot (y: U32.t { bitfield_eq32_lhs x lo hi == y <==> (get_bitfield32 x lo hi <: U32.t) == v })
+= [@inline_let] let _ =
+    bitfield_eq_shift (U32.v x) lo hi (U32.v v)
+  in
+  v `u32_shift_left` U32.uint_to_t lo
+
+inline_for_extraction
+let get_bitfield_gen32
+  (x: U32.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 32})
+: Tot (y: U32.t { U32.v y == get_bitfield (U32.v x) (U32.v lo) (U32.v hi) })
+= get_bitfield_eq_2 #32 (U32.v x) (U32.v lo) (U32.v hi);
+  (x `U32.shift_left` (32ul `U32.sub` hi)) `U32.shift_right` ((32ul `U32.sub` hi) `U32.add` lo)
+
+#push-options "--z3rlimit 16"
+
+inline_for_extraction
+let set_bitfield_gen32
+  (x: U32.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 32})
+  (v: U32.t { U32.v v < pow2 (U32.v hi - U32.v lo) })
+: Tot (y: U32.t { U32.v y == set_bitfield (U32.v x) (U32.v lo) (U32.v hi) (U32.v v) })
+= bitfield_mask_eq_2 32 (U32.v lo) (U32.v hi);
+  (x `U32.logand` U32.lognot (((U32.lognot 0ul) `U32.shift_right` (32ul `U32.sub` (hi `U32.sub` lo))) `U32.shift_left` lo)) `U32.logor` (v `U32.shift_left` lo)
+
+#pop-options
+
+(* Instantiate to UInt16 *)
+
+inline_for_extraction
+let bitfield_mask16 (lo: nat) (hi: nat { lo <= hi /\ hi <= 16 }) : Tot U16.t =
+  normalize_term (U16.uint_to_t (bitfield_mask 16 lo hi))
+
+inline_for_extraction
+let u16_shift_right
+  (x: U16.t)
+  (amount: U32.t { U32.v amount <= 16 })
+: Tot (y: U16.t { U16.v y == U16.v x `U.shift_right` U32.v amount })
+= if amount = 16ul then 0us else x `U16.shift_right` amount
+
+inline_for_extraction
+let get_bitfield16
+  (x: U16.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 16})
+: Tot (y: U16.t { U16.v y == get_bitfield (U16.v x) lo hi })
+= (x `U16.logand` bitfield_mask16 lo hi) `u16_shift_right` (U32.uint_to_t lo)
+
+inline_for_extraction
+let not_bitfield_mask16 (lo: nat) (hi: nat { lo <= hi /\ hi <= 16 }) : Tot U16.t =
+  normalize_term (U16.uint_to_t (not_bitfield_mask 16 lo hi))
+
+inline_for_extraction
+let u16_shift_left
+  (x: U16.t)
+  (amount: U32.t { U32.v amount <= 16 })
+: Tot (y: U16.t { U16.v y == U16.v x `U.shift_left` U32.v amount })
+= if amount = 16ul then 0us else x `U16.shift_left` amount
+
+inline_for_extraction
+let set_bitfield16
+  (x: U16.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 16})
+  (v: U16.t { U16.v v < pow2 (hi - lo) })
+: Tot (y: U16.t { U16.v y == set_bitfield (U16.v x) lo hi (U16.v v) })
+= (x `U16.logand` not_bitfield_mask16 lo hi) `U16.logor` (v `u16_shift_left` U32.uint_to_t lo)
+
+inline_for_extraction
+let bitfield_eq16_lhs
+  (x: U16.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 16})
+: Tot U16.t
+= x `U16.logand` bitfield_mask16 lo hi
+
+inline_for_extraction
+let bitfield_eq16_rhs
+  (x: U16.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 16})
+  (v: U16.t { U16.v v < pow2 (hi - lo) })
+: Tot (y: U16.t { bitfield_eq16_lhs x lo hi == y <==> (get_bitfield16 x lo hi <: U16.t) == v })
+= [@inline_let] let _ =
+    bitfield_eq_shift (U16.v x) lo hi (U16.v v)
+  in
+  v `u16_shift_left` U32.uint_to_t lo
+
+inline_for_extraction
+let get_bitfield_gen16
+  (x: U16.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 16})
+: Tot (y: U16.t { U16.v y == get_bitfield (U16.v x) (U32.v lo) (U32.v hi) })
+= get_bitfield_eq_2 #16 (U16.v x) (U32.v lo) (U32.v hi);
+  (x `U16.shift_left` (16ul `U32.sub` hi)) `U16.shift_right` ((16ul `U32.sub` hi) `U32.add` lo)
+
+inline_for_extraction
+let set_bitfield_gen16
+  (x: U16.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 16})
+  (v: U16.t { U16.v v < pow2 (U32.v hi - U32.v lo) })
+: Tot (y: U16.t { U16.v y == set_bitfield (U16.v x) (U32.v lo) (U32.v hi) (U16.v v) })
+= bitfield_mask_eq_2 16 (U32.v lo) (U32.v hi);
+  (x `U16.logand` U16.lognot (((U16.lognot 0us) `U16.shift_right` (16ul `U32.sub` (hi `U32.sub` lo))) `U16.shift_left` lo)) `U16.logor` (v `U16.shift_left` lo)
+
+inline_for_extraction
+let bitfield_mask8 (lo: nat) (hi: nat { lo <= hi /\ hi <= 8 }) : Tot U8.t =
+  normalize_term (U8.uint_to_t (bitfield_mask 8 lo hi))
+
+inline_for_extraction
+let u8_shift_right
+  (x: U8.t)
+  (amount: U32.t { U32.v amount <= 8 })
+: Tot (y: U8.t { U8.v y == U8.v x `U.shift_right` U32.v amount })
+= if amount = 8ul then 0uy else x `U8.shift_right` amount
+
+inline_for_extraction
+let get_bitfield8
+  (x: U8.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 8})
+: Tot (y: U8.t { U8.v y == get_bitfield (U8.v x) lo hi })
+= (x `U8.logand` bitfield_mask8 lo hi) `u8_shift_right` (U32.uint_to_t lo)
+
+inline_for_extraction
+let not_bitfield_mask8 (lo: nat) (hi: nat { lo <= hi /\ hi <= 8 }) : Tot U8.t =
+  normalize_term (U8.uint_to_t (not_bitfield_mask 8 lo hi))
+
+inline_for_extraction
+let u8_shift_left
+  (x: U8.t)
+  (amount: U32.t { U32.v amount <= 8 })
+: Tot (y: U8.t { U8.v y == U8.v x `U.shift_left` U32.v amount })
+= if amount = 8ul then 0uy else x `U8.shift_left` amount
+
+inline_for_extraction
+let set_bitfield8
+  (x: U8.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 8})
+  (v: U8.t { U8.v v < pow2 (hi - lo) })
+: Tot (y: U8.t { U8.v y == set_bitfield (U8.v x) lo hi (U8.v v) })
+= (x `U8.logand` not_bitfield_mask8 lo hi) `U8.logor` (v `u8_shift_left` U32.uint_to_t lo)
+
+inline_for_extraction
+let bitfield_eq8_lhs
+  (x: U8.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 8})
+: Tot U8.t
+= x `U8.logand` bitfield_mask8 lo hi
+
+inline_for_extraction
+let bitfield_eq8_rhs
+  (x: U8.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 8})
+  (v: U8.t { U8.v v < pow2 (hi - lo) })
+: Tot (y: U8.t { bitfield_eq8_lhs x lo hi == y <==> (get_bitfield8 x lo hi <: U8.t) == v })
+= [@inline_let] let _ =
+    bitfield_eq_shift (U8.v x) lo hi (U8.v v)
+  in
+  v `u8_shift_left` U32.uint_to_t lo
+
+inline_for_extraction
+let get_bitfield_gen8
+  (x: U8.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 8})
+: Tot (y: U8.t { U8.v y == get_bitfield (U8.v x) (U32.v lo) (U32.v hi) })
+= get_bitfield_eq_2 #8 (U8.v x) (U32.v lo) (U32.v hi);
+  (x `U8.shift_left` (8ul `U32.sub` hi)) `U8.shift_right` ((8ul `U32.sub` hi) `U32.add` lo)
+
+inline_for_extraction
+let set_bitfield_gen8
+  (x: U8.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 8})
+  (v: U8.t { U8.v v < pow2 (U32.v hi - U32.v lo) })
+: Tot (y: U8.t { U8.v y == set_bitfield (U8.v x) (U32.v lo) (U32.v hi) (U8.v v) })
+= bitfield_mask_eq_2 8 (U32.v lo) (U32.v hi);
+  (x `U8.logand` U8.lognot (((U8.lognot 0uy) `U8.shift_right` (8ul `U32.sub` (hi `U32.sub` lo))) `U8.shift_left` lo)) `U8.logor` (v `U8.shift_left` lo)
+
+inline_for_extraction
+noextract
+let uint64 : uint_t 64 U64.t = {
+  v = U64.v;
+  uint_to_t = U64.uint_to_t;
+  v_uint_to_t = (fun _ -> ());
+  uint_to_t_v = (fun _ -> ());
+  get_bitfield_gen = (fun x lo hi -> get_bitfield_gen64 x lo hi);
+  set_bitfield_gen = (fun x lo hi z -> set_bitfield_gen64 x lo hi z);
+  get_bitfield = (fun x lo hi -> get_bitfield64 x lo hi);
+  set_bitfield = (fun x lo hi z -> set_bitfield64 x lo hi z);
+  logor = (fun x y -> U64.logor x y);
+  bitfield_eq_lhs = (fun x lo hi -> bitfield_eq64_lhs x lo hi);
+  bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq64_rhs x lo hi z);
+}
+
+let uint64_v_eq x = ()
+let uint64_uint_to_t_eq x = ()
+
+inline_for_extraction
+noextract
+let uint32 : uint_t 32 U32.t = {
+  v = U32.v;
+  uint_to_t = U32.uint_to_t;
+  v_uint_to_t = (fun _ -> ());
+  uint_to_t_v = (fun _ -> ());
+  get_bitfield_gen = (fun x lo hi -> get_bitfield_gen32 x lo hi);
+  set_bitfield_gen = (fun x lo hi z -> set_bitfield_gen32 x lo hi z);
+  get_bitfield = (fun x lo hi -> get_bitfield32 x lo hi);
+  set_bitfield = (fun x lo hi z -> set_bitfield32 x lo hi z);
+  logor = (fun x y -> U32.logor x y);
+  bitfield_eq_lhs = (fun x lo hi -> bitfield_eq32_lhs x lo hi);
+  bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq32_rhs x lo hi z);
+}
+
+let uint32_v_eq x = ()
+let uint32_uint_to_t_eq x = ()
+
+inline_for_extraction
+noextract
+let uint16 : uint_t 16 U16.t = {
+  v = U16.v;
+  uint_to_t = U16.uint_to_t;
+  v_uint_to_t = (fun _ -> ());
+  uint_to_t_v = (fun _ -> ());
+  get_bitfield_gen = (fun x lo hi -> get_bitfield_gen16 x lo hi);
+  set_bitfield_gen = (fun x lo hi z -> set_bitfield_gen16 x lo hi z);
+  get_bitfield = (fun x lo hi -> get_bitfield16 x lo hi);
+  set_bitfield = (fun x lo hi z -> set_bitfield16 x lo hi z);
+  logor = (fun x y -> U16.logor x y);
+  bitfield_eq_lhs = (fun x lo hi -> bitfield_eq16_lhs x lo hi);
+  bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq16_rhs x lo hi z);
+}
+
+let uint16_v_eq x = ()
+let uint16_uint_to_t_eq x = ()
+
+inline_for_extraction
+noextract
+let uint8 : uint_t 8 U8.t = {
+  v = U8.v;
+  uint_to_t = U8.uint_to_t;
+  v_uint_to_t = (fun _ -> ());
+  uint_to_t_v = (fun _ -> ());
+  get_bitfield_gen = (fun x lo hi -> get_bitfield_gen8 x lo hi);
+  set_bitfield_gen = (fun x lo hi z -> set_bitfield_gen8 x lo hi z);
+  get_bitfield = (fun x lo hi -> get_bitfield8 x lo hi);
+  set_bitfield = (fun x lo hi z -> set_bitfield8 x lo hi z);
+  logor = (fun x y -> U8.logor x y);
+  bitfield_eq_lhs = (fun x lo hi -> bitfield_eq8_lhs x lo hi);
+  bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq8_rhs x lo hi z);
+}
+
+let uint8_v_eq x = ()
+let uint8_uint_to_t_eq x = ()

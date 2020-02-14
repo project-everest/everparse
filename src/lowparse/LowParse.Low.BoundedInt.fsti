@@ -3,6 +3,9 @@ include LowParse.Spec.BoundedInt
 include LowParse.Low.Base
 
 module U32 = FStar.UInt32
+module HST = FStar.HyperStack.ST
+module B = LowStar.Monotonic.Buffer
+module U64 = FStar.UInt64
 
 (* bounded integers *)
 
@@ -31,19 +34,54 @@ let read_bounded_integer
   | 3 -> read_bounded_integer_3 ()
   | 4 -> read_bounded_integer_4 ()
 
+let read_bounded_integer'
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+: Tot (leaf_reader (parse_bounded_integer (U32.v i)))
+= fun #rrel #rel sl pos ->
+  if i = 1ul
+  then read_bounded_integer_1 () sl pos
+  else if i = 2ul
+  then read_bounded_integer_2 () sl pos
+  else if i = 3ul
+  then read_bounded_integer_3 () sl pos
+  else read_bounded_integer_4 () sl pos
+
+inline_for_extraction
+val read_bounded_integer_ct
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+  (#rrel: _)
+  (#rel: _)
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: HST.Stack (bounded_integer (U32.v i))
+  (requires (fun h ->
+    live_slice h sl /\
+    U32.v pos + 4 <= U32.v sl.len
+  ))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\
+    valid_content (parse_bounded_integer (U32.v i)) h sl pos res
+  ))
+
 inline_for_extraction
 noextract
 let validate_bounded_integer
   (i: integer_size) // must be a constant
 : Tot (validator (parse_bounded_integer i))
-= validate_total_constant_size (parse_bounded_integer i) (U32.uint_to_t i) ()
+= validate_total_constant_size (parse_bounded_integer i) (U64.uint_to_t i) ()
+
+inline_for_extraction
+let validate_bounded_integer'
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+: Tot (validator (parse_bounded_integer (U32.v i)))
+= validate_total_constant_size (parse_bounded_integer (U32.v i)) (FStar.Int.Cast.uint32_to_uint64 i) ()
 
 inline_for_extraction
 noextract
 let validate_bounded_integer_le
   (i: integer_size) // must be a constant
 : Tot (validator (parse_bounded_integer_le i))
-= validate_total_constant_size (parse_bounded_integer_le i) (U32.uint_to_t i) ()
+= validate_total_constant_size (parse_bounded_integer_le i) (U64.uint_to_t i) ()
 
 inline_for_extraction
 noextract
@@ -51,6 +89,12 @@ let jump_bounded_integer
   (i: integer_size) // must be a constant
 : Tot (jumper (parse_bounded_integer i))
 = jump_constant_size (parse_bounded_integer i) (U32.uint_to_t i) ()
+
+inline_for_extraction
+let jump_bounded_integer'
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+: Tot (jumper (parse_bounded_integer (U32.v i)))
+= jump_constant_size (parse_bounded_integer (U32.v i)) (i) ()
 
 inline_for_extraction
 noextract
@@ -95,6 +139,19 @@ let write_bounded_integer
   | 2 -> write_bounded_integer_2 ()
   | 3 -> write_bounded_integer_3 ()
   | 4 -> write_bounded_integer_4 ()
+
+inline_for_extraction
+let write_bounded_integer'
+  (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
+: Tot (leaf_writer_strong (serialize_bounded_integer (U32.v i)))
+= fun v #rrel #rel sl pos ->
+  if i = 1ul
+  then write_bounded_integer_1 () v sl pos
+  else if i = 2ul
+  then write_bounded_integer_2 () v sl pos
+  else if i = 3ul
+  then write_bounded_integer_3 () v sl pos
+  else write_bounded_integer_4 () v sl pos
 
 inline_for_extraction
 let write_bounded_integer_1_weak (_ : unit) : Tot (leaf_writer_weak (serialize_bounded_integer 1)) =
@@ -267,11 +324,19 @@ let jump_bounded_int32
 
 inline_for_extraction
 let validate_u16_le () : validator parse_u16_le =
-  validate_total_constant_size parse_u16_le 2ul ()
+  validate_total_constant_size parse_u16_le 2uL ()
+
+inline_for_extraction
+let validate_u16_le_with_error_code (c: error_code) : validator parse_u16_le =
+  validate_total_constant_size_with_error_code parse_u16_le 2uL c
 
 inline_for_extraction
 let validate_u32_le () : validator parse_u32_le =
-  validate_total_constant_size parse_u32_le 4ul ()
+  validate_total_constant_size parse_u32_le 4uL ()
+
+inline_for_extraction
+let validate_u32_le_with_error_code (c: error_code) : validator parse_u32_le =
+  validate_total_constant_size_with_error_code parse_u32_le 4uL c
 
 inline_for_extraction
 let jump_u16_le : jumper parse_u16_le =

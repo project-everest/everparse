@@ -7,7 +7,7 @@ include LowParse.Spec.Array
 module U32 = FStar.UInt32
 
 inline_for_extraction
-let parse32_array
+let parse32_array'
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -16,8 +16,8 @@ let parse32_array
   (array_byte_size: nat)
   (array_byte_size32: U32.t { U32.v array_byte_size32 == array_byte_size } )
   (elem_count: nat)
-  (u : unit { fldata_array_precond p array_byte_size elem_count == true } )
-: Tot (parser32 (parse_array s array_byte_size elem_count))
+  (u : unit { fldata_array_precond k array_byte_size elem_count == true } )
+: Tot (parser32 (parse_array' s array_byte_size elem_count))
 = [@inline_let]
   let _ =
     fldata_to_array_inj s array_byte_size elem_count u
@@ -35,7 +35,21 @@ let parse32_array
     ()
 
 inline_for_extraction
-let serialize32_array
+let parse32_array
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (p32: parser32 p)
+  (array_byte_size: nat)
+  (array_byte_size32: U32.t { U32.v array_byte_size32 == array_byte_size } )
+  (elem_count: nat)
+  (u : unit { fldata_array_precond k array_byte_size elem_count == true } )
+: Tot (parser32 (parse_array s array_byte_size elem_count))
+= fun x -> parse32_array' s p32 array_byte_size array_byte_size32 elem_count u x
+
+inline_for_extraction
+let serialize32_array'
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -43,8 +57,8 @@ let serialize32_array
   (s32: partial_serializer32 s)
   (array_byte_size: nat { array_byte_size < 4294967296 } )
   (elem_count: nat)
-  (u : unit { fldata_array_precond p array_byte_size elem_count == true } )
-: Tot (serializer32 (serialize_array s array_byte_size elem_count u))
+  (u : unit { fldata_array_precond k array_byte_size elem_count == true } )
+: Tot (serializer32 (serialize_array' s array_byte_size elem_count u))
 = [@inline_let]
   let _ =
     fldata_to_array_inj s array_byte_size elem_count u
@@ -66,6 +80,19 @@ let serialize32_array
     ()
 
 inline_for_extraction
+let serialize32_array
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (#s: serializer p)
+  (s32: partial_serializer32 s)
+  (array_byte_size: nat { array_byte_size < 4294967296 } )
+  (elem_count: nat)
+  (u : unit { fldata_array_precond k array_byte_size elem_count == true } )
+: Tot (serializer32 (serialize_array s array_byte_size elem_count u))
+= fun x -> serialize32_array' s32 array_byte_size elem_count u x
+
+inline_for_extraction
 let size32_array
   (#k: parser_kind)
   (#t: Type0)
@@ -74,7 +101,7 @@ let size32_array
   (array_byte_size: nat)
   (array_byte_size32: U32.t { U32.v array_byte_size32 == array_byte_size } )
   (elem_count: nat)
-  (u : unit { fldata_array_precond p array_byte_size elem_count == true } )
+  (u : unit { fldata_array_precond k array_byte_size elem_count == true } )
 : Tot (size32 (serialize_array s array_byte_size elem_count u))
 = size32_constant (serialize_array s array_byte_size elem_count u) array_byte_size32 ()
 

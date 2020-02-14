@@ -1,0 +1,61 @@
+EverParse: verified parsing for binary data formats
+
+Copyright (C) 2019, 2020 Microsoft Corporation.
+All rights reserved.
+
+Please read the license files for EverParse and its included
+dependencies in the licenses\ subdirectory. Your use of this software
+implies your unconditional acceptance of the terms of these licenses.
+
+
+DESCRIPTION
+
+EverParse takes a semi-formal description of binary formats and
+automatically produces C implementations of validators formally
+verified with respect to memory safety, functional correctness, and
+absence of double fetches.
+
+
+USAGE
+
+1. Write your format description in a .3d file, say MyFormat.3d
+
+2. Open a DOS command prompt (cmd) and go to the directory
+   containing your .3d file:
+
+   cd <path-to-MyFormat.3d>
+
+3. Run the following command:
+
+   <path-to-everparse>\everparse.bat /3D MyFormat
+
+   IMPORTANT:
+
+   * you must be in the directory containing your MyFormat.3d file
+
+   * you must specify your file name without the path and without .3d
+     file name extension
+
+Then, EverParse produces, in the current directory:
+
+* MyFormat.fsti and MyFormat.fst, a specification of your data formats
+  and a formally verified implementation of validators, both in the F*
+  verification language
+
+* MyFormat.h and MyFormat.c, a C implementation compiled from the
+  verified F* implementation
+
+* MyFormatWrappers.h and MyFormatWrappers.c, a cleaner interface for
+  integration with any existing outside code.
+
+* EverParse.h (EverParse-specific helpers), EverParseError.h (error
+  reporting) and EverParseEndianness.h (reading integers from their
+  byte representations).
+
+
+COLOPHON
+
+EverParse and F* are components of the Everest project. For more
+information about EverParse, F* and Everest, please go to
+https://project-everest.github.io/
+

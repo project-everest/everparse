@@ -25,4 +25,4 @@ let read_int32le : leaf_reader parse_int32le
 
 inline_for_extraction
 let validate_int32le : validator parse_int32le
-= validate_total_constant_size parse_int32le 4ul ()
+= validate_total_constant_size parse_int32le 4uL ()

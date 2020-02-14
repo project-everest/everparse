@@ -1,0 +1,11 @@
+typedef struct _t (UINT32 a) {
+   //this is field `x` of `struct t`
+   UINT32 x;
+} t, *pt;
+
+typedef entrypoint struct _s {
+   //the field `a` of `struct s` is UINT32
+   UINT32 a;
+   //the field `b` depends on the value of `a`
+   _t(a) b;
+} s, *ps;

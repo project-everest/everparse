@@ -8,10 +8,21 @@ threads=$3
 branchname=$4
 
 function export_home() {
+    local home_path=""
     if command -v cygpath >/dev/null 2>&1; then
-        export $1_HOME=$(cygpath -m "$2")
+        home_path=$(cygpath -m "$2")
     else
-        export $1_HOME="$2"
+        home_path="$2"
+    fi
+
+    export $1_HOME=$home_path
+
+    # Update .bashrc file
+    token=$1_HOME=
+    if grep -q "$token" ~/.bashrc; then
+        sed -i -E "s|$token.*|$token$home_path|" ~/.bashrc
+    else
+        echo "export $1_HOME=$home_path" >> ~/.bashrc
     fi
 }
 
@@ -76,6 +87,7 @@ function raise () {
 
 function build_and_test_quackyducky() {
     fetch_and_make_kremlin &&
+    export_home QD "$(pwd)" &&
     make -j $threads -k test &&
     # Build incrementality test
     pushd tests/sample && {

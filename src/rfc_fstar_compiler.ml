@@ -366,11 +366,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         max_len = k;
         min_count = k / li.min_len;
         max_count = k / li.max_len;
-        (* FIXME: should be li.meta but only bytes are total in LowParse currently *)
-        meta = match ty with
-               | TypeSimple ("uint8") | TypeSimple ("opaque") -> MetadataTotal
-               | TypeSimple ("Fail") -> MetadataFail
-               | _ -> MetadataDefault;
+        meta = (if li.meta = MetadataFail || li.min_len = li.max_len then li.meta else MetadataDefault);
       }
     | VectorFixedCount k ->
       { li with
@@ -378,7 +374,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         max_count = k;
         min_len = k * li.min_len;
         max_len = k * li.max_len;
-        meta = if li.meta = MetadataFail then li.meta else MetadataDefault;
+        meta = (if li.meta = MetadataFail || li.min_len = li.max_len then li.meta else MetadataDefault);
       }
     | VectorVldata tn ->
       let (len_len_min, len_len_max, max_len) = basic_bounds tn in
@@ -870,6 +866,14 @@ and compile_ite o i n sn fn tagn clen cval tt tf al  =
   wl i "  (ensures (fun h res h' -> B.modifies B.loc_none h h' /\\\n";
   wl i "    (res == true <==> %s_true? (LL.contents %s_parser h input pos))))\n\n" ncap n;
   wl o "let %s_test #_ #_ input pos = let h = HST.get () in %s_elim h input pos; test_%s input pos\n\n" n n n;
+  wl i "noextract let %s_clens_tag : LL.clens %s %s = {\n" n n (compile_type tagt);
+  wl i "  LL.clens_cond = (fun x -> True);\n";
+  wl i "  LL.clens_get = (fun x -> (match x with | %s_true _ -> %s_cst | %s_false m -> m.tag));\n\n" ncap n ncap;
+  wl i "}\n\n";
+  wl i "val %s_gaccessor_tag: LL.gaccessor %s_parser %s %s_clens_tag\n\n" n n (pcombinator_name tagt) n;
+  wl o "let %s_gaccessor_tag = LL.gaccessor_ext (LL.gaccessor_ifthenelse_tag serialize_%s_param) %s_clens_tag ()\n\n" n n n;
+  wl i "val %s_accessor_tag: LL.accessor %s_gaccessor_tag\n\n" n n;
+  wl o "let %s_accessor_tag = LL.accessor_ext (LL.accessor_ifthenelse_tag serialize_%s_param) %s_clens_tag ()\n\n" n n n;
   wl i "noextract let %s_clens_true : LL.clens %s %s = {\n" n n (compile_type tt);
   wl i "  LL.clens_cond = (fun x -> %s_true? x);\n" ncap;
   wl i "  LL.clens_get = (fun x -> (match x with %s_true y -> y) <: Ghost %s (requires (%s_true? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tt) ncap;
@@ -1295,8 +1299,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
         wl o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name dt))
      end;
 
-    if need_validator then
-     begin
+    (* validity from sum to tag *)
       let maybe = match def with
         | None -> ""
         | _ -> "maybe_"
@@ -1314,8 +1317,37 @@ and compile_select o i n seln tagn tagt taga cl def al =
       end;
       wl o "  lemma_synth_%s_inj ();\n" tn;
       wl o "  LL.valid_synth h parse_%s%s_key synth_%s s pos\n" maybe tn tn;
-      wl o "\n"
-     end;
+      wl o "\n";
+
+      (* tag accessor *) 
+      wl i "noextract let %s_clens_tag : LL.clens %s %s = {\n" n n tn;
+      wl i "  LL.clens_cond = (fun _ -> True);\n";
+      wl i "  LL.clens_get = (fun (x: %s) -> tag_of_%s x);\n" n n;
+      wl i "}\n\n";
+      wl i "val %s_gaccessor_tag : LL.gaccessor %s_parser %s %s_clens_tag\n\n" n n (pcombinator_name tn) n;
+      wl i "val %s_accessor_tag : LL.accessor %s_gaccessor_tag\n\n" n n;
+      let print_tag_accessor g =
+        let sum_tag_acc =
+        match def with
+        | None -> sprintf "LL.%saccessor_sum_tag %s_sum %s_repr_parser parse_%s_cases" g n tn n
+        | Some dt -> sprintf "LL.%saccessor_dsum_tag %s_sum %s_repr_parser parse_%s_cases %s" g n tn n (pcombinator_name dt)
+        in
+        wl o "let %s_%saccessor_tag =\n" n g;
+        wl o "%s" same_kind;
+        wl o "  lemma_synth_%s_inj ();\n" tn;
+        wl o "  lemma_synth_%s_inv ();\n" tn;
+        wl o "  LL.%saccessor_ext\n" g;
+        wl o "    (LL.%saccessor_compose\n" g;
+        wl o "      (%s)\n" sum_tag_acc;
+        wl o "      (LL.%saccessor_synth_inv parse_%s%s_key synth_%s synth_%s_inv ())\n" g maybe tn tn tn;
+        if g <> "g" then wl o "      ()\n";
+        wl o "    )\n";
+        wl o "    %s_clens_tag\n" n;
+        wl o "    ()\n\n";
+        ()
+      in
+      print_tag_accessor "g";
+      print_tag_accessor "";
 
     (* bytesize *)
     begin match def with
@@ -2082,7 +2114,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == L.length x `FStar.Mul.op_Star` %d) [SMTPat (%s_bytesize x)]\n\n" n n n elem_li.min_len n;
       w o "let %s_bytesize_eqn x =\n" n;
-      w o "  assert_norm (LP.fldata_array_precond %s %d %d == true);\n" (pcombinator_name ty) li.max_len li.max_count;
+      w o "  assert_norm (LP.fldata_array_precond (LP.get_parser_kind %s) %d %d == true);\n" (pcombinator_name ty) li.max_len li.max_count;
       w o "  LP.length_serialize_array %s %d %d () x\n\n"(scombinator_name ty) li.max_len li.max_count;
       ()
 
@@ -2631,7 +2663,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
      in
      let (acc, _) = accessors "" (sprintf "(LL.accessor_id %s'_parser)" n) tfields in
      wl o "%s" acc;
-     wl o "noextract let clens_%s_%s' : LL.clens %s %s' = synth_%s_recip_inverse (); synth_%s_recip_injective (); LL.clens_synth synth_%s_recip synth_%s ()\n\n" n n n n n n n n;
+     wl o "noextract let clens_%s_%s' : LL.clens %s %s' = synth_%s_recip_inverse (); synth_%s_recip_injective (); LL.clens_synth synth_%s_recip synth_%s\n\n" n n n n n n n n;
      wl o "let gaccessor_%s_%s' : LL.gaccessor %s_parser %s'_parser clens_%s_%s' = synth_%s_inverse (); synth_%s_injective (); synth_%s_recip_inverse (); LL.gaccessor_synth %s'_parser synth_%s synth_%s_recip ()\n\n" n n n n n n n n n n n n;
      wl o "inline_for_extraction noextract let accessor_%s_%s' : LL.accessor gaccessor_%s_%s' = synth_%s_inverse (); synth_%s_injective (); synth_%s_recip_inverse (); LL.accessor_synth %s'_parser synth_%s synth_%s_recip ()\n\n" n n n n n n n n n n;
     (* write the lenses *)

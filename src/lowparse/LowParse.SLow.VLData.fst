@@ -5,7 +5,6 @@ include LowParse.SLow.BoundedInt // for bounded_integer
 
 module Seq = FStar.Seq
 module U32 = FStar.UInt32
-module E = LowParse.BigEndianImpl.SLow
 module B32 = LowParse.Bytes32
 
 (* Parsers and serializers for the payload *)

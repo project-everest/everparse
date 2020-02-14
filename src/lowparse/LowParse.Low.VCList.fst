@@ -161,7 +161,7 @@ let validate_nlist
 = fun #rrel #rel input pos ->
   let h0 = HST.get () in
   HST.push_frame ();
-  let bpos1 : B.buffer U64.t = B.alloca (Cast.uint32_to_uint64 pos) 1ul in
+  let bpos1 : B.buffer U64.t = B.alloca pos 1ul in
   let br = B.alloca n 1ul in
   let h1 = HST.get () in
   C.Loops.do_while
@@ -170,16 +170,16 @@ let validate_nlist
       let pos1 = B.get h bpos1 0 in
       let r = B.get h br 0 in
       U32.v r <= U32.v n /\
-      U32.v pos <= U64.v pos1 /\ (
-      if U64.v pos1 <= U64.v validator_max_length
+      U64.v pos <= U64.v pos1 /\ (
+      if is_success pos1
       then
         let pos1 = uint64_to_uint32 pos1 in
         U32.v pos1 <= U32.v input.len /\
-        (valid (parse_nlist (U32.v n) p) h0 input pos <==> valid (parse_nlist (U32.v r) p) h0 input pos1) /\
-        ((valid (parse_nlist (U32.v n) p) h0 input pos /\ valid (parse_nlist (U32.v r) p) h0 input pos1) ==> get_valid_pos (parse_nlist (U32.v n) p) h0 input pos == get_valid_pos (parse_nlist (U32.v r) p) h0 input pos1) /\
+        (valid (parse_nlist (U32.v n) p) h0 input (uint64_to_uint32 pos) <==> valid (parse_nlist (U32.v r) p) h0 input pos1) /\
+        ((valid (parse_nlist (U32.v n) p) h0 input (uint64_to_uint32 pos) /\ valid (parse_nlist (U32.v r) p) h0 input pos1) ==> get_valid_pos (parse_nlist (U32.v n) p) h0 input (uint64_to_uint32 pos) == get_valid_pos (parse_nlist (U32.v r) p) h0 input pos1) /\
         (stop == true ==> r == 0ul)
       else
-        (stop == true /\ (~ (valid (parse_nlist (U32.v n) p) h0 input pos)))
+        (stop == true /\ (~ (valid (parse_nlist (U32.v n) p) h0 input (uint64_to_uint32 pos))))
     )))
     (fun _ ->
       let r = B.index br 0ul in
@@ -187,24 +187,23 @@ let validate_nlist
       then true
       else
         let pos1 = B.index bpos1 0ul in
-        let pos1 = uint64_to_uint32 pos1 in
         let pos2 = v input pos1 in
         let _ = B.upd br 0ul (r `U32.sub` 1ul) in
         let _ = B.upd bpos1 0ul pos2 in
         [@inline_let]
-        let stop = validator_max_length `U64.lt` pos2 in
+        let stop = is_error pos2 in
         [@inline_let]
         let _ =
           if stop
-          then valid_nlist_cons_not (U32.v r) p h0 input pos1
-          else valid_nlist_cons' (U32.v r) p h0 input pos1
+          then valid_nlist_cons_not (U32.v r) p h0 input (uint64_to_uint32 pos1)
+          else valid_nlist_cons' (U32.v r) p h0 input (uint64_to_uint32 pos1)
         in
         stop
     )
   ;
   let res = B.index bpos1 0ul in
   [@inline_let] let _ =
-    if U64.v res <= U64.v validator_max_length
+    if is_success res
     then valid_nlist_nil p h0 input (uint64_to_uint32 res)
   in
   HST.pop_frame ();
@@ -342,21 +341,20 @@ let validate_vclist
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts (parse_vclist (U32.v min) (U32.v max) lp p) h input pos;
-    parse_vclist_eq (U32.v min) (U32.v max) lp p (bytes_of_slice_from h input pos);
-    valid_facts lp h input pos
+    valid_facts (parse_vclist (U32.v min) (U32.v max) lp p) h input (uint64_to_uint32 pos);
+    parse_vclist_eq (U32.v min) (U32.v max) lp p (bytes_of_slice_from h input (uint64_to_uint32 pos));
+    valid_facts lp h input (uint64_to_uint32 pos)
   in
   let pos1 = lv input pos in
-  if validator_max_length `U64.lt` pos1
+  if is_error pos1
   then pos1 // error
   else
-    let n = lr input pos in
+    let n = lr input (uint64_to_uint32 pos) in
     if n `U32.lt` min || max `U32.lt` n
     then validator_error_generic
     else
-      let pos1 = uint64_to_uint32 pos1 in
       [@inline_let]
-      let _ = valid_facts (parse_nlist (U32.v n) p) h input pos1 in
+      let _ = valid_facts (parse_nlist (U32.v n) p) h input (uint64_to_uint32 pos1) in
       validate_nlist n v input pos1
 
 inline_for_extraction

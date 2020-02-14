@@ -1,0 +1,8 @@
+typedef struct _t (UINT32 a) {
+   UINT32 x;
+} t, *pt;
+
+typedef struct _s {
+   UINT32 a; //this should be dependent
+   t(a) b;
+} s, *ps;

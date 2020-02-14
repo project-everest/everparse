@@ -7,7 +7,6 @@ open FStar.Mul
 
 module Seq = FStar.Seq
 module U8 = FStar.UInt8
-module E = LowParse.BigEndian
 module U32 = FStar.UInt32
 module Math = LowParse.Math
 module B32 = LowParse.Bytes32

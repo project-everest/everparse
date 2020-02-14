@@ -17,41 +17,40 @@ let validate_bcvli : validator parse_bcvli =
   fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts parse_bcvli h input pos;
-    parse_bcvli_eq (bytes_of_slice_from h input pos);
-    valid_facts (parse_bounded_integer_le 1) h input pos
+    valid_facts parse_bcvli h input (uint64_to_uint32 pos);
+    parse_bcvli_eq (bytes_of_slice_from h input (uint64_to_uint32 pos));
+    valid_facts (parse_bounded_integer_le 1) h input (uint64_to_uint32 pos)
   in
-  let pos1 = validate_total_constant_size (parse_bounded_integer_le 1) 1ul () input pos in
-  if validator_max_length `U64.lt` pos1
+  let pos1 = validate_total_constant_size (parse_bounded_integer_le 1) 1uL () input pos in
+  if is_error pos1
   then pos1
   else
-    let pos1' = uint64_to_uint32 pos1 in
     [@inline_let] let _ =
-      valid_facts (parse_bounded_integer_le 2) h input pos1';
-      valid_facts (parse_bounded_integer_le 4) h input pos1'
+      valid_facts (parse_bounded_integer_le 2) h input (uint64_to_uint32 pos1);
+      valid_facts (parse_bounded_integer_le 4) h input (uint64_to_uint32 pos1)
     in
-    let r = read_bounded_integer_le_1 input pos in
+    let r = read_bounded_integer_le_1 input (uint64_to_uint32 pos) in
     if r `U32.lt` 253ul
     then pos1
     else if r = 253ul
     then
-      let pos2 = validate_total_constant_size (parse_bounded_integer_le 2) 2ul () input pos1' in
-      if validator_max_length `U64.lt` pos2
+      let pos2 = validate_total_constant_size (parse_bounded_integer_le 2) 2uL () input pos1 in
+      if is_error pos2
       then pos2
       else
         (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
-        let r = read_bounded_integer_le_2 input pos1' in
+        let r = read_bounded_integer_le_2 input (uint64_to_uint32 pos1) in
         if r `U32.lt` 253ul
         then validator_error_generic
         else pos2
     else if r = 254ul
     then
-      let pos2 = validate_total_constant_size (parse_bounded_integer_le 4) 4ul () input pos1' in
-      if validator_max_length `U64.lt` pos2
+      let pos2 = validate_total_constant_size (parse_bounded_integer_le 4) 4uL () input pos1 in
+      if is_error pos2
       then pos2
       else
         (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
-        let r = read_bounded_integer_le_4 input pos1' in
+        let r = read_bounded_integer_le_4 input (uint64_to_uint32 pos1) in
         if r `U32.lt` 65536ul
         then validator_error_generic
         else pos2
@@ -184,21 +183,20 @@ let validate_bounded_bcvli'
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts (parse_bounded_bcvli (U32.v min32) (U32.v max32)) h input pos;
-    parse_bounded_bcvli_eq (U32.v min32) (U32.v max32) (bytes_of_slice_from h input pos);
-    parse_bcvli_eq (bytes_of_slice_from h input pos);
-    valid_facts (parse_bounded_integer_le 1) h input pos
+    valid_facts (parse_bounded_bcvli (U32.v min32) (U32.v max32)) h input (uint64_to_uint32 pos);
+    parse_bounded_bcvli_eq (U32.v min32) (U32.v max32) (bytes_of_slice_from h input (uint64_to_uint32 pos));
+    parse_bcvli_eq (bytes_of_slice_from h input (uint64_to_uint32 pos));
+    valid_facts (parse_bounded_integer_le 1) h input (uint64_to_uint32 pos)
   in
-  let pos1 = validate_total_constant_size (parse_bounded_integer_le 1) 1ul () input pos in
-  if validator_max_length `U64.lt` pos1
+  let pos1 = validate_total_constant_size (parse_bounded_integer_le 1) 1uL () input pos in
+  if is_error pos1
   then pos1
   else
-    let pos1' = uint64_to_uint32 pos1 in
     [@inline_let] let _ =
-      valid_facts (parse_bounded_integer_le 2) h input pos1';
-      valid_facts (parse_bounded_integer_le 4) h input pos1'
+      valid_facts (parse_bounded_integer_le 2) h input (uint64_to_uint32 pos1);
+      valid_facts (parse_bounded_integer_le 4) h input (uint64_to_uint32 pos1)
     in
-    let r = read_bounded_integer_le_1 input pos in
+    let r = read_bounded_integer_le_1 input (uint64_to_uint32 pos) in
     if r `U32.lt` 253ul && min32 `U32.lte` r && r `U32.lte` max32
     then pos1
     else if max32 `U32.lt` 253ul
@@ -208,12 +206,12 @@ let validate_bounded_bcvli'
       if 65536ul `U32.lte` min32
       then validator_error_generic
       else
-        let pos2 = validate_total_constant_size (parse_bounded_integer_le 2) 2ul () input pos1' in
-        if validator_max_length `U64.lt` pos2
+        let pos2 = validate_total_constant_size (parse_bounded_integer_le 2) 2uL () input pos1 in
+        if is_error pos2
         then pos2
         else
           (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
-          let r = read_bounded_integer_le_2 input pos1' in
+          let r = read_bounded_integer_le_2 input (uint64_to_uint32 pos1) in
           if r `U32.lt` 253ul || r `U32.lt` min32 || max32 `U32.lt` r
           then validator_error_generic
           else pos2
@@ -221,12 +219,12 @@ let validate_bounded_bcvli'
     then validator_error_generic
     else if r = 254ul
     then
-      let pos2 = validate_total_constant_size (parse_bounded_integer_le 4) 4ul () input pos1' in
-      if validator_max_length `U64.lt` pos2
+      let pos2 = validate_total_constant_size (parse_bounded_integer_le 4) 4uL () input pos1 in
+      if is_error pos2
       then pos2
       else
         (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
-        let r = read_bounded_integer_le_4 input pos1' in
+        let r = read_bounded_integer_le_4 input (uint64_to_uint32 pos1) in
         if r `U32.lt` 65536ul || r `U32.lt` min32 || max32 `U32.lt` r
         then validator_error_generic
         else pos2

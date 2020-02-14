@@ -1,0 +1,26 @@
+FSTAR_HOME ?= ../../../FStar
+KREMLIN_HOME ?= ../../../kremlin
+QD_HOME ?= ../..
+LOWPARSE_HOME ?= $(QD_HOME)/src/lowparse
+
+export FSTAR_HOME
+export LOWPARSE_HOME
+export KREMLIN_HOME
+export QD_HOME
+
+FSTAR_OPTIONS = --odir kremlin --cache_dir cache --cache_checked_modules \
+		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
+		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --cmi
+
+FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
+
+HEADERS = $(addprefix -add-include ,'"kremlin/internal/compat.h"')
+
+KREMLIN = $(KREMLIN_HOME)/krml \
+	 -ccopt "-Ofast" \
+	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
+	 -tmpdir out \
+	 -bundle 'LowParse.\*' \
+	 $(HEADERS) \
+	 -warn-error -9
+

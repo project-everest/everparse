@@ -1,17 +1,25 @@
 ROOT=Main.fst
 FSTAR_HOME?=../../../FStar
 EVERPARSE_HOME?=../..
-KREMLIN_HOME=$(EVERPARSE_HOME)/../kremlin
+KREMLIN_HOME?=$(EVERPARSE_HOME)/../kremlin
 
 INCLUDE_PATHS=
 OTHERFLAGS?=
-FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS))
+FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached 'Prims FStar -FStar.Getopt'
 
-.PHONY: ocaml
+all: 3d prelude
 
-3d: ocaml
-	rm -f ocaml/Main.native
-	make -C ocaml Main.native
+test: demo
+
+demo: all
+	+$(MAKE) -C tests test
+
+.PHONY: all prelude test
+
+prelude:
+	+$(MAKE) -C prelude
+
+3d: ocaml/Main.native
 	cp ocaml/Main.native 3d
 
 .depend: 
@@ -19,10 +27,13 @@ FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUD
 
 include .depend
 
-ocaml: $(ALL_ML_FILES)
+ocaml/Main.native: $(ALL_ML_FILES) ocaml/parser.mly ocaml/lexer.mll
+	rm -f ocaml/Main.native
+	+$(MAKE) -C ocaml Main.native
 
 %.checked:
 	$(FSTAR) $< --cache_checked_modules
+	touch $@
 
 %.ml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen OCaml --extract_module $(basename $(notdir $(subst .checked,,$<))) --odir ocaml

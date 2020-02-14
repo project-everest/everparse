@@ -91,5 +91,9 @@ let plus_minus_r (x y: int) : Lemma
   (x + y - y == x)
 = ()
 
+let lemma_mult_nat (a b: nat) : Lemma
+  (0 <= a * b)
+= ()
+
 inline_for_extraction
 let mult_nat (a b: nat) : Tot (c: nat { c == a `Prims.op_Multiply` b } ) = a `Prims.op_Multiply` b

@@ -22,58 +22,58 @@ let validate_der_length_payload32
 = fun #rrel #rel input pos ->
     let h = HST.get () in
     [@inline_let] let _ =
-      valid_facts (parse_der_length_payload32 x) h input pos;
-      assert (U32.v pos <= U32.v input.len);
-      parse_der_length_payload32_unfold x (bytes_of_slice_from h input pos);
+      valid_facts (parse_der_length_payload32 x) h input (uint64_to_uint32 pos);
+      assert (U64.v pos <= U32.v input.len);
+      parse_der_length_payload32_unfold x (bytes_of_slice_from h input (uint64_to_uint32 pos));
       assert_norm (pow2 (8 * 1) == 256);
       assert_norm (pow2 (8 * 2) == 65536);
       assert_norm (pow2 (8 * 3) == 16777216);
       assert_norm (pow2 (8 * 4) == 4294967296)
     in
     if x `U8.lt` 128uy
-    then Cast.uint32_to_uint64 pos
+    then pos
     else if x = 128uy || x = 255uy
     then validator_error_generic
     else if x = 129uy
     then
-      [@inline_let] let _ = valid_facts parse_u8 h input pos in
+      [@inline_let] let _ = valid_facts parse_u8 h input (uint64_to_uint32 pos) in
       let v = validate_u8 () input pos in
-      if validator_max_length `U64.lt` v
+      if is_error v
       then v
       else
-        let z = read_u8 input pos in
+        let z = read_u8 input (uint64_to_uint32 pos) in
         if z `U8.lt` 128uy
         then validator_error_generic
         else v
     else
       let len = x `U8.sub` 128uy in
-      [@inline_let] let _ = valid_facts (parse_bounded_integer (U8.v len)) h input pos in
+      [@inline_let] let _ = valid_facts (parse_bounded_integer (U8.v len)) h input (uint64_to_uint32 pos) in
       if len = 2uy
       then
         let v = validate_bounded_integer 2 input pos in
-        if validator_max_length `U64.lt` v
+        if is_error v
         then v
         else
-          let y = read_bounded_integer_2 () input pos in
+          let y = read_bounded_integer_2 () input (uint64_to_uint32 pos) in
           if y `U32.lt `256ul
           then validator_error_generic
           else v
       else if len = 3uy
       then
         let v = validate_bounded_integer 3 input pos in
-        if validator_max_length `U64.lt` v
+        if is_error v
         then v
         else
-          let y = read_bounded_integer_3 () input pos in
+          let y = read_bounded_integer_3 () input (uint64_to_uint32 pos) in
           if y `U32.lt `65536ul
           then validator_error_generic
           else v
       else
         let v = validate_bounded_integer 4 input pos in
-        if validator_max_length `U64.lt` v
+        if is_error v
         then v
         else
-          let y = read_bounded_integer_4 () input pos in
+          let y = read_bounded_integer_4 () input (uint64_to_uint32 pos) in
           if y `U32.lt` 16777216ul
           then validator_error_generic
           else v
@@ -162,15 +162,15 @@ let validate_bounded_der_length32
     let h = HST.get () in
     [@inline_let]
     let _ =
-      valid_facts (parse_bounded_der_length32 (U32.v min) (U32.v max)) h input pos;
-      parse_bounded_der_length32_unfold (U32.v min) (U32.v max) (bytes_of_slice_from h input pos);
-      valid_facts parse_u8 h input pos
+      valid_facts (parse_bounded_der_length32 (U32.v min) (U32.v max)) h input (uint64_to_uint32 pos);
+      parse_bounded_der_length32_unfold (U32.v min) (U32.v max) (bytes_of_slice_from h input (uint64_to_uint32 pos));
+      valid_facts parse_u8 h input (uint64_to_uint32 pos)
     in
     let v = validate_u8 () input pos in
-    if validator_max_length `U64.lt` v
+    if is_error v
     then v
     else
-      let x = read_u8 input pos in
+      let x = read_u8 input (uint64_to_uint32 pos) in
       let len = der_length_payload_size_of_tag8 x in
       let tg1 = tag_of_der_length32_impl min in
       let l1 = der_length_payload_size_of_tag8 tg1 in
@@ -179,13 +179,12 @@ let validate_bounded_der_length32
       if (len `U8.lt` l1) || ( l2 `U8.lt` len)
       then validator_error_generic
       else
-        let v = uint64_to_uint32 v in
-        [@inline_let] let _ = valid_facts (parse_der_length_payload32 x) h input v in
+        [@inline_let] let _ = valid_facts (parse_der_length_payload32 x) h input (uint64_to_uint32 v) in
         let v2 = validate_der_length_payload32 x input v in
-        if validator_max_length `U64.lt` v2
+        if is_error v2
         then v2
         else
-          let y = read_der_length_payload32 x input v in
+          let y = read_der_length_payload32 x input (uint64_to_uint32 v) in
           if y `U32.lt` min || max `U32.lt` y
           then validator_error_generic
           else v2

@@ -1,64 +1,73 @@
 module LowParse.SLow.Int
+open LowParse.SLow.Combinators
 
-module Aux = LowParse.SLow.Int.Aux
-module Unique = LowParse.Spec.Int.Unique
 module Seq = FStar.Seq
 module U8  = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
-module B32 = FStar.Bytes
+module U64 = FStar.UInt64
+module B32 = LowParse.Bytes32
+
+friend LowParse.Spec.Int
 
 let parse32_u8 =
-  (fun input ->
-    [@inline_let]
-    let _ = Unique.parse_u8_unique (B32.reveal input) in
-    [@inline_let]
-    let res : option (U8.t * U32.t) = Aux.parse32_u8 input in
-    (res <: (res: option (U8.t * U32.t) { parser32_correct parse_u8 input res } ))
-  )
+  decode_u8_injective ();
+  make_total_constant_size_parser32 1 1ul
+    decode_u8
+    ()
+    (fun (b: B32.lbytes 1) ->
+      let r = B32.get b 0ul in
+      assert (r == Seq.index (B32.reveal b) 0);
+      B32.b32_index_reveal b 0;
+      (r <: (y: U8.t { y == decode_u8 (B32.reveal b) })))
 
 let serialize32_u8
-: serializer32 serialize_u8
 = (fun (input: U8.t) ->
-    [@inline_let]
-    let _ = Unique.serialize_u8_unique input in
-    [@inline_let]
-    let res : bytes32 = Aux.serialize32_u8 input in
-    (res <: (res: bytes32 { serializer32_correct #_ #_ #parse_u8 serialize_u8 input res } )))
+    let b = B32.create 1ul input in
+    B32.b32_reveal_create 1ul input;
+    (b <: (res: bytes32 { serializer32_correct #_ #_ #parse_u8 serialize_u8 input res } )))
 
-let parse32_u16 =
-  (fun input ->
-    [@inline_let]
-    let _ = Unique.parse_u16_unique (B32.reveal input) in
-    [@inline_let]
-    let res : option (U16.t * U32.t) = Aux.parse32_u16 input in
-    (res <: (res: option (U16.t * U32.t) { parser32_correct parse_u16 input res } ))
-  )
+module E = LowParse.SLow.Endianness
+module EI = LowParse.Spec.Endianness.Instances
 
+inline_for_extraction
+noextract
+let be_to_n_2 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint16 2)
+
+inline_for_extraction
+let parse32_u16 : parser32 parse_u16 =
+  decode_u16_injective ();
+    make_total_constant_size_parser32 2 2ul
+      #U16.t
+      decode_u16
+      ()
+      (fun (input: B32.lbytes 2) -> be_to_n_2 input)
+
+inline_for_extraction
+noextract
+let n_to_be_2 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_n_to_be EI.uint16 2)
+
+inline_for_extraction
 let serialize32_u16
-: serializer32 serialize_u16
-= (fun (input: U16.t) ->
-    [@inline_let]
-    let _ = Unique.serialize_u16_unique input in
-    [@inline_let]
-    let res : bytes32 = Aux.serialize32_u16 input in
-    (res <: (res: bytes32 { serializer32_correct #_ #_ #parse_u16 serialize_u16 input res } )))
+= (fun (input: U16.t) -> n_to_be_2 input)
 
-let parse32_u32 =
-  (fun input ->
-    [@inline_let]
-    let _ = Unique.parse_u32_unique (B32.reveal input) in
-    [@inline_let]
-    let res : option (U32.t * U32.t) = Aux.parse32_u32 input in
-    (res <: (res: option (U32.t * U32.t) { parser32_correct parse_u32 input res } ))
-  )
+inline_for_extraction
+noextract
+let be_to_n_4 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint32 4)
 
+inline_for_extraction
+let parse32_u32 : parser32 parse_u32 =
+  decode_u32_injective ();
+    make_total_constant_size_parser32 4 4ul
+      #U32.t
+      decode_u32
+      ()
+      (fun (input: B32.lbytes 4) -> be_to_n_4 input)
+
+inline_for_extraction
+noextract
+let n_to_be_4 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_n_to_be EI.uint32 4)
+
+inline_for_extraction
 let serialize32_u32
-: serializer32 serialize_u32
-= (fun (input: U32.t) ->
-    [@inline_let]
-    let _ = Unique.serialize_u32_unique input in
-    [@inline_let]
-    let res : bytes32 = Aux.serialize32_u32 input in
-    (res <: (res: bytes32 { serializer32_correct #_ #_ #parse_u32 serialize_u32 input res } )))
-
+= (fun (input: U32.t) -> n_to_be_4 input)

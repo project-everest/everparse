@@ -31,9 +31,15 @@ if [[ -d everparse ]] ; then
     exit 1
 fi
 
+commit_id=$(git show --no-patch --format=%h)
+commit_date_iso=$(git show --no-patch --format=%ad --date=iso)
+commit_date=$(date --utc --date="$commit_date_iso" '+%Y%m%d%H%M%S')
+commit_date_hr=$(date --utc --date="$commit_date_iso" '+%Y-%m-%d %H:%M:%S')
+platform=$(uname --machine)
+
     # Verify if F* and KReMLin are here
     if [[ -z "$FSTAR_HOME" ]] ; then
-        git clone --branch taramana_dep_ninja https://github.com/FStarLang/FStar &&
+        git clone --branch nik_rename_let https://github.com/FStarLang/FStar &&
         export FSTAR_HOME=$(cygpath -m $PWD/FStar)
     else
         export FSTAR_HOME=$(cygpath -m "$FSTAR_HOME")
@@ -61,37 +67,40 @@ fi
     mkdir -p everparse/ulib/ &&
     cp -p $FSTAR_HOME/ulib/*.fst everparse/ulib &&
     cp -p $FSTAR_HOME/ulib/*.fsti everparse/ulib &&
-    cp -p $FSTAR_HOME/ulib/*.checked everparse/ulib &&
+    cp -p -r $FSTAR_HOME/ulib/.cache everparse/ulib/ &&
 
     # Copy KReMLin
     cp -p $KREMLIN_HOME/Kremlin.native everparse/bin/krml.exe &&
-    cp -p -r $KREMLIN_HOME/include everparse/ &&
     cp -p -r $KREMLIN_HOME/kremlib everparse/ &&
     cp -p -r $KREMLIN_HOME/misc everparse/ &&
-    cp -p -r $KREMLIN_HOME/runtime everparse/ &&
 
     # Copy EverParse
     cp $QD_HOME/quackyducky.native everparse/bin/qd.exe &&
     cp -p -r $QD_HOME/src/3d/3d everparse/bin/3d.exe &&
     mkdir -p everparse/src &&
     cp -p -r $QD_HOME/src/lowparse everparse/src/ &&
-    mkdir -p everparse/src/package &&
-    cp -p -r $QD_HOME/src/package/build.ninja everparse/src/package &&
     cp -p -r $QD_HOME/src/package/everparse.bat everparse/ &&
-    mkdir -p everparse/src/3d &&
-    cp -p -r $QD_HOME/src/3d/out/Prelude.fst everparse/src/3d && # we change the destination directory here, maybe Prelude should be somewhere else at the first place
+    cp -p -r $QD_HOME/src/3d/prelude everparse/src/3d &&
+    cp -p -r $QD_HOME/src/3d/.clang-format everparse/src/3d &&
+    mkdir -p everparse/include/ &&
+    cp -p -r $QD_HOME/src/3d/EverParseEndianness.h everparse/include/ &&
+    cp -p -r $QD_HOME/src/3d/EverParseError.h everparse/include/ &&
+    cp -p -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
+    cp -p -r $QD_HOME/src/package/README.pkg everparse/README &&
+    echo "This is EverParse $commit_id ($commit_date_hr UTC+0000)" >> everparse/README &&
 
-    # Fetch and extract ninja
-    NINJA_URL=$(wget -q -nv -O- https://api.github.com/repos/ninja-build/ninja/releases/latest 2>/dev/null | jq -r '.assets[] | select(.browser_download_url | contains("ninja-win")) | .browser_download_url') &&
-    wget -O ninja.zip $NINJA_URL &&
-    unzip ninja.zip -d everparse/bin/ &&
-
-    # TODO: licenses
-
+    # licenses
+    mkdir -p everparse/licenses &&
+    cp -p $FSTAR_HOME/LICENSE everparse/licenses/FStar &&
+    cp -p $KREMLIN_HOME/LICENSE everparse/licenses/KReMLin &&
+    cp -p $QD_HOME/LICENSE everparse/licenses/EverParse &&
+    wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt &&
+    
     # Reset permissions and build the package
     chmod a+x everparse/bin/*.exe everparse/bin/*.dll &&
     rm -f everparse.zip &&
     zip -r everparse.zip everparse &&
+    mv everparse.zip everparse_"$commit_date"_"$commit_id"_"$OS"_"$platform".zip &&
     
     # END
     true

@@ -110,7 +110,7 @@ let validate_bounded_vldata'
   let _ = parse_bounded_vldata_correct min max sz p in
   validate_strengthen
     (parse_bounded_vldata_strong_kind min max sz k)
-    (validate_vldata_gen sz (in_bounds min max) (fun i -> not (U32.lt i (U32.uint_to_t min) || U32.lt (U32.uint_to_t max) i)) v)
+    (validate_vldata_gen sz (in_bounds min max) (fun i -> if min = 0 then i `U32.lte` U32.uint_to_t max else (U32.uint_to_t min `U32.lte` i && i `U32.lte` U32.uint_to_t max)) v)
     ()
 
 inline_for_extraction
@@ -180,9 +180,9 @@ let validate_bounded_vldata_strong'
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
-  let _ = valid_facts (parse_bounded_vldata_strong' min max l s) h input pos in
+  let _ = valid_facts (parse_bounded_vldata_strong' min max l s) h input (uint64_to_uint32 pos) in
   [@inline_let]
-  let _ = valid_facts (parse_bounded_vldata' min max l p) h input pos in
+  let _ = valid_facts (parse_bounded_vldata' min max l p) h input (uint64_to_uint32 pos) in
   validate_bounded_vldata' min max l v input pos
 
 inline_for_extraction
@@ -717,32 +717,42 @@ let weak_finalize_bounded_vldata_strong
   weak_finalize_bounded_vldata_strong_exact min max s input pos pos'
 
 
-#push-options "--z3rlimit 16"
+let gaccessor_bounded_vldata_payload'
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t { k.parser_kind_subkind == Some ParserStrong })
+: Tot (gaccessor' (parse_bounded_vldata min max p) p (clens_id t))
+= fun input ->
+  let sz = log256' max in
+  parse_vldata_gen_eq sz (in_bounds min max) p input;
+  if Seq.length input < sz
+  then 0 (* dummy *)
+  else
+    let _ = match parse (parse_bounded_vldata min max p) input with
+    | None -> ()
+    | Some _ ->
+      assert (Some? (parse (parse_vldata_gen sz (in_bounds min max) p) input));
+      parse_vldata_gen_eq sz (in_bounds min max) p input;
+      let Some (len, consumed) = parse (parse_bounded_integer sz) input in
+      assert (consumed == sz);
+      parse_strong_prefix p (Seq.slice input sz (sz + U32.v len)) (Seq.slice input sz (Seq.length input))
+    in
+    sz
 
 let gaccessor_bounded_vldata_payload
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#k: parser_kind)
   (#t: Type0)
-  (p: parser k t)
+  (p: parser k t { k.parser_kind_subkind == Some ParserStrong })
 : Tot (gaccessor (parse_bounded_vldata min max p) p (clens_id t))
-= fun input ->
-  let sz = log256' max in
-  parse_vldata_gen_eq sz (in_bounds min max) p input;
-  let res =
-    if Seq.length input < sz
-    then (assert (None? (parse (parse_bounded_integer sz) input)); (0, 0)) // dummy
-    else begin
-      parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer sz);
-      assert (Some? (parse (parse_bounded_integer sz) input));
-      let Some (_, consumed) = parse (parse_bounded_integer sz) input in
-      assert (consumed == sz);
-      (sz, Seq.length input - sz)
-    end
-  in
-  (res <: (res : _ { gaccessor_post' (parse_bounded_vldata min max p) p (clens_id _) input res } ))
-
-#pop-options
+= let sz = log256' max in
+  Classical.forall_intro (parse_vldata_gen_eq sz (in_bounds min max) p);
+  assert (forall x . gaccessor_pre (parse_bounded_vldata min max p) p (clens_id t) x ==> Seq.length x >= sz);
+  gaccessor_prop_equiv (parse_bounded_vldata min max p) p (clens_id t) (gaccessor_bounded_vldata_payload' min max p);
+  gaccessor_bounded_vldata_payload' min max p
 
 inline_for_extraction
 let accessor_bounded_vldata_payload
@@ -750,7 +760,7 @@ let accessor_bounded_vldata_payload
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#k: parser_kind)
   (#t: Type0)
-  (p: parser k t)
+  (p: parser k t { k.parser_kind_subkind == Some ParserStrong })
 : Tot (accessor (gaccessor_bounded_vldata_payload min max p))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
@@ -772,16 +782,28 @@ let clens_bounded_vldata_strong_payload
   clens_get = (fun (x: parse_bounded_vldata_strong_t min max s) -> (x <: t));
 }
 
+let gaccessor_bounded_vldata_strong_payload'
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
+: Tot (gaccessor' (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s))
+= fun input ->
+  (gaccessor_bounded_vldata_payload min max p input <: (res : _ { gaccessor_post' (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s) input res } ))
+
 let gaccessor_bounded_vldata_strong_payload
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
-  (s: serializer p)
+  (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
 : Tot (gaccessor (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s))
-= fun input ->
-  (gaccessor_bounded_vldata_payload min max p input <: (res : _ { gaccessor_post' (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s) input res } ))
+= gaccessor_prop_equiv (parse_bounded_vldata min max p) p (clens_id t) (gaccessor_bounded_vldata_payload' min max p);
+  gaccessor_prop_equiv (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong_payload min max s) (gaccessor_bounded_vldata_strong_payload' min max s);
+  gaccessor_bounded_vldata_strong_payload' min max s
 
 inline_for_extraction
 let accessor_bounded_vldata_strong_payload
@@ -790,7 +812,7 @@ let accessor_bounded_vldata_strong_payload
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
-  (s: serializer p)
+  (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
 : Tot (accessor (gaccessor_bounded_vldata_strong_payload min max s))
 = fun #rrel #rel input pos ->
   let h = HST.get () in

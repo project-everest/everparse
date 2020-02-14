@@ -206,7 +206,7 @@ let validate_list_inv
   (g0 g1: G.erased HS.mem)
   (#rrel #rel: _)
   (sl: slice rrel rel)
-  (pos0: U32.t)
+  (pos0: pos_t)
   (bpos: B.pointer U64.t)
   (h: HS.mem)
   (stop: bool)
@@ -216,21 +216,21 @@ let validate_list_inv
   B.disjoint sl.base bpos /\
   k.parser_kind_subkind == Some ParserStrong /\
   k.parser_kind_low > 0 /\
-  U32.v pos0 <= U32.v sl.len /\
+  U64.v pos0 <= U32.v sl.len /\
   live_slice h0 sl /\
   B.live h1 bpos /\
   B.modifies B.loc_none h0 h1 /\
   B.modifies (B.loc_buffer bpos) h1 h /\ (
   let pos1 = Seq.index (B.as_seq h bpos) 0 in
   if
-    U64.v pos1 > U64.v validator_max_length
+    is_error pos1
   then
     stop == true /\
-    (~ (valid_exact (parse_list p) h0 sl pos0 sl.len))
+    (~ (valid_exact (parse_list p) h0 sl (uint64_to_uint32 pos0) sl.len))
   else
-    U32.v pos0 <= U64.v pos1 /\
+    U64.v pos0 <= U64.v pos1 /\
     U64.v pos1 <= U32.v sl.len /\
-    (valid_exact (parse_list p) h0 sl pos0 sl.len <==> valid_exact (parse_list p) h0 sl (uint64_to_uint32 pos1) sl.len) /\
+    (valid_exact (parse_list p) h0 sl (uint64_to_uint32 pos0) sl.len <==> valid_exact (parse_list p) h0 sl (uint64_to_uint32 pos1) sl.len) /\
     (stop == true ==> U64.v pos1 == U32.v sl.len)
   )
 
@@ -243,7 +243,7 @@ let validate_list_body
   (g0 g1: G.erased HS.mem)
   (#rrel #rel: _)
   (sl: slice rrel rel)
-  (pos0: U32.t)
+  (pos0: pos_t)
   (bpos: B.pointer U64.t)
 : HST.Stack bool
   (requires (fun h -> validate_list_inv p g0 g1 sl pos0 bpos h false))
@@ -252,16 +252,15 @@ let validate_list_body
     validate_list_inv p g0 g1 sl pos0 bpos h' res
   ))
 = let pos1 = B.index bpos 0ul in
-  let pos1 = uint64_to_uint32 pos1 in
-  assert (U32.v pos1 <= U32.v sl.len);
-  if pos1 = sl.len
+  assert (U64.v pos1 <= U32.v sl.len);
+  if pos1 = Cast.uint32_to_uint64 sl.len
   then true
   else begin
-    Classical.move_requires (valid_exact_list_cons p (G.reveal g0) sl pos1) sl.len;
-    Classical.move_requires (valid_exact_list_cons_recip p (G.reveal g0) sl pos1) sl.len;
+    Classical.move_requires (valid_exact_list_cons p (G.reveal g0) sl (uint64_to_uint32 pos1)) sl.len;
+    Classical.move_requires (valid_exact_list_cons_recip p (G.reveal g0) sl (uint64_to_uint32 pos1)) sl.len;
     let pos1 = v sl pos1 in
     B.upd bpos 0ul pos1;
-    pos1 `U64.gt` validator_max_length
+    is_error pos1
   end
 
 inline_for_extraction
@@ -272,12 +271,12 @@ let validate_list'
   (v: validator p)
   (#rrel #rel: _)
   (sl: slice rrel rel)
-  (pos: U32.t)
+  (pos: pos_t)
 : HST.Stack U64.t
   (requires (fun h ->
     k.parser_kind_subkind == Some ParserStrong /\
     k.parser_kind_low > 0 /\
-    U32.v pos <= U32.v sl.len /\
+    U64.v pos <= U32.v sl.len /\
     live_slice h sl
   ))
   (ensures (fun h res h' ->
@@ -285,14 +284,15 @@ let validate_list'
     (* we could return a boolean, but we would like to return the last
        validation error code if it fails. (alas, we cannot capture
        that fact in the spec.) *)
-    (U64.v res <= U64.v validator_max_length <==> valid_exact (parse_list p) h sl pos sl.len)
+    (is_success res <==> valid_exact (parse_list p) h sl (uint64_to_uint32 pos) sl.len) /\
+    (is_success res ==> U64.v res == U32.v sl.len)
   ))
 = let h0 = HST.get () in
   let g0 = G.hide h0 in
   HST.push_frame ();
   let h02 = HST.get () in
   B.fresh_frame_modifies h0 h02;
-  let bpos = B.alloca (Cast.uint32_to_uint64 pos) 1ul in
+  let bpos = B.alloca pos 1ul in
   let h1 = HST.get () in
   let g1 = G.hide h1 in
   C.Loops.do_while (validate_list_inv p g0 g1 sl pos bpos) (fun _ -> validate_list_body v g0 g1 sl pos bpos);
@@ -315,13 +315,10 @@ let validate_list
 = fun
   (#rrel #rel: _)
   (sl: slice rrel rel)
-  (pos: U32.t) ->
+  pos ->
   let h = HST.get () in
-  valid_valid_exact_consumes_all (parse_list p) h sl pos;
-  let error = validate_list' v sl pos in 
-  if error `U64.lte` validator_max_length
-  then Cast.uint32_to_uint64 sl.len
-  else error
+  valid_valid_exact_consumes_all (parse_list p) h sl (uint64_to_uint32 pos);
+  validate_list' v sl pos
 
 abstract
 let rec serialized_list_length_eq_length_serialize_list
@@ -345,7 +342,7 @@ let rec serialized_list_length_eq_length_serialize_list
     serialized_list_length_eq_length_serialize_list s q;
     serialized_length_eq s a
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction
 let rec list_last_pos

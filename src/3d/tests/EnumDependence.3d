@@ -1,0 +1,23 @@
+#define A 0
+#define B 1
+
+UINT32 enum AB {
+       A,
+       B
+}
+
+casetype _C (AB ab) {
+  switch (ab) {
+  case A:
+    UINT16 u16;
+  case B:
+    UINT32 u32;
+  }
+} C;
+
+entrypoint
+typedef struct _T {
+  AB ab;
+  C(ab) c;      
+} T;
+  

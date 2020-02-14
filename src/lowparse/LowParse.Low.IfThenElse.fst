@@ -98,15 +98,14 @@ let validate_ifthenelse
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    Classical.move_requires (valid_ifthenelse_intro p h input) pos;
-    Classical.move_requires (valid_ifthenelse_elim p h input) pos
+    Classical.move_requires (valid_ifthenelse_intro p h input) (uint64_to_uint32 pos);
+    Classical.move_requires (valid_ifthenelse_elim p h input) (uint64_to_uint32 pos)
   in
   let pos_after_t = vt input pos in
-  if validator_max_length `U64.lt` pos_after_t
+  if is_error pos_after_t
   then pos_after_t
   else
-    let pos_after_t = uint64_to_uint32 pos_after_t in
-    let b = test input pos in
+    let b = test input (uint64_to_uint32 pos) in
     if b (* eta-expansion here *)
     then vp true input pos_after_t
     else vp false input pos_after_t
@@ -129,6 +128,42 @@ let jump_ifthenelse
   then vp true input pos_after_t
   else vp false input pos_after_t
 
+let clens_ifthenelse_tag
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Tot (clens p.parse_ifthenelse_t p.parse_ifthenelse_tag_t)
+= {
+    clens_cond = (fun _ -> True);
+    clens_get = (fun (x: p.parse_ifthenelse_t) -> dfst (s.serialize_ifthenelse_synth_recip x));
+  }
+
+let gaccessor_ifthenelse_tag'
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Tot (gaccessor' (parse_ifthenelse p) p.parse_ifthenelse_tag_parser (clens_ifthenelse_tag s))
+= fun input ->
+    parse_ifthenelse_eq p input;
+    if Some? (parse (parse_ifthenelse p) input)
+    then parse_ifthenelse_parse_tag_payload s input;
+    0
+
+let gaccessor_ifthenelse_tag
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Tot (gaccessor (parse_ifthenelse p) p.parse_ifthenelse_tag_parser (clens_ifthenelse_tag s))
+= gaccessor_prop_equiv (parse_ifthenelse p) p.parse_ifthenelse_tag_parser (clens_ifthenelse_tag s) (gaccessor_ifthenelse_tag' s);
+  gaccessor_ifthenelse_tag' s
+
+inline_for_extraction
+let accessor_ifthenelse_tag
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Tot (accessor (gaccessor_ifthenelse_tag s))
+= fun #rrel #rel sl pos -> 
+    let h = HST.get () in
+    slice_access_eq h (gaccessor_ifthenelse_tag s) sl pos;
+    pos
+
 let clens_ifthenelse_payload
   (#p: parse_ifthenelse_param)
   (s: serialize_ifthenelse_param p)
@@ -139,34 +174,88 @@ let clens_ifthenelse_payload
     clens_get = (fun (x: p.parse_ifthenelse_t) -> dsnd (s.serialize_ifthenelse_synth_recip x) <: Ghost (p.parse_ifthenelse_payload_t b) (requires (p.parse_ifthenelse_tag_cond (dfst (s.serialize_ifthenelse_synth_recip x)) == b)) (ensures (fun _ -> True)));
   }
 
+let gaccessor_ifthenelse_payload''
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+  (b: bool)
+  (input: bytes)
+: Ghost nat
+  (requires (
+    gaccessor_pre (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b) input
+  ))
+  (ensures (fun res ->
+    gaccessor_post' (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b) input res
+  ))
+=   parse_ifthenelse_eq p input;
+    parse_ifthenelse_parse_tag_payload s input;
+    let Some (t, consumed) = parse p.parse_ifthenelse_tag_parser input in
+    consumed
+
+let gaccessor_ifthenelse_payload'
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+  (b: bool)
+: Tot (gaccessor' (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b))
+= fun (input: bytes) ->
+    match parse (parse_ifthenelse p) input with
+    | Some (x, _) ->
+      if p.parse_ifthenelse_tag_cond (dfst (s.serialize_ifthenelse_synth_recip x)) = b
+      then gaccessor_ifthenelse_payload'' s b input
+      else 0 (* dummy *)
+    | _ -> 0 (* dummy *)
+
+let gaccessor_ifthenelse_payload_injective
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+  (b: bool)
+  (sl sl' : bytes)
+: Lemma
+  (requires (
+    gaccessor_pre (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b) sl /\
+    gaccessor_pre (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b) sl' /\
+    injective_precond (parse_ifthenelse p) sl sl'
+  ))
+  (ensures (gaccessor_ifthenelse_payload' s b sl == gaccessor_ifthenelse_payload' s b sl'))
+= parse_ifthenelse_eq p sl;
+  parse_ifthenelse_eq p sl';
+  parse_ifthenelse_parse_tag_payload s sl;
+  parse_ifthenelse_parse_tag_payload s sl' ;
+  parse_injective p.parse_ifthenelse_tag_parser sl sl'
+
+let gaccessor_ifthenelse_payload_no_lookahead
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+  (b: bool)
+  (sl sl' : bytes)
+: Lemma
+  (requires (
+    (parse_ifthenelse_kind p).parser_kind_subkind == Some ParserStrong /\
+    gaccessor_pre (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b) sl /\
+    gaccessor_pre (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b) sl' /\
+    no_lookahead_on_precond (parse_ifthenelse p) sl sl'
+  ))
+  (ensures (gaccessor_ifthenelse_payload' s b sl == gaccessor_ifthenelse_payload' s b sl'))
+= parse_ifthenelse_eq p sl;
+  parse_ifthenelse_eq p sl';
+  parse_ifthenelse_parse_tag_payload s sl;
+  parse_ifthenelse_parse_tag_payload s sl' ;
+  parse_strong_prefix (parse_ifthenelse p) sl sl';
+  parse_injective p.parse_ifthenelse_tag_parser sl sl'
+
 let gaccessor_ifthenelse_payload
   (#p: parse_ifthenelse_param)
   (s: serialize_ifthenelse_param p)
   (b: bool)
 : Tot (gaccessor (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b))
-= fun (input: bytes) ->
-    parse_ifthenelse_eq p input;
-    let res =
-      match parse p.parse_ifthenelse_tag_parser input with
-      | Some (t, consumed) ->
-        let b = p.parse_ifthenelse_tag_cond t in
-        let input' = Seq.slice input consumed (Seq.length input) in
-        begin match parse (dsnd (p.parse_ifthenelse_payload_parser b)) input' with
-        | Some (x, _) ->
-          s.serialize_ifthenelse_synth_inverse (p.parse_ifthenelse_synth t x);
-          let (| t', x' |) = s.serialize_ifthenelse_synth_recip (p.parse_ifthenelse_synth t x) in
-          p.parse_ifthenelse_synth_injective t x t' x';
-          (consumed, Seq.length input - consumed)
-        | _ -> (consumed, Seq.length input - consumed) (* must be the same value as in the Some case, for the stateful accessor, but no postcondition here in the ghost accessor *)
-        end
-      | _ -> (0, 0) (* dummy *)
-    in
-    (res <: (res: _ { gaccessor_post' (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b) input res } ))
+= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_ifthenelse_payload_injective s b x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_ifthenelse_payload_no_lookahead s b x));
+  gaccessor_prop_equiv (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b) (gaccessor_ifthenelse_payload' s b);
+  gaccessor_ifthenelse_payload' s b
 
 inline_for_extraction
 let accessor_ifthenelse_payload'
   (#p: parse_ifthenelse_param)
-  (s: serialize_ifthenelse_param p { p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong  } )
+  (s: serialize_ifthenelse_param p)
   (j: jumper p.parse_ifthenelse_tag_parser)
   (b: bool)
   (#rrel #rel: _)
@@ -174,8 +263,6 @@ let accessor_ifthenelse_payload'
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
-    (get_parser_kind (parse_ifthenelse p)).parser_kind_subkind == Some ParserStrong /\
-    (get_parser_kind (dsnd (p.parse_ifthenelse_payload_parser b))).parser_kind_subkind == Some ParserStrong /\
     valid (parse_ifthenelse p) h input pos /\
     (clens_ifthenelse_payload s b).clens_cond (contents (parse_ifthenelse p) h input pos)
   ))
@@ -187,13 +274,10 @@ let accessor_ifthenelse_payload'
   [@inline_let]
   let _ =
     let pos' = get_valid_pos (parse_ifthenelse p) h input pos in
-    let small = bytes_of_slice_from_to h input pos pos' in
     let large = bytes_of_slice_from h input pos in
     slice_access_eq h (gaccessor_ifthenelse_payload s b) input pos;
     valid_facts (parse_ifthenelse p) h input pos;
     parse_ifthenelse_eq p large;
-    parse_ifthenelse_eq p small;
-    parse_strong_prefix p.parse_ifthenelse_tag_parser large small;
     valid_facts p.parse_ifthenelse_tag_parser h input pos
   in
   j input pos
@@ -201,7 +285,7 @@ let accessor_ifthenelse_payload'
 inline_for_extraction
 let accessor_ifthenelse_payload
   (#p: parse_ifthenelse_param)
-  (s: serialize_ifthenelse_param p { p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong  } )
+  (s: serialize_ifthenelse_param p)
   (j: jumper p.parse_ifthenelse_tag_parser)
   (b: bool)
 : Tot (accessor (gaccessor_ifthenelse_payload s b))

@@ -1,0 +1,28 @@
+entrypoint typedef struct _t (UINT32 a,
+                   mutable UINT32 *out_x,
+                   mutable UINT32 *out_xx,
+                   mutable UINT32 *out_y) {
+   // field `x` of struct `t`
+   UINT32 x
+    {:on-success
+       var i = field_pos;
+       *out_x = i;
+       return true;
+     };
+   // field `xx` of struct `t`
+   UINT32 xx
+    { x <= xx }
+    {:on-success
+       var i = field_pos;
+       *out_xx = i;
+       return true;
+     };
+   // field `y` of struct `t`
+   UINT32 y
+    { x <= y  && xx <= y }
+    {:on-success
+      var i = field_pos;
+      *out_y = i;
+      return true;
+    };
+} t, *pt;

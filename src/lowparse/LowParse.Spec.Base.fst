@@ -537,6 +537,21 @@ let coerce_parser
   (ensures (fun _ -> True))
 = p
 
+let parse_injective
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (input1: bytes)
+  (input2: bytes)
+: Lemma
+  (requires (
+    injective_precond p input1 input2
+  ))
+  (ensures (
+    injective_postcond p input1 input2
+  ))
+= ()
+
 let parse_strong_prefix
   (#k: parser_kind)
   (#t: Type)
@@ -695,6 +710,16 @@ let serialize
   (x: t)
 : GTot bytes
 = s x
+
+let parse_serialize
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: t)
+: Lemma
+  (parse p (serialize s x) == Some (x, Seq.length (serialize s x)))
+= ()
 
 let serializer_unique
   (#k: parser_kind)

@@ -103,6 +103,8 @@ let unit_test_lemma1_aux1
   )
 = nondep_then_eq (parse_bounded_int32 0 100) (parse_bounded_int32 0 100) input
 
+#push-options "--z3rlimit 16"
+
 let unit_test_lemma1
   (input : bytes)
 : Lemma 
@@ -149,6 +151,8 @@ let unit_test_lemma1
         let input'' = Seq.slice input (consumed + consumed') (Seq.length input) in
         parse_deplen_payload_unfold unit_test_min unit_test_max unit_test_deplen_func unit_test_payload_serializer (len, foo) input'';
         ()
+
+#pop-options
 
 (* serializer specification *)
 
