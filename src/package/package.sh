@@ -31,10 +31,22 @@ if [[ -d everparse ]] ; then
     exit 1
 fi
 
+print_component_commit_id() {
+    ( cd $1 && git show --no-patch --format=%h )
+}
+
+print_component_commit_date_iso() {
+    ( cd $1 && git show --no-patch --format=%ad --date=iso )
+}
+
+print_date_utc_of_iso_hr() {
+    date --utc --date="$1" '+%Y-%m-%d %H:%M:%S'
+}
+
 commit_id=$(git show --no-patch --format=%h)
 commit_date_iso=$(git show --no-patch --format=%ad --date=iso)
 commit_date=$(date --utc --date="$commit_date_iso" '+%Y%m%d%H%M%S')
-commit_date_hr=$(date --utc --date="$commit_date_iso" '+%Y-%m-%d %H:%M:%S')
+commit_date_hr=$(print_date_utc_of_iso_hr "$commit_date_iso")
 platform=$(uname --machine)
 
     # Verify if F* and KReMLin are here
@@ -50,6 +62,14 @@ platform=$(uname --machine)
     else
         export KREMLIN_HOME=$(cygpath -m "$KREMLIN_HOME")
     fi &&
+
+    fstar_commit_id=$(print_component_commit_id "$FSTAR_HOME") &&
+    fstar_commit_date_iso=$(print_component_commit_date_iso "$FSTAR_HOME") &&
+    fstar_commit_date_hr=$(print_date_utc_of_iso_hr "$fstar_commit_date_iso") &&
+    kremlin_commit_id=$(print_component_commit_id "$KREMLIN_HOME") &&
+    kremlin_commit_date_iso=$(print_component_commit_date_iso "$KREMLIN_HOME") &&
+    kremlin_commit_date_hr=$(print_date_utc_of_iso_hr "$kremlin_commit_date_iso") &&
+    z3_version_string=$($Z3_DIR/z3.exe --version) &&
 
     # Rebuild everything
     export OTHERFLAGS='--admit_smt_queries true' &&
@@ -88,6 +108,9 @@ platform=$(uname --machine)
     cp -p -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
     cp -p -r $QD_HOME/src/package/README.pkg everparse/README &&
     echo "This is EverParse $commit_id ($commit_date_hr UTC+0000)" >> everparse/README &&
+    echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr UTC+0000)" >> everparse/README &&
+    echo "Running with KReMLin $kremlin_commit_id ($kremlin_commit_date_hr UTC+0000)" >> everparse/README &&
+    echo -n "Running with $z3_version_string" >> everparse/README &&
 
     # licenses
     mkdir -p everparse/licenses &&
