@@ -539,7 +539,7 @@ let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin b
     if need_validator md bmin bmax then
       wl i "val %s_validator%s: LL.validator %s\n\n" n parg pparse
     else
-      wl i "let %s_validator%s: LL.validator %s = LL.validate_total_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
+      wl i "let %s_validator%s: LL.validator %s = LL.validate_total_constant_size %s %duL ()\n\n" n parg pparse pparse bmin;
     if need_jumper bmin bmax then
       wl i "val %s_jumper%s: LL.jumper %s\n\n" n parg pparse
     else
