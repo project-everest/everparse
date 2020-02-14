@@ -37,6 +37,7 @@ test:
 	+$(MAKE) all
 
 out/%.fst: %.3d
+	mkdir -p out
 	$(3D) --module_name $* $^
 	$(FSTAR) --print_in_place $@  #implementation
 	$(FSTAR) --print_in_place $@i #interface
