@@ -1007,25 +1007,28 @@ let elaborate_record (e:global_env)
 
     let d = with_range_and_comments (Record tdnames params where fields) range comments in
 
-    let is_var_length_array (x:field) =
-      match x.v.field_array_opt with
-      | Some (_, b) -> b
-      | _ -> false
+    let is_var_length (x:field) : ML bool =
+      let sfx = typ_has_suffix env x.v.field_type in
+      sfx ||
+      (match x.v.field_array_opt with
+       | Some (_, b) -> b
+       | _ -> false)
     in
 
-    let rec check_suffix (f:list field) : ML bool =
-      match f with
-      | [] -> false
-      | [last] ->
-        let sfx = typ_has_suffix env last.v.field_type in
-        sfx
-        || is_var_length_array last
-      | hd::tl ->
-        let sfx = typ_has_suffix env hd.v.field_type in
-        if sfx
-        || is_var_length_array hd
-        then error "Variable-length fields can only be at the end of a struct" hd.v.field_type.range
-        else check_suffix tl
+    let check_suffix (fs:list field) : ML bool =
+      let _, has_variable =
+        List.fold_right
+          (fun f (allow_variable, has_variable) ->
+            let f_is_var = is_var_length f in
+            let has_variable = has_variable || f_is_var in
+            if f_is_var
+            then if allow_variable then allow_variable, has_variable
+                 else error "Variable-length fields can only be at the end of a struct" f.v.field_type.range
+            else false, has_variable)
+          fs
+          (true, false)
+      in
+      has_variable
     in
     let has_suffix = check_suffix fields in
     Options.debug_print_string
