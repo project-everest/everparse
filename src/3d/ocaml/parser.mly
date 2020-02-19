@@ -33,7 +33,7 @@
 %token<Ast.ident>   IDENT
 %token          EQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS ENTRYPOINT
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON
-%token          STAR DIV MINUS PLUS LBRACK RBRACK LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
+%token          STAR DIV MINUS PLUS LBRACK RBRACK LBRACK_LEQ LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.decl list> prog
@@ -148,8 +148,9 @@ refinement:
   | LBRACE e=expr RBRACE { e }
 
 array_size:
-  | LBRACK e=expr RBRACK { (e, true) }
-  | LBRACK LBRACE e=expr RBRACE RBRACK { (e, false) }
+  | LBRACK e=expr RBRACK { (e, VariableSizeEq) }
+  | LBRACK_LEQ e=expr RBRACK { (e, VariableSizeLeq) }
+  | LBRACK LBRACE e=expr RBRACE RBRACK { (e, ConstantSize) }
 
 bitwidth:
   | COLON i=INT { Inl (with_range (Z.of_int i) $startpos(i)) }

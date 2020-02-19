@@ -577,9 +577,13 @@ let translate_field (f:A.field) : ML T.struct_field =
     let t =
         match sf.field_array_opt with
         | None -> t
-        | Some (e, _) ->
+        | Some (e, ConstantSize)
+        | Some (e, VariableSizeEq) ->
           let e = translate_expr e in
           T.T_app (with_range "nlist" sf.field_type.range) [Inr e; Inl t]
+        | Some (e, VariableSizeLeq) ->
+          let e = translate_expr e in
+          T.T_app (with_range "t_at_most" sf.field_type.range) [Inr e; Inl t]
     in
     let t =
       match sf.field_constraint with

@@ -99,7 +99,8 @@ rule token =
   | ":"            { locate lexbuf COLON }
   | "{:on-success" { locate lexbuf LBRACE_ONSUCCESS }
   | "{"            { locate lexbuf LBRACE }
-  | "}"            { locate lexbuf RBRACE }  
+  | "}"            { locate lexbuf RBRACE }
+  | "[<="          { locate lexbuf LBRACK_LEQ }  
   | "["            { locate lexbuf LBRACK }
   | "]"            { locate lexbuf RBRACK }  
   | "*"            { locate lexbuf STAR }

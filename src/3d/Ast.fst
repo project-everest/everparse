@@ -250,13 +250,18 @@ and bitfield_attr = with_meta_t bitfield_attr'
 
 let field_bitwidth_t = either (with_meta_t int) bitfield_attr
 
+type array_qualifier =
+  | VariableSizeEq
+  | VariableSizeLeq
+  | ConstantSize
+
 noeq
 type struct_field = {
   field_dependence:bool;   //computed; whether or not the rest of the struct depends on this field
   field_size:option size;  //computed; the size in bytes occupied by this field
   field_ident:ident;       //name of the field
   field_type:typ;          //type of the field
-  field_array_opt:option (expr * bool);  //array size in bytes, the bool indicates whether this is a variable-length suffix or not
+  field_array_opt:option (expr * array_qualifier);  //array size in bytes, the qualifier indicates whether this is a variable-length suffix or not
   field_constraint:option expr; //refinement constraint
   field_number:option field_num; //computed; field identifiers, used for error reporting
   field_bitwidth:option field_bitwidth_t;  //bits used for the field; elaborate from Inl to Inr
@@ -526,13 +531,20 @@ let print_bitfield (bf:option field_bitwidth_t) =
      a.bitfield_from a.bitfield_to
 
 let print_field (f:field) : ML string =
+  let print_array eq : Tot string =
+    let e, q = eq in
+    match q with
+    | VariableSizeEq -> Printf.sprintf "[%s]" (print_expr e)
+    | VariableSizeLeq -> Printf.sprintf "[<= %s]" (print_expr e)
+    | ConstantSize -> Printf.sprintf "[{ %s }]" (print_expr e)
+  in
   let sf = f.v in
     Printf.sprintf "%s%s %s%s%s%s; (* size = %s *)"
       (if sf.field_dependence then "dependent " else "")
       (print_typ sf.field_type)
       (print_ident sf.field_ident)
       (print_bitfield sf.field_bitwidth)
-      (print_opt sf.field_array_opt (fun (e, b) -> Printf.sprintf "[%s]%s" (print_expr e) (if b then " suffix" else "")))
+      (print_opt sf.field_array_opt print_array)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
       (print_opt sf.field_size string_of_int)
 

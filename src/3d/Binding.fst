@@ -723,15 +723,13 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         | _, None -> size_opt
         | None, _ -> size_opt
         | _, Some 0 -> size_opt //this is an opaque field
-        | Some (e, suffix), Some s ->
+        | Some (e, ConstantSize), Some s ->
           begin
           match value_of_const_expr env e with
           | Some (Inr (_, n)) -> Some (n * s)
-          | _ ->
-            if suffix
-            then Some 0
-            else error "Variable-length array fields must be marked with the 'suffix' qualifier" f.range
+          | _ -> error "Variable-length array fields must be marked with the 'suffix' qualifier" f.range
           end
+        | _ -> Some 0 //variable length
     in
     // Options.debug_print_string
     //   (Printf.sprintf "!!!Size of field %s is %s\n"
@@ -1011,8 +1009,9 @@ let elaborate_record (e:global_env)
       let sfx = typ_has_suffix env x.v.field_type in
       sfx ||
       (match x.v.field_array_opt with
-       | Some (_, b) -> b
-       | _ -> false)
+       | None
+       | Some (_, ConstantSize) -> false
+       | _ -> true)
     in
 
     let check_suffix (fs:list field) : ML bool =

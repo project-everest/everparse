@@ -154,9 +154,9 @@ let rec print_typ (t:typ) : Tot string (decreases t) =
       (print_typ t1)
       (print_typ t2)
   | T_refine t1 (x, e2) ->
-    Printf.sprintf "(%s:%s{%s})"
-      (print_ident x)
+    Printf.sprintf "(refine %s (fun %s -> %s))"
       (print_typ t1)
+      (print_ident x)
       (print_expr e2)
   | T_if_else e t1 t2 ->
     Printf.sprintf "(t_ite %s %s %s)"
