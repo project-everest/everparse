@@ -24,6 +24,7 @@ module Cast = FStar.Int.Cast
 module HS = FStar.HyperStack
 open FStar.HyperStack.ST
 open LowStar.Buffer
+friend Prelude
 open Prelude
 module B = LowStar.Buffer
 
@@ -225,8 +226,8 @@ let validate_dep_pair_with_refinement_and_action'
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
       #inv1' #l1' #b (a:t1 -> action p1 inv1' l1' b bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine f -> Type) (#p2:(x:refine f -> parser k2 (t2 x)))
-      #inv2 #l2 #ar2 (v2:(x:refine f -> validate_with_action_t (p2 x) inv2 l2 ar2))
+      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t
              ((p1 `LPC.parse_filter` f) `(parse_dep_pair #nz1)` p2)
              (conj_inv inv1 (conj_inv inv1' inv2))
@@ -282,8 +283,8 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
       #inv1' #l1' #b (a:t1 -> action p1 inv1' l1' b bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine f -> Type) (#p2:(x:refine f -> parser k2 (t2 x)))
-      #inv2 #l2 #ar2 (v2:(x:refine f -> validate_with_action_t (p2 x) inv2 l2 ar2))
+      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Pure (validate_with_action_t
              ((p1 `LPC.parse_filter` f) `(parse_dep_pair #nz1)` p2)
              (conj_inv inv1 (conj_inv inv1' inv2))
@@ -339,8 +340,8 @@ let validate_dep_pair_with_refinement'
       #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine f -> Type) (#p2:(x:refine f -> parser k2 (t2 x)))
-      #inv2 #l2 #ar2 (v2:(x:refine f -> validate_with_action_t (p2 x) inv2 l2 ar2))
+      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t
              ((p1 `LPC.parse_filter` f) `(parse_dep_pair #nz1)` p2)
              (conj_inv inv1 inv2)
@@ -387,8 +388,8 @@ let validate_dep_pair_with_refinement_total_zero_parser'
       #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine f -> Type) (#p2:(x:refine f -> parser k2 (t2 x)))
-      #inv2 #l2 #ar2 (v2:(x:refine f -> validate_with_action_t (p2 x) inv2 l2 ar2))
+      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Pure (validate_with_action_t
              ((p1 `LPC.parse_filter` f) `(parse_dep_pair #nz1)` p2)
              (conj_inv inv1 inv2)
@@ -439,8 +440,8 @@ let validate_dep_pair_with_refinement_and_action
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
       #inv1' #l1' #b (a:t1 -> action p1 inv1' l1' b bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine f -> Type) (#p2:(x:refine f -> parser k2 (t2 x)))
-      #inv2 #l2 #ar2 (v2:(x:refine f -> validate_with_action_t (p2 x) inv2 l2 ar2))
+      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t ((p1 `parse_filter` f) `parse_dep_pair` p2)
                                 (conj_inv inv1 (conj_inv inv1' inv2))
                                 (l1 `eloc_union` (l1' `eloc_union` l2))
@@ -499,8 +500,8 @@ let validate_dep_pair_with_refinement
       #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine f -> Type) (#p2:(x:refine f -> parser k2 (t2 x)))
-      #inv2 #l2 #ar2 (v2:(x:refine f -> validate_with_action_t (p2 x) inv2 l2 ar2))
+      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t ((p1 `parse_filter` f) `parse_dep_pair` p2)
                                 (conj_inv inv1 inv2)
                                 (l1 `eloc_union` l2)
@@ -855,6 +856,31 @@ let validate_nlist_constant_size_without_actions
     )
   else
     validate_nlist n v
+
+// let validate_t_at_most (n:U32.t) (#k:parser_kind true) #t (#p:parser k t)
+//                        #inv #l #ar (v:validate_with_action_t p inv l ar)
+//   : Tot (validate_with_action_t (t_at_most n t) inv l false)
+//   = fun input startPosition ->
+//       let h = HST.get () in
+//       [@inline_let]
+//       let p2 = LowParse.Spec.Bytes.parse_all_bytes in
+//       [@inline_let]
+//       let v2 = LowParse.Low.Bytes.validate_all_bytes in
+//       [@inline_let] let _ = LPLC.valid_nondep_then h p p2 input (LPL.uint64_to_uint32 startPosition) in
+//       [@(rename_let ("positionAfter" ^ name1))]
+//       let pos1 = v input startPosition in
+//       let h1 = HST.get () in
+//       modifies_address_liveness_insensitive_unused_in h h1;
+//       if LPL.is_error pos1
+//       then begin
+//         pos1
+//       end
+//       else
+//         [@inline_let] let _ = LPL.valid_facts p2 h input (LPL.uint64_to_uint32 pos1) in
+//         v2 input pos1
+
+//       LowParse.Low.FLData.validate_fldata
+//         (LowParse.Low.Combinators.validate_nondep_then
 
 inline_for_extraction noextract
 let validate_with_comment (c:string)

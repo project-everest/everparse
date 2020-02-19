@@ -14,12 +14,7 @@
    limitations under the License.
 *)
 module Actions
-module LP = LowParse.Spec.Base
-module LPC = LowParse.Spec.Combinators
 module LPL = LowParse.Low.Base
-module LPLC = LowParse.Low.Combinators
-module LPLL = LowParse.Low.List
-module LPLF = LowParse.Spec.FLData
 module Cast = FStar.Int.Cast
 module HS = FStar.HyperStack
 open FStar.HyperStack.ST
@@ -100,15 +95,6 @@ val leaf_reader
       (p: parser k t)
  : Type0
 
-inline_for_extraction noextract
-val lift_leaf_reader
-      (#nz:bool)
-      (#k:parser_kind nz)
-      (#t:Type)
-      (#p:parser k t)
-      (r:LPL.leaf_reader p)
-  : leaf_reader p
-
 inline_for_extraction
 noextract
 val validate_with_success_action
@@ -165,8 +151,6 @@ val validate_dep_pair
       (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
   : validate_with_action_t (p1 `parse_dep_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
 
-let refine (#a:Type) (f:a -> bool) = x:a{f x}
-
 inline_for_extraction noextract
 val validate_dep_pair_with_refinement_and_action
       (p1_is_constant_size_without_actions: bool)
@@ -176,8 +160,8 @@ val validate_dep_pair_with_refinement_and_action
       (#inv1:_) (#l1:_) (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
       (#inv1':_) (#l1':_) (#b:_) (a:t1 -> action p1 inv1' l1' b bool)
-      (#nz2:_) (#k2:parser_kind nz2) (#t2:refine f -> Type) (#p2:(x:refine f -> parser k2 (t2 x)))
-      (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:refine f -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
+      (#nz2:_) (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
   : validate_with_action_t ((p1 `parse_filter` f) `parse_dep_pair` p2)
                            (conj_inv inv1 (conj_inv inv1' inv2))
                            (l1 `eloc_union` (l1' `eloc_union` l2))
@@ -204,8 +188,8 @@ val validate_dep_pair_with_refinement
       (#nz1:_) (#k1:parser_kind nz1) (#t1:_) (#p1:parser k1 t1)
       (#inv1:_) (#l1:_) (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      (#nz2:_) (#k2:parser_kind nz2) (#t2:refine f -> Type) (#p2:(x:refine f -> parser k2 (t2 x)))
-      (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:refine f -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
+      (#nz2:_) (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
   : validate_with_action_t ((p1 `parse_filter` f) `parse_dep_pair` p2)
                            (conj_inv inv1 inv2)
                            (l1 `eloc_union` l2)
