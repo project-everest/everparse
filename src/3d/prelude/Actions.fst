@@ -861,7 +861,32 @@ noextract inline_for_extraction
 let validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
-  = admit()
+  = fun input startPosition ->
+    let h = HST.get () in
+    let _ =
+      LPL.valid_weaken kind_t_at_most (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) (U32.v n)) h input (LPL.uint64_to_uint32 startPosition);
+      LPL.valid_facts (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) (U32.v n)) h input (LPL.uint64_to_uint32 startPosition)
+    in
+    if (Cast.uint32_to_uint64 input.LPL.len `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
+    then LPL.validator_error_not_enough_data
+    else
+      [@inline_let] let input' = { LPL.base = input.LPL.base; LPL.len = LPL.uint64_to_uint32 startPosition `U32.add` n; } in
+      [@inline_let] let _ =
+        LPL.valid_facts (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) h input' (LPL.uint64_to_uint32 startPosition);
+        LPLC.valid_nondep_then h p LowParse.Spec.Bytes.parse_all_bytes input' (LPL.uint64_to_uint32 startPosition)
+      in
+      // FIXME: I'd need a name here
+      let positionAfterContents = v input' startPosition in
+      let h1 = HST.get () in
+      let _ = modifies_address_liveness_insensitive_unused_in h h1 in
+      if LPL.is_error positionAfterContents
+      then positionAfterContents
+      else
+        [@inline_let] let _ =
+          LPL.valid_facts LowParse.Spec.Bytes.parse_all_bytes h input' (LPL.uint64_to_uint32 positionAfterContents)
+        in
+        startPosition `U64.add` Cast.uint32_to_uint64 n
+
 
 inline_for_extraction noextract
 let validate_with_comment (c:string)
