@@ -119,6 +119,7 @@ type parser_kind' =
   | PK_impos
   | PK_base     : hd:A.ident -> parser_kind'
   | PK_list     : parser_kind'
+  | PK_t_at_most: parser_kind'
   | PK_filter   : k:parser_kind -> parser_kind'
   | PK_and_then : k1:parser_kind -> k2:parser_kind -> parser_kind'
   | PK_glb      : k1:parser_kind -> k2:parser_kind -> parser_kind'
@@ -138,6 +139,7 @@ type parser' =
   | Parse_return    : v:expr -> parser'
   | Parse_app       : hd:A.ident -> args:list index -> parser'
   | Parse_nlist     : n:expr -> t:parser -> parser'
+  | Parse_t_at_most : n:expr -> t:parser -> parser'
   | Parse_pair      : n1: A.ident -> p:parser -> q:parser -> parser'
   | Parse_dep_pair  : n1: A.ident -> p:parser -> k:lam parser -> parser'
   | Parse_dep_pair_with_refinement: n1: A.ident -> f1: A.field_num -> dfst:parser -> refinement:lam expr -> dsnd:lam parser -> parser'
@@ -175,6 +177,7 @@ type validator' =
   | Validate_app      : hd:A.ident -> args:list index -> validator'
   | Validate_nlist    : n:expr -> v:validator -> validator'
   | Validate_nlist_constant_size_without_actions : n:expr -> v:validator -> validator'
+  | Validate_t_at_most : n:expr -> v:validator -> validator'
   | Validate_pair      : n1: A.ident -> v1:validator -> v2:validator -> validator'
   | Validate_dep_pair : n1: A.ident -> v:validator -> r:reader -> k:lam validator -> validator'
   | Validate_dep_pair_with_refinement: p1_is_constant_size_without_actions: bool -> n1: A.ident -> f1: A.ident -> dfst:validator -> r:reader -> refinement:lam expr -> dsnd:lam validator -> validator'

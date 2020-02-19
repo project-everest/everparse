@@ -43,6 +43,7 @@ let rec parser_kind_eq k k' =
   | PK_return, PK_return -> true
   | PK_impos, PK_impos -> true
   | PK_list,  PK_list -> true
+  | PK_t_at_most,  PK_t_at_most -> true
   | PK_base hd1, PK_base hd2 -> A.(hd1.v = hd2.v)
   | PK_filter k, PK_filter k' -> parser_kind_eq k k'
   | PK_and_then k1 k2, PK_and_then k1' k2'
@@ -180,7 +181,9 @@ let rec print_kind (k:parser_kind) : Tot string =
     Printf.sprintf "kind_%s"
       (print_ident hd)
   | PK_list ->
-      "kind_nlist"
+    "kind_nlist"
+  | PK_t_at_most ->
+    "kind_t_at_most"
   | PK_return ->
     "ret_kind"
   | PK_impos ->
@@ -205,6 +208,8 @@ let rec print_parser (p:parser) : Tot string (decreases p) =
     Printf.sprintf "(parse_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
   | Parse_nlist e p ->
     Printf.sprintf "(parse_nlist %s %s)" (print_expr e) (print_parser p)
+  | Parse_t_at_most e p ->
+    Printf.sprintf "(parse_t_at_most %s %s)" (print_expr e) (print_parser p)
   | Parse_pair _ p1 p2 ->
     Printf.sprintf "(%s `parse_pair` %s)" (print_parser p1) (print_parser p2)
   | Parse_dep_pair _ p1 (x, p2)
@@ -300,6 +305,8 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
     Printf.sprintf "(validate_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
   | Validate_nlist e p ->
     Printf.sprintf "(validate_nlist %s %s)" (print_expr e) (print_validator p)
+  | Validate_t_at_most e p ->
+    Printf.sprintf "(validate_t_at_most %s %s)" (print_expr e) (print_validator p)
   | Validate_nlist_constant_size_without_actions e p ->
     let n_is_const = match e with
     | Constant (A.Int _ _) -> true

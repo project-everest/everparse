@@ -857,30 +857,11 @@ let validate_nlist_constant_size_without_actions
   else
     validate_nlist n v
 
-// let validate_t_at_most (n:U32.t) (#k:parser_kind true) #t (#p:parser k t)
-//                        #inv #l #ar (v:validate_with_action_t p inv l ar)
-//   : Tot (validate_with_action_t (t_at_most n t) inv l false)
-//   = fun input startPosition ->
-//       let h = HST.get () in
-//       [@inline_let]
-//       let p2 = LowParse.Spec.Bytes.parse_all_bytes in
-//       [@inline_let]
-//       let v2 = LowParse.Low.Bytes.validate_all_bytes in
-//       [@inline_let] let _ = LPLC.valid_nondep_then h p p2 input (LPL.uint64_to_uint32 startPosition) in
-//       [@(rename_let ("positionAfter" ^ name1))]
-//       let pos1 = v input startPosition in
-//       let h1 = HST.get () in
-//       modifies_address_liveness_insensitive_unused_in h h1;
-//       if LPL.is_error pos1
-//       then begin
-//         pos1
-//       end
-//       else
-//         [@inline_let] let _ = LPL.valid_facts p2 h input (LPL.uint64_to_uint32 pos1) in
-//         v2 input pos1
-
-//       LowParse.Low.FLData.validate_fldata
-//         (LowParse.Low.Combinators.validate_nondep_then
+noextract inline_for_extraction
+let validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
+                       (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
+  : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
+  = admit()
 
 inline_for_extraction noextract
 let validate_with_comment (c:string)

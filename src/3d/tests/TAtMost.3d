@@ -1,0 +1,18 @@
+#define A 0
+#define B 1
+
+casetype _S (UINT32 tag) {
+  switch (tag) {
+  case A:
+    UINT32 u32;
+  case B:
+    UINT64 u64;
+  }
+} S;
+
+entrypoint
+typedef struct _T {
+   UINT32 tag;
+   UINT32 length;
+   S(tag) s[<= length]
+} T;

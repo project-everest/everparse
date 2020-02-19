@@ -81,10 +81,9 @@ let go () : ML unit =
     failwith "Not enough arguments"
 
 #push-options "--warn_error -272" //top-level effects are okay
+#push-options "--admit_smt_queries true" //explicitly not handling all exceptions, so that we can meaningful backtraces
 let _ =
   try go()
   with
     | Error msg -> FStar.IO.print_string msg
-    | _ ->
-      failwith "Unexpected error"
 #pop-options
