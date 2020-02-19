@@ -9,5 +9,5 @@ let field_id_of_result (result:result) : U64.t =
 let result_is_error(result:result) : bool =
   let open U64 in
   result >^ LPL.validator_max_length
-let error_reason_of_result (result:result) : U64.t =
+let error_kind_of_result (result:result) : U64.t =
   LowParse.Low.Base.get_validator_error_kind result

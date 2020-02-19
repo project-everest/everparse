@@ -610,7 +610,7 @@ let print_error_map () : ML (string & string & string) =
   let errs = Binding.all_nums() in
   let error_reasons =
     "static char* ErrorReasonOfResult (uint64_t code) {\n\t\
-      switch (code) {\n\t\t\
+      switch (EverParseErrorKindOfResult(code)) {\n\t\t\
         case 1: return \"generic error\";\n\t\t\
         case 2: return \"not enough data\";\n\t\t\
         case 3: return \"impossible\";\n\t\t\
