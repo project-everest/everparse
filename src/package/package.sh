@@ -44,6 +44,9 @@ print_date_utc_of_iso_hr() {
 }
 
 everparse_version=$(cat $QD_HOME/version.txt)
+if [[ $(git describe --exact-match) != $everparse_version ]] ; then
+    everparse_version=$(git show --no-patch --format=%h)
+fi
 platform=$(uname --machine)
 
     # Verify if F* and KReMLin are here
