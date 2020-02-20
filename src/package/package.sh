@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 if ! [[ "$OS" = "Windows_NT" ]] ; then
     echo This script is only for Windows binary packages
     exit 1
