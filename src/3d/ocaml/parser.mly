@@ -112,6 +112,10 @@ expr_no_range:
         in
         App(IfThenElse, [e;e1;e2])
     }
+  | i=IDENT LPAREN es=arguments RPAREN
+    {
+       App(Ext i.v, es)
+    }
 
 expr_opt:
   |        { None }

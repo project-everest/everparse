@@ -19,6 +19,10 @@ module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
 module LPL = LowParse.Low.Base
 module LPLC = LowParse.Low.Combinators
+module U16 = FStar.UInt16
+module U32 = FStar.UInt32
+module U64 = FStar.UInt64
+
 ////////////////////////////////////////////////////////////////////////////////
 // Parsers
 ////////////////////////////////////////////////////////////////////////////////
@@ -135,8 +139,6 @@ let parse_ite #nz (#k:parser_kind nz) (#a:Type) (#b:Type) (e:bool)
   : Tot (parser k (t_ite e a b))
   = if e then p1 () else p2 ()
 
-module U32 = FStar.UInt32
-module U16 = FStar.UInt16
 
 let nlist (n:U32.t) (t:Type) = list t
 
@@ -378,7 +380,7 @@ inline_for_extraction noextract
 let kind____UINT64 : parser_kind true = LowParse.Spec.Int.parse_u64_kind
 let parse____UINT64 : parser kind____UINT64 ___UINT64 = LowParse.Spec.Int.parse_u64_le
 let read____UINT64 : LPL.leaf_reader parse____UINT64 = LowParse.Low.Int.read_u64_le
-
+  
 inline_for_extraction noextract
 let read_unit
   : LPL.leaf_reader (parse_ret ())
