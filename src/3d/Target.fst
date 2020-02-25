@@ -725,7 +725,7 @@ let print_c_entry (ds:list decl) : ML (string & string) =
       |> pascal_case
     in
     let signature =
-      Printf.sprintf "bool %s(%suint8_t *base, uint32_t len)"
+      Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
        wrapper_name
        (print_params d.decl_name.td_params)
     in
@@ -747,9 +747,9 @@ let print_c_entry (ds:list decl) : ML (string & string) =
                   StructNameOfErr(result),\n\t\t\t\
                   FieldNameOfErr (result),\n\t\t\t\
                   ErrorReasonOfResult(result));\n\t\t\
-           return false;\n\t\
+           return FALSE;\n\t\
          }\n\t\
-         return true;\n\
+         return TRUE;\n\
        }"
        signature
        validator_name

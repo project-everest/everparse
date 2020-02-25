@@ -26,17 +26,20 @@ nswamy, protz, taramana 5-Feb-2020
  *****************************************************************************/
 
 #include <string.h>
-#include <stdbool.h>
+#include <stdint.h>
+
+typedef uint8_t BOOLEAN;
+
+#define FALSE 0
+#define TRUE 1
 
 /* ... for Linux */
 #if defined(__linux__) || defined(__CYGWIN__) || defined (__USE_SYSTEM_ENDIAN_H__)
 #  include <endian.h>
-#  include <stdint.h>
 
 
 /* ... for OSX */
 #elif defined(__APPLE__)
-#  include <stdint.h>
 #  include <libkern/OSByteOrder.h>
 #  define htole64(x) OSSwapHostToLittleInt64(x)
 #  define le64toh(x) OSSwapLittleToHostInt64(x)
@@ -57,7 +60,6 @@ nswamy, protz, taramana 5-Feb-2020
 #elif defined(_MSC_VER)
 
 #  include <stdlib.h>
-#  include "stdint.h"
 
 #  define htobe16(x) _byteswap_ushort(x)
 #  define htole16(x) (x)
@@ -78,7 +80,6 @@ nswamy, protz, taramana 5-Feb-2020
 #elif (defined(_WIN32) || defined(_WIN64)) &&                                  \
     (defined(__GNUC__) || defined(__clang__))
 
-#  include <stdint.h>
 #  define htobe16(x) __builtin_bswap16(x)
 #  define htole16(x) (x)
 #  define be16toh(x) __builtin_bswap16(x)

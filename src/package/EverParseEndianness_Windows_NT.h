@@ -26,12 +26,13 @@ nswamy, protz, taramana 5-Feb-2020
  *****************************************************************************/
 
 #include <string.h>
-#include <stdbool.h>
 
 /* ... for Windows (MSVC)... not targeting XBOX 360! */
 
 #  include <stdlib.h>
-#  include "stdint.h"
+#  include <stdint.h>
+
+#  include <windef.h>
 
 #  define htobe16(x) _byteswap_ushort(x)
 #  define htole16(x) (x)
