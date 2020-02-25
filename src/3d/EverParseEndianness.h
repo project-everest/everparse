@@ -33,6 +33,8 @@ typedef uint8_t BOOLEAN;
 #define FALSE 0
 #define TRUE 1
 
+typedef char * const EverParseString;
+
 /* ... for Linux */
 #if defined(__linux__) || defined(__CYGWIN__) || defined (__USE_SYSTEM_ENDIAN_H__)
 #  include <endian.h>
