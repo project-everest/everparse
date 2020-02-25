@@ -48,9 +48,8 @@ Then, EverParse produces, in the current directory:
 * MyFormatWrappers.h and MyFormatWrappers.c, a cleaner interface for
   integration with any existing outside code.
 
-* EverParse.h (EverParse-specific helpers), EverParseError.h (error
-  reporting) and EverParseEndianness.h (reading integers from their
-  byte representations).
+* EverParse.h (EverParse-specific helpers) and EverParseEndianness.h
+  (reading integers from their byte representations).
 
 
 COLOPHON
