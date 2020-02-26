@@ -2244,6 +2244,31 @@ let validator (#k: parser_kind) (#t: Type) (p: parser k t) : Tot Type =
       (~ (valid p h sl (uint64_to_uint32 pos)))
   )))
 
+[@unifier_hint_injective]
+inline_for_extraction
+let validator_no_read (#k: parser_kind) (#t: Type) (p: parser k t) : Tot Type =
+  (#rrel: _) -> (#rel: _) ->
+  (sl: Ghost.erased (slice rrel rel)) ->
+  (len: U32.t { len == (Ghost.reveal sl).len }) ->
+  (pos: U64.t) ->
+  HST.Stack U64.t
+  (requires (fun h -> live_slice h sl /\ U64.v pos <= U32.v sl.len))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\ (
+    if is_success res
+    then
+      valid_pos p h sl (uint64_to_uint32 pos) (uint64_to_uint32 res)
+    else
+      (~ (valid p h sl (uint64_to_uint32 pos)))
+  )))
+
+inline_for_extraction
+let validate_no_read
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (v: validator_no_read p)
+: Tot (validator p)
+= fun #rrel #rel sl pos -> v (Ghost.hide sl) sl.len pos
+
 noextract
 inline_for_extraction
 let comment (s: string) : HST.Stack unit
@@ -2359,6 +2384,26 @@ let valid_total_constant_size
   valid_facts p h input pos
 
 inline_for_extraction
+let validate_total_constant_size_no_read
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (sz: U64.t)
+  (u: unit {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == U64.v sz /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal
+  })
+: Tot (validator_no_read p)
+= fun #rrel #rel (input: Ghost.erased (slice rrel rel)) len pos ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_total_constant_size h p (U64.v sz) input (uint64_to_uint32 pos) in
+  if U64.lt (Cast.uint32_to_uint64 len `U64.sub` pos) sz
+  then validator_error_not_enough_data
+  else
+    (pos `U64.add` sz)
+
+inline_for_extraction
 let validate_total_constant_size
   (#k: parser_kind)
   (#t: Type0)
@@ -2370,13 +2415,7 @@ let validate_total_constant_size
     k.parser_kind_metadata == Some ParserKindMetadataTotal
   })
 : Tot (validator p)
-= fun #rrel #rel (input: slice rrel rel) pos ->
-  let h = HST.get () in
-  [@inline_let] let _ = valid_total_constant_size h p (U64.v sz) input (uint64_to_uint32 pos) in
-  if U64.lt (Cast.uint32_to_uint64 input.len `U64.sub` pos) sz
-  then validator_error_not_enough_data
-  else
-    (pos `U64.add` sz)
+= validate_no_read (validate_total_constant_size_no_read p sz u)
 
 inline_for_extraction
 let validate_total_constant_size_with_error_code
