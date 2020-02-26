@@ -11,7 +11,7 @@ FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(addprefix --include , $(INCLUDES)) --odir ou
 KREMLIN = $(KREMLIN_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -tmpdir out \
-	 -bundle 'ResultOps=Prims,C.*,FStar.*,LowStar.*,LowParse.*,Prelude,Prelude.*,Actions[rename=EverParse,rename-prefix]' \
+	 -bundle 'ResultOps=Prims,C.*,FStar.*,LowStar.*,LowParse.*,Prelude,Prelude.*,EverParse3d.*,Actions[rename=EverParse,rename-prefix]' \
 	 $(HEADERS) \
 	 $(KRML_FLAGS) \
 	 -warn-error -9 \

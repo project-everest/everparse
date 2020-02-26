@@ -204,6 +204,11 @@ let validator #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
   : Type
   = LPL.validator #k #t p
 
+inline_for_extraction noextract
+let validator_no_read #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
+  : Type
+  = LPL.validator_no_read #k #t p
+
 [@ CMacro ]
 let validator_error_impossible : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 3uL)
 
@@ -245,7 +250,7 @@ let parse_nlist_total_fixed_size_kind_correct
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size_mod_ok (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
-  : Pure (validator (parse_nlist n p))
+  : Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in
     k.parser_kind_subkind == Some ParserStrong /\
@@ -256,7 +261,7 @@ let validate_nlist_total_constant_size_mod_ok (n:U32.t) (#k:parser_kind true) #t
   ))
   (ensures (fun _ -> True))
 = 
-      (fun #rrel #rel sl pos ->
+      (fun #rrel #rel sl len pos ->
          let h = FStar.HyperStack.ST.get () in
          [@inline_let]
          let _ =
@@ -264,7 +269,7 @@ let validate_nlist_total_constant_size_mod_ok (n:U32.t) (#k:parser_kind true) #t
            LPL.valid_facts (parse_nlist n p) h sl (LPL.uint64_to_uint32 pos);
            LPL.valid_facts (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) h sl (LPL.uint64_to_uint32 pos)
          in
-         LPL.validate_total_constant_size (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) (FStar.Int.Cast.uint32_to_uint64 n) () sl pos
+         LPL.validate_total_constant_size_no_read (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) (FStar.Int.Cast.uint32_to_uint64 n) () sl len pos
       )
 
 [@ CMacro ]
@@ -272,7 +277,7 @@ let validator_error_list_size_not_multiple : LPL.validator_error = normalize_ter
 
 inline_for_extraction noextract
 let validate_nlist_constant_size_mod_ko (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
-  : Pure (validator (parse_nlist n p))
+  : Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in
     k.parser_kind_subkind == Some ParserStrong /\
@@ -281,7 +286,7 @@ let validate_nlist_constant_size_mod_ko (n:U32.t) (#k:parser_kind true) #t (p:pa
   ))
   (ensures (fun _ -> True))
 = 
-  (fun #rrel #rel sl pos ->
+  (fun #rrel #rel sl len pos ->
      let h = FStar.HyperStack.ST.get () in
      [@inline_let]
      let _ =
@@ -306,7 +311,7 @@ let validate_nlist_constant_size_mod_ko (n:U32.t) (#k:parser_kind true) #t (p:pa
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size' (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
-  : Pure (validator (parse_nlist n p))
+  : Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in
     k.parser_kind_subkind == Some ParserStrong /\
@@ -315,14 +320,14 @@ let validate_nlist_total_constant_size' (n:U32.t) (#k:parser_kind true) #t (p:pa
     k.parser_kind_low < 4294967296
   ))
   (ensures (fun _ -> True))
-= fun #rrel #rel sl pos ->
+= fun #rrel #rel sl len pos ->
   if n `U32.rem` U32.uint_to_t k.LP.parser_kind_low = 0ul
-  then validate_nlist_total_constant_size_mod_ok n p sl pos
-  else validate_nlist_constant_size_mod_ko n p sl pos
+  then validate_nlist_total_constant_size_mod_ok n p sl len pos
+  else validate_nlist_constant_size_mod_ko n p sl len pos
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
-: Pure (validator (parse_nlist n p))
+: Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in
     k.parser_kind_subkind = Some ParserStrong /\

@@ -14,7 +14,7 @@
    limitations under the License.
 *)
 module Actions
-module LPL = LowParse.Low.Base
+module LPL = EverParse3d.InputBuffer
 module Cast = FStar.Int.Cast
 module HS = FStar.HyperStack
 open FStar.HyperStack.ST
@@ -27,7 +27,7 @@ module U64 = FStar.UInt64
 module HST = FStar.HyperStack.ST
 
 let triv = B.trivial_preorder LowParse.Bytes.byte
-let input_buffer_t = LPL.slice triv triv
+let input_buffer_t = LPL.input_buffer_t
 
 let hinv = HS.mem -> Type
 let extends h1 h0 = forall #a #r #s (b:mbuffer a r s). {:pattern live h1 b} live h0 b ==> live h1 b
@@ -40,7 +40,7 @@ let mem_inv  = liveness_inv
 let slice_inv =  mbuffer LPL.byte triv triv -> mem_inv
 let inv_implies (inv0 inv1:slice_inv) =
   forall (i:input_buffer_t) h.
-    inv0 i.LPL.base h ==> inv1 i.LPL.base h
+    inv0 (LPL.slice_of i).LPL.base h ==> inv1 (LPL.slice_of i).LPL.base h
 let true_inv : slice_inv = fun _ _ -> True
 let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h
 let eloc = FStar.Ghost.erased B.loc
@@ -111,7 +111,7 @@ val validate_with_success_action
       (#l2:eloc)
       (#b:bool)
       (a:action p1 inv2 l2 b bool)
-  : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
+  : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) allow_reading
 
 inline_for_extraction noextract
 val validate_with_error_action
@@ -127,7 +127,7 @@ val validate_with_error_action
       (#inv2:_)
       (#l2:eloc)
       (a:action p1 inv2 l2 false bool)
-  : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
+  : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) allow_reading
 
 inline_for_extraction noextract
 val validate_ret
@@ -140,7 +140,7 @@ val validate_pair
        (#inv1:_) (#l1:eloc) (#allow_reading1:bool) (v1:validate_with_action_t p1 inv1 l1 allow_reading1)
        (#nz2:_) (#k2:parser_kind nz2) (#t2:_) (#p2:parser k2 t2)
        (#inv2:_) (#l2:eloc) (#allow_reading2:bool) (v2:validate_with_action_t p2 inv2 l2 allow_reading2)
-  : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
+  : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) (allow_reading1 && allow_reading2)
 
 inline_for_extraction noextract
 val validate_dep_pair
@@ -281,7 +281,7 @@ val validate_nlist_constant_size_without_actions
 noextract inline_for_extraction
 val validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
-  : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
+  : Tot (validate_with_action_t (parse_t_at_most n p) inv l ar)
 
 inline_for_extraction noextract
 val validate_with_comment (c:string)
@@ -410,7 +410,7 @@ noextract
 inline_for_extraction
 val action_field_ptr
       (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t) (u:unit)
-   : action p true_inv eloc_none true (B.buffer LowParse.Bytes.byte)
+   : action p true_inv eloc_none true LPL.puint8
 
 noextract
 inline_for_extraction
