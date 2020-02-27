@@ -55,7 +55,7 @@ platform=$(uname --machine)
 
     # Verify if F* and KReMLin are here
     if [[ -z "$FSTAR_HOME" ]] ; then
-        git clone --branch nik_rename_let https://github.com/FStarLang/FStar &&
+        git clone https://github.com/FStarLang/FStar &&
         export FSTAR_HOME=$(cygpath -m $PWD/FStar)
     else
         export FSTAR_HOME=$(cygpath -m "$FSTAR_HOME")
