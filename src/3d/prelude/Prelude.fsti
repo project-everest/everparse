@@ -142,6 +142,20 @@ val parse_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (p:parser k t)
   : Tot (parser kind_t_at_most (t_at_most n t))
 
 ////////////////////////////////////////////////////////////////////////////////
+// Variable-sized element whose size in bytes is exactly n
+////////////////////////////////////////////////////////////////////////////////
+val t_exact (n:U32.t) (t:Type0) : Type0
+
+/// Lists/arrays
+inline_for_extraction
+noextract
+val kind_t_exact : parser_kind false
+
+inline_for_extraction noextract
+val parse_t_exact (n:U32.t) (#k:parser_kind true) (#t:_) (p:parser k t)
+  : Tot (parser kind_t_exact (t_exact n t))
+
+////////////////////////////////////////////////////////////////////////////////
 // Readers
 ////////////////////////////////////////////////////////////////////////////////
 

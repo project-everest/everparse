@@ -182,6 +182,22 @@ let parse_t_at_most (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
             kind_t_at_most
 
 ////////////////////////////////////////////////////////////////////////////////
+let t_exact (n:U32.t) (t:Type) = t
+let kind_t_exact : parser_kind false = kind_nlist
+inline_for_extraction noextract
+let parse_t_exact (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
+  : Tot (parser kind_t_exact (t_exact n t))
+  = let open LowParse.Spec.FLData in
+    let open LowParse.Spec.List in
+    parse_weaken
+            #false 
+            (LowParse.Spec.FLData.parse_fldata 
+                p
+                (U32.v n))
+            #false
+            kind_t_exact
+
+////////////////////////////////////////////////////////////////////////////////
 // Readers
 ////////////////////////////////////////////////////////////////////////////////
 

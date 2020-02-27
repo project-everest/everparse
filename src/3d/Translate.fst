@@ -112,6 +112,10 @@ let pk_t_at_most = T.({
   pk_kind = PK_t_at_most;
   pk_nz = false
 })
+let pk_t_exact = T.({
+  pk_kind = PK_t_exact;
+  pk_nz = false
+})
 let pk_filter k = T.({
   pk_kind = PK_filter k;
   pk_nz = k.pk_nz
@@ -297,6 +301,12 @@ let rec parse_typ (env:global_env) (name: A.ident) (t:T.typ) : ML T.parser =
               t
               (T.Parse_t_at_most e pt)
 
+  | T.T_app {v="t_exact"} [Inr e; Inl t] ->
+    let pt = parse_typ env name t in
+    mk_parser pk_t_exact
+              t
+              (T.Parse_t_exact e pt)
+
   | T.T_app hd args ->
     mk_parser (pk_base hd (parser_kind_nz env hd)) t (T.Parse_app hd args)
 
@@ -448,6 +458,7 @@ let rec parser_is_constant_size_without_actions
       then parser_is_constant_size_without_actions env parse_value
       else false
   | T.Parse_t_at_most _ _
+  | T.Parse_t_exact _ _  
   | T.Parse_dep_pair_with_action _ _ _
   | T.Parse_dep_pair_with_refinement_and_action _ _ _ _ _ _
   | T.Parse_refinement_with_action _ _ _ _
@@ -481,7 +492,10 @@ let rec make_validator (env:global_env) (p:T.parser) : ML T.validator =
 
   | Parse_t_at_most n p ->
     pv false p (Validate_t_at_most n (make_validator env p))  
-    
+
+  | Parse_t_exact n p ->
+    pv false p (Validate_t_exact n (make_validator env p))  
+
   | Parse_return e ->
     pv true p Validate_return
 
@@ -599,6 +613,9 @@ let translate_field (f:A.field) : ML T.struct_field =
         | Some (e, VariableSizeLeq) ->
           let e = translate_expr e in
           T.T_app (with_range "t_at_most" sf.field_type.range) [Inr e; Inl t]
+        | Some (e, SingleElementVariableSizeEq) ->
+          let e = translate_expr e in
+          T.T_app (with_range "t_exact" sf.field_type.range) [Inr e; Inl t]
     in
     let t =
       match sf.field_constraint with
