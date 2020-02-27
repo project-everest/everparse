@@ -258,13 +258,15 @@ val unreadable_prop
   (ensures (unreadable h p from to))
   [SMTPat (readable h p from to)]
 
+val model : FStar.Ghost.erased bool
+
 val readable_not_unreadable
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
   (from: U32.t)
   (to: U32.t { U32.v from < (* important: not equal *) U32.v to /\ U32.v to <= B.length b })
 : Lemma
-  (~ (readable h p from to /\ unreadable h p from to))
+  (FStar.Ghost.reveal model ==> (~ (readable h p from to /\ unreadable h p from to)))
 
 val unreadable_gsub
   (h: HS.mem)
