@@ -199,6 +199,7 @@ let translate_op : A.op -> ML T.op = function
   | BitFieldOf i -> T.BitFieldOf i
   | IfThenElse -> T.IfThenElse
   | Cast (Some from) to -> T.Cast from to
+  | Ext s -> T.Ext s
   | op -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
                                   (Ast.print_op op))
 
@@ -967,7 +968,7 @@ let hoist_refinements (genv:global_env) (tdn:T.typedef_name) (fields:list T.fiel
         let open T in
         let (env, decls, fields) = edf in
         let decls', f = hoist_field genv env tdn f in
-        let env =
+        let env = 
           if f.sf_dependence
           then (f.sf_ident, f.sf_typ)::env
           else env

@@ -97,12 +97,20 @@ type decl_attributes = {
   parser_kind_nz:option bool
 }
 
+noeq
+type macro_signature = {
+  macro_arguments_t: list typ;
+  macro_result_t: typ
+}
+
+let nullary_macro t = { macro_arguments_t = []; macro_result_t = t }
+
 (* Type-checking environments *)
 
 /// global_env maps top-level identifiers to their corresponding declaration
 ///  -- maps type identifiers to decl_attributes
 ///  -- maps macro names to their types
-let global_env = H.t ident' (decl & either decl_attributes typ)
+let global_env = H.t ident' (decl & either decl_attributes macro_signature)
 
 /// Maps locally bound names, i.e., a field name to its type
 ///  -- the bool signifies that this identifier has been used, and is
@@ -165,7 +173,7 @@ let format_identifier (e:env) (i:ident) : ML ident =
        i.v j.v in
     error msg i.range
 
-let add_global (e:global_env) (i:ident) (d:decl) (t:either decl_attributes typ) : ML unit =
+let add_global (e:global_env) (i:ident) (d:decl) (t:either decl_attributes macro_signature) : ML unit =
   check_shadow e i d.range;
   let env = mk_env e in
   let i' = format_identifier env i in
@@ -189,7 +197,7 @@ let add_local (e:env) (i:ident) (t:typ) : ML unit =
   H.insert e.locals i.v (i'.v, t, false);
   H.insert e.locals i'.v (i'.v, t, false)
 
-let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes typ)) =
+let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes macro_signature)) =
   match H.try_find e.locals i.v with
   | Some (_, t, true) ->
     Inl t
@@ -219,9 +227,14 @@ let resolve_typedef_abbrev (env:env) (i:ident) =
 let lookup_expr_name (e:env) (i:ident) : ML typ =
   match lookup e i with
   | Inl t -> t
-  | Inr (_, Inr t) -> t
+  | Inr (_, Inr ({ macro_arguments_t=[]; macro_result_t=t })) -> t
   | Inr _ ->
     error (Printf.sprintf "Variable %s is not an expression identifier" i.v) i.range
+
+let lookup_macro_name (e:env) (i:ident) : ML macro_signature =
+  match lookup e i with
+  | Inr (_, Inr m) -> m
+  | _ -> error (Printf.sprintf "%s is an unknown operator" i.v) i.range
 
 let try_lookup_enum_cases (e:env) (i:ident)
   : ML (option (list ident & typ))
@@ -473,6 +486,27 @@ and check_expr (env:env) (e:expr)
       | _ ->
         error "`sizeof` applied to a non-sized-typed" r
       end
+
+    | App (Ext s) es ->
+      let m = lookup_macro_name env (with_range s e.range) in
+      let n_formals = List.length m.macro_arguments_t in
+      let n_actuals = List.length es in
+      if n_formals <> n_actuals
+      then error (Printf.sprintf "%s expects %d arguments; got %d" s n_formals n_actuals) e.range;
+      let check_arg e t : ML expr =
+        let e, t' = check_expr env e in
+        if not (eq_typ env t t')
+        then error
+               (Printf.sprintf
+                  "%s expected argument of type %s; \
+                  got argument %s of type %s"
+                  s (print_typ t) (print_expr e) (print_typ t))
+               e.range;
+        e
+      in
+      let es = List.map2 check_arg es m.macro_arguments_t in
+      with_range (App (Ext s) es) e.range,
+      m.macro_result_t
 
     | App op es ->
       let ets = List.map (check_expr env) es in
@@ -981,11 +1015,15 @@ let elaborate_record (e:global_env)
     let fields = fields |> List.map (check_field env true) in
 
     (* Infer which of the fields are dependent by seeing which of them are used in refinements *)
-    let fields = fields |> List.map (fun f ->
+    let nfields = List.length fields in
+    let fields = fields |> List.mapi (fun i f ->
       let sf = f.v in
+      let used = is_used env sf.field_ident in
+      let last_field = i = (nfields - 1) in
+      let dependent = used || (Some? sf.field_constraint && not last_field) in
       let f =
         with_range_and_comments
-          ({ sf with field_dependence = is_used env sf.field_ident })
+          ({ sf with field_dependence = dependent })
           f.range
           f.comments
       in
@@ -1051,7 +1089,7 @@ let elaborate_record (e:global_env)
 let bind_decl (e:global_env) (d:decl) : ML decl =
   match d.v with
   | Define i None c ->
-    add_global e i d (Inr (type_of_constant c));
+    add_global e i d (Inr (nullary_macro (type_of_constant c)));
     d
 
   | Define i (Some t) c ->
@@ -1059,7 +1097,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     check_typ false env t;
     let t' = type_of_constant c in
     if eq_typ env t t'
-    then (add_global e i d (Inr (type_of_constant c)); d)
+    then (add_global e i d (Inr (nullary_macro (type_of_constant c))); d)
     else error "Ill-typed constant" d.range
 
   | TypeAbbrev t i ->
@@ -1125,16 +1163,24 @@ let initial_global_env () =
     in
     with_dummy_range (Record td_name [] None [])
   in
-  [ ("unit",    { size = 0; has_suffix = false; may_fail = false; integral = false; has_reader = true; parser_kind_nz=Some false});
-    ("Bool",    { size = 1; has_suffix = false; may_fail = true;  integral = false; has_reader = true; parser_kind_nz=Some true});
-    ("UINT8",   { size = 1; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true });
-    ("UINT16",  { size = 2; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true });
-    ("UINT32",  { size = 4; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true});
-    ("UINT64",  { size = 8; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true});
-    ("field_id",  { size = 4; has_suffix = false; may_fail = true;  integral = true ; has_reader = false; parser_kind_nz=Some true})]
-  |> List.iter (fun (i, attrs) ->
-    let i = with_dummy_range i in
-    add_global e i (nullary_decl i) (Inl attrs));
+  let _type_names =
+    [ ("unit",    { size = 0; has_suffix = false; may_fail = false; integral = false; has_reader = true; parser_kind_nz=Some false});
+      ("Bool",    { size = 1; has_suffix = false; may_fail = true;  integral = false; has_reader = true; parser_kind_nz=Some true});
+      ("UINT8",   { size = 1; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true });
+      ("UINT16",  { size = 2; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true });
+      ("UINT32",  { size = 4; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true});
+      ("UINT64",  { size = 8; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true});
+      ("field_id",  { size = 4; has_suffix = false; may_fail = true;  integral = true ; has_reader = false; parser_kind_nz=Some true})]
+    |> List.iter (fun (i, attrs) ->
+      let i = with_dummy_range i in
+      add_global e i (nullary_decl i) (Inl attrs))
+  in
+  let _operators =
+    [ ("is_range_okay", { macro_arguments_t=[tuint32;tuint32;tuint32]; macro_result_t=tbool}) ]
+    |> List.iter (fun (i, d) ->
+        let i = with_dummy_range i in
+        add_global e i (nullary_decl i) (Inr d))
+  in
   e
 
 let add_field_error_code_decls

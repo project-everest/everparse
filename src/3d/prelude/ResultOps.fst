@@ -11,3 +11,12 @@ let result_is_error(result:result) : bool =
   result >^ LPL.validator_max_length
 let error_kind_of_result (result:result) : U64.t =
   LowParse.Low.Base.get_validator_error_kind result
+let error_reason_of_result (code:U64.t) : string =
+  match error_kind_of_result code with
+  | 1uL -> "generic error"
+  | 2uL -> "not enough data"
+  | 3uL -> "impossible"
+  | 4uL -> "list size not multiple of element size"
+  | 5uL -> "action failed"
+  | 6uL -> "constraint failed"
+  | _ -> "unspecified"

@@ -175,6 +175,7 @@ type op =
   | BitFieldOf of int //BitFieldOf_n(i, from, to); the integer is the size of i in bits
   | SizeOf
   | Cast : from:option integer_type -> to:integer_type -> op
+  | Ext of string
   //OffsetOf ?
 
 /// Expressions used in refinements
@@ -440,6 +441,7 @@ let print_op = function
   | BitFieldOf i -> Printf.sprintf "bitfield_of(%d)" i
   | SizeOf -> "sizeof"
   | Cast _ t -> "(" ^ print_integer_type t ^ ")"
+  | Ext s -> s
 
 let rec print_expr (e:expr) : Tot string =
   match e.v with
@@ -475,6 +477,8 @@ let rec print_expr (e:expr) : Tot string =
     Printf.sprintf "(sizeof %s)" (print_expr e1)
   | App (Cast i j) [e] ->
     Printf.sprintf "%s %s" (print_op (Cast i j)) (print_expr e)
+  | App (Ext s) es ->
+    Printf.sprintf "%s(%s)" (print_op (Ext s)) (String.concat ", " (print_exprs es))
   | App op es ->
     Printf.sprintf "(?? %s %s)" (print_op op) (String.concat ", " (print_exprs es))
 

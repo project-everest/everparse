@@ -229,5 +229,4 @@ let decl = decl' * decl_attributes
 val print_typ (t:typ) : Tot string (decreases t)
 val print_decls (ds:list decl) : ML string
 val print_decls_signature (ds:list decl) : ML string
-val print_error_map (_:unit) : ML (string & string & string)
 val print_c_entry (ds:list decl) : ML (string & string)

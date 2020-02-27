@@ -64,8 +64,6 @@ set DDD_HOME=%mypath%\src\3d
 @if errorlevel 1 goto runerror
 copy %mypath%\src\3d\.clang-format .
 @if errorlevel 1 goto runerror
-copy %mypath%\include\EverParseError.h .
-@if errorlevel 1 goto runerror
 copy %mypath%\include\EverParseEndianness.h .
 %krml% -skip-compilation -bundle ResultOps=Prims,C.\*,FStar.\*,LowStar.\*,LowParse.\*,Prelude,Prelude.\*,Actions[rename=EverParse,rename-prefix] -warn-error -9 -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -header %DDD_HOME%\noheader.txt -minimal -add-include EverParse:"EverParseEndianness.h" -static-header Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps -no-prefix LowParse.Slice -no-prefix LowParse.Low.BoundedInt %DDD_HOME%\*.krml *.krml
 @if errorlevel 1 goto runerror

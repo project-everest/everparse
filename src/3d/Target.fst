@@ -606,21 +606,8 @@ let print_decls_signature (ds:list decl) =
   // in
   decls // ^ "\n" ^ dummy
 
-let print_error_map () : ML (string & string & string) =
+let print_error_map () : ML (string & string) =
   let errs = Binding.all_nums() in
-  let error_reasons =
-    "static char* ErrorReasonOfResult (uint64_t code) {\n\t\
-      switch (EverParseErrorKindOfResult(code)) {\n\t\t\
-        case 1: return \"generic error\";\n\t\t\
-        case 2: return \"not enough data\";\n\t\t\
-        case 3: return \"impossible\";\n\t\t\
-        case 4: return \"list size not multiple of element size\";\n\t\t\
-        case 5: return \"action failed\";\n\t\t\
-        case 6: return \"constraint failed\";\n\t\t\
-        default: return \"unspecified\";\n\t\
-      }\n\
-     }"
-  in
   let struct_names =
     List.map
     (fun (kis: (A.field_num * option A.ident * string)) ->
@@ -642,16 +629,16 @@ let print_error_map () : ML (string & string & string) =
  in
  let print_switch fname cases =
    Printf.sprintf
-     "static char* %s(uint64_t err) {\n\t\
+     "static char* %s%s(uint64_t err) {\n\t\
         switch (EverParseFieldIdOfResult(err)) {\n\t\t\
           %s \n\t\t\
           default: return \"\";\n\t\
        }\n\
       }\n"
+      (Options.get_module_name())
       fname
       (String.concat "\n\t\t" cases)
  in
- error_reasons,
  print_switch "StructNameOfErr" struct_names,
  print_switch "FieldNameOfErr" field_names
 
@@ -703,7 +690,7 @@ let pascal_case name : ML string =
   else String.uppercase (String.sub name 0 1) ^ String.sub name 1 (String.length name - 1)
 
 let print_c_entry (ds:list decl) : ML (string & string) =
-  let error_reasons, struct_name_map, field_name_map = print_error_map() in
+  let struct_name_map, field_name_map = print_error_map() in
 
   let print_one_validator (d:type_decl) : ML (string & string) =
     let print_params (ps:list param) : Tot string =
@@ -725,7 +712,7 @@ let print_c_entry (ds:list decl) : ML (string & string) =
       |> pascal_case
     in
     let signature =
-      Printf.sprintf "bool %s(%suint8_t *base, uint32_t len)"
+      Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
        wrapper_name
        (print_params d.decl_name.td_params)
     in
@@ -743,17 +730,20 @@ let print_c_entry (ds:list decl) : ML (string & string) =
          s.len = len;\n\t\
          uint64_t result = %s(%s, 0);\n\t\
          if (EverParseResultIsError(result)) {\n\t\t\
-           EverParseError(\n\t\
-                  StructNameOfErr(result),\n\t\t\t\
-                  FieldNameOfErr (result),\n\t\t\t\
-                  ErrorReasonOfResult(result));\n\t\t\
-           return false;\n\t\
+           %sEverParseError(\n\t\
+                  %sStructNameOfErr(result),\n\t\t\t\
+                  %sFieldNameOfErr (result),\n\t\t\t\
+                  EverParseErrorReasonOfResult(result));\n\t\t\
+           return FALSE;\n\t\
          }\n\t\
-         return true;\n\
+         return TRUE;\n\
        }"
        signature
        validator_name
        (((List.Tot.map (fun (id, _) -> print_ident id) d.decl_name.td_params)@["s"]) |> String.concat ", ")
+       (Options.get_module_name())
+       (Options.get_module_name())
+       (Options.get_module_name())
     in
     signature ^";",
     impl
@@ -777,17 +767,20 @@ let print_c_entry (ds:list decl) : ML (string & string) =
       (Options.get_module_name())
       (signatures |> String.concat "\n\n")
   in
+  let error_callback_proto =
+    Printf.sprintf "void %sEverParseError(char *x, char *y, char *z);"
+      (Options.get_module_name())
+  in
   let impl =
     Printf.sprintf
-      "#include \"EverParseError.h\"\n\
-       #include \"EverParse.h\"\n\
+      "#include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
        %s\n\
        %s\n\
        %s\n\
        %s\n"
       (Options.get_module_name())
-       error_reasons
+      error_callback_proto
       struct_name_map
       field_name_map
       (impls |> String.concat "\n\n")
