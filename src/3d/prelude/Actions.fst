@@ -528,7 +528,7 @@ let validate_dep_pair_with_refinement_and_action
     else
       validate_dep_pair_with_refinement_and_action' name1 id1 v1 r1 f a v2
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction noextract
 let validate_dep_pair_with_action
@@ -966,37 +966,39 @@ let validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
         in
         with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
 
-#pop-options
-
 [@ CMacro ]
 let validator_error_unexpected_padding : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 7uL)
 
 noextract inline_for_extraction
 let validate_t_exact (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
-  : Tot (validate_with_action_t (parse_t_exact n p) inv l false)
+  : Tot (validate_with_action_t (parse_t_exact n p) inv l ar)
   = fun input startPosition ->
     let h = HST.get () in
     let _ =
-      LPL.valid_weaken kind_t_at_most (LowParse.Spec.FLData.parse_fldata p (U32.v n)) h input (LPL.uint64_to_uint32 startPosition);
-      LPL.valid_facts (LowParse.Spec.FLData.parse_fldata p (U32.v n)) h input (LPL.uint64_to_uint32 startPosition)
+      LPL.valid_weaken kind_t_at_most (LowParse.Spec.FLData.parse_fldata p (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition);
+      LPL.valid_facts (LowParse.Spec.FLData.parse_fldata p (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition)
     in
-    if (Cast.uint32_to_uint64 input.LPL.len `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
-    then LPL.validator_error_not_enough_data
+    if (Cast.uint32_to_uint64 (LPL.slice_length input) `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
+    then
+    with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) LPL.validator_error_not_enough_data
     else
-      [@inline_let] let input' = { LPL.base = input.LPL.base; LPL.len = LPL.uint64_to_uint32 startPosition `U32.add` n; } in
+      [@inline_let] let input' = LPL.truncate_input_buffer input (LPL.uint64_to_uint32 startPosition `U32.add` n) in
+      [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.slice_length input') (LPL.slice_length input) in
       [@inline_let] let _ =
-        LPL.valid_facts p h input' (LPL.uint64_to_uint32 startPosition)
+        LPL.valid_facts p h (LPL.slice_of input') (LPL.uint64_to_uint32 startPosition)
       in
       // FIXME: I'd need a name here
       let positionAfterContents = v input' startPosition in
       let h1 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h1 in
       if LPL.is_error positionAfterContents
-      then positionAfterContents
-      else if (LPL.uint64_to_uint32 positionAfterContents) <> input'.LPL.len
-      then validator_error_unexpected_padding
-      else startPosition `U64.add` Cast.uint32_to_uint64 n
+      then with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) positionAfterContents
+      else if (LPL.uint64_to_uint32 positionAfterContents) <> LPL.slice_length input'
+      then with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_unexpected_padding
+      else with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
+
+#pop-options
 
 inline_for_extraction noextract
 let validate_with_comment (c:string)
