@@ -19,4 +19,5 @@ let error_reason_of_result (code:U64.t) : string =
   | 4uL -> "list size not multiple of element size"
   | 5uL -> "action failed"
   | 6uL -> "constraint failed"
+  | 7uL -> "unexpected padding"
   | _ -> "unspecified"

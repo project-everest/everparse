@@ -283,6 +283,11 @@ val validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
 
+noextract inline_for_extraction
+val validate_t_exact (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
+                     (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
+  : Tot (validate_with_action_t (parse_t_exact n p) inv l false)
+
 inline_for_extraction noextract
 val validate_with_comment (c:string)
                           (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
