@@ -7,6 +7,8 @@ module U32 = FStar.UInt32
 module LPL = LowParse.Low.Base
 module R = EverParse3d.Readable
 
+inline_for_extraction
+noextract
 let triv = B.trivial_preorder LowParse.Bytes.byte
 
 inline_for_extraction

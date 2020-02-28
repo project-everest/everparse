@@ -11,10 +11,13 @@ module G = FStar.Ghost
 open LowParse.Low.Base
 
 noeq
-type input_buffer_t = {
+inline_for_extraction
+type input_buffer_t' = {
   slice: LPL.slice triv triv;
   perm: R.perm slice.LPL.base;
 }
+
+let input_buffer_t = input_buffer_t'
 
 let slice_of x = x.slice
 
