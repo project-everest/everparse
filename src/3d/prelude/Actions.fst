@@ -164,7 +164,7 @@ let validate_scrub
 
 inline_for_extraction
 noextract
-let validate_with_success_action (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
+let validate_with_success_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
                          (v1:validate_with_action_t p1 inv1 l1 ar)
                          (#inv2:_) (#l2:eloc) #b (a:action p1 inv2 l2 b bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) ar
@@ -187,8 +187,14 @@ let validate_with_success_action (name: string) #nz (#k1:parser_kind nz) #t1 (#p
     else
          pos1
 
+let validate_with_success_action
+  name
+  #nz #k1 #t1 #p1 #inv1 #l1 #ar v1
+  #inv2 #l2 #b a
+= validate_scrub (validate_with_success_action' name v1 a)
+
 inline_for_extraction noextract
-let validate_with_error_action (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
+let validate_with_error_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
                          (v1:validate_with_action_t p1 inv1 l1 ar)
                          (#inv2:_) (#l2:eloc) (a:action p1 inv2 l2 false bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) ar
@@ -206,6 +212,12 @@ let validate_with_error_action (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:
          let b = a input startPosition pos1 in
          if not b then validator_error_action_failed else pos1
 
+let validate_with_error_action
+  name
+  #nz #k1 #t1 #p1 #inv1 #l1 #ar v1
+  #inv2 #l2 a
+= validate_scrub (validate_with_error_action' name v1 a)
+
 inline_for_extraction noextract
 let validate_ret
   : validate_with_action_t (parse_ret ()) true_inv eloc_none true
@@ -217,7 +229,7 @@ let validate_ret
 #push-options "--z3rlimit 16"
 
 inline_for_extraction noextract
-let validate_pair
+let validate_pair'
        (name1: string)
        #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
        (#inv1:_) (#l1:eloc) (#ar1:_) (v1:validate_with_action_t p1 inv1 l1 ar1)
@@ -240,6 +252,12 @@ let validate_pair
       [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 pos1) (LPL.slice_length input) in
       [@inline_let] let _ = LPL.valid_facts p2 h (LPL.slice_of input) (LPL.uint64_to_uint32 pos1) in
       with_scrub_if (not (ar1 && ar2)) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 input pos1)
+
+let validate_pair
+  name1
+  #nz1 #k1 #t1 #p1 #inv1 #l1 #ar1 v1
+  #nz2 #k2 #t2 #p2 #inv2 #l2 #ar2 v2
+= validate_scrub (validate_pair' name1 v1 v2)
 
 inline_for_extraction noextract
 let validate_dep_pair
@@ -935,7 +953,7 @@ let validate_nlist_constant_size_without_actions
 #push-options "--z3rlimit 16"
 
 noextract inline_for_extraction
-let validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
+let validate_t_at_most' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_at_most n p) inv l ar)
   = fun input startPosition ->
@@ -966,11 +984,16 @@ let validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
         in
         with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
 
+let validate_t_at_most
+  n
+  #k #t #p #inv #l #ar v
+= validate_scrub (validate_t_at_most' n v)
+
 [@ CMacro ]
 let validator_error_unexpected_padding : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 7uL)
 
 noextract inline_for_extraction
-let validate_t_exact (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
+let validate_t_exact' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_exact n p) inv l ar)
   = fun input startPosition ->
@@ -999,6 +1022,11 @@ let validate_t_exact (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
       else with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
 
 #pop-options
+
+let validate_t_exact
+  n
+  #k #t #p #inv #l #ar v
+= validate_scrub (validate_t_exact' n v)
 
 inline_for_extraction noextract
 let validate_with_comment (c:string)

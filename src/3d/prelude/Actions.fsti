@@ -111,7 +111,7 @@ val validate_with_success_action
       (#l2:eloc)
       (#b:bool)
       (a:action p1 inv2 l2 b bool)
-  : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) allow_reading
+  : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
 
 inline_for_extraction noextract
 val validate_with_error_action
@@ -127,7 +127,7 @@ val validate_with_error_action
       (#inv2:_)
       (#l2:eloc)
       (a:action p1 inv2 l2 false bool)
-  : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) allow_reading
+  : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
 
 inline_for_extraction noextract
 val validate_ret
@@ -140,7 +140,7 @@ val validate_pair
        (#inv1:_) (#l1:eloc) (#allow_reading1:bool) (v1:validate_with_action_t p1 inv1 l1 allow_reading1)
        (#nz2:_) (#k2:parser_kind nz2) (#t2:_) (#p2:parser k2 t2)
        (#inv2:_) (#l2:eloc) (#allow_reading2:bool) (v2:validate_with_action_t p2 inv2 l2 allow_reading2)
-  : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) (allow_reading1 && allow_reading2)
+  : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
 
 inline_for_extraction noextract
 val validate_dep_pair
@@ -281,12 +281,12 @@ val validate_nlist_constant_size_without_actions
 noextract inline_for_extraction
 val validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
-  : Tot (validate_with_action_t (parse_t_at_most n p) inv l ar)
+  : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
 
 noextract inline_for_extraction
 val validate_t_exact (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                      (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
-  : Tot (validate_with_action_t (parse_t_exact n p) inv l ar)
+  : Tot (validate_with_action_t (parse_t_exact n p) inv l false)
 
 inline_for_extraction noextract
 val validate_with_comment (c:string)
