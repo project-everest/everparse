@@ -122,7 +122,7 @@ let validator_error_action_failed : LPL.validator_error = normalize_term (LPL.se
 
 inline_for_extraction
 noextract
-let with_scrub_if
+let with_drop_if
   (#t: Type)
   (cond: bool)
   (inv: slice_inv)
@@ -146,21 +146,21 @@ let with_scrub_if
     res == x
   ))
 = let h1 = HST.get () in
-  if cond then LPL.scrub sl from (fto x);
+  if cond then LPL.drop sl from (fto x);
   let h2 = HST.get () in
   [@inline_let] let _ = assert (h2 `extends` h1) in
   x
 
 inline_for_extraction
 noextract
-let validate_scrub
+let validate_drop
    #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t) (#inv:slice_inv) (#l:eloc) (#allow_reading:bool)
    (v: validate_with_action_t p inv l allow_reading)
 : Tot (validate_with_action_t p inv l false)
 = fun
   (input: input_buffer_t)
   (startPosition: U64.t) ->
-  with_scrub_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v input startPosition)
+  with_drop_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v input startPosition)
 
 inline_for_extraction
 noextract
@@ -181,7 +181,7 @@ let validate_with_success_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#
          let b = a input startPosition pos1 in
          if not b
          then
-           with_scrub_if (not ar) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed
+           with_drop_if (not ar) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed
          else
            pos1
     else
@@ -191,7 +191,7 @@ let validate_with_success_action
   name
   #nz #k1 #t1 #p1 #inv1 #l1 #ar v1
   #inv2 #l2 #b a
-= validate_scrub (validate_with_success_action' name v1 a)
+= validate_drop (validate_with_success_action' name v1 a)
 
 inline_for_extraction noextract
 let validate_with_error_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
@@ -216,7 +216,7 @@ let validate_with_error_action
   name
   #nz #k1 #t1 #p1 #inv1 #l1 #ar v1
   #inv2 #l2 a
-= validate_scrub (validate_with_error_action' name v1 a)
+= validate_drop (validate_with_error_action' name v1 a)
 
 inline_for_extraction noextract
 let validate_ret
@@ -246,18 +246,18 @@ let validate_pair'
     modifies_address_liveness_insensitive_unused_in h h1;
     if LPL.is_error pos1
     then begin
-      with_scrub_if (not (ar1 && ar2)) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) pos1
+      with_drop_if (not (ar1 && ar2)) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) pos1
     end
     else
       [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 pos1) (LPL.slice_length input) in
       [@inline_let] let _ = LPL.valid_facts p2 h (LPL.slice_of input) (LPL.uint64_to_uint32 pos1) in
-      with_scrub_if (not (ar1 && ar2)) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 input pos1)
+      with_drop_if (not (ar1 && ar2)) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 input pos1)
 
 let validate_pair
   name1
   #nz1 #k1 #t1 #p1 #inv1 #l1 #ar1 v1
   #nz2 #k2 #t2 #p2 #inv2 #l2 #ar2 v2
-= validate_scrub (validate_pair' name1 v1 v2)
+= validate_drop (validate_pair' name1 v1 v2)
 
 inline_for_extraction noextract
 let validate_dep_pair
@@ -275,7 +275,7 @@ let validate_dep_pair
       let h1 = HST.get() in
       if LPL.is_error pos1
       then begin
-        with_scrub_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) pos1
+        with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) pos1
       end
       else
         [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 pos1) (LPL.slice_length input) in
@@ -284,7 +284,7 @@ let validate_dep_pair
         let h15 = HST.get () in
         let _ = modifies_address_liveness_insensitive_unused_in h h15 in
         [@inline_let] let _ = LPLC.valid_facts (p2 x) h (LPL.slice_of input) (LPL.uint64_to_uint32 pos1) in
-        with_scrub_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 x input pos1)
+        with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 x input pos1)
 
 #pop-options
 
@@ -329,7 +329,7 @@ let validate_dep_pair_with_refinement_and_action'
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if LPL.is_error res
       then begin
-        with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
+        with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
       end
       else begin
         [@inline_let] let _ = R.readable_split h0 (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
@@ -341,7 +341,7 @@ let validate_dep_pair_with_refinement_and_action'
         let res1 = check_constraint_ok_with_field_id ok startPosition res id1 in
         if LPL.is_error res1
         then
-          with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
+          with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
         else let h2 = HST.get() in
              // assert (B.modifies B.loc_none h1 h2);
              // assert (inv1' input.LPL.base h2);
@@ -350,7 +350,7 @@ let validate_dep_pair_with_refinement_and_action'
              // [@(rename_let ("action_" ^ name1))]
              // let action_result =  in
              if not (a field_value input startPosition res)
-             then with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1) //action failed
+             then with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1) //action failed
              else begin
                let open LPL in
                // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
@@ -358,7 +358,7 @@ let validate_dep_pair_with_refinement_and_action'
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
                [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 (LPL.slice_of input) (LPL.uint64_to_uint32 res1) in
                [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
-               with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 field_value input res1)
+               with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 field_value input res1)
              end
         end
 
@@ -399,7 +399,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
         let res1 = check_constraint_ok_with_field_id ok startPosition startPosition id1 in
         if LPL.is_error res1
         then
-             with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
+             with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
         else let h2 = HST.get() in
              // assert (B.modifies B.loc_none h1 h2);
              // assert (inv1' input.LPL.base h2);
@@ -408,7 +408,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
              // [@(rename_let ("action_" ^ name1))]
              // let action_result =  in
              if not (a field_value input startPosition startPosition)
-             then with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1) //action failed
+             then with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1) //action failed
              else begin
                let open LPL in
                // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
@@ -416,7 +416,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
                [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 (LPL.slice_of input) (LPL.uint64_to_uint32 res1) in
                [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
-               with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 field_value input res1)
+               with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 field_value input res1)
              end
         end
 
@@ -443,7 +443,7 @@ let validate_dep_pair_with_refinement'
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if LPL.is_error res
       then begin
-        with_scrub_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
+        with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
       end
       else begin
         [@inline_let] let _ = R.readable_split h0 (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
@@ -455,7 +455,7 @@ let validate_dep_pair_with_refinement'
         let res1 = check_constraint_ok_with_field_id ok startPosition res id1 in
         if LPL.is_error res1
         then
-             with_scrub_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
+             with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
         else let h2 = HST.get() in
              // assert (B.modifies B.loc_none h1 h2);
              // assert (inv1' input.LPL.base h2);
@@ -467,7 +467,7 @@ let validate_dep_pair_with_refinement'
              let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
              [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 (LPL.slice_of input) (LPL.uint64_to_uint32 res1) in
              [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
-             with_scrub_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 field_value input res1)
+             with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 field_value input res1)
         end
 
 inline_for_extraction noextract
@@ -505,7 +505,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
         [@(rename_let ("positionOrErrorAfter" ^ name1))]
         let res1 = check_constraint_ok_with_field_id ok startPosition startPosition id1 in
         if LPL.is_error res1
-        then with_scrub_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
+        then with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
         else let h2 = HST.get() in
              // assert (B.modifies B.loc_none h1 h2);
              // assert (inv1' input.LPL.base h2);
@@ -517,7 +517,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
              let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
              [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 (LPL.slice_of input) (LPL.uint64_to_uint32 res1) in
              [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
-             with_scrub_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 field_value input res1)
+             with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 field_value input res1)
         end
 
 #pop-options
@@ -567,7 +567,7 @@ let validate_dep_pair_with_action
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if LPL.is_error res
       then begin
-        with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
+        with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
       end
       else begin
         [@inline_let] let _ = R.readable_split h0 (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
@@ -576,13 +576,13 @@ let validate_dep_pair_with_action
         modifies_address_liveness_insensitive_unused_in h1 h2;
         let action_result = a field_value input startPosition res in
         if not action_result
-        then with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed //action failed
+        then with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed //action failed
         else begin
                let open LPL in
                let h15 = HST.get () in
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
                [@inline_let] let _ = LPLC.valid_dtuple2 h0 p1 p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
-               with_scrub_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 field_value input res)
+               with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 field_value input res)
              end
       end
 
@@ -623,7 +623,7 @@ let validate_filter' (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k 
     let res = v input startPosition in
     let h1 = HST.get () in
     if LPL.is_error res
-    then with_scrub_if true inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
+    then with_drop_if true inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
     else begin
       LowStar.Comment.comment cr;
       [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
@@ -633,7 +633,7 @@ let validate_filter' (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k 
       [@(rename_let (name ^ "ConstraintIsOk"))]
       let ok = f field_value in
       LowStar.Comment.comment (normalize_term ("end: " ^ cf));
-      with_scrub_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (check_constraint_ok ok res)
+      with_drop_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (check_constraint_ok ok res)
     end
 
 inline_for_extraction noextract
@@ -657,7 +657,7 @@ let validate_filter'_with_action
     let res = v input startPosition in
     let h1 = HST.get () in
     if LPL.is_error res
-    then with_scrub_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
+    then with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
     else begin
       LowStar.Comment.comment cr;
       [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
@@ -672,8 +672,8 @@ let validate_filter'_with_action
              let _ = modifies_address_liveness_insensitive_unused_in h h15 in
              if a field_value input startPosition res
              then res
-             else with_scrub_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed
-      else with_scrub_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_constraint_failed
+             else with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed
+      else with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_constraint_failed
     end
 
 inline_for_extraction noextract
@@ -699,7 +699,7 @@ let validate_with_dep_action
     let res = v input startPosition in
     let h1 = HST.get () in
     if LPL.is_error res
-    then with_scrub_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
+    then with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
     else begin
       [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
       [@(rename_let ("" ^ name))]
@@ -708,7 +708,7 @@ let validate_with_dep_action
       let _ = modifies_address_liveness_insensitive_unused_in h h15 in
       if a field_value input startPosition res
       then res
-      else with_scrub_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed
+      else with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed
     end
 
 inline_for_extraction noextract
@@ -772,7 +772,7 @@ let validate_ite #nz (#k:parser_kind nz) (#a:Type) (#b:Type)
                  (p2:squash (not e) -> parser k b) (v2:(squash (not e) -> validate_with_action_t (p2()) inv2 l2 ar2))
   : Tot (validate_with_action_t (parse_ite e p1 p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false)
   = fun (input:input_buffer_t) startPosition ->
-      if e then validate_scrub (v1 ()) input startPosition else validate_scrub (v2 ()) input startPosition
+      if e then validate_drop (v1 ()) input startPosition else validate_drop (v2 ()) input startPosition
 
 unfold
 let validate_list_inv
@@ -916,12 +916,12 @@ let validate_nlist
   LPL.valid_facts (parse_nlist n p) h (LPL.slice_of input) (LPL.uint64_to_uint32 pos);
   LPLF.parse_fldata_consumes_all_correct (LPLL.parse_list p) (U32.v n) (LPL.bytes_of_slice_from h (LPL.slice_of input) (LPL.uint64_to_uint32 pos));
   if (Cast.uint32_to_uint64 (LPL.slice_length input) `U64.sub` pos) `U64.lt` Cast.uint32_to_uint64 n
-  then with_scrub_if true inv input (LPL.uint64_to_uint32 pos) (fun _ -> LPL.slice_length input) LPL.validator_error_not_enough_data
+  then with_drop_if true inv input (LPL.uint64_to_uint32 pos) (fun _ -> LPL.slice_length input) LPL.validator_error_not_enough_data
   else begin
     let listInput = LPL.truncate_input_buffer input (LPL.uint64_to_uint32 pos `U32.add` n) in
     LPL.valid_exact_equiv (LPLL.parse_list p) h (LPL.slice_of listInput) (LPL.uint64_to_uint32 pos) (LPL.uint64_to_uint32 pos `U32.add` n);
     R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 pos) (LPL.slice_length listInput) (LPL.slice_length input);
-    with_scrub_if true inv input (LPL.uint64_to_uint32 pos) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (validate_list' n v listInput pos)
+    with_drop_if true inv input (LPL.uint64_to_uint32 pos) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (validate_list' n v listInput pos)
   end
 
 noextract
@@ -945,7 +945,7 @@ let validate_nlist_constant_size_without_actions
       let h = HST.get () in
       assert (forall h' . {:pattern (B.modifies B.loc_none h h')} (B.modifies B.loc_none h h' /\ inv (LPL.slice_of input).LPL.base h) ==> h' `extends` h);
       assert (forall h' . {:pattern (B.modifies B.loc_none h h')} (B.modifies B.loc_none h h' /\ inv (LPL.slice_of input).LPL.base h) ==> inv (LPL.slice_of input).LPL.base h');
-      with_scrub_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (validate_nlist_total_constant_size n_is_const n p (FStar.Ghost.elift1 LPL.slice_of input) (LPL.slice_length input) startPosition)
+      with_drop_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (validate_nlist_total_constant_size n_is_const n p (FStar.Ghost.elift1 LPL.slice_of input) (LPL.slice_length input) startPosition)
     )
   else
     validate_nlist n v
@@ -964,7 +964,7 @@ let validate_t_at_most' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
     in
     if (Cast.uint32_to_uint64 (LPL.slice_length input) `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
     then
-      with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input)  LPL.validator_error_not_enough_data
+      with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input)  LPL.validator_error_not_enough_data
     else
       [@inline_let] let input' = LPL.truncate_input_buffer input (LPL.uint64_to_uint32 startPosition `U32.add` n) in
       [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.slice_length input') (LPL.slice_length input) in
@@ -977,17 +977,17 @@ let validate_t_at_most' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
       let h1 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h1 in
       if LPL.is_error positionAfterContents
-      then with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) positionAfterContents
+      then with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) positionAfterContents
       else
         [@inline_let] let _ =
           LPL.valid_facts LowParse.Spec.Bytes.parse_all_bytes h (LPL.slice_of input') (LPL.uint64_to_uint32 positionAfterContents)
         in
-        with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
+        with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
 
 let validate_t_at_most
   n
   #k #t #p #inv #l #ar v
-= validate_scrub (validate_t_at_most' n v)
+= validate_drop (validate_t_at_most' n v)
 
 [@ CMacro ]
 let validator_error_unexpected_padding : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 7uL)
@@ -1004,7 +1004,7 @@ let validate_t_exact' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
     in
     if (Cast.uint32_to_uint64 (LPL.slice_length input) `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
     then
-    with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) LPL.validator_error_not_enough_data
+    with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) LPL.validator_error_not_enough_data
     else
       [@inline_let] let input' = LPL.truncate_input_buffer input (LPL.uint64_to_uint32 startPosition `U32.add` n) in
       [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.slice_length input') (LPL.slice_length input) in
@@ -1016,17 +1016,17 @@ let validate_t_exact' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
       let h1 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h1 in
       if LPL.is_error positionAfterContents
-      then with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) positionAfterContents
+      then with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) positionAfterContents
       else if (LPL.uint64_to_uint32 positionAfterContents) <> LPL.slice_length input'
-      then with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_unexpected_padding
-      else with_scrub_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
+      then with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_unexpected_padding
+      else with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
 
 #pop-options
 
 let validate_t_exact
   n
   #k #t #p #inv #l #ar v
-= validate_scrub (validate_t_exact' n v)
+= validate_drop (validate_t_exact' n v)
 
 inline_for_extraction noextract
 let validate_with_comment (c:string)

@@ -94,5 +94,5 @@ let unreadable_empty h #t #b p i = ()
 
 let unreadable_frame h #t #b p from to l h' = ()
 
-let scrub #t #b p from to =
+let drop #t #b p from to =
   if F.model then B.fill (B.sub (p <: perm' b) from (to `U32.sub` from)) (G.hide false) (to `U32.sub` from) else ()

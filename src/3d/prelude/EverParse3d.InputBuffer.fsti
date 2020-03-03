@@ -59,7 +59,7 @@ val truncate_input_buffer
 
 inline_for_extraction
 noextract
-val scrub
+val drop
   (sl: input_buffer_t)
   (from: U32.t)
   (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= U32.v (slice_of sl).LPL.len })

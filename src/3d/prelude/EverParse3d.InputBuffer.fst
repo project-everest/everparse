@@ -22,13 +22,13 @@ let perm_of x = x.Aux.perm
 let truncate_input_buffer x len =
   { Aux.base = x.Aux.base; Aux.perm = x.Aux.perm; Aux.len = len }
 
-let scrub sl from to =
-  R.scrub sl.Aux.perm from to
+let drop sl from to =
+  R.drop sl.Aux.perm from to
 
 let read_with_perm #k #t #p r j sl pos =
   [@inline_let] let sl' : LPL.slice triv triv = { LPL.base = sl.Aux.base; LPL.len = sl.Aux.len } in
   let pos' = j sl' pos in
-  scrub sl pos pos' ;
+  drop sl pos pos' ;
   r sl' pos
 
 let puint8 = B.buffer LPL.byte

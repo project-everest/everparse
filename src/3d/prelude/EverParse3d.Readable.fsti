@@ -322,7 +322,7 @@ val unreadable_frame
 
 inline_for_extraction
 noextract
-val scrub
+val drop
   (#t: _) (#b: B.buffer t) (p: perm b)
   (from: U32.t)
   (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= B.length b })
