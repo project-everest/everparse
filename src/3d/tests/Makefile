@@ -27,6 +27,7 @@ KREMLIN = $(KREMLIN_HOME)/krml \
 	 -add-include '<stdint.h>' \
 	 -static-header Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps \
 	 -no-prefix LowParse.Slice \
+	 -no-prefix EverParse3d.InputBuffer.Aux \
 	 -no-prefix LowParse.Low.BoundedInt
 
 all: $(ROOT)
