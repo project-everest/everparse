@@ -93,10 +93,14 @@ let compose_int32le
   + 256 `FStar.Mul.op_Star` (b2
   + 256 `FStar.Mul.op_Star` b3))
 
+#push-options "--z3rlimit 16"
+
 let decompose_compose_equiv
   (v: nat { 0 <= v /\ v < 4294967296 } )
 : Lemma (compose_int32le (decompose_int32le_0 v) (decompose_int32le_1 v) (decompose_int32le_2 v) (decompose_int32le_3 v) == v)
 = ()
+
+#pop-options
 
 inline_for_extraction
 let compare_by_bytes
