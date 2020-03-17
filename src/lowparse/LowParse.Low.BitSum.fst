@@ -16,7 +16,7 @@ let validate_bitsum'
   (#k: parser_kind)
   (#p: parser k t)
   (v: validator p)
-  (r: leaf_reader p)
+  (r: leaf_reader p { k.parser_kind_subkind == Some ParserStrong } )
   (phi: filter_bitsum'_t b)
 : Tot (validator (parse_bitsum' b p))
 = synth_bitsum'_injective b;
@@ -260,7 +260,7 @@ let validate_bitsum
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (#p: parser kt t)
   (v: validator p)
-  (r: leaf_reader p)
+  (r: leaf_reader p { kt.parser_kind_subkind == Some ParserStrong })
   (phi: filter_bitsum'_t b)
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
   (vf: (x: bitsum'_key_type b) -> Tot (validator (dsnd (f x))))
@@ -284,7 +284,7 @@ let validate_bitsum
       parse_filter_eq p (filter_bitsum' b) (bytes_of_slice_from h sl pos);
       valid_facts p h sl pos
     in
-    let x = r sl pos in
+    let x = read_from_valid_slice r sl pos in
     [@inline_let]
     let _ =
       let y = synth_bitsum' b x in

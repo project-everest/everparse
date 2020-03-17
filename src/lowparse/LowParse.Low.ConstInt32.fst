@@ -44,7 +44,7 @@ let validate_constint32le_slow
   then
     validator_error_not_enough_data
   else
-    let v' = read_int32le input pos in
+    let v' = read_from_valid_slice read_int32le input pos in
     if U32.eq v v' then
       pos `U32.add` 4ul
     else

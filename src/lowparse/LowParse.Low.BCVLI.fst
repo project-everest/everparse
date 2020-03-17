@@ -28,7 +28,7 @@ let validate_bcvli : validator parse_bcvli =
       valid_facts (parse_bounded_integer_le 2) h input pos1;
       valid_facts (parse_bounded_integer_le 4) h input pos1
     in
-    let r = read_bounded_integer_le_1 input pos in
+    let r = read_from_valid_slice read_bounded_integer_le_1 input pos in
     if r `U32.lt` 253ul
     then pos1
     else if r = 253ul
@@ -38,7 +38,7 @@ let validate_bcvli : validator parse_bcvli =
       then pos2
       else
         (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
-        let r = read_bounded_integer_le_2 input pos1 in
+        let r = read_from_valid_slice read_bounded_integer_le_2 input pos1 in
         if r `U32.lt` 253ul
         then validator_error_generic
         else pos2
@@ -49,7 +49,7 @@ let validate_bcvli : validator parse_bcvli =
       then pos2
       else
         (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
-        let r = read_bounded_integer_le_4 input pos1 in
+        let r = read_from_valid_slice read_bounded_integer_le_4 input pos1 in
         if r `U32.lt` 65536ul
         then validator_error_generic
         else pos2
@@ -59,14 +59,14 @@ let jump_bcvli : jumper parse_bcvli =
   fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts parse_bcvli h input pos;
-    parse_bcvli_eq (bytes_of_slice_from h input pos);
-    valid_facts (parse_bounded_integer_le 1) h input pos
+    bvalid_facts parse_bcvli h input pos;
+    parse_bcvli_eq (bytes_of_buffer_from h input pos);
+    bvalid_facts (parse_bounded_integer_le 1) h input pos
   in
   let pos1 = jump_constant_size (parse_bounded_integer_le 1) 1ul () input pos in
   [@inline_let] let _ =
-    valid_facts (parse_bounded_integer_le 2) h input pos1;
-    valid_facts (parse_bounded_integer_le 4) h input pos1
+    bvalid_facts (parse_bounded_integer_le 2) h input pos1;
+    bvalid_facts (parse_bounded_integer_le 4) h input pos1
   in
   let r = read_bounded_integer_le_1 input pos in
   if r `U32.lt` 253ul
@@ -81,9 +81,9 @@ let read_bcvli : leaf_reader parse_bcvli =
   fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts parse_bcvli h input pos;
-    parse_bcvli_eq (bytes_of_slice_from h input pos);
-    valid_facts (parse_bounded_integer_le 1) h input pos
+    bvalid_facts parse_bcvli h input pos;
+    parse_bcvli_eq (bytes_of_buffer_from h input pos);
+    bvalid_facts (parse_bounded_integer_le 1) h input pos
   in
   let r = read_bounded_integer_le_1 input pos in
   if r `U32.lt` 253ul
@@ -91,8 +91,8 @@ let read_bcvli : leaf_reader parse_bcvli =
   else
     let pos1 = jump_constant_size (parse_bounded_integer_le 1) 1ul () input pos in
     [@inline_let] let _ =
-      valid_facts (parse_bounded_integer_le 2) h input pos1;
-      valid_facts (parse_bounded_integer_le 4) h input pos1
+      bvalid_facts (parse_bounded_integer_le 2) h input pos1;
+      bvalid_facts (parse_bounded_integer_le 4) h input pos1
     in
     if r = 253ul
     then read_bounded_integer_le_2 input pos1 <: U32.t
@@ -195,7 +195,7 @@ let validate_bounded_bcvli'
       valid_facts (parse_bounded_integer_le 2) h input pos1;
       valid_facts (parse_bounded_integer_le 4) h input pos1
     in
-    let r = read_bounded_integer_le_1 input pos in
+    let r = read_from_valid_slice read_bounded_integer_le_1 input pos in
     if r `U32.lt` 253ul && min32 `U32.lte` r && r `U32.lte` max32
     then pos1
     else if max32 `U32.lt` 253ul
@@ -210,7 +210,7 @@ let validate_bounded_bcvli'
         then pos2
         else
           (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
-          let r = read_bounded_integer_le_2 input pos1 in
+          let r = read_from_valid_slice read_bounded_integer_le_2 input pos1 in
           if r `U32.lt` 253ul || r `U32.lt` min32 || max32 `U32.lt` r
           then validator_error_generic
           else pos2
@@ -223,7 +223,7 @@ let validate_bounded_bcvli'
       then pos2
       else
         (* because of the non-malleability constraint, I need to actually read the value and check whether it is not a lower integer *)
-        let r = read_bounded_integer_le_4 input pos1 in
+        let r = read_from_valid_slice read_bounded_integer_le_4 input pos1 in
         if r `U32.lt` 65536ul || r `U32.lt` min32 || max32 `U32.lt` r
         then validator_error_generic
         else pos2
@@ -249,9 +249,9 @@ let jump_bounded_bcvli
     let h = HST.get () in
     [@inline_let]
     let _ =
-      valid_facts (parse_bounded_bcvli min max) h input pos;
-      parse_bounded_bcvli_eq min max (bytes_of_slice_from h input pos);
-      valid_facts parse_bcvli h input pos
+      bvalid_facts (parse_bounded_bcvli min max) h input pos;
+      parse_bounded_bcvli_eq min max (bytes_of_buffer_from h input pos);
+      bvalid_facts parse_bcvli h input pos
     in
     jump_bcvli input pos
 
@@ -265,9 +265,9 @@ let read_bounded_bcvli
     let h = HST.get () in
     [@inline_let]
     let _ =
-      valid_facts (parse_bounded_bcvli min max) h input pos;
-      parse_bounded_bcvli_eq min max (bytes_of_slice_from h input pos);
-      valid_facts parse_bcvli h input pos
+      bvalid_facts (parse_bounded_bcvli min max) h input pos;
+      parse_bounded_bcvli_eq min max (bytes_of_buffer_from h input pos);
+      bvalid_facts parse_bcvli h input pos
     in
     read_bcvli input pos <: bounded_int32 min max
 

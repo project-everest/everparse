@@ -463,24 +463,24 @@ let lwriter_list_map
   (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_low > 0 } )
   (f: t1 -> Tot t2)
   (#rrel #rel: _)
-  (sin: slice rrel rel)
+  (sin: B.mbuffer byte rrel rel)
   (pin_from pin_to: U32.t)
   (h0: HS.mem)
   (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (pout_from0: U32.t {
-    B.loc_disjoint (loc_slice_from sout pout_from0) (loc_slice_from_to sin pin_from pin_to) /\
-    valid_list p1 h0 sin pin_from pin_to
+    B.loc_disjoint (loc_slice_from sout pout_from0) (B.loc_buffer_from_to sin pin_from pin_to) /\
+    bvalid_list p1 h0 sin pin_from pin_to
   })
   (f' : (
     (pos: U32.t {
       U32.v pin_from <= U32.v pos /\
-      valid p1 h0 sin pos /\
-      U32.v pos + content_length p1 h0 sin pos <= U32.v pin_to
+      bvalid p1 h0 sin pos /\
+      U32.v pos + bcontent_length p1 h0 sin pos <= U32.v pin_to
     }) ->
-    Tot (y: writer s2 h0 sout pout_from0 { wvalue y == f (contents p1 h0 sin pos) })
+    Tot (y: writer s2 h0 sout pout_from0 { wvalue y == f (bcontents p1 h0 sin pos) })
   ))
-: Tot (x: lwriter s2 h0 sout pout_from0 { lwvalue x == List.Tot.map f (contents_list p1 h0 sin pin_from pin_to) } )
-= LWriter (Ghost.hide (List.Tot.map f (contents_list p1 h0 sin pin_from pin_to))) (fun pout_from ->
+: Tot (x: lwriter s2 h0 sout pout_from0 { lwvalue x == List.Tot.map f (bcontents_list p1 h0 sin pin_from pin_to) } )
+= LWriter (Ghost.hide (List.Tot.map f (bcontents_list p1 h0 sin pin_from pin_to))) (fun pout_from ->
     assert (k1.parser_kind_subkind == Some ParserStrong);
     let h = HST.get () in
     list_map
@@ -491,7 +491,7 @@ let lwriter_list_map
       sin pin_from pin_to
       sout pout_from
       (fun pin_ pout_ ->
-        valid_pos_frame_strong p1 h0 sin pin_ (get_valid_pos p1 h sin pin_) (loc_slice_from sout pout_from0) h;
+        valid_pos_frame_strong p1 h0 (slice_of_buffer sin) pin_ (bget_valid_pos p1 h sin pin_) (loc_slice_from sout pout_from0) h;
         write (f' pin_) pout_
       )
   )
@@ -859,18 +859,18 @@ let wcopy
   (#p: parser k t)
   (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
   (#rrel #rel: _)
-  (sin: slice rrel rel)
+  (sin: B.mbuffer byte rrel rel)
   (pin_from pin_to: U32.t)
   (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (sout_from0: U32.t)
   (h0: HS.mem {
-    B.loc_disjoint (loc_slice_from_to sin pin_from pin_to) (loc_slice_from sout sout_from0) /\
-    valid_pos p h0 sin pin_from pin_to
+    B.loc_disjoint (B.loc_buffer_from_to sin pin_from pin_to) (loc_slice_from sout sout_from0) /\
+    bvalid_pos p h0 sin pin_from pin_to
   })
 : Tot (w: writer s h0 sout sout_from0 {
-    wvalue w == contents p h0 sin pin_from
+    wvalue w == bcontents p h0 sin pin_from
   })
-= Writer (Ghost.hide (contents p h0 sin pin_from)) (fun sout_from ->
+= Writer (Ghost.hide (bcontents p h0 sin pin_from)) (fun sout_from ->
     copy_weak_with_length p sin pin_from pin_to sout sout_from
   )
 
@@ -883,18 +883,18 @@ let wjcopy
   (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
   (j: jumper p)
   (#rrel #rel: _)
-  (sin: slice rrel rel)
+  (sin: B.mbuffer byte rrel rel)
   (pin_from: U32.t)
   (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (sout_from0: U32.t)
   (h0: HS.mem {
-    valid p h0 sin pin_from /\
-    B.loc_disjoint (loc_slice_from_to sin pin_from (get_valid_pos p h0 sin pin_from)) (loc_slice_from sout sout_from0)
+    bvalid p h0 sin pin_from /\
+    B.loc_disjoint (B.loc_buffer_from_to sin pin_from (bget_valid_pos p h0 sin pin_from)) (loc_slice_from sout sout_from0)
   })
 : Tot (w: writer s h0 sout sout_from0 {
-    wvalue w == contents p h0 sin pin_from
+    wvalue w == bcontents p h0 sin pin_from
   })
-= Writer (Ghost.hide (contents p h0 sin pin_from)) (fun sout_from ->
+= Writer (Ghost.hide (bcontents p h0 sin pin_from)) (fun sout_from ->
     copy_weak p j sin pin_from sout sout_from
   )
 
@@ -1072,16 +1072,16 @@ let graccess
   (#g: gaccessor p1 p2 cl)
   (a: accessor g)
   (#rrel #rel: _)
-  (sin: slice rrel rel)
+  (sin: B.mbuffer byte rrel rel)
   (pin: U32.t)
   (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (pout_from0: U32.t)
   (h0: HS.mem {
     k1.parser_kind_subkind == Some ParserStrong /\
     k2.parser_kind_subkind == Some ParserStrong /\
-    valid p1 h0 sin pin /\
-    cl.clens_cond (contents p1 h0 sin pin) /\
-    B.loc_disjoint (loc_slice_from_to sin pin (get_valid_pos p1 h0 sin pin)) (loc_slice_from sout pout_from0)
+    bvalid p1 h0 sin pin /\
+    cl.clens_cond (bcontents p1 h0 sin pin) /\
+    B.loc_disjoint (B.loc_buffer_from_to sin pin (bget_valid_pos p1 h0 sin pin)) (loc_slice_from sout pout_from0)
   })
 : Tot (r: greader h0 sout pout_from0 U32.t { grvalue r == slice_access h0 g sin pin } )
 = GReader (Ghost.hide (slice_access h0 g sin pin)) (fun _ ->
@@ -1096,17 +1096,17 @@ let read_leaf
   (#p: parser k t)
   (r: leaf_reader p)
   (#rrel #rel: _)
-  (sin: slice rrel rel)
+  (sin: B.mbuffer byte rrel rel)
   (pin: U32.t)
   (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (pout_from0: U32.t)
   (h0: HS.mem {
     k.parser_kind_subkind == Some ParserStrong /\
-    valid p h0 sin pin /\
-    B.loc_disjoint (loc_slice_from_to sin pin (get_valid_pos p h0 sin pin)) (loc_slice_from sout pout_from0)
+    bvalid p h0 sin pin /\
+    B.loc_disjoint (B.loc_buffer_from_to sin pin (bget_valid_pos p h0 sin pin)) (loc_slice_from sout pout_from0)
   })
-: Tot (r' : greader h0 sout pout_from0 t { grvalue r' == contents p h0 sin pin } )
-= GReader (Ghost.hide (contents p h0 sin pin)) (fun _ ->
+: Tot (r' : greader h0 sout pout_from0 t { grvalue r' == bcontents p h0 sin pin } )
+= GReader (Ghost.hide (bcontents p h0 sin pin)) (fun _ ->
     r sin pin
   )
 
@@ -1121,29 +1121,29 @@ let grlexistsb
   (f' : (
     (#rrel: _) ->
     (#rel: _) ->
-    (sl: slice rrel rel) ->
+    (sl: B.mbuffer byte rrel rel) ->
     (pos: U32.t) ->
     HST.Stack bool
     (requires (fun h ->
-      valid p h sl pos
+      bvalid p h sl pos
     ))
     (ensures (fun h res h' ->
       B.modifies B.loc_none h h' /\
-      res == f (contents p h sl pos)
+      res == f (bcontents p h sl pos)
     ))
   ))
   (#rrel #rel: _)
-  (sl: slice rrel rel)
+  (sl: B.mbuffer byte rrel rel)
   (pos pos' : U32.t)
   (sout: slice (srel_of_buffer_srel (B.trivial_preorder _)) (srel_of_buffer_srel (B.trivial_preorder _)))
   (pout_from0: U32.t)
   (h0: HS.mem {
     k.parser_kind_subkind == Some ParserStrong /\
-    valid_list p h0 sl pos pos' /\
-    B.loc_disjoint (loc_slice_from_to sl pos pos') (loc_slice_from sout pout_from0)
+    bvalid_list p h0 sl pos pos' /\
+    B.loc_disjoint (B.loc_buffer_from_to sl pos pos') (loc_slice_from sout pout_from0)
   })
-: Tot (r' : greader h0 sout pout_from0 bool { grvalue r' == L.existsb f (contents_list p h0 sl pos pos') } )
-= GReader (Ghost.hide (L.existsb f (contents_list p h0 sl pos pos'))) (fun _ ->
+: Tot (r' : greader h0 sout pout_from0 bool { grvalue r' == L.existsb f (bcontents_list p h0 sl pos pos') } )
+= GReader (Ghost.hide (L.existsb f (bcontents_list p h0 sl pos pos'))) (fun _ ->
     list_existsb j f f' sl pos pos'
   )
 

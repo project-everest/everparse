@@ -130,7 +130,7 @@ let validate_sum_aux
   (#kt: parser_kind)
   (#p: parser kt (sum_repr_type t))
   (v: validator p)
-  (p32: leaf_reader p)
+  (p32: leaf_reader p { kt.parser_kind_subkind == Some ParserStrong })
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (v_payload: ((k: sum_repr_type t)) -> Tot (validate_sum_aux_payload_t t pc (maybe_enum_key_of_repr (sum_enum t) k)))
 : Tot (validator (parse_sum t p pc))
@@ -147,7 +147,7 @@ let validate_sum_aux
   then len_after_tag
   else begin
     let h1 = HST.get () in
-    let k' = p32 input pos in
+    let k' = read_from_valid_slice p32 input pos in
     [@inline_let]
     let _ =
       match maybe_enum_key_of_repr (sum_enum t) k' with
@@ -191,7 +191,7 @@ let validate_sum
   (#kt: parser_kind)
   (#p: parser kt (sum_repr_type t))
   (v: validator p)
-  (p32: leaf_reader p)
+  (p32: leaf_reader p {kt.parser_kind_subkind == Some ParserStrong})
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (pc32: ((x: sum_key t) -> Tot (validator (dsnd (pc x)))))
   (destr: dep_maybe_enum_destr_t (sum_enum t) (validate_sum_aux_payload_t t pc))
@@ -335,20 +335,20 @@ let jump_sum_aux_payload_t
   (k: maybe_enum_key (sum_enum t))
 : Tot Type
 = (#rrel: _) -> (#rel: _) ->
-  (input: slice rrel rel) ->
+  (input: B.mbuffer byte rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
-  (requires (fun h -> live_slice h input /\ U32.v pos <= U32.v input.len /\ (
+  (requires (fun h -> B.live h input /\ U32.v pos <= B.length input /\ (
     match k with
     | Unknown _ -> False
-    | Known k' -> valid (dsnd (pc k')) h input pos
+    | Known k' -> bvalid (dsnd (pc k')) h input pos
   )))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\ (
     match k with
     | Unknown _ -> False
     | Known k' ->
-      valid_pos (dsnd (pc k')) h input pos res
+      bvalid_pos (dsnd (pc k')) h input pos res
   )))
 
 let jump_sum_aux_payload_eq
@@ -505,18 +505,18 @@ let read_sum_tag
   (destr: dep_maybe_enum_destr_t (sum_enum t) (read_enum_key_t (sum_enum t)))
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack (sum_key t)
   (requires (fun h ->
-    valid (parse_sum t p pc) h input pos
+    bvalid (parse_sum t p pc) h input pos
   ))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
-    res == sum_tag_of_data t (contents (parse_sum t p pc) h input pos)
+    res == sum_tag_of_data t (bcontents (parse_sum t p pc) h input pos)
   ))
 = let h = HST.get () in
-  [@inline_let] let _ = valid_sum_elim_tag h t p pc input pos in
+  [@inline_let] let _ = valid_sum_elim_tag h t p pc (slice_of_buffer input) pos in
   read_enum_key p32 (sum_enum t) destr input pos
 
 inline_for_extraction
@@ -532,7 +532,7 @@ let jump_sum_aux
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
-  let _ = valid_sum_elim h t p pc input pos in
+  let _ = valid_sum_elim h t p pc (slice_of_buffer input) pos in
   let pos_after_tag = v input pos in
   let k' = p32 input pos in
   v_payload k' input pos_after_tag
@@ -697,12 +697,12 @@ let accessor_clens_sum_payload'
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: sum_key t)
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
-    valid (parse_sum t p pc) h input pos /\
-    (clens_sum_payload t k).clens_cond (contents (parse_sum t p pc) h input pos)
+    bvalid (parse_sum t p pc) h input pos /\
+    (clens_sum_payload t k).clens_cond (bcontents (parse_sum t p pc) h input pos)
   ))
   (ensures (fun h pos' h' ->
     B.modifies B.loc_none h h' /\
@@ -712,12 +712,12 @@ let accessor_clens_sum_payload'
   let h = HST.get () in
   [@inline_let]
   let _ =
-    let pos' = get_valid_pos (parse_sum t p pc) h input pos in
-    let large = bytes_of_slice_from h input pos in
+    let pos' = bget_valid_pos (parse_sum t p pc) h input pos in
+    let large = bytes_of_buffer_from h input pos in
     slice_access_eq h (gaccessor_clens_sum_payload t p pc k) input pos;
-    valid_facts (parse_sum t p pc) h input pos;
+    bvalid_facts (parse_sum t p pc) h input pos;
     parse_sum_eq'' t p pc large;
-    valid_facts p h input pos
+    bvalid_facts p h input pos
   in
   j input pos
 
@@ -888,7 +888,7 @@ let validate_dsum
   (t: dsum)
   (#p: parser kt (dsum_repr_type t))
   (v: validator p)
-  (p32: leaf_reader p)
+  (p32: leaf_reader p {kt.parser_kind_subkind == Some ParserStrong})
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
   (f32: (x: dsum_known_key t) -> Tot (validator (dsnd (f x))))
   (#k': parser_kind)
@@ -908,7 +908,7 @@ let validate_dsum
   if validator_max_length `U32.lt` pos_after_tag
   then pos_after_tag
   else
-    let tg = p32 input pos in
+    let tg = read_from_valid_slice p32 input pos in
     [@inline_let]
     let _ = valid_facts (parse_dsum_cases' t f g (maybe_enum_key_of_repr (dsum_enum t) tg)) h input pos_after_tag in
     destr (validate_dsum_cases_eq t f g) (validate_dsum_cases_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (validate_dsum_cases' t f f32 g32) tg input pos_after_tag
@@ -1102,18 +1102,18 @@ let read_dsum_tag
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack (dsum_key t)
   (requires (fun h ->
-    valid (parse_dsum t p f g) h input pos
+    bvalid (parse_dsum t p f g) h input pos
   ))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
-    res == dsum_tag_of_data t (contents (parse_dsum t p f g) h input pos)
+    res == dsum_tag_of_data t (bcontents (parse_dsum t p f g) h input pos)
   ))
 = let h = HST.get () in
-  [@inline_let] let _ = valid_dsum_elim_tag h t p f g input pos in
+  [@inline_let] let _ = valid_dsum_elim_tag h t p f g (slice_of_buffer input) pos in
   read_maybe_enum_key p32 (dsum_enum t) destr input pos 
 
 let valid_dsum_elim_known
@@ -1289,9 +1289,9 @@ let jump_dsum_cases
   let h = HST.get () in
   [@inline_let]
   let _ =
-    valid_facts (parse_dsum_cases' s f g x) h input pos;
-    valid_facts (parse_dsum_cases s f g x) h input pos;
-    parse_dsum_cases_eq' s f g x (bytes_of_slice_from h input pos)
+    bvalid_facts (parse_dsum_cases' s f g x) h input pos;
+    bvalid_facts (parse_dsum_cases s f g x) h input pos;
+    parse_dsum_cases_eq' s f g x (bytes_of_buffer_from h input pos)
   in
   jump_dsum_cases'_destr s f f' g' destr x input pos
 
@@ -1314,15 +1314,15 @@ let jump_dsum
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
-  let _ = parse_dsum_eq' t p f g (bytes_of_slice_from h input pos) in
+  let _ = parse_dsum_eq' t p f g (bytes_of_buffer_from h input pos) in
   [@inline_let]
-  let _ = valid_facts (parse_dsum t p f g) h input pos in
+  let _ = bvalid_facts (parse_dsum t p f g) h input pos in
   [@inline_let]
-  let _ = valid_facts p h input pos in
+  let _ = bvalid_facts p h input pos in
   let pos_after_tag = v input pos in
   let tg = p32 input pos in
   [@inline_let]
-  let _ = valid_facts (parse_dsum_cases' t f g (maybe_enum_key_of_repr (dsum_enum t) tg)) h input pos_after_tag in
+  let _ = bvalid_facts (parse_dsum_cases' t f g (maybe_enum_key_of_repr (dsum_enum t) tg)) h input pos_after_tag in
   destr (jump_dsum_cases_eq t f g) (jump_dsum_cases_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (jump_dsum_cases' t f f32 g32) tg input pos_after_tag
 
 #pop-options
@@ -1476,12 +1476,12 @@ let accessor_clens_dsum_payload'
   (g: parser ku (dsum_type_of_unknown_tag t))
   (k: dsum_key t)
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
-    valid (parse_dsum t p f g) h input pos /\
-    (clens_dsum_payload t k).clens_cond (contents (parse_dsum t p f g) h input pos)
+    bvalid (parse_dsum t p f g) h input pos /\
+    (clens_dsum_payload t k).clens_cond (bcontents (parse_dsum t p f g) h input pos)
   ))
   (ensures (fun h pos' h' ->
     B.modifies B.loc_none h h' /\
@@ -1491,12 +1491,12 @@ let accessor_clens_dsum_payload'
   let h = HST.get () in
   [@inline_let]
   let _ =
-    let pos' = get_valid_pos (parse_dsum t p f g) h input pos in
-    let large = bytes_of_slice_from h input pos in
+    let pos' = bget_valid_pos (parse_dsum t p f g) h input pos in
+    let large = bytes_of_buffer_from h input pos in
     slice_access_eq h (gaccessor_clens_dsum_payload t p f g k) input pos;
-    valid_facts (parse_dsum t p f g) h input pos;
+    bvalid_facts (parse_dsum t p f g) h input pos;
     parse_dsum_eq3 t p f g large;
-    valid_facts p h input pos
+    bvalid_facts p h input pos
   in
   j input pos
 
@@ -1604,12 +1604,12 @@ let accessor_clens_dsum_unknown_payload'
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
-    valid (parse_dsum t p f g) h input pos /\
-    (clens_dsum_unknown_payload t).clens_cond (contents (parse_dsum t p f g) h input pos)
+    bvalid (parse_dsum t p f g) h input pos /\
+    (clens_dsum_unknown_payload t).clens_cond (bcontents (parse_dsum t p f g) h input pos)
   ))
   (ensures (fun h pos' h' ->
     B.modifies B.loc_none h h' /\
@@ -1619,12 +1619,12 @@ let accessor_clens_dsum_unknown_payload'
   let h = HST.get () in
   [@inline_let]
   let _ =
-    let pos' = get_valid_pos (parse_dsum t p f g) h input pos in
-    let large = bytes_of_slice_from h input pos in
+    let pos' = bget_valid_pos (parse_dsum t p f g) h input pos in
+    let large = bytes_of_buffer_from h input pos in
     slice_access_eq h (gaccessor_clens_dsum_unknown_payload t p f g) input pos;
-    valid_facts (parse_dsum t p f g) h input pos;
+    bvalid_facts (parse_dsum t p f g) h input pos;
     parse_dsum_eq3 t p f g large;
-    valid_facts p h input pos
+    bvalid_facts p h input pos
   in
   j input pos
 

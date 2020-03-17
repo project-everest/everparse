@@ -227,9 +227,9 @@ let jump_nlist
       let r = B.get h br 0 in
       U32.v r <= U32.v n /\
       U32.v pos <= U32.v pos1 /\
-      U32.v pos1 <= U32.v input.len /\
-      valid (parse_nlist (U32.v n) p) h0 input pos /\ valid (parse_nlist (U32.v r) p) h0 input pos1 /\
-      get_valid_pos (parse_nlist (U32.v n) p) h0 input pos == get_valid_pos (parse_nlist (U32.v r) p) h0 input pos1 /\
+      U32.v pos1 <= B.length input /\
+      bvalid (parse_nlist (U32.v n) p) h0 input pos /\ bvalid (parse_nlist (U32.v r) p) h0 input pos1 /\
+      bget_valid_pos (parse_nlist (U32.v n) p) h0 input pos == bget_valid_pos (parse_nlist (U32.v r) p) h0 input pos1 /\
       (stop == true ==> r == 0ul)
     ))
     (fun _ ->
@@ -240,7 +240,7 @@ let jump_nlist
         let pos1 = B.index bpos1 0ul in
         [@inline_let]
         let _ =
-          valid_nlist_cons_recip (U32.v r) p h0 input pos1
+          valid_nlist_cons_recip (U32.v r) p h0 (slice_of_buffer input) pos1
         in
         let pos2 = v input pos1 in
         let _ = B.upd br 0ul (r `U32.sub` 1ul) in
@@ -250,7 +250,7 @@ let jump_nlist
   ;
   let res = B.index bpos1 0ul in
   [@inline_let] let _ =
-    valid_nlist_nil p h0 input res
+    valid_nlist_nil p h0 (slice_of_buffer input) res
   in
   HST.pop_frame ();
   res
@@ -329,7 +329,7 @@ let validate_vclist
   (#lk: parser_kind)
   (#lp: parser lk U32.t)
   (lv: validator lp)
-  (lr: leaf_reader lp)
+  (lr: leaf_reader lp { lk.parser_kind_subkind == Some ParserStrong })
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -346,7 +346,7 @@ let validate_vclist
   if validator_max_length `U32.lt` pos1
   then pos1 // error
   else
-    let n = lr input pos in
+    let n = read_from_valid_slice lr input pos in
     if n `U32.lt` min || max `U32.lt` n
     then validator_error_generic
     else
@@ -370,14 +370,14 @@ let jump_vclist
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts (parse_vclist min max lp p) h input pos;
-    parse_vclist_eq min max lp p (bytes_of_slice_from h input pos);
-    valid_facts lp h input pos
+    bvalid_facts (parse_vclist min max lp p) h input pos;
+    parse_vclist_eq min max lp p (bytes_of_buffer_from h input pos);
+    bvalid_facts lp h input pos
   in
   let pos1 = lv input pos in
   let n = lr input pos in
   [@inline_let]
-  let _ = valid_facts (parse_nlist (U32.v n) p) h input pos1 in
+  let _ = bvalid_facts (parse_nlist (U32.v n) p) h input pos1 in
   jump_nlist n v input pos1
 
 #pop-options

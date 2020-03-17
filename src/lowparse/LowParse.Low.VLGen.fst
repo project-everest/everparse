@@ -194,7 +194,7 @@ let validate_bounded_vlgen
   (#sk: parser_kind)
   (#pk: parser sk (bounded_int32 (vmin) (vmax)))
   (vk: validator pk)
-  (rk: leaf_reader pk)
+  (rk: leaf_reader pk { sk.parser_kind_subkind == Some ParserStrong } )
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -212,7 +212,7 @@ let validate_bounded_vlgen
   if validator_max_length `U32.lt` n
   then n
   else
-    let len = rk input pos in
+    let len = read_from_valid_slice rk input pos in
     [@inline_let]
     let _ = valid_facts (parse_fldata_strong s (U32.v len)) h input n in
     validate_fldata_strong s v (U32.v len) len input n
@@ -357,7 +357,7 @@ let validate_vlgen
   (#sk: parser_kind)
   (#pk: parser sk (bounded_int32 (vmin) (vmax)))
   (vk: validator pk)
-  (rk: leaf_reader pk)
+  (rk: leaf_reader pk { sk.parser_kind_subkind == Some ParserStrong } )
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -385,14 +385,14 @@ let jump_bounded_vlgen
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts (parse_bounded_vlgen (vmin) (vmax) pk s) h input pos;
-    parse_bounded_vlgen_unfold (vmin) (vmax) pk s (bytes_of_slice_from h input pos);
-    valid_facts pk h input pos
+    bvalid_facts (parse_bounded_vlgen (vmin) (vmax) pk s) h input pos;
+    parse_bounded_vlgen_unfold (vmin) (vmax) pk s (bytes_of_buffer_from h input pos);
+    bvalid_facts pk h input pos
   in
   let n = vk input pos in
   let len = rk input pos in
   [@inline_let]
-  let _ = valid_facts (parse_fldata_strong s (U32.v len)) h input n in
+  let _ = bvalid_facts (parse_fldata_strong s (U32.v len)) h input n in
   jump_fldata_strong s (U32.v len) len input n
 
 inline_for_extraction
@@ -580,9 +580,9 @@ let accessor_bounded_vlgen_payload
   [@inline_let]
   let _ =
     slice_access_eq h (gaccessor_bounded_vlgen_payload min max pk s) input pos;
-    valid_facts (parse_bounded_vlgen min max pk s) h input pos;
-    parse_bounded_vlgen_unfold_aux min max pk s (bytes_of_slice_from h input pos);
-    valid_facts pk h input pos
+    bvalid_facts (parse_bounded_vlgen min max pk s) h input pos;
+    parse_bounded_vlgen_unfold_aux min max pk s (bytes_of_buffer_from h input pos);
+    bvalid_facts pk h input pos
   in
   jk input pos
 
@@ -751,9 +751,9 @@ let accessor_vlgen_payload
   [@inline_let]
   let _ =
     slice_access_eq h (gaccessor_vlgen_payload min max pk s) input pos;
-    valid_facts (parse_vlgen min max pk s) h input pos;
-    parse_vlgen_unfold min max pk s (bytes_of_slice_from h input pos);
-    valid_facts pk h input pos
+    bvalid_facts (parse_vlgen min max pk s) h input pos;
+    parse_vlgen_unfold min max pk s (bytes_of_buffer_from h input pos);
+    bvalid_facts pk h input pos
   in
   jk input pos
 

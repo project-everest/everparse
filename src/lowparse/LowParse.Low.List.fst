@@ -354,17 +354,17 @@ let rec list_last_pos
   (s: serializer p)
   (j: jumper p)
   (#rrel #rel: _)
-  (sl: slice rrel rel)
+  (sl: B.mbuffer byte rrel rel)
   (pos pos' : U32.t)
   (l: Ghost.erased (list t))
 : HST.Stack U32.t
   (requires (fun h ->
     k.parser_kind_subkind == Some ParserStrong /\
     k.parser_kind_low > 0 /\
-    live_slice h sl /\
+    B.live h sl /\
     U32.v pos <= U32.v pos' /\
-    U32.v pos' <= U32.v sl.len /\
-    bytes_of_slice_from_to h sl pos pos' `Seq.equal` serialize (serialize_list _ s) (Ghost.reveal l) /\
+    U32.v pos' <= B.length sl /\
+    bytes_of_buffer_from_to h sl pos pos' `Seq.equal` serialize (serialize_list _ s) (Ghost.reveal l) /\
     Cons? (Ghost.reveal l)
   ))
   (ensures (fun h res h' ->
@@ -390,7 +390,7 @@ let rec list_last_pos
       Ghost.reveal l == left `L.append` right /\
       U32.v pos + Seq.length (serialize (serialize_list _ s) left) == U32.v pos1 /\
       U32.v pos1 <= U32.v pos' /\
-      bytes_of_slice_from_to h0 sl pos1 pos' `Seq.equal` serialize (serialize_list _ s) right /\
+      bytes_of_buffer_from_to h0 sl pos1 pos' `Seq.equal` serialize (serialize_list _ s) right /\
       Cons? right /\
       (stop == true ==> L.length right == 1)
     ))
@@ -398,7 +398,7 @@ let rec list_last_pos
       let pos1 = B.index bpos1 0ul in
       let gright = B.index bgright 0ul in
       serialize_list_cons _ s (L.hd (Ghost.reveal gright)) (L.tl (Ghost.reveal gright));
-      assert (bytes_of_slice_from h0 sl pos1 `seq_starts_with` bytes_of_slice_from_to h0 sl pos1 pos');
+      assert (bytes_of_buffer_from h0 sl pos1 `seq_starts_with` bytes_of_buffer_from_to h0 sl pos1 pos');
       let pos2 = jump_serializer s j sl pos1 (Ghost.hide (L.hd (Ghost.reveal gright))) in
       if pos2 = pos'
       then begin

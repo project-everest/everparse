@@ -98,10 +98,9 @@ let jump_nondep_then
   (#p2: parser k2 t2)
   (p2' : jumper p2)
 : Tot (jumper (nondep_then p1 p2))
-= fun  (#rrel #rel: _)
-  (input: slice rrel rel) (pos: U32.t) ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_nondep_then h p1 p2 input pos in
+  [@inline_let] let _ = valid_nondep_then h p1 p2 (slice_of_buffer input) pos in
   p2' input (p1' input pos)
 
 inline_for_extraction
@@ -202,10 +201,9 @@ let jump_synth
     synth_injective f2
   })
 : Tot (jumper (parse_synth p1 f2))
-= fun   (#rrel #rel: _)
-  (input: slice rrel rel) (pos: U32.t) ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_synth h p1 f2 input pos in
+  [@inline_let] let _ = valid_synth h p1 f2 (slice_of_buffer input) pos in
   p1' input pos
 
 let valid_dtuple2
@@ -250,14 +248,13 @@ let validate_dtuple2
   (#t1: Type0)
   (#p1: parser k1 t1)
   (v1: validator p1)
-  (r1: leaf_reader p1)
+  (r1: leaf_reader p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
   (#t2: t1 -> Type0)
   (#p2: (x: t1) -> parser k2 (t2 x))
   (v2: (x: t1) -> Tot (validator (p2 x)))
 : Tot (validator (parse_dtuple2 p1 p2))
-= fun   (#rrel #rel: _)
-  (input: slice rrel rel) (pos: U32.t) ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ = valid_dtuple2 h p1 p2 input pos in
   let pos1 = v1 input pos in
@@ -266,7 +263,7 @@ let validate_dtuple2
     pos1
   end
   else
-    let x = r1 input pos in
+    let x = read_from_valid_slice r1 input pos in
     [@inline_let] let _ = valid_facts (p2 x) h input pos1 in
     v2 x input pos1
 
@@ -282,13 +279,11 @@ let jump_dtuple2
   (#p2: (x: t1) -> parser k2 (t2 x))
   (v2: (x: t1) -> Tot (jumper (p2 x)))
 : Tot (jumper (parse_dtuple2 p1 p2))
-= fun   (#rrel #rel: _)
-  (input: slice rrel rel) (pos: U32.t) ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_dtuple2 h p1 p2 input pos in
+  [@inline_let] let _ = valid_dtuple2 h p1 p2 (slice_of_buffer input) pos in
   let pos1 = v1 input pos in
   let x = r1 input pos in
-  [@inline_let] let _ = valid_facts (p2 x) h input pos1 in
   v2 x input pos1
 
 inline_for_extraction
@@ -302,13 +297,11 @@ let jump_dtuple2_constant_size_dsnd
   (p2: (x: t1) -> parser k2 (t2 x))
   (sz: U32.t { U32.v sz == k2.parser_kind_low /\ k2.parser_kind_high == Some k2.parser_kind_low })
 : Tot (jumper (parse_dtuple2 p1 p2))
-= fun   (#rrel #rel: _)
-  (input: slice rrel rel) (pos: U32.t) ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_dtuple2 h p1 p2 input pos in
+  [@inline_let] let _ = valid_dtuple2 h p1 p2 (slice_of_buffer input) pos in
   let pos1 = v1 input pos in
-  [@inline_let] let p2x = Ghost.hide (p2 (contents p1 h input pos)) in
-  [@inline_let] let _ = valid_facts (Ghost.reveal p2x) h input pos1 in
+  [@inline_let] let p2x = Ghost.hide (p2 (bcontents p1 h input pos)) in
   jump_constant_size' (fun _ -> Ghost.reveal p2x) sz () input pos1
 
 inline_for_extraction
@@ -775,11 +768,11 @@ let accessor_snd
 : Tot (accessor (gaccessor_snd p1 p2))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_nondep_then h p1 p2 input pos in
+  [@inline_let] let _ = valid_nondep_then h p1 p2 (slice_of_buffer input) pos in
   let res = j1 input pos in
   [@inline_let] let _ =
     slice_access_eq h (gaccessor_snd p1 p2) input pos;
-    valid_facts p1 h input pos
+    bvalid_facts p1 h input pos
   in
   res
 
@@ -819,8 +812,8 @@ let make_total_constant_size_reader
 : Tot (leaf_reader (make_total_constant_size_parser sz t f))
 = fun #rrel #rel sl pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_facts (make_total_constant_size_parser sz t f) h sl pos in
-  f' sl.base pos
+  [@inline_let] let _ = bvalid_facts (make_total_constant_size_parser sz t f) h sl pos in
+  f' sl pos
 
 let valid_filter
   (#rrel #rel: _)
@@ -849,7 +842,7 @@ let validate_filter
   (#t: Type0)
   (#p: parser k t)
   (v32: validator p)
-  (p32: leaf_reader p)
+  (p32: leaf_reader p { k.parser_kind_subkind == Some ParserStrong } )
   (f: (t -> GTot bool))
   (f' : ((x: t) -> Tot (y: bool { y == f x } )))
 : Tot (validator (parse_filter p f))
@@ -860,7 +853,7 @@ let validate_filter
   if res `U32.gt` validator_max_length
   then res
   else
-    let va = p32 input pos in
+    let va = read_from_valid_slice p32 input pos in
     if f' va
     then res
     else validator_error_generic
@@ -875,7 +868,7 @@ let jump_filter
 : Tot (jumper (parse_filter p f))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_filter h p f input pos in
+  [@inline_let] let _ = valid_filter h p f (slice_of_buffer input) pos in
   j input pos
 
 inline_for_extraction
@@ -888,7 +881,7 @@ let read_filter
 : Tot (leaf_reader (parse_filter p f))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_filter h p f input pos in
+  [@inline_let] let _ = valid_filter h p f (slice_of_buffer input) pos in
   (p32 input pos <: (res: t { f res == true } )) // FIXME: WHY WHY WHY do we need this coercion?
 
 inline_for_extraction
@@ -952,7 +945,7 @@ let read_synth
 : Tot (leaf_reader (parse_synth p1 f2))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_synth h p1 f2 input pos in
+  [@inline_let] let _ = valid_synth h p1 f2 (slice_of_buffer input) pos in
   let res = p1' input pos in
   f2' res <: t2 // FIXME: WHY WHY WHY this coercion AND the separate let binding?
 
@@ -985,7 +978,7 @@ let read_inline_synth
 : Tot (leaf_reader (parse_synth p1 f2))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_synth h p1 f2 input pos in
+  [@inline_let] let _ = valid_synth h p1 f2 (slice_of_buffer input) pos in
   [@inline_let] let f2'' (x: t1) : HST.Stack t2 (requires (fun _ -> True)) (ensures (fun h y h' -> h == h' /\ y == f2 x)) = f2' x in // FIXME: WHY WHY WHY do I need this stateful function here? why can't I directly use f2' ?
   f2'' (p1' input pos)
 
@@ -1074,7 +1067,7 @@ let validate_filter_and_then
   (#t1: Type0)
   (#p1: parser k1 t1)
   (v1: validator p1)
-  (p1': leaf_reader p1)
+  (p1': leaf_reader p1 {k1.parser_kind_subkind == Some ParserStrong} )
   (f: (t1 -> GTot bool))
   (f' : ((x: t1) -> Tot (y: bool { y == f x } )))
   (#k2: parser_kind)
@@ -1099,7 +1092,7 @@ let validate_filter_and_then
   if validator_max_length `U32.lt` res
   then res
   else
-    let va = p1' input pos in
+    let va = read_from_valid_slice p1' input pos in
     if f' va
     then
       [@inline_let]
@@ -1136,9 +1129,9 @@ let jump_weaken
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
-  let _ = valid_facts (weaken k1 p2) h input pos in
+  let _ = valid_facts (weaken k1 p2) h (slice_of_buffer input) pos in
   [@inline_let]
-  let _ = valid_facts p2 h input pos in
+  let _ = valid_facts p2 h (slice_of_buffer input) pos in
   v2 input pos
 
 inline_for_extraction
@@ -1339,9 +1332,9 @@ let accessor_tagged_union_payload
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts (parse_tagged_union pt tag_of_data p) h input pos;
-    parse_tagged_union_eq pt tag_of_data p (bytes_of_slice_from h input pos);
-    valid_facts pt h input pos
+    bvalid_facts (parse_tagged_union pt tag_of_data p) h input pos;
+    parse_tagged_union_eq pt tag_of_data p (bytes_of_buffer_from h input pos);
+    bvalid_facts pt h input pos
   in
   let res = jt input pos in
   [@inline_let] let _ =

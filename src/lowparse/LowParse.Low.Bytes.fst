@@ -367,15 +367,6 @@ let validate_bounded_vlbytes
 = validate_bounded_vlbytes' min max (log256' max)
 
 inline_for_extraction
-let jump_all_bytes
-  ()
-: Tot (jumper parse_all_bytes)
-= fun #rrel #rel input pos ->
-  let h = HST.get () in
-  [@inline_let] let _ = valid_facts parse_all_bytes h input pos in
-  input.len
-
-inline_for_extraction
 let jump_bounded_vlbytes'
   (min: nat) // must be a constant
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296  } )
@@ -497,23 +488,23 @@ let bounded_vlbytes'_payload_length
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (l: nat { l >= log256' max /\ l <= 4 } )
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
-  (requires (fun h -> valid (parse_bounded_vlbytes' min max l) h input pos))
+  (requires (fun h -> bvalid (parse_bounded_vlbytes' min max l) h input pos))
   (ensures (fun h len h' ->
     B.modifies B.loc_none h h' /\
-    U32.v pos + l + U32.v len <= U32.v input.len /\ (
-    let x = contents (parse_bounded_vlbytes' min max l) h input pos in
-    let pos' = get_valid_pos (parse_bounded_vlbytes' min max l) h input pos in
+    U32.v pos + l + U32.v len <= B.length input /\ (
+    let x = bcontents (parse_bounded_vlbytes' min max l) h input pos in
+    let pos' = bget_valid_pos (parse_bounded_vlbytes' min max l) h input pos in
     BY.len x == len /\
-    valid_content_pos (parse_flbytes (U32.v len)) h input (pos `U32.add` U32.uint_to_t l) x pos' /\
-    bytes_of_slice_from_to h input (pos `U32.add` U32.uint_to_t l) pos' == BY.reveal x
+    bvalid_content_pos (parse_flbytes (U32.v len)) h input (pos `U32.add` U32.uint_to_t l) x pos' /\
+    bytes_of_buffer_from_to h input (pos `U32.add` U32.uint_to_t l) pos' == BY.reveal x
   )))
 = let h = HST.get () in
-  [@inline_let] let _ = valid_bounded_vlbytes'_elim h min max l input pos in
+  [@inline_let] let _ = valid_bounded_vlbytes'_elim h min max l (slice_of_buffer input) pos in
   let len = read_bounded_integer l input pos in
-  [@inline_let] let _ = valid_flbytes_elim h (U32.v len) input (pos `U32.add` U32.uint_to_t l) in
+  [@inline_let] let _ = valid_flbytes_elim h (U32.v len) (slice_of_buffer input) (pos `U32.add` U32.uint_to_t l) in
   len
 
 inline_for_extraction
@@ -521,18 +512,18 @@ let bounded_vlbytes_payload_length
   (min: nat) // must be a constant
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
-  (requires (fun h -> valid (parse_bounded_vlbytes min max) h input pos))
+  (requires (fun h -> bvalid (parse_bounded_vlbytes min max) h input pos))
   (ensures (fun h len h' ->
     B.modifies B.loc_none h h' /\
-    U32.v pos + log256' max + U32.v len <= U32.v input.len /\ (
-    let x = contents (parse_bounded_vlbytes min max) h input pos in
-    let pos' = get_valid_pos (parse_bounded_vlbytes min max) h input pos in
+    U32.v pos + log256' max + U32.v len <= B.length input /\ (
+    let x = bcontents (parse_bounded_vlbytes min max) h input pos in
+    let pos' = bget_valid_pos (parse_bounded_vlbytes min max) h input pos in
     BY.len x == len /\
-    valid_content_pos (parse_flbytes (U32.v len)) h input (pos `U32.add` U32.uint_to_t (log256' max)) x pos' /\
-    bytes_of_slice_from_to h input (pos `U32.add` U32.uint_to_t (log256' max)) pos' == BY.reveal x
+    bvalid_content_pos (parse_flbytes (U32.v len)) h input (pos `U32.add` U32.uint_to_t (log256' max)) x pos' /\
+    bytes_of_buffer_from_to h input (pos `U32.add` U32.uint_to_t (log256' max)) pos' == BY.reveal x
   )))
 = bounded_vlbytes'_payload_length min max (log256' max) input pos
 
@@ -545,23 +536,23 @@ let get_vlbytes'_contents
   (min: nat) // must be a constant
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (l: nat { l >= log256' max /\ l <= 4 } )
-  (input: slice (srel_of_buffer_srel (BF.trivial_preorder _)) (srel_of_buffer_srel (BF.trivial_preorder _)))
+  (input: B.mbuffer byte (srel_of_buffer_srel (BF.trivial_preorder _)) (srel_of_buffer_srel (BF.trivial_preorder _)))
   (pos: U32.t)
 : HST.Stack (BF.buffer byte)
-  (requires (fun h -> valid (parse_bounded_vlbytes' min max l) h input pos))
+  (requires (fun h -> bvalid (parse_bounded_vlbytes' min max l) h input pos))
   (ensures (fun h b h' ->
-    let x = contents (parse_bounded_vlbytes' min max l) h input pos in
+    let x = bcontents (parse_bounded_vlbytes' min max l) h input pos in
     B.modifies B.loc_none h h' /\
-    U32.v pos + l + BY.length x <= U32.v input.len /\
-    b == BF.gsub input.base (pos `U32.add` U32.uint_to_t l) (BY.len x) /\
+    U32.v pos + l + BY.length x <= B.length input /\
+    b == BF.gsub input (pos `U32.add` U32.uint_to_t l) (BY.len x) /\
     B.as_seq h b == BY.reveal x
   ))
 = 
   let h = HST.get () in
-  [@inline_let] let _ = valid_bounded_vlbytes'_elim h min max l input pos in
+  [@inline_let] let _ = valid_bounded_vlbytes'_elim h min max l (slice_of_buffer input) pos in
   let len = read_bounded_integer l input pos in
-  [@inline_let] let _ = valid_facts (parse_flbytes (U32.v len)) h input (pos `U32.add` U32.uint_to_t l) in
-  BF.sub input.base (pos `U32.add` U32.uint_to_t l) len
+  [@inline_let] let _ = bvalid_facts (parse_flbytes (U32.v len)) h input (pos `U32.add` U32.uint_to_t l) in
+  BF.sub input (pos `U32.add` U32.uint_to_t l) len
 
 #pop-options
 
@@ -569,16 +560,16 @@ inline_for_extraction
 let get_vlbytes_contents
   (min: nat) // must be a constant
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
-  (input: slice (srel_of_buffer_srel (BF.trivial_preorder _)) (srel_of_buffer_srel (BF.trivial_preorder _)))
+  (input: B.mbuffer byte (srel_of_buffer_srel (BF.trivial_preorder _)) (srel_of_buffer_srel (BF.trivial_preorder _)))
   (pos: U32.t)
 : HST.Stack (BF.buffer byte)
-  (requires (fun h -> valid (parse_bounded_vlbytes min max) h input pos))
+  (requires (fun h -> bvalid (parse_bounded_vlbytes min max) h input pos))
   (ensures (fun h b h' ->
     let l = log256' max in
-    let x = contents (parse_bounded_vlbytes min max) h input pos in
+    let x = bcontents (parse_bounded_vlbytes min max) h input pos in
     B.modifies B.loc_none h h' /\
-    U32.v pos + l + BY.length x <= U32.v input.len /\
-    b == BF.gsub input.base (pos `U32.add` U32.uint_to_t l) (BY.len x) /\
+    U32.v pos + l + BY.length x <= B.length input /\
+    b == BF.gsub input (pos `U32.add` U32.uint_to_t l) (BY.len x) /\
     B.as_seq h b == BY.reveal x
   ))
 = get_vlbytes'_contents min max (log256' max) input pos
@@ -663,8 +654,8 @@ let accessor_vlbytes'
   [@inline_let]
   let _ =
     slice_access_eq h (gaccessor_vlbytes' min max l (U32.v length)) sl pos;
-    valid_bounded_vlbytes'_elim h min max l sl pos;
-    parse_bounded_vlbytes_eq min max l (bytes_of_slice_from h sl pos)
+    valid_bounded_vlbytes'_elim h min max l (slice_of_buffer sl) pos;
+    parse_bounded_vlbytes_eq min max l (bytes_of_buffer_from h sl pos)
   in
   pos `U32.add` U32.uint_to_t l
 
@@ -743,8 +734,8 @@ let accessor_vlbytes'_slice
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts (parse_bounded_vlbytes' min max l) h input pos;
-    parse_bounded_vlbytes_eq min max l (bytes_of_slice_from h input pos);
+    bvalid_facts (parse_bounded_vlbytes' min max l) h input pos;
+    parse_bounded_vlbytes_eq min max l (bytes_of_buffer_from h input pos);
     slice_access_eq h (gaccessor_vlbytes'_slice min max l from to) input pos
   in
   pos `U32.add`  U32.uint_to_t l `U32.add` from
@@ -819,8 +810,8 @@ let accessor_vlbytes'_get
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts (parse_bounded_vlbytes' min max l) h input pos;
-    parse_bounded_vlbytes_eq min max l (bytes_of_slice_from h input pos);
+    bvalid_facts (parse_bounded_vlbytes' min max l) h input pos;
+    parse_bounded_vlbytes_eq min max l (bytes_of_buffer_from h input pos);
     slice_access_eq h (gaccessor_vlbytes'_get min max l i) input pos
   in
   pos `U32.add` U32.uint_to_t l `U32.add` i
@@ -973,7 +964,7 @@ let validate_bounded_vlgenbytes
   (#kk: parser_kind)
   (#pk: parser kk (bounded_int32 (vmin) (vmax)))
   (vk: validator pk)
-  (rk: leaf_reader pk)
+  (rk: leaf_reader pk { kk.parser_kind_subkind == Some ParserStrong } )
 : Tot (validator (parse_bounded_vlgenbytes vmin vmax pk))
 = validate_synth
     (validate_bounded_vlgen
@@ -1017,20 +1008,20 @@ let bounded_vlgenbytes_payload_length
   (#pk: parser kk (bounded_int32 (vmin) (vmax)))
   (rk: leaf_reader pk)
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
-  (requires (fun h -> valid (parse_bounded_vlgenbytes vmin vmax pk) h input pos))
+  (requires (fun h -> bvalid (parse_bounded_vlgenbytes vmin vmax pk) h input pos))
   (ensures (fun h len h' ->
     B.modifies B.loc_none h h' /\
-    valid pk h input pos /\ (
-    let pos1 = get_valid_pos pk h input pos in
-    U32.v pos1 + U32.v len <= U32.v input.len /\ (
-    let x = contents (parse_bounded_vlgenbytes vmin vmax pk) h input pos in
-    let pos' = get_valid_pos (parse_bounded_vlgenbytes vmin vmax pk) h input pos in
+    bvalid pk h input pos /\ (
+    let pos1 = bget_valid_pos pk h input pos in
+    U32.v pos1 + U32.v len <= B.length input /\ (
+    let x = bcontents (parse_bounded_vlgenbytes vmin vmax pk) h input pos in
+    let pos' = bget_valid_pos (parse_bounded_vlgenbytes vmin vmax pk) h input pos in
     BY.len x == len /\
-    valid_content_pos (parse_flbytes (U32.v len)) h input pos1 x pos' /\
-    bytes_of_slice_from_to h input pos1 pos' == BY.reveal x
+    bvalid_content_pos (parse_flbytes (U32.v len)) h input pos1 x pos' /\
+    bytes_of_buffer_from_to h input pos1 pos' == BY.reveal x
   ))))
 = let h = HST.get () in
   valid_synth
@@ -1042,20 +1033,20 @@ let bounded_vlgenbytes_payload_length
       serialize_all_bytes
     )
     (synth_bounded_vlbytes vmin vmax)
-    input
+    (slice_of_buffer input)
     pos;
   valid_bounded_vlgen_elim
     vmin
     vmax
     pk
     serialize_all_bytes
-    input
+    (slice_of_buffer input)
     pos
     h;
   let len = rk input pos in
-  let pos1 = Ghost.hide (get_valid_pos pk h input pos) in
-  valid_exact_all_bytes_elim h input (Ghost.reveal pos1) (Ghost.reveal pos1 `U32.add` len);
-  valid_flbytes_elim h (U32.v len) input (Ghost.reveal pos1);
+  let pos1 = Ghost.hide (bget_valid_pos pk h input pos) in
+  valid_exact_all_bytes_elim h (slice_of_buffer input) (Ghost.reveal pos1) (Ghost.reveal pos1 `U32.add` len);
+  valid_flbytes_elim h (U32.v len) (slice_of_buffer input) (Ghost.reveal pos1);
   len
 
 inline_for_extraction
@@ -1066,22 +1057,22 @@ let get_bounded_vlgenbytes_contents
   (#pk: parser kk (bounded_int32 (vmin) (vmax)))
   (rk: leaf_reader pk)
   (jk: jumper pk)
-  (input: slice (BF.trivial_preorder _) (BF.trivial_preorder _))
+  (input: B.mbuffer byte (BF.trivial_preorder _) (BF.trivial_preorder _))
   (pos: U32.t)
 : HST.Stack (BF.buffer byte)
-  (requires (fun h -> valid (parse_bounded_vlgenbytes vmin vmax pk) h input pos))
+  (requires (fun h -> bvalid (parse_bounded_vlgenbytes vmin vmax pk) h input pos))
   (ensures (fun h b h' ->
-    let x = contents (parse_bounded_vlgenbytes vmin vmax pk) h input pos in
-    valid pk h input pos /\ (
-    let pos1 = get_valid_pos pk h input pos in
+    let x = bcontents (parse_bounded_vlgenbytes vmin vmax pk) h input pos in
+    bvalid pk h input pos /\ (
+    let pos1 = bget_valid_pos pk h input pos in
     B.modifies B.loc_none h h' /\
-    U32.v pos1 + BY.length x == U32.v (get_valid_pos (parse_bounded_vlgenbytes vmin vmax pk) h input pos) /\
-    b == BF.gsub input.base pos1 (BY.len x) /\
+    U32.v pos1 + BY.length x == U32.v (bget_valid_pos (parse_bounded_vlgenbytes vmin vmax pk) h input pos) /\
+    b == BF.gsub input pos1 (BY.len x) /\
     B.as_seq h b == BY.reveal x
   )))
 = let len = bounded_vlgenbytes_payload_length vmin vmax rk input pos in
   let pos1 = jk input pos in
-  BF.sub input.base pos1 len
+  BF.sub input pos1 len
 
 let valid_exact_all_bytes_intro
   (h: HS.mem)

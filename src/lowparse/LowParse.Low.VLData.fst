@@ -87,7 +87,7 @@ let jump_vldata_gen
 : Tot (jumper (parse_vldata_gen sz f p))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_vldata_gen_elim h sz f p input pos in
+  [@inline_let] let _ = valid_vldata_gen_elim h sz f p (slice_of_buffer input) pos in
   pos `U32.add` (U32.uint_to_t sz `U32.add` read_bounded_integer sz input pos)
 
 inline_for_extraction
@@ -145,8 +145,8 @@ let jump_bounded_vldata'
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let sz = l in
-  [@inline_let] let _ = valid_facts (parse_bounded_vldata' min max l p) h input pos in
-  [@inline_let] let _ = valid_facts (parse_vldata_gen sz (in_bounds min max) p) h input pos in
+  [@inline_let] let _ = bvalid_facts (parse_bounded_vldata' min max l p) h input pos in
+  [@inline_let] let _ = bvalid_facts (parse_vldata_gen sz (in_bounds min max) p) h input pos in
   jump_vldata_gen sz (in_bounds min max) p input pos
 
 inline_for_extraction
@@ -212,10 +212,10 @@ let jump_bounded_vldata_strong'
   (#p: parser k t)
   (s: serializer p)
 : Tot (jumper (parse_bounded_vldata_strong' min max l s))
-= fun #rrel #rel (input: slice rrel rel) pos ->
+= fun #rrel #rel input pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_facts (parse_bounded_vldata_strong' min max l s) h input pos in
-  [@inline_let] let _ = valid_facts (parse_bounded_vldata' min max l p) h input pos in
+  [@inline_let] let _ = bvalid_facts (parse_bounded_vldata_strong' min max l s) h input pos in
+  [@inline_let] let _ = bvalid_facts (parse_bounded_vldata' min max l p) h input pos in
   jump_bounded_vldata' min max l p input pos
 
 inline_for_extraction

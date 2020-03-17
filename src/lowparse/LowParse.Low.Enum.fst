@@ -19,7 +19,7 @@ let is_known
 inline_for_extraction
 let validate_enum_key
   (#key #repr: eqtype)
-  (#k: parser_kind) (#p: parser k repr) (v: validator p) (p32: leaf_reader p)
+  (#k: parser_kind) (#p: parser k repr) (v: validator p) (p32: leaf_reader p { k.parser_kind_subkind == Some ParserStrong })
   (e: enum key repr)
   (destr: maybe_enum_destr_t bool e)
 : Tot (validator (parse_enum_key p e)) =

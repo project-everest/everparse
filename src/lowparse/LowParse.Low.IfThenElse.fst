@@ -77,18 +77,37 @@ inline_for_extraction
 type test_ifthenelse_tag
   (p: parse_ifthenelse_param)
 = (#rrel: _) -> (#rel: _) ->
-  (input: slice rrel rel) ->
+  (input: B.mbuffer byte rrel rel) ->
   (pos: U32.t) ->
   HST.Stack bool
+  (requires (fun h -> bvalid p.parse_ifthenelse_tag_parser h input pos))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\
+    res == p.parse_ifthenelse_tag_cond (bcontents p.parse_ifthenelse_tag_parser h input pos)
+  ))
+
+inline_for_extraction
+let test_ifthenelse_tag_from_valid_slice
+  (#p: parse_ifthenelse_param)
+  (t: test_ifthenelse_tag p {p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong})
+  (#rrel: _) (#rel: _)
+  (input: slice rrel rel)
+  (pos: U32.t)
+: HST.Stack bool
   (requires (fun h -> valid p.parse_ifthenelse_tag_parser h input pos))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
     res == p.parse_ifthenelse_tag_cond (contents p.parse_ifthenelse_tag_parser h input pos)
   ))
+= let h = HST.get () in
+  valid_facts p.parse_ifthenelse_tag_parser h input pos;
+  parse_strong_prefix p.parse_ifthenelse_tag_parser (bytes_of_slice_from h input pos) (bytes_of_buffer_from h input.base pos);
+  bvalid_facts p.parse_ifthenelse_tag_parser h input.base pos;
+  t input.base pos
 
 inline_for_extraction
 let validate_ifthenelse
-  (p: parse_ifthenelse_param)
+  (p: parse_ifthenelse_param {p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong})
   (vt: validator p.parse_ifthenelse_tag_parser)
   (test: test_ifthenelse_tag p)
   (vp: (b: bool) -> Tot (validator (dsnd (p.parse_ifthenelse_payload_parser b))))
@@ -103,7 +122,7 @@ let validate_ifthenelse
   if validator_max_length `U32.lt` pos_after_t
   then pos_after_t
   else
-    let b = test input pos in
+    let b = test_ifthenelse_tag_from_valid_slice test input pos in
     if b (* eta-expansion here *)
     then vp true input pos_after_t
     else vp false input pos_after_t
@@ -118,7 +137,7 @@ let jump_ifthenelse
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    Classical.move_requires (valid_ifthenelse_elim p h input) pos
+    Classical.move_requires (valid_ifthenelse_elim p h (slice_of_buffer input)) pos
   in
   let pos_after_t = vt input pos in
   let b = test input pos in
@@ -257,12 +276,12 @@ let accessor_ifthenelse_payload'
   (j: jumper p.parse_ifthenelse_tag_parser)
   (b: bool)
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
-    valid (parse_ifthenelse p) h input pos /\
-    (clens_ifthenelse_payload s b).clens_cond (contents (parse_ifthenelse p) h input pos)
+    bvalid (parse_ifthenelse p) h input pos /\
+    (clens_ifthenelse_payload s b).clens_cond (bcontents (parse_ifthenelse p) h input pos)
   ))
   (ensures (fun h pos' h' ->
     B.modifies B.loc_none h h' /\
@@ -271,12 +290,12 @@ let accessor_ifthenelse_payload'
 = let h = HST.get () in
   [@inline_let]
   let _ =
-    let pos' = get_valid_pos (parse_ifthenelse p) h input pos in
-    let large = bytes_of_slice_from h input pos in
+    let pos' = bget_valid_pos (parse_ifthenelse p) h input pos in
+    let large = bytes_of_buffer_from h input pos in
     slice_access_eq h (gaccessor_ifthenelse_payload s b) input pos;
-    valid_facts (parse_ifthenelse p) h input pos;
+    bvalid_facts (parse_ifthenelse p) h input pos;
     parse_ifthenelse_eq p large;
-    valid_facts p.parse_ifthenelse_tag_parser h input pos
+    bvalid_facts p.parse_ifthenelse_tag_parser h input pos
   in
   j input pos
 

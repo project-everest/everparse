@@ -47,8 +47,24 @@ let bytes_of_slice_from   (#rrel #rel: _)
   then Seq.slice (B.as_seq h s.base) (U32.v pos) (U32.v s.len)  
   else Seq.empty
 
+let bytes_of_slice_from_to  (#rrel #rel: _)
+  (h: HS.mem) (s: slice rrel rel) (pos pos': U32.t) : Ghost bytes (requires  (U32.v pos <= U32.v pos' /\ U32.v pos' <= U32.v s.len)) (ensures (fun _ -> True)) =
+  Seq.slice (B.as_seq h s.base) (U32.v pos) (U32.v pos')
+
 let loc_slice_from_to (#rrel #rel: _) (s: slice rrel rel) (pos pos' : U32.t) : GTot B.loc =
   B.loc_buffer_from_to s.base pos pos'
 
 let loc_slice_from (#rrel #rel: _) (s: slice rrel rel) (pos: U32.t) : GTot B.loc =
   loc_slice_from_to s pos s.len
+
+let slice_of_buffer (#rrel #rel: _) (b: B.mbuffer byte rrel rel) : GTot (slice (srel_of_buffer_srel rrel) (srel_of_buffer_srel rel)) =
+  make_slice b (B.len b)
+
+let bytes_of_buffer_from (#rrel #rel: _)
+  (h: HS.mem) (s: B.mbuffer byte rrel rel) (pos: U32.t)
+: GTot bytes
+= bytes_of_slice_from h (slice_of_buffer s) pos
+
+let bytes_of_buffer_from_to  (#rrel #rel: _)
+  (h: HS.mem) (s: B.mbuffer byte rrel rel) (pos pos': U32.t) : Ghost bytes (requires  (U32.v pos <= U32.v pos' /\ U32.v pos' <= B.length s)) (ensures (fun _ -> True)) =
+  bytes_of_slice_from_to h (slice_of_buffer s) pos pos'
