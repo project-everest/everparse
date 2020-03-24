@@ -203,6 +203,7 @@ inline_for_extraction noextract
 let mk_from_const_buffer
          (#k:strong_parser_kind) #t (#parser:LP.parser k t)
          (parser32:LS.parser32 parser)
+         (jumper:LP.jumper parser)
          (b: C.const_buffer LP.byte)
          (from:uint_32)
   : Stack (repr_ptr_p t parser)
@@ -229,7 +230,7 @@ let mk_from_const_buffer
     let sub_b = C.sub b from (to - from) in
     let value =
       // Compute [.v]; this code will eventually disappear
-      let to' : (to' : U32.t { to' == Ghost.reveal to }) = magic () in
+      let to' : (to' : U32.t { to' == Ghost.reveal to }) = jumper (C.cast b) from in
       let sub_b_bytes = FStar.Bytes.of_buffer (to' - from) (C.cast sub_b) in
       let Some (v, _) = parser32 sub_b_bytes in
       v
@@ -249,6 +250,7 @@ inline_for_extraction
 noextract
 let mk (#k:strong_parser_kind) #t (#parser:LP.parser k t)
        (parser32:LS.parser32 parser)
+       (jumper:LP.jumper parser)
        #q
        (b:B.mbuffer LP.byte (C.q_preorder q LP.byte) (C.q_preorder q LP.byte))
        (from:uint_32)
@@ -261,7 +263,7 @@ let mk (#k:strong_parser_kind) #t (#parser:LP.parser k t)
       p.b `C.const_sub_buffer from p.meta.len` (C.of_qbuf b) /\
       p.meta.v == LP.bcontents parser h1 b from)
   = let c = C.of_qbuf b in
-    mk_from_const_buffer parser32 c from
+    mk_from_const_buffer parser32 jumper c from
 
 /// A high-level constructor, taking a value instead of a slice.
 ///
@@ -274,6 +276,7 @@ let mk_from_serialize
     (#k:strong_parser_kind) #t (#parser:LP.parser k t) (#serializer: LP.serializer parser)
     (parser32: LS.parser32 parser) (serializer32: LS.serializer32 serializer)
     (size32: LS.size32 serializer)
+    (jumper:LP.jumper parser)
     (b:LP.slice mut_p mut_p)
     (from:uint_32 { from <= b.LP.len })
     (x: t)
@@ -307,7 +310,7 @@ let mk_from_serialize
       LP.serialize_valid_exact serializer h b x from to;
       LP.valid_bvalid_strong_prefix parser h b from;
       LP.parse_serialize serializer x;
-      let r = mk parser32 b.LP.base from in
+      let r = mk parser32 jumper b.LP.base from in
       let h' = ST.get () in
       valid_repr_bytes r h' serializer;
       Some r
@@ -554,7 +557,7 @@ type field_accessor (#k1 #k2:strong_parser_kind)
      (#cl: LP.clens t1 t2) ->
      (#g: LP.gaccessor p1 p2 cl) ->
      (acc:LP.accessor g) ->
-//     (jump:LP.jumper p2) ->
+     (jump:LP.jumper p2) ->
      (p2': LS.parser32 p2) ->
      field_accessor p1 p2
 
@@ -568,10 +571,10 @@ let field_accessor_comp (#k1 #k2 #k3:strong_parser_kind)
                         (f23 : field_accessor p2 p3)
    : field_accessor p1 p3
    =
-   [@inline_let] let FieldAccessor acc12 (* j2 *) p2' = f12 in
-   [@inline_let] let FieldAccessor acc23 (* j3 *) p3' = f23 in
+   [@inline_let] let FieldAccessor acc12 j2 p2' = f12 in
+   [@inline_let] let FieldAccessor acc23 j3 p3' = f23 in
    [@inline_let] let acc13 = LP.accessor_compose acc12 acc23 () in
-     FieldAccessor acc13 (* j3 *) p3'
+     FieldAccessor acc13 j3 p3'
 
 unfold noextract
 let field_accessor_t
@@ -598,9 +601,9 @@ let get_field (#k1:strong_parser_kind) #t1 (#p1:LP.parser k1 t1)
    : field_accessor_t f
    = fun p ->
      [@inline_let] 
-     let FieldAccessor acc (*jump*) p2' = f in
+     let FieldAccessor acc jump p2' = f in
      let pos = acc (C.cast p.b) 0ul in
-     let q = mk p2' (C.cast p.b) pos in
+     let q = mk p2' jump (C.cast p.b) pos in
      let h = get () in
      assert (q.b `C.const_sub_buffer pos q.meta.len` p.b);
      assert (q `sub_ptr` p); //needed to trigger the sub_ptr_stable lemma
@@ -764,6 +767,7 @@ let as_repr_pos #t (b: C.const_buffer LP.byte) (from:index b) (to: Ghost.erased 
 inline_for_extraction
 let mk_repr_pos (#k:strong_parser_kind) #t (#parser:LP.parser k t)
                 (parser32:LS.parser32 parser)
+                (jumper:LP.jumper parser)
                 (b: B.mbuffer LP.byte mut_p mut_p)
                 (from:index (C.of_qbuf b))
   : Stack (repr_pos_p t (C.of_qbuf b) parser)
@@ -776,7 +780,7 @@ let mk_repr_pos (#k:strong_parser_kind) #t (#parser:LP.parser k t)
       r.vv_pos == LP.bcontents parser h1 b from)
   = let h = ST.get () in
     let to = Ghost.hide (LP.bget_valid_pos parser h b from) in
-    let r = mk parser32 b from in
+    let r = mk parser32 jumper b from in
     LP.bvalid_facts parser h b from;
     LP.parse_injective parser (LP.bytes_of_buffer_from h b from) ((Ptr?.meta r).repr_bytes);
     as_repr_pos (C.of_qbuf b) from to r
@@ -789,6 +793,7 @@ inline_for_extraction
 let mk_repr_pos_from_const_buffer
          (#k:strong_parser_kind) #t (#parser:LP.parser k t)
          (parser32:LS.parser32 parser)
+         (jumper:LP.jumper parser)
          (b: C.const_buffer LP.byte)
          (from:index b)
   : Stack (repr_pos_p t b parser)
@@ -801,7 +806,7 @@ let mk_repr_pos_from_const_buffer
       r.vv_pos == LP.bcontents parser h1 (C.cast b) from)
   = let h = ST.get () in
     let to = Ghost.hide (LP.bget_valid_pos parser h (C.cast b) from) in
-    let r = mk_from_const_buffer  parser32 b from in
+    let r = mk_from_const_buffer  parser32 jumper b from in
     LP.bvalid_facts parser h (C.cast b) from;
     LP.parse_injective parser (LP.bytes_of_buffer_from h (C.cast b) from) ((Ptr?.meta r).repr_bytes);
     as_repr_pos b from to r
@@ -817,6 +822,7 @@ let mk_repr_pos_from_serialize
   (#k:strong_parser_kind) #t (#parser:LP.parser k t) (#serializer: LP.serializer parser)
   (parser32: LS.parser32 parser) (serializer32: LS.serializer32 serializer)
   (size32: LS.size32 serializer)
+  (jumper:LP.jumper parser)
   (b:LP.slice mut_p mut_p{ LP.(b.len <= validator_max_length) })
   (from: U32.t { from <= b.LP.len })
   (x: t)
@@ -837,7 +843,7 @@ let mk_repr_pos_from_serialize
       end
     )
 = let size = size32 x in
-  match (mk_from_serialize parser32 serializer32 size32 b from x) with
+  match (mk_from_serialize parser32 serializer32 size32 jumper b from x) with
   | None -> None
   | Some p -> Some (as_repr_pos (C.of_qbuf b.LP.base) from (from + size) p)
 
@@ -877,11 +883,11 @@ let get_field_pos (#k1: strong_parser_kind) (#t1: Type) (#p1: LP.parser k1 t1)
  : get_field_pos_t f
  = fun #b pp ->
     [@inline_let]
-    let FieldAccessor acc (*jump*) p2' = f in
+    let FieldAccessor acc jump p2' = f in
     let h = ST.get () in
     valid_repr_pos_elim pp h;
     let pos = acc (C.cast b) pp.start_pos in
-    mk_repr_pos_from_const_buffer p2' b pos
+    mk_repr_pos_from_const_buffer p2' jump b pos
 
 unfold
 let read_field_pos_t (#k1: strong_parser_kind) (#t1: Type) (#p1: LP.parser k1 t1)
