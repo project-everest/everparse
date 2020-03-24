@@ -2515,6 +2515,25 @@ let leaf_reader
     res == contents p h (slice_of_buffer sl) pos
   ))
 
+let valid_bvalid_strong_prefix
+  (#k: parser_kind) (#t: Type) (p: parser k t)
+  (h: HS.mem)
+  (#rrel: _) (#rel: _) (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    valid p h sl pos
+  ))
+  (ensures (
+    valid p h sl pos /\
+    bvalid_content_pos p h sl.base pos (contents p h sl pos) (get_valid_pos p h sl pos)
+  ))
+= 
+  valid_facts p h sl pos;
+  valid_facts p h (slice_of_buffer sl.base) pos;
+  parse_strong_prefix p (bytes_of_slice_from h sl pos) (bytes_of_buffer_from h sl.base pos)
+
 inline_for_extraction
 let read_from_valid_slice
   (#k: parser_kind)
@@ -2531,9 +2550,7 @@ let read_from_valid_slice
     res == contents p h sl pos
   ))
 = let h = HST.get () in
-  valid_facts p h sl pos;
-  parse_strong_prefix p (bytes_of_slice_from h sl pos) (bytes_of_buffer_from h sl.base pos);
-  valid_facts p h (slice_of_buffer sl.base) pos;
+  valid_bvalid_strong_prefix p h sl pos;
   r sl.base pos
 
 [@unifier_hint_injective]
