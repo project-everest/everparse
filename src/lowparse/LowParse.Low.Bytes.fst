@@ -322,22 +322,22 @@ let buffer_equals_bytes
 #pop-options
 
 inline_for_extraction
-let valid_slice_equals_bytes
+let valid_buffer_equals_bytes
   (const: BY.bytes)
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (input: B.mbuffer byte rrel rel)
   (pos: U32.t)
 : HST.Stack bool
   (requires (fun h ->
-    valid (parse_flbytes (BY.length const)) h input pos
+    bvalid (parse_flbytes (BY.length const)) h input pos
   ))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
-    (res == true <==> contents (parse_flbytes (BY.length const)) h input pos == const
+    (res == true <==> bcontents (parse_flbytes (BY.length const)) h input pos == const
   )))
 = let h = HST.get () in
-  [@inline_let] let _ = valid_facts (parse_flbytes (BY.length const)) h input pos in
-  buffer_equals_bytes const input.base pos
+  [@inline_let] let _ = bvalid_facts (parse_flbytes (BY.length const)) h input pos in
+  buffer_equals_bytes const input pos
 
 inline_for_extraction
 let validate_all_bytes
@@ -922,7 +922,7 @@ let finalize_bounded_vlbytes'
 = let h0 = HST.get () in
   [@inline_let]
   let sz = l in
-  let pos_payload = write_bounded_integer sz len input pos in
+  let pos_payload = leaf_writer_strong_to_slice_strong_prefix (write_bounded_integer sz) len input pos in
   let h = HST.get () in
   [@inline_let] let _ =
     valid_flbytes_intro h0 (U32.v len) input pos_payload;

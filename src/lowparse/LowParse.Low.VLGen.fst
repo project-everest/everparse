@@ -95,7 +95,7 @@ let finalize_bounded_vlgen_exact
   (#sk: parser_kind)
   (#pk: parser sk (bounded_int32 (min) (max)))
   (#ssk: serializer pk)
-  (wk: leaf_writer_strong ssk)
+  (wk: leaf_writer_strong ssk { sk.parser_kind_subkind == Some ParserStrong })
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -133,7 +133,7 @@ let finalize_bounded_vlgen_exact
     serialized_length_eq s (contents_exact p h input (pos `U32.add` sz32) pos');
     valid_exact_serialize s h input (pos `U32.add` sz32) pos'
   in
-  let _ = wk len_payload input pos in
+  let _ = leaf_writer_strong_to_slice_strong_prefix wk len_payload input pos in
   let h = HST.get () in
   valid_bounded_vlgen min max pk s input pos h
 
@@ -145,7 +145,7 @@ let finalize_bounded_vlgen
   (#sk: parser_kind)
   (#pk: parser sk (bounded_int32 (min) (max)))
   (#ssk: serializer pk)
-  (wk: leaf_writer_strong ssk)
+  (wk: leaf_writer_strong ssk { sk.parser_kind_subkind == Some ParserStrong })
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -261,7 +261,7 @@ let finalize_vlgen_exact
   (#sk: parser_kind)
   (#pk: parser sk (bounded_int32 (min) (max)))
   (#ssk: serializer pk)
-  (wk: leaf_writer_strong ssk)
+  (wk: leaf_writer_strong ssk { sk.parser_kind_subkind == Some ParserStrong })
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -299,7 +299,7 @@ let finalize_vlgen_exact
     serialized_length_eq s (contents_exact p h input (pos `U32.add` sz32) pos');
     valid_exact_serialize s h input (pos `U32.add` sz32) pos'
   in
-  let _ = wk len_payload input pos in
+  let _ = leaf_writer_strong_to_slice_strong_prefix wk len_payload input pos in
   let h = HST.get () in
   valid_vlgen min max pk s input pos h
 
@@ -311,7 +311,7 @@ let finalize_vlgen
   (#sk: parser_kind)
   (#pk: parser sk (bounded_int32 (min) (max)))
   (#ssk: serializer pk)
-  (wk: leaf_writer_strong ssk)
+  (wk: leaf_writer_strong ssk { sk.parser_kind_subkind == Some ParserStrong })
   (#k: parser_kind)
   (#t: Type0)
   (#p: parser k t)

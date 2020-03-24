@@ -2534,6 +2534,26 @@ let valid_bvalid_strong_prefix
   valid_facts p h (slice_of_buffer sl.base) pos;
   parse_strong_prefix p (bytes_of_slice_from h sl pos) (bytes_of_buffer_from h sl.base pos)
 
+[@unifier_hint_injective]
+inline_for_extraction
+let jump_on_valid_slice
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p { k.parser_kind_subkind == Some ParserStrong })
+  (#rrel: _) (#rel: _)
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: HST.Stack U32.t
+  (requires (fun h -> valid p h sl pos))
+  (ensures (fun h pos' h' ->
+    B.modifies B.loc_none h h' /\
+    U32.v pos + content_length p h sl pos == U32.v pos'
+  ))
+= let h = HST.get () in
+  valid_bvalid_strong_prefix p h sl pos;
+  j sl.base pos
+
 inline_for_extraction
 let read_from_valid_slice
   (#k: parser_kind)
@@ -2836,11 +2856,54 @@ let leaf_writer_strong
 : Tot Type
 = (x: t) ->
   (#rrel: _) -> (#rel: _) ->
-  (sl: slice rrel rel) ->
+  (sl: B.mbuffer byte rrel rel) ->
   (pos: U32.t) ->
   HST.Stack U32.t
   (requires (fun h ->
-    let sq = B.as_seq h sl.base in
+    let len = serialized_length s x in
+    B.live h sl /\
+    U32.v pos + len <= B.length sl /\
+    writable sl (U32.v pos) (U32.v pos + len) h
+  ))
+  (ensures (fun h pos' h' ->
+    B.modifies (B.loc_buffer_from_to sl pos pos') h h' /\
+    bvalid_content_pos p h' sl pos x pos'
+  ))
+
+let bvalid_valid_strong_prefix
+  (#k: parser_kind) (#t: Type) (p: parser k t)
+  (h: HS.mem)
+  (#rrel: _) (#rel: _) (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    bvalid p h sl.base pos /\
+    U32.v (bget_valid_pos p h sl.base pos) <= U32.v sl.len
+  ))
+  (ensures (
+    valid p h sl pos /\
+    bvalid_content_pos p h sl.base pos (contents p h sl pos) (get_valid_pos p h sl pos)
+  ))
+= 
+  valid_facts p h (slice_of_buffer sl.base) pos;
+  valid_facts p h sl pos;
+  parse_strong_prefix p (bytes_of_buffer_from h sl.base pos) (bytes_of_slice_from h sl pos)
+
+[@unifier_hint_injective]
+inline_for_extraction
+let leaf_writer_strong_to_slice_strong_prefix
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: leaf_writer_strong s { k.parser_kind_subkind == Some ParserStrong })
+  (x: t)
+  (#rrel: _) (#rel: _)
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: HST.Stack U32.t
+  (requires (fun h ->
     let len = serialized_length s x in
     live_slice h sl /\
     U32.v pos + len <= U32.v sl.len /\
@@ -2850,6 +2913,10 @@ let leaf_writer_strong
     B.modifies (loc_slice_from_to sl pos pos') h h' /\
     valid_content_pos p h' sl pos x pos'
   ))
+= let res = w x sl.base pos in
+  let h' = HST.get () in
+  bvalid_valid_strong_prefix p h' sl pos;
+  res
 
 [@unifier_hint_injective]
 inline_for_extraction
@@ -2938,15 +3005,15 @@ let leaf_writer_strong_of_serializer32
 : Tot (leaf_writer_strong s)
 = fun x #rrel #rel input pos ->
   let h0 = HST.get () in
-  let len = s32 x input.base pos in
+  let len = s32 x input pos in
   [@inline_let]
   let pos' = pos `U32.add` len in
   let h = HST.get () in
   [@inline_let] let _ =
-    let large = bytes_of_slice_from h input pos in
-    let small = bytes_of_slice_from_to h input pos pos' in
+    let large = bytes_of_buffer_from h input pos in
+    let small = bytes_of_buffer_from_to h input pos pos' in
     parse_strong_prefix p small large;
-    valid_facts p h input pos
+    bvalid_facts p h input pos
   in
   pos'
 
@@ -2959,6 +3026,7 @@ let leaf_writer_weak_of_strong_constant_size
   (s32: leaf_writer_strong s)
   (sz: U32.t)
   (u: squash (
+    k.parser_kind_subkind == Some ParserStrong /\
     k.parser_kind_high == Some k.parser_kind_low /\
     k.parser_kind_low == U32.v sz /\
     k.parser_kind_low < U32.v max_uint32
@@ -2970,7 +3038,7 @@ let leaf_writer_weak_of_strong_constant_size
   else begin
     let h = HST.get () in
     writable_weaken input.base (U32.v pos) (U32.v input.len) h (U32.v pos) (U32.v pos + U32.v sz);
-    s32 x input pos
+    leaf_writer_strong_to_slice_strong_prefix s32 x input pos
   end
 
 inline_for_extraction

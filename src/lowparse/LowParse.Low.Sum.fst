@@ -240,7 +240,7 @@ let finalize_sum_case
   (#kt: parser_kind)
   (#p: parser kt (sum_repr_type t))
   (s: serializer p)
-  (w: leaf_writer_strong s)
+  (w: leaf_writer_strong s { kt.parser_kind_subkind == Some ParserStrong } )
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (destr: enum_repr_of_key'_t (sum_enum t))
   (k: sum_key t)
@@ -261,7 +261,7 @@ let finalize_sum_case
     B.modifies (loc_slice_from_to input pos pos_payload) h h' /\
     valid_content_pos (parse_sum t p pc) h' input pos (synth_sum_case t k (contents (dsnd (pc k)) h input pos_payload)) (get_valid_pos (dsnd (pc k)) h input pos_payload)
   ))
-= let pos1 = write_enum_key w (sum_enum t) destr k input pos in
+= let pos1 = leaf_writer_strong_to_slice_strong_prefix (write_enum_key w (sum_enum t) destr) k input pos in
   let h = HST.get () in
   [@inline_let]
   let _ = valid_sum_intro h t p pc input pos in
@@ -991,7 +991,7 @@ let finalize_dsum_case_known
   (#kt: parser_kind)
   (#p: parser kt (dsum_repr_type t))
   (s: serializer p)
-  (w: leaf_writer_strong s)
+  (w: leaf_writer_strong s { kt.parser_kind_subkind == Some ParserStrong })
   (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
@@ -1014,7 +1014,7 @@ let finalize_dsum_case_known
     B.modifies (loc_slice_from_to input pos pos_payload) h h' /\
     valid_content_pos (parse_dsum t p f g) h' input pos (synth_dsum_case t (Known k) (contents (dsnd (f k)) h input pos_payload)) (get_valid_pos (dsnd (f k)) h input pos_payload)
   ))
-= let pos1 = write_enum_key w (dsum_enum t) destr k input pos in
+= let pos1 = leaf_writer_strong_to_slice_strong_prefix (write_enum_key w (dsum_enum t) destr) k input pos in
   let h = HST.get () in
   [@inline_let]
   let _ =
@@ -1033,7 +1033,7 @@ let finalize_dsum_case_unknown
   (#kt: parser_kind)
   (#p: parser kt (dsum_repr_type t))
   (s: serializer p)
-  (w: leaf_writer_strong s)
+  (w: leaf_writer_strong s { kt.parser_kind_subkind == Some ParserStrong })
   (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
@@ -1055,7 +1055,7 @@ let finalize_dsum_case_unknown
     B.modifies (loc_slice_from_to input pos pos_payload) h h' /\
     valid_content_pos (parse_dsum t p f g) h' input pos (synth_dsum_case t (Unknown r) (contents g h input pos_payload)) (get_valid_pos g h input pos_payload)
   ))
-= let pos1 = w r input pos in
+= let pos1 = leaf_writer_strong_to_slice_strong_prefix w r input pos in
   let h = HST.get () in
   [@inline_let]
   let _ =

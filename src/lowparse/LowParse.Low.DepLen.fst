@@ -148,12 +148,31 @@ let deplen_func
   (dlf: t -> Tot (bounded_int32 min max) )
 : Tot Type
 = (#rrel: _) -> (#rel: _) ->
-  (input: slice rrel rel) ->
+  (input: B.mbuffer byte rrel rel) ->
   (pos: U32.t) ->
   HST.Stack (bounded_int32 min max)
+  (requires (fun h -> bvalid p h input pos))
+  (ensures (fun h res h' -> res == dlf (bcontents p h input pos) /\ B.modifies B.loc_none h h'))
+
+inline_for_extraction
+let deplen_func_on_slice
+  (#min: nat)
+  (#max: nat { min <= max /\ max < 4294967296 } )
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#dlf: t -> Tot (bounded_int32 min max) )
+  (df: deplen_func min max p dlf { k.parser_kind_subkind == Some ParserStrong } )
+  (#rrel: _)
+  (#rel: _)
+  (input: slice rrel rel)
+  (pos: U32.t)
+: HST.Stack (bounded_int32 min max)
   (requires (fun h -> valid p h input pos))
   (ensures (fun h res h' -> res == dlf (contents p h input pos) /\ B.modifies B.loc_none h h'))
-
+= let h = HST.get () in
+  valid_bvalid_strong_prefix p h input pos;
+  df input.base pos
 
 (* the validator for deplen data first validates the header then the payload *)
 
@@ -164,7 +183,7 @@ let validate_deplen
   (#hk: parser_kind)
   (#ht: Type)
   (#hp: parser hk ht)
-  (hv: validator hp)
+  (hv: validator hp { hk.parser_kind_subkind == Some ParserStrong })
   (dlf: ht -> Tot (bounded_int32 min max))
   (dlfc: deplen_func min max hp dlf)
   (#pk: parser_kind)
@@ -182,7 +201,7 @@ let validate_deplen
   if validator_max_length `U32.lt` pos_payload then
     pos_payload
   else
-    let payload_len = dlfc input pos in
+    let payload_len = deplen_func_on_slice dlfc input pos in
     if (input.len `U32.sub` pos_payload) `U32.lt` payload_len then
       validator_error_not_enough_data
     else

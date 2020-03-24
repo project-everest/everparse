@@ -284,7 +284,7 @@ let swrite_bitsum
     serialized_length_eq s (synth_bitsum'_recip b k);
     serialized_length_eq (g (bitsum'_key_of_t b k)) (swvalue w_pl);
     serialize_bitsum_eq_2 b tag_of_data type_of_tag synth_case s g k (swvalue w_pl);
-    let pos1 = w_tg (mk k) sout pout_from in
+    let pos1 = leaf_writer_strong_to_slice_strong_prefix w_tg (mk k) sout pout_from in
     let pos2 = swrite w_pl pos1 in
     let h = HST.get () in
     valid_filter h p (filter_bitsum' b) sout pout_from;

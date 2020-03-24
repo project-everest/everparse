@@ -898,7 +898,7 @@ let write_filter
   [@inline_let] let _ = serialized_length_eq (serialize_filter s f) x in 
   let res = s32 x input pos in
   let h = HST.get () in
-  [@inline_let] let _ = valid_filter h p f input pos in
+  [@inline_let] let _ = valid_filter h p f (slice_of_buffer input) pos in
   res
 
 inline_for_extraction
@@ -1015,7 +1015,7 @@ let write_synth
   [@inline_let] let _ = serialized_length_eq s1 (g1 x) in
   let pos' = s1' (g1' x) input pos in
   let h = HST.get () in
-  [@inline_let] let _ = valid_synth h p1 f2 input pos in
+  [@inline_let] let _ = valid_synth h p1 f2 (slice_of_buffer input) pos in
   pos'
 
 inline_for_extraction

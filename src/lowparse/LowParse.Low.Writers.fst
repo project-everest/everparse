@@ -131,7 +131,7 @@ let swrite_leaf
   (x: t)
 : Tot (y: swriter s h0 0 sout pout_from0 { swvalue y == x } )
 = SWriter (Ghost.hide x)
-  (fun pout_from -> w x sout pout_from)
+  (fun pout_from -> leaf_writer_strong_to_slice_strong_prefix w x sout pout_from)
 
 inline_for_extraction
 noextract
@@ -256,7 +256,7 @@ let write_leaf_cs
   (fun pout_from ->
     if U32.uint_to_t k.parser_kind_low `U32.gt` (sout.len `U32.sub` pout_from)
     then max_uint32
-    else w x sout pout_from
+    else leaf_writer_strong_to_slice_strong_prefix w x sout pout_from
   )
 
 inline_for_extraction
@@ -626,7 +626,7 @@ let owrite_leaf_cs
   (fun pout_from ->
     if U32.uint_to_t k.parser_kind_low `U32.gt` (sout.len `U32.sub` pout_from)
     then max_uint32
-    else w x sout pout_from
+    else leaf_writer_strong_to_slice_strong_prefix w x sout pout_from
   )
 
 inline_for_extraction

@@ -293,7 +293,7 @@ let finalize_vldata_gen
   ))
 = [@inline_let]
   let len_payload = pos' `U32.sub` (pos `U32.add` U32.uint_to_t sz) in
-  let _ = write_bounded_integer sz len_payload input pos in
+  let _ = leaf_writer_strong_to_slice_strong_prefix (write_bounded_integer sz) len_payload input pos in
   let h = HST.get () in
   valid_vldata_gen_intro h sz f p input pos pos'
 
@@ -520,7 +520,7 @@ let finalize_bounded_vldata_strong_exact
     serialized_length_eq s (contents_exact p h input (pos `U32.add` U32.uint_to_t sz) pos');
     valid_exact_serialize s h input (pos `U32.add` U32.uint_to_t sz) pos'
   in
-  let _ = write_bounded_integer sz len_payload input pos in
+  let _ = leaf_writer_strong_to_slice_strong_prefix (write_bounded_integer sz) len_payload input pos in
   let h = HST.get () in
   valid_bounded_vldata_strong_intro h min max s input pos pos'
 
@@ -597,7 +597,7 @@ let finalize_bounded_vldata_exact
   [@inline_let]
   let len_payload = pos' `U32.sub` (pos `U32.add` U32.uint_to_t sz) in
   let h = HST.get () in
-  let _ = write_bounded_integer sz len_payload input pos in
+  let _ = leaf_writer_strong_to_slice_strong_prefix (write_bounded_integer sz) len_payload input pos in
   let h = HST.get () in
   valid_bounded_vldata_intro h min max p input pos pos'
 
