@@ -654,13 +654,13 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   (* Used in select() *)
   w o "noextract let %s_repr_parser = %s\n\n" n (pcombinator_name repr_t);
   w o "noextract let %s_repr_serializer = %s\n\n" n (scombinator_name repr_t);
-  w o "inline_for_extraction noextract let %s_repr_parser32 = %s\n\n" n (pcombinator32_name repr_t);
-  w o "inline_for_extraction noextract let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
-  w o "inline_for_extraction noextract let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
-  w o "inline_for_extraction noextract let %s_repr_validator = %s\n\n" n (validator_name repr_t);
-  w o "inline_for_extraction noextract let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
-  w o "inline_for_extraction noextract let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
-  w o "inline_for_extraction noextract let %s_repr_writer = %s\n\n" n (leaf_writer_name repr_t);
+  wh o "inline_for_extraction noextract let %s_repr_parser32 = %s\n\n" n (pcombinator32_name repr_t);
+  wh o "inline_for_extraction noextract let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
+  wh o "inline_for_extraction noextract let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
+  wl o "inline_for_extraction noextract let %s_repr_validator = %s\n\n" n (validator_name repr_t);
+  wl o "inline_for_extraction noextract let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
+  wl o "inline_for_extraction noextract let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
+  wl o "inline_for_extraction noextract let %s_repr_writer = %s\n\n" n (leaf_writer_name repr_t);
 
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
@@ -1372,11 +1372,11 @@ and compile_select o i n seln tagn tagt taga cl def al =
            w o "let %s_bytesize_eqn_%s %s x =\n" n case vvar;
            w o "  %s\n" same_kind;
            w o "  LP.serialize_dsum_eq %s_sum %s_repr_serializer parse_%s_cases serialize_%s_cases %s %s (%s %s x) ;\n" n tn n n (pcombinator_name dt) (scombinator_name dt) constr vvar;
-           w o "  let tg = LL.dsum_tag_of_data %s_sum (%s %s x) in\n" n constr vvar;
+           w o "  let tg = LP.dsum_tag_of_data %s_sum (%s %s x) in\n" n constr vvar;
            if vvar = "" then
-             w o "  assert_norm (tg == LL.Known (known_%s_as_enum_key %s));\n" tn (String.capitalize_ascii case)
+             w o "  assert_norm (tg == LP.Known (known_%s_as_enum_key %s));\n" tn (String.capitalize_ascii case)
            else
-             w o "  assert_norm (tg == LL.Unknown (unknown_%s_as_enum_key %s));\n" tn vvar;
+             w o "  assert_norm (tg == LP.Unknown (unknown_%s_as_enum_key %s));\n" tn vvar;
            w o "  (let ln = FStar.Seq.length (LP.serialize (LP.serialize_maybe_enum_key _ %s_repr_serializer (LP.dsum_enum %s_sum)) tg) in assert (%d <= ln /\\ ln <= %d));\n" tn n taglen taglen;
            w o "  %s\n\n" (bytesize_eq_call ty "x")
          end
@@ -1690,8 +1690,8 @@ and compile_vllist o i is_private n ty li elem_li lenty smin smax =
   w o "let %s_list_bytesize_nil = LP.serialize_list_nil %s %s\n\n" n (pcombinator_name ty) (scombinator_name ty);
   w i "val %s_list_bytesize_cons (x: %s) (y: list %s) : Lemma (%s_list_bytesize (x :: y) == %s + %s_list_bytesize y) [SMTPat (%s_list_bytesize (x :: y))]\n\n" n (compile_type ty) (compile_type ty) n (bytesize_call ty "x") n n;
   w o "let %s_list_bytesize_cons x y = LP.serialize_list_cons %s %s x y; %s\n\n" n (pcombinator_name ty) (scombinator_name ty) (bytesize_eq_call ty "x");
-  w i "val %s_list_bytesize_eq (l: list %s) : Lemma (%s_list_bytesize l == LL.serialized_list_length %s l)\n\n" n (compile_type ty) n (scombinator_name ty);
-  w o "let %s_list_bytesize_eq l = LL.serialized_list_length_eq_length_serialize_list %s l\n\n" n (scombinator_name ty);
+  wl i "val %s_list_bytesize_eq (l: list %s) : Lemma (%s_list_bytesize l == LL.serialized_list_length %s l)\n\n" n (compile_type ty) n (scombinator_name ty);
+  wl o "let %s_list_bytesize_eq l = LL.serialized_list_length_eq_length_serialize_list %s l\n\n" n (scombinator_name ty);
   wh i "val check_%s_list_bytesize (l: list %s) : Tot (b: bool {b == (let x = %s_list_bytesize l in %d <= x && x <= %d)})\n\n" n (compile_type ty) n smin smax;
   wh o "let check_%s_list_bytesize l =\n" n;
   wh o "  let x = LS.size32_list %s () l in\n" (size32_name ty);
@@ -1816,9 +1816,9 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "let %s_parser' = LP.parse_vclist %d %d %s %s\n\n" n low high (pcombinator_name repr_t) (pcombinator_name ty);
       w o "private let kind_eq : squash (LP.get_parser_kind %s_parser' == %s_parser_kind) = _ by (FStar.Tactics.trefl ())\n\n" n n;
-      w o "private let type_eq : squash (%s == LL.vlarray %s %d %d) = _ by (FStar.Tactics.trefl ())\n\n" n (compile_type ty) low high;
+      w o "private let type_eq : squash (%s == LP.vlarray %s %d %d) = _ by (FStar.Tactics.trefl ())\n\n" n (compile_type ty) low high;
       w o "let %s_parser = %s_parser'\n" n n;
-      w o "let %s_serializer = LL.serialize_vclist %d %d %s %s\n\n" n low high (scombinator_name repr_t) (scombinator_name ty);
+      w o "let %s_serializer = LP.serialize_vclist %d %d %s %s\n\n" n low high (scombinator_name repr_t) (scombinator_name ty);
       write_bytesize o is_private n;
       wh o "let %s_parser32 = LS.parse32_vclist %dul %dul %s %s\n\n" n low high (pcombinator32_name repr_t) (pcombinator32_name ty);
       wh o "let %s_serializer32 =\n  [@inline_let] let _ = assert_norm (LS.serialize32_vclist_precond %d %d (LP.get_parser_kind %s) (LP.get_parser_kind %s)) in\n" n low high (pcombinator_name repr_t) (pcombinator_name ty);
@@ -2352,8 +2352,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_list_bytesize_nil = LP.serialize_list_nil %s %s\n\n" n (pcombinator_name ty) (scombinator_name ty);
       w i "val %s_list_bytesize_cons (x: %s) (y: list %s) : Lemma (%s_list_bytesize (x :: y) == %s + %s_list_bytesize y) [SMTPat (%s_list_bytesize (x :: y))]\n\n" n (compile_type ty) (compile_type ty) n (bytesize_call ty "x") n n;
       w o "let %s_list_bytesize_cons x y = LP.serialize_list_cons %s %s x y; %s\n\n" n (pcombinator_name ty) (scombinator_name ty) (bytesize_eq_call ty "x");
-      w i "val %s_list_bytesize_eq (l: list %s) : Lemma (%s_list_bytesize l == LL.serialized_list_length %s l)\n\n" n (compile_type ty) n (scombinator_name ty);
-      w o "let %s_list_bytesize_eq l = LL.serialized_list_length_eq_length_serialize_list %s l\n\n" n (scombinator_name ty);
+      wl i "val %s_list_bytesize_eq (l: list %s) : Lemma (%s_list_bytesize l == LL.serialized_list_length %s l)\n\n" n (compile_type ty) n (scombinator_name ty);
+      wl o "let %s_list_bytesize_eq l = LL.serialized_list_length_eq_length_serialize_list %s l\n\n" n (scombinator_name ty);
       wh i "val check_%s_list_bytesize (l: list %s) : Tot (b: bool {b == (let x = %s_list_bytesize l in %d <= x && x <= %d)})\n\n" n (compile_type ty) n min max;
       wh o "let check_%s_list_bytesize l =\n" n;
       wh o "  let x = LS.size32_list %s () l in\n" (size32_name ty);
