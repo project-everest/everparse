@@ -11,7 +11,7 @@ include LowParse.SLow.Bytes
 include LowParse.SLow.Enum
 include LowParse.SLow.Tac.Enum
 include LowParse.SLow.Sum
-include LowParse.SLow.Tac.Sum
+include LowParse.Spec.Tac.Sum
 include LowParse.SLow.Option
 include LowParse.SLow.IfThenElse
 include LowParse.SLow.VCList
