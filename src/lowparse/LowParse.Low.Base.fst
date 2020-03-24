@@ -2053,6 +2053,81 @@ let accessor
     pos' == slice_access h g sl pos
   ))
 
+let valid_bvalid_strong_prefix
+  (#k: parser_kind) (#t: Type) (p: parser k t)
+  (h: HS.mem)
+  (#rrel: _) (#rel: _) (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    valid p h sl pos
+  ))
+  (ensures (
+    valid p h sl pos /\
+    bvalid_content_pos p h sl.base pos (contents p h sl pos) (get_valid_pos p h sl pos)
+  ))
+= 
+  valid_facts p h sl pos;
+  valid_facts p h (slice_of_buffer sl.base) pos;
+  parse_strong_prefix p (bytes_of_slice_from h sl pos) (bytes_of_buffer_from h sl.base pos)
+
+let bvalid_valid_strong_prefix
+  (#k: parser_kind) (#t: Type) (p: parser k t)
+  (h: HS.mem)
+  (#rrel: _) (#rel: _) (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    bvalid p h sl.base pos /\
+    U32.v (bget_valid_pos p h sl.base pos) <= U32.v sl.len
+  ))
+  (ensures (
+    valid p h sl pos /\
+    bvalid_content_pos p h sl.base pos (contents p h sl pos) (get_valid_pos p h sl pos)
+  ))
+= 
+  valid_facts p h (slice_of_buffer sl.base) pos;
+  valid_facts p h sl pos;
+  parse_strong_prefix p (bytes_of_buffer_from h sl.base pos) (bytes_of_slice_from h sl pos)
+
+inline_for_extraction
+let access_from_valid_slice
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (#g: gaccessor p1 p2 cl)
+  (a: accessor g)
+  (#rrel: _)
+  (#rel: _)
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: HST.Stack U32.t
+  (requires (fun h ->
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    valid p1 h sl pos /\
+    cl.clens_cond (contents p1 h sl pos)
+  ))
+  (ensures (fun h pos' h' ->
+    B.modifies B.loc_none h h' /\
+    valid p2 h sl pos' /\
+    contents p2 h sl pos' == cl.clens_get (contents p1 h sl pos) /\
+    // useful for framing
+    U32.v pos <= U32.v pos' /\
+    U32.v pos' + content_length p2 h sl pos' <= U32.v pos + content_length p1 h sl pos
+  ))
+= let h = HST.get () in
+  valid_bvalid_strong_prefix p1 h sl pos; 
+  let pos' = a sl.base pos in
+  bvalid_valid_strong_prefix p2 h sl pos' ;
+  pos'
+
 inline_for_extraction
 let make_accessor_from_pure
   (#k1: parser_kind)
@@ -2515,25 +2590,6 @@ let leaf_reader
     res == contents p h (slice_of_buffer sl) pos
   ))
 
-let valid_bvalid_strong_prefix
-  (#k: parser_kind) (#t: Type) (p: parser k t)
-  (h: HS.mem)
-  (#rrel: _) (#rel: _) (sl: slice rrel rel)
-  (pos: U32.t)
-: Lemma
-  (requires (
-    k.parser_kind_subkind == Some ParserStrong /\
-    valid p h sl pos
-  ))
-  (ensures (
-    valid p h sl pos /\
-    bvalid_content_pos p h sl.base pos (contents p h sl pos) (get_valid_pos p h sl pos)
-  ))
-= 
-  valid_facts p h sl pos;
-  valid_facts p h (slice_of_buffer sl.base) pos;
-  parse_strong_prefix p (bytes_of_slice_from h sl pos) (bytes_of_buffer_from h sl.base pos)
-
 [@unifier_hint_injective]
 inline_for_extraction
 let jump_on_valid_slice
@@ -2870,27 +2926,6 @@ let leaf_writer_strong
     bvalid_content_pos p h' sl pos x pos'
   ))
 
-let bvalid_valid_strong_prefix
-  (#k: parser_kind) (#t: Type) (p: parser k t)
-  (h: HS.mem)
-  (#rrel: _) (#rel: _) (sl: slice rrel rel)
-  (pos: U32.t)
-: Lemma
-  (requires (
-    k.parser_kind_subkind == Some ParserStrong /\
-    bvalid p h sl.base pos /\
-    U32.v (bget_valid_pos p h sl.base pos) <= U32.v sl.len
-  ))
-  (ensures (
-    valid p h sl pos /\
-    bvalid_content_pos p h sl.base pos (contents p h sl pos) (get_valid_pos p h sl pos)
-  ))
-= 
-  valid_facts p h (slice_of_buffer sl.base) pos;
-  valid_facts p h sl pos;
-  parse_strong_prefix p (bytes_of_buffer_from h sl.base pos) (bytes_of_slice_from h sl pos)
-
-[@unifier_hint_injective]
 inline_for_extraction
 let leaf_writer_strong_to_slice_strong_prefix
   (#k: parser_kind)
