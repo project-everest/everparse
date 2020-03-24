@@ -81,7 +81,7 @@ let test_bitcoin () : St bool =
     (print !$"Validator failed on Bitcoin block!\n"; false)
   else
     let slice = LPL.make_slice lb (len block) in
-    let pos_random = Block.accessor_block_prev_block slice 0ul in
+    let pos_random = LPL.access_from_valid_slice Block.accessor_block_prev_block slice 0ul in
     let p_random = LB.sub lb pos_random 32ul in
     bprint (" The previous block hash is: " ^(hex_of_bytes (of_buffer 32ul p_random))); true
 
