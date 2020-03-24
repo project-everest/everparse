@@ -93,7 +93,7 @@ let size32_t =
 inline_for_extraction
 let test_HelloRetryRequest : LL.test_ifthenelse_tag parse_t_param
 = fun #_ #_ input pos ->
-  LL.valid_slice_equals_bytes msg_type_HelloRetryRequest input pos
+  LL.valid_buffer_equals_bytes msg_type_HelloRetryRequest input pos
 
 let validate_t = LL.validate_ifthenelse parse_t_param (LL.validate_flbytes 3 3ul) test_HelloRetryRequest (fun b -> if b then LL.validate_u32 () else LL.validate_u16 ())
 
@@ -103,7 +103,7 @@ let t_elim h input pos = LL.valid_ifthenelse_elim parse_t_param h input pos
 
 let t_test_HelloRetryRequest input pos =
   let h = HST.get () in
-  t_elim h input pos;
+  t_elim h (LL.slice_of_buffer input) pos;
   test_HelloRetryRequest input pos
 
 let t_gaccessor_HelloRetryRequest =

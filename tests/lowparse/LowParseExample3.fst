@@ -29,13 +29,13 @@ let dummy
     then
       if which = 42ul
       then
-        let x : U16.t = read_u16 input (access_a input 0ul) in
+        let x : U16.t = read_from_valid_slice read_u16 input (access_from_valid_slice access_a input 0ul) in
         Cast.uint16_to_uint32 x
       else if which = 1729ul
       then
-        read_u32 input (access_b input 0ul)
+        read_from_valid_slice read_u32 input (access_from_valid_slice access_b input 0ul)
       else
-        let x : U16.t = read_u16 input (access_c input 0ul) in
+        let x : U16.t = read_from_valid_slice read_u16 input (access_from_valid_slice access_c input 0ul) in
         Cast.uint16_to_uint32 x
     else 0ul
   in

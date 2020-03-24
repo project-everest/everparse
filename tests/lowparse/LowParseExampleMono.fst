@@ -39,7 +39,7 @@ let wvalid_stable
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (s: slice)
+  (s: buffer)
   (pos: U32.t)
   (gpos' : Ghost.erased U32.t)
   (v' : Ghost.erased t)
@@ -52,7 +52,7 @@ let wvalid_stable
     (requires (wvalid p s (compl t) pos gpos' v' s1 /\ prefix_freezable_preorder s1 s2))
     (ensures (wvalid p s (compl t) pos gpos' v' s1 /\ prefix_freezable_preorder s1 s2 /\ wvalid p s (compl t) pos gpos' v' s2))
   = prefix_freezable_preorder_elim s1 s2;
-    parse_strong_prefix p (Seq.slice s1 (U32.v pos) (U32.v s.len)) (Seq.slice s2 (U32.v pos) (U32.v s.len))
+    parse_strong_prefix p (Seq.slice s1 (U32.v pos) (B.length s)) (Seq.slice s2 (U32.v pos) (B.length s))
   in
   let pf' (s1 s2: Seq.seq byte) : Lemma
     ((wvalid p s (compl t) pos gpos' v' s1 /\ prefix_freezable_preorder s1 s2) ==> wvalid p s (compl t) pos gpos' v' s2)
@@ -65,7 +65,7 @@ let irepr
   (#t: Type)
   (#k: parser_kind)
   (p: parser k t)
-  (s: slice)
+  (s: buffer)
 = irepr p s (compl t)
 
 let buffer_frozen_until (buf: buffer) (h:HS.mem) : GTot nat =
@@ -77,25 +77,25 @@ let witness_valid
   (#t: Type)
   (#k: parser_kind)
   (#p: parser k t)
-  (s: slice)
+  (s: buffer)
   (pos: U32.t)
 : HST.Stack (irepr p s)
   (requires (fun h ->
     k.parser_kind_subkind == Some ParserStrong /\
-    valid p h s pos /\
+    bvalid p h s pos /\
     (* conditions on global size header *)
     U32.v pos >= 4 /\ (
-    let len = buffer_frozen_until s.base h in
-    U32.v (get_valid_pos p h s pos) <= len
+    let len = buffer_frozen_until s h in
+    U32.v (bget_valid_pos p h s pos) <= len
   )))
   (ensures (fun h res h' ->
     h' == h /\
     irepr_pos res == pos /\
-    valid_content_pos p h s pos (irepr_v res) (irepr_pos' res)
+    bvalid_content_pos p h s pos (irepr_v res) (irepr_pos' res)
   ))
 = let h = HST.get () in
-  recall_frozen_until_default s.base;
-  wvalid_stable p s pos (Ghost.hide (get_valid_pos p h s pos)) (Ghost.hide (contents p h s pos));
+  recall_frozen_until_default s;
+  wvalid_stable p s pos (Ghost.hide (bget_valid_pos p h s pos)) (Ghost.hide (bcontents p h s pos));
   witness_valid_gen s (compl t) pos
 
 inline_for_extraction
@@ -104,17 +104,17 @@ let recall_valid
   (#t: Type)
   (#k: parser_kind)
   (#p: parser k t)
-  (#s: slice)
+  (#s: buffer)
   (i: irepr p s)
 : HST.Stack unit
-  (requires (fun h -> B.recallable s.base \/ live_slice h s))
+  (requires (fun h -> B.recallable s \/ B.live h s))
   (ensures (fun h _ h' ->
     h' == h /\
-    live_slice h s /\
-    valid_content_pos p h s (irepr_pos i) (irepr_v i) (irepr_pos' i) /\
-    U32.v s.len >= 4 /\
+    B.live h s /\
+    bvalid_content_pos p h s (irepr_pos i) (irepr_v i) (irepr_pos' i) /\
+    B.length s >= 4 /\
     U32.v (irepr_pos i) >= 4 /\
-    U32.v (irepr_pos' i) <= buffer_frozen_until s.base h
+    U32.v (irepr_pos' i) <= buffer_frozen_until s h
   ))
 = recall_valid_gen i
 
@@ -130,25 +130,25 @@ let iaccess
   (#cl: clens t1 t2)
   (#g: gaccessor p1 p2 cl)
   ($a: accessor g)
-  (#s: slice)
+  (#s: buffer)
   (i1: irepr p1 s)
 : HST.Stack (irepr p2 s)
   (requires (fun h ->
     k1.parser_kind_subkind == Some ParserStrong /\
     k2.parser_kind_subkind == Some ParserStrong /\
     cl.clens_cond (irepr_v i1) /\
-    (B.recallable s.base \/ live_slice h s)
+    (B.recallable s \/ B.live h s)
   ))
   (ensures (fun h i2 h' ->
     B.modifies B.loc_none h h' /\
-    valid_content_pos p1 h s (irepr_pos i1) (irepr_v i1) (irepr_pos' i1) /\
-    valid_content_pos p2 h s (irepr_pos i2) (irepr_v i2) (irepr_pos' i2) /\
+    bvalid_content_pos p1 h s (irepr_pos i1) (irepr_v i1) (irepr_pos' i1) /\
+    bvalid_content_pos p2 h s (irepr_pos i2) (irepr_v i2) (irepr_pos' i2) /\
     irepr_pos i2 == slice_access h g s (irepr_pos i1) /\
     irepr_v i2 == cl.clens_get (irepr_v i1)
   ))
 = recall_valid i1;
   let x = a s (irepr_pos i1) in
-  recall_frozen_until_default s.base;
+  recall_frozen_until_default s;
   witness_valid s x
 
 inline_for_extraction
@@ -158,13 +158,13 @@ let iread
   (#t: Type)
   (#p: parser k t)
   (r: leaf_reader p)
-  (#s: slice)
+  (#s: buffer)
   (i: irepr p s)
 : HST.Stack t
-  (requires (fun h -> (B.recallable s.base \/ live_slice h s)))
+  (requires (fun h -> (B.recallable s \/ B.live h s)))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
-    valid_content_pos p h s (irepr_pos i) (irepr_v i) (irepr_pos' i) /\
+    bvalid_content_pos p h s (irepr_pos i) (irepr_v i) (irepr_pos' i) /\
     res == irepr_v i
   ))
 = recall_valid i;
@@ -176,13 +176,13 @@ let ijump
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)
-  (#s: slice)
+  (#s: buffer)
   (i: irepr p s)
 : HST.Stack U32.t
-  (requires (fun h -> (B.recallable s.base \/ live_slice h s)))
+  (requires (fun h -> (B.recallable s \/ B.live h s)))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
-    valid_content_pos p h s (irepr_pos i) (irepr_v i) (irepr_pos' i) /\
+    bvalid_content_pos p h s (irepr_pos i) (irepr_v i) (irepr_pos' i) /\
     res == irepr_pos' i
   ))
 = recall_valid i;
@@ -217,43 +217,43 @@ let freeze_valid
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (sl: slice)
+  (sl: buffer)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack (irepr p sl)
   (requires (fun h ->
-    (B.recallable sl.base \/ live_slice h sl) /\
-    buffer_frozen_until sl.base h <= U32.v pos /\
-    valid_pos p h sl pos pos' /\
+    (B.recallable sl \/ B.live h sl) /\
+    buffer_frozen_until sl h <= U32.v pos /\
+    bvalid_pos p h sl pos pos' /\
     k.parser_kind_subkind == Some ParserStrong // for valid_exact_ext_intro
   ))
   (ensures (fun h res h' ->
-    B.modifies (B.loc_buffer sl.base) h h' /\
-    buffer_frozen_until sl.base h' == U32.v pos' /\
+    B.modifies (B.loc_buffer sl) h h' /\
+    buffer_frozen_until sl h' == U32.v pos' /\
     irepr_pos res == pos /\
     irepr_pos' res == pos' /\
-    irepr_v res == contents p h sl pos
+    irepr_v res == bcontents p h sl pos
   ))
-=    B.recall_p sl.base (frozen_until_at_least 4); // to recover liveness
+=    B.recall_p sl (frozen_until_at_least 4); // to recover liveness
      let h1 = HST.get () in
-     freeze sl.base pos' ;
+     freeze sl pos' ;
      let h2 = HST.get () in
-     valid_pos_valid_exact p h1 sl pos pos' ;
-     valid_exact_ext_intro p h1 sl pos pos' h2 sl pos pos' ;
+     valid_pos_valid_exact p h1 (slice_of_buffer sl) pos pos' ;
+     valid_exact_ext_intro p h1 (slice_of_buffer sl) pos pos' h2 (slice_of_buffer sl) pos pos' ;
      witness_valid sl pos
 
 let frozen_until_frame
-  (sl: slice)
+  (sl: buffer)
   (l: B.loc)
   (h h' : HS.mem)
 : Lemma
-  (requires (live_slice h sl /\ B.modifies l h h' /\ B.loc_disjoint l (loc_slice_from_to sl 0ul 4ul)))
-  (ensures (buffer_frozen_until sl.base h' == buffer_frozen_until sl.base h))
+  (requires (B.live h sl /\ B.modifies l h h' /\ B.loc_disjoint l (B.loc_buffer_from_to sl 0ul 4ul)))
+  (ensures (buffer_frozen_until sl h' == buffer_frozen_until sl h))
   [SMTPatOr [
-    [SMTPat (B.modifies l h h'); SMTPat (buffer_frozen_until sl.base h);];
-    [SMTPat (B.modifies l h h'); SMTPat (buffer_frozen_until sl.base h');];
+    [SMTPat (B.modifies l h h'); SMTPat (buffer_frozen_until sl h);];
+    [SMTPat (B.modifies l h h'); SMTPat (buffer_frozen_until sl h');];
   ]]
-= B.modifies_buffer_from_to_elim sl.base 0ul 4ul l h h'
+= B.modifies_buffer_from_to_elim sl 0ul 4ul l h h'
 
 inline_for_extraction
 noextract
@@ -264,23 +264,23 @@ let iwrite
   (#s: serializer p)
   (w: leaf_writer_strong s)
   (v: t)
-  (sl: slice)
+  (sl: buffer)
   (pos: U32.t)
 : HST.Stack (irepr p sl)
   (requires (fun h ->
     k.parser_kind_subkind == Some ParserStrong /\ // for valid_exact_ext_intro
-    buffer_frozen_until sl.base h <= U32.v pos /\
-    U32.v pos + serialized_length s v <= U32.v sl.len /\
-    (recallable sl.base \/ live_slice h sl)
+    buffer_frozen_until sl h <= U32.v pos /\
+    U32.v pos + serialized_length s v <= B.length sl /\
+    (recallable sl \/ B.live h sl)
   ))
   (ensures (fun h i h' ->
     irepr_v i == v /\
     irepr_pos i == pos /\
     irepr_pos' i == pos `U32.add` U32.uint_to_t (serialized_length s v) /\
-    buffer_frozen_until sl.base h' == U32.v (irepr_pos' i) /\
-    B.modifies (B.loc_buffer sl.base) h h'
+    buffer_frozen_until sl h' == U32.v (irepr_pos' i) /\
+    B.modifies (B.loc_buffer sl) h h'
   ))
-=    B.recall_p sl.base (frozen_until_at_least 4); // to recover liveness
+=    B.recall_p sl (frozen_until_at_least 4); // to recover liveness
      let pos' = w v sl pos in
      freeze_valid p sl pos pos'
 
@@ -291,16 +291,16 @@ let icopy
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: LowParse.Low.Base.slice rrel rel)
+  (src: B.mbuffer byte rrel rel)
   (spos spos' : U32.t)
   (dst: slice)
   (dpos: U32.t)
-: HST.Stack (irepr p dst)
+: HST.Stack (irepr p dst.base)
   (requires (fun h ->
     k.parser_kind_subkind == Some ParserStrong /\
-    valid_pos p h src spos spos' /\
+    bvalid_pos p h src spos spos' /\
     U32.v dpos + U32.v spos' - U32.v spos <= U32.v dst.len /\
-    B.loc_disjoint (loc_slice_from_to src spos spos') (loc_slice_from_to dst dpos (dpos `U32.add` (spos' `U32.sub` spos))) /\ (
+    B.loc_disjoint (loc_buffer_from_to src spos spos') (loc_slice_from_to dst dpos (dpos `U32.add` (spos' `U32.sub` spos))) /\ (
     let len = buffer_frozen_until dst.base h in
     (recallable dst.base \/ live_slice h dst) /\
     len <= U32.v dpos
@@ -308,12 +308,14 @@ let icopy
   (ensures (fun h i h' ->
     B.modifies (B.loc_buffer dst.base) h h' /\
     irepr_pos i == dpos /\
-    irepr_v i == contents p h src spos /\
+    irepr_v i == bcontents p h src spos /\
     buffer_frozen_until dst.base h' == U32.v (irepr_pos' i)
   ))
 = B.recall_p dst.base (frozen_until_at_least 4); // to recover liveness
   let dpos' = copy_strong p src spos spos' dst dpos in
-  let i = freeze_valid p dst dpos dpos' in
+  let h = HST.get () in
+  valid_bvalid_strong_prefix p h dst dpos;
+  let i = freeze_valid p dst.base dpos dpos' in
   i
 
 val main: FStar.Int32.t -> LowStar.Buffer.buffer (LowStar.Buffer.buffer C.char) ->

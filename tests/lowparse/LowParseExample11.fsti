@@ -32,11 +32,11 @@ val validate_t : LL.validator parse_t
 
 val jump_t : LL.jumper parse_t
 
-val read_6th: (sl: slice) -> (pos: U32.t) -> HST.Stack U32.t
-  (requires (fun h -> LL.valid parse_t h sl pos))
+val read_6th: (sl: B.buffer LL.byte) -> (pos: U32.t) -> HST.Stack U32.t
+  (requires (fun h -> LL.bvalid parse_t h sl pos))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
-    res == L.index (LL.contents parse_t h sl pos) 6
+    res == L.index (LL.bcontents parse_t h sl pos) 6
   ))
 
 val main: FStar.Int32.t -> LowStar.Buffer.buffer (LowStar.Buffer.buffer C.char) ->

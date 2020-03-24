@@ -19,9 +19,9 @@ let vltest () : HST.Stack unit (fun _ -> True) (fun _ _ _ -> True) =
   HST.push_frame ();
   let b = B.alloca 0uy 12ul in
   let sl = { LP.base = b; LP.len = 12ul; } in
-  let j = LPI.write_u16 18us sl 2ul in
-  let j = LPI.write_u16 42us sl j in
-  let j = LPI.write_u32 1729ul sl j in
+  let j = LP.leaf_writer_strong_to_slice_strong_prefix LPI.write_u16 18us sl 2ul in
+  let j = LP.leaf_writer_strong_to_slice_strong_prefix LPI.write_u16 42us sl j in
+  let j = LP.leaf_writer_strong_to_slice_strong_prefix LPI.write_u32 1729ul sl j in
   let h = HST.get () in
   serialize_inner_intro h sl 2ul;
   serialize_t_intro h sl 2ul;

@@ -35,11 +35,11 @@ let jump_t =  LL.jump_vclist 10 1000 LL.jump_bcvli LL.read_bcvli LL.jump_bcvli
 
 let read_6th sl pos =
   let h = HST.get () in
-  LL.valid_vclist_elim 10 1000 LL.parse_bcvli LL.parse_bcvli h sl pos;
+  LL.valid_vclist_elim 10 1000 LL.parse_bcvli LL.parse_bcvli h (LL.slice_of_buffer sl) pos;
   let len = LL.read_bcvli sl pos in
   let pos_payload = LL.jump_bcvli sl pos in
   let pos' = LL.jump_nlist len (LL.jump_bcvli <: LL.jumper LL.parse_bcvli) sl pos_payload in
-  LL.valid_nlist_valid_list (U32.v len) LL.parse_bcvli h sl pos_payload;
+  LL.valid_nlist_valid_list (U32.v len) LL.parse_bcvli h (LL.slice_of_buffer sl) pos_payload;
   let pos_6th = LL.list_nth LL.parse_bcvli LL.jump_bcvli sl pos_payload pos' 6ul in
   LL.read_bcvli sl pos_6th
 

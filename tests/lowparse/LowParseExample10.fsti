@@ -72,11 +72,11 @@ val t_elim (h: HS.mem) (input: slice) (pos: U32.t) : Lemma
     | Other m -> m.msg_type
   ))))
 
-val t_test_HelloRetryRequest (input: slice) (pos: U32.t) : HST.Stack bool
-  (requires (fun h -> LL.valid parse_t h input pos))
+val t_test_HelloRetryRequest (input: B.buffer U8.t) (pos: U32.t) : HST.Stack bool
+  (requires (fun h -> LL.bvalid parse_t h input pos))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
-    (res == true <==> HelloRetryRequest? (LL.contents parse_t h input pos))
+    (res == true <==> HelloRetryRequest? (LL.bcontents parse_t h input pos))
   ))
 
 let clens_HelloRetryRequest : LL.clens t U32.t = {
