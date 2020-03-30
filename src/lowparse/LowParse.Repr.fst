@@ -40,6 +40,8 @@ module I = LowStar.ImmutableBuffer
    Calling it LowParse.Ptr since it should eventually move to everparse/src/lowparse
  *)
 
+inline_for_extraction let const_buffer = C.const_buffer LP.byte
+
 /// `strong_parser_kind`: We restrict our attention to the
 /// representation of types whose parsers have the strong-prefix
 /// property.
