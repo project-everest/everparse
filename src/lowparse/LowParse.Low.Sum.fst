@@ -1116,6 +1116,7 @@ let read_dsum_tag
   [@inline_let] let _ = valid_dsum_elim_tag h t p f g input pos in
   read_maybe_enum_key p32 (dsum_enum t) destr input pos 
 
+#push-options "--z3rlimit 32"
 let valid_dsum_elim_known
   (h: HS.mem)
   (t: dsum)
@@ -1151,6 +1152,7 @@ let valid_dsum_elim_known
   let Known k = contents (parse_maybe_enum_key p (dsum_enum t)) h input pos in
   let pos_payload = get_valid_pos (parse_maybe_enum_key p (dsum_enum t)) h input pos in
   valid_facts (dsnd (f k)) h input pos_payload
+#pop-options
 
 let valid_dsum_elim_unknown
   (h: HS.mem)
