@@ -438,7 +438,7 @@ let finalize_vlarray
   (elem_count_min: nat)
   (elem_count_max: nat)
   (#rrel #rel: _)
-  (sl: slice rrel rel)
+  (sl: B.mbuffer byte rrel rel)
   (pos pos' : U32.t)
 : HST.Stack unit
   (requires (fun h ->
@@ -447,30 +447,30 @@ let finalize_vlarray
     vpos1 < 4294967296 /\ (
     let pos1 = U32.uint_to_t vpos1 in
     let len = U32.v pos' - vpos1 in
-    valid_list p h sl pos1 pos' /\ (
-    let count = L.length (contents_list p h sl pos1 pos') in
-    writable sl.base (U32.v pos) vpos1 h /\
+    bvalid_list p h sl pos1 pos' /\ (
+    let count = L.length (bcontents_list p h sl pos1 pos') in
+    writable sl (U32.v pos) vpos1 h /\
     ((array_byte_size_min <= len /\ len <= array_byte_size_max) \/ (elem_count_min <= count /\ count <= elem_count_max))
   )))))
   (ensures (fun h _ h' ->
     let pos1 = (U32.uint_to_t (U32.v pos + log256' array_byte_size_max)) in
-    let l = contents_list p h sl pos1 pos' in
-    B.modifies (loc_slice_from_to sl pos pos1) h h' /\
+    let l = bcontents_list p h sl pos1 pos' in
+    B.modifies (B.loc_buffer_from_to sl pos pos1) h h' /\
     elem_count_min <= L.length l /\ L.length l <= elem_count_max /\
-    valid_content_pos (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) h' sl pos l pos'
+    bvalid_content_pos (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ()) h' sl pos l pos'
   ))
 = let h = HST.get () in
   let pos1 = pos `U32.add` U32.uint_to_t (log256' array_byte_size_max) in
-  valid_list_valid_exact_list p h sl pos1 pos';
-  let l = Ghost.hide (contents_list p h sl pos1 pos') in
+  valid_list_valid_exact_list p h (slice_of_buffer sl) pos1 pos';
+  let l = Ghost.hide (bcontents_list p h sl pos1 pos') in
   let _ : squash (let count = L.length (Ghost.reveal l) in elem_count_min <= count /\ count <= elem_count_max) =
-    valid_exact_serialize (serialize_list _ s) h sl pos1 pos' ;
+    valid_exact_serialize (serialize_list _ s) h (slice_of_buffer sl) pos1 pos' ;
     Classical.move_requires (vldata_to_vlarray_correct array_byte_size_min array_byte_size_max s elem_count_min elem_count_max) (Ghost.reveal l) 
   in
   vlarray_to_vldata_correct array_byte_size_min array_byte_size_max s elem_count_min elem_count_max (Ghost.reveal l);
   finalize_bounded_vldata_strong_exact array_byte_size_min array_byte_size_max (serialize_list _ s) sl pos pos' ;
   let h = HST.get () in
-  valid_synth h (parse_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s)) (vldata_to_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ())  sl pos
+  valid_synth h (parse_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s)) (vldata_to_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ())  (slice_of_buffer sl) pos
 
 let clens_vlarray_nth
   (t: Type)
@@ -825,28 +825,28 @@ let finalize_bounded_vldata_strong_list
   (#p: parser k t)
   (s: serializer p)
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (output: B.mbuffer byte rrel rel)
   (pos: U32.t)
   (pos' : U32.t)
 : HST.Stack unit
   (requires (fun h ->
     let sz = log256' max in
-    U32.v pos + sz <= U32.v input.len /\ (
+    U32.v pos + sz <= B.length output /\ (
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
-    valid_list p h input pos_payload pos' /\ (
+    bvalid_list p h output pos_payload pos' /\ (
     let len_payload = pos' `U32.sub` pos_payload in
-    let len_ser = Seq.length (serialize (serialize_list _ s) (contents_list p h input pos_payload pos')) in
-    writable input.base (U32.v pos) (U32.v pos_payload) h /\
+    let len_ser = Seq.length (serialize (serialize_list _ s) (bcontents_list p h output pos_payload pos')) in
+    writable output (U32.v pos) (U32.v pos_payload) h /\
     ((min <= U32.v len_payload /\ U32.v len_payload <= max) \/ (min <= len_ser /\ len_ser <= max))
   ))))
   (ensures (fun h _ h' ->
     let sz = log256' max in
-    let x = contents_list p h input (pos `U32.add` U32.uint_to_t sz) pos' in
-    B.modifies (loc_slice_from_to input pos (pos `U32.add` U32.uint_to_t sz)) h h' /\
+    let x = bcontents_list p h output (pos `U32.add` U32.uint_to_t sz) pos' in
+    B.modifies (B.loc_buffer_from_to output pos (pos `U32.add` U32.uint_to_t sz)) h h' /\
     Seq.length (serialize (serialize_list _ s) x) == U32.v pos' - (U32.v pos + sz) /\
     parse_bounded_vldata_strong_pred min max (serialize_list _ s) x /\
-    valid_content_pos (parse_bounded_vldata_strong min max (serialize_list _ s)) h' input pos x pos'
+    bvalid_content_pos (parse_bounded_vldata_strong min max (serialize_list _ s)) h' output pos x pos'
   ))
 = let h = HST.get () in
-  [@inline_let] let _ = valid_list_valid_exact_list p h input (pos `U32.add` U32.uint_to_t (log256' max)) pos' in
-  finalize_bounded_vldata_strong_exact min max (serialize_list _ s) input pos pos'
+  [@inline_let] let _ = valid_list_valid_exact_list p h (slice_of_buffer output) (pos `U32.add` U32.uint_to_t (log256' max)) pos' in
+  finalize_bounded_vldata_strong_exact min max (serialize_list _ s) output pos pos'

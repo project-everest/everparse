@@ -209,7 +209,10 @@ let swrite_bounded_vlbytes
     let pout_payload = pout_from `U32.add` U32.uint_to_t (log256' max) in
     let payload = B.sub sout.base pout_payload len in
     B.blit b 0ul payload 0ul len;
-    finalize_bounded_vlbytes min max sout pout_from len
+    let res = finalize_bounded_vlbytes min max sout.base pout_from len in
+    let h = HST.get () in
+    bvalid_valid_strong_prefix (parse_bounded_vlbytes min max) h sout pout_from;
+    res
   )
 
 inline_for_extraction

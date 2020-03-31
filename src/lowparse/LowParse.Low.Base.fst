@@ -4863,3 +4863,65 @@ let recall_valid_gen
   [@inline_let]
   let _ = bvalid_facts p h s (irepr_pos i) in
   B.recall_p s (wvalid p s compl (irepr_pos i) (IRepr?.gpos' i) (IRepr?.gv i))
+
+let bvalid_exact
+  (#rrel #rel: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (s: B.mbuffer byte rrel rel)
+  (pos: U32.t)
+  (pos' : U32.t)
+: GTot Type0
+= valid_exact p h (slice_of_buffer s) pos pos'
+
+let bvalid_exact_equiv
+  (#rrel #rel: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (s: B.mbuffer byte rrel rel)
+  (pos: U32.t)
+  (pos' : U32.t)
+: Lemma
+  (bvalid_exact p h s pos pos' <==> (
+    U32.v pos <= U32.v pos' /\
+    U32.v pos' <= B.length s /\
+    B.live h s /\ (
+    let len' = pos' `U32.sub` pos in
+    match parse p (bytes_of_buffer_from_to h s pos pos') with
+    | None -> False
+    | Some (_, consumed) -> (consumed <: nat) == U32.v len'
+    )
+  ))
+= valid_exact_equiv p h (slice_of_buffer s) pos pos'
+
+let bcontents_exact
+  (#rrel #rel: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (s: B.mbuffer byte rrel rel)
+  (pos: U32.t)
+  (pos' : U32.t)
+: Ghost t
+  (requires (bvalid_exact p h s pos pos'))
+  (ensures (fun _ -> True))
+= contents_exact p h (slice_of_buffer s) pos pos'
+
+let bcontents_exact_eq
+  (#rrel #rel: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (s: B.mbuffer byte rrel rel)
+  (pos: U32.t)
+  (pos' : U32.t)
+: Lemma
+  (requires (bvalid_exact p h s pos pos'))
+  (ensures (bvalid_exact p h s pos pos' /\ valid_exact' p h (slice_of_buffer s) pos pos' /\ bcontents_exact p h s pos pos' == contents_exact' p h (slice_of_buffer s) pos pos'))
+= contents_exact_eq p h (slice_of_buffer s) pos pos'

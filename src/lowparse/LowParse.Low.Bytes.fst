@@ -898,35 +898,35 @@ let finalize_bounded_vlbytes'
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (l: nat { l >= log256' max /\ l <= 4 } )
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (output: B.mbuffer byte rrel rel)
   (pos: U32.t)
   (len: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
     let sz = l in
-    live_slice h input /\
+    B.live h output /\
     min <= U32.v len /\ U32.v len <= max /\
-    U32.v pos + sz + U32.v len <= U32.v input.len /\
-    writable input.base (U32.v pos) (U32.v pos + sz) h
+    U32.v pos + sz + U32.v len <= B.length output /\
+    writable output (U32.v pos) (U32.v pos + sz) h
   ))
   (ensures (fun h pos' h' ->
     let sz = l in
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
-    B.modifies (loc_slice_from_to input pos pos_payload) h h' /\
+    B.modifies (B.loc_buffer_from_to output pos pos_payload) h h' /\
     U32.v pos_payload + U32.v len == U32.v pos' /\
-    U32.v pos' <= U32.v input.len /\
-    valid (parse_bounded_vlbytes' min max l) h' input pos /\
-    get_valid_pos (parse_bounded_vlbytes' min max l) h' input pos == pos' /\
-    contents (parse_bounded_vlbytes' min max l) h' input pos == BY.hide (bytes_of_slice_from_to h input pos_payload pos')
+    U32.v pos' <= B.length output /\
+    bvalid (parse_bounded_vlbytes' min max l) h' output pos /\
+    bget_valid_pos (parse_bounded_vlbytes' min max l) h' output pos == pos' /\
+    bcontents (parse_bounded_vlbytes' min max l) h' output pos == BY.hide (bytes_of_buffer_from_to h output pos_payload pos')
   ))
 = let h0 = HST.get () in
   [@inline_let]
   let sz = l in
-  let pos_payload = leaf_writer_strong_to_slice_strong_prefix (write_bounded_integer sz) len input pos in
+  let pos_payload = (write_bounded_integer sz) len output pos in
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_flbytes_intro h0 (U32.v len) input pos_payload;
-    valid_bounded_vlbytes'_intro h min max l input pos len
+    valid_flbytes_intro h0 (U32.v len) (slice_of_buffer output) pos_payload;
+    valid_bounded_vlbytes'_intro h min max l (slice_of_buffer output) pos len
   in
   pos_payload `U32.add` len
 
@@ -935,25 +935,25 @@ let finalize_bounded_vlbytes
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#rrel #rel: _)
-  (input: slice rrel rel)
+  (output: B.mbuffer byte rrel rel)
   (pos: U32.t)
   (len: U32.t)
 : HST.Stack U32.t
   (requires (fun h ->
     let sz = log256' max in
-    live_slice h input /\
+    B.live h output /\
     min <= U32.v len /\ U32.v len <= max /\
-    U32.v pos + sz + U32.v len <= U32.v input.len /\
-    writable input.base (U32.v pos) (U32.v pos + sz) h
+    U32.v pos + sz + U32.v len <= B.length output /\
+    writable output (U32.v pos) (U32.v pos + sz) h
   ))
   (ensures (fun h pos' h' ->
     let sz = log256' max in
     let pos_payload = pos `U32.add` U32.uint_to_t sz in
-    B.modifies (loc_slice_from_to input pos pos_payload) h h' /\
+    B.modifies (B.loc_buffer_from_to output pos pos_payload) h h' /\
     U32.v pos' == U32.v pos_payload + U32.v len /\
-    valid_content_pos (parse_bounded_vlbytes min max) h' input pos (BY.hide (bytes_of_slice_from_to h input pos_payload pos')) pos'
+    bvalid_content_pos (parse_bounded_vlbytes min max) h' output pos (BY.hide (bytes_of_buffer_from_to h output pos_payload pos')) pos'
   ))
-= finalize_bounded_vlbytes' min max (log256' max) input pos len
+= finalize_bounded_vlbytes' min max (log256' max) output pos len
 
 inline_for_extraction
 let validate_bounded_vlgenbytes
