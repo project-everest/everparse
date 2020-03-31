@@ -3650,6 +3650,55 @@ let rec serialized_list_length_constant_size
     assert (serialized_length s a == k.parser_kind_low);
     M.distributivity_add_left 1 (L.length q) k.parser_kind_low
 
+let rec valid_list_ext
+  (#rrel #rel: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h1: HS.mem)
+  (sl1: slice rrel rel)
+  (pos1: U32.t)
+  (pos1' : U32.t)
+  (h2: HS.mem)
+  (sl2: slice rrel rel)
+  (pos2: U32.t)
+  (pos2' : U32.t)
+: Lemma
+  (requires (
+    valid_list p h1 sl1 pos1 pos1' /\
+    live_slice h2 sl2 /\
+    U32.v pos2 <= U32.v pos2' /\
+    U32.v pos2' <= U32.v sl2.len /\
+    bytes_of_slice_from_to h1 sl1 pos1 pos1' `Seq.equal` bytes_of_slice_from_to h2 sl2 pos2 pos2'
+  ))
+  (ensures (
+    valid_list p h2 sl2 pos2 pos2' /\
+    contents_list p h2 sl2 pos2 pos2' == contents_list p h1 sl1 pos1 pos1'
+  ))
+  (decreases (
+    U32.v pos1' - U32.v pos1
+  ))
+= valid_list_equiv p h1 sl1 pos1 pos1' ;
+  valid_list_equiv p h2 sl2 pos2 pos2' ;
+  contents_list_eq p h1 sl1 pos1 pos1' ;
+  match contents_list p h1 sl1 pos1 pos1' with
+  | [] -> valid_list_nil p h2 sl2 pos2
+  | a :: q ->
+    let pos1_ = get_valid_pos p h1 sl1 pos1 in
+    let len = (U32.v pos1_ - U32.v pos1) in
+    assert (bytes_of_slice_from_to h1 sl1 pos1 pos1_ == Seq.slice (bytes_of_slice_from_to h1 sl1 pos1 pos1') 0 len);
+    assert (len <= U32.v pos1' - U32.v pos1);
+    assert (Seq.length (bytes_of_slice_from_to h1 sl1 pos1 pos1') == Seq.length (bytes_of_slice_from_to h2 sl2 pos2 pos2'));
+    assert (U32.v pos1' - U32.v pos1 == U32.v pos2' - U32.v pos2);
+    assert (len <= U32.v pos2' - U32.v pos2);
+    assert (Seq.slice (bytes_of_slice_from_to h1 sl1 pos1 pos1') 0 len `Seq.equal` Seq.slice (bytes_of_slice_from_to h2 sl2 pos2 pos2') 0 len);
+    valid_ext_intro p h1 sl1 pos1 h2 sl2 pos2;  
+    let pos2_ = get_valid_pos p h2 sl2 pos2 in
+    assert (bytes_of_slice_from_to h1 sl1 pos1_ pos1' `Seq.equal` Seq.slice (bytes_of_slice_from_to h1 sl1 pos1 pos1') len (U32.v pos1' - U32.v pos1));
+    assert (bytes_of_slice_from_to h2 sl2 pos2_ pos2' `Seq.equal` Seq.slice (bytes_of_slice_from_to h2 sl2 pos2 pos2') len (U32.v pos2' - U32.v pos2));
+    valid_list_ext p h1 sl1 pos1_ pos1' h2 sl2 pos2_ pos2' ;
+    valid_list_cons p h2 sl2 pos2 pos2'
+
 (* fold_left on lists *)
 
 module BF = LowStar.Buffer
