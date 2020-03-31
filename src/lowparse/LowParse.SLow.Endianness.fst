@@ -63,7 +63,7 @@ let be_to_n_S
 // attribute for use with delta_attr
 noextract
 noeq
-type must_reduce =
+type must_reduce = | MustReduce_dummy_do_not_use
 
 [@must_reduce]
 noextract
