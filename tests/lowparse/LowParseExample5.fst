@@ -18,20 +18,19 @@ module B = LowStar.Buffer
 let vltest () : HST.Stack unit (fun _ -> True) (fun _ _ _ -> True) =
   HST.push_frame ();
   let b = B.alloca 0uy 12ul in
-  let sl = { LP.base = b; LP.len = 12ul; } in
-  let j = LP.leaf_writer_strong_to_slice_strong_prefix LPI.write_u16 18us sl 2ul in
-  let j = LP.leaf_writer_strong_to_slice_strong_prefix LPI.write_u16 42us sl j in
-  let j = LP.leaf_writer_strong_to_slice_strong_prefix LPI.write_u32 1729ul sl j in
+  let j = LPI.write_u16 18us b 2ul in
+  let j = LPI.write_u16 42us b j in
+  let j = LPI.write_u32 1729ul b j in
   let h = HST.get () in
-  serialize_inner_intro h sl 2ul;
-  serialize_t_intro h sl 2ul;
-  let _ = LPV.finalize_bounded_vldata_strong 0 65535 serialize_t sl 0ul j in
+  serialize_inner_intro h (LPI.slice_of_buffer b) 2ul;
+  serialize_t_intro h (LPI.slice_of_buffer b) 2ul;
+  let _ = LPV.finalize_bounded_vldata_strong 0 65535 serialize_t b 0ul j in
   let h = HST.get () in
   assert (
     let v = ({ inner = ({ left = 18us; right = 42us; }); last = 1729ul;}) in
     LPV.parse_bounded_vldata_strong_pred 0 65535 serialize_t v /\
-    LP.valid (LPV.parse_bounded_vldata_strong 0 65535 serialize_t) h sl 0ul /\
-    LP.contents (LPV.parse_bounded_vldata_strong 0 65535 serialize_t) h sl 0ul == v
+    LP.bvalid (LPV.parse_bounded_vldata_strong 0 65535 serialize_t) h b 0ul /\
+    LP.bcontents (LPV.parse_bounded_vldata_strong 0 65535 serialize_t) h b 0ul == v
   );
   HST.pop_frame ()
 
