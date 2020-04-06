@@ -296,7 +296,7 @@ let mk_from_serialize
          valid p h1 /\
          U32.v from + U32.v size <= U32.v b.LP.len /\
          p.meta.len == size /\
-         p.b == C.gsub (C.of_buffer b.LP.base) from size /\
+         p.b == C.gsub (C.of_qbuf b.LP.base) from size /\
          p.meta.v == x))
   = let size = size32 x in
     let len = b.LP.len - from in
@@ -825,7 +825,7 @@ let mk_repr_pos_from_serialize
   (parser32: LS.parser32 parser) (serializer32: LS.serializer32 serializer)
   (size32: LS.size32 serializer)
   (jumper:LP.jumper parser)
-  (b:LP.slice mut_p mut_p{ LP.(b.len <= validator_max_length) })
+  (b:LP.slice mut_p mut_p)
   (from: U32.t { from <= b.LP.len })
   (x: t)
 : Stack (option (repr_pos_p t (C.of_qbuf b.LP.base) parser))
@@ -910,3 +910,19 @@ let read_field_pos (#k1: strong_parser_kind) (#t1: Type) (#p1: LP.parser k1 t1)
    : read_field_pos_t f
    = fun #b p ->
      read_field f (as_ptr p)
+
+inline_for_extraction
+noextract
+let compute_end_pos
+  #t #b (r:repr_pos t b) (j: LP.jumper r.meta.parser)
+: Stack U32.t
+  (requires (fun h ->
+    valid_repr_pos r h
+  ))
+  (ensures (fun h pos' h' ->
+    B.modifies B.loc_none h h' /\
+    pos' == end_pos r
+  ))
+= let p = as_ptr r in
+  let len = length p j in
+  r.start_pos + len
