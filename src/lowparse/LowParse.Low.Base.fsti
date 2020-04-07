@@ -147,9 +147,7 @@ let content_length'
   parser_kind_prop_equiv k p;
   consumed
 
-[@"opaque_to_smt"]
-abstract
-let content_length
+val content_length
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -160,11 +158,8 @@ let content_length
 : Ghost nat
   (requires (valid p h sl pos))
   (ensures (fun res -> True))
-= valid_equiv p h sl pos;
-  content_length' p h sl pos
 
-abstract
-let serialized_length
+val serialized_length
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -178,10 +173,8 @@ let serialized_length
     | None -> True
     | Some max -> res <= max
   )))
-= Seq.length (serialize s x)
 
-abstract
-let serialized_length_eq
+val serialized_length_eq
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -189,10 +182,8 @@ let serialized_length_eq
   (x: t)
 : Lemma
   (serialized_length s x == Seq.length (serialize s x))
-= ()
 
-abstract
-let content_length_eq_gen
+val content_length_eq_gen
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -203,8 +194,6 @@ let content_length_eq_gen
 : Lemma
   (requires (valid p h sl pos))
   (ensures (valid p h sl pos /\ valid' p h sl pos /\ content_length p h sl pos == content_length' p h sl pos))
-= valid_equiv p h sl pos;
-  assert_norm (content_length p h sl pos == content_length' p h sl pos)
 
 abstract
 let content_length_post
@@ -247,8 +236,7 @@ let valid_facts
   Classical.move_requires (contents_eq p h sl) pos;
   Classical.move_requires (content_length_eq_gen p h sl) pos
 
-abstract
-let content_length_eq
+val content_length_eq
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -261,16 +249,6 @@ let content_length_eq
   (requires (valid p h sl pos))
   (ensures (content_length p h sl pos == serialized_length s (contents p h sl pos)))
   [SMTPat (serialized_length s (contents p h sl pos))]
-= parser_kind_prop_equiv k p;
-  content_length_eq_gen p h sl pos;
-  contents_eq p h sl pos;
-  let b = bytes_of_slice_from h sl pos in
-  let Some (x, consumed) = parse p b in
-  assert (x == contents p h sl pos);
-  let ps' = parse p (serialize s x) in
-  assert (serializer_correct p s);
-  assert (Some? ps');
-  assert (injective_precond p b (serialize s x))
 
 let valid_pos
   (#rrel #rel: _)
@@ -2796,6 +2774,7 @@ let leaf_writer_strong_of_serializer32
   (u: squash (k.parser_kind_subkind == Some ParserStrong))
 : Tot (leaf_writer_strong s)
 = fun x #rrel #rel input pos ->
+  serialized_length_eq s x;
   let h0 = HST.get () in
   let len = s32 x input.base pos in
   [@inline_let]
