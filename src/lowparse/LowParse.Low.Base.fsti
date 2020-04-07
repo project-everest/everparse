@@ -328,7 +328,6 @@ let valid_content_pos
 = valid_pos p h sl pos pos' /\
   valid_content p h sl pos x
 
-abstract
 let valid_frame
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -392,9 +391,7 @@ let valid_exact'
   | Some (_, consumed) -> (consumed <: nat) == U32.v len'
   )
 
-[@"opaque_to_smt"]
-abstract
-let valid_exact
+val valid_exact
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -404,10 +401,8 @@ let valid_exact
   (pos: U32.t)
   (pos' : U32.t)
 : GTot Type0
-= valid_exact' p h s pos pos'
 
-abstract
-let valid_exact_equiv
+val valid_exact_equiv
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -418,9 +413,7 @@ let valid_exact_equiv
   (pos' : U32.t)
 : Lemma
   (valid_exact p h s pos pos' <==> valid_exact' p h s pos pos')
-= assert_norm (valid_exact p h s pos pos' <==> valid_exact' p h s pos pos')
 
-abstract
 let valid_exact_elim
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -436,7 +429,6 @@ let valid_exact_elim
 //  [SMTPat (valid_exact p h s pos pos')]
 = valid_exact_equiv p h s pos pos'
 
-abstract
 let valid_exact_elim'
   (#rrel #rel: _)
   (#k: parser_kind)
