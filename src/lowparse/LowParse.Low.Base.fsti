@@ -44,8 +44,7 @@ val valid_equiv
 : Lemma
   (valid p h s pos <==> valid' p h s pos)
 
-abstract
-let valid_dec
+val valid_dec
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -58,10 +57,7 @@ let valid_dec
   (ensures (fun b ->
     b == true <==> valid p h s pos
   ))
-= valid_equiv p h s pos;
-  (not (pos `U32.gt` s.len)) && Some? (parse p (bytes_of_slice_from h s pos))
 
-abstract
 let valid_elim
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -76,7 +72,6 @@ let valid_elim
 //  [SMTPat (valid p h s pos)]
 = valid_equiv p h s pos
 
-abstract
 let valid_elim'
   (#rrel #rel: _)
   (#k: parser_kind)
