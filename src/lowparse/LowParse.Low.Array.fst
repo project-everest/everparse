@@ -80,7 +80,6 @@ let array_nth_ghost''
 
 #reset-options "--z3cliopt smt.arith.nl=false"
 
-abstract
 let array_nth_ghost_correct'
   (#k: parser_kind)
   (#t: Type0)
@@ -108,7 +107,6 @@ let array_nth_ghost_correct'
   let off = i `Prims.op_Multiply` k.parser_kind_low in
   parse_strong_prefix p (Seq.slice input0 off (Seq.length input0)) (Seq.slice input off (Seq.length input))
 
-abstract
 let array_nth_ghost_correct
   (#k: parser_kind)
   (#t: Type0)
@@ -627,7 +625,6 @@ let vlarray_nth_body
 
 #push-options "--z3rlimit 32"
 
-abstract
 let vlarray_nth_ghost_correct'
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
@@ -658,7 +655,6 @@ let vlarray_nth_ghost_correct'
 
 #pop-options
 
-abstract
 let vlarray_nth_ghost_correct
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
