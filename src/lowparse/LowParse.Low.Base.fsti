@@ -469,9 +469,7 @@ let contents_exact'
 = let (Some (v, _)) = parse p (bytes_of_slice_from_to h s pos pos') in
   v
 
-[@"opaque_to_smt"]
-abstract
-let contents_exact
+val contents_exact
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -483,11 +481,8 @@ let contents_exact
 : Ghost t
   (requires (valid_exact p h s pos pos'))
   (ensures (fun _ -> True))
-= valid_exact_equiv p h s pos pos' ;
-  contents_exact' p h s pos pos'
 
-abstract
-let contents_exact_eq
+val contents_exact_eq
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -499,10 +494,7 @@ let contents_exact_eq
 : Lemma
   (requires (valid_exact p h s pos pos'))
   (ensures (valid_exact p h s pos pos' /\ valid_exact' p h s pos pos' /\ contents_exact p h s pos pos' == contents_exact' p h s pos pos'))
-= valid_exact_equiv p h s pos pos' ;
-  assert_norm (contents_exact p h s pos pos' == contents_exact' p h s pos pos')
 
-abstract
 let valid_exact_serialize
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -523,7 +515,6 @@ let valid_exact_serialize
   serializer_correct_implies_complete p s;
   ()
 
-abstract
 let serialize_valid_exact
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -550,7 +541,6 @@ let serialize_valid_exact
   valid_exact_equiv p h sl pos pos' ;
   contents_exact_eq p h sl pos pos'
 
-abstract
 let valid_exact_frame
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -592,7 +582,6 @@ let valid_exact_frame
   in
   Classical.move_requires f ()
 
-abstract
 let valid_valid_exact_consumes_all
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -613,7 +602,6 @@ let valid_valid_exact_consumes_all
   valid_exact_equiv p h s pos s.len;
   Classical.move_requires (contents_exact_eq p h s pos) s.len
 
-abstract
 let valid_valid_exact
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -638,7 +626,6 @@ let valid_valid_exact
   Classical.move_requires (contents_exact_eq p h s pos) pos' ;
   parse_strong_prefix p (bytes_of_slice_from h s pos) (bytes_of_slice_from_to h s pos pos')
 
-abstract
 let valid_pos_valid_exact
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -674,7 +661,6 @@ let valid_pos_valid_exact_pat
   [SMTPat (valid_exact p h s pos pos'); SMTPat (valid p h s pos)]
 = valid_pos_valid_exact p h s pos pos'
 
-abstract
 let valid_exact_valid
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -806,7 +792,6 @@ let valid_frame_strong
   ]]
 = valid_pos_frame_strong p h sl pos (get_valid_pos p h sl pos) l h'
 
-abstract
 let valid_exact_ext_intro
   (#rrel1 #rel1: _)
   (#k: parser_kind)
@@ -838,7 +823,6 @@ let valid_exact_ext_intro
   contents_exact_eq p h1 s1 pos1 pos1' ;
   contents_exact_eq p h2 s2 pos2 pos2'
 
-abstract
 let valid_exact_ext_elim
   (#rrel1 #rel1: _)
   (#k: parser_kind)
@@ -871,7 +855,6 @@ let valid_exact_ext_elim
   assert (injective_precond p (bytes_of_slice_from_to h1 s1 pos1 pos1') (bytes_of_slice_from_to h2 s2 pos2 pos2'));
   assert (injective_postcond p (bytes_of_slice_from_to h1 s1 pos1 pos1') (bytes_of_slice_from_to h2 s2 pos2 pos2'))
 
-abstract
 let valid_ext_intro
   (#rrel1 #rel1: _)
   (#k: parser_kind)
@@ -903,7 +886,6 @@ let valid_ext_intro
   valid_exact_ext_intro p h1 s1 pos1 pos1' h2 s2 pos2 pos2' ;
   valid_exact_valid p h2 s2 pos2 pos2'
 
-abstract
 let valid_ext_elim
   (#rrel1 #rel1: _)
   (#k: parser_kind)
