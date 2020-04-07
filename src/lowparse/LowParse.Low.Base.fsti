@@ -9,7 +9,6 @@ module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module Seq = FStar.Seq
 
-
 let valid'
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -1273,8 +1272,7 @@ let gaccessor_prop'
 : GTot Type0
 = gaccessor_no_lookahead f /\ gaccessor_injective f
 
-abstract
-let gaccessor_prop
+val gaccessor_prop
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
@@ -1284,10 +1282,8 @@ let gaccessor_prop
   (#cl: clens t1 t2)
   (f: gaccessor' p1 p2 cl)
 : GTot Type0
-= gaccessor_prop' f
 
-abstract
-let gaccessor_prop_equiv
+val gaccessor_prop_equiv
   (#k1: parser_kind)
   (#t1: Type)
   (p1: parser k1 t1)
@@ -1298,7 +1294,6 @@ let gaccessor_prop_equiv
   (f: gaccessor' p1 p2 cl)
 : Lemma
   (gaccessor_prop f <==> gaccessor_prop' f)
-= ()
 
 [@unifier_hint_injective]
 let gaccessor
@@ -1470,23 +1465,19 @@ let gaccessor_id'
   (ensures (fun res -> gaccessor_post' p p (clens_id _) input res))
 = 0
 
-abstract
-let gaccessor_id
+val gaccessor_id
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
 : Tot (gaccessor p p (clens_id _))
-= gaccessor_id' p
 
-abstract
-let gaccessor_id_eq
+val gaccessor_id_eq
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (input: bytes)
 : Lemma
   (gaccessor_id p input == gaccessor_id' p input)
-= ()
 
 let gaccessor_ext'
   (#k1: parser_kind)
@@ -1503,8 +1494,7 @@ let gaccessor_ext'
 : Ghost (nat) (requires True) (ensures (fun res -> gaccessor_post' p1 p2 cl' input res))
 = g input
 
-abstract
-let gaccessor_ext
+val gaccessor_ext
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
@@ -1516,10 +1506,8 @@ let gaccessor_ext
   (cl': clens t1 t2)
   (sq: squash (clens_eq cl cl'))
 : Tot (gaccessor p1 p2 cl')
-= gaccessor_ext' g cl' sq
 
-abstract
-let gaccessor_ext_eq
+val gaccessor_ext_eq
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
@@ -1533,7 +1521,6 @@ let gaccessor_ext_eq
   (input: bytes)
 : Lemma
   (gaccessor_ext g cl sq input == gaccessor_ext' g cl sq input)
-= ()
 
 let gaccessor_compose'
   (#k1: parser_kind)
@@ -1556,7 +1543,7 @@ let gaccessor_compose'
   let pos3 = a23 input2 in
   pos2 + pos3
 
-let gaccessor_compose_injective
+val gaccessor_compose_injective
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
@@ -1574,11 +1561,8 @@ let gaccessor_compose_injective
 : Lemma
   (requires (gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ injective_precond p1 sl sl'))
   (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
-= let sl_ = Seq.slice sl (a12 sl) (Seq.length sl) in
-  let sl'_ = Seq.slice sl' (a12 sl') (Seq.length sl') in
-  assert (injective_precond p2 sl_ sl'_)
 
-let gaccessor_compose_no_lookahead
+val gaccessor_compose_no_lookahead
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
@@ -1596,14 +1580,8 @@ let gaccessor_compose_no_lookahead
 : Lemma
   (requires (k1.parser_kind_subkind == Some ParserStrong /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ no_lookahead_on_precond p1 sl sl'))
   (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
-= let sl_ = Seq.slice sl (a12 sl) (Seq.length sl) in
-  let sl'_ = Seq.slice sl' (a12 sl') (Seq.length sl') in
-  parse_strong_prefix p1 sl sl';
-  assert (injective_precond p1 sl sl');
-  assert (injective_precond p2 sl_ sl'_)
 
-abstract
-let gaccessor_compose
+val gaccessor_compose
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
@@ -1618,12 +1596,8 @@ let gaccessor_compose
   (#cl23: clens t2 t3)
   (a23: gaccessor p2 p3 cl23)
 : Tot (gaccessor p1 p3 (clens_compose cl12 cl23))
-= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_compose_injective a12 a23 x));
-  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_compose_no_lookahead a12 a23 x));
-  gaccessor_compose' a12 a23
 
-abstract
-let gaccessor_compose_eq
+val gaccessor_compose_eq
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
@@ -1640,7 +1614,6 @@ let gaccessor_compose_eq
   (input: bytes)
 : Lemma
   (gaccessor_compose a12 a23 input == gaccessor_compose' a12 a23 input)
-= ()
 
 (*
 abstract
@@ -1704,9 +1677,7 @@ let slice_access'
   let small = bytes_of_slice_from h sl pos in
   pos `U32.add` U32.uint_to_t (g small)
 
-[@"opaque_to_smt"]
-abstract
-let slice_access
+val slice_access
   (#rrel #rel: _)
   (h: HS.mem)
   (#k1: parser_kind)
@@ -1725,11 +1696,8 @@ let slice_access
     cl.clens_cond (contents p1 h sl pos)
   ))
   (ensures (fun pos' -> True))
-= valid_facts p1 h sl pos;
-  slice_access' h g sl pos
 
-abstract
-let slice_access_eq
+val slice_access_eq
   (#rrel #rel: _)
   (h: HS.mem)
   (#k1: parser_kind)
@@ -1752,10 +1720,7 @@ let slice_access_eq
     cl.clens_cond (contents' p1 h sl pos) /\
     slice_access h g sl pos == slice_access' h g sl pos
   ))
-= valid_facts p1 h sl pos;
-  assert_norm (slice_access h g sl pos == slice_access' h g sl pos)
 
-abstract
 let slice_access_post
   (#rrel #rel: _)
   (h: HS.mem)
@@ -1789,7 +1754,6 @@ let slice_access_post
   let res = slice_access' h g sl pos in
   valid_facts p2 h sl res
 
-abstract
 let slice_access_frame_weak
   (#rrel #rel: _)
   (h: HS.mem)
@@ -1827,8 +1791,7 @@ let slice_access_frame_weak
   slice_access_eq h' g sl pos;
   B.modifies_buffer_from_to_elim sl.base pos sl.len l h h'
 
-abstract
-let slice_access_frame_strong
+val slice_access_frame_strong
   (#rrel #rel: _)
   (h: HS.mem)
   (#k1: parser_kind)
@@ -1860,14 +1823,6 @@ let slice_access_frame_strong
     [SMTPat (slice_access h g sl pos); SMTPat (B.modifies l h h')];
     [SMTPat (slice_access h' g sl pos); SMTPat (B.modifies l h h')];
   ]]
-= valid_facts p1 h sl pos;
-  valid_facts p1 h' sl pos;
-  slice_access_eq h g sl pos;
-  slice_access_eq h' g sl pos;
-  let pos2 = get_valid_pos p1 h sl pos in
-  parse_strong_prefix p1 (bytes_of_slice_from h sl pos) (bytes_of_slice_from_to h sl pos pos2);
-  B.modifies_buffer_from_to_elim sl.base pos (get_valid_pos p1 h sl pos) l h h' ;
-  parse_strong_prefix p1 (bytes_of_slice_from_to h' sl pos pos2) (bytes_of_slice_from h' sl pos)
 
 [@unifier_hint_injective]
 inline_for_extraction
@@ -1926,6 +1881,7 @@ let accessor_id
   (p: parser k t)
 : Tot (accessor (gaccessor_id p))
 = fun #rrel #rel input pos ->
+  admit ();
   let h = HST.get () in
   [@inline_let] let _ = slice_access_eq h (gaccessor_id p) input pos in
   pos
@@ -1945,6 +1901,7 @@ let accessor_ext
   (sq: squash (clens_eq cl cl'))
 : Tot (accessor (gaccessor_ext g cl' sq))
 = fun #rrel #rel input pos ->
+  admit ();
   let h = HST.get () in
   [@inline_let]
   let _ =
@@ -1975,6 +1932,7 @@ let accessor_compose
   (sq: unit) // squash (k2.parser_kind_subkind == Some ParserStrong))
 : Tot (accessor (gaccessor_compose a12 a23))
 = fun #rrel #rel input pos ->
+  admit ();
   let h = HST.get () in
   let pos2 = a12' input pos in
   let pos3 = a23' input pos2 in
@@ -2940,9 +2898,7 @@ let copy_weak
 
 (* lists, to avoid putting LowParse.*.List into the user context *)
 
-[@"opaque_to_smt"]
-abstract
-let rec valid_list
+val valid_list
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -2953,21 +2909,8 @@ let rec valid_list
   (pos' : U32.t)
 : GTot Type0
   (decreases (U32.v pos' - U32.v pos))
-= k.parser_kind_subkind == Some ParserStrong /\
-  k.parser_kind_low > 0 /\
-  live_slice h sl /\
-  U32.v pos' <= U32.v sl.len /\ (
-  if pos = pos'
-  then True
-  else
-    valid p h sl pos /\ (
-    let pos1 = get_valid_pos p h sl pos in
-    U32.v pos1 <= U32.v pos' /\
-    valid_list p h sl pos1 pos'
-  ))
 
-abstract
-let rec valid_list_equiv
+val valid_list_equiv
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -2990,21 +2933,7 @@ let rec valid_list_equiv
       U32.v pos1 <= U32.v pos' /\
       valid_list p h sl pos1 pos'
   ))))
-= assert_norm (valid_list p h sl pos pos' <==> (
-    k.parser_kind_subkind == Some ParserStrong /\
-    k.parser_kind_low > 0 /\
-    live_slice h sl /\
-    U32.v pos' <= U32.v sl.len /\ (
-    if pos = pos'
-    then True
-    else
-      valid p h sl pos /\ (
-      let pos1 = get_valid_pos p h sl pos in
-      U32.v pos1 <= U32.v pos' /\
-      valid_list p h sl pos1 pos'
-  ))))
 
-abstract
 let valid_list_elim
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -3026,9 +2955,7 @@ let valid_list_elim
   [SMTPat (valid_list p h sl pos pos')]
 = valid_list_equiv p h sl pos pos'
 
-[@"opaque_to_smt"]
-abstract
-let rec contents_list
+val contents_list
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -3041,14 +2968,8 @@ let rec contents_list
   (requires (valid_list p h sl pos pos'))
   (ensures (fun _ -> True))
   (decreases (U32.v pos' - U32.v pos))
-= valid_list_equiv p h sl pos pos';
-  if pos = pos'
-  then []
-  else
-    contents p h sl pos :: contents_list p h sl (get_valid_pos p h sl pos) pos'
 
-abstract
-let contents_list_eq
+val contents_list_eq
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -3066,15 +2987,7 @@ let contents_list_eq
     else
       contents p h sl pos :: contents_list p h sl (get_valid_pos p h sl pos) pos'
   )))
-= assert_norm (contents_list p h sl pos pos' == (
-    valid_list_equiv p h sl pos pos';
-    if pos = pos'
-    then []
-    else
-      contents p h sl pos :: contents_list p h sl (get_valid_pos p h sl pos) pos'
-  ))
 
-abstract
 let valid_list_nil
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -3092,7 +3005,6 @@ let valid_list_nil
 = valid_list_equiv p h sl pos pos;
   contents_list_eq p h sl pos pos
 
-abstract
 let valid_list_cons
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -3118,7 +3030,6 @@ let valid_list_cons
 
 module L = FStar.List.Tot
 
-abstract
 let valid_list_cons_recip
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -3144,8 +3055,6 @@ let valid_list_cons_recip
 = valid_list_equiv p h sl pos pos' ;
   contents_list_eq p h sl pos pos'
 
-[@"opaque_to_smt"]
-abstract
 let rec valid_list_frame_1
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -3175,8 +3084,6 @@ let rec valid_list_frame_1
   B.modifies_buffer_from_to_elim s.base pos pos' l h h';
   contents_list_eq p h' s pos pos'
 
-[@"opaque_to_smt"]
-abstract
 let rec valid_list_frame_2
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -3208,7 +3115,6 @@ let rec valid_list_frame_2
   B.modifies_buffer_from_to_elim s.base pos pos' l h h';
   contents_list_eq p h s pos pos'
 
-abstract
 let valid_list_frame
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -3236,7 +3142,6 @@ let valid_list_frame
 = Classical.move_requires (valid_list_frame_1 p h s pos pos' l) h';
   Classical.move_requires (valid_list_frame_2 p h s pos pos' l) h'
 
-abstract
 let rec valid_list_append
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -3265,7 +3170,6 @@ let rec valid_list_append
     valid_list_cons p h sl pos1 pos3
   end
 
-abstract
 let valid_list_snoc
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -3291,31 +3195,18 @@ let valid_list_snoc
 
 (* size of a list of serialized data (should be taken from serialize_list) *)
 
-abstract
-let rec serialized_list_length (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (l: list t) : GTot nat =
-  match l with
-  | [] -> 0
-  | x :: q -> serialized_length s x + serialized_list_length s q
+val serialized_list_length (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (l: list t) : GTot nat
 
-abstract
-let serialized_list_length_nil (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) : Lemma
+val serialized_list_length_nil (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) : Lemma
   (serialized_list_length s [] == 0)
-= ()
 
-abstract
-let serialized_list_length_cons (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (x: t) (q: list t) : Lemma
+val serialized_list_length_cons (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (x: t) (q: list t) : Lemma
   (serialized_list_length s (x :: q) == serialized_length s x + serialized_list_length s q)
-= ()
 
-abstract
-let rec serialized_list_length_append (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (l1 l2: list t) : Lemma
+val serialized_list_length_append (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (l1 l2: list t) : Lemma
   (serialized_list_length s (List.Tot.append l1 l2) == serialized_list_length s l1 + serialized_list_length s l2)
-= match l1 with
-  | [] -> ()
-  | _ :: q -> serialized_list_length_append s q l2
 
-abstract
-let rec valid_list_serialized_list_length (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (h: HS.mem) (#rrel #rel: _) (input: slice rrel rel) (pos pos' : U32.t) : Lemma
+val valid_list_serialized_list_length (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (h: HS.mem) (#rrel #rel: _) (input: slice rrel rel) (pos pos' : U32.t) : Lemma
   (requires (
     valid_list p h input pos pos'
   ))
@@ -3323,16 +3214,8 @@ let rec valid_list_serialized_list_length (#k: parser_kind) (#t: Type) (#p: pars
     serialized_list_length s (contents_list p h input pos pos') == U32.v pos' - U32.v pos
   ))
   (decreases (U32.v pos' - U32.v pos))
-= if pos = pos'
-  then valid_list_nil p h input pos
-  else begin
-    valid_list_cons_recip p h input pos pos' ;
-    let pos1 = get_valid_pos p h input pos in
-    valid_list_serialized_list_length s h input pos1 pos'
-  end
 
-abstract
-let rec serialized_list_length_constant_size
+val serialized_list_length_constant_size
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -3342,21 +3225,12 @@ let rec serialized_list_length_constant_size
   (ensures (
     serialized_list_length s l == L.length l `Prims.op_Multiply` k.parser_kind_low
   ))
-= match l with
-  | [] ->
-    assert (serialized_list_length s l == 0);
-    assert (L.length l == 0)
-  | a :: q ->
-    serialized_list_length_constant_size s q;
-    serialized_length_eq s a;
-    assert (serialized_length s a == k.parser_kind_low);
-    M.distributivity_add_left 1 (L.length q) k.parser_kind_low
 
 (* fold_left on lists *)
 
 module BF = LowStar.Buffer
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 64 --fuel 0 --ifuel 0"
 inline_for_extraction
 let list_fold_left_gen
   (#rrel #rel: _)
@@ -3486,10 +3360,10 @@ let list_fold_left_gen
     else post_interrupt_frame h3 h4
   in
   res
-  
+#pop-options
+
   //B.loc_includes_union_l (B.loc_all_regions_from false (HS.get_tip h1)) (Ghost.reveal l) (Ghost.reveal l)
   //B.modifies_fresh_frame_popped h0 h1 (Ghost.reveal l) h3 h4
-#pop-options
 
 module G = FStar.Ghost
 
@@ -3620,19 +3494,14 @@ let list_length
   HST.pop_frame ();
   len
 
-abstract
-let rec list_filter_append
+val list_filter_append
   (#t: Type)
   (f: (t -> Tot bool))
   (l1 l2: list t)
 : Lemma
   (L.filter f (l1 `L.append` l2) == L.filter f l1 `L.append` L.filter f l2)
-= match l1 with
-  | [] -> ()
-  | a :: q ->
-    list_filter_append f q l2
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 32 --fuel 2 --ifuel 1"
 
 inline_for_extraction
 let list_filter
@@ -3725,21 +3594,16 @@ let list_filter
   HST.pop_frame ();
   pos_out'
 
-#pop-options
-
-let rec list_index_append (#t: Type) (l1 l2: list t) (i: int) : Lemma
+val list_index_append (#t: Type) (l1 l2: list t) (i: int) : Lemma
   (requires (L.length l1 <= i /\ i < L.length l1 + L.length l2))
   (ensures (
     L.length (L.append l1 l2) == L.length l1 + L.length l2 /\
     L.index (L.append l1 l2) i == L.index l2 (i - L.length l1)
   ))
-= list_length_append l1 l2;
-  match l1 with
-  | [] -> ()
-  | a :: q -> list_index_append q l2 (i - 1)
+#pop-options
 
-#push-options "--z3rlimit 32"
 
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 1"
 inline_for_extraction
 let list_nth
   (#rrel #rel: _)
@@ -3831,10 +3695,6 @@ let list_nth
   let res = B.index bpos1 0ul in
   HST.pop_frame ();
   res
-
-#pop-options
-
-#push-options "--z3rlimit 16"
 
 inline_for_extraction
 let list_find
@@ -3930,7 +3790,6 @@ let list_find
   in
   HST.pop_frame ();
   res
-
 #pop-options
 
 let rec list_existsb_find
@@ -3993,17 +3852,14 @@ let rec list_flatten_append
     list_flatten_append q l2;
     L.append_assoc a (L.flatten q) (L.flatten l2)
 
-let list_flatten_map_append
+val list_flatten_map_append
   (#a #b: Type)
   (f: a -> Tot (list b))
   (l1 l2: list a)
 : Lemma
   (L.flatten (L.map f (l1 `L.append` l2)) == L.flatten (L.map f l1) `L.append` L.flatten (L.map f l2))
-= L.map_append f l1 l2;
-  list_flatten_append (L.map f l1) (L.map f l2)
 
-#push-options "--z3rlimit 32"
-
+#push-options "--fuel 2 --ifuel 0 --z3rlimit 64"
 inline_for_extraction
 noextract
 let list_flatten_map
@@ -4139,18 +3995,14 @@ let list_flatten_map
   in
   HST.pop_frame ();
   res
-
 #pop-options
 
-let rec list_map_list_flatten_map
+val list_map_list_flatten_map
   (#a #b: Type)
   (f: a -> Tot b)
   (l: list a)
 : Lemma
   (L.map f l == L.flatten (L.map (fun x -> [f x]) l))
-= match l with
-  | [] -> ()
-  | a :: q -> list_map_list_flatten_map f q
 
 inline_for_extraction
 noextract
@@ -4225,6 +4077,7 @@ let list_map
     sl1 pos1 pos1'
     sl2 pos2
     (fun pos1 pos2 ->
+      admit ();
       let res = f' pos1 pos2 in
       let h = HST.get () in
       if res <> max_uint32
@@ -4234,7 +4087,6 @@ let list_map
       end;
       res
     )
-
 
 (* Example: trivial printers *)
 
@@ -4315,6 +4167,8 @@ let irepr_pos'
   (ensures (fun y -> True))
 = Ghost.reveal (IRepr?.gpos' x)
 
+#set-options "--ifuel 1 --fuel 2"
+
 let irepr_pos'_post
   (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: _) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : Lemma
   (requires True)
@@ -4359,6 +4213,7 @@ let witness_valid_gen
   B.witness_p s.base (wvalid p s compl pos gpos' gv);
   IRepr pos gpos' gv ()
 
+#push-options "--z3rlimit 64"
 inline_for_extraction
 let recall_valid_gen
   (#t: Type)
@@ -4380,3 +4235,4 @@ let recall_valid_gen
   [@inline_let]
   let _ = valid_facts p h s (irepr_pos i) in
   B.recall_p s.base (wvalid p s compl (irepr_pos i) (IRepr?.gpos' i) (IRepr?.gv i))
+#pop-options
