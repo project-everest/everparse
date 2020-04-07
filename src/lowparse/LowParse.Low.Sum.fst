@@ -1156,8 +1156,6 @@ let valid_dsum_elim_known
   valid_facts (dsnd (f k)) h input pos_payload
 #pop-options
 
-#pop-options
-
 let valid_dsum_elim_unknown
   (h: HS.mem)
   (t: dsum)

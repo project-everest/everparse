@@ -23,6 +23,7 @@ module B = LowStar.Buffer
 module HS = FStar.HyperStack
 module C = LowStar.ConstBuffer
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 
 open FStar.Integers
 open FStar.HyperStack.ST
@@ -83,7 +84,7 @@ let to_slice (x:const_slice)
   : Tot (LP.slice (preorder x.base) (preorder x.base))
   = slice_of_const_buffer x.base x.slice_len
 
-let of_slice (x:LP.slice mut_p mut_p {x.LP.len <= LP.validator_max_length} )
+let of_slice (x:LP.slice mut_p mut_p)
   : Tot const_slice
   = let b = C.of_buffer x.LP.base in
     let len = x.LP.len in
@@ -819,7 +820,7 @@ let as_repr_pos #t (b:const_slice) (from to:index b) (p:repr_ptr t)
 inline_for_extraction
 let mk_repr_pos (#k:strong_parser_kind) #t (#parser:LP.parser k t)
                 (parser32:LS.parser32 parser)
-                (b:LP.slice mut_p mut_p{ LP.(b.len <= validator_max_length) })
+                (b:LP.slice mut_p mut_p)
                 (from to:index (of_slice b))
   : Stack (repr_pos_p t (of_slice b) parser)
     (requires fun h ->
@@ -864,7 +865,7 @@ let mk_repr_pos_from_serialize
   (#k:strong_parser_kind) #t (#parser:LP.parser k t) (#serializer: LP.serializer parser)
   (parser32: LS.parser32 parser) (serializer32: LS.serializer32 serializer)
   (size32: LS.size32 serializer)
-  (b:LP.slice mut_p mut_p{ LP.(b.len <= validator_max_length) })
+  (b:LP.slice mut_p mut_p)
   (from:index (of_slice b))
   (x: t)
 : Stack (option (repr_pos_p t (of_slice b) parser))
