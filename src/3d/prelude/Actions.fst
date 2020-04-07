@@ -16,7 +16,8 @@
 module Actions
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
-module LPL = LowParse.Low.Base
+module LPL = EverParse3d.InputBuffer
+module R = EverParse3d.Readable
 module LPLC = LowParse.Low.Combinators
 module LPLL = LowParse.Low.List
 module LPLF = LowParse.Spec.FLData
@@ -37,17 +38,18 @@ let action #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
     Stack a
       (requires fun h ->
         let open LPL in
-        inv sl.LPL.base h /\
+        LPL.live_input_buffer h sl /\
+        inv (LPL.slice_of sl).LPL.base h /\
         loc_not_unused_in h `loc_includes` l /\
         address_liveness_insensitive_locs `loc_includes` l /\
-        l `loc_disjoint` loc_buffer sl.base /\
+        l `loc_disjoint` (loc_buffer (LPL.slice_of sl).base `loc_union` R.loc_perm (LPL.perm_of sl)) /\
         (U64.v res <= U64.v validator_max_length ==>
-           valid_pos p h sl (uint64_to_uint32 pos) (uint64_to_uint32 res)) /\
+           valid_pos p h (LPL.slice_of sl) (uint64_to_uint32 pos) (uint64_to_uint32 res)) /\
         (on_success ==> U64.v res <= U64.v validator_max_length))
       (ensures fun h0 _ h1 ->
         modifies l h0 h1 /\
         h1 `extends` h0 /\
-        inv sl.LPL.base h1)
+        inv (LPL.slice_of sl).LPL.base h1)
 
 inline_for_extraction
 let validate_with_action_t #nz (#k:parser_kind nz) (#t:Type) (p:parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
@@ -56,21 +58,25 @@ let validate_with_action_t #nz (#k:parser_kind nz) (#t:Type) (p:parser k t) (inv
   Stack U64.t
   (requires fun h ->
     let open LPL in
-    inv sl.LPL.base h /\
+    live_input_buffer h sl /\
+    inv (slice_of sl).base h /\
     loc_not_unused_in h `loc_includes` l /\
     address_liveness_insensitive_locs `loc_includes` l /\
-    l `loc_disjoint` loc_buffer sl.base /\
-    live_slice h sl /\
-    U64.v pos <= U32.v sl.len)
+    l `loc_disjoint` (loc_buffer (slice_of sl).base `loc_union` R.loc_perm (perm_of sl)) /\
+    U64.v pos <= U32.v (slice_of sl).len /\
+    R.readable h (perm_of sl) (uint64_to_uint32 pos) (slice_of sl).len
+  )
   (ensures fun h res h' ->
     let open LPL in
-    modifies l h h' /\
     h' `extends` h /\
-    inv sl.LPL.base h' /\ (
-    if U64.v res <= U64.v validator_max_length
-    then
-      valid_pos p h sl (uint64_to_uint32 pos) (uint64_to_uint32 res)
-    else True))
+    live_input_buffer h' sl /\
+    inv (slice_of sl).base h' /\
+    (is_success res ==> valid_pos p h (slice_of sl) (uint64_to_uint32 pos) (uint64_to_uint32 res)) /\
+    modifies
+      (if allow_reading then l else l `loc_union` (R.loc_perm_from_to (perm_of sl) (uint64_to_uint32 pos) (if is_success res then uint64_to_uint32 res else (slice_of sl).len)))
+      h h' /\
+    ((~ allow_reading) ==> R.unreadable h' (perm_of sl) (uint64_to_uint32 pos) (if is_success res then uint64_to_uint32 res else (slice_of sl).len))
+  )
 
 inline_for_extraction noextract
 let act_with_comment
@@ -94,24 +100,71 @@ let leaf_reader
   (pos: U32.t) ->
   Stack t
   (requires (fun h ->
-    LPL.valid p h sl pos))
+    LPL.valid p h (LPL.slice_of sl) pos /\
+    R.readable h (LPL.perm_of sl) pos (LPL.get_valid_pos p h (LPL.slice_of sl) pos)
+  ))
   (ensures (fun h res h' ->
-    modifies loc_none h h' /\
+    let pos' = LPL.get_valid_pos p h (LPL.slice_of sl) pos in
+    modifies (R.loc_perm_from_to (LPL.perm_of sl) pos pos') h h' /\
+    R.unreadable h' (LPL.perm_of sl) pos pos' /\
     h' `extends` h /\
-    res == LPL.contents p h sl pos
+    res == LPL.contents p h (LPL.slice_of sl) pos
   ))
 
 inline_for_extraction noextract
-let lift_leaf_reader #nz (#k:parser_kind nz) #t (#p:parser k t) (r:LPL.leaf_reader p)
+let lift_constant_size_leaf_reader #nz (#k:parser_kind nz) #t (#p:parser k t) (r:LPL.leaf_reader p) (sz: U32.t { k.LPL.parser_kind_high == Some k.LPL.parser_kind_low /\ k.LPL.parser_kind_low == U32.v sz })
   : leaf_reader p
-  = fun input startPosition -> r input startPosition
+  = fun input startPosition ->
+      LPL.read_with_perm r (LPL.jump_constant_size p sz ()) input startPosition
 
 [@ CMacro ]
 let validator_error_action_failed : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 5uL)
 
 inline_for_extraction
 noextract
-let validate_with_success_action (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
+let with_drop_if
+  (#t: Type)
+  (cond: bool)
+  (inv: slice_inv)
+  (sl: input_buffer_t)
+  (from: U32.t)
+  (fto: ((x: t) -> Tot U32.t))
+  (x: t)
+: HST.Stack t
+  (requires (fun h ->
+    let to = fto x in
+    U32.v from <= U32.v to /\
+    U32.v to <= U32.v (LPL.slice_of sl).LPL.len /\
+    LPL.live_input_buffer h sl /\
+    inv (LPL.slice_of sl).LPL.base h
+  ))
+  (ensures (fun h res h' ->
+    B.modifies (if cond then R.loc_perm_from_to (LPL.perm_of sl) from (fto x) else B.loc_none) h h' /\
+    LPL.live_input_buffer h' sl /\
+    (cond ==> R.unreadable h' (LPL.perm_of sl) from (fto x)) /\
+    inv (LPL.slice_of sl).LPL.base h' /\
+    res == x
+  ))
+= let h1 = HST.get () in
+  if cond then LPL.drop sl from (fto x);
+  let h2 = HST.get () in
+  [@inline_let] let _ = assert (h2 `extends` h1) in
+  x
+
+inline_for_extraction
+noextract
+let validate_drop
+   #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t) (#inv:slice_inv) (#l:eloc) (#allow_reading:bool)
+   (v: validate_with_action_t p inv l allow_reading)
+: Tot (validate_with_action_t p inv l false)
+= fun
+  (input: input_buffer_t)
+  (startPosition: U64.t) ->
+  with_drop_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v input startPosition)
+
+inline_for_extraction
+noextract
+let validate_with_success_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
                          (v1:validate_with_action_t p1 inv1 l1 ar)
                          (#inv2:_) (#l2:eloc) #b (a:action p1 inv2 l2 b bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) ar
@@ -126,11 +179,22 @@ let validate_with_success_action (name: string) #nz (#k1:parser_kind nz) #t1 (#p
     then
          [@(rename_let ("action_success_" ^ name))]
          let b = a input startPosition pos1 in
-         if not b then validator_error_action_failed else pos1
-    else pos1
+         if not b
+         then
+           with_drop_if (not ar) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed
+         else
+           pos1
+    else
+         pos1
+
+let validate_with_success_action
+  name
+  #nz #k1 #t1 #p1 #inv1 #l1 #ar v1
+  #inv2 #l2 #b a
+= validate_drop (validate_with_success_action' name v1 a)
 
 inline_for_extraction noextract
-let validate_with_error_action (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
+let validate_with_error_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
                          (v1:validate_with_action_t p1 inv1 l1 ar)
                          (#inv2:_) (#l2:eloc) (a:action p1 inv2 l2 false bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) ar
@@ -148,34 +212,52 @@ let validate_with_error_action (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:
          let b = a input startPosition pos1 in
          if not b then validator_error_action_failed else pos1
 
+let validate_with_error_action
+  name
+  #nz #k1 #t1 #p1 #inv1 #l1 #ar v1
+  #inv2 #l2 a
+= validate_drop (validate_with_error_action' name v1 a)
+
 inline_for_extraction noextract
 let validate_ret
   : validate_with_action_t (parse_ret ()) true_inv eloc_none true
-  = fun input startPosition -> LPLC.validate_ret () input startPosition
+  = fun input startPosition ->
+    let h = HST.get () in
+    [@inline_let] let _ = LPL.valid_facts (parse_ret ()) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+    startPosition
+
+#push-options "--z3rlimit 16"
 
 inline_for_extraction noextract
-let validate_pair
+let validate_pair'
        (name1: string)
        #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
        (#inv1:_) (#l1:eloc) (#ar1:_) (v1:validate_with_action_t p1 inv1 l1 ar1)
        #nz2 (#k2:parser_kind nz2) #t2 (#p2:parser k2 t2)
        (#inv2:_) (#l2:eloc) (#ar2:_) (v2:validate_with_action_t p2 inv2 l2 ar2)
-  : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
+  : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) (ar1 && ar2)
   = fun   (input: input_buffer_t)
         startPosition ->
     let h = HST.get () in
-    [@inline_let] let _ = LPLC.valid_nondep_then h p1 p2 input (LPL.uint64_to_uint32 startPosition) in
+    [@inline_let] let _ = LPLC.valid_nondep_then h p1 p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
     [@(rename_let ("positionAfter" ^ name1))]
     let pos1 = v1 input startPosition in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h1;
     if LPL.is_error pos1
     then begin
-      pos1
+      with_drop_if (not (ar1 && ar2)) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) pos1
     end
     else
-      [@inline_let] let _ = LPL.valid_facts p2 h input (LPL.uint64_to_uint32 pos1) in
-      v2 input pos1
+      [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 pos1) (LPL.slice_length input) in
+      [@inline_let] let _ = LPL.valid_facts p2 h (LPL.slice_of input) (LPL.uint64_to_uint32 pos1) in
+      with_drop_if (not (ar1 && ar2)) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 input pos1)
+
+let validate_pair
+  name1
+  #nz1 #k1 #t1 #p1 #inv1 #l1 #ar1 v1
+  #nz2 #k2 #t2 #p2 #inv2 #l2 #ar2 v2
+= validate_drop (validate_pair' name1 v1 v2)
 
 inline_for_extraction noextract
 let validate_dep_pair
@@ -187,21 +269,24 @@ let validate_dep_pair
   : Tot (validate_with_action_t (p1 `parse_dep_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false)
   = fun (input: input_buffer_t) startPosition ->
       let h = HST.get () in
-      [@inline_let] let _ = LPLC.valid_dtuple2 h p1 p2 input (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LPLC.valid_dtuple2 h p1 p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@(rename_let ("positionAfter" ^ name1))]
       let pos1 = v1 input startPosition in
       let h1 = HST.get() in
       if LPL.is_error pos1
       then begin
-        pos1
+        with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) pos1
       end
       else
+        [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 pos1) (LPL.slice_length input) in
         [@(rename_let ("" ^ name1))]
         let x = r1 input (LPL.uint64_to_uint32 startPosition) in
         let h15 = HST.get () in
         let _ = modifies_address_liveness_insensitive_unused_in h h15 in
-        [@inline_let] let _ = LPLC.valid_facts (p2 x) h input (LPL.uint64_to_uint32 pos1) in
-        v2 x input pos1
+        [@inline_let] let _ = LPLC.valid_facts (p2 x) h (LPL.slice_of input) (LPL.uint64_to_uint32 pos1) in
+        with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 x input pos1)
+
+#pop-options
 
 [@ CMacro ]
 let validator_error_constraint_failed : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 6uL)
@@ -217,6 +302,8 @@ let check_constraint_ok_with_field_id (ok:bool) (startPosition: LPL.pos_t) (endP
       if ok
       then endPosition
       else LPL.set_validator_error_pos_and_code validator_error_constraint_failed startPosition fieldId
+
+#push-options "--z3rlimit 32"
 
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action'
@@ -235,16 +322,17 @@ let validate_dep_pair_with_refinement_and_action'
              false)
   = fun (input: input_buffer_t) startPosition ->
       let h0 = HST.get () in
-      [@inline_let] let _ = LPLC.valid_filter h0 p1 f input (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LPLC.valid_filter h0 p1 f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@(rename_let ("positionAfter" ^ name1))]
       let res = v1 input startPosition in
       let h1 = HST.get() in
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if LPL.is_error res
       then begin
-        res
+        with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
       end
       else begin
+        [@inline_let] let _ = R.readable_split h0 (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
         [@(rename_let ("" ^ name1))]
         let field_value = r1 input (LPL.uint64_to_uint32 startPosition) in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
@@ -252,7 +340,8 @@ let validate_dep_pair_with_refinement_and_action'
         [@(rename_let ("pos_or_error_after_" ^ name1))]
         let res1 = check_constraint_ok_with_field_id ok startPosition res id1 in
         if LPL.is_error res1
-        then res1
+        then
+          with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
         else let h2 = HST.get() in
              // assert (B.modifies B.loc_none h1 h2);
              // assert (inv1' input.LPL.base h2);
@@ -261,19 +350,17 @@ let validate_dep_pair_with_refinement_and_action'
              // [@(rename_let ("action_" ^ name1))]
              // let action_result =  in
              if not (a field_value input startPosition res)
-             then LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1 //action failed
+             then with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1) //action failed
              else begin
                let open LPL in
                // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
                let h15 = HST.get () in
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
-               [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 input (LPL.uint64_to_uint32 res1) in
-               [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 input (LPL.uint64_to_uint32 startPosition) in
-               v2 field_value input res1
+               [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 (LPL.slice_of input) (LPL.uint64_to_uint32 res1) in
+               [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+               with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 field_value input res1)
              end
         end
-
-#push-options "--z3rlimit 16"
 
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action_total_zero_parser'
@@ -298,11 +385,12 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
          (ensures (fun _ -> True))
   = fun (input: input_buffer_t) startPosition ->
       let h0 = HST.get () in
-      [@inline_let] let _ = LPLC.valid_filter h0 p1 f input (LPL.uint64_to_uint32 startPosition) in
-      [@inline_let] let _ = LPLC.valid_facts p1 h0 input (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LPLC.valid_filter h0 p1 f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LPLC.valid_facts p1 h0 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@inline_let] let _ = LP.parser_kind_prop_equiv k1 p1 in
       begin
         LowStar.Comment.comment ("Validating field " ^ name1);
+        [@inline_let] let _ = R.readable_split h0 (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 startPosition) (LPL.slice_length input) in
         [@(rename_let ("" ^ name1))]
         let field_value = r1 input (LPL.uint64_to_uint32 startPosition) in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
@@ -310,7 +398,8 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
         [@(rename_let ("pos_or_error_after_" ^ name1))]
         let res1 = check_constraint_ok_with_field_id ok startPosition startPosition id1 in
         if LPL.is_error res1
-        then res1
+        then
+             with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
         else let h2 = HST.get() in
              // assert (B.modifies B.loc_none h1 h2);
              // assert (inv1' input.LPL.base h2);
@@ -319,19 +408,17 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
              // [@(rename_let ("action_" ^ name1))]
              // let action_result =  in
              if not (a field_value input startPosition startPosition)
-             then LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1 //action failed
+             then with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1) //action failed
              else begin
                let open LPL in
                // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
                let h15 = HST.get () in
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
-               [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 input (LPL.uint64_to_uint32 res1) in
-               [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 input (LPL.uint64_to_uint32 startPosition) in
-               v2 field_value input res1
+               [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 (LPL.slice_of input) (LPL.uint64_to_uint32 res1) in
+               [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+               with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 field_value input res1)
              end
         end
-
-#pop-options
 
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement'
@@ -349,16 +436,17 @@ let validate_dep_pair_with_refinement'
              false)
   = fun (input: input_buffer_t) startPosition ->
       let h0 = HST.get () in
-      [@inline_let] let _ = LPLC.valid_filter h0 p1 f input (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LPLC.valid_filter h0 p1 f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@(rename_let ("positionAfter" ^ name1))]
       let res = v1 input startPosition in
       let h1 = HST.get() in
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if LPL.is_error res
       then begin
-        res
+        with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
       end
       else begin
+        [@inline_let] let _ = R.readable_split h0 (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
         [@(rename_let ("" ^ name1))]
         let field_value = r1 input (LPL.uint64_to_uint32 startPosition) in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
@@ -366,7 +454,8 @@ let validate_dep_pair_with_refinement'
         [@(rename_let ("positionOrErrorAfter" ^ name1))]
         let res1 = check_constraint_ok_with_field_id ok startPosition res id1 in
         if LPL.is_error res1
-        then res1
+        then
+             with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
         else let h2 = HST.get() in
              // assert (B.modifies B.loc_none h1 h2);
              // assert (inv1' input.LPL.base h2);
@@ -376,9 +465,9 @@ let validate_dep_pair_with_refinement'
              // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
              let h15 = HST.get () in
              let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
-             [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 input (LPL.uint64_to_uint32 res1) in
-             [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 input (LPL.uint64_to_uint32 startPosition) in
-             v2 field_value input res1
+             [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 (LPL.slice_of input) (LPL.uint64_to_uint32 res1) in
+             [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+             with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 field_value input res1)
         end
 
 inline_for_extraction noextract
@@ -403,11 +492,12 @@ let validate_dep_pair_with_refinement_total_zero_parser'
          (ensures (fun _ -> True))
   = fun (input: input_buffer_t) startPosition ->
       let h0 = HST.get () in
-      [@inline_let] let _ = LPLC.valid_filter h0 p1 f input (LPL.uint64_to_uint32 startPosition) in
-      [@inline_let] let _ = LPLC.valid_facts p1 h0 input (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LPLC.valid_filter h0 p1 f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LPLC.valid_facts p1 h0 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@inline_let] let _ = LP.parser_kind_prop_equiv k1 p1 in
       begin
         LowStar.Comment.comment ("Validating field " ^ name1);
+        [@inline_let] let _ = R.readable_split h0 (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 startPosition) (LPL.slice_length input) in
         [@(rename_let ("" ^ name1))]
         let field_value = r1 input (LPL.uint64_to_uint32 startPosition) in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
@@ -415,7 +505,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
         [@(rename_let ("positionOrErrorAfter" ^ name1))]
         let res1 = check_constraint_ok_with_field_id ok startPosition startPosition id1 in
         if LPL.is_error res1
-        then res1
+        then with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
         else let h2 = HST.get() in
              // assert (B.modifies B.loc_none h1 h2);
              // assert (inv1' input.LPL.base h2);
@@ -425,11 +515,12 @@ let validate_dep_pair_with_refinement_total_zero_parser'
              // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
              let h15 = HST.get () in
              let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
-             [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 input (LPL.uint64_to_uint32 res1) in
-             [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 input (LPL.uint64_to_uint32 startPosition) in
-             v2 field_value input res1
+             [@inline_let] let _ = LPLC.valid_facts (p2 field_value) h0 (LPL.slice_of input) (LPL.uint64_to_uint32 res1) in
+             [@inline_let] let _ = LPLC.valid_dtuple2 h0 (p1 `LPC.parse_filter` f) p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+             with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 field_value input res1)
         end
 
+#pop-options
 
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action
@@ -455,6 +546,8 @@ let validate_dep_pair_with_refinement_and_action
     else
       validate_dep_pair_with_refinement_and_action' name1 id1 v1 r1 f a v2
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction noextract
 let validate_dep_pair_with_action
       #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
@@ -474,23 +567,26 @@ let validate_dep_pair_with_action
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if LPL.is_error res
       then begin
-        res
+        with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
       end
       else begin
+        [@inline_let] let _ = R.readable_split h0 (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
         let field_value = r1 input (LPL.uint64_to_uint32 startPosition) in
         let h2 = HST.get() in
         modifies_address_liveness_insensitive_unused_in h1 h2;
         let action_result = a field_value input startPosition res in
         if not action_result
-        then validator_error_action_failed //action failed
+        then with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed //action failed
         else begin
                let open LPL in
                let h15 = HST.get () in
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
-               [@inline_let] let _ = LPLC.valid_dtuple2 h0 p1 p2 input (LPL.uint64_to_uint32 startPosition) in
-               v2 field_value input res
+               [@inline_let] let _ = LPLC.valid_dtuple2 h0 p1 p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+               with_drop_if true (conj_inv inv1 (conj_inv inv1' inv2)) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 field_value input res)
              end
       end
+
+#pop-options
 
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement
@@ -522,21 +618,22 @@ let validate_filter' (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k 
   : Tot (validate_with_action_t #nz (p `LPC.parse_filter` f) inv l false)
   = fun input startPosition ->
     let h = HST.get () in
-    [@inline_let] let _ = LPLC.valid_filter h p f input (LPL.uint64_to_uint32 startPosition) in
+    [@inline_let] let _ = LPLC.valid_filter h p f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
     [@(rename_let ("positionAfter" ^ name))]
     let res = v input startPosition in
     let h1 = HST.get () in
     if LPL.is_error res
-    then res
+    then with_drop_if true inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
     else begin
       LowStar.Comment.comment cr;
+      [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
       [@(rename_let ("" ^ name))]
       let field_value = r input (LPL.uint64_to_uint32 startPosition) in
       LowStar.Comment.comment (normalize_term ("start: " ^cf));
       [@(rename_let (name ^ "ConstraintIsOk"))]
       let ok = f field_value in
       LowStar.Comment.comment (normalize_term ("end: " ^ cf));
-      check_constraint_ok ok res
+      with_drop_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (check_constraint_ok ok res)
     end
 
 inline_for_extraction noextract
@@ -555,14 +652,15 @@ let validate_filter'_with_action
   : Tot (validate_with_action_t #nz (p `LPC.parse_filter` f) (conj_inv inv inva) (eloc_union l la) false)
   = fun input startPosition ->
     let h = HST.get () in
-    [@inline_let] let _ = LPLC.valid_filter h p f input (LPL.uint64_to_uint32 startPosition) in
+    [@inline_let] let _ = LPLC.valid_filter h p f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
     [@(rename_let ("positionAfter" ^ name))]
     let res = v input startPosition in
     let h1 = HST.get () in
     if LPL.is_error res
-    then res
+    then with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
     else begin
       LowStar.Comment.comment cr;
+      [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
       [@(rename_let ("" ^ name))]
       let field_value = r input (LPL.uint64_to_uint32 startPosition) in
       LowStar.Comment.comment (normalize_term ("start: " ^cf));
@@ -574,8 +672,8 @@ let validate_filter'_with_action
              let _ = modifies_address_liveness_insensitive_unused_in h h15 in
              if a field_value input startPosition res
              then res
-             else validator_error_action_failed
-      else validator_error_constraint_failed
+             else with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed
+      else with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_constraint_failed
     end
 
 inline_for_extraction noextract
@@ -601,27 +699,17 @@ let validate_with_dep_action
     let res = v input startPosition in
     let h1 = HST.get () in
     if LPL.is_error res
-    then res
+    then with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res
     else begin
+      [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 res) (LPL.slice_length input) in
       [@(rename_let ("" ^ name))]
       let field_value = r input (LPL.uint64_to_uint32 startPosition) in
       let h15 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h15 in
       if a field_value input startPosition res
       then res
-      else validator_error_action_failed
+      else with_drop_if true (conj_inv inv inva) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_action_failed
     end
-
-
-private
-let valid_weaken #nz (#k:parser_kind nz) #t (p:parser k t)
-                 #nz' (k':parser_kind nz'{k' `is_weaker_than` k}) (h:HS.mem)
-                 (input:input_buffer_t) (pos:U32.t)
-  : Lemma ((forall res. {:pattern (LPL.valid_pos (LP.weaken k' p) h input pos res)}
-             LPL.valid_pos p h input pos res <==> LPL.valid_pos (LP.weaken k' p) h input pos res) /\
-           (LPL.valid p h input pos <==> LPL.valid (LP.weaken k' p) h input pos))
- =  LPL.valid_facts p h input pos;
-    LPL.valid_facts (LP.weaken k' p) h input pos
 
 inline_for_extraction noextract
 let validate_weaken #nz (#k:parser_kind nz) #t (#p:parser k t)
@@ -632,7 +720,7 @@ let validate_weaken #nz (#k:parser_kind nz) #t (#p:parser k t)
     let open LPLC in
     let h = HST.get () in
     [@inline_let]
-    let _ = valid_weaken k' p h input (LPL.uint64_to_uint32 startPosition) in
+    let _ = valid_weaken k' p h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
     v input startPosition
 
 /// Parser: weakening kinds
@@ -684,7 +772,7 @@ let validate_ite #nz (#k:parser_kind nz) (#a:Type) (#b:Type)
                  (p2:squash (not e) -> parser k b) (v2:(squash (not e) -> validate_with_action_t (p2()) inv2 l2 ar2))
   : Tot (validate_with_action_t (parse_ite e p1 p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false)
   = fun (input:input_buffer_t) startPosition ->
-      if e then v1 () input startPosition else v2 () input startPosition
+      if e then validate_drop (v1 ()) input startPosition else validate_drop (v2 ()) input startPosition
 
 unfold
 let validate_list_inv
@@ -702,34 +790,35 @@ let validate_list_inv
 : GTot Type0
 = let h0 = Ghost.reveal g0 in
   let h1 = Ghost.reveal g1 in
-  inv sl.LPL.base h0 /\
+  let pos1 = Seq.index (as_seq h bpos) 0 in
+  inv (LPL.slice_of sl).LPL.base h0 /\
   h `extends` h0 /\
   loc_not_unused_in h0 `loc_includes` l /\
-  l `loc_disjoint` loc_buffer sl.LPL.base /\
+  l `loc_disjoint` (loc_buffer (LPL.slice_of sl).LPL.base `B.loc_union` R.loc_perm (LPL.perm_of sl)) /\
   l `loc_disjoint` loc_buffer bpos /\
   address_liveness_insensitive_locs `loc_includes` l /\
-  disjoint sl.LPL.base bpos /\
+  B.loc_buffer bpos `B.loc_disjoint` (B.loc_buffer (LPL.slice_of sl).LPL.base `B.loc_union` R.loc_perm (LPL.perm_of sl)) /\
   k.LPL.parser_kind_subkind == Some LPL.ParserStrong /\
   k.LPL.parser_kind_low > 0 /\
-  U32.v pos0 <= U32.v sl.LPL.len /\
-  LPL.live_slice h0 sl /\
+  U32.v pos0 <= U32.v (LPL.slice_of sl).LPL.len /\
+  LPL.live_input_buffer h0 sl /\
   live h1 bpos /\
-  modifies loc_none h0 h1 /\
-  modifies (l `loc_union` loc_buffer bpos) h1 h /\ (
-  let pos1 = Seq.index (as_seq h bpos) 0 in
+  modifies loc_none h0 h1 /\ (
   if
     LPL.is_error pos1
   then
     stop == true
   else
     U32.v pos0 <= U64.v pos1 /\
-    U64.v pos1 <= U32.v sl.LPL.len /\
-    (LPL.valid_exact (LPLL.parse_list p) h0 sl pos0 sl.LPL.len <==>
-     LPL.valid_exact (LPLL.parse_list p) h0 sl (Cast.uint64_to_uint32 pos1) sl.LPL.len) /\
-    (stop == true ==> U64.v pos1 == U32.v sl.LPL.len)
-  )
+    U64.v pos1 <= U32.v (LPL.slice_of sl).LPL.len /\
+    R.readable h (LPL.perm_of sl) (LPL.uint64_to_uint32 pos1) (LPL.slice_length sl) /\
+    (LPL.valid_exact (LPLL.parse_list p) h0 (LPL.slice_of sl) pos0 (LPL.slice_of sl).LPL.len <==>
+     LPL.valid_exact (LPLL.parse_list p) h0 (LPL.slice_of sl) (Cast.uint64_to_uint32 pos1) (LPL.slice_of sl).LPL.len) /\
+    (stop == true ==> U64.v pos1 == U32.v (LPL.slice_of sl).LPL.len)
+  ) /\
+  modifies (l `loc_union` loc_buffer bpos `loc_union` R.loc_perm_from_to (LPL.perm_of sl) pos0 (if LPL.is_error pos1 then LPL.slice_length sl else LPL.uint64_to_uint32 pos1)) h1 h
 
-#push-options "--z3rlimit_factor 4"
+#push-options "--z3rlimit 128"
 
 inline_for_extraction
 noextract
@@ -752,22 +841,23 @@ let validate_list_body
   ))
 = let h = HST.get () in
   let elementStartPosition = index bpos 0ul in
-  assert (U64.v elementStartPosition <= U32.v sl.LPL.len);
-  if elementStartPosition = Cast.uint32_to_uint64 sl.LPL.len
+  assert (U64.v elementStartPosition <= U32.v (LPL.slice_of sl).LPL.len);
+  if elementStartPosition = Cast.uint32_to_uint64 (LPL.slice_length sl)
   then true
   else begin
-    Classical.move_requires (LPLL.valid_exact_list_cons p (Ghost.reveal g0) sl (LPL.uint64_to_uint32 elementStartPosition)) sl.LPL.len;
-    Classical.move_requires (LPLL.valid_exact_list_cons_recip p (Ghost.reveal g0) sl (LPL.uint64_to_uint32 elementStartPosition)) sl.LPL.len;
+    Classical.move_requires (LPLL.valid_exact_list_cons p (Ghost.reveal g0) (LPL.slice_of sl) (LPL.uint64_to_uint32 elementStartPosition)) (LPL.slice_of sl).LPL.len;
+    Classical.move_requires (LPLL.valid_exact_list_cons_recip p (Ghost.reveal g0) (LPL.slice_of sl) (LPL.uint64_to_uint32 elementStartPosition)) (LPL.slice_of sl).LPL.len;
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in (Ghost.reveal g0) h1;
     let elementEndPosition = v sl elementStartPosition in
     upd bpos 0ul elementEndPosition;
+    (if LPL.is_success elementEndPosition then R.readable_split h1 (LPL.perm_of sl) (LPL.uint64_to_uint32 elementStartPosition) (LPL.uint64_to_uint32 elementEndPosition) (LPL.slice_length sl));
     LPL.is_error elementEndPosition
   end
 
 #pop-options
 
-#push-options "--z3rlimit_factor 4"
+#push-options "--z3rlimit 64"
 inline_for_extraction
 noextract
 let validate_list'
@@ -781,17 +871,18 @@ let validate_list'
   (pos: U64.t)
 : HST.Stack U64.t
   (requires (fun h ->
-    U64.v pos <= U32.v sl.LPL.len /\
-    inv sl.LPL.base h /\
+    U64.v pos <= U32.v (LPL.slice_of sl).LPL.len /\
+    inv (LPL.slice_of sl).LPL.base h /\
     loc_not_unused_in h `loc_includes` l /\
-    l `loc_disjoint` loc_buffer sl.LPL.base /\
+    l `loc_disjoint` (loc_buffer (LPL.slice_of sl).LPL.base `B.loc_union` R.loc_perm (LPL.perm_of sl)) /\
     address_liveness_insensitive_locs `loc_includes` l /\
-    LPL.live_slice h sl
+    R.readable h (LPL.perm_of sl) (LPL.uint64_to_uint32 pos) (LPL.slice_of sl).LPL.len /\
+    LPL.live_slice h (LPL.slice_of sl)
   ))
   (ensures (fun h res h' ->
-    modifies l h h' /\
-    inv sl.LPL.base h' /\
-    (LPL.is_success res ==> (LPL.valid_exact (LPLL.parse_list p) h sl (LPL.uint64_to_uint32 pos) sl.LPL.len /\ U64.v res == U32.v sl.LPL.len))
+    inv (LPL.slice_of sl).LPL.base h' /\
+    (LPL.is_success res ==> (LPL.valid_exact (LPLL.parse_list p) h (LPL.slice_of sl) (LPL.uint64_to_uint32 pos) (LPL.slice_of sl).LPL.len /\ U64.v res == U32.v (LPL.slice_of sl).LPL.len)) /\
+    modifies (l `B.loc_union` R.loc_perm_from_to (LPL.perm_of sl) (LPL.uint64_to_uint32 pos) (if LPL.is_success res then LPL.uint64_to_uint32 res else LPL.slice_length sl)) h h'
   ))
 = let h0 = HST.get () in
   let g0 = Ghost.hide h0 in
@@ -802,7 +893,7 @@ let validate_list'
   let h1 = HST.get () in
   let g1 = Ghost.hide h1 in
   C.Loops.do_while (validate_list_inv p inv l g0 g1 sl (LPL.uint64_to_uint32 pos) currentPosition) (fun _ -> validate_list_body n v g0 g1 sl pos currentPosition);
-  LPLL.valid_exact_list_nil p h0 sl sl.LPL.len;
+  LPLL.valid_exact_list_nil p h0 (LPL.slice_of sl) (LPL.slice_of sl).LPL.len;
   let finalPositionOrError = index currentPosition 0ul in
   HST.pop_frame ();
   let h' = HST.get () in
@@ -822,14 +913,15 @@ let validate_nlist
 : Tot (validate_with_action_t (parse_nlist n p) inv l false)
 = fun input pos ->
   let h = HST.get () in
-  LPL.valid_facts (parse_nlist n p) h input (LPL.uint64_to_uint32 pos);
-  LPLF.parse_fldata_consumes_all_correct (LPLL.parse_list p) (U32.v n) (LPL.bytes_of_slice_from h input (LPL.uint64_to_uint32 pos));
-  if (Cast.uint32_to_uint64 input.LPL.len `U64.sub` pos) `U64.lt` Cast.uint32_to_uint64 n
-  then LPL.validator_error_not_enough_data
+  LPL.valid_facts (parse_nlist n p) h (LPL.slice_of input) (LPL.uint64_to_uint32 pos);
+  LPLF.parse_fldata_consumes_all_correct (LPLL.parse_list p) (U32.v n) (LPL.bytes_of_slice_from h (LPL.slice_of input) (LPL.uint64_to_uint32 pos));
+  if (Cast.uint32_to_uint64 (LPL.slice_length input) `U64.sub` pos) `U64.lt` Cast.uint32_to_uint64 n
+  then with_drop_if true inv input (LPL.uint64_to_uint32 pos) (fun _ -> LPL.slice_length input) LPL.validator_error_not_enough_data
   else begin
-    let listInput = LPL.make_slice input.LPL.base (LPL.uint64_to_uint32 pos `U32.add` n) in
-    LPL.valid_exact_equiv (LPLL.parse_list p) h listInput (LPL.uint64_to_uint32 pos) (LPL.uint64_to_uint32 pos `U32.add` n);
-    validate_list' n v listInput pos
+    let listInput = LPL.truncate_input_buffer input (LPL.uint64_to_uint32 pos `U32.add` n) in
+    LPL.valid_exact_equiv (LPLL.parse_list p) h (LPL.slice_of listInput) (LPL.uint64_to_uint32 pos) (LPL.uint64_to_uint32 pos `U32.add` n);
+    R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 pos) (LPL.slice_length listInput) (LPL.slice_length input);
+    with_drop_if true inv input (LPL.uint64_to_uint32 pos) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (validate_list' n v listInput pos)
   end
 
 noextract
@@ -841,7 +933,8 @@ let validate_nlist_constant_size_without_actions
   #t (#p:parser k t) #inv #l #ar
   (v: validate_with_action_t p inv l ar)
 : Tot (validate_with_action_t (parse_nlist n p) inv l false)
-= if
+= 
+  if
     let open LP in
     k.parser_kind_subkind = Some ParserStrong &&
     k.parser_kind_high = Some k.parser_kind_low &&
@@ -850,73 +943,90 @@ let validate_nlist_constant_size_without_actions
   then
     (fun input startPosition ->
       let h = HST.get () in
-      assert (forall h' . {:pattern (B.modifies B.loc_none h h')} (B.modifies B.loc_none h h' /\ inv input.LPL.base h) ==> h' `extends` h);
-      assert (forall h' . {:pattern (B.modifies B.loc_none h h')} (B.modifies B.loc_none h h' /\ inv input.LPL.base h) ==> inv input.LPL.base h');
-      validate_nlist_total_constant_size n_is_const n p input startPosition
+      assert (forall h' . {:pattern (B.modifies B.loc_none h h')} (B.modifies B.loc_none h h' /\ inv (LPL.slice_of input).LPL.base h) ==> h' `extends` h);
+      assert (forall h' . {:pattern (B.modifies B.loc_none h h')} (B.modifies B.loc_none h h' /\ inv (LPL.slice_of input).LPL.base h) ==> inv (LPL.slice_of input).LPL.base h');
+      with_drop_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (validate_nlist_total_constant_size n_is_const n p (FStar.Ghost.elift1 LPL.slice_of input) (LPL.slice_length input) startPosition)
     )
   else
     validate_nlist n v
 
+#push-options "--z3rlimit 16"
+
 noextract inline_for_extraction
-let validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
+let validate_t_at_most' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
-  : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
+  : Tot (validate_with_action_t (parse_t_at_most n p) inv l ar)
   = fun input startPosition ->
     let h = HST.get () in
     let _ =
-      LPL.valid_weaken kind_t_at_most (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) (U32.v n)) h input (LPL.uint64_to_uint32 startPosition);
-      LPL.valid_facts (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) (U32.v n)) h input (LPL.uint64_to_uint32 startPosition)
+      LPL.valid_weaken kind_t_at_most (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition);
+      LPL.valid_facts (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition)
     in
-    if (Cast.uint32_to_uint64 input.LPL.len `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
-    then LPL.validator_error_not_enough_data
+    if (Cast.uint32_to_uint64 (LPL.slice_length input) `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
+    then
+      with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input)  LPL.validator_error_not_enough_data
     else
-      [@inline_let] let input' = { LPL.base = input.LPL.base; LPL.len = LPL.uint64_to_uint32 startPosition `U32.add` n; } in
+      [@inline_let] let input' = LPL.truncate_input_buffer input (LPL.uint64_to_uint32 startPosition `U32.add` n) in
+      [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.slice_length input') (LPL.slice_length input) in
       [@inline_let] let _ =
-        LPL.valid_facts (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) h input' (LPL.uint64_to_uint32 startPosition);
-        LPLC.valid_nondep_then h p LowParse.Spec.Bytes.parse_all_bytes input' (LPL.uint64_to_uint32 startPosition)
+        LPL.valid_facts (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) h (LPL.slice_of input') (LPL.uint64_to_uint32 startPosition);
+        LPLC.valid_nondep_then h p LowParse.Spec.Bytes.parse_all_bytes (LPL.slice_of input') (LPL.uint64_to_uint32 startPosition)
       in
       // FIXME: I'd need a name here
       let positionAfterContents = v input' startPosition in
       let h1 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h1 in
       if LPL.is_error positionAfterContents
-      then positionAfterContents
+      then with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) positionAfterContents
       else
         [@inline_let] let _ =
-          LPL.valid_facts LowParse.Spec.Bytes.parse_all_bytes h input' (LPL.uint64_to_uint32 positionAfterContents)
+          LPL.valid_facts LowParse.Spec.Bytes.parse_all_bytes h (LPL.slice_of input') (LPL.uint64_to_uint32 positionAfterContents)
         in
-        startPosition `U64.add` Cast.uint32_to_uint64 n
+        with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
+
+let validate_t_at_most
+  n
+  #k #t #p #inv #l #ar v
+= validate_drop (validate_t_at_most' n v)
 
 [@ CMacro ]
 let validator_error_unexpected_padding : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 7uL)
 
 noextract inline_for_extraction
-let validate_t_exact (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
+let validate_t_exact' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
-  : Tot (validate_with_action_t (parse_t_exact n p) inv l false)
+  : Tot (validate_with_action_t (parse_t_exact n p) inv l ar)
   = fun input startPosition ->
     let h = HST.get () in
     let _ =
-      LPL.valid_weaken kind_t_at_most (LowParse.Spec.FLData.parse_fldata p (U32.v n)) h input (LPL.uint64_to_uint32 startPosition);
-      LPL.valid_facts (LowParse.Spec.FLData.parse_fldata p (U32.v n)) h input (LPL.uint64_to_uint32 startPosition)
+      LPL.valid_weaken kind_t_at_most (LowParse.Spec.FLData.parse_fldata p (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition);
+      LPL.valid_facts (LowParse.Spec.FLData.parse_fldata p (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition)
     in
-    if (Cast.uint32_to_uint64 input.LPL.len `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
-    then LPL.validator_error_not_enough_data
+    if (Cast.uint32_to_uint64 (LPL.slice_length input) `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
+    then
+    with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) LPL.validator_error_not_enough_data
     else
-      [@inline_let] let input' = { LPL.base = input.LPL.base; LPL.len = LPL.uint64_to_uint32 startPosition `U32.add` n; } in
+      [@inline_let] let input' = LPL.truncate_input_buffer input (LPL.uint64_to_uint32 startPosition `U32.add` n) in
+      [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.slice_length input') (LPL.slice_length input) in
       [@inline_let] let _ =
-        LPL.valid_facts p h input' (LPL.uint64_to_uint32 startPosition)
+        LPL.valid_facts p h (LPL.slice_of input') (LPL.uint64_to_uint32 startPosition)
       in
       // FIXME: I'd need a name here
       let positionAfterContents = v input' startPosition in
       let h1 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h1 in
       if LPL.is_error positionAfterContents
-      then positionAfterContents
-      else if (LPL.uint64_to_uint32 positionAfterContents) <> input'.LPL.len
-      then validator_error_unexpected_padding
-      else startPosition `U64.add` Cast.uint32_to_uint64 n
+      then with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) positionAfterContents
+      else if (LPL.uint64_to_uint32 positionAfterContents) <> LPL.slice_length input'
+      then with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_unexpected_padding
+      else with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
 
+#pop-options
+
+let validate_t_exact
+  n
+  #k #t #p #inv #l #ar v
+= validate_drop (validate_t_exact' n v)
 
 inline_for_extraction noextract
 let validate_with_comment (c:string)
@@ -948,64 +1058,64 @@ let read_filter #nz
     : leaf_reader (parse_filter p f)
     = fun input startPosition ->
         let h = HST.get () in
-        assert (LPL.valid #triv #triv #(filter_kind k) #(Prelude.refine t f) (parse_filter p f) h input startPosition);
+        assert (LPL.valid #triv #triv #(filter_kind k) #(Prelude.refine t f) (parse_filter p f) h (LPL.slice_of input) startPosition);
         assert (parse_filter p f == LPC.parse_filter #k #t p f);
-        assert (LPL.valid #triv #triv #(filter_kind k) #(Prelude.refine t f) (LPC.parse_filter #k #t p f) h input startPosition);
-        assert (LPL.valid #triv #triv #(filter_kind k) #(x:t{f x}) (LPC.parse_filter #k #t p f) h input startPosition);
-        assert (LPL.valid #triv #triv #(LPC.parse_filter_kind k) #(x:t{f x}) (LPC.parse_filter #k #t p f) h input startPosition);
+        assert (LPL.valid #triv #triv #(filter_kind k) #(Prelude.refine t f) (LPC.parse_filter #k #t p f) h (LPL.slice_of input) startPosition);
+        assert (LPL.valid #triv #triv #(filter_kind k) #(x:t{f x}) (LPC.parse_filter #k #t p f) h (LPL.slice_of input) startPosition);
+        assert (LPL.valid #triv #triv #(LPC.parse_filter_kind k) #(x:t{f x}) (LPC.parse_filter #k #t p f) h (LPL.slice_of input) startPosition);
         assert_norm (Prelude.refine t f == LPC.parse_filter_refine f);
-        [@inline_let] let _ = LPLC.valid_filter h p f input startPosition in
-        assert (LPL.valid p h input startPosition);
+        [@inline_let] let _ = LPLC.valid_filter h p f (LPL.slice_of input) startPosition in
+        assert (LPL.valid p h (LPL.slice_of input) startPosition);
         p32 input startPosition
-
 
 inline_for_extraction noextract
 let validate____UINT8
   : validator parse____UINT8
   = fun input startPosition ->
     LowStar.Comment.comment "Checking that we have enough space for a UINT8, i.e., 1 byte";
-    LowParse.Low.Int.validate_u8 () input startPosition
+    LowParse.Low.Base.validate_total_constant_size_no_read parse____UINT8 1uL () (Ghost.elift1 LPL.slice_of (Ghost.hide input)) (LPL.slice_length input) startPosition
 
 inline_for_extraction noextract
 let read____UINT8
   : leaf_reader parse____UINT8
-  = LowParse.Low.Int.read_u8 #_ #_
+  = lift_constant_size_leaf_reader LowParse.Low.Int.read_u8 1ul
 
 inline_for_extraction noextract
 let validate____UINT16
   : validator parse____UINT16
   = fun input startPosition ->
     LowStar.Comment.comment "Checking that we have enough space for a UINT16, i.e., 2 bytes";
-    LowParse.Low.BoundedInt.validate_u16_le () input startPosition
+    LowParse.Low.Base.validate_total_constant_size_no_read parse____UINT16 2uL () (Ghost.elift1 LPL.slice_of (Ghost.hide input)) (LPL.slice_length input) startPosition
 
 inline_for_extraction noextract
 let read____UINT16
   : leaf_reader parse____UINT16
-  = LowParse.Low.BoundedInt.read_u16_le #_ #_
+  = lift_constant_size_leaf_reader LowParse.Low.BoundedInt.read_u16_le 2ul
+
 
 inline_for_extraction noextract
 let validate____UINT32
   : validator parse____UINT32
   = fun input startPosition ->
     LowStar.Comment.comment "Checking that we have enough space for a ULONG, i.e., 4 bytes";
-    LowParse.Low.BoundedInt.validate_u32_le () input startPosition
+    LowParse.Low.Base.validate_total_constant_size_no_read parse____UINT32 4uL () (Ghost.elift1 LPL.slice_of (Ghost.hide input)) (LPL.slice_length input) startPosition
 
 inline_for_extraction noextract
 let read____UINT32
   : leaf_reader parse____UINT32
-  = LowParse.Low.BoundedInt.read_u32_le #_ #_
+  = lift_constant_size_leaf_reader LowParse.Low.BoundedInt.read_u32_le 4ul
 
 inline_for_extraction noextract
 let validate____UINT64
   : validator parse____UINT64
   = fun input startPosition ->
     LowStar.Comment.comment "Checking that we have enough space for a ULONG64, i.e., 8 bytes";
-    LowParse.Low.Int.validate_u64_le () input startPosition
+    LowParse.Low.Base.validate_total_constant_size_no_read parse____UINT64 8uL () (Ghost.elift1 LPL.slice_of (Ghost.hide input)) (LPL.slice_length input) startPosition
 
 inline_for_extraction noextract
 let read____UINT64
   : leaf_reader parse____UINT64
-  = LowParse.Low.Int.read_u64_le #_ #_
+  = lift_constant_size_leaf_reader LowParse.Low.Int.read_u64_le 8ul
 
 inline_for_extraction noextract
 let validate_unit
@@ -1015,15 +1125,15 @@ let validate_unit
 inline_for_extraction noextract
 let read_unit
   : leaf_reader (parse_ret ())
-  = LPLC.read_ret () #_ #_
+  = lift_constant_size_leaf_reader (LPLC.read_ret ()) 0ul
 
 inline_for_extraction noextract
 let validate_unit_refinement' (f:unit -> bool) (cf:string)
   : Tot (validate_with_action_t #false (parse_unit `LPC.parse_filter` f) true_inv eloc_none true)
   = fun input startPosition ->
       let h = HST.get () in
-      [@inline_let] let _ = LPLC.valid_facts (parse_unit) h input (LPL.uint64_to_uint32 startPosition) in
-      [@inline_let] let _ = LPLC.valid_filter h parse_unit f input (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LPLC.valid_facts (parse_unit) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LPLC.valid_filter h parse_unit f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       LowStar.Comment.comment cf;
       if f ()
       then
@@ -1110,10 +1220,10 @@ noextract
 inline_for_extraction
 let action_field_ptr
       #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t) (u:unit)
-   : action p true_inv eloc_none true (B.buffer LowParse.Bytes.byte)
+   : action p true_inv eloc_none true LPL.puint8
    = fun input startPosition _ ->
        let open LowParse.Slice in
-       B.moffset triv input.base (LPL.uint64_to_uint32 startPosition)
+       LPL.offset input (LPL.uint64_to_uint32 startPosition)
 
 noextract
 inline_for_extraction
@@ -1131,6 +1241,7 @@ let action_assignment
    : action p (ptr_inv x) (ptr_loc x) false unit
    = fun _ _ _ -> x *= v
 
+(* FIXME: This is now unsound.
 noextract
 inline_for_extraction
 let action_read_value
@@ -1139,6 +1250,7 @@ let action_read_value
    : action p true_inv eloc_none true t
    = fun input startPosition endPosition ->
      r input (LPL.uint64_to_uint32 startPosition)
+*)
 
 noextract
 inline_for_extraction

@@ -11,7 +11,7 @@ FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(addprefix --include , $(INCLUDES)) --odir ou
 KREMLIN = $(KREMLIN_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -tmpdir out \
-	 -bundle 'ResultOps=Prims,C.*,FStar.*,LowStar.*,LowParse.*,Prelude,Prelude.*,Actions[rename=EverParse,rename-prefix]' \
+	 -bundle 'ResultOps=Prims,C.*,FStar.*,LowStar.*,LowParse.*,Prelude,Prelude.*,EverParse3d.*,Actions[rename=EverParse,rename-prefix]' \
 	 $(HEADERS) \
 	 $(KRML_FLAGS) \
 	 -warn-error -9 \
@@ -27,6 +27,7 @@ KREMLIN = $(KREMLIN_HOME)/krml \
 	 -add-include '<stdint.h>' \
 	 -static-header Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps \
 	 -no-prefix LowParse.Slice \
+	 -no-prefix EverParse3d.InputBuffer.Aux \
 	 -no-prefix LowParse.Low.BoundedInt
 
 all: $(ROOT)
