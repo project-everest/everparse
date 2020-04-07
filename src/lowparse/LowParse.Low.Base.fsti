@@ -195,7 +195,6 @@ val content_length_eq_gen
   (requires (valid p h sl pos))
   (ensures (valid p h sl pos /\ valid' p h sl pos /\ content_length p h sl pos == content_length' p h sl pos))
 
-abstract
 let content_length_post
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -217,7 +216,6 @@ let content_length_post
   [SMTPat (content_length p h sl pos)]
 = content_length_eq_gen p h sl pos
 
-abstract
 let valid_facts
   (#rrel #rel: _)
   (#k: parser_kind)
@@ -262,8 +260,7 @@ let valid_pos
 = valid p h sl pos /\
   U32.v pos + content_length p h sl pos == U32.v pos'
 
-abstract
-let get_valid_pos
+val get_valid_pos
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -274,10 +271,8 @@ let get_valid_pos
 : Ghost U32.t
   (requires (valid p h sl pos))
   (ensures (fun pos' -> True))
-= pos `U32.add` U32.uint_to_t (content_length p h sl pos)
 
-abstract
-let get_valid_pos_post
+val get_valid_pos_post
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -292,9 +287,7 @@ let get_valid_pos_post
     valid_pos p h sl pos pos'
   ))
   [SMTPat (get_valid_pos p h sl pos)]
-= ()
 
-abstract
 let valid_pos_get_valid_pos
   (#rrel #rel: _)
   (#k: parser_kind)
