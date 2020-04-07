@@ -102,9 +102,7 @@ let contents'
 = let Some (v, _) = parse p (bytes_of_slice_from h s pos) in
   v
 
-[@"opaque_to_smt"]
-abstract
-let contents
+val contents
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -115,11 +113,8 @@ let contents
 : Ghost t
   (requires (valid p h s pos))
   (ensures (fun _ -> True))
-= valid_equiv p h s pos;
-  contents' p h s pos
 
-abstract
-let contents_eq
+val contents_eq
   (#rrel #rel: _)
   (#k: parser_kind)
   (#t: Type)
@@ -130,8 +125,6 @@ let contents_eq
 : Lemma
   (requires (valid p h s pos))
   (ensures (valid p h s pos /\ valid' p h s pos /\ contents p h s pos == contents' p h s pos))
-= valid_equiv p h s pos;
-  assert_norm (contents p h s pos == contents' p h s pos)
 
 let content_length'
   (#rrel #rel: _)
