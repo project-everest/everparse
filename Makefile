@@ -48,7 +48,10 @@ clean:
 
 # Windows binary package
 package:
-	+src/package/package.sh
+	+src/package/package.sh -zip
+
+everparse:
+	+src/package/package.sh -make
 
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 

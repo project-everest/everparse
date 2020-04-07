@@ -622,7 +622,7 @@ let rec check_field_action (env:env) (f:field) (a:action)
           Action_field_pos, tuint32
 
         | Action_field_ptr ->
-          Action_field_ptr, with_range (Pointer f.v.field_type) r
+          Action_field_ptr, with_range (Pointer tuint8) r
 
         | Action_deref i ->
           let t = lookup_expr_name env i in
@@ -1170,7 +1170,8 @@ let initial_global_env () =
       ("UINT16",  { size = 2; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true });
       ("UINT32",  { size = 4; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true});
       ("UINT64",  { size = 8; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true});
-      ("field_id",  { size = 4; has_suffix = false; may_fail = true;  integral = true ; has_reader = false; parser_kind_nz=Some true})]
+      ("field_id", { size = 4; has_suffix = false; may_fail = true;  integral = true ; has_reader = false; parser_kind_nz=Some true});
+      ("PUINT8",   { size = 4; has_suffix = false; may_fail = true;  integral = false ; has_reader = false; parser_kind_nz=Some true})]
     |> List.iter (fun (i, attrs) ->
       let i = with_dummy_range i in
       add_global e i (nullary_decl i) (Inl attrs))

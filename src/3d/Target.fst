@@ -165,7 +165,7 @@ let rec print_typ (t:typ) : Tot string (decreases t) =
       (print_expr e)
       (print_typ t1)
       (print_typ t2)
-  | T_pointer t -> Printf.sprintf "B.pointer %s" (print_typ t)
+  | T_pointer t -> Printf.sprintf "B.pointer (%s)" (print_typ t)
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ t

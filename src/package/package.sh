@@ -53,6 +53,7 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
 fi
 platform=$(uname --machine)
 
+make_everparse() {
     # Verify if F* and KReMLin are here
     if [[ -z "$FSTAR_HOME" ]] ; then
         git clone https://github.com/FStarLang/FStar &&
@@ -123,10 +124,41 @@ platform=$(uname --machine)
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt &&
     
     # Reset permissions and build the package
-    chmod a+x everparse/bin/*.exe everparse/bin/*.dll &&
+    chmod a+x everparse/bin/*.exe everparse/bin/*.dll
+}
+
+zip_everparse() {
     rm -f everparse.zip &&
     zip -r everparse.zip everparse &&
     mv everparse.zip everparse_"$everparse_version"_"$OS"_"$platform".zip &&
     
     # END
     true
+}
+
+print_usage ()
+{
+  cat <<HELP
+USAGE: $0 [OPTIONS]
+
+OPTION:
+  -make     Build and place all components in the everparse folder
+
+  -zip      Like -make, but also zip the folder and name with the version
+HELP
+}
+
+case "$1" in
+    -zip)
+        make_everparse &&
+            zip_everparse
+        ;;
+
+    -make)
+        make_everparse
+        ;;
+
+    *)
+        print_usage
+        ;;
+esac
