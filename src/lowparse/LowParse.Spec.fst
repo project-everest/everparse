@@ -5,7 +5,9 @@ include LowParse.Spec.Int
 include LowParse.Spec.FLData
 include LowParse.Spec.VLData
 include LowParse.Spec.Enum
+include LowParse.Spec.Tac.Enum
 include LowParse.Spec.Sum
+include LowParse.Spec.Tac.Sum
 include LowParse.Spec.List
 include LowParse.Spec.Seq
 include LowParse.Spec.Array
