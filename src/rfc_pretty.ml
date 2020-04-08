@@ -10,6 +10,8 @@ and rfc_pretty_print (prog:Rfc_ast.prog) =
 	let print ac g = sprintf "%s\n%s" ac (match g with
 	| Enum(attr, fl, n) ->
 		sprintf "\n%senum {%s\n} %s;" (attrs attr) (print_enum_fields 1 fl) n
+        | Abstract(attr, dn, min, max, n) ->
+           sprintf "\n%sabstract %s = \"%s\" <%d..%d>;" (attrs attr) n dn min max
 	| Struct(attr, fl, n) ->
 		sprintf "\n%sstruct {%s\n} %s;" (attrs attr) (print_struct_fields 1 fl) n
   | Typedef(td) -> print_struct_fields 0 [td])
@@ -20,6 +22,7 @@ and print_vector = function
 	| VectorFixed(n) -> sprintf "[%d]" n
 	| VectorSymbolic(k) -> sprintf "[%s]" k
 	| VectorRange(a,b,_) -> sprintf "<%d..%d>" a b
+        | _ -> failwith "print_vector"
 
 and print_enum_fields p (fl:enum_field_t list) =
 	let print ac f = sprintf "%s\n%s%s" ac (pad p) (match f with
@@ -45,6 +48,8 @@ and print_struct_fields p (fl:struct_field_t list) =
 
 and print_type p = function
 	| TypeSimple t -> t
+        | TypeIfeq (n, c, t, f) ->
+           sprintf "if %s = %s %s else %s" n c t f
   | TypeSelect (n, cl, def) ->
     sprintf "select(%s) {\n%s%s%s}" n
     (print_select_fields (p+1) cl)

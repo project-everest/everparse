@@ -55,6 +55,7 @@ let log256 k =
 
 let tname (lower:bool) (p:gemstone_t) : string =
   let n = match p with
+    | Abstract (_, _, _, _, n) -> n
 		| Enum (_, _, n) -> n
 		| Struct (_, _, n) -> n
     | Typedef (_, _, n, _, _) -> n
@@ -73,10 +74,25 @@ let open_files n =
   try open_out fn, open_out (fn^"i")
   with _ -> failwith "Failed to create output file"
 
+let open_files' p =
+  let n = tname true p in
+  match p with
+  | Abstract _ ->
+     let fn = sprintf "%s/%s.fst" !odir (module_name n) in
+     printf "Writing interface for abstract type %s...\n" n;
+     begin
+       try
+         let (dummy_in, dummy_out) = Unix.pipe () in
+         Unix.out_channel_of_descr dummy_out, open_out (fn^"i")
+       with _ -> failwith "Failed to create output file"
+     end
+  | _ -> open_files n
+
 let close_files o i =
   close_out o; close_out i
 
 let attr_of = function
+  | Abstract (a, _, _, _, _) -> a
   | Enum (a, _, _) -> a
   | Struct (a, _, _) -> a
   | Typedef (a, _, _, _, _) -> a
@@ -451,6 +467,10 @@ let getdep (toplevel:bool) (p:gemstone_t) : typ list =
   let tn = tname toplevel p in
   let dep =
     match p with
+    | Abstract (_, _, min, max, _) ->
+      let li = { len_len = 0; min_len = min; max_len = max; min_count = 0; max_count = 0; vl = (min <> max); meta = MetadataDefault; } in
+      li_add tn li;
+      ([]:typ list list)
     | Enum (a, fl, n) ->
       if not toplevel then failwith "Invalid internal rewrite of an enum";
       let meta = if has_attr a "open" then MetadataTotal else MetadataDefault in
@@ -793,6 +813,11 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   wl o "let %s_bytesize_eqn x = %s_bytesize_eq x; assert (FStar.Seq.length (LP.serialize %s_serializer x) <= %d); assert (%d <= FStar.Seq.length (LP.serialize %s_serializer x))\n\n" n n n blen blen n;
   ()
 
+and compile_abstract o i n dn min max =
+  w i "type %s = %s\n" n dn;
+  let li = get_leninfo n in
+  write_api o i false li.meta n min max
+  
 and compile_ite o i n sn fn tagn clen cval tt tf al  =
   let is_private = has_attr al "private" in
   let li = get_leninfo (sn^"@"^fn) in
@@ -2799,6 +2824,7 @@ and apply_subst_t (t:type_t) =
 and apply_subst_field (al, ty, n, vec, def) = al, apply_subst_t ty, n, vec, def
 and apply_subst (p:gemstone_t) =
   match p with
+  | Abstract _ -> p
   | Enum _ -> p
   | Typedef tdef -> Typedef (apply_subst_field tdef)
   | Struct(al, fl, n) ->
@@ -2864,6 +2890,8 @@ and compile o i (tn:typ) (p:gemstone_t) =
 
   try let _ =
     match p with
+    | Abstract (_, dn, min, max, n) ->
+      compile_abstract o i n dn min max
   	| Enum(al, fl, _) ->  compile_enum o i n fl al
     | Typedef(al, ty, n', vec, def) -> compile_typedef o i tn n' ty vec def al
     | Struct(al, fl, _) ->
@@ -2899,7 +2927,6 @@ and compile o i (tn:typ) (p:gemstone_t) =
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
   let aux (p:gemstone_t) =
-	  let n = tname true p in
-    let (o, i) = open_files n in
+    let (o, i) = open_files' p in
 		compile o i "" p
 	in List.iter aux p

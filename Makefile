@@ -7,7 +7,7 @@ quackyducky: qd
 
 qd: $(wildcard src/*.ml*)
 	-@rm -f quackyducky.native
-	ocamlbuild -I src -use-menhir -use-ocamlfind -package batteries -package hex quackyducky.native -classic-display -cflags '-warn-error +5'
+	ocamlbuild -I src -use-menhir -use-ocamlfind -package batteries -package hex quackyducky.native -classic-display -cflags '-warn-error +5+8'
 	ln -sf quackyducky.native qd
 	touch qd
 
