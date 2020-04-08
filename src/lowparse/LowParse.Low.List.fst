@@ -65,7 +65,6 @@ let valid_exact_list_cons
   contents_exact_eq (parse_list p) h sl pos pos';
   contents_exact_eq (parse_list p) h sl pos1 pos'
 
-abstract
 let rec valid_list_valid_exact_list
   (#k: parser_kind)
   (#t: Type0)
@@ -131,7 +130,6 @@ let valid_exact_list_cons_recip
   contents_exact_eq (parse_list p) h sl pos pos';
   contents_exact_eq (parse_list p) h sl pos1 pos'
 
-abstract
 let rec valid_exact_list_valid_list
   (#k: parser_kind)
   (#t: Type0)
@@ -165,7 +163,6 @@ let rec valid_exact_list_valid_list
 
 module L = FStar.List.Tot
 
-abstract
 let rec valid_exact_list_append
   (#k: parser_kind)
   (#t: Type0)
@@ -322,7 +319,6 @@ let validate_list
   then sl.len
   else error
 
-abstract
 let rec serialized_list_length_eq_length_serialize_list
   (#k: parser_kind)
   (#t: Type)
@@ -507,3 +503,5 @@ let list_tail
     v == v'
   ))))
 = B.offset input (v input)
+
+
