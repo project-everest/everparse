@@ -9,6 +9,43 @@ module B = LowStar.Buffer
 
 #reset-options "--z3cliopt smt.arith.nl=false"
 
+let valid_bounded_vlgen'
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 (vmin) (vmax)))
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    U32.v pos1 + U32.v len < 4294967296 /\
+    valid (parse_fldata_strong s (U32.v len)) h input pos1
+  )))
+  (ensures (
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    valid (parse_fldata_strong s (U32.v len)) h input pos1 /\ (
+    let x = contents (parse_fldata_strong s (U32.v len)) h input pos1 in
+    Seq.length (serialize s x) == U32.v len /\
+    valid_content_pos (parse_bounded_vlgen vmin vmax pk s) h input pos x (pos1 `U32.add` len)
+  ))))
+= valid_facts (parse_bounded_vlgen (vmin) (vmax) pk s) h input pos;
+  parse_bounded_vlgen_unfold_aux (vmin) (vmax) pk s (bytes_of_slice_from h input pos);
+  valid_facts pk h input pos;
+  let pos1 = get_valid_pos pk h input pos in
+  let len = contents pk h input pos in
+  valid_facts (parse_fldata_strong s (U32.v len)) h input pos1
+
 let valid_bounded_vlgen
   (vmin: der_length_t)
   (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
@@ -31,12 +68,14 @@ let valid_bounded_vlgen
     valid_exact p h input pos1 (pos1 `U32.add` len)
   )))
   (ensures (
+    valid pk h input pos /\ (
     let pos1 = get_valid_pos pk h input pos in
     let len = contents pk h input pos in
+    valid_exact p h input pos1 (pos1 `U32.add` len) /\ (
     let x = contents_exact p h input pos1 (pos1 `U32.add` len) in
     Seq.length (serialize s x) == U32.v len /\
     valid_content_pos (parse_bounded_vlgen vmin vmax pk s) h input pos x (pos1 `U32.add` len)
-  ))
+  ))))
 = valid_facts (parse_bounded_vlgen (vmin) (vmax) pk s) h input pos;
   parse_bounded_vlgen_unfold (vmin) (vmax) pk s (bytes_of_slice_from h input pos);
   valid_facts pk h input pos;
@@ -47,6 +86,43 @@ let valid_bounded_vlgen
   valid_fldata_gen p (U32.v len) input pos1 h;
   serialized_length_eq s x;
   valid_exact_serialize s h input pos1 pos2
+
+let valid_bounded_vlgen_elim'
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 (vmin) (vmax)))
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    valid (parse_bounded_vlgen vmin vmax pk s) h input pos
+  ))
+  (ensures (
+    valid (parse_bounded_vlgen vmin vmax pk s) h input pos /\
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    U32.v pos1 + U32.v len < 4294967296 /\
+    valid (parse_fldata_strong s (U32.v len)) h input pos1 /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    let x = contents (parse_fldata_strong s (U32.v len)) h input pos1 in
+    Seq.length (serialize s x) == U32.v len /\
+    valid_content_pos (parse_bounded_vlgen vmin vmax pk s) h input pos x (pos1 `U32.add` len)
+  ))))
+= valid_facts (parse_bounded_vlgen (vmin) (vmax) pk s) h input pos;
+  parse_bounded_vlgen_unfold_aux (vmin) (vmax) pk s (bytes_of_slice_from h input pos);
+  valid_facts pk h input pos;
+  let pos1 = get_valid_pos pk h input pos in
+  let len = contents pk h input pos in
+  valid_facts (parse_fldata_strong s (U32.v len)) h input pos1
 
 let valid_bounded_vlgen_elim
   (vmin: der_length_t)
@@ -66,6 +142,7 @@ let valid_bounded_vlgen_elim
     valid (parse_bounded_vlgen vmin vmax pk s) h input pos
   ))
   (ensures (
+    valid (parse_bounded_vlgen vmin vmax pk s) h input pos /\
     valid pk h input pos /\ (
     let pos1 = get_valid_pos pk h input pos in
     let len = contents pk h input pos in
@@ -182,9 +259,6 @@ let finalize_bounded_vlgen
   in
   finalize_bounded_vlgen_exact min max sz32 wk s input pos pos'
 
-#push-options "--z3rlimit 64 --max_fuel 8"
-#restart-solver
-
 inline_for_extraction
 let validate_bounded_vlgen
   (vmin: der_length_t)
@@ -204,18 +278,16 @@ let validate_bounded_vlgen
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    valid_facts (parse_bounded_vlgen (U32.v min) (U32.v max) pk s) h input pos;
-    parse_bounded_vlgen_unfold (U32.v min) (U32.v max) pk s (bytes_of_slice_from h input pos);
-    valid_facts pk h input pos
+    Classical.move_requires (valid_bounded_vlgen' vmin vmax pk s input pos) h;
+    Classical.move_requires (valid_bounded_vlgen_elim' vmin vmax pk s input pos) h
   in
   let n = vk input pos in
   if validator_max_length `U32.lt` n
   then n
-  else
+  else begin
     let len = rk input pos in
-    [@inline_let]
-    let _ = valid_facts (parse_fldata_strong s (U32.v len)) h input n in
     validate_fldata_strong s v (U32.v len) len input n
+  end
 
 let valid_vlgen
   (vmin: der_length_t)
@@ -912,6 +984,4 @@ let valid_vlgen_intro_strong_prefix
     let len = contents pk h input pos in
     valid_pos_valid_exact p h input pos1 (pos1 `U32.add` len);
     valid_vlgen_intro min max pk s h input pos
-
-#pop-options
 
