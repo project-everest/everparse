@@ -18,16 +18,32 @@ inline_for_extraction
 let parse32_empty : parser32 parse_empty = parse32_ret ()
 
 inline_for_extraction
-let serialize32_empty : serializer32 #_ #_ #parse_empty serialize_empty
+let serialize32_ret
+  (#t: Type)
+  (v: t)
+  (v_unique: (v' : t) -> Lemma (v == v'))
+: Tot (serializer32 (serialize_ret v v_unique))
 = fun input ->
   [@inline_let]
   let b = B32.empty_bytes in
   assert (B32.reveal b `Seq.equal` Seq.empty);
-  (b <: (b: bytes32 { serializer32_correct #_ #_ #parse_empty serialize_empty input b } ))
+  (b <: (b: bytes32 { serializer32_correct #_ #_ #(parse_ret v) (serialize_ret v v_unique) input b } ))
+
+inline_for_extraction
+let serialize32_empty : serializer32 #_ #_ #parse_empty serialize_empty
+= serialize32_ret () (fun _ -> ())
+
+inline_for_extraction
+let size32_ret
+  (#t: Type)
+  (v: t)
+  (v_unique: (v' : t) -> Lemma (v == v'))
+: Tot (size32 #_ #_ #(parse_ret v) (serialize_ret v v_unique))
+= size32_constant #_ #_ #(parse_ret v) (serialize_ret v v_unique) 0ul ()
 
 inline_for_extraction
 let size32_empty : size32 #_ #_ #parse_empty serialize_empty
-= size32_constant #_ #_ #parse_empty serialize_empty 0ul ()
+= size32_ret () (fun _ -> ())
 
 inline_for_extraction
 let parse32_false : parser32 parse_false = fun _ -> None
@@ -124,6 +140,60 @@ let serialize32_nondep_then
     let _ = assert (B32.length output2 == Seq.length (serialize s2 sn)) in
   ((B32.append output1 output2) <:
     (res: bytes32 { serializer32_correct (serialize_nondep_then s1 s2) input res } ))
+
+inline_for_extraction
+let parse32_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (p1' : parser32 p1)
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (#p2: (x: t1) -> Tot (parser k2 (t2 x)))
+  (p2' : (x: t1) -> Tot (parser32 (p2 x)))
+: Tot (parser32 (parse_dtuple2 p1 p2))
+= fun (input: bytes32) ->
+  ((
+  [@inline_let] let _ = parse_dtuple2_eq p1 p2 (B32.reveal input) in
+  match p1' input with
+  | Some (v, l) ->
+    let input' = B32.slice input l (B32.len input) in
+    begin match p2' v input' with
+    | Some (v', l') ->
+      Some ((| v, v' |), U32.add l l')
+    | _ -> None
+    end
+  | _ -> None
+  ) <: (res: option (dtuple2 t1 t2 * U32.t) { parser32_correct (parse_dtuple2 p1 p2) input res } ))
+
+inline_for_extraction
+let serialize32_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1)
+  (s1' : serializer32 s1 { k1.parser_kind_subkind == Some ParserStrong } )
+  (#k2: parser_kind {
+    serialize32_kind_precond k1 k2
+  })
+  (#t2: t1 -> Tot Type0)
+  (#p2: (x: t1) -> Tot (parser k2 (t2 x)))
+  (#s2: (x: t1) -> Tot (serializer (p2 x)))
+  (s2' : (x: t1) -> serializer32 (s2 x))
+: Tot (serializer32 (serialize_dtuple2 s1 s2))
+= fun (input: dtuple2 t1 t2) ->
+  [@inline_let]
+  let _ = serialize_dtuple2_eq s1 s2 input in
+  match input with
+  | (| fs, sn |) ->
+    let output1 = s1' fs in
+    let output2 = s2' fs sn in
+    [@inline_let]
+    let _ = assert (B32.length output1 == Seq.length (serialize s1 fs)) in
+    [@inline_let]
+    let _ = assert (B32.length output2 == Seq.length (serialize (s2 fs) sn)) in
+  ((B32.append output1 output2) <:
+    (res: bytes32 { serializer32_correct (serialize_dtuple2 s1 s2) input res } ))
 
 inline_for_extraction
 let parse32_strengthen
@@ -316,6 +386,28 @@ let size32_nondep_then
     (res <: (z : U32.t { size32_postcond (serialize_nondep_then s1 s2) x z } ))
 
 inline_for_extraction
+let size32_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1)
+  (s1' : size32 s1 { k1.parser_kind_subkind == Some ParserStrong } )
+  (#k2: parser_kind)
+  (#t2: t1 -> Tot Type0)
+  (#p2: (x: t1) -> Tot (parser k2 (t2 x)))
+  (#s2: (x: t1) -> Tot (serializer (p2 x)))
+  (s2' : (x: t1) -> Tot (size32 (s2 x)))
+: Tot (size32 (serialize_dtuple2 s1 s2))
+= fun x ->
+  [@inline_let] let _ = serialize_dtuple2_eq s1 s2 x in
+  match x with
+  | (| x1, x2 |) ->
+    let v1 = s1' x1 in
+    let v2 = s2' x1 x2 in
+    let res = add_overflow v1 v2 in
+    (res <: (z : U32.t { size32_postcond (serialize_dtuple2 s1 s2) x z } ))
+
+inline_for_extraction
 let size32_filter
   (#k: parser_kind)
   (#t: Type0)
@@ -402,3 +494,35 @@ let size32_compose_context
   (k: kt2)
 : Tot (size32 (s (f k)))
 = fun input -> s32 (f k) input
+
+inline_for_extraction
+let parse32_weaken
+  (k1: parser_kind)
+  (#k2: parser_kind)
+  (#t: Type0)
+  (#p2: parser k2 t)
+  (p2' : parser32 p2 { k1 `is_weaker_than` k2 })
+: Tot (parser32 (weaken k1 p2))
+= fun x -> p2' x
+
+inline_for_extraction
+let serialize32_weaken
+  (k1: parser_kind)
+  (#k2: parser_kind)
+  (#t: Type0)
+  (#p2: parser k2 t)
+  (#s2: serializer p2)
+  (s2' : serializer32 s2 { k1 `is_weaker_than` k2 })
+: Tot (serializer32 (serialize_weaken k1 s2))
+= fun x -> s2' x
+
+inline_for_extraction
+let size32_weaken
+  (k1: parser_kind)
+  (#k2: parser_kind)
+  (#t: Type0)
+  (#p2: parser k2 t)
+  (#s2: serializer p2)
+  (s2' : size32 s2 { k1 `is_weaker_than` k2 })
+: Tot (size32 (serialize_weaken k1 s2))
+= fun x -> s2' x
