@@ -79,7 +79,7 @@ copy %mypath%\src\3d\.clang-format .
 copy %mypath%\include\EverParseEndianness.h .
 %krml% -skip-compilation -bundle ResultOps=Prims,C.\*,FStar.\*,LowStar.\*,LowParse.\*,Prelude,Prelude.\*,Actions,EverParse3d.\*[rename=EverParse,rename-prefix] -warn-error -9 -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -header %DDD_HOME%\noheader.txt -minimal -add-include EverParse:\"EverParseEndianness.h\" -static-header Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps -no-prefix LowParse.Slice -no-prefix LowParse.Low.BoundedInt -no-prefix EverParse3d.InputBuffer.Aux %DDD_HOME%\*.krml *.krml
 @if errorlevel 1 goto runerror
-if "%setclangformat%" == "1" clang-format -i --style=file *.c *.h
+if "%clangformat%" == "1" clang-format -i --style=file *.c *.h
 @if errorlevel 1 goto runerror
 @echo EverParse successfully completed verification and code generation!
 @goto exit
