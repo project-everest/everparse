@@ -4,9 +4,19 @@ set mypath0=%~dp0
 set mypath=%mypath0:~0,-1%
 set everparseerror=0
 
+if "%1" == "/?"  goto help
+
+if "%1" == "/f" goto setclangformat
+if "%1" == "/F" goto setclangformat
+set clangformat=0
+goto mode
+
+:setclangformat
+set clangformat=1
+shift
+
 :mode
 
-if "%1" == "/?"  goto help
 if "%1" == "/3D" goto 3d-file
 if "%1" == "/3d" goto 3d-file
 echo Missing argument: EverParse running mode
@@ -21,12 +31,14 @@ goto help
 echo.
 echo EverParse: verified parsing for binary data formats
 echo.
-echo Usage: everparse.bat /3D modulename
+echo Usage: everparse.bat [/F] /3D modulename
 echo.
 echo Arguments:
 echo.
 echo /3D modulename    Run EverParse in 3D (Dependent Data Description) mode
 echo                   reading the format description from modulename.3d
+echo /F                Run clang-format on generated .c/.h files
+echo                   (clang-format must be in the PATH)
 echo.
 goto exit
 
@@ -66,6 +78,8 @@ copy %mypath%\src\3d\.clang-format .
 @if errorlevel 1 goto runerror
 copy %mypath%\include\EverParseEndianness.h .
 %krml% -skip-compilation -bundle ResultOps=Prims,C.\*,FStar.\*,LowStar.\*,LowParse.\*,Prelude,Prelude.\*,Actions,EverParse3d.\*[rename=EverParse,rename-prefix] -warn-error -9 -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -header %DDD_HOME%\noheader.txt -minimal -add-include EverParse:\"EverParseEndianness.h\" -static-header Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps -no-prefix LowParse.Slice -no-prefix LowParse.Low.BoundedInt -no-prefix EverParse3d.InputBuffer.Aux %DDD_HOME%\*.krml *.krml
+@if errorlevel 1 goto runerror
+if "%setclangformat%" == "1" clang-format -i --style=file *.c *.h
 @if errorlevel 1 goto runerror
 @echo EverParse successfully completed verification and code generation!
 @goto exit
