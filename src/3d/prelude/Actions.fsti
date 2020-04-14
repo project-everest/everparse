@@ -27,7 +27,7 @@ module U64 = FStar.UInt64
 module HST = FStar.HyperStack.ST
 
 inline_for_extraction
-let puint8 = LPL.puint8
+let ___PUINT8 = LPL.puint8
 
 let triv = B.trivial_preorder LowParse.Bytes.byte
 let input_buffer_t = LPL.input_buffer_t
