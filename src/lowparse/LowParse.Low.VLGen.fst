@@ -11,6 +11,43 @@ module U64 = FStar.UInt64
 
 #reset-options "--z3cliopt smt.arith.nl=false"
 
+let valid_bounded_vlgen'
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 (vmin) (vmax)))
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    U32.v pos1 + U32.v len < 4294967296 /\
+    valid (parse_fldata_strong s (U32.v len)) h input pos1
+  )))
+  (ensures (
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    valid (parse_fldata_strong s (U32.v len)) h input pos1 /\ (
+    let x = contents (parse_fldata_strong s (U32.v len)) h input pos1 in
+    Seq.length (serialize s x) == U32.v len /\
+    valid_content_pos (parse_bounded_vlgen vmin vmax pk s) h input pos x (pos1 `U32.add` len)
+  ))))
+= valid_facts (parse_bounded_vlgen (vmin) (vmax) pk s) h input pos;
+  parse_bounded_vlgen_unfold_aux (vmin) (vmax) pk s (bytes_of_slice_from h input pos);
+  valid_facts pk h input pos;
+  let pos1 = get_valid_pos pk h input pos in
+  let len = contents pk h input pos in
+  valid_facts (parse_fldata_strong s (U32.v len)) h input pos1
+
 let valid_bounded_vlgen
   (vmin: der_length_t)
   (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
@@ -53,6 +90,43 @@ let valid_bounded_vlgen
   serialized_length_eq s x;
   valid_exact_serialize s h input pos1 pos2
 
+let valid_bounded_vlgen_elim'
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 (vmin) (vmax)))
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    valid (parse_bounded_vlgen vmin vmax pk s) h input pos
+  ))
+  (ensures (
+    valid (parse_bounded_vlgen vmin vmax pk s) h input pos /\
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    U32.v pos1 + U32.v len < 4294967296 /\
+    valid (parse_fldata_strong s (U32.v len)) h input pos1 /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    let x = contents (parse_fldata_strong s (U32.v len)) h input pos1 in
+    Seq.length (serialize s x) == U32.v len /\
+    valid_content_pos (parse_bounded_vlgen vmin vmax pk s) h input pos x (pos1 `U32.add` len)
+  ))))
+= valid_facts (parse_bounded_vlgen (vmin) (vmax) pk s) h input pos;
+  parse_bounded_vlgen_unfold_aux (vmin) (vmax) pk s (bytes_of_slice_from h input pos);
+  valid_facts pk h input pos;
+  let pos1 = get_valid_pos pk h input pos in
+  let len = contents pk h input pos in
+  valid_facts (parse_fldata_strong s (U32.v len)) h input pos1
+
 let valid_bounded_vlgen_elim
   (vmin: der_length_t)
   (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
@@ -71,6 +145,7 @@ let valid_bounded_vlgen_elim
     valid (parse_bounded_vlgen vmin vmax pk s) h input pos
   ))
   (ensures (
+    valid (parse_bounded_vlgen vmin vmax pk s) h input pos /\
     valid pk h input pos /\ (
     let pos1 = get_valid_pos pk h input pos in
     let len = contents pk h input pos in
@@ -206,18 +281,16 @@ let validate_bounded_vlgen
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let] let _ =
-    Classical.move_requires (valid_bounded_vlgen vmin vmax pk s input (uint64_to_uint32 pos)) h;
-    Classical.move_requires (valid_bounded_vlgen_elim vmin vmax pk s input (uint64_to_uint32 pos)) h
+    Classical.move_requires (valid_bounded_vlgen' vmin vmax pk s input (uint64_to_uint32 pos)) h;
+    Classical.move_requires (valid_bounded_vlgen_elim' vmin vmax pk s input (uint64_to_uint32 pos)) h
   in
   let n = vk input pos in
   if is_error n
   then n
-  else
+  else begin
     let len = rk input (uint64_to_uint32 pos) in
-    [@inline_let]
-    let _ = Classical.move_requires (valid_fldata_strong_gen s (U32.v len) input (uint64_to_uint32 n)) h in
-    let _ = Classical.move_requires (valid_fldata_strong_gen_elim s (U32.v len) input (uint64_to_uint32 n)) h in
     validate_fldata_strong s v (U32.v len) len input n
+  end
 
 let valid_vlgen
   (vmin: der_length_t)
