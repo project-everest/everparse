@@ -19,6 +19,7 @@ let attr    = "/*@" ['a'-'z' 'A'-'Z' '_']+ "*/"
 rule read = parse
 	| space    { read lexbuf }
 	| newln    { new_line lexbuf; read lexbuf }
+        | "abstract" { ABSTRACT }
 	| "struct" { STRUCT }
 	| "enum"   { ENUM }
 	| "select" { SELECT }
@@ -68,5 +69,4 @@ and comment_start depth = parse
 and string_start acc = parse
   | "\\\"" {string_start (acc^"\"") lexbuf}
 	| "\"" { LITERAL acc }
-	| hexb as b { string_start (acc^b) lexbuf }
-  | _ { raise (SyntaxError ("Invalid hex literal" ^ Lexing.lexeme lexbuf)) }
+        | [ ^ '"' '\\' ] as c { string_start (acc^String.make 1 c) lexbuf }

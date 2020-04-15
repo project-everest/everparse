@@ -9,6 +9,7 @@ and gemstone_t =
 	| Enum of attr list * enum_field_t list * typ
 	| Struct of attr list * struct_field_t list * typ
 	| Typedef of struct_field_t
+        | Abstract of attr list * string * int * int * typ
 
 and type_t =
   | TypeSimple of typ

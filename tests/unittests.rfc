@@ -6,6 +6,8 @@ t3 t5<0..255>;
 
 enum { a, b, (255) } tag;
 
+abstract t0 = "FStar.UInt16.t" < 2..3 >
+
 struct {
   tag t;
   select(t) {

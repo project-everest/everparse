@@ -14,6 +14,7 @@ let ectr = ref 0
 %token STRUCT ENUM
 %token SELECT CASE DEFAULT
 %token IF ELSE
+%token ABSTRACT
 
 %token <string>  ATTRIBUTE
 %token <string>  TYPE
@@ -38,6 +39,8 @@ gemstone:
 		{ ectr := 0; Enum(a, enum, t) }
 	| STRUCT; a = attrlist; LBRACE; fields = list(struct_field); RBRACE; t = TYPE; SEMCOL;
 		{ Struct(a, fields, t) }
+        | ABSTRACT; a=attrlist; t = TYPE; EQUALS; dn = LITERAL; LT; min = INT; DOTDOT; max = INT; GT
+          { Abstract (a, dn, min, max, t) }
 	| t = struct_field; { Typedef(t) }
 ;
 
