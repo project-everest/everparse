@@ -185,9 +185,9 @@ let validate_synth
   })
 : Tot (validator (parse_synth p1 f2))
 = fun   (#rrel #rel: _)
-  (input: slice rrel rel) (pos: U32.t) ->
+  (input: slice rrel rel) pos ->
   let h = HST.get () in
-  [@inline_let] let _ = valid_synth h p1 f2 input pos in
+  [@inline_let] let _ = valid_synth h p1 f2 input (uint64_to_uint32 pos) in
   p1' input pos
 
 inline_for_extraction
@@ -316,7 +316,7 @@ let validate_ret
   (#t: Type)
   (v: t)
 : Tot (validator (parse_ret v))
-= validate_total_constant_size (parse_ret v) 0ul ()
+= validate_total_constant_size (parse_ret v) 0uL ()
 
 inline_for_extraction
 let validate_empty () : Tot (validator parse_empty)
@@ -327,7 +327,7 @@ let validate_false () : Tot (validator parse_false)
 = fun #rrel #rel input pos ->
   let h = HST.get () in
   [@inline_let]
-  let _ = valid_facts parse_false h input pos in
+  let _ = valid_facts parse_false h input (uint64_to_uint32 pos) in
   validator_error_generic
 
 inline_for_extraction
@@ -337,6 +337,19 @@ let jump_empty : jumper parse_empty
 inline_for_extraction
 let jump_false : jumper parse_false
 = jump_constant_size parse_false 0ul ()
+
+inline_for_extraction
+let read_ret
+  (#t: Type)
+  (v: t)
+: Tot (leaf_reader (parse_ret v))
+= fun #rrel #rel sl pos ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_facts (parse_ret v) h sl pos in
+  v
+
+inline_for_extraction
+let read_empty : leaf_reader parse_empty = read_ret ()
 
 let clens_synth
   (#t1: Type)
