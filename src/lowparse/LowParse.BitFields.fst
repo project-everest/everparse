@@ -359,7 +359,19 @@ let get_bitfield_set_bitfield_other
     end
   )
 
-let set_bitfield_set_bitfield
+let set_bitfield_set_bitfield_same
+  (#tot: pos) (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
+  (v' : ubitfield tot (hi - lo))
+: Lemma
+  (ensures (set_bitfield (set_bitfield x lo hi v) lo hi v' == set_bitfield x lo hi v'))
+= eq_nth (set_bitfield (set_bitfield x lo hi v) lo hi v') (set_bitfield x lo hi v') (fun i ->
+    nth_set_bitfield (set_bitfield x lo hi v) lo hi v' i;
+    nth_set_bitfield x lo hi v i;
+    nth_set_bitfield x lo hi v' i
+  )
+
+let set_bitfield_set_bitfield_other
   (#tot: pos) (x: U.uint_t tot)
   (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
   (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot }) (v' : ubitfield tot (hi' - lo'))

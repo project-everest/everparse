@@ -36,7 +36,14 @@ val get_bitfield_set_bitfield_other
   (requires (hi' <= lo \/ hi <= lo'))
   (ensures (get_bitfield (set_bitfield x lo hi v) lo' hi' == get_bitfield x lo' hi'))
 
-val set_bitfield_set_bitfield
+val set_bitfield_set_bitfield_same
+  (#tot: pos) (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
+  (v' : ubitfield tot (hi - lo))
+: Lemma
+  (ensures (set_bitfield (set_bitfield x lo hi v) lo hi v' == set_bitfield x lo hi v'))
+
+val set_bitfield_set_bitfield_other
   (#tot: pos) (x: U.uint_t tot)
   (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
   (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot }) (v' : ubitfield tot (hi' - lo'))
@@ -239,6 +246,26 @@ let uint_get_bitfield_set_bitfield_other
   [SMTPat (cl.get_bitfield (cl.set_bitfield x lo hi z) lo' hi')]
 = get_bitfield_set_bitfield_other (cl.v x) lo hi (cl.v z) lo' hi';
   assert (cl.uint_to_t (cl.v (cl.get_bitfield (cl.set_bitfield x lo hi z) lo' hi')) == cl.uint_to_t (cl.v (cl.get_bitfield x lo' hi')))
+
+let uint_set_bitfield_set_bitfield_same
+  #tot #t (cl: uint_t tot t)
+  (x: t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (z: bitfield cl (hi - lo))
+  (z' : bitfield cl (hi - lo))
+: Lemma
+  (cl.set_bitfield (cl.set_bitfield x lo hi z) lo hi z' == cl.set_bitfield x lo hi z')
+= set_bitfield_set_bitfield_same (cl.v x) lo hi (cl.v z) (cl.v z');
+  assert (cl.uint_to_t (cl.v (cl.set_bitfield (cl.set_bitfield x lo hi z) lo hi z')) == cl.uint_to_t (cl.v (cl.set_bitfield x lo hi z')))
+
+let uint_set_bitfield_set_bitfield_other
+  #tot #t (cl: uint_t tot t)
+  (x: t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (z: bitfield cl (hi - lo))
+  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot /\ (hi' <= lo \/ hi <= lo') })
+  (z' : bitfield cl (hi' - lo'))
+: Lemma
+  (cl.set_bitfield (cl.set_bitfield x lo hi z) lo' hi' z' == cl.set_bitfield (cl.set_bitfield x lo' hi' z') lo hi z)
+= set_bitfield_set_bitfield_other (cl.v x) lo hi (cl.v z) lo' hi' (cl.v z');
+  assert (cl.uint_to_t (cl.v (cl.set_bitfield (cl.set_bitfield x lo hi z) lo' hi' z')) == cl.uint_to_t (cl.v (cl.set_bitfield (cl.set_bitfield x lo' hi' z') lo hi z)))
+
 
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
