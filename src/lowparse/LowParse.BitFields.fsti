@@ -200,6 +200,11 @@ val get_bitfield_eq_2
 : Lemma
   (get_bitfield x lo hi == (x `U.shift_left` (tot - hi)) `U.shift_right` (tot - hi + lo))
 
+val set_bitfield_eq
+  (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
+: Lemma
+  (set_bitfield x lo hi v == (x `U.logand` U.lognot ((U.lognot 0 `U.shift_right` (tot - (hi - lo))) `U.shift_left` lo)) `U.logor` (v `U.shift_left` lo))
+
 module U32 = FStar.UInt32
 
 inline_for_extraction

@@ -776,6 +776,12 @@ let bitfield_mask_eq_2 (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) 
   U.lemma_lognot_value_mod #tot 0;
   U.shift_right_value_lemma #tot (pow2 tot - 1) (tot - (hi - lo))
 
+let set_bitfield_eq
+  (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
+: Lemma
+  (set_bitfield x lo hi v == (x `U.logand` U.lognot ((U.lognot 0 `U.shift_right` (tot - (hi - lo))) `U.shift_left` lo)) `U.logor` (v `U.shift_left` lo))
+= bitfield_mask_eq_2 tot lo hi
+
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module U16 = FStar.UInt16
