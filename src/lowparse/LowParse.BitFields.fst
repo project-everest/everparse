@@ -385,6 +385,14 @@ let set_bitfield_set_bitfield_other
     nth_set_bitfield x lo' hi' v' i
   )
 
+let set_bitfield_full
+  (#tot: pos) (x: U.uint_t tot) (y: ubitfield tot tot)
+: Lemma
+  (set_bitfield x 0 tot y == y)
+= eq_nth (set_bitfield x 0 tot y) y (fun i ->
+    nth_set_bitfield x 0 tot y i
+  )
+
 let nth_zero
   (tot: pos)
   (i: nat {i < tot})

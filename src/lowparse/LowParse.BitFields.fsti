@@ -51,6 +51,11 @@ val set_bitfield_set_bitfield_other
   (requires (hi' <= lo \/ hi <= lo'))
   (ensures (set_bitfield (set_bitfield x lo hi v) lo' hi' v' == set_bitfield (set_bitfield x lo' hi' v') lo hi v))
 
+val set_bitfield_full
+  (#tot: pos) (x: U.uint_t tot) (y: ubitfield tot tot)
+: Lemma
+  (set_bitfield x 0 tot y == y)
+
 val get_bitfield_zero
   (tot: pos)
   (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
