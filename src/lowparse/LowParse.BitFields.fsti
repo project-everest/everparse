@@ -65,6 +65,11 @@ val set_bitfield_full
 : Lemma
   (set_bitfield x 0 tot y == y)
 
+val set_bitfield_empty
+  (#tot: pos) (x: U.uint_t tot) (i: nat { i <= tot }) (y: ubitfield tot 0)
+: Lemma
+  (set_bitfield x i i y == x)
+
 val get_bitfield_zero
   (tot: pos)
   (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
@@ -210,6 +215,16 @@ val set_bitfield_size
   (v: ubitfield tot1 (hi - lo))
 : Lemma
   (x < pow2 tot2 /\  v < pow2 tot2 /\ (set_bitfield #tot1 x lo hi v <: nat) == (set_bitfield #tot2 x lo hi v <: nat))
+
+val set_bitfield_bound
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (bound: nat { bound <= tot /\ x < pow2 bound })
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= bound })
+  (v: ubitfield tot (hi - lo))
+: Lemma
+  (set_bitfield x lo hi v < pow2 bound)
 
 val get_bitfield_eq
   (#tot: pos)

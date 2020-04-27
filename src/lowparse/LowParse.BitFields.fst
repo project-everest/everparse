@@ -394,6 +394,14 @@ let set_bitfield_full
     nth_set_bitfield x 0 tot y i
   )
 
+let set_bitfield_empty
+  (#tot: pos) (x: U.uint_t tot) (i: nat { i <= tot }) (y: ubitfield tot 0)
+: Lemma
+  (set_bitfield x i i y == x)
+= eq_nth (set_bitfield x i i y) x (fun j ->
+    nth_set_bitfield x i i y j
+  )
+
 let nth_zero
   (tot: pos)
   (i: nat {i < tot})
@@ -741,6 +749,23 @@ let set_bitfield_size
       then nth_size tot1 tot2 v (i - lo)
     end
   )
+
+let set_bitfield_bound
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (bound: nat { bound <= tot /\ x < pow2 bound })
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= bound })
+  (v: ubitfield tot (hi - lo))
+: Lemma
+  (set_bitfield x lo hi v < pow2 bound)
+= if bound = 0
+  then set_bitfield_empty x lo v
+  else begin
+    M.pow2_le_compat tot bound;
+    M.pow2_le_compat bound (hi - lo);
+    set_bitfield_size bound tot x lo hi v
+  end
 
 let mod_1 (x: int) : Lemma
   (x % 1 == 0)
