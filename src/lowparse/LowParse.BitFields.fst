@@ -767,6 +767,35 @@ let set_bitfield_bound
     set_bitfield_size bound tot x lo hi v
   end
 
+#push-options "--z3rlimit 32 --z3cliopt smt.arith.nl=false"
+
+let set_bitfield_set_bitfield_get_bitfield
+  #tot x lo hi lo' hi' v'
+= set_bitfield_bound (get_bitfield x lo hi) (hi - lo) lo' hi' v' ;
+  let x1 = set_bitfield x lo hi (set_bitfield (get_bitfield x lo hi) lo' hi' v') in
+  let x2 = set_bitfield x (lo + lo') (lo + hi') v' in
+  eq_nth x1 x2 (fun i ->
+    nth_set_bitfield x lo hi (set_bitfield (get_bitfield x lo hi) lo' hi' v') i;
+    nth_set_bitfield x (lo + lo') (lo + hi') v' i ;
+    if lo <= i && i < hi
+    then begin
+      assert (nth x1 i == nth (set_bitfield (get_bitfield x lo hi) lo' hi' v') (i - lo));
+      nth_set_bitfield (get_bitfield x lo hi) lo' hi' v' (i - lo);
+      if lo' <= i - lo && i - lo < hi'
+      then begin
+        ()
+      end
+      else begin
+        assert (nth x2 i == nth x i);
+        assert (nth x1 i == nth (get_bitfield x lo hi) (i - lo));
+        nth_get_bitfield x lo hi (i - lo);
+        assert (i - lo + lo == i)
+      end
+    end
+  )
+
+#pop-options
+
 let mod_1 (x: int) : Lemma
   (x % 1 == 0)
 = ()

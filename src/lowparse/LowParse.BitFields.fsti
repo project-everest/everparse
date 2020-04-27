@@ -226,6 +226,15 @@ val set_bitfield_bound
 : Lemma
   (set_bitfield x lo hi v < pow2 bound)
 
+val set_bitfield_set_bitfield_get_bitfield
+  (#tot: pos) (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
+  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= hi - lo }) (v' : ubitfield tot (hi' - lo'))
+: Lemma
+  ( let v = set_bitfield (get_bitfield x lo hi) lo' hi' v' in
+    v < pow2 (hi - lo) /\
+    set_bitfield x lo hi v == set_bitfield x (lo + lo') (lo + hi') v' )
+
 val get_bitfield_eq
   (#tot: pos)
   (x: U.uint_t tot)
