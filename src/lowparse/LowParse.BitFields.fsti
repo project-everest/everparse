@@ -193,6 +193,15 @@ val get_bitfield_size
 : Lemma
   (x < pow2 tot2 /\ (get_bitfield #tot1 x lo hi <: nat) == (get_bitfield #tot2 x lo hi <: nat))
 
+val set_bitfield_size
+  (tot1 tot2: pos)
+  (x: nat { x < pow2 tot1 /\ tot1 <= tot2 })
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= tot1 })
+  (v: ubitfield tot1 (hi - lo))
+: Lemma
+  (x < pow2 tot2 /\  v < pow2 tot2 /\ (set_bitfield #tot1 x lo hi v <: nat) == (set_bitfield #tot2 x lo hi v <: nat))
+
 val get_bitfield_eq
   (#tot: pos)
   (x: U.uint_t tot)

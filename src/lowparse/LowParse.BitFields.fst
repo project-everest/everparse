@@ -718,6 +718,29 @@ let get_bitfield_size
     end
   )
 
+let set_bitfield_size
+  (tot1 tot2: pos)
+  (x: nat { x < pow2 tot1 /\ tot1 <= tot2 })
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= tot1 })
+  (v: ubitfield tot1 (hi - lo))
+: Lemma
+  (x < pow2 tot2 /\  v < pow2 tot2 /\ (set_bitfield #tot1 x lo hi v <: nat) == (set_bitfield #tot2 x lo hi v <: nat))
+= M.pow2_le_compat tot2 tot1;
+  eq_nth #tot2 (set_bitfield #tot1 x lo hi v) (set_bitfield #tot2 x lo hi v) (fun i ->
+    let y1 = nth #tot2 (set_bitfield #tot1 x lo hi v) i in
+    let y2 = nth #tot2 (set_bitfield #tot2 x lo hi v) i in
+    nth_set_bitfield #tot2 x lo hi v i;
+    nth_size tot1 tot2 (set_bitfield #tot1 x lo hi v) i;
+    nth_size tot1 tot2 x i;
+    if i < tot1
+    then begin
+      nth_set_bitfield #tot1 x lo hi v i;
+      if lo <= i && i < hi
+      then nth_size tot1 tot2 v (i - lo)
+    end
+  )
+
 let mod_1 (x: int) : Lemma
   (x % 1 == 0)
 = ()
