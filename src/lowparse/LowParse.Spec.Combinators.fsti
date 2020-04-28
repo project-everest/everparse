@@ -1051,6 +1051,34 @@ val serialize_dtuple2_eq
 : Lemma
   (serialize (serialize_dtuple2 s1 s2) xy == serialize s1 (dfst xy) `Seq.append` serialize (s2 (dfst xy)) (dsnd xy))
 
+let bare_serialize_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (s2: (x: t1) -> serializer (p2 x))
+  (xy: dtuple2 t1 t2)
+: GTot bytes
+= serialize s1 (dfst xy) `Seq.append` serialize (s2 (dfst xy)) (dsnd xy)
+
+let serialize_dtuple2_eq'
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (s2: (x: t1) -> serializer (p2 x))
+  (xy: dtuple2 t1 t2)
+: Tot (squash (
+  (serialize #_ #(dtuple2 t1 t2)  (serialize_dtuple2 #k1 #t1 #p1 s1 #k2 #t2 #p2 s2) xy == bare_serialize_dtuple2 #k1 #t1 #p1 s1 #k2 #t2 #p2 s2 xy)))
+= serialize_dtuple2_eq s1 s2 xy
+
+
 (* Special case for non-dependent parsing *)
 
 val nondep_then
