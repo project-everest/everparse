@@ -1512,13 +1512,40 @@ let lift_parser_correct
   (parser_kind_prop k (lift_parser' f))
 = parser_kind_prop_ext k (f ()) (lift_parser' f)
 
-unfold
 let lift_parser
   (#k: parser_kind)
   (#t: Type0)
   (f: unit -> GTot (parser k t))
-: Tot (bare_parser t)
-= lift_parser' f
+: Tot (parser k t)
+= lift_parser_correct f;
+  lift_parser' f
+
+unfold
+let lift_serializer'
+  (#k: parser_kind)
+  (#t: Type0)
+  (#f: unit -> GTot (parser k t))
+  (s: unit -> GTot (serializer (f ())))
+: Tot (bare_serializer t)
+= fun (x: t) -> serialize (s ()) x
+
+let lift_serializer_correct
+  (#k: parser_kind)
+  (#t: Type0)
+  (#f: unit -> GTot (parser k t))
+  (s: unit -> GTot (serializer (f ())))
+: Lemma
+  (serializer_correct (lift_parser f) (lift_serializer' s))
+= ()
+
+let lift_serializer
+  (#k: parser_kind)
+  (#t: Type0)
+  (#f: unit -> GTot (parser k t))
+  (s: unit -> GTot (serializer (f ())))
+: Tot (serializer #k #t (lift_parser f))
+= lift_serializer_correct #k #t #f s;
+  lift_serializer' #k #t #f s
 
 (** Refinements *)
 

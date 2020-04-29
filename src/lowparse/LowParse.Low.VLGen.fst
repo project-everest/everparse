@@ -441,6 +441,8 @@ let validate_vlgen
     (synth_vlgen (U32.v min) (U32.v max) s)
     ()
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 let jump_bounded_vlgen
   (vmin: der_length_t)
@@ -466,6 +468,8 @@ let jump_bounded_vlgen
   [@inline_let]
   let _ = valid_facts (parse_fldata_strong s (U32.v len)) h input n in
   jump_fldata_strong s (U32.v len) len input n
+
+#pop-options
 
 inline_for_extraction
 let jump_vlgen

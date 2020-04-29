@@ -338,6 +338,45 @@ inline_for_extraction
 let jump_false : jumper parse_false
 = jump_constant_size parse_false 0ul ()
 
+let valid_lift_parser
+  (#k: parser_kind)
+  (#t: Type)
+  (p: unit -> Tot (parser k t))
+  (h: HS.mem)
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  ((valid (lift_parser p) h input pos \/ valid (p ()) h input pos) ==>
+    valid (p ()) h input pos /\
+    valid_content_pos (lift_parser p) h input pos (contents (p ()) h input pos) (get_valid_pos (p ()) h input pos))
+= valid_facts (p ()) h input pos;
+  valid_facts (lift_parser p) h input pos
+
+inline_for_extraction
+let validate_lift_parser
+  (#k: parser_kind)
+  (#t: Type)
+  (p: unit -> Tot (parser k t))
+  (v: validator #k #t (p ()))
+: Tot (validator #k #t (lift_parser p))
+= fun #rrel #rel input pos ->
+  let h = HST.get () in
+  valid_lift_parser p h input pos;
+  v input pos
+
+inline_for_extraction
+let jump_lift_parser
+  (#k: parser_kind)
+  (#t: Type)
+  (p: unit -> Tot (parser k t))
+  (v: jumper (p ()))
+: Tot (jumper (lift_parser p))
+= fun #rrel #rel input pos ->
+  let h = HST.get () in
+  valid_lift_parser p h input pos;
+  v input pos
+
 let clens_synth
   (#t1: Type)
   (#t2: Type)
