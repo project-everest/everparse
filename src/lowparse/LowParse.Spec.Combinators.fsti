@@ -1038,6 +1038,37 @@ val parse_dtuple2_eq
   | _ -> None
   ))
 
+let bare_parse_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (p2: (x: t1) -> parser k2 (t2 x))
+: Tot (bare_parser (dtuple2 t1 t2))
+= fun b ->
+  match parse p1 b with
+  | Some (x1, consumed1) ->
+    let b' = Seq.slice b consumed1 (Seq.length b) in
+    begin match parse (p2 x1) b' with
+    | Some (x2, consumed2) ->
+      Some ((| x1, x2 |), consumed1 + consumed2)
+    | _ -> None
+    end
+  | _ -> None
+  
+let parse_dtuple2_eq'
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (p2: (x: t1) -> parser k2 (t2 x))
+  (b: bytes)
+: Lemma
+  (parse (parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2) b == bare_parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2 b)
+= parse_dtuple2_eq p1 p2 b
+
 val serialize_dtuple2_eq
   (#k1: parser_kind)
   (#t1: Type0)
