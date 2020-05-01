@@ -767,7 +767,7 @@ let set_bitfield_bound
     set_bitfield_size bound tot x lo hi v
   end
 
-#push-options "--z3rlimit 32 --z3cliopt smt.arith.nl=false"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --fuel 0 --ifuel 0"
 
 let set_bitfield_set_bitfield_get_bitfield
   #tot x lo hi lo' hi' v'
