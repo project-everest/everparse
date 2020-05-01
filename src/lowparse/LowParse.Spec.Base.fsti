@@ -707,6 +707,21 @@ let parse_serialize
   (parse p (serialize s x) == Some (x, Seq.length (serialize s x)))
 = ()
 
+let parsed_data_is_serialize
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: bytes)
+: Lemma
+  (requires (Some? (parse p x)))
+  (ensures (
+    let Some (y, consumed) = parse p x in
+    (serialize s y `Seq.append` Seq.slice x consumed (Seq.length x)) `Seq.equal` x
+  ))
+= let Some (y, consumed) = parse p x in
+  parse_injective p (serialize s y) x
+
 let serializer_unique
   (#k: parser_kind)
   (#t: Type0)
