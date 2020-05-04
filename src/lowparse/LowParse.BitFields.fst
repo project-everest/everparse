@@ -1102,7 +1102,7 @@ inline_for_extraction
 let bitfield_mask8 (lo: nat) (hi: nat { lo <= hi /\ hi <= 8 }) : Tot (x: U8.t { U8.v x == bitfield_mask 8 lo hi }) =
   if lo = hi
   then 0uy
-  else begin    
+  else begin
     bitfield_mask_eq_2 8 lo hi;
     (U8.lognot 0uy `U8.shift_right` (8ul `U32.sub` (U32.uint_to_t (hi - lo)))) `U8.shift_left` U32.uint_to_t lo
   end
@@ -1112,13 +1112,43 @@ let u8_shift_right
   (x: U8.t)
   (amount: U32.t { U32.v amount <= 8 })
 : Tot (y: U8.t { U8.v y == U8.v x `U.shift_right` U32.v amount })
-= if amount = 8ul then 0uy else x `U8.shift_right` amount
+= let y =
+      if amount = 8ul then 0uy else x `U8.shift_right` amount
+  in
+  y
+
+// inline_for_extraction // no, because of https://github.com/FStarLang/kremlin/issues/102
+let get_bitfield_gen8
+  (x: U8.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 8})
+: Tot (y: U8.t { U8.v y == get_bitfield (U8.v x) (U32.v lo) (U32.v hi) })
+= get_bitfield_eq_2 #8 (U8.v x) (U32.v lo) (U32.v hi);
+  (* NOTE: due to https://github.com/FStarLang/kremlin/issues/102 I need to introduce explicit let-bindings here *)
+  let op1 = x `U8.shift_left` (8ul `U32.sub` hi) in
+  let op2 = op1 `U8.shift_right` ((8ul `U32.sub` hi) `U32.add` lo) in
+  op2
+
+// inline_for_extraction // no, same
+let set_bitfield_gen8
+  (x: U8.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 8})
+  (v: U8.t { U8.v v < pow2 (U32.v hi - U32.v lo) })
+: Tot (y: U8.t { U8.v y == set_bitfield (U8.v x) (U32.v lo) (U32.v hi) (U8.v v) })
+= bitfield_mask_eq_2 8 (U32.v lo) (U32.v hi);
+  (* NOTE: due to https://github.com/FStarLang/kremlin/issues/102 I need to introduce explicit let-bindings here *)
+  let op0 = (U8.lognot 0uy) in
+  let op1 = op0 `U8.shift_right` (8ul `U32.sub` (hi `U32.sub` lo)) in
+  let op2 = op1 `U8.shift_left` lo in
+  let op3 = U8.lognot op2 in
+  let op4 = x `U8.logand` op3 in
+  let op5 = v `U8.shift_left` lo in
+  let op6 = op4 `U8.logor` op5 in
+  op6
 
 inline_for_extraction
 let get_bitfield8
   (x: U8.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 8})
 : Tot (y: U8.t { U8.v y == get_bitfield (U8.v x) lo hi })
-= (x `U8.logand` bitfield_mask8 lo hi) `u8_shift_right` (U32.uint_to_t lo)
+= if lo = hi then 0uy else
+  get_bitfield_gen8 x (U32.uint_to_t lo) (U32.uint_to_t hi)
 
 inline_for_extraction
 let not_bitfield_mask8 (lo: nat) (hi: nat { lo <= hi /\ hi <= 8 }) : Tot (x: U8.t { U8.v x == not_bitfield_mask 8 lo hi }) =
@@ -1129,14 +1159,20 @@ let u8_shift_left
   (x: U8.t)
   (amount: U32.t { U32.v amount <= 8 })
 : Tot (y: U8.t { U8.v y == U8.v x `U.shift_left` U32.v amount })
-= if amount = 8ul then 0uy else x `U8.shift_left` amount
+= let y =
+      if amount = 8ul then 0uy else x `U8.shift_left` amount
+  in
+  y
 
 inline_for_extraction
 let set_bitfield8
   (x: U8.t) (lo: nat) (hi: nat {lo <= hi /\ hi <= 8})
   (v: U8.t { U8.v v < pow2 (hi - lo) })
 : Tot (y: U8.t { U8.v y == set_bitfield (U8.v x) lo hi (U8.v v) })
-= (x `U8.logand` not_bitfield_mask8 lo hi) `U8.logor` (v `u8_shift_left` U32.uint_to_t lo)
+= if lo = hi then begin
+    set_bitfield_empty #8 (U8.v x) lo (U8.v v);
+    x
+  end else set_bitfield_gen8 x (U32.uint_to_t lo) (U32.uint_to_t hi) v
 
 inline_for_extraction
 let bitfield_eq8_lhs
@@ -1153,21 +1189,6 @@ let bitfield_eq8_rhs
     bitfield_eq_shift (U8.v x) lo hi (U8.v v)
   in
   v `u8_shift_left` U32.uint_to_t lo
-
-inline_for_extraction
-let get_bitfield_gen8
-  (x: U8.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 8})
-: Tot (y: U8.t { U8.v y == get_bitfield (U8.v x) (U32.v lo) (U32.v hi) })
-= get_bitfield_eq_2 #8 (U8.v x) (U32.v lo) (U32.v hi);
-  (x `U8.shift_left` (8ul `U32.sub` hi)) `U8.shift_right` ((8ul `U32.sub` hi) `U32.add` lo)
-
-inline_for_extraction
-let set_bitfield_gen8
-  (x: U8.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 8})
-  (v: U8.t { U8.v v < pow2 (U32.v hi - U32.v lo) })
-: Tot (y: U8.t { U8.v y == set_bitfield (U8.v x) (U32.v lo) (U32.v hi) (U8.v v) })
-= bitfield_mask_eq_2 8 (U32.v lo) (U32.v hi);
-  (x `U8.logand` U8.lognot (((U8.lognot 0uy) `U8.shift_right` (8ul `U32.sub` (hi `U32.sub` lo))) `U8.shift_left` lo)) `U8.logor` (v `U8.shift_left` lo)
 
 inline_for_extraction
 noextract
