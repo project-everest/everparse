@@ -378,3 +378,56 @@ let size32_ext
   (u: squash (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
 : Tot (size32 (serialize_ext p1 s1 p2))
 = fun input -> s1' input
+
+(* Total parsers for sequences *)
+
+[@"opaque_to_smt"]
+irreducible
+let rec bytes_of_seq'
+  (x: Seq.seq byte)
+  (accu: bytes32  { B32.length accu + Seq.length x < 4294967296 })
+: Tot (y: bytes32 { B32.reveal y `Seq.equal` (B32.reveal accu `Seq.append` x) })
+  (decreases (Seq.length x))
+= if Seq.length x = 0
+  then accu
+  else bytes_of_seq' (Seq.tail x) (B32.append accu (B32.create 1ul (Seq.head x)))
+
+[@"opaque_to_smt"]
+inline_for_extraction
+let bytes_of_seq
+  (x: Seq.seq byte { Seq.length x < 4294967296 })
+: Tot (y: bytes32 { B32.reveal y `Seq.equal` x })
+= bytes_of_seq' x B32.empty_bytes
+
+inline_for_extraction
+let parse_tot_seq_of_parser32
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (p32: parser32 p {
+    k.parser_kind_subkind == Some ParserStrong /\
+    begin match k.parser_kind_high with
+    | None -> False
+    | Some max -> max < 4294967296
+    end
+  })
+  (x: Seq.seq byte)
+: Tot (y: _ { y == parse p x })
+= match k.parser_kind_high with
+  | Some max ->
+    if Seq.length x < max
+    then 
+      match p32 (bytes_of_seq x) with
+      | None -> None
+      | Some (x, consumed) -> Some (x, U32.v consumed)
+    else begin
+      [@inline_let]
+      let max32 = U32.uint_to_t max in
+      let res = p32 (bytes_of_seq (Seq.slice x 0 max)) in
+      Classical.move_requires (parse_strong_prefix p x) (Seq.slice x 0 max);
+      Classical.move_requires (parse_strong_prefix p (Seq.slice x 0 max)) x;
+      parser_kind_prop_equiv k p;
+      match res with
+      | None -> None
+      | Some (x, consumed) -> Some (x, U32.v consumed)
+    end
