@@ -526,3 +526,74 @@ let size32_weaken
   (s2' : size32 s2 { k1 `is_weaker_than` k2 })
 : Tot (size32 (serialize_weaken k1 s2))
 = fun x -> s2' x
+
+inline_for_extraction
+let lift_parser32
+  (#k: parser_kind)
+  (#t: Type)
+  (f: unit -> GTot (parser k t))
+  (f32: parser32 (f ()))
+: Tot (parser32 (lift_parser f))
+= fun x -> f32 x
+
+inline_for_extraction
+let lift_serializer32
+  (#k: parser_kind)
+  (#t: Type)
+  (f: unit -> GTot (parser k t))
+  (s: unit -> GTot (serializer (f ())))
+  (s32: serializer32 (s ()))
+: Tot (serializer32 (lift_serializer #k #t #f s))
+= fun x -> s32 x
+
+inline_for_extraction
+let parse32_tagged_union
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (#pt: parser kt tag_t)
+  (pt32: parser32 pt)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (#p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (p32: (t: tag_t) -> Tot (parser32 (p t)))
+: Tot (parser32 (parse_tagged_union pt tag_of_data p))
+=
+  fun input -> 
+    parse_tagged_union_eq pt tag_of_data p (B32.reveal input);
+    match pt32 input with
+    | None -> None
+    | Some (tg, consumed_tg) ->
+      let input_tg = B32.slice input consumed_tg (B32.len input) in
+      begin match p32 tg input_tg with
+      | None -> None
+      | Some (x, consumed_x) -> Some ((x <: data_t), consumed_tg `U32.add` consumed_x)
+      end
+
+inline_for_extraction
+let serialize32_tagged_union
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (#pt: parser kt tag_t)
+  (#st: serializer pt)
+  (st32: serializer32 st)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (tag_of_data' : ((x: data_t) -> Tot (y: tag_t { y == tag_of_data x })))
+  (#k: parser_kind)
+  (#p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (#s: (t: tag_t) -> Tot (serializer (p t)))
+  (s32: (t: tag_t) -> Tot (serializer32 (s t)))
+  (x: squash (
+    kt.parser_kind_subkind == Some ParserStrong /\
+    begin match kt.parser_kind_high, k.parser_kind_high with
+    | Some max1, Some max2 -> max1 + max2 < 4294967296
+    | _ -> False
+    end
+  ))
+: Tot (serializer32 (serialize_tagged_union st tag_of_data s))
+=
+  fun x ->
+    serialize_tagged_union_eq st tag_of_data s x;
+    let tg = tag_of_data' x in
+    st32 tg `B32.append` s32 tg x
