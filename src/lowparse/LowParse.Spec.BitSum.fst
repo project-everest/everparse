@@ -837,6 +837,40 @@ let parse_bitsum_eq
 
 #pop-options
 
+let parse_bitsum_eq'
+  (#kt: parser_kind)
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#data: Type0)
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (synth_case: synth_case_t b data tag_of_data type_of_tag)
+  (p: parser kt t)
+  (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
+  (x: bytes)
+: Lemma
+  (parse (parse_bitsum b tag_of_data type_of_tag synth_case p f) x == (match parse p x with
+  | None -> None
+  | Some (tg', consumed1) ->
+    if filter_bitsum' b tg'
+    then
+      let tg = synth_bitsum' b tg' in
+      let k = bitsum'_key_of_t b tg in
+      begin match parse (dsnd (f k)) (Seq.slice x consumed1 (Seq.length x)) with
+      | None -> None
+      | Some (y, consumed2) ->
+        Some ((synth_case.f tg y <: data), consumed1 + consumed2)
+      end
+    else
+      None
+  ))
+= parse_bitsum_eq b tag_of_data type_of_tag synth_case p f x;
+  synth_bitsum'_injective b;
+  parse_synth_eq (p `parse_filter` filter_bitsum' b) (synth_bitsum' b) x;
+  parse_filter_eq p (filter_bitsum' b) x
+
 let synth_bitsum_case_recip_inverse
   (#tot: pos)
   (#t: eqtype)
