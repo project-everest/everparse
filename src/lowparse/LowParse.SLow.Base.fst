@@ -431,3 +431,32 @@ let parse_tot_seq_of_parser32
       | None -> None
       | Some (x, consumed) -> Some (x, U32.v consumed)
     end
+
+[@"opaque_to_smt"]
+irreducible
+let rec seq_of_bytes'
+  (x: bytes32)
+  (accu: Seq.seq byte)
+: Tot (y: Seq.seq byte { y `Seq.equal` (accu `Seq.append` B32.reveal x) })
+  (decreases (B32.length x))
+= if B32.len x = 0ul
+  then accu
+  else (seq_of_bytes' (B32.slice x 1ul (B32.len x)) (Seq.append accu (Seq.create 1 (B32.index x 0))) <: Seq.seq byte)
+
+[@"opaque_to_smt"]
+inline_for_extraction
+let seq_of_bytes
+  (x: bytes32)
+: Tot (y: Seq.seq byte { y `Seq.equal` B32.reveal x })
+= seq_of_bytes' x Seq.empty
+
+inline_for_extraction
+let serialize_tot_seq_of_serializer32
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (s32: serializer32 s)
+  (x: t)
+: Tot (y: _ { y == serialize s x })
+= seq_of_bytes (s32 x)
