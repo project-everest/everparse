@@ -1,23 +1,7 @@
 module LowParse.Spec.ListUpTo
-include LowParse.Spec.Base
+open LowParse.Spec.Base
 open LowParse.Spec.Fuel
 open LowParse.Spec.Combinators
-
-module L = FStar.List.Tot
-module Seq = FStar.Seq
-
-let negate_cond
-  (#t: Type)
-  (cond: (t -> Tot bool))
-  (x: t)
-: Tot bool
-= not (cond x)
-
-let parse_list_up_to_t
-  (#t: Type)
-  (cond: (t -> Tot bool))
-: Tot Type0
-= list (parse_filter_refine (negate_cond cond)) & parse_filter_refine cond
 
 let llist
   (t: Type)
@@ -30,15 +14,7 @@ let parse_list_up_to_fuel_t
   (cond: (t -> Tot bool))
   (fuel: nat)
 : Tot Type0
-= (llist (parse_filter_refine (negate_cond cond)) fuel) & parse_filter_refine cond
-
-inline_for_extraction
-let parse_list_up_to_kind (k: parser_kind) : Tot (k' : parser_kind {k' `is_weaker_than` k }) = {
-  parser_kind_low = 0;
-  parser_kind_high = None;
-  parser_kind_subkind = k.parser_kind_subkind;
-  parser_kind_metadata = None;
-}
+= (llist (refine_with_cond (negate_cond cond)) fuel) & refine_with_cond cond
 
 let parse_list_up_to_payload_t
   (#t: Type)
@@ -226,7 +202,7 @@ let rec parse_list_up_to_fuel_ext
   (ensures (
     match parse (parse_list_up_to_fuel cond p fuel1) b, parse (parse_list_up_to_fuel cond p fuel2) b with  
     | None, None -> True
-    | Some (xy1, consumed1), Some (xy2, consumed2) -> (fst xy1 <: list (parse_filter_refine (negate_cond cond)))  == (fst xy2 <: list (parse_filter_refine (negate_cond cond))) /\ snd xy1 == snd xy2 /\ consumed1 == consumed2
+    | Some (xy1, consumed1), Some (xy2, consumed2) -> (fst xy1 <: list (refine_with_cond (negate_cond cond)))  == (fst xy2 <: list (refine_with_cond (negate_cond cond))) /\ snd xy1 == snd xy2 /\ consumed1 == consumed2
     | _ -> False
   ))
   (decreases fuel1)
@@ -313,20 +289,6 @@ let parse_list_up_to_correct
       parser_kind_prop_fuel_complete fuel (parse_list_up_to_kind k) (parse_list_up_to' cond p fuel)
     )
 
-let consumes_if_not_cond
-  (#k: parser_kind)
-  (#t: Type)
-  (cond: (t -> Tot bool))
-  (p: parser k t)
-: Tot Type
-= 
-    (b: bytes) ->
-    (x: t) ->
-    (consumed: consumed_length b) ->
-    Lemma
-    (requires (parse p b == Some (x, consumed) /\ (~ (cond x))))
-    (ensures (consumed > 0))
-
 let parse_list_up_to
   (#k: parser_kind)
   (#t: Type)
@@ -396,7 +358,7 @@ let synth_list_up_to_fuel_recip
 = let (l, z) = xy in
   match l with
   | [] -> (| z, () |)
-  | x :: y -> (| x, ((y <: llist (parse_filter_refine (negate_cond cond)) fuel), z) |)
+  | x :: y -> (| x, ((y <: llist (refine_with_cond (negate_cond cond)) fuel), z) |)
 
 let synth_list_up_to_fuel_inverse
   (#t: Type)
@@ -448,7 +410,7 @@ let serialize_list_up_to_fuel_eq
     let (l, z) = xy in
     match l with
     | [] -> serialize s z
-    | x :: y -> serialize s x `Seq.append` serialize (serialize_list_up_to_fuel cond s (fuel - 1)) ((y <: llist (parse_filter_refine (negate_cond cond)) (fuel - 1)), z)
+    | x :: y -> serialize s x `Seq.append` serialize (serialize_list_up_to_fuel cond s (fuel - 1)) ((y <: llist (refine_with_cond (negate_cond cond)) (fuel - 1)), z)
   ))
 = 
   serialize_synth_eq
