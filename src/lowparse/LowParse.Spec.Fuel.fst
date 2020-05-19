@@ -146,12 +146,19 @@ let parser_kind_prop_fuel_correct
   end;
   parser_kind_metadata_prop_fuel_correct k f
 
-let parser_kind_prop_fuel_complete
+let parser_kind_prop_fuel_complete'
   (fuel: nat) (#t: Type0) (k: parser_kind) (f: bare_parser t)
 : Lemma
   (requires (parser_kind_prop' k f))
   (ensures (parser_kind_prop_fuel fuel k f))
 = ()
+
+let parser_kind_prop_fuel_complete
+  (fuel: nat) (#t: Type0) (k: parser_kind) (f: bare_parser t)
+: Lemma
+  (requires (parser_kind_prop k f))
+  (ensures (parser_kind_prop_fuel fuel k f))
+= parser_kind_prop_equiv k f
 
 let no_lookahead_fuel_ext
   (fuel: nat)
