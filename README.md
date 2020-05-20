@@ -1,5 +1,9 @@
 # EverParse
 
+| Linux | Windows |
+|---------|-------|
+| [![Linux](https://msr-project-everest.visualstudio.com/Everest/_apis/build/status/QuackyDucky/QuackyDucky-Linux?branchName=master)](https://msr-project-everest.visualstudio.com/Everest/_build/latest?definitionId=36&branchName=master) | [![Windows](https://msr-project-everest.visualstudio.com/Everest/_apis/build/status/QuackyDucky/QuackyDucky-Windows?branchName=master)](https://msr-project-everest.visualstudio.com/Everest/_build/latest?definitionId=45&branchName=master) |
+
 EverParse is a framework for generating verified secure parsers from DSL format specification languages.
 It consists of LowParse, a verified combinator library (in `src/lowparse`), and QuackyDucky, an untrusted message format specification language compiler.
 
