@@ -29,4 +29,4 @@ Our CI maintains up to date Docker images on DockerHub for [Linux](https://hub.d
 `make`
 
 ### Running
-`./bin/quackyducky -help`
+`./qd -help`
