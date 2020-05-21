@@ -419,6 +419,40 @@ let strengthen (k: parser_kind) (#t: Type0) (f: bare_parser t) : Pure (parser k 
 
 #push-options "--z3rlimit 16"
 
+[@"opaque_to_smt"]
+inline_for_extraction
+let is_some
+  (#t: Type)
+  (x: option t)
+: Tot (y: bool { y == Some? x })
+= match x with
+  | Some _ -> true
+  | _ -> false
+
+[@"opaque_to_smt"]
+inline_for_extraction
+let some_v
+  (#t: Type)
+  (x: option t { Some? x })
+: Tot (y: t { y == Some?.v x })
+= match x with
+  | Some y -> y
+
+[@"opaque_to_smt"]
+inline_for_extraction
+let bool_and
+  (b1 b2: bool)
+: Tot (y: bool { y == (b1 && b2) })
+= if b1 then b2 else false
+
+[@"opaque_to_smt"]
+inline_for_extraction
+let bool_or
+  (b1 b2: bool)
+: Tot (y: bool { y == (b1 || b2) })
+= if b1 then true else b2
+
+inline_for_extraction
 let glb
   (k1 k2: parser_kind)
 : Pure parser_kind
@@ -431,20 +465,24 @@ let glb
 = match k1.parser_kind_metadata, k2.parser_kind_metadata with
   | _, Some ParserKindMetadataFail ->
   {
-    k1 with
+    parser_kind_low = k1.parser_kind_low;
+    parser_kind_high = k1.parser_kind_high;
+    parser_kind_subkind = k1.parser_kind_subkind;
     parser_kind_metadata = (match k1.parser_kind_metadata with Some ParserKindMetadataFail -> Some ParserKindMetadataFail | _ -> None);
   }
   | Some ParserKindMetadataFail, _ ->
   {
-    k2 with
+    parser_kind_low = k2.parser_kind_low;
+    parser_kind_high = k2.parser_kind_high;
+    parser_kind_subkind = k2.parser_kind_subkind;
     parser_kind_metadata = None;
   }
   | _ ->
   {
     parser_kind_low = (if k1.parser_kind_low < k2.parser_kind_low then k1.parser_kind_low else k2.parser_kind_low);
     parser_kind_high = (
-      if Some? k1.parser_kind_high && Some? k2.parser_kind_high
-      then if Some?.v k2.parser_kind_high < Some?.v k1.parser_kind_high
+      if is_some k1.parser_kind_high `bool_and` is_some k2.parser_kind_high
+      then if some_v k2.parser_kind_high < some_v k1.parser_kind_high
 	   then k1.parser_kind_high
 	   else k2.parser_kind_high
       else None
