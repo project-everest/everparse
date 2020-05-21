@@ -657,7 +657,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   else w i "\n";
 
   (* Enum definition *)
-	w o "inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n (compile_type repr_t);
+	w o "[@LP.Norm] inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n (compile_type repr_t);
 	w o "  [@inline_let] let e = [\n";
 	List.iter (function
 	  | EnumFieldSimple (x, i) ->
@@ -776,7 +776,9 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   else
    begin
     wl o "inline_for_extraction let validate_%s%s_key : LL.validator parse_%s%s_key =\n" maybe n maybe n;
-    wl o "  LL.validate_enum_key %s_repr_validator %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n n;
+    wl o "  norm [delta_attr [`%%LP.Norm]; iota; zeta; primops] (\n";
+    wl o "    LL.mk_validate_enum_key %s_repr_validator %s_repr_reader %s_enum\n\n" n n n;
+    wl o "  )";
     wl o "let %s_validator =\n" n;
     wl o "  lemma_synth_%s_inj ();\n" n;
     wl o "  LL.validate_synth validate_%s%s_key synth_%s ()\n\n" maybe n n
@@ -787,12 +789,16 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
     if is_open then
       begin
         wl o "inline_for_extraction let read_maybe_%s_key : LL.leaf_reader parse_maybe_%s_key =\n" n n;
-        wl o "  LL.read_maybe_enum_key %s_repr_reader %s_enum (_ by (LP.maybe_enum_destr_t_tac ()))\n\n" n n
+        wl o "  norm [delta_attr [`%%LP.Norm]; iota; zeta; primops] (\n";
+        wl o "    LL.mk_read_maybe_enum_key %s_repr_reader %s_enum\n\n" n n;
+        wl o "  )"
       end
     else
       begin
         wl o "inline_for_extraction let read_%s_key : LL.leaf_reader parse_%s_key =\n" n n;
-        wl o "  LL.read_enum_key %s_repr_reader %s_enum (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n n
+        wl o "  norm [delta_attr [`%%LP.Norm]; iota; zeta; primops] (\n";
+        wl o "  LL.mk_read_enum_key %s_repr_reader %s_enum\n\n" n n;
+        wl o "  )"
       end
   end;
   wl i "val %s_reader: LL.leaf_reader %s_parser\n\n" n n;

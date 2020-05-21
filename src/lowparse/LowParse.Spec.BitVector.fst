@@ -29,7 +29,7 @@ let rec of_uint8
     let hi = of_uint8 (n - 1) (x `U8.div` 2uy) in
     Seq.snoc hi (x `U8.rem` 2uy = 1uy)
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 let rec to_uint8_of_uint8
   (n: nat { n <= 8 })

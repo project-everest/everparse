@@ -1038,6 +1038,37 @@ val parse_dtuple2_eq
   | _ -> None
   ))
 
+let bare_parse_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (p2: (x: t1) -> parser k2 (t2 x))
+: Tot (bare_parser (dtuple2 t1 t2))
+= fun b ->
+  match parse p1 b with
+  | Some (x1, consumed1) ->
+    let b' = Seq.slice b consumed1 (Seq.length b) in
+    begin match parse (p2 x1) b' with
+    | Some (x2, consumed2) ->
+      Some ((| x1, x2 |), consumed1 + consumed2)
+    | _ -> None
+    end
+  | _ -> None
+  
+let parse_dtuple2_eq'
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (p2: (x: t1) -> parser k2 (t2 x))
+  (b: bytes)
+: Lemma
+  (parse (parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2) b == bare_parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2 b)
+= parse_dtuple2_eq p1 p2 b
+
 val serialize_dtuple2_eq
   (#k1: parser_kind)
   (#t1: Type0)
@@ -1050,6 +1081,34 @@ val serialize_dtuple2_eq
   (xy: dtuple2 t1 t2)
 : Lemma
   (serialize (serialize_dtuple2 s1 s2) xy == serialize s1 (dfst xy) `Seq.append` serialize (s2 (dfst xy)) (dsnd xy))
+
+let bare_serialize_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (s2: (x: t1) -> serializer (p2 x))
+  (xy: dtuple2 t1 t2)
+: GTot bytes
+= serialize s1 (dfst xy) `Seq.append` serialize (s2 (dfst xy)) (dsnd xy)
+
+let serialize_dtuple2_eq'
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (s2: (x: t1) -> serializer (p2 x))
+  (xy: dtuple2 t1 t2)
+: Tot (squash (
+  (serialize #_ #(dtuple2 t1 t2)  (serialize_dtuple2 #k1 #t1 #p1 s1 #k2 #t2 #p2 s2) xy == bare_serialize_dtuple2 #k1 #t1 #p1 s1 #k2 #t2 #p2 s2 xy)))
+= serialize_dtuple2_eq s1 s2 xy
+
 
 (* Special case for non-dependent parsing *)
 
@@ -1484,13 +1543,40 @@ let lift_parser_correct
   (parser_kind_prop k (lift_parser' f))
 = parser_kind_prop_ext k (f ()) (lift_parser' f)
 
-unfold
 let lift_parser
   (#k: parser_kind)
   (#t: Type0)
   (f: unit -> GTot (parser k t))
-: Tot (bare_parser t)
-= lift_parser' f
+: Tot (parser k t)
+= lift_parser_correct f;
+  lift_parser' f
+
+unfold
+let lift_serializer'
+  (#k: parser_kind)
+  (#t: Type0)
+  (#f: unit -> GTot (parser k t))
+  (s: unit -> GTot (serializer (f ())))
+: Tot (bare_serializer t)
+= fun (x: t) -> serialize (s ()) x
+
+let lift_serializer_correct
+  (#k: parser_kind)
+  (#t: Type0)
+  (#f: unit -> GTot (parser k t))
+  (s: unit -> GTot (serializer (f ())))
+: Lemma
+  (serializer_correct (lift_parser f) (lift_serializer' s))
+= ()
+
+let lift_serializer
+  (#k: parser_kind)
+  (#t: Type0)
+  (#f: unit -> GTot (parser k t))
+  (s: unit -> GTot (serializer (f ())))
+: Tot (serializer #k #t (lift_parser f))
+= lift_serializer_correct #k #t #f s;
+  lift_serializer' #k #t #f s
 
 (** Refinements *)
 

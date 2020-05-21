@@ -837,6 +837,40 @@ let parse_bitsum_eq
 
 #pop-options
 
+let parse_bitsum_eq'
+  (#kt: parser_kind)
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#data: Type0)
+  (tag_of_data: (data -> Tot (bitsum'_type b)))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (synth_case: synth_case_t b data tag_of_data type_of_tag)
+  (p: parser kt t)
+  (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
+  (x: bytes)
+: Lemma
+  (parse (parse_bitsum b tag_of_data type_of_tag synth_case p f) x == (match parse p x with
+  | None -> None
+  | Some (tg', consumed1) ->
+    if filter_bitsum' b tg'
+    then
+      let tg = synth_bitsum' b tg' in
+      let k = bitsum'_key_of_t b tg in
+      begin match parse (dsnd (f k)) (Seq.slice x consumed1 (Seq.length x)) with
+      | None -> None
+      | Some (y, consumed2) ->
+        Some ((synth_case.f tg y <: data), consumed1 + consumed2)
+      end
+    else
+      None
+  ))
+= parse_bitsum_eq b tag_of_data type_of_tag synth_case p f x;
+  synth_bitsum'_injective b;
+  parse_synth_eq (p `parse_filter` filter_bitsum' b) (synth_bitsum' b) x;
+  parse_filter_eq p (filter_bitsum' b) x
+
 let synth_bitsum_case_recip_inverse
   (#tot: pos)
   (#t: eqtype)
@@ -1735,3 +1769,216 @@ and mk_synth_bitsum'_recip_BitSum
       L.append_assoc l1 [(k, r)] q
     in  
     synth_bitsum'_recip_BitSum_cons cl bitsum'_size key key_size e payload l1 k r q (mk_synth_bitsum'_recip (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k)) (mk_synth_bitsum'_recip_BitSum cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q)
+
+(* Mutating a bitfield within a bitsum value *)
+
+let rec is_valid_bitfield
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+  (k: bitsum'_key_type b)
+  (low high: nat)
+: GTot bool
+= match b with
+  | BitStop _ -> false
+  | BitField sz rest ->
+    if low + sz = high && high = bitsum'_size
+    then true    
+    else is_valid_bitfield rest (bitsum'_key_type_elim_BitField cl bitsum'_size sz rest k) low high
+  | BitSum' key key_size e payload ->
+    let (| k', r' |) = bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload k in
+    is_valid_bitfield (payload k') r' low high
+
+let rec is_valid_bitfield_prop
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+  (k: bitsum'_key_type b)
+  (low high: nat)
+: Lemma
+  (requires (is_valid_bitfield b k low high))
+  (ensures (
+    low <= high /\ high <= bitsum'_size
+  ))
+  [SMTPat (is_valid_bitfield b k low high)]
+= match b with
+  | BitField sz rest ->
+    if low + sz = high && high = bitsum'_size
+    then ()
+    else is_valid_bitfield_prop rest (bitsum'_key_type_elim_BitField cl bitsum'_size sz rest k) low high
+  | BitSum' key key_size e payload ->
+    let (| k', r' |) = bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload k in
+    is_valid_bitfield_prop (payload k') r' low high
+
+let rec get_valid_bitfield
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+  (k: bitsum'_type b)
+  (low: nat)
+  (high: nat { is_valid_bitfield b (bitsum'_key_of_t b k) low high })
+: Tot (bitfield cl (high - low))
+= match b with
+  | BitField sz rest ->
+    let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest k in
+    if low + sz = high && high = bitsum'_size
+    then hd
+    else get_valid_bitfield rest tl low high
+  | BitSum' key key_size e payload ->
+    let (| k', r' |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload k in
+    get_valid_bitfield (payload k') r' low high
+
+let rec get_valid_bitfield_correct
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+  (k: bitsum'_type b)
+  (low: nat)
+  (high: nat { is_valid_bitfield b (bitsum'_key_of_t b k) low high })
+: Lemma
+  (get_valid_bitfield b k low high == cl.get_bitfield (synth_bitsum'_recip b k) low high)
+=  match b with
+  | BitField sz rest ->
+    let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest k in
+    if low + sz = high && high = bitsum'_size
+    then ()
+    else get_valid_bitfield_correct rest tl low high
+  | BitSum' key key_size e payload ->
+    let (| k', r' |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload k in
+    get_valid_bitfield_correct (payload k') r' low high
+
+let rec set_valid_bitfield
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+  (k: bitsum'_type b)
+  (low: nat)
+  (high: nat { is_valid_bitfield b (bitsum'_key_of_t b k) low high })
+  (v: bitfield cl (high - low))
+: Tot (bitsum'_type b)
+= match b with
+  | BitField sz rest ->
+    let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest k in
+    bitsum'_type_intro_BitField cl bitsum'_size sz rest
+    begin if low + sz = high && high = bitsum'_size
+    then (v, tl)
+    else (hd, set_valid_bitfield rest tl low high v)
+    end
+  | BitSum' key key_size e payload ->
+    let (| k', r' |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload k in
+    bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k' , set_valid_bitfield (payload k') r' low high v |)
+
+let rec bitsum'_key_of_t_set_valid_bitfield
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+  (k: bitsum'_type b)
+  (low: nat)
+  (high: nat { is_valid_bitfield b (bitsum'_key_of_t b k) low high })
+  (v: bitfield cl (high - low))
+: Lemma
+  (bitsum'_key_of_t b (set_valid_bitfield b k low high v) == bitsum'_key_of_t b k)
+= match b with
+  | BitField sz rest ->
+    let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest k in
+    if low + sz = high && high = bitsum'_size
+    then ()
+    else bitsum'_key_of_t_set_valid_bitfield rest tl low high v
+  | BitSum' key key_size e payload ->
+    let (| k', r' |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload k in
+    bitsum'_key_of_t_set_valid_bitfield (payload k') r' low high v
+
+let rec get_valid_bitfield_set_valid_bitfield_same
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+  (k: bitsum'_type b)
+  (low: nat)
+  (high: nat { is_valid_bitfield b (bitsum'_key_of_t b k) low high })
+  (v: bitfield cl (high - low))
+: Lemma
+  (
+    let k' = set_valid_bitfield b k low high v in
+    is_valid_bitfield b (bitsum'_key_of_t b k') low high /\
+    get_valid_bitfield b k' low high == v
+  )
+= match b with
+  | BitField sz rest ->
+    let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest k in
+    if low + sz = high && high = bitsum'_size
+    then ()
+    else get_valid_bitfield_set_valid_bitfield_same rest tl low high v
+  | BitSum' key key_size e payload ->
+    let (| k', r' |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload k in
+    get_valid_bitfield_set_valid_bitfield_same (payload k') r' low high v
+
+let rec get_valid_bitfield_set_valid_bitfield_other
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+  (k: bitsum'_type b)
+  (low: nat)
+  (high: nat { is_valid_bitfield b (bitsum'_key_of_t b k) low high })
+  (v: bitfield cl (high - low))
+  (low': nat)
+  (high': nat { is_valid_bitfield b (bitsum'_key_of_t b k) low' high' /\ (high' <= low \/ high <= low') })
+: Lemma
+  (
+    let k' = set_valid_bitfield b k low high v in
+    is_valid_bitfield b (bitsum'_key_of_t b k') low' high' /\
+    get_valid_bitfield b k' low' high' == get_valid_bitfield b k low' high'
+  )
+= match b with
+  | BitField sz rest ->
+    let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest k in
+    if low' + sz = high' && high' = bitsum'_size
+    then ()
+    else if low + sz = high && high = bitsum'_size
+    then ()
+    else get_valid_bitfield_set_valid_bitfield_other rest tl low high v low' high'
+  | BitSum' key key_size e payload ->
+    let (| k', r' |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload k in
+    get_valid_bitfield_set_valid_bitfield_other (payload k') r' low high v low' high'
+
+let rec set_valid_bitfield_correct
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+  (k: bitsum'_type b)
+  (low: nat)
+  (high: nat { is_valid_bitfield b (bitsum'_key_of_t b k) low high })
+  (v: bitfield cl (high - low))
+: Lemma
+  (synth_bitsum'_recip b (set_valid_bitfield b k low high v) == cl.set_bitfield (synth_bitsum'_recip b k) low high v)
+= match b with
+  | BitField sz rest ->
+    let (hd, tl) = bitsum'_type_elim_BitField cl bitsum'_size sz rest k in
+    if low + sz = high && high = bitsum'_size
+    then
+      BF.uint_set_bitfield_set_bitfield_same cl (synth_bitsum'_recip rest tl) low high hd v
+    else begin
+      BF.uint_set_bitfield_set_bitfield_other cl (synth_bitsum'_recip rest tl) (bitsum'_size - sz) bitsum'_size hd low high v;
+      set_valid_bitfield_correct rest tl low high v
+    end
+  | BitSum' key key_size e payload ->
+    let (| k', r' |) = bitsum'_type_elim_BitSum' cl bitsum'_size key key_size e payload k in
+    BF.uint_set_bitfield_set_bitfield_other cl (synth_bitsum'_recip (payload k') r') (bitsum'_size - key_size) bitsum'_size (enum_repr_of_key e k') low high v;
+    set_valid_bitfield_correct (payload k') r' low high v

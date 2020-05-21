@@ -36,13 +36,39 @@ val get_bitfield_set_bitfield_other
   (requires (hi' <= lo \/ hi <= lo'))
   (ensures (get_bitfield (set_bitfield x lo hi v) lo' hi' == get_bitfield x lo' hi'))
 
-val set_bitfield_set_bitfield
+val set_bitfield_set_bitfield_same_gen
+  (#tot: pos) (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
+  (lo' : nat) (hi' : nat { lo' <= lo /\ hi <= hi' /\ hi' <= tot })
+  (v' : ubitfield tot (hi' - lo'))
+: Lemma
+  (ensures (set_bitfield (set_bitfield x lo hi v) lo' hi' v' == set_bitfield x lo' hi' v'))
+
+let set_bitfield_set_bitfield_same
+  (#tot: pos) (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
+  (v' : ubitfield tot (hi - lo))
+: Lemma
+  (ensures (set_bitfield (set_bitfield x lo hi v) lo hi v' == set_bitfield x lo hi v'))
+= set_bitfield_set_bitfield_same_gen x lo hi v lo hi v'
+
+val set_bitfield_set_bitfield_other
   (#tot: pos) (x: U.uint_t tot)
   (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
   (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot }) (v' : ubitfield tot (hi' - lo'))
 : Lemma
   (requires (hi' <= lo \/ hi <= lo'))
   (ensures (set_bitfield (set_bitfield x lo hi v) lo' hi' v' == set_bitfield (set_bitfield x lo' hi' v') lo hi v))
+
+val set_bitfield_full
+  (#tot: pos) (x: U.uint_t tot) (y: ubitfield tot tot)
+: Lemma
+  (set_bitfield x 0 tot y == y)
+
+val set_bitfield_empty
+  (#tot: pos) (x: U.uint_t tot) (i: nat { i <= tot }) (y: ubitfield tot 0)
+: Lemma
+  (set_bitfield x i i y == x)
 
 val get_bitfield_zero
   (tot: pos)
@@ -181,12 +207,50 @@ val get_bitfield_size
 : Lemma
   (x < pow2 tot2 /\ (get_bitfield #tot1 x lo hi <: nat) == (get_bitfield #tot2 x lo hi <: nat))
 
+val set_bitfield_size
+  (tot1 tot2: pos)
+  (x: nat { x < pow2 tot1 /\ tot1 <= tot2 })
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= tot1 })
+  (v: ubitfield tot1 (hi - lo))
+: Lemma
+  (x < pow2 tot2 /\  v < pow2 tot2 /\ (set_bitfield #tot1 x lo hi v <: nat) == (set_bitfield #tot2 x lo hi v <: nat))
+
+val set_bitfield_bound
+  (#tot: pos)
+  (x: U.uint_t tot)
+  (bound: nat { bound <= tot /\ x < pow2 bound })
+  (lo: nat)
+  (hi: nat { lo <= hi /\ hi <= bound })
+  (v: ubitfield tot (hi - lo))
+: Lemma
+  (set_bitfield x lo hi v < pow2 bound)
+
+val set_bitfield_set_bitfield_get_bitfield
+  (#tot: pos) (x: U.uint_t tot)
+  (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
+  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= hi - lo }) (v' : ubitfield tot (hi' - lo'))
+: Lemma
+  ( let v = set_bitfield (get_bitfield x lo hi) lo' hi' v' in
+    v < pow2 (hi - lo) /\
+    set_bitfield x lo hi v == set_bitfield x (lo + lo') (lo + hi') v' )
+
 val get_bitfield_eq
   (#tot: pos)
   (x: U.uint_t tot)
   (lo: nat) (hi: nat {lo <= hi /\ hi <= tot})
 : Lemma
   (get_bitfield x lo hi == (x / pow2 lo) % pow2 (hi - lo))
+
+val get_bitfield_eq_2
+  (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot })
+: Lemma
+  (get_bitfield x lo hi == (x `U.shift_left` (tot - hi)) `U.shift_right` (tot - hi + lo))
+
+val set_bitfield_eq
+  (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
+: Lemma
+  (set_bitfield x lo hi v == (x `U.logand` U.lognot ((U.lognot 0 `U.shift_right` (tot - (hi - lo))) `U.shift_left` lo)) `U.logor` (v `U.shift_left` lo))
 
 module U32 = FStar.UInt32
 
@@ -239,6 +303,35 @@ let uint_get_bitfield_set_bitfield_other
   [SMTPat (cl.get_bitfield (cl.set_bitfield x lo hi z) lo' hi')]
 = get_bitfield_set_bitfield_other (cl.v x) lo hi (cl.v z) lo' hi';
   assert (cl.uint_to_t (cl.v (cl.get_bitfield (cl.set_bitfield x lo hi z) lo' hi')) == cl.uint_to_t (cl.v (cl.get_bitfield x lo' hi')))
+
+let uint_set_bitfield_set_bitfield_same_gen
+  #tot #t (cl: uint_t tot t)
+  (x: t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (z: bitfield cl (hi - lo))
+  (lo': nat) (hi': nat { lo' <= lo /\ hi <= hi' /\ hi' <= tot }) (z' : bitfield cl (hi' - lo'))
+: Lemma
+  (cl.set_bitfield (cl.set_bitfield x lo hi z) lo' hi' z' == cl.set_bitfield x lo' hi' z')
+= set_bitfield_set_bitfield_same_gen (cl.v x) lo hi (cl.v z) lo' hi' (cl.v z');
+  assert (cl.uint_to_t (cl.v (cl.set_bitfield (cl.set_bitfield x lo hi z) lo' hi' z')) == cl.uint_to_t (cl.v (cl.set_bitfield x lo' hi' z')))
+
+let uint_set_bitfield_set_bitfield_same
+  #tot #t (cl: uint_t tot t)
+  (x: t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (z: bitfield cl (hi - lo))
+  (z' : bitfield cl (hi - lo))
+: Lemma
+  (cl.set_bitfield (cl.set_bitfield x lo hi z) lo hi z' == cl.set_bitfield x lo hi z')
+= set_bitfield_set_bitfield_same (cl.v x) lo hi (cl.v z) (cl.v z');
+  assert (cl.uint_to_t (cl.v (cl.set_bitfield (cl.set_bitfield x lo hi z) lo hi z')) == cl.uint_to_t (cl.v (cl.set_bitfield x lo hi z')))
+
+let uint_set_bitfield_set_bitfield_other
+  #tot #t (cl: uint_t tot t)
+  (x: t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (z: bitfield cl (hi - lo))
+  (lo' : nat) (hi' : nat { lo' <= hi' /\ hi' <= tot /\ (hi' <= lo \/ hi <= lo') })
+  (z' : bitfield cl (hi' - lo'))
+: Lemma
+  (cl.set_bitfield (cl.set_bitfield x lo hi z) lo' hi' z' == cl.set_bitfield (cl.set_bitfield x lo' hi' z') lo hi z)
+= set_bitfield_set_bitfield_other (cl.v x) lo hi (cl.v z) lo' hi' (cl.v z');
+  assert (cl.uint_to_t (cl.v (cl.set_bitfield (cl.set_bitfield x lo hi z) lo' hi' z')) == cl.uint_to_t (cl.v (cl.set_bitfield (cl.set_bitfield x lo' hi' z') lo hi z)))
+
 
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
