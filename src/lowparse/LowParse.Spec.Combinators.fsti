@@ -369,6 +369,7 @@ let and_then_no_lookahead_on
       else ()
     | _ -> ()
 
+inline_for_extraction
 let and_then_metadata
   (k1 k2: parser_kind_metadata_t)
 : Tot parser_kind_metadata_t
@@ -379,6 +380,7 @@ let and_then_metadata
   | _ -> None
 
 // unfold
+inline_for_extraction
 let and_then_kind
   (k1 k2: parser_kind)
 : Tot parser_kind
@@ -386,8 +388,8 @@ let and_then_kind
     parser_kind_low = k1.parser_kind_low + k2.parser_kind_low;
     parser_kind_high =
       begin
-	if Some? k1.parser_kind_high && Some? k2.parser_kind_high
-	then Some (Some?.v k1.parser_kind_high + Some?.v k2.parser_kind_high)
+	if is_some k1.parser_kind_high `bool_and` is_some k2.parser_kind_high
+	then Some (some_v k1.parser_kind_high + some_v k2.parser_kind_high)
 	else None
       end;
     parser_kind_metadata = and_then_metadata k1.parser_kind_metadata k2.parser_kind_metadata;
@@ -395,9 +397,9 @@ let and_then_kind
       begin
         if k2.parser_kind_subkind = Some ParserConsumesAll
 	then Some ParserConsumesAll
-	else if k1.parser_kind_subkind = Some ParserStrong && k2.parser_kind_subkind = Some ParserStrong
+	else if (k1.parser_kind_subkind = Some ParserStrong) `bool_and` (k2.parser_kind_subkind = Some ParserStrong)
 	then Some ParserStrong
-	else if k2.parser_kind_high = Some 0 && k2.parser_kind_subkind = Some ParserStrong
+	else if (k2.parser_kind_high = Some 0) `bool_and` (k2.parser_kind_subkind = Some ParserStrong)
 	then k1.parser_kind_subkind
 	else None
       end;
