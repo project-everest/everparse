@@ -375,7 +375,7 @@ let validate_lift_parser
 : Tot (validator #k #t (lift_parser p))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
-  valid_lift_parser p h input pos;
+  valid_lift_parser p h input (uint64_to_uint32 pos);
   v input pos
 
 inline_for_extraction

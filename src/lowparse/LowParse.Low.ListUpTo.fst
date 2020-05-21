@@ -3,6 +3,7 @@ include LowParse.Spec.ListUpTo
 include LowParse.Low.Base
 
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
@@ -18,7 +19,7 @@ let validate_list_up_to_inv
   (sl: slice rrel rel)
   (pos0: U32.t)
   (h0: HS.mem)
-  (bpos: B.pointer U32.t)
+  (bpos: B.pointer U64.t)
   (h: HS.mem)
   (stop: bool)
 : GTot Type0
@@ -28,10 +29,10 @@ let validate_list_up_to_inv
   live_slice h0 sl /\
   B.loc_disjoint (B.loc_buffer sl.base) (B.loc_buffer bpos) /\
   B.modifies (B.loc_buffer bpos) h0 h /\
-  U32.v pos0 <= U32.v pos /\
-  U32.v sl.len <= U32.v validator_max_length /\
-  begin if U32.v pos <= U32.v validator_max_length
+  U32.v pos0 <= U64.v pos /\
+  begin if is_success pos
   then
+    let pos = uint64_to_uint32 pos in
     U32.v pos <= U32.v sl.len /\
     begin if stop
     then
@@ -74,7 +75,7 @@ let validate_list_up_to_body
   (sl: slice rrel rel)
   (pos0: U32.t)
   (h0: HS.mem)
-  (bpos: B.pointer U32.t)
+  (bpos: B.pointer U64.t)
 : HST.Stack bool
   (requires (fun h ->
     validate_list_up_to_inv cond prf sl pos0 h0 bpos h false
@@ -86,17 +87,17 @@ let validate_list_up_to_body
 =
   let h = HST.get () in
   let pos = B.index bpos 0ul in
-  valid_facts (parse_list_up_to cond p prf) h sl pos;
-  parse_list_up_to_eq cond p prf (bytes_of_slice_from h sl pos);
-  valid_facts p h sl pos;
+  valid_facts (parse_list_up_to cond p prf) h sl (uint64_to_uint32 pos);
+  parse_list_up_to_eq cond p prf (bytes_of_slice_from h sl (uint64_to_uint32 pos));
+  valid_facts p h sl (uint64_to_uint32 pos);
   let pos1 = v sl pos in
   B.upd bpos 0ul pos1;
-  if validator_max_length `U32.lt` pos1
+  if is_error pos1
   then 
     true
   else begin
-    valid_facts (parse_list_up_to cond p prf) h sl pos1;
-    cond_impl sl pos
+    valid_facts (parse_list_up_to cond p prf) h sl (uint64_to_uint32 pos1);
+    cond_impl sl (uint64_to_uint32 pos)
   end
 
 #pop-options
@@ -128,8 +129,8 @@ let validate_list_up_to
   let bpos = B.alloca pos 1ul in
   let h2 = HST.get () in
   C.Loops.do_while
-    (validate_list_up_to_inv cond prf sl pos h2 bpos)
-    (fun _ -> validate_list_up_to_body cond prf v cond_impl sl pos h2 bpos)
+    (validate_list_up_to_inv cond prf sl (uint64_to_uint32 pos) h2 bpos)
+    (fun _ -> validate_list_up_to_body cond prf v cond_impl sl (uint64_to_uint32 pos) h2 bpos)
     ;
   let res = B.index bpos 0ul in
   HST.pop_frame ();

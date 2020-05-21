@@ -606,6 +606,8 @@ and check_expr (env:env) (e:expr)
         end
       | _ -> error "Unexpected arity" e.range
 
+#push-options "--z3rlimit_factor 2"
+
 let rec check_field_action (env:env) (f:field) (a:action)
   : ML (action & typ)
   = let check_atomic_action env (r:range) (a:atomic_action)
@@ -696,7 +698,9 @@ let rec check_field_action (env:env) (f:field) (a:action)
       remove_local env i;
       { a with v = Action_let i aa k }, t
 
-#push-options "--z3rlimit_factor 2"
+#pop-options
+
+#push-options "--z3rlimit_factor 4"
 let check_field (env:env) (extend_scope: bool) (f:field)
   : ML field
   = let sf = f.v in
