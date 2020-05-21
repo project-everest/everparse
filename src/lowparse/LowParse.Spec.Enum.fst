@@ -898,6 +898,7 @@ let maybe_enum_key_of_repr_not_in_cons
   (ensures (maybe_enum_key_of_repr_not_in e ((k, r) :: l) x))
 = ()
 
+[@Norm]
 inline_for_extraction
 let list_hd
   (#t: Type)
@@ -905,6 +906,7 @@ let list_hd
 = match l with
   | a :: _ -> a
 
+[@Norm]
 inline_for_extraction
 let list_tl
   (#t: Type)
@@ -984,6 +986,31 @@ let maybe_enum_destr_nil
     L.rev_mem (L.map snd l1) x;
     f (Unknown x)
   ) <: (y: t { eq y (f (maybe_enum_key_of_repr e x)) } ))
+
+[@Norm]
+let rec mk_maybe_enum_destr'
+  (t: Type)
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (l1: list (key * repr))
+  (l2: list (key * repr))
+  (u: squash (e == L.rev l1 `L.append` l2))
+: Tot (maybe_enum_destr_t' t e l1 l2 u)
+  (decreases l2)
+= match l2 with
+  | [] -> maybe_enum_destr_nil t e l1 l2 u
+  | _ ->
+    [@inline_let]
+    let _ = list_append_rev_cons l1 (list_hd l2) (list_tl l2) in
+    maybe_enum_destr_cons t e l1 l2 u (mk_maybe_enum_destr' t e (list_hd l2 :: l1) (list_tl l2) u)
+
+[@Norm]
+let mk_maybe_enum_destr
+  (t: Type)
+  (#key #repr: eqtype)
+  (e: enum key repr)
+: Tot (maybe_enum_destr_t t e)
+= maybe_enum_destr_t_intro t e (mk_maybe_enum_destr' t e [] e ())
 
 (* dependent representation-based destructor *)
 
@@ -1105,6 +1132,27 @@ let dep_maybe_enum_destr_nil
     let _ = v_eq_refl (maybe_enum_key_of_repr e x) (f (maybe_enum_key_of_repr e x)) in
     y
   ) <: (y: v (maybe_enum_key_of_repr e x) { v_eq (maybe_enum_key_of_repr e x) y (f (maybe_enum_key_of_repr e x)) } ))
+
+[@Norm]
+let rec mk_dep_maybe_enum_destr'
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (v: (maybe_enum_key e -> Tot Type))
+  (l1: list (key * repr))
+  (l2: list (key * repr))
+  (u1: squash (e == L.append (L.rev l1) l2))
+: Tot (dep_maybe_enum_destr_t' e v l1 l2 u1)
+  (decreases l2)
+= match l2 with
+  | [] -> dep_maybe_enum_destr_nil e v l1 l2 u1
+  | _ -> dep_maybe_enum_destr_cons e v l1 l2 u1 (mk_dep_maybe_enum_destr' e v (list_hd l2 :: l1) (list_tl l2) (list_append_rev_cons l1 (list_hd l2) (list_tl l2)))
+
+[@Norm]
+let mk_dep_maybe_enum_destr
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (v: (maybe_enum_key e -> Tot Type))
+= dep_maybe_enum_destr_t_intro e v (mk_dep_maybe_enum_destr' e v [] e ())
 
 (* Eliminators and destructors for verification purposes *)
 

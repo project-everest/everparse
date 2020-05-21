@@ -29,6 +29,14 @@ let validate_enum_key
     (parse_enum_key_synth e)
     ()
 
+[@Norm]
+let mk_validate_enum_key
+  (#key #repr: eqtype)
+  (#k: parser_kind) (#p: parser k repr) (v: validator p) (p32: leaf_reader p)
+  (e: enum key repr)
+: Tot (validator (parse_enum_key p e))
+= validate_enum_key v p32 e (mk_maybe_enum_destr bool e)
+
 inline_for_extraction
 let validate_maybe_enum_key
   (#key #repr: eqtype)
@@ -72,6 +80,14 @@ let read_maybe_enum_key
     (fun x -> destr _ (default_if _) (fun _ -> ()) (fun _ _ _ -> ()) (fun k -> k) x)
     j
     ()
+
+[@Norm]
+let mk_read_maybe_enum_key
+  (#key #repr: eqtype)
+  (#k: parser_kind) (#p: parser k repr) (j: leaf_reader p)
+  (e: enum key repr)
+: Tot (leaf_reader (parse_maybe_enum_key p e))
+= read_maybe_enum_key j e (mk_maybe_enum_destr (maybe_enum_key e) e)
 
 inline_for_extraction
 let read_enum_key_prop
@@ -141,6 +157,14 @@ let read_enum_key
     (fun r -> destr (read_enum_key_eq e) (read_enum_key_if e) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (read_enum_key_f e) r ())
     (read_filter p32 (parse_enum_key_cond e))
     ()
+
+[@Norm]
+let mk_read_enum_key
+  (#key #repr: eqtype)
+  (#k: parser_kind) (#p: parser k repr) (p32: leaf_reader p)
+  (e: enum key repr { Cons? e })
+: Tot (leaf_reader (parse_enum_key p e))
+= read_enum_key p32 e (mk_dep_maybe_enum_destr e (read_enum_key_t e))
 
 inline_for_extraction
 let write_enum_key
