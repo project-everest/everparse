@@ -18,7 +18,7 @@ import sys
 # -- Project information -----------------------------------------------------
 
 project = u'EverParse Manual'
-copyright = u'2020, INRIA, Microsoft Research'
+copyright = u'2020, Microsoft Research'
 author = u'Tahina Ramananandro, Nikhil Swamy, Jonathan Protzenko, Antoine Delignat-Lavaud'
 
 # The short X.Y version
