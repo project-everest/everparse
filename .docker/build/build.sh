@@ -74,7 +74,12 @@ function fetch_mitls() {
 }
 
 function rebuild_doc () {
-   if [[ "$OS" != "Windows_NT" ]] ; then
+   if
+      [[ "$OS" != "Windows_NT" ]] && {
+          [[ "$branchname" == "master" ]] ||
+          [[ "$branchname" == "everparse_3d" ]]
+      }
+   then
        git clone git@github.com:project-everest/project-everest.github.io project-everest-github-io &&
        rm -rf project-everest-github-io/everparse &&
        mkdir project-everest-github-io/everparse &&
@@ -106,7 +111,6 @@ function test_mitls_parsers () {
 }
 
 function nightly_test_quackyducky () {
-    rebuild_doc &&
     test_mitls_parsers
 }
 
@@ -131,8 +135,10 @@ function build_and_test_quackyducky() {
         }
         err=$?
         popd
-        raise $err
     }
+    if [[ "$err" -gt 0 ]] ; then return "$err" ; fi
+    # Rebuild the EverParse documentation and push it to project-everest.github.io
+    rebuild_doc
 }
 
 function exec_build() {
