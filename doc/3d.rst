@@ -1,0 +1,62 @@
+.. _3d:
+
+3d: Dependent Data Descriptions for Verified Validation
+=======================================================
+
+**NOTE:** 3d is available only from the EverParse/3d releases
+(including the corresponding Windows binary package) or from the
+``everparse_3d`` branch. It is not available from ``master``.
+
+tl;dr Summary
+-------------
+
+1. Write your data description format in the 3d language, as MyFile.3d
+
+2. Run ``everparse.bat /3D MyFile`` from the location of your .3d
+   file, without the .3d file name extension
+
+Then, EverParse/3d produces:
+
+* MyFile.fsti, MyFile.fst: the verified F* specification and Low*
+  implementation of parsers and validators for your data format
+
+* MyFile.c, MyFile.h: the verified C code generated from the verified
+  F* and Low* files
+
+* MyFileWrapper.c, MyFileWrapper.h: an entrypoint API to call into the
+  verified C code.
+
+* EverParse.h, EverParseEndianness.h: various EverParse helpers for
+  the implementation of verified validators
+
+3. Insert ``#include "MyFileWrapper.h"`` into any of your C compilation
+   units that need to call a validator.
+
+EverParse.bat command-line arguments
+------------------------------------
+
+Usage: ``EVERPARSE.BAT [/F] /3D filenamewithoutextension``
+
+* ``/F`` (optional) Runs clang-format on the generated .c and .h
+  files. A ``clang-format.exe`` must be reachable from the ``PATH``
+  environment variable.
+
+* ``/3D filenamewithoutextension`` (required) Generates verified
+  validators from the data description in
+  ``filenamewithoutextension.3d``. That file must be in the current
+  directory. Files are produced in the current directory.
+
+The 3d Dependent Data Description language
+------------------------------------------
+
+TODO
+
+The 3d frontend
+---------------
+
+You can also use the 3d frontend by hand (but then, you will need to
+manually call F* and KReMLin to verify and generate C code.) If you
+are using the Windows binary package, you can find 3d at
+``bin\3d.exe``; if you are using the source package or the source code
+from the ``everparse_3d`` branch, do ``make 3d`` and then you will
+find the 3d tool at ``src/3d/3d``.
