@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
+
 if [[ $1 == "" ]]; then
   echo "USAGE: $0 DST where DST is the directory in which files have to be copied"
   exit 1

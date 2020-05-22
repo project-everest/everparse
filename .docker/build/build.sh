@@ -80,7 +80,9 @@ function rebuild_doc () {
        mkdir project-everest-github-io/everparse &&
        doc/ci.sh project-everest-github-io/everparse &&
        pushd project-everest-github-io && {
+           git add -A everparse &&
            if ! git diff --exit-code HEAD > /dev/null; then
+               git add -u &&
                git commit -m "[CI] Refresh EverParse doc" &&
                git push
            else
