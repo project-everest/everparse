@@ -538,9 +538,9 @@ let validate_dep_pair_with_refinement_and_action
                                 (l1 `eloc_union` (l1' `eloc_union` l2))
                                 false)
   = if
-      p1_is_constant_size_without_actions &&
-      k1.LP.parser_kind_high = Some 0 &&
-      k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal
+      p1_is_constant_size_without_actions `LP.bool_and`
+      (k1.LP.parser_kind_high = Some 0) `LP.bool_and`
+      (k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal)
     then
       validate_dep_pair_with_refinement_and_action_total_zero_parser' name1 id1 v1 r1 f a v2
     else
@@ -603,9 +603,9 @@ let validate_dep_pair_with_refinement
                                 (l1 `eloc_union` l2)
                                 false)
   = if
-      p1_is_constant_size_without_actions &&
-      k1.LP.parser_kind_high = Some 0 &&
-      k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal
+      p1_is_constant_size_without_actions `LP.bool_and`
+      (k1.LP.parser_kind_high = Some 0) `LP.bool_and`
+      (k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal)
     then
       validate_dep_pair_with_refinement_total_zero_parser' name1 id1 v1 r1 f v2
     else
@@ -901,6 +901,8 @@ let validate_list'
   finalPositionOrError
 #pop-options
 
+#push-options "--z3rlimit 32"
+#restart-solver
 noextract
 inline_for_extraction
 let validate_nlist
@@ -923,6 +925,7 @@ let validate_nlist
     R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 pos) (LPL.slice_length listInput) (LPL.slice_length input);
     with_drop_if true inv input (LPL.uint64_to_uint32 pos) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (validate_list' n v listInput pos)
   end
+#pop-options
 
 noextract
 inline_for_extraction
