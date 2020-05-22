@@ -5,6 +5,9 @@ if [[ $1 == "" ]]; then
   exit 1
 fi
 
+destpath=$(realpath "$1")
+cd $(dirname $0)
+
 if which gsed &>/dev/null; then
   SED=gsed
 else
@@ -18,12 +21,9 @@ else
 fi
 
 make html
-cp -R _build/html/* $1
+cp -R _build/html/* "$destpath"
 
-mkdir -p $1/javascript_doc
-cp -R ../dist/wasm/doc/out/* $1/javascript_doc
-
-cd $1
+cd "$destpath"
 rm -rf static && mv _static static
 rm -rf images && mv _images images
 $FIND . -type f | grep -v '\.git' | xargs $SED -i 's/_static/static/g'

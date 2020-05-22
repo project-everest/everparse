@@ -13,6 +13,9 @@ ARG MAXTHREADS
 ARG BUILDTARGET
 ARG BRANCHNAME
 
+# Install sphinx (for the documentation)
+RUN pip install --upgrade pip && pip install --user sphinx-rtd-theme
+
 # ADD SSH KEY
 RUN mkdir -p ${MYHOME}/.ssh
 RUN chown everest ${MYHOME}/.ssh

@@ -73,12 +73,39 @@ function fetch_mitls() {
     export_home MITLS "$(pwd)/mitls-fstar"
 }
 
+function rebuild_doc () {
+   if [[ "$OS" != "Windows_NT" ]] ; then
+       git clone git@github.com:project-everest/project-everest.github.io project-everest-github-io &&
+       rm -rf project-everest-github-io/everparse &&
+       mkdir project-everest-github-io/everparse &&
+       doc/ci.sh project-everest-github-io/everparse &&
+       pushd project-everest-github-io && {
+           if ! git diff --exit-code HEAD > /dev/null; then
+               git commit -m "[CI] Refresh EverParse doc" &&
+               git push
+           else
+               echo No git diff for the doc, not generating a commit
+           fi
+           errcode=$?
+       } &&
+       popd &&
+       return $errcode
+   fi
+}
+
+function test_mitls_parsers () {
+    if [[ "$branchname" == "master" ]] ; then
+        fetch_and_make_kremlin &&
+        OTHERFLAGS='--admit_smt_queries true' make -j $threads &&
+        export_home QD "$(pwd)" &&
+        fetch_mitls &&
+        make -j $threads -C $MITLS_HOME/src/parsers verify
+    fi
+}
+
 function nightly_test_quackyducky () {
-    fetch_and_make_kremlin &&
-    OTHERFLAGS='--admit_smt_queries true' make -j $threads &&
-    export_home QD "$(pwd)" &&
-    fetch_mitls &&
-    make -j $threads -C $MITLS_HOME/src/parsers verify
+    rebuild_doc &&
+    test_mitls_parsers
 }
 
 function raise () {
