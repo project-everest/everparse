@@ -14,7 +14,7 @@ ARG BUILDTARGET
 ARG BRANCHNAME
 
 # Install sphinx (for the documentation)
-RUN pip install --upgrade pip && pip install --user sphinx-rtd-theme
+RUN pip3 install --upgrade pip && pip3 install --user sphinx-rtd-theme
 
 # ADD SSH KEY
 RUN mkdir -p ${MYHOME}/.ssh
