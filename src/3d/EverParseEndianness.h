@@ -34,6 +34,7 @@ typedef uint8_t BOOLEAN;
 #define TRUE 1
 
 typedef char * const EverParseString;
+typedef uint8_t * PUINT8;
 
 /* ... for Linux */
 #if defined(__linux__) || defined(__CYGWIN__) || defined (__USE_SYSTEM_ENDIAN_H__)
