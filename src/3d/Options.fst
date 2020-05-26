@@ -45,8 +45,23 @@ let parse_cmd_line () : ML (list string) =
   | Error s -> FStar.IO.print_string s; exit 1
   | _ -> exit 2
 
+let rec list_last #a (l: list a { Cons? l }) : Tot a =
+  match l with
+  | [x] -> x
+  | _ :: l' -> list_last l'
+
+let basename (fn: string) : Tot string =
+  let fn2 =
+    match String.split ['\\'] fn with
+    | [] -> fn
+    | l -> list_last l
+  in
+  match String.split ['/'] fn2 with
+  | [] -> fn2
+  | l2 -> list_last l2
+
 let split_3d_file_name fn =
-  match String.split ['.'] fn with
+  match String.split ['.'] (basename fn) with
   | [name;extension] ->
     // FStar.IO.print_string
     //   (Printf.sprintf "filename = %s; name=%s; extension=%s"
