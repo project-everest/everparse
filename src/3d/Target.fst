@@ -583,7 +583,7 @@ let print_decl_signature (d:decl) : Tot string =
      end
 
 
-let print_decls (ds:list decl) =
+let print_decls (modul: string) (ds:list decl) =
   let decls =
   Printf.sprintf
     "module %s\n\
@@ -592,12 +592,12 @@ let print_decls (ds:list decl) =
      module B = LowStar.Buffer\n\
      #set-options \"--using_facts_from '* FStar Actions Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
      %s"
-     (Options.get_module_name())
+     modul
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.Tot.map print_decl ds))
   in
   decls
 
-let print_decls_signature (ds:list decl) =
+let print_decls_signature (modul: string) (ds:list decl) =
   let decls =
     Printf.sprintf
     "module %s\n\
@@ -605,7 +605,7 @@ let print_decls_signature (ds:list decl) =
      open Actions\n\
      module B = LowStar.Buffer\n\
      %s"
-     (Options.get_module_name())
+     modul
      (String.concat "\n" (List.Tot.map print_decl_signature ds))
   in
   // let dummy =
@@ -613,7 +613,7 @@ let print_decls_signature (ds:list decl) =
   // in
   decls // ^ "\n" ^ dummy
 
-let print_error_map () : ML (string & string) =
+let print_error_map (modul: string) : ML (string & string) =
   let errs = Binding.all_nums() in
   let struct_names =
     List.map
@@ -642,7 +642,7 @@ let print_error_map () : ML (string & string) =
           default: return \"\";\n\t\
        }\n\
       }\n"
-      (Options.get_module_name())
+      modul
       fname
       (String.concat "\n\t\t" cases)
  in
@@ -696,8 +696,8 @@ let pascal_case name : ML string =
   then name
   else String.uppercase (String.sub name 0 1) ^ String.sub name 1 (String.length name - 1)
 
-let print_c_entry (ds:list decl) : ML (string & string) =
-  let struct_name_map, field_name_map = print_error_map() in
+let print_c_entry (modul: string) (ds:list decl) : ML (string & string) =
+  let struct_name_map, field_name_map = print_error_map modul in
 
   let print_one_validator (d:type_decl) : ML (string & string) =
     let print_params (ps:list param) : Tot string =
@@ -714,7 +714,7 @@ let print_c_entry (ds:list decl) : ML (string & string) =
     in
     let wrapper_name =
       Printf.sprintf "%s_check_%s"
-        (Options.get_module_name())
+        modul
         (A.print_ident d.decl_name.td_name)
       |> pascal_case
     in
@@ -725,7 +725,7 @@ let print_c_entry (ds:list decl) : ML (string & string) =
     in
     let validator_name =
        Printf.sprintf "%s_validate_%s"
-         (Options.get_module_name())
+         modul
          (print_ident d.decl_name.td_name)
        |> pascal_case
     in
@@ -748,9 +748,9 @@ let print_c_entry (ds:list decl) : ML (string & string) =
        signature
        validator_name
        (((List.Tot.map (fun (id, _) -> print_ident id) d.decl_name.td_params)@["s"]) |> String.concat ", ")
-       (Options.get_module_name())
-       (Options.get_module_name())
-       (Options.get_module_name())
+       modul
+       modul
+       modul
     in
     signature ^";",
     impl
@@ -771,12 +771,12 @@ let print_c_entry (ds:list decl) : ML (string & string) =
     Printf.sprintf
       "#include \"%s.h\"\n\
        %s\n"
-      (Options.get_module_name())
+      modul
       (signatures |> String.concat "\n\n")
   in
   let error_callback_proto =
     Printf.sprintf "void %sEverParseError(char *x, char *y, char *z);"
-      (Options.get_module_name())
+      modul
   in
   let impl =
     Printf.sprintf
@@ -786,7 +786,7 @@ let print_c_entry (ds:list decl) : ML (string & string) =
        %s\n\
        %s\n\
        %s\n"
-      (Options.get_module_name())
+      modul
       error_callback_proto
       struct_name_map
       field_name_map

@@ -36,6 +36,11 @@ all: $(ROOT)
 test:
 	+$(MAKE) -B $(ROOT)
 	+$(MAKE) all
+	+$(MAKE) batch-test
+
+batch-test:
+	mkdir -p out.batch
+	$(3D) --odir out.batch $(wildcard *.3d)
 
 out/%.fst: %.3d
 	mkdir -p out
@@ -63,6 +68,6 @@ out/%.checked:
 out/%.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))
 
-.PHONY: all codegen kremlin test
+.PHONY: all codegen kremlin test batch-test
 
 out/%.c: out/%.fst

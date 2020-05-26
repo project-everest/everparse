@@ -47,20 +47,19 @@ let split_3d_file_name fn =
     else None
   | _ -> None
 
-let get_module_name () =
+let get_module_name (file: string) =
   match !module_name with
   | None ->
     begin
-    match !input_file with
-    | file::_ ->
-      begin
-      match split_3d_file_name file with
-      | Some nm -> nm
-      | None -> "DEFAULT"
-      end
-    | _ -> "DEFAULT"
+    match split_3d_file_name file with
+    | Some nm -> nm
+    | None -> "DEFAULT"
     end
-  | Some s -> s
+  | Some s ->
+    match !input_file with
+    | _ :: _ :: _ ->
+      failwith "module_name not allowed if several files are provided"
+    | _ -> s
 
 let get_output_dir () =
   match !output_dir with
