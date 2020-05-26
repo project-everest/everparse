@@ -85,5 +85,7 @@ let go () : ML unit =
 let _ =
   try go()
   with
-    | Error msg -> FStar.IO.print_string msg
+    | Error msg ->
+      FStar.IO.print_string msg;
+      raise (Error msg)
 #pop-options
