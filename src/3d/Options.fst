@@ -10,7 +10,12 @@ let error_log : ref (option string) = alloc None
 let error_log_function : ref (option string) = alloc None
 let debug : ref bool = alloc false
 
-let options =
+(* We would like to parse --help as an option, but this would
+   require to recurse on the definition of the list of options. To
+   avoid that, we define this list as mutable, and then we add --help
+   after the fact. *)
+
+let options0 =
   let open FStar.Getopt in
   [(noshort, "module_name", OneArg ((fun mname -> module_name := Some mname), "module name"), "module name to use for the output file");
    (noshort, "odir", OneArg ((fun dir -> output_dir := Some dir), "output directory"), "output directory (default 'out'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory");
@@ -19,15 +24,20 @@ let options =
    (noshort, "debug", ZeroArgs (fun _ -> debug := true), "Emit a lot of debugging output");
    ]
 
+let options : ref _ = alloc options0
+
 let display_usage () : ML unit =
   FStar.IO.print_string "3d [options] input_file\n";
   List.iter (fun (_, m, _, desc) ->
     FStar.IO.print_string (Printf.sprintf "    --%s %s\n" m desc))
-    options
+    !options
+
+let _ =
+  options := ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message") :: !options
 
 let parse_cmd_line () : ML (list string) =
   let open FStar.Getopt in
-  let res = FStar.Getopt.parse_cmdline options (fun file -> input_file := file :: !input_file) in
+  let res = FStar.Getopt.parse_cmdline !options (fun file -> input_file := file :: !input_file) in
   match res with
   | Success -> !input_file
   | Help -> display_usage(); exit 0
