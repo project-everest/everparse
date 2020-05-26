@@ -50,14 +50,15 @@ casetype _MessageUnion(MessageType tag) {
 } MessageUnion, *P_MessageUnion;
 
 // A Message is a tag and a message payload
-typedef struct _Message {
-  MessageType tag;
-  MessageUnion(tag) message;
-} Message, *P_Message;
+// FIXME: no longer works because of double fetches
+// typedef struct _Message {
+//   MessageType tag;
+//   MessageUnion(tag) message;
+// } Message, *P_Message;
 
 // Messages is a variable length array of flatly allocated variable length messages
-entrypoint
-typedef struct _Messages (UINT32 size) {
-  UINT32 byte_length;
-  Message msgs[byte_length];
-} Messages, *P_MESSAGES;
+// entrypoint
+// typedef struct _Messages (UINT32 size) {
+//   UINT32 byte_length;
+//   Message msgs[byte_length];
+// } Messages, *P_MESSAGES;
