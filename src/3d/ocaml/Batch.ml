@@ -297,10 +297,68 @@ let add_copyright
       Printf.sprintf "%sWrapper.h" modul;
     ]
   end
+  
+(* Collect all produced .c and .h files *)
+
+let collect_file
+  accu
+  filename
+=
+  if Sys.file_exists filename
+  then filename :: accu
+  else accu
+
+let collect_files_from
+  out_dir
+  accu
+  (_, modul)
+=
+  let collect_file' accu file =
+    collect_file accu (filename_concat out_dir file)
+  in
+  List.fold_left
+    collect_file'
+    accu
+    [
+      Printf.sprintf "%s.c" modul;
+      Printf.sprintf "%s.h" modul;
+      Printf.sprintf "%sWrapper.c" modul;
+      Printf.sprintf "%sWrapper.h" modul;
+    ]
+
+let collect_files
+  out_dir
+  files_and_modules
+=
+  let accu = [] in
+  let accu = collect_file accu (filename_concat out_dir "EverParse.h") in
+  let accu = collect_file accu (filename_concat out_dir "EverParseEndianness.h") in
+  List.fold_left (collect_files_from out_dir) accu files_and_modules
+
+(* Call clang-format *)
+
+let call_clang_format
+  (clang_format_exe0: string)
+  (out_dir: string)
+  (files_and_modules: (string * string) list)
+= 
+  let clang_format_exe =
+    if clang_format_exe0 <> ""
+    then clang_format_exe0
+    else Printf.sprintf "clang-format%s" (if Sys.win32 then ".exe" else "")
+  in
+  let clang_format_args =
+    "-i" ::
+    "--style=file" ::
+    collect_files out_dir files_and_modules
+  in
+  run_cmd clang_format_exe clang_format_args
 
 (* Summary *)
 
 let postprocess
+  (clang_format: bool)
+  (clang_format_executable: string)
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
@@ -316,4 +374,7 @@ let postprocess
   List.iter (add_copyright out_dir) files_and_modules;
   let copyright_txt = filename_concat ddd_home "copyright.txt" in
   add_copyright_header out_dir copyright_txt "EverParse.h";
+  (* clang-format the files if asked for *)
+  if clang_format
+  then call_clang_format clang_format_executable out_dir files_and_modules;
   ()

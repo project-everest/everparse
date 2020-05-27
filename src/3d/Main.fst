@@ -81,7 +81,8 @@ let go () : ML unit =
   List.iter process_file files;
   let out_dir = Options.get_output_dir () in
   let files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) files in
-  if Options.get_batch () then Batch.postprocess out_dir files_and_modules
+  if Options.get_batch ()
+  then Batch.postprocess (Options.get_clang_format ()) (Options.get_clang_format_executable ()) out_dir files_and_modules
 
 #push-options "--warn_error -272" //top-level effects are okay
 #push-options "--admit_smt_queries true" //explicitly not handling all exceptions, so that we can meaningful backtraces

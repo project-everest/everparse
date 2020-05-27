@@ -10,6 +10,8 @@ let error_log : ref (option string) = alloc None
 let error_log_function : ref (option string) = alloc None
 let debug : ref bool = alloc false
 let batch : ref bool = alloc false
+let clang_format : ref bool = alloc false
+let clang_format_executable : ref string = alloc ""
 
 (* We would like to parse --help as an option, but this would
    require to recurse on the definition of the list of options. To
@@ -24,6 +26,9 @@ let options0 =
    (noshort, "error_log_function", OneArg ((fun l -> error_log_function := Some l), "error logging function"), "The function to use to log errors  (default 'fprintf')");
    (noshort, "debug", ZeroArgs (fun _ -> debug := true), "Emit a lot of debugging output");
    (noshort, "batch", ZeroArgs (fun _ -> batch := true), "Verify the generated F* code and extract C code");
+   (noshort, "clang_format", ZeroArgs (fun _ -> clang_format := true), "Call clang-format on extracted .c/.h files (--batch only)");
+   (noshort, "no_clang_format", ZeroArgs (fun _ -> clang_format := false), "Do not call clang-format on extracted .c/.h files");
+   (noshort, "clang_format_executable", OneArg ((fun cmd -> clang_format_executable := cmd), "clang-format full path"), "Provide path to clang-format if not reachable through PATH");
    (noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
    ]
 
@@ -112,3 +117,8 @@ let debug_print_string (s:string): ML unit =
 let get_batch () =
   !batch
 
+let get_clang_format () =
+  !clang_format
+
+let get_clang_format_executable () =
+  !clang_format_executable
