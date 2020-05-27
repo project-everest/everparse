@@ -135,8 +135,8 @@ function build_and_test_quackyducky() {
         }
         err=$?
         popd
-    }
-    if [[ "$err" -gt 0 ]] ; then return "$err" ; fi
+    } &&
+    if [[ "$err" -gt 0 ]] ; then return "$err" ; fi &&
     # Rebuild the EverParse documentation and push it to project-everest.github.io
     rebuild_doc
 }
