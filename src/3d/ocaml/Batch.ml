@@ -92,7 +92,6 @@ let krml out_dir =
 
 (* command lines *)
 let fstar_args0 = [
-  "--cache_checked_modules";
   "--already_cached"; "FStar,LowStar,C.Spec.Loops,LowParse";
   "--include"; lowparse_home;
   "--include"; kremlib;
@@ -114,14 +113,18 @@ let verify_and_extract_module
     "--odir" :: out_dir ::
     fstar_args0
   in
-  run_cmd fstar_exe (list_snoc fstar_args (fsti_file));
-  run_cmd fstar_exe (list_snoc fstar_args (fst_file));
+  let fstar_args_fst = list_snoc fstar_args (fst_file) in
+  let fstar_args_fsti = list_snoc fstar_args (fsti_file) in
+  run_cmd fstar_exe ("--print_in_place" :: fstar_args_fsti);
+  run_cmd fstar_exe ("--print_in_place" :: fstar_args_fst);
+  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fsti);
+  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fst);
   let fstar_extract_args =
     "--extract_module" :: modul ::
     "--codegen" :: "Kremlin" ::
-    fstar_args
+      fstar_args_fst
   in
-  run_cmd fstar_exe (list_snoc fstar_extract_args (fst_file))
+  run_cmd fstar_exe fstar_extract_args
 
 let ends_with
   sg suff
