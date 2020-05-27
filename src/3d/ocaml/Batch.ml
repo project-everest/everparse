@@ -274,10 +274,7 @@ let add_copyright_header
     let tmp = Filename.temp_file "everparseaddcopyrightheader" ".tmp" in
     rename target_file tmp;
     let cout = open_out target_file in
-    output_line cout "/*++";
     replace_variables target_file_base copyright_file cout;
-    output_line cout "--*/";
-    output_line cout "";
     cat tmp cout;
     close_out cout;
     Sys.remove tmp

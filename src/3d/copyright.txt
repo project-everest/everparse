@@ -1,3 +1,4 @@
+/*++
 
 Copyright (c) Microsoft Corporation
 
@@ -16,3 +17,4 @@ Authors:
 
 nswamy, protz, taramana 5-Feb-2020
 
+--*/
