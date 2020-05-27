@@ -44,7 +44,7 @@ batch-test:
 
 out/%.fst: %.3d
 	mkdir -p out
-	$(3D) --module_name $* $^
+	$(3D) --odir out --module_name $* $^
 	$(FSTAR) --print_in_place $@  #implementation
 	$(FSTAR) --print_in_place $@i #interface
 
