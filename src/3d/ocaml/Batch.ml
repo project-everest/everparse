@@ -4,9 +4,7 @@ let code_of_exit = function
   | Unix.WSTOPPED i
     -> i
 
-let filename_concat = Printf.sprintf "%s/%s" 
-
-let filename_quote s = s
+let filename_concat = Filename.concat
 
 let run_cmd_gen reconcat prog args =
   let cmd = String.concat " " (prog :: args) in
@@ -42,12 +40,10 @@ let fix_seps =
 let copy
   source target
 =
-  let cp =
-    if Sys.win32
-    then (filename_concat ddd_home "cp.bat")
-    else "cp"
-  in
-  run_cmd cp [ fix_seps source; fix_seps target ]
+  BatFile.with_file_in source (fun cin ->
+    BatFile.with_file_out target (fun cout ->
+      BatIO.copy cin cout
+  ))
 
 (* fstar.exe executable *)
 let fstar_exe = (filename_concat (filename_concat fstar_home "bin") "fstar.exe")
@@ -370,7 +366,7 @@ let postprocess
   (* produce the C files *)
   produce_c_files out_dir files_and_modules;
   (* copy ancillaries *)
-  copy (filename_concat ddd_home ".clang-format") out_dir;
+  copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
   copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h");
   (* add copyright *)
   List.iter (add_copyright out_dir) files_and_modules;

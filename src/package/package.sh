@@ -106,7 +106,6 @@ make_everparse() {
     cp -p -r $QD_HOME/src/lowparse everparse/src/ &&
     cp -p -r $QD_HOME/src/package/everparse.bat everparse/ &&
     cp -p -r $QD_HOME/src/3d/prelude everparse/src/3d/prelude &&
-    cp -p -r $QD_HOME/src/3d/cp.bat everparse/src/3d &&
     cp -p -r $QD_HOME/src/3d/.clang-format everparse/src/3d &&
     cp -p -r $QD_HOME/src/3d/copyright.txt everparse/src/3d &&
     cp -p -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ &&
