@@ -102,13 +102,15 @@ make_everparse() {
     # Copy EverParse
     cp $QD_HOME/quackyducky.native everparse/bin/qd.exe &&
     cp -p -r $QD_HOME/src/3d/3d everparse/bin/3d.exe &&
-    mkdir -p everparse/src &&
+    mkdir -p everparse/src/3d &&
     cp -p -r $QD_HOME/src/lowparse everparse/src/ &&
     cp -p -r $QD_HOME/src/package/everparse.bat everparse/ &&
-    cp -p -r $QD_HOME/src/3d/prelude everparse/src/3d &&
+    cp -p -r $QD_HOME/src/3d/prelude everparse/src/3d/prelude &&
+    cp -p -r $QD_HOME/src/3d/cp.bat everparse/src/3d &&
     cp -p -r $QD_HOME/src/3d/.clang-format everparse/src/3d &&
-    mkdir -p everparse/include/ &&
-    cp -p -r $QD_HOME/src/package/EverParseEndianness_$OS.h everparse/include/EverParseEndianness.h &&
+    cp -p -r $QD_HOME/src/3d/copyright.txt everparse/src/3d &&
+    cp -p -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ &&
+    cp -p -r $QD_HOME/src/3d/EverParseEndianness.h everparse/src/3d/ &&
     cp -p -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
     cp -p -r $QD_HOME/src/package/README.pkg everparse/README &&
     echo "This is EverParse $everparse_version" >> everparse/README &&
