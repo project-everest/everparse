@@ -40,7 +40,7 @@ test:
 
 batch-test:
 	mkdir -p out.batch
-	$(3D) --odir out.batch $(wildcard *.3d)
+	$(3D) --odir out.batch --batch $(wildcard *.3d)
 
 out/%.fst: %.3d
 	mkdir -p out

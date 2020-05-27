@@ -9,6 +9,7 @@ let input_file : ref (list string) = alloc []
 let error_log : ref (option string) = alloc None
 let error_log_function : ref (option string) = alloc None
 let debug : ref bool = alloc false
+let batch : ref bool = alloc false
 
 (* We would like to parse --help as an option, but this would
    require to recurse on the definition of the list of options. To
@@ -22,6 +23,7 @@ let options0 =
    (noshort, "error_log", OneArg ((fun l -> error_log := Some l), "error log"), "The stream to which to log errors (default 'stderr')");
    (noshort, "error_log_function", OneArg ((fun l -> error_log_function := Some l), "error logging function"), "The function to use to log errors  (default 'fprintf')");
    (noshort, "debug", ZeroArgs (fun _ -> debug := true), "Emit a lot of debugging output");
+   (noshort, "batch", ZeroArgs (fun _ -> batch := true), "Verify the generated F* code and extract C code");
    (noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
    ]
 
@@ -106,3 +108,7 @@ let debug_print_string (s:string): ML unit =
   if !debug
   then FStar.IO.print_string s
   else ()
+
+let get_batch () =
+  !batch
+
