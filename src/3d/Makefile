@@ -1,7 +1,6 @@
 ROOT=Main.fst
 FSTAR_HOME?=../../../FStar
 EVERPARSE_HOME?=../..
-export EVERPARSE_HOME
 KREMLIN_HOME?=$(EVERPARSE_HOME)/../kremlin
 
 INCLUDE_PATHS=
@@ -24,7 +23,7 @@ prelude:
 	cp ocaml/Main.native 3d
 
 .depend: $(wildcard *.fst *.fsti)
-	+bash version.sh
+	env EVERPARSE_HOME=$(EVERPARSE_HOME) bash version.sh
 	$(FSTAR) --odir ocaml --dep full $(ROOT) --extract '* -Prims -FStar' > .depend
 
 include .depend
