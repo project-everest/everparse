@@ -613,8 +613,8 @@ let print_decls_signature (modul: string) (ds:list decl) =
   // in
   decls // ^ "\n" ^ dummy
 
-let print_error_map (modul: string) : ML (string & string) =
-  let errs = Binding.all_nums() in
+let print_error_map (modul: string) (env: global_env) : ML (string & string) =
+  let errs = Binding.all_nums env in
   let struct_names =
     List.map
     (fun (kis: (A.field_num * option A.ident * string)) ->
@@ -696,8 +696,8 @@ let pascal_case name : ML string =
   then name
   else String.uppercase (String.sub name 0 1) ^ String.sub name 1 (String.length name - 1)
 
-let print_c_entry (modul: string) (ds:list decl) : ML (string & string) =
-  let struct_name_map, field_name_map = print_error_map modul in
+let print_c_entry (modul: string) (env: global_env) (ds:list decl) : ML (string & string) =
+  let struct_name_map, field_name_map = print_error_map modul env in
 
   let print_one_validator (d:type_decl) : ML (string & string) =
     let print_params (ps:list param) : Tot string =

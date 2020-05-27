@@ -57,7 +57,7 @@ let process_file (fn: string) : ML unit =
     FStar.IO.write_string fsti_file (Target.print_decls_signature modul t_decls);
     FStar.IO.close_write_file fsti_file;
 
-    let wrapper_header, wrapper_impl = Target.print_c_entry modul t_decls in
+    let wrapper_header, wrapper_impl = Target.print_c_entry modul env t_decls in
 
     let c_file =
       open_write_file
