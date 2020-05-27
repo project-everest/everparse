@@ -21,7 +21,7 @@ let clang_format_executable : ref string = alloc ""
 let options0 =
   let open FStar.Getopt in
   [(noshort, "module_name", OneArg ((fun mname -> module_name := Some mname), "module name"), "module name to use for the output file");
-   (noshort, "odir", OneArg ((fun dir -> output_dir := Some dir), "output directory"), "output directory (default 'out'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory");
+   (noshort, "odir", OneArg ((fun dir -> output_dir := Some dir), "output directory"), "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory");
    (noshort, "error_log", OneArg ((fun l -> error_log := Some l), "error log"), "The stream to which to log errors (default 'stderr')");
    (noshort, "error_log_function", OneArg ((fun l -> error_log_function := Some l), "error logging function"), "The function to use to log errors  (default 'fprintf')");
    (noshort, "debug", ZeroArgs (fun _ -> debug := true), "Emit a lot of debugging output");
@@ -96,7 +96,7 @@ let get_module_name (file: string) =
 
 let get_output_dir () =
   match !output_dir with
-  | None -> "out"
+  | None -> "."
   | Some s -> s
 
 let get_error_log () =
