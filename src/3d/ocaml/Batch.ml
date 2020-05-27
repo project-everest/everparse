@@ -92,7 +92,7 @@ let krml out_dir =
 
 (* command lines *)
 let fstar_args0 = [
-  "--already_cached"; "FStar,LowStar,C.Spec.Loops,LowParse";
+  "--already_cached"; "Prims,LowStar,FStar,LowParse,C,Prelude,Actions,ResultOps,Spec";
   "--include"; lowparse_home;
   "--include"; kremlib;
   "--include"; ddd_prelude_home;
@@ -111,6 +111,8 @@ let verify_and_extract_module
   let fsti_file = Printf.sprintf "%si" fst_file in
   let fstar_args =
     "--odir" :: out_dir ::
+    "--cache_dir" :: out_dir ::
+    "--include" :: out_dir ::
     fstar_args0
   in
   let fstar_args_fst = list_snoc fstar_args (fst_file) in
