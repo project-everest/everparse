@@ -23,7 +23,7 @@ prelude:
 	cp ocaml/Main.native 3d
 
 .depend: $(wildcard *.fst *.fsti)
-	env EVERPARSE_HOME=$(EVERPARSE_HOME) bash version.sh
+	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh
 	$(FSTAR) --odir ocaml --dep full $(ROOT) --extract '* -Prims -FStar' > .depend
 
 include .depend
