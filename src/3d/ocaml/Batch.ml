@@ -29,11 +29,14 @@ let lowparse_home = filename_concat (filename_concat qd_home "src") "lowparse"
 let ddd_home = filename_concat (filename_concat qd_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat qd_home "src") "3d") "prelude"
 
+let regexp_fslash = Str.regexp "/"
+let regexp_bslash = Str.regexp "\\"
+
 (* fix all directory separators of a file *)
 let fix_seps =
   if Sys.win32
-  then Str.global_replace (Str.regexp "/") "\\\\"
-  else Str.global_replace (Str.regexp "\\") "/"
+  then Str.global_replace regexp_fslash "\\\\"
+  else Str.global_replace regexp_bslash "/"
 
 (* copy a file *)
 let copy
@@ -195,6 +198,108 @@ let produce_c_files
   print_endline (Printf.sprintf "KReMLin found at: %s" krml);
   run_cmd krml [Printf.sprintf "@%s" argfile]
 
+(* Update EVERPARSEVERSION and FILENAME *)
+
+let regexp_EVERPARSEVERSION = Str.regexp "EVERPARSEVERSION"
+let regexp_FILENAME = Str.regexp "FILENAME"
+
+let output_line out s =
+  output_string out s;
+  output_string out "\n"
+
+let replace_variables
+  filename
+  file_in
+  channel_out
+=
+  let cin = open_in file_in in
+  let rec aux () =
+    match
+      begin try
+        Some (input_line cin)
+      with End_of_file -> None
+      end
+    with
+      | None -> ()
+      | Some ln ->
+         let ln = Str.global_replace regexp_EVERPARSEVERSION Version.everparse_version ln in
+         let ln = Str.global_replace regexp_FILENAME filename ln in
+         output_line channel_out ln;
+         aux ()
+  in
+  aux ();
+  close_in cin
+
+(* Copyright headers *)
+
+let cat
+  (source_file: string)
+  (cout: out_channel)
+= let cin = open_in source_file in
+  let rec aux () =
+    match
+      begin try
+        Some (input_line cin)
+      with
+        End_of_file -> None
+      end
+    with
+    | None -> ()
+    | Some ln -> output_line cout ln; aux ()
+  in
+  aux ();
+  close_in cin
+
+(* for OCaml < 4.06, when renaming a file, we need to remove the new file if it exists *)
+
+let ocaml_version_lt_4_06 =
+  match String.split_on_char '.' Sys.ocaml_version with
+  | major :: minor :: _ ->
+    int_of_string major < 4 || (major = "4" && int_of_string minor < 6)
+  | _ -> failwith "Sys.ocaml_version: invalid string"
+
+let rename ol ne =
+  if ocaml_version_lt_4_06 && Sys.file_exists ne then Sys.remove ne;
+  Sys.rename ol ne
+
+let add_copyright_header
+  out_dir
+  copyright_file
+  target_file_base
+=
+  let target_file = filename_concat out_dir target_file_base in
+  if Sys.file_exists target_file
+  then begin
+    print_endline (Printf.sprintf "Adding copyright to %s from %s" target_file copyright_file);
+    let tmp = Filename.temp_file "everparseaddcopyrightheader" ".tmp" in
+    rename target_file tmp;
+    let cout = open_out target_file in
+    output_line cout "/*++";
+    replace_variables target_file_base copyright_file cout;
+    output_line cout "--*/";
+    output_line cout "";
+    cat tmp cout;
+    close_out cout;
+    Sys.remove tmp
+  end
+
+let add_copyright
+  out_dir
+  (ddd_file, modul)
+=
+  let copyright_file = Printf.sprintf "%s.copyright.txt" ddd_file in
+  if Sys.file_exists copyright_file
+  then begin
+    List.iter (add_copyright_header out_dir copyright_file) [
+      Printf.sprintf "%s.c" modul;
+      Printf.sprintf "%s.h" modul;
+      Printf.sprintf "%sWrapper.c" modul;
+      Printf.sprintf "%sWrapper.h" modul;
+    ]
+  end
+
+(* Summary *)
+
 let postprocess
   (out_dir: string)
   (files_and_modules: (string * string) list)
@@ -207,4 +312,8 @@ let postprocess
   (* copy ancillaries *)
   copy (filename_concat ddd_home ".clang-format") out_dir;
   copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h");
+  (* add copyright *)
+  List.iter (add_copyright out_dir) files_and_modules;
+  let copyright_txt = filename_concat ddd_home "copyright.txt" in
+  add_copyright_header out_dir copyright_txt "EverParse.h";
   ()
