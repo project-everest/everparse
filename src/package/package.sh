@@ -117,12 +117,16 @@ make_everparse() {
     echo "Running with KReMLin $kremlin_commit_id ($kremlin_commit_date_hr UTC+0000)" >> everparse/README &&
     echo -n "Running with $z3_version_string" >> everparse/README &&
 
+    # Download and copy clang-format
+    wget --output-document=everparse/bin/clang-format.exe https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe &&
+    
     # licenses
     mkdir -p everparse/licenses &&
     cp -p $FSTAR_HOME/LICENSE everparse/licenses/FStar &&
     cp -p $KREMLIN_HOME/LICENSE everparse/licenses/KReMLin &&
     cp -p $QD_HOME/LICENSE everparse/licenses/EverParse &&
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt &&
+    wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/master/clang/LICENSE.TXT &&
     
     # Reset permissions and build the package
     chmod a+x everparse/bin/*.exe everparse/bin/*.dll
