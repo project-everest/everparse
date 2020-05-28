@@ -174,6 +174,7 @@ make_everparse() {
 
 zip_everparse() {
     set -x
+    with_version=$1
     if $is_windows ; then
         ext=.zip
     else
@@ -185,7 +186,7 @@ zip_everparse() {
     else
         time tar cvzf everparse$ext everparse/*
     fi &&
-    mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext &&
+    if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi &&
     
     # END
     true
@@ -200,13 +201,20 @@ OPTION:
   -make     Build and place all components in the everparse folder
 
   -zip      Like -make, but also zip the folder and name with the version
+
+  -zip-noversion      Like -zip, but without the version
 HELP
 }
 
 case "$1" in
     -zip)
         make_everparse &&
-            zip_everparse
+            zip_everparse true
+        ;;
+
+    -zip-noversion)
+        make_everparse &&
+            zip_everparse false
         ;;
 
     -make)
