@@ -173,9 +173,19 @@ make_everparse() {
 }
 
 zip_everparse() {
-    rm -f everparse.zip &&
-    zip -r everparse.zip everparse &&
-    mv everparse.zip everparse_"$everparse_version"_"$OS"_"$platform".zip &&
+    set -x
+    if $is_windows ; then
+        ext=.zip
+    else
+        ext=.tar.gz
+    fi
+    rm -f everparse$ext &&
+    if $is_windows ; then
+        zip -r everparse$ext everparse
+    else
+        time tar cvzf everparse$ext everparse/*
+    fi &&
+    mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext &&
     
     # END
     true
