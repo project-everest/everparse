@@ -83,7 +83,10 @@ let krml out_dir =
       target
     end
   else
-    aux true [(dir, "krml")]
+    aux true [
+      (dir_bin, "krml"); (* binary package *)
+      (dir, "krml");
+    ]
 
 (* command lines *)
 let fstar_args0 = [

@@ -2,9 +2,13 @@
 
 set -e
 
-if ! [[ "$OS" = "Windows_NT" ]] ; then
-    echo This script is only for Windows binary packages
-    exit 1
+if [[ -z "$OS" ]] ; then
+    OS=$(uname)
+fi
+
+is_windows=false
+if [[ "$OS" = "Windows_NT" ]] ; then
+   is_windows=true
 fi
 
 if [[ -z "$QD_HOME" ]] ; then
@@ -16,16 +20,25 @@ if [[ -z "$QD_HOME" ]] ; then
     export QD_HOME=$PWD
 fi
 
-Z3_DIR=$(dirname $(which z3.exe))
+if $is_windows ; then
+    exe=.exe
+else
+    exe=
+fi
+
+z3=z3$exe
+Z3_DIR=$(dirname $(which $z3))
 if [[ -z "$Z3_DIR" ]] ; then
     echo z3 is missing
     exit 1
 fi
 
-LIBGMP10_DLL=$(which libgmp-10.dll)
-if [[ -z "$LIBGMP10_DLL" ]] ; then
-    echo libgmp-10.dll is missing
-    exit 1
+if $is_windows ; then
+    LIBGMP10_DLL=$(which libgmp-10.dll)
+    if [[ -z "$LIBGMP10_DLL" ]] ; then
+        echo libgmp-10.dll is missing
+        exit 1
+    fi
 fi
 
 if [[ -d everparse ]] ; then
@@ -53,19 +66,27 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
 fi
 platform=$(uname --machine)
 
+fixpath () {
+    if $is_windows ; then
+        cygpath -m "$1"
+    else
+        echo "$1"
+    fi
+}
+
 make_everparse() {
     # Verify if F* and KReMLin are here
     if [[ -z "$FSTAR_HOME" ]] ; then
         git clone https://github.com/FStarLang/FStar &&
-        export FSTAR_HOME=$(cygpath -m $PWD/FStar)
+        export FSTAR_HOME=$(fixpath $PWD/FStar)
     else
-        export FSTAR_HOME=$(cygpath -m "$FSTAR_HOME")
+        export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
     fi &&
     if [[ -z "$KREMLIN_HOME" ]] ; then
         git clone https://github.com/FStarLang/kremlin &&
-        export KREMLIN_HOME=$(cygpath -m $PWD/kremlin)
+        export KREMLIN_HOME=$(fixpath $PWD/kremlin)
     else
-        export KREMLIN_HOME=$(cygpath -m "$KREMLIN_HOME")
+        export KREMLIN_HOME=$(fixpath "$KREMLIN_HOME")
     fi &&
 
     fstar_commit_id=$(print_component_commit_id "$FSTAR_HOME") &&
@@ -74,7 +95,7 @@ make_everparse() {
     kremlin_commit_id=$(print_component_commit_id "$KREMLIN_HOME") &&
     kremlin_commit_date_iso=$(print_component_commit_date_iso "$KREMLIN_HOME") &&
     kremlin_commit_date_hr=$(print_date_utc_of_iso_hr "$kremlin_commit_date_iso") &&
-    z3_version_string=$($Z3_DIR/z3.exe --version) &&
+    z3_version_string=$($Z3_DIR/$z3 --version) &&
 
     # Rebuild everything
     export OTHERFLAGS='--admit_smt_queries true' &&
@@ -84,31 +105,40 @@ make_everparse() {
 
     # Copy dependencies and Z3
     mkdir -p everparse/bin &&
-    cp $LIBGMP10_DLL everparse/bin/ &&
-    cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/ &&
+    if $is_windows
+    then
+        cp -p $LIBGMP10_DLL everparse/bin/ &&
+        cp -p $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/
+    else
+        cp -p $Z3_DIR/z3 everparse/bin/
+    fi &&
 
     # Copy F*
-    cp $FSTAR_HOME/bin/fstar.exe everparse/bin/ &&
+    cp -p $FSTAR_HOME/bin/fstar.exe everparse/bin/ &&
     mkdir -p everparse/ulib/ &&
     cp -p $FSTAR_HOME/ulib/*.fst everparse/ulib &&
     cp -p $FSTAR_HOME/ulib/*.fsti everparse/ulib &&
     cp -p -r $FSTAR_HOME/ulib/.cache everparse/ulib/ &&
 
     # Copy KReMLin
-    cp -p $KREMLIN_HOME/Kremlin.native everparse/bin/krml.exe &&
+    cp -p $KREMLIN_HOME/Kremlin.native everparse/bin/krml$exe &&
     cp -p -r $KREMLIN_HOME/kremlib everparse/ &&
     cp -p -r $KREMLIN_HOME/misc everparse/ &&
 
     # Copy EverParse
-    cp $QD_HOME/quackyducky.native everparse/bin/qd.exe &&
-    cp -p -r $QD_HOME/src/3d/3d everparse/bin/3d.exe &&
+    cp -p $QD_HOME/quackyducky.native everparse/bin/qd$exe &&
+    cp -p -r $QD_HOME/src/3d/3d everparse/bin/3d$exe &&
     mkdir -p everparse/src/3d &&
     cp -p -r $QD_HOME/src/lowparse everparse/src/ &&
-    cp -p -r $QD_HOME/src/package/everparse.bat everparse/ &&
+    if $is_windows ; then
+        cp -p -r $QD_HOME/src/package/everparse.bat everparse/
+    else
+        cp -p -r $QD_HOME/src/package/everparse.sh everparse/
+    fi &&
     cp -p -r $QD_HOME/src/3d/prelude everparse/src/3d/prelude &&
     cp -p -r $QD_HOME/src/3d/.clang-format everparse/src/3d &&
     cp -p -r $QD_HOME/src/3d/copyright.txt everparse/src/3d &&
-    cp -p -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ &&
+    if $is_windows ; then cp -p -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi &&
     cp -p -r $QD_HOME/src/3d/EverParseEndianness.h everparse/src/3d/ &&
     cp -p -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
     cp -p -r $QD_HOME/src/package/README.pkg everparse/README &&
@@ -118,7 +148,9 @@ make_everparse() {
     echo -n "Running with $z3_version_string" >> everparse/README &&
 
     # Download and copy clang-format
-    wget --output-document=everparse/bin/clang-format.exe https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe &&
+    if $is_windows ; then
+        wget --output-document=everparse/bin/clang-format.exe https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe
+    fi &&
     
     # licenses
     mkdir -p everparse/licenses &&
@@ -126,10 +158,14 @@ make_everparse() {
     cp -p $KREMLIN_HOME/LICENSE everparse/licenses/KReMLin &&
     cp -p $QD_HOME/LICENSE everparse/licenses/EverParse &&
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt &&
-    wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/master/clang/LICENSE.TXT &&
+    if $is_windows ; then
+        wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/master/clang/LICENSE.TXT
+    fi &&
     
     # Reset permissions and build the package
-    chmod a+x everparse/bin/*.exe everparse/bin/*.dll
+    if $is_windows ; then
+        chmod a+x everparse/bin/*.exe everparse/bin/*.dll
+    fi
 }
 
 zip_everparse() {
