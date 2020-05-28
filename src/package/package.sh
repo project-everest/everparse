@@ -141,7 +141,11 @@ make_everparse() {
     if $is_windows ; then cp -p -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi &&
     cp -p -r $QD_HOME/src/3d/EverParseEndianness.h everparse/src/3d/ &&
     cp -p -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
-    cp -p -r $QD_HOME/src/package/README.pkg everparse/README &&
+    if $is_windows ; then
+        cp -p -r $QD_HOME/src/package/README.Windows.pkg everparse/README
+    else
+        cp -p -r $QD_HOME/src/package/README.pkg everparse/README
+    fi &&
     echo "This is EverParse $everparse_version" >> everparse/README &&
     echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr UTC+0000)" >> everparse/README &&
     echo "Running with KReMLin $kremlin_commit_id ($kremlin_commit_date_hr UTC+0000)" >> everparse/README &&
