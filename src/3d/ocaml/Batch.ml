@@ -10,7 +10,6 @@ let run_cmd_gen reconcat prog args =
   let cmd = String.concat " " (prog :: args) in
   print_endline (Printf.sprintf "Running: %s" cmd);
   let args' = Array.of_list (if reconcat then prog :: args else args) in (* FIXME: WHY WHY WHY do I need to recons the prog in front of the args? *)
-  print_endline (Printf.sprintf "Length of args' is: %d" (Array.length args'));
   let pid = Unix.create_process prog args' Unix.stdin Unix.stdout Unix.stderr in
   let (_, res) = Unix.waitpid [] pid in
   let res = code_of_exit res in
