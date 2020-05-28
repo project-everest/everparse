@@ -26,9 +26,10 @@ let options0 =
    (noshort, "error_log_function", OneArg ((fun l -> error_log_function := Some l), "error logging function"), "The function to use to log errors  (default 'fprintf')");
    (noshort, "debug", ZeroArgs (fun _ -> debug := true), "Emit a lot of debugging output");
    (noshort, "batch", ZeroArgs (fun _ -> batch := true), "Verify the generated F* code and extract C code");
-   (noshort, "clang_format", ZeroArgs (fun _ -> clang_format := true), "Call clang-format on extracted .c/.h files (--batch only)");
+   (noshort, "no_batch", ZeroArgs (fun _ -> batch := false), "Do not verify the generated F* code or extract C code");
+   (noshort, "clang_format", ZeroArgs (fun _ -> batch := true; clang_format := true), "Call clang-format on extracted .c/.h files (--batch only)");
    (noshort, "no_clang_format", ZeroArgs (fun _ -> clang_format := false), "Do not call clang-format on extracted .c/.h files");
-   (noshort, "clang_format_executable", OneArg ((fun cmd -> clang_format_executable := cmd), "clang-format full path"), "Provide path to clang-format if not reachable through PATH");
+   (noshort, "clang_format_executable", OneArg ((fun cmd -> batch := true; clang_format := true; clang_format_executable := cmd), "clang-format full path"), "Provide path to clang-format if not reachable through PATH");
    (noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
    ]
 
@@ -39,6 +40,13 @@ let display_usage () : ML unit =
   List.iter (fun (_, m, _, desc) ->
     FStar.IO.print_string (Printf.sprintf "    --%s %s\n" m desc))
     !options
+      ;
+  if !batch then begin
+    FStar.IO.print_string "--batch is currently toggled.\n";
+    if !clang_format then begin
+      FStar.IO.print_string "--clang_format is currently toggled.\n"
+    end
+  end
 
 let _ =
   options := ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message") :: !options
