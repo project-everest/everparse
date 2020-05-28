@@ -49,7 +49,10 @@ Usage: ``EVERPARSE.BAT [/F] /3D filenamewithoutextension``
 The 3d Dependent Data Description language
 ------------------------------------------
 
-TODO
+.. toctree::
+   :maxdepth: 1
+
+   3d-lang
 
 The 3d frontend
 ---------------
