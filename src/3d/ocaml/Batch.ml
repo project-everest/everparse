@@ -253,17 +253,10 @@ let cat
   aux ();
   close_in cin
 
-(* for OCaml < 4.06, when renaming a file, we need to remove the new file if it exists *)
-
-let ocaml_version_lt_4_06 =
-  match String.split_on_char '.' Sys.ocaml_version with
-  | major :: minor :: _ ->
-    int_of_string major < 4 || (major = "4" && int_of_string minor < 6)
-  | _ -> failwith "Sys.ocaml_version: invalid string"
-
 let rename ol ne =
-  if ocaml_version_lt_4_06 && Sys.file_exists ne then Sys.remove ne;
-  Sys.rename ol ne
+  (* Sys.rename does not work across devices *)
+  copy ol ne;
+  Sys.remove ol
 
 let add_copyright_header
   out_dir
