@@ -159,11 +159,12 @@ files produced for all the ``.3d`` files that you provided.
 
 .. note::
 
-   If, along with some ``MyFile.3d``, you provide a file
-   ``MyFile.3d.copyright.txt`` that contains syntactically correct C
-   comments (with ``//`` or ``/* ... */``), then EverParse will
-   prepend ``MyFile.c``, ``MyFileWrapper.c`` and their corresponding
-   ``.h`` with these comments.
+   If, along with some ``MyFile.3d``, in the same directory, you
+   provide a file ``MyFile.3d.copyright.txt`` that contains
+   syntactically correct C comments (with ``//`` or ``/* ... */``),
+   then EverParse will prepend ``MyFile.c``, ``MyFileWrapper.c`` and
+   their corresponding ``.h`` with these comments. You do not need to
+   mention this file on the command line.
 
    These comments can contain the following special symbols:
 
