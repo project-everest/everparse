@@ -132,7 +132,7 @@ Options are treated from left to right:
 
   Provide the path to clang-format if not reachable through ``PATH``
   (or to override the one provided in the Windows binary package.)
-  This option automatically enables ``--clang_format`` and
+  This option automatically toggles ``--clang_format`` and
   ``--batch``.
 
 * ``--version``
@@ -156,6 +156,22 @@ all bear the ``.3d`` file name extension, and their names must start
 with a capital letter. Then, ``EverParse.h`` and
 ``EverParseEndianness.h`` will be shared across ``.c`` and ``.h``
 files produced for all the ``.3d`` files that you provided.
+
+.. note::
+
+   If, along with some ``MyFile.3d``, you provide a file
+   ``MyFile.3d.copyright.txt`` that contains syntactically correct C
+   comments (with ``//`` or ``/* ... */``), then EverParse will
+   prepend ``MyFile.c``, ``MyFileWrapper.c`` and their corresponding
+   ``.h`` with these comments.
+
+   These comments can contain the following special symbols:
+
+   * ``EVERPARSEVERSION``, which EverParse will automatically replace
+     with its version number;
+
+   * ``FILENAME``, which EverParse will automatically replace with the
+     name of the ``.c`` / ``.h`` file being generated.
 
 Optional: From the sources
 --------------------------
