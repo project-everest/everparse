@@ -3,7 +3,12 @@ typedef struct _point {
   UINT16 y;
 } point;
 
-entrypoint typedef struct _coloredPoint {
+entrypoint typedef struct _coloredPoint1 {
   UINT8 color;
   point pt;
-} coloredPoint;
+} coloredPoint1;
+
+entrypoint typedef struct _coloredPoint2 {
+  point pt;
+  UINT8 color;
+} coloredPoint2;

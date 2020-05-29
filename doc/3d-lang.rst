@@ -62,15 +62,18 @@ There can be several definitions marked ``entrypoint`` in a given
 
 .. warning::
 
-  All fields are padded to 1, i.e. 3d does not enforce any alignment
-  constraints. So, for instance, the following data format
-  description:
+  3d does not enforce any alignment constraints, and does not
+  introduce any implicit alignment padding. So, for instance, in the
+  following data format description:
 
   .. literalinclude:: ColoredPoint.3d
       :language: c
 
-  will not introduce any padding between the ``color`` field and the
-  ``pt`` field.
+  * in ``coloredPoint1``, 3d will not introduce any padding between
+    the ``color`` field and the ``pt`` field;
+
+  * in ``coloredPoint2``, 3d will not introduce any padding after the
+    ``color`` field.
 
 Constraints
 -----------
