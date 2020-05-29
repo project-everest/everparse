@@ -1,6 +1,146 @@
-.. _3d-lang:
+        .. _3d-lang:
 
 The 3d Dependent Data Description language
 ==========================================
 
-TODO
+3d supports (nested) structs, constraints, enums, parameterized data
+types, tagged or otherwise value-dependent unions, fixed-size arrays,
+and variable-size arrays. In addition to data validation, 3d also
+supports *local actions* to pass values read from the data structure,
+or pointers to them, to the caller code.
+
+Structs
+-------
+
+We would like to extract a validator for a simple point type, with X
+and Y coordinates. So we create a file, ``HelloWorld.3d``, with the
+following 3d data format description:
+
+.. literalinclude:: HelloWorld.3d
+    :language: c
+
+This data format is very similar to a C type description, where
+``UINT16`` denotes the type of unsigned 16-bit integers, represented
+as little-endian; with the addition of the ``entrypoint`` keyword,
+which tells 3d to expose a validator to the final user.
+
+Once we run ``3d`` with this file, we obtain several files:
+
+* ``HelloWorld.c`` and ``HelloWorld.h``, which contain the actual verified
+  validators;
+
+* ``HelloWorldWrapper.c`` and ``HelloWorldWrapper.h``, which contain
+  entrypoint function definitions for data validators that the user
+  should ultimately use in their client code. More precisely, here is
+  the contents of ``HelloWorldWrapper.h``:
+
+.. literalinclude:: HelloWorldWrapper.h
+    :language: c
+    :start-after: SNIPPET_START: Point
+    :end-before: SNIPPET_END: Point
+
+The ``HelloWorldCheckPoint`` function is the actual validator for the
+``point`` type. It takes an array of bytes, ``base``, and its length
+``len``, and it returns 1 if ``base`` starts with valid ``point`` data
+that fits in ``len`` bytes or less, and 0 otherwise.
+
+More generally, for a given ``Module.3d``, a type definition ``typ``
+marked with ``entrypoint`` tells 3d to expose its validator in
+``ModuleWrapper.h`` which will bear the name ``ModuleCheckTyp``.
+
+Structs can be nested, such as in the following instance:
+
+.. literalinclude:: Triangle.3d
+    :language: c
+
+Then, since in this file the definition of ``point`` is not prefixed
+with ``entrypoint``, only ``triangle`` will have its validator exposed
+in ``TriangleWrapper.h``.
+
+There can be several definitions marked ``entrypoint`` in a given
+``.3d`` file.
+
+.. warning::
+
+  All fields are padded to 1, i.e. 3d does not enforce any alignment
+  constraints. So, for instance, the following data format
+  description:
+
+  .. literalinclude:: ColoredPoint.3d
+      :language: c
+
+  will not introduce any padding between the ``color`` field and the
+  ``pt`` field.
+
+Constraints
+-----------
+
+Validators for structs alone are only layout-related. Beyond that, 3d
+provides a way to actually check for constraints on their field
+values:
+
+.. literalinclude:: Smoker.3d
+    :language: c
+
+In this example, the validator for ``smoker`` will check that the
+value of the ``age`` field is at least 21.
+
+.. note::
+
+  (FIXME) Integer constants are currently considered to be 32-bit
+  integers; 3d does not support any kind of type casting at this time.
+
+The constraint language includes integer arithmetic (``+``, ``-``,
+``*``, ``/``, ``==``, ``!=``, ``<=``, ``<``, ``>=``, ``>``) and
+Boolean propositional logic (``&&``, ``||``, ``!``)
+
+Constraints on a field can also depend on the values of the previous
+fields of the struct. For instance, here is a type definition for a
+pair ordered by increasing values:
+
+.. literalinclude:: OrderedPair.3d
+    :language: c
+
+Enumerations
+------------
+
+3d provides a way to define enumerated types:
+
+.. literalinclude:: Color.3d
+    :language: c
+
+Then, the validator for ``coloredPoint`` will check that the value of
+``col`` is either 1, 2 (for ``green``), or 42.
+
+Contrary to structs, enum types cannot be marked ``entrypoint``.
+
+The first enum label must be associated with a value.
+
+The support type (here ``UINT32``) must be the same type as the type
+of the values associated to each label.
+
+.. note::
+
+  (FIXME) Contrary to type definitions, enum definitions must not be
+  followed by a ``;``
+
+Parameterized data types
+------------------------
+
+3d also offers the possibility to parameterize a data type description
+with arguments that can then be reused in constraints. For instance,
+the following ``BoundedSum.3d`` data description defines a pair of two
+integers whose sum is bounded by a bound provided by the user as
+argument:
+
+.. literalinclude:: BoundedSum.3d
+    :language: c
+
+Then, these arguments will add up to the arguments of the
+corresponding validator in the ``BoundedSumWrapper.h`` header produced
+by 3d:
+
+.. literalinclude:: BoundedSumWrapper.h
+    :language: c
+    :start-after: SNIPPET_START: BoundedSum
+    :end-before: SNIPPET_END: BoundedSum

@@ -1,0 +1,4 @@
+entrypoint typedef struct _point {
+  UINT16 x;
+  UINT16 y;
+} point;
