@@ -26,11 +26,24 @@ else
     exe=
 fi
 
-z3=z3$exe
-Z3_DIR=$(dirname $(which $z3))
-if [[ -z "$Z3_DIR" ]] ; then
-    echo z3 is missing
-    exit 1
+platform=$(uname --machine)
+if [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
+    # Download a dependency-free z3
+    z3_tagged=z3-4.8.5-linux-clang
+    z3_archive=$z3_tagged-$platform.tar.gz
+    wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
+    tar xzf $z3_archive
+    Z3_DIR="$PWD/z3"
+    z3=z3
+    echo "Z3_DIR=$Z3_DIR"
+    export PATH="$Z3_DIR:$PATH"
+else
+    z3=z3$exe
+    Z3_DIR=$(dirname $(which $z3))
+    if [[ -z "$Z3_DIR" ]] ; then
+        echo z3 is missing
+        exit 1
+    fi
 fi
 
 if $is_windows ; then
@@ -64,7 +77,6 @@ everparse_commit=$(git show --no-patch --format=%h)
 if [[ $everparse_commit != $everparse_last_version ]] ; then
     everparse_version=$everparse_commit
 fi
-platform=$(uname --machine)
 
 fixpath () {
     if $is_windows ; then
