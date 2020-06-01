@@ -236,7 +236,7 @@ A ``casetype`` type can also be marked ``entrypoint``.
 Element-sized arrays
 --------------------
 
-3d lets you define arrays with a constant number of elements. The
+3d lets the user define arrays with a constant number of elements. The
 following example defines a triangle where the three corners of the
 triangle are recorded in an array of 3 elements:
 
@@ -253,7 +253,7 @@ triangle are recorded in an array of 3 elements:
 Byte-sized arrays
 -----------------
 
-3d lets you define arrays with a constant of variable size in bytes.
+3d lets the user define arrays with a constant of variable size in bytes.
 
 TODO:
 
@@ -279,3 +279,11 @@ TODO:
 * ``onerror``: does it work?
 
 * how do actions work with array elements
+
+Comments
+--------
+
+The user can insert comments in their ``.3d`` file, some of which will
+be inserted into the ``.c`` file:
+
+TODO
