@@ -104,10 +104,38 @@ pair ordered by increasing values:
 .. literalinclude:: OrderedPair.3d
     :language: c
 
-Enumerations
-------------
+.. warning::
 
-3d provides a way to define enumerated types:
+   Arithmetics on constraints are evaluated in machine integers, not
+   mathematical integers. Thus, the following naive definition:
+
+   .. literalinclude:: BoundedSumConst.3d
+       :language: c
+       :start-after: SNIPPET_START: boundedSumNaive
+       :end-before: SNIPPET_END: boundedSumNaive
+
+   will fail at F* verification because the ``left + right`` sum must
+   be proven to not overflow *before* evaluating the condition. The
+   correct way of stating the condition is as follows:
+
+   .. literalinclude:: BoundedSumConst.3d
+       :language: c
+       :start-after: SNIPPET_START: boundedSumCorrect
+       :end-before: SNIPPET_END: boundedSumCorrect
+
+   which is correct because the right-hand-side condition of a ``&&``
+   is evaluated in a context where the left-hand-side can be assumed
+   to be true (thus ``42 - left`` will not underflow.)
+
+Constants and Enumerations
+--------------------------
+
+3d provides a way to define numerical constants:
+
+.. literalinclude:: ConstColor.3d
+    :language: c
+
+Alternatively, 3d provides a way to define enumerated types:
 
 .. literalinclude:: Color.3d
     :language: c
@@ -138,6 +166,8 @@ argument:
 
 .. literalinclude:: BoundedSum.3d
     :language: c
+    :start-after: SNIPPET_START: boundedSum
+    :end-before: SNIPPET_END: boundedSum
 
 Then, these arguments will add up to the arguments of the
 corresponding validator in the ``BoundedSumWrapper.h`` header produced
@@ -147,3 +177,42 @@ by 3d:
     :language: c
     :start-after: SNIPPET_START: BoundedSum
     :end-before: SNIPPET_END: BoundedSum
+
+Parameterized data types can also be instantiated within the ``.3d``
+file itself, including by the value of the field of a struct:
+
+.. literalinclude:: BoundedSum.3d
+    :language: c
+    :start-after: SNIPPET_START: mySum
+    :end-before: SNIPPET_END: mySum
+
+Tagged unions
+-------------
+
+3d supports *tagged unions*: a data type can store a value named *tag*
+and a *payload* whose type depends on the tag value.
+
+For instance, the following description defines the type of an integer
+prefixed by its size in bits.
+
+.. literalinclude:: TaggedUnion.3d
+    :language: c
+
+.. note::
+
+  (FIXME) Currently, union cases can only be introduced by constants
+  defined with ``#define``. Due to current restrictions on
+  double-fetches, 3d currently does not support unions tagged by enum
+  values.
+
+.. warning::
+
+  3d does not enforce that all cases of a union be of the same size,
+  and 3d does not introduce any implicit padding to enforce it. Nor
+  does 3d introduce any alignment padding.
+
+A ``casetype`` type actually defines an untagged union type dependent
+on an argument value, which can be reused, e.g. for several types that
+put different constraints on the value of the tag.
+
+A ``casetype`` type can also be marked ``entrypoint``.
