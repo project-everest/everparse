@@ -186,6 +186,12 @@ file itself, including by the value of the field of a struct:
     :start-after: SNIPPET_START: mySum
     :end-before: SNIPPET_END: mySum
 
+A parameterized data type can also check whether a condition on its
+arguments holds before even trying to check its contents:
+
+.. literalinclude:: BoundedSumWhere.3d
+    :language: c
+
 Tagged unions
 -------------
 
