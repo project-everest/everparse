@@ -268,3 +268,14 @@ TODO:
 
 * how could we define variable-length arrays in terms of number of
   elements?
+
+Actions
+-------
+
+TODO:
+
+* how to return values as pointer arguments
+
+* ``onerror``: does it work?
+
+* how do actions work with array elements
