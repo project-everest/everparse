@@ -127,6 +127,16 @@ pair ordered by increasing values:
    is evaluated in a context where the left-hand-side can be assumed
    to be true (thus ``42 - left`` will not underflow.)
 
+Bitfields
+---------
+
+TODO:
+
+* What is the constraint on a bitfield type? on field sizes?
+
+* Can constraints be put on indvidual fields of a bitfield? 
+
+
 Constants and Enumerations
 --------------------------
 
@@ -222,3 +232,39 @@ on an argument value, which can be reused, e.g. for several types that
 put different constraints on the value of the tag.
 
 A ``casetype`` type can also be marked ``entrypoint``.
+
+Element-sized arrays
+--------------------
+
+3d lets you define arrays with a constant number of elements. The
+following example defines a triangle where the three corners of the
+triangle are recorded in an array of 3 elements:
+
+.. literalinclude:: Triangle2.3d
+    :language: c
+
+.. note::
+
+  (FIXME) There is no direct 3d support for arrays with a variable
+  number of elements. Sometimes, but not always, they can be simulated
+  with variable-size arrays in terms of size in bytes.
+
+
+Byte-sized arrays
+-----------------
+
+3d lets you define arrays with a constant of variable size in bytes.
+
+TODO:
+
+* ``suffix``: am I restricted to only one explicitly declared
+  variable-sized array having to be named ``suffix`` and be the last
+  element of my struct? does it mean that if I need several
+  variable-sized arrays, I have to use parameterized data types?
+
+* ``sizeof``: how does it work with "variable-size" types with no
+  variable-size suffix? (e.g. unions where cases do not have the same
+  size)
+
+* how could we define variable-length arrays in terms of number of
+  elements?
