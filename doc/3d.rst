@@ -135,6 +135,16 @@ Options are treated from left to right:
   This option automatically toggles ``--clang_format`` and
   ``--batch``.
 
+* ``--cleanup``
+
+  With ``--batch``, remove all produced intermediate files other than
+  ``.c`` and ``.h` files (thus: ``.fst``, ``.fsti``, ``.checked``,
+  ``.krml``)
+
+* ``--no_cleanup``
+
+  Keep all produced intermediate files. This is toggled by default.
+
 * ``--version``
 
   Print the version of EverParse/3d and exit (do not process any
