@@ -67,7 +67,7 @@ let krml out_dir =
       ]
     in
     if candidate <> ""
-    then candidate
+    then (false, candidate)
     else begin
       let target = filename_concat out_dir "krml.exe" in
       if Unix.has_symlink ()
@@ -80,13 +80,13 @@ let krml out_dir =
         let candidate = aux true [(dir', "Kremlin.native")] in
         copy candidate target
       end;
-      target
+      (true, target)
     end
   else
-    aux true [
+    (false, aux true [
       (dir_bin, "krml"); (* binary package *)
       (dir, "krml");
-    ]
+    ])
 
 (* command lines *)
 let fstar_args0 = [
@@ -158,7 +158,25 @@ let all_krmls_in_dir
 let all_everparse_krmls =
   all_krmls_in_dir ddd_prelude_home
 
+let remove_if_exists
+  file
+= if Sys.file_exists file then Sys.remove file
+
+let remove_fst_and_krml_files
+  out_dir
+  (_, modul)
+=
+  let root_name = filename_concat out_dir modul in
+  List.iter remove_if_exists [
+    Printf.sprintf "%s.fst" root_name;
+    Printf.sprintf "%s.fsti" root_name;
+    Printf.sprintf "%s.fst.checked" root_name;
+    Printf.sprintf "%s.fsti.checked" root_name;
+    Printf.sprintf "%s.krml" root_name;
+  ]
+
 let produce_c_files
+  (cleanup: bool)
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
@@ -197,9 +215,19 @@ let produce_c_files
   in
   aux krml_args;
   close_out h;
-  let krml = krml out_dir in
+  let (is_temp_krml, krml) = krml out_dir in
   print_endline (Printf.sprintf "KReMLin found at: %s" krml);
-  run_cmd krml [Printf.sprintf "@%s" argfile]
+  run_cmd krml [Printf.sprintf "@%s" argfile];
+  if cleanup
+  then begin
+    List.iter Sys.remove [
+      argfile;
+      filename_concat out_dir "Makefile.basic";
+      filename_concat out_dir "Makefile.include";
+    ];
+    if is_temp_krml then Sys.remove krml;
+    List.iter (remove_fst_and_krml_files out_dir) files_and_modules
+  end
 
 (* Update EVERPARSEVERSION and FILENAME *)
 
@@ -352,6 +380,7 @@ let call_clang_format
 let postprocess
   (clang_format: bool)
   (clang_format_executable: string)
+  (cleanup: bool)
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
@@ -359,7 +388,7 @@ let postprocess
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module out_dir) files_and_modules;
   (* produce the C files *)
-  produce_c_files out_dir files_and_modules;
+  produce_c_files cleanup out_dir files_and_modules;
   (* copy ancillaries *)
   copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
   copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h");

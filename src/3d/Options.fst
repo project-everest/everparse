@@ -12,6 +12,7 @@ let debug : ref bool = alloc false
 let batch : ref bool = alloc false
 let clang_format : ref bool = alloc false
 let clang_format_executable : ref string = alloc ""
+let cleanup : ref bool = alloc false
 
 (* We would like to parse --help as an option, but this would
    require to recurse on the definition of the list of options. To
@@ -30,6 +31,8 @@ let options0 =
    (noshort, "clang_format", ZeroArgs (fun _ -> batch := true; clang_format := true), "Call clang-format on extracted .c/.h files (--batch only)");
    (noshort, "no_clang_format", ZeroArgs (fun _ -> clang_format := false), "Do not call clang-format on extracted .c/.h files");
    (noshort, "clang_format_executable", OneArg ((fun cmd -> batch := true; clang_format := true; clang_format_executable := cmd), "clang-format full path"), "Provide path to clang-format if not reachable through PATH");
+   (noshort, "cleanup", ZeroArgs (fun _ -> cleanup := true), "Remove *.fst*, *.krml and kremlin-args.rsp (--batch only)");
+   (noshort, "no_cleanup", ZeroArgs (fun _ -> cleanup := false), "Do not remove *.fst*, *.krml or kremlin-args.rsp");
    (noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
    ]
 
@@ -45,6 +48,9 @@ let display_usage () : ML unit =
     FStar.IO.print_string "--batch is currently toggled.\n";
     if !clang_format then begin
       FStar.IO.print_string "--clang_format is currently toggled.\n"
+    end;
+    if !cleanup then begin
+      FStar.IO.print_string "--cleanup is currently toggled.\n"
     end
   end
 
@@ -130,3 +136,6 @@ let get_clang_format () =
 
 let get_clang_format_executable () =
   !clang_format_executable
+
+let get_cleanup () =
+  !cleanup
