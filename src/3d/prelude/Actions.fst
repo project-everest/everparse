@@ -260,6 +260,36 @@ let validate_pair
 = validate_drop (validate_pair' name1 v1 v2)
 
 inline_for_extraction noextract
+let validate_bind
+      (name1: string)
+      (#nz1:_) (#k1:parser_kind nz1) (#t1:_) (#p1:parser k1 t1)
+      (#inv1:_) (#l1:_) (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
+      (#nz2:_) (#k2:parser_kind nz2) (#t2:Type) (#p2:(x:t1 -> parser k2 t2))
+      (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
+  : validate_with_action_t (p1 `parse_bind` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
+  = fun (input: input_buffer_t) startPosition ->
+      let h = HST.get () in
+      assume (LowParse.Spec.Combinators.and_then_cases_injective p2);
+      [@inline_let] let _ = LowParse.Spec.Combinators.and_then_eq p1 p2 (LowParse.Low.Base.bytes_of_slice_from h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition)) in
+      [@inline_let] let _ = LowParse.Low.Base.valid_facts (parse_bind p1 p2) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+      [@inline_let] let _ = LowParse.Low.Base.valid_facts p1 h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
+      let pos1 = v1 input startPosition in
+      let h1 = HST.get() in
+      if LPL.is_error pos1
+      then begin
+        with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) pos1
+      end
+      else 
+        [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.uint64_to_uint32 pos1) (LPL.slice_length input) in
+        [@(rename_let ("" ^ name1))]
+        let x = r1 input (LPL.uint64_to_uint32 startPosition) in
+        let h15 = HST.get () in
+        let _ = modifies_address_liveness_insensitive_unused_in h h15 in
+        [@inline_let] let _ = LPLC.valid_facts (p2 x) h (LPL.slice_of input) (LPL.uint64_to_uint32 pos1) in 
+        with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 x input pos1)
+
+
+inline_for_extraction noextract
 let validate_dep_pair
       (name1: string)
       #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)

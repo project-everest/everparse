@@ -75,7 +75,7 @@ val validate_with_action_t
       (l:eloc)
       (allow_reading:bool)
     : Type0
-
+    
 inline_for_extraction noextract
 val act_with_comment
       (s: string)
@@ -144,6 +144,16 @@ val validate_pair
        (#nz2:_) (#k2:parser_kind nz2) (#t2:_) (#p2:parser k2 t2)
        (#inv2:_) (#l2:eloc) (#allow_reading2:bool) (v2:validate_with_action_t p2 inv2 l2 allow_reading2)
   : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
+
+
+inline_for_extraction noextract
+val validate_bind
+      (name1: string)
+      (#nz1:_) (#k1:parser_kind nz1) (#t1:_) (#p1:parser k1 t1)
+      (#inv1:_) (#l1:_) (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
+      (#nz2:_) (#k2:parser_kind nz2) (#t2:Type) (#p2:(x:t1 -> parser k2 t2))
+      (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
+  : validate_with_action_t (p1 `parse_bind` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
 
 inline_for_extraction noextract
 val validate_dep_pair

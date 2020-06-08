@@ -75,6 +75,13 @@ let and_then_kind #nz1 (k1:parser_kind nz1)
                   #nz2 (k2:parser_kind nz2)
     : parser_kind (nz1 || nz2)
     = LPC.and_then_kind k1 k2
+
+let parse_bind #nz1 (#k1:parser_kind nz1) (#t1: Type0) (p1: parser k1 t1)
+               #nz2 (#k2:parser_kind nz2) (#t2: Type0) (p2: (x: t1) -> parser k2 t2)
+  : Tot (parser (and_then_kind k1 k2) t2)
+  = assume (LPC.and_then_cases_injective p2);
+    LPC.and_then p1 p2
+  
 inline_for_extraction noextract
 let parse_dep_pair #nz1 (#k1:parser_kind nz1) (#t1: Type0) (p1: parser k1 t1)
                    #nz2 (#k2:parser_kind nz2) (#t2: (t1 -> Tot Type0)) (p2: (x: t1) -> parser k2 (t2 x))

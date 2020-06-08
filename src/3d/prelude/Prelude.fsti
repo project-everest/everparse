@@ -63,10 +63,23 @@ val and_then_kind (#nz1:_) (k1:parser_kind nz1)
                   (#nz2:_) (k2:parser_kind nz2)
     : parser_kind (nz1 || nz2)
 
+
+inline_for_extraction noextract
+val parse_bind (#nz1:_) (#k1:parser_kind nz1) (#t1: Type0) (p1: parser k1 t1)
+               (#nz2:_) (#k2:parser_kind nz2) (#t2: Type0) (p2: (x: t1) -> parser k2 t2)
+  : Tot (parser (and_then_kind k1 k2) t2)
+
+let parse_dep_pair_alt (#nz1:_) (#k1:parser_kind nz1) (#t1: Type0) (p1: parser k1 t1)
+                   (#nz2:_) (#k2:parser_kind nz2) (#t2: (t1 -> Tot Type0)) (p2: (x: t1) -> parser k2 (t2 x))
+    : Tot (parser (and_then_kind k1 (and_then_kind k2 ret_kind)) (dtuple2 t1 t2))
+    = parse_bind p1 (fun (x:t1) ->
+      parse_bind (p2 x) (fun (y:t2 x) ->
+      parse_ret #(dtuple2 t1 t2) (| x, y |)))
+
 inline_for_extraction noextract
 val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1) (#t1: Type0) (p1: parser k1 t1)
                    (#nz2:_) (#k2:parser_kind nz2) (#t2: (t1 -> Tot Type0)) (p2: (x: t1) -> parser k2 (t2 x))
-  : Tot (parser (and_then_kind k1 k2) (dtuple2 t1 t2) )
+    : Tot (parser (and_then_kind k1 k2) (dtuple2 t1 t2))
 
 /// Parser: sequencing
 inline_for_extraction noextract
