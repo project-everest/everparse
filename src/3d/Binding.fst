@@ -35,7 +35,6 @@ type field_num_ops_t = {
   all_nums : unit -> ML (list (field_num & option ident & string)) //retrieve a table of identifier/field-name mappings
 }
 
-#push-options "--warn_error -272" //top-level effect; ok
 let mk_field_num_ops () : ML field_num_ops_t =
   let open FStar.ST in
   let h : H.t field_num (option ident & string) = H.create 100 in
@@ -65,7 +64,6 @@ let mk_field_num_ops () : ML field_num_ops_t =
     lookup = lookup;
     all_nums = all_nums
   }
-#pop-options
 
 let field_error_code_variable_name_of_field
   (x: (option ident & string))
@@ -100,9 +98,16 @@ let nullary_macro t = { macro_arguments_t = []; macro_result_t = t }
 
 (* Type-checking environments *)
 
-/// global_env maps top-level identifiers to their corresponding declaration
+/// global_env ge_h field is a hash (hence `_h`) table that:
+///  -- maps top-level identifiers to their corresponding declaration
 ///  -- maps type identifiers to decl_attributes
 ///  -- maps macro names to their types
+///
+/// global_env ge_fd field maps a unique numerical identifier to each
+/// "struct identifier - field (hence `_fd`) name" pair. It is part of
+/// the global environment so that numerical field identifiers are
+/// proper to the current module, and not shared across different .3d
+/// files given on the command line
 noeq
 type global_env = {
   ge_h: H.t ident' (decl & either decl_attributes macro_signature);
