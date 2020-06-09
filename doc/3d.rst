@@ -23,32 +23,35 @@ tl;dr Summary
 -------------
 
 1. Write your data format description in the 3d language, as
-   ``MyFile.3d``.
+   ``MyFile1.3d``, ``MyFile2.3d``.
 
-2. Give MyFile.3d to EverParse:
+2. Give MyFile1.3d and MyFile2.3d to EverParse:
 
-   * with the Windows binary package: ``everparse.bat MyFile.3d``
+   * with the Windows binary package: ``everparse.bat MyFile1.3d MyFile2.3d``
 
-   * with the Linux binary package: ``everparse.sh MyFile.3d``
+   * with the Linux binary package: ``everparse.sh MyFile1.3d MyFile2.3d``
 
-   * with the sources: ``src/3d/3d --batch MyFile.3d``
+   * with the sources: ``src/3d/3d --batch MyFile1.3d MyFile2.3d``
 
 Then, EverParse/3d produces:
 
-* ``MyFile.fsti``, ``MyFile.fst``: the verified F* specification and
-  Low* implementation of parsers and validators for your data format
+* ``MyFile1.fsti``, ``MyFile1.fst``: the verified F\* specification
+  and Low\* implementation of parsers and validators for your data
+  format from ``MyFile1.3d``, and similarly for ``MyFile2.3d``
 
-* ``MyFile.c``, ``MyFile.h``: the verified C code generated from the verified
-  F* and Low* files
+* ``MyFile1.c``, ``MyFile1.h``: the verified C code generated from the verified
+  F\* and Low\* files, and similarly for ``MyFile2.3d``
 
-* ``MyFileWrapper.c``, ``MyFileWrapper.h``: an entrypoint API to call into the
-  verified C code.
+* ``MyFile1Wrapper.c``, ``MyFile1Wrapper.h``: an entrypoint API to call into the
+  verified C code, and similarly for ``MyFile2.3d``
 
-* ``EverParse.h``, ``EverParseEndianness.h``: various EverParse helpers for
-  the implementation of verified validators
+* ``EverParse.h``, ``EverParseEndianness.h``: various EverParse
+  helpers for the implementation of verified validators, common to
+  ``MyFile1.3d`` and ``MyFile2.3d``
 
-3. Insert ``#include "MyFileWrapper.h"`` into any of your C compilation
-   units that need to call a validator.
+3. Insert ``#include "MyFile1Wrapper.h"`` into any of your C
+   compilation units that need to call a validator from
+   ``MyFile1.3d``, and similarly for ``MyFile2.3d``.
 
 The 3d Dependent Data Description language
 ------------------------------------------
@@ -75,7 +78,7 @@ actual entrypoint executable is ``everparse.bat`` (for Windows) or
 ``everparse.sh`` (for Linux.)
 
 Binary packages already contain all dependencies required by
-EverParse, such as F*, KReMLin and z3, so no need to install anything
+EverParse, such as F\*, KReMLin and z3, so no need to install anything
 beforehand.
 
 The Windows binary package contains a `binary snapshot of clang-format
@@ -85,8 +88,7 @@ info at the `LLVM download page
 <https://releases.llvm.org/download.html>`_), but this is optional.
 
 The Windows binary package is fully native, in the sense that it does
-not require any POSIX emulation layer such as Cygwin (contrary to the
-sources) or WSL.
+not require any POSIX emulation layer such as Cygwin or WSL.
 
 Run
 ---
@@ -106,12 +108,12 @@ Options are treated from left to right:
 
 * ``--batch``
 
-  Verify the produced F* ``.fst`` and ``.fsti`` files and generate C
+  Verify the produced F\* ``.fst`` and ``.fsti`` files and generate C
   ``.c`` and ``.h`` files. This is toggled by default.
 
 * ``--no_batch``
 
-  Do not verify the produced F* ``.fst`` and ``.fsti`` files or
+  Do not verify the produced F\* ``.fst`` and ``.fsti`` files or
   generate C ``.c`` and ``.h`` files.
 
 * ``--clang_format``
@@ -196,12 +198,12 @@ of the following cases:
 * You are not on Windows or Linux (however, there is no guarantee that
   the sources will compile under any such non-Windows-Linux system.)
 
-* You want to use your own copy of F*, KReMLin or z3.
+* You want to use your own copy of F\*, KReMLin or z3.
 
 * You want to contribute to EverParse.
 
-To this end, you need to install the dependencies (F*, KReMLin, z3.)
-Fortunately, EverParse, F* and KReMLin are all components of the
+To this end, you need to install the dependencies (F\*, KReMLin, z3.)
+Fortunately, EverParse, F\* and KReMLin are all components of the
 Everest project. Thus, the best way to do that is to use the Everest
 script, as described below following the `website of the Everest
 project <https://project-everest.github.io/>`_, which EverParse is a
@@ -228,18 +230,18 @@ member of:
 4. Run ``./everest z3`` and follow the instructions to install z3 on
    your system.
 
-5. Run ``./everest pull`` to fetch and pull the latest versions of F*
+5. Run ``./everest pull`` to fetch and pull the latest versions of F\*
    and KReMLin.
 
-6. Run ``./everest -j 1 FStar make kremlin make`` to build F* and
+6. Run ``./everest -j 1 FStar make kremlin make`` to build F\* and
    KReMLin. The ``-j`` option introduces a parallelism factor. You can
-   also speed up the build by skipping F* and KReMLin library proofs
+   also speed up the build by skipping F\* and KReMLin library proofs
    by setting the ``OTHERFLAGS`` environment variable to
    ``"--admit_smt_queries true"``.
 
 7. Set the ``FSTAR_HOME`` environment variable to the ``FStar``
    subdirectory of your Everest clone, which contains a clone of the
-   latest F*.
+   latest F\*.
 
 8. Set the ``KREMLIN_HOME`` environment variable to the ``kremlin``
    subdirectory of your Everest clone, which contains a clone of the
@@ -255,7 +257,7 @@ member of:
 10. Set the ``QD_HOME`` environment variable to your EverParse clone
     as you chose it.
 
-(if you already have your own copy of F* or KReMLin, and if you
+(if you already have your own copy of F\* or KReMLin, and if you
 already know how to build them, then you can skip steps 1 to 6 and set
 the environment variables accordingly.)
 
@@ -285,6 +287,6 @@ Corporation under the `Apache License 2.0
 <https://github.com/project-everest/everparse/blob/master/LICENSE>`_.
 
 Additionally, the licenses of all dependencies included in the
-EverParse binary packages (F*, KReMLin, z3, clang-format) are all
+EverParse binary packages (F\*, KReMLin, z3, clang-format) are all
 stored in the ``licenses/`` subdirectory of the EverParse binary
 package once extracted.
