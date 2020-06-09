@@ -1,21 +1,4 @@
-let code_of_exit = function
-  | Unix.WEXITED i
-  | Unix.WSIGNALED i
-  | Unix.WSTOPPED i
-    -> i
-
-let filename_concat = Filename.concat
-
-let run_cmd_gen reconcat prog args =
-  let cmd = String.concat " " (prog :: args) in
-  print_endline (Printf.sprintf "Running: %s" cmd);
-  let args' = Array.of_list (if reconcat then prog :: args else args) in (* FIXME: WHY WHY WHY do I need to recons the prog in front of the args? *)
-  let pid = Unix.create_process prog args' Unix.stdin Unix.stdout Unix.stderr in
-  let (_, res) = Unix.waitpid [] pid in
-  let res = code_of_exit res in
-  if res <> 0 then exit res
-
-let run_cmd = run_cmd_gen true
+open OS
 
 (* paths *)
 let fstar_home = Sys.getenv "FSTAR_HOME"
@@ -25,24 +8,6 @@ let qd_home = Sys.getenv "QD_HOME"
 let lowparse_home = filename_concat (filename_concat qd_home "src") "lowparse"
 let ddd_home = filename_concat (filename_concat qd_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat qd_home "src") "3d") "prelude"
-
-let regexp_fslash = Str.regexp "/"
-let regexp_bslash = Str.regexp "\\"
-
-(* fix all directory separators of a file *)
-let fix_seps =
-  if Sys.win32
-  then Str.global_replace regexp_fslash "\\\\"
-  else Str.global_replace regexp_bslash "/"
-
-(* copy a file *)
-let copy
-  source target
-=
-  BatFile.with_file_in source (fun cin ->
-    BatFile.with_file_out target (fun cout ->
-      BatIO.copy cin cout
-  ))
 
 (* fstar.exe executable *)
 let fstar_exe = (filename_concat (filename_concat fstar_home "bin") "fstar.exe")
@@ -126,16 +91,9 @@ let verify_and_extract_module
   in
   run_cmd fstar_exe fstar_extract_args
 
-let ends_with
-  sg suff
-= let len = String.length sg in
-  let len_suff = String.length suff in
-  len >= len_suff &&
-  String.sub sg (len - len_suff) len_suff = suff
-
 let is_krml
   filename
-= ends_with filename ".krml"
+= Filename.check_suffix filename "krml"
 
 let all_krmls_in_dir
   dir
@@ -157,10 +115,6 @@ let all_krmls_in_dir
 
 let all_everparse_krmls =
   all_krmls_in_dir ddd_prelude_home
-
-let remove_if_exists
-  file
-= if Sys.file_exists file then Sys.remove file
 
 let remove_fst_and_krml_files
   out_dir
@@ -234,10 +188,6 @@ let produce_c_files
 let regexp_EVERPARSEVERSION = Str.regexp "EVERPARSEVERSION"
 let regexp_FILENAME = Str.regexp "FILENAME"
 
-let output_line out s =
-  output_string out s;
-  output_string out "\n"
-
 let replace_variables
   filename
   file_in
@@ -262,29 +212,6 @@ let replace_variables
   close_in cin
 
 (* Copyright headers *)
-
-let cat
-  (source_file: string)
-  (cout: out_channel)
-= let cin = open_in source_file in
-  let rec aux () =
-    match
-      begin try
-        Some (input_line cin)
-      with
-        End_of_file -> None
-      end
-    with
-    | None -> ()
-    | Some ln -> output_line cout ln; aux ()
-  in
-  aux ();
-  close_in cin
-
-let rename ol ne =
-  (* Sys.rename does not work across devices *)
-  copy ol ne;
-  Sys.remove ol
 
 let add_copyright_header
   out_dir
