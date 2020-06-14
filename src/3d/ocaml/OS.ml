@@ -14,6 +14,17 @@ let extension = Filename.extension
 
 let filename_concat = Filename.concat
 
+(* Read an environment variable.
+   Raise a specific exception if undefined *)
+
+exception Undefined_environment_variable of string
+
+let getenv var =
+  try
+    Sys.getenv var
+  with Not_found ->
+    raise (Undefined_environment_variable var)
+
 (* Run program prog with argument args (starting from $1, so prog need
    not be duplicated). *)
 

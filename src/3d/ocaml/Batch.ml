@@ -1,10 +1,10 @@
 open OS
 
 (* paths *)
-let fstar_home = Sys.getenv "FSTAR_HOME"
-let kremlin_home = Sys.getenv "KREMLIN_HOME"
+let fstar_home = OS.getenv "FSTAR_HOME"
+let kremlin_home = OS.getenv "KREMLIN_HOME"
 let kremlib = filename_concat kremlin_home "kremlib"
-let qd_home = Sys.getenv "QD_HOME"
+let qd_home = OS.getenv "QD_HOME"
 let lowparse_home = filename_concat (filename_concat qd_home "src") "lowparse"
 let ddd_home = filename_concat (filename_concat qd_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat qd_home "src") "3d") "prelude"
