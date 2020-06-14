@@ -16,7 +16,7 @@ let parse_list #k #t p =
 
 let parse_list_eq
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -39,7 +39,7 @@ let parse_list_eq
 
 let parse_list_eq'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -61,7 +61,7 @@ let parse_list_eq'
 
 let bare_serialize_list_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
 : Lemma
@@ -97,7 +97,7 @@ let bare_serialize_list_correct
 
 let serialize_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
 : Pure (serializer (parse_list p))
@@ -110,7 +110,7 @@ let serialize_list
 
 let serialize_list_nil
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
 : Lemma
@@ -122,7 +122,7 @@ let serialize_list_nil
 
 let serialize_list_cons
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
   (a: t)
@@ -138,7 +138,7 @@ let serialize_list_cons
 
 let serialize_list_singleton
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
   (a: t)
@@ -149,7 +149,7 @@ let serialize_list_singleton
 
 let rec serialize_list_append
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
   (l1 l2: list t)
@@ -168,7 +168,7 @@ let rec serialize_list_append
 
 let serialize_list_cons_upd_chain
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (x: t)
@@ -195,7 +195,7 @@ let serialize_list_cons_upd_chain
 
 let serialize_list_snoc_upd_chain
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (l1: list t)

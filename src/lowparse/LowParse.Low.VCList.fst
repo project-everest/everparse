@@ -12,7 +12,7 @@ module U64 = FStar.UInt64
 
 let valid_nlist_nil
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -26,7 +26,7 @@ let valid_nlist_nil
 
 let valid_nlist_nil_recip
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -43,7 +43,7 @@ let valid_nlist_nil_recip
 let valid_nlist_cons
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -75,7 +75,7 @@ let valid_nlist_cons
 let valid_nlist_cons_recip
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -109,7 +109,7 @@ let valid_nlist_cons_recip
 let valid_nlist_cons'
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -131,7 +131,7 @@ let valid_nlist_cons'
 let valid_nlist_cons_not
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -154,7 +154,7 @@ inline_for_extraction
 let validate_nlist
   (n: U32.t)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: validator p)
 : Tot (validator (parse_nlist (U32.v n) p))
@@ -213,7 +213,7 @@ inline_for_extraction
 let jump_nlist
   (n: U32.t)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: jumper p)
 : Tot (jumper (parse_nlist (U32.v n) p))
@@ -263,7 +263,7 @@ let jump_nlist
 let rec valid_nlist_valid_list
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -294,7 +294,7 @@ let rec valid_nlist_valid_list
 
 let rec valid_list_valid_nlist
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -334,7 +334,7 @@ let validate_vclist
   (lv: validator lp)
   (lr: leaf_reader lp)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: validator p)
 : Tot (validator (parse_vclist (U32.v min) (U32.v max) lp p))
@@ -366,7 +366,7 @@ let jump_vclist
   (lv: jumper lp)
   (lr: leaf_reader lp)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: jumper p)
 : Tot (jumper (parse_vclist min max lp p))
@@ -391,7 +391,7 @@ let valid_vclist_elim
   (#lk: parser_kind)
   (lp: parser lk U32.t { lk.parser_kind_subkind == Some ParserStrong })
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -421,7 +421,7 @@ let valid_vclist_intro
   (#lk: parser_kind)
   (lp: parser lk U32.t { lk.parser_kind_subkind == Some ParserStrong })
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)

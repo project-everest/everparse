@@ -27,21 +27,21 @@ let rec bounds_of_widths (lo: nat) (hi: nat { lo <= hi }) (l: list nat) : Pure (
 module U = FStar.UInt
 
 noextract
-let rec bitfields (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) : Tot Type0 (decreases l) =
+let rec bitfields (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) : Tot Type (decreases l) =
   match l with
   | [] -> unit
   | [sz] -> bitfield cl sz
   | sz :: q -> bitfield cl sz & bitfields cl (lo + sz) hi q
 
-let rec synth_bitfield' (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: t) : Tot (bitfields cl lo hi l) (decreases l) =
+let rec synth_bitfield' (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: t) : Tot (bitfields cl lo hi l) (decreases l) =
   match l with
   | [] -> ()
   | [_] -> cl.get_bitfield x lo hi
   | sz :: q -> (((cl.get_bitfield x lo (lo + sz) <: t) <: bitfield cl sz), synth_bitfield' cl (lo + sz) hi q x)
 
-let synth_bitfield (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: t) : Tot (bitfields cl lo hi l) = synth_bitfield' cl lo hi l x
+let synth_bitfield (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: t) : Tot (bitfields cl lo hi l) = synth_bitfield' cl lo hi l x
 
-let rec synth_bitfield_injective' (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x y: t) : Lemma
+let rec synth_bitfield_injective' (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x y: t) : Lemma
   (requires (synth_bitfield cl lo hi l x == synth_bitfield cl lo hi l y))
   (ensures (BF.get_bitfield (cl.v x) lo hi == BF.get_bitfield (cl.v y) lo hi))
   (decreases l)
@@ -54,7 +54,7 @@ let rec synth_bitfield_injective' (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo
     synth_bitfield_injective' cl (lo + sz) hi q x y;
     BF.get_bitfield_partition_2_gen lo (lo + sz) hi (cl.v x) (cl.v y)
 
-let synth_bitfield_injective (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths 0 tot l })
+let synth_bitfield_injective (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths 0 tot l })
   : Lemma ((lo == 0 /\ hi == tot) ==> synth_injective (synth_bitfield cl lo hi l))
     [SMTPat (synth_injective (synth_bitfield #tot #t cl lo hi l))]
 =
@@ -66,7 +66,7 @@ let synth_bitfield_injective (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat
 
 #push-options "--z3rlimit 128"
 
-let rec synth_bitfield_ext (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x y: t) : Lemma
+let rec synth_bitfield_ext (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x y: t) : Lemma
   (requires (BF.get_bitfield (cl.v x) lo hi == BF.get_bitfield (cl.v y) lo hi))
   (ensures (synth_bitfield cl lo hi l x == synth_bitfield cl lo hi l y))
   (decreases l)
@@ -86,10 +86,10 @@ let rec synth_bitfield_ext (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) 
 
 #pop-options
 
-let parse_bitfield (#t: Type0) (#k: parser_kind) (p: parser k t) (#tot: pos) (cl: uint_t tot t) (l: list nat { valid_bitfield_widths 0 tot l }) : Tot (parser k (bitfields cl 0 tot l)) =
+let parse_bitfield (#t: Type) (#k: parser_kind) (p: parser k t) (#tot: pos) (cl: uint_t tot t) (l: list nat { valid_bitfield_widths 0 tot l }) : Tot (parser k (bitfields cl 0 tot l)) =
   p `parse_synth` synth_bitfield cl 0 tot l
 
-let rec synth_bitfield_recip' (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields cl lo hi l) : Tot t (decreases l) =
+let rec synth_bitfield_recip' (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields cl lo hi l) : Tot t (decreases l) =
   match l with
   | [] -> cl.uint_to_t 0
   | [_] -> cl.set_bitfield (cl.uint_to_t 0) lo hi x
@@ -97,12 +97,12 @@ let rec synth_bitfield_recip' (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: na
     let (hd, tl) = x <: (bitfield cl sz & bitfields cl (lo + sz) hi q) in
     cl.set_bitfield (synth_bitfield_recip' cl (lo + sz) hi q tl) lo (lo + sz) hd
 
-let synth_bitfield_recip (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields cl lo hi l) : Tot t = synth_bitfield_recip' cl lo hi l x
+let synth_bitfield_recip (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields cl lo hi l) : Tot t = synth_bitfield_recip' cl lo hi l x
 
 #push-options "--z3rlimit 64"
 
 let rec synth_bitfield_recip_inverse'
-  (#tot: pos) (#t: Type0) (cl: uint_t tot t)
+  (#tot: pos) (#t: Type) (cl: uint_t tot t)
   (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields cl lo hi l)
 : Lemma
   (ensures (synth_bitfield cl lo hi l (synth_bitfield_recip cl lo hi l x) == x))
@@ -129,7 +129,7 @@ let rec synth_bitfield_recip_inverse'
 
 #pop-options
 
-let synth_bitfield_recip_inverse (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths 0 tot l })
+let synth_bitfield_recip_inverse (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths 0 tot l })
   : Lemma ((lo == 0 /\ hi == tot) ==> synth_inverse (synth_bitfield cl lo hi l) (synth_bitfield_recip cl lo hi l))
     [SMTPat (synth_inverse (synth_bitfield #tot #t cl lo hi l) (synth_bitfield_recip #tot #t cl lo hi l))]
 =
@@ -138,7 +138,7 @@ let synth_bitfield_recip_inverse (#tot: pos) (#t: Type0) (cl: uint_t tot t) (lo:
   )
 
 let serialize_bitfield
-  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+  (#t: Type) (#k: parser_kind) (#p: parser k t) (s: serializer p)
   (#tot: pos) (cl: uint_t tot t) (l: list nat { valid_bitfield_widths 0 tot l })
 : Tot (serializer (parse_bitfield p cl l))
 = serialize_synth
@@ -178,7 +178,7 @@ inline_for_extraction
 noextract
 let bitfields_destr_t
   (#tot: pos)
-  (#t: Type0)
+  (#t: Type)
   (cl: uint_t tot t)
   (lo: nat)
   (hi: nat { lo <= hi /\ hi <= tot })
@@ -194,7 +194,7 @@ inline_for_extraction
 noextract
 let bitfields_destr_cons
   (#tot: pos)
-  (#t: Type0)
+  (#t: Type)
   (cl: uint_t tot t)
   (lo: nat)
   (sz: nat)
@@ -212,7 +212,7 @@ inline_for_extraction
 noextract
 let bitfields_destr_cons_nil
   (#tot: pos)
-  (#t: Type0)
+  (#t: Type)
   (cl: uint_t tot t)
   (lo: nat)
   (sz: nat { lo + sz <= tot })
@@ -224,7 +224,7 @@ inline_for_extraction
 noextract
 let bitfields_destr_nil
   (#tot: pos)
-  (#t: Type0)
+  (#t: Type)
   (cl: uint_t tot t)
   (lo: nat { lo <= tot } )
 : Tot (bitfields_destr_t cl lo lo [])
@@ -234,7 +234,7 @@ let bitfields_destr_nil
 noextract
 let rec mk_bitfields_destr'
   (#tot: pos)
-  (#t: Type0)
+  (#t: Type)
   (cl: uint_t tot t)
   (lo: nat)
   (hi: nat { lo <= hi /\ hi <= tot })
@@ -250,7 +250,7 @@ inline_for_extraction
 noextract
 let mk_bitfields_destr
   (#tot: pos)
-  (#t: Type0)
+  (#t: Type)
   (cl: uint_t tot t)
   (lo: nat)
   (hi: nat { lo <= hi /\ hi <= tot })

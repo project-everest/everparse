@@ -12,7 +12,7 @@ module Classical = FStar.Classical
 (* Parse a list, until there is nothing left to read. This parser will mostly fail EXCEPT if the whole size is known and the slice has been suitably truncated beforehand, or if the elements of the list all have a known constant size. *)
 
 val parse_seq_aux
-  (#t: Type0)
+  (#t: Type)
   (p: bare_parser t)
   (b: bytes)
 : GTot (option (Seq.seq t * (consumed_length b)))
@@ -34,14 +34,14 @@ let rec parse_seq_aux #t p b =
 	| _ -> None
 
 let seq_of_list_inj
-  (t: Type0)
+  (t: Type)
 : Lemma
   (forall (l1 l2 : list t) . Seq.seq_of_list l1 == Seq.seq_of_list l2 ==> l1 == l2)
 = Classical.forall_intro (Seq.lemma_list_seq_bij #t)
 
 let parse_seq'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Tot (parser PL.parse_list_kind (Seq.seq t))
 = seq_of_list_inj t;
@@ -49,7 +49,7 @@ let parse_seq'
 
 val parse_seq_aux_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -78,7 +78,7 @@ let rec parse_seq_aux_correct #k #t p b =
 
 let parse_seq
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Tot (parser PL.parse_list_kind (Seq.seq t))
 = Classical.forall_intro (parse_seq_aux_correct p);
@@ -88,7 +88,7 @@ let parse_seq
 
 let parse_seq_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -97,7 +97,7 @@ let parse_seq_correct
 
 val seq_length_constant_size_parser_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -118,7 +118,7 @@ let seq_length_constant_size_parser_correct #k #t p b =
 
 let serialize_seq'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
 : Pure (serializer (parse_seq' p))
@@ -130,7 +130,7 @@ let serialize_seq'
 
 let serialize_seq
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
 : Pure (serializer (parse_seq p))

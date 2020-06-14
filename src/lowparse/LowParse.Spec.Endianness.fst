@@ -9,7 +9,7 @@ open FStar.Mul
 inline_for_extraction
 noextract
 noeq
-type uinttype (t: Type0) (n: nat) =
+type uinttype (t: Type) (n: nat) =
   | UIntType:
     (v: (t -> Tot (y: nat { y < pow2 (8 * n) } ))) ->
     (to_byte: ((x: t) -> Tot (y: U8.t { U8.v y == v x % 256 } ))) ->

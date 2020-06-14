@@ -161,7 +161,7 @@ let parse_bounded_vlbytes_pred
 let parse_bounded_vlbytes_t
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
-: Tot Type0
+: Tot Type
 = (x: B32.bytes { parse_bounded_vlbytes_pred min max x } )
 
 let parse_bounded_vlbytes_kind

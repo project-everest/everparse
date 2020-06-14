@@ -257,7 +257,7 @@ module U32 = FStar.UInt32
 inline_for_extraction
 noextract
 noeq
-type uint_t (tot: pos) (t: Type0) = {
+type uint_t (tot: pos) (t: Type) = {
   v: (t -> Tot (U.uint_t tot));
   uint_to_t: (U.uint_t tot -> Tot t);
   v_uint_to_t: ((x: U.uint_t tot) -> Lemma (v (uint_to_t x) == x));
@@ -272,7 +272,7 @@ type uint_t (tot: pos) (t: Type0) = {
 }
 
 inline_for_extraction
-let bitfield (#tot: pos) (#t: Type0) (cl: uint_t tot t) (sz: nat { sz <= tot }) : Tot Type0 =
+let bitfield (#tot: pos) (#t: Type) (cl: uint_t tot t) (sz: nat { sz <= tot }) : Tot Type =
   (x: t { cl.v x < pow2 sz })
 
 let uint_t_v_uint_to_t #tot #t (cl: uint_t tot t) (x: U.uint_t tot) : Lemma

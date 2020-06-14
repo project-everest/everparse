@@ -8,13 +8,13 @@ module U32 = FStar.UInt32
 let parser_kind_prop = parser_kind_prop'
 
 let parser_kind_prop_equiv
-  (#t: Type0) (k: parser_kind) (f: bare_parser t)
+  (#t: Type) (k: parser_kind) (f: bare_parser t)
 : Lemma
   (parser_kind_prop k f <==> parser_kind_prop' k f)
 = ()
 
 let parser_kind_prop_ext
-  (#t: Type0)
+  (#t: Type)
   (k: parser_kind)
   (f1 f2: bare_parser t)
 : Lemma
@@ -75,7 +75,7 @@ let parse_strong_prefix
 
 let serializer_correct_implies_complete
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (f: bare_serializer t)
 : Lemma
@@ -98,7 +98,7 @@ let serializer_correct_implies_complete
 
 let serializer_parser_unique'
   (#k1: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p1: parser k1 t)
   (#k2: parser_kind)
   (p2: parser k2 t)
@@ -129,7 +129,7 @@ let serializer_parser_unique'
 
 let serialize_length
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (x: t)

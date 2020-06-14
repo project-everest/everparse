@@ -10,7 +10,7 @@ module Classical = FStar.Classical
 
 let rec parse_list_aux
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : GTot (option (list t * (consumed_length b)))
@@ -31,14 +31,14 @@ let rec parse_list_aux
 
 let parse_list_bare
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Tot (bare_parser (list t))
 = (fun b -> parse_list_aux #k #t p b) <: bare_parser (list t)
 
 let rec parse_list_bare_consumed
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -59,7 +59,7 @@ let rec parse_list_bare_consumed
 
 let parse_list_bare_consumes_all
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Lemma
   (consumes_all (parse_list_bare p))
@@ -69,7 +69,7 @@ let parse_list_bare_consumes_all
 
 let parse_list_bare_injective
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Lemma
   (ensures (injective (parse_list_bare p)))
@@ -120,13 +120,13 @@ let parse_list_kind =
 
 val parse_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Tot (parser parse_list_kind (list t))
 
 val parse_list_eq
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -148,7 +148,7 @@ val parse_list_eq
 
 val parse_list_eq'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -169,7 +169,7 @@ val parse_list_eq'
 
 let rec bare_serialize_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
   (x: list t)
@@ -187,7 +187,7 @@ let serialize_list_precond
 
 val bare_serialize_list_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
 : Lemma
@@ -196,7 +196,7 @@ val bare_serialize_list_correct
 
 val serialize_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
 : Pure (serializer (parse_list p))
@@ -207,7 +207,7 @@ val serialize_list
 
 val serialize_list_nil
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
 : Lemma
@@ -218,7 +218,7 @@ val serialize_list_nil
 
 val serialize_list_cons
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
   (a: t)
@@ -233,7 +233,7 @@ val serialize_list_cons
 
 val serialize_list_singleton
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
   (a: t)
@@ -243,7 +243,7 @@ val serialize_list_singleton
 
 val serialize_list_append
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p)
   (l1 l2: list t)
@@ -286,7 +286,7 @@ let rec serialize_list_eq_parser_fail
 
 let serialize_list_cons_upd
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (x: t)
@@ -316,7 +316,7 @@ let serialize_list_cons_upd
 
 let serialize_list_upd
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (l1: list t)
@@ -347,7 +347,7 @@ let serialize_list_upd
 
 let serialize_list_upd_bw
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (l1: list t)
@@ -374,7 +374,7 @@ let serialize_list_upd_bw
 
 let serialize_list_upd_chain
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (l1: list t)
@@ -420,7 +420,7 @@ let serialize_list_upd_chain
 
 let serialize_list_upd_bw_chain
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (l1: list t)
@@ -451,7 +451,7 @@ let serialize_list_upd_bw_chain
 
 val serialize_list_cons_upd_chain
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (x: t)
@@ -477,7 +477,7 @@ val serialize_list_cons_upd_chain
 
 let serialize_list_cons_upd_bw_chain
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (x: t)
@@ -505,7 +505,7 @@ let serialize_list_cons_upd_bw_chain
 
 val serialize_list_snoc_upd_chain
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (l1: list t)
@@ -531,7 +531,7 @@ val serialize_list_snoc_upd_chain
 
 let serialize_list_snoc_upd_bw_chain
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (l1: list t)
@@ -561,7 +561,7 @@ let serialize_list_snoc_upd_bw_chain
 
 val list_length_constant_size_parser_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -580,7 +580,7 @@ val list_length_constant_size_parser_correct
 
 let rec parse_list_total_constant_size
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (elem_count: nat)
   (x: bytes)
