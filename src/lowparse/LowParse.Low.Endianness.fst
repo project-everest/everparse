@@ -14,7 +14,7 @@ let writable_store_pre
   (b: B.mbuffer byte rrel rel)
   (i: nat)
   (j: nat)
-  (predicate:Seq.seq byte -> Type0)
+  (predicate:Seq.seq byte -> Type)
   (h: HS.mem)
 : Lemma
   (requires (
@@ -45,7 +45,7 @@ let writable_store_pre
 
 let store_post_modifies
   (#a:Type) (#rrel #rel:B.srel a) (b:B.mbuffer a rrel rel)
-  (i:nat) (j:nat{i + j <= B.length b}) (predicate:Seq.seq a -> Type0)
+  (i:nat) (j:nat{i + j <= B.length b}) (predicate:Seq.seq a -> Type)
   (h0: HS.mem)
   (h1: HS.mem)
 : Lemma

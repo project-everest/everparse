@@ -90,7 +90,7 @@ val der_length_payload_size_le
   (requires (x1 <= x2))
   (ensures (der_length_payload_size x1 <= der_length_payload_size x2))
 
-let lint (len: nat) : Tot Type0 = (x: nat { x < pow2 (8 * len) })
+let lint (len: nat) : Tot Type = (x: nat { x < pow2 (8 * len) })
 
 module U32 = FStar.UInt32
 

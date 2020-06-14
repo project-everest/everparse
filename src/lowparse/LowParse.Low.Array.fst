@@ -13,7 +13,7 @@ module HST = FStar.HyperStack.ST
 
 val list_nth_constant_size_parser_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
   (i: nat)
@@ -61,7 +61,7 @@ let clens_array_nth
 [@"opaque_to_smt"]
 let array_nth_ghost''
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -82,7 +82,7 @@ let array_nth_ghost''
 
 let array_nth_ghost_correct'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -109,7 +109,7 @@ let array_nth_ghost_correct'
 
 let array_nth_ghost_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -129,7 +129,7 @@ let array_nth_ghost_correct
 [@"opaque_to_smt"]
 let array_nth_ghost'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -148,7 +148,7 @@ let array_nth_ghost'
 [@"opaque_to_smt"]
 let array_nth_ghost
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -175,7 +175,7 @@ module B = LowStar.Buffer
 inline_for_extraction
 let array_nth
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -206,7 +206,7 @@ module HS = FStar.HyperStack
 
 let valid_list_valid_array'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -239,7 +239,7 @@ let valid_list_valid_array'
 
 let valid_list_valid_array
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -268,7 +268,7 @@ let valid_list_valid_array
 
 let valid_array_valid_list'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -304,7 +304,7 @@ let valid_array_valid_list'
 
 let valid_array_valid_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -337,7 +337,7 @@ let valid_array_valid_list
 inline_for_extraction
 let validate_array'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (v: validator p)
@@ -357,7 +357,7 @@ let validate_array'
 inline_for_extraction
 let validate_array
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (v: validator p)
@@ -376,7 +376,7 @@ let validate_array
 inline_for_extraction
 let jump_array
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -394,7 +394,7 @@ let validate_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (v: validator p)
@@ -416,7 +416,7 @@ let jump_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -437,7 +437,7 @@ let finalize_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -492,7 +492,7 @@ let vlarray_list_length
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -551,7 +551,7 @@ let vlarray_nth_ghost''
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -593,7 +593,7 @@ let vlarray_nth_body
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -629,7 +629,7 @@ let vlarray_nth_ghost_correct'
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -659,7 +659,7 @@ let vlarray_nth_ghost_correct
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -678,7 +678,7 @@ let vlarray_nth_ghost'
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -696,7 +696,7 @@ let vlarray_nth_bound
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -724,7 +724,7 @@ let vlarray_nth_ghost
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -744,7 +744,7 @@ let vlarray_nth
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -767,7 +767,7 @@ let valid_bounded_vldata_strong_list_valid_list
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 } )
   (#rrel #rel: _)
@@ -796,7 +796,7 @@ let bounded_vldata_strong_list_payload_size
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 } )
   (#rrel #rel: _)
@@ -832,7 +832,7 @@ let finalize_bounded_vldata_strong_list
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (#rrel #rel: _)

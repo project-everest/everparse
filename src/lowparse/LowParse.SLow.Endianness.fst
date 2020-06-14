@@ -11,18 +11,18 @@ open FStar.Mul
 inline_for_extraction
 noextract
 let be_to_n_t
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
   (len: nat { len <= tot })
-: Tot Type0
+: Tot Type
 = (x: B.lbytes len) ->
   Tot (y: t { u.v y == E.be_to_n (B.reveal x) })
 
 inline_for_extraction
 noextract
 let be_to_n_0
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
 : Tot (be_to_n_t u 0)
@@ -36,7 +36,7 @@ module U32 = FStar.UInt32
 inline_for_extraction
 noextract
 let be_to_n_S
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (#u: uinttype t tot)
   (#len: nat { len + 1 <= tot })
@@ -68,7 +68,7 @@ type must_reduce = | MustReduce_dummy_do_not_use
 [@must_reduce]
 noextract
 let rec mk_be_to_n
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
   (len: nat {len <= tot})
@@ -81,18 +81,18 @@ let rec mk_be_to_n
 inline_for_extraction
 noextract
 let n_to_be_t
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
   (len: nat { len <= tot })
-: Tot Type0
+: Tot Type
 = (n: t { u.v n < pow2 (8 * len) }) ->
   Tot (b: B.bytes { B.reveal b `Seq.equal` E.n_to_be len (u.v n) })
 
 inline_for_extraction
 noextract
 let n_to_be_0
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
 : Tot (n_to_be_t u 0)
@@ -101,7 +101,7 @@ let n_to_be_0
 inline_for_extraction
 noextract
 let n_to_be_S
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (#u: uinttype t tot)
   (#len: nat {len + 1 <= tot /\ tot < pow2 32})
@@ -118,7 +118,7 @@ let n_to_be_S
 [@must_reduce]
 noextract
 let rec mk_n_to_be
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
   (len: nat {len <= tot /\ tot < pow2 32})
@@ -131,18 +131,18 @@ let rec mk_n_to_be
 inline_for_extraction
 noextract
 let le_to_n_t
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
   (len: nat { len <= tot })
-: Tot Type0
+: Tot Type
 = (x: B.lbytes len) ->
   Tot (y: t { u.v y == E.le_to_n (B.reveal x) })
 
 inline_for_extraction
 noextract
 let le_to_n_0
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
 : Tot (le_to_n_t u 0)
@@ -156,7 +156,7 @@ module U32 = FStar.UInt32
 inline_for_extraction
 noextract
 let le_to_n_S
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (#u: uinttype t tot)
   (#len: nat { len + 1 <= tot })
@@ -183,7 +183,7 @@ let le_to_n_S
 [@must_reduce]
 noextract
 let rec mk_le_to_n
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
   (len: nat {len <= tot})
@@ -196,18 +196,18 @@ let rec mk_le_to_n
 inline_for_extraction
 noextract
 let n_to_le_t
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
   (len: nat { len <= tot })
-: Tot Type0
+: Tot Type
 = (n: t { u.v n < pow2 (8 * len) }) ->
   Tot (b: B.bytes { B.reveal b `Seq.equal` E.n_to_le len (u.v n) })
 
 inline_for_extraction
 noextract
 let n_to_le_0
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
 : Tot (n_to_le_t u 0)
@@ -216,7 +216,7 @@ let n_to_le_0
 inline_for_extraction
 noextract
 let n_to_le_S
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (#u: uinttype t tot)
   (#len: nat {len + 1 <= tot /\ tot < pow2 32})
@@ -233,7 +233,7 @@ let n_to_le_S
 [@must_reduce]
 noextract
 let rec mk_n_to_le
-  (#t: Type0)
+  (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
   (len: nat {len <= tot /\ tot < pow2 32})

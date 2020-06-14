@@ -12,7 +12,7 @@ module E = FStar.Endianness
 
 (* bounded integers *)
 
-let integer_size : Type0 = (sz: nat { 1 <= sz /\ sz <= 4 } )
+let integer_size : Type = (sz: nat { 1 <= sz /\ sz <= 4 } )
 
 val integer_size_values (i: integer_size) : Lemma
   (i == 1 \/ i == 2 \/ i == 3 \/ i == 4)
@@ -32,7 +32,7 @@ val bounded_integer_prop_equiv
 inline_for_extraction
 let bounded_integer
   (i: integer_size)
-: Tot Type0
+: Tot Type
 = (u: U32.t { bounded_integer_prop i u } )
 
 inline_for_extraction
@@ -176,7 +176,7 @@ inline_for_extraction
 let bounded_int32
   (min: nat)
   (max: nat { min <= max })
-: Tot Type0
+: Tot Type
 = (x: U32.t { in_bounds min max x } )
 
 // unfold

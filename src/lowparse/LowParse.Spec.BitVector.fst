@@ -251,7 +251,7 @@ inline_for_extraction
 let bounded_bv_t
   (min: nat)
   (max: nat { min <= max })
-: Tot Type0
+: Tot Type
 = (bitsize: bounded_int32 min max & BV.bv_t (U32.v bitsize))
 
 let parse_bounded_bv_payload_kind

@@ -30,7 +30,7 @@ let rec bitsum'_type'
   (#cl: uint_t tot t)
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
-: Tot Type0
+: Tot Type
   (decreases (bitsum'_size))
 = match b with
   | BitStop _ -> unit
@@ -45,7 +45,7 @@ let bitsum'_type
   (#cl: uint_t tot t)
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
-: Tot Type0
+: Tot Type
 = bitsum'_type' b
 
 inline_for_extraction
@@ -56,7 +56,7 @@ let bitsum'_type_bitfield
   (bitsum'_size: nat)
   (sz: nat { sz > 0 /\ sz <= bitsum'_size /\ bitsum'_size  <= tot })
   (rest: bitsum' cl (bitsum'_size - sz))
-: Tot Type0
+: Tot Type
 = bitfield cl sz & bitsum'_type rest
 
 let bitsum'_type_bitsum'
@@ -68,7 +68,7 @@ let bitsum'_type_bitsum'
   (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
   (e: enum key (bitfield cl key_size))
   (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
-: Tot Type0
+: Tot Type
 = (k': enum_key e & bitsum'_type (payload k'))
 
 noextract
@@ -625,10 +625,10 @@ type synth_case_t
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (data: Type0)
+  (data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
-: Type0
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
+: Type
 = | SynthCase:
     (f: (
       (k' : bitsum'_type b) ->
@@ -661,9 +661,9 @@ let synth_case_g_f_eq
   (#t: eqtype)
   (#cl: uint_t tot t)
   (#b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (#tag_of_data: (data -> Tot (bitsum'_type b)))
-  (#type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (#type_of_tag: (bitsum'_key_type b -> Tot Type))
   (s: synth_case_t b data tag_of_data type_of_tag)
   (k: bitsum'_type b)
   (x: type_of_tag (bitsum'_key_of_t b k))
@@ -714,7 +714,7 @@ let weaken_parse_bitsum_cases_kind
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
 : Tot (k: parser_kind { forall (x: bitsum'_key_type b) . k `is_weaker_than` dfst (f x) })
 = let (| k, phi |) = weaken_parse_bitsum_cases_kind' b (fun k -> dfst (f k)) in
@@ -726,9 +726,9 @@ let synth_bitsum_case_injective
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (x: bitsum'_type b)
 : Lemma
@@ -743,9 +743,9 @@ let parse_bitsum_cases
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
   (x: bitsum'_type b)
@@ -761,7 +761,7 @@ let parse_bitsum_kind
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
 : Tot parser_kind
 = and_then_kind (parse_filter_kind kt) (weaken_parse_bitsum_cases_kind b type_of_tag f)
@@ -772,9 +772,9 @@ let parse_bitsum
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (p: parser kt t)
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
@@ -798,9 +798,9 @@ let parse_bitsum_eq
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (p: parser kt t)
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
@@ -843,9 +843,9 @@ let parse_bitsum_eq'
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (p: parser kt t)
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
@@ -876,9 +876,9 @@ let synth_bitsum_case_recip_inverse
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (x: bitsum'_type b)
 : Lemma
@@ -893,9 +893,9 @@ let serialize_bitsum_cases
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (#f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
   (g: (x: bitsum'_key_type b) -> Tot (serializer (dsnd (f x))))
@@ -919,9 +919,9 @@ let serialize_bitsum
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (#p: parser kt t)
   (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
@@ -945,9 +945,9 @@ let serialize_bitsum_alt
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (#p: parser kt t)
   (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
@@ -967,9 +967,9 @@ let serialize_bitsum_eq
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (#p: parser kt t)
   (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
@@ -1009,9 +1009,9 @@ let serialize_bitsum_eq'
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (#p: parser kt t)
   (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
@@ -1028,9 +1028,9 @@ let serialize_bitsum_alt_2
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (#p: parser kt t)
   (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
@@ -1048,9 +1048,9 @@ let serialize_bitsum_eq_2
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (#p: parser kt t)
   (s: serializer p { kt.parser_kind_subkind == Some ParserStrong } )
@@ -1073,7 +1073,7 @@ let filter_bitsum'_t
   (#cl: uint_t tot t)
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
-: Tot Type0
+: Tot Type
 = (x: t) ->
   Tot (y: bool { y == filter_bitsum' b x })
 
@@ -1132,7 +1132,7 @@ let filter_bitsum'_bitsum'_t
   (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
-: Tot Type0
+: Tot Type
 = (x: t { ~ (list_mem (cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size <: bitfield cl key_size) (list_map snd l1)) }) ->
   (xr: t { xr == cl.bitfield_eq_lhs x (bitsum'_size - key_size) bitsum'_size }) ->
   Tot (y: bool { y == filter_bitsum' (BitSum' key key_size e payload) x })
@@ -1540,7 +1540,7 @@ let synth_bitsum'_recip_t
   (#cl: uint_t tot t)
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
-: Tot Type0
+: Tot Type
 = (x: bitsum'_type b) ->
   Tot (y: t { y == synth_bitsum'_recip b x })
 
@@ -1601,7 +1601,7 @@ let synth_bitsum'_recip_BitSum_t
   (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
-: Tot Type0
+: Tot Type
 = (k: enum_key e { ~ (list_mem (k <: key) (list_map fst l1)) }) ->
   (pl: bitsum'_type (payload k)) ->
   Tot (y: t { y == synth_bitsum'_recip (BitSum' key key_size e payload) (| k, pl |) } )

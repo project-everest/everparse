@@ -24,7 +24,7 @@ module M = LowParse.Math
 
 let constint32
   (v: nat { 0 <= v /\ v < 4294967296 } )
-: Tot Type0
+: Tot Type
 = (u: U32.t { U32.v u == v } )
 
 inline_for_extraction

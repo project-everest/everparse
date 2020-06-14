@@ -234,7 +234,7 @@ let parse_bounded_der_length_payload_kind
 let bounded_int
   (min: der_length_t)
   (max: der_length_t { min <= max })
-: Tot Type0
+: Tot Type
 = (x: int { min <= x /\ x <= max })
 
 let parse_bounded_der_length_tag_cond

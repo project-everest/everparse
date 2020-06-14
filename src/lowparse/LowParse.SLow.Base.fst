@@ -8,7 +8,7 @@ let bytes32 = B32.bytes
 
 let parser32_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (input: bytes32)
   (res: option (t * U32.t))
@@ -27,14 +27,14 @@ let parser32_correct
 inline_for_extraction
 let parser32
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
-: Tot Type0
+: Tot Type
 = (input: bytes32) -> Tot (res: option (t * U32.t) { parser32_correct p input res } )
 
 let parser32_consumes
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
@@ -44,7 +44,7 @@ let parser32_consumes
 
 let parser32_consumes'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
@@ -57,7 +57,7 @@ let parser32_consumes'
 inline_for_extraction
 let make_parser32
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (p32: (input: bytes32) -> Pure (option (t * U32.t)) (requires True) (ensures (fun res -> parser32_correct p input res)))
 : Tot (parser32 p)
@@ -65,9 +65,9 @@ let make_parser32
 
 inline_for_extraction
 let coerce_parser32
-  (t2: Type0)
+  (t2: Type)
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p: parser k t1)
   (p32: parser32 p)
   (u: unit { t2 == t1 } )
@@ -76,7 +76,7 @@ let coerce_parser32
 
 let validator_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (input: bytes32)
   (res: option U32.t)
@@ -92,14 +92,14 @@ let validator_correct
 
 let validator
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
-: Tot Type0
+: Tot Type
 = (input: bytes32) -> Tot (res: option U32.t { validator_correct p input res } )
 
 let serializer32_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (input: t)
@@ -109,7 +109,7 @@ let serializer32_correct
 
 let serializer32_correct'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (input: t)
@@ -121,15 +121,15 @@ let serializer32_correct'
 inline_for_extraction
 let serializer32
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-: Tot Type0
+: Tot Type
 = (input: t) -> Tot (res: bytes32 { serializer32_correct s input res } )
 
 let serializer32_correct_length
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (input: t)
@@ -149,12 +149,12 @@ let serializer32_correct_length
 inline_for_extraction
 let serialize32_ext
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (s1: serializer p1)
   (s1': serializer32 s1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (p2: parser k2 t2)
   (u: squash (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
 : Tot (serializer32 (serialize_ext p1 s1 p2))
@@ -163,15 +163,15 @@ let serialize32_ext
 inline_for_extraction
 let partial_serializer32
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-: Tot Type0
+: Tot Type
 = (input: t { Seq.length (s input) < 4294967296 } ) -> Tot (res: bytes32 { serializer32_correct s input res } )
 
 let serializer32_then_parser32
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (p32: parser32 p)
@@ -183,7 +183,7 @@ let serializer32_then_parser32
 
 let parser32_then_serializer32
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (p32: parser32 p)
@@ -200,7 +200,7 @@ let parser32_then_serializer32
 
 let parser32_then_serializer32'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
   (p32: parser32 p)
@@ -219,7 +219,7 @@ let parser32_then_serializer32'
 
 let parser32_injective
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (input1 input2: bytes32)
@@ -252,7 +252,7 @@ let parser32_injective
 
 let serializer32_injective
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (s32: serializer32 s)
@@ -264,7 +264,7 @@ let serializer32_injective
 
 let parse32_size
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
@@ -282,7 +282,7 @@ let parse32_size
 
 let parse32_total
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
@@ -317,7 +317,7 @@ let add_overflow
 
 let size32_postcond
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (x: t)
@@ -332,10 +332,10 @@ let size32_postcond
 inline_for_extraction
 let size32
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-: Tot Type0
+: Tot Type
 = (x: t) ->
   Tot (y: U32.t {
     size32_postcond s x y
@@ -343,7 +343,7 @@ let size32
 
 let size32_constant_precond
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (len32: U32.t)
@@ -354,7 +354,7 @@ let size32_constant_precond
 inline_for_extraction
 let size32_constant
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (len32: U32.t)
@@ -368,12 +368,12 @@ let size32_constant
 inline_for_extraction
 let size32_ext
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (s1: serializer p1)
   (s1': size32 s1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (p2: parser k2 t2)
   (u: squash (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
 : Tot (size32 (serialize_ext p1 s1 p2))

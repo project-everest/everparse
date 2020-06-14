@@ -11,7 +11,7 @@ module B32 = LowParse.Bytes32
 let rec parse_nlist_tailrec
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (accu: list t * nat)
   (b: bytes)
@@ -29,7 +29,7 @@ let rec parse_nlist_tailrec
 let rec parse_nlist_tailrec_correct'
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (accu: list t * nat)
   (b: bytes)
@@ -61,7 +61,7 @@ let rec parse_nlist_tailrec_correct'
 let parse_nlist_tailrec_correct
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma
@@ -109,7 +109,7 @@ inline_for_extraction
 let parse_nlist_body
   (n: U32.t)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
@@ -135,7 +135,7 @@ inline_for_extraction
 let parse32_nlist
   (n: U32.t)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
 : Tot (parser32 (parse_nlist (U32.v n) p))
@@ -170,7 +170,7 @@ inline_for_extraction
 let serialize32_nlist
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
   (s32: serializer32 s)
@@ -223,7 +223,7 @@ inline_for_extraction
 let size32_nlist
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
   (s32: size32 s)
