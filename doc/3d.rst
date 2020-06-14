@@ -9,6 +9,9 @@
    corresponding binary package) or from the ``everparse_3d``
    branch. It is not available from ``master``.
 
+   The documentation from this page covers the EverParse/3d releases
+   v2020.06.14 or later.
+
 EverParse/3d lets you write a data format description and
 automatically produces efficient data validation code formally
 verified for memory-safety (absence of buffer overruns), functional
