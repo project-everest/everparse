@@ -78,7 +78,7 @@ let process_file (fn: string) : ML unit =
 
 let go () : ML unit =
   match Options.parse_cmd_line() with
-  | [] -> ()
+  | [] -> Options.display_usage ()
   | files ->
   List.iter process_file files;
   let out_dir = Options.get_output_dir () in

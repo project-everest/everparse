@@ -10,4 +10,4 @@ if which clang-format >/dev/null ; then
 else
     clang_format=
 fi
-exec "$QD_HOME/bin/3d" --batch $clang_format "$@"
+exec "$QD_HOME/bin/3d" --__arg0 everparse.sh --batch $clang_format "$@"

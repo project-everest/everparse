@@ -16,6 +16,7 @@ let batch : ref bool = alloc false
 let clang_format : ref bool = alloc false
 let clang_format_executable : ref string = alloc ""
 let cleanup : ref bool = alloc false
+let arg0 : ref string = alloc "3d"
 
 (* We would like to parse --help as an option, but this would
    require to recurse on the definition of the list of options. To
@@ -42,11 +43,20 @@ let options0 =
 let options : ref _ = alloc options0
 
 let display_usage () : ML unit =
-  FStar.IO.print_string "3d [options] input_file\n";
-  List.iter (fun (_, m, _, desc) ->
-    FStar.IO.print_string (Printf.sprintf "    --%s %s\n" m desc))
+  FStar.IO.print_string "EverParse/3d: verified data validation with dependent data descriptions\n";
+  FStar.IO.print_string "\n";
+  FStar.IO.print_string (Printf.sprintf "Usage: %s [options] path_to_input_file1.3d path_to_input_file2.3d ... \n" !arg0);
+  FStar.IO.print_string "\n";
+  FStar.IO.print_string "Options:\n";
+  List.iter (fun (_, m, arg, desc) ->
+    let argdesc = match arg with
+    | FStar.Getopt.OneArg (_, argdesc) -> Printf.sprintf " <%s>" argdesc
+    | _ -> ""
+    in
+    FStar.IO.print_string (Printf.sprintf "--%s%s\n\t%s\n" m argdesc desc))
     !options
       ;
+  FStar.IO.print_string "\n";
   if !batch then begin
     FStar.IO.print_string "--batch is currently toggled.\n";
     if !clang_format then begin
@@ -60,9 +70,15 @@ let display_usage () : ML unit =
 let _ =
   options := ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message") :: !options
 
+let hidden_options =
+  let open FStar.Getopt in
+  [
+    (noshort, "__arg0", OneArg ((fun s -> arg0 := s), "executable name"), "executable name to use for the help message");
+  ]
+
 let parse_cmd_line () : ML (list string) =
   let open FStar.Getopt in
-  let res = FStar.Getopt.parse_cmdline !options (fun file -> input_file := file :: !input_file) in
+  let res = FStar.Getopt.parse_cmdline (hidden_options `List.Tot.append` !options) (fun file -> input_file := file :: !input_file) in
   match res with
   | Success -> !input_file
   | Help -> display_usage(); exit 0
