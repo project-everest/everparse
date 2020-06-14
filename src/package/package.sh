@@ -27,7 +27,7 @@ else
 fi
 
 platform=$(uname --machine)
-if [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
+if [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] && ! [[ -d z3 ]] ; then
     # Download a dependency-free z3
     z3_tagged=z3-4.8.5-linux-clang
     z3_archive=$z3_tagged-$platform.tar.gz
