@@ -459,7 +459,7 @@ let valid_total_constant_size
 inline_for_extraction
 let validate_total_constant_size_no_read
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: U64.t)
   (u: unit {
@@ -493,7 +493,7 @@ let validate_total_constant_size
 inline_for_extraction
 let validate_total_constant_size_with_error_code
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: U64.t)
   (c: error_code {

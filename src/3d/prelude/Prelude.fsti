@@ -39,7 +39,7 @@ val parser_kind (nz:bool) : Type0
 
 inline_for_extraction
 noextract
-val parser (#nz:bool) (k:parser_kind nz) (t:Type0) : Type0
+val parser (#nz:bool) (k:parser_kind nz) (t:Type u#r) : Type u#r
 
 inline_for_extraction
 noextract
@@ -64,8 +64,8 @@ val and_then_kind (#nz1:_) (k1:parser_kind nz1)
     : parser_kind (nz1 || nz2)
 
 inline_for_extraction noextract
-val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1) (#t1: Type0) (p1: parser k1 t1)
-                   (#nz2:_) (#k2:parser_kind nz2) (#t2: (t1 -> Tot Type0)) (p2: (x: t1) -> parser k2 (t2 x))
+val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1) (#t1: Type) (p1: parser k1 t1)
+                   (#nz2:_) (#k2:parser_kind nz2) (#t2: (t1 -> Tot Type)) (p2: (x: t1) -> parser k2 (t2 x))
   : Tot (parser (and_then_kind k1 k2) (dtuple2 t1 t2) )
 
 /// Parser: sequencing
@@ -115,7 +115,7 @@ val parse_ite (#nz:_) (#k:parser_kind nz) (#a:Type) (#b:Type) (e:bool)
 ////////////////////////////////////////////////////////////////////////////////
 // Variable-sized list whose size in bytes is exactly n
 ////////////////////////////////////////////////////////////////////////////////
-val nlist (n:U32.t) (t:Type0) : Type0
+val nlist (n:U32.t) (t:Type u#r) : Type u#r
 
 /// Lists/arrays
 inline_for_extraction
@@ -130,7 +130,7 @@ val parse_nlist (n:U32.t) (#k:parser_kind true) (#t:_) (p:parser k t)
 ////////////////////////////////////////////////////////////////////////////////
 // Variable-sized element whose size in bytes is at most n
 ////////////////////////////////////////////////////////////////////////////////
-val t_at_most (n:U32.t) (t:Type0) : Type0
+val t_at_most (n:U32.t) (t:Type u#r) : Type u#r
 
 /// Lists/arrays
 inline_for_extraction
@@ -144,7 +144,7 @@ val parse_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (p:parser k t)
 ////////////////////////////////////////////////////////////////////////////////
 // Variable-sized element whose size in bytes is exactly n
 ////////////////////////////////////////////////////////////////////////////////
-val t_exact (n:U32.t) (t:Type0) : Type0
+val t_exact (n:U32.t) (t:Type u#r) : Type u#r
 
 /// Lists/arrays
 inline_for_extraction
@@ -165,7 +165,7 @@ val reader (#nz:_) (#k:parser_kind nz) (#t:_) (p:parser k t) : Type u#1
 inline_for_extraction noextract
 val read_filter (#nz:_)
                 (#k: parser_kind nz)
-                (#t: Type0)
+                (#t: Type)
                 (#p: parser k t)
                 (p32: reader p)
                 (f: (t -> bool))

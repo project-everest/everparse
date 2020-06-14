@@ -307,7 +307,7 @@ val validate_weaken_inv_loc (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
 inline_for_extraction noextract
 val read_filter (#nz:_)
                 (#k: parser_kind nz)
-                (#t: Type0)
+                (#t: Type)
                 (#p: parser k t)
                 (p32: leaf_reader p)
                 (f: (t -> bool))
