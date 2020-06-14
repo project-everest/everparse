@@ -9,7 +9,7 @@ module HS = FStar.HyperStack
 
 let valid_fldata_gen
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: nat)
   #rrel #rel
@@ -34,7 +34,7 @@ let valid_fldata_gen
 
 let valid_fldata_gen_elim
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: nat)
   #rrel #rel
@@ -61,7 +61,7 @@ let valid_fldata_gen_elim
 inline_for_extraction
 let validate_fldata_gen
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: validator p)
   (sz: nat)
@@ -88,7 +88,7 @@ let validate_fldata_gen
 inline_for_extraction
 let validate_fldata_consumes_all
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: validator p)
   (sz: nat)
@@ -117,7 +117,7 @@ let validate_fldata_consumes_all
 inline_for_extraction
 let validate_fldata
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: validator p)
   (sz: nat)
@@ -130,7 +130,7 @@ let validate_fldata
 inline_for_extraction
 let validate_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (v: validator p)
@@ -146,7 +146,7 @@ let validate_fldata_strong
 inline_for_extraction
 let jump_fldata
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: nat)
   (sz32: U32.t { U32.v sz32 == sz } )
@@ -156,7 +156,7 @@ let jump_fldata
 inline_for_extraction
 let jump_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)
@@ -166,7 +166,7 @@ let jump_fldata_strong
 
 let gaccessor_fldata'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t { k.parser_kind_subkind == Some ParserStrong } )
   (sz: nat)
 : Tot (gaccessor' (parse_fldata p sz) p (clens_id _))
@@ -183,7 +183,7 @@ let gaccessor_fldata'
 
 let gaccessor_fldata
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t { k.parser_kind_subkind == Some ParserStrong } )
   (sz: nat)
 : Tot (gaccessor (parse_fldata p sz) p (clens_id _))
@@ -193,7 +193,7 @@ let gaccessor_fldata
 inline_for_extraction
 let accessor_fldata
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t { k.parser_kind_subkind == Some ParserStrong } )
   (sz: nat)
 : Tot (accessor (gaccessor_fldata p sz))
@@ -204,7 +204,7 @@ let accessor_fldata
 
 let clens_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)
@@ -217,7 +217,7 @@ let clens_fldata_strong
 inline_for_extraction
 let gaccessor_fldata_strong'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (sz: nat)
@@ -235,7 +235,7 @@ let gaccessor_fldata_strong'
 inline_for_extraction
 let gaccessor_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (sz: nat)
@@ -246,7 +246,7 @@ let gaccessor_fldata_strong
 inline_for_extraction
 let accessor_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (sz: nat)

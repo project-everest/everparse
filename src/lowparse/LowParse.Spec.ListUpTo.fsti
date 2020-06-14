@@ -20,7 +20,7 @@ let refine_with_cond
 let parse_list_up_to_t
   (#t: Type)
   (cond: (t -> Tot bool))
-: Tot Type0
+: Tot Type
 = list (refine_with_cond (negate_cond cond)) & refine_with_cond cond
 
 inline_for_extraction

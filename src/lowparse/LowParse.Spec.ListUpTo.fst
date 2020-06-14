@@ -13,17 +13,20 @@ let parse_list_up_to_fuel_t
   (#t: Type)
   (cond: (t -> Tot bool))
   (fuel: nat)
-: Tot Type0
+: Tot Type
 = (llist (refine_with_cond (negate_cond cond)) fuel) & refine_with_cond cond
+
+(* Universe-polymorphic unit type *)
+type up_unit : Type u#r = | UP_UNIT
 
 let parse_list_up_to_payload_t
   (#t: Type)
   (cond: (t -> Tot bool))
   (fuel: nat)
   (x: t)
-: Tot Type0
+: Tot Type
 = if cond x
-  then unit
+  then up_unit
   else parse_list_up_to_fuel_t cond fuel
 
 let synth_list_up_to_fuel
@@ -57,7 +60,7 @@ let parse_list_up_to_payload
   (x: t)
 : Tot (parser (parse_list_up_to_kind k) (parse_list_up_to_payload_t cond fuel x))
 = if cond x
-  then weaken (parse_list_up_to_kind k) parse_empty
+  then weaken (parse_list_up_to_kind k) (parse_ret UP_UNIT)
   else ptail
 
 let rec parse_list_up_to_fuel
@@ -228,7 +231,7 @@ let synth_list_up_to'
 
 let parse_list_up_to'
   (#k: parser_kind)
-  (#t: Type)
+  (#t: Type u#r)
   (cond: (t -> Tot bool))
   (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (fuel: nat)
@@ -263,7 +266,7 @@ let close_parse_list_up_to
 
 let parse_list_up_to_correct
   (#k: parser_kind)
-  (#t: Type)
+  (#t: Type u#r)
   (cond: (t -> Tot bool))
   (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (prf: (
@@ -296,7 +299,7 @@ let parse_list_up_to
   (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (prf: consumes_if_not_cond cond p)
 : Tot (parser (parse_list_up_to_kind k) (parse_list_up_to_t cond))
-= parse_list_up_to_correct cond p prf;
+= parse_list_up_to_correct #k #t cond p prf;
   close_by_fuel (parse_list_up_to' cond p) close_parse_list_up_to
 
 let parse_list_up_to_eq
@@ -346,7 +349,7 @@ let serialize_list_up_to_payload
   (x: t)
 : Tot (serializer (parse_list_up_to_payload cond fuel k ptail x))
 = if cond x
-  then serialize_weaken (parse_list_up_to_kind k) serialize_empty
+  then serialize_weaken (parse_list_up_to_kind k) (serialize_ret UP_UNIT (fun _ -> ()))
   else stail
 
 let synth_list_up_to_fuel_recip
@@ -357,7 +360,7 @@ let synth_list_up_to_fuel_recip
 : Tot (dtuple2 t (parse_list_up_to_payload_t cond fuel))
 = let (l, z) = xy in
   match l with
-  | [] -> (| z, () |)
+  | [] -> (| z, UP_UNIT |)
   | x :: y -> (| x, ((y <: llist (refine_with_cond (negate_cond cond)) fuel), z) |)
 
 let synth_list_up_to_fuel_inverse

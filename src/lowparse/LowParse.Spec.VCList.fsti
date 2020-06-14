@@ -138,7 +138,7 @@ let parse_nlist_kind
 let rec parse_nlist'
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Tot (parser (parse_nlist_kind n k) (nlist n t))
 = if n = 0
@@ -153,14 +153,14 @@ let rec parse_nlist'
 val parse_nlist
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Tot (y: parser (parse_nlist_kind n k) (nlist n t) { y == parse_nlist' n p } )
 
 let parse_nlist_eq
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Lemma (
@@ -189,7 +189,7 @@ let parse_nlist_eq
 let rec serialize_nlist'
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
 : Tot (serializer (parse_nlist n p))
@@ -207,14 +207,14 @@ let rec serialize_nlist'
 val serialize_nlist
   (n: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
 : Tot (y: serializer (parse_nlist n p) { y == serialize_nlist' n s })
 
 let serialize_nlist_nil
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
 : Lemma
@@ -223,7 +223,7 @@ let serialize_nlist_nil
 
 let serialize_nlist_cons
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (n: nat)
   (#p: parser k t)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )

@@ -83,11 +83,11 @@ let parse32_and_then
 inline_for_extraction
 let parse32_nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (p1' : parser32 p1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (p2' : parser32 p2)
 : Tot (parser32 (nondep_then p1 p2))
@@ -115,12 +115,12 @@ let serialize32_kind_precond
 inline_for_extraction
 let serialize32_nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (#s1: serializer p1)
   (s1' : serializer32 s1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (#s2: serializer p2)
   (s2' : serializer32 s2 {
@@ -144,11 +144,11 @@ let serialize32_nondep_then
 inline_for_extraction
 let parse32_dtuple2
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (p1' : parser32 p1)
   (#k2: parser_kind)
-  (#t2: (t1 -> Tot Type0))
+  (#t2: (t1 -> Tot Type))
   (#p2: (x: t1) -> Tot (parser k2 (t2 x)))
   (p2' : (x: t1) -> Tot (parser32 (p2 x)))
 : Tot (parser32 (parse_dtuple2 p1 p2))
@@ -169,14 +169,14 @@ let parse32_dtuple2
 inline_for_extraction
 let serialize32_dtuple2
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (#s1: serializer p1)
   (s1' : serializer32 s1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind {
     serialize32_kind_precond k1 k2
   })
-  (#t2: t1 -> Tot Type0)
+  (#t2: t1 -> Tot Type)
   (#p2: (x: t1) -> Tot (parser k2 (t2 x)))
   (#s2: (x: t1) -> Tot (serializer (p2 x)))
   (s2' : (x: t1) -> serializer32 (s2 x))
@@ -198,7 +198,7 @@ let serialize32_dtuple2
 inline_for_extraction
 let parse32_strengthen
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k t1)
   (p1' : parser32 p1)
   (p2: t1 -> GTot Type0)
@@ -218,8 +218,8 @@ let parse32_strengthen
 inline_for_extraction
 let parse32_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (f2': (x: t1) -> Tot (y: t2 { y == f2 x } )) 
@@ -239,8 +239,8 @@ let parse32_synth
 inline_for_extraction
 let parse32_synth'
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> Tot t2)
   (p1' : parser32 p1)
@@ -253,8 +253,8 @@ let parse32_synth'
 inline_for_extraction
 let serialize32_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -274,8 +274,8 @@ let serialize32_synth
 inline_for_extraction
 let serialize32_synth'
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -290,7 +290,7 @@ let serialize32_synth'
 inline_for_extraction
 let parse32_filter
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (f: (t -> GTot bool))
@@ -314,7 +314,7 @@ let parse32_filter
 inline_for_extraction
 let serialize32_filter
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
   (s32: serializer32 s)
@@ -326,7 +326,7 @@ inline_for_extraction
 let make_constant_size_parser32
   (sz: nat)
   (sz' : U32.t { U32.v sz' == sz } )
-  (#t: Type0)
+  (#t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
   (u: unit {
     make_constant_size_parser_precond sz t f
@@ -348,7 +348,7 @@ inline_for_extraction
 let make_total_constant_size_parser32
   (sz: nat)
   (sz' : U32.t { U32.v sz' == sz } )
-  (#t: Type0)
+  (#t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (t)))
   (u: unit {
     make_total_constant_size_parser_precond sz t f
@@ -366,12 +366,12 @@ let make_total_constant_size_parser32
 inline_for_extraction
 let size32_nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (#s1: serializer p1)
   (s1' : size32 s1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (#s2: serializer p2)
   (s2' : size32 s2)
@@ -388,12 +388,12 @@ let size32_nondep_then
 inline_for_extraction
 let size32_dtuple2
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (#s1: serializer p1)
   (s1' : size32 s1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: t1 -> Tot Type0)
+  (#t2: t1 -> Tot Type)
   (#p2: (x: t1) -> Tot (parser k2 (t2 x)))
   (#s2: (x: t1) -> Tot (serializer (p2 x)))
   (s2' : (x: t1) -> Tot (size32 (s2 x)))
@@ -410,7 +410,7 @@ let size32_dtuple2
 inline_for_extraction
 let size32_filter
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
   (s32: size32 s)
@@ -421,8 +421,8 @@ let size32_filter
 inline_for_extraction
 let size32_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -443,8 +443,8 @@ let size32_synth
 inline_for_extraction
 let size32_synth'
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -462,7 +462,7 @@ let parse32_compose_context
   (#pk: parser_kind)
   (#kt1 #kt2: Type)
   (f: (kt2 -> Tot kt1))
-  (t: (kt1 -> Tot Type0))
+  (t: (kt1 -> Tot Type))
   (p: ((k: kt1) -> Tot (parser pk (t k))))
   (p32: ((k: kt1) -> Tot (parser32 (p k))))
   (k: kt2)
@@ -474,7 +474,7 @@ let serialize32_compose_context
   (#pk: parser_kind)
   (#kt1 #kt2: Type)
   (f: (kt2 -> Tot kt1))
-  (t: (kt1 -> Tot Type0))
+  (t: (kt1 -> Tot Type))
   (p: ((k: kt1) -> Tot (parser pk (t k))))
   (s: ((k: kt1) -> Tot (serializer (p k))))
   (s32: ((k: kt1) -> Tot (serializer32 (s k))))
@@ -487,7 +487,7 @@ let size32_compose_context
   (#pk: parser_kind)
   (#kt1 #kt2: Type)
   (f: (kt2 -> Tot kt1))
-  (t: (kt1 -> Tot Type0))
+  (t: (kt1 -> Tot Type))
   (p: ((k: kt1) -> Tot (parser pk (t k))))
   (s: ((k: kt1) -> Tot (serializer (p k))))
   (s32: ((k: kt1) -> Tot (size32 (s k))))
@@ -499,7 +499,7 @@ inline_for_extraction
 let parse32_weaken
   (k1: parser_kind)
   (#k2: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p2: parser k2 t)
   (p2' : parser32 p2 { k1 `is_weaker_than` k2 })
 : Tot (parser32 (weaken k1 p2))
@@ -509,7 +509,7 @@ inline_for_extraction
 let serialize32_weaken
   (k1: parser_kind)
   (#k2: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p2: parser k2 t)
   (#s2: serializer p2)
   (s2' : serializer32 s2 { k1 `is_weaker_than` k2 })
@@ -520,7 +520,7 @@ inline_for_extraction
 let size32_weaken
   (k1: parser_kind)
   (#k2: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p2: parser k2 t)
   (#s2: serializer p2)
   (s2' : size32 s2 { k1 `is_weaker_than` k2 })
@@ -549,10 +549,10 @@ let lift_serializer32
 inline_for_extraction
 let parse32_tagged_union
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (#pt: parser kt tag_t)
   (pt32: parser32 pt)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (#p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -573,11 +573,11 @@ let parse32_tagged_union
 inline_for_extraction
 let serialize32_tagged_union
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (#pt: parser kt tag_t)
   (#st: serializer pt)
   (st32: serializer32 st)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (tag_of_data' : ((x: data_t) -> Tot (y: tag_t { y == tag_of_data x })))
   (#k: parser_kind)

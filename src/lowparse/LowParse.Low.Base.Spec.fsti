@@ -1920,7 +1920,7 @@ val contents_list_eq
 let valid_list_nil
   (#rrel #rel: _)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (sl: slice rrel rel)
@@ -1937,7 +1937,7 @@ let valid_list_nil
 let valid_list_cons
   (#rrel #rel: _)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (sl: slice rrel rel)
@@ -1962,7 +1962,7 @@ module L = FStar.List.Tot
 let valid_list_cons_recip
   (#rrel #rel: _)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (sl: slice rrel rel)
@@ -2074,7 +2074,7 @@ let valid_list_frame
 let rec valid_list_append
   (#rrel #rel: _)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (sl: slice rrel rel)
@@ -2102,7 +2102,7 @@ let rec valid_list_append
 let valid_list_snoc
   (#rrel #rel: _)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (sl: slice rrel rel)

@@ -295,7 +295,7 @@ let validate
 let valid_total_constant_size
   (h: HS.mem)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: U32.t)
   (#rrel #rel: _)
@@ -317,7 +317,7 @@ let valid_total_constant_size
 inline_for_extraction
 let validate_total_constant_size
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: U32.t)
   (u: unit {
@@ -337,7 +337,7 @@ let validate_total_constant_size
 let valid_weaken
   (k1: parser_kind)
   (#k2: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p2: parser k2 t)
   (h: HS.mem)
   #rrel #rel
@@ -357,7 +357,7 @@ inline_for_extraction
 let validate_weaken
   (k1: parser_kind)
   (#k2: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p2: parser k2 t)
   (v2: validator p2 { k1 `is_weaker_than` k2 } )
 : Tot (validator (weaken k1 p2))
@@ -388,7 +388,7 @@ let jumper
 inline_for_extraction
 let jump_constant_size'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: (unit -> GTot (parser k t)))
   (sz: U32.t)
   (u: unit {
@@ -404,7 +404,7 @@ let jump_constant_size'
 inline_for_extraction
 let jump_constant_size
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: U32.t)
   (u: unit {
@@ -418,7 +418,7 @@ inline_for_extraction
 let jump_weaken
   (k1: parser_kind)
   (#k2: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p2: parser k2 t)
   (v2: jumper p2 { k1 `is_weaker_than` k2 } )
 : Tot (jumper (weaken k1 p2))
@@ -924,7 +924,7 @@ let leaf_writer_weak_of_strong_constant_size
 
 inline_for_extraction
 let blit_strong
-  (#a:Type0) (#rrel1 #rrel2 #rel1 #rel2: _)
+  (#a:Type) (#rrel1 #rrel2 #rel1 #rel2: _)
   (src: B.mbuffer a rrel1 rel1)
   (idx_src:U32.t)
   (dst: B.mbuffer a rrel2 rel2)
@@ -1092,7 +1092,7 @@ inline_for_extraction
 let list_fold_left_gen
   (#rrel #rel: _)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (j: jumper p)
   (sl: slice rrel rel)
@@ -1228,7 +1228,7 @@ inline_for_extraction
 let list_fold_left
   (#rrel #rel: _)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (j: jumper p)
   (sl: slice rrel rel)
@@ -1302,7 +1302,7 @@ inline_for_extraction
 let list_length
   (#rrel #rel: _)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (j: jumper p)
   (sl: slice rrel rel)
@@ -1354,7 +1354,7 @@ let list_length
 inline_for_extraction
 let list_filter
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (j: jumper p)
   (f: (t -> Tot bool))
@@ -1450,7 +1450,7 @@ inline_for_extraction
 let list_nth
   (#rrel #rel: _)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (j: jumper p)
   (sl: slice rrel rel)
@@ -1913,7 +1913,7 @@ let list_map
 inline_for_extraction
 let print_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (j: jumper p)
   (print: ((#rrel: _) -> (#rel: _) -> (sl: slice rrel rel) -> (pos: U32.t) -> HST.Stack unit (requires (fun h -> valid p h sl pos)) (ensures (fun h _ h' -> B.modifies B.loc_none h h'))))

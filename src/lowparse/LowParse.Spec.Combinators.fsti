@@ -13,7 +13,7 @@ module T = FStar.Tactics
 
 let make_constant_size_parser_aux
   (sz: nat)
-  (t: Type0)
+  (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
 : Tot (bare_parser t)
 = fun (s: bytes) ->
@@ -30,7 +30,7 @@ let make_constant_size_parser_aux
 
 let make_constant_size_parser_precond_precond
   (sz: nat)
-  (t: Type0)
+  (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
   (s1: bytes { Seq.length s1 == sz } )
   (s2: bytes { Seq.length s2 == sz } )
@@ -39,7 +39,7 @@ let make_constant_size_parser_precond_precond
 
 let make_constant_size_parser_precond
   (sz: nat)
-  (t: Type0)
+  (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
 : GTot Type0
 = forall (s1: bytes {Seq.length s1 == sz}) (s2: bytes {Seq.length s2 == sz}) . {:pattern (f s1); (f s2)}
@@ -47,7 +47,7 @@ let make_constant_size_parser_precond
 
 let make_constant_size_parser_precond'
   (sz: nat)
-  (t: Type0)
+  (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
 : GTot Type0
 = forall (s1: bytes {Seq.length s1 == sz}) (s2: bytes {Seq.length s2 == sz}) . {:pattern (f s1); (f s2)}
@@ -55,7 +55,7 @@ let make_constant_size_parser_precond'
 
 let make_constant_size_parser_injective
   (sz: nat)
-  (t: Type0)
+  (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
 : Lemma
   (requires (
@@ -89,7 +89,7 @@ let constant_size_parser_kind
 
 let make_constant_size_parser
   (sz: nat)
-  (t: Type0)
+  (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
 : Pure (
     parser
@@ -107,7 +107,7 @@ let make_constant_size_parser
 
 let make_total_constant_size_parser_precond
   (sz: nat)
-  (t: Type0)
+  (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot t))
 : GTot Type0
 = forall (s1: bytes {Seq.length s1 == sz}) (s2: bytes {Seq.length s2 == sz}) . {:pattern (f s1); (f s2)}
@@ -115,7 +115,7 @@ let make_total_constant_size_parser_precond
 
 let make_total_constant_size_parser
   (sz: nat)
-  (t: Type0)
+  (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot t))
 : Pure (
     parser
@@ -171,13 +171,13 @@ let fail_parser_kind_precond
   (Some? k.parser_kind_high ==> k.parser_kind_low <= Some?.v k.parser_kind_high)
 
 let fail_parser'
-  (t: Type0)
+  (t: Type)
 : Tot (bare_parser t)
 = fun _ -> None
 
 let fail_parser
   (k: parser_kind)
-  (t: Type0)
+  (t: Type)
 : Pure (parser k t)
   (requires (fail_parser_kind_precond k))
   (ensures (fun _ -> True))
@@ -187,7 +187,7 @@ let fail_parser
 
 let fail_serializer
   (k: parser_kind {fail_parser_kind_precond k} )
-  (t: Type0)
+  (t: Type)
   (prf: (x: t) -> Lemma False)
 : Tot (serializer (fail_parser k t))
 = mk_serializer
@@ -485,15 +485,15 @@ let parse_fret (#t #t':Type) (f: t -> GTot t') (v:t) : Tot (parser parse_ret_kin
   parse_fret' f v
 
 let synth_injective
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (f: (t1 -> GTot t2))
 : GTot Type0
 = forall (x x' : t1) . {:pattern (f x); (f x')} f x == f x' ==> x == x'
 
 let synth_injective_intro
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (f: (t1 -> GTot t2))
 : Lemma
   (requires (forall (x x' : t1) . f x == f x' ==> x == x'))
@@ -501,8 +501,8 @@ let synth_injective_intro
 = ()
 
 let synth_injective_intro'
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (f: (t1 -> GTot t2))
   (prf: (
     (x: t1) ->
@@ -517,8 +517,8 @@ let synth_injective_intro'
   
 let parse_synth'
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
 : Tot (bare_parser t2)
@@ -528,8 +528,8 @@ let parse_synth'
 
 val parse_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
 : Pure (parser k t2)
@@ -540,8 +540,8 @@ val parse_synth
 
 val parse_synth_eq
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (b: bytes)
@@ -551,8 +551,8 @@ val parse_synth_eq
 
 let bare_serialize_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -562,8 +562,8 @@ let bare_serialize_synth
 
 val bare_serialize_synth_correct
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -576,16 +576,16 @@ val bare_serialize_synth_correct
   (ensures (serializer_correct (parse_synth p1 f2) (bare_serialize_synth p1 f2 s1 g1 )))
 
 let synth_inverse
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (f2: (t1 -> GTot t2))
   (g1: (t2 -> GTot t1))
 : GTot Type0
 = (forall (x : t2) . {:pattern (f2 (g1 x))} f2 (g1 x) == x)
 
 let synth_inverse_intro
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (f2: (t1 -> GTot t2))
   (g1: (t2 -> GTot t1))
 : Lemma
@@ -594,8 +594,8 @@ let synth_inverse_intro
 = ()
 
 let synth_inverse_intro'
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (f2: (t1 -> GTot t2))
   (g1: (t2 -> GTot t1))
   (prf: (x: t2) -> Lemma (f2 (g1 x) == x))
@@ -604,8 +604,8 @@ let synth_inverse_intro'
 = Classical.forall_intro prf
 
 let synth_inverse_synth_injective_pat
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (f: (t1 -> GTot t2))
   (g: (t2 -> GTot t1))
 : Lemma
@@ -615,8 +615,8 @@ let synth_inverse_synth_injective_pat
 = assert (forall x1 x2. f x1 == f x2 ==> g (f x1) == g (f x2))
 
 let synth_inverse_synth_injective
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (f: (t1 -> GTot t2))
   (g: (t2 -> GTot t1))
 : Lemma
@@ -625,8 +625,8 @@ let synth_inverse_synth_injective
 = ()
 
 let synth_inverse_synth_injective'
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (g: (t2 -> GTot t1))
   (f: (t1 -> GTot t2))
   (u: squash (synth_inverse g f))
@@ -634,8 +634,8 @@ let synth_inverse_synth_injective'
 = ()
 
 let synth_injective_synth_inverse_synth_inverse_recip
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (g: (t2 -> GTot t1))
   (f: (t1 -> GTot t2))
   (u: squash (synth_inverse g f /\ synth_injective g))
@@ -644,8 +644,8 @@ let synth_injective_synth_inverse_synth_inverse_recip
 
 val serialize_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -658,8 +658,8 @@ val serialize_synth
 
 val serialize_synth_eq
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -674,8 +674,8 @@ val serialize_synth_eq
 
 let serialize_synth_eq'
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -695,8 +695,8 @@ let serialize_synth_eq'
 
 val serialize_synth_upd_chain
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -728,8 +728,8 @@ val serialize_synth_upd_chain
 
 val serialize_synth_upd_bw_chain
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (s1: serializer p1)
@@ -763,8 +763,8 @@ val serialize_synth_upd_bw_chain
 
 inline_for_extraction
 let synth_tagged_union_data
-  (#tag_t: Type0)
-  (#data_t: Type0)
+  (#tag_t: Type)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (tg: tag_t)
   (x: refine_with_tag tag_of_data tg)
@@ -772,8 +772,8 @@ let synth_tagged_union_data
 = x
 
 let parse_tagged_union_payload
-  (#tag_t: Type0)
-  (#data_t: Type0)
+  (#tag_t: Type)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -782,8 +782,8 @@ let parse_tagged_union_payload
 = parse_synth #k #(refine_with_tag tag_of_data tg) (p tg) (synth_tagged_union_data tag_of_data tg)
 
 let parse_tagged_union_payload_and_then_cases_injective
-  (#tag_t: Type0)
-  (#data_t: Type0)
+  (#tag_t: Type)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -796,9 +796,9 @@ let parse_tagged_union_payload_and_then_cases_injective
 
 val parse_tagged_union
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -806,9 +806,9 @@ val parse_tagged_union
 
 val parse_tagged_union_eq
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -826,9 +826,9 @@ val parse_tagged_union_eq
 
 let bare_parse_tagged_union
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (k': (t: tag_t) -> Tot parser_kind)
   (p: (t: tag_t) -> Tot (parser (k' t) (refine_with_tag tag_of_data t)))
@@ -845,9 +845,9 @@ let bare_parse_tagged_union
 
 val parse_tagged_union_eq_gen
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -872,10 +872,10 @@ val parse_tagged_union_eq_gen
 
 let bare_serialize_tagged_union
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (#pt: parser kt tag_t)
   (st: serializer pt)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (#p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -901,10 +901,10 @@ let seq_slice_append_r
 
 let bare_serialize_tagged_union_correct
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (#pt: parser kt tag_t)
   (st: serializer pt)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (#p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -948,10 +948,10 @@ let bare_serialize_tagged_union_correct
 
 val serialize_tagged_union
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (#pt: parser kt tag_t)
   (st: serializer pt)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (#p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -962,10 +962,10 @@ val serialize_tagged_union
 
 val serialize_tagged_union_eq
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (#pt: parser kt tag_t)
   (st: serializer pt)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (#p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -980,8 +980,8 @@ val serialize_tagged_union_eq
 
 inline_for_extraction
 let synth_dtuple2
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
+  (#t1: Type)
+  (#t2: t1 -> Type)
   (x: t1)
   (y: t2 x)
 : Tot (refine_with_tag #t1 #(dtuple2 t1 t2) dfst x)
@@ -989,10 +989,10 @@ let synth_dtuple2
 
 let parse_dtuple2
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: (t1 -> Tot Type0))
+  (#t2: (t1 -> Tot Type))
   (p2: (x: t1) -> parser k2 (t2 x))
 : Tot (parser (and_then_kind k1 k2) (dtuple2 t1 t2))
 = parse_tagged_union
@@ -1002,8 +1002,8 @@ let parse_dtuple2
 
 inline_for_extraction
 let synth_dtuple2_recip
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
+  (#t1: Type)
+  (#t2: t1 -> Type)
   (x: t1)
   (y: refine_with_tag #t1 #(dtuple2 t1 t2) dfst x)
 : Tot (t2 x)
@@ -1011,21 +1011,21 @@ let synth_dtuple2_recip
 
 val serialize_dtuple2
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
-  (#t2: (t1 -> Tot Type0))
+  (#t2: (t1 -> Tot Type))
   (#p2: (x: t1) -> parser k2 (t2 x))
   (s2: (x: t1) -> serializer (p2 x))
 : Tot (serializer (parse_dtuple2 p1 p2))
 
 val parse_dtuple2_eq
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: (t1 -> Tot Type0))
+  (#t2: (t1 -> Tot Type))
   (p2: (x: t1) -> parser k2 (t2 x))
   (b: bytes)
 : Lemma
@@ -1042,10 +1042,10 @@ val parse_dtuple2_eq
 
 let bare_parse_dtuple2
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: (t1 -> Tot Type0))
+  (#t2: (t1 -> Tot Type))
   (p2: (x: t1) -> parser k2 (t2 x))
 : Tot (bare_parser (dtuple2 t1 t2))
 = fun b ->
@@ -1061,10 +1061,10 @@ let bare_parse_dtuple2
   
 let parse_dtuple2_eq'
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: (t1 -> Tot Type0))
+  (#t2: (t1 -> Tot Type))
   (p2: (x: t1) -> parser k2 (t2 x))
   (b: bytes)
 : Lemma
@@ -1073,11 +1073,11 @@ let parse_dtuple2_eq'
 
 val serialize_dtuple2_eq
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
-  (#t2: (t1 -> Tot Type0))
+  (#t2: (t1 -> Tot Type))
   (#p2: (x: t1) -> parser k2 (t2 x))
   (s2: (x: t1) -> serializer (p2 x))
   (xy: dtuple2 t1 t2)
@@ -1086,11 +1086,11 @@ val serialize_dtuple2_eq
 
 let bare_serialize_dtuple2
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
-  (#t2: (t1 -> Tot Type0))
+  (#t2: (t1 -> Tot Type))
   (#p2: (x: t1) -> parser k2 (t2 x))
   (s2: (x: t1) -> serializer (p2 x))
   (xy: dtuple2 t1 t2)
@@ -1099,11 +1099,11 @@ let bare_serialize_dtuple2
 
 let serialize_dtuple2_eq'
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
-  (#t2: (t1 -> Tot Type0))
+  (#t2: (t1 -> Tot Type))
   (#p2: (x: t1) -> parser k2 (t2 x))
   (s2: (x: t1) -> serializer (p2 x))
   (xy: dtuple2 t1 t2)
@@ -1116,10 +1116,10 @@ let serialize_dtuple2_eq'
 
 val nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (p2: parser k2 t2)
 : Tot (parser (and_then_kind k1 k2) (t1 * t2))
 
@@ -1127,10 +1127,10 @@ val nondep_then
 
 val nondep_then_eq
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (p2: parser k2 t2)
   (b: bytes)
 : Lemma
@@ -1147,11 +1147,11 @@ val nondep_then_eq
 
 let bare_serialize_nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (s1: serializer p1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (p2: parser k2 t2)
   (s2: serializer p2)
 : Tot (bare_serializer (t1 * t2))
@@ -1161,22 +1161,22 @@ let bare_serialize_nondep_then
 
 val serialize_nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
 : Tot (serializer (nondep_then p1 p2))
 
 val serialize_nondep_then_eq
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (input: t1 * t2)
@@ -1185,11 +1185,11 @@ val serialize_nondep_then_eq
 
 val length_serialize_nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (input1: t1)
@@ -1199,11 +1199,11 @@ val length_serialize_nondep_then
 
 val serialize_nondep_then_upd_left
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (x: t1 * t2)
@@ -1218,11 +1218,11 @@ val serialize_nondep_then_upd_left
 
 val serialize_nondep_then_upd_left_chain
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (x: t1 * t2)
@@ -1243,11 +1243,11 @@ val serialize_nondep_then_upd_left_chain
 
 val serialize_nondep_then_upd_bw_left
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (x: t1 * t2)
@@ -1265,11 +1265,11 @@ val serialize_nondep_then_upd_bw_left
 
 val serialize_nondep_then_upd_bw_left_chain
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (x: t1 * t2)
@@ -1291,11 +1291,11 @@ val serialize_nondep_then_upd_bw_left_chain
 
 val serialize_nondep_then_upd_right
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (x: t1 * t2)
@@ -1310,11 +1310,11 @@ val serialize_nondep_then_upd_right
 
 val serialize_nondep_then_upd_right_chain
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (x: t1 * t2)
@@ -1337,11 +1337,11 @@ val serialize_nondep_then_upd_right_chain
 
 let serialize_nondep_then_upd_bw_right
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (x: t1 * t2)
@@ -1357,11 +1357,11 @@ let serialize_nondep_then_upd_bw_right
 
 let serialize_nondep_then_upd_bw_right_chain
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong } )
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (x: t1 * t2)
@@ -1396,10 +1396,10 @@ let serialize_nondep_then_upd_bw_right_chain
 
 let parse_strengthen_prf
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k t1)
   (p2: t1 -> GTot Type0)
-: Tot Type0
+: Tot Type
 = (xbytes: bytes) ->
   (consumed: consumed_length xbytes) ->
   (x: t1) ->
@@ -1409,7 +1409,7 @@ let parse_strengthen_prf
 
 let bare_parse_strengthen
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k t1)
   (p2: t1 -> GTot Type0)
   (prf: parse_strengthen_prf p1 p2)
@@ -1424,7 +1424,7 @@ let bare_parse_strengthen
 
 let bare_parse_strengthen_no_lookahead
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k t1)
   (p2: t1 -> GTot Type0)
   (prf: parse_strengthen_prf p1 p2)
@@ -1435,7 +1435,7 @@ let bare_parse_strengthen_no_lookahead
 
 let bare_parse_strengthen_injective
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k t1)
   (p2: t1 -> GTot Type0)
   (prf: parse_strengthen_prf p1 p2)
@@ -1448,7 +1448,7 @@ let bare_parse_strengthen_injective
 
 let bare_parse_strengthen_correct
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k t1)
   (p2: t1 -> GTot Type0)
   (prf: parse_strengthen_prf p1 p2)
@@ -1463,7 +1463,7 @@ let bare_parse_strengthen_correct
 
 let parse_strengthen
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k t1)
   (p2: t1 -> GTot Type0)
   (prf: parse_strengthen_prf p1 p2)
@@ -1473,7 +1473,7 @@ let parse_strengthen
 
 let serialize_strengthen'
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k t1)
   (p2: t1 -> GTot Type0)
   (prf: parse_strengthen_prf p1 p2)
@@ -1484,7 +1484,7 @@ let serialize_strengthen'
 
 let serialize_strengthen_correct
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k t1)
   (p2: t1 -> GTot Type0)
   (prf: parse_strengthen_prf p1 p2)
@@ -1497,7 +1497,7 @@ let serialize_strengthen_correct
 
 let serialize_strengthen
   (#k: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k t1)
   (p2: t1 -> GTot Type0)
   (prf: parse_strengthen_prf p1 p2)
@@ -1512,7 +1512,7 @@ let compose (#t1 #t2 #t3: Type) (f1: t1 -> GTot t2) (f2: t2 -> GTot t3) (x: t1) 
 
 val make_total_constant_size_parser_compose
   (sz: nat)
-  (t1 t2: Type0)
+  (t1 t2: Type)
   (f1: ((s: bytes {Seq.length s == sz}) -> GTot t1))
   (g2: t1 -> GTot t2)
 : Lemma
@@ -1532,14 +1532,14 @@ val make_total_constant_size_parser_compose
 unfold
 let lift_parser'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (f: unit -> GTot (parser k t))
 : Tot (bare_parser t)
 = fun (input: bytes) -> parse (f ()) input
 
 let lift_parser_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (f: unit -> GTot (parser k t))
 : Lemma
   (parser_kind_prop k (lift_parser' f))
@@ -1547,7 +1547,7 @@ let lift_parser_correct
 
 let lift_parser
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (f: unit -> GTot (parser k t))
 : Tot (parser k t)
 = lift_parser_correct f;
@@ -1556,7 +1556,7 @@ let lift_parser
 unfold
 let lift_serializer'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#f: unit -> GTot (parser k t))
   (s: unit -> GTot (serializer (f ())))
 : Tot (bare_serializer t)
@@ -1564,7 +1564,7 @@ let lift_serializer'
 
 let lift_serializer_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#f: unit -> GTot (parser k t))
   (s: unit -> GTot (serializer (f ())))
 : Lemma
@@ -1573,7 +1573,7 @@ let lift_serializer_correct
 
 let lift_serializer
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#f: unit -> GTot (parser k t))
   (s: unit -> GTot (serializer (f ())))
 : Tot (serializer #k #t (lift_parser f))
@@ -1604,7 +1604,7 @@ let parse_filter_refine (#t: Type) (f: (t -> GTot bool)) =
   (x: t { f x == true } )
 
 let parse_filter_payload
-  (#t: Type0)
+  (#t: Type)
   (f: (t -> GTot bool))
   (v: t)
 : Tot (parser parse_filter_payload_kind (parse_filter_refine f))
@@ -1621,14 +1621,14 @@ let parse_filter_payload
 
 val parse_filter
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (f: (t -> GTot bool))
 : Tot (parser (parse_filter_kind k) (parse_filter_refine f))
 
 val parse_filter_eq
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (f: (t -> GTot bool))
   (input: bytes)
@@ -1643,7 +1643,7 @@ val parse_filter_eq
 
 let serialize_filter'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (f: (t -> GTot bool))
@@ -1652,7 +1652,7 @@ let serialize_filter'
 
 val serialize_filter_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (f: (t -> GTot bool))
@@ -1661,7 +1661,7 @@ val serialize_filter_correct
 
 let serialize_filter
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (f: (t -> GTot bool))
@@ -1671,7 +1671,7 @@ let serialize_filter
 
 let serialize_weaken
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (k' : parser_kind)
   (#p: parser k t)
   (s: serializer p { k' `is_weaker_than` k })
@@ -1680,6 +1680,6 @@ let serialize_weaken
 
 (* Helpers to define `if` combinators *)
 
-let cond_true (cond: bool) : Tot Type0 = (u: unit { cond == true } )
+let cond_true (cond: bool) : Tot Type = (u: unit { cond == true } )
 
-let cond_false (cond: bool) : Tot Type0 = (u: unit { cond == false } )
+let cond_false (cond: bool) : Tot Type = (u: unit { cond == false } )

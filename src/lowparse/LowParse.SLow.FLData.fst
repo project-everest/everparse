@@ -8,7 +8,7 @@ module U32 = FStar.UInt32
 inline_for_extraction
 let parse32_fldata
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (sz: nat)
@@ -31,7 +31,7 @@ let parse32_fldata
 inline_for_extraction
 let parse32_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (p32: parser32 p)
@@ -53,7 +53,7 @@ let parse32_fldata_strong
 inline_for_extraction
 let serialize32_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
   (s32: partial_serializer32 s)
@@ -64,7 +64,7 @@ let serialize32_fldata_strong
 inline_for_extraction
 let size32_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)

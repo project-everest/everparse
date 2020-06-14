@@ -12,7 +12,7 @@ module L = FStar.List.Tot
 
 let rec parse_list_tailrec'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (b: bytes32)
@@ -43,7 +43,7 @@ let list_append_rev_cons
 
 let rec parse_list_tailrec'_correct'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (b: bytes32)
@@ -78,7 +78,7 @@ let rec parse_list_tailrec'_correct'
 
 let parse_list_tailrec'_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (b: bytes32)
@@ -121,7 +121,7 @@ let list_rev
 
 let parse_list_tailrec_inv
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
@@ -136,7 +136,7 @@ let parse_list_tailrec_inv
     b == false /\ None? (parse_list_tailrec' p32 input [])
 
 let parse_list_tailrec_measure
-  (#t: Type0)
+  (#t: Type)
   (x: option (bytes32 * list t))
 : GTot nat
 = match x with
@@ -146,7 +146,7 @@ let parse_list_tailrec_measure
 inline_for_extraction
 let parse_list_tailrec_body
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
@@ -175,7 +175,7 @@ let parse_list_tailrec_body
 inline_for_extraction
 let parse_list_tailrec
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
@@ -194,7 +194,7 @@ let parse_list_tailrec
 inline_for_extraction
 let parse32_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
 : Tot (parser32 (parse_list p))
@@ -208,7 +208,7 @@ let parse32_list
   ) <: (res: option (list t * U32.t) { parser32_correct (parse_list p) input res } ))
 
 let rec partial_serialize32_list'
-  (#t: Type0)
+  (#t: Type)
   (#k: parser_kind)
   (p: parser k t)
   (s: serializer p)
@@ -238,7 +238,7 @@ let rec partial_serialize32_list'
     res
 
 let rec partial_serialize32_list_tailrec'
-  (#t: Type0)
+  (#t: Type)
   (#k: parser_kind)
   (p: parser k t)
   (s: serializer p)
@@ -269,7 +269,7 @@ let rec partial_serialize32_list_tailrec'
     partial_serialize32_list_tailrec' p s s32 accu' q
 
 let partial_serialize32_list'_inv
-  (#t: Type0)
+  (#t: Type)
   (#k: parser_kind)
   (p: parser k t)
   (s: serializer p)
@@ -290,14 +290,14 @@ let partial_serialize32_list'_inv
   )
 
 let partial_serialize32_list'_measure
-  (#t: Type0)
+  (#t: Type)
   (x: bytes32 * list t)
 : GTot nat
 = L.length (snd x)
 
 inline_for_extraction
 let partial_serialize32_list'_body
-  (#t: Type0)
+  (#t: Type)
   (#k: parser_kind)
   (p: parser k t)
   (s: serializer p)
@@ -322,7 +322,7 @@ let partial_serialize32_list'_body
     (true, (accu', q))
 
 let partial_serialize32_list'_init
-  (#t: Type0)
+  (#t: Type)
   (#k: parser_kind)
   (p: parser k t)
   (s: serializer p)
@@ -343,7 +343,7 @@ let partial_serialize32_list'_init
 
 inline_for_extraction
 let partial_serialize32_list
-  (#t: Type0)
+  (#t: Type)
   (#k: parser_kind)
   (p: parser k t)
   (s: serializer p)
@@ -365,7 +365,7 @@ let partial_serialize32_list
   ) <: (res: bytes32 { serializer32_correct (serialize_list p s) input res }))
 
 let size32_list_inv
-  (#t: Type0)
+  (#t: Type)
   (#k: parser_kind)
   (#p: parser k t)
   (#s: serializer p)
@@ -387,7 +387,7 @@ let size32_list_inv
     size32_postcond (serialize_list p s) input len
 
 let size32_list_measure
-  (#t: Type0)
+  (#t: Type)
   (accu: (U32.t * list t))
 : GTot nat
 = let (_, rem) = accu in
@@ -395,7 +395,7 @@ let size32_list_measure
 
 inline_for_extraction
 let size32_list_body
-  (#t: Type0)
+  (#t: Type)
   (#k: parser_kind)
   (#p: parser k t)
   (#s: serializer p)
@@ -429,7 +429,7 @@ let size32_list_body
 
 inline_for_extraction
 let size32_list
-  (#t: Type0)
+  (#t: Type)
   (#k: parser_kind)
   (#p: parser k t)
   (#s: serializer p)

@@ -39,8 +39,8 @@ let validate_bitsum_cases_t
   (#cl: uint_t tot t)
   (#from: nat)
   (b: bitsum' cl from)
-: Tot Type
-= (u: (bitsum'_key_type b -> Tot Type0)) ->
+: Tot (Type u#(r+1))
+= (u: (bitsum'_key_type b -> Tot (Type u#r))) ->
   (f: ((x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (u x)))) ->
   (v: ((x: bitsum'_key_type b) -> Tot (validator (dsnd (f x))))) ->
   (x: parse_filter_refine (filter_bitsum' b)) ->
@@ -51,7 +51,7 @@ let validate_bitsum_cases_bitstop
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
-: Tot (validate_bitsum_cases_t #tot #t #cl #0 (BitStop ()))
+: Tot (validate_bitsum_cases_t u#r #tot #t #cl #0 (BitStop ()))
 = fun u f v x #rrel #rel sl pos ->
   v () sl pos
 
@@ -63,8 +63,8 @@ let validate_bitsum_cases_bitfield
   (bitsum'_size: nat)
   (sz: nat { sz > 0 /\ sz <= bitsum'_size /\ bitsum'_size <= tot })
   (rest: bitsum' cl (bitsum'_size - sz))
-  (phi: validate_bitsum_cases_t rest)
-: Tot (validate_bitsum_cases_t (BitField sz rest))
+  (phi: validate_bitsum_cases_t u#r rest)
+: Tot (validate_bitsum_cases_t u#r (BitField sz rest))
 = fun u f v x #rrel #rel sl pos ->
   phi
     (fun x -> u (coerce (bitsum'_key_type (BitField sz rest)) x))
@@ -85,8 +85,8 @@ let validate_bitsum_cases_bitsum_gen
   (e: enum key (bitfield cl key_size))
   (key_of: ((x: enum_repr e) -> Tot (y: enum_key e { y == enum_key_of_repr e x })))
   (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
-  (destr_payload: ((k: enum_key e) -> Tot (validate_bitsum_cases_t (payload k))))
-: Tot (validate_bitsum_cases_t (BitSum' key key_size e payload))
+  (destr_payload: ((k: enum_key e) -> Tot (validate_bitsum_cases_t u#r (payload k))))
+: Tot (validate_bitsum_cases_t u#r (BitSum' key key_size e payload))
 = fun u f v x_ #rrel #rel sl pos ->
       [@inline_let]
       let r = cl.get_bitfield x_ (bitsum'_size - key_size) bitsum'_size in
@@ -114,8 +114,8 @@ let validate_bitsum_cases_bitsum'_t
   (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
-: Tot Type
-= (u: (bitsum'_key_type (BitSum' key key_size e payload) -> Tot Type0)) ->
+: Tot (Type u#(r+1))
+= (u: (bitsum'_key_type (BitSum' key key_size e payload) -> Tot (Type u#r))) ->
   (f: ((x: bitsum'_key_type (BitSum' key key_size e payload)) -> Tot (k: parser_kind & parser k (u x)))) ->
   (v: ((x: bitsum'_key_type (BitSum' key key_size e payload)) -> Tot (validator (dsnd (f x))))) ->
   (x: parse_filter_refine (filter_bitsum' (BitSum' key key_size e payload)) { ~ (list_mem (cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size <: bitfield cl key_size) (list_map snd l1)) }) ->
@@ -132,8 +132,8 @@ let validate_bitsum_cases_bitsum'_intro
   (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
   (e: enum key (bitfield cl key_size))
   (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
-  (phi: validate_bitsum_cases_bitsum'_t cl bitsum'_size key key_size e payload [] e)
-: Tot (validate_bitsum_cases_t (BitSum' key key_size e payload))
+  (phi: validate_bitsum_cases_bitsum'_t u#r cl bitsum'_size key key_size e payload [] e)
+: Tot (validate_bitsum_cases_t u#r (BitSum' key key_size e payload))
 = fun u f v x #rrel #rel sl pos ->
     let xr = cl.bitfield_eq_lhs x (bitsum'_size - key_size) bitsum'_size in
     phi u f v x xr sl pos
@@ -149,7 +149,7 @@ let validate_bitsum_cases_bitsum'_nil
   (e: enum key (bitfield cl key_size))
   (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
   (h: squash (e == e `L.append` []))
-: Tot (validate_bitsum_cases_bitsum'_t cl bitsum'_size key key_size e payload e [])
+: Tot (validate_bitsum_cases_bitsum'_t u#r cl bitsum'_size key key_size e payload e [])
 = (fun u f v x xr #rrel #rel sl pos ->
     assert False;
     validator_error_generic (* dummy *))
@@ -175,9 +175,9 @@ let validate_bitsum_cases_bitsum'_cons
     enum_repr_of_key e k == r /\
     e == (l1 `L.append` [(k, r)]) `L.append` l2
   })
-  (destr_payload: validate_bitsum_cases_t (payload k))
-  (destr_tail: validate_bitsum_cases_bitsum'_t cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) l2)
-: Tot (validate_bitsum_cases_bitsum'_t cl bitsum'_size key key_size e payload l1 ((k, r) :: l2))
+  (destr_payload: validate_bitsum_cases_t u#r (payload k))
+  (destr_tail: validate_bitsum_cases_bitsum'_t u#r cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) l2)
+: Tot (validate_bitsum_cases_bitsum'_t u#r cl bitsum'_size key key_size e payload l1 ((k, r) :: l2))
 = fun u f v x xr #rrel #rel sl pos ->
     // [@inline_let]
     let _ =
@@ -202,23 +202,10 @@ let validate_bitsum_cases_bitsum'_cons
         L.append_mem (L.map snd l1) (L.map snd [(k, r)]) (cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size <: bitfield cl key_size)
       in
       destr_tail u f v (x <: t) xr sl pos
-    
+
 [@filter_bitsum'_t_attr]
 noextract
-let rec mk_validate_bitsum_cases_t'
-  (#tot: pos)
-  (#t: eqtype)
-  (#cl: uint_t tot t)
-  (#bitsum'_size: nat)
-  (b: bitsum' cl bitsum'_size)
-: Tot (validate_bitsum_cases_t b)
-  (decreases (LexCons b (LexCons () LexTop)))
-= match b with
-  | BitStop _ -> validate_bitsum_cases_bitstop cl
-  | BitField sz rest -> validate_bitsum_cases_bitfield cl bitsum'_size sz rest (mk_validate_bitsum_cases_t' rest)
-  | BitSum' key key_size e payload ->
-    validate_bitsum_cases_bitsum'_intro cl bitsum'_size key key_size e payload (mk_validate_bitsum_cases_bitsum'_t' cl bitsum'_size key key_size e payload [] e)
-and mk_validate_bitsum_cases_bitsum'_t'
+let rec mk_validate_bitsum_cases_bitsum'_t'
   (#tot: pos)
   (#t: eqtype)
   (cl: uint_t tot t)
@@ -229,7 +216,14 @@ and mk_validate_bitsum_cases_bitsum'_t'
   (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
-: Tot (validate_bitsum_cases_bitsum'_t cl bitsum'_size key key_size e payload l1 l2)
+  (mk_validate_bitsum_cases_t':
+    (* universe-polymorphic mutually recursive functions must be "split off"
+       cf. https://github.com/FStarLang/FStar/issues/1480#issuecomment-623260544
+     *)
+    (b: bitsum' cl (bitsum'_size - key_size) { b << BitSum' key key_size e payload }) ->
+    Tot (validate_bitsum_cases_t u#r b)
+  )
+: Tot (validate_bitsum_cases_bitsum'_t u#r cl bitsum'_size key key_size e payload l1 l2)
   (decreases (LexCons payload (LexCons l2 LexTop)))
 = match l2 with
   | [] ->
@@ -242,7 +236,23 @@ and mk_validate_bitsum_cases_bitsum'_t'
       enum_repr_of_key_append_cons e l1 (k, r) q;
       L.append_assoc l1 [(k, r)] q
     in  
-    validate_bitsum_cases_bitsum'_cons cl bitsum'_size key key_size e payload l1 k r q (mk_validate_bitsum_cases_t' (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k)) (mk_validate_bitsum_cases_bitsum'_t' cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q)
+    validate_bitsum_cases_bitsum'_cons cl bitsum'_size key key_size e payload l1 k r q (mk_validate_bitsum_cases_t' (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k)) (mk_validate_bitsum_cases_bitsum'_t' cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q mk_validate_bitsum_cases_t')
+
+[@filter_bitsum'_t_attr]
+noextract
+let rec mk_validate_bitsum_cases_t'
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+: Tot (validate_bitsum_cases_t u#r b)
+  (decreases (LexCons b (LexCons () LexTop)))
+= match b with
+  | BitStop _ -> validate_bitsum_cases_bitstop cl
+  | BitField sz rest -> validate_bitsum_cases_bitfield cl bitsum'_size sz rest (mk_validate_bitsum_cases_t' rest)
+  | BitSum' key key_size e payload ->
+    validate_bitsum_cases_bitsum'_intro cl bitsum'_size key key_size e payload (mk_validate_bitsum_cases_bitsum'_t' cl bitsum'_size key key_size e payload [] e (mk_validate_bitsum_cases_t' #tot #t #cl #(bitsum'_size - key_size)))
 
 #push-options "--z3rlimit 64"
 #restart-solver
@@ -254,9 +264,9 @@ let validate_bitsum
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (#p: parser kt t)
   (v: validator p)
@@ -302,9 +312,9 @@ let valid_bitsum_intro
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (p: parser kt t)
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
@@ -343,9 +353,9 @@ let valid_bitsum_elim'
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (p: parser kt t)
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
@@ -382,9 +392,9 @@ let valid_bitsum_elim
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (bitsum'_type b)))
-  (type_of_tag: (bitsum'_key_type b -> Tot Type0))
+  (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (synth_case: synth_case_t b data tag_of_data type_of_tag)
   (p: parser kt t)
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))

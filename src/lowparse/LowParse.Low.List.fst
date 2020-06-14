@@ -12,7 +12,7 @@ module G = FStar.Ghost
 
 let valid_exact_list_nil
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -30,7 +30,7 @@ let valid_exact_list_nil
 
 let valid_exact_list_cons
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -67,7 +67,7 @@ let valid_exact_list_cons
 
 let rec valid_list_valid_exact_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -95,7 +95,7 @@ let rec valid_list_valid_exact_list
 
 let valid_exact_list_cons_recip
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -132,7 +132,7 @@ let valid_exact_list_cons_recip
 
 let rec valid_exact_list_valid_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -165,7 +165,7 @@ module L = FStar.List.Tot
 
 let rec valid_exact_list_append
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (h: HS.mem)
   (#rrel #rel: _)
@@ -196,7 +196,7 @@ let rec valid_exact_list_append
 
 let validate_list_inv
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (g0 g1: G.erased HS.mem)
   (#rrel #rel: _)
@@ -233,7 +233,7 @@ let validate_list_inv
 inline_for_extraction
 let validate_list_body
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: validator p)
   (g0 g1: G.erased HS.mem)
@@ -262,7 +262,7 @@ let validate_list_body
 inline_for_extraction
 let validate_list'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: validator p)
   (#rrel #rel: _)
@@ -300,7 +300,7 @@ let validate_list'
 inline_for_extraction
 let validate_list
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: validator p)
   (u: squash (
@@ -432,7 +432,7 @@ let rec list_last_pos
 inline_for_extraction
 val list_is_nil
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (input: buffer8)
   (len: I32.t)
@@ -455,7 +455,7 @@ let list_is_nil #k #t p input len =
 inline_for_extraction
 let list_head
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (input: buffer8)
 : HST.Stack buffer8
@@ -481,7 +481,7 @@ let list_head
 inline_for_extraction
 let list_tail
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v: validator_nochk32 p)
   (input: buffer8)
