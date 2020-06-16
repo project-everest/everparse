@@ -12,7 +12,7 @@ let parse_vldata_gen
   (sz: integer_size)
   (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Tot (parser (parse_vldata_gen_kind sz k) t)
 = parse_fldata_and_then_cases_injective sz f p;
@@ -29,7 +29,7 @@ let parse_vldata_gen_eq_def
   (sz: integer_size)
   (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
 : Lemma
   (and_then_cases_injective (parse_vldata_payload sz f p) /\

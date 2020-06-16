@@ -807,7 +807,7 @@ let validate_ite #nz (#k:parser_kind nz) (#a:Type) (#b:Type)
 unfold
 let validate_list_inv
   (#k: LPL.parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: LPL.parser k t)
   (inv: slice_inv)
   (l: loc)
@@ -1084,7 +1084,7 @@ let validate_weaken_inv_loc #nz (#k:parser_kind nz) #t (#p:parser k t)
 inline_for_extraction noextract
 let read_filter #nz
                 (#k: parser_kind nz)
-                (#t: Type0)
+                (#t: Type)
                 (#p: parser k t)
                 (p32: leaf_reader p)
                 (f: (t -> bool))

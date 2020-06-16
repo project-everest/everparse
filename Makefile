@@ -50,6 +50,10 @@ clean:
 package:
 	+src/package/package.sh -zip
 
+# Windows binary package
+package-noversion:
+	+src/package/package.sh -zip-noversion
+
 everparse:
 	+src/package/package.sh -make
 

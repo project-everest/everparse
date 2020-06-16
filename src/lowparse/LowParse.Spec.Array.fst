@@ -29,7 +29,7 @@ let fldata_array_precond
 
 let fldata_to_array_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -55,7 +55,7 @@ let array (t: Type) (n: nat) = (l: list t { array_pred n l } )
 inline_for_extraction
 let fldata_to_array
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -73,7 +73,7 @@ let fldata_to_array
 
 let fldata_to_array_inj
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -96,7 +96,7 @@ let parse_array_kind'
 
 let parse_array'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -112,7 +112,7 @@ let parse_array'
 
 let parse_array_total_constant_size
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -150,7 +150,7 @@ let parse_array_kind
 
 let parse_array_kind_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -171,7 +171,7 @@ let parse_array_kind_correct
 
 let parse_array
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -186,7 +186,7 @@ let parse_array
 
 let array_to_fldata_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -206,7 +206,7 @@ let array_to_fldata_correct
 inline_for_extraction
 let array_to_fldata
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -224,7 +224,7 @@ let array_to_fldata
 
 let array_to_fldata_to_array
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -239,7 +239,7 @@ let array_to_fldata_to_array
 
 let serialize_array'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -259,7 +259,7 @@ let serialize_array'
 
 let serialize_array
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -272,7 +272,7 @@ let serialize_array
 
 let length_serialize_array
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (array_byte_size: nat)
@@ -305,7 +305,7 @@ let vldata_vlarray_precond
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (elem_count_min: nat)
   (elem_count_max: nat)
@@ -331,7 +331,7 @@ let vldata_vlarray_precond_parser_kind_low
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (elem_count_min: nat)
   (elem_count_max: nat)
@@ -345,7 +345,7 @@ let vldata_to_vlarray_correct
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -375,7 +375,7 @@ let vldata_to_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -395,7 +395,7 @@ let vldata_to_vlarray_inj
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -424,7 +424,7 @@ let parse_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -442,7 +442,7 @@ let parse_vlarray_eq_some
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -483,7 +483,7 @@ let vlarray_to_vldata_correct
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -509,7 +509,7 @@ let vlarray_to_vldata
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -529,7 +529,7 @@ let vlarray_to_vldata_to_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -552,7 +552,7 @@ let serialize_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)
@@ -574,7 +574,7 @@ let length_serialize_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (elem_count_min: nat)

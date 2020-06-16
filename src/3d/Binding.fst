@@ -35,8 +35,7 @@ type field_num_ops_t = {
   all_nums : unit -> ML (list (field_num & option ident & string)) //retrieve a table of identifier/field-name mappings
 }
 
-#push-options "--warn_error -272" //top-level effect; ok
-let field_num_ops : field_num_ops_t =
+let mk_field_num_ops () : ML field_num_ops_t =
   let open FStar.ST in
   let h : H.t field_num (option ident & string) = H.create 100 in
   let ctr : ref field_num = alloc 1 in
@@ -65,7 +64,6 @@ let field_num_ops : field_num_ops_t =
     lookup = lookup;
     all_nums = all_nums
   }
-#pop-options
 
 let field_error_code_variable_name_of_field
   (x: (option ident & string))
@@ -75,13 +73,6 @@ let field_error_code_variable_name_of_field
   | None -> with_dummy_range name
   | Some this ->
     with_dummy_range (this.v ^ "__" ^ name)
-
-let all_nums = field_num_ops.all_nums
-
-let lookup_field_num x =
-  match field_num_ops.lookup x with
-  | None -> None
-  | Some y -> Some (field_error_code_variable_name_of_field y)
 
 /// Computed attributes for a decl:
 ///    -- its size in bytes
@@ -107,10 +98,29 @@ let nullary_macro t = { macro_arguments_t = []; macro_result_t = t }
 
 (* Type-checking environments *)
 
-/// global_env maps top-level identifiers to their corresponding declaration
+/// global_env ge_h field is a hash (hence `_h`) table that:
+///  -- maps top-level identifiers to their corresponding declaration
 ///  -- maps type identifiers to decl_attributes
 ///  -- maps macro names to their types
-let global_env = H.t ident' (decl & either decl_attributes macro_signature)
+///
+/// global_env ge_fd field maps a unique numerical identifier to each
+/// "struct identifier - field (hence `_fd`) name" pair. It is part of
+/// the global environment so that numerical field identifiers are
+/// proper to the current module, and not shared across different .3d
+/// files given on the command line
+noeq
+type global_env = {
+  ge_h: H.t ident' (decl & either decl_attributes macro_signature);
+  ge_fd: field_num_ops_t;
+}
+
+let all_nums ge = ge.ge_fd.all_nums ()
+
+let lookup_field_num ge x =
+  match ge.ge_fd.lookup x with
+  | None -> None
+  | Some y -> Some (field_error_code_variable_name_of_field y)
+
 
 /// Maps locally bound names, i.e., a field name to its type
 ///  -- the bool signifies that this identifier has been used, and is
@@ -164,7 +174,7 @@ let format_identifier (e:env) (i:ident) : ML ident =
       else //otherwise, add an underscore
            {i with v =  Ast.reserved_prefix ^ i.v}
   in
-  match H.try_find e.globals j.v, H.try_find e.locals j.v with
+  match H.try_find e.globals.ge_h j.v, H.try_find e.locals j.v with
   | None, None -> j
   | _ ->
     let msg = Printf.sprintf
@@ -174,24 +184,24 @@ let format_identifier (e:env) (i:ident) : ML ident =
     error msg i.range
 
 let add_global (e:global_env) (i:ident) (d:decl) (t:either decl_attributes macro_signature) : ML unit =
-  check_shadow e i d.range;
+  check_shadow e.ge_h i d.range;
   let env = mk_env e in
   let i' = format_identifier env i in
-  H.insert e i.v (d, t);
-  H.insert e i'.v (d, t);
+  H.insert e.ge_h i.v (d, t);
+  H.insert e.ge_h i'.v (d, t);
   match typedef_names d with
   | None -> ()
   | Some td ->
     if td.typedef_abbrev.v <> i.v
     then begin
-      check_shadow e td.typedef_abbrev d.range;
+      check_shadow e.ge_h td.typedef_abbrev d.range;
       let abbrev = format_identifier env td.typedef_abbrev in
-      H.insert e td.typedef_abbrev.v (d, t);
-      H.insert e abbrev.v (d, t)
+      H.insert e.ge_h td.typedef_abbrev.v (d, t);
+      H.insert e.ge_h abbrev.v (d, t)
     end
 
 let add_local (e:env) (i:ident) (t:typ) : ML unit =
-  check_shadow e.globals i t.range;
+  check_shadow e.globals.ge_h i t.range;
   check_shadow e.locals i t.range;
   let i' = format_identifier e i in
   H.insert e.locals i.v (i'.v, t, false);
@@ -206,7 +216,7 @@ let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes mac
     H.insert e.locals i.v (j, t, true);
     Inl t
   | None ->
-    match H.try_find e.globals i.v with
+    match H.try_find e.globals.ge_h i.v with
     | Some d -> Inr d
     | None -> error (Printf.sprintf "Variable %s not found" i.v) i.range
 
@@ -305,17 +315,17 @@ let typ_is_integral env (t:typ) : ML bool =
     | _ -> false
 
 let has_reader (env:global_env) (id:ident) : ML bool =
-  match H.try_find env id.v with
+  match H.try_find env.ge_h id.v with
   | Some (_, Inl attrs) -> attrs.has_reader
   | _ -> false
 
 let parser_kind_nz (env:global_env) (id:ident) : ML (option bool) =
-  match H.try_find env id.v with
+  match H.try_find env.ge_h id.v with
   | Some (_, Inl attrs) -> attrs.parser_kind_nz
   | _ -> None
 
 let has_suffix (env:global_env) (id:ident) : ML bool =
-  match H.try_find env id.v with
+  match H.try_find env.ge_h id.v with
   | Some (_, Inl attrs) -> attrs.has_suffix
   | _ -> false
 
@@ -779,7 +789,7 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         if may_fail
         || Some? fc //it has a refinement
         || Some? fa //it's an array
-        then Some (field_num_ops.next (env.this, sf.field_ident.v))
+        then Some (env.globals.ge_fd.next (env.this, sf.field_ident.v))
         else None
     in
     let sf = {
@@ -1006,7 +1016,7 @@ let elaborate_record (e:global_env)
             field_type = tunit;
             field_array_opt = None;
             field_constraint = w;
-            field_number = Some (field_num_ops.next (env.this, "__precondition"));
+            field_number = Some (env.globals.ge_fd.next (env.this, "__precondition"));
             field_bitwidth = None;
             field_action = None
           }
@@ -1156,7 +1166,11 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     d
 
 let initial_global_env () =
-  let e = H.create 10 in
+  let e = {
+    ge_h = H.create 10;
+    ge_fd = mk_field_num_ops ();
+  }
+  in
   let nullary_decl i =
     let td_name = {
       typedef_name = i;
@@ -1189,9 +1203,9 @@ let initial_global_env () =
   e
 
 let add_field_error_code_decls
-  ()
+  (ge: global_env)
 : ML prog
-= let l = all_nums () in
+= let l = all_nums ge in
   List.map
     (fun (z: (field_num & option ident & string)) ->
       let (i, this, name) = z in
@@ -1206,5 +1220,5 @@ let add_field_error_code_decls
 let bind_prog (p:prog) : ML (prog & global_env) =
   let e = initial_global_env() in
   let p' = List.map (bind_decl e) p in
-  let fc = add_field_error_code_decls () in
+  let fc = add_field_error_code_decls e in
   (fc @ p'), e

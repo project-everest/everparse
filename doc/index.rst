@@ -27,8 +27,9 @@ QUIC.
 Releases
 --------
 
-We produce public releases under the form of a Windows standalone
-binary package and a platform-independent source package.
+We produce public releases under the form of a Windows or Linux
+standalone binary (amd64) package and a platform-independent source
+package.
 
 The latest release of EverParse can be found `here <https://github.com/project-everest/everparse/releases>`_.
 

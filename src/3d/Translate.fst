@@ -511,7 +511,7 @@ let rec make_validator (env:global_env) (p:T.parser) : ML T.validator =
 
   | Parse_dep_pair_with_refinement n1 f1 p1 e k ->
     let p1_is_constant_size_without_actions = parser_is_constant_size_without_actions env p1 in
-    let f1' = match B.lookup_field_num f1 with
+    let f1' = match B.lookup_field_num env.benv f1 with
       | Some fn' -> fn'
       | _ -> failwith (Printf.sprintf "Field `%d` not found" f1)
     in
@@ -533,7 +533,7 @@ let rec make_validator (env:global_env) (p:T.parser) : ML T.validator =
 
   | Parse_dep_pair_with_refinement_and_action n1 f1 p1 e a k ->
     let p1_is_constant_size_without_actions = parser_is_constant_size_without_actions env p1 in
-    let f1' = match B.lookup_field_num f1 with
+    let f1' = match B.lookup_field_num env.benv f1 with
       | Some fn' -> fn'
       | _ -> failwith (Printf.sprintf "Field `%d` not found" f1)
     in
@@ -574,7 +574,7 @@ let rec make_validator (env:global_env) (p:T.parser) : ML T.validator =
     pv false p (Validate_if_else e (make_validator env p1) (make_validator env p2))
 
   | Parse_with_error f p ->
-    begin match B.lookup_field_num f with
+    begin match B.lookup_field_num env.benv f with
     | Some fn ->
       let v = make_validator env p in
       pv v.v_allow_reading p (Validate_with_error fn v)

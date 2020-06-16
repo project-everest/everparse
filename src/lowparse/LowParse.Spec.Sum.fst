@@ -7,9 +7,9 @@ let synth_case_recip'
     (#key: eqtype)
     (#repr: eqtype)
     (e: enum key repr)
-    (#data: Type0)
+    (#data: Type)
     (tag_of_data: (data -> Tot (enum_key e)))
-    (type_of_tag: (enum_key e -> Tot Type0))
+    (type_of_tag: (enum_key e -> Tot Type))
     (synth_case_recip: ((k: enum_key e) -> (x: refine_with_tag tag_of_data k) -> Tot (type_of_tag k)))
     (x: data)
 : GTot (type_of_tag (tag_of_data x))
@@ -21,9 +21,9 @@ type sum =
     (key: eqtype) ->
     (repr: eqtype) ->
     (e: enum key repr) ->
-    (data: Type0) ->
+    (data: Type) ->
     (tag_of_data: (data -> Tot (enum_key e))) ->
-    (type_of_tag: (enum_key e -> Tot Type0)) ->
+    (type_of_tag: (enum_key e -> Tot Type)) ->
     (synth_case: ((x: enum_key e) -> (y: type_of_tag x) -> Tot (refine_with_tag tag_of_data x))) ->
     (synth_case_recip: ((k: enum_key e) -> (x: refine_with_tag tag_of_data k) -> Tot (type_of_tag k))) ->
     (synth_case_recip_synth_case: (
@@ -52,7 +52,7 @@ let sum_enum (t: sum) : Tot (enum (sum_key_type t) (sum_repr_type t)) =
   match t with (Sum _ _ e _ _ _ _ _ _ _) -> e
 
 inline_for_extraction
-let sum_key (t: sum) : Tot Type0 =
+let sum_key (t: sum) : Tot Type =
   enum_key (sum_enum t)
 
 inline_for_extraction
@@ -62,7 +62,7 @@ let sum_key_type_of_sum_key (t: sum) (k: sum_key t) : Pure (sum_key_type t)
 = k
 
 inline_for_extraction
-let sum_type (t: sum) : Tot Type0 =
+let sum_type (t: sum) : Tot Type =
   match t with
   | Sum _ _ _ data _ _ _ _ _ _ -> data
 
@@ -72,7 +72,7 @@ let sum_tag_of_data (t: sum) : Tot ((x: sum_type t) -> Tot (sum_key t)) =
   | Sum _ _ _ _ tag_of_data _ _ _ _ _ -> tag_of_data
 
 inline_for_extraction
-let sum_cases (t: sum) (x: sum_key t) : Type0 =
+let sum_cases (t: sum) (x: sum_key t) : Type =
   refine_with_tag #(sum_key t) #(sum_type t) (sum_tag_of_data t) x
 
 inline_for_extraction
@@ -351,10 +351,10 @@ inline_for_extraction
 let make_sum
   (#key #repr: eqtype)
   (e: enum key repr)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (enum_key e)))
 : Tot (
-    (type_of_tag: (enum_key e -> Tot Type0)) ->
+    (type_of_tag: (enum_key e -> Tot Type)) ->
     (synth_case: ((x: enum_key e) -> (y: type_of_tag x) -> Tot (refine_with_tag tag_of_data x))) ->
     (synth_case_recip: ((k: enum_key e) -> (x: refine_with_tag tag_of_data k) -> Tot (type_of_tag k))) ->
     (synth_case_recip_synth_case: (
@@ -374,9 +374,9 @@ let make_sum
 let synth_case_recip_synth_case_post
   (#key #repr: eqtype)
   (e: enum key repr)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (enum_key e)))
-  (type_of_tag: (enum_key e -> Tot Type0))
+  (type_of_tag: (enum_key e -> Tot Type))
   (synth_case: ((x: enum_key e) -> (y: type_of_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: enum_key e) -> (x: refine_with_tag tag_of_data k) -> Tot (type_of_tag k)))
   (x: key)
@@ -391,9 +391,9 @@ inline_for_extraction
 let make_sum'
   (#key #repr: eqtype)
   (e: enum key repr)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (enum_key e)))
-  (type_of_tag: (enum_key e -> Tot Type0))
+  (type_of_tag: (enum_key e -> Tot Type))
   (synth_case: ((x: enum_key e) -> (y: type_of_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: enum_key e) -> (x: refine_with_tag tag_of_data k) -> Tot (type_of_tag k)))
   (synth_case_recip_synth_case: (
@@ -419,10 +419,10 @@ let dsum_type_of_tag'
   (#key: eqtype)
   (#repr: eqtype)
   (e: enum key repr)
-  (type_of_known_tag: (enum_key e -> Tot Type0))
-  (type_of_unknown_tag: Type0)
+  (type_of_known_tag: (enum_key e -> Tot Type))
+  (type_of_unknown_tag: Type)
   (k: maybe_enum_key e)
-: Type0
+: Type
 = match k with
   | Unknown _ -> type_of_unknown_tag
   | Known k -> type_of_known_tag k
@@ -431,10 +431,10 @@ let synth_dsum_case'
   (#key: eqtype)
   (#repr: eqtype)
   (e: enum key repr)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> GTot (maybe_enum_key e)))
-  (type_of_known_tag: (enum_key e -> Tot Type0))
-  (type_of_unknown_tag: Type0)
+  (type_of_known_tag: (enum_key e -> Tot Type))
+  (type_of_unknown_tag: Type)
   (synth_known_case: ((x: enum_key e) -> (y: type_of_known_tag x) -> Tot (refine_with_tag tag_of_data (Known x))))
   (synth_unknown_case: ((x: unknown_enum_repr e) -> type_of_unknown_tag -> Tot (refine_with_tag tag_of_data (Unknown x))))
   (xy: (x: maybe_enum_key e & dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x))
@@ -448,10 +448,10 @@ let synth_dsum_case_recip'
   (#key: eqtype)
   (#repr: eqtype)
   (e: enum key repr)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> GTot (maybe_enum_key e)))
-  (type_of_known_tag: (enum_key e -> Tot Type0))
-  (type_of_unknown_tag: Type0)
+  (type_of_known_tag: (enum_key e -> Tot Type))
+  (type_of_unknown_tag: Type)
   (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k)))
   (y: data)
 : GTot (x: maybe_enum_key e & dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x)
@@ -464,10 +464,10 @@ type dsum =
     (key: eqtype) ->
     (repr: eqtype) ->
     (e: enum key repr) ->
-    (data: Type0) ->
+    (data: Type) ->
     (tag_of_data: (data -> Tot (maybe_enum_key e))) ->
-    (type_of_known_tag: (enum_key e -> Tot Type0)) ->
-    (type_of_unknown_tag: Type0) ->
+    (type_of_known_tag: (enum_key e -> Tot Type)) ->
+    (type_of_unknown_tag: Type) ->
     (synth_case: ((x: maybe_enum_key e) -> (y: dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x) -> Tot (refine_with_tag tag_of_data x))) ->
     (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k))) ->
     (synth_case_recip_synth_case: (
@@ -498,19 +498,19 @@ let dsum_enum (t: dsum) : Tot (enum (dsum_key_type t) (dsum_repr_type t)) =
   match t with (DSum _ _ e _ _ _ _ _ _ _ _) -> e
 
 inline_for_extraction
-let dsum_key (t: dsum) : Tot Type0 =
+let dsum_key (t: dsum) : Tot Type =
   maybe_enum_key (dsum_enum t)
 
 inline_for_extraction
-let dsum_known_key (t: dsum) : Tot Type0 =
+let dsum_known_key (t: dsum) : Tot Type =
   enum_key (dsum_enum t)
 
 inline_for_extraction
-let dsum_unknown_key (t: dsum) : Tot Type0 =
+let dsum_unknown_key (t: dsum) : Tot Type =
   unknown_enum_repr (dsum_enum t)
 
 inline_for_extraction
-let dsum_type (t: dsum) : Tot Type0 =
+let dsum_type (t: dsum) : Tot Type =
   //NS: this was rewritten from `let DSum ... data .. = t in data`
   //to workaround a glitch in desugaring the above, which introduces
   //an additional, unreduced let binding for extraction
@@ -522,16 +522,16 @@ let dsum_tag_of_data (t: dsum) : Tot ((x: dsum_type t) -> Tot (dsum_key t)) =
   match t with (DSum _ _ _ _ tag_of_data _ _ _ _ _ _) -> tag_of_data
 
 inline_for_extraction
-let dsum_cases (t: dsum) (x: dsum_key t) : Type0 =
+let dsum_cases (t: dsum) (x: dsum_key t) : Type =
   refine_with_tag #(dsum_key t) #(dsum_type t) (dsum_tag_of_data t) x
 
 inline_for_extraction
-let dsum_type_of_known_tag (t: dsum) : Tot ((k: dsum_known_key t) -> Tot Type0) =
+let dsum_type_of_known_tag (t: dsum) : Tot ((k: dsum_known_key t) -> Tot Type) =
   match t with (DSum _ _ _ _ _ type_of_known_tag _ _ _ _ _) ->
   type_of_known_tag
 
 inline_for_extraction
-let dsum_type_of_unknown_tag (t: dsum) : Tot Type0 =
+let dsum_type_of_unknown_tag (t: dsum) : Tot Type =
   match t with (DSum _ _ _ _ _ _ type_of_unknown_tag _ _ _ _) ->
   type_of_unknown_tag
 
@@ -609,7 +609,7 @@ let parse_dsum_type_of_tag
   (x: dsum_key s)
 : Tot (parser (weaken_parse_dsum_cases_kind s f k) (dsum_type_of_tag s x))
 = match x with
-    | Known x' -> weaken (weaken_parse_dsum_cases_kind s f k) (dsnd (f x')) <: parser (weaken_parse_dsum_cases_kind s f k) (dsum_type_of_tag s x)
+    | Known x' -> coerce (parser (weaken_parse_dsum_cases_kind s f k) (dsum_type_of_tag s x)) (weaken (weaken_parse_dsum_cases_kind s f k) (dsnd (f x')))
     | Unknown x' -> weaken (weaken_parse_dsum_cases_kind s f k) g <: parser (weaken_parse_dsum_cases_kind s f k) (dsum_type_of_tag s x)
 
 let parse_dsum_cases
@@ -641,7 +641,7 @@ let parse_dsum_type_of_tag'
   (x: dsum_key s)
 : Tot (parser (parse_dsum_cases_kind s f g x) (dsum_type_of_tag s x))
 = match x with
-    | Known x' -> (dsnd (f x')) <: parser (parse_dsum_cases_kind s f g x) (dsum_type_of_tag s x)
+    | Known x' -> coerce (parser (parse_dsum_cases_kind s f g x) (dsum_type_of_tag s x)) (dsnd (f x'))
     | Unknown x' -> g <: parser (parse_dsum_cases_kind s f g x) (dsum_type_of_tag s x)
 
 let parse_dsum_cases'
@@ -923,10 +923,10 @@ let serialize_dsum
 let synth_dsum_case_recip_synth_case_known_post
   (#key #repr: eqtype)
   (e: enum key repr)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (maybe_enum_key e)))
-  (type_of_known_tag: (enum_key e -> Tot Type0))
-  (type_of_unknown_tag: Type0)
+  (type_of_known_tag: (enum_key e -> Tot Type))
+  (type_of_unknown_tag: Type)
   (synth_case: ((x: maybe_enum_key e) -> (y: dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k)))
   (x: key)
@@ -940,10 +940,10 @@ let synth_dsum_case_recip_synth_case_known_post
 let synth_dsum_case_recip_synth_case_unknown_post
   (#key #repr: eqtype)
   (e: enum key repr)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (maybe_enum_key e)))
-  (type_of_known_tag: (enum_key e -> Tot Type0))
-  (type_of_unknown_tag: Type0)
+  (type_of_known_tag: (enum_key e -> Tot Type))
+  (type_of_unknown_tag: Type)
   (synth_case: ((x: maybe_enum_key e) -> (y: dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k)))
   (x: repr)
@@ -958,11 +958,11 @@ inline_for_extraction
 let make_dsum
   (#key #repr: eqtype)
   (e: enum key repr)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (maybe_enum_key e)))
 : Tot (
-    (type_of_known_tag: (enum_key e -> Tot Type0)) ->
-    (type_of_unknown_tag: Type0) ->
+    (type_of_known_tag: (enum_key e -> Tot Type)) ->
+    (type_of_unknown_tag: Type) ->
     (synth_case: ((x: maybe_enum_key e) -> (y: dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x) -> Tot (refine_with_tag tag_of_data x))) ->
     (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k))) ->
     (synth_case_recip_synth_case: (
@@ -986,10 +986,10 @@ inline_for_extraction
 let make_dsum'
   (#key #repr: eqtype)
   (e: enum key repr)
-  (#data: Type0)
+  (#data: Type)
   (tag_of_data: (data -> Tot (maybe_enum_key e)))
-  (type_of_known_tag: (enum_key e -> Tot Type0))
-  (type_of_unknown_tag: Type0)
+  (type_of_known_tag: (enum_key e -> Tot Type))
+  (type_of_unknown_tag: Type)
   (synth_case: ((x: maybe_enum_key e) -> (y: dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k)))
   (synth_case_recip_synth_case_known: (

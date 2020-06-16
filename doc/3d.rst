@@ -3,48 +3,58 @@
 3d: Dependent Data Descriptions for Verified Validation
 =======================================================
 
-**NOTE:** 3d is available only from the EverParse/3d releases
-(including the corresponding Windows binary package) or from the
-``everparse_3d`` branch. It is not available from ``master``.
+.. note::
+
+   3d is available only from the EverParse/3d releases (including the
+   corresponding binary package) or from the ``everparse_3d``
+   branch. It is not available from ``master``.
+
+   The documentation from this page covers the EverParse/3d releases
+   v2020.06.14 or later.
+
+EverParse/3d lets you write a data format description and
+automatically produces efficient data validation code formally
+verified for memory-safety (absence of buffer overruns), functional
+correctness (validation is correct wrt. your data format) and security
+(absence of double memory fetches.) A gentle overview of formal
+verification is available in the `documentation of EverCrypt
+<https://hacl-star.github.io/Overview.html#what-is-verified-software>`_;
+EverParse provides similar formal guarantees except
+secret-independence.
 
 tl;dr Summary
 -------------
 
-1. Write your data description format in the 3d language, as MyFile.3d
+1. Write your data format description in the 3d language, as
+   ``MyFile1.3d``, ``MyFile2.3d``.
 
-2. Run ``everparse.bat /3D MyFile`` from the location of your .3d
-   file, without the .3d file name extension
+2. Give MyFile1.3d and MyFile2.3d to EverParse:
+
+   * with the Windows binary package: ``everparse.bat MyFile1.3d MyFile2.3d``
+
+   * with the Linux binary package: ``everparse.sh MyFile1.3d MyFile2.3d``
+
+   * with the sources: ``src/3d/3d --batch MyFile1.3d MyFile2.3d``
 
 Then, EverParse/3d produces:
 
-* MyFile.fsti, MyFile.fst: the verified F* specification and Low*
-  implementation of parsers and validators for your data format
+* ``MyFile1.fsti``, ``MyFile1.fst``: the verified F\* specification
+  and Low\* implementation of parsers and validators for your data
+  format from ``MyFile1.3d``, and similarly for ``MyFile2.3d``
 
-* MyFile.c, MyFile.h: the verified C code generated from the verified
-  F* and Low* files
+* ``MyFile1.c``, ``MyFile1.h``: the verified C code generated from the verified
+  F\* and Low\* files, and similarly for ``MyFile2.3d``
 
-* MyFileWrapper.c, MyFileWrapper.h: an entrypoint API to call into the
-  verified C code.
+* ``MyFile1Wrapper.c``, ``MyFile1Wrapper.h``: an entrypoint API to call into the
+  verified C code, and similarly for ``MyFile2.3d``
 
-* EverParse.h, EverParseEndianness.h: various EverParse helpers for
-  the implementation of verified validators
+* ``EverParse.h``, ``EverParseEndianness.h``: various EverParse
+  helpers for the implementation of verified validators, common to
+  ``MyFile1.3d`` and ``MyFile2.3d``
 
-3. Insert ``#include "MyFileWrapper.h"`` into any of your C compilation
-   units that need to call a validator.
-
-EverParse.bat command-line arguments
-------------------------------------
-
-Usage: ``EVERPARSE.BAT [/F] /3D filenamewithoutextension``
-
-* ``/F`` (optional) Runs clang-format on the generated .c and .h
-  files. A ``clang-format.exe`` must be reachable from the ``PATH``
-  environment variable.
-
-* ``/3D filenamewithoutextension`` (required) Generates verified
-  validators from the data description in
-  ``filenamewithoutextension.3d``. That file must be in the current
-  directory. Files are produced in the current directory.
+3. Insert ``#include "MyFile1Wrapper.h"`` into any of your C
+   compilation units that need to call a validator from
+   ``MyFile1.3d``, and similarly for ``MyFile2.3d``.
 
 The 3d Dependent Data Description language
 ------------------------------------------
@@ -54,12 +64,232 @@ The 3d Dependent Data Description language
 
    3d-lang
 
-The 3d frontend
----------------
+Download and install
+--------------------
 
-You can also use the 3d frontend by hand (but then, you will need to
-manually call F* and KReMLin to verify and generate C code.) If you
-are using the Windows binary package, you can find 3d at
-``bin\3d.exe``; if you are using the source package or the source code
-from the ``everparse_3d`` branch, do ``make 3d`` and then you will
-find the 3d tool at ``src/3d/3d``.
+We provide binary (amd64 only) packages for Windows and Linux.
+
+1. Download the binary package corresponding to your platform, from
+   the `latest EverParse/3d release
+   <https://github.com/project-everest/everparse/releases>`_.
+
+2. Extract it (Windows: ``unzip``; Linux: ``tar xzf``) anywhere you
+   like. No need to configure it anyhow.
+
+Then, everything is contained in a ``everparse`` directory, whose
+actual entrypoint executable is ``everparse.bat`` (for Windows) or
+``everparse.sh`` (for Linux.)
+
+Binary packages already contain all dependencies required by
+EverParse, such as F\*, KReMLin and z3, so no need to install anything
+beforehand.
+
+The Windows binary package contains a `binary snapshot of clang-format
+<https://llvm.org/builds/>`_ to pretty-print the produced ``.c`` and
+``.h`` files. On Linux, you may want to install clang-format (more
+info at the `LLVM download page
+<https://releases.llvm.org/download.html>`_), but this is optional.
+
+The Windows binary package is fully native, in the sense that it does
+not require any POSIX emulation layer such as Cygwin or WSL.
+
+Run
+---
+
+On Windows: ``everparse.bat`` [options] input_files
+
+On Linux: ``everparse.sh`` [options] input_files
+
+Options are treated from left to right:
+
+* ``--odir output_directory_name``
+
+  Tell EverParse to write all files to the directory
+  ``output_directory_name``. This directory must already exist
+  (EverParse will not create it.) The default is ``.`` (current
+  directory)
+
+* ``--batch``
+
+  Verify the produced F\* ``.fst`` and ``.fsti`` files and generate C
+  ``.c`` and ``.h`` files. This is toggled by default.
+
+* ``--no_batch``
+
+  Do not verify the produced F\* ``.fst`` and ``.fsti`` files or
+  generate C ``.c`` and ``.h`` files.
+
+* ``--clang_format``
+
+  Call ``clang-format`` on extracted .c/.h files. This option
+  automatically toggles ``--batch``.
+
+  This is toggled by default on Windows, since the Windows binary
+  package contains a copy of clang-format. On Linux, this is toggled
+  by default only if ``clang-format`` is reachable through the
+  ``PATH`` environment variable.
+
+* ``--no_clang_format``
+
+  Do not call clang-format on extracted .c/.h files.
+
+* ``--clang_format_executable``
+
+  Provide the path to clang-format if not reachable through ``PATH``
+  (or to override the one provided in the Windows binary package.)
+  This option automatically toggles ``--clang_format`` and
+  ``--batch``.
+
+* ``--cleanup``
+
+  With ``--batch``, remove all produced intermediate files other than
+  ``.c`` and ``.h` files (thus: ``.fst``, ``.fsti``, ``.checked``,
+  ``.krml``)
+
+* ``--no_cleanup``
+
+  Keep all produced intermediate files. This is toggled by default.
+
+* ``--version``
+
+  Print the version of EverParse/3d and exit (do not process any
+  further options to the right, nor any files at all.)
+
+* ``--help``
+
+  Show the usage message and the status of some options given so far,
+  and exit (do not process any further options to the right, nor any
+  files at all.)
+
+Options are treated from left to right, with higher priority on
+right-most options. Thus, any ``--no_clang_format`` will override any
+occurrence of ``--clang_format`` or ``--clang_format_executable`` to
+its left, and vice-versa.
+
+You can provide one or more ``input_files`` to EverParse. They must
+all bear the ``.3d`` file name extension, and their names must start
+with a capital letter. Then, ``EverParse.h`` and
+``EverParseEndianness.h`` will be shared across ``.c`` and ``.h``
+files produced for all the ``.3d`` files that you provided.
+
+.. note::
+
+   If, along with some ``MyFile.3d``, in the same directory, you
+   provide a file ``MyFile.3d.copyright.txt`` that contains
+   syntactically correct C comments (with ``//`` or ``/* ... */``),
+   then EverParse will prepend ``MyFile.c``, ``MyFileWrapper.c`` and
+   their corresponding ``.h`` with these comments. You do not need to
+   mention this file on the command line.
+
+   These comments can contain the following special symbols:
+
+   * ``EVERPARSEVERSION``, which EverParse will automatically replace
+     with its version number;
+
+   * ``FILENAME``, which EverParse will automatically replace with the
+     name of the ``.c`` / ``.h`` file being generated.
+
+Optional: From the sources
+--------------------------
+
+You may want to use the sources instead of the binary package in any
+of the following cases:
+
+* You are on a non-amd64 platform (however, there is no guarantee that
+  the sources will compile under any such non-amd64 platform.)
+
+* You are not on Windows or Linux (however, there is no guarantee that
+  the sources will compile under any such non-Windows-Linux system.)
+
+* You want to use your own copy of F\*, KReMLin or z3.
+
+* You want to contribute to EverParse.
+
+To this end, you need to install the dependencies (F\*, KReMLin, z3.)
+Fortunately, EverParse, F\* and KReMLin are all components of the
+Everest project. Thus, the best way to do that is to use the Everest
+script, as described below following the `website of the Everest
+project <https://project-everest.github.io/>`_, which EverParse is a
+member of:
+
+1. On Windows, you must first `install Cygwin
+   <https://www.cygwin.com/>`_.
+
+   Instead, you could also use the `Windows Subsystem for Linux (WSL)
+   <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_ and
+   act as if you were on Linux, but this has not been officially
+   tested by anyone in the Everest project.
+
+2. Clone the `Everest repository from GitHub
+   <https://github.com/project-everest/everest>`_.
+
+3. From inside the origin directory of the clone, run ``./everest
+   check`` and follow the instructions on how to install compilation
+   dependencies (OCaml, etc.) On Windows (but not WSL), ``./everest
+   check`` should automatically install all such compilation
+   dependencies, but you may need to re-run it several times after
+   refreshing the environment.
+
+4. Run ``./everest z3`` and follow the instructions to install z3 on
+   your system.
+
+5. Run ``./everest pull`` to fetch and pull the latest versions of F\*
+   and KReMLin.
+
+6. Run ``./everest -j 1 FStar make kremlin make`` to build F\* and
+   KReMLin. The ``-j`` option introduces a parallelism factor. You can
+   also speed up the build by skipping F\* and KReMLin library proofs
+   by setting the ``OTHERFLAGS`` environment variable to
+   ``"--admit_smt_queries true"``.
+
+7. Set the ``FSTAR_HOME`` environment variable to the ``FStar``
+   subdirectory of your Everest clone, which contains a clone of the
+   latest F\*.
+
+8. Set the ``KREMLIN_HOME`` environment variable to the ``kremlin``
+   subdirectory of your Everest clone, which contains a clone of the
+   latest KReMLin.
+
+9. Everest contains a clone of the EverParse sources in the
+   ``quackyducky`` subdirectory. You can work from there and switch to
+   the ``everparse_3d`` branch there. Alternatively, you can `clone it
+   yourself
+   <https://github.com/project-everest/everparse/tree/everparse_3d>`_
+   anywhere else.
+
+10. Set the ``QD_HOME`` environment variable to your EverParse clone
+    as you chose it.
+
+(if you already have your own copy of F\* or KReMLin, and if you
+already know how to build them, then you can skip steps 1 to 6 and set
+the environment variables accordingly.)
+
+Then, once you are all set up in your EverParse clone, you can build
+3d by ``make 3d``. Then, the EverParse/3d executable will be located
+at ``src/3d/3d``.
+
+.. note::
+
+   You cannot use ``everparse.sh`` or ``everparse.bat`` from the
+   sources. You need to use ``3d`` instead.
+
+``3d`` has the same options as ``everparse.sh`` or ``everparse.bat``,
+with the following caveat: no options are toggled by default (not even
+``--batch`` or ``--clang_format``) and you need to provide all options
+by hand.
+
+Then, if you want, you can build your own binary package for your own
+platform through ``make package``.
+
+Licenses
+--------
+
+EverParse is Copyright 2018, 2019, 2020 Microsoft Corporation. All
+rights reserved. EverParse is free software, licensed by Microsoft
+Corporation under the `Apache License 2.0
+<https://github.com/project-everest/everparse/blob/master/LICENSE>`_.
+
+Additionally, the licenses of all dependencies included in the
+EverParse binary packages (F\*, KReMLin, z3, clang-format) are all
+stored in the ``licenses/`` subdirectory of the EverParse binary
+package once extracted.

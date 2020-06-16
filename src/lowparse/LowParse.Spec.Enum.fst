@@ -4,7 +4,7 @@ include LowParse.Spec.Combinators
 module L = FStar.List.Tot
 
 noeq
-type norm_t : Type0 = | Norm
+type norm_t : Type = | Norm
 
 [@Norm]
 let rec list_map
@@ -253,7 +253,7 @@ let serialize_enum_key_eq
     x
 
 inline_for_extraction
-let unknown_enum_repr (#key #repr: eqtype) (e: enum key repr) : Tot Type0 =
+let unknown_enum_repr (#key #repr: eqtype) (e: enum key repr) : Tot Type =
   (r: repr { list_mem r (list_map snd e) == false } )
 
 type maybe_enum_key (#key #repr: eqtype) (e: enum key repr) =
@@ -1218,7 +1218,7 @@ let forall_maybe_enum_key
 let enum_repr_of_key'_t
   (#key #repr: eqtype)
   (e: enum key repr)
-: Tot Type0
+: Tot Type
 = (x: enum_key e) ->
   Tot (r: enum_repr e { r == enum_repr_of_key e x } )
 
@@ -1290,7 +1290,7 @@ let enum_repr_of_key_append_cons
 let maybe_enum_key_of_repr'_t
   (#key #repr: eqtype)
   (e: enum key repr)
-: Tot Type0
+: Tot Type
 = (x: repr) ->
   Tot (k: maybe_enum_key e { k == maybe_enum_key_of_repr e x } )
 

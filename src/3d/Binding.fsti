@@ -17,13 +17,14 @@ module Binding
 open FStar.All
 open Ast
 
-val all_nums (_:unit)
+val global_env : Type0
+
+val all_nums (ge: global_env)
   : ML (list (field_num & option ident & string)) //retrieve a table of identifier/field-name mappings
 
 (* retrieve the name of the field code variable *)
-val lookup_field_num : field_num -> ML (option ident)
+val lookup_field_num : global_env -> field_num -> ML (option ident)
 
-val global_env : Type0
 val env : Type0
 val mk_env (g:global_env) : ML env
 

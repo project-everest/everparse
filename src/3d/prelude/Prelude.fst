@@ -33,7 +33,7 @@ let parser_kind (nz:bool) =
   k:LP.parser_kind{LP.(k.parser_kind_subkind == Some ParserStrong /\
                       (nz ==> (k.parser_kind_low > 0)))}
 
-let parser #nz (k:parser_kind nz) (t:Type0) = LP.parser k t
+let parser #nz (k:parser_kind nz) (t:Type) = LP.parser k t
 
 let is_weaker_than #nz1 (k:parser_kind nz1)
                    #nz2 (k':parser_kind nz2) = k `LP.is_weaker_than` k'
@@ -83,8 +83,8 @@ let parse_bind #nz1 (#k1:parser_kind nz1) (#t1: Type0) (p1: parser k1 t1)
     LPC.and_then p1 p2
   
 inline_for_extraction noextract
-let parse_dep_pair #nz1 (#k1:parser_kind nz1) (#t1: Type0) (p1: parser k1 t1)
-                   #nz2 (#k2:parser_kind nz2) (#t2: (t1 -> Tot Type0)) (p2: (x: t1) -> parser k2 (t2 x))
+let parse_dep_pair #nz1 (#k1:parser_kind nz1) (#t1: Type) (p1: parser k1 t1)
+                   #nz2 (#k2:parser_kind nz2) (#t2: (t1 -> Tot Type)) (p2: (x: t1) -> parser k2 (t2 x))
   : Tot (parser (and_then_kind k1 k2) (dtuple2 t1 t2) )
   = LPC.parse_dtuple2 p1 p2
 
@@ -214,7 +214,7 @@ let reader #nz (#k:parser_kind nz) #t (p:parser k t) = LPLC.leaf_reader p
 inline_for_extraction noextract
 let read_filter #nz
                 (#k: parser_kind nz)
-                (#t: Type0)
+                (#t: Type)
                 (#p: parser k t)
                 (p32: LPL.leaf_reader p)
                 (f: (t -> bool))
@@ -274,7 +274,7 @@ let parse_nlist_total_fixed_size_kind_correct
   Classical.forall_intro (Classical.move_requires (parse_nlist_total_fixed_size_aux n p))
 
 inline_for_extraction noextract
-let validate_nlist_total_constant_size_mod_ok (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
+let validate_nlist_total_constant_size_mod_ok (n:U32.t) (#k:parser_kind true) (#t: Type) (p:parser k t)
   : Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in
@@ -351,7 +351,7 @@ let validate_nlist_total_constant_size' (n:U32.t) (#k:parser_kind true) #t (p:pa
   else validate_nlist_constant_size_mod_ko n p sl len pos
 
 inline_for_extraction noextract
-let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
+let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) (#k:parser_kind true) (#t: Type) (p:parser k t)
 : Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in

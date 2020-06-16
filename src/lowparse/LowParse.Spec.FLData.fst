@@ -9,7 +9,7 @@ module Classical = FStar.Classical
 inline_for_extraction
 val parse_fldata'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: nat)
 : Tot (bare_parser t)
@@ -29,7 +29,7 @@ let parse_fldata' #k #t p sz =
 
 let parse_fldata_injective
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: nat)
 : Lemma
@@ -59,7 +59,7 @@ let parse_fldata_kind
 inline_for_extraction
 val parse_fldata
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: nat)
 : Tot (parser (parse_fldata_kind sz k) t)
@@ -72,7 +72,7 @@ let parse_fldata #b #t p sz =
 
 val parse_fldata_consumes_all
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: nat)
 : Pure (bare_parser t)
@@ -92,7 +92,7 @@ let parse_fldata_consumes_all #k #t p sz =
 
 let parse_fldata_consumes_all_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (sz: nat)
   (b: bytes)
@@ -103,7 +103,7 @@ let parse_fldata_consumes_all_correct
 
 let parse_fldata_strong_pred
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)
@@ -113,16 +113,16 @@ let parse_fldata_strong_pred
 
 let parse_fldata_strong_t
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)
-: Tot Type0
+: Tot Type
 = (x: t { parse_fldata_strong_pred s sz x } )
 
 let parse_fldata_strong_correct
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)
@@ -137,7 +137,7 @@ let parse_fldata_strong_correct
 inline_for_extraction
 let parse_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)
@@ -150,7 +150,7 @@ let parse_fldata_strong
 
 let serialize_fldata_strong'
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)
@@ -160,7 +160,7 @@ let serialize_fldata_strong'
 
 let serialize_fldata_strong
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)

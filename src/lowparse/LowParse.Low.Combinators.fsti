@@ -14,10 +14,10 @@ let valid_nondep_then
   (#rrel #rel: _)
   (h: HS.mem)
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (p2: parser k2 t2)
   (s: slice rrel rel)
   (pos: U32.t)
@@ -48,10 +48,10 @@ let valid_nondep_then_intro
   (#rrel #rel: _)
   (h: HS.mem)
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (p2: parser k2 t2)
   (s: slice rrel rel)
   (pos: U32.t)
@@ -66,11 +66,11 @@ let valid_nondep_then_intro
 inline_for_extraction
 let validate_nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (p1' : validator p1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (p2' : validator p2)
 : Tot (validator (nondep_then p1 p2))
@@ -90,11 +90,11 @@ let validate_nondep_then
 inline_for_extraction
 let jump_nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (p1' : jumper p1)
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (p2' : jumper p2)
 : Tot (jumper (nondep_then p1 p2))
@@ -107,12 +107,12 @@ let jump_nondep_then
 inline_for_extraction
 let serialize32_nondep_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (#s1: serializer p1)
   (s1' : serializer32 s1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: parser k2 t2)
   (#s2: serializer p2)
   (s2' : serializer32 s2)
@@ -132,8 +132,8 @@ let valid_synth
   (#rrel #rel: _)
   (h: HS.mem)
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (input: slice rrel rel)
@@ -156,8 +156,8 @@ let valid_synth_intro
   (#rrel #rel: _)
   (h: HS.mem)
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (input: slice rrel rel)
@@ -175,8 +175,8 @@ let valid_synth_intro
 inline_for_extraction
 let validate_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (#p1: parser k t1)
   (p1' : validator p1)
   (f2: t1 -> GTot t2)
@@ -193,8 +193,8 @@ let validate_synth
 inline_for_extraction
 let jump_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (#p1: parser k t1)
   (p1' : jumper p1)
   (f2: t1 -> GTot t2)
@@ -212,10 +212,10 @@ let valid_dtuple2
   (#rrel #rel: _)
   (h: HS.mem)
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: t1 -> Type0)
+  (#t2: t1 -> Type)
   (p2: (x: t1) -> parser k2 (t2 x))
   (s: slice rrel rel)
   (pos: U32.t)
@@ -247,12 +247,12 @@ let valid_dtuple2
 inline_for_extraction
 let validate_dtuple2
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (v1: validator p1)
   (r1: leaf_reader p1)
   (#k2: parser_kind)
-  (#t2: t1 -> Type0)
+  (#t2: t1 -> Type)
   (#p2: (x: t1) -> parser k2 (t2 x))
   (v2: (x: t1) -> Tot (validator (p2 x)))
 : Tot (validator (parse_dtuple2 p1 p2))
@@ -273,12 +273,12 @@ let validate_dtuple2
 inline_for_extraction
 let jump_dtuple2
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (v1: jumper p1)
   (r1: leaf_reader p1)
   (#k2: parser_kind)
-  (#t2: t1 -> Type0)
+  (#t2: t1 -> Type)
   (#p2: (x: t1) -> parser k2 (t2 x))
   (v2: (x: t1) -> Tot (jumper (p2 x)))
 : Tot (jumper (parse_dtuple2 p1 p2))
@@ -294,11 +294,11 @@ let jump_dtuple2
 inline_for_extraction
 let jump_dtuple2_constant_size_dsnd
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (v1: jumper p1)
   (#k2: parser_kind)
-  (#t2: t1 -> Type0)
+  (#t2: t1 -> Type)
   (p2: (x: t1) -> parser k2 (t2 x))
   (sz: U32.t { U32.v sz == k2.parser_kind_low /\ k2.parser_kind_high == Some k2.parser_kind_low })
 : Tot (jumper (parse_dtuple2 p1 p2))
@@ -846,7 +846,7 @@ inline_for_extraction
 let make_total_constant_size_reader
   (sz: nat)
   (sz' : U32.t { U32.v sz' == sz } )
-  (#t: Type0)
+  (#t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (t)))
   (u: unit {
     make_total_constant_size_parser_precond sz t f
@@ -867,7 +867,7 @@ let valid_filter
   (#rrel #rel: _)
   (h: HS.mem)
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (p: parser k t)
   (f: (t -> GTot bool))
   (input: slice rrel rel)
@@ -887,7 +887,7 @@ let valid_filter
 inline_for_extraction
 let validate_filter
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (v32: validator p)
   (p32: leaf_reader p)
@@ -963,7 +963,7 @@ let validate_filter_ret_with_error_code
 inline_for_extraction
 let jump_filter
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (j: jumper p)
   (f: (t -> GTot bool))
@@ -976,7 +976,7 @@ let jump_filter
 inline_for_extraction
 let read_filter
   (#k: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p: parser k t)
   (p32: leaf_reader p)
   (f: (t -> GTot bool))
@@ -1035,8 +1035,8 @@ let serialize32_filter
 inline_for_extraction
 let read_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (f2': (x: t1) -> Tot (y: t2 { y == f2 x } )) 
@@ -1054,8 +1054,8 @@ let read_synth
 inline_for_extraction
 let read_synth'
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> Tot t2)
   (p1' : leaf_reader p1)
@@ -1068,8 +1068,8 @@ let read_synth'
 inline_for_extraction
 let read_inline_synth
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> GTot t2)
   (f2': (x: t1) -> Tot (y: t2 { y == f2 x } )) 
@@ -1087,8 +1087,8 @@ let read_inline_synth
 inline_for_extraction
 let read_inline_synth'
   (#k: parser_kind)
-  (#t1: Type0)
-  (#t2: Type0)
+  (#t1: Type)
+  (#t2: Type)
   (p1: parser k t1)
   (f2: t1 -> Tot t2)
   (p1' : leaf_reader p1)
@@ -1166,14 +1166,14 @@ let serialize32_synth
 inline_for_extraction
 let validate_filter_and_then
   (#k1: parser_kind)
-  (#t1: Type0)
+  (#t1: Type)
   (#p1: parser k1 t1)
   (v1: validator p1)
   (p1': leaf_reader p1)
   (f: (t1 -> GTot bool))
   (f' : ((x: t1) -> Tot (y: bool { y == f x } )))
   (#k2: parser_kind)
-  (#t2: Type0)
+  (#t2: Type)
   (#p2: ((x: t1 { f x == true} ) -> parser k2 t2))
   (v2: ((x1: t1 { f x1 == true } ) -> validator (p2 x1)))
   (u: unit {
@@ -1206,7 +1206,7 @@ inline_for_extraction
 let validate_weaken
   (k1: parser_kind)
   (#k2: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p2: parser k2 t)
   (v2: validator p2)
   (sq: squash (k1 `is_weaker_than` k2))
@@ -1223,7 +1223,7 @@ inline_for_extraction
 let jump_weaken
   (k1: parser_kind)
   (#k2: parser_kind)
-  (#t: Type0)
+  (#t: Type)
   (#p2: parser k2 t)
   (v2: jumper p2)
   (sq: squash (k1 `is_weaker_than` k2))
@@ -1258,7 +1258,7 @@ let validate_compose_context
   (#pk: parser_kind)
   (#kt1 #kt2: Type)
   (f: (kt2 -> Tot kt1))
-  (t: (kt1 -> Tot Type0))
+  (t: (kt1 -> Tot Type))
   (p: ((k: kt1) -> Tot (parser pk (t k))))
   (v: ((k: kt1) -> Tot (validator (p k))))
   (k: kt2)
@@ -1270,7 +1270,7 @@ let jump_compose_context
   (#pk: parser_kind)
   (#kt1 #kt2: Type)
   (f: (kt2 -> Tot kt1))
-  (t: (kt1 -> Tot Type0))
+  (t: (kt1 -> Tot Type))
   (p: ((k: kt1) -> Tot (parser pk (t k))))
   (v: ((k: kt1) -> Tot (jumper (p k))))
   (k: kt2)
@@ -1278,8 +1278,8 @@ let jump_compose_context
 = fun #rrel #rel input pos -> v (f k) input pos
 
 let clens_tagged_union_tag
-  (#tag_t: Type0)
-  (#data_t: Type0)
+  (#tag_t: Type)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
 : Tot (clens data_t tag_t)
 = {
@@ -1289,9 +1289,9 @@ let clens_tagged_union_tag
 
 let gaccessor_tagged_union_tag'
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -1302,9 +1302,9 @@ let gaccessor_tagged_union_tag'
 
 let gaccessor_tagged_union_tag
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -1315,9 +1315,9 @@ let gaccessor_tagged_union_tag
 inline_for_extraction
 let accessor_tagged_union_tag
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -1328,8 +1328,8 @@ let accessor_tagged_union_tag
   pos
 
 let clens_tagged_union_payload
-  (#tag_t: Type0)
-  (#data_t: Type0)
+  (#tag_t: Type)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (t: tag_t)
 : Tot (clens data_t (refine_with_tag tag_of_data t))
@@ -1340,9 +1340,9 @@ let clens_tagged_union_payload
 
 let gaccessor_tagged_union_payload'
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -1357,9 +1357,9 @@ let gaccessor_tagged_union_payload'
 
 let gaccessor_tagged_union_payload_injective
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -1381,9 +1381,9 @@ let gaccessor_tagged_union_payload_injective
 
 let gaccessor_tagged_union_payload_no_lookahead
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -1406,9 +1406,9 @@ let gaccessor_tagged_union_payload_no_lookahead
 
 let gaccessor_tagged_union_payload
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -1422,10 +1422,10 @@ let gaccessor_tagged_union_payload
 inline_for_extraction
 let accessor_tagged_union_payload
   (#kt: parser_kind)
-  (#tag_t: Type0)
+  (#tag_t: Type)
   (#pt: parser kt tag_t)
   (jt: jumper pt)
-  (#data_t: Type0)
+  (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))

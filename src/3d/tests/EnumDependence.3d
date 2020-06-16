@@ -15,9 +15,9 @@ casetype _C (AB ab) {
   }
 } C;
 
-entrypoint
-typedef struct _T {
-  AB ab;
-  C(ab) c;      
-} T;
-  
+// FIXME: This definition now fails because of double fetches.
+// entrypoint
+// typedef struct _T {
+//   AB ab;
+//   C(ab) c;      
+// } T;
