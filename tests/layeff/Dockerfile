@@ -2,6 +2,8 @@
 # Can also be used standalone
 
 FROM projecteverest/kremlin-linux:3659197bb45c
+ENV FSTAR_HOME $HOME/FStar
+ENV KREMLIN_HOME $HOME/kremlin
 
 # # Install the dependencies of Project Everest
 # RUN apt-get update
@@ -24,8 +26,8 @@ RUN opam env --set-switch | tee --append .profile .bashrc .bash_profile
 # RUN emacs --script .emacs.d/install-fstar-mode.el
 
 # Add the project files proper
-RUN mkdir everparse
-WORKDIR everparse
+RUN mkdir $HOME/everparse
+WORKDIR $HOME/everparse
 ADD --chown=everest src/lowparse/* src/lowparse/
 ADD --chown=everest tests/layeff/* tests/layeff/
 ADD --chown=everest Makefile Makefile
