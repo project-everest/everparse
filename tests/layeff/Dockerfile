@@ -7,9 +7,8 @@ FROM ubuntu:focal
 RUN apt-get update
 RUN apt-get --yes --no-install-recommends install software-properties-common dirmngr gpg-agent
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-RUN echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | tee /etc/apt/sources.list.d/mono-official-stable.list
 RUN apt-get update
-RUN apt-get --yes install --no-install-recommends opam emacs gcc binutils make m4 git time gnupg ca-certificates mono-devel sudo
+RUN apt-get --yes install --no-install-recommends opam emacs-nox gcc binutils make m4 git time gnupg ca-certificates sudo
 
 # Create a new user and give them sudo rights
 RUN useradd -d /home/test test
