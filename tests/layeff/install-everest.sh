@@ -6,11 +6,11 @@ old_pwd="$PWD"
 everest_home="$old_pwd/everest"
 export FSTAR_HOME=$everest_home/FStar
 export KREMLIN_HOME=$everest_home/kremlin
-cd "$FSTAR_HOME"
-git checkout _c_layeff
 cd "$everest_home"
 ./everest --yes opam
-./everest --yes reset
+# FIXME: if supported, ./everest --yes FStar reset kremlin reset
+git clone --branch _c_layeff https://github.com/FStarLang/FStar.git FStar
+git clone https://github.com/FStarLang/kremlin.git kremlin
 ./everest --yes z3
 export PATH=$everest_home/z3/bin:$PATH
 if [[ -z "$EVEREST_THREADS" ]]
