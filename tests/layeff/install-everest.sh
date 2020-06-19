@@ -4,23 +4,38 @@ set -x
 git clone https://github.com/project-everest/everest.git
 old_pwd="$PWD"
 everest_home="$old_pwd/everest"
-export FSTAR_HOME=$everest_home/FStar
-export KREMLIN_HOME=$everest_home/kremlin
 cd "$everest_home"
 ./everest --yes opam
-# FIXME: if supported, ./everest --yes FStar reset kremlin reset
-git clone --branch _c_layeff https://github.com/FStarLang/FStar.git FStar
-git clone https://github.com/FStarLang/kremlin.git kremlin
-./everest --yes z3
-export PATH=$everest_home/z3/bin:$PATH
+if ! z3=$(which z3) ; then
+    ./everest --yes z3
+    export z3path="$everest_home/z3/bin"
+else
+    z3path=$(dirname "$z3")
+fi
+export PATH="$z3path":"$PATH"
 if [[ -z "$EVEREST_THREADS" ]]
 then
     EVEREST_THREADS=1
 fi
-OTHERFLAGS='--admit_smt_queries true' ./everest -j $EVEREST_THREADS FStar make kremlin make
+if [[ -n "$FSTAR_HOME" ]] ; then
+    cd "$FSTAR_HOME"
+    git checkout _c_layeff
+else
+    git clone --branch _c_layeff https://github.com/FStarLang/FStar.git FStar
+    export FSTAR_HOME=$everest_home/FStar
+fi
+cd "$FSTAR_HOME"
+make -j $EVEREST_THREADS -k
+cd "$everest_home"
+if [[ -z "$KREMLIN_HOME" ]] ; then
+    git clone https://github.com/FStarLang/kremlin.git kremlin
+    export KREMLIN_HOME=$everest_home/kremlin
+fi
+cd "$KREMLIN_HOME"
+make -j $EVEREST_THREADS -k
 cd "$old_pwd"
 cat >everest-env.sh <<EOF
-export PATH=$everest_home/z3/bin:\$PATH
+export PATH=$z3path:\$PATH
 export FSTAR_HOME=$FSTAR_HOME
 export KREMLIN_HOME=$KREMLIN_HOME
 EOF

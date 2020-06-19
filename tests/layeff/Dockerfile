@@ -1,36 +1,27 @@
 # Test CI based on GitHub Actions
 # Can also be used standalone
 
-FROM ubuntu:focal
+FROM projecteverest/kremlin-linux:3659197bb45c
 
-# Install the dependencies of Project Everest
-RUN apt-get update
-RUN apt-get --yes --no-install-recommends install software-properties-common dirmngr gpg-agent
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-RUN apt-get update
-RUN apt-get --yes install --no-install-recommends opam emacs-nox gcc binutils make m4 git time gnupg ca-certificates sudo
-
-# Create a new user and give them sudo rights
-RUN useradd -d /home/test test
-RUN echo 'test ALL=NOPASSWD: ALL' >> /etc/sudoers
-RUN mkdir /home/test
-RUN chown test:test /home/test
-USER test
-ENV HOME /home/test
-WORKDIR $HOME
+# # Install the dependencies of Project Everest
+# RUN apt-get update
+# RUN apt-get --yes --no-install-recommends install software-properties-common dirmngr gpg-agent
+# RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+# RUN apt-get update
+# RUN apt-get --yes install --no-install-recommends opam emacs-nox gcc binutils make m4 git time gnupg ca-certificates sudo
 
 SHELL ["/bin/bash", "--login", "-c"]
 
 # Install OCaml
 ENV OPAMYES 1
-RUN opam init --disable-sandboxing --compiler=4.09.1
+# RUN opam init --disable-sandboxing --compiler=4.09.1
 RUN opam env --set-switch | tee --append .profile .bashrc .bash_profile
 
-# Install emacs F* mode
-ADD --chown=test src/package/fstar.sh bin/fstar.sh
-ADD --chown=test src/package/init.el .emacs.d/init.el
-ADD --chown=test src/package/install-fstar-mode.el .emacs.d/install-fstar-mode.el
-RUN emacs --script .emacs.d/install-fstar-mode.el
+# # Install emacs F* mode
+# ADD --chown=test src/package/fstar.sh bin/fstar.sh
+# ADD --chown=test src/package/init.el .emacs.d/init.el
+# ADD --chown=test src/package/install-fstar-mode.el .emacs.d/install-fstar-mode.el
+# RUN emacs --script .emacs.d/install-fstar-mode.el
 
 # Add the project files proper
 RUN mkdir everparse
