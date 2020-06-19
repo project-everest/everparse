@@ -17,18 +17,20 @@ ENV OPAMYES 1
 # RUN opam init --disable-sandboxing --compiler=4.09.1
 RUN opam env --set-switch | tee --append .profile .bashrc .bash_profile
 
+ENV USERNAME everest
+
 # # Install emacs F* mode
-# ADD --chown=test src/package/fstar.sh bin/fstar.sh
-# ADD --chown=test src/package/init.el .emacs.d/init.el
-# ADD --chown=test src/package/install-fstar-mode.el .emacs.d/install-fstar-mode.el
+# ADD --chown=$USERNAME src/package/fstar.sh bin/fstar.sh
+# ADD --chown=$USERNAME src/package/init.el .emacs.d/init.el
+# ADD --chown=$USERNAME src/package/install-fstar-mode.el .emacs.d/install-fstar-mode.el
 # RUN emacs --script .emacs.d/install-fstar-mode.el
 
 # Add the project files proper
 RUN mkdir everparse
 WORKDIR everparse
-ADD --chown=test src/lowparse/* src/lowparse/
-ADD --chown=test tests/layeff/* tests/layeff/
-ADD --chown=test Makefile Makefile
+ADD --chown=$USERNAME src/lowparse/* src/lowparse/
+ADD --chown=$USERNAME tests/layeff/* tests/layeff/
+ADD --chown=$USERNAME Makefile Makefile
 
 # Clone and build Project Everest
 ARG EVEREST_THREADS=1
