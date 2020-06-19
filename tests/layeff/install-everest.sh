@@ -19,6 +19,7 @@ then
 fi
 if [[ -n "$FSTAR_HOME" ]] ; then
     cd "$FSTAR_HOME"
+    git fetch
     git checkout _c_layeff
 else
     git clone --branch _c_layeff https://github.com/FStarLang/FStar.git FStar

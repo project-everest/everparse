@@ -2,6 +2,8 @@
 # Can also be used standalone
 
 FROM projecteverest/kremlin-linux:3659197bb45c
+USER everest
+ENV HOME /home/everest
 ENV FSTAR_HOME $HOME/FStar
 ENV KREMLIN_HOME $HOME/kremlin
 
