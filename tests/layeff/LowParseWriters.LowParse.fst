@@ -203,3 +203,28 @@ let gaccessor_frame
   #p1 #p2 #lens g h b l h'
 =
   Classical.forall_intro (Classical.move_requires (gaccessor_frame1 g h b l))
+
+let accessor
+  #p1 #p2 #lens g
+= LP.accessor g
+
+#push-options "--z3rlimit 16"
+
+let baccess
+  #p1 #p2 #lens #g a b len
+=
+  let h = HST.get () in
+  let sl = LP.make_slice b len in
+  LP.valid_facts (dsnd p1).parser h sl 0ul;
+  let pos = a sl 0ul in
+  LP.slice_access_eq h g sl 0ul;
+  LP.valid_facts (dsnd p2).parser h sl pos;
+  let pos' = (dsnd p2).jumper sl pos in
+  let b1 = B.sub b pos (B.len b `U32.sub` pos) in
+  let len' = pos' `U32.sub` pos in
+  let b' = B.sub b1 0ul len' in
+  LP.parse_strong_prefix (dsnd p2).parser (B.as_seq h b1) (B.as_seq h b');
+  LP.valid_facts (dsnd p2).parser h (LP.make_slice b' (B.len b')) 0ul;
+  (b', len')
+
+#pop-options
