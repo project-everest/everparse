@@ -162,3 +162,77 @@ let valid_star_inv
   let h = HST.get () in
   LP.valid_nondep_then h (dsnd p1).parser (dsnd p2).parser (LP.make_slice b len) pos1;
   (dsnd p1).jumper (LP.make_slice b len) pos1
+
+let clens_to_lp_clens
+  (#t1 #t2: Type)
+  (c: clens t1 t2)
+: GTot (LP.clens t1 t2)
+= {
+  LP.clens_cond = c.clens_cond;
+  LP.clens_get = c.clens_get
+}
+
+let gaccessor
+  p1 p2 lens
+= LP.gaccessor (dsnd p1).parser (dsnd p2).parser (clens_to_lp_clens lens)
+
+let gaccess
+  #p1 #p2 #lens g h b
+=
+  let sl = LP.make_slice b (B.len b) in
+  LP.valid_facts (dsnd p1).parser h sl 0ul;
+  let posn = g (B.as_seq h b) in
+  let pos = U32.uint_to_t posn in
+  LP.valid_facts (dsnd p2).parser h sl pos;
+  let pos' = LP.get_valid_pos (dsnd p2).parser h sl pos in
+  let b1 = B.gsub b pos (B.len b `U32.sub` pos) in
+  let len' = pos' `U32.sub` pos in
+  let b' = B.gsub b1 0ul len' in
+  LP.parse_strong_prefix (dsnd p2).parser (B.as_seq h b1) (B.as_seq h b');
+  let sl' = LP.make_slice b' (B.len b') in
+  LP.valid_facts (dsnd p2).parser h sl' 0ul;
+  b'
+
+let gaccessor_frame1
+  (#p1 #p2: parser)
+  (#lens: clens (dfst p1) (dfst p2))
+  (g: gaccessor p1 p2 lens)
+  (h: HS.mem)
+  (b: B.buffer u8)
+  (l: B.loc)
+  (h' : HS.mem)
+: Lemma
+  (requires (
+    B.modifies l h h' /\
+    B.loc_disjoint l (B.loc_buffer b) /\ (
+      (
+        valid_buffer p1 h b /\
+        lens.clens_cond (buffer_contents p1 h b)
+      )
+  )))
+  (ensures (
+    valid_buffer p1 h b /\
+    valid_buffer p1 h' b /\
+    buffer_contents p1 h b == buffer_contents p1 h' b /\
+    lens.clens_cond (buffer_contents p1 h b) /\
+    lens.clens_cond (buffer_contents p1 h' b) /\
+    gaccess g h' b == gaccess g h b
+  ))
+= let sl = LP.make_slice b (B.len b) in
+  LP.valid_facts (dsnd p1).parser h sl 0ul;
+  let posn = g (B.as_seq h b) in
+  let pos = U32.uint_to_t posn in
+  LP.valid_facts (dsnd p2).parser h sl pos;
+  let pos' = LP.get_valid_pos (dsnd p2).parser h sl pos in
+  let b1 = B.gsub b pos (B.len b `U32.sub` pos) in
+  let len' = pos' `U32.sub` pos in
+  let b' = B.gsub b1 0ul len' in
+  LP.parse_strong_prefix (dsnd p2).parser (B.as_seq h b1) (B.as_seq h b');
+  let sl' = LP.make_slice b' (B.len b') in
+  LP.valid_facts (dsnd p2).parser h sl' 0ul;
+  ()
+
+let gaccessor_frame
+  #p1 #p2 #lens g h b l h'
+=
+  Classical.forall_intro (Classical.move_requires (gaccessor_frame1 g h b l))
