@@ -78,7 +78,7 @@ let size_star
 
 let valid_frame
   p h b pos pos' l h'
-= ()
+= LP.valid_pos_frame_strong (dsnd p).parser h (LP.make_slice b (B.len b)) pos pos' l h'
 
 unfold
 let valid'
@@ -228,3 +228,39 @@ let baccess
   (b', len')
 
 #pop-options
+
+let validator
+  p
+=
+  (
+    squash begin match (dsnd p).kind.LP.parser_kind_high with
+    | None -> False
+    | Some max -> max <= U32.v LP.validator_max_length
+    end &
+    LP.validator (dsnd p).parser
+  )
+
+inline_for_extraction
+let snd (a, b) = b
+
+let gvalidate
+  p h b
+=
+  let sl = LP.make_slice b (B.len b) in
+  LP.valid_facts (dsnd p).parser h sl 0ul;
+  match LP.parse (dsnd p).parser (B.as_seq h b) with
+  | None -> None
+  | Some (_, res) -> Some (U32.uint_to_t res)
+
+let gvalidate_frame
+  p h b l h'
+=
+  ()
+
+let bvalidate
+  #p v b len
+=
+  let res = LP.validate_bounded_strong_prefix (snd v) (LP.make_slice b len) 0ul in
+  if res `U32.lte` LP.validator_max_length
+  then Some res
+  else None
