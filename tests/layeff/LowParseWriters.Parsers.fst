@@ -67,3 +67,17 @@ let parse_vldata
     (LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p))
     (LP.serialize_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p))
     (LP.jump_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p) ())
+
+let valid_synth_parse_vldata
+  p min max min' max'
+= {
+  valid_synth_valid = (fun h b pos pos' ->
+    let sl = LP.make_slice b (B.len b) in
+    let s = get_serializer p in
+    LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) s sl pos;
+    LP.valid_bounded_vldata_strong_intro h (U32.v min') (U32.v max') s sl pos pos'
+  );
+  valid_synth_size = (fun x ->
+    ()
+  );
+}

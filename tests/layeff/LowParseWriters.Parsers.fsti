@@ -112,14 +112,13 @@ val parse_vldata
     get_serializer p' == LP.serialize_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p)
   })
 
-(*
 val valid_synth_parse_vldata
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
   (min': U32.t)
   (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 })
-: Tot (valid_synth_t (parse_vldata p min max) (parse_vldata p min' max') (fun x -> U32.v min' <= size p x /\ size p x <= U32.v max')
+: Tot (valid_synth_t (parse_vldata p min max) (parse_vldata p min' max') (fun x -> U32.v min' <= size p x /\ size p x <= U32.v max' /\ LP.log256' (U32.v max') == LP.log256' (U32.v max))
 (fun x -> x))
 
 inline_for_extraction
