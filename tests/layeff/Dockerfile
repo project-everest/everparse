@@ -41,7 +41,7 @@ RUN cat everest-env.sh | tee --append $HOME/.profile $HOME/.bashrc $HOME/.bash_p
 
 # Test
 ENV QD_HOME $HOME/everparse
-RUN make -j $EVEREST_THREADS -k lowparse
+RUN env OTHERFLAGS='--admit_smt_queries true' make -j $EVEREST_THREADS -k lowparse
 RUN make -j $EVEREST_THREADS -k -C tests/layeff
 
 ENTRYPOINT ["/bin/bash", "--login"]
