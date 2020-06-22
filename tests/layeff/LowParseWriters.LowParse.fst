@@ -123,6 +123,13 @@ let write_u32
   then None
   else Some (LPI.write_u32 x (LP.make_slice b len) 0ul)
 
+let valid_star_inv_spec
+  h p1 p2 b pos1 pos3
+=
+  let sl = LP.make_slice b (B.len b) in
+  LP.valid_nondep_then h (dsnd p1).parser (dsnd p2).parser sl pos1;
+  LP.get_valid_pos (dsnd p1).parser h sl pos1
+
 let valid_star_inv
   p1 p2 b len pos1 pos3
 =
