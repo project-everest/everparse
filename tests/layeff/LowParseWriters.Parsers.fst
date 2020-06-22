@@ -82,6 +82,61 @@ let valid_synth_parse_vldata
   );
 }
 
+let parse_bounded_integer
+  sz
+=
+  make_parser
+    (LP.parse_bounded_integer sz)
+    (LP.serialize_bounded_integer sz)
+    (LP.jump_bounded_integer sz)
+
+module HST = FStar.HyperStack.ST
+
+let parse_vldata_intro_impl
+  #inv p min max
+= mk_repr_impl
+    _ _ _ _ _ _ inv (parse_vldata_intro_spec p min max)
+  (fun b len pos ->
+    let h = HST.get () in
+    [@inline_let]
+    let sz : LP.integer_size = LP.log256' (U32.v max) in
+    [@inline_let]
+    let sz32 = U32.uint_to_t sz in
+    let sl = LP.make_slice b len in
+    LP.valid_nondep_then h (LP.parse_bounded_integer sz) (get_parser p) sl 0ul;
+    assert (LP.valid_pos (get_parser p) h sl sz32 pos); // necessary because the vldata lemma below uses the end position
+    let size = pos `U32.sub` sz32 in
+    let _ = LP.write_bounded_integer sz size sl 0ul in
+    let h1 = HST.get () in
+    LP.valid_bounded_vldata_strong_intro h1 (U32.v min) (U32.v max) (get_serializer p) sl 0ul pos;
+    ICorrect () pos
+  )
+
+let parse_vldata_intro_weak_impl
+  #inv p min max
+= mk_repr_impl
+    _ _ _ _ _ _ inv (parse_vldata_intro_weak_spec p min max)
+  (fun b len pos ->
+    let h = HST.get () in
+    [@inline_let]
+    let sz : LP.integer_size = LP.log256' (U32.v max) in
+    [@inline_let]
+    let sz32 = U32.uint_to_t sz in
+    let sl = LP.make_slice b len in
+    LP.valid_nondep_then h (LP.parse_bounded_integer sz) (get_parser p) sl 0ul;
+    assert (LP.valid_pos (get_parser p) h sl sz32 pos); // necessary because the vldata lemma below uses the end position
+    let size = pos `U32.sub` sz32 in
+    if min `U32.lte` size && size `U32.lte` max
+    then begin
+      let _ = LP.write_bounded_integer sz size sl 0ul in
+      let h1 = HST.get () in
+      LP.valid_bounded_vldata_strong_intro h1 (U32.v min) (U32.v max) (get_serializer p) sl 0ul pos;
+      ICorrect () pos
+    end else begin
+      IError "parse_vldata_intro_weak_spec: out of bounds"
+    end
+  )
+
 noeq
 type rlptr = {
   rlptr_base: B.buffer u8;

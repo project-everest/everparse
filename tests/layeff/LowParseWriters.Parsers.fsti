@@ -101,6 +101,7 @@ val valid_synth_parse_synth
   ))
 : Tot (valid_synth_t p1 (parse_synth p1 f2 f1) (fun _ -> True) f2)
 
+inline_for_extraction
 val parse_vldata
   (p: parser)
   (min: U32.t)
@@ -120,6 +121,70 @@ val valid_synth_parse_vldata
   (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 })
 : Tot (valid_synth_t (parse_vldata p min max) (parse_vldata p min' max') (fun x -> U32.v min' <= size p x /\ size p x <= U32.v max' /\ LP.log256' (U32.v max') == LP.log256' (U32.v max))
 (fun x -> x))
+
+inline_for_extraction
+val parse_bounded_integer
+  (sz: LP.integer_size)
+: Tot (p' : parser {
+    dfst p' == LP.bounded_integer sz /\
+    get_parser_kind p' == LP.parse_bounded_integer_kind sz /\
+    get_parser p' == LP.parse_bounded_integer sz /\
+    get_serializer p' == LP.serialize_bounded_integer sz
+  })
+
+let parse_vldata_intro_spec
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (repr_spec unit (parse_bounded_integer (LP.log256' (U32.v max)) `star` p) (parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun (_, vin) _ vout -> vin == vout) (fun _ -> False))
+=
+  fun (_, vin) -> Correct ((), vin)
+
+inline_for_extraction
+val parse_vldata_intro_impl
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (repr_impl _ _ _ _ _ _ inv (parse_vldata_intro_spec p min max))
+
+inline_for_extraction
+let parse_vldata_intro
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Write unit (parse_bounded_integer (LP.log256' (U32.v max)) `star` p) (parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun (_, vin) _ vout -> vin == vout) inv
+= EWrite?.reflect (| parse_vldata_intro_spec p min max, parse_vldata_intro_impl p min max |)
+
+let parse_vldata_intro_weak_spec
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (repr_spec unit (parse_bounded_integer (LP.log256' (U32.v max)) `star` p) (parse_vldata p min max) (fun _ -> True) (fun (_, vin) _ vout -> vin == vout) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)))
+=
+  fun (_, vin) ->
+    let sz = size p vin in
+    if U32.v min <= sz && sz <= U32.v max
+    then Correct ((), vin)
+    else Error "parse_vldata_intro_weak_spec: out of bounds"
+
+inline_for_extraction
+val parse_vldata_intro_weak_impl
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (repr_impl _ _ _ _ _ _ inv (parse_vldata_intro_weak_spec p min max))
+
+inline_for_extraction
+let parse_vldata_intro_weak
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: EWrite unit (parse_bounded_integer (LP.log256' (U32.v max)) `star` p) (parse_vldata p min max) (fun _ -> True) (fun (_, vin) _ vout -> vin == vout) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)) inv
+= EWrite?.reflect (| _, parse_vldata_intro_weak_impl p min max |)
 
 inline_for_extraction
 type parser1 = (p: parser {
