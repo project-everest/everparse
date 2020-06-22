@@ -127,3 +127,63 @@ type parser1 = (p: parser {
   | None -> False
   | Some max -> max > 0
 })
+
+inline_for_extraction
+val rlptr: Type0
+val valid_rlptr (p: parser1) : memory_invariant -> rlptr -> GTot Type0
+
+let lptr (p: parser1) (inv: memory_invariant) =
+  (x: rlptr { valid_rlptr p inv x })
+
+val deref_list_spec (#p: parser1) (#inv: memory_invariant) (x: lptr p inv) : GTot (list (dfst p))
+
+val valid_rlptr_frame
+  (#p: parser1) (#inv: memory_invariant) (x: lptr p inv) (inv' : memory_invariant)
+: Lemma
+  (requires (
+    inv `memory_invariant_includes` inv'
+  ))
+  (ensures (
+    valid_rlptr p inv' x /\
+    deref_list_spec #p #inv' x == deref_list_spec #p #inv x
+  ))
+  [SMTPatOr [
+    [SMTPat (inv `memory_invariant_includes` inv'); SMTPat (valid_rlptr p inv x)];
+    [SMTPat (inv `memory_invariant_includes` inv'); SMTPat (valid_rlptr p inv' x)];
+  ]]
+
+unfold
+let destr_list_post
+  (#p: parser1)
+  (#inv: memory_invariant)
+  (x: lptr p inv)
+  (res: option (ptr p inv & lptr p inv))
+: GTot Type0
+= 
+  match res, deref_list_spec x with
+  | None, [] -> True
+  | Some (hd, tl), hd' :: tl' ->
+    deref_spec hd == hd' /\ deref_list_spec tl == tl'
+  | _ -> False
+
+inline_for_extraction
+val destr_list
+  (#p: parser1)
+  (#inv: memory_invariant)
+  (x: lptr p inv)
+: Read (option (ptr p inv & lptr p inv)) (True) (destr_list_post x) inv
+
+let rec list_exists
+  (#p: parser1)
+  (#inv: memory_invariant)
+  (f_spec: Ghost.erased (dfst p -> Tot bool)) // reifying f below is not enough because of the ptr
+  (f: ((x: ptr p inv) -> Read bool (True) (fun res -> res == Ghost.reveal f_spec (deref_spec x)) inv))
+  (l: lptr p inv)
+: Read bool (True) (fun res -> res == List.Tot.existsb f_spec (deref_list_spec l)) inv
+  (decreases (List.Tot.length (deref_list_spec l)))
+= match destr_list l with
+  | None -> false
+  | Some (hd, tl) ->
+    if f hd
+    then true
+    else list_exists f_spec f tl
