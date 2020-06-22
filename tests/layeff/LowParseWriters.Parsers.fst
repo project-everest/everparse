@@ -11,6 +11,10 @@ let get_parser
   p
 = (dsnd p).parser
 
+let get_serializer
+  p
+= (dsnd p).serializer
+
 let make_parser'
   #t #k p s j
 = {
@@ -25,8 +29,8 @@ let make_parser_correct
 = ()
 
 let size_correct
-  p s x
-= LP.serializer_unique (get_parser p) (dsnd p).serializer s x
+  p x
+= ()
 
 let valid_synth_parser_eq
   p1 p2
@@ -55,3 +59,11 @@ let valid_synth_parse_synth
     LP.serialize_synth_eq (get_parser p1) f2 (dsnd p1).serializer f1 () (f2 x)
   );
 }
+
+let parse_vldata
+  p min max
+=
+  make_parser
+    (LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p))
+    (LP.serialize_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p))
+    (LP.jump_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p) ())
