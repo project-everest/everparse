@@ -240,9 +240,7 @@ let parse_vldata_intro_weak_frame
 
 inline_for_extraction
 type parser1 = (p: parser {
-  match (get_parser_kind p).LP.parser_kind_high with
-  | None -> False
-  | Some max -> max > 0
+  (get_parser_kind p).LP.parser_kind_low > 0
 })
 
 inline_for_extraction
@@ -304,3 +302,156 @@ let rec list_exists
     if f hd
     then true
     else list_exists f_spec f tl
+
+let parse_vllist_t
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot Type
+= let s = LP.serialize_list (get_parser p) (get_serializer p) in
+  LP.parse_bounded_vldata_strong_t (U32.v min) (U32.v max) s
+
+inline_for_extraction
+val parse_vllist
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (p' : parser {
+    dfst p' == parse_vllist_t p min max /\
+    get_parser_kind p' == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) LP.parse_list_kind /\
+    get_parser p' == LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) /\
+    get_serializer p' == LP.serialize_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) /\
+    True
+  })
+
+inline_for_extraction
+val lptr_of_vllist_ptr
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (r: ptr (parse_vllist p min max) inv)
+: Read (lptr p inv) True (fun r' -> deref_list_spec r' == (deref_spec r <: list (dfst p))) inv
+
+let list_size
+  (p: parser1)
+  (x: list (dfst p))
+: GTot nat
+= Seq.length (LP.serialize (LP.serialize_list _ (get_serializer p)) x)
+
+let parse_vllist_nil_spec
+  (p: parser1)
+  (max: U32.t { U32.v max > 0 })
+: Tot (repr_spec unit emp (parse_vllist p 0ul max) (fun _ -> True) (fun _ _ x -> (x <: list (dfst p)) == [] /\ list_size p x == 0) (fun _ -> False))
+= fun _ ->
+  LP.serialize_list_nil _ (get_serializer p);
+  Correct ((), ([] <: parse_vllist_t p 0ul max))
+
+inline_for_extraction
+val parse_vllist_nil_impl
+  (#inv: memory_invariant)
+  (p: parser1)
+  (max: U32.t { U32.v max > 0 })
+: Tot (repr_impl _ _ _ _ _ _ inv (parse_vllist_nil_spec p max))
+
+inline_for_extraction
+let parse_vllist_nil
+  (#inv: memory_invariant)
+  (p: parser1)
+  (max: U32.t { U32.v max > 0 })
+: Write unit emp (parse_vllist p 0ul max) (fun _ -> True) (fun _ _ x -> (x <: list (dfst p)) == [] /\ list_size p x == 0) inv
+= EWrite?.reflect (| _, parse_vllist_nil_impl p max |)
+
+module L = FStar.List.Tot
+
+#push-options "--z3rlimit 32"
+
+let parse_vllist_snoc_spec
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (repr_spec unit (parse_vllist p min max `star` p) (parse_vllist p min max)
+    (fun (l, x) ->
+      let sz = list_size p l + size p x in
+      U32.v min <= sz /\ sz <= U32.v max)
+    (fun (l, x) _ l' -> (l' <: list (dfst p)) == L.snoc ((l <: list (dfst p)), x) /\ list_size p l' == list_size p l + size p x)
+    (fun _ -> False)
+  )
+= fun (l, x) ->
+  LP.serialize_list_singleton _ (get_serializer p) x;
+  LP.serialize_list_append _ (get_serializer p) l [x];
+  Correct ((), L.snoc ((l <: list (dfst p)), x))
+
+#pop-options
+
+inline_for_extraction
+val parse_vllist_snoc_impl
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (repr_impl _ _ _ _ _ _ inv (parse_vllist_snoc_spec p min max))
+
+inline_for_extraction
+let parse_vllist_snoc
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Write unit (parse_vllist p min max `star` p) (parse_vllist p min max)
+    (fun (l, x) ->
+      let sz = list_size p l + size p x in
+      U32.v min <= sz /\ sz <= U32.v max)
+    (fun (l, x) _ l' -> (l' <: list (dfst p)) == L.snoc ((l <: list (dfst p)), x) /\ list_size p l' == list_size p l + size p x)
+    inv
+=
+  EWrite?.reflect (| _, parse_vllist_snoc_impl p min max |)
+
+#push-options "--z3rlimit 32"
+
+let parse_vllist_snoc_weak_spec
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (repr_spec unit (parse_vllist p min max `star` p) (parse_vllist p min max)
+    (fun _ -> True)
+    (fun (l, x) _ l' -> (l' <: list (dfst p)) == L.snoc ((l <: list (dfst p)), x) /\ list_size p l' == list_size p l + size p x)
+    (fun (l, x) ->
+      let sz = list_size p l + size p x in
+      ~ (U32.v min <= sz /\ sz <= U32.v max))
+  )
+= fun (l, x) ->
+  let sz = list_size p l + size p x in
+  if U32.v min <= sz && sz <= U32.v max
+  then begin
+    LP.serialize_list_singleton _ (get_serializer p) x;
+    LP.serialize_list_append _ (get_serializer p) l [x];
+    Correct ((), L.snoc ((l <: list (dfst p)), x))
+  end else
+    Error "parse_vllist_snoc_weak: out of bounds"
+
+#pop-options
+
+inline_for_extraction
+val parse_vllist_snoc_weak_impl
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (repr_impl _ _ _ _ _ _ inv (parse_vllist_snoc_weak_spec p min max))
+
+inline_for_extraction
+let parse_vllist_snoc_weak
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: EWrite unit (parse_vllist p min max `star` p) (parse_vllist p min max)
+    (fun _ -> True)
+    (fun (l, x) _ l' -> (l' <: list (dfst p)) == L.snoc ((l <: list (dfst p)), x) /\ list_size p l' == list_size p l + size p x)
+    (fun (l, x) ->
+      let sz = list_size p l + size p x in
+      ~ (U32.v min <= sz /\ sz <= U32.v max))
+    inv
+=
+  EWrite?.reflect (| _, parse_vllist_snoc_weak_impl p min max |)

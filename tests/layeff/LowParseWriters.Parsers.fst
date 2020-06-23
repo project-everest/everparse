@@ -345,3 +345,118 @@ let destr_list
   #p #inv x
 =
   Read?.reflect (| destr_list_spec x, destr_list_impl x |)
+
+let parse_vllist
+  p min max
+=
+  make_parser
+    (LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)))
+    (LP.serialize_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)))
+    (LP.jump_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) ())
+
+let lptr_of_vllist_ptr_spec
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (r: ptr (parse_vllist p min max) inv)
+: Tot (read_repr_spec (lptr p inv) True (fun r' -> deref_list_spec r' == (deref_spec r <: list (dfst p))) (fun _ -> False))
+=
+  fun _ ->
+  let (b, len) = buffer_of_ptr r in
+  let sl = LP.make_slice b len in
+  LP.valid_bounded_vldata_strong_elim inv.h0 (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) sl 0ul;
+  let pos_pl = U32.uint_to_t (LP.log256' (U32.v max)) in
+  let len_pl = len `U32.sub` pos_pl in
+  LP.valid_exact_list_valid_list (get_parser p) inv.h0 sl pos_pl len;
+  let b_pl = B.gsub b pos_pl len_pl in
+  valid_list_ext (get_parser p) inv.h0 sl pos_pl len inv.h0 (LP.make_slice b_pl len_pl) 0ul len_pl;
+  Correct ({ rlptr_base = b_pl; rlptr_len = len_pl })
+
+inline_for_extraction
+let lptr_of_vllist_ptr_impl
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (r: ptr (parse_vllist p min max) inv)
+: Tot (read_repr_impl _ _ _ _ inv (lptr_of_vllist_ptr_spec p min max r))
+=
+  mk_read_repr_impl
+    _ _ _ _ inv (lptr_of_vllist_ptr_spec p min max r) (fun _ ->
+    let (b, len) = buffer_of_ptr r in
+    let sl = LP.make_slice b len in
+    LP.valid_bounded_vldata_strong_elim inv.h0 (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) sl 0ul;
+    let pos_pl = U32.uint_to_t (LP.log256' (U32.v max)) in
+    let len_pl = len `U32.sub` pos_pl in
+    LP.valid_exact_list_valid_list (get_parser p) inv.h0 sl pos_pl len;
+    let b_pl = B.sub b pos_pl len_pl in
+    valid_list_ext (get_parser p) inv.h0 sl pos_pl len inv.h0 (LP.make_slice b_pl len_pl) 0ul len_pl;
+    Correct ({ rlptr_base = b_pl; rlptr_len = len_pl })
+  )
+
+#push-options "--z3rlimit 32"
+
+let lptr_of_vllist_ptr
+  #inv p min max r
+=
+  ERead?.reflect (| _, lptr_of_vllist_ptr_impl p min max r |)
+
+let parse_vllist_nil_impl
+  #inv p max
+=
+  mk_repr_impl
+    _ _ _ _ _ _ inv (parse_vllist_nil_spec p max) (fun b len _ ->
+    let pos_pl = U32.uint_to_t (LP.log256' (U32.v max)) in
+    if len `U32.lt` pos_pl
+    then IOverflow
+    else begin
+      let h = HST.get () in
+      let sl = LP.make_slice b len in
+      LP.valid_list_nil (get_parser p) h sl pos_pl;
+      LP.valid_list_valid_exact_list (get_parser p) h sl pos_pl pos_pl;
+      LP.finalize_bounded_vldata_strong_exact 0 (U32.v max) (LP.serialize_list _ (get_serializer p)) sl 0ul pos_pl;
+      ICorrect () pos_pl
+    end
+  )
+
+let parse_vllist_snoc_impl
+  #inv p min max
+= mk_repr_impl
+    _ _ _ _ _ _ inv (parse_vllist_snoc_spec p min max) (fun b len pos ->
+    let h = HST.get () in
+    let sl = LP.make_slice b len in
+    assert (LP.valid (LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) `LP.nondep_then` get_parser p) h sl 0ul);
+    LP.valid_nondep_then h (LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p))) (get_parser p) sl 0ul;
+    let pos_last = LP.jump_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) () sl 0ul in
+    let pos_pl = U32.uint_to_t (LP.log256' (U32.v max)) in
+    LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) sl 0ul;
+    LP.valid_exact_list_valid_list (get_parser p) h sl pos_pl pos_last;
+    LP.valid_list_snoc (get_parser p) h sl pos_pl pos_last;
+    LP.valid_list_valid_exact_list (get_parser p) h sl pos_pl pos;
+    LP.finalize_bounded_vldata_strong_exact (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) sl 0ul pos;
+    ICorrect () pos
+  )
+
+let parse_vllist_snoc_weak_impl
+  #inv p min max
+= mk_repr_impl
+    _ _ _ _ _ _ inv (parse_vllist_snoc_weak_spec p min max) (fun b len pos ->
+    let h = HST.get () in
+    let sl = LP.make_slice b len in
+    assert (LP.valid (LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) `LP.nondep_then` get_parser p) h sl 0ul);
+    LP.valid_nondep_then h (LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p))) (get_parser p) sl 0ul;
+    let pos_last = LP.jump_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) () sl 0ul in
+    let pos_pl = U32.uint_to_t (LP.log256' (U32.v max)) in
+    LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) sl 0ul;
+    LP.valid_exact_list_valid_list (get_parser p) h sl pos_pl pos_last;
+    LP.valid_list_snoc (get_parser p) h sl pos_pl pos_last;
+    LP.valid_list_valid_exact_list (get_parser p) h sl pos_pl pos;
+    let sz = pos `U32.sub` pos_pl in
+    if min `U32.lte` sz && sz `U32.lte` max
+    then begin
+      LP.finalize_bounded_vldata_strong_exact (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) sl 0ul pos;
+      ICorrect () pos
+    end else
+      IError "parse_vllist_snoc_weak: out of bounds"
+  )
