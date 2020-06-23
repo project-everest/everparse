@@ -186,7 +186,6 @@ let parse_vldata_intro
 : Write unit (parse_bounded_integer (LP.log256' (U32.v max)) `star` p) (parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun (_, vin) _ vout -> vin == vout) inv
 = EWrite?.reflect (| parse_vldata_intro_spec p min max, parse_vldata_intro_impl p min max |)
 
-// FIXME: WHY WHY WHY is the following SO slow?
 inline_for_extraction
 let parse_vldata_intro_frame
   (#inv: memory_invariant)
@@ -226,11 +225,6 @@ let parse_vldata_intro_weak
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
 : EWrite unit (parse_bounded_integer (LP.log256' (U32.v max)) `star` p) (parse_vldata p min max) (fun _ -> True) (fun (_, vin) _ vout -> vin == vout) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)) inv
 = EWrite?.reflect (| _, parse_vldata_intro_weak_impl p min max |)
-
-// FIXME: WHY WHY WHY is the following SO slow?
-// Like parse_vldata_intro_frame
-// Removing smt_reifiable_layered_effect does not help.
-// Neither does #push-options "--using_facts_from '*,-LowParse,+LowParse.Spec.Base,+LowParse.Low.Base,+LowParse.Spec.VLData'"
 
 inline_for_extraction
 let parse_vldata_intro_weak_frame
