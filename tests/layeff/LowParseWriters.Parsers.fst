@@ -32,6 +32,34 @@ let size_correct
   p x
 = ()
 
+let deref
+  #p #inv r x
+=
+  deref #p #inv (fun b len -> r (LP.make_slice b len) 0ul) x
+
+inline_for_extraction
+let leaf_writer_of_leaf_writer
+  (p: parser)
+  (w: LP.leaf_writer_strong (get_serializer p) {
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+  })
+: Tot (leaf_writer p)
+= if (get_parser_kind p).LP.parser_kind_low > 4294967295
+  then (fun b len x -> None)
+  else (fun b len x ->
+    if len `U32.lt` U32.uint_to_t ((get_parser_kind p).LP.parser_kind_low)
+    then None
+    else Some (w x (LP.make_slice b len) 0ul)
+  )
+
+let start
+  #p w #l x
+= start (leaf_writer_of_leaf_writer p w) x
+
+let append
+  #fr #p w #l x
+= append (leaf_writer_of_leaf_writer p w) x
+
 let valid_synth_parser_eq
   p1 p2
 = {

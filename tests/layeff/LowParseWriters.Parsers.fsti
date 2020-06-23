@@ -61,6 +61,35 @@ val size_correct
   (size p x == Seq.length (LP.serialize (get_serializer p) x))
   [SMTPat (size p x)]
 
+inline_for_extraction
+val deref
+  (#p: parser)
+  (#inv: memory_invariant)
+  (r: LP.leaf_reader (get_parser p))
+  (x: ptr p inv)
+: Read (dfst p) True (fun res -> res == deref_spec x) inv
+
+inline_for_extraction
+val start
+  (#p: parser)
+  (w: LP.leaf_writer_strong (get_serializer p) {
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+  })
+  (#l: memory_invariant)
+  (x: dfst p)
+: Write unit emp (p) (fun _ -> True) (fun _ _ y -> y == x) l
+
+inline_for_extraction
+val append
+  (#fr: parser)
+  (#p: parser)
+  (w: LP.leaf_writer_strong (get_serializer p) {
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+  })
+  (#l: memory_invariant)
+  (x: dfst p)
+: Write unit fr (fr `star` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) l
+
 val valid_synth_parser_eq
   (p1: parser)
   (p2: parser {
