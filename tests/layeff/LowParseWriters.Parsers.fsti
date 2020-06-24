@@ -455,3 +455,12 @@ let parse_vllist_snoc_weak
     inv
 =
   EWrite?.reflect (| _, parse_vllist_snoc_weak_impl p min max |)
+
+val valid_synth_parse_vllist
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t)
+  (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 })
+: Tot (valid_synth_t (parse_vllist p min max) (parse_vllist p min' max') (fun x -> U32.v min' <= list_size p x /\ list_size p x <= U32.v max' /\ LP.log256' (U32.v max') == LP.log256' (U32.v max))
+(fun x -> x))

@@ -460,3 +460,17 @@ let parse_vllist_snoc_weak_impl
     end else
       IError "parse_vllist_snoc_weak: out of bounds"
   )
+
+let valid_synth_parse_vllist
+  p min max min' max'
+= {
+  valid_synth_valid = (fun h b pos pos' ->
+    let sl = LP.make_slice b (B.len b) in
+    let s = LP.serialize_list _ (get_serializer p) in
+    LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) s sl pos;
+    LP.valid_bounded_vldata_strong_intro h (U32.v min') (U32.v max') s sl pos pos'
+  );
+  valid_synth_size = (fun x ->
+    ()
+  );
+}
