@@ -583,3 +583,24 @@ let get_vlbytes
   #inv min max p
 =
   ERead?.reflect (| get_vlbytes_spec min max p, get_vlbytes_impl min max p |)
+
+let put_vlbytes_impl
+  #inv min max len l f
+=
+  mk_repr_impl _ _ _ _ _ _ inv (put_vlbytes_spec min max l) (fun b blen _ ->
+    let ilen = U32.uint_to_t (LP.log256' (U32.v max)) in
+    if blen `U32.lt` ilen || (blen `U32.sub` ilen) `U32.lt` len
+    then begin
+      LP.length_serialize_bounded_vlbytes (U32.v min) (U32.v max) (FStar.Bytes.hide (Ghost.reveal l));
+      IOverflow
+    end else begin
+      let sl = LP.make_slice b blen in
+      let _ = LP.write_bounded_integer (LP.log256' (U32.v max)) len sl 0ul in
+      let b_pl = B.sub b ilen len in
+      f b_pl;
+      let h = HST.get () in
+      LP.valid_flbytes_intro h (U32.v len) sl ilen;
+      LP.valid_bounded_vlbytes_intro h (U32.v min) (U32.v max) sl 0ul len;
+      ICorrect () (ilen `U32.add` len)
+    end
+  )

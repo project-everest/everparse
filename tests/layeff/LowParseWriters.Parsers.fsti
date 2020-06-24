@@ -573,3 +573,56 @@ val get_vlbytes
       B.as_seq inv.h0 b `Seq.equal` FStar.Bytes.reveal (deref_spec p)
     )
     inv
+
+let put_vlbytes_spec
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (l: Ghost.erased (Seq.seq LP.byte) { U32.v min <= Seq.length l /\ Seq.length l <= U32.v max })
+: Tot (repr_spec unit emp (parse_vlbytes min max) (fun _ -> True) (fun _ _ vout -> vout == FStar.Bytes.hide (Ghost.reveal l)) (fun _ -> False))
+=
+  fun _ -> Correct ((), FStar.Bytes.hide (Ghost.reveal l))
+
+module HST = FStar.HyperStack.ST
+
+inline_for_extraction
+let put_vlbytes_impl_t
+  (inv: memory_invariant)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (len: U32.t { U32.v min <= U32.v len /\ U32.v len <= U32.v max })
+  (l: Ghost.erased (Seq.seq LP.byte) { Seq.length l == U32.v len })
+: Tot Type
+=
+    (b: B.buffer LP.byte) ->
+    HST.Stack unit
+    (requires (fun h ->
+      B.modifies inv.lwrite inv.h0 h /\
+      B.live h b /\
+      B.len b == len /\
+      inv.lwrite `B.loc_includes` B.loc_buffer b
+    ))
+    (ensures (fun h _ h' ->
+      B.modifies (B.loc_buffer b) h h' /\
+      B.as_seq h' b `Seq.equal` Ghost.reveal l
+    ))
+
+inline_for_extraction
+val put_vlbytes_impl
+  (#inv: memory_invariant)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (len: U32.t { U32.v min <= U32.v len /\ U32.v len <= U32.v max })
+  (l: Ghost.erased (Seq.seq LP.byte) { Seq.length l == U32.v len })
+  (f: put_vlbytes_impl_t inv min max len l)
+: Tot (repr_impl _ _ _ _ _ _ inv (put_vlbytes_spec min max l))
+
+inline_for_extraction
+let put_vlbytes
+  (#inv: memory_invariant)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (len: U32.t { U32.v min <= U32.v len /\ U32.v len <= U32.v max })
+  (l: Ghost.erased (Seq.seq LP.byte) { Seq.length l == U32.v len })
+  (f: put_vlbytes_impl_t inv min max len l)
+: Write unit emp (parse_vlbytes min max) (fun _ -> True) (fun _ _ vout -> vout == FStar.Bytes.hide (Ghost.reveal l)) inv
+= EWrite?.reflect (| _, put_vlbytes_impl min max len l f |)
