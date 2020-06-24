@@ -76,39 +76,12 @@ let size_star
 =
   LP.length_serialize_nondep_then (dsnd p1).serializer (dsnd p2).serializer x1 x2
 
-let valid_frame
-  p h b pos pos' l h'
-= LP.valid_pos_frame_strong (dsnd p).parser h (LP.make_slice b (B.len b)) pos pos' l h'
-
-unfold
-let valid'
-  (#rrel #rel: _)
-  (#k: LP.parser_kind)
-  (#t: Type)
-  (p: LP.parser k t)
-  (h: HS.mem)
-  (s: LP.slice rrel rel)
-  (pos: U32.t)
-: GTot Type0
-= U32.v pos <= U32.v s.LP.len /\
-  LP.live_slice h s /\
-  Some? (LP.parse p (LP.bytes_of_slice_from h s pos))
-
-let valid_gsub_elim
-  p h b pos0 pos1 pos2 len
-= let s = slice_of_buffer b in
-  let s' = slice_of_buffer (B.gsub b pos0 len) in
-  LP.valid_facts (dsnd p).parser h s (pos0 `U32.add` pos1);
-  LP.valid_facts (dsnd p).parser h s' pos1;
-  LP.parse_strong_prefix (dsnd p).parser (LP.bytes_of_slice_from h s' pos1) (LP.bytes_of_slice_from h s (pos0 `U32.add` pos1))
-
-let valid_gsub_intro
-  p h b pos0 pos1 pos2 len
-= let s = slice_of_buffer b in
-  let s' = slice_of_buffer (B.gsub b pos0 len) in
-  LP.valid_facts (dsnd p).parser h s (pos0 `U32.add` pos1);
-  LP.valid_facts (dsnd p).parser h s' pos1;
-  LP.parse_strong_prefix (dsnd p).parser (LP.bytes_of_slice_from h s (pos0 `U32.add` pos1)) (LP.bytes_of_slice_from h s' pos1)
+let valid_ext
+  p h1 b1 pos1 pos1' h2 b2 pos2 pos2'
+=
+  assert (Seq.length (B.as_seq h2 (B.gsub b2 pos2 (pos2' `U32.sub` pos2))) == Seq.length (B.as_seq h1 (B.gsub b1 pos1 (pos1' `U32.sub` pos1))));
+  assert (pos2' `U32.sub` pos2 == pos1' `U32.sub` pos1);
+  LP.valid_ext_intro (dsnd p).parser h1 (LP.make_slice b1 (B.len b1)) pos1 h2 (LP.make_slice b2 (B.len b2)) pos2
 
 let parse_u32' = {
   kind = _;
@@ -149,6 +122,8 @@ let clens_to_lp_clens
 let gaccessor
   p1 p2 lens
 = LP.gaccessor (dsnd p1).parser (dsnd p2).parser (clens_to_lp_clens lens)
+
+#push-options "--z3rlimit 16"
 
 let gaccess
   #p1 #p2 #lens g h b
@@ -205,6 +180,8 @@ let gaccessor_frame1
   let sl' = LP.make_slice b' (B.len b') in
   LP.valid_facts (dsnd p2).parser h sl' 0ul;
   ()
+
+#pop-options
 
 let gaccessor_frame
   #p1 #p2 #lens g h b l h'
