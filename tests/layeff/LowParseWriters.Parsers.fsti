@@ -545,3 +545,31 @@ let parse_vllist_recast
   (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 /\ LP.log256' (U32.v max) == LP.log256' (U32.v max')})
 : EWrite unit (parse_vllist p min max) (parse_vllist p min' max') (fun _ -> True) (fun vin _ vout -> (vin <: list (dfst p)) == (vout <: list (dfst p))) (fun vin -> ~ (U32.v min' <= list_size p vin /\ list_size p vin <= U32.v max')) inv
 = EWrite?.reflect (| _, parse_vllist_recast_impl p min max min' max' |)
+
+inline_for_extraction
+val parse_vlbytes
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Tot (p' : parser {
+    dfst p' == LP.parse_bounded_vlbytes_t (U32.v min) (U32.v max) /\
+    get_parser_kind p' == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) LP.parse_all_bytes_kind /\
+    get_parser p' == LP.parse_bounded_vlbytes (U32.v min) (U32.v max) /\
+    get_serializer p' == LP.serialize_bounded_vlbytes (U32.v min) (U32.v max)
+  })
+
+module B = LowStar.Buffer
+
+val get_vlbytes
+  (#inv: memory_invariant)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (p: ptr (parse_vlbytes min max) inv)
+: Read
+    (B.buffer LP.byte & U32.t)
+    True
+    (fun (b, len) ->
+      B.live inv.h0 b /\
+      len == B.len b /\
+      B.as_seq inv.h0 b `Seq.equal` FStar.Bytes.reveal (deref_spec p)
+    )
+    inv

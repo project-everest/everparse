@@ -520,3 +520,66 @@ let parse_vllist_recast_impl
     end else
       IError "parse_vllist_recast: out of bounds"
   )
+
+let parse_vlbytes
+  min max
+= make_parser
+    (LP.parse_bounded_vlbytes (U32.v min) (U32.v max))
+    (LP.serialize_bounded_vlbytes (U32.v min) (U32.v max))
+    (LP.jump_bounded_vlbytes (U32.v min) (U32.v max))
+
+let get_vlbytes_spec
+  (#inv: memory_invariant)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (p: ptr (parse_vlbytes min max) inv)
+: Tot (read_repr_spec 
+    (B.buffer LP.byte & U32.t)
+    True
+    (fun (b, len) ->
+      B.live inv.h0 b /\
+      len == B.len b /\
+      B.as_seq inv.h0 b `Seq.equal` FStar.Bytes.reveal (deref_spec p)
+    )
+    (fun _ -> False)
+  )
+= fun _ ->
+    let l = LP.log256' (U32.v max) in
+    let (base, len) = buffer_of_ptr p in
+    let input = LP.make_slice base len in
+    let x = LP.contents (LP.parse_bounded_vlbytes (U32.v min) (U32.v max)) inv.h0 input 0ul in
+    let blen = FStar.Bytes.len x in
+    LP.valid_bounded_vlbytes'_elim inv.h0 (U32.v min) (U32.v max) l input 0ul;
+    LP.valid_facts (LP.parse_flbytes (U32.v blen)) inv.h0 input (U32.uint_to_t l);
+    Correct (B.gsub input.LP.base (U32.uint_to_t l) blen, blen)
+
+inline_for_extraction
+let get_vlbytes_impl
+  (#inv: memory_invariant)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (p: ptr (parse_vlbytes min max) inv)
+: Tot (read_repr_impl
+    (B.buffer LP.byte & U32.t)
+    True
+    (fun (b, len) ->
+      B.live inv.h0 b /\
+      len == B.len b /\
+      B.as_seq inv.h0 b `Seq.equal` FStar.Bytes.reveal (deref_spec p)
+    )
+    (fun _ -> False)
+    inv
+    (get_vlbytes_spec min max p)
+  )
+= mk_read_repr_impl _ _ _ _ inv (get_vlbytes_spec min max p) (fun _ ->
+    let (base, len) = buffer_of_ptr p in
+    let input = LP.make_slice base len in
+    let blen = LP.bounded_vlbytes_payload_length (U32.v min) (U32.v max) input 0ul in
+    let b = LP.get_vlbytes_contents (U32.v min) (U32.v max) input 0ul in
+    Correct (b, blen)
+  )
+
+let get_vlbytes
+  #inv min max p
+=
+  ERead?.reflect (| get_vlbytes_spec min max p, get_vlbytes_impl min max p |)
