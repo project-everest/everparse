@@ -207,7 +207,7 @@ let valid_rlptr
   let len = B.len base in
   let sl = LP.make_slice base len in
   LP.valid_list (get_parser p) inv.h0 sl 0ul len /\
-  inv.lread `B.loc_includes` B.loc_buffer base
+  inv.lwrite `B.loc_disjoint` B.loc_buffer base
 
 let deref_list_spec
   #p #inv x
