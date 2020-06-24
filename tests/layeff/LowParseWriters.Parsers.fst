@@ -161,8 +161,25 @@ let parse_vldata_intro_weak_impl
       LP.valid_bounded_vldata_strong_intro h1 (U32.v min) (U32.v max) (get_serializer p) sl 0ul pos;
       ICorrect () pos
     end else begin
-      IError "parse_vldata_intro_weak_spec: out of bounds"
+      IError "parse_vldata_intro_weak: out of bounds"
     end
+  )
+
+let parse_vldata_recast_impl
+  #inv p min max min' max'
+=
+  mk_repr_impl _ _ _ _ _ _ inv (parse_vldata_recast_spec p min max min' max') (fun b len pos ->
+    let h = HST.get () in
+    let sl = LP.make_slice b len in
+    let s = get_serializer p in
+    LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) s sl 0ul;
+    let sz = pos `U32.sub` U32.uint_to_t (LP.log256' (U32.v max)) in
+    if min' `U32.lte` sz && sz `U32.lte` max'
+    then begin
+      LP.valid_bounded_vldata_strong_intro h (U32.v min') (U32.v max') s sl 0ul pos;
+      ICorrect () pos
+    end else
+      IError "parse_vldata_recast: out of bounds"
   )
 
 noeq
@@ -474,3 +491,20 @@ let valid_synth_parse_vllist
     ()
   );
 }
+
+let parse_vllist_recast_impl
+  #inv p min max min' max'
+=
+  mk_repr_impl _ _ _ _ _ _ inv (parse_vllist_recast_spec p min max min' max') (fun b len pos ->
+    let h = HST.get () in
+    let sl = LP.make_slice b len in
+    let s = LP.serialize_list _ (get_serializer p) in
+    LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) s sl 0ul;
+    let sz = pos `U32.sub` U32.uint_to_t (LP.log256' (U32.v max)) in
+    if min' `U32.lte` sz && sz `U32.lte` max'
+    then begin
+      LP.valid_bounded_vldata_strong_intro h (U32.v min') (U32.v max') s sl 0ul pos;
+      ICorrect () pos
+    end else
+      IError "parse_vllist_recast: out of bounds"
+  )

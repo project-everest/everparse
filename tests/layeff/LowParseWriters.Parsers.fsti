@@ -207,7 +207,7 @@ let parse_vldata_intro_weak_spec
     let sz = size p vin in
     if U32.v min <= sz && sz <= U32.v max
     then Correct ((), vin)
-    else Error "parse_vldata_intro_weak_spec: out of bounds"
+    else Error "parse_vldata_intro_weak: out of bounds"
 
 inline_for_extraction
 val parse_vldata_intro_weak_impl
@@ -237,6 +237,41 @@ let parse_vldata_intro_weak_frame
 = 
   valid_synth _ _ _ _ _ (valid_synth_star_assoc_1 _ _ _);
   frame2 _ _ _ _ _ _ _ _ (fun _ -> parse_vldata_intro_weak p min max)
+
+let parse_vldata_recast_spec
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t)
+  (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 /\ LP.log256' (U32.v max) == LP.log256' (U32.v max')})
+: Tot (repr_spec unit (parse_vldata p min max) (parse_vldata p min' max') (fun _ -> True) (fun vin _ vout -> (vin <: dfst p) == (vout <: dfst p)) (fun vin -> ~ (U32.v min' <= size p vin /\ size p vin <= U32.v max')))
+=
+  fun vin ->
+    let sz = size p vin in
+    if U32.v min' <= sz && sz <= U32.v max'
+    then Correct ((), vin)
+    else Error "parse_vldata_recast: out of bounds"
+
+inline_for_extraction
+val parse_vldata_recast_impl
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t)
+  (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 /\ LP.log256' (U32.v max) == LP.log256' (U32.v max')})
+: Tot (repr_impl _ _ _ _ _ _ inv (parse_vldata_recast_spec p min max min' max'))
+
+inline_for_extraction
+let parse_vldata_recast
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t)
+  (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 /\ LP.log256' (U32.v max) == LP.log256' (U32.v max')})
+: EWrite unit (parse_vldata p min max) (parse_vldata p min' max') (fun _ -> True) (fun vin _ vout -> (vin <: dfst p) == (vout <: dfst p)) (fun vin -> ~ (U32.v min' <= size p vin /\ size p vin <= U32.v max')) inv
+= EWrite?.reflect (| _, parse_vldata_recast_impl p min max min' max' |)
 
 inline_for_extraction
 type parser1 = (p: parser {
@@ -464,3 +499,38 @@ val valid_synth_parse_vllist
   (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 })
 : Tot (valid_synth_t (parse_vllist p min max) (parse_vllist p min' max') (fun x -> U32.v min' <= list_size p x /\ list_size p x <= U32.v max' /\ LP.log256' (U32.v max') == LP.log256' (U32.v max))
 (fun x -> x))
+
+let parse_vllist_recast_spec
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t)
+  (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 /\ LP.log256' (U32.v max) == LP.log256' (U32.v max')})
+: Tot (repr_spec unit (parse_vllist p min max) (parse_vllist p min' max') (fun _ -> True) (fun vin _ vout -> (vin <: list (dfst p)) == (vout <: list (dfst p))) (fun vin -> ~ (U32.v min' <= list_size p vin /\ list_size p vin <= U32.v max')))
+=
+  fun vin ->
+    let sz = list_size p vin in
+    if U32.v min' <= sz && sz <= U32.v max'
+    then Correct ((), vin)
+    else Error "parse_vllist_recast: out of bounds"
+
+inline_for_extraction
+val parse_vllist_recast_impl
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t)
+  (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 /\ LP.log256' (U32.v max) == LP.log256' (U32.v max')})
+: Tot (repr_impl _ _ _ _ _ _ inv (parse_vllist_recast_spec p min max min' max'))
+
+inline_for_extraction
+let parse_vllist_recast
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t)
+  (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 /\ LP.log256' (U32.v max) == LP.log256' (U32.v max')})
+: EWrite unit (parse_vllist p min max) (parse_vllist p min' max') (fun _ -> True) (fun vin _ vout -> (vin <: list (dfst p)) == (vout <: list (dfst p))) (fun vin -> ~ (U32.v min' <= list_size p vin /\ list_size p vin <= U32.v max')) inv
+= EWrite?.reflect (| _, parse_vllist_recast_impl p min max min' max' |)
