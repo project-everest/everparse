@@ -130,6 +130,17 @@ val valid_synth_parse_synth
   ))
 : Tot (valid_synth_t p1 (parse_synth p1 f2 f1) (fun _ -> True) f2)
 
+val valid_synth_parse_synth_recip
+  (p1: parser)
+  (#t2: Type)
+  (f2: dfst p1 -> GTot t2)
+  (f1: t2 -> GTot (dfst p1))
+  (sq: squash (
+    LP.synth_injective f2 /\
+    LP.synth_inverse f2 f1
+  ))
+: Tot (valid_synth_t (parse_synth p1 f2 f1) p1 (fun _ -> True) f1)
+
 inline_for_extraction
 val parse_vldata
   (p: parser)
