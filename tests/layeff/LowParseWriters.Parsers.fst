@@ -53,12 +53,27 @@ let leaf_writer_of_leaf_writer
   )
 
 let start
-  #p w #l x
+  p w #l x
 = start (leaf_writer_of_leaf_writer p w) x
 
 let append
-  #fr #p w #l x
+  #fr p w #l x
 = append (leaf_writer_of_leaf_writer p w) x
+
+
+let lp_clens_to_clens
+  (#t1 #t2: Type)
+  (c: LP.clens t1 t2)
+: Tot (clens t1 t2)
+= {
+  clens_cond = c.LP.clens_cond;
+  clens_get = c.LP.clens_get
+}
+
+let access
+  p1 p2 #lens #inv #g a x
+=
+  access #p1 #p2 #(lp_clens_to_clens lens) a x
 
 let valid_synth_parser_eq
   p1 p2
