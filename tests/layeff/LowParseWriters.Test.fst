@@ -15,4 +15,4 @@ let test_read
     True
   ))
 =
-  reify_read bool True (fun _ -> True) (fun _ -> False) inv (fun _ -> test_read3 inv (fun () -> false))
+  reify_read bool True (fun _ -> True) (fun _ -> False) inv (fun _ -> test_read1 inv (fun () -> false))
