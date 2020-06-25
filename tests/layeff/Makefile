@@ -25,25 +25,42 @@ LOWPARSE_HOME=$(QD_HOME)/src/lowparse
 
 INCLUDE_PATHS=$(LOWPARSE_HOME) $(FSTAR_HOME)/examples/layeredeffects
 
-FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN) --already_cached *,-LowParseWriters
+FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN) --already_cached *,-LowParseWriters --cmi
 
 ROOT_FILES=$(wildcard *.fst) $(wildcard *.fsti)
 
+HEADERS = $(addprefix -add-include ,'"kremlin/internal/compat.h"')
+
+KREMLIN = $(KREMLIN_HOME)/krml \
+	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
+	 -bundle 'LowParseWriters.Test=LowParse.\*,LowParseWriters,LowParseWriters.\*' \
+	 $(HEADERS) \
+	 -warn-error '-9@4@2'
+
+FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS)
+
 clean:
-	rm -rf *.checked *.source .depend
+	rm -rf *.checked *.source .depend *.krml *.c *.h Makefile.*
 
 .depend: $(ROOT_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(ROOT_FILES) > $@
+	$(FSTAR) --dep full $(ROOT_FILES) > $@
 
 include .depend
 
 verify-all: $(ALL_CHECKED_FILES)
 
 $(ALL_CHECKED_FILES): %.checked:
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
+	$(FSTAR) $<
 	touch $@
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test
+$(ALL_KRML_FILES): %.krml:
+	$(FSTAR) --codegen Kremlin $(patsubst %.checked,%,$(notdir $<)) --extract_module $(basename $(patsubst %.checked,%,$(notdir $<))) --warn_error '@241'
+
+extract: $(ALL_KRML_FILES) # from .depend
+	$(KREMLIN) -dast -skip-linking $^
+
+
+.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test extract
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)

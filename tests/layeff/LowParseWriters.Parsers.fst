@@ -388,7 +388,7 @@ inline_for_extraction
 let destr_list
   #p #inv x
 =
-  Read?.reflect (| destr_list_spec x, destr_list_impl x |)
+  Read?.reflect (ReadRepr _ (destr_list_impl x))
 
 let parse_vllist
   p min max
@@ -444,7 +444,7 @@ let lptr_of_vllist_ptr_impl
 let lptr_of_vllist_ptr
   #inv p min max r
 =
-  ERead?.reflect (| _, lptr_of_vllist_ptr_impl p min max r |)
+  ERead?.reflect (ReadRepr _ (lptr_of_vllist_ptr_impl p min max r))
 
 let parse_vllist_nil_impl
   #inv p max
@@ -597,7 +597,7 @@ let get_vlbytes_impl
 let get_vlbytes
   #inv min max p
 =
-  ERead?.reflect (| get_vlbytes_spec min max p, get_vlbytes_impl min max p |)
+  ERead?.reflect (ReadRepr _ (get_vlbytes_impl min max p))
 
 let put_vlbytes_impl
   #inv min max len l f
