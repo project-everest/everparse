@@ -32,6 +32,10 @@ let size_correct
   p x
 = ()
 
+let star_correct
+  p1 p2
+= ()
+
 let deref
   #p #inv r x
 =

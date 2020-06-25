@@ -61,6 +61,14 @@ val size_correct
   (size p x == Seq.length (LP.serialize (get_serializer p) x))
   [SMTPat (size p x)]
 
+val star_correct
+  (p1 p2: parser)
+: Lemma
+  (get_parser_kind (p1 `star` p2) == get_parser_kind p1 `LP.and_then_kind` get_parser_kind p2 /\
+  get_parser (p1 `star` p2) == get_parser p1 `LP.nondep_then` get_parser p2 /\
+  get_serializer (p1 `star` p2) == get_serializer p1 `LP.serialize_nondep_then` get_serializer p2)
+  [SMTPat (p1 `star` p2)]
+
 inline_for_extraction
 val deref
   (#p: parser)
