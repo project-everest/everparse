@@ -92,3 +92,31 @@ let test_read_if_nontrivial
   ))
 =
   reify_read U32.t True (fun _ -> True) (fun _ -> False) inv (test_read_if_nontrivial' inv b)
+
+inline_for_extraction
+noextract
+let test_read_if_really_nontrivial'
+  (inv: memory_invariant)
+  (b: ptr parse_u32 inv)
+  (c: ptr parse_u32 inv)
+  ()
+: Read FStar.UInt32.t True (fun _ -> True) inv
+= let x = deref LPI.read_u32 b in
+  if x = 18ul
+  then deref LPI.read_u32 c
+  else 1729ul
+
+let test_read_if_really_nontrivial
+  (inv: memory_invariant)
+  (b: ptr parse_u32 inv)
+  (c: ptr parse_u32 inv)
+  ()
+: HST.Stack (result U32.t)
+  (requires (fun h ->
+    B.modifies B.loc_none inv.h0 h
+  ))
+  (ensures (fun h _ h' ->
+    True
+  ))
+=
+  reify_read U32.t True (fun _ -> True) (fun _ -> False) inv (test_read_if_really_nontrivial' inv b c)
