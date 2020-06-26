@@ -1,6 +1,7 @@
 module LowParseWriters.Parsers
 friend LowParseWriters.LowParse
 
+module LP = LowParse.Low
 module B = LowStar.Buffer
 
 let get_parser_kind
@@ -30,10 +31,6 @@ let make_parser_correct
 
 let size_correct
   p x
-= ()
-
-let star_correct
-  p1 p2
 = ()
 
 let deref
@@ -88,36 +85,15 @@ let valid_synth_parser_eq
   );
 }
 
-let parse_synth
-  p1 #t2 f2 f1
-= make_parser
-    ((dsnd p1).parser `LP.parse_synth` f2)
-    (LP.serialize_synth (dsnd p1).parser f2 (dsnd p1).serializer f1 ())
-    (LP.jump_synth (dsnd p1).jumper f2 ())
-
-let valid_synth_parse_synth
-  p1 #t2 f2 f1 sq
-= {
-  valid_synth_valid = (fun h b pos pos' ->
-    LP.valid_synth h (get_parser p1) f2 (LP.make_slice b (B.len b)) pos
-  );
-  valid_synth_size = (fun x ->
-    LP.synth_injective_synth_inverse_synth_inverse_recip f2 f1 ();
-    LP.serialize_synth_eq (get_parser p1) f2 (dsnd p1).serializer f1 () (f2 x)
-  );
-}
-
-let valid_synth_parse_synth_recip
-  p1 #t2 f2 f1 sq
-= {
-  valid_synth_valid = (fun h b pos pos' ->
-    LP.synth_injective_synth_inverse_synth_inverse_recip f2 f1 ();
-    LP.valid_synth h (get_parser p1) f2 (LP.make_slice b (B.len b)) pos
-  );
-  valid_synth_size = (fun x ->
-    LP.serialize_synth_eq (get_parser p1) f2 (dsnd p1).serializer f1 () (x)
-  );
-}
+let parse_vldata_t_correct
+  (min: nat)
+  (max: nat { min <= max /\ 0 < max /\ max < 4294967296 })
+  (p: parser)
+: Lemma
+  (parse_vldata_t ( min) ( max) p == LP.parse_bounded_vldata_strong_t ( min) ( max) (get_serializer p))
+  [SMTPat (parse_vldata_t ( min) ( max) p)]
+=
+  assert_norm (parse_vldata_t (min) ( max) p == LP.parse_bounded_vldata_strong_t ( min) ( max) (get_serializer p))
 
 let parse_vldata
   p min max
@@ -127,12 +103,24 @@ let parse_vldata
     (LP.serialize_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p))
     (LP.jump_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p) ())
 
+let size_parse_vldata
+  p min max x
+= ()
+
+let log256_correct
+  (max: U32.t { U32.v max > 0 })
+: Lemma
+  (U32.v (log256 max) == LP.log256' (U32.v max))
+  [SMTPat (U32.v (log256 max))]
+= ()
+
 let valid_synth_parse_vldata
   p min max min' max'
 = {
   valid_synth_valid = (fun h b pos pos' ->
     let sl = LP.make_slice b (B.len b) in
     let s = get_serializer p in
+    let sz = U32.v (log256 max) in
     LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) s sl pos;
     LP.valid_bounded_vldata_strong_intro h (U32.v min') (U32.v max') s sl pos pos'
   );
@@ -145,9 +133,9 @@ let parse_bounded_integer
   sz
 =
   make_parser
-    (LP.parse_bounded_integer sz)
-    (LP.serialize_bounded_integer sz)
-    (LP.jump_bounded_integer sz)
+    (LP.parse_bounded_integer (U32.v sz))
+    (LP.serialize_bounded_integer (U32.v sz))
+    (LP.jump_bounded_integer' sz)
 
 module HST = FStar.HyperStack.ST
 
@@ -394,6 +382,30 @@ let destr_list
 =
   Read?.reflect (ReadRepr _ (destr_list_impl x))
 
+let list_size
+  p x
+=
+  Seq.length (LP.serialize (LP.serialize_list _ (get_serializer p)) x)
+
+let list_size_nil
+  p
+=
+  LP.serialize_list_nil _ (get_serializer p)
+
+let list_size_cons
+  p a q
+=
+  LP.serialize_list_cons _ (get_serializer p) a q
+
+let parse_vllist_t_correct
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: Lemma
+  (parse_vllist_t p min max == LP.parse_bounded_vldata_strong_t (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)))
+  [SMTPat (parse_vllist_t p min max)]
+= assert_norm (parse_vllist_t p min max == LP.parse_bounded_vldata_strong_t (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)))
+
 let parse_vllist
   p min max
 =
@@ -401,6 +413,10 @@ let parse_vllist
     (LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)))
     (LP.serialize_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)))
     (LP.jump_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) ())
+
+let parse_vllist_size
+  p min max x
+= ()
 
 let lptr_of_vllist_ptr_spec
   (#inv: memory_invariant)
@@ -443,8 +459,6 @@ let lptr_of_vllist_ptr_impl
     Correct ({ rlptr_base = b_pl; rlptr_len = len_pl })
   )
 
-#push-options "--z3rlimit 32"
-
 let lptr_of_vllist_ptr
   #inv p min max r
 =
@@ -467,6 +481,8 @@ let parse_vllist_nil_impl
       ICorrect () pos_pl
     end
   )
+
+#push-options "--z3rlimit 32"
 
 let parse_vllist_snoc_impl
   #inv p min max
@@ -509,6 +525,8 @@ let parse_vllist_snoc_weak_impl
       IError "parse_vllist_snoc_weak: out of bounds"
   )
 
+#pop-options
+
 let valid_synth_parse_vllist
   p min max min' max'
 = {
@@ -539,6 +557,14 @@ let parse_vllist_recast_impl
     end else
       IError "parse_vllist_recast: out of bounds"
   )
+
+let parse_vlbytes_t_correct
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
+: Lemma
+  (parse_vlbytes_t min max == LP.parse_bounded_vlbytes_t min max)
+  [SMTPat (parse_vlbytes_t min max)]
+= assert_norm (parse_vlbytes_t min max == LP.parse_bounded_vlbytes_t min max)
 
 let parse_vlbytes
   min max
@@ -603,6 +629,8 @@ let get_vlbytes
 =
   ERead?.reflect (ReadRepr _ (get_vlbytes_impl min max p))
 
+#push-options "--z3rlimit 32"
+
 let put_vlbytes_impl
   #inv min max len l f
 =
@@ -623,3 +651,5 @@ let put_vlbytes_impl
       ICorrect () (ilen `U32.add` len)
     end
   )
+
+#pop-options
