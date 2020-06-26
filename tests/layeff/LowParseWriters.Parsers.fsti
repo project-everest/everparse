@@ -403,6 +403,34 @@ let list_size
 : GTot nat
 = Seq.length (LP.serialize (LP.serialize_list _ (get_serializer p)) x)
 
+let list_size_nil
+  (p: parser1)
+: Lemma
+  (list_size p [] == 0)
+  [SMTPat (list_size p [])]
+= LP.serialize_list_nil _ (get_serializer p)
+
+let list_size_cons
+  (p: parser1)
+  (a: dfst p)
+  (q: list (dfst p))
+: Lemma
+  (list_size p (a :: q) == size p a + list_size p q)
+  [SMTPat (list_size p (a :: q))]
+= LP.serialize_list_cons _ (get_serializer p) a q
+
+module L = FStar.List.Tot
+
+let rec list_size_append
+  (p: parser1)
+  (l1 l2: list (dfst p))
+: Lemma
+  (list_size p (l1 `L.append` l2) == list_size p l1 + list_size p l2)
+  [SMTPat (list_size p (l1 `L.append` l2))]
+= match l1 with
+  | [] -> ()
+  | a :: q -> list_size_append p q l2
+
 let parse_vllist_nil_spec
   (p: parser1)
   (max: U32.t { U32.v max > 0 })
@@ -425,8 +453,6 @@ let parse_vllist_nil
   (max: U32.t { U32.v max > 0 })
 : Write unit emp (parse_vllist p 0ul max) (fun _ -> True) (fun _ _ x -> (x <: list (dfst p)) == [] /\ list_size p x == 0) inv
 = EWrite?.reflect (| _, parse_vllist_nil_impl p max |)
-
-module L = FStar.List.Tot
 
 #push-options "--z3rlimit 32"
 
@@ -644,3 +670,58 @@ let put_vlbytes
   (f: put_vlbytes_impl_t inv min max len l)
 : Write unit emp (parse_vlbytes min max) (fun _ -> True) (fun _ _ vout -> vout == FStar.Bytes.hide (Ghost.reveal l)) inv
 = EWrite?.reflect (| _, put_vlbytes_impl min max len l f |)
+
+let rec list_map'
+  (p1 p2: parser1)
+  (#inv: memory_invariant)
+  (f: Ghost.erased (dfst p1 -> Tot (dfst p2)))
+  (f' : (
+    (x: ptr p1 inv) ->
+    Write unit emp p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
+  ))
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (l: lptr p1 inv)
+: EWrite
+    unit
+    (parse_vllist p2 min max)
+    (parse_vllist p2 min max)
+    (fun _ -> True)
+    (fun lin _ lout -> (lout <: list (dfst p2)) == (lin <: list (dfst p2)) `L.append` L.map (Ghost.reveal f) (deref_list_spec l))
+    (fun lin -> list_size p2 lin + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l)) > U32.v max)
+    inv
+  (decreases (deref_list_spec l))
+=
+  let lin = get_state () in
+  match destr_list l with
+  | None ->
+    L.append_l_nil (Ghost.reveal lin <: list (dfst p2))
+  | Some (hd, tl) ->
+    frame _ _ _ _ _ _ _ (fun _ -> f' hd);
+    parse_vllist_snoc_weak p2 min max;
+    L.append_assoc (Ghost.reveal lin) [Ghost.reveal f (deref_spec hd)] (L.map (Ghost.reveal f) (deref_list_spec tl));
+    list_map' p1 p2 f f' min max tl
+
+let list_map
+  (p1 p2: parser1)
+  (#inv: memory_invariant)
+  (f: Ghost.erased (dfst p1 -> Tot (dfst p2)))
+  (f' : (
+    (x: ptr p1 inv) ->
+    Write unit emp p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
+  ))
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (l: lptr p1 inv)
+: EWrite
+    unit
+    emp
+    (parse_vllist p2 min max)
+    (fun _ -> True)
+    (fun _ _ lout -> (lout <: list (dfst p2)) == L.map (Ghost.reveal f) (deref_list_spec l))
+    (fun _ -> let len = list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l)) in len < U32.v min \/ len > U32.v max)
+    inv
+=
+  parse_vllist_nil p2 max;
+  list_map' p1 p2 f f' 0ul max l;
+  parse_vllist_recast p2 0ul max min max
