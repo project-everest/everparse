@@ -203,8 +203,53 @@ let parse_vldata_intro
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: Write unit (parse_bounded_integer (log256 max) `star` p) (parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun (_, vin) _ vout -> vin == vout) inv
+: Write unit (parse_bounded_integer (log256 max) `star` p) (parse_vldata p min max)
+  (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max)
+  (fun (_, vin) _ vout -> vin == vout) inv
 = EWrite?.reflect (| parse_vldata_intro_spec p min max, parse_vldata_intro_impl p min max |)
+
+inline_for_extraction
+val write_bounded_integer
+  (i: integer_size)
+: Tot (LP.leaf_writer_strong (LPI.serialize_bounded_integer (U32.v i)))
+
+inline_for_extraction
+let parse_vldata_intro_ho
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (pre: pre_t emp)
+  (post: post_t unit emp p pre)
+  (post_err: post_err_t emp pre)
+  ($f: (unit -> EWrite unit emp p pre post post_err inv))
+: EWrite unit emp (parse_vldata p min max)
+    (fun _ ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v ==> (U32.v min <= size p v /\ size p v <= U32.v max)
+      | _ -> True
+      end
+    )
+    (fun _ _ vout ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\
+        (vout <: dfst p) == v
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      post_err ()
+    )
+    inv
+=
+  let int_size = log256 max in
+  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  parse_vldata_intro _ _ _
 
 inline_for_extraction
 let parse_vldata_intro_frame
@@ -245,6 +290,44 @@ let parse_vldata_intro_weak
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
 : EWrite unit (parse_bounded_integer (log256 (max)) `star` p) (parse_vldata p min max) (fun _ -> True) (fun (_, vin) _ vout -> vin == vout) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)) inv
 = EWrite?.reflect (| _, parse_vldata_intro_weak_impl p min max |)
+
+inline_for_extraction
+let parse_vldata_intro_weak_ho
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (pre: pre_t emp)
+  (post: post_t unit emp p pre)
+  (post_err: post_err_t emp pre)
+  ($f: (unit -> EWrite unit emp p pre post post_err inv))
+: EWrite unit emp (parse_vldata p min max)
+    (fun _ ->
+      pre ()
+    )
+    (fun _ _ vout ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\
+        (vout <: dfst p) == v
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\ (~ (U32.v min <= size p v /\ size p v <= U32.v max))
+      | _ -> post_err ()
+      end
+    )
+    inv
+=
+  let int_size = log256 max in
+  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  parse_vldata_intro_weak _ _ _
 
 inline_for_extraction
 let parse_vldata_intro_weak_frame
@@ -491,6 +574,42 @@ let parse_vllist_snoc
 =
   EWrite?.reflect (| _, parse_vllist_snoc_impl p min max |)
 
+inline_for_extraction
+let parse_vllist_snoc_ho
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (pre: pre_t emp)
+  (post: post_t unit emp p pre)
+  (post_err: post_err_t emp pre)
+  ($f: (unit -> EWrite unit emp p pre post post_err inv))
+: EWrite unit (parse_vllist p min max) (parse_vllist p min max)
+    (fun vin ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v ==> list_size p vin + size p v <= U32.v max
+      | _ -> True
+      end
+    )
+    (fun vin _ vout ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\
+        (vout <: list (dfst p)) == (vin <: list (dfst p)) `L.append` [v]
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      post_err ()
+    )
+    inv
+=
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  parse_vllist_snoc _ _ _
+
 let parse_vllist_snoc_weak_spec
   (p: parser1)
   (min: U32.t)
@@ -533,6 +652,43 @@ let parse_vllist_snoc_weak
     inv
 =
   EWrite?.reflect (| _, parse_vllist_snoc_weak_impl p min max |)
+
+inline_for_extraction
+let parse_vllist_snoc_weak_ho
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (pre: pre_t emp)
+  (post: post_t unit emp p pre)
+  (post_err: post_err_t emp pre)
+  ($f: (unit -> EWrite unit emp p pre post post_err inv))
+: EWrite unit (parse_vllist p min max) (parse_vllist p min max)
+    (fun vin ->
+      pre ()
+    )
+    (fun vin _ vout ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\
+        (vout <: list (dfst p)) == (vin <: list (dfst p)) `L.append` [v]
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\
+        list_size p vin + size p v > U32.v max
+      | _ -> post_err ()
+      end
+    )
+    inv
+=
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  parse_vllist_snoc_weak _ _ _
 
 val valid_synth_parse_vllist
   (p: parser1)
