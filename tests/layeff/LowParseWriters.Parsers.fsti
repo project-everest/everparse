@@ -724,3 +724,32 @@ let list_map
   parse_vllist_nil p2 max;
   list_map' p1 p2 f f' 0ul max l;
   parse_vllist_recast p2 0ul max min max
+
+(* integers *)
+
+inline_for_extraction
+noextract
+val parse_u32 : (p': parser {
+  dfst p' == U32.t /\
+  get_parser_kind p' == LPI.parse_u32_kind /\
+  get_parser p' == LPI.parse_u32 /\
+  get_serializer p' == LPI.serialize_u32
+})
+
+inline_for_extraction
+noextract
+val parse_u16 : (p': parser {
+  dfst p' == FStar.UInt16.t /\
+  get_parser_kind p' == LPI.parse_u16_kind /\
+  get_parser p' == LPI.parse_u16 /\
+  get_serializer p' == LPI.serialize_u16
+})
+
+inline_for_extraction
+noextract
+val parse_u8 : (p': parser {
+  dfst p' == FStar.UInt8.t /\
+  get_parser_kind p' == LPI.parse_u8_kind /\
+  get_parser p' == LPI.parse_u8 /\
+  get_serializer p' == LPI.serialize_u8
+})

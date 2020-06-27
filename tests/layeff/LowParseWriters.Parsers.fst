@@ -653,3 +653,21 @@ let put_vlbytes_impl
   )
 
 #pop-options
+
+let parse_u32
+= make_parser
+  LP.parse_u32
+  LP.serialize_u32
+  LP.jump_u32
+
+let parse_u16
+= make_parser
+  LP.parse_u16
+  LP.serialize_u16
+  LP.jump_u16
+
+let parse_u8
+= make_parser
+  LP.parse_u8
+  LP.serialize_u8
+  LP.jump_u8
