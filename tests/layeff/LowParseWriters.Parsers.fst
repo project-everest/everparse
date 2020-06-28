@@ -72,7 +72,7 @@ let lp_clens_to_clens
 }
 
 let access
-  p1 p2 #lens #inv #g a x
+  p1 p2 #lens #g a #inv x
 =
   access #p1 #p2 #(lp_clens_to_clens lens) a x
 

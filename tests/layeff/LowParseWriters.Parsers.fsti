@@ -92,14 +92,24 @@ val append
 : Write unit fr (fr `star` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) l
 
 inline_for_extraction
+let access_t
+  (p1 p2: parser)
+  (#lens: LP.clens (dfst p1) (dfst p2))
+  (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
+  (a: LP.accessor g)
+: Tot Type
+=
+  (#inv: memory_invariant) ->
+  (x: ptr p1 inv) ->
+  Read (ptr p2 inv) (lens.LP.clens_cond (deref_spec x)) (fun res -> lens.LP.clens_cond (deref_spec x) /\ deref_spec res == lens.LP.clens_get (deref_spec x)) inv
+
+inline_for_extraction
 val access
   (p1 p2: parser)
   (#lens: LP.clens (dfst p1) (dfst p2))
-  (#inv: memory_invariant)
   (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
   (a: LP.accessor g)
-  (x: ptr p1 inv)
-: Read (ptr p2 inv) (lens.LP.clens_cond (deref_spec x)) (fun res -> lens.LP.clens_cond (deref_spec x) /\ deref_spec res == lens.LP.clens_get (deref_spec x)) inv
+: Tot (access_t p1 p2 a)
 
 val valid_synth_parser_eq
   (p1: parser)
