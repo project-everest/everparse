@@ -565,12 +565,35 @@ let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin b
     else
       wl i "let %s_jumper%s: LL.jumper %s = LL.jump_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
     begin match p with
-    | None -> wl i "inline_for_extraction noextract let lwp_%s = LowParseWriters.Parsers.make_parser %s_parser %s_serializer %s_jumper\n" n n n n
+    | None -> wl i "inline_for_extraction noextract let lwp_%s = LWP.make_parser %s_parser %s_serializer %s_jumper\n" n n n n
     | _ -> ()
     end;
     ()
    end
+     
+let lwp_combinator_name = function
+  | "opaque" | "uint8" -> Some "LWP.parse_u8"
+  | "uint16" -> Some "LWP.parse_u16"
+  | "uint16_le" -> None (* failwith "LWP.parse_u16_le: not implemented" *)
+  | "uint24" -> Some "(LWP.parse_bounded_integer 3ul)"
+  | "uint24_le" -> None (* failwith "(LWP.parse_bounded_integer_le 3ul): not implemented" *)
+  | "uint32" -> Some "LWP.parse_u32"
+  | "uint32_le" -> None (* failwith "LWP.parse_u32_le: not implemented" *)
+  | "asn1_len" -> None (* failwith "pcombinator_name: for now asn1_len not standalone" *)
+  | "bitcoin_varint" -> None (* failwith "LWP.parse_bcvli: not implemented" *)
+  | "Empty" -> Some "LWP.emp"
+  | "Fail" -> None (* failwith "LWP.parse_false: not implemented" *)
+  | t -> Some (sprintf "lwp_%s" (String.uncapitalize_ascii t))
 
+let write_lwp_accessor' param arg i acc tfrom tto =
+  if !emit_low
+  then match lwp_combinator_name tfrom, lwp_combinator_name tto with
+  | Some pfrom, Some pto ->
+    wl i "inline_for_extraction noextract let lwp_%s %s : LWP.access_t %s %s (%s %s) = LWP.access _ _ _\n\n" acc param pfrom pto acc arg
+  | _ -> ()
+
+let write_lwp_accessor = write_lwp_accessor' "" ""
+  
 (* binary trees to compile struct fields into log nesting instead of a comb *)
 
 type 'a btree =
@@ -909,16 +932,19 @@ and compile_ite o i n sn fn tagn clen cval tt tf al  =
   wl o "let %s_gaccessor_tag = LL.gaccessor_ext (LL.gaccessor_ifthenelse_tag serialize_%s_param) %s_clens_tag ()\n\n" n n n;
   wl i "val %s_accessor_tag: LL.accessor %s_gaccessor_tag\n\n" n n;
   wl o "let %s_accessor_tag = LL.accessor_ext (LL.accessor_ifthenelse_tag serialize_%s_param) %s_clens_tag ()\n\n" n n n;
+  write_lwp_accessor i (sprintf "%s_accessor_tag" n) n tagt;
   wl i "noextract let %s_clens_true : LL.clens %s %s = {\n" n n (compile_type tt);
   wl i "  LL.clens_cond = (fun x -> %s_true? x);\n" ncap;
   wl i "  LL.clens_get = (fun x -> (match x with %s_true y -> y) <: Ghost %s (requires (%s_true? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tt) ncap;
   wl i "val %s_gaccessor_true: LL.gaccessor %s_parser %s %s_clens_true\n\n" n n (pcombinator_name tt) n;
   wl i "val %s_accessor_true: LL.accessor %s_gaccessor_true\n\n" n n;
+  write_lwp_accessor i (sprintf "%s_accessor_true" n) n tt;
   wl i "noextract let %s_clens_false : LL.clens %s %s = {\n" n n (compile_type tf);
   wl i "  LL.clens_cond = (fun x -> %s_false? x);\n" ncap;
   wl i "  LL.clens_get = (fun x -> (match x with %s_false m -> m.value) <: Ghost %s (requires (%s_false? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tf) ncap;
   wl i "val %s_gaccessor_false: LL.gaccessor %s_parser %s %s_clens_false\n\n" n n (pcombinator_name tf) n;
   wl i "val %s_accessor_false: LL.accessor %s_gaccessor_false\n\n" n n;
+  write_lwp_accessor i (sprintf "%s_accessor_false" n) n tf;
   wl o "let %s_gaccessor_true = LL.gaccessor_ext (LL.gaccessor_ifthenelse_payload serialize_%s_param true) %s_clens_true ()\n\n" n n n;
   wl o "let %s_accessor_true = LL.accessor_ext (LL.accessor_ifthenelse_payload serialize_%s_param %s true) %s_clens_true ()\n\n" n n (jumper_name tagt) n;
   wl o "let %s_gaccessor_false = LL.gaccessor_ext (LL.gaccessor_ifthenelse_payload serialize_%s_param false) %s_clens_false ()\n\n" n n n;
@@ -1361,6 +1387,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
       wl i "}\n\n";
       wl i "val %s_gaccessor_tag : LL.gaccessor %s_parser %s %s_clens_tag\n\n" n n (pcombinator_name tn) n;
       wl i "val %s_accessor_tag : LL.accessor %s_gaccessor_tag\n\n" n n;
+      write_lwp_accessor i (sprintf "%s_accessor_tag" n) n tn;
       let print_tag_accessor g =
         let sum_tag_acc =
         match def with
@@ -1472,6 +1499,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
                in
                write_accessor "g";
                wl i "val %s_accessor_%s : LL.accessor %s_gaccessor_%s\n\n" n case n case;
+               write_lwp_accessor i (sprintf "%s_accessor_%s" n case) n ty;
                write_accessor "";
                ()
              end
@@ -1503,6 +1531,7 @@ and compile_select o i n seln tagn tagt taga cl def al =
           wl i "val %s_gaccessor_Unknown : LL.gaccessor %s_parser %s %s_clens_Unknown\n\n" n n (pcombinator_name dt) n;
           write_accessor "g" "parser";
           wl i "val %s_accessor_Unknown : LL.accessor %s_gaccessor_Unknown\n\n" n n;
+          write_lwp_accessor i (sprintf "%s_accessor_Unknown" n) n dt;
           write_accessor "" "jumper"
        | _ -> ()
     end;
@@ -1642,6 +1671,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
       wl i "val %s_gaccessor : LL.gaccessor %s_parser %s (LL.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
       wl o "let %s_gaccessor = LL.gaccessor_vlgen_payload %d %d %s %s\n\n" n smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
       wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+      write_lwp_accessor i (sprintf "%s_accessor" n) n ty;
       wl o "let %s_accessor = LL.accessor_vlgen_payload %d %d %s %s\n\n" n smin smax (jumper_length_header_name lenty smin smax) (scombinator_name ty);
       ()
     end;
@@ -1709,6 +1739,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
       () in
     write_accessor "g" false (pcombinator_length_header_name lenty smin smax);
     wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+    write_lwp_accessor i (sprintf "%s_accessor" n) n ty;
     write_accessor "" true (jumper_length_header_name lenty smin smax);
     ()
    end;
@@ -1911,6 +1942,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
           wl o "let %s_gaccessor = LL.gaccessor_bounded_vldata_payload %d %d %s\n\n" n 0 smax (pcombinator_name ty);
           wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
           wl o "let %s_accessor = LL.accessor_bounded_vldata_payload %d %d %s\n\n" n 0 smax (pcombinator_name ty);
+          write_lwp_accessor i (sprintf "%s_accessor" n) n ty;
           ()
          end;
         (* finalizer *)
@@ -2040,6 +2072,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
         in
         write_accessor "g" false;
         wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
+        write_lwp_accessor i (sprintf "%s_accessor" n) n ty;
         write_accessor "" true;
         ()
        end;
@@ -2122,6 +2155,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "val %s_nth_ghost (i: nat {i < %d}) : LL.gaccessor %s_parser %s (clens_%s_nth i)\n\n" n li.max_count n (pcombinator_name ty) n;
       wl o "let %s_nth_ghost i = LL.array_nth_ghost %s %d %d i\n\n" n (scombinator_name ty) li.max_len li.max_count;
       wl i "inline_for_extraction val %s_nth (i: U32.t { U32.v i < %d } ) : LL.accessor (%s_nth_ghost (U32.v i))\n\n" n li.max_count n;
+      write_lwp_accessor' (sprintf "(i: U32.t { U32.v i < %d })" li.max_count) "i" i (sprintf "%s_nth" n) n ty;
       wl o "let %s_nth i = LL.array_nth %s %d %d i\n\n" n (scombinator_name ty) li.max_len li.max_count;
       (* intro lemma *)
       wl i "val %s_intro (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos pos' : U32.t) : Lemma\n" n;
@@ -2371,6 +2405,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       wl i "val %s_nth_ghost (i: nat) : Tot (LL.gaccessor %s_parser %s (%s_clens_nth i))\n\n" n n (pcombinator_name ty) n;
       wl o "let %s_nth_ghost i = LL.vlarray_nth_ghost %d %d %s %d %d i\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
       wl i "val %s_nth (i: U32.t) : Tot (LL.accessor (%s_nth_ghost (U32.v i)))\n\n" n n;
+      write_lwp_accessor' "(i: U32.t)" "i" i (sprintf "%s_nth" n) n ty;
       wl o "let %s_nth i = LL.vlarray_nth %d %d %s %d %d i\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + (L.length x `FStar.Mul.op_Star` %d)) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len elem_li.min_len n;
@@ -2716,6 +2751,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
         wl i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn;
         wl o "let gaccessor_%s_%s = LL.gaccessor_ext (gaccessor_%s_%s' `LL.gaccessor_compose` gaccessor'_%s_%s) clens_%s_%s ()\n\n" n fn n n n fn n fn;
         wl i "val accessor_%s_%s : LL.accessor gaccessor_%s_%s\n\n" n fn n fn;
+        write_lwp_accessor i (sprintf "accessor_%s_%s" n fn) n ty;
         wl o "let accessor_%s_%s = LL.accessor_ext (LL.accessor_compose accessor_%s_%s' accessor'_%s_%s ()) clens_%s_%s ()\n\n" n fn n n n fn n fn
       )
       fields;
@@ -2862,6 +2898,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w i "module BY = FStar.Bytes\n";
   wl i "module HS = FStar.HyperStack\n";
   wl i "module HST = FStar.HyperStack.ST\n";
+  wl i "module LWP = LowParseWriters.Parsers\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -2880,6 +2917,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w o "module BY = FStar.Bytes\n";
   wl o "module HS = FStar.HyperStack\n";
   wl o "module HST = FStar.HyperStack.ST\n";
+  wl o "module LWP = LowParseWriters.Compat\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
