@@ -248,3 +248,60 @@ val valid_synth_parse_vlarray_elim
     (fun _ -> True)
     (fun x -> LP.vlarray_to_vldata (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max () x)
   )
+
+val valid_synth_parse_bounded_vldata_intro
+  (pa: parser)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t {
+    U32.v min <= U32.v max /\
+    U32.v max > 0 /\
+    LP.serialize_bounded_vldata_precond (U32.v min) (U32.v max) (get_parser_kind p) /\
+    dfst pa == dfst p /\
+    get_parser_kind pa == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) (get_parser_kind p) /\
+    get_parser pa == LP.parse_bounded_vldata (U32.v min) (U32.v max) (get_parser p)
+  })
+: Tot (valid_synth_t
+    (parse_vldata p min max)
+    pa
+    (fun _ -> True)
+    (fun x -> x)
+  )
+
+inline_for_extraction
+noextract
+let parse_bounded_vldata_intro_ho
+  (#inv: memory_invariant)
+  (pa: parser)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t {
+    U32.v min <= U32.v max /\
+    U32.v max > 0 /\
+    LP.serialize_bounded_vldata_precond (U32.v min) (U32.v max) (get_parser_kind p) /\
+    dfst pa == dfst p /\
+    get_parser_kind pa == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) (get_parser_kind p) /\
+    get_parser pa == LP.parse_bounded_vldata (U32.v min) (U32.v max) (get_parser p)
+  })
+  #pre #post #post_err
+  ($f: (unit -> EWrite unit emp p pre post post_err inv))
+: EWrite unit emp pa pre 
+    (fun _ _ vout ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\
+        (vout <: dfst p) == v
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      post_err ()
+    )
+    inv
+=
+  assert ( // FIXME: WHY WHY WHY?
+    let x = destr_repr_spec _ _ _ _ _ _ _ f () in True
+  );
+  parse_vldata_intro_ho p min max _ _ _ f;
+  valid_synth _ _ _ _ _ (valid_synth_parse_bounded_vldata_intro _ _ _ _)

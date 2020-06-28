@@ -186,3 +186,18 @@ let valid_synth_parse_vlarray_elim
       )
     )
     _ _
+
+let valid_synth_parse_bounded_vldata_intro
+  pa p min max
+= {
+  valid_synth_valid = (fun h b pos pos' ->
+    assert (valid_pos (parse_vldata p min max) h b pos pos');
+    let sl = LP.make_slice b (B.len b) in
+    LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) (get_serializer p) sl pos;
+    LP.valid_bounded_vldata_intro h (U32.v min) (U32.v max) (get_parser p) sl pos pos'
+  );
+  valid_synth_size = (fun (x: dfst (parse_vldata p min max)) ->
+    LP.serializer_unique (get_parser pa) (get_serializer pa) (LP.serialize_bounded_vldata (U32.v min) (U32.v max) (get_serializer p)) x
+  );
+}
+  
