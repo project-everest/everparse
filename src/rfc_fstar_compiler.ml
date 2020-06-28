@@ -565,7 +565,7 @@ let write_api o i ?param:(p=None) is_private (md: parser_kind_metadata) n bmin b
     else
       wl i "let %s_jumper%s: LL.jumper %s = LL.jump_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
     begin match p with
-    | None -> wl i "inline_for_extraction let lwp_%s = LowParseWriters.Parsers.make_parser %s_parser %s_serializer %s_jumper\n" n n n n
+    | None -> wl i "inline_for_extraction noextract let lwp_%s = LowParseWriters.Parsers.make_parser %s_parser %s_serializer %s_jumper\n" n n n n
     | _ -> ()
     end;
     ()
