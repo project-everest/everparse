@@ -64,58 +64,8 @@ let parse_enum
     (LP.serialize_enum_key _ (get_serializer p) e)
     (LP.jump_enum_key (dsnd p).jumper e)
 
-let rec glb_list_of_strong
-  (#t: eqtype)
-  (f: (t -> Tot LP.parser_kind))
-  (l: list t)
-  (f_strong: ((x: t) -> Lemma (List.Tot.mem x l ==> (f x).LP.parser_kind_subkind == Some LP.ParserStrong)))
-: Lemma
-  (requires (Cons? l))
-  (ensures ((LP.glb_list_of f l).LP.parser_kind_subkind == Some LP.ParserStrong))
-= match l with
-  | [a] ->
-    f_strong a
-  | a :: q ->
-    f_strong a;
-    glb_list_of_strong f q f_strong
-
-let weaken_parse_cases_kind_strong_parser_kind
-  (s: LP.sum { Cons? (LP.Sum?.e s) })
-  (f: (x: LP.sum_key s) -> Tot (k: LP.parser_kind & LP.parser k (LP.sum_type_of_tag s x)))
-  (f_strong: (x: LP.sum_key s) -> Lemma ((dfst (f x)).LP.parser_kind_subkind == Some LP.ParserStrong))
-: Lemma
-  ((LP.weaken_parse_cases_kind s f).LP.parser_kind_subkind == Some LP.ParserStrong)
-=
-  let keys : list (LP.sum_key_type s) = List.Tot.map fst (LP.sum_enum s) in
-  glb_list_of_strong #(LP.sum_key_type s) (fun (x: LP.sum_key_type s) ->
-    if List.Tot.mem x keys
-    then let (| k, _ |) = f x in k
-    else LP.default_parser_kind
-  ) (List.Tot.map fst (LP.sum_enum s))
-  (fun x ->
-    if List.Tot.mem x keys
-    then f_strong x
-    else ()
-  )
-
-let parse_sum_kind_strong
-  (ps: parse_sum_t)
-: Lemma
-  ((LP.parse_sum_kind ps.sum_kt ps.sum_t ps.sum_pc).LP.parser_kind_subkind == Some LP.ParserStrong)
-= weaken_parse_cases_kind_strong_parser_kind ps.sum_t ps.sum_pc (fun x -> let p = ps.sum_pc' x in ())
-  
-let parse_sum
-  ps
-=
-  [@inline_let]
-  let _ = parse_sum_kind_strong ps in
-  make_parser
-    (LP.parse_sum ps.sum_t ps.sum_p ps.sum_pc)
-    (LP.serialize_sum #ps.sum_kt ps.sum_t #ps.sum_p ps.sum_s #ps.sum_pc ps.sum_sc)
-    (LP.jump_sum ps.sum_t (dsnd (ps.sum_p')).jumper ps.sum_r ps.sum_pc (fun x -> (dsnd (ps.sum_pc' x)).jumper) ps.sum_destr)
-
 let valid_synth_parse_sum
-  ps k
+  ps pe p k pk
 = {
   valid_synth_valid = (fun h b pos pos' ->
     let sl = LP.make_slice b (B.len b) in
@@ -128,7 +78,7 @@ let valid_synth_parse_sum
     LP.valid_sum_intro h ps.sum_t ps.sum_p ps.sum_pc sl pos
   );
   valid_synth_size = (fun x ->
-    let (k', pl) = LP.coerce (dfst (parse_enum ps.sum_p' (LP.sum_enum ps.sum_t)) & dfst (ps.sum_pc' k)) (x <: (dfst (parse_enum ps.sum_p' (LP.sum_enum ps.sum_t) `star` ps.sum_pc' k))) in
+    let (k', pl) = LP.coerce (dfst pe & dfst pk) (x <: (dfst (pe `star` pk))) in
     let y = LP.synth_sum_case ps.sum_t k pl in
     assert (LP.sum_tag_of_data ps.sum_t y == k);
     LP.synth_sum_case_inverse ps.sum_t k;
@@ -139,42 +89,6 @@ let valid_synth_parse_sum
   );
 }
 
-let weaken_parse_dsum_cases_kind_strong_parser_kind
-  (s: LP.dsum { Cons? (LP.DSum?.e s) })
-  (f: (x: LP.dsum_known_key s) -> Tot (k: LP.parser_kind & LP.parser k (LP.dsum_type_of_known_tag s x)))
-  (f_strong: (x: LP.dsum_known_key s) -> Lemma ((dfst (f x)).LP.parser_kind_subkind == Some LP.ParserStrong))
-  (k' : LP.parser_kind { k'.LP.parser_kind_subkind == Some LP.ParserStrong })
-: Lemma
-  ((LP.weaken_parse_dsum_cases_kind s f k').LP.parser_kind_subkind == Some LP.ParserStrong)
-=
-  let keys : list (LP.dsum_key_type s) = List.Tot.map fst (LP.dsum_enum s) in
-  glb_list_of_strong #(LP.dsum_key_type s) (fun (x: LP.dsum_key_type s) ->
-    if List.Tot.mem x keys
-    then let (| k, _ |) = f x in k
-    else k'
-  ) (List.Tot.map fst (LP.dsum_enum s))
-  (fun x ->
-    if List.Tot.mem x keys
-    then f_strong x
-    else ()
-  )
-
-let parse_dsum_kind_strong
-  (ps: parse_dsum_t)
-: Lemma
-  ((LP.parse_dsum_kind ps.dsum_kt ps.dsum_t ps.dsum_pc ps.dsum_ku).LP.parser_kind_subkind == Some LP.ParserStrong)
-= weaken_parse_dsum_cases_kind_strong_parser_kind ps.dsum_t ps.dsum_pc (fun x -> let p = ps.dsum_pc' x in ()) ps.dsum_ku
-
-let parse_dsum
-  ps
-=
-  [@inline_let]
-  let _ = parse_dsum_kind_strong ps in
-  make_parser
-    (LP.parse_dsum ps.dsum_t ps.dsum_p ps.dsum_pc ps.dsum_pu)
-    (LP.serialize_dsum #ps.dsum_kt ps.dsum_t #ps.dsum_p ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su)
-    (LP.jump_dsum ps.dsum_t (dsnd ps.dsum_p').jumper ps.dsum_r ps.dsum_pc (fun x -> (dsnd (ps.dsum_pc' x)).jumper) (dsnd ps.dsum_pu').jumper ps.dsum_destr)
-
 let parse_maybe_enum
   #key p e
 =
@@ -184,7 +98,7 @@ let parse_maybe_enum
     (LP.jump_maybe_enum_key (dsnd p).jumper e)
 
 let valid_synth_parse_dsum_known
-  ps k
+  ps pe p k pk
 = {
   valid_synth_valid = (fun h b pos pos' ->
     let sl = LP.make_slice b (B.len b) in
@@ -197,7 +111,7 @@ let valid_synth_parse_dsum_known
     LP.valid_dsum_intro_known h ps.dsum_t ps.dsum_p ps.dsum_pc ps.dsum_pu sl pos
   );
   valid_synth_size = (fun x ->
-    let (k', pl) = LP.coerce (dfst (parse_maybe_enum ps.dsum_p' (LP.dsum_enum ps.dsum_t)) & dfst (ps.dsum_pc' k)) (x <: (dfst (parse_maybe_enum ps.dsum_p' (LP.dsum_enum ps.dsum_t) `star` ps.dsum_pc' k))) in
+    let (k', pl) = LP.coerce (dfst pe & dfst pk) (x <: (dfst (pe `star` pk))) in
     let y = LP.synth_dsum_case ps.dsum_t (LP.Known k) pl in
     assert (LP.dsum_tag_of_data ps.dsum_t y == LP.Known k);
     LP.synth_dsum_case_inverse ps.dsum_t (LP.Known k);
@@ -209,7 +123,7 @@ let valid_synth_parse_dsum_known
 }
 
 let valid_synth_parse_dsum_unknown
-  ps
+  ps pe p pu
 = {
   valid_synth_valid = (fun h b pos pos' ->
     let sl = LP.make_slice b (B.len b) in
@@ -222,7 +136,7 @@ let valid_synth_parse_dsum_unknown
     LP.valid_dsum_intro_unknown h ps.dsum_t ps.dsum_p ps.dsum_pc ps.dsum_pu sl pos
   );
   valid_synth_size = (fun x ->
-    let (k', pl) = LP.coerce (dfst (parse_maybe_enum ps.dsum_p' (LP.dsum_enum ps.dsum_t)) & dfst (ps.dsum_pu')) (x <: (dfst (parse_maybe_enum ps.dsum_p' (LP.dsum_enum ps.dsum_t) `star` ps.dsum_pu'))) in
+    let (k', pl) = LP.coerce (dfst pe & dfst pu) (x <: (dfst (pe `star` pu))) in
     let y = LP.synth_dsum_case ps.dsum_t (k') pl in
     assert (LP.dsum_tag_of_data ps.dsum_t y == k');
     LP.synth_dsum_case_inverse ps.dsum_t (k');

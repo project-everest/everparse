@@ -122,27 +122,11 @@ noextract
 noeq
 type parse_sum_t = {
   sum_kt: LP.parser_kind;
-  sum_t: (sum_t: LP.sum {
-    Cons? (LP.sum_enum sum_t)
-  });
+  sum_t: LP.sum;
   sum_p: LP.parser sum_kt (LP.sum_repr_type sum_t);
-  sum_r: LP.leaf_reader sum_p;
   sum_s: LP.serializer sum_p;
   sum_pc: ((x: LP.sum_key sum_t) -> Tot (k: LP.parser_kind & LP.parser k (LP.sum_type_of_tag sum_t x)));
   sum_sc: ((x: LP.sum_key sum_t) -> Tot (LP.serializer (dsnd (sum_pc x))));
-  sum_destr: LP.dep_maybe_enum_destr_t (LP.sum_enum sum_t) (LP.jump_sum_aux_payload_t sum_t sum_pc);
-  sum_p' : (p' : parser {
-    dfst p' == LP.sum_repr_type sum_t /\
-    get_parser_kind p' == sum_kt /\
-    get_parser p' == sum_p /\
-    get_serializer p' == sum_s
-  });
-  sum_pc' : ((x: LP.sum_key sum_t) -> Tot (p': parser {
-    dfst p' == LP.sum_type_of_tag sum_t x /\
-    get_parser_kind p' == dfst (sum_pc x) /\
-    get_parser p' == LP.coerce (LP.parser (get_parser_kind p') (dfst p')) (dsnd (sum_pc x)) /\
-    get_serializer p' == LP.coerce (LP.serializer (get_parser p')) (sum_sc x)
-  }));
 }
 
 inline_for_extraction
@@ -160,67 +144,42 @@ val parse_enum
 
 inline_for_extraction
 noextract
-val parse_sum
-  (ps: parse_sum_t)
-: Tot (q: parser {
-    dfst q == LP.sum_type ps.sum_t /\
-    get_parser_kind q == LP.parse_sum_kind ps.sum_kt ps.sum_t ps.sum_pc /\
-    get_parser q == LP.parse_sum ps.sum_t ps.sum_p ps.sum_pc /\
-    get_serializer q == LP.serialize_sum #ps.sum_kt ps.sum_t #ps.sum_p ps.sum_s #ps.sum_pc ps.sum_sc
+let pparser
+  (t: Type)
+  (k: LP.parser_kind)
+  (p: LP.parser k t)
+  (s: LP.serializer p)
+: Tot Type
+=
+  (q: parser {
+    dfst q == t /\
+    get_parser_kind q == k /\
+    get_parser q == p /\
+    get_serializer q == s
   })
 
 val valid_synth_parse_sum
   (ps: parse_sum_t)
+  (pe: pparser _ _ _ (LP.serialize_enum_key ps.sum_p ps.sum_s (LP.sum_enum ps.sum_t)))
+  (p: pparser _ _ _ (LP.serialize_sum ps.sum_t ps.sum_s #ps.sum_pc ps.sum_sc))
   (k: LP.sum_key ps.sum_t)
-: Tot (valid_synth_t (parse_enum ps.sum_p' (LP.sum_enum ps.sum_t) `star` ps.sum_pc' k) (parse_sum ps) (fun (k', _) -> k' == k) (fun (_, pl) -> LP.Sum?.synth_case ps.sum_t k pl))
+  (pk: pparser _ _ (dsnd (ps.sum_pc k)) (ps.sum_sc k))
+: Tot (valid_synth_t (pe `star` pk) p (fun (k', _) -> k' == k) (fun (_, pl) -> LP.Sum?.synth_case ps.sum_t k pl))
 
 inline_for_extraction
 noextract
 noeq
 type parse_dsum_t = {
   dsum_kt: LP.parser_kind;
-  dsum_t: (dsum_t: LP.dsum {
-    Cons? (LP.dsum_enum dsum_t)
-  });
+  dsum_t: LP.dsum;
   dsum_p: LP.parser dsum_kt (LP.dsum_repr_type dsum_t);
-  dsum_r: LP.leaf_reader dsum_p;
   dsum_s: LP.serializer dsum_p;
   dsum_pc: ((x: LP.dsum_known_key dsum_t) -> Tot (k: LP.parser_kind & LP.parser k (LP.dsum_type_of_known_tag dsum_t x)));
   dsum_sc: ((x: LP.dsum_known_key dsum_t) -> Tot (LP.serializer (dsnd (dsum_pc x))));
   dsum_ku: LP.parser_kind;
   dsum_pu: LP.parser dsum_ku (LP.dsum_type_of_unknown_tag dsum_t);
   dsum_su: LP.serializer dsum_pu;
-  dsum_destr: LP.dep_maybe_enum_destr_t (LP.dsum_enum dsum_t) (LP.jump_dsum_cases_t dsum_t dsum_pc dsum_pu);
-  dsum_p' : (p' : parser {
-    dfst p' == LP.dsum_repr_type dsum_t /\
-    get_parser_kind p' == dsum_kt /\
-    get_parser p' == dsum_p /\
-    get_serializer p' == dsum_s
-  });
-  dsum_pc' : ((x: LP.dsum_known_key dsum_t) -> Tot (p': parser {
-    dfst p' == LP.dsum_type_of_known_tag dsum_t x /\
-    get_parser_kind p' == dfst (dsum_pc x) /\
-    get_parser p' == LP.coerce (LP.parser (get_parser_kind p') (dfst p')) (dsnd (dsum_pc x)) /\
-    get_serializer p' == LP.coerce (LP.serializer (get_parser p')) (dsum_sc x)
-  }));
-  dsum_pu' : (p' : parser {
-    dfst p' == LP.dsum_type_of_unknown_tag dsum_t /\
-    get_parser_kind p' == dsum_ku /\
-    get_parser p' == dsum_pu /\
-    get_serializer p' == dsum_su
-  });
 }
-
-inline_for_extraction
-noextract
-val parse_dsum
-  (ps: parse_dsum_t)
-: Tot (q: parser {
-    dfst q == LP.dsum_type ps.dsum_t /\
-    get_parser_kind q == LP.parse_dsum_kind ps.dsum_kt ps.dsum_t ps.dsum_pc ps.dsum_ku /\
-    get_parser q == LP.parse_dsum ps.dsum_t ps.dsum_p ps.dsum_pc ps.dsum_pu /\
-    get_serializer q == LP.serialize_dsum #ps.dsum_kt ps.dsum_t #ps.dsum_p ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su
-  })
 
 inline_for_extraction
 noextract
@@ -237,9 +196,15 @@ val parse_maybe_enum
 
 val valid_synth_parse_dsum_known
   (ps: parse_dsum_t)
+  (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
+  (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
   (k: LP.dsum_known_key ps.dsum_t)
-: Tot (valid_synth_t (parse_maybe_enum ps.dsum_p' (LP.dsum_enum ps.dsum_t) `star` ps.dsum_pc' k) (parse_dsum ps) (fun (k', _) -> k' == LP.Known k) (fun (_, pl) -> LP.DSum?.synth_case ps.dsum_t (LP.Known k) pl))
+  (pk: pparser _ _ (dsnd (ps.dsum_pc k)) (ps.dsum_sc k))
+: Tot (valid_synth_t (pe `star` pk) p (fun (k', _) -> k' == LP.Known k) (fun (_, pl) -> LP.DSum?.synth_case ps.dsum_t (LP.Known k) pl))
 
 val valid_synth_parse_dsum_unknown
   (ps: parse_dsum_t)
-: Tot (valid_synth_t (parse_maybe_enum ps.dsum_p' (LP.dsum_enum ps.dsum_t) `star` ps.dsum_pu') (parse_dsum ps) (fun (k', _) -> LP.Unknown? #_ #_ #(LP.dsum_enum ps.dsum_t) k') (fun (k', pl) -> LP.DSum?.synth_case ps.dsum_t k' pl))
+  (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
+  (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
+  (pu: pparser _ _ ps.dsum_pu ps.dsum_su)
+: Tot (valid_synth_t (pe `star` pu) p (fun (k', _) -> LP.Unknown? #_ #_ #(LP.dsum_enum ps.dsum_t) k') (fun (k', pl) -> LP.DSum?.synth_case ps.dsum_t k' pl))
