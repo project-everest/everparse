@@ -208,3 +208,43 @@ val valid_synth_parse_dsum_unknown
   (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
   (pu: pparser _ _ ps.dsum_pu ps.dsum_su)
 : Tot (valid_synth_t (pe `star` pu) p (fun (k', _) -> LP.Unknown? #_ #_ #(LP.dsum_enum ps.dsum_t) k') (fun (k', pl) -> LP.DSum?.synth_case ps.dsum_t k' pl))
+
+val valid_synth_parse_vlarray_intro
+  (pa: parser)
+  (p: parser1)
+  (array_byte_size_min: U32.t)
+  (array_byte_size_max: U32.t { U32.v array_byte_size_min <= U32.v array_byte_size_max /\ U32.v array_byte_size_max > 0 } )
+  (elem_count_min: nat)
+  (elem_count_max: nat)
+  (u: squash (
+    LP.vldata_vlarray_precond (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_parser p) elem_count_min elem_count_max == true /\
+    get_parser_kind pa == LP.parse_vlarray_kind (U32.v array_byte_size_min) (U32.v array_byte_size_max) /\
+    dfst pa == LP.vlarray (dfst p) elem_count_min elem_count_max /\
+    get_parser pa == LP.parse_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max ()
+  ))
+: Tot (valid_synth_t
+    (parse_vllist p array_byte_size_min array_byte_size_max)
+    pa
+    (fun _ -> True)
+    (fun x -> LP.vldata_to_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max () x)
+  )
+
+val valid_synth_parse_vlarray_elim
+  (pa: parser)
+  (p: parser1)
+  (array_byte_size_min: U32.t)
+  (array_byte_size_max: U32.t { U32.v array_byte_size_min <= U32.v array_byte_size_max /\ U32.v array_byte_size_max > 0 } )
+  (elem_count_min: nat)
+  (elem_count_max: nat)
+  (u: squash (
+    LP.vldata_vlarray_precond (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_parser p) elem_count_min elem_count_max == true /\
+    get_parser_kind pa == LP.parse_vlarray_kind (U32.v array_byte_size_min) (U32.v array_byte_size_max) /\
+    dfst pa == LP.vlarray (dfst p) elem_count_min elem_count_max /\
+    get_parser pa == LP.parse_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max ()
+  ))
+: Tot (valid_synth_t
+    pa
+    (parse_vllist p array_byte_size_min array_byte_size_max)
+    (fun _ -> True)
+    (fun x -> LP.vlarray_to_vldata (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max () x)
+  )

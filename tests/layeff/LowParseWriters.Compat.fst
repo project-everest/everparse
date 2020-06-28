@@ -146,3 +146,43 @@ let valid_synth_parse_dsum_unknown
     LP.serialize_dsum_eq ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su y
   );
 }
+
+let valid_synth_parse_vlarray_intro
+  pa p array_byte_size_min array_byte_size_max elem_count_min elem_count_max u
+=
+  LP.vldata_to_vlarray_inj (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max u;
+  LP.vlarray_to_vldata_to_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max u;
+  valid_synth_implies
+    _ _ _ _
+    (valid_synth_compose
+      _ _ _ _
+      (valid_synth_parse_synth
+        (parse_vllist p array_byte_size_min array_byte_size_max)
+        (LP.vldata_to_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max u)
+        (LP.vlarray_to_vldata (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max u)
+        ()
+      )
+      _ _ _
+      (valid_synth_parser_eq _ _)
+    )
+    _ _
+
+let valid_synth_parse_vlarray_elim
+  pa p array_byte_size_min array_byte_size_max elem_count_min elem_count_max u
+=
+  LP.vldata_to_vlarray_inj (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max u;
+  LP.vlarray_to_vldata_to_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max u;
+  valid_synth_implies
+    _ _ _ _
+    (valid_synth_compose
+      _ _ _ _
+      (valid_synth_parser_eq _ _)
+      _ _ _
+      (valid_synth_parse_synth_recip
+        (parse_vllist p array_byte_size_min array_byte_size_max)
+        (LP.vldata_to_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max u)
+        (LP.vlarray_to_vldata (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max u)
+        ()
+      )
+    )
+    _ _
