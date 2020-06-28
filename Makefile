@@ -2,6 +2,7 @@ all: quackyducky lowparse
 
 lowparse:
 	+$(MAKE) -C src/lowparse
+	+$(MAKE) -C tests/layeff
 
 quackyducky: qd
 
