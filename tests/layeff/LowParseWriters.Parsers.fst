@@ -33,10 +33,20 @@ let size_correct
   p x
 = ()
 
-let deref
-  #p #inv r x
+inline_for_extraction
+let deref'
+  (#p: parser)
+  (#inv: memory_invariant)
+  (r: LP.leaf_reader (get_parser p))
+  (x: ptr p inv)
+: Read (dfst p) True (fun res -> res == deref_spec x) inv
 =
   deref #p #inv (fun b len -> r (LP.make_slice b len) 0ul) x
+
+let deref_repr
+  #p #inv r x
+=
+  reify (deref' r x)
 
 inline_for_extraction
 let leaf_writer_of_leaf_writer
@@ -53,14 +63,38 @@ let leaf_writer_of_leaf_writer
     else Some (w x (LP.make_slice b len) 0ul)
   )
 
-let start
-  p w #l x
+inline_for_extraction
+let start'
+  (p: parser)
+  (w: LP.leaf_writer_strong (get_serializer p) {
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+  })
+  (#l: memory_invariant)
+  (x: dfst p)
+: Write unit emp (p) (fun _ -> True) (fun _ _ y -> y == x) l
 = start (leaf_writer_of_leaf_writer p w) x
 
-let append
-  #fr p w #l x
+let start_repr
+  p w #l x
+=
+  reify (start' p w x)
+
+inline_for_extraction
+let append'
+  (#fr: parser)
+  (p: parser)
+  (w: LP.leaf_writer_strong (get_serializer p) {
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+  })
+  (#l: memory_invariant)
+  (x: dfst p)
+: Write unit fr (fr `star` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) l
 = append (leaf_writer_of_leaf_writer p w) x
 
+let append_repr
+  #fr p w #l x
+=
+  reify (append' p w x)
 
 let lp_clens_to_clens
   (#t1 #t2: Type)
@@ -71,10 +105,21 @@ let lp_clens_to_clens
   clens_get = c.LP.clens_get
 }
 
-let access
-  p1 p2 #lens #g a #inv x
+inline_for_extraction
+let access'
+  (p1 p2: parser)
+  (#lens: LP.clens (dfst p1) (dfst p2))
+  (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
+  (a: LP.accessor g)
+  (#inv: memory_invariant)
+  (x: ptr p1 inv)
+: Read (ptr p2 inv) (lens.LP.clens_cond (deref_spec x)) (fun res -> lens.LP.clens_cond (deref_spec x) /\ deref_spec res == lens.LP.clens_get (deref_spec x)) inv
 =
   access #p1 #p2 #(lp_clens_to_clens lens) a x
+
+let access_repr
+  p1 p2 #lens #g a #inv x
+= reify (access' p1 p2 a x)
 
 let valid_synth_parser_eq
   p1 p2
@@ -378,11 +423,9 @@ let destr_list_impl
       end
     )
 
-inline_for_extraction
-let destr_list
+let destr_list_repr
   #p #inv x
-=
-  Read?.reflect (ReadRepr _ (destr_list_impl x))
+= ReadRepr _ (destr_list_impl x)
 
 let list_size
   p x
@@ -461,10 +504,10 @@ let lptr_of_vllist_ptr_impl
     Correct ({ rlptr_base = b_pl; rlptr_len = len_pl })
   )
 
-let lptr_of_vllist_ptr
+let lptr_of_vllist_ptr_repr
   #inv p min max r
 =
-  ERead?.reflect (ReadRepr _ (lptr_of_vllist_ptr_impl p min max r))
+  (ReadRepr _ (lptr_of_vllist_ptr_impl p min max r))
 
 let parse_vllist_nil_impl
   #inv p max

@@ -63,15 +63,34 @@ val size_correct
   [SMTPat (size p x)]
 
 inline_for_extraction
-val deref
+val deref_repr
+  (#p: parser)
+  (#inv: memory_invariant)
+  (r: LP.leaf_reader (get_parser p))
+  (x: ptr p inv)
+: Tot (read_repr (dfst p) True (fun res -> res == deref_spec x) (fun _ -> False) inv)
+
+inline_for_extraction
+let deref
   (#p: parser)
   (#inv: memory_invariant)
   (r: LP.leaf_reader (get_parser p))
   (x: ptr p inv)
 : Read (dfst p) True (fun res -> res == deref_spec x) inv
+= Read?.reflect (deref_repr r x)
 
 inline_for_extraction
-val start
+val start_repr
+  (p: parser)
+  (w: LP.leaf_writer_strong (get_serializer p) {
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+  })
+  (#l: memory_invariant)
+  (x: dfst p)
+: Tot (repr unit emp (p) (fun _ -> True) (fun _ _ y -> y == x) (fun _ -> False) l)
+
+inline_for_extraction
+let start
   (p: parser)
   (w: LP.leaf_writer_strong (get_serializer p) {
     (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
@@ -79,9 +98,21 @@ val start
   (#l: memory_invariant)
   (x: dfst p)
 : Write unit emp (p) (fun _ -> True) (fun _ _ y -> y == x) l
+= EWrite?.reflect (start_repr p w x)
 
 inline_for_extraction
-val append
+val append_repr
+  (#fr: parser)
+  (p: parser)
+  (w: LP.leaf_writer_strong (get_serializer p) {
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+  })
+  (#l: memory_invariant)
+  (x: dfst p)
+: Tot (repr unit fr (fr `star` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) (fun _ -> False) l)
+
+inline_for_extraction
+let append
   (#fr: parser)
   (p: parser)
   (w: LP.leaf_writer_strong (get_serializer p) {
@@ -90,6 +121,7 @@ val append
   (#l: memory_invariant)
   (x: dfst p)
 : Write unit fr (fr `star` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) l
+= EWrite?.reflect (append_repr p w x)
 
 inline_for_extraction
 let access_t
@@ -104,12 +136,24 @@ let access_t
   Read (ptr p2 inv) (lens.LP.clens_cond (deref_spec x)) (fun res -> lens.LP.clens_cond (deref_spec x) /\ deref_spec res == lens.LP.clens_get (deref_spec x)) inv
 
 inline_for_extraction
-val access
+val access_repr
+  (p1 p2: parser)
+  (#lens: LP.clens (dfst p1) (dfst p2))
+  (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
+  (a: LP.accessor g)
+  (#inv: memory_invariant)
+  (x: ptr p1 inv)
+: Tot (read_repr (ptr p2 inv) (lens.LP.clens_cond (deref_spec x)) (fun res -> lens.LP.clens_cond (deref_spec x) /\ deref_spec res == lens.LP.clens_get (deref_spec x)) (fun _ -> False) inv)
+
+inline_for_extraction
+let access
   (p1 p2: parser)
   (#lens: LP.clens (dfst p1) (dfst p2))
   (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
   (a: LP.accessor g)
 : Tot (access_t p1 p2 a)
+= fun #inv x ->
+  ERead?.reflect (access_repr p1 p2 a x)
 
 val valid_synth_parser_eq
   (p1: parser)
@@ -262,6 +306,38 @@ let parse_vldata_intro_ho
   parse_vldata_intro _ _ _
 
 inline_for_extraction
+let parse_vldata_intro_ho'
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+: EWrite unit emp (parse_vldata p min max)
+    (fun _ ->
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        (U32.v min <= size p v /\ size p v <= U32.v max)
+      | _ -> True
+      end
+    )
+    (fun _ _ vout ->
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        (vout <: dfst p) == v
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      Error? (destr_repr_spec _ _ _ _ _ _ _ f ())
+    )
+    inv
+=
+  let int_size = log256 max in
+  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  parse_vldata_intro _ _ _
+
+inline_for_extraction
 let parse_vldata_intro_frame
   (#inv: memory_invariant)
   (frame: parser)
@@ -330,6 +406,36 @@ let parse_vldata_intro_weak_ho
       | Correct (_, v) ->
         post () () v /\ (~ (U32.v min <= size p v /\ size p v <= U32.v max))
       | _ -> post_err ()
+      end
+    )
+    inv
+=
+  let int_size = log256 max in
+  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  parse_vldata_intro_weak _ _ _
+
+inline_for_extraction
+let parse_vldata_intro_weak_ho'
+  (#inv: memory_invariant)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+: EWrite unit emp (parse_vldata p min max)
+    (fun _ -> True)
+    (fun _ _ vout ->
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        (vout <: dfst p) == v
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        (~ (U32.v min <= size p v /\ size p v <= U32.v max))
+      | _ -> True
       end
     )
     inv
@@ -430,11 +536,19 @@ let destr_list_post
   | _ -> False
 
 inline_for_extraction
-val destr_list
+val destr_list_repr
+  (#p: parser1)
+  (#inv: memory_invariant)
+  (x: lptr p inv)
+: Tot (read_repr (option (ptr p inv & lptr p inv)) (True) (destr_list_post x) (fun _ -> False) inv)
+
+inline_for_extraction
+let destr_list
   (#p: parser1)
   (#inv: memory_invariant)
   (x: lptr p inv)
 : Read (option (ptr p inv & lptr p inv)) (True) (destr_list_post x) inv
+= ERead?.reflect (destr_list_repr x)
 
 let rec list_exists
   (#p: parser1)
@@ -517,13 +631,23 @@ val parse_vllist_size
   [SMTPat (size (parse_vllist p min max) x)]
 
 inline_for_extraction
-val lptr_of_vllist_ptr
+val lptr_of_vllist_ptr_repr
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (r: ptr (parse_vllist p min max) inv)
+: Tot (read_repr (lptr p inv) True (fun r' -> deref_list_spec r' == (deref_spec r <: list (dfst p))) (fun _ -> False) inv)
+
+inline_for_extraction
+let lptr_of_vllist_ptr
   (#inv: memory_invariant)
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
   (r: ptr (parse_vllist p min max) inv)
 : Read (lptr p inv) True (fun r' -> deref_list_spec r' == (deref_spec r <: list (dfst p))) inv
+= ERead?.reflect (lptr_of_vllist_ptr_repr p min max r)
 
 let parse_vllist_nil_spec
   (p: parser1)
@@ -620,6 +744,36 @@ let parse_vllist_snoc_ho
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vllist_snoc _ _ _
 
+inline_for_extraction
+let parse_vllist_snoc_ho'
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+: EWrite unit (parse_vllist p min max) (parse_vllist p min max)
+    (fun vin ->
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        list_size p vin + size p v <= U32.v max
+      | _ -> True
+      end
+    )
+    (fun vin _ vout ->
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        (vout <: list (dfst p)) == (vin <: list (dfst p)) `L.append` [v]
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      Error? (destr_repr_spec _ _ _ _ _ _ _ f ())
+    )
+    inv
+=
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  parse_vllist_snoc _ _ _
+
 let parse_vllist_snoc_weak_spec
   (p: parser1)
   (min: U32.t)
@@ -693,6 +847,34 @@ let parse_vllist_snoc_weak_ho
         post () () v /\
         list_size p vin + size p v > U32.v max
       | _ -> post_err ()
+      end
+    )
+    inv
+=
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  parse_vllist_snoc_weak _ _ _
+
+inline_for_extraction
+let parse_vllist_snoc_weak_ho'
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+: EWrite unit (parse_vllist p min max) (parse_vllist p min max)
+    (fun vin -> True)
+    (fun vin _ vout ->
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        (vout <: list (dfst p)) == (vin <: list (dfst p)) `L.append` [v]
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        list_size p vin + size p v > U32.v max
+      | _ -> True
       end
     )
     inv

@@ -311,3 +311,39 @@ let parse_bounded_vldata_intro_ho
   );
   parse_vldata_intro_ho p min max _ _ _ f;
   valid_synth _ _ _ _ _ (valid_synth_parse_bounded_vldata_intro _ _ _ _)
+
+inline_for_extraction
+noextract
+let parse_bounded_vldata_intro_ho'
+  (#inv: memory_invariant)
+  (pa: parser)
+  (p: parser)
+  (min: U32.t)
+  (max: U32.t {
+    U32.v min <= U32.v max /\
+    U32.v max > 0 /\
+    LP.serialize_bounded_vldata_precond (U32.v min) (U32.v max) (get_parser_kind p) /\
+    dfst pa == dfst p /\
+    get_parser_kind pa == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) (get_parser_kind p) /\
+    get_parser pa == LP.parse_bounded_vldata (U32.v min) (U32.v max) (get_parser p)
+  })
+  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+: EWrite unit emp pa
+    (fun _ -> True)
+    (fun _ _ vout ->
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        (vout <: dfst p) == v
+      | _ -> False
+      end
+    )
+    (fun vin ->
+      Error? (destr_repr_spec _ _ _ _ _ _ _ f ())
+    )
+    inv
+=
+  assert ( // FIXME: WHY WHY WHY?
+    let x = destr_repr_spec _ _ _ _ _ _ _ f () in True
+  );
+  parse_vldata_intro_ho' p min max f;
+  valid_synth _ _ _ _ _ (valid_synth_parse_bounded_vldata_intro _ _ _ _)
