@@ -3,6 +3,12 @@ include LowParseWriters.Parsers
 
 module LP = LowParse.Low
 
+val emp_correct : squash (
+  get_parser_kind emp == LP.parse_ret_kind /\
+  get_parser emp == LP.parse_empty /\
+  get_serializer emp == LP.serialize_empty
+)
+
 val star_correct
   (p1 p2: parser)
 : Lemma

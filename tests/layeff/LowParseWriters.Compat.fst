@@ -5,6 +5,8 @@ friend LowParseWriters.Parsers
 
 module B = LowStar.Buffer
 
+let emp_correct = ()
+
 let star_correct
   p1 p2
 = ()
