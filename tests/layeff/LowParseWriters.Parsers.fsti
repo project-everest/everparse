@@ -321,11 +321,7 @@ let parse_vldata_intro_ho'
       end
     )
     (fun _ _ vout ->
-      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
-      | Correct (_, v) ->
-        (vout <: dfst p) == v
-      | _ -> False
-      end
+      destr_repr_spec _ _ _ _ _ _ _ f () == Correct ((), vout)
     )
     (fun vin ->
       Error? (destr_repr_spec _ _ _ _ _ _ _ f ())
@@ -425,11 +421,7 @@ let parse_vldata_intro_weak_ho'
 : EWrite unit emp (parse_vldata p min max)
     (fun _ -> True)
     (fun _ _ vout ->
-      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
-      | Correct (_, v) ->
-        (vout <: dfst p) == v
-      | _ -> False
-      end
+      destr_repr_spec _ _ _ _ _ _ _ f () == Correct ((), vout)
     )
     (fun vin ->
       begin match destr_repr_spec _ _ _ _ _ _ _ f () with
