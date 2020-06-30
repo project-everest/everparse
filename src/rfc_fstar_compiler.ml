@@ -589,7 +589,12 @@ let write_lwp_accessor' param arg i acc tfrom tto =
   if !emit_low
   then match lwp_combinator_name tfrom, lwp_combinator_name tto with
   | Some pfrom, Some pto ->
-    wl i "inline_for_extraction noextract let lwp_%s %s : LWP.access_t %s %s (%s %s) = LWP.access _ _ _\n\n" acc param pfrom pto acc arg
+     List.iter
+       (fun (lmodul, modul) ->
+         wl i "inline_for_extraction noextract let %s_%s %s : %s.access_t %s %s (%s %s) = %s.access _ _ _\n\n" lmodul acc param modul pfrom pto acc arg modul
+       )
+       [ ("lwp", "LWP");
+         ("lwps", "LWPS"); ]
   | _ -> ()
 
 let write_lwp_accessor = write_lwp_accessor' "" ""
@@ -2899,6 +2904,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   wl i "module HS = FStar.HyperStack\n";
   wl i "module HST = FStar.HyperStack.ST\n";
   wl i "module LWP = LowParseWriters.Parsers\n";
+  wl i "module LWPS = LowParseWriters.Sealed\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -2918,6 +2924,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   wl o "module HS = FStar.HyperStack\n";
   wl o "module HST = FStar.HyperStack.ST\n";
   wl o "module LWP = LowParseWriters.Compat\n";
+  wl o "module LWPS = LowParseWriters.Sealed.Compat\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
