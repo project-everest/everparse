@@ -33,28 +33,13 @@ let size_correct
   p x
 = ()
 
-inline_for_extraction
-let deref'
-  (#p: parser)
-  (#inv: memory_invariant)
-  (r: LP.leaf_reader (get_parser p))
-  (x: ptr p inv)
-: Read (dfst p) True (fun res -> res == deref_spec x) inv
-=
-  deref #p #inv (fun b len -> r (LP.make_slice b len) 0ul) x
-
-let deref_repr
-  #p #inv r x
-=
-  reify (deref' r x)
+let leaf_reader_of_lp_leaf_reader
+  p r
+= fun b len -> r (LP.make_slice b len) 0ul
 
 inline_for_extraction
-let leaf_writer_of_leaf_writer
-  (p: parser)
-  (w: LP.leaf_writer_strong (get_serializer p) {
-    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
-  })
-: Tot (leaf_writer p)
+let leaf_writer_of_lp_leaf_writer
+  p w
 = if (get_parser_kind p).LP.parser_kind_low > 4294967295
   then (fun b len x -> None)
   else (fun b len x ->
@@ -62,39 +47,6 @@ let leaf_writer_of_leaf_writer
     then None
     else Some (w x (LP.make_slice b len) 0ul)
   )
-
-inline_for_extraction
-let start'
-  (p: parser)
-  (w: LP.leaf_writer_strong (get_serializer p) {
-    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
-  })
-  (#l: memory_invariant)
-  (x: dfst p)
-: Write unit emp (p) (fun _ -> True) (fun _ _ y -> y == x) l
-= start (leaf_writer_of_leaf_writer p w) x
-
-let start_repr
-  p w #l x
-=
-  reify (start' p w x)
-
-inline_for_extraction
-let append'
-  (#fr: parser)
-  (p: parser)
-  (w: LP.leaf_writer_strong (get_serializer p) {
-    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
-  })
-  (#l: memory_invariant)
-  (x: dfst p)
-: Write unit fr (fr `star` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) l
-= append (leaf_writer_of_leaf_writer p w) x
-
-let append_repr
-  #fr p w #l x
-=
-  reify (append' p w x)
 
 let lp_clens_to_clens
   (#t1 #t2: Type)
@@ -105,21 +57,14 @@ let lp_clens_to_clens
   clens_get = c.LP.clens_get
 }
 
-inline_for_extraction
-let access'
-  (p1 p2: parser)
-  (#lens: LP.clens (dfst p1) (dfst p2))
-  (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
-  (a: LP.accessor g)
-  (#inv: memory_invariant)
-  (x: ptr p1 inv)
-: Read (ptr p2 inv) (lens.LP.clens_cond (deref_spec x)) (fun res -> lens.LP.clens_cond (deref_spec x) /\ deref_spec res == lens.LP.clens_get (deref_spec x)) inv
-=
-  access #p1 #p2 #(lp_clens_to_clens lens) a x
-
-let access_repr
+let access_spec
   p1 p2 #lens #g a #inv x
-= reify (access' p1 p2 a x)
+=
+  access_spec #p1 #p2 #(lp_clens_to_clens lens) g x
+
+let access_impl
+  p1 p2 #lens #g a #inv x
+= access_impl #p1 #p2 #(lp_clens_to_clens lens) a x
 
 let valid_synth_parser_eq
   p1 p2

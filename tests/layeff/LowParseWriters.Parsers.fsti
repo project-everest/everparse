@@ -63,12 +63,10 @@ val size_correct
   [SMTPat (size p x)]
 
 inline_for_extraction
-val deref_repr
-  (#p: parser)
-  (#inv: memory_invariant)
+val leaf_reader_of_lp_leaf_reader
+  (p: parser)
   (r: LP.leaf_reader (get_parser p))
-  (x: ptr p inv)
-: Tot (read_repr (dfst p) True (fun res -> res == deref_spec x) (fun _ -> False) inv)
+: Tot (leaf_reader p)
 
 inline_for_extraction
 let deref
@@ -77,17 +75,15 @@ let deref
   (r: LP.leaf_reader (get_parser p))
   (x: ptr p inv)
 : Read (dfst p) True (fun res -> res == deref_spec x) inv
-= Read?.reflect (deref_repr r x)
+= deref (leaf_reader_of_lp_leaf_reader p r) x
 
 inline_for_extraction
-val start_repr
+val leaf_writer_of_lp_leaf_writer
   (p: parser)
   (w: LP.leaf_writer_strong (get_serializer p) {
     (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
   })
-  (#l: memory_invariant)
-  (x: dfst p)
-: Tot (repr unit emp (p) (fun _ -> True) (fun _ _ y -> y == x) (fun _ -> False) l)
+: Tot (leaf_writer p)
 
 inline_for_extraction
 let start
@@ -98,18 +94,7 @@ let start
   (#l: memory_invariant)
   (x: dfst p)
 : Write unit emp (p) (fun _ -> True) (fun _ _ y -> y == x) l
-= EWrite?.reflect (start_repr p w x)
-
-inline_for_extraction
-val append_repr
-  (#fr: parser)
-  (p: parser)
-  (w: LP.leaf_writer_strong (get_serializer p) {
-    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
-  })
-  (#l: memory_invariant)
-  (x: dfst p)
-: Tot (repr unit fr (fr `star` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) (fun _ -> False) l)
+= start (leaf_writer_of_lp_leaf_writer p w) x
 
 inline_for_extraction
 let append
@@ -121,7 +106,7 @@ let append
   (#l: memory_invariant)
   (x: dfst p)
 : Write unit fr (fr `star` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) l
-= EWrite?.reflect (append_repr p w x)
+= append (leaf_writer_of_lp_leaf_writer p w) x
 
 inline_for_extraction
 let access_t
@@ -135,15 +120,26 @@ let access_t
   (x: ptr p1 inv) ->
   Read (ptr p2 inv) (lens.LP.clens_cond (deref_spec x)) (fun res -> lens.LP.clens_cond (deref_spec x) /\ deref_spec res == lens.LP.clens_get (deref_spec x)) inv
 
-inline_for_extraction
-val access_repr
+val access_spec
   (p1 p2: parser)
   (#lens: LP.clens (dfst p1) (dfst p2))
   (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
   (a: LP.accessor g)
   (#inv: memory_invariant)
   (x: ptr p1 inv)
-: Tot (read_repr (ptr p2 inv) (lens.LP.clens_cond (deref_spec x)) (fun res -> lens.LP.clens_cond (deref_spec x) /\ deref_spec res == lens.LP.clens_get (deref_spec x)) (fun _ -> False) inv)
+: Ghost (ptr p2 inv)
+  (requires (lens.LP.clens_cond (deref_spec x)))
+  (ensures (fun res -> deref_spec res == lens.LP.clens_get (deref_spec x)))
+
+inline_for_extraction
+val access_impl
+  (p1 p2: parser)
+  (#lens: LP.clens (dfst p1) (dfst p2))
+  (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
+  (a: LP.accessor g)
+  (#inv: memory_invariant)
+  (x: ptr p1 inv)
+: Tot (read_repr_impl _ (lens.LP.clens_cond (deref_spec x)) (fun res -> lens.LP.clens_cond (deref_spec x) /\ deref_spec res == lens.LP.clens_get (deref_spec x)) (fun _ -> False) inv (fun _ -> Correct (access_spec p1 p2 a x)))
 
 inline_for_extraction
 let access
@@ -153,7 +149,7 @@ let access
   (a: LP.accessor g)
 : Tot (access_t p1 p2 a)
 = fun #inv x ->
-  ERead?.reflect (access_repr p1 p2 a x)
+  ERead?.reflect (ReadRepr _ (access_impl p1 p2 a x))
 
 val valid_synth_parser_eq
   (p1: parser)
