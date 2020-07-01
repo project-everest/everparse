@@ -6,15 +6,15 @@ module B = LowStar.Buffer
 
 let get_parser_kind
   p
-= (dsnd p).kind
+= (Parser?.p p).kind
 
 let get_parser
   p
-= (dsnd p).parser
+= (Parser?.p p).parser
 
 let get_serializer
   p
-= (dsnd p).serializer
+= (Parser?.p p).serializer
 
 let make_parser'
   #t #k p s j
@@ -71,7 +71,7 @@ let valid_synth_parser_eq
 = {
   valid_synth_valid = (fun h b pos pos' -> ());
   valid_synth_size = (fun x ->
-    LP.serializer_unique (get_parser p1) (dsnd p1).serializer (dsnd p2).serializer x
+    LP.serializer_unique (get_parser p1) (Parser?.p p1).serializer (Parser?.p p2).serializer x
   );
 }
 
@@ -351,7 +351,7 @@ let destr_list_impl
         Correct None
       end else begin
         LP.valid_list_cons_recip ps inv.h0 sl 0ul len;
-        let pos = (dsnd p).jumper sl 0ul in
+        let pos = (Parser?.p p).jumper sl 0ul in
         let b_hd = B.sub base 0ul pos in
         let len_tl = len `U32.sub` pos in
         let b_tl = B.sub base pos len_tl in
@@ -414,7 +414,7 @@ let lptr_of_vllist_ptr_spec
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
   (r: ptr (parse_vllist p min max) inv)
-: Tot (read_repr_spec (lptr p inv) True (fun r' -> deref_list_spec r' == (deref_spec r <: list (dfst p))) (fun _ -> False))
+: Tot (read_repr_spec (lptr p inv) True (fun r' -> deref_list_spec r' == (deref_spec r <: list (Parser?.t p))) (fun _ -> False))
 =
   fun _ ->
   let (b, len) = buffer_of_ptr r in

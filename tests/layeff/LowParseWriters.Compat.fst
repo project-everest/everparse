@@ -14,9 +14,9 @@ let star_correct
 let parse_synth
   p1 #t2 f2 f1
 = make_parser
-    ((dsnd p1).parser `LP.parse_synth` f2)
-    (LP.serialize_synth (dsnd p1).parser f2 (dsnd p1).serializer f1 ())
-    (LP.jump_synth (dsnd p1).jumper f2 ())
+    ((Parser?.p p1).parser `LP.parse_synth` f2)
+    (LP.serialize_synth (Parser?.p p1).parser f2 (Parser?.p p1).serializer f1 ())
+    (LP.jump_synth (Parser?.p p1).jumper f2 ())
 
 let valid_synth_parse_synth
   p1 #t2 f2 f1 sq
@@ -26,7 +26,7 @@ let valid_synth_parse_synth
   );
   valid_synth_size = (fun x ->
     LP.synth_injective_synth_inverse_synth_inverse_recip f2 f1 ();
-    LP.serialize_synth_eq (get_parser p1) f2 (dsnd p1).serializer f1 () (f2 x)
+    LP.serialize_synth_eq (get_parser p1) f2 (Parser?.p p1).serializer f1 () (f2 x)
   );
 }
 
@@ -38,7 +38,7 @@ let valid_synth_parse_synth_recip
     LP.valid_synth h (get_parser p1) f2 (LP.make_slice b (B.len b)) pos
   );
   valid_synth_size = (fun x ->
-    LP.serialize_synth_eq (get_parser p1) f2 (dsnd p1).serializer f1 () (x)
+    LP.serialize_synth_eq (get_parser p1) f2 (Parser?.p p1).serializer f1 () (x)
   );
 }
 
@@ -64,7 +64,7 @@ let parse_enum
   make_parser
     (LP.parse_enum_key (get_parser p) e)
     (LP.serialize_enum_key _ (get_serializer p) e)
-    (LP.jump_enum_key (dsnd p).jumper e)
+    (LP.jump_enum_key (Parser?.p p).jumper e)
 
 let valid_synth_parse_sum
   ps pe p k pk
@@ -80,7 +80,7 @@ let valid_synth_parse_sum
     LP.valid_sum_intro h ps.sum_t ps.sum_p ps.sum_pc sl pos
   );
   valid_synth_size = (fun x ->
-    let (k', pl) = LP.coerce (dfst pe & dfst pk) (x <: (dfst (pe `star` pk))) in
+    let (k', pl) = LP.coerce (Parser?.t pe & Parser?.t pk) (x <: (Parser?.t (pe `star` pk))) in
     let y = LP.synth_sum_case ps.sum_t k pl in
     assert (LP.sum_tag_of_data ps.sum_t y == k);
     LP.synth_sum_case_inverse ps.sum_t k;
@@ -97,7 +97,7 @@ let parse_maybe_enum
   make_parser
     (LP.parse_maybe_enum_key (get_parser p) e)
     (LP.serialize_maybe_enum_key _ (get_serializer p) e)
-    (LP.jump_maybe_enum_key (dsnd p).jumper e)
+    (LP.jump_maybe_enum_key (Parser?.p p).jumper e)
 
 let valid_synth_parse_dsum_known
   ps pe p k pk
@@ -113,7 +113,7 @@ let valid_synth_parse_dsum_known
     LP.valid_dsum_intro_known h ps.dsum_t ps.dsum_p ps.dsum_pc ps.dsum_pu sl pos
   );
   valid_synth_size = (fun x ->
-    let (k', pl) = LP.coerce (dfst pe & dfst pk) (x <: (dfst (pe `star` pk))) in
+    let (k', pl) = LP.coerce (Parser?.t pe & Parser?.t pk) (x <: (Parser?.t (pe `star` pk))) in
     let y = LP.synth_dsum_case ps.dsum_t (LP.Known k) pl in
     assert (LP.dsum_tag_of_data ps.dsum_t y == LP.Known k);
     LP.synth_dsum_case_inverse ps.dsum_t (LP.Known k);
@@ -138,7 +138,7 @@ let valid_synth_parse_dsum_unknown
     LP.valid_dsum_intro_unknown h ps.dsum_t ps.dsum_p ps.dsum_pc ps.dsum_pu sl pos
   );
   valid_synth_size = (fun x ->
-    let (k', pl) = LP.coerce (dfst pe & dfst pu) (x <: (dfst (pe `star` pu))) in
+    let (k', pl) = LP.coerce (Parser?.t pe & Parser?.t pu) (x <: (Parser?.t (pe `star` pu))) in
     let y = LP.synth_dsum_case ps.dsum_t (k') pl in
     assert (LP.dsum_tag_of_data ps.dsum_t y == k');
     LP.synth_dsum_case_inverse ps.dsum_t (k');
@@ -198,7 +198,7 @@ let valid_synth_parse_bounded_vldata_intro
     LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) (get_serializer p) sl pos;
     LP.valid_bounded_vldata_intro h (U32.v min) (U32.v max) (get_parser p) sl pos pos'
   );
-  valid_synth_size = (fun (x: dfst (parse_vldata p min max)) ->
+  valid_synth_size = (fun (x: Parser?.t (parse_vldata p min max)) ->
     LP.serializer_unique (get_parser pa) (get_serializer pa) (LP.serialize_bounded_vldata (U32.v min) (U32.v max) (get_serializer p)) x
   );
 }

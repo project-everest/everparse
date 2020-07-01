@@ -199,13 +199,13 @@ let deref
   (#inv: memory_invariant)
   (r: LP.leaf_reader (get_parser p))
   (x: ptr p inv)
-: TRead (dfst p) inv
+: TRead (Parser?.t p) inv
 = tread_of_eread (fun _ -> deref r x)
 
 inline_for_extraction
 let access_t
   (p1 p2: parser)
-  (#lens: LP.clens (dfst p1) (dfst p2))
+  (#lens: LP.clens (Parser?.t p1) (Parser?.t p2))
   (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
   (a: LP.accessor g)
 : Tot Type
@@ -219,7 +219,7 @@ let access_t
 inline_for_extraction
 let access
   (p1 p2: parser)
-  (#lens: LP.clens (dfst p1) (dfst p2))
+  (#lens: LP.clens (Parser?.t p1) (Parser?.t p2))
   (#g: LP.gaccessor (get_parser p1) (get_parser p2) lens)
   (a: LP.accessor g)
 : Tot (access_t p1 p2 a)
@@ -367,7 +367,7 @@ let destr_repr_spec
   (#l: memory_invariant)
   ($f_destr_spec: unit -> TWrite a r_in r_out l)
 : Tot (repr_spec a r_in r_out (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True))
-= dfst (reify (f_destr_spec ()))
+= Repr?.spec (reify (f_destr_spec ()))
 
 inline_for_extraction
 let destr_repr_impl
@@ -377,18 +377,17 @@ let destr_repr_impl
   (#l: memory_invariant)
   (f_destr_spec: unit -> TWrite a r_in r_out l)
 : Tot (repr_impl a r_in r_out (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) l (destr_repr_spec f_destr_spec))
-= dsnd (reify (f_destr_spec ()))
+= Repr?.impl (reify (f_destr_spec ()))
 
-(* I would like this, but I cannot use a definition in a branch of a match, because F* will not unfold it
-
+(* cannot do that, F* won't unfold under match
 let bind_spec'
   (inv: memory_invariant)
   (p1 p2 p3: parser)
   (a b: Type)
   (f: (unit -> TWrite a p1 p2 inv))
   (g: (a -> unit -> TWrite b p2 p3 inv))
-  (v1: dfst p1)
-: GTot (result (b & dfst p3))
+  (v1: Parser?.t p1)
+: GTot (result (b & Parser?.t p3))
 =
    match destr_repr_spec f v1 with
     | Error e -> Error e
@@ -401,12 +400,12 @@ let bind_spec'
   (a b: Type)
   (f: (unit -> TWrite a p1 p2 inv))
   (g: (a -> unit -> TWrite b p2 p3 inv))
-  (v1: dfst p1)
-: GTot (result (b & dfst p3))
+  (v1: Parser?.t p1)
+: GTot (result (b & Parser?.t p3))
 =
-   match destr_repr_spec f v1 with
+   match Repr?.spec (reify (f ())) v1 with
     | Error e -> Error e
-    | Correct (x, v2) -> dfst (reify (g x ())) v2
+    | Correct (x, v2) -> Repr?.spec (reify (g x ())) v2
 
 let bind_impl'
   (inv: memory_invariant)
@@ -418,21 +417,25 @@ let bind_impl'
 : TWrite b p1 p3 inv
 = let x = f () in g x ()
 
-[@@expect_failure] // FIXME: do not use dtuple2 for repr
+#push-options "--print_implicits"
+
+[@@expect_failure] // FIXME: WHY WHY WHY?
 let bind_correct
   (inv: memory_invariant)
   (p1 p2 p3: parser)
   (a b: Type)
   (f: (unit -> TWrite a p1 p2 inv))
   (g: (a -> unit -> TWrite b p2 p3 inv))
-  (v1: dfst p1)
+  (v1: Parser?.t p1)
 : Lemma
-  (dfst (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
+  (Repr?.spec (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
     bind_spec' inv p1 p2 p3 a b f g v1)
 = assert
-  (dfst (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
+  (Repr?.spec (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
     bind_spec' inv p1 p2 p3 a b f g v1)
   by (FStar.Tactics.(norm [delta; iota; zeta; primops]; trefl ()))
+
+#pop-options
 
 inline_for_extraction
 let twrite_of_ewrite // NOTE: I could define it as a lift (sub_effect), but I prefer to do it explicitly to avoid F* generating pre and postconditions
@@ -482,7 +485,7 @@ type valid_synth_t
   (p2: parser)
 =
 | ValidSynth:
-  (f: (dfst p1 -> GTot (dfst p2))) ->
+  (f: (Parser?.t p1 -> GTot (Parser?.t p2))) ->
   (v: LowParseWriters.valid_synth_t p1 p2 (fun _ -> True) f) ->
   valid_synth_t p1 p2
 
@@ -490,10 +493,10 @@ let tvalid_synth_of_evalid_synth
   (#p1: parser)
   (#p2: parser)
   (#precond: pre_t p1)
-  (#f: (x: dfst p1 { precond x }) -> GTot (dfst p2))
+  (#f: (x: Parser?.t p1 { precond x }) -> GTot (Parser?.t p2))
   (v: LowParseWriters.valid_synth_t p1 p2 precond f)
 : Pure (valid_synth_t p1 p2)
-  (requires (forall (x: dfst p1) . precond x))
+  (requires (forall (x: Parser?.t p1) . precond x))
   (ensures (fun _ -> True))
 = ValidSynth
     f
@@ -503,8 +506,8 @@ let evalid_synth_of_tvalid_synth_f
   (#p1: parser)
   (#p2: parser)
   (v: valid_synth_t p1 p2)
-  (x: dfst p1)
-: GTot (dfst p2)
+  (x: Parser?.t p1)
+: GTot (Parser?.t p2)
 =
   ValidSynth?.f v x
 
@@ -585,7 +588,7 @@ let start
     (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
   })
   (#l: memory_invariant)
-  (x: dfst p)
+  (x: Parser?.t p)
 : TWrite unit emp (p) l
 = twrite_of_ewrite (fun _ -> start p w x)
 
@@ -597,16 +600,16 @@ let append
     (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
   })
   (#l: memory_invariant)
-  (x: dfst p)
+  (x: Parser?.t p)
 : TWrite unit fr (fr `star` p) l
 = twrite_of_ewrite (fun _ -> append p w x)
 
 let valid_synth_parser_eq'
   (p1: parser)
   (p2: parser {
-    dfst p1 == dfst p2 /\
+    Parser?.t p1 == Parser?.t p2 /\
     get_parser_kind p1 == get_parser_kind p2 /\
-    get_parser p1 == LP.coerce (LP.parser (get_parser_kind p1) (dfst p1)) (get_parser p2)
+    get_parser p1 == LP.coerce (LP.parser (get_parser_kind p1) (Parser?.t p1)) (get_parser p2)
   })
 : Tot (valid_synth_t p1 p2)
 = tvalid_synth_of_evalid_synth (valid_synth_parser_eq p1 p2)

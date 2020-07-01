@@ -21,8 +21,8 @@ inline_for_extraction
 val parse_synth
   (p1: parser)
   (#t2: Type)
-  (f2: dfst p1 -> GTot t2)
-  (f1: t2 -> GTot (dfst p1))
+  (f2: Parser?.t p1 -> GTot t2)
+  (f1: t2 -> GTot (Parser?.t p1))
 : Pure parser
   (requires (
     LP.synth_injective f2 /\
@@ -31,17 +31,17 @@ val parse_synth
   (ensures (fun r ->
     LP.synth_injective f2 /\
     LP.synth_inverse f2 f1 /\
-    dfst r == t2 /\
+    Parser?.t r == t2 /\
     get_parser_kind r == get_parser_kind p1 /\
-    get_parser r == LP.coerce (LP.parser (get_parser_kind r) (dfst r)) (get_parser p1 `LP.parse_synth` f2) /\
+    get_parser r == LP.coerce (LP.parser (get_parser_kind r) (Parser?.t r)) (get_parser p1 `LP.parse_synth` f2) /\
     get_serializer r == LP.coerce (LP.serializer (get_parser r)) (LP.serialize_synth (get_parser p1) f2 (get_serializer p1) f1 ())
   ))
 
 val valid_synth_parse_synth
   (p1: parser)
   (#t2: Type)
-  (f2: dfst p1 -> GTot t2)
-  (f1: t2 -> GTot (dfst p1))
+  (f2: Parser?.t p1 -> GTot t2)
+  (f1: t2 -> GTot (Parser?.t p1))
   (sq: squash (
     LP.synth_injective f2 /\
     LP.synth_inverse f2 f1
@@ -51,8 +51,8 @@ val valid_synth_parse_synth
 val valid_synth_parse_synth_recip
   (p1: parser)
   (#t2: Type)
-  (f2: dfst p1 -> GTot t2)
-  (f1: t2 -> GTot (dfst p1))
+  (f2: Parser?.t p1 -> GTot t2)
+  (f1: t2 -> GTot (Parser?.t p1))
   (sq: squash (
     LP.synth_injective f2 /\
     LP.synth_inverse f2 f1
@@ -68,13 +68,13 @@ val parse_vldata_correct
 : Lemma
   (
     let p' = parse_vldata p min max in
-    dfst p' == LP.parse_bounded_vldata_strong_t (U32.v min) (U32.v max) (get_serializer p) /\
+    Parser?.t p' == LP.parse_bounded_vldata_strong_t (U32.v min) (U32.v max) (get_serializer p) /\
     get_parser_kind p' == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) (get_parser_kind p) /\
     get_parser p' == LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p) /\
     get_serializer p' == LP.serialize_bounded_vldata_strong (U32.v min) (U32.v max) (get_serializer p)
   )
   [SMTPatOr [
-    [SMTPat (dfst (parse_vldata p min max))];
+    [SMTPat (Parser?.t (parse_vldata p min max))];
     [SMTPat (get_parser_kind (parse_vldata p min max))];
     [SMTPat (get_parser (parse_vldata p min max))];
     [SMTPat (get_serializer (parse_vldata p min max))];
@@ -82,7 +82,7 @@ val parse_vldata_correct
 
 val list_size_correct
   (p: parser1)
-  (x: list (dfst p))
+  (x: list (Parser?.t p))
 : Lemma
   (list_size p x == Seq.length (LP.serialize (LP.serialize_list _ (get_serializer p)) x))
   [SMTPat (list_size p x)]
@@ -94,13 +94,13 @@ val parse_vllist_correct
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
 : Lemma
   (let p' = parse_vllist p min max in
-    dfst p' == LP.parse_bounded_vldata_strong_t (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) /\
+    Parser?.t p' == LP.parse_bounded_vldata_strong_t (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) /\
     get_parser_kind p' == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) LP.parse_list_kind /\
     get_parser p' == LP.parse_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p)) /\
     get_serializer p' == LP.serialize_bounded_vldata_strong (U32.v min) (U32.v max) (LP.serialize_list _ (get_serializer p))
   )
   [SMTPatOr [
-    [SMTPat (dfst (parse_vllist p min max))];
+    [SMTPat (Parser?.t (parse_vllist p min max))];
     [SMTPat (get_parser_kind (parse_vllist p min max))];
     [SMTPat (get_parser (parse_vllist p min max))];
     [SMTPat (get_serializer (parse_vllist p min max))];
@@ -111,13 +111,13 @@ val parse_vlbytes_correct
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
 : Lemma (
     let p' = parse_vlbytes min max in
-    dfst p' == LP.parse_bounded_vlbytes_t (U32.v min) (U32.v max) /\
+    Parser?.t p' == LP.parse_bounded_vlbytes_t (U32.v min) (U32.v max) /\
     get_parser_kind p' == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) LP.parse_all_bytes_kind /\
     get_parser p' == LP.parse_bounded_vlbytes (U32.v min) (U32.v max) /\
     get_serializer p' == LP.serialize_bounded_vlbytes (U32.v min) (U32.v max)
   )
   [SMTPatOr [
-    [SMTPat (dfst (parse_vlbytes min max))];
+    [SMTPat (Parser?.t (parse_vlbytes min max))];
     [SMTPat (get_parser_kind (parse_vlbytes min max))];
     [SMTPat (get_parser (parse_vlbytes min max))];
     [SMTPat (get_serializer (parse_vlbytes min max))];
@@ -139,10 +139,10 @@ inline_for_extraction
 noextract
 val parse_enum
   (#key: eqtype)
-  (p: parser { hasEq (dfst p) })
-  (e: LP.enum key (dfst p))
+  (p: parser { hasEq (Parser?.t p) })
+  (e: LP.enum key (Parser?.t p))
 : Tot (p': parser {
-    dfst p' == LP.enum_key e /\
+    Parser?.t p' == LP.enum_key e /\
     get_parser_kind p' == LP.parse_filter_kind (get_parser_kind p) /\
     get_parser p' == LP.parse_enum_key (get_parser p) e /\
     get_serializer p' == LP.serialize_enum_key _ (get_serializer p) e
@@ -158,7 +158,7 @@ let pparser
 : Tot Type
 =
   (q: parser {
-    dfst q == t /\
+    Parser?.t q == t /\
     get_parser_kind q == k /\
     get_parser q == p /\
     get_serializer q == s
@@ -191,12 +191,12 @@ inline_for_extraction
 noextract
 val parse_maybe_enum
   (#key: eqtype)
-  (p: parser { hasEq (dfst p) })
-  (e: LP.enum key (dfst p))
+  (p: parser { hasEq (Parser?.t p) })
+  (e: LP.enum key (Parser?.t p))
 : Tot (p': parser {
-    dfst p' == LP.maybe_enum_key e /\
+    Parser?.t p' == LP.maybe_enum_key e /\
     get_parser_kind p' == get_parser_kind p /\
-    get_parser p' == LP.coerce (LP.parser (get_parser_kind p') (dfst p')) (LP.parse_maybe_enum_key (get_parser p) e) /\
+    get_parser p' == LP.coerce (LP.parser (get_parser_kind p') (Parser?.t p')) (LP.parse_maybe_enum_key (get_parser p) e) /\
     get_serializer p' == LP.coerce (LP.serializer (get_parser p')) (LP.serialize_maybe_enum_key _ (get_serializer p) e)
   })
 
@@ -225,7 +225,7 @@ val valid_synth_parse_vlarray_intro
   (u: squash (
     LP.vldata_vlarray_precond (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_parser p) elem_count_min elem_count_max == true /\
     get_parser_kind pa == LP.parse_vlarray_kind (U32.v array_byte_size_min) (U32.v array_byte_size_max) /\
-    dfst pa == LP.vlarray (dfst p) elem_count_min elem_count_max /\
+    Parser?.t pa == LP.vlarray (Parser?.t p) elem_count_min elem_count_max /\
     get_parser pa == LP.parse_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max ()
   ))
 : Tot (valid_synth_t
@@ -245,7 +245,7 @@ val valid_synth_parse_vlarray_elim
   (u: squash (
     LP.vldata_vlarray_precond (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_parser p) elem_count_min elem_count_max == true /\
     get_parser_kind pa == LP.parse_vlarray_kind (U32.v array_byte_size_min) (U32.v array_byte_size_max) /\
-    dfst pa == LP.vlarray (dfst p) elem_count_min elem_count_max /\
+    Parser?.t pa == LP.vlarray (Parser?.t p) elem_count_min elem_count_max /\
     get_parser pa == LP.parse_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max ()
   ))
 : Tot (valid_synth_t
@@ -263,7 +263,7 @@ val valid_synth_parse_bounded_vldata_intro
     U32.v min <= U32.v max /\
     U32.v max > 0 /\
     LP.serialize_bounded_vldata_precond (U32.v min) (U32.v max) (get_parser_kind p) /\
-    dfst pa == dfst p /\
+    Parser?.t pa == Parser?.t p /\
     get_parser_kind pa == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) (get_parser_kind p) /\
     get_parser pa == LP.parse_bounded_vldata (U32.v min) (U32.v max) (get_parser p)
   })
@@ -285,7 +285,7 @@ let parse_bounded_vldata_intro_ho
     U32.v min <= U32.v max /\
     U32.v max > 0 /\
     LP.serialize_bounded_vldata_precond (U32.v min) (U32.v max) (get_parser_kind p) /\
-    dfst pa == dfst p /\
+    Parser?.t pa == Parser?.t p /\
     get_parser_kind pa == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) (get_parser_kind p) /\
     get_parser pa == LP.parse_bounded_vldata (U32.v min) (U32.v max) (get_parser p)
   })
@@ -297,7 +297,7 @@ let parse_bounded_vldata_intro_ho
       begin match destr_repr_spec _ _ _ _ _ _ _ f () with
       | Correct (_, v) ->
         post () () v /\
-        (vout <: dfst p) == v
+        (vout <: Parser?.t p) == v
       | _ -> False
       end
     )
@@ -323,7 +323,7 @@ let parse_bounded_vldata_intro_ho'
     U32.v min <= U32.v max /\
     U32.v max > 0 /\
     LP.serialize_bounded_vldata_precond (U32.v min) (U32.v max) (get_parser_kind p) /\
-    dfst pa == dfst p /\
+    Parser?.t pa == Parser?.t p /\
     get_parser_kind pa == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) (get_parser_kind p) /\
     get_parser pa == LP.parse_bounded_vldata (U32.v min) (U32.v max) (get_parser p)
   })
@@ -333,7 +333,7 @@ let parse_bounded_vldata_intro_ho'
     (fun _ _ vout ->
       begin match destr_repr_spec _ _ _ _ _ _ _ f () with
       | Correct (_, v) ->
-        (vout <: dfst p) == v
+        (vout <: Parser?.t p) == v
       | _ -> False
       end
     )
