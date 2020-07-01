@@ -116,6 +116,35 @@ let lift_pure_read (a:Type) (wp:pure_wp a { pure_wp_mono a wp })
 
 sub_effect PURE ~> TRead = lift_pure_read
 
+let read_bind_spec'
+  (inv: memory_invariant)
+  (a b: Type)
+  (f: (unit -> TRead a inv))
+  (g: (a -> TRead b inv))
+: GTot (result b)
+=
+   match ReadRepr?.spec (reify (f ())) () with
+    | Error e -> Error e
+    | Correct x -> ReadRepr?.spec (reify (g x)) ()
+
+let read_bind_impl'
+  (inv: memory_invariant)
+  (a b: Type)
+  (f: (unit -> TRead a inv))
+  (g: (a -> TRead b inv))
+: TRead b inv
+= let x = f () in g x
+
+let read_bind_correct
+  (inv: memory_invariant)
+  (a b: Type)
+  (f: (unit -> TRead a inv))
+  (g: (a -> TRead b inv))
+: Lemma
+      (ReadRepr?.spec (reify (read_bind_impl' inv a b f g)) () == read_bind_spec' inv a b f g)
+= assert_norm
+    (ReadRepr?.spec (reify (read_bind_impl' inv a b f g)) () == read_bind_spec' inv a b f g)
+
 inline_for_extraction
 let tread_of_eread // NOTE: I could define it as a lift (sub_effect), but I prefer to do it explicitly to avoid F* generating pre and postconditions
   (#a: Type)
@@ -336,7 +365,7 @@ let destr_repr_spec
   (#r_in: parser)
   (#r_out: parser)
   (#l: memory_invariant)
-  (f_destr_spec: unit -> TWrite a r_in r_out l)
+  ($f_destr_spec: unit -> TWrite a r_in r_out l)
 : Tot (repr_spec a r_in r_out (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True))
 = dfst (reify (f_destr_spec ()))
 
@@ -349,6 +378,61 @@ let destr_repr_impl
   (f_destr_spec: unit -> TWrite a r_in r_out l)
 : Tot (repr_impl a r_in r_out (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) l (destr_repr_spec f_destr_spec))
 = dsnd (reify (f_destr_spec ()))
+
+(* I would like this, but I cannot use a definition in a branch of a match, because F* will not unfold it
+
+let bind_spec'
+  (inv: memory_invariant)
+  (p1 p2 p3: parser)
+  (a b: Type)
+  (f: (unit -> TWrite a p1 p2 inv))
+  (g: (a -> unit -> TWrite b p2 p3 inv))
+  (v1: dfst p1)
+: GTot (result (b & dfst p3))
+=
+   match destr_repr_spec f v1 with
+    | Error e -> Error e
+    | Correct (x, v2) -> destr_repr_spec (g x) v2
+*)
+
+let bind_spec'
+  (inv: memory_invariant)
+  (p1 p2 p3: parser)
+  (a b: Type)
+  (f: (unit -> TWrite a p1 p2 inv))
+  (g: (a -> unit -> TWrite b p2 p3 inv))
+  (v1: dfst p1)
+: GTot (result (b & dfst p3))
+=
+   match destr_repr_spec f v1 with
+    | Error e -> Error e
+    | Correct (x, v2) -> dfst (reify (g x ())) v2
+
+let bind_impl'
+  (inv: memory_invariant)
+  (p1 p2 p3: parser)
+  (a b: Type)
+  (f: (unit -> TWrite a p1 p2 inv))
+  (g: (a -> unit -> TWrite b p2 p3 inv))
+  ()
+: TWrite b p1 p3 inv
+= let x = f () in g x ()
+
+[@@expect_failure] // FIXME: do not use dtuple2 for repr
+let bind_correct
+  (inv: memory_invariant)
+  (p1 p2 p3: parser)
+  (a b: Type)
+  (f: (unit -> TWrite a p1 p2 inv))
+  (g: (a -> unit -> TWrite b p2 p3 inv))
+  (v1: dfst p1)
+: Lemma
+  (dfst (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
+    bind_spec' inv p1 p2 p3 a b f g v1)
+= assert
+  (dfst (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
+    bind_spec' inv p1 p2 p3 a b f g v1)
+  by (FStar.Tactics.(norm [delta; iota; zeta; primops]; trefl ()))
 
 inline_for_extraction
 let twrite_of_ewrite // NOTE: I could define it as a lift (sub_effect), but I prefer to do it explicitly to avoid F* generating pre and postconditions
@@ -551,21 +635,59 @@ let parse_vldata_recast
 = twrite_of_ewrite (fun _ -> parse_vldata_recast p min max min' max')
 
 inline_for_extraction
+let destr_list'
+  (#p: parser1)
+  (#inv: memory_invariant)
+  (x: lptr p inv)
+: ERead (y: option (ptr p inv & lptr p inv) {
+    match y with
+    | None -> deref_list_spec x == []
+    | Some (hd, tl) -> deref_list_spec x == deref_spec hd :: deref_list_spec tl
+  })
+    True
+    (fun _ -> True)
+    (fun _ -> False)
+    inv
+=
+  match destr_list x with
+  | None -> None
+  | Some (hd, tl) -> Some (hd, tl)
+
+inline_for_extraction
 let destr_list
   (#p: parser1)
   (#inv: memory_invariant)
   (x: lptr p inv)
-: TRead (option (ptr p inv & lptr p inv)) inv
-= tread_of_eread (fun _ -> destr_list x)
+: TRead (y: option (ptr p inv & lptr p inv) {
+    match y with
+    | None -> deref_list_spec x == []
+    | Some (hd, tl) -> deref_list_spec x == deref_spec hd :: deref_list_spec tl
+  }) inv
+= tread_of_eread (fun _ -> destr_list' x)
 
-let list_exists
+let destr_list_is_correct
   (#p: parser1)
   (#inv: memory_invariant)
-  (f_spec: Ghost.erased (dfst p -> Tot bool)) // reifying f below is not enough because of the ptr
-  (f: ((x: ptr p inv) -> Read bool (True) (fun res -> res == Ghost.reveal f_spec (deref_spec x)) inv))
+  (l: lptr p inv)
+: Lemma
+  (Correct? (ReadRepr?.spec (reify (destr_list l)) ()))
+= assert_norm (Correct? (ReadRepr?.spec (reify (destr_list l)) ()))
+
+let rec list_exists
+  (#p: parser1)
+  (#inv: memory_invariant)
+  (f: ((x: ptr p inv) -> TRead bool inv))
   (l: lptr p inv)
 : TRead bool inv
-= tread_of_eread (fun _ -> list_exists f_spec f l)
+  (decreases (List.Tot.length (deref_list_spec l)))
+= let x = destr_list l in
+  match x with
+  | None -> false
+  | Some (hd, tl) ->
+    let y = f hd in
+    if y
+    then true
+    else list_exists f tl
 
 inline_for_extraction
 let parse_vllist_nil
@@ -631,16 +753,41 @@ let put_vlbytes
 : TWrite unit emp (parse_vlbytes min max) inv
 = twrite_of_ewrite (fun _ -> put_vlbytes min max len l f)
 
+let rec list_map'
+  (p1 p2: parser1)
+  (#inv: memory_invariant)
+  (f' : (
+    (x: ptr p1 inv) ->
+    TWrite unit emp p2 inv
+  ))
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (l: lptr p1 inv)
+: TWrite
+    unit
+    (parse_vllist p2 min max)
+    (parse_vllist p2 min max)
+    inv
+  (decreases (deref_list_spec l))
+=
+  match destr_list l with
+  | None -> ()
+  | Some (hd, tl) ->
+    frame (fun _ -> f' hd);
+    parse_vllist_snoc_weak p2 min max;
+    list_map' p1 p2 f' min max tl
+
 let list_map
   (p1 p2: parser1)
   (#inv: memory_invariant)
-  (f: Ghost.erased (dfst p1 -> Tot (dfst p2)))
   (f' : (
     (x: ptr p1 inv) ->
-    Write unit emp p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
+    TWrite unit emp p2 inv
   ))
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
   (l: lptr p1 inv)
 : TWrite unit emp (parse_vllist p2 min max) inv
-= twrite_of_ewrite (fun _ -> list_map p1 p2 f f' min max l)
+= parse_vllist_nil p2 max;
+  list_map' p1 p2 f' 0ul max l;
+  parse_vllist_recast _ _ _ min _
