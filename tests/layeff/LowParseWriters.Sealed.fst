@@ -84,7 +84,7 @@ let read_if_then_else (a:Type)
 : Tot Type
 = read_repr a l
 
-[@@ smt_reifiable_layered_effect ]
+// [@@ smt_reifiable_layered_effect ]
 reifiable reflectable total
 layered_effect {
   TRead : a:Type -> (memory_invariant) -> Effect
@@ -97,7 +97,7 @@ layered_effect {
 }
 
 inline_for_extraction
-let lift_pure_read_conv (a:Type) (wp:pure_wp a { pure_wp_mono a wp })
+let lift_pure_read_conv (a:Type) (wp:pure_wp a)
   (l: memory_invariant)
   (f_pure:unit -> PURE a wp)
   (sq: squash (wp (fun _ -> True)))
@@ -106,15 +106,15 @@ let lift_pure_read_conv (a:Type) (wp:pure_wp a { pure_wp_mono a wp })
 = f_pure ()
 
 inline_for_extraction
-let lift_pure_read (a:Type) (wp:pure_wp a { pure_wp_mono a wp })
+let lift_pure_read' (a:Type) (wp:pure_wp a)
   (l: memory_invariant)
-  (f_pure:unit -> PURE a wp)
+  (f_pure: eqtype_as_type unit -> PURE a wp)
 : Pure (read_repr a l)
   (requires (wp (fun _ -> True)))
   (ensures (fun _ -> True))
 = read_reify_trivial (lift_pure_read_conv a wp l f_pure ())
 
-sub_effect PURE ~> TRead = lift_pure_read
+sub_effect PURE ~> TRead = lift_pure_read'
 
 let read_bind_spec'
   (inv: memory_invariant)
@@ -326,7 +326,7 @@ let if_then_else (a:Type)
 = repr a r_in r_out
     l
 
-[@@smt_reifiable_layered_effect]
+// [@@smt_reifiable_layered_effect]
 reifiable reflectable total
 layered_effect {
   TWrite : a:Type -> (pin: parser) -> (pout: (parser)) -> (memory_invariant) -> Effect
@@ -414,38 +414,6 @@ let bind_impl'
   ()
 : TWrite b p1 p3 inv
 = let x = f () in g x ()
-
-#push-options "--print_implicits"
-
-[@@expect_failure] // FIXME: WHY WHY WHY?
-let bind_correct
-  (inv: memory_invariant)
-  (p1 p2 p3: parser)
-  (a b: Type)
-  (f: (unit -> TWrite a p1 p2 inv))
-  (g: (a -> unit -> TWrite b p2 p3 inv))
-  (v1: Parser?.t p1)
-: Lemma
-  (Repr?.spec (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
-    bind_spec2 inv p1 p2 p3 a b f g v1)
-= assert
-  (Repr?.spec (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
-    bind_spec2 inv p1 p2 p3 a b f g v1)
-  by (FStar.Tactics.(norm [delta; iota; zeta; primops]; trefl ()))
-
-#pop-options
-
-let bind_correct
-  (inv: memory_invariant)
-  (p1 p2 p3: parser)
-  (a b: Type)
-  (f: (unit -> TWrite a p1 p2 inv))
-  (g: (a -> unit -> TWrite b p2 p3 inv))
-  (v1: Parser?.t p1)
-: Lemma
-  (Repr?.spec (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
-    bind_spec' inv p1 p2 p3 a b f g v1)
-= ()
 
 inline_for_extraction
 let twrite_of_ewrite // NOTE: I could define it as a lift (sub_effect), but I prefer to do it explicitly to avoid F* generating pre and postconditions
