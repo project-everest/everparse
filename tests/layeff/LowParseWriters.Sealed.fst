@@ -84,7 +84,7 @@ let read_if_then_else (a:Type)
 : Tot Type
 = read_repr a l
 
-// NOT smt_reifiable_layered_effect because no logical contents
+[@@ smt_reifiable_layered_effect ]
 reifiable reflectable total
 layered_effect {
   TRead : a:Type -> (memory_invariant) -> Effect
@@ -326,7 +326,7 @@ let if_then_else (a:Type)
 = repr a r_in r_out
     l
 
-// NOT smt_reifiable_layered_effect because no logical contents
+[@@smt_reifiable_layered_effect]
 reifiable reflectable total
 layered_effect {
   TWrite : a:Type -> (pin: parser) -> (pout: (parser)) -> (memory_invariant) -> Effect
@@ -379,7 +379,6 @@ let destr_repr_impl
 : Tot (repr_impl a r_in r_out (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) l (destr_repr_spec f_destr_spec))
 = Repr?.impl (reify (f_destr_spec ()))
 
-(* cannot do that, F* won't unfold under match
 let bind_spec'
   (inv: memory_invariant)
   (p1 p2 p3: parser)
@@ -392,9 +391,8 @@ let bind_spec'
    match destr_repr_spec f v1 with
     | Error e -> Error e
     | Correct (x, v2) -> destr_repr_spec (g x) v2
-*)
 
-let bind_spec'
+let bind_spec2
   (inv: memory_invariant)
   (p1 p2 p3: parser)
   (a b: Type)
@@ -429,13 +427,25 @@ let bind_correct
   (v1: Parser?.t p1)
 : Lemma
   (Repr?.spec (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
-    bind_spec' inv p1 p2 p3 a b f g v1)
+    bind_spec2 inv p1 p2 p3 a b f g v1)
 = assert
   (Repr?.spec (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
-    bind_spec' inv p1 p2 p3 a b f g v1)
+    bind_spec2 inv p1 p2 p3 a b f g v1)
   by (FStar.Tactics.(norm [delta; iota; zeta; primops]; trefl ()))
 
 #pop-options
+
+let bind_correct
+  (inv: memory_invariant)
+  (p1 p2 p3: parser)
+  (a b: Type)
+  (f: (unit -> TWrite a p1 p2 inv))
+  (g: (a -> unit -> TWrite b p2 p3 inv))
+  (v1: Parser?.t p1)
+: Lemma
+  (Repr?.spec (reify (bind_impl' inv p1 p2 p3 a b f g ())) v1 ==
+    bind_spec' inv p1 p2 p3 a b f g v1)
+= ()
 
 inline_for_extraction
 let twrite_of_ewrite // NOTE: I could define it as a lift (sub_effect), but I prefer to do it explicitly to avoid F* generating pre and postconditions
