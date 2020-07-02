@@ -228,6 +228,8 @@ let validator
 inline_for_extraction
 let snd (a, b) = b
 
+#push-options "--z3rlimit 16"
+
 let gvalidate
   p h b
 =
@@ -236,6 +238,8 @@ let gvalidate
   match LP.parse (Parser?.p p).parser (B.as_seq h b) with
   | None -> None
   | Some (_, res) -> Some (U32.uint_to_t res)
+
+#pop-options
 
 let gvalidate_frame
   p h b l h'

@@ -80,7 +80,7 @@ let read_if_then_else (a:Type)
   (l:memory_invariant)
   (f_ifthenelse:read_repr a l)
   (g:read_repr a l)
-  (p:Type0)
+  (p:bool)
 : Tot Type
 = read_repr a l
 
@@ -321,7 +321,7 @@ let if_then_else (a:Type)
   (l:memory_invariant)
   (f_ifthenelse:repr a r_in r_out l)
   (g:repr a r_in r_out l)
-  (p:Type0)
+  (p:bool)
 : Tot Type
 = repr a r_in r_out
     l
