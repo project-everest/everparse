@@ -403,12 +403,12 @@ let read_do_while_impl
         assert (invariant x true);
         assert (read_do_while_spec' inv #t invariant measure error body x0 () == read_do_while_spec' inv #t invariant measure error body x ());
         match reify_read _ _ _ _ _ (body x) with
-        | Correct (x', continue) ->
+        | Correct (x', cont) ->
           B.upd btemp 0ul (Correct x');
           let h' = HST.get () in
           assert (Correct? (destr_read_repr_spec _ _ _ _ _ (body x) ()));
-          assert (invariant x' continue);
-          not continue
+          assert (invariant x' cont);
+          not cont
         | Error s ->
           B.upd btemp 0ul (Error s);
           true
@@ -750,13 +750,13 @@ let do_while_impl
         assert (invariant vin x true);
         assert (do_while_spec' inv #p #t invariant measure error body x0 vin0 == do_while_spec' inv #p #t invariant measure error body x vin);
         match extract_repr_impl _ _ _ _ _ _ _ _ (destr_repr_impl _ _ _ _ _ _ _ (body x)) b blen pos with
-        | ICorrect (x', continue) pos' ->
+        | ICorrect (x', cont) pos' ->
           B.upd btemp 0ul (ICorrect x' pos');
           let h' = HST.get () in
           let vin' = Ghost.hide (contents p h' b 0ul pos') in
           assert (Correct? (destr_repr_spec _ _ _ _ _ _ _ (body x) vin));
-          assert (invariant vin' x' continue);
-          not continue
+          assert (invariant vin' x' cont);
+          not cont
         | IError s ->
           B.upd btemp 0ul (IError s);
           true
