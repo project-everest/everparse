@@ -154,6 +154,14 @@ let tread_of_eread // NOTE: I could define it as a lift (sub_effect), but I pref
 = TRead?.reflect (read_reify_trivial f)
 
 inline_for_extraction
+let eread_of_tread
+  (#a: Type)
+  (#l: memory_invariant)
+  (f: unit -> TRead a l)
+: ERead a True (fun _ -> True) (fun _ -> True) l
+= ERead?.reflect (reify (f ()))
+
+inline_for_extraction
 let failwith
   (#a: Type)
   (#inv: memory_invariant)
@@ -720,6 +728,39 @@ let destr_list_is_correct
   (Correct? (ReadRepr?.spec (reify (destr_list l)) ()))
 = assert_norm (Correct? (ReadRepr?.spec (reify (destr_list l)) ()))
 
+inline_for_extraction
+let read_do_while
+  (#inv: memory_invariant)
+  (#t: Type0)
+  (measure: (t -> GTot nat))
+  (body: (
+    (x: t) ->
+    TRead
+      (x'cond: (t & bool) {
+        let (x', cond) = x'cond in
+        cond == true ==> measure x' < measure x
+      })
+      inv
+  ))
+  (x: t)
+: TRead
+    t
+    inv
+= tread_of_eread (fun _ ->
+    read_do_while
+      #inv
+      #t
+      (fun _ _ -> True)
+      measure
+      (fun _ -> True)
+      (fun x ->
+        let (x', cond) = eread_of_tread (fun _ -> body x) in
+        (x', cond)
+      )
+      x
+  )
+
+(* This will not extract.
 let rec list_exists
   (#p: parser1)
   (#inv: memory_invariant)
@@ -735,6 +776,33 @@ let rec list_exists
     if y
     then true
     else list_exists f tl
+*)
+
+inline_for_extraction
+let list_exists
+  (#p: parser1)
+  (#inv: memory_invariant)
+  (f: ((x: ptr p inv) -> TRead bool inv))
+  (l: lptr p inv)
+: TRead bool inv
+=
+ let res = read_do_while
+    #inv
+    #(lptr p inv)
+    (fun l1 -> List.Tot.length (deref_list_spec l1))
+    (fun l1 ->
+      match destr_list l1 with
+      | None -> (l1, false)
+      | Some (hd, tl) ->
+        if f hd
+        then (l1, false)
+        else (tl, true)
+    )
+    l
+  in
+  match destr_list res with
+  | None -> false
+  | _ -> true
 
 inline_for_extraction
 let parse_vllist_nil
@@ -801,6 +869,42 @@ let put_vlbytes
 : TWrite unit emp (parse_vlbytes min max) inv
 = twrite_of_ewrite (fun _ -> put_vlbytes min max len l f)
 
+inline_for_extraction
+let do_while
+  (#inv: memory_invariant)
+  (#p: parser)
+  (#t: Type0)
+  (measure: (t -> GTot nat))
+  (body: (
+    (x: t) ->
+    TWrite
+      (x'cond: (t & bool) {
+        let (x', cond) = x'cond in
+        (cond == true ==>  measure x' < measure x)
+      })
+      p p
+      inv
+  ))
+  (x: t)
+: TWrite
+    t p p
+    inv
+= twrite_of_ewrite (fun _ ->
+    do_while
+      #inv
+      #p
+      #t
+      (fun _ _ _ -> True)
+      (fun _ -> measure)
+      (fun _ _ -> True)
+      (fun x ->
+        let (x', cond) = ewrite_of_twrite (fun _ -> body x) in
+        (x', cond)
+      )
+      x
+  )
+
+(* This will not extract.
 let rec list_map'
   (p1 p2: parser1)
   (#inv: memory_invariant)
@@ -824,7 +928,45 @@ let rec list_map'
     frame (fun _ -> f' hd);
     parse_vllist_snoc_weak p2 min max;
     list_map' p1 p2 f' min max tl
+*)
 
+inline_for_extraction
+let list_map'
+  (p1 p2: parser1)
+  (#inv: memory_invariant)
+  (f' : (
+    (x: ptr p1 inv) ->
+    TWrite unit emp p2 inv
+  ))
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (l: lptr p1 inv)
+: TWrite
+    unit
+    (parse_vllist p2 min max)
+    (parse_vllist p2 min max)
+    inv
+=
+  let _ = do_while
+    #inv
+    #(parse_vllist p2 min max)
+    #(lptr p1 inv)
+    (fun l1 -> List.Tot.length (deref_list_spec l1))
+    (fun l1 ->
+      match destr_list l1 with
+      | None ->
+        (l1, false)
+      | Some (hd, tl) ->
+        frame (fun _ -> f' hd);
+        parse_vllist_snoc_weak p2 min max;
+        (tl, true)
+    )
+    l
+  in
+  ()
+
+
+inline_for_extraction
 let list_map
   (p1 p2: parser1)
   (#inv: memory_invariant)
