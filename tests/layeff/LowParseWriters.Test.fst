@@ -18,8 +18,7 @@ let test_read
     True
   ))
 =
-  reify_read bool True (fun _ -> True) (fun _ -> False) inv (fun _ -> test_read3 inv (fun () -> false))
-
+  reify_read _ _ _ _ _ (fun _ -> test_read3 inv (fun () -> false) <: Read bool True (fun _ -> True) inv)
 
 let test_read_if_1
   (inv: memory_invariant)
@@ -33,7 +32,7 @@ let test_read_if_1
     True
   ))
 =
-  reify_read bool True (fun _ -> True) (fun _ -> False) inv (fun _ -> test_read_if inv (fun () -> false))
+  reify_read _ _ _ _ _ (fun _ -> test_read_if inv (fun () -> false) <: Read bool True (fun _ -> True) inv)
 
 inline_for_extraction
 noextract

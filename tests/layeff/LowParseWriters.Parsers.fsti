@@ -538,6 +538,161 @@ let destr_list
 : Read (option (ptr p inv & lptr p inv)) (True) (destr_list_post x) inv
 = ERead?.reflect (destr_list_repr x)
 
+let rec read_do_while_spec'
+  (inv: memory_invariant)
+  (#t: Type0)
+  (invariant: (t -> bool -> GTot Type0))
+  (measure: (t -> GTot nat))
+  (error: (t -> GTot Type0))
+  (body: (
+    (x: t) ->
+    unit ->
+    ERead
+      (t & bool)
+      (invariant x true)
+      (fun (x', cond) ->
+        invariant x true /\
+        invariant x' cond /\
+        (cond == true ==> measure x' < measure x)
+      )
+      (fun vin ->
+        invariant x true /\
+        error x
+      )
+      inv
+  ))
+  (x: t)
+  ()
+: Ghost (result t)
+  (requires (
+    invariant x true
+  ))
+  (ensures (fun res ->
+    match res with
+    | Error _ ->
+      invariant x true /\
+      (exists x' . invariant x' true /\ error x')
+    | Correct x' ->
+      invariant x true /\
+      invariant x' false
+  ))
+  (decreases (measure x))
+=
+  match destr_read_repr_spec _ _ _ _ _ (body x) () with
+  | Error e -> Error e
+  | Correct (x', cond) ->
+    if cond
+    then read_do_while_spec' inv invariant measure error body x' ()
+    else Correct x'
+
+let read_do_while_spec
+  (inv: memory_invariant)
+  (#t: Type0)
+  (invariant: (t -> bool -> GTot Type0))
+  (measure: (t -> GTot nat))
+  (error: t -> GTot Type0)
+  (body: (
+    (x: t) ->
+    unit ->
+    ERead
+      (t & bool)
+      (invariant x true)
+      (fun (x', cond) ->
+        invariant x true /\
+        invariant x' cond /\
+        (cond == true ==> measure x' < measure x)
+      )
+      (fun _ ->
+        invariant x true /\
+        error x
+      )
+      inv
+  ))
+  (x: t)
+: Tot (read_repr_spec t
+    (invariant x true)
+    (fun x' ->
+      invariant x true /\
+      invariant x' false
+    )
+    (fun _ ->
+      invariant x true /\
+      (exists x' . invariant x' true /\ error x')
+    )
+  )
+=
+  fun vin -> read_do_while_spec' inv invariant measure error body x vin
+
+inline_for_extraction
+val read_do_while_impl
+  (inv: memory_invariant)
+  (#t: Type0)
+  (invariant: (t -> bool -> GTot Type0))
+  (measure: (t -> GTot nat))
+  (error: t -> GTot Type0)
+  (body: (
+    (x: t) ->
+    unit ->
+    ERead
+      (t & bool)
+      (invariant x true)
+      (fun (x', cond) ->
+        invariant x true /\
+        invariant x' cond /\
+        (cond == true ==> measure x' < measure x)
+      )
+      (fun _ ->
+        invariant x true /\
+        error x
+      )
+      inv
+  ))
+  (x: t)
+: Tot (read_repr_impl _ _ _ _ inv (read_do_while_spec inv invariant measure error body x))
+
+inline_for_extraction
+let read_do_while
+  (#inv: memory_invariant)
+  (#t: Type0)
+  (invariant: (t -> bool -> GTot Type0))
+  (measure: (t -> GTot nat))
+  (error: t -> GTot Type0)
+  (body: (
+    (x: t) ->
+    ERead
+      (t & bool)
+      (invariant x true)
+      (fun (x', cond) ->
+        invariant x true /\
+        invariant x' cond /\
+        (cond == true ==> measure x' < measure x)
+      )
+      (fun _ ->
+        invariant x true /\
+        error x
+      )
+      inv
+  ))
+  (x: t)
+: ERead
+    t
+    (invariant x true)
+    (fun x' ->
+      invariant x true /\
+      invariant x' false
+    )
+    (fun _ ->
+      invariant x true /\
+      (exists x' . invariant x' true /\ error x')
+    )
+    inv
+= ERead?.reflect (
+    ReadRepr
+      (read_do_while_spec inv invariant measure error (fun x _ -> body x) x)
+      (read_do_while_impl inv invariant measure error (fun x _ -> body x) x)
+  )
+
+(* This will not extract.
 let rec list_exists
   (#p: parser1)
   (#inv: memory_invariant)
@@ -552,6 +707,37 @@ let rec list_exists
     if f hd
     then true
     else list_exists f_spec f tl
+*)
+
+inline_for_extraction
+let list_exists
+  (#p: parser1)
+  (#inv: memory_invariant)
+  (f_spec: Ghost.erased (Parser?.t p -> Tot bool)) // reifying f below is not enough because of the ptr
+  (f: ((x: ptr p inv) -> Read bool (True) (fun res -> res == Ghost.reveal f_spec (deref_spec x)) inv))
+  (l: lptr p inv)
+: Read bool (True) (fun res -> res == List.Tot.existsb f_spec (deref_list_spec l)) inv
+  (decreases (List.Tot.length (deref_list_spec l)))
+= let res = read_do_while
+    #inv
+    #(lptr p inv)
+    (fun l1 continue ->
+        List.Tot.existsb f_spec (deref_list_spec l) ==
+        (if continue then List.Tot.existsb f_spec (deref_list_spec l1) else Cons? (deref_list_spec l1))
+    )
+    (fun l1 -> List.Tot.length (deref_list_spec l1))
+    (fun _ -> False)
+    (fun l1 ->
+      match destr_list l1 with
+      | None -> (l1, false)
+      | Some (hd, tl) ->
+        if f hd
+        then (l1, false)
+        else (tl, true)
+    )
+    l
+  in
+  Some? (destr_list res)
 
 val list_size
   (p: parser1)

@@ -372,6 +372,52 @@ let destr_list_repr
   #p #inv x
 = ReadRepr _ (destr_list_impl x)
 
+let read_do_while_impl
+  inv #t invariant measure error body x0
+=
+  mk_read_repr_impl _ _ _ _ inv (read_do_while_spec inv #t invariant measure error body x0) (fun _ ->
+    HST.push_frame ();
+    let btemp : B.pointer (result t) = B.alloca (Correct x0) 1ul in
+    let h0 = HST.get () in
+    C.Loops.do_while
+      (fun h stop ->
+        B.modifies (B.loc_all_regions_from true (HS.get_tip h0)) h0 h /\
+        B.live h btemp /\
+        HS.get_tip h0 == HS.get_tip h /\
+        begin match B.deref h btemp with
+        | Correct x ->
+          invariant x (not stop) /\
+          read_do_while_spec' inv #t invariant measure error body x0 () ==
+            begin if stop
+              then Correct x
+              else read_do_while_spec' inv #t invariant measure error body x ()
+            end
+        | Error s ->
+          stop == true /\
+          read_do_while_spec' inv #t invariant measure error body x0 () == Error s
+        end
+      )
+      (fun _ ->
+        let Correct x = B.index btemp 0ul in
+        let h = HST.get () in
+        assert (invariant x true);
+        assert (read_do_while_spec' inv #t invariant measure error body x0 () == read_do_while_spec' inv #t invariant measure error body x ());
+        match reify_read _ _ _ _ _ (body x) with
+        | Correct (x', continue) ->
+          B.upd btemp 0ul (Correct x');
+          let h' = HST.get () in
+          assert (Correct? (destr_read_repr_spec _ _ _ _ _ (body x) ()));
+          assert (invariant x' continue);
+          not continue
+        | Error s ->
+          B.upd btemp 0ul (Error s);
+          true
+      );
+    let res = B.index btemp 0ul in
+    HST.pop_frame ();
+    res
+  )
+
 let list_size
   p x
 =
