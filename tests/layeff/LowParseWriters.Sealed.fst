@@ -379,6 +379,70 @@ let destr_repr_impl
 : Tot (repr_impl a r_in r_out (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) l (destr_repr_spec f_destr_spec))
 = Repr?.impl (reify (f_destr_spec ()))
 
+module HST = FStar.HyperStack.ST
+
+inline_for_extraction
+let extract_t
+  (#a:Type u#x)
+  (#r_in: parser)
+  (#r_out: parser)
+  (l: memory_invariant)
+  (f_destr_spec: unit -> TWrite a r_in r_out l)
+: Tot Type
+=
+  (b: B.buffer u8 { l.lwrite `B.loc_includes` B.loc_buffer b }) ->
+  (len: U32.t { len == B.len b }) ->
+  (pos1: buffer_offset b) ->
+  HST.Stack (iresult a)
+  (requires (fun h ->
+    B.modifies l.lwrite l.h0 h /\
+    valid_pos r_in h b 0ul pos1
+  ))
+  (ensures (fun h res h' ->
+    valid_pos r_in h b 0ul pos1 /\
+    B.modifies (B.loc_buffer b) h h' /\ (
+    let v_in = contents r_in h b 0ul pos1 in
+    begin match destr_repr_spec f_destr_spec v_in, res with
+    | Correct (v, v_out), ICorrect v' pos2 ->
+      U32.v pos1 <= U32.v pos2 /\
+      valid_pos (r_out) h' b 0ul pos2 /\
+      v' == v /\
+      v_out == contents (r_out) h' b 0ul pos2
+    | Correct (v, v_out), IOverflow ->
+      size (r_out) v_out > B.length b
+    | Error s, IError s' ->
+      s == s'
+    | Error _, IOverflow ->
+      (* overflow happened in implementation before specification could reach error *)
+      True
+    | _ -> False
+    end
+  )))
+
+inline_for_extraction
+let extract
+  (#a:Type u#x)
+  (#r_in: parser)
+  (#r_out: parser)
+  (l: memory_invariant)
+  (f_destr_spec: unit -> TWrite a r_in r_out l)
+: Tot (extract_t l f_destr_spec)
+= extract_repr_impl _ _ _ _ _ _ _ _ (destr_repr_impl f_destr_spec)
+
+inline_for_extraction
+let wrap_extracted_impl
+  (#a:Type u#x)
+  (#r_in: parser)
+  (#r_out: parser)
+  (l: memory_invariant)
+  (f_destr_spec: unit -> TWrite a r_in r_out l)
+  (e: extract_t l f_destr_spec)
+: TWrite a r_in r_out l
+= TWrite?.reflect (Repr (destr_repr_spec f_destr_spec) (
+    mk_repr_impl
+      a r_in r_out (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) l (destr_repr_spec f_destr_spec) (fun b len pos1 -> e b len pos1)
+  ))
+
 let bind_spec'
   (inv: memory_invariant)
   (p1 p2 p3: parser)
@@ -700,6 +764,7 @@ let parse_vllist_snoc_weak_ho'
 =
   twrite_of_ewrite (fun _ -> parse_vllist_snoc_weak_ho' p min max (fun _ -> ewrite_of_twrite f))
 
+inline_for_extraction
 let parse_vllist_recast
   (#inv: memory_invariant)
   (p: parser1)
