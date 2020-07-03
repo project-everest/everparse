@@ -380,6 +380,7 @@ let destr_repr_impl
 = Repr?.impl (reify (f_destr_spec ()))
 
 module HST = FStar.HyperStack.ST
+module HS = FStar.HyperStack
 
 inline_for_extraction
 let extract_t
@@ -396,6 +397,7 @@ let extract_t
   HST.Stack (iresult a)
   (requires (fun h ->
     B.modifies l.lwrite l.h0 h /\
+    HS.get_tip l.h0 `HS.includes` HS.get_tip h /\
     valid_pos r_in h b 0ul pos1
   ))
   (ensures (fun h res h' ->

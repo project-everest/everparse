@@ -4,13 +4,15 @@ open LowParseWriters.Parsers
 module B = LowStar.Buffer
 module HST = FStar.HyperStack.ST
 module LPI = LowParse.Low.Int
+module HS = FStar.HyperStack
 
 let test_read
   (inv: memory_invariant)
   ()
 : HST.Stack (result bool)
   (requires (fun h ->
-    B.modifies B.loc_none inv.h0 h
+    B.modifies B.loc_none inv.h0 h /\
+    HS.get_tip inv.h0 `HS.includes` HS.get_tip h
   ))
   (ensures (fun h _ h' ->
     True
@@ -24,7 +26,8 @@ let test_read_if_1
   ()
 : HST.Stack (result bool)
   (requires (fun h ->
-    B.modifies B.loc_none inv.h0 h
+    B.modifies B.loc_none inv.h0 h /\
+    HS.get_tip inv.h0 `HS.includes` HS.get_tip h
   ))
   (ensures (fun h _ h' ->
     True
@@ -58,7 +61,8 @@ let test_read_from_ptr
   ()
 : HST.Stack (result U32.t)
   (requires (fun h ->
-    B.modifies B.loc_none inv.h0 h
+    B.modifies B.loc_none inv.h0 h /\
+    HS.get_tip inv.h0 `HS.includes` HS.get_tip h
   ))
   (ensures (fun h _ h' ->
     True
@@ -85,7 +89,8 @@ let test_read_if_nontrivial
   ()
 : HST.Stack (result U32.t)
   (requires (fun h ->
-    B.modifies B.loc_none inv.h0 h
+    B.modifies B.loc_none inv.h0 h /\
+    HS.get_tip inv.h0 `HS.includes` HS.get_tip h
   ))
   (ensures (fun h _ h' ->
     True
@@ -113,7 +118,8 @@ let test_read_if_really_nontrivial
   ()
 : HST.Stack (result U32.t)
   (requires (fun h ->
-    B.modifies B.loc_none inv.h0 h
+    B.modifies B.loc_none inv.h0 h /\
+    HS.get_tip inv.h0 `HS.includes` HS.get_tip h
   ))
   (ensures (fun h _ h' ->
     True
