@@ -642,6 +642,8 @@ let put_vlbytes_impl
     end
   )
 
+let do_while_impl = admit ()
+
 #pop-options
 
 let parse_u32

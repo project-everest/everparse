@@ -1006,6 +1006,163 @@ let put_vlbytes
 : Write unit emp (parse_vlbytes min max) (fun _ -> True) (fun _ _ vout -> vout == FStar.Bytes.hide (Ghost.reveal l)) inv
 = EWrite?.reflect (Repr _ (put_vlbytes_impl min max len l f))
 
+let rec do_while_spec'
+  (inv: memory_invariant)
+  (#p: parser)
+  (#t: Type)
+  (invariant: (Parser?.t p -> t -> bool -> GTot Type0))
+  (measure: (Parser?.t p -> t -> GTot nat))
+  (error: (Parser?.t p -> t -> GTot Type0))
+  (body: (
+    (x: t) ->
+    EWrite
+      (t & bool) p p
+      (fun vin -> invariant vin x true)
+      (fun vin (x', cond) vout ->
+        invariant vin x true /\
+        invariant vout x' cond /\
+        (cond == true ==> measure vout x' < measure vin x)
+      )
+      (fun vin ->
+        invariant vin x true /\
+        error vin x
+      )
+      inv
+  ))
+  (x: t)
+  (vin: Parser?.t p)
+: Ghost (result (t & Parser?.t p))
+  (requires (
+    invariant vin x true
+  ))
+  (ensures (fun res ->
+    match res with
+    | Error _ ->
+      invariant vin x true /\
+      (exists vout x' . invariant vout x' true /\ error vout x')
+    | Correct (x', vout) ->
+      invariant vin x true /\
+      invariant vout x' false /\
+      size p vout >= size p vin
+  ))
+  (decreases (measure vin x))
+=
+  match Repr?.spec (reify (body x)) vin with
+  | Error e -> Error e
+  | Correct ((x', cond), vout) ->
+    if cond
+    then do_while_spec' inv invariant measure error body x' vout
+    else Correct (x', vout)
+
+let do_while_spec
+  (inv: memory_invariant)
+  (#p: parser)
+  (#t: Type)
+  (invariant: (Parser?.t p -> t -> bool -> GTot Type0))
+  (measure: (Parser?.t p -> t -> GTot nat))
+  (error: Parser?.t p -> t -> GTot Type0)
+  (body: (
+    (x: t) ->
+    EWrite
+      (t & bool) p p
+      (fun vin -> invariant vin x true)
+      (fun vin (x', cond) vout ->
+        invariant vin x true /\
+        invariant vout x' cond /\
+        (cond == true ==> measure vout x' < measure vin x)
+      )
+      (fun vin ->
+        invariant vin x true /\
+        error vin x
+      )
+      inv
+  ))
+  (x: t)
+: Tot (repr_spec t p p
+    (fun vin -> invariant vin x true)
+    (fun vin x' vout ->
+      invariant vin x true /\
+      invariant vout x' false
+    )
+    (fun vin ->
+      invariant vin x true /\
+      (exists vout x' . invariant vout x' true /\ error vout x')
+    )
+  )
+=
+  fun vin -> do_while_spec' inv invariant measure error body x vin
+
+inline_for_extraction
+val do_while_impl
+  (inv: memory_invariant)
+  (#p: parser)
+  (#t: Type)
+  (invariant: (Parser?.t p -> t -> bool -> GTot Type0))
+  (measure: (Parser?.t p -> t -> GTot nat))
+  (error: Parser?.t p -> t -> GTot Type0)
+  (body: (
+    (x: t) ->
+    EWrite
+      (t & bool) p p
+      (fun vin -> invariant vin x true)
+      (fun vin (x', cond) vout ->
+        invariant vin x true /\
+        invariant vout x' cond /\
+        (cond == true ==> measure vout x' < measure vin x)
+      )
+      (fun vin ->
+        invariant vin x true /\
+        error vin x
+      )
+      inv
+  ))
+  (x: t)
+: Tot (repr_impl _ _ _ _ _ _ inv (do_while_spec inv invariant measure error body x))
+
+inline_for_extraction
+let do_while
+  (#inv: memory_invariant)
+  (#p: parser)
+  (#t: Type)
+  (invariant: (Parser?.t p -> t -> bool -> GTot Type0))
+  (measure: (Parser?.t p -> t -> GTot nat))
+  (error: Parser?.t p -> t -> GTot Type0)
+  (body: (
+    (x: t) ->
+    EWrite
+      (t & bool) p p
+      (fun vin -> invariant vin x true)
+      (fun vin (x', cond) vout ->
+        invariant vin x true /\
+        invariant vout x' cond /\
+        (cond == true ==> measure vout x' < measure vin x)
+      )
+      (fun vin ->
+        invariant vin x true /\
+        error vin x
+      )
+      inv
+  ))
+  (x: t)
+: EWrite
+    t p p
+    (fun vin -> invariant vin x true)
+    (fun vin x' vout ->
+      invariant vin x true /\
+      invariant vout x' false
+    )
+    (fun vin ->
+      invariant vin x true /\
+      (exists vout x' . invariant vout x' true /\ error vout x')
+    )
+    inv
+= EWrite?.reflect (
+    Repr
+      (do_while_spec inv invariant measure error body x)
+      (do_while_impl inv invariant measure error body x)
+  )
+
+(* // This will not extract.
 let rec list_map'
   (p1 p2: parser1)
   (#inv: memory_invariant)
@@ -1036,7 +1193,65 @@ let rec list_map'
     parse_vllist_snoc_weak p2 min max;
     L.append_assoc (Ghost.reveal lin) [Ghost.reveal f (deref_spec hd)] (L.map (Ghost.reveal f) (deref_list_spec tl));
     list_map' p1 p2 f f' min max tl
+*)
 
+#push-options "--z3rlimit 16"
+
+inline_for_extraction
+let list_map'
+  (p1 p2: parser1)
+  (#inv: memory_invariant)
+  (f: Ghost.erased (Parser?.t p1 -> Tot (Parser?.t p2)))
+  (f' : (
+    (x: ptr p1 inv) ->
+    Write unit emp p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
+  ))
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (l: lptr p1 inv)
+: EWrite
+    unit
+    (parse_vllist p2 min max)
+    (parse_vllist p2 min max)
+    (fun _ -> True)
+    (fun lin _ lout -> (lout <: list (Parser?.t p2)) == (lin <: list (Parser?.t p2)) `L.append` L.map (Ghost.reveal f) (deref_list_spec l))
+    (fun lin -> list_size p2 lin + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l)) > U32.v max)
+    inv
+=
+  let lin0 = get_state () in
+  let _ = do_while
+    #inv
+    #(parse_vllist p2 min max)
+    #(lptr p1 inv)
+    (fun lin l1 cond ->
+      lin0 `L.append` L.map (Ghost.reveal f) (deref_list_spec l) ==
+      lin  `L.append` L.map (Ghost.reveal f) (deref_list_spec l1) /\
+      (cond == false ==> deref_list_spec l1 == [])
+    )
+    (fun _ l1 -> L.length (deref_list_spec l1))
+    (fun lin l1 ->
+      list_size p2 lin + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l1)) > U32.v max
+    )
+    (fun l1 ->
+      let lin = get_state () in
+      match destr_list l1 with
+      | None ->
+        (l1, false)
+      | Some (hd, tl) ->
+        L.append_assoc (Ghost.reveal lin) [Ghost.reveal f (deref_spec hd)] (L.map (Ghost.reveal f) (deref_list_spec tl));
+        frame _ _ _ _ _ _ _ (fun _ -> f' hd);
+        parse_vllist_snoc_weak p2 min max;
+        (tl, true)
+    )
+    l
+  in
+  let lin = get_state () in
+  L.append_l_nil (Ghost.reveal lin <: list (Parser?.t p2));
+  ()
+
+#pop-options
+
+inline_for_extraction
 let list_map
   (p1 p2: parser1)
   (#inv: memory_invariant)
