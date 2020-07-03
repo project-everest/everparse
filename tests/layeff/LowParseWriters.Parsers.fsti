@@ -651,6 +651,49 @@ val read_do_while_impl
 : Tot (read_repr_impl _ _ _ _ inv (read_do_while_spec inv invariant measure error body x))
 
 inline_for_extraction
+let read_do_while'
+  (#inv: memory_invariant)
+  (#t: Type0)
+  (invariant: (t -> bool -> GTot Type0))
+  (measure: (t -> GTot nat))
+  (error: t -> GTot Type0)
+  (body: (
+    (x: t) ->
+    unit ->
+    ERead
+      (t & bool)
+      (invariant x true)
+      (fun (x', cond) ->
+        invariant x true /\
+        invariant x' cond /\
+        (cond == true ==> measure x' < measure x)
+      )
+      (fun _ ->
+        invariant x true /\
+        error x
+      )
+      inv
+  ))
+  (x: t)
+: ERead
+    t
+    (invariant x true)
+    (fun x' ->
+      invariant x true /\
+      invariant x' false
+    )
+    (fun _ ->
+      invariant x true /\
+      (exists x' . invariant x' true /\ error x')
+    )
+    inv
+= ERead?.reflect (
+    ReadRepr
+      (read_do_while_spec inv invariant measure error body x)
+      (read_do_while_impl inv invariant measure error body x)
+  )
+
+inline_for_extraction
 let read_do_while
   (#inv: memory_invariant)
   (#t: Type0)
@@ -686,11 +729,8 @@ let read_do_while
       (exists x' . invariant x' true /\ error x')
     )
     inv
-= ERead?.reflect (
-    ReadRepr
-      (read_do_while_spec inv invariant measure error (fun x _ -> body x) x)
-      (read_do_while_impl inv invariant measure error (fun x _ -> body x) x)
-  )
+= read_do_while' invariant measure error (fun x _ -> body x) x
+
 
 (* This will not extract.
 let rec list_exists
@@ -1309,6 +1349,50 @@ val do_while_impl
 : Tot (repr_impl _ _ _ _ _ _ inv (do_while_spec inv invariant measure error body x))
 
 inline_for_extraction
+let do_while'
+  (#inv: memory_invariant)
+  (#p: parser)
+  (#t: Type0)
+  (invariant: (Parser?.t p -> t -> bool -> GTot Type0))
+  (measure: (Parser?.t p -> t -> GTot nat))
+  (error: Parser?.t p -> t -> GTot Type0)
+  (body: (
+    (x: t) ->
+    unit ->
+    EWrite
+      (t & bool) p p
+      (fun vin -> invariant vin x true)
+      (fun vin (x', cond) vout ->
+        invariant vin x true /\
+        invariant vout x' cond /\
+        (cond == true ==> measure vout x' < measure vin x)
+      )
+      (fun vin ->
+        invariant vin x true /\
+        error vin x
+      )
+      inv
+  ))
+  (x: t)
+: EWrite
+    t p p
+    (fun vin -> invariant vin x true)
+    (fun vin x' vout ->
+      invariant vin x true /\
+      invariant vout x' false
+    )
+    (fun vin ->
+      invariant vin x true /\
+      (exists vout x' . invariant vout x' true /\ error vout x')
+    )
+    inv
+= EWrite?.reflect (
+    Repr
+      (do_while_spec inv invariant measure error (body) x)
+      (do_while_impl inv invariant measure error (body) x)
+  )
+
+inline_for_extraction
 let do_while
   (#inv: memory_invariant)
   (#p: parser)
@@ -1345,11 +1429,8 @@ let do_while
       (exists vout x' . invariant vout x' true /\ error vout x')
     )
     inv
-= EWrite?.reflect (
-    Repr
-      (do_while_spec inv invariant measure error (fun x _ -> body x) x)
-      (do_while_impl inv invariant measure error (fun x _ -> body x) x)
-  )
+= do_while' invariant measure error (fun x _ -> body x) x
+
 
 (* // This will not extract.
 let rec list_map'

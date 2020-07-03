@@ -116,6 +116,7 @@ let lift_pure_read' (a:Type) (wp:pure_wp a)
 
 sub_effect PURE ~> TRead = lift_pure_read'
 
+(*
 let read_bind_spec'
   (inv: memory_invariant)
   (a b: Type)
@@ -144,6 +145,7 @@ let read_bind_correct
       (ReadRepr?.spec (reify (read_bind_impl' inv a b f g)) () == read_bind_spec' inv a b f g)
 = assert_norm
     (ReadRepr?.spec (reify (read_bind_impl' inv a b f g)) () == read_bind_spec' inv a b f g)
+*)
 
 inline_for_extraction
 let tread_of_eread // NOTE: I could define it as a lift (sub_effect), but I prefer to do it explicitly to avoid F* generating pre and postconditions
@@ -335,6 +337,7 @@ let if_then_else (a:Type)
     l
 
 // [@@smt_reifiable_layered_effect]
+[@@allow_informative_binders]
 reifiable reflectable total
 layered_effect {
   TWrite : a:Type -> (pin: parser) -> (pout: (parser)) -> (memory_invariant) -> Effect
@@ -720,6 +723,7 @@ let destr_list
   }) inv
 = tread_of_eread (fun _ -> destr_list' x)
 
+(*
 let destr_list_is_correct
   (#p: parser1)
   (#inv: memory_invariant)
@@ -727,6 +731,7 @@ let destr_list_is_correct
 : Lemma
   (Correct? (ReadRepr?.spec (reify (destr_list l)) ()))
 = assert_norm (Correct? (ReadRepr?.spec (reify (destr_list l)) ()))
+*)
 
 inline_for_extraction
 let read_do_while
