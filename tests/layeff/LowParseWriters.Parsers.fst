@@ -642,7 +642,95 @@ let put_vlbytes_impl
     end
   )
 
-let do_while_impl = admit ()
+noeq
+type do_while_result
+  (p: parser)
+  (t: Type0)
+= | DWCorrect:
+      (x: t) ->
+      (pos: U32.t) ->
+      do_while_result p t
+  | DWError:
+      (x: t) ->
+      (vin: Ghost.erased (Parser?.t p)) ->
+      (s: string) ->
+      do_while_result p t
+  | DWOverflow:
+      (x: t) ->
+      (vin: Ghost.erased (Parser?.t p)) ->
+      do_while_result p t
+
+let do_while_impl
+  inv #p #t invariant measure error body x0
+=
+  mk_repr_impl _ _ _ _ _ _ inv (do_while_spec inv #p #t invariant measure error body x0) (fun b blen pos0 ->
+    HST.push_frame ();
+    let btemp : B.pointer (iresult t) = B.alloca (ICorrect x0 pos0) 1ul in
+    let h0 = HST.get () in
+    let vin0 = Ghost.hide (contents p h0 b 0ul pos0) in
+    C.Loops.do_while
+      (fun h stop ->
+        B.modifies (B.loc_buffer b `B.loc_union` B.loc_all_regions_from true (HS.get_tip h0)) h0 h /\
+        B.live h btemp /\
+        HS.get_tip h0 == HS.get_tip h /\
+        begin match B.deref h btemp with
+        | ICorrect x pos ->
+          U32.v pos0 <= U32.v pos /\
+          valid_pos p h b 0ul pos /\ (
+            let vin = contents p h b 0ul pos in
+            invariant vin x (not stop) /\
+            do_while_spec' inv #p #t invariant measure error body x0 (Ghost.reveal vin0) ==
+              begin if stop
+              then Correct (x, vin)
+              else do_while_spec' inv #p #t invariant measure error body x vin
+            end
+          )
+        | IError s ->
+          stop == true /\
+          do_while_spec' inv #p #t invariant measure error body x0 (Ghost.reveal vin0) == Error s
+        | IOverflow ->
+          stop == true /\
+          begin match do_while_spec' inv #p #t invariant measure error body x0 (Ghost.reveal vin0) with
+          | Error _ -> True
+          | Correct (_, vout) ->
+            size p vout > B.length b
+          end
+        end
+      )
+      (fun _ ->
+        let ICorrect x pos = B.index btemp 0ul in
+        let h = HST.get () in
+        let vin = Ghost.hide (contents p h b 0ul pos) in
+        assert (invariant vin x true);
+        assert (do_while_spec' inv #p #t invariant measure error body x0 vin0 == do_while_spec' inv #p #t invariant measure error body x vin);
+        match extract_repr_impl _ _ _ _ _ _ _ _ (destr_repr_impl _ _ _ _ _ _ _ (body x)) b blen pos with
+        | ICorrect (x', continue) pos' ->
+          B.upd btemp 0ul (ICorrect x' pos');
+          let h' = HST.get () in
+          let vin' = Ghost.hide (contents p h' b 0ul pos') in
+          assert (Correct? (destr_repr_spec _ _ _ _ _ _ _ (body x) vin));
+          assert (invariant vin' x' continue);
+          not continue
+        | IError s ->
+          B.upd btemp 0ul (IError s);
+          true
+        | IOverflow ->
+          assert (match do_while_spec' inv #p #t invariant measure error body x vin with
+          | Error _ -> True
+          | Correct (_, vout) ->
+            begin match destr_repr_spec _ _ _ _ _ _ _ (body x) vin with
+            | Error _ -> False
+            | Correct (_, vout') ->
+              size p vout' > B.length b /\ size p vout >= size p vout'
+            end
+          );
+          B.upd btemp 0ul IOverflow;
+          true
+      );
+    let res = B.index btemp 0ul in
+    HST.pop_frame ();
+    res
+  )
 
 #pop-options
 

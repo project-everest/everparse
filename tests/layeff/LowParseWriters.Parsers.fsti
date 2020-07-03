@@ -1009,12 +1009,13 @@ let put_vlbytes
 let rec do_while_spec'
   (inv: memory_invariant)
   (#p: parser)
-  (#t: Type)
+  (#t: Type0)
   (invariant: (Parser?.t p -> t -> bool -> GTot Type0))
   (measure: (Parser?.t p -> t -> GTot nat))
   (error: (Parser?.t p -> t -> GTot Type0))
   (body: (
     (x: t) ->
+    unit ->
     EWrite
       (t & bool) p p
       (fun vin -> invariant vin x true)
@@ -1047,7 +1048,7 @@ let rec do_while_spec'
   ))
   (decreases (measure vin x))
 =
-  match Repr?.spec (reify (body x)) vin with
+  match destr_repr_spec _ _ _ _ _ _ _ (body x) vin with
   | Error e -> Error e
   | Correct ((x', cond), vout) ->
     if cond
@@ -1057,12 +1058,13 @@ let rec do_while_spec'
 let do_while_spec
   (inv: memory_invariant)
   (#p: parser)
-  (#t: Type)
+  (#t: Type0)
   (invariant: (Parser?.t p -> t -> bool -> GTot Type0))
   (measure: (Parser?.t p -> t -> GTot nat))
   (error: Parser?.t p -> t -> GTot Type0)
   (body: (
     (x: t) ->
+    unit ->
     EWrite
       (t & bool) p p
       (fun vin -> invariant vin x true)
@@ -1096,12 +1098,13 @@ inline_for_extraction
 val do_while_impl
   (inv: memory_invariant)
   (#p: parser)
-  (#t: Type)
+  (#t: Type0)
   (invariant: (Parser?.t p -> t -> bool -> GTot Type0))
   (measure: (Parser?.t p -> t -> GTot nat))
   (error: Parser?.t p -> t -> GTot Type0)
   (body: (
     (x: t) ->
+    unit ->
     EWrite
       (t & bool) p p
       (fun vin -> invariant vin x true)
@@ -1123,7 +1126,7 @@ inline_for_extraction
 let do_while
   (#inv: memory_invariant)
   (#p: parser)
-  (#t: Type)
+  (#t: Type0)
   (invariant: (Parser?.t p -> t -> bool -> GTot Type0))
   (measure: (Parser?.t p -> t -> GTot nat))
   (error: Parser?.t p -> t -> GTot Type0)
@@ -1158,8 +1161,8 @@ let do_while
     inv
 = EWrite?.reflect (
     Repr
-      (do_while_spec inv invariant measure error body x)
-      (do_while_impl inv invariant measure error body x)
+      (do_while_spec inv invariant measure error (fun x _ -> body x) x)
+      (do_while_impl inv invariant measure error (fun x _ -> body x) x)
   )
 
 (* // This will not extract.
