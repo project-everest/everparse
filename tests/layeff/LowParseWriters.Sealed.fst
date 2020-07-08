@@ -296,6 +296,75 @@ let bind (a:Type) (b:Type)
 : Tot (repr b r_in_f r_out_g l)
 = reify_trivial (bind_conv a b r_in_f r_out_f r_out_g l f_bind g)
 
+noeq
+type valid_synth_t'
+  (p1: parser)
+  (p2: parser)
+=
+| ValidSynth:
+  (f: (Parser?.t p1 -> GTot (Parser?.t p2))) ->
+  (v: LowParseWriters.valid_synth_t p1 p2 (fun _ -> True) f) ->
+  valid_synth_t' p1 p2
+
+let valid_synth_prop (p1 p2: parser) : GTot Type0 =
+  exists (x: valid_synth_t' p1 p2) . True
+
+(*
+// unfold
+let valid_synth_t (p1 p2: parser) : Tot Type0 =
+  squash (valid_synth_prop p1 p2)
+*)
+
+let tvalid_synth_of_evalid_synth
+  (#p1: parser)
+  (#p2: parser)
+  (#precond: pre_t p1)
+  (#f: (x: Parser?.t p1 { precond x }) -> GTot (Parser?.t p2))
+  (v: LowParseWriters.valid_synth_t p1 p2 precond f { forall (x: Parser?.t p1) . precond x })
+: Tot (squash (valid_synth_prop p1 p2))
+= let _ = ValidSynth
+    f
+    (valid_synth_implies _ _ _ _ v _ _)
+  in
+  ()
+
+let evalid_synth_of_tvalid_synth_f
+  (#p1: parser)
+  (#p2: parser)
+  (v: squash (valid_synth_prop p1 p2))
+  (x: Parser?.t p1)
+: GTot (Parser?.t p2)
+= let v' : valid_synth_t' p1 p2 = FStar.IndefiniteDescription.indefinite_description_ghost (valid_synth_t' p1 p2) (fun _ -> True) in
+  ValidSynth?.f v' x
+
+let evalid_synth_of_tvalid_synth
+  (#p1: parser)
+  (#p2: parser)
+  (v: squash (valid_synth_prop p1 p2))
+: Tot (LowParseWriters.valid_synth_t p1 p2 (fun _ -> True) (evalid_synth_of_tvalid_synth_f v))
+= valid_synth_implies _ _ _ _ (ValidSynth?.v (FStar.IndefiniteDescription.indefinite_description_ghost (valid_synth_t' p1 p2) (fun _ -> True))) _ _
+
+let valid_synth_refl
+  (p: parser)
+: Lemma
+  (valid_synth_prop p p)
+  [SMTPat (valid_synth_prop p p)]
+= let x = tvalid_synth_of_evalid_synth #p #p #(fun _ -> True) #(fun x -> x) ({
+    valid_synth_valid = (fun h b pos pos' -> ());
+    valid_synth_size = (fun x -> ());
+  })
+  in
+  ()
+
+inline_for_extraction
+let valid_synth_repr
+  (#p1: parser)
+  (#p2: parser)
+  (#inv: memory_invariant)
+  (v: squash (valid_synth_prop p1 p2))
+: Tot (repr unit p1 p2 inv)
+= reify_trivial (fun _ -> valid_synth _ _ _ _ _ (evalid_synth_of_tvalid_synth v))
+
 inline_for_extraction
 let subcomp_conv
   (a:Type)
@@ -312,7 +381,7 @@ let subcomp_conv
   x
 
 inline_for_extraction
-let subcomp
+let subcomp1
   (a:Type)
   (r_in:parser) (r_out: parser)
   (l:memory_invariant)
@@ -325,6 +394,35 @@ let subcomp
   (ensures (fun _ -> True))
 =
   reify_trivial (subcomp_conv a r_in r_out l l' f_subcomp ())
+
+inline_for_extraction
+let subcomp2
+  (a:Type)
+  (r_in:parser) (r_out r_out': parser)
+  (l:memory_invariant)
+  (f_subcomp:repr a r_in r_out l)
+: Pure (repr a r_in r_out' l)
+  (requires (
+    valid_synth_prop r_out r_out'
+  ))
+  (ensures (fun _ -> True))
+=
+  bind a a r_in r_out r_out' l f_subcomp (fun x -> bind unit a r_out r_out' r_out' l (valid_synth_repr ()) (fun _ -> returnc a x r_out' l))
+
+inline_for_extraction
+let subcomp
+  (a:Type)
+  (r_in:parser) (r_out r_out': parser)
+  (l:memory_invariant)
+  (l' : memory_invariant)
+  (f_subcomp:repr a r_in r_out l)
+: Pure (repr a r_in r_out' l')
+  (requires (
+    l `memory_invariant_includes` l' /\
+    valid_synth_prop r_out r_out'
+  ))
+  (ensures (fun _ -> True))
+= subcomp2 a r_in r_out r_out' l' (subcomp1 a r_in r_out l l' f_subcomp)
 
 let if_then_else (a:Type)
   (r_in:parser) (r_out: parser)
@@ -399,7 +497,7 @@ let extract_t
   (#r_in: parser)
   (#r_out: parser)
   (l: memory_invariant)
-  (f_destr_spec: unit -> TWrite a r_in r_out l)
+  ($f_destr_spec: unit -> TWrite a r_in r_out l)
 : Tot Type
 =
   (b: B.buffer u8 { l.lwrite `B.loc_includes` B.loc_buffer b }) ->
@@ -515,7 +613,7 @@ let ewrite_of_twrite
   (#a: Type)
   (#l: memory_invariant)
   (#p1 #p2: parser)
-  (f: unit -> TWrite a p1 p2 l)
+  ($f: unit -> TWrite a p1 p2 l)
 : EWrite a p1 p2 (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) l
 = EWrite?.reflect (reify (f ()))
 
@@ -533,53 +631,13 @@ let frame
 =
   twrite_of_ewrite (fun _ -> frame' _ _ _ _ (fun _ -> ewrite_of_twrite f))
 
-noeq
-[@erasable] // very important, otherwise KReMLin will fail with argument typing
-type valid_synth_t
-  (p1: parser)
-  (p2: parser)
-=
-| ValidSynth:
-  (f: (Parser?.t p1 -> GTot (Parser?.t p2))) ->
-  (v: LowParseWriters.valid_synth_t p1 p2 (fun _ -> True) f) ->
-  valid_synth_t p1 p2
-
-let tvalid_synth_of_evalid_synth
-  (#p1: parser)
-  (#p2: parser)
-  (#precond: pre_t p1)
-  (#f: (x: Parser?.t p1 { precond x }) -> GTot (Parser?.t p2))
-  (v: LowParseWriters.valid_synth_t p1 p2 precond f)
-: Pure (valid_synth_t p1 p2)
-  (requires (forall (x: Parser?.t p1) . precond x))
-  (ensures (fun _ -> True))
-= ValidSynth
-    f
-    (valid_synth_implies _ _ _ _ v _ _)
-
-let evalid_synth_of_tvalid_synth_f
-  (#p1: parser)
-  (#p2: parser)
-  (v: valid_synth_t p1 p2)
-  (x: Parser?.t p1)
-: GTot (Parser?.t p2)
-=
-  ValidSynth?.f v x
-
-let evalid_synth_of_tvalid_synth
-  (#p1: parser)
-  (#p2: parser)
-  (v: valid_synth_t p1 p2)
-: Tot (LowParseWriters.valid_synth_t p1 p2 (fun _ -> True) (evalid_synth_of_tvalid_synth_f v))
-= valid_synth_implies _ _ _ _ (ValidSynth?.v v) _ _
-
 let valid_synth_compose
   (#p1: parser)
   (#p2: parser)
-  (v12: valid_synth_t p1 p2)
+  (v12: squash (valid_synth_prop p1 p2))
   (#p3: parser)
-  (v23: valid_synth_t p2 p3)
-: Tot (valid_synth_t p1 p3)
+  (v23: squash (valid_synth_prop p2 p3))
+: Tot (squash (valid_synth_prop p1 p3))
 = tvalid_synth_of_evalid_synth (valid_synth_compose _ _ _ _ (evalid_synth_of_tvalid_synth v12) _ _ _ (evalid_synth_of_tvalid_synth v23))
 
 inline_for_extraction
@@ -587,7 +645,7 @@ let valid_synth
   (#p1: parser)
   (#p2: parser)
   (#inv: memory_invariant)
-  (v: valid_synth_t p1 p2)
+  (v: squash (valid_synth_prop p1 p2))
 : TWrite unit p1 p2 inv
 = twrite_of_ewrite (fun _ -> valid_synth _ _ _ _ _ (evalid_synth_of_tvalid_synth v))
 
@@ -596,35 +654,33 @@ let cast
   (#p1: parser)
   (#p2: parser)
   (#inv: memory_invariant)
-  (v: valid_synth_t p1 p2)
+  (v: squash (valid_synth_prop p1 p2))
   (x1: ptr p1 inv)
-: Tot (x2: ptr p2 inv {
-    deref_spec x2 == ValidSynth?.f v (deref_spec x1)
-  })
+: Tot (ptr p2 inv)
 = cast _ _ _ _ (evalid_synth_of_tvalid_synth v) _ x1
 
 let valid_synth_star_assoc_1
   (p1 p2 p3: parser)
-: Tot (valid_synth_t ((p1 `star` p2) `star` p3) (p1 `star` (p2 `star` p3)))
+: Tot (squash (valid_synth_prop ((p1 `star` p2) `star` p3) (p1 `star` (p2 `star` p3))))
 = tvalid_synth_of_evalid_synth (valid_synth_star_assoc_1 p1 p2 p3)
 
 let valid_synth_star_assoc_2
   (p1 p2 p3: parser)
-: Tot (valid_synth_t (p1 `star` (p2 `star` p3)) ((p1 `star` p2) `star` p3))
+: Tot (squash (valid_synth_prop (p1 `star` (p2 `star` p3)) ((p1 `star` p2) `star` p3)))
 = tvalid_synth_of_evalid_synth (valid_synth_star_assoc_2 p1 p2 p3)
 
 let valid_synth_star_compat_l
   (p: parser)
   (#p1 #p2: parser)
-  (v: valid_synth_t p1 p2)
-: Tot (valid_synth_t (p `star` p1) (p `star` p2))
+  (v: squash (valid_synth_prop p1 p2))
+: Tot (squash (valid_synth_prop (p `star` p1) (p `star` p2)))
 = tvalid_synth_of_evalid_synth (valid_synth_star_compat_l p _ _ _ _ (evalid_synth_of_tvalid_synth v))
 
 let valid_synth_star_compat_r
   (p: parser)
   (#p1 #p2: parser)
-  (v: valid_synth_t p1 p2)
-: Tot (valid_synth_t (p1 `star` p) (p2 `star` p))
+  (v: squash (valid_synth_prop p1 p2))
+: Tot (squash (valid_synth_prop (p1 `star` p) (p2 `star` p)))
 =
   tvalid_synth_of_evalid_synth (valid_synth_star_compat_r p _ _ _ _ (evalid_synth_of_tvalid_synth v))
 
@@ -666,7 +722,7 @@ let valid_synth_parser_eq'
     get_parser_kind p1 == get_parser_kind p2 /\
     get_parser p1 == LP.coerce (LP.parser (get_parser_kind p1) (Parser?.t p1)) (get_parser p2)
   })
-: Tot (valid_synth_t p1 p2)
+: Tot (squash (valid_synth_prop p1 p2))
 = tvalid_synth_of_evalid_synth (valid_synth_parser_eq p1 p2)
 
 inline_for_extraction
@@ -985,4 +1041,4 @@ let list_map
 : TWrite unit emp (parse_vllist p2 min max) inv
 = parse_vllist_nil p2 max;
   list_map' p1 p2 f' 0ul max l;
-  parse_vllist_recast _ _ _ min _
+  parse_vllist_recast _ _ _ min max
