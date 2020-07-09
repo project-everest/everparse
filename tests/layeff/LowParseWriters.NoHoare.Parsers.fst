@@ -391,3 +391,17 @@ let list_map
 = write_vllist_nil p2 max;
   list_map' p1 p2 f' 0ul max l;
   parse_vllist_recast _ _ _ min max
+
+(* Copy the contents of a list into a variable-sized list *)
+
+inline_for_extraction
+noextract
+let cat_list
+  (#p: parser1)
+  (#inv: memory_invariant)
+  (l: lptr p inv)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+: TWrite unit parse_empty (parse_vllist p min max) inv
+=
+  list_map p p (fun x -> cat x) min max l
