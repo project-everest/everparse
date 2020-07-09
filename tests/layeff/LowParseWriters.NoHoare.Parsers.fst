@@ -14,8 +14,8 @@ let deref
   (#inv: memory_invariant)
   (r: LP.leaf_reader (get_parser p))
   (x: ptr p inv)
-: TRead (Parser?.t p) inv
-= tread_of_eread (fun _ -> P.deref r x)
+: TRead (y: Parser?.t p { y == deref_spec x }) inv
+= tread_of_eread (fun _ -> let y = P.deref r x in (y <: (y: Parser?.t p { y == deref_spec x })))
 
 inline_for_extraction
 let access_t
@@ -29,7 +29,7 @@ let access_t
   (x: ptr p1 inv {
     lens.LP.clens_cond (deref_spec x)
   }) ->
-  TRead (ptr p2 inv) inv
+  TRead (y: ptr p2 inv {deref_spec y == lens.LP.clens_get (deref_spec x) }) inv
 
 inline_for_extraction
 let access
@@ -39,7 +39,7 @@ let access
   (a: LP.accessor g)
 : Tot (access_t p1 p2 a)
 = fun #inv x ->
-  tread_of_eread (fun _ -> P.access p1 p2 a x)
+  tread_of_eread (fun _ -> let y = P.access p1 p2 a x in (y <: (y: ptr p2 inv {deref_spec y == lens.LP.clens_get (deref_spec x) })))
 
 inline_for_extraction
 let start
