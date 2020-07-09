@@ -83,19 +83,6 @@ let valid_ext
   assert (pos2' `U32.sub` pos2 == pos1' `U32.sub` pos1);
   LP.valid_ext_intro (Parser?.p p).parser h1 (LP.make_slice b1 (B.len b1)) pos1 h2 (LP.make_slice b2 (B.len b2)) pos2
 
-let parse_u32' = {
-  kind = _;
-  parser = LPI.parse_u32;
-  serializer = LPI.serialize_u32;
-  jumper = LPI.jump_u32;
-}
-
-let write_u32
-  b len x
-= if len `U32.lt` 4ul
-  then None
-  else Some (LPI.write_u32 x (LP.make_slice b len) 0ul)
-
 let valid_parse_pair_inv_spec
   h p1 p2 b pos1 pos3
 =

@@ -125,3 +125,43 @@ let test_read_if_really_nontrivial
   ))
 =
   reify_read U32.t True (fun _ -> True) (fun _ -> False) inv (test_read_if_really_nontrivial' inv b c)
+
+let write_two_ints
+  (l: memory_invariant)
+  (x y: U32.t)
+: Write unit parse_empty (parse_u32 `parse_pair` parse_u32) (fun _ -> True) (fun _ _ (x', y') -> x' == x /\ y' == y) l
+= start parse_u32 LPI.write_u32 x;
+  append parse_u32 LPI.write_u32 y
+
+let write_two_ints_2
+  (l: memory_invariant)
+  (x y: U32.t)
+  ()
+: Write unit parse_empty (parse_u32 `parse_pair` parse_u32) (fun _ -> True) (fun _ _ _ -> True) l
+= start parse_u32 LPI.write_u32 x;
+  append parse_u32 LPI.write_u32 y
+
+let write_two_ints_ifthenelse
+  (l: memory_invariant)
+  (x y: U32.t)
+: Write unit parse_empty (parse_u32 `parse_pair` parse_u32) (fun _ -> True) (fun _ _ (x', y') -> x' == x /\ y' == (if U32.v x < U32.v y then x else y)) l
+= if x `U32.lt` y
+  then begin
+    start parse_u32 LPI.write_u32 x;
+    append parse_u32 LPI.write_u32 x
+  end else begin
+    start parse_u32 LPI.write_u32 x;
+    append parse_u32 LPI.write_u32 y
+  end
+
+let write_two_ints_ifthenelse_2_aux
+  (l: memory_invariant)
+  (x y: U32.t)
+  ()
+: Write unit parse_empty (parse_u32 `parse_pair` parse_u32) (fun _ -> True) (fun _ _ _ -> True) l
+= start parse_u32 LPI.write_u32 x;
+  if x `U32.lt` y
+  then
+    append parse_u32 LPI.write_u32 x
+  else
+    append parse_u32 LPI.write_u32 y
