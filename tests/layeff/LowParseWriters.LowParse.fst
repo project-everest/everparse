@@ -8,7 +8,7 @@ module Seq = FStar.Seq
 noeq
 inline_for_extraction
 type parser'' t = {
-  kind: (kind: LP.parser_kind { kind.LP.parser_kind_subkind == Some LP.ParserStrong }); // needed because of star; will be a problem with parse_list...
+  kind: (kind: LP.parser_kind { kind.LP.parser_kind_subkind == Some LP.ParserStrong }); // needed because of parse_pair; will be a problem with parse_list...
   parser: LP.parser kind t;
   serializer: LP.serializer parser;
   jumper: LP.jumper parser;
@@ -43,21 +43,21 @@ let contents_size
 = LP.valid_pos_valid_exact (Parser?.p p).parser h (slice_of_buffer b) pos pos';
   LP.valid_exact_serialize (Parser?.p p).serializer h (slice_of_buffer b) pos pos'
 
-let emp' = {
+let parse_empty' = {
   kind = _;
   parser = LP.parse_empty;
   serializer = LP.serialize_empty;
   jumper = LP.jump_empty;
 }
 
-let valid_emp
+let valid_parse_empty
   h b pos pos'
 =
   LP.valid_exact_equiv LP.parse_empty h (slice_of_buffer b) pos pos'
 
-let size_emp = ()
+let size_parse_empty = ()
 
-let star'
+let parse_pair'
   #t1 #t2 p1 p2
 = {
   kind = _;
@@ -66,12 +66,12 @@ let star'
   jumper = LP.jump_nondep_then p1.jumper p2.jumper;
 }
 
-let valid_star
+let valid_parse_pair
   p1 p2 h b pos1 pos2 pos3
 =
   LP.valid_nondep_then h (Parser?.p p1).parser (Parser?.p p2).parser (slice_of_buffer b) pos1
 
-let size_star
+let size_parse_pair
   p1 p2 x1 x2
 =
   LP.length_serialize_nondep_then (Parser?.p p1).serializer (Parser?.p p2).serializer x1 x2
@@ -96,14 +96,14 @@ let write_u32
   then None
   else Some (LPI.write_u32 x (LP.make_slice b len) 0ul)
 
-let valid_star_inv_spec
+let valid_parse_pair_inv_spec
   h p1 p2 b pos1 pos3
 =
   let sl = LP.make_slice b (B.len b) in
   LP.valid_nondep_then h (Parser?.p p1).parser (Parser?.p p2).parser sl pos1;
   LP.get_valid_pos (Parser?.p p1).parser h sl pos1
 
-let valid_star_inv
+let valid_parse_pair_inv
   p1 p2 b len pos1 pos3
 =
   let h = HST.get () in

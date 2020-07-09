@@ -66,11 +66,11 @@ let access_impl
   p1 p2 #lens #g a #inv x
 = access_impl #p1 #p2 #(lp_clens_to_clens lens) a x
 
-let valid_synth_parser_eq
+let valid_rewrite_parser_eq
   p1 p2
 = {
-  valid_synth_valid = (fun h b pos pos' -> ());
-  valid_synth_size = (fun x ->
+  valid_rewrite_valid = (fun h b pos pos' -> ());
+  valid_rewrite_size = (fun x ->
     LP.serializer_unique (get_parser p1) (Parser?.p p1).serializer (Parser?.p p2).serializer x
   );
 }
@@ -104,17 +104,17 @@ let log256_correct
   [SMTPat (U32.v (log256 max))]
 = ()
 
-let valid_synth_parse_vldata
+let valid_rewrite_parse_vldata
   p min max min' max'
 = {
-  valid_synth_valid = (fun h b pos pos' ->
+  valid_rewrite_valid = (fun h b pos pos' ->
     let sl = LP.make_slice b (B.len b) in
     let s = get_serializer p in
     let sz = U32.v (log256 max) in
     LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) s sl pos;
     LP.valid_bounded_vldata_strong_intro h (U32.v min') (U32.v max') s sl pos pos'
   );
-  valid_synth_size = (fun x ->
+  valid_rewrite_size = (fun x ->
     ()
   );
 }
@@ -563,16 +563,16 @@ let parse_vllist_snoc_weak_impl
 
 #pop-options
 
-let valid_synth_parse_vllist
+let valid_rewrite_parse_vllist
   p min max min' max'
 = {
-  valid_synth_valid = (fun h b pos pos' ->
+  valid_rewrite_valid = (fun h b pos pos' ->
     let sl = LP.make_slice b (B.len b) in
     let s = LP.serialize_list _ (get_serializer p) in
     LP.valid_bounded_vldata_strong_elim h (U32.v min) (U32.v max) s sl pos;
     LP.valid_bounded_vldata_strong_intro h (U32.v min') (U32.v max') s sl pos pos'
   );
-  valid_synth_size = (fun x ->
+  valid_rewrite_size = (fun x ->
     ()
   );
 }

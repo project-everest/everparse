@@ -297,73 +297,73 @@ let bind (a:Type) (b:Type)
 = reify_trivial (bind_conv a b r_in_f r_out_f r_out_g l f_bind g)
 
 noeq
-type valid_synth_t'
+type valid_rewrite_t'
   (p1: parser)
   (p2: parser)
 =
 | ValidSynth:
   (f: (Parser?.t p1 -> GTot (Parser?.t p2))) ->
-  (v: LowParseWriters.valid_synth_t p1 p2 (fun _ -> True) f) ->
-  valid_synth_t' p1 p2
+  (v: LowParseWriters.valid_rewrite_t p1 p2 (fun _ -> True) f) ->
+  valid_rewrite_t' p1 p2
 
-let valid_synth_prop (p1 p2: parser) : GTot Type0 =
-  exists (x: valid_synth_t' p1 p2) . True
+let valid_rewrite_prop (p1 p2: parser) : GTot Type0 =
+  exists (x: valid_rewrite_t' p1 p2) . True
 
 (*
 // unfold
-let valid_synth_t (p1 p2: parser) : Tot Type0 =
-  squash (valid_synth_prop p1 p2)
+let valid_rewrite_t (p1 p2: parser) : Tot Type0 =
+  squash (valid_rewrite_prop p1 p2)
 *)
 
-let tvalid_synth_of_evalid_synth
+let tvalid_rewrite_of_evalid_rewrite
   (#p1: parser)
   (#p2: parser)
   (#precond: pre_t p1)
   (#f: (x: Parser?.t p1 { precond x }) -> GTot (Parser?.t p2))
-  (v: LowParseWriters.valid_synth_t p1 p2 precond f { forall (x: Parser?.t p1) . precond x })
-: Tot (squash (valid_synth_prop p1 p2))
+  (v: LowParseWriters.valid_rewrite_t p1 p2 precond f { forall (x: Parser?.t p1) . precond x })
+: Tot (squash (valid_rewrite_prop p1 p2))
 = let _ = ValidSynth
     f
-    (valid_synth_implies _ _ _ _ v _ _)
+    (valid_rewrite_implies _ _ _ _ v _ _)
   in
   ()
 
-let evalid_synth_of_tvalid_synth_f
+let evalid_rewrite_of_tvalid_rewrite_f
   (#p1: parser)
   (#p2: parser)
-  (v: squash (valid_synth_prop p1 p2))
+  (v: squash (valid_rewrite_prop p1 p2))
   (x: Parser?.t p1)
 : GTot (Parser?.t p2)
-= let v' : valid_synth_t' p1 p2 = FStar.IndefiniteDescription.indefinite_description_ghost (valid_synth_t' p1 p2) (fun _ -> True) in
+= let v' : valid_rewrite_t' p1 p2 = FStar.IndefiniteDescription.indefinite_description_ghost (valid_rewrite_t' p1 p2) (fun _ -> True) in
   ValidSynth?.f v' x
 
-let evalid_synth_of_tvalid_synth
+let evalid_rewrite_of_tvalid_rewrite
   (#p1: parser)
   (#p2: parser)
-  (v: squash (valid_synth_prop p1 p2))
-: Tot (LowParseWriters.valid_synth_t p1 p2 (fun _ -> True) (evalid_synth_of_tvalid_synth_f v))
-= valid_synth_implies _ _ _ _ (ValidSynth?.v (FStar.IndefiniteDescription.indefinite_description_ghost (valid_synth_t' p1 p2) (fun _ -> True))) _ _
+  (v: squash (valid_rewrite_prop p1 p2))
+: Tot (LowParseWriters.valid_rewrite_t p1 p2 (fun _ -> True) (evalid_rewrite_of_tvalid_rewrite_f v))
+= valid_rewrite_implies _ _ _ _ (ValidSynth?.v (FStar.IndefiniteDescription.indefinite_description_ghost (valid_rewrite_t' p1 p2) (fun _ -> True))) _ _
 
-let valid_synth_refl
+let valid_rewrite_refl
   (p: parser)
 : Lemma
-  (valid_synth_prop p p)
-  [SMTPat (valid_synth_prop p p)]
-= let x = tvalid_synth_of_evalid_synth #p #p #(fun _ -> True) #(fun x -> x) ({
-    valid_synth_valid = (fun h b pos pos' -> ());
-    valid_synth_size = (fun x -> ());
+  (valid_rewrite_prop p p)
+  [SMTPat (valid_rewrite_prop p p)]
+= let x = tvalid_rewrite_of_evalid_rewrite #p #p #(fun _ -> True) #(fun x -> x) ({
+    valid_rewrite_valid = (fun h b pos pos' -> ());
+    valid_rewrite_size = (fun x -> ());
   })
   in
   ()
 
 inline_for_extraction
-let valid_synth_repr
+let valid_rewrite_repr
   (#p1: parser)
   (#p2: parser)
   (#inv: memory_invariant)
-  (v: squash (valid_synth_prop p1 p2))
+  (v: squash (valid_rewrite_prop p1 p2))
 : Tot (repr unit p1 p2 inv)
-= reify_trivial (fun _ -> valid_synth _ _ _ _ _ (evalid_synth_of_tvalid_synth v))
+= reify_trivial (fun _ -> valid_rewrite _ _ _ _ _ (evalid_rewrite_of_tvalid_rewrite v))
 
 inline_for_extraction
 let subcomp_conv
@@ -403,11 +403,11 @@ let subcomp2
   (f_subcomp:repr a r_in r_out l)
 : Pure (repr a r_in r_out' l)
   (requires (
-    valid_synth_prop r_out r_out'
+    valid_rewrite_prop r_out r_out'
   ))
   (ensures (fun _ -> True))
 =
-  bind a a r_in r_out r_out' l f_subcomp (fun x -> bind unit a r_out r_out' r_out' l (valid_synth_repr ()) (fun _ -> returnc a x r_out' l))
+  bind a a r_in r_out r_out' l f_subcomp (fun x -> bind unit a r_out r_out' r_out' l (valid_rewrite_repr ()) (fun _ -> returnc a x r_out' l))
 
 inline_for_extraction
 let subcomp
@@ -419,7 +419,7 @@ let subcomp
 : Pure (repr a r_in r_out' l')
   (requires (
     l `memory_invariant_includes` l' /\
-    valid_synth_prop r_out r_out'
+    valid_rewrite_prop r_out r_out'
   ))
   (ensures (fun _ -> True))
 = subcomp2 a r_in r_out r_out' l' (subcomp1 a r_in r_out l l' f_subcomp)
@@ -624,72 +624,72 @@ let frame
   (#p: parser)
   (#l: memory_invariant)
   (f: unit ->
-    TWrite a emp p l
+    TWrite a parse_empty p l
   )
-: TWrite a fr (fr `star` p)
+: TWrite a fr (fr `parse_pair` p)
     l
 =
   twrite_of_ewrite (fun _ -> frame' _ _ _ _ (fun _ -> ewrite_of_twrite f))
 
-let valid_synth_compose
+let valid_rewrite_compose
   (#p1: parser)
   (#p2: parser)
-  (v12: squash (valid_synth_prop p1 p2))
+  (v12: squash (valid_rewrite_prop p1 p2))
   (#p3: parser)
-  (v23: squash (valid_synth_prop p2 p3))
-: Tot (squash (valid_synth_prop p1 p3))
-= tvalid_synth_of_evalid_synth (valid_synth_compose _ _ _ _ (evalid_synth_of_tvalid_synth v12) _ _ _ (evalid_synth_of_tvalid_synth v23))
+  (v23: squash (valid_rewrite_prop p2 p3))
+: Tot (squash (valid_rewrite_prop p1 p3))
+= tvalid_rewrite_of_evalid_rewrite (valid_rewrite_compose _ _ _ _ (evalid_rewrite_of_tvalid_rewrite v12) _ _ _ (evalid_rewrite_of_tvalid_rewrite v23))
 
 inline_for_extraction
-let valid_synth
+let valid_rewrite
   (#p1: parser)
   (#p2: parser)
   (#inv: memory_invariant)
-  (v: squash (valid_synth_prop p1 p2))
+  (v: squash (valid_rewrite_prop p1 p2))
 : TWrite unit p1 p2 inv
-= twrite_of_ewrite (fun _ -> valid_synth _ _ _ _ _ (evalid_synth_of_tvalid_synth v))
+= twrite_of_ewrite (fun _ -> valid_rewrite _ _ _ _ _ (evalid_rewrite_of_tvalid_rewrite v))
 
 inline_for_extraction
 let cast
   (#p1: parser)
   (#p2: parser)
   (#inv: memory_invariant)
-  (v: squash (valid_synth_prop p1 p2))
+  (v: squash (valid_rewrite_prop p1 p2))
   (x1: ptr p1 inv)
 : Tot (ptr p2 inv)
-= cast _ _ _ _ (evalid_synth_of_tvalid_synth v) _ x1
+= cast _ _ _ _ (evalid_rewrite_of_tvalid_rewrite v) _ x1
 
-let valid_synth_star_assoc_1
+let valid_rewrite_parse_pair_assoc_1
   (p1 p2 p3: parser)
-: Tot (squash (valid_synth_prop ((p1 `star` p2) `star` p3) (p1 `star` (p2 `star` p3))))
-= tvalid_synth_of_evalid_synth (valid_synth_star_assoc_1 p1 p2 p3)
+: Tot (squash (valid_rewrite_prop ((p1 `parse_pair` p2) `parse_pair` p3) (p1 `parse_pair` (p2 `parse_pair` p3))))
+= tvalid_rewrite_of_evalid_rewrite (valid_rewrite_parse_pair_assoc_1 p1 p2 p3)
 
-let valid_synth_star_assoc_2
+let valid_rewrite_parse_pair_assoc_2
   (p1 p2 p3: parser)
-: Tot (squash (valid_synth_prop (p1 `star` (p2 `star` p3)) ((p1 `star` p2) `star` p3)))
-= tvalid_synth_of_evalid_synth (valid_synth_star_assoc_2 p1 p2 p3)
+: Tot (squash (valid_rewrite_prop (p1 `parse_pair` (p2 `parse_pair` p3)) ((p1 `parse_pair` p2) `parse_pair` p3)))
+= tvalid_rewrite_of_evalid_rewrite (valid_rewrite_parse_pair_assoc_2 p1 p2 p3)
 
-let valid_synth_star_compat_l
+let valid_rewrite_parse_pair_compat_l
   (p: parser)
   (#p1 #p2: parser)
-  (v: squash (valid_synth_prop p1 p2))
-: Tot (squash (valid_synth_prop (p `star` p1) (p `star` p2)))
-= tvalid_synth_of_evalid_synth (valid_synth_star_compat_l p _ _ _ _ (evalid_synth_of_tvalid_synth v))
+  (v: squash (valid_rewrite_prop p1 p2))
+: Tot (squash (valid_rewrite_prop (p `parse_pair` p1) (p `parse_pair` p2)))
+= tvalid_rewrite_of_evalid_rewrite (valid_rewrite_parse_pair_compat_l p _ _ _ _ (evalid_rewrite_of_tvalid_rewrite v))
 
-let valid_synth_star_compat_r
+let valid_rewrite_parse_pair_compat_r
   (p: parser)
   (#p1 #p2: parser)
-  (v: squash (valid_synth_prop p1 p2))
-: Tot (squash (valid_synth_prop (p1 `star` p) (p2 `star` p)))
+  (v: squash (valid_rewrite_prop p1 p2))
+: Tot (squash (valid_rewrite_prop (p1 `parse_pair` p) (p2 `parse_pair` p)))
 =
-  tvalid_synth_of_evalid_synth (valid_synth_star_compat_r p _ _ _ _ (evalid_synth_of_tvalid_synth v))
+  tvalid_rewrite_of_evalid_rewrite (valid_rewrite_parse_pair_compat_r p _ _ _ _ (evalid_rewrite_of_tvalid_rewrite v))
 
 inline_for_extraction
 let cat
   (#inv: memory_invariant)
   (#p: parser)
   (x: ptr p inv)
-: TWrite unit emp p inv
+: TWrite unit parse_empty p inv
 = twrite_of_ewrite (fun _ -> cat x)
 
 inline_for_extraction
@@ -700,7 +700,7 @@ let start
   })
   (#l: memory_invariant)
   (x: Parser?.t p)
-: TWrite unit emp (p) l
+: TWrite unit parse_empty (p) l
 = twrite_of_ewrite (fun _ -> start p w x)
 
 inline_for_extraction
@@ -712,18 +712,18 @@ let append
   })
   (#l: memory_invariant)
   (x: Parser?.t p)
-: TWrite unit fr (fr `star` p) l
+: TWrite unit fr (fr `parse_pair` p) l
 = twrite_of_ewrite (fun _ -> append p w x)
 
-let valid_synth_parser_eq'
+let valid_rewrite_parser_eq'
   (p1: parser)
   (p2: parser {
     Parser?.t p1 == Parser?.t p2 /\
     get_parser_kind p1 == get_parser_kind p2 /\
     get_parser p1 == LP.coerce (LP.parser (get_parser_kind p1) (Parser?.t p1)) (get_parser p2)
   })
-: Tot (squash (valid_synth_prop p1 p2))
-= tvalid_synth_of_evalid_synth (valid_synth_parser_eq p1 p2)
+: Tot (squash (valid_rewrite_prop p1 p2))
+= tvalid_rewrite_of_evalid_rewrite (valid_rewrite_parser_eq p1 p2)
 
 inline_for_extraction
 let parse_vldata_intro_weak_ho'
@@ -731,8 +731,8 @@ let parse_vldata_intro_weak_ho'
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (f: (unit -> TWrite unit emp p inv))
-: TWrite unit emp (parse_vldata p min max)
+  (f: (unit -> TWrite unit parse_empty p inv))
+: TWrite unit parse_empty (parse_vldata p min max)
     inv
 =
   twrite_of_ewrite (fun _ -> parse_vldata_intro_weak_ho' p min max (fun _ -> ewrite_of_twrite f))
@@ -866,31 +866,31 @@ let list_exists
   | _ -> true
 
 inline_for_extraction
-let parse_vllist_nil
+let write_vllist_nil
   (#inv: memory_invariant)
   (p: parser1)
   (max: U32.t { U32.v max > 0 })
-: TWrite unit emp (parse_vllist p 0ul max) inv
+: TWrite unit parse_empty (parse_vllist p 0ul max) inv
 = twrite_of_ewrite (fun _ -> parse_vllist_nil p max)
 
 inline_for_extraction
-let parse_vllist_snoc_weak
+let extend_vllist_snoc
   (#inv: memory_invariant)
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: TWrite unit (parse_vllist p min max `star` p) (parse_vllist p min max)
+: TWrite unit (parse_vllist p min max `parse_pair` p) (parse_vllist p min max)
     inv
 =
   twrite_of_ewrite (fun _ -> parse_vllist_snoc_weak p min max)
 
 inline_for_extraction
-let parse_vllist_snoc_weak_ho'
+let extend_vllist_snoc_ho
   (#inv: memory_invariant)
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (f: (unit -> TWrite unit emp p inv))
+  (f: (unit -> TWrite unit parse_empty p inv))
 : TWrite unit (parse_vllist p min max) (parse_vllist p min max) inv
 =
   twrite_of_ewrite (fun _ -> parse_vllist_snoc_weak_ho' p min max (fun _ -> ewrite_of_twrite f))
@@ -927,7 +927,7 @@ let put_vlbytes
   (len: U32.t { U32.v min <= U32.v len /\ U32.v len <= U32.v max })
   (l: Ghost.erased (Seq.seq LP.byte) { Seq.length l == U32.v len })
   (f: put_vlbytes_impl_t inv min max len l)
-: TWrite unit emp (parse_vlbytes min max) inv
+: TWrite unit parse_empty (parse_vlbytes min max) inv
 = twrite_of_ewrite (fun _ -> put_vlbytes min max len l f)
 
 inline_for_extraction
@@ -971,7 +971,7 @@ let rec list_map'
   (#inv: memory_invariant)
   (f' : (
     (x: ptr p1 inv) ->
-    TWrite unit emp p2 inv
+    TWrite unit parse_empty p2 inv
   ))
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
@@ -997,7 +997,7 @@ let list_map'
   (#inv: memory_invariant)
   (f' : (
     (x: ptr p1 inv) ->
-    TWrite unit emp p2 inv
+    TWrite unit parse_empty p2 inv
   ))
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
@@ -1019,7 +1019,7 @@ let list_map'
         (l1, false)
       | Some (hd, tl) ->
         frame (fun _ -> f' hd);
-        parse_vllist_snoc_weak p2 min max;
+        extend_vllist_snoc p2 min max;
         (tl, true)
     )
     l
@@ -1033,12 +1033,12 @@ let list_map
   (#inv: memory_invariant)
   (f' : (
     (x: ptr p1 inv) ->
-    TWrite unit emp p2 inv
+    TWrite unit parse_empty p2 inv
   ))
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
   (l: lptr p1 inv)
-: TWrite unit emp (parse_vllist p2 min max) inv
-= parse_vllist_nil p2 max;
+: TWrite unit parse_empty (parse_vllist p2 min max) inv
+= write_vllist_nil p2 max;
   list_map' p1 p2 f' 0ul max l;
   parse_vllist_recast _ _ _ min max

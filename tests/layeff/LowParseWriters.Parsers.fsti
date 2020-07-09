@@ -93,7 +93,7 @@ let start
   })
   (#l: memory_invariant)
   (x: Parser?.t p)
-: Write unit emp (p) (fun _ -> True) (fun _ _ y -> y == x) l
+: Write unit parse_empty (p) (fun _ -> True) (fun _ _ y -> y == x) l
 = start (leaf_writer_of_lp_leaf_writer p w) x
 
 inline_for_extraction
@@ -105,7 +105,7 @@ let append
   })
   (#l: memory_invariant)
   (x: Parser?.t p)
-: Write unit fr (fr `star` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) l
+: Write unit fr (fr `parse_pair` p) (fun _ -> True) (fun w _ (w', x') -> w' == w /\ x' == x) l
 = append (leaf_writer_of_lp_leaf_writer p w) x
 
 inline_for_extraction
@@ -151,14 +151,14 @@ let access
 = fun #inv x ->
   ERead?.reflect (ReadRepr _ (access_impl p1 p2 a x))
 
-val valid_synth_parser_eq
+val valid_rewrite_parser_eq
   (p1: parser)
   (p2: parser {
     Parser?.t p1 == Parser?.t p2 /\
     get_parser_kind p1 == get_parser_kind p2 /\
     get_parser p1 == LP.coerce (LP.parser (get_parser_kind p1) (Parser?.t p1)) (get_parser p2)
   })
-: Tot (valid_synth_t p1 p2 (fun _ -> True) (fun x -> x))
+: Tot (valid_rewrite_t p1 p2 (fun _ -> True) (fun x -> x))
 
 let parse_vldata_pred
   (min: nat)
@@ -212,13 +212,13 @@ val size_parse_vldata
   (U32.v (log256 max) + size p x == size (parse_vldata p min max) x)
   [SMTPat (size (parse_vldata p min max) x)]
 
-val valid_synth_parse_vldata
+val valid_rewrite_parse_vldata
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
   (min': U32.t)
   (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 })
-: Tot (valid_synth_t (parse_vldata p min max) (parse_vldata p min' max') (fun x -> U32.v min' <= size p x /\ size p x <= U32.v max' /\ log256 max == log256 max')
+: Tot (valid_rewrite_t (parse_vldata p min max) (parse_vldata p min' max') (fun x -> U32.v min' <= size p x /\ size p x <= U32.v max' /\ log256 max == log256 max')
 (fun x -> x))
 
 inline_for_extraction
@@ -235,7 +235,7 @@ let parse_vldata_intro_spec
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: Tot (repr_spec unit (parse_bounded_integer (log256 max) `star` p) (parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun (_, vin) _ vout -> vin == vout) (fun _ -> False))
+: Tot (repr_spec unit (parse_bounded_integer (log256 max) `parse_pair` p) (parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun (_, vin) _ vout -> vin == vout) (fun _ -> False))
 =
   fun (_, vin) -> Correct ((), vin)
 
@@ -253,7 +253,7 @@ let parse_vldata_intro
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: Write unit (parse_bounded_integer (log256 max) `star` p) (parse_vldata p min max)
+: Write unit (parse_bounded_integer (log256 max) `parse_pair` p) (parse_vldata p min max)
   (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max)
   (fun (_, vin) _ vout -> vin == vout) inv
 = EWrite?.reflect (Repr (parse_vldata_intro_spec p min max) (parse_vldata_intro_impl p min max))
@@ -269,11 +269,11 @@ let parse_vldata_intro_ho
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (pre: pre_t emp)
-  (post: post_t unit emp p pre)
-  (post_err: post_err_t emp pre)
-  ($f: (unit -> EWrite unit emp p pre post post_err inv))
-: EWrite unit emp (parse_vldata p min max)
+  (pre: pre_t parse_empty)
+  (post: post_t unit parse_empty p pre)
+  (post_err: post_err_t parse_empty pre)
+  ($f: (unit -> EWrite unit parse_empty p pre post post_err inv))
+: EWrite unit parse_empty (parse_vldata p min max)
     (fun _ ->
       pre () /\
       begin match destr_repr_spec _ _ _ _ _ _ _ f () with
@@ -307,8 +307,8 @@ let parse_vldata_intro_ho'
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
-: EWrite unit emp (parse_vldata p min max)
+  (f: (unit -> EWrite unit parse_empty p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+: EWrite unit parse_empty (parse_vldata p min max)
     (fun _ ->
       begin match destr_repr_spec _ _ _ _ _ _ _ f () with
       | Correct (_, v) ->
@@ -336,15 +336,15 @@ let parse_vldata_intro_frame
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: Write unit ((frame `star` parse_bounded_integer (log256 (max))) `star` p) (frame `star` parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun ((fr, _), vin) _ (fr', vout) -> fr == fr' /\ (vin <: Parser?.t p) == (vout <: Parser?.t p)) inv
-= valid_synth _ _ _ _ _ (valid_synth_star_assoc_1 _ _ _);
+: Write unit ((frame `parse_pair` parse_bounded_integer (log256 (max))) `parse_pair` p) (frame `parse_pair` parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun ((fr, _), vin) _ (fr', vout) -> fr == fr' /\ (vin <: Parser?.t p) == (vout <: Parser?.t p)) inv
+= valid_rewrite _ _ _ _ _ (valid_rewrite_parse_pair_assoc_1 _ _ _);
   frame2 _ _ _ _ _ _ _ _ (fun _ -> parse_vldata_intro p min max)
 
 let parse_vldata_intro_weak_spec
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: Tot (repr_spec unit (parse_bounded_integer (log256 (max)) `star` p) (parse_vldata p min max) (fun _ -> True) (fun (_, vin) _ vout -> vin == vout) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)))
+: Tot (repr_spec unit (parse_bounded_integer (log256 (max)) `parse_pair` p) (parse_vldata p min max) (fun _ -> True) (fun (_, vin) _ vout -> vin == vout) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)))
 =
   fun (_, vin) ->
     let sz = size p vin in
@@ -366,7 +366,7 @@ let parse_vldata_intro_weak
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: EWrite unit (parse_bounded_integer (log256 (max)) `star` p) (parse_vldata p min max) (fun _ -> True) (fun (_, vin) _ vout -> vin == vout) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)) inv
+: EWrite unit (parse_bounded_integer (log256 (max)) `parse_pair` p) (parse_vldata p min max) (fun _ -> True) (fun (_, vin) _ vout -> vin == vout) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)) inv
 = EWrite?.reflect (Repr _ (parse_vldata_intro_weak_impl p min max))
 
 inline_for_extraction
@@ -375,11 +375,11 @@ let parse_vldata_intro_weak_ho
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (pre: pre_t emp)
-  (post: post_t unit emp p pre)
-  (post_err: post_err_t emp pre)
-  ($f: (unit -> EWrite unit emp p pre post post_err inv))
-: EWrite unit emp (parse_vldata p min max)
+  (pre: pre_t parse_empty)
+  (post: post_t unit parse_empty p pre)
+  (post_err: post_err_t parse_empty pre)
+  ($f: (unit -> EWrite unit parse_empty p pre post post_err inv))
+: EWrite unit parse_empty (parse_vldata p min max)
     (fun _ ->
       pre ()
     )
@@ -413,8 +413,8 @@ let parse_vldata_intro_weak_ho'
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
-: EWrite unit emp (parse_vldata p min max)
+  (f: (unit -> EWrite unit parse_empty p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+: EWrite unit parse_empty (parse_vldata p min max)
     (fun _ -> True)
     (fun _ _ vout ->
       destr_repr_spec _ _ _ _ _ _ _ f () == Correct ((), vout)
@@ -440,9 +440,9 @@ let parse_vldata_intro_weak_frame
   (p: parser)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: EWrite unit ((frame `star` parse_bounded_integer (log256 (max))) `star` p) (frame `star` parse_vldata p min max) (fun _ -> True) (fun ((fr, _), vin) _ (fr', vout) -> fr == fr' /\ (vin <: Parser?.t p) == (vout <: Parser?.t p)) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)) inv
+: EWrite unit ((frame `parse_pair` parse_bounded_integer (log256 (max))) `parse_pair` p) (frame `parse_pair` parse_vldata p min max) (fun _ -> True) (fun ((fr, _), vin) _ (fr', vout) -> fr == fr' /\ (vin <: Parser?.t p) == (vout <: Parser?.t p)) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)) inv
 = 
-  valid_synth _ _ _ _ _ (valid_synth_star_assoc_1 _ _ _);
+  valid_rewrite _ _ _ _ _ (valid_rewrite_parse_pair_assoc_1 _ _ _);
   frame2 _ _ _ _ _ _ _ _ (fun _ -> parse_vldata_intro_weak p min max)
 
 let parse_vldata_recast_spec
@@ -866,7 +866,7 @@ let lptr_of_vllist_ptr
 let parse_vllist_nil_spec
   (p: parser1)
   (max: U32.t { U32.v max > 0 })
-: Tot (repr_spec unit emp (parse_vllist p 0ul max) (fun _ -> True) (fun _ _ x -> (x <: list (Parser?.t p)) == [] /\ list_size p x == 0) (fun _ -> False))
+: Tot (repr_spec unit parse_empty (parse_vllist p 0ul max) (fun _ -> True) (fun _ _ x -> (x <: list (Parser?.t p)) == [] /\ list_size p x == 0) (fun _ -> False))
 = fun _ ->
   Correct ((), ([] <: parse_vllist_t p 0ul max))
 
@@ -882,14 +882,14 @@ let parse_vllist_nil
   (#inv: memory_invariant)
   (p: parser1)
   (max: U32.t { U32.v max > 0 })
-: Write unit emp (parse_vllist p 0ul max) (fun _ -> True) (fun _ _ x -> (x <: list (Parser?.t p)) == [] /\ list_size p x == 0) inv
+: Write unit parse_empty (parse_vllist p 0ul max) (fun _ -> True) (fun _ _ x -> (x <: list (Parser?.t p)) == [] /\ list_size p x == 0) inv
 = EWrite?.reflect (Repr _ (parse_vllist_nil_impl p max))
 
 let parse_vllist_snoc_spec
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: Tot (repr_spec unit (parse_vllist p min max `star` p) (parse_vllist p min max)
+: Tot (repr_spec unit (parse_vllist p min max `parse_pair` p) (parse_vllist p min max)
     (fun (l, x) ->
       let sz = list_size p l + size p x in
       U32.v min <= sz /\ sz <= U32.v max)
@@ -913,7 +913,7 @@ let parse_vllist_snoc
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: Write unit (parse_vllist p min max `star` p) (parse_vllist p min max)
+: Write unit (parse_vllist p min max `parse_pair` p) (parse_vllist p min max)
     (fun (l, x) ->
       let sz = list_size p l + size p x in
       U32.v min <= sz /\ sz <= U32.v max)
@@ -928,10 +928,10 @@ let parse_vllist_snoc_ho
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (pre: pre_t emp)
-  (post: post_t unit emp p pre)
-  (post_err: post_err_t emp pre)
-  ($f: (unit -> EWrite unit emp p pre post post_err inv))
+  (pre: pre_t parse_empty)
+  (post: post_t unit parse_empty p pre)
+  (post_err: post_err_t parse_empty pre)
+  ($f: (unit -> EWrite unit parse_empty p pre post post_err inv))
 : EWrite unit (parse_vllist p min max) (parse_vllist p min max)
     (fun vin ->
       pre () /\
@@ -964,7 +964,7 @@ let parse_vllist_snoc_ho'
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+  (f: (unit -> EWrite unit parse_empty p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
 : EWrite unit (parse_vllist p min max) (parse_vllist p min max)
     (fun vin ->
       begin match destr_repr_spec _ _ _ _ _ _ _ f () with
@@ -992,7 +992,7 @@ let parse_vllist_snoc_weak_spec
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: Tot (repr_spec unit (parse_vllist p min max `star` p) (parse_vllist p min max)
+: Tot (repr_spec unit (parse_vllist p min max `parse_pair` p) (parse_vllist p min max)
     (fun _ -> True)
     (fun (l, x) _ l' -> (l' <: list (Parser?.t p)) == L.snoc ((l <: list (Parser?.t p)), x) /\ list_size p l' == list_size p l + size p x)
     (fun (l, x) ->
@@ -1021,7 +1021,7 @@ let parse_vllist_snoc_weak
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-: EWrite unit (parse_vllist p min max `star` p) (parse_vllist p min max)
+: EWrite unit (parse_vllist p min max `parse_pair` p) (parse_vllist p min max)
     (fun _ -> True)
     (fun (l, x) _ l' -> (l' <: list (Parser?.t p)) == L.snoc ((l <: list (Parser?.t p)), x) /\ list_size p l' == list_size p l + size p x)
     (fun (l, x) ->
@@ -1037,10 +1037,10 @@ let parse_vllist_snoc_weak_ho
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (pre: pre_t emp)
-  (post: post_t unit emp p pre)
-  (post_err: post_err_t emp pre)
-  ($f: (unit -> EWrite unit emp p pre post post_err inv))
+  (pre: pre_t parse_empty)
+  (post: post_t unit parse_empty p pre)
+  (post_err: post_err_t parse_empty pre)
+  ($f: (unit -> EWrite unit parse_empty p pre post post_err inv))
 : EWrite unit (parse_vllist p min max) (parse_vllist p min max)
     (fun vin ->
       pre ()
@@ -1074,7 +1074,7 @@ let parse_vllist_snoc_weak_ho'
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
-  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+  (f: (unit -> EWrite unit parse_empty p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
 : EWrite unit (parse_vllist p min max) (parse_vllist p min max)
     (fun vin -> True)
     (fun vin _ vout ->
@@ -1096,13 +1096,13 @@ let parse_vllist_snoc_weak_ho'
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vllist_snoc_weak _ _ _
 
-val valid_synth_parse_vllist
+val valid_rewrite_parse_vllist
   (p: parser1)
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
   (min': U32.t)
   (max': U32.t { U32.v min' <= U32.v max' /\ U32.v max' > 0 })
-: Tot (valid_synth_t (parse_vllist p min max) (parse_vllist p min' max') (fun x -> U32.v min' <= list_size p x /\ list_size p x <= U32.v max' /\ log256 (max) == log256 (max'))
+: Tot (valid_rewrite_t (parse_vllist p min max) (parse_vllist p min' max') (fun x -> U32.v min' <= list_size p x /\ list_size p x <= U32.v max' /\ log256 (max) == log256 (max'))
 (fun x -> x))
 
 let parse_vllist_recast_spec
@@ -1183,7 +1183,7 @@ let put_vlbytes_spec
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
   (l: Ghost.erased (Seq.seq LP.byte) { U32.v min <= Seq.length l /\ Seq.length l <= U32.v max })
-: Tot (repr_spec unit emp (parse_vlbytes min max) (fun _ -> True) (fun _ _ vout -> vout == FStar.Bytes.hide (Ghost.reveal l)) (fun _ -> False))
+: Tot (repr_spec unit parse_empty (parse_vlbytes min max) (fun _ -> True) (fun _ _ vout -> vout == FStar.Bytes.hide (Ghost.reveal l)) (fun _ -> False))
 =
   fun _ -> Correct ((), FStar.Bytes.hide (Ghost.reveal l))
 
@@ -1229,7 +1229,7 @@ let put_vlbytes
   (len: U32.t { U32.v min <= U32.v len /\ U32.v len <= U32.v max })
   (l: Ghost.erased (Seq.seq LP.byte) { Seq.length l == U32.v len })
   (f: put_vlbytes_impl_t inv min max len l)
-: Write unit emp (parse_vlbytes min max) (fun _ -> True) (fun _ _ vout -> vout == FStar.Bytes.hide (Ghost.reveal l)) inv
+: Write unit parse_empty (parse_vlbytes min max) (fun _ -> True) (fun _ _ vout -> vout == FStar.Bytes.hide (Ghost.reveal l)) inv
 = EWrite?.reflect (Repr _ (put_vlbytes_impl min max len l f))
 
 let rec do_while_spec'
@@ -1439,7 +1439,7 @@ let rec list_map'
   (f: Ghost.erased (Parser?.t p1 -> Tot (Parser?.t p2)))
   (f' : (
     (x: ptr p1 inv) ->
-    Write unit emp p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
+    Write unit parse_empty p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
   ))
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
@@ -1474,7 +1474,7 @@ let list_map'
   (f: Ghost.erased (Parser?.t p1 -> Tot (Parser?.t p2)))
   (f' : (
     (x: ptr p1 inv) ->
-    Write unit emp p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
+    Write unit parse_empty p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
   ))
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
@@ -1528,14 +1528,14 @@ let list_map
   (f: Ghost.erased (Parser?.t p1 -> Tot (Parser?.t p2)))
   (f' : (
     (x: ptr p1 inv) ->
-    Write unit emp p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
+    Write unit parse_empty p2 (fun _ -> True) (fun _ _ out -> out == Ghost.reveal f (deref_spec x)) inv
   ))
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
   (l: lptr p1 inv)
 : EWrite
     unit
-    emp
+    parse_empty
     (parse_vllist p2 min max)
     (fun _ -> True)
     (fun _ _ lout -> (lout <: list (Parser?.t p2)) == L.map (Ghost.reveal f) (deref_list_spec l))

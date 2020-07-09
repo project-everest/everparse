@@ -3,19 +3,19 @@ include LowParseWriters.Parsers
 
 module LP = LowParse.Low
 
-val emp_correct : squash (
-  get_parser_kind emp == LP.parse_ret_kind /\
-  get_parser emp == LP.parse_empty /\
-  get_serializer emp == LP.serialize_empty
+val parse_empty_correct : squash (
+  get_parser_kind parse_empty == LP.parse_ret_kind /\
+  get_parser parse_empty == LP.parse_empty /\
+  get_serializer parse_empty == LP.serialize_empty
 )
 
-val star_correct
+val parse_pair_correct
   (p1 p2: parser)
 : Lemma
-  (get_parser_kind (p1 `star` p2) == get_parser_kind p1 `LP.and_then_kind` get_parser_kind p2 /\
-  get_parser (p1 `star` p2) == get_parser p1 `LP.nondep_then` get_parser p2 /\
-  get_serializer (p1 `star` p2) == get_serializer p1 `LP.serialize_nondep_then` get_serializer p2)
-  [SMTPat (p1 `star` p2)]
+  (get_parser_kind (p1 `parse_pair` p2) == get_parser_kind p1 `LP.and_then_kind` get_parser_kind p2 /\
+  get_parser (p1 `parse_pair` p2) == get_parser p1 `LP.nondep_then` get_parser p2 /\
+  get_serializer (p1 `parse_pair` p2) == get_serializer p1 `LP.serialize_nondep_then` get_serializer p2)
+  [SMTPat (p1 `parse_pair` p2)]
 
 inline_for_extraction
 val parse_synth
@@ -37,7 +37,7 @@ val parse_synth
     get_serializer r == LP.coerce (LP.serializer (get_parser r)) (LP.serialize_synth (get_parser p1) f2 (get_serializer p1) f1 ())
   ))
 
-val valid_synth_parse_synth
+val valid_rewrite_parse_synth
   (p1: parser)
   (#t2: Type)
   (f2: Parser?.t p1 -> GTot t2)
@@ -46,9 +46,9 @@ val valid_synth_parse_synth
     LP.synth_injective f2 /\
     LP.synth_inverse f2 f1
   ))
-: Tot (valid_synth_t p1 (parse_synth p1 f2 f1) (fun _ -> True) f2)
+: Tot (valid_rewrite_t p1 (parse_synth p1 f2 f1) (fun _ -> True) f2)
 
-val valid_synth_parse_synth_recip
+val valid_rewrite_parse_synth_recip
   (p1: parser)
   (#t2: Type)
   (f2: Parser?.t p1 -> GTot t2)
@@ -57,7 +57,7 @@ val valid_synth_parse_synth_recip
     LP.synth_injective f2 /\
     LP.synth_inverse f2 f1
   ))
-: Tot (valid_synth_t (parse_synth p1 f2 f1) p1 (fun _ -> True) f1)
+: Tot (valid_rewrite_t (parse_synth p1 f2 f1) p1 (fun _ -> True) f1)
 
 module U32 = FStar.UInt32
 
@@ -164,13 +164,13 @@ let pparser
     get_serializer q == s
   })
 
-val valid_synth_parse_sum
+val valid_rewrite_parse_sum
   (ps: parse_sum_t)
   (pe: pparser _ _ _ (LP.serialize_enum_key ps.sum_p ps.sum_s (LP.sum_enum ps.sum_t)))
   (p: pparser _ _ _ (LP.serialize_sum ps.sum_t ps.sum_s #ps.sum_pc ps.sum_sc))
   (k: LP.sum_key ps.sum_t)
   (pk: pparser _ _ (dsnd (ps.sum_pc k)) (ps.sum_sc k))
-: Tot (valid_synth_t (pe `star` pk) p (fun (k', _) -> k' == k) (fun (_, pl) -> LP.Sum?.synth_case ps.sum_t k pl))
+: Tot (valid_rewrite_t (pe `parse_pair` pk) p (fun (k', _) -> k' == k) (fun (_, pl) -> LP.Sum?.synth_case ps.sum_t k pl))
 
 inline_for_extraction
 noextract
@@ -200,22 +200,22 @@ val parse_maybe_enum
     get_serializer p' == LP.coerce (LP.serializer (get_parser p')) (LP.serialize_maybe_enum_key _ (get_serializer p) e)
   })
 
-val valid_synth_parse_dsum_known
+val valid_rewrite_parse_dsum_known
   (ps: parse_dsum_t)
   (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
   (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
   (k: LP.dsum_known_key ps.dsum_t)
   (pk: pparser _ _ (dsnd (ps.dsum_pc k)) (ps.dsum_sc k))
-: Tot (valid_synth_t (pe `star` pk) p (fun (k', _) -> k' == LP.Known k) (fun (_, pl) -> LP.DSum?.synth_case ps.dsum_t (LP.Known k) pl))
+: Tot (valid_rewrite_t (pe `parse_pair` pk) p (fun (k', _) -> k' == LP.Known k) (fun (_, pl) -> LP.DSum?.synth_case ps.dsum_t (LP.Known k) pl))
 
-val valid_synth_parse_dsum_unknown
+val valid_rewrite_parse_dsum_unknown
   (ps: parse_dsum_t)
   (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
   (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
   (pu: pparser _ _ ps.dsum_pu ps.dsum_su)
-: Tot (valid_synth_t (pe `star` pu) p (fun (k', _) -> LP.Unknown? #_ #_ #(LP.dsum_enum ps.dsum_t) k') (fun (k', pl) -> LP.DSum?.synth_case ps.dsum_t k' pl))
+: Tot (valid_rewrite_t (pe `parse_pair` pu) p (fun (k', _) -> LP.Unknown? #_ #_ #(LP.dsum_enum ps.dsum_t) k') (fun (k', pl) -> LP.DSum?.synth_case ps.dsum_t k' pl))
 
-val valid_synth_parse_vlarray_intro
+val valid_rewrite_parse_vlarray_intro
   (pa: parser)
   (p: parser1)
   (array_byte_size_min: U32.t)
@@ -228,14 +228,14 @@ val valid_synth_parse_vlarray_intro
     Parser?.t pa == LP.vlarray (Parser?.t p) elem_count_min elem_count_max /\
     get_parser pa == LP.parse_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max ()
   ))
-: Tot (valid_synth_t
+: Tot (valid_rewrite_t
     (parse_vllist p array_byte_size_min array_byte_size_max)
     pa
     (fun _ -> True)
     (fun x -> LP.vldata_to_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max () x)
   )
 
-val valid_synth_parse_vlarray_elim
+val valid_rewrite_parse_vlarray_elim
   (pa: parser)
   (p: parser1)
   (array_byte_size_min: U32.t)
@@ -248,14 +248,14 @@ val valid_synth_parse_vlarray_elim
     Parser?.t pa == LP.vlarray (Parser?.t p) elem_count_min elem_count_max /\
     get_parser pa == LP.parse_vlarray (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max ()
   ))
-: Tot (valid_synth_t
+: Tot (valid_rewrite_t
     pa
     (parse_vllist p array_byte_size_min array_byte_size_max)
     (fun _ -> True)
     (fun x -> LP.vlarray_to_vldata (U32.v array_byte_size_min) (U32.v array_byte_size_max) (get_serializer p) elem_count_min elem_count_max () x)
   )
 
-val valid_synth_parse_bounded_vldata_intro
+val valid_rewrite_parse_bounded_vldata_intro
   (pa: parser)
   (p: parser)
   (min: U32.t)
@@ -267,7 +267,7 @@ val valid_synth_parse_bounded_vldata_intro
     get_parser_kind pa == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) (get_parser_kind p) /\
     get_parser pa == LP.parse_bounded_vldata (U32.v min) (U32.v max) (get_parser p)
   })
-: Tot (valid_synth_t
+: Tot (valid_rewrite_t
     (parse_vldata p min max)
     pa
     (fun _ -> True)
@@ -290,8 +290,8 @@ let parse_bounded_vldata_intro_ho
     get_parser pa == LP.parse_bounded_vldata (U32.v min) (U32.v max) (get_parser p)
   })
   #pre #post #post_err
-  ($f: (unit -> EWrite unit emp p pre post post_err inv))
-: EWrite unit emp pa pre 
+  ($f: (unit -> EWrite unit parse_empty p pre post post_err inv))
+: EWrite unit parse_empty pa pre 
     (fun _ _ vout ->
       pre () /\
       begin match destr_repr_spec _ _ _ _ _ _ _ f () with
@@ -310,7 +310,7 @@ let parse_bounded_vldata_intro_ho
     let x = destr_repr_spec _ _ _ _ _ _ _ f () in True
   );
   parse_vldata_intro_ho p min max _ _ _ f;
-  valid_synth _ _ _ _ _ (valid_synth_parse_bounded_vldata_intro _ _ _ _)
+  valid_rewrite _ _ _ _ _ (valid_rewrite_parse_bounded_vldata_intro _ _ _ _)
 
 inline_for_extraction
 noextract
@@ -327,8 +327,8 @@ let parse_bounded_vldata_intro_ho'
     get_parser_kind pa == LP.parse_bounded_vldata_strong_kind (U32.v min) (U32.v max) (LP.log256' (U32.v max)) (get_parser_kind p) /\
     get_parser pa == LP.parse_bounded_vldata (U32.v min) (U32.v max) (get_parser p)
   })
-  (f: (unit -> EWrite unit emp p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
-: EWrite unit emp pa
+  (f: (unit -> EWrite unit parse_empty p (fun _ -> True) (fun _ _ _ -> True) (fun _ -> True) inv))
+: EWrite unit parse_empty pa
     (fun _ -> True)
     (fun _ _ vout ->
       begin match destr_repr_spec _ _ _ _ _ _ _ f () with
@@ -346,4 +346,4 @@ let parse_bounded_vldata_intro_ho'
     let x = destr_repr_spec _ _ _ _ _ _ _ f () in True
   );
   parse_vldata_intro_ho' p min max f;
-  valid_synth _ _ _ _ _ (valid_synth_parse_bounded_vldata_intro _ _ _ _)
+  valid_rewrite _ _ _ _ _ (valid_rewrite_parse_bounded_vldata_intro _ _ _ _)
