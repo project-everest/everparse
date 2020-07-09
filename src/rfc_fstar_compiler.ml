@@ -2904,7 +2904,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   wl i "module HS = FStar.HyperStack\n";
   wl i "module HST = FStar.HyperStack.ST\n";
   wl i "module LWP = LowParseWriters.Parsers\n";
-  wl i "module LWPS = LowParseWriters.Sealed\n";
+  wl i "module LWPS = LowParseWriters.NoHoare.Parsers\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -2924,7 +2924,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   wl o "module HS = FStar.HyperStack\n";
   wl o "module HST = FStar.HyperStack.ST\n";
   wl o "module LWP = LowParseWriters.Compat\n";
-  wl o "module LWPS = LowParseWriters.Sealed.Compat\n";
+  wl o "module LWPS = LowParseWriters.NoHoare.Compat\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 

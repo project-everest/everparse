@@ -1,6 +1,6 @@
-module LowParseWriters.Sealed.Compat
+module LowParseWriters.NoHoare.Compat
 include LowParseWriters.Compat
-include LowParseWriters.Sealed
+include LowParseWriters.NoHoare.Parsers
 
 module LP = LowParse.Low
 
