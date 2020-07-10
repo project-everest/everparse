@@ -8,6 +8,8 @@ module HS = FStar.HyperStack
 
 module U32 = FStar.UInt32
 
+(* Unit tests *)
+
 let test_read
   (inv: memory_invariant)
   ()
@@ -118,7 +120,7 @@ let test_read_if_really_nontrivial
 
 inline_for_extraction
 noextract
-let write_two_ints
+let write_two_ints_1
   (l: memory_invariant)
   (x y: U32.t)
   ()
@@ -126,11 +128,11 @@ let write_two_ints
 = start parse_u32 LPI.write_u32 x;
   append parse_u32 LPI.write_u32 y
 
-let extract_write_two_ints 
+let extract_write_two_ints_1
   (l: memory_invariant)
   (x y: U32.t)
 =
-  extract _ (write_two_ints l x y)
+  extract _ (write_two_ints_1 l x y)
 
 inline_for_extraction
 noextract
@@ -167,3 +169,66 @@ let extract_write_two_ints_ifthenelse_2_aux
   (x y: U32.t)
 =
   extract _ (write_two_ints_ifthenelse_2_aux l x y)
+
+(* Tests from the paper *)
+
+open LowParseWriters.NoHoare.Compat
+
+noeq
+type example = { left: U32.t; right: U32.t }
+
+let synth_example (left, right) = { left = left; right = right }
+let synth_example_recip (e: example) = (e.left, e.right)
+
+inline_for_extraction
+noextract
+let parse_example : parser =
+  parse_synth
+    (parse_u32 `parse_pair` parse_u32)
+    synth_example
+    synth_example_recip
+
+let valid_rewrite_example : squash (valid_rewrite_prop
+  (parse_u32 `parse_pair` parse_u32)
+  parse_example
+) =
+  tvalid_rewrite_of_evalid_rewrite
+    (valid_rewrite_parse_synth (parse_u32 `parse_pair` parse_u32) synth_example synth_example_recip ())
+
+inline_for_extraction
+noextract
+let write_u32
+  #inv
+  (x: U32.t)
+: TWrite unit parse_empty parse_u32 inv
+=
+  start parse_u32 LPI.write_u32 x
+
+inline_for_extraction
+let write_example_1
+  #inv
+  (left right: U32.t)
+: TWrite unit parse_empty parse_example inv
+=
+  write_u32 left;
+  frame (fun _ -> write_u32 right);
+  valid_rewrite valid_rewrite_example
+
+inline_for_extraction
+let write_example_2
+  #inv
+  (left right: U32.t)
+: TWrite unit parse_empty parse_example inv
+=
+  start parse_u32 LPI.write_u32 left;
+  append parse_u32 LPI.write_u32 right
+
+(* FAIL
+inline_for_extraction
+let write_example_3
+  #inv
+  (left right: U32.t)
+: TWrite unit parse_empty parse_example inv
+=
+  write_u32 left;
+  frame (fun _ -> write_u32 right)
