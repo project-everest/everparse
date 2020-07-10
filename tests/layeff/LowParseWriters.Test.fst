@@ -6,6 +6,8 @@ module HST = FStar.HyperStack.ST
 module LPI = LowParse.Low.Int
 module HS = FStar.HyperStack
 
+module U32 = FStar.UInt32
+
 let test_read
   (inv: memory_invariant)
   ()
@@ -36,17 +38,6 @@ let test_read_if_1
 
 inline_for_extraction
 noextract
-let parse_u32
-: parser
-= make_parser
-    LPI.parse_u32
-    LPI.serialize_u32
-    LPI.jump_u32
-
-module U32 = FStar.UInt32
-
-inline_for_extraction
-noextract
 let test_read_from_ptr'
   (inv: memory_invariant)
   (b: ptr parse_u32 inv)
@@ -68,7 +59,6 @@ let test_read_from_ptr
   ))
 =
   reify_read U32.t True (fun _ -> True) (fun _ -> False) inv (test_read_from_ptr' inv b)
-
 
 inline_for_extraction
 noextract
@@ -126,13 +116,24 @@ let test_read_if_really_nontrivial
 =
   reify_read U32.t True (fun _ -> True) (fun _ -> False) inv (test_read_if_really_nontrivial' inv b c)
 
+inline_for_extraction
+noextract
 let write_two_ints
   (l: memory_invariant)
   (x y: U32.t)
+  ()
 : Write unit parse_empty (parse_u32 `parse_pair` parse_u32) (fun _ -> True) (fun _ _ (x', y') -> x' == x /\ y' == y) l
 = start parse_u32 LPI.write_u32 x;
   append parse_u32 LPI.write_u32 y
 
+let extract_write_two_ints 
+  (l: memory_invariant)
+  (x y: U32.t)
+=
+  extract _ (write_two_ints l x y)
+
+inline_for_extraction
+noextract
 let write_two_ints_2
   (l: memory_invariant)
   (x y: U32.t)
@@ -141,19 +142,14 @@ let write_two_ints_2
 = start parse_u32 LPI.write_u32 x;
   append parse_u32 LPI.write_u32 y
 
-let write_two_ints_ifthenelse
+let extract_write_two_ints_2
   (l: memory_invariant)
   (x y: U32.t)
-: Write unit parse_empty (parse_u32 `parse_pair` parse_u32) (fun _ -> True) (fun _ _ (x', y') -> x' == x /\ y' == (if U32.v x < U32.v y then x else y)) l
-= if x `U32.lt` y
-  then begin
-    start parse_u32 LPI.write_u32 x;
-    append parse_u32 LPI.write_u32 x
-  end else begin
-    start parse_u32 LPI.write_u32 x;
-    append parse_u32 LPI.write_u32 y
-  end
+=
+  extract _ (write_two_ints_2 l x y)
 
+inline_for_extraction
+noextract
 let write_two_ints_ifthenelse_2_aux
   (l: memory_invariant)
   (x y: U32.t)
@@ -165,3 +161,9 @@ let write_two_ints_ifthenelse_2_aux
     append parse_u32 LPI.write_u32 x
   else
     append parse_u32 LPI.write_u32 y
+
+let extract_write_two_ints_ifthenelse_2_aux
+  (l: memory_invariant)
+  (x y: U32.t)
+=
+  extract _ (write_two_ints_ifthenelse_2_aux l x y)

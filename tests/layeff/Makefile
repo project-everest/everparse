@@ -1,4 +1,4 @@
-all: verify-all
+all: verify-all extract
 
 ifndef FSTAR_HOME
   FSTAR_EXE=$(shell which fstar.exe)
@@ -25,7 +25,7 @@ LOWPARSE_HOME=$(QD_HOME)/src/lowparse
 
 INCLUDE_PATHS=$(LOWPARSE_HOME) $(FSTAR_HOME)/examples/layeredeffects
 
-FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN) --already_cached *,-LowParseWriters --cmi
+FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN) --already_cached *,-LowParseWriters,-BUGSLowParseWriters --cmi
 
 ROOT_FILES=$(wildcard *.fst) $(wildcard *.fsti)
 
@@ -53,14 +53,19 @@ $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR) $<
 	touch $@
 
-$(ALL_KRML_FILES): %.krml:
+ALMOST_ALL_KRML_FILES := $(filter-out BUGSLowParseWriters%,$(ALL_KRML_FILES))
+
+%.krml:
 	$(FSTAR) --codegen Kremlin $(patsubst %.checked,%,$(notdir $<)) --extract_module $(basename $(patsubst %.checked,%,$(notdir $<))) --warn_error '@241'
 
-extract: $(ALL_KRML_FILES) # from .depend
+extract: $(ALMOST_ALL_KRML_FILES) # from .depend
+	$(KREMLIN) -dast -skip-linking $^
+
+extract-all: $(ALL_KRML_FILES) # from .depend
 	$(KREMLIN) -dast -skip-linking $^
 
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test extract
+.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test extract extract-all
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
