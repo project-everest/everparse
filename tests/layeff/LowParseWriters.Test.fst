@@ -223,7 +223,6 @@ let write_example_2
   start parse_u32 LPI.write_u32 left;
   append parse_u32 LPI.write_u32 right
 
-(* FAIL
 inline_for_extraction
 let write_example_3
   #inv
@@ -231,4 +230,26 @@ let write_example_3
 : TWrite unit parse_empty parse_example inv
 =
   write_u32 left;
+  frame #_ #_ #parse_u32 (fun _ -> write_u32 right)
+
+[@@expect_failure]
+inline_for_extraction
+let write_example_4
+  #inv
+  (left right: U32.t)
+: TWrite unit parse_empty parse_example inv
+=
+  write_u32 left;
   frame (fun _ -> write_u32 right)
+
+inline_for_extraction
+let write_two_ints
+  #inv
+  (x y: U32.t)
+  (max: U32.t { U32.v max > 0 })
+: TWrite unit parse_empty (parse_vllist parse_u32 0ul max) inv
+= write_vllist_nil parse_u32 max;
+  frame (fun _ -> write_u32 x);
+  extend_vllist_snoc _ _ _;
+  frame (fun _ -> write_u32 y);
+  extend_vllist_snoc _ _ _
