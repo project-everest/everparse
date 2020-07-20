@@ -7,7 +7,8 @@ KREMLIN_HOME?=$(EVERPARSE_HOME)/../kremlin
 OTHERFLAGS?=
 INCLUDES=out $(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib
 ROOT=out/TestActions1.fst
-FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(addprefix --include , $(INCLUDES)) --odir out $(OTHERFLAGS) $(ALREADY_CACHED) --z3rlimit_factor 8 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100' --cmi
+FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
+FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) --odir out $(OTHERFLAGS) $(ALREADY_CACHED) --z3rlimit_factor 8 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100' --cmi
 KREMLIN = $(KREMLIN_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -tmpdir out \
@@ -71,3 +72,6 @@ out/%.krml:
 .PHONY: all codegen kremlin test batch-test
 
 out/%.c: out/%.fst
+
+%.fst-in %.fsti-in:
+	@echo $(FSTAR_OPTIONS)

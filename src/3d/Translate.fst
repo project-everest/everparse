@@ -186,20 +186,28 @@ let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:T.lam T.parser) =
       t
       (Parse_dep_pair_with_action p1 a p2)
 
-let translate_op : A.op -> ML T.op = function
+
+let translate_op : A.op -> ML T.op = 
+  let force_topt (o:option A.integer_type) 
+    : ML integer_type
+    = match o with
+      | None -> failwith (Printf.sprintf "Unelaborated integer operator")
+      | Some t -> t
+  in
+  function
   | Eq -> T.Eq
   | Neq -> T.Neq
   | And -> T.And
   | Or -> T.Or
   | Not -> T.Not
-  | Plus -> T.Plus
-  | Minus -> T.Minus
-  | Mul -> T.Mul
-  | Division -> T.Division
-  | LT -> T.LT
-  | GT -> T.GT
-  | LE -> T.LE
-  | GE -> T.GE
+  | Plus topt -> T.Plus (force_topt topt)
+  | Minus topt -> T.Minus (force_topt topt)
+  | Mul topt -> T.Mul (force_topt topt)
+  | Division topt -> T.Division (force_topt topt)
+  | LT topt -> T.LT (force_topt topt)
+  | GT topt -> T.GT (force_topt topt)
+  | LE topt -> T.LE (force_topt topt)
+  | GE topt -> T.GE (force_topt topt)
   | BitFieldOf i -> T.BitFieldOf i
   | IfThenElse -> T.IfThenElse
   | Cast (Some from) to -> T.Cast from to
@@ -1026,8 +1034,7 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
   match d.v with
   | Define i None s ->
-    let t = translate_typ A.tuint32 in
-    [with_comments d.comments (T.Definition (i, [], t, T.Constant s))]
+    failwith (Printf.sprintf "Untyped definition remains after elaboration: %s" i.v)
 
   | Define i (Some t) s ->
     let t = translate_typ t in

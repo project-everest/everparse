@@ -26,14 +26,14 @@ type op =
   | And
   | Or
   | Not
-  | Plus
-  | Minus
-  | Mul
-  | Division
-  | LT
-  | GT
-  | LE
-  | GE
+  | Plus of A.integer_type
+  | Minus of A.integer_type
+  | Mul of A.integer_type
+  | Division of A.integer_type
+  | LT of A.integer_type
+  | GT of A.integer_type
+  | LE of A.integer_type
+  | GE of A.integer_type
   | IfThenElse
   | BitFieldOf of int //BitFieldOf(i, from, to)
   | Cast : from:A.integer_type -> to:A.integer_type -> op

@@ -137,9 +137,8 @@ let integer_type_lub (t1 t2: integer_type) : Tot integer_type =
   | _, UInt32
   | UInt32, _ -> UInt32
   | _, UInt16
-  | UInt16, _ -> UInt32
-  | _, UInt8
-  | UInt8, _ -> UInt8
+  | UInt16, _ -> UInt16
+  | UInt8, UInt8 -> UInt8
 
 let as_integer_typ (i:ident) : ML integer_type =
   match i.v with
@@ -152,8 +151,8 @@ let as_integer_typ (i:ident) : ML integer_type =
 /// Integer, hex and boolean constants
 type constant =
   | Unit
-  | Int: integer_type -> int -> constant
-  | XInt of string   //hexadecimal constants
+  | Int : integer_type -> int -> constant
+  | XInt: integer_type -> string -> constant   //hexadecimal constants
   | Bool of bool
 
 /// Operators supported in refinement expressions
@@ -163,14 +162,14 @@ type op =
   | And
   | Or
   | Not
-  | Plus
-  | Minus
-  | Mul
-  | Division
-  | LT
-  | GT
-  | LE
-  | GE
+  | Plus of option integer_type
+  | Minus of option integer_type
+  | Mul of option integer_type
+  | Division of option integer_type
+  | LT of option integer_type
+  | GT of option integer_type
+  | LE of option integer_type
+  | GE of option integer_type
   | IfThenElse
   | BitFieldOf of int //BitFieldOf_n(i, from, to); the integer is the size of i in bits
   | SizeOf
@@ -407,13 +406,21 @@ let subst_decl (s:subst) (d:decl) : ML decl =
 
 (*** Printing the source AST; for debugging only **)
 let print_constant (c:constant) =
+  let print_tag = function
+    | UInt8 -> "uy"
+    | UInt16 -> "us"
+    | UInt32 -> "ul"
+    | UInt64 -> "uL"
+  in
   match c with
   | Unit -> "()"
-  | Int UInt8 i  -> Printf.sprintf "%dus" i
-  | Int UInt16 i -> Printf.sprintf "%du" i
-  | Int UInt32 i -> Printf.sprintf "%dul" i
-  | Int UInt64 i -> Printf.sprintf "%duL" i
-  | XInt x -> Printf.sprintf "%s" x
+  | Int tag i  -> Printf.sprintf "%d%s" i (print_tag tag)
+  | XInt tag x ->
+    let tag = print_tag tag in
+    if String.length x >= 2
+    && String.sub x (String.length x - 2) 2 = tag
+    then x
+    else Printf.sprintf "%s%s" x tag
   | Bool b -> Printf.sprintf "%b" b
 
 let print_ident (i:ident) = i.v
@@ -430,14 +437,14 @@ let print_op = function
   | And -> "&&"
   | Or -> "||"
   | Not -> "not"
-  | Plus -> "+"
-  | Minus -> "-"
-  | Mul -> "*"
-  | Division -> "/"
-  | LT -> "<"
-  | GT -> ">"
-  | LE -> "<="
-  | GE -> ">="
+  | Plus _ -> "+"
+  | Minus _ -> "-"
+  | Mul _ -> "*"
+  | Division _ -> "/"
+  | LT _ -> "<"
+  | GT _ -> ">"
+  | LE _ -> "<="
+  | GE _ -> ">="
   | IfThenElse -> "ifthenelse"
   | BitFieldOf i -> Printf.sprintf "bitfield_of(%d)" i
   | SizeOf -> "sizeof"
@@ -458,21 +465,19 @@ let rec print_expr (e:expr) : Tot string =
     Printf.sprintf "(%s && %s)" (print_expr e1) (print_expr e2)
   | App Or [e1; e2] ->
     Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
-  | App Or [e1; e2] ->
-    Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
   | App Not [e1] ->
     Printf.sprintf "(not %s)" (print_expr e1)
-  | App Plus [e1; e2] ->
+  | App (Plus _) [e1; e2] ->
     Printf.sprintf "(%s + %s)" (print_expr e1) (print_expr e2)
-  | App Minus [e1; e2] ->
+  | App (Minus _) [e1; e2] ->
     Printf.sprintf "(%s - %s)" (print_expr e1) (print_expr e2)
-  | App LT [e1; e2] ->
+  | App (LT _) [e1; e2] ->
     Printf.sprintf "(%s < %s)" (print_expr e1) (print_expr e2)
-  | App GT [e1; e2] ->
+  | App (GT _) [e1; e2] ->
     Printf.sprintf "(%s > %s)" (print_expr e1) (print_expr e2)
-  | App LE [e1; e2] ->
+  | App (LE _) [e1; e2] ->
     Printf.sprintf "(%s <= %s)" (print_expr e1) (print_expr e2)
-  | App GE [e1; e2] ->
+  | App (GE _) [e1; e2] ->
     Printf.sprintf "(%s >= %s)" (print_expr e1) (print_expr e2)
   | App SizeOf [e1] ->
     Printf.sprintf "(sizeof %s)" (print_expr e1)

@@ -1,0 +1,10 @@
+#define MAX_UINT16 0xffff
+
+entrypoint
+typedef struct _Test (UINT8 param)
+where param < 100uy
+{
+  UINT8 field1  { field1 < param + 1uy };
+  UINT16 field2 { field2 < MAX_UINT16 - (UINT16)field1 };
+  UINT32 field3 { field3 < 0xbeefbadd - (UINT32)field2 }
+} Test;

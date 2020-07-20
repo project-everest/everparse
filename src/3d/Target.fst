@@ -74,20 +74,29 @@ let print_integer_type =
    | UInt32 -> "uint32"
    | UInt64 -> "uint64"
 
-let print_op = function
+let namespace_of_integer_type =
+  let open A in
+  function
+   | UInt8 -> "UInt8"
+   | UInt16 -> "UInt16"
+   | UInt32 -> "UInt32"
+   | UInt64 -> "UInt64"
+
+let print_op =
+  function
   | Eq -> "="
   | Neq -> "<>"
   | And -> "&&"
   | Or -> "||"
   | Not -> "not"
-  | Plus -> "`FStar.UInt32.add`"
-  | Minus -> "`FStar.UInt32.sub`"
-  | Mul -> "`FStar.UInt32.mul`"
-  | Division -> "`FStar.UInt32.div`"
-  | LT -> "`FStar.UInt32.lt`"
-  | GT -> "`FStar.UInt32.gt`"
-  | LE -> "`FStar.UInt32.lte`"
-  | GE -> "`FStar.UInt32.gte`"
+  | Plus t -> Printf.sprintf "`FStar.%s.add`" (namespace_of_integer_type t)
+  | Minus t -> Printf.sprintf "`FStar.%s.sub`" (namespace_of_integer_type t)
+  | Mul t -> Printf.sprintf "`FStar.%s.mul`" (namespace_of_integer_type t)
+  | Division t -> Printf.sprintf "`FStar.%s.div`" (namespace_of_integer_type t)
+  | LT t -> Printf.sprintf "`FStar.%s.lt`" (namespace_of_integer_type t)
+  | GT t -> Printf.sprintf "`FStar.%s.gt`" (namespace_of_integer_type t)
+  | LE t -> Printf.sprintf "`FStar.%s.lte`" (namespace_of_integer_type t)
+  | GE t -> Printf.sprintf "`FStar.%s.gte`" (namespace_of_integer_type t)
   | IfThenElse -> "ite"
   | BitFieldOf i -> Printf.sprintf "get_bitfield%d" i
   | Cast from to ->
@@ -106,14 +115,14 @@ let rec print_expr (e:expr) : Tot string =
   | App Neq [e1; e2]
   | App And [e1; e2]
   | App Or [e1; e2]
-  | App Plus [e1; e2]
-  | App Minus [e1; e2]
-  | App Mul [e1; e2]
-  | App Division [e1; e2]
-  | App LT [e1; e2]
-  | App GT [e1; e2]
-  | App LE [e1; e2]
-  | App GE [e1; e2] ->
+  | App (Plus _) [e1; e2]
+  | App (Minus _) [e1; e2]
+  | App (Mul _) [e1; e2]
+  | App (Division _) [e1; e2]
+  | App (LT _) [e1; e2]
+  | App (GT _) [e1; e2]
+  | App (LE _) [e1; e2]
+  | App (GE _) [e1; e2] ->
     Printf.sprintf "(%s %s %s)" (print_expr e1) (print_op (App?.hd e)) (print_expr e2)
   | App Not [e1] ->
     Printf.sprintf "(%s %s)" (print_op (App?.hd e)) (print_expr e1)
@@ -487,7 +496,6 @@ let print_decl (d:decl) : Tot string =
       then "inline_for_extraction noextract\n"
       else "[@ (CInline)]\n"
     | cs ->
-      let c = String.concat "\\n\\\n" cs in
       Printf.sprintf "[@ %s %s]\n%s"
         (print_comments cs)
         (if not entrypoint && not attrs.should_inline then "(CInline)" else "")

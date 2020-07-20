@@ -26,8 +26,8 @@
          | Some k -> k
 %}
 
-%token<int>       INT
-%token<string>  XINT
+%token<int>     INT UINT8 UINT16 UINT32 UINT64
+%token<string>  XINT8 XINT16 XINT32 XINT64
 %token<string>  BLOCK_COMMENT
 %token<bool>    BOOL
 %token<Ast.ident>   IDENT
@@ -64,27 +64,50 @@ right_flexible_nonempty_list(SEP, X):
   | x=X SEP xs=right_flexible_list(SEP, X) { x :: xs }
 
 constant:
-  | i=INT { Int (Ast.UInt32, Z.of_int i) }
-  | x=XINT { XInt x }
-  | b=BOOL { Bool b }
+  | i=INT    { Int (Ast.UInt32, Z.of_int i) }
+  | i=UINT8  { Int (Ast.UInt8,  Z.of_int i) }
+  | i=UINT16 { Int (Ast.UInt16, Z.of_int i) }
+  | i=UINT32 { Int (Ast.UInt32, Z.of_int i) }
+  | i=UINT64 { Int (Ast.UInt64, Z.of_int i) }
+  | x=XINT8  { XInt(Ast.UInt8, x) }
+  | x=XINT16 { XInt(Ast.UInt16, x) }
+  | x=XINT32 { XInt(Ast.UInt32, x) }
+  | x=XINT64 { XInt(Ast.UInt64, x) }
+  | b=BOOL   { Bool b }
 
 rel_op:
   | EQ { Eq }
   | NEQ { Neq }
-  | LEQ { LE }
-  | LESS_THAN { LT }
-  | GEQ { GE }
-  | GREATER_THAN { GT }
+  | LEQ          { LE None }
+  | LESS_THAN    { LT None }
+  | GEQ          { GE None }
+  | GREATER_THAN { GT None }
 
 else_opt:
   |             { None   }
   | ELSE LBRACE e=expr RBRACE { Some e }
 
+atomic_expr:
+  | i=IDENT    { Identifier i }
+  | THIS       { This }
+  | c=constant { Constant c }
+
+castable_expr:
+  |               { None }
+  | e=atomic_expr { Some e }
+  | LPAREN e=expr RPAREN { Some e.v }
+
 expr_no_range:
-  | i=IDENT { Identifier i }
-  | THIS    { This }
-  | c=constant
-    { Constant c }
+  | e=atomic_expr { e }
+  | LPAREN e=expr RPAREN eopt=castable_expr {
+      match e, eopt with
+      | _, None -> e.v
+      | {v=Identifier i}, Some e' ->
+        let e' = with_range e' $startpos(eopt) in
+        App (Cast (None, as_integer_typ i), [e'])
+      | _ ->
+        error ("Expected a cast expression, got " ^ (print_expr e)) e.range
+    }
   | l=expr o=rel_op r=expr %prec EQ
     { App (o, [l;r]) }
   | l=expr AND r=expr
@@ -92,13 +115,13 @@ expr_no_range:
   | l=expr OR r=expr
     { App (Or, [l;r]) }
   | l=expr MINUS r=expr
-    { App (Minus, [l;r]) }
+    { App (Minus None, [l;r]) }
   | l=expr PLUS r=expr
-    { App (Plus, [l;r]) }
+    { App (Plus None, [l;r]) }
   | l=expr STAR r=expr
-    { App (Mul, [l;r]) }
+    { App (Mul None, [l;r]) }
   | l=expr DIV r=expr
-    { App (Division, [l;r]) }
+    { App (Division None, [l;r]) }
   | NOT LPAREN e=expr RPAREN
     { App (Not, [e]) }
   | SIZEOF LPAREN e=expr RPAREN
@@ -117,19 +140,8 @@ expr_no_range:
        App(Ext i.v, es)
     }
 
-expr_opt:
-  |        { None }
-  | e=expr { Some e }
-
 expr:
   | e=expr_no_range { with_range e $startpos }
-  | LPAREN e=expr RPAREN eopt=expr_opt {
-      match e, eopt with
-      | _, None -> with_range e.v $startpos
-      | {v=Identifier i}, Some e' ->
-        with_range (App (Cast (None, as_integer_typ i), [e'])) $startpos(eopt)
-      | _ -> error ("Expected a cast expression, got " ^ (print_expr e)) e.range
-    }
 
 arguments:
  | es=right_flexible_nonempty_list(COMMA, expr)  { es }

@@ -83,7 +83,7 @@ type decl_attributes = {
   size:size;
   has_suffix:bool;
   may_fail:bool;
-  integral:bool;
+  integral:option integer_type;
   has_reader:bool;
   parser_kind_nz:option bool
 }
@@ -270,14 +270,22 @@ let type_of_integer_type = function
   | UInt32 -> tuint32
   | UInt64 -> tuint64
 
-let type_of_constant (c:constant) : typ =
+let check_integer_bounds t i =
+    match t with
+    | UInt8  -> FStar.UInt.fits i 8
+    | UInt16 -> FStar.UInt.fits i 16
+    | UInt32 -> FStar.UInt.fits i 32
+    | UInt64 -> FStar.UInt.fits i 64
+
+let type_of_constant rng (c:constant) : ML typ =
   match c with
   | Unit -> tunit
-  | Int UInt8 i -> tuint8
-  | Int UInt16 i -> tuint16
-  | Int UInt32 i -> tuint32
-  | Int UInt64 i -> tuint64
-  | XInt x -> tuint32
+  | Int tag i ->
+    if check_integer_bounds tag i
+    then type_of_integer_type tag
+    else error (Printf.sprintf "Constant %d is too large for its type %s" i (Ast.print_integer_type tag)) rng
+  | XInt tag _ -> //bounds checked by the syntax
+    type_of_integer_type tag
   | Bool _ -> tbool
 
 let size_of_typ (env:env) (t:typ) : ML size =
@@ -311,8 +319,16 @@ let typ_is_integral env (t:typ) : ML bool =
   | Pointer _ -> false
   | Type_app hd _ ->
     match lookup env hd with
-    | Inr (d, Inl attrs) -> attrs.integral
+    | Inr (d, Inl attrs) -> Some? attrs.integral
     | _ -> false
+
+let tag_of_integral_typ env (t:typ) : ML (option _) =
+  match t.v with
+  | Pointer _ -> None
+  | Type_app hd _ ->
+    match lookup env hd with
+    | Inr (_, Inl attrs) -> attrs.integral
+    | _ -> None
 
 let has_reader (env:global_env) (id:ident) : ML bool =
   match H.try_find env.ge_h id.v with
@@ -344,17 +360,17 @@ let rec value_of_const_expr (env:env) (e:expr) : ML (option (either bool (intege
     let v2 = value_of_const_expr env e2 in
     begin
     match op, v1, v2 with
-    | Plus, Some (Inr (t1, n1)), Some (Inr (t2, n2)) -> Some (Inr (integer_type_lub t1 t2, n1 + n2))
-    | Minus, Some (Inr (t1, n1)), Some (Inr (t2, n2)) -> Some (Inr (integer_type_lub t1 t2, n1 - n2))
-    | Mul, Some (Inr (t1, n1)), Some (Inr (t2, n2)) -> Some (Inr (integer_type_lub t1 t2, n1 * n2))
-    | Division, Some (Inr (t1, n1)), Some (Inr (t2, n2)) ->
+    | Plus _,  Some (Inr (t1, n1)), Some (Inr (t2, n2)) -> Some (Inr (integer_type_lub t1 t2, n1 + n2))
+    | Minus _, Some (Inr (t1, n1)), Some (Inr (t2, n2)) -> Some (Inr (integer_type_lub t1 t2, n1 - n2))
+    | Mul _,   Some (Inr (t1, n1)), Some (Inr (t2, n2)) -> Some (Inr (integer_type_lub t1 t2, n1 * n2))
+    | Division _, Some (Inr (t1, n1)), Some (Inr (t2, n2)) ->
       if n2 = 0
       then error ("Division by zero in constant expression") e2.range
       else Some (Inr (integer_type_lub t1 t2, n1 / n2))
-    | GT, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 > n2))
-    | LT, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 < n2))
-    | GE, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 >= n2))
-    | LE, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 <= n2))
+    | GT _, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 > n2))
+    | LT _, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 < n2))
+    | GE _, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 >= n2))
+    | LE _, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 <= n2))
     | And, Some (Inl b1), Some (Inl b2) -> Some (Inl (b1 && b2))
     | Or, Some (Inl b1), Some (Inl b2) -> Some (Inl (b1 || b2))
     | _ -> None
@@ -439,9 +455,22 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
 and check_expr (env:env) (e:expr)
   : ML (expr & typ)
   = let w e' = with_range e' e.range in
+    let arith_op_t op t : ML Ast.op =
+      let t = tag_of_integral_typ env t in
+      match op with
+      | Plus _ -> Plus t
+      | Minus _ -> Minus t
+      | Mul _ -> Mul t
+      | Division _ -> Division t
+      | LE _ -> LE t
+      | LT _ -> LT t
+      | GE _ -> GE t
+      | GT _ -> GT t
+      | _ -> op
+    in
     match e.v with
     | Constant c ->
-      e, type_of_constant c
+      e, type_of_constant e.range c
 
     | Identifier i ->
       let t = lookup_expr_name env i in
@@ -552,10 +581,10 @@ and check_expr (env:env) (e:expr)
           then error "Binary boolean op on non booleans" e.range;
           w (App op [e1; e2]), tbool
 
-        | Plus
-        | Minus
-        | Mul
-        | Division ->
+        | Plus _
+        | Minus _
+        | Mul _
+        | Division _ ->
           if not (eq_typs env [(t1,t2)])
           then error (Printf.sprintf "Binary integer operator (%s) on non-equal types: %s and %s"
                                      (print_expr e)
@@ -564,18 +593,18 @@ and check_expr (env:env) (e:expr)
                      e.range;
           if not (typ_is_integral env t1)
           then error "Binary integer op on non-integral type" e.range;
-          w (App op [e1; e2]), t1
+          w (App (arith_op_t op t1) [e1; e2]), t1
 
 
-        | LT
-        | GT
-        | LE
-        | GE ->
+        | LT _
+        | GT _
+        | LE _
+        | GE _ ->
           if not (eq_typs env [(t1,t2)])
           then error "Binary integer operator on non-equal types" e.range;
           if not (typ_is_integral env t1)
           then error "Binary integer op on non-integral type" e.range;
-          w (App op [e1; e2]), tbool
+          w (App (arith_op_t op t1) [e1; e2]), tbool
 
         | _ ->
           error "Not a binary op" e.range
@@ -883,7 +912,7 @@ let check_switch (env:env) (s:switch_case)
       has_suffix = suffix;
       size = size;
       may_fail = false;
-      integral = false;
+      integral = None;
       has_reader = false;
       parser_kind_nz = None
     } in
@@ -1091,7 +1120,7 @@ let elaborate_record (e:global_env)
         size = size;
         has_suffix = has_suffix;
         may_fail = false; //only its fields may fail; not the struct itself
-        integral = false;
+        integral = None;
         has_reader = false;
         parser_kind_nz = None
       }
@@ -1103,15 +1132,17 @@ let elaborate_record (e:global_env)
 let bind_decl (e:global_env) (d:decl) : ML decl =
   match d.v with
   | Define i None c ->
-    add_global e i d (Inr (nullary_macro (type_of_constant c)));
+    let t = type_of_constant d.range c in
+    let d = {d with v = Define i (Some t) c} in
+    add_global e i d (Inr (nullary_macro t));
     d
 
   | Define i (Some t) c ->
     let env = mk_env e in
     check_typ false env t;
-    let t' = type_of_constant c in
+    let t' = type_of_constant d.range c in
     if eq_typ env t t'
-    then (add_global e i d (Inr (nullary_macro (type_of_constant c))); d)
+    then (add_global e i d (Inr (nullary_macro (type_of_constant d.range c))); d)
     else error "Ill-typed constant" d.range
 
   | TypeAbbrev t i ->
@@ -1122,7 +1153,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         has_suffix = typ_has_suffix env t;
         size = size_of_typ env t;
         may_fail = parser_may_fail env t;
-        integral = typ_is_integral env t;
+        integral = tag_of_integral_typ env t;
         has_reader = typ_has_reader env t;
         parser_kind_nz = None
       }
@@ -1146,7 +1177,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         has_suffix = typ_has_suffix env t;
         size = size_of_typ env t;
         may_fail = true;
-        integral = true;
+        integral = Some UInt32;
         has_reader = false; //it's a refinement, so you can't read it again because of double fetches
         parser_kind_nz = None
       }
@@ -1182,14 +1213,14 @@ let initial_global_env () =
     with_dummy_range (Record td_name [] None [])
   in
   let _type_names =
-    [ ("unit",    { size = 0; has_suffix = false; may_fail = false; integral = false; has_reader = true; parser_kind_nz=Some false});
-      ("Bool",    { size = 1; has_suffix = false; may_fail = true;  integral = false; has_reader = true; parser_kind_nz=Some true});
-      ("UINT8",   { size = 1; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true });
-      ("UINT16",  { size = 2; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true });
-      ("UINT32",  { size = 4; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true});
-      ("UINT64",  { size = 8; has_suffix = false; may_fail = true;  integral = true ; has_reader = true; parser_kind_nz=Some true});
-      ("field_id", { size = 4; has_suffix = false; may_fail = true;  integral = true ; has_reader = false; parser_kind_nz=Some true});
-      ("PUINT8",   { size = 4; has_suffix = false; may_fail = true;  integral = false ; has_reader = false; parser_kind_nz=Some true})]
+    [ ("unit",    { size = 0; has_suffix = false; may_fail = false; integral = None; has_reader = true; parser_kind_nz=Some false});
+      ("Bool",    { size = 1; has_suffix = false; may_fail = true;  integral = None; has_reader = true; parser_kind_nz=Some true});
+      ("UINT8",   { size = 1; has_suffix = false; may_fail = true;  integral = Some UInt8 ; has_reader = true; parser_kind_nz=Some true });
+      ("UINT16",  { size = 2; has_suffix = false; may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_kind_nz=Some true });
+      ("UINT32",  { size = 4; has_suffix = false; may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_kind_nz=Some true});
+      ("UINT64",  { size = 8; has_suffix = false; may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_kind_nz=Some true});
+      ("field_id", { size = 4; has_suffix = false; may_fail = true;  integral = Some UInt32 ; has_reader = false; parser_kind_nz=Some true});
+      ("PUINT8",   { size = 4; has_suffix = false; may_fail = true;  integral = None ; has_reader = false; parser_kind_nz=Some true})]
     |> List.iter (fun (i, attrs) ->
       let i = with_dummy_range i in
       add_global e i (nullary_decl i) (Inl attrs))

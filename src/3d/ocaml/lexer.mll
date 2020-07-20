@@ -48,17 +48,25 @@ let () =
   H.add keywords "var" VAR;
   H.add keywords "abort" ABORT;
   H.add keywords "return" RETURN  
+
+let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
+
 }
 
 let space = " " | "\t"
 let newline = "\r" | "\r\n" | "\n"
 let skip = space+ | newline+
-
 let digit = ['0'-'9']
 let hex   = digit | ['A'-'F'] | ['a'-'f']
-let sw_suffix = "uy" | "us" | "ul" | "uL" | "y" | "s" | "l" | "L"
-let xinteger = "0x" hex+ sw_suffix
 let integer = digit+
+let uint8 = digit+ "uy"
+let uint16 = digit+ "us"
+let uint32 = digit+ "ul"
+let uint64 = digit+ "uL"
+let xint8 = "0x" hex hex "uy"?
+let xint16 = "0x" hex hex hex hex "us"?
+let xint32 = "0x" hex hex hex hex hex hex hex hex "ul"?
+let xint64 = "0x" hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex "uL"?
 let bool = "true" | "false"
 
 
@@ -107,9 +115,16 @@ rule token =
   | "*"            { locate lexbuf STAR }
   | "/"            { locate lexbuf DIV }    
   | "+"            { locate lexbuf PLUS }  
-  | "-"            { locate lexbuf MINUS }    
+  | "-"            { locate lexbuf MINUS }
+  | uint8  as i    { locate lexbuf (UINT8  (unsigned_int_of_string i) ) }
+  | uint16 as i    { locate lexbuf (UINT16 (unsigned_int_of_string i) ) }
+  | uint32 as i    { locate lexbuf (UINT32 (unsigned_int_of_string i) ) }
+  | uint64 as i    { locate lexbuf (UINT64 (unsigned_int_of_string i) ) }
   | integer as i   { locate lexbuf (INT (int_of_string i) ) }
-  | xinteger as x  { locate lexbuf (XINT x) }
+  | xint8 as x     { locate lexbuf (XINT8 x) }
+  | xint16 as x    { locate lexbuf (XINT16 x) }
+  | xint32 as x    { locate lexbuf (XINT32 x) }
+  | xint64 as x    { locate lexbuf (XINT64 x) }  
   | space+         { token lexbuf }
   | newline        { Lexing.new_line lexbuf; token lexbuf }
   | eof            { locate lexbuf EOF }
