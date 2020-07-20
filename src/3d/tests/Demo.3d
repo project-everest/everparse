@@ -38,7 +38,7 @@ typedef struct _Halt {
 } Halt, *P_Halt;
 
 // Union of the three message types, parameterized by a tag
-casetype _MessageUnion(MessageType tag) {
+casetype _MessageUnion(UINT32 tag) {
   switch(tag) {
   case INIT_MSG:
     Init init;
@@ -51,10 +51,10 @@ casetype _MessageUnion(MessageType tag) {
 
 // A Message is a tag and a message payload
 // FIXME: no longer works because of double fetches
-// typedef struct _Message {
-//   MessageType tag;
-//   MessageUnion(tag) message;
-// } Message, *P_Message;
+typedef struct _Message {
+   UINT32 tag;
+   MessageUnion(tag) message;
+} Message, *P_Message;
 
 // Messages is a variable length array of flatly allocated variable length messages
 // entrypoint
