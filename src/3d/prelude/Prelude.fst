@@ -376,7 +376,6 @@ let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) (#k:parser_k
 // Base types
 ////////////////////////////////////////////////////////////////////////////////
 
-
 /// UINT8
 inline_for_extraction noextract
 let kind____UINT8 : parser_kind true= LowParse.Spec.Int.parse_u8_kind

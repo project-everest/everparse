@@ -99,5 +99,5 @@ let _ =
   with
     | Error msg ->
       FStar.IO.print_string msg;
-      raise (Error msg)
+      exit 1
 #pop-options

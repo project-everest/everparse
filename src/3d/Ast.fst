@@ -508,6 +508,11 @@ let rec print_typ t : ML string =
      Printf.sprintf "(pointer %s)"
        (print_typ t)
 
+let typ_as_integer_type (t:typ) : ML integer_type =
+  match t.v with
+  | Type_app i [] -> as_integer_typ i
+  | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
+
 let print_qual = function
   | Mutable -> "mutable"
   | Immutable -> ""

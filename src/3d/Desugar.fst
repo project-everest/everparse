@@ -80,7 +80,7 @@ let desugar_one_enum (d:decl) : ML (list decl) =
     else //if we have any assignments at all, then we treat all the
          //tags as fresh constants and assign them values in sequence
          //with respect to the assigned values of preceding tags
-         let cases, ds = desugar_enum_cases UInt32 cases in
+         let cases, ds = desugar_enum_cases (typ_as_integer_type t) cases in
          let enum = { d with v = Enum t i cases } in
          ds@[enum]
   | _ -> [d]

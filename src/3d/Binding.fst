@@ -601,9 +601,13 @@ and check_expr (env:env) (e:expr)
         | LE _
         | GE _ ->
           if not (eq_typs env [(t1,t2)])
-          then error "Binary integer operator on non-equal types" e.range;
+          then error (Printf.sprintf "Binary integer operator on non-equal types: %s and %s"
+                                     (print_typ t1)
+                                     (print_typ t2))
+                     e.range;
           if not (typ_is_integral env t1)
-          then error "Binary integer op on non-integral type" e.range;
+          then error (Printf.sprintf "Binary integer op on non-integral type: %s"
+                                     (print_typ t1)) e.range;
           w (App (arith_op_t op t1) [e1; e2]), tbool
 
         | _ ->
@@ -615,9 +619,13 @@ and check_expr (env:env) (e:expr)
         match op with
         | IfThenElse ->
           if not (eq_typ env t1 tbool)
-          then error "If-then-else expects a boolean guard" e1.range;
+          then error (Printf.sprintf "If-then-else expects a boolean guard, got %s" (print_typ t1))
+                     e1.range;
           if not (eq_typ env t2 t3)
-          then error "then- and else-branch do not have the same type" e.range;
+          then error (Printf.sprintf "then- and else-branch do not have the same type: got %s and %s"
+                                     (print_typ t2)
+                                     (print_typ t3))
+                     e.range;
           w (App IfThenElse [e1;e2;e3]), t2
 
         | BitFieldOf n ->
@@ -1177,7 +1185,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         has_suffix = typ_has_suffix env t;
         size = size_of_typ env t;
         may_fail = true;
-        integral = Some UInt32;
+        integral = Some (typ_as_integer_type t);
         has_reader = false; //it's a refinement, so you can't read it again because of double fetches
         parser_kind_nz = None
       }

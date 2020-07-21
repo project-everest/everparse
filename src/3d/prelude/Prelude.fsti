@@ -175,6 +175,8 @@ val read_filter (#nz:_)
 // Base types
 ////////////////////////////////////////////////////////////////////////////////
 
+inline_for_extraction
+let ___Bool = bool
 
 /// UINT8
 let ___UINT8 : eqtype = FStar.UInt8.t
