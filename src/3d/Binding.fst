@@ -425,11 +425,82 @@ let eq_typ env t1 t2 =
 let eq_typs env ts =
   List.for_all (fun (t1, t2) -> eq_typ env t1 t2) ts
 
+let is_retypeable_constant e =
+    match e.v with
+    | Constant (Int UInt32 _) -> true
+    | _ -> false
+
+let retype_constant e t : ML (option expr) =
+    match e.v with
+    | Constant (Int _ x) ->
+      if check_integer_bounds t x
+      then Some ({e with v = Constant (Int t x)})
+      else None
+    | _ -> Some e
+
+let try_retype_constant env e t : ML (option expr) =
+  let it = typ_is_integral env t in
+  let rt = is_retypeable_constant e in
+  if it && rt
+  then
+    let tt = typ_as_integer_type (unfold_typ_abbrevs env t) in
+    retype_constant e tt
+  else None
+
+let try_recover_binary_arith_expr (env:env) e1 e2 rng : ML (option (expr & expr & typ))=
+  let e1, t1 = e1 in
+  let e2, t2 = e2 in
+  let fail #a i : ML a  = raise (Error (Printf.sprintf "(%d) Failed to retype exprs (%s : %s) and (%s : %s)"
+                                                        i
+                                                        (print_expr e1)
+                                                        (print_typ t1)
+                                                        (print_expr e2)
+                                                        (print_typ t2))) in
+  try
+    let tt1 = typ_as_integer_type (unfold_typ_abbrevs env t1) in
+    let tt2 = typ_as_integer_type (unfold_typ_abbrevs env t2) in
+    let retype_constant e t : ML expr =
+      match retype_constant e t with
+      | None -> fail 0
+      | Some e -> e
+    in
+    let e1, e2, t =
+      if is_retypeable_constant e1
+      && is_retypeable_constant e2
+      then let t = integer_type_lub tt1 tt2 in
+           retype_constant e1 t,
+           retype_constant e2 t,
+           type_of_integer_type t
+      else if is_retypeable_constant e1
+      then retype_constant e1 tt2,
+           e2,
+           t2
+      else if is_retypeable_constant e2
+      then e1,
+           retype_constant e2 tt1,
+           t1
+      else fail 1
+    in
+    FStar.IO.print_string
+      (Printf.sprintf "Retyped to (%s, %s, %s)\n"
+        (print_expr e1)
+        (print_expr e2)
+        (print_typ t));
+    Some (e1, e2, t)
+  with
+    | Error msg ->
+      FStar.IO.print_string msg;
+      None
+    | _ -> None
+
+
+#push-options "--z3rlimit_factor 4"
 let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
-  : ML unit
+  : ML typ
   = match t.v with
     | Pointer t0 ->
-      if pointer_ok then check_typ pointer_ok env t0
+      if pointer_ok
+      then { t with v = Pointer (check_typ pointer_ok env t0) }
       else error (Printf.sprintf "Pointer types are not permissible here; got %s" (print_typ t)) t.range
 
     | Type_app s es ->
@@ -441,16 +512,18 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
         let params = params_of_decl d in
         if List.length params <> List.length es
         then error (Printf.sprintf "Not enough arguments to %s" s.v) s.range;
-        let _ =
+        let es =
           List.map2 (fun (t, _, _) e ->
             let e, t' = check_expr env e in
             if not (eq_typ env t t')
-            then error "Argument type mismatch" e.range;
-            e)
+            then match try_retype_constant env e t with
+                 | Some e -> e
+                 | _ -> error "Argument type mismatch" e.range
+            else e)
             params
             es
         in
-        ()
+        {t with v = Type_app s es}
 
 and check_expr (env:env) (e:expr)
   : ML (expr & typ)
@@ -568,12 +641,26 @@ and check_expr (env:env) (e:expr)
         | Eq
         | Neq ->
           if not (eq_typ env t1 t2)
-          then error
-                 (Printf.sprintf "Equality on unequal types: %s and %s"
-                   (print_typ t1)
-                   (print_typ t2))
-               e.range;
-          w (App op [e1; e2]), tbool
+          then
+          begin
+            let err #a () : ML a =
+                error
+                     (Printf.sprintf "Equality on unequal types: %s and %s"
+                       (print_typ t1)
+                       (print_typ t2))
+                     e.range
+            in
+            let it1 = typ_is_integral env t1 in
+            let it2 = typ_is_integral env t2 in
+            if it1 && it2
+            then match try_recover_binary_arith_expr env (e1, t1) (e2, t2) e.range with
+                 | Some (e1, e2, t) -> w (App op [e1; e2]), tbool
+                 | _ -> err ()
+
+            else err ()
+          end
+          else
+            w (App op [e1; e2]), tbool
 
         | And
         | Or ->
@@ -584,31 +671,37 @@ and check_expr (env:env) (e:expr)
         | Plus _
         | Minus _
         | Mul _
-        | Division _ ->
-          if not (eq_typs env [(t1,t2)])
-          then error (Printf.sprintf "Binary integer operator (%s) on non-equal types: %s and %s"
-                                     (print_expr e)
-                                     (print_typ t1)
-                                     (print_typ t2))
-                     e.range;
-          if not (typ_is_integral env t1)
-          then error "Binary integer op on non-integral type" e.range;
-          w (App (arith_op_t op t1) [e1; e2]), t1
-
-
+        | Division _
         | LT _
         | GT _
         | LE _
         | GE _ ->
-          if not (eq_typs env [(t1,t2)])
-          then error (Printf.sprintf "Binary integer operator on non-equal types: %s and %s"
+          let result_typ t =
+              match op with
+              | LT _ | GT _ | LE _ | GE _ -> tbool
+              | _ -> t
+          in
+          let t1_integral = typ_is_integral env t1 in
+          let t2_integral = typ_is_integral env t2 in
+          if not t1_integral || not t2_integral
+          then error (Printf.sprintf "Binary integer op on non-integral types: %s and %s"
                                      (print_typ t1)
                                      (print_typ t2))
-                     e.range;
-          if not (typ_is_integral env t1)
-          then error (Printf.sprintf "Binary integer op on non-integral type: %s"
-                                     (print_typ t1)) e.range;
-          w (App (arith_op_t op t1) [e1; e2]), tbool
+               e.range;
+
+
+          if not (eq_typs env [(t1,t2)])
+          then match try_recover_binary_arith_expr env (e1, t1) (e2, t2) e.range with
+               | Some (e1, e2, t) ->
+                 w (App (arith_op_t op t) [e1; e2]), result_typ t
+
+               | _ ->
+                 error (Printf.sprintf "Binary integer operator (%s) on non-equal types: %s and %s"
+                                     (print_expr e)
+                                     (print_typ t1)
+                                     (print_typ t2))
+                     e.range
+          else w (App (arith_op_t op t1) [e1; e2]), result_typ t1
 
         | _ ->
           error "Not a binary op" e.range
@@ -653,6 +746,7 @@ and check_expr (env:env) (e:expr)
         end
       | _ -> error "Unexpected arity" e.range
 
+#pop-options
 #push-options "--z3rlimit_factor 2"
 
 let rec check_field_action (env:env) (f:field) (a:action)
@@ -751,7 +845,7 @@ let rec check_field_action (env:env) (f:field) (a:action)
 let check_field (env:env) (extend_scope: bool) (f:field)
   : ML field
   = let sf = f.v in
-    check_typ false env sf.field_type;
+    let sf_field_type = check_typ false env sf.field_type in
     let fa = sf.field_array_opt |> map_opt (fun (e, b) ->
         let e, t = check_expr env e in
         if not (eq_typ env t tuint32)
@@ -831,6 +925,7 @@ let check_field (env:env) (extend_scope: bool) (f:field)
     in
     let sf = {
         sf with
+        field_type = sf_field_type;
         field_array_opt = fa;
         field_constraint = fc;
         field_size = size_opt;
@@ -929,7 +1024,7 @@ let check_switch (env:env) (s:switch_case)
 
 let check_params (env:env) (ps:list param) : ML unit =
   ps |> List.iter (fun (t, p, _q) ->
-      check_typ true env t;
+      let _ = check_typ true env t in
       add_local env p t)
 
 let rec elaborate_bit_fields env
@@ -1147,15 +1242,16 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
 
   | Define i (Some t) c ->
     let env = mk_env e in
-    check_typ false env t;
+    let t = check_typ false env t in
     let t' = type_of_constant d.range c in
+    let d = { d with v = Define i (Some t) c } in
     if eq_typ env t t'
     then (add_global e i d (Inr (nullary_macro (type_of_constant d.range c))); d)
     else error "Ill-typed constant" d.range
 
   | TypeAbbrev t i ->
     let env = mk_env e in
-    check_typ false env t;
+    let t = check_typ false env t in
     let attrs =
       {
         has_suffix = typ_has_suffix env t;
@@ -1166,14 +1262,15 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         parser_kind_nz = None
       }
     in
+    let d = { d with v = TypeAbbrev t i } in
     add_global e i d (Inl attrs);
     d
 
   | Enum t i cases ->
     let env = mk_env e in
-    check_typ false env t;
-    let cases = Desugar.check_desugared_enum_cases cases in
-    cases |> List.iter (fun i ->
+    let t = check_typ false env t in
+    let cases_idents = Desugar.check_desugared_enum_cases cases in
+    cases_idents |> List.iter (fun i ->
       let _, t' = check_expr env (with_dummy_range (Identifier i)) in
       if not (eq_typ env t t')
       then error (Printf.sprintf "Inconsistent type of enumeration identifier: Expected %s, got %s"
@@ -1190,6 +1287,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         parser_kind_nz = None
       }
     in
+    let d = {d with v = Enum t i cases } in
     add_global e i d (Inl attrs);
     d
 

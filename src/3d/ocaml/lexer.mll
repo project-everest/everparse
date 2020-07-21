@@ -98,6 +98,7 @@ rule token =
   | "<="           { locate lexbuf LEQ }
   | ">"            { locate lexbuf GREATER_THAN }
   | "<"            { locate lexbuf LESS_THAN }
+  | "=="           { locate lexbuf EQEQ }
   | "="            { locate lexbuf EQ }
   | "!="           { locate lexbuf NEQ }  
   | "&&"           { locate lexbuf AND }
