@@ -12,7 +12,7 @@ all: 3d prelude
 test: demo
 
 demo: all
-	+$(MAKE) -C tests test
+	+$(MAKE) -C tests
 
 .PHONY: all prelude test
 

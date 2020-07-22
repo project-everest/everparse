@@ -58,15 +58,9 @@ let newline = "\r" | "\r\n" | "\n"
 let skip = space+ | newline+
 let digit = ['0'-'9']
 let hex   = digit | ['A'-'F'] | ['a'-'f']
-let integer = digit+
-let uint8 = digit+ "uy"
-let uint16 = digit+ "us"
-let uint32 = digit+ "ul"
-let uint64 = digit+ "uL"
-let xint8 = "0x" hex hex "uy"?
-let xint16 = "0x" hex hex hex hex "us"?
-let xint32 = "0x" hex hex hex hex hex hex hex hex "ul"?
-let xint64 = "0x" hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex "uL"?
+let signedness_width = "uy" | "us" | "ul" | "uL"
+let integer = digit+ signedness_width?
+let xinteger = "0x" digit+ signedness_width?
 let bool = "true" | "false"
 
 
@@ -106,6 +100,7 @@ rule token =
   | ","            { locate lexbuf COMMA }
   | ";"            { locate lexbuf SEMICOLON }
   | ":"            { locate lexbuf COLON }
+  | "?"            { locate lexbuf QUESTION }  
   | "{:on-success" { locate lexbuf LBRACE_ONSUCCESS }
   | "{"            { locate lexbuf LBRACE }
   | "}"            { locate lexbuf RBRACE }
@@ -117,15 +112,8 @@ rule token =
   | "/"            { locate lexbuf DIV }    
   | "+"            { locate lexbuf PLUS }  
   | "-"            { locate lexbuf MINUS }
-  | uint8  as i    { locate lexbuf (UINT8  (unsigned_int_of_string i) ) }
-  | uint16 as i    { locate lexbuf (UINT16 (unsigned_int_of_string i) ) }
-  | uint32 as i    { locate lexbuf (UINT32 (unsigned_int_of_string i) ) }
-  | uint64 as i    { locate lexbuf (UINT64 (unsigned_int_of_string i) ) }
-  | integer as i   { locate lexbuf (INT (int_of_string i) ) }
-  | xint8 as x     { locate lexbuf (XINT8 x) }
-  | xint16 as x    { locate lexbuf (XINT16 x) }
-  | xint32 as x    { locate lexbuf (XINT32 x) }
-  | xint64 as x    { locate lexbuf (XINT64 x) }  
+  | integer as i   { locate lexbuf (INT i) }
+  | xinteger as i  { locate lexbuf (XINT i) }
   | space+         { token lexbuf }
   | newline        { Lexing.new_line lexbuf; token lexbuf }
   | eof            { locate lexbuf EOF }

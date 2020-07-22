@@ -438,16 +438,24 @@ let retype_constant e t : ML (option expr) =
       else None
     | _ -> Some e
 
-let try_retype_constant env e t : ML (option expr) =
-  let it = typ_is_integral env t in
-  let rt = is_retypeable_constant e in
-  if it && rt
+let cast e t t' = { e with v = App (Cast (Some t) t') [e] }
+
+let try_cast_integer env et to : ML (option expr) =
+  let e, from = et in
+  let i_to = typ_is_integral env to in
+  let i_from = typ_is_integral env from in
+  if i_from && i_to
   then
-    let tt = typ_as_integer_type (unfold_typ_abbrevs env t) in
-    retype_constant e tt
+    let i_from = typ_as_integer_type (unfold_typ_abbrevs env from) in
+    let i_to = typ_as_integer_type (unfold_typ_abbrevs env to) in
+    if integer_type_leq i_from i_to
+    then Some (cast e i_from i_to)
+    else None
   else None
 
-let try_recover_binary_arith_expr (env:env) e1 e2 rng : ML (option (expr & expr & typ))=
+let _or_ b1 b2 = b1 || b2
+let _and_ b1 b2 = b1 && b2
+let try_retype_arith_exprs (env:env) e1 e2 rng : ML (option (expr & expr & typ))=
   let e1, t1 = e1 in
   let e2, t2 = e2 in
   let fail #a i : ML a  = raise (Error (Printf.sprintf "(%d) Failed to retype exprs (%s : %s) and (%s : %s)"
@@ -457,35 +465,29 @@ let try_recover_binary_arith_expr (env:env) e1 e2 rng : ML (option (expr & expr 
                                                         (print_expr e2)
                                                         (print_typ t2))) in
   try
-    let tt1 = typ_as_integer_type (unfold_typ_abbrevs env t1) in
-    let tt2 = typ_as_integer_type (unfold_typ_abbrevs env t2) in
-    let retype_constant e t : ML expr =
-      match retype_constant e t with
-      | None -> fail 0
-      | Some e -> e
-    in
+    let t1, t2 = unfold_typ_abbrevs env t1, unfold_typ_abbrevs env t2 in
+    if not (typ_is_integral env t1 `_and_`
+            typ_is_integral env t2)
+    then fail 1;
+    let tt1 = typ_as_integer_type t1 in
+    let tt2 = typ_as_integer_type t2 in
+    let cast e t t' = { e with v = App (Cast (Some t) t') [e] } in
     let e1, e2, t =
-      if is_retypeable_constant e1
-      && is_retypeable_constant e2
-      then let t = integer_type_lub tt1 tt2 in
-           retype_constant e1 t,
-           retype_constant e2 t,
-           type_of_integer_type t
-      else if is_retypeable_constant e1
-      then retype_constant e1 tt2,
+      if integer_type_leq tt1 tt2
+      then cast e1 tt1 tt2,
            e2,
            t2
-      else if is_retypeable_constant e2
+      else if integer_type_leq tt2 tt1
       then e1,
-           retype_constant e2 tt1,
+           cast e2 tt2 tt1,
            t1
-      else fail 1
+      else fail 0
     in
-    FStar.IO.print_string
-      (Printf.sprintf "Retyped to (%s, %s, %s)\n"
-        (print_expr e1)
-        (print_expr e2)
-        (print_typ t));
+    // FStar.IO.print_string
+    //   (Printf.sprintf "Retyped to (%s, %s, %s)\n"
+    //     (print_expr e1)
+    //     (print_expr e2)
+    //     (print_typ t));
     Some (e1, e2, t)
   with
     | Error msg ->
@@ -516,7 +518,7 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
           List.map2 (fun (t, _, _) e ->
             let e, t' = check_expr env e in
             if not (eq_typ env t t')
-            then match try_retype_constant env e t with
+            then match try_cast_integer env (e, t') t with
                  | Some e -> e
                  | _ -> error "Argument type mismatch" e.range
             else e)
@@ -653,7 +655,7 @@ and check_expr (env:env) (e:expr)
             let it1 = typ_is_integral env t1 in
             let it2 = typ_is_integral env t2 in
             if it1 && it2
-            then match try_recover_binary_arith_expr env (e1, t1) (e2, t2) e.range with
+            then match try_retype_arith_exprs env (e1, t1) (e2, t2) e.range with
                  | Some (e1, e2, t) -> w (App op [e1; e2]), tbool
                  | _ -> err ()
 
@@ -691,7 +693,7 @@ and check_expr (env:env) (e:expr)
 
 
           if not (eq_typs env [(t1,t2)])
-          then match try_recover_binary_arith_expr env (e1, t1) (e2, t2) e.range with
+          then match try_retype_arith_exprs env (e1, t1) (e2, t2) e.range with
                | Some (e1, e2, t) ->
                  w (App (arith_op_t op t) [e1; e2]), result_typ t
 
@@ -715,11 +717,16 @@ and check_expr (env:env) (e:expr)
           then error (Printf.sprintf "If-then-else expects a boolean guard, got %s" (print_typ t1))
                      e1.range;
           if not (eq_typ env t2 t3)
-          then error (Printf.sprintf "then- and else-branch do not have the same type: got %s and %s"
-                                     (print_typ t2)
-                                     (print_typ t3))
-                     e.range;
-          w (App IfThenElse [e1;e2;e3]), t2
+          then match try_retype_arith_exprs env (e2, t2) (e3, t3) e.range with
+               | Some (e2, e3, t) ->
+                 w (App IfThenElse [e1;e2;e3]), t
+               | None ->
+                 error (Printf.sprintf "then- and else-branch do not have the same type: got %s and %s"
+                                       (print_typ t2)
+                                       (print_typ t3))
+                       e.range
+          else
+            w (App IfThenElse [e1;e2;e3]), t2
 
         | BitFieldOf n ->
           let size = 8 * size_of_typ env t1 in
@@ -849,11 +856,13 @@ let check_field (env:env) (extend_scope: bool) (f:field)
     let fa = sf.field_array_opt |> map_opt (fun (e, b) ->
         let e, t = check_expr env e in
         if not (eq_typ env t tuint32)
-        then error (Printf.sprintf "Array expression %s has type %s instead of UInt32"
+        then match try_cast_integer env (e, t) tuint32 with
+             | Some e -> e, b
+             | _ ->  error (Printf.sprintf "Array expression %s has type %s instead of UInt32"
                           (print_expr e)
                           (print_typ t))
-                   e.range;
-        e, b)
+                    e.range
+        else e, b)
     in
     let fc = sf.field_constraint |> map_opt (fun e ->
         add_local env sf.field_ident sf.field_type;

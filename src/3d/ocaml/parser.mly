@@ -20,19 +20,32 @@
   let with_range (x:'a) (l:Lexing.position) : 'a with_meta_t =
       Ast.with_range x (mk_pos l, mk_pos l)
 
-    let pointer_name j p =
-         match p with
-         | None -> {j with v="P"^j.v}
-         | Some k -> k
+  let pointer_name j p =
+      match p with
+      | None -> {j with v="P"^j.v}
+      | Some k -> k
+
+  let parse_int_and_type r (s:string) : Z.t * string * integer_type =
+      let r = mk_pos r, mk_pos r in
+      let s', t = parse_int_suffix s in
+      let i = Z.of_string s' in
+      let t' = smallest_integer_type_of r i in
+      let t = match t with
+              | None -> t'
+              | Some t ->
+                if integer_type_leq t' t
+                then t
+                else error ("Integer " ^s^ " is too large for the specified type") r
+      in
+      i, s', t
 %}
 
-%token<int>     INT UINT8 UINT16 UINT32 UINT64
-%token<string>  XINT8 XINT16 XINT32 XINT64
+%token<string>  INT XINT
 %token<string>  BLOCK_COMMENT
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
 %token          EQ EQEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS ENTRYPOINT
-%token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON
+%token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
 (* LBRACE_ONERROR CHECK  *)
@@ -64,15 +77,8 @@ right_flexible_nonempty_list(SEP, X):
   | x=X SEP xs=right_flexible_list(SEP, X) { x :: xs }
 
 constant:
-  | i=INT    { Int (Ast.UInt32, Z.of_int i) }
-  | i=UINT8  { Int (Ast.UInt8,  Z.of_int i) }
-  | i=UINT16 { Int (Ast.UInt16, Z.of_int i) }
-  | i=UINT32 { Int (Ast.UInt32, Z.of_int i) }
-  | i=UINT64 { Int (Ast.UInt64, Z.of_int i) }
-  | x=XINT8  { XInt(Ast.UInt8, x) }
-  | x=XINT16 { XInt(Ast.UInt16, x) }
-  | x=XINT32 { XInt(Ast.UInt32, x) }
-  | x=XINT64 { XInt(Ast.UInt64, x) }
+  | i=INT    { let n, _, t = parse_int_and_type ($startpos(i)) i in Int(t, n) }
+  | i=XINT   { let _, x, t = parse_int_and_type ($startpos(i)) i in XInt(t, x) }
   | b=BOOL   { Bool b }
 
 rel_op:
@@ -127,6 +133,10 @@ expr_no_range:
     { App (Not, [e]) }
   | SIZEOF LPAREN e=expr RPAREN
     { App (SizeOf, [e]) }
+  | e=expr QUESTION e1=expr COLON e2=expr
+    {
+        App(IfThenElse, [e;e1;e2])
+    }
   | IF e=expr LBRACE e1=expr RBRACE e2=else_opt
     {
         let e2 =
@@ -171,7 +181,7 @@ array_size:
   | LBRACK LBRACE e=expr RBRACE RBRACK { (e, ConstantSize) }
 
 bitwidth:
-  | COLON i=INT { Inl (with_range (Z.of_int i) $startpos(i)) }
+  | COLON i=INT { Inl (with_range (Z.of_string i) $startpos(i)) }
 
 field_action:
   | LBRACE_ONSUCCESS a=action RBRACE { a, false }
@@ -253,7 +263,7 @@ action:
 
 enum_case:
   | i=IDENT            { i, None }
-  | i=IDENT EQ j=INT   { i, Some (Inl (Z.of_int j)) }
+  | i=IDENT EQ j=INT   { i, Some (Inl (Z.of_string j)) }
   | i=IDENT EQ j=IDENT { i, Some (Inr j) }
 
 typedef_pointer_name_opt:

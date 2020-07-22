@@ -20,3 +20,5 @@ let parse filename =
   with e ->
     Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf;
     raise e
+
+let int_of_string x = Z.of_string x

@@ -130,6 +130,29 @@ type integer_type =
   | UInt32
   | UInt64
 
+let parse_int_suffix (i:string) : string * option integer_type =
+    let l = String.length i in
+    if l >= 2
+    then let suffix = String.sub i (l - 2) 2 in
+         let prefix = String.sub i 0 (l - 2) in
+         match suffix with
+         | "uy" -> prefix, Some UInt8
+         | "us" -> prefix, Some UInt16
+         | "ul" -> prefix, Some UInt32
+         | "uL" -> prefix, Some UInt64
+         | _ -> i, None
+    else i, None
+
+let smallest_integer_type_of r (i:int) : ML integer_type =
+  if FStar.UInt.fits i 8 then UInt8
+  else if FStar.UInt.fits i 16 then UInt16
+  else if FStar.UInt.fits i 32 then UInt32
+  else if FStar.UInt.fits i 64 then UInt64
+  else error (Printf.sprintf
+                 "Integer %d is too large for all supported fixed-width types"
+                 i)
+             r
+
 let integer_type_lub (t1 t2: integer_type) : Tot integer_type =
   match t1, t2 with
   | UInt64, _
@@ -139,6 +162,9 @@ let integer_type_lub (t1 t2: integer_type) : Tot integer_type =
   | _, UInt16
   | UInt16, _ -> UInt16
   | UInt8, UInt8 -> UInt8
+
+let integer_type_leq (t1 t2: integer_type) : bool =
+  integer_type_lub t1 t2 = t2
 
 let as_integer_typ (i:ident) : ML integer_type =
   match i.v with
