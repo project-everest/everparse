@@ -1,5 +1,5 @@
-#define A 0
-#define B 1
+#define A 0ul
+#define B 1ul
 
 UINT32 enum AB {
        A,
