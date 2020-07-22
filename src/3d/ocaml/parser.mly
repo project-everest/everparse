@@ -44,7 +44,7 @@
 %token<string>  BLOCK_COMMENT
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
-%token          EQ EQEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS ENTRYPOINT
+%token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS ENTRYPOINT
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
@@ -54,7 +54,7 @@
 
 %left OR
 %left AND
-%nonassoc EQ LEQ LESS_THAN GEQ GREATER_THAN NEQ
+%nonassoc EQ LEQ LESS_THAN GEQ GREATER_THAN NEQ DOUBLEEQ
 %left PLUS
 %left MINUS
 %left STAR
@@ -82,9 +82,9 @@ constant:
   | b=BOOL   { Bool b }
 
 rel_op:
-  | EQ { Eq }
-  | EQEQ { Eq }
-  | NEQ { Neq }
+  | EQ           { Eq }
+  | DOUBLEEQ           { Eq }
+  | NEQ          { Neq }
   | LEQ          { LE None }
   | LESS_THAN    { LT None }
   | GEQ          { GE None }
@@ -98,6 +98,10 @@ atomic_expr:
   | i=IDENT    { Identifier i }
   | THIS       { This }
   | c=constant { Constant c }
+
+ternary_subterm:
+  | e=atomic_expr  { with_range e $startpos }
+  | LPAREN e=expr RPAREN { e }
 
 castable_expr:
   |               { None }
@@ -133,7 +137,7 @@ expr_no_range:
     { App (Not, [e]) }
   | SIZEOF LPAREN e=expr RPAREN
     { App (SizeOf, [e]) }
-  | e=expr QUESTION e1=expr COLON e2=expr
+  | e=ternary_subterm QUESTION e1=ternary_subterm COLON e2=ternary_subterm
     {
         App(IfThenElse, [e;e1;e2])
     }

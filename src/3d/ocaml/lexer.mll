@@ -60,7 +60,7 @@ let digit = ['0'-'9']
 let hex   = digit | ['A'-'F'] | ['a'-'f']
 let signedness_width = "uy" | "us" | "ul" | "uL"
 let integer = digit+ signedness_width?
-let xinteger = "0x" digit+ signedness_width?
+let xinteger = "0x" hex+ signedness_width?
 let bool = "true" | "false"
 
 
@@ -92,7 +92,7 @@ rule token =
   | "<="           { locate lexbuf LEQ }
   | ">"            { locate lexbuf GREATER_THAN }
   | "<"            { locate lexbuf LESS_THAN }
-  | "=="           { locate lexbuf EQEQ }
+  | "=="           { locate lexbuf DOUBLEEQ }
   | "="            { locate lexbuf EQ }
   | "!="           { locate lexbuf NEQ }  
   | "&&"           { locate lexbuf AND }
@@ -112,8 +112,8 @@ rule token =
   | "/"            { locate lexbuf DIV }    
   | "+"            { locate lexbuf PLUS }  
   | "-"            { locate lexbuf MINUS }
-  | integer as i   { locate lexbuf (INT i) }
   | xinteger as i  { locate lexbuf (XINT i) }
+  | integer as i   { locate lexbuf (INT i) }
   | space+         { token lexbuf }
   | newline        { Lexing.new_line lexbuf; token lexbuf }
   | eof            { locate lexbuf EOF }

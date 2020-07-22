@@ -425,19 +425,6 @@ let eq_typ env t1 t2 =
 let eq_typs env ts =
   List.for_all (fun (t1, t2) -> eq_typ env t1 t2) ts
 
-let is_retypeable_constant e =
-    match e.v with
-    | Constant (Int UInt32 _) -> true
-    | _ -> false
-
-let retype_constant e t : ML (option expr) =
-    match e.v with
-    | Constant (Int _ x) ->
-      if check_integer_bounds t x
-      then Some ({e with v = Constant (Int t x)})
-      else None
-    | _ -> Some e
-
 let cast e t t' = { e with v = App (Cast (Some t) t') [e] }
 
 let try_cast_integer env et to : ML (option expr) =
@@ -971,15 +958,20 @@ let check_switch (env:env) (s:switch_case)
       let pat, f = c in
       let pat, pat_t = check_expr env pat in
       let f = check_field env false f in
-      let _ = //check type of patterns
+      let pat = //check type of patterns
         match tags_t_opt with
         | None ->
           //Not an enum; just check that its a valid u32
           if not (eq_typ env maybe_enum_t pat_t)
-          then error (Printf.sprintf "Type of case (%s) does not match type of switch expression (%s)"
-                                     (print_typ pat_t)
-                                     (print_typ maybe_enum_t))
-                     pat.range
+          then match try_cast_integer env (pat, pat_t) maybe_enum_t with
+               | Some pat -> pat
+               | _ ->
+                 error (Printf.sprintf "Type of case (%s) does not match type of switch expression (%s)"
+                                       (print_typ pat_t)
+                                       (print_typ maybe_enum_t))
+                       pat.range
+          else pat
+
         | Some (enum_tags, t) ->
           //expected an enumerated type;
           //check that patterns are valid cases of the enum
@@ -995,11 +987,13 @@ let check_switch (env:env) (s:switch_case)
                                      (print_typ pat_t)
                                      (print_typ t))
                      pat.range;
+
           if not case_exists
           then error (Printf.sprintf "Case (%s) is not in the enumerated type %s"
                                      (print_expr pat)
                                      (print_typ maybe_enum_t))
-                     pat.range
+                     pat.range;
+          pat
       in
       pat, f
     in
