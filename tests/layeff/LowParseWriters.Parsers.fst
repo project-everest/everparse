@@ -394,7 +394,7 @@ let read_do_while_impl
             end
         | Error s ->
           stop == true /\
-          read_do_while_spec' inv #t invariant measure error body x0 () == Error s
+          Error? (read_do_while_spec' inv #t invariant measure error body x0 ())
         end
       )
       (fun _ ->
@@ -733,7 +733,7 @@ let do_while_impl
           )
         | IError s ->
           stop == true /\
-          do_while_spec' inv #p #t invariant measure error body x0 (Ghost.reveal vin0) == Error s
+          Error? (do_while_spec' inv #p #t invariant measure error body x0 (Ghost.reveal vin0))
         | IOverflow ->
           stop == true /\
           begin match do_while_spec' inv #p #t invariant measure error body x0 (Ghost.reveal vin0) with

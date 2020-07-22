@@ -215,7 +215,7 @@ let validator
 inline_for_extraction
 let snd (a, b) = b
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 let gvalidate
   p h b
