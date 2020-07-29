@@ -27,7 +27,7 @@ else
   KREMLIN_EXE=krml
 endif
 
-INCLUDE_KREMLIN=--include $(KREMLIB)
+INCLUDE_KREMLIN=--include $(KREMLIB) --include $(KREMLIB)/obj
 
 FSTAR_OPTIONS += --use_hints --use_two_phase_tc true --trivial_pre_for_unannotated_effectful_fns false --include $(LOWPARSE_HOME) --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN) --cmi
 

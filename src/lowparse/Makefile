@@ -25,7 +25,7 @@ endif
 ifdef KREMLIN_HOME
   KREMLIB=$(KREMLIN_HOME)/kremlib
 endif
-INCLUDE_KREMLIN=--include $(KREMLIB)
+INCLUDE_KREMLIN=--include $(KREMLIB) --include $(KREMLIB)/obj
 
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN) --already_cached *,-LowParse
 
