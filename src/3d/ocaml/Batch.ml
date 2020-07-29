@@ -58,6 +58,7 @@ let fstar_args0 = [
   "--already_cached"; "Prims,LowStar,FStar,LowParse,C,Prelude,Actions,ResultOps,Spec";
   "--include"; lowparse_home;
   "--include"; kremlib;
+  "--include"; (filename_concat kremlib "obj");
   "--include"; ddd_prelude_home;
   "--cmi";
 ]

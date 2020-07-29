@@ -47,7 +47,7 @@ clean:
 	rm -rf *.checked $(ALL_ML_FILES) *~
 
 
-FSTAR_OPTIONS=$(OTHERFLAGS) $(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib)
+FSTAR_OPTIONS=$(OTHERFLAGS) $(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib $(KREMLIN_HOME)/kremlib/obj)
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
