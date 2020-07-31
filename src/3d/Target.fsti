@@ -239,5 +239,6 @@ let decl = decl' * decl_attributes
 
 val print_typ (t:typ) : Tot string (decreases t)
 val print_decls (modul: string) (ds:list decl) : ML string
+val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string
 val print_c_entry (modul: string) (env: global_env) (ds:list decl) : ML (string & string)

@@ -122,7 +122,7 @@ let print_op_with_range ropt o =
   | Cast from to ->
     Printf.sprintf "FStar.Int.Cast.%s_to_%s" (print_integer_type from) (print_integer_type to)
   | Ext s -> s
-xo
+
 let print_op = print_op_with_range None
 
 let rec print_expr (e:expr) : Tot string =
@@ -501,7 +501,7 @@ let print_typedef_actions_inv_and_fp (td:type_decl) =
     in
     inv, fp
 
-let print_decl (d:decl) : Tot string =
+let print_decl_aux (only_types:bool) (d:decl) : Tot string =
   let print_comments cs =
     match cs with
     | [] -> ""
@@ -553,36 +553,41 @@ let print_decl (d:decl) : Tot string =
       (print_typedef_name td.decl_name)
       (print_typedef_body td.decl_typ)
     `strcat`
-    Printf.sprintf "noextract\ninline_for_extraction\nlet kind_%s : parser_kind %s = %s\n\n"
-      (print_ident td.decl_name.td_name)
-      (string_of_bool td.decl_parser.p_kind.pk_nz)
-      (print_kind td.decl_parser.p_kind)
-    `strcat`
-    Printf.sprintf "noextract\nlet parse_%s : parser (kind_%s) (%s) = %s\n\n"
-      (print_typedef_name td.decl_name)
-      (print_ident td.decl_name.td_name)
-      (print_typedef_typ td.decl_name)
-      (print_parser td.decl_parser)
-    `strcat`
-    (let inv, fp = print_typedef_actions_inv_and_fp td in
-     Printf.sprintf "%slet validate_%s = validate_weaken_inv_loc _ _ %s <: Tot (validate_with_action_t (parse_%s) %s %s %b) by (weaken_tac())\n\n"
-      (print_attributes td.decl_name.td_entrypoint (snd d))
-      (print_typedef_name td.decl_name)
-      (print_validator td.decl_validator)
-      (print_typedef_typ td.decl_name)
-      inv
-      fp
-      td.decl_validator.v_allow_reading)
-    `strcat`
-    (match td.decl_reader with
-     | None -> ""
-     | Some r ->
-       Printf.sprintf "%sinline_for_extraction\nlet read_%s : leaf_reader (parse_%s) = %s\n\n"
-         (if td.decl_name.td_entrypoint then "" else "noextract\n")
+    (if only_types then ""
+     else
+       Printf.sprintf "noextract\ninline_for_extraction\nlet kind_%s : parser_kind %s = %s\n\n"
+         (print_ident td.decl_name.td_name)
+         (string_of_bool td.decl_parser.p_kind.pk_nz)
+         (print_kind td.decl_parser.p_kind)
+       `strcat`
+       Printf.sprintf "noextract\nlet parse_%s : parser (kind_%s) (%s) = %s\n\n"
          (print_typedef_name td.decl_name)
+         (print_ident td.decl_name.td_name)
          (print_typedef_typ td.decl_name)
-         (print_reader r))
+         (print_parser td.decl_parser)
+       `strcat`
+       (let inv, fp = print_typedef_actions_inv_and_fp td in
+        Printf.sprintf "%slet validate_%s = validate_weaken_inv_loc _ _ %s <: Tot (validate_with_action_t (parse_%s) %s %s %b) by    (weaken_tac())\n\n"
+         (print_attributes td.decl_name.td_entrypoint (snd d))
+         (print_typedef_name td.decl_name)
+         (print_validator td.decl_validator)
+         (print_typedef_typ td.decl_name)
+         inv
+         fp
+         td.decl_validator.v_allow_reading)
+       `strcat`
+       (match td.decl_reader with
+        | None -> ""
+        | Some r ->
+          Printf.sprintf "%sinline_for_extraction\nlet read_%s : leaf_reader (parse_%s) = %s\n\n"
+            (if td.decl_name.td_entrypoint then "" else "noextract\n")
+            (print_typedef_name td.decl_name)
+            (print_typedef_typ td.decl_name)
+            (print_reader r)))
 
+let print_decl = print_decl_aux false
+
+let print_types_decl = print_decl_aux true
 
 let print_decl_signature (d:decl) : Tot string =
   match fst d with
@@ -624,6 +629,18 @@ let print_decls (modul: string) (ds:list decl) =
      %s"
      modul
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.Tot.map print_decl ds))
+  in
+  decls
+
+let print_types_decls (modul:string) (ds:list decl) =
+  let decls =
+  Printf.sprintf
+    "module %s.Types\n\
+     open Prelude\n\n\
+     #set-options \"--fuel 0 --ifuel 0 --using_facts_from 'Prims FStar Prelude -FStar.Tactics -FStar.Reflection'\"\n\n\
+     %s"
+     modul
+     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.Tot.map print_types_decl ds))
   in
   decls
 
