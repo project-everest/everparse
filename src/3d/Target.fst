@@ -637,6 +637,8 @@ let print_types_decls (modul:string) (ds:list decl) =
   Printf.sprintf
     "module %s.Types\n\
      open Prelude\n\n\
+     open Actions\n\n\
+     module B = LowStar.Buffer\n\
      #set-options \"--fuel 0 --ifuel 0 --using_facts_from 'Prims FStar Prelude -FStar.Tactics -FStar.Reflection'\"\n\n\
      %s"
      modul
