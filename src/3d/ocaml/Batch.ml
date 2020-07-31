@@ -72,6 +72,7 @@ let verify_and_extract_module
 : unit
 =
   let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
+  let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
   let fsti_file = Printf.sprintf "%si" fst_file in
   let fstar_args =
     "--odir" :: out_dir ::
@@ -79,10 +80,13 @@ let verify_and_extract_module
     "--include" :: out_dir ::
     fstar_args0
   in
-  let fstar_args_fst = list_snoc fstar_args (fst_file) in
+  let fstar_args_types_fst = list_snoc fstar_args (types_fst_file) in
   let fstar_args_fsti = list_snoc fstar_args (fsti_file) in
+  let fstar_args_fst = list_snoc fstar_args (fst_file) in
+  run_cmd fstar_exe ("--print_in_place" :: fstar_args_types_fst);
   run_cmd fstar_exe ("--print_in_place" :: fstar_args_fsti);
   run_cmd fstar_exe ("--print_in_place" :: fstar_args_fst);
+  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_types_fst);
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fsti);
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fst);
   let fstar_extract_args =
@@ -123,6 +127,7 @@ let remove_fst_and_krml_files
 =
   let root_name = filename_concat out_dir modul in
   List.iter remove_if_exists [
+    Printf.sprintf "%s.Types.fst" root_name;
     Printf.sprintf "%s.fst" root_name;
     Printf.sprintf "%s.fsti" root_name;
     Printf.sprintf "%s.fst.checked" root_name;
