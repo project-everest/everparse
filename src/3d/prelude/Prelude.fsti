@@ -224,3 +224,144 @@ let max_int_sizes
     )
   = let open FStar.UInt in
     normalize_term_spec (max_int 10)
+
+
+(*
+ * AR: scaffolding for getting arithmetic error locations in the 3d file
+ *)
+
+open FStar.Mul
+
+noeq
+type t_uint = {
+  n   : nat;
+  t   : Type0;
+  v   : t -> FStar.UInt.uint_t n;
+  add : x:t -> y:t -> Pure t (requires UInt.size (v x + v y) n) (ensures fun z -> v z == v x + v y);
+  sub : x:t -> y:t -> Pure t (requires UInt.size (v x - v y) n) (ensures fun z -> v z == v x - v y);
+  mul : x:t -> y:t -> Pure t (requires UInt.size (v x * v y) n) (ensures fun z -> v z == v x * v y);
+  div : x:t -> y:t{v y =!= 0} -> Pure t (requires True)            (ensures fun z -> v z == v x / v y);
+}
+
+noextract
+let u_add (t:t_uint) (msg:string) (r:Prims.range) (x y:t.t)
+  : Pure t.t
+      (requires labeled r msg (UInt.size (t.v x + t.v y) t.n))
+      (ensures fun z -> t.v z == t.v x + t.v y)
+  = t.add x y
+
+noextract
+let u_sub (t:t_uint) (msg:string) (r:Prims.range) (x y:t.t)
+  : Pure t.t
+      (requires labeled r msg (UInt.size (t.v x - t.v y) t.n))
+      (ensures fun z -> t.v z == t.v x - t.v y)
+  = t.sub x y
+
+noextract
+let u_mul (t:t_uint) (msg:string) (r:Prims.range) (x y:t.t)
+  : Pure t.t
+      (requires labeled r msg (UInt.size (t.v x * t.v y) t.n))
+      (ensures fun z -> t.v z == t.v x * t.v y)
+  = t.mul x y
+
+noextract
+let u_div (t:t_uint) (msg:string) (r:Prims.range) (x y:t.t)
+  : Pure t.t
+      (requires labeled r msg (t.v y =!= 0))
+      (ensures fun z -> t.v z == t.v x / t.v y)
+  = t.div x y
+
+noextract
+let t_8 =
+  let open FStar.UInt8 in
+  { n = n; t = t; v = v; add = add; sub = sub; mul = mul; div = div }
+
+noextract
+let t_16 =
+  let open FStar.UInt16 in
+  { n = n; t = t; v = v; add = add; sub = sub; mul = mul; div = div }
+
+noextract
+let t_32 =
+  let open FStar.UInt32 in
+  { n = n; t = t; v = v; add = add; sub = sub; mul = mul; div = div }
+
+noextract
+let t_64 =
+  let open FStar.UInt64 in
+  { n = n; t = t; v = v; add = add; sub = sub; mul = mul; div = div }
+
+open FStar.Tactics
+
+noextract
+let norm () : Tac unit =
+  norm [iota; delta_only [
+    `%u_add; `%u_sub; `%u_mul; `%u_div;    
+    `%Mkt_uint?.n; `%Mkt_uint?.t; `%Mkt_uint?.v; `%Mkt_uint?.add; `%Mkt_uint?.sub; `%Mkt_uint?.mul; `%Mkt_uint?.div;
+    `%t_8; `%t_16; `%t_32; `%t_64 ]
+  ];
+  trefl ()
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u8_add = u_add t_8
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u16_add = u_add t_16
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u32_add = u_add t_32
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u64_add = u_add t_64
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u8_sub = u_sub t_8
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u16_sub = u_sub t_16
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u32_sub = u_sub t_32
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u64_sub = u_sub t_64
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u8_mul = u_mul t_8
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u16_mul = u_mul t_16
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u32_mul = u_mul t_32
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u64_mul = u_mul t_64
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u8_div = u_div t_8
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u16_div = u_div t_16
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u32_div = u_div t_32
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u64_div = u_div t_64
