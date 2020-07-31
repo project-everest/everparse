@@ -40,12 +40,20 @@ type op =
   | Ext of string
 
 /// Same as A.expr, but with `This` removed
+///
+/// Carrying around the range information from AST.expr so that we
+///   can report errors in terms of their 3d file locations
+
 noeq
-type expr =
-  | Constant   : c:A.constant -> expr
-  | Identifier : i:A.ident -> expr
-  | App        : hd:op -> args:list expr -> expr
-  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr
+type expr' =
+  | Constant   : c:A.constant -> expr'
+  | Identifier : i:A.ident -> expr'
+  | App        : hd:op -> args:list expr -> expr'
+  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr'
+
+and expr = expr' & A.range
+
+let mk_expr (e:expr') = e, A.dummy_range
 
 type lam a = A.ident & a
 

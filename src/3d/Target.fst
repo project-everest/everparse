@@ -20,7 +20,7 @@ module A = Ast
 open Binding
 
 let rec expr_eq e1 e2 =
-  match e1, e2 with
+  match fst e1, fst e2 with
   | Constant c1, Constant c2 -> c1=c2
   | Identifier i1, Identifier i2 -> A.(i1.v = i2.v)
   | App hd1 args1, App hd2 args2 -> hd1 = hd2 && exprs_eq args1 args2
@@ -82,17 +82,37 @@ let namespace_of_integer_type =
    | UInt32 -> "UInt32"
    | UInt64 -> "UInt64"
 
-let print_op =
-  function
+let print_range (r:A.range) : string =
+  let open A in
+  Printf.sprintf "(Prims.mk_range \"%s\" %d %d %d %d)"
+    (fst r).filename
+    (fst r).line
+    (fst r).col
+    (snd r).line
+    (snd r).col
+
+let print_arith_op
+  (o:op{Plus? o \/ Minus? o \/ Mul? o \/ Division? o})
+  (t:A.integer_type)
+  (r:option A.range)
+  = let t = match t with | A.UInt8 -> "u8" | A.UInt16 -> "u16" | A.UInt32 -> "u32" | A.UInt64 -> "u64" in
+    let fn = match o with | Plus _ -> "add" | Minus _ -> "sub" | Mul _ -> "mul" | Division _ -> "div" in
+    let r = match r with | Some r -> r | None -> A.dummy_range in
+
+    Printf.sprintf "`Prelude.%s_%s \"Cannot verify that %s %s is safe\" %s`"
+      t fn t fn (print_range r)
+
+let print_op_with_range ropt o =
+  match o with
   | Eq -> "="
   | Neq -> "<>"
   | And -> "&&"
   | Or -> "||"
   | Not -> "not"
-  | Plus t -> Printf.sprintf "`FStar.%s.add`" (namespace_of_integer_type t)
-  | Minus t -> Printf.sprintf "`FStar.%s.sub`" (namespace_of_integer_type t)
-  | Mul t -> Printf.sprintf "`FStar.%s.mul`" (namespace_of_integer_type t)
-  | Division t -> Printf.sprintf "`FStar.%s.div`" (namespace_of_integer_type t)
+  | Plus t
+  | Minus t
+  | Mul t
+  | Division t -> print_arith_op o t ropt
   | LT t -> Printf.sprintf "`FStar.%s.lt`" (namespace_of_integer_type t)
   | GT t -> Printf.sprintf "`FStar.%s.gt`" (namespace_of_integer_type t)
   | LE t -> Printf.sprintf "`FStar.%s.lte`" (namespace_of_integer_type t)
@@ -102,9 +122,11 @@ let print_op =
   | Cast from to ->
     Printf.sprintf "FStar.Int.Cast.%s_to_%s" (print_integer_type from) (print_integer_type to)
   | Ext s -> s
+xo
+let print_op = print_op_with_range None
 
 let rec print_expr (e:expr) : Tot string =
-  match e with
+  match fst e with
   | Constant c ->
     A.print_constant c
   | Identifier i ->
@@ -123,9 +145,9 @@ let rec print_expr (e:expr) : Tot string =
   | App (GT _) [e1; e2]
   | App (LE _) [e1; e2]
   | App (GE _) [e1; e2] ->
-    Printf.sprintf "(%s %s %s)" (print_expr e1) (print_op (App?.hd e)) (print_expr e2)
+    Printf.sprintf "(%s %s %s)" (print_expr e1) (print_op_with_range (Some (snd e)) (App?.hd (fst e))) (print_expr e2)
   | App Not [e1] ->
-    Printf.sprintf "(%s %s)" (print_op (App?.hd e)) (print_expr e1)
+    Printf.sprintf "(%s %s)" (print_op (App?.hd (fst e))) (print_expr e1)
   | App IfThenElse [e1;e2;e3] ->
     Printf.sprintf
       "(if %s then %s else %s)"
@@ -324,7 +346,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
   | Validate_t_exact e p ->
     Printf.sprintf "(validate_t_exact %s %s)" (print_expr e) (print_validator p)
   | Validate_nlist_constant_size_without_actions e p ->
-    let n_is_const = match e with
+    let n_is_const = match fst e with
     | Constant (A.Int _ _) -> true
     | _ -> false
     in
@@ -502,13 +524,13 @@ let print_decl (d:decl) : Tot string =
         (if attrs.should_inline then "inline_for_extraction\n" else "")
   in
   match fst d with
-  | Definition (x, [], T_app ({Ast.v="field_id"}) _, Constant c) ->
+  | Definition (x, [], T_app ({Ast.v="field_id"}) _, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
       (print_comments (snd d).comments)
       (print_ident x)
       (A.print_constant c)
 
-  | Definition (x, [], t, Constant c) ->
+  | Definition (x, [], t, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
       (print_comments (snd d).comments)
       (print_ident x)
