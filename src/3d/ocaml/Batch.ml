@@ -73,6 +73,7 @@ let verify_and_extract_module
 =
   let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
+  let types_modul = Printf.sprintf "%s.Types" modul in
   let fsti_file = Printf.sprintf "%si" fst_file in
   let fstar_args =
     "--odir" :: out_dir ::
@@ -89,12 +90,13 @@ let verify_and_extract_module
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_types_fst);
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fsti);
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fst);
-  let fstar_extract_args =
+  let fstar_extract_args fst modul =
     "--extract_module" :: modul ::
     "--codegen" :: "Kremlin" ::
-      fstar_args_fst
+      (list_snoc fstar_args fst)
   in
-  run_cmd fstar_exe fstar_extract_args
+  run_cmd fstar_exe (fstar_extract_args types_fst_file types_modul);
+  run_cmd fstar_exe (fstar_extract_args fst_file modul)
 
 let is_krml
   filename
@@ -142,7 +144,8 @@ let produce_c_files
 : unit
 = 
   let krml_files = List.fold_left
-    (fun accu (_, modul) -> filename_concat out_dir (Printf.sprintf "%s.krml" modul) :: accu)
+    (fun accu (_, modul) -> filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
+                            filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu)
     all_everparse_krmls
     files_and_modules
   in
@@ -164,6 +167,11 @@ let produce_c_files
     "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
     krml_files
   in
+  (* bundle M.Types.krml into M *)
+  let krml_args =
+      let bundle_types = List.fold_left (fun acc (_, modul) ->
+        "-bundle"::(Printf.sprintf "%s=%s.Types" modul modul)::acc) [] files_and_modules in
+      krml_args@bundle_types in
   (* the argument list is too long, so we need to go through an argument file *)
   let argfile = filename_concat out_dir "kremlin_args.rsp" in
   let h = open_out argfile in
