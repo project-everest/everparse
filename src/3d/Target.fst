@@ -99,8 +99,8 @@ let print_arith_op
     let fn = match o with | Plus _ -> "add" | Minus _ -> "sub" | Mul _ -> "mul" | Division _ -> "div" in
     let r = match r with | Some r -> r | None -> A.dummy_range in
 
-    Printf.sprintf "`Prelude.%s_%s \"Cannot verify that %s %s is safe\" %s`"
-      t fn t fn (print_range r)
+    Printf.sprintf "`Prelude.%s_%s %s`"
+      t fn (print_range r)
 
 let print_op_with_range ropt o =
   match o with

@@ -302,66 +302,68 @@ let norm () : Tac unit =
   ];
   trefl ()
 
-[@@postprocess_with norm]
-inline_for_extraction noextract
-let u8_add = u_add t_8
+unfold let msg_prefix : string = "Cannot verify the safety of "
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u16_add = u_add t_16
+let u8_add = u_add t_8 (String.concat "" [msg_prefix; "u8 addition"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u32_add = u_add t_32
+let u16_add = u_add t_16 (String.concat "" [msg_prefix; "u16 addition"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u64_add = u_add t_64
+let u32_add = u_add t_32 (String.concat "" [msg_prefix; "u32 addition"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u8_sub = u_sub t_8
+let u64_add = u_add t_64 (String.concat "" [msg_prefix; "u64 addition"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u16_sub = u_sub t_16
+let u8_sub = u_sub t_8 (String.concat "" [msg_prefix; "u8 subtraction"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u32_sub = u_sub t_32
+let u16_sub = u_sub t_16 (String.concat "" [msg_prefix; "u16 subtraction"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u64_sub = u_sub t_64
+let u32_sub = u_sub t_32 (String.concat "" [msg_prefix; "u32 subtraction"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u8_mul = u_mul t_8
+let u64_sub = u_sub t_64 (String.concat "" [msg_prefix; "u64 subtraction"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u16_mul = u_mul t_16
+let u8_mul = u_mul t_8 (String.concat "" [msg_prefix; "u8 multiplication"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u32_mul = u_mul t_32
+let u16_mul = u_mul t_16 (String.concat "" [msg_prefix; "u16 multiplication"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u64_mul = u_mul t_64
+let u32_mul = u_mul t_32 (String.concat "" [msg_prefix; "u32 multiplication"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u8_div = u_div t_8
+let u64_mul = u_mul t_64 (String.concat "" [msg_prefix; "u64 multiplication"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u16_div = u_div t_16
+let u8_div = u_div t_8 (String.concat "" [msg_prefix; "u8 division"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u32_div = u_div t_32
+let u16_div = u_div t_16 (String.concat "" [msg_prefix; "u16 division"])
 
 [@@postprocess_with norm]
 inline_for_extraction noextract
-let u64_div = u_div t_64
+let u32_div = u_div t_32 (String.concat "" [msg_prefix; "u32 division"])
+
+[@@postprocess_with norm]
+inline_for_extraction noextract
+let u64_div = u_div t_64 (String.concat "" [msg_prefix; "u64 division"])
