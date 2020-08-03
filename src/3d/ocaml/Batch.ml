@@ -144,7 +144,7 @@ let produce_c_files
   let krml_args =
     "-tmpdir" :: out_dir ::
     "-skip-compilation" ::
-    "-bundle" :: "ResultOps=Prims,C.\\*,FStar.\\*,LowStar.\\*,LowParse.\\*,Prelude,Prelude.\\*,Actions,EverParse3d.\\*[rename=EverParse,rename-prefix]" ::
+    "-bundle" :: "ResultOps+EverParse3d.InputBuffer.Aux=Prims,C.\\*,FStar.\\*,LowStar.\\*,LowParse.\\*,Prelude,Prelude.\\*,Actions,EverParse3d.\\*[rename=EverParse,rename-prefix]" ::
     "-warn-error" :: "-9@4" ::
     "-fnoreturn-else" ::
     "-fparentheses" ::
@@ -156,7 +156,6 @@ let produce_c_files
     "-static-header" :: "Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps" ::
     "-no-prefix" :: "LowParse.Slice" ::
     "-no-prefix" :: "LowParse.Low.BoundedInt" ::
-    "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
     krml_files
   in
   (* the argument list is too long, so we need to go through an argument file *)

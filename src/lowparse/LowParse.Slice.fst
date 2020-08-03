@@ -6,13 +6,16 @@ module U32 = FStar.UInt32
 module HS = FStar.HyperStack
 
 inline_for_extraction
+noextract
 type srel (a: Type) = (B.srel a)
 
 inline_for_extraction
+noextract
 let buffer_srel_of_srel (#a: Type) (s: srel a) : Tot (B.srel a) =
   s
 
 inline_for_extraction
+noextract
 let srel_of_buffer_srel (#a: Type) (s: B.srel a) : Tot (srel a) =
   s
 
@@ -29,6 +32,7 @@ type slice (rrel rel: srel byte) = {
 }
 
 inline_for_extraction
+noextract
 let make_slice
   (#rrel #rel: _)
   (b: B.mbuffer byte rrel rel)
