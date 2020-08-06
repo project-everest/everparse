@@ -57,8 +57,8 @@ typedef struct _Message {
 } Message, *P_Message;
 
 // Messages is a variable length array of flatly allocated variable length messages
-// entrypoint
-// typedef struct _Messages (UINT32 size) {
-//   UINT32 byte_length;
-//   Message msgs[byte_length];
-// } Messages, *P_MESSAGES;
+entrypoint
+typedef struct _Messages (UINT32 size) {
+  UINT32 byte_length;
+  Message msgs[byte_length];
+} Messages, *P_MESSAGES;

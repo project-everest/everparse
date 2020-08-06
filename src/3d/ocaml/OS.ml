@@ -25,6 +25,11 @@ let getenv var =
   with Not_found ->
     raise (Undefined_environment_variable var)
 
+let getenv_array var =
+  try
+    String.split_on_char ' ' (String.trim (getenv var))
+  with Undefined_environment_variable _ -> []
+
 (* Run program prog with argument args (starting from $1, so prog need
    not be duplicated). *)
 
