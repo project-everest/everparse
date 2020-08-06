@@ -58,7 +58,7 @@
 %left BITWISE_OR
 %left BITWISE_XOR
 %left BITWISE_AND
-%nonassoc EQ NEQ DOUBLEEQ
+%nonassoc NEQ DOUBLEEQ
 %nonassoc LEQ LESS_THAN GEQ GREATER_THAN
 %left SHIFT_LEFT SHIFT_RIGHT
 %left PLUS MINUS
@@ -86,8 +86,7 @@ constant:
   | b=BOOL   { Bool b }
 
 rel_op:
-  | EQ           { Eq }
-  | DOUBLEEQ           { Eq }
+  | DOUBLEEQ     { Eq }
   | NEQ          { Neq }
   | LEQ          { LE None }
   | LESS_THAN    { LT None }
@@ -123,7 +122,7 @@ expr_no_range:
       | _ ->
         error ("Expected a cast expression, got " ^ (print_expr e)) e.range
     }
-  | l=expr o=rel_op r=expr %prec EQ
+  | l=expr o=rel_op r=expr %prec DOUBLEEQ
     { App (o, [l;r]) }
   | l=expr AND r=expr
     { App (And, [l;r]) }
