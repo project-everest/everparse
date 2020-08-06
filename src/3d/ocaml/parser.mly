@@ -61,11 +61,8 @@
 %nonassoc EQ NEQ DOUBLEEQ
 %nonassoc LEQ LESS_THAN GEQ GREATER_THAN
 %left SHIFT_LEFT SHIFT_RIGHT
-%left PLUS
-%left MINUS
-%left STAR
-%left REM
-%left DIV
+%left PLUS MINUS
+%left STAR REM DIV
 %nonassoc BITWISE_NOT NOT
 
 %%
