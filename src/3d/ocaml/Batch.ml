@@ -158,6 +158,7 @@ let produce_c_files
     "-static-header" :: "Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps" ::
     "-no-prefix" :: "LowParse.Slice" ::
     "-no-prefix" :: "LowParse.Low.BoundedInt" ::
+    "-fextern-c" ::
     (krml_args0 @ krml_files)
   in
   (* the argument list is too long, so we need to go through an argument file *)
