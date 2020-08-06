@@ -56,9 +56,35 @@ let readable_prop h #t #b p from to = ()
 
 let readable_gsub h #t #b p offset length from to = ()
 
-let readable_split h #t #b p from mid to =
+let readable_split_1
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+: Lemma
+  (requires (readable h p from to))
+  (ensures (readable h p from mid /\ readable h p mid to))
+=
   Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
   if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
+
+let readable_split_2
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+: Lemma
+  (requires (readable h p from mid /\ readable h p mid to))
+  (ensures (readable h p from to))
+=
+  Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
+  if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
+
+let readable_split h #t #b p from mid to =
+  Classical.move_requires (readable_split_1 h p from mid) to;
+  Classical.move_requires (readable_split_2 h p from mid) to
 
 let readable_frame h #t #b p from to l h' = ()
 
@@ -86,9 +112,35 @@ let readable_not_unreadable h #t #b p from to =
 
 let unreadable_gsub h #t #b p offset length from to = ()
 
-let unreadable_split h #t #b p from mid to =
+let unreadable_split_1
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+: Lemma
+  (requires (unreadable h p from to))
+  (ensures (unreadable h p from mid /\ unreadable h p mid to))
+=
   Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
   if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
+
+let unreadable_split_2
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+: Lemma
+  (requires (unreadable h p from mid /\ unreadable h p mid to))
+  (ensures (unreadable h p from to))
+=
+  Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
+  if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
+
+let unreadable_split h #t #b p from mid to =
+  Classical.move_requires (unreadable_split_1 h p from mid) to;
+  Classical.move_requires (unreadable_split_2 h p from mid) to
 
 let unreadable_empty h #t #b p i = ()
 
