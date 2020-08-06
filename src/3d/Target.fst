@@ -91,16 +91,70 @@ let print_range (r:A.range) : string =
     (snd r).line
     (snd r).col
 
-let print_arith_op
-  (o:op{Plus? o \/ Minus? o \/ Mul? o \/ Division? o})
-  (t:A.integer_type)
-  (r:option A.range)
-  = let t = match t with | A.UInt8 -> "u8" | A.UInt16 -> "u16" | A.UInt32 -> "u32" | A.UInt64 -> "u64" in
-    let fn = match o with | Plus _ -> "add" | Minus _ -> "sub" | Mul _ -> "mul" | Division _ -> "div" in
-    let r = match r with | Some r -> r | None -> A.dummy_range in
+let arith_op (o:op) =
+  match o with
+  | Plus _
+  | Minus _
+  | Mul _
+  | Division _
+  | Remainder _
+  | ShiftLeft _
+  | ShiftRight _
+  | BitwiseAnd _
+  | BitwiseOr _
+  | BitwiseXor _
+  | BitwiseNot _ -> true
+  | _ -> false
 
-    Printf.sprintf "`Prelude.%s_%s %s`"
+let integer_type_of_arith_op (o:op{arith_op o}) =
+  match o with
+  | Plus t
+  | Minus t
+  | Mul t
+  | Division t
+  | Remainder t
+  | ShiftLeft t
+  | ShiftRight t
+  | BitwiseAnd t
+  | BitwiseOr t
+  | BitwiseXor t
+  | BitwiseNot t -> t
+
+let print_arith_op
+  (o:op{arith_op o})
+  (r:option A.range)
+  = let t =
+      match integer_type_of_arith_op o with
+      | A.UInt8 -> "u8"
+      | A.UInt16 -> "u16"
+      | A.UInt32 -> "u32"
+      | A.UInt64 -> "u64"
+    in
+    let fn =
+      match o with
+      | Plus _ -> "add"
+      | Minus _ -> "sub"
+      | Mul _ -> "mul"
+      | Division _ -> "div"
+      | Remainder _ -> "rem"
+      | ShiftLeft _ -> "shift_left"
+      | ShiftRight _ -> "shift_right"
+      | BitwiseAnd _ -> "logand"
+      | BitwiseOr _ -> "logor"
+      | BitwiseXor _ -> "logxor"
+      | BitwiseNot _ -> "lognot"
+    in
+    let r = match r with | Some r -> r | None -> A.dummy_range in
+    Printf.sprintf "Prelude.%s_%s %s"
       t fn (print_range r)
+
+let is_infix =
+  function
+  | Eq
+  | Neq
+  | And
+  | Or -> true
+  | _ -> false
 
 let print_op_with_range ropt o =
   match o with
@@ -109,14 +163,21 @@ let print_op_with_range ropt o =
   | And -> "&&"
   | Or -> "||"
   | Not -> "not"
-  | Plus t
-  | Minus t
-  | Mul t
-  | Division t -> print_arith_op o t ropt
-  | LT t -> Printf.sprintf "`FStar.%s.lt`" (namespace_of_integer_type t)
-  | GT t -> Printf.sprintf "`FStar.%s.gt`" (namespace_of_integer_type t)
-  | LE t -> Printf.sprintf "`FStar.%s.lte`" (namespace_of_integer_type t)
-  | GE t -> Printf.sprintf "`FStar.%s.gte`" (namespace_of_integer_type t)
+  | Plus _
+  | Minus _
+  | Mul _
+  | Division _
+  | Remainder _
+  | ShiftLeft _
+  | ShiftRight _
+  | BitwiseAnd _
+  | BitwiseOr _
+  | BitwiseXor _
+  | BitwiseNot _ -> print_arith_op o ropt
+  | LT t -> Printf.sprintf "FStar.%s.lt" (namespace_of_integer_type t)
+  | GT t -> Printf.sprintf "FStar.%s.gt" (namespace_of_integer_type t)
+  | LE t -> Printf.sprintf "FStar.%s.lte" (namespace_of_integer_type t)
+  | GE t -> Printf.sprintf "FStar.%s.gte" (namespace_of_integer_type t)
   | IfThenElse -> "ite"
   | BitFieldOf i -> Printf.sprintf "get_bitfield%d" i
   | Cast from to ->
@@ -133,20 +194,20 @@ let rec print_expr (e:expr) : Tot string =
     print_ident i
   | Record nm fields ->
     Printf.sprintf "{ %s }" (String.concat "; " (print_fields fields))
-  | App Eq [e1; e2]
-  | App Neq [e1; e2]
-  | App And [e1; e2]
-  | App Or [e1; e2]
-  | App (Plus _) [e1; e2]
-  | App (Minus _) [e1; e2]
-  | App (Mul _) [e1; e2]
-  | App (Division _) [e1; e2]
-  | App (LT _) [e1; e2]
-  | App (GT _) [e1; e2]
-  | App (LE _) [e1; e2]
-  | App (GE _) [e1; e2] ->
-    Printf.sprintf "(%s %s %s)" (print_expr e1) (print_op_with_range (Some (snd e)) (App?.hd (fst e))) (print_expr e2)
-  | App Not [e1] ->
+  | App op [e1;e2] ->
+    if is_infix op
+    then
+      Printf.sprintf "(%s %s %s)"
+                   (print_expr e1)
+                   (print_op_with_range (Some (snd e)) (App?.hd (fst e)))
+                   (print_expr e2)
+    else
+      Printf.sprintf "(%s %s %s)"
+                   (print_op_with_range (Some (snd e)) (App?.hd (fst e)))
+                   (print_expr e1)
+                   (print_expr e2)
+  | App Not [e1]
+  | App (BitwiseNot _) [e1] ->
     Printf.sprintf "(%s %s)" (print_op (App?.hd (fst e))) (print_expr e1)
   | App IfThenElse [e1;e2;e3] ->
     Printf.sprintf

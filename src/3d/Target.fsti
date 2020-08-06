@@ -20,6 +20,7 @@ module A = Ast
 open Binding
 
 /// The same as A.op, but with `SizeOf` removed
+/// and arithmetic operators resolved to their types
 type op =
   | Eq
   | Neq
@@ -30,6 +31,13 @@ type op =
   | Minus of A.integer_type
   | Mul of A.integer_type
   | Division of A.integer_type
+  | Remainder of A.integer_type
+  | BitwiseAnd of A.integer_type
+  | BitwiseXor of A.integer_type
+  | BitwiseOr of A.integer_type
+  | BitwiseNot of A.integer_type
+  | ShiftRight of A.integer_type
+  | ShiftLeft of A.integer_type
   | LT of A.integer_type
   | GT of A.integer_type
   | LE of A.integer_type

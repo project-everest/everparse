@@ -16,7 +16,7 @@ let mk_pos (l:Lexing.position) =
 
 let with_range (x:'a) (l:Lexing.position) : 'a with_meta_t =
     Ast.with_range x (mk_pos l, mk_pos l)
-    
+
 let locate lb tok =
   tok,
   Lexing.lexeme_start_p lb,
@@ -28,9 +28,8 @@ let locate_pos lb tok =
 
 let keywords = H.create 0
 let () =
-  H.add keywords "not" NOT;
   H.add keywords "where" WHERE;
-  H.add keywords "requires" REQUIRES;    
+  H.add keywords "requires" REQUIRES;
   H.add keywords "sizeof" SIZEOF;
   H.add keywords "enum" ENUM;
   H.add keywords "typedef" TYPEDEF;
@@ -40,14 +39,14 @@ let () =
   H.add keywords "case" CASE;
   H.add keywords "this" THIS;
   H.add keywords "entrypoint" ENTRYPOINT;
-  H.add keywords "if" IF; 
+  H.add keywords "if" IF;
   H.add keywords "else" ELSE;
   H.add keywords "mutable" MUTABLE;
   H.add keywords "field_pos" FIELD_POS;
   H.add keywords "field_ptr" FIELD_PTR;
   H.add keywords "var" VAR;
   H.add keywords "abort" ABORT;
-  H.add keywords "return" RETURN  
+  H.add keywords "return" RETURN
 
 let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
 
@@ -87,30 +86,38 @@ rule token =
   | line_comment as c { Ast.comments_buffer.push (locate_pos lexbuf c); token lexbuf }
   | "/*++"         { block_comment ("", Lexing.lexeme_start_p lexbuf) lexbuf }
   | "("            { locate lexbuf LPAREN }
-  | ")"            { locate lexbuf RPAREN }  
+  | ")"            { locate lexbuf RPAREN }
+  | "<<"           { locate lexbuf SHIFT_LEFT }
+  | ">>"           { locate lexbuf SHIFT_RIGHT }
   | ">="           { locate lexbuf GEQ }
   | "<="           { locate lexbuf LEQ }
   | ">"            { locate lexbuf GREATER_THAN }
   | "<"            { locate lexbuf LESS_THAN }
   | "=="           { locate lexbuf DOUBLEEQ }
   | "="            { locate lexbuf EQ }
-  | "!="           { locate lexbuf NEQ }  
+  | "!="           { locate lexbuf NEQ }
+  | "!"            { locate lexbuf NOT }
   | "&&"           { locate lexbuf AND }
+  | "&"            { locate lexbuf BITWISE_AND }
   | "||"           { locate lexbuf OR }
+  | "|"            { locate lexbuf BITWISE_OR }
+  | "^"            { locate lexbuf BITWISE_XOR }
+  | "~"            { locate lexbuf BITWISE_NOT }
   | ","            { locate lexbuf COMMA }
   | ";"            { locate lexbuf SEMICOLON }
   | ":"            { locate lexbuf COLON }
-  | "?"            { locate lexbuf QUESTION }  
+  | "?"            { locate lexbuf QUESTION }
   | "{:on-success" { locate lexbuf LBRACE_ONSUCCESS }
   | "{"            { locate lexbuf LBRACE }
   | "}"            { locate lexbuf RBRACE }
-  | "[="           { locate lexbuf LBRACK_EQ }    
-  | "[<="          { locate lexbuf LBRACK_LEQ }  
+  | "[="           { locate lexbuf LBRACK_EQ }
+  | "[<="          { locate lexbuf LBRACK_LEQ }
   | "["            { locate lexbuf LBRACK }
-  | "]"            { locate lexbuf RBRACK }  
+  | "]"            { locate lexbuf RBRACK }
   | "*"            { locate lexbuf STAR }
-  | "/"            { locate lexbuf DIV }    
-  | "+"            { locate lexbuf PLUS }  
+  | "/"            { locate lexbuf DIV }
+  | "%"            { locate lexbuf REM }
+  | "+"            { locate lexbuf PLUS }
   | "-"            { locate lexbuf MINUS }
   | xinteger as i  { locate lexbuf (XINT i) }
   | integer as i   { locate lexbuf (INT i) }
@@ -129,11 +136,7 @@ and block_comment cp = parse
       Lexing.new_line lexbuf;
       block_comment (contents^n, pos) lexbuf }
 
- | _ as n 
+ | _ as n
    {  let contents, pos = cp in
       let n = String.make 1 n in
       block_comment (contents^n, pos) lexbuf }
-
-
-
-

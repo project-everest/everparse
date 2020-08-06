@@ -192,6 +192,13 @@ type op =
   | Minus of option integer_type
   | Mul of option integer_type
   | Division of option integer_type
+  | Remainder of option integer_type
+  | BitwiseAnd of option integer_type
+  | BitwiseXor of option integer_type
+  | BitwiseOr of option integer_type
+  | BitwiseNot of option integer_type
+  | ShiftRight of option integer_type
+  | ShiftLeft of option integer_type
   | LT of option integer_type
   | GT of option integer_type
   | LE of option integer_type
@@ -462,11 +469,18 @@ let print_op = function
   | Neq -> "!="
   | And -> "&&"
   | Or -> "||"
-  | Not -> "not"
+  | Not -> "!"
   | Plus _ -> "+"
   | Minus _ -> "-"
   | Mul _ -> "*"
   | Division _ -> "/"
+  | Remainder _ -> "%"
+  | BitwiseAnd _ -> "&"
+  | BitwiseOr _ -> "|"
+  | BitwiseXor _ -> "^"
+  | BitwiseNot _ -> "~"
+  | ShiftLeft _ -> "<<"
+  | ShiftRight _ -> ">>"
   | LT _ -> "<"
   | GT _ -> ">"
   | LE _ -> "<="
@@ -492,7 +506,9 @@ let rec print_expr (e:expr) : Tot string =
   | App Or [e1; e2] ->
     Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
   | App Not [e1] ->
-    Printf.sprintf "(not %s)" (print_expr e1)
+    Printf.sprintf "(! %s)" (print_expr e1)
+  | App (BitwiseNot _) [e1] ->
+    Printf.sprintf "(~ %s)" (print_expr e1)
   | App (Plus _) [e1; e2] ->
     Printf.sprintf "(%s + %s)" (print_expr e1) (print_expr e2)
   | App (Minus _) [e1; e2] ->

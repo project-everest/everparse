@@ -195,7 +195,8 @@ let translate_op : A.op -> ML T.op =
       | None -> failwith (Printf.sprintf "Unelaborated integer operator")
       | Some t -> t
   in
-  function
+  fun op ->
+  match op with
   | Eq -> T.Eq
   | Neq -> T.Neq
   | And -> T.And
@@ -205,15 +206,23 @@ let translate_op : A.op -> ML T.op =
   | Minus topt -> T.Minus (force_topt topt)
   | Mul topt -> T.Mul (force_topt topt)
   | Division topt -> T.Division (force_topt topt)
+  | Remainder topt -> T.Remainder (force_topt topt)
+  | BitwiseAnd topt -> T.BitwiseAnd (force_topt topt)
+  | BitwiseXor topt -> T.BitwiseXor (force_topt topt)
+  | BitwiseOr topt -> T.BitwiseOr (force_topt topt)
+  | BitwiseNot topt -> T.BitwiseNot (force_topt topt)
+  | ShiftRight topt -> T.ShiftRight (force_topt topt)
+  | ShiftLeft topt -> T.ShiftLeft (force_topt topt)
   | LT topt -> T.LT (force_topt topt)
   | GT topt -> T.GT (force_topt topt)
   | LE topt -> T.LE (force_topt topt)
   | GE topt -> T.GE (force_topt topt)
-  | BitFieldOf i -> T.BitFieldOf i
   | IfThenElse -> T.IfThenElse
+  | BitFieldOf i -> T.BitFieldOf i
   | Cast (Some from) to -> T.Cast from to
   | Ext s -> T.Ext s
-  | op -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
+  | Cast None _
+  | SizeOf -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
                                   (Ast.print_op op))
 
 let rec translate_expr (e:A.expr) : ML T.expr =
