@@ -54,14 +54,14 @@ let krml out_dir =
     ])
 
 (* command lines *)
-let fstar_args0 = [
-  "--already_cached"; "Prims,LowStar,FStar,LowParse,C,Prelude,Actions,ResultOps,Spec";
-  "--include"; lowparse_home;
-  "--include"; kremlib;
-  "--include"; (filename_concat kremlib "obj");
-  "--include"; ddd_prelude_home;
-  "--cmi";
-]
+let fstar_args0 =
+  "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,Prelude,Actions,ResultOps,Spec" ::
+  "--include" :: lowparse_home ::
+  "--include" :: kremlib ::
+  "--include" :: (filename_concat kremlib "obj") ::
+  "--include" :: ddd_prelude_home ::
+  "--cmi" ::
+  OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"
 
 let list_snoc q a =
   q @ [a]
@@ -95,6 +95,8 @@ let verify_and_extract_module
 let is_krml
   filename
 = Filename.check_suffix filename "krml"
+
+let krml_args0 = OS.getenv_array "EVERPARSE_KREMLIN_OPTIONS"
 
 let all_krmls_in_dir
   dir
@@ -156,7 +158,7 @@ let produce_c_files
     "-static-header" :: "Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps" ::
     "-no-prefix" :: "LowParse.Slice" ::
     "-no-prefix" :: "LowParse.Low.BoundedInt" ::
-    krml_files
+    (krml_args0 @ krml_files)
   in
   (* the argument list is too long, so we need to go through an argument file *)
   let argfile = filename_concat out_dir "kremlin_args.rsp" in
