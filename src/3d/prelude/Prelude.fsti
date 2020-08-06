@@ -224,3 +224,122 @@ let max_int_sizes
     )
   = let open FStar.UInt in
     normalize_term_spec (max_int 10)
+
+
+
+(*
+ * AR: scaffolding for getting arithmetic error locations in the 3d file
+ *)
+
+unfold noextract
+let u8_add (r:Prims.range) (x y:UInt8.t)
+  : Pure UInt8.t
+      (requires labeled r "Cannot verify u8 addition" (UInt.size (UInt8.v x + UInt8.v y) UInt8.n))
+      (ensures fun z -> UInt8.v z == UInt8.v x + UInt8.v y)
+  = UInt8.add x y
+
+
+unfold noextract
+let u8_sub (r:Prims.range) (x y:UInt8.t)
+  : Pure UInt8.t
+      (requires labeled r "Cannot verify u8 subtraction" (UInt.size (UInt8.v x - UInt8.v y) UInt8.n))
+      (ensures fun z -> UInt8.v z == UInt8.v x - UInt8.v y)
+  = UInt8.sub x y
+
+unfold noextract
+let u8_mul (r:Prims.range) (x y:UInt8.t)
+  : Pure UInt8.t
+      (requires labeled r "Cannot verify u8 multiplication" (UInt.size (UInt8.v x `Prims.op_Multiply` UInt8.v y) UInt8.n))
+      (ensures fun z -> UInt8.v z == UInt8.v x `Prims.op_Multiply` UInt8.v y)
+  = UInt8.mul x y
+
+unfold noextract
+let u8_div (r:Prims.range) (x y:UInt8.t)
+  : Pure UInt8.t
+      (requires labeled r "Cannot verify u8 division" (UInt8.v y =!= 0))
+      (ensures fun z -> UInt8.v z == UInt8.v x / UInt8.v y)
+  = UInt8.div x y
+
+unfold noextract
+let u16_add (r:Prims.range) (x y:UInt16.t)
+  : Pure UInt16.t
+      (requires labeled r "Cannot verify u16 addition" (UInt.size (UInt16.v x + UInt16.v y) UInt16.n))
+      (ensures fun z -> UInt16.v z == UInt16.v x + UInt16.v y)
+  = UInt16.add x y
+
+unfold noextract
+let u16_sub (r:Prims.range) (x y:UInt16.t)
+  : Pure UInt16.t
+      (requires labeled r "Cannot verify u16 subtraction" (UInt.size (UInt16.v x - UInt16.v y) UInt16.n))
+      (ensures fun z -> UInt16.v z == UInt16.v x - UInt16.v y)
+  = UInt16.sub x y
+
+unfold noextract
+let u16_mul (r:Prims.range) (x y:UInt16.t)
+  : Pure UInt16.t
+      (requires labeled r "Cannot verify u16 multiplication" (UInt.size (UInt16.v x `Prims.op_Multiply` UInt16.v y) UInt16.n))
+      (ensures fun z -> UInt16.v z == UInt16.v x `Prims.op_Multiply` UInt16.v y)
+  = UInt16.mul x y
+
+unfold noextract
+let u16_div (r:Prims.range) (x y:UInt16.t)
+  : Pure UInt16.t
+      (requires labeled r "Cannot verify u16 division" (UInt16.v y =!= 0))
+      (ensures fun z -> UInt16.v z == UInt16.v x / UInt16.v y)
+  = UInt16.div x y
+
+unfold noextract
+let u32_add (r:Prims.range) (x y:UInt32.t)
+  : Pure UInt32.t
+      (requires labeled r "Cannot verify u32 addition" (UInt.size (UInt32.v x + UInt32.v y) UInt32.n))
+      (ensures fun z -> UInt32.v z == UInt32.v x + UInt32.v y)
+  = UInt32.add x y
+
+unfold noextract
+let u32_sub (r:Prims.range) (x y:UInt32.t)
+  : Pure UInt32.t
+      (requires labeled r "Cannot verify u32 subtraction" (UInt.size (UInt32.v x - UInt32.v y) UInt32.n))
+      (ensures fun z -> UInt32.v z == UInt32.v x - UInt32.v y)
+  = UInt32.sub x y
+
+unfold noextract
+let u32_mul (r:Prims.range) (x y:UInt32.t)
+  : Pure UInt32.t
+      (requires labeled r "Cannot verify u32 multiplication" (UInt.size (UInt32.v x `Prims.op_Multiply` UInt32.v y) UInt32.n))
+      (ensures fun z -> UInt32.v z == UInt32.v x `Prims.op_Multiply` UInt32.v y)
+  = UInt32.mul x y
+
+unfold noextract
+let u32_div (r:Prims.range) (x y:UInt32.t)
+  : Pure UInt32.t
+      (requires labeled r "Cannot verify u32 division" (UInt32.v y =!= 0))
+      (ensures fun z -> UInt32.v z == UInt32.v x / UInt32.v y)
+  = UInt32.div x y
+
+unfold noextract
+let u64_add (r:Prims.range) (x y:UInt64.t)
+  : Pure UInt64.t
+      (requires labeled r "Cannot verify u64 addition" (UInt.size (UInt64.v x + UInt64.v y) UInt64.n))
+      (ensures fun z -> UInt64.v z == UInt64.v x + UInt64.v y)
+  = UInt64.add x y
+
+unfold noextract
+let u64_sub (r:Prims.range) (x y:UInt64.t)
+  : Pure UInt64.t
+      (requires labeled r "Cannot verify u64 subtraction" (UInt.size (UInt64.v x - UInt64.v y) UInt64.n))
+      (ensures fun z -> UInt64.v z == UInt64.v x - UInt64.v y)
+  = UInt64.sub x y
+
+unfold noextract
+let u64_mul (r:Prims.range) (x y:UInt64.t)
+  : Pure UInt64.t
+      (requires labeled r "Cannot verify u64 multiplication" (UInt.size (UInt64.v x `Prims.op_Multiply` UInt64.v y) UInt64.n))
+      (ensures fun z -> UInt64.v z == UInt64.v x `Prims.op_Multiply` UInt64.v y)
+  = UInt64.mul x y
+
+unfold noextract
+let u64_div (r:Prims.range) (x y:UInt64.t)
+  : Pure UInt64.t
+      (requires labeled r "Cannot verify u64 division" (UInt64.v y =!= 0))
+      (ensures fun z -> UInt64.v z == UInt64.v x / UInt64.v y)
+  = UInt64.div x y

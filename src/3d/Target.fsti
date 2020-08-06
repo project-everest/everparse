@@ -40,12 +40,20 @@ type op =
   | Ext of string
 
 /// Same as A.expr, but with `This` removed
+///
+/// Carrying around the range information from AST.expr so that we
+///   can report errors in terms of their 3d file locations
+
 noeq
-type expr =
-  | Constant   : c:A.constant -> expr
-  | Identifier : i:A.ident -> expr
-  | App        : hd:op -> args:list expr -> expr
-  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr
+type expr' =
+  | Constant   : c:A.constant -> expr'
+  | Identifier : i:A.ident -> expr'
+  | App        : hd:op -> args:list expr -> expr'
+  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr'
+
+and expr = expr' & A.range
+
+let mk_expr (e:expr') = e, A.dummy_range
 
 type lam a = A.ident & a
 
@@ -231,5 +239,6 @@ let decl = decl' * decl_attributes
 
 val print_typ (t:typ) : Tot string (decreases t)
 val print_decls (modul: string) (ds:list decl) : ML string
+val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string
 val print_c_entry (modul: string) (env: global_env) (ds:list decl) : ML (string & string)
