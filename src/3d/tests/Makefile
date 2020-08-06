@@ -7,6 +7,7 @@ all: batch-test batch-test-negative
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
 %.3d.negtest: %.3d
+	mkdir -p out.fail.batch
 	! $(3D) --odir out.fail.batch --batch $<
 
 batch-test:
