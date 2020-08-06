@@ -85,6 +85,7 @@ rule token =
     }
   | line_comment as c { Ast.comments_buffer.push (locate_pos lexbuf c); token lexbuf }
   | "/*++"         { block_comment ("", Lexing.lexeme_start_p lexbuf) lexbuf }
+  | "/*"           { multi_line_comment lexbuf }
   | "("            { locate lexbuf LPAREN }
   | ")"            { locate lexbuf RPAREN }
   | "<<"           { locate lexbuf SHIFT_LEFT }
@@ -140,3 +141,20 @@ and block_comment cp = parse
    {  let contents, pos = cp in
       let n = String.make 1 n in
       block_comment (contents^n, pos) lexbuf }
+
+and multi_line_comment = parse
+ | "*/"
+   {
+      token lexbuf
+   }
+
+ | newline as n
+    {
+      Lexing.new_line lexbuf;
+      multi_line_comment lexbuf
+    }
+
+ | _ as n
+   {
+      multi_line_comment lexbuf
+   }
