@@ -11,10 +11,21 @@ let open_write_file (s:string) : ML FStar.IO.fd_write =
   FStar.IO.print_string (FStar.Printf.sprintf "Writing file %s\n" s);
   FStar.IO.open_write_file s
 
+let parse_decls (fn:string) : ML (list decl) =
+  let decls = ParserDriver.parse fn in
+  if decls
+     |> List.tryFind (fun d -> match d.v with
+                           | Record names _ _ _
+                           | CaseType names _ _ -> names.typedef_entry_point
+                           | _ -> false)
+     |> Some?
+  then decls
+  else raise (Error (Printf.sprintf "File %s does not have an entry point definition, exiting\n" fn))
+
 let process_file (fn: string) : ML unit =
     let modul = Options.get_module_name fn in
     Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn modul);
-    let decls = ParserDriver.parse fn in
+    let decls = parse_decls fn in
     Options.debug_print_string "=============After parsing=============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
