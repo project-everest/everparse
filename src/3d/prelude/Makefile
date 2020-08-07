@@ -1,7 +1,7 @@
 all: verify extract
 
-FSTAR_HOME?=../../../../FStar
-KREMLIN_HOME?=../../../../kremlin
+FSTAR_HOME?=$(realpath ../../../../FStar)
+KREMLIN_HOME?=$(realpath ../../../../kremlin)
 OTHERFLAGS?=
 EVERPARSE_HOME=../../..
 

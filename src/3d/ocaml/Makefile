@@ -1,3 +1,5 @@
+FSTAR_HOME ?= $(realpath ../../../../FStar)
+
 Main.native: FStar_Getopt.ml
 	rm -f Main.native
 	OCAMLPATH="$(FSTAR_HOME)/bin" ocamlbuild -use-menhir -tag thread -use-ocamlfind -quiet -pkg batteries -pkg menhirLib -pkg fstarlib -pkg process -cflags -w,-8 Main.native

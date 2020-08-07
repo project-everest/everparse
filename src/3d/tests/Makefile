@@ -1,9 +1,15 @@
-QD_HOME ?= ../../..
+QD_HOME ?= $(realpath ../../..)
 export QD_HOME
 
-3D=../3d
+3D=$(QD_HOME)/src/3d/3d
 
-INCLUDES=../prelude ../../lowparse ../../../../kremlin/kremlib/obj ../../../../kremlin/kremlib
+KREMLIN_HOME ?= $(realpath ../../../../kremlin)
+export KREMLIN_HOME
+
+FSTAR_HOME ?= $(realpath ../../../../FStar)
+export FSTAR_HOME
+
+INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib/obj $(KREMLIN_HOME)/kremlin/kremlib
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 
