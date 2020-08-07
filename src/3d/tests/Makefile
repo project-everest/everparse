@@ -1,5 +1,7 @@
 3D=../3d
 
+INCLUDES=../prelude ../../lowparse ../../../../kremlin/kremlib/obj ../../../../kremlin/kremlib
+
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 
 all: batch-test batch-test-negative

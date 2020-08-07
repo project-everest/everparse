@@ -133,15 +133,15 @@ let false_typ = T.T_false
 let unit_typ =
     T.T_app (with_dummy_range "unit") []
 let unit_val =
-    T.(App (Ext "()") [])
+    T.(mk_expr (App (Ext "()") []))
 let unit_parser =
     mk_parser pk_return unit_typ (T.Parse_return unit_val)
 let pair_typ t1 t2 =
     T.T_app (with_dummy_range "tuple2") [Inl t1; Inl t2]
 let pair_value x y =
     T.Record (with_dummy_range "tuple2")
-             [(with_dummy_range "fst", T.Identifier x);
-              (with_dummy_range "snd", T.Identifier y)]
+             [(with_dummy_range "fst", T.mk_expr (T.Identifier x));
+              (with_dummy_range "snd", T.mk_expr (T.Identifier y))]
 let pair_parser n1 p1 p2 =
     let open T in
     let pt = pair_typ p1.p_typ p2.p_typ in
@@ -149,9 +149,10 @@ let pair_parser n1 p1 p2 =
 let dep_pair_typ t1 (t2:T.lam T.typ) : T.typ =
     T.T_dep_pair t1 t2
 let dep_pair_value x y : T.expr =
-    T.Record (with_dummy_range "dtuple2")
-             [(with_dummy_range "fst", T.Identifier x);
-              (with_dummy_range "snd", T.Identifier y)]
+    T.mk_expr
+      (T.Record (with_dummy_range "dtuple2")
+                [(with_dummy_range "fst", T.mk_expr (T.Identifier x));
+                 (with_dummy_range "snd", T.mk_expr (T.Identifier y))])
 let dep_pair_parser n1 p1 (p2:T.lam T.parser) =
   let open T in
   let t = T_dep_pair p1.p_typ (fst p2, (snd p2).p_typ) in
@@ -194,7 +195,8 @@ let translate_op : A.op -> ML T.op =
       | None -> failwith (Printf.sprintf "Unelaborated integer operator")
       | Some t -> t
   in
-  function
+  fun op ->
+  match op with
   | Eq -> T.Eq
   | Neq -> T.Neq
   | And -> T.And
@@ -204,23 +206,32 @@ let translate_op : A.op -> ML T.op =
   | Minus topt -> T.Minus (force_topt topt)
   | Mul topt -> T.Mul (force_topt topt)
   | Division topt -> T.Division (force_topt topt)
+  | Remainder topt -> T.Remainder (force_topt topt)
+  | BitwiseAnd topt -> T.BitwiseAnd (force_topt topt)
+  | BitwiseXor topt -> T.BitwiseXor (force_topt topt)
+  | BitwiseOr topt -> T.BitwiseOr (force_topt topt)
+  | BitwiseNot topt -> T.BitwiseNot (force_topt topt)
+  | ShiftRight topt -> T.ShiftRight (force_topt topt)
+  | ShiftLeft topt -> T.ShiftLeft (force_topt topt)
   | LT topt -> T.LT (force_topt topt)
   | GT topt -> T.GT (force_topt topt)
   | LE topt -> T.LE (force_topt topt)
   | GE topt -> T.GE (force_topt topt)
-  | BitFieldOf i -> T.BitFieldOf i
   | IfThenElse -> T.IfThenElse
+  | BitFieldOf i -> T.BitFieldOf i
   | Cast (Some from) to -> T.Cast from to
   | Ext s -> T.Ext s
-  | op -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
+  | Cast None _
+  | SizeOf -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
                                   (Ast.print_op op))
 
 let rec translate_expr (e:A.expr) : ML T.expr =
-  match e.v with
-  | Constant c -> T.Constant c
-  | Identifier i -> T.Identifier i
-  | App op exprs -> T.App (translate_op op) (List.map translate_expr exprs)
-  | This -> failwith "`this` should have been eliminated already"
+  (match e.v with
+   | Constant c -> T.Constant c
+   | Identifier i -> T.Identifier i
+   | App op exprs -> T.App (translate_op op) (List.map translate_expr exprs)
+   | This -> failwith "`this` should have been eliminated already"),
+  e.A.range
 
 let rec translate_typ (t:A.typ) : ML T.typ =
   match t.v with
@@ -241,9 +252,9 @@ let make_enum_typ (t:T.typ) (ids:list ident) =
   let refinement i =
     let x = T.Identifier i in
     List.fold_right
-      (fun y e -> T.App T.Or [T.App T.Eq [x; T.Identifier y;]; e])
+      (fun y e -> T.mk_expr (T.App T.Or [T.mk_expr (T.App T.Eq [T.mk_expr x; T.mk_expr (T.Identifier y);]); e]))
       ids
-      (T.Constant (Bool false))
+      (T.mk_expr (T.Constant (Bool false)))
   in
   T.T_refine t (mk_lam refinement)
 
@@ -435,7 +446,7 @@ let rec translate_action (a:A.action) : ML T.action =
   | Action_ite hd then_ None ->
     T.Action_ite (translate_expr hd)
                  (translate_action then_)
-                 (T.Atomic_action (T.Action_return (T.Constant A.Unit)))
+                 (T.Atomic_action (T.Action_return (T.mk_expr (T.Constant A.Unit))))
 
   | Action_let i a k ->
     T.Action_let i (translate_atomic_action a) (translate_action k)
@@ -451,7 +462,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_app hd _
     -> parser_kind_is_constant_size env hd
   | T.Parse_nlist array_size parse_elem
-    -> begin match array_size with
+    -> begin match fst array_size with
       | T.Constant (A.Int _ array_size) -> parser_is_constant_size_without_actions env parse_elem
       | _ -> false
       end
@@ -814,7 +825,7 @@ let rec free_vars_expr (genv:global_env)
                        (e:T.expr)
   : ML env_t
   = let open T in
-    match e with
+    match fst e with
     | Constant _ -> out
     | Identifier i ->
       if Some? (type_in_local_env i out) then out
@@ -874,9 +885,9 @@ let rec hoist_typ
         let id = maybe_gen_ident genv filter_name in
         let result_type = T_app (with_dummy_range "bool") [] in
         let body = e in
-        let app = App (Ext id.A.v) args in
+        let app = App (Ext id.A.v) (List.Tot.map (fun arg -> T.mk_expr arg) args) in
         (id, params, result_type, body),
-        app
+        T.mk_expr app
       in
       let d = Definition def in
       let t = T_refine t1 (x, app) in
@@ -932,7 +943,7 @@ let hoist_one_type_definition (should_inline:bool)
      let parse_typ = parse_typ genv in
      let type_name = prefix in //^ "_type" in
      let id = maybe_gen_ident genv type_name in
-     let args = List.map (fun (x, _) -> Inr (Identifier x)) (List.rev env) in
+     let args = List.map (fun (x, _) -> Inr (T.mk_expr (Identifier x))) (List.rev env) in
      let tdef = T_app id args in
      let tdef =
        if should_inline
@@ -1020,7 +1031,7 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
       let sf = translate_field f in
       let decls', sfs = hoist_refinements genv tdn [sf] in
       let sf = List.hd sfs in
-      let guard = App Eq [sc; translate_expr e] in
+      let guard = T.mk_expr (App Eq [sc; translate_expr e]) in
       let t = T_if_else guard sf.sf_typ t_else in
       let field_name = Printf.sprintf "%s_ite_%d" tdn.td_name.v n in
       let td, tdef = hoist_one_type_definition true genv env tdn field_name None t in
@@ -1038,7 +1049,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
 
   | Define i (Some t) s ->
     let t = translate_typ t in
-    [with_comments d.comments (T.Definition (i, [], t, T.Constant s))]
+    [with_comments d.comments (T.Definition (i, [], t, T.mk_expr (T.Constant s)))]
 
   | TypeAbbrev t i ->
     let tdn = make_tdn i in

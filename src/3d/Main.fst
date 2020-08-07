@@ -51,6 +51,14 @@ let process_file (fn: string) : ML unit =
     Options.debug_print_string "\n";
     let t_decls = Translate.translate_decls env decls in
 
+    let types_fst_file =
+      open_write_file
+        (Printf.sprintf "%s/%s.Types.fst"
+          (Options.get_output_dir ())
+          modul) in
+    FStar.IO.write_string types_fst_file (Target.print_types_decls modul t_decls);
+    FStar.IO.close_write_file types_fst_file;
+
     let fst_file =
       open_write_file
         (Printf.sprintf "%s/%s.fst"
@@ -58,7 +66,6 @@ let process_file (fn: string) : ML unit =
           modul) in
     FStar.IO.write_string fst_file (Target.print_decls modul t_decls);
     FStar.IO.close_write_file fst_file;
-
 
     let fsti_file =
       open_write_file

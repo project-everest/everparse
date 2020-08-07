@@ -3,7 +3,7 @@
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+   You may obtain as copy of the License at
 
        http://www.apache.org/licenses/LICENSE-2.0
 
@@ -435,7 +435,9 @@ let try_cast_integer env et to : ML (option expr) =
   then
     let i_from = typ_as_integer_type (unfold_typ_abbrevs env from) in
     let i_to = typ_as_integer_type (unfold_typ_abbrevs env to) in
-    if integer_type_leq i_from i_to
+    if i_from = i_to
+    then Some e
+    else if integer_type_leq i_from i_to
     then Some (cast e i_from i_to)
     else None
   else None
@@ -524,6 +526,13 @@ and check_expr (env:env) (e:expr)
       | Minus _ -> Minus t
       | Mul _ -> Mul t
       | Division _ -> Division t
+      | Remainder _ -> Remainder t
+      | BitwiseNot _ -> BitwiseNot t
+      | BitwiseAnd _ -> BitwiseAnd t
+      | BitwiseOr _ -> BitwiseOr t
+      | BitwiseXor _ -> BitwiseXor t
+      | ShiftLeft _ -> ShiftLeft t
+      | ShiftRight _ -> ShiftRight t
       | LE _ -> LE t
       | LT _ -> LT t
       | GE _ -> GE t
@@ -620,6 +629,12 @@ and check_expr (env:env) (e:expr)
           then error "Expected bool" e1.range;
           w (App Not [e1]), t1
 
+        | BitwiseNot _ ->
+          if typ_is_integral env t1
+          then w (App (arith_op_t op t1) [e1]), t1
+          else error (Printf.sprintf "Bitwise negation is only available on integral types; got %s"
+                                     (print_typ t1))
+                     e1.range
         | _ ->
           error "Not a unary op" e1.range
         end
@@ -657,14 +672,38 @@ and check_expr (env:env) (e:expr)
           then error "Binary boolean op on non booleans" e.range;
           w (App op [e1; e2]), tbool
 
+        | ShiftLeft _
+        | ShiftRight _ ->
+          let t1_integral = typ_is_integral env t1 in
+          let t2_integral = typ_is_integral env t2 in
+          if not t1_integral || not t2_integral
+          then error (Printf.sprintf "Bit shifts are only permissible on integral types: got %s and %s"
+                                     (print_typ t1)
+                                     (print_typ t2))
+                     e.range;
+          begin
+          match try_cast_integer env (e2, t2) tuint32 with
+          | None ->
+            error (Printf.sprintf "Bit shift offset is too large: got type %s"
+                                     (print_typ t2))
+                  e2.range
+
+          | Some e2 ->
+            w (App (arith_op_t op t1) [e1; e2]), t1
+          end
+
         | Plus _
         | Minus _
         | Mul _
         | Division _
+        | Remainder _
         | LT _
         | GT _
         | LE _
-        | GE _ ->
+        | GE _
+        | BitwiseAnd _
+        | BitwiseOr _
+        | BitwiseXor _ ->
           let result_typ t =
               match op with
               | LT _ | GT _ | LE _ | GE _ -> tbool

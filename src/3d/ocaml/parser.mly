@@ -48,18 +48,22 @@
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
+%token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.decl list> prog
 %start <Ast.expr> expr_top
 
 %left OR
 %left AND
-%nonassoc EQ LEQ LESS_THAN GEQ GREATER_THAN NEQ DOUBLEEQ
-%left PLUS
-%left MINUS
-%left STAR
-%left DIV
-
+%left BITWISE_OR
+%left BITWISE_XOR
+%left BITWISE_AND
+%nonassoc NEQ DOUBLEEQ
+%nonassoc LEQ LESS_THAN GEQ GREATER_THAN
+%left SHIFT_LEFT SHIFT_RIGHT
+%left PLUS MINUS
+%left STAR REM DIV
+%nonassoc BITWISE_NOT NOT
 
 %%
 
@@ -82,8 +86,7 @@ constant:
   | b=BOOL   { Bool b }
 
 rel_op:
-  | EQ           { Eq }
-  | DOUBLEEQ           { Eq }
+  | DOUBLEEQ     { Eq }
   | NEQ          { Neq }
   | LEQ          { LE None }
   | LESS_THAN    { LT None }
@@ -99,7 +102,7 @@ atomic_expr:
   | THIS       { This }
   | c=constant { Constant c }
 
-ternary_subterm:
+atomic_or_paren_expr:
   | e=atomic_expr  { with_range e $startpos }
   | LPAREN e=expr RPAREN { e }
 
@@ -119,7 +122,7 @@ expr_no_range:
       | _ ->
         error ("Expected a cast expression, got " ^ (print_expr e)) e.range
     }
-  | l=expr o=rel_op r=expr %prec EQ
+  | l=expr o=rel_op r=expr %prec DOUBLEEQ
     { App (o, [l;r]) }
   | l=expr AND r=expr
     { App (And, [l;r]) }
@@ -133,11 +136,25 @@ expr_no_range:
     { App (Mul None, [l;r]) }
   | l=expr DIV r=expr
     { App (Division None, [l;r]) }
-  | NOT LPAREN e=expr RPAREN
+  | l=expr REM r=expr
+    { App (Remainder None, [l;r]) }
+  | l=expr BITWISE_AND r=expr
+    { App (BitwiseAnd None, [l;r]) }
+  | l=expr BITWISE_XOR r=expr
+    { App (BitwiseXor None, [l;r]) }
+  | l=expr BITWISE_OR r=expr
+    { App (BitwiseOr None, [l;r]) }
+  | BITWISE_NOT l=expr
+    { App (BitwiseNot None, [l]) }
+  | l=expr SHIFT_RIGHT r=expr
+    { App (ShiftRight None, [l;r]) }
+  | l=expr SHIFT_LEFT r=expr
+    { App (ShiftLeft None, [l;r]) }
+  | NOT e=expr
     { App (Not, [e]) }
   | SIZEOF LPAREN e=expr RPAREN
     { App (SizeOf, [e]) }
-  | e=ternary_subterm QUESTION e1=ternary_subterm COLON e2=ternary_subterm
+  | e=atomic_or_paren_expr QUESTION e1=atomic_or_paren_expr COLON e2=atomic_or_paren_expr
     {
         App(IfThenElse, [e;e1;e2])
     }

@@ -89,7 +89,7 @@ let parse_pair #nz1 (#k1:parser_kind nz1) #t1 (p1:parser k1 t1)
   = LPC.nondep_then p1 p2
 
 /// Parser: map
-let injective_map a b = f:(a -> Tot b) //{LPC.synth_injective f}
+let injective_map a b = (a -> Tot b) //{LPC.synth_injective f}
 
 inline_for_extraction
 noextract

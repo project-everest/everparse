@@ -20,7 +20,7 @@ module A = Ast
 open Binding
 
 let rec expr_eq e1 e2 =
-  match e1, e2 with
+  match fst e1, fst e2 with
   | Constant c1, Constant c2 -> c1=c2
   | Identifier i1, Identifier i2 -> A.(i1.v = i2.v)
   | App hd1 args1, App hd2 args2 -> hd1 = hd2 && exprs_eq args1 args2
@@ -82,50 +82,133 @@ let namespace_of_integer_type =
    | UInt32 -> "UInt32"
    | UInt64 -> "UInt64"
 
-let print_op =
+let print_range (r:A.range) : string =
+  let open A in
+  Printf.sprintf "(Prims.mk_range \"%s\" %d %d %d %d)"
+    (fst r).filename
+    (fst r).line
+    (fst r).col
+    (snd r).line
+    (snd r).col
+
+let arith_op (o:op) =
+  match o with
+  | Plus _
+  | Minus _
+  | Mul _
+  | Division _
+  | Remainder _
+  | ShiftLeft _
+  | ShiftRight _
+  | BitwiseAnd _
+  | BitwiseOr _
+  | BitwiseXor _
+  | BitwiseNot _ -> true
+  | _ -> false
+
+let integer_type_of_arith_op (o:op{arith_op o}) =
+  match o with
+  | Plus t
+  | Minus t
+  | Mul t
+  | Division t
+  | Remainder t
+  | ShiftLeft t
+  | ShiftRight t
+  | BitwiseAnd t
+  | BitwiseOr t
+  | BitwiseXor t
+  | BitwiseNot t -> t
+
+let print_arith_op
+  (o:op{arith_op o})
+  (r:option A.range)
+  = let t =
+      match integer_type_of_arith_op o with
+      | A.UInt8 -> "u8"
+      | A.UInt16 -> "u16"
+      | A.UInt32 -> "u32"
+      | A.UInt64 -> "u64"
+    in
+    let fn =
+      match o with
+      | Plus _ -> "add"
+      | Minus _ -> "sub"
+      | Mul _ -> "mul"
+      | Division _ -> "div"
+      | Remainder _ -> "rem"
+      | ShiftLeft _ -> "shift_left"
+      | ShiftRight _ -> "shift_right"
+      | BitwiseAnd _ -> "logand"
+      | BitwiseOr _ -> "logor"
+      | BitwiseXor _ -> "logxor"
+      | BitwiseNot _ -> "lognot"
+    in
+    let r = match r with | Some r -> r | None -> A.dummy_range in
+    Printf.sprintf "Prelude.%s_%s %s"
+      t fn (print_range r)
+
+let is_infix =
   function
+  | Eq
+  | Neq
+  | And
+  | Or -> true
+  | _ -> false
+
+let print_op_with_range ropt o =
+  match o with
   | Eq -> "="
   | Neq -> "<>"
   | And -> "&&"
   | Or -> "||"
   | Not -> "not"
-  | Plus t -> Printf.sprintf "`FStar.%s.add`" (namespace_of_integer_type t)
-  | Minus t -> Printf.sprintf "`FStar.%s.sub`" (namespace_of_integer_type t)
-  | Mul t -> Printf.sprintf "`FStar.%s.mul`" (namespace_of_integer_type t)
-  | Division t -> Printf.sprintf "`FStar.%s.div`" (namespace_of_integer_type t)
-  | LT t -> Printf.sprintf "`FStar.%s.lt`" (namespace_of_integer_type t)
-  | GT t -> Printf.sprintf "`FStar.%s.gt`" (namespace_of_integer_type t)
-  | LE t -> Printf.sprintf "`FStar.%s.lte`" (namespace_of_integer_type t)
-  | GE t -> Printf.sprintf "`FStar.%s.gte`" (namespace_of_integer_type t)
+  | Plus _
+  | Minus _
+  | Mul _
+  | Division _
+  | Remainder _
+  | ShiftLeft _
+  | ShiftRight _
+  | BitwiseAnd _
+  | BitwiseOr _
+  | BitwiseXor _
+  | BitwiseNot _ -> print_arith_op o ropt
+  | LT t -> Printf.sprintf "FStar.%s.lt" (namespace_of_integer_type t)
+  | GT t -> Printf.sprintf "FStar.%s.gt" (namespace_of_integer_type t)
+  | LE t -> Printf.sprintf "FStar.%s.lte" (namespace_of_integer_type t)
+  | GE t -> Printf.sprintf "FStar.%s.gte" (namespace_of_integer_type t)
   | IfThenElse -> "ite"
   | BitFieldOf i -> Printf.sprintf "get_bitfield%d" i
   | Cast from to ->
     Printf.sprintf "FStar.Int.Cast.%s_to_%s" (print_integer_type from) (print_integer_type to)
   | Ext s -> s
 
+let print_op = print_op_with_range None
+
 let rec print_expr (e:expr) : Tot string =
-  match e with
+  match fst e with
   | Constant c ->
     A.print_constant c
   | Identifier i ->
     print_ident i
   | Record nm fields ->
     Printf.sprintf "{ %s }" (String.concat "; " (print_fields fields))
-  | App Eq [e1; e2]
-  | App Neq [e1; e2]
-  | App And [e1; e2]
-  | App Or [e1; e2]
-  | App (Plus _) [e1; e2]
-  | App (Minus _) [e1; e2]
-  | App (Mul _) [e1; e2]
-  | App (Division _) [e1; e2]
-  | App (LT _) [e1; e2]
-  | App (GT _) [e1; e2]
-  | App (LE _) [e1; e2]
-  | App (GE _) [e1; e2] ->
-    Printf.sprintf "(%s %s %s)" (print_expr e1) (print_op (App?.hd e)) (print_expr e2)
-  | App Not [e1] ->
-    Printf.sprintf "(%s %s)" (print_op (App?.hd e)) (print_expr e1)
+  | App op [e1;e2] ->
+    if is_infix op
+    then
+      Printf.sprintf "(%s %s %s)"
+                   (print_expr e1)
+                   (print_op_with_range (Some (snd e)) (App?.hd (fst e)))
+                   (print_expr e2)
+    else
+      Printf.sprintf "(%s %s %s)"
+                   (print_op_with_range (Some (snd e)) (App?.hd (fst e)))
+                   (print_expr e1)
+                   (print_expr e2)
+  | App Not [e1]
+  | App (BitwiseNot _) [e1] ->
+    Printf.sprintf "(%s %s)" (print_op (App?.hd (fst e))) (print_expr e1)
   | App IfThenElse [e1;e2;e3] ->
     Printf.sprintf
       "(if %s then %s else %s)"
@@ -324,7 +407,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
   | Validate_t_exact e p ->
     Printf.sprintf "(validate_t_exact %s %s)" (print_expr e) (print_validator p)
   | Validate_nlist_constant_size_without_actions e p ->
-    let n_is_const = match e with
+    let n_is_const = match fst e with
     | Constant (A.Int _ _) -> true
     | _ -> false
     in
@@ -479,36 +562,39 @@ let print_typedef_actions_inv_and_fp (td:type_decl) =
     in
     inv, fp
 
-let print_decl (d:decl) : Tot string =
-  let print_comments cs =
-    match cs with
-    | [] -> ""
-    | _ ->
-      let c = String.concat "\\n\\\n" cs in
-      Printf.sprintf " (Comment \"%s\")" c
-  in
-  let print_attributes entrypoint attrs =
-    match attrs.comments with
-    | [] ->
-      if entrypoint
-      then ""
-      else if attrs.should_inline
-      then "inline_for_extraction noextract\n"
-      else "[@ (CInline)]\n"
-    | cs ->
-      Printf.sprintf "[@ %s %s]\n%s"
-        (print_comments cs)
-        (if not entrypoint && not attrs.should_inline then "(CInline)" else "")
-        (if attrs.should_inline then "inline_for_extraction\n" else "")
-  in
-  match fst d with
-  | Definition (x, [], T_app ({Ast.v="field_id"}) _, Constant c) ->
-    Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
-      (print_comments (snd d).comments)
-      (print_ident x)
-      (A.print_constant c)
+let print_comments (cs:list string) : string =
+  match cs with
+  | [] -> ""
+  | _ ->
+    let c = String.concat "\\n\\\n" cs in
+    Printf.sprintf " (Comment \"%s\")" c
 
-  | Definition (x, [], t, Constant c) ->
+let print_attributes (entrypoint:bool) (attrs:decl_attributes) : string =
+  match attrs.comments with
+  | [] ->
+    if entrypoint
+    then ""
+    else if attrs.should_inline
+    then "inline_for_extraction noextract\n"
+    else "[@ (CInline)]\n"
+  | cs ->
+    Printf.sprintf "[@ %s %s]\n%s"
+      (print_comments cs)
+      (if not entrypoint && not attrs.should_inline then "(CInline)" else "")
+      (if attrs.should_inline then "inline_for_extraction\n" else "")
+
+/// Printing a decl for M.Types.fst
+///
+/// Print all the definitions, and for a Type_decl, only the type definition
+let print_decl_for_types (_modul:string) (d:decl) : Tot string =
+  match fst d with
+  | Definition (x, [], T_app ({Ast.v="field_id"}) _, (Constant c, _)) ->
+    Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
+     (print_comments (snd d).comments)
+     (print_ident x)
+     (A.print_constant c)
+
+  | Definition (x, [], t, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
       (print_comments (snd d).comments)
       (print_ident x)
@@ -530,6 +616,24 @@ let print_decl (d:decl) : Tot string =
     Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s\n\n"
       (print_typedef_name td.decl_name)
       (print_typedef_body td.decl_typ)
+
+/// Print a decl for M.fst
+///
+/// No need to print Definition(s), they are `include`d from M.Types.fst
+///
+/// For a Type_decl, if it is an entry point, we need to emit a definition since
+///   there is a corresponding declaration in the .fsti
+///   We make the definition as simply the definition in M.Types.fst
+let print_decl_for_validators (modul:string) (d:decl) : Tot string =
+  match fst d with
+  | Definition _ -> ""
+  | Type_decl td ->
+    (if not td.decl_name.td_entrypoint
+     then ""
+     else Printf.sprintf "noextract\ninline_for_extraction\nlet %s = %s.Types.%s  (* from corresponding Types.fst  *)\n\n"
+            (print_ident td.decl_name.td_name)
+            modul
+            (print_ident td.decl_name.td_name))
     `strcat`
     Printf.sprintf "noextract\ninline_for_extraction\nlet kind_%s : parser_kind %s = %s\n\n"
       (print_ident td.decl_name.td_name)
@@ -543,7 +647,7 @@ let print_decl (d:decl) : Tot string =
       (print_parser td.decl_parser)
     `strcat`
     (let inv, fp = print_typedef_actions_inv_and_fp td in
-     Printf.sprintf "%slet validate_%s = validate_weaken_inv_loc _ _ %s <: Tot (validate_with_action_t (parse_%s) %s %s %b) by (weaken_tac())\n\n"
+     Printf.sprintf "%slet validate_%s = validate_weaken_inv_loc _ _ %s <: Tot (validate_with_action_t (parse_%s) %s %s %b) by    (weaken_tac())\n\n"
       (print_attributes td.decl_name.td_entrypoint (snd d))
       (print_typedef_name td.decl_name)
       (print_validator td.decl_validator)
@@ -560,7 +664,6 @@ let print_decl (d:decl) : Tot string =
          (print_typedef_name td.decl_name)
          (print_typedef_typ td.decl_name)
          (print_reader r))
-
 
 let print_decl_signature (d:decl) : Tot string =
   match fst d with
@@ -597,11 +700,27 @@ let print_decls (modul: string) (ds:list decl) =
     "module %s\n\
      open Prelude\n\
      open Actions\n\
-     module B = LowStar.Buffer\n\
+     module B = LowStar.Buffer\n\n\
+     include %s.Types\n\n\
      #set-options \"--using_facts_from '* FStar Actions Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
      %s"
      modul
-     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.Tot.map print_decl ds))
+     modul
+     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.Tot.map (print_decl_for_validators modul) ds))
+  in
+  decls
+
+let print_types_decls (modul:string) (ds:list decl) =
+  let decls =
+  Printf.sprintf
+    "module %s.Types\n\
+     open Prelude\n\
+     open Actions\n\n\
+     module B = LowStar.Buffer\n\n\
+     #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
+     %s"
+     modul
+     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.Tot.map (print_decl_for_types modul) ds))
   in
   decls
 

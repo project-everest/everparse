@@ -20,6 +20,7 @@ module A = Ast
 open Binding
 
 /// The same as A.op, but with `SizeOf` removed
+/// and arithmetic operators resolved to their types
 type op =
   | Eq
   | Neq
@@ -30,6 +31,13 @@ type op =
   | Minus of A.integer_type
   | Mul of A.integer_type
   | Division of A.integer_type
+  | Remainder of A.integer_type
+  | BitwiseAnd of A.integer_type
+  | BitwiseXor of A.integer_type
+  | BitwiseOr of A.integer_type
+  | BitwiseNot of A.integer_type
+  | ShiftRight of A.integer_type
+  | ShiftLeft of A.integer_type
   | LT of A.integer_type
   | GT of A.integer_type
   | LE of A.integer_type
@@ -40,12 +48,20 @@ type op =
   | Ext of string
 
 /// Same as A.expr, but with `This` removed
+///
+/// Carrying around the range information from AST.expr so that we
+///   can report errors in terms of their 3d file locations
+
 noeq
-type expr =
-  | Constant   : c:A.constant -> expr
-  | Identifier : i:A.ident -> expr
-  | App        : hd:op -> args:list expr -> expr
-  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr
+type expr' =
+  | Constant   : c:A.constant -> expr'
+  | Identifier : i:A.ident -> expr'
+  | App        : hd:op -> args:list expr -> expr'
+  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr'
+
+and expr = expr' & A.range
+
+let mk_expr (e:expr') = e, A.dummy_range
 
 type lam a = A.ident & a
 
@@ -231,5 +247,6 @@ let decl = decl' * decl_attributes
 
 val print_typ (t:typ) : Tot string (decreases t)
 val print_decls (modul: string) (ds:list decl) : ML string
+val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string
 val print_c_entry (modul: string) (env: global_env) (ds:list decl) : ML (string & string)
