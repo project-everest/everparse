@@ -1,3 +1,6 @@
+QD_HOME ?= ../../..
+export QD_HOME
+
 3D=../3d
 
 INCLUDES=../prelude ../../lowparse ../../../../kremlin/kremlib/obj ../../../../kremlin/kremlib

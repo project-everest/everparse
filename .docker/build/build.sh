@@ -120,7 +120,6 @@ function raise () {
 
 function build_and_test_quackyducky() {
     fetch_and_make_kremlin &&
-    export_home QD "$(pwd)" &&
     make -j $threads -k test &&
     # Build incrementality test
     pushd tests/sample && {
