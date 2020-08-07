@@ -5,10 +5,6 @@
 
 .. note::
 
-   3d is available only from the EverParse/3d releases (including the
-   corresponding binary package) or from the ``everparse_3d``
-   branch. It is not available from ``master``.
-
    The documentation from this page covers the EverParse/3d releases
    v2020.06.14 or later.
 
@@ -251,10 +247,9 @@ member of:
    latest KReMLin.
 
 9. Everest contains a clone of the EverParse sources in the
-   ``quackyducky`` subdirectory. You can work from there and switch to
-   the ``everparse_3d`` branch there. Alternatively, you can `clone it
-   yourself
-   <https://github.com/project-everest/everparse/tree/everparse_3d>`_
+   ``quackyducky`` subdirectory. You can work from
+   there. Alternatively, you can `clone it yourself
+   <https://github.com/project-everest/everparse>`_
    anywhere else.
 
 10. Set the ``QD_HOME`` environment variable to your EverParse clone
