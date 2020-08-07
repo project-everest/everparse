@@ -26,7 +26,7 @@ tl;dr Summary
 
 2. Give MyFile1.3d and MyFile2.3d to EverParse:
 
-   * with the Windows binary package: ``everparse.bat MyFile1.3d MyFile2.3d``
+   * with the Windows binary package: ``everparse.cmd MyFile1.3d MyFile2.3d``
 
    * with the Linux binary package: ``everparse.sh MyFile1.3d MyFile2.3d``
 
@@ -73,7 +73,7 @@ We provide binary (amd64 only) packages for Windows and Linux.
    like. No need to configure it anyhow.
 
 Then, everything is contained in a ``everparse`` directory, whose
-actual entrypoint executable is ``everparse.bat`` (for Windows) or
+actual entrypoint executable is ``everparse.cmd`` (for Windows) or
 ``everparse.sh`` (for Linux.)
 
 Binary packages already contain all dependencies required by
@@ -92,7 +92,7 @@ not require any POSIX emulation layer such as Cygwin or WSL.
 Run
 ---
 
-On Windows: ``everparse.bat`` [options] input_files
+On Windows: ``everparse.cmd`` [options] input_files
 
 On Linux: ``everparse.sh`` [options] input_files
 
@@ -265,10 +265,10 @@ at ``src/3d/3d``.
 
 .. note::
 
-   You cannot use ``everparse.sh`` or ``everparse.bat`` from the
+   You cannot use ``everparse.sh`` or ``everparse.cmd`` from the
    sources. You need to use ``3d`` instead.
 
-``3d`` has the same options as ``everparse.sh`` or ``everparse.bat``,
+``3d`` has the same options as ``everparse.sh`` or ``everparse.cmd``,
 with the following caveat: no options are toggled by default (not even
 ``--batch`` or ``--clang_format``) and you need to provide all options
 by hand.

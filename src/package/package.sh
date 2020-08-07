@@ -143,7 +143,7 @@ make_everparse() {
     mkdir -p everparse/src/3d &&
     cp -p -r $QD_HOME/src/lowparse everparse/src/ &&
     if $is_windows ; then
-        cp -p -r $QD_HOME/src/package/everparse.bat everparse/
+        cp -p -r $QD_HOME/src/package/everparse.cmd everparse/
     else
         cp -p -r $QD_HOME/src/package/everparse.sh everparse/
     fi &&
