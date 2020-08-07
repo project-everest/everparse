@@ -63,7 +63,7 @@ typedef struct _Check {
    UINT8 h_logand {h_logand == (a & a)};
    UINT8 i_logor {i_logor == (a | a)};
    UINT8 j_logxor {j_logxor == (a ^ a)};
-   UINT8 k_lognot {k_lognot == ~a};
+   UINT8 k_lognot {k_lognot == ~(a ^ a)};
    UINT8 k_shr {k_shr == a >> a};
    UINT8 l_shl {l_shl == a << a};
    UINT8 m_not {!(m_not == 17) || l_shl == k_shr};
