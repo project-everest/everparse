@@ -54,17 +54,17 @@ typedef struct _Test3
 
 entrypoint
 typedef struct _Check {
-   UINT8 a {a == 1};
-   UINT8 b_plus {b_plus == a + a};
-   UINT8 c_mul  {c_mul == a * a};
-   UINT8 d_div  {d_div == a / a};
-   UINT8 e_minus {e_minus == a - a};
-   UINT8 f_rem   {f_rem == a % a};
-   UINT8 h_logand {h_logand == (a & a)};
-   UINT8 i_logor {i_logor == (a | a)};
-   UINT8 j_logxor {j_logxor == (a ^ a)};
-   UINT8 k_lognot {k_lognot == ~(a ^ a)};
-   UINT8 k_shr {k_shr == a >> a};
-   UINT8 l_shl {l_shl == a << a};
-   UINT8 m_not {!(m_not == 17) || l_shl == k_shr};
+   UINT32 a {a == 1};
+   UINT32 b_plus {b_plus == a + a};
+   UINT32 c_mul  {c_mul == a * a};
+   UINT32 d_div  {d_div == a / a};
+   UINT32 e_minus {e_minus == a - a};
+   UINT32 f_rem   {f_rem == a % a};
+   UINT32 h_logand {h_logand == (a & a)};
+   UINT32 i_logor {i_logor == (a | a)};
+   UINT32 j_logxor {j_logxor == (a ^ a)};
+   UINT32 k_lognot {k_lognot == ~a};
+   UINT32 k_shr {k_shr == a >> a};
+   UINT32 l_shl {l_shl == a << a};
+   UINT32 m_not {!(m_not == 17) || l_shl == k_shr};
 } Check;
