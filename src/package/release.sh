@@ -38,7 +38,6 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
     echo $everparse_version > $QD_HOME/version.txt
     git add $QD_HOME/version.txt
     git commit -m "Release $everparse_version"
-    everparse_commit=$(git show --no-patch --format=%h)
     git tag $everparse_version
 fi
 
@@ -62,6 +61,5 @@ docker build \
        --build-arg platform=$platform \
        --build-arg everparse_version=$everparse_version \
        --build-arg ext=$ext \
-       --build-arg everparse_commit=$everparse_commit \
        --build-arg SATS_TOKEN=$SATS_TOKEN \
        .
