@@ -58,7 +58,7 @@ fi
 
 docker build \
        -t everparse-release:$everparse_version \
-       -f src/package/Dockerfile.release.$OS \
+       -f src/package/Dockerfile.release \
        --build-arg OS=$OS \
        --build-arg platform=$platform \
        --build-arg everparse_version=$everparse_version \
