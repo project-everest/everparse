@@ -25,6 +25,7 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
+git diff --staged --exit-code
 git fetch
 git pull --ff-only
 branchname=$(git rev-parse --abbrev-ref HEAD)
@@ -32,22 +33,18 @@ branchname=$(git rev-parse --abbrev-ref HEAD)
 everparse_version=$(cat $QD_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
-push_new_tag=false
 if [[ $everparse_commit != $everparse_last_version ]] ; then
     everparse_version=$(date '+test-v%Y.%m.%d')
     echo $everparse_version > $QD_HOME/version.txt
     git add $QD_HOME/version.txt
     git commit -m "Release $everparse_version"
     git tag $everparse_version
-    push_new_tag=true
 fi
 
 src/package/package.sh -zip
 
 # push my commit and the tag
-if $push_new_tag ; then
-    git push origin $branchname $everparse_version
-fi
+git push origin $branchname $everparse_version
 
 platform=$(uname --machine)
 
