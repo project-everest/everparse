@@ -63,5 +63,6 @@ docker build \
        --build-arg platform=$platform \
        --build-arg everparse_version=$everparse_version \
        --build-arg ext=$ext \
+       --build-arg branchname=$branchname \
        --build-arg SATS_TOKEN=$SATS_TOKEN \
        .
