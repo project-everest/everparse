@@ -6,7 +6,8 @@
 .. note::
 
    The documentation from this page covers the EverParse/3d releases
-   v2020.06.14 or later.
+   v2020.08.07 or later. Documentations for earlier versions may be
+   found in the Git history.
 
 EverParse/3d lets you write a data format description and
 automatically produces efficient data validation code formally
