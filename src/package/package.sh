@@ -71,11 +71,13 @@ print_date_utc_of_iso_hr() {
     date --utc --date="$1" '+%Y-%m-%d %H:%M:%S'
 }
 
-everparse_version=$(cat $QD_HOME/version.txt)
-everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
-everparse_commit=$(git show --no-patch --format=%h)
-if [[ $everparse_commit != $everparse_last_version ]] ; then
-    everparse_version=$everparse_commit
+if [[ -z "$everparse_version" ]] ; then
+    everparse_version=$(cat $QD_HOME/version.txt)
+    everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
+    everparse_commit=$(git show --no-patch --format=%h)
+    if [[ $everparse_commit != $everparse_last_version ]] ; then
+        everparse_version=$everparse_commit
+    fi
 fi
 
 fixpath () {
