@@ -32,4 +32,4 @@ COPY $archive $archive
 
 # Upload the file to the release
 ARG SATS_TOKEN
-RUN env LANG=C.UTF-8 env LC_ALL=C.UTF-8 satsuki --slug=project-everest/everparse --tag=$everparse_version --file=$archive --pre
+RUN env LANG=C.UTF-8 env LC_ALL=C.UTF-8 satsuki --slug=project-everest/everparse --tag=$everparse_version --commitish=$everparse_version --file=$archive --pre
