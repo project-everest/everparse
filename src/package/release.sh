@@ -28,7 +28,7 @@ fi
 
 git diff --staged --exit-code
 git diff --exit-code
-git fetch
+git fetch --tags
 git pull --ff-only
 branchname=$(git rev-parse --abbrev-ref HEAD)
 
