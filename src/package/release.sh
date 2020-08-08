@@ -38,6 +38,7 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
     echo $everparse_version > $QD_HOME/version.txt
     git add $QD_HOME/version.txt
     git commit -m "Release $everparse_version"
+    everparse_commit=$(git show --no-patch --format=%h)
     git tag $everparse_version
 fi
 
