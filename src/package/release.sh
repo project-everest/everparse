@@ -42,7 +42,7 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
     push_new_tag=true
 fi
 
-everparse_version=$everparse_version src/package/package.sh -zip
+src/package/package.sh -zip
 
 # push my commit and the tag
 if $push_new_tag ; then
@@ -64,6 +64,6 @@ docker build \
        --build-arg platform=$platform \
        --build-arg everparse_version=$everparse_version \
        --build-arg ext=$ext \
-       --build-arg branchname=$branchname \
+       --build-arg everparse_commit=$everparse_commit \
        --build-arg SATS_TOKEN=$SATS_TOKEN \
        .
