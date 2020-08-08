@@ -36,7 +36,7 @@ everparse_version=$(cat $QD_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
 if [[ $everparse_commit != $everparse_last_version ]] ; then
-    everparse_version=$(date '+test2-v%Y.%m.%d')
+    everparse_version=$(date '+test3-v%Y.%m.%d')
     echo $everparse_version > $QD_HOME/version.txt
     git add $QD_HOME/version.txt
     git commit -m "Release $everparse_version"
