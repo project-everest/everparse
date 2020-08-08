@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -x
 
 if [[ -z "$QD_HOME" ]] ; then
     if ! [[ -f src/rfc_fstar_compiler.ml ]] ; then
