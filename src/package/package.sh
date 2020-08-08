@@ -114,7 +114,8 @@ make_everparse() {
     # Rebuild everything
     export OTHERFLAGS='--admit_smt_queries true' &&
     make -C "$FSTAR_HOME" "$@" &&
-    make -C "$KREMLIN_HOME" "$@" &&
+    make -C "$KREMLIN_HOME" "$@" minimal &&
+    make -C "$KREMLIN_HOME/kremlib" "$@" verify-all &&
     make -C "$QD_HOME" "$@" &&
 
     # Copy dependencies and Z3
