@@ -56,13 +56,13 @@ else
     ext=.tar.gz
 fi
 
+archive=everparse_"$everparse_version"_"$OS"_"$platform""$ext"
+
 docker build \
        -t everparse-release:$everparse_version \
        -f src/package/Dockerfile.release \
-       --build-arg OS=$OS \
-       --build-arg platform=$platform \
-       --build-arg everparse_version=$everparse_version \
-       --build-arg ext=$ext \
-       --build-arg branchname=$branchname \
+       --build-arg SATS_FILE=$archive \
+       --build-arg SATS_TAG=$everparse_version \
+       --build-arg SATS_COMMITISH=$branchname \
        --build-arg SATS_TOKEN=$SATS_TOKEN \
        .
