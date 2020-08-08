@@ -1,0 +1,21 @@
+FROM python:3
+
+RUN pip3 install pygithub==1.47
+RUN pip3 install satsuki==0.1.23
+
+ARG everparse_version
+ARG OS
+ARG platform
+ARG ext
+
+ENV archive everparse_"$everparse_version"_"$OS"_"$platform""$ext"
+
+COPY $archive $archive
+
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+
+# Upload the file to the release
+ARG SATS_TOKEN
+ARG branchname
+RUN satsuki --slug=project-everest/everparse --tag=$everparse_version --commitish=$branchname --file=$archive --pre
