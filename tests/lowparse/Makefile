@@ -40,7 +40,7 @@ LOW_LEVEL=$(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c
 
 MY_KREMLIN=$(KREMLIN_EXE) -bundle 'LowParse.\*'  -add-include '"kremlin/internal/compat.h"'
 
-EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair ExampleDepLen ExampleConstInt32le
+EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair ExampleDepLen ExampleConstInt32le ExampleWriters
 
 NOEXTRACT_EXAMPLES=ExamplePair
 ROOT_FILES=$(addprefix LowParse, $(addsuffix .fst, $(EXAMPLES)))
@@ -102,6 +102,7 @@ ExampleMono: KREMLIN_ARGS=
 ExamplePair: KREMLIN_ARGS=
 ExampleDepLen: KREMLIN_ARGS=
 ExampleConstInt32le: KREMLIN_ARGS=
+ExampleWriters: KREMLIN_ARGS=$(LOW_LEVEL)
 
 .PHONY: all verify-all clean extract-all $(EXAMPLES) %.fst-in %.fsti-in
 
