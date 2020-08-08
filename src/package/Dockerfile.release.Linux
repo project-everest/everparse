@@ -33,4 +33,5 @@ COPY src/package/complete_release.sh complete_release.sh
 
 # Upload the file to the release
 ARG SATS_TOKEN
-RUN ./complete_release.sh
+ARG branchname
+RUN env LANG=C.UTF-8 env LC_ALL=C.UTF-8 satsuki --slug=project-everest/everparse --tag=$everparse_version --file=$archive --commitish=$branchname --pre
