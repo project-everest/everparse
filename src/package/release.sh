@@ -25,6 +25,8 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
+git pull --ff-only
+
 everparse_version=$(cat $QD_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
@@ -39,10 +41,11 @@ fi
 
 everparse_version=$everparse_version src/package/package.sh -zip
 
-# push my commit and the tag, cf. https://stackoverflow.com/questions/3745135/push-git-commits-tags-simultaneously
+# push my commit and the tag
 if $push_new_tag ; then
+    branchname=$(git rev-parse --abbrev-ref HEAD)
     git tag $everparse_version
-    git push origin : $everparse_version
+    git push origin $branchname $everparse_version
 fi
 
 platform=$(uname --machine)
