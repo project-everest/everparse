@@ -29,7 +29,6 @@ ARG ext
 ENV archive everparse_"$everparse_version"_"$OS"_"$platform""$ext"
 
 COPY $archive $archive
-COPY src/package/complete_release.sh complete_release.sh
 
 # Upload the file to the release
 ARG SATS_TOKEN
