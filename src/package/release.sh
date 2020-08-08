@@ -26,6 +26,7 @@ if [[ "$OS" = "Windows_NT" ]] ; then
 fi
 
 git diff --staged --exit-code
+git diff --exit-code
 git fetch
 git pull --ff-only
 branchname=$(git rev-parse --abbrev-ref HEAD)
