@@ -166,6 +166,7 @@ let produce_c_files
     "-static-header" :: "Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps" ::
     "-no-prefix" :: "LowParse.Slice" ::
     "-no-prefix" :: "LowParse.Low.BoundedInt" ::
+    "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
     "-fextern-c" ::
     (krml_args0 @ krml_files)
   in
