@@ -147,6 +147,7 @@ let produce_c_files
 = 
   let krml_files = List.fold_left
     (fun accu (_, modul) -> filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
+                            Printf.sprintf "%sWrapper.c" modul ::
                             filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu)
     all_everparse_krmls
     files_and_modules
