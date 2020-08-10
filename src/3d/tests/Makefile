@@ -13,7 +13,12 @@ INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/lowparse $(KREMLIN_HOME)/kreml
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 
-all: batch-test batch-test-negative
+positive_tests=$(filter-out $(wildcard FAIL*.3d),$(wildcard *.3d))
+positive_tests_nosuffix=$(basename $(positive_tests))
+modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
+clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(addsuffix .h,$(modules_or_wrappers)) EverParse.h EverParseEndianness.h
+
+all: batch-test batch-test-negative batch-cleanup-test
 
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
@@ -23,13 +28,18 @@ batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
 batch-test:
 	mkdir -p out.batch
-	$(3D) --odir out.batch --batch $(filter-out $(wildcard FAIL*.3d),$(wildcard *.3d))
+	$(3D) --odir out.batch --batch $(positive_tests)
 	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS=-Wno-ignored-qualifiers
+
+batch-cleanup-test:
+	mkdir -p out.cleanup
+	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup $(positive_tests)
+	test "$$(ls out.cleanup | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
 clean:
-	rm -f out.batch out.fail.batch
+	rm -rf out.batch out.fail.batch out.cleanup
 
-.PHONY: all batch-test batch-test-negative %.negtest clean
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test
