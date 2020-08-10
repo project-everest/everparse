@@ -134,8 +134,10 @@ let remove_fst_and_krml_files
     Printf.sprintf "%s.Types.fst" root_name;
     Printf.sprintf "%s.fst" root_name;
     Printf.sprintf "%s.fsti" root_name;
+    Printf.sprintf "%s.Types.fst.checked" root_name;
     Printf.sprintf "%s.fst.checked" root_name;
     Printf.sprintf "%s.fsti.checked" root_name;
+    Printf.sprintf "%s_Types.krml" root_name;
     Printf.sprintf "%s.krml" root_name;
   ]
 
