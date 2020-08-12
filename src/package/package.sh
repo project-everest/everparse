@@ -90,6 +90,7 @@ fixpath () {
 
 make_everparse() {
     # Verify if F* and KReMLin are here
+    cp="cp --preserve=mode,timestamps"
     if [[ -z "$FSTAR_HOME" ]] ; then
         git clone https://github.com/FStarLang/FStar &&
         export FSTAR_HOME=$(fixpath $PWD/FStar)
@@ -122,44 +123,44 @@ make_everparse() {
     mkdir -p everparse/bin &&
     if $is_windows
     then
-        cp -p $LIBGMP10_DLL everparse/bin/ &&
-        cp -p $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/
+        $cp $LIBGMP10_DLL everparse/bin/ &&
+        $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/
     else
-        cp -p $Z3_DIR/z3 everparse/bin/
+        $cp $Z3_DIR/z3 everparse/bin/
     fi &&
 
     # Copy F*
-    cp -p $FSTAR_HOME/bin/fstar.exe everparse/bin/ &&
+    $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/ &&
     mkdir -p everparse/ulib/ &&
-    cp -p $FSTAR_HOME/ulib/*.fst everparse/ulib &&
-    cp -p $FSTAR_HOME/ulib/*.fsti everparse/ulib &&
-    cp -p -r $FSTAR_HOME/ulib/.cache everparse/ulib/ &&
+    $cp $FSTAR_HOME/ulib/*.fst everparse/ulib &&
+    $cp $FSTAR_HOME/ulib/*.fsti everparse/ulib &&
+    $cp -r $FSTAR_HOME/ulib/.cache everparse/ulib/ &&
 
     # Copy KReMLin
-    cp -p $KREMLIN_HOME/Kremlin.native everparse/bin/krml$exe &&
-    cp -p -r $KREMLIN_HOME/kremlib everparse/ &&
-    cp -p -r $KREMLIN_HOME/misc everparse/ &&
+    $cp $KREMLIN_HOME/Kremlin.native everparse/bin/krml$exe &&
+    $cp -r $KREMLIN_HOME/kremlib everparse/ &&
+    $cp -r $KREMLIN_HOME/misc everparse/ &&
 
     # Copy EverParse
-    cp -p $QD_HOME/quackyducky.native everparse/bin/qd$exe &&
-    cp -p -r $QD_HOME/src/3d/3d everparse/bin/3d$exe &&
+    $cp $QD_HOME/quackyducky.native everparse/bin/qd$exe &&
+    $cp -r $QD_HOME/src/3d/3d everparse/bin/3d$exe &&
     mkdir -p everparse/src/3d &&
-    cp -p -r $QD_HOME/src/lowparse everparse/src/ &&
+    $cp -r $QD_HOME/src/lowparse everparse/src/ &&
     if $is_windows ; then
-        cp -p -r $QD_HOME/src/package/everparse.cmd everparse/
+        $cp -r $QD_HOME/src/package/everparse.cmd everparse/
     else
-        cp -p -r $QD_HOME/src/package/everparse.sh everparse/
+        $cp -r $QD_HOME/src/package/everparse.sh everparse/
     fi &&
-    cp -p -r $QD_HOME/src/3d/prelude everparse/src/3d/prelude &&
-    cp -p -r $QD_HOME/src/3d/.clang-format everparse/src/3d &&
-    cp -p -r $QD_HOME/src/3d/copyright.txt everparse/src/3d &&
-    if $is_windows ; then cp -p -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi &&
-    cp -p -r $QD_HOME/src/3d/EverParseEndianness.h everparse/src/3d/ &&
-    cp -p -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
+    $cp -r $QD_HOME/src/3d/prelude everparse/src/3d/prelude &&
+    $cp -r $QD_HOME/src/3d/.clang-format everparse/src/3d &&
+    $cp -r $QD_HOME/src/3d/copyright.txt everparse/src/3d &&
+    if $is_windows ; then $cp -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi &&
+    $cp -r $QD_HOME/src/3d/EverParseEndianness.h everparse/src/3d/ &&
+    $cp -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
     if $is_windows ; then
-        cp -p -r $QD_HOME/src/package/README.Windows.pkg everparse/README
+        $cp -r $QD_HOME/src/package/README.Windows.pkg everparse/README
     else
-        cp -p -r $QD_HOME/src/package/README.pkg everparse/README
+        $cp -r $QD_HOME/src/package/README.pkg everparse/README
     fi &&
     echo "This is EverParse $everparse_version" >> everparse/README &&
     echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr UTC+0000)" >> everparse/README &&
@@ -173,9 +174,9 @@ make_everparse() {
     
     # licenses
     mkdir -p everparse/licenses &&
-    cp -p $FSTAR_HOME/LICENSE everparse/licenses/FStar &&
-    cp -p $KREMLIN_HOME/LICENSE everparse/licenses/KReMLin &&
-    cp -p $QD_HOME/LICENSE everparse/licenses/EverParse &&
+    $cp $FSTAR_HOME/LICENSE everparse/licenses/FStar &&
+    $cp $KREMLIN_HOME/LICENSE everparse/licenses/KReMLin &&
+    $cp $QD_HOME/LICENSE everparse/licenses/EverParse &&
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt &&
     if $is_windows ; then
         wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/master/clang/LICENSE.TXT
