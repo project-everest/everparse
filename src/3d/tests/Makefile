@@ -30,6 +30,8 @@ batch-test:
 	mkdir -p out.batch
 	$(3D) --odir out.batch --batch $(positive_tests)
 	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS=-Wno-ignored-qualifiers
+	$(CXX) -o test-cpp.exe -I out.batch test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
+	./test-cpp.exe
 
 batch-cleanup-test:
 	mkdir -p out.cleanup
@@ -40,6 +42,6 @@ batch-cleanup-test:
 	@echo $(FSTAR_OPTIONS)
 
 clean:
-	rm -rf out.batch out.fail.batch out.cleanup
+	rm -rf out.batch out.fail.batch out.cleanup test-cpp.exe
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test

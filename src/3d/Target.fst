@@ -903,7 +903,13 @@ let print_c_entry (modul: string) (env: global_env) (ds:list decl) : ML (string 
   let header =
     Printf.sprintf
       "#include \"%s.h\"\n\
-       %s\n"
+       #ifdef __cplusplus\n\
+       extern \"C\" {\n\
+       #endif\n\
+       %s\n\
+       #ifdef __cplusplus\n\
+       }\n\
+       #endif\n"
       modul
       (signatures |> String.concat "\n\n")
   in
