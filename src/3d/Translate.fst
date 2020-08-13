@@ -1024,20 +1024,39 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
   let sc, cases = sw in
   let sc = translate_expr sc in
   let env = List.rev tdn.T.td_params in
+  let translate_one_case f : ML _ = 
+    let sf = translate_field f in
+    let decls, sfs = hoist_refinements genv tdn [sf] in
+    let sf = List.hd sfs in
+    decls, sf
+  in
+  let rest, default_t, decls =
+    if List.length cases > 0
+    then 
+      let rest, last = List.splitAt (List.length cases - 1) cases in
+      match last with
+      | [DefaultCase f] ->
+        let decls, sf = translate_one_case f in
+        rest, sf.T.sf_typ, decls
+      | _ -> 
+        cases, T.T_false, []
+    else
+      cases, T.T_false, []
+  in
   let t,decls,_ = List.fold_right
-    (fun ef (t_else, decls, n) ->
-      let e, f = ef in
-      let open T in
-      let sf = translate_field f in
-      let decls', sfs = hoist_refinements genv tdn [sf] in
-      let sf = List.hd sfs in
-      let guard = T.mk_expr (App Eq [sc; translate_expr e]) in
-      let t = T_if_else guard sf.sf_typ t_else in
-      let field_name = Printf.sprintf "%s_ite_%d" tdn.td_name.v n in
-      let td, tdef = hoist_one_type_definition true genv env tdn field_name None t in
-      tdef, decls@decls'@[td], n + 1)
-    cases
-    (T.T_false, [], 0)
+    (fun case (t_else, decls, n) ->
+      match case with
+      | DefaultCase _ -> failwith "Impossible"
+      | Case e f ->
+        let open T in
+        let decls', sf = translate_one_case f in
+        let guard = T.mk_expr (App Eq [sc; translate_expr e]) in
+        let t = T_if_else guard sf.sf_typ t_else in
+        let field_name = Printf.sprintf "%s_ite_%d" tdn.td_name.v n in
+        let td, tdef = hoist_one_type_definition true genv env tdn field_name None t in
+        tdef, decls@decls'@[td], n + 1)
+    rest
+    (default_t, decls, 0)
   in
   t,
   decls

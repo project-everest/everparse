@@ -85,7 +85,9 @@ let simplify_decl (env:B.env) (d:decl) : ML decl =
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in 
     let hd, cases = switch in
     let hd = simplify_expr env hd in
-    let cases = List.map (fun (e, f) -> simplify_expr env e, simplify_field env f) cases in
+    let cases = List.map (function Case e f -> Case (simplify_expr env e) (simplify_field env f)
+                                 | DefaultCase f -> DefaultCase (simplify_field env f)) 
+                         cases in
     { d with v=CaseType tdnames params (hd, cases) }
 
 let simplify_prog (env:B.global_env) (p:B.prog) =

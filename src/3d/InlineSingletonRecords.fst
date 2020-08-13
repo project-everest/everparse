@@ -111,7 +111,9 @@ let simplify_decl (env:env) (d:decl) : ML decl =
 
   | CaseType tdnames params switch ->
     let hd, cases = switch in
-    let cases = List.map (fun (e, f) -> e, simplify_field env f) cases in
+    let cases = List.map (function Case e f -> Case e (simplify_field env f)
+                                 | DefaultCase f -> DefaultCase (simplify_field env f)) 
+                         cases in
     { d with v=CaseType tdnames params (hd, cases) }
 
 let simplify_prog (p:list decl) =

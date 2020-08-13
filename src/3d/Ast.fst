@@ -304,7 +304,11 @@ type struct_field = {
 
 let field = with_meta_t struct_field
 
-type case = expr & field
+noeq
+type case =
+  | Case : expr -> field -> case
+  | DefaultCase : field -> case
+
 type switch_case = expr & list case
 
 /// Typedefs are given 2 names by convention and can be tagged as an
@@ -421,7 +425,9 @@ let subst_field (s:subst) (f:field) : ML field =
   } in
   { f with v = sf }
 let subst_case (s:subst) (c:case) : ML case =
-  subst_expr s (fst c), subst_field s (snd c)
+  match c with
+  | Case e f -> Case (subst_expr s e) (subst_field s f)
+  | DefaultCase f -> DefaultCase (subst_field s f)
 let subst_switch_case (s:subst) (sc:switch_case) : ML switch_case =
   subst_expr s (fst sc), List.map (subst_case s) (snd sc)
 let subst_params (s:subst) (p:list param) : ML (list param) =
@@ -609,9 +615,14 @@ let print_field (f:field) : ML string =
 let print_switch_case (s:switch_case) : ML string =
   let head, cases = s in
   let print_case (c:case) : ML string =
-    Printf.sprintf "case %s: %s;"
-      (print_expr (fst c))
-      (print_field (snd c))
+    match c with
+    | Case e f ->
+      Printf.sprintf "case %s: %s;"
+        (print_expr e)
+        (print_field f)
+    | DefaultCase f ->
+      Printf.sprintf "default: %s;"
+        (print_field f)
   in
   Printf.sprintf "switch (%s) {\n
                   %s\n\

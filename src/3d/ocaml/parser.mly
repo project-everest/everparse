@@ -44,7 +44,7 @@
 %token<string>  BLOCK_COMMENT
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
-%token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE THIS ENTRYPOINT
+%token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS ENTRYPOINT
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
@@ -247,7 +247,8 @@ parameters:
   | LPAREN ps=right_flexible_nonempty_list(COMMA, parameter) RPAREN { ps }
 
 case:
-  | CASE i=IDENT COLON f=field { (with_range (Identifier i) $startpos(i), f) }
+  | CASE i=IDENT COLON f=field { Case (with_range (Identifier i) $startpos(i), f) }
+  | DEFAULT COLON f=field { DefaultCase f }
 
 cases:
   | cs=right_flexible_nonempty_list(SEMICOLON, case) { cs }

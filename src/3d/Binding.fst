@@ -993,8 +993,8 @@ let check_switch (env:env) (s:switch_case)
         | Some enum -> Some enum
         | _ -> fail_non_integral ()
     in
-    let check_case (c:case) : ML case =
-      let pat, f = c in
+    let check_case (c:case{Case? c}) : ML case =
+      let Case pat f = c in
       let pat, pat_t = check_expr env pat in
       let f = check_field env false f in
       let pat = //check type of patterns
@@ -1034,24 +1034,45 @@ let check_switch (env:env) (s:switch_case)
                      pat.range;
           pat
       in
-      pat, f
+      Case pat f
     in
-    let cases = List.map check_case cases in
-    let size, suffix =
+    let check_default_case (c:case{DefaultCase? c}) : ML case =
+       let DefaultCase f = c in
+       let f = check_field env false f in
+       DefaultCase f
+    in
+    let cases =
+      List.map (fun (o:case) -> if Case? o then check_case o else check_default_case o) cases in
+    let size, suffix, _ =
       List.fold_right
-        (fun (_, f) (size, suffix) ->
-          let sf = f.v in
+        (fun case (size, suffix, default_ok) ->
+          let sf =
+            match case with
+            | Case _ f -> f.v
+            | DefaultCase f ->
+              if default_ok
+              then f.v
+              else raise (error "default is only allowed in the last case"
+                                f.v.field_ident.range)
+          in
           let size =
               match sf.field_size with
-              | Some f -> if f > size then f else size
+              | Some f ->
+                FStar.IO.print_string (
+                Printf.sprintf "Size of union field %s is %d\n"
+                               sf.field_ident.v
+                               f);
+                if f > size then f else size
               | _ ->
                 raise (error (Printf.sprintf "Size of union field %s cannot be computed"
                                              sf.field_ident.v)
                               sf.field_ident.range)
           in
-          size, typ_has_suffix env sf.field_type)
+          size,
+          typ_has_suffix env sf.field_type,
+          false)
         cases
-        (0, false)
+        (0, false, true)
     in
     let attrs = {
       has_suffix = suffix;

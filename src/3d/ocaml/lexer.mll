@@ -37,6 +37,7 @@ let () =
   H.add keywords "casetype" CASETYPE;
   H.add keywords "switch" SWITCH;
   H.add keywords "case" CASE;
+  H.add keywords "default" DEFAULT;
   H.add keywords "this" THIS;
   H.add keywords "entrypoint" ENTRYPOINT;
   H.add keywords "if" IF;
