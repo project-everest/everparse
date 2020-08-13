@@ -5,12 +5,9 @@
 
 .. note::
 
-   3d is available only from the EverParse/3d releases (including the
-   corresponding binary package) or from the ``everparse_3d``
-   branch. It is not available from ``master``.
-
    The documentation from this page covers the EverParse/3d releases
-   v2020.06.14 or later.
+   v2020.08.07 or later. Documentations for earlier versions may be
+   found in the Git history.
 
 EverParse/3d lets you write a data format description and
 automatically produces efficient data validation code formally
@@ -30,7 +27,7 @@ tl;dr Summary
 
 2. Give MyFile1.3d and MyFile2.3d to EverParse:
 
-   * with the Windows binary package: ``everparse.bat MyFile1.3d MyFile2.3d``
+   * with the Windows binary package: ``everparse.cmd MyFile1.3d MyFile2.3d``
 
    * with the Linux binary package: ``everparse.sh MyFile1.3d MyFile2.3d``
 
@@ -77,7 +74,7 @@ We provide binary (amd64 only) packages for Windows and Linux.
    like. No need to configure it anyhow.
 
 Then, everything is contained in a ``everparse`` directory, whose
-actual entrypoint executable is ``everparse.bat`` (for Windows) or
+actual entrypoint executable is ``everparse.cmd`` (for Windows) or
 ``everparse.sh`` (for Linux.)
 
 Binary packages already contain all dependencies required by
@@ -96,7 +93,7 @@ not require any POSIX emulation layer such as Cygwin or WSL.
 Run
 ---
 
-On Windows: ``everparse.bat`` [options] input_files
+On Windows: ``everparse.cmd`` [options] input_files
 
 On Linux: ``everparse.sh`` [options] input_files
 
@@ -251,10 +248,9 @@ member of:
    latest KReMLin.
 
 9. Everest contains a clone of the EverParse sources in the
-   ``quackyducky`` subdirectory. You can work from there and switch to
-   the ``everparse_3d`` branch there. Alternatively, you can `clone it
-   yourself
-   <https://github.com/project-everest/everparse/tree/everparse_3d>`_
+   ``quackyducky`` subdirectory. You can work from
+   there. Alternatively, you can `clone it yourself
+   <https://github.com/project-everest/everparse>`_
    anywhere else.
 
 10. Set the ``QD_HOME`` environment variable to your EverParse clone
@@ -270,10 +266,10 @@ at ``src/3d/3d``.
 
 .. note::
 
-   You cannot use ``everparse.sh`` or ``everparse.bat`` from the
+   You cannot use ``everparse.sh`` or ``everparse.cmd`` from the
    sources. You need to use ``3d`` instead.
 
-``3d`` has the same options as ``everparse.sh`` or ``everparse.bat``,
+``3d`` has the same options as ``everparse.sh`` or ``everparse.cmd``,
 with the following caveat: no options are toggled by default (not even
 ``--batch`` or ``--clang_format``) and you need to provide all options
 by hand.

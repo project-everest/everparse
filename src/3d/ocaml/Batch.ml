@@ -134,8 +134,10 @@ let remove_fst_and_krml_files
     Printf.sprintf "%s.Types.fst" root_name;
     Printf.sprintf "%s.fst" root_name;
     Printf.sprintf "%s.fsti" root_name;
+    Printf.sprintf "%s.Types.fst.checked" root_name;
     Printf.sprintf "%s.fst.checked" root_name;
     Printf.sprintf "%s.fsti.checked" root_name;
+    Printf.sprintf "%s_Types.krml" root_name;
     Printf.sprintf "%s.krml" root_name;
   ]
 
@@ -147,6 +149,7 @@ let produce_c_files
 = 
   let krml_files = List.fold_left
     (fun accu (_, modul) -> filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
+                            Printf.sprintf "%sWrapper.c" modul ::
                             filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu)
     all_everparse_krmls
     files_and_modules
@@ -166,6 +169,7 @@ let produce_c_files
     "-static-header" :: "Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps" ::
     "-no-prefix" :: "LowParse.Slice" ::
     "-no-prefix" :: "LowParse.Low.BoundedInt" ::
+    "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
     "-fextern-c" ::
     (krml_args0 @ krml_files)
   in

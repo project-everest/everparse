@@ -1,7 +1,7 @@
 ROOT=Main.fst
-FSTAR_HOME?=../../../FStar
-EVERPARSE_HOME?=../..
-KREMLIN_HOME?=$(EVERPARSE_HOME)/../kremlin
+FSTAR_HOME?=$(realpath ../../../FStar)
+KREMLIN_HOME?=$(realpath ../../../kremlin)
+EVERPARSE_HOME=../..
 
 INCLUDE_PATHS=
 OTHERFLAGS?=

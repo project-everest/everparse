@@ -22,7 +22,7 @@ USAGE
 
 2. Run the following command:
 
-   <path-to-everparse>\everparse.bat <path-to-your-file>\MyFormat.3d
+   <path-to-everparse>\everparse.cmd <path-to-your-file>\MyFormat.3d
 
 Then, EverParse produces, in the current directory:
 

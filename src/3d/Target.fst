@@ -782,6 +782,12 @@ let rec print_as_c_type (t:typ) : Tot string =
     match t with
     | T_pointer t ->
           Printf.sprintf "%s*" (print_as_c_type t)
+    | T_app {v="Bool"} [] ->
+          "BOOLEAN"
+    | T_app {v="UINT8"} [] ->
+          "uint8_t"
+    | T_app {v="UINT16"} [] ->
+          "uint16_t"
     | T_app {v="UINT32"} [] ->
           "uint32_t"
     | T_app {v="UINT64"} [] ->

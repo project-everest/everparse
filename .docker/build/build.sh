@@ -75,10 +75,8 @@ function fetch_mitls() {
 
 function rebuild_doc () {
    if
-      [[ "$OS" != "Windows_NT" ]] && {
-          [[ "$branchname" == "master" ]] ||
-          [[ "$branchname" == "everparse_3d" ]]
-      }
+      [[ "$OS" != "Windows_NT" ]] &&
+      [[ "$branchname" == "master" ]]
    then
        git clone git@github.com:project-everest/project-everest.github.io project-everest-github-io &&
        rm -rf project-everest-github-io/everparse &&
@@ -120,7 +118,6 @@ function raise () {
 
 function build_and_test_quackyducky() {
     fetch_and_make_kremlin &&
-    export_home QD "$(pwd)" &&
     make -j $threads -k test &&
     # Build incrementality test
     pushd tests/sample && {
