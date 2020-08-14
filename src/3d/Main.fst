@@ -11,21 +11,26 @@ let open_write_file (s:string) : ML FStar.IO.fd_write =
   FStar.IO.print_string (FStar.Printf.sprintf "Writing file %s\n" s);
   FStar.IO.open_write_file s
 
-let parse_decls (fn:string) : ML (list decl) =
-  let decls = ParserDriver.parse fn in
+let has_entrypoint (l:list attribute) =
+  List.tryFind (function Entrypoint -> true | _ -> false) l
+  |> Some?
+
+let parse_prog (fn:string) : ML prog =
+  let decls, type_refinement_opt = ParserDriver.parse fn in
   if decls
      |> List.tryFind (fun d -> match d.v with
                            | Record names _ _ _
-                           | CaseType names _ _ -> names.typedef_entry_point
+                           | CaseType names _ _ ->
+                             has_entrypoint (names.typedef_attributes)
                            | _ -> false)
      |> Some?
-  then decls
+  then decls, type_refinement_opt
   else raise (Error (Printf.sprintf "File %s does not have an entry point definition, exiting\n" fn))
 
 let process_file (fn: string) : ML unit =
     let modul = Options.get_module_name fn in
     Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn modul);
-    let decls = parse_decls fn in
+    let decls, refinement = parse_prog fn in
     Options.debug_print_string "=============After parsing=============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
@@ -37,6 +42,7 @@ let process_file (fn: string) : ML unit =
     Options.debug_print_string "=============After binding=============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
+    let static_asserts = StaticAssertions.compute_static_asserts env refinement in
     let decls = BitFields.eliminate env decls in
     Options.debug_print_string "=============After bitflds=============\n";
     Options.debug_print_string (print_decls decls);
@@ -75,7 +81,7 @@ let process_file (fn: string) : ML unit =
     FStar.IO.write_string fsti_file (Target.print_decls_signature modul t_decls);
     FStar.IO.close_write_file fsti_file;
 
-    let wrapper_header, wrapper_impl = Target.print_c_entry modul env t_decls in
+    let wrapper_header, wrapper_impl = Target.print_c_entry modul env t_decls static_asserts in
 
     let c_file =
       open_write_file

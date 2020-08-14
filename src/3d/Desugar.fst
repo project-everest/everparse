@@ -94,7 +94,7 @@ let eliminate_enum (d:decl) : ML decl =
       typedef_name = { i with v = Ast.reserved_prefix ^ Ast.reserved_prefix ^ i.v };
       typedef_abbrev = i;
       typedef_ptr_abbrev = { i with v = Ast.reserved_prefix ^ Ast.reserved_prefix ^ "P" ^ i.v };
-      typedef_entry_point = false;
+      typedef_attributes = [];
     } in
     let params = [] in
     let where = None in

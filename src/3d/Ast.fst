@@ -311,6 +311,10 @@ type case =
 
 type switch_case = expr & list case
 
+noeq
+type attribute =
+  | Entrypoint
+
 /// Typedefs are given 2 names by convention and can be tagged as an
 /// "entrypoint" for the validator
 ///
@@ -321,7 +325,7 @@ type typedef_names = {
   typedef_name: ident;
   typedef_abbrev: ident;
   typedef_ptr_abbrev: ident;
-  typedef_entry_point: bool
+  typedef_attributes: list attribute
 }
 
 let enum_case = ident & option (either int ident)
@@ -340,6 +344,14 @@ type decl' =
   | Record: names:typedef_names -> params:list param -> where:option expr -> fields:list field -> decl'
   | CaseType: typedef_names -> list param -> switch_case -> decl'
 and decl = with_meta_t decl'
+
+noeq
+type type_refinement = {
+  includes:list string;
+  type_map:list (ident * option ident)
+}
+
+let prog = list decl & option type_refinement
 
 ////////////////////////////////////////////////////////////////////////////////
 // Utilities

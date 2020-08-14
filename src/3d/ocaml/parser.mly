@@ -6,7 +6,7 @@
     typedef_name = i;
     typedef_abbrev = j;
     typedef_ptr_abbrev = k;
-    typedef_entry_point = b
+    typedef_attributes = b
   }
 
   let mk_pos (l:Lexing.position) =
@@ -40,17 +40,17 @@
       i, s', t
 %}
 
-%token<string>  INT XINT
+%token<string>  INT XINT STRING
 %token<string>  BLOCK_COMMENT
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
-%token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS ENTRYPOINT
+%token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS ENTRYPOINT REFINING
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
-%token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT
+%token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
 (* LBRACE_ONERROR CHECK  *)
-%start <Ast.decl list> prog
+%start <Ast.prog> prog
 %start <Ast.expr> expr_top
 
 %left OR
@@ -253,9 +253,12 @@ case:
 cases:
   | cs=right_flexible_nonempty_list(SEMICOLON, case) { cs }
 
-maybe_entry:
-  |            { false }
-  | ENTRYPOINT { true }
+attribute:
+  | ENTRYPOINT { Entrypoint }
+
+attributes:
+  |            { [] }
+  | a=attribute tl=attributes { a :: tl }
 
 where_opt:
   |              { None }
@@ -295,15 +298,15 @@ decl_no_range:
   | DEFINE i=IDENT c=constant { Define (i, None, c) }
   | t=IDENT ENUM i=IDENT LBRACE es=right_flexible_nonempty_list(COMMA, enum_case) RBRACE
     { Enum(with_range (Type_app (t, [])) ($startpos(t)), i, es) }
-  | b=maybe_entry TYPEDEF t=typ i=IDENT SEMICOLON
+  | b=attributes TYPEDEF t=typ i=IDENT SEMICOLON
     { TypeAbbrev (t, i) }
-  | b=maybe_entry TYPEDEF STRUCT i=IDENT ps=parameters w=where_opt
+  | b=attributes TYPEDEF STRUCT i=IDENT ps=parameters w=where_opt
     LBRACE fields=right_flexible_nonempty_list(SEMICOLON, field)
     RBRACE j=IDENT p=typedef_pointer_name_opt SEMICOLON
     {  let k = pointer_name j p in
        Record(mk_td b i j k, ps, w, fields)
     }
-  | b=maybe_entry CASETYPE i=IDENT ps=parameters
+  | b=attributes CASETYPE i=IDENT ps=parameters
     LBRACE SWITCH LPAREN e=IDENT RPAREN
            LBRACE cs=cases
            RBRACE
@@ -329,6 +332,27 @@ decl:
 expr_top:
   | e=expr EOF { e }
 
+type_map:
+  | i=IDENT { i, None }
+  | i=IDENT AS j=IDENT { i, Some j }
+
+type_refinement:
+  | REFINING includes=right_flexible_nonempty_list(COMMA, STRING)
+    LBRACE
+      type_map=right_flexible_nonempty_list(COMMA, type_map)
+    RBRACE
+    {
+          {
+            includes = includes;
+            type_map = type_map
+          }
+    }
+
 prog:
-  | d=decl EOF { [d] }
-  | d=decl p=prog { d :: p }
+  | d=decl r=option_of(type_refinement) EOF
+    { [d], r }
+  | d=decl p=prog
+    {
+        let tl, r = p in
+        (d :: tl), r
+    }

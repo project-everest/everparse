@@ -47,7 +47,9 @@ let () =
   H.add keywords "field_ptr" FIELD_PTR;
   H.add keywords "var" VAR;
   H.add keywords "abort" ABORT;
-  H.add keywords "return" RETURN
+  H.add keywords "return" RETURN;
+  H.add keywords "refining" REFINING;
+  H.add keywords "as" AS
 
 let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
 
@@ -62,7 +64,7 @@ let signedness_width = "uy" | "us" | "ul" | "uL"
 let integer = digit+ signedness_width?
 let xinteger = "0x" hex+ signedness_width?
 let bool = "true" | "false"
-
+let string = "\""
 
 let low_alpha = ['a'-'z']
 let up_alpha =  ['A'-'Z']
@@ -123,6 +125,7 @@ rule token =
   | "-"            { locate lexbuf MINUS }
   | xinteger as i  { locate lexbuf (XINT i) }
   | integer as i   { locate lexbuf (INT i) }
+  | '"'            { string (Buffer.create 0) (Lexing.lexeme_start_p lexbuf) lexbuf }
   | space+         { token lexbuf }
   | newline        { Lexing.new_line lexbuf; token lexbuf }
   | eof            { locate lexbuf EOF }
@@ -158,4 +161,33 @@ and multi_line_comment = parse
  | _ as n
    {
       multi_line_comment lexbuf
+   }
+
+and string buffer start_pos = parse
+ | '\\' newline space*
+   {
+      Lexing.new_line lexbuf; string buffer start_pos lexbuf
+   }
+ | newline
+   {
+      Buffer.add_string buffer (Lexing.lexeme lexbuf);
+      Lexing.new_line lexbuf;
+      string buffer start_pos lexbuf
+   }
+ | '"'
+   {
+    (* position info must be set since the start of the string *)
+    STRING (Buffer.contents buffer),
+    start_pos,
+    Lexing.lexeme_end_p lexbuf
+   }
+ | _
+   {
+     Buffer.add_string buffer (Lexing.lexeme lexbuf);
+     string buffer start_pos lexbuf
+   }
+ | eof
+   {
+     let r = (mk_pos start_pos) in
+     error "Unterminated string" (r, r)
    }

@@ -829,8 +829,27 @@ let pascal_case name : ML string =
   then name
   else String.uppercase (String.sub name 0 1) ^ String.sub name 1 (String.length name - 1)
 
-let print_c_entry (modul: string) (env: global_env) (ds:list decl) : ML (string & string) =
-  let struct_name_map, field_name_map = print_error_map modul env in
+let print_static_asserts (sas:StaticAssertions.static_asserts)
+  : ML string
+  = let open StaticAssertions in
+    let includes =
+        sas.includes
+        |> List.map (fun i -> Printf.sprintf "#include \"%s\"" i)
+        |> String.concat "\n"
+    in
+    let sizeof_assertions =
+        sas.sizeof_assertions
+        |> List.map (fun sa -> Printf.sprintf "C_ASSERT(sizeof(%s) == %d);//has_suffix=%b" sa.type_name.Ast.v sa.size sa.has_suffix)
+        |> String.concat "\n"
+    in
+    includes ^ "\n" ^ sizeof_assertions
+
+let print_c_entry (modul: string)
+                  (env: global_env)
+                  (ds:list decl)
+                  (sas:StaticAssertions.static_asserts)
+: ML (string & string)
+= let struct_name_map, field_name_map = print_error_map modul env in
 
   let print_one_validator (d:type_decl) : ML (string & string) =
     let print_params (ps:list param) : Tot string =
@@ -924,12 +943,14 @@ let print_c_entry (modul: string) (env: global_env) (ds:list decl) : ML (string 
        %s\n\
        %s\n\
        %s\n\
+       %s\n\
        %s\n"
       modul
       error_callback_proto
       struct_name_map
       field_name_map
       (impls |> String.concat "\n\n")
+      (print_static_asserts sas)
   in
   header,
   impl

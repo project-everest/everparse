@@ -241,12 +241,16 @@ let rec translate_typ (t:A.typ) : ML T.typ =
   | Type_app hd args ->
     T.T_app hd (List.map (fun x -> Inr (translate_expr x)) args)
 
+let has_entrypoint (l:list A.attribute) =
+  List.tryFind (function A.Entrypoint -> true | _ -> false) l
+  |> Some?
+
 let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param) : ML T.typedef_name =
   let params = List.map (fun (t, id, _) -> id, translate_typ t) params in //TODO: ignoring qualifier
   let open T in
   { td_name = tdn.typedef_name;
     td_params = params;
-    td_entrypoint = tdn.typedef_entry_point }
+    td_entrypoint = has_entrypoint tdn.typedef_attributes }
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
   let refinement i =
@@ -802,7 +806,7 @@ let make_tdn (i:A.ident) =
     typedef_name = i;
     typedef_abbrev = with_dummy_range "";
     typedef_ptr_abbrev = with_dummy_range "";
-    typedef_entry_point = false
+    typedef_attributes = []
   }
 
 let env_t = list (A.ident * T.typ)

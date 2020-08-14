@@ -1376,7 +1376,7 @@ let initial_global_env () =
       typedef_name = i;
       typedef_abbrev = i;
       typedef_ptr_abbrev = i;
-      typedef_entry_point = false
+      typedef_attributes = []
     }
     in
     with_dummy_range (Record td_name [] None [])
