@@ -91,10 +91,15 @@ type decl_attributes = {
 noeq
 type macro_signature = {
   macro_arguments_t: list typ;
-  macro_result_t: typ
+  macro_result_t: typ;
+  macro_defn_t:option expr
 }
 
-let nullary_macro t = { macro_arguments_t = []; macro_result_t = t }
+let nullary_macro t d = {
+  macro_arguments_t = [];
+  macro_result_t = t;
+  macro_defn_t = d
+}
 
 (* Type-checking environments *)
 
@@ -393,6 +398,17 @@ let rec value_of_const_expr (env:env) (e:expr) : ML (option (either bool (intege
     match v with
     | Some (Inr (_, n)) ->
       Some (Inr (t, n))
+    | _ -> None
+    end
+  | Identifier i ->
+    begin
+    let res =
+      try Some (lookup env i)
+      with _ -> None
+    in
+    match res with
+    | Some (Inr (_, Inr { macro_defn_t = Some e })) ->
+      value_of_const_expr env e
     | _ -> None
     end
   | _ -> None
@@ -943,6 +959,13 @@ let check_field (env:env) (extend_scope: bool) (f:field)
           | Some (Inr (_, n)) -> Some (n * s)
           | _ -> error "Variable-length array fields must be marked with the 'suffix' qualifier" f.range
           end
+        | Some (e, VariableSizeEq), Some s
+        | Some (e, SingleElementVariableSizeEq), Some s ->
+          begin
+          match value_of_const_expr env e with
+          | Some (Inr (_, n)) -> Some (n * s)
+          | _ -> Some 0
+          end
         | _ -> Some 0 //variable length
     in
     // Options.debug_print_string
@@ -1254,11 +1277,21 @@ let elaborate_record (e:global_env)
 
     let is_var_length (x:field) : ML bool =
       let sfx = typ_has_suffix env x.v.field_type in
-      sfx ||
-      (match x.v.field_array_opt with
-       | None
-       | Some (_, ConstantSize) -> false
-       | _ -> true)
+      if sfx then true
+      else
+        match x.v.field_array_opt with
+        | None
+        | Some (_, ConstantSize) -> false
+        | Some (n, VariableSizeEq)
+        | Some (n, SingleElementVariableSizeEq) ->
+          begin
+          match value_of_const_expr env n with
+          | Some (Inr _) -> //it's a constant
+            false
+          | _ ->
+            true
+          end
+        | _ -> true
     in
 
     let check_suffix (fs:list field) : ML bool =
@@ -1300,7 +1333,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
   | Define i None c ->
     let t = type_of_constant d.range c in
     let d = {d with v = Define i (Some t) c} in
-    add_global e i d (Inr (nullary_macro t));
+    add_global e i d (Inr (nullary_macro t (Some (with_range (Constant c) d.range))));
     d
 
   | Define i (Some t) c ->
@@ -1309,7 +1342,9 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     let t' = type_of_constant d.range c in
     let d = { d with v = Define i (Some t) c } in
     if eq_typ env t t'
-    then (add_global e i d (Inr (nullary_macro (type_of_constant d.range c))); d)
+    then (add_global e i d (Inr (nullary_macro (type_of_constant d.range c)
+                                               (Some (with_range (Constant c) d.range))));
+          d)
     else error "Ill-typed constant" d.range
 
   | TypeAbbrev t i ->
@@ -1395,7 +1430,7 @@ let initial_global_env () =
       add_global e i (nullary_decl i) (Inl attrs))
   in
   let _operators =
-    [ ("is_range_okay", { macro_arguments_t=[tuint32;tuint32;tuint32]; macro_result_t=tbool}) ]
+    [ ("is_range_okay", { macro_arguments_t=[tuint32;tuint32;tuint32]; macro_result_t=tbool; macro_defn_t = None}) ]
     |> List.iter (fun (i, d) ->
         let i = with_dummy_range i in
         add_global e i (nullary_decl i) (Inr d))

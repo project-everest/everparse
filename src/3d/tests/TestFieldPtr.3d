@@ -8,3 +8,7 @@ typedef struct _T(mutable PUINT8* out) {
         return true;
     };
 } T;
+
+refining "I.h" {
+  S as T
+}

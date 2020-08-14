@@ -839,7 +839,7 @@ let print_static_asserts (sas:StaticAssertions.static_asserts)
     in
     let sizeof_assertions =
         sas.sizeof_assertions
-        |> List.map (fun sa -> Printf.sprintf "C_ASSERT(sizeof(%s) == %d);//has_suffix=%b" sa.type_name.Ast.v sa.size sa.has_suffix)
+        |> List.map (fun sa -> Printf.sprintf "C_ASSERT(sizeof(%s) == %d);" sa.type_name.Ast.v sa.size)
         |> String.concat "\n"
     in
     includes ^ "\n" ^ sizeof_assertions
