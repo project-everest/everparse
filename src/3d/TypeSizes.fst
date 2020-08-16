@@ -55,9 +55,18 @@ let size_of_typename (env:env_t) (i:ident)
     | Some s -> s
     | None -> failwith (Printf.sprintf "size_of_typename: Identifier %s not found" i.v)
 
+let print_size =
+  function
+  | Fixed n -> Printf.sprintf "(Fixed %d)" n
+  | WithVariableSuffix n -> Printf.sprintf "(WithVariableSuffix %d)" n
+  | Variable -> "Variable"
+
 let extend_with_size_of_ident (env:env_t) (i:ident) (n:size)
   : ML unit
-  = H.insert (snd env) i.v n
+  = Options.debug_print_string
+     (Printf.sprintf "***** Size of %s = %s\n"
+                     i.v (print_size n));
+    H.insert (snd env) i.v n
 
 let extend_with_size_of_typedef_names (env:env_t) (names:typedef_names) (size:size)
   : ML unit
@@ -176,44 +185,19 @@ let size_of_decl (env:env_t) (d:decl)
 
     | Record names params where fields ->
       let field_sizes = List.map (size_of_field env) fields in
-      let size =
-        List.fold_right
-          (fun f_size accum ->
-            match accum with
-            | None -> //f is the last field
-              begin
-              match f_size with
-              | Fixed _
-              | WithVariableSuffix _ ->
-                Some f_size
-              | Variable ->
-                Some (WithVariableSuffix 0)
-              end
-            | Some s_suffix ->
-              let s =
-                match f_size, s_suffix with
-                | Variable, _
-                | WithVariableSuffix _, _ ->
-                  Variable
-
-                | Fixed n0, Fixed n1 ->
-                  Fixed (n0 + n1)
-
-                | Fixed n0, WithVariableSuffix n ->
-                  WithVariableSuffix (n0 + n)
-
-                | Fixed _, Variable ->
-                  Variable
-              in
-              Some s)
-          field_sizes
-          None
+      let rec sum (accum : size) (sizes:list size)
+        : Tot size (decreases sizes)
+        = match accum, sizes with
+          | Variable, _
+          | WithVariableSuffix _, _
+          | _, [] -> accum
+          | Fixed n, hd::tl ->
+            match hd with
+            | Fixed m -> sum (Fixed (n + m)) tl
+            | WithVariableSuffix m -> WithVariableSuffix (n + m)
+            | Variable -> WithVariableSuffix n
       in
-      let size =
-        match size with
-        | None -> Fixed 0 //empty record
-        | Some s -> s
-      in
+      let size = sum (Fixed 0) field_sizes in
       extend_with_size_of_typedef_names env names size
 
     | CaseType names params cases ->

@@ -860,59 +860,6 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         remove_local env sf.field_ident;
         a, dependent)
     in
-    // let size = size_of_typ env sf.field_type in
-    // let size_opt =
-    //     match sf.field_bitwidth with
-    //     | None -> Some size
-
-    //     | Some (Inl bw) ->
-    //       if not (typ_is_integral env sf.field_type)
-    //       then error (Printf.sprintf
-    //                      "Bit-field annotations are only permitted on integral types; \
-    //                       %s is not integral"
-    //                       (print_typ sf.field_type))
-    //                  bw.range;
-
-    //       if Some? (sf.field_array_opt)
-    //       then error "Bit-width annotations are not permitted on array fields" bw.range;
-
-    //       let bitwidth_size = 8 * size in
-    //       if not (0 <= bw.v && bw.v <= bitwidth_size)
-    //       then error (Printf.sprintf "Expected a bit-width between 0 and %d" bitwidth_size)
-    //                  bw.range;
-
-    //       //we cannot compute the size of a bit field type in isolation
-    //       //it requires information about adjacent bit fields
-    //       //The size will be computed in a separate pass
-    //       None
-
-    //     | Some (Inr _) ->
-    //       failwith "Impossible: this is an already elaborated bit field"
-    // in
-    // let size_opt =
-    //     match sf.field_array_opt, size_opt with
-    //     | _, None -> size_opt
-    //     | None, _ -> size_opt
-    //     | _, Some 0 -> size_opt //this is an opaque field
-    //     | Some (e, ConstantSize), Some s ->
-    //       begin
-    //       match value_of_const_expr env e with
-    //       | Some (Inr (_, n)) -> Some (n * s)
-    //       | _ -> error "Variable-length array fields must be marked with the 'suffix' qualifier" f.range
-    //       end
-    //     | Some (e, VariableSizeEq), Some s
-    //     | Some (e, SingleElementVariableSizeEq), Some s ->
-    //       begin
-    //       match value_of_const_expr env e with
-    //       | Some (Inr (_, n)) -> Some (n * s)
-    //       | _ -> Some 0
-    //       end
-    //     | _ -> Some 0 //variable length
-    // in
-    // Options.debug_print_string
-    //   (Printf.sprintf "!!!Size of field %s is %s\n"
-    //     sf.field_ident.v
-    //     (match size_opt with | None -> "None" | Some s -> string_of_int s));
     if extend_scope then add_local env sf.field_ident sf.field_type;
     let field_number =
         let may_fail = parser_may_fail env sf.field_type in

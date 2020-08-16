@@ -36,7 +36,7 @@ let rec simplify_expr (env:T.env_t) (e:expr)
       begin
       match T.value_of_const_expr env e with
       | Some (Inr (t, n)) -> with_range (Constant (Int t n)) e.range
-      | _ -> error "Could not evaluate sizeof to a compile-time constant" e.range
+      | _ -> error (Printf.sprintf "Could not evaluate %s to a compile-time constant" (print_expr e)) e.range
       end
     | App op es ->
       let es = List.map (simplify_expr env) es in
