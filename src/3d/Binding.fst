@@ -755,7 +755,7 @@ let rec check_field_action (env:env) (f:field) (a:action)
           Action_field_pos, tuint32
 
         | Action_field_ptr ->
-          Action_field_ptr, with_range (Pointer tuint8) r
+          Action_field_ptr, puint8
 
         | Action_deref i ->
           let t = lookup_expr_name env i in

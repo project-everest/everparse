@@ -389,6 +389,7 @@ let with_dummy_range x = with_range x dummy_range
 let tbool = with_dummy_range (Type_app (with_dummy_range "Bool") [])
 let tunit = with_dummy_range (Type_app (with_dummy_range "unit") [])
 let tuint8 = with_dummy_range (Type_app (with_dummy_range "UINT8") [])
+let puint8 = with_dummy_range (Type_app (with_dummy_range "PUINT8") [])
 let tuint16 = with_dummy_range (Type_app (with_dummy_range "UINT16") [])
 let tuint32 = with_dummy_range (Type_app (with_dummy_range "UINT32") [])
 let tuint64 = with_dummy_range (Type_app (with_dummy_range "UINT64") [])
