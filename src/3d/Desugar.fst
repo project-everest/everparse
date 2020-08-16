@@ -110,7 +110,6 @@ let eliminate_enum (d:decl) : ML decl =
     in
     let field = {
        field_dependence = false;
-       field_size = None;
        field_ident = field_ident;
        field_type = t;
        field_array_opt = None;
@@ -126,6 +125,5 @@ let eliminate_enum (d:decl) : ML decl =
   
   
 let desugar (ds:list decl) : ML (list decl) =
-  let ds = List.collect desugar_one_enum ds in
-  ds
+  List.collect desugar_one_enum ds
 

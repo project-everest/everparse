@@ -38,16 +38,17 @@ let process_file (fn: string) : ML unit =
     Options.debug_print_string "=============After desugaring=============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
-    let decls, env = Binding.bind_prog decls in
+    let decls, env = Binding.bind_decls decls in
     Options.debug_print_string "=============After binding=============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
-    let static_asserts = StaticAssertions.compute_static_asserts env refinement in
     let decls = BitFields.eliminate env decls in
     Options.debug_print_string "=============After bitflds=============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
-    let decls = Simplify.simplify_prog env decls in
+    let senv = TypeSizes.size_of_decls env decls in
+    let static_asserts = StaticAssertions.compute_static_asserts senv refinement in
+    let decls = Simplify.simplify_prog senv decls in
     Options.debug_print_string "=============After simplify============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
@@ -55,7 +56,7 @@ let process_file (fn: string) : ML unit =
     Options.debug_print_string "=============After inline singletons============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
-    let t_decls = Translate.translate_decls env decls in
+    let t_decls = Translate.translate_decls env senv decls in
 
     let types_fst_file =
       open_write_file

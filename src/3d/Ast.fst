@@ -260,9 +260,6 @@ type qualifier =
 ///   Parameters have a name and are always annoted with their type
 type param =  typ & ident & qualifier
 
-/// The size of a type is its the number of bytes used in its representation
-let size = int
-
 /// field_num: Every field in a struct is assigned a unique identifier
 ///   which is then reported in case validation fails. The identifier
 ///   has to be suitably small, so that it fits in the 32 bits that
@@ -292,7 +289,6 @@ type array_qualifier =
 noeq
 type struct_field = {
   field_dependence:bool;   //computed; whether or not the rest of the struct depends on this field
-  field_size:option size;  //computed; the size in bytes occupied by this field
   field_ident:ident;       //name of the field
   field_type:typ;          //type of the field
   field_array_opt:option (expr * array_qualifier);  //array size in bytes, the qualifier indicates whether this is a variable-length suffix or not
@@ -619,14 +615,13 @@ let print_field (f:field) : ML string =
     | ConstantSize -> Printf.sprintf "[{ %s }]" (print_expr e)
   in
   let sf = f.v in
-    Printf.sprintf "%s%s %s%s%s%s; (* size = %s *)"
+    Printf.sprintf "%s%s %s%s%s%s;"
       (if sf.field_dependence then "dependent " else "")
       (print_typ sf.field_type)
       (print_ident sf.field_ident)
       (print_bitfield sf.field_bitwidth)
       (print_opt sf.field_array_opt print_array)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
-      (print_opt sf.field_size string_of_int)
 
 let print_switch_case (s:switch_case) : ML string =
   let head, cases = s in

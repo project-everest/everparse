@@ -3,7 +3,7 @@
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+   You may obtain as copy of the License at
 
        http://www.apache.org/licenses/LICENSE-2.0
 
@@ -13,16 +13,30 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 *)
-module Simplify
-open Ast
+module TypeSizes
 open FStar.All
+open Ast
+open FStar.Mul
+module H = Hashtable
 module B = Binding
 
-(*
-  This module implements a pass over the source AST
+type size =
+  | Fixed of int
+  | WithVariableSuffix of int
+  | Variable
 
-    1. Simplifying refinement expressions, in particular reducing
-       sizeof expressions to constants
-*)
+val size_env : Type0
 
-val simplify_prog (env:TypeSizes.env_t) (p:list decl) : ML (list decl)
+let env_t = B.env & size_env
+
+val size_of_typename (env:env_t) (i:ident)
+  : ML size
+
+val size_of_typ (env:env_t) (t:typ)
+  : ML size
+
+val value_of_const_expr (env:env_t) (e:expr)
+  : ML (option (either bool (integer_type & int)))
+
+val size_of_decls (env:B.global_env) (d:list decl)
+  : ML env_t

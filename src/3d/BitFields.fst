@@ -56,7 +56,7 @@ let group_bit_fields (fields: list field)
 let coalesce_grouped_bit_field env (f:bitfield_group)
   : ML (field & list (ident & expr))
   = let id, typ, fields = f in
-    let size = B.size_of_typ env typ in
+    let size = B.size_of_integral_typ env typ typ.range in
     let bitsize = 8 * size in
     let field_id = with_range (Printf.sprintf "__bitfield_%d" id) dummy_range in
     let id = with_range (Identifier field_id) field_id.range in
@@ -91,7 +91,6 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
     in
     let struct_field = {
       field_dependence = field_dependence;
-      field_size = Some size;
       field_ident = field_id;
       field_type = typ;
       field_array_opt = None;

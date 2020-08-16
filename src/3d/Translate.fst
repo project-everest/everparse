@@ -21,11 +21,13 @@ module A = Ast
 module B = Binding
 module T = Target
 module H = Hashtable
+module TS = TypeSizes
 open FStar.All
 
 noeq
 type global_env = {
   benv:B.global_env;
+  size_env: TS.env_t;
   has_reader: H.t string bool;
   parser_kind_nz: H.t string bool;
   parser_kind_is_constant_size: H.t string bool;
@@ -54,7 +56,10 @@ let parser_kind_is_constant_size
 = 
   match H.try_find env.parser_kind_is_constant_size id.v with
   | Some b -> b
-  | None -> not (B.has_suffix env.benv id)
+  | None -> 
+    match TS.size_of_typename env.size_env id with
+    | TS.Fixed _ -> true
+    | _ -> false
 
 let add_parser_kind_is_constant_size (genv:global_env) (id:A.ident) (is_constant_size:bool) =
   H.insert genv.parser_kind_is_constant_size id.v is_constant_size
@@ -1148,9 +1153,10 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     } in
     decls @ [with_comments d.Ast.comments (Type_decl td)]
 
-let translate_decls (env:B.global_env) (ds:list A.decl) : ML (list T.decl) =
+let translate_decls (benv:B.global_env) (senv:TS.env_t) (ds:list A.decl) : ML (list T.decl) =
   let env = {
-    benv = env;
+    benv = benv;
+    size_env = senv;
     has_reader = H.create 20;
     parser_kind_nz = H.create 20;
     parser_kind_is_constant_size = H.create 20;

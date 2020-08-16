@@ -21,8 +21,7 @@ module B = Binding
 noeq
 type sizeof_assertion = {
   type_name : ident;
-  size : size;
-  has_suffix : bool
+  size : int
 }
 
 noeq
@@ -36,12 +35,12 @@ let empty_static_asserts = {
   sizeof_assertions = []
 }
 
-let compute_static_asserts (genv:B.global_env) (r:option type_refinement)
+let compute_static_asserts (env:TypeSizes.env_t) 
+                           (r:option type_refinement)
   : ML static_asserts
   = match r with
     | None -> empty_static_asserts
     | Some r -> 
-      let env = B.mk_env genv in
       let sizeof_assertions =
         r.type_map
         |> List.map
@@ -52,9 +51,17 @@ let compute_static_asserts (genv:B.global_env) (r:option type_refinement)
               | Some j -> j
             in
             let t_j = with_dummy_range (Type_app j []) in
-            { type_name = i;
-              size = B.size_of_typ env t_j;
-              has_suffix = B.has_suffix genv j})
+            match TypeSizes.size_of_typ env t_j with
+            | TypeSizes.Fixed n
+            | TypeSizes.WithVariableSuffix n ->
+             { type_name = i;
+               size = n }
+            | _ -> 
+              Ast.error 
+                (Printf.sprintf
+                  "Type %s is variable sized and cannot refine a C type %s"
+                  j.v i.v)
+                i.range)
       in
       {
         includes = r.Ast.includes;

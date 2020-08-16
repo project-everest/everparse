@@ -80,8 +80,6 @@ let field_error_code_variable_name_of_field
 ///    -- whether or not its validator may fail
 ///    -- whether the type is an integral type, i.e., can it be decomposed into bitfields
 type decl_attributes = {
-  size:size;
-  has_suffix:bool;
   may_fail:bool;
   integral:option integer_type;
   has_reader:bool;
@@ -251,6 +249,13 @@ let lookup_macro_name (e:env) (i:ident) : ML macro_signature =
   | Inr (_, Inr m) -> m
   | _ -> error (Printf.sprintf "%s is an unknown operator" i.v) i.range
 
+let lookup_macro_definition (e:env) (i:ident) =
+  try
+    let m = lookup_macro_name e i in
+    m.macro_defn_t
+  with
+  | _ -> None
+
 let try_lookup_enum_cases (e:env) (i:ident)
   : ML (option (list ident & typ))
   = match lookup e i with
@@ -293,23 +298,6 @@ let type_of_constant rng (c:constant) : ML typ =
     type_of_integer_type tag
   | Bool _ -> tbool
 
-let size_of_typ (env:env) (t:typ) : ML size =
-  match t.v with
-  | Type_app hd _ ->
-    begin
-    match lookup env hd with
-    | Inr (_, Inl attrs) -> attrs.size
-    | _ -> error (Printf.sprintf "Type %s not found" hd.v) t.range
-    end
-  | Pointer _ -> 4 //TODO
-
-let typ_has_suffix env (t:typ) : ML bool =
-  match t.v with
-  | Pointer _ -> false
-  | Type_app hd _ ->
-    match lookup env hd with
-    | Inr (d, Inl attrs) -> attrs.has_suffix
-    | _ -> false
 
 let parser_may_fail (env:env) (t:typ) : ML bool =
   match t.v with
@@ -345,76 +333,11 @@ let parser_kind_nz (env:global_env) (id:ident) : ML (option bool) =
   | Some (_, Inl attrs) -> attrs.parser_kind_nz
   | _ -> None
 
-let has_suffix (env:global_env) (id:ident) : ML bool =
-  match H.try_find env.ge_h id.v with
-  | Some (_, Inl attrs) -> attrs.has_suffix
-  | _ -> false
-
 let typ_has_reader env (t:typ) : ML bool =
   match t.v with
   | Pointer _ -> false
   | Type_app hd _ ->
     has_reader env.globals hd
-
-let rec value_of_const_expr (env:env) (e:expr) : ML (option (either bool (integer_type & int))) =
-  match e.v with
-  | Constant (Int t n) -> Some (Inr (t, n))
-  | Constant (Bool b) -> Some (Inl b)
-  | App op [e1; e2] ->
-    let v1 = value_of_const_expr env e1 in
-    let v2 = value_of_const_expr env e2 in
-    begin
-    match op, v1, v2 with
-    | Plus _,  Some (Inr (t1, n1)), Some (Inr (t2, n2)) -> Some (Inr (integer_type_lub t1 t2, n1 + n2))
-    | Minus _, Some (Inr (t1, n1)), Some (Inr (t2, n2)) -> Some (Inr (integer_type_lub t1 t2, n1 - n2))
-    | Mul _,   Some (Inr (t1, n1)), Some (Inr (t2, n2)) -> Some (Inr (integer_type_lub t1 t2, n1 * n2))
-    | Division _, Some (Inr (t1, n1)), Some (Inr (t2, n2)) ->
-      if n2 = 0
-      then error ("Division by zero in constant expression") e2.range
-      else Some (Inr (integer_type_lub t1 t2, n1 / n2))
-    | GT _, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 > n2))
-    | LT _, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 < n2))
-    | GE _, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 >= n2))
-    | LE _, Some (Inr (_, n1)), Some (Inr (_, n2)) -> Some (Inl (n1 <= n2))
-    | And, Some (Inl b1), Some (Inl b2) -> Some (Inl (b1 && b2))
-    | Or, Some (Inl b1), Some (Inl b2) -> Some (Inl (b1 || b2))
-    | _ -> None
-    end
-  | App Not [e] ->
-    let v = value_of_const_expr env e in
-    begin
-    match v with
-    | Some (Inl b) -> Some (Inl (not b))
-    | _ -> None
-    end
-  | App SizeOf [{v=Identifier t}] ->
-    begin
-    try
-      let n = size_of_typ env (with_range (Type_app t []) t.range) in
-      Some (Inr (UInt32, n))
-    with
-      | Error _ -> None
-    end
-  | App (Cast _ t) [e] ->
-    let v = value_of_const_expr env e in
-    begin
-    match v with
-    | Some (Inr (_, n)) ->
-      Some (Inr (t, n))
-    | _ -> None
-    end
-  | Identifier i ->
-    begin
-    let res =
-      try Some (lookup env i)
-      with _ -> None
-    in
-    match res with
-    | Some (Inr (_, Inr { macro_defn_t = Some e })) ->
-      value_of_const_expr env e
-    | _ -> None
-    end
-  | _ -> None
 
 let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
   match o with
@@ -436,6 +359,20 @@ let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
     | _ -> t
     end
   | _ -> t
+
+let size_of_integral_typ (env:env) (t:typ) r
+  : ML int
+  = let t = unfold_typ_abbrevs env t in
+    if not (typ_is_integral env t)
+    then error (Printf.sprintf "Expected and integral type, got %s"
+                                                (print_typ t))
+               r;
+    match tag_of_integral_typ env t with
+    | None -> failwith "Impossible"
+    | Some UInt8 -> 1
+    | Some UInt16 -> 2
+    | Some UInt32 -> 4
+    | Some UInt64 -> 8
 
 let eq_typ env t1 t2 =
   if Ast.eq_typ t1 t2 then true
@@ -774,7 +711,8 @@ and check_expr (env:env) (e:expr)
             w (App IfThenElse [e1;e2;e3]), t2
 
         | BitFieldOf n ->
-          let size = 8 * size_of_typ env t1 in
+          let base_size = size_of_integral_typ env t1 e1.range in
+          let size = 8 * base_size in
           if n <> size
           then error
                  (Printf.sprintf "BitFieldOf size %d is not equal to %d, i.e., the bit size %s"
@@ -922,55 +860,55 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         remove_local env sf.field_ident;
         a, dependent)
     in
-    let size = size_of_typ env sf.field_type in
-    let size_opt =
-        match sf.field_bitwidth with
-        | None -> Some size
+    // let size = size_of_typ env sf.field_type in
+    // let size_opt =
+    //     match sf.field_bitwidth with
+    //     | None -> Some size
 
-        | Some (Inl bw) ->
-          if not (typ_is_integral env sf.field_type)
-          then error (Printf.sprintf
-                         "Bit-field annotations are only permitted on integral types; \
-                          %s is not integral"
-                          (print_typ sf.field_type))
-                     bw.range;
+    //     | Some (Inl bw) ->
+    //       if not (typ_is_integral env sf.field_type)
+    //       then error (Printf.sprintf
+    //                      "Bit-field annotations are only permitted on integral types; \
+    //                       %s is not integral"
+    //                       (print_typ sf.field_type))
+    //                  bw.range;
 
-          if Some? (sf.field_array_opt)
-          then error "Bit-width annotations are not permitted on array fields" bw.range;
+    //       if Some? (sf.field_array_opt)
+    //       then error "Bit-width annotations are not permitted on array fields" bw.range;
 
-          let bitwidth_size = 8 * size in
-          if not (0 <= bw.v && bw.v <= bitwidth_size)
-          then error (Printf.sprintf "Expected a bit-width between 0 and %d" bitwidth_size)
-                     bw.range;
+    //       let bitwidth_size = 8 * size in
+    //       if not (0 <= bw.v && bw.v <= bitwidth_size)
+    //       then error (Printf.sprintf "Expected a bit-width between 0 and %d" bitwidth_size)
+    //                  bw.range;
 
-          //we cannot compute the size of a bit field type in isolation
-          //it requires information about adjacent bit fields
-          //The size will be computed in a separate pass
-          None
+    //       //we cannot compute the size of a bit field type in isolation
+    //       //it requires information about adjacent bit fields
+    //       //The size will be computed in a separate pass
+    //       None
 
-        | Some (Inr _) ->
-          failwith "Impossible: this is an already elaborated bit field"
-    in
-    let size_opt =
-        match sf.field_array_opt, size_opt with
-        | _, None -> size_opt
-        | None, _ -> size_opt
-        | _, Some 0 -> size_opt //this is an opaque field
-        | Some (e, ConstantSize), Some s ->
-          begin
-          match value_of_const_expr env e with
-          | Some (Inr (_, n)) -> Some (n * s)
-          | _ -> error "Variable-length array fields must be marked with the 'suffix' qualifier" f.range
-          end
-        | Some (e, VariableSizeEq), Some s
-        | Some (e, SingleElementVariableSizeEq), Some s ->
-          begin
-          match value_of_const_expr env e with
-          | Some (Inr (_, n)) -> Some (n * s)
-          | _ -> Some 0
-          end
-        | _ -> Some 0 //variable length
-    in
+    //     | Some (Inr _) ->
+    //       failwith "Impossible: this is an already elaborated bit field"
+    // in
+    // let size_opt =
+    //     match sf.field_array_opt, size_opt with
+    //     | _, None -> size_opt
+    //     | None, _ -> size_opt
+    //     | _, Some 0 -> size_opt //this is an opaque field
+    //     | Some (e, ConstantSize), Some s ->
+    //       begin
+    //       match value_of_const_expr env e with
+    //       | Some (Inr (_, n)) -> Some (n * s)
+    //       | _ -> error "Variable-length array fields must be marked with the 'suffix' qualifier" f.range
+    //       end
+    //     | Some (e, VariableSizeEq), Some s
+    //     | Some (e, SingleElementVariableSizeEq), Some s ->
+    //       begin
+    //       match value_of_const_expr env e with
+    //       | Some (Inr (_, n)) -> Some (n * s)
+    //       | _ -> Some 0
+    //       end
+    //     | _ -> Some 0 //variable length
+    // in
     // Options.debug_print_string
     //   (Printf.sprintf "!!!Size of field %s is %s\n"
     //     sf.field_ident.v
@@ -989,7 +927,6 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         field_type = sf_field_type;
         field_array_opt = fa;
         field_constraint = fc;
-        field_size = size_opt;
         field_number = field_number;
         field_action = f_act
     } in
@@ -1069,36 +1006,19 @@ let check_switch (env:env) (s:switch_case)
     in
     let cases =
       List.map (fun (o:case) -> if Case? o then check_case o else check_default_case o) cases in
-    let size, suffix, _ =
+    let _ =
       List.fold_right
-        (fun case (size, suffix, default_ok) ->
-          let sf =
-            match case with
-            | Case _ f -> f.v
-            | DefaultCase f ->
-              if default_ok
-              then f.v
+        (fun case default_ok ->
+           match case with
+           | Case _ _ -> false
+           | DefaultCase f ->
+              if default_ok then false
               else raise (error "default is only allowed in the last case"
-                                f.v.field_ident.range)
-          in
-          let size =
-              match sf.field_size with
-              | Some f ->
-                if f > size then f else size
-              | _ ->
-                raise (error (Printf.sprintf "Size of union field %s cannot be computed"
-                                             sf.field_ident.v)
-                              sf.field_ident.range)
-          in
-          size,
-          typ_has_suffix env sf.field_type,
-          false)
+                                f.v.field_ident.range))
         cases
-        (0, false, true)
+        true
     in
     let attrs = {
-      has_suffix = suffix;
-      size = size;
       may_fail = false;
       integral = None;
       has_reader = false;
@@ -1107,18 +1027,18 @@ let check_switch (env:env) (s:switch_case)
     (head, cases), attrs
 #pop-options
 
-let check_params (env:env) (ps:list param) : ML unit =
-  ps |> List.iter (fun (t, p, _q) ->
-      let _ = check_typ true env t in
-      add_local env p t)
 
-let rec elaborate_bit_fields env
-                            (bf_index:int)
-                            (open_bit_field: option (typ & int & int ))
-                            (fields:list field)
-  : ML (list field & size)
-  = let new_bit_field index sf bw r : ML (field & option (typ & int & int) & int) =
-        let size = size_of_typ env sf.field_type in
+(** Computes a layout for bit fields,
+    decorating each field with a bitfield index
+    and a bit range within that bitfield to store the given field.
+
+    Collapsing adjacent bitfields into a single field is done in a
+    separate phase, see BitFields.fst
+ *)
+let elaborate_bit_fields env (fields:list field)
+  : ML (list field)
+  = let new_bit_field index sf bw r : ML (field & option (typ & int & int)) =
+        let size = size_of_integral_typ env sf.field_type r in
         let bit_size = 8 * size in
         let remaining_size = bit_size - bw.v in
         let from = 0 in
@@ -1132,73 +1052,70 @@ let rec elaborate_bit_fields env
         } in
         let sf = { sf with field_bitwidth = Some (Inr (with_range bf_attr r)) } in
         with_range sf r,
-        Some (sf.field_type, to, remaining_size),
-        size
+        Some (sf.field_type, to, remaining_size)
     in
-    let field_size hd : ML int =
-      match hd.v.field_size with
-      | None ->
-        failwith (Printf.sprintf "Field size for %s should already have been computed"
-                                 hd.v.field_ident.v)
-      | Some n ->
-        n
-    in
-    let aux hd tl_size : ML _ =
-      hd::fst tl_size, snd tl_size + field_size hd
-    in
-    match fields with
-    | [] ->
-      [], 0
+    let rec aux bf_index open_bit_field fields
+      : ML (list field)
+      = match fields with
+        | [] ->
+          []
 
-    | hd::tl ->
-      let sf = hd.v in
-      match sf.field_bitwidth, open_bit_field with
-      | None, None ->
-          aux hd (elaborate_bit_fields env bf_index open_bit_field tl)
+        | hd::tl ->
+          let sf = hd.v in
+          match sf.field_bitwidth, open_bit_field with
+          | None, None ->
+            hd :: aux bf_index open_bit_field tl
 
-      | None, Some _ ->  //end the bit field
-          aux hd (elaborate_bit_fields env (bf_index + 1) None tl)
+          | None, Some _ ->  //end the bit field
+            hd :: aux (bf_index + 1) None tl
 
-      | Some (Inr _), _ ->
-          failwith "Bitfield is already elaborated"
+          | Some (Inr _), _ ->
+            failwith "Bitfield is already elaborated"
 
-      | Some (Inl bw), None ->
-          let hd, open_bit_field, size = new_bit_field bf_index sf bw hd.range in
-          let tl, size_tl = elaborate_bit_fields env bf_index open_bit_field tl in
-          hd :: tl, size + size_tl
+          | Some (Inl bw), None ->
+            let hd, open_bit_field = new_bit_field bf_index sf bw hd.range in
+            let tl = aux bf_index open_bit_field tl in
+            hd :: tl
 
-      | Some (Inl bw), Some (bit_field_typ, pos, remaining_size) ->
-          Options.debug_print_string
-            (Printf.sprintf
-              "Field type = %s; bit_field_type = %s\n"
-              (print_typ sf.field_type)
-              (print_typ bit_field_typ));
+          | Some (Inl bw), Some (bit_field_typ, pos, remaining_size) ->
+            Options.debug_print_string
+              (Printf.sprintf
+                "Field type = %s; bit_field_type = %s\n"
+                  (print_typ sf.field_type)
+                  (print_typ bit_field_typ));
 
-          if remaining_size < bw.v //not enough space in this bit field, start a new one
-          then let next_index = bf_index + 1 in
-               let hd, open_bit_field, size = new_bit_field next_index sf bw hd.range in
-               let tl, size_tl = elaborate_bit_fields env next_index open_bit_field tl in
-               hd :: tl, size + size_tl
-          else //extend this bit field
-               begin
-               if not (eq_typ env sf.field_type bit_field_typ)
-               then raise (error "Packing fields of different types into the same bit field is not yet supported" hd.range);
-               let remaining_size = remaining_size - bw.v in
-               let from = pos in
-               let to = pos + bw.v in
-               let bf_attr = {
+            if remaining_size < bw.v //not enough space in this bit field, start a new one
+            then let next_index = bf_index + 1 in
+                 let hd, open_bit_field = new_bit_field next_index sf bw hd.range in
+                 let tl = aux next_index open_bit_field tl in
+                 hd :: tl
+            else //extend this bit field
+                 begin
+                   if not (eq_typ env sf.field_type bit_field_typ)
+                   then raise (error "Packing fields of different types into the same bit field is not yet supported" hd.range);
+                   let remaining_size = remaining_size - bw.v in
+                   let from = pos in
+                   let to = pos + bw.v in
+                   let bf_attr = {
                        bitfield_width = bw.v;
                        bitfield_identifier = bf_index;
                        bitfield_type = bit_field_typ;
                        bitfield_from = from;
                        bitfield_to = to
-               } in
-               let sf = { sf with field_bitwidth = Some (Inr (with_range bf_attr bw.range)) } in
-               let hd = { hd with v = sf } in
-               let open_bit_field = Some (bit_field_typ, to, remaining_size) in
-               let tl, size_tl = elaborate_bit_fields env bf_index open_bit_field tl in
-               hd :: tl, size_tl
-          end
+                   } in
+                   let sf = { sf with field_bitwidth = Some (Inr (with_range bf_attr bw.range)) } in
+                   let hd = { hd with v = sf } in
+                   let open_bit_field = Some (bit_field_typ, to, remaining_size) in
+                   let tl = aux bf_index open_bit_field tl in
+                   hd :: tl
+                 end
+      in
+      aux 0 None fields
+
+let check_params (env:env) (ps:list param) : ML unit =
+  ps |> List.iter (fun (t, p, _q) ->
+      let _ = check_typ true env t in
+      add_local env p t)
 
 let elaborate_record (e:global_env)
                      (tdnames:Ast.typedef_names)
@@ -1228,7 +1145,6 @@ let elaborate_record (e:global_env)
         let w = Some e in
         let field =
           { field_dependence = true;
-            field_size = Some 0;
             field_ident = with_range "__precondition" e.range;
             field_type = tunit;
             field_array_opt = None;
@@ -1270,53 +1186,11 @@ let elaborate_record (e:global_env)
 
     let fields = maybe_unit_field@fields in
 
-    let fields, size = elaborate_bit_fields env 0 None fields in
+    let fields = elaborate_bit_fields env fields in
 
     let d = with_range_and_comments (Record tdnames params where fields) range comments in
 
-    let is_var_length (x:field) : ML bool =
-      let sfx = typ_has_suffix env x.v.field_type in
-      if sfx then true
-      else
-        match x.v.field_array_opt with
-        | None
-        | Some (_, ConstantSize) -> false
-        | Some (n, VariableSizeEq)
-        | Some (n, SingleElementVariableSizeEq) ->
-          begin
-          match value_of_const_expr env n with
-          | Some (Inr _) -> //it's a constant
-            false
-          | _ ->
-            true
-          end
-        | _ -> true
-    in
-
-    let check_suffix (fs:list field) : ML bool =
-      let _, has_variable =
-        List.fold_right
-          (fun f (allow_variable, has_variable) ->
-            let f_is_var = is_var_length f in
-            let has_variable = has_variable || f_is_var in
-            if f_is_var
-            then if allow_variable then allow_variable, has_variable
-                 else error "Variable-length fields can only be at the end of a struct" f.v.field_type.range
-            else false, has_variable)
-          fs
-          (true, false)
-      in
-      has_variable
-    in
-    let has_suffix = check_suffix fields in
-    Options.debug_print_string
-      (Printf.sprintf "Size of record %s is %d\n"
-        tdnames.typedef_name.v
-        size
-        );
     let attrs = {
-        size = size;
-        has_suffix = has_suffix;
         may_fail = false; //only its fields may fail; not the struct itself
         integral = None;
         has_reader = false;
@@ -1325,7 +1199,6 @@ let elaborate_record (e:global_env)
     in
     add_global e tdnames.typedef_name d (Inl attrs);
     d
-
 
 let bind_decl (e:global_env) (d:decl) : ML decl =
   match d.v with
@@ -1351,8 +1224,6 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     let t = check_typ false env t in
     let attrs =
       {
-        has_suffix = typ_has_suffix env t;
-        size = size_of_typ env t;
         may_fail = parser_may_fail env t;
         integral = tag_of_integral_typ env t;
         has_reader = typ_has_reader env t;
@@ -1376,8 +1247,6 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
                  d.range);
     let attrs =
       {
-        has_suffix = typ_has_suffix env t;
-        size = size_of_typ env t;
         may_fail = true;
         integral = Some (typ_as_integer_type t);
         has_reader = false; //it's a refinement, so you can't read it again because of double fetches
@@ -1416,14 +1285,14 @@ let initial_global_env () =
     with_dummy_range (Record td_name [] None [])
   in
   let _type_names =
-    [ ("unit",    { size = 0; has_suffix = false; may_fail = false; integral = None; has_reader = true; parser_kind_nz=Some false});
-      ("Bool",    { size = 1; has_suffix = false; may_fail = true;  integral = None; has_reader = true; parser_kind_nz=Some true});
-      ("UINT8",   { size = 1; has_suffix = false; may_fail = true;  integral = Some UInt8 ; has_reader = true; parser_kind_nz=Some true });
-      ("UINT16",  { size = 2; has_suffix = false; may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_kind_nz=Some true });
-      ("UINT32",  { size = 4; has_suffix = false; may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_kind_nz=Some true});
-      ("UINT64",  { size = 8; has_suffix = false; may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_kind_nz=Some true});
-      ("field_id", { size = 4; has_suffix = false; may_fail = true;  integral = Some UInt32 ; has_reader = false; parser_kind_nz=Some true});
-      ("PUINT8",   { size = 4; has_suffix = false; may_fail = true;  integral = None ; has_reader = false; parser_kind_nz=Some true})]
+    [ ("unit",     { may_fail = false; integral = None; has_reader = true; parser_kind_nz=Some false});
+      ("Bool",     { may_fail = true;  integral = None; has_reader = true; parser_kind_nz=Some true});
+      ("UINT8",    { may_fail = true;  integral = Some UInt8 ; has_reader = true; parser_kind_nz=Some true });
+      ("UINT16",   { may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_kind_nz=Some true });
+      ("UINT32",   { may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_kind_nz=Some true});
+      ("UINT64",   { may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_kind_nz=Some true});
+      ("field_id", { may_fail = true;  integral = Some UInt32 ; has_reader = false; parser_kind_nz=Some true});
+      ("PUINT8",   { may_fail = true;  integral = None ; has_reader = false; parser_kind_nz=Some true})]
     |> List.iter (fun (i, attrs) ->
       let i = with_dummy_range i in
       add_global e i (nullary_decl i) (Inl attrs))
@@ -1436,22 +1305,21 @@ let initial_global_env () =
   in
   e
 
-let add_field_error_code_decls
-  (ge: global_env)
-: ML prog
-= let l = all_nums ge in
-  List.map
-    (fun (z: (field_num & option ident & string)) ->
-      let (i, this, name) = z in
-      let d =
-        with_dummy_range (Define (field_error_code_variable_name_of_field (this, name))
-                                 (Some tfield_id)
-                                 (Int UInt64 i)) in
-      { d with comments = ["Auto-generated field identifier for error reporting"] }
-    )
-    l
+let add_field_error_code_decls (ge: global_env)
+  : ML (list decl)
+  = let l = all_nums ge in
+    List.map
+      (fun (z: (field_num & option ident & string)) ->
+        let (i, this, name) = z in
+        let d =
+          with_dummy_range (Define (field_error_code_variable_name_of_field (this, name))
+                                   (Some tfield_id)
+                                   (Int UInt64 i)) in
+        { d with comments = ["Auto-generated field identifier for error reporting"] }
+      )
+      l
 
-let bind_prog (p:prog) : ML (prog & global_env) =
+let bind_decls (p:list decl) : ML (list decl & global_env) =
   let e = initial_global_env() in
   let p' = List.map (bind_decl e) p in
   let fc = add_field_error_code_decls e in

@@ -216,7 +216,6 @@ struct_field:
          field_type=t;
          field_array_opt=aopt;
          field_constraint=c;
-         field_size=None;
          field_number=None;
          field_bitwidth=bopt;
          field_action=a

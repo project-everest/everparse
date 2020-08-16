@@ -17,6 +17,7 @@ module Simplify
 open Ast
 open FStar.All
 module B = Binding
+module T = TypeSizes
 
 (*
   This module implements a pass over the source AST
@@ -27,13 +28,13 @@ module B = Binding
     2. Reducing typedef abbreviations
 *)
 
-let rec simplify_expr (env:B.env) (e:expr)
+let rec simplify_expr (env:T.env_t) (e:expr)
   : ML expr
   = match e.v with
     | This -> failwith "Impossible: should have been eliminated already"
     | App SizeOf _ ->
       begin
-      match B.value_of_const_expr env e with
+      match T.value_of_const_expr env e with
       | Some (Inr (t, n)) -> with_range (Constant (Int t n)) e.range
       | _ -> error "Could not evaluate sizeof to a compile-time constant" e.range
       end
@@ -43,16 +44,16 @@ let rec simplify_expr (env:B.env) (e:expr)
 
     | _ -> e
     
-let rec simplify_typ (env:B.env) (t:typ)
+let rec simplify_typ (env:T.env_t) (t:typ)
   : ML typ
   = match t.v with
     | Pointer t -> {t with v=Pointer (simplify_typ env t)}
     | Type_app s es ->
       let es = List.map (simplify_expr env) es in
-      let s = B.resolve_typedef_abbrev env s in
+      let s = B.resolve_typedef_abbrev (fst env) s in
       { t with v = Type_app s es }
 
-let simplify_field (env:B.env) (f:field)
+let simplify_field (env:T.env_t) (f:field)
   : ML field
   = let sf = f.v in
     let ft = simplify_typ env sf.field_type in
@@ -63,7 +64,7 @@ let simplify_field (env:B.env) (f:field)
                        field_constraint = fc } in
     { f with v = sf }
 
-let simplify_decl (env:B.env) (d:decl) : ML decl =
+let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   match d.v with
   | Define i None c -> d
   | Define i (Some t) c -> { d with v = Define i (Some (simplify_typ env t)) c }
@@ -90,6 +91,5 @@ let simplify_decl (env:B.env) (d:decl) : ML decl =
                          cases in
     { d with v=CaseType tdnames params (hd, cases) }
 
-let simplify_prog (env:B.global_env) (p:B.prog) =
-  let env = B.mk_env env in
+let simplify_prog (env:T.env_t) (p:list decl) =
   List.map (simplify_decl env) p

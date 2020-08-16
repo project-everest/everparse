@@ -30,15 +30,9 @@ val mk_env (g:global_env) : ML env
 
 val resolve_typedef_abbrev (_:env) (_:ident): ML ident
 val lookup_expr_name (_:env) (_:ident) : ML typ
-val size_of_typ (_:env) (_:typ) : ML size
+val lookup_macro_definition (_:env) (_:ident) : ML (option expr)
 val has_reader (_:global_env) (_:ident) : ML bool
 val parser_kind_nz (env:global_env) (id:ident) : ML (option bool)
-val has_suffix (env:global_env) (id:ident) : ML bool
-val value_of_const_expr (env:env) (e:expr) : ML (option (either bool (integer_type & int)))
 val map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b)
-
-
-
-let prog = list decl
-
-val bind_prog (p:prog) : ML (prog & global_env)
+val size_of_integral_typ (_:env) (_:typ) (_:range) : ML int
+val bind_decls (p:list decl) : ML (list decl & global_env)
