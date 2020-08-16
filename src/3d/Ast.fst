@@ -527,18 +527,22 @@ let rec print_expr (e:expr) : Tot string =
     Printf.sprintf "(! %s)" (print_expr e1)
   | App (BitwiseNot _) [e1] ->
     Printf.sprintf "(~ %s)" (print_expr e1)
-  | App (Plus _) [e1; e2] ->
-    Printf.sprintf "(%s + %s)" (print_expr e1) (print_expr e2)
-  | App (Minus _) [e1; e2] ->
-    Printf.sprintf "(%s - %s)" (print_expr e1) (print_expr e2)
-  | App (LT _) [e1; e2] ->
-    Printf.sprintf "(%s < %s)" (print_expr e1) (print_expr e2)
-  | App (GT _) [e1; e2] ->
-    Printf.sprintf "(%s > %s)" (print_expr e1) (print_expr e2)
-  | App (LE _) [e1; e2] ->
-    Printf.sprintf "(%s <= %s)" (print_expr e1) (print_expr e2)
+  | App (Plus _) [e1; e2]
+  | App (Minus _) [e1; e2]
+  | App (Mul _) [e1; e2]
+  | App (Division _) [e1; e2]
+  | App (Remainder _) [e1; e2]
+  | App (BitwiseAnd _) [e1; e2]
+  | App (BitwiseOr _) [e1; e2]
+  | App (BitwiseXor _) [e1; e2]
+  | App (ShiftLeft _) [e1; e2]
+  | App (ShiftRight _) [e1; e2]
+  | App (LT _) [e1; e2]
+  | App (GT _) [e1; e2]
+  | App (LE _) [e1; e2]
   | App (GE _) [e1; e2] ->
-    Printf.sprintf "(%s >= %s)" (print_expr e1) (print_expr e2)
+    let op = App?._0 e.v in
+    Printf.sprintf "(%s %s %s)" (print_expr e1) (print_op op) (print_expr e2)
   | App SizeOf [e1] ->
     Printf.sprintf "(sizeof %s)" (print_expr e1)
   | App (Cast i j) [e] ->

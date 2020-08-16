@@ -389,8 +389,11 @@ let rec value_of_const_expr (env:env) (e:expr) : ML (option (either bool (intege
     end
   | App SizeOf [{v=Identifier t}] ->
     begin
-    let n = size_of_typ env (with_range (Type_app t []) t.range) in
-    Some (Inr (UInt32, n))
+    try
+      let n = size_of_typ env (with_range (Type_app t []) t.range) in
+      Some (Inr (UInt32, n))
+    with
+      | Error _ -> None
     end
   | App (Cast _ t) [e] ->
     let v = value_of_const_expr env e in
@@ -1081,10 +1084,6 @@ let check_switch (env:env) (s:switch_case)
           let size =
               match sf.field_size with
               | Some f ->
-                FStar.IO.print_string (
-                Printf.sprintf "Size of union field %s is %d\n"
-                               sf.field_ident.v
-                               f);
                 if f > size then f else size
               | _ ->
                 raise (error (Printf.sprintf "Size of union field %s cannot be computed"
