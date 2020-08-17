@@ -272,13 +272,139 @@ TODO:
 Actions
 -------
 
+In addition to semantic constraints on types, 3d allows augmenting the
+the fields of a struct or union with imperative actions, which allows
+running certain user-chosen commands at specified points during
+validation.
+
+Let's start with a simple example. Suppose you want to validate that a
+byte array contains a pair of integers, and then read them into a
+couple of local variables. Here's how:
+
+.. literalinclude:: ReadPair.3d
+    :language: c
+
+The struct ``Pair`` is takes two out-parameters, ``x`` and ``y``. Out
+parameters are signified by the ``mutable`` keyword and have pointer
+types---in this case ``UINT32*``. Each field in the struct is
+augmented with an ``on-success`` action, where the action's body is a
+runs a small program snippet, which writes the ``first`` field into
+``x``; the ``second`` field into ``y``; and returns ``true`` in both
+cases. Actions can also return ``false``, to signal that validation
+should halt and signal failure.
+
+Now, in greater detail:
+
+Action basics
+.............
+
+An action is a program composed from a few elements:
+
+* Atomic actions: Basic commands to read and write variables
+  
+* Variable bindings and sequential composition
+  
+* Conditionals
+
+An action is evaluated with respect to a handler (e.g.,
+``on-success``) associated with a given field. We refer to this field
+as the "base field" of the action.
+
+An action is invoked by EverParse immediately after validating the
+base field of the action. The action of the ``on-success`` handler is
+invoked in case the field is valid (if preseent), otherwise the
+``on-error`` handler is invoked (if present).
+
+The on-success handler can influence whether or not validation of the
+other fields continues by returning a boolean---in case an on-success
+action returns false, the validation of the type halts with an error.
+
+The on-error handler also returns a boolean: in case it returns false,
+the error code associated with the validator is mentions that an
+on-error handler failed; if it returns true, the error code is the
+error code associated with the failed validation of the base field. In
+both cases, validation halts with an error.
+
+
+Atomic actions
+^^^^^^^^^^^^^^
+
+* ``*i = e``: Assigns the value of the expressions ``e`` to the memory referenced by the pointer ``i``.
+  
+* ``*i``: Dereferences the pointer ``i``
+  
+* ``field_pos``: Returns the offset of base field of the action from
+  the base of the validation buffer as a ``UINT32`` value.
+
+* ``field_ptr``: Returns a pointer to base field of the action as a
+  ``PUINT8``, i.e., an abstract pointer to a ``UINT8``.
+
+* ``return e`` Returns a boolean value ``e``
+
 TODO:
 
-* how to return values as pointer arguments
+* We have experimental features for external calls in actions and for
+  an abort action.
+  
 
-* ``onerror``: does it work?
+Composing atomic actions sequentially and conditionally
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* how do actions work with array elements
+Composite actions can be built in a few ways:
+
+* Atomic actions: Any atomic action ``a`` the ``a;`` (with a trailing
+  semicolon) is a composite action ``p``.
+
+* Sequential composition: ```a; p`` Given an atomic action ``a``, and
+  a compositite action ``p``, the form ``a;p`` runs ``a`` then ``p``.
+
+* Variable binding: ``var x = a; p`` Given an atomic action ``a``,
+  and a compositite action ``p``, the form ``var x = a; p`` runs ``a``
+  and stores its result in the new variable ``x`` (local to the
+  action) and then runs ``p``.
+
+* Conditionals: ``if (e) { p }`` is a conditional action that runs the
+  composite actions ``p`` only if the condition ``e`` is
+  true. Additionally, ``if (e) { p0 } else { p1 }`` is also legal,
+  with the expected semantics, i.e., ``p1` is run in case ``e`` is
+  false.
+
+Another example
+^^^^^^^^^^^^^^^
+
+Consider the following definition:
+
+.. literalinclude:: GetFieldPtr.3d
+    :language: c
+    :start-after: SNIPPET_START: GetFieldPtr.T
+    :end-before: SNIPPET_END: GetFieldPtr.T
+
+Here, we define a type ``T`` with an out-parameter ``PUINT8* out``,
+i.e., pointer to a pointer to a ``UINT8``.
+
+Associated with field ``f2`` we have an on-success handler, where we
+read a pointer to the field ``f2`` into the local variable ``x``;
+then, we write ``x`` into ``*out``; and finally return ``true``.
+
+.. note:: The return type of ``field_ptr`` is ``PUINT8``. In
+   EverParse, a ``PUINT8`` is a pointer into the input buffer, unlike
+   a ``UINT8*`` which may point to any other memory. This distinction
+   between pointers into the input buffer and other pointers allows
+   EverParse to prove that validators never read the contents of the
+   input buffer more than once, i.e., there are no double fetches from
+   the input buffer. As such, the ``out`` parameter should have type
+   ``PUINT8*`` rather than ``UINT8*``.
+
+Restrictions
+............
+
+* Actions can only be associated with fields.
+
+* Actions cannot be associated with the elements of an array, unless
+  the array elements themselves are defined types, in which case they
+  can be associated with the fields of that type, if any.
+
+* Actions cannot be associated with bit fields.
 
 Comments
 --------
@@ -286,4 +412,15 @@ Comments
 The user can insert comments in their ``.3d`` file, some of which will
 be inserted into the ``.c`` file:
 
-TODO
+There are three kinds of comments:
+
+* Block comments are delimited by ``/*`` and ``*/`` and do not
+  nest. These are never propagated to the C code.
+  
+* Line comments begin with ``//`` and are propagated to C
+  heuristically close to the translated source construct.
+  
+* Each top-level declaration can be preceded by a type declaration
+  comment delimited by ``/*++`` and ``--*/``: These are propagated to
+  the C code preceding the C procedure corresponding to the validator
+  of the source type.
