@@ -1,7 +1,20 @@
 # Minimal makefile for Sphinx documentation
 #
 
-all: html
+all: html 3d
+
+export QD_HOME?=$(realpath ..)
+export FSTAR_HOME?=$(realpath $(QD_HOME)/../FStar)
+export KREMLIN_HOME?=$(realpath $(QD_HOME)/../kremlin)
+
+3D=../src/3d/3d
+3D_EXCLUDE=ConstColor.3d
+3D_FILES=$(filter-out $(3D_EXCLUDE),$(wildcard *.3d))
+3D_MODULES=$(basename $(3D_FILES))
+3D_C_AND_H_FILES=$(addsuffix .c,$(3D_MODULES)) $(addsuffix .h,$(3D_MODULES))
+3D_DIFF=$(addsuffix .diff,$(3D_C_AND_H_FILES))
+3D_OUT=$(addprefix out/,$(3D_C_AND_H_FILES))
+3D_SNAPSHOT=$(addprefix 3d-snapshot/,$(3D_C_AND_H_FILES))
 
 # You can set these variables from the command line.
 SPHINXOPTS    = -W
@@ -14,9 +27,30 @@ BUILDDIR      = _build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile test all
+.PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+3d: $(3D_DIFF)
+
+3d-do-tests:
+	mkdir -p out
+	$(3D) --odir out --batch $(3D_FILES)
+	+$(MAKE) -C out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
+
+$(3D_OUT): out/%: 3d-do-tests
+
+$(3D_SNAPSHOT): 3d-snapshot/%: out/%
+	mkdir -p 3d-snapshot
+	cp $^ $@
+
+3d-snapshot: $(3D_SNAPSHOT)
+
+%.diff: 3d-do-tests
+	diff out/$(basename $@) 3d-snapshot/$(basename $@)
+
+clean:
+	rm -rf out _build

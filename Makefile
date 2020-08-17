@@ -22,8 +22,13 @@ gen-test: qd
 lowparse-unit-test: lowparse
 	+$(MAKE) -C tests/lowparse
 
-3d-test: 3d
+3d-unit-test: 3d
 	+$(MAKE) -C src/3d test
+
+3d-doc-test: 3d
+	+$(MAKE) -C doc 3d
+
+3d-test: 3d-unit-test 3d-doc-test
 
 lowparse-bitfields-test: lowparse
 	+$(MAKE) -C tests/bitfields
@@ -45,7 +50,7 @@ clean:
 	+$(MAKE) -C src/lowparse clean
 	rm -rf *~ src/*~ _build src/*lexer.ml src/*parser.ml src/*parser.mli qd quackyducky.native
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test
 
 release:
 	+src/package/release.sh
