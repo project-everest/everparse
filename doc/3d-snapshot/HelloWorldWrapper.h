@@ -1,8 +1,4 @@
 #include "HelloWorld.h"
-#ifdef __cplusplus
-extern "C" {
-#endif
+// SNIPPET_START: Point
 BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len);
-#ifdef __cplusplus
-}
-#endif
+// SNIPPET_END: Point

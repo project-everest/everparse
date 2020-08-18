@@ -6,7 +6,7 @@
 .. note::
 
    The documentation from this page covers the EverParse/3d releases
-   v2020.08.07 or later. Documentations for earlier versions may be
+   v2020.08.17 or later. Documentations for earlier versions may be
    found in the Git history.
 
 EverParse/3d lets you write a data format description and

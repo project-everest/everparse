@@ -40,6 +40,7 @@ help:
 3d-do-tests:
 	mkdir -p out
 	$(3D) --odir out --batch $(3D_FILES)
+	cp *.h out
 	+$(MAKE) -C out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 
 $(3D_OUT): out/%: 3d-do-tests
@@ -51,7 +52,7 @@ $(3D_SNAPSHOT): 3d-snapshot/%: out/%
 3d-snapshot: $(3D_SNAPSHOT)
 
 %.diff: 3d-do-tests
-	diff out/$(basename $@) 3d-snapshot/$(basename $@)
+	diff -w out/$(basename $@) 3d-snapshot/$(basename $@)
 
 clean:
 	rm -rf out _build

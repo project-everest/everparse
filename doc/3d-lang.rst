@@ -279,7 +279,7 @@ validation.
 
 Let's start with a simple example. Suppose you want to validate that a
 byte array contains a pair of integers, and then read them into a
-couple of local variables. Here's how:
+couple of mutable locations of your choosing. Here's how:
 
 .. literalinclude:: ReadPair.3d
     :language: c
@@ -406,6 +406,54 @@ Restrictions
 
 * Actions cannot be associated with bit fields.
 
+Checking 3d types for correspondence with existing C types
+----------------------------------------------------------
+
+A typical scenario is that you have an existing C program with some
+collection of types defined in a file ``Types.h``.  You've written a
+``Types.3d`` file to defined validators for byte buffers containing
+those types, typically *refining* the C types with additional semantic
+constraints and also with actions. Now, you may want to make sure that
+types you defined in ``Types.3d`` correspond to the types in
+``Types.h``, e.g., to ensure that you didn't forget to include a field
+in a struct, or that you've made explicit in your ``Types.3d`` the
+alignment padding between struct fields that a C compiler is sometimes
+requires to insert.
+
+To assist with this, 3d provides the following feature:
+
+.. literalinclude:: GetFieldPtr.3d
+    :language: c
+
+Following the type definitions, the ``refining`` section states that
+the type ``S`` defined in the C header file ``GetFieldPtrBase.h`` is
+refined by the type ``T`` defined here. As a result of this
+declaration, 3d emits a static assertion in the C code of the form
+
+.. code-block:: c
+
+  #include "GetFieldPtrBase.h"
+  C_ASSERT(sizeof(S) == 30);
+   
+checking that the ``sizeof(S)`` as computed by the C compiler matches
+3d's computation of the ``sizeof(T)``.
+
+In generality, the refining declaration takes the following form:
+
+.. code-block:: c
+                
+  refining "I1.h", ..., "In.h" {
+      S1 as T1, ...
+      Sm as Tm
+  }
+
+
+where each ``Si`` is a type defined in one of the C header files
+"I1.h", ..., "In.h", and the ``Ti`` are types defined in the current
+3d file. In case the types have the same names, one can simply write
+``T`` instead of ``T as T``.
+
+  
 Comments
 --------
 
