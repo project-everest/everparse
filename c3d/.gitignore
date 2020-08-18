@@ -1,0 +1,9 @@
+*_build
+.merlin
+*.gch
+*.gch.tmp
+compile_commands.json
+tests/*.3d
+tests/*.preprocessed.h
+.clangd
+out

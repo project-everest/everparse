@@ -1,0 +1,174 @@
+Notes on building Clang/LVVM
+============================
+
+https://llvm.org/docs/CMake.html is a good reference. There are a variety of
+build configuration tweaks that can make a difference between a fast build and
+one that takes hours; personally, I use this cmake invocation:
+
+cmake -DCLANG_BUILD_EXAMPLES=on -DLLVM_ENABLE_PLUGINS=on -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD=X86 ../llvm 
+
+There is invocation to run tests but I forgot. There's a couple tests for the
+Attribute plugin that one might be interested in.
+
+
+Structure of the clang source tree
+==================================
+
+clang has a lot of sub-parts, e.g. Parse, Sema (semantic actions like name
+checking, scope resolution), AST, etc.
+
+For a sub-part X, headers are in clang/include/clang/X/ and implementations are
+in clang/lib/X/, e.g. Parser.h is in clang/include/clang/Parse/Parser.h and the
+corresponding cpp is clang/lib/Parse/Parser.cpp
+
+
+Notes on building c3d
+=====================
+
+This is my debug loop.
+
+mkdir out && cd out
+
+cmake -D LLVM_BUILD_ROOT=$CLANG_BUILD ../src/ && make -j && $CLANG_BUILD/bin/clang -mllvm -debug-only=c3d -std=c2x -fplugin=./C3d.dylib ../tests/basic0.h
+
+
+Overview of the clang architecture
+==================================
+
+(Insofar as it's relevant for understanding how c3d works.)
+
+Please read
+https://llvm.org/devmtg/2019-10/slides/ClangTutorial-Stulova-vanHaastregt.pdf
+slides 1-25. Excellent summary.
+
+Key points to understand:
+- parsing is tightly coupled with semantic actions and AST building
+- this is not an ML compiler, where a parse tree is constructed, then another
+  AST, etc.: in Clang, the parser builds the AST on the fly while doing
+  diagnostics, name resolution, scope resolution; the parser is also capable of
+  doing error recovery
+
+Going a little more in-depth: the parser creates a lot of "pre-structures" that
+hold either incomplete information, or information that has yet to undergo
+suitable checks and AST construction. For instance, the Parser, while working on
+a declaration like `uint32_t x = 0;`, builds a `Declarator` object; once the
+`Declarator` has all the information needed, it may be become a
+`ParsingDeclSpec` (see C grammar for what a "spec and declarator is"), which can
+then be sent over to Sema for semantic checking and AST-building, giving rise to
+a `Decl` object attached in the AST.
+
+Attributes follow this general pipeline, with a few twists.
+
+Attributes are described using "TableGen" (see https://llvm.org/docs/TableGen/)
+-- basically a DSL that allows to auto-generate a bunch of C++ classes to save
+the clang compiler hacker the trouble of writing a lot of boilerplate. See
+Attr.td in the clang source tree.
+
+For each attribute, Attr.td gives rise to two classes that descend from
+ParsedAttrInfo and Attr respectively. For instance, the Deprecated attribute
+described in clang/include/clang/Basic/Attr.td gives rise to:
+- `struct ParsedAttrInfoDeprecated final : public ParsedAttrInfo {` in
+  `tools/clang/include/clang/Sema/AttrParsedAttrImpl.inc`
+- `class DeprecatedAttr : public InheritableAttr` in
+  `tools/clang/include/clang/AST/Attrs.inc`, which ultimately inherits from Attr
+
+Both of these are in files to be found in your build directory -- they are not
+under version control (they're generated via TableGen) so they are not
+searchable via `git grep`.
+
+The former (`ParsedAttrInfo`) is used for the purposes of parsing, and contains
+information relevant to this attribute, such as the number of mandatory
+arguments, the number of optional arguments, whether the argument is a type or
+an expr.
+
+Once parsing has succeeded, a `ParsedAttr` is constructed that holds the result
+of parsing: this is either an array of `Expr`s, or a single `QualType` -- this
+is restrictive, and cause us trouble later.
+
+Once parsing is done and a modicum of validation is performed, the `ParsedAttr`
+gets attached (with suitable custom treatment for each attribute) to the Clang
+AST, by creating an instance of the corresponding `Attr`, i.e. the second
+auto-generated class. From here on, the attribute is visible in the AST and to
+the rest of the tooling.
+
+
+Limitations of the current setup
+================================
+
+For attributes that are not covered by Attr.td, clang just emits a warning and
+ignores the attribute.
+
+Currently, this behavior can be refined by *clang plugins* that have the ability
+to register ParsedAttrInfo's to inform clang about the syntax, number of
+arguments, etc. of the attribute that the plugin wishes to handle.
+
+Clang hardcodes the following parsing behavior:
+- for CXX11/C2x-syntax attributes (i.e. `[[ foo::bar(e) ]]`), the arguments are
+  ignored and a ParsedAttr storing no arguments is constructed
+- for GNU-syntax attributes (i.e. `__attribute__(( foo_bar(e) ))`, the arguments
+  are parsed according to the default scoping rules of C, and are validated
+  using the plugin's ParsedAttrInfo-specified NumArgs and OptArgs.
+
+See https://bugs.llvm.org/show_bug.cgi?id=46446#c7 for why there is a
+difference.
+
+Next, the plugin gets an opportunity to handle the ParsedAttr. Remember that
+there's a tight coupling between parsing and semantic actions for diagnostics
+and AST building. Here, the plugin gets to participate in both.
+- For diagnostics, the plugin is allowed to bail (e.g. because the attribute
+  appears in the wrong place). This is the virtual method
+  `diagAppertainsToDecl`.
+- For AST building, the plugin can create any instance of `Attr` it pleases, and
+  slap it onto the corresponding `Decl` node. This is the virtual method
+  `handleDeclAttribute` of the plugin.
+
+This is super limited, essentially plugins cannot handle CXX11/C2x attributes
+with arguments (the harcoded parsing rule for non-builtin attributes is to just
+ignore the argument). They also cannot implement custom syntax that would either
+allow other types of arguments that are not expressions, or allow different
+scoping rules.
+
+
+My clang patch
+==============
+
+My clang patch allows plugins to participate not just in diagnostics and
+parser-to-ast construction, but also to participate in parsing itself. To that
+end, my patch adds a new virtual method to plugins, currently named
+`parseAttributePayload`. Essentially, the plugin is given a chance to drive the
+parser itself, and to construct the `ParsedAttr` itself according to its own
+parsing and scoping rules.
+
+
+More limitations
+================
+
+There is currently no simple way to extend Attr.td, meaning that I don't have a
+way to register a custom kind of attribute in the clang AST, I have to use one
+of the existing ones. (This could conceivably be fixed with more work. Haven't
+gotten around to doing that just yet.)
+
+So, sadly, this means that instead of registering a nice semantic attribute in
+the AST that would hold an expression (everparse::constraint), nothing
+(everparse::entrypoint), a spec-and declarator (everparse::parameter), I'm doing
+early pretty-printing and attaching a string rendition of the attribute in the
+AST. Sigh. (This is the Annotate attribute I mentioned earlier.)
+
+Also: since ParsedAttr is hardcoded to hold either expressions or a single type,
+this means that for an attribute such as `everparse::parameter(uint32_t
+MessageLength)`, there is no natural way to register the result of parsing, to
+be attached to the AST later.
+
+Also: the Parser was not meant to be driven from other parts of the source code,
+so many useful parsing bits just cannot be called from a plugin because they're
+`private`. So parsing from a plugin is cumbersome.
+
+
+Rest of C3d
+===========
+
+The generation of the 3d file is done in a subsequent phase that performs an AST
+traversal via an AST visitor. This is more familiar and there's no real
+surprises there. Sadly, rather than visiting an expression and printing it, this
+latter phase just sees strings stashed inside Annotate attributes, and prints
+them as-is.

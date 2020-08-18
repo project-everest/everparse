@@ -1,0 +1,287 @@
+diff --git a/clang/include/clang/Parse/Parser.h b/clang/include/clang/Parse/Parser.h
+index 1ae219781c6..8945abcb7c0 100644
+--- a/clang/include/clang/Parse/Parser.h
++++ b/clang/include/clang/Parse/Parser.h
+@@ -26,6 +26,7 @@
+ #include "llvm/Frontend/OpenMP/OMPContext.h"
+ #include "llvm/Support/Compiler.h"
+ #include "llvm/Support/PrettyStackTrace.h"
++#include "llvm/Support/Registry.h"
+ #include "llvm/Support/SaveAndRestore.h"
+ #include <memory>
+ #include <stack>
+@@ -2658,7 +2659,7 @@ private:
+     if (standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
+       ParsedAttributesWithRange attrs(AttrFactory);
+       SourceLocation endLoc;
+-      ParseCXX11Attributes(attrs, &endLoc);
++      ParseCXX11Attributes(attrs, &endLoc, &D);
+       D.takeAttributes(attrs, endLoc);
+     }
+   }
+@@ -2681,16 +2682,19 @@ private:
+   }
+ 
+   void ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
+-                                    SourceLocation *EndLoc = nullptr);
++                                    SourceLocation *EndLoc = nullptr,
++                                    Declarator *D = nullptr);
+   void ParseCXX11Attributes(ParsedAttributesWithRange &attrs,
+-                            SourceLocation *EndLoc = nullptr);
++                            SourceLocation *EndLoc = nullptr,
++                            Declarator *D = nullptr);
+   /// Parses a C++11 (or C2x)-style attribute argument list. Returns true
+   /// if this results in adding an attribute to the ParsedAttributes list.
+   bool ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
+                                SourceLocation AttrNameLoc,
+                                ParsedAttributes &Attrs, SourceLocation *EndLoc,
+                                IdentifierInfo *ScopeName,
+-                               SourceLocation ScopeLoc);
++                               SourceLocation ScopeLoc,
++                               Declarator *D = nullptr);
+ 
+   IdentifierInfo *TryParseCXX11AttributeIdentifier(SourceLocation &Loc);
+ 
+diff --git a/clang/include/clang/Sema/ParsedAttr.h b/clang/include/clang/Sema/ParsedAttr.h
+index 21e030fe513..7d336ffde06 100644
+--- a/clang/include/clang/Sema/ParsedAttr.h
++++ b/clang/include/clang/Sema/ParsedAttr.h
+@@ -17,6 +17,7 @@
+ #include "clang/Basic/AttrSubjectMatchRules.h"
+ #include "clang/Basic/AttributeCommonInfo.h"
+ #include "clang/Basic/Diagnostic.h"
++#include "clang/Basic/IdentifierTable.h"
+ #include "clang/Basic/SourceLocation.h"
+ #include "clang/Sema/Ownership.h"
+ #include "llvm/ADT/PointerUnion.h"
+@@ -34,14 +35,18 @@ namespace clang {
+ 
+ class ASTContext;
+ class Decl;
++class Declarator;
+ class Expr;
+ class IdentifierInfo;
+ class LangOptions;
+ class ParsedAttr;
++class ParsedAttributes;
++class Parser;
+ class Sema;
+ class TargetInfo;
+ 
+-struct ParsedAttrInfo {
++class ParsedAttrInfo {
++public:
+   /// Corresponds to the Kind enum.
+   unsigned AttrKind : 16;
+   /// The number of required arguments of this attribute.
+@@ -75,6 +80,34 @@ struct ParsedAttrInfo {
+ 
+   virtual ~ParsedAttrInfo() = default;
+ 
++  enum AttrHandling {
++    NotHandled,
++    AttributeApplied,
++    AttributeNotApplied
++  };
++
++  /// Override the default parsing logic and perform parsing of the attribute
++  /// payload here. This is only meaningful for plugins that register new
++  /// attributes. Flags such as HasCustomParsing, NumArgs, OptArgs 
++  /// are not honored, and the plugin has to do all of the validation by hand. Plugin
++  /// receives an possibly-null Declarator D that provides, if available, information
++  /// on the in-progress Decl that the attribute is attached to.
++  ///
++  /// NotHandled defers to default parsing (accept expression
++  /// arguments for GNU syntax, ignore arguments for CXX11 syntax);
++  /// AttributeNotApplied indicates a parsing failure and AttributeApplied a
++  /// success.
++  virtual AttrHandling parseAttributePayload(Parser *P,
++                                     ParsedAttributes &Attrs,
++                                     Declarator *D,
++                                     IdentifierInfo *AttrName,
++                                     SourceLocation AttrNameLoc,
++                                     SourceLocation *EndLoc,
++                                     IdentifierInfo *ScopeName,
++                                     SourceLocation ScopeLoc) const {
++    return NotHandled;
++  }
++
+   /// Check if this attribute appertains to D, and issue a diagnostic if not.
+   virtual bool diagAppertainsToDecl(Sema &S, const ParsedAttr &Attr,
+                                     const Decl *D) const {
+@@ -99,11 +132,6 @@ struct ParsedAttrInfo {
+       llvm::SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>> &Rules,
+       const LangOptions &LangOpts) const {
+   }
+-  enum AttrHandling {
+-    NotHandled,
+-    AttributeApplied,
+-    AttributeNotApplied
+-  };
+   /// If this ParsedAttrInfo knows how to handle this ParsedAttr applied to this
+   /// Decl then do so and return either AttributeApplied if it was applied or
+   /// AttributeNotApplied if it wasn't. Otherwise return NotHandled.
+@@ -112,6 +140,13 @@ struct ParsedAttrInfo {
+     return NotHandled;
+   }
+ 
++  /// Search amongst registered plugins for a ParsedAttrInfo whose name and
++  /// syntax match, and return a default value otherwise.
++  static const ParsedAttrInfo &get(std::string FullName, AttributeCommonInfo::Syntax SyntaxUsed);
++
++  /// Once parsing has been performed, an AttributeCommonInfo (e.g. ParsedAttr)
++  /// most likely has a ParsedAttrInfo attached to it. Perform ParsedAttrInfo
++  /// resolution via A, falling back on get above otherwise.
+   static const ParsedAttrInfo &get(const AttributeCommonInfo &A);
+ };
+ 
+diff --git a/clang/lib/Parse/ParseDeclCXX.cpp b/clang/lib/Parse/ParseDeclCXX.cpp
+index a236a82213f..6d111cd7d19 100644
+--- a/clang/lib/Parse/ParseDeclCXX.cpp
++++ b/clang/lib/Parse/ParseDeclCXX.cpp
+@@ -4041,18 +4041,40 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
+                                      ParsedAttributes &Attrs,
+                                      SourceLocation *EndLoc,
+                                      IdentifierInfo *ScopeName,
+-                                     SourceLocation ScopeLoc) {
++                                     SourceLocation ScopeLoc,
++                                     Declarator *D) {
+   assert(Tok.is(tok::l_paren) && "Not a C++11 attribute argument list");
+   SourceLocation LParenLoc = Tok.getLocation();
+   const LangOptions &LO = getLangOpts();
+   ParsedAttr::Syntax Syntax =
+       LO.CPlusPlus ? ParsedAttr::AS_CXX11 : ParsedAttr::AS_C2x;
+ 
+-  // If the attribute isn't known, we will not attempt to parse any
+-  // arguments.
+   if (!hasAttribute(LO.CPlusPlus ? AttrSyntax::CXX : AttrSyntax::C, ScopeName,
+                     AttrName, getTargetInfo(), getLangOpts())) {
+-    // Eat the left paren, then skip to the ending right paren.
++    std::string FullName;
++    FullName += ScopeName->getNameStart();
++    FullName += "::";
++    FullName += AttrName->getNameStart();
++    const ParsedAttrInfo &PluginInfo = ParsedAttrInfo::get(FullName, Syntax);
++    if (PluginInfo.AttrKind != AttributeCommonInfo::UnknownAttribute) {
++      // A plugin exists for this attribute. See if the plugin wants to opt into
++      // custom parsing.
++      ParsedAttrInfo::AttrHandling H = PluginInfo.parseAttributePayload(this,
++          Attrs,
++          D,
++          AttrName,
++          AttrNameLoc, EndLoc, ScopeName, ScopeLoc);
++      if (H == ParsedAttrInfo::AttributeApplied)
++        return true;
++      else if (H == ParsedAttrInfo::AttributeNotApplied)
++        return false;
++      else
++        ; // fall-through
++    }
++
++    // Unknown attribute, or plugin declined to handle it. We do not attempt to
++    // parse its arguments. Eat the left paren, then skip to the ending right
++    // paren.
+     ConsumeParen();
+     SkipUntil(tok::r_paren);
+     return false;
+@@ -4126,7 +4148,8 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
+ /// [C++11] attribute-namespace:
+ ///         identifier
+ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
+-                                          SourceLocation *endLoc) {
++                                          SourceLocation *endLoc,
++                                          Declarator *D) {
+   if (Tok.is(tok::kw_alignas)) {
+     Diag(Tok.getLocation(), diag::warn_cxx98_compat_alignas);
+     ParseAlignmentSpecifier(attrs, endLoc);
+@@ -4207,7 +4230,7 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
+     // Parse attribute arguments
+     if (Tok.is(tok::l_paren))
+       AttrParsed = ParseCXX11AttributeArgs(AttrName, AttrLoc, attrs, endLoc,
+-                                           ScopeName, ScopeLoc);
++                                           ScopeName, ScopeLoc, D);
+ 
+     if (!AttrParsed)
+       attrs.addNew(
+@@ -4234,7 +4257,8 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
+ /// attribute-specifier-seq:
+ ///       attribute-specifier-seq[opt] attribute-specifier
+ void Parser::ParseCXX11Attributes(ParsedAttributesWithRange &attrs,
+-                                  SourceLocation *endLoc) {
++                                  SourceLocation *endLoc,
++                                  Declarator *D) {
+   assert(standardAttributesAllowed());
+ 
+   SourceLocation StartLoc = Tok.getLocation(), Loc;
+@@ -4242,7 +4266,7 @@ void Parser::ParseCXX11Attributes(ParsedAttributesWithRange &attrs,
+     endLoc = &Loc;
+ 
+   do {
+-    ParseCXX11AttributeSpecifier(attrs, endLoc);
++    ParseCXX11AttributeSpecifier(attrs, endLoc, D);
+   } while (isCXX11AttributeSpecifier());
+ 
+   attrs.Range = SourceRange(StartLoc, *endLoc);
+diff --git a/clang/lib/Sema/ParsedAttr.cpp b/clang/lib/Sema/ParsedAttr.cpp
+index 3ef8498baff..77f2394af4a 100644
+--- a/clang/lib/Sema/ParsedAttr.cpp
++++ b/clang/lib/Sema/ParsedAttr.cpp
+@@ -109,18 +109,8 @@ namespace {
+ 
+ } // namespace
+ 
+-const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
+-  // If we have a ParsedAttrInfo for this ParsedAttr then return that.
+-  if ((size_t)A.getParsedKind() < llvm::array_lengthof(AttrInfoMap))
+-    return *AttrInfoMap[A.getParsedKind()];
+-
+-  // If this is an ignored attribute then return an appropriate ParsedAttrInfo.
+-  static const ParsedAttrInfo IgnoredParsedAttrInfo(
+-      AttributeCommonInfo::IgnoredAttribute);
+-  if (A.getParsedKind() == AttributeCommonInfo::IgnoredAttribute)
+-    return IgnoredParsedAttrInfo;
+-
+-  // Otherwise this may be an attribute defined by a plugin. First instantiate
++const ParsedAttrInfo &ParsedAttrInfo::get(std::string FullName, AttributeCommonInfo::Syntax SyntaxUsed) {
++  // This may be an attribute defined by a plugin. First instantiate
+   // all plugin attributes if we haven't already done so.
+   static llvm::ManagedStatic<std::list<std::unique_ptr<ParsedAttrInfo>>>
+       PluginAttrInstances;
+@@ -128,14 +118,11 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
+     for (auto It : ParsedAttrInfoRegistry::entries())
+       PluginAttrInstances->emplace_back(It.instantiate());
+ 
+-  // Search for a ParsedAttrInfo whose name and syntax match.
+-  std::string FullName = A.getNormalizedFullName();
+-  AttributeCommonInfo::Syntax SyntaxUsed = A.getSyntax();
+   if (SyntaxUsed == AttributeCommonInfo::AS_ContextSensitiveKeyword)
+     SyntaxUsed = AttributeCommonInfo::AS_Keyword;
+ 
+   for (auto &Ptr : *PluginAttrInstances)
+-    for (auto &S : Ptr->Spellings)
++    for (const auto &S : Ptr->Spellings)
+       if (S.Syntax == SyntaxUsed && S.NormalizedFullName == FullName)
+         return *Ptr;
+ 
+@@ -145,6 +132,21 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
+   return DefaultParsedAttrInfo;
+ }
+ 
++const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
++  // If we have a ParsedAttrInfo for this ParsedAttr then return that.
++  if ((size_t)A.getParsedKind() < llvm::array_lengthof(AttrInfoMap))
++    return *AttrInfoMap[A.getParsedKind()];
++
++  // If this is an ignored attribute then return an appropriate ParsedAttrInfo.
++  static const ParsedAttrInfo IgnoredParsedAttrInfo(
++      AttributeCommonInfo::IgnoredAttribute);
++  if (A.getParsedKind() == AttributeCommonInfo::IgnoredAttribute)
++    return IgnoredParsedAttrInfo;
++
++  // Search for a ParsedAttrInfo whose name and syntax match.
++  return get(A.getNormalizedFullName(), A.getSyntax());
++}
++
+ unsigned ParsedAttr::getMinArgs() const { return getInfo().NumArgs; }
+ 
+ unsigned ParsedAttr::getMaxArgs() const {
