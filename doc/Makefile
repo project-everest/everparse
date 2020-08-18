@@ -16,6 +16,7 @@ export KREMLIN_HOME?=$(realpath $(QD_HOME)/../kremlin)
 3D_DIFF=$(addsuffix .diff,$(3D_C_AND_H_FILES))
 3D_OUT=$(addprefix out/,$(3D_C_AND_H_FILES))
 3D_SNAPSHOT=$(addprefix 3d-snapshot/,$(3D_C_AND_H_FILES))
+AUX_HEADERS=GetFieldPtrBase.h
 
 # You can set these variables from the command line.
 SPHINXOPTS    = -W
@@ -40,7 +41,7 @@ help:
 3d-do-tests:
 	mkdir -p out
 	$(3D) --odir out --batch $(3D_FILES)
-	cp *.h out
+	cp $(AUX_HEADERS) out
 	+$(MAKE) -C out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 
 $(3D_OUT): out/%: 3d-do-tests
