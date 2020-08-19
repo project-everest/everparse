@@ -659,10 +659,8 @@ public:
     /* const RewriteBuffer *RewriteBuf = V.R.getRewriteBufferFor(S.getMainFileID()); */
     /* RewriteBuf->write(OutH); */
 
-    // TODO: This does not print the #includes, so not exactly what we want.
-    // TODO: This also introduces extra binders for each scope manipulation that we
-    // did earlier, so I'm wondering if we should just do a cleanup phase,
-    // removing binders one by one.
+    // TODO: this prints a file after C preprocessing, it's suboptimal but
+    // workable for now
     /* Context.getTranslationUnitDecl()->dump(); */
     Context.getTranslationUnitDecl()->print(OutH, 0, true);
 

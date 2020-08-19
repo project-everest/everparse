@@ -186,26 +186,45 @@ Array size
     syntax (e.g., [EVERPARSE_VLA] or something like that), then we
     require the field to be decorated with one of the following:
 
-     i.  [everparse::variable_length,
-          everparse::array_size_eq(e)]
+     i.  [everparse::constraint (size == e)]
 
           Producing in 3d the array dimension `[e]`
 
-     ii. [everparse::variable_length,
-          everparse::array_size_leq(e)]
+     ii. [everparse::constraint (size <= e))]
 
           Producing in 3d the array dimension `[<= e]`
 
-     iii. [everparse::variable_length,
-           everparse::array_size_single_element_leq(e)]
 
-          Producing in 3d the array dimension `[= e]`
+    If a field is VLA (i.e. my_field[0]), then all subsequent fields
+    must also be VLA or marked with everparse::ghost.
 
-    If a field is decorated with a [everparse::variable_length], then
-    all subsequent fields must also have the same attribute.
+    All VLA fields are coalesced in the generated header.h file into a
+    single zero-length array field.
 
-    All fields with an [everparse::variable_length] are coalesced in
-    the generated header.h file into a single zero-length array field.
+    TODO: or they become implicitly hidden, possibly with a warning if the
+    subsequent fields are not marked ghost?
+
+    Side note: need to maintain a table of structs that end up in VLA in order
+    to provide proper warnings, see e.g.
+
+      struct _A {
+         uint32 x;
+         uint8 vla[n];
+      }
+
+      struct B {
+         uint32 y;
+         A a;
+         uint32 z;
+      }
+
+
+ - For single fields that themselves have a variable length, we do
+
+   struct foo {
+     S my_struct [[ everparse::constraint(size == e) ]];
+
+   Producing in 3d the length annotation `[= e]`
 
 Refinement
 ^^^^^^^^^^

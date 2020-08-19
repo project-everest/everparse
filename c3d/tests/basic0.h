@@ -1,4 +1,4 @@
-typedef int uint32_t;
+#include <stdint.h>
 
 typedef uint32_t RNDIS_REQUEST_ID;
 
