@@ -1,0 +1,84 @@
+3d syntax (summary)
+
+prog ::= seq(decl_with_comments)
+      |  seq(decl_with_comments) C_type_refinement
+
+decl_with_comments
+     ::= block_comment decl
+      |  decl
+
+decl ::= define_decl
+      |  enum_decl
+      |  typedef_decl
+      |  struct_decl
+      |  casetype_decl
+
+C_type_refinement ::= REFINING seq(STRING, ",") LBRACE seq(type_map, ",") RBRACE
+
+type_map ::= IDENT | IDENT as IDENT
+
+define_decl ::= DEFINE IDENT constant
+
+enum_decl ::= opt(IDENT) ENUM LBRACE seq(enum_case, ",") RBRACE
+
+enum_case ::= IDENT
+              | IDENT EQ INT
+              | IDENT EQ IDENT
+
+
+typedef_decl ::= opt(attributes) TYPEDEF type IDENT SEMICOLON
+
+struct_decl ::= opt(attributes)
+                TYPEDEF STRUCT IDENT parameters opt(where)
+                LBRACE seq(field, SEMICOLON) RBRACE
+                IDENT SEMICOLON
+
+casetype_decl ::= opt(attributes)
+                  CASETYPE IDENT parameters
+                  LBRACE SWITCH LPAREN IDENT RPAREN
+                  LBRACE seq(case, SEMICOLON) RBRACE
+                  IDENT SEMICOLON
+
+case ::= CASE IDENT COLON field
+       | DEFAULT COLON field
+
+field ::= type IDENT opt(bit_width) opt(array_size) opt(refinement) opt(field_action)
+
+bit_width ::= COLON INT
+
+array_size ::=
+            | LBRACK expr RBRACK     // variable size array with length in bytes equal to the expr
+            | LBRACK_LEQ expr RBRACK // variable size array with length in bytes less or equal to the expr
+            | LBRACK_EQ expr RBRACK  // single element array with variable size whose length in bytes is equal to expr
+
+refinement ::= LBRACE expr BRACE
+
+field_action ::= LBRACE_ON_ERROR action RBRACE
+
+type ::= IDENT |
+         IDENT LPAREN seq(expr, ", ") RPAREN
+
+atomic_action ::= STAR IDENT EQ expr // assignment
+              |  STAR IDENT //deref
+              |  FIELD_POS //get current offset of field
+              |  FIELD_PTR //get pointer to current field
+              |  RETURN expr
+
+action ::=  atomic_action SEMICOLON        //single action
+        |   atomic_action SEMICOLON action //sequental composition
+        |   VAR IDENT eq atomic_action SEMICOLON action //var binding
+        |   IF expr LBRACE action RBRACE
+        |   IF expr LBRACE action RBRACE ELSE LBRACE action RBRACE
+
+expr ::= ... A subset of C expressions ...
+
+
+TODO:
+ - Generalize syntax of casetype to take an expression scrutinee
+ - Remove element sized arrays in documentation
+ - Figure out what we want to do with element-count arrays in the long run
+ - Revise documentation for on-error
+ - Handle on-error in 3d properly (Action.fsti does support it)
+ - extend language of actions to be less monadically strict
+ - anonymous casetype at any level
+ - anonymous struct at any level

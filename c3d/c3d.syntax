@@ -1,0 +1,233 @@
+c3d tentative syntax.
+
+The main things to work out are:
+
+1. Notation for casetype
+
+2. Notation for field with
+   a. refinements
+   b. array dimensions
+   c. actions
+
+================================================================================
+Casetype and union
+================================================================================
+
+3d supports a notion of a contextually determined sum type, called
+"casetype". For example one can write something like this:
+
+```
+casetype _T(P1 x1, ..., Pn xn) {
+  switch(e) {
+  case e1: T1 f1;
+  case e2: T2 f2;
+  ...
+  default: Tn fn;
+  }
+} T;
+```
+
+This is similar in spirit to a C union, but there is an important
+difference. In fact, 3d chose the keyword "casetype" specifically to
+indicate that this does not correspond to a C union. The distinction
+is that in C, unions are padded to the size of their largest
+element. However, casetype in 3d, in general, is a variable length
+structure whose size depends on the case.
+
+3d does not yet support a padded C union---all padding is explicit in
+3d. But, we could easily add a variant to 3d for a union type all of
+whose cases have constant size and whose size is the maximum size of
+all its fields.
+
+Towards that end, here's a proposal for encoding in c3d:
+
+1. Casetype
+
+A top-level named union in C can be decorated with everparse::casetype
+attribute to trigger a translation to a 3d casetype (unpadded variable
+length sum type).
+
+
+Here's an example of c3d syntax:
+
+```
+[everparse::process,
+ everparse::casetype,
+ everparse::parameters(P1 x1),
+ ...
+ everparse::parameters(Pn xn),
+ everparse::switch(e)]
+typedef union _T
+{
+   T1 f1[everparse::case(e1)];
+   T2 f2[everparse::case(e2)];
+   ...
+   Tn fn[everparse::default];
+} T;
+```
+
+Translates to 3d
+
+```
+casetype _T(P1 x1, ..., Pn xn) {
+  switch(e) {
+  case e1: T1 f1;
+  case e2: T2 f2;
+  ...
+  default: Tn fn;
+  }
+} T;
+```
+
+This does not produce anything in the .h file---casetype are for
+specification purposes only and do not correspond to anything in C.
+
+2. Union
+
+In contrast, the following c3d definition with `everparse::union`
+
+
+```
+[everparse::process,
+ everparse::union,
+ everparse::parameters(P1 x1),
+ ...
+ everparse::parameters(Pn xn),
+ everparse::switch(e)]
+typedef union _T
+{
+   T1 f1[everparse::case(e1)];
+   T2 f2[everparse::case(e2)];
+   ...
+   Tn fn[everparse::default];
+} T;
+```
+
+Should produce in 3d:
+
+
+```
+typedef union _T(P1 x1, ..., Pn xn) {
+  switch(e) {
+  case e1: T1 f1;
+  case e2: T2 f2;
+  ...
+  default: Tn fn;
+  }
+} T;
+```
+
+Which will trigger a check in 3d that the cases all have fixed size
+and the size of T is the max of the case sizes.
+
+It should also produce in C header.h:
+
+typedef union _T
+{
+   T1 f1;
+   T2 f2
+   ...
+   Tn fn;
+} T;
+
+and accumulate information to eventually emit a "refining" block in 3d
+that contains:
+
+```
+refining "header.h" {
+ T
+}
+```
+
+to check that 3d's notion of the union type corresponds to the C
+compiler's notion.
+
+
+
+Note: Eventually, we will want to support switched on anonymous unions
+too, but 3d doesn't support it yet. But, it would be nice to confirm
+that whatever encoding we pick for named unions would also generalize
+easily to anonymous unions.
+
+================================================================================
+Fields
+================================================================================
+
+The syntax of a field declaration in 3d is
+
+```
+field ::= type IDENT opt(bit_width) opt(array_size) opt(refinement) opt(field_action)
+```
+
+Not all combinations of these options are legal, but they are
+permissible in the syntax and illegal combinations are rejected by the
+3d typechecker.
+
+Bit width
+^^^^^^^^^
+
+The `bit_width` can already be expressed in C syntax, without need for
+an attribute.
+
+Array size
+^^^^^^^^^^
+
+  - If the array size in C is [e], for e <> 0, c3d should emit in 3d
+    Either:
+
+      a. [sizeof(t) * e], where t is the underlying field type, since
+          3d sizes are byte counts
+
+      b. [num_elements(e)]: We are considering a 3d extension to
+         support element-count arrays. If so, then we could emit this
+         instead.
+
+  - If the array size in C is [0], [], or some other distinguished
+    syntax (e.g., [EVERPARSE_VLA] or something like that), then we
+    require the field to be decorated with one of the following:
+
+     i.  [everparse::variable_length,
+          everparse::array_size_eq(e)]
+
+          Producing in 3d the array dimension `[e]`
+
+     ii. [everparse::variable_length,
+          everparse::array_size_leq(e)]
+
+          Producing in 3d the array dimension `[<= e]`
+
+     iii. [everparse::variable_length,
+           everparse::array_size_single_element_leq(e)]
+
+          Producing in 3d the array dimension `[= e]`
+
+    If a field is decorated with a [everparse::variable_length], then
+    all subsequent fields must also have the same attribute.
+
+    All fields with an [everparse::variable_length] are coalesced in
+    the generated header.h file into a single zero-length array field.
+
+Refinement
+^^^^^^^^^^
+
+One or more [everparse::constraint(e)] are interpreted as a
+conjunction of boolean refinements.
+
+Actions
+^^^^^^^
+
+A handlers in c3d could be expressed as:
+
+  [everparse::on_success(e)]
+  [everparse::on_error(e)]   //this is not yet supported in 3d but will be soon
+
+The language of actions should include the following constants:
+
+  * field_pos
+  * field_ptr
+
+The language of actions is from a small imperative language in
+3d. That would most naturally map to the statement language in C, with
+if/then/else, return, assignment, derefernce, local variable
+introduction, and return. Can the argument to an attribute be a
+statement?
