@@ -51,7 +51,11 @@ add_llvm_library(C3d MODULE C3d.cpp PLUGIN_TOOL clang)
 
 set(LLVM_LINK_COMPONENTS Support)
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
-target_link_libraries(C3d PRIVATE
-  clang
-  LLVMSupport
-)
+# TODO: I don't understand why, but this causes a segfault on Linux where some
+# global initializer seems to be called twice
+if(APPLE)
+  target_link_libraries(C3d PRIVATE
+    clang
+    LLVMSupport
+  )
+endif()
