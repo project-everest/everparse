@@ -360,6 +360,7 @@ public:
         AttrNameLoc, AttrNameLoc, ParamName, QT,
         TS,
         SC_None);
+    VD->setImplicit(true);
     S.PushOnScopeChains(VD, P->getCurScope());
 
     // Mega-hack; consumes the ident and encodes it as an expression... but
@@ -663,7 +664,7 @@ public:
     // did earlier, so I'm wondering if we should just do a cleanup phase,
     // removing binders one by one.
     /* Context.getTranslationUnitDecl()->dump(); */
-    /* Context.getTranslationUnitDecl()->print(OutH, 0, true); */
+    Context.getTranslationUnitDecl()->print(OutH, 0, true);
 
     return;
   }
