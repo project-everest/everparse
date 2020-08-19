@@ -5,13 +5,7 @@ FROM projecteverest/clang-c3d
 
 # Install some c3d build dependencies
 RUN apt-get update
-RUN apt-get --yes install --no-install-recommends make binutils tar gzip libstdc++-9-dev libc-dev libgcc-9-dev libc-dev sudo
-
-# Install cmake
-WORKDIR /root
-ADD https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.tar.gz .
-RUN tar xf cmake-3.18.1-Linux-x86_64.tar.gz
-RUN mv cmake-3.18.1-Linux-x86_64 /opt/cmake
+RUN apt-get --yes install --no-install-recommends make binutils tar gzip libstdc++-9-dev libc-dev libgcc-9-dev libc-dev sudo cmake
 
 # Create a new user and give them sudo rights
 RUN useradd -d /home/test test
@@ -33,6 +27,6 @@ COPY tests tests
 RUN sudo chown --recursive test:test src tests
 RUN mkdir out
 WORKDIR out
-RUN /opt/cmake/bin/cmake -D LLVM_BUILD_ROOT=$LLVM_BUILD_ROOT ../src/ && make -j
-RUN $LLVM_BUILD_ROOT/bin/clang  -fplugin=./C3d.so -std=c2x -mllvm -debug-only=c3d  ../tests/basic0.h
+RUN cmake -D LLVM_BUILD_ROOT=$LLVM_BUILD_ROOT ../src/ && make -j
+RUN $LLVM_BUILD_ROOT/bin/clang  -fplugin=./C3d.so -std=c2x ../tests/basic0.h
 

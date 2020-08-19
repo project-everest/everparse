@@ -7,7 +7,7 @@
 # all the proper definitions, etc.
 
 project(c3d)
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.16)
 
 # TODO: couldn't find how to reuse the flags as picked by the build of LLVM
 # itself
