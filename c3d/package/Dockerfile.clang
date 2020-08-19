@@ -1,0 +1,40 @@
+# This Dockerfile builds clang as patched to support plugins such as c3d
+# It should be built from the parent directory
+# The image should be pushed as projecteverest/clang-c3d
+
+FROM ubuntu:focal
+
+# Install clang dependencies
+RUN apt-get update
+RUN env DEBIAN_FRONTEND=noninteractive apt-get --yes --no-install-recommends install git cmake make ca-certificates patch gcc g++ sudo python3
+
+# Create a new user and give them sudo rights
+RUN useradd -d /home/test test
+RUN echo 'test ALL=NOPASSWD: ALL' >> /etc/sudoers
+RUN mkdir /home/test
+RUN chown test:test /home/test
+USER test
+ENV HOME /home/test
+WORKDIR $HOME
+
+# Clone clang
+RUN git clone --depth=10000 https://github.com/llvm/llvm-project && cd llvm-project && git checkout d604cc6e9a41aa6cf1759b8c58c8d02e5c87dda2
+
+# Apply patch
+WORKDIR llvm-project
+ADD patches/clang-parsedattrinfo-parsing-v1.patch clang-c3d.patch
+RUN patch -p1 < clang-c3d.patch
+
+# Build clang following https://llvm.org/docs/CMake.html
+# mkdir necessary for permissions
+RUN mkdir clangc3d
+WORKDIR clangc3d
+RUN cmake -DLLVM_ENABLE_PLUGINS=on -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD=X86 ../llvm
+# This is not portable. I should use `cmake --build .` instead
+RUN make -j 24 -k
+RUN sudo cmake -DCMAKE_INSTALL_PREFIX=/opt/clang-c3d -P cmake_install.cmake
+
+# Take advantage of Docker multi-stage builds (https://docs.docker.com/develop/develop-images/multistage-build/)
+# to only keep installed files and drop everything else out of the image
+FROM ubuntu:focal
+COPY --from=0 /opt/clang-c3d /opt/clang-c3d
