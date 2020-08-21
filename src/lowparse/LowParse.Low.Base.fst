@@ -1016,6 +1016,20 @@ let serializer32
   )))
 
 inline_for_extraction
+let serialize32_ext
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (s1: serializer p1)
+  (s1': serializer32 s1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (u: squash (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
+: Tot (serializer32 (serialize_ext p1 s1 p2))
+= fun x #rrel #rel b pos -> s1' x b pos
+
+inline_for_extraction
 let frame_serializer32
   (#k: parser_kind)
   (#t: Type)
