@@ -649,19 +649,16 @@ public:
     OutputH += ".preprocessed.h";
     llvm::raw_fd_ostream OutH { OutputH, EC };
 
-    // This crashes (seen somewhere on a tutorial, frankly I don't understand
-    // the point of the rewriter -- investigate).
-    // TODO: I cannot get a debug build to debug this on my linux machine;
-    // reason, once I try to load the plugin:
-    //    : CommandLine Error: Option 'debug' registered more than once!
-    //    fatal error: error in backend: inconsistency in registered CommandLine options
+    // This crashes, but in theory it should allow us to rewrite the source file
+    // in-place and print it out in a nicer way, with the includes and all.
+    // TODO: debug and try to just comment out the attributes for nicer printing
+    // (suggestion by Guido)
     // Attempt was:
     /* const RewriteBuffer *RewriteBuf = V.R.getRewriteBufferFor(S.getMainFileID()); */
     /* RewriteBuf->write(OutH); */
 
     // TODO: this prints a file after C preprocessing, it's suboptimal but
     // workable for now
-    /* Context.getTranslationUnitDecl()->dump(); */
     Context.getTranslationUnitDecl()->print(OutH, 0, true);
 
     return;
