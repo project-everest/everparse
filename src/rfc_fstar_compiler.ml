@@ -407,7 +407,7 @@ let leaf_reader_name = function
   | "bitcoin_varint" -> "LL.read_bcvli"
   | "Empty" -> "LL.read_empty"
   | "Fail" -> "LL.read_false"
-  | t -> failwith (sprintf "leaf_reader_name %s: should only be called for enum repr" t)
+  | t -> sprintf "%s_reader" t
 
 let leaf_writer_name = function
   | "opaque" | "uint8" -> "LL.write_u8"
@@ -1453,8 +1453,8 @@ and compile_select o i n seln tagn tagt taga cl def al =
 
     if li.has_lserializer then begin
         let annot = if is_private then " : LL.leaf_reader "^(pcombinator_name n) else "" in
-        wl i "val read_%s : LL.leaf_reader %s\n\n" n (pcombinator_name n);
-        wl o "let read_%s%s =\n%s" n annot same_kind;
+        wl i "val %s_reader : LL.leaf_reader %s\n\n" n (pcombinator_name n);
+        wl o "let %s_reader%s =\n%s" n annot same_kind;
         (match def with
          | None ->
             wl o "  LL.read_sum %s_sum %s_repr_parser read_%s_key %s_repr_jumper parse_%s_cases read_%s_cases (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn tn n n;
@@ -2784,8 +2784,18 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
 
   (* lserialize *)
   if li.has_lserializer then begin
-      let parser32 = combinator leaf_reader_name "LL.read_nondep_then" in
-      wl o "inline_for_extraction let %s'_reader : LL.leaf_reader %s'_parser = %s\n\n" n n parser32;
+      let rec mk_jumper_reader = function
+        | TLeaf (_, ty) -> (jumper_name ty, leaf_reader_name ty)
+        | TNode (_, tl, tr) ->
+           let (jl, rl) = mk_jumper_reader tl in
+           let (jr, rr) = mk_jumper_reader tr in
+           let j = sprintf "(%s `LL.jump_nondep_then` %s)" jl jr in
+           let r = sprintf "(LL.read_nondep_then %s %s %s)" jl rl rr in
+           (j, r)
+      in
+      let (_, reader) = mk_jumper_reader tfields in
+      wl i "val %s_reader : LL.leaf_reader %s_parser\n\n" n n;
+      wl o "inline_for_extraction let %s'_reader : LL.leaf_reader %s'_parser = %s\n\n" n n reader;
       wl o "let %s_reader =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
       wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
       wl o "  LL.read_synth _ synth_%s (fun x -> synth_%s x) %s'_reader ()\n\n" n n n;
