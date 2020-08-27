@@ -119,13 +119,13 @@ let basic_type = function
   | _ -> false
 
 let basic_bounds = function
-  | "uint8" -> 1, 1, 255uL
-  | "uint16" | "uint16_le" -> 2, 2, 65535uL
-  | "uint24" | "uint24_le" -> 3, 3, 16777215uL
-  | "uint32" | "uint32_le" -> 4, 4, 4294967295uL
-  | "uint64" | "uint64_le" -> 8, 8, 18446744073709551615uL
-  | "asn1_len8" -> 1, 2, 255uL
-  | "asn1_len" | "bitcoin_varint" -> 1, 5, 4294967295uL
+  | "uint8" -> 1, 1, Some 255
+  | "uint16" | "uint16_le" -> 2, 2, Some 65535
+  | "uint24" | "uint24_le" -> 3, 3, Some 16777215
+  | "uint32" | "uint32_le" -> 4, 4, Some 4294967295
+  | "uint64" | "uint64_le" -> 8, 8, None (* 18446744073709551615 *)
+  | "asn1_len8" -> 1, 2, Some 255
+  | "asn1_len" | "bitcoin_varint" -> 1, 5, Some 4294967295
   | s -> failwith (s^" is not a base type and can't be used as symbolic length")
        
 let ends_with str suff =
@@ -346,6 +346,8 @@ let validator_name = function
   | "uint24_le" -> "(magic())"
   | "uint32" -> "(LL.validate_u32 ())"
   | "uint32_le" -> "(LL.validate_u32_le ())"
+  | "uint64" -> "(LL.validate_u64 ())"
+  | "uint64_le" -> "(LL.validate_u64_le ())"
   | "asn1_len" -> failwith "validator_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LL.validate_bcvli"
   | "Empty" -> "(LL.validate_empty ())"
@@ -360,6 +362,8 @@ let jumper_name = function
   | "uint24_le" -> "(LL.jump_constant_size LP.parse_bounded_integer_le_3 3ul)"
   | "uint32" -> "LL.jump_u32"
   | "uint32_le" -> "LL.jump_u32_le"
+  | "uint64" -> "LL.jump_u64"
+  | "uint64_le" -> "LL.jump_u64_le"
   | "asn1_len" -> failwith "jumper_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LL.jump_bcvli"
   | "Empty" -> "LL.jump_empty"
@@ -371,6 +375,7 @@ let bytesize_call t x = match t with
   | "uint16" | "uint16_le" -> "2"
   | "uint24" | "uint24_le" -> "3"
   | "uint32" | "uint32_le" -> "4"
+  | "uint64" | "uint64_le" -> "8"
   | "asn1_len" -> sprintf "(if U32.v %s < 128 then 1 else if U32.v %s < 256 then 2 else if U32.v %s < 65536 then 3 else if U32.v %s < 16777216 then 4 else 5)" x x x x
   | "bitcoin_varint" -> sprintf "(if U32.v %s <= 252 then 1 else if U32.v %s <= 65535 then 3 else 5)" x x
   | "Empty" | "Fail" -> "0"
@@ -381,6 +386,7 @@ let bytesize_eq_call t x = match t with
   | "uint16" | "uint16_le" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u16 (%s)) == 2))" x
   | "uint24" | "uint24_le" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u32 (%s)) == 4))" x
   | "uint32" | "uint32_le" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u32 (%s)) == 4))" x
+  | "uint64" | "uint64_le" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_u64 (%s)) == 8))" x
   | "asn1_len" -> sprintf "(LP.serialize_bounded_der_length32_size 0 4294967295 %s)" x
   | "bitcoin_varint" -> sprintf "(LP.serialize_bcvli_eq %s)" x
   | "Empty" -> sprintf "(assert (FStar.Seq.length (LP.serialize LP.serialize_empty (%s)) == 0))" x
@@ -395,6 +401,8 @@ let leaf_reader_name = function
   | "uint24_le" -> "LL.read_u32_le"
   | "uint32" -> "LL.read_u32"
   | "uint32_le" -> "LL.read_u32_le"
+  | "uint64" -> "LL.read_u64"
+  | "uint64_le" -> "LL.read_u64_le"
   | "asn1_len" -> "(LL.read_bounded_der_length32 0 4294967295)"
   | "bitcoin_varint" -> "LL.read_bcvli"
   | "Empty" -> "LL.read_empty"
@@ -414,6 +422,10 @@ let leaf_writer_name = function
   | "asn1_len" -> "(LL.write_bounded_der_length32 0 4294967295)"
   | "bitcoin_varint" -> "LL.write_bcvli"
   | _ -> failwith "leaf_writer_name: should only be called for enum repr"
+
+let assume_some = function
+  | None -> failwith "assume_some"
+  | Some x -> x
 
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
@@ -443,9 +455,9 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
     | VectorVldata tn ->
       let (len_len_min, len_len_max, max_len) = basic_bounds tn in
       let (li_min_len, li_max_len) =
-        if ty = TypeSimple "opaque" then (0, max_len)
+        if ty = TypeSimple "opaque" then (0, assume_some max_len)
         else (li.min_len, li.max_len) in
-      let max' = len_len_max + min max_len li_max_len in
+      let max' = len_len_max + min (assume_some max_len) li_max_len in
       (*let min', max' = li.min_len, min li.max_len max_len in*)
       let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
       {li with len_len = len_len_min; min_len = len_len_min + li_min_len; max_len = max'; vl = true; has_lserializer = false; meta = meta' }
@@ -454,7 +466,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       let li' = get_leninfo (tn^"@"^cst) in
       (* Important: must reflect parse_bounded_vldata_strong_kind computation *)
       let max' = min li.max_len (match li'.max_len with
-      | 1 -> 255 | 2 ->  65535 | 3 -> 16777215 | 4 -> 4294967295 | 8 -> 18446744073709551615
+      | 1 -> 255 | 2 ->  65535 | 3 -> 16777215 | 4 -> 4294967295
       | _ -> failwith "bad vldata") in
       let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
       (* N.B. the len_len will be counted in the explicit length field *)
@@ -694,7 +706,6 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 		| EnumFieldAnonymous 255 -> "uint8", "z", 1
 		| EnumFieldAnonymous 65535 -> patch_little_endian "uint16", "us", 2
 		| EnumFieldAnonymous 4294967295 -> patch_little_endian "uint32", "ul", 4
-                | EnumFieldAnonymous 18446744073709551615 -> patch_little_endian "uint64", "uL", 8
 		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32, u64 supported)")
 	in
 
@@ -1938,11 +1949,11 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       let (len_len_min, len_len_max, max_len) = basic_bounds vl in
       TypeSimple("opaque"),
       VectorRange(max 0 (li.min_len-len_len_min),
-                  min max_len (max 0 (li.max_len-len_len_max)),
+                  min (assume_some max_len) (max 0 (li.max_len-len_len_max)),
                   Some vl)
     | TypeSimple("opaque"), VectorVldata vl ->
       let (_, _, max_len) = basic_bounds vl in
-      TypeSimple("opaque"), VectorRange(0, max_len, Some vl)
+      TypeSimple("opaque"), VectorRange(0, assume_some max_len, Some vl)
     | _ -> ty, vec in
   match ty with
   | TypeIfeq _ -> failwith "Unsupported if-then-else, must to appear in a struct after a tag"
@@ -2010,12 +2021,13 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
        let (_, _, smax) = basic_bounds lenty in
        if compile_type ty = "U8.t"
        then
-         compile_vlbytes o i is_private n li lenty 0 smax
+         compile_vlbytes o i is_private n li lenty 0 (assume_some smax)
        else
-         compile_vldata o i is_private n ty li elem_li lenty 0 smax
+         compile_vldata o i is_private n ty li elem_li lenty 0 (assume_some smax)
 
     | VectorVldata vl ->
       let (len_len_min, len_len_max, smax) = basic_bounds vl in
+      let smax = assume_some smax in
       let (min, max) = li.min_len, li.max_len in
       let fits_in_bounds = elem_li.max_len <= smax in
       let needs_synth = not fits_in_bounds in
