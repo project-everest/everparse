@@ -382,7 +382,9 @@ let leaf_reader_name = function
   | "uint32_le" -> "LL.read_u32_le"
   | "asn1_len" -> "(LL.read_bounded_der_length32 0 4294967295)"
   | "bitcoin_varint" -> "LL.read_bcvli"
-  | t -> failwith "leaf_reader_name: should only be called for enum repr"
+  | "Empty" -> "LL.read_empty"
+  | "Fail" -> "LL.read_false"
+  | t -> failwith (sprintf "leaf_reader_name %s: should only be called for enum repr" t)
 
 let leaf_writer_name = function
   | "opaque" | "uint8" -> "LL.write_u8"
@@ -1281,6 +1283,14 @@ and compile_select o i n seln tagn tagt taga cl def al =
    end;
 
   if li.has_lserializer then begin
+      wl o "inline_for_extraction noextract let read_%s_cases (x:%s)\n" n ktype;
+      wl o "  : LL.leaf_reader (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+      List.iter (fun (case, ty) ->
+          let cn = String.capitalize_ascii case in
+          wl o "  | %s -> [@inline_let] let u : LL.leaf_reader (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (leaf_reader_name ty)
+        ) cl;
+      wl o "  | _ -> LL.read_false\n\n";
+
       wl o "inline_for_extraction noextract let lserialize_%s_cases (x:%s)\n" n ktype;
       wl o "  : LL.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
       List.iter (fun (case, ty) ->
@@ -1411,6 +1421,16 @@ and compile_select o i n seln tagn tagt taga cl def al =
      end;
 
     if li.has_lserializer then begin
+        let annot = if is_private then " : LL.leaf_reader "^(pcombinator_name n) else "" in
+        wl i "val read_%s : LL.leaf_reader %s\n\n" n (pcombinator_name n);
+        wl o "let read_%s%s =\n%s" n annot same_kind;
+        (match def with
+         | None ->
+            wl o "  LL.read_sum %s_sum %s_repr_parser read_%s_key %s_repr_jumper parse_%s_cases read_%s_cases (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn tn n n;
+         | Some dt ->
+            wl o "  LL.read_dsum %s_sum read_maybe_%s_key %s_repr_jumper\n" n tn tn;
+            wl o "  parse_%s_cases read_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n (leaf_reader_name dt));
+
         let annot = if is_private then " : LL.serializer32 "^(scombinator_name n) else "" in
         wl i "val %s_lserializer: LL.serializer32 %s\n\n" n (scombinator_name n);
         wl o "let %s_lserializer%s =\n%s" n annot same_kind;
@@ -1925,6 +1945,8 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
          let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
          wl o "let %s_jumper%s = %s\n\n" n jumper_annot (jumper_name ty));
       if li.has_lserializer then begin
+          wl i "val %s_reader : LL.leaf_reader %s\n\n" n (pcombinator_name n);
+          wl o "let %s_reader = %s\n\n" n (leaf_reader_name ty);
           wl i "val %s_lserializer : LL.serializer32 %s\n\n" n (scombinator_name n);
           wl o "let %s_lserializer = %s\n\n" n (lscombinator_name ty)
       end;
@@ -2730,6 +2752,12 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
 
   (* lserialize *)
   if li.has_lserializer then begin
+      let parser32 = combinator leaf_reader_name "LL.read_nondep_then" in
+      wl o "inline_for_extraction let %s'_reader : LL.leaf_reader %s'_parser = %s\n\n" n n parser32;
+      wl o "let %s_reader =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+      wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+      wl o "  LL.read_synth _ synth_%s (fun x -> synth_%s x) %s'_reader ()\n\n" n n n;
+
       let serializer32 = combinator lscombinator_name "LL.serialize32_nondep_then" in
       wl i "val %s_lserializer : LL.serializer32 %s_serializer\n\n" n n;
       wl o "inline_for_extraction let %s'_lserializer : LL.serializer32 %s'_serializer = %s\n\n" n n serializer32;
