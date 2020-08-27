@@ -1126,6 +1126,33 @@ let leaf_writer_weak_of_strong_constant_size
   end
 
 inline_for_extraction
+let serializer32_of_leaf_writer_strong_constant_size
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (s32: leaf_writer_strong s)
+  (sz: U32.t)
+  (u: squash (
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == U32.v sz
+  ))
+: Tot (serializer32 s)
+= fun x #rrel #rel b pos ->
+  serialized_length_eq s x;
+  let h0 = HST.get () in
+  let pos' = s32 x (make_slice b (pos `U32.add` sz)) pos in
+  [@inline_let]
+  let len = pos' `U32.sub` pos in
+  let h = HST.get () in
+  [@inline_let] let _ =
+    valid_valid_exact p h (make_slice b (pos `U32.add` sz)) pos;
+    valid_exact_serialize s h (make_slice b (pos `U32.add` sz)) pos pos'
+  in
+  len
+
+inline_for_extraction
 let blit_strong
   (#a:Type) (#rrel1 #rrel2 #rel1 #rel2: _)
   (src: B.mbuffer a rrel1 rel1)

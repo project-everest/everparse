@@ -69,6 +69,9 @@ let readable_split_1
   Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
   if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
 
+#push-options "--fuel 17" // "--using_facts_from '*,-LowParse.Low.Base.serializer32_of_leaf_writer_strong_constant_size'"
+#restart-solver
+
 let readable_split_2
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -81,6 +84,9 @@ let readable_split_2
 =
   Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
   if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
+
+#pop-options
+#restart-solver
 
 let readable_split h #t #b p from mid to =
   Classical.move_requires (readable_split_1 h p from mid) to;
