@@ -450,6 +450,10 @@ inline_for_extraction
 let read_empty : leaf_reader parse_empty = read_ret ()
 
 inline_for_extraction
+let read_false : leaf_reader parse_false = fun #rrel #rel sl pos ->
+  LowStar.Failure.failwith "read_false: should not be called"
+
+inline_for_extraction
 let serialize32_ret
   (#t: Type)
   (v: t)
