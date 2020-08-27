@@ -1602,7 +1602,7 @@ let read_dsum
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: leaf_reader g)
   (destr: dep_enum_destr _ (read_dsum_cases_t t f g))
-: GTot (leaf_reader (parse_dsum t p f g))
+: Tot (leaf_reader (parse_dsum t p f g))
 = fun #_ #_ input pos ->
   let h = HST.get () in
   valid_facts (parse_dsum t p f g) h input pos;
