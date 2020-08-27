@@ -29,6 +29,7 @@ type len_info = {
   mutable max_count: int;
   mutable vl : bool;
   mutable meta: parser_kind_metadata;
+  mutable has_lserializer: bool;
 }
 
 (* Recording the boundaries of variable length structures *)
@@ -126,11 +127,18 @@ let basic_bounds = function
   | "asn1_len" | "bitcoin_varint" -> 1, 5, 4294967295
   | s -> failwith (s^" is not a base type and can't be used as symbolic length")
        
+let ends_with str suff =
+  let str_len = String.length str in
+  let suff_len = String.length suff in
+  str_len >= suff_len &&
+  String.sub str (str_len - suff_len) suff_len = suff
+
 let rec sizeof = function
   | TypeIfeq(tag, v, t, f) ->
     let lit = sizeof (TypeSimple t) in
     let lif = sizeof (TypeSimple f) in
     {len_len = 0; min_len = min lit.min_len lif.min_len; max_len = max lit.max_len lif.max_len;
+      has_lserializer = false; (* FIXME: should be "and" *)
       min_count = 0; max_count = 0; vl = lit.vl || lif.vl; meta =
       match lit.meta, lif.meta with
       | MetadataTotal, MetadataTotal -> MetadataTotal
@@ -140,6 +148,7 @@ let rec sizeof = function
     let lil = (List.map (fun (_,ty) -> sizeof (TypeSimple ty)) cl)
       @ (match def with None -> [] | Some ty -> [sizeof (TypeSimple ty)]) in
     let li = { len_len = 0; min_len = max_int; max_len = 0; min_count = 0; max_count = 0;
+      has_lserializer = List.for_all (fun l -> l.has_lserializer) lil;
       vl = true; meta = MetadataTotal } in
     List.iter (fun l ->
       match l.meta with
@@ -158,17 +167,18 @@ let rec sizeof = function
     if li.meta = MetadataFail then failwith (sprintf "Type select(%s) cannot parse any data" n);
     li
   | TypeSimple typ ->
+    let not_is_le = not (ends_with typ "_le") in
     match typ with
     | "opaque"
-    | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
-    | "uint16" | "uint16_le" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
-    | "uint24" | "uint24_le" -> { len_len = 0; min_len = 3; max_len = 3; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
-    | "uint32" | "uint32_le" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
-    | "asn1_len8" -> { len_len = 0; min_len = 1; max_len = 2; min_count = 0; max_count = 0; vl = true; meta = MetadataDefault }
+    | "uint8"  -> { len_len = 0; min_len = 1; max_len = 1; min_count = 0; max_count = 0; vl = false; has_lserializer = true; meta = MetadataTotal }
+    | "uint16" | "uint16_le" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; has_lserializer = not_is_le; meta = MetadataTotal }
+    | "uint24" | "uint24_le" -> { len_len = 0; min_len = 3; max_len = 3; min_count = 0; max_count = 0; vl = false; has_lserializer = not_is_le; meta = MetadataTotal }
+    | "uint32" | "uint32_le" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; has_lserializer = not_is_le; meta = MetadataTotal }
+    | "asn1_len8" -> { len_len = 0; min_len = 1; max_len = 2; min_count = 0; max_count = 0; vl = true; has_lserializer = false; meta = MetadataDefault }
     | "asn1_len"
-    | "bitcoin_varint" -> { len_len = 0; min_len = 1; max_len = 5; min_count = 0; max_count = 0; vl = true; meta = MetadataDefault }
-    | "Empty" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataTotal }
-    | "Fail" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; meta = MetadataFail }
+    | "bitcoin_varint" -> { len_len = 0; min_len = 1; max_len = 5; min_count = 0; max_count = 0; vl = true; has_lserializer = true; meta = MetadataDefault }
+    | "Empty" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; has_lserializer = true; meta = MetadataTotal }
+    | "Fail" -> { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0; vl = false; has_lserializer = true; meta = MetadataFail }
     | s ->
       let li = get_leninfo s in
       {li with len_len = li.len_len} (* shallow copy *)
@@ -282,6 +292,23 @@ let scombinator32_name = function
   | "Fail" -> "LS.serialize32_false"
   | t -> String.uncapitalize_ascii  t^"_serializer32"
 
+let lscombinator_name = function
+  | "opaque" | "uint8" -> "LL.serialize32_u8"
+  | "uint16" -> "LL.serialize32_u16"
+  | (
+    "uint16_le" |
+      "uint24" |
+      "uint24_le" |
+      "uint32_le"
+  ) as s
+    -> failwith ("lscombinator_name: " ^ s ^ " not implemented")
+  | "uint32" -> "LL.serialize32_u32"
+  | "bitcoin_varint" -> "LL.serialize32_bcvli"
+  | "Empty" -> "LL.serialize32_empty"
+  | "Fail" -> "LL.serialize32_false"
+  | "asn1_len" -> failwith "lscombinator_name: for now asn1_len not standalone"
+  | t -> String.uncapitalize_ascii  t^"_lserializer"
+
 let size32_name = function
   | "opaque" | "uint8" -> "LS.size32_u8"
   | "uint16" -> "LS.size32_u16"
@@ -383,6 +410,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         min_count = k / li.min_len;
         max_count = k / li.max_len;
         meta = (if li.meta = MetadataFail || li.min_len = li.max_len then li.meta else MetadataDefault);
+        has_lserializer = false;
       }
     | VectorFixedCount k ->
       { li with
@@ -391,6 +419,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         min_len = k * li.min_len;
         max_len = k * li.max_len;
         meta = (if li.meta = MetadataFail || li.min_len = li.max_len then li.meta else MetadataDefault);
+        has_lserializer = false;
       }
     | VectorVldata tn ->
       let (len_len_min, len_len_max, max_len) = basic_bounds tn in
@@ -400,7 +429,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       let max' = len_len_max + min max_len li_max_len in
       (*let min', max' = li.min_len, min li.max_len max_len in*)
       let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
-      {li with len_len = len_len_min; min_len = len_len_min + li_min_len; max_len = max'; vl = true; meta = meta' }
+      {li with len_len = len_len_min; min_len = len_len_min + li_min_len; max_len = max'; vl = true; has_lserializer = false; meta = meta' }
     | VectorSymbolic cst ->
       if tn = "" then failwith "Can't define a symbolic bytelen outide struct";
       let li' = get_leninfo (tn^"@"^cst) in
@@ -410,7 +439,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       | _ -> failwith "bad vldata") in
       let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
       (* N.B. the len_len will be counted in the explicit length field *)
-      {li' with vl = true; len_len = 0; min_len = li.min_len; max_len = max'; meta = meta' }
+      {li' with vl = true; len_len = 0; min_len = li.min_len; max_len = max'; has_lserializer = false; meta = meta' }
     | VectorCount (low, high, repr) ->
       let (l, h, meta) = match repr with
         | None -> let x = log256 high in (x, x, MetadataTotal)
@@ -425,6 +454,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         len_len = h;
         min_len = l + low * li.min_len;
         max_len = h + high * li.max_len;
+        has_lserializer = false;
         meta = match li.meta with (* See parse_vclist_payload_kind *)
                | MetadataFail -> li.meta
                | d -> if high = 0 then meta else MetadataDefault;
@@ -447,6 +477,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
         len_len = h;
         min_len = l + low;
         max_len = h + high;
+        has_lserializer = false;
         meta = if li.meta = MetadataFail then li.meta else MetadataDefault;
       } in
     li_add qname li'
@@ -468,7 +499,7 @@ let getdep (toplevel:bool) (p:gemstone_t) : typ list =
   let dep =
     match p with
     | Abstract (_, _, min, max, _) ->
-      let li = { len_len = 0; min_len = min; max_len = max; min_count = 0; max_count = 0; vl = (min <> max); meta = MetadataDefault; } in
+      let li = { len_len = 0; min_len = min; max_len = max; min_count = 0; max_count = 0; vl = (min <> max); meta = MetadataDefault; has_lserializer = false; } in
       li_add tn li;
       ([]:typ list list)
     | Enum (a, fl, n) ->
@@ -476,7 +507,7 @@ let getdep (toplevel:bool) (p:gemstone_t) : typ list =
       let meta = if has_attr a "open" then MetadataTotal else MetadataDefault in
       let m = try List.find (function EnumFieldAnonymous x -> true | _ -> false) fl
               with _ -> failwith ("Enum "^n^" is missing a representation hint") in
-      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; meta = meta; } in
+      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; has_lserializer = true; meta = meta; } in
       (match m with
       | EnumFieldAnonymous 255 -> li.min_len <- 1; li.max_len <- 1
       | EnumFieldAnonymous 65535 -> li.min_len <- 2; li.max_len <- 2
@@ -490,13 +521,14 @@ let getdep (toplevel:bool) (p:gemstone_t) : typ list =
       [typedep ty]
     | Struct (_, fl, _) ->
       if not toplevel then failwith "invalid internal rewrite of a struct";
-      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; meta = MetadataTotal } in
+      let li = { len_len = 0; min_len = 0; max_len = 0; min_count = 0; max_count = 0;  vl = false; has_lserializer = true; meta = MetadataTotal } in
       let dep = List.map (fun (al, ty, n, vec, def) ->
         add_field al tn n ty vec;
         let lif = get_leninfo (tn^"@"^n) in
         li.min_len <- li.min_len + lif.min_len;
         li.max_len <- li.max_len + lif.max_len;
         if lif.meta = MetadataDefault then li.meta <- MetadataDefault;
+        li.has_lserializer <- li.has_lserializer && lif.has_lserializer;
         typedep ty) fl in
       li_add tn li; dep
     in
@@ -840,10 +872,14 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   (* Low: writer *)
   wl o "inline_for_extraction let write_%s%s_key : LL.leaf_writer_strong serialize_%s%s_key =\n" maybe n maybe n;
   wl o "  LL.write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
+  wl o "inline_for_extraction let lserialize_%s%s_key : LL.serializer32 serialize_%s%s_key =\n" maybe n maybe n;
+  wl o "  LL.serializer32_of_leaf_writer_strong_constant_size write_%s%s_key %dul ()\n\n" maybe n blen;
   wl i "val %s_writer: LL.leaf_writer_strong %s_serializer\n\n" n n;
   wl o "let %s_writer =\n" n;
   wl o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
   wl o "  LL.write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x) ()\n\n" maybe n n n n;
+  wl i "val %s_lserializer: LL.serializer32 %s_serializer\n\n" n n;
+  wl o "let %s_lserializer = LL.serializer32_of_leaf_writer_strong_constant_size %s_writer %dul ()\n\n" n n blen;
 
   (* bytesize lemma *)
   wl i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
@@ -1244,6 +1280,16 @@ and compile_select o i n seln tagn tagt taga cl def al =
     wl o "  | _ -> LL.jump_false\n\n"
    end;
 
+  if li.has_lserializer then begin
+      wl o "inline_for_extraction noextract let lserialize_%s_cases (x:%s)\n" n ktype;
+      wl o "  : LL.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
+      List.iter (fun (case, ty) ->
+          let cn = String.capitalize_ascii case in
+          wl o "  | %s -> [@inline_let] let u : LL.serializer32 (serialize_%s_cases %s) = %s in u\n" cn n cn (lscombinator_name ty)
+        ) cl;
+      wl o "  | _ -> LL.serialize32_false\n\n";
+  end;
+
   if is_implicit then (
     match def with
     | None ->
@@ -1363,6 +1409,18 @@ and compile_select o i n seln tagn tagt taga cl def al =
       | Some dt ->
         wl o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name dt))
      end;
+
+    if li.has_lserializer then begin
+        let annot = if is_private then " : LL.serializer32 "^(scombinator_name n) else "" in
+        wl i "val %s_lserializer: LL.serializer32 %s\n\n" n (scombinator_name n);
+        wl o "let %s_lserializer%s =\n%s" n annot same_kind;
+        (match def with
+         | None ->
+            wl o "  LL.serialize32_sum %s_sum %s_repr_serializer lserialize_%s_key serialize_%s_cases lserialize_%s_cases (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn n n
+         | Some dt ->
+            wl o "  assert_norm (LS.serializer32_sum_gen_precond (LP.get_parser_kind %s_repr_parser) (LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases %s_parser_kind));\n" tn n n n;
+            wl o "  LL.serialize32_dsum %s_sum %s_repr_serializer lserialize_maybe_%s_key parse_%s_cases serialize_%s_cases lserialize_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn n n n (lscombinator_name dt))
+    end;
 
     (* validity from sum to tag *)
       let maybe = match def with
@@ -1866,6 +1924,10 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       (if need_jumper then
          let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
          wl o "let %s_jumper%s = %s\n\n" n jumper_annot (jumper_name ty));
+      if li.has_lserializer then begin
+          wl i "val %s_lserializer : LL.serializer32 %s\n\n" n (scombinator_name n);
+          wl o "let %s_lserializer = %s\n\n" n (lscombinator_name ty)
+      end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
       if ty <> "Empty" && ty <> "Fail"
@@ -2665,6 +2727,17 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
     wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
     wl o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n
    end;
+
+  (* lserialize *)
+  if li.has_lserializer then begin
+      let serializer32 = combinator lscombinator_name "LL.serialize32_nondep_then" in
+      wl i "val %s_lserializer : LL.serializer32 %s_serializer\n\n" n n;
+      wl o "inline_for_extraction let %s'_lserializer : LL.serializer32 %s'_serializer = %s\n\n" n n serializer32;
+      wl o "let %s_lserializer =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+      wl o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
+      wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+      wl o "  LL.serialize32_synth %s'_lserializer synth_%s synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
+  end;
 
   (* bytesize *)
   w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n"
