@@ -112,19 +112,20 @@ let li_add (s:string) (li:len_info) =
   linfo := SM.add s li !linfo
 
 let basic_type = function
-  | "opaque" | "uint8" | "uint16" | "uint24" | "uint32"
-  | "uint16_le" | "uint24_le" | "uint32_le"
+  | "opaque" | "uint8" | "uint16" | "uint24" | "uint32" | "uint64"
+  | "uint16_le" | "uint24_le" | "uint32_le" | "uint64_le"
   | "asn1_len" | "asn1_len8" | "bitcoin_varint"
   | "Empty" | "Fail" -> true
   | _ -> false
 
 let basic_bounds = function
-  | "uint8" -> 1, 1, 255
-  | "uint16" | "uint16_le" -> 2, 2, 65535
-  | "uint24" | "uint24_le" -> 3, 3, 16777215
-  | "uint32" | "uint32_le" -> 4, 4, 4294967295
-  | "asn1_len8" -> 1, 2, 255
-  | "asn1_len" | "bitcoin_varint" -> 1, 5, 4294967295
+  | "uint8" -> 1, 1, 255uL
+  | "uint16" | "uint16_le" -> 2, 2, 65535uL
+  | "uint24" | "uint24_le" -> 3, 3, 16777215uL
+  | "uint32" | "uint32_le" -> 4, 4, 4294967295uL
+  | "uint64" | "uint64_le" -> 8, 8, 18446744073709551615uL
+  | "asn1_len8" -> 1, 2, 255uL
+  | "asn1_len" | "bitcoin_varint" -> 1, 5, 4294967295uL
   | s -> failwith (s^" is not a base type and can't be used as symbolic length")
        
 let ends_with str suff =
@@ -174,6 +175,7 @@ let rec sizeof = function
     | "uint16" | "uint16_le" -> { len_len = 0; min_len = 2; max_len = 2; min_count = 0; max_count = 0; vl = false; has_lserializer = not_is_le; meta = MetadataTotal }
     | "uint24" | "uint24_le" -> { len_len = 0; min_len = 3; max_len = 3; min_count = 0; max_count = 0; vl = false; has_lserializer = not_is_le; meta = MetadataTotal }
     | "uint32" | "uint32_le" -> { len_len = 0; min_len = 4; max_len = 4; min_count = 0; max_count = 0; vl = false; has_lserializer = not_is_le; meta = MetadataTotal }
+    | "uint64" | "uint64_le" -> { len_len = 0; min_len = 8; max_len = 8; min_count = 0; max_count = 0; vl = false; has_lserializer = not_is_le; meta = MetadataTotal }
     | "asn1_len8" -> { len_len = 0; min_len = 1; max_len = 2; min_count = 0; max_count = 0; vl = true; has_lserializer = false; meta = MetadataDefault }
     | "asn1_len"
     | "bitcoin_varint" -> { len_len = 0; min_len = 1; max_len = 5; min_count = 0; max_count = 0; vl = true; has_lserializer = true; meta = MetadataDefault }
@@ -189,6 +191,7 @@ let compile_type = function
   | "uint16" | "uint16_le" -> "U16.t"
   | "uint24" | "uint24_le" -> "(LPI.bounded_integer 3)"
   | "uint32" | "uint32_le" -> "U32.t"
+  | "uint64" | "uint64_le" -> "U64.t"
   | (( "asn1_len8" | "asn1_len") as s) -> failwith (sprintf "compile_type: for now %s not standalone" s)
   | "bitcoin_varint" -> "U32.t"
   | "Empty" -> "unit"
@@ -244,6 +247,8 @@ let pcombinator_name = function
   | "uint24_le" -> "(LPI.parse_bounded_integer_le 3)"
   | "uint32" -> "LPI.parse_u32"
   | "uint32_le" -> "LPI.parse_u32_le"
+  | "uint64" -> "LPI.parse_u64"
+  | "uint64_le" -> "LPI.parse_u64_le"
   | "asn1_len" -> failwith "pcombinator_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LPI.parse_bcvli"
   | "Empty" -> "LP.parse_empty"
@@ -258,6 +263,8 @@ let scombinator_name = function
   | "uint24_le" -> "(LPI.serialize_bounded_integer_le 3)"
   | "uint32" -> "LPI.serialize_u32"
   | "uint32_le" -> "LPI.serialize_u32_le"
+  | "uint64" -> "LPI.serialize_u64"
+  | "uint64_le" -> "LPI.serialize_u64_le"
   | "asn1_len" -> failwith "scombinator_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LPI.serialize_bcvli"
   | "Empty" -> "LP.serialize_empty"
@@ -272,6 +279,8 @@ let pcombinator32_name = function
   | "uint24_le" -> "LS.parse32_bounded_integer_le_3"
   | "uint32" -> "LS.parse32_u32"
   | "uint32_le" -> "LS.parse32_u32_le"
+  | "uint64" -> "LS.parse32_u64"
+  | "uint64_le" -> "LS.parse32_u64_le"
   | "asn1_len" -> failwith "pcombinator32_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LS.parse32_bcvli"
   | "Empty" -> "LS.parse32_empty"
@@ -286,6 +295,8 @@ let scombinator32_name = function
   | "uint24_le" -> "LS.serialize32_bounded_integer_le_3"
   | "uint32" -> "LS.serialize32_u32"
   | "uint32_le" -> "LS.serialize32_u32_le"
+  | "uint64" -> "LS.serialize32_u64"
+  | "uint64_le" -> "LS.serialize32_u64_le"
   | "asn1_len" -> failwith "scombinator32_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LS.serialize32_bcvli"
   | "Empty" -> "LS.serialize32_empty"
@@ -299,10 +310,12 @@ let lscombinator_name = function
     "uint16_le" |
       "uint24" |
       "uint24_le" |
-      "uint32_le"
+      "uint32_le" |
+      "uint64_le"
   ) as s
     -> failwith ("lscombinator_name: " ^ s ^ " not implemented")
   | "uint32" -> "LL.serialize32_u32"
+  | "uint64" -> "LL.serialize32_u64"
   | "bitcoin_varint" -> "LL.serialize32_bcvli"
   | "Empty" -> "LL.serialize32_empty"
   | "Fail" -> "LL.serialize32_false"
@@ -317,6 +330,8 @@ let size32_name = function
   | "uint24_le" -> "(LS.size32_constant (LS.serialize_bounded_integer_le 3) 3ul ())"
   | "uint32" -> "LS.size32_u32"
   | "uint32_le" -> "LS.size32_u32_le"
+  | "uint64" -> "LS.size32_u64"
+  | "uint64_le" -> "(LS.size32_constant LS.serialize_u64_le 8ul ())"
   | "asn1_len" -> failwith "size32_name: for now asn1_len not standalone"
   | "bitcoin_varint" -> "LS.size32_bcvli"
   | "Empty" -> "LS.size32_empty"
@@ -394,6 +409,8 @@ let leaf_writer_name = function
   | "uint24_le" -> "LL.write_u32_le"
   | "uint32" -> "LL.write_u32"
   | "uint32_le" -> "LL.write_u32_le"
+  | "uint64" -> "LL.write_u64"
+  | "uint64_le" -> "LL.write_u64_le"
   | "asn1_len" -> "(LL.write_bounded_der_length32 0 4294967295)"
   | "bitcoin_varint" -> "LL.write_bcvli"
   | _ -> failwith "leaf_writer_name: should only be called for enum repr"
@@ -437,7 +454,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
       let li' = get_leninfo (tn^"@"^cst) in
       (* Important: must reflect parse_bounded_vldata_strong_kind computation *)
       let max' = min li.max_len (match li'.max_len with
-      | 1 -> 255 | 2 ->  65535 | 3 -> 16777215 | 4 -> 4294967295
+      | 1 -> 255 | 2 ->  65535 | 3 -> 16777215 | 4 -> 4294967295 | 8 -> 18446744073709551615
       | _ -> failwith "bad vldata") in
       let meta' = if li.meta = MetadataFail then li.meta else MetadataDefault in
       (* N.B. the len_len will be counted in the explicit length field *)
@@ -613,6 +630,8 @@ let lwp_combinator_name = function
   | "uint24_le" -> None (* failwith "(LWP.parse_bounded_integer_le 3ul): not implemented" *)
   | "uint32" -> Some "LWP.parse_u32"
   | "uint32_le" -> None (* failwith "LWP.parse_u32_le: not implemented" *)
+  | "uint64" -> Some "LWP.parse_u64"
+  | "uint64_le" -> None (* failwith "LWP.parse_u64_le: not implemented" *)
   | "asn1_len" -> None (* failwith "pcombinator_name: for now asn1_len not standalone" *)
   | "bitcoin_varint" -> None (* failwith "LWP.parse_bcvli: not implemented" *)
   | "Empty" -> Some "LWP.emp"
@@ -675,7 +694,8 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
 		| EnumFieldAnonymous 255 -> "uint8", "z", 1
 		| EnumFieldAnonymous 65535 -> patch_little_endian "uint16", "us", 2
 		| EnumFieldAnonymous 4294967295 -> patch_little_endian "uint32", "ul", 4
-		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32 supported)")
+                | EnumFieldAnonymous 18446744073709551615 -> patch_little_endian "uint64", "uL", 8
+		| _ -> failwith ("Cannot represent enum type "^n^" (only u8, u16, u32, u64 supported)")
 	in
 
   if is_open then
@@ -2994,6 +3014,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w i "module U8 = FStar.UInt8\n";
   w i "module U16 = FStar.UInt16\n";
   w i "module U32 = FStar.UInt32\n";
+  w i "module U64 = FStar.UInt64\n";
   w i "module LP = LowParse.Spec.Base\n";
   wh i "module LS = LowParse.SLow.Base\n";
   w i "module LPI = LowParse.Spec.AllIntegers\n";
@@ -3013,6 +3034,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   w o "module U8 = FStar.UInt8\n";
   w o "module U16 = FStar.UInt16\n";
   w o "module U32 = FStar.UInt32\n";
+  w o "module U64 = FStar.UInt64\n";
   w o "module LP = LowParse.Spec\n";
   wh o "module LS = LowParse.SLow\n";
   w o "module LPI = LowParse.Spec.AllIntegers\n";
