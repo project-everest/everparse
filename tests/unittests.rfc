@@ -214,3 +214,40 @@ struct {
    case b: t4;
   } body;
 } t6le;
+
+struct {
+  uint8 x8;
+  uint16 x16;
+  uint32 x32;
+  uint64 x64;
+  uint64 y64;
+  uint32 y32;
+  uint16 y16;
+  uint8 y8;
+} t37;
+
+struct {
+  tag t;
+  select(t) {
+   case a: t37;
+   case b: uint64;
+  } body;
+} t38;
+
+struct {
+  t37 x;
+  t38 y;
+} t39;
+
+struct {
+  tag2 t;
+  select(t) {
+   case w: t37;
+   default: uint64;
+  } body;
+} t40;
+
+struct {
+  t39 x;
+  t40 y;
+} t41;

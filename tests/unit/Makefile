@@ -32,7 +32,7 @@ KREMLIN = $(KREMLIN_HOME)/krml \
 	 -tmpdir out -I .. \
 	 -bundle 'LowParse.\*' \
 	 $(HEADERS) \
-	 -warn-error -9
+	 -warn-error '@2'
 
 QD_FILES = $(wildcard *.fst *.fsti)
 
@@ -72,7 +72,7 @@ ALL_KRML_FILES := $(filter-out kremlin/prims.krml,$(ALL_KRML_FILES))
 
 extract: $(ALL_KRML_FILES) # from .depend
 	-@mkdir out
-	$(KREMLIN) -warn-error '@2' -skip-compilation $^
+	$(KREMLIN) -skip-compilation $^
 
 test.exe: $(ALL_KRML_FILES) kremlin/Test.krml
 	-@mkdir out
