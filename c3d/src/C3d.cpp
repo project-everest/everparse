@@ -413,7 +413,7 @@ public:
         State = SeenType;
         return AttributeApplied;
 
-      case SeenType:
+      case SeenType: {
         Expr *ArgExpr = Attr.getArgAsExpr(0);
 
         std::string Str = "c3d_parameter:";
@@ -432,6 +432,11 @@ public:
 
         State = SeenExpr;
         return AttributeApplied;
+     }
+
+     default:
+        LLVM_DEBUG(llvm::dbgs() << "c3d: WARNING default case in handleDeclAttribute\n");
+        return NotHandled;
     }
   }
 };
