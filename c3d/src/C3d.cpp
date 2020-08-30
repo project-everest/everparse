@@ -214,7 +214,7 @@ public:
     // which case no need to add this field to the scope
     // TODO: this did not work out. Why?
     // LookupResult LR(P->getActions(), D->getIdentifier(), D->getBeginLoc(), Sema::LookupAnyName);
-    // if (LR.getResultKind() != LookupResult::Found) {
+    // if (LR.getResultKind() != LookupResult::Found) { ... }
     Sema &S = P->getActions();
     bool InScope = false;
     // TODO: figure out how to use specific_decl_iterator
