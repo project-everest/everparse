@@ -407,7 +407,7 @@ let leaf_reader_name = function
   | "bitcoin_varint" -> "LL.read_bcvli"
   | "Empty" -> "LL.read_empty"
   | "Fail" -> "LL.read_false"
-  | t -> sprintf "%s_reader" t
+  | t -> sprintf "%s_reader" (String.uncapitalize_ascii t)
 
 let leaf_writer_name = function
   | "opaque" | "uint8" -> "LL.write_u8"
