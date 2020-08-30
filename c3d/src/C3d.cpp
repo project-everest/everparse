@@ -24,6 +24,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/Support/Debug.h"
@@ -441,12 +442,118 @@ public:
   }
 };
 
+class C3dWhereAttrInfo : public C3dSimpleSpelling, C3dDiagOnStruct {
+public:
+  C3dWhereAttrInfo():
+    C3dSimpleSpelling("everparse::where"),
+    C3dDiagOnStruct("everparse::where")
+  {
+    NumArgs = 1;
+  }
+
+  AttrHandling parseAttributePayload(Parser *P,
+                                     ParsedAttributes &Attrs,
+                                     Declarator *D,
+                                     IdentifierInfo *AttrName,
+                                     SourceLocation AttrNameLoc,
+                                     SourceLocation *EndLoc,
+                                     IdentifierInfo *ScopeName,
+                                     SourceLocation ScopeLoc) const override {
+    // Note: we don't have access to the internal API of the Parser here, which
+    // makes things somewhat difficult. For instance, we don't have access to
+    // ConsumeParen(), or ExpectAndConsume()...
+    LLVM_DEBUG(llvm::dbgs() << "c3d: parsing argument to everparse::where\n");
+
+    // Defer to the parser to produce a good error message. TODO is this right?
+    if (P->getCurToken().getKind() != tok::l_paren)
+      return AttributeNotApplied;
+
+    // Eat opening left parenthesis.
+    P->ConsumeAnyToken();
+
+    ExprResult E;
+
+    // We push a new scope and introduce a dummy 'this' variable
+    // to parse the where clause. Then we pop it away, so it does
+    // not leak.
+    {
+        // Push a new scope. We use the DeclScope flag which permits
+        // declarations inside the new scope. Otherwise, we get
+        // an assertion failure at the ExitScope(). (An alternative
+        // is to manually delete the Decl from this new scope.)
+        P->EnterScope(Scope::DeclScope);
+
+        Sema &S = P->getActions();
+
+        // A 'void' type
+        const Type *voidTy = S.getASTContext().VoidTy.getTypePtr();
+        QualType R = QualType(voidTy, 0);
+
+        // A dummy 'this' identifier
+        IdentifierInfo &IDD = P->getPreprocessor().getIdentifierTable().getOwn("this");
+
+        // Create a variable declaration for 'this', at 'void' type, and push it.
+        VarDecl *VD = VarDecl::Create(S.getASTContext(), S.CurContext,
+                AttrNameLoc, AttrNameLoc, &IDD, R,
+                nullptr,
+                SC_None);
+        VD->setImplicit(true);
+        S.PushOnScopeChains(VD, P->getCurScope());
+
+        // Parse the clause
+        E = P->ParseExpression();
+
+        // Pop the scope!
+        P->ExitScope();
+    }
+
+    if (!E.isUsable())
+      return consumeUntilClosingParenAndError(P);
+
+    // TODO: in the case of trailing tokens (e.g. too many arguments), the error
+    // message is not exactly mind-blowing
+    if (P->getCurToken().getKind() != tok::r_paren)
+      return consumeUntilClosingParenAndError(P);
+
+    // From ParseAttributeArgsCommon, this seems like a sensible thing to do.
+    SourceLocation RParen = P->getCurToken().getLocation();
+    if (EndLoc)
+      *EndLoc = RParen;
+
+    P->ConsumeAnyToken();
+
+    // We are done: register the ParsedAttr so that we see it later on.
+    ArgsVector ArgExprs;
+    ArgExprs.push_back(E.get());
+    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
+                 ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
+
+    return AttributeApplied;
+  }
+
+  AttrHandling handleDeclAttribute(Sema &S, Decl *D,
+                                   const ParsedAttr &Attr) const override {
+
+    // see C3dConstraintAttrInfo::handleDeclAttribute for explanation
+    Expr *ArgExpr = Attr.getArgAsExpr(0);
+
+    std::string Str = "c3d_where:";
+    llvm::raw_string_ostream out{Str};
+    ArgExpr->printPretty(out, nullptr, S.Context.getPrintingPolicy());
+    LLVM_DEBUG(llvm::dbgs() << "c3d: registering where " << Str << "\n");
+
+    D->addAttr(AnnotateAttr::Create(S.Context, Str, Attr.getRange()));
+    return AttributeApplied;
+  }
+};
+
 } // namespace
 
 static ParsedAttrInfoRegistry::Add<C3dProcessAttrInfo> X1("c3d_process", "recognize everparse::process");
 static ParsedAttrInfoRegistry::Add<C3dEntryPointAttrInfo> X2("c3d_entrypoint", "recognize everparse::entrypoint");
 static ParsedAttrInfoRegistry::Add<C3dConstraintAttrInfo> X3("c3d_constraint", "recognize everparse::constraint");
 static ParsedAttrInfoRegistry::Add<C3dParameterAttrInfo> X4("c3d_parameter", "recognize everparse::parameter");
+static ParsedAttrInfoRegistry::Add<C3dWhereAttrInfo> X5("c3d_where", "recognize everparse::where");
 
 //===----------------------------------------------------------------------===//
 
@@ -515,6 +622,7 @@ public:
     bool HasEntrypoint = false;
     AttrVec FilteredAttrs {};
     SmallVector<AnnotateAttr *, 4> Parameters {};
+    SmallVector<AnnotateAttr *, 4> WhereClauses {};
     for (const auto& A: R->attrs()) {
       if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
         LLVM_DEBUG(llvm::dbgs() << "c3d: record has attribute " << AA->getAnnotation() << "\n");
@@ -524,6 +632,8 @@ public:
           HasEntrypoint = true;
         else if (AA->getAnnotation().startswith("c3d_parameter:"))
           Parameters.push_back(AA);
+        else if (AA->getAnnotation().startswith("c3d_where:"))
+          WhereClauses.push_back(AA);
         else
           FilteredAttrs.push_back(AA);
       } else {
@@ -564,6 +674,27 @@ public:
     }
     if (State == InArgs)
       Out << ")";
+
+    // Printing where clause, joining them into a single conjunction
+    // since that's what 3d expects.
+    if (! WhereClauses.empty()) {
+        enum { First, Mid } State = First;
+        const int shift = strlen("c3d_where:");
+        Out << "\nwhere ";
+        for (const auto& W: WhereClauses) {
+            switch (State) {
+                case Mid:
+                    Out << " && ";
+                    // fall through!
+
+                case First:
+                    Out << "(" << W->getAnnotation().slice(shift, W->getAnnotation().size()) << ")";
+                    State = Mid;
+                    break;
+            }
+        }
+        Out << "\n";
+    }
 
     Out << " { \n";
 
