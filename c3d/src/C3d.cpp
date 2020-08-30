@@ -549,15 +549,16 @@ public:
     // Printing parameters
     enum { BeforeLParen, InArgs } State = BeforeLParen;
     for (const auto& A: Parameters) {
+      const int shift = strlen("c3d_parameter:");
       switch (State) {
         case BeforeLParen:
           Out << " (";
-          Out << A->getAnnotation().slice(14, A->getAnnotation().size());
+          Out << A->getAnnotation().slice(shift, A->getAnnotation().size());
           State = InArgs;
           break;
         case InArgs:
           Out << ", ";
-          Out << A->getAnnotation().slice(14, A->getAnnotation().size());
+          Out << A->getAnnotation().slice(shift, A->getAnnotation().size());
           break;
       }
     }
