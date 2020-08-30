@@ -306,9 +306,9 @@ let scombinator32_name = function
 let lscombinator_name = function
   | "opaque" | "uint8" -> "LL.serialize32_u8"
   | "uint16" -> "LL.serialize32_u16"
+  | "uint24" -> "(LL.serialize32_bounded_integer_3 ())"
   | (
     "uint16_le" |
-      "uint24" |
       "uint24_le" |
       "uint32_le" |
       "uint64_le"
@@ -397,8 +397,8 @@ let leaf_reader_name = function
   | "opaque" | "uint8" -> "LL.read_u8"
   | "uint16" -> "LL.read_u16"
   | "uint16_le" -> "LL.read_u16_le"
-  | "uint24" -> "LL.read_u32"
-  | "uint24_le" -> "LL.read_u32_le"
+  | "uint24" -> "(LL.read_bounded_integer_3 ())"
+  | "uint24_le" -> "LL.read_bounded_integer_le_3"
   | "uint32" -> "LL.read_u32"
   | "uint32_le" -> "LL.read_u32_le"
   | "uint64" -> "LL.read_u64"
@@ -413,8 +413,8 @@ let leaf_writer_name = function
   | "opaque" | "uint8" -> "LL.write_u8"
   | "uint16" -> "LL.write_u16"
   | "uint16_le" -> "LL.write_u16_le"
-  | "uint24" -> "LL.write_u32"
-  | "uint24_le" -> "LL.write_u32_le"
+  | "uint24" -> "(LL.write_bounded_integer_3 ())"
+  | "uint24_le" -> "LL.write_bounded_integer_le_3"
   | "uint32" -> "LL.write_u32"
   | "uint32_le" -> "LL.write_u32_le"
   | "uint64" -> "LL.write_u64"
