@@ -147,20 +147,21 @@ let size_of_field (env:env_t) (f:field)
     | None ->
       base_size
 
-    | Some (e, ConstantSize) ->
-      let n = value_of_const_expr env e in
+    | Some (n, ByteArrayByteSize) ->
+      if base_size <> Fixed 1
+      then error "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
+                  f.range;
+      let n = value_of_const_expr env n in
       begin
       match n with
       | Some (Inr (_, k)) -> Fixed k
 
       | _ ->
-        error (Printf.sprintf "Constant sized array expression %s could not be statically evaluated to a constant"
-                                (print_expr e))
-              f.range
+        Variable
       end
 
-    | Some (n, VariableSizeEq)
-    | Some (n, SingleElementVariableSizeEq) ->
+    | Some (n, ArrayByteSize)
+    | Some (n, ArrayByteSizeSingleElementArray) ->
       let n = value_of_const_expr env n in
       begin
       match n with

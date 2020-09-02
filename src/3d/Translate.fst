@@ -634,14 +634,14 @@ let translate_field (f:A.field) : ML T.struct_field =
     let t =
         match sf.field_array_opt with
         | None -> t
-        | Some (e, ConstantSize)
-        | Some (e, VariableSizeEq) ->
+        | Some (e, ByteArrayByteSize)
+        | Some (e, ArrayByteSize) ->
           let e = translate_expr e in
           T.T_app (with_range "nlist" sf.field_type.range) [Inr e; Inl t]
-        | Some (e, VariableSizeLeq) ->
+        | Some (e, ArrayByteSizeAtMost) ->
           let e = translate_expr e in
           T.T_app (with_range "t_at_most" sf.field_type.range) [Inr e; Inl t]
-        | Some (e, SingleElementVariableSizeEq) ->
+        | Some (e, ArrayByteSizeSingleElementArray) ->
           let e = translate_expr e in
           T.T_app (with_range "t_exact" sf.field_type.range) [Inr e; Inl t]
     in
@@ -670,7 +670,7 @@ let translate_field (f:A.field) : ML T.struct_field =
       | c -> T.T_with_comment t c
     in
     if T.T_pointer? t
-    then failwith "Type-checking should have forbitten fields with pointer types"
+    then failwith "Type-checking should have forbidden fields with pointer types"
     else
       T.({sf_dependence=sf.field_dependence;
           sf_ident=sf.field_ident;
