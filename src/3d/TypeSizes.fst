@@ -151,8 +151,7 @@ let size_of_field (env:env_t) (f:field)
       let n = value_of_const_expr env e in
       begin
       match n with
-      | Some (Inr (_, k)) ->
-        product_size base_size k
+      | Some (Inr (_, k)) -> Fixed k
 
       | _ ->
         error (Printf.sprintf "Constant sized array expression %s could not be statically evaluated to a constant"
@@ -165,8 +164,7 @@ let size_of_field (env:env_t) (f:field)
       let n = value_of_const_expr env n in
       begin
       match n with
-      | Some (Inr (_, k)) ->
-        product_size base_size k
+      | Some (Inr (_, k)) -> Fixed k
 
       | _ ->
         Variable
