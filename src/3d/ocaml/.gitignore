@@ -1,0 +1,8 @@
+_build/
+Main.native
+**/*.ml
+
+!Batch.ml
+!Hashtable.ml
+!OS.ml
+!ParserDriver.ml
