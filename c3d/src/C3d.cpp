@@ -46,7 +46,18 @@ using namespace clang;
 // Note that this is largely inspired by
 // https://clang.llvm.org/docs/ClangPlugins.html#defining-attributes
 
+// Represents the arguments to VarDecl::Create, except the AST/Decl contexts.
+struct c3d_var_info {
+    SourceLocation    StartLoc;
+    SourceLocation    IdLoc;
+    IdentifierInfo *  Id;
+    QualType          T;
+    TypeSourceInfo *  TInfo;
+    StorageClass      S;
+};
+
 namespace {
+
 
 // TODO (general things):
 // - settle on {} vs () for constructors (just be consistent)
@@ -81,6 +92,79 @@ class C3dSimpleSpelling: public ParsedAttrInfo {
 private:
   Spelling S[1];
 
+protected:
+  static std::vector<c3d_var_info> c3d_scope;
+
+  static void C3dPushVar(Parser *P, SourceLocation StartLoc, SourceLocation IdLoc,
+                         IdentifierInfo *Id, QualType T,
+                         TypeSourceInfo *TInfo, StorageClass S) {
+      LLVM_DEBUG(llvm::dbgs() << "c3d pushing variable " << Id->getName() << " \n");
+      c3d_var_info v = {
+          .StartLoc  = StartLoc,
+          .IdLoc     = IdLoc,
+          .Id        = Id,
+          .T         = T,
+          .TInfo     = TInfo,
+          .S         = S,
+      };
+      c3d_scope.push_back(v);
+  }
+
+  static void C3dClearScope() {
+    LLVM_DEBUG(llvm::dbgs() << "c3d CLEARING scope\n");
+    c3d_scope.clear();
+  }
+
+  // Pop one variable from the C3d scope (FIXME: something more generic please)
+  static void C3dPopVar() {
+      c3d_scope.pop_back();
+  }
+
+  static void C3dEnterScope(Parser *P) {
+      // LLVM_DEBUG(llvm::dbgs() << "c3d entering scope\n");
+      Sema &S = P->getActions();
+
+      P->EnterScope(Scope::DeclScope);
+
+      // Populate scope
+      for (auto vtup : c3d_scope) {
+        VarDecl *VD;
+        VD = VarDecl::Create(S.getASTContext(), S.CurContext,
+                             vtup.StartLoc, vtup.IdLoc,
+                             vtup.Id, vtup.T, vtup.TInfo, vtup.S);
+        VD->setImplicit(true);
+
+        LLVM_DEBUG(llvm::dbgs() << "c3d pushing " << vtup.Id->getName() << " to parser\n");
+        // Doing this makes sure Sema is aware of the new scope entry, meaning this name
+        // will be in scope when parsing the expression. (Parsing and scope
+        // resolution are intertwined.)
+        S.PushOnScopeChains(VD, P->getCurScope());
+
+        // This does not suffice, as it only modifies the parser's scope, not the
+        // semantic action's scope. It was previously paired with RemoveDecl right
+        // after parsing.
+        //P->getCurScope()->AddDecl(VD);
+      }
+      // LLVM_DEBUG(llvm::dbgs() << "c3d entered scope OK!\n");
+  }
+
+  static void C3dExitScope(Parser *P) {
+      // LLVM_DEBUG(llvm::dbgs() << "c3d exiting scope\n");
+
+      // Just pop the scope
+      P->ExitScope();
+  }
+
+  // Parses an expression in a scope extended with all the symbols
+  // in c3d_scope pushed into the scope. Pops the scope afterwards.
+  static ExprResult C3dParseExpr (Parser *P) {
+      C3dEnterScope(P);
+      ExprResult E = P->ParseExpression();
+      C3dExitScope (P);
+      LLVM_DEBUG(llvm::dbgs() << "c3d parsed '" << "something" << "'\n");
+      return E;
+  }
+
 public:
   C3dSimpleSpelling(const char *SpellingStr)
   {
@@ -90,6 +174,7 @@ public:
   }
 };
 
+std::vector<c3d_var_info> C3dSimpleSpelling::c3d_scope;
 
 // A general class for an attribute with no arguments that goes onto a struct
 // type declaration. See tests/basic0.h for proper placement of this attribute.
@@ -126,16 +211,6 @@ public:
   }
 };
 
-struct C3dProcessAttrInfo: TrivialC3dAttrInfo {
-  C3dProcessAttrInfo(): TrivialC3dAttrInfo{"everparse::process", "c3d_process"} {
-  }
-};
-
-struct C3dEntryPointAttrInfo: TrivialC3dAttrInfo {
-  C3dEntryPointAttrInfo(): TrivialC3dAttrInfo{"everparse::entrypoint", "c3d_entrypoint"} {
-  }
-};
-
 // When doing custom parsing, consuming everything until the next right paren
 // mimics the behavior of the parser, and provide better parser recovery so
 // that the rest of the declaration can be parsed properly.
@@ -143,6 +218,85 @@ ParsedAttrInfo::AttrHandling consumeUntilClosingParenAndError(Parser *P) {
   P->SkipUntil(tok::r_paren);
   return ParsedAttrInfo::AttributeNotApplied;
 }
+
+class C3dProcessAttrInfo : public C3dSimpleSpelling, C3dDiagOnStruct {
+public:
+  C3dProcessAttrInfo():
+    C3dSimpleSpelling("everparse::process"),
+    C3dDiagOnStruct("everparse::process")
+  {
+    NumArgs = 1;
+  }
+
+  AttrHandling parseAttributePayload(Parser *P,
+                                     ParsedAttributes &Attrs,
+                                     Declarator *D,
+                                     IdentifierInfo *AttrName,
+                                     SourceLocation AttrNameLoc,
+                                     SourceLocation *EndLoc,
+                                     IdentifierInfo *ScopeName,
+                                     SourceLocation ScopeLoc) const override {
+    /*
+     * This is a bit of a hack: when we reach an everparse::process(..) attribute,
+     * we clear the scope since it could contain stuff from the previous decl.
+     * We leverage the parseAttributePayload method for this, since we need to
+     * clear the scope before attempting to parse the following attributes.
+     * This implies everparse::process must come before everparse::parameter
+     * and everparse::where.
+     */
+    C3dClearScope();
+
+    LLVM_DEBUG(llvm::dbgs() << "c3d: parseAttributePayload for everparse::process\n");
+
+    /*
+     * We parse the (expression) argument and register it, but we don't do 
+     * anything with it: it is just so that we see the attribute later on.
+     */
+    P->ConsumeAnyToken();
+    ExprResult E = P->ParseExpression();
+    if (!E.isUsable())
+      return consumeUntilClosingParenAndError(P);
+
+    if (P->getCurToken().getKind() != tok::r_paren)
+      return consumeUntilClosingParenAndError(P);
+    P->SkipUntil(tok::r_paren);
+
+    ArgsVector ArgExprs;
+    ArgExprs.push_back(E.get());
+    Attrs.addNew(AttrName, AttrNameLoc, ScopeName, ScopeLoc,
+                 ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
+
+    return AttributeApplied;
+  }
+
+  AttrHandling handleDeclAttribute(Sema &S, Decl *D,
+                                   const ParsedAttr &Attr) const override {
+    // Check if the decl is at file scope.
+    // TODO: accept things that are within a C++ namespace so that we can work
+    // in C++ mode.
+    // TODO: move this into diagAppertainsToDecl for better error reporting? the
+    // original Attribute plugin did this check here so I'm unsure.
+  
+    LLVM_DEBUG(llvm::dbgs() << "c3d: handleDeclAttribute for everparse::process\n");
+    
+    if (!D->getDeclContext()->isFileContext()) {
+      unsigned ID = S.getDiagnostics().getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "%0 attribute only allowed at file scope");
+      S.Diag(Attr.getLoc(), ID) << SpellingStr;
+      return AttributeNotApplied;
+    }
+
+    // Attach an annotate attribute to the Decl.
+    D->addAttr(AnnotateAttr::Create(S.Context, "c3d_process", Attr.getRange()));
+    return AttributeApplied;
+  }
+};
+
+struct C3dEntryPointAttrInfo: TrivialC3dAttrInfo {
+  C3dEntryPointAttrInfo(): TrivialC3dAttrInfo{"everparse::entrypoint", "c3d_entrypoint"} {
+  }
+};
 
 // This one recognizes the everparse::constraint attribute, validates it,
 // renders it as a string and leaves that as a (built-in) annotate attribute to
@@ -206,46 +360,28 @@ public:
       return consumeUntilClosingParenAndError(P);
     }
 
+    Sema &S = P->getActions();
+
     // Extend the scope so that we don't have resolution errors. We fake a
     // variable declaration just so that the name resolution is happy, and then
     // assume that the current context will be dropped anyhow.
     LLVM_DEBUG(llvm::dbgs() << "c3d: scope extension! " << D->getIdentifier()->getNameStart() << "\n");
-
-    // Check if we are accumulating another constraint on the same field, in
-    // which case no need to add this field to the scope
-    // TODO: this did not work out. Why?
-    // LookupResult LR(P->getActions(), D->getIdentifier(), D->getBeginLoc(), Sema::LookupAnyName);
-    // if (LR.getResultKind() != LookupResult::Found) { ... }
-    Sema &S = P->getActions();
-    bool InScope = false;
-    // TODO: figure out how to use specific_decl_iterator
-    // TODO: not all declarations have names
-    for (const auto &Decl: S.getCurScope()->decls())
-      if (const auto *VD = dyn_cast<VarDecl>(Decl))
-        if (VD->getName() == D->getIdentifier()->getName())
-          InScope = true;
+    // Check if we are accumulating another constraint on the same
+    // field, in which case no need to add this field to the scope. It
+    // can only be in the last posititon.
+    bool InScope =
+        !c3d_scope.empty() &&
+         (c3d_scope.back().Id->getName() == D->getIdentifier()->getName());
 
     if (!InScope) {
       TypeSourceInfo *T = S.GetTypeForDeclarator(*D, P->getCurScope());
       QualType R = T->getType();
-      VarDecl *VD = VarDecl::Create(S.getASTContext(), S.CurContext,
-          D->getBeginLoc(), D->getIdentifierLoc(), D->getIdentifier(), R,
-          T,
-          SC_None);
-      VD->setImplicit(true);
-      // Doing this makes sure Sema is aware of the new scope entry, meaning this name
-      // will be in scope when parsing the expression. (Parsing and scope
-      // resolution are intertwined.)
-      S.PushOnScopeChains(VD, P->getCurScope());
+      C3dPushVar(P, D->getBeginLoc(), D->getIdentifierLoc(),
+                 D->getIdentifier(), R,
+                 T, SC_None);
     }
 
-    // This does not suffice, as it only modifies the parser's scope, not the
-    // semantic action's scope. It was previously paired with RemoveDecl right
-    // after parsing.
-    //P->getCurScope()->AddDecl(VD);
-
-    // Parse the expression in an extended scope
-    ExprResult E = P->ParseExpression();
+    ExprResult E = C3dParseExpr(P);
 
     if (!E.isUsable())
       return consumeUntilClosingParenAndError(P);
@@ -357,17 +493,10 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "c3d: parameter type: " << QT.getAsString() << "\n");
 
     // TODO: the locations are not exactly optimal here
-    VarDecl *VD = VarDecl::Create(S.getASTContext(), S.CurContext,
-        AttrNameLoc, AttrNameLoc, ParamName, QT,
-        TS,
-        SC_None);
-    VD->setImplicit(true);
-    S.PushOnScopeChains(VD, P->getCurScope());
+    C3dPushVar(P, AttrNameLoc, AttrNameLoc, ParamName, QT, TS, SC_None);
 
-    // Mega-hack; consumes the ident and encodes it as an expression... but
-    // after we've added the ident into scope so as to avoid name resolution
-    // errors. UGLY!
-    ExprResult ER = P->ParseExpression();
+    ExprResult ER = C3dParseExpr(P);
+
     assert (ER.isUsable() && "This ident should have parsed");
 
     // TODO: in the case of trailing tokens (e.g. too many arguments), the error
@@ -436,7 +565,7 @@ public:
      }
 
      default: {
-        /* Silences a GCC warning */
+        /* Silences a GCC coverage warning */
         LLVM_DEBUG(llvm::dbgs() << "c3d: WARNING default case in handleDeclAttribute\n");
         return NotHandled;
      }
@@ -475,16 +604,9 @@ public:
 
     ExprResult E;
 
-    // We push a new scope and introduce a dummy 'this' variable
-    // to parse the where clause. Then we pop it away, so it does
-    // not leak.
+    // We push a dummy 'this' variable into the C3d scope before
+    // parsing.
     {
-        // Push a new scope. We use the DeclScope flag which permits
-        // declarations inside the new scope. Otherwise, we get
-        // an assertion failure at the ExitScope(). (An alternative
-        // is to manually delete the Decl from this new scope.)
-        P->EnterScope(Scope::DeclScope);
-
         Sema &S = P->getActions();
 
         // A 'void' type
@@ -494,19 +616,16 @@ public:
         // A dummy 'this' identifier
         IdentifierInfo &IDD = P->getPreprocessor().getIdentifierTable().getOwn("this");
 
-        // Create a variable declaration for 'this', at 'void' type, and push it.
-        VarDecl *VD = VarDecl::Create(S.getASTContext(), S.CurContext,
-                AttrNameLoc, AttrNameLoc, &IDD, R,
-                nullptr,
-                SC_None);
-        VD->setImplicit(true);
-        S.PushOnScopeChains(VD, P->getCurScope());
+        // Push a variable declaration for 'this' at type 'void'
+        C3dPushVar(P, AttrNameLoc, AttrNameLoc, &IDD, R,
+                   nullptr,
+                   SC_None);
 
-        // Parse the clause
-        E = P->ParseExpression();
+        E = C3dParseExpr(P);
 
-        // Pop the scope!
-        P->ExitScope();
+        // Pop the 'this', so it does not leak into, e.g., the constraints
+        // on fields.
+        C3dPopVar();
     }
 
     if (!E.isUsable())
@@ -829,4 +948,3 @@ public:
 
 static FrontendPluginRegistry::Add<PluginC3dAction>
     Y("c3d-plugin", "emit a 3d file write out a copy of the .h file stripped of its attributes");
-
