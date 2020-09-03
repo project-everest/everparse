@@ -19,10 +19,11 @@ endif
 OURCLANG=${CLANG_BUILD}/bin/clang
 
 # This is the compiler that will be used to compile the plugin
-# itself. It doesn't have to be clang: you can use gcc too, others
-# compiler *may* work too, but we support only clang. You *could*
+# itself. It doesn't have to be clang: you can use gcc too, other
+# compilers *may* work too, but we support only clang. You *could*
 # also point this to ${OURCLANG}, but might be terribly slow if
-# you compiled OURCLANG with debugging enabled.
+# you compiled OURCLANG with debugging enabled. On changing this
+# you should delete out/.
 CC = clang
 
 test: out
