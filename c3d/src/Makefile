@@ -16,11 +16,23 @@ else
 endif
 endif
 
+OURCLANG=${CLANG_BUILD}/bin/clang
+
+# This is the compiler that will be used to compile the plugin
+# itself. It doesn't have to be clang: you can use gcc too, others
+# compiler *may* work too, but we support only clang. You *could*
+# also point this to ${OURCLANG}, but might be terribly slow if
+# you compiled OURCLANG with debugging enabled.
+CC = clang
+
 test: out
 	make -C out/
-	${CLANG_BUILD}/bin/clang -mllvm -debug-only=c3d -std=c2x -fplugin=./out/C3d.so ${TESTFILE}
+	${OURCLANG} -mllvm -debug-only=c3d -std=c2x -fplugin=./out/C3d.so ${TESTFILE}
 	cat $(patsubst %.h,%.3d,${TESTFILE})
 
 out:
 	mkdir -p out
-	cd out/ && cmake -D LLVM_BUILD_ROOT=${CLANG_BUILD} ../
+	cd out/ && cmake -D LLVM_BUILD_ROOT=${CLANG_BUILD}	\
+		-D CMAKE_C_COMPILER=${CC}			\
+		-D CMAKE_CXX_COMPILER=${CC}			\
+		../
