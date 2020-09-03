@@ -685,7 +685,7 @@ public:
             switch (State) {
                 case Mid:
                     Out << " && ";
-                    // fall through!
+                    [[fallthrough]];
 
                 case First:
                     Out << "(" << W->getAnnotation().slice(shift, W->getAnnotation().size()) << ")";
