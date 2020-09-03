@@ -435,9 +435,11 @@ public:
         return AttributeApplied;
      }
 
-     default:
+     default: {
+        /* Silences a GCC warning */
         LLVM_DEBUG(llvm::dbgs() << "c3d: WARNING default case in handleDeclAttribute\n");
         return NotHandled;
+     }
     }
   }
 };
