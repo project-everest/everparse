@@ -13,3 +13,4 @@ qd
 tests/unit/*
 !tests/unit/Makefile
 **/out
+.*.swp
