@@ -222,7 +222,7 @@ let size_of_decl (env:env_t) (d:decl)
       in
       let size =
         match size with
-        | None -> Fixed 0
+        | None -> Fixed 0 //empty case type
         | Some s -> s
       in
       extend_with_size_of_typedef_names env names size
