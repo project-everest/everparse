@@ -68,6 +68,13 @@ let compute_static_asserts (env:TypeSizes.env_t)
         sizeof_assertions = sizeof_assertions
       }
 
+let no_static_asserts (sas: static_asserts) : Tot bool =
+  Nil? sas.includes &&
+  Nil? sas.sizeof_assertions
+
+let has_static_asserts (sas: static_asserts) : Tot bool =
+  not (no_static_asserts sas)
+
 let print_static_asserts (sas:static_asserts)
   : ML string
   = let open StaticAssertions in

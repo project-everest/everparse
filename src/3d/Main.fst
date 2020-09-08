@@ -100,14 +100,15 @@ let process_file (fn: string) : ML unit =
     FStar.IO.write_string h_file wrapper_header;
     FStar.IO.close_write_file h_file;
 
-
-    let c_static_asserts_file =
-      open_write_file
-        (Printf.sprintf "%s/%sStaticAssertions.c"
-          (Options.get_output_dir())
-          modul) in
-    FStar.IO.write_string c_static_asserts_file (StaticAssertions.print_static_asserts static_asserts);
-    FStar.IO.close_write_file c_static_asserts_file
+    if StaticAssertions.has_static_asserts static_asserts then begin
+      let c_static_asserts_file =
+        open_write_file
+          (Printf.sprintf "%s/%sStaticAssertions.c"
+            (Options.get_output_dir())
+            modul) in
+      FStar.IO.write_string c_static_asserts_file (StaticAssertions.print_static_asserts static_asserts);
+      FStar.IO.close_write_file c_static_asserts_file
+    end
 
 
 let go () : ML unit =
