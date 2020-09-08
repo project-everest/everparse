@@ -82,7 +82,7 @@ let process_file (fn: string) : ML unit =
     FStar.IO.write_string fsti_file (Target.print_decls_signature modul t_decls);
     FStar.IO.close_write_file fsti_file;
 
-    let wrapper_header, wrapper_impl = Target.print_c_entry modul env t_decls static_asserts in
+    let wrapper_header, wrapper_impl = Target.print_c_entry modul env t_decls in
 
     let c_file =
       open_write_file
@@ -98,7 +98,16 @@ let process_file (fn: string) : ML unit =
           (Options.get_output_dir())
           modul) in
     FStar.IO.write_string h_file wrapper_header;
-    FStar.IO.close_write_file h_file
+    FStar.IO.close_write_file h_file;
+
+
+    let c_static_asserts_file =
+      open_write_file
+        (Printf.sprintf "%s/%sStaticAssertions.c"
+          (Options.get_output_dir())
+          modul) in
+    FStar.IO.write_string c_static_asserts_file (StaticAssertions.print_static_asserts static_asserts);
+    FStar.IO.close_write_file c_static_asserts_file
 
 
 let go () : ML unit =
