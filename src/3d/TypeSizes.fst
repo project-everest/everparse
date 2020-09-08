@@ -149,8 +149,8 @@ let size_of_field (env:env_t) (f:field)
 
     | Some (n, ByteArrayByteSize) ->
       if base_size <> Fixed 1
-      then error "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
-                  f.range;
+      then warning "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
+                    f.range;
       let n = value_of_const_expr env n in
       begin
       match n with
