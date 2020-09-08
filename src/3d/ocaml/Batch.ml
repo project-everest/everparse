@@ -264,6 +264,7 @@ let add_copyright
       Printf.sprintf "%s.h" modul;
       Printf.sprintf "%sWrapper.c" modul;
       Printf.sprintf "%sWrapper.h" modul;
+      Printf.sprintf "%sStaticAssertions.c" modul;
     ]
   end
 
@@ -293,6 +294,7 @@ let collect_files_from
       Printf.sprintf "%s.h" modul;
       Printf.sprintf "%sWrapper.c" modul;
       Printf.sprintf "%sWrapper.h" modul;
+      Printf.sprintf "%sStaticAssertions.c" modul;
     ]
 
 let collect_files
