@@ -117,9 +117,6 @@ let lift_constant_size_leaf_reader #nz (#k:parser_kind nz) #t (#p:parser k t) (r
   = fun input startPosition ->
       LPL.read_with_perm r (LPL.jump_constant_size p sz ()) input startPosition
 
-[@ CMacro ]
-let validator_error_action_failed : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 5uL)
-
 inline_for_extraction
 noextract
 let with_drop_if
@@ -287,21 +284,6 @@ let validate_dep_pair
         with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v2 x input pos1)
 
 #pop-options
-
-[@ CMacro ]
-let validator_error_constraint_failed : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 6uL)
-
-[@ CInline ]
-let check_constraint_ok (ok:bool) (position:U64.t) : Tot U64.t =
-      if ok
-      then position
-      else validator_error_constraint_failed
-
-[@ CInline ]
-let check_constraint_ok_with_field_id (ok:bool) (startPosition: LPL.pos_t) (endPosition:U64.t) (fieldId: field_id) : Tot U64.t =
-      if ok
-      then endPosition
-      else LPL.set_validator_error_pos_and_code validator_error_constraint_failed startPosition fieldId
 
 #push-options "--z3rlimit 32"
 
