@@ -736,6 +736,43 @@ public:
   {
   }
 
+  bool VisitEnumDecl(EnumDecl *E) {
+    AttrVec FilteredAttrs {};
+    bool HasProcess = false;
+
+    LLVM_DEBUG(llvm::dbgs() << "c3d: visiting enum " << E->getName() << "\n");
+
+    for (const auto& A: E->attrs()) {
+      if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
+        LLVM_DEBUG(llvm::dbgs() << "c3d: enum has attribute " << AA->getAnnotation() << "\n");
+        if (AA->getAnnotation() == "c3d_process")
+          HasProcess = true;
+        else
+          FilteredAttrs.push_back(A);
+      } else {
+        FilteredAttrs.push_back(A);
+      }
+    }
+
+    if (!HasProcess)
+        return true;
+
+    E->dropAttrs();
+    E->setAttrs(FilteredAttrs);
+
+    Out << "UINT32 enum ";
+    Out << E->getName();
+    Out << " {\n";
+    for (const auto& D: E->enumerators()) {
+        Out << "  ";
+        D->print(Out, 2); // GM: the 2 seems ignored.
+        Out << ",\n";
+    }
+    Out << "}\n";
+
+    return true;
+  }
+
   bool VisitRecordDecl(RecordDecl *R) {
     LLVM_DEBUG(llvm::dbgs() << "c3d: visiting record " << R->getName() << "\n");
 
