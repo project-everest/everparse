@@ -265,7 +265,7 @@ public:
     // We are done: register the ParsedAttr so that we see it later on.
     ArgsVector ArgExprs;
     ArgExprs.push_back(E.get());
-    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
+    Attrs.addNew(AttrName, SourceRange(ScopeLoc, RParen), ScopeName, ScopeLoc,
                  ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
 
     return AttributeApplied;
@@ -619,14 +619,24 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "c3d: visiting record " << R->getName() << "\n");
 
     // Iterate over this record's attributes, collecting non-c3d attributes in
-    // filtered_attributes.
+    // filtered_attributes. We also remember some offsets for the first and last
+    // attributes.
     bool HasProcess = false;
     bool HasEntrypoint = false;
+    bool IsFirst = true;
+    SourceLocation Start, End;
     AttrVec FilteredAttrs {};
     SmallVector<AnnotateAttr *, 4> Parameters {};
     SmallVector<AnnotateAttr *, 4> WhereClauses {};
     for (const auto& A: R->attrs()) {
       if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
+        // Location-related business.
+        if (IsFirst) {
+          Start = AA->getLoc().getLocWithOffset(-6);
+          IsFirst = false;
+        }
+        End = AA->getRange().getEnd().getLocWithOffset(4);
+
         LLVM_DEBUG(llvm::dbgs() << "c3d: record has attribute " << AA->getAnnotation() << "\n");
         if (AA->getAnnotation() == "c3d_process")
           HasProcess = true;
@@ -651,6 +661,24 @@ public:
     // failure.
     R->dropAttrs();
     R->setAttrs(FilteredAttrs);
+
+    // Assuming no non-c3d attributes for now, meaning we can comment out the
+    // entire attribute block.
+    if (FilteredAttrs.size() > 0) {
+      LLVM_DEBUG(llvm::dbgs() << "c3d: TODO: more fine-grained handling when existing atttributes for: " << R->getName() << "\n");
+    } else if (!IsFirst) {
+      // Based on SemaDeclAttr.cpp, specifically ProcessDeclAttributeList, it
+      // seems like the range of the whole attribute list is not retained in any
+      // meaningful way on the resulting Decl, so we have right now no way to
+      // know where exactly the opening brackets are... so we do some guesswork
+      // for the time being.
+      //
+      // TODO: do something smarter, perhaps use the cursor API to move
+      // backwards until the token is found?
+      LLVM_DEBUG(llvm::dbgs() << "c3d: record " << R->getName() << " commenting out attributes\n");
+      this->R.InsertText(Start, "/*", true, true);
+      this->R.InsertText(End, "*/", true, true);
+    }
 
     // Interleaved printing
     if (HasEntrypoint)
@@ -703,10 +731,19 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "c3d: everparse::process found (entrypoint: " << HasEntrypoint << "), reviewing fields\n");
     for (const auto& F: R->fields()) {
       LLVM_DEBUG(llvm::dbgs() << "c3d: visiting field " << F->getNameAsString() << "\n");
+      bool IsFirst = true;
+      SourceLocation Start, End;
       AttrVec FilteredAttributes {};
       SmallVector<StringRef, 4> FoundConstraints {};
       for (const auto& A: F->attrs()) {
         if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
+          // Location-related business.
+          if (IsFirst) {
+            Start = AA->getLoc().getLocWithOffset(-4);
+            IsFirst = false;
+          }
+          End = AA->getRange().getEnd().getLocWithOffset(3);
+
           StringRef Annot = AA->getAnnotation();
           LLVM_DEBUG(llvm::dbgs() << "c3d: " << F->getNameAsString() << " has an attribute " << Annot << "\n");
           if (Annot.startswith("c3d_constraint:"))
@@ -719,6 +756,23 @@ public:
       }
       F->dropAttrs();
       F->setAttrs(FilteredAttributes);
+
+      if (FilteredAttributes.size() > 0) {
+        LLVM_DEBUG(llvm::dbgs() << "c3d: TODO: more fine-grained handling when existing atttributes for: " << R->getName() << "\n");
+      } else if (!IsFirst) {
+        // Based on SemaDeclAttr.cpp, specifically ProcessDeclAttributeList, it
+        // seems like the range of the whole attribute list is not retained in any
+        // meaningful way on the resulting Decl, so we have right now no way to
+        // know where exactly the opening brackets are... so we do some guesswork
+        // for the time being.
+        //
+        // TODO: do something smarter, perhaps use the cursor API to move
+        // backwards until the token is found?
+        LLVM_DEBUG(llvm::dbgs() << "c3d: field " << F->getName() << " commenting out attributes\n");
+        this->R.InsertText(Start, "/*", true, true);
+        this->R.InsertText(End, "*/", true, true);
+      }
+
 
       Out << "  ";
       F->print(Out, 2);
@@ -761,8 +815,9 @@ public:
     { }
 
   void HandleTranslationUnit(ASTContext &Context) override {
-    // Tedious string manipulations to figure out the destination file
     SourceManager& S = Context.getSourceManager();
+
+    // Tedious string manipulations to figure out the destination file
     const FileEntry *E = S.getFileEntryForID(S.getMainFileID());
     StringRef File, Ext;
     std::tie(File, Ext) = E->getName().rsplit(".");
@@ -775,8 +830,9 @@ public:
     // Open .3d file for writing
     std::error_code EC;
     llvm::raw_fd_ostream Out(NewFile, EC);
-
     // TODO: check EC
+
+    // This also initializes the Rewriter V.R
     C3dVisitor V(CI, Out);
 
     LLVM_DEBUG(llvm::dbgs() << "c3d: starting AST rewrite\n");
@@ -788,17 +844,10 @@ public:
     OutputH += ".preprocessed.h";
     llvm::raw_fd_ostream OutH { OutputH, EC };
 
-    // This crashes, but in theory it should allow us to rewrite the source file
-    // in-place and print it out in a nicer way, with the includes and all.
-    // TODO: debug and try to just comment out the attributes for nicer printing
-    // (suggestion by Guido)
-    // Attempt was:
-    /* const RewriteBuffer *RewriteBuf = V.R.getRewriteBufferFor(S.getMainFileID()); */
-    /* RewriteBuf->write(OutH); */
-
-    // TODO: this prints a file after C preprocessing, it's suboptimal but
-    // workable for now
-    Context.getTranslationUnitDecl()->print(OutH, 0, true);
+    // Our AST consumer has run and as a side-effect its Rewriter has
+    // accumulated edits. Render the edited buffer into our preprocessed file.
+    const RewriteBuffer &RewriteBuf = V.R.getEditBuffer(S.getMainFileID());
+    RewriteBuf.write(OutH);
 
     return;
   }
