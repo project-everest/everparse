@@ -30,6 +30,7 @@ inline_for_extraction
 let ___PUINT8 = LPL.puint8
 
 let triv = B.trivial_preorder LowParse.Bytes.byte
+inline_for_extraction
 let input_buffer_t = LPL.input_buffer_t
 
 let hinv = HS.mem -> Type

@@ -104,27 +104,6 @@ let is_krml
 
 let krml_args0 = OS.getenv_array "EVERPARSE_KREMLIN_OPTIONS"
 
-let all_krmls_in_dir
-  dir
-= let h = Unix.opendir dir in
-  let rec aux accu =
-    match
-      begin try
-        Some (Unix.readdir h)
-      with End_of_file -> None
-      end
-    with
-    | None -> accu
-    | Some entry ->
-      aux (if is_krml entry then (filename_concat dir entry :: accu) else accu)
-  in
-  let res = aux [] in
-  Unix.closedir h;
-  res
-
-let all_everparse_krmls =
-  all_krmls_in_dir ddd_prelude_home
-
 let remove_fst_and_krml_files
   out_dir
   (_, modul)
@@ -159,26 +138,32 @@ let produce_c_files
        then static_asserts :: l
        else l
      )
-    all_everparse_krmls
+    []
     files_and_modules
   in
   let krml_args =
     "-tmpdir" :: out_dir ::
     "-skip-compilation" ::
-    "-bundle" :: "ResultOps+EverParse3d.InputBuffer.Aux=Prims,C.\\*,FStar.\\*,LowStar.\\*,LowParse.\\*,Prelude,Prelude.\\*,Actions,EverParse3d.\\*[rename=EverParse,rename-prefix]" ::
-    "-warn-error" :: "-9@4" ::
+     "-bundle" :: "ResultOps,Prims,C.\\*,FStar.\\*,LowStar.\\*,LowParse.\\*,Prelude,Prelude.\\*,Actions,EverParse3d.\\*[rename=EverParse,rename-prefix]" ::
+    "-library" :: "ResultOps,Prims,C.\\*,FStar.\\*,LowStar.\\*,LowParse.\\*,Prelude,Prelude.\\*,Actions,EverParse3d.\\*" :: 
+   "-warn-error" :: "-9@4" ::
     "-fnoreturn-else" ::
     "-fparentheses" ::
     "-fcurly-braces" ::
     "-fmicrosoft" ::
     "-header" :: filename_concat ddd_home "noheader.txt" ::
     "-minimal" ::
-    "-add-include" :: "EverParse:\"EverParseEndianness.h\"" ::
-    "-static-header" :: "Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps" ::
+    "-add-include" :: "\"EverParse.h\"" ::
+    "-static-header" :: "Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps,LowParse.Low.ErrorCode" ::
     "-no-prefix" :: "LowParse.Slice" ::
     "-no-prefix" :: "LowParse.Low.BoundedInt" ::
     "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
     "-fextern-c" ::
+    filename_concat ddd_prelude_home "LowStar_Endianness.krml" ::
+    filename_concat ddd_prelude_home "LowParse_Slice.krml" ::
+    filename_concat ddd_prelude_home "LowParse_Low_ErrorCode.krml" ::
+    filename_concat ddd_prelude_home "ResultOps.krml" ::
+    filename_concat ddd_prelude_home "EverParse3d_InputBuffer_Aux.krml" ::
     (krml_args0 @ krml_files)
   in
   (* bundle M.Types.krml into M *)
@@ -345,9 +330,13 @@ let postprocess
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module out_dir) files_and_modules;
   (* produce the C files *)
+  let everparse_h = filename_concat out_dir "EverParse.h" in
+  remove_if_exists everparse_h;
   produce_c_files cleanup out_dir files_and_modules;
+  assert (not (Sys.file_exists everparse_h));
   (* copy ancillaries *)
   copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
+  copy (filename_concat (filename_concat ddd_home "prelude") "EverParse.h") everparse_h;
   copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h");
   (* add copyright *)
   List.iter (add_copyright out_dir) files_and_modules;
