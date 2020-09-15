@@ -174,7 +174,7 @@ let produce_c_files
     "-header" :: filename_concat ddd_home "noheader.txt" ::
     "-minimal" ::
     "-add-include" :: "EverParse:\"EverParseEndianness.h\"" ::
-    "-static-header" :: "Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps" ::
+    "-static-header" :: "Prelude.\\*,LowParse.Low.Base,LowParse.Low.ErrorCode,Prelude,Actions,ResultOps" ::
     "-no-prefix" :: "LowParse.Slice" ::
     "-no-prefix" :: "LowParse.Low.BoundedInt" ::
     "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
