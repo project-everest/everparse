@@ -670,6 +670,75 @@ public:
   }
 };
 
+class C3dSwitchAttrInfo : public C3dSimpleSpelling, C3dDiagOnStruct {
+public:
+  C3dWhereAttrInfo():
+    C3dSimpleSpelling("everparse::switch"),
+    C3dDiagOnStruct("everparse::switch")
+  {
+    NumArgs = 1;
+  }
+
+  AttrHandling parseAttributePayload(Parser *P,
+                                     ParsedAttributes &Attrs,
+                                     Declarator *D,
+                                     IdentifierInfo *AttrName,
+                                     SourceLocation AttrNameLoc,
+                                     SourceLocation *EndLoc,
+                                     IdentifierInfo *ScopeName,
+                                     SourceLocation ScopeLoc) const override {
+    LLVM_DEBUG(llvm::dbgs() << "c3d: parsing argument to everparse::switch\n");
+
+    // Defer to the parser to produce a good error message. TODO is this right?
+    if (P->getCurToken().getKind() != tok::l_paren)
+      return AttributeNotApplied;
+
+    // Eat opening left parenthesis.
+    P->ConsumeAnyToken();
+
+    ExprResult E = ParseExpr(P);
+
+    if (!E.isUsable())
+      return consumeUntilClosingParenAndError(P);
+
+    // TODO: in the case of trailing tokens (e.g. too many arguments), the error
+    // message is not exactly mind-blowing
+    if (P->getCurToken().getKind() != tok::r_paren)
+      return consumeUntilClosingParenAndError(P);
+
+    // From ParseAttributeArgsCommon, this seems like a sensible thing to do.
+    SourceLocation RParen = P->getCurToken().getLocation();
+    if (EndLoc)
+      *EndLoc = RParen;
+
+    P->ConsumeAnyToken();
+
+    // We are done: register the ParsedAttr so that we see it later on.
+    ArgsVector ArgExprs;
+    ArgExprs.push_back(E.get());
+    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
+                 ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
+
+    return AttributeApplied;
+  }
+
+  AttrHandling handleDeclAttribute(Sema &S, Decl *D,
+                                   const ParsedAttr &Attr) const override {
+
+    // see C3dConstraintAttrInfo::handleDeclAttribute for explanation
+    Expr *ArgExpr = Attr.getArgAsExpr(0);
+
+    std::string Str = "c3d_where:";
+    llvm::raw_string_ostream out{Str};
+    ArgExpr->printPretty(out, nullptr, S.Context.getPrintingPolicy());
+    LLVM_DEBUG(llvm::dbgs() << "c3d: registering where " << Str << "\n");
+
+    D->addAttr(AnnotateAttr::Create(S.Context, Str, Attr.getRange()));
+    return AttributeApplied;
+  }
+};
+
+
 } // namespace
 
 static ParsedAttrInfoRegistry::Add<C3dProcessAttrInfo> X1("c3d_process", "recognize everparse::process");
@@ -765,7 +834,17 @@ public:
     Out << " {\n";
     for (const auto& D: E->enumerators()) {
         Out << "  ";
-        D->print(Out, 2); // GM: the 2 seems ignored.
+
+        if (false) {
+          /* Print all initializers explicitly as integers */
+          Out << D->getName();
+          Out << " = ";
+          Out << D->getInitVal();
+        } else {
+          /* Print the declaration as it was parsed */
+          D->print(Out, 2);
+        }
+
         Out << ",\n";
     }
     Out << "}\n";
@@ -780,6 +859,18 @@ public:
     // filtered_attributes.
     bool HasProcess = false;
     bool HasEntrypoint = false;
+    enum { Struct, Union } kind;
+
+    /* Set `kind`, and abort if this is not a struct or a union */
+    if (R->isStruct()) {
+        kind = Struct;
+    } else if (R->isUnion()) {
+        kind = Union;
+    } else {
+      LLVM_DEBUG(llvm::dbgs() << "c3d: unrecognized record decl for " << R->getName() << "\n");
+      return false;
+    }
+
     AttrVec FilteredAttrs {};
     SmallVector<AnnotateAttr *, 4> Parameters {};
     SmallVector<AnnotateAttr *, 4> WhereClauses {};
@@ -813,8 +904,15 @@ public:
     // Interleaved printing
     if (HasEntrypoint)
       Out << "entrypoint\n";
-    Out << "typedef struct ";
-    Out << R->getName();
+
+    switch (kind) {
+    case Struct:
+      Out << "typedef struct ";
+      Out << R->getName();
+      break;
+    case Union:
+      Out << "casetype " << R->getName();
+    }
 
     // Printing parameters
     enum { BeforeLParen, InArgs } State = BeforeLParen;
