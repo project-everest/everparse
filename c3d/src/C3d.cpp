@@ -226,6 +226,10 @@ public:
     NumArgs = 1;
   }
 
+  // TODO: diagAppertainsToDecl ? It is not inherited from C3dDiagOnStruct,
+  // since C3dDiagOnStruct does not inherit from ParsedAttrInfo. It's default
+  // to true, which is fine for now.
+
   AttrHandling parseAttributePayload(Parser *P,
                                      ParsedAttributes &Attrs,
                                      Declarator *D,
