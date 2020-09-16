@@ -162,10 +162,13 @@ let produce_c_files
     all_everparse_krmls
     files_and_modules
   in
+  let krml_files = List.rev krml_files in
+  let everparse_bundle = "Prims,FStar.\\*,LowStar.\\*,C.\\*,LowParse.\\*,EverParse3d.\\*,ResultOps,Prelude.\\*,Prelude,Actions" in
   let krml_args =
     "-tmpdir" :: out_dir ::
     "-skip-compilation" ::
-    "-bundle" :: "ResultOps+EverParse3d.InputBuffer.Aux=Prims,C.\\*,FStar.\\*,LowStar.\\*,LowParse.\\*,Prelude,Prelude.\\*,Actions,EverParse3d.\\*[rename=EverParse,rename-prefix]" ::
+    "-bundle" :: Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_bundle ::
+    "-library" :: everparse_bundle ::
     "-warn-error" :: "-9@4" ::
     "-fnoreturn-else" ::
     "-fparentheses" ::
@@ -173,18 +176,18 @@ let produce_c_files
     "-fmicrosoft" ::
     "-header" :: filename_concat ddd_home "noheader.txt" ::
     "-minimal" ::
-    "-add-include" :: "EverParse:\"EverParseEndianness.h\"" ::
-    "-static-header" :: "Prelude.\\*,LowParse.Low.Base,LowParse.Low.ErrorCode,Prelude,Actions,ResultOps" ::
+    "-add-include" :: "\"EverParse.h\"" ::
+    "-static-header" :: everparse_bundle :: (* "LowParse.Low.ErrorCode,LowParse.Low.Base,Prelude.\\*,Prelude,Actions,ResultOps" :: *)
     "-no-prefix" :: "LowParse.Slice" ::
     "-no-prefix" :: "LowParse.Low.BoundedInt" ::
     "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
     "-fextern-c" ::
     (krml_args0 @ krml_files)
   in
-  (* bundle M.Types.krml into M *)
+  (* bundle M.Types.krml and EverParse into M *)
   let krml_args =
       let bundle_types = List.fold_left (fun acc (_, modul) ->
-        "-bundle"::(Printf.sprintf "%s=%s.Types" modul modul)::acc) [] files_and_modules in
+        "-bundle"::(Printf.sprintf "%s=%s.Types,%s" modul modul everparse_bundle)::acc) [] files_and_modules in
       krml_args@bundle_types in
   (* the argument list is too long, so we need to go through an argument file *)
   let argfile = filename_concat out_dir "kremlin_args.rsp" in
@@ -348,6 +351,9 @@ let postprocess
   produce_c_files cleanup out_dir files_and_modules;
   (* copy ancillaries *)
   copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
+  let dest_everparse_h = filename_concat out_dir "EverParse.h" in
+  assert (not (Sys.file_exists dest_everparse_h));
+  copy (filename_concat ddd_home (filename_concat "prelude" "EverParse.h")) dest_everparse_h;
   copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h");
   (* add copyright *)
   List.iter (add_copyright out_dir) files_and_modules;
