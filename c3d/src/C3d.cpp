@@ -388,12 +388,12 @@ public:
     //
     // TODO: submit a patch to clang to allow a plugin-managed opaque_ptr in the
     // storage area of the ParsedAttr
-    Attrs.addNewTypeAttr(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
+    Attrs.addNewTypeAttr(AttrName, SourceRange(ScopeLoc, RParen), ScopeName, ScopeLoc,
                  PT, ParsedAttr::AS_C2x);
 
     ArgsVector ArgExprs;
     ArgExprs.push_back(ER.get());
-    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
+    Attrs.addNew(AttrName, SourceRange(ScopeLoc, RParen), ScopeName, ScopeLoc,
                  ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
 
     return AttributeApplied;
@@ -527,7 +527,7 @@ public:
     // We are done: register the ParsedAttr so that we see it later on.
     ArgsVector ArgExprs;
     ArgExprs.push_back(E.get());
-    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
+    Attrs.addNew(AttrName, SourceRange(ScopeLoc, RParen), ScopeName, ScopeLoc,
                  ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
 
     return AttributeApplied;
