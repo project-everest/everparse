@@ -261,11 +261,12 @@ public:
 
     if (P->getCurToken().getKind() != tok::r_paren)
       return consumeUntilClosingParenAndError(P);
+    SourceLocation RParen = P->getCurToken().getLocation();
     P->SkipUntil(tok::r_paren);
 
     ArgsVector ArgExprs;
     ArgExprs.push_back(E.get());
-    Attrs.addNew(AttrName, AttrNameLoc, ScopeName, ScopeLoc,
+    Attrs.addNew(AttrName, SourceRange(ScopeLoc, RParen), ScopeName, ScopeLoc,
                  ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
 
     return AttributeApplied;
