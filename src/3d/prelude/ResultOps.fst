@@ -24,10 +24,19 @@ let error_reason_of_result (code:U64.t) : string =
   | _ -> "unspecified"
 
 [@ CMacro ]
+let validator_error_impossible : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 3uL)
+
+[@ CMacro ]
+let validator_error_list_size_not_multiple : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 4uL)
+
+[@ CMacro ]
 let validator_error_action_failed : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 5uL)
 
 [@ CMacro ]
 let validator_error_constraint_failed : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 6uL)
+
+[@ CMacro ]
+let validator_error_unexpected_padding : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 7uL)
 
 [@ CInline ]
 let check_constraint_ok (ok:bool) (position:U64.t) : Tot U64.t =

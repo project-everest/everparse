@@ -24,8 +24,23 @@ EverParse.rsp: $(ALL_KRML_FILES)
 	for f in $^ ; do echo $$f ; done > $@
 
 EverParse.h: EverParse.rsp
-	$(KREMLIN_HOME)/krml -skip-compilation -bundle 'ResultOps+EverParse3d.InputBuffer.Aux+Prelude.StaticHeader+LowParse.Low.ErrorCode=Prims,C.\*,FStar.\*,LowStar.\*,LowParse.\*,Prelude,Prelude.\*,Actions,EverParse3d.\*[rename=EverParse,rename-prefix]' -warn-error -9@4 -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -header ../noheader.txt -minimal -add-include 'EverParse:"EverParseEndianness.h"' -static-header Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps,LowParse.Low.ErrorCode -no-prefix LowParse.Slice -no-prefix LowParse.Low.BoundedInt -no-prefix EverParse3d.InputBuffer.Aux -fextern-c @$^
+	$(KREMLIN_HOME)/krml \
+	  -skip-compilation \
+	  -bundle 'C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
+	  -bundle 'LowParse.Low.ErrorCode+EverParse3d.InputBuffer.Aux+Prelude.StaticHeader+ResultOps=Prims,LowParse.\*,Prelude,Prelude.\*,Actions,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -warn-error -9@4 \
+	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
+	  -header ../noheader.txt \
+	  -minimal \
+	  -add-include 'EverParse:"EverParseEndianness.h"' \
+	  -static-header Prelude.StaticHeader,LowParse.Low.Base,ResultOps,LowParse.Low.ErrorCode,EverParse3d.InputBuffer.Aux \
+	  -no-prefix LowParse.Slice \
+	  -no-prefix LowParse.Low.BoundedInt \
+	  -no-prefix EverParse3d.InputBuffer.Aux \
+	  -fextern-c \
+	  @$^
 	! test -e EverParse.c
+	! test -e SHOULDNOTBETHERE.h
 
 %.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))
