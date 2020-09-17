@@ -437,11 +437,17 @@ public:
   }
 };
 
-class C3dParameterAttrInfo : public C3dSimpleSpelling, C3dDiagOnStruct {
+// An everparse attribute with an argument representing a variable,
+// like `everparse::parameter(uint32_t len)` or `everparse::switch(uint8_t tag)`
+class C3dAttrWithVar : public C3dSimpleSpelling, C3dDiagOnStruct {
+  const char *Name;
+  const char *InternalName;
 public:
-  C3dParameterAttrInfo():
-    C3dSimpleSpelling("everparse::parameter"),
-    C3dDiagOnStruct("everparse::parameter")
+  C3dAttrWithVar(const char *Name, const char *InternalName):
+    C3dSimpleSpelling(Name),
+    C3dDiagOnStruct(Name),
+    Name{Name},
+    InternalName{InternalName}
   {
     NumArgs = 1;
   }
@@ -457,7 +463,7 @@ public:
     // Note: we don't have access to the internal API of the Parser here, which
     // makes things somewhat difficult. For instance, we don't have access to
     // ConsumeParen(), or ExpectAndConsume()...
-    LLVM_DEBUG(llvm::dbgs() << "c3d: parsing argument to everparse::parameter\n");
+    LLVM_DEBUG(llvm::dbgs() << "c3d: parsing argument to " << Name << "\n");
 
     // Defer to the parser to produce a good error message. TODO is this right?
     if (P->getCurToken().getKind() != tok::l_paren)
@@ -472,7 +478,7 @@ public:
       return consumeUntilClosingParenAndError(P);
     ParsedType PT = TR.get();
 
-    // Parse the type of the parameter -- this is really a degenerate version of
+    // Parse the type of the variable -- this is really a degenerate version of
     // parsing a proper spec and declarator, and only likely works for really
     // simple types.
     //
@@ -482,18 +488,18 @@ public:
     if (Tok.getKind() != tok::identifier)
       return consumeUntilClosingParenAndError(P);
 
-    // Parse the name of the parameter. We LET the lookahead token be the ident.
+    // Parse the name of the variable. We LET the lookahead token be the ident.
     IdentifierInfo *ParamName = Tok.getIdentifierInfo();
 
-    // Extend the scope with the parameter.
-    LLVM_DEBUG(llvm::dbgs() << "c3d: parameter scope extension! " << ParamName->getNameStart() << "\n");
+    // Extend the scope with the variable.
+    LLVM_DEBUG(llvm::dbgs() << "c3d: " << Name << " scope extension! " << ParamName->getNameStart() << "\n");
     Sema &S = P->getActions();
 
     // This doesn't work because it doesn't return the TypeSourceInfo.
     // QualType QT = PT.get();
     TypeSourceInfo *TS = nullptr;
     QualType QT = S.GetTypeFromParser(PT, &TS);
-    LLVM_DEBUG(llvm::dbgs() << "c3d: parameter type: " << QT.getAsString() << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "c3d: " << Name << " type: " << QT.getAsString() << "\n");
 
     // TODO: the locations are not exactly optimal here
     PushVar(P, AttrNameLoc, AttrNameLoc, ParamName, QT, TS, SC_None);
@@ -549,7 +555,8 @@ public:
       case SeenType: {
         Expr *ArgExpr = Attr.getArgAsExpr(0);
 
-        std::string Str = "c3d_parameter:";
+        std::string Str = InternalName;
+        Str += ":";
         llvm::raw_string_ostream out{Str};
 
         TypeSourceInfo *TS = nullptr;
@@ -559,7 +566,7 @@ public:
         out << " ";
         ArgExpr->printPretty(out, nullptr, S.Context.getPrintingPolicy());
 
-        LLVM_DEBUG(llvm::dbgs() << "c3d: registering parameter " << Str << "\n");
+        LLVM_DEBUG(llvm::dbgs() << "c3d: registering " << Name << "(" << Str << ")\n");
 
         D->addAttr(AnnotateAttr::Create(S.Context, Str, Attr.getRange()));
 
@@ -573,6 +580,16 @@ public:
         return NotHandled;
      }
     }
+  }
+};
+
+struct C3dParameterAttrInfo : C3dAttrWithVar {
+  C3dParameterAttrInfo(): C3dAttrWithVar{"everparse::parameter", "c3d_parameter"} {
+  }
+};
+
+struct C3dSwitchAttrInfo : C3dAttrWithVar {
+  C3dSwitchAttrInfo(): C3dAttrWithVar{"everparse::switch", "c3d_switch"} {
   }
 };
 
@@ -671,13 +688,122 @@ public:
   }
 };
 
+// GM mostly copied from constraint! Refactor.
+class C3dCaseAttrInfo : public C3dSimpleSpelling {
+public:
+  C3dCaseAttrInfo(): C3dSimpleSpelling("everparse::case") {
+    NumArgs = 1;
+  }
+
+  bool diagAppertainsToDecl(Sema &S, const ParsedAttr &Attr,
+                            const Decl *D) const override {
+    if (!isa<FieldDecl>(D)) { // GM CHECK
+      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+        << Attr << "struct field declarations";
+      return false;
+    }
+    // TODO: check isa<RecordDecl>(D->getParent()), then check the parent has
+    // everparse::process
+    //
+
+    LLVM_DEBUG(llvm::dbgs() << "c3d: found attribute everparse::case\n");
+    return true;
+  }
+
+  AttrHandling parseAttributePayload(Parser *P,
+                                     ParsedAttributes &Attrs,
+                                     Declarator *D,
+                                     IdentifierInfo *AttrName,
+                                     SourceLocation AttrNameLoc,
+                                     SourceLocation *EndLoc,
+                                     IdentifierInfo *ScopeName,
+                                     SourceLocation ScopeLoc) const override {
+    // Note: we don't have access to the internal API of the Parser here, which
+    // makes things somewhat difficult. For instance, we don't have access to
+    // ConsumeParen(), or ExpectAndConsume()...
+    LLVM_DEBUG(llvm::dbgs() << "c3d: parsing argument to everparse::case\n");
+
+    // Defer to the parser to produce a good error message.
+    if (P->getCurToken().getKind() != tok::l_paren)
+      return AttributeNotApplied;
+
+    // Eat opening left parenthesis. Note: it's important to go through
+    // ConsumeAnyToken, since it'll properly redirect into the
+    // parenthesis-handling, internal parser code that increments the open
+    // parenthesis count.
+    P->ConsumeAnyToken();
+
+    // This means we are not attached to the right kind of declaration. Provide
+    // a meaningful error now.
+    if (D == nullptr) {
+      P->getActions().Diag(AttrNameLoc, diag::warn_attribute_wrong_decl_type_str)
+        << "everparse::case" << "union field declarations";
+      return consumeUntilClosingParenAndError(P);
+    }
+
+    ExprResult E = ParseExpr(P);
+
+    if (!E.isUsable())
+      return consumeUntilClosingParenAndError(P);
+
+    if (P->getCurToken().getKind() != tok::r_paren)
+      return consumeUntilClosingParenAndError(P);
+
+    // From ParseAttributeArgsCommon, this seems like a sensible thing to do.
+    SourceLocation RParen = P->getCurToken().getLocation();
+    if (EndLoc)
+      *EndLoc = RParen;
+
+    P->ConsumeAnyToken();
+
+    // We are done: register the ParsedAttr so that we see it later on.
+    ArgsVector ArgExprs;
+    ArgExprs.push_back(E.get());
+    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
+                 ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
+
+    return AttributeApplied;
+  }
+
+
+  AttrHandling handleDeclAttribute(Sema &S, Decl *D,
+                                   const ParsedAttr &Attr) const override {
+
+    Expr *ArgExpr = Attr.getArgAsExpr(0);
+
+    std::string Str = "c3d_case:";
+    llvm::raw_string_ostream out{Str};
+    ArgExpr->printPretty(out, nullptr, S.Context.getPrintingPolicy());
+    LLVM_DEBUG(llvm::dbgs() << "c3d: registering case " << Str << "\n");
+
+    D->addAttr(AnnotateAttr::Create(S.Context, Str, Attr.getRange()));
+    return AttributeApplied;
+  }
+};
+
+
 } // namespace
 
-static ParsedAttrInfoRegistry::Add<C3dProcessAttrInfo> X1("c3d_process", "recognize everparse::process");
-static ParsedAttrInfoRegistry::Add<C3dEntryPointAttrInfo> X2("c3d_entrypoint", "recognize everparse::entrypoint");
-static ParsedAttrInfoRegistry::Add<C3dConstraintAttrInfo> X3("c3d_constraint", "recognize everparse::constraint");
-static ParsedAttrInfoRegistry::Add<C3dParameterAttrInfo> X4("c3d_parameter", "recognize everparse::parameter");
-static ParsedAttrInfoRegistry::Add<C3dWhereAttrInfo> X5("c3d_where", "recognize everparse::where");
+static ParsedAttrInfoRegistry::Add<C3dProcessAttrInfo>
+    X1("c3d_process", "recognize everparse::process");
+
+static ParsedAttrInfoRegistry::Add<C3dEntryPointAttrInfo>
+    X2("c3d_entrypoint", "recognize everparse::entrypoint");
+
+static ParsedAttrInfoRegistry::Add<C3dConstraintAttrInfo>
+    X3("c3d_constraint", "recognize everparse::constraint");
+
+static ParsedAttrInfoRegistry::Add<C3dParameterAttrInfo>
+    X4("c3d_parameter", "recognize everparse::parameter");
+
+static ParsedAttrInfoRegistry::Add<C3dWhereAttrInfo>
+    X5("c3d_where", "recognize everparse::where");
+
+static ParsedAttrInfoRegistry::Add<C3dSwitchAttrInfo>
+    X6("c3d_switch", "recognize everparse::switch");
+
+static ParsedAttrInfoRegistry::Add<C3dCaseAttrInfo>
+    X7("c3d_case", "recognize everparse::case");
 
 //===----------------------------------------------------------------------===//
 
@@ -737,6 +863,63 @@ public:
   {
   }
 
+  bool VisitEnumDecl(EnumDecl *E) {
+    AttrVec FilteredAttrs {};
+    bool HasProcess = false;
+
+    LLVM_DEBUG(llvm::dbgs() << "c3d: visiting enum " << E->getName() << "\n");
+
+    for (const auto& A: E->attrs()) {
+      if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
+        LLVM_DEBUG(llvm::dbgs() << "c3d: enum has attribute " << AA->getAnnotation() << "\n");
+        if (AA->getAnnotation() == "c3d_process")
+          HasProcess = true;
+        else
+          FilteredAttrs.push_back(A);
+      } else {
+        FilteredAttrs.push_back(A);
+      }
+    }
+
+    if (!HasProcess)
+        return true;
+
+    E->dropAttrs();
+    E->setAttrs(FilteredAttrs);
+
+    Out << "UINT32 enum ";
+
+    if (E->getName() == "") {
+        static unsigned cnt = 0;
+        Out << "_c3danonenum" << cnt++;
+    } else {
+        Out << E->getName();
+    }
+
+    Out << " {\n";
+    for (const auto& D: E->enumerators()) {
+        Out << "  ";
+
+        if (true) {
+          /* Print all initializers explicitly as integers. This loses
+           * hex notation and macros, but is maybe desirable. */
+          Out << D->getName();
+          Out << " = ";
+          Out << D->getInitVal();
+        } else {
+          /* Print the declaration as it was parsed. One problem here
+           * is that 3d will not take an expression like 1+1 as a valid
+           * initializer. */
+          D->print(Out, 2);
+        }
+
+        Out << ",\n";
+    }
+    Out << "}\n";
+
+    return true;
+  }
+
   bool VisitRecordDecl(RecordDecl *R) {
     LLVM_DEBUG(llvm::dbgs() << "c3d: visiting record " << R->getName() << "\n");
 
@@ -747,9 +930,22 @@ public:
     bool HasEntrypoint = false;
     bool IsFirst = true;
     SourceLocation Start, End;
+    enum { Struct, Union } Kind;
+
+    /* Set `Kind`, and abort if this is not a struct or a union */
+    if (R->isStruct()) {
+        Kind = Struct;
+    } else if (R->isUnion()) {
+        Kind = Union;
+    } else {
+      LLVM_DEBUG(llvm::dbgs() << "c3d: unrecognized record decl for " << R->getName() << "\n");
+      return false;
+    }
+
     AttrVec FilteredAttrs {};
     SmallVector<AnnotateAttr *, 4> Parameters {};
     SmallVector<AnnotateAttr *, 4> WhereClauses {};
+    SmallVector<AnnotateAttr *, 4> Switch{};
     for (const auto& A: R->attrs()) {
       if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
         // Location-related business.
@@ -768,6 +964,8 @@ public:
           Parameters.push_back(AA);
         else if (AA->getAnnotation().startswith("c3d_where:"))
           WhereClauses.push_back(AA);
+        else if (AA->getAnnotation().startswith("c3d_switch:"))
+          Switch.push_back(AA);
         else
           FilteredAttrs.push_back(AA);
       } else {
@@ -805,8 +1003,19 @@ public:
     // Interleaved printing
     if (HasEntrypoint)
       Out << "entrypoint\n";
-    Out << "typedef struct ";
-    Out << R->getName();
+
+    switch (Kind) {
+    case Struct:
+      Out << "typedef struct ";
+      Out << R->getName();
+      break;
+    case Union:
+      // GM: from the manual it seems the casetype has a name beginning
+      // with an underscore and then the "normal" name is given at end
+      // like if this was a typedef. Why?
+      Out << "casetype _" << R->getName();
+      break;
+    }
 
     // Printing parameters
     enum { BeforeLParen, InArgs } State = BeforeLParen;
@@ -850,6 +1059,14 @@ public:
 
     Out << " { \n";
 
+    if (Kind == Union) {
+      assert (Switch.size() == 1 && "There must be exactly one switch for a casetype");
+      AnnotateAttr *A = Switch[0];
+      const int shift = strlen("c3d_switch:");
+
+      Out << " switch (" << A->getAnnotation().slice(shift, A->getAnnotation().size()) << ") {\n";
+    }
+
     LLVM_DEBUG(llvm::dbgs() << "c3d: everparse::process found (entrypoint: " << HasEntrypoint << "), reviewing fields\n");
     for (const auto& F: R->fields()) {
       LLVM_DEBUG(llvm::dbgs() << "c3d: visiting field " << F->getNameAsString() << "\n");
@@ -857,6 +1074,7 @@ public:
       SourceLocation Start, End;
       AttrVec FilteredAttributes {};
       SmallVector<StringRef, 4> FoundConstraints {};
+      SmallVector<StringRef, 4> FoundCase {};
       for (const auto& A: F->attrs()) {
         if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
           // Location-related business.
@@ -868,8 +1086,10 @@ public:
 
           StringRef Annot = AA->getAnnotation();
           LLVM_DEBUG(llvm::dbgs() << "c3d: " << F->getNameAsString() << " has an attribute " << Annot << "\n");
-          if (Annot.startswith("c3d_constraint:"))
+          if (Kind == Struct && Annot.startswith("c3d_constraint:"))
             FoundConstraints.push_back(Annot.slice(15, Annot.size()));
+          else if (Kind == Union && Annot.startswith("c3d_case:"))
+            FoundCase.push_back(Annot.slice(9, Annot.size()));
           else
             FilteredAttributes.push_back(A);
         } else {
@@ -895,9 +1115,18 @@ public:
         this->R.InsertText(End, "*/", true, true);
       }
 
+      assert (FoundCase.size() < 2 &&
+                    "There can be at most one everparse::case annotation on a union field");
 
       Out << "  ";
+
+      if (FoundCase.size() > 0) {
+        StringRef Case = FoundCase[0];
+        Out << "case " << Case << ": ";
+      }
+
       F->print(Out, 2);
+
       if (FoundConstraints.size() > 0) {
         bool NeedsAnd = FoundConstraints.size() >= 2;
         Out << " { ";
@@ -918,8 +1147,15 @@ public:
       Out << ";\n";
     }
 
-    // Interleaved printing
-    Out << "}\n\n";
+    switch (Kind) {
+    case Union:
+      Out << " }\n} " << R->getName() << ";\n\n";
+      break;
+    case Struct:
+      // Interleaved printing
+      Out << "}\n\n";
+      break;
+    }
 
     return true;
   }
