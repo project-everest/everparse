@@ -136,16 +136,6 @@ protected:
     PushVar(P, L, L, &IDD, R, nullptr, SC_None);
   }
 
-  void PushSizeVar(Parser *P) const {
-    SourceLocation L;
-    Sema &S = P->getActions();
-    // At type 'sizeof'
-    const Type *voidTy = S.getASTContext().getSizeType().getTypePtr();
-    QualType R = QualType(voidTy, 0);
-    IdentifierInfo &IDD = P->getPreprocessor().getIdentifierTable().getOwn("size");
-    PushVar(P, L, L, &IDD, R, nullptr, SC_None);
-  }
-
   // Pop one variable out from the C3d scope. Currently only used to remove the
   // 'this' binding when parsing a where clause.
   void PopVar() const {
@@ -443,9 +433,7 @@ public:
     }
 
     PushThisVar(P);
-    PushSizeVar(P);
     ExprResult E = ParseExpr(P);
-    PopVar();
     PopVar();
 
     if (!E.isUsable())
