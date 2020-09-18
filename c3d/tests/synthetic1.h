@@ -74,7 +74,9 @@ typedef struct [[
             offset >= sizeof(this)
         )]];
     UINT32_Alias4   f4 [[everparse::constraint(f4 == 0)]];
-    UINT8        buffer [[everparse::constraint(9999 == TotalLen - sizeof(this))]] [0];
+    UINT8        buffer [[everparse::constraint(9999 == TotalLen - sizeof(this)),
+                          everparse::byte_size(123)
+                        ]] [0];
 } STRUCT_3;
 
 enum

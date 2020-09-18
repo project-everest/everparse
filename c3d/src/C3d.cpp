@@ -498,6 +498,11 @@ struct C3dWithAttrInfo : public C3dFieldExprAttrInfo {
   }
 };
 
+struct C3dByteSizeAttrInfo : public C3dFieldExprAttrInfo {
+  C3dByteSizeAttrInfo(): C3dFieldExprAttrInfo("everparse::byte_size", "c3d_byte_size") {
+  }
+};
+
 // An everparse attribute with an argument representing a variable,
 // like `everparse::parameter(uint32_t len)` or `everparse::switch(uint8_t tag)`
 class C3dAttrWithVar : public C3dSimpleSpelling, C3dDiagOnStruct {
@@ -1016,6 +1021,9 @@ static ParsedAttrInfoRegistry::Add<C3dWithAttrInfo>
 static ParsedAttrInfoRegistry::Add<C3dDefaultAttrInfo>
     X9("c3d_default", "recognize everparse::default");
 
+static ParsedAttrInfoRegistry::Add<C3dByteSizeAttrInfo>
+    X10("c3d_byte_size", "recognize everparse::byte_size");
+
 
 //===----------------------------------------------------------------------===//
 
@@ -1354,6 +1362,7 @@ public:
       SmallVector<StringRef, 4> FoundConstraints {};
       SmallVector<StringRef, 4> FoundCase {};
       SmallVector<StringRef, 4> FoundWith {};
+      SmallVector<StringRef, 4> FoundByteSize {};
       bool FoundDefault = false;
       for (const auto& A: F->attrs()) {
         if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
@@ -1379,6 +1388,8 @@ public:
             FoundDefault = true;
           } else if (Annot.startswith("c3d_with:"))
             FoundWith.push_back(Annot.slice(9, Annot.size()));
+           else if (Annot.startswith("c3d_byte_size:"))
+            FoundByteSize.push_back(Annot.slice(14, Annot.size()));
           else
             FilteredAttributes.push_back(A);
         } else {
@@ -1421,14 +1432,21 @@ public:
       if (FoundDefault)
         Out << "default: \n    ";
 
+      /* Print the type of the field */
+      LangOptions Opts;
+      QualType T = F->getType();
+
+      // FIXME: this is getting the base element type if this an array.
+      // It's ignoring lengths, and dimensionality, which it should not.
+      while (auto AT = dyn_cast<ArrayType>(T))
+        T = AT->getElementType();
+
+      T.print(Out, PrintingPolicy(Opts));
+
       /* Potentially print the instantiations (everparse::with) of the type. We
        * do that by printing the type name separately... but this breaks
        * arrays. What to do? */
       if (FoundWith.size() > 0) {
-        /* Print the type of the field */
-        LangOptions Opts;
-        F->getType().print(Out, PrintingPolicy(Opts));
-
         Out << "(";
         bool first = true;
         for (const auto &W: FoundWith) {
@@ -1437,14 +1455,19 @@ public:
           first = false;
           Out << W;
         }
-        /* Print the field name */
-        Out << ") " << F->getName();
-      } else {
-        // If there are no instantiations then we just print the field,
-        // so arrays work.
-        F->print(Out, 2);
+        Out << ")";
       }
+      Out << " ";
 
+      /* Print the field name */
+      Out << F->getName();
+
+      /* Print byte size if any (TODO: check this is actually an array */
+      if (FoundByteSize.size() > 0) {
+        // There can only be one!
+        auto S = FoundByteSize[0];
+        Out << "[:byte-size " << S << "]";
+      }
 
       if (FoundConstraints.size() > 0) {
         bool NeedsAnd = FoundConstraints.size() >= 2;
