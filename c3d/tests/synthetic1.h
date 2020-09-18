@@ -59,9 +59,6 @@ typedef struct [[
   STRUCT_1   field_1 [[everparse::with(len)]];
 } STRUCT_2;
 
-// Fixing unbound size, should this be the size of the field?
-int size = 999;
-
 typedef struct [[
   everparse::process(0),
   everparse::parameter(UINT32 TotalLen)
