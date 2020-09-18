@@ -18,12 +18,12 @@ include .depend
 
 verify: $(ALL_CHECKED_FILES)
 
-extract: EverParse.h
+extract: ../EverParse.h
 
 EverParse.rsp: $(ALL_KRML_FILES)
 	for f in $^ ; do echo $$f ; done > $@
 
-EverParse.h: EverParse.rsp
+../EverParse.h: EverParse.rsp
 	$(KREMLIN_HOME)/krml \
 	  -skip-compilation \
 	  -bundle 'C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
@@ -37,10 +37,11 @@ EverParse.h: EverParse.rsp
 	  -no-prefix LowParse.Slice \
 	  -no-prefix LowParse.Low.BoundedInt \
 	  -no-prefix EverParse3d.InputBuffer.Aux \
+	  -tmpdir .. \
 	  -fextern-c \
 	  @$^
-	! test -e EverParse.c
-	! test -e SHOULDNOTBETHERE.h
+	! test -e ../EverParse.c
+	! test -e ../SHOULDNOTBETHERE.h
 
 %.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))
@@ -54,4 +55,4 @@ EverParse.h: EverParse.rsp
 .PHONY: all verify extract clean
 
 clean:
-	rm -f *.checked *.krml EverParse.h EverParse.rsp Makefile.basic Makefile.include .depend
+	rm -f *.checked *.krml ../EverParse.h EverParse.rsp ../Makefile.basic ../Makefile.include .depend

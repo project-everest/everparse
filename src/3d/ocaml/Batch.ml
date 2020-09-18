@@ -316,8 +316,6 @@ let collect_files
   files_and_modules
 =
   let accu = [] in
-  let accu = collect_file accu (filename_concat out_dir "EverParse.h") in
-  let accu = collect_file accu (filename_concat out_dir "EverParseEndianness.h") in
   List.fold_left (collect_files_from out_dir) accu files_and_modules
 
 (* Call clang-format *)
@@ -351,18 +349,15 @@ let postprocess
 = (* produce the .checked and .krml files.
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module out_dir) files_and_modules;
+  let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the C files *)
   produce_c_files cleanup out_dir files_and_modules;
+  if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
+  then failwith "krml produced some EverParse.h, should not have happened";
   (* copy ancillaries *)
   copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
-  let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-  assert (not (Sys.file_exists dest_everparse_h));
-  copy (filename_concat ddd_home (filename_concat "prelude" "EverParse.h")) dest_everparse_h;
-  copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h");
   (* add copyright *)
   List.iter (add_copyright out_dir) files_and_modules;
-  let copyright_txt = filename_concat ddd_home "copyright.txt" in
-  add_copyright_header out_dir copyright_txt "EverParse.h";
   (* clang-format the files if asked for *)
   if clang_format
   then call_clang_format clang_format_executable out_dir files_and_modules;
