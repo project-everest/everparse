@@ -22,3 +22,5 @@ val get_clang_format : unit -> ML bool
 val get_clang_format_executable : unit -> ML string
 
 val get_cleanup : unit -> ML bool
+
+val get_skip_makefiles : unit -> ML bool

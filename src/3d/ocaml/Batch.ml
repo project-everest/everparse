@@ -183,6 +183,11 @@ let produce_c_files
     "-fextern-c" ::
     (krml_args0 @ krml_files)
   in
+  let krml_args =
+    if Options.get_skip_makefiles ()
+    then "-skip-makefiles" :: krml_args
+    else krml_args
+  in
   (* bundle M.Types.krml and EverParse into M *)
   let krml_args =
       let bundle_types = List.fold_left (fun acc (_, modul) ->
@@ -208,11 +213,7 @@ let produce_c_files
   run_cmd krml [Printf.sprintf "@%s" argfile];
   if cleanup
   then begin
-    List.iter Sys.remove [
-      argfile;
-      filename_concat out_dir "Makefile.basic";
-      filename_concat out_dir "Makefile.include";
-    ];
+    Sys.remove argfile;
     if is_temp_krml then Sys.remove krml;
     List.iter (remove_fst_and_krml_files out_dir) files_and_modules
   end
