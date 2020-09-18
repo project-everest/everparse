@@ -28,13 +28,12 @@ let krml out_dir =
       aux false [
         (dir_bin, "krml.exe"); (* binary package *)
         (dir, "krml.exe");
-        (out_dir, "krml.exe"); (* has already been copied before *)
       ]
     in
     if candidate <> ""
     then (false, candidate)
     else begin
-      let target = filename_concat out_dir "krml.exe" in
+      let target = Filename.temp_file ~temp_dir:out_dir "krml" ".exe" in
       if Unix.has_symlink ()
       then
         let candidate = aux true [(dir, "krml")] in
