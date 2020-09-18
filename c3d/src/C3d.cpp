@@ -226,6 +226,26 @@ public:
   }
 };
 
+class TrivialFieldC3dAttrInfo : public C3dSimpleSpelling, C3dDiagOnStruct {
+private:
+  const char *InternalName;
+
+public:
+  TrivialFieldC3dAttrInfo(const char *SpellingStr, const char *InternalName)
+    : C3dSimpleSpelling{SpellingStr},
+      C3dDiagOnStruct{SpellingStr},
+      InternalName{InternalName}
+  {
+  }
+
+  AttrHandling handleDeclAttribute(Sema &S, Decl *D,
+                                   const ParsedAttr &Attr) const override {
+    // Attach an annotate attribute to the Decl.
+    D->addAttr(AnnotateAttr::Create(S.Context, InternalName, Attr.getRange()));
+    return AttributeApplied;
+  }
+};
+
 // When doing custom parsing, consuming everything until the next right paren
 // mimics the behavior of the parser, and provide better parser recovery so
 // that the rest of the declaration can be parsed properly.
@@ -315,6 +335,11 @@ public:
 
 struct C3dEntryPointAttrInfo: TrivialC3dAttrInfo {
   C3dEntryPointAttrInfo(): TrivialC3dAttrInfo{"everparse::entrypoint", "c3d_entrypoint"} {
+  }
+};
+
+struct C3dDefaultAttrInfo: TrivialFieldC3dAttrInfo {
+  C3dDefaultAttrInfo(): TrivialFieldC3dAttrInfo{"everparse::default", "c3d_default"} {
   }
 };
 
@@ -824,6 +849,10 @@ static ParsedAttrInfoRegistry::Add<C3dCaseAttrInfo>
 static ParsedAttrInfoRegistry::Add<C3dWithAttrInfo>
     X8("c3d_with", "recognize everparse::with");
 
+static ParsedAttrInfoRegistry::Add<C3dDefaultAttrInfo>
+    X9("c3d_default", "recognize everparse::default");
+
+
 //===----------------------------------------------------------------------===//
 
 // Now that all the attributes have been validated, processed and retained in
@@ -1095,6 +1124,7 @@ public:
       SmallVector<StringRef, 4> FoundConstraints {};
       SmallVector<StringRef, 4> FoundCase {};
       SmallVector<StringRef, 4> FoundWith {};
+      bool FoundDefault = false;
       for (const auto& A: F->attrs()) {
         if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
           // Location-related business.
@@ -1110,6 +1140,8 @@ public:
             FoundConstraints.push_back(Annot.slice(15, Annot.size()));
           else if (Kind == Union && Annot.startswith("c3d_case:"))
             FoundCase.push_back(Annot.slice(9, Annot.size()));
+          else if (Kind == Union && Annot == "c3d_default")
+            FoundDefault = true;
           else if (Annot.startswith("c3d_with:"))
             FoundWith.push_back(Annot.slice(9, Annot.size()));
           else
@@ -1137,15 +1169,22 @@ public:
         this->R.InsertText(End, "*/", true, true);
       }
 
-      assert (FoundCase.size() < 2 &&
-                    "There can be at most one everparse::case annotation on a union field");
+      assert(FoundCase.size() < 2 &&
+                "There can be at most one everparse::case annotation on a union field");
+      assert((!FoundDefault || (FoundCase.size() == 0)) &&
+                "'case' and 'default' attributes cannot be mixed");
+      assert((Kind != Union || FoundDefault || FoundCase.size() > 0) &&
+                "Every union field needs either a case or a default marker");
 
       Out << "  ";
 
       if (FoundCase.size() > 0) {
         StringRef Case = FoundCase[0];
-        Out << "case " << Case << ": ";
+        Out << "case " << Case << ": \n    ";
       }
+
+      if (FoundDefault)
+        Out << "default: \n    ";
 
       /* Print the type of the field */
       LangOptions Opts;
