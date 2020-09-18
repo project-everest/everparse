@@ -1,3 +1,6 @@
+#include <stdint.h>
+#include <stdbool.h>
+
 // Some constants explicitly in u32
 enum
 [[
@@ -34,7 +37,7 @@ typedef struct [[
   everparse::process(0),
   everparse::parameter(UINT32 Len),
   everparse::where(Len == sizeof(this))
-]] _STRUCT_1
+]] STRUCT_1
 {
   UINT32_Alias1 f1;
   UINT32        f2;
@@ -50,27 +53,73 @@ typedef struct [[
   everparse::process(0),
   everparse::parameter(UINT32 Len),
   everparse::where (Len == sizeof(this))
-]] _STRUCT_2 
+]] STRUCT_2 
 {
-  UINT32_Alias3   len [[ everparse::process(0) ]];
-  STRUCT_1   field_1 [[ everparse::parameter(len) ]];
+  UINT32_Alias3   len [[everparse::constraint(true)]];
+  STRUCT_1   field_1 [[everparse::with(len)]];
 } STRUCT_2;
 
+// Fixing unbound size, should this be the size of the field?
+int size = 999;
 
 typedef struct [[
   everparse::process(0),
-  everparse::parameter(UINT32 Len)
-]] _STRUCT_3
+  everparse::parameter(UINT32 TotalLen)
+]] STRUCT_3
 {
     UINT32_Alias1   f1;
     UINT32_Alias2   f2;
-    ULONG           len;
+    ULONG           len
+        [[everparse::constraint(true)]];
     UINT32          offset
         [[everparse::constraint(
             is_range_okay(TotalLen, offset, len) &&
             offset >= sizeof(this)
         )]];
     UINT32_Alias4   f4 [[everparse::constraint(f4 == 0)]];
-    UINT8        buffer [0] [[everparse::constraint(size == TotalLen - sizeof(this))]];
+    UINT8        buffer [[everparse::constraint(9999 == TotalLen - sizeof(this))]] [0];
 } STRUCT_3;
 
+enum
+[[
+  everparse::process(0)
+]] {
+  TAG_STRUCT_1 = 0,
+  TAG_STRUCT_2 = 2,
+  TAG_STRUCT_3 = 3,
+};
+
+typedef union [[
+  everparse::process(0),
+  everparse::switch(UINT32 Tag),
+  everparse::parameter(UINT32 TotalLen)
+]] UNION_1
+{
+  STRUCT_1 struct1
+    [[everparse::case(TAG_STRUCT_1),
+      everparse::with(TotalLen)]];
+  STRUCT_2 struct2
+    [[everparse::case(TAG_STRUCT_2),
+      everparse::with(TotalLen)]];
+  STRUCT_3 struct3
+    [[everparse::case(TAG_STRUCT_3),
+      everparse::with(TotalLen)]];
+  unit empty
+    [[everparse::default]];
+} UNION_1;
+
+typedef struct [[
+  everparse::process(0),
+  everparse::entrypoint
+]] CONTAINER_1
+{
+  UINT32            Tag
+    [[everparse::constraint(true)]];
+  UINT32            MessageLength
+    [[everparse::constraint(
+       MessageLength >= sizeof(this)
+       )]];
+  UNION_1 union_
+    [[everparse::with(Tag),
+      everparse::with(MessageLength - sizeof(this))]];
+} CONTAINER_1;
