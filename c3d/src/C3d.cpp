@@ -488,6 +488,155 @@ public:
   }
 };
 
+// This is just a copy of C3dFieldExprAttrInfo that checks that the expr
+// is a Clang block (i.e. ^{...}, similar to a lambda) and only takes
+// and prints its body instead of the full thing.
+class C3dFieldStmtAttrInfo : public C3dSimpleSpelling {
+  const char *Name;
+  const char *InternalName;
+public:
+  C3dFieldStmtAttrInfo(const char *Name, const char *InternalName):
+    C3dSimpleSpelling(Name),
+    Name{Name},
+    InternalName{InternalName}
+  {
+    NumArgs = 1;
+  }
+
+  bool diagAppertainsToDecl(Sema &S, const ParsedAttr &Attr,
+                            const Decl *D) const override {
+    if (!isa<FieldDecl>(D)) {
+      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+        << Attr << "struct field declarations";
+      return false;
+    }
+    // TODO: check isa<RecordDecl>(D->getParent()), then check the parent has
+    // everparse::process
+    //
+
+    LLVM_DEBUG(llvm::dbgs() << "c3d: found attribute " << Name << "\n");
+    return true;
+  }
+
+  AttrHandling parseAttributePayload(Parser *P,
+                                     ParsedAttributes &Attrs,
+                                     Declarator *D,
+                                     IdentifierInfo *AttrName,
+                                     SourceLocation AttrNameLoc,
+                                     SourceLocation *EndLoc,
+                                     IdentifierInfo *ScopeName,
+                                     SourceLocation ScopeLoc) const override {
+    // Note: we don't have access to the internal API of the Parser here, which
+    // makes things somewhat difficult. For instance, we don't have access to
+    // ConsumeParen(), or ExpectAndConsume()...
+    LLVM_DEBUG(llvm::dbgs() << "c3d: parsing argument to " << Name << "\n");
+
+    // Defer to the parser to produce a good error message.
+    if (P->getCurToken().getKind() != tok::l_paren)
+      return AttributeNotApplied;
+
+    // Eat opening left parenthesis. Note: it's important to go through
+    // ConsumeAnyToken, since it'll properly redirect into the
+    // parenthesis-handling, internal parser code that increments the open
+    // parenthesis count.
+    P->ConsumeAnyToken();
+
+    // This means we are not attached to the right kind of declaration. Provide
+    // a meaningful error now.
+    if (D == nullptr) {
+      P->getActions().Diag(AttrNameLoc, diag::warn_attribute_wrong_decl_type_str)
+        << Name << "struct field declarations";
+      return consumeUntilClosingParenAndError(P);
+    }
+
+    Sema &S = P->getActions();
+
+    // Extend the scope so that we don't have resolution errors. We fake a
+    // variable declaration just so that the name resolution is happy, and then
+    // assume that the current context will be dropped anyhow.
+    LLVM_DEBUG(llvm::dbgs() << "c3d: scope extension! " << D->getIdentifier()->getNameStart() << "\n");
+    // Check if we are accumulating another constraint on the same
+    // field, in which case no need to add this field to the scope. It
+    // can only be in the last posititon.
+    bool InScope =
+        !c3d_scope.empty() &&
+         (c3d_scope.back().Id->getName() == D->getIdentifier()->getName());
+
+    if (!InScope) {
+      TypeSourceInfo *T = S.GetTypeForDeclarator(*D, P->getCurScope());
+      QualType R = T->getType();
+      PushVar(P, D->getBeginLoc(), D->getIdentifierLoc(),
+              D->getIdentifier(), R,
+              T, SC_None);
+    }
+
+    PushThisVar(P);
+    ExprResult E = ParseExpr(P);
+    PopVar();
+
+    if (!E.isUsable())
+      return consumeUntilClosingParenAndError(P);
+
+    // TODO: in the case of trailing tokens (e.g. too many arguments), the error
+    // message is not exactly mind-blowing
+    if (P->getCurToken().getKind() != tok::r_paren)
+      return consumeUntilClosingParenAndError(P);
+
+    // From ParseAttributeArgsCommon, this seems like a sensible thing to do.
+    SourceLocation RParen = P->getCurToken().getLocation();
+    if (EndLoc)
+      *EndLoc = RParen;
+
+    P->ConsumeAnyToken();
+
+    // We are done: register the ParsedAttr so that we see it later on.
+    ArgsVector ArgExprs;
+    ArgExprs.push_back(E.get());
+    Attrs.addNew(AttrName, SourceRange(ScopeLoc, RParen), ScopeName, ScopeLoc,
+                 ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
+
+    return AttributeApplied;
+  }
+
+
+  AttrHandling handleDeclAttribute(Sema &S, Decl *D,
+                                   const ParsedAttr &Attr) const override {
+
+    Expr *ArgExpr = Attr.getArgAsExpr(0);
+
+    // This is super dirty because we can't yet add custom attributes, so we
+    // have to rely on AnnotateAttr which can only hold a string! To make sure
+    // we can tell our own attributes apart from potentially other plugins, we
+    // pretty-print the expression now, and prefix it with c3d_FOO:.
+    std::string Str = InternalName;
+    Str += ":";
+    llvm::raw_string_ostream out{Str};
+
+    if (!isa<BlockExpr>(*ArgExpr)) {
+      LLVM_DEBUG(llvm::dbgs() << "c3d: not a block!!\n");
+      return AttributeNotApplied;
+    }
+
+    BlockExpr *BE = dyn_cast<BlockExpr>(ArgExpr);
+
+    Stmt *ST = BE->getBody();
+
+    ST->printPretty(out, nullptr, S.Context.getPrintingPolicy());
+
+    LLVM_DEBUG(llvm::dbgs() << "c3d: registering " << Str << "\n");
+
+    // I tried to create a custom attribute that inherits from InheritableAttr
+    // but I could not figure out how to implement its constructor (which is
+    // deleted). I actually can't tell if plugins can even register new attributes
+    // since it's all auto-generated (see
+    // http://clang.llvm.org/docs/InternalsManual.html#AddingAttributes). So, at
+    // this stage, it seems simpler to just render the expresion as a string
+    // here...
+    D->addAttr(AnnotateAttr::Create(S.Context, Str, Attr.getRange()));
+    return AttributeApplied;
+  }
+};
+
 struct C3dConstraintAttrInfo : public C3dFieldExprAttrInfo {
   C3dConstraintAttrInfo(): C3dFieldExprAttrInfo("everparse::constraint", "c3d_constraint") {
   }
@@ -507,6 +656,17 @@ struct C3dByteSizeAtMostAttrInfo : public C3dFieldExprAttrInfo {
   C3dByteSizeAtMostAttrInfo(): C3dFieldExprAttrInfo("everparse::byte_size_at_most", "c3d_byte_size_at_most") {
   }
 };
+
+struct C3dOnSuccessAttrInfo : public C3dFieldStmtAttrInfo {
+  C3dOnSuccessAttrInfo(): C3dFieldStmtAttrInfo("everparse::on_success", "c3d_on_success") {
+  }
+};
+
+struct C3dOnFailureAttrInfo : public C3dFieldStmtAttrInfo {
+  C3dOnFailureAttrInfo(): C3dFieldStmtAttrInfo("everparse::on_failure", "c3d_on_failure") {
+  }
+};
+
 
 // An everparse attribute with an argument representing a variable,
 // like `everparse::parameter(uint32_t len)` or `everparse::switch(uint8_t tag)`
@@ -1032,6 +1192,13 @@ static ParsedAttrInfoRegistry::Add<C3dByteSizeAttrInfo>
 static ParsedAttrInfoRegistry::Add<C3dByteSizeAtMostAttrInfo>
     X11("c3d_byte_size_at_most", "recognize everparse::byte_size_at_most");
 
+static ParsedAttrInfoRegistry::Add<C3dOnSuccessAttrInfo>
+    X12("c3d_on_success", "recognize everparse::on_success");
+
+static ParsedAttrInfoRegistry::Add<C3dOnFailureAttrInfo>
+    X13("c3d_on_failure", "recognize everparse::on_failure");
+
+
 
 //===----------------------------------------------------------------------===//
 
@@ -1373,6 +1540,8 @@ public:
       SmallVector<StringRef, 4> FoundWith {};
       SmallVector<StringRef, 4> FoundByteSize {};
       SmallVector<StringRef, 4> FoundByteSizeAtMost {};
+      SmallVector<StringRef, 4> FoundSuccess {};
+      SmallVector<StringRef, 4> FoundFailure {};
       bool FoundDefault = false;
       for (const auto& A: F->attrs()) {
         if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
@@ -1402,6 +1571,10 @@ public:
             FoundByteSize.push_back(Annot.slice(14, Annot.size()));
           } else if (Annot.startswith("c3d_byte_size_at_most:")) {
             FoundByteSizeAtMost.push_back(Annot.slice(22, Annot.size()));
+          } else if (Annot.startswith("c3d_on_success:")) {
+            FoundSuccess.push_back(Annot.slice(15, Annot.size()));
+          } else if (Annot.startswith("c3d_on_failure:")) {
+            FoundFailure.push_back(Annot.slice(15, Annot.size()));
           } else {
             FilteredAttributes.push_back(A);
           }
@@ -1531,6 +1704,14 @@ public:
             PrintState = NextArgs;
         }
         Out << " } ";
+      }
+      if (FoundSuccess.size() > 0) {
+          auto S = FoundSuccess[0];
+          Out << "\n    {:on-success \n" << S << "\n    }";
+      }
+      if (FoundFailure.size() > 0) {
+          auto S = FoundFailure[0];
+          Out << "\n    {:on-failure \n" << S << "\n    }";
       }
       Out << ";\n";
     }
