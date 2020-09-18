@@ -119,6 +119,23 @@ protected:
     c3d_scope.clear();
   }
 
+  // Adds a 'this' binding into the C3d scope, can be later popped
+  // away with PopVar.
+  void PushThisVar(Parser *P) const {
+    SourceLocation L;
+    Sema &S = P->getActions();
+
+    // A 'void' type
+    const Type *voidTy = S.getASTContext().VoidTy.getTypePtr();
+    QualType R = QualType(voidTy, 0);
+
+    // A dummy 'this' identifier
+    IdentifierInfo &IDD = P->getPreprocessor().getIdentifierTable().getOwn("this");
+
+    // Push a variable declaration for 'this' at type 'void'
+    PushVar(P, L, L, &IDD, R, nullptr, SC_None);
+  }
+
   // Pop one variable out from the C3d scope. Currently only used to remove the
   // 'this' binding when parsing a where clause.
   void PopVar() const {
@@ -384,7 +401,9 @@ public:
               T, SC_None);
     }
 
+    PushThisVar(P);
     ExprResult E = ParseExpr(P);
+    PopVar();
 
     if (!E.isUsable())
       return consumeUntilClosingParenAndError(P);
@@ -622,31 +641,11 @@ public:
     // Eat opening left parenthesis.
     P->ConsumeAnyToken();
 
-    ExprResult E;
-
     // We push a dummy 'this' variable into the C3d scope before
     // parsing.
-    {
-        Sema &S = P->getActions();
-
-        // A 'void' type
-        const Type *voidTy = S.getASTContext().VoidTy.getTypePtr();
-        QualType R = QualType(voidTy, 0);
-
-        // A dummy 'this' identifier
-        IdentifierInfo &IDD = P->getPreprocessor().getIdentifierTable().getOwn("this");
-
-        // Push a variable declaration for 'this' at type 'void'
-        PushVar(P, AttrNameLoc, AttrNameLoc, &IDD, R,
-                   nullptr,
-                   SC_None);
-
-        E = ParseExpr(P);
-
-        // Pop the 'this', so it does not leak into, e.g., the constraints
-        // on fields.
-        PopVar();
-    }
+    PushThisVar(P);
+    ExprResult E = ParseExpr(P);
+    PopVar();
 
     if (!E.isUsable())
       return consumeUntilClosingParenAndError(P);
