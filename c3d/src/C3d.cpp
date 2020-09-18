@@ -1,10 +1,4 @@
-//===- C3d.cpp ------------------------------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
+//===- C3d.cpp ------------------------------------------------------------===//
 //
 // c3d is a clang plugin that parses everparse annotations as C2x attributes and
 // generates corresponding .3d files, along with a header file stripped of the
@@ -15,6 +9,8 @@
 // -fplugin=path/to/thisplugin.{so,dll,dylib}
 //
 //===----------------------------------------------------------------------===//
+
+#include "C3d.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -46,6 +42,10 @@ using namespace clang;
 // Note that this is largely inspired by
 // https://clang.llvm.org/docs/ClangPlugins.html#defining-attributes
 
+using namespace c3d;
+
+namespace c3d {
+
 // Represents the arguments to VarDecl::Create, except the AST/Decl contexts.
 struct c3d_var_info {
     SourceLocation    StartLoc;
@@ -55,9 +55,6 @@ struct c3d_var_info {
     TypeSourceInfo *  TInfo;
     StorageClass      S;
 };
-
-namespace {
-
 
 // TODO (general things):
 // - settle on {} vs () for constructors (just be consistent)
@@ -1062,7 +1059,7 @@ static ParsedAttrInfoRegistry::Add<C3dByteSizeAtMostAttrInfo>
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 
-namespace {
+namespace c3d {
 
 using namespace std;
 
@@ -1553,55 +1550,44 @@ public:
   }
 };
 
-
 // We register an instance of this class to allow modifying the AST.
-class C3dASTConsumer : public ASTConsumer {
-private:
-  CompilerInstance *CI;
+void C3dASTConsumer::HandleTranslationUnit(ASTContext &Context) {
+  SourceManager& S = Context.getSourceManager();
 
-public:
-  explicit C3dASTConsumer(CompilerInstance *CI_)
-    : CI(CI_)
-    { }
+  // Tedious string manipulations to figure out the destination file
+  const FileEntry *E = S.getFileEntryForID(S.getMainFileID());
+  StringRef File, Ext;
+  std::tie(File, Ext) = E->getName().rsplit(".");
+  std::string NewFile = "";
+  NewFile += File;
+  NewFile += ".3d";
+  LLVM_DEBUG(llvm::dbgs() << "\n=== end of parsing & validation ===\n\n");
+  LLVM_DEBUG(llvm::dbgs() << "c3d: will write in " << NewFile << "\n");
 
-  void HandleTranslationUnit(ASTContext &Context) override {
-    SourceManager& S = Context.getSourceManager();
+  // Open .3d file for writing
+  std::error_code EC;
+  llvm::raw_fd_ostream Out(NewFile, EC);
+  // TODO: check EC
 
-    // Tedious string manipulations to figure out the destination file
-    const FileEntry *E = S.getFileEntryForID(S.getMainFileID());
-    StringRef File, Ext;
-    std::tie(File, Ext) = E->getName().rsplit(".");
-    std::string NewFile = "";
-    NewFile += File;
-    NewFile += ".3d";
-    LLVM_DEBUG(llvm::dbgs() << "\n=== end of parsing & validation ===\n\n");
-    LLVM_DEBUG(llvm::dbgs() << "c3d: will write in " << NewFile << "\n");
+  // This also initializes the Rewriter V.R
+  C3dVisitor V(CI, Out);
 
-    // Open .3d file for writing
-    std::error_code EC;
-    llvm::raw_fd_ostream Out(NewFile, EC);
-    // TODO: check EC
+  LLVM_DEBUG(llvm::dbgs() << "c3d: starting AST rewrite\n");
+  V.TraverseDecl(Context.getTranslationUnitDecl());
 
-    // This also initializes the Rewriter V.R
-    C3dVisitor V(CI, Out);
+  // Now writing the cleaned up AST
+  std::string OutputH;
+  OutputH += File;
+  OutputH += ".preprocessed.h";
+  llvm::raw_fd_ostream OutH { OutputH, EC };
 
-    LLVM_DEBUG(llvm::dbgs() << "c3d: starting AST rewrite\n");
-    V.TraverseDecl(Context.getTranslationUnitDecl());
+  // Our AST consumer has run and as a side-effect its Rewriter has
+  // accumulated edits. Render the edited buffer into our preprocessed file.
+  const RewriteBuffer &RewriteBuf = V.R.getEditBuffer(S.getMainFileID());
+  RewriteBuf.write(OutH);
 
-    // Now writing the cleaned up AST
-    std::string OutputH;
-    OutputH += File;
-    OutputH += ".preprocessed.h";
-    llvm::raw_fd_ostream OutH { OutputH, EC };
-
-    // Our AST consumer has run and as a side-effect its Rewriter has
-    // accumulated edits. Render the edited buffer into our preprocessed file.
-    const RewriteBuffer &RewriteBuf = V.R.getEditBuffer(S.getMainFileID());
-    RewriteBuf.write(OutH);
-
-    return;
-  }
-};
+  return;
+}
 
 
 // Registering the entry point for our AST rewriting.
