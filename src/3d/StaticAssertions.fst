@@ -67,3 +67,25 @@ let compute_static_asserts (env:TypeSizes.env_t)
         includes = r.Ast.includes;
         sizeof_assertions = sizeof_assertions
       }
+
+let no_static_asserts (sas: static_asserts) : Tot bool =
+  Nil? sas.includes &&
+  Nil? sas.sizeof_assertions
+
+let has_static_asserts (sas: static_asserts) : Tot bool =
+  not (no_static_asserts sas)
+
+let print_static_asserts (sas:static_asserts)
+  : ML string
+  = let open StaticAssertions in
+    let includes =
+        sas.includes
+        |> List.map (fun i -> Printf.sprintf "#include \"%s\"" i)
+        |> String.concat "\n"
+    in
+    let sizeof_assertions =
+        sas.sizeof_assertions
+        |> List.map (fun sa -> Printf.sprintf "C_ASSERT(sizeof(%s) == %d);" sa.type_name.Ast.v sa.size)
+        |> String.concat "\n"
+    in
+    includes ^ "\n" ^ sizeof_assertions

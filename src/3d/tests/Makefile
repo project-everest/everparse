@@ -16,7 +16,8 @@ FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 positive_tests=$(filter-out $(wildcard FAIL*.3d),$(wildcard *.3d))
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
-clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(addsuffix .h,$(modules_or_wrappers)) EverParse.h EverParseEndianness.h
+modules_static_assertions=TestFieldPtrStaticAssertions.c
+clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(modules_static_assertions) $(addsuffix .h,$(modules_or_wrappers)) EverParse.h EverParseEndianness.h
 OTHER_HEADERS=TestFieldPtrBase.h
 
 all: batch-test batch-test-negative batch-cleanup-test

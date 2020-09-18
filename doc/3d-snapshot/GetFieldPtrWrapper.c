@@ -31,5 +31,3 @@ BOOLEAN GetFieldPtrCheckT(PUINT8* out, uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
-#include "GetFieldPtrBase.h"
-C_ASSERT(sizeof(S) == 30);

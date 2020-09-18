@@ -233,41 +233,58 @@ put different constraints on the value of the tag.
 
 A ``casetype`` type can also be marked ``entrypoint``.
 
-Element-sized arrays
---------------------
 
-3d lets the user define arrays with a constant number of elements. The
-following example defines a triangle where the three corners of the
-triangle are recorded in an array of 3 elements:
+Arrays
+------
 
-.. literalinclude:: Triangle2.3d
-    :language: c
+A field in a struct or a casetype can be an array.
 
-.. note::
+Arrays in 3d differ from arrays in C in a few important ways:
 
-  (FIXME) There is no direct 3d support for arrays with a variable
-  number of elements. Sometimes, but not always, they can be simulated
-  with variable-size arrays in terms of size in bytes.
+* Rather than counting elements, the size of an array in 3d is always
+  given in bytes.
 
+* Array sizes need not be a constant expression: any integer
+  expression is permissible for an array, so long as it fits in
+  ``UINT32``. This allows expressing variable-sized arrays.
+  
+3d supports several kinds of arrays.
 
 Byte-sized arrays
------------------
+.................
 
-3d lets the user define arrays with a constant of variable size in bytes.
+* ``T f[:byte-size n]``
+  
+The notation ``T f[:byte-size n]`` describes a field named ``f`` holding an
+array of elements of type ``T`` whose cumulative size in bytes is ``n``.
 
-TODO:
+When ``sizeof(T) = 1``, 3d supports the notation ``T f[n]``, i.e., for
+byte arrays, since the byte size and element count coincide, you need
+not qualify the size of the array with a ``:byte-size`` qualifier.
 
-* ``suffix``: am I restricted to only one explicitly declared
-  variable-sized array having to be named ``suffix`` and be the last
-  element of my struct? does it mean that if I need several
-  variable-sized arrays, I have to use parameterized data types?
+Upper-bounded byte-sized arrays
+...............................
 
-* ``sizeof``: how does it work with "variable-size" types with no
-  variable-size suffix? (e.g. unions where cases do not have the same
-  size)
+* ``T f[:byte-size-at-most n]``
 
-* how could we define variable-length arrays in terms of number of
-  elements?
+Sometimes, it is required to specify that a variable size array has a
+cumulative length that fits within some given byte size bound. This
+can be specified in 3d using the notation above, which introduces a
+field ``f`` of ``T``-typed elements whose cumulative size in bytes
+less than or equal to ``n``.
+
+Singleton arrays of variable size
+.................................
+
+* ``T f[:byte-size-single-element-array n]``
+  
+In some cases, it is required to specify that a field contains a
+single variable-sized element whose size in bytes is equal to a given
+expression. The notation above introduces a field ``f`` that contains
+a single element of type ``T`` occupying exactly ``n`` bytes.
+
+We expect to add several other kinds of variable-length array-like
+types in the uture.
 
 Actions
 -------

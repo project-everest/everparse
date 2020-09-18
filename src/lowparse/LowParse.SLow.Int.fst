@@ -71,3 +71,24 @@ let n_to_be_4 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_n
 inline_for_extraction
 let serialize32_u32
 = (fun (input: U32.t) -> n_to_be_4 input)
+
+inline_for_extraction
+noextract
+let be_to_n_8 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint64 8)
+
+inline_for_extraction
+let parse32_u64 : parser32 parse_u64 =
+  decode_u64_injective ();
+    make_total_constant_size_parser32 8 8ul
+      #U64.t
+      decode_u64
+      ()
+      (fun (input: B32.lbytes 8) -> be_to_n_8 input)
+
+inline_for_extraction
+noextract
+let n_to_be_8 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_n_to_be EI.uint64 8)
+
+inline_for_extraction
+let serialize32_u64
+= (fun (input: U64.t) -> n_to_be_8 input)

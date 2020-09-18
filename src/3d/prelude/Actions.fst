@@ -996,7 +996,7 @@ let validate_t_at_most
 let validator_error_unexpected_padding : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 7uL)
 
 noextract inline_for_extraction
-let validate_t_exact' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
+let validate_t_exact' (n:U32.t) (#nz:bool) (#k:parser_kind nz) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_exact n p) inv l ar)
   = fun input startPosition ->
@@ -1028,7 +1028,7 @@ let validate_t_exact' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
 
 let validate_t_exact
   n
-  #k #t #p #inv #l #ar v
+  #nz #k #t #p #inv #l #ar v
 = validate_drop (validate_t_exact' n v)
 
 inline_for_extraction noextract

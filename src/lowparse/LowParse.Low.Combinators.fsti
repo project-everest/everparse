@@ -105,6 +105,69 @@ let jump_nondep_then
   p2' input (p1' input pos)
 
 inline_for_extraction
+let read_nondep_then
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (p1' : jumper p1)
+  (r1: leaf_reader p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (r2: leaf_reader p2)
+: Tot (leaf_reader (nondep_then p1 p2))
+= fun #_ #_ sl pos ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_nondep_then h p1 p2 sl pos in
+  let x1 = r1 sl pos in
+  let pos2 = p1' sl pos in
+  let x2 = r2 sl pos2 in
+  (x1, x2)
+
+inline_for_extraction
+let serialize32_nondep_then_aux
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1)
+  (s1' : serializer32 s1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#s2: serializer p2)
+  (s2' : serializer32 s2)
+  (x1: t1)
+  (x2: t2)
+  (#rrel: _) (#rel: _)
+  (b: B.mbuffer byte rrel rel)
+  (pos: U32.t)
+: HST.Stack U32.t
+  (requires (fun h ->
+    let len1 = Seq.length (serialize s1 x1) in
+    let len2 = Seq.length (serialize s2 x2) in
+    let len = len1 + len2 in
+    let sq = B.as_seq h b in
+    B.live h b /\
+    U32.v pos + len <= B.length b /\
+    writable b (U32.v pos) (U32.v pos + len) h
+  ))
+  (ensures (fun h len h' ->
+    let len1 = Seq.length (serialize s1 x1) in
+    let len2 = Seq.length (serialize s2 x2) in
+    len1 + len2 == U32.v len /\ (
+    B.modifies (B.loc_buffer_from_to b pos (pos `U32.add` len)) h h' /\
+    B.live h b /\
+    Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + U32.v len) `Seq.equal` (serialize s1 x1 `Seq.append` serialize s2 x2)
+  )))
+=
+  let gpos' = Ghost.hide (pos `U32.add` U32.uint_to_t (Seq.length (serialize s1 x1) + Seq.length (serialize s2 x2))) in
+  let len1 = frame_serializer32 s1' x1 b (Ghost.hide pos) gpos' pos in
+  let pos1 = pos `U32.add` len1 in
+  let len2 = frame_serializer32 s2' x2 b (Ghost.hide pos) gpos' pos1 in
+  let h1 = HST.get () in
+  len1 `U32.add` len2
+
+inline_for_extraction
 let serialize32_nondep_then
   (#k1: parser_kind)
   (#t1: Type)
@@ -121,12 +184,7 @@ let serialize32_nondep_then
   [@inline_let]
   let (x1, x2) = x in
   serialize_nondep_then_eq s1 s2 x;
-  let gpos' = Ghost.hide (pos `U32.add` U32.uint_to_t (Seq.length (serialize (s1 `serialize_nondep_then` s2) x))) in
-  let len1 = frame_serializer32 s1' x1 b (Ghost.hide pos) gpos' pos in
-  let pos1 = pos `U32.add` len1 in
-  let len2 = frame_serializer32 s2' x2 b (Ghost.hide pos) gpos' pos1 in
-  let h1 = HST.get () in
-  len1 `U32.add` len2
+  serialize32_nondep_then_aux s1' s2' x1 x2 b pos
 
 let valid_synth
   (#rrel #rel: _)
@@ -312,6 +370,46 @@ let jump_dtuple2_constant_size_dsnd
   jump_constant_size' (fun _ -> Ghost.reveal p2x) sz () input pos1
 
 inline_for_extraction
+let read_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (v1: jumper p1)
+  (r1: leaf_reader p1)
+  (#k2: parser_kind)
+  (#t2: t1 -> Type)
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (r2: (x: t1) -> Tot (leaf_reader (p2 x)))
+: Tot (leaf_reader (parse_dtuple2 p1 p2))
+= fun #_ #_ sl pos ->
+  let h = HST.get () in
+  [@inline_let] let _ = valid_dtuple2 h p1 p2 sl pos in
+  let x1 = r1 sl pos in
+  let pos2 = v1 sl pos in
+  let x2 = r2 x1 sl pos2 in
+  (| x1, x2 |)
+
+inline_for_extraction
+let serialize32_dtuple2
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1)
+  (s1' : serializer32 s1 { k1.parser_kind_subkind == Some ParserStrong } )
+  (#k2: parser_kind)
+  (#t2: t1 -> Tot Type)
+  (#p2: (x: t1) -> Tot (parser k2 (t2 x)))
+  (#s2: (x: t1) -> Tot (serializer (p2 x)))
+  (s2' : (x: t1) -> serializer32 (s2 x))
+: Tot (serializer32 (serialize_dtuple2 s1 s2))
+= fun (x: dtuple2 t1 t2) #_ #_ b pos ->
+  [@inline_let]
+  let _ = serialize_dtuple2_eq s1 s2 x in
+  match x with
+  | (| x1, x2 |) ->
+    serialize32_nondep_then_aux s1' (s2' x1) x1 x2 b pos
+
+inline_for_extraction
 let validate_ret
   (#t: Type)
   (v: t)
@@ -350,6 +448,26 @@ let read_ret
 
 inline_for_extraction
 let read_empty : leaf_reader parse_empty = read_ret ()
+
+inline_for_extraction
+let read_false : leaf_reader parse_false = fun #rrel #rel sl pos ->
+  LowStar.Failure.failwith "read_false: should not be called"
+
+inline_for_extraction
+let serialize32_ret
+  (#t: Type)
+  (v: t)
+  (v_unique: (v' : t) -> Lemma (v == v'))
+: Tot (serializer32 (serialize_ret v v_unique))
+= fun _ #_ #_ _ _ -> 0ul
+
+inline_for_extraction
+let serialize32_empty : serializer32 #_ #_ #parse_empty serialize_empty
+= serialize32_ret () (fun _ -> ())
+
+inline_for_extraction
+let serialize32_false : serializer32 #_ #_ #parse_false serialize_false
+= fun _ #_ #_ _ _ -> 0ul // dummy
 
 let valid_lift_parser
   (#k: parser_kind)

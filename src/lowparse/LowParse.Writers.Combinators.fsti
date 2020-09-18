@@ -1550,6 +1550,15 @@ let list_map
 
 inline_for_extraction
 noextract
+val parse_u64 : (p': parser {
+  Parser?.t p' == FStar.UInt64.t /\
+  get_parser_kind p' == LPI.parse_u64_kind /\
+  get_parser p' == LPI.parse_u64 /\
+  get_serializer p' == LPI.serialize_u64
+})
+
+inline_for_extraction
+noextract
 val parse_u32 : (p': parser {
   Parser?.t p' == U32.t /\
   get_parser_kind p' == LPI.parse_u32_kind /\

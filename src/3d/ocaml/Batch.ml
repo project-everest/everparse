@@ -146,11 +146,19 @@ let produce_c_files
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
-= 
+=
   let krml_files = List.fold_left
-    (fun accu (_, modul) -> filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
-                            Printf.sprintf "%sWrapper.c" modul ::
-                            filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu)
+    (fun accu (_, modul) ->
+       let l =
+         filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
+         Printf.sprintf "%sWrapper.c" modul ::
+         filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu
+       in
+       let static_asserts = Printf.sprintf "%sStaticAssertions.c" modul in
+       if Sys.file_exists (filename_concat out_dir static_asserts)
+       then static_asserts :: l
+       else l
+     )
     all_everparse_krmls
     files_and_modules
   in
@@ -164,7 +172,7 @@ let produce_c_files
     "-fcurly-braces" ::
     "-fmicrosoft" ::
     "-header" :: filename_concat ddd_home "noheader.txt" ::
-    "-minimal" :: 
+    "-minimal" ::
     "-add-include" :: "EverParse:\"EverParseEndianness.h\"" ::
     "-static-header" :: "Prelude.StaticHeader,LowParse.Low.Base,Prelude,Actions,ResultOps" ::
     "-no-prefix" :: "LowParse.Slice" ::
@@ -263,9 +271,10 @@ let add_copyright
       Printf.sprintf "%s.h" modul;
       Printf.sprintf "%sWrapper.c" modul;
       Printf.sprintf "%sWrapper.h" modul;
+      Printf.sprintf "%sStaticAssertions.c" modul;
     ]
   end
-  
+
 (* Collect all produced .c and .h files *)
 
 let collect_file
@@ -292,6 +301,7 @@ let collect_files_from
       Printf.sprintf "%s.h" modul;
       Printf.sprintf "%sWrapper.c" modul;
       Printf.sprintf "%sWrapper.h" modul;
+      Printf.sprintf "%sStaticAssertions.c" modul;
     ]
 
 let collect_files
@@ -309,7 +319,7 @@ let call_clang_format
   (clang_format_exe0: string)
   (out_dir: string)
   (files_and_modules: (string * string) list)
-= 
+=
   let clang_format_exe =
     if clang_format_exe0 <> ""
     then clang_format_exe0

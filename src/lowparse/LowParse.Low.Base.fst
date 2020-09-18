@@ -1016,6 +1016,20 @@ let serializer32
   )))
 
 inline_for_extraction
+let serialize32_ext
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (s1: serializer p1)
+  (s1': serializer32 s1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (u: squash (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
+: Tot (serializer32 (serialize_ext p1 s1 p2))
+= fun x #rrel #rel b pos -> s1' x b pos
+
+inline_for_extraction
 let frame_serializer32
   (#k: parser_kind)
   (#t: Type)
@@ -1110,6 +1124,33 @@ let leaf_writer_weak_of_strong_constant_size
     writable_weaken input.base (U32.v pos) (U32.v input.len) h (U32.v pos) (U32.v pos + U32.v sz);
     s32 x input pos
   end
+
+inline_for_extraction
+let serializer32_of_leaf_writer_strong_constant_size
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (s32: leaf_writer_strong s)
+  (sz: U32.t)
+  (u: squash (
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == U32.v sz
+  ))
+: Tot (serializer32 s)
+= fun x #rrel #rel b pos ->
+  serialized_length_eq s x;
+  let h0 = HST.get () in
+  let pos' = s32 x (make_slice b (pos `U32.add` sz)) pos in
+  [@inline_let]
+  let len = pos' `U32.sub` pos in
+  let h = HST.get () in
+  [@inline_let] let _ =
+    valid_valid_exact p h (make_slice b (pos `U32.add` sz)) pos;
+    valid_exact_serialize s h (make_slice b (pos `U32.add` sz)) pos pos'
+  in
+  len
 
 inline_for_extraction
 let blit_strong

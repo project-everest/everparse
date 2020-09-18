@@ -4,5 +4,5 @@ typedef struct _point {
 } point;
 
 entrypoint typedef struct _triangle {
-  point corners[{3}];
+  point corners[:byte-size sizeof(point)*3];
 } triangle;
