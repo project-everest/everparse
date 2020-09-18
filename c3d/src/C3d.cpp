@@ -644,13 +644,177 @@ public:
   }
 };
 
+class C3dAttrWithVar2 : public C3dSimpleSpelling, C3dDiagOnStruct {
+  const char *Name;
+  const char *InternalName;
+public:
+  C3dAttrWithVar2(const char *Name, const char *InternalName):
+    C3dSimpleSpelling(Name),
+    C3dDiagOnStruct(Name),
+    Name{Name},
+    InternalName{InternalName}
+  {
+    NumArgs = 1;
+  }
+
+  AttrHandling parseAttributePayload(Parser *P,
+                                     ParsedAttributes &Attrs,
+                                     Declarator *D,
+                                     IdentifierInfo *AttrName,
+                                     SourceLocation AttrNameLoc,
+                                     SourceLocation *EndLoc,
+                                     IdentifierInfo *ScopeName,
+                                     SourceLocation ScopeLoc) const override {
+    // Note: we don't have access to the internal API of the Parser here, which
+    // makes things somewhat difficult. For instance, we don't have access to
+    // ConsumeParen(), or ExpectAndConsume()...
+    LLVM_DEBUG(llvm::dbgs() << "c3d: parsing argument to " << Name << "\n");
+
+    // Defer to the parser to produce a good error message. TODO is this right?
+    if (P->getCurToken().getKind() != tok::l_paren)
+      return AttributeNotApplied;
+
+    // Eat opening left parenthesis.
+    P->ConsumeAnyToken();
+
+    // Parse the type -- no function is available to parse a declaration, sadly.
+    TypeResult TR = P->ParseTypeName();
+    if (!TR.isUsable())
+      return consumeUntilClosingParenAndError(P);
+    ParsedType PT = TR.get();
+
+    // Parse the type of the variable -- this is really a degenerate version of
+    // parsing a proper spec and declarator, and only likely works for really
+    // simple types.
+    //
+    // TODO: submit a patch to clang to be able to parse a simple spec-and-decl
+    // in one go
+    Token Tok = P->getCurToken();
+    if (Tok.getKind() != tok::identifier)
+      return consumeUntilClosingParenAndError(P);
+
+    // Parse the name of the variable. We LET the lookahead token be the ident.
+    IdentifierInfo *ParamName = Tok.getIdentifierInfo();
+
+    // Extend the scope with the variable.
+    LLVM_DEBUG(llvm::dbgs() << "c3d: " << Name << " scope extension! " << ParamName->getNameStart() << "\n");
+    Sema &S = P->getActions();
+
+    // This doesn't work because it doesn't return the TypeSourceInfo.
+    // QualType QT = PT.get();
+    TypeSourceInfo *TS = nullptr;
+    QualType QT = S.GetTypeFromParser(PT, &TS);
+    LLVM_DEBUG(llvm::dbgs() << "c3d: " << Name << " type: " << QT.getAsString() << "\n");
+
+    // TODO: the locations are not exactly optimal here
+    PushVar(P, AttrNameLoc, AttrNameLoc, ParamName, QT, TS, SC_None);
+
+    ExprResult ER = ParseExpr(P);
+
+    assert (ER.isUsable() && "This ident should have parsed");
+
+    // TODO: in the case of trailing tokens (e.g. too many arguments), the error
+    // message is not exactly mind-blowing
+    if (P->getCurToken().getKind() != tok::r_paren)
+      return consumeUntilClosingParenAndError(P);
+
+    // From ParseAttributeArgsCommon, this seems like a sensible thing to do.
+    SourceLocation RParen = P->getCurToken().getLocation();
+    if (EndLoc)
+      *EndLoc = RParen;
+
+    P->ConsumeAnyToken();
+
+    // Mega-hack: register two attributes with the same name, and rely on the
+    // (unstated) invariant that clang preserves the order of things. The first
+    // attribute will hold the type, and the subsequent one the expression.
+    //
+    // TODO: submit a patch to clang to allow a plugin-managed opaque_ptr in the
+    // storage area of the ParsedAttr
+    Attrs.addNewTypeAttr(AttrName, SourceRange(ScopeLoc, RParen), ScopeName, ScopeLoc,
+                 PT, ParsedAttr::AS_C2x);
+
+    ArgsVector ArgExprs;
+    ArgExprs.push_back(ER.get());
+    Attrs.addNew(AttrName, SourceRange(ScopeLoc, RParen), ScopeName, ScopeLoc,
+                 ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
+
+    return AttributeApplied;
+  }
+
+  AttrHandling handleDeclAttribute(Sema &S, Decl *D,
+                                   const ParsedAttr &Attr) const override {
+
+    // 😱
+    static const ParsedType *LastPT;
+    static enum { SeenType, SeenExpr } State = SeenExpr;
+
+    switch (State) {
+      case SeenExpr:
+        // Visiting a new pair of attributes, now seeing the type, which comes
+        // first.
+        LastPT = &Attr.getTypeArg();
+        State = SeenType;
+        return AttributeApplied;
+
+      case SeenType: {
+        Expr *ArgExpr = Attr.getArgAsExpr(0);
+
+       {
+        std::string Str = "c3d_parameter";
+        Str += ":";
+        llvm::raw_string_ostream out{Str};
+
+        TypeSourceInfo *TS = nullptr;
+        const QualType &QT = S.GetTypeFromParser(*LastPT, &TS);
+
+        QT.print(out, S.Context.getPrintingPolicy());
+        out << " ";
+        ArgExpr->printPretty(out, nullptr, S.Context.getPrintingPolicy());
+
+        LLVM_DEBUG(llvm::dbgs() << "c3d: registering " << Name << "(" << Str << ")\n");
+
+        D->addAttr(AnnotateAttr::Create(S.Context, Str, Attr.getRange()));
+       }
+
+       {
+        std::string Str = InternalName;
+        Str += ":";
+        llvm::raw_string_ostream out{Str};
+
+        // TypeSourceInfo *TS = nullptr;
+        // const QualType &QT = S.GetTypeFromParser(*LastPT, &TS);
+
+        // QT.print(out, S.Context.getPrintingPolicy());
+        // out << " ";
+        ArgExpr->printPretty(out, nullptr, S.Context.getPrintingPolicy());
+
+        LLVM_DEBUG(llvm::dbgs() << "c3d: registering " << Name << "(" << Str << ")\n");
+
+        D->addAttr(AnnotateAttr::Create(S.Context, Str, Attr.getRange()));
+       }
+
+        State = SeenExpr;
+        return AttributeApplied;
+     }
+
+     default: {
+        /* Silences a GCC coverage warning */
+        LLVM_DEBUG(llvm::dbgs() << "c3d: WARNING default case in handleDeclAttribute\n");
+        return NotHandled;
+     }
+    }
+  }
+};
+
+
 struct C3dParameterAttrInfo : C3dAttrWithVar {
   C3dParameterAttrInfo(): C3dAttrWithVar{"everparse::parameter", "c3d_parameter"} {
   }
 };
 
-struct C3dSwitchAttrInfo : C3dAttrWithVar {
-  C3dSwitchAttrInfo(): C3dAttrWithVar{"everparse::switch", "c3d_switch"} {
+struct C3dSwitchAttrInfo : C3dAttrWithVar2 {
+  C3dSwitchAttrInfo(): C3dAttrWithVar2{"everparse::switch", "c3d_switch"} {
   }
 };
 
