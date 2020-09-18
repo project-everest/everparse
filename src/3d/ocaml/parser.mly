@@ -280,6 +280,7 @@ action_else:
   | ELSE LBRACE a=action RBRACE { a }
 
 action_no_range:
+  | LBRACE a=action_no_range RBRACE { a }
   | a=atomic_action { Atomic_action a }
   | a1=atomic_action a=action { Action_seq (a1, a) }
   | IF e=expr LBRACE a1=action RBRACE a2=option_of(action_else) { Action_ite (e, a1, a2) }
