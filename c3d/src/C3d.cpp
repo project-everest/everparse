@@ -958,14 +958,23 @@ public:
   }
 
   bool VisitEnumDecl(EnumDecl *E) {
+    SourceLocation Start, End;
     AttrVec FilteredAttrs {};
     bool HasProcess = false;
+    bool IsFirst;
 
     LLVM_DEBUG(llvm::dbgs() << "c3d: visiting enum " << E->getName() << "\n");
 
+    IsFirst = true;
     for (const auto& A: E->attrs()) {
       if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
         LLVM_DEBUG(llvm::dbgs() << "c3d: enum has attribute " << AA->getAnnotation() << "\n");
+        if (IsFirst) {
+          Start = AA->getLoc().getLocWithOffset(-6);
+          IsFirst = false;
+        }
+        End = AA->getRange().getEnd().getLocWithOffset(4);
+
         if (AA->getAnnotation() == "c3d_process")
           HasProcess = true;
         else
@@ -980,6 +989,14 @@ public:
 
     E->dropAttrs();
     E->setAttrs(FilteredAttrs);
+
+    if (FilteredAttrs.size() > 0) {
+      LLVM_DEBUG(llvm::dbgs() << "c3d: TODO: more fine-grained handling when existing atttributes for: enum\n");
+    } else if (!IsFirst) {
+      LLVM_DEBUG(llvm::dbgs() << "c3d: enum commenting out attributes\n");
+      this->R.InsertText(Start, "/*", true, true);
+      this->R.InsertText(End, "*/", true, true);
+    }
 
     Out << "UINT32 enum ";
 
@@ -1052,9 +1069,12 @@ public:
         LLVM_DEBUG(llvm::dbgs() << "c3d: record has attribute " << AA->getAnnotation() << "\n");
         if (AA->getAnnotation() == "c3d_process")
           HasProcess = true;
-        else if (AA->getAnnotation() == "c3d_entrypoint")
+        else if (AA->getAnnotation() == "c3d_entrypoint") {
+          // GM: FIXME: locations are wrong for c3d_entrypoint, but
+          // has no payload, so fix that here.
+          End = AA->getRange().getEnd().getLocWithOffset(13);
           HasEntrypoint = true;
-        else if (AA->getAnnotation().startswith("c3d_parameter:"))
+        } else if (AA->getAnnotation().startswith("c3d_parameter:"))
           Parameters.push_back(AA);
         else if (AA->getAnnotation().startswith("c3d_where:"))
           WhereClauses.push_back(AA);
@@ -1182,13 +1202,18 @@ public:
 
           StringRef Annot = AA->getAnnotation();
           LLVM_DEBUG(llvm::dbgs() << "c3d: " << F->getNameAsString() << " has an attribute " << Annot << "\n");
-          if (Kind == Struct && Annot.startswith("c3d_constraint:"))
-            FoundConstraints.push_back(Annot.slice(15, Annot.size()));
-          else if (Kind == Union && Annot.startswith("c3d_case:"))
+          if (Kind == Struct && Annot.startswith("c3d_constraint:")) {
+            StringRef C = Annot.slice(15, Annot.size());
+            if (C != "1") // Avoid printing trivial constraints
+              FoundConstraints.push_back(C);
+          } else if (Kind == Union && Annot.startswith("c3d_case:"))
             FoundCase.push_back(Annot.slice(9, Annot.size()));
-          else if (Kind == Union && Annot == "c3d_default")
+          else if (Kind == Union && Annot == "c3d_default") {
+            // GM: FIXME: locations are wrong for c3d_default, but
+            // has no payload, so fix that here.
+            End = AA->getRange().getEnd().getLocWithOffset(9);
             FoundDefault = true;
-          else if (Annot.startswith("c3d_with:"))
+          } else if (Annot.startswith("c3d_with:"))
             FoundWith.push_back(Annot.slice(9, Annot.size()));
           else
             FilteredAttributes.push_back(A);
