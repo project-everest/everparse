@@ -503,6 +503,11 @@ struct C3dByteSizeAttrInfo : public C3dFieldExprAttrInfo {
   }
 };
 
+struct C3dByteSizeAtMostAttrInfo : public C3dFieldExprAttrInfo {
+  C3dByteSizeAtMostAttrInfo(): C3dFieldExprAttrInfo("everparse::byte_size_at_most", "c3d_byte_size_at_most") {
+  }
+};
+
 // An everparse attribute with an argument representing a variable,
 // like `everparse::parameter(uint32_t len)` or `everparse::switch(uint8_t tag)`
 class C3dAttrWithVar : public C3dSimpleSpelling, C3dDiagOnStruct {
@@ -1024,6 +1029,9 @@ static ParsedAttrInfoRegistry::Add<C3dDefaultAttrInfo>
 static ParsedAttrInfoRegistry::Add<C3dByteSizeAttrInfo>
     X10("c3d_byte_size", "recognize everparse::byte_size");
 
+static ParsedAttrInfoRegistry::Add<C3dByteSizeAtMostAttrInfo>
+    X11("c3d_byte_size_at_most", "recognize everparse::byte_size_at_most");
+
 
 //===----------------------------------------------------------------------===//
 
@@ -1364,6 +1372,7 @@ public:
       SmallVector<StringRef, 4> FoundCase {};
       SmallVector<StringRef, 4> FoundWith {};
       SmallVector<StringRef, 4> FoundByteSize {};
+      SmallVector<StringRef, 4> FoundByteSizeAtMost {};
       bool FoundDefault = false;
       for (const auto& A: F->attrs()) {
         if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
@@ -1380,19 +1389,22 @@ public:
             StringRef C = Annot.slice(15, Annot.size());
             if (C != "1") // Avoid printing trivial constraints
               FoundConstraints.push_back(C);
-          } else if (Kind == Union && Annot.startswith("c3d_case:"))
+          } else if (Kind == Union && Annot.startswith("c3d_case:")) {
             FoundCase.push_back(Annot.slice(9, Annot.size()));
-          else if (Kind == Union && Annot == "c3d_default") {
+          } else if (Kind == Union && Annot == "c3d_default") {
             // GM: FIXME: locations are wrong for c3d_default, but
             // has no payload, so fix that here.
             End = AA->getRange().getEnd().getLocWithOffset(9);
             FoundDefault = true;
-          } else if (Annot.startswith("c3d_with:"))
+          } else if (Annot.startswith("c3d_with:")) {
             FoundWith.push_back(Annot.slice(9, Annot.size()));
-           else if (Annot.startswith("c3d_byte_size:"))
+          } else if (Annot.startswith("c3d_byte_size:")) {
             FoundByteSize.push_back(Annot.slice(14, Annot.size()));
-          else
+          } else if (Annot.startswith("c3d_byte_size_at_most:")) {
+            FoundByteSizeAtMost.push_back(Annot.slice(22, Annot.size()));
+          } else {
             FilteredAttributes.push_back(A);
+          }
         } else {
           FilteredAttributes.push_back(A);
         }
@@ -1495,9 +1507,11 @@ public:
         break;
 
       case VLA:
-        assert (FoundByteSize.size() == 1 && "VLA arrays need exactly one byte_size attribute");
-        auto S = FoundByteSize[0];
-        Out << "[:byte-size (" << S << ")]";
+        assert ((FoundByteSize.size() + FoundByteSizeAtMost.size ()) == 1
+                    && "VLA arrays need exactly one byte_size or byte_size_at_most attribute");
+        bool AtMost = FoundByteSizeAtMost.size() > 0;
+        auto S = AtMost ? FoundByteSizeAtMost[0] : FoundByteSize[0];
+        Out << "[:byte-size" << (AtMost ? "-at-most" : "") << " (" << S << ")]";
         break;
       }
 
