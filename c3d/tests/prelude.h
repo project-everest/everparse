@@ -12,3 +12,5 @@
 #define UINT64 uint64_t
 
 bool is_range_okay(uint32_t x, uint32_t y, uint32_t z);
+
+const int EVERPARSE_VLA = 0;

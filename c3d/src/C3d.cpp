@@ -1437,10 +1437,30 @@ public:
       LangOptions Opts;
       QualType T = F->getType();
 
+      enum { NotAnArray, ConstantSize, VLA } ArrayKind;
+      llvm::APInt ArrayLen;
+
       // FIXME: this is getting the base element type if this an array.
       // It's ignoring lengths, and dimensionality, which it should not.
-      while (auto AT = dyn_cast<ArrayType>(T))
+      if (isa<ArrayType>(T)) {
+        auto AT = dyn_cast<ArrayType>(T);
+        if (isa<ConstantArrayType>(AT)) {
+            auto CAT = dyn_cast<ConstantArrayType>(AT);
+            ArrayLen = CAT->getSize();
+            if (ArrayLen.isStrictlyPositive())
+              ArrayKind = ConstantSize;
+            else
+              ArrayKind = VLA;
+        } else {
+            /* I think we can only reach here if the array does not have a
+             * size, since non-constant sizes are rejected early. */
+            ArrayKind = VLA;
+            ArrayLen = 0;
+        }
         T = AT->getElementType();
+      } else {
+        ArrayKind = NotAnArray;
+      }
 
       T.print(Out, PrintingPolicy(Opts));
 
@@ -1464,10 +1484,21 @@ public:
       Out << F->getName();
 
       /* Print byte size if any (TODO: check this is actually an array */
-      if (FoundByteSize.size() > 0) {
-        // There can only be one!
+      switch (ArrayKind) {
+      case NotAnArray:
+          break;
+
+      case ConstantSize:
+        Out << "[:byte-size (" << ArrayLen << ") * sizeof (";
+        T.print(Out, PrintingPolicy(Opts));
+        Out << ")]";
+        break;
+
+      case VLA:
+        assert (FoundByteSize.size() == 1 && "VLA arrays need exactly one byte_size attribute");
         auto S = FoundByteSize[0];
-        Out << "[:byte-size " << S << "]";
+        Out << "[:byte-size (" << S << ")]";
+        break;
       }
 
       if (FoundConstraints.size() > 0) {
