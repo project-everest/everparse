@@ -1204,7 +1204,8 @@ public:
   }
 
   bool VisitRecordDecl(RecordDecl *R) {
-    LLVM_DEBUG(llvm::dbgs() << "c3d: visiting record " << R->getName() << "\n");
+    StringRef DName = R->getName();
+    LLVM_DEBUG(llvm::dbgs() << "c3d: visiting record " << DName << "\n");
 
     // Iterate over this record's attributes, collecting non-c3d attributes in
     // filtered_attributes. We also remember some offsets for the first and last
@@ -1221,7 +1222,7 @@ public:
     } else if (R->isUnion()) {
         Kind = Union;
     } else {
-      LLVM_DEBUG(llvm::dbgs() << "c3d: unrecognized record decl for " << R->getName() << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "c3d: unrecognized record decl for " << DName << "\n");
       return false;
     }
 
@@ -1271,7 +1272,7 @@ public:
     // Assuming no non-c3d attributes for now, meaning we can comment out the
     // entire attribute block.
     if (FilteredAttrs.size() > 0) {
-      LLVM_DEBUG(llvm::dbgs() << "c3d: TODO: more fine-grained handling when existing atttributes for: " << R->getName() << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "c3d: TODO: more fine-grained handling when existing atttributes for: " << DName << "\n");
     } else if (!IsFirst) {
       // Based on SemaDeclAttr.cpp, specifically ProcessDeclAttributeList, it
       // seems like the range of the whole attribute list is not retained in any
@@ -1281,7 +1282,7 @@ public:
       //
       // TODO: do something smarter, perhaps use the cursor API to move
       // backwards until the token is found?
-      LLVM_DEBUG(llvm::dbgs() << "c3d: record " << R->getName() << " commenting out attributes\n");
+      LLVM_DEBUG(llvm::dbgs() << "c3d: record " << DName << " commenting out attributes\n");
       this->R.InsertText(Start, "/*", true, true);
       this->R.InsertText(End, "*/", true, true);
     }
@@ -1292,14 +1293,14 @@ public:
 
     switch (Kind) {
     case Struct:
-      Out << "typedef struct _X_";
-      Out << R->getName();
+      Out << "typedef struct ";
+      Out << DName;
       break;
     case Union:
       // GM: from the manual it seems the casetype has a name beginning
       // with an underscore and then the "normal" name is given at end
       // like if this was a typedef. Why?
-      Out << "casetype _X_" << R->getName();
+      Out << "casetype " << DName;
       break;
     }
 
@@ -1400,7 +1401,7 @@ public:
       F->setAttrs(FilteredAttributes);
 
       if (FilteredAttributes.size() > 0) {
-        LLVM_DEBUG(llvm::dbgs() << "c3d: TODO: more fine-grained handling when existing atttributes for: " << R->getName() << "\n");
+        LLVM_DEBUG(llvm::dbgs() << "c3d: TODO: more fine-grained handling when existing atttributes for: " << DName << "\n");
       } else if (!IsFirst) {
         // Based on SemaDeclAttr.cpp, specifically ProcessDeclAttributeList, it
         // seems like the range of the whole attribute list is not retained in any
@@ -1489,12 +1490,17 @@ public:
       Out << ";\n";
     }
 
+
+    // Remove leading underscode (Windows coding convention)
+    if (DName.front() == '_')
+      DName = DName.drop_front();
+
     switch (Kind) {
     case Union:
-      Out << " }\n} " << R->getName() << ";\n\n";
-      break;
+      Out << " }\n";
+      [[fallthrough]];
     case Struct:
-      Out << "} " << R->getName() << ";\n\n";
+      Out << "} " << DName << ", *P" << DName << ";\n\n";
       break;
     }
 

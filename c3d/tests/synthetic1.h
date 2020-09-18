@@ -45,7 +45,7 @@ typedef struct [[
   everparse::process(0),
   everparse::parameter(UINT32 Len),
   everparse::where (Len == sizeof(this))
-]] STRUCT_2 
+]] _STRUCT_2
 {
   UINT32_Alias3   len  [[everparse::constraint(true)]];
   STRUCT_1   field_1  [[everparse::with(len)]];
@@ -54,7 +54,7 @@ typedef struct [[
 typedef struct [[
   everparse::process(0),
   everparse::parameter(UINT32 TotalLen)
-]] STRUCT_3
+]] _STRUCT_3
 {
     UINT32_Alias1   f1;
     UINT32_Alias2   f2;
@@ -83,7 +83,7 @@ typedef union [[
   everparse::process(0),
   everparse::switch(UINT32 Tag),
   everparse::parameter(UINT32 TotalLen)
-]] UNION_1
+]] _UNION_1
 {
   STRUCT_1 struct1
     [[everparse::case(TAG_STRUCT_1),
@@ -101,7 +101,7 @@ typedef union [[
 typedef struct [[
   everparse::process(0),
   everparse::entrypoint
-]] CONTAINER_1
+]] _CONTAINER_1
 {
   UINT32            Tag
     [[everparse::constraint(true)]];
@@ -109,7 +109,7 @@ typedef struct [[
     [[everparse::constraint(
        MessageLength >= sizeof(this)
        )]];
-  UNION_1 
+  UNION_1 union_ // FIXME: allow this to be unnamed
     [[everparse::with(Tag),
       everparse::with(MessageLength - sizeof(this))]];
 } CONTAINER_1;
