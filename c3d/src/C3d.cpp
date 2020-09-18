@@ -328,9 +328,15 @@ struct C3dEntryPointAttrInfo: TrivialC3dAttrInfo {
 // attribute that holds a user-provided payload. (Suggestion by Aaron Ballman).
 // This would require some non-trivial feature work in clang itself, as I have
 // found no way to extend Attr.td with an out-of-tree plugin.
-class C3dConstraintAttrInfo : public C3dSimpleSpelling {
+class C3dFieldExprAttrInfo : public C3dSimpleSpelling {
+  const char *Name;
+  const char *InternalName;
 public:
-  C3dConstraintAttrInfo(): C3dSimpleSpelling("everparse::constraint") {
+  C3dFieldExprAttrInfo(const char *Name, const char *InternalName):
+    C3dSimpleSpelling(Name),
+    Name{Name},
+    InternalName{InternalName}
+  {
     NumArgs = 1;
   }
 
@@ -345,7 +351,7 @@ public:
     // everparse::process
     //
 
-    LLVM_DEBUG(llvm::dbgs() << "c3d: found attribute everparse::constraint\n");
+    LLVM_DEBUG(llvm::dbgs() << "c3d: found attribute " << Name << "\n");
     return true;
   }
 
@@ -360,7 +366,7 @@ public:
     // Note: we don't have access to the internal API of the Parser here, which
     // makes things somewhat difficult. For instance, we don't have access to
     // ConsumeParen(), or ExpectAndConsume()...
-    LLVM_DEBUG(llvm::dbgs() << "c3d: parsing argument to everparse::constraint\n");
+    LLVM_DEBUG(llvm::dbgs() << "c3d: parsing argument to " << Name << "\n");
 
     // Defer to the parser to produce a good error message.
     if (P->getCurToken().getKind() != tok::l_paren)
@@ -376,7 +382,7 @@ public:
     // a meaningful error now.
     if (D == nullptr) {
       P->getActions().Diag(AttrNameLoc, diag::warn_attribute_wrong_decl_type_str)
-        << "everparse::constraint" << "struct field declarations";
+        << Name << "struct field declarations";
       return consumeUntilClosingParenAndError(P);
     }
 
@@ -439,10 +445,11 @@ public:
     // have to rely on AnnotateAttr which can only hold a string! To make sure
     // we can tell our own attributes apart from potentially other plugins, we
     // pretty-print the expression now, and prefix it with c3d_FOO:.
-    std::string Str = "c3d_constraint:";
+    std::string Str = InternalName;
+    Str += ":";
     llvm::raw_string_ostream out{Str};
     ArgExpr->printPretty(out, nullptr, S.Context.getPrintingPolicy());
-    LLVM_DEBUG(llvm::dbgs() << "c3d: registering constraint " << Str << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "c3d: registering " << Str << "\n");
 
     // I tried to create a custom attribute that inherits from InheritableAttr
     // but I could not figure out how to implement its constructor (which is
@@ -453,6 +460,16 @@ public:
     // here...
     D->addAttr(AnnotateAttr::Create(S.Context, Str, Attr.getRange()));
     return AttributeApplied;
+  }
+};
+
+struct C3dConstraintAttrInfo : public C3dFieldExprAttrInfo {
+  C3dConstraintAttrInfo(): C3dFieldExprAttrInfo("everparse::constraint", "c3d_constraint") {
+  }
+};
+
+struct C3dWithAttrInfo : public C3dFieldExprAttrInfo {
+  C3dWithAttrInfo(): C3dFieldExprAttrInfo("everparse::with", "c3d_with") {
   }
 };
 
@@ -804,6 +821,9 @@ static ParsedAttrInfoRegistry::Add<C3dSwitchAttrInfo>
 static ParsedAttrInfoRegistry::Add<C3dCaseAttrInfo>
     X7("c3d_case", "recognize everparse::case");
 
+static ParsedAttrInfoRegistry::Add<C3dWithAttrInfo>
+    X8("c3d_with", "recognize everparse::with");
+
 //===----------------------------------------------------------------------===//
 
 // Now that all the attributes have been validated, processed and retained in
@@ -1074,6 +1094,7 @@ public:
       AttrVec FilteredAttributes {};
       SmallVector<StringRef, 4> FoundConstraints {};
       SmallVector<StringRef, 4> FoundCase {};
+      SmallVector<StringRef, 4> FoundWith {};
       for (const auto& A: F->attrs()) {
         if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
           // Location-related business.
@@ -1089,6 +1110,8 @@ public:
             FoundConstraints.push_back(Annot.slice(15, Annot.size()));
           else if (Kind == Union && Annot.startswith("c3d_case:"))
             FoundCase.push_back(Annot.slice(9, Annot.size()));
+          else if (Annot.startswith("c3d_with:"))
+            FoundWith.push_back(Annot.slice(9, Annot.size()));
           else
             FilteredAttributes.push_back(A);
         } else {
@@ -1124,7 +1147,25 @@ public:
         Out << "case " << Case << ": ";
       }
 
-      F->print(Out, 2);
+      /* Print the type of the field */
+      LangOptions Opts;
+      F->getType().print(Out, PrintingPolicy(Opts));
+
+      /* Potentially print the instantiations (everparse::with) of the type */
+      if (FoundWith.size() > 0) {
+        bool first = true;
+        Out << "(";
+        for (const auto &W: FoundWith) {
+          if (!first)
+            Out << ", ";
+          first = false;
+          Out << W;
+        }
+        Out << ")";
+      }
+
+      /* Print the field name */
+      Out << " " << F->getName();
 
       if (FoundConstraints.size() > 0) {
         bool NeedsAnd = FoundConstraints.size() >= 2;
