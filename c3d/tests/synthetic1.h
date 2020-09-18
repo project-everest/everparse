@@ -1,6 +1,3 @@
-#include <stdint.h>
-#include <stdbool.h>
-
 // Some constants explicitly in u32
 enum
 [[
@@ -16,12 +13,7 @@ enum
   V9 = 0x000009ul,
 };
 
-typedef uint8_t UINT8;
-typedef uint16_t UINT16;
-typedef uint32_t UINT32;
-typedef uint64_t UINT64;
-
-typedef struct {} unit;
+typedef struct { char dummy[0]; } unit;
 
 // Some typedefs
 typedef UINT32 UINT32_Alias1     [[everparse::process(1)]]     ;
@@ -37,7 +29,7 @@ typedef struct [[
   everparse::process(0),
   everparse::parameter(UINT32 Len),
   everparse::where(Len == sizeof(this))
-]] STRUCT_1
+]] _STRUCT_1
 {
   UINT32_Alias1 f1;
   UINT32        f2;
@@ -55,8 +47,8 @@ typedef struct [[
   everparse::where (Len == sizeof(this))
 ]] STRUCT_2 
 {
-  UINT32_Alias3   len [[everparse::constraint(true)]];
-  STRUCT_1   field_1 [[everparse::with(len)]];
+  UINT32_Alias3   len  [[everparse::constraint(true)]];
+  STRUCT_1   field_1  [[everparse::with(len)]];
 } STRUCT_2;
 
 typedef struct [[
@@ -73,7 +65,7 @@ typedef struct [[
             is_range_okay(TotalLen, offset, len) &&
             offset >= sizeof(this)
         )]];
-    UINT32_Alias4   f4 [[everparse::constraint(f4 == 0)]];
+    UINT32_Alias4   f4  [[everparse::constraint(f4 == 0)]];
     UINT8        buffer     [[everparse::byte_size(TotalLen - sizeof(this))]]   
                             [0];
 } STRUCT_3;
@@ -117,7 +109,7 @@ typedef struct [[
     [[everparse::constraint(
        MessageLength >= sizeof(this)
        )]];
-  UNION_1 union_
+  UNION_1 
     [[everparse::with(Tag),
       everparse::with(MessageLength - sizeof(this))]];
 } CONTAINER_1;

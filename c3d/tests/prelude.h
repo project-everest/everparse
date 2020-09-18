@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define UINT8 uint8_t
 #define UINT16 uint16_t
