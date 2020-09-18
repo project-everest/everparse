@@ -198,7 +198,7 @@ let produce_c_files
         ]
   in
   (* the argument list is too long, so we need to go through an argument file *)
-  let argfile = filename_concat out_dir "kremlin_args.rsp" in
+  let argfile = Filename.temp_file ~temp_dir:out_dir "kremlinargs" ".rsp" in
   let h = open_out argfile in
   let rec aux = function
     | [] -> ()
