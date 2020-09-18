@@ -800,7 +800,7 @@ public:
     // We are done: register the ParsedAttr so that we see it later on.
     ArgsVector ArgExprs;
     ArgExprs.push_back(E.get());
-    Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
+    Attrs.addNew(AttrName, SourceRange(ScopeLoc, RParen), ScopeName, ScopeLoc,
                  ArgExprs.data(), ArgExprs.size(), ParsedAttr::AS_C2x);
 
     return AttributeApplied;
