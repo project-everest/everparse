@@ -911,6 +911,52 @@ public:
   {
   }
 
+  bool VisitTypedefDecl(TypedefDecl *D) {
+    SourceLocation Start, End;
+    AttrVec FilteredAttrs {};
+    bool HasProcess = false;
+    bool IsFirst;
+
+    LLVM_DEBUG(llvm::dbgs() << "c3d: visiting typedef " << D->getName() << "\n");
+
+    IsFirst = true;
+    for (const auto& A: D->attrs()) {
+      if (const auto& AA = dyn_cast<AnnotateAttr>(A)) {
+        if (IsFirst) {
+          Start = AA->getLoc().getLocWithOffset(-6);
+          IsFirst = false;
+        }
+        End = AA->getRange().getEnd().getLocWithOffset(4);
+
+        if (AA->getAnnotation() == "c3d_process")
+          HasProcess = true;
+        else
+          FilteredAttrs.push_back(A);
+      } else {
+        FilteredAttrs.push_back(A);
+      }
+    }
+
+    if (!HasProcess)
+        return true;
+
+    D->dropAttrs();
+    D->setAttrs(FilteredAttrs);
+
+    if (FilteredAttrs.size() > 0) {
+      LLVM_DEBUG(llvm::dbgs() << "c3d: TODO: more fine-grained handling when existing atttributes for: enum\n");
+    } else if (!IsFirst) {
+      LLVM_DEBUG(llvm::dbgs() << "c3d: enum commenting out attributes\n");
+      this->R.InsertText(Start, "/*", true, true);
+      this->R.InsertText(End, "*/", true, true);
+    }
+
+    D->print(Out, 2);
+    Out << ";\n\n";
+
+    return true;
+  }
+
   bool VisitEnumDecl(EnumDecl *E) {
     AttrVec FilteredAttrs {};
     bool HasProcess = false;
@@ -1054,14 +1100,14 @@ public:
 
     switch (Kind) {
     case Struct:
-      Out << "typedef struct ";
+      Out << "typedef struct _X_";
       Out << R->getName();
       break;
     case Union:
       // GM: from the manual it seems the casetype has a name beginning
       // with an underscore and then the "normal" name is given at end
       // like if this was a typedef. Why?
-      Out << "casetype _" << R->getName();
+      Out << "casetype _X_" << R->getName();
       break;
     }
 
@@ -1203,7 +1249,7 @@ public:
           Out << W;
         }
         /* Print the field name */
-        Out << " " << F->getName() << ")";
+        Out << ") " << F->getName();
       } else {
         // If there are no instantiations then we just print the field,
         // so arrays work.
@@ -1236,8 +1282,7 @@ public:
       Out << " }\n} " << R->getName() << ";\n\n";
       break;
     case Struct:
-      // Interleaved printing
-      Out << "}\n\n";
+      Out << "} " << R->getName() << ";\n\n";
       break;
     }
 

@@ -1,20 +1,32 @@
 // Some constants explicitly in u32
-#define V2              0x00000002ul
-#define V3              3ul
-#define V4              0x00000004ul
-#define V5              0x5ul
-#define V6              0x00000006ul
-#define V7              0x00000007ul
-#define V8              0x00000008ul
-#define V9              0x000009ul
+enum
+[[
+  everparse::process(0)
+]] {
+  V2 = 0x00000002ul,
+  V3 = 3ul,
+  V4 = 0x00000004ul,
+  V5 = 0x5ul,
+  V6 = 0x00000006ul,
+  V7 = 0x00000007ul,
+  V8 = 0x00000008ul,
+  V9 = 0x000009ul,
+};
+
+typedef uint8_t UINT8;
+typedef uint16_t UINT16;
+typedef uint32_t UINT32;
+typedef uint64_t UINT64;
+
+typedef struct {} unit;
 
 // Some typedefs
-typedef UINT32 UINT32_Alias1;
-typedef UINT32 UINT32_Alias2;
-typedef UINT32 UINT32_Alias3;
-typedef UINT32 UINT32_Alias4;
-typedef UINT32 UINT32_Alias5;
-typedef UINT32 ULONG;
+typedef UINT32 UINT32_Alias1     [[everparse::process(1)]]     ;
+typedef UINT32 UINT32_Alias2     [[everparse::process(1)]]     ;
+typedef UINT32 UINT32_Alias3     [[everparse::process(1)]]     ;
+typedef UINT32 UINT32_Alias4     [[everparse::process(1)]]     ;
+typedef UINT32 UINT32_Alias5     [[everparse::process(1)]]     ;
+typedef UINT32 ULONG             [[everparse::process(1)]]     ;
 typedef UINT64 ULONG64;
 
 //Struct with a where clause and sizeof
