@@ -354,11 +354,12 @@ let postprocess
   produce_c_files cleanup out_dir files_and_modules;
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
-  (* copy ancillaries *)
-  copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
   (* add copyright *)
   List.iter (add_copyright out_dir) files_and_modules;
   (* clang-format the files if asked for *)
   if clang_format
-  then call_clang_format clang_format_executable out_dir files_and_modules;
+  then begin
+    copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
+    call_clang_format clang_format_executable out_dir files_and_modules;
+  end;
   ()
