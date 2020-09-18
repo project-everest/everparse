@@ -136,6 +136,16 @@ protected:
     PushVar(P, L, L, &IDD, R, nullptr, SC_None);
   }
 
+  void PushSizeVar(Parser *P) const {
+    SourceLocation L;
+    Sema &S = P->getActions();
+    // At type 'sizeof'
+    const Type *voidTy = S.getASTContext().getSizeType().getTypePtr();
+    QualType R = QualType(voidTy, 0);
+    IdentifierInfo &IDD = P->getPreprocessor().getIdentifierTable().getOwn("size");
+    PushVar(P, L, L, &IDD, R, nullptr, SC_None);
+  }
+
   // Pop one variable out from the C3d scope. Currently only used to remove the
   // 'this' binding when parsing a where clause.
   void PopVar() const {
@@ -433,7 +443,9 @@ public:
     }
 
     PushThisVar(P);
+    PushSizeVar(P);
     ExprResult E = ParseExpr(P);
+    PopVar();
     PopVar();
 
     if (!E.isUsable())
@@ -1186,25 +1198,30 @@ public:
       if (FoundDefault)
         Out << "default: \n    ";
 
-      /* Print the type of the field */
-      LangOptions Opts;
-      F->getType().print(Out, PrintingPolicy(Opts));
-
-      /* Potentially print the instantiations (everparse::with) of the type */
+      /* Potentially print the instantiations (everparse::with) of the type. We
+       * do that by printing the type name separately... but this breaks
+       * arrays. What to do? */
       if (FoundWith.size() > 0) {
-        bool first = true;
+        /* Print the type of the field */
+        LangOptions Opts;
+        F->getType().print(Out, PrintingPolicy(Opts));
+
         Out << "(";
+        bool first = true;
         for (const auto &W: FoundWith) {
           if (!first)
             Out << ", ";
           first = false;
           Out << W;
         }
-        Out << ")";
+        /* Print the field name */
+        Out << " " << F->getName() << ")";
+      } else {
+        // If there are no instantiations then we just print the field,
+        // so arrays work.
+        F->print(Out, 2);
       }
 
-      /* Print the field name */
-      Out << " " << F->getName();
 
       if (FoundConstraints.size() > 0) {
         bool NeedsAnd = FoundConstraints.size() >= 2;
