@@ -792,6 +792,8 @@ let rec print_as_c_type (t:typ) : Tot string =
           "uint32_t"
     | T_app {v="UINT64"} [] ->
           "uint64_t"
+    | T_app {v="PUINT8"} [] ->
+          "uint8_t*"
     | T_app {v=x} [] ->
           x
     | _ ->
