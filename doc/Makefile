@@ -48,7 +48,7 @@ $(3D_OUT): out/%: 3d-do-tests
 
 $(3D_SNAPSHOT): 3d-snapshot/%: out/%
 	mkdir -p 3d-snapshot
-	cp $^ $@
+	if diff -w -B $^ $@ ; then touch $@ ; else cp $^ $@ ; fi
 
 3d-snapshot: $(3D_SNAPSHOT)
 

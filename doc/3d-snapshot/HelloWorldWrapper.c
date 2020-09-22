@@ -1,3 +1,4 @@
+#include "HelloWorldWrapper.h"
 #include "EverParse.h"
 #include "HelloWorld.h"
 void HelloWorldEverParseError(char *x, char *y, char *z);
@@ -31,5 +32,3 @@ BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
-
-

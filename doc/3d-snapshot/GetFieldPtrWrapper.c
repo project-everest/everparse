@@ -1,3 +1,4 @@
+#include "GetFieldPtrWrapper.h"
 #include "EverParse.h"
 #include "GetFieldPtr.h"
 void GetFieldPtrEverParseError(char *x, char *y, char *z);
