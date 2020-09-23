@@ -92,7 +92,7 @@ make_everparse() {
     # Verify if F* and KReMLin are here
     cp="cp --preserve=mode,timestamps"
     if [[ -z "$FSTAR_HOME" ]] ; then
-        git clone --branch nik_process_ctrl https://github.com/FStarLang/FStar &&
+        git clone https://github.com/FStarLang/FStar &&
         export FSTAR_HOME=$(fixpath $PWD/FStar)
     else
         export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
