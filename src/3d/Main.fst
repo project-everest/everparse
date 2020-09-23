@@ -124,6 +124,7 @@ let go () : ML unit =
       (Options.get_clang_format ())
       (Options.get_clang_format_executable ())
       (Options.get_cleanup ())
+      (Options.get_no_everparse_h ())
       out_dir files_and_modules;
   FStar.IO.print_string "EverParse succeeded!\n"
 

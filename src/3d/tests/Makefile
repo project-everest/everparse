@@ -30,7 +30,7 @@ batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
 batch-test:
 	mkdir -p out.batch
-	$(3D) --odir out.batch --batch $(positive_tests)
+	$(3D) --odir out.batch --batch --no_copy_everparse_h $(positive_tests)
 	cp $(OTHER_HEADERS) out.batch
 	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(QD_HOME)/src/3d'
 	$(CXX) -o test-cpp.exe -I out.batch -I $(QD_HOME)/src/3d test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
@@ -38,7 +38,7 @@ batch-test:
 
 batch-cleanup-test:
 	mkdir -p out.cleanup
-	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup --skip_makefiles $(positive_tests)
+	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup --skip_makefiles --no_copy_everparse_h $(positive_tests)
 	test "$$(ls out.cleanup | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 %.fst-in %.fsti-in:

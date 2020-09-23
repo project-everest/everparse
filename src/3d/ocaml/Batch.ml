@@ -312,15 +312,26 @@ let collect_files_from
     ]
 
 let collect_files
+  no_everparse_h
   out_dir
   files_and_modules
 =
   let accu = [] in
+  let accu =
+    if not no_everparse_h
+    then
+      let accu = collect_file accu (filename_concat out_dir "EverParse.h") in
+      let accu = collect_file accu (filename_concat out_dir "EverParseEndianness.h") in
+      accu
+    else
+      accu
+  in
   List.fold_left (collect_files_from out_dir) accu files_and_modules
 
 (* Call clang-format *)
 
 let call_clang_format
+  (no_everparse_h: bool)
   (clang_format_exe0: string)
   (out_dir: string)
   (files_and_modules: (string * string) list)
@@ -333,7 +344,7 @@ let call_clang_format
   let clang_format_args =
     "-i" ::
     "--style=file" ::
-    collect_files out_dir files_and_modules
+    collect_files no_everparse_h out_dir files_and_modules
   in
   run_cmd clang_format_exe clang_format_args
 
@@ -343,6 +354,7 @@ let postprocess
   (clang_format: bool)
   (clang_format_executable: string)
   (cleanup: bool)
+  (no_everparse_h: bool)
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
@@ -354,12 +366,24 @@ let postprocess
   produce_c_files cleanup out_dir files_and_modules;
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
+  (* copy EverParse.h unless prevented *)
+  if not no_everparse_h
+  then begin
+      let dest_everparse_h = filename_concat out_dir "EverParse.h" in
+      copy (filename_concat ddd_home "EverParse.h") dest_everparse_h;
+      copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h")
+  end;
   (* add copyright *)
   List.iter (add_copyright out_dir) files_and_modules;
+  if not no_everparse_h
+  then begin
+      let copyright_txt = filename_concat ddd_home "copyright.txt" in
+      add_copyright_header out_dir copyright_txt "EverParse.h"
+  end;
   (* clang-format the files if asked for *)
   if clang_format
   then begin
     copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
-    call_clang_format clang_format_executable out_dir files_and_modules;
+    call_clang_format no_everparse_h clang_format_executable out_dir files_and_modules;
   end;
   ()

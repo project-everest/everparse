@@ -17,6 +17,7 @@ let clang_format : ref bool = alloc false
 let clang_format_executable : ref string = alloc ""
 let cleanup : ref bool = alloc false
 let skip_makefiles : ref bool = alloc false
+let no_everparse_h : ref bool = alloc false
 let arg0 : ref string = alloc "3d"
 
 (* We would like to parse --help as an option, but this would
@@ -40,6 +41,8 @@ let options0 =
    (noshort, "no_cleanup", ZeroArgs (fun _ -> cleanup := false), "Do not remove *.fst*, *.krml or kremlin-args.rsp");
    (noshort, "skip_makefiles", ZeroArgs (fun _ -> skip_makefiles := true), "Do not generate Makefile.basic, Makefile.include");
    (noshort, "no_skip_makefiles", ZeroArgs (fun _ -> skip_makefiles := false), "Generate Makefile.basic, Makefile.include (--batch only)");
+   (noshort, "copy_everparse_h", ZeroArgs (fun _ -> no_everparse_h := false), "Copy EverParse.h (--batch only)");
+   (noshort, "no_copy_everparse_h", ZeroArgs (fun _ -> no_everparse_h := true), "Do not copy EverParse.h");
    (noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
    ]
 
@@ -70,6 +73,9 @@ let display_usage () : ML unit =
     end;
     if !skip_makefiles then begin
       FStar.IO.print_string "--skip_makefiles is currently toggled.\n"
+    end;
+    if not !no_everparse_h then begin
+      FStar.IO.print_string "--copy_everparse_h is currently toggled.\n"
     end;
     ()
   end
@@ -146,3 +152,6 @@ let get_cleanup () =
 
 let get_skip_makefiles () =
   !skip_makefiles
+
+let get_no_everparse_h () =
+  !no_everparse_h
