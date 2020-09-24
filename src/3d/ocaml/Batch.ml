@@ -362,13 +362,16 @@ let hashed_files
   }
 
 let check_hashes
+  (is_weak: bool)
   (out_dir: string)
   (file, modul)
 =
-  let c = hashed_files out_dir modul in
   let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
-  Hashing.check_hash file None json &&
-  Hashing.check_hash file (Some c) json
+  Hashing.check_hash file None json && (
+    is_weak ||
+      let c = hashed_files out_dir modul in
+      Hashing.check_hash file (Some c) json
+  )
 
 let save_hashes
   (out_dir: string)
@@ -384,6 +387,7 @@ let postprocess'
   (clang_format_executable: string)
   (cleanup: bool)
   (no_everparse_h: bool)
+  (save_hashes_opt: bool)
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
@@ -417,7 +421,8 @@ let postprocess'
     call_clang_format no_everparse_h clang_format_executable out_dir files_and_modules;
   end;
   (* save hashes *)
-  List.iter (save_hashes out_dir) files_and_modules;
+  if save_hashes_opt
+  then List.iter (save_hashes out_dir) files_and_modules;
   ()
 
 let postprocess
@@ -425,9 +430,15 @@ let postprocess
   (clang_format_executable: string)
   (cleanup: bool)
   (no_everparse_h: bool)
+  (check_weak_hashes: bool option)
+  (save_hashes_opt: bool)
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
 =
-  if not (List.for_all (check_hashes out_dir) files_and_modules)
-  then postprocess' clang_format clang_format_executable cleanup no_everparse_h out_dir files_and_modules
+  if
+    begin match check_weak_hashes with
+    | None -> true
+    | Some is_weak -> not (List.for_all (check_hashes is_weak out_dir) files_and_modules)
+    end
+  then postprocess' clang_format clang_format_executable cleanup no_everparse_h save_hashes_opt out_dir files_and_modules

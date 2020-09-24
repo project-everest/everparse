@@ -18,7 +18,15 @@ let clang_format_executable : ref string = alloc ""
 let cleanup : ref bool = alloc false
 let skip_makefiles : ref bool = alloc false
 let no_everparse_h : ref bool = alloc false
+let check_hashes : ref check_hashes_t = alloc NoHashes
+let save_hashes : ref bool = alloc false
 let arg0 : ref string = alloc "3d"
+
+let set_check_hashes = function
+| "none" -> check_hashes := NoHashes
+| "weak" -> check_hashes := WeakHashes
+| "strong" -> check_hashes := StrongHashes
+| _ -> ()
 
 (* We would like to parse --help as an option, but this would
    require to recurse on the definition of the list of options. To
@@ -44,6 +52,9 @@ let options0 =
    (noshort, "copy_everparse_h", ZeroArgs (fun _ -> no_everparse_h := false), "Copy EverParse.h (--batch only)");
    (noshort, "no_copy_everparse_h", ZeroArgs (fun _ -> no_everparse_h := true), "Do not copy EverParse.h");
    (noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
+   (noshort, "check_hashes", OneArg (set_check_hashes, "none|weak|strong"), "Check hashes");
+   (noshort, "save_hashes", ZeroArgs (fun _ -> save_hashes := true), "Save hashes");
+   (noshort, "no_save_hashes", ZeroArgs (fun _ -> save_hashes := false), "Do not save hashes");
    ]
 
 let options : ref _ = alloc options0
@@ -76,6 +87,15 @@ let display_usage () : ML unit =
     end;
     if not !no_everparse_h then begin
       FStar.IO.print_string "--copy_everparse_h is currently toggled.\n"
+    end;
+    let chk = match !check_hashes with
+    | NoHashes -> "none"
+    | WeakHashes -> "weak"
+    | StrongHashes -> "strong"
+    in
+    FStar.IO.print_string (Printf.sprintf "--check_hashes is currently set to %s.\n" chk);
+    if !save_hashes then begin
+      FStar.IO.print_string "--save_hashes is currently toggled.\n"
     end;
     ()
   end
@@ -155,3 +175,9 @@ let get_skip_makefiles () =
 
 let get_no_everparse_h () =
   !no_everparse_h
+
+let get_check_hashes () =
+  !check_hashes
+
+let get_save_hashes () =
+  !save_hashes

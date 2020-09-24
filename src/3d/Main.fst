@@ -110,6 +110,11 @@ let process_file (fn: string) : ML unit =
       FStar.IO.close_write_file c_static_asserts_file
     end
 
+let get_check_hashes () =
+  match Options.get_check_hashes () with
+  | Options.NoHashes -> None
+  | Options.WeakHashes -> Some true
+  | Options.StrongHashes -> Some false
 
 let go () : ML unit =
   match Options.parse_cmd_line() with
@@ -125,6 +130,8 @@ let go () : ML unit =
       (Options.get_clang_format_executable ())
       (Options.get_cleanup ())
       (Options.get_no_everparse_h ())
+      (get_check_hashes ())
+      (Options.get_save_hashes ())
       out_dir files_and_modules;
   FStar.IO.print_string "EverParse succeeded!\n"
 
