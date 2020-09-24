@@ -264,7 +264,7 @@ public:
   }
 
   // TODO: diagAppertainsToDecl ? It is not inherited from C3dDiagOnStruct,
-  // since C3dDiagOnStruct does not inherit from ParsedAttrInfo. It's default
+  // since C3dDiagOnStruct does not inherit from ParsedAttrInfo. It defaults
   // to true, which is fine for now.
 
   AttrHandling parseAttributePayload(Parser *P,
@@ -814,6 +814,7 @@ public:
   }
 };
 
+// This is acopy of C3dAttrWithVar but adds a parameter too
 class C3dAttrWithVar2 : public C3dSimpleSpelling, C3dDiagOnStruct {
   const char *Name;
   const char *InternalName;
@@ -1207,9 +1208,6 @@ static ParsedAttrInfoRegistry::Add<C3dOnFailureAttrInfo>
 static ParsedAttrInfoRegistry::Add<C3dMutableParameterAttrInfo>
     X14("c3d_mutable_parameter", "recognize everparse::mutable_parameter");
 
-
-
-
 //===----------------------------------------------------------------------===//
 
 // Now that all the attributes have been validated, processed and retained in
@@ -1220,7 +1218,7 @@ static ParsedAttrInfoRegistry::Add<C3dMutableParameterAttrInfo>
 //   (I can imagine some syntactic hack to embed a spec-and-declarator inside an
 //   expression but let's leave this up to later).
 // - emitting a .3d file as we process attributes in the AST
-// - removing our annotations from the AST
+// - removing our annotations from the AST and writing a .preprocessed.h file
 //
 // The documentation for this part is found at
 // https://clang.llvm.org/docs/RAVFrontendAction.html, and
