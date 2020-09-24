@@ -1,8 +1,23 @@
+(* Hash a boolean *)
+
+let hash_bool h b =
+  let buf = Bytes.make 1 (char_of_int (if b then 1 else 0)) in
+  Hacl_star__EverCrypt.Hash.update h buf
+
+(* Hash an integer *)
+
+let hash_int h i =
+  let i32 = Int32.of_int i in
+  let buf = Bytes.create 4 in
+  Bytes.set_int32_be buf 0 i32;
+  Hacl_star__EverCrypt.Hash.update h buf
+
 (* Hash a file *)
 
 let hash_file h f =
   let ch = open_in_bin f in
   let len = in_channel_length ch in
+  hash_int h len;
   let buf = Bytes.create len in
   let _ = input ch buf 0 len in
   close_in ch;
@@ -11,6 +26,7 @@ let hash_file h f =
 (* Hash a string *)
 
 let hash_string h s =
+  hash_int h (String.length s);
   Hacl_star__EverCrypt.Hash.update h (Bytes.of_string s)
 
 type t = Hacl_star__EverCrypt.Hash.t
@@ -51,8 +67,8 @@ let hash f opt_c =
   hash_string h Version.kremlin_commit;
   hash_file h f;
   begin match opt_c with
-  | None -> ()
-  | Some c -> hash_file h c
+  | None -> hash_bool h false
+  | Some c -> hash_bool h true; hash_file h c
   end;
   hex_of_bytes (finish h)
 
