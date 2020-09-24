@@ -96,8 +96,15 @@ let load_hash file is_weak =
 
 let check_hash f opt_c f_json =
   match load_hash f_json (opt_c = None) with
-  | None -> false
-  | Some h' -> h' = hash f opt_c
+  | None ->
+     Printf.printf "No hashes found for %s\n" f;
+     false
+  | Some h0 ->
+     let h = hash f opt_c in
+     let res = (h0 = h) in
+     if not res
+     then Printf.printf "%s hash check failed for %s\nOriginal: %s\nComputed: %s\n" (if opt_c = None then "weak" else "strong") f h0 h;
+     res
 
 let save_hashes f opt_c f_json =
   let weak_hash = hash f None in

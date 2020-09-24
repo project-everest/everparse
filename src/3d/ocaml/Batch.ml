@@ -382,7 +382,7 @@ let save_hashes
 
 (* Summary *)
 
-let postprocess'
+let postprocess
   (clang_format: bool)
   (clang_format_executable: string)
   (cleanup: bool)
@@ -425,20 +425,11 @@ let postprocess'
   then List.iter (save_hashes out_dir) files_and_modules;
   ()
 
-let postprocess
-  (clang_format: bool)
-  (clang_format_executable: string)
-  (cleanup: bool)
-  (no_everparse_h: bool)
-  (check_weak_hashes: bool option)
-  (save_hashes_opt: bool)
+let check_all_hashes
+  (is_weak: bool)
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
-=
-  if
-    begin match check_weak_hashes with
-    | None -> true
-    | Some is_weak -> not (List.for_all (check_hashes is_weak out_dir) files_and_modules)
-    end
-  then postprocess' clang_format clang_format_executable cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+= if List.for_all (check_hashes is_weak out_dir) files_and_modules
+  then print_endline "EverParse check_hashes succeeded!"
+  else failwith "EverParse check_hashes failed"

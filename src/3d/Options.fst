@@ -24,8 +24,8 @@ let arg0 : ref string = alloc "3d"
 
 let set_check_hashes = function
 | "none" -> check_hashes := NoHashes
-| "weak" -> check_hashes := WeakHashes
-| "strong" -> check_hashes := StrongHashes
+| "weak" -> batch := true; check_hashes := WeakHashes
+| "strong" -> batch := true; check_hashes := StrongHashes
 | _ -> ()
 
 (* We would like to parse --help as an option, but this would
@@ -177,7 +177,7 @@ let get_no_everparse_h () =
   !no_everparse_h
 
 let get_check_hashes () =
-  !check_hashes
+  if !batch then !check_hashes else NoHashes
 
 let get_save_hashes () =
   !save_hashes
