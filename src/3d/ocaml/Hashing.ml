@@ -60,6 +60,13 @@ let hex_of_bytes buf =
     ) buf;
   Bytes.to_string hex
 
+type c_files = {
+    wrapper_h: string;
+    wrapper_c: string;
+    h: string;
+    c: string;
+  }
+
 let hash f opt_c =
   let h = init () in
   hash_string h Version.everparse_version;
@@ -68,7 +75,7 @@ let hash f opt_c =
   hash_file h f;
   begin match opt_c with
   | None -> hash_bool h false
-  | Some c -> hash_bool h true; hash_file h c
+  | Some c -> hash_bool h true; hash_file h c.wrapper_h; hash_file h c.wrapper_c; hash_file h c.h; hash_file h c.c
   end;
   hex_of_bytes (finish h)
 

@@ -350,11 +350,22 @@ let call_clang_format
 
 (* Check and Save hashes *)
 
+let hashed_files
+  (out_dir: string)
+  (modul: string)
+=
+  {
+    Hashing.c = filename_concat out_dir (Printf.sprintf "%s.c" modul);
+    Hashing.h = filename_concat out_dir (Printf.sprintf "%s.h" modul);
+    Hashing.wrapper_c = filename_concat out_dir (Printf.sprintf "%sWrapper.c" modul);
+    Hashing.wrapper_h = filename_concat out_dir (Printf.sprintf "%sWrapper.h" modul);
+  }
+
 let check_hashes
   (out_dir: string)
   (file, modul)
 =
-  let c = filename_concat out_dir (Printf.sprintf "%s.c" modul) in
+  let c = hashed_files out_dir modul in
   let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
   Hashing.check_hash file None json &&
   Hashing.check_hash file (Some c) json
@@ -362,8 +373,7 @@ let check_hashes
 let save_hashes
   (out_dir: string)
   (file, modul)
-=
-  let c = filename_concat out_dir (Printf.sprintf "%s.c" modul) in
+= let c = hashed_files out_dir modul in
   let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
   Hashing.save_hashes file (Some c) json
 
