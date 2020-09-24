@@ -55,3 +55,34 @@ let hash f opt_c =
   | Some c -> hash_file h c
   end;
   hex_of_bytes (finish h)
+
+(* load, check and save hashes from/to JSON file *)
+
+let load_hash file is_weak =
+  try
+    begin match Yojson.Basic.from_file file with
+    | `Assoc l ->
+       let name = Printf.sprintf "%s-hash" (if is_weak then "weak" else "strong") in
+       begin match List.assoc_opt name l with
+       | Some (`String s) -> Some s
+       | _ -> None
+       end
+    | _ -> None
+    end
+  with _ -> None
+
+let check_hash f opt_c f_json =
+  match load_hash f_json (opt_c = None) with
+  | None -> false
+  | Some h' -> h' = hash f opt_c
+
+let save_hashes f opt_c f_json =
+  let weak_hash = hash f None in
+  let l : (string * Yojson.Basic.t) list = [("weak-hash", `String weak_hash)] in
+  let l : (string * Yojson.Basic.t) list = match opt_c with
+    | None -> l
+    | _ ->
+       let strong_hash = hash f opt_c in
+       ("strong-hash", `String strong_hash) :: l
+  in
+  Yojson.Basic.to_file f_json (`Assoc l)

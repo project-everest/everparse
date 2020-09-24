@@ -348,9 +348,28 @@ let call_clang_format
   in
   run_cmd clang_format_exe clang_format_args
 
+(* Check and Save hashes *)
+
+let check_hashes
+  (out_dir: string)
+  (file, modul)
+=
+  let c = filename_concat out_dir (Printf.sprintf "%s.c" modul) in
+  let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
+  Hashing.check_hash file None json &&
+  Hashing.check_hash file (Some c) json
+
+let save_hashes
+  (out_dir: string)
+  (file, modul)
+=
+  let c = filename_concat out_dir (Printf.sprintf "%s.c" modul) in
+  let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
+  Hashing.save_hashes file (Some c) json
+
 (* Summary *)
 
-let postprocess
+let postprocess'
   (clang_format: bool)
   (clang_format_executable: string)
   (cleanup: bool)
@@ -359,9 +378,6 @@ let postprocess
   (files_and_modules: (string * string) list)
 : unit
 =
-  List.iter (fun (f, m) ->
-      Printf.printf ("hash %s: %s\n") m (Hashing.hash f None)
-    ) files_and_modules;
   (* produce the .checked and .krml files.
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module out_dir) files_and_modules;
@@ -390,4 +406,18 @@ let postprocess
     copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
     call_clang_format no_everparse_h clang_format_executable out_dir files_and_modules;
   end;
+  (* save hashes *)
+  List.iter (save_hashes out_dir) files_and_modules;
   ()
+
+let postprocess
+  (clang_format: bool)
+  (clang_format_executable: string)
+  (cleanup: bool)
+  (no_everparse_h: bool)
+  (out_dir: string)
+  (files_and_modules: (string * string) list)
+: unit
+=
+  if not (List.for_all (check_hashes out_dir) files_and_modules)
+  then postprocess' clang_format clang_format_executable cleanup no_everparse_h out_dir files_and_modules
