@@ -358,7 +358,11 @@ let postprocess
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
-= (* produce the .checked and .krml files.
+=
+  List.iter (fun (f, m) ->
+      Printf.printf ("hash %s: %s\n") m (Hashing.hash f None)
+    ) files_and_modules;
+  (* produce the .checked and .krml files.
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module out_dir) files_and_modules;
   let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
