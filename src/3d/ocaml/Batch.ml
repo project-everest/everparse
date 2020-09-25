@@ -1,4 +1,5 @@
 open OS
+open HashingOptions
 
 (* paths *)
 let fstar_home = OS.getenv "FSTAR_HOME"
@@ -222,8 +223,10 @@ let produce_c_files
 
 let regexp_EVERPARSEVERSION = Str.regexp "EVERPARSEVERSION"
 let regexp_FILENAME = Str.regexp "FILENAME"
+let regexp_EVERPARSEHASHES = Str.regexp "EVERPARSEHASHES"
 
 let replace_variables
+  hash_comment
   filename
   file_in
   channel_out
@@ -240,6 +243,12 @@ let replace_variables
       | Some ln ->
          let ln = Str.global_replace regexp_EVERPARSEVERSION Version.everparse_version ln in
          let ln = Str.global_replace regexp_FILENAME filename ln in
+         let ln =
+           match hash_comment with
+           | None -> ln
+           | Some hash_comment ->
+              Str.global_replace regexp_EVERPARSEHASHES hash_comment ln
+         in
          output_line channel_out ln;
          aux ()
   in
@@ -249,6 +258,7 @@ let replace_variables
 (* Copyright headers *)
 
 let add_copyright_header
+  hash_comment
   out_dir
   copyright_file
   target_file_base
@@ -260,7 +270,7 @@ let add_copyright_header
     let tmp = Filename.temp_file "everparseaddcopyrightheader" ".tmp" in
     rename target_file tmp;
     let cout = open_out target_file in
-    replace_variables target_file_base copyright_file cout;
+    replace_variables hash_comment target_file_base copyright_file cout;
     cat tmp cout;
     close_out cout;
     Sys.remove tmp
@@ -273,7 +283,8 @@ let add_copyright
   let copyright_file = Printf.sprintf "%s.copyright.txt" ddd_file in
   if Sys.file_exists copyright_file
   then begin
-    List.iter (add_copyright_header out_dir copyright_file) [
+    let h = Hashing.hash_as_comment ddd_file in
+    List.iter (add_copyright_header (Some h) out_dir copyright_file) [
       Printf.sprintf "%s.c" modul;
       Printf.sprintf "%s.h" modul;
       Printf.sprintf "%sWrapper.c" modul;
@@ -359,19 +370,29 @@ let hashed_files
     Hashing.h = filename_concat out_dir (Printf.sprintf "%s.h" modul);
     Hashing.wrapper_c = filename_concat out_dir (Printf.sprintf "%sWrapper.c" modul);
     Hashing.wrapper_h = filename_concat out_dir (Printf.sprintf "%sWrapper.h" modul);
+    Hashing.assertions =
+      let assertions = filename_concat out_dir (Printf.sprintf "%sStaticAssertions.c" modul) in
+      if Sys.file_exists assertions
+      then Some assertions
+      else None;
   }
 
 let check_hashes
-  (is_weak: bool)
+  (ch: check_hashes_t)
   (out_dir: string)
   (file, modul)
 =
-  let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
-  Hashing.check_hash file None json && (
-    is_weak ||
-      let c = hashed_files out_dir modul in
-      Hashing.check_hash file (Some c) json
-  )
+  let c = hashed_files out_dir modul in
+  match ch with
+  | InplaceHashes ->
+    Hashing.check_inplace_hashes file c
+  | _ ->
+    let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
+    Hashing.check_hash file None json && (
+      is_weak ch ||
+        let c = hashed_files out_dir modul in
+        Hashing.check_hash file (Some c) json
+    )
 
 let save_hashes
   (out_dir: string)
@@ -412,7 +433,7 @@ let postprocess
   if not no_everparse_h
   then begin
       let copyright_txt = filename_concat ddd_home "copyright.txt" in
-      add_copyright_header out_dir copyright_txt "EverParse.h"
+      add_copyright_header None out_dir copyright_txt "EverParse.h"
   end;
   (* clang-format the files if asked for *)
   if clang_format
@@ -426,10 +447,10 @@ let postprocess
   ()
 
 let check_all_hashes
-  (is_weak: bool)
+  (ch: check_hashes_t)
   (out_dir: string)
   (files_and_modules: (string * string) list)
 : unit
-= if List.for_all (check_hashes is_weak out_dir) files_and_modules
+= if List.for_all (check_hashes ch out_dir) files_and_modules
   then print_endline "EverParse check_hashes succeeded!"
   else failwith "EverParse check_hashes failed"

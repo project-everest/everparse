@@ -1,4 +1,5 @@
 module Options
+open HashingOptions
 open FStar.All
 open FStar.ST
 
@@ -18,14 +19,15 @@ let clang_format_executable : ref string = alloc ""
 let cleanup : ref bool = alloc false
 let skip_makefiles : ref bool = alloc false
 let no_everparse_h : ref bool = alloc false
-let check_hashes : ref check_hashes_t = alloc NoHashes
+let check_hashes : ref (option check_hashes_t) = alloc None
 let save_hashes : ref bool = alloc false
 let arg0 : ref string = alloc "3d"
 
 let set_check_hashes = function
-| "none" -> check_hashes := NoHashes
-| "weak" -> batch := true; check_hashes := WeakHashes
-| "strong" -> batch := true; check_hashes := StrongHashes
+| "none" -> check_hashes := None
+| "weak" -> batch := true; check_hashes := Some WeakHashes
+| "strong" -> batch := true; check_hashes := Some StrongHashes
+| "inplace" -> batch := true; check_hashes := Some InplaceHashes
 | _ -> ()
 
 (* We would like to parse --help as an option, but this would
@@ -89,9 +91,10 @@ let display_usage () : ML unit =
       FStar.IO.print_string "--copy_everparse_h is currently toggled.\n"
     end;
     let chk = match !check_hashes with
-    | NoHashes -> "none"
-    | WeakHashes -> "weak"
-    | StrongHashes -> "strong"
+    | None -> "none"
+    | Some WeakHashes -> "weak"
+    | Some StrongHashes -> "strong"
+    | Some InplaceHashes -> "inplace"
     in
     FStar.IO.print_string (Printf.sprintf "--check_hashes is currently set to %s.\n" chk);
     if !save_hashes then begin
@@ -177,7 +180,7 @@ let get_no_everparse_h () =
   !no_everparse_h
 
 let get_check_hashes () =
-  if !batch then !check_hashes else NoHashes
+  if !batch then !check_hashes else None
 
 let get_save_hashes () =
   !save_hashes

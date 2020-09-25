@@ -110,21 +110,13 @@ let process_file (fn: string) : ML unit =
       FStar.IO.close_write_file c_static_asserts_file
     end
 
-let get_check_hashes () =
-  match Options.get_check_hashes () with
-  | Options.NoHashes -> None
-  | Options.WeakHashes -> Some true
-  | Options.StrongHashes -> Some false
-
 let go () : ML unit =
   match Options.parse_cmd_line() with
   | [] -> Options.display_usage ()
   | files ->
   let out_dir = Options.get_output_dir () in
   let files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) files in
-  match get_check_hashes () with
-  | Some is_weak ->
-    Batch.check_all_hashes is_weak out_dir files_and_modules
+  match Options.get_check_hashes () with
   | None ->
     List.iter process_file files;
     if Options.get_batch ()
@@ -138,6 +130,8 @@ let go () : ML unit =
         out_dir files_and_modules;
       FStar.IO.print_string "EverParse succeeded!\n"
     end
+  | Some ch ->
+    Batch.check_all_hashes ch out_dir files_and_modules
 
 #push-options "--warn_error -272" //top-level effects are okay
 #push-options "--admit_smt_queries true" //explicitly not handling all exceptions, so that we can meaningful backtraces

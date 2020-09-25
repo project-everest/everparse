@@ -1,4 +1,5 @@
 module Batch
+open HashingOptions
 open FStar.All
 
 val postprocess
@@ -12,7 +13,7 @@ val postprocess
 : ML unit
 
 val check_all_hashes
-  (is_weak: bool)
+  (ch: check_hashes_t)
   (out_dir: string)
   (files_and_modules: list (string & string))
 : ML unit

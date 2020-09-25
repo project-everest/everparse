@@ -65,6 +65,7 @@ type c_files = {
     wrapper_c: string;
     h: string;
     c: string;
+    assertions: string option;
   }
 
 let hash f opt_c =
@@ -75,9 +76,71 @@ let hash f opt_c =
   hash_file h f;
   begin match opt_c with
   | None -> hash_bool h false
-  | Some c -> hash_bool h true; hash_file h c.wrapper_h; hash_file h c.wrapper_c; hash_file h c.h; hash_file h c.c
+  | Some c ->
+     hash_bool h true;
+     hash_file h c.wrapper_h;
+     hash_file h c.wrapper_c;
+     hash_file h c.h;
+     hash_file h c.c;
+     begin match c.assertions with
+     | None ->
+        hash_bool h false
+     | Some assertions ->
+        hash_bool h true;
+        hash_file h assertions
+     end
   end;
   hex_of_bytes (finish h)
+
+(* load, check and save weak hashes from a C file *)
+
+let c_comment_intro = "EverParse checksum hash"
+
+let hash_as_comment file =
+  let h = hash file None in
+  Printf.sprintf "%s:%s" c_comment_intro h
+
+let check_inplace_hashes file_3d files_c =
+  let h = hash file_3d None in
+  let f file_c =
+    let ch = open_in file_c in
+    (* Check fails if a bad hash or no hash is found. A
+       good hash alone does not make the check succeed *)
+    let rec aux accu =
+      try
+        let l = input_line ch in
+        begin match String.split_on_char ':' (String.trim l) with
+        | [hd; tl] when hd = c_comment_intro ->
+           if tl = h
+           then aux true
+           else begin
+               Printf.printf "Weak hash check failed in %s, expected %s, found %s\n" file_c h tl;
+               false
+           end 
+        | _ -> aux accu
+        end
+      with End_of_file -> 
+        begin
+          if not accu
+          then Printf.printf "No hash found in %s\n" file_c;
+          accu
+        end
+    in
+    let res = aux false in
+    close_in ch;
+    res
+  in
+  List.for_all f (
+      files_c.c ::
+      files_c.h ::
+      files_c.wrapper_c ::
+      files_c.wrapper_h ::
+      begin match files_c.assertions with
+      | None -> []
+      | Some assertions -> [assertions]
+      end
+    )
+  
 
 (* load, check and save hashes from/to JSON file *)
 

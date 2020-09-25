@@ -20,7 +20,7 @@ modules_static_assertions=TestFieldPtrStaticAssertions.c
 clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(modules_static_assertions) $(addsuffix .h,$(modules_or_wrappers))
 OTHER_HEADERS=TestFieldPtrBase.h
 
-all: batch-test batch-test-negative batch-cleanup-test
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test
 
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
@@ -37,6 +37,11 @@ batch-test:
 	$(CXX) -o test-cpp.exe -I out.batch -I $(QD_HOME)/src/3d test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
 	./test-cpp.exe
 
+inplace-hash-test:
+	mkdir -p out.inplace-hash
+	$(3D) --odir out.inplace-hash --batch --no_copy_everparse_h Comments.3d
+	$(3D) --odir out.inplace-hash --batch --check_hashes inplace Comments.3d
+
 batch-cleanup-test:
 	mkdir -p out.cleanup
 	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup --skip_makefiles --no_copy_everparse_h $(positive_tests)
@@ -46,6 +51,6 @@ batch-cleanup-test:
 	@echo $(FSTAR_OPTIONS)
 
 clean:
-	rm -rf out.batch out.fail.batch out.cleanup test-cpp.exe
+	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test
