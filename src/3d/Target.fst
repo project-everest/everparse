@@ -268,6 +268,12 @@ and print_indexes (is:list index) : Tot (list string) (decreases is) =
   | Inl t::is -> print_typ t::print_indexes is
   | Inr e::is -> print_expr e::print_indexes is
 
+let print_struct_field f =
+  Printf.sprintf "%s:%s" (print_ident f.sf_ident) (print_typ f.sf_typ)
+
+let print_struct_fields fs =
+  List.fold_left (fun s f -> Printf.sprintf "%s, %s" s (print_struct_field f)) "" fs
+
 let rec print_kind (k:parser_kind) : Tot string =
   match k.pk_kind with
   | PK_base hd ->

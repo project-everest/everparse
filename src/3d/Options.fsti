@@ -15,6 +15,8 @@ val get_error_log_function : unit -> ML string
 
 val debug_print_string (s:string) : ML unit
 
+val should_hoist (_:unit) : ML bool
+
 val get_batch : unit -> ML bool
 
 val get_clang_format : unit -> ML bool

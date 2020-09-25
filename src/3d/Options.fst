@@ -12,6 +12,7 @@ let input_file : ref (list string) = alloc []
 let error_log : ref (option string) = alloc None
 let error_log_function : ref (option string) = alloc None
 let debug : ref bool = alloc false
+let no_hoist : ref bool = alloc false
 let batch : ref bool = alloc false
 let clang_format : ref bool = alloc false
 let clang_format_executable : ref string = alloc ""
@@ -30,6 +31,7 @@ let options0 =
    (noshort, "error_log", OneArg ((fun l -> error_log := Some l), "error log"), "The stream to which to log errors (default 'stderr')");
    (noshort, "error_log_function", OneArg ((fun l -> error_log_function := Some l), "error logging function"), "The function to use to log errors  (default 'fprintf')");
    (noshort, "debug", ZeroArgs (fun _ -> debug := true), "Emit a lot of debugging output");
+   (noshort, "no_hoist", ZeroArgs (fun _ -> no_hoist := true), "Do not hoist struct fields and their refinements to the top-level");
    (noshort, "batch", ZeroArgs (fun _ -> batch := true), "Verify the generated F* code and extract C code");
    (noshort, "no_batch", ZeroArgs (fun _ -> batch := false), "Do not verify the generated F* code or extract C code");
    (noshort, "clang_format", ZeroArgs (fun _ -> batch := true; clang_format := true), "Call clang-format on extracted .c/.h files (--batch only)");
@@ -124,6 +126,8 @@ let debug_print_string (s:string): ML unit =
   if !debug
   then FStar.IO.print_string s
   else ()
+
+let should_hoist () = not (!no_hoist)
 
 let get_batch () =
   !batch

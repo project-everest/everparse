@@ -246,6 +246,8 @@ type decl' =
 let decl = decl' * decl_attributes
 
 val print_typ (t:typ) : Tot string (decreases t)
+val print_struct_field (f:struct_field) : string
+val print_struct_fields (fs:list struct_field) : ML string
 val print_decls (modul: string) (ds:list decl) : ML string
 val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string

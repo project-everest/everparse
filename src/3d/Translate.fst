@@ -1148,7 +1148,11 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
   | Record tdn params _ ast_fields ->
     let tdn = translate_typedef_name tdn params in
     let fields = List.map translate_field ast_fields in
-    let hoists, fields = hoist_refinements env tdn fields in
+    let hoists, fields =
+      if Options.should_hoist ()
+      then hoist_refinements env tdn fields
+      else [], fields in
+    Options.debug_print_string (T.print_struct_fields fields);
     let p = parse_fields env tdn fields in
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz;
