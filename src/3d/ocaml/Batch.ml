@@ -428,18 +428,18 @@ let postprocess
       copy (filename_concat ddd_home "EverParse.h") dest_everparse_h;
       copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h")
   end;
+  (* clang-format the files if asked for *)
+  if clang_format
+  then begin
+    copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
+    call_clang_format no_everparse_h clang_format_executable out_dir files_and_modules;
+  end;
   (* add copyright *)
   List.iter (add_copyright out_dir) files_and_modules;
   if not no_everparse_h
   then begin
       let copyright_txt = filename_concat ddd_home "copyright.txt" in
       add_copyright_header None out_dir copyright_txt "EverParse.h"
-  end;
-  (* clang-format the files if asked for *)
-  if clang_format
-  then begin
-    copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
-    call_clang_format no_everparse_h clang_format_executable out_dir files_and_modules;
   end;
   (* save hashes *)
   if save_hashes_opt
