@@ -124,7 +124,10 @@ make_everparse() {
     if $is_windows
     then
         $cp $LIBGMP10_DLL everparse/bin/ &&
-        $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/
+        $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/ &&
+        $cp $(ocamlfind printconf destdir)/stublibs/libevercrypt.dll everparse/bin/ &&
+        $cp $(which libffi-6.dll) everparse/bin/ &&
+        true
     else
         $cp $Z3_DIR/z3 everparse/bin/
     fi &&
