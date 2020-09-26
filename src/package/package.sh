@@ -129,6 +129,8 @@ make_everparse() {
         $cp $(which libffi-6.dll) everparse/bin/ &&
         true
     else
+        $cp $(ocamlfind query hacl-star-raw)/libevercrypt.so everparse/bin/ &&
+        $cp $(dpkg -L libffi6 | grep '/libffi.so.6$') everparse/bin/ &&
         $cp $Z3_DIR/z3 everparse/bin/
     fi &&
 
