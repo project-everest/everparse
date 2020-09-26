@@ -125,7 +125,15 @@ make_everparse() {
     then
         $cp $LIBGMP10_DLL everparse/bin/ &&
         $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/ &&
-        $cp $(ocamlfind printconf destdir)/stublibs/libevercrypt.dll everparse/bin/ &&
+        for f in $(cat $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
+            libevercrypt_dll=$f/libevercrypt.dll
+            if [[ -f $libevercrypt_dll ]] ; then
+                break
+            fi
+            unset libevercrypt_dll
+        done &&
+        [[ -n $libevercrypt_dll ]] &&
+        $cp $libevercrypt_dll everparse/bin/ &&
         $cp $(which libffi-6.dll) everparse/bin/ &&
         true
     else
