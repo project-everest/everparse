@@ -92,13 +92,13 @@ make_everparse() {
     # Verify if F* and KReMLin are here
     cp="cp --preserve=mode,timestamps"
     if [[ -z "$FSTAR_HOME" ]] ; then
-        git clone https://github.com/FStarLang/FStar &&
+        { [[ -d FStar ]] || git clone https://github.com/FStarLang/FStar ; } &&
         export FSTAR_HOME=$(fixpath $PWD/FStar)
     else
         export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
     fi &&
     if [[ -z "$KREMLIN_HOME" ]] ; then
-        git clone https://github.com/FStarLang/kremlin &&
+        { [[ -d kremlin ]] || git clone https://github.com/FStarLang/kremlin ; } &&
         export KREMLIN_HOME=$(fixpath $PWD/kremlin)
     else
         export KREMLIN_HOME=$(fixpath "$KREMLIN_HOME")
