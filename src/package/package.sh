@@ -112,11 +112,32 @@ make_everparse() {
     kremlin_commit_date_hr=$(print_date_utc_of_iso_hr "$kremlin_commit_date_iso") &&
     z3_version_string=$($Z3_DIR/$z3 --version) &&
 
-    # Rebuild everything
+    # Rebuild F* and kremlin
     export OTHERFLAGS='--admit_smt_queries true' &&
     make -C "$FSTAR_HOME" "$@" &&
     make -C "$KREMLIN_HOME" "$@" minimal &&
     make -C "$KREMLIN_HOME/kremlib" "$@" verify-all &&
+
+    # Build the hacl-star package if not available
+    if ! ocamlfind query hacl-star ; then
+        mkdir -p ocaml-packages &&
+        export OCAMLFIND_DESTDIR=$(fixpath "$PWD/ocaml-packages") &&
+        if $is_windows ; then
+            export OCAMLPATH="$OCAMLFIND_DESTDIR;$OCAMLPATH"
+        else
+            export OCAMLPATH="$OCAMLFIND_DESTDIR:$OCAMLPATH"
+        fi &&
+        { [[ -d hacl-star ]] || git clone https://github.com/project-everest/hacl-star ; } &&
+        if ! ocamlfind query hacl-star-raw ; then
+            make -C hacl-star/dist/gcc-compatible "$@" &&
+            make -C hacl-star/dist/gcc-compatible install-hacl-star-raw
+        fi &&
+        if ! ocamlfind query hacl-star ; then
+            (cd hacl-star/bindings/ocaml && dune build @install && dune build && dune install)
+        fi
+    fi &&
+
+    # Rebuild EverParse
     make -C "$QD_HOME" "$@" &&
 
     # Copy dependencies and Z3
