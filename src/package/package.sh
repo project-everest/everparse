@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -x
 
 if [[ -z "$OS" ]] ; then
     OS=$(uname)
