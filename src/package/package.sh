@@ -127,13 +127,16 @@ make_everparse() {
         else
             export OCAMLPATH="$OCAMLFIND_DESTDIR:$OCAMLPATH"
         fi &&
-        { [[ -d hacl-star ]] || git clone https://github.com/project-everest/hacl-star ; } &&
+        if [[ -z $HACL_HOME ]] ; then
+            { [[ -d hacl-star ]] || git clone https://github.com/project-everest/hacl-star ; } &&
+            HACL_HOME=$(fixpath $PWD/hacl-star)
+        fi &&
         if ! ocamlfind query hacl-star-raw ; then
-            make -C hacl-star/dist/gcc-compatible "$@" &&
-            make -C hacl-star/dist/gcc-compatible install-hacl-star-raw
+            make -C $HACL_HOME/dist/gcc-compatible "$@" &&
+            make -C $HACL_HOME/dist/gcc-compatible install-hacl-star-raw
         fi &&
         if ! ocamlfind query hacl-star ; then
-            (cd hacl-star/bindings/ocaml && dune build @install && dune build && dune install)
+            (cd $HACL_HOME/bindings/ocaml && dune build @install && dune build && dune install)
         fi
     fi &&
 
