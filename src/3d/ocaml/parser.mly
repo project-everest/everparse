@@ -248,8 +248,12 @@ parameters:
   |  { [] }
   | LPAREN ps=right_flexible_nonempty_list(COMMA, parameter) RPAREN { ps }
 
+case_pattern:
+  | i=IDENT { with_range (Identifier i) $startpos(i) }
+  | c=constant { with_range (Constant c) $startpos(c) }
+
 case:
-  | CASE i=IDENT COLON f=field { Case (with_range (Identifier i) $startpos(i), f) }
+  | CASE p=case_pattern COLON f=field { Case (p, f) }
   | DEFAULT COLON f=field { DefaultCase f }
 
 cases:
