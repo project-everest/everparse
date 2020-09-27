@@ -10,28 +10,10 @@ RUN apt-get update
 RUN apt-get --yes --no-install-recommends install software-properties-common dirmngr gpg-agent
 RUN add-apt-repository ppa:avsm/ppa
 
-# Install clang 10.0 for Linux (intended not to be in the package)
-# From: https://apt.llvm.org/
-RUN apt-get update
-RUN apt-get --yes install --no-install-recommends wget ca-certificates gnupg
-RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
-RUN echo deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main >> /etc/apt/sources.list
-RUN echo deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main >> /etc/apt/sources.list
-RUN apt-get update
-RUN apt-get --yes install --no-install-recommends clang-10
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 20
-RUN update-alternatives --set clang /usr/bin/clang-10
-RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 20
-RUN update-alternatives --set clang++ /usr/bin/clang++-10
-RUN clang --version
-RUN clang++ --version
-ENV CC clang
-ENV CXX clang++
-
 # Install the dependencies of Project Everest
 RUN apt-get update
 RUN apt-get update
-RUN apt-get --yes install --no-install-recommends opam make m4 git time gnupg ca-certificates sudo patch
+RUN apt-get --yes install --no-install-recommends opam gcc binutils make m4 git time gnupg ca-certificates sudo patch libc6-dev wget
 
 # Create a new user and give them sudo rights
 RUN useradd -d /home/test test
