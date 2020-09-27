@@ -230,6 +230,8 @@ make_everparse() {
     $cp $KREMLIN_HOME/LICENSE everparse/licenses/KReMLin &&
     $cp $QD_HOME/LICENSE everparse/licenses/EverParse &&
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt &&
+    wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE &&
+    wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE &&
     if $is_windows ; then
         wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/master/clang/LICENSE.TXT
     fi &&
