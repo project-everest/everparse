@@ -150,7 +150,7 @@ make_everparse() {
     then
         $cp $LIBGMP10_DLL everparse/bin/ &&
         $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/ &&
-        for f in $(cat $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
+        for f in $(sed 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
             libevercrypt_dll=$f/libevercrypt.dll
             if [[ -f $libevercrypt_dll ]] ; then
                 break
