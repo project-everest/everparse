@@ -134,7 +134,10 @@ make_everparse() {
         fi &&
         if ! ocamlfind query hacl-star-raw ; then
             if ! $is_windows ; then
-                echo "#ifndef LINUX_NO_EXPLICIT_BZERO\n#define LINUX_NO_EXPLICIT_BZERO\n#endif" >> $HACL_HOME/dist/gcc-compatible/config.h
+                config_h=$HACL_HOME/dist/gcc-compatible/config.h
+                echo "#ifndef LINUX_NO_EXPLICIT_BZERO" >> $config_h &&
+                echo "#define LINUX_NO_EXPLICIT_BZERO" >> $config_h &&
+                echo "#endif" >> $config_h
             fi &&
             make -C $HACL_HOME/dist/gcc-compatible "$@" &&
             make -C $HACL_HOME/dist/gcc-compatible install-hacl-star-raw
