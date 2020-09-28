@@ -142,6 +142,7 @@ let remove_fst_and_krml_files
   ]
 
 let produce_c_files
+  (skip_makefiles: bool)
   (cleanup: bool)
   (out_dir: string)
   (files_and_modules: (string * string) list)
@@ -185,7 +186,7 @@ let produce_c_files
     (krml_args0 @ krml_files)
   in
   let krml_args =
-    if Options.get_skip_makefiles ()
+    if skip_makefiles
     then "-skip-makefiles" :: krml_args
     else krml_args
   in
@@ -420,6 +421,7 @@ let save_hashes
 let postprocess
   (clang_format: bool)
   (clang_format_executable: string)
+  (skip_makefiles: bool)
   (cleanup: bool)
   (no_everparse_h: bool)
   (save_hashes_opt: bool)
@@ -432,7 +434,7 @@ let postprocess
   List.iter (verify_and_extract_module out_dir) files_and_modules;
   let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the C files *)
-  produce_c_files cleanup out_dir files_and_modules;
+  produce_c_files skip_makefiles cleanup out_dir files_and_modules;
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
   (* copy EverParse.h unless prevented *)

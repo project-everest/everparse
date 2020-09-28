@@ -130,6 +130,7 @@ let go () : ML unit =
       Batch.postprocess
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
+        (Options.get_skip_makefiles ())
         (Options.get_cleanup ())
         (Options.get_no_everparse_h ())
         (Options.get_save_hashes ())
