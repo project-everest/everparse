@@ -2,6 +2,10 @@ module Batch
 open HashingOptions
 open FStar.All
 
+val check_inplace_hashes
+  (files_3d_c: list string)
+: ML unit
+
 val postprocess
   (clang_format: bool)
   (clang_format_executable: string)

@@ -21,6 +21,7 @@ let skip_makefiles : ref bool = alloc false
 let no_everparse_h : ref bool = alloc false
 let check_hashes : ref (option check_hashes_t) = alloc None
 let save_hashes : ref bool = alloc false
+let inplace_hashes : ref (list string) = alloc []
 let arg0 : ref string = alloc "3d"
 
 let set_check_hashes = function
@@ -55,6 +56,7 @@ let options0 =
    (noshort, "no_copy_everparse_h", ZeroArgs (fun _ -> no_everparse_h := true), "Do not copy EverParse.h");
    (noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
    (noshort, "check_hashes", OneArg (set_check_hashes, "none|weak|strong"), "Check hashes");
+   (noshort, "check_inplace_hash", OneArg ((fun c -> inplace_hashes := c :: !inplace_hashes), "file.3d=file.h"), "Check hashes stored in one .h/.c file");
    (noshort, "save_hashes", ZeroArgs (fun _ -> save_hashes := true), "Save hashes");
    (noshort, "no_save_hashes", ZeroArgs (fun _ -> save_hashes := false), "Do not save hashes");
    ]
@@ -184,3 +186,6 @@ let get_check_hashes () =
 
 let get_save_hashes () =
   !save_hashes
+
+let get_check_inplace_hashes () =
+  List.rev !inplace_hashes

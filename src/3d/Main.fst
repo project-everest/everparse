@@ -111,7 +111,13 @@ let process_file (fn: string) : ML unit =
     end
 
 let go () : ML unit =
-  match Options.parse_cmd_line() with
+  let files = Options.parse_cmd_line() in
+  let inplace_hashes = Options.get_check_inplace_hashes () in
+  match inplace_hashes with
+  | _ :: _ ->
+    Batch.check_inplace_hashes inplace_hashes
+  | [] ->
+  match files with
   | [] -> Options.display_usage ()
   | files ->
   let out_dir = Options.get_output_dir () in

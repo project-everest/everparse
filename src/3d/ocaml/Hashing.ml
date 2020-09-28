@@ -100,6 +100,10 @@ let hash_as_comment file =
   let h = hash file None in
   Printf.sprintf "%s:%s" c_comment_intro h
 
+type check_inplace_hashes_t =
+  | AllHashes of c_files
+  | OneHash of string
+
 let check_inplace_hashes file_3d files_c =
   let h = hash file_3d None in
   let f file_c =
@@ -130,7 +134,10 @@ let check_inplace_hashes file_3d files_c =
     close_in ch;
     res
   in
-  List.for_all f (
+  match files_c with
+  | OneHash c_file -> f c_file
+  | AllHashes files_c ->
+    List.for_all f (
       files_c.c ::
       files_c.h ::
       files_c.wrapper_c ::

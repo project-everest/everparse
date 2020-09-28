@@ -31,3 +31,5 @@ val get_no_everparse_h : unit -> ML bool
 val get_check_hashes : unit -> ML (option check_hashes_t)
 
 val get_save_hashes : unit -> ML bool
+
+val get_check_inplace_hashes : unit -> ML (list string)

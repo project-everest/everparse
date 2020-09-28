@@ -41,6 +41,7 @@ inplace-hash-test:
 	mkdir -p out.inplace-hash
 	$(3D) --odir out.inplace-hash --batch --no_copy_everparse_h Comments.3d
 	$(3D) --odir out.inplace-hash --batch --check_hashes inplace Comments.3d
+	$(3D) --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
 
 batch-cleanup-test:
 	mkdir -p out.cleanup
