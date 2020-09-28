@@ -174,7 +174,7 @@ let produce_c_files
     "-no-prefix" :: "LowParse.Low.BoundedInt" ::
     "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
     "-library" :: everparse_only_bundle ::
-    "-warn-error" :: "-9@4" ::
+    "-warn-error" :: "-9@4-20" ::
     "-fnoreturn-else" ::
     "-fparentheses" ::
     "-fcurly-braces" ::
