@@ -13,6 +13,9 @@ ARG MAXTHREADS
 ARG BUILDTARGET
 ARG BRANCHNAME
 
+# Install ocaml sha
+RUN env OPAMYES=1 opam install sha
+
 # Install sphinx (for the documentation)
 RUN pip3 install --upgrade pip && pip3 install --user sphinx-rtd-theme
 
