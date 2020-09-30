@@ -1,8 +1,11 @@
+let hash_update h buf =
+  Hacl_star__EverCrypt.Hash.update h buf
+
 (* Hash a boolean *)
 
 let hash_bool h b =
   let buf = Bytes.make 1 (char_of_int (if b then 1 else 0)) in
-  Hacl_star__EverCrypt.Hash.update h buf
+  hash_update h buf
 
 (* Hash an integer *)
 
@@ -10,7 +13,7 @@ let hash_int h i =
   let i32 = Int32.of_int i in
   let buf = Bytes.create 4 in
   Bytes.set_int32_be buf 0 i32;
-  Hacl_star__EverCrypt.Hash.update h buf
+  hash_update h buf
 
 (* Hash a file *)
 
@@ -21,15 +24,14 @@ let hash_file h f =
   let buf = Bytes.create len in
   let _ = input ch buf 0 len in
   close_in ch;
-  Hacl_star__EverCrypt.Hash.update h buf
+  hash_update h buf
 
 (* Hash a string *)
 
 let hash_string h s =
   hash_int h (String.length s);
-  Hacl_star__EverCrypt.Hash.update h (Bytes.of_string s)
+  hash_update h (Bytes.of_string s)
 
-type t = Hacl_star__EverCrypt.Hash.t
 let alg = Hacl_star__SharedDefs.HashDefs.SHA2_256
 let hlen = Hacl_star__SharedDefs.HashDefs.digest_len alg
 
