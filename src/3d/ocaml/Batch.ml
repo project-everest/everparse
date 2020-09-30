@@ -386,8 +386,10 @@ let check_inplace_hash
     if Hashing.check_inplace_hashes file_3d (Hashing.OneHash file_c)
     then begin
       print_endline (Printf.sprintf "EverParse check_inplace_hash succeeded on %s" file_3d)
-    end else
-      failwith (Printf.sprintf "EverParse check_inplace_hash failed on %s" file_3d)
+    end else begin
+      print_endline (Printf.sprintf "EverParse check_inplace_hash failed on %s" file_3d);
+      exit 255
+    end
   | _ -> failwith "check_inplace_hash: expected file.3d=file.h"
 
 let check_inplace_hashes = List.iter check_inplace_hash
@@ -469,4 +471,7 @@ let check_all_hashes
 : unit
 = if List.for_all (check_hashes ch out_dir) files_and_modules
   then print_endline "EverParse check_hashes succeeded!"
-  else failwith "EverParse check_hashes failed"
+  else begin
+    print_endline "EverParse check_hashes failed";
+    exit 255
+  end
