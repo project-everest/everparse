@@ -36,6 +36,7 @@ RUN opam env --set-switch | tee --append .profile .bashrc .bash_profile
 RUN git clone https://github.com/project-everest/everest.git
 WORKDIR everest
 RUN ./everest --yes opam
+RUN env OPAMYES=1 opam install sha
 RUN ./everest --yes z3
 RUN echo export PATH=$HOME/everest/z3/bin:$PATH | tee --append $HOME/.bash_profile $HOME/.profile $HOME/.bashrc
 WORKDIR ..
