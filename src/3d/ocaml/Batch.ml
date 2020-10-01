@@ -35,11 +35,7 @@ let krml out_dir =
     then (false, candidate)
     else begin
       let target = Filename.temp_file ~temp_dir:out_dir "krml" ".exe" in
-      if Unix.has_symlink ()
-      then
-        let candidate = aux true [(dir, "krml")] in
-        Unix.symlink candidate target
-      else begin
+      begin
         (* Here, Windows cannot even read symlinks *)
         let dir' = filename_concat (filename_concat dir "_build") "src" in
         let candidate = aux true [(dir', "Kremlin.native")] in
