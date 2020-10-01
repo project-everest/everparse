@@ -138,6 +138,7 @@ make_everparse() {
                 echo "#define LINUX_NO_EXPLICIT_BZERO" >> $config_h &&
                 echo "#endif" >> $config_h
             fi &&
+            sed -i 's!^USER_CFLAGS=.*$!USER_CFLAGS=!' $HACL_HOME/dist/gcc-compatible/Makefile.include &&
             make -C $HACL_HOME/dist/gcc-compatible "$@" &&
             make -C $HACL_HOME/dist/gcc-compatible install-hacl-star-raw
         fi &&
