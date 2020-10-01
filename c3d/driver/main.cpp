@@ -21,6 +21,12 @@ public:
 };
 
 int main(int argc, const char **argv) {
+  // TODO: the following steps need to happen
+  // i) figure out how to pass suitable options to the compiler invocations,
+  //    e.g. how to pass -std=c2x, how to pass a proper -include, etc.
+  // ii) figure out how to load and enable plugins; apparently the plugin
+  //     loading code does not kick in with our custom driver, but! we are
+  //     linking in the plugin so it ought to do something (famous last words?)
   CommonOptionsParser op(argc, argv, llvm::cl::GeneralCategory);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
 
