@@ -7,5 +7,9 @@ set -e
 set -x
 docker build -t build-c3d -f package/Dockerfile .
 docker create --name=build-c3d build-c3d
-docker cp build-c3d:/home/test/out/C3d.so .
+# The plugin is useful for those who already have clang installed and wish to
+# run it as part of a global compilation run; the executable is likely more
+# useful.
+# docker cp build-c3d:/home/test/out/src/C3d.so .
+docker cp build-c3d:/home/test/out/driver/clang-c3d .
 docker rm build-c3d

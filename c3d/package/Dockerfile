@@ -27,6 +27,5 @@ COPY tests tests
 RUN sudo chown --recursive test:test src tests
 RUN mkdir out
 WORKDIR out
-RUN cmake -D LLVM_BUILD_ROOT=$LLVM_BUILD_ROOT ../src/ && make -j
-RUN $LLVM_BUILD_ROOT/bin/clang  -fplugin=./C3d.so -std=c2x ../tests/basic0.h
-
+RUN cmake -D LLVM_BUILD_ROOT=$LLVM_BUILD_ROOT .. && make -j
+RUN $LLVM_BUILD_ROOT/bin/clang  -fplugin=./src/C3d.so -std=c2x ../tests/basic0.h
