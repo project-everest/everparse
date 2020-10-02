@@ -13,3 +13,6 @@ docker create --name=build-c3d build-c3d
 # docker cp build-c3d:/home/test/out/src/C3d.so .
 docker cp build-c3d:/home/test/out/driver/clang-c3d .
 docker rm build-c3d
+
+# Test 
+./clang-c3d tests/basic0.h

@@ -22,10 +22,12 @@ ENV CC $LLVM_BUILD_ROOT/bin/clang
 ENV CXX $LLVM_BUILD_ROOT/bin/clang++
 
 # Build and test c3d
+COPY CMakeLists.txt CMakeLists.txt
+COPY driver driver
 COPY src src
 COPY tests tests
-RUN sudo chown --recursive test:test src tests
+RUN sudo chown --recursive test:test CMakeLists.txt driver src tests
 RUN mkdir out
 WORKDIR out
 RUN cmake -D LLVM_BUILD_ROOT=$LLVM_BUILD_ROOT .. && make -j
-RUN $LLVM_BUILD_ROOT/bin/clang  -fplugin=./src/C3d.so -std=c2x ../tests/basic0.h
+# RUN $LLVM_BUILD_ROOT/bin/clang  -fplugin=./src/C3d.so -std=c2x ../tests/basic0.h
