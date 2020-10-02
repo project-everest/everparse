@@ -31,3 +31,5 @@ RUN mkdir out
 WORKDIR out
 RUN cmake -D LLVM_BUILD_ROOT=$LLVM_BUILD_ROOT .. && make -j
 # RUN $LLVM_BUILD_ROOT/bin/clang  -fplugin=./src/C3d.so -std=c2x ../tests/basic0.h
+WORKDIR ..
+RUN out/driver/clang-c3d tests/basic0.h
