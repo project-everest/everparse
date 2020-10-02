@@ -126,7 +126,7 @@ let compare_by_bytes'
 = (compose_int32le (U8.v a0) (U8.v a1) (U8.v a2) (U8.v a3)) =
   (compose_int32le (U8.v b0) (U8.v b1) (U8.v b2) (U8.v b3))
 
-#push-options "--max_fuel 5 --z3rlimit 32"
+#push-options "--max_fuel 5 --z3rlimit 64"
 
 let compare_by_bytes_equiv
   (a0: U8.t { 0 <= U8.v a0 /\ U8.v a0 < 256 } )

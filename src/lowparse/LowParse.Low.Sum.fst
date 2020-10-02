@@ -577,6 +577,174 @@ let jump_sum
 : Tot (jumper (parse_sum t p pc))
 = jump_sum_aux t v p32 pc (jump_sum_aux_payload t pc pc32 destr)
 
+inline_for_extraction
+let read_sum_cases'
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (leaf_reader (dsnd (pc x)))))
+  (k: sum_key t)
+: Tot (leaf_reader (parse_sum_cases' t pc k))
+= [@inline_let]
+  let _ = synth_sum_case_injective t k in
+        read_synth'
+            (dsnd (pc k))
+            (synth_sum_case t k)
+            (pc32 k)
+            ()
+
+inline_for_extraction
+let read_sum_cases_t
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+: Tot Type
+= leaf_reader (parse_sum_cases' t pc k)
+
+let read_sum_cases_t_eq
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+  (x y : read_sum_cases_t t pc k)
+: GTot Type0
+= True
+
+inline_for_extraction
+let read_sum_cases_t_if
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+: Tot (if_combinator _ (read_sum_cases_t_eq t pc k))
+= fun cond (sv_true: cond_true cond -> Tot (read_sum_cases_t t pc k)) (sv_false: cond_false cond -> Tot (read_sum_cases_t t pc k)) #_ #_ input pos ->
+  if cond
+  then (sv_true () input pos)
+  else (sv_false () input pos)
+
+inline_for_extraction
+let read_sum_cases 
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (leaf_reader (dsnd (pc x)))))
+  (destr: dep_enum_destr (sum_enum t) (read_sum_cases_t t pc))
+  (k: sum_key t)
+: Tot (leaf_reader (parse_sum_cases' t pc k))
+= destr
+    _
+    (read_sum_cases_t_if t pc)
+    (fun _ _ -> ())
+    (fun _ _ _ _ -> ())
+    (read_sum_cases' t pc pc32)
+    k
+
+inline_for_extraction
+let read_sum
+  (#kt: parser_kind)
+  (t: sum)
+  (p: parser kt (sum_repr_type t))
+  (p32: leaf_reader (parse_enum_key p (sum_enum t)))
+  (j: jumper p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (leaf_reader (dsnd (pc x)))))
+  (destr: dep_enum_destr (sum_enum t) (read_sum_cases_t t pc))
+: Tot (leaf_reader (parse_sum t p pc))
+=
+  fun #_ #_ input pos ->
+    let h = HST.get () in
+    valid_facts (parse_sum t p pc) h input pos;
+    parse_sum_eq' t p pc (bytes_of_slice_from h input pos);
+    valid_facts (parse_enum_key p (sum_enum t)) h input pos;
+    let k = p32 input pos in
+    let pos' = jump_enum_key j (sum_enum t) input pos in
+    valid_facts (parse_sum_cases' t pc k) h input pos' ;
+    read_sum_cases t pc pc32 destr k input pos'
+
+inline_for_extraction
+let serialize32_sum_cases_t
+  (t: sum)
+  (#pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
+  (k: sum_key t)
+: Tot Type
+= serializer32 (serialize_sum_cases t pc sc k)
+
+let serialize32_sum_cases_t_eq
+  (t: sum)
+  (#pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
+  (k: sum_key t)
+  (x y: serialize32_sum_cases_t t sc k)
+: GTot Type0
+= True
+
+inline_for_extraction
+let serialize32_sum_cases_t_if
+  (t: sum)
+  (#pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
+  (k: sum_key t)
+: Tot (if_combinator _ (serialize32_sum_cases_t_eq t sc k))
+= fun cond (sv_true: (cond_true cond -> Tot (serialize32_sum_cases_t t sc k))) (sv_false: (cond_false cond -> Tot (serialize32_sum_cases_t t sc k))) x #rrel #rel b pos ->
+  if cond
+  then (sv_true () x b pos)
+  else (sv_false () x b pos)
+
+inline_for_extraction
+let serialize32_sum_cases_aux
+  (t: sum)
+  (#pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
+  (sc32: ((x: sum_key t) -> Tot (serializer32 (sc x))))
+  (k: sum_key t)
+: Tot (serializer32 (serialize_sum_cases t pc sc k))
+= fun x #rrel #rel b pos ->
+  [@inline_let] let _ =
+    Classical.forall_intro (parse_sum_cases_eq' t pc k);
+    synth_sum_case_injective t k;
+    synth_sum_case_inverse t k
+  in
+  serialize32_synth
+    (sc32 k)
+    (synth_sum_case t k)
+    (synth_sum_case_recip t k)
+    (fun x -> synth_sum_case_recip t k x)
+    ()
+    x
+    b
+    pos
+
+inline_for_extraction
+let serialize32_sum_cases
+  (t: sum)
+  (#pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
+  (sc32: ((x: sum_key t) -> Tot (serializer32 (sc x))))
+  (destr: dep_enum_destr (sum_enum t) (serialize32_sum_cases_t t sc))
+  (k: sum_key t)
+: Tot (serializer32 (serialize_sum_cases t pc sc k))
+= destr
+    _
+    (serialize32_sum_cases_t_if t sc)
+    (fun _ _ -> ())
+    (fun _ _ _ _ -> ())
+    (serialize32_sum_cases_aux t sc sc32)
+    k
+
+inline_for_extraction
+let serialize32_sum
+  (#kt: parser_kind)
+  (t: sum)
+  (#p: parser kt (sum_repr_type t))
+  (s: serializer p {kt.parser_kind_subkind == Some ParserStrong})
+  (s32: serializer32 (serialize_enum_key _ s (sum_enum t)))
+  (#pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
+  (sc32: ((x: sum_key t) -> Tot (serializer32 (sc x))))
+  (destr: dep_enum_destr (sum_enum t) (serialize32_sum_cases_t t sc))
+: Tot (serializer32 (serialize_sum t s sc))
+= fun x #rrel #rel b pos ->
+  serialize_sum_eq t s sc x;
+  let tg = sum_tag_of_data t x in
+  serialize32_nondep_then_aux s32 (serialize32_sum_cases t sc sc32 destr tg) tg x b pos
+
 let clens_sum_tag
   (s: sum)
 : Tot (clens (sum_type s) (sum_key s))
@@ -1330,6 +1498,255 @@ let jump_dsum
   destr (jump_dsum_cases_eq t f g) (jump_dsum_cases_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (jump_dsum_cases' t f f32 g32) tg input pos_after_tag
 
 #pop-options
+
+inline_for_extraction
+let read_dsum_cases'
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (f32: (x: dsum_known_key t) -> Tot (leaf_reader (dsnd (f x))))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (g32: leaf_reader g)
+  (x: dsum_key t)
+: Tot (leaf_reader (parse_dsum_cases' t f g x))
+= fun #rrel #rel input pos ->
+  [@inline_let]
+  let _ = synth_dsum_case_injective t x in
+  match x with
+  | Known x' ->
+    read_synth'
+      (dsnd (f x'))
+      (synth_dsum_case t (Known x'))
+      (f32 x')
+      ()
+      input
+      pos
+  | Unknown x' ->
+    read_synth'
+      g
+      (synth_dsum_case t (Unknown x'))
+      g32
+      ()
+      input
+      pos
+
+inline_for_extraction
+let read_dsum_cases_t
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (k: dsum_known_key t)
+: Tot Type
+= leaf_reader (parse_dsum_cases' t f g (Known k))
+
+let read_dsum_cases_t_eq
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (k: dsum_known_key t)
+  (x y : read_dsum_cases_t t f g k)
+: GTot Type0
+= True
+
+inline_for_extraction
+let read_dsum_cases_t_if
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (k: dsum_known_key t)
+: Tot (if_combinator _ (read_dsum_cases_t_eq t f g k))
+= fun cond (sv_true: cond_true cond -> Tot (read_dsum_cases_t t f g k)) (sv_false: cond_false cond -> Tot (read_dsum_cases_t t f g k)) #_ #_ input pos ->
+  if cond
+  then sv_true () input pos
+  else sv_false () input pos
+
+inline_for_extraction
+let read_dsum_cases 
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (f32: (x: dsum_known_key t) -> Tot (leaf_reader (dsnd (f x))))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (g32: leaf_reader g)
+  (destr: dep_enum_destr _ (read_dsum_cases_t t f g))
+  (x: dsum_key t)
+: Tot (leaf_reader (parse_dsum_cases' t f g x))
+= fun #_ #_ input pos ->
+  match x with
+  | Known k ->
+    destr
+      _
+      (read_dsum_cases_t_if t f g)
+      (fun _ _ -> ())
+      (fun _ _ _ _ -> ())
+      (fun k -> read_dsum_cases' t f f32 g g32 (Known k))
+      k
+      input
+      pos
+  | Unknown r ->
+    read_dsum_cases' t f f32 g g32 (Unknown r) input pos
+
+inline_for_extraction
+let read_dsum
+  (#kt: parser_kind)
+  (t: dsum)
+  (#p: parser kt (dsum_repr_type t))
+  (p32: leaf_reader (parse_maybe_enum_key p (dsum_enum t)))
+  (j: jumper p)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (f32: (x: dsum_known_key t) -> Tot (leaf_reader (dsnd (f x))))
+  (#k': parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (g32: leaf_reader g)
+  (destr: dep_enum_destr _ (read_dsum_cases_t t f g))
+: Tot (leaf_reader (parse_dsum t p f g))
+= fun #_ #_ input pos ->
+  let h = HST.get () in
+  valid_facts (parse_dsum t p f g) h input pos;
+  parse_dsum_eq_ t p f g (bytes_of_slice_from h input pos);
+  valid_facts (parse_maybe_enum_key p (dsum_enum t)) h input pos;
+  let k = p32 input pos in
+  let pos' = jump_maybe_enum_key j (dsum_enum t) input pos  in
+  valid_facts (parse_dsum_cases' t f g k) h input pos' ;
+  read_dsum_cases t f f32 g g32 destr k input pos'
+
+inline_for_extraction
+let serialize32_dsum_type_of_tag
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
+  (sf32: (x: dsum_known_key t) -> Tot (serializer32 (sf x)))
+  (#k': parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (#sg: serializer g)
+  (sg32: serializer32 sg)
+  (tg: dsum_key t)
+: Tot (serializer32 (serialize_dsum_type_of_tag t f sf g sg tg))
+= match tg with
+  | Known x' -> serialize32_ext (dsnd (f x')) (sf x') (sf32 x') (parse_dsum_type_of_tag t f g tg) ()
+  | Unknown x' -> serialize32_ext g sg sg32 (parse_dsum_type_of_tag t f g tg) ()
+
+inline_for_extraction
+let serialize32_dsum_cases_aux
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
+  (sf32: (x: dsum_known_key t) -> Tot (serializer32 (sf x)))
+  (#k': parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (#sg: serializer g)
+  (sg32: serializer32 sg)
+  (tg: dsum_key t)
+: Tot (serializer32 (serialize_dsum_cases t f sf g sg tg))
+= [@inline_let]
+  let _ = synth_dsum_case_injective t tg in
+  [@inline_let]
+  let _ = synth_dsum_case_inverse t tg in
+  serialize32_synth
+    (serialize32_dsum_type_of_tag t f sf sf32 sg32 tg)
+    (synth_dsum_case t tg) 
+    (synth_dsum_case_recip t tg)
+    (fun x -> synth_dsum_case_recip t tg x)
+    ()
+
+inline_for_extraction
+let serialize32_dsum_cases_t
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (sg: serializer g)
+  (k: dsum_known_key t)
+: Tot Type
+= serializer32 (serialize_dsum_cases t f sf g sg (Known k))
+
+let serialize32_dsum_cases_t_eq
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (sg: serializer g)
+  (k: dsum_known_key t)
+  (x y: serialize32_dsum_cases_t t f sf g sg k)
+: GTot Type0
+= True
+
+inline_for_extraction
+let serialize32_dsum_cases_t_if
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (sg: serializer g)
+  (k: dsum_known_key t)
+: Tot (if_combinator _ (serialize32_dsum_cases_t_eq t f sf g sg k))
+= fun cond (sv_true: (cond_true cond -> Tot (serialize32_dsum_cases_t t f sf g sg k))) (sv_false: (cond_false cond -> Tot (serialize32_dsum_cases_t t f sf g sg k))) x #rrel #rel output pos ->
+  if cond
+  then (sv_true () x output pos)
+  else (sv_false () x output pos)
+
+inline_for_extraction
+let serialize32_dsum_cases
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
+  (sf32: (x: dsum_known_key t) -> Tot (serializer32 (sf x)))
+  (#k': parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (#sg: serializer g)
+  (sg32: serializer32 sg)
+  (destr: dep_enum_destr _ (serialize32_dsum_cases_t t f sf g sg))
+  (tg: dsum_key t)
+: Tot (serializer32 (serialize_dsum_cases t f sf g sg tg))
+= fun x #rrel #rel output pos ->
+  match tg with
+  | Known k ->
+    destr
+      _
+      (serialize32_dsum_cases_t_if t f sf g sg)
+      (fun _ _ -> ())
+      (fun _ _ _ _ -> ())
+      (fun k -> serialize32_dsum_cases_aux t f sf sf32 sg32 (Known k))
+      k
+      x
+      output
+      pos
+  | Unknown r ->
+    serialize32_dsum_cases_aux t f sf sf32 sg32 (Unknown r) x output pos
+
+inline_for_extraction
+let serialize32_dsum
+  (#kt: parser_kind)
+  (t: dsum)
+  (#p: parser kt (dsum_repr_type t))
+  (s: serializer p {kt.parser_kind_subkind == Some ParserStrong})
+  (s32: serializer32 (serialize_maybe_enum_key _ s (dsum_enum t)))
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
+  (sf32: (x: dsum_known_key t) -> Tot (serializer32 (sf x)))
+  (#k': parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (#sg: serializer g)
+  (sg32: serializer32 sg)
+  (destr: dep_enum_destr _ (serialize32_dsum_cases_t t f sf g sg))
+: Tot (serializer32 (serialize_dsum t s f sf g sg))
+= fun x #_ #_ output pos ->
+  [@inline_let]
+  let _ = serialize_dsum_eq' t s f sf g sg x in
+  let tg = dsum_tag_of_data t x in
+  serialize32_nondep_then_aux
+    s32
+    (serialize32_dsum_cases t f sf sf32 sg32 destr tg)
+    tg
+    x
+    output
+    pos
 
 let clens_dsum_tag
   (s: dsum)

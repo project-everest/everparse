@@ -52,8 +52,10 @@ $(3D_SNAPSHOT): 3d-snapshot/%: out/%
 
 3d-snapshot: $(3D_SNAPSHOT)
 
+all-diffs: $(3D_DIFF)
+
 %.diff: 3d-do-tests
-	diff -w out/$(basename $@) 3d-snapshot/$(basename $@)
+	diff -w -B out/$(basename $@) 3d-snapshot/$(basename $@)
 
 clean:
 	rm -rf out _build

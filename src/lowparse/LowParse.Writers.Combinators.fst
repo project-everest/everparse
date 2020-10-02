@@ -780,6 +780,12 @@ let do_while_impl
 
 #pop-options
 
+let parse_u64
+= make_parser
+  LP.parse_u64
+  LP.serialize_u64
+  LP.jump_u64
+
 let parse_u32
 = make_parser
   LP.parse_u32

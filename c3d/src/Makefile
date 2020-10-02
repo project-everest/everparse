@@ -28,7 +28,7 @@ CC = clang
 
 test: out
 	make -C out/
-	${OURCLANG} -mllvm -debug-only=c3d -std=c2x -fplugin=./out/C3d.so -include ../tests/prelude.h ${TESTFILE}
+	${OURCLANG} -mllvm -debug-only=c3d -std=c2x -fblocks -fplugin=./out/C3d.so -include ../tests/prelude.h ${TESTFILE}
 	cat $(patsubst %.h,%.3d,${TESTFILE})
 
 out:

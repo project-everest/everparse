@@ -281,10 +281,10 @@ and bitfield_attr = with_meta_t bitfield_attr'
 let field_bitwidth_t = either (with_meta_t int) bitfield_attr
 
 type array_qualifier =
-  | VariableSizeEq              //[Size]
-  | VariableSizeLeq             //[<= Size]
-  | SingleElementVariableSizeEq //[= Size]
-  | ConstantSize                //[N]
+  | ByteArrayByteSize  //[
+  | ArrayByteSize      //[:byte-size
+  | ArrayByteSizeAtMost //[:byte-size-at-most
+  | ArrayByteSizeSingleElementArray //[:byte-size-single-element-array
 
 noeq
 type struct_field = {
@@ -610,10 +610,10 @@ let print_field (f:field) : ML string =
   let print_array eq : Tot string =
     let e, q = eq in
     match q with
-    | VariableSizeEq -> Printf.sprintf "[%s]" (print_expr e)
-    | VariableSizeLeq -> Printf.sprintf "[<= %s]" (print_expr e)
-    | SingleElementVariableSizeEq -> Printf.sprintf "[= %s]" (print_expr e)
-    | ConstantSize -> Printf.sprintf "[{ %s }]" (print_expr e)
+    | ByteArrayByteSize -> Printf.sprintf "[%s]" (print_expr e)
+    | ArrayByteSize -> Printf.sprintf "[:byte-size %s]" (print_expr e)
+    | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-at-most %s]" (print_expr e)
+    | ArrayByteSizeSingleElementArray -> Printf.sprintf "[:byte-size-single-element-array %s]" (print_expr e)
   in
   let sf = f.v in
     Printf.sprintf "%s%s %s%s%s%s;"

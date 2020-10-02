@@ -14,6 +14,10 @@ let mk_pos (l:Lexing.position) =
         col=Z.of_int col;
       }
 
+let range_of_lexbuf lb =
+  mk_pos (Lexing.lexeme_start_p lb),
+  mk_pos (Lexing.lexeme_end_p lb)
+
 let with_range (x:'a) (l:Lexing.position) : 'a with_meta_t =
     Ast.with_range x (mk_pos l, mk_pos l)
 
@@ -53,6 +57,9 @@ let () =
 
 let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
 
+let deprecation_warning lb t =
+    Ast.warning ("This construct is deprecated; Use '" ^t^ "' instead")
+                (range_of_lexbuf lb)
 }
 
 let space = " " | "\t"
@@ -114,10 +121,15 @@ rule token =
   | "{:on-success" { locate lexbuf LBRACE_ONSUCCESS }
   | "{"            { locate lexbuf LBRACE }
   | "}"            { locate lexbuf RBRACE }
-  | "[="           { locate lexbuf LBRACK_EQ }
-  | "[<="          { locate lexbuf LBRACK_LEQ }
-  | "["            { locate lexbuf LBRACK }
-  | "]"            { locate lexbuf RBRACK }
+  | "[:byte-size"                { locate lexbuf LBRACK_BYTESIZE }
+  | "[:byte-size-at-most"        { locate lexbuf LBRACK_BYTESIZE_AT_MOST }
+  | "[:byte-size-single-element-array" { locate lexbuf LBRACK_SINGLE_ELEMENT_BYTESIZE }
+  | "["                          { locate lexbuf LBRACK (* intended for use with UINT8 arrays only, interpreted as [:byte-size] *)}
+  | "]"                          { locate lexbuf RBRACK }
+  | "[="           { deprecation_warning lexbuf "[:byte-size-single-element-array";
+                     locate lexbuf LBRACK_EQ }
+  | "[<="          { deprecation_warning lexbuf "[:byte-size-at-most";
+                     locate lexbuf LBRACK_LEQ }
   | "*"            { locate lexbuf STAR }
   | "/"            { locate lexbuf DIV }
   | "%"            { locate lexbuf REM }

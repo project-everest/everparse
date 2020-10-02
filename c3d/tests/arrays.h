@@ -24,7 +24,9 @@ typedef struct [[
   everparse::parameter(UINT32 len)
 ]] _POINTNPARAM2
 {
-  UINT8 dummy;
+  UINT8 dummy        [[everparse::on_success(
+                          ^{return (dummy < 25);}
+                       )]];
   UINT32  x                 [[everparse::byte_size_at_most(len)]]
             [EVERPARSE_VLA];
 } POINTNPARAM2, *PPOINTNPARAM2;
