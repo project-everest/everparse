@@ -12,6 +12,7 @@ cmake_minimum_required(VERSION 3.16)
 # TODO: couldn't find how to reuse the flags as picked by the build of LLVM
 # itself
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++14 -fno-rtti -fno-omit-frame-pointer")
+set(CMAKE_EXE_LINKER_FLAGS "-static-libstdc++")
 
 # Reusing the LLVM CMake stuff
 # ----------------------------
