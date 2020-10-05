@@ -1274,3 +1274,10 @@ let bind_decls (p:list decl) : ML (list decl & global_env) =
   let p' = List.map (bind_decl e) p in
   let fc = add_field_error_code_decls e in
   (fc @ p'), e
+
+
+let next_field_num (enclosing_struct:ident)
+                   (field_name:ident)
+                   (env:env)
+   : ML field_num
+   = env.globals.ge_fd.next (Some enclosing_struct, field_name.v)

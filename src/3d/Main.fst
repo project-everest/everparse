@@ -46,7 +46,7 @@ let process_file (fn: string) : ML unit =
     Options.debug_print_string "=============After bitflds=============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
-    let senv = TypeSizes.size_of_decls env decls in
+    let senv, decls = TypeSizes.size_of_decls env decls in
     let static_asserts = StaticAssertions.compute_static_asserts senv refinement in
     let decls = Simplify.simplify_prog senv decls in
     Options.debug_print_string "=============After simplify============\n";

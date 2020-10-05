@@ -307,9 +307,9 @@ type case =
 
 type switch_case = expr & list case
 
-noeq
 type attribute =
   | Entrypoint
+  | Aligned
 
 /// Typedefs are given 2 names by convention and can be tagged as an
 /// "entrypoint" for the validator
