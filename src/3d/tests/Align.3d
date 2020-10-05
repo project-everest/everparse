@@ -1,0 +1,40 @@
+aligned
+typedef struct _A
+{
+   UINT8  a1;
+   UINT16 a2; //1 byte of padding
+} A;
+
+aligned
+entrypoint
+typedef struct _B
+{
+   UINT8  b1;
+   A      b2; //1 byte of padding, since T is aligned at 2
+} B;
+
+
+aligned
+entrypoint
+typedef struct _C
+{
+   UINT8  c1;
+   B      c2; //1 byte of padding, since T is aligned at 2
+   UINT8  c3; //1 byte of end padding; since B is 2-aligned
+} C;
+
+
+aligned
+entrypoint
+typedef struct _D
+{
+   UINT8  d1;
+   C      d2; //1 byte of padding
+   UINT32 d3; //offset 12, ok ... no padding
+   UINT8  d4; //3 bytes of end padding
+} D;
+
+
+refining "AlignC.h" {
+ A, B, C, D
+}

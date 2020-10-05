@@ -386,8 +386,9 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       extend_with_size_of_typedef_names env names size alignment;
       d
 
-let size_of_decls (env:B.global_env) (ds:list decl)
+let size_of_decls (genv:B.global_env) (ds:list decl)
   : ML (env_t & list decl)
-  = let env = initial_env env in
+  = let env = initial_env genv in
     let ds = List.map (decl_size_with_alignment env) ds in
-    env, ds
+    let ds' = Binding.add_field_error_code_decls (Binding.mk_env genv) in
+    env, ds'@ds

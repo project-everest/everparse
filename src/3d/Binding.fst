@@ -1255,9 +1255,20 @@ let initial_global_env () =
   in
   e
 
-let add_field_error_code_decls (ge: global_env)
+let bind_decls (p:list decl) : ML (list decl & global_env) =
+  let e = initial_global_env() in
+  let p' = List.map (bind_decl e) p in
+  p', e
+
+let next_field_num (enclosing_struct:ident)
+                   (field_name:ident)
+                   (env:env)
+   : ML field_num
+   = env.globals.ge_fd.next (Some enclosing_struct, field_name.v)
+
+let add_field_error_code_decls (env: env)
   : ML (list decl)
-  = let l = all_nums ge in
+  = let l = all_nums env.globals in
     List.map
       (fun (z: (field_num & option ident & string)) ->
         let (i, this, name) = z in
@@ -1268,16 +1279,3 @@ let add_field_error_code_decls (ge: global_env)
         { d with comments = ["Auto-generated field identifier for error reporting"] }
       )
       l
-
-let bind_decls (p:list decl) : ML (list decl & global_env) =
-  let e = initial_global_env() in
-  let p' = List.map (bind_decl e) p in
-  let fc = add_field_error_code_decls e in
-  (fc @ p'), e
-
-
-let next_field_num (enclosing_struct:ident)
-                   (field_name:ident)
-                   (env:env)
-   : ML field_num
-   = env.globals.ge_fd.next (Some enclosing_struct, field_name.v)

@@ -40,3 +40,5 @@ val next_field_num (enclosing_struct:ident)
                    (field_name:ident)
                    (_:env)
     : ML field_num
+val add_field_error_code_decls (ge: env)
+  : ML (list decl)
