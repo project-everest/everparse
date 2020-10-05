@@ -10,7 +10,7 @@ entrypoint
 typedef struct _B
 {
    UINT8  b1;
-   A      b2; //1 byte of padding, since T is aligned at 2
+   A      b2; //1 byte of padding, since A is aligned at 2
 } B;
 
 
@@ -19,7 +19,7 @@ entrypoint
 typedef struct _C
 {
    UINT8  c1;
-   B      c2; //1 byte of padding, since T is aligned at 2
+   B      c2; //1 byte of padding, since A is aligned at 2
    UINT8  c3; //1 byte of end padding; since B is 2-aligned
 } C;
 
@@ -35,6 +35,25 @@ typedef struct _D
 } D;
 
 
+aligned
+casetype _E(Bool b) {
+    switch(b) {
+    case true:
+      A e1;
+    default:
+      UINT32 e2;
+    }
+} E;
+
+
+aligned
+entrypoint
+typedef struct _F
+{
+   UINT8 f1;
+   E(false) f2; //4 byte aligned; needs 3 bytes of padding
+} F;
+
 refining "AlignC.h" {
- A, B, C, D
+ A, B, C, D, E, F
 }

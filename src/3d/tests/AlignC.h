@@ -31,3 +31,15 @@ typedef struct _D
    uint32_t d3; //offset 12, ok ... no padding
    uint8_t  d4; //3 bytes of end padding
 } D;
+
+typedef union _E
+{
+  A e1;
+  uint32_t e2;
+} E;
+
+typedef struct _F
+{
+  uint8_t f1;
+  E f2;
+} F;

@@ -340,13 +340,12 @@ let decl_size_with_alignment (env:env_t) (d:decl)
                then Some s
                else Some Variable
          in
-         let alignment =
-             match accum_align with
-             | None -> f_align
-             | Some _ ->
-               if accum_align = f_align
-               then accum_align
-               else None
+         let alignment : alignment =
+           if None? accum_align then f_align
+           else if None? f_align then accum_align
+           else let Some n = accum_align in
+                let Some m = f_align in
+                Some (FStar.Math.Lib.max n m)
          in
          size, alignment
       in
@@ -361,6 +360,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
         | None -> Fixed 0 //empty case type
         | Some s -> s
       in
+      let alignment = if Fixed? size then alignment else None in
       let all_fixed =
         List.for_all
           (fun (size, _) ->
