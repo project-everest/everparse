@@ -128,7 +128,7 @@ make_everparse() {
             export OCAMLPATH="$OCAMLFIND_DESTDIR:$OCAMLPATH"
         fi &&
         if [[ -z $HACL_HOME ]] ; then
-            { [[ -d hacl-star ]] || git clone https://github.com/project-everest/hacl-star ; } &&
+            { [[ -d hacl-star ]] || git clone --branch protz_cross https://github.com/project-everest/hacl-star ; } &&
             HACL_HOME=$(fixpath $PWD/hacl-star)
         fi &&
         if ! ocamlfind query hacl-star-raw ; then
