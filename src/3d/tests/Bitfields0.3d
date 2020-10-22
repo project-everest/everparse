@@ -12,3 +12,10 @@ typedef struct _BF2(mutable UINT32 *outx) {
         return true;
      };
 } BF2, *PBF2;
+
+typedef struct _BF3 {
+   UINT8  a;
+   UINT32 x : 6 { x == 0 };
+   UINT32 y : 10;
+   UINT32 z : 16;
+} BF3;

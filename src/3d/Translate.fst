@@ -679,6 +679,20 @@ let translate_field (f:A.field) : ML T.struct_field =
 
 let nondep_group = list T.field
 let grouped_fields = list (either T.field nondep_group)
+let print_grouped_fields (gfs:grouped_fields) : ML string =
+  Printf.sprintf "[%s]"
+    (let s = 
+      List.Tot.map 
+        (fun (f:either T.field nondep_group) -> 
+          match f with
+          | Inl f -> f.T.sf_ident.v
+          | Inr l -> 
+            Printf.sprintf "[%s]" 
+              (let s = List.Tot.map (fun f -> f.T.sf_ident.v) l in
+               String.concat "; " s))
+        gfs
+    in
+    String.concat "; " s)
 let make_grouped_fields (fs:list T.field) : ML grouped_fields =
   let open T in
   let add_run (out, run) : grouped_fields =
@@ -693,9 +707,18 @@ let make_grouped_fields (fs:list T.field) : ML grouped_fields =
           (sf:struct_field)
           (out, run)
     : grouped_fields & nondep_group
-    = if sf.sf_dependence
-      then Inl sf::add_run (out, run), []
-      else out, extend_run sf run
+    = match out, run with
+      | [], [] -> 
+        //last field is always non-dependent
+        //even though its sf_dependence flag may be sets
+        //e.g., because it a field result from coalescing multiple bitfield
+        //which may themselves be dependent
+        //See BitFields0.3d for a test case
+        out, extend_run sf run
+      | _ -> 
+        if sf.sf_dependence
+        then Inl sf::add_run (out, run), []
+        else out, extend_run sf run
   in
   let gfs : grouped_fields =
     add_run (List.fold_right group_non_dependent_fields fs ([], []))
@@ -803,6 +826,11 @@ let parse_fields (env:global_env) (tdn:T.typedef_name) (fs:list T.field)
   let open T in
   let td_name, td_params = tdn.td_name, tdn.td_params in
   let gfs = make_grouped_fields fs in
+  // FStar.IO.print_string
+  //   (FStar.Printf.sprintf "parse_fields (tdn = %s), fields=[%s], grouped_fields=%s\n"
+  //     tdn.td_name.v 
+  //     (List.map (fun x -> x.sf_ident.v) fs |> String.concat ", ")
+  //     (print_grouped_fields gfs));
   let p = parse_grouped_fields env gfs in
   p
 

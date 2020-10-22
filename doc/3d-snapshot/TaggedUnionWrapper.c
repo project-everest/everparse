@@ -1,3 +1,4 @@
+#include "TaggedUnionWrapper.h"
 #include "EverParse.h"
 #include "TaggedUnion.h"
 void TaggedUnionEverParseError(char *x, char *y, char *z);
@@ -35,5 +36,3 @@ BOOLEAN TaggedUnionCheckInteger(uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
-
-

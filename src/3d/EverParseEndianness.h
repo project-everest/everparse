@@ -19,7 +19,12 @@ nswamy, protz, taramana 5-Feb-2020
 /* This is a hand-written header that selectively includes relevant bits from
  * kremlib.h -- it has to be updated manually to track upstream changes. */
 
-#pragma once
+#ifndef __EverParseEndianness_H
+#define __EverParseEndianness_H
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 /*****************************************************************************
  ********* Implementation of LowStar.Endianness (selected bits) **************
@@ -28,13 +33,34 @@ nswamy, protz, taramana 5-Feb-2020
 #include <string.h>
 #include <stdint.h>
 
-typedef uint8_t BOOLEAN;
+typedef char * const EverParseString;
 
+/* ... for Windows (MSVC)... not targeting XBOX 360! */
+#if defined(_MSC_VER)
+
+#  include <stdlib.h>
+#  include <windef.h>
+
+#  define htobe16(x) _byteswap_ushort(x)
+#  define htole16(x) (x)
+#  define be16toh(x) _byteswap_ushort(x)
+#  define le16toh(x) (x)
+
+#  define htobe32(x) _byteswap_ulong(x)
+#  define htole32(x) (x)
+#  define be32toh(x) _byteswap_ulong(x)
+#  define le32toh(x) (x)
+
+#  define htobe64(x) _byteswap_uint64(x)
+#  define htole64(x) (x)
+#  define be64toh(x) _byteswap_uint64(x)
+#  define le64toh(x) (x)
+
+#else
+
+typedef uint8_t BOOLEAN;
 #define FALSE 0
 #define TRUE 1
-
-typedef char * const EverParseString;
-typedef uint8_t * PUINT8;
 
 /* ... for Linux */
 #if defined(__linux__) || defined(__CYGWIN__) || defined (__USE_SYSTEM_ENDIAN_H__)
@@ -59,26 +85,6 @@ typedef uint8_t * PUINT8;
 #  define htobe32(x) OSSwapHostToBigInt32(x)
 #  define be32toh(x) OSSwapBigToHostInt32(x)
 
-/* ... for Windows (MSVC)... not targeting XBOX 360! */
-#elif defined(_MSC_VER)
-
-#  include <stdlib.h>
-
-#  define htobe16(x) _byteswap_ushort(x)
-#  define htole16(x) (x)
-#  define be16toh(x) _byteswap_ushort(x)
-#  define le16toh(x) (x)
-
-#  define htobe32(x) _byteswap_ulong(x)
-#  define htole32(x) (x)
-#  define be32toh(x) _byteswap_ulong(x)
-#  define le32toh(x) (x)
-
-#  define htobe64(x) _byteswap_uint64(x)
-#  define htole64(x) (x)
-#  define be64toh(x) _byteswap_uint64(x)
-#  define le64toh(x) (x)
-
 /* ... for Windows (GCC-like, e.g. mingw or clang) */
 #elif (defined(_WIN32) || defined(_WIN64)) &&                                  \
     (defined(__GNUC__) || defined(__clang__))
@@ -101,6 +107,8 @@ typedef uint8_t * PUINT8;
 #else
 
 #error "Unsupported platform"
+
+#endif
 
 #endif
 
@@ -148,3 +156,10 @@ inline static void Store64(uint8_t *b, uint64_t i) {
 #define Store64Le(b, i) (Store64(b, htole64(i)))
 #define Load64Be(b) (be64toh(Load64(b)))
 #define Store64Be(b, i) (Store64(b, htobe64(i)))
+
+
+#if defined(__cplusplus)
+}
+#endif
+
+#endif

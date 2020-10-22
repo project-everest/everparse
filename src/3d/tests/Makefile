@@ -16,11 +16,11 @@ FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 positive_tests=$(filter-out $(wildcard FAIL*.3d),$(wildcard *.3d))
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
-modules_static_assertions=TestFieldPtrStaticAssertions.c
-clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(modules_static_assertions) $(addsuffix .h,$(modules_or_wrappers)) EverParse.h EverParseEndianness.h
-OTHER_HEADERS=TestFieldPtrBase.h
+modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
+clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(modules_static_assertions) $(addsuffix .h,$(modules_or_wrappers))
+OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test
 
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
@@ -30,21 +30,28 @@ batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
 batch-test:
 	mkdir -p out.batch
-	$(3D) --odir out.batch --batch $(positive_tests)
+	$(3D) --odir out.batch --batch --no_copy_everparse_h --save_hashes $(positive_tests)
+	$(3D) --odir out.batch --batch --check_hashes strong $(positive_tests)
 	cp $(OTHER_HEADERS) out.batch
-	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS=-Wno-ignored-qualifiers
-	$(CXX) -o test-cpp.exe -I out.batch test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
+	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(QD_HOME)/src/3d'
+	$(CXX) -o test-cpp.exe -I out.batch -I $(QD_HOME)/src/3d test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
 	./test-cpp.exe
+
+inplace-hash-test:
+	mkdir -p out.inplace-hash
+	$(3D) --odir out.inplace-hash --batch --no_copy_everparse_h Comments.3d
+	$(3D) --odir out.inplace-hash --batch --check_hashes inplace Comments.3d
+	$(3D) --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
 
 batch-cleanup-test:
 	mkdir -p out.cleanup
-	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup $(positive_tests)
+	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup --skip_makefiles --no_copy_everparse_h $(positive_tests)
 	test "$$(ls out.cleanup | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
 clean:
-	rm -rf out.batch out.fail.batch out.cleanup test-cpp.exe
+	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test

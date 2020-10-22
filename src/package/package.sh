@@ -92,13 +92,13 @@ make_everparse() {
     # Verify if F* and KReMLin are here
     cp="cp --preserve=mode,timestamps"
     if [[ -z "$FSTAR_HOME" ]] ; then
-        git clone https://github.com/FStarLang/FStar &&
+        { [[ -d FStar ]] || git clone https://github.com/FStarLang/FStar ; } &&
         export FSTAR_HOME=$(fixpath $PWD/FStar)
     else
         export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
     fi &&
     if [[ -z "$KREMLIN_HOME" ]] ; then
-        git clone https://github.com/FStarLang/kremlin &&
+        { [[ -d kremlin ]] || git clone https://github.com/FStarLang/kremlin ; } &&
         export KREMLIN_HOME=$(fixpath $PWD/kremlin)
     else
         export KREMLIN_HOME=$(fixpath "$KREMLIN_HOME")
@@ -112,11 +112,36 @@ make_everparse() {
     kremlin_commit_date_hr=$(print_date_utc_of_iso_hr "$kremlin_commit_date_iso") &&
     z3_version_string=$($Z3_DIR/$z3 --version) &&
 
-    # Rebuild everything
+    # Rebuild F* and kremlin
     export OTHERFLAGS='--admit_smt_queries true' &&
     make -C "$FSTAR_HOME" "$@" &&
     make -C "$KREMLIN_HOME" "$@" minimal &&
     make -C "$KREMLIN_HOME/kremlib" "$@" verify-all &&
+
+    # Build the hacl-star package if not available
+    if ! ocamlfind query hacl-star ; then
+        mkdir -p ocaml-packages &&
+        export OCAMLFIND_DESTDIR=$(fixpath "$PWD/ocaml-packages") &&
+        if $is_windows ; then
+            export OCAMLPATH="$OCAMLFIND_DESTDIR;$OCAMLPATH"
+        else
+            export OCAMLPATH="$OCAMLFIND_DESTDIR:$OCAMLPATH"
+        fi &&
+        if [[ -z $HACL_HOME ]] ; then
+            { [[ -d hacl-star ]] || git clone https://github.com/project-everest/hacl-star ; } &&
+            HACL_HOME=$(fixpath $PWD/hacl-star)
+        fi &&
+        if ! ocamlfind query hacl-star-raw ; then
+            (cd $HACL_HOME/dist/gcc-compatible && ./configure --disable-bzero) &&
+            make -C $HACL_HOME/dist/gcc-compatible "$@" &&
+            make -C $HACL_HOME/dist/gcc-compatible install-hacl-star-raw
+        fi &&
+        if ! ocamlfind query hacl-star ; then
+            (cd $HACL_HOME/bindings/ocaml && dune build @install && dune build && dune install)
+        fi
+    fi &&
+
+    # Rebuild EverParse
     make -C "$QD_HOME" "$@" &&
 
     # Copy dependencies and Z3
@@ -124,8 +149,29 @@ make_everparse() {
     if $is_windows
     then
         $cp $LIBGMP10_DLL everparse/bin/ &&
-        $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/
+        $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/ &&
+        for f in $(sed 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
+            libevercrypt_dll=$f/libevercrypt.dll
+            if [[ -f $libevercrypt_dll ]] ; then
+                break
+            fi
+            unset libevercrypt_dll
+        done &&
+        [[ -n $libevercrypt_dll ]] &&
+        $cp $libevercrypt_dll everparse/bin/ &&
+        $cp $(which libffi-6.dll) everparse/bin/ &&
+        true
     else
+        for f in $(cat $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
+            libevercrypt_so=$f/libevercrypt.so
+            if [[ -f $libevercrypt_so ]] ; then
+                break
+            fi
+            unset libevercrypt_so
+        done &&
+        [[ -n $libevercrypt_so ]] &&
+        $cp $libevercrypt_so everparse/bin/ &&
+        $cp $(dpkg -L libffi6 | grep '/libffi.so.6$') everparse/bin/ &&
         $cp $Z3_DIR/z3 everparse/bin/
     fi &&
 
@@ -154,6 +200,7 @@ make_everparse() {
     $cp -r $QD_HOME/src/3d/prelude everparse/src/3d/prelude &&
     $cp -r $QD_HOME/src/3d/.clang-format everparse/src/3d &&
     $cp -r $QD_HOME/src/3d/copyright.txt everparse/src/3d &&
+    $cp -r $QD_HOME/src/3d/EverParse.h everparse/src/3d/ &&
     if $is_windows ; then $cp -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi &&
     $cp -r $QD_HOME/src/3d/EverParseEndianness.h everparse/src/3d/ &&
     $cp -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/ &&
@@ -178,6 +225,8 @@ make_everparse() {
     $cp $KREMLIN_HOME/LICENSE everparse/licenses/KReMLin &&
     $cp $QD_HOME/LICENSE everparse/licenses/EverParse &&
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt &&
+    wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE &&
+    wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE &&
     if $is_windows ; then
         wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/master/clang/LICENSE.TXT
     fi &&

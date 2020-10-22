@@ -1,3 +1,4 @@
+#include "ReadPairWrapper.h"
 #include "EverParse.h"
 #include "ReadPair.h"
 void ReadPairEverParseError(char *x, char *y, char *z);
@@ -31,5 +32,3 @@ BOOLEAN ReadPairCheckPair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len)
 	}
 	return TRUE;
 }
-
-

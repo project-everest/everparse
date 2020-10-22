@@ -792,6 +792,8 @@ let rec print_as_c_type (t:typ) : Tot string =
           "uint32_t"
     | T_app {v="UINT64"} [] ->
           "uint64_t"
+    | T_app {v="PUINT8"} [] ->
+          "uint8_t*"
     | T_app {v=x} [] ->
           x
     | _ ->
@@ -905,7 +907,7 @@ let print_c_entry (modul: string)
   in
   let header =
     Printf.sprintf
-      "#include \"%s.h\"\n\
+      "#include \"EverParseEndianness.h\"\n\
        #ifdef __cplusplus\n\
        extern \"C\" {\n\
        #endif\n\
@@ -913,7 +915,6 @@ let print_c_entry (modul: string)
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
-      modul
       (signatures |> String.concat "\n\n")
   in
   let error_callback_proto =
@@ -922,12 +923,14 @@ let print_c_entry (modul: string)
   in
   let impl =
     Printf.sprintf
-      "#include \"EverParse.h\"\n\
+      "#include \"%sWrapper.h\"\n\
+       #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
        %s\n\
        %s\n\
        %s\n\
        %s\n"
+      modul
       modul
       error_callback_proto
       struct_name_map

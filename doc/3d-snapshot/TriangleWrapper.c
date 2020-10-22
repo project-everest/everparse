@@ -1,3 +1,4 @@
+#include "TriangleWrapper.h"
 #include "EverParse.h"
 #include "Triangle.h"
 void TriangleEverParseError(char *x, char *y, char *z);
@@ -31,5 +32,3 @@ BOOLEAN TriangleCheckTriangle(uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
-
-
