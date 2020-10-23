@@ -92,6 +92,9 @@ let _ = Arg.parse [
   ("-bytes", Arg.String (fun n -> bytes := n),
 		" <module> - Name of bytes module (must provide [l]bytes, pinverse_t, etc)");
 
+  ("-types_from", Arg.String (fun n -> types_from := n),
+		" <module> - Take types from some module (RFC must contain only aliases, records and structs with simple fields)");
+
   ("-add_fst", Arg.String (fun n -> headers := (let (u,v) = !headers in (n::u, v))),
 		" <h> - Add <h> to the preamble of implementation files");
 
