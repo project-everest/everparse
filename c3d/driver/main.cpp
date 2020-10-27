@@ -35,9 +35,10 @@ static cl::list<std::string>
                   cl::desc("<list of one or more header list files>"),
                   cl::CommaSeparated);
 
+// Cannot name this one "debug" as it's already used by clang!
 static cl::opt<bool>
-Debug("c3debug", cl::init(false),
-cl::desc("Enabled c3d internal debugging"));
+  Debug("c3debug", cl::init(false),
+        cl::desc("Enabled c3d internal debugging"));
 
 
 // Collect all other arguments, which will be passed to the front end.
@@ -46,7 +47,7 @@ static cl::list<std::string>
                  cl::desc("<arguments to be passed to front end>..."));
 
 // Query apple's `xcrun` launcher, which is the source of truth for "how should"
-// clang be invoked on this system.
+// clang be invoked on this system. (Taken from clang-tools-extra/clangd.)
 llvm::Optional<std::string> queryXcrun(llvm::ArrayRef<llvm::StringRef> Argv) {
   auto Xcrun = llvm::sys::findProgramByName("xcrun");
   if (!Xcrun) {
