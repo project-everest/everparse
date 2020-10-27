@@ -1465,6 +1465,11 @@ public:
     if (!HasProcess)
       return true;
 
+    assert ((Switch.size() == 0 || Kind == Union)
+                && "everparse::switch can only be used on unions");
+    assert (Switch.size() <= 1
+                && "There must be exactly one switch for a union");
+
     // Need to drop-then-assign, as just calling setAttrs triggers an assertion
     // failure.
     R->dropAttrs();
@@ -1545,10 +1550,8 @@ public:
 
     Out << " { \n";
 
-    if (Kind == Union) {
-      assert (Switch.size() == 1 && "There must be exactly one switch for a casetype");
+    if (Kind == Union)
       Out << " switch (" << Switch[0] << ") {\n";
-    }
 
     LLVM_DEBUG(llvm::dbgs() << "c3d: everparse::process found (entrypoint: " << HasEntrypoint << "), reviewing fields\n");
     for (const auto& F: R->fields()) {
@@ -1579,9 +1582,9 @@ public:
             StringRef C = Annot.slice(15, Annot.size());
             if (C != "1") // Avoid printing trivial constraints
               FoundConstraints.push_back(C);
-          } else if (Kind == Union && Annot.startswith("c3d_case:")) {
+          } else if (Annot.startswith("c3d_case:")) {
             FoundCase.push_back(Annot.slice(9, Annot.size()));
-          } else if (Kind == Union && Annot == "c3d_default") {
+          } else if (Annot == "c3d_default") {
             // GM: FIXME: locations are wrong for c3d_default, but
             // has no payload, so fix that here.
             End = AA->getRange().getEnd().getLocWithOffset(9);
@@ -1628,6 +1631,10 @@ public:
                 "'case' and 'default' attributes cannot be mixed");
       assert((Kind != Union || FoundDefault || FoundCase.size() > 0) &&
                 "Every union field needs either a case or a default marker");
+      assert((FoundCase.size() == 0 || Kind == Union) &&
+                "everparse::case attributes can only be used for union members");
+      assert((!FoundDefault || Kind == Union) &&
+                "everparse::default attributes can only be used for union members");
 
       Out << "  ";
 
