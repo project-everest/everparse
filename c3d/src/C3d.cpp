@@ -1733,6 +1733,12 @@ public:
 
 // We register an instance of this class to allow modifying the AST.
 void C3dASTConsumer::HandleTranslationUnit(ASTContext &Context) {
+  // For some reason, when called from the standalone driver, this function is
+  // called a second time. Need to debug and figure things out. I tried
+  // disabling the call to HandleTranslationUnit (maybe it was being taken care
+  // of automatically?) but then nothing happens. Maybe it's a linking issue and
+  // I just need to have a reference from driver.cpp to C3d.cpp to ensure the
+  // plugin doesn't get discarded at link-time? Not clear!
   static bool SecondTime = false;
 
   // Classy
