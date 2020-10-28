@@ -49,68 +49,16 @@ set(LLVM_LINK_COMPONENTS Support)
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 set(CLANGLIBS
-  clangAST
-  clangBasic
-  clangDriver
-  clangFrontend
   clangIndex
-  clangLex
-  clangSema
-  clangSerialization
-  clangTooling
-  clangARCMigrate
-  LLVMX86CodeGen
-  LLVMX86AsmParser
-  LLVMX86Desc
-  LLVMX86Disassembler
-  LLVMX86Info
-  LLVMCore
-  LLVMSupport
   clangFormat
-  clangToolingInclusions
-  clangToolingCore
-  clangFrontend
-  clangDriver
-  LLVMOption
   clangParse
-  clangSerialization
   clangSema
   clangEdit
   clangRewrite
   clangAnalysis
-  clangASTMatchers
   clangAST
   clangLex
   clangBasic
-  LLVMFrontendOpenMP
-  LLVMAsmPrinter
-  LLVMDebugInfoDWARF
-  LLVMCFGuard
-  LLVMGlobalISel
-  LLVMSelectionDAG
-  LLVMCodeGen
-  LLVMBitWriter
-  LLVMScalarOpts
-  LLVMAggressiveInstCombine
-  LLVMInstCombine
-  LLVMTransformUtils
-  LLVMTarget
-  LLVMAnalysis
-  LLVMProfileData
-  LLVMObject
-  LLVMBitReader
-  LLVMCore
-  LLVMRemarks
-  LLVMBitstreamReader
-  LLVMTextAPI
-  LLVMMCParser
-  LLVMMCDisassembler
-  LLVMMC
-  LLVMBinaryFormat
-  LLVMDebugInfoCodeView
-  LLVMDebugInfoMSF
-  LLVMSupport
-  LLVMDemangle
 )
 
 add_subdirectory(src)

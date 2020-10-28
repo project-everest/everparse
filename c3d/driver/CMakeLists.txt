@@ -10,4 +10,5 @@ target_link_libraries(clang-c3d
   PRIVATE
   C3dCore
   ${CLANGLIBS}
+  clangTooling
 )
