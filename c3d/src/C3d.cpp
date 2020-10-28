@@ -1733,6 +1733,13 @@ public:
 
 // We register an instance of this class to allow modifying the AST.
 void C3dASTConsumer::HandleTranslationUnit(ASTContext &Context) {
+  static bool SecondTime = false;
+
+  // Classy
+  if (SecondTime)
+    return;
+  SecondTime = true;
+
   SourceManager& S = Context.getSourceManager();
 
   // Tedious string manipulations to figure out the destination file

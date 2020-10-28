@@ -8,6 +8,10 @@
 
 #include "C3d.h"
 
+// A driver for compiling c3d as a standalone tool; good context at
+// https://github.com/eliben/llvm-clang-samples/blob/master/src_clang/tooling_sample.cpp
+// Better context at: clang-tools-extra/modularize/Modularize.cpp
+
 #define DEBUG_TYPE "c3d"
 
 using namespace llvm;
@@ -15,19 +19,8 @@ using namespace clang;
 using namespace clang::tooling;
 using namespace c3d;
 
-// A driver for compiling c3d as a standalone tool; good context at
-// https://github.com/eliben/llvm-clang-samples/blob/master/src_clang/tooling_sample.cpp
-// Better context at: clang-tools-extra/modularize/Modularize.cpp
-class C3dFrontendAction : public ASTFrontendAction {
-public:
-  C3dFrontendAction() {}
-
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef file) override {
-    LLVM_DEBUG(llvm::dbgs() << "clang-c3d: start AST consumer\n");
-    return std::make_unique<C3dASTConsumer>(&CI);
-  }
-};
+// Options we define
+// -----------------
 
 // Option to specify a file name for a list of header files to check.
 static cl::list<std::string>
@@ -45,6 +38,9 @@ static cl::opt<bool>
 static cl::list<std::string>
     CC1Arguments(cl::ConsumeAfter,
                  cl::desc("<arguments to be passed to front end>..."));
+
+// Helpers
+// -------
 
 // Query apple's `xcrun` launcher, which is the source of truth for "how should"
 // clang be invoked on this system. (Taken from clang-tools-extra/clangd.)
@@ -84,12 +80,24 @@ llvm::Optional<std::string> queryXcrun(llvm::ArrayRef<llvm::StringRef> Argv) {
   return Path.str();
 }
 
-int main(int Argc, const char *Argv[]) {
-  // TODO: the following steps need to happen
-  // ii) figure out how to load and enable plugins; apparently the plugin
-  //     loading code does not kick in with our custom driver, but! we are
-  //     linking in the plugin so it ought to do something (famous last words?)
+// Hooking up to our existing infrastructure
+// -----------------------------------------
 
+class C3dFrontendAction : public ASTFrontendAction {
+public:
+  C3dFrontendAction() {}
+
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef file) override {
+    LLVM_DEBUG(llvm::dbgs() << "clang-c3d: start AST consumer\n");
+    return std::make_unique<C3dASTConsumer>(&CI);
+  }
+};
+
+int main(int Argc, const char *Argv[]) {
+  // Building a new array of command-line arguments: the original ones we got
+  // from the command-line, along with a few extra ones we append.
+  // TODO: do we want to append -include with the prelude?
   llvm::Optional<std::string> Path;
   SmallVector<const char *, 20> NewArgv;
   NewArgv.push_back(Argv[0]);
@@ -105,9 +113,12 @@ int main(int Argc, const char *Argv[]) {
 #endif
 
   int NewArgc = static_cast<int>(NewArgv.size());
+  // Fills out our various options declared above as static.
   cl::ParseCommandLineOptions(NewArgc, &NewArgv[0], "c3d.\n");
 
-  // After this line, LLVM_DEBUG will start doing something!
+  // After this line, LLVM_DEBUG will start doing something. This mimics the
+  // effect of passing -mllvm -debug-only=c3d (see Debug.h to reverse-engineer
+  // this).
   if (Debug.getValue()) {
     llvm::DebugFlag = true;
     setCurrentDebugType(DEBUG_TYPE);
@@ -119,6 +130,8 @@ int main(int Argc, const char *Argv[]) {
     return 1;
   }
 
+  // Copied from Modularize.cpp -- not sure why there is a call to reset rather
+  // than a call to the constructor.
   SmallString<256> PathBuf;
   sys::fs::current_path(PathBuf);
   std::unique_ptr<CompilationDatabase> Compilations;
