@@ -1,3 +1,4 @@
+#include "BoundedSumWrapper.h"
 #include "EverParse.h"
 #include "BoundedSum.h"
 void BoundedSumEverParseError(char *x, char *y, char *z);
@@ -48,5 +49,3 @@ BOOLEAN BoundedSumCheckMySum(uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
-
-

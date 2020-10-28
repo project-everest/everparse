@@ -887,21 +887,24 @@ let check_field (env:env) (extend_scope: bool) (f:field)
 let check_switch (env:env) (s:switch_case)
   : ML (switch_case & decl_attributes)
   = let head, cases = s in
-    let head, maybe_enum_t = check_expr env head in
-    let fail_non_integral (#a:Type) ()  : ML (option a) =
-        if not (typ_is_integral env maybe_enum_t)
-        then error (Printf.sprintf "Case analysis of a non-integral type (%s) is not supported"
-                                     (print_typ maybe_enum_t))
+    let head, scrutinee_t = check_expr env head in
+    let fail_non_equality_type (#a:Type) ()  : ML (option a) =
+        let integral = typ_is_integral env scrutinee_t in
+        let is_bool = eq_typ env scrutinee_t tbool in
+        if not integral
+        && not is_bool
+        then error (Printf.sprintf "Case analysis of a non-integral or non-boolean type (%s) is not supported"
+                                     (print_typ scrutinee_t))
                      head.range;
         None
     in
     let tags_t_opt =
-      match maybe_enum_t.v with
-      | Pointer _ -> fail_non_integral ()
+      match scrutinee_t.v with
+      | Pointer _ -> fail_non_equality_type ()
       | Type_app hd es ->
         match try_lookup_enum_cases env hd with
         | Some enum -> Some enum
-        | _ -> fail_non_integral ()
+        | _ -> fail_non_equality_type ()
     in
     let check_case (c:case{Case? c}) : ML case =
       let Case pat f = c in
@@ -911,13 +914,13 @@ let check_switch (env:env) (s:switch_case)
         match tags_t_opt with
         | None ->
           //Not an enum; just check that its a valid u32
-          if not (eq_typ env maybe_enum_t pat_t)
-          then match try_cast_integer env (pat, pat_t) maybe_enum_t with
+          if not (eq_typ env scrutinee_t pat_t)
+          then match try_cast_integer env (pat, pat_t) scrutinee_t with
                | Some pat -> pat
                | _ ->
                  error (Printf.sprintf "Type of case (%s) does not match type of switch expression (%s)"
                                        (print_typ pat_t)
-                                       (print_typ maybe_enum_t))
+                                       (print_typ scrutinee_t))
                        pat.range
           else pat
 
@@ -940,7 +943,7 @@ let check_switch (env:env) (s:switch_case)
           if not case_exists
           then error (Printf.sprintf "Case (%s) is not in the enumerated type %s"
                                      (print_expr pat)
-                                     (print_typ maybe_enum_t))
+                                     (print_typ scrutinee_t))
                      pat.range;
           pat
       in
@@ -1252,9 +1255,20 @@ let initial_global_env () =
   in
   e
 
-let add_field_error_code_decls (ge: global_env)
+let bind_decls (p:list decl) : ML (list decl & global_env) =
+  let e = initial_global_env() in
+  let p' = List.map (bind_decl e) p in
+  p', e
+
+let next_field_num (enclosing_struct:ident)
+                   (field_name:ident)
+                   (env:env)
+   : ML field_num
+   = env.globals.ge_fd.next (Some enclosing_struct, field_name.v)
+
+let add_field_error_code_decls (env: env)
   : ML (list decl)
-  = let l = all_nums ge in
+  = let l = all_nums env.globals in
     List.map
       (fun (z: (field_num & option ident & string)) ->
         let (i, this, name) = z in
@@ -1265,9 +1279,3 @@ let add_field_error_code_decls (ge: global_env)
         { d with comments = ["Auto-generated field identifier for error reporting"] }
       )
       l
-
-let bind_decls (p:list decl) : ML (list decl & global_env) =
-  let e = initial_global_env() in
-  let p' = List.map (bind_decl e) p in
-  let fc = add_field_error_code_decls e in
-  (fc @ p'), e

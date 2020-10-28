@@ -44,12 +44,13 @@
 %token<string>  BLOCK_COMMENT
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
-%token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS ENTRYPOINT REFINING
+%token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
+%token          ENTRYPOINT REFINING ALIGNED
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
 %start <Ast.expr> expr_top
@@ -248,8 +249,12 @@ parameters:
   |  { [] }
   | LPAREN ps=right_flexible_nonempty_list(COMMA, parameter) RPAREN { ps }
 
+case_pattern:
+  | i=IDENT { with_range (Identifier i) $startpos(i) }
+  | c=constant { with_range (Constant c) $startpos(c) }
+
 case:
-  | CASE i=IDENT COLON f=field { Case (with_range (Identifier i) $startpos(i), f) }
+  | CASE p=case_pattern COLON f=field { Case (p, f) }
   | DEFAULT COLON f=field { DefaultCase f }
 
 cases:
@@ -257,6 +262,7 @@ cases:
 
 attribute:
   | ENTRYPOINT { Entrypoint }
+  | ALIGNED    { Aligned }
 
 attributes:
   |            { [] }

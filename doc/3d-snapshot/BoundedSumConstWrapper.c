@@ -1,3 +1,4 @@
+#include "BoundedSumConstWrapper.h"
 #include "EverParse.h"
 #include "BoundedSumConst.h"
 void BoundedSumConstEverParseError(char *x, char *y, char *z);
@@ -31,5 +32,3 @@ BOOLEAN BoundedSumConstCheckBoundedSum(uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
-
-
