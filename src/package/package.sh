@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -x
 
 if [[ -z "$OS" ]] ; then
     OS=$(uname)
@@ -177,14 +178,12 @@ make_everparse() {
 
     # Copy F*
     $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/ &&
-    mkdir -p everparse/ulib/ &&
-    $cp $FSTAR_HOME/ulib/*.fst everparse/ulib &&
-    $cp $FSTAR_HOME/ulib/*.fsti everparse/ulib &&
-    $cp -r $FSTAR_HOME/ulib/.cache everparse/ulib/ &&
+    $cp -r $FSTAR_HOME/ulib everparse/ &&
 
     # Copy KReMLin
     $cp $KREMLIN_HOME/Kremlin.native everparse/bin/krml$exe &&
     $cp -r $KREMLIN_HOME/kremlib everparse/ &&
+    $cp -r $KREMLIN_HOME/include everparse/ &&
     $cp -r $KREMLIN_HOME/misc everparse/ &&
 
     # Copy EverParse
@@ -238,7 +237,6 @@ make_everparse() {
 }
 
 zip_everparse() {
-    set -x
     with_version=$1
     if $is_windows ; then
         ext=.zip
