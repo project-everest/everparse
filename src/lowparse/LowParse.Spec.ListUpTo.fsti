@@ -25,7 +25,7 @@ let parse_list_up_to_t
 
 inline_for_extraction
 let parse_list_up_to_kind (k: parser_kind) : Tot (k' : parser_kind {k' `is_weaker_than` k }) = {
-  parser_kind_low = 0;
+  parser_kind_low = k.parser_kind_low;
   parser_kind_high = None;
   parser_kind_subkind = k.parser_kind_subkind;
   parser_kind_metadata = None;

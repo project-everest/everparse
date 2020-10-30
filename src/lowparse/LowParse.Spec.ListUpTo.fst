@@ -51,6 +51,14 @@ let synth_list_up_to_injective
   [SMTPat (synth_injective (synth_list_up_to_fuel cond fuel))]
 = ()
 
+inline_for_extraction
+let parse_list_up_to_payload_kind (k: parser_kind) : Tot (k' : parser_kind {k' `is_weaker_than` k }) = {
+  parser_kind_low = 0;
+  parser_kind_high = None;
+  parser_kind_subkind = k.parser_kind_subkind;
+  parser_kind_metadata = None;
+}
+
 let parse_list_up_to_payload
   (#t: Type)
   (cond: (t -> Tot bool))
@@ -58,10 +66,10 @@ let parse_list_up_to_payload
   (k: parser_kind { k.parser_kind_subkind <> Some ParserConsumesAll })
   (ptail: parser (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel))
   (x: t)
-: Tot (parser (parse_list_up_to_kind k) (parse_list_up_to_payload_t cond fuel x))
+: Tot (parser (parse_list_up_to_payload_kind k) (parse_list_up_to_payload_t cond fuel x))
 = if cond x
-  then weaken (parse_list_up_to_kind k) (parse_ret UP_UNIT)
-  else ptail
+  then weaken (parse_list_up_to_payload_kind k) (parse_ret UP_UNIT)
+  else weaken (parse_list_up_to_payload_kind k) ptail
 
 let rec parse_list_up_to_fuel
   (#k: parser_kind)
@@ -76,7 +84,7 @@ let rec parse_list_up_to_fuel
   else
     parse_dtuple2
       (weaken (parse_list_up_to_kind k) p)
-      #(parse_list_up_to_kind k)
+      #(parse_list_up_to_payload_kind k)
       #(parse_list_up_to_payload_t cond (fuel - 1))
       (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
       `parse_synth`
@@ -109,14 +117,14 @@ let parse_list_up_to_fuel_eq
     parse_synth_eq
       (parse_dtuple2
         (weaken (parse_list_up_to_kind k) p)
-        #(parse_list_up_to_kind k)
+        #(parse_list_up_to_payload_kind k)
         #(parse_list_up_to_payload_t cond (fuel - 1))
         (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1))))
       (synth_list_up_to_fuel cond (fuel - 1))
       b;
     parse_dtuple2_eq'
       (weaken (parse_list_up_to_kind k) p)
-      #(parse_list_up_to_kind k)
+      #(parse_list_up_to_payload_kind k)
       #(parse_list_up_to_payload_t cond (fuel - 1))
       (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
       b
@@ -349,8 +357,8 @@ let serialize_list_up_to_payload
   (x: t)
 : Tot (serializer (parse_list_up_to_payload cond fuel k ptail x))
 = if cond x
-  then serialize_weaken (parse_list_up_to_kind k) (serialize_ret UP_UNIT (fun _ -> ()))
-  else stail
+  then serialize_weaken (parse_list_up_to_payload_kind k) (serialize_ret UP_UNIT (fun _ -> ()))
+  else serialize_weaken (parse_list_up_to_payload_kind k) stail
 
 let synth_list_up_to_fuel_recip
   (#t: Type)
@@ -387,13 +395,13 @@ let rec serialize_list_up_to_fuel
     serialize_synth
       (parse_dtuple2
         (weaken (parse_list_up_to_kind k) p)
-        #(parse_list_up_to_kind k)
+        #(parse_list_up_to_payload_kind k)
         #(parse_list_up_to_payload_t cond (fuel - 1))
         (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1))))
       (synth_list_up_to_fuel cond (fuel - 1))
       (serialize_dtuple2
         (serialize_weaken (parse_list_up_to_kind k) s)
-        #(parse_list_up_to_kind k)
+        #(parse_list_up_to_payload_kind k)
         #(parse_list_up_to_payload_t cond (fuel - 1))
         #(parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
         (serialize_list_up_to_payload cond (fuel - 1) k (serialize_list_up_to_fuel cond s (fuel - 1))))
@@ -419,13 +427,13 @@ let serialize_list_up_to_fuel_eq
   serialize_synth_eq
     (parse_dtuple2
       (weaken (parse_list_up_to_kind k) p)
-      #(parse_list_up_to_kind k)
+      #(parse_list_up_to_payload_kind k)
       #(parse_list_up_to_payload_t cond (fuel - 1))
       (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1))))
     (synth_list_up_to_fuel cond (fuel - 1))
     (serialize_dtuple2
       (serialize_weaken (parse_list_up_to_kind k) s)
-      #(parse_list_up_to_kind k)
+      #(parse_list_up_to_payload_kind k)
       #(parse_list_up_to_payload_t cond (fuel - 1))
       #(parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
       (serialize_list_up_to_payload cond (fuel - 1) k (serialize_list_up_to_fuel cond s (fuel - 1))))
@@ -434,7 +442,7 @@ let serialize_list_up_to_fuel_eq
     xy;
   serialize_dtuple2_eq' 
     (serialize_weaken (parse_list_up_to_kind k) s)
-    #(parse_list_up_to_kind k)
+    #(parse_list_up_to_payload_kind k)
     #(parse_list_up_to_payload_t cond (fuel - 1))
     #(parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
     (serialize_list_up_to_payload cond (fuel - 1) k (serialize_list_up_to_fuel cond s (fuel - 1))) 
