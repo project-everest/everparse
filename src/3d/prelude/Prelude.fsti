@@ -164,22 +164,23 @@ val read_filter (#nz:_)
 
 /// Parse a zero-terminated string within n bytes
 
-val parse_string_within_t
+val parse_string_at_most_t
   (t: eqtype)
   (terminator: t)
+  (n: U32.t)
 : Tot Type0
 
 inline_for_extraction
 noextract
-val parse_string_within_kind (k: parser_kind true) : Tot (parser_kind true)
+val parse_string_at_most_kind : parser_kind false
 
-val parse_string_within
+val parse_string_at_most
   (#k: parser_kind true)
   (#t: eqtype)
   (p: parser k t)
   (terminator: t)
   (n: U32.t)
-: Tot (parser (parse_string_within_kind k) (parse_string_within_t t terminator))
+: Tot (parser parse_string_at_most_kind (parse_string_at_most_t t terminator n))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Base types

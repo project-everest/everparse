@@ -361,6 +361,17 @@ inline_for_extraction noextract
 val validate_unit_refinement (f:unit -> bool) (cf:string)
   : validator (parse_unit `parse_filter` f)
 
+inline_for_extraction noextract
+val validate_string_at_most
+  (#k: parser_kind true)
+  (#t: eqtype)
+  (#p: parser k t)
+  (v: validator p)
+  (r: leaf_reader p)
+  (terminator: t)
+  (n: U32.t)
+: Tot (validate_with_action_t (parse_string_at_most p terminator n) true_inv eloc_none false)
+
 ////////////////////////////////////////////////////////////////////////////////
 
 noextract

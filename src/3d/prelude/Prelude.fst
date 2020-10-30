@@ -366,112 +366,35 @@ let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) (#k:parser_k
   else
     validate_nlist_total_constant_size' n p
 
-let parse_string_within_t
+module LUT = LowParse.Spec.ListUpTo
+
+inline_for_extraction
+noextract
+let cond_string_up_to
+  (#t: eqtype)
+  (terminator: t)
+  (x: t)
+: Tot bool
+= x = terminator
+
+let parse_string_at_most_t
   (t: eqtype)
   (terminator: t)
+  (n: U32.t)
 : Tot Type0
-= LowParse.Spec.ListUpTo.parse_list_up_to_t (op_Equality terminator) & FStar.Bytes.bytes
+= t_at_most n (LUT.parse_list_up_to_t (cond_string_up_to terminator))
 
-let parse_string_within_kind'
-  (k: parser_kind true)
-  (n: U32.t)
-: Tot (parser_kind (n <> 0ul))
-= LowParse.Spec.FLData.parse_fldata_kind (U32.v n) (LowParse.Spec.ListUpTo.parse_list_up_to_kind k `LPC.and_then_kind` LowParse.Spec.Bytes.parse_all_bytes_kind)
+let parse_string_at_most_kind = kind_t_at_most
 
-let parse_string_within'
+let parse_string_at_most
   (#k: parser_kind true)
   (#t: eqtype)
   (p: parser k t)
   (terminator: t)
   (n: U32.t)
-: Tot (parser (parse_string_within_kind' k n) (parse_string_within_t t terminator))
 =
   LowParse.Spec.Base.parser_kind_prop_equiv k p;
-  LowParse.Spec.FLData.parse_fldata (LowParse.Spec.ListUpTo.parse_list_up_to (op_Equality terminator) p (fun _ _ _ -> ()) `LPC.nondep_then` LowParse.Spec.Bytes.parse_all_bytes) (U32.v n)
-
-let parse_string_within_kind (k: parser_kind true) : Tot (parser_kind true) = {
-  LP.parser_kind_low = k.LP.parser_kind_low; (* could be n, but n may not be constant *)
-  LP.parser_kind_high = None; (* could be Some n, but n may not be constant *)
-  LP.parser_kind_subkind = Some LP.ParserStrong;
-  LP.parser_kind_metadata = None;
-}
-
-let parse_string_within
-  (#k: parser_kind true)
-  (#t: eqtype)
-  (p: parser k t)
-  (terminator: t)
-  (n: U32.t)
-: Tot (parser (parse_string_within_kind k) (parse_string_within_t t terminator))
-=
-  if U32.v n < k.LP.parser_kind_low
-  then LPC.fail_parser (parse_string_within_kind k) (parse_string_within_t t terminator)
-  else LP.weaken (parse_string_within_kind k) (parse_string_within' p terminator n)
-
-let parse_string_within_eq
-  (#k: parser_kind true)
-  (#t: eqtype)
-  (p: parser k t)
-  (terminator: t)
-  (n: U32.t)
-  (b: LP.bytes)
-: Lemma
-  (LP.parse (parse_string_within p terminator n) b == LP.parse (parse_string_within' p terminator n) b)
-=
-  if U32.v n < k.LP.parser_kind_low && Seq.length b >= U32.v n
-  then begin
-    let b' = Seq.slice b 0 (U32.v n) in
-    LowParse.Spec.Base.parser_kind_prop_equiv k p;
-    LPC.nondep_then_eq (LowParse.Spec.ListUpTo.parse_list_up_to (op_Equality terminator) p (fun _ _ _ -> ())) LowParse.Spec.Bytes.parse_all_bytes b' ;
-    LowParse.Spec.ListUpTo.parse_list_up_to_eq (op_Equality terminator) p (fun _ _ _ -> ()) b'
-  end else
-    ()
-
-inline_for_extraction
-noextract
-let validate_string_within'
-  (#k: parser_kind true)
-  (#t: eqtype)
-  (#p: parser k t)
-  (v: validator_no_read p)
-  (r: LPL.leaf_reader p)
-  (terminator: t)
-  (n: U32.t)
-: Tot (validator (parse_string_within' p terminator n))
-= 
-  LowParse.Spec.Base.parser_kind_prop_equiv k p;
-  LowParse.Low.FLData.validate_fldata
-    (
-      LowParse.Low.ListUpTo.validate_list_up_to
-        (op_Equality terminator)
-        (fun _ _ _ -> ())
-        (LPL.validate_no_read v)
-        (fun #rrel #rel sl pos ->
-          let x = r sl pos in
-          x = terminator
-        )
-     `LPLC.validate_nondep_then`
-     LowParse.Low.Bytes.validate_all_bytes ()
-    )
-    (U32.v n) n
-
-inline_for_extraction
-noextract
-let validate_string_within
-  (#k: parser_kind true)
-  (#t: eqtype)
-  (#p: parser k t)
-  (v: validator_no_read p)
-  (r: LPL.leaf_reader p)
-  (terminator: t)
-  (n: U32.t)
-: Tot (validator (parse_string_within p terminator n))
-= fun #rrel #rel sl pos ->
-  let h = FStar.HyperStack.ST.get () in
-  LPL.valid_facts (parse_string_within p terminator n) h sl (LPL.uint64_to_uint32 pos);
-  LPL.valid_facts (parse_string_within' p terminator n) h sl (LPL.uint64_to_uint32 pos);
-  parse_string_within_eq p terminator n (LPL.bytes_of_slice_from h sl (LPL.uint64_to_uint32 pos));
-  validate_string_within' v r terminator n sl pos
+  parse_t_at_most n (LUT.parse_list_up_to (cond_string_up_to terminator) p (fun _ _ _ -> ()))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Base types

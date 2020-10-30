@@ -1127,6 +1127,146 @@ let validate_unit_refinement (f:unit -> bool) (cf:string)
   : Tot (validator (parse_unit `parse_filter` f))
   = validate_unit_refinement' f cf
 
+
+(* Reimplement validate_list_up_to with readability (but no actions) *)
+
+module LUT = LowParse.Low.ListUpTo
+
+unfold
+let validate_list_up_to_inv
+  (#k: parser_kind true)
+  (#t: eqtype)
+  (p: parser k t)
+  (terminator: t)
+  (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
+  (sl: input_buffer_t)
+  (pos0: U32.t)
+  (h0: HS.mem)
+  (bpos: B.pointer U64.t)
+  (h: HS.mem)
+  (stop: bool)
+: GTot Type0
+= let open LPL in
+  let pos = B.deref h bpos in
+  let q = LUT.parse_list_up_to (cond_string_up_to terminator) p prf in
+  B.live h0 bpos /\
+  live_input_buffer h0 sl /\
+  live_input_buffer h sl /\
+  B.loc_disjoint (B.loc_buffer (slice_of sl).LPL.base `B.loc_union` R.loc_perm (perm_of sl)) (B.loc_buffer bpos) /\
+  U32.v pos0 <= U64.v pos /\
+  begin if is_success pos
+  then
+    let pos = uint64_to_uint32 pos in
+    U32.v pos <= U32.v (slice_of sl).len /\
+    B.modifies (B.loc_buffer bpos `B.loc_union` R.loc_perm_from_to (perm_of sl) pos0 pos) h0 h /\
+    R.unreadable h (perm_of sl) pos0 pos /\
+    R.readable h (perm_of sl) pos (slice_of sl).len /\
+    begin if stop
+    then
+      valid_pos q h0 (slice_of sl) pos0 pos
+    else
+      (valid q h0 (slice_of sl) pos0 <==> valid q h0 (slice_of sl) pos) /\
+      ((valid q h0 (slice_of sl) pos0 /\ valid q h0 (slice_of sl) pos) ==>
+        get_valid_pos q h0 (slice_of sl) pos0 == get_valid_pos q h0 (slice_of sl) pos
+      )
+    end
+  else
+    U32.v pos0 <= U32.v (slice_of sl).len /\
+    B.modifies (B.loc_buffer bpos `B.loc_union` R.loc_perm_from_to (perm_of sl) pos0 (slice_of sl).len) h0 h /\
+    R.unreadable h (perm_of sl) pos0 (slice_of sl).len /\
+    stop == true /\
+    True // (~ (valid q h0 (slice_of sl) pos0)) // we lost completeness because of actions
+  end
+
+#push-options "--z3rlimit 16"
+
+inline_for_extraction
+let validate_list_up_to_body
+  (#k: parser_kind true)
+  (#t: eqtype)
+  (#p: parser k t)
+  (terminator: t)
+  (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
+  (v: validator p)
+  (r: leaf_reader p)
+  (sl: input_buffer_t)
+  (pos0: U32.t)
+  (h0: HS.mem)
+  (bpos: B.pointer U64.t)
+: HST.Stack bool
+  (requires (fun h ->
+    validate_list_up_to_inv p terminator prf sl pos0 h0 bpos h false
+  ))
+  (ensures (fun h stop h' ->
+    validate_list_up_to_inv p terminator prf sl pos0 h0 bpos h false /\
+    validate_list_up_to_inv p terminator prf sl pos0 h0 bpos h' stop
+  ))
+=
+  let open LPL in
+  let open LUT in
+  let h = HST.get () in
+  let pos = B.index bpos 0ul in
+  valid_facts (parse_list_up_to (cond_string_up_to terminator) p prf) h0 (slice_of sl) (uint64_to_uint32 pos);
+  parse_list_up_to_eq (cond_string_up_to terminator) p prf (bytes_of_slice_from h0 (slice_of sl) (uint64_to_uint32 pos));
+  valid_facts p h0 (slice_of sl) (uint64_to_uint32 pos);
+  let pos1 = v sl pos in
+  B.upd bpos 0ul pos1;
+  if is_error pos1
+  then begin
+    drop sl (uint64_to_uint32 pos) (slice_length sl);
+    let h = HST.get () in
+    R.unreadable_split h (perm_of sl) pos0 (uint64_to_uint32 pos) (slice_length sl);
+    true
+  end else begin
+    valid_facts (parse_list_up_to (cond_string_up_to terminator) p prf) h0 (slice_of sl) (uint64_to_uint32 pos1);
+    let h = HST.get () in
+    R.readable_split h (perm_of sl) (uint64_to_uint32 pos) (uint64_to_uint32 pos1) (slice_length sl);
+    let x = r sl (uint64_to_uint32 pos) in
+    let h = HST.get () in
+    R.unreadable_split h (perm_of sl) pos0 (uint64_to_uint32 pos) (uint64_to_uint32 pos1);
+    cond_string_up_to terminator x
+  end
+
+inline_for_extraction
+noextract
+let validate_list_up_to
+  (#k: parser_kind true)
+  (#t: eqtype)
+  (#p: parser k t)
+  (v: validator p)
+  (r: leaf_reader p)
+  (terminator: t)
+  (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
+: Tot (validate_with_action_t #true (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) true_inv eloc_none false)
+=
+  fun sl pos ->
+  HST.push_frame ();
+  let bpos = B.alloca pos 1ul in
+  let h2 = HST.get () in
+  R.unreadable_empty h2 (LPL.perm_of sl) (LPL.uint64_to_uint32 pos);
+  C.Loops.do_while
+    (validate_list_up_to_inv p terminator prf sl (LPL.uint64_to_uint32 pos) h2 bpos)
+    (fun _ -> validate_list_up_to_body terminator prf v r sl (LPL.uint64_to_uint32 pos) h2 bpos)
+    ;
+  let res = B.index bpos 0ul in
+  HST.pop_frame ();
+  res
+
+#pop-options
+
+let validate_string_at_most
+  (#k: parser_kind true)
+  (#t: eqtype)
+  (#p: parser k t)
+  (v: validator p)
+  (r: leaf_reader p)
+  (terminator: t)
+  (n: U32.t)
+: Tot (validate_with_action_t (parse_string_at_most p terminator n) true_inv eloc_none false)
+=
+  LP.parser_kind_prop_equiv k p;
+  validate_t_at_most n (validate_list_up_to v r terminator (fun _ _ _ -> ()))
+
 ////////////////////////////////////////////////////////////////////////////////
 
 noextract
