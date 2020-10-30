@@ -15,6 +15,7 @@ let opt_type    = ref "option"
 let emit_high   = ref true
 let emit_low    = ref true
 let types_from  = ref ""
+let types_to    = ref ""
 
 let headers : (string list * string list) ref
   = ref ([], [])

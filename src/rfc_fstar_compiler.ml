@@ -4,6 +4,10 @@ open Rfc_ast
 
 module SM = Map.Make (String)
 
+let module_of_filename (fn: string) =
+  let raw_module = Filename.remove_extension (Filename.basename fn) in
+  String.concat "." (List.map String.capitalize_ascii (String.split_on_char '.' raw_module))
+
 type parser_kind_metadata =
   | MetadataTotal
   | MetadataFail
@@ -692,7 +696,7 @@ let rec btree_fold
      let g2 = btree_fold f pushl plpr popr left right (plpr g1) (right linit) tright in
      popr g2
   
-let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
+let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   let is_open = has_attr al "open" in
   let is_private = has_attr al "private" in
   let is_little_endian = has_attr al "little_endian" in
@@ -735,14 +739,14 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
    end;
 
   if !types_from = "" then begin
-	w i "type %s =\n" n;
+	w tch "type %s =\n" n;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
-		  w i "  | %s\n" (String.capitalize_ascii x)
+		  w tch "  | %s\n" (String.capitalize_ascii x)
 		| _ -> ()) fl;
   if is_open then
-	  w i "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n (compile_type repr_t) n
-  else w i "\n";
+	  w tch "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n (compile_type repr_t) n
+  else w tch "\n";
   end;
 
 	w i "let string_of_%s = function\n" n;
@@ -921,18 +925,18 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   wl o "let %s_bytesize_eqn x = %s_bytesize_eq x; assert (FStar.Seq.length (LP.serialize %s_serializer x) <= %d); assert (%d <= FStar.Seq.length (LP.serialize %s_serializer x))\n\n" n n n blen blen n;
   ()
 
-and compile_abstract o i n dn min max =
-  if !types_from = "" then w i "type %s = %s\n" n dn;
+and compile_abstract tch o i n dn min max =
+  if !types_from = "" then w tch "type %s = %s\n" n dn;
   let li = get_leninfo n in
   write_api o i false li.meta n min max
   
-and compile_ite o i n sn fn tagn clen cval tt tf al  =
+and compile_ite tch o i n sn fn tagn clen cval tt tf al  =
   let is_private = has_attr al "private" in
   let li = get_leninfo (sn^"@"^fn) in
   let ncap = String.capitalize_ascii n in
   let tagt = sprintf "%s_%s" sn tagn in
   if clen = 0 then failwith "Tag cannot be empty in if-then-else.";
-  compile_typedef o i sn tagn (TypeSimple "opaque") (VectorFixed clen) None al;
+  compile_typedef tch o i sn tagn (TypeSimple "opaque") (VectorFixed clen) None al;
 
   w i "let %s_cst : %s_%s =\n  let b = BY.bytes_of_hex \"%s\" in\n  assume(BY.length b == %d); b\n\n" n sn tagn cval clen;
   w i "type %s_false = {\n  tag: t:%s_%s{t <> %s_cst};\n  value: %s\n}\n\n" n n tagn n (compile_type tf);
@@ -1045,7 +1049,7 @@ and compile_ite o i n sn fn tagn clen cval tt tf al  =
   wl o "let %s_intro_false h #_ #_ input pos = LL.valid_ifthenelse_intro parse_%s_param h input pos\n\n" n n;
   ()
 
-and compile_select o i n seln tagn tagt taga cl def al =
+and compile_select tch o i n seln tagn tagt taga cl def al =
   let is_private = has_attr al "private" in
   let is_implicit = has_attr taga "implicit" in
   let has_fail_missing = has_attr al "failmissing" in (* autocomplete missing cases with Fail even if default is provided *)
@@ -1080,9 +1084,9 @@ and compile_select o i n seln tagn tagt taga cl def al =
   let prime = if is_implicit then "'" else "" in
   w o "friend %s\n\n" (module_name tagt);
   if !types_from = "" then begin
-  w i "type %s%s =\n" n prime;
-  List.iter (fun (case, ty) -> w i "  | %s_%s of %s\n" cprefix case (compile_type ty)) cl;
-  (match def with Some d -> w i "  | %s_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> x:%s -> %s%s\n" cprefix tn tn tn (compile_type d) n prime | _ -> ());
+  w tch "type %s%s =\n" n prime;
+  List.iter (fun (case, ty) -> w tch "  | %s_%s of %s\n" cprefix case (compile_type ty)) cl;
+  (match def with Some d -> w tch "  | %s_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> x:%s -> %s%s\n" cprefix tn tn tn (compile_type d) n prime | _ -> ());
   end;
 
   w i "\ninline_for_extraction let tag_of_%s (x:%s%s) : %s = match x with\n" n n prime (compile_type tagt);
@@ -1935,7 +1939,7 @@ and compile_vlbytes o i is_private n li lenty smin smax =
       wl o "let %s_jumper%s = LL.jump_bounded_vlgenbytes %d %d %s %s\n\n" n jumper_annot smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax)
     end
   
-and compile_typedef o i tn fn (ty:type_t) vec def al =
+and compile_typedef tch o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
   let qname = if tn = "" then String.uncapitalize_ascii fn else tn^"@"^fn in
   let is_private = has_attr al "private" in
@@ -1966,7 +1970,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
     match vec with
     (* Type aliasing *)
     | VectorNone ->
-      w i "type %s = %s\n\n" n (compile_type ty);
+      if !types_from = "" then w tch "type %s = %s\n\n" n (compile_type ty);
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty);
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty);
@@ -2621,7 +2625,7 @@ and compile_typedef o i tn fn (ty:type_t) vec def al =
       w o "let %s_bytesize_eqn x = LP.serialize_synth_eq %s'_parser synth_%s %s'_serializer synth_%s_recip () x" n n n n n;
       ()
 
-and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
+and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
   let li = get_leninfo n in
   let is_private = has_attr al "private" in
 
@@ -2637,7 +2641,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
       let n' = sprintf "%s_%s" n fn in
       let p = Typedef (al, ty, fn, vec, def) in
       let (o', i') = open_files n' in
-      compile o' i' n p;
+      compile tch o' i' n p;
       w i "(* Type of field %s*)\ninclude %s\n\n" fn (module_name n');
       w o "(* Type of field %s*)\nopen %s\n\n" fn (module_name n');
       (* compile_typedef o i n fn ty vec def ("private"::al); *)
@@ -2648,10 +2652,10 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   
   (* application type *)
   if !types_from = "" then begin
-    w i "type %s = {\n" n;
+    w tch "type %s = {\n" n;
     List.iter (fun (fn, ty) ->
-      w i "  %s : %s;\n" fn (compile_type ty)) fields;
-    w i "}\n\n";
+      w tch "  %s : %s;\n" fn (compile_type ty)) fields;
+    w tch "}\n\n";
   end;
 
   (* Tuple type for nondep_then combination *)
@@ -2946,7 +2950,7 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   ()
 
 (* Rewrite {... uintX len; t value[len]; ...} into VectorVldata *)
-and normalize_symboliclen sn (fl:struct_field_t list) : struct_field_t list =
+and normalize_symboliclen tch sn (fl:struct_field_t list) : struct_field_t list =
   match fl with
   | [] -> []
   | (al, TypeSimple(tagt), tagn, VectorNone, None)
@@ -2960,8 +2964,8 @@ and normalize_symboliclen sn (fl:struct_field_t list) : struct_field_t list =
           let ef = sprintf "%s_%s_false" sn n in
           let (o, i) = open_files et in
           let (o', i') = open_files ef in
-          compile o i "" (Typedef (al', TypeSimple tt, et, VectorVldata tagt, None));
-          compile o' i' "" (Typedef (al', TypeSimple tf, ef, VectorVldata tagt, None));
+          compile tch o i "" (Typedef (al', TypeSimple tt, et, VectorVldata tagt, None));
+          compile tch o' i' "" (Typedef (al', TypeSimple tf, ef, VectorVldata tagt, None));
           (al @ al', TypeIfeq(itag, cst, et, ef), n, VectorNone, None)
         | TypeSelect (sel, cl, def) ->
           let r = ref [] in
@@ -2978,12 +2982,12 @@ and normalize_symboliclen sn (fl:struct_field_t list) : struct_field_t list =
           List.iter (fun (etyp, t) ->
             let p = Typedef(al @ al', TypeSimple t, etyp, VectorVldata tagt, None) in
             let (o', i') = open_files etyp in
-            compile o' i' "" p
+            compile tch o' i' "" p
           ) !r;
           (al @ al', TypeSelect(sel, cl', def'), n, VectorNone, None)
         in
-      h :: (normalize_symboliclen sn r)
-  | h :: t -> h :: (normalize_symboliclen sn t)
+      h :: (normalize_symboliclen tch sn r)
+  | h :: t -> h :: (normalize_symboliclen tch sn t)
 
 (* Hoist {... tag t; select(t){} ...} when other fields are present,
   also rewrites { ... tag t[x]; (if t = v then ttrue else tfalse) y ... *)
@@ -3030,7 +3034,7 @@ and apply_subst (p:gemstone_t) =
     let fl' = List.map apply_subst_field fl in
     Struct(al, fl', n)
 
-and compile o i (tn:typ) (p:gemstone_t) =
+and compile tch o i (tn:typ) (p:gemstone_t) =
   let p = apply_subst p in
   let n = if tn = "" then tname true p else tn^"_"^(tname false p) in
   let mn = module_name n in
@@ -3039,6 +3043,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
   (* .fsti *)
   w i "module %s\n\n" mn;
   if !types_from <> "" then w i "include %s\n\n" !types_from;
+  if !types_to <> "" then w i "include %s\n\n" (module_of_filename !types_to);
   w i "open %s\n" !bytes;
   w i "module U8 = FStar.UInt8\n";
   w i "module U16 = FStar.UInt16\n";
@@ -3079,7 +3084,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
 
   (* Rewrite synbolic vldata before computing length *)
   let p = match p with
-    | Struct(al, fl, nn) -> Struct(al, normalize_symboliclen n fl, nn)
+    | Struct(al, fl, nn) -> Struct(al, normalize_symboliclen tch n fl, nn)
     | p -> p in
 
   let depl = getdep (tn = "") p in
@@ -3095,22 +3100,22 @@ and compile o i (tn:typ) (p:gemstone_t) =
   try let _ =
     match p with
     | Abstract (_, dn, min, max, n) ->
-      compile_abstract o i n dn min max
-  	| Enum(al, fl, _) ->  compile_enum o i n fl al
-    | Typedef(al, ty, n', vec, def) -> compile_typedef o i tn n' ty vec def al
+      compile_abstract tch o i n dn min max
+  	| Enum(al, fl, _) ->  compile_enum tch o i n fl al
+    | Typedef(al, ty, n', vec, def) -> compile_typedef tch o i tn n' ty vec def al
     | Struct(al, fl, _) ->
       match normalize_select n fl [] [] [] with
       | [_, TypeSimple etyp', seln', VectorNone, None], [], [al, al', sn, ifn, tagn, d, tagv, tt, tf] ->
-        compile_ite o i n sn ifn tagn d tagv tt tf al
+        compile_ite tch o i n sn ifn tagn d tagv tt tf al
       | [_, TypeSimple etyp', seln', VectorNone, None], [al, al', etyp, tagn, seln, tagt, cases, def], [] ->
         if etyp' <> etyp || seln' <> seln then failwith "Invalid rewrite of a select (QD bug)";
-        compile_select o i n seln tagn tagt al cases def al'
+        compile_select tch o i n seln tagn tagt al cases def al'
       | fl, sell, itel ->
         List.iter (fun (al, al', etyp, tagn, seln, tagt, cases, def) ->
           let p = Struct([], [(al, TypeSimple(tagt), tagn, VectorNone, None);
             (al', TypeSelect (tagn, cases, def), seln, VectorNone, None)], etyp) in
           let (o', i') = open_files etyp in
-          compile o' i' "" p;
+          compile tch o' i' "" p;
           w i "(* Internal select() for %s *)\ninclude %s\n\n" etyp (module_name etyp);
           w o "(* Internal select() for %s *)\nopen %s\n\n" etyp (module_name etyp);
         ) sell;
@@ -3119,18 +3124,39 @@ and compile o i (tn:typ) (p:gemstone_t) =
           let p = Struct([], [(al, TypeSimple("opaque"), tagn, VectorFixed d, None);
             (al', TypeIfeq(tagn, tagv, tt, tf), ifn, VectorNone, None)], etyp) in
           let (o', i') = open_files etyp in
-          compile o' i' "" p;
+          compile tch o' i' "" p;
           w i "include %s\n\n" (module_name etyp);
           w o "open %s\n\n" (module_name etyp);
         ) itel;
         match fl with
-        | [] -> compile_typedef o i tn n (TypeSimple "Empty") VectorNone None al
-        | [(al, ty, _, vec, def)] -> compile_typedef o i tn n ty vec def al
-        | _ -> compile_struct o i n fl al
+        | [] -> compile_typedef tch o i tn n (TypeSimple "Empty") VectorNone None al
+        | [(al, ty, _, vec, def)] -> compile_typedef tch o i tn n ty vec def al
+        | _ -> compile_struct tch o i n fl al
   in close_files o i with e -> close_files o i; raise e
 
 let rfc_generate_fstar (p:Rfc_ast.prog) =
+  let type_channel =
+    if !types_to = ""
+    then None
+    else begin
+      let c = open_out !types_to in
+      w c "module %s\n" (module_of_filename !types_to);
+      w c "module U8 = FStar.UInt8\n";
+      w c "module U16 = FStar.UInt16\n";
+      w c "module U32 = FStar.UInt32\n";
+      w c "module U64 = FStar.UInt64\n";
+      Some c
+    end
+  in
   let aux (p:gemstone_t) =
     let (o, i) = open_files' p in
-		compile o i "" p
-	in List.iter aux p
+    let tc = match type_channel with
+      | None -> i
+      | Some c -> c
+    in
+    compile tc o i "" p
+  in
+  List.iter aux p;
+  match type_channel with
+  | None -> ()
+  | Some c -> close_out c
