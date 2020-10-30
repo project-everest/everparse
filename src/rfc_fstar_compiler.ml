@@ -696,6 +696,10 @@ let rec btree_fold
      let g2 = btree_fold f pushl plpr popr left right (plpr g1) (right linit) tright in
      popr g2
   
+let type_channel tch i = match tch with
+  | None -> i
+  | Some tch -> tch
+
 let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   let is_open = has_attr al "open" in
   let is_private = has_attr al "private" in
@@ -739,14 +743,14 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
    end;
 
   if !types_from = "" then begin
-	w tch "type %s =\n" n;
+	w (type_channel tch i) "type %s =\n" n;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
-		  w tch "  | %s\n" (String.capitalize_ascii x)
+		  w (type_channel tch i) "  | %s\n" (String.capitalize_ascii x)
 		| _ -> ()) fl;
   if is_open then
-	  w tch "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n (compile_type repr_t) n
-  else w tch "\n";
+	  w (type_channel tch i) "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n (compile_type repr_t) n
+  else w (type_channel tch i) "\n";
   end;
 
 	w i "let string_of_%s = function\n" n;
@@ -926,7 +930,7 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   ()
 
 and compile_abstract tch o i n dn min max =
-  if !types_from = "" then w tch "type %s = %s\n" n dn;
+  if !types_from = "" then w (type_channel tch i) "type %s = %s\n" n dn;
   let li = get_leninfo n in
   write_api o i false li.meta n min max
   
@@ -1084,9 +1088,9 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
   let prime = if is_implicit then "'" else "" in
   w o "friend %s\n\n" (module_name tagt);
   if !types_from = "" then begin
-  w tch "type %s%s =\n" n prime;
-  List.iter (fun (case, ty) -> w tch "  | %s_%s of %s\n" cprefix case (compile_type ty)) cl;
-  (match def with Some d -> w tch "  | %s_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> x:%s -> %s%s\n" cprefix tn tn tn (compile_type d) n prime | _ -> ());
+  w (type_channel tch i) "type %s%s =\n" n prime;
+  List.iter (fun (case, ty) -> w (type_channel tch i) "  | %s_%s of %s\n" cprefix case (compile_type ty)) cl;
+  (match def with Some d -> w (type_channel tch i) "  | %s_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> x:%s -> %s%s\n" cprefix tn tn tn (compile_type d) n prime | _ -> ());
   end;
 
   w i "\ninline_for_extraction let tag_of_%s (x:%s%s) : %s = match x with\n" n n prime (compile_type tagt);
@@ -1970,7 +1974,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
     match vec with
     (* Type aliasing *)
     | VectorNone ->
-      if !types_from = "" then w tch "type %s = %s\n\n" n (compile_type ty);
+      if !types_from = "" then w (type_channel tch i) "type %s = %s\n\n" n (compile_type ty);
       write_api o i is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty);
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty);
@@ -2652,10 +2656,10 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
   
   (* application type *)
   if !types_from = "" then begin
-    w tch "type %s = {\n" n;
+    w (type_channel tch i) "type %s = {\n" n;
     List.iter (fun (fn, ty) ->
-      w tch "  %s : %s;\n" fn (compile_type ty)) fields;
-    w tch "}\n\n";
+      w (type_channel tch i) "  %s : %s;\n" fn (compile_type ty)) fields;
+    w (type_channel tch i) "}\n\n";
   end;
 
   (* Tuple type for nondep_then combination *)
@@ -3150,11 +3154,7 @@ let rfc_generate_fstar (p:Rfc_ast.prog) =
   in
   let aux (p:gemstone_t) =
     let (o, i) = open_files' p in
-    let tc = match type_channel with
-      | None -> i
-      | Some c -> c
-    in
-    compile tc o i "" p
+    compile type_channel o i "" p
   in
   List.iter aux p;
   match type_channel with
