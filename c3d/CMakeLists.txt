@@ -17,7 +17,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-static-libstdc++")
 # Reusing the LLVM CMake stuff
 # ----------------------------
 #
-# Note: we expect users to invoke cmake -DLLVM_BUILD_DIR=path/to/llvm-project/out
+# Note: we expect users to invoke cmake -DLLVM_BUILD_ROOT=path/to/llvm-project/out
 
 set(CLANG_DIR "${LLVM_BUILD_ROOT}/lib/cmake/clang")
 set(LLVM_DIR "${LLVM_BUILD_ROOT}/lib/cmake/llvm")
