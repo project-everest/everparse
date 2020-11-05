@@ -1254,18 +1254,11 @@ let validate_list_up_to
 
 #pop-options
 
-let validate_string_at_most
-  (#k: parser_kind true)
-  (#t: eqtype)
-  (#p: parser k t)
-  (v: validator p)
-  (r: leaf_reader p)
-  (terminator: t)
-  (n: U32.t)
-: Tot (validate_with_action_t (parse_string_at_most p terminator n) true_inv eloc_none false)
+let validate_string
+  #k #t #p v r terminator
 =
   LP.parser_kind_prop_equiv k p;
-  validate_t_at_most n (validate_list_up_to v r terminator (fun _ _ _ -> ()))
+  validate_weaken (validate_list_up_to v r terminator (fun _ _ _ -> ())) _
 
 ////////////////////////////////////////////////////////////////////////////////
 

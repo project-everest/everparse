@@ -377,24 +377,24 @@ let cond_string_up_to
 : Tot bool
 = x = terminator
 
-let parse_string_at_most_t
+let parse_string_t
   (t: eqtype)
   (terminator: t)
-  (n: U32.t)
 : Tot Type0
-= t_at_most n (LUT.parse_list_up_to_t (cond_string_up_to terminator))
+= LUT.parse_list_up_to_t (cond_string_up_to terminator)
 
-let parse_string_at_most_kind = kind_t_at_most
+let parse_string_kind = {
+  LP.parser_kind_low = 1;
+  LP.parser_kind_high = None;
+  LP.parser_kind_subkind = Some LP.ParserStrong;
+  LP.parser_kind_metadata = None;
+}
 
-let parse_string_at_most
-  (#k: parser_kind true)
-  (#t: eqtype)
-  (p: parser k t)
-  (terminator: t)
-  (n: U32.t)
+let parse_string
+  #k #t p terminator
 =
   LowParse.Spec.Base.parser_kind_prop_equiv k p;
-  parse_t_at_most n (LUT.parse_list_up_to (cond_string_up_to terminator) p (fun _ _ _ -> ()))
+  LP.weaken parse_string_kind (LUT.parse_list_up_to (cond_string_up_to terminator) p (fun _ _ _ -> ()))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Base types
