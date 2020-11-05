@@ -408,9 +408,9 @@ val action_ite
       (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
       (guard:bool)
-      (#bf:_) (#a:Type) (then_: action p invf lf bf a)
+      (#bf:_) (#a:Type) (then_: squash guard -> action p invf lf bf a)
       (#invg:slice_inv) (#lg:eloc) (#bg:_)
-      (#b:Type) (else_: action p invg lg bg a)
+      (else_: squash (not guard) -> action p invg lg bg a)
   : action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) a
 
 noextract
@@ -491,20 +491,20 @@ let rec subterm_appears_in_term
     Some refl
   else
     let (hd, tl) = T.app_head_tail term in
-    if
-      hd `T.term_eq` conj &&
-      Cons? tl &&
-      Cons? (List.Tot.Base.tl tl)
+    if hd `T.term_eq` conj
     then
-      let ((tl1, _) :: (tl2, _) :: _) = tl in
-      begin match subterm_appears_in_term conj refl ltac rtac subterm tl1 with
-      | Some f -> Some (fun _ -> ltac (); f ())
-      | None ->
-	begin match subterm_appears_in_term conj refl ltac rtac subterm tl2 with
-	| Some f -> Some (fun _ -> rtac (); f ())
-	| None -> None
-	end
-      end
+      match tl with 
+      | _::_::_ ->
+        let ((tl1, _) :: (tl2, _) :: _) = tl in
+        begin match subterm_appears_in_term conj refl ltac rtac subterm tl1 with
+        | Some f -> Some (fun _ -> ltac (); f ())
+        | None ->
+	  begin match subterm_appears_in_term conj refl ltac rtac subterm tl2 with
+	  | Some f -> Some (fun _ -> rtac (); f ())
+	  | None -> None
+	  end
+        end
+      | _ -> None
     else
       None
 

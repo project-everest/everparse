@@ -815,8 +815,8 @@ let rec check_field_action (env:env) (f:field) (a:action)
       let branches_eq_t = eq_typ env t t' in
       let eq_t_unit = eq_typ env t tunit in
       if not branches_eq_t
-      || not eq_t_unit
-      then error (Printf.sprintf "The branches of a conditional must both have return type 'void'; got %s and %s"
+      || (None? else_ && not eq_t_unit)
+      then error (Printf.sprintf "The branches of a conditional must both have the same type; got %s and %s"
                                  (print_typ t)
                                  (print_typ t'))
                 a.range;

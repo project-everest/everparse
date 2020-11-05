@@ -9,7 +9,7 @@ export KREMLIN_HOME
 FSTAR_HOME ?= $(realpath ../../../../FStar)
 export FSTAR_HOME
 
-INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib/obj $(KREMLIN_HOME)/kremlin/kremlib
+INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib/obj $(KREMLIN_HOME)/kremlib
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 

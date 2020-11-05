@@ -377,7 +377,7 @@ let rec print_action (a:action) : Tot string =
                     (print_atomic_action hd)
                     (print_action tl)
   | Action_ite hd then_ else_ ->
-    Printf.sprintf "(action_ite %s %s %s)"
+    Printf.sprintf "(action_ite %s (fun _ -> %s) (fun _ -> %s))"
       (print_expr hd)
       (print_action then_)
       (print_action else_)

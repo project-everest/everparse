@@ -1317,11 +1317,14 @@ let action_ite
       #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
       (guard:bool)
-      #bf (#a:Type) (then_: action p invf lf bf a)
+      #bf (#a:Type) (then_: squash guard -> action p invf lf bf a)
       (#invg:slice_inv) (#lg:eloc) #bg
-      (#b:Type) (else_: action p invg lg bg a)
+      (else_: squash (not guard) -> action p invg lg bg a)
   : action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) a
-  = fun input startPosition endPosition -> if guard then then_ input startPosition endPosition else else_ input startPosition endPosition
+  = fun input startPosition endPosition ->
+      if guard 
+      then then_ () input startPosition endPosition 
+      else else_ () input startPosition endPosition
 
 noextract
 inline_for_extraction
