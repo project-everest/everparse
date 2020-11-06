@@ -288,7 +288,7 @@ type array_qualifier =
 
 noeq
 type field_array_t =
-  | FieldArrayNormal
+  | FieldScalar
   | FieldArrayQualified of (expr & array_qualifier) //array size in bytes, the qualifier indicates whether this is a variable-length suffix or not
   | FieldString of (option expr)
 
@@ -432,7 +432,7 @@ let rec subst_typ (s:subst) (t:typ) : ML typ =
   | Pointer t -> {t with v = Pointer (subst_typ s t) }
 let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   match f with
-  | FieldArrayNormal -> f
+  | FieldScalar -> f
   | FieldArrayQualified (e, q) -> FieldArrayQualified (subst_expr s e, q)
   | FieldString sz -> FieldString (map_opt (subst_expr s) sz)
 let subst_field (s:subst) (f:field) : ML field =
@@ -620,7 +620,7 @@ let print_bitfield (bf:option field_bitwidth_t) =
 let print_field (f:field) : ML string =
   let print_array eq : Tot string =
     match eq with
-    | FieldArrayNormal -> ""
+    | FieldScalar -> ""
     | FieldArrayQualified (e, q) ->
       begin match q with
       | ByteArrayByteSize -> Printf.sprintf "[%s]" (print_expr e)

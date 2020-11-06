@@ -207,7 +207,7 @@ array_size:
   | LBRACK_SINGLE_ELEMENT_BYTESIZE e=expr RBRACK { (e, ArrayByteSizeSingleElementArray) }
 
 array_annot:
-  | { FieldArrayNormal }
+  | { FieldScalar }
   | a=array_size { FieldArrayQualified a }
   | LBRACK_STRING RBRACK { FieldString None }
   | LBRACK_STRING_AT_MOST e=expr RBRACK { FieldString (Some e) }

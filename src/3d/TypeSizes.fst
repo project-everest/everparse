@@ -158,7 +158,7 @@ let size_and_alignment_of_field (env:env_t) (f:field)
   = let base_size, align = size_and_alignment_of_typ env f.v.field_type in
     let size =
       match f.v.field_array_opt with
-      | FieldArrayNormal ->
+      | FieldScalar ->
         base_size
 
       | FieldArrayQualified (n, ByteArrayByteSize) ->
@@ -220,7 +220,7 @@ let padding_field (env:env_t) (enclosing_struct:ident) (padding_msg:string) (n:i
       field_dependence = false;
       field_ident = field_name;
       field_type = tuint8;
-      field_array_opt=(if n = 1 then FieldArrayNormal else FieldArrayQualified(n_expr, ByteArrayByteSize));
+      field_array_opt=(if n = 1 then FieldScalar else FieldArrayQualified(n_expr, ByteArrayByteSize));
       field_constraint=None;
       field_number=Some field_num;
       field_bitwidth=None;

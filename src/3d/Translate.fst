@@ -655,7 +655,7 @@ let translate_field (f:A.field) : ML T.struct_field =
           T.T_app (with_range "t_at_most" sf.field_type.range) [Inr e; Inl t]
         in
         match sf.field_array_opt with
-        | FieldArrayNormal -> t
+        | FieldScalar -> t
         | FieldArrayQualified (e, ByteArrayByteSize)
         | FieldArrayQualified (e, ArrayByteSize) ->
           let e = translate_expr e in

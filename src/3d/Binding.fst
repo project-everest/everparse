@@ -848,7 +848,7 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         else e
     in
     let fa = match sf.field_array_opt with
-    | FieldArrayNormal -> FieldArrayNormal
+    | FieldScalar -> FieldScalar
     | FieldArrayQualified (e, b) -> FieldArrayQualified (check_annot e, b)
     | FieldString sz -> FieldString (map_opt check_annot sz)
     in
@@ -870,7 +870,7 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         let may_fail = parser_may_fail env sf.field_type in
         if may_fail
         || Some? fc //it has a refinement
-        || not (FieldArrayNormal? fa) //it's an array or a string
+        || not (FieldScalar? fa) //it's an array or a string
         then Some (env.globals.ge_fd.next (env.this, sf.field_ident.v))
         else None
     in
@@ -1102,7 +1102,7 @@ let elaborate_record (e:global_env)
           { field_dependence = true;
             field_ident = with_range "__precondition" e.range;
             field_type = tunit;
-            field_array_opt = FieldArrayNormal;
+            field_array_opt = FieldScalar;
             field_constraint = w;
             field_number = Some (env.globals.ge_fd.next (env.this, "__precondition"));
             field_bitwidth = None;

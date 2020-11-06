@@ -55,7 +55,7 @@ let rec simplify_typ (env:T.env_t) (t:typ)
 
 let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   match f with
-  | FieldArrayNormal -> FieldArrayNormal
+  | FieldScalar -> FieldScalar
   | FieldArrayQualified (e, b) -> FieldArrayQualified (simplify_expr env e, b)
   | FieldString sz -> FieldString (B.map_opt (simplify_expr env) sz)
 
