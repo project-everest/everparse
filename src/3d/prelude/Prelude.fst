@@ -377,7 +377,7 @@ let cond_string_up_to
 : Tot bool
 = x = terminator
 
-let parse_string_t
+let cstring
   (t: eqtype)
   (terminator: t)
 : Tot Type0

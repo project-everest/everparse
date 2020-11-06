@@ -93,7 +93,7 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
       field_dependence = field_dependence;
       field_ident = field_id;
       field_type = typ;
-      field_array_opt = None;
+      field_array_opt = FieldArrayNormal;
       field_constraint = field_constraint;
       field_number = field_num;
       field_bitwidth = None;

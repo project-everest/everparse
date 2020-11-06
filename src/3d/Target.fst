@@ -294,6 +294,8 @@ let rec print_kind (k:parser_kind) : Tot string =
   | PK_filter k ->
     Printf.sprintf "(filter_kind %s)"
       (print_kind k)
+  | PK_string ->
+    "parse_string_kind"
 
 let rec print_parser (p:parser) : Tot string (decreases p) =
   match p.p_parser with
@@ -339,6 +341,8 @@ let rec print_parser (p:parser) : Tot string (decreases p) =
   | Parse_with_dep_action _ p _
   | Parse_with_action _ p _
   | Parse_with_comment p _ -> print_parser p
+  | Parse_string elem zero ->
+    Printf.sprintf "(parse_string %s %s)" (print_parser elem) (print_expr zero)
 
 let rec print_reader (r:reader) : Tot string =
   match r with
@@ -511,6 +515,8 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
     Printf.sprintf "(validate_with_comment \"%s\" %s)"
       c
       (print_validator v)
+  | Validate_string velem relem zero ->
+    Printf.sprintf "(validate_string %s %s %s)" (print_validator velem) (print_reader relem) (print_expr zero)
 
 let print_typedef_name (tdn:typedef_name) =
   Printf.sprintf "%s %s"

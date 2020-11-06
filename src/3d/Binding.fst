@@ -836,16 +836,21 @@ let check_field (env:env) (extend_scope: bool) (f:field)
   : ML field
   = let sf = f.v in
     let sf_field_type = check_typ false env sf.field_type in
-    let fa = sf.field_array_opt |> map_opt (fun (e, b) ->
+    let check_annot (e: expr) : ML expr =
         let e, t = check_expr env e in
         if not (eq_typ env t tuint32)
         then match try_cast_integer env (e, t) tuint32 with
-             | Some e -> e, b
+             | Some e -> e
              | _ ->  error (Printf.sprintf "Array expression %s has type %s instead of UInt32"
                           (print_expr e)
                           (print_typ t))
                     e.range
-        else e, b)
+        else e
+    in
+    let fa = match sf.field_array_opt with
+    | FieldArrayNormal -> FieldArrayNormal
+    | FieldArrayQualified (e, b) -> FieldArrayQualified (check_annot e, b)
+    | FieldString sz -> FieldString (map_opt check_annot sz)
     in
     let fc = sf.field_constraint |> map_opt (fun e ->
         add_local env sf.field_ident sf.field_type;
@@ -865,7 +870,7 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         let may_fail = parser_may_fail env sf.field_type in
         if may_fail
         || Some? fc //it has a refinement
-        || Some? fa //it's an array
+        || not (FieldArrayNormal? fa) //it's an array or a string
         then Some (env.globals.ge_fd.next (env.this, sf.field_ident.v))
         else None
     in
@@ -1097,7 +1102,7 @@ let elaborate_record (e:global_env)
           { field_dependence = true;
             field_ident = with_range "__precondition" e.range;
             field_type = tunit;
-            field_array_opt = None;
+            field_array_opt = FieldArrayNormal;
             field_constraint = w;
             field_number = Some (env.globals.ge_fd.next (env.this, "__precondition"));
             field_bitwidth = None;

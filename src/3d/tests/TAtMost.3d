@@ -14,5 +14,9 @@ entrypoint
 typedef struct _T {
    UINT32 tag;
    UINT32 length;
-   S(tag) s[:byte-size-at-most length]
+   S(tag) s[:byte-size-at-most length];
+   UINT16 str1[:string];
+   UINT16 str2[:string-byte-size-at-most length];
+   UINT16 str3[:string-byte-size-at-most 1729];
 } T;
+

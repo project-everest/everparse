@@ -121,6 +121,10 @@ let pk_t_exact = T.({
   pk_kind = PK_t_exact;
   pk_nz = false
 })
+let pk_string = T.({
+  pk_kind = PK_string;
+  pk_nz = true
+})
 let pk_filter k = T.({
   pk_kind = PK_filter k;
   pk_nz = k.pk_nz
@@ -335,6 +339,12 @@ let rec parse_typ (env:global_env) (name: A.ident) (t:T.typ) : ML T.parser =
               t
               (T.Parse_t_exact e pt)
 
+  | T.T_app {v="cstring"} [Inl t; Inr e] ->
+    let pt = parse_typ env name t in
+    mk_parser pk_string
+              t
+              (T.Parse_string pt e)
+
   | T.T_app hd args ->
     mk_parser (pk_base hd (parser_kind_nz env hd)) t (T.Parse_app hd args)
 
@@ -493,6 +503,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_with_dep_action _ _ _
   | T.Parse_with_action _ _ _
   | T.Parse_if_else _ _ _
+  | T.Parse_string _ _
     -> false
   | T.Parse_map p _
   | T.Parse_refinement _ p _
@@ -613,6 +624,9 @@ let rec make_validator (env:global_env) (p:T.parser) : ML T.validator =
     let v = make_validator env p in
     pv v.v_allow_reading p (Validate_with_comment v c)
 
+  | Parse_string elem zero ->
+    pv false p (Validate_string (make_validator env elem) (make_reader env elem.p_typ) zero)
+
 // x:t1;
 // t2;
 // t3;
@@ -628,22 +642,36 @@ let rec make_validator (env:global_env) (p:T.parser) : ML T.validator =
 //       parse_t6) `map` (fun x56 -> y, x56))))
 //  `map` (fun x_2_3_4_5_6 -> {x = x; y .... }))
 
+let make_zero (r: range) (t: typ) : ML T.expr =
+  let it = typ_as_integer_type t in
+  (T.Constant (Int it 0), r)
+
 let translate_field (f:A.field) : ML T.struct_field =
     let sf = f.v in
     let t = translate_typ sf.field_type in
     let t =
-        match sf.field_array_opt with
-        | None -> t
-        | Some (e, ByteArrayByteSize)
-        | Some (e, ArrayByteSize) ->
-          let e = translate_expr e in
-          T.T_app (with_range "nlist" sf.field_type.range) [Inr e; Inl t]
-        | Some (e, ArrayByteSizeAtMost) ->
+        let mk_at_most t e : ML T.typ =
           let e = translate_expr e in
           T.T_app (with_range "t_at_most" sf.field_type.range) [Inr e; Inl t]
-        | Some (e, ArrayByteSizeSingleElementArray) ->
+        in
+        match sf.field_array_opt with
+        | FieldArrayNormal -> t
+        | FieldArrayQualified (e, ByteArrayByteSize)
+        | FieldArrayQualified (e, ArrayByteSize) ->
+          let e = translate_expr e in
+          T.T_app (with_range "nlist" sf.field_type.range) [Inr e; Inl t]
+        | FieldArrayQualified (e, ArrayByteSizeAtMost) ->
+          mk_at_most t e
+        | FieldArrayQualified (e, ArrayByteSizeSingleElementArray) ->
           let e = translate_expr e in
           T.T_app (with_range "t_exact" sf.field_type.range) [Inr e; Inl t]
+        | FieldString sz ->
+          let r = sf.field_type.range in
+          let str = T.T_app (with_range "cstring" r) [Inl t; Inr (make_zero r sf.field_type)] in
+          begin match sz with
+          | None -> str
+          | Some e -> mk_at_most str e
+          end
     in
     let t =
       match sf.field_constraint with

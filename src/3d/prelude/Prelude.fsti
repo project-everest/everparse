@@ -165,7 +165,7 @@ val read_filter (#nz:_)
 /// Parse a zero-terminated string
 
 noextract
-val parse_string_t
+val cstring
   (t: eqtype)
   (terminator: t)
 : Tot Type0
@@ -179,7 +179,7 @@ val parse_string
   (#t: eqtype)
   (p: parser k t)
   (terminator: t)
-: Tot (parser parse_string_kind (parse_string_t t terminator))
+: Tot (parser parse_string_kind (cstring t terminator))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Base types
