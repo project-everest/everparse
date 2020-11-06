@@ -628,8 +628,8 @@ let print_field (f:field) : ML string =
       | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-at-most %s]" (print_expr e)
       | ArrayByteSizeSingleElementArray -> Printf.sprintf "[:byte-size-single-element-array %s]" (print_expr e)
       end
-    | FieldString None -> Printf.sprintf "[:string]"
-    | FieldString (Some sz) -> Printf.sprintf "[:string-byte-size-at-most %s]" (print_expr sz)
+    | FieldString None -> Printf.sprintf "[::zeroterm]"
+    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-b-te-size-at-most %s]" (print_expr sz)
   in
   let sf = f.v in
     Printf.sprintf "%s%s %s%s%s%s;"
