@@ -1,3 +1,4 @@
+#include "ColorWrapper.h"
 #include "EverParse.h"
 #include "Color.h"
 void ColorEverParseError(char *x, char *y, char *z);
@@ -33,5 +34,3 @@ BOOLEAN ColorCheckColoredPoint(uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
-
-

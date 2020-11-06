@@ -1,6 +1,6 @@
 .PHONY: test
 
-TESTFILE=../tests/basic0.h
+TESTFILE=tests/basic0.h
 
 ifeq (${CLANG_BUILD},)
 $(error "Please define $$CLANG_BUILD, it should point to your clang build directory")
@@ -28,12 +28,10 @@ CC = clang
 
 test: out
 	make -C out/
-	${OURCLANG} -mllvm -debug-only=c3d -std=c2x -fblocks -fplugin=./out/C3d.so -include ../tests/prelude.h ${TESTFILE}
+	${OURCLANG} -mllvm -debug-only=c3d -std=c2x -fblocks -fplugin=./out/src/C3d.so -include ../tests/prelude.h ${TESTFILE}
 	cat $(patsubst %.h,%.3d,${TESTFILE})
 
 out:
 	mkdir -p out
 	cd out/ && cmake -D LLVM_BUILD_ROOT=${CLANG_BUILD}	\
-		-D CMAKE_C_COMPILER=${CC}			\
-		-D CMAKE_CXX_COMPILER=${CC}			\
 		../

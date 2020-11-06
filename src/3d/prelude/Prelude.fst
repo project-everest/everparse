@@ -227,9 +227,6 @@ let validator_no_read #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
   : Type
   = LPL.validator_no_read #k #t p
 
-[@ CMacro ]
-let validator_error_impossible : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 3uL)
-
 let parse_nlist_total_fixed_size_aux
   (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
   (x: LP.bytes)
@@ -289,9 +286,6 @@ let validate_nlist_total_constant_size_mod_ok (n:U32.t) (#k:parser_kind true) (#
          in
          LPL.validate_total_constant_size_no_read (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) (FStar.Int.Cast.uint32_to_uint64 n) () sl len pos
       )
-
-[@ CMacro ]
-let validator_error_list_size_not_multiple : LPL.validator_error = normalize_term (LPL.set_validator_error_kind 0uL 4uL)
 
 inline_for_extraction noextract
 let validate_nlist_constant_size_mod_ko (n:U32.t) (#k:parser_kind true) #t (p:parser k t)

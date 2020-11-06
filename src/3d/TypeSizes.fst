@@ -30,18 +30,23 @@ let product_size (base:size) (n:int) =
 
 let typename = string
 
-let size_env = H.t typename size
+let alignment = option (x:int{x == 1 \/ x == 2 \/ x == 4 \/ x == 8})
+
+let size_env = H.t typename (size & alignment)
+
+//TODO: size of pointer is platform-dependent
+let pointer_alignment : alignment = Some 8
 
 let initial_env (benv:B.global_env) : ML env_t =
   let i = [
-       ("unit",     Fixed 0);
-       ("Bool",     Fixed 1);
-       ("UINT8",    Fixed 1);
-       ("UINT16",   Fixed 2);
-       ("UINT32",   Fixed 4);
-       ("UINT64",   Fixed 8);
-       ("field_id", Fixed 4);
-       ("PUINT8",   Variable) //size of pointer is platform-dependent
+       ("unit",     (Fixed 0,  None));
+       ("Bool",     (Fixed 1,  Some 1));
+       ("UINT8",    (Fixed 1,  Some 1));
+       ("UINT16",   (Fixed 2,  Some 2));
+       ("UINT32",   (Fixed 4,  Some 4));
+       ("UINT64",   (Fixed 8,  Some 8));
+       ("field_id", (Fixed 4,  Some 4));
+       ("PUINT8",   (Variable, pointer_alignment))
   ]
   in
   let senv = H.create 17 in
@@ -49,11 +54,15 @@ let initial_env (benv:B.global_env) : ML env_t =
   B.mk_env benv,
   senv
 
-let size_of_typename (env:env_t) (i:ident)
-  : ML size
+let size_and_alignment_of_typename (env:env_t) (i:ident)
+  : ML (size & alignment)
   = match H.try_find (snd env) i.v with
     | Some s -> s
     | None -> failwith (Printf.sprintf "size_of_typename: Identifier %s not found" i.v)
+
+let size_of_typename (env:env_t) (i:ident)
+  : ML size
+  = fst (size_and_alignment_of_typename env i)
 
 let print_size =
   function
@@ -61,24 +70,28 @@ let print_size =
   | WithVariableSuffix n -> Printf.sprintf "(WithVariableSuffix %d)" n
   | Variable -> "Variable"
 
-let extend_with_size_of_ident (env:env_t) (i:ident) (n:size)
+let extend_with_size_of_ident (env:env_t) (i:ident) (n:size) (a:alignment)
   : ML unit
   = Options.debug_print_string
      (Printf.sprintf "***** Size of %s = %s\n"
                      i.v (print_size n));
-    H.insert (snd env) i.v n
+    H.insert (snd env) i.v (n, a)
 
-let extend_with_size_of_typedef_names (env:env_t) (names:typedef_names) (size:size)
+let extend_with_size_of_typedef_names (env:env_t) (names:typedef_names) (size:size) (a:alignment)
   : ML unit
-  = extend_with_size_of_ident env names.typedef_name size;
-    extend_with_size_of_ident env names.typedef_abbrev size;
-    extend_with_size_of_ident env names.typedef_ptr_abbrev Variable
+  = extend_with_size_of_ident env names.typedef_name size a;
+    extend_with_size_of_ident env names.typedef_abbrev size a;
+    extend_with_size_of_ident env names.typedef_ptr_abbrev Variable a
+
+let size_and_alignment_of_typ (env:env_t) (t:typ)
+  : ML (size & alignment)
+  = match t.v with
+    | Type_app i _ -> size_and_alignment_of_typename env i
+    | Pointer _ -> Variable, Some 8
 
 let size_of_typ (env:env_t) (t:typ)
   : ML size
-  = match t.v with
-    | Type_app i _ -> size_of_typename env i
-    | Pointer _ -> Variable
+  = fst (size_and_alignment_of_typ env t)
 
 let rec value_of_const_expr (env:env_t) (e:expr)
   : ML (option (either bool (integer_type & int)))
@@ -140,64 +153,172 @@ let rec value_of_const_expr (env:env_t) (e:expr)
     end
   | _ -> None
 
-let size_of_field (env:env_t) (f:field)
-  : ML size
-  = let base_size = size_of_typ env f.v.field_type in
-    match f.v.field_array_opt with
-    | None ->
-      base_size
+let size_and_alignment_of_field (env:env_t) (f:field)
+  : ML (size & alignment)
+  = let base_size, align = size_and_alignment_of_typ env f.v.field_type in
+    let size =
+      match f.v.field_array_opt with
+      | None ->
+        base_size
 
-    | Some (n, ByteArrayByteSize) ->
-      if base_size <> Fixed 1
-      then warning "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
-                    f.range;
-      let n = value_of_const_expr env n in
-      begin
-      match n with
-      | Some (Inr (_, k)) -> Fixed k
+      | Some (n, ByteArrayByteSize) ->
+        if base_size <> Fixed 1
+        then warning "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
+                     f.range;
+        let n = value_of_const_expr env n in
+        begin
+        match n with
+        | Some (Inr (_, k)) ->
+          Fixed k
+        | _ ->
+          Variable
+        end
 
-      | _ ->
-        Variable
-      end
+      | Some (n, ArrayByteSize)
+      | Some (n, ArrayByteSizeSingleElementArray) ->
+        let n = value_of_const_expr env n in
+        begin
+        match n with
+        | Some (Inr (_, k)) -> Fixed k
 
-    | Some (n, ArrayByteSize)
-    | Some (n, ArrayByteSizeSingleElementArray) ->
-      let n = value_of_const_expr env n in
-      begin
-      match n with
-      | Some (Inr (_, k)) -> Fixed k
+        | _ ->
+          Variable
+        end
 
-      | _ ->
-        Variable
-      end
+      | _ -> Variable
+    in
+    size, align
 
-    | _ -> Variable
+#push-options "--warn_error -272"
+let gen_alignment_ident
+  : unit -> ML ident
+  = let ctr : ref int = alloc 0 in
+    fun () ->
+      let next = !ctr in
+      ctr := next + 1;
+      with_range
+        (Printf.sprintf "%salignment_padding_%d" Ast.reserved_prefix next)
+        dummy_range
+#pop-options
 
-let size_of_decl (env:env_t) (d:decl)
-  : ML unit
+let padding_field (env:env_t) (enclosing_struct:ident) (padding_msg:string) (n:int)
+  : ML (list field)
+  =
+  if n <= 0
+  then []
+  else (
+    let field_name = gen_alignment_ident() in
+    let field_num = Binding.next_field_num enclosing_struct field_name (fst env) in
+    let n_expr = with_range (Constant (Int UInt32 n)) dummy_range in
+    FStar.IO.print_string
+      (Printf.sprintf "Adding padding field in %s for %d bytes at %s\n"
+                       enclosing_struct.v
+                       n
+                       padding_msg);
+    let sf = {
+      field_dependence = false;
+      field_ident = field_name;
+      field_type = tuint8;
+      field_array_opt=(if n = 1 then None else Some(n_expr, ByteArrayByteSize));
+      field_constraint=None;
+      field_number=Some field_num;
+      field_bitwidth=None;
+      field_action=None
+    } in
+    [with_dummy_range sf]
+  )
+
+let should_align (td:typedef_names)
+  : bool
+  = List.Tot.Base.mem Aligned td.typedef_attributes
+
+let alignment_padding env (enclosing_name:typedef_names) (msg:string) (offset:size) (a:alignment)
+  : ML (int & list field)
+  = if not (should_align enclosing_name)
+    then 0, []
+    else (
+      let pad_size =
+          match offset, a with
+          | _, None ->
+            0 //no alignment for this type
+          | Fixed o, Some n ->
+            if o % n = 0
+            then 0 //already aligned
+            else n - (o % n)
+          | _ ->
+            //variable offset;
+            //this is beyond what is expressed in C
+            //no alignment needed
+            0
+      in
+      pad_size,
+      padding_field env enclosing_name.typedef_name msg pad_size
+    )
+
+let sum_size (n : size) (m:size)
+  = match n with
+    | Variable
+    | WithVariableSuffix _ -> n
+    | Fixed n ->
+      match m with
+      | Fixed m -> Fixed (n + m)
+      | WithVariableSuffix m -> WithVariableSuffix (n + m)
+      | Variable -> WithVariableSuffix n
+
+let decl_size_with_alignment (env:env_t) (d:decl)
+  : ML decl
   = match d.v with
-    | Define _ _ _ -> ()
+    | Define _ _ _ -> d
 
     | TypeAbbrev t i
     | Enum t i _ ->
-      extend_with_size_of_ident env i (size_of_typ env t)
+      let s, a = size_and_alignment_of_typ env t in
+      extend_with_size_of_ident env i s a;
+      d
 
     | Record names params where fields ->
-      let field_sizes = List.map (size_of_field env) fields in
-      let rec sum (accum : size) (sizes:list size)
-        : Tot size (decreases sizes)
-        = match accum, sizes with
-          | Variable, _
-          | WithVariableSuffix _, _
-          | _, [] -> accum
-          | Fixed n, hd::tl ->
-            match hd with
-            | Fixed m -> sum (Fixed (n + m)) tl
-            | WithVariableSuffix m -> WithVariableSuffix (n + m)
-            | Variable -> WithVariableSuffix n
+      let aligned_field_size
+            (offset:size)
+            (max_align:alignment)
+            (fields:list field)
+            (f:field)
+        : ML (size & alignment & list field)
+        = let field_size, field_alignment = size_and_alignment_of_field env f in
+          let pad_size, padding_field =
+            let msg = Printf.sprintf "(preceding field %s)" f.v.field_ident.v in
+            alignment_padding env names msg offset field_alignment
+          in
+          let offset =
+            (offset `sum_size` (Fixed pad_size)) `sum_size`
+            field_size
+          in
+          let max_align =
+            match max_align, field_alignment with
+            | None, _ -> field_alignment
+            | _, None -> max_align
+            | Some n, Some m -> Some (FStar.Math.Lib.max n m)
+          in
+          let fields =
+            f ::
+            padding_field @
+            fields
+          in
+          offset, max_align, fields
       in
-      let size = sum (Fixed 0) field_sizes in
-      extend_with_size_of_typedef_names env names size
+      let size, max_align, fields_rev =
+        List.fold_left
+          (fun (o, m, fs) f -> aligned_field_size o m fs f)
+          (Fixed 0, None, [])
+          fields
+      in
+      let pad_size, end_padding =
+          alignment_padding env names "(end padding)" size max_align
+      in
+      let size = size `sum_size` (Fixed pad_size) in
+      let fields_rev = end_padding @ fields_rev in
+      let fields = List.rev fields_rev in
+      extend_with_size_of_typedef_names env names size max_align;
+      { d with v = Record names params where fields }
 
     | CaseType names params cases ->
       let case_sizes =
@@ -205,30 +326,69 @@ let size_of_decl (env:env_t) (d:decl)
           (function
             | Case _ f
             | DefaultCase f ->
-              size_of_field env f)
+              size_and_alignment_of_field env f)
           (snd cases)
       in
-      let size =
-        List.fold_right
-          (fun s accum ->
-            match accum with
-            | None -> Some s
-            | Some s' ->
-              if s = s'
-              then Some s
-              else Some Variable)
+      let combine_size_and_alignment
+          (accum_size, accum_align)
+          (f_size, f_align)
+       = let size =
+             match accum_size with
+             | None -> Some f_size
+             | Some s ->
+               if s = f_size
+               then Some s
+               else Some Variable
+         in
+         let alignment : alignment =
+           if None? accum_align then f_align
+           else if None? f_align then accum_align
+           else let Some n = accum_align in
+                let Some m = f_align in
+                Some (FStar.Math.Lib.max n m)
+         in
+         size, alignment
+      in
+      let size, alignment =
+        List.fold_left
+          combine_size_and_alignment
+          (None, None)
           case_sizes
-          None
       in
       let size =
         match size with
         | None -> Fixed 0 //empty case type
         | Some s -> s
       in
-      extend_with_size_of_typedef_names env names size
+      let alignment = if Fixed? size then alignment else None in
+      let all_fixed =
+        List.for_all
+          (fun (size, _) ->
+            match size with
+            | Fixed _ -> true
+            | _ -> false)
+          case_sizes
+      in
+      if should_align names
+      then (
+        let all_cases_fixed =
+          List.for_all (function (Fixed _, _) -> true | _ -> false) case_sizes
+        in
+        if all_cases_fixed
+        && not (Fixed? size)
+        then error
+              "With the --align option, \
+               all cases of a union with a fixed size \
+               must have the same size; \
+               union padding is not yet supported"
+               d.range
+      );
+      extend_with_size_of_typedef_names env names size alignment;
+      d
 
-let size_of_decls (env:B.global_env) (d:list decl)
-  : ML env_t
-  = let env = initial_env env in
-    List.iter (size_of_decl env) d;
-    env
+let size_of_decls (genv:B.global_env) (ds:list decl)
+  : ML (env_t & list decl)
+  = let env = initial_env genv in
+    let ds = List.map (decl_size_with_alignment env) ds in
+    let ds' = Binding.add_field_error_code_decls (Binding.mk_env genv) in
+    env, ds'@ds

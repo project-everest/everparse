@@ -54,12 +54,13 @@ let der_length_payload_size_of_tag
   assert_norm (pow2 8 == 256);
   assert_norm (256 < der_length_max);
   assert (U8.v x <= der_length_max);
+  [@inline_let]
   let x' = U8.v x in
   if x' <= 128 || x' = 255
   then
     0
   else
-    U8.v x - 128
+    x' - 128
 
 inline_for_extraction
 let parse_der_length_payload_kind (x: U8.t) : Tot parser_kind =

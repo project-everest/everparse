@@ -58,6 +58,27 @@ function fetch_and_make_kremlin() {
     export PATH="$(pwd)/kremlin:$PATH"
 }
 
+function fetch_hacl() {
+    if [ ! -d hacl-star ]; then
+        git clone https://github.com/project-everest/hacl-star hacl-star
+    fi
+
+    cd hacl-star
+    git fetch origin
+    local ref=$(jq -c -r '.RepoVersions["hacl_version"]' "$rootPath/.docker/build/config.json" )
+    echo Switching to 'HACL*' $ref
+    git reset --hard $ref
+    cd ..
+    export_home HACL "$(pwd)/hacl-star"
+}
+
+function fetch_and_make_hacl() {
+    fetch_hacl
+    make -C hacl-star/dist/gcc-compatible -j $threads
+    make -C hacl-star/dist/gcc-compatible install-hacl-star-raw
+    (cd hacl-star/bindings/ocaml && dune build @install && dune install)
+}
+
 # Nightly build: verify miTLS parsers
 # (necessary since miTLS builds check them with "--admit_smt_queries true")
 function fetch_mitls() {
@@ -101,7 +122,7 @@ function rebuild_doc () {
 function test_mitls_parsers () {
     if [[ "$branchname" == "master" ]] ; then
         fetch_and_make_kremlin &&
-        OTHERFLAGS='--admit_smt_queries true' make -j $threads &&
+        OTHERFLAGS='--admit_smt_queries true' make -j $threads quackyducky lowparse &&
         export_home QD "$(pwd)" &&
         fetch_mitls &&
         make -j $threads -C $MITLS_HOME/src/parsers verify
@@ -118,6 +139,7 @@ function raise () {
 
 function build_and_test_quackyducky() {
     fetch_and_make_kremlin &&
+    fetch_and_make_hacl &&
     make -j $threads -k test &&
     # Build incrementality test
     pushd tests/sample && {

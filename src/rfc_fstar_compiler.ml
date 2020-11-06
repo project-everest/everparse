@@ -734,6 +734,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
     w i "let known_%s_repr (v:%s) : bool = %s\n\n" n (compile_type repr_t) unknown_formula
    end;
 
+  if !types_from = "" then begin
 	w i "type %s =\n" n;
 	List.iter (function
 	  | EnumFieldSimple (x, _) ->
@@ -742,6 +743,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   if is_open then
 	  w i "  | Unknown_%s of (v:%s{not (known_%s_repr v)})\n\n" n (compile_type repr_t) n
   else w i "\n";
+  end;
 
 	w i "let string_of_%s = function\n" n;
   List.iter (function
@@ -920,7 +922,7 @@ let rec compile_enum o i n (fl: enum_field_t list) (al:attr list) =
   ()
 
 and compile_abstract o i n dn min max =
-  w i "type %s = %s\n" n dn;
+  if !types_from = "" then w i "type %s = %s\n" n dn;
   let li = get_leninfo n in
   write_api o i false li.meta n min max
   
@@ -1077,9 +1079,11 @@ and compile_select o i n seln tagn tagt taga cl def al =
 
   let prime = if is_implicit then "'" else "" in
   w o "friend %s\n\n" (module_name tagt);
+  if !types_from = "" then begin
   w i "type %s%s =\n" n prime;
   List.iter (fun (case, ty) -> w i "  | %s_%s of %s\n" cprefix case (compile_type ty)) cl;
   (match def with Some d -> w i "  | %s_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> x:%s -> %s%s\n" cprefix tn tn tn (compile_type d) n prime | _ -> ());
+  end;
 
   w i "\ninline_for_extraction let tag_of_%s (x:%s%s) : %s = match x with\n" n n prime (compile_type tagt);
   List.iter (fun (case, ty) -> w i "  | %s_%s _ -> %s\n" cprefix case (String.capitalize_ascii case)) cl;
@@ -2643,10 +2647,12 @@ and compile_struct o i n (fl: struct_field_t list) (al:attr list) =
   assert (List.length fields >= 2);
   
   (* application type *)
+  if !types_from = "" then begin
     w i "type %s = {\n" n;
     List.iter (fun (fn, ty) ->
       w i "  %s : %s;\n" fn (compile_type ty)) fields;
     w i "}\n\n";
+  end;
 
   (* Tuple type for nondep_then combination *)
   let tfields = List.fold_left btree_insert (TLeaf (List.hd fields)) (List.tl fields) in
@@ -3032,6 +3038,7 @@ and compile o i (tn:typ) (p:gemstone_t) =
 
   (* .fsti *)
   w i "module %s\n\n" mn;
+  if !types_from <> "" then w i "include %s\n\n" !types_from;
   w i "open %s\n" !bytes;
   w i "module U8 = FStar.UInt8\n";
   w i "module U16 = FStar.UInt16\n";

@@ -12,7 +12,7 @@ void ArithEverParseError(char *x, char *y, char *z) {
 }
 
 int main(int argc, char** argv) {
-  if (EverParseIsError(ArithCheckTest3(test, 20))) {
+  if (! (ArithCheckTest3(test, 20))) {
       std::cout << "Validation failed, but that's fine" << std::endl;
   } else {
       std::cout << "Validation succeeded" << std::endl;

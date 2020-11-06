@@ -1,3 +1,4 @@
+#include "GetFieldPtrWrapper.h"
 #include "EverParse.h"
 #include "GetFieldPtr.h"
 void GetFieldPtrEverParseError(char *x, char *y, char *z);
@@ -17,7 +18,7 @@ static char* GetFieldPtrFieldNameOfErr(uint64_t err) {
 	}
 }
 
-BOOLEAN GetFieldPtrCheckT(PUINT8* out, uint8_t *base, uint32_t len) {
+BOOLEAN GetFieldPtrCheckT(uint8_t** out, uint8_t *base, uint32_t len) {
 	InputBuffer s;
 	s.base = base;
 	s.len = len;

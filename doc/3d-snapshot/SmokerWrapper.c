@@ -1,3 +1,4 @@
+#include "SmokerWrapper.h"
 #include "EverParse.h"
 #include "Smoker.h"
 void SmokerEverParseError(char *x, char *y, char *z);
@@ -31,5 +32,3 @@ BOOLEAN SmokerCheckSmoker(uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
-
-
