@@ -140,6 +140,7 @@ type parser_kind' =
   | PK_filter   : k:parser_kind -> parser_kind'
   | PK_and_then : k1:parser_kind -> k2:parser_kind -> parser_kind'
   | PK_glb      : k1:parser_kind -> k2:parser_kind -> parser_kind'
+  | PK_string   : parser_kind'
 
 and parser_kind = {
   pk_kind : parser_kind';
@@ -174,6 +175,7 @@ type parser' =
   | Parse_impos     : parser'
   | Parse_with_error: f:A.field_num -> parser -> parser'
   | Parse_with_comment: p:parser -> c:A.comments -> parser'
+  | Parse_string    : p:parser -> zero:expr -> parser'
 
 and parser = {
   p_kind:parser_kind;
@@ -213,6 +215,7 @@ type validator' =
   | Validate_impos    : validator'
   | Validate_with_error: f:A.ident (* field identifier obtained by Binding.lookup_field_num *) -> validator -> validator'
   | Validate_with_comment: v:validator -> c:A.comments -> validator'
+  | Validate_string: v:validator -> r:reader -> zero:expr -> validator'
 
 and validator = {
   v_allow_reading: bool;

@@ -287,11 +287,17 @@ type array_qualifier =
   | ArrayByteSizeSingleElementArray //[:byte-size-single-element-array
 
 noeq
+type field_array_t =
+  | FieldScalar
+  | FieldArrayQualified of (expr & array_qualifier) //array size in bytes, the qualifier indicates whether this is a variable-length suffix or not
+  | FieldString of (option expr)
+
+noeq
 type struct_field = {
   field_dependence:bool;   //computed; whether or not the rest of the struct depends on this field
   field_ident:ident;       //name of the field
   field_type:typ;          //type of the field
-  field_array_opt:option (expr * array_qualifier);  //array size in bytes, the qualifier indicates whether this is a variable-length suffix or not
+  field_array_opt: field_array_t;
   field_constraint:option expr; //refinement constraint
   field_number:option field_num; //computed; field identifiers, used for error reporting
   field_bitwidth:option field_bitwidth_t;  //bits used for the field; elaborate from Inl to Inr
@@ -424,12 +430,17 @@ let rec subst_typ (s:subst) (t:typ) : ML typ =
   match t.v with
   | Type_app hd es -> { t with v = Type_app hd (List.map (subst_expr s) es) }
   | Pointer t -> {t with v = Pointer (subst_typ s t) }
+let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
+  match f with
+  | FieldScalar -> f
+  | FieldArrayQualified (e, q) -> FieldArrayQualified (subst_expr s e, q)
+  | FieldString sz -> FieldString (map_opt (subst_expr s) sz)
 let subst_field (s:subst) (f:field) : ML field =
   let sf = f.v in
   let sf = {
       sf with
       field_type = subst_typ s sf.field_type;
-      field_array_opt = map_opt (fun (e, b) -> subst_expr s e, b) sf.field_array_opt;
+      field_array_opt = subst_field_array s sf.field_array_opt;
       field_constraint = map_opt (subst_expr s) sf.field_constraint
   } in
   { f with v = sf }
@@ -608,12 +619,17 @@ let print_bitfield (bf:option field_bitwidth_t) =
 
 let print_field (f:field) : ML string =
   let print_array eq : Tot string =
-    let e, q = eq in
-    match q with
-    | ByteArrayByteSize -> Printf.sprintf "[%s]" (print_expr e)
-    | ArrayByteSize -> Printf.sprintf "[:byte-size %s]" (print_expr e)
-    | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-at-most %s]" (print_expr e)
-    | ArrayByteSizeSingleElementArray -> Printf.sprintf "[:byte-size-single-element-array %s]" (print_expr e)
+    match eq with
+    | FieldScalar -> ""
+    | FieldArrayQualified (e, q) ->
+      begin match q with
+      | ByteArrayByteSize -> Printf.sprintf "[%s]" (print_expr e)
+      | ArrayByteSize -> Printf.sprintf "[:byte-size %s]" (print_expr e)
+      | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-at-most %s]" (print_expr e)
+      | ArrayByteSizeSingleElementArray -> Printf.sprintf "[:byte-size-single-element-array %s]" (print_expr e)
+      end
+    | FieldString None -> Printf.sprintf "[::zeroterm]"
+    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-b-te-size-at-most %s]" (print_expr sz)
   in
   let sf = f.v in
     Printf.sprintf "%s%s %s%s%s%s;"
@@ -621,7 +637,7 @@ let print_field (f:field) : ML string =
       (print_typ sf.field_type)
       (print_ident sf.field_ident)
       (print_bitfield sf.field_bitwidth)
-      (print_opt sf.field_array_opt print_array)
+      (print_array sf.field_array_opt)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
 
 let print_switch_case (s:switch_case) : ML string =

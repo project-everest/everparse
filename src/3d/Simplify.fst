@@ -53,11 +53,17 @@ let rec simplify_typ (env:T.env_t) (t:typ)
       let s = B.resolve_typedef_abbrev (fst env) s in
       { t with v = Type_app s es }
 
+let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
+  match f with
+  | FieldScalar -> FieldScalar
+  | FieldArrayQualified (e, b) -> FieldArrayQualified (simplify_expr env e, b)
+  | FieldString sz -> FieldString (B.map_opt (simplify_expr env) sz)
+
 let simplify_field (env:T.env_t) (f:field)
   : ML field
   = let sf = f.v in
     let ft = simplify_typ env sf.field_type in
-    let fa = sf.field_array_opt |> B.map_opt (fun (e, b) -> simplify_expr env e, b) in
+    let fa = simplify_field_array env sf.field_array_opt in
     let fc = sf.field_constraint |> B.map_opt (simplify_expr env) in
     let sf = { sf with field_type = ft;
                        field_array_opt = fa; 

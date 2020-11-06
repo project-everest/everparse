@@ -158,10 +158,10 @@ let size_and_alignment_of_field (env:env_t) (f:field)
   = let base_size, align = size_and_alignment_of_typ env f.v.field_type in
     let size =
       match f.v.field_array_opt with
-      | None ->
+      | FieldScalar ->
         base_size
 
-      | Some (n, ByteArrayByteSize) ->
+      | FieldArrayQualified (n, ByteArrayByteSize) ->
         if base_size <> Fixed 1
         then warning "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
                      f.range;
@@ -174,8 +174,9 @@ let size_and_alignment_of_field (env:env_t) (f:field)
           Variable
         end
 
-      | Some (n, ArrayByteSize)
-      | Some (n, ArrayByteSizeSingleElementArray) ->
+      | FieldString (Some n)
+      | FieldArrayQualified (n, ArrayByteSize)
+      | FieldArrayQualified (n, ArrayByteSizeSingleElementArray) ->
         let n = value_of_const_expr env n in
         begin
         match n with
@@ -219,7 +220,7 @@ let padding_field (env:env_t) (enclosing_struct:ident) (padding_msg:string) (n:i
       field_dependence = false;
       field_ident = field_name;
       field_type = tuint8;
-      field_array_opt=(if n = 1 then None else Some(n_expr, ByteArrayByteSize));
+      field_array_opt=(if n = 1 then FieldScalar else FieldArrayQualified(n_expr, ByteArrayByteSize));
       field_constraint=None;
       field_number=Some field_num;
       field_bitwidth=None;

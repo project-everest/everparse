@@ -65,9 +65,13 @@ let simplify_field (env:env) (f:field)
           | { field_constraint = Some _ }, { field_action = Some _ } ->
             failwith "Singleton field cannot be inlined because it would alter order of evaluation of refinement and action"
   
-          | { field_array_opt = Some _ }, _        
-          | _, { field_array_opt = Some _ } ->
+          | { field_array_opt = FieldArrayQualified _ }, _
+          | _, { field_array_opt = FieldArrayQualified _ } ->
             failwith "Singleton field cannot be inlined because it contains an array"
+  
+          | { field_array_opt = FieldString _ }, _
+          | _, { field_array_opt = FieldString _ } ->
+            failwith "Singleton field cannot be inlined because it contains a string"
 
           | { field_bitwidth = Some _ }, _        
           | _, { field_bitwidth = Some _ } ->
@@ -96,7 +100,8 @@ let simplify_decl (env:env) (d:decl) : ML decl =
   | Record tdnames params None [field] -> //singleton
     begin
     match field.v with
-    | { field_array_opt = Some _ }
+    | { field_array_opt = FieldArrayQualified _ }
+    | { field_array_opt = FieldString _ }
     | { field_bitwidth = Some _ } ->
        d
     | _ -> 
