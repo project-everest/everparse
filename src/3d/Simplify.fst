@@ -43,7 +43,24 @@ let rec simplify_expr (env:T.env_t) (e:expr)
       { e with v = App op es }
 
     | _ -> e
-    
+
+let simplify_atomic_action (env:T.env_t) (a:atomic_action)
+  : ML atomic_action
+  = match a with
+    | Action_return e -> Action_return (simplify_expr env e)
+    | Action_assignment lhs rhs -> Action_assignment lhs (simplify_expr env rhs)
+    | Action_call f args -> Action_call f (List.map (simplify_expr env) args)
+    | _ -> a //action mutable identifiers are not subject to substitution
+let rec simplify_action (env:T.env_t) (a:action) : ML action =
+  match a.v with
+  | Atomic_action aa -> {a with v = Atomic_action (simplify_atomic_action env aa)}
+  | Action_seq hd tl -> {a with v = Action_seq (simplify_atomic_action env hd) (simplify_action env tl) }
+  | Action_ite hd then_ else_ -> {a with v = Action_ite (simplify_expr env hd) (simplify_action env then_) (simplify_action_opt env else_) }
+  | Action_let i aa k -> {a with v = Action_let i (simplify_atomic_action env aa) (simplify_action env k) }
+and simplify_action_opt (env:T.env_t) (a:option action) : ML (option action) =
+  match a with
+  | None -> None
+  | Some a -> Some (simplify_action env a)
 let rec simplify_typ (env:T.env_t) (t:typ)
   : ML typ
   = match t.v with
@@ -65,9 +82,15 @@ let simplify_field (env:T.env_t) (f:field)
     let ft = simplify_typ env sf.field_type in
     let fa = simplify_field_array env sf.field_array_opt in
     let fc = sf.field_constraint |> B.map_opt (simplify_expr env) in
+    let fact =
+      match sf.field_action with
+      | None -> None
+      | Some (a, b) -> Some (simplify_action env a, b)
+    in
     let sf = { sf with field_type = ft;
                        field_array_opt = fa; 
-                       field_constraint = fc } in
+                       field_constraint = fc;
+                       field_action = fact } in
     { f with v = sf }
 
 let simplify_decl (env:T.env_t) (d:decl) : ML decl =

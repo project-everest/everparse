@@ -426,6 +426,22 @@ let rec subst_expr (s:subst) (e:expr) : ML expr =
   | This -> e
   | Identifier i -> apply s i
   | App op es -> {e with v = App op (List.map (subst_expr s) es)}
+let subst_atomic_action (s:subst) (aa:atomic_action) : ML atomic_action =
+  match aa with
+  | Action_return e -> Action_return (subst_expr s e)
+  | Action_assignment lhs rhs -> Action_assignment lhs (subst_expr s rhs)
+  | Action_call f args -> Action_call f (List.map (subst_expr s) args)
+  | _ -> aa //action mutable identifiers are not subject to substitution
+let rec subst_action (s:subst) (a:action) : ML action =
+  match a.v with
+  | Atomic_action aa -> {a with v = Atomic_action (subst_atomic_action s aa)}
+  | Action_seq hd tl -> {a with v = Action_seq (subst_atomic_action s hd) (subst_action s tl) }
+  | Action_ite hd then_ else_ -> {a with v = Action_ite (subst_expr s hd) (subst_action s then_) (subst_action_opt s else_) }
+  | Action_let i aa k -> {a with v = Action_let i (subst_atomic_action s aa) (subst_action s k) }
+and subst_action_opt (s:subst) (a:option action) : ML (option action) =
+  match a with
+  | None -> None
+  | Some a -> Some (subst_action s a)
 let rec subst_typ (s:subst) (t:typ) : ML typ =
   match t.v with
   | Type_app hd es -> { t with v = Type_app hd (List.map (subst_expr s) es) }
@@ -437,11 +453,17 @@ let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   | FieldString sz -> FieldString (map_opt (subst_expr s) sz)
 let subst_field (s:subst) (f:field) : ML field =
   let sf = f.v in
+  let a =
+    match sf.field_action with
+    | None -> None
+    | Some (a, b) -> Some (subst_action s a, b)
+  in
   let sf = {
       sf with
       field_type = subst_typ s sf.field_type;
       field_array_opt = subst_field_array s sf.field_array_opt;
-      field_constraint = map_opt (subst_expr s) sf.field_constraint
+      field_constraint = map_opt (subst_expr s) sf.field_constraint;
+      field_action = a
   } in
   { f with v = sf }
 let subst_case (s:subst) (c:case) : ML case =
