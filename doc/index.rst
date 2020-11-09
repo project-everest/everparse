@@ -42,6 +42,10 @@ Manual
 Papers
 ------
 
+`A Security Model and Fully Verified Implementation for the IETF QUIC Record Layer <https://project-everest.github.io/assets/everquic.pdf>`_;
+  Antoine Delignat-Lavaud, Cedric Fournet, Bryan Parno, Jonathan Protzenko, Tahina Ramananandro, Jay Bosamiya, Joseph Lallemand, Itsaka Rakotonirina, and Yi Zhou;
+  To appear in Proceedings of the 42nd IEEE Symposium on Security and Privacy, 2021
+
 `EverParse: Verified Secure Zero-Copy Parsers for Authenticated Message Formats <https://project-everest.github.io/assets/everparse.pdf>`_;
   Tahina Ramananandro, Antoine Delignat-Lavaud, Cedric Fournet, Nikhil Swamy, Tej Chajed, Nadim Kobeissi, and Jonathan Protzenko;
   In Proceedings of the 28th USENIX Security Symposium, 2019
