@@ -20,7 +20,7 @@ endif
 endif
 
 OURCLANG=${CLANG_BUILD}/bin/clang
-PLUGIN=./out/C3d.so
+PLUGIN=./out/src/C3d.so
 
 # This is the compiler that will be used to compile the plugin
 # itself. It doesn't have to be clang: you can use gcc too, other
