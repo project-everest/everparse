@@ -21,10 +21,7 @@ static char* Triangle2FieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN Triangle2CheckTriangle(uint8_t *base, uint32_t len) {
-	InputBuffer s;
-	s.base = base;
-	s.len = len;
-	uint64_t result = Triangle2ValidateTriangle(s, 0);
+	uint64_t result = Triangle2ValidateTriangle(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		Triangle2EverParseError(
 	Triangle2StructNameOfErr(result),

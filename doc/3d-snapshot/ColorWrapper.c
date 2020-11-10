@@ -21,10 +21,7 @@ static char* ColorFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN ColorCheckColoredPoint(uint8_t *base, uint32_t len) {
-	InputBuffer s;
-	s.base = base;
-	s.len = len;
-	uint64_t result = ColorValidateColoredPoint(s, 0);
+	uint64_t result = ColorValidateColoredPoint(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		ColorEverParseError(
 	ColorStructNameOfErr(result),

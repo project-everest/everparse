@@ -21,10 +21,7 @@ static char* BoundedSumFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
-	InputBuffer s;
-	s.base = base;
-	s.len = len;
-	uint64_t result = BoundedSumValidateBoundedSum(bound, s, 0);
+	uint64_t result = BoundedSumValidateBoundedSum(bound, len, base, 0);
 	if (EverParseResultIsError(result)) {
 		BoundedSumEverParseError(
 	BoundedSumStructNameOfErr(result),
@@ -36,10 +33,7 @@ BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
 }
 
 BOOLEAN BoundedSumCheckMySum(uint8_t *base, uint32_t len) {
-	InputBuffer s;
-	s.base = base;
-	s.len = len;
-	uint64_t result = BoundedSumValidateMySum(s, 0);
+	uint64_t result = BoundedSumValidateMySum(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		BoundedSumEverParseError(
 	BoundedSumStructNameOfErr(result),

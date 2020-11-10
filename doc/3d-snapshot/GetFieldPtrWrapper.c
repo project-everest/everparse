@@ -19,10 +19,7 @@ static char* GetFieldPtrFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN GetFieldPtrCheckT(uint8_t** out, uint8_t *base, uint32_t len) {
-	InputBuffer s;
-	s.base = base;
-	s.len = len;
-	uint64_t result = GetFieldPtrValidateT(out, s, 0);
+	uint64_t result = GetFieldPtrValidateT(out, len, base, 0);
 	if (EverParseResultIsError(result)) {
 		GetFieldPtrEverParseError(
 	GetFieldPtrStructNameOfErr(result),

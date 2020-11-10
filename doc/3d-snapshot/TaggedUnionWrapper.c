@@ -23,10 +23,7 @@ static char* TaggedUnionFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN TaggedUnionCheckInteger(uint8_t *base, uint32_t len) {
-	InputBuffer s;
-	s.base = base;
-	s.len = len;
-	uint64_t result = TaggedUnionValidateInteger(s, 0);
+	uint64_t result = TaggedUnionValidateInteger(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		TaggedUnionEverParseError(
 	TaggedUnionStructNameOfErr(result),
