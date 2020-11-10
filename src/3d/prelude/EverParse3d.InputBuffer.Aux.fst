@@ -7,10 +7,8 @@ module U32 = FStar.UInt32
 
 #set-options "--__temp_no_proj EverParse3d.InputBuffer.Aux"
 
-noeq
-type input_buffer
+inline_for_extraction
+let input_buffer
   (len: U32.t)
-= {
-  base: (base: B.buffer LPL.byte { U32.v len <= B.length base });
-  perm: R.perm base;
-}
+: Tot Type0
+= (base: (base: B.buffer LPL.byte { U32.v len <= B.length base }) & R.perm base)
