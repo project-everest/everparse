@@ -45,21 +45,23 @@ include_directories(SYSTEM ${LLVM_INCLUDE_DIRS} ${CLANG_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-set(LLVM_LINK_COMPONENTS Support)
-set(CMAKE_EXPORT_COMPILE_COMMANDS true)
+if (APPLE)
+    set(LLVM_LINK_COMPONENTS Support)
+    set(CLANGLIBS
+      clangIndex
+      clangFormat
+      clangParse
+      clangSema
+      clangEdit
+      clangRewrite
+      clangAnalysis
+      clangAST
+      clangLex
+      clangBasic
+    )
+endif()
 
-set(CLANGLIBS
-  clangIndex
-  clangFormat
-  clangParse
-  clangSema
-  clangEdit
-  clangRewrite
-  clangAnalysis
-  clangAST
-  clangLex
-  clangBasic
-)
+set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 add_subdirectory(src)
 add_subdirectory(driver)
