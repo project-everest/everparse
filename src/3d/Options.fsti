@@ -1,4 +1,5 @@
 module Options
+open HashingOptions
 open FStar.All
 
 val display_usage : unit -> ML unit
@@ -22,3 +23,13 @@ val get_clang_format : unit -> ML bool
 val get_clang_format_executable : unit -> ML string
 
 val get_cleanup : unit -> ML bool
+
+val get_skip_makefiles : unit -> ML bool
+
+val get_no_everparse_h : unit -> ML bool
+
+val get_check_hashes : unit -> ML (option check_hashes_t)
+
+val get_save_hashes : unit -> ML bool
+
+val get_check_inplace_hashes : unit -> ML (list string)

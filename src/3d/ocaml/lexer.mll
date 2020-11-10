@@ -44,6 +44,7 @@ let () =
   H.add keywords "default" DEFAULT;
   H.add keywords "this" THIS;
   H.add keywords "entrypoint" ENTRYPOINT;
+  H.add keywords "aligned" ALIGNED;
   H.add keywords "if" IF;
   H.add keywords "else" ELSE;
   H.add keywords "mutable" MUTABLE;

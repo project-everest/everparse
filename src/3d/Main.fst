@@ -46,7 +46,7 @@ let process_file (fn: string) : ML unit =
     Options.debug_print_string "=============After bitflds=============\n";
     Options.debug_print_string (print_decls decls);
     Options.debug_print_string "\n";
-    let senv = TypeSizes.size_of_decls env decls in
+    let senv, decls = TypeSizes.size_of_decls env decls in
     let static_asserts = StaticAssertions.compute_static_asserts senv refinement in
     let decls = Simplify.simplify_prog senv decls in
     Options.debug_print_string "=============After simplify============\n";
@@ -110,22 +110,35 @@ let process_file (fn: string) : ML unit =
       FStar.IO.close_write_file c_static_asserts_file
     end
 
-
 let go () : ML unit =
-  match Options.parse_cmd_line() with
+  let files = Options.parse_cmd_line() in
+  let inplace_hashes = Options.get_check_inplace_hashes () in
+  match inplace_hashes with
+  | _ :: _ ->
+    Batch.check_inplace_hashes inplace_hashes
+  | [] ->
+  match files with
   | [] -> Options.display_usage ()
   | files ->
-  List.iter process_file files;
   let out_dir = Options.get_output_dir () in
   let files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) files in
-  if Options.get_batch ()
-  then
-    Batch.postprocess
-      (Options.get_clang_format ())
-      (Options.get_clang_format_executable ())
-      (Options.get_cleanup ())
-      out_dir files_and_modules;
-  FStar.IO.print_string "EverParse succeeded!\n"
+  match Options.get_check_hashes () with
+  | None ->
+    List.iter process_file files;
+    if Options.get_batch ()
+    then begin
+      Batch.postprocess
+        (Options.get_clang_format ())
+        (Options.get_clang_format_executable ())
+        (Options.get_skip_makefiles ())
+        (Options.get_cleanup ())
+        (Options.get_no_everparse_h ())
+        (Options.get_save_hashes ())
+        out_dir files_and_modules;
+      FStar.IO.print_string "EverParse succeeded!\n"
+    end
+  | Some ch ->
+    Batch.check_all_hashes ch out_dir files_and_modules
 
 #push-options "--warn_error -272" //top-level effects are okay
 #push-options "--admit_smt_queries true" //explicitly not handling all exceptions, so that we can meaningful backtraces

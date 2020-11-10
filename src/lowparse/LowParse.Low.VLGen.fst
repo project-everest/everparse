@@ -838,6 +838,8 @@ let accessor_vlgen_payload
 
 module HS = FStar.HyperStack
 
+#push-options "--z3rlimit 16"
+
 let valid_bounded_vlgen_intro
   (min: nat)
   (max: nat { min <= max /\ max < 4294967296 } )
@@ -876,6 +878,8 @@ let valid_bounded_vlgen_intro
   contents_exact_eq p h input pos1 (pos1 `U32.add` len);
   parse_bounded_vlgen_unfold min max pk s (bytes_of_slice_from h input pos);
   valid_facts (parse_bounded_vlgen min max pk s) h input pos
+
+#pop-options
 
 let valid_bounded_vlgen_intro_strong_prefix
   (min: nat)

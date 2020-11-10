@@ -2,7 +2,7 @@
 
 all: test
 
-TEST_DIR=../tests
+TEST_DIR=./tests
 ALL_TESTS=$(filter-out %.preprocessed.h %/prelude.h, $(wildcard $(TEST_DIR)/*.h))
 
 ifeq (${CLANG_BUILD},)
@@ -33,11 +33,11 @@ CC = clang
 test: $(patsubst %.h,%.check,$(ALL_TESTS))
 accept: $(patsubst %.h,%.accept,$(ALL_TESTS))
 
-$(PLUGIN): C3d.cpp out
+$(PLUGIN): src/C3d.cpp out
 	make -C out/
 
 $(TEST_DIR)/%.3d $(TEST_DIR)/%.preprocessed.h: $(TEST_DIR)/%.h $(PLUGIN) out 
-	${OURCLANG} -mllvm -debug-only=c3d -std=c2x -fblocks -fplugin=$(PLUGIN) -include ../tests/prelude.h $< 2>/dev/null
+	${OURCLANG} -mllvm -debug-only=c3d -std=c2x -fblocks -fplugin=$(PLUGIN) -include ./tests/prelude.h $< 2>/dev/null
 
 $(TEST_DIR)/%.check:	$(TEST_DIR)/%.3dcheck \
 			$(TEST_DIR)/%.hcheck
@@ -62,8 +62,6 @@ $(TEST_DIR)/%.hcheck: $(TEST_DIR)/%.preprocessed.h $(TEST_DIR)/%.preprocessed.h.
 out:
 	mkdir -p out
 	cd out/ && cmake -D LLVM_BUILD_ROOT=${CLANG_BUILD}	\
-		-D CMAKE_C_COMPILER=${CC}			\
-		-D CMAKE_CXX_COMPILER=${CC}			\
 		../
 
 .DELETE_ON_ERROR:

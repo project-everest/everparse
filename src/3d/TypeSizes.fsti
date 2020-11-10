@@ -39,4 +39,4 @@ val value_of_const_expr (env:env_t) (e:expr)
   : ML (option (either bool (integer_type & int)))
 
 val size_of_decls (env:B.global_env) (d:list decl)
-  : ML env_t
+  : ML (env_t & list decl)
