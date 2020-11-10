@@ -876,9 +876,6 @@ let print_c_entry (modul: string)
     let impl =
       Printf.sprintf
       "%s {\n\t\
-         InputBuffer s;\n\t\
-         s.base = base;\n\t\
-         s.len = len;\n\t\
          uint64_t result = %s(%s, 0);\n\t\
          if (EverParseResultIsError(result)) {\n\t\t\
            %sEverParseError(\n\t\
@@ -891,7 +888,7 @@ let print_c_entry (modul: string)
        }"
        signature
        validator_name
-       (((List.Tot.map (fun (id, _) -> print_ident id) d.decl_name.td_params)@["s"]) |> String.concat ", ")
+       (((List.Tot.map (fun (id, _) -> print_ident id) d.decl_name.td_params)@["len"; "base"]) |> String.concat ", ")
        modul
        modul
        modul
