@@ -17,7 +17,7 @@ Auto-generated field identifier for error reporting
 */
 #define BOUNDEDSUM__RIGHT ((uint64_t)3U)
 
-static inline uint64_t ValidateBoundedSumLeft(InputBuffer Input, uint64_t StartPosition)
+static inline uint64_t ValidateBoundedSumLeft(uint32_t Uu, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _boundedSum_left
@@ -27,7 +27,7 @@ static inline uint64_t ValidateBoundedSumLeft(InputBuffer Input, uint64_t StartP
   /* Validating field left */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Input.len - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -42,7 +42,8 @@ static inline uint64_t
 ValidateBoundedSumRight(
   uint32_t Bound,
   uint32_t Left,
-  InputBuffer Input,
+  uint32_t Uu,
+  uint8_t *Input,
   uint64_t StartPosition
 )
 /*++
@@ -54,7 +55,7 @@ ValidateBoundedSumRight(
   /* Validating field right */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAfterBoundedSumRight;
-  if (((uint64_t)Input.len - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
   {
     positionAfterBoundedSumRight = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -70,7 +71,8 @@ ValidateBoundedSumRight(
   else
   {
     /* reading field value */
-    uint32_t boundedSumRight = Load32Le(Input.base + (uint32_t)StartPosition);
+    uint8_t *base = Input;
+    uint32_t boundedSumRight = Load32Le(base + (uint32_t)StartPosition);
     /* start: checking constraint */
     BOOLEAN boundedSumRightConstraintIsOk = Left <= Bound && boundedSumRight <= (Bound - Left);
     /* end: checking constraint */
@@ -82,7 +84,12 @@ ValidateBoundedSumRight(
 }
 
 uint64_t
-BoundedSumWhereValidateBoundedSum(uint32_t Bound, InputBuffer Input, uint64_t StartPosition)
+BoundedSumWhereValidateBoundedSum(
+  uint32_t Bound,
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
+)
 {
   /* Validating field __precondition */
   BOOLEAN preconditionConstraintIsOk = Bound <= (uint32_t)(uint16_t)1729U;
@@ -97,13 +104,14 @@ BoundedSumWhereValidateBoundedSum(uint32_t Bound, InputBuffer Input, uint64_t St
     return positionOrErrorAfterPrecondition;
   }
   /* Field _boundedSum_left */
-  uint64_t positionAfterleft = ValidateBoundedSumLeft(Input, positionOrErrorAfterPrecondition);
+  uint64_t positionAfterleft = ValidateBoundedSumLeft(Uu, positionOrErrorAfterPrecondition);
   if (EverParseIsError(positionAfterleft))
   {
     return positionAfterleft;
   }
-  uint32_t left = Load32Le(Input.base + (uint32_t)positionOrErrorAfterPrecondition);
+  uint8_t *base = Input;
+  uint32_t left = Load32Le(base + (uint32_t)positionOrErrorAfterPrecondition);
   /* Field _boundedSum_right */
-  return ValidateBoundedSumRight(Bound, left, Input, positionAfterleft);
+  return ValidateBoundedSumRight(Bound, left, Uu, Input, positionAfterleft);
 }
 

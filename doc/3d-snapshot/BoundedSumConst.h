@@ -1,14 +1,16 @@
 
 
-
-
 #ifndef __BoundedSumConst_H
 #define __BoundedSumConst_H
 
-#include "EverParse.h"
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+#include "EverParse.h"
+
+
+#include "Smoker.h"
 
 /*
  The following will fail because of integer overflow
@@ -20,7 +22,8 @@ entrypoint typedef struct _boundedSum {
 // SNIPPET_END: boundedSumNaive
 
 */
-uint64_t BoundedSumConstValidateBoundedSum(InputBuffer Input, uint64_t StartPosition);
+uint64_t
+BoundedSumConstValidateBoundedSum(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)
 }
