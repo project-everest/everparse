@@ -8,8 +8,9 @@ module U32 = FStar.UInt32
 #set-options "--__temp_no_proj EverParse3d.InputBuffer.Aux"
 
 noeq
-type input_buffer = {
-  base: B.buffer LPL.byte;
+type input_buffer
+  (len: U32.t)
+= {
+  base: (base: B.buffer LPL.byte { U32.v len <= B.length base });
   perm: R.perm base;
-  len: (length: U32.t { U32.v length <= B.length base });
 }

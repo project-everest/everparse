@@ -13,21 +13,23 @@ let triv = B.trivial_preorder LowParse.Bytes.byte
 
 inline_for_extraction
 noextract
-val input_buffer_t : Type0
+val input_buffer_t (len: U32.t) : Type0
 
 include LowParse.Low.Base
 
-val slice_of (x: input_buffer_t) : GTot (slice triv triv)
+val slice_of (#len: U32.t) (x: input_buffer_t len) : GTot (sl: slice triv triv { sl.LPL.len == len })
 
 inline_for_extraction
 noextract
-val slice_length (x: input_buffer_t) : Tot (v: U32.t { v == (slice_of x).LPL.len })
+let slice_length (#len: U32.t) (x: input_buffer_t len) : Tot (v: U32.t { v == (slice_of x).LPL.len }) =
+  len
 
-val perm_of (x: input_buffer_t) : GTot (R.perm (slice_of x).base)
+val perm_of (#len: U32.t) (x: input_buffer_t len) : GTot (R.perm (slice_of x).base)
 
 let live_input_buffer
   (h: HS.mem)
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
 : GTot Type0
 = LPL.live_slice h (slice_of sl) /\
   R.valid_perm h (perm_of sl)
@@ -37,7 +39,8 @@ let valid_input_buffer
   (#t: Type u#0)
   (p: parser k t)
   (h: HS.mem)
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (pos: U32.t)
 : GTot Type0
 = LPL.valid p h (slice_of sl) pos /\
@@ -46,9 +49,10 @@ let valid_input_buffer
 inline_for_extraction
 noextract
 val truncate_input_buffer
-  (sl: input_buffer_t)
+  (#len0: U32.t)
+  (sl: input_buffer_t len0)
   (len: U32.t)
-: Pure input_buffer_t
+: Pure (input_buffer_t len)
   (requires (
     U32.v len <= U32.v (slice_of sl).len
   ))
@@ -60,7 +64,8 @@ val truncate_input_buffer
 inline_for_extraction
 noextract
 val drop
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (from: U32.t)
   (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= U32.v (slice_of sl).LPL.len })
 : HST.Stack unit
@@ -80,7 +85,8 @@ val read_with_perm
   (#p: parser k t)
   (r: leaf_reader p)
   (j: jumper p)
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (pos: U32.t)
 : HST.Stack t
   (requires (fun h ->
@@ -103,7 +109,8 @@ val puint8: Type0
 inline_for_extraction
 noextract
 val offset
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (off: U32.t)
 : HST.Stack puint8
   (requires (fun h ->

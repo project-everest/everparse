@@ -42,7 +42,7 @@ let liveness_inv = i:hinv {
 let mem_inv  = liveness_inv
 let slice_inv =  mbuffer LPL.byte triv triv -> mem_inv
 let inv_implies (inv0 inv1:slice_inv) =
-  forall (i:input_buffer_t) h.
+  forall (#len: U32.t) (i:input_buffer_t len) h.
     inv0 (LPL.slice_of i).LPL.base h ==> inv1 (LPL.slice_of i).LPL.base h
 let true_inv : slice_inv = fun _ _ -> True
 let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h

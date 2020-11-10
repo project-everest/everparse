@@ -32,7 +32,8 @@ module B = LowStar.Buffer
 inline_for_extraction
 let action #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
            (inv:slice_inv) (l:eloc) (on_success:bool) (a:Type)
-  = sl: input_buffer_t ->
+  = #len: U32.t ->
+    sl: input_buffer_t len ->
     pos:LPL.pos_t ->
     res:U64.t ->
     Stack a
@@ -53,7 +54,8 @@ let action #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
 
 inline_for_extraction
 let validate_with_action_t #nz (#k:parser_kind nz) (#t:Type) (p:parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
-  (sl: input_buffer_t) ->
+  (#len: U32.t) ->
+  (sl: input_buffer_t len) ->
   (pos: U64.t) ->
   Stack U64.t
   (requires fun h ->
@@ -85,7 +87,7 @@ let act_with_comment
   (#inv:slice_inv) (#l:eloc) (#b:_) (res:Type)
   (a: action p inv l b res)
 : Tot (action p inv l b res)
-= fun (input:input_buffer_t) startPosition endPosition ->
+= fun input startPosition endPosition ->
   LPL.comment s;
   a input startPosition endPosition
 
@@ -96,7 +98,8 @@ let leaf_reader
   (#t: Type)
   (p: parser k t)
 : Tot Type
-= (sl: input_buffer_t) ->
+= (#len: U32.t) ->
+  (sl: input_buffer_t len) ->
   (pos: U32.t) ->
   Stack t
   (requires (fun h ->
@@ -123,7 +126,8 @@ let with_drop_if
   (#t: Type)
   (cond: bool)
   (inv: slice_inv)
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (from: U32.t)
   (fto: ((x: t) -> Tot U32.t))
   (x: t)
@@ -155,7 +159,7 @@ let validate_drop
    (v: validate_with_action_t p inv l allow_reading)
 : Tot (validate_with_action_t p inv l false)
 = fun
-  (input: input_buffer_t)
+  input
   (startPosition: U64.t) ->
   with_drop_if true inv input (LPL.uint64_to_uint32 startPosition) (fun (y: U64.t) -> if LPL.is_success y then LPL.uint64_to_uint32 y else LPL.slice_length input) (v input startPosition)
 
@@ -165,7 +169,7 @@ let validate_with_success_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#
                          (v1:validate_with_action_t p1 inv1 l1 ar)
                          (#inv2:_) (#l2:eloc) #b (a:action p1 inv2 l2 b bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) ar
-  = fun   (input: input_buffer_t)
+  = fun   input
         startPosition ->
     let h0 = HST.get () in
     [@(rename_let ("positionAfter" ^ name))]
@@ -195,7 +199,7 @@ let validate_with_error_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#p1
                          (v1:validate_with_action_t p1 inv1 l1 ar)
                          (#inv2:_) (#l2:eloc) (a:action p1 inv2 l2 false bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) ar
-  = fun   (input: input_buffer_t)
+  = fun   input
         startPosition ->
     let h0 = HST.get () in
     [@(rename_let ("positionAfter" ^ name))]
@@ -233,7 +237,7 @@ let validate_pair'
        #nz2 (#k2:parser_kind nz2) #t2 (#p2:parser k2 t2)
        (#inv2:_) (#l2:eloc) (#ar2:_) (v2:validate_with_action_t p2 inv2 l2 ar2)
   : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) (ar1 && ar2)
-  = fun   (input: input_buffer_t)
+  = fun   input
         startPosition ->
     let h = HST.get () in
     [@inline_let] let _ = LPLC.valid_nondep_then h p1 p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
@@ -264,7 +268,7 @@ let validate_dep_pair
       #nz2 (#k2:parser_kind nz2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t (p1 `parse_dep_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false)
-  = fun (input: input_buffer_t) startPosition ->
+  = fun input startPosition ->
       let h = HST.get () in
       [@inline_let] let _ = LPLC.valid_dtuple2 h p1 p2 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@(rename_let ("positionAfter" ^ name1))]
@@ -302,7 +306,7 @@ let validate_dep_pair_with_refinement_and_action'
              (conj_inv inv1 (conj_inv inv1' inv2))
              (l1 `eloc_union` (l1' `eloc_union` l2))
              false)
-  = fun (input: input_buffer_t) startPosition ->
+  = fun input startPosition ->
       let h0 = HST.get () in
       [@inline_let] let _ = LPLC.valid_filter h0 p1 f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@(rename_let ("positionAfter" ^ name1))]
@@ -365,7 +369,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
            k1.parser_kind_metadata == Some ParserKindMetadataTotal
          ))
          (ensures (fun _ -> True))
-  = fun (input: input_buffer_t) startPosition ->
+  = fun input startPosition ->
       let h0 = HST.get () in
       [@inline_let] let _ = LPLC.valid_filter h0 p1 f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@inline_let] let _ = LPLC.valid_facts p1 h0 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
@@ -416,7 +420,7 @@ let validate_dep_pair_with_refinement'
              (conj_inv inv1 inv2)
              (l1 `eloc_union` l2)
              false)
-  = fun (input: input_buffer_t) startPosition ->
+  = fun input startPosition ->
       let h0 = HST.get () in
       [@inline_let] let _ = LPLC.valid_filter h0 p1 f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@(rename_let ("positionAfter" ^ name1))]
@@ -472,7 +476,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
            k1.parser_kind_metadata == Some ParserKindMetadataTotal
          ))
          (ensures (fun _ -> True))
-  = fun (input: input_buffer_t) startPosition ->
+  = fun input startPosition ->
       let h0 = HST.get () in
       [@inline_let] let _ = LPLC.valid_filter h0 p1 f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
       [@inline_let] let _ = LPLC.valid_facts p1 h0 (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
@@ -542,7 +546,7 @@ let validate_dep_pair_with_action
              (conj_inv inv1 (conj_inv inv1' inv2))
              (l1 `eloc_union` (l1' `eloc_union` l2))
              false)
-  = fun (input: input_buffer_t) startPosition ->
+  = fun input startPosition ->
       let h0 = HST.get () in
       let res = v1 input startPosition in
       let h1 = HST.get() in
@@ -698,7 +702,7 @@ let validate_weaken #nz (#k:parser_kind nz) #t (#p:parser k t)
                     #inv #l #ar (v:validate_with_action_t p inv l ar)
                     #nz' (k':parser_kind nz'{k' `is_weaker_than` k})
   : Tot (validate_with_action_t (parse_weaken p k') inv l ar)
-  = fun (input:input_buffer_t) startPosition ->
+  = fun input startPosition ->
     let open LPLC in
     let h = HST.get () in
     [@inline_let]
@@ -753,7 +757,7 @@ let validate_ite #nz (#k:parser_kind nz) (#a:Type) (#b:Type)
                  (p1:squash e -> parser k a) (v1:(squash e -> validate_with_action_t (p1()) inv1 l1 ar1))
                  (p2:squash (not e) -> parser k b) (v2:(squash (not e) -> validate_with_action_t (p2()) inv2 l2 ar2))
   : Tot (validate_with_action_t (parse_ite e p1 p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false)
-  = fun (input:input_buffer_t) startPosition ->
+  = fun input startPosition ->
       if e then validate_drop (v1 ()) input startPosition else validate_drop (v2 ()) input startPosition
 
 unfold
@@ -764,7 +768,8 @@ let validate_list_inv
   (inv: slice_inv)
   (l: loc)
   (g0 g1: Ghost.erased HS.mem)
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (pos0: U32.t)
   (bpos: pointer U64.t)
   (h: HS.mem)
@@ -812,7 +817,8 @@ let validate_list_body
   #inv #l #ar
   (v: validate_with_action_t p inv l ar)
   (g0 g1: Ghost.erased HS.mem)
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (pos0: LPL.pos_t)
   (bpos: pointer U64.t)
 : HST.Stack bool
@@ -849,7 +855,8 @@ let validate_list'
   (#p:parser k t)
   #inv #l #ar
   (v: validate_with_action_t p inv l ar)
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (pos: U64.t)
 : HST.Stack U64.t
   (requires (fun h ->
@@ -1139,7 +1146,8 @@ let validate_list_up_to_inv
   (p: parser k t)
   (terminator: t)
   (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (pos0: U32.t)
   (h0: HS.mem)
   (bpos: B.pointer U64.t)
@@ -1189,7 +1197,8 @@ let validate_list_up_to_body
   (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
   (v: validator p)
   (r: leaf_reader p)
-  (sl: input_buffer_t)
+  (#len: U32.t)
+  (sl: input_buffer_t len)
   (pos0: U32.t)
   (h0: HS.mem)
   (bpos: B.pointer U64.t)
