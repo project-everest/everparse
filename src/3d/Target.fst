@@ -403,7 +403,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
   | Validate_return ->
     Printf.sprintf "validate_ret"
   | Validate_app hd args ->
-    Printf.sprintf "(validate_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
+    Printf.sprintf "(validate_eta (validate_%s %s))" (print_ident hd) (String.concat " " (print_indexes args))
   | Validate_nlist e p ->
     Printf.sprintf "(validate_nlist %s %s)" (print_expr e) (print_validator p)
   | Validate_t_at_most e p ->

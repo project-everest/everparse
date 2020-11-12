@@ -80,6 +80,9 @@ let validate_with_action_t #nz (#k:parser_kind nz) (#t:Type) (p:parser k t) (inv
     ((~ allow_reading) ==> R.unreadable h' (perm_of sl) (uint64_to_uint32 pos) (if is_success res then uint64_to_uint32 res else (slice_of sl).len))
   )
 
+let validate_eta v =
+  fun input startPosition -> v input startPosition
+
 inline_for_extraction noextract
 let act_with_comment
   (s: string)

@@ -76,6 +76,19 @@ val validate_with_action_t
       (allow_reading:bool)
     : Type0
 
+inline_for_extraction
+noextract
+val validate_eta
+      (#nz:bool)
+      (#k:parser_kind nz)
+      (#t:Type)
+      (#p:parser k t)
+      (#inv:slice_inv)
+      (#l:eloc)
+      (#allow_reading:bool)
+      (v: validate_with_action_t p inv l allow_reading)
+: Tot (validate_with_action_t p inv l allow_reading)
+
 inline_for_extraction noextract
 val act_with_comment
       (s: string)
