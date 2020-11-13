@@ -43,7 +43,7 @@ let action #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
         inv (LPL.slice_of sl).LPL.base h /\
         loc_not_unused_in h `loc_includes` l /\
         address_liveness_insensitive_locs `loc_includes` l /\
-        l `loc_disjoint` (loc_buffer (LPL.slice_of sl).base `loc_union` R.loc_perm (LPL.perm_of sl)) /\
+        l `loc_disjoint` LPL.loc_input_buffer sl /\
         (U64.v res <= U64.v validator_max_length ==>
            valid_pos p h (LPL.slice_of sl) (uint64_to_uint32 pos) (uint64_to_uint32 res)) /\
         (on_success ==> U64.v res <= U64.v validator_max_length))
@@ -64,7 +64,7 @@ let validate_with_action_t #nz (#k:parser_kind nz) (#t:Type) (p:parser k t) (inv
     inv (slice_of sl).base h /\
     loc_not_unused_in h `loc_includes` l /\
     address_liveness_insensitive_locs `loc_includes` l /\
-    l `loc_disjoint` (loc_buffer (slice_of sl).base `loc_union` R.loc_perm (perm_of sl)) /\
+    l `loc_disjoint` LPL.loc_input_buffer sl /\
     U64.v pos <= U32.v (slice_of sl).len /\
     R.readable h (perm_of sl) (uint64_to_uint32 pos) (slice_of sl).len
   )
@@ -784,10 +784,10 @@ let validate_list_inv
   inv (LPL.slice_of sl).LPL.base h0 /\
   h `extends` h0 /\
   loc_not_unused_in h0 `loc_includes` l /\
-  l `loc_disjoint` (loc_buffer (LPL.slice_of sl).LPL.base `B.loc_union` R.loc_perm (LPL.perm_of sl)) /\
+  l `loc_disjoint` LPL.loc_input_buffer sl /\
   l `loc_disjoint` loc_buffer bpos /\
   address_liveness_insensitive_locs `loc_includes` l /\
-  B.loc_buffer bpos `B.loc_disjoint` (B.loc_buffer (LPL.slice_of sl).LPL.base `B.loc_union` R.loc_perm (LPL.perm_of sl)) /\
+  B.loc_buffer bpos `B.loc_disjoint` LPL.loc_input_buffer sl /\
   k.LPL.parser_kind_subkind == Some LPL.ParserStrong /\
   k.LPL.parser_kind_low > 0 /\
   U32.v pos0 <= U32.v (LPL.slice_of sl).LPL.len /\
@@ -866,7 +866,7 @@ let validate_list'
     U64.v pos <= U32.v (LPL.slice_of sl).LPL.len /\
     inv (LPL.slice_of sl).LPL.base h /\
     loc_not_unused_in h `loc_includes` l /\
-    l `loc_disjoint` (loc_buffer (LPL.slice_of sl).LPL.base `B.loc_union` R.loc_perm (LPL.perm_of sl)) /\
+    l `loc_disjoint` LPL.loc_input_buffer sl /\
     address_liveness_insensitive_locs `loc_includes` l /\
     R.readable h (LPL.perm_of sl) (LPL.uint64_to_uint32 pos) (LPL.slice_of sl).LPL.len /\
     LPL.live_slice h (LPL.slice_of sl)
@@ -1163,7 +1163,7 @@ let validate_list_up_to_inv
   B.live h0 bpos /\
   live_input_buffer h0 sl /\
   live_input_buffer h sl /\
-  B.loc_disjoint (B.loc_buffer (slice_of sl).LPL.base `B.loc_union` R.loc_perm (perm_of sl)) (B.loc_buffer bpos) /\
+  B.loc_disjoint (LPL.loc_input_buffer sl) (B.loc_buffer bpos) /\
   U32.v pos0 <= U64.v pos /\
   begin if is_success pos
   then

@@ -26,6 +26,9 @@ let slice_length (#len: U32.t) (x: input_buffer_t len) : Tot (v: U32.t { v == (s
 
 val perm_of (#len: U32.t) (x: input_buffer_t len) : GTot (R.perm (slice_of x).base)
 
+let loc_input_buffer (#len: U32.t) (sl: input_buffer_t len) : GTot B.loc =
+  B.loc_buffer (slice_of sl).base `B.loc_union` R.loc_perm (perm_of sl)
+
 let live_input_buffer
   (h: HS.mem)
   (#len: U32.t)
