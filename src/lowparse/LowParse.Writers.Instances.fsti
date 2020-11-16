@@ -249,6 +249,74 @@ val valid_rewrite_parse_dsum_unknown
   (pu: pparser _ _ ps.dsum_pu ps.dsum_su)
 : Tot (valid_rewrite_t (pe `parse_pair` pu) p (fun (k', _) -> LP.Unknown? #_ #_ #(LP.dsum_enum ps.dsum_t) k') (fun (k', pl) -> LP.DSum?.synth_case ps.dsum_t k' pl))
 
+inline_for_extraction
+noextract
+let write_dsum_known
+  (ps: parse_dsum_t)
+  (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
+  (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
+  (w: LP.leaf_writer_strong (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)) {
+    ps.dsum_kt.LP.parser_kind_high == Some ps.dsum_kt.LP.parser_kind_low
+  })
+  (k: LP.dsum_known_key ps.dsum_t)
+  (pk: pparser _ _ (dsnd (ps.dsum_pc k)) (ps.dsum_sc k))
+  (pre: pre_t parse_empty)
+  (post: post_t unit parse_empty pk pre)
+  (post_err: post_err_t parse_empty pre)
+  (inv: memory_invariant)
+  ($f: (unit -> EWrite unit parse_empty pk pre post post_err inv))
+: EWrite unit parse_empty p
+    (fun _ -> pre ())
+    (fun _ _ vout ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\
+        vout == LP.DSum?.synth_case ps.dsum_t (LP.Known k) v
+      | _ -> False
+      end
+    )
+    (fun _ -> post_err ())
+    inv
+=
+  start pe w (LP.Known k);
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  valid_rewrite _ _ _ _ _ (valid_rewrite_parse_dsum_known ps pe p k pk)
+
+inline_for_extraction
+noextract
+let write_dsum_unknown
+  (ps: parse_dsum_t)
+  (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
+  (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
+  (w: LP.leaf_writer_strong (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)) {
+    ps.dsum_kt.LP.parser_kind_high == Some ps.dsum_kt.LP.parser_kind_low
+  })
+  (k: LP.dsum_unknown_key ps.dsum_t)
+  (pk: pparser _ _ _ ps.dsum_su)
+  (pre: pre_t parse_empty)
+  (post: post_t unit parse_empty pk pre)
+  (post_err: post_err_t parse_empty pre)
+  (inv: memory_invariant)
+  ($f: (unit -> EWrite unit parse_empty pk pre post post_err inv))
+: EWrite unit parse_empty p
+    (fun _ -> pre ())
+    (fun _ _ vout ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\
+        vout == LP.DSum?.synth_case ps.dsum_t (LP.Unknown k) v
+      | _ -> False
+      end
+    )
+    (fun _ -> post_err ())
+    inv
+=
+  start pe w (LP.Unknown k);
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  valid_rewrite _ _ _ _ _ (valid_rewrite_parse_dsum_unknown ps pe p pk)
+
 val valid_rewrite_parse_vlarray_intro
   (pa: parser)
   (p: parser1)

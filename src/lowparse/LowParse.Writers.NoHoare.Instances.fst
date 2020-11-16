@@ -126,3 +126,39 @@ let write_sum
 : TWrite unit parse_empty p inv
 =
   twrite_of_ewrite (fun _ -> write_sum ps pe p w k pk _ _ _ inv (fun _ -> ewrite_of_twrite f))
+
+inline_for_extraction
+noextract
+let write_dsum_known
+  (ps: parse_dsum_t)
+  (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
+  (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
+  (w: LP.leaf_writer_strong (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)) {
+    ps.dsum_kt.LP.parser_kind_high == Some ps.dsum_kt.LP.parser_kind_low
+  })
+  (k: LP.dsum_known_key ps.dsum_t)
+  (pk: pparser _ _ (dsnd (ps.dsum_pc k)) (ps.dsum_sc k))
+  (inv: memory_invariant)
+  (f: (unit -> TWrite unit parse_empty pk inv))
+: TWrite unit parse_empty p
+    inv
+=
+  twrite_of_ewrite (fun _ -> write_dsum_known ps pe p w k pk _ _ _ inv (fun _ -> ewrite_of_twrite f))
+
+inline_for_extraction
+noextract
+let write_dsum_unknown
+  (ps: parse_dsum_t)
+  (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
+  (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
+  (w: LP.leaf_writer_strong (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)) {
+    ps.dsum_kt.LP.parser_kind_high == Some ps.dsum_kt.LP.parser_kind_low
+  })
+  (k: LP.dsum_unknown_key ps.dsum_t)
+  (pk: pparser _ _ _ ps.dsum_su)
+  (inv: memory_invariant)
+  ($f: (unit -> TWrite unit parse_empty pk inv))
+: TWrite unit parse_empty p
+    inv
+=
+  twrite_of_ewrite (fun _ -> write_dsum_unknown ps pe p w k pk _ _ _ inv (fun _ -> ewrite_of_twrite f))
