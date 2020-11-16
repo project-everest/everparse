@@ -110,3 +110,19 @@ let parse_bounded_vldata_intro_ho'
 =
   twrite_of_ewrite (fun _ -> parse_bounded_vldata_intro_ho' pa p min max (fun _ -> ewrite_of_twrite f))
    
+inline_for_extraction
+noextract
+let write_sum
+  (ps: parse_sum_t)
+  (pe: pparser _ _ _ (LP.serialize_enum_key ps.sum_p ps.sum_s (LP.sum_enum ps.sum_t)))
+  (p: pparser _ _ _ (LP.serialize_sum ps.sum_t ps.sum_s #ps.sum_pc ps.sum_sc))
+  (w: LP.leaf_writer_strong (LP.serialize_enum_key ps.sum_p ps.sum_s (LP.sum_enum ps.sum_t)) {
+    ps.sum_kt.LP.parser_kind_high == Some ps.sum_kt.LP.parser_kind_low
+  })
+  (k: LP.sum_key ps.sum_t)
+  (pk: pparser _ _ (dsnd (ps.sum_pc k)) (ps.sum_sc k))
+  (inv: memory_invariant)
+  (f: (unit -> TWrite unit parse_empty pk inv))
+: TWrite unit parse_empty p inv
+=
+  twrite_of_ewrite (fun _ -> write_sum ps pe p w k pk _ _ _ inv (fun _ -> ewrite_of_twrite f))

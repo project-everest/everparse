@@ -174,6 +174,40 @@ val valid_rewrite_parse_sum
 
 inline_for_extraction
 noextract
+let write_sum
+  (ps: parse_sum_t)
+  (pe: pparser _ _ _ (LP.serialize_enum_key ps.sum_p ps.sum_s (LP.sum_enum ps.sum_t)))
+  (p: pparser _ _ _ (LP.serialize_sum ps.sum_t ps.sum_s #ps.sum_pc ps.sum_sc))
+  (w: LP.leaf_writer_strong (LP.serialize_enum_key ps.sum_p ps.sum_s (LP.sum_enum ps.sum_t)) {
+    ps.sum_kt.LP.parser_kind_high == Some ps.sum_kt.LP.parser_kind_low
+  })
+  (k: LP.sum_key ps.sum_t)
+  (pk: pparser _ _ (dsnd (ps.sum_pc k)) (ps.sum_sc k))
+  (pre: pre_t parse_empty)
+  (post: post_t unit parse_empty pk pre)
+  (post_err: post_err_t parse_empty pre)
+  (inv: memory_invariant)
+  ($f: (unit -> EWrite unit parse_empty pk pre post post_err inv))
+: EWrite unit parse_empty p
+    (fun _ -> pre ())
+    (fun _ _ vout ->
+      pre () /\
+      begin match destr_repr_spec _ _ _ _ _ _ _ f () with
+      | Correct (_, v) ->
+        post () () v /\
+        vout == LP.Sum?.synth_case ps.sum_t k v
+      | _ -> False
+      end
+    )
+    (fun _ -> post_err ())
+    inv
+=
+  start pe w k;
+  frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
+  valid_rewrite _ _ _ _ _ (valid_rewrite_parse_sum ps pe p k pk)
+
+inline_for_extraction
+noextract
 noeq
 type parse_dsum_t = {
   dsum_kt: LP.parser_kind;
