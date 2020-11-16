@@ -3066,7 +3066,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   w i "module BY = FStar.Bytes\n";
   wl i "module HS = FStar.HyperStack\n";
   wl i "module HST = FStar.HyperStack.ST\n";
-  wl i "module LWP = LowParse.Writers.Combinators\n";
+  wl i "module LWP = LowParse.Writers.NoHoare.Combinators\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -3087,7 +3087,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   w o "module BY = FStar.Bytes\n";
   wl o "module HS = FStar.HyperStack\n";
   wl o "module HST = FStar.HyperStack.ST\n";
-  wl o "module LWP = LowParse.Writers.Instances\n";
+  wl o "module LWP = LowParse.Writers.NoHoare.Instances\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
