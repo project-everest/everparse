@@ -309,7 +309,7 @@ let validate_nlist_constant_size_mod_ko (n:U32.t) (#k:parser_kind true) #t (p:pa
        (requires (LPL.valid (parse_nlist n p) h sl (LPL.uint64_to_uint32 pos)))
        (ensures False)
      = let sq = LPL.bytes_of_slice_from h sl (LPL.uint64_to_uint32 pos) in
-       let sq' = Seq.slice sq 0 (U32.v n) in
+       let sq' = Ghost.hide (Seq.slice sq 0 (U32.v n)) in
        LowParse.Spec.List.list_length_constant_size_parser_correct p sq' ;
        let Some (l, _) = LP.parse (parse_nlist n p) sq in
        assert (U32.v n == FStar.List.Tot.length l `Prims.op_Multiply` k.LP.parser_kind_low) ;

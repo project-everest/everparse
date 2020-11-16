@@ -876,19 +876,20 @@ let print_c_entry (modul: string)
     let impl =
       Printf.sprintf
       "%s {\n\t\
-         uint64_t result = %s(%s, 0);\n\t\
-         if (EverParseResultIsError(result)) {\n\t\t\
+         uint64_t maybe_error = 0L;
+         %s(%s, 0);\n\t\
+         if (EverParseResultIsError(maybe_error)) {\n\t\t\
            %sEverParseError(\n\t\
-                  %sStructNameOfErr(result),\n\t\t\t\
-                  %sFieldNameOfErr (result),\n\t\t\t\
-                  EverParseErrorReasonOfResult(result));\n\t\t\
+                  %sStructNameOfErr(maybe_error),\n\t\t\t\
+                  %sFieldNameOfErr (maybe_error),\n\t\t\t\
+                  EverParseErrorReasonOfResult(maybe_error));\n\t\t\
            return FALSE;\n\t\
          }\n\t\
          return TRUE;\n\
        }"
        signature
        validator_name
-       (((List.Tot.map (fun (id, _) -> print_ident id) d.decl_name.td_params)@["len"; "base"]) |> String.concat ", ")
+       (((List.Tot.map (fun (id, _) -> print_ident id) d.decl_name.td_params)@["&maybe_error"; "len"; "base"]) |> String.concat ", ")
        modul
        modul
        modul
