@@ -648,6 +648,7 @@ let write_pair
   ($f1: unit -> TWrite unit parse_empty p1 inv)
   (#p2: parser)
   ($f2: unit -> TWrite unit parse_empty p2 inv)
+  ()
 : TWrite unit parse_empty (p1 `parse_pair` p2) inv
 =
   f1 ();

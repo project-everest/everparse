@@ -2799,6 +2799,33 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
     wl o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n
    end;
 
+  (* writer *)
+  let rec writer_params = function
+    | TLeaf (fn, ty) -> 
+      begin match lwp_combinator_name ty with
+      | Some wr -> Some (sprintf "(f_%s : (unit -> LWP.TWrite unit LWP.parse_empty %s inv))\n" fn wr)
+      | _ -> None
+      end
+    | TNode (_, t1, t2) ->
+       begin match writer_params t1, writer_params t2 with
+       | Some wr1, Some wr2 -> Some (sprintf "%s%s" wr1 wr2)
+       | _ -> None
+       end
+  in
+  begin match writer_params tfields with
+  | Some params ->
+     wl i "inline_for_extraction noextract val %s_lwriter (#inv: LWP.memory_invariant) %s : LWP.TWrite unit LWP.parse_empty %s inv\n" n params (assume_some (lwp_combinator_name n));
+     wl o "let %s_lwriter #inv %s = \n" n params;
+     let rec writer_args = function
+       | TLeaf (fn, _) -> sprintf "f_%s" fn
+       | TNode (_, t1, t2) -> sprintf "(%s `LWP.write_pair` %s)" (writer_args t1) (writer_args t2)
+     in
+     wl o "%s ();" (writer_args tfields);
+     wl o "LWP.valid_rewrite (LWP.valid_rewrite_parse_synth' _ synth_%s synth_%s_recip (synth_%s_injective (); synth_%s_inverse ()));\n" n n n n;
+     wl o "LWP.valid_rewrite (LWP.valid_rewrite_parser_eq' _ %s)\n\n" (assume_some (lwp_combinator_name n))
+  | _ -> ()
+  end;
+
   (* lserialize *)
   if li.has_lserializer then begin
       let rec mk_jumper_reader = function
