@@ -154,3 +154,36 @@ let unreadable_frame h #t #b p from to l h' = ()
 
 let drop #t #b p from to =
   if F.model then B.fill (B.sub (p <: perm' b) from (to `U32.sub` from)) (G.hide false) (to `U32.sub` from) else ()
+
+#push-options "--z3rlimit 32"
+let drop_if #t #b p from mid to cond =
+  if F.model then begin
+    let h0 = HST.get () in
+    B.fill (B.sub (p <: perm' b) from (mid `U32.sub` from)) (G.hide false) (mid `U32.sub` from);
+    let h1 = HST.get () in
+    B.fill (B.sub (p <: perm' b) mid (to `U32.sub` mid)) cond (to `U32.sub` mid);
+    let h2 = HST.get () in
+    let f () : Lemma
+      (B.modifies (loc_perm_from_to p from (if cond then mid else to)) h1 h2)
+    =
+      if cond then begin
+(*      
+        Seq.lemma_split (B.as_seq h0 (p <: perm' b)) (U32.v to);
+        Seq.lemma_split (Seq.slice (B.as_seq h0 (p <: perm' b)) 0 (U32.v to)) (U32.v mid);
+        Seq.lemma_split (Seq.slice (B.as_seq h0 (p <: perm' b)) 0 (U32.v mid)) (U32.v from);
+        Seq.lemma_split (B.as_seq h1 (p <: perm' b)) (U32.v to);
+        Seq.lemma_split (Seq.slice (B.as_seq h1 (p <: perm' b)) 0 (U32.v to)) (U32.v mid);
+        Seq.lemma_split (Seq.slice (B.as_seq h1 (p <: perm' b)) 0 (U32.v mid)) (U32.v from);
+        Seq.lemma_split (B.as_seq h2 (p <: perm' b)) (U32.v to);
+        Seq.lemma_split (Seq.slice (B.as_seq h2 (p <: perm' b)) 0 (U32.v to)) (U32.v mid);
+        Seq.lemma_split (Seq.slice (B.as_seq h2 (p <: perm' b)) 0 (U32.v mid)) (U32.v from);
+*)
+        assert (B.as_seq h2 (B.gsub (p <: perm' b) 0ul mid) == B.as_seq h1 (B.gsub (p <: perm' b) 0ul mid));
+        assert (B.as_seq h1 (B.gsub (p <: perm' b) mid (to `U32.sub` mid)) `Seq.equal` B.as_seq h1 (B.gsub (p <: perm' b) mid (to `U32.sub` mid)));
+        assert (B.as_seq h2 (B.gsub (p <: perm' b) mid (to `U32.sub` mid)) `Seq.equal` B.as_seq h1 (B.gsub (p <: perm' b) mid (to `U32.sub` mid)));
+        B.modifies_loc_buffer_from_to_intro (p <: perm' b) mid mid B.loc_none h1 h2
+      end
+    in
+    f ()
+  end else ()
+#pop-options

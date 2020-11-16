@@ -335,3 +335,22 @@ val drop
     valid_perm h' p /\
     unreadable h' p from to
   ))
+
+inline_for_extraction
+noextract
+val drop_if
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+  (cond: Ghost.erased bool)
+: HST.Stack unit
+  (requires (fun h ->
+    valid_perm h p /\
+    readable h p from to
+  ))
+  (ensures (fun h _ h' ->
+    B.modifies (loc_perm_from_to p from (if cond then mid else to)) h h' /\
+    valid_perm h' p /\
+    unreadable h' p from (if cond then mid else to)
+  ))
