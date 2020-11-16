@@ -636,7 +636,22 @@ let valid_rewrite
   (#inv: memory_invariant)
   (v: squash (valid_rewrite_prop p1 p2))
 : TWrite unit p1 p2 inv
-= twrite_of_ewrite (fun _ -> valid_rewrite _ _ _ _ _ (evalid_rewrite_of_tvalid_rewrite v))
+= (fun () -> () <: TWrite unit p1 p1 inv) ()
+  // twrite_of_ewrite (fun _ -> valid_rewrite _ _ _ _ _ (evalid_rewrite_of_tvalid_rewrite v)) // OK
+  // () // KO
+
+inline_for_extraction
+noextract
+let write_pair
+  (#inv: memory_invariant)
+  (#p1: parser)
+  ($f1: unit -> TWrite unit parse_empty p1 inv)
+  (#p2: parser)
+  ($f2: unit -> TWrite unit parse_empty p2 inv)
+: TWrite unit parse_empty (p1 `parse_pair` p2) inv
+=
+  f1 ();
+  frame f2
 
 inline_for_extraction
 let cast
