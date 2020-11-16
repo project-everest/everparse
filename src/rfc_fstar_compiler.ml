@@ -653,7 +653,7 @@ let lwp_combinator_name = function
   | "uint64_le" -> None (* failwith "LWP.parse_u64_le: not implemented" *)
   | "asn1_len" -> None (* failwith "pcombinator_name: for now asn1_len not standalone" *)
   | "bitcoin_varint" -> None (* failwith "LWP.parse_bcvli: not implemented" *)
-  | "Empty" -> Some "LWP.emp"
+  | "Empty" -> Some "LWP.parse_empty"
   | "Fail" -> None (* failwith "LWP.parse_false: not implemented" *)
   | t -> Some (sprintf "lwp_%s" (String.uncapitalize_ascii t))
 
@@ -790,6 +790,7 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   wl o "inline_for_extraction noextract let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
   wl o "inline_for_extraction noextract let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
   wl o "inline_for_extraction noextract let %s_repr_writer = %s\n\n" n (leaf_writer_name repr_t);
+  wl o "inline_for_extraction noextract let %s_repr_lwp_parser = LWP.make_parser %s_repr_parser %s_repr_serializer %s_repr_jumper\n\n"  n n n n;
 
   write_api o i is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
@@ -1465,6 +1466,38 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       | Some dt ->
         wl o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name dt))
      end;
+
+    (* low-level writers *)
+    begin match def with
+    | Some _ -> ()
+    | None ->
+       wl o "inline_for_extraction noextract let %s_lwp_parse_sum : LWP.parse_sum_t = {\n" n;
+       wl o "  LWP.sum_kt = _;\n";
+       wl o "  LWP.sum_t = %s_sum;\n" n;
+       wl o "  LWP.sum_p = %s_repr_parser;\n" tn;
+       wl o "  LWP.sum_s = %s_repr_serializer;\n" tn;
+       wl o "  LWP.sum_pc = parse_%s_cases;\n" n;
+       wl o "  LWP.sum_sc = serialize_%s_cases;\n" n;
+       wl o "}\n\n";
+       List.iter (fun (case, ty) ->
+           let cn = String.capitalize_ascii case in
+           match lwp_combinator_name ty with
+           | None -> ()
+           | Some lwp ->
+              wl i "inline_for_extraction noextract val %s_%s_lwriter (#inv: LWP.memory_invariant) (f: (unit -> LWP.TWrite unit LWP.parse_empty %s inv)) : LWP.TWrite unit LWP.parse_empty %s inv\n\n" n case lwp (assume_some (lwp_combinator_name n));
+              wl o "let %s_%s_lwriter #inv f =\n" n case;
+              wl o "LWP.write_sum\n";
+              wl o "  %s_lwp_parse_sum\n" n;
+              wl o "  (LWP.parse_enum %s_repr_lwp_parser (LP.sum_enum %s_sum))\n" tn n;
+              wl o "  %s\n" (assume_some (lwp_combinator_name n));
+              wl o "  write_%s_key\n" tn;
+              wl o "  %s\n" (String.capitalize_ascii case);
+              wl o "  %s\n" lwp;
+              wl o "  inv\n";
+              wl o "  f\n";
+              wl o "\n"
+         ) cl;
+    end;
 
     if li.has_lserializer then begin
         let annot = if is_private then " : LL.leaf_reader "^(pcombinator_name n) else "" in
