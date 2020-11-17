@@ -23,7 +23,7 @@ entrypoint typedef struct _boundedSum {
 
 */
 uint64_t
-BoundedSumConstValidateBoundedSum(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
+BoundedSumConstValidateBoundedSum(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)
 }

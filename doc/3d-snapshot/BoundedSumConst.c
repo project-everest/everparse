@@ -12,7 +12,7 @@ Auto-generated field identifier for error reporting
 */
 #define BOUNDEDSUM__RIGHT ((uint64_t)2U)
 
-static inline uint64_t ValidateBoundedSumLeft(uint32_t Uu, uint64_t StartPosition)
+static inline uint64_t ValidateBoundedSumLeft(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _boundedSum_left
@@ -22,7 +22,7 @@ static inline uint64_t ValidateBoundedSumLeft(uint32_t Uu, uint64_t StartPositio
   /* SNIPPET_START: boundedSumCorrect */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -34,7 +34,12 @@ static inline uint64_t ValidateBoundedSumLeft(uint32_t Uu, uint64_t StartPositio
 }
 
 static inline uint64_t
-ValidateBoundedSumRight(uint32_t Left, uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+ValidateBoundedSumRight(
+  uint32_t Left,
+  uint32_t InputLength,
+  uint8_t *Input,
+  uint64_t StartPosition
+)
 /*++
     Internal helper function:
         Validator for field _boundedSum_right
@@ -44,7 +49,7 @@ ValidateBoundedSumRight(uint32_t Left, uint32_t Uu, uint8_t *Input, uint64_t Sta
   /* Validating field right */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAfterBoundedSumRight;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     positionAfterBoundedSumRight = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -76,7 +81,8 @@ ValidateBoundedSumRight(uint32_t Left, uint32_t Uu, uint8_t *Input, uint64_t Sta
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, BOUNDEDSUM__RIGHT);
 }
 
-uint64_t BoundedSumConstValidateBoundedSum(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+uint64_t
+BoundedSumConstValidateBoundedSum(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 /*++
  The following will fail because of integer overflow
 // SNIPPET_START: boundedSumNaive
@@ -89,7 +95,7 @@ entrypoint typedef struct _boundedSum {
 --*/
 {
   /* Field _boundedSum_left */
-  uint64_t positionAfterleft = ValidateBoundedSumLeft(Uu, StartPosition);
+  uint64_t positionAfterleft = ValidateBoundedSumLeft(InputLength, StartPosition);
   if (EverParseIsError(positionAfterleft))
   {
     return positionAfterleft;
@@ -97,6 +103,6 @@ entrypoint typedef struct _boundedSum {
   uint8_t *base = Input;
   uint32_t left = Load32Le(base + (uint32_t)StartPosition);
   /* Field _boundedSum_right */
-  return ValidateBoundedSumRight(left, Uu, Input, positionAfterleft);
+  return ValidateBoundedSumRight(left, InputLength, Input, positionAfterleft);
 }
 

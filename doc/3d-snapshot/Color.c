@@ -32,11 +32,12 @@ Enum constant
 */
 #define BLUE ((uint32_t)42U)
 
-static inline uint64_t ValidateColor(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+static inline uint64_t
+ValidateColor(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 {
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAftercolor;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     positionAftercolor = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -58,7 +59,7 @@ static inline uint64_t ValidateColor(uint32_t Uu, uint8_t *Input, uint64_t Start
 }
 
 static inline uint64_t
-ValidateColoredPointCol(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+ValidateColoredPointCol(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _coloredPoint_col
@@ -66,11 +67,11 @@ ValidateColoredPointCol(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
 --*/
 {
   /* Validating field col */
-  uint64_t endPositionOrError = ValidateColor(Uu, Input, StartPosition);
+  uint64_t endPositionOrError = ValidateColor(InputLength, Input, StartPosition);
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT__COL);
 }
 
-static inline uint64_t ValidateColoredPointX(uint32_t Uu, uint64_t StartPosition)
+static inline uint64_t ValidateColoredPointX(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _coloredPoint_x
@@ -80,7 +81,7 @@ static inline uint64_t ValidateColoredPointX(uint32_t Uu, uint64_t StartPosition
   /* Validating field x */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -91,7 +92,7 @@ static inline uint64_t ValidateColoredPointX(uint32_t Uu, uint64_t StartPosition
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT__X);
 }
 
-static inline uint64_t ValidateColoredPointY(uint32_t Uu, uint64_t StartPosition)
+static inline uint64_t ValidateColoredPointY(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _coloredPoint_y
@@ -101,7 +102,7 @@ static inline uint64_t ValidateColoredPointY(uint32_t Uu, uint64_t StartPosition
   /* Validating field y */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }

@@ -18,7 +18,8 @@ typedef uint8_t InputBufferTTags;
 
 typedef uint8_t *InputBufferT;
 
-static inline uint64_t ValidateSmokerCigarettesConsumed(uint32_t Uu, uint64_t StartPosition)
+static inline uint64_t
+ValidateSmokerCigarettesConsumed(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _smoker_cigarettesConsumed
@@ -28,7 +29,7 @@ static inline uint64_t ValidateSmokerCigarettesConsumed(uint32_t Uu, uint64_t St
   /* Validating field cigarettesConsumed */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)1U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)1U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -42,12 +43,12 @@ static inline uint64_t ValidateSmokerCigarettesConsumed(uint32_t Uu, uint64_t St
       SMOKER__CIGARETTESCONSUMED);
 }
 
-uint64_t SmokerValidateSmoker(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+uint64_t SmokerValidateSmoker(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 {
   /* Validating field age */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -75,6 +76,6 @@ uint64_t SmokerValidateSmoker(uint32_t Uu, uint8_t *Input, uint64_t StartPositio
     return positionOrErrorAfterage;
   }
   /* Field _smoker_cigarettesConsumed */
-  return ValidateSmokerCigarettesConsumed(Uu, positionOrErrorAfterage);
+  return ValidateSmokerCigarettesConsumed(InputLength, positionOrErrorAfterage);
 }
 

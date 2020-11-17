@@ -12,7 +12,7 @@ Auto-generated field identifier for error reporting
 */
 #define POINT__Y ((uint64_t)2U)
 
-static inline uint64_t ValidatePointX(uint32_t Uu, uint64_t StartPosition)
+static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _point_x
@@ -22,7 +22,7 @@ static inline uint64_t ValidatePointX(uint32_t Uu, uint64_t StartPosition)
   /* Validating field x */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)2U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)2U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -33,7 +33,7 @@ static inline uint64_t ValidatePointX(uint32_t Uu, uint64_t StartPosition)
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, POINT__X);
 }
 
-static inline uint64_t ValidatePointY(uint32_t Uu, uint64_t StartPosition)
+static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _point_y
@@ -43,7 +43,7 @@ static inline uint64_t ValidatePointY(uint32_t Uu, uint64_t StartPosition)
   /* Validating field y */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)2U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)2U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }

@@ -12,7 +12,7 @@ Auto-generated field identifier for error reporting
 */
 #define ORDEREDPAIR__GREATER ((uint64_t)2U)
 
-static inline uint64_t ValidateOrderedPairLesser(uint32_t Uu, uint64_t StartPosition)
+static inline uint64_t ValidateOrderedPairLesser(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _orderedPair_lesser
@@ -22,7 +22,7 @@ static inline uint64_t ValidateOrderedPairLesser(uint32_t Uu, uint64_t StartPosi
   /* Validating field lesser */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -36,7 +36,7 @@ static inline uint64_t ValidateOrderedPairLesser(uint32_t Uu, uint64_t StartPosi
 static inline uint64_t
 ValidateOrderedPairGreater(
   uint32_t Lesser,
-  uint32_t Uu,
+  uint32_t InputLength,
   uint8_t *Input,
   uint64_t StartPosition
 )
@@ -49,7 +49,7 @@ ValidateOrderedPairGreater(
   /* Validating field greater */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAfterOrderedPairGreater;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     positionAfterOrderedPairGreater = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -77,10 +77,11 @@ ValidateOrderedPairGreater(
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, ORDEREDPAIR__GREATER);
 }
 
-uint64_t OrderedPairValidateOrderedPair(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+uint64_t
+OrderedPairValidateOrderedPair(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 {
   /* Field _orderedPair_lesser */
-  uint64_t positionAfterlesser = ValidateOrderedPairLesser(Uu, StartPosition);
+  uint64_t positionAfterlesser = ValidateOrderedPairLesser(InputLength, StartPosition);
   if (EverParseIsError(positionAfterlesser))
   {
     return positionAfterlesser;
@@ -88,6 +89,6 @@ uint64_t OrderedPairValidateOrderedPair(uint32_t Uu, uint8_t *Input, uint64_t St
   uint8_t *base = Input;
   uint32_t lesser = Load32Le(base + (uint32_t)StartPosition);
   /* Field _orderedPair_greater */
-  return ValidateOrderedPairGreater(lesser, Uu, Input, positionAfterlesser);
+  return ValidateOrderedPairGreater(lesser, InputLength, Input, positionAfterlesser);
 }
 

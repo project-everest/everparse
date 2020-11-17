@@ -15,7 +15,7 @@ extern "C" {
 uint64_t
 BoundedSumWhereValidateBoundedSum(
   uint32_t Bound,
-  uint32_t Uu,
+  uint32_t InputLength,
   uint8_t *Input,
   uint64_t StartPosition
 );

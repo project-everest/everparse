@@ -29,7 +29,7 @@ EverParseCheckConstraintOkWithFieldId(
   uint64_t fieldId
 );
 
-uint64_t SmokerValidateSmoker(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
+uint64_t SmokerValidateSmoker(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)
 }

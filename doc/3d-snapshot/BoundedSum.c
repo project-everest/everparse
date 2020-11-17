@@ -17,7 +17,7 @@ Auto-generated field identifier for error reporting
 */
 #define MYSUM__BOUND ((uint64_t)3U)
 
-static inline uint64_t ValidateBoundedSumLeft(uint32_t Uu, uint64_t StartPosition)
+static inline uint64_t ValidateBoundedSumLeft(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _boundedSum_left
@@ -27,7 +27,7 @@ static inline uint64_t ValidateBoundedSumLeft(uint32_t Uu, uint64_t StartPositio
   /* SNIPPET_START: boundedSum */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -42,7 +42,7 @@ static inline uint64_t
 ValidateBoundedSumRight(
   uint32_t Bound,
   uint32_t Left,
-  uint32_t Uu,
+  uint32_t InputLength,
   uint8_t *Input,
   uint64_t StartPosition
 )
@@ -55,7 +55,7 @@ ValidateBoundedSumRight(
   /* Validating field right */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAfterBoundedSumRight;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     positionAfterBoundedSumRight = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -86,13 +86,13 @@ ValidateBoundedSumRight(
 uint64_t
 BoundedSumValidateBoundedSum(
   uint32_t Bound,
-  uint32_t Uu,
+  uint32_t InputLength,
   uint8_t *Input,
   uint64_t StartPosition
 )
 {
   /* Field _boundedSum_left */
-  uint64_t positionAfterleft = ValidateBoundedSumLeft(Uu, StartPosition);
+  uint64_t positionAfterleft = ValidateBoundedSumLeft(InputLength, StartPosition);
   if (EverParseIsError(positionAfterleft))
   {
     return positionAfterleft;
@@ -100,10 +100,10 @@ BoundedSumValidateBoundedSum(
   uint8_t *base = Input;
   uint32_t left = Load32Le(base + (uint32_t)StartPosition);
   /* Field _boundedSum_right */
-  return ValidateBoundedSumRight(Bound, left, Uu, Input, positionAfterleft);
+  return ValidateBoundedSumRight(Bound, left, InputLength, Input, positionAfterleft);
 }
 
-static inline uint64_t ValidateMySumBound(uint32_t Uu, uint64_t StartPosition)
+static inline uint64_t ValidateMySumBound(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field mySum_bound
@@ -113,7 +113,7 @@ static inline uint64_t ValidateMySumBound(uint32_t Uu, uint64_t StartPosition)
   /* Validating field bound */
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t endPositionOrError;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
@@ -125,7 +125,7 @@ static inline uint64_t ValidateMySumBound(uint32_t Uu, uint64_t StartPosition)
 }
 
 static inline uint64_t
-ValidateMySumSum(uint32_t Bound, uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+ValidateMySumSum(uint32_t Bound, uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field mySum_sum
@@ -133,13 +133,13 @@ ValidateMySumSum(uint32_t Bound, uint32_t Uu, uint8_t *Input, uint64_t StartPosi
 --*/
 {
   /* Validating field sum */
-  return BoundedSumValidateBoundedSum(Bound, Uu, Input, StartPosition);
+  return BoundedSumValidateBoundedSum(Bound, InputLength, Input, StartPosition);
 }
 
-uint64_t BoundedSumValidateMySum(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+uint64_t BoundedSumValidateMySum(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 {
   /* Field mySum_bound */
-  uint64_t positionAfterbound = ValidateMySumBound(Uu, StartPosition);
+  uint64_t positionAfterbound = ValidateMySumBound(InputLength, StartPosition);
   if (EverParseIsError(positionAfterbound))
   {
     return positionAfterbound;
@@ -147,6 +147,6 @@ uint64_t BoundedSumValidateMySum(uint32_t Uu, uint8_t *Input, uint64_t StartPosi
   uint8_t *base = Input;
   uint32_t bound = Load32Le(base + (uint32_t)StartPosition);
   /* Field mySum_sum */
-  return ValidateMySumSum(bound, Uu, Input, positionAfterbound);
+  return ValidateMySumSum(bound, InputLength, Input, positionAfterbound);
 }
 
