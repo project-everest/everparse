@@ -1105,6 +1105,81 @@ val valid_rewrite_parse_vllist
 : Tot (valid_rewrite_t (parse_vllist p min max) (parse_vllist p min' max') (fun x -> U32.v min' <= list_size p x /\ list_size p x <= U32.v max' /\ log256 (max) == log256 (max'))
 (fun x -> x))
 
+let valid_rewrite_parse_vllist_static
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t)
+  (max': U32.t { U32.v min' <= U32.v min /\ U32.v max <= U32.v max' /\ log256 max == log256 max' })
+: Tot (valid_rewrite_t (parse_vllist p min max) (parse_vllist p min' max') (fun x -> True)
+(fun x -> x))
+=
+  valid_rewrite_implies _ _ _ _ (valid_rewrite_parse_vllist p min max min' max') _ _
+
+let parse_vllist_recast_left_spec
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t { U32.v min' <= U32.v max })
+: Tot (repr_spec unit (parse_vllist p min max) (parse_vllist p min' max) (fun _ -> True) (fun vin _ vout -> (vin <: list (Parser?.t p)) == (vout <: list (Parser?.t p))) (fun vin -> ~ (U32.v min' <= list_size p vin)))
+=
+  fun vin ->
+    let sz = list_size p vin in
+    if U32.v min' <= sz
+    then Correct ((), vin)
+    else Error "parse_vllist_recast_left: out of bounds"
+
+inline_for_extraction
+val parse_vllist_recast_left_impl
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t { U32.v min' <= U32.v max})
+: Tot (repr_impl _ _ _ _ _ _ inv (parse_vllist_recast_left_spec p min max min'))
+
+inline_for_extraction
+let parse_vllist_recast_left
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t { U32.v min' <= U32.v max})
+: EWrite unit (parse_vllist p min max) (parse_vllist p min' max) (fun _ -> True) (fun vin _ vout -> (vin <: list (Parser?.t p)) == (vout <: list (Parser?.t p))) (fun vin -> ~ (U32.v min' <= list_size p vin)) inv
+= EWrite?.reflect (Repr _ (parse_vllist_recast_left_impl p min max min'))
+
+let parse_vllist_recast_right_spec
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (max': U32.t { U32.v min <= U32.v max' /\ U32.v max' > 0 /\ log256 max == log256 (max')})
+: Tot (repr_spec unit (parse_vllist p min max) (parse_vllist p min max') (fun _ -> True) (fun vin _ vout -> (vin <: list (Parser?.t p)) == (vout <: list (Parser?.t p))) (fun vin -> ~ (list_size p vin <= U32.v max')))
+=
+  fun vin ->
+    let sz = list_size p vin in
+    if sz <= U32.v max'
+    then Correct ((), vin)
+    else Error "parse_vllist_recast_right: out of bounds"
+
+inline_for_extraction
+val parse_vllist_recast_right_impl
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (max': U32.t { U32.v min <= U32.v max' /\ U32.v max' > 0 /\ log256 (max) == log256 max'})
+: Tot (repr_impl _ _ _ _ _ _ inv (parse_vllist_recast_right_spec p min max max'))
+
+inline_for_extraction
+let parse_vllist_recast_right
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (max': U32.t { U32.v min <= U32.v max' /\ U32.v max' > 0 /\ log256 (max) == log256 (max')})
+: EWrite unit (parse_vllist p min max) (parse_vllist p min max') (fun _ -> True) (fun vin _ vout -> (vin <: list (Parser?.t p)) == (vout <: list (Parser?.t p))) (fun vin -> ~ (list_size p vin <= U32.v max')) inv
+= EWrite?.reflect (Repr _ (parse_vllist_recast_right_impl p min max max'))
+
 let parse_vllist_recast_spec
   (p: parser1)
   (min: U32.t)

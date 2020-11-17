@@ -244,6 +244,38 @@ let extend_vllist_snoc_ho
 =
   twrite_of_ewrite (fun _ -> parse_vllist_snoc_weak_ho' p min max (fun _ -> ewrite_of_twrite f))
 
+let valid_rewrite_parse_vllist'
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t)
+  (max': U32.t { U32.v min' <= U32.v min /\ U32.v max <= U32.v max' /\ log256 max == log256 max' })
+: Tot (squash (valid_rewrite_prop (parse_vllist p min max) (parse_vllist p min' max')))
+=
+  tvalid_rewrite_of_evalid_rewrite (valid_rewrite_parse_vllist_static p min max min' max')
+
+inline_for_extraction
+let parse_vllist_recast_left
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (min': U32.t { U32.v min' <= U32.v max})
+: TWrite unit (parse_vllist p min max) (parse_vllist p min' max) inv
+=
+  twrite_of_ewrite (fun _ -> parse_vllist_recast_left p min max min')
+
+inline_for_extraction
+let parse_vllist_recast_right
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (max': U32.t { U32.v min <= U32.v max' /\ U32.v max' > 0 /\ log256 (max) == log256 (max')})
+: TWrite unit (parse_vllist p min max) (parse_vllist p min max') inv
+=
+  twrite_of_ewrite (fun _ -> parse_vllist_recast_right p min max max')
+
 inline_for_extraction
 let parse_vllist_recast
   (#inv: memory_invariant)
