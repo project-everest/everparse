@@ -18,8 +18,8 @@ let parse_synth
     (LP.serialize_synth (Parser?.p p1).parser f2 (Parser?.p p1).serializer f1 ())
     (LP.jump_synth (Parser?.p p1).jumper f2 ())
 
-let valid_rewrite_parse_synth
-  p1 #t2 f2 f1 sq
+let valid_rewrite_parse_synth_gen
+  p1 p2 f2 f1 sq
 = {
   valid_rewrite_valid = (fun h b pos pos' ->
     LP.valid_synth h (get_parser p1) f2 (LP.make_slice b (B.len b)) pos
