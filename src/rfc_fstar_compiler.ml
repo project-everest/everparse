@@ -2077,8 +2077,11 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       begin match lwp_combinator_name ty with
       | None -> ()
       | Some lwp ->
-         wl i "inline_for_extraction noextract val %s_valid_rewrite : squash (LWP.valid_rewrite_prop %s %s)\n\n" n lwp (assume_some (lwp_combinator_name n));
-         wl o "let %s_valid_rewrite = LWP.valid_rewrite_parser_eq' _ _\n\n" n
+         wl i "val %s_valid_rewrite : squash (LWP.valid_rewrite_prop %s %s)\n\n" n lwp (assume_some (lwp_combinator_name n));
+         wl o "let %s_valid_rewrite = LWP.valid_rewrite_parser_eq' _ _\n\n" n;
+         (* for pointer casting, guard against unit to avoid polluting context *)
+         wl i "val %s_valid_rewrite_recip : unit -> Tot (squash (LWP.valid_rewrite_prop %s %s))\n\n" n (assume_some (lwp_combinator_name n)) lwp;
+         wl o "let %s_valid_rewrite_recip _ = LWP.valid_rewrite_parser_eq' _ _\n\n" n
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
@@ -2507,6 +2510,11 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wl o "let %s_lwp_rewrite =\n" n;
       wl o "  assert_norm (LP.parse_bounded_vlbytes_t %d %d == %s);\n" low high n;
       wl o "  LWP.valid_rewrite_parser_eq' _ _\n\n";
+      (* rewrite for pointer casting purposes. guarded behind unit to avoid polluting context *)
+      wl i "val %s_lwp_rewrite_recip : unit -> Tot (squash (LWP.valid_rewrite_prop %s (LWP.parse_vlbytes %dul %dul)))\n\n" n (assume_some (lwp_combinator_name n)) low high;
+      wl o "let %s_lwp_rewrite_recip _ =\n" n;
+      wl o "  assert_norm (LP.parse_bounded_vlbytes_t %d %d == %s);\n" low high n;
+      wl o "  LWP.valid_rewrite_parser_eq' _ _\n\n";
       (* finalizer *)
       wl i "val %s_finalize (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
       wl i "  (requires (fun h ->\n";
@@ -2632,7 +2640,11 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
          wl i "inline_for_extraction noextract val %s_lwp_write (#inv: LWP.memory_invariant) (_: unit) : LWP.TWrite unit (LWP.parse_vllist %s 0ul %dul) %s inv\n\n" n lwp high (assume_some (lwp_combinator_name n));
          wl o "let %s_lwp_write #inv _ =\n" n;
          if low > 0 then wl o "  LWP.parse_vllist_recast_left %s 0ul %dul %dul;\n" lwp high low;
-         wl o "  LWP.valid_rewrite (LWP.valid_rewrite_parse_vlarray_intro' _ %s %dul %dul %d %d ())\n\n" lwp low high li.min_count li.max_count
+         wl o "  LWP.valid_rewrite (LWP.valid_rewrite_parse_vlarray_intro' _ %s %dul %dul %d %d ())\n\n" lwp low high li.min_count li.max_count;
+         (* recip for pointer casting purposes, guard behind unit to avoid polluting context *)
+         wl i "inline_for_extraction noextract val %s_lwp_write_recip (_: unit) : Tot (squash (LWP.valid_rewrite_prop %s (LWP.parse_vllist %s %dul %dul)))\n\n" n (assume_some (lwp_combinator_name n)) lwp low high;
+         wl o "let %s_lwp_write_recip _ =\n" n;
+         wl o "  LWP.valid_rewrite_parse_vlarray_elim' _ %s %dul %dul %d %d ()\n\n" lwp low high li.min_count li.max_count;
       end;
       (* length (elem count) and elim *)
       wl i "val %s_count (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack U32.t\n" n;
@@ -2716,7 +2728,11 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
          wl i "inline_for_extraction noextract val %s_lwp_write (#inv: LWP.memory_invariant) (_: unit) : LWP.TWrite unit (LWP.parse_vllist %s 0ul %dul) %s inv\n\n" n lwp max (assume_some (lwp_combinator_name n));
          wl o "let %s_lwp_write #inv _ =\n" n;
          if min > 0 then wl o "  LWP.parse_vllist_recast_left %s 0ul %dul %dul;\n" lwp max min;
-         wl o "  LWP.valid_rewrite (LWP.valid_rewrite_parse_synth_gen' _ _ synth_%s synth_%s_recip ())\n\n" n n
+         wl o "  LWP.valid_rewrite (LWP.valid_rewrite_parse_synth_gen' _ _ synth_%s synth_%s_recip ())\n\n" n n;
+         (* recip for pointer casting purposes, guard behind unit to avoid polluting context *)
+         wl i "inline_for_extraction noextract val %s_lwp_write_recip (_: unit) : Tot (squash (LWP.valid_rewrite_prop %s (LWP.parse_vllist %s %dul %dul)))\n\n" n (assume_some (lwp_combinator_name n)) lwp min max;
+         wl o "let %s_lwp_write_recip _ =\n" n;
+         wl o "  LWP.valid_rewrite_parse_synth_gen_recip' _ _ synth_%s synth_%s_recip ()\n\n" n n
       end;
       (* finalizer *)
       wl i "val finalize_%s (#rrel: _) (#rel: _) (sl: LL.slice rrel rel) (pos pos' : U32.t) : HST.Stack unit\n" n;
