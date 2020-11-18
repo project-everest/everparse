@@ -1469,7 +1469,52 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
 
     (* low-level writers *)
     begin match def with
-    | Some _ -> ()
+    | Some dt ->
+       wl o "inline_for_extraction noextract let %s_lwp_parse_sum : LWP.parse_dsum_t = {\n" n;
+       wl o "  LWP.dsum_kt = _;\n";
+       wl o "  LWP.dsum_t = %s_sum;\n" n;
+       wl o "  LWP.dsum_p = %s_repr_parser;\n" tn;
+       wl o "  LWP.dsum_s = %s_repr_serializer;\n" tn;
+       wl o "  LWP.dsum_pc = parse_%s_cases;\n" n;
+       wl o "  LWP.dsum_sc = serialize_%s_cases;\n" n;
+       wl o "  LWP.dsum_ku = _;\n";
+       wl o "  LWP.dsum_pu = %s;\n" (pcombinator_name dt);
+       wl o "  LWP.dsum_su = %s;\n" (scombinator_name dt);
+       wl o "}\n\n";
+       List.iter (fun (case, ty) ->
+           let cn = String.capitalize_ascii case in
+           match lwp_combinator_name ty with
+           | None -> ()
+           | Some lwp ->
+              wl i "inline_for_extraction noextract val %s_%s_lwriter (#inv: LWP.memory_invariant) (f: (unit -> LWP.TWrite unit LWP.parse_empty %s inv)) : LWP.TWrite unit LWP.parse_empty %s inv\n\n" n case lwp (assume_some (lwp_combinator_name n));
+              wl o "let %s_%s_lwriter = \n %s\n fun #inv f -> \n" n case same_kind;
+              wl o "LWP.write_dsum_known\n";
+              wl o "  %s_lwp_parse_sum\n" n;
+              wl o "  (LWP.parse_maybe_enum %s_repr_lwp_parser (LP.dsum_enum %s_sum))\n" tn n;
+              wl o "  %s\n" (assume_some (lwp_combinator_name n));
+              wl o "  write_maybe_%s_key\n" tn;
+              wl o "  (known_%s_as_enum_key %s)\n" tn (String.capitalize_ascii case);
+              wl o "  %s\n" lwp;
+              wl o "  inv\n";
+              wl o "  f\n";
+              wl o "\n"
+         ) cl;
+       begin match lwp_combinator_name dt with
+       | None -> ()
+       | Some lwp ->
+          wl i "inline_for_extraction noextract val %s_lwriter_unknown (#inv: LWP.memory_invariant) (k: _ { ~ (known_%s_repr k) }) (f: (unit -> LWP.TWrite unit LWP.parse_empty %s inv)) : LWP.TWrite unit LWP.parse_empty %s inv\n\n" n tn lwp (assume_some (lwp_combinator_name n));
+          wl o "let %s_lwriter_unknown = \n %s\n fun #inv k f ->\n" n same_kind;
+          wl o "LWP.write_dsum_unknown\n";
+          wl o "  %s_lwp_parse_sum\n" n;
+          wl o "  (LWP.parse_maybe_enum %s_repr_lwp_parser (LP.dsum_enum %s_sum))\n" tn n;
+          wl o "  %s\n" (assume_some (lwp_combinator_name n));
+          wl o "  write_maybe_%s_key\n" tn;
+          wl o "  (unknown_%s_as_enum_key k)\n" tn;
+          wl o "  %s\n" lwp;
+          wl o "  inv\n";
+          wl o "  f\n";
+          wl o "\n"
+       end
     | None ->
        wl o "inline_for_extraction noextract let %s_lwp_parse_sum : LWP.parse_sum_t = {\n" n;
        wl o "  LWP.sum_kt = _;\n";
