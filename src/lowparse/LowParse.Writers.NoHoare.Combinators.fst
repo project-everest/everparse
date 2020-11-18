@@ -100,6 +100,16 @@ let parse_vldata_recast
 = twrite_of_ewrite (fun _ -> parse_vldata_recast p min max min' max')
 
 inline_for_extraction
+let lptr_of_vllist_ptr
+  (#inv: memory_invariant)
+  (p: parser1)
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
+  (r: ptr (parse_vllist p min max) inv)
+: TRead (lptr p inv) inv
+= tread_of_eread (fun _ -> lptr_of_vllist_ptr p min max r)
+
+inline_for_extraction
 let destr_list'
   (#p: parser1)
   (#inv: memory_invariant)
