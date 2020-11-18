@@ -30,8 +30,8 @@ let valid_rewrite_parse_synth_gen
   );
 }
 
-let valid_rewrite_parse_synth_recip
-  p1 #t2 f2 f1 sq
+let valid_rewrite_parse_synth_gen_recip
+  p1 p2 f2 f1 sq
 = {
   valid_rewrite_valid = (fun h b pos pos' ->
     LP.synth_injective_synth_inverse_synth_inverse_recip f2 f1 ();

@@ -19,6 +19,21 @@ let valid_rewrite_parse_synth_gen'
 : Tot (squash (valid_rewrite_prop p1 p2))
 = tvalid_rewrite_of_evalid_rewrite (valid_rewrite_parse_synth_gen p1 p2 f2 f1 sq)
 
+let valid_rewrite_parse_synth_gen_recip'
+  (p1: parser)
+  (p2: parser)
+  (f2: Parser?.t p1 -> GTot (Parser?.t p2))
+  (f1: Parser?.t p2 -> GTot (Parser?.t p1))
+  (sq: squash (
+    LP.synth_injective f2 /\
+    LP.synth_inverse f2 f1 /\
+    get_parser_kind p2 == get_parser_kind p1 /\
+    get_parser p2 == LP.coerce (LP.parser (get_parser_kind p2) (Parser?.t p2)) (get_parser p1 `LP.parse_synth` f2) /\
+    get_serializer p2 == LP.coerce (LP.serializer (get_parser p2)) (LP.serialize_synth (get_parser p1) f2 (get_serializer p1) f1 ())
+  ))
+: Tot (squash (valid_rewrite_prop p2 p1))
+= tvalid_rewrite_of_evalid_rewrite (valid_rewrite_parse_synth_gen_recip p1 p2 f2 f1 sq)
+
 let valid_rewrite_parse_synth'
   (p1: parser)
   (#t2: Type)
