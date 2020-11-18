@@ -361,6 +361,17 @@ let frame2_impl
 
 #pop-options
 
+let ifthenelse_combinator_impl
+  #a ppre pre p
+  post_true post_false
+  post_err_true post_err_false
+  l cond f_true f_false
+=
+  fun buf len pos ->
+    if cond
+    then destr_repr_impl a ppre p pre post_true post_err_true l (f_true ()) buf len pos
+    else destr_repr_impl a ppre p pre post_false post_err_false l (f_false ()) buf len pos
+
 let valid_rewrite_impl
   p1 p2 precond f v inv
 =

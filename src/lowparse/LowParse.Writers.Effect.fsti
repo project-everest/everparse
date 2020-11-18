@@ -1650,6 +1650,71 @@ let frame2
 : EWrite a (frame `parse_pair` ppre) (frame_out a frame p) (frame2_pre frame ppre pre) (frame2_post a frame ppre pre p post) (frame2_post_err frame ppre pre post_err) l
 = frame2_repr a frame ppre pre p post post_err l inner ()
 
+let ifthenelse_combinator_spec
+  (#a: Type)
+  (ppre: parser)
+  (pre: pre_t ppre)
+  (p: parser)
+  (post_true post_false: post_t a ppre p pre)
+  (post_err_true post_err_false: post_err_t ppre pre)
+  (l: memory_invariant)
+  (cond: bool)
+  (f_true: squash cond -> unit -> EWrite a ppre p pre post_true post_err_true l)
+  (f_false: squash (not cond) -> unit -> EWrite a ppre p pre post_false post_err_false l)
+: Tot (repr_spec a ppre p pre (fun vin res vout -> if cond then post_true vin res vout else post_false vin res vout) (fun vin -> if cond then post_err_true vin else post_err_false vin))
+=
+  if cond
+  then destr_repr_spec a ppre p pre post_true post_err_true l (f_true ())
+  else destr_repr_spec a ppre p pre post_false post_err_false l (f_false ())
+
+inline_for_extraction
+val ifthenelse_combinator_impl
+  (#a: Type)
+  (ppre: parser)
+  (pre: pre_t ppre)
+  (p: parser)
+  (post_true post_false: post_t a ppre p pre)
+  (post_err_true post_err_false: post_err_t ppre pre)
+  (l: memory_invariant)
+  (cond: bool)
+  (f_true: squash cond -> unit -> EWrite a ppre p pre post_true post_err_true l)
+  (f_false: squash (not cond) -> unit -> EWrite a ppre p pre post_false post_err_false l)
+: Tot (repr_impl _ _ _ _ _ _ l (ifthenelse_combinator_spec ppre pre p post_true post_false post_err_true post_err_false l cond f_true f_false))
+
+inline_for_extraction
+let ifthenelse_combinator_repr
+  (#a: Type)
+  (ppre: parser)
+  (pre: pre_t ppre)
+  (p: parser)
+  (post_true post_false: post_t a ppre p pre)
+  (post_err_true post_err_false: post_err_t ppre pre)
+  (l: memory_invariant)
+  (cond: bool)
+  (f_true: squash cond -> unit -> EWrite a ppre p pre post_true post_err_true l)
+  (f_false: squash (not cond) -> unit -> EWrite a ppre p pre post_false post_err_false l)
+: Tot (unit -> EWrite a ppre p pre (fun vin res vout -> if cond then post_true vin res vout else post_false vin res vout) (fun vin -> if cond then post_err_true vin else post_err_false vin) l)
+=
+  mk_repr
+    a ppre p pre (fun vin res vout -> if cond then post_true vin res vout else post_false vin res vout) (fun vin -> if cond then post_err_true vin else post_err_false vin) l
+    (ifthenelse_combinator_spec ppre pre p post_true post_false post_err_true post_err_false l cond f_true f_false)
+    (ifthenelse_combinator_impl ppre pre p post_true post_false post_err_true post_err_false l cond f_true f_false)
+
+inline_for_extraction
+let ifthenelse_combinator
+  (#a: Type)
+  (ppre: parser)
+  (pre: pre_t ppre)
+  (p: parser)
+  (post_true post_false: post_t a ppre p pre)
+  (post_err_true post_err_false: post_err_t ppre pre)
+  (l: memory_invariant)
+  (cond: bool)
+  (f_true: squash cond -> EWrite a ppre p pre post_true post_err_true l)
+  (f_false: squash (not cond) -> EWrite a ppre p pre post_false post_err_false l)
+: EWrite a ppre p pre (fun vin res vout -> if cond then post_true vin res vout else post_false vin res vout) (fun vin -> if cond then post_err_true vin else post_err_false vin) l
+= ifthenelse_combinator_repr ppre pre p post_true post_false post_err_true post_err_false l cond (fun sq _ -> f_true sq) (fun sq _ -> f_false sq) ()
+
 noeq
 [@erasable] // very important, otherwise KReMLin will fail with argument typing
 type valid_rewrite_t

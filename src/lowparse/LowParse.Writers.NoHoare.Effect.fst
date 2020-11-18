@@ -620,6 +620,19 @@ let frame
 =
   twrite_of_ewrite (fun _ -> frame' _ _ _ _ (fun _ -> ewrite_of_twrite f))
 
+inline_for_extraction
+let ifthenelse_combinator
+  (#a: Type)
+  (#ppre: parser)
+  (#p: parser)
+  (#l: memory_invariant)
+  (cond: bool)
+  (f_true: squash cond -> TWrite a ppre p l)
+  (f_false: squash (not cond) -> TWrite a ppre p l)
+: TWrite a ppre p l
+=
+  twrite_of_ewrite #a #l #ppre #p (ifthenelse_combinator_repr #a ppre (fun _ -> True) p (fun _ _ _ -> True) (fun _ _ _ -> True) (fun _ -> True) (fun _ -> True) l cond (fun sq _ -> ewrite_of_twrite #a #l #ppre #p (fun _ -> f_true sq)) (fun sq _ -> ewrite_of_twrite #a #l #ppre #p (fun _ -> f_false sq)))
+
 let valid_rewrite_compose
   (#p1: parser)
   (#p2: parser)
