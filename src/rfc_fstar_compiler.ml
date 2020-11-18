@@ -2074,6 +2074,12 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
           wl i "val %s_lserializer : LL.serializer32 %s\n\n" n (scombinator_name n);
           wl o "let %s_lserializer = %s\n\n" n (lscombinator_name ty)
       end;
+      begin match lwp_combinator_name ty with
+      | None -> ()
+      | Some lwp ->
+         wl i "inline_for_extraction noextract val %s_valid_rewrite : squash (LWP.valid_rewrite_prop %s %s)\n\n" n lwp (assume_some (lwp_combinator_name n));
+         wl o "let %s_valid_rewrite = LWP.valid_rewrite_parser_eq' _ _\n\n" n
+      end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
       if ty <> "Empty" && ty <> "Fail"
