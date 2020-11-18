@@ -2451,6 +2451,11 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wl o "let %s_length #_ #_ input pos =\n" n;
       wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
       wl o "  LL.bounded_vlbytes_payload_length %d %d input pos\n\n" low high;
+      (* low-level writer *)
+      wl i "val %s_lwp_rewrite : squash (LWP.valid_rewrite_prop (LWP.parse_vlbytes %dul %dul) %s)\n\n" n low high (assume_some (lwp_combinator_name n));
+      wl o "let %s_lwp_rewrite =\n" n;
+      wl o "  assert_norm (LP.parse_bounded_vlbytes_t %d %d == %s);\n" low high n;
+      wl o "  LWP.valid_rewrite_parser_eq' _ _\n\n";
       (* finalizer *)
       wl i "val %s_finalize (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) (len: U32.t) : HST.Stack U32.t\n\n" n;
       wl i "  (requires (fun h ->\n";
