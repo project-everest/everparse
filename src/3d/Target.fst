@@ -403,7 +403,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
   | Validate_return ->
     Printf.sprintf "validate_ret"
   | Validate_app hd args ->
-    Printf.sprintf "(validate_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
+    Printf.sprintf "(validate_eta (validate_%s %s))" (print_ident hd) (String.concat " " (print_indexes args))
   | Validate_nlist e p ->
     Printf.sprintf "(validate_nlist %s %s)" (print_expr e) (print_validator p)
   | Validate_t_at_most e p ->
@@ -876,9 +876,6 @@ let print_c_entry (modul: string)
     let impl =
       Printf.sprintf
       "%s {\n\t\
-         InputBuffer s;\n\t\
-         s.base = base;\n\t\
-         s.len = len;\n\t\
          uint64_t result = %s(%s, 0);\n\t\
          if (EverParseResultIsError(result)) {\n\t\t\
            %sEverParseError(\n\t\
@@ -891,7 +888,7 @@ let print_c_entry (modul: string)
        }"
        signature
        validator_name
-       (((List.Tot.map (fun (id, _) -> print_ident id) d.decl_name.td_params)@["s"]) |> String.concat ", ")
+       (((List.Tot.map (fun (id, _) -> print_ident id) d.decl_name.td_params)@["len"; "base"]) |> String.concat ", ")
        modul
        modul
        modul

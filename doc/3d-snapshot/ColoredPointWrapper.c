@@ -23,10 +23,7 @@ static char* ColoredPointFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN ColoredPointCheckColoredPoint1(uint8_t *base, uint32_t len) {
-	InputBuffer s;
-	s.base = base;
-	s.len = len;
-	uint64_t result = ColoredPointValidateColoredPoint1(s, 0);
+	uint64_t result = ColoredPointValidateColoredPoint1(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		ColoredPointEverParseError(
 	ColoredPointStructNameOfErr(result),
@@ -38,10 +35,7 @@ BOOLEAN ColoredPointCheckColoredPoint1(uint8_t *base, uint32_t len) {
 }
 
 BOOLEAN ColoredPointCheckColoredPoint2(uint8_t *base, uint32_t len) {
-	InputBuffer s;
-	s.base = base;
-	s.len = len;
-	uint64_t result = ColoredPointValidateColoredPoint2(s, 0);
+	uint64_t result = ColoredPointValidateColoredPoint2(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		ColoredPointEverParseError(
 	ColoredPointStructNameOfErr(result),

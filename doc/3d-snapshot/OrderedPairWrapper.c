@@ -19,10 +19,7 @@ static char* OrderedPairFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN OrderedPairCheckOrderedPair(uint8_t *base, uint32_t len) {
-	InputBuffer s;
-	s.base = base;
-	s.len = len;
-	uint64_t result = OrderedPairValidateOrderedPair(s, 0);
+	uint64_t result = OrderedPairValidateOrderedPair(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		OrderedPairEverParseError(
 	OrderedPairStructNameOfErr(result),

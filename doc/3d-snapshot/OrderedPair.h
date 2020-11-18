@@ -1,16 +1,19 @@
 
 
-
-
 #ifndef __OrderedPair_H
 #define __OrderedPair_H
 
-#include "EverParse.h"
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-uint64_t OrderedPairValidateOrderedPair(InputBuffer Input, uint64_t StartPosition);
+#include "EverParse.h"
+
+
+#include "Smoker.h"
+
+uint64_t
+OrderedPairValidateOrderedPair(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)
 }

@@ -7,7 +7,7 @@ Auto-generated field identifier for error reporting
 */
 #define TRIANGLE__CORNERS ((uint64_t)3U)
 
-static inline uint64_t ValidateTriangleCorners(InputBuffer Input, uint64_t StartPosition)
+static inline uint64_t ValidateTriangleCorners(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _triangle_corners
@@ -16,15 +16,15 @@ static inline uint64_t ValidateTriangleCorners(InputBuffer Input, uint64_t Start
 {
   /* Validating field corners */
   uint64_t endPositionOrError;
-  if ((uint32_t)(uint8_t)3U % (uint32_t)4U == (uint32_t)0U)
+  if ((uint32_t)4U * (uint32_t)(uint8_t)3U % (uint32_t)4U == (uint32_t)0U)
   {
-    if (((uint64_t)Input.len - StartPosition) < (uint64_t)(uint32_t)(uint8_t)3U)
+    if (((uint64_t)InputLength - StartPosition) < (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U))
     {
       endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
     else
     {
-      endPositionOrError = StartPosition + (uint64_t)(uint32_t)(uint8_t)3U;
+      endPositionOrError = StartPosition + (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U);
     }
   }
   else
@@ -34,9 +34,10 @@ static inline uint64_t ValidateTriangleCorners(InputBuffer Input, uint64_t Start
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, TRIANGLE__CORNERS);
 }
 
-uint64_t Triangle2ValidateTriangle(InputBuffer Input, uint64_t StartPosition)
+uint64_t
+Triangle2ValidateTriangle(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 {
   /* Field _triangle_corners */
-  return ValidateTriangleCorners(Input, StartPosition);
+  return ValidateTriangleCorners(InputLength, StartPosition);
 }
 

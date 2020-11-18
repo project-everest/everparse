@@ -1,7 +1,7 @@
 
 
-#ifndef __BoundedSumWhere_H
-#define __BoundedSumWhere_H
+#ifndef __ReadPair_H
+#define __ReadPair_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -13,9 +13,10 @@ extern "C" {
 #include "Smoker.h"
 
 uint64_t
-BoundedSumWhereValidateBoundedSum(
-  uint32_t Bound,
-  uint32_t InputLength,
+ReadPairValidatePair(
+  uint32_t *X,
+  uint32_t *Y,
+  uint32_t Uu,
   uint8_t *Input,
   uint64_t StartPosition
 );
@@ -24,5 +25,5 @@ BoundedSumWhereValidateBoundedSum(
 }
 #endif
 
-#define __BoundedSumWhere_H_DEFINED
+#define __ReadPair_H_DEFINED
 #endif

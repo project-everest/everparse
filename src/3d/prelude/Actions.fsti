@@ -42,7 +42,7 @@ let liveness_inv = i:hinv {
 let mem_inv  = liveness_inv
 let slice_inv =  mbuffer LPL.byte triv triv -> mem_inv
 let inv_implies (inv0 inv1:slice_inv) =
-  forall (i:input_buffer_t) h.
+  forall (#len: U32.t) (i:input_buffer_t len) h.
     inv0 (LPL.slice_of i).LPL.base h ==> inv1 (LPL.slice_of i).LPL.base h
 let true_inv : slice_inv = fun _ _ -> True
 let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h
@@ -75,6 +75,19 @@ val validate_with_action_t
       (l:eloc)
       (allow_reading:bool)
     : Type0
+
+inline_for_extraction
+noextract
+val validate_eta
+      (#nz:bool)
+      (#k:parser_kind nz)
+      (#t:Type)
+      (#p:parser k t)
+      (#inv:slice_inv)
+      (#l:eloc)
+      (#allow_reading:bool)
+      (v: validate_with_action_t p inv l allow_reading)
+: Tot (validate_with_action_t p inv l allow_reading)
 
 inline_for_extraction noextract
 val act_with_comment
