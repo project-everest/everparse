@@ -45,7 +45,8 @@ inline_for_extraction
 let start
   (p: parser)
   (w: LP.leaf_writer_strong (get_serializer p) {
-    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low /\
+    (get_parser_kind p).LP.parser_kind_low <= 4294967295
   })
   (#l: memory_invariant)
   (x: Parser?.t p)
@@ -57,7 +58,8 @@ let append
   (#fr: parser)
   (p: parser)
   (w: LP.leaf_writer_strong (get_serializer p) {
-    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low /\
+    (get_parser_kind p).LP.parser_kind_low <= 4294967295
   })
   (#l: memory_invariant)
   (x: Parser?.t p)

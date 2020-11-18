@@ -81,7 +81,8 @@ inline_for_extraction
 val leaf_writer_of_lp_leaf_writer
   (p: parser)
   (w: LP.leaf_writer_strong (get_serializer p) {
-    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low /\
+    (get_parser_kind p).LP.parser_kind_low <= 4294967295
   })
 : Tot (leaf_writer p)
 
@@ -89,7 +90,8 @@ inline_for_extraction
 let start
   (p: parser)
   (w: LP.leaf_writer_strong (get_serializer p) {
-    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low /\
+    (get_parser_kind p).LP.parser_kind_low <= 4294967295
   })
   (#l: memory_invariant)
   (x: Parser?.t p)
@@ -101,7 +103,8 @@ let append
   (#fr: parser)
   (p: parser)
   (w: LP.leaf_writer_strong (get_serializer p) {
-    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low
+    (get_parser_kind p).LP.parser_kind_high == Some (get_parser_kind p).LP.parser_kind_low /\
+    (get_parser_kind p).LP.parser_kind_low <= 4294967295
   })
   (#l: memory_invariant)
   (x: Parser?.t p)
@@ -428,6 +431,7 @@ let parse_vldata_intro_weak_ho'
     )
     inv
 =
+  [@inline_let]
   let int_size = log256 max in
   start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);

@@ -40,9 +40,7 @@ let leaf_reader_of_lp_leaf_reader
 inline_for_extraction
 let leaf_writer_of_lp_leaf_writer
   p w
-= if (get_parser_kind p).LP.parser_kind_low > 4294967295
-  then (fun b len x -> None)
-  else (fun b len x ->
+= (fun b len x ->
     if len `U32.lt` U32.uint_to_t ((get_parser_kind p).LP.parser_kind_low)
     then None
     else Some (w x (LP.make_slice b len) 0ul)

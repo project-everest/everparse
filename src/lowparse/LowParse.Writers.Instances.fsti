@@ -194,7 +194,8 @@ let write_sum
   (pe: pparser _ _ _ (LP.serialize_enum_key ps.sum_p ps.sum_s (LP.sum_enum ps.sum_t)))
   (p: pparser _ _ _ (LP.serialize_sum ps.sum_t ps.sum_s #ps.sum_pc ps.sum_sc))
   (w: LP.leaf_writer_strong (LP.serialize_enum_key ps.sum_p ps.sum_s (LP.sum_enum ps.sum_t)) {
-    ps.sum_kt.LP.parser_kind_high == Some ps.sum_kt.LP.parser_kind_low
+    ps.sum_kt.LP.parser_kind_high == Some ps.sum_kt.LP.parser_kind_low /\
+    ps.sum_kt.LP.parser_kind_low <= 4294967295
   })
   (k: LP.sum_key ps.sum_t)
   (pk: pparser _ _ (dsnd (ps.sum_pc k)) (ps.sum_sc k))
@@ -271,7 +272,8 @@ let write_dsum_known
   (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
   (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
   (w: LP.leaf_writer_strong (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)) {
-    ps.dsum_kt.LP.parser_kind_high == Some ps.dsum_kt.LP.parser_kind_low
+    ps.dsum_kt.LP.parser_kind_high == Some ps.dsum_kt.LP.parser_kind_low /\
+    ps.dsum_kt.LP.parser_kind_low <= 4294967295
   })
   (k: LP.dsum_known_key ps.dsum_t)
   (pk: pparser _ _ (dsnd (ps.dsum_pc k)) (ps.dsum_sc k))
@@ -305,7 +307,8 @@ let write_dsum_unknown
   (pe: pparser _ _ _ (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)))
   (p: pparser _ _ _ (LP.serialize_dsum ps.dsum_t ps.dsum_s ps.dsum_pc ps.dsum_sc ps.dsum_pu ps.dsum_su))
   (w: LP.leaf_writer_strong (LP.serialize_maybe_enum_key ps.dsum_p ps.dsum_s (LP.dsum_enum ps.dsum_t)) {
-    ps.dsum_kt.LP.parser_kind_high == Some ps.dsum_kt.LP.parser_kind_low
+    ps.dsum_kt.LP.parser_kind_high == Some ps.dsum_kt.LP.parser_kind_low /\
+    ps.dsum_kt.LP.parser_kind_low <= 4294967295
   })
   (k: LP.dsum_unknown_key ps.dsum_t)
   (pk: pparser _ _ _ ps.dsum_su)
