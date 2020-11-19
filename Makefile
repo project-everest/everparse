@@ -28,6 +28,11 @@ lowparse-unit-test: lowparse
 3d-doc-test: 3d
 	+$(MAKE) -C doc 3d
 
+3d-doc-ci: 3d
+	+$(MAKE) -C doc 3d-ci
+
+3d-ci: 3d-unit-test 3d-doc-ci
+
 3d-test: 3d-unit-test 3d-doc-test
 
 lowparse-bitfields-test: lowparse
@@ -45,12 +50,14 @@ quackyducky-test: quackyducky-unit-test quackyducky-sample-test
 
 test: lowparse-test quackyducky-test 3d-test
 
+ci: lowparse-test quackyducky-test 3d-ci
+
 clean:
 	+$(MAKE) -C src/3d clean
 	+$(MAKE) -C src/lowparse clean
 	rm -rf *~ src/*~ _build src/*lexer.ml src/*parser.ml src/*parser.mli qd quackyducky.native
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test 3d-doc-ci 3d-ci ci
 
 release:
 	+src/package/release.sh

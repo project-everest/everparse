@@ -140,7 +140,7 @@ function raise () {
 function build_and_test_quackyducky() {
     fetch_and_make_kremlin &&
     fetch_and_make_hacl &&
-    make -j $threads -k test &&
+    make -j $threads -k ci &&
     # Build incrementality test
     pushd tests/sample && {
         {
