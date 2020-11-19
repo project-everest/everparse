@@ -1693,6 +1693,11 @@ public:
       /* Print the field name */
       Out << F->getName();
 
+      /* Print bitwidth if any */
+      if (F->isBitField()) {
+          Out << ":" << F->getBitWidthValue(AC);
+      }
+
       /* Print byte size if any (TODO: check this is actually an array */
       switch (ArrayKind) {
       case NotAnArray:
