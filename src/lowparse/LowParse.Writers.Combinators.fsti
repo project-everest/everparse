@@ -197,7 +197,16 @@ inline_for_extraction
 let log256
   (max: U32.t { U32.v max > 0 })
 : Tot integer_size
-=
+= [@inline_let] let max = U32.v max in
+  if max < 256
+  then 1ul
+  else if max < 65536
+  then 2ul
+  else if max < 16777216
+  then 3ul
+  else 4ul
+
+(*
   if max `U32.lt` 256ul
   then 1ul
   else if max `U32.lt` 65536ul
@@ -205,6 +214,7 @@ let log256
   else if max `U32.lt` 16777216ul
   then 3ul
   else 4ul
+*)
 
 val size_parse_vldata
   (p: parser)
@@ -299,6 +309,7 @@ let parse_vldata_intro_ho
     )
     inv
 =
+  [@inline_let]
   let int_size = log256 max in
   start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
@@ -327,6 +338,7 @@ let parse_vldata_intro_ho'
     )
     inv
 =
+  [@inline_let]
   let int_size = log256 max in
   start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
@@ -405,6 +417,7 @@ let parse_vldata_intro_weak_ho
     )
     inv
 =
+  [@inline_let]
   let int_size = log256 max in
   start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
