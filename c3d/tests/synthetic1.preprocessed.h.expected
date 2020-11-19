@@ -113,3 +113,191 @@ typedef struct/* [[
   /*  [[everparse::with(Tag),
       everparse::with(MessageLength - sizeof(this))]]*/;
 } CONTAINER_1;
+
+typedef struct/* [[
+  everparse::process(0),
+  everparse::entrypoint,
+  everparse::parameter(UINT32 PLen),
+  everparse::parameter(UINT32 HLen),
+  everparse::mutable_parameter(UINT32 *offset1),
+  everparse::mutable_parameter(UINT32 *len1),
+  everparse::mutable_parameter(UINT32 *offset2),
+  everparse::mutable_parameter(UINT32 *len2),
+  everparse::where(sizeof(this) <= HLen && HLen <= PLen),
+]*/] _HEADER {
+  UINT32 Offset1
+  /*  [[everparse::constraint(sizeof(this) <= Offset1)]]
+    [[everparse::on_success(^{
+      *offset1 = Offset1;
+      return true;
+      })]]*/
+    ;
+
+  UINT32 Len1
+  /*  [[everparse::constraint(is_range_okay(PLen, Offset1, Len1))]]
+    [[everparse::on_success(^{
+      *len1 = Len1;
+      return true;
+      })]]*/
+    ;
+
+  UINT32 Dummy
+  /*  [[everparse::constraint(Dummy == 0)]]*/
+    ;
+
+  UINT32 Offset2
+    /* no constraint */
+  /*  [[everparse::on_success(^{
+      *offset2 = Offset2;
+      return true;
+      })]]*/
+    ;
+
+  UINT32 Len2
+  /*  [[everparse::constraint(
+      /* coding an if-then as an expression */
+      !(Offset2 != 0 || Len2 != 0) || (
+        is_range_okay (HLen, Offset2, Len2) &&
+        Offset2 >= sizeof(this) &&
+        Offset2 + Len2 <= Offset2
+      ))
+    ]]
+    [[everparse::on_success(^{
+      *len2 = Len2;
+      return true;
+      })]]*/
+    ;
+
+  UINT32_Alias1 Dummy2
+  /*  [[everparse::constraint(Dummy2 == 0)]]*/
+    ;
+
+  UINT32_Alias1 Dummy3
+    ;
+
+} HEADER;
+
+typedef struct/* [[
+  everparse::process(0),
+  everparse::parameter(UINT32 Bound)
+]]*/ _BITIFIELD0
+{
+  ULONG bit_0:1;
+  ULONG bit_1:1;
+  ULONG bit_2:1;
+  ULONG bit_3:1;
+  ULONG bit_4:1;
+  /* Attributes must appear before the bitwidth */
+  ULONG bit_5_16
+  /*  [[everparse::constraint(bit_5_16 < 2000)]]*/
+    : 11
+    ;
+  ULONG bit_16_26
+  /*  [[everparse::constraint(bit_16_26 < 2000 &&
+                            bit_5_16 + bit_16_26 <= Bound)]]*/
+    : 10
+    ;
+} BITFIELD0;
+
+typedef struct/* [[
+  everparse::process(0),
+  everparse::parameter(UINT32 Bound)
+]]*/ _BITIFIELD1
+{
+  ULONG bit_0:1;
+  ULONG bit_1:1;
+  ULONG bit_2:1;
+  ULONG bit_3:1;
+  ULONG bit_4:1;
+  ULONG bit_5_16
+  /*  [[everparse::constraint(bit_5_16 < 2000)]]*/
+    : 11
+    ;
+  ULONG bit_16_26
+  /*  [[everparse::constraint(bit_16_26 < 2000 &&
+                            bit_5_16 + bit_16_26 <= Bound)]]*/
+    : 10
+    ;
+} BITFIELD1;
+
+#define CONST1  91
+#define CONST2  113
+
+typedef struct/* [[
+  everparse::process(0),
+  everparse::parameter(UINT32 Bound)
+]]*/ _BITIFIELD2
+{
+  ULONG bit_0_8
+  /*  [[everparse::constraint(1)]]*/ // Brings it into C3d scope
+    :8
+    ;
+  ULONG bit_8_16
+  /*  [[everparse::constraint(bit_8_16 <= 220)]]*/
+    :8
+    ;
+
+  ULONG bit_16_24
+  /*  [[everparse::constraint(bit_16_24 == 0
+                              || (bit_16_24 * 4 + CONST1 + CONST2 <= Bound))]]*/
+    :8
+    ;
+  ULONG bit_24_32
+  /*  [[everparse::constraint
+              (bit_24_32 == 0 || (bit_24_32 * 4 + CONST1 + CONST2 <= Bound))]]
+    [[everparse::constraint
+              (bit_24_32 == 0 || (bit_16_24 * 4 + CONST1 + CONST2 + bit_0_8 <= Bound))]]*/
+    :8
+    ;
+} BITFIELD2;
+
+#define UNION2_CASE0 0
+#define UNION2_CASE1 1
+#define UNION2_CASE2 2
+#define UNION2_CASE3 3
+#define UNION2_CASE4 4
+#define UNION2_CASE5 5
+#define UNION2_CASE6 6
+#define UNION2_CASE7 7
+#define UNION2_CASE8 8
+#define UNION2_CASE9 9
+#define UNION2_CASE10 10
+#define UNION2_CASE11 11
+#define UNION2_CASE12 12
+
+typedef union/* [[
+  everparse::process(0),
+  everparse::parameter(UINT32 Tag),
+  everparse::switch(UINT32 Len),
+  everparse::mutable_parameter(UINT32 *Out0),
+  everparse::mutable_parameter(UINT32 *Out1),
+  everparse::mutable_parameter(UINT32 *Out2),
+]*/] _UNION2 {
+  BITFIELD0 bf0
+  /*  [[everparse::case(UNION2_CASE0)]]
+    [[everparse::with(Len)]]
+    [[everparse::on_success(^{
+      *Out0 = 42; // bf0; // GM: ill-typed?
+      return true;
+      })]]*/
+    ;
+
+  BITFIELD0 bf1
+  /*  [[everparse::case(UNION2_CASE1)]]
+    [[everparse::with(Len)]]
+    [[everparse::on_success(^{
+      *Out1 = 42;
+      return true;
+      })]]*/
+    ;
+
+  BITFIELD0 bf2
+  /*  [[everparse::case(UNION2_CASE2)]]
+    [[everparse::with(Len)]]
+    [[everparse::on_success(^{
+      *Out2 = 42;
+      return true;
+      })]]*/
+    ;
+
+} UNION2;
