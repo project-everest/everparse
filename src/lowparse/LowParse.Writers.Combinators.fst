@@ -770,7 +770,7 @@ let do_while_impl
         | IError s ->
           stop == true /\
           do_while_spec' inv #p #t invariant measure error body x0 (Ghost.reveal vin0) == Error s
-        | IOverflow ->
+        | _ ->
           stop == true /\
           begin match do_while_spec' inv #p #t invariant measure error body x0 (Ghost.reveal vin0) with
           | Error _ -> True
@@ -796,7 +796,7 @@ let do_while_impl
         | IError s ->
           B.upd btemp 0ul (IError s);
           true
-        | IOverflow ->
+        | _ ->
           assert (match do_while_spec' inv #p #t invariant measure error body x vin with
           | Error _ -> True
           | Correct (_, vout) ->

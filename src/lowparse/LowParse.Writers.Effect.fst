@@ -237,8 +237,8 @@ let bind_impl
 = fun buf len pos ->
   match f' buf len pos with
   | IError e -> IError e
-  | IOverflow -> IOverflow
   | ICorrect x posf -> g' x buf len posf
+  | _ -> IOverflow
 
 inline_for_extraction
 let subcomp_impl
@@ -297,7 +297,6 @@ let frame_impl
   let buf' = B.offset buf pos in
   match destr_repr_impl a parse_empty p pre post post_err l inner buf' (len `U32.sub` pos) 0ul with
   | IError e -> IError e
-  | IOverflow -> IOverflow
   | ICorrect x wlen ->
     let h' = HST.get () in
     let pos' = pos `U32.add` wlen in
@@ -305,6 +304,7 @@ let frame_impl
     valid_frame frame h buf 0ul pos (B.loc_buffer buf') h';
     valid_parse_pair frame (p) h' buf 0ul pos pos' ;
     ICorrect x pos'
+  | _ -> IOverflow
 
 #push-options "--z3rlimit 128"
 
@@ -314,8 +314,8 @@ let elem_writer_impl
   fun b len pos ->
   let b' = B.offset b pos in
   match w b' (len `U32.sub` pos) x with
-  | None -> IOverflow
   | Some xlen -> ICorrect () (pos `U32.add` xlen)
+  | _ -> IOverflow
 
 inline_for_extraction
 let recast_writer_impl
@@ -346,8 +346,6 @@ let frame2_impl
   let h1 = HST.get () in
   valid_frame ppre h buf' 0ul (pos `U32.sub` pos2) B.loc_none h1;
   match destr_repr_impl a ppre p pre post post_err l inner buf' (len `U32.sub` pos2) (pos `U32.sub` pos2) with
-  | IOverflow ->
-    IOverflow
   | IError e -> IError e
   | ICorrect x wlen ->
     let h' = HST.get () in
@@ -356,6 +354,7 @@ let frame2_impl
     valid_frame frame h buf 0ul pos2 (B.loc_buffer buf') h';
     valid_parse_pair frame (p) h' buf 0ul pos2 pos' ;
     ICorrect x pos'
+  | _ -> IOverflow
 
 #pop-options
 
