@@ -111,7 +111,7 @@ where (sizeof (this) <= HLen && HLen <= PLen)
   UINT32_Alias1 Dummy3;
 } HEADER, *PHEADER;
 
-typedef struct _BITIFIELD0 (uint32_t Bound) { 
+typedef struct _BITFIELD0 (uint32_t Bound) { 
   ULONG bit_0:1;
   ULONG bit_1:1;
   ULONG bit_2:1;
@@ -119,7 +119,7 @@ typedef struct _BITIFIELD0 (uint32_t Bound) {
   ULONG bit_4:1;
   ULONG bit_5_16:11 { bit_5_16 < 2000 } ;
   ULONG bit_16_26:10 { bit_16_26 < 2000 && bit_5_16 + bit_16_26 <= Bound } ;
-} BITIFIELD0, *PBITIFIELD0;
+} BITFIELD0, *PBITFIELD0;
 
 typedef struct _BITIFIELD1 (uint32_t Bound) { 
   ULONG bit_0:1;

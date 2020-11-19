@@ -180,7 +180,7 @@ typedef struct [[
 typedef struct [[
   everparse::process(0),
   everparse::parameter(UINT32 Bound)
-]] _BITIFIELD0
+]] _BITFIELD0
 {
   ULONG bit_0:1;
   ULONG bit_1:1;
