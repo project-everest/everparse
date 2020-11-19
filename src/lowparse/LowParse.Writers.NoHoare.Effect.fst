@@ -20,6 +20,7 @@ open LowParse.Writers.Effect
 
 open FStar.HyperStack.ST
 
+module E = LowParse.Writers.Effect
 module HS = FStar.HyperStack
 module B = LowStar.Buffer
 module U8 = FStar.UInt8
@@ -57,7 +58,7 @@ let read_return
   (inv: memory_invariant)
 : Tot (read_repr t inv)
 =
-  read_reify_trivial (read_return_conv t x inv)
+  read_subcomp _ _ _ _ _ _ _ _ _ (read_return t x inv)
 
 inline_for_extraction
 let read_bind_conv
@@ -77,7 +78,7 @@ let read_bind
   (f_bind : read_repr a l)
   (g : (x: a -> read_repr b l))
 : Tot (read_repr b l)
-= read_reify_trivial (read_bind_conv a b l f_bind g)
+= read_subcomp _ _ _ _ _ _ _ _ _ (read_bind _ _ _ _ _ _ _ _ _ f_bind g)
 
 inline_for_extraction
 let read_subcomp_conv (a:Type)
@@ -98,7 +99,7 @@ let read_subcomp (a:Type)
 : Pure (read_repr a l')
   (requires (l `memory_invariant_includes` l'))
   (ensures (fun _ -> True))
-= read_reify_trivial (read_subcomp_conv a l l' f_subcomp ())
+= read_subcomp _ _ _ _ _ _ _ _ _ f_subcomp
 
 inline_for_extraction
 let read_if_then_else (a:Type)
@@ -137,7 +138,7 @@ let lift_pure_read' (a:Type) (wp:pure_wp a)
 : Pure (read_repr a l)
   (requires (wp (fun _ -> True)))
   (ensures (fun _ -> True))
-= read_reify_trivial (lift_pure_read_conv a wp l f_pure ())
+= E.read_subcomp _ _ _ _ _ _ _ _ _ (lift_pure_read a wp l f_pure)
 
 sub_effect PURE ~> TRead = lift_pure_read'
 
@@ -261,7 +262,7 @@ let returnc
   (r: parser)
   (inv: memory_invariant)
 : Tot (repr t r r inv)
-= reify_trivial (return_conv t x r inv)
+= subcomp _ _ _ _ _ _ _ _ _ _ _ (returnc t x r inv)
 
 inline_for_extraction
 let bind_conv (a:Type) (b:Type)
@@ -283,7 +284,7 @@ let bind (a:Type) (b:Type)
   (f_bind : repr a r_in_f r_out_f l)
   (g : (x: a -> repr b (r_out_f) r_out_g l))
 : Tot (repr b r_in_f r_out_g l)
-= reify_trivial (bind_conv a b r_in_f r_out_f r_out_g l f_bind g)
+= subcomp _ _ _ _ _ _ _ _ _ _ _ (bind _ _ _ _ _ _ _ _ _ _ _ _ f_bind g)
 
 noeq
 type valid_rewrite_t'
@@ -382,7 +383,7 @@ let subcomp1
   ))
   (ensures (fun _ -> True))
 =
-  reify_trivial (subcomp_conv a r_in r_out l l' f_subcomp ())
+  subcomp _ _ _ _ _ _ _ _ _ _ _ f_subcomp
 
 inline_for_extraction
 let subcomp2
@@ -454,7 +455,7 @@ let lift_read
   (r: parser)
   (f_read_spec: read_repr a inv)
 : Tot (repr a r r inv)
-= reify_trivial (lift_read_conv a inv r f_read_spec)
+= E.subcomp _ _ _ _ _ _ _ _ _ _ _ (lift_read _ _ _ _ _ _ f_read_spec)
 
 sub_effect TRead ~> TWrite = lift_read
 
