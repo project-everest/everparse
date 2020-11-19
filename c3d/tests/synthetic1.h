@@ -123,7 +123,7 @@ typedef struct [[
   everparse::mutable_parameter(UINT32 *len1),
   everparse::mutable_parameter(UINT32 *offset2),
   everparse::mutable_parameter(UINT32 *len2),
-  everparse::where(sizeof(this) <= HLen && HLen <= PLen),
+  everparse::where(sizeof(this) <= HLen && HLen <= PLen)
 ]] _HEADER {
   UINT32 Offset1
     [[everparse::constraint(sizeof(this) <= Offset1)]]
@@ -154,8 +154,8 @@ typedef struct [[
     ;
 
   UINT32 Len2
+    /* coding an if-then as an expression below */
     [[everparse::constraint(
-      /* coding an if-then as an expression */
       !(Offset2 != 0 || Len2 != 0) || (
         is_range_okay (HLen, Offset2, Len2) &&
         Offset2 >= sizeof(this) &&
@@ -271,7 +271,7 @@ typedef union [[
   everparse::switch(UINT32 Len),
   everparse::mutable_parameter(UINT32 *Out0),
   everparse::mutable_parameter(UINT32 *Out1),
-  everparse::mutable_parameter(UINT32 *Out2),
+  everparse::mutable_parameter(UINT32 *Out2)
 ]] _UNION2 {
   BITFIELD0 bf0
     [[everparse::case(UNION2_CASE0)]]
