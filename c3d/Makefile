@@ -37,7 +37,7 @@ $(PLUGIN): src/C3d.cpp out
 	make -C out/
 
 $(TEST_DIR)/%.3d $(TEST_DIR)/%.preprocessed.h: $(TEST_DIR)/%.h $(PLUGIN) out 
-	${OURCLANG} -mllvm -debug-only=c3d -std=c2x -fblocks -fplugin=$(PLUGIN) -include ./tests/prelude.h $< 2>/dev/null
+	${OURCLANG} -mllvm -debug-only=c3d -std=c2x -fblocks -fplugin=$(PLUGIN) -include ./tests/prelude.h $< 2>$<.err || (cat $<.err ; false)
 
 $(TEST_DIR)/%.check:	$(TEST_DIR)/%.3dcheck \
 			$(TEST_DIR)/%.hcheck
