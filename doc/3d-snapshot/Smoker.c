@@ -12,10 +12,6 @@ Auto-generated field identifier for error reporting
 */
 #define SMOKER__CIGARETTESCONSUMED ((uint64_t)2U)
 
-#define Mkdtuple2 0
-
-typedef uint8_t InputBufferTTags;
-
 typedef uint8_t *InputBufferT;
 
 static inline uint64_t
