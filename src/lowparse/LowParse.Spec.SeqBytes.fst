@@ -39,7 +39,7 @@ let parse_seq_all_bytes_injective () : Lemma
   in
   Classical.forall_intro_2 (fun x -> Classical.move_requires (prf x))
 
-#reset-options "--use_two_phase_tc true"
+#reset-options
 
 let parse_seq_all_bytes_correct () : Lemma
   (parser_kind_prop parse_seq_all_bytes_kind parse_seq_all_bytes')
@@ -70,7 +70,7 @@ let serialize_seq_all_bytes_correct () : Lemma (serializer_correct parse_seq_all
   in
   Classical.forall_intro prf
 
-#reset-options "--use_two_phase_tc true"
+#reset-options
 
 let serialize_seq_all_bytes : serializer parse_seq_all_bytes =
   serialize_seq_all_bytes_correct ();
