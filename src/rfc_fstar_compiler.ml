@@ -536,8 +536,8 @@ let getdep (toplevel:bool) (p:gemstone_t) : typ list =
   let tn = tname toplevel p in
   let dep =
     match p with
-    | Abstract (_, _, min, max, _) ->
-      let li = { len_len = 0; min_len = min; max_len = max; min_count = 0; max_count = 0; vl = (min <> max); meta = MetadataDefault; has_lserializer = false; } in
+    | Abstract (attrs, _, min, max, _) ->
+      let li = { len_len = 0; min_len = min; max_len = max; min_count = 0; max_count = 0; vl = (min <> max); meta = MetadataDefault; has_lserializer = has_attr attrs "has_lserializer"; } in
       li_add tn li;
       ([]:typ list list)
     | Enum (a, fl, n) ->
@@ -932,10 +932,15 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   wl o "let %s_bytesize_eqn x = %s_bytesize_eq x; assert (FStar.Seq.length (LP.serialize %s_serializer x) <= %d); assert (%d <= FStar.Seq.length (LP.serialize %s_serializer x))\n\n" n n n blen blen n;
   ()
 
-and compile_abstract tch o i n dn min max =
+and compile_abstract tch o i n dn min max attrs =
   if !types_from = "" then w (type_channel tch i) "type %s = %s\n" n dn;
   let li = get_leninfo n in
-  write_api o i false li.meta n min max
+  write_api o i false li.meta n min max;
+  if has_attr attrs "has_lserializer"
+  then begin
+      wl i "val %s_reader : LL.leaf_reader %s\n\n" n (pcombinator_name n);
+      wl i "val %s_lserializer: LL.serializer32 %s\n\n" n (scombinator_name n);
+  end
   
 and compile_ite tch o i n sn fn tagn clen cval tt tf al  =
   let is_private = has_attr al "private" in
@@ -3108,8 +3113,8 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
 
   try let _ =
     match p with
-    | Abstract (_, dn, min, max, n) ->
-      compile_abstract tch o i n dn min max
+    | Abstract (attrs, dn, min, max, n) ->
+      compile_abstract tch o i n dn min max attrs
   	| Enum(al, fl, _) ->  compile_enum tch o i n fl al
     | Typedef(al, ty, n', vec, def) -> compile_typedef tch o i tn n' ty vec def al
     | Struct(al, fl, _) ->
