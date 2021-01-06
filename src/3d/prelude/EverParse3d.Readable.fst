@@ -118,6 +118,7 @@ let readable_not_unreadable h #t #b p from to =
 
 let unreadable_gsub h #t #b p offset length from to = ()
 
+#push-options "--warn_error -271"
 let unreadable_split_1
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -128,8 +129,26 @@ let unreadable_split_1
   (requires (unreadable h p from to))
   (ensures (unreadable h p from mid /\ unreadable h p mid to))
 =
-  Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
-  if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
+  let aux (#a:Type) (s:Seq.seq a) (from to mid:nat) (x:a)
+    : Lemma
+        (requires
+          from <= mid /\ mid <= to /\ to <= Seq.length s /\
+          Seq.equal (Seq.slice s from to) (Seq.create (to - from) x))
+        (ensures Seq.equal (Seq.slice s from mid)
+                           (Seq.create (mid - from) x) /\
+                 Seq.equal (Seq.slice s mid to)
+                           (Seq.create (to - mid) x))
+        [SMTPat ()]
+    = 
+    let aux0 (#a:Type) (s:Seq.seq a) (from:nat) (to:nat{from <= to /\ to <= Seq.length s})
+        (i:nat{from <= i /\ i < to})
+        : Lemma (Seq.index (Seq.slice s from to) (i - from) == Seq.index s i)
+                [SMTPat ()]
+        = Seq.lemma_index_slice s from to (i - from) in
+      assert (forall (i:nat). (from <= i /\ i < to) ==> Seq.index (Seq.slice s from to) (i - from) == x);
+      assert (forall (i:nat). (from <= i /\ i < to) ==> Seq.index s i == x) in
+  ()
+#pop-options
 
 let unreadable_split_2
   (h: HS.mem)

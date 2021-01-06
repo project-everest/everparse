@@ -224,7 +224,7 @@ let rec mk_validate_bitsum_cases_bitsum'_t'
     Tot (validate_bitsum_cases_t u#r b)
   )
 : Tot (validate_bitsum_cases_bitsum'_t u#r cl bitsum'_size key key_size e payload l1 l2)
-  (decreases (LexCons payload (LexCons l2 LexTop)))
+  (decreases %[payload; l2])
 = match l2 with
   | [] ->
     [@inline_let] let _ =
@@ -247,7 +247,7 @@ let rec mk_validate_bitsum_cases_t'
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
 : Tot (validate_bitsum_cases_t u#r b)
-  (decreases (LexCons b (LexCons () LexTop)))
+  (decreases b)
 = match b with
   | BitStop _ -> validate_bitsum_cases_bitstop cl
   | BitField sz rest -> validate_bitsum_cases_bitfield cl bitsum'_size sz rest (mk_validate_bitsum_cases_t' rest)

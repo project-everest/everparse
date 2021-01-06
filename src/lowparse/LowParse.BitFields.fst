@@ -611,6 +611,7 @@ let bitfield_eq_shift
 
 #pop-options
 
+#push-options "--z3rlimit 16"
 let set_bitfield_get_bitfield
   (#tot: pos)
   (x: U.uint_t tot)
@@ -622,6 +623,7 @@ let set_bitfield_get_bitfield
     if lo <= i && i < hi
     then nth_get_bitfield x lo hi (i - lo)
   )
+#pop-options
 
 #push-options "--z3rlimit 16"
 

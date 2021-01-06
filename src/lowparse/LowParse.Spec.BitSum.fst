@@ -1230,7 +1230,7 @@ let rec mk_filter_bitsum'_t'
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
 : Tot (filter_bitsum'_t b)
-  (decreases (LexCons b (LexCons () LexTop)))
+  (decreases %[b; ()])
 = match b with
   | BitStop _ -> filter_bitsum'_bitstop cl
   | BitField sz rest -> filter_bitsum'_bitfield cl bitsum'_size sz rest (mk_filter_bitsum'_t' rest)
@@ -1248,7 +1248,7 @@ and mk_filter_bitsum'_bitsum'_t'
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
 : Tot (filter_bitsum'_bitsum'_t cl bitsum'_size key key_size e payload l1 l2)
-  (decreases (LexCons payload (LexCons l2 LexTop)))
+  (decreases %[payload; l2])
 = match l2 with
   | [] ->
     [@inline_let] let _ =
@@ -1493,7 +1493,7 @@ let rec mk_destr_bitsum'_t
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
 : Tot (destr_bitsum'_t b <: Type u#1)
-  (decreases (LexCons b (LexCons () LexTop)))
+  (decreases %[b; ()])
 = match b with
   | BitStop _ -> destr_bitsum'_bitstop cl
   | BitField sz rest -> destr_bitsum'_bitfield cl bitsum'_size sz rest (mk_destr_bitsum'_t rest)
@@ -1511,7 +1511,7 @@ and mk_destr_bitsum'_bitsum_t
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
 : Tot (destr_bitsum'_bitsum_t cl bitsum'_size key key_size e payload l1 l2 <: Type u#1)
-  (decreases (LexCons payload (LexCons l2 LexTop)))
+  (decreases %[payload; l2])
 = match l2 with
   | [] ->
     [@inline_let] let _ =
@@ -1732,7 +1732,7 @@ let rec mk_synth_bitsum'_recip
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
 : Tot (synth_bitsum'_recip_t b)
-  (decreases (LexCons b (LexCons () LexTop)))
+  (decreases %[b; ()])
 = match b with
   | BitStop _ -> synth_bitsum'_recip_BitStop cl
   | BitField sz rest -> synth_bitsum'_recip_BitField cl bitsum'_size sz rest (mk_synth_bitsum'_recip rest)
@@ -1750,7 +1750,7 @@ and mk_synth_bitsum'_recip_BitSum
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
 : Tot (synth_bitsum'_recip_BitSum_t cl bitsum'_size key key_size e payload l1 l2)
-  (decreases (LexCons payload (LexCons l2 LexTop)))
+  (decreases %[payload; l2])
 = match l2 with
   | [] ->
     [@inline_let] let _ =
