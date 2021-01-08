@@ -2,7 +2,7 @@ module WeakenTac
 
 open Actions
 
-module T = FStar.Tactics
+module T = LowParse.TacLib
 
 let inv_implies_true (inv0:slice_inv) : Tot (squash (inv0 `inv_implies` true_inv)) = ()
 
@@ -26,42 +26,6 @@ let eloc_includes_refl (l: eloc) : Tot (squash (l `eloc_includes` l)) = ()
 
 let squash_1_to_2 (p: Type0) (_: squash p) : Tot (squash (squash p)) = ()
 
-(*
- * The following three functions app_head_rev_tail, app_head_tail, and tassert
- *   are copied from LowParse.TacLib
- * There these functions are marked noextract, that interferes with
- *   running them as a plugin
- *
- * TODO: remove `noextract` from these in LowParse, add this attribute, and see if
- *   there are any regressions
- *)
-[@@ noextract_to "Kremlin"]
-let rec app_head_rev_tail (t: T.term) :
-  T.Tac (T.term * list T.argv)
-=
-  let ins = T.inspect t in
-  if T.Tv_App? ins
-  then
-    let (T.Tv_App u v) = ins in
-    let (x, l) = app_head_rev_tail u in
-    (x, v :: l)
-  else
-    (t, [])
-
-[@@ noextract_to "Kremlin"]
-let app_head_tail (t: T.term) :
-    T.Tac (T.term * list T.argv)
-= let (x, l) = app_head_rev_tail t in
-  (x, FStar.List.Tot.rev l)
-
-[@@ noextract_to "Kremlin"]
-let tassert (b: bool) : T.Tac (squash b) =
-  if b
-  then ()
-  else
-    let s = T.term_to_string (quote b) in
-    T.fail ("Tactic assertion failed: " ^ s)
-
 [@@ noextract_to "Kremlin"]
 let rec subterm_appears_in_term
   (conj: T.term)
@@ -75,7 +39,7 @@ let rec subterm_appears_in_term
   then
     Some refl
   else
-    let (hd, tl) = app_head_tail term in
+    let (hd, tl) = T.app_head_tail term in
     if hd `T.term_eq` conj
     then
       match tl with 
@@ -93,7 +57,7 @@ let rec subterm_appears_in_term
     else
       None
 
-[@plugin]
+[@@ plugin; noextract_to "Kremlin"]
 let rec weaken_tac () : T.Tac unit =
     let open T in
     let n = T.ngoals () in

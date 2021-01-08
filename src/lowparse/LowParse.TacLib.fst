@@ -3,7 +3,7 @@ include FStar.Tactics
 
 module L = FStar.List.Tot
 
-noextract
+[@@ noextract_to "Kremlin"]
 let conclude ()
 : Tac unit
 = // dump "conclude before";
@@ -19,12 +19,12 @@ let conclude ()
 //  dump "conclude after";
   qed ()
 
-noextract
+[@@ noextract_to "Kremlin"]
 let solve_vc ()
 : Tac unit
 = exact_guard (quote ()); conclude ()
 
-noextract
+[@@ noextract_to "Kremlin"]
 let rec app_head_rev_tail (t: term) :
   Tac (term * list argv)
 =
@@ -37,13 +37,13 @@ let rec app_head_rev_tail (t: term) :
   else
     (t, [])
 
-noextract
+[@@ noextract_to "Kremlin"]
 let app_head_tail (t: term) :
     Tac (term * list argv)
 = let (x, l) = app_head_rev_tail t in
   (x, L.rev l)
 
-noextract
+[@@ noextract_to "Kremlin"]
 let tassert (b: bool) : Tac (squash b) =
   if b
   then ()
@@ -51,14 +51,14 @@ let tassert (b: bool) : Tac (squash b) =
     let s = term_to_string (quote b) in
     fail ("Tactic assertion failed: " ^ s)
 
-noextract
+[@@ noextract_to "Kremlin"]
 let rec to_all_goals (t: (unit -> Tac unit)) : Tac unit =
   if ngoals () = 0
   then ()
   else
     let _ = divide 1 t (fun () -> to_all_goals t) in ()
 
-noextract
+[@@ noextract_to "Kremlin"]
 let rec intros_until_squash
   ()
 : Tac binder
@@ -68,7 +68,7 @@ let rec intros_until_squash
   then i
   else intros_until_squash ()
 
-noextract
+[@@ noextract_to "Kremlin"]
 let rec intros_until_eq_hyp
   ()
 : Tac binder

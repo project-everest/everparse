@@ -17,8 +17,8 @@ ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops
 include .depend
 
 verify_and_build_weaken_tac_plugin: $(ALL_CHECKED_FILES)
-	$(FSTAR) --extract WeakenTac --codegen Plugin WeakenTac.fst
-	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -shared -package fstar-tactics-lib -o WeakenTac.cmxs WeakenTac.ml
+	$(FSTAR) --extract 'LowParse.TacLib WeakenTac' --codegen Plugin WeakenTac.fst
+	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_TacLib.ml WeakenTac.ml
 
 extract: ../EverParse.h
 
@@ -57,4 +57,4 @@ EverParse.rsp: $(ALL_KRML_FILES)
 .PHONY: all verify extract clean
 
 clean:
-	rm -f *.checked *.krml ../EverParse.h EverParse.rsp ../Makefile.basic ../Makefile.include .depend
+	rm -f *.checked *.krml ../EverParse.h EverParse.rsp ../Makefile.basic ../Makefile.include .depend *.o *.cmi *.cmx *.cmxs WeakenTac.ml LowParse_TacLib.ml
