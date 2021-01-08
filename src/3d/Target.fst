@@ -706,9 +706,10 @@ let print_decls (modul: string) (ds:list decl) =
     "module %s\n\
      open Prelude\n\
      open Actions\n\
+     open WeakenTac\n\
      module B = LowStar.Buffer\n\n\
      include %s.Types\n\n\
-     #set-options \"--using_facts_from '* FStar Actions Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
+     #set-options \"--using_facts_from '* FStar Actions Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
      %s"
      modul
      modul
@@ -722,8 +723,9 @@ let print_types_decls (modul:string) (ds:list decl) =
     "module %s.Types\n\
      open Prelude\n\
      open Actions\n\n\
+     open WeakenTac\n\
      module B = LowStar.Buffer\n\n\
-     #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
+     #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\n\
      %s"
      modul
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.Tot.map (print_decl_for_types modul) ds))
@@ -736,6 +738,7 @@ let print_decls_signature (modul: string) (ds:list decl) =
     "module %s\n\
      open Prelude\n\
      open Actions\n\
+     open WeakenTac\n\
      module B = LowStar.Buffer\n\
      %s"
      modul
