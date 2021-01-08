@@ -75,6 +75,7 @@ let verify_and_extract_module
     "--odir" :: out_dir ::
     "--cache_dir" :: out_dir ::
     "--include" :: out_dir ::
+    "--load" :: "WeakenTac" ::
     fstar_args0
   in
   let fstar_args_types_fst = list_snoc fstar_args (types_fst_file) in
