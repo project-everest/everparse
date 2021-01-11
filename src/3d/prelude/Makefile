@@ -1,4 +1,4 @@
-all: verify extract
+all: verify_and_build_weaken_tac_plugin extract
 
 FSTAR_HOME?=$(realpath ../../../../FStar)
 KREMLIN_HOME?=$(realpath ../../../../kremlin)
@@ -16,7 +16,9 @@ ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops
 
 include .depend
 
-verify: $(ALL_CHECKED_FILES)
+verify_and_build_weaken_tac_plugin: $(ALL_CHECKED_FILES)
+	$(FSTAR) --extract 'LowParse.TacLib WeakenTac' --codegen Plugin WeakenTac.fst
+	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_TacLib.ml WeakenTac.ml
 
 extract: ../EverParse.h
 
@@ -27,7 +29,7 @@ EverParse.rsp: $(ALL_KRML_FILES)
 	$(KREMLIN_HOME)/krml \
 	  -skip-compilation \
 	  -bundle 'C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle 'LowParse.Low.ErrorCode+EverParse3d.InputBuffer.Aux+Prelude.StaticHeader+ResultOps=Prims,LowParse.\*,Prelude,Prelude.\*,Actions,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'LowParse.Low.ErrorCode+EverParse3d.InputBuffer.Aux+Prelude.StaticHeader+ResultOps=Prims,LowParse.\*,Prelude,Prelude.\*,Actions,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
 	  -header ../noheader.txt \
@@ -55,4 +57,4 @@ EverParse.rsp: $(ALL_KRML_FILES)
 .PHONY: all verify extract clean
 
 clean:
-	rm -f *.checked *.krml ../EverParse.h EverParse.rsp ../Makefile.basic ../Makefile.include .depend
+	rm -f *.checked *.krml ../EverParse.h EverParse.rsp ../Makefile.basic ../Makefile.include .depend *.o *.cmi *.cmx *.cmxs WeakenTac.ml LowParse_TacLib.ml

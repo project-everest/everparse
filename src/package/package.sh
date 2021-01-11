@@ -178,6 +178,7 @@ make_everparse() {
 
     # Copy F*
     $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/ &&
+    $cp -r $FSTAR_HOME/bin/fstar-tactics-lib everparse/bin/ &&
     $cp -r $FSTAR_HOME/ulib everparse/ &&
 
     # Copy KReMLin
