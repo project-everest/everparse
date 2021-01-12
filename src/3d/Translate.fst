@@ -933,6 +933,18 @@ let rec hoist_typ
   = let open T in
     match t with
     | T_false -> [], t
+    | T_app head [Inr e; Inl base_t] ->
+      if head.v = "nlist" then
+        let params = List.rev env in
+        let args = List.map (fun (x, _) -> Identifier x) params in
+        let expr_name = fn ^ "_array_expr" in
+        let id = maybe_gen_ident genv expr_name in
+        let result_typ = T_app (with_dummy_range "UINT32") [] in
+        let body = e in
+        let def = Definition (id, params, result_typ, body) in
+        let app = App (Ext id.A.v) (List.Tot.map (fun arg -> T.mk_expr arg) args)  in
+        [with_attrs def true []], T_app head [Inr (T.mk_expr app); Inl base_t]
+      else [], t
     | T_app _ _ -> [], t
     | T_dep_pair t1 (x, t2) ->
       let ds, t1 = hoist_typ fn genv env t1 in
