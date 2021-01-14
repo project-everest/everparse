@@ -18,7 +18,7 @@ type bitsum'
     bitsum' cl bitsum'_size
 | BitSum' :
     (key: eqtype) ->
-    (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot }) -> // key_size made positive because F* cannot prove that (payload _) is a smaller term wrt. << without FStar.WellFounded.axiom1_dep
+    (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot }) -> // key_size made positive because F* cannot prove that (payload _) is a smaller term wrt. << without FStar.WellFounded.axiom1_dep //NS: TODO: please check this comment
     (e: enum key (bitfield cl key_size)) ->
     (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size)))) ->
     bitsum' cl bitsum'_size
@@ -171,7 +171,7 @@ let bitsum'_key_type_intro_BitSum'
   (key: eqtype)
   (key_size: nat { key_size > 0 /\ key_size <= bitsum'_size /\ bitsum'_size <= tot })
   (e: enum key (bitfield cl key_size))
-  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size)))) 
+  (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
   (x: (k': enum_key e & bitsum'_key_type (payload k')))
 : Tot (bitsum'_key_type (BitSum' key key_size e payload))
 = x
@@ -254,7 +254,7 @@ let rec synth_bitsum'
     let z : bitsum'_type (payload k) = synth_bitsum' (payload k) x in
     let p : (k' : enum_key e & bitsum'_type (payload k')) = (| k, z |) in
     bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload p
-  
+
 module BF = LowParse.BitFields
 
 #push-options "--z3rlimit 16"
@@ -955,7 +955,7 @@ let serialize_bitsum_alt
   (g: (x: bitsum'_key_type b) -> Tot (serializer (dsnd (f x))))
   (x: data)
 : GTot bytes
-= 
+=
     let tg = tag_of_data x in
     let k = bitsum'_key_of_t b tg in
     let payload = synth_case.g tg x in
@@ -1180,7 +1180,7 @@ let filter_bitsum'_bitsum'_cons
   (l1: list (key & bitfield cl key_size))
   (k: key)
   (r: bitfield cl key_size)
-  (l2: list (key & bitfield cl key_size) { 
+  (l2: list (key & bitfield cl key_size) {
     e == l1 `L.append` ((k, r) :: l2) /\
     list_mem k (list_map fst e) /\
     enum_repr_of_key e k == r /\
@@ -1195,7 +1195,7 @@ let filter_bitsum'_bitsum'_cons
     in
     [@inline_let] let yr = cl.bitfield_eq_rhs x (bitsum'_size - key_size) bitsum'_size r in
     [@inline_let] let cond = (xr <: t) = yr in
-    [@inline_let] let _ = 
+    [@inline_let] let _ =
       assert (cond == true <==> (cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size <: bitfield cl key_size) == r)
     in
     if cond
@@ -1209,17 +1209,15 @@ let filter_bitsum'_bitsum'_cons
       in
       destr_tail (x <: t) xr
 
-module WF = FStar.WellFounded (* for axiom1_dep *)
-    
-[@filter_bitsum'_t_attr]
-inline_for_extraction
-noextract
-let wf_apply // because WF.apply is not marked inline_for_extraction
-  (#a:Type) (#b:a -> Type) (f: (x:a -> Tot (b x))) (x:a)
-  : Pure (b x) (requires True) (ensures (fun r -> r == f x /\ f x << f))
-=
-  [@inline_let] let _ = WF.axiom1_dep #a #b f x in
-  f x
+let bitsum_wellfoundedness
+      (#tot: pos)
+      (#t: eqtype)
+      (#cl: uint_t tot t)
+      (#bitsum'_size: nat)
+      (b:bitsum' cl bitsum'_size { BitSum'? b })
+ : Lemma (let BitSum' key key_size e payload = b in
+          (forall (k:enum_key e). payload k << b))
+ = ()
 
 [@filter_bitsum'_t_attr]
 noextract
@@ -1230,7 +1228,7 @@ let rec mk_filter_bitsum'_t'
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
 : Tot (filter_bitsum'_t b)
-  (decreases (LexCons b (LexCons () LexTop)))
+      (decreases %[b; 1; ()])
 = match b with
   | BitStop _ -> filter_bitsum'_bitstop cl
   | BitField sz rest -> filter_bitsum'_bitfield cl bitsum'_size sz rest (mk_filter_bitsum'_t' rest)
@@ -1248,8 +1246,9 @@ and mk_filter_bitsum'_bitsum'_t'
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
 : Tot (filter_bitsum'_bitsum'_t cl bitsum'_size key key_size e payload l1 l2)
-  (decreases (LexCons payload (LexCons l2 LexTop)))
-= match l2 with
+      (decreases %[BitSum' key key_size e payload; 0; l2])
+= bitsum_wellfoundedness (BitSum' key key_size e payload);
+  match l2 with
   | [] ->
     [@inline_let] let _ =
       L.append_l_nil l1
@@ -1259,8 +1258,10 @@ and mk_filter_bitsum'_bitsum'_t'
     [@inline_let] let _ =
       enum_repr_of_key_append_cons e l1 (k, r) q;
       L.append_assoc l1 [(k, r)] q
-    in  
-    filter_bitsum'_bitsum'_cons cl bitsum'_size key key_size e payload l1 k r q (mk_filter_bitsum'_t' (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k)) (mk_filter_bitsum'_bitsum'_t' cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q)
+    in
+    filter_bitsum'_bitsum'_cons cl bitsum'_size key key_size e payload l1 k r q
+      (mk_filter_bitsum'_t' (payload k))
+      (mk_filter_bitsum'_bitsum'_t' cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q)
 
 (* Universal destructor *)
 
@@ -1411,7 +1412,7 @@ let destr_bitsum'_bitsum_cons
   (l1: list (key & bitfield cl key_size))
   (k: key)
   (r: bitfield cl key_size)
-  (l2: list (key & bitfield cl key_size) { 
+  (l2: list (key & bitfield cl key_size) {
     e == l1 `L.append` ((k, r) :: l2) /\
     list_mem k (list_map fst e) /\
     enum_repr_of_key e k == r /\
@@ -1425,12 +1426,12 @@ let destr_bitsum'_bitsum_cons
     let _ =
       enum_repr_of_key_append_cons e l1 (k, r) l2
     in
-    [@inline_let] let cond = ((cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size <: bitfield cl key_size) = r) in    
+    [@inline_let] let cond = ((cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size <: bitfield cl key_size) = r) in
     u_if
       (Ghost.hide (synth_bitsum' (BitSum' key key_size e payload) x))
       cond
       (fun cond_true ->
-        destr_payload 
+        destr_payload
           (fun x -> u (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, x |)))
           (fun x -> u_if (Ghost.hide (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, Ghost.reveal x |))))
           (fun x -> f (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, x |)))
@@ -1478,7 +1479,7 @@ let destr_bitsum'_bitsum_cons_nil
         L.append_mem (L.map snd l1) (L.map snd [(k, r)]) (cl.get_bitfield x (bitsum'_size - key_size) bitsum'_size <: bitfield cl key_size)
       end
     in
-    destr_payload 
+    destr_payload
           (fun x -> u (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, x |)))
           (fun x -> u_if (Ghost.hide (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, Ghost.reveal x |))))
           (fun x -> f (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, x |)))
@@ -1493,7 +1494,7 @@ let rec mk_destr_bitsum'_t
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
 : Tot (destr_bitsum'_t b <: Type u#1)
-  (decreases (LexCons b (LexCons () LexTop)))
+  (decreases %[b;1;()])
 = match b with
   | BitStop _ -> destr_bitsum'_bitstop cl
   | BitField sz rest -> destr_bitsum'_bitfield cl bitsum'_size sz rest (mk_destr_bitsum'_t rest)
@@ -1511,8 +1512,9 @@ and mk_destr_bitsum'_bitsum_t
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
 : Tot (destr_bitsum'_bitsum_t cl bitsum'_size key key_size e payload l1 l2 <: Type u#1)
-  (decreases (LexCons payload (LexCons l2 LexTop)))
-= match l2 with
+  (decreases %[BitSum' key key_size e payload; 0; l2])
+= bitsum_wellfoundedness (BitSum' key key_size e payload);
+  match l2 with
   | [] ->
     [@inline_let] let _ =
       L.append_l_nil l1
@@ -1522,14 +1524,17 @@ and mk_destr_bitsum'_bitsum_t
     [@inline_let] let _ =
       enum_repr_of_key_append_cons e l1 (k, r) [];
       L.append_assoc l1 [(k, r)] []
-    in  
-    destr_bitsum'_bitsum_cons_nil cl bitsum'_size key key_size e payload l1 k r (mk_destr_bitsum'_t (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k))
+    in
+    destr_bitsum'_bitsum_cons_nil cl bitsum'_size key key_size e payload l1 k r
+      (mk_destr_bitsum'_t (payload k))
   | (k, r) :: q ->
     [@inline_let] let _ =
       enum_repr_of_key_append_cons e l1 (k, r) q;
       L.append_assoc l1 [(k, r)] q
-    in  
-    destr_bitsum'_bitsum_cons cl bitsum'_size key key_size e payload l1 k r q (mk_destr_bitsum'_t (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k)) (mk_destr_bitsum'_bitsum_t cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q)
+    in
+    destr_bitsum'_bitsum_cons cl bitsum'_size key key_size e payload l1 k r q
+      (mk_destr_bitsum'_t (payload k))
+      (mk_destr_bitsum'_bitsum_t cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q)
 
 (* from a bitsum key to its representation *)
 
@@ -1636,7 +1641,7 @@ let synth_bitsum'_recip_BitSum_nil
   (l1: list (key & bitfield cl key_size) { e == l1 `L.append` [] } )
 : Tot (synth_bitsum'_recip_BitSum_t cl bitsum'_size key key_size e payload l1 [])
 = fun k _ ->
-  [@inline_let] 
+  [@inline_let]
   let _ = L.append_l_nil l1 in
   false_elim ()
 
@@ -1653,7 +1658,7 @@ let synth_bitsum'_recip_BitSum_cons
   (l1: list (key & bitfield cl key_size))
   (k: key)
   (r: bitfield cl key_size)
-  (l2: list (key & bitfield cl key_size) { 
+  (l2: list (key & bitfield cl key_size) {
     e == l1 `L.append` ((k, r) :: l2) /\
     list_mem k (list_map fst e) /\
     enum_repr_of_key e k == r /\
@@ -1715,7 +1720,7 @@ let synth_bitsum'_recip_BitSum_cons_nil
         L.append_assoc l1 [(k, r)] [];
         L.map_append fst l1 [(k, r)];
         L.append_mem (L.map fst l1) (L.map fst [(k, r)]) (k' <: key)
-      end      
+      end
     in
     [@inline_let]
     let _ =
@@ -1732,7 +1737,7 @@ let rec mk_synth_bitsum'_recip
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
 : Tot (synth_bitsum'_recip_t b)
-  (decreases (LexCons b (LexCons () LexTop)))
+  (decreases %[b;1;()])
 = match b with
   | BitStop _ -> synth_bitsum'_recip_BitStop cl
   | BitField sz rest -> synth_bitsum'_recip_BitField cl bitsum'_size sz rest (mk_synth_bitsum'_recip rest)
@@ -1750,8 +1755,9 @@ and mk_synth_bitsum'_recip_BitSum
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
 : Tot (synth_bitsum'_recip_BitSum_t cl bitsum'_size key key_size e payload l1 l2)
-  (decreases (LexCons payload (LexCons l2 LexTop)))
-= match l2 with
+      (decreases %[BitSum' key key_size e payload; 0; l2])
+= bitsum_wellfoundedness (BitSum' key key_size e payload);
+  match l2 with
   | [] ->
     [@inline_let] let _ =
       L.append_l_nil l1
@@ -1761,14 +1767,17 @@ and mk_synth_bitsum'_recip_BitSum
     [@inline_let] let _ =
       enum_repr_of_key_append_cons e l1 (k, r) [];
       L.append_assoc l1 [(k, r)] []
-    in  
-    synth_bitsum'_recip_BitSum_cons_nil cl bitsum'_size key key_size e payload l1 k r (mk_synth_bitsum'_recip (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k))
+    in
+    synth_bitsum'_recip_BitSum_cons_nil cl bitsum'_size key key_size e payload l1 k r
+      (mk_synth_bitsum'_recip (payload k))
   | (k, r) :: q ->
     [@inline_let] let _ =
       enum_repr_of_key_append_cons e l1 (k, r) q;
       L.append_assoc l1 [(k, r)] q
-    in  
-    synth_bitsum'_recip_BitSum_cons cl bitsum'_size key key_size e payload l1 k r q (mk_synth_bitsum'_recip (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k)) (mk_synth_bitsum'_recip_BitSum cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q)
+    in
+    synth_bitsum'_recip_BitSum_cons cl bitsum'_size key key_size e payload l1 k r q
+      (mk_synth_bitsum'_recip (payload k))
+      (mk_synth_bitsum'_recip_BitSum cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q)
 
 (* Mutating a bitfield within a bitsum value *)
 
@@ -1785,7 +1794,7 @@ let rec is_valid_bitfield
   | BitStop _ -> false
   | BitField sz rest ->
     if low + sz = high && high = bitsum'_size
-    then true    
+    then true
     else is_valid_bitfield rest (bitsum'_key_type_elim_BitField cl bitsum'_size sz rest k) low high
   | BitSum' key key_size e payload ->
     let (| k', r' |) = bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload k in

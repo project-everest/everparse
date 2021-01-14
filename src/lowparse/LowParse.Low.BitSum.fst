@@ -224,8 +224,9 @@ let rec mk_validate_bitsum_cases_bitsum'_t'
     Tot (validate_bitsum_cases_t u#r b)
   )
 : Tot (validate_bitsum_cases_bitsum'_t u#r cl bitsum'_size key key_size e payload l1 l2)
-  (decreases (LexCons payload (LexCons l2 LexTop)))
-= match l2 with
+      (decreases %[BitSum' key key_size e payload; l2])
+= bitsum_wellfoundedness (BitSum' key key_size e payload);
+  match l2 with
   | [] ->
     [@inline_let] let _ =
       L.append_l_nil l1
@@ -236,7 +237,9 @@ let rec mk_validate_bitsum_cases_bitsum'_t'
       enum_repr_of_key_append_cons e l1 (k, r) q;
       L.append_assoc l1 [(k, r)] q
     in  
-    validate_bitsum_cases_bitsum'_cons cl bitsum'_size key key_size e payload l1 k r q (mk_validate_bitsum_cases_t' (wf_apply #(enum_key e) #(fun _ -> bitsum' cl (bitsum'_size - key_size)) payload k)) (mk_validate_bitsum_cases_bitsum'_t' cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q mk_validate_bitsum_cases_t')
+    validate_bitsum_cases_bitsum'_cons cl bitsum'_size key key_size e payload l1 k r q
+      (mk_validate_bitsum_cases_t' (payload k))
+      (mk_validate_bitsum_cases_bitsum'_t' cl bitsum'_size key key_size e payload (l1 `L.append` [(k, r)]) q mk_validate_bitsum_cases_t')
 
 [@filter_bitsum'_t_attr]
 noextract
