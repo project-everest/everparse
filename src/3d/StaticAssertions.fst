@@ -35,10 +35,12 @@ let empty_static_asserts = {
   sizeof_assertions = []
 }
 
-let compute_static_asserts (env:TypeSizes.env_t) 
+let compute_static_asserts (benv:B.global_env)
+                           (senv:TypeSizes.size_env)
                            (r:option type_refinement)
   : ML static_asserts
-  = match r with
+  = let env = B.mk_env benv, senv in
+    match r with
     | None -> empty_static_asserts
     | Some r -> 
       let sizeof_assertions =
@@ -60,7 +62,7 @@ let compute_static_asserts (env:TypeSizes.env_t)
               Ast.error 
                 (Printf.sprintf
                   "Type %s is variable sized and cannot refine a C type %s"
-                  j.v i.v)
+                  (ident_to_string j) (ident_to_string i))
                 i.range)
       in
       {
@@ -85,7 +87,7 @@ let print_static_asserts (sas:static_asserts)
     in
     let sizeof_assertions =
         sas.sizeof_assertions
-        |> List.map (fun sa -> Printf.sprintf "C_ASSERT(sizeof(%s) == %d);" sa.type_name.Ast.v sa.size)
+        |> List.map (fun sa -> Printf.sprintf "C_ASSERT(sizeof(%s) == %d);" (ident_to_string sa.type_name) sa.size)
         |> String.concat "\n"
     in
     includes ^ "\n" ^ sizeof_assertions
