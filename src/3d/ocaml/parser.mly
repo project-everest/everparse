@@ -102,7 +102,7 @@ else_opt:
   | ELSE LBRACE e=expr RBRACE { Some e }
 
 atomic_expr:
-  | i=IDENT    { Identifier i }
+  | i=qident   { Identifier i }
   | THIS       { This }
   | c=constant { Constant c }
 
