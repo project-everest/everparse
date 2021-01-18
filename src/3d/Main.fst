@@ -157,7 +157,7 @@ let process_modul (en:env) (modul fn:string) : ML env =
   emit_fstar_code en modul t_decls static_asserts;
   en
 
-let process_file (fn:string) : ML unit =
+let process_file (fn:string) : ML (list string) =
   let sorted_modules = Deps.get_sorted_deps fn in
   let initial_env = {
     binding_env = Binding.initial_global_env ();
@@ -165,7 +165,7 @@ let process_file (fn:string) : ML unit =
     translate_env = Translate.initial_translate_env () } in
   let _ = List.fold_left (fun en m ->
     process_modul en m (Options.get_file_name (OS.concat (OS.dirname fn) m))) initial_env sorted_modules in
-  ()
+  sorted_modules
 
 let go () : ML unit =
   let files = Options.parse_cmd_line() in
@@ -181,7 +181,8 @@ let go () : ML unit =
   let files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) files in
   match Options.get_check_hashes () with
   | None ->
-    List.iter process_file files;
+    let all_modules = List.collect process_file files in
+    let files_and_modules = List.map (fun m -> (Options.get_file_name m, m)) all_modules in
     if Options.get_batch ()
     then begin
       Batch.postprocess

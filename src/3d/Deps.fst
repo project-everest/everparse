@@ -39,13 +39,13 @@ let scan_deps (fn:string) : ML (list string) =
 
   let abbrevs = H.create 10 in
 
-  let maybe_dep (i:ident) =
+  let maybe_dep (i:ident) : ML (list string) =
     match i.v.modul_name with
     | None -> []
     | Some s ->
-      match H.try_find abbrevs s with
-      | None -> [s]
-      | Some m -> [m] in
+      (match H.try_find abbrevs s with
+       | None -> [s]
+       | Some m -> [m]) in
 
   //AR: TODO: collect deps from expressions etc.
 
