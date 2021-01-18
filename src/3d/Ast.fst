@@ -356,6 +356,7 @@ let enum_case = ident & option (either int ident)
 ///   - CaseType: an untagged union
 noeq
 type decl' =
+  | ModuleAbbrev: ident -> ident -> decl'
   | Define: ident -> option typ -> constant -> decl'
   | TypeAbbrev: typ -> ident -> decl'
   | Enum: typ -> ident -> list enum_case -> decl'
@@ -497,6 +498,7 @@ let subst_params (s:subst) (p:list param) : ML (list param) =
   List.map (fun (t, i, q) -> subst_typ s t, i, q) p
 let subst_decl (s:subst) (d:decl) : ML decl =
   match d.v with
+  | ModuleAbbrev _ _ -> d
   | Define i None _ -> d
   | Define i (Some t) c -> {d with v = Define i (Some (subst_typ s t)) c}
   | TypeAbbrev t i -> { d with v = TypeAbbrev (subst_typ s t) i }
@@ -703,6 +705,7 @@ let print_switch_case (s:switch_case) : ML string =
 
 let print_decl' (d:decl') : ML string =
   match d with
+  | ModuleAbbrev i m -> Printf.sprintf "module %s = %s" (print_ident i) (print_ident m)
   | Define i None c ->
     Printf.sprintf "#define %s %s;" (print_ident i) (print_constant c)
   | Define i (Some t) c ->
