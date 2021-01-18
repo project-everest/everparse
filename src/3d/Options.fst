@@ -130,6 +130,8 @@ let split_3d_file_name fn =
   then Some (OS.remove_extension fn)
   else None
 
+let get_file_name mname = mname ^ ".3d"
+
 let get_module_name (file: string) =
   match !module_name with
   | None ->

@@ -6,6 +6,8 @@ val display_usage : unit -> ML unit
 
 val parse_cmd_line : unit -> ML (list string)
 
+val get_file_name (mname:string) : ML string
+
 val get_module_name (file: string) : ML string
 
 val get_output_dir : unit -> ML string
