@@ -432,7 +432,7 @@ let rec read_typ (env:global_env) (t:T.typ) : ML (option T.reader) =
 let make_reader (env:global_env) (t:T.typ) : ML T.reader =
   match read_typ env t with
   | None ->
-    failwith (Printf.sprintf "Unsupported reader type: %s\n" (T.print_typ t))
+    failwith (Printf.sprintf "Unsupported reader type: %s\n" (T.print_typ "" t))  //AR: TODO: needs a module name
   | Some r ->
     r
 
@@ -999,7 +999,7 @@ let maybe_add_reader (genv:global_env)
     let _ =
       if Some? reader
       then begin
-        Options.debug_print_string (Printf.sprintf ">>>>>> Adding reader for %s with definition %s\n" (ident_to_string decl_name.td_name) (T.print_typ t));
+        Options.debug_print_string (Printf.sprintf ">>>>>> Adding reader for %s with definition %s\n" (ident_to_string decl_name.td_name) (T.print_typ "" t));  //AR: TODO: needs a module name
         add_reader genv decl_name.td_name
      end
     in
