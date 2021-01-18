@@ -158,7 +158,6 @@ let process_modul (en:env) (modul fn:string) : ML env =
   en
 
 let process_file (fn:string) : ML unit =
-  let dep_graph = build_dep_graph fn in
   let sorted_modules = Deps.get_sorted_deps fn in
   let initial_env = {
     binding_env = Binding.initial_global_env ();
