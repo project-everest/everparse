@@ -4,6 +4,8 @@ open FStar.IO
 open FStar.All
 open Ast
 
+module H = Hashtable
+
 type edge = string & string
 
 type dep_graph = list edge
@@ -35,10 +37,15 @@ let topsort (g:dep_graph) (root:string) : ML (list string) =
 let scan_deps (fn:string) : ML (list string) =
   let decls, __refinement = ParserDriver.parse fn in  //AR: TODO: look into refinement too?
 
+  let abbrevs = H.create 10 in
+
   let maybe_dep (i:ident) =
     match i.v.modul_name with
     | None -> []
-    | Some s -> [s] in
+    | Some s ->
+      match H.try_find abbrevs s with
+      | None -> [s]
+      | Some m -> [m] in
 
   //AR: TODO: collect deps from expressions etc.
 
@@ -52,6 +59,9 @@ let scan_deps (fn:string) : ML (list string) =
 
   let rec deps_of_decl (d:decl) : ML (list string) =
     match d.v with
+    | ModuleAbbrev i m ->
+      H.insert abbrevs i.v.name m.v.name;
+      [m.v.name]
     | Define _ None _ -> []
     | Define _ (Some t) _ -> deps_of_typ t
     | TypeAbbrev t _ -> deps_of_typ t
