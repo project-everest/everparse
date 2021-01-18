@@ -58,7 +58,7 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
   = let id, typ, fields = f in
     let size = B.size_of_integral_typ env typ typ.range in
     let bitsize = 8 * size in
-    let field_id = with_range (Printf.sprintf "__bitfield_%d" id) dummy_range in
+    let field_id = with_range (to_ident' (Printf.sprintf "__bitfield_%d" id)) dummy_range in
     let id = with_range (Identifier field_id) field_id.range in
     let mk_e (e:expr') :expr = with_range e field_id.range in
     let bitfield_attrs f : ML _ =
@@ -130,7 +130,7 @@ let eliminate_one_decl (env:B.global_env) (d:decl) : ML decl =
                   (String.concat "\n" f.comments))) fields;
 
     List.iter (fun (i, e) ->
-      Options.debug_print_string (Printf.sprintf "subst(%s -> %s)\n" i.v (print_expr e)))
+      Options.debug_print_string (Printf.sprintf "subst(%s -> %s)\n" (ident_to_string i) (print_expr e)))
       subst;
     let fields = List.map (subst_field (mk_subst subst)) fields in
     let fields =
