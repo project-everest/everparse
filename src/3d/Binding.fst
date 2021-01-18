@@ -70,9 +70,10 @@ let field_error_code_variable_name_of_field
 : Tot ident
 = let (o, name) = x in
   match o with
-  | None -> with_dummy_range name
+  | None -> with_dummy_range (to_ident' name)
   | Some this ->
-    with_dummy_range (this.v ^ "__" ^ name)
+    with_dummy_range ({modul_name=this.v.modul_name;
+                       name=this.v.name ^ "__" ^ name})
 
 /// Computed attributes for a decl:
 ///    -- its size in bytes
@@ -111,9 +112,12 @@ let nullary_macro t d = {
 /// the global environment so that numerical field identifiers are
 /// proper to the current module, and not shared across different .3d
 /// files given on the command line
+
+type global_hash_t = H.t ident' (decl & either decl_attributes macro_signature)
+
 noeq
 type global_env = {
-  ge_h: H.t ident' (decl & either decl_attributes macro_signature);
+  ge_h: global_hash_t;
   ge_fd: field_num_ops_t;
 }
 
@@ -128,6 +132,8 @@ let lookup_field_num ge x =
 /// Maps locally bound names, i.e., a field name to its type
 ///  -- the bool signifies that this identifier has been used, and is
 ///     therefore marked as a dependent field
+///
+/// The modul_name in these ident' must be None -- TODO: add a refinement?
 let local_env = H.t ident' (ident' & typ & bool)
 
 /// `env` includes both a global and local env, together with a
@@ -137,7 +143,7 @@ noeq
 type env = {
   this: option ident;
   locals: local_env;
-  globals: global_env
+  globals: global_env;
 }
 
 let mk_env (g:global_env) =
@@ -156,7 +162,7 @@ let params_of_decl (d:decl) : list param =
 let check_shadow (e:H.t ident' 'a) (i:ident) (r:range) =
   match H.try_find e i.v with
   | Some j ->
-    let msg = Printf.sprintf "Declaration %s clashes with previous declaration" i.v in
+    let msg = Printf.sprintf "Declaration %s clashes with previous declaration" (ident_to_string i) in
     error msg i.range
   | _ -> ()
 
@@ -168,14 +174,14 @@ let typedef_names (d:decl) : option typedef_names =
 
 let format_identifier (e:env) (i:ident) : ML ident =
   let j =
-    match String.list_of_string i.v with
+    match String.list_of_string i.v.name with
     | [] ->
       failwith "Impossible: empty identifier"
     | c0::cs ->
       if FStar.Char.lowercase c0 = c0
       then i //it starts with a lowercase symbol; that's ok
       else //otherwise, add an underscore
-           {i with v =  Ast.reserved_prefix ^ i.v}
+           {i with v = {i.v with name=Ast.reserved_prefix ^ i.v.name}}
   in
   match H.try_find e.globals.ge_h j.v, H.try_find e.locals j.v with
   | None, None -> j
@@ -183,15 +189,17 @@ let format_identifier (e:env) (i:ident) : ML ident =
     let msg = Printf.sprintf
       "This name (%s) starts will clash with another name in scope (%s) as it is translated. \
        Please rename it"
-       i.v j.v in
+       (ident_to_string i) (ident_to_string j) in
     error msg i.range
 
 let add_global (e:global_env) (i:ident) (d:decl) (t:either decl_attributes macro_signature) : ML unit =
+  let insert k v = H.insert e.ge_h k v in
+
   check_shadow e.ge_h i d.range;
   let env = mk_env e in
   let i' = format_identifier env i in
-  H.insert e.ge_h i.v (d, t);
-  H.insert e.ge_h i'.v (d, t);
+  insert i.v (d, t);
+  insert i'.v (d, t);
   match typedef_names d with
   | None -> ()
   | Some td ->
@@ -199,8 +207,8 @@ let add_global (e:global_env) (i:ident) (d:decl) (t:either decl_attributes macro
     then begin
       check_shadow e.ge_h td.typedef_abbrev d.range;
       let abbrev = format_identifier env td.typedef_abbrev in
-      H.insert e.ge_h td.typedef_abbrev.v (d, t);
-      H.insert e.ge_h abbrev.v (d, t)
+      insert td.typedef_abbrev.v (d, t);
+      insert abbrev.v (d, t)
     end
 
 let add_local (e:env) (i:ident) (t:typ) : ML unit =
@@ -221,7 +229,7 @@ let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes mac
   | None ->
     match H.try_find e.globals.ge_h i.v with
     | Some d -> Inr d
-    | None -> error (Printf.sprintf "Variable %s not found" i.v) i.range
+    | None -> error (Printf.sprintf "Variable %s not found" (ident_to_string i)) i.range
 
 let remove_local (e:env) (i:ident) : ML unit =
   match H.try_find e.locals i.v with
@@ -242,12 +250,12 @@ let lookup_expr_name (e:env) (i:ident) : ML typ =
   | Inl t -> t
   | Inr (_, Inr ({ macro_arguments_t=[]; macro_result_t=t })) -> t
   | Inr _ ->
-    error (Printf.sprintf "Variable %s is not an expression identifier" i.v) i.range
+    error (Printf.sprintf "Variable %s is not an expression identifier" (ident_to_string i)) i.range
 
 let lookup_macro_name (e:env) (i:ident) : ML macro_signature =
   match lookup e i with
   | Inr (_, Inr m) -> m
-  | _ -> error (Printf.sprintf "%s is an unknown operator" i.v) i.range
+  | _ -> error (Printf.sprintf "%s is an unknown operator" (ident_to_string i)) i.range
 
 let lookup_macro_definition (e:env) (i:ident) =
   try
@@ -267,12 +275,12 @@ let lookup_enum_cases (e:env) (i:ident)
   : ML (list ident & typ)
   = match try_lookup_enum_cases e i with
     | Some (tags, t) -> tags, t
-    | _ -> error (Printf.sprintf "Type %s is not an enumeration" i.v) i.range
+    | _ -> error (Printf.sprintf "Type %s is not an enumeration" (ident_to_string i)) i.range
 
 let is_used (e:env) (i:ident) : ML bool =
   match H.try_find e.locals i.v with
   | Some (_, t, b) -> b
-  | _ ->  error (Printf.sprintf "Variable %s not found" i.v) i.range
+  | _ ->  error (Printf.sprintf "Variable %s not found" (ident_to_string i)) i.range
 
 let type_of_integer_type = function
   | UInt8  -> tuint8
@@ -338,11 +346,6 @@ let typ_has_reader env (t:typ) : ML bool =
   | Pointer _ -> false
   | Type_app hd _ ->
     has_reader env.globals hd
-
-let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
-  match o with
-  | None -> None
-  | Some x -> Some (f x)
 
 let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
   match t.v with
@@ -453,12 +456,12 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
     | Type_app s es ->
       match lookup env s with
       | Inl _ ->
-        error (Printf.sprintf "%s is not a type" s.v) s.range
+        error (Printf.sprintf "%s is not a type" (ident_to_string s)) s.range
 
       | Inr (d, _) ->
         let params = params_of_decl d in
         if List.length params <> List.length es
-        then error (Printf.sprintf "Not enough arguments to %s" s.v) s.range;
+        then error (Printf.sprintf "Not enough arguments to %s" (ident_to_string s)) s.range;
         let es =
           List.map2 (fun (t, _, _) e ->
             let e, t' = check_expr env e in
@@ -554,7 +557,8 @@ and check_expr (env:env) (e:expr)
       end
 
     | App (Ext s) es ->
-      let m = lookup_macro_name env (with_range s e.range) in
+      //TODO: AR: not sure about this Ext node
+      let m = lookup_macro_name env (with_range (to_ident' s) e.range) in
       let n_formals = List.length m.macro_arguments_t in
       let n_actuals = List.length es in
       if n_formals <> n_actuals
@@ -871,7 +875,7 @@ let check_field (env:env) (extend_scope: bool) (f:field)
         if may_fail
         || Some? fc //it has a refinement
         || not (FieldScalar? fa) //it's an array or a string
-        then Some (env.globals.ge_fd.next (env.this, sf.field_ident.v))
+        then Some (env.globals.ge_fd.next (env.this, sf.field_ident.v.name))
         else None
     in
     let sf = {
@@ -1100,7 +1104,7 @@ let elaborate_record (e:global_env)
         let w = Some e in
         let field =
           { field_dependence = true;
-            field_ident = with_range "__precondition" e.range;
+            field_ident = with_range (to_ident' "__precondition") e.range;
             field_type = tunit;
             field_array_opt = FieldScalar;
             field_constraint = w;
@@ -1223,6 +1227,29 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_global e tdnames.typedef_name d (Inl attrs);
     d
 
+let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
+  List.map (bind_decl g) p, g
+
+let next_field_num (enclosing_struct:ident)
+                   (field_name:ident)
+                   (env:env)
+   : ML field_num
+   = env.globals.ge_fd.next (Some enclosing_struct, field_name.v.name)
+
+let add_field_error_code_decls (env: env)
+  : ML (list decl)
+  = let l = all_nums env.globals in
+    List.map
+      (fun (z: (field_num & option ident & string)) ->
+        let (i, this, name) = z in
+        let d =
+          with_dummy_range (Define (field_error_code_variable_name_of_field (this, name))
+                                   (Some tfield_id)
+                                   (Int UInt64 i)) in
+        { d with comments = ["Auto-generated field identifier for error reporting"] }
+      )
+      l
+
 let initial_global_env () =
   let e = {
     ge_h = H.create 10;
@@ -1249,38 +1276,13 @@ let initial_global_env () =
       ("field_id", { may_fail = true;  integral = Some UInt32 ; has_reader = false; parser_kind_nz=Some true});
       ("PUINT8",   { may_fail = true;  integral = None ; has_reader = false; parser_kind_nz=Some true})]
     |> List.iter (fun (i, attrs) ->
-      let i = with_dummy_range i in
+      let i = with_dummy_range (to_ident' i) in
       add_global e i (nullary_decl i) (Inl attrs))
   in
   let _operators =
     [ ("is_range_okay", { macro_arguments_t=[tuint32;tuint32;tuint32]; macro_result_t=tbool; macro_defn_t = None}) ]
     |> List.iter (fun (i, d) ->
-        let i = with_dummy_range i in
+        let i = with_dummy_range (to_ident' i) in
         add_global e i (nullary_decl i) (Inr d))
   in
   e
-
-let bind_decls (p:list decl) : ML (list decl & global_env) =
-  let e = initial_global_env() in
-  let p' = List.map (bind_decl e) p in
-  p', e
-
-let next_field_num (enclosing_struct:ident)
-                   (field_name:ident)
-                   (env:env)
-   : ML field_num
-   = env.globals.ge_fd.next (Some enclosing_struct, field_name.v)
-
-let add_field_error_code_decls (env: env)
-  : ML (list decl)
-  = let l = all_nums env.globals in
-    List.map
-      (fun (z: (field_num & option ident & string)) ->
-        let (i, this, name) = z in
-        let d =
-          with_dummy_range (Define (field_error_code_variable_name_of_field (this, name))
-                                   (Some tfield_id)
-                                   (Int UInt64 i)) in
-        { d with comments = ["Auto-generated field identifier for error reporting"] }
-      )
-      l

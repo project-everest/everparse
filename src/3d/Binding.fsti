@@ -33,12 +33,13 @@ val lookup_expr_name (_:env) (_:ident) : ML typ
 val lookup_macro_definition (_:env) (_:ident) : ML (option expr)
 val has_reader (_:global_env) (_:ident) : ML bool
 val parser_kind_nz (env:global_env) (id:ident) : ML (option bool)
-val map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b)
 val size_of_integral_typ (_:env) (_:typ) (_:range) : ML int
-val bind_decls (p:list decl) : ML (list decl & global_env)
+val bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env)
 val next_field_num (enclosing_struct:ident)
                    (field_name:ident)
                    (_:env)
     : ML field_num
 val add_field_error_code_decls (ge: env)
   : ML (list decl)
+
+val initial_global_env (_:unit) : ML global_env
