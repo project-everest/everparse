@@ -604,6 +604,7 @@ let print_attributes (entrypoint:bool) (attrs:decl_attributes) : string =
 /// Print all the definitions, and for a Type_decl, only the type definition
 let print_decl_for_types (_modul:string) (d:decl) : Tot string =
   match fst d with
+  | TModuleAbbrev i m -> Printf.sprintf "module %s = %s\n" i m
   | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
      (print_comments (snd d).comments)
@@ -642,6 +643,8 @@ let print_decl_for_types (_modul:string) (d:decl) : Tot string =
 ///   We make the definition as simply the definition in M.Types.fst
 let print_decl_for_validators (modul:string) (d:decl) : Tot string =
   match fst d with
+  | TModuleAbbrev i m ->
+    Printf.sprintf "module %s = %s\n" i m
   | Definition _ -> ""
   | Type_decl td ->
     (if not td.decl_name.td_entrypoint
@@ -681,6 +684,7 @@ let print_decl_for_validators (modul:string) (d:decl) : Tot string =
 
 let print_decl_signature (d:decl) : Tot string =
   match fst d with
+  | TModuleAbbrev i m -> Printf.sprintf "module %s = %s\n" i m
   | Definition _ -> ""
   | Type_decl td ->
     if not td.decl_name.td_entrypoint

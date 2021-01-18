@@ -243,8 +243,9 @@ type decl_attributes = {
 
 noeq
 type decl' =
-  | Definition of definition //the bool marks it for inline_for_extraction
-  | Type_decl of type_decl
+  | TModuleAbbrev : string -> string -> decl'
+  | Definition : definition -> decl' //the bool marks it for inline_for_extraction
+  | Type_decl : type_decl -> decl'
 
 let decl = decl' * decl_attributes
 
