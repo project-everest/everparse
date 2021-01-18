@@ -255,8 +255,9 @@ let qualify_decl' (env:qenv) (d:decl') : ML decl' =
     let env = List.fold_left (fun env (_, t, _) -> push_name env t.v.name) env params in
     let where = map_opt (qualify_expr env) where in
     let _, flds = List.fold_left (fun (env, flds) f ->
+      let env = push_name env f.v.field_ident.v.name in
       let f = qualify_field env f in
-      push_name env f.v.field_ident.v.name, flds@[f]) (env, []) flds in
+      env, flds@[f]) (env, []) flds in
     Record td_names params where flds
   | CaseType td_names params sc ->
     let td_names = qualify_typedef_names env td_names in
