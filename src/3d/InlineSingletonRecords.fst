@@ -88,6 +88,9 @@ let simplify_field (env:env) (f:field)
 
 let simplify_decl (env:env) (d:decl) : ML decl =
   match d.v with
+  | ModuleAbbrev _ _ ->
+    d
+
   | Define _ _ _ ->
     d
 

@@ -242,6 +242,7 @@ let qualify_enum_case (env:qenv) (ec:enum_case) : ML enum_case =
 
 let qualify_decl' (env:qenv) (d:decl') : ML decl' =
   match d with
+  | ModuleAbbrev _ _ -> d
   | Define i topt c ->
     Define (maybe_qualify_ident env i) (map_opt (qualify_typ env) topt) c
   | TypeAbbrev t i ->

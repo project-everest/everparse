@@ -95,6 +95,7 @@ let simplify_field (env:T.env_t) (f:field)
 
 let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   match d.v with
+  | ModuleAbbrev _ _ -> d
   | Define i None c -> d
   | Define i (Some t) c -> { d with v = Define i (Some (simplify_typ env t)) c }
 
