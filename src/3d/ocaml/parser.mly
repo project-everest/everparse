@@ -22,7 +22,7 @@
 
   let pointer_name j p =
       match p with
-      | None -> {j with v="P"^j.v}
+      | None -> {j with v={j.v with name="P"^j.v.name}}
       | Some k -> k
 
   let parse_int_and_type r (s:string) : Z.t * string * integer_type =
@@ -45,7 +45,7 @@
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
 %token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS
-%token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON QUESTION
+%token          DEFINE LPAREN RPAREN LBRACE RBRACE DOT COMMA SEMICOLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
@@ -172,7 +172,7 @@ expr_no_range:
     }
   | i=IDENT LPAREN es=arguments RPAREN
     {
-       App(Ext i.v, es)
+       App(Ext i.v.name, es)
     }
 
 expr:
@@ -181,9 +181,13 @@ expr:
 arguments:
  | es=right_flexible_nonempty_list(COMMA, expr)  { es }
 
+qident:
+  | i=IDENT    { i }
+  | m=IDENT DOT n=IDENT    { with_range ({modul_name=Some m.v.name; name=n.v.name}) $startpos }
+
 typ_no_range:
-  | i=IDENT { Type_app(i, []) }
-  | hd=IDENT LPAREN a=arguments RPAREN { Type_app(hd, a) }
+  | i=qident { Type_app(i, []) }
+  | hd=qident LPAREN a=arguments RPAREN { Type_app(hd, a) }
 
 typ:
   | t=typ_no_range { with_range t $startpos }
