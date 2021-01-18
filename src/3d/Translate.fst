@@ -34,6 +34,7 @@ type global_env = {
 }
 
 let has_reader (env:global_env) (id:A.ident) : ML bool =
+  let id = B.maybe_resolve_module_abbrev env.benv id in
   if B.has_reader env.benv id
   then true
   else Some? (H.try_find env.has_reader id.v)
@@ -42,6 +43,7 @@ let add_reader (env:global_env) (id:A.ident) : ML unit =
   H.insert env.has_reader id.v true
 
 let parser_kind_nz (env:global_env) (id:A.ident) : ML bool =
+  let id = B.maybe_resolve_module_abbrev env.benv id in
   match H.try_find env.parser_kind_nz id.v with
   | Some b -> b
   | None ->
@@ -54,6 +56,7 @@ let parser_kind_is_constant_size
   (env: global_env) (id: A.ident)
 : ML bool
 = 
+  let id = B.maybe_resolve_module_abbrev env.benv id in
   match H.try_find env.parser_kind_is_constant_size id.v with
   | Some b -> b
   | None ->
@@ -1130,6 +1133,7 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
 
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
   match d.v with
+  | ModuleAbbrev i m -> [with_comments d.comments (T.TModuleAbbrev i.v.name m.v.name)]
   | Define i None s ->
     failwith (Printf.sprintf "Untyped definition remains after elaboration: %s" (ident_to_string i))
 

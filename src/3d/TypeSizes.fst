@@ -55,7 +55,8 @@ let initial_senv () =
 
 let size_and_alignment_of_typename (env:env_t) (i:ident)
   : ML (size & alignment)
-  = match H.try_find (snd env) i.v with
+  = let i = B.maybe_resolve_module_abbrev (B.global_env_of_env (fst env)) i in
+    match H.try_find (snd env) i.v with
     | Some s -> s
     | None ->
       failwith (Printf.sprintf "size_of_typename: Identifier %s not found" (ident_to_string i))
@@ -269,6 +270,7 @@ let sum_size (n : size) (m:size)
 let decl_size_with_alignment (env:env_t) (d:decl)
   : ML decl
   = match d.v with
+    | ModuleAbbrev _ _ -> d
     | Define _ _ _ -> d
 
     | TypeAbbrev t i
