@@ -649,12 +649,6 @@ let print_decl_for_validators (mname:string) (d:decl) : Tot string =
   match fst d with
   | TModuleAbbrev i m ->
     Printf.sprintf "module %s = %s\n" i m
-  | Definition (x, [], t, (Constant c, _)) ->
-    Printf.sprintf "[@(CMacro)%s]\nlet %s = %s.Types.%s\n\n"
-      (print_comments (snd d).comments)
-      (print_ident x)
-      mname
-      (print_ident x)
   | Definition _ -> ""
   | Type_decl td ->
     (if not td.decl_name.td_entrypoint
@@ -696,10 +690,12 @@ let print_decl_signature (mname:string) (d:decl) : Tot string =
   match fst d with
   | TModuleAbbrev i m -> Printf.sprintf "module %s = %s\n" i m
   | Definition (x, [], t, (Constant c, _)) ->
-    Printf.sprintf "[@(CMacro)%s]\nval %s : %s\n\n"
+    Printf.sprintf "[@(CMacro)%s]\nlet %s : %s = %s.Types.%s\n\n"
       (print_comments (snd d).comments)
       (print_ident x)
       (print_typ mname t)
+      mname
+      (print_ident x)
   | Definition _ -> ""
   | Type_decl td ->
     if not td.decl_name.td_entrypoint
