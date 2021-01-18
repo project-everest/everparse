@@ -21,4 +21,12 @@ module B = Binding
 module T = Target
 open FStar.All
 
-val translate_decls (env:B.global_env) (senv:TypeSizes.env_t) (d:list A.decl) : ML (list T.decl)
+val translate_env : Type0
+
+val initial_translate_env (_:unit) : ML translate_env
+
+val translate_decls
+  (env:B.global_env)
+  (senv:TypeSizes.size_env)
+  (tenv:translate_env)
+  (d:list A.decl) : ML (list T.decl & translate_env)
