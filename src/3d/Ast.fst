@@ -106,8 +106,19 @@ let with_range_and_comments (x:'a) r c : with_meta_t 'a = {
 }
 let with_range (x:'a) (r:range) : with_meta_t 'a = with_range_and_comments x r []
 
-let ident' = string
+type ident' = {
+  modul_name : option string;
+  name : string
+}
 let ident = with_meta_t ident'
+
+let ident_to_string i = Printf.sprintf "%s%s"
+  (match i.v.modul_name with
+   | None -> ""
+   | Some m -> m ^ ".")
+  i.v.name
+
+let ident_name i = i.v.name
 
 exception Error of string
 
@@ -119,7 +130,7 @@ let warning msg (r:range) : ML unit =
 
 let check_reserved_identifier (i:ident) =
   let open FStar.String in
-  let s = i.v in
+  let s = i.v.name in
   if length s >= 3
   && sub s 0 3 = reserved_prefix
   then error "Identifiers cannot begin with \"___\"" i.range
@@ -167,12 +178,16 @@ let integer_type_leq (t1 t2: integer_type) : bool =
   integer_type_lub t1 t2 = t2
 
 let as_integer_typ (i:ident) : ML integer_type =
-  match i.v with
-  | "UINT8" -> UInt8
-  | "UINT16" -> UInt16
-  | "UINT32" -> UInt32
-  | "UINT64" -> UInt64
-  | _ -> error ("Unknown integer type: " ^ i.v) i.range
+  let err () = error ("Unknown integer type: " ^ ident_to_string i) i.range in
+  if i.v.modul_name <> None
+  then err ()
+  else
+    match i.v.name with
+    | "UINT8" -> UInt8
+    | "UINT16" -> UInt16
+    | "UINT32" -> UInt32
+    | "UINT64" -> UInt64
+    | _ -> err ()
 
 /// Integer, hex and boolean constants
 type constant =
@@ -225,6 +240,7 @@ and expr = with_meta_t expr'
 
 /// Types: all types are named and fully instantiated to expressions only
 ///   i.e., no type-parameterized types
+
 noeq
 type typ' =
   | Type_app : ident -> list expr -> typ'
@@ -379,11 +395,14 @@ and eq_exprs (es1 es2:list expr) : Tot bool =
   | hd1::es1, hd2::es2 -> eq_expr hd1 hd2 && eq_exprs es1 es2
   | _ -> false
 
+let eq_idents (i1 i2:ident) : Tot bool =
+  i1.v.modul_name = i2.v.modul_name && i1.v.name = i2.v.name
+
 /// eq_typ: syntactic equalty of types
 let rec eq_typ (t1 t2:typ) : Tot bool =
   match t1.v, t2.v with
   | Type_app hd1 es1, Type_app hd2 es2 ->
-    hd1.v = hd2.v
+    eq_idents hd1 hd2
     && eq_exprs es1 es2
   | Pointer t1, Pointer t2 ->
     eq_typ t1 t2
@@ -392,15 +411,17 @@ let rec eq_typ (t1 t2:typ) : Tot bool =
 (** Common AST constants and builders **)
 let dummy_range = dummy_pos, dummy_pos
 let with_dummy_range x = with_range x dummy_range
-let tbool = with_dummy_range (Type_app (with_dummy_range "Bool") [])
-let tunit = with_dummy_range (Type_app (with_dummy_range "unit") [])
-let tuint8 = with_dummy_range (Type_app (with_dummy_range "UINT8") [])
-let puint8 = with_dummy_range (Type_app (with_dummy_range "PUINT8") [])
-let tuint16 = with_dummy_range (Type_app (with_dummy_range "UINT16") [])
-let tuint32 = with_dummy_range (Type_app (with_dummy_range "UINT32") [])
-let tuint64 = with_dummy_range (Type_app (with_dummy_range "UINT64") [])
-let tunknown = with_dummy_range (Type_app (with_dummy_range "?") [])
-let tfield_id = with_dummy_range (Type_app (with_dummy_range "field_id") [])
+let to_ident' x = {modul_name=None;name=x}
+let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) [])
+let tbool = mk_prim_t "Bool"
+let tunit = mk_prim_t "unit"
+let tuint8 = mk_prim_t "UINT8"
+let puint8 = mk_prim_t "PUINT8"
+let tuint16 = mk_prim_t "UINT16"
+let tuint32 = mk_prim_t "UINT32"
+let tuint64 = mk_prim_t "UINT64"
+let tunknown = mk_prim_t "?"
+let tfield_id = mk_prim_t "field_id"
 
 let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
   match o with
@@ -504,7 +525,7 @@ let print_constant (c:constant) =
     else Printf.sprintf "%s%s" x tag
   | Bool b -> Printf.sprintf "%b" b
 
-let print_ident (i:ident) = i.v
+let print_ident (i:ident) = ident_to_string i
 
 let print_integer_type = function
   | UInt8 -> "UINT8"
@@ -592,10 +613,10 @@ let rec print_typ t : ML string =
   | Type_app i es ->
     begin
     match es with
-    | [] -> i.v
+    | [] -> ident_to_string i
     | _ ->
       Printf.sprintf "%s(%s)"
-        i.v
+        (ident_to_string i)
         (String.concat ", " (List.map print_expr es))
     end
   | Pointer t ->
@@ -699,27 +720,27 @@ let print_decl' (d:decl') : ML string =
                        %s \n\
                    }"
                    (print_typ t)
-                   i.v
+                   (ident_to_string i)
                    (String.concat ",\n" (List.map print_enum_case ls))
   | Record td params wopt fields ->
     Printf.sprintf "typedef struct %s%s%s {\n\
                         %s \n\
                     } %s, *%s"
-                    td.typedef_name.v
+                    (ident_to_string td.typedef_name)
                     (print_params params)
                     (match wopt with | None -> "" | Some e -> " where " ^ print_expr e)
                     (String.concat "\n" (List.map print_field fields))
-                    td.typedef_abbrev.v
-                    td.typedef_ptr_abbrev.v
+                    (ident_to_string td.typedef_abbrev)
+                    (ident_to_string td.typedef_ptr_abbrev)
   | CaseType td params switch_case ->
     Printf.sprintf "casetype %s%s {\n\
                         %s \n\
                     } %s, *%s"
-                    td.typedef_name.v
+                    (ident_to_string td.typedef_name)
                     (print_params params)
                     (print_switch_case switch_case)
-                    td.typedef_abbrev.v
-                    td.typedef_ptr_abbrev.v
+                    (ident_to_string td.typedef_abbrev)
+                    (ident_to_string td.typedef_ptr_abbrev)
 
 let print_decl (d:decl) : ML string =
   match d.comments with
