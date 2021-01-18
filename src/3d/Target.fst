@@ -57,14 +57,23 @@ let rec parser_kind_eq k k' =
 // Printing the target AST in F* concrete syntax
 ////////////////////////////////////////////////////////////////////////////////
 
+let mname_prefix (i:A.ident) =
+  let open A in
+  match i.v.modul_name with
+  | None -> ""
+  | Some s -> Printf.sprintf "%s." s
+
 let print_ident (i:A.ident) =
   let open A in
-  match String.list_of_string i.v with
-  | [] -> i.v
+  match String.list_of_string i.v.name with
+  | [] -> i.v.name
   | c0::_ ->
     if FStar.Char.lowercase c0 = c0
-    then i.v
-    else Ast.reserved_prefix^i.v
+    then i.v.name
+    else Ast.reserved_prefix^i.v.name
+
+let print_qualified_ident (i:A.ident) =
+  Printf.sprintf "%s%s" (mname_prefix i) (print_ident i)
 
 let print_integer_type =
   let open A in
@@ -191,7 +200,7 @@ let rec print_expr (e:expr) : Tot string =
   | Constant c ->
     A.print_constant c
   | Identifier i ->
-    print_ident i
+    print_qualified_ident i
   | Record nm fields ->
     Printf.sprintf "{ %s }" (String.concat "; " (print_fields fields))
   | App op [e1;e2] ->
@@ -240,7 +249,7 @@ let rec print_typ (t:typ) : Tot string (decreases t) =
   | T_false -> "False"
   | T_app hd args ->
     Printf.sprintf "(%s %s)"
-      (print_ident hd)
+      (print_qualified_ident hd)
       (String.concat " " (print_indexes args))
   | T_dep_pair t1 (x, t2) ->
     Printf.sprintf "(%s:%s & %s)"
@@ -271,7 +280,8 @@ and print_indexes (is:list index) : Tot (list string) (decreases is) =
 let rec print_kind (k:parser_kind) : Tot string =
   match k.pk_kind with
   | PK_base hd ->
-    Printf.sprintf "kind_%s"
+    Printf.sprintf "%skind_%s"
+      (mname_prefix hd)
       (print_ident hd)
   | PK_list ->
     "kind_nlist"
@@ -302,7 +312,7 @@ let rec print_parser (p:parser) : Tot string (decreases p) =
   | Parse_return v ->
     Printf.sprintf "(parse_ret %s)" (print_expr v)
   | Parse_app hd args ->
-    Printf.sprintf "(parse_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
+    Printf.sprintf "(%sparse_%s %s)" (mname_prefix hd) (print_ident hd) (String.concat " " (print_indexes args))
   | Parse_nlist e p ->
     Printf.sprintf "(parse_nlist %s %s)" (print_expr e) (print_parser p)
   | Parse_t_at_most e p ->
@@ -350,7 +360,7 @@ let rec print_reader (r:reader) : Tot string =
   | Read_u16 -> "read____UINT16"
   | Read_u32 -> "read____UINT32"
   | Read_app hd args ->
-    Printf.sprintf "(read_%s %s)" (print_ident hd) (String.concat " " (print_indexes args))
+    Printf.sprintf "(%sread_%s %s)" (mname_prefix hd) (print_ident hd) (String.concat " " (print_indexes args))
   | Read_filter r (x, f) ->
     Printf.sprintf "(read_filter %s (fun %s -> %s))"
       (print_reader r)
@@ -396,14 +406,14 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
   let is_unit_validator v =
     let open A in
     match v.v_validator with
-    | Validate_app ({v="unit"}) [] -> true
+    | Validate_app ({v={name="unit"}}) [] -> true
     | _ -> false
   in
   match v.v_validator with
   | Validate_return ->
     Printf.sprintf "validate_ret"
   | Validate_app hd args ->
-    Printf.sprintf "(validate_eta (validate_%s %s))" (print_ident hd) (String.concat " " (print_indexes args))
+    Printf.sprintf "(validate_eta (%svalidate_%s %s))" (mname_prefix hd) (print_ident hd) (String.concat " " (print_indexes args))
   | Validate_nlist e p ->
     Printf.sprintf "(validate_nlist %s %s)" (print_expr e) (print_validator p)
   | Validate_t_at_most e p ->
@@ -417,7 +427,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
     in
     Printf.sprintf "(validate_nlist_constant_size_without_actions %s %s %s)" (if n_is_const then "true" else "false") (print_expr e) (print_validator p)
   | Validate_pair n1 p1 p2 ->
-    Printf.sprintf "(validate_pair \"%s\" %s %s)" (print_ident n1) (print_validator p1) (print_validator p2)
+    Printf.sprintf "(validate_pair \"%s\" %s %s)" (print_qualified_ident n1) (print_validator p1) (print_validator p2)
   | Validate_dep_pair n1 p1 r (x, p2) ->
     Printf.sprintf "(validate_dep_pair \"%s\" %s %s (fun %s -> %s))"
       (print_ident n1)
@@ -428,7 +438,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
   | Validate_dep_pair_with_refinement p1_is_constant_size_without_actions n1 f1 p1 r (x, e) (y, p2) ->
     Printf.sprintf "(validate_dep_pair_with_refinement %s \"%s\" %s %s %s (fun %s -> %s) (fun %s -> %s))"
       (if p1_is_constant_size_without_actions then "true" else "false")
-      (print_ident n1)
+      (print_qualified_ident n1)
       (print_ident f1)
       (print_validator p1)
       (print_reader r)
@@ -447,7 +457,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
   | Validate_dep_pair_with_refinement_and_action p1_is_constant_size_without_actions n1 f1 p1 r (x, e) (y, a) (z, p2)  ->
     Printf.sprintf "(validate_dep_pair_with_refinement_and_action %s \"%s\" %s %s %s (fun %s -> %s) (fun %s -> %s) (fun %s -> %s))"
       (if p1_is_constant_size_without_actions then "true" else "false")
-      (print_ident n1)
+      (print_qualified_ident n1)
       (print_ident f1)
       (print_validator p1)
       (print_reader r)
@@ -467,7 +477,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
                           (print_expr e)
       else Printf.sprintf "(validate_filter \"%s\" %s %s (fun %s -> %s)
                                             \"reading field value\" \"checking constraint\")"
-                          (print_ident n1)
+                          (print_qualified_ident n1)
                           (print_validator p1)
                           (print_reader r)
                           (print_ident x)
@@ -477,7 +487,7 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
     Printf.sprintf "(validate_filter_with_action \"%s\" %s %s (fun %s -> %s)
                                             \"reading field value\" \"checking constraint\"
                                             (fun %s -> %s))"
-                          (print_ident n1)
+                          (print_qualified_ident n1)
                           (print_validator p1)
                           (print_reader r)
                           (print_ident x)
@@ -486,12 +496,12 @@ let rec print_validator (v:validator) : Tot string (decreases v) =
                           (print_action a)
   | Validate_with_action name v a ->
     Printf.sprintf "(validate_with_success_action \"%s\" %s %s)"
-      (print_ident name)
+      (print_qualified_ident name)
       (print_validator v)
       (print_action a)
   | Validate_with_dep_action n v r (x, a) ->
     Printf.sprintf "(validate_with_dep_action \"%s\" %s %s (fun %s -> %s))"
-      (print_ident n)
+      (print_qualified_ident n)
       (print_validator v)
       (print_reader r)
       (print_ident x)
@@ -594,7 +604,7 @@ let print_attributes (entrypoint:bool) (attrs:decl_attributes) : string =
 /// Print all the definitions, and for a Type_decl, only the type definition
 let print_decl_for_types (_modul:string) (d:decl) : Tot string =
   match fst d with
-  | Definition (x, [], T_app ({Ast.v="field_id"}) _, (Constant c, _)) ->
+  | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
      (print_comments (snd d).comments)
      (print_ident x)
@@ -665,10 +675,8 @@ let print_decl_for_validators (modul:string) (d:decl) : Tot string =
     (match td.decl_reader with
      | None -> ""
      | Some r ->
-       Printf.sprintf "%sinline_for_extraction\nlet read_%s : leaf_reader (parse_%s) = %s\n\n"
-         (if td.decl_name.td_entrypoint then "" else "noextract\n")
+       Printf.sprintf "let read_%s = %s\n\n"
          (print_typedef_name td.decl_name)
-         (print_typedef_typ td.decl_name)
          (print_reader r))
 
 let print_decl_signature (d:decl) : Tot string =
@@ -697,6 +705,14 @@ let print_decl_signature (d:decl) : Tot string =
         inv
         fp
         td.decl_validator.v_allow_reading)
+      `strcat`
+      (match td.decl_reader with
+       | None -> ""
+       | Some r ->
+         Printf.sprintf "%sinline_for_extraction\nval read_%s : leaf_reader (parse_%s)\n\n"
+           (if td.decl_name.td_entrypoint then "" else "noextract\n")
+           (print_typedef_name td.decl_name)
+           (print_typedef_typ td.decl_name))
      end
 
 
@@ -791,19 +807,19 @@ let rec print_as_c_type (t:typ) : Tot string =
     match t with
     | T_pointer t ->
           Printf.sprintf "%s*" (print_as_c_type t)
-    | T_app {v="Bool"} [] ->
+    | T_app {v={name="Bool"}} [] ->
           "BOOLEAN"
-    | T_app {v="UINT8"} [] ->
+    | T_app {v={name="UINT8"}} [] ->
           "uint8_t"
-    | T_app {v="UINT16"} [] ->
+    | T_app {v={name="UINT16"}} [] ->
           "uint16_t"
-    | T_app {v="UINT32"} [] ->
+    | T_app {v={name="UINT32"}} [] ->
           "uint32_t"
-    | T_app {v="UINT64"} [] ->
+    | T_app {v={name="UINT64"}} [] ->
           "uint64_t"
-    | T_app {v="PUINT8"} [] ->
+    | T_app {v={name="PUINT8"}} [] ->
           "uint8_t*"
-    | T_app {v=x} [] ->
+    | T_app {v={name=x}} [] ->
           x
     | _ ->
          "__UNKNOWN__"
