@@ -74,14 +74,14 @@ let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   match f with
   | FieldScalar -> FieldScalar
   | FieldArrayQualified (e, b) -> FieldArrayQualified (simplify_expr env e, b)
-  | FieldString sz -> FieldString (B.map_opt (simplify_expr env) sz)
+  | FieldString sz -> FieldString (map_opt (simplify_expr env) sz)
 
 let simplify_field (env:T.env_t) (f:field)
   : ML field
   = let sf = f.v in
     let ft = simplify_typ env sf.field_type in
     let fa = simplify_field_array env sf.field_array_opt in
-    let fc = sf.field_constraint |> B.map_opt (simplify_expr env) in
+    let fc = sf.field_constraint |> map_opt (simplify_expr env) in
     let fact =
       match sf.field_action with
       | None -> None
@@ -120,5 +120,5 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
                          cases in
     { d with v=CaseType tdnames params (hd, cases) }
 
-let simplify_prog (env:T.env_t) (p:list decl) =
-  List.map (simplify_decl env) p
+let simplify_prog benv senv (p:list decl) =
+  List.map (simplify_decl (B.mk_env benv, senv)) p
