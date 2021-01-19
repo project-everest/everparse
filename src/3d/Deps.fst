@@ -47,15 +47,78 @@ let scan_deps (fn:string) : ML (list string) =
        | None -> [s]
        | Some m -> [m]) in
 
-  //AR: TODO: collect deps from expressions etc.
+  let deps_of_opt (#a:Type) (f:a -> ML (list string)) (x:option a) : ML (list string) =
+    match x with
+    | None -> []
+    | Some x -> f x in
+
+  let rec deps_of_expr (e:expr) : ML (list string) =
+    match e.v with
+    | Constant _ -> []
+    | Identifier i -> maybe_dep i
+    | This -> []
+    | App _op args -> List.collect deps_of_expr args in
 
   let rec deps_of_typ (t:typ) : ML (list string) =
     match t.v with
-    | Type_app hd _ -> maybe_dep hd
+    | Type_app hd args -> (maybe_dep hd)@(List.collect deps_of_expr args)
     | Pointer t -> deps_of_typ t in
+
+  let deps_of_atomic_action (ac:atomic_action) : ML (list string) =
+    match ac with
+    | Action_return e -> deps_of_expr e
+    | Action_abort | Action_field_pos | Action_field_ptr -> []
+    | Action_deref _i -> []  //a local variable
+    | Action_assignment _lhs rhs -> deps_of_expr rhs
+    | Action_call hd args -> (maybe_dep hd)@(List.collect deps_of_expr args) in
+
+  let rec deps_of_action (a:action) : ML (list string) =
+    match a.v with
+    | Atomic_action ac -> deps_of_atomic_action ac
+    | Action_seq hd tl -> (deps_of_atomic_action hd)@(deps_of_action tl)
+    | Action_ite hd then_ else_ ->
+      (deps_of_expr hd)@
+      (deps_of_action then_)@
+      (deps_of_opt deps_of_action else_)
+    | Action_let _i a k -> (deps_of_atomic_action a)@(deps_of_action k) in
 
   let deps_of_params params : ML (list string) =
     params |> List.collect (fun (t, _, _) -> deps_of_typ t) in
+
+  let deps_of_bitfield_attr (b:bitfield_attr) : ML (list string) =
+    deps_of_typ b.v.bitfield_type in
+
+  let deps_of_field_bitwidth_t (fb:field_bitwidth_t) : ML (list string) =
+    match fb with
+    | Inr b -> deps_of_bitfield_attr b
+    | _ -> [] in
+
+  let deps_of_field_array_t (fa:field_array_t) : ML (list string) =
+    match fa with
+    | FieldScalar -> []
+    | FieldArrayQualified (e, _) -> deps_of_expr e
+    | FieldString eopt -> deps_of_opt deps_of_expr eopt in
+
+  let deps_of_struct_field (sf:struct_field) : ML (list string) =
+    (deps_of_typ sf.field_type)@
+    (deps_of_field_array_t sf.field_array_opt)@
+    (deps_of_opt deps_of_expr sf.field_constraint)@
+    (deps_of_opt deps_of_field_bitwidth_t sf.field_bitwidth)@
+    (deps_of_opt (fun (a, _) -> deps_of_action a) sf.field_action) in
+
+  let deps_of_case (c:case) : ML (list string) =
+    match c with
+    | Case e f -> (deps_of_expr e)@(deps_of_struct_field f.v)
+    | DefaultCase f -> deps_of_struct_field f.v in
+
+  let deps_of_switch_case (sc:switch_case) : ML (list string) =
+    let e, l = sc in
+    (deps_of_expr e)@(List.collect deps_of_case l) in
+
+  let deps_of_enum_case (ec:enum_case) : ML (list string) =
+    match snd ec with
+    | Some (Inr i) -> maybe_dep i
+    | _ -> [] in
 
   let rec deps_of_decl (d:decl) : ML (list string) =
     match d.v with
@@ -65,15 +128,15 @@ let scan_deps (fn:string) : ML (list string) =
     | Define _ None _ -> []
     | Define _ (Some t) _ -> deps_of_typ t
     | TypeAbbrev t _ -> deps_of_typ t
-    | Enum _ _ _ -> []
-    | Record _ params _ flds ->
-      (deps_of_params params) @
-      (List.collect (fun fld -> deps_of_typ fld.v.field_type) flds)
-    | CaseType _ params (_, cases) ->
-      (deps_of_params params) @
-      (List.collect (fun case -> match case with
-                              | Case _ fld
-                              | DefaultCase fld -> deps_of_typ fld.v.field_type) cases) in
+    | Enum _base_t _ l -> List.collect deps_of_enum_case l
+    | Record _ params wopt flds ->
+      (deps_of_params params)@
+      (deps_of_opt deps_of_expr wopt)@
+      (List.collect (fun f -> deps_of_struct_field f.v) flds)
+    | CaseType _ params sc ->
+      (deps_of_params params)@
+      (deps_of_switch_case sc) in
+
   List.collect deps_of_decl decls
 
 let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & list string)
