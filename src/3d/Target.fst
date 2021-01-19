@@ -690,12 +690,11 @@ let print_decl_signature (mname:string) (d:decl) : Tot string =
   match fst d with
   | TModuleAbbrev i m -> Printf.sprintf "module %s = %s\n" i m
   | Definition (x, [], t, (Constant c, _)) ->
-    Printf.sprintf "[@(CMacro)%s]\nlet %s : %s = %s.Types.%s\n\n"
+    Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
       (print_comments (snd d).comments)
       (print_ident x)
+      (A.print_constant c)
       (print_typ mname t)
-      mname
-      (print_ident x)
   | Definition _ -> ""
   | Type_decl td ->
     if false //not td.decl_name.td_entrypoint
