@@ -196,6 +196,7 @@ let go () : ML unit =
       FStar.IO.print_string "EverParse succeeded!\n"
     end
   | Some ch ->
+    //AR: TODO: FIXME, files_and_modules here does not include all the files, e.g. dependencies
     Batch.check_all_hashes ch out_dir files_and_modules
 
 #push-options "--warn_error -272" //top-level effects are okay
