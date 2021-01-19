@@ -770,7 +770,9 @@ let print_decls_signature (mname: string) (ds:list decl) =
      open Actions\n\
      open WeakenTac\n\
      module B = LowStar.Buffer\n\
+     include %s.Types
      %s"
+     mname
      mname
      (String.concat "\n" (List.Tot.map (print_decl_signature mname) ds))
   in
