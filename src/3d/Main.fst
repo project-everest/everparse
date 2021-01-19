@@ -15,17 +15,18 @@ let has_entrypoint (l:list attribute) =
   List.tryFind (function Entrypoint -> true | _ -> false) l
   |> Some?
 
-let parse_prog (fn:string) : ML prog =
+let parse_prog (fn:string) (must_have_entrypoint:bool) : ML prog =
   let decls, type_refinement_opt = ParserDriver.parse fn in
-  if decls
-     |> List.tryFind (fun d -> match d.v with
-                           | Record names _ _ _
-                           | CaseType names _ _ ->
-                             has_entrypoint (names.typedef_attributes)
-                           | _ -> false)
-     |> Some?
-  then decls, type_refinement_opt
-  else raise (Error (Printf.sprintf "File %s does not have an entry point definition, exiting\n" fn))
+  if not must_have_entrypoint then decls, type_refinement_opt
+  else if decls
+          |> List.tryFind (fun d -> match d.v with
+                                | Record names _ _ _
+                                | CaseType names _ _ ->
+                                  has_entrypoint (names.typedef_attributes)
+                                | _ -> false)
+          |> Some?
+       then decls, type_refinement_opt
+       else raise (Error (Printf.sprintf "File %s does not have an entry point definition, exiting\n" fn))
 
 noeq
 type env = {
@@ -40,14 +41,14 @@ let initial_env () : ML env = {
   translate_env = Translate.initial_translate_env ();
 }
 
-let translate_module (en:env) (mname:string) (fn:string)
+let translate_module (en:env) (mname:string) (fn:string) (must_have_entrypoint:bool)
   : ML (list Ast.decl &
         list Target.decl &
         StaticAssertions.static_asserts &
         env) =
 
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
-  let decls, refinement = parse_prog fn in
+  let decls, refinement = parse_prog fn must_have_entrypoint in
 
   Options.debug_print_string "=============After parsing=============\n";
   Options.debug_print_string (print_decls decls);
@@ -152,8 +153,8 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file c_static_asserts_file
   end
 
-let process_modul (en:env) (modul fn:string) : ML env =
-  let _decls, t_decls, static_asserts, en = translate_module en modul fn in
+let process_modul (en:env) (modul fn:string) (must_have_entrypoint:bool) : ML env =
+  let _decls, t_decls, static_asserts, en = translate_module en modul fn must_have_entrypoint in
   emit_fstar_code en modul t_decls static_asserts;
   en
 
@@ -164,7 +165,11 @@ let process_file (fn:string) : ML (list string) =
     typesizes_env = TypeSizes.initial_senv ();
     translate_env = Translate.initial_translate_env () } in
   let _ = List.fold_left (fun en m ->
-    process_modul en m (Options.get_file_name (OS.concat (OS.dirname fn) m))) initial_env sorted_modules in
+    process_modul
+      en
+      m
+      (Options.get_file_name (OS.concat (OS.dirname fn) m))
+      (m = Options.get_module_name fn)) initial_env sorted_modules in
   sorted_modules
 
 let go () : ML unit =

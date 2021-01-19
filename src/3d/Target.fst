@@ -651,7 +651,7 @@ let print_decl_for_validators (mname:string) (d:decl) : Tot string =
     Printf.sprintf "module %s = %s\n" i m
   | Definition _ -> ""
   | Type_decl td ->
-    (if not td.decl_name.td_entrypoint
+    (if false //not td.decl_name.td_entrypoint
      then ""
      else Printf.sprintf "noextract\ninline_for_extraction\nlet %s = %s.Types.%s  (* from corresponding Types.fst  *)\n\n"
             (print_ident td.decl_name.td_name)
@@ -698,7 +698,7 @@ let print_decl_signature (mname:string) (d:decl) : Tot string =
       (print_ident x)
   | Definition _ -> ""
   | Type_decl td ->
-    if not td.decl_name.td_entrypoint
+    if false //not td.decl_name.td_entrypoint
     then ""
     else begin
       Printf.sprintf "noextract\ninline_for_extraction\nval %s : Type u#0\n\n"
