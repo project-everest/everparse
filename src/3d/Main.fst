@@ -160,6 +160,8 @@ let process_modul (en:env) (modul fn:string) (must_have_entrypoint:bool) : ML en
 
 let process_file (fn:string) : ML (list string) =
   let sorted_modules = Deps.get_sorted_deps fn in
+  FStar.IO.print_string (Printf.sprintf "Modules in the dependency order: %s\n"
+    (List.fold_left (fun s m -> Printf.sprintf "%s %s" s m) "" sorted_modules));
   let initial_env = {
     binding_env = Binding.initial_global_env ();
     typesizes_env = TypeSizes.initial_senv ();

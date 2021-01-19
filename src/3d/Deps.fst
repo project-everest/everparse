@@ -10,29 +10,29 @@ type edge = string & string
 
 type dep_graph = list edge
 
-let all_edges_from (g:dep_graph) (node:string) : ML (list edge) =
-  g |> List.filter (fun (src, _dst) -> src = node)
+let all_edges_from (g:dep_graph) (node:string) : Tot (list edge) =
+  List.Tot.filter (fun (src, _dst) -> src = node) g
 
-type acc_t = list string & list string  //seen nodes and sorted nodes
+(*
+ * root is already in the visited nodes
+ *)
+let rec topsort_aux (g:dep_graph) (root:string) (acc:list string & list string)
+  : ML (list string & list string) =  //visited nodes & sorted nodes
 
-let rec topsort_aux (g:dep_graph) (root:string) (acc:acc_t)
-  : ML acc_t =  //seen and sorted
-
-  let seen, sorted = acc in
+  let visited, sorted = acc in
   let all_edges_from_root = all_edges_from g root in
-  if List.length all_edges_from_root = 0
-  then seen, root::sorted  //finished DFS at root
+  if List.Tot.length all_edges_from_root = 0
+  then visited, root::sorted  //finished DFS at root
   else
-    all_edges_from_root |> List.fold_left (fun (seen, sorted) (_src, dst) ->
-      let b = List.mem dst seen in
-      if b
-      then error "Cycle in the dependency graph" Ast.dummy_range
-      else
-        let seen, sorted = topsort_aux g dst (dst::seen, sorted) in
-        seen, root::sorted) (seen, sorted)
+    let visited, sorted = 
+      all_edges_from_root |> List.fold_left (fun (visited, sorted) (_src, dst) ->
+        if List.Tot.mem dst visited
+        then raise (Error "Cycle in the dependency graph")
+        else topsort_aux g dst (dst::visited, sorted)) (visited, sorted) in
+    visited, root::sorted
 
 let topsort (g:dep_graph) (root:string) : ML (list string) =
-  topsort_aux g root ([], []) |> snd |> List.rev
+  topsort_aux g root ([root], []) |> snd |> List.rev
 
 let scan_deps (fn:string) : ML (list string) =
   let decls, __refinement = ParserDriver.parse fn in  //AR: TODO: look into refinement too?
