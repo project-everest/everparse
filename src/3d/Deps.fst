@@ -14,22 +14,26 @@ let all_edges_from (g:dep_graph) (node:string) : Tot (list edge) =
   List.Tot.filter (fun (src, _dst) -> src = node) g
 
 (*
- * root is already in the visited nodes
+ * root is already greyed
  *)
 let rec topsort_aux (g:dep_graph) (root:string) (acc:list string & list string)
-  : ML (list string & list string) =  //visited nodes & sorted nodes
+  : ML (list string & list string) =  //grey nodes & finished nodes
 
-  let visited, sorted = acc in
+  let finish (acc:list string & list string) : ML (list string & list string) =
+    let grey, finished = acc in
+    List.filter (fun s -> s <> root) grey, root::finished in
+
   let all_edges_from_root = all_edges_from g root in
-  if List.Tot.length all_edges_from_root = 0
-  then visited, root::sorted  //finished DFS at root
+  if List.length all_edges_from_root = 0
+  then finish acc
   else
-    let visited, sorted = 
-      all_edges_from_root |> List.fold_left (fun (visited, sorted) (_src, dst) ->
-        if List.Tot.mem dst visited
+    all_edges_from_root
+    |> List.fold_left (fun (grey, finished) (_src, dst) ->
+        if List.mem dst grey
         then raise (Error "Cycle in the dependency graph")
-        else topsort_aux g dst (dst::visited, sorted)) (visited, sorted) in
-    visited, root::sorted
+        else if List.mem dst finished then (grey, finished)
+        else topsort_aux g dst (dst::grey, finished)) acc
+    |> finish
 
 let topsort (g:dep_graph) (root:string) : ML (list string) =
   topsort_aux g root ([root], []) |> snd |> List.rev
