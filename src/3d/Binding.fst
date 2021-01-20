@@ -119,7 +119,6 @@ noeq
 type global_env = {
   ge_h: global_hash_t;
   ge_fd: field_num_ops_t;
-  modul_abbrevs: H.t string string
 }
 
 let all_nums ge = ge.ge_fd.all_nums ()
@@ -128,14 +127,6 @@ let lookup_field_num ge x =
   match ge.ge_fd.lookup x with
   | None -> None
   | Some y -> Some (field_error_code_variable_name_of_field y)
-
-let resolve_modul_abbrev (ge:global_env) (i:ident) : ML ident =
-  match i.v.modul_name with
-  | None -> i
-  | Some s ->
-    match H.try_find ge.modul_abbrevs s with
-    | Some m -> {i with v = {i.v with modul_name=Some m}}
-    | None -> i
 
 /// Maps locally bound names, i.e., a field name to its type
 ///  -- the bool signifies that this identifier has been used, and is
@@ -230,7 +221,6 @@ let add_local (e:env) (i:ident) (t:typ) : ML unit =
   H.insert e.locals i'.v (i'.v, t, false)
 
 let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes macro_signature)) =
-  let i = resolve_modul_abbrev e.globals i in
   match H.try_find e.locals i.v with
   | Some (_, t, true) ->
     Inl t
@@ -249,8 +239,6 @@ let remove_local (e:env) (i:ident) : ML unit =
     H.remove e.locals i.v;
     H.remove e.locals j
   | _ -> ()
-
-let maybe_resolve_module_abbrev g i = resolve_modul_abbrev g i
 
 let resolve_typedef_abbrev (env:env) (i:ident) =
     match lookup env i with
@@ -1175,13 +1163,7 @@ let elaborate_record (e:global_env)
 
 let bind_decl (e:global_env) (d:decl) : ML decl =
   match d.v with
-  | ModuleAbbrev i m ->
-    (match H.try_find e.modul_abbrevs i.v.name with
-     | None -> H.insert e.modul_abbrevs i.v.name m.v.name
-     | Some n ->
-       if m.v.name <> n
-       then error (Printf.sprintf "Module abbreviation %s already mapped to %s" i.v.name n) d.range);
-    d
+  | ModuleAbbrev i m -> d
   | Define i None c ->
     let t = type_of_constant d.range c in
     let d = {d with v = Define i (Some t) c} in
@@ -1249,7 +1231,6 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     d
 
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
-  let g = { g with modul_abbrevs = H.create 10 } in
   List.map (bind_decl g) p, g
 
 let next_field_num (enclosing_struct:ident)
@@ -1276,7 +1257,6 @@ let initial_global_env () =
   let e = {
     ge_h = H.create 10;
     ge_fd = mk_field_num_ops ();
-    modul_abbrevs = H.create 10;
   }
   in
   let nullary_decl i =
