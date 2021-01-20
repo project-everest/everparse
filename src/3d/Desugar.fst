@@ -125,10 +125,15 @@ let eliminate_enum (d:decl) : ML decl =
   | _ -> d
 
 
+noeq
 type qenv = {
   mname : string;
+  module_abbrevs : H.t string string;
   local_names : list string
 }
+
+let push_module_abbrev (env:qenv) (i m:string) : ML unit =
+  H.insert env.module_abbrevs i m
 
 let push_name (env:qenv) (name:string) : qenv =
   { env with local_names = name::env.local_names }
@@ -138,135 +143,148 @@ let prim_consts = [
   "field_id"; "PUINT8";
   "is_range_okay" ]
 
-let maybe_qualify_ident (env:qenv) (i:ident) : ML ident =
-  if List.mem i.v.name prim_consts     ||
-     List.mem i.v.name env.local_names ||
-     Some? i.v.modul_name then i
-  else { i with v = { i.v with modul_name = Some env.mname } }
+let resolve_ident (env:qenv) (i:ident) : ML ident =
+  if List.mem i.v.name prim_consts  //it's a primitive constant, e.g. UINT8, leave as is
+  then i
+  else if List.mem i.v.name env.local_names  //it's a local name (e.g. a parameter name)
+       then (if Some? i.v.modul_name  //must have module name set to None
+             then error (Printf.sprintf 
+                          "Ident %s is a local name but has a qualifying modul %s"
+                          i.v.name
+                          (Some?.v i.v.modul_name))
+                        i.range
+             else i)  //return the local name as is
+       else (match i.v.modul_name with  //it's a top-level name
+             | None -> { i with v = { i.v with modul_name = Some env.mname } }  //if unqualified, add current module
+             | Some m ->  //if already qualified, check if it is an abbreviation
+               (match H.try_find env.module_abbrevs m with
+                | None -> i
+                | Some m -> { i with v = { i.v with modul_name = Some m } }))
 
-let rec qualify_expr' (env:qenv) (e:expr') : ML expr' =
+
+let rec resolve_expr' (env:qenv) (e:expr') : ML expr' =
   match e with
   | Constant _ -> e
-  | Identifier i -> Identifier (maybe_qualify_ident env i)
+  | Identifier i -> Identifier (resolve_ident env i)
   | This -> e
-  | App op args -> App op (List.map (qualify_expr env) args)
+  | App op args -> App op (List.map (resolve_expr env) args)
 
-and qualify_expr (env:qenv) (e:expr) : ML expr = { e with v = qualify_expr' env e.v }
+and resolve_expr (env:qenv) (e:expr) : ML expr = { e with v = resolve_expr' env e.v }
 
-let rec qualify_typ' (env:qenv) (t:typ') : ML typ' =
+let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
   match t with
   | Type_app hd args ->
-    Type_app (maybe_qualify_ident env hd) (List.map (qualify_expr env) args)
-  | Pointer t -> Pointer (qualify_typ env t)
+    Type_app (resolve_ident env hd) (List.map (resolve_expr env) args)
+  | Pointer t -> Pointer (resolve_typ env t)
 
-and qualify_typ (env:qenv) (t:typ) : ML typ = { t with v = qualify_typ' env t.v }
+and resolve_typ (env:qenv) (t:typ) : ML typ = { t with v = resolve_typ' env t.v }
 
-let qualify_atomic_action (env:qenv) (ac:atomic_action) : ML atomic_action =
+let resolve_atomic_action (env:qenv) (ac:atomic_action) : ML atomic_action =
   match ac with
-  | Action_return e -> Action_return (qualify_expr env e)
+  | Action_return e -> Action_return (resolve_expr env e)
   | Action_abort
   | Action_field_pos
   | Action_field_ptr -> ac
   | Action_deref i -> Action_deref i  //most certainly a type parameter
   | Action_assignment lhs rhs ->
-    Action_assignment lhs (qualify_expr env rhs)  //lhs is an action-local variable
+    Action_assignment lhs (resolve_expr env rhs)  //lhs is an action-local variable
   | Action_call f args ->
-    Action_call (maybe_qualify_ident env f) (List.map (qualify_expr env) args)
+    Action_call (resolve_ident env f) (List.map (resolve_expr env) args)
 
-let rec qualify_action' (env:qenv) (act:action') : ML action' =
+let rec resolve_action' (env:qenv) (act:action') : ML action' =
   match act with
-  | Atomic_action ac -> Atomic_action (qualify_atomic_action env ac)
+  | Atomic_action ac -> Atomic_action (resolve_atomic_action env ac)
   | Action_seq hd tl ->
-    Action_seq (qualify_atomic_action env hd) (qualify_action env tl)
+    Action_seq (resolve_atomic_action env hd) (resolve_action env tl)
   | Action_ite hd then_ else_ ->
-    Action_ite (qualify_expr env hd) (qualify_action env then_) (map_opt (qualify_action env) else_)
+    Action_ite (resolve_expr env hd) (resolve_action env then_) (map_opt (resolve_action env) else_)
   | Action_let i a k ->
-    Action_let i (qualify_atomic_action env a) (qualify_action (push_name env i.v.name) k)
+    Action_let i (resolve_atomic_action env a) (resolve_action (push_name env i.v.name) k)
 
-and qualify_action (env:qenv) (act:action) : ML action =
-  { act with v = qualify_action' env act.v }
+and resolve_action (env:qenv) (act:action) : ML action =
+  { act with v = resolve_action' env act.v }
 
-let qualify_param (env:qenv) (p:param) : ML param =
+let resolve_param (env:qenv) (p:param) : ML param =
   let t, i, q = p in
-  qualify_typ env t, i, q
+  resolve_typ env t, i, q
 
-let qualify_field_bitwidth_t (env:qenv) (fb:field_bitwidth_t) : ML field_bitwidth_t =
-  let qualify_bitfield_attr' (env:qenv) (b:bitfield_attr') : ML bitfield_attr' =
-    { b with bitfield_type = qualify_typ env b.bitfield_type } in
+let resolve_field_bitwidth_t (env:qenv) (fb:field_bitwidth_t) : ML field_bitwidth_t =
+  let resolve_bitfield_attr' (env:qenv) (b:bitfield_attr') : ML bitfield_attr' =
+    { b with bitfield_type = resolve_typ env b.bitfield_type } in
 
-  let qualify_bitfield_attr (env:qenv) (b:bitfield_attr) : ML bitfield_attr =
-    { b with v = qualify_bitfield_attr' env b.v } in
+  let resolve_bitfield_attr (env:qenv) (b:bitfield_attr) : ML bitfield_attr =
+    { b with v = resolve_bitfield_attr' env b.v } in
 
   match fb with
   | Inl _ -> fb
-  | Inr b -> Inr (qualify_bitfield_attr env b)
+  | Inr b -> Inr (resolve_bitfield_attr env b)
 
-let qualify_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
+let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
   match farr with
   | FieldScalar -> farr
   | FieldArrayQualified (e, aq) ->
-    FieldArrayQualified (qualify_expr env e, aq)
+    FieldArrayQualified (resolve_expr env e, aq)
   | FieldString None -> farr
-  | FieldString (Some e) -> FieldString (Some (qualify_expr env e))
+  | FieldString (Some e) -> FieldString (Some (resolve_expr env e))
 
-let qualify_field (env:qenv) (f:field) : ML field =
-  let qualify_struct_field (env:qenv) (sf:struct_field) : ML struct_field =
+let resolve_field (env:qenv) (f:field) : ML field =
+  let resolve_struct_field (env:qenv) (sf:struct_field) : ML struct_field =
     { sf with
-      field_type = qualify_typ env sf.field_type;
-      field_array_opt = qualify_field_array_t env sf.field_array_opt;
-      field_constraint = map_opt (qualify_expr env) sf.field_constraint;
-      field_bitwidth = map_opt (qualify_field_bitwidth_t env) sf.field_bitwidth;
-      field_action = map_opt (fun (a, b) -> qualify_action env a, b) sf.field_action } in
+      field_type = resolve_typ env sf.field_type;
+      field_array_opt = resolve_field_array_t env sf.field_array_opt;
+      field_constraint = map_opt (resolve_expr env) sf.field_constraint;
+      field_bitwidth = map_opt (resolve_field_bitwidth_t env) sf.field_bitwidth;
+      field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action } in
 
-  { f with v = qualify_struct_field env f.v }
+  { f with v = resolve_struct_field env f.v }
 
-let qualify_switch_case (env:qenv) (sc:switch_case) : ML switch_case =
-  let qualify_case (env:qenv) (c:case) : ML case =
+let resolve_switch_case (env:qenv) (sc:switch_case) : ML switch_case =
+  let resolve_case (env:qenv) (c:case) : ML case =
     match c with
-    | Case e f -> Case (qualify_expr env e) (qualify_field env f)
-    | DefaultCase f -> DefaultCase (qualify_field env f) in
+    | Case e f -> Case (resolve_expr env e) (resolve_field env f)
+    | DefaultCase f -> DefaultCase (resolve_field env f) in
 
   let e, l = sc in
-  qualify_expr env e, List.map (qualify_case env) l
+  resolve_expr env e, List.map (resolve_case env) l
 
-let qualify_typedef_names (env:qenv) (td_names:typedef_names) : ML typedef_names =
+let resolve_typedef_names (env:qenv) (td_names:typedef_names) : ML typedef_names =
   { td_names with
-    typedef_name = maybe_qualify_ident env td_names.typedef_name;
-    typedef_abbrev = maybe_qualify_ident env td_names.typedef_abbrev;
-    typedef_ptr_abbrev = maybe_qualify_ident env td_names.typedef_ptr_abbrev }
+    typedef_name = resolve_ident env td_names.typedef_name;
+    typedef_abbrev = resolve_ident env td_names.typedef_abbrev;
+    typedef_ptr_abbrev = resolve_ident env td_names.typedef_ptr_abbrev }
 
-let qualify_enum_case (env:qenv) (ec:enum_case) : ML enum_case =
+let resolve_enum_case (env:qenv) (ec:enum_case) : ML enum_case =
   match ec with
-  | i, None -> maybe_qualify_ident env i, None
-  | _ -> error "Unexpected enum_case in qualify_enum_case" (fst ec).range
+  | i, None -> resolve_ident env i, None
+  | _ -> error "Unexpected enum_case in resolve_enum_case" (fst ec).range
 
-let qualify_decl' (env:qenv) (d:decl') : ML decl' =
+let resolve_decl' (env:qenv) (d:decl') : ML decl' =
   match d with
-  | ModuleAbbrev _ _ -> d
+  | ModuleAbbrev i m -> push_module_abbrev env i.v.name m.v.name; d
   | Define i topt c ->
-    Define (maybe_qualify_ident env i) (map_opt (qualify_typ env) topt) c
+    Define (resolve_ident env i) (map_opt (resolve_typ env) topt) c
   | TypeAbbrev t i ->
-    TypeAbbrev (qualify_typ env t) (maybe_qualify_ident env i)
+    TypeAbbrev (resolve_typ env t) (resolve_ident env i)
   | Enum t i ecs ->
-    Enum (qualify_typ env t) (maybe_qualify_ident env i) (List.map (qualify_enum_case env) ecs)
+    Enum (resolve_typ env t) (resolve_ident env i) (List.map (resolve_enum_case env) ecs)
   | Record td_names params where flds ->
-    let td_names = qualify_typedef_names env td_names in
-    let params = List.map (qualify_param env) params in
+    let td_names = resolve_typedef_names env td_names in
+    let params = List.map (resolve_param env) params in
     let env = List.fold_left (fun env (_, t, _) -> push_name env t.v.name) env params in
-    let where = map_opt (qualify_expr env) where in
+    let where = map_opt (resolve_expr env) where in
     let _, flds = List.fold_left (fun (env, flds) f ->
       let env = push_name env f.v.field_ident.v.name in
-      let f = qualify_field env f in
+      let f = resolve_field env f in
       env, flds@[f]) (env, []) flds in
     Record td_names params where flds
   | CaseType td_names params sc ->
-    let td_names = qualify_typedef_names env td_names in
-    let params = List.map (qualify_param env) params in
-    let sc = qualify_switch_case env sc in
+    let td_names = resolve_typedef_names env td_names in
+    let params = List.map (resolve_param env) params in
+    let sc = resolve_switch_case env sc in
     CaseType td_names params sc
 
-let qualify_decl (env:qenv) (d:decl) : ML decl = { d with v = qualify_decl' env d.v }
+let resolve_decl (env:qenv) (d:decl) : ML decl = { d with v = resolve_decl' env d.v }
 
 let desugar (mname:string) (ds:list decl) : ML (list decl) =
   let ds = List.collect desugar_one_enum ds in
-  List.map (qualify_decl ({mname=mname; local_names=[]})) ds
+  List.map (resolve_decl ({mname=mname; module_abbrevs=H.create 10; local_names=[]})) ds
