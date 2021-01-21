@@ -604,17 +604,13 @@ let print_attributes (entrypoint:bool) (attrs:decl_attributes) : string =
       (if not entrypoint && not attrs.should_inline then "(CInline)" else "")
       (if attrs.should_inline then "inline_for_extraction\n" else "")
 
+
 /// Printing a decl for M.Types.fst
 ///
 /// Print all the definitions, and for a Type_decl, only the type definition
 let print_decl_for_types (mname:string) (d:decl) : Tot string =
   match fst d with
   | TModuleAbbrev i m -> Printf.sprintf "module %s = %s\n" i m
-  | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
-    Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
-     (print_comments (snd d).comments)
-     (print_ident x)
-     (A.print_constant c)
 
   | Definition (x, [], t, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
@@ -650,6 +646,11 @@ let print_decl_for_validators (mname:string) (d:decl) : Tot string =
   match fst d with
   | TModuleAbbrev i m ->
     Printf.sprintf "module %s = %s\n" i m
+  | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
+    Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
+     (print_comments (snd d).comments)
+     (print_ident x)
+     (A.print_constant c)
   | Definition _ -> ""
   | Type_decl td ->
     (if false //not td.decl_name.td_entrypoint
@@ -687,9 +688,10 @@ let print_decl_for_validators (mname:string) (d:decl) : Tot string =
          (print_typedef_name mname td.decl_name)
          (print_reader mname r))
 
-let print_decl_signature (mname:string) (d:decl) : Tot string =
+let print_decl_signature_aux (mname:string) (d:decl) : Tot string =
   match fst d with
   | TModuleAbbrev i m -> Printf.sprintf "module %s = %s\n" i m
+  | Definition (_, _, T_app ({Ast.v={Ast.name="field_id"}}) _, _) -> ""
   | Definition (x, [], t, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
       (print_comments (snd d).comments)
@@ -730,6 +732,8 @@ let print_decl_signature (mname:string) (d:decl) : Tot string =
            (print_typedef_typ td.decl_name))
      end
 
+let print_decl_signature (mname:string) (d:decl) : Tot string =
+  if (snd d).is_hoist then "" else print_decl_signature_aux mname d
 
 let print_decls (modul: string) (ds:list decl) =
   let decls =
@@ -771,9 +775,7 @@ let print_decls_signature (mname: string) (ds:list decl) =
      open Actions\n\
      open WeakenTac\n\
      module B = LowStar.Buffer\n\
-     include %s.Types
      %s"
-     mname
      mname
      (String.concat "\n" (List.Tot.map (print_decl_signature mname) ds))
   in
