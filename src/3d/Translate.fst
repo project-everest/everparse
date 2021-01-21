@@ -908,23 +908,13 @@ let rec free_vars_expr (genv:global_env)
     | Record _ fields ->
       List.fold_left (fun out (_, e) -> free_vars_expr genv env out e) out fields
 
-let no_attrs : T.decl_attributes =
-  let open T in
-  {
-    should_inline=false;
-    comments=[]
-  }
-
-let as_decl (d:T.decl') : T.decl =
-  d, no_attrs
-
-let with_attrs (d:T.decl') (i:bool) (c:list string)
+let with_attrs (d:T.decl') (h:bool) (i:bool) (c:list string)
   : T.decl
-  = d, T.({ should_inline = i; comments = c } )
+  = d, T.({ is_hoist = h; should_inline = i; comments = c } )
 
 let with_comments c (d:T.decl')
   : T.decl
-  = d, T.({ should_inline = false; comments = c } )
+  = d, T.({ is_hoist = false; should_inline = false; comments = c } )
 
 let rec hoist_typ
           (fn:string)
@@ -958,7 +948,7 @@ let rec hoist_typ
       in
       let d = Definition def in
       let t = T_refine t1 (x, app) in
-      ds@[with_attrs d true []], t
+      ds@[with_attrs d true true []], t
 
     | T_if_else e t f ->
       let d1, t = hoist_typ fn genv env t in
@@ -1043,7 +1033,7 @@ let hoist_one_type_definition (should_inline:bool)
         decl_reader = reader;
       } in
       let td = Type_decl td in
-      with_attrs td should_inline [comment], tdef
+      with_attrs td true should_inline [comment], tdef
 
 let hoist_field (genv:global_env) (env:env_t) (tdn:T.typedef_name) (f:T.field)
   : ML (list T.decl & T.field)
