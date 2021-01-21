@@ -85,7 +85,7 @@ let gen_ident : option string -> St ident =
 (** Some utilities **)
 let mk_lam (f:(A.ident -> ML 'a)) : ML (T.lam 'a) =
   let x = gen_ident None in
-  x, f x
+  Some x, f x
 
 let map_lam (x:T.lam 'a) (g: 'a -> ML 'b) : ML (T.lam 'b) =
   fst x, g (snd x)
@@ -155,20 +155,20 @@ let pair_parser n1 p1 p2 =
     let open T in
     let pt = pair_typ p1.p_typ p2.p_typ in
     mk_parser (pk_and_then p1.p_kind p2.p_kind) pt (Parse_pair n1 p1 p2)
-let dep_pair_typ t1 (t2:T.lam T.typ) : T.typ =
+let dep_pair_typ t1 (t2:(A.ident & T.typ)) : T.typ =
     T.T_dep_pair t1 t2
 let dep_pair_value x y : T.expr =
     T.mk_expr
       (T.Record (with_dummy_range (to_ident' "dtuple2"))
                 [(with_dummy_range (to_ident' "fst"), T.mk_expr (T.Identifier x));
                  (with_dummy_range (to_ident' "snd"), T.mk_expr (T.Identifier y))])
-let dep_pair_parser n1 p1 (p2:T.lam T.parser) =
+let dep_pair_parser n1 p1 (p2:A.ident & T.parser) =
   let open T in
   let t = T_dep_pair p1.p_typ (fst p2, (snd p2).p_typ) in
   mk_parser
       (pk_and_then p1.p_kind (snd p2).p_kind) t
-      (Parse_dep_pair n1 p1 p2)
-let dep_pair_with_refinement_parser n1 f1 p1 (e:T.lam T.expr) (p2:T.lam T.parser) =
+      (Parse_dep_pair n1 p1 (Some (fst p2), snd p2))
+let dep_pair_with_refinement_parser n1 f1 p1 (e:T.lam T.expr) (p2:A.ident & T.parser) =
   let open T in
   let t1 = T_refine p1.p_typ e in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
@@ -176,8 +176,8 @@ let dep_pair_with_refinement_parser n1 f1 p1 (e:T.lam T.expr) (p2:T.lam T.parser
   mk_parser
       (pk_and_then k1 (snd p2).p_kind)
       t
-      (Parse_dep_pair_with_refinement n1 f1 p1 e p2)
-let dep_pair_with_refinement_and_action_parser n1 f1 p1 (e:T.lam T.expr) (a:T.lam T.action) (p2:T.lam T.parser) =
+      (Parse_dep_pair_with_refinement n1 f1 p1 e (Some (fst p2), snd p2))
+let dep_pair_with_refinement_and_action_parser n1 f1 p1 (e:T.lam T.expr) (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
   let t1 = T_refine p1.p_typ e in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
@@ -185,8 +185,8 @@ let dep_pair_with_refinement_and_action_parser n1 f1 p1 (e:T.lam T.expr) (a:T.la
   mk_parser
       (pk_and_then k1 (snd p2).p_kind)
       t
-      (Parse_dep_pair_with_refinement_and_action n1 f1 p1 e a p2)
-let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:T.lam T.parser) =
+      (Parse_dep_pair_with_refinement_and_action n1 f1 p1 e a (Some (fst p2), snd p2))
+let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
   let t1 = p1.p_typ in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
@@ -194,7 +194,7 @@ let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:T.lam T.parser) =
   mk_parser
       (pk_and_then k1 (snd p2).p_kind)
       t
-      (Parse_dep_pair_with_action p1 a p2)
+      (Parse_dep_pair_with_action p1 a (Some (fst p2), snd p2))
 
 
 let translate_op : A.op -> ML T.op = 
@@ -677,7 +677,7 @@ let translate_field (f:A.field) : ML T.struct_field =
       match sf.field_constraint with
       | None -> t
       | Some e ->
-        T.T_refine t (sf.field_ident, translate_expr e)
+        T.T_refine t (Some sf.field_ident, translate_expr e)
     in
     let t =
       match sf.field_action with
@@ -685,7 +685,7 @@ let translate_field (f:A.field) : ML T.struct_field =
       | Some (a, false) ->
         T.T_with_action t (translate_action a)
       | Some (a, _) ->
-        T.T_with_dep_action t (sf.field_ident, translate_action a)
+        T.T_with_dep_action t (Some sf.field_ident, translate_action a)
     in
     let t : T.typ =
       match f.comments with
@@ -772,7 +772,7 @@ let parse_grouped_fields (env:global_env) (gfs:grouped_fields)
       | Inl sf::gfs ->
         //This a dependent pair, gfs cannot be empty
         let get_action = function
-          | Inl a -> (sf.sf_ident, a)
+          | Inl a -> (Some sf.sf_ident, a)
           | Inr a -> a
         in
         begin
@@ -930,14 +930,14 @@ let rec hoist_typ
       let ds, t1 = hoist_typ fn genv env t1 in
       let ds', t2 = hoist_typ fn genv ((x, t1)::env) t2 in
       ds@ds', T_dep_pair t1 (x, t2)
-    | T_refine t1 (x, e) ->
+    | T_refine t1 (Some x, e) ->
       let ds, t1 = hoist_typ fn genv env t1 in
       // let fvs = env in //free_vars_expr genv env [] e in
       let params = List.rev env in
       let args = (List.map (fun (x, _) -> Identifier x) params) in
       let def, app =
         let params = params @ [x,t1] in
-        let args = args @ [Identifier x] in
+        let args = args in //@ [Identifier x] in
         let filter_name = fn ^ "_filter" in
         let id = maybe_gen_ident genv filter_name in
         let result_type = T_app (with_dummy_range (to_ident' "bool")) [] in
@@ -947,8 +947,12 @@ let rec hoist_typ
         T.mk_expr app
       in
       let d = Definition def in
-      let t = T_refine t1 (x, app) in
+      let t = T_refine t1 (None, app) in
       ds@[with_attrs d true true []], t
+
+    | T_refine t1 (None, e) ->
+      let ds, t1 = hoist_typ fn genv env t1 in
+      ds, T_refine t1 (None, e)
 
     | T_if_else e t f ->
       let d1, t = hoist_typ fn genv env t in
