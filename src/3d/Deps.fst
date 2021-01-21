@@ -30,7 +30,8 @@ let rec topsort_aux (g:dep_graph) (root:string) (acc:list string & list string)
     all_edges_from_root
     |> List.fold_left (fun (grey, finished) (_src, dst) ->
         if List.mem dst grey
-        then raise (Error "Cycle in the dependency graph")
+        then raise (Error (Printf.sprintf "Cycle in the dependency graph (%s)"
+               (List.fold_left (fun s m -> Printf.sprintf "%s <== %s" s m) dst grey)))
         else if List.mem dst finished then (grey, finished)
         else topsort_aux g dst (dst::grey, finished)) acc
     |> finish
