@@ -204,9 +204,15 @@ let rec resolve_action' (env:qenv) (act:action') : ML action' =
 and resolve_action (env:qenv) (act:action) : ML action =
   { act with v = resolve_action' env act.v }
 
-let resolve_param (env:qenv) (p:param) : ML param =
+let resolve_param (env:qenv) (p:param) : ML (param & qenv) =
   let t, i, q = p in
-  resolve_typ env t, i, q
+  (resolve_typ env t, i, q),
+  push_name env i.v.name
+
+let resolve_params (env:qenv) (params:list param) : ML (list param & qenv) =
+  List.fold_left (fun (params, env) p ->
+    let p, env = resolve_param env p in
+    params@[p], env) ([], env) params
 
 let resolve_field_bitwidth_t (env:qenv) (fb:field_bitwidth_t) : ML field_bitwidth_t =
   let resolve_bitfield_attr' (env:qenv) (b:bitfield_attr') : ML bitfield_attr' =
@@ -227,7 +233,7 @@ let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
   | FieldString None -> farr
   | FieldString (Some e) -> FieldString (Some (resolve_expr env e))
 
-let resolve_field (env:qenv) (f:field) : ML field =
+let resolve_field (env:qenv) (f:field) : ML (field & qenv) =
   let resolve_struct_field (env:qenv) (sf:struct_field) : ML struct_field =
     { sf with
       field_type = resolve_typ env sf.field_type;
@@ -236,13 +242,19 @@ let resolve_field (env:qenv) (f:field) : ML field =
       field_bitwidth = map_opt (resolve_field_bitwidth_t env) sf.field_bitwidth;
       field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action } in
 
-  { f with v = resolve_struct_field env f.v }
+  let env = push_name env f.v.field_ident.v.name in
+  { f with v = resolve_struct_field env f.v }, env
+
+let resolve_fields (env:qenv) (flds:list field) : ML (list field & qenv) =
+  List.fold_left (fun (flds, env) f ->
+    let f, env = resolve_field env f in
+    flds@[f], env) ([], env) flds
 
 let resolve_switch_case (env:qenv) (sc:switch_case) : ML switch_case =
   let resolve_case (env:qenv) (c:case) : ML case =
     match c with
-    | Case e f -> Case (resolve_expr env e) (resolve_field env f)
-    | DefaultCase f -> DefaultCase (resolve_field env f) in
+    | Case e f -> Case (resolve_expr env e) (fst (resolve_field env f))
+    | DefaultCase f -> DefaultCase (fst (resolve_field env f)) in
 
   let e, l = sc in
   resolve_expr env e, List.map (resolve_case env) l
@@ -269,17 +281,13 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     Enum (resolve_typ env t) (resolve_ident env i) (List.map (resolve_enum_case env) ecs)
   | Record td_names params where flds ->
     let td_names = resolve_typedef_names env td_names in
-    let params = List.map (resolve_param env) params in
-    let env = List.fold_left (fun env (_, t, _) -> push_name env t.v.name) env params in
+    let params, env = resolve_params env params in
     let where = map_opt (resolve_expr env) where in
-    let _, flds = List.fold_left (fun (env, flds) f ->
-      let env = push_name env f.v.field_ident.v.name in
-      let f = resolve_field env f in
-      env, flds@[f]) (env, []) flds in
+    let flds, _ = resolve_fields env flds in
     Record td_names params where flds
   | CaseType td_names params sc ->
     let td_names = resolve_typedef_names env td_names in
-    let params = List.map (resolve_param env) params in
+    let params, env = resolve_params env params in
     let sc = resolve_switch_case env sc in
     CaseType td_names params sc
 
