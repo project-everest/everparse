@@ -651,10 +651,10 @@ let print_decl_for_validators (mname:string) (d:decl) : Tot string =
   | Type_decl td ->
     (if false //not td.decl_name.td_entrypoint
      then ""
-     else Printf.sprintf "noextract\ninline_for_extraction\nlet %s = %s.Types.%s  (* from corresponding Types.fst  *)\n\n"
-            (print_ident td.decl_name.td_name)
+     else Printf.sprintf "noextract\ninline_for_extraction\nlet %s : Type u#0 = %s.Types.%s  (* from corresponding Types.fst  *)\n\n"
+            (print_typedef_name mname td.decl_name)
             mname
-            (print_ident td.decl_name.td_name))
+            (print_typedef_typ td.decl_name))
     `strcat`
     Printf.sprintf "noextract\ninline_for_extraction\nlet kind_%s : parser_kind %s = %s\n\n"
       (print_ident td.decl_name.td_name)
@@ -680,8 +680,9 @@ let print_decl_for_validators (mname:string) (d:decl) : Tot string =
     (match td.decl_reader with
      | None -> ""
      | Some r ->
-       Printf.sprintf "let read_%s = %s\n\n"
+       Printf.sprintf "let read_%s : leaf_reader (parse_%s) = %s\n\n"
          (print_typedef_name mname td.decl_name)
+         (print_typedef_typ td.decl_name)
          (print_reader mname r))
 
 let print_decl_signature_aux (mname:string) (d:decl) : Tot string =
