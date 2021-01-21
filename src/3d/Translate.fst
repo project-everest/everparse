@@ -1120,7 +1120,7 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
 
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
   match d.v with
-  | ModuleAbbrev i m -> [with_comments d.comments (T.TModuleAbbrev i.v.name m.v.name)]
+  | ModuleAbbrev _ _ -> []
   | Define i None s ->
     failwith (Printf.sprintf "Untyped definition remains after elaboration: %s" (ident_to_string i))
 

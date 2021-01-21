@@ -244,7 +244,6 @@ type decl_attributes = {
 
 noeq
 type decl' =
-  | TModuleAbbrev : string -> string -> decl'
   | Definition : definition -> decl' //the bool marks it for inline_for_extraction
   | Type_decl : type_decl -> decl'
 

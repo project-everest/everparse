@@ -610,8 +610,6 @@ let print_attributes (entrypoint:bool) (attrs:decl_attributes) : string =
 /// Print all the definitions, and for a Type_decl, only the type definition
 let print_decl_for_types (mname:string) (d:decl) : Tot string =
   match fst d with
-  | TModuleAbbrev i m -> Printf.sprintf "module %s = %s\n" i m
-
   | Definition (x, [], t, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
       (print_comments (snd d).comments)
@@ -644,8 +642,6 @@ let print_decl_for_types (mname:string) (d:decl) : Tot string =
 ///   We make the definition as simply the definition in M.Types.fst
 let print_decl_for_validators (mname:string) (d:decl) : Tot string =
   match fst d with
-  | TModuleAbbrev i m ->
-    Printf.sprintf "module %s = %s\n" i m
   | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
      (print_comments (snd d).comments)
@@ -690,7 +686,6 @@ let print_decl_for_validators (mname:string) (d:decl) : Tot string =
 
 let print_decl_signature_aux (mname:string) (d:decl) : Tot string =
   match fst d with
-  | TModuleAbbrev i m -> Printf.sprintf "module %s = %s\n" i m
   | Definition (_, _, T_app ({Ast.v={Ast.name="field_id"}}) _, _) -> ""
   | Definition (x, [], t, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
@@ -758,9 +753,8 @@ let print_types_decls (modul:string) (ds:list decl) =
     "module %s.Types\n\
      open Prelude\n\
      open Actions\n\n\
-     open WeakenTac\n\
      module B = LowStar.Buffer\n\n\
-     #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\n\
+     #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
      %s"
      modul
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.Tot.map (print_decl_for_types modul) ds))
@@ -773,7 +767,6 @@ let print_decls_signature (mname: string) (ds:list decl) =
     "module %s\n\
      open Prelude\n\
      open Actions\n\
-     open WeakenTac\n\
      module B = LowStar.Buffer\n\
      %s"
      mname
