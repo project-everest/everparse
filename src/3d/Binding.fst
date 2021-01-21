@@ -1246,6 +1246,9 @@ let initial_global_env () =
       ("UINT16",   { may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_kind_nz=Some true });
       ("UINT32",   { may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_kind_nz=Some true});
       ("UINT64",   { may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_kind_nz=Some true});
+      ("UINT16BE",   { may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_kind_nz=Some true });
+      ("UINT32BE",   { may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_kind_nz=Some true});
+      ("UINT64BE",   { may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_kind_nz=Some true});
       ("field_id", { may_fail = true;  integral = Some UInt32 ; has_reader = false; parser_kind_nz=Some true});
       ("PUINT8",   { may_fail = true;  integral = None ; has_reader = false; parser_kind_nz=Some true})]
     |> List.iter (fun (i, attrs) ->
