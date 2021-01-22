@@ -434,6 +434,11 @@ let postprocess
   =
   (* produce the .checked and .krml files.
      FIXME: modules can be processed in parallel *)
+  (* TODO: should we always dedup files_and_modules? *)
+  let files_and_modules =
+    files_and_modules
+    |> List.fold_left (fun seen m -> if List.mem m seen then seen else m::seen) []
+    |> List.rev in
   List.iter (verify_and_extract_module out_dir) files_and_modules;
   let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the C files *)
