@@ -642,6 +642,12 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
 /// For a Type_decl, if it is an entry point, we need to emit a definition since
 ///   there is a corresponding declaration in the .fsti
 ///   We make the definition as simply the definition in M.Types.fst
+
+let is_type_abbreviation (td:type_decl) : bool =
+  match td.decl_typ with
+  | TD_abbrev _ -> true
+  | TD_struct _ -> false
+
 let print_decl_for_validators (mname:string) (d:decl) : ML string =
   match fst d with
   | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
@@ -653,7 +659,9 @@ let print_decl_for_validators (mname:string) (d:decl) : ML string =
   | Type_decl td ->
     (if false //not td.decl_name.td_entrypoint
      then ""
-     else Printf.sprintf "noextract\ninline_for_extraction\nlet %s : Type u#0 = %s.Types.%s  (* from corresponding Types.fst  *)\n\n"
+     else if is_type_abbreviation td
+     then ""
+     else Printf.sprintf "noextract\ninline_for_extraction\nlet %s = %s.Types.%s  (* from corresponding Types.fst  *)\n\n"
             (print_typedef_name mname td.decl_name)
             mname
             (print_typedef_typ td.decl_name))
@@ -701,8 +709,13 @@ let print_decl_signature_aux (mname:string) (d:decl) : ML string =
     if false //not td.decl_name.td_entrypoint
     then ""
     else begin
-      Printf.sprintf "noextract\ninline_for_extraction\nval %s : Type u#0\n\n"
-        (print_typedef_name mname td.decl_name)
+      (if is_type_abbreviation td
+       then Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s.Types.%s\n\n"
+              (print_typedef_name mname td.decl_name)
+              mname
+              (print_typedef_typ td.decl_name)
+       else Printf.sprintf "noextract\ninline_for_extraction\nval %s : Type0\n\n"
+              (print_typedef_name mname td.decl_name))
       `strcat`
       Printf.sprintf "noextract\ninline_for_extraction\nval kind_%s : parser_kind %s\n\n"
         (print_ident td.decl_name.td_name)
@@ -771,7 +784,9 @@ let print_decls_signature (mname: string) (ds:list decl) =
      open Prelude\n\
      open Actions\n\
      module B = LowStar.Buffer\n\
+     include %s.Types\n\
      %s"
+     mname
      mname
      (String.concat "\n" (List.map (print_decl_signature mname) ds))
   in
