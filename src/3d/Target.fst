@@ -57,12 +57,6 @@ let rec parser_kind_eq k k' =
 // Printing the target AST in F* concrete syntax
 ////////////////////////////////////////////////////////////////////////////////
 
-let mname_prefix (i:A.ident) =
-  let open A in
-  match i.v.modul_name with
-  | None -> ""
-  | Some s -> Printf.sprintf "%s." s
-
 let maybe_mname_prefix (mname:string) (i:A.ident) =
   let open A in
   match i.v.modul_name with
