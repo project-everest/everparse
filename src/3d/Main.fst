@@ -153,26 +153,31 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file c_static_asserts_file
   end
 
-let process_modul (en:env) (modul fn:string) (must_have_entrypoint:bool) : ML env =
-  let _decls, t_decls, static_asserts, en = translate_module en modul fn must_have_entrypoint in
+let process_file (en:env) (fn:string) (cmdline_modules:list string) : ML env =
+  let modul = Options.get_module_name fn in
+  let _decls, t_decls, static_asserts, en =
+    translate_module en modul fn (List.mem modul cmdline_modules) in
   emit_fstar_code en modul t_decls static_asserts;
   en
 
-let process_file (fn:string) : ML (list string) =
-  let sorted_modules = Deps.get_sorted_deps fn in
-  FStar.IO.print_string (Printf.sprintf "Modules in the dependency order: %s\n"
-    (List.fold_left (fun s m -> Printf.sprintf "%s %s" s m) "" sorted_modules));
-  let initial_env = {
-    binding_env = Binding.initial_global_env ();
-    typesizes_env = TypeSizes.initial_senv ();
-    translate_env = Translate.initial_translate_env () } in
-  let _ = List.fold_left (fun en m ->
-    process_modul
-      en
-      m
-      (Options.get_file_name (OS.concat (OS.dirname fn) m))
-      (m = Options.get_module_name fn)) initial_env sorted_modules in
-  sorted_modules
+let collect_and_sort_dependencies (files:list string) : ML (list string) =
+  let dirname = files |> List.hd |> OS.dirname in
+  let filename_of modul = Options.get_file_name (OS.concat dirname modul) in
+
+  files
+  |> List.collect Deps.get_sorted_deps
+  |> List.fold_left (fun acc mod -> if List.mem mod acc then acc else mod::acc) []
+  |> List.rev
+  |> List.map filename_of
+
+let process_files (files:list string) (cmdline_files:list string) : ML unit =
+  IO.print_string (Printf.sprintf "Processing files: %s\n"
+    (List.fold_left (fun acc fn -> Printf.sprintf "%s %s" acc fn) "" files));
+  let cmdline_modules = List.map Options.get_module_name cmdline_files in
+  let env = initial_env () in
+  files
+  |> List.fold_left (fun env fn -> process_file env fn cmdline_modules) env
+  |> ignore
 
 let go () : ML unit =
   let files = Options.parse_cmd_line() in
@@ -183,13 +188,13 @@ let go () : ML unit =
   | [] ->
   match files with
   | [] -> Options.display_usage ()
-  | files ->
-  let out_dir = Options.get_output_dir () in
-  let files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) files in
+  | _ ->
+    let out_dir = Options.get_output_dir () in
+    let all_files = collect_and_sort_dependencies files in
+    let all_files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) all_files in
   match Options.get_check_hashes () with
   | None ->
-    let all_modules = List.collect process_file files in
-    let files_and_modules = List.map (fun m -> (Options.get_file_name m, m)) all_modules in
+    process_files all_files files;
     if Options.get_batch ()
     then begin
       Batch.postprocess
@@ -199,12 +204,11 @@ let go () : ML unit =
         (Options.get_cleanup ())
         (Options.get_no_everparse_h ())
         (Options.get_save_hashes ())
-        out_dir files_and_modules;
+        out_dir all_files_and_modules;
       FStar.IO.print_string "EverParse succeeded!\n"
     end
   | Some ch ->
-    //AR: TODO: FIXME, files_and_modules here does not include all the files, e.g. dependencies
-    Batch.check_all_hashes ch out_dir files_and_modules
+    Batch.check_all_hashes ch out_dir all_files_and_modules
 
 #push-options "--warn_error -272" //top-level effects are okay
 #push-options "--admit_smt_queries true" //explicitly not handling all exceptions, so that we can meaningful backtraces
