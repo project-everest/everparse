@@ -1,0 +1,9 @@
+#define ONE 1
+#define TWO 2
+
+UINT32 enum Nat {
+  One = 1,
+  Two,
+  Three,
+  Four
+}

@@ -1,0 +1,4 @@
+typedef struct _TWO_D_POINT {
+  UINT32  x;
+  UINT32  y;
+} TWO_D_POINT;
