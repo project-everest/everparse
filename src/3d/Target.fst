@@ -693,13 +693,13 @@ let print_decl_for_validators (mname:string) (d:decl) : ML string =
 
 let print_decl_signature_aux (mname:string) (d:decl) : ML string =
   match fst d with
-  | Definition (_, _, T_app ({Ast.v={Ast.name="field_id"}}) _, _) -> ""
-  | Definition (x, [], t, (Constant c, _)) ->
-    Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
-      (print_comments (snd d).comments)
-      (print_ident x)
-      (A.print_constant c)
-      (print_typ mname t)
+  // | Definition (_, _, T_app ({Ast.v={Ast.name="field_id"}}) _, _) -> ""
+  // | Definition (x, [], t, (Constant c, _)) ->
+  //   Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
+  //     (print_comments (snd d).comments)
+  //     (print_ident x)
+  //     (A.print_constant c)
+  //     (print_typ mname t)
   | Definition _ -> ""
   | Type_decl td ->
     if false //not td.decl_name.td_entrypoint
