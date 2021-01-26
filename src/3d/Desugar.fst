@@ -293,6 +293,16 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = { d with v = resolve_decl' env d.v }
 
-let desugar (mname:string) (ds:list decl) : ML (list decl) =
-  let ds = List.collect desugar_one_enum ds in
-  List.map (resolve_decl ({mname=mname; module_abbrevs=H.create 10; local_names=[]})) ds
+let desugar (mname:string) (p:prog) : ML prog =
+  let decls, refinement = p in
+  let decls = List.collect desugar_one_enum decls in
+  let env = {mname=mname; module_abbrevs=H.create 10; local_names=[]} in
+  let decls = List.map (resolve_decl env) decls in
+  decls,
+  (match refinement with
+   | None -> None
+   | Some tr ->
+     Some ({ tr with
+             type_map =
+               tr.type_map
+               |> List.map (fun (i, iopt) -> i, map_opt (resolve_ident env) iopt) }))

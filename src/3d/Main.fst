@@ -54,7 +54,7 @@ let translate_module (en:env) (mname:string) (fn:string) (must_have_entrypoint:b
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
 
-  let decls = Desugar.desugar mname decls in
+  let decls, refinement = Desugar.desugar mname (decls, refinement) in
 
   Options.debug_print_string "=============After desugaring=============\n";
   Options.debug_print_string (print_decls decls);
