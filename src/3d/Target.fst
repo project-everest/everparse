@@ -904,7 +904,7 @@ let print_c_entry (modul: string)
     let wrapper_name =
       Printf.sprintf "%s_check_%s"
         modul
-        (A.print_ident d.decl_name.td_name)
+        d.decl_name.td_name.A.v.A.name
       |> pascal_case
     in
     let signature =
@@ -915,7 +915,7 @@ let print_c_entry (modul: string)
     let validator_name =
        Printf.sprintf "%s_validate_%s"
          modul
-         (print_ident d.decl_name.td_name)
+         d.decl_name.td_name.A.v.A.name
        |> pascal_case
     in
     let impl =
