@@ -305,4 +305,6 @@ let desugar (mname:string) (p:prog) : ML prog =
      Some ({ tr with
              type_map =
                tr.type_map
-               |> List.map (fun (i, iopt) -> i, map_opt (resolve_ident env) iopt) }))
+               |> List.map (fun (i, jopt) -> match jopt with
+                                         | None -> i, Some (resolve_ident env i)
+                                         | Some j -> i, Some (resolve_ident env j))}))
