@@ -82,6 +82,8 @@ let gen_ident : option string -> St ident =
   next
 #pop-options
 
+let underscore_ident = with_dummy_range (to_ident' "_")
+
 (** Some utilities **)
 let mk_lam (f:(A.ident -> ML 'a)) : ML (T.lam 'a) =
   let x = gen_ident None in
@@ -390,7 +392,7 @@ let rec parse_typ (env:global_env) (name: A.ident) (t:T.typ) : ML T.parser =
       let p = parse_typ env name t in
       mk_parser (pk_filter p.p_kind)
                 (T.T_refine t r)
-                (T.Parse_refinement_with_action name p r (fst r, a))
+                (T.Parse_refinement_with_action name p r (Some underscore_ident, a))
     | Some (t, Some r, Some (Inr a), copt) ->
       let t = maybe_add_comment t copt in            
       let p = parse_typ env name t in
