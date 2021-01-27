@@ -686,7 +686,8 @@ let print_decl_for_validators (mname:string) (d:decl) : ML string =
     (match td.decl_reader with
      | None -> ""
      | Some r ->
-       Printf.sprintf "let read_%s : leaf_reader (parse_%s) = %s\n\n"
+       Printf.sprintf "%sinline_for_extraction\nlet read_%s : leaf_reader (parse_%s) = %s\n\n"
+         (if td.decl_name.td_entrypoint then "" else "noextract\n")
          (print_typedef_name mname td.decl_name)
          (print_typedef_typ td.decl_name)
          (print_reader mname r))
