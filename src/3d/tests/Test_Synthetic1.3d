@@ -174,12 +174,7 @@ typedef struct _BITFIELD2(UINT32 Bound)
   }
   ;
   ULONG   bit_16_24:8
-  {
-    if (bit_16_24 != 0)
-    {
-       bit_16_24 * 4 + CONST1 + CONST2 <= Bound
-    }
-  };
+  { bit_16_24 == 0 || bit_16_24 * 4 + CONST1 + CONST2 <= Bound };
   ULONG   bit_24_32:8 {
     (bit_24_32 == 0 || ( bit_24_32 * 4 + CONST1 + CONST2 <= Bound ))
     &&
