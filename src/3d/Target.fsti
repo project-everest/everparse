@@ -249,7 +249,7 @@ type decl' =
 
 let decl = decl' * decl_attributes
 
-val print_typ (mname:string) (t:typ) : Dv string //(decreases t)
+val print_typ (mname:string) (t:typ) : ML string //(decreases t)
 val print_decls (modul: string) (ds:list decl) : ML string
 val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string

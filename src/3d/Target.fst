@@ -129,17 +129,13 @@ let integer_type_of_arith_op (o:op{arith_op o}) =
   | BitwiseXor t
   | BitwiseNot t -> t
 
+let print_arith_op_range () : ML bool =
+  List.length (Options.get_equate_types_list ()) = 0
+
 let print_arith_op
   (o:op{arith_op o})
-  (r:option A.range)
-  = let t =
-      match integer_type_of_arith_op o with
-      | A.UInt8 -> "u8"
-      | A.UInt16 -> "u16"
-      | A.UInt32 -> "u32"
-      | A.UInt64 -> "u64"
-    in
-    let fn =
+  (r:option A.range) : ML string
+  = let fn =
       match o with
       | Plus _ -> "add"
       | Minus _ -> "sub"
@@ -153,9 +149,28 @@ let print_arith_op
       | BitwiseXor _ -> "logxor"
       | BitwiseNot _ -> "lognot"
     in
-    let r = match r with | Some r -> r | None -> A.dummy_range in
-    Printf.sprintf "Prelude.%s_%s %s"
-      t fn (print_range r)
+
+    if print_arith_op_range ()
+    then
+      let t =
+        match integer_type_of_arith_op o with
+        | A.UInt8 -> "u8"
+        | A.UInt16 -> "u16"
+        | A.UInt32 -> "u32"
+        | A.UInt64 -> "u64"
+      in
+      let r = match r with | Some r -> r | None -> A.dummy_range in
+      Printf.sprintf "Prelude.%s_%s %s"
+        t fn (print_range r)
+    else
+      let m =
+        match integer_type_of_arith_op o with
+        | A.UInt8 -> "FStar.UInt8"
+        | A.UInt16 -> "FStar.UInt16"
+        | A.UInt32 -> "FStar.UInt32"
+        | A.UInt64 -> "FStar.UInt64"
+      in
+      Printf.sprintf "%s.%s" m fn
 
 let is_infix =
   function
@@ -195,7 +210,7 @@ let print_op_with_range ropt o =
 
 let print_op = print_op_with_range None
 
-let rec print_expr (mname:string) (e:expr) : Tot string =
+let rec print_expr (mname:string) (e:expr) : ML string =
   match fst e with
   | Constant c ->
     A.print_constant c
@@ -231,19 +246,19 @@ let rec print_expr (mname:string) (e:expr) : Tot string =
   | App op es ->
     Printf.sprintf "(%s %s)" (print_op op) (String.concat " " (print_exprs mname es))
 
-and print_exprs (mname:string) (es:list expr) : Tot (list string) =
+and print_exprs (mname:string) (es:list expr) : ML (list string) =
   match es with
   | [] -> []
   | hd::tl -> print_expr mname hd :: print_exprs mname tl
 
-and print_fields (mname:string) (fs:_) : Tot (list string) =
+and print_fields (mname:string) (fs:_) : ML (list string) =
   match fs with
   | [] -> []
   | (x, e)::tl ->
     Printf.sprintf "%s = %s" (print_ident x) (print_expr mname e)
     :: print_fields mname tl
 
-let print_lam (#a:Type) (f:a -> Dv string) (x:lam a) : Dv string =
+let print_lam (#a:Type) (f:a -> ML string) (x:lam a) : ML string =
   match x with
   | Some x, y ->
     Printf.sprintf ("(fun %s -> %s)")
@@ -251,10 +266,10 @@ let print_lam (#a:Type) (f:a -> Dv string) (x:lam a) : Dv string =
       (f y)
   | None, y -> f y
 
-let print_expr_lam (mname:string) (x:lam expr) : Dv string =
+let print_expr_lam (mname:string) (x:lam expr) : ML string =
   print_lam (print_expr mname) x
 
-let rec print_typ (mname:string) (t:typ) : Dv string = //(decreases t) =
+let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   match t with
   | T_false -> "False"
   | T_app hd args ->
@@ -280,7 +295,7 @@ let rec print_typ (mname:string) (t:typ) : Dv string = //(decreases t) =
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
 
-and print_indexes (mname:string) (is:list index) : Dv (list string) = //(decreases is) =
+and print_indexes (mname:string) (is:list index) : ML (list string) = //(decreases is) =
   match is with
   | [] -> []
   | Inl t::is -> print_typ mname t::print_indexes mname is
@@ -316,7 +331,7 @@ let rec print_kind (mname:string) (k:parser_kind) : Tot string =
   | PK_string ->
     "parse_string_kind"
 
-let rec print_parser (mname:string) (p:parser) : Dv string = //(decreases p) =
+let rec print_parser (mname:string) (p:parser) : ML string = //(decreases p) =
   match p.p_parser with
   | Parse_return v ->
     Printf.sprintf "(parse_ret %s)" (print_expr mname v)
@@ -367,7 +382,7 @@ let rec print_parser (mname:string) (p:parser) : Dv string = //(decreases p) =
   | Parse_string elem zero ->
     Printf.sprintf "(parse_string %s %s)" (print_parser mname elem) (print_expr mname zero)
 
-let rec print_reader (mname:string) (r:reader) : Dv string =
+let rec print_reader (mname:string) (r:reader) : ML string =
   match r with
   | Read_u8 -> "read____UINT8"
   | Read_u16 -> "read____UINT16"
@@ -379,9 +394,9 @@ let rec print_reader (mname:string) (r:reader) : Dv string =
       (print_reader mname r)
       (print_expr_lam mname f)
 
-let rec print_action (mname:string) (a:action) : Tot string =
+let rec print_action (mname:string) (a:action) : ML string =
   let print_atomic_action (a:atomic_action)
-    : Tot string
+    : ML string
     = match a with
       | Action_return e ->
         Printf.sprintf "(action_return %s)" (print_expr mname e)
@@ -393,7 +408,7 @@ let rec print_action (mname:string) (a:action) : Tot string =
       | Action_assignment lhs rhs ->
         Printf.sprintf "(action_assignment %s %s)" (print_ident lhs) (print_expr mname rhs)
       | Action_call f args ->
-        Printf.sprintf "(%s %s)" (print_ident f) (String.concat " " (List.Tot.map (print_expr mname) args))
+        Printf.sprintf "(%s %s)" (print_ident f) (String.concat " " (List.map (print_expr mname) args))
   in
   match a with
   | Atomic_action a ->
@@ -414,7 +429,7 @@ let rec print_action (mname:string) (a:action) : Tot string =
                    (print_ident i)
                    (print_action mname k)
 
-let rec print_validator (mname:string) (v:validator) : Dv string = //(decreases v) =
+let rec print_validator (mname:string) (v:validator) : ML string = //(decreases v) =
   let is_unit_validator v =
     let open A in
     match v.v_validator with
@@ -545,7 +560,7 @@ let print_typedef_body (mname:string) (b:typedef_body) : ML string =
   match b with
   | TD_abbrev t -> print_typ mname t
   | TD_struct fields ->
-    let print_field (sf:field) : Dv string =
+    let print_field (sf:field) : ML string =
         Printf.sprintf "%s : %s%s%s"
           (print_ident sf.sf_ident)
           (print_typ mname sf.sf_typ)
@@ -604,6 +619,19 @@ let print_attributes (entrypoint:bool) (attrs:decl_attributes) : string =
 /// Printing a decl for M.Types.fst
 ///
 /// Print all the definitions, and for a Type_decl, only the type definition
+
+let maybe_print_type_equality (mname:string) (td:type_decl) : ML string =
+  if td.decl_name.td_entrypoint
+  then
+    let equate_types_list = Options.get_equate_types_list () in
+    (match (List.tryFind (fun (_, m) -> m = mname) equate_types_list) with
+     | Some (a, _) ->
+       let typname = A.ident_name td.decl_name.td_name in
+       Printf.sprintf "\n\nlet _ = assert (%s.Types.%s == %s) by (FStar.Tactics.trefl ())\n\n"
+         a typname typname         
+     | None -> "")
+  else ""
+
 let print_decl_for_types (mname:string) (d:decl) : ML string =
   match fst d with
   | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, _) -> ""
@@ -630,6 +658,8 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
     Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s\n\n"
       (print_typedef_name mname td.decl_name)
       (print_typedef_body mname td.decl_typ)
+    `strcat`
+    maybe_print_type_equality mname td
 
 /// Print a decl for M.fst
 ///
