@@ -1,4 +1,5 @@
-QD_HOME ?= ../../..
+QD_HOME ?= $(realpath ../../../..)
+export QD_HOME
 
 all:
 	$(QD_HOME)/src/3d/3d --batch --no_copy_everparse_h Test.3d
