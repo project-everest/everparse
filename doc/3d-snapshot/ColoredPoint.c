@@ -26,7 +26,7 @@ static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_x
-        of type _point
+        of type ColoredPoint._point
 --*/
 {
   /* Validating field x */
@@ -47,7 +47,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_y
-        of type _point
+        of type ColoredPoint._point
 --*/
 {
   /* Validating field y */
@@ -64,7 +64,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, POINT__Y);
 }
 
-static inline uint64_t ValidatePoint(uint32_t Uu, uint64_t StartPosition)
+inline uint64_t ColoredPointValidatePoint(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
 {
   /* Field _point_x */
   uint64_t positionAfterx = ValidatePointX(Uu, StartPosition);
@@ -80,7 +80,7 @@ static inline uint64_t ValidateColoredPoint1Color(uint32_t InputLength, uint64_t
 /*++
     Internal helper function:
         Validator for field _coloredPoint1_color
-        of type _coloredPoint1
+        of type ColoredPoint._coloredPoint1
 --*/
 {
   /* Validating field color */
@@ -97,15 +97,16 @@ static inline uint64_t ValidateColoredPoint1Color(uint32_t InputLength, uint64_t
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT1__COLOR);
 }
 
-static inline uint64_t ValidateColoredPoint1Pt(uint32_t InputLength, uint64_t StartPosition)
+static inline uint64_t
+ValidateColoredPoint1Pt(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _coloredPoint1_pt
-        of type _coloredPoint1
+        of type ColoredPoint._coloredPoint1
 --*/
 {
   /* Validating field pt */
-  return ValidatePoint(InputLength, StartPosition);
+  return ColoredPointValidatePoint(InputLength, Input, StartPosition);
 }
 
 uint64_t ColoredPointValidateColoredPoint1(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
@@ -117,25 +118,26 @@ uint64_t ColoredPointValidateColoredPoint1(uint32_t Uu, uint8_t *Input, uint64_t
     return positionAftercolor;
   }
   /* Field _coloredPoint1_pt */
-  return ValidateColoredPoint1Pt(Uu, positionAftercolor);
+  return ValidateColoredPoint1Pt(Uu, Input, positionAftercolor);
 }
 
-static inline uint64_t ValidateColoredPoint2Pt(uint32_t InputLength, uint64_t StartPosition)
+static inline uint64_t
+ValidateColoredPoint2Pt(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _coloredPoint2_pt
-        of type _coloredPoint2
+        of type ColoredPoint._coloredPoint2
 --*/
 {
   /* Validating field pt */
-  return ValidatePoint(InputLength, StartPosition);
+  return ColoredPointValidatePoint(InputLength, Input, StartPosition);
 }
 
 static inline uint64_t ValidateColoredPoint2Color(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _coloredPoint2_color
-        of type _coloredPoint2
+        of type ColoredPoint._coloredPoint2
 --*/
 {
   /* Validating field color */
@@ -155,7 +157,7 @@ static inline uint64_t ValidateColoredPoint2Color(uint32_t InputLength, uint64_t
 uint64_t ColoredPointValidateColoredPoint2(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
 {
   /* Field _coloredPoint2_pt */
-  uint64_t positionAfterpt = ValidateColoredPoint2Pt(Uu, StartPosition);
+  uint64_t positionAfterpt = ValidateColoredPoint2Pt(Uu, Input, StartPosition);
   if (EverParseIsError(positionAfterpt))
   {
     return positionAfterpt;

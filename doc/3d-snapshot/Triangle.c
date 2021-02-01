@@ -16,7 +16,7 @@ static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_x
-        of type _point
+        of type Triangle._point
 --*/
 {
   /* Validating field x */
@@ -37,7 +37,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_y
-        of type _point
+        of type Triangle._point
 --*/
 {
   /* Validating field y */
@@ -54,7 +54,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, POINT__Y);
 }
 
-static inline uint64_t ValidatePoint(uint32_t Uu, uint64_t StartPosition)
+inline uint64_t TriangleValidatePoint(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
 {
   /* Field _point_x */
   uint64_t positionAfterx = ValidatePointX(Uu, StartPosition);
@@ -66,54 +66,57 @@ static inline uint64_t ValidatePoint(uint32_t Uu, uint64_t StartPosition)
   return ValidatePointY(Uu, positionAfterx);
 }
 
-static inline uint64_t ValidateTriangleA(uint32_t InputLength, uint64_t StartPosition)
+static inline uint64_t
+ValidateTriangleA(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _triangle_a
-        of type _triangle
+        of type Triangle._triangle
 --*/
 {
   /* Validating field a */
-  return ValidatePoint(InputLength, StartPosition);
+  return TriangleValidatePoint(InputLength, Input, StartPosition);
 }
 
-static inline uint64_t ValidateTriangleB(uint32_t InputLength, uint64_t StartPosition)
+static inline uint64_t
+ValidateTriangleB(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _triangle_b
-        of type _triangle
+        of type Triangle._triangle
 --*/
 {
   /* Validating field b */
-  return ValidatePoint(InputLength, StartPosition);
+  return TriangleValidatePoint(InputLength, Input, StartPosition);
 }
 
-static inline uint64_t ValidateTriangleC(uint32_t InputLength, uint64_t StartPosition)
+static inline uint64_t
+ValidateTriangleC(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _triangle_c
-        of type _triangle
+        of type Triangle._triangle
 --*/
 {
   /* Validating field c */
-  return ValidatePoint(InputLength, StartPosition);
+  return TriangleValidatePoint(InputLength, Input, StartPosition);
 }
 
 uint64_t TriangleValidateTriangle(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
 {
   /* Field _triangle_a */
-  uint64_t positionAftera = ValidateTriangleA(Uu, StartPosition);
+  uint64_t positionAftera = ValidateTriangleA(Uu, Input, StartPosition);
   if (EverParseIsError(positionAftera))
   {
     return positionAftera;
   }
   /* Field _triangle_b */
-  uint64_t positionAfterb = ValidateTriangleB(Uu, positionAftera);
+  uint64_t positionAfterb = ValidateTriangleB(Uu, Input, positionAftera);
   if (EverParseIsError(positionAfterb))
   {
     return positionAfterb;
   }
   /* Field _triangle_c */
-  return ValidateTriangleC(Uu, positionAfterb);
+  return ValidateTriangleC(Uu, Input, positionAfterb);
 }
 

@@ -10,7 +10,9 @@ extern "C" {
 #include "EverParse.h"
 
 
-#include "Smoker.h"
+
+
+uint64_t Triangle2ValidatePoint(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 
 uint64_t
 Triangle2ValidateTriangle(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);

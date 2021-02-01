@@ -4,8 +4,8 @@
 void GetFieldPtrEverParseError(char *x, char *y, char *z);
 static char* GetFieldPtrStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_T";
-		case 2: return "_T"; 
+		case 1: return "GetFieldPtr._T";
+		case 2: return "GetFieldPtr._T"; 
 		default: return "";
 	}
 }

@@ -2,6 +2,12 @@
 
 #include "TaggedUnion.h"
 
+#define SIZE8 ((uint8_t)8U)
+
+#define SIZE16 ((uint8_t)16U)
+
+#define SIZE32 ((uint8_t)32U)
+
 /*
 Auto-generated field identifier for error reporting
 */
@@ -22,17 +28,11 @@ Auto-generated field identifier for error reporting
 */
 #define INTEGER__SIZE ((uint64_t)4U)
 
-#define SIZE8 ((uint8_t)8U)
-
-#define SIZE16 ((uint8_t)16U)
-
-#define SIZE32 ((uint8_t)32U)
-
 static inline uint64_t ValidateIntPayloadValue32(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _int_payload_value32
-        of type _int_payload
+        of type TaggedUnion._int_payload
 --*/
 {
   /* Validating field value32 */
@@ -53,7 +53,7 @@ static inline uint64_t ValidateIntPayloadValue16(uint32_t InputLength, uint64_t 
 /*++
     Internal helper function:
         Validator for field _int_payload_value16
-        of type _int_payload
+        of type TaggedUnion._int_payload
 --*/
 {
   /* Validating field value16 */
@@ -74,7 +74,7 @@ static inline uint64_t ValidateIntPayloadValue8(uint32_t InputLength, uint64_t S
 /*++
     Internal helper function:
         Validator for field _int_payload_value8
-        of type _int_payload
+        of type TaggedUnion._int_payload
 --*/
 {
   /* Validating field value8 */
@@ -91,8 +91,13 @@ static inline uint64_t ValidateIntPayloadValue8(uint32_t InputLength, uint64_t S
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, INT_PAYLOAD__VALUE8);
 }
 
-static inline uint64_t
-ValidateIntPayload(uint32_t Size, uint32_t InputLength, uint64_t StartPosition)
+inline uint64_t
+TaggedUnionValidateIntPayload(
+  uint32_t Size,
+  uint32_t InputLength,
+  uint8_t *Input,
+  uint64_t StartPosition
+)
 {
   if (Size == (uint32_t)SIZE8)
   {
@@ -116,7 +121,7 @@ static inline uint64_t ValidateIntegerSize(uint32_t InputLength, uint64_t StartP
 /*++
     Internal helper function:
         Validator for field _integer_size
-        of type _integer
+        of type TaggedUnion._integer
 --*/
 {
   /* Validating field size */
@@ -134,15 +139,20 @@ static inline uint64_t ValidateIntegerSize(uint32_t InputLength, uint64_t StartP
 }
 
 static inline uint64_t
-ValidateIntegerPayload(uint32_t Size, uint32_t InputLength, uint64_t StartPosition)
+ValidateIntegerPayload(
+  uint32_t Size,
+  uint32_t InputLength,
+  uint8_t *Input,
+  uint64_t StartPosition
+)
 /*++
     Internal helper function:
         Validator for field _integer_payload
-        of type _integer
+        of type TaggedUnion._integer
 --*/
 {
   /* Validating field payload */
-  return ValidateIntPayload(Size, InputLength, StartPosition);
+  return TaggedUnionValidateIntPayload(Size, InputLength, Input, StartPosition);
 }
 
 uint64_t
@@ -157,6 +167,6 @@ TaggedUnionValidateInteger(uint32_t InputLength, uint8_t *Input, uint64_t StartP
   uint8_t *base = Input;
   uint32_t size = Load32Le(base + (uint32_t)StartPosition);
   /* Field _integer_payload */
-  return ValidateIntegerPayload(size, InputLength, positionAftersize);
+  return ValidateIntegerPayload(size, InputLength, Input, positionAftersize);
 }
 

@@ -10,7 +10,15 @@ extern "C" {
 #include "EverParse.h"
 
 
-#include "Smoker.h"
+
+
+uint64_t
+TaggedUnionValidateIntPayload(
+  uint32_t Size,
+  uint32_t InputLength,
+  uint8_t *Input,
+  uint64_t StartPosition
+);
 
 uint64_t
 TaggedUnionValidateInteger(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);

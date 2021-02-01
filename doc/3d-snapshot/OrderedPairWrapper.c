@@ -4,8 +4,8 @@
 void OrderedPairEverParseError(char *x, char *y, char *z);
 static char* OrderedPairStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_orderedPair";
-		case 2: return "_orderedPair"; 
+		case 1: return "OrderedPair._orderedPair";
+		case 2: return "OrderedPair._orderedPair"; 
 		default: return "";
 	}
 }

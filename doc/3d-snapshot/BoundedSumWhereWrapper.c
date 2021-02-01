@@ -4,9 +4,9 @@
 void BoundedSumWhereEverParseError(char *x, char *y, char *z);
 static char* BoundedSumWhereStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_boundedSum";
-		case 2: return "_boundedSum";
-		case 3: return "_boundedSum"; 
+		case 1: return "BoundedSumWhere._boundedSum";
+		case 2: return "BoundedSumWhere._boundedSum";
+		case 3: return "BoundedSumWhere._boundedSum"; 
 		default: return "";
 	}
 }
