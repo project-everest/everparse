@@ -29,6 +29,6 @@
 
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
-        "kremlin_version" : "origin/protz_no_library_static_inline"
+        "kremlin_version" : "origin/master"
     }
 }
