@@ -51,7 +51,7 @@
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
-%token          MODULE
+%token          MODULE EXPORT
 %token          ENTRYPOINT REFINING ALIGNED
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -311,6 +311,10 @@ enum_case:
   | i=IDENT EQ j=INT   { i, Some (Inl (Z.of_string j)) }
   | i=IDENT EQ j=IDENT { i, Some (Inr j) }
 
+exported:
+  |              { false }
+  | EXPORT       { true }
+
 typedef_pointer_name_opt:
   |                    { None }
   | COMMA STAR k=IDENT { Some k }
@@ -343,11 +347,12 @@ block_comment_opt:
   | c=BLOCK_COMMENT { Some c }
 
 decl:
-  | c=block_comment_opt d=decl_no_range {
+  | c=block_comment_opt isexported=exported d=decl_no_range {
       let _ = Ast.comments_buffer.flush () in
+      let r = mk_pos ($startpos(d)), mk_pos ($startpos(d)) in
       match c with
-      | Some c -> with_range_and_comments d (mk_pos ($startpos(d)), mk_pos ($startpos(d))) [c]
-      | None -> with_range d ($startpos(d))
+      | Some c -> mk_decl d r [c] isexported
+      | None -> mk_decl d r [] isexported
     }
 
 expr_top:
