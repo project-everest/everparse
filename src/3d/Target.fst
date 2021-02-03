@@ -788,7 +788,9 @@ let print_decls (modul: string) (ds:list decl) =
      %s"
      modul
      modul
-     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.map (print_decl_for_validators modul) ds))
+     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n"
+       (ds |> List.map (print_decl_for_validators modul)
+           |> List.filter (fun s -> s <> "")))
   in
   decls
 
@@ -802,7 +804,9 @@ let print_types_decls (modul:string) (ds:list decl) =
      #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
      %s"
      modul
-     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" (List.map (print_decl_for_types modul) ds))
+     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" 
+       (ds |> List.map (print_decl_for_types modul)
+           |> List.filter (fun s -> s <> "")))
   in
   decls
 
@@ -813,11 +817,11 @@ let print_decls_signature (mname: string) (ds:list decl) =
      open Prelude\n\
      open Actions\n\
      module B = LowStar.Buffer\n\
-     include %s.Types\n\
+     include %s.Types\n\n\
      %s"
      mname
      mname
-     (String.concat "\n" (List.map (print_decl_signature mname) ds))
+     (String.concat "\n" (ds |> List.map (print_decl_signature mname) |> List.filter (fun s -> s <> "")))
   in
   // let dummy =
   //     "let retain (x:result) : Tot (FStar.UInt64.t & bool) = field_id_of_result x, result_is_error x"
