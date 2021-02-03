@@ -19,7 +19,7 @@ let parse_prog (fn:string) (must_have_entrypoint:bool) : ML prog =
   let decls, type_refinement_opt = ParserDriver.parse fn in
   if not must_have_entrypoint then decls, type_refinement_opt
   else if decls
-          |> List.tryFind (fun d -> match d.v with
+          |> List.tryFind (fun d -> match d.d_decl.v with
                                 | Record names _ _ _
                                 | CaseType names _ _ ->
                                   has_entrypoint (names.typedef_attributes)
@@ -158,7 +158,12 @@ let process_file (en:env) (fn:string) (cmdline_modules:list string) : ML env =
   let _decls, t_decls, static_asserts, en =
     translate_module en modul fn (List.mem modul cmdline_modules) in
   emit_fstar_code en modul t_decls static_asserts;
-  en
+
+  let ds = Binding.get_exported_decls en.binding_env modul in
+  
+  { binding_env = Binding.finish_module en.binding_env modul ds;
+    typesizes_env = TypeSizes.finish_module en.typesizes_env modul ds;
+    translate_env = Translate.finish_module en.translate_env modul ds }
 
 let collect_and_sort_dependencies (files:list string) : ML (list string) =
   let dirname = files |> List.hd |> OS.dirname in
