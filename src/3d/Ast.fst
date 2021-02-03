@@ -362,7 +362,19 @@ type decl' =
   | Enum: typ -> ident -> list enum_case -> decl'
   | Record: names:typedef_names -> params:list param -> where:option expr -> fields:list field -> decl'
   | CaseType: typedef_names -> list param -> switch_case -> decl'
-and decl = with_meta_t decl'
+
+noeq
+type decl = {
+  d_decl : with_meta_t decl';
+  d_exported : bool
+}
+
+let mk_decl (d:decl') r c (is_exported:bool) : decl =
+  { d_decl = with_range_and_comments d r c;
+    d_exported = is_exported }
+
+let decl_with_v (d:decl) (v:decl') : decl =
+  { d with d_decl = { d.d_decl with v = v } }
 
 noeq
 type type_refinement = {
@@ -496,20 +508,21 @@ let subst_switch_case (s:subst) (sc:switch_case) : ML switch_case =
   subst_expr s (fst sc), List.map (subst_case s) (snd sc)
 let subst_params (s:subst) (p:list param) : ML (list param) =
   List.map (fun (t, i, q) -> subst_typ s t, i, q) p
-let subst_decl (s:subst) (d:decl) : ML decl =
-  match d.v with
+let subst_decl' (s:subst) (d:decl') : ML decl' =
+  match d with
   | ModuleAbbrev _ _ -> d
   | Define i None _ -> d
-  | Define i (Some t) c -> {d with v = Define i (Some (subst_typ s t)) c}
-  | TypeAbbrev t i -> { d with v = TypeAbbrev (subst_typ s t) i }
-  | Enum t i is -> { d with v = Enum (subst_typ s t) i is }
+  | Define i (Some t) c -> Define i (Some (subst_typ s t)) c
+  | TypeAbbrev t i -> TypeAbbrev (subst_typ s t) i
+  | Enum t i is -> Enum (subst_typ s t) i is
   | Record names params where fields ->
-    { d with v = Record names (subst_params s params) (map_opt (subst_expr s) where) (List.map (subst_field s) fields) }
+    Record names (subst_params s params) (map_opt (subst_expr s) where) (List.map (subst_field s) fields)
   | CaseType names params cases ->
-    { d with v = CaseType names (subst_params s params) (subst_switch_case s cases) }
+    CaseType names (subst_params s params) (subst_switch_case s cases)
+let subst_decl (s:subst) (d:decl) : ML decl = decl_with_v d (subst_decl' s d.d_decl.v)
 
 (*** Printing the source AST; for debugging only **)
-let print_constant (c:constant) =
+let print_constant (c:constant) =
   let print_tag = function
     | UInt8 -> "uy"
     | UInt16 -> "us"
@@ -746,11 +759,11 @@ let print_decl' (d:decl') : ML string =
                     (ident_to_string td.typedef_ptr_abbrev)
 
 let print_decl (d:decl) : ML string =
-  match d.comments with
-  | [] -> print_decl' d.v
+  match d.d_decl.comments with
+  | [] -> print_decl' d.d_decl.v
   | cs -> Printf.sprintf "/* %s */\n%s"
           (String.concat "\n" cs)
-          (print_decl' d.v)
+          (print_decl' d.d_decl.v)
 
 let print_decls (ds:list decl) : ML string =
   List.map print_decl ds
