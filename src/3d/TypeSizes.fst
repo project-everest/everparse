@@ -268,7 +268,7 @@ let sum_size (n : size) (m:size)
 
 let decl_size_with_alignment (env:env_t) (d:decl)
   : ML decl
-  = match d.v with
+  = match d.d_decl.v with
     | ModuleAbbrev _ _ -> d
     | Define _ _ _ -> d
 
@@ -320,7 +320,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       let fields_rev = end_padding @ fields_rev in
       let fields = List.rev fields_rev in
       extend_with_size_of_typedef_names env names size max_align;
-      { d with v = Record names params where fields }
+      decl_with_v d (Record names params where fields)
 
     | CaseType names params cases ->
       let case_sizes =
@@ -383,7 +383,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
                all cases of a union with a fixed size \
                must have the same size; \
                union padding is not yet supported"
-               d.range
+               d.d_decl.range
       );
       extend_with_size_of_typedef_names env names size alignment;
       d
@@ -395,3 +395,8 @@ let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
   let ds = List.map (decl_size_with_alignment env) ds in
   let ds' = Binding.add_field_error_code_decls (Binding.mk_env genv) in
   ds'@ds, snd env
+
+let finish_module en mname e_and_p =
+  e_and_p |> snd |> List.iter (H.remove en);
+  en
+  

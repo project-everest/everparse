@@ -910,13 +910,13 @@ let rec free_vars_expr (genv:global_env)
     | Record _ fields ->
       List.fold_left (fun out (_, e) -> free_vars_expr genv env out e) out fields
 
-let with_attrs (d:T.decl') (h:bool) (i:bool) (c:list string)
+let with_attrs (d:T.decl') (h:bool) (e:bool) (i:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoist = h; should_inline = i; comments = c } )
+  = d, T.({ is_hoisted = h; is_exported = e; should_inline = i; comments = c } )
 
-let with_comments c (d:T.decl')
+let with_comments (d:T.decl') (e:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoist = false; should_inline = false; comments = c } )
+  = d, T.({ is_hoisted = false; is_exported = e; should_inline = false; comments = c } )
 
 let rec hoist_typ
           (fn:string)
@@ -950,7 +950,8 @@ let rec hoist_typ
       in
       let d = Definition def in
       let t = T_refine t1 (None, app) in
-      ds@[with_attrs d true true []], t
+      ds@[with_attrs d true false true []],  //hoisted, not exported, inlineable
+      t
 
     | T_refine t1 (None, e) ->
       let ds, t1 = hoist_typ fn genv env t1 in
@@ -1039,7 +1040,8 @@ let hoist_one_type_definition (should_inline:bool)
         decl_reader = reader;
       } in
       let td = Type_decl td in
-      with_attrs td true should_inline [comment], tdef
+      with_attrs td true false should_inline [comment],  //hoisted, not exported, should_inline
+      tdef
 
 let hoist_field (genv:global_env) (env:env_t) (tdn:T.typedef_name) (f:T.field)
   : ML (list T.decl & T.field)
@@ -1125,14 +1127,14 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
   decls
 
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
-  match d.v with
+  match d.d_decl.v with
   | ModuleAbbrev _ _ -> []
   | Define i None s ->
     failwith (Printf.sprintf "Untyped definition remains after elaboration: %s" (ident_to_string i))
 
   | Define i (Some t) s ->
     let t = translate_typ t in
-    [with_comments d.comments (T.Definition (i, [], t, T.mk_expr (T.Constant s)))]
+    [with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) d.d_exported d.d_decl.comments]
 
   | TypeAbbrev t i ->
     let tdn = make_tdn i in
@@ -1150,7 +1152,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_validator = make_validator env p;
         decl_reader = reader;
     } in
-    [with_comments d.Ast.comments (Type_decl td)]
+    [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | Enum t i ids ->
     let ids = Desugar.check_desugared_enum_cases ids in
@@ -1170,7 +1172,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_validator = make_validator env p;
         decl_reader = reader;
     } in
-    [with_comments d.Ast.comments (Type_decl td)]
+    [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | Record tdn params _ ast_fields ->
     let tdn = translate_typedef_name tdn params in
@@ -1189,7 +1191,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_validator = make_validator env p;
           decl_reader = reader
     } in
-    hoists @ [with_comments d.Ast.comments (Type_decl td)]
+    hoists @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | CaseType tdn0 params switch_case ->
     let tdn = translate_typedef_name tdn0 params in
@@ -1206,22 +1208,16 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_validator = make_validator env p;
         decl_reader = reader;
     } in
-    decls @ [with_comments d.Ast.comments (Type_decl td)]
+    decls @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
 noeq
 type translate_env = {
-  t_deps_has_reader: H.t ident' bool;
-  t_deps_parser_kind_nz: H.t ident' bool;
-  t_deps_parser_kind_is_constant_size: H.t ident' bool;
   t_has_reader: H.t ident' bool;
   t_parser_kind_nz: H.t ident' bool;
   t_parser_kind_is_constant_size: H.t ident' bool;
 }
 
 let initial_translate_env () = {
-  t_deps_has_reader = H.create 10;
-  t_deps_parser_kind_nz = H.create 10;
-  t_deps_parser_kind_is_constant_size = H.create 10;
   t_has_reader = H.create 0;
   t_parser_kind_nz = H.create 0;
   t_parser_kind_is_constant_size = H.create 0; }
@@ -1238,3 +1234,10 @@ let translate_decls benv senv tenv ds =
   { tenv with t_has_reader = env.has_reader;
               t_parser_kind_nz = env.parser_kind_nz;
               t_parser_kind_is_constant_size = env.parser_kind_is_constant_size }
+
+let finish_module en mname e_and_p =
+  e_and_p |> snd |> List.iter (fun k ->
+    H.remove en.t_has_reader k;
+    H.remove en.t_parser_kind_nz k;
+    H.remove en.t_parser_kind_is_constant_size k);
+  en

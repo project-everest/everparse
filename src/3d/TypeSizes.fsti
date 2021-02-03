@@ -42,3 +42,6 @@ val value_of_const_expr (env:env_t) (e:expr)
 
 val size_of_decls (env:B.global_env) (senv:size_env) (d:list decl)
   : ML (list decl & size_env)
+
+val finish_module (en:size_env) (mname:string) (e_and_p:list ident' & list ident')
+  : ML size_env
