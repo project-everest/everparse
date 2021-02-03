@@ -722,16 +722,8 @@ let print_decl_for_validators (mname:string) (d:decl) : ML string =
          (print_typedef_typ td.decl_name)
          (print_reader mname r))
 
-let print_decl_signature_aux (mname:string) (d:decl) : ML string =
+let print_type_decl_signature (mname:string) (d:decl{Type_decl? (fst d)}) : ML string =
   match fst d with
-  // | Definition (_, _, T_app ({Ast.v={Ast.name="field_id"}}) _, _) -> ""
-  // | Definition (x, [], t, (Constant c, _)) ->
-  //   Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
-  //     (print_comments (snd d).comments)
-  //     (print_ident x)
-  //     (A.print_constant c)
-  //     (print_typ mname t)
-  | Definition _ -> ""
   | Type_decl td ->
     if false //not td.decl_name.td_entrypoint
     then ""
@@ -771,9 +763,14 @@ let print_decl_signature_aux (mname:string) (d:decl) : ML string =
      end
 
 let print_decl_signature (mname:string) (d:decl) : ML string =
-  if (snd d).is_hoisted || not (snd d).is_exported
-  then ""
-  else print_decl_signature_aux mname d
+  match fst d with
+  | Definition _ -> ""
+  | Type_decl td ->
+    if (snd d).is_hoisted
+    then ""
+    else if not ((snd d).is_exported || td.decl_name.td_entrypoint)
+    then ""
+    else print_type_decl_signature mname d
 
 let print_decls (modul: string) (ds:list decl) =
   let decls =
