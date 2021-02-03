@@ -87,7 +87,7 @@ let simplify_field (env:env) (f:field)
     { f with v = field }
 
 let simplify_decl (env:env) (d:decl) : ML decl =
-  match d.v with
+  match d.d_decl.v with
   | ModuleAbbrev _ _ ->
     d
 
@@ -110,19 +110,19 @@ let simplify_decl (env:env) (d:decl) : ML decl =
     | _ -> 
       let field = simplify_field env field in
       H.insert env tdnames.typedef_name.v (params, field);
-      {d with v = Record tdnames params None [field]}
+      decl_with_v d (Record tdnames params None [field])
     end
   
   | Record tdnames params wopt fields ->
     let fields = List.map (simplify_field env) fields in
-    { d with v = Record tdnames params wopt fields }
+    decl_with_v d (Record tdnames params wopt fields)
 
   | CaseType tdnames params switch ->
     let hd, cases = switch in
     let cases = List.map (function Case e f -> Case e (simplify_field env f)
                                  | DefaultCase f -> DefaultCase (simplify_field env f)) 
                          cases in
-    { d with v=CaseType tdnames params (hd, cases) }
+    decl_with_v d (CaseType tdnames params (hd, cases))
 
 let simplify_prog (p:list decl) =
   let env = H.create 10 in

@@ -120,7 +120,7 @@ let coalesce_fields (env:B.global_env) (fields:list field)
     subst
 
 let eliminate_one_decl (env:B.global_env) (d:decl) : ML decl =
-  match d.v with
+  match d.d_decl.v with
   | Record names params where fields ->
     let fields, subst = coalesce_fields env fields in
     List.iter (fun f ->
@@ -140,7 +140,7 @@ let eliminate_one_decl (env:B.global_env) (d:decl) : ML decl =
         [{ f with v = sf }]
       | _ -> fields
     in
-    { d with v = Record names params where fields }
+    decl_with_v d (Record names params where fields)
   | _ -> d
 
 let eliminate (env:B.global_env) (ds:list decl) : ML (list decl) =

@@ -34,10 +34,10 @@ let check_desugared_enum_cases (cases:list enum_case) : ML (list ident) =
         | (i, _) -> failwith "Enum should already have been desugared")
      cases
 
-let desugar_enum_cases (ityp:integer_type) (cases:list enum_case)
+let desugar_enum_cases (ityp:integer_type) (cases:list enum_case) (export:bool)
   : ML (list enum_case & list decl) =
   let find_definition (i:ident) (d:decl) =
-    match d.v with
+    match d.d_decl.v with
     | Define j _ (Int _ _) -> 
       i.v = j.v
     | _ -> 
@@ -52,16 +52,17 @@ let desugar_enum_cases (ityp:integer_type) (cases:list enum_case)
           | Some (Inr j) -> 
             begin
             match List.Tot.find (find_definition j) ds_rev with
-            | Some ({v=Define _ _ (Int _ k)}) -> k
+            | Some ({d_decl={v=Define _ _ (Int _ k)}}) -> k
             | _ -> error (Printf.sprintf "Enum identifier %s not found" (print_ident j)) j.range
             end
           | None -> next
         in
         let case = (i, None) in
-        let d = with_range_and_comments 
+        let d = mk_decl
                    (Define i None (Int ityp next))
                    i.range
                    ["Enum constant"]
+                   export
         in
         (next + 1,
          case :: cases_rev,
@@ -73,56 +74,56 @@ let desugar_enum_cases (ityp:integer_type) (cases:list enum_case)
   List.rev ds_rev
 
 let desugar_one_enum (d:decl) : ML (list decl) =
-  match d.v with
+  match d.d_decl.v with
   | Enum t i cases -> 
     if List.for_all (fun (_, jopt) -> None? jopt) cases
     then [d] //no enum value assignments; no desugaring to do
-    else //if we have any assignments at all, then we treat all the
-         //tags as fresh constants and assign them values in sequence
-         //with respect to the assigned values of preceding tags
-         let cases, ds = desugar_enum_cases (typ_as_integer_type t) cases in
-         let enum = { d with v = Enum t i cases } in
+    else     //if we have any assignments at all, then we treat all the
+             //tags as fresh constants and assign them values in sequence
+             //with respect to the assigned values of preceding tags
+         let cases, ds = desugar_enum_cases (typ_as_integer_type t) cases d.d_exported in
+         let enum = decl_with_v d (Enum t i cases) in
          ds@[enum]
   | _ -> [d]
 
 (* This code is currently not used
    It desugars an Enum to a record with a single refined field *)
-let eliminate_enum (d:decl) : ML decl =
-  match d.v with 
-  | Enum t i cases -> 
-    let names = {
-      typedef_name = { i with v = { i.v with name=Ast.reserved_prefix ^ Ast.reserved_prefix ^ i.v.name }};
-      typedef_abbrev = i;
-      typedef_ptr_abbrev = { i with v = {i.v with
-                                         name = Ast.reserved_prefix ^ Ast.reserved_prefix ^ "P" ^ i.v.name }};
-      typedef_attributes = [];
-    } in
-    let params = [] in
-    let where = None in
-    let field_ident = with_dummy_range (to_ident' (Ast.reserved_prefix ^ "enum_field")) in
-    let field_ident_expr = with_dummy_range (Identifier field_ident) in
-    let field_constraint = 
-      List.fold_right 
-        (fun (case, _) out ->
-          let eq = with_range (App Eq [field_ident_expr; with_range (Identifier case) case.range]) case.range in
-          with_dummy_range (App Or [eq; out]))
-        cases
-        (with_dummy_range (Constant (Bool false)))
-    in
-    let field = {
-       field_dependence = false;
-       field_ident = field_ident;
-       field_type = t;
-       field_array_opt = FieldScalar;
-       field_constraint = Some field_constraint;
-       field_number = None;
-       field_bitwidth = None;
-       field_action = None
-    } in
-    let d' = Record names params where [with_dummy_range field] in
-    {d with v = d'}
+// let eliminate_enum (d:decl) : ML decl =
+//   match d.v with 
+//   | Enum t i cases -> 
+//     let names = {
+//       typedef_name = { i with v = { i.v with name=Ast.reserved_prefix ^ Ast.reserved_prefix ^ i.v.name }};
+//       typedef_abbrev = i;
+//       typedef_ptr_abbrev = { i with v = {i.v with
+//                                          name = Ast.reserved_prefix ^ Ast.reserved_prefix ^ "P" ^ i.v.name }};
+//       typedef_attributes = [];
+//     } in
+//     let params = [] in
+//     let where = None in
+//     let field_ident = with_dummy_range (to_ident' (Ast.reserved_prefix ^ "enum_field")) in
+//     let field_ident_expr = with_dummy_range (Identifier field_ident) in
+//     let field_constraint = 
+//       List.fold_right 
+//         (fun (case, _) out ->
+//           let eq = with_range (App Eq [field_ident_expr; with_range (Identifier case) case.range]) case.range in
+//           with_dummy_range (App Or [eq; out]))
+//         cases
+//         (with_dummy_range (Constant (Bool false)))
+//     in
+//     let field = {
+//        field_dependence = false;
+//        field_ident = field_ident;
+//        field_type = t;
+//        field_array_opt = FieldScalar;
+//        field_constraint = Some field_constraint;
+//        field_number = None;
+//        field_bitwidth = None;
+//        field_action = None
+//     } in
+//     let d' = Record names params where [with_dummy_range field] in
+//     {d with v = d'}
     
-  | _ -> d
+//   | _ -> d
 
 
 noeq
@@ -291,7 +292,7 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let sc = resolve_switch_case env sc in
     CaseType td_names params sc
 
-let resolve_decl (env:qenv) (d:decl) : ML decl = { d with v = resolve_decl' env d.v }
+let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
 let desugar (mname:string) (p:prog) : ML prog =
   let decls, refinement = p in
