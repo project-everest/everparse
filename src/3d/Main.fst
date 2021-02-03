@@ -15,18 +15,21 @@ let has_entrypoint (l:list attribute) =
   List.tryFind (function Entrypoint -> true | _ -> false) l
   |> Some?
 
-let parse_prog (fn:string) (must_have_entrypoint:bool) : ML prog =
+let is_entrypoint_or_export d = match d.d_decl.v with
+  | Record names _ _ _
+  | CaseType names _ _ ->
+    if has_entrypoint (names.typedef_attributes)
+    then true
+    else d.d_exported
+  | _ -> d.d_exported
+
+let parse_prog (fn:string) : ML prog =
   let decls, type_refinement_opt = ParserDriver.parse fn in
-  if not must_have_entrypoint then decls, type_refinement_opt
-  else if decls
-          |> List.tryFind (fun d -> match d.d_decl.v with
-                                | Record names _ _ _
-                                | CaseType names _ _ ->
-                                  has_entrypoint (names.typedef_attributes)
-                                | _ -> false)
-          |> Some?
-       then decls, type_refinement_opt
-       else raise (Error (Printf.sprintf "File %s does not have an entry point definition, exiting\n" fn))
+  if decls
+     |> List.tryFind is_entrypoint_or_export
+     |> Some?
+  then decls, type_refinement_opt
+  else raise (Error (Printf.sprintf "File %s does not have an entry point or an exported definition, exiting\n" fn))
 
 noeq
 type env = {
@@ -41,14 +44,14 @@ let initial_env () : ML env = {
   translate_env = Translate.initial_translate_env ();
 }
 
-let translate_module (en:env) (mname:string) (fn:string) (must_have_entrypoint:bool)
+let translate_module (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
         list Target.decl &
         StaticAssertions.static_asserts &
         env) =
 
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
-  let decls, refinement = parse_prog fn must_have_entrypoint in
+  let decls, refinement = parse_prog fn in
 
   Options.debug_print_string "=============After parsing=============\n";
   Options.debug_print_string (print_decls decls);
@@ -153,10 +156,10 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file c_static_asserts_file
   end
 
-let process_file (en:env) (fn:string) (cmdline_modules:list string) : ML env =
+let process_file (en:env) (fn:string) : ML env =
   let modul = Options.get_module_name fn in
   let _decls, t_decls, static_asserts, en =
-    translate_module en modul fn (List.mem modul cmdline_modules) in
+    translate_module en modul fn in
   emit_fstar_code en modul t_decls static_asserts;
 
   let ds = Binding.get_exported_decls en.binding_env modul in
@@ -175,13 +178,12 @@ let collect_and_sort_dependencies (files:list string) : ML (list string) =
   |> List.rev
   |> List.map filename_of
 
-let process_files (files:list string) (cmdline_files:list string) : ML unit =
+let process_files (files:list string) : ML unit =
   IO.print_string (Printf.sprintf "Processing files: %s\n"
     (List.fold_left (fun acc fn -> Printf.sprintf "%s %s" acc fn) "" files));
-  let cmdline_modules = List.map Options.get_module_name cmdline_files in
   let env = initial_env () in
   files
-  |> List.fold_left (fun env fn -> process_file env fn cmdline_modules) env
+  |> List.fold_left (fun env fn -> process_file env fn) env
   |> ignore
 
 let go () : ML unit =
@@ -199,7 +201,7 @@ let go () : ML unit =
     let all_files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) all_files in
   match Options.get_check_hashes () with
   | None ->
-    process_files all_files files;
+    process_files all_files;
     if Options.get_batch ()
     then begin
       Batch.postprocess
