@@ -237,7 +237,8 @@ type type_decl = {
 let definition = A.ident * list param * typ * expr
 
 type decl_attributes = {
-  is_hoist: bool;
+  is_hoisted: bool;
+  is_exported: bool;
   should_inline: bool;
   comments: list string;
 }

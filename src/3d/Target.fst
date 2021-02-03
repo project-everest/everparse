@@ -771,7 +771,9 @@ let print_decl_signature_aux (mname:string) (d:decl) : ML string =
      end
 
 let print_decl_signature (mname:string) (d:decl) : ML string =
-  if (snd d).is_hoist then "" else print_decl_signature_aux mname d
+  if (snd d).is_hoisted || not (snd d).is_exported
+  then ""
+  else print_decl_signature_aux mname d
 
 let print_decls (modul: string) (ds:list decl) =
   let decls =
