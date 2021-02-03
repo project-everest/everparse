@@ -126,7 +126,7 @@ let scan_deps (fn:string) : ML (list string) =
     | _ -> [] in
 
   let rec deps_of_decl (d:decl) : ML (list string) =
-    match d.v with
+    match d.d_decl.v with
     | ModuleAbbrev i m ->
       H.insert abbrevs i.v.name m.v.name;
       [m.v.name]
