@@ -1,4 +1,11 @@
+typedef struct _PVT {
+  UINT32 z;
+  UINT32 w;
+} PVT;
+
+export
 typedef struct _TWO_D_POINT {
   UINT32  x;
   UINT32  y;
+  PVT     z;
 } TWO_D_POINT;
