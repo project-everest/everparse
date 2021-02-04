@@ -3,21 +3,6 @@
 #include "Color.h"
 
 /*
-Enum constant
-*/
-#define RED ((uint32_t)1U)
-
-/*
-Enum constant
-*/
-#define GREEN ((uint32_t)2U)
-
-/*
-Enum constant
-*/
-#define BLUE ((uint32_t)42U)
-
-/*
 Auto-generated field identifier for error reporting
 */
 #define COLOREDPOINT__COL ((uint64_t)1U)
@@ -31,6 +16,21 @@ Auto-generated field identifier for error reporting
 Auto-generated field identifier for error reporting
 */
 #define COLOREDPOINT__Y ((uint64_t)3U)
+
+/*
+Enum constant
+*/
+#define RED ((uint32_t)1U)
+
+/*
+Enum constant
+*/
+#define GREEN ((uint32_t)2U)
+
+/*
+Enum constant
+*/
+#define BLUE ((uint32_t)42U)
 
 static inline uint64_t
 ValidateColor(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)

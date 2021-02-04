@@ -2,12 +2,6 @@
 
 #include "TaggedUnion.h"
 
-#define SIZE8 ((uint8_t)8U)
-
-#define SIZE16 ((uint8_t)16U)
-
-#define SIZE32 ((uint8_t)32U)
-
 /*
 Auto-generated field identifier for error reporting
 */
@@ -27,6 +21,12 @@ Auto-generated field identifier for error reporting
 Auto-generated field identifier for error reporting
 */
 #define INTEGER__SIZE ((uint64_t)4U)
+
+#define SIZE8 ((uint8_t)8U)
+
+#define SIZE16 ((uint8_t)16U)
+
+#define SIZE32 ((uint8_t)32U)
 
 static inline uint64_t ValidateIntPayloadValue32(uint32_t InputLength, uint64_t StartPosition)
 /*++
