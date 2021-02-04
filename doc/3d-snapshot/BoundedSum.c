@@ -17,8 +17,6 @@ Auto-generated field identifier for error reporting
 */
 #define MYSUM__BOUND ((uint64_t)3U)
 
-typedef uint8_t *InputBufferT;
-
 static inline uint64_t ValidateBoundedSumLeft(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
