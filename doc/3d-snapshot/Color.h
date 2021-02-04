@@ -12,8 +12,6 @@ extern "C" {
 
 
 
-uint64_t ColorValidateColor(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);
-
 uint64_t ColorValidateColoredPoint(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)

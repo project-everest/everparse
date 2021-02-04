@@ -32,8 +32,8 @@ Auto-generated field identifier for error reporting
 */
 #define COLOREDPOINT__Y ((uint64_t)3U)
 
-inline uint64_t
-ColorValidateColor(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
+static inline uint64_t
+ValidateColor(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 {
   /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAftercolor;
@@ -51,9 +51,9 @@ ColorValidateColor(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
   }
   /* reading field value */
   uint8_t *base = Input;
-  uint32_t color1 = Load32Le(base + (uint32_t)StartPosition);
+  uint32_t color = Load32Le(base + (uint32_t)StartPosition);
   /* start: checking constraint */
-  BOOLEAN colorConstraintIsOk = color1 == RED || color1 == GREEN || color1 == BLUE || FALSE;
+  BOOLEAN colorConstraintIsOk = color == RED || color == GREEN || color == BLUE || FALSE;
   /* end: checking constraint */
   return EverParseCheckConstraintOk(colorConstraintIsOk, positionAftercolor);
 }
@@ -67,7 +67,7 @@ ValidateColoredPointCol(uint32_t InputLength, uint8_t *Input, uint64_t StartPosi
 --*/
 {
   /* Validating field col */
-  uint64_t endPositionOrError = ColorValidateColor(InputLength, Input, StartPosition);
+  uint64_t endPositionOrError = ValidateColor(InputLength, Input, StartPosition);
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT__COL);
 }
 

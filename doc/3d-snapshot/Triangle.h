@@ -12,8 +12,6 @@ extern "C" {
 
 
 
-uint64_t TriangleValidatePoint(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
-
 uint64_t TriangleValidateTriangle(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)

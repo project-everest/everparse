@@ -12,8 +12,6 @@ Auto-generated field identifier for error reporting
 */
 #define SMOKER__CIGARETTESCONSUMED ((uint64_t)2U)
 
-typedef uint8_t *InputBufferT;
-
 static inline uint64_t
 ValidateSmokerCigarettesConsumed(uint32_t InputLength, uint64_t StartPosition)
 /*++

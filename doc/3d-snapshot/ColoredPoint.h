@@ -12,8 +12,6 @@ extern "C" {
 
 
 
-uint64_t ColoredPointValidatePoint(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
-
 uint64_t
 ColoredPointValidateColoredPoint1(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 

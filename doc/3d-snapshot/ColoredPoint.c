@@ -64,7 +64,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, POINT__Y);
 }
 
-inline uint64_t ColoredPointValidatePoint(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+static inline uint64_t ValidatePoint(uint32_t Uu, uint64_t StartPosition)
 {
   /* Field _point_x */
   uint64_t positionAfterx = ValidatePointX(Uu, StartPosition);
@@ -97,8 +97,7 @@ static inline uint64_t ValidateColoredPoint1Color(uint32_t InputLength, uint64_t
   return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT1__COLOR);
 }
 
-static inline uint64_t
-ValidateColoredPoint1Pt(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
+static inline uint64_t ValidateColoredPoint1Pt(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _coloredPoint1_pt
@@ -106,7 +105,7 @@ ValidateColoredPoint1Pt(uint32_t InputLength, uint8_t *Input, uint64_t StartPosi
 --*/
 {
   /* Validating field pt */
-  return ColoredPointValidatePoint(InputLength, Input, StartPosition);
+  return ValidatePoint(InputLength, StartPosition);
 }
 
 uint64_t ColoredPointValidateColoredPoint1(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
@@ -118,11 +117,10 @@ uint64_t ColoredPointValidateColoredPoint1(uint32_t Uu, uint8_t *Input, uint64_t
     return positionAftercolor;
   }
   /* Field _coloredPoint1_pt */
-  return ValidateColoredPoint1Pt(Uu, Input, positionAftercolor);
+  return ValidateColoredPoint1Pt(Uu, positionAftercolor);
 }
 
-static inline uint64_t
-ValidateColoredPoint2Pt(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
+static inline uint64_t ValidateColoredPoint2Pt(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _coloredPoint2_pt
@@ -130,7 +128,7 @@ ValidateColoredPoint2Pt(uint32_t InputLength, uint8_t *Input, uint64_t StartPosi
 --*/
 {
   /* Validating field pt */
-  return ColoredPointValidatePoint(InputLength, Input, StartPosition);
+  return ValidatePoint(InputLength, StartPosition);
 }
 
 static inline uint64_t ValidateColoredPoint2Color(uint32_t InputLength, uint64_t StartPosition)
@@ -157,7 +155,7 @@ static inline uint64_t ValidateColoredPoint2Color(uint32_t InputLength, uint64_t
 uint64_t ColoredPointValidateColoredPoint2(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
 {
   /* Field _coloredPoint2_pt */
-  uint64_t positionAfterpt = ValidateColoredPoint2Pt(Uu, Input, StartPosition);
+  uint64_t positionAfterpt = ValidateColoredPoint2Pt(Uu, StartPosition);
   if (EverParseIsError(positionAfterpt))
   {
     return positionAfterpt;
