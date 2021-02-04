@@ -634,15 +634,19 @@ let maybe_print_type_equality (mname:string) (td:type_decl) : ML string =
 
 let print_decl_for_types (mname:string) (d:decl) : ML string =
   match fst d with
-  | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, _) -> ""
-  
+  | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
+    Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
+     (print_comments (snd d).comments)
+     (print_ident x)
+     (A.print_constant c)
+
   | Definition (x, [], t, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot %s\n\n"
       (print_comments (snd d).comments)
       (print_ident x)
       (A.print_constant c)
-      (print_typ mname t)
-
+      (print_typ mname t) 
+  
   | Definition (x, params, typ, expr) ->
     let x_ps = {
       td_name = x;
@@ -676,11 +680,6 @@ let is_type_abbreviation (td:type_decl) : bool =
 
 let print_decl_for_validators (mname:string) (d:decl) : ML string =
   match fst d with
-  | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
-    Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
-     (print_comments (snd d).comments)
-     (print_ident x)
-     (A.print_constant c) 
   | Definition _ -> ""
   | Type_decl td ->
     (if false //not td.decl_name.td_entrypoint
