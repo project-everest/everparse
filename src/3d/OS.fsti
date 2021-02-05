@@ -15,3 +15,6 @@ val remove_extension: string -> Tot string
 (* The extension of the filename, including its leading . *)
 
 val extension: string -> Tot string
+
+
+val file_exists: string -> Tot bool

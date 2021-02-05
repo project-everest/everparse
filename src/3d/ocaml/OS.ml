@@ -111,3 +111,5 @@ let rename ol ne =
   copy ol ne;
   Sys.remove ol
 
+
+let file_exists s = Sys.file_exists s
