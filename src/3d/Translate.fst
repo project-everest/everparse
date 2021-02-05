@@ -28,9 +28,9 @@ noeq
 type global_env = {
   benv:B.global_env;
   size_env: TS.env_t;
-  has_reader: H.t string bool;
-  parser_kind_nz: H.t string bool;
-  parser_kind_is_constant_size: H.t string bool;
+  has_reader: H.t ident' bool;
+  parser_kind_nz: H.t ident' bool;
+  parser_kind_is_constant_size: H.t ident' bool;
 }
 
 let has_reader (env:global_env) (id:A.ident) : ML bool =
@@ -48,7 +48,7 @@ let parser_kind_nz (env:global_env) (id:A.ident) : ML bool =
     match B.parser_kind_nz env.benv id with
     | Some b -> b
     | None ->
-      failwith (Printf.sprintf "Type %s has an unknown parser kind" id.v)
+      failwith (Printf.sprintf "Type %s has an unknown parser kind" (ident_to_string id))
 
 let parser_kind_is_constant_size
   (env: global_env) (id: A.ident)
@@ -56,7 +56,7 @@ let parser_kind_is_constant_size
 = 
   match H.try_find env.parser_kind_is_constant_size id.v with
   | Some b -> b
-  | None -> 
+  | None ->
     match TS.size_of_typename env.size_env id with
     | TS.Fixed _ -> true
     | _ -> false
@@ -77,15 +77,17 @@ let gen_ident : option string -> St ident =
       | None -> Printf.sprintf "_x_%d" v
       | Some n -> Printf.sprintf "_%s_%d" n v
     in
-    with_dummy_range id
+    with_dummy_range (to_ident' id)
   in
   next
 #pop-options
 
+let underscore_ident = with_dummy_range (to_ident' "_")
+
 (** Some utilities **)
 let mk_lam (f:(A.ident -> ML 'a)) : ML (T.lam 'a) =
   let x = gen_ident None in
-  x, f x
+  Some x, f x
 
 let map_lam (x:T.lam 'a) (g: 'a -> ML 'b) : ML (T.lam 'b) =
   fst x, g (snd x)
@@ -140,35 +142,35 @@ let pk_glb k1 k2 = T.({
 
 let false_typ = T.T_false
 let unit_typ =
-    T.T_app (with_dummy_range "unit") []
+    T.T_app (with_dummy_range (to_ident' "unit")) []
 let unit_val =
     T.(mk_expr (App (Ext "()") []))
 let unit_parser =
     mk_parser pk_return unit_typ (T.Parse_return unit_val)
 let pair_typ t1 t2 =
-    T.T_app (with_dummy_range "tuple2") [Inl t1; Inl t2]
+    T.T_app (with_dummy_range (to_ident' "tuple2")) [Inl t1; Inl t2]
 let pair_value x y =
-    T.Record (with_dummy_range "tuple2")
-             [(with_dummy_range "fst", T.mk_expr (T.Identifier x));
-              (with_dummy_range "snd", T.mk_expr (T.Identifier y))]
+    T.Record (with_dummy_range (to_ident' "tuple2"))
+             [(with_dummy_range (to_ident' "fst"), T.mk_expr (T.Identifier x));
+              (with_dummy_range (to_ident' "snd"), T.mk_expr (T.Identifier y))]
 let pair_parser n1 p1 p2 =
     let open T in
     let pt = pair_typ p1.p_typ p2.p_typ in
     mk_parser (pk_and_then p1.p_kind p2.p_kind) pt (Parse_pair n1 p1 p2)
-let dep_pair_typ t1 (t2:T.lam T.typ) : T.typ =
+let dep_pair_typ t1 (t2:(A.ident & T.typ)) : T.typ =
     T.T_dep_pair t1 t2
 let dep_pair_value x y : T.expr =
     T.mk_expr
-      (T.Record (with_dummy_range "dtuple2")
-                [(with_dummy_range "fst", T.mk_expr (T.Identifier x));
-                 (with_dummy_range "snd", T.mk_expr (T.Identifier y))])
-let dep_pair_parser n1 p1 (p2:T.lam T.parser) =
+      (T.Record (with_dummy_range (to_ident' "dtuple2"))
+                [(with_dummy_range (to_ident' "fst"), T.mk_expr (T.Identifier x));
+                 (with_dummy_range (to_ident' "snd"), T.mk_expr (T.Identifier y))])
+let dep_pair_parser n1 p1 (p2:A.ident & T.parser) =
   let open T in
   let t = T_dep_pair p1.p_typ (fst p2, (snd p2).p_typ) in
   mk_parser
       (pk_and_then p1.p_kind (snd p2).p_kind) t
-      (Parse_dep_pair n1 p1 p2)
-let dep_pair_with_refinement_parser n1 f1 p1 (e:T.lam T.expr) (p2:T.lam T.parser) =
+      (Parse_dep_pair n1 p1 (Some (fst p2), snd p2))
+let dep_pair_with_refinement_parser n1 f1 p1 (e:T.lam T.expr) (p2:A.ident & T.parser) =
   let open T in
   let t1 = T_refine p1.p_typ e in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
@@ -176,8 +178,8 @@ let dep_pair_with_refinement_parser n1 f1 p1 (e:T.lam T.expr) (p2:T.lam T.parser
   mk_parser
       (pk_and_then k1 (snd p2).p_kind)
       t
-      (Parse_dep_pair_with_refinement n1 f1 p1 e p2)
-let dep_pair_with_refinement_and_action_parser n1 f1 p1 (e:T.lam T.expr) (a:T.lam T.action) (p2:T.lam T.parser) =
+      (Parse_dep_pair_with_refinement n1 f1 p1 e (Some (fst p2), snd p2))
+let dep_pair_with_refinement_and_action_parser n1 f1 p1 (e:T.lam T.expr) (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
   let t1 = T_refine p1.p_typ e in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
@@ -185,8 +187,8 @@ let dep_pair_with_refinement_and_action_parser n1 f1 p1 (e:T.lam T.expr) (a:T.la
   mk_parser
       (pk_and_then k1 (snd p2).p_kind)
       t
-      (Parse_dep_pair_with_refinement_and_action n1 f1 p1 e a p2)
-let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:T.lam T.parser) =
+      (Parse_dep_pair_with_refinement_and_action n1 f1 p1 e a (Some (fst p2), snd p2))
+let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
   let t1 = p1.p_typ in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
@@ -194,7 +196,7 @@ let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:T.lam T.parser) =
   mk_parser
       (pk_and_then k1 (snd p2).p_kind)
       t
-      (Parse_dep_pair_with_action p1 a p2)
+      (Parse_dep_pair_with_action p1 a (Some (fst p2), snd p2))
 
 
 let translate_op : A.op -> ML T.op = 
@@ -321,25 +323,25 @@ let rec parse_typ (env:global_env) (name: A.ident) (t:T.typ) : ML T.parser =
   | T_false ->
     mk_parser pk_impos T_false Parse_impos
 
-  | T.T_app {v="nlist"} [Inr e; Inl t] ->
+  | T.T_app {v={name="nlist"}} [Inr e; Inl t] ->
     let pt = parse_typ env name t in
     mk_parser pk_list
               t
               (T.Parse_nlist e pt)
 
-  | T.T_app {v="t_at_most"} [Inr e; Inl t] ->
+  | T.T_app {v={name="t_at_most"}} [Inr e; Inl t] ->
     let pt = parse_typ env name t in
     mk_parser pk_t_at_most
               t
               (T.Parse_t_at_most e pt)
 
-  | T.T_app {v="t_exact"} [Inr e; Inl t] ->
+  | T.T_app {v={name="t_exact"}} [Inr e; Inl t] ->
     let pt = parse_typ env name t in
     mk_parser pk_t_exact
               t
               (T.Parse_t_exact e pt)
 
-  | T.T_app {v="cstring"} [Inl t; Inr e] ->
+  | T.T_app {v={name="cstring"}} [Inl t; Inr e] ->
     let pt = parse_typ env name t in
     mk_parser pk_string
               t
@@ -390,7 +392,7 @@ let rec parse_typ (env:global_env) (name: A.ident) (t:T.typ) : ML T.parser =
       let p = parse_typ env name t in
       mk_parser (pk_filter p.p_kind)
                 (T.T_refine t r)
-                (T.Parse_refinement_with_action name p r (fst r, a))
+                (T.Parse_refinement_with_action name p r (Some underscore_ident, a))
     | Some (t, Some r, Some (Inr a), copt) ->
       let t = maybe_add_comment t copt in            
       let p = parse_typ env name t in
@@ -414,9 +416,9 @@ let pv ar p v = T.({
 let rec read_typ (env:global_env) (t:T.typ) : ML (option T.reader) =
   let open T in
   match t with
-  | T_app ({v="UINT8"}) [] -> Some Read_u8
-  | T_app ({v="UINT16"}) [] -> Some Read_u16
-  | T_app ({v="UINT32"}) [] -> Some Read_u32
+  | T_app ({v={name="UINT8"}}) [] -> Some Read_u8
+  | T_app ({v={name="UINT16"}}) [] -> Some Read_u16
+  | T_app ({v={name="UINT32"}}) [] -> Some Read_u32
   | T.T_app hd args ->
     if has_reader env hd
     then Some (T.Read_app hd args)
@@ -429,7 +431,7 @@ let rec read_typ (env:global_env) (t:T.typ) : ML (option T.reader) =
 let make_reader (env:global_env) (t:T.typ) : ML T.reader =
   match read_typ env t with
   | None ->
-    failwith (Printf.sprintf "Unsupported reader type: %s\n" (T.print_typ t))
+    failwith (Printf.sprintf "Unsupported reader type: %s\n" (T.print_typ "" t))  //AR: TODO: needs a module name
   | Some r ->
     r
 
@@ -652,22 +654,22 @@ let translate_field (f:A.field) : ML T.struct_field =
     let t =
         let mk_at_most t e : ML T.typ =
           let e = translate_expr e in
-          T.T_app (with_range "t_at_most" sf.field_type.range) [Inr e; Inl t]
+          T.T_app (with_range (to_ident' "t_at_most") sf.field_type.range) [Inr e; Inl t]
         in
         match sf.field_array_opt with
         | FieldScalar -> t
         | FieldArrayQualified (e, ByteArrayByteSize)
         | FieldArrayQualified (e, ArrayByteSize) ->
           let e = translate_expr e in
-          T.T_app (with_range "nlist" sf.field_type.range) [Inr e; Inl t]
+          T.T_app (with_range (to_ident' "nlist") sf.field_type.range) [Inr e; Inl t]
         | FieldArrayQualified (e, ArrayByteSizeAtMost) ->
           mk_at_most t e
         | FieldArrayQualified (e, ArrayByteSizeSingleElementArray) ->
           let e = translate_expr e in
-          T.T_app (with_range "t_exact" sf.field_type.range) [Inr e; Inl t]
+          T.T_app (with_range (to_ident' "t_exact") sf.field_type.range) [Inr e; Inl t]
         | FieldString sz ->
           let r = sf.field_type.range in
-          let str = T.T_app (with_range "cstring" r) [Inl t; Inr (make_zero r sf.field_type)] in
+          let str = T.T_app (with_range (to_ident' "cstring") r) [Inl t; Inr (make_zero r sf.field_type)] in
           begin match sz with
           | None -> str
           | Some e -> mk_at_most str e
@@ -677,7 +679,7 @@ let translate_field (f:A.field) : ML T.struct_field =
       match sf.field_constraint with
       | None -> t
       | Some e ->
-        T.T_refine t (sf.field_ident, translate_expr e)
+        T.T_refine t (Some sf.field_ident, translate_expr e)
     in
     let t =
       match sf.field_action with
@@ -685,7 +687,7 @@ let translate_field (f:A.field) : ML T.struct_field =
       | Some (a, false) ->
         T.T_with_action t (translate_action a)
       | Some (a, _) ->
-        T.T_with_dep_action t (sf.field_ident, translate_action a)
+        T.T_with_dep_action t (Some sf.field_ident, translate_action a)
     in
     let t : T.typ =
       match f.comments with
@@ -713,10 +715,10 @@ let print_grouped_fields (gfs:grouped_fields) : ML string =
       List.Tot.map 
         (fun (f:either T.field nondep_group) -> 
           match f with
-          | Inl f -> f.T.sf_ident.v
+          | Inl f -> ident_to_string f.T.sf_ident
           | Inr l -> 
             Printf.sprintf "[%s]" 
-              (let s = List.Tot.map (fun f -> f.T.sf_ident.v) l in
+              (let s = List.Tot.map (fun f -> ident_to_string f.T.sf_ident) l in
                String.concat "; " s))
         gfs
     in
@@ -772,7 +774,7 @@ let parse_grouped_fields (env:global_env) (gfs:grouped_fields)
       | Inl sf::gfs ->
         //This a dependent pair, gfs cannot be empty
         let get_action = function
-          | Inl a -> (sf.sf_ident, a)
+          | Inl a -> (Some sf.sf_ident, a)
           | Inr a -> a
         in
         begin
@@ -792,7 +794,8 @@ let parse_grouped_fields (env:global_env) (gfs:grouped_fields)
         | Some (t, Some e, None, copt) ->
           let fn = match sf.sf_field_number with
           | Some fn -> fn
-          | _ -> failwith (Printf.sprintf "Field %s has no field number" sf.sf_ident.v)
+          | _ ->
+            failwith (Printf.sprintf "Field %s has no field number" (ident_to_string sf.sf_ident))
           in
           dep_pair_with_refinement_parser
             sf.sf_ident
@@ -804,7 +807,8 @@ let parse_grouped_fields (env:global_env) (gfs:grouped_fields)
         | Some (t, Some e, Some a, copt) ->
           let fn = match sf.sf_field_number with
           | Some fn -> fn
-          | _ -> failwith (Printf.sprintf "Field %s has no field number" sf.sf_ident.v)
+          | _ ->
+            failwith (Printf.sprintf "Field %s has no field number" (ident_to_string sf.sf_ident))
           in
           dep_pair_with_refinement_and_action_parser
             sf.sf_ident
@@ -865,8 +869,8 @@ let parse_fields (env:global_env) (tdn:T.typedef_name) (fs:list T.field)
 let make_tdn (i:A.ident) =
   {
     typedef_name = i;
-    typedef_abbrev = with_dummy_range "";
-    typedef_ptr_abbrev = with_dummy_range "";
+    typedef_abbrev = with_dummy_range (to_ident' "");
+    typedef_ptr_abbrev = with_dummy_range (to_ident' "");
     typedef_attributes = []
   }
 
@@ -876,7 +880,7 @@ let check_in_global_env (env:global_env) (i:A.ident) =
   let _ = B.lookup_expr_name (B.mk_env env.benv) i in ()
 
 let maybe_gen_ident (env:global_env) (s:string) : A.ident =
-  with_dummy_range s
+  with_dummy_range (to_ident' s)
 
 let type_in_local_env (i:A.ident) (env:env_t)
   : ML (option T.typ) =
@@ -906,23 +910,13 @@ let rec free_vars_expr (genv:global_env)
     | Record _ fields ->
       List.fold_left (fun out (_, e) -> free_vars_expr genv env out e) out fields
 
-let no_attrs : T.decl_attributes =
-  let open T in
-  {
-    should_inline=false;
-    comments=[]
-  }
-
-let as_decl (d:T.decl') : T.decl =
-  d, no_attrs
-
-let with_attrs (d:T.decl') (i:bool) (c:list string)
+let with_attrs (d:T.decl') (h:bool) (e:bool) (i:bool) (c:list string)
   : T.decl
-  = d, T.({ should_inline = i; comments = c } )
+  = d, T.({ is_hoisted = h; is_exported = e; should_inline = i; comments = c } )
 
-let with_comments c (d:T.decl')
+let with_comments (d:T.decl') (e:bool) (c:list string)
   : T.decl
-  = d, T.({ should_inline = false; comments = c } )
+  = d, T.({ is_hoisted = false; is_exported = e; should_inline = false; comments = c } )
 
 let rec hoist_typ
           (fn:string)
@@ -938,25 +932,30 @@ let rec hoist_typ
       let ds, t1 = hoist_typ fn genv env t1 in
       let ds', t2 = hoist_typ fn genv ((x, t1)::env) t2 in
       ds@ds', T_dep_pair t1 (x, t2)
-    | T_refine t1 (x, e) ->
+    | T_refine t1 (Some x, e) ->
       let ds, t1 = hoist_typ fn genv env t1 in
       // let fvs = env in //free_vars_expr genv env [] e in
       let params = List.rev env in
       let args = (List.map (fun (x, _) -> Identifier x) params) in
       let def, app =
         let params = params @ [x,t1] in
-        let args = args @ [Identifier x] in
+        let args = args in //@ [Identifier x] in
         let filter_name = fn ^ "_filter" in
         let id = maybe_gen_ident genv filter_name in
-        let result_type = T_app (with_dummy_range "bool") [] in
+        let result_type = T_app (with_dummy_range (to_ident' "bool")) [] in
         let body = e in
-        let app = App (Ext id.A.v) (List.Tot.map (fun arg -> T.mk_expr arg) args) in
+        let app = App (Ext id.A.v.name) (List.Tot.map (fun arg -> T.mk_expr arg) args) in
         (id, params, result_type, body),
         T.mk_expr app
       in
       let d = Definition def in
-      let t = T_refine t1 (x, app) in
-      ds@[with_attrs d true []], t
+      let t = T_refine t1 (None, app) in
+      ds@[with_attrs d true false true []],  //hoisted, not exported, inlineable
+      t
+
+    | T_refine t1 (None, e) ->
+      let ds, t1 = hoist_typ fn genv env t1 in
+      ds, T_refine t1 (None, e)
 
     | T_if_else e t f ->
       let d1, t = hoist_typ fn genv env t in
@@ -981,7 +980,7 @@ let rec hoist_typ
 let add_parser_kind_nz (genv:global_env) (id:A.ident) (nz:bool) =
   let _ = Options.debug_print_string
     (Printf.sprintf "For %s, adding parser kind %s\n"
-      id.v
+      (ident_to_string id)
       (string_of_bool nz)) in
   H.insert genv.parser_kind_nz id.v nz
 
@@ -994,7 +993,7 @@ let maybe_add_reader (genv:global_env)
     let _ =
       if Some? reader
       then begin
-        Options.debug_print_string (Printf.sprintf ">>>>>> Adding reader for %s with definition %s\n" decl_name.td_name.v (T.print_typ t));
+        Options.debug_print_string (Printf.sprintf ">>>>>> Adding reader for %s with definition %s\n" (ident_to_string decl_name.td_name) (T.print_typ "" t));  //AR: TODO: needs a module name
         add_reader genv decl_name.td_name
      end
     in
@@ -1018,7 +1017,7 @@ let hoist_one_type_definition (should_inline:bool)
                              prefix]
       in
       let body = t in
-      let comment = Printf.sprintf "    Internal helper function:\n        Validator for field %s\n        of type %s" prefix tdn.td_name.v in
+      let comment = Printf.sprintf "    Internal helper function:\n        Validator for field %s\n        of type %s" prefix (ident_to_string tdn.td_name) in
       let tdn = {
           td_name = id;
           td_params = List.rev env;
@@ -1041,12 +1040,13 @@ let hoist_one_type_definition (should_inline:bool)
         decl_reader = reader;
       } in
       let td = Type_decl td in
-      with_attrs td should_inline [comment], tdef
+      with_attrs td true false should_inline [comment],  //hoisted, not exported, should_inline
+      tdef
 
 let hoist_field (genv:global_env) (env:env_t) (tdn:T.typedef_name) (f:T.field)
   : ML (list T.decl & T.field)
   = let open T in
-    let field_name = Printf.sprintf "%s_%s" tdn.td_name.v f.sf_ident.v in
+    let field_name = Printf.sprintf "%s_%s" (ident_name tdn.td_name) (ident_to_string f.sf_ident) in
     let d, t = hoist_typ field_name genv env f.sf_typ in
     let ref_action = has_refinement_and_action t in
     if (f.sf_dependence
@@ -1117,7 +1117,7 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
         let decls', sf = translate_one_case f in
         let guard = T.mk_expr (App Eq [sc; translate_expr e]) in
         let t = T_if_else guard sf.sf_typ t_else in
-        let field_name = Printf.sprintf "%s_ite_%d" tdn.td_name.v n in
+        let field_name = Printf.sprintf "%s_ite_%d" (ident_name tdn.td_name) n in
         let td, tdef = hoist_one_type_definition true genv env tdn field_name None t in
         tdef, decls@decls'@[td], n + 1)
     rest
@@ -1127,13 +1127,14 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
   decls
 
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
-  match d.v with
+  match d.d_decl.v with
+  | ModuleAbbrev _ _ -> []
   | Define i None s ->
-    failwith (Printf.sprintf "Untyped definition remains after elaboration: %s" i.v)
+    failwith (Printf.sprintf "Untyped definition remains after elaboration: %s" (ident_to_string i))
 
   | Define i (Some t) s ->
     let t = translate_typ t in
-    [with_comments d.comments (T.Definition (i, [], t, T.mk_expr (T.Constant s)))]
+    [with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) d.d_exported d.d_decl.comments]
 
   | TypeAbbrev t i ->
     let tdn = make_tdn i in
@@ -1151,7 +1152,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_validator = make_validator env p;
         decl_reader = reader;
     } in
-    [with_comments d.Ast.comments (Type_decl td)]
+    [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | Enum t i ids ->
     let ids = Desugar.check_desugared_enum_cases ids in
@@ -1171,7 +1172,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_validator = make_validator env p;
         decl_reader = reader;
     } in
-    [with_comments d.Ast.comments (Type_decl td)]
+    [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | Record tdn params _ ast_fields ->
     let tdn = translate_typedef_name tdn params in
@@ -1190,7 +1191,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_validator = make_validator env p;
           decl_reader = reader
     } in
-    hoists @ [with_comments d.Ast.comments (Type_decl td)]
+    hoists @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | CaseType tdn0 params switch_case ->
     let tdn = translate_typedef_name tdn0 params in
@@ -1207,14 +1208,36 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_validator = make_validator env p;
         decl_reader = reader;
     } in
-    decls @ [with_comments d.Ast.comments (Type_decl td)]
+    decls @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
-let translate_decls (benv:B.global_env) (senv:TS.env_t) (ds:list A.decl) : ML (list T.decl) =
+noeq
+type translate_env = {
+  t_has_reader: H.t ident' bool;
+  t_parser_kind_nz: H.t ident' bool;
+  t_parser_kind_is_constant_size: H.t ident' bool;
+}
+
+let initial_translate_env () = {
+  t_has_reader = H.create 0;
+  t_parser_kind_nz = H.create 0;
+  t_parser_kind_is_constant_size = H.create 0; }
+
+let translate_decls benv senv tenv ds =
   let env = {
     benv = benv;
-    size_env = senv;
-    has_reader = H.create 20;
-    parser_kind_nz = H.create 20;
-    parser_kind_is_constant_size = H.create 20;
+    size_env = (B.mk_env benv, senv);
+    has_reader = tenv.t_has_reader;
+    parser_kind_nz = tenv.t_parser_kind_nz;
+    parser_kind_is_constant_size = tenv.t_parser_kind_is_constant_size;
   } in
-  List.collect (translate_decl env) ds
+  List.collect (translate_decl env) ds,
+  { tenv with t_has_reader = env.has_reader;
+              t_parser_kind_nz = env.parser_kind_nz;
+              t_parser_kind_is_constant_size = env.parser_kind_is_constant_size }
+
+let finish_module en mname e_and_p =
+  e_and_p |> snd |> List.iter (fun k ->
+    H.remove en.t_has_reader k;
+    H.remove en.t_parser_kind_nz k;
+    H.remove en.t_parser_kind_is_constant_size k);
+  en

@@ -6,3 +6,5 @@ let try_find = H.find_option
 let insert = H.add
 let remove = H.remove
 let fold = H.fold
+let iter = H.iter
+let length h = Z.of_int (H.length h)

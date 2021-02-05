@@ -16,7 +16,7 @@ static inline uint64_t ValidateBoundedSumLeft(uint32_t InputLength, uint64_t Sta
 /*++
     Internal helper function:
         Validator for field _boundedSum_left
-        of type _boundedSum
+        of type BoundedSumConst._boundedSum
 --*/
 {
   /* SNIPPET_START: boundedSumCorrect */
@@ -43,7 +43,7 @@ ValidateBoundedSumRight(
 /*++
     Internal helper function:
         Validator for field _boundedSum_right
-        of type _boundedSum
+        of type BoundedSumConst._boundedSum
 --*/
 {
   /* Validating field right */

@@ -63,7 +63,7 @@ and expr = expr' & A.range
 
 let mk_expr (e:expr') = e, A.dummy_range
 
-type lam a = A.ident & a
+type lam a = (option A.ident) & a
 
 noeq
 type atomic_action =
@@ -87,7 +87,7 @@ noeq
 type typ =
   | T_false    : typ
   | T_app      : hd:A.ident -> args:list index -> typ
-  | T_dep_pair : dfst:typ -> dsnd:lam typ -> typ
+  | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
   | T_pointer  : typ -> typ
@@ -237,18 +237,20 @@ type type_decl = {
 let definition = A.ident * list param * typ * expr
 
 type decl_attributes = {
+  is_hoisted: bool;
+  is_exported: bool;
   should_inline: bool;
   comments: list string;
 }
 
 noeq
 type decl' =
-  | Definition of definition //the bool marks it for inline_for_extraction
-  | Type_decl of type_decl
+  | Definition : definition -> decl' //the bool marks it for inline_for_extraction
+  | Type_decl : type_decl -> decl'
 
 let decl = decl' * decl_attributes
 
-val print_typ (t:typ) : Tot string (decreases t)
+val print_typ (mname:string) (t:typ) : ML string //(decreases t)
 val print_decls (modul: string) (ds:list decl) : ML string
 val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string

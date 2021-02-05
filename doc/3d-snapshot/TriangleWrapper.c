@@ -4,8 +4,8 @@
 void TriangleEverParseError(char *x, char *y, char *z);
 static char* TriangleStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_point";
-		case 2: return "_point"; 
+		case 1: return "Triangle._point";
+		case 2: return "Triangle._point"; 
 		default: return "";
 	}
 }

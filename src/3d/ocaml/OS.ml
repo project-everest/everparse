@@ -1,6 +1,10 @@
+let dirname = Filename.dirname
+
 (* The filename without its path *)
 
 let basename = Filename.basename
+
+let concat = Filename.concat
 
 (* The filename without its extension *)
 

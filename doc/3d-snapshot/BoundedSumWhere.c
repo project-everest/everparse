@@ -21,7 +21,7 @@ static inline uint64_t ValidateBoundedSumLeft(uint32_t InputLength, uint64_t Sta
 /*++
     Internal helper function:
         Validator for field _boundedSum_left
-        of type _boundedSum
+        of type BoundedSumWhere._boundedSum
 --*/
 {
   /* Validating field left */
@@ -49,7 +49,7 @@ ValidateBoundedSumRight(
 /*++
     Internal helper function:
         Validator for field _boundedSum_right
-        of type _boundedSum
+        of type BoundedSumWhere._boundedSum
 --*/
 {
   /* Validating field right */

@@ -20,7 +20,10 @@ modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
 clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(modules_static_assertions) $(addsuffix .h,$(modules_or_wrappers))
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules
+
+modules:
+	+$(MAKE) -C modules
 
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
@@ -54,4 +57,4 @@ batch-cleanup-test:
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules

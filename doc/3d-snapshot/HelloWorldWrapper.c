@@ -4,8 +4,8 @@
 void HelloWorldEverParseError(char *x, char *y, char *z);
 static char* HelloWorldStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_point";
-		case 2: return "_point"; 
+		case 1: return "HelloWorld._point";
+		case 2: return "HelloWorld._point"; 
 		default: return "";
 	}
 }

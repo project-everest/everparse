@@ -27,6 +27,8 @@ type size =
 
 val size_env : Type0
 
+val initial_senv (_:unit) : ML size_env
+
 let env_t = B.env & size_env
 
 val size_of_typename (env:env_t) (i:ident)
@@ -38,5 +40,8 @@ val size_of_typ (env:env_t) (t:typ)
 val value_of_const_expr (env:env_t) (e:expr)
   : ML (option (either bool (integer_type & int)))
 
-val size_of_decls (env:B.global_env) (d:list decl)
-  : ML (env_t & list decl)
+val size_of_decls (env:B.global_env) (senv:size_env) (d:list decl)
+  : ML (list decl & size_env)
+
+val finish_module (en:size_env) (mname:string) (e_and_p:list ident' & list ident')
+  : ML size_env

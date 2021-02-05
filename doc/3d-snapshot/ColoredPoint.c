@@ -26,7 +26,7 @@ static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_x
-        of type _point
+        of type ColoredPoint._point
 --*/
 {
   /* Validating field x */
@@ -47,7 +47,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_y
-        of type _point
+        of type ColoredPoint._point
 --*/
 {
   /* Validating field y */
@@ -80,7 +80,7 @@ static inline uint64_t ValidateColoredPoint1Color(uint32_t InputLength, uint64_t
 /*++
     Internal helper function:
         Validator for field _coloredPoint1_color
-        of type _coloredPoint1
+        of type ColoredPoint._coloredPoint1
 --*/
 {
   /* Validating field color */
@@ -101,7 +101,7 @@ static inline uint64_t ValidateColoredPoint1Pt(uint32_t InputLength, uint64_t St
 /*++
     Internal helper function:
         Validator for field _coloredPoint1_pt
-        of type _coloredPoint1
+        of type ColoredPoint._coloredPoint1
 --*/
 {
   /* Validating field pt */
@@ -124,7 +124,7 @@ static inline uint64_t ValidateColoredPoint2Pt(uint32_t InputLength, uint64_t St
 /*++
     Internal helper function:
         Validator for field _coloredPoint2_pt
-        of type _coloredPoint2
+        of type ColoredPoint._coloredPoint2
 --*/
 {
   /* Validating field pt */
@@ -135,7 +135,7 @@ static inline uint64_t ValidateColoredPoint2Color(uint32_t InputLength, uint64_t
 /*++
     Internal helper function:
         Validator for field _coloredPoint2_color
-        of type _coloredPoint2
+        of type ColoredPoint._coloredPoint2
 --*/
 {
   /* Validating field color */
