@@ -13,6 +13,9 @@ type dep_graph = list edge
 let all_edges_from (g:dep_graph) (node:string) : Tot (list edge) =
   List.Tot.filter (fun (src, _dst) -> src = node) g
 
+let dep_exists dirname name =
+  OS.file_exists (Options.get_file_name (OS.concat dirname name))
+
 (*
  * root is already greyed
  *)
@@ -40,6 +43,7 @@ let topsort (g:dep_graph) (root:string) : ML (list string) =
   topsort_aux g root ([root], []) |> snd |> List.rev
 
 let scan_deps (fn:string) : ML (list string) =
+  let dirname = OS.dirname fn in
   let decls, __refinement = ParserDriver.parse fn in  //AR: TODO: look into refinement too?
 
   let abbrevs = H.create 10 in
@@ -48,9 +52,15 @@ let scan_deps (fn:string) : ML (list string) =
     match i.v.modul_name with
     | None -> []
     | Some s ->
-      (match H.try_find abbrevs s with
-       | None -> [s]
-       | Some m -> [m]) in
+      let dep =
+        match H.try_find abbrevs s with
+        | None -> s
+        | Some m -> m
+      in
+      if dep_exists dirname dep
+      then [dep]
+      else error (Printf.sprintf "Dependency not found: %s" dep) i.range
+  in
 
   let deps_of_opt (#a:Type) (f:a -> ML (list string)) (x:option a) : ML (list string) =
     match x with
