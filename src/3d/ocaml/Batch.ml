@@ -62,6 +62,38 @@ let fstar_args0 =
 let list_snoc q a =
   q @ [a]
 
+let fstar_args
+  out_dir
+=
+    "--odir" :: out_dir ::
+      "--cache_dir" :: out_dir ::
+        "--include" :: out_dir ::
+          "--load" :: "WeakenTac" ::
+            fstar_args0
+
+let verify_fst_file
+  out_dir
+  file
+=
+  let fstar_args = list_snoc (fstar_args out_dir) file in
+  run_cmd fstar_exe ("--print_in_place" :: fstar_args);
+  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args)
+
+let fstar_modul_of_filename fst =
+  let basename = remove_extension (basename fst) in
+  String.concat "." (List.map String.capitalize_ascii (String.split_on_char '.' basename))
+
+let fstar_extract_args out_dir fst =
+  "--extract_module" :: fstar_modul_of_filename fst ::
+    "--codegen" :: "Kremlin" ::
+      (list_snoc (fstar_args out_dir) fst)
+
+let extract_fst_file
+  out_dir
+  file
+=
+  run_cmd fstar_exe (fstar_extract_args out_dir file)
+
 let verify_and_extract_module
       out_dir
       (file, modul)
@@ -69,31 +101,16 @@ let verify_and_extract_module
   =
   let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
-  let types_modul = Printf.sprintf "%s.Types" modul in
   let fsti_file = Printf.sprintf "%si" fst_file in
-  let fstar_args =
-    "--odir" :: out_dir ::
-      "--cache_dir" :: out_dir ::
-        "--include" :: out_dir ::
-          "--load" :: "WeakenTac" ::
-            fstar_args0
-  in
-  let fstar_args_types_fst = list_snoc fstar_args (types_fst_file) in
-  let fstar_args_fsti = list_snoc fstar_args (fsti_file) in
-  let fstar_args_fst = list_snoc fstar_args (fst_file) in
-  run_cmd fstar_exe ("--print_in_place" :: fstar_args_types_fst);
-  run_cmd fstar_exe ("--print_in_place" :: fstar_args_fsti);
-  run_cmd fstar_exe ("--print_in_place" :: fstar_args_fst);
-  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_types_fst);
-  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fsti);
-  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fst);
-  let fstar_extract_args fst modul =
-    "--extract_module" :: modul ::
-      "--codegen" :: "Kremlin" ::
-        (list_snoc fstar_args fst)
-  in
-  run_cmd fstar_exe (fstar_extract_args types_fst_file types_modul);
-  run_cmd fstar_exe (fstar_extract_args fst_file modul)
+  List.iter (verify_fst_file out_dir) [
+      types_fst_file;
+      fsti_file;
+      fst_file;
+  ];
+  List.iter (extract_fst_file out_dir) [
+      types_fst_file;
+      fst_file;
+  ]
 
 let is_krml
       filename
@@ -421,7 +438,7 @@ let save_hashes
 
 (* Summary *)
 
-let postprocess
+let postprocess_c
       (clang_format: bool)
       (clang_format_executable: string)
       (skip_makefiles: bool)
@@ -432,9 +449,6 @@ let postprocess
       (files_and_modules: (string * string) list)
     : unit
   =
-  (* produce the .checked and .krml files.
-     FIXME: modules can be processed in parallel *)
-  List.iter (verify_and_extract_module out_dir) files_and_modules;
   let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the C files *)
   produce_c_files skip_makefiles cleanup out_dir files_and_modules;
@@ -464,6 +478,23 @@ let postprocess
   if save_hashes_opt
   then List.iter (save_hashes out_dir) files_and_modules;
   ()
+
+let postprocess
+      (clang_format: bool)
+      (clang_format_executable: string)
+      (skip_makefiles: bool)
+      (cleanup: bool)
+      (no_everparse_h: bool)
+      (save_hashes_opt: bool)
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+    : unit
+  =
+  (* produce the .checked and .krml files.
+     FIXME: modules can be processed in parallel *)
+  List.iter (verify_and_extract_module out_dir) files_and_modules;
+  (* produce the .c and .h files and format them *)
+  postprocess_c clang_format clang_format_executable skip_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let check_all_hashes
       (ch: check_hashes_t)
