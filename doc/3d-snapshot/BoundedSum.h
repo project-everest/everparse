@@ -10,7 +10,7 @@ extern "C" {
 #include "EverParse.h"
 
 
-#include "Smoker.h"
+
 
 uint64_t
 BoundedSumValidateBoundedSum(

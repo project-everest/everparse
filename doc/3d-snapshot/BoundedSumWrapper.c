@@ -4,9 +4,9 @@
 void BoundedSumEverParseError(char *x, char *y, char *z);
 static char* BoundedSumStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_boundedSum";
-		case 2: return "_boundedSum";
-		case 3: return "mySum"; 
+		case 1: return "BoundedSum._boundedSum";
+		case 2: return "BoundedSum._boundedSum";
+		case 3: return "BoundedSum.mySum"; 
 		default: return "";
 	}
 }

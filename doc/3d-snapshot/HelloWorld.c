@@ -16,7 +16,7 @@ static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_x
-        of type _point
+        of type HelloWorld._point
 --*/
 {
   /* Validating field x */
@@ -37,7 +37,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_y
-        of type _point
+        of type HelloWorld._point
 --*/
 {
   /* Validating field y */

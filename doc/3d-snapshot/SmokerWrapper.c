@@ -4,8 +4,8 @@
 void SmokerEverParseError(char *x, char *y, char *z);
 static char* SmokerStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_smoker";
-		case 2: return "_smoker"; 
+		case 1: return "Smoker._smoker";
+		case 2: return "Smoker._smoker"; 
 		default: return "";
 	}
 }

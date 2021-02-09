@@ -32,7 +32,7 @@ static inline uint64_t ValidateIntPayloadValue32(uint32_t InputLength, uint64_t 
 /*++
     Internal helper function:
         Validator for field _int_payload_value32
-        of type _int_payload
+        of type TaggedUnion._int_payload
 --*/
 {
   /* Validating field value32 */
@@ -53,7 +53,7 @@ static inline uint64_t ValidateIntPayloadValue16(uint32_t InputLength, uint64_t 
 /*++
     Internal helper function:
         Validator for field _int_payload_value16
-        of type _int_payload
+        of type TaggedUnion._int_payload
 --*/
 {
   /* Validating field value16 */
@@ -74,7 +74,7 @@ static inline uint64_t ValidateIntPayloadValue8(uint32_t InputLength, uint64_t S
 /*++
     Internal helper function:
         Validator for field _int_payload_value8
-        of type _int_payload
+        of type TaggedUnion._int_payload
 --*/
 {
   /* Validating field value8 */
@@ -116,7 +116,7 @@ static inline uint64_t ValidateIntegerSize(uint32_t InputLength, uint64_t StartP
 /*++
     Internal helper function:
         Validator for field _integer_size
-        of type _integer
+        of type TaggedUnion._integer
 --*/
 {
   /* Validating field size */
@@ -138,7 +138,7 @@ ValidateIntegerPayload(uint32_t Size, uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _integer_payload
-        of type _integer
+        of type TaggedUnion._integer
 --*/
 {
   /* Validating field payload */

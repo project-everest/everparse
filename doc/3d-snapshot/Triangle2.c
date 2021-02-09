@@ -11,7 +11,7 @@ static inline uint64_t ValidateTriangleCorners(uint32_t InputLength, uint64_t St
 /*++
     Internal helper function:
         Validator for field _triangle_corners
-        of type _triangle
+        of type Triangle2._triangle
 --*/
 {
   /* Validating field corners */

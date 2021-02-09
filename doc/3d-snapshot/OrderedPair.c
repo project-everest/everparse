@@ -16,7 +16,7 @@ static inline uint64_t ValidateOrderedPairLesser(uint32_t InputLength, uint64_t 
 /*++
     Internal helper function:
         Validator for field _orderedPair_lesser
-        of type _orderedPair
+        of type OrderedPair._orderedPair
 --*/
 {
   /* Validating field lesser */
@@ -43,7 +43,7 @@ ValidateOrderedPairGreater(
 /*++
     Internal helper function:
         Validator for field _orderedPair_greater
-        of type _orderedPair
+        of type OrderedPair._orderedPair
 --*/
 {
   /* Validating field greater */

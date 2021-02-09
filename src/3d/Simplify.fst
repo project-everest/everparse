@@ -74,14 +74,14 @@ let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   match f with
   | FieldScalar -> FieldScalar
   | FieldArrayQualified (e, b) -> FieldArrayQualified (simplify_expr env e, b)
-  | FieldString sz -> FieldString (B.map_opt (simplify_expr env) sz)
+  | FieldString sz -> FieldString (map_opt (simplify_expr env) sz)
 
 let simplify_field (env:T.env_t) (f:field)
   : ML field
   = let sf = f.v in
     let ft = simplify_typ env sf.field_type in
     let fa = simplify_field_array env sf.field_array_opt in
-    let fc = sf.field_constraint |> B.map_opt (simplify_expr env) in
+    let fc = sf.field_constraint |> map_opt (simplify_expr env) in
     let fact =
       match sf.field_action with
       | None -> None
@@ -94,22 +94,23 @@ let simplify_field (env:T.env_t) (f:field)
     { f with v = sf }
 
 let simplify_decl (env:T.env_t) (d:decl) : ML decl =
-  match d.v with
+  match d.d_decl.v with
+  | ModuleAbbrev _ _ -> d
   | Define i None c -> d
-  | Define i (Some t) c -> { d with v = Define i (Some (simplify_typ env t)) c }
+  | Define i (Some t) c -> decl_with_v d (Define i (Some (simplify_typ env t)) c)
 
   | TypeAbbrev t i ->
-    { d with v = TypeAbbrev (simplify_typ env t) i }
+    decl_with_v d (TypeAbbrev (simplify_typ env t) i)
 
   | Enum t i cases ->
     let t = simplify_typ env t in
-    { d with v = Enum t i cases }
+    decl_with_v d (Enum t i cases)
 
   | Record tdnames params wopt fields ->
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
     let fields = List.map (simplify_field env) fields in
     let wopt = match wopt with | None -> None | Some w -> Some (simplify_expr env w) in
-    { d with v = Record tdnames params wopt fields }
+    decl_with_v d (Record tdnames params wopt fields)
 
   | CaseType tdnames params switch ->
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in 
@@ -118,7 +119,7 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     let cases = List.map (function Case e f -> Case (simplify_expr env e) (simplify_field env f)
                                  | DefaultCase f -> DefaultCase (simplify_field env f)) 
                          cases in
-    { d with v=CaseType tdnames params (hd, cases) }
+    decl_with_v d (CaseType tdnames params (hd, cases))
 
-let simplify_prog (env:T.env_t) (p:list decl) =
-  List.map (simplify_decl env) p
+let simplify_prog benv senv (p:list decl) =
+  List.map (simplify_decl (B.mk_env benv, senv)) p

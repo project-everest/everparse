@@ -1,0 +1,13 @@
+export #define ONE 1
+export #define TWO 2
+
+#define THREE 3
+#define FOUR  4
+
+export
+UINT32 enum Nat {
+  One = 1,
+  Two,
+  Three,
+  Four
+}

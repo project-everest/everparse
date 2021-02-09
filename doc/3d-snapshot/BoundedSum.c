@@ -21,7 +21,7 @@ static inline uint64_t ValidateBoundedSumLeft(uint32_t InputLength, uint64_t Sta
 /*++
     Internal helper function:
         Validator for field _boundedSum_left
-        of type _boundedSum
+        of type BoundedSum._boundedSum
 --*/
 {
   /* SNIPPET_START: boundedSum */
@@ -49,7 +49,7 @@ ValidateBoundedSumRight(
 /*++
     Internal helper function:
         Validator for field _boundedSum_right
-        of type _boundedSum
+        of type BoundedSum._boundedSum
 --*/
 {
   /* Validating field right */
@@ -107,7 +107,7 @@ static inline uint64_t ValidateMySumBound(uint32_t InputLength, uint64_t StartPo
 /*++
     Internal helper function:
         Validator for field mySum_bound
-        of type mySum
+        of type BoundedSum.mySum
 --*/
 {
   /* Validating field bound */
@@ -129,7 +129,7 @@ ValidateMySumSum(uint32_t Bound, uint32_t InputLength, uint8_t *Input, uint64_t 
 /*++
     Internal helper function:
         Validator for field mySum_sum
-        of type mySum
+        of type BoundedSum.mySum
 --*/
 {
   /* Validating field sum */

@@ -4,10 +4,10 @@
 void TaggedUnionEverParseError(char *x, char *y, char *z);
 static char* TaggedUnionStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_int_payload";
-		case 2: return "_int_payload";
-		case 3: return "_int_payload";
-		case 4: return "_integer"; 
+		case 1: return "TaggedUnion._int_payload";
+		case 2: return "TaggedUnion._int_payload";
+		case 3: return "TaggedUnion._int_payload";
+		case 4: return "TaggedUnion._integer"; 
 		default: return "";
 	}
 }

@@ -16,7 +16,7 @@ static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_x
-        of type _point
+        of type Triangle._point
 --*/
 {
   /* Validating field x */
@@ -37,7 +37,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
 /*++
     Internal helper function:
         Validator for field _point_y
-        of type _point
+        of type Triangle._point
 --*/
 {
   /* Validating field y */
@@ -70,7 +70,7 @@ static inline uint64_t ValidateTriangleA(uint32_t InputLength, uint64_t StartPos
 /*++
     Internal helper function:
         Validator for field _triangle_a
-        of type _triangle
+        of type Triangle._triangle
 --*/
 {
   /* Validating field a */
@@ -81,7 +81,7 @@ static inline uint64_t ValidateTriangleB(uint32_t InputLength, uint64_t StartPos
 /*++
     Internal helper function:
         Validator for field _triangle_b
-        of type _triangle
+        of type Triangle._triangle
 --*/
 {
   /* Validating field b */
@@ -92,7 +92,7 @@ static inline uint64_t ValidateTriangleC(uint32_t InputLength, uint64_t StartPos
 /*++
     Internal helper function:
         Validator for field _triangle_c
-        of type _triangle
+        of type Triangle._triangle
 --*/
 {
   /* Validating field c */
