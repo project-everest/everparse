@@ -372,7 +372,7 @@ let get_skip_makefiles () =
   !skip_makefiles
 
 let get_no_everparse_h () =
-  not !no_copy_everparse_h
+  !no_copy_everparse_h
 
 let get_check_hashes () =
   if !batch then match !check_hashes with
