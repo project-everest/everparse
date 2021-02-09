@@ -1,6 +1,10 @@
+let dirname = Filename.dirname
+
 (* The filename without its path *)
 
 let basename = Filename.basename
+
+let concat = Filename.concat
 
 (* The filename without its extension *)
 
@@ -107,3 +111,5 @@ let rename ol ne =
   copy ol ne;
   Sys.remove ol
 
+
+let file_exists s = Sys.file_exists s

@@ -19,7 +19,7 @@ ValidateSmokerCigarettesConsumed(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _smoker_cigarettesConsumed
-        of type _smoker
+        of type Smoker._smoker
 --*/
 {
   /* Validating field cigarettesConsumed */

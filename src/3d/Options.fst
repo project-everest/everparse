@@ -31,6 +31,8 @@ let set_check_hashes = function
 | "inplace" -> batch := true; check_hashes := Some InplaceHashes
 | _ -> ()
 
+let equate_types_list : ref (list (string & string)) = alloc []
+
 (* We would like to parse --help as an option, but this would
    require to recurse on the definition of the list of options. To
    avoid that, we define this list as mutable, and then we add --help
@@ -60,6 +62,11 @@ let options0 =
    (noshort, "skip_makefiles", ZeroArgs (fun _ -> skip_makefiles := true), "Do not generate Makefile.basic, Makefile.include");
    (noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
    (noshort, "module_name", OneArg ((fun mname -> module_name := Some mname), "module name"), "module name to use for the output file");
+   (noshort, "equate_types", OneArg ((fun str ->
+     let l = String.split [','] str in
+     match l with
+     | [m1;m2] -> equate_types_list := (m1, m2)::(!equate_types_list)
+     | _ -> failwith (Printf.sprintf "Bad argument to equate_types %s\n" str)), "A, B"), "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line");
    ]
 
 let options : ref _ = alloc options0
@@ -130,6 +137,8 @@ let split_3d_file_name fn =
   then Some (OS.remove_extension fn)
   else None
 
+let get_file_name mname = mname ^ ".3d"
+
 let get_module_name (file: string) =
   match !module_name with
   | None ->
@@ -190,3 +199,5 @@ let get_save_hashes () =
 
 let get_check_inplace_hashes () =
   List.rev !inplace_hashes
+
+let get_equate_types_list () = !equate_types_list

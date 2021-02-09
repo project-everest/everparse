@@ -16,7 +16,7 @@ static inline uint64_t ValidateTF1(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _T_f1
-        of type _T
+        of type GetFieldPtr._T
 --*/
 {
   /* SNIPPET_START: GetFieldPtr.T */
@@ -37,7 +37,7 @@ ValidateTF2(uint8_t **Out, uint32_t InputLength, uint8_t *Input, uint64_t StartP
 /*++
     Internal helper function:
         Validator for field _T_f2
-        of type _T
+        of type GetFieldPtr._T
 --*/
 {
   /* Validating field f2 */

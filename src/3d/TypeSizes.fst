@@ -28,16 +28,16 @@ let product_size (base:size) (n:int) =
   | Fixed k ->
     Fixed (k * n)
 
-let typename = string
+let typename = ident'
 
 let alignment = option (x:int{x == 1 \/ x == 2 \/ x == 4 \/ x == 8})
 
-let size_env = H.t typename (size & alignment)
+type size_env = H.t typename (size & alignment)
 
 //TODO: size of pointer is platform-dependent
 let pointer_alignment : alignment = Some 8
 
-let initial_env (benv:B.global_env) : ML env_t =
+let initial_senv () =
   let i = [
        ("unit",     (Fixed 0,  None));
        ("Bool",     (Fixed 1,  Some 1));
@@ -50,15 +50,15 @@ let initial_env (benv:B.global_env) : ML env_t =
   ]
   in
   let senv = H.create 17 in
-  List.iter (fun (i, k) -> H.insert senv i k) i;
-  B.mk_env benv,
+  List.iter (fun (i, k) -> H.insert senv (to_ident' i) k) i;
   senv
 
 let size_and_alignment_of_typename (env:env_t) (i:ident)
   : ML (size & alignment)
   = match H.try_find (snd env) i.v with
     | Some s -> s
-    | None -> failwith (Printf.sprintf "size_of_typename: Identifier %s not found" i.v)
+    | None ->
+      failwith (Printf.sprintf "size_of_typename: Identifier %s not found" (ident_to_string i))
 
 let size_of_typename (env:env_t) (i:ident)
   : ML size
@@ -74,7 +74,7 @@ let extend_with_size_of_ident (env:env_t) (i:ident) (n:size) (a:alignment)
   : ML unit
   = Options.debug_print_string
      (Printf.sprintf "***** Size of %s = %s\n"
-                     i.v (print_size n));
+                     (ident_to_string i) (print_size n));
     H.insert (snd env) i.v (n, a)
 
 let extend_with_size_of_typedef_names (env:env_t) (names:typedef_names) (size:size) (a:alignment)
@@ -198,7 +198,7 @@ let gen_alignment_ident
       let next = !ctr in
       ctr := next + 1;
       with_range
-        (Printf.sprintf "%salignment_padding_%d" Ast.reserved_prefix next)
+        (to_ident' (Printf.sprintf "%salignment_padding_%d" Ast.reserved_prefix next))
         dummy_range
 #pop-options
 
@@ -213,7 +213,7 @@ let padding_field (env:env_t) (enclosing_struct:ident) (padding_msg:string) (n:i
     let n_expr = with_range (Constant (Int UInt32 n)) dummy_range in
     FStar.IO.print_string
       (Printf.sprintf "Adding padding field in %s for %d bytes at %s\n"
-                       enclosing_struct.v
+                       (ident_to_string enclosing_struct)
                        n
                        padding_msg);
     let sf = {
@@ -268,7 +268,8 @@ let sum_size (n : size) (m:size)
 
 let decl_size_with_alignment (env:env_t) (d:decl)
   : ML decl
-  = match d.v with
+  = match d.d_decl.v with
+    | ModuleAbbrev _ _ -> d
     | Define _ _ _ -> d
 
     | TypeAbbrev t i
@@ -286,7 +287,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
         : ML (size & alignment & list field)
         = let field_size, field_alignment = size_and_alignment_of_field env f in
           let pad_size, padding_field =
-            let msg = Printf.sprintf "(preceding field %s)" f.v.field_ident.v in
+            let msg = Printf.sprintf "(preceding field %s)" (ident_to_string f.v.field_ident) in
             alignment_padding env names msg offset field_alignment
           in
           let offset =
@@ -319,7 +320,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       let fields_rev = end_padding @ fields_rev in
       let fields = List.rev fields_rev in
       extend_with_size_of_typedef_names env names size max_align;
-      { d with v = Record names params where fields }
+      decl_with_v d (Record names params where fields)
 
     | CaseType names params cases ->
       let case_sizes =
@@ -382,14 +383,20 @@ let decl_size_with_alignment (env:env_t) (d:decl)
                all cases of a union with a fixed size \
                must have the same size; \
                union padding is not yet supported"
-               d.range
+               d.d_decl.range
       );
       extend_with_size_of_typedef_names env names size alignment;
       d
 
-let size_of_decls (genv:B.global_env) (ds:list decl)
-  : ML (env_t & list decl)
-  = let env = initial_env genv in
-    let ds = List.map (decl_size_with_alignment env) ds in
-    let ds' = Binding.add_field_error_code_decls (Binding.mk_env genv) in
-    env, ds'@ds
+let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
+  let env =
+    B.mk_env genv, senv in
+    // {senv with sizes = H.create 10} in
+  let ds = List.map (decl_size_with_alignment env) ds in
+  let ds' = Binding.add_field_error_code_decls (Binding.mk_env genv) in
+  ds'@ds, snd env
+
+let finish_module en mname e_and_p =
+  e_and_p |> snd |> List.iter (H.remove en);
+  en
+  

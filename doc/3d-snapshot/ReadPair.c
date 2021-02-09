@@ -17,7 +17,7 @@ ValidatePairFirst(uint32_t *X, uint32_t InputLength, uint8_t *Input, uint64_t St
 /*++
     Internal helper function:
         Validator for field _Pair_first
-        of type _Pair
+        of type ReadPair._Pair
 --*/
 {
   /* Validating field first */
@@ -58,7 +58,7 @@ ValidatePairSecond(uint32_t *Y, uint32_t InputLength, uint8_t *Input, uint64_t S
 /*++
     Internal helper function:
         Validator for field _Pair_second
-        of type _Pair
+        of type ReadPair._Pair
 --*/
 {
   /* Validating field second */

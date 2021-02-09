@@ -22,7 +22,7 @@
 
   let pointer_name j p =
       match p with
-      | None -> {j with v="P"^j.v}
+      | None -> {j with v={j.v with name="P"^j.v.name}}
       | Some k -> k
 
   let parse_int_and_type r (s:string) : Z.t * string * integer_type =
@@ -45,12 +45,13 @@
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
 %token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS
-%token          DEFINE LPAREN RPAREN LBRACE RBRACE COMMA SEMICOLON COLON QUESTION
+%token          DEFINE LPAREN RPAREN LBRACE RBRACE DOT COMMA SEMICOLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
+%token          MODULE EXPORT
 %token          ENTRYPOINT REFINING ALIGNED
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -101,7 +102,7 @@ else_opt:
   | ELSE LBRACE e=expr RBRACE { Some e }
 
 atomic_expr:
-  | i=IDENT    { Identifier i }
+  | i=qident   { Identifier i }
   | THIS       { This }
   | c=constant { Constant c }
 
@@ -172,7 +173,7 @@ expr_no_range:
     }
   | i=IDENT LPAREN es=arguments RPAREN
     {
-       App(Ext i.v, es)
+       App(Ext i.v.name, es)
     }
 
 expr:
@@ -181,9 +182,13 @@ expr:
 arguments:
  | es=right_flexible_nonempty_list(COMMA, expr)  { es }
 
+qident:
+  | i=IDENT    { i }
+  | m=IDENT DOT n=IDENT    { with_range ({modul_name=Some m.v.name; name=n.v.name}) $startpos }
+
 typ_no_range:
-  | i=IDENT { Type_app(i, []) }
-  | hd=IDENT LPAREN a=arguments RPAREN { Type_app(hd, a) }
+  | i=qident { Type_app(i, []) }
+  | hd=qident LPAREN a=arguments RPAREN { Type_app(hd, a) }
 
 typ:
   | t=typ_no_range { with_range t $startpos }
@@ -257,7 +262,7 @@ parameters:
   | LPAREN ps=right_flexible_nonempty_list(COMMA, parameter) RPAREN { ps }
 
 case_pattern:
-  | i=IDENT { with_range (Identifier i) $startpos(i) }
+  | i=qident   { with_range (Identifier i) $startpos(i) }
   | c=constant { with_range (Constant c) $startpos(c) }
 
 case:
@@ -306,10 +311,15 @@ enum_case:
   | i=IDENT EQ j=INT   { i, Some (Inl (Z.of_string j)) }
   | i=IDENT EQ j=IDENT { i, Some (Inr j) }
 
+exported:
+  |              { false }
+  | EXPORT       { true }
+
 typedef_pointer_name_opt:
   |                    { None }
   | COMMA STAR k=IDENT { Some k }
 decl_no_range:
+  | MODULE i=IDENT EQ m=IDENT { ModuleAbbrev (i, m) }
   | DEFINE i=IDENT c=constant { Define (i, None, c) }
   | t=IDENT ENUM i=IDENT LBRACE es=right_flexible_nonempty_list(COMMA, enum_case) RBRACE
     { Enum(with_range (Type_app (t, [])) ($startpos(t)), i, es) }
@@ -337,11 +347,12 @@ block_comment_opt:
   | c=BLOCK_COMMENT { Some c }
 
 decl:
-  | c=block_comment_opt d=decl_no_range {
+  | c=block_comment_opt isexported=exported d=decl_no_range {
       let _ = Ast.comments_buffer.flush () in
+      let r = mk_pos ($startpos(d)), mk_pos ($startpos(d)) in
       match c with
-      | Some c -> with_range_and_comments d (mk_pos ($startpos(d)), mk_pos ($startpos(d))) [c]
-      | None -> with_range d ($startpos(d))
+      | Some c -> mk_decl d r [c] isexported
+      | None -> mk_decl d r [] isexported
     }
 
 expr_top:

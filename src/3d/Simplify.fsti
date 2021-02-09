@@ -25,4 +25,4 @@ module B = Binding
        sizeof expressions to constants
 *)
 
-val simplify_prog (env:TypeSizes.env_t) (p:list decl) : ML (list decl)
+val simplify_prog (benv:B.global_env) (senv:TypeSizes.size_env) (p:list decl) : ML (list decl)

@@ -4,8 +4,8 @@
 void ReadPairEverParseError(char *x, char *y, char *z);
 static char* ReadPairStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_Pair";
-		case 2: return "_Pair"; 
+		case 1: return "ReadPair._Pair";
+		case 2: return "ReadPair._Pair"; 
 		default: return "";
 	}
 }

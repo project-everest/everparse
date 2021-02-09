@@ -18,7 +18,7 @@ include .depend
 
 verify_and_build_weaken_tac_plugin: $(ALL_CHECKED_FILES)
 	$(FSTAR) --extract 'LowParse.TacLib WeakenTac' --codegen Plugin WeakenTac.fst
-	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_TacLib.ml WeakenTac.ml
+	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -w -8 -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_TacLib.ml WeakenTac.ml
 
 extract: ../EverParse.h
 

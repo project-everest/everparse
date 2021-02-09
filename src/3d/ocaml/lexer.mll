@@ -18,6 +18,8 @@ let range_of_lexbuf lb =
   mk_pos (Lexing.lexeme_start_p lb),
   mk_pos (Lexing.lexeme_end_p lb)
 
+let to_ident' (x:string) = {modul_name=None; name=x}
+
 let with_range (x:'a) (l:Lexing.position) : 'a with_meta_t =
     Ast.with_range x (mk_pos l, mk_pos l)
 
@@ -54,7 +56,9 @@ let () =
   H.add keywords "abort" ABORT;
   H.add keywords "return" RETURN;
   H.add keywords "refining" REFINING;
-  H.add keywords "as" AS
+  H.add keywords "as" AS;
+  H.add keywords "module" MODULE;
+  H.add keywords "export" EXPORT
 
 let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
 
@@ -90,7 +94,7 @@ rule token =
   | bool as b      { locate lexbuf (BOOL (b="true")) }
   | "#define"      { locate lexbuf DEFINE }
   | ident as i        {
-      let ident = with_range i (Lexing.lexeme_start_p lexbuf) in
+      let ident = with_range (to_ident' i) (Lexing.lexeme_start_p lexbuf) in
       check_reserved_identifier ident;
       locate lexbuf (H.find_option keywords i |> Option.default (IDENT (ident)))
     }
@@ -115,6 +119,7 @@ rule token =
   | "|"            { locate lexbuf BITWISE_OR }
   | "^"            { locate lexbuf BITWISE_XOR }
   | "~"            { locate lexbuf BITWISE_NOT }
+  | "."            { locate lexbuf DOT }
   | ","            { locate lexbuf COMMA }
   | ";"            { locate lexbuf SEMICOLON }
   | ":"            { locate lexbuf COLON }

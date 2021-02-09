@@ -228,7 +228,7 @@ make_everparse() {
     wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE &&
     wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE &&
     if $is_windows ; then
-        wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/master/clang/LICENSE.TXT
+        wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT
     fi &&
     
     # Reset permissions and build the package

@@ -4,9 +4,9 @@
 void ColorEverParseError(char *x, char *y, char *z);
 static char* ColorStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_coloredPoint";
-		case 2: return "_coloredPoint";
-		case 3: return "_coloredPoint"; 
+		case 1: return "Color._coloredPoint";
+		case 2: return "Color._coloredPoint";
+		case 3: return "Color._coloredPoint"; 
 		default: return "";
 	}
 }

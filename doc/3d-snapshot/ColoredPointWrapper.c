@@ -4,10 +4,10 @@
 void ColoredPointEverParseError(char *x, char *y, char *z);
 static char* ColoredPointStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "_point";
-		case 2: return "_point";
-		case 3: return "_coloredPoint1";
-		case 4: return "_coloredPoint2"; 
+		case 1: return "ColoredPoint._point";
+		case 2: return "ColoredPoint._point";
+		case 3: return "ColoredPoint._coloredPoint1";
+		case 4: return "ColoredPoint._coloredPoint2"; 
 		default: return "";
 	}
 }
