@@ -18,12 +18,12 @@ let always_valid (_: string) : Tot bool = true
 inline_for_extraction
 let vstring = valid_string always_valid
 
-(* NOTE: default arguments here MUST be set to "", false, [] or None *)
+(* NOTE: default arguments here MUST be set to false, [] or None *)
 
-let arg0 : ref vstring = alloc ""
+let arg0 : ref (option vstring) = alloc None
 let batch : ref bool = alloc false
 let clang_format : ref bool = alloc false
-let clang_format_executable : ref vstring = alloc ""
+let clang_format_executable : ref (option vstring) = alloc None
 let cleanup : ref bool = alloc false
 let debug : ref bool = alloc false
 let error_log : ref (option vstring) = alloc None
@@ -31,7 +31,7 @@ let error_log_function : ref (option vstring) = alloc None
 let inplace_hashes : ref (list vstring) = alloc []
 let input_file : ref (list string) = alloc []
 let no_copy_everparse_h : ref bool = alloc false
-let output_dir : ref vstring = alloc ""
+let output_dir : ref (option vstring) = alloc None
 let save_hashes : ref bool = alloc false
 let skip_makefiles : ref bool = alloc false
 
@@ -56,11 +56,6 @@ noeq
 type cmd_option_kind =
   | OptBool:
       (v: ref bool) ->
-      cmd_option_kind
-  | OptString:
-      (arg_desc: string) ->
-      (valid: (string -> Tot bool)) ->
-      (v: ref (valid_string valid)) ->
       cmd_option_kind
   | OptStringOption:
       (arg_desc: string) ->
@@ -109,18 +104,11 @@ let cmd_option_arg_desc (a: cmd_option) : Tot string =
     end
   | CmdOption _ kind _ _ ->
     begin match kind with
-    | OptString argdesc _ _
     | OptStringOption argdesc _ _
     | OptList argdesc _ _
       -> argdesc
     | _ -> ""
     end
-
-let cmd_option_has_negation (a: cmd_option) : Tot bool =
-  match a with
-  | CmdOption _ k _ _ ->
-    OptBool? k || OptStringOption? k
-  | _ -> false
 
 let set_implies (options: ref (list cmd_option)) (implies: list string) : ML unit =
   List.iter
@@ -159,22 +147,6 @@ let fstar_options_of_cmd_option
         (FStar.Getopt.noshort, name, FStar.Getopt.ZeroArgs (fun _ -> set_implies options implies; v := true), desc);
         (FStar.Getopt.noshort, negate_name name, FStar.Getopt.ZeroArgs (fun _ -> v := false), negate_description desc);
       ]
-    | OptString arg_desc valid v ->
-      [(
-        FStar.Getopt.noshort, name,
-        FStar.Getopt.OneArg (
-          (fun (x: string) ->
-             if valid x
-             then begin
-               set_implies options implies;
-               v := x
-             end else
-               failwith (Printf.sprintf "Bad argument to %s: got %s, expected %s" name x arg_desc)
-          ),
-          arg_desc
-        ),
-        desc
-      )]
     | OptStringOption arg_desc valid v ->
       [
         (
@@ -195,81 +167,78 @@ let fstar_options_of_cmd_option
         (FStar.Getopt.noshort, negate_name name, FStar.Getopt.ZeroArgs (fun _ -> v := None), negate_description desc)
       ]
     | OptList arg_desc valid v ->
-      [(
-        FStar.Getopt.noshort, name,
-        FStar.Getopt.OneArg (
-          (fun (x: string) ->
-            if valid x
-            then begin
-              set_implies options implies;
-              v := x :: !v
-            end else
-              failwith (Printf.sprintf "Bad argument to %s: got %s, expected %s" name x arg_desc)
+      [
+        (
+          FStar.Getopt.noshort, name,
+          FStar.Getopt.OneArg (
+            (fun (x: string) ->
+              if valid x
+              then begin
+                set_implies options implies;
+                v := x :: !v
+              end else
+                failwith (Printf.sprintf "Bad argument to %s: got %s, expected %s" name x arg_desc)
+            ),
+            arg_desc
           ),
-          arg_desc
-        ),
-        desc
-      )]
+          desc
+        );
+        (
+          FStar.Getopt.noshort, negate_name name,
+          FStar.Getopt.ZeroArgs (fun _ -> v := []),
+          desc
+        );
+      ]
     end
 
 let compute_current_options (options: ref (list cmd_option)) : ML string =
-  (* we need to accumulate those boolean options implied by other options but that might be manually toggled by the user,
-     but without duplicates
-   *)
-  let update_manually_untoggled_1 (mu: list string) (opt: string) : ML (list string) =
-    match find_cmd_option opt !options with
-    | Some (CmdOption _ (OptBool v) _ _) ->
-      if !v then mu else if List.Tot.mem opt mu then mu else opt :: mu
-    | _ -> mu
-  in
-  let update_manually_untoggled (mu: list string) (s: list string) : ML (list string) =
-    List.fold_left update_manually_untoggled_1 mu s
-  in
-  (* first print the values of current options *)
-  let print (msg_mu: string & list string) (opt: cmd_option) : ML (string & list string) =
+  (* we would like to output a normalized sequence of options so that its semantics does not depend on whether any other options are prepended (i.e. whether 3d is run from 3d or from everparse.cmd or from everparse.sh *)
+  (* first print the values of current options except untoggled boolean options *)
+  let print (msg: string) (opt: cmd_option) : ML string =
     match opt with
     | CmdOption name kind desc implies ->
-      let (msg, mu) = msg_mu in
       begin match kind with
       | OptBool v ->
         if !v
-        then (Printf.sprintf "%s --%s" msg name, update_manually_untoggled mu implies)
-        else msg_mu
-      | OptString _ _ v ->
-        let v = !v in
-        if v = ""
-        then msg_mu
-        else (Printf.sprintf "%s --%s %s" msg name v, update_manually_untoggled mu implies)
+        then Printf.sprintf "%s --%s" msg name
+        else msg
       | OptStringOption _ _ v ->
         begin match !v with
-        | None -> msg_mu
-        | Some v -> (Printf.sprintf "%s --%s %s" msg name v, update_manually_untoggled mu implies)
+        | None -> Printf.sprintf "%s --%s" msg (negate_name name)
+        | Some v -> Printf.sprintf "%s --%s %s" msg name v
         end
       | OptList _ _ v ->
         let v = !v in
-        if Nil? v
-        then msg_mu
-        else
-          let app (msg: string) (s: string) = Printf.sprintf "%s --%s %s" msg name s in
-          (List.Tot.fold_left app msg (List.Tot.rev v) (* list was accumulated as a fifo *),
-            update_manually_untoggled mu implies)
+        let msg = Printf.sprintf "%s --%s" msg (negate_name name) in
+        let app (msg: string) (s: string) = Printf.sprintf "%s --%s %s" msg name s in
+        List.Tot.fold_left app msg (List.Tot.rev v) (* list was accumulated as a fifo *)
       end
-    | _ -> msg_mu
+    | _ -> msg
   in
-  let (msg, manually_untoggled) = List.fold_left print ("", []) !options in
-  (* then print the untoggling of those options manually toggled by the user *)
-  let print_untoggle (msg: string) (opt: string) : Tot string =
-    Printf.sprintf "%s --%s" msg (negate_name opt)
+  let msg = List.fold_left print "" !options in
+  (* then print the untoggled boolean options *)
+  let print_untoggle (msg: string) (opt: cmd_option) : ML string =
+    match opt with
+    | CmdOption name (OptBool v) _ _ ->
+      if not !v
+      then Printf.sprintf "%s --%s" msg (negate_name name)
+      else msg
+    | _ -> msg
   in
-  let msg = List.Tot.fold_left print_untoggle msg manually_untoggled in
+  let msg = List.fold_left print_untoggle msg !options in
   (* finally, append the input files *)
   let app (msg: string) (s: string) : Tot string = Printf.sprintf "%s %s" msg s in
   List.Tot.fold_left app msg !input_file
 
+let get_arg0 () : ML string =
+  match !arg0 with
+  | None -> "3d"
+  | Some v -> v
+
 let display_usage_1 (options: ref (list cmd_option)) : ML unit =
   FStar.IO.print_string "EverParse/3d: verified data validation with dependent data descriptions\n";
   FStar.IO.print_string "\n";
-  FStar.IO.print_string (Printf.sprintf "Usage: %s [options] path_to_input_file1.3d path_to_input_file2.3d ... \n" (if !arg0 = "" then "3d" else !arg0));
+  FStar.IO.print_string (Printf.sprintf "Usage: %s [options] path_to_input_file1.3d path_to_input_file2.3d ... \n" (get_arg0 ()));
   FStar.IO.print_string "\n";
   FStar.IO.print_string "Options:\n";
   List.iter
@@ -278,8 +247,8 @@ let display_usage_1 (options: ref (list cmd_option)) : ML unit =
       let desc = cmd_option_description x in
       let argdesc = cmd_option_arg_desc x in
       let argdesc = if argdesc = "" then "" else Printf.sprintf "<%s>" argdesc in
+      let negate = if CmdOption? x then Printf.sprintf " (opposite is --%s)" (negate_name m) else "" in
       let visible = not (m `string_starts_with` "__") in
-      let negate = if cmd_option_has_negation x then Printf.sprintf " (opposite is --%s)" (negate_name m) else "" in
       if visible then FStar.IO.print_string (Printf.sprintf "--%s%s%s\n\t%s\n" m argdesc negate desc)
     )
     !options
@@ -294,19 +263,19 @@ let (display_usage_2, fstar_options) =
     CmdOption "check_hashes" (OptStringOption "weak|strong|inplace" valid_check_hashes check_hashes) "Check hashes" ["batch"];
     CmdOption "check_inplace_hash" (OptList "file.3d=file.h" always_valid inplace_hashes) "Check hashes stored in one .h/.c file" [];
     CmdOption "clang_format" (OptBool clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
-    CmdOption "clang_format_executable" (OptString "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
+    CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and kremlin-args.rsp (--batch only)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
     CmdOption "debug" (OptBool debug) "Emit a lot of debugging output" [];
     CmdOption "error_log" (OptStringOption "error log" always_valid error_log) "Set the stream to which to log errors (default 'stderr')" [];
     CmdOption "error_log_function" (OptStringOption "error logging function" always_valid error_log_function) "Use a function to log errors (default 'fprintf')" [];
     CmdFStarOption ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message");
-    CmdOption "odir" (OptString "output directory" always_valid output_dir) "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory" [];
+    CmdOption "odir" (OptStringOption "output directory" always_valid output_dir) "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory" [];
     CmdOption "save_hashes" (OptBool save_hashes) "Save hashes" [];
     CmdOption "skip_makefiles" (OptBool skip_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
     CmdFStarOption (let open FStar.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
-    CmdOption "__arg0" (OptString "executable name" always_valid arg0) "executable name to use for the help message" [];
+    CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
   ];
   let fstar_options =
     List.Tot.concatMap (fstar_options_of_cmd_option options) !options
@@ -338,8 +307,9 @@ let get_module_name (file: string) =
     | None -> "DEFAULT"
 
 let get_output_dir () =
-  let s = !output_dir in
-  if s = "" then "." else !output_dir
+  match !output_dir with
+  | None -> "."
+  | Some s -> s
 
 let get_error_log () =
   match !error_log with
@@ -363,7 +333,9 @@ let get_clang_format () =
   !clang_format
 
 let get_clang_format_executable () =
-  !clang_format_executable
+  match !clang_format_executable with
+  | None -> ""
+  | Some s -> s
 
 let get_cleanup () =
   !cleanup
