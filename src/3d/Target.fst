@@ -604,7 +604,7 @@ let print_comments (cs:list string) : string =
 let print_attributes (entrypoint:bool) (attrs:decl_attributes) : string =
   match attrs.comments with
   | [] ->
-    if entrypoint
+    if entrypoint || attrs.is_exported
     then ""
     else if attrs.should_inline
     then "inline_for_extraction noextract\n"
