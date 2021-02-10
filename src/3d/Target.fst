@@ -612,7 +612,10 @@ let print_attributes (entrypoint:bool) (attrs:decl_attributes) : string =
   | cs ->
     Printf.sprintf "[@ %s %s]\n%s"
       (print_comments cs)
-      (if not entrypoint && not attrs.should_inline then "(CInline)" else "")
+      (if not entrypoint &&
+          not attrs.is_exported &&
+          not attrs.should_inline 
+       then "(CInline)" else "")
       (if attrs.should_inline then "inline_for_extraction\n" else "")
 
 
