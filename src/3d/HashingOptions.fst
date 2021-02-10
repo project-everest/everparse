@@ -6,3 +6,7 @@ let is_weak = function
   | WeakHashes
   | InplaceHashes -> true
   | _ -> false
+
+type micro_step_t =
+  | MicroStepVerify
+  | MicroStepExtract

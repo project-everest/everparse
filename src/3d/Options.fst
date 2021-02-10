@@ -35,6 +35,16 @@ let output_dir : ref (option vstring) = alloc None
 let save_hashes : ref bool = alloc false
 let skip_makefiles : ref bool = alloc false
 
+let valid_micro_step (str: string) : Tot bool = match str with
+  | "verify"
+  | "extract"
+    -> true
+  | _ -> false
+
+let micro_step : ref (option (valid_string valid_micro_step)) = alloc None
+
+let produce_c_from_existing_krml : ref bool = alloc false
+
 let valid_equate_types (str: string) : Tot bool =
      let l = String.split [','] str in
      match l with
@@ -276,6 +286,8 @@ let (display_usage_2, fstar_options) =
     CmdFStarOption (let open FStar.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
+    CmdOption "__micro_step" (OptStringOption "verify|extract" valid_micro_step micro_step) "micro step" [];
+    CmdOption "__produce_c_from_existing_krml" (OptBool produce_c_from_existing_krml) "produce C from .krml files" [];
   ];
   let fstar_options =
     List.Tot.concatMap (fstar_options_of_cmd_option options) !options
@@ -366,3 +378,12 @@ let get_equate_types_list () =
       let [a; b] = String.split [','] x in (a, b)
     )
     !equate_types_list
+
+let get_micro_step _ =
+  match !micro_step with
+  | None -> None
+  | Some "verify" -> Some MicroStepVerify
+  | Some "extract" -> Some MicroStepExtract
+
+let get_produce_c_from_existing_krml _ =
+  !produce_c_from_existing_krml

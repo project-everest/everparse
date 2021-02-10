@@ -37,3 +37,7 @@ val get_save_hashes : unit -> ML bool
 val get_check_inplace_hashes : unit -> ML (list string)
 
 val get_equate_types_list : unit -> ML (list (string & string))
+
+val get_micro_step : unit -> ML (option micro_step_t)
+
+val get_produce_c_from_existing_krml : unit -> ML bool

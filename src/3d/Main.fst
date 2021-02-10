@@ -187,35 +187,64 @@ let process_files (files:list string) : ML unit =
   |> ignore
 
 let go () : ML unit =
+  (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
   let files = Options.parse_cmd_line() in
+  (* Special mode: --check_inplace_hashes *)
   let inplace_hashes = Options.get_check_inplace_hashes () in
-  match inplace_hashes with
-  | _ :: _ ->
-    Batch.check_inplace_hashes inplace_hashes
-  | [] ->
-  match files with
-  | [] -> Options.display_usage ()
-  | _ ->
-    let out_dir = Options.get_output_dir () in
-    let all_files = collect_and_sort_dependencies files in
-    let all_files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) all_files in
-  match Options.get_check_hashes () with
+  if Cons? inplace_hashes
+  then Batch.check_inplace_hashes inplace_hashes
+  else
+  (* for other modes, a nonempty list of files is needed on the command line, so if none are there, then we shall print the help message *)
+  if Nil? files
+  then let _ = Options.display_usage () in exit 1
+  else
+  let out_dir = Options.get_output_dir () in
+  (* Special mode: --__micro_step *)
+  match Options.get_micro_step () with
+  | Some step ->
+    let f = match step with
+    | HashingOptions.MicroStepExtract -> Batch.extract_fst_file
+    | HashingOptions.MicroStepVerify -> Batch.verify_fst_file
+    in
+    List.iter (f out_dir) files
   | None ->
-    process_files all_files;
-    if Options.get_batch ()
-    then begin
-      Batch.postprocess
+  (* for other modes, the list of files provided on the command line is assumed to be a list of .3d files, and the list of all .3d files in dependency order has to be inferred from the list of .3d input files provided by the user *)
+  let all_files = collect_and_sort_dependencies files in
+  let all_files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) all_files in
+  (* Special mode: --check_hashes *)
+  let check_hashes = Options.get_check_hashes () in
+  if Some? check_hashes
+  then Batch.check_all_hashes (Some?.v check_hashes) out_dir all_files_and_modules
+  else
+  (* Special mode: --__produce_c_from_existing_krml *)
+  if Options.get_produce_c_from_existing_krml ()
+  then
+    let _ = Batch.postprocess_c
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
         (Options.get_skip_makefiles ())
         (Options.get_cleanup ())
         (Options.get_no_everparse_h ())
         (Options.get_save_hashes ())
-        out_dir all_files_and_modules;
-      FStar.IO.print_string "EverParse succeeded!\n"
-    end
-  | Some ch ->
-    Batch.check_all_hashes ch out_dir all_files_and_modules
+        out_dir all_files_and_modules
+    in
+    FStar.IO.print_string "EverParse succeeded!\n"
+  else
+  (* Default mode: process .3d files *)
+  let _ = process_files all_files in
+  (* Sub-mode of the default mode: --batch *)
+  if Options.get_batch ()
+  then
+  let _ = Batch.postprocess
+        (Options.get_clang_format ())
+        (Options.get_clang_format_executable ())
+        (Options.get_skip_makefiles ())
+        (Options.get_cleanup ())
+        (Options.get_no_everparse_h ())
+        (Options.get_save_hashes ())
+        out_dir all_files_and_modules
+  in
+  FStar.IO.print_string "EverParse succeeded!\n"
 
 #push-options "--warn_error -272" //top-level effects are okay
 #push-options "--admit_smt_queries true" //explicitly not handling all exceptions, so that we can meaningful backtraces
