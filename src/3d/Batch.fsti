@@ -2,6 +2,17 @@ module Batch
 open HashingOptions
 open FStar.All
 
+(* The --print_in_place step has to be performed at source generation
+   time, not at verification time, because if the user requests files
+   to be processed by a Makefile, they must not be modified again
+   after they are generated. Thus, we do it always, regardless of
+   --batch. *)
+
+val pretty_print_source_modules
+  (out_dir: string)
+  (files_and_modules: list (string & string))
+: ML unit
+
 val verify_fst_file
   (out_dir: string)
   (file: string)

@@ -231,6 +231,10 @@ let go () : ML unit =
   else
   (* Default mode: process .3d files *)
   let _ = process_files all_files in
+  (* we need to pretty-print source modules in all cases, regardless of --batch,
+     because of the Makefile scenario
+   *)
+  let _ = Batch.pretty_print_source_modules out_dir all_files_and_modules in
   (* Sub-mode of the default mode: --batch *)
   if Options.get_batch ()
   then

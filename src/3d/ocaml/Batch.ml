@@ -77,7 +77,6 @@ let verify_fst_file
   file
 =
   let fstar_args = list_snoc (fstar_args out_dir) file in
-  run_cmd fstar_exe ("--print_in_place" :: fstar_args);
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args)
 
 let fstar_modul_of_filename fst =
@@ -94,6 +93,33 @@ let extract_fst_file
   file
 =
   run_cmd fstar_exe (fstar_extract_args out_dir file)
+
+let pretty_print_source_file
+  out_dir
+  file
+=
+  let fstar_args = list_snoc (fstar_args out_dir) file in
+  run_cmd fstar_exe ("--print_in_place" :: fstar_args)
+
+let pretty_print_source_module
+      out_dir
+      (file, modul)
+    : unit
+  =
+  let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
+  let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
+  let fsti_file = Printf.sprintf "%si" fst_file in
+  List.iter (pretty_print_source_file out_dir) [
+      types_fst_file;
+      fsti_file;
+      fst_file;
+  ]
+
+let pretty_print_source_modules
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+=
+  List.iter (pretty_print_source_module out_dir) files_and_modules
 
 let verify_and_extract_module
       out_dir
