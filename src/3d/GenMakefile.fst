@@ -34,7 +34,7 @@ let produce_types_checked_rule
 : Tot rule_t
 = let types_fst = mk_filename modul "Types.fst" in 
   {
-    from = types_fst :: List.Tot.map (fun m -> mk_filename m "Types.fst.checked") (Deps.dependencies g modul);
+    from = types_fst :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul);
     to = [mk_filename modul "Types.fst.checked"];
     args = Printf.sprintf "--__micro_step verify %s" types_fst;
   }
@@ -67,7 +67,7 @@ let produce_types_krml_rule
 : Tot rule_t
 =
   {
-    from = mk_filename modul "Types.fst.checked" :: List.Tot.map (fun m -> mk_filename m "Types.fst.checked") (Deps.dependencies g modul);
+    from = mk_filename modul "Types.fst.checked" :: List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul);
     to = [mk_filename (Printf.sprintf "%s_Types" modul) "krml"];
     args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "Types.fst");
   }
