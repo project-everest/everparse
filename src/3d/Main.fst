@@ -168,16 +168,6 @@ let process_file (en:env) (fn:string) : ML env =
     typesizes_env = TypeSizes.finish_module en.typesizes_env modul ds;
     translate_env = Translate.finish_module en.translate_env modul ds }
 
-let collect_and_sort_dependencies (files:list string) : ML (list string) =
-  let dirname = files |> List.hd |> OS.dirname in
-  let filename_of modul = Options.get_file_name (OS.concat dirname modul) in
-
-  files
-  |> List.collect Deps.get_sorted_deps
-  |> List.fold_left (fun acc mod -> if List.mem mod acc then acc else mod::acc) []
-  |> List.rev
-  |> List.map filename_of
-
 let process_files (files:list string) : ML unit =
   IO.print_string (Printf.sprintf "Processing files: %s\n"
     (List.fold_left (fun acc fn -> Printf.sprintf "%s %s" acc fn) "" files));
@@ -208,8 +198,17 @@ let go () : ML unit =
     in
     List.iter (f out_dir) files
   | None ->
-  (* for other modes, the list of files provided on the command line is assumed to be a list of .3d files, and the list of all .3d files in dependency order has to be inferred from the list of .3d input files provided by the user *)
-  let all_files = collect_and_sort_dependencies files in
+  (* Special mode: --gnu_makefile" *)
+  if Options.get_gnu_makefile ()
+  then
+    GenMakefile.write_gnu_makefile files
+  else
+  (* for other modes, the list of files provided on the command line is assumed to be a list of .3d files, and the list of all .3d files in dependency order has to be inferred from the list of .3d input files provided by the user, unless --__skip_deps is provided *)
+  let all_files =
+    if Options.get_skip_deps ()
+    then List.Tot.rev files (* files are accumulated in reverse on the command line *)
+    else Deps.collect_and_sort_dependencies files
+  in
   let all_files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) all_files in
   (* Special mode: --check_hashes *)
   let check_hashes = Options.get_check_hashes () in

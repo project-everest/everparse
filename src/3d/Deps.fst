@@ -13,6 +13,9 @@ type dep_graph = list edge
 let all_edges_from (g:dep_graph) (node:string) : Tot (list edge) =
   List.Tot.filter (fun (src, _dst) -> src = node) g
 
+let dependencies graph modul =
+  List.Tot.map snd (all_edges_from graph modul)
+
 let dep_exists dirname name =
   OS.file_exists (Options.get_file_name (OS.concat dirname name))
 
@@ -168,10 +171,18 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
     List.fold_left (fun acc dep -> build_dep_graph_aux dirname dep acc)
       (g@edges, mname::seen) deps
 
-let build_dep_graph (fn:string) : ML dep_graph =
-  build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) ([], [])
+let build_dep_graph_from_list files =
+  List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) ([], []) files
   |> fst
 
-let get_sorted_deps fn =
-  let dep_graph = build_dep_graph fn in
-  topsort dep_graph (Options.get_module_name fn)
+let get_sorted_deps (g: dep_graph) (fl: list string) : ML (list string) =
+  List.collect (fun fn -> topsort g (Options.get_module_name fn)) fl
+
+let collect_and_sort_dependencies_from_graph (g: dep_graph) (files:list string) : ML (list string) =
+  let dirname = files |> List.hd |> OS.dirname in
+  let filename_of modul = Options.get_file_name (OS.concat dirname modul) in
+  files
+  |> get_sorted_deps g
+  |> List.fold_left (fun acc mod -> if List.mem mod acc then acc else mod::acc) []
+  |> List.rev
+  |> List.map filename_of

@@ -57,6 +57,7 @@ let fstar_args0 =
         "--include" :: (filename_concat kremlib "obj") ::
           "--include" :: ddd_prelude_home ::
             "--cmi" ::
+            "--warn_error" :: "+241" ::
               OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"
 
 let list_snoc q a =

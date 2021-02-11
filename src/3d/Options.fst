@@ -34,6 +34,7 @@ let no_copy_everparse_h : ref bool = alloc false
 let output_dir : ref (option vstring) = alloc None
 let save_hashes : ref bool = alloc false
 let skip_makefiles : ref bool = alloc false
+let skip_deps: ref bool = alloc false
 
 let valid_micro_step (str: string) : Tot bool = match str with
   | "verify"
@@ -44,6 +45,9 @@ let valid_micro_step (str: string) : Tot bool = match str with
 let micro_step : ref (option (valid_string valid_micro_step)) = alloc None
 
 let produce_c_from_existing_krml : ref bool = alloc false
+
+let gnu_makefile : ref bool = alloc false
+let makefile_name : ref (option vstring) = alloc None
 
 let valid_equate_types (str: string) : Tot bool =
      let l = String.split [','] str in
@@ -201,10 +205,13 @@ let fstar_options_of_cmd_option
       ]
     end
 
-let compute_current_options (options: ref (list cmd_option)) : ML string =
+let compute_current_options (options: ref (list cmd_option)) (ignore: list string) : ML string =
   (* we would like to output a normalized sequence of options so that its semantics does not depend on whether any other options are prepended (i.e. whether 3d is run from 3d or from everparse.cmd or from everparse.sh *)
   (* first print the values of current options except untoggled boolean options *)
   let print (msg: string) (opt: cmd_option) : ML string =
+    if List.Tot.mem (cmd_option_name opt) ignore
+    then msg
+    else
     match opt with
     | CmdOption name kind desc implies ->
       begin match kind with
@@ -230,15 +237,12 @@ let compute_current_options (options: ref (list cmd_option)) : ML string =
   let print_untoggle (msg: string) (opt: cmd_option) : ML string =
     match opt with
     | CmdOption name (OptBool v) _ _ ->
-      if not !v
+      if (if not (List.Tot.mem name ignore) then not !v else false)
       then Printf.sprintf "%s --%s" msg (negate_name name)
       else msg
     | _ -> msg
   in
-  let msg = List.fold_left print_untoggle msg !options in
-  (* finally, append the input files *)
-  let app (msg: string) (s: string) : Tot string = Printf.sprintf "%s %s" msg s in
-  List.Tot.fold_left app msg !input_file
+  List.fold_left print_untoggle msg !options
 
 let get_arg0 () : ML string =
   match !arg0 with
@@ -263,11 +267,12 @@ let display_usage_1 (options: ref (list cmd_option)) : ML unit =
     )
     !options
     ;
-  FStar.IO.print_string (Printf.sprintf "\nCurrent options are:%s\n" (compute_current_options options))
+  FStar.IO.print_string (Printf.sprintf "\nCurrent options are:%s\n" (compute_current_options options []))
 
-let (display_usage_2, fstar_options) =
+let (display_usage_2, compute_options_2, fstar_options) =
   let options : ref (list cmd_option) = alloc [] in
   let display_usage () = display_usage_1 options in
+  let compute_options = compute_current_options options in
   options := [
     CmdOption "batch" (OptBool batch) "Verify the generated F* code and extract C code" [];
     CmdOption "check_hashes" (OptStringOption "weak|strong|inplace" valid_check_hashes check_hashes) "Check hashes" ["batch"];
@@ -279,7 +284,9 @@ let (display_usage_2, fstar_options) =
     CmdOption "debug" (OptBool debug) "Emit a lot of debugging output" [];
     CmdOption "error_log" (OptStringOption "error log" always_valid error_log) "Set the stream to which to log errors (default 'stderr')" [];
     CmdOption "error_log_function" (OptStringOption "error logging function" always_valid error_log_function) "Use a function to log errors (default 'fprintf')" [];
+    CmdOption "gnu_makefile" (OptBool gnu_makefile) "Do not produce anything, other than a GNU Makefile to produce everything" [];
     CmdFStarOption ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message");
+    CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --gnu_makefile, default <output directory>/EverParse.Makefile" [];
     CmdOption "odir" (OptStringOption "output directory" always_valid output_dir) "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory" [];
     CmdOption "save_hashes" (OptBool save_hashes) "Save hashes" [];
     CmdOption "skip_makefiles" (OptBool skip_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
@@ -288,13 +295,16 @@ let (display_usage_2, fstar_options) =
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
     CmdOption "__micro_step" (OptStringOption "verify|extract" valid_micro_step micro_step) "micro step" [];
     CmdOption "__produce_c_from_existing_krml" (OptBool produce_c_from_existing_krml) "produce C from .krml files" [];
+    CmdOption "__skip_deps" (OptBool skip_deps) "skip dependency analysis, assume all dependencies are specified on the command line" [];
   ];
   let fstar_options =
     List.Tot.concatMap (fstar_options_of_cmd_option options) !options
   in
-  (display_usage, fstar_options)
+  (display_usage, compute_options, fstar_options)
 
 let display_usage = display_usage_2
+
+let compute_options = compute_options_2
 
 let parse_cmd_line () : ML (list string) =
   let open FStar.Getopt in
@@ -387,3 +397,14 @@ let get_micro_step _ =
 
 let get_produce_c_from_existing_krml _ =
   !produce_c_from_existing_krml
+
+let get_skip_deps _ =
+  !skip_deps
+
+let get_gnu_makefile _ =
+  !gnu_makefile
+
+let get_makefile_name _ =
+  match !makefile_name with
+  | None -> OS.concat (get_output_dir ()) "EverParse.Makefile"
+  | Some mf -> mf
