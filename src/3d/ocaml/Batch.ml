@@ -69,7 +69,7 @@ let fstar_args
     "--odir" :: out_dir ::
       "--cache_dir" :: out_dir ::
         "--include" :: out_dir ::
-          "--load" :: "WeakenTac" ::
+          "--load_cmxs" :: "WeakenTac" ::
             fstar_args0
 
 let verify_fst_file
