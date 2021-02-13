@@ -176,6 +176,25 @@ let process_files (files:list string) : ML unit =
   |> List.fold_left (fun env fn -> process_file env fn) env
   |> ignore
 
+let produce_and_postprocess_c
+  (out_dir: string)
+  (file: string)
+: ML unit
+=
+  let modul = Options.get_module_name file in
+  let deps = Deps.collect_and_sort_dependencies [file] in
+  let dep_files_and_modules = List.map (fun f -> (f, Options.get_module_name f)) deps in
+  (* remove the current module from the deps *)
+  let dep_files_and_modules = List.filter (fun (_, m) -> m <> modul) dep_files_and_modules in
+  Batch.produce_and_postprocess_one_c
+    (Options.get_clang_format ())
+    (Options.get_clang_format_executable ())
+    (Options.get_save_hashes ())
+    out_dir
+    file
+    modul
+    dep_files_and_modules
+
 let go () : ML unit =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
   let files = Options.parse_cmd_line() in
@@ -203,6 +222,15 @@ let go () : ML unit =
   then
     GenMakefile.write_gnu_makefile files
   else
+  (* Special mode: --__produce_c_from_existing_krml *)
+  if Options.get_produce_c_from_existing_krml ()
+  then
+    let _ = List.iter
+      (produce_and_postprocess_c out_dir)
+      files
+    in
+    FStar.IO.print_string "EverParse succeeded!\n"
+  else
   (* for other modes, the list of files provided on the command line is assumed to be a list of .3d files, and the list of all .3d files in dependency order has to be inferred from the list of .3d input files provided by the user, unless --__skip_deps is provided *)
   let all_files =
     if Options.get_skip_deps ()
@@ -214,20 +242,6 @@ let go () : ML unit =
   let check_hashes = Options.get_check_hashes () in
   if Some? check_hashes
   then Batch.check_all_hashes (Some?.v check_hashes) out_dir all_files_and_modules
-  else
-  (* Special mode: --__produce_c_from_existing_krml *)
-  if Options.get_produce_c_from_existing_krml ()
-  then
-    let _ = Batch.produce_and_postprocess_c
-        (Options.get_clang_format ())
-        (Options.get_clang_format_executable ())
-        (Options.get_skip_makefiles ())
-        (Options.get_cleanup ())
-        (Options.get_no_everparse_h ())
-        (Options.get_save_hashes ())
-        out_dir all_files_and_modules
-    in
-    FStar.IO.print_string "EverParse succeeded!\n"
   else
   (* Default mode: process .3d files *)
   let _ = process_files all_files in

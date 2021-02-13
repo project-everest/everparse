@@ -191,13 +191,9 @@ let krml_args skip_makefiles out_dir files_and_modules =
                      (fun accu (_, modul) ->
                        let l =
                          filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
-                           Printf.sprintf "%sWrapper.c" modul ::
                              filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu
                        in
-                       let static_asserts = Printf.sprintf "%sStaticAssertions.c" modul in
-                       if Sys.file_exists (filename_concat out_dir static_asserts)
-                       then static_asserts :: l
-                       else l
+                       l
                      )
                      all_everparse_krmls
                      files_and_modules
@@ -227,6 +223,14 @@ let krml_args skip_makefiles out_dir files_and_modules =
     else krml_args
 
 let call_krml files_and_modules_cleanup out_dir krml_args =
+  (* append the everparse and kremlib bundles to the list of arguments *)
+  let krml_args = krml_args @ [
+        "-bundle" ;
+        Printf.sprintf "%s,%s[rename=Lib,rename-prefix]" fstar_kremlib_bundle everparse_only_bundle;
+        "-bundle" ;
+        Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
+  ]
+  in
   (* the argument list is too long, so we need to go through an argument file *)
   let argfile = Filename.temp_file ~temp_dir:out_dir "kremlinargs" ".rsp" in
   let h = open_out argfile in
@@ -263,14 +267,40 @@ let produce_c_files
                            "-bundle"::(Printf.sprintf "%s=%s.Types"
                                          modul
                                          modul)::acc) [] files_and_modules in
-    krml_args@bundle_types@[
-        "-bundle" ;
-        Printf.sprintf "%s,%s[rename=Lib,rename-prefix]" fstar_kremlib_bundle everparse_only_bundle;
-        "-bundle" ;
-        Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
-      ]
+    krml_args@bundle_types
+  in
+  let krml_args =
+    if skip_makefiles
+    then krml_args
+    else
+      List.fold_left
+        (fun acc (_, modul) ->
+          Printf.sprintf "%sWrapper.c" modul ::
+            let static_asserts = Printf.sprintf "%sStaticAssertions.c" modul in
+            if Sys.file_exists (filename_concat out_dir static_asserts)
+            then static_asserts :: acc
+            else acc)
+        krml_args
+        files_and_modules
   in
   call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
+
+let produce_one_c_file
+      (out_dir: string)
+      (file: string)
+      (modul: string)
+      (dep_files_and_modules: (string * string) list)
+    : unit
+  =
+  let krml_args = krml_args true out_dir ((file, modul) :: dep_files_and_modules) in
+  let krml_args =
+    krml_args@
+      List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ [
+        "-bundle" ;
+        Printf.sprintf "%s=%s" modul (String.concat "," (Printf.sprintf "%s.Types" modul :: List.map (fun (_, m) -> Printf.sprintf "%s,%s.Types" m m) dep_files_and_modules));
+      ]
+  in
+  call_krml None out_dir krml_args
 
 (* Update EVERPARSEVERSION and FILENAME *)
 
@@ -526,6 +556,24 @@ let produce_and_postprocess_c
   then failwith "krml produced some EverParse.h, should not have happened";
   (* postprocess the produced C files *)
   postprocess_c clang_format clang_format_executable skip_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+
+let produce_and_postprocess_one_c
+      (clang_format: bool)
+      (clang_format_executable: string)
+      (save_hashes_opt: bool)
+      (out_dir: string)
+      (file: string)
+      (modul: string)
+      (dep_files_and_modules: (string * string) list)
+    : unit
+  =
+  let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
+  (* produce the .c and .h file *)
+  produce_one_c_file out_dir file modul dep_files_and_modules;
+  if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
+  then failwith "krml produced some EverParse.h, should not have happened";
+  (* postprocess the produced .c and .h files for this module *)
+  postprocess_c clang_format clang_format_executable true false true save_hashes_opt out_dir [file, modul]
 
 let postprocess_fst
       (clang_format: bool)
