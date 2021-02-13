@@ -27,7 +27,7 @@ val check_inplace_hashes
   (files_3d_c: list string)
 : ML unit
 
-val postprocess_c
+val produce_and_postprocess_c
   (clang_format: bool)
   (clang_format_executable: string)
   (skip_makefiles: bool)
@@ -38,7 +38,7 @@ val postprocess_c
   (files_and_modules: list (string & string))
 : ML unit
 
-val postprocess
+val postprocess_fst
   (clang_format: bool)
   (clang_format_executable: string)
   (skip_makefiles: bool)

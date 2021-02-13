@@ -182,13 +182,11 @@ let remove_fst_and_krml_files
       Printf.sprintf "%s.krml" root_name;
     ]
 
-let produce_c_files
-      (skip_makefiles: bool)
-      (cleanup: bool)
-      (out_dir: string)
-      (files_and_modules: (string * string) list)
-    : unit
-  =
+let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,ResultOps,Prelude.\\*,Prelude,Actions"
+
+let fstar_kremlib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
+
+let krml_args skip_makefiles out_dir files_and_modules =
   let krml_files = List.fold_left
                      (fun accu (_, modul) ->
                        let l =
@@ -205,8 +203,6 @@ let produce_c_files
                      files_and_modules
   in
   let krml_files = List.rev krml_files in
-  let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,ResultOps,Prelude.\\*,Prelude,Actions" in
-  let fstar_kremlib_bundle = "FStar.\\*,LowStar.\\*,C.\\*" in
   let krml_args =
     "-tmpdir" :: out_dir ::
       "-skip-compilation" ::
@@ -224,26 +220,13 @@ let produce_c_files
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
-                                    (krml_args0 @ krml_files)
-  in
-  let krml_args =
+                                  krml_args0
+    in
     if skip_makefiles
     then "-skip-makefiles" :: krml_args
     else krml_args
-  in
-  (* bundle M.Types.krml and EverParse into M *)
-  let krml_args =
-    let bundle_types = List.fold_left (fun acc (_, modul) ->
-                           "-bundle"::(Printf.sprintf "%s=%s.Types"
-                                         modul
-                                         modul)::acc) [] files_and_modules in
-    krml_args@bundle_types@[
-        "-bundle" ;
-        Printf.sprintf "%s,%s[rename=Lib,rename-prefix]" fstar_kremlib_bundle everparse_only_bundle;
-        "-bundle" ;
-        Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
-      ]
-  in
+
+let call_krml files_and_modules_cleanup out_dir krml_args =
   (* the argument list is too long, so we need to go through an argument file *)
   let argfile = Filename.temp_file ~temp_dir:out_dir "kremlinargs" ".rsp" in
   let h = open_out argfile in
@@ -258,12 +241,36 @@ let produce_c_files
   let (is_temp_krml, krml) = krml out_dir in
   print_endline (Printf.sprintf "KReMLin found at: %s" krml);
   run_cmd krml [Printf.sprintf "@%s" argfile];
-  if cleanup
-  then begin
+  begin match files_and_modules_cleanup with
+  | Some files_and_modules ->
       Sys.remove argfile;
       if is_temp_krml then Sys.remove krml;
       List.iter (remove_fst_and_krml_files out_dir) files_and_modules
-    end
+  | _ -> ()
+  end
+
+let produce_c_files
+      (skip_makefiles: bool)
+      (cleanup: bool)
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+    : unit
+  =
+  let krml_args = krml_args skip_makefiles out_dir files_and_modules in
+  (* bundle M.Types.krml and EverParse into M *)
+  let krml_args =
+    let bundle_types = List.fold_left (fun acc (_, modul) ->
+                           "-bundle"::(Printf.sprintf "%s=%s.Types"
+                                         modul
+                                         modul)::acc) [] files_and_modules in
+    krml_args@bundle_types@[
+        "-bundle" ;
+        Printf.sprintf "%s,%s[rename=Lib,rename-prefix]" fstar_kremlib_bundle everparse_only_bundle;
+        "-bundle" ;
+        Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
+      ]
+  in
+  call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
 
 (* Update EVERPARSEVERSION and FILENAME *)
 
@@ -463,7 +470,7 @@ let save_hashes
     let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
     Hashing.save_hashes file (Some c) json
 
-(* Summary *)
+(* Postprocess C files, assuming that they have already been processed *)
 
 let postprocess_c
       (clang_format: bool)
@@ -476,11 +483,6 @@ let postprocess_c
       (files_and_modules: (string * string) list)
     : unit
   =
-  let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
-  (* produce the C files *)
-  produce_c_files skip_makefiles cleanup out_dir files_and_modules;
-  if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
-  then failwith "krml produced some EverParse.h, should not have happened";
   (* copy EverParse.h unless prevented *)
   if not no_everparse_h
   then begin
@@ -506,7 +508,26 @@ let postprocess_c
   then List.iter (save_hashes out_dir) files_and_modules;
   ()
 
-let postprocess
+let produce_and_postprocess_c
+      (clang_format: bool)
+      (clang_format_executable: string)
+      (skip_makefiles: bool)
+      (cleanup: bool)
+      (no_everparse_h: bool)
+      (save_hashes_opt: bool)
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+    : unit
+  =
+  let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
+  (* produce the C files *)
+  produce_c_files skip_makefiles cleanup out_dir files_and_modules;
+  if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
+  then failwith "krml produced some EverParse.h, should not have happened";
+  (* postprocess the produced C files *)
+  postprocess_c clang_format clang_format_executable skip_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+
+let postprocess_fst
       (clang_format: bool)
       (clang_format_executable: string)
       (skip_makefiles: bool)
@@ -521,7 +542,7 @@ let postprocess
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module out_dir) files_and_modules;
   (* produce the .c and .h files and format them *)
-  postprocess_c clang_format clang_format_executable skip_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+  produce_and_postprocess_c clang_format clang_format_executable skip_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let check_all_hashes
       (ch: check_hashes_t)

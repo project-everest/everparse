@@ -218,7 +218,7 @@ let go () : ML unit =
   (* Special mode: --__produce_c_from_existing_krml *)
   if Options.get_produce_c_from_existing_krml ()
   then
-    let _ = Batch.postprocess_c
+    let _ = Batch.produce_and_postprocess_c
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
         (Options.get_skip_makefiles ())
@@ -238,7 +238,7 @@ let go () : ML unit =
   (* Sub-mode of the default mode: --batch *)
   if Options.get_batch ()
   then
-  let _ = Batch.postprocess
+  let _ = Batch.postprocess_fst
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
         (Options.get_skip_makefiles ())
