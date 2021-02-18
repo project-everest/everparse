@@ -156,11 +156,11 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file c_static_asserts_file
   end
 
-let process_file (en:env) (fn:string) : ML env =
-  let modul = Options.get_module_name fn in
+let process_file (en:env) (fn:string) (modul:string) (emit_fstar:bool) : ML env =
   let _decls, t_decls, static_asserts, en =
     translate_module en modul fn in
-  emit_fstar_code en modul t_decls static_asserts;
+  if emit_fstar then emit_fstar_code en modul t_decls static_asserts
+  else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
 
   let ds = Binding.get_exported_decls en.binding_env modul in
   
@@ -168,12 +168,14 @@ let process_file (en:env) (fn:string) : ML env =
     typesizes_env = TypeSizes.finish_module en.typesizes_env modul ds;
     translate_env = Translate.finish_module en.translate_env modul ds }
 
-let process_files (files:list string) : ML unit =
+let process_files (files_and_modules:list (string & string)) (emit_fstar:string -> ML bool) : ML unit =
   IO.print_string (Printf.sprintf "Processing files: %s\n"
-    (List.fold_left (fun acc fn -> Printf.sprintf "%s %s" acc fn) "" files));
+    (List.fold_left (fun acc fn ->
+      Printf.sprintf "%s %s" acc fn) "" (List.map fst files_and_modules)));
   let env = initial_env () in
-  files
-  |> List.fold_left (fun env fn -> process_file env fn) env
+  files_and_modules
+  |> List.fold_left (fun env (fn, modul) ->
+                    process_file env fn modul (emit_fstar modul)) env
   |> ignore
 
 let produce_and_postprocess_c
@@ -197,14 +199,14 @@ let produce_and_postprocess_c
 
 let go () : ML unit =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
-  let files = Options.parse_cmd_line() in
+  let cmd_line_files = Options.parse_cmd_line() in
   (* Special mode: --check_inplace_hashes *)
   let inplace_hashes = Options.get_check_inplace_hashes () in
   if Cons? inplace_hashes
   then Batch.check_inplace_hashes inplace_hashes
   else
   (* for other modes, a nonempty list of files is needed on the command line, so if none are there, then we shall print the help message *)
-  if Nil? files
+  if Nil? cmd_line_files
   then let _ = Options.display_usage () in exit 1
   else
   let out_dir = Options.get_output_dir () in
@@ -215,27 +217,27 @@ let go () : ML unit =
     | HashingOptions.MicroStepExtract -> Batch.extract_fst_file
     | HashingOptions.MicroStepVerify -> Batch.verify_fst_file
     in
-    List.iter (f out_dir) files
+    List.iter (f out_dir) cmd_line_files
   | None ->
   (* Special mode: --gnu_makefile" *)
   if Options.get_gnu_makefile ()
   then
-    GenMakefile.write_gnu_makefile files
+    GenMakefile.write_gnu_makefile cmd_line_files
   else
   (* Special mode: --__produce_c_from_existing_krml *)
   if Options.get_produce_c_from_existing_krml ()
   then
     let _ = List.iter
       (produce_and_postprocess_c out_dir)
-      files
+      cmd_line_files
     in
     FStar.IO.print_string "EverParse succeeded!\n"
   else
   (* for other modes, the list of files provided on the command line is assumed to be a list of .3d files, and the list of all .3d files in dependency order has to be inferred from the list of .3d input files provided by the user, unless --__skip_deps is provided *)
   let all_files =
     if Options.get_skip_deps ()
-    then List.Tot.rev files (* files are accumulated in reverse on the command line *)
-    else Deps.collect_and_sort_dependencies files
+    then List.Tot.rev cmd_line_files (* files are accumulated in reverse on the command line *)
+    else Deps.collect_and_sort_dependencies cmd_line_files
   in
   let all_files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) all_files in
   (* Special mode: --check_hashes *)
@@ -244,11 +246,20 @@ let go () : ML unit =
   then Batch.check_all_hashes (Some?.v check_hashes) out_dir all_files_and_modules
   else
   (* Default mode: process .3d files *)
-  let _ = process_files all_files in
+  let should_emit_fstar_code : string -> ML bool =
+    let cmd_line_modules = List.map Options.get_module_name cmd_line_files in
+    fun modul ->
+      let b = Options.get_batch () in
+      b || List.Tot.mem modul cmd_line_modules in
+  process_files all_files_and_modules should_emit_fstar_code;
   (* we need to pretty-print source modules in all cases, regardless of --batch,
      because of the Makefile scenario
    *)
-  let _ = Batch.pretty_print_source_modules out_dir all_files_and_modules in
+   (*
+    * pretty print only the modules we emitted code for
+    *)
+  Batch.pretty_print_source_modules out_dir
+    (List.filter (fun (_, m) -> should_emit_fstar_code m) all_files_and_modules);
   (* Sub-mode of the default mode: --batch *)
   if Options.get_batch ()
   then
