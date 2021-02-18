@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define SMOKER__AGE ((uint64_t)1U)
+#define SMOKER__SMOKER__AGE ((uint64_t)33U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define SMOKER__CIGARETTESCONSUMED ((uint64_t)2U)
+#define SMOKER__SMOKER__CIGARETTESCONSUMED ((uint64_t)34U)
 
 typedef uint8_t *InputBufferT;
 
@@ -36,7 +36,7 @@ ValidateSmokerCigarettesConsumed(uint32_t InputLength, uint64_t StartPosition)
   return
     EverParseMaybeSetErrorCode(endPositionOrError,
       StartPosition,
-      SMOKER__CIGARETTESCONSUMED);
+      SMOKER__SMOKER__CIGARETTESCONSUMED);
 }
 
 uint64_t SmokerValidateSmoker(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
@@ -53,7 +53,10 @@ uint64_t SmokerValidateSmoker(uint32_t InputLength, uint8_t *Input, uint64_t Sta
     endPositionOrError = StartPosition + (uint64_t)4U;
   }
   uint64_t
-  positionAfterage = EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, SMOKER__AGE);
+  positionAfterage =
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      SMOKER__SMOKER__AGE);
   if (EverParseIsError(positionAfterage))
   {
     return positionAfterage;
@@ -66,7 +69,7 @@ uint64_t SmokerValidateSmoker(uint32_t InputLength, uint8_t *Input, uint64_t Sta
     EverParseCheckConstraintOkWithFieldId(ageConstraintIsOk,
       StartPosition,
       positionAfterage,
-      SMOKER__AGE);
+      SMOKER__SMOKER__AGE);
   if (EverParseIsError(positionOrErrorAfterage))
   {
     return positionOrErrorAfterage;

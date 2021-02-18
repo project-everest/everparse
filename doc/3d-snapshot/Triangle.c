@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define POINT__X ((uint64_t)1U)
+#define TRIANGLE__POINT__X ((uint64_t)5U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define POINT__Y ((uint64_t)2U)
+#define TRIANGLE__POINT__Y ((uint64_t)6U)
 
 static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPosition)
 /*++
@@ -30,7 +30,7 @@ static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPositi
   {
     endPositionOrError = StartPosition + (uint64_t)2U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, POINT__X);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, TRIANGLE__POINT__X);
 }
 
 static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPosition)
@@ -51,7 +51,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
   {
     endPositionOrError = StartPosition + (uint64_t)2U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, POINT__Y);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, TRIANGLE__POINT__Y);
 }
 
 static inline uint64_t ValidatePoint(uint32_t Uu, uint64_t StartPosition)

@@ -5,22 +5,22 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define POINT__X ((uint64_t)1U)
+#define COLOREDPOINT__POINT__X ((uint64_t)1U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define POINT__Y ((uint64_t)2U)
+#define COLOREDPOINT__POINT__Y ((uint64_t)2U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOREDPOINT1__COLOR ((uint64_t)3U)
+#define COLOREDPOINT__COLOREDPOINT1__COLOR ((uint64_t)3U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOREDPOINT2__COLOR ((uint64_t)4U)
+#define COLOREDPOINT__COLOREDPOINT2__COLOR ((uint64_t)4U)
 
 static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPosition)
 /*++
@@ -40,7 +40,7 @@ static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPositi
   {
     endPositionOrError = StartPosition + (uint64_t)2U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, POINT__X);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT__POINT__X);
 }
 
 static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPosition)
@@ -61,7 +61,7 @@ static inline uint64_t ValidatePointY(uint32_t InputLength, uint64_t StartPositi
   {
     endPositionOrError = StartPosition + (uint64_t)2U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, POINT__Y);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT__POINT__Y);
 }
 
 static inline uint64_t ValidatePoint(uint32_t Uu, uint64_t StartPosition)
@@ -94,7 +94,10 @@ static inline uint64_t ValidateColoredPoint1Color(uint32_t InputLength, uint64_t
   {
     endPositionOrError = StartPosition + (uint64_t)1U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT1__COLOR);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      COLOREDPOINT__COLOREDPOINT1__COLOR);
 }
 
 static inline uint64_t ValidateColoredPoint1Pt(uint32_t InputLength, uint64_t StartPosition)
@@ -149,7 +152,10 @@ static inline uint64_t ValidateColoredPoint2Color(uint32_t InputLength, uint64_t
   {
     endPositionOrError = StartPosition + (uint64_t)1U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT2__COLOR);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      COLOREDPOINT__COLOREDPOINT2__COLOR);
 }
 
 uint64_t ColoredPointValidateColoredPoint2(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
