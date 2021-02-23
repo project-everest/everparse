@@ -128,23 +128,31 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   FStar.IO.write_string fsti_file (Target.print_decls_signature modul t_decls);
   FStar.IO.close_write_file fsti_file;
 
-  let wrapper_header, wrapper_impl = Target.print_c_entry modul en.binding_env t_decls in
+  //print wrapper only if there is an entrypoint
+  if List.tryFind (fun (d, _) ->
+    let open Target in
+    match d with
+    | Type_decl td -> td.decl_name.td_entrypoint
+    | _ -> false) t_decls |> Some?
+  then begin
+    let wrapper_header, wrapper_impl = Target.print_c_entry modul en.binding_env t_decls in
 
-  let c_file =
-    open_write_file
-      (Printf.sprintf "%s/%sWrapper.c"
-        (Options.get_output_dir())
-        modul) in
-  FStar.IO.write_string c_file wrapper_impl;
-  FStar.IO.close_write_file c_file;
+    let c_file =
+      open_write_file
+        (Printf.sprintf "%s/%sWrapper.c"
+          (Options.get_output_dir())
+          modul) in
+    FStar.IO.write_string c_file wrapper_impl;
+    FStar.IO.close_write_file c_file;
 
-  let h_file =
-    open_write_file
-      (Printf.sprintf "%s/%sWrapper.h"
-        (Options.get_output_dir())
-        modul) in
-  FStar.IO.write_string h_file wrapper_header;
-  FStar.IO.close_write_file h_file;
+    let h_file =
+      open_write_file
+        (Printf.sprintf "%s/%sWrapper.h"
+          (Options.get_output_dir())
+          modul) in
+    FStar.IO.write_string h_file wrapper_header;
+    FStar.IO.close_write_file h_file
+  end;
 
   if StaticAssertions.has_static_asserts static_asserts then begin
     let c_static_asserts_file =

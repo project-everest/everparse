@@ -75,6 +75,12 @@ let print_ident (i:A.ident) =
 let print_maybe_qualified_ident (mname:string) (i:A.ident) =
   Printf.sprintf "%s%s" (maybe_mname_prefix mname i) (print_ident i)
 
+let print_field_id_name (i:A.ident) =
+  let open A in
+  match i.v.modul_name with
+  | None -> failwith "Unexpected: module name missing from the field id"
+  | Some m -> Printf.sprintf "%s_%s" (String.lowercase m) i.v.name
+
 let print_integer_type =
   let open A in
   function
@@ -465,7 +471,7 @@ let rec print_validator (mname:string) (v:validator) : ML string = //(decreases 
     Printf.sprintf "(validate_dep_pair_with_refinement %s \"%s\" %s %s %s %s %s)"
       (if p1_is_constant_size_without_actions then "true" else "false")
       (print_maybe_qualified_ident mname n1)
-      (print_ident f1)
+      (print_field_id_name f1)
       (print_validator mname p1)
       (print_reader mname r)
       (print_expr_lam mname e)
@@ -480,7 +486,7 @@ let rec print_validator (mname:string) (v:validator) : ML string = //(decreases 
     Printf.sprintf "(validate_dep_pair_with_refinement_and_action %s \"%s\" %s %s %s %s %s %s)"
       (if p1_is_constant_size_without_actions then "true" else "false")
       (print_maybe_qualified_ident mname n1)
-      (print_ident f1)
+      (print_field_id_name f1)
       (print_validator mname p1)
       (print_reader mname r)
       (print_expr_lam mname e)
@@ -535,7 +541,7 @@ let rec print_validator (mname:string) (v:validator) : ML string = //(decreases 
       (print_validator mname v2)
   | Validate_impos -> "(validate_impos())"
   | Validate_with_error fn v ->
-    Printf.sprintf "(validate_with_error %s %s)" (print_ident fn) (print_validator mname v)
+    Printf.sprintf "(validate_with_error %s %s)" (print_field_id_name fn) (print_validator mname v)
   | Validate_with_comment v c ->
     let c = String.concat "\n" c in
     Printf.sprintf "(validate_with_comment \"%s\" %s)"
@@ -640,7 +646,7 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
   | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
      (print_comments (snd d).comments)
-     (print_ident x)
+     (print_field_id_name x)
      (A.print_constant c)
 
   | Definition (x, [], t, (Constant c, _)) ->

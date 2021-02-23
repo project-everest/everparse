@@ -5,17 +5,17 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOREDPOINT__COL ((uint64_t)1U)
+#define COLOR__COLOREDPOINT__COL ((uint64_t)14U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOREDPOINT__X ((uint64_t)2U)
+#define COLOR__COLOREDPOINT__X ((uint64_t)15U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOREDPOINT__Y ((uint64_t)3U)
+#define COLOR__COLOREDPOINT__Y ((uint64_t)16U)
 
 /*
 Enum constant
@@ -68,7 +68,7 @@ ValidateColoredPointCol(uint32_t InputLength, uint8_t *Input, uint64_t StartPosi
 {
   /* Validating field col */
   uint64_t endPositionOrError = ValidateColor(InputLength, Input, StartPosition);
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT__COL);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOR__COLOREDPOINT__COL);
 }
 
 static inline uint64_t ValidateColoredPointX(uint32_t InputLength, uint64_t StartPosition)
@@ -89,7 +89,7 @@ static inline uint64_t ValidateColoredPointX(uint32_t InputLength, uint64_t Star
   {
     endPositionOrError = StartPosition + (uint64_t)4U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT__X);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOR__COLOREDPOINT__X);
 }
 
 static inline uint64_t ValidateColoredPointY(uint32_t InputLength, uint64_t StartPosition)
@@ -110,7 +110,7 @@ static inline uint64_t ValidateColoredPointY(uint32_t InputLength, uint64_t Star
   {
     endPositionOrError = StartPosition + (uint64_t)4U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOREDPOINT__Y);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, COLOR__COLOREDPOINT__Y);
 }
 
 uint64_t ColorValidateColoredPoint(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)

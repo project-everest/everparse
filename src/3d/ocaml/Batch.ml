@@ -149,13 +149,21 @@ let produce_c_files
                      (fun accu (_, modul) ->
                        let l =
                          filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
-                           Printf.sprintf "%sWrapper.c" modul ::
-                             filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu
+                         filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu
                        in
+
+		       let c_wrapper = Printf.sprintf "%sWrapper.c" modul in
+		       let l =
+		         if Sys.file_exists (filename_concat out_dir c_wrapper)
+                         then c_wrapper :: l
+                         else l in			 
+		       
                        let static_asserts = Printf.sprintf "%sStaticAssertions.c" modul in
-                       if Sys.file_exists (filename_concat out_dir static_asserts)
-                       then static_asserts :: l
-                       else l
+                       let l =
+		         if Sys.file_exists (filename_concat out_dir static_asserts)
+                         then static_asserts :: l
+                         else l in
+		       l
                      )
                      all_everparse_krmls
                      files_and_modules

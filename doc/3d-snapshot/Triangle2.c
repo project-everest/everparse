@@ -5,7 +5,7 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define TRIANGLE__CORNERS ((uint64_t)3U)
+#define TRIANGLE2__TRIANGLE__CORNERS ((uint64_t)13U)
 
 static inline uint64_t ValidateTriangleCorners(uint32_t InputLength, uint64_t StartPosition)
 /*++
@@ -31,7 +31,10 @@ static inline uint64_t ValidateTriangleCorners(uint32_t InputLength, uint64_t St
   {
     endPositionOrError = EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, TRIANGLE__CORNERS);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      TRIANGLE2__TRIANGLE__CORNERS);
 }
 
 uint64_t
