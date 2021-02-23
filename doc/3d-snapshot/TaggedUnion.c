@@ -5,22 +5,22 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define INT_PAYLOAD__VALUE8 ((uint64_t)1U)
+#define TAGGEDUNION__INT_PAYLOAD__VALUE8 ((uint64_t)26U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define INT_PAYLOAD__VALUE16 ((uint64_t)2U)
+#define TAGGEDUNION__INT_PAYLOAD__VALUE16 ((uint64_t)27U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define INT_PAYLOAD__VALUE32 ((uint64_t)3U)
+#define TAGGEDUNION__INT_PAYLOAD__VALUE32 ((uint64_t)28U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define INTEGER__SIZE ((uint64_t)4U)
+#define TAGGEDUNION__INTEGER__SIZE ((uint64_t)29U)
 
 #define SIZE8 ((uint8_t)8U)
 
@@ -46,7 +46,10 @@ static inline uint64_t ValidateIntPayloadValue32(uint32_t InputLength, uint64_t 
   {
     endPositionOrError = StartPosition + (uint64_t)4U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, INT_PAYLOAD__VALUE32);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      TAGGEDUNION__INT_PAYLOAD__VALUE32);
 }
 
 static inline uint64_t ValidateIntPayloadValue16(uint32_t InputLength, uint64_t StartPosition)
@@ -67,7 +70,10 @@ static inline uint64_t ValidateIntPayloadValue16(uint32_t InputLength, uint64_t 
   {
     endPositionOrError = StartPosition + (uint64_t)2U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, INT_PAYLOAD__VALUE16);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      TAGGEDUNION__INT_PAYLOAD__VALUE16);
 }
 
 static inline uint64_t ValidateIntPayloadValue8(uint32_t InputLength, uint64_t StartPosition)
@@ -88,7 +94,10 @@ static inline uint64_t ValidateIntPayloadValue8(uint32_t InputLength, uint64_t S
   {
     endPositionOrError = StartPosition + (uint64_t)1U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, INT_PAYLOAD__VALUE8);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      TAGGEDUNION__INT_PAYLOAD__VALUE8);
 }
 
 static inline uint64_t
@@ -130,7 +139,10 @@ static inline uint64_t ValidateIntegerSize(uint32_t InputLength, uint64_t StartP
   {
     endPositionOrError = StartPosition + (uint64_t)4U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, INTEGER__SIZE);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      TAGGEDUNION__INTEGER__SIZE);
 }
 
 static inline uint64_t

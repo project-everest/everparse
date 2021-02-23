@@ -1232,7 +1232,6 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     d
 
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
-  let g = { g with ge_fd = mk_field_num_ops () } in
   List.map (bind_decl g) p, g
 
 let next_field_num (enclosing_struct:ident)
