@@ -17,4 +17,4 @@ val remove_extension: string -> Tot string
 val extension: string -> Tot string
 
 
-val file_exists: string -> Tot bool
+val file_exists: string -> FStar.All.ML bool
