@@ -5,19 +5,23 @@ all: test
 
 EVERPARSE_HOME=$(QD_HOME)
 EVERPARSE_CMD=$(QD_HOME)/src/3d/3d
-EVERPARSE_OUTPUT_DIR=.
+EVERPARSE_OUTPUT_DIR=obj
+EVERPARSE_INPUT_DIR=src
 
-EverParse.Makefile: $(wildcard *.3d)
-	$(EVERPARSE_CMD) --gnu_makefile Test.3d
+obj:
+	mkdir -p $@
 
--include EverParse.Makefile
+obj/EverParse.Makefile: $(wildcard src/*.3d) obj
+	$(EVERPARSE_CMD) --gnu_makefile --odir obj src/Test.3d
+
+-include obj/EverParse.Makefile
 
 test: $(EVERPARSE_ALL_O_FILES)
-	! test -e EverParse.h
-	! test -e Lib.h
+	! test -e obj/EverParse.h
+	! test -e obj/Lib.h
 	# +$(MAKE) -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -Wno-unused-function -I $(QD_HOME)/src/3d'
 
 clean:
-	rm -f *.c *.h *.o *.fst* *.rsp EverParse.Makefile *.krml
+	rm -rf obj
 
 .PHONY: all test clean

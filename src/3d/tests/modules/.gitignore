@@ -1,6 +1,1 @@
-*.rsp
-*.c
-*.h
-*.fst*
-*.krml
-EverParse.Makefile
+obj

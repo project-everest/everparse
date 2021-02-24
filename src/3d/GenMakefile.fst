@@ -12,6 +12,7 @@ type rule_t = {
   args: string;
 }
 
+let input_dir = "$(EVERPARSE_INPUT_DIR)"
 let output_dir = "$(EVERPARSE_OUTPUT_DIR)"
 
 let print_gnu_make_rule
@@ -33,11 +34,16 @@ let print_gnu_make_rule
     let rule = List.Tot.fold_left (fun rule ne -> Printf.sprintf "%s%s: %s\n\n" rule ne a) rule q in
     rule
 
+let mk_input_filename
+  (file: string)
+: Tot string
+= input_dir `OS.concat` OS.basename file
+
 let mk_filename
   (modul: string)
   (ext: string)
 : Tot string
-= (Printf.sprintf "%s.%s" modul ext)
+= output_dir `OS.concat` (Printf.sprintf "%s.%s" modul ext)
 
 let produce_types_checked_rule
   (g: Deps.dep_graph)
@@ -107,7 +113,7 @@ let produce_fst_rule
   let modul = Options.get_module_name file in
   {
     ty = EverParse;
-    from = [file];
+    from = [mk_input_filename file];
     to =
       begin if Deps.has_entrypoint g modul
         then [
@@ -120,7 +126,7 @@ let produce_fst_rule
         mk_filename modul "fsti";
         mk_filename modul "fst";
       ];
-    args = Printf.sprintf "--no_batch %s" file;
+    args = Printf.sprintf "--no_batch %s" (mk_input_filename file);
   }
 
 let produce_h_rule
@@ -136,7 +142,7 @@ let produce_h_rule
       List.map (fun f -> mk_filename (Printf.sprintf "%s_Types" (Options.get_module_name f)) "krml") all_files
       ;
     to = [mk_filename (Options.get_module_name file) "h"; mk_filename (Options.get_module_name file) "c"];
-    args = Printf.sprintf "--__produce_c_from_existing_krml %s" file;
+    args = Printf.sprintf "--__produce_c_from_existing_krml %s" (mk_input_filename file);
   }
 
 let produce_o_rule
@@ -144,11 +150,12 @@ let produce_o_rule
 : Tot rule_t
 =
   let c = mk_filename modul "c" in
+  let o = mk_filename modul "o" in
   {
     ty = CC;
     from = [c; mk_filename modul "h"];
-    to = [mk_filename modul "o"];
-    args = c;
+    to = [o];
+    args = Printf.sprintf "-o %s %s" o c;
   }
 
 let produce_wrapper_o_rule
@@ -165,7 +172,7 @@ let produce_wrapper_o_rule
     ty = CC;
     from = [wc; wh; h];
     to = [wo];
-    args = wc;
+    args = Printf.sprintf "-o %s %s" wo wc;
   }]
   else []
 
