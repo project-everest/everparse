@@ -11,18 +11,6 @@ let open_write_file (s:string) : ML FStar.IO.fd_write =
   FStar.IO.print_string (FStar.Printf.sprintf "Writing file %s\n" s);
   FStar.IO.open_write_file s
 
-let has_entrypoint (l:list attribute) =
-  List.tryFind (function Entrypoint -> true | _ -> false) l
-  |> Some?
-
-let is_entrypoint_or_export d = match d.d_decl.v with
-  | Record names _ _ _
-  | CaseType names _ _ ->
-    if has_entrypoint (names.typedef_attributes)
-    then true
-    else d.d_exported
-  | _ -> d.d_exported
-
 let parse_prog (fn:string) : ML prog =
   let decls, type_refinement_opt = ParserDriver.parse fn in
   if decls

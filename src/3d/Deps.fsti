@@ -12,3 +12,5 @@ val collect_and_sort_dependencies_from_graph (g: dep_graph) (files:list string) 
 
 let collect_and_sort_dependencies (files:list string) : ML (list string) =
   collect_and_sort_dependencies_from_graph (build_dep_graph_from_list files) files
+
+val has_entrypoint (g: dep_graph) (modul: string) : Tot bool

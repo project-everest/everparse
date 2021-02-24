@@ -100,22 +100,27 @@ let produce_krml_rule
   }
 
 let produce_fst_rule
-  (all_files: list string)
+  (g: Deps.dep_graph)
+  (file: string)
 : FStar.All.ML rule_t
 =
+  let modul = Options.get_module_name file in
   {
     ty = EverParse;
-    from = all_files;
+    from = [file];
     to =
-      begin
-        let types = List.map (fun f -> mk_filename (Options.get_module_name f) "Types.fst") all_files in
-        let fsti = List.map (fun f -> mk_filename (Options.get_module_name f) "fsti") all_files in
-        let fst = List.map (fun f -> mk_filename (Options.get_module_name f) "fst") all_files in
-        let wrapper_h = List.map (fun f -> mk_filename (Printf.sprintf "%sWrapper" (Options.get_module_name f)) "h") all_files in
-        let wrapper_c = List.map (fun f -> mk_filename (Printf.sprintf "%sWrapper" (Options.get_module_name f)) "c") all_files in
-        types `List.Tot.append` fsti `List.Tot.append` fst `List.Tot.append` wrapper_h `List.Tot.append` wrapper_c
-      end;
-    args = Printf.sprintf "--__skip_deps --no_batch %s" (String.concat " " all_files);
+      begin if Deps.has_entrypoint g modul
+        then [
+          mk_filename (Printf.sprintf "%sWrapper" modul) "h";
+          mk_filename (Printf.sprintf "%sWrapper" modul) "c";
+        ]
+        else []
+      end `List.Tot.append` [
+        mk_filename modul "Types.fst";
+        mk_filename modul "fsti";
+        mk_filename modul "fst";
+      ];
+    args = Printf.sprintf "--no_batch %s" file;
   }
 
 let produce_h_rule
@@ -147,29 +152,39 @@ let produce_o_rule
   }
 
 let produce_wrapper_o_rule
+  (g: Deps.dep_graph)
   (modul: string)
-: Tot rule_t
+: Tot (list rule_t)
 =
   let wc = mk_filename (Printf.sprintf "%sWrapper" modul) "c" in
   let wh = mk_filename (Printf.sprintf "%sWrapper" modul) "h" in
   let wo = mk_filename (Printf.sprintf "%sWrapper" modul) "o" in
   let h = mk_filename modul "h" in
-  {
+  if Deps.has_entrypoint g modul
+  then [{
     ty = CC;
     from = [wc; wh; h];
     to = [wo];
     args = wc;
-  }
+  }]
+  else []
+
+noeq
+type produce_makefile_res = {
+  rules: list rule_t;
+  graph: Deps.dep_graph;
+  all_files: list string;
+}
 
 let produce_makefile
   (files: list string)
-: FStar.All.ML (list rule_t & list string)
+: FStar.All.ML produce_makefile_res
 =
   let g = Deps.build_dep_graph_from_list files in
   let all_files = Deps.collect_and_sort_dependencies_from_graph g files in
   let all_modules = List.map Options.get_module_name all_files in
   let rules =
-    produce_fst_rule all_files ::
+    List.map (produce_fst_rule g) all_files `List.Tot.append`
     List.Tot.map (produce_types_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fsti_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
@@ -177,9 +192,12 @@ let produce_makefile
     List.Tot.map (produce_krml_rule g) all_modules `List.Tot.append`
     List.map (produce_h_rule g) all_files `List.Tot.append`
     List.Tot.map produce_o_rule all_modules `List.Tot.append`
-    List.Tot.map produce_wrapper_o_rule all_modules
-  in
-  (rules, all_files)
+    List.Tot.concatMap (produce_wrapper_o_rule g) all_modules
+  in {
+    graph = g;
+    rules = rules;
+    all_files = all_files;
+  }
 
 let write_gnu_makefile
   (files: list string)
@@ -187,12 +205,12 @@ let write_gnu_makefile
 =
   let makefile = Options.get_makefile_name () in
   let file = FStar.IO.open_write_file makefile in
-  let (rules, all_files) = produce_makefile files in
+  let {graph = g; rules; all_files} = produce_makefile files in
   FStar.IO.write_string file (String.concat "" (List.Tot.map print_gnu_make_rule rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       List.map (fun f -> mk_filename (Options.get_module_name f) ext) all_files `List.Tot.append`
-      List.map (fun f -> mk_filename (Printf.sprintf "%sWrapper" (Options.get_module_name f)) ext) all_files
+      List.concatMap (fun f -> let m = Options.get_module_name f in if Deps.has_entrypoint g m then [mk_filename (Printf.sprintf "%sWrapper" m) ext] else []) all_files
     in
     FStar.IO.write_string file (Printf.sprintf "ALL_%s_FILES=%s\n" ext_cap (String.concat " " ln))
   in
