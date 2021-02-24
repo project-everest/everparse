@@ -4,11 +4,12 @@ module OS = OS
 type rule_type =
   | EverParse
   | CC
+  | Nop (* to simulate multiple-target rules *)
 
 type rule_t = {
   ty: rule_type;
   from: list string;
-  to: list string;
+  to: string;
   args: string;
 }
 
@@ -18,20 +19,17 @@ let output_dir = "$(EVERPARSE_OUTPUT_DIR)"
 let print_gnu_make_rule
   (r: rule_t)
 : Tot string
-= (* NOTE: I could use multiple target rule &: from https://www.gnu.org/software/make/manual/html_node/Multiple-Targets.html,
-     but that feature is too recent (GNU Make 4.3, February 2020)
-   *)
-  match r.to with
-  | [] -> ""
-  | a :: q ->
-    let rule = Printf.sprintf "%s : %s\n" a (String.concat " " r.from) in
+= 
+  let rule = Printf.sprintf "%s : %s\n" r.to (String.concat " " r.from) in
+  match r.ty with
+  | Nop -> Printf.sprintf "%s\n" rule
+  | _ ->
     let cmd =
       match r.ty with
       | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --odir %s" output_dir
       | CC -> Printf.sprintf "$(CC) -I %s -c" ("$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d")
     in
     let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
-    let rule = List.Tot.fold_left (fun rule ne -> Printf.sprintf "%s%s: %s\n\n" rule ne a) rule q in
     rule
 
 let mk_input_filename
@@ -53,7 +51,7 @@ let produce_types_checked_rule
   {
     ty = EverParse;
     from = types_fst :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul);
-    to = [mk_filename modul "Types.fst.checked"];
+    to = mk_filename modul "Types.fst.checked";
     args = Printf.sprintf "--__micro_step verify %s" types_fst;
   }
 
@@ -65,7 +63,7 @@ let produce_fsti_checked_rule
   {
     ty = EverParse;
     from = fsti :: mk_filename modul "Types.fst.checked" :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul);
-    to = [mk_filename modul "fsti.checked"];
+    to = mk_filename modul "fsti.checked";
     args = Printf.sprintf "--__micro_step verify %s" fsti;
   }
 
@@ -77,7 +75,7 @@ let produce_fst_checked_rule
   {
     ty = EverParse;
     from = fst :: mk_filename modul "fsti.checked" :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul);
-    to = [mk_filename modul "fst.checked"];
+    to = mk_filename modul "fst.checked";
     args = Printf.sprintf "--__micro_step verify %s" fst;
   }
 
@@ -89,7 +87,7 @@ let produce_types_krml_rule
   {
     ty = EverParse;
     from = mk_filename modul "Types.fst.checked" :: List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul);
-    to = [mk_filename (Printf.sprintf "%s_Types" modul) "krml"];
+    to = mk_filename (Printf.sprintf "%s_Types" modul) "krml";
     args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "Types.fst");
   }
 
@@ -101,20 +99,36 @@ let produce_krml_rule
   {
     ty = EverParse;
     from = mk_filename modul "fst.checked" :: List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul);
-    to = [mk_filename modul "krml"];
+    to = mk_filename modul "krml";
     args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "fst");
   }
 
-let produce_fst_rule
+let produce_nop_rule
+  (from: string)
+  (to: string)
+: Tot rule_t
+=
+  {
+    ty = Nop;
+    from = [from];
+    to = to;
+    args = "";
+  }
+
+let produce_fst_rules
   (g: Deps.dep_graph)
   (file: string)
-: FStar.All.ML rule_t
+: FStar.All.ML (list rule_t)
 =
   let modul = Options.get_module_name file in
+  let to = mk_filename modul "Types.fst" in
   {
     ty = EverParse;
     from = [mk_input_filename file];
-    to =
+    to = to; (* IMPORTANT: relies on the fact that 3d writes the Types.fst first *)
+    args = Printf.sprintf "--no_batch %s" (mk_input_filename file);
+  } :: List.Tot.map (produce_nop_rule to)
+    begin
       begin if Deps.has_entrypoint g modul
         then [
           mk_filename (Printf.sprintf "%sWrapper" modul) "h";
@@ -122,28 +136,28 @@ let produce_fst_rule
         ]
         else []
       end `List.Tot.append` [
-        mk_filename modul "Types.fst";
         mk_filename modul "fsti";
         mk_filename modul "fst";
-      ];
-    args = Printf.sprintf "--no_batch %s" (mk_input_filename file);
-  }
+      ]
+    end
 
-let produce_h_rule
+let produce_h_rules
   (g: Deps.dep_graph)
   (file: string)
-: FStar.All.ML rule_t
+: FStar.All.ML (list rule_t)
 =
   let all_files = Deps.collect_and_sort_dependencies_from_graph g [file] in
+  let to = mk_filename (Options.get_module_name file) "c" in
   {
     ty = EverParse;
     from =
       List.map (fun f -> mk_filename (Options.get_module_name f) "krml") all_files `List.Tot.append`
       List.map (fun f -> mk_filename (Printf.sprintf "%s_Types" (Options.get_module_name f)) "krml") all_files
       ;
-    to = [mk_filename (Options.get_module_name file) "h"; mk_filename (Options.get_module_name file) "c"];
+    to = to; (* IMPORTANT: relies on the fact that kremlin generates .c files BEFORE .h files *)
     args = Printf.sprintf "--__produce_c_from_existing_krml %s" (mk_input_filename file);
-  }
+  } ::
+  [produce_nop_rule to (mk_filename (Options.get_module_name file) "h")]
 
 let produce_o_rule
   (modul: string)
@@ -154,7 +168,7 @@ let produce_o_rule
   {
     ty = CC;
     from = [c; mk_filename modul "h"];
-    to = [o];
+    to = o;
     args = Printf.sprintf "-o %s %s" o c;
   }
 
@@ -171,7 +185,7 @@ let produce_wrapper_o_rule
   then [{
     ty = CC;
     from = [wc; wh; h];
-    to = [wo];
+    to = wo;
     args = Printf.sprintf "-o %s %s" wo wc;
   }]
   else []
@@ -196,13 +210,13 @@ let produce_makefile
       List.Tot.concatMap (produce_wrapper_o_rule g) all_modules `List.Tot.append`
       List.Tot.map produce_o_rule all_modules
     ) `List.Tot.append`
-    List.map (produce_fst_rule g) all_files `List.Tot.append`
+    List.concatMap (produce_fst_rules g) all_files `List.Tot.append`
     List.Tot.map (produce_types_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fsti_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_types_krml_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_krml_rule g) all_modules `List.Tot.append`
-    List.map (produce_h_rule g) all_files
+    List.concatMap (produce_h_rules g) all_files
   in {
     graph = g;
     rules = rules;
