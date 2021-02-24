@@ -1,8 +1,8 @@
-#include "BoundedSumWhereWrapper.h"
+#include "BaseWrapper.h"
 #include "EverParse.h"
-#include "BoundedSumWhere.h"
-void BoundedSumWhereEverParseError(char *x, char *y, char *z);
-static char* BoundedSumWhereStructNameOfErr(uint64_t err) {
+#include "Base.h"
+void BaseEverParseError(char *x, char *y, char *z);
+static char* BaseStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "Triangle2._point";
 		case 2: return "Triangle2._point";
@@ -27,23 +27,12 @@ static char* BoundedSumWhereStructNameOfErr(uint64_t err) {
 		case 21: return "Base._Pair";
 		case 22: return "Base._Mine";
 		case 23: return "Base._Mine";
-		case 24: return "Base._Dummy";
-		case 25: return "Derived._Triple";
-		case 26: return "ColoredPoint._point";
-		case 27: return "ColoredPoint._point";
-		case 28: return "ColoredPoint._coloredPoint1";
-		case 29: return "ColoredPoint._coloredPoint2";
-		case 30: return "Color._coloredPoint";
-		case 31: return "Color._coloredPoint";
-		case 32: return "Color._coloredPoint";
-		case 33: return "BoundedSumWhere._boundedSum";
-		case 34: return "BoundedSumWhere._boundedSum";
-		case 35: return "BoundedSumWhere._boundedSum"; 
+		case 24: return "Base._Dummy"; 
 		default: return "";
 	}
 }
 
-static char* BoundedSumWhereFieldNameOfErr(uint64_t err) {
+static char* BaseFieldNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "x";
 		case 2: return "y";
@@ -68,28 +57,17 @@ static char* BoundedSumWhereFieldNameOfErr(uint64_t err) {
 		case 21: return "second";
 		case 22: return "f";
 		case 23: return "g";
-		case 24: return "dummy";
-		case 25: return "third";
-		case 26: return "x";
-		case 27: return "y";
-		case 28: return "color";
-		case 29: return "color";
-		case 30: return "col";
-		case 31: return "x";
-		case 32: return "y";
-		case 33: return "__precondition";
-		case 34: return "left";
-		case 35: return "right"; 
+		case 24: return "dummy"; 
 		default: return "";
 	}
 }
 
-BOOLEAN BoundedSumWhereCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
-	uint64_t result = BoundedSumWhereValidateBoundedSum(bound, len, base, 0);
+BOOLEAN BaseCheckDummy(uint8_t *base, uint32_t len) {
+	uint64_t result = BaseValidateDummy(len, base, 0);
 	if (EverParseResultIsError(result)) {
-		BoundedSumWhereEverParseError(
-	BoundedSumWhereStructNameOfErr(result),
-			BoundedSumWhereFieldNameOfErr (result),
+		BaseEverParseError(
+	BaseStructNameOfErr(result),
+			BaseFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;
 	}

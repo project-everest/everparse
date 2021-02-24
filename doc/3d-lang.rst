@@ -504,7 +504,9 @@ in ``Derived`` to reuse the definitions that are exported in ``Base``.
 For example, in module ``Base`` we could define the following types:
 
 .. literalinclude:: Base.3d
-    :language: c
+   :language: c
+   :start-after: SNIPPET_START: Base
+   :end-before: SNIPPET_END: Base
 
 Note, the ``export`` qualifier indicate that these definitions may be
 referenced from another module. Types that are not exproted (like

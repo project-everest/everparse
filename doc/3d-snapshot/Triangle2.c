@@ -5,7 +5,7 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define TRIANGLE2__TRIANGLE__CORNERS ((uint64_t)13U)
+#define TRIANGLE2__TRIANGLE__CORNERS ((uint64_t)3U)
 
 static inline uint64_t ValidateTriangleCorners(uint32_t InputLength, uint64_t StartPosition)
 /*++
