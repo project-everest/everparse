@@ -12,7 +12,7 @@ EverParse.Makefile: $(wildcard *.3d)
 
 -include EverParse.Makefile
 
-test: $(ALL_O_FILES)
+test: $(EVERPARSE_ALL_O_FILES)
 	! test -e EverParse.h
 	! test -e Lib.h
 	# +$(MAKE) -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -Wno-unused-function -I $(QD_HOME)/src/3d'

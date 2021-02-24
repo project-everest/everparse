@@ -212,7 +212,7 @@ let write_gnu_makefile
       List.map (fun f -> mk_filename (Options.get_module_name f) ext) all_files `List.Tot.append`
       List.concatMap (fun f -> let m = Options.get_module_name f in if Deps.has_entrypoint g m then [mk_filename (Printf.sprintf "%sWrapper" m) ext] else []) all_files
     in
-    FStar.IO.write_string file (Printf.sprintf "ALL_%s_FILES=%s\n" ext_cap (String.concat " " ln))
+    FStar.IO.write_string file (Printf.sprintf "EVERPARSE_ALL_%s_FILES=%s\n" ext_cap (String.concat " " ln))
   in
   write_all_ext_files "H" "h";
   write_all_ext_files "C" "c";
