@@ -30,7 +30,7 @@ let print_gnu_make_rule
       | CC -> Printf.sprintf "$(CC) -I %s -c" ("$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d")
     in
     let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
-    let rule = List.Tot.fold_left (fun rule ne -> Printf.sprintf "%s%s: %s\n\ttest -f $@ && touch $@\n\n" rule ne a) rule q in
+    let rule = List.Tot.fold_left (fun rule ne -> Printf.sprintf "%s%s: %s\n\n" rule ne a) rule q in
     rule
 
 let mk_filename
