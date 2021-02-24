@@ -177,6 +177,7 @@ type produce_makefile_res = {
 }
 
 let produce_makefile
+  (skip_o_rules: bool)
   (files: list string)
 : FStar.All.ML produce_makefile_res
 =
@@ -184,15 +185,17 @@ let produce_makefile
   let all_files = Deps.collect_and_sort_dependencies_from_graph g files in
   let all_modules = List.map Options.get_module_name all_files in
   let rules =
+    (if skip_o_rules then [] else
+      List.Tot.concatMap (produce_wrapper_o_rule g) all_modules `List.Tot.append`
+      List.Tot.map produce_o_rule all_modules
+    ) `List.Tot.append`
     List.map (produce_fst_rule g) all_files `List.Tot.append`
     List.Tot.map (produce_types_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fsti_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_types_krml_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_krml_rule g) all_modules `List.Tot.append`
-    List.map (produce_h_rule g) all_files `List.Tot.append`
-    List.Tot.map produce_o_rule all_modules `List.Tot.append`
-    List.Tot.concatMap (produce_wrapper_o_rule g) all_modules
+    List.map (produce_h_rule g) all_files
   in {
     graph = g;
     rules = rules;
@@ -200,12 +203,13 @@ let produce_makefile
   }
 
 let write_gnu_makefile
+  (skip_o_rules: bool)
   (files: list string)
 : FStar.All.ML unit
 =
   let makefile = Options.get_makefile_name () in
   let file = FStar.IO.open_write_file makefile in
-  let {graph = g; rules; all_files} = produce_makefile files in
+  let {graph = g; rules; all_files} = produce_makefile skip_o_rules files in
   FStar.IO.write_string file (String.concat "" (List.Tot.map print_gnu_make_rule rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =

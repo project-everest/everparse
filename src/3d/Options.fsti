@@ -49,3 +49,5 @@ val get_skip_deps : unit -> ML bool
 val get_gnu_makefile : unit -> ML bool
 
 val get_makefile_name : unit -> ML string
+
+val get_skip_o_rules : unit -> ML bool

@@ -218,7 +218,7 @@ let go () : ML unit =
   (* Special mode: --gnu_makefile" *)
   if Options.get_gnu_makefile ()
   then
-    GenMakefile.write_gnu_makefile cmd_line_files
+    GenMakefile.write_gnu_makefile (Options.get_skip_o_rules ()) cmd_line_files
   else
   (* Special mode: --__produce_c_from_existing_krml *)
   if Options.get_produce_c_from_existing_krml ()
