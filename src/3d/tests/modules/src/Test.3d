@@ -14,3 +14,7 @@ entrypoint typedef struct _T {
   UINT32             f2  { f2 == Constants.Four };
   UINT32             f3  { f3 == TEST_ONE }
 } T;
+
+refining "Foobar.h" {
+  CIRCLE as CIRCLE
+}

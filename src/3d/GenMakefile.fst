@@ -27,7 +27,7 @@ let print_gnu_make_rule
     let cmd =
       match r.ty with
       | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --odir %s" output_dir
-      | CC -> Printf.sprintf "$(CC) -I %s -c" ("$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d")
+      | CC -> Printf.sprintf "$(CC) $(CFLAGS) -I %s -c" ("$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d")
     in
     let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
     rule
@@ -135,6 +135,10 @@ let produce_fst_rules
           mk_filename (Printf.sprintf "%sWrapper" modul) "c";
         ]
         else []
+      end `List.Tot.append` begin
+        if Deps.has_static_assertions g modul
+        then [mk_filename (Printf.sprintf "%sStaticAssertions" modul) "c"]
+        else []
       end `List.Tot.append` [
         mk_filename modul "fsti";
         mk_filename modul "fst";
@@ -190,6 +194,23 @@ let produce_wrapper_o_rule
   }]
   else []
 
+let produce_static_assertions_o_rule
+  (g: Deps.dep_graph)
+  (modul: string)
+: Tot (list rule_t)
+=
+  let wc = mk_filename (Printf.sprintf "%sStaticAssertions" modul) "c" in
+  let wo = mk_filename (Printf.sprintf "%sStaticAssertions" modul) "o" in
+  let h = mk_filename modul "h" in
+  if Deps.has_static_assertions g modul
+  then [{
+    ty = CC;
+    from = [wc; h];
+    to = wo;
+    args = Printf.sprintf "-o %s %s" wo wc;
+  }]
+  else []
+
 noeq
 type produce_makefile_res = {
   rules: list rule_t;
@@ -208,6 +229,7 @@ let produce_makefile
   let rules =
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule g) all_modules `List.Tot.append`
+      List.Tot.concatMap (produce_static_assertions_o_rule g) all_modules `List.Tot.append`
       List.Tot.map produce_o_rule all_modules
     ) `List.Tot.append`
     List.concatMap (produce_fst_rules g) all_files `List.Tot.append`
@@ -234,8 +256,13 @@ let write_gnu_makefile
   FStar.IO.write_string file (String.concat "" (List.Tot.map print_gnu_make_rule rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
-      List.map (fun f -> mk_filename (Options.get_module_name f) ext) all_files `List.Tot.append`
-      List.concatMap (fun f -> let m = Options.get_module_name f in if Deps.has_entrypoint g m then [mk_filename (Printf.sprintf "%sWrapper" m) ext] else []) all_files
+      begin if ext <> "h"
+      then
+        List.concatMap (fun f -> let m = Options.get_module_name f in if Deps.has_static_assertions g m then [mk_filename (Printf.sprintf "%sStaticAssertions" m) ext] else []) all_files
+      else []
+      end `List.Tot.append`
+      List.concatMap (fun f -> let m = Options.get_module_name f in if Deps.has_entrypoint g m then [mk_filename (Printf.sprintf "%sWrapper" m) ext] else []) all_files `List.Tot.append`
+      List.map (fun f -> mk_filename (Options.get_module_name f) ext) all_files
     in
     FStar.IO.write_string file (Printf.sprintf "EVERPARSE_ALL_%s_FILES=%s\n" ext_cap (String.concat " " ln))
   in
