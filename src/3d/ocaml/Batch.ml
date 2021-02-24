@@ -186,7 +186,7 @@ let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,ResultOps,Prelud
 
 let fstar_kremlib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
 
-let krml_args skip_makefiles out_dir files_and_modules =
+let krml_args skip_c_makefiles out_dir files_and_modules =
   let krml_files = List.fold_left
                      (fun accu (_, modul) ->
                        let l =
@@ -230,7 +230,7 @@ let krml_args skip_makefiles out_dir files_and_modules =
                                   "-fextern-c" ::
                                   krml_args0 @ krml_files
     in
-    if skip_makefiles
+    if skip_c_makefiles
     then "-skip-makefiles" :: krml_args
     else krml_args
 
@@ -266,13 +266,13 @@ let call_krml files_and_modules_cleanup out_dir krml_args =
   end
 
 let produce_c_files
-      (skip_makefiles: bool)
+      (skip_c_makefiles: bool)
       (cleanup: bool)
       (out_dir: string)
       (files_and_modules: (string * string) list)
     : unit
   =
-  let krml_args = krml_args skip_makefiles out_dir files_and_modules in
+  let krml_args = krml_args skip_c_makefiles out_dir files_and_modules in
   (* bundle M.Types.krml and EverParse into M *)
   let krml_args =
     let bundle_types = List.fold_left (fun acc (_, modul) ->
@@ -282,7 +282,7 @@ let produce_c_files
     krml_args@bundle_types
   in
   let krml_args =
-    if skip_makefiles
+    if skip_c_makefiles
     then krml_args
     else
       List.fold_left
@@ -517,7 +517,7 @@ let save_hashes
 let postprocess_c
       (clang_format: bool)
       (clang_format_executable: string)
-      (skip_makefiles: bool)
+      (skip_c_makefiles: bool)
       (cleanup: bool)
       (no_everparse_h: bool)
       (save_hashes_opt: bool)
@@ -553,7 +553,7 @@ let postprocess_c
 let produce_and_postprocess_c
       (clang_format: bool)
       (clang_format_executable: string)
-      (skip_makefiles: bool)
+      (skip_c_makefiles: bool)
       (cleanup: bool)
       (no_everparse_h: bool)
       (save_hashes_opt: bool)
@@ -563,11 +563,11 @@ let produce_and_postprocess_c
   =
   let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the C files *)
-  produce_c_files skip_makefiles cleanup out_dir files_and_modules;
+  produce_c_files skip_c_makefiles cleanup out_dir files_and_modules;
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
   (* postprocess the produced C files *)
-  postprocess_c clang_format clang_format_executable skip_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+  postprocess_c clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let produce_and_postprocess_one_c
       (clang_format: bool)
@@ -590,7 +590,7 @@ let produce_and_postprocess_one_c
 let postprocess_fst
       (clang_format: bool)
       (clang_format_executable: string)
-      (skip_makefiles: bool)
+      (skip_c_makefiles: bool)
       (cleanup: bool)
       (no_everparse_h: bool)
       (save_hashes_opt: bool)
@@ -602,7 +602,7 @@ let postprocess_fst
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module out_dir) files_and_modules;
   (* produce the .c and .h files and format them *)
-  produce_and_postprocess_c clang_format clang_format_executable skip_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+  produce_and_postprocess_c clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let check_all_hashes
       (ch: check_hashes_t)

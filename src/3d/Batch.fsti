@@ -40,7 +40,7 @@ val produce_and_postprocess_one_c
 val postprocess_fst
   (clang_format: bool)
   (clang_format_executable: string)
-  (skip_makefiles: bool)
+  (skip_c_makefiles: bool)
   (cleanup: bool)
   (no_everparse_h: bool)
   (save_hashes: bool)

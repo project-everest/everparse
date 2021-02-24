@@ -33,7 +33,7 @@ let input_file : ref (list string) = alloc []
 let no_copy_everparse_h : ref bool = alloc false
 let output_dir : ref (option vstring) = alloc None
 let save_hashes : ref bool = alloc false
-let skip_makefiles : ref bool = alloc false
+let skip_c_makefiles : ref bool = alloc false
 let skip_deps: ref bool = alloc false
 let skip_o_rules: ref bool = alloc false
 
@@ -290,7 +290,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --gnu_makefile, default <output directory>/EverParse.Makefile" [];
     CmdOption "odir" (OptStringOption "output directory" always_valid output_dir) "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory" [];
     CmdOption "save_hashes" (OptBool save_hashes) "Save hashes" [];
-    CmdOption "skip_makefiles" (OptBool skip_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
+    CmdOption "skip_c_makefiles" (OptBool skip_c_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
     CmdOption "skip_o_rules" (OptBool skip_o_rules) "With --makefile, do not generate rules for .o files" [];
     CmdFStarOption (let open FStar.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
@@ -364,8 +364,8 @@ let get_clang_format_executable () =
 let get_cleanup () =
   !cleanup
 
-let get_skip_makefiles () =
-  !skip_makefiles
+let get_skip_c_makefiles () =
+  !skip_c_makefiles
 
 let get_no_everparse_h () =
   !no_copy_everparse_h
