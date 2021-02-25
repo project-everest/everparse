@@ -356,36 +356,18 @@ let add_copyright_header
       hash_comment
       out_dir
       copyright_file
-      target_file_base
+      target_file
   =
-  let target_file = filename_concat out_dir target_file_base in
   if Sys.file_exists target_file
   then begin
       print_endline (Printf.sprintf "Adding copyright to %s from %s" target_file copyright_file);
       let tmp = Filename.temp_file "everparseaddcopyrightheader" ".tmp" in
       rename target_file tmp;
       let cout = open_out target_file in
-      replace_variables hash_comment target_file_base copyright_file cout;
+      replace_variables hash_comment (basename target_file) copyright_file cout;
       cat tmp cout;
       close_out cout;
       Sys.remove tmp
-    end
-
-let add_copyright
-      out_dir
-      (ddd_file, modul)
-  =
-  let copyright_file = Printf.sprintf "%s.copyright.txt" ddd_file in
-  if Sys.file_exists copyright_file
-  then begin
-      let h = Hashing.hash_as_comment ddd_file in
-      List.iter (add_copyright_header (Some h) out_dir copyright_file) [
-          Printf.sprintf "%s.c" modul;
-          Printf.sprintf "%s.h" modul;
-          Printf.sprintf "%sWrapper.c" modul;
-          Printf.sprintf "%sWrapper.h" modul;
-          Printf.sprintf "%sStaticAssertions.c" modul;
-        ]
     end
 
 (* Collect all produced .c and .h files *)
@@ -399,6 +381,8 @@ let collect_file
   else accu
 
 let collect_files_from
+      (produced_files: bool)
+      (wrappers: bool)
       out_dir
       accu
       (_, modul)
@@ -409,16 +393,28 @@ let collect_files_from
   List.fold_left
     collect_file'
     accu
-    [
-      Printf.sprintf "%s.c" modul;
-      Printf.sprintf "%s.h" modul;
-      Printf.sprintf "%sWrapper.c" modul;
-      Printf.sprintf "%sWrapper.h" modul;
-      Printf.sprintf "%sStaticAssertions.c" modul;
-    ]
+    begin
+      begin if produced_files then
+              [
+                Printf.sprintf "%s.c" modul;
+                Printf.sprintf "%s.h" modul;
+              ]
+            else []
+      end @
+      begin if wrappers then
+              [
+                Printf.sprintf "%sWrapper.c" modul;
+                Printf.sprintf "%sWrapper.h" modul;
+                Printf.sprintf "%sStaticAssertions.c" modul;
+              ]
+            else []
+      end
+    end
 
 let collect_files
       no_everparse_h
+      (produced_files: bool)
+      (wrappers: bool)
       out_dir
       files_and_modules
   =
@@ -432,12 +428,28 @@ let collect_files
     else
       accu
   in
-  List.fold_left (collect_files_from out_dir) accu files_and_modules
+  List.fold_left (collect_files_from produced_files wrappers out_dir) accu files_and_modules
 
+let add_copyright
+      (produced_files: bool)
+      (wrappers: bool)
+      out_dir
+      ((ddd_file, _) as dm)
+  =
+  let copyright_file = Printf.sprintf "%s.copyright.txt" ddd_file in
+  if Sys.file_exists copyright_file
+  then begin
+      let h = Hashing.hash_as_comment ddd_file in
+      List.iter (add_copyright_header (Some h) out_dir copyright_file) (collect_files_from produced_files wrappers out_dir [] dm)
+    end
+
+  
 (* Call clang-format *)
 
 let call_clang_format
       (no_everparse_h: bool)
+      (produced_files: bool)
+      (wrappers: bool)
       (clang_format_exe0: string)
       (out_dir: string)
       (files_and_modules: (string * string) list)
@@ -450,7 +462,7 @@ let call_clang_format
   let clang_format_args =
     "-i" ::
       "--style=file" ::
-        collect_files no_everparse_h out_dir files_and_modules
+        collect_files no_everparse_h produced_files wrappers out_dir files_and_modules
   in
   run_cmd clang_format_exe clang_format_args
 
@@ -463,13 +475,27 @@ let hashed_files
   {
     Hashing.c = filename_concat out_dir (Printf.sprintf "%s.c" modul);
     Hashing.h = filename_concat out_dir (Printf.sprintf "%s.h" modul);
-    Hashing.wrapper_c = filename_concat out_dir (Printf.sprintf "%sWrapper.c" modul);
-    Hashing.wrapper_h = filename_concat out_dir (Printf.sprintf "%sWrapper.h" modul);
+    Hashing.wrapper_c =
+      begin
+        let w = filename_concat out_dir (Printf.sprintf "%sWrapper.c" modul) in
+        if Sys.file_exists w
+        then Some w
+        else None
+      end;
+    Hashing.wrapper_h =
+      begin
+        let w = filename_concat out_dir (Printf.sprintf "%sWrapper.h" modul) in
+        if Sys.file_exists w
+        then Some w
+        else None
+      end;
     Hashing.assertions =
-      let assertions = filename_concat out_dir (Printf.sprintf "%sStaticAssertions.c" modul) in
-      if Sys.file_exists assertions
-      then Some assertions
-      else None;
+      begin
+        let assertions = filename_concat out_dir (Printf.sprintf "%sStaticAssertions.c" modul) in
+        if Sys.file_exists assertions
+        then Some assertions
+        else None
+      end;
   }
 
 let check_inplace_hash
@@ -515,6 +541,8 @@ let save_hashes
 (* Postprocess C files, assuming that they have already been processed *)
 
 let postprocess_c
+      (produced_files: bool)
+      (wrappers: bool)
       (clang_format: bool)
       (clang_format_executable: string)
       (skip_c_makefiles: bool)
@@ -536,14 +564,14 @@ let postprocess_c
   if clang_format
   then begin
       copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
-      call_clang_format no_everparse_h clang_format_executable out_dir files_and_modules;
+      call_clang_format no_everparse_h produced_files wrappers clang_format_executable out_dir files_and_modules;
     end;
   (* add copyright *)
-  List.iter (add_copyright out_dir) files_and_modules;
+  List.iter (add_copyright produced_files wrappers out_dir) files_and_modules;
   if not no_everparse_h
   then begin
       let copyright_txt = filename_concat ddd_home "copyright.txt" in
-      add_copyright_header None out_dir copyright_txt "EverParse.h"
+      add_copyright_header None out_dir copyright_txt (filename_concat out_dir "EverParse.h")
     end;
   (* save hashes *)
   if save_hashes_opt
@@ -567,12 +595,11 @@ let produce_and_postprocess_c
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
   (* postprocess the produced C files *)
-  postprocess_c clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+  postprocess_c true true clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let produce_and_postprocess_one_c
       (clang_format: bool)
       (clang_format_executable: string)
-      (save_hashes_opt: bool)
       (out_dir: string)
       (file: string)
       (modul: string)
@@ -585,7 +612,16 @@ let produce_and_postprocess_one_c
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
   (* postprocess the produced .c and .h files for this module *)
-  postprocess_c clang_format clang_format_executable true false true save_hashes_opt out_dir [file, modul]
+  postprocess_c true false clang_format clang_format_executable true false true false out_dir [file, modul]
+
+let postprocess_wrappers
+      (clang_format: bool)
+      (clang_format_executable: string)
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+    : unit
+  =
+  postprocess_c false true clang_format clang_format_executable true false true false out_dir files_and_modules
 
 let postprocess_fst
       (clang_format: bool)

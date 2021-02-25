@@ -187,7 +187,6 @@ let produce_and_postprocess_c
   Batch.produce_and_postprocess_one_c
     (Options.get_clang_format ())
     (Options.get_clang_format_executable ())
-    (Options.get_save_hashes ())
     out_dir
     file
     modul
@@ -269,6 +268,13 @@ let go () : ML unit =
         out_dir all_files_and_modules
   in
   FStar.IO.print_string "EverParse succeeded!\n"
+  else
+    (* If --batch is not set, then we also need to postprocess the wrappers and assertions
+       (copyright header and clang-format) *)
+    Batch.postprocess_wrappers
+        (Options.get_clang_format ())
+        (Options.get_clang_format_executable ())
+        out_dir all_files_and_modules
 
 #push-options "--warn_error -272" //top-level effects are okay
 #push-options "--admit_smt_queries true" //explicitly not handling all exceptions, so that we can meaningful backtraces

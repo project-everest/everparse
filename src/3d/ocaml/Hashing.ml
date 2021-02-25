@@ -23,6 +23,10 @@ let hash_file h f =
   close_in ch;
   Hacl_star__EverCrypt.Hash.update h buf
 
+let hash_file_option h = function
+  | None -> hash_bool h false
+  | Some f -> hash_bool h true; hash_file h f
+
 (* Hash a string *)
 
 let hash_string h s =
@@ -61,8 +65,8 @@ let hex_of_bytes buf =
   Bytes.to_string hex
 
 type c_files = {
-    wrapper_h: string;
-    wrapper_c: string;
+    wrapper_h: string option;
+    wrapper_c: string option;
     h: string;
     c: string;
     assertions: string option;
@@ -78,8 +82,8 @@ let hash f opt_c =
   | None -> hash_bool h false
   | Some c ->
      hash_bool h true;
-     hash_file h c.wrapper_h;
-     hash_file h c.wrapper_c;
+     hash_file_option h c.wrapper_h;
+     hash_file_option h c.wrapper_c;
      hash_file h c.h;
      hash_file h c.c;
      begin match c.assertions with
@@ -140,8 +144,14 @@ let check_inplace_hashes file_3d files_c =
     List.for_all f (
       files_c.c ::
       files_c.h ::
-      files_c.wrapper_c ::
-      files_c.wrapper_h ::
+      begin match files_c.wrapper_c with
+      | None -> []
+      | Some w -> [w]
+      end @
+      begin match files_c.wrapper_h with
+      | None -> []
+      | Some w -> [w]
+      end @
       begin match files_c.assertions with
       | None -> []
       | Some assertions -> [assertions]

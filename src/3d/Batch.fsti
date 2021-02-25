@@ -30,11 +30,17 @@ val check_inplace_hashes
 val produce_and_postprocess_one_c
   (clang_format: bool)
   (clang_format_executable: string)
-  (save_hashes: bool)
   (out_dir: string)
   (file: string)
   (modul: string)
   (dep_files_and_modules: list (string & string))
+: ML unit
+
+val postprocess_wrappers
+  (clang_format: bool)
+  (clang_format_executable: string)
+  (out_dir: string)
+  (files_and_modules: list (string & string))
 : ML unit
 
 val postprocess_fst

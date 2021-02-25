@@ -104,13 +104,13 @@ let produce_krml_rule
   }
 
 let produce_nop_rule
-  (from: string)
+  (from: list string)
   (to: string)
 : Tot rule_t
 =
   {
     ty = Nop;
-    from = [from];
+    from = from;
     to = to;
     args = "";
   }
@@ -127,7 +127,12 @@ let produce_fst_rules
     from = [mk_input_filename file];
     to = to; (* IMPORTANT: relies on the fact that 3d writes the Types.fst first *)
     args = Printf.sprintf "--no_batch %s" (mk_input_filename file);
-  } :: List.Tot.map (produce_nop_rule to)
+  } ::
+  List.Tot.map (produce_nop_rule [to]) [
+    mk_filename modul "fsti";
+    mk_filename modul "fst";
+  ] `List.Tot.append`
+  List.Tot.map (produce_nop_rule ((if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [mk_input_filename (Printf.sprintf "%s.copyright.txt" file)] else []) `List.Tot.append` [to]))
     begin
       begin if Deps.has_entrypoint g modul
         then [
@@ -139,10 +144,7 @@ let produce_fst_rules
         if Deps.has_static_assertions g modul
         then [mk_filename (Printf.sprintf "%sStaticAssertions" modul) "c"]
         else []
-      end `List.Tot.append` [
-        mk_filename modul "fsti";
-        mk_filename modul "fst";
-      ]
+      end
     end
 
 let produce_h_rules
@@ -152,16 +154,18 @@ let produce_h_rules
 =
   let all_files = Deps.collect_and_sort_dependencies_from_graph g [file] in
   let to = mk_filename (Options.get_module_name file) "c" in
+  let copyright = mk_input_filename (Printf.sprintf "%s.3d.copyright.txt" (Options.get_module_name file)) in
   {
     ty = EverParse;
     from =
+      (if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [copyright] else []) `List.Tot.append`
       List.map (fun f -> mk_filename (Options.get_module_name f) "krml") all_files `List.Tot.append`
       List.map (fun f -> mk_filename (Printf.sprintf "%s_Types" (Options.get_module_name f)) "krml") all_files
       ;
     to = to; (* IMPORTANT: relies on the fact that kremlin generates .c files BEFORE .h files *)
     args = Printf.sprintf "--__produce_c_from_existing_krml %s" (mk_input_filename file);
   } ::
-  [produce_nop_rule to (mk_filename (Options.get_module_name file) "h")]
+  [produce_nop_rule [to] (mk_filename (Options.get_module_name file) "h")]
 
 let produce_o_rule
   (modul: string)
