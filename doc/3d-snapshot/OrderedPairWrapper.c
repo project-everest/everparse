@@ -4,26 +4,28 @@
 void OrderedPairEverParseError(char *x, char *y, char *z);
 static char* OrderedPairStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "BoundedSum._boundedSum";
-		case 2: return "BoundedSum._boundedSum";
-		case 3: return "BoundedSum.mySum";
-		case 4: return "Triangle._point";
+		case 1: return "ColoredPoint._point";
+		case 2: return "ColoredPoint._point";
+		case 3: return "ColoredPoint._coloredPoint1";
+		case 4: return "ColoredPoint._coloredPoint2";
 		case 5: return "Triangle._point";
-		case 6: return "OrderedPair._orderedPair";
-		case 7: return "OrderedPair._orderedPair"; 
+		case 6: return "Triangle._point";
+		case 7: return "OrderedPair._orderedPair";
+		case 8: return "OrderedPair._orderedPair"; 
 		default: return "";
 	}
 }
 
 static char* OrderedPairFieldNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "left";
-		case 2: return "right";
-		case 3: return "bound";
-		case 4: return "x";
-		case 5: return "y";
-		case 6: return "lesser";
-		case 7: return "greater"; 
+		case 1: return "x";
+		case 2: return "y";
+		case 3: return "color";
+		case 4: return "color";
+		case 5: return "x";
+		case 6: return "y";
+		case 7: return "lesser";
+		case 8: return "greater"; 
 		default: return "";
 	}
 }
