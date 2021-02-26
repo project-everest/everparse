@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define GETFIELDPTR__T__F1 ((uint64_t)18U)
+#define GETFIELDPTR__T__F1 ((uint64_t)25U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define GETFIELDPTR__T__F2 ((uint64_t)19U)
+#define GETFIELDPTR__T__F2 ((uint64_t)26U)
 
 static inline uint64_t ValidateTF1(uint32_t InputLength, uint64_t StartPosition)
 /*++

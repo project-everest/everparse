@@ -5,17 +5,17 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define BASE__PAIR__FIRST ((uint64_t)20U)
+#define BASE__PAIR__FIRST ((uint64_t)33U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define BASE__PAIR__SECOND ((uint64_t)21U)
+#define BASE__PAIR__SECOND ((uint64_t)34U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define BASE__DUMMY__DUMMY ((uint64_t)24U)
+#define BASE__DUMMY__DUMMY ((uint64_t)37U)
 
 uint64_t BaseValidateUlong(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 {
