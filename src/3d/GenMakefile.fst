@@ -117,6 +117,7 @@ let produce_nop_rule
 
 let produce_fst_rules
   (g: Deps.dep_graph)
+  (clang_format: bool)
   (file: string)
 : FStar.All.ML (list rule_t)
 =
@@ -124,7 +125,9 @@ let produce_fst_rules
   let to = mk_filename modul "Types.fst" in
   {
     ty = EverParse;
-    from = [mk_input_filename file];
+    from =
+      (if clang_format then [mk_filename "" "clang-format"] else []) `List.Tot.append`
+      [mk_input_filename file];
     to = to; (* IMPORTANT: relies on the fact that 3d writes the Types.fst first *)
     args = Printf.sprintf "--no_batch %s" (mk_input_filename file);
   } ::
@@ -132,7 +135,13 @@ let produce_fst_rules
     mk_filename modul "fsti";
     mk_filename modul "fst";
   ] `List.Tot.append`
-  List.Tot.map (produce_nop_rule ((if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [mk_input_filename (Printf.sprintf "%s.copyright.txt" file)] else []) `List.Tot.append` [to]))
+  List.Tot.map
+    (produce_nop_rule
+      begin
+        (if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [mk_input_filename (Printf.sprintf "%s.copyright.txt" file)] else []) `List.Tot.append`
+        [to]
+      end
+    )
     begin
       begin if Deps.has_entrypoint g modul
         then [
@@ -149,6 +158,7 @@ let produce_fst_rules
 
 let produce_h_rules
   (g: Deps.dep_graph)
+  (clang_format: bool)
   (file: string)
 : FStar.All.ML (list rule_t)
 =
@@ -158,6 +168,7 @@ let produce_h_rules
   {
     ty = EverParse;
     from =
+      (if clang_format then [mk_filename "" "clang-format"] else []) `List.Tot.append`
       (if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [copyright] else []) `List.Tot.append`
       List.map (fun f -> mk_filename (Options.get_module_name f) "krml") all_files `List.Tot.append`
       List.map (fun f -> mk_filename (Printf.sprintf "%s_Types" (Options.get_module_name f)) "krml") all_files
@@ -215,6 +226,18 @@ let produce_static_assertions_o_rule
   }]
   else []
 
+let produce_clang_format_rule
+  (clang_format: bool)
+: Tot (list rule_t)
+=
+  if clang_format
+  then [{
+   ty = EverParse;
+   from = [];
+   to = mk_filename "" "clang-format";
+   args = "--__micro_step copy_clang_format";
+  }] else []
+
 noeq
 type produce_makefile_res = {
   rules: list rule_t;
@@ -224,6 +247,7 @@ type produce_makefile_res = {
 
 let produce_makefile
   (skip_o_rules: bool)
+  (clang_format: bool)
   (files: list string)
 : FStar.All.ML produce_makefile_res
 =
@@ -231,18 +255,19 @@ let produce_makefile
   let all_files = Deps.collect_and_sort_dependencies_from_graph g files in
   let all_modules = List.map Options.get_module_name all_files in
   let rules =
+    produce_clang_format_rule clang_format `List.Tot.append`
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule g) all_modules `List.Tot.append`
       List.Tot.concatMap (produce_static_assertions_o_rule g) all_modules `List.Tot.append`
       List.Tot.map produce_o_rule all_modules
     ) `List.Tot.append`
-    List.concatMap (produce_fst_rules g) all_files `List.Tot.append`
+    List.concatMap (produce_fst_rules g clang_format) all_files `List.Tot.append`
     List.Tot.map (produce_types_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fsti_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_types_krml_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_krml_rule g) all_modules `List.Tot.append`
-    List.concatMap (produce_h_rules g) all_files
+    List.concatMap (produce_h_rules g clang_format) all_files
   in {
     graph = g;
     rules = rules;
@@ -251,12 +276,13 @@ let produce_makefile
 
 let write_gnu_makefile
   (skip_o_rules: bool)
+  (clang_format: bool)
   (files: list string)
 : FStar.All.ML unit
 =
   let makefile = Options.get_makefile_name () in
   let file = FStar.IO.open_write_file makefile in
-  let {graph = g; rules; all_files} = produce_makefile skip_o_rules files in
+  let {graph = g; rules; all_files} = produce_makefile skip_o_rules clang_format files in
   FStar.IO.write_string file (String.concat "" (List.Tot.map print_gnu_make_rule rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =

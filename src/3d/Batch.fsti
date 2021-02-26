@@ -27,6 +27,10 @@ val check_inplace_hashes
   (files_3d_c: list string)
 : ML unit
 
+val copy_clang_format
+  (out_dir: string)
+: ML unit
+
 val produce_and_postprocess_one_c
   (clang_format: bool)
   (clang_format_executable: string)

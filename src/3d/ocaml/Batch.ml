@@ -459,10 +459,14 @@ let call_clang_format
     then clang_format_exe0
     else Printf.sprintf "clang-format%s" (if Sys.win32 then ".exe" else "")
   in
+  let files = collect_files no_everparse_h produced_files wrappers out_dir files_and_modules in
+  match files with
+  | [] -> ()
+  | _ ->
   let clang_format_args =
     "-i" ::
       "--style=file" ::
-        collect_files no_everparse_h produced_files wrappers out_dir files_and_modules
+        files
   in
   run_cmd clang_format_exe clang_format_args
 
@@ -538,6 +542,11 @@ let save_hashes
     let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
     Hashing.save_hashes file (Some c) json
 
+(* Copy .clang-format *)
+
+let copy_clang_format out_dir =
+  copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format")
+
 (* Postprocess C files, assuming that they have already been processed *)
 
 let postprocess_c
@@ -545,6 +554,7 @@ let postprocess_c
       (wrappers: bool)
       (clang_format: bool)
       (clang_format_executable: string)
+      (copy_clang_format_opt: bool)
       (skip_c_makefiles: bool)
       (cleanup: bool)
       (no_everparse_h: bool)
@@ -563,7 +573,7 @@ let postprocess_c
   (* clang-format the files if asked for *)
   if clang_format
   then begin
-      copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
+      if copy_clang_format_opt then copy_clang_format out_dir;
       call_clang_format no_everparse_h produced_files wrappers clang_format_executable out_dir files_and_modules;
     end;
   (* add copyright *)
@@ -595,7 +605,7 @@ let produce_and_postprocess_c
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
   (* postprocess the produced C files *)
-  postprocess_c true true clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+  postprocess_c true true clang_format clang_format_executable true skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let produce_and_postprocess_one_c
       (clang_format: bool)
@@ -612,7 +622,7 @@ let produce_and_postprocess_one_c
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
   (* postprocess the produced .c and .h files for this module *)
-  postprocess_c true false clang_format clang_format_executable true false true false out_dir [file, modul]
+  postprocess_c true false clang_format clang_format_executable false true false true false out_dir [file, modul]
 
 let postprocess_wrappers
       (clang_format: bool)
@@ -621,7 +631,7 @@ let postprocess_wrappers
       (files_and_modules: (string * string) list)
     : unit
   =
-  postprocess_c false true clang_format clang_format_executable true false true false out_dir files_and_modules
+  postprocess_c false true clang_format clang_format_executable false true false true false out_dir files_and_modules
 
 let postprocess_fst
       (clang_format: bool)

@@ -200,13 +200,20 @@ let go () : ML unit =
   if Cons? inplace_hashes
   then Batch.check_inplace_hashes inplace_hashes
   else
+  let micro_step = Options.get_micro_step () in
+  if micro_step = Some HashingOptions.MicroStepCopyClangFormat
+  then
+  (* Special mode: --__micro_step copy_clang_format *)
+    let _ = Batch.copy_clang_format (Options.get_output_dir ()) in
+    exit 0
+  else
   (* for other modes, a nonempty list of files is needed on the command line, so if none are there, then we shall print the help message *)
   if Nil? cmd_line_files
   then let _ = Options.display_usage () in exit 1
   else
   let out_dir = Options.get_output_dir () in
   (* Special mode: --__micro_step *)
-  match Options.get_micro_step () with
+  match micro_step with
   | Some step ->
     let f = match step with
     | HashingOptions.MicroStepExtract -> Batch.extract_fst_file
@@ -217,7 +224,10 @@ let go () : ML unit =
   (* Special mode: --gnu_makefile" *)
   if Options.get_gnu_makefile ()
   then
-    GenMakefile.write_gnu_makefile (Options.get_skip_o_rules ()) cmd_line_files
+    GenMakefile.write_gnu_makefile
+      (Options.get_skip_o_rules ())
+      (Options.get_clang_format ())
+      cmd_line_files
   else
   (* Special mode: --__produce_c_from_existing_krml *)
   if Options.get_produce_c_from_existing_krml ()

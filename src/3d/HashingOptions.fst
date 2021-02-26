@@ -10,3 +10,4 @@ let is_weak = function
 type micro_step_t =
   | MicroStepVerify
   | MicroStepExtract
+  | MicroStepCopyClangFormat

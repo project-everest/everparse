@@ -40,6 +40,7 @@ let skip_o_rules: ref bool = alloc false
 let valid_micro_step (str: string) : Tot bool = match str with
   | "verify"
   | "extract"
+  | "copy_clang_format"
     -> true
   | _ -> false
 
@@ -396,6 +397,7 @@ let get_micro_step _ =
   | None -> None
   | Some "verify" -> Some MicroStepVerify
   | Some "extract" -> Some MicroStepExtract
+  | Some "copy_clang_format" -> Some MicroStepCopyClangFormat
 
 let get_produce_c_from_existing_krml _ =
   !produce_c_from_existing_krml
