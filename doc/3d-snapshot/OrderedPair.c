@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define ORDEREDPAIR__ORDEREDPAIR__LESSER ((uint64_t)6U)
+#define ORDEREDPAIR__ORDEREDPAIR__LESSER ((uint64_t)7U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define ORDEREDPAIR__ORDEREDPAIR__GREATER ((uint64_t)7U)
+#define ORDEREDPAIR__ORDEREDPAIR__GREATER ((uint64_t)8U)
 
 static inline uint64_t ValidateOrderedPairLesser(uint32_t InputLength, uint64_t StartPosition)
 /*++
