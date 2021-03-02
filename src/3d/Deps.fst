@@ -220,13 +220,14 @@ let build_dep_graph_from_list files =
       g1.graph
   }
 
-let get_sorted_deps (g: dep_graph) (fl: list string) : ML (list string) =
-  List.collect (fun fn -> topsort g.graph (Options.get_module_name fn)) fl
+let get_sorted_deps (g: dep_graph) (ml: list string) : ML (list string) =
+  List.collect (fun m -> topsort g.graph m) (List.Tot.sortWith String.compare ml)
 
 let collect_and_sort_dependencies_from_graph (g: dep_graph) (files:list string) : ML (list string) =
   let dirname = files |> List.hd |> OS.dirname in
   let filename_of modul = Options.get_file_name (OS.concat dirname modul) in
   files
+  |> List.map Options.get_module_name
   |> get_sorted_deps g
   |> List.fold_left (fun acc mod -> if List.mem mod acc then acc else mod::acc) []
   |> List.rev
