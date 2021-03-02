@@ -11,8 +11,7 @@ type edge = string & string
 type dep_graph = list edge
 
 let all_edges_from (g:dep_graph) (node:string) : Tot (list edge) =
-  let l = List.Tot.filter (fun (src, _dst) -> src = node) g in
-  List.Tot.sortWith (fun (_, d1) (_, d2) -> String.compare d1 d2) l
+  List.Tot.filter (fun (src, _dst) -> src = node) g
 
 let dep_exists dirname name =
   OS.file_exists (Options.get_file_name (OS.concat dirname name))
@@ -172,6 +171,7 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
 let build_dep_graph (fn:string) : ML dep_graph =
   build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) ([], [])
   |> fst
+  |> List.Tot.sortWith (fun (l1, r1) (l2, r2) -> let c1 = String.compare l1 l2 in if c1 = 0 then String.compare r1 r2 else c1)
 
 let get_sorted_deps fn =
   let dep_graph = build_dep_graph fn in
