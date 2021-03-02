@@ -38,7 +38,7 @@ help:
 
 3d: 3d-do-tests
 
-3d-ci: $(3D_DIFF)
+3d-ci: # temporarily disable, but this will automatically create a conflict with PR 45
 
 3d-do-tests:
 	mkdir -p out
