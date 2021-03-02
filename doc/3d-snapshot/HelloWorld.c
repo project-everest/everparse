@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define HELLOWORLD__POINT__X ((uint64_t)16U)
+#define HELLOWORLD__POINT__X ((uint64_t)9U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define HELLOWORLD__POINT__Y ((uint64_t)17U)
+#define HELLOWORLD__POINT__Y ((uint64_t)10U)
 
 static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPosition)
 /*++

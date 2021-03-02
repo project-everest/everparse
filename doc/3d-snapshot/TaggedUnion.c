@@ -5,22 +5,22 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define TAGGEDUNION__INT_PAYLOAD__VALUE8 ((uint64_t)6U)
+#define TAGGEDUNION__INT_PAYLOAD__VALUE8 ((uint64_t)26U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define TAGGEDUNION__INT_PAYLOAD__VALUE16 ((uint64_t)7U)
+#define TAGGEDUNION__INT_PAYLOAD__VALUE16 ((uint64_t)27U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define TAGGEDUNION__INT_PAYLOAD__VALUE32 ((uint64_t)8U)
+#define TAGGEDUNION__INT_PAYLOAD__VALUE32 ((uint64_t)28U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define TAGGEDUNION__INTEGER__SIZE ((uint64_t)9U)
+#define TAGGEDUNION__INTEGER__SIZE ((uint64_t)29U)
 
 #define SIZE8 ((uint8_t)8U)
 

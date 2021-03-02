@@ -1,4 +1,3 @@
-// SNIPPET_START: Base
 export
 typedef UINT32 ULONG;
 
@@ -12,9 +11,3 @@ typedef struct _Mine {
    UINT8 f;
    UINT8 g;
 } Mine;
-// SNIPPET_END: Base
-
-entrypoint
-typedef struct _Dummy {
-   UINT32 dummy;
-} Dummy;
