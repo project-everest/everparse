@@ -171,6 +171,7 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
 let build_dep_graph (fn:string) : ML dep_graph =
   build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) ([], [])
   |> fst
+  |> List.Tot.sortWith (fun (l1, r1) (l2, r2) -> let c1 = String.compare l1 l2 in if c1 = 0 then String.compare r1 r2 else c1)
 
 let get_sorted_deps fn =
   let dep_graph = build_dep_graph fn in
