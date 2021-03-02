@@ -4,9 +4,9 @@
 void TriangleEverParseError(char *x, char *y, char *z);
 static char* TriangleStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "BoundedSum._boundedSum";
-		case 2: return "BoundedSum._boundedSum";
-		case 3: return "BoundedSum.mySum";
+		case 1: return "Triangle2._point";
+		case 2: return "Triangle2._point";
+		case 3: return "Triangle2._triangle";
 		case 4: return "Triangle._point";
 		case 5: return "Triangle._point"; 
 		default: return "";
@@ -15,9 +15,9 @@ static char* TriangleStructNameOfErr(uint64_t err) {
 
 static char* TriangleFieldNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "left";
-		case 2: return "right";
-		case 3: return "bound";
+		case 1: return "x";
+		case 2: return "y";
+		case 3: return "corners";
 		case 4: return "x";
 		case 5: return "y"; 
 		default: return "";

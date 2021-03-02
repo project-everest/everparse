@@ -5,7 +5,7 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define DERIVED__TRIPLE__THIRD ((uint64_t)38U)
+#define DERIVED__TRIPLE__THIRD ((uint64_t)25U)
 
 static inline uint64_t
 ValidateTriplePair(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
