@@ -206,8 +206,19 @@ let build_dep_graph_from_list files =
     modules_with_static_assertions = [];
   }
   in
-  List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) (g0, []) files
+  let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) (g0, []) files
   |> fst
+  in
+  {g1 with graph =
+    List.Tot.sortWith
+      (fun (l1, r1) (l2, r2) ->
+        let c = String.compare l1 l2 in
+        if c = 0
+        then String.compare r1 r2
+        else c
+      )
+      g1.graph
+  }
 
 let get_sorted_deps (g: dep_graph) (fl: list string) : ML (list string) =
   List.collect (fun fn -> topsort g.graph (Options.get_module_name fn)) fl
