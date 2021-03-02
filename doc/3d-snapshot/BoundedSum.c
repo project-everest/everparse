@@ -5,17 +5,17 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define BOUNDEDSUM__BOUNDEDSUM__LEFT ((uint64_t)21U)
+#define BOUNDEDSUM__BOUNDEDSUM__LEFT ((uint64_t)1U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define BOUNDEDSUM__BOUNDEDSUM__RIGHT ((uint64_t)22U)
+#define BOUNDEDSUM__BOUNDEDSUM__RIGHT ((uint64_t)2U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define BOUNDEDSUM_MYSUM__BOUND ((uint64_t)23U)
+#define BOUNDEDSUM_MYSUM__BOUND ((uint64_t)3U)
 
 static inline uint64_t ValidateBoundedSumLeft(uint32_t InputLength, uint64_t StartPosition)
 /*++
