@@ -14,7 +14,7 @@ test: demo
 demo: all
 	+$(MAKE) -C tests
 
-.PHONY: all prelude test
+.PHONY: all prelude test clean clean-3d clean-prelude
 
 prelude:
 	+$(MAKE) -C prelude
@@ -22,13 +22,16 @@ prelude:
 3d: ocaml/Main.native
 	cp ocaml/Main.native 3d
 
-.depend: $(wildcard *.fst *.fsti)
+ocaml/generated:
+	mkdir -p $@
+
+.depend: $(wildcard *.fst *.fsti) ocaml/generated
 	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh
-	$(FSTAR) --odir ocaml --dep full $(ROOT) --extract '* -Prims -FStar' > .depend
+	$(FSTAR) --odir ocaml/generated --dep full $(ROOT) --extract '* -Prims -FStar' > .depend
 
 include .depend
 
-ocaml/Main.native: $(ALL_ML_FILES) ocaml/parser.mly ocaml/lexer.mll
+ocaml/Main.native: $(ALL_ML_FILES) $(filter-out %~,$(wildcard ocaml/*.ml*))
 	rm -f ocaml/Main.native
 	+$(MAKE) -C ocaml Main.native
 
@@ -37,15 +40,16 @@ ocaml/Main.native: $(ALL_ML_FILES) ocaml/parser.mly ocaml/lexer.mll
 	touch $@
 
 %.ml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen OCaml --extract_module $(basename $(notdir $(subst .checked,,$<))) --odir ocaml
+	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen OCaml --extract_module $(basename $(notdir $(subst .checked,,$<))) --odir ocaml/generated
 
-test.native: ast.ml lexer.mll parser.mly test.ml
-	rm -f test.native
-	ocamlbuild -use-menhir -tag thread -use-ocamlfind -quiet -pkg batteries -pkg menhirLib $@
+clean-prelude:
+	+$(MAKE) -C prelude clean
 
-clean:
-	rm -rf *.checked $(ALL_ML_FILES) *~
+clean-3d:
+	+$(MAKE) -C ocaml clean
+	rm -rf *.checked *~
 
+clean: clean-3d clean-prelude
 
 FSTAR_OPTIONS=$(OTHERFLAGS) $(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib $(KREMLIN_HOME)/kremlib/obj)
 

@@ -28,6 +28,7 @@ EverParse.rsp: $(ALL_KRML_FILES)
 ../EverParse.h: EverParse.rsp
 	$(KREMLIN_HOME)/krml \
 	  -skip-compilation \
+	  -skip-makefiles \
 	  -bundle 'C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
 	  -bundle 'LowParse.Low.ErrorCode+EverParse3d.InputBuffer.Aux+Prelude.StaticHeader+ResultOps=Prims,LowParse.\*,Prelude,Prelude.\*,Actions,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \

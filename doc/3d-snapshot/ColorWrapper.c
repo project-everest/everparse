@@ -4,44 +4,42 @@
 void ColorEverParseError(char *x, char *y, char *z);
 static char* ColorStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "ColoredPoint._point";
-		case 2: return "ColoredPoint._point";
-		case 3: return "ColoredPoint._coloredPoint1";
-		case 4: return "ColoredPoint._coloredPoint2";
-		case 5: return "Triangle._point";
-		case 6: return "Triangle._point";
-		case 7: return "OrderedPair._orderedPair";
-		case 8: return "OrderedPair._orderedPair";
-		case 9: return "HelloWorld._point";
-		case 10: return "HelloWorld._point";
-		case 11: return "Triangle2._point";
-		case 12: return "Triangle2._point";
-		case 13: return "Triangle2._triangle";
+		case 1: return "Base._Pair";
+		case 2: return "Base._Pair";
+		case 3: return "Base._Mine";
+		case 4: return "Base._Mine";
+		case 5: return "BoundedSum._boundedSum";
+		case 6: return "BoundedSum._boundedSum";
+		case 7: return "BoundedSum.mySum";
+		case 8: return "BoundedSumConst._boundedSum";
+		case 9: return "BoundedSumConst._boundedSum";
+		case 10: return "BoundedSumWhere._boundedSum";
+		case 11: return "BoundedSumWhere._boundedSum";
+		case 12: return "BoundedSumWhere._boundedSum";
+		case 13: return "Color._coloredPoint";
 		case 14: return "Color._coloredPoint";
-		case 15: return "Color._coloredPoint";
-		case 16: return "Color._coloredPoint"; 
+		case 15: return "Color._coloredPoint"; 
 		default: return "";
 	}
 }
 
 static char* ColorFieldNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "x";
-		case 2: return "y";
-		case 3: return "color";
-		case 4: return "color";
-		case 5: return "x";
-		case 6: return "y";
-		case 7: return "lesser";
-		case 8: return "greater";
-		case 9: return "x";
-		case 10: return "y";
-		case 11: return "x";
-		case 12: return "y";
-		case 13: return "corners";
-		case 14: return "col";
-		case 15: return "x";
-		case 16: return "y"; 
+		case 1: return "first";
+		case 2: return "second";
+		case 3: return "f";
+		case 4: return "g";
+		case 5: return "left";
+		case 6: return "right";
+		case 7: return "bound";
+		case 8: return "left";
+		case 9: return "right";
+		case 10: return "__precondition";
+		case 11: return "left";
+		case 12: return "right";
+		case 13: return "col";
+		case 14: return "x";
+		case 15: return "y"; 
 		default: return "";
 	}
 }

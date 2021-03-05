@@ -8,10 +8,19 @@ module H = Hashtable
 
 type edge = string & string
 
-type dep_graph = list edge
+type dep_graph' = list edge
 
-let all_edges_from (g:dep_graph) (node:string) : Tot (list edge) =
+type dep_graph = {
+  graph: dep_graph';
+  modules_with_entrypoint: list string;
+  modules_with_static_assertions: list string;
+}
+
+let all_edges_from (g:dep_graph') (node:string) : Tot (list edge) =
   List.Tot.filter (fun (src, _dst) -> src = node) g
+
+let dependencies graph modul =
+  List.Tot.map snd (all_edges_from graph.graph modul)
 
 let dep_exists dirname name =
   OS.file_exists (Options.get_file_name (OS.concat dirname name))
@@ -19,7 +28,7 @@ let dep_exists dirname name =
 (*
  * root is already greyed
  *)
-let rec topsort_aux (g:dep_graph) (root:string) (acc:list string & list string)
+let rec topsort_aux (g:dep_graph') (root:string) (acc:list string & list string)
   : ML (list string & list string) =  //grey nodes & finished nodes
 
   let finish (acc:list string & list string) : ML (list string & list string) =
@@ -39,12 +48,22 @@ let rec topsort_aux (g:dep_graph) (root:string) (acc:list string & list string)
         else topsort_aux g dst (dst::grey, finished)) acc
     |> finish
 
-let topsort (g:dep_graph) (root:string) : ML (list string) =
+let topsort (g:dep_graph') (root:string) : ML (list string) =
   topsort_aux g root ([root], []) |> snd |> List.rev
 
-let scan_deps (fn:string) : ML (list string) =
+noeq
+type scan_deps_t = {
+  sd_deps: list string;
+  sd_has_entrypoint: bool;
+  sd_has_static_assertions: bool;
+}
+
+let scan_deps (fn:string) : ML scan_deps_t =
   let dirname = OS.dirname fn in
-  let decls, __refinement = ParserDriver.parse fn in  //AR: TODO: look into refinement too?
+  let decls, refinement = ParserDriver.parse fn in  //AR: TODO: look into refinement too?
+
+  let has_entrypoint = List.Tot.existsb is_entrypoint decls in
+  let has_static_assertions = Some? refinement in
 
   let abbrevs = H.create 10 in
 
@@ -152,7 +171,11 @@ let scan_deps (fn:string) : ML (list string) =
       (deps_of_params params)@
       (deps_of_switch_case sc) in
 
-  List.collect deps_of_decl decls
+  {
+    sd_deps = List.collect deps_of_decl decls;
+    sd_has_entrypoint = has_entrypoint;
+    sd_has_static_assertions = has_static_assertions;
+  }
 
 let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & list string)
   : ML (dep_graph & list string) =  //seen
@@ -160,18 +183,56 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
   let g, seen = acc in
   if List.mem mname seen then acc
   else
-    let deps = scan_deps (Options.get_file_name (OS.concat dirname mname)) in
+    let {sd_has_entrypoint = has_entrypoint; sd_deps = deps; sd_has_static_assertions = has_static_assertions} =
+      scan_deps (Options.get_file_name (OS.concat dirname mname))
+    in
     let edges = List.fold_left (fun edges dep ->
       if List.mem (mname, dep) edges
       then edges
       else (mname, dep)::edges) [] deps in
+    let g' = {
+      graph = g.graph @ edges;
+      modules_with_entrypoint = (if has_entrypoint then mname :: g.modules_with_entrypoint else g.modules_with_entrypoint);
+      modules_with_static_assertions = (if has_static_assertions then mname :: g.modules_with_static_assertions else g.modules_with_static_assertions);
+    }
+    in
     List.fold_left (fun acc dep -> build_dep_graph_aux dirname dep acc)
-      (g@edges, mname::seen) deps
+      (g', mname::seen) deps
 
-let build_dep_graph (fn:string) : ML dep_graph =
-  build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) ([], [])
+let build_dep_graph_from_list files =
+  let g0 = {
+    graph = [];
+    modules_with_entrypoint = [];
+    modules_with_static_assertions = [];
+  }
+  in
+  let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) (g0, []) files
   |> fst
+  in
+  {g1 with graph =
+    List.Tot.sortWith
+      (fun (l1, r1) (l2, r2) ->
+        let c = String.compare l1 l2 in
+        if c = 0
+        then String.compare r1 r2
+        else c
+      )
+      g1.graph
+  }
 
-let get_sorted_deps fn =
-  let dep_graph = build_dep_graph fn in
-  topsort dep_graph (Options.get_module_name fn)
+let get_sorted_deps (g: dep_graph) (ml: list string) : ML (list string) =
+  List.collect (fun m -> topsort g.graph m) (List.Tot.sortWith String.compare ml)
+
+let collect_and_sort_dependencies_from_graph (g: dep_graph) (files:list string) : ML (list string) =
+  let dirname = files |> List.hd |> OS.dirname in
+  let filename_of modul = Options.get_file_name (OS.concat dirname modul) in
+  files
+  |> List.map Options.get_module_name
+  |> get_sorted_deps g
+  |> List.fold_left (fun acc mod -> if List.mem mod acc then acc else mod::acc) []
+  |> List.rev
+  |> List.map filename_of
+
+let has_entrypoint g m = List.Tot.mem m g.modules_with_entrypoint
+
+let has_static_assertions g m = List.Tot.mem m g.modules_with_static_assertions
