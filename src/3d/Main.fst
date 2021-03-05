@@ -221,14 +221,15 @@ let go () : ML unit =
     in
     List.iter (f out_dir) cmd_line_files
   | None ->
-  (* Special mode: --gnu_makefile" *)
-  if Options.get_gnu_makefile ()
-  then
-    GenMakefile.write_gnu_makefile
+  (* Special mode: --makefile" *)
+  match Options.get_makefile () with
+  | Some t ->
+    GenMakefile.write_makefile
+      t
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())
       cmd_line_files
-  else
+  | None ->
   (* Special mode: --__produce_c_from_existing_krml *)
   if Options.get_produce_c_from_existing_krml ()
   then

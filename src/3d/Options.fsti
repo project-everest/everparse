@@ -46,7 +46,7 @@ val get_produce_c_from_existing_krml : unit -> ML bool
 
 val get_skip_deps : unit -> ML bool
 
-val get_gnu_makefile : unit -> ML bool
+val get_makefile : unit -> ML (option makefile_type)
 
 val get_makefile_name : unit -> ML string
 

@@ -48,7 +48,13 @@ let micro_step : ref (option (valid_string valid_micro_step)) = alloc None
 
 let produce_c_from_existing_krml : ref bool = alloc false
 
-let gnu_makefile : ref bool = alloc false
+let valid_makefile (str: string) : Tot bool = match str with
+  | "gmake"
+  | "nmake"
+  -> true
+  | _ -> false
+
+let makefile : ref (option (valid_string valid_makefile)) = alloc None
 let makefile_name : ref (option vstring) = alloc None
 
 let valid_equate_types (str: string) : Tot bool =
@@ -286,9 +292,9 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "debug" (OptBool debug) "Emit a lot of debugging output" [];
     CmdOption "error_log" (OptStringOption "error log" always_valid error_log) "Set the stream to which to log errors (default 'stderr')" [];
     CmdOption "error_log_function" (OptStringOption "error logging function" always_valid error_log_function) "Use a function to log errors (default 'fprintf')" [];
-    CmdOption "gnu_makefile" (OptBool gnu_makefile) "Do not produce anything, other than a GNU Makefile to produce everything" [];
     CmdFStarOption ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message");
-    CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --gnu_makefile, default <output directory>/EverParse.Makefile" [];
+    CmdOption "makefile" (OptStringOption "gmake|nmake" valid_makefile makefile) "Do not produce anything, other than a Makefile to produce everything" [];
+    CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile" [];
     CmdOption "odir" (OptStringOption "output directory" always_valid output_dir) "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory" [];
     CmdOption "save_hashes" (OptBool save_hashes) "Save hashes" [];
     CmdOption "skip_c_makefiles" (OptBool skip_c_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
@@ -405,8 +411,11 @@ let get_produce_c_from_existing_krml _ =
 let get_skip_deps _ =
   !skip_deps
 
-let get_gnu_makefile _ =
-  !gnu_makefile
+let get_makefile _ =
+  match !makefile with
+  | None -> None
+  | Some "gmake" -> Some MakefileGMake
+  | Some "nmake" -> Some MakefileNMake
 
 let get_makefile_name _ =
   match !makefile_name with

@@ -1,6 +1,7 @@
 module GenMakefile
 
-val write_gnu_makefile
+val write_makefile
+  (mtype: HashingOptions.makefile_type)
   (skip_o_rules: bool)
   (clang_format: bool)
   (files: list string)

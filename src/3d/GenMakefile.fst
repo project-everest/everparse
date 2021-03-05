@@ -300,3 +300,17 @@ let write_gnu_makefile
   write_all_ext_files "C" "c";
   write_all_ext_files "O" "o";
   FStar.IO.close_write_file file
+
+let write_nmakefile = write_gnu_makefile
+
+let write_makefile
+  (mtype: HashingOptions.makefile_type)
+: Tot (
+    (skip_o_rules: bool) ->
+    (clang_format: bool) ->
+    (files: list string) ->
+    FStar.All.ML unit
+  )
+= match mtype with
+  | HashingOptions.MakefileGMake -> write_gnu_makefile
+  | HashingOptions.MakefileNMake -> write_nmakefile
