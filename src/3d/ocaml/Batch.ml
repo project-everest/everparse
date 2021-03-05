@@ -196,13 +196,13 @@ let krml_args skip_c_makefiles out_dir files_and_modules =
 
 		       let c_wrapper = Printf.sprintf "%sWrapper.c" modul in
 		       let l =
-		         if Sys.file_exists (filename_concat out_dir c_wrapper)
+		         if (not skip_c_makefiles) && Sys.file_exists (filename_concat out_dir c_wrapper)
                          then c_wrapper :: l
                          else l in			 
 		       
                        let static_asserts = Printf.sprintf "%sStaticAssertions.c" modul in
                        let l =
-		         if Sys.file_exists (filename_concat out_dir static_asserts)
+		         if (not skip_c_makefiles) && Sys.file_exists (filename_concat out_dir static_asserts)
                          then static_asserts :: l
                          else l in
 		       l
@@ -280,20 +280,6 @@ let produce_c_files
                                          modul
                                          modul)::acc) [] files_and_modules in
     krml_args@bundle_types
-  in
-  let krml_args =
-    if skip_c_makefiles
-    then krml_args
-    else
-      List.fold_left
-        (fun acc (_, modul) ->
-          Printf.sprintf "%sWrapper.c" modul ::
-            let static_asserts = Printf.sprintf "%sStaticAssertions.c" modul in
-            if Sys.file_exists (filename_concat out_dir static_asserts)
-            then static_asserts :: acc
-            else acc)
-        krml_args
-        files_and_modules
   in
   call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
 
