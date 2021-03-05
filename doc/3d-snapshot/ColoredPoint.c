@@ -5,22 +5,22 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOREDPOINT__POINT__X ((uint64_t)12U)
+#define COLOREDPOINT__POINT__X ((uint64_t)16U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOREDPOINT__POINT__Y ((uint64_t)13U)
+#define COLOREDPOINT__POINT__Y ((uint64_t)17U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOREDPOINT__COLOREDPOINT1__COLOR ((uint64_t)14U)
+#define COLOREDPOINT__COLOREDPOINT1__COLOR ((uint64_t)18U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOREDPOINT__COLOREDPOINT2__COLOR ((uint64_t)15U)
+#define COLOREDPOINT__COLOREDPOINT2__COLOR ((uint64_t)19U)
 
 static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPosition)
 /*++

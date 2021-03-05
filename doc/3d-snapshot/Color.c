@@ -5,17 +5,17 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOR__COLOREDPOINT__COL ((uint64_t)9U)
+#define COLOR__COLOREDPOINT__COL ((uint64_t)13U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOR__COLOREDPOINT__X ((uint64_t)10U)
+#define COLOR__COLOREDPOINT__X ((uint64_t)14U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define COLOR__COLOREDPOINT__Y ((uint64_t)11U)
+#define COLOR__COLOREDPOINT__Y ((uint64_t)15U)
 
 /*
 Enum constant

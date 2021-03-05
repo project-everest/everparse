@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define TRIANGLE__POINT__X ((uint64_t)30U)
+#define TRIANGLE__POINT__X ((uint64_t)35U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define TRIANGLE__POINT__Y ((uint64_t)31U)
+#define TRIANGLE__POINT__Y ((uint64_t)36U)
 
 static inline uint64_t ValidatePointX(uint32_t InputLength, uint64_t StartPosition)
 /*++
