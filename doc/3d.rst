@@ -6,7 +6,7 @@
 .. note::
 
    The documentation from this page covers the EverParse/3d releases
-   v2020.08.17 or later. Documentations for earlier versions may be
+   v2021.03.05 or later. Documentations for earlier versions may be
    found in the Git history.
 
 EverParse/3d lets you write a data format description and
@@ -97,6 +97,9 @@ On Windows: ``everparse.cmd`` [options] input_files
 
 On Linux: ``everparse.sh`` [options] input_files
 
+Default mode
+^^^^^^^^^^^^
+
 Options are treated from left to right:
 
 * ``--odir output_directory_name``
@@ -147,6 +150,88 @@ Options are treated from left to right:
 
   Keep all produced intermediate files. This is toggled by default.
 
+Options are treated from left to right, with higher priority on
+right-most options. Thus, any ``--no_clang_format`` will override any
+occurrence of ``--clang_format`` or ``--clang_format_executable`` to
+its left, and vice-versa.
+
+You can provide one or more ``input_files`` to EverParse. They must
+all bear the ``.3d`` file name extension, and their names must start
+with a capital letter. Then, ``EverParse.h`` and
+``EverParseEndianness.h`` will be shared across ``.c`` and ``.h``
+files produced for all the ``.3d`` files that you provided.
+
+Alternate mode: generating a Makefile
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, with ``--batch``, given a ``.3d`` specification, EverParse
+produces ``.c`` and ``.h`` files by first producing ``.fsti`` and
+``.fst`` files files containing verified F* specifications and
+implementations of validators, and then calling F* and KReMLin on each
+such file to verify and extract them to C. EverParse will issue all
+such calls to F* and KReMLin sequentially.
+
+Alternatively, with ``everparse.cmd --makefile gmake Test.3d`` (on
+Windows; use ``./everparse.sh`` on Linux), instead of producing ``.c``
+and ``.h`` files, EverParse will take ``Test.3d`` and all of the
+modules it depends on, and produce a GNU Makefile containing all
+recipes and rules to produce ``.c`` and ``.h`` files and all
+intermediate files with proper dependencies so that the user can
+leverage GNU Make parallelism for any rules that do not depend on one
+another. Other build systems are supported with variations of the
+``--makefile`` option, as stated below.
+
+The produced Makefile will make use of three variables:
+
+* ``EVERPARSE_CMD``: the command to run EverParse. This variable must
+  contain the path and name of the EverParse executable, and any
+  options (``--clang_format``, etc.) useful to produce .
+
+* ``EVERPARSE_INPUT_DIR``: the path to the input files.
+
+.. note::
+
+  (FIXME) Currently, all ``.3d`` files shall be located in the same
+  input directory.
+
+* ``EVERPARSE_OUTPUT_DIR``: the path to the output files. EverParse
+  will append the ``--odir`` option appropriately.
+
+* ``CC``: the path and name of the C compiler that will be used to
+  compile the produced C files.
+
+* ``CFLAGS``: options to provide to the C compiler to compile the
+  produced C files.
+
+The produced Makefile, by default called ``EverParse.Makefile``, is
+meant to be included in the main ``Makefile`` of your project. On
+Linux, such a typical main ``Makefile`` for use with GNU Make may look
+like:
+
+.. literalinclude:: Sample.EverParse.Makefile
+    :language: make
+
+EverParse supports the following command-line options relevant to this
+mode:
+
+* ``--makefile gmake``: produce a Makefile for use with GNU Make.
+
+* ``--makefile nmake``: produce a Makefile for use with Microsoft
+  NMAKE.
+
+* ``--makefile_name my_file_name``: the name of the produced Makefile
+  shall be ``my_file_name`` instead of the default
+  ``EverParse.Makefile``.
+
+* ``--skip_o_rules``: do not output rules that would produce ``.o``
+  files by compiling ``.c`` files.
+
+Alternate mode: help and version
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some options make EverParse do nothing other than show a help or
+version message:
+
 * ``--version``
 
   Print the version of EverParse/3d and exit (do not process any
@@ -158,16 +243,7 @@ Options are treated from left to right:
   and exit (do not process any further options to the right, nor any
   files at all.)
 
-Options are treated from left to right, with higher priority on
-right-most options. Thus, any ``--no_clang_format`` will override any
-occurrence of ``--clang_format`` or ``--clang_format_executable`` to
-its left, and vice-versa.
 
-You can provide one or more ``input_files`` to EverParse. They must
-all bear the ``.3d`` file name extension, and their names must start
-with a capital letter. Then, ``EverParse.h`` and
-``EverParseEndianness.h`` will be shared across ``.c`` and ``.h``
-files produced for all the ``.3d`` files that you provided.
 
 Optional: From the sources
 --------------------------
