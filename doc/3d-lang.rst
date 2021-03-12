@@ -490,6 +490,25 @@ There are three kinds of comments:
   the C code preceding the C procedure corresponding to the validator
   of the source type.
 
+
+Adding copyright notices to produced .c/.h files
+------------------------------------------------
+
+If, along with some ``MyFile.3d``, in the same directory, you provide
+a file ``MyFile.3d.copyright.txt`` that contains syntactically correct
+C comments (with ``//`` or ``/* ... */``), then EverParse will prepend
+``MyFile.c``, ``MyFileWrapper.c`` and their corresponding ``.h`` with
+these comments. You do not need to mention this file on the command
+line.
+
+These comments can contain the following special symbols:
+
+* ``EVERPARSEVERSION``, which EverParse will automatically replace
+  with its version number;
+
+* ``FILENAME``, which EverParse will automatically replace with the
+  name of the ``.c`` / ``.h`` file being generated.
+
   
 Modular structure and files
 ---------------------------

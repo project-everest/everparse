@@ -169,23 +169,6 @@ with a capital letter. Then, ``EverParse.h`` and
 ``EverParseEndianness.h`` will be shared across ``.c`` and ``.h``
 files produced for all the ``.3d`` files that you provided.
 
-.. note::
-
-   If, along with some ``MyFile.3d``, in the same directory, you
-   provide a file ``MyFile.3d.copyright.txt`` that contains
-   syntactically correct C comments (with ``//`` or ``/* ... */``),
-   then EverParse will prepend ``MyFile.c``, ``MyFileWrapper.c`` and
-   their corresponding ``.h`` with these comments. You do not need to
-   mention this file on the command line.
-
-   These comments can contain the following special symbols:
-
-   * ``EVERPARSEVERSION``, which EverParse will automatically replace
-     with its version number;
-
-   * ``FILENAME``, which EverParse will automatically replace with the
-     name of the ``.c`` / ``.h`` file being generated.
-
 Optional: From the sources
 --------------------------
 
