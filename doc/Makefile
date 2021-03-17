@@ -12,7 +12,7 @@ export KREMLIN_HOME?=$(realpath $(QD_HOME)/../kremlin)
 3D_FILES=$(filter-out $(3D_EXCLUDE),$(wildcard *.3d))
 3D_MODULES=$(basename $(3D_FILES))
 3D_MODULES_AND_WRAPPERS=$(3D_MODULES) $(addsuffix Wrapper,$(3D_MODULES))
-3D_C_AND_H_FILES=$(addsuffix .c,$(3D_MODULES_AND_WRAPPERS)) $(addsuffix .h,$(3D_MODULES_AND_WRAPPERS))
+3D_C_AND_H_FILES=$(filter-out BaseWrapper.c BaseWrapper.h,$(addsuffix .c,$(3D_MODULES_AND_WRAPPERS)) $(addsuffix .h,$(3D_MODULES_AND_WRAPPERS)))
 3D_DIFF=$(addsuffix .diff,$(3D_C_AND_H_FILES))
 3D_OUT=$(addprefix out/,$(3D_C_AND_H_FILES))
 3D_SNAPSHOT=$(addprefix 3d-snapshot/,$(3D_C_AND_H_FILES))
@@ -38,7 +38,7 @@ help:
 
 3d: 3d-do-tests
 
-3d-ci: $(3D_DIFF)
+3d-ci:  $(3D_DIFF)
 
 3d-do-tests:
 	mkdir -p out

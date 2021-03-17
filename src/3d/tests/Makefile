@@ -48,7 +48,7 @@ inplace-hash-test:
 
 batch-cleanup-test:
 	mkdir -p out.cleanup
-	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup --skip_makefiles --no_copy_everparse_h $(positive_tests)
+	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
 	test "$$(ls out.cleanup | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 %.fst-in %.fsti-in:

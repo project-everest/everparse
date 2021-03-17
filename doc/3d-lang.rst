@@ -489,3 +489,66 @@ There are three kinds of comments:
   comment delimited by ``/*++`` and ``--*/``: These are propagated to
   the C code preceding the C procedure corresponding to the validator
   of the source type.
+
+
+Adding copyright notices to produced .c/.h files
+------------------------------------------------
+
+If, along with some ``MyFile.3d``, in the same directory, you provide
+a file ``MyFile.3d.copyright.txt`` that contains syntactically correct
+C comments (with ``//`` or ``/* ... */``), then EverParse will prepend
+``MyFile.c``, ``MyFileWrapper.c`` and their corresponding ``.h`` with
+these comments. You do not need to mention this file on the command
+line.
+
+These comments can contain the following special symbols:
+
+* ``EVERPARSEVERSION``, which EverParse will automatically replace
+  with its version number;
+
+* ``FILENAME``, which EverParse will automatically replace with the
+  name of the ``.c`` / ``.h`` file being generated.
+
+* ``EVERPARSEHASHES``, which EverParse will automatically replace with
+  a hash of the contents of the corresponding .3d file for the purpose
+  of ``--check_hashes inplace`` or ``--check_inplace_hash`` (see `Hash
+  checking <3d.html#alternate-mode-hash-checking>`_).
+
+  
+Modular structure and files
+---------------------------
+
+A 3d specification is described in a collection of modules, each
+stored in a file with a ``.3d`` extension. The name of a module is
+derived from its filename, i.e., the file ``A.3d`` defines a module
+named ``A``. A module can ``Derived`` (in Derived.3d) can refer to
+another module ``Base`` (in Base.3d) by its name, allowing definitions
+in ``Derived`` to reuse the definitions that are exported in ``Base``.
+
+For example, in module ``Base`` we could define the following types:
+
+.. literalinclude:: Base.3d
+    :language: c
+
+Note, the ``export`` qualifier indicate that these definitions may be
+referenced from another module. Types that are not exproted (like
+``Mine``) are not visible from another module.
+
+In ``Derived`` we can use the type from ``Base`` by referring to it
+using a fully qualified name of the form ``<MODULE NAME>.<IDENTIFIER>``.
+
+.. literalinclude:: Derived.3d
+   :language: c
+   :start-after: SNIPPET_START: Triple
+   :end-before: SNIPPET_END: Triple
+
+
+3d also allows defining module abbreviations. For example, using
+``module B = Base`` we introduce a shorter name for the module
+``Base`` for use within the current module.
+
+.. literalinclude:: Derived.3d
+   :language: c
+   :start-after: SNIPPET_START: Quad
+   :end-before: SNIPPET_END: Quad
+

@@ -984,6 +984,8 @@ let validate_t_at_most
   #k #t #p #inv #l #ar v
 = validate_drop (validate_t_at_most' n v)
 
+
+#push-options "--fuel 1 --ifuel 1"
 noextract inline_for_extraction
 let validate_t_exact' (n:U32.t) (#nz:bool) (#k:parser_kind nz) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
@@ -1012,6 +1014,7 @@ let validate_t_exact' (n:U32.t) (#nz:bool) (#k:parser_kind nz) (#t:_) (#p:parser
       else if (LPL.uint64_to_uint32 positionAfterContents) <> LPL.slice_length input'
       then with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) validator_error_unexpected_padding
       else with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
+#pop-options
 
 #pop-options
 

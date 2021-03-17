@@ -1,8 +1,8 @@
-#include "ReadPairWrapper.h"
+#include "DerivedWrapper.h"
 #include "EverParse.h"
-#include "ReadPair.h"
-void ReadPairEverParseError(char *x, char *y, char *z);
-static char* ReadPairStructNameOfErr(uint64_t err) {
+#include "Derived.h"
+void DerivedEverParseError(char *x, char *y, char *z);
+static char* DerivedStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "Base._Pair";
 		case 2: return "Base._Pair";
@@ -23,20 +23,12 @@ static char* ReadPairStructNameOfErr(uint64_t err) {
 		case 17: return "ColoredPoint._point";
 		case 18: return "ColoredPoint._coloredPoint1";
 		case 19: return "ColoredPoint._coloredPoint2";
-		case 20: return "Derived._Triple";
-		case 21: return "GetFieldPtr._T";
-		case 22: return "GetFieldPtr._T";
-		case 23: return "HelloWorld._point";
-		case 24: return "HelloWorld._point";
-		case 25: return "OrderedPair._orderedPair";
-		case 26: return "OrderedPair._orderedPair";
-		case 27: return "ReadPair._Pair";
-		case 28: return "ReadPair._Pair"; 
+		case 20: return "Derived._Triple"; 
 		default: return "";
 	}
 }
 
-static char* ReadPairFieldNameOfErr(uint64_t err) {
+static char* DerivedFieldNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "first";
 		case 2: return "second";
@@ -57,25 +49,29 @@ static char* ReadPairFieldNameOfErr(uint64_t err) {
 		case 17: return "y";
 		case 18: return "color";
 		case 19: return "color";
-		case 20: return "third";
-		case 21: return "f1";
-		case 22: return "f2";
-		case 23: return "x";
-		case 24: return "y";
-		case 25: return "lesser";
-		case 26: return "greater";
-		case 27: return "first";
-		case 28: return "second"; 
+		case 20: return "third"; 
 		default: return "";
 	}
 }
 
-BOOLEAN ReadPairCheckPair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len) {
-	uint64_t result = ReadPairValidatePair(x, y, len, base, 0);
+BOOLEAN DerivedCheckTriple(uint8_t *base, uint32_t len) {
+	uint64_t result = DerivedValidateTriple(len, base, 0);
 	if (EverParseResultIsError(result)) {
-		ReadPairEverParseError(
-	ReadPairStructNameOfErr(result),
-			ReadPairFieldNameOfErr (result),
+		DerivedEverParseError(
+	DerivedStructNameOfErr(result),
+			DerivedFieldNameOfErr (result),
+			EverParseErrorReasonOfResult(result));
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN DerivedCheckQuad(uint8_t *base, uint32_t len) {
+	uint64_t result = DerivedValidateQuad(len, base, 0);
+	if (EverParseResultIsError(result)) {
+		DerivedEverParseError(
+	DerivedStructNameOfErr(result),
+			DerivedFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;
 	}

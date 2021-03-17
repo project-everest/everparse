@@ -57,10 +57,69 @@ let fstar_args0 =
         "--include" :: (filename_concat kremlib "obj") ::
           "--include" :: ddd_prelude_home ::
             "--cmi" ::
+            "--warn_error" :: "+241" ::
               OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"
 
 let list_snoc q a =
   q @ [a]
+
+let fstar_args
+  out_dir
+=
+    "--odir" :: out_dir ::
+      "--cache_dir" :: out_dir ::
+        "--include" :: out_dir ::
+          "--load_cmxs" :: "WeakenTac" ::
+            fstar_args0
+
+let verify_fst_file
+  out_dir
+  file
+=
+  let fstar_args = list_snoc (fstar_args out_dir) file in
+  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args)
+
+let fstar_modul_of_filename fst =
+  let basename = remove_extension (basename fst) in
+  String.concat "." (List.map String.capitalize_ascii (String.split_on_char '.' basename))
+
+let fstar_extract_args out_dir fst =
+  "--extract_module" :: fstar_modul_of_filename fst ::
+    "--codegen" :: "Kremlin" ::
+      (list_snoc (fstar_args out_dir) fst)
+
+let extract_fst_file
+  out_dir
+  file
+=
+  run_cmd fstar_exe (fstar_extract_args out_dir file)
+
+let pretty_print_source_file
+  out_dir
+  file
+=
+  let fstar_args = list_snoc (fstar_args out_dir) file in
+  run_cmd fstar_exe ("--print_in_place" :: fstar_args)
+
+let pretty_print_source_module
+      out_dir
+      (file, modul)
+    : unit
+  =
+  let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
+  let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
+  let fsti_file = Printf.sprintf "%si" fst_file in
+  List.iter (pretty_print_source_file out_dir) [
+      types_fst_file;
+      fsti_file;
+      fst_file;
+  ]
+
+let pretty_print_source_modules
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+=
+  List.iter (pretty_print_source_module out_dir) files_and_modules
 
 let verify_and_extract_module
       out_dir
@@ -69,31 +128,16 @@ let verify_and_extract_module
   =
   let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
-  let types_modul = Printf.sprintf "%s.Types" modul in
   let fsti_file = Printf.sprintf "%si" fst_file in
-  let fstar_args =
-    "--odir" :: out_dir ::
-      "--cache_dir" :: out_dir ::
-        "--include" :: out_dir ::
-          "--load" :: "WeakenTac" ::
-            fstar_args0
-  in
-  let fstar_args_types_fst = list_snoc fstar_args (types_fst_file) in
-  let fstar_args_fsti = list_snoc fstar_args (fsti_file) in
-  let fstar_args_fst = list_snoc fstar_args (fst_file) in
-  run_cmd fstar_exe ("--print_in_place" :: fstar_args_types_fst);
-  run_cmd fstar_exe ("--print_in_place" :: fstar_args_fsti);
-  run_cmd fstar_exe ("--print_in_place" :: fstar_args_fst);
-  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_types_fst);
-  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fsti);
-  run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args_fst);
-  let fstar_extract_args fst modul =
-    "--extract_module" :: modul ::
-      "--codegen" :: "Kremlin" ::
-        (list_snoc fstar_args fst)
-  in
-  run_cmd fstar_exe (fstar_extract_args types_fst_file types_modul);
-  run_cmd fstar_exe (fstar_extract_args fst_file modul)
+  List.iter (verify_fst_file out_dir) [
+      types_fst_file;
+      fsti_file;
+      fst_file;
+  ];
+  List.iter (extract_fst_file out_dir) [
+      types_fst_file;
+      fst_file;
+  ]
 
 let is_krml
       filename
@@ -138,31 +182,35 @@ let remove_fst_and_krml_files
       Printf.sprintf "%s.krml" root_name;
     ]
 
-let produce_c_files
-      (skip_makefiles: bool)
-      (cleanup: bool)
-      (out_dir: string)
-      (files_and_modules: (string * string) list)
-    : unit
-  =
+let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,ResultOps,Prelude.\\*,Prelude,Actions"
+
+let fstar_kremlib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
+
+let krml_args skip_c_makefiles out_dir files_and_modules =
   let krml_files = List.fold_left
                      (fun accu (_, modul) ->
                        let l =
                          filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
-                           Printf.sprintf "%sWrapper.c" modul ::
-                             filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu
+                         filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu
                        in
+
+		       let c_wrapper = Printf.sprintf "%sWrapper.c" modul in
+		       let l =
+		         if (not skip_c_makefiles) && Sys.file_exists (filename_concat out_dir c_wrapper)
+                         then c_wrapper :: l
+                         else l in			 
+		       
                        let static_asserts = Printf.sprintf "%sStaticAssertions.c" modul in
-                       if Sys.file_exists (filename_concat out_dir static_asserts)
-                       then static_asserts :: l
-                       else l
+                       let l =
+		         if (not skip_c_makefiles) && Sys.file_exists (filename_concat out_dir static_asserts)
+                         then static_asserts :: l
+                         else l in
+		       l
                      )
                      all_everparse_krmls
                      files_and_modules
   in
   let krml_files = List.rev krml_files in
-  let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,ResultOps,Prelude.\\*,Prelude,Actions" in
-  let fstar_kremlib_bundle = "FStar.\\*,LowStar.\\*,C.\\*" in
   let krml_args =
     "-tmpdir" :: out_dir ::
       "-skip-compilation" ::
@@ -180,25 +228,20 @@ let produce_c_files
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
-                                    (krml_args0 @ krml_files)
-  in
-  let krml_args =
-    if skip_makefiles
+                                  krml_args0 @ krml_files
+    in
+    if skip_c_makefiles
     then "-skip-makefiles" :: krml_args
     else krml_args
-  in
-  (* bundle M.Types.krml and EverParse into M *)
-  let krml_args =
-    let bundle_types = List.fold_left (fun acc (_, modul) ->
-                           "-bundle"::(Printf.sprintf "%s=%s.Types"
-                                         modul
-                                         modul)::acc) [] files_and_modules in
-    krml_args@bundle_types@[
+
+let call_krml files_and_modules_cleanup out_dir krml_args =
+  (* append the everparse and kremlib bundles to the list of arguments *)
+  let krml_args = krml_args @ [
         "-bundle" ;
         Printf.sprintf "%s,%s[rename=Lib,rename-prefix]" fstar_kremlib_bundle everparse_only_bundle;
         "-bundle" ;
         Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
-      ]
+  ]
   in
   (* the argument list is too long, so we need to go through an argument file *)
   let argfile = Filename.temp_file ~temp_dir:out_dir "kremlinargs" ".rsp" in
@@ -214,12 +257,48 @@ let produce_c_files
   let (is_temp_krml, krml) = krml out_dir in
   print_endline (Printf.sprintf "KReMLin found at: %s" krml);
   run_cmd krml [Printf.sprintf "@%s" argfile];
-  if cleanup
-  then begin
+  begin match files_and_modules_cleanup with
+  | Some files_and_modules ->
       Sys.remove argfile;
       if is_temp_krml then Sys.remove krml;
       List.iter (remove_fst_and_krml_files out_dir) files_and_modules
-    end
+  | _ -> ()
+  end
+
+let produce_c_files
+      (skip_c_makefiles: bool)
+      (cleanup: bool)
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+    : unit
+  =
+  let krml_args = krml_args skip_c_makefiles out_dir files_and_modules in
+  (* bundle M.Types.krml and EverParse into M *)
+  let krml_args =
+    let bundle_types = List.fold_left (fun acc (_, modul) ->
+                           "-bundle"::(Printf.sprintf "%s=%s.Types"
+                                         modul
+                                         modul)::acc) [] files_and_modules in
+    krml_args@bundle_types
+  in
+  call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
+
+let produce_one_c_file
+      (out_dir: string)
+      (file: string)
+      (modul: string)
+      (dep_files_and_modules: (string * string) list)
+    : unit
+  =
+  let krml_args = krml_args true out_dir ((file, modul) :: dep_files_and_modules) in
+  let krml_args =
+    krml_args@
+      List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ [
+        "-bundle" ;
+        Printf.sprintf "%s=%s" modul (String.concat "," (Printf.sprintf "%s.Types" modul :: List.map (fun (_, m) -> Printf.sprintf "%s,%s.Types" m m) dep_files_and_modules));
+      ]
+  in
+  call_krml None out_dir krml_args
 
 (* Update EVERPARSEVERSION and FILENAME *)
 
@@ -263,36 +342,18 @@ let add_copyright_header
       hash_comment
       out_dir
       copyright_file
-      target_file_base
+      target_file
   =
-  let target_file = filename_concat out_dir target_file_base in
   if Sys.file_exists target_file
   then begin
       print_endline (Printf.sprintf "Adding copyright to %s from %s" target_file copyright_file);
       let tmp = Filename.temp_file "everparseaddcopyrightheader" ".tmp" in
       rename target_file tmp;
       let cout = open_out target_file in
-      replace_variables hash_comment target_file_base copyright_file cout;
+      replace_variables hash_comment (basename target_file) copyright_file cout;
       cat tmp cout;
       close_out cout;
       Sys.remove tmp
-    end
-
-let add_copyright
-      out_dir
-      (ddd_file, modul)
-  =
-  let copyright_file = Printf.sprintf "%s.copyright.txt" ddd_file in
-  if Sys.file_exists copyright_file
-  then begin
-      let h = Hashing.hash_as_comment ddd_file in
-      List.iter (add_copyright_header (Some h) out_dir copyright_file) [
-          Printf.sprintf "%s.c" modul;
-          Printf.sprintf "%s.h" modul;
-          Printf.sprintf "%sWrapper.c" modul;
-          Printf.sprintf "%sWrapper.h" modul;
-          Printf.sprintf "%sStaticAssertions.c" modul;
-        ]
     end
 
 (* Collect all produced .c and .h files *)
@@ -306,6 +367,8 @@ let collect_file
   else accu
 
 let collect_files_from
+      (produced_files: bool)
+      (wrappers: bool)
       out_dir
       accu
       (_, modul)
@@ -316,16 +379,28 @@ let collect_files_from
   List.fold_left
     collect_file'
     accu
-    [
-      Printf.sprintf "%s.c" modul;
-      Printf.sprintf "%s.h" modul;
-      Printf.sprintf "%sWrapper.c" modul;
-      Printf.sprintf "%sWrapper.h" modul;
-      Printf.sprintf "%sStaticAssertions.c" modul;
-    ]
+    begin
+      begin if produced_files then
+              [
+                Printf.sprintf "%s.c" modul;
+                Printf.sprintf "%s.h" modul;
+              ]
+            else []
+      end @
+      begin if wrappers then
+              [
+                Printf.sprintf "%sWrapper.c" modul;
+                Printf.sprintf "%sWrapper.h" modul;
+                Printf.sprintf "%sStaticAssertions.c" modul;
+              ]
+            else []
+      end
+    end
 
 let collect_files
       no_everparse_h
+      (produced_files: bool)
+      (wrappers: bool)
       out_dir
       files_and_modules
   =
@@ -339,12 +414,28 @@ let collect_files
     else
       accu
   in
-  List.fold_left (collect_files_from out_dir) accu files_and_modules
+  List.fold_left (collect_files_from produced_files wrappers out_dir) accu files_and_modules
 
+let add_copyright
+      (produced_files: bool)
+      (wrappers: bool)
+      out_dir
+      ((ddd_file, _) as dm)
+  =
+  let copyright_file = Printf.sprintf "%s.copyright.txt" ddd_file in
+  if Sys.file_exists copyright_file
+  then begin
+      let h = Hashing.hash_as_comment ddd_file in
+      List.iter (add_copyright_header (Some h) out_dir copyright_file) (collect_files_from produced_files wrappers out_dir [] dm)
+    end
+
+  
 (* Call clang-format *)
 
 let call_clang_format
       (no_everparse_h: bool)
+      (produced_files: bool)
+      (wrappers: bool)
       (clang_format_exe0: string)
       (out_dir: string)
       (files_and_modules: (string * string) list)
@@ -354,10 +445,14 @@ let call_clang_format
     then clang_format_exe0
     else Printf.sprintf "clang-format%s" (if Sys.win32 then ".exe" else "")
   in
+  let files = collect_files no_everparse_h produced_files wrappers out_dir files_and_modules in
+  match files with
+  | [] -> ()
+  | _ ->
   let clang_format_args =
     "-i" ::
       "--style=file" ::
-        collect_files no_everparse_h out_dir files_and_modules
+        files
   in
   run_cmd clang_format_exe clang_format_args
 
@@ -370,13 +465,27 @@ let hashed_files
   {
     Hashing.c = filename_concat out_dir (Printf.sprintf "%s.c" modul);
     Hashing.h = filename_concat out_dir (Printf.sprintf "%s.h" modul);
-    Hashing.wrapper_c = filename_concat out_dir (Printf.sprintf "%sWrapper.c" modul);
-    Hashing.wrapper_h = filename_concat out_dir (Printf.sprintf "%sWrapper.h" modul);
+    Hashing.wrapper_c =
+      begin
+        let w = filename_concat out_dir (Printf.sprintf "%sWrapper.c" modul) in
+        if Sys.file_exists w
+        then Some w
+        else None
+      end;
+    Hashing.wrapper_h =
+      begin
+        let w = filename_concat out_dir (Printf.sprintf "%sWrapper.h" modul) in
+        if Sys.file_exists w
+        then Some w
+        else None
+      end;
     Hashing.assertions =
-      let assertions = filename_concat out_dir (Printf.sprintf "%sStaticAssertions.c" modul) in
-      if Sys.file_exists assertions
-      then Some assertions
-      else None;
+      begin
+        let assertions = filename_concat out_dir (Printf.sprintf "%sStaticAssertions.c" modul) in
+        if Sys.file_exists assertions
+        then Some assertions
+        else None
+      end;
   }
 
 let check_inplace_hash
@@ -419,12 +528,20 @@ let save_hashes
     let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
     Hashing.save_hashes file (Some c) json
 
-(* Summary *)
+(* Copy .clang-format *)
 
-let postprocess
+let copy_clang_format out_dir =
+  copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format")
+
+(* Postprocess C files, assuming that they have already been processed *)
+
+let postprocess_c
+      (produced_files: bool)
+      (wrappers: bool)
       (clang_format: bool)
       (clang_format_executable: string)
-      (skip_makefiles: bool)
+      (copy_clang_format_opt: bool)
+      (skip_c_makefiles: bool)
       (cleanup: bool)
       (no_everparse_h: bool)
       (save_hashes_opt: bool)
@@ -432,14 +549,6 @@ let postprocess
       (files_and_modules: (string * string) list)
     : unit
   =
-  (* produce the .checked and .krml files.
-     FIXME: modules can be processed in parallel *)
-  List.iter (verify_and_extract_module out_dir) files_and_modules;
-  let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
-  (* produce the C files *)
-  produce_c_files skip_makefiles cleanup out_dir files_and_modules;
-  if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
-  then failwith "krml produced some EverParse.h, should not have happened";
   (* copy EverParse.h unless prevented *)
   if not no_everparse_h
   then begin
@@ -450,20 +559,82 @@ let postprocess
   (* clang-format the files if asked for *)
   if clang_format
   then begin
-      copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format");
-      call_clang_format no_everparse_h clang_format_executable out_dir files_and_modules;
+      if copy_clang_format_opt then copy_clang_format out_dir;
+      call_clang_format no_everparse_h produced_files wrappers clang_format_executable out_dir files_and_modules;
     end;
   (* add copyright *)
-  List.iter (add_copyright out_dir) files_and_modules;
+  List.iter (add_copyright produced_files wrappers out_dir) files_and_modules;
   if not no_everparse_h
   then begin
       let copyright_txt = filename_concat ddd_home "copyright.txt" in
-      add_copyright_header None out_dir copyright_txt "EverParse.h"
+      add_copyright_header None out_dir copyright_txt (filename_concat out_dir "EverParse.h")
     end;
   (* save hashes *)
   if save_hashes_opt
   then List.iter (save_hashes out_dir) files_and_modules;
   ()
+
+let produce_and_postprocess_c
+      (clang_format: bool)
+      (clang_format_executable: string)
+      (skip_c_makefiles: bool)
+      (cleanup: bool)
+      (no_everparse_h: bool)
+      (save_hashes_opt: bool)
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+    : unit
+  =
+  let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
+  (* produce the C files *)
+  produce_c_files skip_c_makefiles cleanup out_dir files_and_modules;
+  if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
+  then failwith "krml produced some EverParse.h, should not have happened";
+  (* postprocess the produced C files *)
+  postprocess_c true true clang_format clang_format_executable true skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+
+let produce_and_postprocess_one_c
+      (clang_format: bool)
+      (clang_format_executable: string)
+      (out_dir: string)
+      (file: string)
+      (modul: string)
+      (dep_files_and_modules: (string * string) list)
+    : unit
+  =
+  let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
+  (* produce the .c and .h file *)
+  produce_one_c_file out_dir file modul dep_files_and_modules;
+  if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
+  then failwith "krml produced some EverParse.h, should not have happened";
+  (* postprocess the produced .c and .h files for this module *)
+  postprocess_c true false clang_format clang_format_executable false true false true false out_dir [file, modul]
+
+let postprocess_wrappers
+      (clang_format: bool)
+      (clang_format_executable: string)
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+    : unit
+  =
+  postprocess_c false true clang_format clang_format_executable false true false true false out_dir files_and_modules
+
+let postprocess_fst
+      (clang_format: bool)
+      (clang_format_executable: string)
+      (skip_c_makefiles: bool)
+      (cleanup: bool)
+      (no_everparse_h: bool)
+      (save_hashes_opt: bool)
+      (out_dir: string)
+      (files_and_modules: (string * string) list)
+    : unit
+  =
+  (* produce the .checked and .krml files.
+     FIXME: modules can be processed in parallel *)
+  List.iter (verify_and_extract_module out_dir) files_and_modules;
+  (* produce the .c and .h files and format them *)
+  produce_and_postprocess_c clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let check_all_hashes
       (ch: check_hashes_t)

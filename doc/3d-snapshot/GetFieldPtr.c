@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define T__F1 ((uint64_t)1U)
+#define GETFIELDPTR__T__F1 ((uint64_t)21U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define T__F2 ((uint64_t)2U)
+#define GETFIELDPTR__T__F2 ((uint64_t)22U)
 
 static inline uint64_t ValidateTF1(uint32_t InputLength, uint64_t StartPosition)
 /*++
@@ -29,7 +29,7 @@ static inline uint64_t ValidateTF1(uint32_t InputLength, uint64_t StartPosition)
   {
     endPositionOrError = StartPosition + (uint64_t)(uint32_t)(uint8_t)10U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, T__F1);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, GETFIELDPTR__T__F1);
 }
 
 static inline uint64_t
@@ -70,7 +70,7 @@ ValidateTF2(uint8_t **Out, uint32_t InputLength, uint8_t *Input, uint64_t StartP
   {
     endPositionOrError = positionAfterTF2;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, T__F2);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, GETFIELDPTR__T__F2);
 }
 
 uint64_t

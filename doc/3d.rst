@@ -6,7 +6,7 @@
 .. note::
 
    The documentation from this page covers the EverParse/3d releases
-   v2020.08.17 or later. Documentations for earlier versions may be
+   v2021.03.05 or later. Documentations for earlier versions may be
    found in the Git history.
 
 EverParse/3d lets you write a data format description and
@@ -97,6 +97,9 @@ On Windows: ``everparse.cmd`` [options] input_files
 
 On Linux: ``everparse.sh`` [options] input_files
 
+Default mode
+^^^^^^^^^^^^
+
 Options are treated from left to right:
 
 * ``--odir output_directory_name``
@@ -147,17 +150,6 @@ Options are treated from left to right:
 
   Keep all produced intermediate files. This is toggled by default.
 
-* ``--version``
-
-  Print the version of EverParse/3d and exit (do not process any
-  further options to the right, nor any files at all.)
-
-* ``--help``
-
-  Show the usage message and the status of some options given so far,
-  and exit (do not process any further options to the right, nor any
-  files at all.)
-
 Options are treated from left to right, with higher priority on
 right-most options. Thus, any ``--no_clang_format`` will override any
 occurrence of ``--clang_format`` or ``--clang_format_executable`` to
@@ -169,22 +161,142 @@ with a capital letter. Then, ``EverParse.h`` and
 ``EverParseEndianness.h`` will be shared across ``.c`` and ``.h``
 files produced for all the ``.3d`` files that you provided.
 
+Alternate mode: generating a Makefile
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, with ``--batch``, given a ``.3d`` specification, EverParse
+produces ``.c`` and ``.h`` files by first producing ``.fsti`` and
+``.fst`` files files containing verified F* specifications and
+implementations of validators, and then calling F* and KReMLin on each
+such file to verify and extract them to C. EverParse will issue all
+such calls to F* and KReMLin sequentially.
+
+Alternatively, with ``everparse.cmd --makefile gmake Test.3d`` (on
+Windows; use ``./everparse.sh`` on Linux), instead of producing ``.c``
+and ``.h`` files, EverParse will take ``Test.3d`` and all of the
+modules it depends on, and produce a GNU Makefile containing all
+recipes and rules to produce ``.c`` and ``.h`` files and all
+intermediate files with proper dependencies so that the user can
+leverage GNU Make parallelism for any rules that do not depend on one
+another. Other build systems are supported with variations of the
+``--makefile`` option, as stated below.
+
+The produced Makefile will make use of three variables:
+
+* ``EVERPARSE_CMD``: the command to run EverParse. This variable must
+  contain the path and name of the EverParse executable, and any
+  options (``--clang_format``, etc.) useful to produce .
+
+* ``EVERPARSE_INPUT_DIR``: the path to the input files.
+
 .. note::
 
-   If, along with some ``MyFile.3d``, in the same directory, you
-   provide a file ``MyFile.3d.copyright.txt`` that contains
-   syntactically correct C comments (with ``//`` or ``/* ... */``),
-   then EverParse will prepend ``MyFile.c``, ``MyFileWrapper.c`` and
-   their corresponding ``.h`` with these comments. You do not need to
-   mention this file on the command line.
+  (FIXME) Currently, all ``.3d`` files shall be located in the same
+  input directory.
 
-   These comments can contain the following special symbols:
+* ``EVERPARSE_OUTPUT_DIR``: the path to the output files. EverParse
+  will append the ``--odir`` option appropriately.
 
-   * ``EVERPARSEVERSION``, which EverParse will automatically replace
-     with its version number;
+* ``CC``: the path and name of the C compiler that will be used to
+  compile the produced C files.
 
-   * ``FILENAME``, which EverParse will automatically replace with the
-     name of the ``.c`` / ``.h`` file being generated.
+* ``CFLAGS``: options to provide to the C compiler to compile the
+  produced C files.
+
+The produced Makefile, by default called ``EverParse.Makefile``, is
+meant to be included in the main ``Makefile`` of your project. On
+Linux, such a typical main ``Makefile`` for use with GNU Make may look
+like:
+
+.. literalinclude:: Sample.EverParse.Makefile
+    :language: make
+
+EverParse supports the following command-line options relevant to this
+mode:
+
+* ``--makefile gmake``: produce a Makefile for use with GNU Make.
+
+* ``--makefile nmake``: produce a Makefile for use with Microsoft
+  NMAKE.
+
+* ``--makefile_name my_file_name``: the name of the produced Makefile
+  shall be ``my_file_name`` instead of the default
+  ``EverParse.Makefile``.
+
+* ``--skip_o_rules``: do not output rules that would produce ``.o``
+  files by compiling ``.c`` files.
+
+Alternate mode: hash checking
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To speed up some scenarios where the user maintains a snapshot of the
+generated .c and .h files to skip unnecessary verification time when
+.3d files are not changed, EverParse provides an optional mechanism to
+record the hash of .3d, .c and .h files and to compare them to skip
+reverification and regeneration. This mechanism is disabled by
+default, and has to be explicitly enabled using the ``--check_hashes``
+option as described below.  **WARNING:** this mode will weaken
+verification guarantees to the probability of hash collisions!
+
+If enabled, then EverParse checks the hashes of the .3d and maybe .c
+and .h files (depending on the variant, as described below) and fails
+if hashes do not match; no verification or regeneration is performed
+at all.
+
+Hashes are computed and checked using the `EverCrypt
+<https://hacl-star.github.io/HaclValeEverCrypt.html>`_ verified
+cryptographic library, which is included in EverParse binary packages.
+
+Options relevant to this mode:
+
+* ``--save_hashes``: save the hashes of the contents of source .3d, .c
+  and .h files into a .json file. This option can be added in default
+  mode when generating .c and .h files.
+
+* ``--check_hashes strong`` : checks the hashes of the contents of
+  source .3d, .c and .h files, by reading the recorded hash from the
+  .json file created by ``--save_hashes``.
+
+* ``--check_hashes weak`` : checks the hashes of the contents of
+  source .3d files only, by reading the recorded hash from the .json
+  file created by ``--save_hashes``, leaving the option for the user
+  to manually change the generated .c and .h files (**WARNING:** this
+  will void all verification guarantees!)
+
+* ``--check_hashes inplace``: same as ``--check_hashes weak``, but
+  uses the hash recorded in the copyright header of the generated .c
+  and .h files instead of the .json file. The hash is introduced by
+  using the ``EVERPARSEHASHES`` keyword in the corresponding
+  ``.copyright.txt`` used to prepend generated .c and .h files with
+  copyright headers; see `Copyright headers
+  <3d-lang.html#adding-copyright-notices-to-produced-c-h-files>`_ for
+  more details.
+
+* ``--check_inplace_hash MyFile.3d=MyFile.h``: same as
+  ``--check_hashes inplace``, but instead manually specifies the pair
+  of the source ``.3d`` file and the already-generated ``.h`` (or
+  ``.c``) file in which to check the hash. This option can be
+  specified several times to provide several such pairs to check.
+
+
+Alternate mode: help and version
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some options make EverParse do nothing other than show a help or
+version message:
+
+* ``--version``
+
+  Print the version of EverParse/3d and exit (do not process any
+  further options to the right, nor any files at all.)
+
+* ``--help``
+
+  Show the usage message and the status of some options given so far,
+  and exit (do not process any further options to the right, nor any
+  files at all.)
+
+
 
 Optional: From the sources
 --------------------------

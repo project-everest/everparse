@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define BOUNDEDSUM__LEFT ((uint64_t)1U)
+#define BOUNDEDSUMCONST__BOUNDEDSUM__LEFT ((uint64_t)8U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define BOUNDEDSUM__RIGHT ((uint64_t)2U)
+#define BOUNDEDSUMCONST__BOUNDEDSUM__RIGHT ((uint64_t)9U)
 
 static inline uint64_t ValidateBoundedSumLeft(uint32_t InputLength, uint64_t StartPosition)
 /*++
@@ -30,7 +30,10 @@ static inline uint64_t ValidateBoundedSumLeft(uint32_t InputLength, uint64_t Sta
   {
     endPositionOrError = StartPosition + (uint64_t)4U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, BOUNDEDSUM__LEFT);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      BOUNDEDSUMCONST__BOUNDEDSUM__LEFT);
 }
 
 static inline uint64_t
@@ -78,7 +81,10 @@ ValidateBoundedSumRight(
       EverParseCheckConstraintOk(boundedSumRightConstraintIsOk,
         positionAfterBoundedSumRight);
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, BOUNDEDSUM__RIGHT);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      BOUNDEDSUMCONST__BOUNDEDSUM__RIGHT);
 }
 
 uint64_t

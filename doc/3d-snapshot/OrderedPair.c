@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define ORDEREDPAIR__LESSER ((uint64_t)1U)
+#define ORDEREDPAIR__ORDEREDPAIR__LESSER ((uint64_t)25U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define ORDEREDPAIR__GREATER ((uint64_t)2U)
+#define ORDEREDPAIR__ORDEREDPAIR__GREATER ((uint64_t)26U)
 
 static inline uint64_t ValidateOrderedPairLesser(uint32_t InputLength, uint64_t StartPosition)
 /*++
@@ -30,7 +30,10 @@ static inline uint64_t ValidateOrderedPairLesser(uint32_t InputLength, uint64_t 
   {
     endPositionOrError = StartPosition + (uint64_t)4U;
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, ORDEREDPAIR__LESSER);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      ORDEREDPAIR__ORDEREDPAIR__LESSER);
 }
 
 static inline uint64_t
@@ -74,7 +77,10 @@ ValidateOrderedPairGreater(
       EverParseCheckConstraintOk(orderedPairGreaterConstraintIsOk,
         positionAfterOrderedPairGreater);
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, ORDEREDPAIR__GREATER);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      ORDEREDPAIR__ORDEREDPAIR__GREATER);
 }
 
 uint64_t

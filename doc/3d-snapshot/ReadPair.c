@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define PAIR__FIRST ((uint64_t)1U)
+#define READPAIR__PAIR__FIRST ((uint64_t)27U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define PAIR__SECOND ((uint64_t)2U)
+#define READPAIR__PAIR__SECOND ((uint64_t)28U)
 
 static inline uint64_t
 ValidatePairFirst(uint32_t *X, uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
@@ -50,7 +50,7 @@ ValidatePairFirst(uint32_t *X, uint32_t InputLength, uint8_t *Input, uint64_t St
       endPositionOrError = EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
     }
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, PAIR__FIRST);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, READPAIR__PAIR__FIRST);
 }
 
 static inline uint64_t
@@ -91,7 +91,7 @@ ValidatePairSecond(uint32_t *Y, uint32_t InputLength, uint8_t *Input, uint64_t S
       endPositionOrError = EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
     }
   }
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, PAIR__SECOND);
+  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, READPAIR__PAIR__SECOND);
 }
 
 uint64_t

@@ -391,6 +391,25 @@ let prog = list decl & option type_refinement
 // Utilities
 ////////////////////////////////////////////////////////////////////////////////
 
+(** Entrypoint and export definitions *)
+
+let has_entrypoint (l:list attribute) : Tot bool =
+  Some? (List.Tot.tryFind (function Entrypoint -> true | _ -> false) l)
+
+let is_entrypoint_or_export d = match d.d_decl.v with
+  | Record names _ _ _
+  | CaseType names _ _ ->
+    if has_entrypoint (names.typedef_attributes)
+    then true
+    else d.d_exported
+  | _ -> d.d_exported
+
+let is_entrypoint d = match d.d_decl.v with
+  | Record names _ _ _
+  | CaseType names _ _ ->
+    has_entrypoint (names.typedef_attributes)
+  | _ -> false
+
 (** Equality on expressions and types **)
 
 /// eq_expr partially decides equality on expressions, by requiring

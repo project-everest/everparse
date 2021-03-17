@@ -42,6 +42,10 @@ Manual
 Papers
 ------
 
+`DICE*: A Formally Verified Implementation of DICE Measured Boot <https://www.microsoft.com/en-us/research/publication/dice-a-formally-verified-implementation-of-dice-measured-boot/>`_;
+  Zhe Tao, Aseem Rastogi, Naman Gupta, Kapil Vaswani and Aditya V. Thakur;
+  To appear in Proceedings of the 30th USENIX Security Symposium, 2021
+
 `A Security Model and Fully Verified Implementation for the IETF QUIC Record Layer <https://project-everest.github.io/assets/everquic.pdf>`_;
   Antoine Delignat-Lavaud, Cedric Fournet, Bryan Parno, Jonathan Protzenko, Tahina Ramananandro, Jay Bosamiya, Joseph Lallemand, Itsaka Rakotonirina, and Yi Zhou;
   To appear in Proceedings of the 42nd IEEE Symposium on Security and Privacy, 2021
