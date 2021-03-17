@@ -509,6 +509,11 @@ These comments can contain the following special symbols:
 * ``FILENAME``, which EverParse will automatically replace with the
   name of the ``.c`` / ``.h`` file being generated.
 
+* ``EVERPARSEHASHES``, which EverParse will automatically replace with
+  a hash of the contents of the corresponding .3d file for the purpose
+  of ``--check_hashes inplace`` or ``--check_inplace_hash`` (see `Hash
+  checking <3d.html#alternate-mode-hash-checking>`_).
+
   
 Modular structure and files
 ---------------------------

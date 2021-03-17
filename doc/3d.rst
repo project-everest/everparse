@@ -226,6 +226,59 @@ mode:
 * ``--skip_o_rules``: do not output rules that would produce ``.o``
   files by compiling ``.c`` files.
 
+Alternate mode: hash checking
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To speed up some scenarios where the user maintains a snapshot of the
+generated .c and .h files to skip unnecessary verification time when
+.3d files are not changed, EverParse provides an optional mechanism to
+record the hash of .3d, .c and .h files and to compare them to skip
+reverification and regeneration. This mechanism is disabled by
+default, and has to be explicitly enabled using the ``--check_hashes``
+option as described below.  **WARNING:** this mode will weaken
+verification guarantees to the probability of hash collisions!
+
+If enabled, then EverParse checks the hashes of the .3d and maybe .c
+and .h files (depending on the variant, as described below) and fails
+if hashes do not match; no verification or regeneration is performed
+at all.
+
+Hashes are computed and checked using the `EverCrypt
+<https://hacl-star.github.io/HaclValeEverCrypt.html>`_ verified
+cryptographic library, which is included in EverParse binary packages.
+
+Options relevant to this mode:
+
+* ``--save_hashes``: save the hashes of the contents of source .3d, .c
+  and .h files into a .json file. This option can be added in default
+  mode when generating .c and .h files.
+
+* ``--check_hashes strong`` : checks the hashes of the contents of
+  source .3d, .c and .h files, by reading the recorded hash from the
+  .json file created by ``--save_hashes``.
+
+* ``--check_hashes weak`` : checks the hashes of the contents of
+  source .3d files only, by reading the recorded hash from the .json
+  file created by ``--save_hashes``, leaving the option for the user
+  to manually change the generated .c and .h files (**WARNING:** this
+  will void all verification guarantees!)
+
+* ``--check_hashes inplace``: same as ``--check_hashes weak``, but
+  uses the hash recorded in the copyright header of the generated .c
+  and .h files instead of the .json file. The hash is introduced by
+  using the ``EVERPARSEHASHES`` keyword in the corresponding
+  ``.copyright.txt`` used to prepend generated .c and .h files with
+  copyright headers; see `Copyright headers
+  <3d-lang.html#adding-copyright-notices-to-produced-c-h-files>`_ for
+  more details.
+
+* ``--check_inplace_hash MyFile.3d=MyFile.h``: same as
+  ``--check_hashes inplace``, but instead manually specifies the pair
+  of the source ``.3d`` file and the already-generated ``.h`` (or
+  ``.c``) file in which to check the hash. This option can be
+  specified several times to provide several such pairs to check.
+
+
 Alternate mode: help and version
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
