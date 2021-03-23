@@ -9,6 +9,13 @@ module BF = LowParse.BitFields
 // Bit fields
 ////////////////////////////////////////////////////////////////////////////////
 [@CInline]
+let get_bitfield16 (value:U16.t)
+                   (bitsFrom:U32.t{U32.v bitsFrom < 16})
+                   (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 16})
+   : i:U16.t{FStar.UInt.size (U16.v i) (U32.v bitsTo - U32.v bitsFrom)}
+   = BF.uint16.BF.get_bitfield_gen value bitsFrom bitsTo
+
+[@CInline]
 let get_bitfield32 (value:U32.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 32})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 32})
