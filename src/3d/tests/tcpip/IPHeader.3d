@@ -1,0 +1,78 @@
+//
+// Internet Datagram Header from RFC 791
+//
+// Also used by the ICMP messages (RFC 792)
+//
+
+#define _MAX_UINT32_     0xffffffff
+
+export
+typedef struct _IP_DATAGRAM_HEADER_PARAMETRIZED (
+    Bool SpecificToS,
+    UINT8 ToSVal,
+    Bool SpecificProtocol,
+    UINT8 ProtocolVal)
+{
+    //RFC 791 describes Version 4
+
+    UINT16                                               Version:4
+    {
+        Version == 4
+    };
+
+    //Length of the header in 32 bit words, minimum value 5
+
+    UINT16                                               IHL:4
+    {
+        (5 <= IHL) && (IHL < (_MAX_UINT32_ / 4))
+    };
+
+    //Type of Service may be a specific value, in the case of ICMP (RFC 792) for example
+
+    UINT16                                               ToS:8
+    {
+        (!SpecificToS) || (ToS == ToSVal)
+    };
+
+    //Total length of the IP datagram
+
+    UINT16                                               TotalLength;
+
+    UINT16                                               Identification;
+
+    //Flags is 3 bits, the first bit is 0
+
+    UINT16                                               Flags_0:1
+    {
+        Flags_0 == 0
+    };
+    UINT16                                               Flags_1_2:2;
+
+    UINT16                                               FragmentOffset:13;
+
+    UINT8                                                TimeToLive;
+
+    //Also could be a specific value, e.g. ICMP
+    UINT8                                                Protocol
+    {
+        (!SpecificProtocol) || (Protocol == ProtocolVal)
+    };
+
+    UINT16                                               HeaderCheckSum;
+
+    UINT32                                               SourceAddress;
+
+    UINT32                                               DestinationAddress;
+
+    //TODO: RFC 791 defines Options precisely, underspecifying for now
+    //Note, base type is UINT32, so that it ends on a 32bit boundary
+    
+    UINT32                                               OptionsAndPadding [:byte-size ((UINT32) IHL) * 4 - sizeof (this)];
+
+} IP_DATAGRAM_HEADER_PARAMETRIZED;
+
+
+export
+typedef struct _IP_DATAGRAM_HEADER {
+    IP_DATAGRAM_HEADER_PARAMETRIZED (false, 0, false, 0)    Header;
+} IP_DATAGRAM_HEADER;
