@@ -19,3 +19,8 @@ typedef struct _BF3 {
    UINT32 y : 10;
    UINT32 z : 16;
 } BF3;
+
+typedef struct _BF_UINT16 {
+    UINT16    f1:1  { f1 == 0 };
+    UINT16    f2:15;
+} BF_UINT16;
