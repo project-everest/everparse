@@ -122,6 +122,15 @@ typedef struct _OPTION(Bool MaxSegSizeAllowed)
     OPTION_PAYLOAD(OptionKind, MaxSegSizeAllowed) OptionPayload;
 } OPTION;
 
+/*++
+  The top-level type of a TCP Header
+
+  Arguments:
+
+  * UINT32 PacketLength, the size of the packet,
+    including both header and data, passed in by the caller
+
+  --*/
 export
 typedef struct _TCP_HEADER(UINT32 PacketLength)
 {
@@ -130,15 +139,14 @@ typedef struct _TCP_HEADER(UINT32 PacketLength)
   SEQ_NUMBER      SeqNumber;
   ACK_NUMBER      AckNumber;
   UINT16          DataOffset:4
-  {
-    sizeof(this) == 20 && //assert: static size in bytes is 20
-    sizeof(this) <= DataOffset && //DataOffset points after the static fields
-    DataOffset <= PacketLength && //DataOffset fits within PacketLength
-    DataOffset % 4 == 0 //DataOffset is 4-byte aligned
+  { //DataOffset is in units of 32 bit words
+    sizeof(this) == 20 && //Sanity check: static size in bytes of this type, excluding the variable length elements, is 20
+    sizeof(this) <= DataOffset * 4 && //DataOffset points after the static fields
+    DataOffset * 4 <= PacketLength
   };
   UINT16          Reserved:3
   {
-    Reserved == 0
+    Reserved == 0 //Reserved bytes are unused
   };
   UINT16          NS:1;
   UINT16          CWR:1;
@@ -160,6 +168,8 @@ typedef struct _TCP_HEADER(UINT32 PacketLength)
       UrgentPointer == 0 ||
       URG == 1 //UrgentPointer can only be set if the URG flag is set
   };
-  OPTION(SYN==1)  Options[:byte-size DataOffset - sizeof(this)];
+  //The SYN=1 condition indicates when MAX_SEG_SIZE option can be received
+  //This is an array of options consuming
+  OPTION(SYN==1)  Options[:byte-size (DataOffset * 4) - sizeof(this)];
   UINT8           Data[PacketLength - DataOffset];
 } TCP_HEADER;
