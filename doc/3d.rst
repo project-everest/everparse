@@ -191,8 +191,8 @@ The produced Makefile will make use of three variables:
 
 .. note::
 
-  (FIXME) Currently, all ``.3d`` files shall be located in the same
-  input directory.
+  Currently, all ``.3d`` files must be located in the same input
+  directory.
 
 * ``EVERPARSE_OUTPUT_DIR``: the path to the output files. EverParse
   will append the ``--odir`` option appropriately.

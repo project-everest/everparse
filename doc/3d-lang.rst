@@ -88,11 +88,6 @@ values:
 In this example, the validator for ``smoker`` will check that the
 value of the ``age`` field is at least 21.
 
-.. note::
-
-  (FIXME) Integer constants are currently considered to be 32-bit
-  integers; 3d does not support any kind of type casting at this time.
-
 The constraint language includes integer arithmetic (``+``, ``-``,
 ``*``, ``/``, ``==``, ``!=``, ``<=``, ``<``, ``>=``, ``>``) and
 Boolean propositional logic (``&&``, ``||``, ``!``)
@@ -206,7 +201,8 @@ Tagged unions
 -------------
 
 3d supports *tagged unions*: a data type can store a value named *tag*
-and a *payload* whose type depends on the tag value.
+and a *payload* whose type depends on the tag value. The tag does not
+need to be stored with the payload.
 
 For instance, the following description defines the type of an integer
 prefixed by its size in bits.
@@ -216,8 +212,7 @@ prefixed by its size in bits.
 
 .. note::
 
-  (FIXME) Currently, union cases can only be introduced by constants
-  defined with ``#define``. Due to current restrictions on
+  (FIXME) Due to current restrictions on
   double-fetches, 3d currently does not support unions tagged by enum
   values.
 
@@ -225,7 +220,9 @@ prefixed by its size in bits.
 
   3d does not enforce that all cases of a union be of the same size,
   and 3d does not introduce any implicit padding to enforce it. Nor
-  does 3d introduce any alignment padding.
+  does 3d introduce any alignment padding. This is in the spirit of
+  keeping 3d specifications explicit: if you want padding, you need to
+  add it explicitly.
 
 A ``casetype`` type actually defines an untagged union type dependent
 on an argument value, which can be reused, e.g. for several types that
@@ -358,10 +355,10 @@ Atomic actions
 
 * ``return e`` Returns a boolean value ``e``
 
-TODO:
-
-* We have experimental features for external calls in actions and for
-  an abort action.
+* ``abort``: Causes the current validation process to fail.
+  
+We plan to support additional user-defined actions as callbacks to
+external C functions.
   
 
 Composing atomic actions sequentially and conditionally
@@ -552,3 +549,300 @@ using a fully qualified name of the form ``<MODULE NAME>.<IDENTIFIER>``.
    :start-after: SNIPPET_START: Quad
    :end-before: SNIPPET_END: Quad
 
+
+A fully worked example: TCP Segment Headers
+-------------------------------------------
+
+The classic `IETF RFC 793 <https://tools.ietf.org/html/rfc793>`_ from
+1981 introduces the TCP protocol, including the format of the header
+of TCP segments. The format has been extended slightly since then, to
+accommodate new options and flags---this `Wikipedia page
+<https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure>`_
+provides a good summary. 
+
+Reproduced below is an ASCII depiction of the format of TCP
+headers. In this section, we show how to specify this format in
+3d. The full specification can be found `here <https://github.com/project-everest/everparse/tree/master/src/3d/tests/tcpip/TCP.3d>`_.
+
+
+.. code-block:: c
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |          Source Port          |       Destination Port        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                        Sequence Number                        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    Acknowledgment Number                      |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  Data |     |N|C|E|U|A|P|R|S|F|                               |
+   | Offset| Rese|S|W|C|R|C|S|S|Y|I|            Window             |
+   |       | rved| |R|E|G|K|H|T|N|N|                               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |           Checksum            |         Urgent Pointer        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    Options                    |    Padding    |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                             data                              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+Each ``-`` in the diagram represents a single bit, with fioelds
+separated by vertical bars ``|``.
+
+The main subtle element of the specification is the handling of the
+``DataOffset`` field. It is a 4-bit value representing an offset from
+the beginning of the segment, in 32-bit increments, of the start of
+the ``data`` field. The ``Options`` and ``Padding`` fields are
+optional, so the ``DataOffset`` field is used to encode the size of
+the ``Options`` field. As such, ``DataOffset`` is always at least
+``5``.
+
+The ``Options`` field itself is an array of tagged unions,
+representing various kinds of options. Padding and the end of the
+options array ensures that the ``data`` fields is always begins at a
+multiple of 32-bits from the start of the segment.
+
+Additionally, semantic constraints restrict the values of the fields
+depending on the values of some other fields. For example, the
+Acknowledgement number can only be non-zero when the ``ACK`` bit is
+set.
+
+To specify the type of a TCP header, we begin by defining some basic
+types.
+
+.. code-block:: c
+
+  typedef UINT16 PORT;
+  typedef UINT32 SEQ_NUMBER;
+  typedef UINT32 ACK_NUMBER;
+  typedef UINT16 WINDOW;
+  typedef UINT16 CHECK_SUM;
+  typedef UINT16 URGENT_PTR;
+
+The source and destination port each occupy 16 bits and are
+represented by a ``UINT16``; the sequence and acknowledgment number
+fields are ``UINT32`` etc.
+
+Next, we define the various kind of options that are allowed. Every
+option begins with an option kind tag, an 8-bit value. Depending on
+the option kind, a variable number of bits of an option value can
+follow. The permitted option kinds are:
+
+.. code-block:: c
+
+  #define OPTION_KIND_END_OF_OPTION_LIST 0x00
+  #define OPTION_KIND_NO_OPERATION 0x01
+  #define OPTION_KIND_MAX_SEG_SIZE 0x02
+  #define OPTION_KIND_WINDOW_SCALE 0x03
+  #define OPTION_KIND_SACK_PERMITTED 0x04
+  #define OPTION_KIND_SACK 0x05
+  #define OPTION_KIND_TIMESTAMP 0x08
+
+An ``OPTION`` is parameterized by a boolean, ``MaxSegSizeAllowed``,
+which constraints when the ``OPTION_KIND_MAX_SEG_SIZE`` is allowed to
+be present---it turns out, the ``SYN`` bit in the header must be set
+for this option to be allowed. The general shape of an ``OPTION`` is
+as below.
+
+.. code-block:: c
+
+  typedef struct _OPTION(Bool MaxSegSizeAllowed)
+  {
+      UINT8 OptionKind;
+      OPTION_PAYLOAD(OptionKind, MaxSegSizeAllowed) OptionPayload;
+  } OPTION;
+
+We have an ``OptionKind`` field followed by an ``OptionPayload`` that
+depends on the ``OptionKind`` and the ``MaxSegSizeAllowed`` flag.
+
+Next, to define the ``OPTION_PAYLOAD`` type, we use a ``casetype``, as
+shown below.
+
+.. code-block:: c
+
+  casetype _OPTION_PAYLOAD(UINT8 OptionKind, Bool MaxSegSizeAllowed)
+  {
+    switch(OptionKind)
+    {
+     case OPTION_KIND_END_OF_OPTION_LIST:
+       unit EndOfList;
+       
+     case OPTION_KIND_NO_OPERATION:
+       unit Noop;
+
+     case OPTION_KIND_MAX_SEG_SIZE:
+       MAX_SEG_SIZE_PAYLOAD(MaxSegSizeAllowed) MaxSegSizePayload;
+
+     case OPTION_KIND_WINDOW_SCALE:
+       WINDOW_SCALE_PAYLOAD WindowScalePayload;
+
+     case OPTION_KIND_SACK_PERMITTED:
+       UINT8 SackPermittedPayload;
+
+     case OPTION_KIND_SACK:
+       SELECTIVE_ACK_PAYLOAD SelectiveAckPayload;
+
+     case OPTION_KIND_TIMESTAMP:
+       TIMESTAMP_PAYLOAD TimestampPayload;
+    } 
+  } OPTION_PAYLOAD;
+
+In the first two cases of ``OptionKind``, no payload is expected. The
+``unit`` type in 3d is an empty type---it consumes no space in the
+message format.
+
+For ``OPTION_KIND_MAX_SEG_SIZE``, we have the following payload---the
+use of the ``where` constraint ensures that this case is present only
+when `MaxSegSizeAllowed == true``. The payload is a length field (4
+bytes) and a 2-byte ``MaxSegSize`` value.
+
+.. code-block:: c
+
+  typedef struct _MAX_SEG_SIZE_PAYLOAD(Bool MaxSegSizeAllowed)
+  where MaxSegSizeAllowed
+  {
+    UINT8 Length
+    {
+      Length == 4
+    };
+    UINT16 MaxSegSize;
+  } MAX_SEG_SIZE_PAYLOAD;
+
+The other cases are relatively straightforward, where
+``SELECTIVE_ACK_PAYLOAD`` and ``TIMESTAMP_PAYLOAD`` illustrate the use
+of variable length arrays.
+
+.. code-block::c
+
+  typedef struct _WINDOW_SCALE_PAYLOAD
+  {
+    UINT8 Length
+    {
+      Length == 3
+    };
+    UINT8 WindowScale;
+  } WINDOW_SCALE_PAYLOAD;
+
+
+  typedef struct _SELECTIVE_ACK_PAYLOAD
+  {
+    UINT8 Length
+    {
+      Length == 10 ||
+      Length == 18 ||
+      Length == 26 ||
+      Length == 34
+    };
+    UINT8 SelectiveAck[:byte-size (Length - 2)];
+  } SELECTIVE_ACK_PAYLOAD;
+
+  
+  typedef struct _TIMESTAMP_PAYLOAD
+  {
+    UINT8 Length
+    {
+      Length == 10
+    };
+    UINT8 TimeStamp[:byte-size (Length - 2)];
+  } TIMESTAMP_PAYLOAD;
+
+Finally, we can assemble our top-level TCP header type, as shown
+below. The specification of the options array is weaker than it could
+be. It currently permits an end-of-options-list option to appear
+anywhere in the Options list, rather than as just the last
+element. This can be improved by using a more advanced combinator from
+EverParse, however we leave it as is for simplicity of this example.
+
+.. code-block:: c
+
+  /*++
+    The top-level type of a TCP Header
+
+    Arguments:
+
+    * UINT32 SegmentLength, the size of the segment,
+      including both header and data, passed in by the caller
+
+    --*/
+  export
+  typedef struct _TCP_HEADER(UINT32 SegmentLength)
+  {
+    PORT            SourcePort;
+    PORT            DestinationPort;
+    SEQ_NUMBER      SeqNumber;
+    ACK_NUMBER      AckNumber;
+    UINT16          DataOffset:4
+    { //DataOffset is in units of 32 bit words
+      sizeof(this) <= DataOffset * 4 && //DataOffset points after the static fields
+      DataOffset * 4 <= SegmentLength //and within the current segment
+    };
+    UINT16          Reserved:3
+    {
+      Reserved == 0 //Reserved bytes are unused
+    };
+    UINT16          NS:1;
+    UINT16          CWR:1;
+    UINT16          ECE:1;
+    UINT16          URG:1;
+    UINT16          ACK:1
+    {
+      AckNumber == 0 ||
+      ACK == 1 //AckNumber can only be set if the ACK flag is set
+    } ;
+    UINT16          PSH:1;
+    UINT16          RST:1;
+    UINT16          SYN:1;
+    UINT16          FIN:1;
+    WINDOW          Window;
+    CHECK_SUM       CheckSum;
+    URGENT_PTR      UrgentPointer
+    {
+      UrgentPointer == 0 ||
+      URG == 1 //UrgentPointer can only be set if the URG flag is set
+    };
+    //The SYN=1 condition indicates when MAX_SEG_SIZE option can be received
+    //This is an array of options consuming
+    OPTION(SYN==1)  Options[:byte-size (DataOffset * 4) - sizeof(this)];
+    UINT8           Data[SegmentLength - (DataOffset * 4)];
+  } TCP_HEADER;
+
+  
+The type is parameterized by ``SegmentLength``, the size in bytes
+determined by the caller of the entire segment, including the header
+and the data.
+
+The first four fields, ``SourcePort``, ``DestinationPort``,
+``SeqNumber`` and ``AckNumber`` are straightforward.
+
+The ``DataOffset`` field is 4-bit value constrained to point beyond
+the static fields of the header. Here ``sizeof(this)`` is a 3d
+compile-time constant referring to the size of the non-variable length
+prefix of the current type, i.e., the sum of the length in bytes of
+all the fields up to the ``Options`` field. In this case, that number
+is ``20``. ``DataOffset`` is also constrained to reference an offset
+within the curent segment.
+
+Next, we have 3 reserved bits, following by 1 bit each for the 9
+flags. The ``Ack`` flag is interesting, since its constraints states
+that the ``AckNumber`` can be non-zero only if the ``Ack`` bit is set.
+
+Then, we have a ``Window`` and ``CheckSum``, both of which are
+straightforward. Note, we do not specify the ``CheckSum`` as part of
+the format---that's up to an application-specific check to
+confirm. Alternatively, one could check this using a user-provided
+action callback, though this is not yet supported.
+
+The ``UrgentPointer`` field is similar to ``AckNumber`` in that it can
+only be non-zero when the ``URG`` flag is set.
+
+Then, we have an ``Options`` array, using the condition ``SYN==1`` to
+determine the ``MaxSegSizeAllowed`` condition. The size in bytes of
+the options array is variable and includes also the padding field, to
+ensure 32-bit alignment. Note, this type is little too permissive, as
+it will permit options arrays where the end-of-list option kind is not
+necessarily only the last element.
+
+Finally, we have the data field itself, whose byte size is bytes is
+the computed expression.

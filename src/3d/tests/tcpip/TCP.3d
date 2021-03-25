@@ -132,7 +132,7 @@ typedef struct _OPTION(Bool MaxSegSizeAllowed)
 
   --*/
 export
-typedef struct _TCP_HEADER(UINT32 PacketLength)
+typedef struct _TCP_HEADER(UINT32 SegmentLength)
 {
   PORT            SourcePort;
   PORT            DestinationPort;
@@ -142,7 +142,7 @@ typedef struct _TCP_HEADER(UINT32 PacketLength)
   { //DataOffset is in units of 32 bit words
     sizeof(this) == 20 && //Sanity check: static size in bytes of this type, excluding the variable length elements, is 20
     sizeof(this) <= DataOffset * 4 && //DataOffset points after the static fields
-    DataOffset * 4 <= PacketLength
+    DataOffset * 4 <= SegmentLength
   };
   UINT16          Reserved:3
   {
@@ -171,5 +171,5 @@ typedef struct _TCP_HEADER(UINT32 PacketLength)
   //The SYN=1 condition indicates when MAX_SEG_SIZE option can be received
   //This is an array of options consuming
   OPTION(SYN==1)  Options[:byte-size (DataOffset * 4) - sizeof(this)];
-  UINT8           Data[PacketLength - DataOffset];
+  UINT8           Data[SegmentLength - (DataOffset * 4)];
 } TCP_HEADER;
