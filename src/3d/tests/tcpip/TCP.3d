@@ -1,0 +1,165 @@
+/*
+
+  Specifying the format of TCP headers, from RFC 793, augmented to
+  support more recent TCP option kinds and TCP flags.
+
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |          Source Port          |       Destination Port        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                        Sequence Number                        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    Acknowledgment Number                      |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  Data |     |N|C|E|U|A|P|R|S|F|                               |
+   | Offset| Rese|S|W|C|R|C|S|S|Y|I|            Window             |
+   |       | rved| |R|E|G|K|H|T|N|N|                               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |           Checksum            |         Urgent Pointer        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    Options                    |    Padding    |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                             data                              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+  The specification of the options array is weaker than it could be.
+  It currently permits an end-of-options-list option to appear
+  anywhere in the Options list, rather than as just the last element.
+
+  This can be improved by using a more advanced combinator from
+  EverParse, however we leave it as is for simplicity of this example.
+*/   
+
+typedef UINT16 PORT;
+typedef UINT32 SEQ_NUMBER;
+typedef UINT32 ACK_NUMBER;
+typedef UINT16 WINDOW;
+typedef UINT16 CHECK_SUM;
+typedef UINT16 URGENT_PTR;
+
+#define OPTION_KIND_END_OF_OPTION_LIST 0x00
+#define OPTION_KIND_NO_OPERATION 0x01
+#define OPTION_KIND_MAX_SEG_SIZE 0x02
+#define OPTION_KIND_WINDOW_SCALE 0x03
+#define OPTION_KIND_SACK_PERMITTED 0x04
+#define OPTION_KIND_SACK 0x05
+#define OPTION_KIND_TIMESTAMP 0x08
+
+typedef struct _MAX_SEG_SIZE_PAYLOAD(Bool MaxSegSizeAllowed)
+where MaxSegSizeAllowed
+{
+  UINT8 Length
+  {
+    Length == 4
+  };
+  UINT16 MaxSegSize;
+} MAX_SEG_SIZE_PAYLOAD;
+
+typedef struct _WINDOW_SCALE_PAYLOAD
+{
+  UINT8 Length
+  {
+    Length == 3
+  };
+  UINT8 WindowScale;
+} WINDOW_SCALE_PAYLOAD;
+
+
+typedef struct _SELECTIVE_ACK_PAYLOAD
+{
+  UINT8 Length
+  {
+    Length == 10 ||
+    Length == 18 ||
+    Length == 26 ||
+    Length == 34
+  };
+  UINT8 SelectiveAck[:byte-size (Length - 2)];
+} SELECTIVE_ACK_PAYLOAD;
+
+typedef struct _TIMESTAMP_PAYLOAD
+{
+  UINT8 Length
+  {
+    Length == 10
+  };
+  UINT8 TimeStamp[:byte-size (Length - 2)];
+} TIMESTAMP_PAYLOAD;
+
+casetype _OPTION_PAYLOAD(UINT8 OptionKind, Bool MaxSegSizeAllowed)
+{
+  switch(OptionKind)
+  {
+     case OPTION_KIND_END_OF_OPTION_LIST:
+       unit EndOfList;
+       
+     case OPTION_KIND_NO_OPERATION:
+       unit Noop;
+
+     case OPTION_KIND_MAX_SEG_SIZE:
+       MAX_SEG_SIZE_PAYLOAD(MaxSegSizeAllowed) MaxSegSizePayload;
+
+     case OPTION_KIND_WINDOW_SCALE:
+       WINDOW_SCALE_PAYLOAD WindowScalePayload;
+
+     case OPTION_KIND_SACK_PERMITTED:
+       UINT8 SackPermittedPayload;
+
+     case OPTION_KIND_SACK:
+       SELECTIVE_ACK_PAYLOAD SelectiveAckPayload;
+
+     case OPTION_KIND_TIMESTAMP:
+       TIMESTAMP_PAYLOAD TimestampPayload;
+  } 
+} OPTION_PAYLOAD;
+
+typedef struct _OPTION(Bool MaxSegSizeAllowed)
+{
+    UINT8 OptionKind;
+    OPTION_PAYLOAD(OptionKind, MaxSegSizeAllowed) OptionPayload;
+} OPTION;
+
+export
+typedef struct _TCP_HEADER(UINT32 PacketLength)
+{
+  PORT            SourcePort;
+  PORT            DestinationPort;
+  SEQ_NUMBER      SeqNumber;
+  ACK_NUMBER      AckNumber;
+  UINT16          DataOffset:4
+  {
+    sizeof(this) == 20 && //assert: static size in bytes is 20
+    sizeof(this) <= DataOffset && //DataOffset points after the static fields
+    DataOffset <= PacketLength && //DataOffset fits within PacketLength
+    DataOffset % 4 == 0 //DataOffset is 4-byte aligned
+  };
+  UINT16          Reserved:3
+  {
+    Reserved == 0
+  };
+  UINT16          NS:1;
+  UINT16          CWR:1;
+  UINT16          ECE:1;
+  UINT16          URG:1;
+  UINT16          ACK:1
+  {
+      AckNumber == 0 ||
+      ACK == 1 //AckNumber can only be set if the ACK flag is set
+  } ;
+  UINT16          PSH:1;
+  UINT16          RST:1;
+  UINT16          SYN:1;
+  UINT16          FIN:1;
+  WINDOW          Window;
+  CHECK_SUM       CheckSum;
+  URGENT_PTR      UrgentPointer
+  {
+      UrgentPointer == 0 ||
+      URG == 1 //UrgentPointer can only be set if the URG flag is set
+  };
+  OPTION(SYN==1)  Options[:byte-size DataOffset - sizeof(this)];
+  UINT8           Data[PacketLength - DataOffset];
+} TCP_HEADER;
