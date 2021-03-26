@@ -1,7 +1,7 @@
 QD_HOME ?= $(realpath ../../../..)
 export QD_HOME
 
-all: test
+all: all0
 
 EVERPARSE_HOME=$(QD_HOME)
 EVERPARSE_CMD=$(QD_HOME)/src/3d/3d
@@ -18,14 +18,26 @@ $(EVERPARSE_MAKEFILE): $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR)
 
 include $(EVERPARSE_MAKEFILE)
 
-test: $(EVERPARSE_ALL_O_FILES)
+ci: $(EVERPARSE_ALL_O_FILES)
 	! test -e $(EVERPARSE_OUTPUT_DIR)/EverParse.h
 	! test -e $(EVERPARSE_OUTPUT_DIR)/Lib.h
 	$(EVERPARSE_CMD) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.h
 	$(EVERPARSE_CMD) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.c
-	# +$(MAKE) -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -Wno-unused-function -I $(QD_HOME)/src/3d'
+
+ALL_O_FILES=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o
+
+$(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_OUTPUT_DIR)/TestWrapper.h
+	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -I $(EVERPARSE_HOME)/src/3d -c -o $@ $<
+
+$(EVERPARSE_OUTPUT_DIR)/test.exe: $(ALL_O_FILES)
+	$(CC) $(LDFLAGS) -o $@ $^
+
+test: $(EVERPARSE_OUTPUT_DIR)/test.exe
+	$<
+
+all0: ci test
 
 clean:
 	rm -rf $(EVERPARSE_OUTPUT_DIR)
 
-.PHONY: all test clean
+.PHONY: all all0 test clean ci
