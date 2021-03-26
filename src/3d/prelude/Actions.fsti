@@ -339,6 +339,30 @@ val read____UINT8
   : leaf_reader parse____UINT8
 
 inline_for_extraction noextract
+val validate____UINT16BE
+  : validator parse____UINT16BE
+
+inline_for_extraction noextract
+val read____UINT16BE
+  : leaf_reader parse____UINT16BE
+
+inline_for_extraction noextract
+val validate____UINT32BE
+  : validator parse____UINT32BE
+
+inline_for_extraction noextract
+val read____UINT32BE
+  : leaf_reader parse____UINT32BE
+
+inline_for_extraction noextract
+val validate____UINT64BE
+  : validator parse____UINT64BE
+
+inline_for_extraction noextract
+val read____UINT64BE
+  : leaf_reader parse____UINT64BE
+
+inline_for_extraction noextract
 val validate____UINT16
   : validator parse____UINT16
 

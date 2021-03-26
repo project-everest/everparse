@@ -1076,6 +1076,42 @@ let read____UINT8
   = lift_constant_size_leaf_reader LowParse.Low.Int.read_u8 1ul
 
 inline_for_extraction noextract
+let validate____UINT16BE
+  : validator parse____UINT16BE
+  = fun #inputLength input startPosition ->
+    LowStar.Comment.comment "Checking that we have enough space for a UINT16BE, i.e., 2 bytes";
+    LowParse.Low.Base.validate_total_constant_size_no_read parse____UINT16BE 2uL () (Ghost.elift1 LPL.slice_of (Ghost.hide input)) (LPL.slice_length input) startPosition
+
+inline_for_extraction noextract
+let read____UINT16BE
+  : leaf_reader parse____UINT16BE
+  = lift_constant_size_leaf_reader LowParse.Low.Int.read_u16 2ul
+
+inline_for_extraction noextract
+let validate____UINT32BE
+  : validator parse____UINT32BE
+  = fun #inputLength input startPosition ->
+    LowStar.Comment.comment "Checking that we have enough space for a ULONG, i.e., 4 bytes";
+    LowParse.Low.Base.validate_total_constant_size_no_read parse____UINT32BE 4uL () (Ghost.elift1 LPL.slice_of (Ghost.hide input)) (LPL.slice_length input) startPosition
+
+inline_for_extraction noextract
+let read____UINT32BE
+  : leaf_reader parse____UINT32BE
+  = lift_constant_size_leaf_reader LowParse.Low.Int.read_u32 4ul
+
+inline_for_extraction noextract
+let validate____UINT64BE
+  : validator parse____UINT64BE
+  = fun #inputLength input startPosition ->
+    LowStar.Comment.comment "Checking that we have enough space for a ULONG64BE, i.e., 8 bytes";
+    LowParse.Low.Base.validate_total_constant_size_no_read parse____UINT64BE 8uL () (Ghost.elift1 LPL.slice_of (Ghost.hide input)) (LPL.slice_length input) startPosition
+
+inline_for_extraction noextract
+let read____UINT64BE
+  : leaf_reader parse____UINT64BE
+  = lift_constant_size_leaf_reader LowParse.Low.Int.read_u64 8ul
+
+inline_for_extraction noextract
 let validate____UINT16
   : validator parse____UINT16
   = fun #inputLength input startPosition ->

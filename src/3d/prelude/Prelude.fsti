@@ -219,6 +219,31 @@ val kind____UINT8 : parser_kind true
 val parse____UINT8 : parser kind____UINT8 ___UINT8
 val read____UINT8 : reader parse____UINT8
 
+// Big-endian (or "network order")
+
+/// UInt16BE
+let ___UINT16BE : eqtype = U16.t
+inline_for_extraction noextract
+val kind____UINT16BE : parser_kind true
+val parse____UINT16BE : parser kind____UINT16BE ___UINT16BE
+val read____UINT16BE : reader parse____UINT16BE
+
+/// UInt32BE
+let ___UINT32BE : eqtype = U32.t
+inline_for_extraction noextract
+val kind____UINT32BE : parser_kind true
+val parse____UINT32BE : parser kind____UINT32BE ___UINT32BE
+val read____UINT32BE : reader parse____UINT32BE
+
+/// UInt64BE
+let ___UINT64BE : eqtype = U64.t
+inline_for_extraction noextract
+val kind____UINT64BE : parser_kind true
+val parse____UINT64BE : parser kind____UINT64BE ___UINT64BE
+val read____UINT64BE : reader parse____UINT64BE
+
+// Little-endian
+
 /// UInt16
 let ___UINT16 : eqtype = U16.t
 inline_for_extraction noextract
@@ -265,6 +290,11 @@ let max_int_sizes
 (*
  * AR: scaffolding for getting arithmetic error locations in the 3d file
  *)
+
+(* Identity function for endianness-only casts *)
+
+inline_for_extraction noextract
+let id (#t: Type) (x: t) : Tot t = x
 
 (*** UInt8 operations ***)
 unfold noextract
