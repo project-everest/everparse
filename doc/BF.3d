@@ -8,9 +8,9 @@ typedef struct _BF {
 
 // SNIPPET_START: BF2
 typedef struct _BF2 {
-  UINT8 x : 6;
-  UINT16 y : 10;
-  UINT16 z;
+  UINT16 x : 6;
+  UINT16 y : 12;
+  UINT8 z;
 } BF2;
 // SNIPPET_END: BF2
 
