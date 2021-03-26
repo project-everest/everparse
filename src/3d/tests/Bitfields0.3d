@@ -24,3 +24,9 @@ typedef struct _BF_UINT16 {
     UINT16    f1:1  { f1 == 0 };
     UINT16    f2:15;
 } BF_UINT16;
+
+export
+typedef struct _T {
+    UINT8  f1:1  { f1 == 0 };
+    UINT8  f2:7;
+} T;
