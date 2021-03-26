@@ -125,12 +125,49 @@ pair ordered by increasing values:
 Bitfields
 ---------
 
-TODO:
+Like in C, the fields of a struct type in 3d can include bitfields,
+i.e., unsigned integer types of user-specified width represented
+packed within unsigned integer fields of the canonical sizes UINT8,
+UINT16, UINT32 and UINT64.
 
-* What is the constraint on a bitfield type? on field sizes?
+Consider the following example:
 
-* Can constraints be put on indvidual fields of a bitfield? 
+.. literalinclude:: BF.3d
+    :language: c
+    :start-after: SNIPPET_START: BF
+    :end-before: SNIPPET_END: BF
 
+This defines a struct ``BF`` occupying 32 bits of memory, where the
+first 6 bits are for the field ``x``; the next 10 bits are for the
+field ``y``; and the following 16 bits are for the field ``z``.
+
+The fields ``x``, ``y``, and ``z`` can all be used in specifications
+and are implicitly promoted to the underlying integer type, ``UINT32``
+in this case, although the 3d verifier is aware of suitable bounds on
+the types, e.g., that ``0 <= x < 64``.
+
+3d implements C's rules for packing bit fields. For instance,
+
+.. literalinclude:: BF.3d
+    :language: c
+    :start-after: SNIPPET_START: BF2
+    :end-before: SNIPPET_END: BF2
+
+In ``BF2``, although ``x``, ``y`` and ``z`` cumulatively consume only
+32 bits, the layout of ``BF2`` is actually as shown below, consuming
+40 bits, since a given field must be represented within the bounds of
+a single underlying type---we have 2 unused bits after ``x`` and 6
+unused bits after ``y``.
+
+.. code-block:: c
+
+    0                   1                   2                   3                   4
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+   |     x     |Unu|         y         |  Unused   |               z               |
+   |           |sed|                   |           |                               |     
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+                
 
 Constants and Enumerations
 --------------------------
@@ -155,11 +192,39 @@ The first enum label must be associated with a value.
 The support type (here ``UINT32``) must be the same type as the type
 of the values associated to each label.
 
-.. note::
+Due to a limitation in the way 3d currently checks for the absence of
+double-fetches, values with enum type cannot be used in
+constraints. For example, the following code is currently rejected.
 
-  (FIXME) Contrary to type definitions, enum definitions must not be
-  followed by a ``;``
+.. code-block:: c
+                
+  UINT32 enum color {
+    red = 1,
+    green,
+    blue = 42
+  };
 
+  typedef struct _enum_constraint {
+    color col;
+    UINT32 x
+    {
+       x == 0 || color == green
+    };
+  } _enum_constraint ;
+
+With the following error message:
+
+.. code-block:: c
+
+   (Error) The type of this field does not have a reader, either because its values are too large or because reading it may incur a double fetch; subsequent fields cannot depend on it
+
+
+One must instead write:
+
+.. literalinclude:: EnumConstraint.3d
+
+We expect to lift this limitation soon.
+   
 Parameterized data types
 ------------------------
 
@@ -209,12 +274,6 @@ prefixed by its size in bits.
 
 .. literalinclude:: TaggedUnion.3d
     :language: c
-
-.. note::
-
-  (FIXME) Due to current restrictions on
-  double-fetches, 3d currently does not support unions tagged by enum
-  values.
 
 .. warning::
 

@@ -315,13 +315,18 @@ exported:
   |              { false }
   | EXPORT       { true }
 
+maybe_semi:
+  |           { () }
+  | SEMICOLON { () }
+
 typedef_pointer_name_opt:
   |                    { None }
   | COMMA STAR k=IDENT { Some k }
+
 decl_no_range:
   | MODULE i=IDENT EQ m=IDENT { ModuleAbbrev (i, m) }
   | DEFINE i=IDENT c=constant { Define (i, None, c) }
-  | t=IDENT ENUM i=IDENT LBRACE es=right_flexible_nonempty_list(COMMA, enum_case) RBRACE
+  | t=IDENT ENUM i=IDENT LBRACE es=right_flexible_nonempty_list(COMMA, enum_case) RBRACE maybe_semi
     { Enum(with_range (Type_app (t, [])) ($startpos(t)), i, es) }
   | b=attributes TYPEDEF t=typ i=IDENT SEMICOLON
     { TypeAbbrev (t, i) }
