@@ -1,7 +1,7 @@
 #include "ReadPairWrapper.h"
 #include "EverParse.h"
 #include "ReadPair.h"
-void ReadPairEverParseError(char *x, char *y, char *z);
+void ReadPairEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* ReadPairStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

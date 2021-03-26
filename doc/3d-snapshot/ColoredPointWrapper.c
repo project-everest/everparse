@@ -1,7 +1,7 @@
 #include "ColoredPointWrapper.h"
 #include "EverParse.h"
 #include "ColoredPoint.h"
-void ColoredPointEverParseError(char *x, char *y, char *z);
+void ColoredPointEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* ColoredPointStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

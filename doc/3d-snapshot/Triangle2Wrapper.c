@@ -1,7 +1,7 @@
 #include "Triangle2Wrapper.h"
 #include "EverParse.h"
 #include "Triangle2.h"
-void Triangle2EverParseError(char *x, char *y, char *z);
+void Triangle2EverParseError(char *StructName, char *FieldName, char *Reason);
 static char* Triangle2StructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

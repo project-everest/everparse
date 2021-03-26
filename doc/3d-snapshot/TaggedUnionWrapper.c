@@ -1,7 +1,7 @@
 #include "TaggedUnionWrapper.h"
 #include "EverParse.h"
 #include "TaggedUnion.h"
-void TaggedUnionEverParseError(char *x, char *y, char *z);
+void TaggedUnionEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* TaggedUnionStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

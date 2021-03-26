@@ -1,7 +1,7 @@
 #include "EnumConstraintWrapper.h"
 #include "EverParse.h"
 #include "EnumConstraint.h"
-void EnumConstraintEverParseError(char *x, char *y, char *z);
+void EnumConstraintEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* EnumConstraintStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";
