@@ -1094,7 +1094,9 @@ let get_bitfield_gen16
   (x: U16.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 16})
 : Tot (y: U16.t { U16.v y == get_bitfield (U16.v x) (U32.v lo) (U32.v hi) })
 = get_bitfield_eq_2 #16 (U16.v x) (U32.v lo) (U32.v hi);
-  (x `U16.shift_left` (16ul `U32.sub` hi)) `U16.shift_right` ((16ul `U32.sub` hi) `U32.add` lo)
+  (* avoid integer promotion again *)
+  let bf : U16.t = x `U16.shift_left` (16ul `U32.sub` hi) in
+  bf `U16.shift_right` ((16ul `U32.sub` hi) `U32.add` lo)
 
 inline_for_extraction
 let set_bitfield_gen16
