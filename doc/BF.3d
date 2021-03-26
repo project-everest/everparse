@@ -14,7 +14,7 @@ typedef struct _BF2 {
 } BF2;
 // SNIPPET_END: BF2
 
-export
+entrypoint
 typedef struct _dummy {
  unit emp;
 } dummy;
