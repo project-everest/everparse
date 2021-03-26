@@ -5,7 +5,7 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define TRIANGLE2__TRIANGLE__CORNERS ((uint64_t)39U)
+#define TRIANGLE2__TRIANGLE__CORNERS ((uint64_t)47U)
 
 typedef uint8_t *InputBufferT;
 

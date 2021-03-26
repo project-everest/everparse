@@ -4,30 +4,42 @@
 void BoundedSumConstEverParseError(char *x, char *y, char *z);
 static char* BoundedSumConstStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "Base._Pair";
-		case 2: return "Base._Pair";
-		case 3: return "Base._Mine";
-		case 4: return "Base._Mine";
-		case 5: return "BoundedSum._boundedSum";
-		case 6: return "BoundedSum._boundedSum";
-		case 7: return "BoundedSum.mySum";
-		case 8: return "BoundedSumConst._boundedSum";
-		case 9: return "BoundedSumConst._boundedSum"; 
+		case 1: return "BF._BF";
+		case 2: return "BF._BF";
+		case 3: return "BF._BF";
+		case 4: return "BF._BF2";
+		case 5: return "BF._BF2";
+		case 6: return "BF._BF2";
+		case 7: return "Base._Pair";
+		case 8: return "Base._Pair";
+		case 9: return "Base._Mine";
+		case 10: return "Base._Mine";
+		case 11: return "BoundedSum._boundedSum";
+		case 12: return "BoundedSum._boundedSum";
+		case 13: return "BoundedSum.mySum";
+		case 14: return "BoundedSumConst._boundedSum";
+		case 15: return "BoundedSumConst._boundedSum"; 
 		default: return "";
 	}
 }
 
 static char* BoundedSumConstFieldNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
-		case 1: return "first";
-		case 2: return "second";
-		case 3: return "f";
-		case 4: return "g";
-		case 5: return "left";
-		case 6: return "right";
-		case 7: return "bound";
-		case 8: return "left";
-		case 9: return "right"; 
+		case 1: return "x";
+		case 2: return "y";
+		case 3: return "z";
+		case 4: return "x";
+		case 5: return "y";
+		case 6: return "z";
+		case 7: return "first";
+		case 8: return "second";
+		case 9: return "f";
+		case 10: return "g";
+		case 11: return "left";
+		case 12: return "right";
+		case 13: return "bound";
+		case 14: return "left";
+		case 15: return "right"; 
 		default: return "";
 	}
 }

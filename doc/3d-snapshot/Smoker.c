@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define SMOKER__SMOKER__AGE ((uint64_t)29U)
+#define SMOKER__SMOKER__AGE ((uint64_t)37U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define SMOKER__SMOKER__CIGARETTESCONSUMED ((uint64_t)30U)
+#define SMOKER__SMOKER__CIGARETTESCONSUMED ((uint64_t)38U)
 
 static inline uint64_t
 ValidateSmokerCigarettesConsumed(uint32_t InputLength, uint64_t StartPosition)

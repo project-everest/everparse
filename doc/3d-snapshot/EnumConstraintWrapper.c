@@ -1,8 +1,8 @@
-#include "SmokerWrapper.h"
+#include "EnumConstraintWrapper.h"
 #include "EverParse.h"
-#include "Smoker.h"
-void SmokerEverParseError(char *x, char *y, char *z);
-static char* SmokerStructNameOfErr(uint64_t err) {
+#include "EnumConstraint.h"
+void EnumConstraintEverParseError(char *x, char *y, char *z);
+static char* EnumConstraintStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";
 		case 2: return "BF._BF";
@@ -31,22 +31,12 @@ static char* SmokerStructNameOfErr(uint64_t err) {
 		case 25: return "ColoredPoint._coloredPoint2";
 		case 26: return "Derived._Triple";
 		case 27: return "EnumConstraint._enum_constraint";
-		case 28: return "EnumConstraint._enum_constraint";
-		case 29: return "GetFieldPtr._T";
-		case 30: return "GetFieldPtr._T";
-		case 31: return "HelloWorld._point";
-		case 32: return "HelloWorld._point";
-		case 33: return "OrderedPair._orderedPair";
-		case 34: return "OrderedPair._orderedPair";
-		case 35: return "ReadPair._Pair";
-		case 36: return "ReadPair._Pair";
-		case 37: return "Smoker._smoker";
-		case 38: return "Smoker._smoker"; 
+		case 28: return "EnumConstraint._enum_constraint"; 
 		default: return "";
 	}
 }
 
-static char* SmokerFieldNameOfErr(uint64_t err) {
+static char* EnumConstraintFieldNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "x";
 		case 2: return "y";
@@ -75,27 +65,17 @@ static char* SmokerFieldNameOfErr(uint64_t err) {
 		case 25: return "color";
 		case 26: return "third";
 		case 27: return "col";
-		case 28: return "x";
-		case 29: return "f1";
-		case 30: return "f2";
-		case 31: return "x";
-		case 32: return "y";
-		case 33: return "lesser";
-		case 34: return "greater";
-		case 35: return "first";
-		case 36: return "second";
-		case 37: return "age";
-		case 38: return "cigarettesConsumed"; 
+		case 28: return "x"; 
 		default: return "";
 	}
 }
 
-BOOLEAN SmokerCheckSmoker(uint8_t *base, uint32_t len) {
-	uint64_t result = SmokerValidateSmoker(len, base, 0);
+BOOLEAN EnumConstraintCheckEnumConstraint(uint8_t *base, uint32_t len) {
+	uint64_t result = EnumConstraintValidateEnumConstraint(len, base, 0);
 	if (EverParseResultIsError(result)) {
-		SmokerEverParseError(
-	SmokerStructNameOfErr(result),
-			SmokerFieldNameOfErr (result),
+		EnumConstraintEverParseError(
+	EnumConstraintStructNameOfErr(result),
+			EnumConstraintFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;
 	}

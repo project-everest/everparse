@@ -211,7 +211,11 @@ let print_op_with_range ropt o =
   | IfThenElse -> "ite"
   | BitFieldOf i -> Printf.sprintf "get_bitfield%d" i
   | Cast from to ->
-    Printf.sprintf "FStar.Int.Cast.%s_to_%s" (print_integer_type from) (print_integer_type to)
+    let tfrom = print_integer_type from in
+    let tto = print_integer_type to in
+    if tfrom = tto
+    then "Prelude.id"
+    else Printf.sprintf "FStar.Int.Cast.%s_to_%s" tfrom tto
   | Ext s -> s
 
 let print_op = print_op_with_range None

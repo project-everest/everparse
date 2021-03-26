@@ -187,6 +187,9 @@ let as_integer_typ (i:ident) : ML integer_type =
     | "UINT16" -> UInt16
     | "UINT32" -> UInt32
     | "UINT64" -> UInt64
+  | "UINT16BE" -> UInt16
+  | "UINT32BE" -> UInt32
+  | "UINT64BE" -> UInt64
     | _ -> err ()
 
 /// Integer, hex and boolean constants

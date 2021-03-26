@@ -406,6 +406,25 @@ let kind____UINT8 : parser_kind true= LowParse.Spec.Int.parse_u8_kind
 let parse____UINT8 : parser kind____UINT8 ___UINT8 = LowParse.Spec.Int.parse_u8
 let read____UINT8 : reader parse____UINT8 = LowParse.Low.Int.read_u8
 
+/// UInt16BE
+inline_for_extraction noextract
+let kind____UINT16BE : parser_kind true = LowParse.Spec.BoundedInt.parse_u16_kind
+let parse____UINT16BE : parser kind____UINT16BE ___UINT16BE = LowParse.Spec.Int.parse_u16
+let read____UINT16BE : LPL.leaf_reader parse____UINT16BE = LowParse.Low.Int.read_u16
+
+/// UInt32BE
+inline_for_extraction noextract
+let kind____UINT32BE : parser_kind true = LowParse.Spec.BoundedInt.parse_u32_kind
+let parse____UINT32BE : parser kind____UINT32BE ___UINT32BE = LowParse.Spec.Int.parse_u32
+let read____UINT32BE : LPL.leaf_reader parse____UINT32BE = LowParse.Low.Int.read_u32
+
+/// UInt64BE
+inline_for_extraction noextract
+let kind____UINT64BE : parser_kind true = LowParse.Spec.Int.parse_u64_kind
+let parse____UINT64BE : parser kind____UINT64BE ___UINT64BE = LowParse.Spec.Int.parse_u64
+let read____UINT64BE : LPL.leaf_reader parse____UINT64BE = LowParse.Low.Int.read_u64
+
+
 /// UInt16
 inline_for_extraction noextract
 let kind____UINT16 : parser_kind true = LowParse.Spec.BoundedInt.parse_u16_kind

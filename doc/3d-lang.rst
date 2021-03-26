@@ -22,7 +22,7 @@ following 3d data format description:
 This data format is very similar to a C type description, where
 ``UINT16`` denotes the type of unsigned 16-bit integers, represented
 as little-endian; with the addition of the ``entrypoint`` keyword,
-which tells 3d to expose a validator to the final user.
+which tells 3d to expose the validator for the type to the final user.
 
 Once we run ``3d`` with this file, we obtain several files:
 
@@ -57,7 +57,7 @@ Then, since in this file the definition of ``point`` is not prefixed
 with ``entrypoint``, only ``triangle`` will have its validator exposed
 in ``TriangleWrapper.h``.
 
-There can be several definitions marked ``entrypoint`` in a given
+There can be multiple definitions marked ``entrypoint`` in a given
 ``.3d`` file.
 
 .. warning::
@@ -109,8 +109,8 @@ pair ordered by increasing values:
        :start-after: SNIPPET_START: boundedSumNaive
        :end-before: SNIPPET_END: boundedSumNaive
 
-   will fail at F* verification because the ``left + right`` sum must
-   be proven to not overflow *before* evaluating the condition. The
+   will fail at F* verification because the expression ``left + right``
+   must be proven to not overflow *before* evaluating the condition. The
    correct way of stating the condition is as follows:
 
    .. literalinclude:: BoundedSumConst.3d
@@ -118,19 +118,56 @@ pair ordered by increasing values:
        :start-after: SNIPPET_START: boundedSumCorrect
        :end-before: SNIPPET_END: boundedSumCorrect
 
-   which is correct because the right-hand-side condition of a ``&&``
-   is evaluated in a context where the left-hand-side can be assumed
-   to be true (thus ``42 - left`` will not underflow.)
+   This verifies because F* evaluates the right-hand-side
+   condition of a ``&&`` in a context where the left-hand-side
+   condition is assumed to be true (thus ``42 - left`` will not underflow.)
 
 Bitfields
 ---------
 
-TODO:
+Like in C, the fields of a struct type in 3d can include bitfields,
+i.e., unsigned integer types of user-specified width represented
+packed within unsigned integer fields of the canonical sizes
+UINT16, UINT32 and UINT64.
 
-* What is the constraint on a bitfield type? on field sizes?
+Consider the following example:
 
-* Can constraints be put on indvidual fields of a bitfield? 
+.. literalinclude:: BF.3d
+    :language: c
+    :start-after: SNIPPET_START: BF
+    :end-before: SNIPPET_END: BF
 
+This defines a struct ``BF`` occupying 32 bits of memory, where the
+first 6 bits are for the field ``x``; the next 10 bits are for the
+field ``y``; and the following 16 bits are for the field ``z``.
+
+The fields ``x``, ``y``, and ``z`` can all be used in specifications
+and are implicitly promoted to the underlying integer type, ``UINT32``
+in this case, although the 3d verifier is aware of suitable bounds on
+the types, e.g., that ``0 <= x < 64``.
+
+3d implements C's rules for packing bit fields. For instance,
+
+.. literalinclude:: BF.3d
+    :language: c
+    :start-after: SNIPPET_START: BF2
+    :end-before: SNIPPET_END: BF2
+
+In ``BF2``, although ``x``, ``y`` and ``z`` cumulatively consume only
+26 bits, the layout of ``BF2`` is actually as shown below, consuming
+40 bits, since a given field must be represented within the bounds of
+a single underlying type---we have 10 unused bits after ``x`` and 4
+unused bits after ``y``.
+
+.. code-block:: c
+
+    0                   1                   2                   3                   4
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+   |     x     |       Unused      |           y           |Unused |        z      |
+   |           |                   |                       |       |               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+                
 
 Constants and Enumerations
 --------------------------
@@ -145,8 +182,8 @@ Alternatively, 3d provides a way to define enumerated types:
 .. literalinclude:: Color.3d
     :language: c
 
-Then, the validator for ``coloredPoint`` will check that the value of
-``col`` is either 1, 2 (for ``green``), or 42.
+The validator for ``coloredPoint`` will check that the value of
+the field ``col`` is either 1, 2 (for ``green``), or 42.
 
 Contrary to structs, enum types cannot be marked ``entrypoint``.
 
@@ -155,10 +192,39 @@ The first enum label must be associated with a value.
 The support type (here ``UINT32``) must be the same type as the type
 of the values associated to each label.
 
-.. note::
+Due to a limitation in the way 3d currently checks for the absence of
+double-fetches, values with enum type cannot be used in
+constraints. For example, the following code is currently rejected.
 
-  (FIXME) Contrary to type definitions, enum definitions must not be
-  followed by a ``;``
+.. code-block:: c
+                
+  UINT32 enum color {
+    red = 1,
+    green,
+    blue = 42
+  };
+
+  typedef struct _enum_constraint {
+    color col;
+    UINT32 x
+    {
+       x == 0 || color == green
+    };
+  } _enum_constraint ;
+
+With the following error message:
+
+.. code-block:: c
+
+   (Error) The type of this field does not have a reader, either because its values are too large or because reading it may incur a double fetch; subsequent fields cannot depend on it
+
+
+One must instead write:
+
+.. literalinclude:: EnumConstraint.3d
+
+We expect to lift this limitation soon.
+
 
 Parameterized data types
 ------------------------
@@ -174,7 +240,7 @@ argument:
     :start-after: SNIPPET_START: boundedSum
     :end-before: SNIPPET_END: boundedSum
 
-Then, these arguments will add up to the arguments of the
+Then, these arguments will show up as arguments of the
 corresponding validator in the ``BoundedSumWrapper.h`` header produced
 by 3d:
 
@@ -197,24 +263,23 @@ arguments holds before even trying to check its contents:
 .. literalinclude:: BoundedSumWhere.3d
     :language: c
 
+In this case, the validator for ``boundedSum`` would check
+that ``bound <= 1729``, before validating its fields.
+   
+
 Tagged unions
 -------------
 
 3d supports *tagged unions*: a data type can store a value named *tag*
 and a *payload* whose type depends on the tag value. The tag does not
-need to be stored with the payload.
+need to be stored with the payload (e.g. it could be a parameter to the
+type).
 
 For instance, the following description defines the type of an integer
 prefixed by its size in bits.
 
 .. literalinclude:: TaggedUnion.3d
     :language: c
-
-.. note::
-
-  (FIXME) Due to current restrictions on
-  double-fetches, 3d currently does not support unions tagged by enum
-  values.
 
 .. warning::
 
@@ -298,7 +363,7 @@ couple of mutable locations of your choosing. Here's how:
 .. literalinclude:: ReadPair.3d
     :language: c
 
-The struct ``Pair`` is takes two out-parameters, ``x`` and ``y``. Out
+The struct ``Pair`` takes two out-parameters, ``x`` and ``y``. Out
 parameters are signified by the ``mutable`` keyword and have pointer
 types---in this case ``UINT32*``. Each field in the struct is
 augmented with an ``on-success`` action, where the action's body is a
@@ -334,7 +399,7 @@ other fields continues by returning a boolean---in case an on-success
 action returns false, the validation of the type halts with an error.
 
 The on-error handler also returns a boolean: in case it returns false,
-the error code associated with the validator is mentions that an
+the error code associated with the validator mentions that an
 on-error handler failed; if it returns true, the error code is the
 error code associated with the failed validation of the base field. In
 both cases, validation halts with an error.
@@ -343,10 +408,12 @@ both cases, validation halts with an error.
 Atomic actions
 ^^^^^^^^^^^^^^
 
+* Expression ``e`` consist of variables and constants.
+
 * ``*i = e``: Assigns the value of the expressions ``e`` to the memory referenced by the pointer ``i``.
   
 * ``*i``: Dereferences the pointer ``i``
-  
+
 * ``field_pos``: Returns the offset of base field of the action from
   the base of the validation buffer as a ``UINT32`` value.
 
@@ -366,16 +433,16 @@ Composing atomic actions sequentially and conditionally
 
 Composite actions can be built in a few ways:
 
-* Atomic actions: Any atomic action ``a`` the ``a;`` (with a trailing
+* Atomic actions: For any atomic action ``a``, ``a;`` (with a trailing
   semicolon) is a composite action ``p``.
 
 * Sequential composition: ```a; p`` Given an atomic action ``a``, and
   a compositite action ``p``, the form ``a;p`` runs ``a`` then ``p``.
 
 * Variable binding: ``var x = a; p`` Given an atomic action ``a``,
-  and a compositite action ``p``, the form ``var x = a; p`` runs ``a``
-  and stores its result in the new variable ``x`` (local to the
-  action) and then runs ``p``.
+  and a compositite action ``p``, the form ``var x = a; p`` runs ``a``,
+  stores its result in the new variable ``x`` (local to the
+  action), and then runs ``p`` (where ``p`` may mention `x`
 
 * Conditionals: ``if (e) { p }`` is a conditional action that runs the
   composite actions ``p`` only if the condition ``e`` is

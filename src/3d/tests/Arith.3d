@@ -68,3 +68,11 @@ typedef struct _Check {
    UINT32 l_shl {l_shl == a << a};
    UINT32 m_not {!(m_not == 17) || l_shl == k_shr};
 } Check;
+
+// Big-endian
+entrypoint
+typedef struct _Test_be {
+  UINT32BE x {x < 64};
+  UINT32 y {y == x};
+  UINT64 z {z == x};
+} Test_be;
