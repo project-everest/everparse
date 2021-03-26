@@ -73,7 +73,7 @@ following properties:
 
 * *Write footprint*: The validator does not modify the input array,
   and only modifies memory as described by user-controlled imperative
-  actions that are explicit in the specification
+  actions that are explicit in the specification.
 
 * *No heap allocation*: The validator does not allocate any memory on
   the heap.

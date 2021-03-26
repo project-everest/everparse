@@ -3,11 +3,34 @@
 The 3d Dependent Data Description language
 ==========================================
 
-3d supports (nested) structs, constraints, enums, parameterized data
-types, tagged or otherwise value-dependent unions, fixed-size arrays,
-and variable-size arrays. In addition to data validation, 3d also
-supports *local actions* to pass values read from the data structure,
-or pointers to them, to the caller code.
+3d supports several fixed-width integer base types, (nested) structs,
+constraints, enums, parameterized data types, tagged or otherwise
+value-dependent unions, fixed-size arrays, and variable-size
+arrays. In addition to data validation, 3d also supports *local
+actions* to pass values read from the data structure, or pointers to
+them, to the caller code.
+
+Base types
+----------
+
+The primitive types in 3d include unsigned integers of the following
+flavors:
+
+* UINT8: 8-bit unsigned little-endian integer
+* UINT16: 16-bit unsigned little-endian integer
+* UINT32: 32-bit unsigned little-endian integer
+* UINT64: 64-bit unsigned little-endian integer
+
+We also provide big-endian unsigned integers:
+
+* UINT16BE: 16-bit unsigned big-endian integer
+* UINT32BE: 32-bit unsigned big-endian integer
+* UINT64BE: 64-bit unsigned big-endian integer
+
+Big-endian integers are often useful in describing network message
+formats. 3d ensures suitable endianness conversions are applied when
+comparing or equating integers of different endianness. We show an
+example of this :ref:`below <sec-constraints>`.
 
 Structs
 -------
@@ -75,6 +98,7 @@ There can be multiple definitions marked ``entrypoint`` in a given
   * in ``coloredPoint2``, 3d will not introduce any padding after the
     ``color`` field.
 
+.. _sec-constraints:
 Constraints
 -----------
 
