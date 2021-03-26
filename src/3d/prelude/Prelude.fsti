@@ -19,7 +19,7 @@ include ResultOps
 module U32 = FStar.UInt32
 module U16 = FStar.UInt16
 module U64 = FStar.UInt64
-#push-options "--initial_fuel 6 --max_fuel 6 --z3rlimit_factor 4"
+
 let pow2_values (x:nat) : Lemma
   (let p = pow2 x in
    match x with
@@ -34,9 +34,15 @@ let pow2_values (x:nat) : Lemma
    | 8  -> p=256
    | _ -> True)
   [SMTPat (pow2 x)]
-  = ()
-#pop-options
-
+  = norm_spec [delta;zeta;primops] (pow2 0);
+    norm_spec [delta;zeta;primops] (pow2 1);
+    norm_spec [delta;zeta;primops] (pow2 2);
+    norm_spec [delta;zeta;primops] (pow2 3);
+    norm_spec [delta;zeta;primops] (pow2 4);
+    norm_spec [delta;zeta;primops] (pow2 5);
+    norm_spec [delta;zeta;primops] (pow2 6);
+    norm_spec [delta;zeta;primops] (pow2 7);
+    norm_spec [delta;zeta;primops] (pow2 8)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Parsers
