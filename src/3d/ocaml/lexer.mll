@@ -128,8 +128,8 @@ rule token =
   | "{"            { locate lexbuf LBRACE }
   | "}"            { locate lexbuf RBRACE }
   | "[:byte-size"                { locate lexbuf LBRACK_BYTESIZE }
-  | "[:byte-size-at-most"        { locate lexbuf LBRACK_BYTESIZE_AT_MOST }
-  | "[:byte-size-single-element-array" { locate lexbuf LBRACK_SINGLE_ELEMENT_BYTESIZE }
+  | "[:byte-size-single-element-array-at-most"      { locate lexbuf LBRACK_BYTESIZE_AT_MOST }
+  | "[:byte-size-single-element-array-exact"        { locate lexbuf LBRACK_SINGLE_ELEMENT_BYTESIZE }
   | "[:zeroterm"     { locate lexbuf LBRACK_STRING }
   | "[:zeroterm-byte-size-at-most"     { locate lexbuf LBRACK_STRING_AT_MOST }
   | "["                          { locate lexbuf LBRACK (* intended for use with UINT8 arrays only, interpreted as [:byte-size] *)}
