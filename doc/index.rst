@@ -23,6 +23,9 @@ in a style common to many RFCs. We have used it to generate message
 processing code for several networking protocols, including TLS and
 QUIC.
 
+EverParse is open-source and available on `GitHub
+<https://github.com/project-everest/everparse/>`_. EverParse is part
+of `Project Everest <https://project-everest.github.io/>`_.
 
 Releases
 --------
