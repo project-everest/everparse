@@ -19,8 +19,8 @@ verification is available in the `documentation of EverCrypt
 EverParse provides similar formal guarantees except
 secret-independence.
 
-tl;dr Summary
--------------
+Summary
+-------
 
 1. Write your data format description in the 3d language, as
    ``MyFile1.3d``, ``MyFile2.3d``.
@@ -52,6 +52,35 @@ Then, EverParse/3d produces:
 3. Insert ``#include "MyFile1Wrapper.h"`` into any of your C
    compilation units that need to call a validator from
    ``MyFile1.3d``, and similarly for ``MyFile2.3d``.
+
+Formal guarantees
+^^^^^^^^^^^^^^^^^
+
+For each message type in the source data formats, the generated C code
+provides a _validator_, a procedure to determine if a given input
+array of bytes contains a valid representation of a message, with the
+following properties:
+
+* *Memory safety*: The validator is `memory safe <http://www.pl-enthusiast.net/2014/07/21/memory-safety/>`_, meaning it never
+  accesses memory out of bounds, accesses memory at an incompatible
+  type, uses memory after it has been freed, etc.
+
+* *Arithmetic safety*: The validator has no integer overflows or underflows.
+
+* *Double-fetch freedom*: The validator reads every byte in the input array at
+  most once, defending against certain kinds of
+  `time-of-check/time-of-use <https://cwe.mitre.org/data/definitions/367.html>`_ bugs.
+
+* *Write footprint*: The validator does not modify the input array,
+  and only modifies memory as described by user-controlled imperative
+  actions that are explicit in the specification
+
+* *No heap allocation*: The validator does not allocate any memory on
+  the heap.
+
+* *Functionally correct*: The validator accepts all input arrays that
+  contain valid representations of the message according to its
+  specification, rejecting all others.
 
 The 3d Dependent Data Description language
 ------------------------------------------
