@@ -29,8 +29,8 @@ We also provide big-endian unsigned integers:
 
 Big-endian integers are often useful in describing network message
 formats. 3d ensures suitable endianness conversions are applied when
-comparing or equating integers of different endianness. We show an
-example of this :ref:`below <sec-constraints>`.
+comparing or equating integers represented in different endianness. We
+show an example of this :ref:`below <sec-constraints>`.
 
 Structs
 -------
@@ -99,6 +99,7 @@ There can be multiple definitions marked ``entrypoint`` in a given
     ``color`` field.
 
 .. _sec-constraints:
+
 Constraints
 -----------
 
@@ -857,7 +858,7 @@ EverParse, however we leave it as is for simplicity of this example.
       including both header and data, passed in by the caller
 
     --*/
-  export
+  entrypoint
   typedef struct _TCP_HEADER(UINT32 SegmentLength)
   {
     PORT            SourcePort;
@@ -937,3 +938,31 @@ necessarily only the last element.
 
 Finally, we have the data field itself, whose byte size is bytes is
 the computed expression.
+
+Generated code
+..............
+
+Running the EverParse toolchain on the TCP segment header
+specification produces a C procedure with the following signature, in ``TCPWrapper.h``:
+
+
+.. code-block:: c
+
+   BOOLEAN TcpCheckTcpHeader(uint32_t ___SegmentLength, uint8_t *base, uint32_t len);
+
+This procedure is a validator for the ``TCP_HEADER`` type. The caller
+passes in three parameters:
+
+* ``__SegmentLength``, representing the ``SegmentLength`` argument of
+  the ``TCPHeader`` type in the 3d specification.
+
+* ``base``: a pointer to an array of bytes
+
+* ``len``: a lower bound on the length of that array that ``base``
+  points to.
+
+``TcpCheckTcpHeader`` returns ``TRUE`` if, and only if, the contents
+of ``base`` represent a valid ``TCPHeader``, while enjoying all the
+guarantees of memory safety, arithmetic safety, double-fetch freedom,
+not modifying any of the caller's memory, not allocating any heap
+data, and being provably functional correct.
