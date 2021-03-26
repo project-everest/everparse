@@ -19,7 +19,7 @@ include ResultOps
 module U32 = FStar.UInt32
 module U16 = FStar.UInt16
 module U64 = FStar.UInt64
-
+#push-options "--initial_fuel 6 --max_fuel 6 --z3rlimit_factor 4"
 let pow2_values (x:nat) : Lemma
   (let p = pow2 x in
    match x with
@@ -35,7 +35,7 @@ let pow2_values (x:nat) : Lemma
    | _ -> True)
   [SMTPat (pow2 x)]
   = ()
-
+#pop-options
 
 
 ////////////////////////////////////////////////////////////////////////////////
