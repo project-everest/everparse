@@ -414,14 +414,9 @@ Atomic actions
   
 * ``*i``: Dereferences the pointer ``i``
 
-//AR: is the following true? field_pos is from the base of the validation
-//    buffer or offset in the current struct?
-  
 * ``field_pos``: Returns the offset of base field of the action from
   the base of the validation buffer as a ``UINT32`` value.
 
-//AR: abstract comes up for the first time
-  
 * ``field_ptr``: Returns a pointer to base field of the action as a
   ``PUINT8``, i.e., an abstract pointer to a ``UINT8``.
 
@@ -471,12 +466,6 @@ i.e., pointer to a pointer to a ``UINT8``.
 Associated with field ``f2`` we have an on-success handler, where we
 read a pointer to the field ``f2`` into the local variable ``x``;
 then, we write ``x`` into ``*out``; and finally return ``true``.
-
-//AR: Is this trying to say that: if out parameters were allowed to be
-//    UINT8*, a caller could have asked us to write some fieldptr
-//    into a UINT8*, and then later for some other struct, pass us the
-//    same UINT8* to check some constraint with it, causing double
-//    reads from that?
 
 .. note:: The return type of ``field_ptr`` is ``PUINT8``. In
    EverParse, a ``PUINT8`` is a pointer into the input buffer, unlike
