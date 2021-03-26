@@ -5,12 +5,12 @@
 /*
 Auto-generated field identifier for error reporting
 */
-#define READPAIR__PAIR__FIRST ((uint64_t)27U)
+#define READPAIR__PAIR__FIRST ((uint64_t)35U)
 
 /*
 Auto-generated field identifier for error reporting
 */
-#define READPAIR__PAIR__SECOND ((uint64_t)28U)
+#define READPAIR__PAIR__SECOND ((uint64_t)36U)
 
 static inline uint64_t
 ValidatePairFirst(uint32_t *X, uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)

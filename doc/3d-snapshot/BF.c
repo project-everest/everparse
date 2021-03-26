@@ -19,3 +19,8 @@ uint64_t BfValidateDummy(uint32_t InputLength, uint8_t *Input, uint64_t StartPos
   return ValidateDummyEmp(StartPosition);
 }
 
+void BfReadDummy(uint32_t InputLength, uint8_t *Input, uint32_t StartPosition)
+{
+  
+}
+
