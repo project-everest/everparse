@@ -1,7 +1,7 @@
 #include "BoundedSumWhereWrapper.h"
 #include "EverParse.h"
 #include "BoundedSumWhere.h"
-void BoundedSumWhereEverParseError(char *x, char *y, char *z);
+void BoundedSumWhereEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* BoundedSumWhereStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

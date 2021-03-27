@@ -1,7 +1,7 @@
 #include "BFWrapper.h"
 #include "EverParse.h"
 #include "BF.h"
-void BFEverParseError(char *x, char *y, char *z);
+void BFEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* BFStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

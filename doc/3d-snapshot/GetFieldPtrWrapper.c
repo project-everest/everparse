@@ -1,7 +1,7 @@
 #include "GetFieldPtrWrapper.h"
 #include "EverParse.h"
 #include "GetFieldPtr.h"
-void GetFieldPtrEverParseError(char *x, char *y, char *z);
+void GetFieldPtrEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* GetFieldPtrStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

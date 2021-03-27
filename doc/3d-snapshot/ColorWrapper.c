@@ -1,7 +1,7 @@
 #include "ColorWrapper.h"
 #include "EverParse.h"
 #include "Color.h"
-void ColorEverParseError(char *x, char *y, char *z);
+void ColorEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* ColorStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

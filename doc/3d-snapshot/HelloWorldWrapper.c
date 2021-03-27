@@ -1,7 +1,7 @@
 #include "HelloWorldWrapper.h"
 #include "EverParse.h"
 #include "HelloWorld.h"
-void HelloWorldEverParseError(char *x, char *y, char *z);
+void HelloWorldEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* HelloWorldStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

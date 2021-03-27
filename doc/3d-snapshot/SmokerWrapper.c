@@ -1,7 +1,7 @@
 #include "SmokerWrapper.h"
 #include "EverParse.h"
 #include "Smoker.h"
-void SmokerEverParseError(char *x, char *y, char *z);
+void SmokerEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* SmokerStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

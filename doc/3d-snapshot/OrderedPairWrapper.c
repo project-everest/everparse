@@ -1,7 +1,7 @@
 #include "OrderedPairWrapper.h"
 #include "EverParse.h"
 #include "OrderedPair.h"
-void OrderedPairEverParseError(char *x, char *y, char *z);
+void OrderedPairEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* OrderedPairStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";

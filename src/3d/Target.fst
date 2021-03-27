@@ -1012,7 +1012,7 @@ let print_c_entry (modul: string)
       (signatures |> String.concat "\n\n")
   in
   let error_callback_proto =
-    Printf.sprintf "void %sEverParseError(char *x, char *y, char *z);"
+    Printf.sprintf "void %sEverParseError(char *StructName, char *FieldName, char *Reason);"
       modul
   in
   let impl =

@@ -1,7 +1,7 @@
 #include "DerivedWrapper.h"
 #include "EverParse.h"
 #include "Derived.h"
-void DerivedEverParseError(char *x, char *y, char *z);
+void DerivedEverParseError(char *StructName, char *FieldName, char *Reason);
 static char* DerivedStructNameOfErr(uint64_t err) {
 	switch (EverParseFieldIdOfResult(err)) {
 		case 1: return "BF._BF";
