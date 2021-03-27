@@ -349,17 +349,6 @@ When ``sizeof(T) = 1``, 3d supports the notation ``T f[n]``, i.e., for
 byte arrays, since the byte size and element count coincide, you need
 not qualify the size of the array with a ``:byte-size`` qualifier.
 
-Upper-bounded byte-sized arrays
-...............................
-
-* ``T f[:byte-size-at-most n]``
-
-Sometimes, it is required to specify that a variable size array has a
-cumulative length that fits within some given byte size bound. This
-can be specified in 3d using the notation above, which introduces a
-field ``f`` of ``T``-typed elements whose cumulative size in bytes
-less than or equal to ``n``.
-
 Singleton arrays of variable size
 .................................
 
@@ -369,6 +358,13 @@ In some cases, it is required to specify that a field contains a
 single variable-sized element whose size in bytes is equal to a given
 expression. The notation above introduces a field ``f`` that contains
 a single element of type ``T`` occupying exactly ``n`` bytes.
+
+A variation is:
+
+* ``T f[:byte-size-single-element-array-at-most n]``
+
+similar to the previous form, but where ``n`` is an upper bound on the
+size in bytes.
 
 We expect to add several other kinds of variable-length array-like
 types in the uture.
