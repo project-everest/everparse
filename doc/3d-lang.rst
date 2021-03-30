@@ -637,6 +637,8 @@ using a fully qualified name of the form ``<MODULE NAME>.<IDENTIFIER>``.
    :start-after: SNIPPET_START: Quad
    :end-before: SNIPPET_END: Quad
 
+A commented example is available `in the EverParse repository
+<https://github.com/project-everest/everparse/blob/master/src/3d/tests/modules/>`_.
 
 A fully worked example: TCP Segment Headers
 -------------------------------------------

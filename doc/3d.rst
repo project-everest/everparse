@@ -240,6 +240,10 @@ like:
 .. literalinclude:: Sample.EverParse.Makefile
     :language: make
 
+A fully commented version of that main ``Makefile`` is available `in
+the EverParse repository
+<https://github.com/project-everest/everparse/blob/master/src/3d/tests/modules/Makefile>`_.
+
 EverParse supports the following command-line options relevant to this
 mode:
 
