@@ -1,0 +1,105 @@
+ T0 ::= uint8 | ... | uint32
+ T  ::= x:T0{e}
+ n ::= 0 | 1 | ...
+ e ::= x | op e e | true | false | n
+
+ t ::= T
+    |  t * t'
+    |  x:T & t'
+    |  if e then t1 else t2
+    |  array_byte_size e t
+    |  array_X ...
+
+
+ [[ . ]] : t -> p:parser t
+              & validator p
+              & (b:buffer u8 -> ST (repr p))
+
+
+ repr T   = unit -> T
+ repr (t * t')   = repr t * repr t'
+ repr (x:T & t') = unit -> (x:T & repr t')
+ repr (if e then t1 else t2) = if e then repr t1 else repr t2
+ repr (array_byte_size e t) = vec t
+
+// repr (x:T & t') = repr T * (unit -> (x:erased T & repr t'))
+
+
+
+  vec t = {
+                is_nil : unit -> bool;
+                head : unit -> repr t;
+                tail : unit -> vec t
+          }
+
+        = len:nat & lbuffer len u8
+
+
+
+
+  iterator t = {
+                 has_next : unit -> bool;
+                 get_next : unit -> ST (repr t);
+                 reset : unit -> unit
+                }
+
+--------------------------------------------------------------------------------
+
+class repr_c (t:Type) = {
+  repr_t: Type;
+  mk:    lbuffer l u8 -> repr_t
+}
+
+--------------------------------------------------------------------------------
+
+let parser (t:Type) = {
+    p:LP.parser t;
+    v:LP.validator p;
+}
+
+let repr (#t:Type) (p:parser t) = {
+    len:u32;
+    buf:lbuffer len u8
+}
+
+class basetype (#t:Type) (v:Type) = {
+      p: parser t;
+      lr: leaf_reader t;
+      read : repr t -> v
+}
+
+class basetype (t:Type) = {
+      read : repr t -> t
+}
+
+val rfst : p1:parser t1 -> p2:parser t2 -> repr (parse_pair p1 p2) -> repr p1
+val rsnd : p1:parser t1 -> p2:parser t2 -> repr (parse_pair p1 p2) -> repr p2
+
+
+instance ipair (t1 t2:Type) : pair (t1 * t2) t1 t2 = {
+
+}
+
+let t = u8 * (plen:u32 & array plen u8)
+
+let r : repr t = ...
+
+let r1 : repr u8 = rfst r in
+let v = read r1 in
+
+
+--------------------------------------------------------------------------------
+
+
+let repr (#t:_) (p:parser t) = {
+    len:u32;
+    buf:lbuffer len u8;
+}
+
+class readable (#t:Type) (p:parser t) (v:Type) = {
+    read: (r:repr p -> ST v (requires valid p r) ... )
+}
+
+instance readable_u8 : readable u8 u8 = {
+    read
+}
