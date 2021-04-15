@@ -20,7 +20,7 @@
     "HasLogsToExtract" : true,
 
     "NotificationEnabled" : true,
-    "NotificationChannel" : "#quackyducky-build",
+    "NotificationChannel" : "#everparse-build",
     "PublicBranches" : [ "master", "dev" ],
 
     "CompressBuildFolder": true,
