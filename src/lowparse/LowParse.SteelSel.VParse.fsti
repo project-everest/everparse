@@ -46,22 +46,6 @@ let is_byte_repr
     x == v' /\
     consumed == n
 
-val has_byte_repr
-  (n: nat)
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (x: t)
-: Tot prop
-
-let select_t
-  (n: Ghost.erased nat)
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-: Tot Type0
-= (y: t { has_byte_repr n p y })
-
 val vparse_slprop
   (#k: parser_kind)
   (#t: Type0)
@@ -74,7 +58,7 @@ val vparse_sel
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: Tot (SE.selector (select_t (A.length a) p) (vparse_slprop p a))
+: Tot (SE.selector t (vparse_slprop p a))
 
 [@SE.__steel_reduce__]
 let vparse'
@@ -85,7 +69,7 @@ let vparse'
 : Tot SE.vprop'
 = {
   SE.hp = vparse_slprop p a;
-  SE.t = select_t (A.length a) p;
+  SE.t = t;
   SE.sel = vparse_sel p a;
 }
 
