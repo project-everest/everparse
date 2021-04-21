@@ -56,6 +56,7 @@ let readable_prop h #t #b p from to = ()
 
 let readable_gsub h #t #b p offset length from to = ()
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 2"
 let readable_split_1
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -68,6 +69,7 @@ let readable_split_1
 =
   Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
   if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
+#pop-options
 
 #push-options "--fuel 17" // "--using_facts_from '*,-LowParse.Low.Base.serializer32_of_leaf_writer_strong_constant_size'"
 #restart-solver
