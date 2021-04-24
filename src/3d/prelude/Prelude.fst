@@ -27,31 +27,40 @@ module U64 = FStar.UInt64
 // Parsers
 ////////////////////////////////////////////////////////////////////////////////
 
+let parser_kind_prop
+  (nz: bool)
+  (wk: weak_kind)
+  (k: LP.parser_kind)
+: Tot prop
+= (nz ==> (k.LP.parser_kind_low > 0)) /\
+  begin match wk with
+  | WeakKindStrongPrefix -> k.LP.parser_kind_subkind == Some LP.ParserStrong
+  | WeakKindConsumesAll -> k.LP.parser_kind_subkind == Some LP.ParserConsumesAll
+  | _ -> True
+  end
+
 inline_for_extraction
 noextract
-let parser_kind (nz:bool) =
-  k:LP.parser_kind{LP.(k.parser_kind_subkind == Some ParserStrong /\
-                      (nz ==> (k.parser_kind_low > 0)))}
+let parser_kind (nz:bool) (wk: weak_kind) =
+  k:LP.parser_kind { parser_kind_prop nz wk k }
 
-let parser #nz (k:parser_kind nz) (t:Type) = LP.parser k t
+let parser k t = LP.parser k t
 
-let is_weaker_than #nz1 (k:parser_kind nz1)
-                   #nz2 (k':parser_kind nz2) = k `LP.is_weaker_than` k'
+let is_weaker_than #nz1 #wk1 (k:parser_kind nz1 wk1)
+                   #nz2 #wk2 (k':parser_kind nz2 wk2) = k `LP.is_weaker_than` k'
 
 inline_for_extraction
 noextract
-let glb #nz1 (k1:parser_kind nz1)
-        #nz2 (k2:parser_kind nz2)
-    : parser_kind (nz1 && nz2)
+let glb k1 k2
     = LP.glb k1 k2
 
-let is_weaken_than_refl #nz (k:parser_kind nz)
+let is_weaker_than_refl #nz #wk (k:parser_kind nz wk)
   : Lemma (ensures (is_weaker_than k k))
           [SMTPat (is_weaker_than k k)]
   = ()
 
-let is_weaker_than_glb #nz1 (k1:parser_kind nz1)
-                       #nz2 (k2:parser_kind nz2)
+let is_weaker_than_glb #nz1 #wk1 (k1:parser_kind nz1 wk1)
+                       #nz2 #wk2 (k2:parser_kind nz2 wk2)
   : Lemma (is_weaker_than (glb k1 k2) k1 /\
            is_weaker_than (glb k1 k2) k2)
           [SMTPatOr
@@ -62,7 +71,7 @@ let is_weaker_than_glb #nz1 (k1:parser_kind nz1)
 /// Parser: return
 inline_for_extraction
 noextract
-let ret_kind : parser_kind false = LPC.parse_ret_kind
+let ret_kind = LPC.parse_ret_kind
 inline_for_extraction noextract
 let parse_ret #t (v:t)
   : Tot (parser ret_kind t)
@@ -71,21 +80,15 @@ let parse_ret #t (v:t)
 /// Parser: bind
 inline_for_extraction
 noextract
-let and_then_kind #nz1 (k1:parser_kind nz1)
-                  #nz2 (k2:parser_kind nz2)
-    : parser_kind (nz1 || nz2)
+let and_then_kind k1 k2
     = LPC.and_then_kind k1 k2
 inline_for_extraction noextract
-let parse_dep_pair #nz1 (#k1:parser_kind nz1) (#t1: Type) (p1: parser k1 t1)
-                   #nz2 (#k2:parser_kind nz2) (#t2: (t1 -> Tot Type)) (p2: (x: t1) -> parser k2 (t2 x))
-  : Tot (parser (and_then_kind k1 k2) (dtuple2 t1 t2) )
+let parse_dep_pair p1 p2
   = LPC.parse_dtuple2 p1 p2
 
 /// Parser: sequencing
 inline_for_extraction noextract
-let parse_pair #nz1 (#k1:parser_kind nz1) #t1 (p1:parser k1 t1)
-               #nz2 (#k2:parser_kind nz2) #t2 (p2:parser k2 t2)
-  : Tot (parser (and_then_kind k1 k2) (t1 * t2))
+let parse_pair p1 p2
   = LPC.nondep_then p1 p2
 
 /// Parser: map
@@ -93,36 +96,31 @@ let injective_map a b = (a -> Tot b) //{LPC.synth_injective f}
 
 inline_for_extraction
 noextract
-let filter_kind #nz (k:parser_kind nz) : parser_kind nz = LPC.parse_filter_kind k
+let filter_kind k = LPC.parse_filter_kind k
 inline_for_extraction noextract
-let parse_filter #nz (#k:parser_kind nz) #t (p:parser k t) (f:(t -> bool))
-  : Tot (parser (filter_kind k) (refine t f))
-  = LPC.parse_filter #k #t p f
+let parse_filter p f
+  = LPC.parse_filter p f
 
 /// Parser: weakening kinds
 inline_for_extraction noextract
-let parse_weaken #nz  (#k:parser_kind nz) #t (p:parser k t)
-                 #nz' (k':parser_kind nz'{k' `is_weaker_than` k})
+let parse_weaken #nz #wk (#k:parser_kind nz wk) #t (p:parser k t)
+                 #nz' #wk' (k':parser_kind nz' wk' {k' `is_weaker_than` k})
   : Tot (parser k' t)
   = LP.weaken k' p
 
 /// Parser: weakening kinds
 inline_for_extraction noextract
-let parse_weaken_left #nz  (#k:parser_kind nz) #t (p:parser k t)
-                      #nz' (k':parser_kind nz')
-  : Tot (parser (glb k' k) t)
+let parse_weaken_left #nz #wk #k p k'
   = LP.weaken (glb k' k) p
 
 /// Parser: weakening kinds
 inline_for_extraction noextract
-let parse_weaken_right #nz  (#k:parser_kind nz) #t (p:parser k t)
-                       #nz' (k':parser_kind nz')
-  : Tot (parser (glb k k') t)
+let parse_weaken_right #nz #wk #k p k'
   = LP.weaken (glb k k') p
 
 inline_for_extraction
 noextract
-let impos_kind : parser_kind true =
+let impos_kind =
   LPC.(strong_parser_kind 1 1 (Some ParserKindMetadataFail))
 
 /// Parser: unreachable, for default cases of exhaustive pattern matching
@@ -133,10 +131,7 @@ let parse_impos ()
     LP.parser_kind_prop_equiv impos_kind p;
     p
 
-let parse_ite #nz (#k:parser_kind nz) (#a:Type) (#b:Type) (e:bool)
-              (p1:squash e -> parser k a)
-              (p2:squash (not e) -> parser k b)
-  : Tot (parser k (t_ite e a b))
+let parse_ite e p1 p2
   = if e then p1 () else p2 ()
 
 
@@ -145,7 +140,7 @@ let nlist (n:U32.t) (t:Type) = list t
 /// Lists/arrays
 inline_for_extraction
 noextract
-let kind_nlist : parser_kind false =
+let kind_nlist =
   let open LP in
   {
     parser_kind_low = 0;
@@ -155,26 +150,25 @@ let kind_nlist : parser_kind false =
   }
 
 inline_for_extraction noextract
-let parse_nlist (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
-  : Tot (parser kind_nlist (nlist n t))
+let parse_nlist n #wk #k #t p
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
     parse_weaken
-            #false #(parse_fldata_kind (U32.v n) parse_list_kind) #(list t)
+            #false #WeakKindStrongPrefix #(parse_fldata_kind (U32.v n) parse_list_kind) #(list t)
             (LowParse.Spec.FLData.parse_fldata (LowParse.Spec.List.parse_list p) (U32.v n))
             #false kind_nlist
 
 ////////////////////////////////////////////////////////////////////////////////
 module B32 = FStar.Bytes
 let t_at_most (n:U32.t) (t:Type) = t & B32.bytes
-let kind_t_at_most : parser_kind false = kind_nlist
+let kind_t_at_most = kind_nlist
 inline_for_extraction noextract
-let parse_t_at_most (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
-  : Tot (parser kind_t_at_most (t_at_most n t))
+let parse_t_at_most n #wk #k #t p
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
     parse_weaken
             #false 
+            #WeakKindStrongPrefix
             (LowParse.Spec.FLData.parse_fldata 
                 (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes)
                 (U32.v n))
@@ -183,14 +177,14 @@ let parse_t_at_most (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
 
 ////////////////////////////////////////////////////////////////////////////////
 let t_exact (n:U32.t) (t:Type) = t
-let kind_t_exact : parser_kind false = kind_nlist
+let kind_t_exact = kind_nlist
 inline_for_extraction noextract
-let parse_t_exact (n:U32.t) (#nz:bool) (#k:parser_kind nz) #t (p:parser k t)
-  : Tot (parser kind_t_exact (t_exact n t))
+let parse_t_exact n #nz #wk #k #t p
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
     parse_weaken
             #false 
+            #WeakKindStrongPrefix
             (LowParse.Spec.FLData.parse_fldata 
                 p
                 (U32.v n))
@@ -202,33 +196,27 @@ let parse_t_exact (n:U32.t) (#nz:bool) (#k:parser_kind nz) #t (p:parser k t)
 ////////////////////////////////////////////////////////////////////////////////
 
 inline_for_extraction noextract
-let reader #nz (#k:parser_kind nz) #t (p:parser k t) = LPLC.leaf_reader p
+let reader p = LPLC.leaf_reader p
 
 inline_for_extraction noextract
-let read_filter #nz
-                (#k: parser_kind nz)
-                (#t: Type)
-                (#p: parser k t)
-                (p32: LPL.leaf_reader p)
-                (f: (t -> bool))
-    : LPL.leaf_reader (parse_filter p f)
+let read_filter p32 f
     = LPLC.read_filter p32 f
 
 // ////////////////////////////////////////////////////////////////////////////////
 // // Validators
 // ////////////////////////////////////////////////////////////////////////////////
 inline_for_extraction noextract
-let validator #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
+let validator #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   : Type
   = LPL.validator #k #t p
 
 inline_for_extraction noextract
-let validator_no_read #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
+let validator_no_read #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   : Type
   = LPL.validator_no_read #k #t p
 
 let parse_nlist_total_fixed_size_aux
-  (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
+  (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
   (x: LP.bytes)
 : Lemma
   (requires (
@@ -247,7 +235,7 @@ let parse_nlist_total_fixed_size_aux
   LP.parser_kind_prop_equiv LowParse.Spec.List.parse_list_kind (LowParse.Spec.List.parse_list p)
 
 let parse_nlist_total_fixed_size_kind_correct
-  (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
+  (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
 : Lemma
   (requires (
     let open LP in
@@ -264,7 +252,7 @@ let parse_nlist_total_fixed_size_kind_correct
   Classical.forall_intro (Classical.move_requires (parse_nlist_total_fixed_size_aux n p))
 
 inline_for_extraction noextract
-let validate_nlist_total_constant_size_mod_ok (n:U32.t) (#k:parser_kind true) (#t: Type) (p:parser k t)
+let validate_nlist_total_constant_size_mod_ok (n:U32.t) #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t)
   : Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in
@@ -288,7 +276,7 @@ let validate_nlist_total_constant_size_mod_ok (n:U32.t) (#k:parser_kind true) (#
       )
 
 inline_for_extraction noextract
-let validate_nlist_constant_size_mod_ko (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
+let validate_nlist_constant_size_mod_ko (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
   : Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in
@@ -322,7 +310,7 @@ let validate_nlist_constant_size_mod_ko (n:U32.t) (#k:parser_kind true) #t (p:pa
   )
 
 inline_for_extraction noextract
-let validate_nlist_total_constant_size' (n:U32.t) (#k:parser_kind true) #t (p:parser k t)
+let validate_nlist_total_constant_size' (n:U32.t) #wk (#k:parser_kind true wk) #t (p:parser k t)
   : Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in
@@ -338,7 +326,7 @@ let validate_nlist_total_constant_size' (n:U32.t) (#k:parser_kind true) #t (p:pa
   else validate_nlist_constant_size_mod_ko n p sl len pos
 
 inline_for_extraction noextract
-let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) (#k:parser_kind true) (#t: Type) (p:parser k t)
+let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t)
 : Pure (validator_no_read (parse_nlist n p))
   (requires (
     let open LP in
@@ -402,47 +390,47 @@ let parse_string
 
 /// UINT8
 inline_for_extraction noextract
-let kind____UINT8 : parser_kind true= LowParse.Spec.Int.parse_u8_kind
-let parse____UINT8 : parser kind____UINT8 ___UINT8 = LowParse.Spec.Int.parse_u8
-let read____UINT8 : reader parse____UINT8 = LowParse.Low.Int.read_u8
+let kind____UINT8 = LowParse.Spec.Int.parse_u8_kind
+let parse____UINT8 = LowParse.Spec.Int.parse_u8
+let read____UINT8 = LowParse.Low.Int.read_u8
 
 /// UInt16BE
 inline_for_extraction noextract
-let kind____UINT16BE : parser_kind true = LowParse.Spec.BoundedInt.parse_u16_kind
-let parse____UINT16BE : parser kind____UINT16BE ___UINT16BE = LowParse.Spec.Int.parse_u16
-let read____UINT16BE : LPL.leaf_reader parse____UINT16BE = LowParse.Low.Int.read_u16
+let kind____UINT16BE = LowParse.Spec.BoundedInt.parse_u16_kind
+let parse____UINT16BE = LowParse.Spec.Int.parse_u16
+let read____UINT16BE = LowParse.Low.Int.read_u16
 
 /// UInt32BE
 inline_for_extraction noextract
-let kind____UINT32BE : parser_kind true = LowParse.Spec.BoundedInt.parse_u32_kind
-let parse____UINT32BE : parser kind____UINT32BE ___UINT32BE = LowParse.Spec.Int.parse_u32
-let read____UINT32BE : LPL.leaf_reader parse____UINT32BE = LowParse.Low.Int.read_u32
+let kind____UINT32BE = LowParse.Spec.BoundedInt.parse_u32_kind
+let parse____UINT32BE = LowParse.Spec.Int.parse_u32
+let read____UINT32BE = LowParse.Low.Int.read_u32
 
 /// UInt64BE
 inline_for_extraction noextract
-let kind____UINT64BE : parser_kind true = LowParse.Spec.Int.parse_u64_kind
-let parse____UINT64BE : parser kind____UINT64BE ___UINT64BE = LowParse.Spec.Int.parse_u64
-let read____UINT64BE : LPL.leaf_reader parse____UINT64BE = LowParse.Low.Int.read_u64
+let kind____UINT64BE = LowParse.Spec.Int.parse_u64_kind
+let parse____UINT64BE = LowParse.Spec.Int.parse_u64
+let read____UINT64BE = LowParse.Low.Int.read_u64
 
 
 /// UInt16
 inline_for_extraction noextract
-let kind____UINT16 : parser_kind true = LowParse.Spec.BoundedInt.parse_u16_kind
-let parse____UINT16 : parser kind____UINT16 ___UINT16 = LowParse.Spec.BoundedInt.parse_u16_le
-let read____UINT16 : LPL.leaf_reader parse____UINT16 = LowParse.Low.BoundedInt.read_u16_le
+let kind____UINT16 = LowParse.Spec.BoundedInt.parse_u16_kind
+let parse____UINT16 = LowParse.Spec.BoundedInt.parse_u16_le
+let read____UINT16 = LowParse.Low.BoundedInt.read_u16_le
 
 /// UInt32
 inline_for_extraction noextract
-let kind____UINT32 : parser_kind true = LowParse.Spec.BoundedInt.parse_u32_kind
-let parse____UINT32 : parser kind____UINT32 ___UINT32 = LowParse.Spec.BoundedInt.parse_u32_le
-let read____UINT32 : LPL.leaf_reader parse____UINT32 = LowParse.Low.BoundedInt.read_u32_le
+let kind____UINT32 = LowParse.Spec.BoundedInt.parse_u32_kind
+let parse____UINT32 = LowParse.Spec.BoundedInt.parse_u32_le
+let read____UINT32 = LowParse.Low.BoundedInt.read_u32_le
 
 
 /// UInt64
 inline_for_extraction noextract
-let kind____UINT64 : parser_kind true = LowParse.Spec.Int.parse_u64_kind
-let parse____UINT64 : parser kind____UINT64 ___UINT64 = LowParse.Spec.Int.parse_u64_le
-let read____UINT64 : LPL.leaf_reader parse____UINT64 = LowParse.Low.Int.read_u64_le
+let kind____UINT64 = LowParse.Spec.Int.parse_u64_kind
+let parse____UINT64 = LowParse.Spec.Int.parse_u64_le
+let read____UINT64 = LowParse.Low.Int.read_u64_le
   
 inline_for_extraction noextract
 let read_unit

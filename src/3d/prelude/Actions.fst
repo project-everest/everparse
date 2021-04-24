@@ -30,8 +30,7 @@ open Prelude
 module B = LowStar.Buffer
 
 inline_for_extraction
-let action #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
-           (inv:slice_inv) (l:eloc) (on_success:bool) (a:Type)
+let action p inv l on_success a
   = #len: U32.t ->
     sl: input_buffer_t len ->
     pos:LPL.pos_t ->
@@ -81,7 +80,7 @@ let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv
   )
 
 inline_for_extraction
-let validate_with_action_t #nz (#k:parser_kind nz) (#t:Type) (p:parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
+let validate_with_action_t p inv l allow_reading =
   validate_with_action_t' p inv l allow_reading
 
 let validate_eta v =
@@ -90,7 +89,7 @@ let validate_eta v =
 inline_for_extraction noextract
 let act_with_comment
   (s: string)
-  #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+  #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
   (#inv:slice_inv) (#l:eloc) (#b:_) (res:Type)
   (a: action p inv l b res)
 : Tot (action p inv l b res)
@@ -101,7 +100,7 @@ let act_with_comment
 inline_for_extraction
 let leaf_reader
   #nz
-  (#k: parser_kind nz)
+  #k
   (#t: Type)
   (p: parser k t)
 : Tot Type
@@ -122,7 +121,7 @@ let leaf_reader
   ))
 
 inline_for_extraction noextract
-let lift_constant_size_leaf_reader #nz (#k:parser_kind nz) #t (#p:parser k t) (r:LPL.leaf_reader p) (sz: U32.t { k.LPL.parser_kind_high == Some k.LPL.parser_kind_low /\ k.LPL.parser_kind_low == U32.v sz })
+let lift_constant_size_leaf_reader #nz (#k: parser_kind nz WeakKindStrongPrefix) #t (#p:parser k t) (r:LPL.leaf_reader p) (sz: U32.t { k.LPL.parser_kind_high == Some k.LPL.parser_kind_low /\ k.LPL.parser_kind_low == U32.v sz })
   : leaf_reader p
   = fun #inputLength input startPosition ->
       LPL.read_with_perm r (LPL.jump_constant_size p sz ()) input startPosition
@@ -162,7 +161,7 @@ let with_drop_if
 inline_for_extraction
 noextract
 let validate_drop
-   #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t) (#inv:slice_inv) (#l:eloc) (#allow_reading:bool)
+   #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (#inv:slice_inv) (#l:eloc) (#allow_reading:bool)
    (v: validate_with_action_t p inv l allow_reading)
 : Tot (validate_with_action_t p inv l false)
 = fun
@@ -172,7 +171,7 @@ let validate_drop
 
 inline_for_extraction
 noextract
-let validate_with_success_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
+let validate_with_success_action' (name: string) #nz #wk (#k1:parser_kind nz wk) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
                          (v1:validate_with_action_t p1 inv1 l1 ar)
                          (#inv2:_) (#l2:eloc) #b (a:action p1 inv2 l2 b bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) ar
@@ -196,13 +195,11 @@ let validate_with_success_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#
          pos1
 
 let validate_with_success_action
-  name
-  #nz #k1 #t1 #p1 #inv1 #l1 #ar v1
-  #inv2 #l2 #b a
+  name v1 a
 = validate_drop (validate_with_success_action' name v1 a)
 
 inline_for_extraction noextract
-let validate_with_error_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
+let validate_with_error_action' (name: string) #nz #wk (#k1:parser_kind nz wk) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
                          (v1:validate_with_action_t p1 inv1 l1 ar)
                          (#inv2:_) (#l2:eloc) (a:action p1 inv2 l2 false bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) ar
@@ -221,9 +218,7 @@ let validate_with_error_action' (name: string) #nz (#k1:parser_kind nz) #t1 (#p1
          if not b then validator_error_action_failed else pos1
 
 let validate_with_error_action
-  name
-  #nz #k1 #t1 #p1 #inv1 #l1 #ar v1
-  #inv2 #l2 a
+  name v1 a
 = validate_drop (validate_with_error_action' name v1 a)
 
 inline_for_extraction noextract
@@ -239,9 +234,9 @@ let validate_ret
 inline_for_extraction noextract
 let validate_pair'
        (name1: string)
-       #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
+       #nz1 (#k1:parser_kind nz1 WeakKindStrongPrefix) #t1 (#p1:parser k1 t1)
        (#inv1:_) (#l1:eloc) (#ar1:_) (v1:validate_with_action_t p1 inv1 l1 ar1)
-       #nz2 (#k2:parser_kind nz2) #t2 (#p2:parser k2 t2)
+       #nz2 #wk2 (#k2:parser_kind nz2 wk2) #t2 (#p2:parser k2 t2)
        (#inv2:_) (#l2:eloc) (#ar2:_) (v2:validate_with_action_t p2 inv2 l2 ar2)
   : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) (ar1 && ar2)
   = fun #inputLength  input
@@ -262,17 +257,15 @@ let validate_pair'
       with_drop_if (not (ar1 && ar2)) (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun (x: U64.t) -> if LPL.is_success x then LPL.uint64_to_uint32 x else LPL.slice_length input) (v2 input pos1)
 
 let validate_pair
-  name1
-  #nz1 #k1 #t1 #p1 #inv1 #l1 #ar1 v1
-  #nz2 #k2 #t2 #p2 #inv2 #l2 #ar2 v2
+  name1 v1 v2
 = validate_drop (validate_pair' name1 v1 v2)
 
 inline_for_extraction noextract
 let validate_dep_pair
       (name1: string)
-      #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
+      #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
-      #nz2 (#k2:parser_kind nz2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
+      #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t (p1 `parse_dep_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false)
   = fun #inputLength input startPosition ->
@@ -302,11 +295,11 @@ inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action'
       (name1: string)
       (id1: field_id)
-      #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
+      #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
       #inv1' #l1' #b (a:t1 -> action p1 inv1' l1' b bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t
              ((p1 `LPC.parse_filter` f) `(parse_dep_pair #nz1)` p2)
@@ -359,11 +352,11 @@ inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action_total_zero_parser'
       (name1: string)
       (id1: field_id)
-      #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
+      #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
       #inv1' #l1' #b (a:t1 -> action p1 inv1' l1' b bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Pure (validate_with_action_t
              ((p1 `LPC.parse_filter` f) `(parse_dep_pair #nz1)` p2)
@@ -417,10 +410,10 @@ inline_for_extraction noextract
 let validate_dep_pair_with_refinement'
       (name1: string)
       (id1: field_id)
-      #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
+      #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t
              ((p1 `LPC.parse_filter` f) `(parse_dep_pair #nz1)` p2)
@@ -467,10 +460,10 @@ inline_for_extraction noextract
 let validate_dep_pair_with_refinement_total_zero_parser'
       (name1: string)
       (id1: field_id)
-      #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
+      #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Pure (validate_with_action_t
              ((p1 `LPC.parse_filter` f) `(parse_dep_pair #nz1)` p2)
@@ -520,11 +513,11 @@ let validate_dep_pair_with_refinement_and_action
       (p1_is_constant_size_without_actions: bool)
       (name1: string)
       (id1: field_id)
-      #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
+      #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
       #inv1' #l1' #b (a:t1 -> action p1 inv1' l1' b bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t ((p1 `parse_filter` f) `parse_dep_pair` p2)
                                 (conj_inv inv1 (conj_inv inv1' inv2))
@@ -543,10 +536,10 @@ let validate_dep_pair_with_refinement_and_action
 
 inline_for_extraction noextract
 let validate_dep_pair_with_action
-      #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
+      #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       #inv1' #l1' #b (a:t1 -> action p1 inv1' l1' b bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
+      #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t
              (p1 `(parse_dep_pair #nz1)` p2)
@@ -586,10 +579,10 @@ let validate_dep_pair_with_refinement
       (p1_is_constant_size_without_actions: bool)
       (name1: string)
       (id1: field_id)
-      #nz1 (#k1:parser_kind nz1) #t1 (#p1:parser k1 t1)
+      #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      #nz2 (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t ((p1 `parse_filter` f) `parse_dep_pair` p2)
                                 (conj_inv inv1 inv2)
@@ -605,10 +598,10 @@ let validate_dep_pair_with_refinement
       validate_dep_pair_with_refinement' name1 id1 v1 r1 f v2
 
 inline_for_extraction noextract
-let validate_filter' (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k t)
+let validate_filter' (name: string) #nz (#k:parser_kind nz _) (#t:_) (#p:parser k t)
                     #inv #l (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
-  : Tot (validate_with_action_t #nz (p `LPC.parse_filter` f) inv l false)
+  : Tot (validate_with_action_t #nz #WeakKindStrongPrefix (p `LPC.parse_filter` f) inv l false)
   = fun #inputLength input startPosition ->
     let h = HST.get () in
     [@inline_let] let _ = LPLC.valid_filter h p f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
@@ -630,7 +623,7 @@ let validate_filter' (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k 
     end
 
 inline_for_extraction noextract
-let validate_filter (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k t)
+let validate_filter (name: string) #nz (#k:parser_kind nz _) (#t:_) (#p:parser k t)
                     #inv #l (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
   : Tot (validate_with_action_t (p `parse_filter` f) inv l false)
@@ -638,11 +631,11 @@ let validate_filter (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k t
 
 inline_for_extraction noextract
 let validate_filter'_with_action
-                    (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k t)
+                    (name: string) #nz (#k:parser_kind nz _) (#t:_) (#p:parser k t)
                     #inv #l (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
-                    (#b:bool) #inva (#la:eloc) (a: t -> action #nz #(filter_kind k) #_ (p `LPC.parse_filter` f) inva la b bool)
-  : Tot (validate_with_action_t #nz (p `LPC.parse_filter` f) (conj_inv inv inva) (eloc_union l la) false)
+                    (#b:bool) #inva (#la:eloc) (a: t -> action #nz #WeakKindStrongPrefix #(filter_kind k) #_ (p `LPC.parse_filter` f) inva la b bool)
+  : Tot (validate_with_action_t #nz #WeakKindStrongPrefix (p `LPC.parse_filter` f) (conj_inv inv inva) (eloc_union l la) false)
   = fun #inputLength input startPosition ->
     let h = HST.get () in
     [@inline_let] let _ = LPLC.valid_filter h p f (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
@@ -671,7 +664,7 @@ let validate_filter'_with_action
 
 inline_for_extraction noextract
 let validate_filter_with_action
-                    (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k t)
+                    (name: string) #nz (#k:parser_kind nz _) (#t:_) (#p:parser k t)
                     #inv #l (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
                     (#b:bool) #inva (#la:eloc) (a: t -> action (p `parse_filter` f) inva la b bool)
@@ -681,7 +674,7 @@ let validate_filter_with_action
 
 inline_for_extraction noextract
 let validate_with_dep_action
-                    (name: string) #nz (#k:parser_kind nz) (#t:_) (#p:parser k t)
+                    (name: string) #nz (#k:parser_kind nz _) (#t:_) (#p:parser k t)
                     #inv #l (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p)
                     (#b:bool) #inva (#la:eloc) (a: t -> action p inva la b bool)
@@ -705,9 +698,9 @@ let validate_with_dep_action
     end
 
 inline_for_extraction noextract
-let validate_weaken #nz (#k:parser_kind nz) #t (#p:parser k t)
+let validate_weaken #nz #wk (#k:parser_kind nz wk) #t (#p:parser k t)
                     #inv #l #ar (v:validate_with_action_t p inv l ar)
-                    #nz' (k':parser_kind nz'{k' `is_weaker_than` k})
+                    #nz' #wk' (k':parser_kind nz' wk'{k' `is_weaker_than` k})
   : Tot (validate_with_action_t (parse_weaken p k') inv l ar)
   = fun #inputLength input startPosition ->
     let open LPLC in
@@ -717,30 +710,20 @@ let validate_weaken #nz (#k:parser_kind nz) #t (#p:parser k t)
     v input startPosition
 
 /// Parser: weakening kinds
-inline_for_extraction noextract
-let parse_weaken_left #nz  (#k:parser_kind nz) #t (p:parser k t)
-                      #nz' (k':parser_kind nz')
-  : Tot (parser (glb k' k) t)
-  = LP.weaken (glb k' k) p
 
 inline_for_extraction noextract
-let validate_weaken_left (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+let validate_weaken_left (#nz:_) #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                          (#inv:_) (#l:_) #ar (v:validate_with_action_t p inv l ar)
-                         (#nz':_) (k':parser_kind nz')
+                         (#nz':_) #wk' (k':parser_kind nz' wk')
   : validate_with_action_t (parse_weaken_left p k') inv l ar
   = validate_weaken v (glb k' k)
 
 /// Parser: weakening kinds
-inline_for_extraction noextract
-let parse_weaken_right #nz  (#k:parser_kind nz) #t (p:parser k t)
-                       #nz' (k':parser_kind nz')
-  : Tot (parser (glb k k') t)
-  = LP.weaken (glb k k') p
 
 inline_for_extraction noextract
-let validate_weaken_right (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+let validate_weaken_right (#nz:_) #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                          (#inv:_) (#l:_) #ar (v:validate_with_action_t p inv l ar)
-                         (#nz':_) (k':parser_kind nz')
+                         (#nz':_) #wk' (k':parser_kind nz' wk')
   : validate_with_action_t (parse_weaken_right p k') inv l ar
   = validate_weaken v (glb k k')
 
@@ -750,20 +733,15 @@ let validate_impos ()
   = fun #inputLength _ _ -> validator_error_impossible
 
 inline_for_extraction noextract
-let validate_with_error #nz (#k:parser_kind nz) #t (#p:parser k t)
-                        #inv #l #ar (c:field_id) (v:validate_with_action_t p inv l ar)
-  : Tot (validate_with_action_t p inv l ar)
+let validate_with_error
+  c v
   = fun #inputLength input startPosition ->
     let endPositionOrError = v input startPosition in
     LPL.maybe_set_error_code endPositionOrError startPosition c
 
 noextract inline_for_extraction
-let validate_ite #nz (#k:parser_kind nz) (#a:Type) (#b:Type)
-                 #inv1 #l1 #ar1 #inv2 #l2 #ar2
-                 (e:bool)
-                 (p1:squash e -> parser k a) (v1:(squash e -> validate_with_action_t (p1()) inv1 l1 ar1))
-                 (p2:squash (not e) -> parser k b) (v2:(squash (not e) -> validate_with_action_t (p2()) inv2 l2 ar2))
-  : Tot (validate_with_action_t (parse_ite e p1 p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false)
+let validate_ite
+  e p1 v1 p2 v2
   = fun #inputLength input startPosition ->
       if e then validate_drop (v1 ()) input startPosition else validate_drop (v2 ()) input startPosition
 
@@ -940,14 +918,15 @@ noextract
 inline_for_extraction
 let validate_nlist
   (n:U32.t)
-  (#k:parser_kind true)
+  #wk
+  (#k:parser_kind true wk)
   #t
   (#p:parser k t)
   #inv #l #ar
   (v: validate_with_action_t p inv l ar)
 : Tot (validate_with_action_t (parse_nlist n p) inv l false)
 = validate_weaken
-    #false #(LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) #(list t)
+    #false #WeakKindStrongPrefix #(LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) #(list t)
     (validate_fldata_consumes_all n (validate_list v))
     kind_nlist
 
@@ -956,7 +935,8 @@ inline_for_extraction
 let validate_nlist_constant_size_without_actions
   (n_is_const: bool)
   (n:U32.t)
-  (#k:parser_kind true)
+  #wk
+  (#k:parser_kind true wk)
   #t (#p:parser k t) #inv #l #ar
   (v: validate_with_action_t p inv l ar)
 : Tot (validate_with_action_t (parse_nlist n p) inv l false)
@@ -980,7 +960,7 @@ let validate_nlist_constant_size_without_actions
 #push-options "--z3rlimit 16"
 
 noextract inline_for_extraction
-let validate_t_at_most' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
+let validate_t_at_most' (n:U32.t) #wk (#k:parser_kind true wk) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_at_most n p) inv l ar)
   = fun #inputLength input startPosition ->
@@ -1012,14 +992,13 @@ let validate_t_at_most' (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
         with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
 
 let validate_t_at_most
-  n
-  #k #t #p #inv #l #ar v
+  n v
 = validate_drop (validate_t_at_most' n v)
 
 
 #push-options "--fuel 1 --ifuel 1"
 noextract inline_for_extraction
-let validate_t_exact' (n:U32.t) (#nz:bool) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+let validate_t_exact' (n:U32.t) (#nz:bool) #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_exact n p) inv l ar)
   = fun #inputLength input startPosition ->
@@ -1051,13 +1030,12 @@ let validate_t_exact' (n:U32.t) (#nz:bool) (#k:parser_kind nz) (#t:_) (#p:parser
 #pop-options
 
 let validate_t_exact
-  n
-  #nz #k #t #p #inv #l #ar v
+  n v
 = validate_drop (validate_t_exact' n v)
 
 inline_for_extraction noextract
 let validate_with_comment (c:string)
-                          #nz (#k:parser_kind nz) #t (#p:parser k t)
+                          #nz #wk (#k:parser_kind nz wk) #t (#p:parser k t)
                           #inv #l #ar (v:validate_with_action_t p inv l ar)
   : validate_with_action_t p inv l ar
   = fun #inputLength input startPosition ->
@@ -1065,7 +1043,7 @@ let validate_with_comment (c:string)
     v input startPosition
 
 inline_for_extraction noextract
-let validate_weaken_inv_loc #nz (#k:parser_kind nz) #t (#p:parser k t)
+let validate_weaken_inv_loc #nz #wk (#k:parser_kind nz wk) #t (#p:parser k t)
                             #inv (#l:eloc) #ar
                             (inv':slice_inv{inv' `inv_implies` inv}) (l':eloc{l' `eloc_includes` l})
                             (v:validate_with_action_t p inv l ar)
@@ -1077,7 +1055,7 @@ let validate_weaken_inv_loc #nz (#k:parser_kind nz) #t (#p:parser k t)
 ////////////////////////////////////////////////////////////////////////////////
 inline_for_extraction noextract
 let read_filter #nz
-                (#k: parser_kind nz)
+                (#k: parser_kind nz WeakKindStrongPrefix)
                 (#t: Type)
                 (#p: parser k t)
                 (p32: leaf_reader p)
@@ -1192,7 +1170,7 @@ let read_unit
 
 inline_for_extraction noextract
 let validate_unit_refinement' (f:unit -> bool) (cf:string)
-  : Tot (validate_with_action_t #false (parse_unit `LPC.parse_filter` f) true_inv eloc_none true)
+  : Tot (validate_with_action_t #false #WeakKindStrongPrefix (parse_unit `LPC.parse_filter` f) true_inv eloc_none true)
   = fun #inputLength input startPosition ->
       let h = HST.get () in
       [@inline_let] let _ = LPLC.valid_facts (parse_unit) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition) in
@@ -1215,7 +1193,7 @@ module LUT = LowParse.Low.ListUpTo
 
 unfold
 let validate_list_up_to_inv
-  (#k: parser_kind true)
+  (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
   (p: parser k t)
   (terminator: t)
@@ -1264,7 +1242,7 @@ let validate_list_up_to_inv
 
 inline_for_extraction
 let validate_list_up_to_body
-  (#k: parser_kind true)
+  (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
   (#p: parser k t)
   (terminator: t)
@@ -1313,14 +1291,14 @@ let validate_list_up_to_body
 inline_for_extraction
 noextract
 let validate_list_up_to
-  (#k: parser_kind true)
+  (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
   (#p: parser k t)
   (v: validator p)
   (r: leaf_reader p)
   (terminator: t)
   (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
-: Tot (validate_with_action_t #true (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) true_inv eloc_none false)
+: Tot (validate_with_action_t #true #WeakKindStrongPrefix (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) true_inv eloc_none false)
 =
   fun sl pos ->
   HST.push_frame ();
@@ -1348,7 +1326,7 @@ let validate_string
 noextract
 inline_for_extraction
 let action_return
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:Type) (x:a)
   : action p true_inv eloc_none false a
   = fun input startPosition endPosition -> x
@@ -1357,7 +1335,7 @@ noextract
 inline_for_extraction
 let action_bind
       (name: string)
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
       #bf (#a:Type) (f: action p invf lf bf a)
       (#invg:slice_inv) (#lg:eloc) #bg
@@ -1374,7 +1352,7 @@ let action_bind
 noextract
 inline_for_extraction
 let action_seq
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
       #bf (#a:Type) (f: action p invf lf bf a)
       (#invg:slice_inv) (#lg:eloc) #bg
@@ -1390,7 +1368,7 @@ let action_seq
 noextract
 inline_for_extraction
 let action_ite
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
       (guard:bool)
       #bf (#a:Type) (then_: squash guard -> action p invf lf bf a)
@@ -1405,14 +1383,14 @@ let action_ite
 noextract
 inline_for_extraction
 let action_abort
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
   : action p true_inv eloc_none false bool
   = fun input startPosition endPosition -> false
 
 noextract
 inline_for_extraction
 let action_field_pos
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t) (u:unit)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
    : action p true_inv eloc_none false U32.t
    = fun _ startPosition _ -> LPL.uint64_to_uint32 startPosition
 
@@ -1420,7 +1398,7 @@ let action_field_pos
 noextract
 inline_for_extraction
 let action_field_ptr
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t) (u:unit)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
    : action p true_inv eloc_none true LPL.puint8
    = fun input startPosition _ ->
        let open LowParse.Slice in
@@ -1429,7 +1407,7 @@ let action_field_ptr
 noextract
 inline_for_extraction
 let action_deref
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:_) (x:B.pointer a)
    : action p (ptr_inv x) loc_none false a
    = fun _ _ _ -> !*x
@@ -1437,7 +1415,7 @@ let action_deref
 noextract
 inline_for_extraction
 let action_assignment
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:_) (x:B.pointer a) (v:a)
    : action p (ptr_inv x) (ptr_loc x) false unit
    = fun _ _ _ -> x *= v
@@ -1456,7 +1434,7 @@ let action_read_value
 noextract
 inline_for_extraction
 let action_weaken
-      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#inv:slice_inv) (#l:eloc) (#b:_) (#a:_) (act:action p inv l b a)
       (#inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
    : action p inv' l' b a

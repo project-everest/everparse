@@ -48,24 +48,39 @@ let pow2_values (x:nat) : Lemma
 // Parsers
 ////////////////////////////////////////////////////////////////////////////////
 
-inline_for_extraction
 noextract
-val parser_kind (nz:bool) : Type0
+type weak_kind =
+| WeakKindWeak
+| WeakKindStrongPrefix
+| WeakKindConsumesAll
 
 inline_for_extraction
 noextract
-val parser (#nz:bool) (k:parser_kind nz) (t:Type u#r) : Type u#r
+val parser_kind (nz:bool) (wk: weak_kind) : Type0
 
 inline_for_extraction
 noextract
-val glb (#nz1:bool) (k1:parser_kind nz1)
-        (#nz2:bool) (k2:parser_kind nz2)
-    : parser_kind (nz1 && nz2)
+val parser (#nz:bool) (#wk: weak_kind) (k:parser_kind nz wk) (t:Type u#r) : Type u#r
+
+inline_for_extraction
+noextract
+let weak_kind_glb
+  (k1 k2: weak_kind)
+: Tot weak_kind
+= if k1 = k2
+  then k1
+  else WeakKindWeak
+
+inline_for_extraction
+noextract
+val glb (#nz1:bool) (#wk1: weak_kind) (k1:parser_kind nz1 wk1)
+        (#nz2:bool) (#wk2: weak_kind) (k2:parser_kind nz2 wk2)
+    : parser_kind (nz1 && nz2) (weak_kind_glb wk1 wk2)
 
 /// Parser: return
 inline_for_extraction
 noextract
-val ret_kind : parser_kind false
+val ret_kind : parser_kind false WeakKindStrongPrefix
 
 inline_for_extraction noextract
 val parse_ret (#t:Type) (v:t)
@@ -74,19 +89,19 @@ val parse_ret (#t:Type) (v:t)
 /// Parser: bind
 inline_for_extraction
 noextract
-val and_then_kind (#nz1:_) (k1:parser_kind nz1)
-                  (#nz2:_) (k2:parser_kind nz2)
-    : parser_kind (nz1 || nz2)
+val and_then_kind (#nz1:_) (k1:parser_kind nz1 WeakKindStrongPrefix)
+                  (#nz2:_) (#wk2: _) (k2:parser_kind nz2 wk2)
+    : parser_kind (nz1 || nz2) wk2
 
 inline_for_extraction noextract
-val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1) (#t1: Type) (p1: parser k1 t1)
-                   (#nz2:_) (#k2:parser_kind nz2) (#t2: (t1 -> Tot Type)) (p2: (x: t1) -> parser k2 (t2 x))
+val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1: Type) (p1: parser k1 t1)
+                   (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2: (t1 -> Tot Type)) (p2: (x: t1) -> parser k2 (t2 x))
   : Tot (parser (and_then_kind k1 k2) (dtuple2 t1 t2) )
 
 /// Parser: sequencing
 inline_for_extraction noextract
-val parse_pair (#nz1:_) (#k1:parser_kind nz1) (#t1:_) (p1:parser k1 t1)
-               (#nz2:_) (#k2:parser_kind nz2) (#t2:_) (p2:parser k2 t2)
+val parse_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (p1:parser k1 t1)
+               (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:_) (p2:parser k2 t2)
   : Tot (parser (and_then_kind k1 k2) (t1 * t2))
 
 /// Parser: filter
@@ -94,26 +109,26 @@ let refine t (f:t -> bool) = x:t{f x}
 
 inline_for_extraction
 noextract
-val filter_kind (#nz:_) (k:parser_kind nz) : parser_kind nz
+val filter_kind (#nz:_) (#wk: _) (k:parser_kind nz wk) : parser_kind nz wk
 
 inline_for_extraction noextract
-val parse_filter (#nz:_) (#k:parser_kind nz) (#t:_) (p:parser k t) (f:(t -> bool))
+val parse_filter (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t) (f:(t -> bool))
   : Tot (parser (filter_kind k) (refine t f))
 
 
 inline_for_extraction noextract
-val parse_weaken_left (#nz:_)  (#k:parser_kind nz) (#t:_) (p:parser k t)
-                      (#nz':_) (k':parser_kind nz')
+val parse_weaken_left (#nz:_) (#wk: _)  (#k:parser_kind nz wk) (#t:_) (p:parser k t)
+                      (#nz':_) (#wk': _) (k':parser_kind nz' wk')
   : Tot (parser (glb k' k) t)
 
 inline_for_extraction noextract
-val parse_weaken_right (#nz:_)  (#k:parser_kind nz) (#t:_) (p:parser k t)
-                       (#nz':_) (k':parser_kind nz')
+val parse_weaken_right (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t)
+                       (#nz':_) (#wk': _) (k':parser_kind nz' wk')
   : Tot (parser (glb k k') t)
 
 inline_for_extraction
 noextract
-val impos_kind : parser_kind true
+val impos_kind : parser_kind true WeakKindStrongPrefix
 
 /// Parser: unreachable, for default cases of exhaustive pattern matching
 inline_for_extraction noextract
@@ -122,7 +137,7 @@ val parse_impos (_:unit)
 
 let t_ite (e:bool) (a:Type) (b:Type) = if e then a else b
 
-val parse_ite (#nz:_) (#k:parser_kind nz) (#a:Type) (#b:Type) (e:bool)
+val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#a:Type) (#b:Type) (e:bool)
               (p1:squash e -> parser k a)
               (p2:squash (not e) -> parser k b)
   : Tot (parser k (t_ite e a b))
@@ -135,10 +150,10 @@ val nlist (n:U32.t) (t:Type u#r) : Type u#r
 /// Lists/arrays
 inline_for_extraction
 noextract
-val kind_nlist : parser_kind false
+val kind_nlist : parser_kind false WeakKindStrongPrefix
 
 inline_for_extraction noextract
-val parse_nlist (n:U32.t) (#k:parser_kind true) (#t:_) (p:parser k t)
+val parse_nlist (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (p:parser k t)
   : Tot (parser kind_nlist (nlist n t))
 
 
@@ -150,10 +165,10 @@ val t_at_most (n:U32.t) (t:Type u#r) : Type u#r
 /// Lists/arrays
 inline_for_extraction
 noextract
-val kind_t_at_most : parser_kind false
+val kind_t_at_most : parser_kind false WeakKindStrongPrefix
 
 inline_for_extraction noextract
-val parse_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (p:parser k t)
+val parse_t_at_most (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (p:parser k t)
   : Tot (parser kind_t_at_most (t_at_most n t))
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -164,10 +179,10 @@ val t_exact (n:U32.t) (t:Type u#r) : Type u#r
 /// Lists/arrays
 inline_for_extraction
 noextract
-val kind_t_exact : parser_kind false
+val kind_t_exact : parser_kind false WeakKindStrongPrefix
 
 inline_for_extraction noextract
-val parse_t_exact (n:U32.t) (#nz:bool) (#k:parser_kind nz) (#t:_) (p:parser k t)
+val parse_t_exact (n:U32.t) (#nz:bool) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t)
   : Tot (parser kind_t_exact (t_exact n t))
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -175,11 +190,11 @@ val parse_t_exact (n:U32.t) (#nz:bool) (#k:parser_kind nz) (#t:_) (p:parser k t)
 ////////////////////////////////////////////////////////////////////////////////
 
 inline_for_extraction noextract
-val reader (#nz:_) (#k:parser_kind nz) (#t:_) (p:parser k t) : Type u#1
+val reader (#nz:_) (#k:parser_kind nz WeakKindStrongPrefix) (#t:_) (p:parser k t) : Type u#1
 
 inline_for_extraction noextract
 val read_filter (#nz:_)
-                (#k: parser_kind nz)
+                (#k: parser_kind nz WeakKindStrongPrefix)
                 (#t: Type)
                 (#p: parser k t)
                 (p32: reader p)
@@ -196,10 +211,10 @@ val cstring
 
 inline_for_extraction
 noextract
-val parse_string_kind : parser_kind true
+val parse_string_kind : parser_kind true WeakKindStrongPrefix
 
 val parse_string
-  (#k: parser_kind true)
+  (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
   (p: parser k t)
   (terminator: t)
@@ -215,7 +230,7 @@ let ___Bool = bool
 /// UINT8
 let ___UINT8 : eqtype = FStar.UInt8.t
 inline_for_extraction noextract
-val kind____UINT8 : parser_kind true
+val kind____UINT8 : parser_kind true WeakKindStrongPrefix
 val parse____UINT8 : parser kind____UINT8 ___UINT8
 val read____UINT8 : reader parse____UINT8
 
@@ -224,21 +239,21 @@ val read____UINT8 : reader parse____UINT8
 /// UInt16BE
 let ___UINT16BE : eqtype = U16.t
 inline_for_extraction noextract
-val kind____UINT16BE : parser_kind true
+val kind____UINT16BE : parser_kind true WeakKindStrongPrefix
 val parse____UINT16BE : parser kind____UINT16BE ___UINT16BE
 val read____UINT16BE : reader parse____UINT16BE
 
 /// UInt32BE
 let ___UINT32BE : eqtype = U32.t
 inline_for_extraction noextract
-val kind____UINT32BE : parser_kind true
+val kind____UINT32BE : parser_kind true WeakKindStrongPrefix
 val parse____UINT32BE : parser kind____UINT32BE ___UINT32BE
 val read____UINT32BE : reader parse____UINT32BE
 
 /// UInt64BE
 let ___UINT64BE : eqtype = U64.t
 inline_for_extraction noextract
-val kind____UINT64BE : parser_kind true
+val kind____UINT64BE : parser_kind true WeakKindStrongPrefix
 val parse____UINT64BE : parser kind____UINT64BE ___UINT64BE
 val read____UINT64BE : reader parse____UINT64BE
 
@@ -247,26 +262,26 @@ val read____UINT64BE : reader parse____UINT64BE
 /// UInt16
 let ___UINT16 : eqtype = U16.t
 inline_for_extraction noextract
-val kind____UINT16 : parser_kind true
+val kind____UINT16 : parser_kind true WeakKindStrongPrefix
 val parse____UINT16 : parser kind____UINT16 ___UINT16
 val read____UINT16 : reader parse____UINT16
 
 /// UInt32
 let ___UINT32 : eqtype = U32.t
 inline_for_extraction noextract
-val kind____UINT32 : parser_kind true
+val kind____UINT32 : parser_kind true WeakKindStrongPrefix
 val parse____UINT32 : parser kind____UINT32 ___UINT32
 val read____UINT32 : reader parse____UINT32
 
 /// UInt64
 let ___UINT64 : eqtype = U64.t
 inline_for_extraction noextract
-val kind____UINT64 : parser_kind true
+val kind____UINT64 : parser_kind true WeakKindStrongPrefix
 val parse____UINT64 : parser kind____UINT64 ___UINT64
 val read____UINT64 : reader parse____UINT64
 
 inline_for_extraction noextract
-let kind_unit : parser_kind false = ret_kind
+let kind_unit : parser_kind false WeakKindStrongPrefix = ret_kind
 let parse_unit : parser kind_unit unit = parse_ret ()
 inline_for_extraction noextract
 val read_unit

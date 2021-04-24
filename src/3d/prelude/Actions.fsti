@@ -56,7 +56,8 @@ let ptr_inv #a (x:B.pointer a) : slice_inv = fun (sl:_) h -> B.live h x
 inline_for_extraction
 val action
       (#nz:bool)
-      (#k:parser_kind nz)
+      (#wk: _)
+      (#k:parser_kind nz wk)
       (#t:Type)
       (p:parser k t)
       (inv:slice_inv)
@@ -68,7 +69,8 @@ val action
 inline_for_extraction
 val validate_with_action_t
       (#nz:bool)
-      (#k:parser_kind nz)
+      (#wk: _)
+      (#k:parser_kind nz wk)
       (#t:Type)
       (p:parser k t)
       (inv:slice_inv)
@@ -80,7 +82,8 @@ inline_for_extraction
 noextract
 val validate_eta
       (#nz:bool)
-      (#k:parser_kind nz)
+      (#wk: _)
+      (#k:parser_kind nz wk)
       (#t:Type)
       (#p:parser k t)
       (#inv:slice_inv)
@@ -93,7 +96,8 @@ inline_for_extraction noextract
 val act_with_comment
       (s: string)
       (#nz:bool)
-      (#k:parser_kind nz)
+      (#wk: _)
+      (#k:parser_kind nz wk)
       (#t:Type)
       (#p:parser k t)
       (#inv:slice_inv)
@@ -106,7 +110,7 @@ val act_with_comment
 inline_for_extraction
 val leaf_reader
       (#nz:bool)
-      (#k: parser_kind nz)
+      (#k: parser_kind nz WeakKindStrongPrefix)
       (#t: Type)
       (p: parser k t)
  : Type0
@@ -116,7 +120,8 @@ noextract
 val validate_with_success_action
       (name: string)
       (#nz:bool)
-      (#k1:parser_kind nz)
+      (#wk: _)
+      (#k1:parser_kind nz wk)
       (#t1:Type)
       (#p1:parser k1 t1)
       (#inv1:_)
@@ -133,7 +138,8 @@ inline_for_extraction noextract
 val validate_with_error_action
       (name: string)
       (#nz:bool)
-      (#k1:parser_kind nz)
+      (#wk: _)
+      (#k1:parser_kind nz wk)
       (#t1:Type)
       (#p1:parser k1 t1)
       (#inv1:_)
@@ -152,18 +158,18 @@ val validate_ret
 inline_for_extraction noextract
 val validate_pair
        (name1: string)
-       (#nz1:_) (#k1:parser_kind nz1) (#t1:_) (#p1:parser k1 t1)
+       (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (#p1:parser k1 t1)
        (#inv1:_) (#l1:eloc) (#allow_reading1:bool) (v1:validate_with_action_t p1 inv1 l1 allow_reading1)
-       (#nz2:_) (#k2:parser_kind nz2) (#t2:_) (#p2:parser k2 t2)
+       (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:_) (#p2:parser k2 t2)
        (#inv2:_) (#l2:eloc) (#allow_reading2:bool) (v2:validate_with_action_t p2 inv2 l2 allow_reading2)
   : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
 
 inline_for_extraction noextract
 val validate_dep_pair
       (name1: string)
-      (#nz1:_) (#k1:parser_kind nz1) (#t1:_) (#p1:parser k1 t1)
+      (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (#p1:parser k1 t1)
       (#inv1:_) (#l1:_) (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
-      (#nz2:_) (#k2:parser_kind nz2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
+      (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
       (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
   : validate_with_action_t (p1 `parse_dep_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
 
@@ -172,11 +178,11 @@ val validate_dep_pair_with_refinement_and_action
       (p1_is_constant_size_without_actions: bool)
       (name1: string)
       (id1: field_id)
-      (#nz1:_) (#k1:parser_kind nz1) (#t1:_) (#p1:parser k1 t1)
+      (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (#p1:parser k1 t1)
       (#inv1:_) (#l1:_) (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
       (#inv1':_) (#l1':_) (#b:_) (a:t1 -> action p1 inv1' l1' b bool)
-      (#nz2:_) (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
   : validate_with_action_t ((p1 `parse_filter` f) `parse_dep_pair` p2)
                            (conj_inv inv1 (conj_inv inv1' inv2))
@@ -185,10 +191,10 @@ val validate_dep_pair_with_refinement_and_action
 
 inline_for_extraction noextract
 val validate_dep_pair_with_action
-      (#nz1:_) (#k1:parser_kind nz1) (#t1:_) (#p1:parser k1 t1)
+      (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (#p1:parser k1 t1)
       (#inv1:_) (#l1:_) (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (#inv1':_) (#l1':_) (#b:_) (a:t1 -> action p1 inv1' l1' b bool)
-      (#nz2:_) (#k2:parser_kind nz2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
+      (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
       (#inv2:_) (#l2:_) (#allow_reading2:_) (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
   : validate_with_action_t
              (p1 `(parse_dep_pair #nz1)` p2)
@@ -201,10 +207,10 @@ val validate_dep_pair_with_refinement
       (p1_is_constant_size_without_actions: bool)
       (name1: string)
       (id1: field_id)
-      (#nz1:_) (#k1:parser_kind nz1) (#t1:_) (#p1:parser k1 t1)
+      (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (#p1:parser k1 t1)
       (#inv1:_) (#l1:_) (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      (#nz2:_) (#k2:parser_kind nz2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
+      (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       (#inv2:_) (#l2:_) (#allow_reading2:bool) (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 allow_reading2))
   : validate_with_action_t ((p1 `parse_filter` f) `parse_dep_pair` p2)
                            (conj_inv inv1 inv2)
@@ -212,14 +218,14 @@ val validate_dep_pair_with_refinement
                            false
 
 inline_for_extraction noextract
-val validate_filter (name: string) (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+val validate_filter (name: string) (#nz:_) (#k:parser_kind nz WeakKindStrongPrefix) (#t:_) (#p:parser k t)
                     (#inv:_) (#l:_) (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
   : validate_with_action_t (p `parse_filter` f) inv l false
 
 inline_for_extraction noextract
 val validate_filter_with_action
-                    (name: string) (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+                    (name: string) (#nz:_) (#k:parser_kind nz WeakKindStrongPrefix) (#t:_) (#p:parser k t)
                     (#inv:_) (#l:_) (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
                     (#b:bool) (#inva:_) (#la:eloc) (a: t -> action (p `parse_filter` f) inva la b bool)
@@ -227,32 +233,22 @@ val validate_filter_with_action
 
 inline_for_extraction noextract
 val validate_with_dep_action
-                    (name: string) (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+                    (name: string) (#nz:_) (#k:parser_kind nz WeakKindStrongPrefix) (#t:_) (#p:parser k t)
                     (#inv:_) (#l:_) (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p)
                     (#b:bool) (#inva:_) (#la:eloc) (a: t -> action p inva la b bool)
   : validate_with_action_t #nz p (conj_inv inv inva) (eloc_union l la) false
 
 inline_for_extraction noextract
-val parse_weaken_left (#nz:_)  (#k:parser_kind nz) (#t:_) (p:parser k t)
-                      (#nz':_) (k':parser_kind nz')
-  : Tot (parser (glb k' k) t)
-
-inline_for_extraction noextract
-val validate_weaken_left (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+val validate_weaken_left (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                          (#inv:_) (#l:_) (#allow_reading:bool) (v:validate_with_action_t p inv l allow_reading)
-                         (#nz':_) (k':parser_kind nz')
+                         (#nz':_) (#wk': _) (k':parser_kind nz' wk')
   : validate_with_action_t (parse_weaken_left p k') inv l allow_reading
 
 inline_for_extraction noextract
-val parse_weaken_right (#nz:_)  (#k:parser_kind nz) (#t:_) (p:parser k t)
-                       (#nz':_) (k':parser_kind nz')
-  : Tot (parser (glb k k') t)
-
-inline_for_extraction noextract
-val validate_weaken_right (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+val validate_weaken_right (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                          (#inv:_) (#l:_) (#allow_reading:bool) (v:validate_with_action_t p inv l allow_reading)
-                         (#nz':_) (k':parser_kind nz')
+                         (#nz':_) (#wk': _) (k':parser_kind nz' wk')
   : validate_with_action_t (parse_weaken_right p k') inv l allow_reading
 
 inline_for_extraction noextract
@@ -260,12 +256,12 @@ val validate_impos (_:unit)
   : validate_with_action_t (parse_impos ()) true_inv eloc_none true
 
 inline_for_extraction noextract
-val validate_with_error (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+val validate_with_error (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                         (#inv:_) (#l:_) (#allow_reading:bool) (c:field_id) (v:validate_with_action_t p inv l allow_reading)
   : validate_with_action_t p inv l allow_reading
 
 noextract inline_for_extraction
-val validate_ite (#nz:_) (#k:parser_kind nz) (#a:Type) (#b:Type)
+val validate_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#a:Type) (#b:Type)
                  (#inv1:_) (#l1:_) (#ar1:_)
                  (#inv2:_) (#l2:_) (#ar2:_)
                  (e:bool)
@@ -276,7 +272,8 @@ val validate_ite (#nz:_) (#k:parser_kind nz) (#a:Type) (#b:Type)
 noextract inline_for_extraction
 val validate_nlist
   (n:U32.t)
-  (#k:parser_kind true)
+  (#wk: _)
+  (#k:parser_kind true wk)
   (#t:_)
   (#p:parser k t)
   (#inv:_) (#l:_) (#allow_reading:bool)
@@ -287,7 +284,8 @@ noextract inline_for_extraction
 val validate_nlist_constant_size_without_actions
   (n_is_const: bool)
   (n:U32.t)
-  (#k:parser_kind true)
+  (#wk: _)
+  (#k:parser_kind true wk)
   (#t:_)
   (#p:parser k t)
   (#inv:_) (#l:_) (#allow_reading:bool)
@@ -295,23 +293,23 @@ val validate_nlist_constant_size_without_actions
 : Tot (validate_with_action_t (parse_nlist n p) inv l false)
 
 noextract inline_for_extraction
-val validate_t_at_most (n:U32.t) (#k:parser_kind true) (#t:_) (#p:parser k t)
+val validate_t_at_most (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
 
 noextract inline_for_extraction
-val validate_t_exact (n:U32.t) (#nz:bool) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+val validate_t_exact (n:U32.t) (#nz:bool) (#wk: _) (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                      (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_exact n p) inv l false)
 
 inline_for_extraction noextract
 val validate_with_comment (c:string)
-                          (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+                          (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                           (#inv:_) (#l:_) (#allow_reading:bool) (v:validate_with_action_t p inv l allow_reading)
   : validate_with_action_t p inv l allow_reading
 
 inline_for_extraction noextract
-val validate_weaken_inv_loc (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
+val validate_weaken_inv_loc (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                             (#inv:_) (#l:eloc) (#allow_reading:bool)
                             (inv':slice_inv{inv' `inv_implies` inv}) (l':eloc{l' `eloc_includes` l})
                             (v:validate_with_action_t p inv l allow_reading)
@@ -319,7 +317,7 @@ val validate_weaken_inv_loc (#nz:_) (#k:parser_kind nz) (#t:_) (#p:parser k t)
 
 inline_for_extraction noextract
 val read_filter (#nz:_)
-                (#k: parser_kind nz)
+                (#k: parser_kind nz WeakKindStrongPrefix)
                 (#t: Type)
                 (#p: parser k t)
                 (p32: leaf_reader p)
@@ -327,7 +325,7 @@ val read_filter (#nz:_)
     : leaf_reader (parse_filter p f)
 
 inline_for_extraction
-let validator #nz (#k:parser_kind nz) (#t:Type) (p:parser k t)
+let validator #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   = validate_with_action_t p true_inv eloc_none true
 
 inline_for_extraction noextract
@@ -400,7 +398,7 @@ val validate_unit_refinement (f:unit -> bool) (cf:string)
 
 inline_for_extraction noextract
 val validate_string
-  (#k: parser_kind true)
+  (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
   (#p: parser k t)
   (v: validator p)
@@ -413,7 +411,7 @@ val validate_string
 noextract
 inline_for_extraction
 val action_return
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:Type) (x:a)
   : action p true_inv eloc_none false a
 
@@ -421,7 +419,7 @@ noextract
 inline_for_extraction
 val action_bind
       (name: string)
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
       (#bf:_) (#a:Type) (f: action p invf lf bf a)
       (#invg:slice_inv) (#lg:eloc) (#bg:_)
@@ -431,7 +429,7 @@ val action_bind
 noextract
 inline_for_extraction
 val action_seq
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
       (#bf:_) (#a:Type) (f: action p invf lf bf a)
       (#invg:slice_inv) (#lg:eloc) (#bg:_)
@@ -441,7 +439,7 @@ val action_seq
 noextract
 inline_for_extraction
 val action_ite
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
       (guard:bool)
       (#bf:_) (#a:Type) (then_: squash guard -> action p invf lf bf a)
@@ -452,39 +450,39 @@ val action_ite
 noextract
 inline_for_extraction
 val action_abort
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
   : action p true_inv eloc_none false bool
 
 noextract
 inline_for_extraction
 val action_field_pos
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t) (u:unit)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
    : action p true_inv eloc_none false U32.t
 
 noextract
 inline_for_extraction
 val action_field_ptr
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t) (u:unit)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
    : action p true_inv eloc_none true LPL.puint8
 
 noextract
 inline_for_extraction
 val action_deref
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:_) (x:B.pointer a)
    : action p (ptr_inv x) loc_none false a
 
 noextract
 inline_for_extraction
 val action_assignment
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:_) (x:B.pointer a) (v:a)
    : action p (ptr_inv x) (ptr_loc x) false unit
 
 noextract
 inline_for_extraction
 val action_weaken
-      (#nz:_) (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#inv:slice_inv) (#l:eloc) (#b:_) (#a:_) (act:action p inv l b a)
       (#inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
    : action p inv' l' b a
