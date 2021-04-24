@@ -220,6 +220,25 @@ val parse_string
   (terminator: t)
 : Tot (parser parse_string_kind (cstring t terminator))
 
+/////
+// Parse all of the remaining bytes of the input buffer
+/////
+noextract
+val all_bytes: Type0
+
+inline_for_extraction noextract
+val parse_all_bytes_kind: parser_kind false WeakKindConsumesAll
+
+val parse_all_bytes: parser parse_all_bytes_kind all_bytes
+
+noextract
+val all_zeros: Type0
+
+inline_for_extraction noextract
+val parse_all_zeros_kind: parser_kind false WeakKindConsumesAll
+
+val parse_all_zeros: parser parse_all_zeros_kind all_zeros
+
 ////////////////////////////////////////////////////////////////////////////////
 // Base types
 ////////////////////////////////////////////////////////////////////////////////

@@ -384,6 +384,19 @@ let parse_string
   LowParse.Spec.Base.parser_kind_prop_equiv k p;
   LP.weaken parse_string_kind (LUT.parse_list_up_to (cond_string_up_to terminator) p (fun _ _ _ -> ()))
 
+
+let all_bytes = B32.bytes
+let parse_all_bytes_kind = LowParse.Spec.Bytes.parse_all_bytes_kind
+let parse_all_bytes = LowParse.Spec.Bytes.parse_all_bytes
+
+inline_for_extraction noextract
+let is_zero (x: FStar.UInt8.t) : Tot bool = x = 0uy
+
+let all_zeros = list (LowParse.Spec.Combinators.parse_filter_refine is_zero)
+let parse_all_zeros_kind = LowParse.Spec.List.parse_list_kind
+let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.parse_filter LowParse.Spec.Int.parse_u8 is_zero)
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Base types
 ////////////////////////////////////////////////////////////////////////////////

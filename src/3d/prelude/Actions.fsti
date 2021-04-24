@@ -406,6 +406,14 @@ val validate_string
   (terminator: t)
 : Tot (validate_with_action_t (parse_string p terminator) true_inv eloc_none false)
 
+inline_for_extraction noextract
+val validate_all_bytes
+: validate_with_action_t parse_all_bytes true_inv eloc_none true
+
+inline_for_extraction noextract
+val validate_all_zeros
+: validate_with_action_t parse_all_zeros true_inv eloc_none false
+
 ////////////////////////////////////////////////////////////////////////////////
 
 noextract

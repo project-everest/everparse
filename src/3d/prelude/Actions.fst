@@ -1321,6 +1321,15 @@ let validate_string
   LP.parser_kind_prop_equiv k p;
   validate_weaken (validate_list_up_to v r terminator (fun _ _ _ -> ())) _
 
+let validate_all_bytes =
+  fun #inputLength input startPosition ->
+    let h = HST.get () in
+    LPL.valid_facts LowParse.Spec.Bytes.parse_all_bytes h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition);
+    FStar.Int.Cast.uint32_to_uint64 inputLength
+
+let validate_all_zeros =
+  validate_list (validate_filter "parse_zeros" validate____UINT8 read____UINT8 is_zero "check if zero" "")
+
 ////////////////////////////////////////////////////////////////////////////////
 
 noextract
