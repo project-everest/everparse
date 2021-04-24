@@ -960,7 +960,7 @@ let validate_nlist_constant_size_without_actions
 #push-options "--z3rlimit 16"
 
 noextract inline_for_extraction
-let validate_t_at_most' (n:U32.t) #wk (#k:parser_kind true wk) (#t:_) (#p:parser k t)
+let validate_t_at_most' (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_at_most n p) inv l ar)
   = fun #inputLength input startPosition ->
@@ -1321,11 +1321,14 @@ let validate_string
   LP.parser_kind_prop_equiv k p;
   validate_weaken (validate_list_up_to v r terminator (fun _ _ _ -> ())) _
 
-let validate_all_bytes =
+inline_for_extraction noextract
+let validate_all_bytes2 : validate_with_action_t parse_all_bytes true_inv eloc_none true =
   fun #inputLength input startPosition ->
     let h = HST.get () in
     LPL.valid_facts LowParse.Spec.Bytes.parse_all_bytes h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition);
     FStar.Int.Cast.uint32_to_uint64 inputLength
+
+let validate_all_bytes = validate_drop validate_all_bytes2
 
 let validate_all_zeros =
   validate_list (validate_filter "parse_zeros" validate____UINT8 read____UINT8 is_zero "check if zero" "")

@@ -168,7 +168,7 @@ noextract
 val kind_t_at_most : parser_kind false WeakKindStrongPrefix
 
 inline_for_extraction noextract
-val parse_t_at_most (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (p:parser k t)
+val parse_t_at_most (n:U32.t) (#nz: _) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t)
   : Tot (parser kind_t_at_most (t_at_most n t))
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -227,17 +227,17 @@ noextract
 val all_bytes: Type0
 
 inline_for_extraction noextract
-val parse_all_bytes_kind: parser_kind false WeakKindConsumesAll
+val kind_all_bytes: parser_kind false WeakKindConsumesAll
 
-val parse_all_bytes: parser parse_all_bytes_kind all_bytes
+val parse_all_bytes: parser kind_all_bytes all_bytes
 
 noextract
 val all_zeros: Type0
 
 inline_for_extraction noextract
-val parse_all_zeros_kind: parser_kind false WeakKindConsumesAll
+val kind_all_zeros: parser_kind false WeakKindConsumesAll
 
-val parse_all_zeros: parser parse_all_zeros_kind all_zeros
+val parse_all_zeros: parser kind_all_zeros all_zeros
 
 ////////////////////////////////////////////////////////////////////////////////
 // Base types

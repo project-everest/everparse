@@ -704,9 +704,10 @@ let print_decl_for_validators (mname:string) (d:decl) : ML string =
             mname
             (print_typedef_typ td.decl_name))
     `strcat`
-    Printf.sprintf "noextract\ninline_for_extraction\nlet kind_%s : parser_kind %s WeakKindStrongPrefix = %s\n\n"
+    Printf.sprintf "noextract\ninline_for_extraction\nlet kind_%s : parser_kind %s %s = %s\n\n"
       (print_ident td.decl_name.td_name)
       (string_of_bool td.decl_parser.p_kind.pk_nz)
+      (A.print_weak_kind td.decl_parser.p_kind.pk_weak_kind)
       (print_kind mname td.decl_parser.p_kind)
     `strcat`
     Printf.sprintf "noextract\nlet parse_%s : parser (kind_%s) (%s) = %s\n\n"
@@ -748,9 +749,10 @@ let print_type_decl_signature (mname:string) (d:decl{Type_decl? (fst d)}) : ML s
        else Printf.sprintf "noextract\ninline_for_extraction\nval %s : Type0\n\n"
               (print_typedef_name mname td.decl_name))
       `strcat`
-      Printf.sprintf "noextract\ninline_for_extraction\nval kind_%s : parser_kind %s WeakKindStrongPrefix\n\n"
+      Printf.sprintf "noextract\ninline_for_extraction\nval kind_%s : parser_kind %s %s\n\n"
         (print_ident td.decl_name.td_name)
         (string_of_bool td.decl_parser.p_kind.pk_nz)
+        (A.print_weak_kind td.decl_parser.p_kind.pk_weak_kind)
       `strcat`
       Printf.sprintf "noextract\nval parse_%s : parser (kind_%s) (%s)\n\n"
         (print_typedef_name mname td.decl_name)

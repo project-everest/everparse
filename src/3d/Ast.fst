@@ -790,3 +790,19 @@ let print_decl (d:decl) : ML string =
 let print_decls (ds:list decl) : ML string =
   List.map print_decl ds
   |> String.concat "\n"
+
+type weak_kind =
+  | WeakKindWeak
+  | WeakKindStrongPrefix
+  | WeakKindConsumesAll
+
+let print_weak_kind (k: weak_kind) : Tot string =
+  match k with
+  | WeakKindConsumesAll -> "WeakKindConsumesAll"
+  | WeakKindStrongPrefix -> "WeakKindStrongPrefix"
+  | WeakKindWeak -> "WeakKindWeak"
+
+let weak_kind_glb (w1 w2: weak_kind) : Tot weak_kind =
+  if w1 = w2
+  then w1
+  else WeakKindWeak

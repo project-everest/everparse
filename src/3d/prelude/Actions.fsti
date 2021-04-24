@@ -293,7 +293,7 @@ val validate_nlist_constant_size_without_actions
 : Tot (validate_with_action_t (parse_nlist n p) inv l false)
 
 noextract inline_for_extraction
-val validate_t_at_most (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (#p:parser k t)
+val validate_t_at_most (n:U32.t) (#nz: _) (#wk: _) (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
 
@@ -408,7 +408,7 @@ val validate_string
 
 inline_for_extraction noextract
 val validate_all_bytes
-: validate_with_action_t parse_all_bytes true_inv eloc_none true
+: validate_with_action_t parse_all_bytes true_inv eloc_none false // could be true
 
 inline_for_extraction noextract
 val validate_all_zeros

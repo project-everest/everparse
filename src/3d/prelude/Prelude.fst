@@ -163,7 +163,7 @@ module B32 = FStar.Bytes
 let t_at_most (n:U32.t) (t:Type) = t & B32.bytes
 let kind_t_at_most = kind_nlist
 inline_for_extraction noextract
-let parse_t_at_most n #wk #k #t p
+let parse_t_at_most n #nz #wk #k #t p
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
     parse_weaken
@@ -386,14 +386,14 @@ let parse_string
 
 
 let all_bytes = B32.bytes
-let parse_all_bytes_kind = LowParse.Spec.Bytes.parse_all_bytes_kind
+let kind_all_bytes = LowParse.Spec.Bytes.parse_all_bytes_kind
 let parse_all_bytes = LowParse.Spec.Bytes.parse_all_bytes
 
 inline_for_extraction noextract
 let is_zero (x: FStar.UInt8.t) : Tot bool = x = 0uy
 
 let all_zeros = list (LowParse.Spec.Combinators.parse_filter_refine is_zero)
-let parse_all_zeros_kind = LowParse.Spec.List.parse_list_kind
+let kind_all_zeros = LowParse.Spec.List.parse_list_kind
 let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.parse_filter LowParse.Spec.Int.parse_u8 is_zero)
 
 

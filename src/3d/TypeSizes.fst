@@ -49,6 +49,8 @@ let initial_senv () =
        ("UINT32BE",   (Fixed 4,  Some 4));
        ("UINT64BE",   (Fixed 8,  Some 8));
        ("field_id", (Fixed 4,  Some 4));
+       ("all_bytes", (Variable, None));
+       ("all_zeros", (Variable, None));
        ("PUINT8",   (Variable, pointer_alignment))
   ]
   in

@@ -143,6 +143,7 @@ let prim_consts = [
   "unit"; "Bool"; "UINT8"; "UINT16"; "UINT32"; "UINT64";
   "UINT16BE"; "UINT32BE"; "UINT64BE";
   "field_id"; "PUINT8";
+  "all_bytes"; "all_zeros";
   "is_range_okay" ]
 
 let resolve_ident (env:qenv) (i:ident) : ML ident =
