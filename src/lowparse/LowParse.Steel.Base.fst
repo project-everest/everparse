@@ -212,7 +212,7 @@ let valid'_intro_strong
   let v = valid'_intro_exact p s.as_al perm s.as_prefix in
   let res = { vi_hd = s.as_al; vi_tl = s.as_ar; vi_value = v; vi_btl = s.as_suffix } in
   SEA.change_slprop (valid' p s.as_al perm v `S.star` A.is_array s.as_ar perm s.as_suffix) (valid' p res.vi_hd perm res.vi_value `S.star` A.is_array res.vi_tl perm res.vi_btl) (fun _ -> ());
-  res
+  return res
 
 let validator
   (#k: parser_kind)
