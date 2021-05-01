@@ -4,47 +4,53 @@ include LowParse.Spec.Base
 module S = Steel.Memory
 module SE = Steel.SelEffect
 module A = Steel.SelArray
+module AP = Steel.SelArrayPtr
 
 (* For now, we only support parsers with ParserStrong or ParserConsumesAll subkind. *)
 
-let byte_array : Type0 = A.array byte
-
-let supported_kind
-  (k: parser_kind)
-: Tot bool
-= match k.parser_kind_subkind with
-  | Some ParserStrong
-  | Some ParserConsumesAll
-    -> true
-  | _ -> false
+let byte_array : Type0 = AP.t byte
 
 let valid
-  (n: nat)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (b: bytes)
 : Tot prop
-= supported_kind k /\
+=
   begin match parse p b with
   | None -> False
   | Some (_, consumed) ->
-    consumed == n
+    consumed == Seq.length b
   end
 
 let is_byte_repr
-  (n: nat)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (x: t)
-  (b: Seq.lseq byte n)
+  (b: bytes)
 : Tot prop
 = match parse p b with
   | None -> False
   | Some (v', consumed) ->
     x == v' /\
-    consumed == n
+    consumed == Seq.length b
+
+val is_byte_repr_injective
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (x: t)
+  (b1 b2: bytes)
+: Lemma
+  (requires (is_byte_repr p x b1 /\ is_byte_repr p x b2))
+  (ensures (b1 == b2))
+
+noeq
+type v (t: Type) = {
+  array : A.array byte;
+  contents : t;
+}
 
 val vparse_slprop
   (#k: parser_kind)
@@ -58,7 +64,7 @@ val vparse_sel
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: Tot (SE.selector t (vparse_slprop p a))
+: Tot (SE.selector (v t) (vparse_slprop p a))
 
 [@SE.__steel_reduce__]
 let vparse'
@@ -69,7 +75,7 @@ let vparse'
 : Tot SE.vprop'
 = {
   SE.hp = vparse_slprop p a;
-  SE.t = t;
+  SE.t = v t;
   SE.sel = vparse_sel p a;
 }
 
@@ -88,14 +94,15 @@ val intro_vparse
   (p: parser k t)
   (a: byte_array)
 : SE.SteelSel unit
-    (A.varray a)
+    (AP.varrayptr a)
     (fun _ -> vparse p a)
     (fun h ->
-      valid (A.length a) p (h (A.varray a))
+      valid p (h (AP.varrayptr a)).AP.contents
     )
     (fun h _ h' ->
-      valid (A.length a) p (h (A.varray a)) /\
-      is_byte_repr (A.length a) p (h' (vparse p a)) (h (A.varray a))
+      valid p (h (AP.varrayptr a)).AP.contents /\
+      (h' (vparse p a)).array == (h (AP.varrayptr a)).AP.array /\
+      is_byte_repr p (h' (vparse p a)).contents (h (AP.varrayptr a)).AP.contents
     )
 
 val elim_vparse
@@ -105,9 +112,10 @@ val elim_vparse
   (a: byte_array)
 : SE.SteelSel unit
     (vparse p a)
-    (fun _ -> A.varray a)
+    (fun _ -> AP.varrayptr a)
     (fun _ -> True)
     (fun h _ h' ->
-      valid (A.length a) p (h' (A.varray a)) /\
-      is_byte_repr (A.length a) p (h (vparse p a)) (h' (A.varray a))
+      valid p (h' (AP.varrayptr a)).AP.contents /\
+      (h' (AP.varrayptr a)).AP.array == (h (vparse p a)).array /\
+      is_byte_repr p (h (vparse p a)).contents (h' (AP.varrayptr a)).AP.contents
     )
