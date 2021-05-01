@@ -22,11 +22,10 @@ prelude:
 3d: ocaml/Main.native
 	cp ocaml/Main.native 3d
 
-ocaml/generated:
-	mkdir -p $@
-
-.depend: $(wildcard *.fst *.fsti) ocaml/generated
+Version.fst:
 	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh
+
+.depend: $(wildcard *.fst *.fsti) Version.fst
 	$(FSTAR) --odir ocaml/generated --dep full $(ROOT) --extract '* -Prims -FStar' > .depend
 
 include .depend
@@ -47,7 +46,7 @@ clean-prelude:
 
 clean-3d:
 	+$(MAKE) -C ocaml clean
-	rm -rf *.checked *~
+	rm -rf *.checked *~ Version.fst
 
 clean: clean-3d clean-prelude
 
