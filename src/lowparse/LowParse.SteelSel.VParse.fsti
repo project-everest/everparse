@@ -3,6 +3,7 @@ include LowParse.Spec.Base
 
 module S = Steel.Memory
 module SE = Steel.SelEffect
+module SEA = Steel.SelEffect.Atomic
 module A = Steel.SelArray
 module AP = Steel.SelArrayPtr
 
@@ -89,11 +90,12 @@ let vparse
 = SE.VUnit (vparse' p a)
 
 val intro_vparse
+  (#opened: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: SE.SteelSel unit
+: SEA.SteelSelGhost unit opened
     (AP.varrayptr a)
     (fun _ -> vparse p a)
     (fun h ->
@@ -106,11 +108,12 @@ val intro_vparse
     )
 
 val elim_vparse
+  (#opened: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: SE.SteelSel unit
+: SEA.SteelSelGhost unit opened
     (vparse p a)
     (fun _ -> AP.varrayptr a)
     (fun _ -> True)

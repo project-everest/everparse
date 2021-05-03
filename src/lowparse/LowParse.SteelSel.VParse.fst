@@ -3,6 +3,7 @@ include LowParse.Spec.Base
 
 module S = Steel.Memory
 module SE = Steel.SelEffect
+module SEA = Steel.SelEffect.Atomic
 module A = Steel.SelArray
 module AP = Steel.SelArrayPtr
 
@@ -76,11 +77,12 @@ let vparse0_sel
   x
 
 let intro_vparse0
+  (#opened: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: SE.SteelSel unit
+: SEA.SteelSelGhost unit opened
     (AP.varrayptr a)
     (fun _ -> vparse0 p a)
     (fun h ->
@@ -92,22 +94,23 @@ let intro_vparse0
       is_byte_repr p (vparse0_sel p a h').contents (h (AP.varrayptr a)).AP.contents
     )
 =
-  SE.intro_vrefine (AP.varrayptr a) (cvalid p);
-  SE.intro_vrewrite (AP.varrayptr a `SE.vrefine` cvalid p) (select a p);
+  SEA.intro_vrefine (AP.varrayptr a) (cvalid p);
+  SEA.intro_vrewrite (AP.varrayptr a `SE.vrefine` cvalid p) (select a p);
   assert_norm ((AP.varrayptr a `SE.vrefine` cvalid p) `SE.vrewrite` select a p == vparse0 p a); // FIXME: WHY WHY WHY?
-  SE.change_equal_slprop ((AP.varrayptr a `SE.vrefine` cvalid p) `SE.vrewrite` select a p) (vparse0 p a)
+  SEA.change_equal_slprop ((AP.varrayptr a `SE.vrefine` cvalid p) `SE.vrewrite` select a p) (vparse0 p a)
 
-let change_equal_slprop (p q: SE.vprop)
+let change_equal_slprop (#opened: _) (p q: SE.vprop)
   (sq: squash (p == q))
-  : SE.SteelSel unit p (fun _ -> q) (fun _ -> True) (fun h0 _ h1 -> p == q /\ h1 q == h0 p)
-= SE.change_equal_slprop p q
+  : SEA.SteelSelGhost unit opened p (fun _ -> q) (fun _ -> True) (fun h0 _ h1 -> p == q /\ h1 q == h0 p)
+= SEA.change_equal_slprop p q
 
 let elim_vparse0
+  (#opened: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: SE.SteelSel unit
+: SEA.SteelSelGhost unit opened
     (vparse0 p a)
     (fun _ -> AP.varrayptr a)
     (fun _ -> True)
@@ -123,10 +126,10 @@ let elim_vparse0
   change_equal_slprop (vparse0 #k #t p a)
     ((AP.varrayptr a `SE.vrefine` cvalid p) `SE.vrewrite` select a p)
     sq;
-  SE.elim_vrewrite (AP.varrayptr a `SE.vrefine` cvalid p) (select a p);
-  let g = SE.gget (AP.varrayptr a `SE.vrefine` cvalid p) in
+  SEA.elim_vrewrite (AP.varrayptr a `SE.vrefine` cvalid p) (select a p);
+  let g = SEA.gget (AP.varrayptr a `SE.vrefine` cvalid p) in
   assert (valid p (Ghost.reveal g).AP.contents);
-  SE.elim_vrefine (AP.varrayptr a) (cvalid p)
+  SEA.elim_vrefine (AP.varrayptr a) (cvalid p)
 
 let vparse_slprop
   #k #t p a
@@ -139,10 +142,10 @@ let vparse_sel
   fun m -> SE.sel_of (vparse0 p a) m
 
 let intro_vparse
-  #k #t p a
+  #opened #k #t p a
 =
   intro_vparse0 p a;
-  SE.change_slprop_rel
+  SEA.change_slprop_rel
     (vparse0 p a)
     (vparse p a)
     (fun (x: SE.t_of (vparse0 p a)) (y: SE.t_of (vparse p a)) -> (x <: v t) == y)
@@ -150,9 +153,9 @@ let intro_vparse
   ()
 
 let elim_vparse
-  #k #t p a
+  #opened #k #t p a
 =
-  SE.change_slprop_rel
+  SEA.change_slprop_rel
     (vparse p a)
     (vparse0 p a)
     (fun (x: SE.t_of (vparse p a)) (y: SE.t_of (vparse0 p a)) -> (x <: v t) == y)

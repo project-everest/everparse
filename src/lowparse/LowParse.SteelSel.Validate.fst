@@ -4,6 +4,7 @@ include LowParse.Low.ErrorCode
 
 module S = Steel.Memory
 module SE = Steel.SelEffect
+module SEA = Steel.SelEffect.Atomic
 module A = Steel.SelArray
 module AP = Steel.SelArrayPtr
 
@@ -198,17 +199,16 @@ let wvalidate
     let ar = AP.split a (uint64_to_uint32 consumed) in
     intro_vparse p a;
     let res = Some ar in
-    SE.reveal_star (vparse p a) (AP.varrayptr ar);
-    SE.change_equal_slprop
+    SEA.reveal_star (vparse p a) (AP.varrayptr ar);
+    SEA.change_equal_slprop
       (vparse p a `SE.star` AP.varrayptr ar)
       (wvalidate_vprop p a res);
-    res
+    SEA.return res
   end else begin
-    SE.noop ();
-    SE.change_equal_slprop
+    SEA.change_equal_slprop
       (AP.varrayptr a)
       (wvalidate_vprop p a None);
-    None
+    SEA.return None
   end
 
 let dummy
@@ -226,23 +226,23 @@ let dummy
       h' (AP.varrayptr a) == h (AP.varrayptr a)
     )
 =
-  let g0 : Ghost.erased (AP.v byte) = SE.gget (AP.varrayptr a) in
+  let g0 : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in
   let res = wvalidate w a len in
   if None? res
   then begin
-    SE.noop ();
-    SE.change_equal_slprop
+    SEA.change_equal_slprop
       (wvalidate_vprop p a res)
-      (AP.varrayptr a)
+      (AP.varrayptr a);
+    SEA.return ()
   end else begin
     let ar = Some?.v res in
-    SE.change_equal_slprop
+    SEA.change_equal_slprop
       (wvalidate_vprop p a res)
       (vparse p a `SE.star` AP.varrayptr ar);
-    SE.reveal_star (vparse p a) (AP.varrayptr ar);
-    let g1 : Ghost.erased (v t) = SE.gget (vparse p a) in
+    SEA.reveal_star (vparse p a) (AP.varrayptr ar);
+    let g1 : Ghost.erased (v t) = SEA.gget (vparse p a) in
     elim_vparse p a;
-    let g2 = SE.gget (AP.varrayptr a) in
+    let g2 = SEA.gget (AP.varrayptr a) in
     let glen = Ghost.hide (A.length (Ghost.reveal g1).array) in
     is_byte_repr_injective p (Ghost.reveal g1).contents (Seq.slice (Ghost.reveal g0).AP.contents 0 (Ghost.reveal glen)) (Ghost.reveal g2).AP.contents;
     Seq.lemma_split (Ghost.reveal g0).AP.contents (Ghost.reveal glen);
