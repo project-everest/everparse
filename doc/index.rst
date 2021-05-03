@@ -41,6 +41,11 @@ Manual
 
 * :ref:`3d` (includes the full documentation of the EverParse Windows binary package)
 
+In the News
+-----------
+`EverParse: Hardening critical attack surfaces with formally proven message parsers <https://www.microsoft.com/en-us/research/blog/everparse-hardening-critical-attack-surfaces-with-formally-proven-message-parsers/>`_;
+  Tahina Ramananandro, Aseem Rastogi and Nikhil Swamy;
+  Microsoft Research blog
 
 Papers
 ------
