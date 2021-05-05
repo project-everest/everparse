@@ -249,89 +249,63 @@ let dummy
     AP.join a ar
   end
 
-(*
-      match parse p s, res with
-      | None, None ->
-        h' (A.varray a) == s
-      | Some (v, consumed), Some res ->
-//        v == (h' (vparse p res.v_contents) <: t) /\
-//        h' (A.varray res.v_rest) == Seq.slice s consumed (A.length a) /\
-        A.merge_into res.v_contents res.v_rest a
-      | _ -> False
-    )
-  
-
-let validator
-  (#t: Type0)
-  (#k: parser_kind)
-  (p: parser k t)
-: Tot Type
-=
-  (a: byte_array) ->
-  (len: U32.t) ->
-  SE.SteelSel (option valid_res_t)
-    (A.varray a)
-    (valid_res_vprop p a)
-    (fun _ -> U32.v len == A.length a)
-    (fun h res h' ->
-      let s = h (A.varray a) in
-      match parse p s, res with
-      | None, None ->
-        h' (A.varray a) == s
-      | Some (v, consumed), Some res ->
-//        v == (h' (vparse p res.v_contents) <: t) /\
-//        h' (A.varray res.v_rest) == Seq.slice s consumed (A.length a) /\
-        A.merge_into res.v_contents res.v_rest a
-      | _ -> False
-    )
-
 #set-options "--ide_id_info_off"
+
+unfold
+let parse_strong_prefix_pre
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (input1: bytes)
+  (input2: bytes)
+: Tot prop
+=   k.parser_kind_subkind == Some ParserStrong /\ (
+    match parse p input1 with
+    | Some (x, consumed) ->
+      consumed <= Seq.length input2 /\
+      Seq.slice input1 0 consumed `Seq.equal` Seq.slice input2 0 consumed
+    | _ -> False
+  )
+
+let parse_strong_prefix2
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (input1: bytes)
+  (input2: bytes)
+  (sq: parse_strong_prefix_pre p input1 input2)
+: Lemma
+  (
+    match parse p input1 with
+    | Some (x, consumed) ->
+      consumed <= Seq.length input2 /\
+      parse p input2 == Some (x, consumed)
+    | _ -> False
+  )
+= parse_strong_prefix p input1 input2
 
 let validate_total_constant_size
   (#t: Type0)
   (#k: parser_kind)
   (p: parser k t)
   (sz: U32.t)
-: Pure (validator p)
-  (requires (
-    k.parser_kind_subkind == Some ParserStrong /\
-    k.parser_kind_high == Some k.parser_kind_low /\
-    k.parser_kind_metadata = Some ParserKindMetadataTotal /\
-    U32.v sz == k.parser_kind_low
-  ))
-  (ensures (fun _ -> True))
+: Pure (wvalidator p)
+    (requires (
+        k.parser_kind_subkind == Some ParserStrong /\
+        k.parser_kind_metadata == Some ParserKindMetadataTotal /\
+        k.parser_kind_high == Some k.parser_kind_low /\
+        k.parser_kind_low == U32.v sz
+    ))
+    (ensures (fun _ -> True))
 = fun (a: byte_array) (len: U32.t) ->
+  let ga = SEA.gget (AP.varrayptr a) in
+  let g = Ghost.hide (Ghost.reveal ga).AP.contents in
   parser_kind_prop_equiv k p;
-  let m0 = SE.get () in
   if len `U32.lt` sz
   then begin
-    assert (None? (parse p (m0 (A.varray a))));
-    SE.noop ();
-    None
+    assert (None? (parse p g));
+    SEA.return validator_error_not_enough_data
   end else begin
-    let split = A.split a sz in
-    SE.reveal_star (A.varray (A.pfst split)) (A.varray (A.psnd split));
-    let m1 = SE.get #(A.varray (A.pfst split) `SE.star` A.varray (A.psnd split)) () in
-    parse_strong_prefix p (m0 (A.varray a)) (m1 (A.varray (A.pfst split)));
-    parse_injective p (m0 (A.varray a)) (m1 (A.varray (A.pfst split)));
-    intro_vparse p (A.pfst split);
-    SE.reveal_star (vparse p (A.pfst split)) (A.varray (A.psnd split));
-    let m2 = SE.get #(vparse p (A.pfst split) `SE.star` A.varray (A.psnd split)) () in
-    assert (
-      let s = m0 (A.varray a) in
-      let Some (_, consumed) = parse p s in
-      m2 (A.varray (A.psnd split)) == Seq.slice s consumed (A.length a)
-    );
-    let res = ({
-      v_contents = A.pfst split;
-      v_rest = A.psnd split;
-      v_rest_len = len `U32.sub` sz;
-    })
-    in
-    SE.change_equal_slprop
-      (vparse p (A.pfst split) `SE.star` A.varray (A.psnd split))
-      (valid_res_vprop p a (Some res));
-//    let m3 = SE.get #(valid_res_vprop p a (Some res)) () in
-//    assert (A.psnd (m3 (valid_res_vprop p a (Some res))) == m2 (A.varray (A.psnd split)));
-    Some res
+    parse_strong_prefix p g (Seq.slice g 0 (U32.v sz));
+    SEA.return (FStar.Int.Cast.uint32_to_uint64 sz)
   end
