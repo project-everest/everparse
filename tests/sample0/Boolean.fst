@@ -127,11 +127,47 @@ let boolean_validator =
   lemma_synth_boolean_inj ();
   LL.validate_synth validate_boolean_key synth_boolean ()
 
+#push-options "--fuel 4"
 inline_for_extraction let read_boolean_key : LL.leaf_reader parse_boolean_key =
+  LL.read_enum_key
+    boolean_repr_reader
+    boolean_enum
+    (LL.dep_maybe_enum_destr_t_intro
+      boolean_enum
+      (LL.read_enum_key_t boolean_enum)
+      (LL.dep_maybe_enum_destr_cons
+        boolean_enum
+        (LL.read_enum_key_t boolean_enum)
+        []
+        [FALSE,0z;TRUE,1z]
+        ()
+        (LL.dep_maybe_enum_destr_cons
+          boolean_enum
+          (LL.read_enum_key_t boolean_enum)
+          [FALSE,0z]
+          [TRUE,1z]
+          ()
+          (LL.dep_maybe_enum_destr_nil
+            boolean_enum
+            (LL.read_enum_key_t boolean_enum)
+            [TRUE,1z;FALSE,0z]
+            []
+            ()
+          )
+        )
+      )
+    )
+
+(* // that above should be the result of:
+  
   norm [delta_attr [`%LP.Norm]; iota; zeta; primops] (
   LL.mk_read_enum_key boolean_repr_reader boolean_enum
 
-  )let boolean_reader =
+  )
+*)
+#pop-options
+
+let boolean_reader =
  [@inline_let] let _ = lemma_synth_boolean_inj () in
  LL.read_synth' parse_boolean_key synth_boolean read_boolean_key ()
 
