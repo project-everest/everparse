@@ -102,11 +102,28 @@ let boolean_size32 =
   [@inline_let] let _ = assert_norm (LS.size32_constant_precond boolean_serializer 1ul) in
   LS.size32_constant boolean_serializer 1ul ()
 
+#push-options "--fuel 4"
 inline_for_extraction let validate_boolean_key : LL.validator parse_boolean_key =
+  LL.validate_enum_key
+    boolean_repr_validator
+    boolean_repr_reader
+    boolean_enum
+    (LL.maybe_enum_destr_t_intro bool boolean_enum
+      (LL.maybe_enum_destr_cons bool boolean_enum [] [FALSE, 0z; TRUE, 1z] ()
+        (LL.maybe_enum_destr_cons bool boolean_enum [FALSE,0z] [TRUE,1z] ()
+          (LL.maybe_enum_destr_nil bool boolean_enum [TRUE,1z;FALSE,0z] [] ())
+        )
+      )
+   )
+
+(* // the above should be the result of this, before extraction:
   norm [delta_attr [`%LP.Norm]; iota; zeta; primops] (
     LL.mk_validate_enum_key boolean_repr_validator boolean_repr_reader boolean_enum
+  )
+*)
+#pop-options
 
-  )let boolean_validator =
+let boolean_validator =
   lemma_synth_boolean_inj ();
   LL.validate_synth validate_boolean_key synth_boolean ()
 
