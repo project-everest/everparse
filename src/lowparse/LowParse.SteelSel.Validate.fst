@@ -34,7 +34,7 @@ let tvalid_res_vprop_true
   (a: byte_array)
   (res: bool)
   (x: SE.t_of (tvalid_res_vprop p a res))
-: Pure (v t)
+: Pure (v k t)
   (requires (res == true))
   (ensures (fun _ -> True))
 = x
@@ -129,7 +129,7 @@ let wvalidate_vprop_some
   (a: byte_array)
   (res: option byte_array)
   (x: SE.t_of (wvalidate_vprop p a res))
-: Pure (v t & AP.v byte)
+: Pure (v k t & AP.v byte)
   (requires (Some? res))
   (ensures (fun _ -> True))
 = x
@@ -240,7 +240,7 @@ let dummy
       (wvalidate_vprop p a res)
       (vparse p a `SE.star` AP.varrayptr ar);
     SEA.reveal_star (vparse p a) (AP.varrayptr ar);
-    let g1 : Ghost.erased (v t) = SEA.gget (vparse p a) in
+    let g1 : Ghost.erased (v k t) = SEA.gget (vparse p a) in // FIXME: WHY WHY WHY is this type annotation needed?
     elim_vparse p a;
     let g2 = SEA.gget (AP.varrayptr a) in
     let glen = Ghost.hide (A.length (Ghost.reveal g1).array) in

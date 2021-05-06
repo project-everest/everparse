@@ -47,9 +47,17 @@ val is_byte_repr_injective
   (requires (is_byte_repr p x b1 /\ is_byte_repr p x b2))
   (ensures (b1 == b2))
 
+let array_prop (k: parser_kind) (a: A.array byte) : Tot prop =
+  let l = A.length a in
+  k.parser_kind_low <= l /\
+  (Some? k.parser_kind_high ==> l <= Some?.v k.parser_kind_high)
+
+let array_t (k: parser_kind) : Tot Type =
+  (array: A.array byte { array_prop k array })
+
 noeq
-type v (t: Type) = {
-  array : A.array byte;
+type v (k: parser_kind) (t: Type) = {
+  array : array_t k;
   contents : t;
 }
 
@@ -65,7 +73,7 @@ val vparse_sel
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: Tot (SE.selector (v t) (vparse_slprop p a))
+: Tot (SE.selector (v k t) (vparse_slprop p a))
 
 [@SE.__steel_reduce__]
 let vparse'
@@ -76,7 +84,7 @@ let vparse'
 : Tot SE.vprop'
 = {
   SE.hp = vparse_slprop p a;
-  SE.t = v t;
+  SE.t = v k t;
   SE.sel = vparse_sel p a;
 }
 

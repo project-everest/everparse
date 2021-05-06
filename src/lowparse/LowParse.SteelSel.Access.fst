@@ -24,7 +24,7 @@ let parsed_size
       U32.v res == A.length (h (vparse p a)).array
     )
 
-let parsed_size_total_constant_size
+let parsed_size_constant_size
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -33,17 +33,12 @@ let parsed_size_total_constant_size
     (requires (
       k.parser_kind_subkind == Some ParserStrong /\
       k.parser_kind_high == Some k.parser_kind_low /\
-      k.parser_kind_metadata == Some ParserKindMetadataTotal /\
       U32.v sz == k.parser_kind_low
     ))
     (ensures (fun _ -> True))
 =
   fun a ->
-  elim_vparse p a;
-  let _ = SEA.gget (AP.varrayptr a) in // FIXME: WHY WHY WHY is this needed?
-  parser_kind_prop_equiv k p;
-  intro_vparse p a;
-  SEA.return sz
+  SEA.return sz // enough thanks to length ineqs in the return type of the selector
 
 let strong_parsed_size
   (#k: parser_kind)

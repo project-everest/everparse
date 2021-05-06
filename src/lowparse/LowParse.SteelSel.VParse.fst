@@ -17,7 +17,8 @@ let cvalid
   (p: parser k t)
   (c: AP.v byte)
 : Tot prop
-= valid p c.AP.contents
+= valid p c.AP.contents /\
+  array_prop k c.AP.array
 
 unfold
 let intro_cvalid
@@ -36,7 +37,7 @@ let select
   (#t: Type)
   (p: parser k t)
   (x: SE.t_of (AP.varrayptr a `SE.vrefine` cvalid p))
-: GTot (v t)
+: GTot (v k t)
 =
   let Some (y, _) = parse p x.AP.contents in
   {
@@ -61,7 +62,7 @@ let vparse0
   (a: byte_array)
 : Pure SE.vprop
   (requires True)
-  (ensures (fun y -> SE.t_of y == v t))
+  (ensures (fun y -> SE.t_of y == v k t))
 = (AP.varrayptr a `SE.vrefine` cvalid p) `SE.vrewrite`  select a p
 
 unfold
@@ -70,7 +71,7 @@ let vparse0_sel
   (#k: parser_kind) (#t: Type) (q: parser k t)
   (r:byte_array)
   (h:SE.rmem p{FStar.Tactics.with_tactic SE.selector_tactic (SE.can_be_split p (vparse0 q r) /\ True)})
-: GTot (v t)
+: GTot (v k t)
 = let x : (SE.t_of (vparse0 q r)) =
     h (vparse0 q r)
   in
@@ -94,6 +95,7 @@ let intro_vparse0
       is_byte_repr p (vparse0_sel p a h').contents (h (AP.varrayptr a)).AP.contents
     )
 =
+  parser_kind_prop_equiv k p;
   SEA.intro_vrefine (AP.varrayptr a) (cvalid p);
   SEA.intro_vrewrite (AP.varrayptr a `SE.vrefine` cvalid p) (select a p);
   assert_norm ((AP.varrayptr a `SE.vrefine` cvalid p) `SE.vrewrite` select a p == vparse0 p a); // FIXME: WHY WHY WHY?
@@ -148,7 +150,7 @@ let intro_vparse
   SEA.change_slprop_rel
     (vparse0 p a)
     (vparse p a)
-    (fun (x: SE.t_of (vparse0 p a)) (y: SE.t_of (vparse p a)) -> (x <: v t) == y)
+    (fun (x: SE.t_of (vparse0 p a)) (y: SE.t_of (vparse p a)) -> (x <: v k t) == y)
     (fun _ -> ());
   ()
 
@@ -158,6 +160,6 @@ let elim_vparse
   SEA.change_slprop_rel
     (vparse p a)
     (vparse0 p a)
-    (fun (x: SE.t_of (vparse p a)) (y: SE.t_of (vparse0 p a)) -> (x <: v t) == y)
+    (fun (x: SE.t_of (vparse p a)) (y: SE.t_of (vparse0 p a)) -> (x <: v k t) == y)
     (fun _ -> ());
   elim_vparse0 p a

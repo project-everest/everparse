@@ -89,7 +89,7 @@ let destruct_pair
   nondep_then_eq p1 p2 b.AP.contents;
   let res = peek_strong j1 a in
   SEA.reveal_star (vparse p1 a) (AP.varrayptr res);
-  let c1 : Ghost.erased (v t1) = SEA.gget (vparse p1 a) in // FIXME: WHY WHY WHY is the type annotation needed?
+  let c1 : Ghost.erased (v k1 t1) = SEA.gget (vparse p1 a) in // FIXME: WHY WHY WHY is the type annotation needed?
   parse_strong_prefix p1 (Seq.slice b.AP.contents 0 (A.length c1.array)) b.AP.contents;
   intro_vparse p2 res;
   SEA.return res
@@ -122,7 +122,7 @@ val construct_pair
 let construct_pair
   #opened #k1 #t1 p1 p2 a1 a2
 =
-  let v1 : Ghost.erased (v t1) = SEA.gget (vparse p1 a1) in // FIXME: WHY WHY WHY is this type annotation needed?
+  let v1 : Ghost.erased (v k1 t1) = SEA.gget (vparse p1 a1) in // FIXME: WHY WHY WHY is this type annotation needed?
   elim_vparse p1 a1;
   elim_vparse p2 a2;
   let g1 = SEA.gget (AP.varrayptr a1) in
