@@ -1,5 +1,6 @@
 module LowParse.SteelSel.Combinators
 include LowParse.SteelSel.Validate
+include LowParse.SteelSel.Access
 include LowParse.Spec.Combinators
 
 module S = Steel.Memory
@@ -56,3 +57,39 @@ let validate_pair
     end
   end
 #pop-options
+
+val destruct_pair
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (j1: strong_parsed_size p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (a: byte_array)
+: SE.SteelSel byte_array
+    (vparse (p1 `nondep_then` p2) a)
+    (fun res -> vparse p1 a `SE.star` vparse p2 res)
+    (fun _ ->
+      k1.parser_kind_subkind == Some ParserStrong
+    )
+    (fun h res h' ->
+      let c = h (vparse (p1 `nondep_then` p2) a) in
+      let c1 = h' (vparse p1 a) in
+      let c2 = h' (vparse p2 res) in
+      A.merge_into c1.array c2.array c.array /\
+      c.contents == (c1.contents, c2.contents)
+    )
+
+let destruct_pair
+  #k1 #t1 #p1 j1 p2 a
+=
+  elim_vparse (p1 `nondep_then` p2) a;
+  let b : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in
+  nondep_then_eq p1 p2 b.AP.contents;
+  let res = peek_strong j1 a in
+  SEA.reveal_star (vparse p1 a) (AP.varrayptr res);
+  let c1 : Ghost.erased (v t1) = SEA.gget (vparse p1 a) in
+  parse_strong_prefix p1 (Seq.slice b.AP.contents 0 (A.length c1.array)) b.AP.contents;
+  intro_vparse p2 res;
+  SEA.return res
