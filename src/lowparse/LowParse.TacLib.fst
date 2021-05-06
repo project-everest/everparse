@@ -1,5 +1,6 @@
 module LowParse.TacLib
 include FStar.Tactics
+include LowParse.Norm
 
 module L = FStar.List.Tot
 
@@ -86,3 +87,13 @@ let rec intros_until_eq_hyp
   if cond
   then i
   else intros_until_eq_hyp ()
+
+[@@ noextract_to "Kremlin"]
+let pp_norm_tac () : Tac unit =
+  norm norm_steps;
+  trefl ();
+  to_all_goals (fun _ ->
+    norm [delta; iota; zeta; primops];
+    smt ()
+  );
+  qed ()
