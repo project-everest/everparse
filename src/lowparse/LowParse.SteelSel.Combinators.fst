@@ -85,11 +85,52 @@ let destruct_pair
   #k1 #t1 #p1 j1 p2 a
 =
   elim_vparse (p1 `nondep_then` p2) a;
-  let b : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in
+  let b = SEA.gget (AP.varrayptr a) in
   nondep_then_eq p1 p2 b.AP.contents;
   let res = peek_strong j1 a in
   SEA.reveal_star (vparse p1 a) (AP.varrayptr res);
-  let c1 : Ghost.erased (v t1) = SEA.gget (vparse p1 a) in
+  let c1 : Ghost.erased (v t1) = SEA.gget (vparse p1 a) in // FIXME: WHY WHY WHY is the type annotation needed?
   parse_strong_prefix p1 (Seq.slice b.AP.contents 0 (A.length c1.array)) b.AP.contents;
   intro_vparse p2 res;
   SEA.return res
+
+val construct_pair
+  (#opened: _)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (a1: byte_array)
+  (a2: byte_array)
+: SEA.SteelSelGhost unit opened
+    (vparse p1 a1 `SE.star` vparse p2 a2)
+    (fun _ -> vparse (p1 `nondep_then` p2) a1)
+    (fun h ->
+      A.adjacent (h (vparse p1 a1)).array (h (vparse p2 a2)).array /\
+      k1.parser_kind_subkind == Some ParserStrong
+    )
+    (fun h res h' ->
+      let c = h' (vparse (p1 `nondep_then` p2) a1) in
+      let c1 = h (vparse p1 a1) in
+      let c2 = h (vparse p2 a2) in
+      A.merge_into c1.array c2.array c.array /\
+      c.contents == (c1.contents, c2.contents)
+    )
+
+let construct_pair
+  #opened #k1 #t1 p1 p2 a1 a2
+=
+  let v1 : Ghost.erased (v t1) = SEA.gget (vparse p1 a1) in // FIXME: WHY WHY WHY is this type annotation needed?
+  elim_vparse p1 a1;
+  elim_vparse p2 a2;
+  let g1 = SEA.gget (AP.varrayptr a1) in
+  let g2 = SEA.gget (AP.varrayptr a2) in
+  AP.join a1 a2;
+  let g : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a1) in // FIXME: same here
+  nondep_then_eq p1 p2 g.AP.contents;
+  Seq.lemma_split g.AP.contents (A.length v1.array);
+  Seq.lemma_append_inj g1.AP.contents g2.AP.contents (Seq.slice g.AP.contents 0 (A.length v1.array)) (Seq.slice g.AP.contents (A.length v1.array) (Seq.length g.AP.contents));
+  parse_strong_prefix p1 g1.AP.contents g.AP.contents;
+  intro_vparse (p1 `nondep_then` p2) a1
