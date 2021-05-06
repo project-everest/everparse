@@ -207,3 +207,141 @@ let copy_strong #_ #_ #p j src dst =
   copy_exact p src dst n;
   SEA.reveal_star_3 (vparse p src) (vparse p dst) (AP.varrayptr res); // for can_be_split
   SEA.return res
+
+let copy_weak_vprop
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (src: byte_array)
+  (dst: byte_array)
+  (res: option byte_array)
+: Tot SE.vprop
+= vparse p src `SE.star`
+  begin if None? res
+  then AP.varrayptr dst
+  else vparse p dst `SE.star` AP.varrayptr (Some?.v res)
+  end
+
+unfold
+let copy_weak_vprop_src
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (src: byte_array)
+  (dst: byte_array)
+  (res: option byte_array)
+  (x: SE.t_of (copy_weak_vprop p src dst res))
+: Tot (v k t)
+= fst x
+
+unfold
+let copy_weak_vprop_dst_some
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (src: byte_array)
+  (dst: byte_array)
+  (res: option byte_array)
+  (x: SE.t_of (copy_weak_vprop p src dst res))
+: Pure (v k t)
+  (requires (None? res == false))
+  (ensures (fun _ -> True))
+= fst #(SE.t_of (vparse p dst)) #(SE.t_of (AP.varrayptr (Some?.v res))) (snd x)
+
+unfold
+let copy_weak_vprop_dst_none
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (src: byte_array)
+  (dst: byte_array)
+  (res: option byte_array)
+  (x: SE.t_of (copy_weak_vprop p src dst res))
+: Pure (AP.v byte)
+  (requires (None? res))
+  (ensures (fun _ -> True))
+= snd x
+
+unfold
+let copy_weak_vprop_res
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (src: byte_array)
+  (dst: byte_array)
+  (res: option byte_array)
+  (x: SE.t_of (copy_weak_vprop p src dst res))
+: Pure (AP.v byte)
+  (requires (Some? res))
+  (ensures (fun _ -> True))
+= snd #(SE.t_of (vparse p dst)) #(SE.t_of (AP.varrayptr (Some?.v res))) (snd x)
+
+let copy_weak_post
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (src: byte_array)
+  (dst: byte_array)
+  (h: SE.rmem (vparse p src `SE.star` AP.varrayptr dst))
+  (res0: option byte_array)
+  (h': SE.rmem (copy_weak_vprop p src dst res0))
+: Tot prop
+=
+      let x = h' (copy_weak_vprop p src dst res0) in
+      h (vparse p src) == copy_weak_vprop_src p src dst res0 x /\
+      begin
+        if None? res0
+        then
+          copy_weak_vprop_dst_none p src dst res0 x == h (AP.varrayptr dst)
+        else
+          let res = Some?.v res0 in
+          let s = h (vparse p src) in
+          let d' = copy_weak_vprop_dst_some p src dst res0 x in
+          let d = h (AP.varrayptr dst) in
+          let r = copy_weak_vprop_res p src dst res0 x in
+          A.merge_into d'.array r.AP.array d.AP.array /\
+          d'.contents == s.contents /\
+          A.length s.array == A.length d'.array /\ // TODO: this should be a consequence of the equality of the contents, via parser injectivity
+          r.AP.contents == Seq.slice d.AP.contents (A.length s.array) (A.length d.AP.array)
+      end
+
+val copy_weak
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: parsed_size p)
+  (src: byte_array)
+  (dst: byte_array)
+  (n: U32.t)
+: SE.SteelSel (option byte_array)
+    (vparse p src `SE.star` AP.varrayptr dst)
+    (fun res -> copy_weak_vprop p src dst res)
+    (fun h ->
+      A.length (h (AP.varrayptr dst)).AP.array == U32.v n
+    )
+    (fun h res0 h' ->
+      copy_weak_post p src dst h res0 h'
+    )
+
+let copy_weak #_ #_ #p j src dst n_dst =
+  let n_src = j src in
+  if n_dst `U32.lt` n_src
+  then begin
+    SEA.reveal_star (vparse p src) (AP.varrayptr dst);
+    let res0 : option byte_array = None in
+    SEA.change_equal_slprop
+      (vparse p src `SE.star` AP.varrayptr dst)
+      (copy_weak_vprop p src dst res0);
+    SEA.return res0
+  end else begin
+    let res = AP.split dst n_src in
+    let _ = SEA.gget (AP.varrayptr dst) in // FIXME: WHY WHY WHY?
+    copy_exact p src dst n_src;
+    SEA.reveal_star (vparse p dst) (AP.varrayptr res);
+    SEA.reveal_star (vparse p src) (vparse p dst `SE.star` AP.varrayptr res);
+    let res0 = Some res in
+    SEA.change_equal_slprop
+      (vparse p src `SE.star` (vparse p dst `SE.star` AP.varrayptr res))
+      (copy_weak_vprop p src dst res0);
+    SEA.return res0
+  end
