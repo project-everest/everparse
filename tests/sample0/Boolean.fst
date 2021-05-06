@@ -10,6 +10,7 @@ module LP = LowParse.Spec
 module LS = LowParse.SLow
 module LPI = LowParse.Spec.AllIntegers
 module LL = LowParse.Low
+module LT = LowParse.TacLib
 module L = FStar.List.Tot
 module B = LowStar.Buffer
 module BY = FStar.Bytes
@@ -19,7 +20,7 @@ module LWP = LowParse.Writers.Instances
 
 #reset-options "--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2"
 
-[@LP.Norm] inline_for_extraction let boolean_enum : LP.enum boolean U8.t =
+[@LT.Norm] inline_for_extraction let boolean_enum : LP.enum boolean U8.t =
   [@inline_let] let e = [
     FALSE, 0z;
     TRUE, 1z;
@@ -102,19 +103,19 @@ let boolean_size32 =
   [@inline_let] let _ = assert_norm (LS.size32_constant_precond boolean_serializer 1ul) in
   LS.size32_constant boolean_serializer 1ul ()
 
+[@@ (LT.postprocess_with LT.pp_norm_tac) ]
 inline_for_extraction let validate_boolean_key : LL.validator parse_boolean_key =
-  norm [delta_attr [`%LP.Norm]; iota; zeta; primops] (
     LL.mk_validate_enum_key boolean_repr_validator boolean_repr_reader boolean_enum
 
-  )let boolean_validator =
+  let boolean_validator =
   lemma_synth_boolean_inj ();
   LL.validate_synth validate_boolean_key synth_boolean ()
 
+[@@ (LT.postprocess_with LT.pp_norm_tac) ]
 inline_for_extraction let read_boolean_key : LL.leaf_reader parse_boolean_key =
-  norm [delta_attr [`%LP.Norm]; iota; zeta; primops] (
   LL.mk_read_enum_key boolean_repr_reader boolean_enum
-
-  )let boolean_reader =
+ 
+let boolean_reader =
  [@inline_let] let _ = lemma_synth_boolean_inj () in
  LL.read_synth' parse_boolean_key synth_boolean read_boolean_key ()
 
