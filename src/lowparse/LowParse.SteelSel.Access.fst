@@ -345,3 +345,132 @@ let copy_weak #_ #_ #p j src dst n_dst =
       (copy_weak_vprop p src dst res0);
     SEA.return res0
   end
+
+module R2L = LowParse.SteelSel.R2LOutput
+
+val copy_strong_r2l
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: parsed_size p)
+  (src: byte_array)
+  (dst: R2L.t)
+: SE.SteelSel byte_array
+    (vparse p src `SE.star` R2L.vp dst)
+    (fun res -> vparse p src `SE.star` R2L.vp dst `SE.star` vparse p res)
+    (fun h ->
+      A.length (h (vparse p src)).array <= A.length (h (R2L.vp dst))
+    )
+    (fun h res h' ->
+      SE.can_be_split (vparse p src `SE.star` R2L.vp dst `SE.star` vparse p res) (vparse p src) /\ // FIXME: WHY WHY WHY?
+      SE.can_be_split (vparse p src `SE.star` R2L.vp dst `SE.star` vparse p res) (R2L.vp dst) /\ // same here
+      begin
+        let s = h (vparse p src) in
+        let d = h (R2L.vp dst) in
+        let d' = h' (R2L.vp dst) in
+        let r = h' (vparse p res) in
+        h' (vparse p src) == s /\
+        A.merge_into d' r.array d /\
+        r.contents == s.contents /\
+        A.length s.array == A.length r.array // TODO: this should be a consequence of the equality of the contents, via parser injectivity
+      end
+    )
+
+let copy_strong_r2l #_ #_ #p j src dst =
+  let n = j src in
+  let res = R2L.split dst n in
+  copy_exact p src res n;
+  SEA.reveal_star_3 (vparse p src) (R2L.vp dst) (vparse p res); // for can_be_split
+  SEA.return res
+
+(* TODO: generalize somehow to any vprop on option. *)
+
+let copy_weak_r2l_vprop
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (res: option byte_array)
+: Tot SE.vprop
+= if None? res
+  then SE.emp
+  else vparse p (Some?.v res)
+
+unfold
+let copy_weak_r2l_vprop_res
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (res: option byte_array)
+  (x: SE.t_of (copy_weak_r2l_vprop p res))
+: Pure (v k t)
+  (requires (Some? res))
+  (ensures (fun _ -> True))
+= x
+
+let copy_weak_r2l_post
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (src: byte_array)
+  (dst: R2L.t)
+  (h: SE.rmem (vparse p src `SE.star` R2L.vp dst))
+  (res0: option byte_array)
+  (h': SE.rmem (vparse p src `SE.star` R2L.vp dst `SE.star` copy_weak_r2l_vprop p res0))
+: Tot prop
+=
+  SE.can_be_split (vparse p src `SE.star` R2L.vp dst `SE.star` copy_weak_r2l_vprop p res0) (vparse p src) /\
+  SE.can_be_split (vparse p src `SE.star` R2L.vp dst `SE.star` copy_weak_r2l_vprop p res0) (R2L.vp dst) /\
+  begin
+      let s = h (vparse p src) in
+      let d = h (R2L.vp dst) in
+      let d' = h' (R2L.vp dst) in
+      h' (vparse p src) == s /\
+      begin
+        if None? res0
+        then
+           d' == d
+        else
+          let res = Some?.v res0 in
+          let r = copy_weak_r2l_vprop_res p res0 (h' (copy_weak_r2l_vprop p res0)) in
+          A.merge_into d' r.array d /\
+          r.contents == s.contents /\
+          A.length s.array == A.length r.array // TODO: this should be a consequence of the equality of the contents, via parser injectivity
+      end
+  end
+
+val copy_weak_r2l
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: parsed_size p)
+  (src: byte_array)
+  (dst: R2L.t)
+: SE.SteelSel (option byte_array)
+    (vparse p src `SE.star` R2L.vp dst)
+    (fun res -> vparse p src `SE.star` R2L.vp dst `SE.star` copy_weak_r2l_vprop p res)
+    (fun _ -> True)
+    (fun h res0 h' ->
+      copy_weak_r2l_post p src dst h res0 h'
+    )
+
+let copy_weak_r2l #_ #_ #p j src dst =
+  let n_dst = R2L.len dst in
+  let n_src = j src in
+  if n_dst `U32.lt` n_src
+  then begin
+    let res0 : option byte_array = None in
+    SEA.change_equal_slprop
+      SE.emp
+      (copy_weak_r2l_vprop p res0);
+    SEA.reveal_star_3 (vparse p src) (R2L.vp dst) (copy_weak_r2l_vprop p res0);
+    SEA.return res0
+  end else begin
+    let res = R2L.split dst n_src in
+    copy_exact p src res n_src;
+    let res0 = Some res in
+    SEA.change_equal_slprop
+      (vparse p res)
+      (copy_weak_r2l_vprop p res0);
+    SEA.reveal_star_3 (vparse p src) (R2L.vp dst) (copy_weak_r2l_vprop p res0);
+    SEA.return res0
+  end
