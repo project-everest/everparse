@@ -144,6 +144,7 @@ type parser_kind' =
 
 and parser_kind = {
   pk_kind : parser_kind';
+  pk_weak_kind : A.weak_kind ;
   pk_nz: bool
 }
 

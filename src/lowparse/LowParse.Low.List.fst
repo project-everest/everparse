@@ -30,6 +30,24 @@ let valid_exact_list_nil
   valid_exact_equiv (parse_list p) h sl pos pos;
   contents_exact_eq (parse_list p) h sl pos pos
 
+let valid_list_intro_nil
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
+  (pos : U32.t)
+: Lemma
+  (requires (U32.v pos == U32.v sl.len /\ live_slice h sl))
+  (ensures (
+    valid (parse_list p) h sl pos /\
+    contents (parse_list p) h sl pos == []
+  ))
+= parse_list_eq p (bytes_of_slice_from h sl pos);
+  valid_equiv (parse_list p) h sl pos;
+  contents_eq (parse_list p) h sl pos
+
 let valid_exact_list_cons
   (#k: parser_kind)
   (#t: Type)
@@ -66,6 +84,57 @@ let valid_exact_list_cons
   valid_exact_equiv (parse_list p) h sl pos1 pos';  
   contents_exact_eq (parse_list p) h sl pos pos';
   contents_exact_eq (parse_list p) h sl pos1 pos'
+
+let valid_list_intro_cons
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
+  (pos : U32.t)
+: Lemma
+  (requires (
+    U32.v pos < U32.v sl.len /\
+    valid p h sl pos /\
+    valid (parse_list p) h sl (get_valid_pos p h sl pos)
+  ))
+  (ensures (
+    valid p h sl pos /\
+    valid (parse_list p) h sl (get_valid_pos p h sl pos) /\
+    valid (parse_list p) h sl pos /\
+    contents (parse_list p) h sl pos == contents p h sl pos :: contents (parse_list p) h sl (get_valid_pos p h sl pos)
+  ))
+= let sq = bytes_of_slice_from h sl pos in
+  parse_list_eq p sq;
+  let pos1 = get_valid_pos p h sl pos in
+  valid_facts (parse_list p) h sl pos;
+  valid_facts p h sl pos;
+  valid_facts (parse_list p) h sl pos1
+
+let valid_list_elim_cons
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (#rrel #rel: _)
+  (sl: slice rrel rel)
+  (pos : U32.t)
+: Lemma
+  (requires (
+    U32.v pos < U32.v sl.len /\
+    valid (parse_list p) h sl pos
+  ))
+  (ensures (
+    valid p h sl pos /\
+    valid (parse_list p) h sl (get_valid_pos p h sl pos)
+  ))
+= let sq = bytes_of_slice_from h sl pos in
+  parse_list_eq p sq;
+  valid_facts (parse_list p) h sl pos;
+  valid_facts p h sl pos;
+  let pos1 = get_valid_pos p h sl pos in
+  valid_facts (parse_list p) h sl pos1
 
 let rec valid_list_valid_exact_list
   (#k: parser_kind)

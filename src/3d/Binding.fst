@@ -84,6 +84,7 @@ type decl_attributes = {
   may_fail:bool;
   integral:option integer_type;
   has_reader:bool;
+  parser_weak_kind:weak_kind;
   parser_kind_nz:option bool
 }
 
@@ -342,6 +343,16 @@ let parser_kind_nz (env:global_env) (id:ident) : ML (option bool) =
   match H.try_find env.ge_h id.v with
   | Some (_, Inl attrs) -> attrs.parser_kind_nz
   | _ -> None
+
+let parser_weak_kind (env:global_env) (id:ident) : ML (option _) =
+  match H.try_find env.ge_h id.v with
+  | Some (_, Inl attrs) -> Some attrs.parser_weak_kind
+  | _ -> None
+
+let typ_weak_kind env (t:typ) : ML (option weak_kind) =
+  match t.v with
+  | Pointer _ -> None
+  | Type_app hd _ -> parser_weak_kind env.globals hd
 
 let typ_has_reader env (t:typ) : ML bool =
   match t.v with
@@ -894,7 +905,25 @@ let check_field (env:env) (extend_scope: bool) (f:field)
                   (String.concat "\n" f.comments));
     { f with v = sf }
 
+let is_strong_prefix_field_array (a: field_array_t) : Tot bool =
+  not (FieldScalar? a)
 
+let weak_kind_of_field (env: env) (f: field) : ML weak_kind =
+  if is_strong_prefix_field_array f.v.field_array_opt
+  then WeakKindStrongPrefix
+  else match typ_weak_kind env f.v.field_type with
+  | Some e -> e
+  | None -> failwith (Printf.sprintf "cannot find the weak kind of field %s : %s" (print_ident f.v.field_ident) (print_typ f.v.field_type))
+
+let weak_kind_of_case (env: env) (c: case) : ML weak_kind =
+  match c with
+  | DefaultCase f
+  | Case _ f
+    -> weak_kind_of_field env f
+
+#pop-options
+
+#push-options "--z3rlimit_factor 8"
 let check_switch (env:env) (s:switch_case)
   : ML (switch_case & decl_attributes)
   = let head, cases = s in
@@ -979,10 +1008,19 @@ let check_switch (env:env) (s:switch_case)
         cases
         true
     in
+    let wk = match cases with
+    | [] -> failwith "no cases in switch"
+    | c :: cases' ->
+      List.fold_left
+        (fun wk case -> weak_kind_glb wk (weak_kind_of_case env case))
+        (weak_kind_of_case env c)
+        cases'
+    in
     let attrs = {
       may_fail = false;
       integral = None;
       has_reader = false;
+      parser_weak_kind = wk;
       parser_kind_nz = None
     } in
     (head, cases), attrs
@@ -1078,6 +1116,16 @@ let check_params (env:env) (ps:list param) : ML unit =
       let _ = check_typ true env t in
       add_local env p t)
 
+let rec weak_kind_of_fields (e: env) (l: list field) : ML weak_kind =
+  match l with
+  | [] -> WeakKindStrongPrefix
+  | [a] -> weak_kind_of_field e a
+  | a :: q ->
+    let wk = weak_kind_of_field e a in
+    if wk <> WeakKindStrongPrefix
+    then failwith (Printf.sprintf "weak_kind_of_fields: field %s : %s should be of strong kind instead of %s" (print_ident a.v.field_ident) (print_typ a.v.field_type) (print_weak_kind wk))
+    else weak_kind_of_fields e q
+
 let elaborate_record (e:global_env)
                      (tdnames:Ast.typedef_names)
                      (params:list param)
@@ -1156,6 +1204,7 @@ let elaborate_record (e:global_env)
         may_fail = false; //only its fields may fail; not the struct itself
         integral = None;
         has_reader = false;
+        parser_weak_kind = weak_kind_of_fields env fields;
         parser_kind_nz = None
       }
     in
@@ -1185,11 +1234,17 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
   | TypeAbbrev t i ->
     let env = mk_env e in
     let t = check_typ false env t in
+    let wk =
+      match typ_weak_kind env t with
+      | None -> failwith (Printf.sprintf "Weak kind not found for type %s" (print_typ t))
+      | Some wk -> wk
+    in
     let attrs =
       {
         may_fail = parser_may_fail env t;
         integral = tag_of_integral_typ env t;
         has_reader = typ_has_reader env t;
+        parser_weak_kind = wk;
         parser_kind_nz = None
       }
     in
@@ -1213,6 +1268,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         may_fail = true;
         integral = Some (typ_as_integer_type t);
         has_reader = false; //it's a refinement, so you can't read it again because of double fetches
+        parser_weak_kind = WeakKindStrongPrefix;
         parser_kind_nz = None
       }
     in
@@ -1270,17 +1326,19 @@ let initial_global_env () =
     mk_decl (Record td_name [] None []) dummy_range [] true
   in
   let _type_names =
-    [ ("unit",     { may_fail = false; integral = None; has_reader = true; parser_kind_nz=Some false});
-      ("Bool",     { may_fail = true;  integral = None; has_reader = true; parser_kind_nz=Some true});
-      ("UINT8",    { may_fail = true;  integral = Some UInt8 ; has_reader = true; parser_kind_nz=Some true });
-      ("UINT16",   { may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_kind_nz=Some true });
-      ("UINT32",   { may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_kind_nz=Some true});
-      ("UINT64",   { may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_kind_nz=Some true});
-      ("UINT16BE",   { may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_kind_nz=Some true });
-      ("UINT32BE",   { may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_kind_nz=Some true});
-      ("UINT64BE",   { may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_kind_nz=Some true});
-      ("field_id", { may_fail = true;  integral = Some UInt32 ; has_reader = false; parser_kind_nz=Some true});
-      ("PUINT8",   { may_fail = true;  integral = None ; has_reader = false; parser_kind_nz=Some true})]
+    [ ("unit",     { may_fail = false; integral = None; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some false});
+      ("Bool",     { may_fail = true;  integral = None; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("UINT8",    { may_fail = true;  integral = Some UInt8 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
+      ("UINT16",   { may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
+      ("UINT32",   { may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("UINT64",   { may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("UINT16BE",   { may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
+      ("UINT32BE",   { may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("UINT64BE",   { may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("field_id", { may_fail = true;  integral = Some UInt32 ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("all_bytes", { may_fail = false;  integral = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
+      ("all_zeros", { may_fail = true;  integral = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
+      ("PUINT8",   { may_fail = true;  integral = None ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true})]
     |> List.iter (fun (i, attrs) ->
       let i = with_dummy_range (to_ident' i) in
       add_global e i (nullary_decl i) (Inl attrs))

@@ -302,6 +302,26 @@ let valid_pos_get_valid_pos
   [SMTPat (valid_pos p h sl pos pos'); SMTPat (get_valid_pos p h sl pos)]
 = ()
 
+
+let valid_pos_consumes_all
+  (#rrel #rel: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (h: HS.mem)
+  (sl: slice rrel rel)
+  (pos: U32.t)
+: Lemma
+  (requires (
+    valid p h sl pos /\
+    k.parser_kind_subkind == Some ParserConsumesAll
+  ))
+  (ensures (
+    valid_pos p h sl pos sl.len
+  ))
+= parser_kind_prop_equiv k p;
+  valid_facts p h sl pos
+
 let valid_content
   (#rrel #rel: _)
   (#k: parser_kind)
