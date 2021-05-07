@@ -95,10 +95,16 @@ let elim_vp x =
   SEA.elim_vrefine (AP.varrayptr x.ptr `SE.star` SR.vptr x.len) (vp0_refine x);
   SEA.reveal_star (AP.varrayptr x.ptr) (SR.vptr x.len)
 
+let sr_alloc (#a:Type0) (x:a) : SE.SteelSel (SR.ref a)
+  SE.emp (fun r -> SR.vptr r)
+  (requires fun _ -> True)
+  (ensures fun _ r h1 -> h1 (SR.vptr r) == x /\ not (SR.is_null r))
+= SR.alloc x
+
 let make
   x len
 =
-  let plen = SR.alloc len in
+  let plen = sr_alloc len in
   let res = {
     ptr = x;
     len = plen;
