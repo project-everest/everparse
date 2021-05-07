@@ -24,13 +24,15 @@
    |                             data                              |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+  Parsing variable length data is hard and TCP option parsing is no
+  exception.
 
-  The specification of the options array is weaker than it could be.
-  It currently permits an end-of-options-list option to appear
-  anywhere in the Options list, rather than as just the last element.
+  Even in code that's been in the Linux TCP/IP stack for 20 years or
+  more, memory safety bugs have been found and patched, as recently as
+  in 2019. See:
 
-  This can be improved by using a more advanced combinator from
-  EverParse, however we leave it as is for simplicity of this example.
+  https://github.com/torvalds/linux/commit/9609dad263f8bea347f41fddca29353dbf8a7d37
+
 */   
 
 typedef UINT16 PORT;
@@ -94,7 +96,7 @@ casetype _OPTION_PAYLOAD(UINT8 OptionKind, Bool MaxSegSizeAllowed)
   switch(OptionKind)
   {
      case OPTION_KIND_END_OF_OPTION_LIST:
-       unit EndOfList;
+       all_zeros EndOfList;
        
      case OPTION_KIND_NO_OPERATION:
        unit Noop;
