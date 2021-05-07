@@ -230,6 +230,24 @@ make_everparse() {
     if $is_windows ; then
         wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT
     fi &&
+    if $is_windows ; then
+        {
+            cat >everparse/licenses/libgmp10 <<EOF
+libgmp10 (the GNU Multiple Precision Arithmetic Library,
+Copyright 2000 - 2020 The GNU Project - Free Software Foundation)
+is licensed under the GNU LGPL v3, a copy of which follows;
+this EverParse binary package combines EverParse with libgmp10
+in accordance with Section 4.d.1 of the GNU LGPL v3.
+
+EOF
+        } &&
+        wget --output-document=everparse/licenses/gnulgplv3 https://www.gnu.org/licenses/lgpl-3.0.txt &&
+        cat everparse/licenses/gnulgplv3 >> everparse/licenses/libgmp10 &&
+        rm everparse/licenses/gnulgplv3 &&
+        wget --output-document=everparse/licenses/gnugplv3 https://www.gnu.org/licenses/gpl-3.0.txt &&
+        cat everparse/licenses/gnugplv3 >> everparse/licenses/libgmp10 &&
+        rm everparse/licenses/gnugplv3
+    fi &&
     
     # Reset permissions and build the package
     if $is_windows ; then

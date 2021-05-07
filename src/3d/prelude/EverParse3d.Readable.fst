@@ -56,7 +56,8 @@ let readable_prop h #t #b p from to = ()
 
 let readable_gsub h #t #b p offset length from to = ()
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 2"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 5"
+#restart-solver
 let readable_split_1
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)

@@ -3,9 +3,6 @@ include LowParse.Spec.Combinators
 
 module L = FStar.List.Tot
 
-noeq
-type norm_t : Type = | Norm
-
 [@Norm]
 let rec list_map
   (#a #b: Type)
@@ -30,13 +27,6 @@ let rec list_mem
 = match l with
   | [] -> false
   | a :: q -> (x = a || list_mem x q)
-
-let norm_spec
-  (#t: Type)
-  (x: t)
-: Lemma
-  (norm [delta_attr [`%Norm]; iota; zeta; primops] x == x)
-= norm_spec [delta_attr [`%Norm]; iota; zeta; primops] x
 
 inline_for_extraction
 let enum_key (#key #repr: eqtype) (e: enum key repr) : Tot eqtype = (s: key { list_mem s (list_map fst e) } )
