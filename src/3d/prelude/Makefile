@@ -16,9 +16,11 @@ ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops
 
 include .depend
 
-verify_and_build_weaken_tac_plugin: $(ALL_CHECKED_FILES)
-	$(FSTAR) --extract 'LowParse.TacLib WeakenTac' --codegen Plugin WeakenTac.fst
-	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -w -8 -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_TacLib.ml WeakenTac.ml
+verify_and_build_weaken_tac_plugin: WeakenTac.cmxs
+
+WeakenTac.cmxs: $(ALL_CHECKED_FILES)
+	$(FSTAR) --extract 'LowParse.Norm LowParse.TacLib WeakenTac' --codegen Plugin WeakenTac.fst
+	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -w -8 -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_Norm.ml LowParse_TacLib.ml WeakenTac.ml
 
 extract: ../EverParse.h
 
@@ -48,6 +50,7 @@ EverParse.rsp: $(ALL_KRML_FILES)
 
 %.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))
+	touch $@
 
 %.checked:
 	$(FSTAR) $< --cache_checked_modules $(ALREADY_CACHED)
@@ -55,7 +58,7 @@ EverParse.rsp: $(ALL_KRML_FILES)
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
-.PHONY: all verify extract clean
+.PHONY: all verify extract clean verify_and_build_weaken_tac_plugin
 
 clean:
 	rm -f *.checked *.krml ../EverParse.h EverParse.rsp ../Makefile.basic ../Makefile.include .depend *.o *.cmi *.cmx *.cmxs WeakenTac.ml LowParse_TacLib.ml
