@@ -30,6 +30,7 @@ type global_env = {
   size_env: TS.env_t;
   has_reader: H.t ident' bool;
   parser_kind_nz: H.t ident' bool;
+  parser_weak_kind: H.t ident' A.weak_kind;
   parser_kind_is_constant_size: H.t ident' bool;
 }
 
@@ -49,6 +50,15 @@ let parser_kind_nz (env:global_env) (id:A.ident) : ML bool =
     | Some b -> b
     | None ->
       failwith (Printf.sprintf "Type %s has an unknown parser kind" (ident_to_string id))
+
+let parser_weak_kind (env:global_env) (id:A.ident) : ML A.weak_kind =
+  match H.try_find env.parser_weak_kind id.v with
+  | Some b -> b
+  | None ->
+    match B.parser_weak_kind env.benv id with
+    | Some b -> b
+    | None ->
+      failwith (Printf.sprintf "Type %s has an unknown weak kind" (ident_to_string id))
 
 let parser_kind_is_constant_size
   (env: global_env) (id: A.ident)
@@ -102,41 +112,51 @@ let mk_parser k t p = T.({
 let pk_return = T.({
   pk_kind = PK_return;
   pk_nz = false;
+  pk_weak_kind = WeakKindStrongPrefix;
 })
 let pk_impos = T.({
   pk_kind = PK_impos;
   pk_nz = true;
+  pk_weak_kind = WeakKindStrongPrefix;
 })
-let pk_base id nz = T.({
+let pk_base id nz wk = T.({
   pk_kind = PK_base id;
+  pk_weak_kind = wk;
   pk_nz = nz
 })
 let pk_list = T.({
   pk_kind = PK_list;
+  pk_weak_kind = WeakKindStrongPrefix;
   pk_nz = false
 })
 let pk_t_at_most = T.({
   pk_kind = PK_t_at_most;
+  pk_weak_kind = WeakKindStrongPrefix;
   pk_nz = false
 })
 let pk_t_exact = T.({
   pk_kind = PK_t_exact;
+  pk_weak_kind = WeakKindStrongPrefix;
   pk_nz = false
 })
 let pk_string = T.({
   pk_kind = PK_string;
+  pk_weak_kind = WeakKindStrongPrefix;
   pk_nz = true
 })
 let pk_filter k = T.({
   pk_kind = PK_filter k;
+  pk_weak_kind = k.pk_weak_kind;
   pk_nz = k.pk_nz
 })
 let pk_and_then k1 k2 = T.({
   pk_kind = PK_and_then k1 k2;
+  pk_weak_kind = k2.pk_weak_kind;
   pk_nz = k1.pk_nz || k2.pk_nz
 })
 let pk_glb k1 k2 = T.({
   pk_kind = PK_glb k1 k2;
+  pk_weak_kind = weak_kind_glb k1.pk_weak_kind k2.pk_weak_kind;
   pk_nz = k1.pk_nz && k2.pk_nz
 })
 
@@ -348,7 +368,7 @@ let rec parse_typ (env:global_env) (name: A.ident) (t:T.typ) : ML T.parser =
               (T.Parse_string pt e)
 
   | T.T_app hd args ->
-    mk_parser (pk_base hd (parser_kind_nz env hd)) t (T.Parse_app hd args)
+    mk_parser (pk_base hd (parser_kind_nz env hd) (parser_weak_kind env hd)) t (T.Parse_app hd args)
 
   | T.T_refine t_base refinement ->
     let base = parse_typ env name t_base in
@@ -977,11 +997,12 @@ let rec hoist_typ
     | T_pointer _ ->
       [], t
 
-let add_parser_kind_nz (genv:global_env) (id:A.ident) (nz:bool) =
+let add_parser_kind_nz (genv:global_env) (id:A.ident) (nz:bool) (wk: weak_kind) =
   let _ = Options.debug_print_string
     (Printf.sprintf "For %s, adding parser kind %s\n"
       (ident_to_string id)
       (string_of_bool nz)) in
+  H.insert genv.parser_weak_kind id.v wk;
   H.insert genv.parser_kind_nz id.v nz
 
 let maybe_add_reader (genv:global_env)
@@ -1029,7 +1050,7 @@ let hoist_one_type_definition (should_inline:bool)
         | None -> t_parser
         | Some fn -> { t_parser with p_parser = Parse_with_error fn t_parser }
       in
-      add_parser_kind_nz genv tdn.td_name t_parser.p_kind.pk_nz;
+      add_parser_kind_nz genv tdn.td_name t_parser.p_kind.pk_nz t_parser.p_kind.pk_weak_kind;
       add_parser_kind_is_constant_size genv tdn.td_name (parser_is_constant_size_without_actions genv t_parser);
       let reader = maybe_add_reader genv tdn body in
       let td = {
@@ -1142,7 +1163,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let tdn = translate_typedef_name tdn [] in
     let p = parse_typ env i t in
     let open T in
-    add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz;
+    add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
     let reader = maybe_add_reader env tdn t in
     let td = {
@@ -1162,7 +1183,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let refined_typ = make_enum_typ typ ids in
     let p = parse_typ env i refined_typ in
     let open T in
-    add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz;
+    add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
     let reader = maybe_add_reader env tdn refined_typ in
     let td = {
@@ -1180,7 +1201,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let hoists, fields = hoist_refinements env tdn fields in
     let p = parse_fields env tdn fields in
     let open T in
-    add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz;
+    add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
     let decl_typ = TD_abbrev p.p_typ in
     let reader = maybe_add_reader env tdn p.p_typ in
@@ -1198,7 +1219,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let t, decls = translate_switch_case_type env tdn switch_case in
     let p = parse_typ env tdn0.typedef_name t in
     let open T in
-    add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz;
+    add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
     let reader = maybe_add_reader env tdn t in
     let td = {
@@ -1214,12 +1235,14 @@ noeq
 type translate_env = {
   t_has_reader: H.t ident' bool;
   t_parser_kind_nz: H.t ident' bool;
+  t_parser_weak_kind: H.t ident' A.weak_kind;
   t_parser_kind_is_constant_size: H.t ident' bool;
 }
 
 let initial_translate_env () = {
   t_has_reader = H.create 0;
   t_parser_kind_nz = H.create 0;
+  t_parser_weak_kind = H.create 0;
   t_parser_kind_is_constant_size = H.create 0; }
 
 let translate_decls benv senv tenv ds =
@@ -1228,16 +1251,19 @@ let translate_decls benv senv tenv ds =
     size_env = (B.mk_env benv, senv);
     has_reader = tenv.t_has_reader;
     parser_kind_nz = tenv.t_parser_kind_nz;
+    parser_weak_kind = tenv.t_parser_weak_kind;
     parser_kind_is_constant_size = tenv.t_parser_kind_is_constant_size;
   } in
   List.collect (translate_decl env) ds,
   { tenv with t_has_reader = env.has_reader;
               t_parser_kind_nz = env.parser_kind_nz;
+              t_parser_weak_kind = env.parser_weak_kind;
               t_parser_kind_is_constant_size = env.parser_kind_is_constant_size }
 
 let finish_module en mname e_and_p =
   e_and_p |> snd |> List.iter (fun k ->
     H.remove en.t_has_reader k;
     H.remove en.t_parser_kind_nz k;
+    H.remove en.t_parser_weak_kind k;
     H.remove en.t_parser_kind_is_constant_size k);
   en
