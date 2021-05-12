@@ -590,7 +590,7 @@ let serialize_der_length_weak_unfold
   if x' < 128
   then begin
     ()
-  end else
+  end else 
    if x = 128uy || x = 255uy
    then
     tag_of_der_length_invalid y
@@ -621,7 +621,8 @@ let serialize_der_length_weak_unfold
           ()
           ;
        serialize_u8_spec (U8.uint_to_t y);
-       ()
+       let res = serialize serialize_der_length_weak y in
+       assume (res `Seq.equal` (s1 `Seq.append` Seq.create 1 (U8.uint_to_t y)))   
    end else begin
     let len : nat = U8.v x - 128 in
     synth_be_int_injective len; // FIXME: WHY WHY WHY does the pattern not trigger, even with higher rlimit?
