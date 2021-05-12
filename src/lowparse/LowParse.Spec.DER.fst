@@ -522,6 +522,15 @@ let serialize_der_length_payload_greater
         ()
       )
 
+let tag_of_der_length_lt_128_eta (x:U8.t{U8.v x < 128}) =
+  fun (y: refine_with_tag tag_of_der_length x) -> tag_of_der_length_lt_128 y <: Lemma (U8.v x == y)
+
+let tag_of_der_length_invalid_eta (x:U8.t{U8.v x == 128 \/ U8.v x == 255}) =
+  fun (y: refine_with_tag tag_of_der_length x) -> tag_of_der_length_invalid y <: Lemma False
+
+let tag_of_der_length_eq_129_eta (x:U8.t{U8.v x == 129}) =
+  fun (y: refine_with_tag tag_of_der_length x) -> tag_of_der_length_eq_129 y <: Lemma (synth_der_length_129 x (synth_der_length_129_recip x y) == y)
+  
 let serialize_der_length_payload
   (x: U8.t)
 : Tot (serializer (parse_der_length_payload x))
@@ -533,11 +542,11 @@ let serialize_der_length_payload
   let (x' : der_length_t) = U8.v x in
   if x' < 128
   then begin
-    serialize_weaken (parse_der_length_payload_kind x) (serialize_ret (x' <: refine_with_tag tag_of_der_length x) (fun (y: refine_with_tag tag_of_der_length x) -> tag_of_der_length_lt_128 y))
+    serialize_weaken (parse_der_length_payload_kind x) (serialize_ret (x' <: refine_with_tag tag_of_der_length x) (tag_of_der_length_lt_128_eta x))
   end else
    if x = 128uy || x = 255uy
    then
-     fail_serializer (parse_der_length_payload_kind x) (refine_with_tag tag_of_der_length x) (fun y -> tag_of_der_length_invalid y)
+     fail_serializer (parse_der_length_payload_kind x) (refine_with_tag tag_of_der_length x) (tag_of_der_length_invalid_eta x)
    else if x = 129uy
    then begin
      serialize_weaken
@@ -547,7 +556,7 @@ let serialize_der_length_payload
           (synth_der_length_129 x)
           (serialize_filter serialize_u8 (fun y -> U8.v y >= 128))
           (synth_der_length_129_recip x)
-          (synth_inverse_intro' (synth_der_length_129 x) (synth_der_length_129_recip x) (fun (y: refine_with_tag tag_of_der_length x) -> tag_of_der_length_eq_129 y))
+          (synth_inverse_intro' (synth_der_length_129 x) (synth_der_length_129_recip x) (tag_of_der_length_eq_129_eta x))
        )
    end else begin
     let len : nat = U8.v x - 128 in
@@ -603,7 +612,7 @@ let serialize_der_length_weak_unfold
           (synth_der_length_129 x)
           (serialize_filter serialize_u8 (fun y -> U8.v y >= 128))
           (synth_der_length_129_recip x)
-          (synth_inverse_intro' (synth_der_length_129 x) (synth_der_length_129_recip x) (fun (y: refine_with_tag tag_of_der_length x) -> tag_of_der_length_eq_129 y))) 
+          (synth_inverse_intro' (synth_der_length_129 x) (synth_der_length_129_recip x) (tag_of_der_length_eq_129_eta x)))
           y
        in
        serialize_synth_eq'
@@ -613,7 +622,7 @@ let serialize_der_length_weak_unfold
           (synth_der_length_129 x)
           (serialize_filter serialize_u8 (fun y -> U8.v y >= 128))
           (synth_der_length_129_recip x)
-          (synth_inverse_intro' (synth_der_length_129 x) (synth_der_length_129_recip x) (fun (y: refine_with_tag tag_of_der_length x) -> tag_of_der_length_eq_129 y))
+          (synth_inverse_intro' (synth_der_length_129 x) (synth_der_length_129_recip x) (tag_of_der_length_eq_129_eta x))
           y
           s1
           ()
