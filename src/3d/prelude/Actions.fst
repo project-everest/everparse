@@ -957,7 +957,8 @@ let validate_nlist_constant_size_without_actions
   else
     validate_nlist n v
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
+#restart-solver
 
 noextract inline_for_extraction
 let validate_t_at_most' (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
