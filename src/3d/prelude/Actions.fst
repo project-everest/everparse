@@ -1321,6 +1321,8 @@ let validate_string
   LP.parser_kind_prop_equiv k p;
   validate_weaken (validate_list_up_to v r terminator (fun _ _ _ -> ())) _
 
+#restart-solver
+
 inline_for_extraction noextract
 let validate_all_bytes2 : validate_with_action_t parse_all_bytes true_inv eloc_none true =
   fun #inputLength input startPosition ->

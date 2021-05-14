@@ -161,6 +161,8 @@ let unreadable_split_1
   ()
 #pop-options
 
+#push-options "--z3rlimit 16"
+#restart-solver
 let unreadable_split_2
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -172,6 +174,7 @@ let unreadable_split_2
   (ensures (unreadable h p from to))
 = Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
   if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
+#pop-options
 
 let unreadable_split h #t #b p from mid to =
   Classical.move_requires (unreadable_split_1 h p from mid) to;
