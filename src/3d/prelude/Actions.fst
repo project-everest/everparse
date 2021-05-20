@@ -998,6 +998,8 @@ let validate_t_at_most
 
 
 #push-options "--fuel 1 --ifuel 1"
+#restart-solver
+
 noextract inline_for_extraction
 let validate_t_exact' (n:U32.t) (#nz:bool) #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
