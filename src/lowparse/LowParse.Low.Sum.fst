@@ -750,7 +750,7 @@ let clens_sum_tag
 : Tot (clens (sum_type s) (sum_key s))
 = {
     clens_cond = (fun _ -> True);
-    clens_get = (fun (x: sum_type s) -> sum_tag_of_data s x);
+    clens_get = sum_tag_of_data s;
   }
 
 let gaccessor_sum_tag
@@ -1753,7 +1753,7 @@ let clens_dsum_tag
 : Tot (clens (dsum_type s) (dsum_key s))
 = {
     clens_cond = (fun _ -> True);
-    clens_get = (fun (x: dsum_type s) -> dsum_tag_of_data s x);
+    clens_get = dsum_tag_of_data s;
   }
 
 let gaccessor_dsum_tag

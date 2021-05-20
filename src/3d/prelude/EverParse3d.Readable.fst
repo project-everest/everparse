@@ -56,8 +56,6 @@ let readable_prop h #t #b p from to = ()
 
 let readable_gsub h #t #b p offset length from to = ()
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 5"
-#restart-solver
 let readable_split_1
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -67,10 +65,20 @@ let readable_split_1
 : Lemma
   (requires (readable h p from to))
   (ensures (readable h p from mid /\ readable h p mid to))
-=
-  Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
-  if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
-#pop-options
+= if F.model then begin
+    let s_from_to = B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from)) in
+    let s_from_mid = B.as_seq h (B.gsub (p <: perm' b) from (mid `U32.sub` from)) in
+    let s_mid_to = B.as_seq h (B.gsub (p <: perm' b) mid (to `U32.sub` mid)) in
+
+    assert (forall (i:nat). i < Seq.length s_from_to ==> Seq.index s_from_to i == G.hide true);
+
+    assert (forall (i:nat). i < Seq.length s_from_mid ==> Seq.index s_from_mid i == G.hide true);
+    assert (readable h p from mid);
+
+    assert (forall (i:nat). i < Seq.length s_mid_to ==> Seq.index s_mid_to i == Seq.index s_from_to (i+ U32.v mid-U32.v from));
+    assert (forall (i:nat). i < Seq.length s_mid_to ==> Seq.index s_mid_to i == G.hide true);
+    assert (readable h p mid to)
+  end
 
 #push-options "--fuel 17" // "--using_facts_from '*,-LowParse.Low.Base.serializer32_of_leaf_writer_strong_constant_size'"
 #restart-solver
@@ -153,6 +161,8 @@ let unreadable_split_1
   ()
 #pop-options
 
+#push-options "--z3rlimit 16"
+#restart-solver
 let unreadable_split_2
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -162,9 +172,9 @@ let unreadable_split_2
 : Lemma
   (requires (unreadable h p from mid /\ unreadable h p mid to))
   (ensures (unreadable h p from to))
-=
-  Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
+= Seq.lemma_split (B.as_seq h (B.gsub b from (to `U32.sub` from))) (U32.v mid - U32.v from);
   if F.model then Seq.lemma_split (B.as_seq h (B.gsub (p <: perm' b) from (to `U32.sub` from))) (U32.v mid - U32.v from)
+#pop-options
 
 let unreadable_split h #t #b p from mid to =
   Classical.move_requires (unreadable_split_1 h p from mid) to;

@@ -7,7 +7,7 @@ Auto-generated field identifier for error reporting
 */
 #define TRIANGLE2__TRIANGLE__CORNERS ((uint64_t)47U)
 
-typedef uint8_t *InputBufferT;
+typedef uint8_t *Dtuple2_uint8T___;
 
 static inline uint64_t ValidateTriangleCorners(uint32_t InputLength, uint64_t StartPosition)
 /*++

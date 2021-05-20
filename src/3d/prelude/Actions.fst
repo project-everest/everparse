@@ -957,7 +957,8 @@ let validate_nlist_constant_size_without_actions
   else
     validate_nlist n v
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
+#restart-solver
 
 noextract inline_for_extraction
 let validate_t_at_most' (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
@@ -1320,6 +1321,8 @@ let validate_string
 =
   LP.parser_kind_prop_equiv k p;
   validate_weaken (validate_list_up_to v r terminator (fun _ _ _ -> ())) _
+
+#restart-solver
 
 inline_for_extraction noextract
 let validate_all_bytes2 : validate_with_action_t parse_all_bytes true_inv eloc_none true =
