@@ -1,13 +1,13 @@
-module LowParse.SteelSel.Combinators
-include LowParse.SteelSel.Validate
-include LowParse.SteelSel.Access
+module LowParse.Steel.Combinators
+include LowParse.Steel.Validate
+include LowParse.Steel.Access
 include LowParse.Spec.Combinators
 
 module S = Steel.Memory
-module SE = Steel.SelEffect
-module SEA = Steel.SelEffect.Atomic
-module A = Steel.SelArray
-module AP = Steel.SelArrayPtr
+module SE = Steel.Effect
+module SEA = Steel.Effect.Atomic
+module A = Steel.Array
+module AP = Steel.ArrayPtr
 
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
@@ -44,6 +44,7 @@ let validate_pair
     let ga1 : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in
     let g1 : Ghost.erased _ = ga1.AP.contents in
     parse_strong_prefix p1 g1 g;
+    let ga2 : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a2) in // FIXME: WHY WHY WHY is this needed?
     let len2 = len `U32.sub` consumed in
     let r2 = v2 a2 len2 in
     AP.join a a2;
@@ -67,7 +68,7 @@ val destruct_pair
   (#t2: Type)
   (p2: parser k2 t2)
   (a: byte_array)
-: SE.SteelSel byte_array
+: SE.Steel byte_array
     (vparse (p1 `nondep_then` p2) a)
     (fun res -> vparse p1 a `SE.star` vparse p2 res)
     (fun _ ->
@@ -85,7 +86,7 @@ let destruct_pair
   #k1 #t1 #p1 j1 p2 a
 =
   elim_vparse (p1 `nondep_then` p2) a;
-  let b = SEA.gget (AP.varrayptr a) in
+  let b : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in
   nondep_then_eq p1 p2 b.AP.contents;
   let res = peek_strong j1 a in
   SEA.reveal_star (vparse p1 a) (AP.varrayptr res);
@@ -104,7 +105,7 @@ val construct_pair
   (p2: parser k2 t2)
   (a1: byte_array)
   (a2: byte_array)
-: SEA.SteelSelGhost unit opened
+: SEA.SteelGhost unit opened
     (vparse p1 a1 `SE.star` vparse p2 a2)
     (fun _ -> vparse (p1 `nondep_then` p2) a1)
     (fun h ->

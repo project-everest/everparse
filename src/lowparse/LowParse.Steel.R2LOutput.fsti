@@ -1,11 +1,11 @@
-module LowParse.SteelSel.R2LOutput
+module LowParse.Steel.R2LOutput
 include LowParse.Bytes
 
 module S = Steel.Memory
-module SE = Steel.SelEffect
-module SEA = Steel.SelEffect.Atomic
-module A = Steel.SelArray
-module AP = Steel.SelArrayPtr
+module SE = Steel.Effect
+module SEA = Steel.Effect.Atomic
+module A = Steel.Array
+module AP = Steel.ArrayPtr
 module U32 = FStar.UInt32
 
 (* Right-to-left output buffer *)
@@ -39,7 +39,7 @@ let vp
 val make
   (x: AP.t byte)
   (len: U32.t)
-: SE.SteelSel t
+: SE.Steel t
     (AP.varrayptr x)
     (fun res -> vp res)
     (fun h -> A.len (h (AP.varrayptr x)).AP.array == len)
@@ -49,7 +49,7 @@ val make
 
 let alloc
   (len: U32.t)
-: SE.SteelSel t
+: SE.Steel t
     SE.emp
     (fun res -> vp res)
     (fun _ -> True)
@@ -63,7 +63,7 @@ let alloc
 
 val len
   (x: t)
-: SE.SteelSel U32.t
+: SE.Steel U32.t
     (vp x)
     (fun _ -> vp x)
     (fun _ -> True)
@@ -75,7 +75,7 @@ val len
 val split
   (x: t)
   (len: U32.t)
-: SE.SteelSel (AP.t byte)
+: SE.Steel (AP.t byte)
     (vp x)
     (fun res -> vp x `SE.star` AP.varrayptr res)
     (fun h -> U32.v len <= A.length (h (vp x)))
@@ -89,7 +89,7 @@ val merge
   (x: t)
   (y: AP.t byte)
   (len: U32.t)
-: SE.SteelSel unit
+: SE.Steel unit
     (vp x `SE.star` AP.varrayptr y)
     (fun res -> vp x)
     (fun h ->
@@ -103,7 +103,7 @@ val merge
 
 val free
   (x: t)
-: SE.SteelSel unit
+: SE.Steel unit
     (vp x)
     (fun _ -> SE.emp)
     (fun h -> A.freeable (h (vp x)))

@@ -1,11 +1,11 @@
-module LowParse.SteelSel.VParse
+module LowParse.Steel.VParse
 include LowParse.Spec.Base
 
 module S = Steel.Memory
-module SE = Steel.SelEffect
-module SEA = Steel.SelEffect.Atomic
-module A = Steel.SelArray
-module AP = Steel.SelArrayPtr
+module SE = Steel.Effect
+module SEA = Steel.Effect.Atomic
+module A = Steel.Array
+module AP = Steel.ArrayPtr
 
 let is_byte_repr_injective
   #k #t p x b1 b2
@@ -83,7 +83,7 @@ let intro_vparse0
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: SEA.SteelSelGhost unit opened
+: SEA.SteelGhost unit opened
     (AP.varrayptr a)
     (fun _ -> vparse0 p a)
     (fun h ->
@@ -103,7 +103,7 @@ let intro_vparse0
 
 let change_equal_slprop (#opened: _) (p q: SE.vprop)
   (sq: squash (p == q))
-  : SEA.SteelSelGhost unit opened p (fun _ -> q) (fun _ -> True) (fun h0 _ h1 -> p == q /\ h1 q == h0 p)
+  : SEA.SteelGhost unit opened p (fun _ -> q) (fun _ -> True) (fun h0 _ h1 -> p == q /\ h1 q == h0 p)
 = SEA.change_equal_slprop p q
 
 let elim_vparse0
@@ -112,7 +112,7 @@ let elim_vparse0
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: SEA.SteelSelGhost unit opened
+: SEA.SteelGhost unit opened
     (vparse0 p a)
     (fun _ -> AP.varrayptr a)
     (fun _ -> True)

@@ -1,13 +1,13 @@
-module LowParse.SteelSel.Leaf
-include LowParse.SteelSel.VParse
+module LowParse.Steel.Leaf
+include LowParse.Steel.VParse
 
 (* Leaf readers and writers *)
 
 module S = Steel.Memory
-module SE = Steel.SelEffect
-module SEA = Steel.SelEffect.Atomic
-module A = Steel.SelArray
-module AP = Steel.SelArrayPtr
+module SE = Steel.Effect
+module SEA = Steel.Effect.Atomic
+module A = Steel.Array
+module AP = Steel.ArrayPtr
 
 let leaf_reader
   (#k: parser_kind)
@@ -15,7 +15,7 @@ let leaf_reader
   (p: parser k t)
 : Tot Type0
 = (src: byte_array) ->
-  SE.SteelSel t
+  SE.Steel t
     (vparse p src)
     (fun _ -> vparse p src)
     (fun _ -> True)
@@ -33,7 +33,7 @@ let exact_serializer
 : Tot Type0
 = (dst: byte_array) ->
   (x: t) ->
-  SE.SteelSel unit
+  SE.Steel unit
     (AP.varrayptr dst)
     (fun _ -> AP.varrayptr dst)
     (requires (fun h -> A.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x)))
@@ -52,7 +52,7 @@ let write_exact
   (w: exact_serializer s)
   (dst: byte_array)
   (x: t)
-: SE.SteelSel unit
+: SE.Steel unit
     (AP.varrayptr dst)
     (fun _ -> vparse p dst)
     (requires (fun h -> A.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x)))

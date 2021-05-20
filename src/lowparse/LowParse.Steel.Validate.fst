@@ -1,12 +1,12 @@
-module LowParse.SteelSel.Validate
-include LowParse.SteelSel.VParse
+module LowParse.Steel.Validate
+include LowParse.Steel.VParse
 include LowParse.Low.ErrorCode
 
 module S = Steel.Memory
-module SE = Steel.SelEffect
-module SEA = Steel.SelEffect.Atomic
-module A = Steel.SelArray
-module AP = Steel.SelArrayPtr
+module SE = Steel.Effect
+module SEA = Steel.Effect.Atomic
+module A = Steel.Array
+module AP = Steel.ArrayPtr
 
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
@@ -60,7 +60,7 @@ let tvalidator
 =
   (a: byte_array) ->
   (len: U32.t) ->
-  SE.SteelSel bool
+  SE.Steel bool
     (AP.varrayptr a)
     (tvalid_res_vprop p a)
     (fun h -> U32.v len == A.length (h (AP.varrayptr a)).AP.array)
@@ -94,7 +94,7 @@ let wvalidator
 =
   (a: byte_array) ->
   (len: U32.t) ->
-  SE.SteelSel U64.t
+  SE.Steel U64.t
     (AP.varrayptr a)
     (fun _ -> AP.varrayptr a)
     (fun h -> U32.v len == A.length (h (AP.varrayptr a)).AP.array)
@@ -180,7 +180,7 @@ val wvalidate
   (w: wvalidator p)
   (a: byte_array)
   (len: U32.t)
-: SE.SteelSel (option byte_array)
+: SE.Steel (option byte_array)
     (AP.varrayptr a)
     (wvalidate_vprop p a)
     (fun h -> len == A.len (h (AP.varrayptr a)).AP.array)
@@ -218,7 +218,7 @@ let dummy
   (w: wvalidator p)
   (a: byte_array)
   (len: U32.t)
-: SE.SteelSel unit
+: SE.Steel unit
     (AP.varrayptr a)
     (fun _ -> AP.varrayptr a)
     (fun h -> len == A.len (h (AP.varrayptr a)).AP.array)

@@ -1,11 +1,11 @@
-module LowParse.SteelSel.Access
-include LowParse.SteelSel.VParse
+module LowParse.Steel.Access
+include LowParse.Steel.VParse
 
 module S = Steel.Memory
-module SE = Steel.SelEffect
-module SEA = Steel.SelEffect.Atomic
-module A = Steel.SelArray
-module AP = Steel.SelArrayPtr
+module SE = Steel.Effect
+module SEA = Steel.Effect.Atomic
+module A = Steel.Array
+module AP = Steel.ArrayPtr
 
 module U32 = FStar.UInt32
 
@@ -15,7 +15,7 @@ let parsed_size
   (p: parser k t)
 : Tot Type0
 = (a: byte_array) ->
-  SE.SteelSel U32.t
+  SE.Steel U32.t
     (vparse p a)
     (fun _ -> vparse p a)
     (fun _ -> True)
@@ -46,7 +46,7 @@ let strong_parsed_size
   (p: parser k t)
 : Tot Type0
 = (a: byte_array) ->
-  SE.SteelSel U32.t
+  SE.Steel U32.t
     (AP.varrayptr a)
     (fun _ -> AP.varrayptr a)
     (fun _ -> True)
@@ -79,7 +79,7 @@ let peek_strong
   (#p: parser k t)
   (j: strong_parsed_size p)
   (a: byte_array)
-: SE.SteelSel byte_array
+: SE.Steel byte_array
     (AP.varrayptr a)
     (fun res -> vparse p a `SE.star` AP.varrayptr res)
     (fun _ -> k.parser_kind_subkind == Some ParserStrong)
@@ -90,6 +90,7 @@ let peek_strong
       let consumed = A.length c_a'.array in
       A.merge_into c_a'.array c_res.AP.array c_a.AP.array /\
       is_byte_repr p c_a'.contents (Seq.slice c_a.AP.contents 0 consumed) /\
+      consumed <= A.length c_a.AP.array /\
       c_res.AP.contents == Seq.slice c_a.AP.contents consumed (A.length c_a.AP.array)
     )
 =
@@ -100,12 +101,12 @@ let peek_strong
   intro_vparse p a;
   SEA.return res
 
-(* TODO: move to Steel.SelArray *)
+(* TODO: move to Steel.Array *)
 val memcpy
   (dst: byte_array)
   (src: byte_array)
   (n: U32.t)
-: SE.SteelSel byte_array
+: SE.Steel byte_array
     (AP.varrayptr dst `SE.star` AP.varrayptr src)
     (fun _ -> AP.varrayptr dst `SE.star` AP.varrayptr src)
     (fun h ->
@@ -142,7 +143,7 @@ val copy_exact
   (src: byte_array)
   (dst: byte_array)
   (n: U32.t)
-: SE.SteelSel unit
+: SE.Steel unit
     (vparse p src `SE.star` AP.varrayptr dst)
     (fun _ -> vparse p src `SE.star` vparse p dst)
     (fun h ->
@@ -178,7 +179,7 @@ val copy_strong
   (j: parsed_size p)
   (src: byte_array)
   (dst: byte_array)
-: SE.SteelSel byte_array
+: SE.Steel byte_array
     (vparse p src `SE.star` AP.varrayptr dst)
     (fun res -> vparse p src `SE.star` vparse p dst `SE.star` AP.varrayptr res)
     (fun h ->
@@ -313,7 +314,7 @@ val copy_weak
   (src: byte_array)
   (dst: byte_array)
   (n: U32.t)
-: SE.SteelSel (option byte_array)
+: SE.Steel (option byte_array)
     (vparse p src `SE.star` AP.varrayptr dst)
     (fun res -> copy_weak_vprop p src dst res)
     (fun h ->
@@ -346,7 +347,7 @@ let copy_weak #_ #_ #p j src dst n_dst =
     SEA.return res0
   end
 
-module R2L = LowParse.SteelSel.R2LOutput
+module R2L = LowParse.Steel.R2LOutput
 
 val copy_strong_r2l
   (#k: parser_kind)
@@ -355,7 +356,7 @@ val copy_strong_r2l
   (j: parsed_size p)
   (src: byte_array)
   (dst: R2L.t)
-: SE.SteelSel byte_array
+: SE.Steel byte_array
     (vparse p src `SE.star` R2L.vp dst)
     (fun res -> vparse p src `SE.star` R2L.vp dst `SE.star` vparse p res)
     (fun h ->
@@ -445,7 +446,7 @@ val copy_weak_r2l
   (j: parsed_size p)
   (src: byte_array)
   (dst: R2L.t)
-: SE.SteelSel (option byte_array)
+: SE.Steel (option byte_array)
     (vparse p src `SE.star` R2L.vp dst)
     (fun res -> vparse p src `SE.star` R2L.vp dst `SE.star` copy_weak_r2l_vprop p res)
     (fun _ -> True)
