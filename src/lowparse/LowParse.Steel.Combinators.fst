@@ -1,6 +1,7 @@
 module LowParse.Steel.Combinators
 include LowParse.Steel.Validate
 include LowParse.Steel.Access
+include LowParse.Steel.Leaf
 include LowParse.Spec.Combinators
 
 module S = Steel.Memory
@@ -119,6 +120,7 @@ val construct_pair
       c.contents == (c1.contents, c2.contents)
     )
 
+#push-options "--z3rlimit 16"
 #restart-solver
 
 let construct_pair
@@ -135,6 +137,8 @@ let construct_pair
   Seq.lemma_append_inj g1.AP.contents g2.AP.contents (Seq.slice g.AP.contents 0 (A.length v1.array)) (Seq.slice g.AP.contents (A.length v1.array) (Seq.length g.AP.contents));
   parse_strong_prefix p1 g1.AP.contents g.AP.contents;
   intro_vparse (p1 `nondep_then` p2) a1
+
+#pop-options
 
 let size_pair
   (#k1: parser_kind)
@@ -228,3 +232,150 @@ let size_synth
   let g = SEA.gget (AP.varrayptr a) in
   parse_synth_eq p1 f2 g.AP.contents;
   j1 a
+
+val intro_vparse_filter
+  (#opened: _)
+  (#k: _) (#t: _) (p: parser k t)
+  (f: (t -> GTot bool))
+  (a: byte_array)
+: SEA.SteelGhost unit opened
+    (vparse p a)
+    (fun _ -> vparse (parse_filter p f) a)
+    (fun h -> f (h (vparse p a)).contents == true)
+    (fun h _ h' ->
+      let r = h (vparse p a) in
+      let r' = h' (vparse (parse_filter p f) a) in
+      f r.contents == true /\
+      r'.array == r.array /\
+      r'.contents == r.contents
+    )
+
+let intro_vparse_filter
+  p f a
+=
+  elim_vparse p a;
+  let g = SEA.gget (AP.varrayptr a) in
+  parse_filter_eq p f g.AP.contents;
+  intro_vparse (parse_filter p f) a
+
+val elim_vparse_filter
+  (#opened: _)
+  (#k: _) (#t: _) (p: parser k t)
+  (f: (t -> GTot bool))
+  (a: byte_array)
+: SEA.SteelGhost unit opened
+    (vparse (parse_filter p f) a)
+    (fun _ -> vparse p a)
+    (fun _ -> True)
+    (fun h _ h' ->
+      let r = h (vparse (parse_filter p f) a) in
+      let r' = h' (vparse p a) in
+      f (r'.contents) == true /\
+      r'.array == r.array /\
+      r'.contents == r.contents
+    )
+
+let elim_vparse_filter
+  p f a
+=
+  elim_vparse (parse_filter p f) a;
+  let g = SEA.gget (AP.varrayptr a) in
+  parse_filter_eq p f g.AP.contents;
+  intro_vparse p a
+
+let size_filter
+  (#k: _) (#t: _) (#p: parser k t)
+  (j: parsed_size p)
+  (f: (t -> GTot bool))
+: Tot (parsed_size (p `parse_filter` f))
+= fun a ->
+  let g = SEA.gget (AP.varrayptr a) in
+  assert (Some? (parse (parse_filter p f) g.AP.contents)); // FIXME: WHY WHY WHY?
+  parse_filter_eq p f g.AP.contents;
+  j a
+
+[@ CMacro ]
+let validator_error_constraint_failed : validator_error = normalize_term (set_validator_error_kind 0uL 6uL)
+
+let test_filter
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (f: (t -> GTot bool))
+: Tot Type0
+= 
+    (x: byte_array) ->
+    SE.Steel bool
+    (vparse p x)
+    (fun _ -> vparse p x)
+    (fun _ -> True)
+    (fun h res h' ->
+      h' (vparse p x) == h (vparse p x) /\
+      res == f (h (vparse p x)).contents
+    )
+
+val validate_filter_gen
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v32: wvalidator p)
+  (f: (t -> GTot bool))
+  (f' : test_filter p f)
+: Pure (wvalidator (parse_filter p f))
+  (requires (k.parser_kind_subkind == Some ParserStrong))
+  (ensures (fun _ -> True))
+
+let validate_filter_gen
+  #_ #_ #p v32 f f'
+= fun a len ->
+  let glong = SEA.gget (AP.varrayptr a) in
+  parse_filter_eq p f glong.AP.contents;
+  let res = v32 a len in
+  if is_error res
+  then SEA.return res
+  else begin
+    let rlen = uint64_to_uint32 res () in
+    let a2 = AP.split a rlen in
+    let gshort = SEA.gget (AP.varrayptr a) in
+    parse_strong_prefix p gshort.AP.contents glong.AP.contents;
+    parse_filter_eq p f gshort.AP.contents;
+    intro_vparse p a;
+    let v = f' a in
+    elim_vparse p a;
+    let gshort' = SEA.gget (AP.varrayptr a) in
+    AP.join a a2;
+    parse_injective p gshort.AP.contents gshort'.AP.contents; // because of the intro_vparse ; elim_vparse sequence
+    if v
+    then SEA.return res
+    else SEA.return validator_error_constraint_failed
+  end
+
+val validate_filter
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v32: wvalidator p)
+  (p32: leaf_reader p)
+  (f: (t -> GTot bool))
+  (f' : ((x: t) -> Pure bool (requires True) (ensures (fun y -> y == f x))))
+: Pure (wvalidator (parse_filter p f))
+  (requires (k.parser_kind_subkind == Some ParserStrong))
+  (ensures (fun _ -> True))
+
+let validate_filter
+  #_ #_ #p v32 p32 f f'
+= validate_filter_gen v32 f
+    (fun a -> let r = p32 a in SEA.return (f' r))
+
+val validate_filter'
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v32: wvalidator p)
+  (p32: leaf_reader p)
+  (f: (t -> Tot bool))
+: Pure (wvalidator (parse_filter p f))
+  (requires (k.parser_kind_subkind == Some ParserStrong))
+  (ensures (fun _ -> True))
+
+let validate_filter' v32 p32 f = validate_filter v32 p32 f (fun x -> f x)
