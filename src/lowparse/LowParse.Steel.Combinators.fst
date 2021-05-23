@@ -63,7 +63,7 @@ val destruct_pair
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
-  (j1: strong_parsed_size p1)
+  (j1: parsed_size p1)
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
@@ -135,3 +135,24 @@ let construct_pair
   Seq.lemma_append_inj g1.AP.contents g2.AP.contents (Seq.slice g.AP.contents 0 (A.length v1.array)) (Seq.slice g.AP.contents (A.length v1.array) (Seq.length g.AP.contents));
   parse_strong_prefix p1 g1.AP.contents g.AP.contents;
   intro_vparse (p1 `nondep_then` p2) a1
+
+let size_pair
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (j1: parsed_size p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (j2: parsed_size p2)
+: Tot (parsed_size (p1 `nondep_then` p2))
+=
+  fun a ->
+  let g : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in
+  nondep_then_eq p1 p2 g.AP.contents;
+  let len1 = j1 a in
+  let a2 = AP.split a len1 in
+  let len2 = j2 a2 in
+  AP.join a a2;
+  Seq.lemma_split g.AP.contents (U32.v len1);
+  SEA.return (len1 `U32.add` len2)

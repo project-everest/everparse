@@ -16,40 +16,9 @@ let parsed_size
 : Tot Type0
 = (a: byte_array) ->
   SE.Steel U32.t
-    (vparse p a)
-    (fun _ -> vparse p a)
-    (fun _ -> True)
-    (fun h res h' ->
-      h' (vparse p a) == h (vparse p a) /\
-      U32.v res == A.length (h (vparse p a)).array
-    )
-
-let parsed_size_constant_size
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (sz: U32.t)
-: Pure (parsed_size p)
-    (requires (
-      k.parser_kind_subkind == Some ParserStrong /\
-      k.parser_kind_high == Some k.parser_kind_low /\
-      U32.v sz == k.parser_kind_low
-    ))
-    (ensures (fun _ -> True))
-=
-  fun a ->
-  SEA.return sz // enough thanks to length ineqs in the return type of the selector
-
-let strong_parsed_size
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-: Tot Type0
-= (a: byte_array) ->
-  SE.Steel U32.t
     (AP.varrayptr a)
     (fun _ -> AP.varrayptr a)
-    (fun _ -> True)
+    (fun h -> Some? (parse p (h (AP.varrayptr a)).AP.contents))
     (fun h res h' ->
       let s = h (AP.varrayptr a) in
       h' (AP.varrayptr a) == s /\
@@ -59,14 +28,39 @@ let strong_parsed_size
       end
     )
 
+let parsed_size_constant_size
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (sz: U32.t)
+: Pure (parsed_size p)
+    (requires (
+      k.parser_kind_high == Some k.parser_kind_low /\
+      U32.v sz == k.parser_kind_low
+    ))
+    (ensures (fun _ -> True))
+=
+  fun a ->
+  parser_kind_prop_equiv k p;
+  let g = SEA.gget (AP.varrayptr a) in
+  assert (Some? (parse p g.AP.contents));
+  SEA.return sz
+
 let get_parsed_size
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (j: strong_parsed_size p)
-: Tot (parsed_size p)
+  (j: parsed_size p)
+  (a: byte_array)
+: SE.Steel U32.t
+    (vparse p a)
+    (fun _ -> vparse p a)
+    (fun _ -> True)
+    (fun h res h' ->
+      h' (vparse p a) == h (vparse p a) /\
+      U32.v res == A.length (h (vparse p a)).array
+    )
 =
-  fun a ->
   elim_vparse p a;
   let _ = SEA.gget (AP.varrayptr a) in // FIXME: WHY WHY WHY is this needed?
   let res = j a in
@@ -77,12 +71,15 @@ let peek_strong
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (j: strong_parsed_size p)
+  (j: parsed_size p)
   (a: byte_array)
 : SE.Steel byte_array
     (AP.varrayptr a)
     (fun res -> vparse p a `SE.star` AP.varrayptr res)
-    (fun _ -> k.parser_kind_subkind == Some ParserStrong)
+    (fun h ->
+      k.parser_kind_subkind == Some ParserStrong /\
+      Some? (parse p (h (AP.varrayptr a)).AP.contents)
+    )
     (fun h res h' ->
       let c_a = h (AP.varrayptr a) in
       let c_a' = h' (vparse p a) in
@@ -202,7 +199,7 @@ val copy_strong
     )
 
 let copy_strong #_ #_ #p j src dst =
-  let n = j src in
+  let n = get_parsed_size j src in
   let res = AP.split dst n in
   let _ = SEA.gget (AP.varrayptr dst) in // FIXME: WHY WHY WHY?
   copy_exact p src dst n;
@@ -325,7 +322,7 @@ val copy_weak
     )
 
 let copy_weak #_ #_ #p j src dst n_dst =
-  let n_src = j src in
+  let n_src = get_parsed_size j src in
   if n_dst `U32.lt` n_src
   then begin
     SEA.reveal_star (vparse p src) (AP.varrayptr dst);
@@ -378,7 +375,7 @@ val copy_strong_r2l
     )
 
 let copy_strong_r2l #_ #_ #p j src dst =
-  let n = j src in
+  let n = get_parsed_size j src in
   let res = R2L.split dst n in
   copy_exact p src res n;
   SEA.reveal_star_3 (vparse p src) (R2L.vp dst) (vparse p res); // for can_be_split
@@ -456,7 +453,7 @@ val copy_weak_r2l
 
 let copy_weak_r2l #_ #_ #p j src dst =
   let n_dst = R2L.len dst in
-  let n_src = j src in
+  let n_src = get_parsed_size j src in
   if n_dst `U32.lt` n_src
   then begin
     let res0 : option byte_array = None in
