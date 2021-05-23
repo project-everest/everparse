@@ -38,7 +38,6 @@ let validate_pair
   else begin
     let sq : squash (is_success r1) = () in // FIXME: WHY WHY WHY does refinement or requires not work?
     let consumed = uint64_to_uint32 r1 sq in
-    Seq.lemma_split g (U32.v consumed);
     let a2 = AP.split a consumed in
     SEA.reveal_star (AP.varrayptr a) (AP.varrayptr a2); // FIXME: WHY WHY WHY is this needed?
     let ga1 : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in
@@ -120,6 +119,8 @@ val construct_pair
       c.contents == (c1.contents, c2.contents)
     )
 
+#restart-solver
+
 let construct_pair
   #opened #k1 #t1 p1 p2 a1 a2
 =
@@ -131,7 +132,6 @@ let construct_pair
   AP.join a1 a2;
   let g : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a1) in // FIXME: same here
   nondep_then_eq p1 p2 g.AP.contents;
-  Seq.lemma_split g.AP.contents (A.length v1.array);
   Seq.lemma_append_inj g1.AP.contents g2.AP.contents (Seq.slice g.AP.contents 0 (A.length v1.array)) (Seq.slice g.AP.contents (A.length v1.array) (Seq.length g.AP.contents));
   parse_strong_prefix p1 g1.AP.contents g.AP.contents;
   intro_vparse (p1 `nondep_then` p2) a1
@@ -154,7 +154,6 @@ let size_pair
   let a2 = AP.split a len1 in
   let len2 = j2 a2 in
   AP.join a a2;
-  Seq.lemma_split g.AP.contents (U32.v len1);
   SEA.return (len1 `U32.add` len2)
 
 val validate_synth
