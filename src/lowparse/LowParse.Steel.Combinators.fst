@@ -156,3 +156,76 @@ let size_pair
   AP.join a a2;
   Seq.lemma_split g.AP.contents (U32.v len1);
   SEA.return (len1 `U32.add` len2)
+
+val validate_synth
+  (#k1: _) (#t1: _) (#p1: parser k1 t1) (v1: wvalidator p1)
+  (#t2: _) (f2: (t1 -> GTot t2))
+  (f2_inj: squash (synth_injective f2))
+: Tot (wvalidator (p1 `parse_synth` f2))
+
+let validate_synth
+  #_ #_ #p1 v1 f2 _
+= fun a len ->
+  Classical.forall_intro (Classical.move_requires (parse_synth_eq p1 f2));
+  v1 a len
+
+val intro_vparse_synth
+  (#opened: _)
+  (#k1: _) (#t1: _) (p1: parser k1 t1)
+  (#t2: _) (f2: (t1 -> GTot t2))
+  (f2_inj: squash (synth_injective f2))
+  (a: byte_array)
+: SEA.SteelGhost unit opened
+    (vparse p1 a)
+    (fun _ -> vparse (parse_synth p1 f2) a)
+    (fun _ -> True)
+    (fun h _ h' ->
+      let r = h (vparse p1 a) in
+      let r' = h' (vparse (parse_synth p1 f2) a) in
+      r'.array == r.array /\
+      r'.contents == f2 r.contents
+    )
+
+let intro_vparse_synth
+  p1 f2 _ a
+=
+  elim_vparse p1 a;
+  let g = SEA.gget (AP.varrayptr a) in
+  parse_synth_eq p1 f2 g.AP.contents;
+  intro_vparse (parse_synth p1 f2) a
+
+val elim_vparse_synth
+  (#opened: _)
+  (#k1: _) (#t1: _) (p1: parser k1 t1)
+  (#t2: _) (f2: (t1 -> GTot t2))
+  (f2_inj: squash (synth_injective f2))
+  (a: byte_array)
+: SEA.SteelGhost unit opened
+    (vparse (parse_synth p1 f2) a)
+    (fun _ -> vparse p1 a)
+    (fun _ -> True)
+    (fun h _ h' ->
+      let r = h (vparse (parse_synth p1 f2) a) in
+      let r' = h' (vparse p1 a) in
+      r'.array == r.array /\
+      r.contents == f2 r'.contents
+    )
+
+let elim_vparse_synth
+  p1 f2 _ a
+=
+  elim_vparse (parse_synth p1 f2) a;
+  let g = SEA.gget (AP.varrayptr a) in
+  parse_synth_eq p1 f2 g.AP.contents;
+  intro_vparse p1 a
+
+let size_synth
+  (#k1: _) (#t1: _) (#p1: parser k1 t1)
+  (j1: parsed_size p1)
+  (#t2: _) (f2: (t1 -> GTot t2))
+  (f2_inj: squash (synth_injective f2))
+: Tot (parsed_size (p1 `parse_synth` f2))
+= fun a ->
+  let g = SEA.gget (AP.varrayptr a) in
+  parse_synth_eq p1 f2 g.AP.contents;
+  j1 a
