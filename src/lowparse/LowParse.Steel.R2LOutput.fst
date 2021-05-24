@@ -13,6 +13,7 @@ let vp0_refine
   (y: SE.normal (SE.t_of (AP.varrayptr x.ptr `SE.star`  SR.vptr x.len)))
 : Tot prop
 =
+  (A.pfst y).AP.perm == SP.full_perm /\
   A.len (A.pfst y).AP.array == A.psnd y
 
 let vp0_rewrite
@@ -39,6 +40,7 @@ val intro_vp
     (AP.varrayptr x.ptr `SE.star` SR.vptr x.len)
     (fun _ -> vp x)
     (fun h ->
+      (h (AP.varrayptr x.ptr)).AP.perm == SP.full_perm /\
       A.len (h (AP.varrayptr x.ptr)).AP.array == h (SR.vptr x.len)
     )
     (fun h _ h'  ->
@@ -72,6 +74,7 @@ val elim_vp
     (fun _ -> True)
     (fun h _ h' ->
       let ar = (h' (AP.varrayptr x.ptr)).AP.array in
+      (h' (AP.varrayptr x.ptr)).AP.perm == SP.full_perm /\
       h (vp x) == ar /\
       A.len (h (vp x)) == h' (SR.vptr x.len)
     )

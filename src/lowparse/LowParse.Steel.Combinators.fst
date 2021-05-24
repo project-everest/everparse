@@ -78,6 +78,7 @@ val destruct_pair
       let c = h (vparse (p1 `nondep_then` p2) a) in
       let c1 = h' (vparse p1 a) in
       let c2 = h' (vparse p2 res) in
+      c1.perm == c.perm /\ c2.perm == c.perm /\
       A.merge_into c1.array c2.array c.array /\
       c.contents == (c1.contents, c2.contents)
     )
@@ -109,6 +110,7 @@ val construct_pair
     (vparse p1 a1 `SE.star` vparse p2 a2)
     (fun _ -> vparse (p1 `nondep_then` p2) a1)
     (fun h ->
+      (h (vparse p1 a1)).perm == (h (vparse p2 a2)).perm /\
       A.adjacent (h (vparse p1 a1)).array (h (vparse p2 a2)).array /\
       k1.parser_kind_subkind == Some ParserStrong
     )
@@ -117,6 +119,7 @@ val construct_pair
       let c1 = h (vparse p1 a1) in
       let c2 = h (vparse p2 a2) in
       A.merge_into c1.array c2.array c.array /\
+      c.perm == c1.perm /\ c.perm == c2.perm /\
       c.contents == (c1.contents, c2.contents)
     )
 
@@ -185,6 +188,7 @@ val intro_vparse_synth
     (fun h _ h' ->
       let r = h (vparse p1 a) in
       let r' = h' (vparse (parse_synth p1 f2) a) in
+      r'.perm == r.perm /\
       r'.array == r.array /\
       r'.contents == f2 r.contents
     )
@@ -210,6 +214,7 @@ val elim_vparse_synth
     (fun h _ h' ->
       let r = h (vparse (parse_synth p1 f2) a) in
       let r' = h' (vparse p1 a) in
+      r'.perm == r.perm /\
       r'.array == r.array /\
       r.contents == f2 r'.contents
     )
@@ -246,6 +251,7 @@ val intro_vparse_filter
       let r = h (vparse p a) in
       let r' = h' (vparse (parse_filter p f) a) in
       f r.contents == true /\
+      r'.perm == r.perm /\
       r'.array == r.array /\
       r'.contents == r.contents
     )
@@ -271,6 +277,7 @@ val elim_vparse_filter
       let r = h (vparse (parse_filter p f) a) in
       let r' = h' (vparse p a) in
       f (r'.contents) == true /\
+      r'.perm == r.perm /\
       r'.array == r.array /\
       r'.contents == r.contents
     )

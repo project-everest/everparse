@@ -2,6 +2,7 @@ module LowParse.Steel.R2LOutput
 include LowParse.Bytes
 
 module S = Steel.Memory
+module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module A = Steel.Array
@@ -42,7 +43,10 @@ val make
 : SE.Steel t
     (AP.varrayptr x)
     (fun res -> vp res)
-    (fun h -> A.len (h (AP.varrayptr x)).AP.array == len)
+    (fun h ->
+      (h (AP.varrayptr x)).AP.perm == SP.full_perm /\
+      A.len (h (AP.varrayptr x)).AP.array == len
+    )
     (fun _ res h' ->
       A.len (h' (vp res)) == len
     )
@@ -81,6 +85,7 @@ val split
     (fun h -> U32.v len <= A.length (h (vp x)))
     (fun h res h' ->
       let ar = (h' (AP.varrayptr res)).AP.array in
+      (h' (AP.varrayptr res)).AP.perm == SP.full_perm /\
       A.merge_into (h' (vp x)) ar (h (vp x)) /\
       A.len ar == len
     )
@@ -94,6 +99,7 @@ val merge
     (fun res -> vp x)
     (fun h ->
       let ar = (h (AP.varrayptr y)).AP.array in
+      (h (AP.varrayptr y)).AP.perm == SP.full_perm /\
       len == A.len ar /\
       A.adjacent (h (vp x)) ar
     )

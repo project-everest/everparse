@@ -39,10 +39,12 @@ let select
   (x: SE.t_of (AP.varrayptr a `SE.vrefine` cvalid p))
 : GTot (v k t)
 =
+  let x : AP.v byte = x in
   let Some (y, _) = parse p x.AP.contents in
   {
     array = x.AP.array;
     contents = y;
+    perm = x.AP.perm;
   }
 
 let select_correct
@@ -91,6 +93,7 @@ let intro_vparse0
     )
     (fun h _ h' ->
       valid p (h (AP.varrayptr a)).AP.contents /\
+      (vparse0_sel p a h').perm == (h (AP.varrayptr a)).AP.perm /\
       (vparse0_sel p a h').array == (h (AP.varrayptr a)).AP.array /\
       is_byte_repr p (vparse0_sel p a h').contents (h (AP.varrayptr a)).AP.contents
     )
@@ -118,6 +121,7 @@ let elim_vparse0
     (fun _ -> True)
     (fun h _ h' ->
       (h' (AP.varrayptr a)).AP.array == (vparse0_sel p a h).array /\
+      (h' (AP.varrayptr a)).AP.perm == (vparse0_sel p a h).perm /\
       valid p (h' (AP.varrayptr a)).AP.contents /\
       is_byte_repr p (vparse0_sel p a h).contents (h' (AP.varrayptr a)).AP.contents
     )

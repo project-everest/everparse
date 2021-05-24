@@ -2,6 +2,7 @@ module LowParse.Steel.VParse
 include LowParse.Spec.Base
 
 module S = Steel.Memory
+module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module A = Steel.Array
@@ -59,6 +60,7 @@ noeq
 type v (k: parser_kind) (t: Type) = {
   array : array_t k;
   contents : t;
+  perm: SP.perm;
 }
 
 val vparse_slprop
@@ -111,6 +113,7 @@ val intro_vparse
     )
     (fun h _ h' ->
       valid p (h (AP.varrayptr a)).AP.contents /\
+      (h' (vparse p a)).perm == (h (AP.varrayptr a)).AP.perm /\
       (h' (vparse p a)).array == (h (AP.varrayptr a)).AP.array /\
       is_byte_repr p (h' (vparse p a)).contents (h (AP.varrayptr a)).AP.contents
     )
@@ -127,6 +130,7 @@ val elim_vparse
     (fun _ -> True)
     (fun h _ h' ->
       valid p (h' (AP.varrayptr a)).AP.contents /\
+      (h' (AP.varrayptr a)).AP.perm == (h (vparse p a)).perm /\
       (h' (AP.varrayptr a)).AP.array == (h (vparse p a)).array /\
       is_byte_repr p (h (vparse p a)).contents (h' (AP.varrayptr a)).AP.contents
     )

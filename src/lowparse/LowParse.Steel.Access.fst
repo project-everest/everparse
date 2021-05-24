@@ -2,6 +2,7 @@ module LowParse.Steel.Access
 include LowParse.Steel.VParse
 
 module S = Steel.Memory
+module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module A = Steel.Array
@@ -86,6 +87,8 @@ let peek_strong
       let c_res = h' (AP.varrayptr res) in
       let consumed = A.length c_a'.array in
       A.merge_into c_a'.array c_res.AP.array c_a.AP.array /\
+      c_a'.perm == c_a.AP.perm /\
+      c_res.AP.perm == c_a.AP.perm /\
       is_byte_repr p c_a'.contents (Seq.slice c_a.AP.contents 0 consumed) /\
       consumed <= A.length c_a.AP.array /\
       c_res.AP.contents == Seq.slice c_a.AP.contents consumed (A.length c_a.AP.array)
@@ -107,6 +110,7 @@ val memcpy
     (AP.varrayptr dst `SE.star` AP.varrayptr src)
     (fun _ -> AP.varrayptr dst `SE.star` AP.varrayptr src)
     (fun h ->
+      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
       U32.v n <= A.length (h (AP.varrayptr src)).AP.array /\
       U32.v n <= A.length (h (AP.varrayptr dst)).AP.array
     )
@@ -116,6 +120,7 @@ val memcpy
       let d' = h' (AP.varrayptr dst) in
       res == dst /\
       h' (AP.varrayptr src) == s /\
+      d'.AP.perm == SP.full_perm /\
       d'.AP.array == d.AP.array /\
       U32.v n <= A.length d.AP.array /\
       U32.v n <= A.length s.AP.array /\
@@ -124,6 +129,8 @@ val memcpy
     (decreases (U32.v n))
 
 let rec memcpy dst src n =
+  let g : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr dst) in
+  assert (g.AP.perm == SP.full_perm);
   if n = 0ul
   then SEA.return dst
   else begin
@@ -144,6 +151,7 @@ val copy_exact
     (vparse p src `SE.star` AP.varrayptr dst)
     (fun _ -> vparse p src `SE.star` vparse p dst)
     (fun h ->
+      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
       U32.v n == A.length (h (vparse p src)).array /\
       U32.v n == A.length (h (AP.varrayptr dst)).AP.array
     )
@@ -155,6 +163,7 @@ val copy_exact
       U32.v n == A.length d.AP.array /\
       h' (vparse p src) == s /\
       d'.array == d.AP.array /\
+      d'.perm == SP.full_perm /\
       d'.contents == s.contents
     )
 
@@ -180,6 +189,7 @@ val copy_strong
     (vparse p src `SE.star` AP.varrayptr dst)
     (fun res -> vparse p src `SE.star` vparse p dst `SE.star` AP.varrayptr res)
     (fun h ->
+      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
       A.length (h (vparse p src)).array <= A.length (h (AP.varrayptr dst)).AP.array
     )
     (fun h res h' ->
@@ -193,7 +203,9 @@ val copy_strong
         h' (vparse p src) == s /\
         A.merge_into d'.array r.AP.array d.AP.array /\
         d'.contents == s.contents /\
+        d'.perm == SP.full_perm /\
         A.length s.array == A.length d'.array /\ // TODO: this should be a consequence of the equality of the contents, via parser injectivity
+        r.AP.perm == SP.full_perm /\
         r.AP.contents == Seq.slice d.AP.contents (A.length s.array) (A.length d.AP.array)
       end
     )
@@ -298,8 +310,10 @@ let copy_weak_post
           let d = h (AP.varrayptr dst) in
           let r = copy_weak_vprop_res p src dst res0 x in
           A.merge_into d'.array r.AP.array d.AP.array /\
+          d'.perm == SP.full_perm /\
           d'.contents == s.contents /\
           A.length s.array == A.length d'.array /\ // TODO: this should be a consequence of the equality of the contents, via parser injectivity
+          r.AP.perm == SP.full_perm /\
           r.AP.contents == Seq.slice d.AP.contents (A.length s.array) (A.length d.AP.array)
       end
 
@@ -315,6 +329,7 @@ val copy_weak
     (vparse p src `SE.star` AP.varrayptr dst)
     (fun res -> copy_weak_vprop p src dst res)
     (fun h ->
+      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
       A.length (h (AP.varrayptr dst)).AP.array == U32.v n
     )
     (fun h res0 h' ->
@@ -369,6 +384,7 @@ val copy_strong_r2l
         let r = h' (vparse p res) in
         h' (vparse p src) == s /\
         A.merge_into d' r.array d /\
+        r.perm == SP.full_perm /\
         r.contents == s.contents /\
         A.length s.array == A.length r.array // TODO: this should be a consequence of the equality of the contents, via parser injectivity
       end
@@ -431,6 +447,7 @@ let copy_weak_r2l_post
           let res = Some?.v res0 in
           let r = copy_weak_r2l_vprop_res p res0 (h' (copy_weak_r2l_vprop p res0)) in
           A.merge_into d' r.array d /\
+          r.perm == SP.full_perm /\
           r.contents == s.contents /\
           A.length s.array == A.length r.array // TODO: this should be a consequence of the equality of the contents, via parser injectivity
       end

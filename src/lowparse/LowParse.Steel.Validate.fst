@@ -72,6 +72,7 @@ let tvalidator
       then
         let s' = tvalid_res_vprop_true p a res s' in
         s'.array == s.AP.array /\
+        s'.perm == s.AP.perm /\
         is_byte_repr p s'.contents s.AP.contents
       else
         let s' = tvalid_res_vprop_false p a res s' in
@@ -168,6 +169,8 @@ let wvalidate_post // FIXME: WHY WHY WHY do I need to define this postcondition 
     let vr = snd v in
     let consumed = A.length vl.array in
     len == A.len s.AP.array /\
+    vl.perm == s.AP.perm /\
+    vr.AP.perm == s.AP.perm /\
     A.merge_into vl.array vr.AP.array s.AP.array /\
     A.length vl.array == consumed /\
     is_byte_repr p vl.contents (Seq.slice s.AP.contents 0 consumed) /\
