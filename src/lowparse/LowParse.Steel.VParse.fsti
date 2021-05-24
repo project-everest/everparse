@@ -134,3 +134,47 @@ val elim_vparse
       (h' (AP.varrayptr a)).AP.array == (h (vparse p a)).array /\
       is_byte_repr p (h (vparse p a)).contents (h' (AP.varrayptr a)).AP.contents
     )
+
+val share
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (a: byte_array)
+: SE.Steel byte_array
+    (vparse p a)
+    (fun res -> vparse p a `SE.star` vparse p res)
+    (fun _ -> True)
+    (fun h res h' ->
+      let s = h (vparse p a) in
+      let s' = h' (vparse p a) in
+      let d = h' (vparse p res) in
+      s'.array == s.array /\
+      s'.perm == SP.half_perm s.perm /\
+      s'.contents == s.contents /\
+      d.array == s.array /\
+      d.perm == SP.half_perm s.perm /\
+      d.contents == s.contents
+    )
+
+val gather
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (a1 a2: byte_array)
+: SEA.SteelGhost unit opened
+    (vparse p a1 `SE.star` vparse p a2)
+    (fun res -> vparse p a1)
+    (fun h ->
+      (h (vparse p a1)).array == (h (vparse p a2)).array
+    )
+    (fun h res h' ->
+      let s1 = h (vparse p a1) in
+      let s2 = h (vparse p a2) in
+      let d = h' (vparse p a1) in
+      d.array == s1.array /\
+      d.array == s2.array /\
+      d.perm == s1.perm `SP.sum_perm` s2.perm /\
+      d.contents == s1.contents /\
+      d.contents == s2.contents
+    )

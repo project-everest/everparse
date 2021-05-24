@@ -167,3 +167,22 @@ let elim_vparse
     (fun (x: SE.t_of (vparse p a)) (y: SE.t_of (vparse0 p a)) -> (x <: v k t) == y)
     (fun _ -> ());
   elim_vparse0 p a
+
+let share
+  #k #t p a
+=
+  elim_vparse p a;
+  let g0 : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in // FIXME: WHY WHY WHY?
+  let res = AP.share a in
+  intro_vparse p a;
+  intro_vparse p res;
+  SEA.return res
+
+let gather
+  #k #t p a1 a2
+=
+  elim_vparse p a1;
+  let g0 : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a1) in // FIXME: WHY WHY WHY?  
+  elim_vparse p a2;
+  AP.gather a1 a2;
+  intro_vparse p a1
