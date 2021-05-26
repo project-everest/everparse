@@ -111,70 +111,57 @@ let wvalidator
       end
     )
 
-let wvalidate_vprop
-  (#t: Type0)
-  (#k: parser_kind)
-  (p: parser k t)
-  (a: byte_array)
-  (res: option byte_array)
-: Tot SE.vprop
-= if Some? res
-  then vparse p a `SE.star` AP.varrayptr (Some?.v res)
-  else AP.varrayptr a
-
-unfold
-let wvalidate_vprop_some
-  (#t: Type0)
-  (#k: parser_kind)
-  (p: parser k t)
-  (a: byte_array)
-  (res: option byte_array)
-  (x: SE.t_of (wvalidate_vprop p a res))
-: Pure (v k t & AP.v byte)
-  (requires (Some? res))
-  (ensures (fun _ -> True))
-= x
-
-unfold
-let wvalidate_vprop_none
-  (#t: Type0)
-  (#k: parser_kind)
-  (p: parser k t)
-  (a: byte_array)
-  (res: option byte_array)
-  (x: SE.t_of (wvalidate_vprop p a res))
-: Pure (AP.v byte)
-  (requires (None? res))
-  (ensures (fun _ -> True))
-= x
-
 let wvalidate_post // FIXME: WHY WHY WHY do I need to define this postcondition separately? (if not, then dummy fails to verify)
   (#t: Type0)
   (#k: parser_kind)
   (p: parser k t)
   (a: byte_array)
   (len: U32.t)
-  (res: option byte_array)
+  (res: byte_array)
   (s: AP.v byte)
-  (s': SE.t_of (wvalidate_vprop p a res))
+  (s': SE.t_of (if AP.g_is_null res then AP.varrayptr a else vparse p a))
+  (vres: option (AP.v byte))
 : Tot prop
 =
-  if None? res
+  if AP.g_is_null res
   then
-    None? (parse p s.AP.contents) /\
-    wvalidate_vprop_none p a res s' == s
-  else
-    let v = wvalidate_vprop_some p a res s' in
-    let vl = fst v in
-    let vr = snd v in
-    let consumed = A.length vl.array in
+    parse p s.AP.contents == None /\
+    vres == None /\
+    s' == s
+  else begin
+    let s' : v k t = s' in
+    let consumed = A.length s'.array in
+    Some? vres /\
     len == A.len s.AP.array /\
-    vl.perm == s.AP.perm /\
-    vr.AP.perm == s.AP.perm /\
-    A.merge_into vl.array vr.AP.array s.AP.array /\
-    A.length vl.array == consumed /\
-    is_byte_repr p vl.contents (Seq.slice s.AP.contents 0 consumed) /\
-    vr.AP.contents == Seq.slice s.AP.contents consumed (U32.v len)
+    s'.perm == s.AP.perm /\
+    (Some?.v vres).AP.perm == s.AP.perm /\
+    A.merge_into s'.array (Some?.v vres).AP.array s.AP.array /\
+    consumed <= A.length s.AP.array /\
+    is_byte_repr p s'.contents (Seq.slice s.AP.contents 0 consumed) /\
+    (Some?.v vres).AP.contents == Seq.slice s.AP.contents consumed (U32.v len)
+  end
+
+(* FIXME: WHY WHY WHY do I need this? It seems that the ifthenelse branch below does not work well if both branches are atomic *)
+
+val ap_split (#a:Type) (x: AP.t a) (i:U32.t)
+  : SE.Steel (AP.t a)
+          (AP.varrayptr x)
+          (fun res -> AP.varrayptr x `SE.star` AP.varrayptr res)
+          (fun h -> U32.v i <= A.length (h (AP.varrayptr x)).AP.array)
+          (fun h res h' ->
+            let s = h (AP.varrayptr x) in
+            let sl = h' (AP.varrayptr x) in
+            let sr = h' (AP.varrayptr res) in
+            U32.v i <= A.length s.AP.array /\
+            A.merge_into sl.AP.array sr.AP.array s.AP.array /\
+            sl.AP.perm == s.AP.perm /\
+            sr.AP.perm == s.AP.perm /\
+            sl.AP.contents == Seq.slice s.AP.contents 0 (U32.v i) /\
+            sr.AP.contents == Seq.slice s.AP.contents (U32.v i) (A.length s.AP.array) /\
+            s.AP.contents == sl.AP.contents `Seq.append` sr.AP.contents
+          )
+
+let ap_split x i = AP.split x i
 
 val wvalidate
   (#t: Type0)
@@ -183,14 +170,15 @@ val wvalidate
   (w: wvalidator p)
   (a: byte_array)
   (len: U32.t)
-: SE.Steel (option byte_array)
+: SE.Steel (byte_array)
     (AP.varrayptr a)
-    (wvalidate_vprop p a)
+    (fun res -> (if AP.g_is_null res then AP.varrayptr a else vparse p a) `SE.star` AP.varrayptr_or_null res)
     (fun h -> len == A.len (h (AP.varrayptr a)).AP.array)
     (fun h res h' ->
       let s = h (AP.varrayptr a) in
-      let s'  = h' (wvalidate_vprop p a res) in
-      wvalidate_post p a len res s s'
+      let s'  = h' (if AP.g_is_null res then AP.varrayptr a else vparse p a) in
+      let vres = h' (AP.varrayptr_or_null res) in
+      wvalidate_post p a len res s s' vres
     )
 
 let wvalidate
@@ -199,19 +187,20 @@ let wvalidate
   let consumed = w a len in
   if is_success consumed
   then begin
-    let ar = AP.split a (uint64_to_uint32 consumed) in
+    let ar : byte_array = ap_split a (uint64_to_uint32 consumed) in // FIXME: WHY WHY WHY do I need ap_split?
     intro_vparse p a;
-    let res = Some ar in
-    SEA.reveal_star (vparse p a) (AP.varrayptr ar);
+    AP.intro_varrayptr_or_null_some ar;
     SEA.change_equal_slprop
-      (vparse p a `SE.star` AP.varrayptr ar)
-      (wvalidate_vprop p a res);
-    SEA.return res
+      (vparse p a)
+      (if AP.g_is_null ar then AP.varrayptr a else vparse p a);
+    SEA.return ar
   end else begin
+    let res : byte_array = AP.null _ in
+    AP.intro_varrayptr_or_null_none res;
     SEA.change_equal_slprop
       (AP.varrayptr a)
-      (wvalidate_vprop p a None);
-    SEA.return None
+      (if AP.g_is_null res then AP.varrayptr a else vparse p a);
+    SEA.return res
   end
 
 let dummy
@@ -231,25 +220,25 @@ let dummy
 =
   let g0 : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in
   let res = wvalidate w a len in
-  if None? res
+  if AP.is_null res
   then begin
     SEA.change_equal_slprop
-      (wvalidate_vprop p a res)
+      (if AP.g_is_null res then AP.varrayptr a else vparse p a)
       (AP.varrayptr a);
+    AP.elim_varrayptr_or_null_none res;
     SEA.return ()
   end else begin
-    let ar = Some?.v res in
     SEA.change_equal_slprop
-      (wvalidate_vprop p a res)
-      (vparse p a `SE.star` AP.varrayptr ar);
-    SEA.reveal_star (vparse p a) (AP.varrayptr ar);
+      (if AP.g_is_null res then AP.varrayptr a else vparse p a)
+      (vparse p a);
+    AP.elim_varrayptr_or_null_some res;
     let g1 : Ghost.erased (v k t) = SEA.gget (vparse p a) in // FIXME: WHY WHY WHY is this type annotation needed?
     elim_vparse p a;
     let g2 = SEA.gget (AP.varrayptr a) in
     let glen = Ghost.hide (A.length (Ghost.reveal g1).array) in
     is_byte_repr_injective p (Ghost.reveal g1).contents (Seq.slice (Ghost.reveal g0).AP.contents 0 (Ghost.reveal glen)) (Ghost.reveal g2).AP.contents;
     Seq.lemma_split (Ghost.reveal g0).AP.contents (Ghost.reveal glen);
-    AP.join a ar
+    AP.join a res
   end
 
 #set-options "--ide_id_info_off"
