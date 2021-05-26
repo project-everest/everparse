@@ -136,11 +136,12 @@ val elim_vparse
     )
 
 val share
+  (#opened: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (a: byte_array)
-: SE.Steel byte_array
+: SEA.SteelAtomic byte_array opened
     (vparse p a)
     (fun res -> vparse p a `SE.star` vparse p res)
     (fun _ -> True)

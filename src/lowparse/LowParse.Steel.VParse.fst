@@ -169,7 +169,7 @@ let elim_vparse
   elim_vparse0 p a
 
 let share
-  #k #t p a
+  p a
 =
   elim_vparse p a;
   let g0 : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a) in // FIXME: WHY WHY WHY?
