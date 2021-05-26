@@ -143,25 +143,7 @@ let wvalidate_post // FIXME: WHY WHY WHY do I need to define this postcondition 
 
 (* FIXME: WHY WHY WHY do I need this? It seems that the ifthenelse branch below does not work well if both branches are atomic *)
 
-val ap_split (#a:Type) (x: AP.t a) (i:U32.t)
-  : SE.Steel (AP.t a)
-          (AP.varrayptr x)
-          (fun res -> AP.varrayptr x `SE.star` AP.varrayptr res)
-          (fun h -> U32.v i <= A.length (h (AP.varrayptr x)).AP.array)
-          (fun h res h' ->
-            let s = h (AP.varrayptr x) in
-            let sl = h' (AP.varrayptr x) in
-            let sr = h' (AP.varrayptr res) in
-            U32.v i <= A.length s.AP.array /\
-            A.merge_into sl.AP.array sr.AP.array s.AP.array /\
-            sl.AP.perm == s.AP.perm /\
-            sr.AP.perm == s.AP.perm /\
-            sl.AP.contents == Seq.slice s.AP.contents 0 (U32.v i) /\
-            sr.AP.contents == Seq.slice s.AP.contents (U32.v i) (A.length s.AP.array) /\
-            s.AP.contents == sl.AP.contents `Seq.append` sr.AP.contents
-          )
-
-let ap_split x i = AP.split x i
+let se_noop (_: unit) : SE.SteelT unit SE.emp (fun _ -> SE.emp) = SEA.return ()
 
 val wvalidate
   (#t: Type0)
@@ -187,7 +169,8 @@ let wvalidate
   let consumed = w a len in
   if is_success consumed
   then begin
-    let ar : byte_array = ap_split a (uint64_to_uint32 consumed) in // FIXME: WHY WHY WHY do I need ap_split?
+    let ar : byte_array = AP.split a (uint64_to_uint32 consumed) in
+    se_noop ();  // FIXME: WHY WHY WHY do I need this?
     intro_vparse p a;
     AP.intro_varrayptr_or_null_some ar;
     SEA.change_equal_slprop
