@@ -6,18 +6,16 @@ lowparse:
 3d: lowparse
 	+$(MAKE) -C src/3d
 
-quackyducky: qd
+quackyducky:
+	mkdir -p bin
+	rm -f bin/qd.exe
+	+$(MAKE) -C src/qd
+	ln -sf ../src/qd/_build/default/quackyducky.exe bin/qd.exe
 
-qd: $(wildcard src/*.ml*)
-	-@rm -f quackyducky.native
-	ocamlbuild -I src -use-menhir -use-ocamlfind -package batteries -package hex quackyducky.native -classic-display -cflags '-warn-error +5+8'
-	ln -sf quackyducky.native qd
-	touch qd
-
-gen-test: qd
+gen-test: quackyducky
 	-rm tests/unit/*.fst tests/unit/*.fsti || true
-	./qd -odir tests/unit tests/unittests.rfc
-	./qd -low -odir tests/unit tests/bitcoin.rfc
+	bin/qd.exe -odir tests/unit tests/unittests.rfc
+	bin/qd.exe -low -odir tests/unit tests/bitcoin.rfc
 
 lowparse-unit-test: lowparse
 	+$(MAKE) -C tests/lowparse
@@ -55,12 +53,19 @@ test: lowparse-test quackyducky-test 3d-test
 
 ci: lowparse-test quackyducky-test 3d-ci
 
-clean:
+clean-3d:
 	+$(MAKE) -C src/3d clean
-	+$(MAKE) -C src/lowparse clean
-	rm -rf *~ src/*~ _build src/*lexer.ml src/*parser.ml src/*parser.mli qd quackyducky.native
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test 3d-doc-ci 3d-ci ci
+clean-lowparse:
+	+$(MAKE) -C src/lowparse clean
+
+clean-quackyducky:
+	+$(MAKE) -C src/qd clean
+	rm -rf bin/qd.exe
+
+clean: clean-3d clean-lowparse clean-quackyducky
+
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test 3d-doc-ci 3d-ci ci clean-3d clean-lowparse clean-quackyducky
 
 release:
 	+src/package/release.sh

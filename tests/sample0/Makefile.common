@@ -24,5 +24,5 @@ KREMLIN = $(KREMLIN_HOME)/krml \
 	 $(HEADERS) \
 	 -warn-error -9
 
-QD = $(QD_HOME)/_build/src/quackyducky.native
+QD = $(QD_HOME)/bin/qd.exe
 RFC = Test.rfc
