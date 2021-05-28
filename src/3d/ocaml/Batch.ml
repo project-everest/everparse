@@ -302,9 +302,9 @@ let produce_one_c_file
 
 (* Update EVERPARSEVERSION and FILENAME *)
 
-let regexp_EVERPARSEVERSION = Str.regexp "EVERPARSEVERSION"
-let regexp_FILENAME = Str.regexp "FILENAME"
-let regexp_EVERPARSEHASHES = Str.regexp "EVERPARSEHASHES"
+let regexp_EVERPARSEVERSION = Re.Posix.compile_pat "EVERPARSEVERSION"
+let regexp_FILENAME = Re.Posix.compile_pat "FILENAME"
+let regexp_EVERPARSEHASHES = Re.Posix.compile_pat "EVERPARSEHASHES"
 
 let replace_variables
       hash_comment
@@ -322,13 +322,13 @@ let replace_variables
     with
     | None -> ()
     | Some ln ->
-       let ln = Str.global_replace regexp_EVERPARSEVERSION Version.everparse_version ln in
-       let ln = Str.global_replace regexp_FILENAME filename ln in
+       let ln = Re.replace_string regexp_EVERPARSEVERSION ~by:Version.everparse_version ln in
+       let ln = Re.replace_string regexp_FILENAME ~by:filename ln in
        let ln =
          match hash_comment with
          | None -> ln
          | Some hash_comment ->
-            Str.global_replace regexp_EVERPARSEHASHES hash_comment ln
+            Re.replace_string regexp_EVERPARSEHASHES ~by:hash_comment ln
        in
        output_line channel_out ln;
        aux ()

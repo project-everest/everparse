@@ -14,7 +14,7 @@ let fst_libs = ref (sprintf
 
 let qd_anon_prefix = "QD_ANONYMOUS_"
 let qd_anon_counter = ref 0
-let qd_bad_names = (Str.regexp ".*\(private_use\)\|\(obsolete\).*")
+let qd_bad_names = Re.Posix.compile_pat ".*\(private_use\)\|\(obsolete\).*"
 
 let rec pad = (fun n -> String.make (n*1) '\t')
 
@@ -53,7 +53,7 @@ and enum_type n (ef:Rfc_ast.enum_fields_t list) =
 			sprintf "| %s\n" (String.uppercase e)
 		| EnumFieldAnonymous(l) -> ""
 		| EnumFieldRange(e, l, m) ->
-			(match (Str.string_match qd_bad_names e 0) with
+			(match (Re.execp qd_bad_names e) with
 				| true  -> sprintf ""
 				| false -> sprintf "Incomplete:EnumFieldRange\n")) in
 	List.fold_left print (sprintf "type %s =\n" n) ef
@@ -66,7 +66,7 @@ and enum_bytes n (ef:Rfc_ast.enum_fields_t list) =
 			tl := !tl + (int_of_float (ceil ((float_of_int l) /. 255.)));
 			sprintf "| %s -> %s (uint_to_t %dul)\n" (String.uppercase e) !ls l
 		| EnumFieldRange(e, l, m) ->
-			(match (Str.string_match qd_bad_names e 0) with
+			(match (Re.execp qd_bad_names e) with
 				| true  -> sprintf ""
 				| false -> sprintf "Incomplete:EnumFieldRange\n")
 		| EnumFieldAnonymous(l) ->
@@ -91,7 +91,7 @@ and enum_parse n (ef:Rfc_ast.enum_fields_t list) =
 			qd_anon_counter := !qd_anon_counter + 1;
 			sprintf "| (%dz) -> Correct %s%d\n" l qd_anon_prefix !qd_anon_counter
 		| EnumFieldRange(e, l, m) ->
-			(match (Str.string_match qd_bad_names e 0) with
+			(match (Re.execp qd_bad_names e) with
 				| true  -> sprintf ""
 				| false -> sprintf "Incomplete:EnumFieldRange")) in
 	(List.fold_left print "" ef);

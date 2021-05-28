@@ -9,6 +9,7 @@
     process
     hacl-star
     yojson
+    re
   )
   (flags (:standard -w -8-9-11-26-27-33-39))
 )
