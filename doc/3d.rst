@@ -31,7 +31,7 @@ Summary
 
    * with the Linux binary package: ``everparse.sh MyFile1.3d MyFile2.3d``
 
-   * with the sources: ``src/3d/3d --batch MyFile1.3d MyFile2.3d``
+   * with the sources: ``bin/3d.exe --batch MyFile1.3d MyFile2.3d``
 
 Then, EverParse/3d produces:
 
@@ -407,7 +407,7 @@ the environment variables accordingly.)
 
 Then, once you are all set up in your EverParse clone, you can build
 3d by ``make 3d``. Then, the EverParse/3d executable will be located
-at ``src/3d/3d``.
+at ``bin/3d.exe``.
 
 .. note::
 

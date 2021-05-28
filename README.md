@@ -33,4 +33,4 @@ EverParse is part of [Project Everest](https://project-everest.github.io). Evere
 `make`
 
 ### Running
-`./qd -help`
+`./bin/qd.exe -help`

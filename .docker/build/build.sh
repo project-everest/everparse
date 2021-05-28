@@ -164,12 +164,6 @@ function exec_build() {
     local status_file="../status.txt"
     echo -n false >$status_file
 
-    if [ ! -f src/rfc_fstar_compiler.ml ]; then
-        echo "I don't seem to be in the right directory, bailing"
-        echo Failure >$result_file
-        return
-    fi
-
     if [[ $target == "quackyducky_nightly_test" ]]
     then
         nightly_test_quackyducky

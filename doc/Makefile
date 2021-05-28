@@ -7,7 +7,7 @@ export QD_HOME?=$(realpath ..)
 export FSTAR_HOME?=$(realpath $(QD_HOME)/../FStar)
 export KREMLIN_HOME?=$(realpath $(QD_HOME)/../kremlin)
 
-3D=../src/3d/3d
+3D=../bin/3d.exe
 3D_EXCLUDE=ConstColor.3d
 3D_FILES=$(filter-out $(3D_EXCLUDE),$(wildcard *.3d))
 3D_MODULES=$(basename $(3D_FILES))

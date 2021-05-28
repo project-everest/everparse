@@ -1,0 +1,20 @@
+(include_subdirs unqualified)
+
+(executable
+  (name Main)
+  (libraries
+    batteries
+    menhirLib
+    fstarlib
+    process
+    hacl-star
+    yojson
+  )
+  (flags (:standard -w -8-9-11-26-27-33-39))
+)
+
+(ocamllex lexer)
+
+(menhir
+  (modules parser)
+)

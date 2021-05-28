@@ -188,8 +188,8 @@ make_everparse() {
     $cp -r $KREMLIN_HOME/misc everparse/ &&
 
     # Copy EverParse
-    $cp $QD_HOME/quackyducky.native everparse/bin/qd$exe &&
-    $cp -r $QD_HOME/src/3d/3d everparse/bin/3d$exe &&
+    $cp $QD_HOME/bin/qd.exe everparse/bin/qd.exe &&
+    $cp -r $QD_HOME/bin/3d.exe everparse/bin/3d.exe &&
     mkdir -p everparse/src/3d &&
     $cp -r $QD_HOME/src/lowparse everparse/src/ &&
     if $is_windows ; then

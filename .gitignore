@@ -8,8 +8,8 @@ _build
 *.cmx
 *.cmxa
 *.krml
-quackyducky.native
-qd
 tests/unit/*
 !tests/unit/Makefile
 **/out
+bin/qd.exe
+bin/3d.exe
