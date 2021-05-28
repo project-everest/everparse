@@ -7,10 +7,7 @@ lowparse:
 	+$(MAKE) -C src/3d
 
 quackyducky:
-	mkdir -p bin
-	rm -f bin/qd.exe
 	+$(MAKE) -C src/qd
-	ln -sf ../src/qd/_build/default/quackyducky.exe bin/qd.exe
 
 gen-test: quackyducky
 	-rm tests/unit/*.fst tests/unit/*.fsti || true
@@ -61,7 +58,6 @@ clean-lowparse:
 
 clean-quackyducky:
 	+$(MAKE) -C src/qd clean
-	rm -rf bin/qd.exe
 
 clean: clean-3d clean-lowparse clean-quackyducky
 	rm -rf bin
