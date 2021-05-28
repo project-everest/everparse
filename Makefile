@@ -64,6 +64,7 @@ clean-quackyducky:
 	rm -rf bin/qd.exe
 
 clean: clean-3d clean-lowparse clean-quackyducky
+	rm -rf bin
 
 .PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test 3d-doc-ci 3d-ci ci clean-3d clean-lowparse clean-quackyducky
 

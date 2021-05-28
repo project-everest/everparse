@@ -9,18 +9,18 @@ FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUD
 
 all: 3d prelude
 
+EVERPARSE_3D=$(EVERPARSE_HOME)/bin/3d.exe
+EVERPARSE_3D_MAIN=ocaml/_build/default/Main.exe
+
 test: demo
 
 demo: all
 	+$(MAKE) -C tests
 
-.PHONY: all prelude test clean clean-3d clean-prelude
+.PHONY: all prelude test clean clean-3d clean-prelude 3d
 
 prelude:
 	+$(MAKE) -C prelude
-
-3d: ocaml/Main.native
-	cp ocaml/Main.native 3d
 
 Version.fst:
 	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh
@@ -30,9 +30,15 @@ Version.fst:
 
 include .depend
 
-ocaml/Main.native: $(ALL_ML_FILES) $(filter-out %~,$(wildcard ocaml/*.ml*))
-	rm -f ocaml/Main.native
-	+$(MAKE) -C ocaml Main.native
+3d: $(EVERPARSE_3D)
+
+$(EVERPARSE_3D): $(EVERPARSE_3D_MAIN)
+	mkdir -p $(dir $@)
+	cp $< $@
+	chmod +w $@ # because dune produces read-only executables
+
+$(EVERPARSE_3D_MAIN): $(ALL_ML_FILES) $(filter-out %~,$(wildcard ocaml/*.ml*))
+	+$(MAKE) -C ocaml
 
 %.checked:
 	$(FSTAR) $< --cache_checked_modules
@@ -46,7 +52,7 @@ clean-prelude:
 
 clean-3d:
 	+$(MAKE) -C ocaml clean
-	rm -rf *.checked *~ Version.fst
+	rm -rf *.checked *~ Version.fst $(EVERPARSE_HOME)/bin/3d.exe
 
 clean: clean-3d clean-prelude
 

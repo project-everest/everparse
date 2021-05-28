@@ -1,7 +1,7 @@
 QD_HOME ?= $(realpath ../../..)
 export QD_HOME
 
-3D=$(QD_HOME)/src/3d/3d
+3D=$(QD_HOME)/bin/3d.exe
 
 KREMLIN_HOME ?= $(realpath ../../../../kremlin)
 export KREMLIN_HOME
