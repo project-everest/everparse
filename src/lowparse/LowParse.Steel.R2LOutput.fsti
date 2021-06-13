@@ -6,7 +6,7 @@ module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module A = Steel.Array
-module AP = Steel.ArrayPtr
+module AP = LowParse.Steel.ArrayPtr
 module U32 = FStar.UInt32
 
 (* Right-to-left output buffer *)
@@ -45,10 +45,10 @@ val make
     (fun res -> vp res)
     (fun h ->
       (h (AP.varrayptr x)).AP.perm == SP.full_perm /\
-      A.len (h (AP.varrayptr x)).AP.array == len
+      A.length (h (AP.varrayptr x)).AP.array == U32.v len
     )
     (fun _ res h' ->
-      A.len (h' (vp res)) == len
+      A.length (h' (vp res)) == U32.v len
     )
 
 let alloc
@@ -58,7 +58,7 @@ let alloc
     (fun res -> vp res)
     (fun _ -> True)
     (fun _ res h' ->
-      A.len (h' (vp res)) == len
+      A.length (h' (vp res)) == U32.v len
     )
 =
   let x = AP.alloc 0uy len in
@@ -73,7 +73,7 @@ val len
     (fun _ -> True)
     (fun h len h' ->
       h (vp x) == h' (vp x) /\
-      A.len (h' (vp x)) == len
+      A.length (h' (vp x)) == U32.v len
     )
 
 val split
@@ -87,7 +87,7 @@ val split
       let ar = (h' (AP.varrayptr res)).AP.array in
       (h' (AP.varrayptr res)).AP.perm == SP.full_perm /\
       A.merge_into (h' (vp x)) ar (h (vp x)) /\
-      A.len ar == len
+      A.length ar == U32.v len
     )
 
 val merge
@@ -100,7 +100,7 @@ val merge
     (fun h ->
       let ar = (h (AP.varrayptr y)).AP.array in
       (h (AP.varrayptr y)).AP.perm == SP.full_perm /\
-      len == A.len ar /\
+      U32.v len == A.length ar /\
       A.adjacent (h (vp x)) ar
     )
     (fun h _ h' ->

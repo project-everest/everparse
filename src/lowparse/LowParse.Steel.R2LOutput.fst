@@ -13,14 +13,14 @@ let vp0_refine
   (y: SE.normal (SE.t_of (AP.varrayptr x.ptr `SE.star`  SR.vptr x.len)))
 : Tot prop
 =
-  (A.pfst y).AP.perm == SP.full_perm /\
-  A.len (A.pfst y).AP.array == A.psnd y
+  (fst y).AP.perm == SP.full_perm /\
+  A.length (fst y).AP.array == U32.v (snd y)
 
 let vp0_rewrite
   (x: t)
   (y: SE.normal (SE.t_of ((AP.varrayptr x.ptr `SE.star`  SR.vptr x.len) `SE.vrefine` vp0_refine x)))
-: Tot (A.array byte)
-= (A.pfst y).AP.array
+: GTot (A.array byte)
+= (fst y).AP.array
 
 let vp0
   (x: t)
@@ -41,7 +41,7 @@ val intro_vp
     (fun _ -> vp x)
     (fun h ->
       (h (AP.varrayptr x.ptr)).AP.perm == SP.full_perm /\
-      A.len (h (AP.varrayptr x.ptr)).AP.array == h (SR.vptr x.len)
+      A.length (h (AP.varrayptr x.ptr)).AP.array == U32.v (h (SR.vptr x.len))
     )
     (fun h _ h'  ->
       h' (vp x) == (h (AP.varrayptr x.ptr)).AP.array
@@ -76,7 +76,7 @@ val elim_vp
       let ar = (h' (AP.varrayptr x.ptr)).AP.array in
       (h' (AP.varrayptr x.ptr)).AP.perm == SP.full_perm /\
       h (vp x) == ar /\
-      A.len (h (vp x)) == h' (SR.vptr x.len)
+      A.length (h (vp x)) == U32.v (h' (SR.vptr x.len))
     )
 
 let elim_vp x =
@@ -102,7 +102,7 @@ let sr_alloc (#a:Type0) (x:a) : SE.Steel (SR.ref a)
   SE.emp (fun r -> SR.vptr r)
   (requires fun _ -> True)
   (ensures fun _ r h1 -> h1 (SR.vptr r) == x /\ not (SR.is_null r))
-= SR.alloc x
+= SR.malloc x
 
 let make
   x len

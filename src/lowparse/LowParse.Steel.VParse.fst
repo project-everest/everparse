@@ -5,7 +5,7 @@ module S = Steel.Memory
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module A = Steel.Array
-module AP = Steel.ArrayPtr
+module AP = LowParse.Steel.ArrayPtr
 
 let is_byte_repr_injective
   #k #t p x b1 b2

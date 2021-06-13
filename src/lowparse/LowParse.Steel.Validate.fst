@@ -6,7 +6,7 @@ module S = Steel.Memory
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module A = Steel.Array
-module AP = Steel.ArrayPtr
+module AP = LowParse.Steel.ArrayPtr
 
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
@@ -132,7 +132,7 @@ let wvalidate_post // FIXME: WHY WHY WHY do I need to define this postcondition 
     let s' : v k t = s' in
     let consumed = A.length s'.array in
     Some? vres /\
-    len == A.len s.AP.array /\
+    U32.v len == A.length s.AP.array /\
     s'.perm == s.AP.perm /\
     (Some?.v vres).AP.perm == s.AP.perm /\
     A.merge_into s'.array (Some?.v vres).AP.array s.AP.array /\
@@ -155,7 +155,7 @@ val wvalidate
 : SE.Steel (byte_array)
     (AP.varrayptr a)
     (fun res -> (if AP.g_is_null res then AP.varrayptr a else vparse p a) `SE.star` AP.varrayptr_or_null res)
-    (fun h -> len == A.len (h (AP.varrayptr a)).AP.array)
+    (fun h -> U32.v len == A.length (h (AP.varrayptr a)).AP.array)
     (fun h res h' ->
       let s = h (AP.varrayptr a) in
       let s'  = h' (if AP.g_is_null res then AP.varrayptr a else vparse p a) in
@@ -196,7 +196,7 @@ let dummy
 : SE.Steel unit
     (AP.varrayptr a)
     (fun _ -> AP.varrayptr a)
-    (fun h -> len == A.len (h (AP.varrayptr a)).AP.array)
+    (fun h -> U32.v len == A.length (h (AP.varrayptr a)).AP.array)
     (fun h _ h' ->
       h' (AP.varrayptr a) == h (AP.varrayptr a)
     )

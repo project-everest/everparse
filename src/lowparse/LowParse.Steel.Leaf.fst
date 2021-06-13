@@ -7,7 +7,7 @@ module S = Steel.Memory
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module A = Steel.Array
-module AP = Steel.ArrayPtr
+module AP = LowParse.Steel.ArrayPtr
 
 let leaf_reader
   (#k: parser_kind)

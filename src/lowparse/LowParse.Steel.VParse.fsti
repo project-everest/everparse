@@ -6,7 +6,7 @@ module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module A = Steel.Array
-module AP = Steel.ArrayPtr
+module AP = LowParse.Steel.ArrayPtr
 
 (* For now, we only support parsers with ParserStrong or ParserConsumesAll subkind. *)
 
@@ -56,6 +56,7 @@ let array_prop (k: parser_kind) (a: A.array byte) : Tot prop =
 let array_t (k: parser_kind) : Tot Type =
   (array: A.array byte { array_prop k array })
 
+[@@erasable]
 noeq
 type v (k: parser_kind) (t: Type) = {
   array : array_t k;
