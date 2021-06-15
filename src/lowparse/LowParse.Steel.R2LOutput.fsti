@@ -13,6 +13,12 @@ module U32 = FStar.UInt32
 
 val t: Type0
 
+val null : t
+
+val g_is_null (x: t) : Ghost bool
+  (requires True)
+  (ensures (fun y -> y == true <==> x == null))
+
 val vp_hp
   (x: t)
 : Tot (S.slprop u#1)
@@ -37,33 +43,158 @@ let vp
 : Tot SE.vprop
 = SE.VUnit (vp' x)
 
+val vp_not_null
+  (#opened: _)
+  (x: t)
+: SEA.SteelGhost unit opened
+    (vp x)
+    (fun _ -> vp x)
+    (fun _ -> True)
+    (fun h _ h' ->
+      h' (vp x) == h (vp x) /\
+      g_is_null x == false
+    )
+
+val vp_or_null_hp
+  (x: t)
+: Tot (S.slprop u#1)
+
+val vp_or_null_sel
+  (x: t)
+: Tot (SE.selector (option (A.array byte)) (vp_or_null_hp x))
+
+[@SE.__steel_reduce__]
+let vp_or_null' 
+  (x: t)
+: Tot SE.vprop'
+= {
+  SE.hp = vp_or_null_hp x;
+  SE.t = option (A.array byte);
+  SE.sel = vp_or_null_sel x;
+}
+
+[@SE.__steel_reduce__]
+let vp_or_null
+  (x: t)
+: Tot SE.vprop
+= SE.VUnit (vp_or_null' x)
+
+val intro_vp_or_null_none
+  (#opened: _)
+  (x: t)
+: SEA.SteelGhost unit opened
+    SE.emp
+    (fun _ -> vp_or_null x)
+    (fun _ -> g_is_null x == true)
+    (fun _ _ h' -> h' (vp_or_null x) == None)
+
+val intro_vp_or_null_some
+  (#opened: _)
+  (x: t)
+: SEA.SteelGhost unit opened
+    (vp x)
+    (fun _ -> vp_or_null x)
+    (fun _ -> True)
+    (fun h _ h' ->
+      g_is_null x == false /\
+      h' (vp_or_null x) == Some (h (vp x)
+    ))
+
+val elim_vp_or_null_some
+  (#opened: _)
+  (x: t)
+: SEA.SteelGhost unit opened
+    (vp_or_null x)
+    (fun _ -> vp x)
+    (fun h -> g_is_null x == false \/ Some? (h (vp_or_null x)))
+    (fun h _ h' ->
+      g_is_null x == false /\
+      h (vp_or_null x) == Some (h' (vp x))
+    )
+
+val elim_vp_or_null_none
+  (#opened: _)
+  (x: t)
+: SEA.SteelGhost unit opened
+    (vp_or_null x)
+    (fun _ -> SE.emp)
+    (fun h -> g_is_null x == true \/ None? (h (vp_or_null x)))
+    (fun h _ _ ->
+      g_is_null x == true /\
+      h (vp_or_null x) == None
+    )
+
+val is_null
+  (#opened: _)
+  (x: t)
+: SEA.SteelAtomicBase bool false opened SEA.Unobservable
+    (vp_or_null x)
+    (fun _ -> vp_or_null x)
+    (fun _ -> True)
+    (fun h res h' ->
+      let s = h (vp_or_null x) in
+      h' (vp_or_null x) == s /\
+      res == None? s /\
+      res == g_is_null x
+    )
+
 val make
   (x: AP.t byte)
   (len: U32.t)
 : SE.Steel t
     (AP.varrayptr x)
-    (fun res -> vp res)
+    (fun res -> vp_or_null res `SE.star` (if g_is_null res then AP.varrayptr x else SE.emp))
     (fun h ->
       (h (AP.varrayptr x)).AP.perm == SP.full_perm /\
       A.length (h (AP.varrayptr x)).AP.array == U32.v len
     )
-    (fun _ res h' ->
-      A.length (h' (vp res)) == U32.v len
+    (fun h res h' ->
+      match g_is_null res, h' (vp_or_null res) with
+      | true, None -> h' (AP.varrayptr x) == h (AP.varrayptr x)
+      | false, Some c ->
+        c == (h (AP.varrayptr x)).AP.array /\
+        A.length c == U32.v len
+      | _ -> False
     )
 
 let alloc
   (len: U32.t)
 : SE.Steel t
     SE.emp
-    (fun res -> vp res)
-    (fun _ -> True)
+    (fun res -> vp_or_null res)
+    (fun _ -> U32.v len > 0)
     (fun _ res h' ->
-      A.length (h' (vp res)) == U32.v len
+      match g_is_null res, h' (vp_or_null res) with
+      | true, None -> True
+      | false, Some a ->
+        A.length a == U32.v len /\
+        A.freeable a
+      | _ -> False
     )
 =
   let x = AP.alloc 0uy len in
-  let _ = SEA.gget (AP.varrayptr x) in // FIXME: WHY WHY WHY?
-  make x len
+  if AP.is_null x
+  then begin
+    AP.elim_varrayptr_or_null_none x;
+    intro_vp_or_null_none null;
+    SEA.return null
+  end else begin
+    AP.elim_varrayptr_or_null_some x;
+    let res = make x len in
+    if is_null res
+    then begin
+      SEA.change_equal_slprop
+        (if g_is_null res then AP.varrayptr x else SE.emp)
+        (AP.varrayptr x);
+      AP.free x
+    end else begin
+      SEA.noop ();
+      SEA.change_equal_slprop
+        (if g_is_null res then AP.varrayptr x else SE.emp)
+        SE.emp
+    end;
+    SEA.return res
+  end
 
 val len
   (x: t)

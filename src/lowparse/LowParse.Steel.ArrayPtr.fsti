@@ -41,20 +41,18 @@ module A = Steel.Array
 
 val t (t:Type u#0) : Type u#0
 
-val g_is_null (#a: Type) (x: t a) : GTot bool
+val null (a: Type) : Tot (t a)
 
-val null (a: Type) : Pure (t a) (requires True) (ensures (fun res -> g_is_null res == true))
-
-val null_unique (#a: Type) (x: t a) : Lemma
-  (requires (g_is_null x == true))
-  (ensures (x == null a))
+val g_is_null (#a: Type) (x: t a) : Ghost bool
+  (requires True)
+  (ensures (fun y -> y == true <==> x == null a))
 
 [@@erasable]
 noeq type v (t: Type u#0) = {
   array: A.array t;                      (* spatial permission range *)
   contents: Seq.lseq t (A.length array); (* actual contents *)
   perm: perm;                            (* temporal permission *)
-  prf: squash (A.length array < 2147483648); (* TODO: remove and switch to size_t *)
+  prf: squash (A.length array < 4294967296); (* TODO: remove and switch to size_t *)
 }
 
 val is_arrayptr (#a:Type0) (r:t a) : slprop u#1
@@ -154,7 +152,7 @@ val is_null
   (#opened: _)
   (#a: Type)
   (x: t a)
-: SteelAtomic bool opened
+: SteelAtomicBase bool false opened Unobservable
     (varrayptr_or_null x)
     (fun _ -> varrayptr_or_null x)
     (fun _ -> True)
@@ -185,7 +183,7 @@ val join (#opened: _) (#a:Type) (al ar:t a)
           )
 
 val split (#opened: _) (#a:Type) (x: t a) (i:U32.t)
-  : SteelAtomic (t a) opened
+  : SteelAtomicBase (t a) false opened Unobservable
           (varrayptr x)
           (fun res -> varrayptr x `star` varrayptr res)
           (fun h -> U32.v i <= A.length (h (varrayptr x)).array)
@@ -207,12 +205,17 @@ val split (#opened: _) (#a:Type) (x: t a) (i:U32.t)
 val alloc (#a:Type) (x:a) (n:U32.t)
   : Steel (t a)
              emp
-             (fun r -> varrayptr r)
-             (requires fun _ -> True)
+             (fun r -> varrayptr_or_null r)
+             (requires fun _ -> U32.v n > 0)
              (ensures fun _ r h1 ->
-               (h1 (varrayptr r)).contents == Seq.create (U32.v n) x /\
-               (h1 (varrayptr r)).perm == full_perm /\
-               A.freeable (h1 (varrayptr r)).array
+               match g_is_null r, h1 (varrayptr_or_null r) with
+               | true, None -> True
+               | false, Some s ->
+                 A.length s.array == U32.v n /\
+                 s.contents == Seq.create (U32.v n) x /\
+                 s.perm == full_perm /\
+                 A.freeable s.array
+               | _ -> False
              )
 
 val index (#a:Type) (r: t a) (i:U32.t)
@@ -253,7 +256,7 @@ val free (#a:Type) (r:t a)
              (ensures fun _ _ _ -> True)
 
 val share (#opened: _) (#a: Type) (r: t a)
-  : SteelAtomic (t a) opened
+  : SteelAtomicBase (t a) false opened Unobservable
     (varrayptr r)
     (fun res -> varrayptr r `star` varrayptr res)
     (fun _ -> True)
