@@ -70,8 +70,11 @@ let tname (lower:bool) (p:gemstone_t) : string =
 	  in
   if lower then String.uncapitalize_ascii n else n
 
+let str_last_chars str len =
+  String.sub str (String.length str - len) len
+
 let module_name (s:string) =
-  if !prefix = "" || Str.last_chars !prefix 1 = "." then
+  if !prefix = "" || str_last_chars !prefix 1 = "." then
     !prefix ^ (String.capitalize_ascii s)
   else
     !prefix ^ (String.uncapitalize_ascii s)

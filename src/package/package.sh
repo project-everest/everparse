@@ -13,10 +13,6 @@ if [[ "$OS" = "Windows_NT" ]] ; then
 fi
 
 if [[ -z "$QD_HOME" ]] ; then
-    if ! [[ -f src/rfc_fstar_compiler.ml ]] ; then
-        echo QuackyDucky not found
-        exit 1
-    fi
     # This file MUST be run from the EverParse root directory
     export QD_HOME=$PWD
 fi
