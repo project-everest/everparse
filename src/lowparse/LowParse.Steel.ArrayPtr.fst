@@ -90,7 +90,6 @@ let is_arrayptr r = hp_of (varrayptr0 r)
 
 let arrayptr_sel r = sel_of (varrayptr0 r)
 
-assume
 val intro_varrayptr
   (#opened: _)
   (#a: Type)
@@ -117,6 +116,54 @@ val intro_varrayptr
       res.contents == h (A.varrayp a p) /\
       res.perm == p
     )
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+let intro_varrayptr
+  #_ #b x ga gp a p
+=
+  reveal_star_3 (SR.ghost_vptr ga) (SR.ghost_vptr gp) (A.varrayp a p);
+  let pa : squash (t_array_t x.t_ptr == SR.ghost_ref (array x.t_ptr)) = () in
+  let pp : squash (t_perm_t x.t_ptr == SR.ghost_ref perm) = () in
+  let a' : Ghost.erased (array x.t_ptr) = gget (SR.ghost_vptr ga) in
+  assert (Ghost.reveal a' == a);
+  let p' : Ghost.erased perm = gget (SR.ghost_vptr gp) in
+  assert (Ghost.reveal p' == p);
+  intro_vrefine emp (varrayptr0_refine x);
+  let y : Ghost.erased (t_of (emp `vrefine` varrayptr0_refine x)) = gget (emp `vrefine` varrayptr0_refine x) in
+  change_equal_slprop
+    (SR.ghost_vptr ga)
+    (SR.ghost_vptr #(array x.t_ptr) x.t_g.t_array);
+  change_equal_slprop
+    (SR.ghost_vptr gp)
+    (SR.ghost_vptr #perm x.t_g.t_perm);
+  SR.ghost_vptr #(array x.t_ptr) x.t_g.t_array `reveal_star` SR.ghost_vptr #perm x.t_g.t_perm;
+  intro_vdep
+    (SR.ghost_vptr #(array x.t_ptr) x.t_g.t_array `star` SR.ghost_vptr #perm x.t_g.t_perm)
+    (A.varrayp a p)
+    (varrayptr0_payload2 x y);
+  intro_vdep
+    (emp `vrefine` varrayptr0_refine x)
+    (SR.ghost_vptr #(array x.t_ptr) x.t_g.t_array `star` SR.ghost_vptr #perm x.t_g.t_perm `vdep` varrayptr0_payload2 x y)
+    (varrayptr0_payload1 x);
+  intro_vrewrite
+    (emp `vrefine` varrayptr0_refine x `vdep` varrayptr0_payload1 x)
+    (varrayptr0_rewrite x);
+  assert_norm (
+    emp `vrefine` varrayptr0_refine x `vdep` varrayptr0_payload1 x `vrewrite` varrayptr0_rewrite x ==
+    varrayptr0 x
+  );
+  change_equal_slprop
+    (emp `vrefine` varrayptr0_refine x `vdep` varrayptr0_payload1 x `vrewrite` varrayptr0_rewrite x)
+    (varrayptr0 x);
+  change_slprop_rel
+    (varrayptr0 x)
+    (varrayptr x)
+    (fun u v -> u == v)
+    (fun _ -> ())
+
+#pop-options
 
 let intro_varrayptr'
   (#opened: _)
@@ -165,7 +212,6 @@ type elim_varrayptr_t
   e_perm: perm;
 }
 
-assume
 val elim_varrayptr
   (#opened: _)
   (#a: Type)
@@ -187,6 +233,61 @@ val elim_varrayptr
       s.perm == res.e_perm /\
       h' (A.varrayp res.e_array res.e_perm) == s.contents
     )
+
+let elim_varrayptr
+  #_ #b x
+=
+  change_slprop_rel
+    (varrayptr x)
+    (varrayptr0 x)
+    (fun u v -> u == v)
+    (fun _ -> ());
+  assert_norm (
+    emp `vrefine` varrayptr0_refine x `vdep` varrayptr0_payload1 x `vrewrite` varrayptr0_rewrite x ==
+    varrayptr0 x
+  );
+  change_equal_slprop
+    (varrayptr0 x)
+    (emp `vrefine` varrayptr0_refine x `vdep` varrayptr0_payload1 x `vrewrite` varrayptr0_rewrite x);
+  elim_vrewrite
+    (emp `vrefine` varrayptr0_refine x `vdep` varrayptr0_payload1 x)
+    (varrayptr0_rewrite x);
+  let y : Ghost.erased (t_of (emp `vrefine` varrayptr0_refine x)) = elim_vdep
+    (emp `vrefine` varrayptr0_refine x)
+    (varrayptr0_payload1 x)
+  in
+  elim_vrefine emp (varrayptr0_refine x);
+  let pa : squash (t_array_t x.t_ptr == SR.ghost_ref (array x.t_ptr)) = () in
+  let pp : squash (t_perm_t x.t_ptr == SR.ghost_ref perm) = () in
+  change_equal_slprop
+    (varrayptr0_payload1 x y)
+    (SR.ghost_vptr #(array x.t_ptr) x.t_g.t_array `star` SR.ghost_vptr #perm x.t_g.t_perm `vdep` varrayptr0_payload2 x y);
+  let gap : Ghost.erased (t_of (SR.ghost_vptr #(array x.t_ptr) x.t_g.t_array `star` SR.ghost_vptr #perm x.t_g.t_perm)) = elim_vdep
+    (SR.ghost_vptr #(array x.t_ptr) x.t_g.t_array `star` SR.ghost_vptr #perm x.t_g.t_perm)
+    (varrayptr0_payload2 x y)
+  in
+  SR.ghost_vptr #(array x.t_ptr) x.t_g.t_array `reveal_star` SR.ghost_vptr #perm x.t_g.t_perm;
+  let g_a : Ghost.erased (array x.t_ptr) = SR.ghost_read #(array x.t_ptr) x.t_g.t_array in
+  let a : array x.t_ptr = Ghost.reveal g_a in
+  let g_p : Ghost.erased perm = SR.ghost_read #perm x.t_g.t_perm in
+  let p : perm = Ghost.reveal g_p in
+  let res = {
+    e_g_array = x.t_g.t_array;
+    e_g_perm = x.t_g.t_perm;
+    e_array = a;
+    e_perm = p;
+  } in
+  change_equal_slprop
+    (SR.ghost_vptr #(array x.t_ptr) x.t_g.t_array)
+    (SR.ghost_vptr res.e_g_array);
+  change_equal_slprop
+    (SR.ghost_vptr #perm x.t_g.t_perm)
+    (SR.ghost_vptr res.e_g_perm);
+  change_equal_slprop
+    (varrayptr0_payload2 x y gap)
+    (A.varrayp res.e_array res.e_perm);
+  reveal_star_3 (SR.ghost_vptr res.e_g_array) (SR.ghost_vptr res.e_g_perm) (A.varrayp res.e_array res.e_perm);
+  res
 
 let varrayptr_not_null
   x
