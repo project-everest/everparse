@@ -292,3 +292,41 @@ val gather
       s'.contents == s2.contents /\
       s'.perm == s1.perm `sum_perm` s2.perm
     )
+
+(* Entering and exiting the abstraction *)
+
+module P = Steel.Pointer
+
+val enter
+  (#opened: _)
+  (#a: Type)
+  (x: A.array a)
+  (p: perm)
+: SteelAtomicBase (t a) false opened Unobservable
+    (A.varrayp x p)
+    (fun res -> varrayptr res)
+    (fun _ ->
+      let p = A.g_get_pointer x in
+      (P.g_is_null p == false ==> P.size_v (P.base_array_len (P.base p)) < 4294967296) // TODO: remove and use size_t instead
+    )
+    (fun h res h' ->
+      let s = h' (varrayptr res) in
+      s.array == x /\
+      s.perm == p /\
+      s.contents == h (A.varrayp x p)
+    )
+
+val exit
+  (#opened: _)
+  (#a: Type)
+  (x: t a)
+: SteelAtomicBase (A.array a & perm) false opened Unobservable
+    (varrayptr x)
+    (fun res -> A.varrayp (fst res) (snd res))
+    (fun _ -> True)
+    (fun h res h' ->
+      let s = h (varrayptr x) in
+      fst res == s.array /\
+      snd res == s.perm /\
+      h' (A.varrayp (fst res) (snd res)) == s.contents
+    )

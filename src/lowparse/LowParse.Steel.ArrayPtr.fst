@@ -731,3 +731,40 @@ let gather r1 r2 =
   SR.ghost_write e1.e_g_perm p;
   reveal_star_3 (SR.ghost_vptr e1.e_g_array) (SR.ghost_vptr e1.e_g_perm) (A.varrayp e1.e_array p);
   intro_varrayptr r1 e1.e_g_array e1.e_g_perm e1.e_array p
+
+let enter x p =
+  A.intro_varrayp_or_null_some x _;
+  let pt = A.get_pointer x _ in
+  A.assert_not_null x _;
+  A.is_null_get_pointer x;
+  A.length_get_pointer x;
+  let ga : SR.ghost_ref (array pt) = SR.ghost_alloc x in
+  let gp : SR.ghost_ref perm = SR.ghost_alloc p in
+  let res = {
+    t_ptr = pt;
+    t_g = {
+      t_array = ga;
+      t_perm = gp;
+    };
+    t_prf = ();
+  } in
+  reveal_star_3 (SR.ghost_vptr ga) (SR.ghost_vptr gp) (A.varrayp x p);
+  intro_varrayptr' res pt ga gp x p;
+  return res
+
+let exit x =
+  let e = elim_varrayptr x in
+  reveal_star_3 (SR.ghost_vptr e.e_g_array) (SR.ghost_vptr e.e_g_perm) (A.varrayp e.e_array e.e_perm);
+  SR.ghost_free e.e_g_array;
+  SR.ghost_free e.e_g_perm;
+  change_equal_slprop
+    (A.varrayp e.e_array e.e_perm)
+    (A.varrayp (Ghost.hide e.e_array) e.e_perm);
+  A.intro_varrayp_or_null_some (Ghost.hide e.e_array) e.e_perm;
+  let a = A.reveal x.t_ptr (Ghost.hide e.e_array) _ in
+  A.assert_not_null a e.e_perm;
+  let res = (a, e.e_perm) in
+  change_equal_slprop
+    (A.varrayp a e.e_perm)
+    (A.varrayp (fst res) (snd res));
+  return res
