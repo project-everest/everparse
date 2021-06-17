@@ -31,7 +31,7 @@ Summary
 
    * with the Linux binary package: ``everparse.sh MyFile1.3d MyFile2.3d``
 
-   * with the sources: ``bin/3d.exe --batch MyFile1.3d MyFile2.3d``
+   * with the source tree: ``bin/3d.exe --batch MyFile1.3d MyFile2.3d``
 
 Then, EverParse/3d produces:
 
@@ -347,90 +347,207 @@ of the following cases:
 
 * You want to contribute to EverParse.
 
-To this end, you need to install the dependencies (F\*, KReMLin, z3.)
-Fortunately, EverParse, F\* and KReMLin are all components of the
-Everest project. Thus, the best way to do that is to use the Everest
-script, as described below following the `website of the Everest
-project <https://project-everest.github.io/>`_, which EverParse is a
-member of:
+To this end, you must first install dependencies, then compile the
+sources.
 
-1. On Windows, you must first `install Cygwin
-   <https://www.cygwin.com/>`_.
+Install dependencies
+^^^^^^^^^^^^^^^^^^^^
 
-   Instead, you could also use the `Windows Subsystem for Linux (WSL)
-   <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_ and
-   act as if you were on Linux, but this has not been officially
-   tested by anyone in the Everest project.
+EverParse, F\* and KReMLin are all components of the Everest
+project. Thus, the best way to install dependencies is to use the
+Everest script, as described below following the `website of the
+Everest project <https://project-everest.github.io/>`_, which
+EverParse is a member of.
+
+Windows
+"""""""
+
+Building EverParse on Windows requires Cygwin. Instead, you could also
+use the `Windows Subsystem for Linux (WSL)
+<https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_ and act
+as if you were on Linux (see below), but this has not been officially
+tested by anyone in the Everest project; you will obtain Linux
+binaries instead.
+
+
+1. `Install Cygwin <https://www.cygwin.com/>`_.
 
 2. Clone the `Everest repository from GitHub
    <https://github.com/project-everest/everest>`_.
 
 3. From inside the origin directory of the clone, run ``./everest
    check`` and follow the instructions on how to install compilation
-   dependencies (OCaml, etc.) On Windows (but not WSL), ``./everest
-   check`` should automatically install all such compilation
-   dependencies, but you may need to re-run it several times after
-   refreshing the environment.
+   dependencies (OCaml, etc.) ``./everest check`` will automatically
+   install all such compilation dependencies, but you may need to
+   re-run it several times after refreshing the environment.
 
-4. Run ``./everest z3`` and follow the instructions to install z3 on
-   your system.
+Linux
+"""""
 
-5. Run ``./everest pull`` to fetch and pull the latest versions of F\*
-   and KReMLin.
+1. `Install opam <https://opam.ocaml.org/doc/Install.html>`_, a
+   package manager for the `OCaml
+   <https://ocaml.org/doc/Install.html>`_ ecosystem.
 
-6. Run ``./everest -j 1 FStar make kremlin make`` to build F\* and
-   KReMLin. The ``-j`` option introduces a parallelism factor. You can
-   also speed up the build by skipping F\* and KReMLin library proofs
-   by setting the ``OTHERFLAGS`` environment variable to
-   ``"--admit_smt_queries true"``.
+   .. note::
 
-7. Set the ``FSTAR_HOME`` environment variable to the ``FStar``
+      You need to install opam 2.x, so beware of older distributions
+      such as Ubuntu 18.04 packaging opam 1.x by default. The opam web
+      page gives detailed installation instructions to install opam
+      2.x.
+
+2. Run ``opam init`` and follow the instructions. This will install OCaml.
+
+   This step will modify your configuration scripts to add the path to
+   OCaml and its libraries to the PATH environment variable every time
+   you login, so you may need to evaluate those configuration scripts
+   again or log out and back in for such changes to take effect.
+
+
+3. Clone the `Everest repository from GitHub
+   <https://github.com/project-everest/everest>`_.
+
+4. From inside the origin directory of the clone, run ``./everest
+   opam`` and follow the instructions. This step will install the
+   relevant opam packages on which EverParse depends.
+
+Compile the sources
+^^^^^^^^^^^^^^^^^^^
+
+There are two possible ways.
+
+* If your platform is not supported (or if binary releases do not work
+  for some reason) and if you just want to rebuild EverParse, then you
+  can build a binary package.
+
+* If you want to contribute to the EverParse sources, then you need to
+  build in the source tree.
+
+Build a binary package
+""""""""""""""""""""""
+
+If you just want to rebuild EverParse without contributing to its
+sources, you can build a binary package:
+
+1. `Clone the EverParse repository <https://github.com/project-everest/everparse>`_ .
+
+2. In the root directory of that EverParse clone, run one of the following commands:
+
+   * ``make everparse``
+
+     That command will build ready-to-use binaries into the
+     ``everparse/`` subdirectory. That directory will behave as if you
+     had downloaded and extracted a binary package archive from the
+     releases page.
+
+     This process is fully automatic. In particular, it automatically
+     downloads a binary release of z3, and downloads and builds F\*,
+     KReMLin and EverCrypt.
+
+
+   * ``make package``
+
+     That command will build a binary package,
+     ``everparse-<version>-<platform>.zip`` on Windows, ``.tar.gz`` on
+     Linux, by producing the ``everparse/`` subdirectory as with
+     ``make everparse`` and compressing it into an archive.
+
+
+   * ``make package-noversion``
+
+     That command will build a binary package, as with ``make
+     package``, but only the name of the archive will change:
+     ``everparse.zip`` on Windows, ``everparse.tar.gz`` on Linux.
+
+In all cases, the produced package offers ``everparse.bat`` on
+Windows, ``everparse.sh`` on Linux, which you can use as directed
+elsewhere in this manual.
+
+Build in the source tree
+""""""""""""""""""""""""
+
+If you want to contribute to the sources of EverParse, you need to
+rebuild in the source tree. To do so, you first need to setup a
+development environment for Everest (steps 1 to 5 below). Then you can
+fetch and build EverParse sources:
+
+1. In the root directory of the Everest clone, run ``./everest z3``
+   and follow the instructions to install z3 on your system.
+
+   This step will modify your configuration scripts to add the path to
+   z3 to the PATH environment variable every time you login, so you
+   may need to evaluate those configuration scripts again or log out
+   and back in for such changes to take effect.
+
+2. Run ``./everest pull`` to fetch and pull the latest versions of F\*,
+   KReMLin and EverParse.
+
+3. Run ``./everest -j 1 FStar make kremlin make hacl-star make`` to
+   build F\*, KReMLin and EverCrypt (needed for hash checking with
+   ``--check_hashes``, etc.). The ``-j`` option introduces a
+   parallelism factor. You can also speed up the build by skipping
+   F\*, KReMLin and EverCrypt library proofs by setting the
+   ``OTHERFLAGS`` environment variable to ``"--admit_smt_queries
+   true"``.
+
+   .. note::
+
+      Even with proofs disabled, this step takes very long time.
+
+   .. note::
+
+      If, at this point, you immediately get an error of the form
+      "menhir not found", then it means that the path to opam packages
+      is not properly set up in your environment. To do so, you need
+      to run ``eval $(opam env)`` (as instructed during ``opam init``
+      or ``./everest opam``), or log out and back in.
+
+
+4. Set the ``FSTAR_HOME`` environment variable to the ``FStar``
    subdirectory of your Everest clone, which contains a clone of the
    latest F\*.
 
-8. Set the ``KREMLIN_HOME`` environment variable to the ``kremlin``
+5. Set the ``KREMLIN_HOME`` environment variable to the ``kremlin``
    subdirectory of your Everest clone, which contains a clone of the
    latest KReMLin.
 
-9. Everest contains a clone of the EverParse sources in the
+   .. note::
+      
+      If you already have your own copy of F\* or KReMLin, and if you
+      already know how to build them, then you can skip steps 1 to 5
+      and set the environment variables accordingly.)
+
+6. Everest contains a clone of the EverParse sources in the
    ``quackyducky`` subdirectory. You can work from
    there. Alternatively, you can `clone it yourself
    <https://github.com/project-everest/everparse>`_
    anywhere else.
 
-10. Set the ``QD_HOME`` environment variable to your EverParse clone
-    as you chose it.
+7. Set the ``QD_HOME`` environment variable to your EverParse clone
+   as you chose it.
 
-(if you already have your own copy of F\* or KReMLin, and if you
-already know how to build them, then you can skip steps 1 to 6 and set
-the environment variables accordingly.)
-
-Then, once you are all set up in your EverParse clone, you can build
-3d by ``make 3d``. Then, the EverParse/3d executable will be located
-at ``bin/3d.exe``.
+8. Then, once you are all set up in your EverParse clone, you can
+   build EverParse by ``make``. Then, the EverParse/3d executable will
+   be located at ``bin/3d.exe``.
 
 .. note::
 
    You cannot use ``everparse.sh`` or ``everparse.cmd`` from the
-   sources. You need to use ``3d`` instead.
+   source tree. You need to use ``bin/3d.exe`` instead.
 
-``3d`` has the same options as ``everparse.sh`` or ``everparse.cmd``,
+``bin/3d.exe`` has the same options as ``everparse.sh`` or ``everparse.cmd``,
 with the following caveat: no options are toggled by default (not even
 ``--batch`` or ``--clang_format``) and you need to provide all options
 by hand.
 
-Then, if you want, you can build your own binary package for your own
-platform through ``make package``.
-
 Licenses
 --------
 
-EverParse is Copyright 2018, 2019, 2020 Microsoft Corporation. All
+EverParse is Copyright 2018, 2019, 2020, 2021 Microsoft Corporation. All
 rights reserved. EverParse is free software, licensed by Microsoft
 Corporation under the `Apache License 2.0
 <https://github.com/project-everest/everparse/blob/master/LICENSE>`_.
 
 Additionally, the licenses of all dependencies included in the
-EverParse binary packages (F\*, KReMLin, z3, clang-format) are all
+EverParse binary packages (F\*, KReMLin, z3, EverCrypt, clang-format) are all
 stored in the ``licenses/`` subdirectory of the EverParse binary
 package once extracted.
