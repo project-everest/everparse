@@ -71,8 +71,8 @@ let tvalidator
       begin if res
       then
         let s' = tvalid_res_vprop_true p a res s' in
-        s'.array == s.AP.array /\
-        s'.perm == s.AP.perm /\
+        array_of s' == s.AP.array /\
+        perm_of s' == s.AP.perm /\
         is_byte_repr p s'.contents s.AP.contents
       else
         let s' = tvalid_res_vprop_false p a res s' in
@@ -130,20 +130,16 @@ let wvalidate_post // FIXME: WHY WHY WHY do I need to define this postcondition 
     s' == s
   else begin
     let s' : v k t = s' in
-    let consumed = A.length s'.array in
+    let consumed = A.length (array_of s') in
     Some? vres /\
     U32.v len == A.length s.AP.array /\
-    s'.perm == s.AP.perm /\
+    perm_of s' == s.AP.perm /\
     (Some?.v vres).AP.perm == s.AP.perm /\
-    A.merge_into s'.array (Some?.v vres).AP.array s.AP.array /\
+    A.merge_into (array_of s') (Some?.v vres).AP.array s.AP.array /\
     consumed <= A.length s.AP.array /\
     is_byte_repr p s'.contents (Seq.slice s.AP.contents 0 consumed) /\
     (Some?.v vres).AP.contents == Seq.slice s.AP.contents consumed (U32.v len)
   end
-
-(* FIXME: WHY WHY WHY do I need this? It seems that the ifthenelse branch below does not work well if both branches are atomic *)
-
-let se_noop (_: unit) : SE.SteelT unit SE.emp (fun _ -> SE.emp) = SEA.return ()
 
 val wvalidate
   (#t: Type0)
@@ -170,7 +166,6 @@ let wvalidate
   if is_success consumed
   then begin
     let ar : byte_array = AP.split a (uint64_to_uint32 consumed) in
-    se_noop ();  // FIXME: WHY WHY WHY do I need this?
     intro_vparse p a;
     AP.intro_varrayptr_or_null_some ar;
     SEA.change_equal_slprop
@@ -218,7 +213,7 @@ let dummy
     let g1 : Ghost.erased (v k t) = SEA.gget (vparse p a) in // FIXME: WHY WHY WHY is this type annotation needed?
     elim_vparse p a;
     let g2 = SEA.gget (AP.varrayptr a) in
-    let glen = Ghost.hide (A.length (Ghost.reveal g1).array) in
+    let glen = Ghost.hide (A.length (array_of (Ghost.reveal g1))) in
     is_byte_repr_injective p (Ghost.reveal g1).contents (Seq.slice (Ghost.reveal g0).AP.contents 0 (Ghost.reveal glen)) (Ghost.reveal g2).AP.contents;
     Seq.lemma_split (Ghost.reveal g0).AP.contents (Ghost.reveal glen);
     AP.join a res

@@ -59,7 +59,7 @@ let get_parsed_size
     (fun _ -> True)
     (fun h res h' ->
       h' (vparse p a) == h (vparse p a) /\
-      U32.v res == A.length (h (vparse p a)).array
+      U32.v res == A.length (array_of (h (vparse p a)))
     )
 =
   elim_vparse p a;
@@ -85,9 +85,9 @@ let peek_strong
       let c_a = h (AP.varrayptr a) in
       let c_a' = h' (vparse p a) in
       let c_res = h' (AP.varrayptr res) in
-      let consumed = A.length c_a'.array in
-      A.merge_into c_a'.array c_res.AP.array c_a.AP.array /\
-      c_a'.perm == c_a.AP.perm /\
+      let consumed = A.length (array_of c_a') in
+      A.merge_into (array_of c_a') c_res.AP.array c_a.AP.array /\
+      perm_of c_a' == c_a.AP.perm /\
       c_res.AP.perm == c_a.AP.perm /\
       is_byte_repr p c_a'.contents (Seq.slice c_a.AP.contents 0 consumed) /\
       consumed <= A.length c_a.AP.array /\
@@ -101,7 +101,6 @@ let peek_strong
   intro_vparse p a;
   SEA.return res
 
-(* TODO: move to Steel.Array *)
 val memcpy
   (dst: byte_array)
   (src: byte_array)
@@ -152,18 +151,18 @@ val copy_exact
     (fun _ -> vparse p src `SE.star` vparse p dst)
     (fun h ->
       (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
-      U32.v n == A.length (h (vparse p src)).array /\
+      U32.v n == A.length (array_of (h (vparse p src))) /\
       U32.v n == A.length (h (AP.varrayptr dst)).AP.array
     )
     (fun h _ h' ->
       let s = h (vparse p src) in
       let d = h (AP.varrayptr dst) in
       let d' = h' (vparse p dst) in
-      U32.v n == A.length s.array /\
+      U32.v n == A.length (array_of s) /\
       U32.v n == A.length d.AP.array /\
       h' (vparse p src) == s /\
-      d'.array == d.AP.array /\
-      d'.perm == SP.full_perm /\
+      array_of d' == d.AP.array /\
+      perm_of d' == SP.full_perm /\
       d'.contents == s.contents
     )
 
@@ -190,7 +189,7 @@ val copy_strong
     (fun res -> vparse p src `SE.star` vparse p dst `SE.star` AP.varrayptr res)
     (fun h ->
       (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
-      A.length (h (vparse p src)).array <= A.length (h (AP.varrayptr dst)).AP.array
+      A.length (array_of (h (vparse p src))) <= A.length (h (AP.varrayptr dst)).AP.array
     )
     (fun h res h' ->
       SE.can_be_split (vparse p src `SE.star` vparse p dst `SE.star` AP.varrayptr res) (vparse p src) /\ // FIXME: WHY WHY WHY?
@@ -201,19 +200,18 @@ val copy_strong
         let d' = h' (vparse p dst) in
         let r = h' (AP.varrayptr res) in
         h' (vparse p src) == s /\
-        A.merge_into d'.array r.AP.array d.AP.array /\
+        A.merge_into (array_of d') r.AP.array d.AP.array /\
         d'.contents == s.contents /\
-        d'.perm == SP.full_perm /\
-        A.length s.array == A.length d'.array /\ // TODO: this should be a consequence of the equality of the contents, via parser injectivity
+        perm_of d' == SP.full_perm /\
+        A.length (array_of s) == A.length (array_of d') /\ // TODO: this should be a consequence of the equality of the contents, via parser injectivity
         r.AP.perm == SP.full_perm /\
-        r.AP.contents == Seq.slice d.AP.contents (A.length s.array) (A.length d.AP.array)
+        r.AP.contents == Seq.slice d.AP.contents (A.length (array_of s)) (A.length d.AP.array)
       end
     )
 
 let copy_strong #_ #_ #p j src dst =
   let n = get_parsed_size j src in
   let res = AP.split dst n in
-  let _ = SEA.gget (AP.varrayptr dst) in // FIXME: WHY WHY WHY?
   copy_exact p src dst n;
   SEA.reveal_star_3 (vparse p src) (vparse p dst) (AP.varrayptr res); // for can_be_split
   SEA.return res
@@ -309,12 +307,12 @@ let copy_weak_post
           let d' = copy_weak_vprop_dst_some p src dst res0 x in
           let d = h (AP.varrayptr dst) in
           let r = copy_weak_vprop_res p src dst res0 x in
-          A.merge_into d'.array r.AP.array d.AP.array /\
-          d'.perm == SP.full_perm /\
+          A.merge_into (array_of d') r.AP.array d.AP.array /\
+          perm_of d' == SP.full_perm /\
           d'.contents == s.contents /\
-          A.length s.array == A.length d'.array /\ // TODO: this should be a consequence of the equality of the contents, via parser injectivity
+          A.length (array_of s) == A.length (array_of d') /\ // TODO: this should be a consequence of the equality of the contents, via parser injectivity
           r.AP.perm == SP.full_perm /\
-          r.AP.contents == Seq.slice d.AP.contents (A.length s.array) (A.length d.AP.array)
+          r.AP.contents == Seq.slice d.AP.contents (A.length (array_of s)) (A.length d.AP.array)
       end
 
 val copy_weak
@@ -372,7 +370,7 @@ val copy_strong_r2l
     (vparse p src `SE.star` R2L.vp dst)
     (fun res -> vparse p src `SE.star` R2L.vp dst `SE.star` vparse p res)
     (fun h ->
-      A.length (h (vparse p src)).array <= A.length (h (R2L.vp dst))
+      A.length (array_of (h (vparse p src))) <= A.length (h (R2L.vp dst))
     )
     (fun h res h' ->
       SE.can_be_split (vparse p src `SE.star` R2L.vp dst `SE.star` vparse p res) (vparse p src) /\ // FIXME: WHY WHY WHY?
@@ -383,10 +381,10 @@ val copy_strong_r2l
         let d' = h' (R2L.vp dst) in
         let r = h' (vparse p res) in
         h' (vparse p src) == s /\
-        A.merge_into d' r.array d /\
-        r.perm == SP.full_perm /\
+        A.merge_into d' (array_of r) d /\
+        (perm_of r) == SP.full_perm /\
         r.contents == s.contents /\
-        A.length s.array == A.length r.array // TODO: this should be a consequence of the equality of the contents, via parser injectivity
+        A.length (array_of s) == A.length (array_of r) // TODO: this should be a consequence of the equality of the contents, via parser injectivity
       end
     )
 
@@ -446,10 +444,10 @@ let copy_weak_r2l_post
         else
           let res = Some?.v res0 in
           let r = copy_weak_r2l_vprop_res p res0 (h' (copy_weak_r2l_vprop p res0)) in
-          A.merge_into d' r.array d /\
-          r.perm == SP.full_perm /\
+          A.merge_into d' (array_of r) d /\
+          perm_of r == SP.full_perm /\
           r.contents == s.contents /\
-          A.length s.array == A.length r.array // TODO: this should be a consequence of the equality of the contents, via parser injectivity
+          A.length (array_of s) == A.length (array_of r) // TODO: this should be a consequence of the equality of the contents, via parser injectivity
       end
   end
 

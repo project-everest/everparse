@@ -42,9 +42,9 @@ let select
   let x : AP.v byte = x in
   let Some (y, _) = parse p x.AP.contents in
   {
-    array = x.AP.array;
+    array_perm = (x.AP.array, x.AP.perm);
     contents = y;
-    perm = x.AP.perm;
+    array_perm_prf = ();
   }
 
 let select_correct
@@ -93,8 +93,8 @@ let intro_vparse0
     )
     (fun h _ h' ->
       valid p (h (AP.varrayptr a)).AP.contents /\
-      (vparse0_sel p a h').perm == (h (AP.varrayptr a)).AP.perm /\
-      (vparse0_sel p a h').array == (h (AP.varrayptr a)).AP.array /\
+      perm_of (vparse0_sel p a h') == (h (AP.varrayptr a)).AP.perm /\
+      array_of (vparse0_sel p a h') == (h (AP.varrayptr a)).AP.array /\
       is_byte_repr p (vparse0_sel p a h').contents (h (AP.varrayptr a)).AP.contents
     )
 =
@@ -120,8 +120,8 @@ let elim_vparse0
     (fun _ -> AP.varrayptr a)
     (fun _ -> True)
     (fun h _ h' ->
-      (h' (AP.varrayptr a)).AP.array == (vparse0_sel p a h).array /\
-      (h' (AP.varrayptr a)).AP.perm == (vparse0_sel p a h).perm /\
+      (h' (AP.varrayptr a)).AP.array == array_of (vparse0_sel p a h) /\
+      (h' (AP.varrayptr a)).AP.perm == perm_of (vparse0_sel p a h) /\
       valid p (h' (AP.varrayptr a)).AP.contents /\
       is_byte_repr p (vparse0_sel p a h).contents (h' (AP.varrayptr a)).AP.contents
     )

@@ -3,6 +3,7 @@ include LowParse.Steel.VParse
 
 (* Leaf readers and writers *)
 
+module SP = Steel.FractionalPermission
 module S = Steel.Memory
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
@@ -36,11 +37,15 @@ let exact_serializer
   SE.Steel unit
     (AP.varrayptr dst)
     (fun _ -> AP.varrayptr dst)
-    (requires (fun h -> A.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x)))
+    (requires (fun h ->
+      A.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x) /\
+      (h (AP.varrayptr dst)).AP.perm == SP.full_perm
+    ))
     (ensures (fun h _ h' ->
       let d = h (AP.varrayptr dst) in
       let d' = h' (AP.varrayptr dst) in
       d'.AP.array == d.AP.array /\
+      d'.AP.perm == d.AP.perm /\
       d'.AP.contents == serialize s x
     ))
 
@@ -55,11 +60,15 @@ let write_exact
 : SE.Steel unit
     (AP.varrayptr dst)
     (fun _ -> vparse p dst)
-    (requires (fun h -> A.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x)))
+    (requires (fun h ->
+      A.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x) /\
+      (h (AP.varrayptr dst)).AP.perm == SP.full_perm
+    ))
     (ensures (fun h _ h' ->
       let d = h (AP.varrayptr dst) in
       let d' = h' (vparse p dst) in
-      d'.array == d.AP.array /\
+      array_of d' == d.AP.array /\
+      perm_of d' == SP.full_perm /\
       d'.contents == x
     ))
 = w dst x;

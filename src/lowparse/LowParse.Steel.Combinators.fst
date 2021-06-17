@@ -78,8 +78,7 @@ val destruct_pair
       let c = h (vparse (p1 `nondep_then` p2) a) in
       let c1 = h' (vparse p1 a) in
       let c2 = h' (vparse p2 res) in
-      c1.perm == c.perm /\ c2.perm == c.perm /\
-      A.merge_into c1.array c2.array c.array /\
+      merge_into c1 c2 c /\
       c.contents == (c1.contents, c2.contents)
     )
 
@@ -92,7 +91,7 @@ let destruct_pair
   let res = peek_strong j1 a in
   SEA.reveal_star (vparse p1 a) (AP.varrayptr res);
   let c1 : Ghost.erased (v k1 t1) = SEA.gget (vparse p1 a) in // FIXME: WHY WHY WHY is the type annotation needed?
-  parse_strong_prefix p1 (Seq.slice b.AP.contents 0 (A.length c1.array)) b.AP.contents;
+  parse_strong_prefix p1 (Seq.slice b.AP.contents 0 (A.length (array_of c1))) b.AP.contents;
   intro_vparse p2 res;
   SEA.return res
 
@@ -110,16 +109,14 @@ val construct_pair
     (vparse p1 a1 `SE.star` vparse p2 a2)
     (fun _ -> vparse (p1 `nondep_then` p2) a1)
     (fun h ->
-      (h (vparse p1 a1)).perm == (h (vparse p2 a2)).perm /\
-      A.adjacent (h (vparse p1 a1)).array (h (vparse p2 a2)).array /\
+      adjacent (h (vparse p1 a1)) (h (vparse p2 a2)) /\
       k1.parser_kind_subkind == Some ParserStrong
     )
     (fun h res h' ->
       let c = h' (vparse (p1 `nondep_then` p2) a1) in
       let c1 = h (vparse p1 a1) in
       let c2 = h (vparse p2 a2) in
-      A.merge_into c1.array c2.array c.array /\
-      c.perm == c1.perm /\ c.perm == c2.perm /\
+      merge_into c1 c2 c /\
       c.contents == (c1.contents, c2.contents)
     )
 
@@ -137,7 +134,7 @@ let construct_pair
   AP.join a1 a2;
   let g : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr a1) in // FIXME: same here
   nondep_then_eq p1 p2 g.AP.contents;
-  Seq.lemma_append_inj g1.AP.contents g2.AP.contents (Seq.slice g.AP.contents 0 (A.length v1.array)) (Seq.slice g.AP.contents (A.length v1.array) (Seq.length g.AP.contents));
+  Seq.lemma_append_inj g1.AP.contents g2.AP.contents (Seq.slice g.AP.contents 0 (A.length (array_of v1))) (Seq.slice g.AP.contents (A.length (array_of v1)) (Seq.length g.AP.contents));
   parse_strong_prefix p1 g1.AP.contents g.AP.contents;
   intro_vparse (p1 `nondep_then` p2) a1
 
@@ -188,8 +185,7 @@ val intro_vparse_synth
     (fun h _ h' ->
       let r = h (vparse p1 a) in
       let r' = h' (vparse (parse_synth p1 f2) a) in
-      r'.perm == r.perm /\
-      r'.array == r.array /\
+      r'.array_perm == r.array_perm /\
       r'.contents == f2 r.contents
     )
 
@@ -214,8 +210,7 @@ val elim_vparse_synth
     (fun h _ h' ->
       let r = h (vparse (parse_synth p1 f2) a) in
       let r' = h' (vparse p1 a) in
-      r'.perm == r.perm /\
-      r'.array == r.array /\
+      r'.array_perm == r.array_perm /\
       r.contents == f2 r'.contents
     )
 
@@ -251,8 +246,7 @@ val intro_vparse_filter
       let r = h (vparse p a) in
       let r' = h' (vparse (parse_filter p f) a) in
       f r.contents == true /\
-      r'.perm == r.perm /\
-      r'.array == r.array /\
+      r'.array_perm == r.array_perm /\
       r'.contents == r.contents
     )
 
@@ -277,8 +271,7 @@ val elim_vparse_filter
       let r = h (vparse (parse_filter p f) a) in
       let r' = h' (vparse p a) in
       f (r'.contents) == true /\
-      r'.perm == r.perm /\
-      r'.array == r.array /\
+      r'.array_perm == r.array_perm /\
       r'.contents == r.contents
     )
 
