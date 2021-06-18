@@ -410,6 +410,14 @@ Linux
    opam`` and follow the instructions. This step will install the
    relevant opam packages on which EverParse depends.
 
+5. Make sure the system packages corresponding to the following
+   commands are installed:
+
+   * wget
+   * which
+
+
+
 Compile the sources
 ^^^^^^^^^^^^^^^^^^^
 
