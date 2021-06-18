@@ -24,23 +24,28 @@ else
 fi
 
 platform=$(uname --machine)
-if [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] && ! [[ -d z3 ]] ; then
-    # Download a dependency-free z3
-    z3_tagged=z3-4.8.5-linux-clang
-    z3_archive=$z3_tagged-$platform.tar.gz
-    wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
-    tar xzf $z3_archive
-    Z3_DIR="$PWD/z3"
-    z3=z3
-    echo "Z3_DIR=$Z3_DIR"
-    export PATH="$Z3_DIR:$PATH"
-else
-    z3=z3$exe
-    Z3_DIR=$(dirname $(which $z3))
-    if [[ -z "$Z3_DIR" ]] ; then
-        echo z3 is missing
+z3=z3$exe
+if ! Z3_DIR=$(dirname $(which $z3)) ; then
+    if [[ -d z3 ]] ; then
+        true
+    elif $is_windows ; then
+        z3_tagged=Z3-4.8.5
+        z3_archive=z3-4.8.5-x64-win.zip
+        wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
+        unzip $z3_archive
+        mv z3-4.8.5-x64-win z3
+    elif [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
+        # Download a dependency-free z3
+        z3_tagged=z3-4.8.5-linux-clang
+        z3_archive=$z3_tagged-$platform.tar.gz
+        wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
+        tar xzf $z3_archive
+    else
+        echo "z3 4.8.5 is missing, please add it to your PATH"
         exit 1
     fi
+    Z3_DIR="$PWD/z3"
+    export PATH="$Z3_DIR:$PATH"
 fi
 
 if $is_windows ; then
