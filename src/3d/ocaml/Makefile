@@ -14,10 +14,13 @@ generated/FStar_Getopt.ml: $(FSTAR_HOME)/src/basic/ml/FStar_Getopt.ml
 	mkdir -p $(dir $@)
 	cp $^ $@
 
-clean:
-	rm -rf _build generated *~ dune dune.tmp
+clean-local:
+	rm -rf _build *~ dune dune.tmp
 
-.PHONY: all clean
+clean: clean-local
+	rm -rf generated
+
+.PHONY: all clean clean-local
 
 ifdef NO_EVERCRYPT
 dune_cpp_defines=-DNO_EVERCRYPT
