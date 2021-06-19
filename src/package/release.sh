@@ -44,7 +44,7 @@ src/package/package.sh -zip
 # push my commit and the tag
 git push origin $branchname $everparse_version
 
-platform=$(uname --machine)
+platform=$(uname -m)
 
 if $is_windows ; then
     ext=.zip

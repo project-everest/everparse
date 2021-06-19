@@ -26,7 +26,7 @@ else
     exe=
 fi
 
-platform=$(uname --machine)
+platform=$(uname -m)
 z3=z3$exe
 if ! Z3_DIR=$(dirname $(which $z3)) ; then
     if [[ -d z3 ]] ; then
