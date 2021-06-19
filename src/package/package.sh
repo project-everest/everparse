@@ -126,7 +126,7 @@ make_everparse() {
     $MAKE -C "$KREMLIN_HOME/kremlib" "$@" verify-all
 
     # Build the hacl-star package if not available
-    if ! ocamlfind query hacl-star ; then
+    if [[ -z "$NO_EVERCRYPT" ]] && ! ocamlfind query hacl-star ; then
         mkdir -p ocaml-packages
         export OCAMLFIND_DESTDIR=$(fixpath "$PWD/ocaml-packages")
         if $is_windows ; then
@@ -148,6 +148,11 @@ make_everparse() {
         fi
     fi
 
+    # Install ocaml-sha if EverCrypt is disabled
+    if [[ -n "$NO_EVERCRYPT" ]] && ! ocamlfind query sha ; then
+        opam install --yes sha
+    fi
+
     # Rebuild EverParse
     $MAKE -C "$QD_HOME" "$@"
 
@@ -157,48 +162,50 @@ make_everparse() {
     then
         $cp $LIBGMP10_DLL everparse/bin/
         $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/
-        for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
-            libevercrypt_dll=$f/libevercrypt.dll
-            if [[ -f $libevercrypt_dll ]] ; then
-                break
-            fi
-            unset libevercrypt_dll
-        done
-        [[ -n $libevercrypt_dll ]]
-        $cp $libevercrypt_dll everparse/bin/
-        $cp $(which libffi-6.dll) everparse/bin/
-        true
+        if [[ -z "$NO_EVERCRYPT" ]] ; then
+            for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
+                libevercrypt_dll=$f/libevercrypt.dll
+                if [[ -f $libevercrypt_dll ]] ; then
+                    break
+                fi
+                unset libevercrypt_dll
+            done
+            [[ -n $libevercrypt_dll ]]
+            $cp $libevercrypt_dll everparse/bin/
+            $cp $(which libffi-6.dll) everparse/bin/
+        fi
     else
-        for f in $(ocamlfind printconf destdir)/stublibs $(cat $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
-            libevercrypt_so=$f/libevercrypt.so
-            if [[ -f $libevercrypt_so ]] ; then
-                break
-            fi
-            unset libevercrypt_so
-        done
-        [[ -n $libevercrypt_so ]]
-        $cp $libevercrypt_so everparse/bin/
+        if [[ -z "$NO_EVERCRYPT" ]] ; then
+            for f in $(ocamlfind printconf destdir)/stublibs $(cat $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
+                libevercrypt_so=$f/libevercrypt.so
+                if [[ -f $libevercrypt_so ]] ; then
+                    break
+                fi
+                unset libevercrypt_so
+            done
+            [[ -n $libevercrypt_so ]]
+            $cp $libevercrypt_so everparse/bin/
 
-        # Locate libffi
-        {
-            # Debian:
-            libffi=$(dpkg -L libffi6 | grep '/libffi.so.6$' | head -n 1)
-            [[ -n "$libffi" ]]
-        } || {
-            # Arch:
-            libffi=$(pacman -Qql libffi | grep '/libffi.so.7$' | head -n 1)
-            [[ -n "$libffi" ]]
-        } || {
-            # Fedora:
-            libffi=$(rpm --query libffi --list | grep '/libffi.so.6$' | head -n 1)
-            [[ -n "$libffi" ]]
-        } || {
-            # Default: not found
-            echo libffi not found
-            exit 1
-        }
-        $cp $libffi everparse/bin/
-
+            # Locate libffi
+            {
+                # Debian:
+                libffi=$(dpkg -L libffi6 | grep '/libffi.so.6$' | head -n 1)
+                [[ -n "$libffi" ]]
+            } || {
+                # Arch:
+                libffi=$(pacman -Qql libffi | grep '/libffi.so.7$' | head -n 1)
+                [[ -n "$libffi" ]]
+            } || {
+                # Fedora:
+                libffi=$(rpm --query libffi --list | grep '/libffi.so.6$' | head -n 1)
+                [[ -n "$libffi" ]]
+            } || {
+                # Default: not found
+                echo libffi not found
+                exit 1
+            }
+            $cp $libffi everparse/bin/
+        fi
         $cp $Z3_DIR/z3 everparse/bin/
     fi
 
@@ -251,8 +258,10 @@ make_everparse() {
     $cp $KREMLIN_HOME/LICENSE everparse/licenses/KReMLin
     $cp $QD_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
-    wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE
-    wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
+    if [[ -z "$NO_EVERCRYPT" ]] ; then
+        wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE
+        wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
+    fi
     if $is_windows ; then
         wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT
     fi
