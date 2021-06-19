@@ -5,6 +5,8 @@ set -x
 
 SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
 MAKE=$(which gmake >/dev/null 2>&1 && echo gmake || echo make)
+DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
+
 
 if [[ -z "$OS" ]] ; then
     OS=$(uname)
@@ -73,7 +75,7 @@ print_component_commit_date_iso() {
 }
 
 print_date_utc_of_iso_hr() {
-    date --utc --date="$1" '+%Y-%m-%d %H:%M:%S'
+    $DATE --utc --date="$1" '+%Y-%m-%d %H:%M:%S'
 }
 
 if [[ -z "$everparse_version" ]] ; then

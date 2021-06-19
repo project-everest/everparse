@@ -3,6 +3,8 @@
 set -e
 set -x
 
+DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
+
 if [[ -z "$QD_HOME" ]] ; then
     # This file MUST be run from the EverParse root directory
     export QD_HOME=$PWD
@@ -32,7 +34,7 @@ everparse_version=$(cat $QD_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
 if [[ $everparse_commit != $everparse_last_version ]] ; then
-    everparse_version=$(date '+v%Y.%m.%d')
+    everparse_version=$($DATE '+v%Y.%m.%d')
     echo $everparse_version > $QD_HOME/version.txt
     git add $QD_HOME/version.txt
     git commit -m "Release $everparse_version"
