@@ -97,7 +97,8 @@ fixpath () {
 
 make_everparse() {
     # Verify if F* and KReMLin are here
-    cp="cp --preserve=mode,timestamps"
+    cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
+    cp="$cp0 --preserve=mode,timestamps"
     if [[ -z "$FSTAR_HOME" ]] ; then
         [[ -d FStar ]] || git clone https://github.com/FStarLang/FStar
         export FSTAR_HOME=$(fixpath $PWD/FStar)
