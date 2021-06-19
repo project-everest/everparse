@@ -395,26 +395,42 @@ Linux
       page gives detailed installation instructions to install opam
       2.x.
 
-2. Run ``opam init`` and follow the instructions. This will install OCaml.
+2. Make sure the system packages corresponding to the following
+   commands are installed:
+
+   * diff
+   * gcc
+   * git
+   * make
+   * patch
+   * wget
+   * which
+
+3. Run ``opam init --compiler=4.12.0`` and follow the instructions. This will install OCaml.
 
    This step will modify your configuration scripts to add the path to
    OCaml and its libraries to the PATH environment variable every time
    you login, so you may need to evaluate those configuration scripts
    again or log out and back in for such changes to take effect.
 
+   .. note::
 
-3. Clone the `Everest repository from GitHub
+      You need to specify an OCaml version number (between 4.08.0 and
+      4.12.x), so that OCaml will be installed in your user profile,
+      because some EverParse dependencies do not work well with a
+      system-wide OCaml. Thus, if opam says that there is an
+      ambiguity, you should re-run ``opam init`` with the non-system
+      package for OCaml.
+
+   If this step fails, then you will need to remove the ``~/.opam``
+   directory before trying again.
+
+4. Clone the `Everest repository from GitHub
    <https://github.com/project-everest/everest>`_.
 
-4. From inside the origin directory of the clone, run ``./everest
+5. From inside the origin directory of the clone, run ``./everest
    opam`` and follow the instructions. This step will install the
    relevant opam packages on which EverParse depends.
-
-5. Make sure the system packages corresponding to the following
-   commands are installed:
-
-   * wget
-   * which
 
 
 
