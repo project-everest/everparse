@@ -67,6 +67,7 @@ Linux
 2. Make sure the system packages corresponding to the following
    commands are installed:
 
+   * GNU cp
    * diff
    * find
    * gcc
