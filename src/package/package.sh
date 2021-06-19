@@ -173,7 +173,27 @@ make_everparse() {
         done
         [[ -n $libevercrypt_so ]]
         $cp $libevercrypt_so everparse/bin/
-        $cp $(dpkg -L libffi6 | grep '/libffi.so.6$') everparse/bin/
+
+        # Locate libffi
+        {
+            # Debian:
+            libffi=$(dpkg -L libffi6 | grep '/libffi.so.6$' | head -n 1)
+            [[ -n "$libffi" ]]
+        } || {
+            # Arch:
+            libffi=$(pacman -Qql libffi | grep '/libffi.so.7$' | head -n 1)
+            [[ -n "$libffi" ]]
+        } || {
+            # Fedora:
+            libffi=$(rpm --query libffi --list | grep '/libffi.so.6$' | head -n 1)
+            [[ -n "$libffi" ]]
+        } || {
+            # Default: not found
+            echo libffi not found
+            exit 1
+        }
+        $cp $libffi everparse/bin/
+
         $cp $Z3_DIR/z3 everparse/bin/
     fi
 
