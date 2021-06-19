@@ -1,7 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -e
 set -x
+
+SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
+MAKE=$(which gmake >/dev/null 2>&1 && echo gmake || echo make)
 
 if [[ -z "$OS" ]] ; then
     OS=$(uname)
@@ -116,9 +119,9 @@ make_everparse() {
 
     # Rebuild F* and kremlin
     export OTHERFLAGS='--admit_smt_queries true'
-    make -C "$FSTAR_HOME" "$@"
-    make -C "$KREMLIN_HOME" "$@" minimal
-    make -C "$KREMLIN_HOME/kremlib" "$@" verify-all
+    $MAKE -C "$FSTAR_HOME" "$@"
+    $MAKE -C "$KREMLIN_HOME" "$@" minimal
+    $MAKE -C "$KREMLIN_HOME/kremlib" "$@" verify-all
 
     # Build the hacl-star package if not available
     if ! ocamlfind query hacl-star ; then
@@ -135,8 +138,8 @@ make_everparse() {
         fi
         if ! ocamlfind query hacl-star-raw ; then
             (cd $HACL_HOME/dist/gcc-compatible ; ./configure --disable-bzero)
-            make -C $HACL_HOME/dist/gcc-compatible "$@"
-            make -C $HACL_HOME/dist/gcc-compatible install-hacl-star-raw
+            $MAKE -C $HACL_HOME/dist/gcc-compatible "$@"
+            $MAKE -C $HACL_HOME/dist/gcc-compatible install-hacl-star-raw
         fi
         if ! ocamlfind query hacl-star ; then
             (cd $HACL_HOME/bindings/ocaml ; dune build ; dune install)
@@ -144,7 +147,7 @@ make_everparse() {
     fi
 
     # Rebuild EverParse
-    make -C "$QD_HOME" "$@"
+    $MAKE -C "$QD_HOME" "$@"
 
     # Copy dependencies and Z3
     mkdir -p everparse/bin
@@ -152,7 +155,7 @@ make_everparse() {
     then
         $cp $LIBGMP10_DLL everparse/bin/
         $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/
-        for f in $(ocamlfind printconf destdir)/stublibs $(sed 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
+        for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
             libevercrypt_dll=$f/libevercrypt.dll
             if [[ -f $libevercrypt_dll ]] ; then
                 break
