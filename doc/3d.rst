@@ -401,6 +401,7 @@ Linux
    * diff
    * find
    * gcc
+   * GNU getopt
    * git
    * GNU make
    * patch
