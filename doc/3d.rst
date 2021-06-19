@@ -474,6 +474,17 @@ sources, you can build a binary package:
         z3 is downloaded only for Windows or Linux. On other platforms, you need to have Z3 4.8.5
         reachable from your PATH. You will most likely need to compile it from `its sources <https://github.com/z3prover/z3/tree/Z3-4.8.5>`_.
 
+     .. note::
+
+        If you encounter a linking issue when building ``3d.exe``,
+        then it may be due to EverCrypt not supported on your platform
+        (e.g. FreeBSD.) As a workaround, you can set the
+        ``NO_EVERCRYPT`` environment variable to any nonzero value, to
+        use `ocaml-sha <https://opam.ocaml.org/packages/sha/>`_
+        instead of EverCrypt. In that case, ``ocaml-sha`` will be
+        automatically installed while building EverParse.
+
+
    * ``make package``
 
      That command will build a binary package,
@@ -545,6 +556,18 @@ fetch and build EverParse sources:
       already present because of an earlier compilation, so you can
       remove it, using ``ocamlfind remove hacl-star-raw``
       and/or ``ocamlfind remove hacl-star``, and try again.
+
+   .. note::
+
+      Even if you manage to build EverCrypt at this stage, you may
+      still encounter a linking issue when building ``3d.exe`` later,
+      maybe due to EverCrypt not supported on your platform
+      (e.g. FreeBSD.) As a workaround, you can set the
+      ``NO_EVERCRYPT`` environment variable to any nonzero value, to
+      use `ocaml-sha <https://opam.ocaml.org/packages/sha/>`_ instead
+      of EverCrypt. In that case, you first need to run ``opam install
+      ocaml-sha`` to install that package beforehand.
+
 
 5. Set the ``FSTAR_HOME`` environment variable to the ``FStar``
    subdirectory of your Everest clone, which contains a clone of the
