@@ -399,6 +399,7 @@ Linux
    commands are installed:
 
    * diff
+   * find
    * gcc
    * git
    * make
