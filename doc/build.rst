@@ -68,6 +68,7 @@ Linux
    commands are installed:
 
    * GNU cp
+   * GNU date
    * diff
    * find
    * gcc
