@@ -402,8 +402,9 @@ Linux
    * find
    * gcc
    * git
-   * make
+   * GNU make
    * patch
+   * GNU sed
    * wget
    * which
 
