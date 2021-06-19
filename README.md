@@ -8,7 +8,7 @@ EverParse is a framework for generating verified secure parsers from DSL format 
 It consists of LowParse, a verified combinator library (in `src/lowparse`), and QuackyDucky, an untrusted message format specification language compiler.
 
 For more information, you can read:
-* The [EverParse project website](https://project-everest.github.io/everparse)
+* The [EverParse project website and user manual](https://project-everest.github.io/everparse), also available in the `doc` subdirectory of this repository as `*.rst` reStructuredText files.
 * our [Microsoft Research blog post](https://www.microsoft.com/en-us/research/blog/everparse-hardening-critical-attack-surfaces-with-formally-proven-message-parsers/)
 * our [USENIX Security 2019 paper](https://www.microsoft.com/en-us/research/publication/everparse/).
 
