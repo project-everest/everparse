@@ -174,10 +174,15 @@ let rec resolve_expr' (env:qenv) (e:expr') : ML expr' =
 
 and resolve_expr (env:qenv) (e:expr) : ML expr = { e with v = resolve_expr' env e.v }
 
+let resolve_typ_param (env:qenv) (p:typ_param) : ML typ_param =
+  match p with
+  | Inl e -> resolve_expr env e |> Inl
+  | _ -> p
+
 let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
   match t with
   | Type_app hd args ->
-    Type_app (resolve_ident env hd) (List.map (resolve_expr env) args)
+    Type_app (resolve_ident env hd) (List.map (resolve_typ_param env) args)
   | Pointer t -> Pointer (resolve_typ env t)
 
 and resolve_typ (env:qenv) (t:typ) : ML typ = { t with v = resolve_typ' env t.v }
@@ -293,6 +298,7 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let params, env = resolve_params env params in
     let sc = resolve_switch_case env sc in
     CaseType td_names params sc
+  | OutputType _ -> d
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
