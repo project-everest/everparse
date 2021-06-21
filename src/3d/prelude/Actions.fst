@@ -198,6 +198,54 @@ let validate_with_success_action
   name v1 a
 = validate_drop (validate_with_success_action' name v1 a)
 
+module P = Prelude
+let p = P.parse_impos ()
+
+let error_handler = typename:string ->
+                    fieldname:string ->
+                    error_reason:string ->
+                    action (parse_impos()) true_inv eloc_none false unit
+
+let error_reason_of_result (code:U64.t) = 
+  match LPL.get_validator_error_kind code with
+  | 1uL -> "generic error"
+  | 2uL -> "not enough data"
+  | 3uL -> "impossible"
+  | 4uL -> "list size not multiple of element size"
+  | 5uL -> "action failed"
+  | 6uL -> "constraint failed"
+  | 7uL -> "unexpected padding"
+  | _ -> "unspecified"
+  
+
+inline_for_extraction noextract
+let validate_with_error_handler (typename:string) 
+                                (fieldname:string)
+                                #nz
+                                #wk
+                                (#k1:parser_kind nz wk)
+                                 #t1
+                                (#p1:parser k1 t1)
+                                (#inv1:_)
+                                (#l1:eloc)
+                                (#ar:_)
+                                (v1:validate_with_action_t p1 inv1 l1 ar)
+                                (err:error_handler)
+  : validate_with_action_t p1 inv1 l1 ar
+  = fun #inputLength  input
+        startPosition ->
+    let h0 = HST.get () in
+    [@(rename_let ("positionAfter" ^ typename))]
+    let pos1 = v1 input startPosition in
+    let h1 = HST.get () in
+    modifies_address_liveness_insensitive_unused_in h0 h1;
+    if LPL.is_success pos1
+    then pos1
+    else (
+         err typename fieldname (error_reason_of_result pos1) input startPosition pos1;
+         pos1
+    )
+
 inline_for_extraction noextract
 let validate_with_error_action' (name: string) #nz #wk (#k1:parser_kind nz wk) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc) (#ar:_)
                          (v1:validate_with_action_t p1 inv1 l1 ar)
