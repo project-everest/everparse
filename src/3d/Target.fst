@@ -523,7 +523,7 @@ let rec print_validator (mname:string) (v:validator) : ML string = //(decreases 
                    (print_lam (print_validator mname) p2)
 
   | Validate_dep_pair_with_refinement p1_is_constant_size_without_actions n1 p1 r e p2 ->
-    Printf.sprintf "(validate_dep_pair_with_refinement %s \"%s\" 1uL %s %s %s %s)"
+    Printf.sprintf "(validate_dep_pair_with_refinement %s \"%s\" %s %s %s %s)"
                    (if p1_is_constant_size_without_actions then "true" else "false")
                    (print_maybe_qualified_ident mname n1)
                    (print_validator mname p1)

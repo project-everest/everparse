@@ -453,7 +453,6 @@ let validate_dep_pair
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action'
       (name1: string)
-      (id1: field_id)
       #nz1
       (#k1:parser_kind nz1 _)
       #t1
@@ -521,7 +520,7 @@ let validate_dep_pair_with_refinement_and_action'
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
         [@(rename_let ("pos_or_error_after_" ^ name1))]
-        let res1 = check_constraint_ok_with_field_id ok startPosition res id1 in
+        let res1 = check_constraint_ok_with_field_id ok startPosition res 1uL in
         if LPL.is_error res1
         then
           with_drop_if 
@@ -546,7 +545,7 @@ let validate_dep_pair_with_refinement_and_action'
                      input
                      (LPL.uint64_to_uint32 startPosition)
                      (fun _ -> LPL.slice_length input)
-                     (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1)
+                     (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition 1uL)
              else begin
                let open LPL in
                // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
@@ -582,7 +581,6 @@ let validate_dep_pair_with_refinement_and_action'
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action_total_zero_parser'
       (name1: string)
-      (id1: field_id)
       #nz1
       (#k1:parser_kind nz1 _)
       #t1
@@ -644,7 +642,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
         [@(rename_let ("pos_or_error_after_" ^ name1))]
-        let res1 = check_constraint_ok_with_field_id ok startPosition startPosition id1 in
+        let res1 = check_constraint_ok_with_field_id ok startPosition startPosition 1uL in
         if LPL.is_error res1
         then
              with_drop_if
@@ -669,7 +667,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
                     input
                     (LPL.uint64_to_uint32 startPosition)
                     (fun _ -> LPL.slice_length input)
-                    (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition id1)
+                    (LPL.set_validator_error_pos_and_code validator_error_action_failed startPosition 1uL)
              else begin
                let open LPL in
                // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
@@ -705,7 +703,6 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement'
       (name1: string)
-      (id1: field_id)
       #nz1
       (#k1:parser_kind nz1 _)
       #t1
@@ -747,7 +744,7 @@ let validate_dep_pair_with_refinement'
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
         [@(rename_let ("positionOrErrorAfter" ^ name1))]
-        let res1 = check_constraint_ok_with_field_id ok startPosition res id1 in
+        let res1 = check_constraint_ok_with_field_id ok startPosition res 1uL in
         if LPL.is_error res1
         then
              with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
@@ -768,7 +765,6 @@ let validate_dep_pair_with_refinement'
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_total_zero_parser'
       (name1: string)
-      (id1: field_id)
       #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
@@ -798,7 +794,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
         [@(rename_let ("positionOrErrorAfter" ^ name1))]
-        let res1 = check_constraint_ok_with_field_id ok startPosition startPosition id1 in
+        let res1 = check_constraint_ok_with_field_id ok startPosition startPosition 1uL in
         if LPL.is_error res1
         then with_drop_if true (conj_inv inv1 inv2) input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) res1
         else let h2 = HST.get() in
@@ -821,7 +817,6 @@ inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action
       (p1_is_constant_size_without_actions: bool)
       (name1: string)
-      (id1: field_id)
       #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
@@ -837,9 +832,9 @@ let validate_dep_pair_with_refinement_and_action
       (k1.LP.parser_kind_high = Some 0) `LP.bool_and`
       (k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal)
     then
-      validate_dep_pair_with_refinement_and_action_total_zero_parser' name1 id1 v1 r1 f a v2
+      validate_dep_pair_with_refinement_and_action_total_zero_parser' name1 v1 r1 f a v2
     else
-      validate_dep_pair_with_refinement_and_action' name1 id1 v1 r1 f a v2
+      validate_dep_pair_with_refinement_and_action' name1 v1 r1 f a v2
 
 #push-options "--z3rlimit 32"
 
@@ -887,7 +882,6 @@ inline_for_extraction noextract
 let validate_dep_pair_with_refinement
       (p1_is_constant_size_without_actions: bool)
       (name1: string)
-      (id1: field_id)
       #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
@@ -902,9 +896,9 @@ let validate_dep_pair_with_refinement
       (k1.LP.parser_kind_high = Some 0) `LP.bool_and`
       (k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal)
     then
-      validate_dep_pair_with_refinement_total_zero_parser' name1 id1 v1 r1 f v2
+      validate_dep_pair_with_refinement_total_zero_parser' name1 v1 r1 f v2
     else
-      validate_dep_pair_with_refinement' name1 id1 v1 r1 f v2
+      validate_dep_pair_with_refinement' name1 v1 r1 f v2
 
 inline_for_extraction noextract
 let validate_filter' (name: string) #nz (#k:parser_kind nz _) (#t:_) (#p:parser k t)
