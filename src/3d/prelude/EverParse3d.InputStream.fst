@@ -10,6 +10,7 @@ type t = {
   g_all: Ghost.erased (Seq.seq U8.t);
   prf: squash (
     len == B.len buf /\
+    Seq.length (Ghost.reveal g_all) == U32.v len /\
     B.loc_disjoint (B.loc_buffer buf) (B.loc_buffer pos)
   );
 }
@@ -22,6 +23,9 @@ let live x h =
 
 let footprint x =
   B.loc_buffer x.buf `B.loc_union` B.loc_buffer x.pos
+
+let len_all x =
+  x.len
 
 let get_all x =
   Ghost.reveal x.g_all

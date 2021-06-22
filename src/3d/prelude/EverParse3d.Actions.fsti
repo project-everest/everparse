@@ -14,7 +14,7 @@
    limitations under the License.
 *)
 module EverParse3d.Actions
-module LPL = EverParse3d.InputBuffer
+module I = EverParse3d.InputStream
 module Cast = FStar.Int.Cast
 module HS = FStar.HyperStack
 open FStar.HyperStack.ST
@@ -26,11 +26,10 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module HST = FStar.HyperStack.ST
 
-inline_for_extraction
-let ___PUINT8 = LPL.puint8
+// inline_for_extraction
+// let ___PUINT8 = LPL.puint8
 
-let triv = B.trivial_preorder LowParse.Bytes.byte
-let input_buffer_t = LPL.input_buffer_t
+let input_buffer_t = I.t
 
 let hinv = HS.mem -> Type
 let extends h1 h0 = forall #a #r #s (b:mbuffer a r s). {:pattern live h1 b} live h0 b ==> live h1 b
@@ -40,10 +39,10 @@ let liveness_inv = i:hinv {
   forall h0 h1. {:pattern (i h1); (h1 `extends` h0)}  i h0 /\ h1 `extends` h0 ==> i h1
 }
 let mem_inv  = liveness_inv
-let slice_inv =  mbuffer LPL.byte triv triv -> mem_inv
+let slice_inv = input_buffer_t -> mem_inv
 let inv_implies (inv0 inv1:slice_inv) =
-  forall (#len: U32.t) (i:input_buffer_t len) h.
-    inv0 (LPL.slice_of i).LPL.base h ==> inv1 (LPL.slice_of i).LPL.base h
+  forall (i:input_buffer_t) h.
+    inv0 i h ==> inv1 i h
 let true_inv : slice_inv = fun _ _ -> True
 let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h
 let eloc = FStar.Ghost.erased B.loc
@@ -461,6 +460,7 @@ val action_abort
       (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
   : action p true_inv eloc_none false bool
 
+(*
 noextract
 inline_for_extraction
 val action_field_pos
@@ -472,6 +472,7 @@ inline_for_extraction
 val action_field_ptr
       (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
    : action p true_inv eloc_none true LPL.puint8
+*)
 
 noextract
 inline_for_extraction

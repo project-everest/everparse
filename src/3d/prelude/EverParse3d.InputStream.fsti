@@ -10,13 +10,21 @@ val t : Type0
 
 val live (x: t) (h: HS.mem) : Tot prop
 
-val footprint (x: t) : GTot B.loc
+val footprint (x: t) : Ghost B.loc
+  (requires True)
+  (ensures (fun y -> B.address_liveness_insensitive_locs `B.loc_includes` y))
 
-val get_all (x: t) : GTot (Seq.seq U8.t)
+val len_all (x: t) : GTot U32.t
+
+let length_all (x: t) : GTot nat = U32.v (len_all x)
+
+val get_all (x: t) : Ghost (Seq.seq U8.t)
+  (requires True)
+  (ensures (fun y -> Seq.length y == length_all x))
 
 val get_remaining (x: t) (h: HS.mem) : Ghost (Seq.seq U8.t)
   (requires (live x h))
-  (ensures (fun _ -> True))
+  (ensures (fun y -> Seq.length y <= length_all x))
 
 val get_remaining_is_suffix (x: t) (h: HS.mem) : Lemma
   (requires (live x h))
