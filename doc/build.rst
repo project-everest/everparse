@@ -171,7 +171,7 @@ sources, you can build a binary package:
      package``, but only the name of the archive will change:
      ``everparse.zip`` on Windows, ``everparse.tar.gz`` on Linux.
 
-In all cases, the produced package offers ``everparse.bat`` on
+In all cases, the produced package offers ``everparse.cmd`` on
 Windows, ``everparse.sh`` on Linux, which you can use as directed
 elsewhere in this manual.
 
