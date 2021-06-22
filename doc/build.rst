@@ -6,8 +6,8 @@ How to build EverParse from source
 You may want to use the sources instead of the binary package in any
 of the following cases:
 
-* You are on a non-amd64 platform (however, there is no guarantee that
-  the sources will compile under any such non-amd64 platform.)
+* You are on a non-x86_64 platform (however, there is no guarantee that
+  the sources will compile under any such non-x86_64 platform.)
 
 * You are not on Windows or Linux (however, there is no guarantee that
   the sources will compile under any such non-Windows-Linux system.)

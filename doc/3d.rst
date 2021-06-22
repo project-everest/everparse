@@ -93,7 +93,7 @@ The 3d Dependent Data Description language
 Download and install
 --------------------
 
-We provide binary (amd64 only) packages for Windows and Linux.
+We provide binary (x86_64 only) packages for Windows and Linux.
 
 1. Download the binary package corresponding to your platform, from
    the `latest EverParse/3d release
