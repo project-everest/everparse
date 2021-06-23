@@ -1,92 +1,120 @@
 module EverParse3d.InputStream
 
-(* Implementation for single buffers *)
+module U8 = FStar.UInt8
+module U32 = FStar.UInt32
+module HS = FStar.HyperStack
+module HST = FStar.HyperStack.ST
+module B = LowStar.Buffer
 
-noeq
-type t = {
-  buf: B.buffer U8.t;
-  len: U32.t;
-  pos: B.pointer U32.t;
-  g_all: Ghost.erased (Seq.seq U8.t);
-  prf: squash (
-    len == B.len buf /\
-    Seq.length (Ghost.reveal g_all) == U32.v len /\
-    B.loc_disjoint (B.loc_buffer buf) (B.loc_buffer pos)
-  );
-}
+val t : Type0
 
-let live x h =
-  B.live h x.buf /\
-  B.live h x.pos /\
-  U32.v (B.deref h x.pos) <= B.length x.buf /\
-  B.as_seq h x.buf == Ghost.reveal x.g_all
+val live (x: t) (h: HS.mem) : Tot prop
 
-let footprint x =
-  B.loc_buffer x.buf `B.loc_union` B.loc_buffer x.pos
+val footprint (x: t) : Ghost B.loc
+  (requires True)
+  (ensures (fun y -> B.address_liveness_insensitive_locs `B.loc_includes` y))
 
-let len_all x =
-  x.len
+val len_all (x: t) : GTot U32.t
 
-let get_all x =
-  Ghost.reveal x.g_all
+let length_all (x: t) : GTot nat = U32.v (len_all x)
 
-let get_remaining x h =
-  let i = U32.v (B.deref h x.pos) in
-  Seq.slice x.g_all i (Seq.length x.g_all)
+val get_all (x: t) : Ghost (Seq.seq U8.t)
+  (requires True)
+  (ensures (fun y -> Seq.length y == length_all x))
 
-let get_remaining_is_suffix x h =
-  let i = U32.v (B.deref h x.pos) in
-  Seq.lemma_split x.g_all i
+val get_remaining (x: t) (h: HS.mem) : Ghost (Seq.seq U8.t)
+  (requires (live x h))
+  (ensures (fun y -> Seq.length y <= length_all x))
 
-let preserved x l h h' = ()
+val get_remaining_is_suffix (x: t) (h: HS.mem) : Lemma
+  (requires (live x h))
+  (ensures (exists z . get_all x == z `Seq.append` get_remaining x h))
 
-open LowStar.BufferOps
-
-let has x n =
-  let pos = !* x.pos in
-  n `U32.lte` (x.len `U32.sub` pos)
-
-let phi
-  (a b c: int)
+val preserved
+  (x: t)
+  (l: B.loc)
+  (h h' : HS.mem)
 : Lemma
-  (requires (a == b - c))
-  (ensures (c + a == b))
-= ()
+  (requires (live x h /\ B.modifies l h h' /\ B.loc_disjoint (footprint x) l))
+  (ensures (
+    live x h' /\
+    get_remaining x h' == get_remaining x h
+  ))
 
-#push-options "--z3rlimit 16 --z3cliopt smt.arith.nl=false"
-#restart-solver
+let get_read (x: t) (h: HS.mem) : Ghost (Seq.seq U8.t)
+  (requires (live x h))
+  (ensures (fun y -> get_all x `Seq.equal` (y `Seq.append` get_remaining x h)))
+=
+  let s = get_all x in
+  get_remaining_is_suffix x h;
+  Seq.slice s 0 (Seq.length s - Seq.length (get_remaining x h))
 
-let read x n dst =
-  let h0 = HST.get () in
-  let pos = !* x.pos in
-  B.blit x.buf pos dst 0ul n;
-  x.pos *= pos `U32.add` n;
-  let h' = HST.get () in
-  assert (B.deref h' x.pos == pos `U32.add` n);
-  Seq.slice_length (B.as_seq h' dst);
-  Seq.slice_slice (B.as_seq h0 x.buf) (U32.v pos) (U32.v x.len) 0 (U32.v n);
-  Seq.slice_slice (B.as_seq h0 x.buf) (U32.v pos) (B.length x.buf) (U32.v n) (Seq.length (get_remaining x h0));
-  phi (Seq.length (get_remaining x h0)) (B.length x.buf) (U32.v pos);
-  ()
+let preserved'
+  (x: t)
+  (l: B.loc)
+  (h h' : HS.mem)
+: Lemma
+  (requires (live x h /\ B.modifies l h h' /\ B.loc_disjoint (footprint x) l))
+  (ensures (
+    live x h' /\
+    get_remaining x h' == get_remaining x h /\
+    get_read x h' == get_read x h
+  ))
+  [SMTPatOr [
+    [SMTPat (live x h); SMTPat (B.modifies l h h')];
+    [SMTPat (live x h'); SMTPat (B.modifies l h h')];
+    [SMTPat (get_remaining x h); SMTPat (B.modifies l h h')];
+    [SMTPat (get_remaining x h'); SMTPat (B.modifies l h h')];
+    [SMTPat (get_read x h); SMTPat (B.modifies l h h')];
+    [SMTPat (get_read x h'); SMTPat (B.modifies l h h')];
+  ]]
+= preserved x l h h'
 
-let skip x n =
-  let h0 = HST.get () in
-  let pos = !* x.pos in
-  x.pos *= pos `U32.add` n;
-  let h' = HST.get () in
-  assert (B.deref h' x.pos == pos `U32.add` n);
-  Seq.slice_slice (B.as_seq h0 x.buf) (U32.v pos) (B.length x.buf) (U32.v n) (Seq.length (get_remaining x h0));
-  phi (Seq.length (get_remaining x h0)) (B.length x.buf) (U32.v pos);
-  ()
+val has
+  (x: t)
+  (n: U32.t)
+: HST.Stack bool
+  (requires (fun h -> live x h))
+  (ensures (fun h res h' ->
+    B.modifies B.loc_none h h' /\
+    (res == true <==> Seq.length (get_remaining x h) >= U32.v n)
+  ))
 
-let make from n =
-  let h = HST.get () in
-  let g = Ghost.hide (B.as_seq h from) in
-  let pos = B.malloc HS.root 0ul 1ul in
-  {
-    buf = from;
-    len = n;
-    pos = pos;
-    g_all = g;
-    prf = ();
-  }
+val read
+  (x: t)
+  (n: U32.t)
+  (dst: B.buffer U8.t)
+: HST.Stack unit
+    (requires (fun h -> live x h /\ B.live h dst /\ B.loc_disjoint (footprint x) (B.loc_buffer dst) /\ B.length dst == U32.v n /\ Seq.length (get_remaining x h) >= U32.v n))
+    (ensures (fun h _ h' ->
+      let s = get_remaining x h in
+      B.modifies (B.loc_buffer dst `B.loc_union` footprint x) h h' /\
+      B.as_seq h' dst == Seq.slice s 0 (U32.v n) /\
+      live x h' /\
+      get_remaining x h' == Seq.slice s (U32.v n) (Seq.length s)
+    ))
+
+val skip
+  (x: t)
+  (n: U32.t)
+: HST.Stack unit
+    (requires (fun h -> live x h /\ Seq.length (get_remaining x h) >= U32.v n))
+    (ensures (fun h _ h' ->
+      let s = get_remaining x h in
+      B.modifies (footprint x) h h' /\
+      live x h' /\
+      get_remaining x h' == Seq.slice s (U32.v n) (Seq.length s)
+    ))
+
+val make
+  (from: B.buffer U8.t)
+  (n: U32.t)
+: HST.ST t
+  (requires (fun h -> B.live h from /\ U32.v n == B.length from))
+  (ensures (fun h res h' ->
+    B.modifies (B.loc_buffer from) h h' /\
+    footprint res `B.loc_includes` B.loc_buffer from /\
+    (B.loc_unused_in h `B.loc_union` B.loc_buffer from) `B.loc_includes` footprint res /\
+    live res h' /\
+    get_remaining res h' == B.as_seq h from
+  ))
