@@ -29,8 +29,6 @@ module HST = FStar.HyperStack.ST
 // inline_for_extraction
 // let ___PUINT8 = LPL.puint8
 
-let input_buffer_t = I.t
-
 let hinv = HS.mem -> Type
 let extends h1 h0 = forall #a #r #s (b:mbuffer a r s). {:pattern live h1 b} live h0 b ==> live h1 b
 let modifies_none_extends (h0 h1:HS.mem)
@@ -39,9 +37,9 @@ let liveness_inv = i:hinv {
   forall h0 h1. {:pattern (i h1); (h1 `extends` h0)}  i h0 /\ h1 `extends` h0 ==> i h1
 }
 let mem_inv  = liveness_inv
-let slice_inv = input_buffer_t -> mem_inv
+let slice_inv = loc -> mem_inv
 let inv_implies (inv0 inv1:slice_inv) =
-  forall (i:input_buffer_t) h.
+  forall i h.
     inv0 i h ==> inv1 i h
 let true_inv : slice_inv = fun _ _ -> True
 let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h
@@ -52,7 +50,7 @@ let eloc_includes (l1 l2:eloc) = B.loc_includes l1 l2
 let ptr_loc #a (x:B.pointer a) : Tot eloc = B.loc_buffer x
 let ptr_inv #a (x:B.pointer a) : slice_inv = fun (sl:_) h -> B.live h x
 
-inline_for_extraction
+inline_for_extraction noextract
 val action
       (#nz:bool)
       (#wk: _)
@@ -63,9 +61,9 @@ val action
       (l:eloc)
       (on_success:bool)
       (a:Type)
-    : Type0
+    : Type u#1
 
-inline_for_extraction
+inline_for_extraction noextract
 val validate_with_action_t
       (#nz:bool)
       (#wk: _)
@@ -75,10 +73,9 @@ val validate_with_action_t
       (inv:slice_inv)
       (l:eloc)
       (allow_reading:bool)
-    : Type0
+    : Type u#1
 
-inline_for_extraction
-noextract
+inline_for_extraction noextract
 val validate_eta
       (#nz:bool)
       (#wk: _)
@@ -106,16 +103,15 @@ val act_with_comment
       (a: action p inv l b res)
 : Tot (action p inv l b res)
 
-inline_for_extraction
+inline_for_extraction noextract
 val leaf_reader
       (#nz:bool)
       (#k: parser_kind nz WeakKindStrongPrefix)
       (#t: Type)
       (p: parser k t)
- : Type0
+ : Type u#1
 
-inline_for_extraction
-noextract
+inline_for_extraction noextract
 val validate_with_success_action
       (name: string)
       (#nz:bool)

@@ -2,29 +2,34 @@ module EverParse3d.Actions
 friend Prelude
 
 module LPE = LowParse.Low.ErrorCode
+open FStar.Tactics.Typeclasses
 
 let action
   p inv l on_success a
 =
+    (#input_buffer_t: Type0) ->
+    (#[tcresolve ()]_: I.input_stream_inst input_buffer_t) ->
     sl: Ghost.erased input_buffer_t ->
     Stack a
       (requires fun h ->
-        I.live sl h /\
-        inv sl h /\
+        I.live (Ghost.reveal sl) h /\
+        inv (I.footprint (Ghost.reveal sl)) h /\
         loc_not_unused_in h `loc_includes` l /\
         address_liveness_insensitive_locs `loc_includes` l /\
-        l `loc_disjoint` I.footprint sl
+        l `loc_disjoint` I.footprint (Ghost.reveal sl)
       )
       (ensures fun h0 _ h1 ->
         modifies l h0 h1 /\
         h1 `extends` h0 /\
-        inv sl h1)
+        inv (I.footprint (Ghost.reveal sl)) h1)
 
 module LP = LowParse.Spec.Base
 module LPL = LowParse.Low.Base
 
 unfold
 let valid_len
+  (#input_buffer_t: Type0)
+  (# [tcresolve ()] inst : I.input_stream_inst input_buffer_t)
   (#k: LP.parser_kind)
   (#t: Type)
   (p: LP.parser k t)
@@ -42,6 +47,8 @@ let valid_len
   end
 
 let valid
+  (#input_buffer_t: Type0)
+  (# [tcresolve ()] inst : I.input_stream_inst input_buffer_t)
   (#k: LP.parser_kind)
   (#t: Type)
   (p: LP.parser k t)
@@ -52,22 +59,24 @@ let valid
   Some? (LP.parse p (I.get_remaining sl h))
 
 let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
+  (#input_buffer_t: Type0) ->
+  (# [tcresolve ()] inst : I.input_stream_inst input_buffer_t) ->
   (sl: input_buffer_t) ->
   (startPosition: U64.t) ->
   Stack U64.t
   (requires fun h ->
     I.live sl h /\
-    inv sl h /\
+    inv (I.footprint sl) h /\
     loc_not_unused_in h `loc_includes` l /\
     address_liveness_insensitive_locs `loc_includes` l /\
     l `loc_disjoint` I.footprint sl /\
-    U64.v startPosition + Seq.length (I.get_remaining sl h) <= I.length_all sl
+    U64.v startPosition + Seq.length (I.get_remaining sl h) <= I.length_all #_ #inst sl
   )
   (ensures fun h res h' ->
     I.live sl h' /\
     modifies (l `loc_union` I.footprint sl) h h' /\
     h' `extends` h /\
-    inv sl h' /\
+    inv (I.footprint sl) h' /\
     begin if LPE.is_success res
     then
       let s = I.get_remaining sl h in
@@ -92,14 +101,16 @@ let act_with_comment
   LPL.comment s;
   a sl
 
-inline_for_extraction
 let leaf_reader
   #nz
   #k
   (#t: Type)
   (p: parser k t)
 : Tot Type
-= (sl: input_buffer_t) ->
+=
+  (#input_buffer_t: Type) ->
+  (# [tcresolve ()] inst : I.input_stream_inst input_buffer_t) ->
+  (sl: input_buffer_t) ->
   Stack t
   (requires (fun h ->
     valid p h sl
@@ -658,6 +669,8 @@ module LPLL = LowParse.Spec.List
 
 unfold
 let validate_list_inv
+  (#input_buffer_t: Type)
+  (#[tcresolve ()] inst: I.input_stream_inst input_buffer_t)
   (#k: LPL.parser_kind)
   (#t: Type)
   (p: LPL.parser k t)
@@ -673,7 +686,7 @@ let validate_list_inv
 = let h0 = Ghost.reveal g0 in
   let h1 = Ghost.reveal g1 in
   let pos1 = Seq.index (as_seq h bpos) 0 in
-  inv sl h0 /\
+  inv (I.footprint sl) h0 /\
   h `extends` h0 /\
   loc_not_unused_in h0 `loc_includes` l /\
   l `loc_disjoint` I.footprint sl /\
@@ -682,7 +695,7 @@ let validate_list_inv
   B.loc_buffer bpos `B.loc_disjoint` I.footprint sl /\
   I.live sl h0 /\
   I.live sl h /\
-  U64.v pos0 + Seq.length (I.get_remaining sl h0) <= I.length_all sl /\
+  U64.v pos0 + Seq.length (I.get_remaining sl h0) <= I.length_all #_ #inst sl /\
   live h1 bpos /\
   modifies loc_none h0 h1 /\ (
   if
@@ -691,13 +704,11 @@ let validate_list_inv
     stop == true
   else
     U64.v pos0 <= U64.v pos1 /\
-    U64.v pos1 + Seq.length (I.get_remaining sl h) <= I.length_all sl /\
+    U64.v pos1 + Seq.length (I.get_remaining sl h) <= I.length_all #_ #inst sl /\
     (valid (LPLL.parse_list p) h0 sl <==>
      valid (LPLL.parse_list p) h sl) /\
     (stop == true ==> Seq.length (I.get_remaining sl h) == 0)
   ) /\
   modifies (l `loc_union` loc_buffer bpos `loc_union` I.footprint sl) h1 h
-
-
 
 #pop-options

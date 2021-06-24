@@ -41,15 +41,7 @@ class input_stream_inst (t: Type) : Type = {
       live x h' /\
       get_remaining x h' == get_remaining x h /\
       get_read x h' == get_read x h
-    ))
-    [SMTPatOr [
-      [SMTPat (live x h); SMTPat (B.modifies l h h')];
-      [SMTPat (live x h'); SMTPat (B.modifies l h h')];
-      [SMTPat (get_remaining x h); SMTPat (B.modifies l h h')];
-      [SMTPat (get_remaining x h'); SMTPat (B.modifies l h h')];
-      [SMTPat (get_read x h); SMTPat (B.modifies l h h')];
-      [SMTPat (get_read x h'); SMTPat (B.modifies l h h')];
-    ]];
+    ));
 
   has:
     (x: t) ->
@@ -90,3 +82,28 @@ class input_stream_inst (t: Type) : Type = {
 }
 
 let length_all #t (#_: input_stream_inst t) (x: t) : GTot nat = U32.v (len_all x)
+
+let preserved'
+    (#t: Type)
+    (# [FStar.Tactics.Typeclasses.tcresolve ()] inst : input_stream_inst t)
+    (x: t)
+    (l: B.loc)
+    (h: HS.mem)
+    (h' : HS.mem)
+ :  Lemma
+    (requires (live x h /\ B.modifies l h h' /\ B.loc_disjoint (footprint x) l))
+    (ensures (
+      live x h' /\
+      get_remaining x h' == get_remaining x h /\
+      get_read x h' == get_read x h
+    ))
+    [SMTPatOr [
+      [SMTPat (live x h); SMTPat (B.modifies l h h')];
+      [SMTPat (live x h'); SMTPat (B.modifies l h h')];
+      [SMTPat (get_remaining x h); SMTPat (B.modifies l h h')];
+      [SMTPat (get_remaining x h'); SMTPat (B.modifies l h h')];
+      [SMTPat (get_read x h); SMTPat (B.modifies l h h')];
+      [SMTPat (get_read x h'); SMTPat (B.modifies l h h')];
+    ]]
+= preserved x l h h'
+
