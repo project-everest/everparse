@@ -724,11 +724,8 @@ let maybe_print_type_equality (mname:string) (td:type_decl) : ML string =
 
 let print_decl_for_types (mname:string) (d:decl) : ML string =
   match fst d with
-  | Assumption (x, t) ->
-    Printf.sprintf "assume\nval %s : %s\n\n"
-      (print_ident x)      
-      (print_typ mname t) 
-
+  | Assumption _ -> ""
+  
   | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
      (print_comments (snd d).comments)
@@ -775,8 +772,13 @@ let is_type_abbreviation (td:type_decl) : bool =
 
 let print_decl_for_validators (mname:string) (d:decl) : ML string =
   match fst d with
-  | Assumption _
   | Definition _ -> ""
+  
+  | Assumption (x, t) ->
+    Printf.sprintf "assume\nval %s : %s\n\n"
+      (print_ident x)      
+      (print_typ mname t) 
+
   | Type_decl td ->
     (if false //not td.decl_name.td_entrypoint
      then ""
@@ -981,14 +983,80 @@ let pascal_case name : ML string =
 let print_c_entry (modul: string)
                   (env: global_env)
                   (ds:list decl)
-: ML (string & string)
-= let print_one_validator (d:type_decl) : ML (string & string) =
+    : ML (string & string)
+    =  let default_error_handler =
+        Printf.sprintf
+          "\
+          typedef struct _ErrorFrame\n\
+          {\n\t\
+             BOOLEAN filled;\n\t\
+             uint32_t start_pos;\n\t\
+             uint32_t end_pos;\n\t\
+             char *typename;\n\t\
+             char *fieldname;\n\t\
+             char *reason;\n\
+          } ErrorFrame;\n\
+          \n\
+          void %sHandleError(\n\t\
+                              EverParseString typename,\n\t\
+                              EverParseString fieldname,\n\t\
+                              EverParseString reason,\n\t\
+                              uint8_t *context,\n\t\
+                              uint32_t len,\n\t\
+                              uint8_t *base,\n\t\
+                              uint64_t start_pos,\n\t\
+                              uint64_t end_pos)\n\
+          {\n\t\
+            ErrorFrame *frame = (ErrorFrame*)context;\n\t\
+            if (!frame->filled)\n\t\
+            {\n\t\t\
+              frame->filled = TRUE;\n\t\t\
+              frame->start_pos = start_pos;\n\t\t\
+              frame->end_pos = end_pos;\n\t\t\
+              frame->typename = typename;\n\t\t\
+              frame->fieldname = fieldname;\n\t\t\
+              frame->reason = reason;\n\t\
+            }\n\
+          }" 
+          modul
+   in
+   let wrapped_call name params =
+     Printf.sprintf
+       "ErrorFrame frame;\n\t\
+       frame.filled = FALSE;\n\t\
+       uint64_t result = %s(%s (uint8_t*)&frame, len, base, 0);\n\t\
+       if (EverParseResultIsError(result))\n\t\
+       {\n\t\t\
+         if (frame.filled)\n\t\t\
+         {\n\t\t\t\
+           %sEverParseError(frame.typename, frame.fieldname, frame.reason);\n\t\t\
+         }\n\t\t\
+         return FALSE;\n\t\
+       }\n\t\
+       return TRUE;"
+       name
+       params
+       modul
+   in
+   let print_one_validator (d:type_decl) : ML (string & string) =
     let print_params (ps:list param) : Tot string =
       let params =
         String.concat
           ", "
           (List.Tot.map
             (fun (id, t) -> Printf.sprintf "%s %s" (print_as_c_type t) (print_ident id))
+            ps)
+       in
+       match ps with
+       | [] -> params
+       | _ -> params ^ ", "
+    in
+    let print_arguments (ps:list param) : Tot string =
+      let params =
+        String.concat
+          ", "
+          (List.Tot.map
+            (fun (id, t) -> print_ident id)
             ps)
        in
        match ps with
@@ -1013,24 +1081,12 @@ let print_c_entry (modul: string)
        |> pascal_case
     in
     let impl =
-      Printf.sprintf
-      "%s {\n\t\
-         uint64_t result = %s(%s, 0);\n\t\
-         if (EverParseResultIsError(result)) {\n\t\t\
-           %sEverParseError(\n\t\
-                  %sStructNameOfErr(result),\n\t\t\t\
-                  %sFieldNameOfErr (result),\n\t\t\t\
-                  EverParseErrorReasonOfResult(result));\n\t\t\
-           return FALSE;\n\t\
-         }\n\t\
-         return TRUE;\n\
-       }"
-       signature
-       validator_name
-       (((List.Tot.map (fun (id, _) -> print_ident id) d.decl_name.td_params)@["len"; "base"]) |> String.concat ", ")
-       modul
-       modul
-       modul
+      let body = 
+        wrapped_call
+          validator_name 
+          (print_arguments d.decl_name.td_params)
+      in
+      Printf.sprintf "%s {\n\t%s\n}" signature body
     in
     signature ^";",
     impl
@@ -1068,11 +1124,13 @@ let print_c_entry (modul: string)
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
-       %s\n\
+       %s\n\n\
+       %s\n\n\
        %s\n"
       modul
       modul
       error_callback_proto
+      default_error_handler
       (impls |> String.concat "\n\n")
   in
   header,
