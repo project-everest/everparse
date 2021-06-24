@@ -1566,7 +1566,7 @@ let validate_list_up_to_inv
     True // (~ (valid q h0 (slice_of sl) pos0)) // we lost completeness because of actions
   end
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction
 let validate_list_up_to_body
