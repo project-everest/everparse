@@ -70,7 +70,7 @@ let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv
     loc_not_unused_in h `loc_includes` l /\
     address_liveness_insensitive_locs `loc_includes` l /\
     l `loc_disjoint` I.footprint sl /\
-    U64.v startPosition + Seq.length (I.get_remaining sl h) <= I.length_all #_ #inst sl
+    U64.v startPosition + Seq.length (I.get_remaining sl h) == I.length_all #_ #inst sl
   )
   (ensures fun h res h' ->
     I.live sl h' /\
