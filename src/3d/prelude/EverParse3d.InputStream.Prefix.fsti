@@ -16,18 +16,12 @@ inline_for_extraction
 val inst (#base: Type0) (# [FStar.Tactics.Typeclasses.tcresolve ()] base_inst : input_stream_inst base)
 : Tot (input_stream_inst (t base))
 
-val gmake
+val made_from
   (#base: Type0)
   (# [FStar.Tactics.Typeclasses.tcresolve ()] base_inst: input_stream_inst base)
+  (x: t base)
   (from: base)
-  (n: U32.t)
-: Ghost (t base)
-    (requires (
-      U32.v n <= length_all #_ #base_inst from
-    ))
-    (ensures (fun y ->
-      footprint (y <: t base) == footprint from
-    ))
+: Tot prop
 
 val get_suffix
   (#base: Type0)
@@ -35,24 +29,25 @@ val get_suffix
   (x: t base)
 : GTot (Seq.seq U8.t)
 
-val gmake_prop
+val made_from_prop
   (#base: Type0)
   (# [FStar.Tactics.Typeclasses.tcresolve ()] base_inst: input_stream_inst base)
+  (x: t base)
   (from: base)
-  (n: U32.t)
   (h: HS.mem)
-: Ghost (t base)
+: Lemma
     (requires (
-      U32.v n <= length_all #_ #base_inst from /\
-      live (gmake from n) h
+      live x h /\
+      x `made_from` from
     ))
-    (ensures (fun y ->
+    (ensures (
       live from h /\
-      get_read from h == get_read (gmake from n) h /\
-      get_remaining from h == get_remaining (gmake from n) h `Seq.append` get_suffix (gmake from n)
+      get_read from h `Seq.equal` get_read x h /\
+      get_remaining from h `Seq.equal` (get_remaining x h `Seq.append` get_suffix x)
     ))
 
 inline_for_extraction
+noextract
 val make
   (#base: Type0)
   (# [FStar.Tactics.Typeclasses.tcresolve ()] base_inst: input_stream_inst base)
@@ -61,9 +56,12 @@ val make
 : HST.Stack (t base)
   (requires (fun h ->
     live from h /\
-    U32.v n <= length_all #_ #base_inst from
+    U32.v n <= Seq.length (get_remaining from h)
   ))
   (ensures (fun h res h' ->
     B.modifies B.loc_none h h' /\
-    res == gmake from n
+    res `made_from` from /\
+    footprint res == footprint from /\
+    live res h' /\
+    Seq.length (get_remaining res h') == U32.v n
   ))

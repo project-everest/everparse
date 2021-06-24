@@ -69,9 +69,9 @@ class input_stream_inst (t: Type) : Type = {
     (ensures (fun h _ h' ->
       let s = get_remaining x h in
       B.modifies (B.loc_buffer dst `B.loc_union` footprint x) h h' /\
-      B.as_seq h' dst == Seq.slice s 0 (U32.v n) /\
+      B.as_seq h' dst `Seq.equal` Seq.slice s 0 (U32.v n) /\
       live x h' /\
-      get_remaining x h' == Seq.slice s (U32.v n) (Seq.length s)
+      get_remaining x h' `Seq.equal` Seq.slice s (U32.v n) (Seq.length s)
     ));
 
   skip:
@@ -83,7 +83,7 @@ class input_stream_inst (t: Type) : Type = {
       let s = get_remaining x h in
       B.modifies (footprint x) h h' /\
       live x h' /\
-      get_remaining x h' == Seq.slice s (U32.v n) (Seq.length s)
+      get_remaining x h' `Seq.equal` Seq.slice s (U32.v n) (Seq.length s)
     ));
 
   get_read_count:
