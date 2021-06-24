@@ -54,6 +54,7 @@ EverParse.rsp: $(ALL_KRML_FILES)
 
 %.checked:
 	$(FSTAR) $< --cache_checked_modules $(ALREADY_CACHED)
+	touch $@
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
