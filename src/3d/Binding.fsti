@@ -19,12 +19,6 @@ open Ast
 
 val global_env : Type0
 
-// val all_nums (ge: global_env)
-//   : ML (list (field_num & option ident & string)) //retrieve a table of identifier/field-name mappings
-
-// (* retrieve the name of the field code variable *)
-// val lookup_field_num : global_env -> field_num -> ML (option ident)
-
 val env : Type0
 val mk_env (g:global_env) : ML env
 val global_env_of_env (e:env) : ML global_env
