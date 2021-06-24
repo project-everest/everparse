@@ -66,6 +66,10 @@ let inst = {
     B.loc_buffer x.buf `B.loc_union` B.loc_buffer x.pos
   end;
 
+  live_not_unused_in = begin fun x h ->
+    ()
+  end;
+
   len_all = begin fun x ->
     x.len
   end;

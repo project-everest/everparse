@@ -16,6 +16,13 @@ class input_stream_inst (t: Type) : Type = {
     (requires True)
     (ensures (fun y -> B.address_liveness_insensitive_locs `B.loc_includes` y));
 
+  live_not_unused_in:
+    (x: t) ->
+    (h: HS.mem) ->
+    Lemma
+    (requires (live x h))
+    (ensures (B.loc_not_unused_in h `B.loc_includes` footprint x));
+
   len_all: (x: t) -> GTot U32.t;
 
   get_all: (x: t) -> Ghost (Seq.seq U8.t)

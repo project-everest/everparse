@@ -722,37 +722,126 @@ let validate_list_inv
   (l: loc)
   (g0 g1: Ghost.erased HS.mem)
   (sl: input_buffer_t)
-  (pos0: U64.t)
-  (bpos: pointer U64.t)
+  (bres: pointer U64.t)
   (h: HS.mem)
   (stop: bool)
 : GTot Type0
 = let h0 = Ghost.reveal g0 in
   let h1 = Ghost.reveal g1 in
-  let pos1 = Seq.index (as_seq h bpos) 0 in
+  let res = Seq.index (as_seq h bres) 0 in
   inv (I.footprint sl) h0 /\
   h `extends` h0 /\
   loc_not_unused_in h0 `loc_includes` l /\
   l `loc_disjoint` I.footprint sl /\
-  l `loc_disjoint` loc_buffer bpos /\
+  l `loc_disjoint` loc_buffer bres /\
   address_liveness_insensitive_locs `loc_includes` l /\
-  B.loc_buffer bpos `B.loc_disjoint` I.footprint sl /\
+  B.loc_buffer bres `B.loc_disjoint` I.footprint sl /\
   I.live sl h0 /\
   I.live sl h /\
-  U64.v pos0 + Seq.length (I.get_remaining sl h0) <= I.length_all #_ #inst sl /\
-  live h1 bpos /\
+  live h1 bres /\
   modifies loc_none h0 h1 /\ (
   if
-    LPL.is_error pos1
+    LPL.is_error res
   then
+    // validation *or action* failed
     stop == true
   else
-    U64.v pos0 <= U64.v pos1 /\
-    U64.v pos1 + Seq.length (I.get_remaining sl h) <= I.length_all #_ #inst sl /\
     (valid (LPLL.parse_list p) h0 sl <==>
      valid (LPLL.parse_list p) h sl) /\
-    (stop == true ==> Seq.length (I.get_remaining sl h) == 0)
+    (stop == true ==> (valid (LPLL.parse_list p) h sl /\ Seq.length (I.get_remaining sl h) == 0))
   ) /\
-  modifies (l `loc_union` loc_buffer bpos `loc_union` I.footprint sl) h1 h
+  modifies (l `loc_union` loc_buffer bres `loc_union` I.footprint sl) h1 h
+
+inline_for_extraction
+noextract
+let validate_list_body
+  (#input_buffer_t: Type)
+  (#[tcresolve ()] inst: I.input_stream_inst input_buffer_t)
+  (#k:LP.parser_kind)
+  #t
+  (#p:LP.parser k t)
+  #inv #l #ar
+  (v: validate_with_action_t' p inv l ar)
+  (g0 g1: Ghost.erased HS.mem)
+  (sl: input_buffer_t)
+  (bres: pointer U64.t)
+: HST.Stack bool
+  (requires (fun h -> validate_list_inv p inv l g0 g1 sl bres h false))
+  (ensures (fun h res h' ->
+    validate_list_inv p inv l g0 g1 sl bres h false /\
+    validate_list_inv p inv l g0 g1 sl bres h' res
+  ))
+= let h = HST.get () in
+  LPLL.parse_list_eq p (I.get_remaining sl h);
+  if not (I.has sl 1ul)
+  then true
+  else begin
+    let h1 = HST.get () in
+    assert (h1 `extends` Ghost.reveal g0);
+    modifies_address_liveness_insensitive_unused_in (Ghost.reveal g0) h1;
+    let result = v sl in
+    upd bres 0ul result;
+    LPL.is_error result
+  end
+
+inline_for_extraction
+noextract
+let validate_list'
+  (#input_buffer_t: Type)
+  (#[tcresolve ()] inst: I.input_stream_inst input_buffer_t)
+  (#k:LP.parser_kind)
+  #t
+  (#p:LP.parser k t)
+  #inv #l #ar
+  (v: validate_with_action_t' p inv l ar)
+  (sl: input_buffer_t)
+: HST.Stack U64.t
+  (requires (fun h ->
+    inv (I.footprint sl) h /\
+    loc_not_unused_in h `loc_includes` l /\
+    l `loc_disjoint` I.footprint sl /\
+    address_liveness_insensitive_locs `loc_includes` l /\
+    I.live sl h
+  ))
+  (ensures (fun h res h' ->
+    let s = I.get_remaining sl h in
+    inv (I.footprint sl) h' /\
+    I.live sl h' /\
+    (LPL.is_success res ==> begin match LP.parse (LPLL.parse_list p) s with
+    | None -> False
+    | Some (_, len) -> I.get_remaining sl h' `Seq.equal` Seq.slice s len (Seq.length s)
+    end) /\
+    modifies (l `B.loc_union` I.footprint sl) h h'
+  ))
+= let h0 = HST.get () in
+  let g0 = Ghost.hide h0 in
+  HST.push_frame ();
+  let h02 = HST.get () in
+  fresh_frame_modifies h0 h02;
+  let result = alloca 0uL 1ul in
+  let h1 = HST.get () in
+  let g1 = Ghost.hide h1 in
+  I.live_not_unused_in sl h0;
+  C.Loops.do_while (validate_list_inv p inv l g0 g1 sl result) (fun _ -> validate_list_body v g0 g1 sl result);
+  let finalResult = index result 0ul in
+  let h2 = HST.get () in
+  HST.pop_frame ();
+  let h' = HST.get () in
+  assert (h' `extends` h0);
+  LP.parser_kind_prop_equiv LPLL.parse_list_kind (LPLL.parse_list p);
+  finalResult
+
+inline_for_extraction
+noextract
+let validate_list
+  (#k:LP.parser_kind)
+  #t
+  (#p:LP.parser k t)
+  #inv #l #ar
+  (v: validate_with_action_t' p inv l ar)
+: Tot (validate_with_action_t' (LowParse.Spec.List.parse_list p) inv l false)
+= fun input ->
+  validate_list' v input
+
 
 #pop-options
