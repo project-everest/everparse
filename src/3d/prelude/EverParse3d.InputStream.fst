@@ -79,6 +79,15 @@ class input_stream_inst (t: Type) : Type = {
       get_remaining x h' == Seq.slice s (U32.v n) (Seq.length s)
     ));
 
+  get_read_count:
+    (x: t) ->
+    HST.Stack U32.t
+    (requires (fun h -> live x h))
+    (ensures (fun h res h' ->
+      B.modifies B.loc_none h h' /\
+      U32.v res == Seq.length (get_read x h)
+    ));
+
 }
 
 let length_all #t (#_: input_stream_inst t) (x: t) : GTot nat = U32.v (len_all x)

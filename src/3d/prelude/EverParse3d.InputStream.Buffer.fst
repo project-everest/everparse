@@ -116,6 +116,10 @@ let inst = {
     ()
   end;
 
+  get_read_count = begin fun x ->
+    !* x.pos
+  end;
+
 }
 
 let make from n =
