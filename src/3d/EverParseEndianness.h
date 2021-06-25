@@ -85,6 +85,12 @@ typedef uint8_t BOOLEAN;
 #  define htobe32(x) OSSwapHostToBigInt32(x)
 #  define be32toh(x) OSSwapBigToHostInt32(x)
 
+/* ... for other BSDs */
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+#  include <sys/endian.h>
+#elif defined(__OpenBSD__)
+#  include <endian.h>
+
 /* ... for Windows (GCC-like, e.g. mingw or clang) */
 #elif (defined(_WIN32) || defined(_WIN64)) &&                                  \
     (defined(__GNUC__) || defined(__clang__))
