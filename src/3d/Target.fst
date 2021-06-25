@@ -609,11 +609,10 @@ let rec print_validator (mname:string) (v:validator) : ML string = //(decreases 
     "(validate_impos())"
 
   | Validate_with_error_handler typename fieldname v ->
-    Printf.sprintf "(validate_with_error_handler \"%s\" \"%s\" %s %s)"
+    Printf.sprintf "(validate_with_error_handler \"%s\" \"%s\" %s)"
                    (print_maybe_qualified_ident mname typename)
                    fieldname
                    (print_validator mname v)
-                   (print_maybe_qualified_ident mname error_handler_name)      
 
   | Validate_with_comment v c ->
     let c = String.concat "\n" c in
@@ -985,9 +984,7 @@ let print_c_entry (modul: string)
                   (ds:list decl)
     : ML (string & string)
     =  let default_error_handler =
-        Printf.sprintf
-          "\
-          typedef struct _ErrorFrame\n\
+         "typedef struct _ErrorFrame\n\
           {\n\t\
              BOOLEAN filled;\n\t\
              uint32_t start_pos;\n\t\
@@ -997,7 +994,7 @@ let print_c_entry (modul: string)
              char *reason;\n\
           } ErrorFrame;\n\
           \n\
-          void %sHandleError(\n\t\
+          void DefaultErrorHandler(\n\t\
                               EverParseString typename,\n\t\
                               EverParseString fieldname,\n\t\
                               EverParseString reason,\n\t\
@@ -1018,13 +1015,12 @@ let print_c_entry (modul: string)
               frame->reason = reason;\n\t\
             }\n\
           }" 
-          modul
    in
    let wrapped_call name params =
      Printf.sprintf
        "ErrorFrame frame;\n\t\
        frame.filled = FALSE;\n\t\
-       uint64_t result = %s(%s (uint8_t*)&frame, len, base, 0);\n\t\
+       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, len, base, 0);\n\t\
        if (EverParseResultIsError(result))\n\t\
        {\n\t\t\
          if (frame.filled)\n\t\t\

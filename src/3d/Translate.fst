@@ -1285,7 +1285,6 @@ let translate_decls benv senv tenv ds =
     parser_weak_kind = tenv.t_parser_weak_kind;
     parser_kind_is_constant_size = tenv.t_parser_kind_is_constant_size;
   } in
-  Target.error_handler_decl ::
   List.collect (translate_decl env) ds,
   { tenv with t_has_reader = env.has_reader;
               t_parser_kind_nz = env.parser_kind_nz;

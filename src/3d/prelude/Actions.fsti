@@ -66,6 +66,8 @@ val action
       (a:Type)
     : Type0
 
+val error_handler : Type0
+
 inline_for_extraction
 val validate_with_action_t
       (#nz:bool)
@@ -134,7 +136,6 @@ val validate_with_success_action
       (a:action p1 inv2 l2 b bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
 
-val error_handler : Type0
 
 inline_for_extraction noextract
 val validate_with_error_handler (typename: string)
@@ -148,7 +149,6 @@ val validate_with_error_handler (typename: string)
                                 (#l1:eloc)
                                 (#ar:_)
                                 (v1:validate_with_action_t p1 inv1 l1 ar)
-                                (err:error_handler)
   : validate_with_action_t p1 inv1 l1 ar
 
 inline_for_extraction noextract
