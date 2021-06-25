@@ -59,6 +59,7 @@ let action p inv l on_success a
         h1 `extends` h0 /\
         inv (LPL.slice_of sl).LPL.base h1)
 
+inline_for_extraction
 let error_handler = typename:string ->
                     fieldname:string ->
                     error_reason:string ->
@@ -238,17 +239,6 @@ let validate_with_success_action name v1 a
   = validate_drop (validate_with_success_action' name v1 a)
 
 module P = Prelude
-
-let error_reason_of_result (code:U64.t) = 
-  match LPL.get_validator_error_kind code with
-  | 1uL -> "generic error"
-  | 2uL -> "not enough data"
-  | 3uL -> "impossible"
-  | 4uL -> "list size not multiple of element size"
-  | 5uL -> "action failed"
-  | 6uL -> "constraint failed"
-  | 7uL -> "unexpected padding"
-  | _ -> "unspecified"
   
 
 inline_for_extraction noextract
@@ -273,7 +263,7 @@ let validate_with_error_handler (typename:string)
     if LPL.is_success pos1
     then pos1
     else (
-         err typename fieldname (error_reason_of_result pos1) ctxt input startPosition pos1;
+         err typename fieldname (ResultOps.error_reason_of_result pos1) ctxt input startPosition pos1;
          pos1
     )
 

@@ -66,6 +66,7 @@ val action
       (a:Type)
     : Type0
 
+inline_for_extraction
 val error_handler : Type0
 
 inline_for_extraction
