@@ -438,7 +438,7 @@ let validate_dep_pair
 
 #pop-options
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action'
