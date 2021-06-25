@@ -253,6 +253,14 @@ let is_null x =
   intro_vp_or_null x;
   SEA.return res
 
+let change_slprop_emp
+ (#opened:_) (q:SE.vprop)
+  (l:(m:S.mem) -> Lemma
+    (requires S.interp (SE.hp_of SE.emp) m)
+    (ensures S.interp (SE.hp_of q) m)
+  ) : SEA.SteelGhostT unit opened SE.emp (fun _ -> q)
+= SEA.change_slprop_rel SE.emp q (fun _ _ -> True) (fun m -> l m)
+
 let make
   x len
 =
@@ -263,7 +271,7 @@ let make
     intro_vp_or_null_none null;
     SEA.change_equal_slprop
       (AP.varrayptr x)
-      (if g_is_null null then AP.varrayptr x else SE.emp);
+      (make_vprop_post x null);
     SEA.return null
   end else begin
     P.assert_not_null plen _;
@@ -284,7 +292,7 @@ let make
     intro_vp_or_null_some res;
     SEA.change_equal_slprop
       SE.emp
-      (if g_is_null res then AP.varrayptr x else SE.emp);
+      (make_vprop_post x res);
     SEA.return res
   end
 

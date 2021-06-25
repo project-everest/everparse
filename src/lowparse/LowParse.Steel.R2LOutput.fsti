@@ -138,23 +138,32 @@ val is_null
       res == g_is_null x
     )
 
+let make_vprop_post
+  (x: AP.t byte)
+  (res: t)
+: Tot SE.vprop
+= 
+  if g_is_null res then AP.varrayptr x else SE.emp
+
 val make
   (x: AP.t byte)
   (len: U32.t)
 : SE.Steel t
     (AP.varrayptr x)
-    (fun res -> vp_or_null res `SE.star` (if g_is_null res then AP.varrayptr x else SE.emp))
+    (fun res -> vp_or_null res `SE.star` make_vprop_post x res)
     (fun h ->
       (h (AP.varrayptr x)).AP.perm == SP.full_perm /\
       A.length (h (AP.varrayptr x)).AP.array == U32.v len
     )
     (fun h res h' ->
-      match g_is_null res, h' (vp_or_null res) with
-      | true, None -> h' (AP.varrayptr x) == h (AP.varrayptr x)
-      | false, Some c ->
-        c == (h (AP.varrayptr x)).AP.array /\
-        A.length c == U32.v len
-      | _ -> False
+      let s = h' (vp_or_null res) in
+      g_is_null res == None? s /\
+      (g_is_null res == true ==> h' (AP.varrayptr x) == h (AP.varrayptr x)) /\
+      (g_is_null res == false ==> (
+        Some? s /\
+        (Some?.v s) == (h (AP.varrayptr x)).AP.array /\
+        A.length (Some?.v s) == U32.v len
+      ))
     )
 
 let alloc
@@ -180,6 +189,8 @@ let alloc
     SEA.return null
   end else begin
     AP.elim_varrayptr_or_null_some x;
+    let g : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr x) in
+    assert (g.AP.perm == Steel.FractionalPermission.full_perm);
     let res = make x len in
     if is_null res
     then begin
