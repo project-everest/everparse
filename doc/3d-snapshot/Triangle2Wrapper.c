@@ -1,22 +1,22 @@
 #include "Triangle2Wrapper.h"
 #include "EverParse.h"
 #include "Triangle2.h"
-void Triangle2EverParseError(char *StructName, char *FieldName, char *Reason);
+void Triangle2EverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 typedef struct _ErrorFrame
 {
 	BOOLEAN filled;
 	uint32_t start_pos;
 	uint32_t end_pos;
-	char *typename;
-	char *fieldname;
-	char *reason;
+	const char *typename;
+	const char *fieldname;
+	const char *reason;
 } ErrorFrame;
 
 void DefaultErrorHandler(
-	EverParseString typename,
-	EverParseString fieldname,
-	EverParseString reason,
+	const char *typename,
+	const char *fieldname,
+	const char *reason,
 	uint8_t *context,
 	uint32_t len,
 	uint8_t *base,

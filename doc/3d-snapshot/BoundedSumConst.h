@@ -10,7 +10,7 @@ extern "C" {
 #include "EverParse.h"
 
 
-#include "Lib.h"
+
 
 /*
  The following will fail because of integer overflow

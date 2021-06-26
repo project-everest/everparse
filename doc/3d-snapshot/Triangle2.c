@@ -2,6 +2,8 @@
 
 #include "Triangle2.h"
 
+typedef uint8_t *Dtuple2_uint8T___;
+
 static inline uint64_t
 ValidateTriangleCorners(
   uint8_t *Ctxt,

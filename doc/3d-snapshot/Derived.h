@@ -11,7 +11,6 @@ extern "C" {
 
 
 #include "Base.h"
-#include "Lib.h"
 
 uint64_t
 DerivedValidateTriple(
