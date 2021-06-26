@@ -67,9 +67,6 @@ val action
     : Type0
 
 inline_for_extraction
-val error_handler : Type0
-
-inline_for_extraction
 val validate_with_action_t
       (#nz:bool)
       (#wk: _)
