@@ -989,15 +989,15 @@ let print_c_entry (modul: string)
              BOOLEAN filled;\n\t\
              uint32_t start_pos;\n\t\
              uint32_t end_pos;\n\t\
-             char *typename;\n\t\
-             char *fieldname;\n\t\
-             char *reason;\n\
+             const char *typename;\n\t\
+             const char *fieldname;\n\t\
+             const char *reason;\n\
           } ErrorFrame;\n\
           \n\
           void DefaultErrorHandler(\n\t\
-                              EverParseString typename,\n\t\
-                              EverParseString fieldname,\n\t\
-                              EverParseString reason,\n\t\
+                              const char *typename,\n\t\
+                              const char *fieldname,\n\t\
+                              const char *reason,\n\t\
                               uint8_t *context,\n\t\
                               uint32_t len,\n\t\
                               uint8_t *base,\n\t\
@@ -1112,7 +1112,7 @@ let print_c_entry (modul: string)
       (signatures |> String.concat "\n\n")
   in
   let error_callback_proto =
-    Printf.sprintf "void %sEverParseError(char *StructName, char *FieldName, char *Reason);"
+    Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
       modul
   in
   let impl =
