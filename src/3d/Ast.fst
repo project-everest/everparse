@@ -27,7 +27,6 @@ type either a b =
   | Inr of b
 
 /// pos: Source locations
-[@@ PpxDerivingYoJson ]
 type pos = {
   filename: string;
   line:int;
@@ -78,11 +77,9 @@ let string_of_pos p =
   Printf.sprintf "%s:(%d,%d)" p.filename p.line p.col
 
 /// range: A source extent
-[@@ PpxDerivingYoJson ]
 let range = pos * pos
 
 /// comment: A list of line comments, i.e., a list of strings
-[@@ PpxDerivingYoJson ]
 let comments = list string
 
 let string_of_range r =
