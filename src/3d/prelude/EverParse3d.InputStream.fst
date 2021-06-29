@@ -95,6 +95,48 @@ class input_stream_inst (t: Type) : Type = {
       U32.v res == Seq.length (get_read x h)
     ));
 
+  is_prefix_of:
+    (x: t) ->
+    (y: t) ->
+    Tot prop;
+
+  get_suffix:
+    (x: t) ->
+    (y: t) ->
+    Ghost (Seq.seq U8.t)
+    (requires (x `is_prefix_of` y))
+    (ensures (fun _ -> True));
+
+  is_prefix_of_prop:
+    (x: t) ->
+    (y: t) ->
+    (h: HS.mem) ->
+    Lemma
+    (requires (
+      live x h /\
+      x `is_prefix_of` y
+    ))
+    (ensures (
+      live y h /\
+      get_read y h `Seq.equal` get_read x h /\
+      get_remaining y h `Seq.equal` (get_remaining x h `Seq.append` get_suffix x y)
+    ));
+
+  truncate:
+    (x: t) ->
+    (n: U32.t) ->
+    HST.Stack t
+    (requires (fun h ->
+      live x h /\
+      U32.v n <= Seq.length (get_remaining x h)
+    ))
+    (ensures (fun h res h' ->
+      B.modifies B.loc_none h h' /\
+      res `is_prefix_of` x /\
+      footprint res == footprint x /\
+      live res h' /\
+      Seq.length (get_remaining res h') == U32.v n
+    ));
 }
 
 let length_all #t (#_: input_stream_inst t) (x: t) : GTot nat = U32.v (len_all x)

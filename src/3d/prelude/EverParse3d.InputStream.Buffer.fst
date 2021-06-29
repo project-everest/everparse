@@ -7,14 +7,18 @@ type t = {
   buf: B.buffer U8.t;
   len: U32.t;
   pos: B.pointer U32.t;
+  g_all_buf: Ghost.erased (Seq.seq U8.t);
   g_all: Ghost.erased (Seq.seq U8.t);
   prf: squash (
-    len == B.len buf /\
-    Seq.length (Ghost.reveal g_all) == U32.v len /\
-    B.loc_disjoint (B.loc_buffer buf) (B.loc_buffer pos)
+    U32.v len <= B.length buf /\
+    Seq.length g_all == U32.v len /\
+    B.loc_disjoint (B.loc_buffer buf) (B.loc_buffer pos) /\
+    Seq.length g_all_buf == B.length buf /\
+    Ghost.reveal g_all == Seq.slice g_all_buf 0 (U32.v len)
   );
 }
 
+unfold
 let _live
   (x: t)
   (h: HS.mem)
@@ -22,8 +26,9 @@ let _live
 =
   B.live h x.buf /\
   B.live h x.pos /\
-  U32.v (B.deref h x.pos) <= B.length x.buf /\
-  B.as_seq h x.buf == Ghost.reveal x.g_all
+  U32.v (B.deref h x.pos) <= U32.v x.len /\
+  B.as_seq h x.buf == Ghost.reveal x.g_all_buf /\
+  Seq.slice (B.as_seq h x.buf) 0 (U32.v x.len) == Ghost.reveal x.g_all
 
 let _get_remaining
   (x: t)
@@ -46,16 +51,43 @@ let _get_read
   Seq.lemma_split x.g_all i;
   Seq.slice x.g_all 0 i
 
-let phi
-  (a b c: int)
+let _is_prefix_of
+  (x y: t)
+: Tot prop
+= x.buf == y.buf /\
+  U32.v x.len <= U32.v y.len /\
+  x.pos == y.pos /\
+  x.g_all_buf == y.g_all_buf /\
+  Ghost.reveal x.g_all == Seq.slice (Ghost.reveal y.g_all) 0 (U32.v x.len)
+
+let _get_suffix
+  (x y: t)
+: Ghost (Seq.seq U8.t)
+  (requires (x `_is_prefix_of` y))
+  (ensures (fun _ -> True))
+= Seq.slice (Ghost.reveal y.g_all) (U32.v x.len) (U32.v y.len)
+
+#push-options "--z3rlimit 32 --z3cliopt smt.arith.nl=false"
+#restart-solver
+
+let _is_prefix_of_prop
+  (x: t)
+  (y: t)
+  (h: HS.mem)
 : Lemma
-  (requires (a == b - c))
-  (ensures (c + a == b))
+  (requires (
+    _live x h /\
+    x `_is_prefix_of` y
+  ))
+  (ensures (
+      _live y h /\
+      _get_read y h `Seq.equal` _get_read x h /\
+      _get_remaining y h `Seq.equal` (_get_remaining x h `Seq.append` _get_suffix x y)
+  ))
 = ()
 
 open LowStar.BufferOps
 
-#push-options "--z3rlimit 16 --z3cliopt smt.arith.nl=false"
 #restart-solver
 
 let inst = {
@@ -91,32 +123,26 @@ let inst = {
   end;
   
   has = begin fun x n ->
-    let pos = !* x.pos in
-    n `U32.lte` (x.len `U32.sub` pos)
+    let currentPosition = !* x.pos in
+    n `U32.lte` (x.len `U32.sub` currentPosition)
   end;
 
   read = begin fun x n dst ->
     let h0 = HST.get () in
-    let pos = !* x.pos in
-    B.blit x.buf pos dst 0ul n;
-    x.pos *= pos `U32.add` n;
+    let currentPosition = !* x.pos in
+    B.blit x.buf currentPosition dst 0ul n;
+    x.pos *= currentPosition `U32.add` n;
     let h' = HST.get () in
-    assert (B.deref h' x.pos == pos `U32.add` n);
-    Seq.slice_length (B.as_seq h' dst);
-    Seq.slice_slice (B.as_seq h0 x.buf) (U32.v pos) (U32.v x.len) 0 (U32.v n);
-    Seq.slice_slice (B.as_seq h0 x.buf) (U32.v pos) (B.length x.buf) (U32.v n) (Seq.length (_get_remaining x h0));
-    phi (Seq.length (_get_remaining x h0)) (B.length x.buf) (U32.v pos);
+    assert (B.deref h' x.pos == currentPosition `U32.add` n);
     ()
   end;
 
   skip = begin fun x n ->
     let h0 = HST.get () in
-    let pos = !* x.pos in
-    x.pos *= pos `U32.add` n;
+    let currentPosition = !* x.pos in
+    x.pos *= currentPosition `U32.add` n;
     let h' = HST.get () in
-    assert (B.deref h' x.pos == pos `U32.add` n);
-    Seq.slice_slice (B.as_seq h0 x.buf) (U32.v pos) (B.length x.buf) (U32.v n) (Seq.length (_get_remaining x h0));
-    phi (Seq.length (_get_remaining x h0)) (B.length x.buf) (U32.v pos);
+    assert (B.deref h' x.pos == currentPosition `U32.add` n);
     ()
   end;
 
@@ -124,7 +150,26 @@ let inst = {
     !* x.pos
   end;
 
+  is_prefix_of = _is_prefix_of;
+
+  get_suffix = _get_suffix;
+
+  is_prefix_of_prop = _is_prefix_of_prop;
+
+  truncate = begin fun x n ->
+    let currentPosition = !* x.pos in
+    {
+      buf = x.buf;
+      len = currentPosition `U32.add` n;
+      pos = x.pos;
+      g_all = Ghost.hide (Seq.slice (Ghost.reveal x.g_all) 0 (U32.v currentPosition + U32.v n));
+      g_all_buf = x.g_all_buf;
+      prf = ();
+    }
+  end;
 }
+
+#pop-options
 
 let make from n =
   let h = HST.get () in
@@ -135,5 +180,6 @@ let make from n =
     len = n;
     pos = pos;
     g_all = g;
+    g_all_buf = g;
     prf = ();
   }
