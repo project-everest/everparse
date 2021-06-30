@@ -4,11 +4,14 @@ friend Prelude
 module LPE = LowParse.Low.ErrorCode
 open FStar.Tactics.Typeclasses
 
+(* TODO: use an interface, and implementations under subdirectories, and do the include dir trick *)
+inline_for_extraction
+noextract
+let input_buffer_t = EverParse3d.InputStream.Buffer.t
+
 let action
   p inv l on_success a
 =
-    (#input_buffer_t: Type0) ->
-    (#[tcresolve ()]_: I.input_stream_inst input_buffer_t) ->
     sl: Ghost.erased input_buffer_t ->
     Stack a
       (requires fun h ->
@@ -80,8 +83,6 @@ let valid
   Some? (LP.parse p (I.get_remaining sl h))
 
 let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
-  (#input_buffer_t: Type0) ->
-  (# [tcresolve ()] inst : I.input_stream_inst input_buffer_t) ->
   (sl: input_buffer_t) ->
   Stack U64.t
   (requires fun h ->
@@ -127,8 +128,6 @@ let leaf_reader
   (p: parser k t)
 : Tot Type
 =
-  (#input_buffer_t: Type) ->
-  (# [tcresolve ()] inst : I.input_stream_inst input_buffer_t) ->
   (sl: input_buffer_t) ->
   Stack t
   (requires (fun h ->
@@ -713,8 +712,6 @@ module LPLL = LowParse.Spec.List
 
 unfold
 let validate_list_inv
-  (#input_buffer_t: Type)
-  (#[tcresolve ()] inst: I.input_stream_inst input_buffer_t)
   (#k: LPL.parser_kind)
   (#t: Type)
   (p: LPL.parser k t)
@@ -755,8 +752,6 @@ let validate_list_inv
 inline_for_extraction
 noextract
 let validate_list_body
-  (#input_buffer_t: Type)
-  (#[tcresolve ()] inst: I.input_stream_inst input_buffer_t)
   (#k:LP.parser_kind)
   #t
   (#p:LP.parser k t)
@@ -787,8 +782,6 @@ let validate_list_body
 inline_for_extraction
 noextract
 let validate_list'
-  (#input_buffer_t: Type)
-  (#[tcresolve ()] inst: I.input_stream_inst input_buffer_t)
   (#k:LP.parser_kind)
   #t
   (#p:LP.parser k t)
@@ -842,6 +835,5 @@ let validate_list
 : Tot (validate_with_action_t' (LowParse.Spec.List.parse_list p) inv l false)
 = fun input ->
   validate_list' v input
-
 
 #pop-options

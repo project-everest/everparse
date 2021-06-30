@@ -61,7 +61,7 @@ val action
       (l:eloc)
       (on_success:bool)
       (a:Type)
-    : Type u#1
+    : Type u#0
 
 inline_for_extraction noextract
 val validate_with_action_t
@@ -73,7 +73,7 @@ val validate_with_action_t
       (inv:slice_inv)
       (l:eloc)
       (allow_reading:bool)
-    : Type u#1
+    : Type u#0
 
 inline_for_extraction noextract
 val validate_eta
@@ -109,7 +109,7 @@ val leaf_reader
       (#k: parser_kind nz WeakKindStrongPrefix)
       (#t: Type)
       (p: parser k t)
- : Type u#1
+ : Type u#0
 
 inline_for_extraction noextract
 val validate_with_success_action
