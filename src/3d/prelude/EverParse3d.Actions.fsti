@@ -456,19 +456,11 @@ val action_abort
       (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
   : action p true_inv eloc_none false bool
 
-(*
 noextract
 inline_for_extraction
 val action_field_pos
       (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
    : action p true_inv eloc_none false U32.t
-
-noextract
-inline_for_extraction
-val action_field_ptr
-      (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
-   : action p true_inv eloc_none true LPL.puint8
-*)
 
 noextract
 inline_for_extraction

@@ -12,19 +12,19 @@ let input_buffer_t = EverParse3d.InputStream.Buffer.t
 let action
   p inv l on_success a
 =
-    sl: Ghost.erased input_buffer_t ->
+    sl: input_buffer_t ->
     Stack a
       (requires fun h ->
-        I.live (Ghost.reveal sl) h /\
-        inv (I.footprint (Ghost.reveal sl)) h /\
+        I.live sl h /\
+        inv (I.footprint sl) h /\
         loc_not_unused_in h `loc_includes` l /\
         address_liveness_insensitive_locs `loc_includes` l /\
-        l `loc_disjoint` I.footprint (Ghost.reveal sl)
+        l `loc_disjoint` I.footprint sl
       )
       (ensures fun h0 _ h1 ->
         modifies l h0 h1 /\
         h1 `extends` h0 /\
-        inv (I.footprint (Ghost.reveal sl)) h1)
+        inv (I.footprint sl) h1)
 
 module LP = LowParse.Spec.Base
 module LPL = LowParse.Low.Base
@@ -46,7 +46,7 @@ let valid_consumed
     let s = I.get_remaining sl h in
     begin match LP.parse p s with
     | None -> False
-    | Some (_, len) -> I.get_remaining sl h' == Seq.slice s len (Seq.length s)
+    | Some (_, len) -> I.get_remaining sl h' `Seq.equal` Seq.slice s len (Seq.length s)
     end
   end
 
@@ -835,5 +835,598 @@ let validate_list
 : Tot (validate_with_action_t' (LowParse.Spec.List.parse_list p) inv l false)
 = fun input ->
   validate_list' v input
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+module LPLF = LowParse.Low.FLData
+
+noextract
+inline_for_extraction
+let validate_fldata_consumes_all
+  (n:U32.t)
+  (#k: LP.parser_kind)
+  #t
+  (#p: LP.parser k t)
+  #inv #l #ar
+  (v: validate_with_action_t' p inv l ar  { k.LP.parser_kind_subkind == Some LP.ParserConsumesAll })
+: Tot (validate_with_action_t' (LowParse.Spec.FLData.parse_fldata p (U32.v n)) inv l false)
+= fun input ->
+  let h = HST.get () in
+  LPLF.parse_fldata_consumes_all_correct p (U32.v n) (I.get_remaining input h);
+  let hasEnoughBytes = I.has input n in
+  let h1 = HST.get () in
+  modifies_address_liveness_insensitive_unused_in h h1;
+  assert (h1 `extends` h);
+  if not hasEnoughBytes
+  then LPL.validator_error_not_enough_data
+  else begin
+    let truncatedInput = I.truncate input n in
+    let h2 = HST.get () in
+    modifies_address_liveness_insensitive_unused_in h h2;
+    assert (h2 `extends` h);
+    I.is_prefix_of_prop truncatedInput input h2;
+    assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n));
+    let res = validate_drop v truncatedInput in
+    let h3 = HST.get () in
+    I.is_prefix_of_prop truncatedInput input h3;
+    res
+  end
+#pop-options
+
+noextract
+inline_for_extraction
+let validate_fldata
+  (n:U32.t)
+  (#k: LP.parser_kind)
+  #t
+  (#p: LP.parser k t)
+  #inv #l #ar
+  (v: validate_with_action_t' p inv l ar)
+: Tot (validate_with_action_t' (LowParse.Spec.FLData.parse_fldata p (U32.v n)) inv l false)
+= fun input ->
+  let h = HST.get () in
+  let hasEnoughBytes = I.has input n in
+  let h1 = HST.get () in
+  modifies_address_liveness_insensitive_unused_in h h1;
+  assert (h1 `extends` h);
+  if not hasEnoughBytes
+  then LPL.validator_error_not_enough_data
+  else begin
+    let truncatedInput = I.truncate input n in
+    let h2 = HST.get () in
+    modifies_address_liveness_insensitive_unused_in h h2;
+    assert (h2 `extends` h);
+    I.is_prefix_of_prop truncatedInput input h2;
+    assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n));
+    let res = validate_drop v truncatedInput in
+    let h3 = HST.get () in
+    I.is_prefix_of_prop truncatedInput input h3;
+    if LPE.is_error res
+    then res
+    else begin
+      let stillHasBytes = I.has truncatedInput 1ul in
+      let h4 = HST.get () in
+      modifies_address_liveness_insensitive_unused_in h h4;
+      assert (h4 `extends` h);
+      if stillHasBytes
+      then ResultOps.validator_error_unexpected_padding
+      else res
+    end
+  end
+
+noextract
+inline_for_extraction
+let validate_nlist
+  (n:U32.t)
+  #wk
+  (#k:parser_kind true wk)
+  #t
+  (#p:parser k t)
+  #inv #l #ar
+  (v: validate_with_action_t p inv l ar)
+: Tot (validate_with_action_t (parse_nlist n p) inv l false)
+= validate_weaken
+    #false #WeakKindStrongPrefix #(LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) #(list t)
+    (validate_fldata_consumes_all n (validate_list v))
+    kind_nlist
+
+inline_for_extraction
+noextract
+let validate_total_constant_size_no_read'
+  (#k: LP.parser_kind)
+  (#t: Type)
+  (p: LP.parser k t)
+  (sz: U32.t)
+  (u: unit {
+    k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+    k.LP.parser_kind_low == U32.v sz /\
+    k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
+  })
+  inv l
+: Tot (validate_with_action_t' p inv l true)
+= fun input ->
+  let h = HST.get () in
+  LP.parser_kind_prop_equiv k p; 
+  let hasBytes = I.has input sz in
+  let h2 = HST.get () in
+  modifies_address_liveness_insensitive_unused_in h h2;
+  assert (h2 `extends` h);
+  if hasBytes
+  then Cast.uint32_to_uint64 sz
+  else LPE.validator_error_not_enough_data
+
+inline_for_extraction
+noextract
+let validate_total_constant_size_no_read
+  #nz #wk
+  (#k: parser_kind nz wk)
+  (#t: Type)
+  (p: parser k t)
+  (sz: U32.t)
+  (u: unit {
+    k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+    k.LP.parser_kind_low == U32.v sz /\
+    k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
+  })
+  inv l
+: Tot (validate_with_action_t p inv l true)
+= validate_total_constant_size_no_read' p sz u inv l
+
+inline_for_extraction noextract
+let validate_nlist_total_constant_size_mod_ok (n:U32.t) #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t) inv l
+  : Pure (validate_with_action_t (parse_nlist n p) inv l true)
+  (requires (
+    let open LP in
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal /\
+    k.parser_kind_low < 4294967296 /\
+    U32.v n % k.LP.parser_kind_low == 0
+  ))
+  (ensures (fun _ -> True))
+= [@inline_let]
+  let _ =
+    parse_nlist_total_fixed_size_kind_correct n p
+  in
+  validate_total_constant_size_no_read' (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) n () inv l
+
+inline_for_extraction noextract
+let validate_nlist_constant_size_mod_ko (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t) inv l
+  : Pure (validate_with_action_t (parse_nlist n p) inv l true)
+  (requires (
+    let open LP in
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    U32.v n % k.LP.parser_kind_low <> 0
+  ))
+  (ensures (fun _ -> True))
+= 
+  (fun input ->
+     let h = FStar.HyperStack.ST.get () in
+     [@inline_let]
+     let f () : Lemma
+       (requires (Some? (LP.parse (parse_nlist n p) (I.get_remaining input h))))
+       (ensures False)
+     = let sq = I.get_remaining input h in
+       let sq' = Seq.slice sq 0 (U32.v n) in
+       LowParse.Spec.List.list_length_constant_size_parser_correct p sq' ;
+       let Some (l, _) = LP.parse (parse_nlist n p) sq in
+       assert (U32.v n == FStar.List.Tot.length l `Prims.op_Multiply` k.LP.parser_kind_low) ;
+       FStar.Math.Lemmas.cancel_mul_mod (FStar.List.Tot.length l) k.LP.parser_kind_low ;
+       assert (U32.v n % k.LP.parser_kind_low == 0)
+     in
+     [@inline_let]
+     let _ = Classical.move_requires f () in
+     validator_error_list_size_not_multiple
+  )
+
+inline_for_extraction noextract
+let validate_nlist_total_constant_size' (n:U32.t) #wk (#k:parser_kind true wk) #t (p:parser k t) inv l
+  : Pure (validate_with_action_t (parse_nlist n p) inv l true)
+  (requires (
+    let open LP in
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal /\
+    k.parser_kind_low < 4294967296
+  ))
+  (ensures (fun _ -> True))
+= fun input -> // n is not an integer constant, so we need to eta-expand and swap fun and if
+  if n `U32.rem` U32.uint_to_t k.LP.parser_kind_low = 0ul
+  then validate_nlist_total_constant_size_mod_ok n p inv l input
+  else validate_nlist_constant_size_mod_ko n p inv l input
+
+inline_for_extraction noextract
+let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t) inv l
+: Pure (validate_with_action_t (parse_nlist n p) inv l true)
+  (requires (
+    let open LP in
+    k.parser_kind_subkind = Some ParserStrong /\
+    k.parser_kind_high = Some k.parser_kind_low /\
+    k.parser_kind_metadata = Some ParserKindMetadataTotal /\
+    k.parser_kind_low < 4294967296
+  ))
+  (ensures (fun _ -> True))
+=
+  if
+    if k.LP.parser_kind_low = 1
+    then true
+    else if n_is_const
+    then U32.v n % k.LP.parser_kind_low = 0
+    else false
+  then
+    validate_nlist_total_constant_size_mod_ok n p inv l
+  else if
+    if n_is_const
+    then U32.v n % k.LP.parser_kind_low <> 0
+    else false
+  then
+    validate_nlist_constant_size_mod_ko n p inv l
+  else
+    validate_nlist_total_constant_size' n p inv l
+
+noextract
+inline_for_extraction
+let validate_nlist_constant_size_without_actions
+  (n_is_const: bool)
+  (n:U32.t)
+  #wk
+  (#k:parser_kind true wk)
+  #t (#p:parser k t) #inv #l #ar
+  (v: validate_with_action_t p inv l ar)
+: Tot (validate_with_action_t (parse_nlist n p) inv l false)
+= 
+  if
+    let open LP in
+    k.parser_kind_subkind = Some ParserStrong &&
+    k.parser_kind_high = Some k.parser_kind_low &&
+    k.parser_kind_metadata = Some ParserKindMetadataTotal &&
+    k.parser_kind_low < 4294967296
+  then
+    validate_drop (validate_nlist_total_constant_size n_is_const n p inv l)
+  else
+    validate_nlist n v
+
+noextract inline_for_extraction
+let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
+                       (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
+  : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
+  = fun input ->
+    let h = HST.get () in
+    let hasBytes = I.has input n in
+    let h1 = HST.get () in
+    modifies_address_liveness_insensitive_unused_in h h1;
+    assert (h1 `extends` h);
+    if not hasBytes
+    then
+      LPL.validator_error_not_enough_data
+    else
+      let positionBeforePayload = I.get_read_count input in
+      let truncatedInput = I.truncate input n in
+      let h2 = HST.get () in
+      let _ = modifies_address_liveness_insensitive_unused_in h h2 in
+      let _ = assert (h2 `extends` h) in
+      let _ = I.is_prefix_of_prop truncatedInput input h2 in
+      let _ = assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n)) in
+      [@inline_let] let _ = LPC.nondep_then_eq p parse_all_bytes (I.get_remaining truncatedInput h2) in
+      let result = validate_drop v truncatedInput in
+      let h3 = HST.get () in
+      let _ = I.is_prefix_of_prop truncatedInput input h3 in
+      if LPE.is_error result
+      then result
+      else begin
+        let positionAfterPayload = I.get_read_count input in
+        I.skip input (n `U32.sub` (positionAfterPayload `U32.sub` positionBeforePayload));
+        let h4 = HST.get () in
+        modifies_address_liveness_insensitive_unused_in h h4;
+        assert (h4 `extends` h);
+        result
+      end
+
+noextract inline_for_extraction
+let validate_t_exact (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
+                       (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
+  : Tot (validate_with_action_t (parse_t_exact n p) inv l false)
+  = fun input ->
+    let h = HST.get () in
+    let hasBytes = I.has input n in
+    let h1 = HST.get () in
+    modifies_address_liveness_insensitive_unused_in h h1;
+    assert (h1 `extends` h);
+    if not hasBytes
+    then
+      LPL.validator_error_not_enough_data
+    else
+      let truncatedInput = I.truncate input n in
+      let h2 = HST.get () in
+      let _ = modifies_address_liveness_insensitive_unused_in h h2 in
+      let _ = assert (h2 `extends` h) in
+      let _ = I.is_prefix_of_prop truncatedInput input h2 in
+      let _ = assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n)) in
+      [@inline_let] let _ = LPC.nondep_then_eq p parse_all_bytes (I.get_remaining truncatedInput h2) in
+      let result = validate_drop v truncatedInput in
+      let h3 = HST.get () in
+      let _ = I.is_prefix_of_prop truncatedInput input h3 in
+      if LPE.is_error result
+      then result
+      else begin
+        let stillHasBytes = I.has truncatedInput 1ul in
+        let h4 = HST.get () in
+        modifies_address_liveness_insensitive_unused_in h h4;
+        assert (h4 `extends` h);
+        I.is_prefix_of_prop truncatedInput input h4;
+        if stillHasBytes
+        then ResultOps.validator_error_unexpected_padding
+        else result
+      end
+
+inline_for_extraction noextract
+let validate_with_comment (c:string)
+                          #nz #wk (#k:parser_kind nz wk) #t (#p:parser k t)
+                          #inv #l #ar (v:validate_with_action_t p inv l ar)
+  : validate_with_action_t p inv l ar
+  = fun input ->
+    LowParse.Low.Base.comment c;
+    v input
+
+inline_for_extraction noextract
+let validate_weaken_inv_loc #nz #wk (#k:parser_kind nz wk) #t (#p:parser k t)
+                            #inv (#l:eloc) #ar
+                            (inv':slice_inv{inv' `inv_implies` inv}) (l':eloc{l' `eloc_includes` l})
+                            (v:validate_with_action_t p inv l ar)
+  : Tot (validate_with_action_t p inv' l' ar)
+  = v
+
+
+////////////////////////////////////////////////////////////////////////////////
+//Base types
+////////////////////////////////////////////////////////////////////////////////
+inline_for_extraction noextract
+let read_filter #nz
+                (#k: parser_kind nz WeakKindStrongPrefix)
+                (#t: Type)
+                (#p: parser k t)
+                (p32: leaf_reader p)
+                (f: (t -> bool))
+    : leaf_reader (parse_filter p f)
+    = fun input ->
+        let h = HST.get () in
+        assert (parse_filter p f == LPC.parse_filter #k #t p f);
+        assert_norm (Prelude.refine t f == LPC.parse_filter_refine f);
+        LPC.parse_filter_eq p f (I.get_remaining input h);
+        p32 input
+
+inline_for_extraction noextract
+let validate____UINT8
+  : validator parse____UINT8
+  = validate_with_comment
+      "Checking that we have enough space for a UINT8, i.e., 1 byte"
+      (validate_total_constant_size_no_read parse____UINT8 1ul () _ _)
+
+inline_for_extraction noextract
+let read____UINT8
+  : leaf_reader parse____UINT8
+= admit ()
+
+inline_for_extraction noextract
+let validate____UINT16BE
+  : validator parse____UINT16BE
+  = validate_with_comment
+      "Checking that we have enough space for a UINT16BE, i.e., 2 bytes"
+      (validate_total_constant_size_no_read parse____UINT16BE 2ul () _ _)
+
+inline_for_extraction noextract
+let read____UINT16BE
+  : leaf_reader parse____UINT16BE
+= admit ()
+
+inline_for_extraction noextract
+let validate____UINT32BE
+  : validator parse____UINT32BE
+  = validate_with_comment
+      "Checking that we have enough space for a UINT32BE, i.e., 4 bytes"
+      (validate_total_constant_size_no_read parse____UINT32BE 4ul () _ _)
+
+inline_for_extraction noextract
+let read____UINT32BE
+  : leaf_reader parse____UINT32BE
+= admit ()
+
+inline_for_extraction noextract
+let validate____UINT64BE
+  : validator parse____UINT64BE
+  = validate_with_comment
+      "Checking that we have enough space for a UINT64BE, i.e., 8 bytes"
+      (validate_total_constant_size_no_read parse____UINT64BE 8ul () _ _)
+
+inline_for_extraction noextract
+let read____UINT64BE
+  : leaf_reader parse____UINT64BE
+= admit ()
+
+
+inline_for_extraction noextract
+let validate____UINT16
+  : validator parse____UINT16
+  = validate_with_comment
+      "Checking that we have enough space for a UINT16, i.e., 2 bytes"
+      (validate_total_constant_size_no_read parse____UINT16 2ul () _ _)
+
+inline_for_extraction noextract
+let read____UINT16
+  : leaf_reader parse____UINT16
+= admit ()
+
+inline_for_extraction noextract
+let validate____UINT32
+  : validator parse____UINT32
+  = validate_with_comment
+      "Checking that we have enough space for a UINT32, i.e., 4 bytes"
+      (validate_total_constant_size_no_read parse____UINT32 4ul () _ _)
+
+inline_for_extraction noextract
+let read____UINT32
+  : leaf_reader parse____UINT32
+= admit ()
+
+inline_for_extraction noextract
+let validate____UINT64
+  : validator parse____UINT64
+  = validate_with_comment
+      "Checking that we have enough space for a UINT64, i.e., 8 bytes"
+      (validate_total_constant_size_no_read parse____UINT64 8ul () _ _)
+
+inline_for_extraction noextract
+let read____UINT64
+  : leaf_reader parse____UINT64
+= admit ()
+
+inline_for_extraction noextract
+let validate_unit
+= fun input -> 0uL
+
+inline_for_extraction noextract
+let read_unit
+= fun input -> ()
+
+inline_for_extraction noextract
+let validate_unit_refinement (f:unit -> bool) (cf:string)
+  : validator (parse_unit `parse_filter` f)
+= fun input ->
+    let h = HST.get () in
+    LPC.parse_filter_eq parse_unit f (I.get_remaining input h);
+    LowStar.Comment.comment cf;
+    if f ()
+    then 0uL
+    else ResultOps.validator_error_constraint_failed
+
+let validate_string = admit ()
+
+(* TODO: how do I empty an input stream? *)
+let validate_all_bytes = admit ()
+let validate_all_zeros = admit ()
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+noextract
+inline_for_extraction
+let action_return
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+      (#a:Type) (x:a)
+  : action p true_inv eloc_none false a
+  = fun input -> x
+
+noextract
+inline_for_extraction
+let action_bind
+      (name: string)
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+      (#invf:slice_inv) (#lf:eloc)
+      #bf (#a:Type) (f: action p invf lf bf a)
+      (#invg:slice_inv) (#lg:eloc) #bg
+      (#b:Type) (g: (a -> action p invg lg bg b))
+  : Tot (action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
+  = fun input ->
+    let h0 = HST.get () in
+    [@(rename_let ("" ^ name))]
+    let x = f input in
+    let h1 = HST.get () in
+    modifies_address_liveness_insensitive_unused_in h0 h1;
+    g x input
+
+noextract
+inline_for_extraction
+let action_seq
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+      (#invf:slice_inv) (#lf:eloc)
+      #bf (#a:Type) (f: action p invf lf bf a)
+      (#invg:slice_inv) (#lg:eloc) #bg
+      (#b:Type) (g: action p invg lg bg b)
+  : Tot (action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
+  = fun input ->
+    let h0 = HST.get () in
+    let _ = f input in
+    let h1 = HST.get () in
+    modifies_address_liveness_insensitive_unused_in h0 h1;
+    g input
+
+noextract
+inline_for_extraction
+let action_ite
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+      (#invf:slice_inv) (#lf:eloc)
+      (guard:bool)
+      #bf (#a:Type) (then_: squash guard -> action p invf lf bf a)
+      (#invg:slice_inv) (#lg:eloc) #bg
+      (else_: squash (not guard) -> action p invg lg bg a)
+  : action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) a
+  = fun input ->
+      if guard 
+      then then_ () input
+      else else_ () input
+
+noextract
+inline_for_extraction
+let action_abort
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+  : action p true_inv eloc_none false bool
+  = fun input -> false
+
+noextract
+inline_for_extraction
+let action_field_pos
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
+   : action p true_inv eloc_none false U32.t
+   = fun input -> I.get_read_count input
+
+(* FIXME: this is now unsound in general (only valid for flat buffer)
+noextract
+inline_for_extraction
+let action_field_ptr
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
+   : action p true_inv eloc_none true LPL.puint8
+   = fun input startPosition _ ->
+       let open LowParse.Slice in
+       LPL.offset input (LPL.uint64_to_uint32 startPosition)
+*)
+
+noextract
+inline_for_extraction
+let action_deref
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+      (#a:_) (x:B.pointer a)
+   : action p (ptr_inv x) loc_none false a
+   = fun _ -> !*x
+
+noextract
+inline_for_extraction
+let action_assignment
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+      (#a:_) (x:B.pointer a) (v:a)
+   : action p (ptr_inv x) (ptr_loc x) false unit
+   = fun _ -> x *= v
+
+(* FIXME: This is now unsound.
+noextract
+inline_for_extraction
+let action_read_value
+      #nz (#k:parser_kind nz) (#t:Type) (#p:parser k t)
+      (r:leaf_reader p)
+   : action p true_inv eloc_none true t
+   = fun input startPosition endPosition ->
+     r input (LPL.uint64_to_uint32 startPosition)
+*)
+
+noextract
+inline_for_extraction
+let action_weaken
+      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+      (#inv:slice_inv) (#l:eloc) (#b:_) (#a:_) (act:action p inv l b a)
+      (#inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
+   : action p inv' l' b a
+   = act
+
 
 #pop-options
