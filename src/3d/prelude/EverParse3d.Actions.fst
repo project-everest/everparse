@@ -1204,10 +1204,43 @@ let validate____UINT8
       "Checking that we have enough space for a UINT8, i.e., 1 byte"
       (validate_total_constant_size_no_read parse____UINT8 1ul () _ _)
 
+(* FIXME: Reading currently performs two copies, one from `read`, another from kremlib's implementations of load16_be, etc. *)
+
+inline_for_extraction noextract
+let lift_reader
+  (#nz: _)
+  (#k: parser_kind nz WeakKindStrongPrefix)
+  (#t: _)
+  (p: parser k t)
+  (r: LPL.leaf_reader p)
+  (sz: U32.t)
+: Pure (leaf_reader p)
+  (requires (
+    k.LP.parser_kind_subkind == Some LP.ParserStrong /\
+    k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+    k.LP.parser_kind_low = U32.v sz /\
+    U32.v sz > 0
+  ))
+  (ensures (fun _ -> True))
+= fun input ->
+  LP.parser_kind_prop_equiv k p;
+  let h0 = HST.get () in
+  HST.push_frame ();
+  let temp = B.alloca 0uy sz in
+  let h1 = HST.get () in
+  I.live_not_unused_in input h0;
+  I.read input sz temp;
+  let h2 = HST.get () in
+  LP.parse_strong_prefix p (I.get_remaining input h0) (B.as_seq h2 temp);
+  LPL.valid_facts p h2 (LPL.make_slice temp sz) 0ul;
+  let res = r (LPL.make_slice temp sz) 0ul in
+  HST.pop_frame ();
+  res
+
 inline_for_extraction noextract
 let read____UINT8
   : leaf_reader parse____UINT8
-= admit ()
+= lift_reader _ LowParse.Low.Int.read_u8 1ul
 
 inline_for_extraction noextract
 let validate____UINT16BE
@@ -1219,7 +1252,7 @@ let validate____UINT16BE
 inline_for_extraction noextract
 let read____UINT16BE
   : leaf_reader parse____UINT16BE
-= admit ()
+= lift_reader _ LowParse.Low.Int.read_u16 2ul
 
 inline_for_extraction noextract
 let validate____UINT32BE
@@ -1231,7 +1264,7 @@ let validate____UINT32BE
 inline_for_extraction noextract
 let read____UINT32BE
   : leaf_reader parse____UINT32BE
-= admit ()
+= lift_reader _ LowParse.Low.Int.read_u32 4ul
 
 inline_for_extraction noextract
 let validate____UINT64BE
@@ -1243,8 +1276,7 @@ let validate____UINT64BE
 inline_for_extraction noextract
 let read____UINT64BE
   : leaf_reader parse____UINT64BE
-= admit ()
-
+= lift_reader _ LowParse.Low.Int.read_u64 8ul
 
 inline_for_extraction noextract
 let validate____UINT16
@@ -1256,7 +1288,7 @@ let validate____UINT16
 inline_for_extraction noextract
 let read____UINT16
   : leaf_reader parse____UINT16
-= admit ()
+= lift_reader _ LowParse.Low.BoundedInt.read_u16_le 2ul
 
 inline_for_extraction noextract
 let validate____UINT32
@@ -1268,7 +1300,7 @@ let validate____UINT32
 inline_for_extraction noextract
 let read____UINT32
   : leaf_reader parse____UINT32
-= admit ()
+= lift_reader _ LowParse.Low.BoundedInt.read_u32_le 4ul
 
 inline_for_extraction noextract
 let validate____UINT64
@@ -1280,7 +1312,7 @@ let validate____UINT64
 inline_for_extraction noextract
 let read____UINT64
   : leaf_reader parse____UINT64
-= admit ()
+= lift_reader _ LowParse.Low.Int.read_u64_le 8ul
 
 inline_for_extraction noextract
 let validate_unit
@@ -1374,6 +1406,7 @@ let action_abort
   : action p true_inv eloc_none false bool
   = fun input -> false
 
+(* FIXME: this action now returns the position *after* validation, not before *)
 noextract
 inline_for_extraction
 let action_field_pos
