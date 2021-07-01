@@ -86,6 +86,7 @@ let valid
 = I.live sl h /\
   Some? (LP.parse p (I.get_remaining sl h))
 
+inline_for_extraction noextract
 let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
   (sl: input_buffer_t) ->
   Stack U64.t

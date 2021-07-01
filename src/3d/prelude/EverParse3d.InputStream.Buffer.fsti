@@ -8,6 +8,8 @@ module B = LowStar.Buffer
 
 open EverParse3d.InputStream
 
+inline_for_extraction
+noextract
 val t : Type0
 
 [@@ FStar.Tactics.Typeclasses.tcinstance]

@@ -1,22 +1,11 @@
 module EverParse3d.InputStream.Buffer
+open EverParse3d.InputStream.Buffer.Aux
 
 (* Implementation for single buffers *)
 
-noeq
-type t = {
-  buf: B.buffer U8.t;
-  len: U32.t;
-  pos: B.pointer U32.t;
-  g_all_buf: Ghost.erased (Seq.seq U8.t);
-  g_all: Ghost.erased (Seq.seq U8.t);
-  prf: squash (
-    U32.v len <= B.length buf /\
-    Seq.length g_all == U32.v len /\
-    B.loc_disjoint (B.loc_buffer buf) (B.loc_buffer pos) /\
-    Seq.length g_all_buf == B.length buf /\
-    Ghost.reveal g_all == Seq.slice g_all_buf 0 (U32.v len)
-  );
-}
+inline_for_extraction
+noextract
+let t = input_buffer
 
 unfold
 let _live
