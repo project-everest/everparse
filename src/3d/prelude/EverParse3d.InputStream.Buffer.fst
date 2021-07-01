@@ -146,6 +146,11 @@ let inst = {
     ()
   end;
 
+  empty = begin fun x ->
+    let h0 = HST.get () in
+    x.pos *= x.len
+  end;
+
   get_read_count = begin fun x ->
     !* x.pos
   end;

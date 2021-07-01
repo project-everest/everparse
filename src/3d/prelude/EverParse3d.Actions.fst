@@ -1102,7 +1102,6 @@ let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parse
     then
       LPL.validator_error_not_enough_data
     else
-      let positionBeforePayload = I.get_read_count input in
       let truncatedInput = I.truncate input n in
       let h2 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h2 in
@@ -1116,10 +1115,10 @@ let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parse
       if LPE.is_error result
       then result
       else begin
-        let positionAfterPayload = I.get_read_count input in
-        I.skip input (n `U32.sub` (positionAfterPayload `U32.sub` positionBeforePayload));
+        I.empty truncatedInput;
         let h4 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h h4;
+        let _ = I.is_prefix_of_prop truncatedInput input h4 in
         assert (h4 `extends` h);
         result
       end
@@ -1335,8 +1334,8 @@ let validate_unit_refinement (f:unit -> bool) (cf:string)
 
 let validate_string = admit ()
 
-(* TODO: how do I empty an input stream? *)
-let validate_all_bytes = admit ()
+let validate_all_bytes = fun input -> I.empty input; 0uL
+
 let validate_all_zeros = admit ()
 
 

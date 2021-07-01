@@ -92,6 +92,16 @@ class input_stream_inst (t: Type) : Type = {
       get_remaining x h' `Seq.equal` Seq.slice s (U32.v n) (Seq.length s)
     ));
 
+  empty:
+    (x: t) ->
+    HST.Stack unit
+    (requires (fun h -> live x h))
+    (ensures (fun h _ h' ->
+      B.modifies (footprint x) h h' /\
+      live x h' /\
+      get_remaining x h' `Seq.equal` Seq.empty
+    ));
+
   get_read_count:
     (x: t) ->
     HST.Stack U32.t
