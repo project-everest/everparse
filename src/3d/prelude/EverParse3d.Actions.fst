@@ -1376,11 +1376,121 @@ let validate_unit_refinement (f:unit -> bool) (cf:string)
     then 0uL
     else ResultOps.validator_error_constraint_failed
 
-let validate_string = admit ()
+
+(* Reimplement validate_list_up_to with readability (but no actions) *)
+
+module LUT = LowParse.Low.ListUpTo
+
+unfold
+let validate_list_up_to_inv
+  (#k: parser_kind true WeakKindStrongPrefix)
+  (#t: eqtype)
+  (p: parser k t)
+  (terminator: t)
+  (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
+  (sl: input_buffer_t)
+  (h0: HS.mem)
+  (bres: B.pointer U64.t)
+  (h: HS.mem)
+  (stop: bool)
+: GTot Type0
+=
+  let res = B.deref h bres in
+  let q = LUT.parse_list_up_to (cond_string_up_to terminator) p prf in
+  B.live h0 bres /\
+  I.live sl h0 /\
+  I.live sl h /\
+  B.loc_disjoint (I.footprint sl) (B.loc_buffer bres) /\
+  B.modifies (B.loc_buffer bres `B.loc_union` I.footprint sl) h0 h /\
+  begin
+    let s = I.get_remaining sl h0 in
+    let s' = I.get_remaining sl h in
+    Seq.length s' <= Seq.length s /\
+    s' `Seq.equal` Seq.slice s (Seq.length s - Seq.length s') (Seq.length s) /\
+    begin if LPL.is_error res
+    then
+      // validation *or action* failed
+      stop == true
+    else if stop
+    then valid_consumed q h0 h sl
+    else match LP.parse q s, LP.parse q s' with
+    | None, None -> True
+    | Some (_, consumed), Some (_, consumed') -> consumed' + Seq.length s - Seq.length s' == consumed
+    | _ -> False
+    end
+  end
+
+inline_for_extraction
+let validate_list_up_to_body
+  (#k: parser_kind true WeakKindStrongPrefix)
+  (#t: eqtype)
+  (#p: parser k t)
+  (terminator: t)
+  (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
+  (v: validator p)
+  (r: leaf_reader p)
+  (sl: input_buffer_t)
+  (h0: HS.mem)
+  (bres: B.pointer U64.t)
+: HST.Stack bool
+  (requires (fun h ->
+    validate_list_up_to_inv p terminator prf sl h0 bres h false
+  ))
+  (ensures (fun h stop h' ->
+    validate_list_up_to_inv p terminator prf sl h0 bres h false /\
+    validate_list_up_to_inv p terminator prf sl h0 bres h' stop
+  ))
+=
+  let h = HST.get () in
+  LUT.parse_list_up_to_eq (cond_string_up_to terminator) p prf (I.get_remaining sl h);
+  let result = v sl in
+  B.upd bres 0ul result;
+  if LPE.is_error result
+  then begin
+    true
+  end else begin
+    let value = r sl in
+    cond_string_up_to terminator value
+  end
+
+inline_for_extraction
+noextract
+let validate_list_up_to
+  (#k: parser_kind true WeakKindStrongPrefix)
+  (#t: eqtype)
+  (#p: parser k t)
+  (v: validator p)
+  (r: leaf_reader p)
+  (terminator: t)
+  (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
+: Tot (validate_with_action_t #true #WeakKindStrongPrefix (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) true_inv eloc_none false)
+=
+  fun sl ->
+  let h0 = HST.get () in
+  HST.push_frame ();
+  let h1 = HST.get () in
+  fresh_frame_modifies h0 h1;
+  let bres = B.alloca 0uL 1ul in
+  let h2 = HST.get () in
+  I.live_not_unused_in sl h0;
+  C.Loops.do_while
+    (validate_list_up_to_inv p terminator prf sl h2 bres)
+    (fun _ -> validate_list_up_to_body terminator prf v r sl h2 bres)
+    ;
+  let result = B.index bres 0ul in
+  HST.pop_frame ();
+  result
+
+let validate_string
+  #k #t #p v r terminator
+=
+  LP.parser_kind_prop_equiv k p;
+  validate_weaken (validate_list_up_to v r terminator (fun _ _ _ -> ())) _
 
 let validate_all_bytes = fun input -> I.empty input; 0uL
 
-let validate_all_zeros = admit ()
+let validate_all_zeros =
+  validate_list (validate_filter "parse_zeros" validate____UINT8 read____UINT8 is_zero "check if zero" "")
 
 
 ////////////////////////////////////////////////////////////////////////////////
