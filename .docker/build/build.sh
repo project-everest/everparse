@@ -136,6 +136,9 @@ function raise () {
 }
 
 function build_and_test_quackyducky() {
+    # Rebuild the EverParse documentation and push it to project-everest.github.io
+    rebuild_doc &&
+    # Test EverParse proper
     fetch_and_make_kremlin &&
     fetch_and_make_hacl &&
     make -j $threads -k ci &&
@@ -154,8 +157,7 @@ function build_and_test_quackyducky() {
         popd
     } &&
     if [[ "$err" -gt 0 ]] ; then return "$err" ; fi &&
-    # Rebuild the EverParse documentation and push it to project-everest.github.io
-    rebuild_doc
+    true
 }
 
 function exec_build() {
