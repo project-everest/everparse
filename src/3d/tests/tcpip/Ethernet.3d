@@ -73,13 +73,18 @@ typedef struct _VLAN_ETHTYPE(mutable UINT16* VlanTagOut,
   EthTypeOut to the EthTypeOrDot1Q value.
   --*/
 casetype _VLAN_ETHTYPE_OR_EMPTY (UINT16 EthTypeOrDot1Q,
+                                 mutable Bool* Dot1QOut,
                                  mutable UINT16* VlanTagOut,
                                  mutable UINT16* EthTypeOut)
 {
   switch(EthTypeOrDot1Q)
   {
      case DOT1Q_TYPE:
-       VLAN_ETHTYPE(VlanTagOut, EthTypeOut) VlanEthType;
+       VLAN_ETHTYPE(VlanTagOut, EthTypeOut) VlanEthType
+         {:on-success
+             *Dot1QOut = true;
+              return true;
+         };
 
      default:
        unit Empty
@@ -105,6 +110,8 @@ casetype _VLAN_ETHTYPE_OR_EMPTY (UINT16 EthTypeOrDot1Q,
 
   Out parameters:
 
+    - Dot1QOut: This flag is set in case the 802.1Q tag is set
+
     - VlanTagOut: This is set to the content of the Outer.VLAN Tag
       Information, in case it is present.
 
@@ -115,7 +122,8 @@ casetype _VLAN_ETHTYPE_OR_EMPTY (UINT16 EthTypeOrDot1Q,
       pointer to continue to process the next level headers.
  --*/
 entrypoint
-typedef struct _ETHERNET_FRAME(mutable UINT16* VlanTagOut,
+typedef struct _ETHERNET_FRAME(mutable Bool* Dot1QOut,
+                               mutable UINT16* VlanTagOut,
                                mutable UINT16* EthTypeOut,
                                mutable PUINT8* EndOfHeaderOut)
 {
@@ -123,6 +131,7 @@ typedef struct _ETHERNET_FRAME(mutable UINT16* VlanTagOut,
   MAC_ADDRESS Source;
   UINT16 EthTypeOrDot1Q;
   VLAN_ETHTYPE_OR_EMPTY(EthTypeOrDot1Q,
+                        Dot1QOut,
                         VlanTagOut,
                         EthTypeOut) VlanEthType;
   unit EndOfHeader
