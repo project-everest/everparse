@@ -1,0 +1,27 @@
+/*
+  UDP Format from https://datatracker.ietf.org/doc/html/rfc768
+
+
+                  0      7 8     15 16    23 24    31
+                 +--------+--------+--------+--------+
+                 |     Source      |   Destination   |
+                 |      Port       |      Port       |
+                 +--------+--------+--------+--------+
+                 |                 |                 |
+                 |     Length      |    Checksum     |
+                 +--------+--------+--------+--------+
+                 |
+                 |          data octets ...
+                 +---------------- ...
+
+                      User Datagram Header Format
+*/
+
+entrypoint
+typedef struct _UDP_Header
+{
+  UINT16 SourcePort;
+  UINT16 DestinationPort;
+  UINT16 Length;
+  UINT16 CheckSum;
+} UDP_HEADER;

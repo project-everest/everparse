@@ -26,8 +26,8 @@ UINT8 enum DESTINATION_UNREACHABLE_CODE
 
 typedef struct _IP_HEADER_AND_DATAGRAM
 {
-    IPHeader.IP_DATAGRAM_HEADER    IpHeader;
-    UINT64                         IpData;
+    IPV4.IPV4_HEADER    IpHeader;
+    UINT64               IpData;
 } IP_HEADER_AND_DATAGRAM;
 
 
