@@ -73,6 +73,6 @@ typedef struct _IP_DATAGRAM_HEADER_PARAMETRIZED (
 
 
 export
-typedef struct _IP_DATAGRAM_HEADER {
+typedef struct _IPV4_HEADER {
     IP_DATAGRAM_HEADER_PARAMETRIZED (false, 0, false, 0)    Header;
-} IP_DATAGRAM_HEADER;
+} IPV4_HEADER;
