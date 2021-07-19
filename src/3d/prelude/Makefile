@@ -1,4 +1,4 @@
-all: verify_and_build_weaken_tac_plugin extract
+all: tac_plugin buffer
 
 FSTAR_HOME?=$(realpath ../../../../FStar)
 KREMLIN_HOME?=$(realpath ../../../../kremlin)
@@ -12,41 +12,25 @@ ROOT=$(wildcard *.fst)
 ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops'
 
 .depend: $(ROOT)
-	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims' > .depend
+	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims' > $@.tmp
+	mv $@.tmp $@
 
 include .depend
 
-verify_and_build_weaken_tac_plugin: WeakenTac.cmxs
+tac_plugin: WeakenTac.cmxs
+
+buffer: EverParse.rsp
+	+$(MAKE) -C buffer
 
 WeakenTac.cmxs: $(ALL_CHECKED_FILES)
 	$(FSTAR) --extract 'LowParse.Norm LowParse.TacLib WeakenTac' --codegen Plugin WeakenTac.fst
 	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -w -8 -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_Norm.ml LowParse_TacLib.ml WeakenTac.ml
 
-extract: ../EverParse.h
+extract: EverParse.rsp
 
 EverParse.rsp: $(ALL_KRML_FILES)
-	for f in $^ ; do echo $$f ; done > $@
-
-../EverParse.h: EverParse.rsp
-	$(KREMLIN_HOME)/krml \
-	  -skip-compilation \
-	  -skip-makefiles \
-	  -bundle 'C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle 'LowParse.Low.ErrorCode+EverParse3d.InputBuffer.Aux+Prelude.StaticHeader+ResultOps+EverParse3d.InputStream.Buffer.Aux=Prims,LowParse.\*,Prelude,Prelude.\*,Actions,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
-	  -warn-error -9@4 \
-	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
-	  -header ../noheader.txt \
-	  -minimal \
-	  -add-include 'EverParse:"EverParseEndianness.h"' \
-	  -static-header 'Prelude.StaticHeader,LowParse.Low.Base,ResultOps,LowParse.Low.ErrorCode,EverParse3d.InputBuffer.Aux,EverParse3d.InputStream.\*' \
-	  -no-prefix LowParse.Slice \
-	  -no-prefix LowParse.Low.BoundedInt \
-	  -no-prefix EverParse3d.InputBuffer.Aux \
-	  -tmpdir .. \
-	  -fextern-c \
-	  @$^
-	! test -e ../EverParse.c
-	! test -e ../SHOULDNOTBETHERE.h
+	for f in $^ ; do echo $$f ; done > $@.tmp
+	mv $@.tmp $@
 
 %.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))
@@ -59,7 +43,8 @@ EverParse.rsp: $(ALL_KRML_FILES)
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
-.PHONY: all verify extract clean verify_and_build_weaken_tac_plugin
+.PHONY: all clean tac_plugin buffer extract
 
 clean:
-	rm -f *.checked *.krml ../EverParse.h EverParse.rsp ../Makefile.basic ../Makefile.include .depend *.o *.cmi *.cmx *.cmxs WeakenTac.ml LowParse_TacLib.ml
+	+$(MAKE) -C buffer clean || true
+	rm -f *.checked *.krml .depend *.cmi *.cmx *.cmxs WeakenTac.ml LowParse_TacLib.ml EverParse.rsp *.tmp

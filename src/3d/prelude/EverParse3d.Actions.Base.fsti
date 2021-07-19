@@ -13,8 +13,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 *)
-module EverParse3d.Actions
-module I = EverParse3d.InputStream
+module EverParse3d.Actions.Base
+module I = EverParse3d.InputStream.Base
 module Cast = FStar.Int.Cast
 module HS = FStar.HyperStack
 open FStar.HyperStack.ST

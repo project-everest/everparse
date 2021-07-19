@@ -6,7 +6,7 @@ module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
 
-open EverParse3d.InputStream
+open EverParse3d.InputStream.Base
 
 inline_for_extraction
 noextract

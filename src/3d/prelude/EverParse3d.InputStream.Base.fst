@@ -1,4 +1,4 @@
-module EverParse3d.InputStream
+module EverParse3d.InputStream.Base
 
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32

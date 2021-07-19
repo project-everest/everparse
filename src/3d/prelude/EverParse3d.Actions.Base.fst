@@ -1,13 +1,12 @@
-module EverParse3d.Actions
+module EverParse3d.Actions.Base
 friend Prelude
 
 module LPE = LowParse.Low.ErrorCode
 open FStar.Tactics.Typeclasses
 
-(* TODO: use an interface, and implementations under subdirectories, and do the include dir trick *)
 inline_for_extraction
 noextract
-let input_buffer_t = EverParse3d.InputStream.Buffer.t
+let input_buffer_t = EverParse3d.InputStream.All.t
 
 let action
   p inv l on_success a
