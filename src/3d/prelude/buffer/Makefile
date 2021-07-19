@@ -8,8 +8,8 @@ EVERPARSE_HOME=../../../..
 FSTAR_OPTIONS=$(addprefix --include , .. $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib $(KREMLIN_HOME)/kremlib/obj) --z3rlimit_factor 8 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100'
 FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
 
-ROOT=$(wildcard *.fst)
-ALREADY_CACHED=--already_cached '*,-EverParse3d.Actions.All,-EverParse3d.InputStream.All'
+ROOT=$(wildcard *.fst) $(wildcard *.fsti)
+ALREADY_CACHED=--already_cached '*,-EverParse3d.Actions.All,-EverParse3d.InputStream.All,-EverParse3d.InputStream.Buffer'
 
 .depend: $(ROOT)
 	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims' > $@.tmp
@@ -29,16 +29,15 @@ EverParse.h: EverParse.rsp
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle 'LowParse.Low.ErrorCode+EverParse3d.InputBuffer.Aux+Prelude.StaticHeader+ResultOps+EverParse3d.InputStream.Buffer.Aux=Prims,LowParse.\*,Prelude,Prelude.\*,Actions,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'LowParse.Low.ErrorCode+Prelude.StaticHeader+ResultOps+EverParse3d.InputStream.Buffer.Aux=Prims,LowParse.\*,Prelude,Prelude.\*,Actions,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
 	  -header ../../noheader.txt \
 	  -minimal \
 	  -add-include 'EverParse:"EverParseEndianness.h"' \
-	  -static-header 'Prelude.StaticHeader,LowParse.Low.Base,ResultOps,LowParse.Low.ErrorCode,EverParse3d.InputBuffer.Aux,EverParse3d.InputStream.\*' \
+	  -static-header 'Prelude.StaticHeader,LowParse.Low.Base,ResultOps,LowParse.Low.ErrorCode,EverParse3d.InputStream.\*' \
 	  -no-prefix LowParse.Slice \
 	  -no-prefix LowParse.Low.BoundedInt \
-	  -no-prefix EverParse3d.InputBuffer.Aux \
 	  -fextern-c \
 	  @$^
 	! test -e EverParse.c
