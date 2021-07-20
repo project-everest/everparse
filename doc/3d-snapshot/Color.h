@@ -10,9 +10,9 @@ extern "C" {
 #include "EverParse.h"
 
 
+#include "Triangle2.h"
 
-
-uint64_t ColorValidateColoredPoint(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
+uint64_t ColorValidateColoredPoint(EverParseInputBuffer Input);
 
 #if defined(__cplusplus)
 }

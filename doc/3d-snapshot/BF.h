@@ -12,9 +12,9 @@ extern "C" {
 
 
 
-uint64_t BfValidateDummy(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);
+uint64_t BfValidateDummy(EverParseInputBuffer Input);
 
-void BfReadDummy(uint32_t InputLength, uint8_t *Input, uint32_t StartPosition);
+void BfReadDummy(EverParseInputBuffer Input);
 
 #if defined(__cplusplus)
 }

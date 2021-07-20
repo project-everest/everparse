@@ -12,8 +12,7 @@ extern "C" {
 
 
 
-uint64_t
-Triangle2ValidateTriangle(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);
+uint64_t Triangle2ValidateTriangle(EverParseInputBuffer Input);
 
 #if defined(__cplusplus)
 }
