@@ -64,7 +64,7 @@ class input_stream_inst (t: Type) : Type = {
     (x: t) ->
     (n: U32.t) ->
     (dst: B.buffer U8.t) ->
-    HST.Stack unit
+    HST.Stack (B.buffer U8.t)
     (requires (fun h ->
       live x h /\
       B.live h dst /\
@@ -72,11 +72,13 @@ class input_stream_inst (t: Type) : Type = {
       B.length dst == U32.v n /\
       Seq.length (get_remaining x h) >= U32.v n
     ))
-    (ensures (fun h _ h' ->
+    (ensures (fun h dst' h' ->
       let s = get_remaining x h in
       B.modifies (B.loc_buffer dst `B.loc_union` footprint x) h h' /\
-      B.as_seq h' dst `Seq.equal` Seq.slice s 0 (U32.v n) /\
+      B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U32.v n) /\
       live x h' /\
+      B.live h' dst' /\
+      (B.loc_buffer dst `B.loc_union` footprint x) `B.loc_includes` B.loc_buffer dst' /\
       get_remaining x h' `Seq.equal` Seq.slice s (U32.v n) (Seq.length s)
     ));
 

@@ -1271,7 +1271,7 @@ let lift_reader
   let temp = B.alloca 0uy sz in
   let h1 = HST.get () in
   I.live_not_unused_in input h0;
-  I.read input sz temp;
+  let temp = I.read input sz temp in
   let h2 = HST.get () in
   LP.parse_strong_prefix p (I.get_remaining input h0) (B.as_seq h2 temp);
   LPL.valid_facts p h2 (LPL.make_slice temp sz) 0ul;
