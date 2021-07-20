@@ -3,7 +3,7 @@ friend EverParse3d.Actions.Base
 friend EverParse3d.InputStream.All
 friend EverParse3d.InputStream.Buffer
 
-let __PUINT8 = LowStar.Buffer.buffer FStar.UInt8.t
+let ___PUINT8 = LowStar.Buffer.buffer FStar.UInt8.t
 
 let action_field_ptr
       #nz #wk (#k:Prelude.parser_kind nz wk) (#t:Type) (#p:Prelude.parser k t) (u:unit)
