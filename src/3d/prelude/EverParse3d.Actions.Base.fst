@@ -11,11 +11,10 @@ let input_buffer_t = EverParse3d.InputStream.All.t
 let action
   p inv l on_success a
 =
-    sl: Ghost.erased input_buffer_t ->
+    sl: input_buffer_t ->
     pos: U32.t -> // position before validation
     Stack a
       (requires fun h ->
-        let sl = Ghost.reveal sl in
         I.live sl h /\
         inv (I.footprint sl) h /\
         loc_not_unused_in h `loc_includes` l /\
