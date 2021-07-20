@@ -87,13 +87,20 @@ static char* ReadPairFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN ReadPairCheckPair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len) {
-	uint64_t result = ReadPairValidatePair(x, y, len, base, 0);
-	if (EverParseResultIsError(result)) {
-		ReadPairEverParseError(
-	ReadPairStructNameOfErr(result),
-			ReadPairFieldNameOfErr (result),
-			EverParseErrorReasonOfResult(result));
-		return FALSE;
-	}
+	uint32_t position = 0;
+	EverParseInputBuffer inputBuffer;
+	inputBuffer.buf = base;
+	inputBuffer.len = len;
+	inputBuffer.pos = &position;
+	{
+		uint64_t result = ReadPairValidatePair(x, y, inputBuffer);
+		if (EverParseResultIsError(result)) {
+			ReadPairEverParseError(
+				ReadPairStructNameOfErr(result),
+				ReadPairFieldNameOfErr (result),
+				EverParseErrorReasonOfResult(result));
+			return FALSE;
+		}
+	};
 	return TRUE;
 }

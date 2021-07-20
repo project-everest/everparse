@@ -10,7 +10,7 @@ extern "C" {
 #include "EverParse.h"
 
 
-
+#include "Triangle2.h"
 
 /*
  The following will fail because of integer overflow
@@ -22,8 +22,7 @@ entrypoint typedef struct _boundedSum {
 // SNIPPET_END: boundedSumNaive
 
 */
-uint64_t
-BoundedSumConstValidateBoundedSum(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);
+uint64_t BoundedSumConstValidateBoundedSum(EverParseInputBuffer Input);
 
 #if defined(__cplusplus)
 }
