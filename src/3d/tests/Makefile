@@ -39,8 +39,8 @@ batch-test:
 	$(3D) --odir out.batch --batch --no_copy_everparse_h --save_hashes $(positive_tests)
 	$(3D) --odir out.batch --batch --check_hashes strong $(positive_tests)
 	cp $(OTHER_HEADERS) out.batch
-	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(QD_HOME)/src/3d'
-	$(CXX) -o test-cpp.exe -I out.batch -I $(QD_HOME)/src/3d test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
+	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer'
+	$(CXX) -o test-cpp.exe -I out.batch -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
 	./test-cpp.exe
 
 inplace-hash-test:
