@@ -10,9 +10,15 @@ extern "C" {
 #include "EverParse.h"
 
 
-#include "Triangle2.h"
 
-uint64_t BoundedSumWhereValidateBoundedSum(uint32_t Bound, EverParseInputBuffer Input);
+
+uint64_t
+BoundedSumWhereValidateBoundedSum(
+  uint32_t Bound,
+  uint32_t InputLength,
+  uint8_t *Input,
+  uint64_t StartPosition
+);
 
 #if defined(__cplusplus)
 }

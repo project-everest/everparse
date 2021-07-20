@@ -11,11 +11,10 @@ extern "C" {
 
 
 #include "Base.h"
-#include "Triangle2.h"
 
-uint64_t DerivedValidateTriple(EverParseInputBuffer Input);
+uint64_t DerivedValidateTriple(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 
-uint64_t DerivedValidateQuad(EverParseInputBuffer Input);
+uint64_t DerivedValidateQuad(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)
 }

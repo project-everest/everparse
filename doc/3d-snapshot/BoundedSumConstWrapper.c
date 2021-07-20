@@ -45,20 +45,13 @@ static char* BoundedSumConstFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN BoundedSumConstCheckBoundedSum(uint8_t *base, uint32_t len) {
-	uint32_t position = 0;
-	EverParseInputBuffer inputBuffer;
-	inputBuffer.buf = base;
-	inputBuffer.len = len;
-	inputBuffer.pos = &position;
-	{
-		uint64_t result = BoundedSumConstValidateBoundedSum(inputBuffer);
-		if (EverParseResultIsError(result)) {
-			BoundedSumConstEverParseError(
-				BoundedSumConstStructNameOfErr(result),
-				BoundedSumConstFieldNameOfErr (result),
-				EverParseErrorReasonOfResult(result));
-			return FALSE;
-		}
-	};
+	uint64_t result = BoundedSumConstValidateBoundedSum(len, base, 0);
+	if (EverParseResultIsError(result)) {
+		BoundedSumConstEverParseError(
+	BoundedSumConstStructNameOfErr(result),
+			BoundedSumConstFieldNameOfErr (result),
+			EverParseErrorReasonOfResult(result));
+		return FALSE;
+	}
 	return TRUE;
 }

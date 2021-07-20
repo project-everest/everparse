@@ -28,151 +28,125 @@ Auto-generated field identifier for error reporting
 
 #define SIZE32 ((uint8_t)32U)
 
-static inline uint64_t ValidateIntPayloadValue32(EverParseInputBuffer Input)
+static inline uint64_t ValidateIntPayloadValue32(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _int_payload_value32
         of type TaggedUnion._int_payload
 --*/
 {
-  uint32_t startPosition = *Input.pos;
-  uint64_t startPosition1 = (uint64_t)startPosition;
   /* Validating field value32 */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  uint32_t currentPosition = *Input.pos;
-  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - currentPosition);
-  uint64_t result;
-  if (hasBytes)
+  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
+  uint64_t endPositionOrError;
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
-    result = (uint64_t)(uint32_t)4U;
+    endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    result = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    endPositionOrError = StartPosition + (uint64_t)4U;
   }
-  return EverParseMaybeSetErrorCode(result, startPosition1, TAGGEDUNION__INT_PAYLOAD__VALUE32);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      TAGGEDUNION__INT_PAYLOAD__VALUE32);
 }
 
-static inline uint64_t ValidateIntPayloadValue16(EverParseInputBuffer Input)
+static inline uint64_t ValidateIntPayloadValue16(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _int_payload_value16
         of type TaggedUnion._int_payload
 --*/
 {
-  uint32_t startPosition = *Input.pos;
-  uint64_t startPosition1 = (uint64_t)startPosition;
   /* Validating field value16 */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  uint32_t currentPosition = *Input.pos;
-  BOOLEAN hasBytes = (uint32_t)2U <= (Input.len - currentPosition);
-  uint64_t result;
-  if (hasBytes)
+  uint64_t endPositionOrError;
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)2U)
   {
-    result = (uint64_t)(uint32_t)2U;
+    endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    result = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    endPositionOrError = StartPosition + (uint64_t)2U;
   }
-  return EverParseMaybeSetErrorCode(result, startPosition1, TAGGEDUNION__INT_PAYLOAD__VALUE16);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      TAGGEDUNION__INT_PAYLOAD__VALUE16);
 }
 
-static inline uint64_t ValidateIntPayloadValue8(EverParseInputBuffer Input)
+static inline uint64_t ValidateIntPayloadValue8(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _int_payload_value8
         of type TaggedUnion._int_payload
 --*/
 {
-  uint32_t startPosition = *Input.pos;
-  uint64_t startPosition1 = (uint64_t)startPosition;
   /* Validating field value8 */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  uint32_t currentPosition = *Input.pos;
-  BOOLEAN hasBytes = (uint32_t)1U <= (Input.len - currentPosition);
-  uint64_t result;
-  if (hasBytes)
+  uint64_t endPositionOrError;
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)1U)
   {
-    result = (uint64_t)(uint32_t)1U;
+    endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    result = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    endPositionOrError = StartPosition + (uint64_t)1U;
   }
-  return EverParseMaybeSetErrorCode(result, startPosition1, TAGGEDUNION__INT_PAYLOAD__VALUE8);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      TAGGEDUNION__INT_PAYLOAD__VALUE8);
 }
 
-static inline uint64_t ValidateIntPayload(uint32_t Size, EverParseInputBuffer Sl)
+static inline uint64_t
+ValidateIntPayload(uint32_t Size, uint32_t InputLength, uint64_t StartPosition)
 {
   if (Size == (uint32_t)SIZE8)
   {
     /* Field _int_payload_value8 */
-    uint64_t res = ValidateIntPayloadValue8(Sl);
-    if (EverParseIsSuccess(res))
-    {
-      uint32_t currentPosition = *Sl.pos;
-      *Sl.pos = currentPosition + (uint32_t)res;
-    }
-    return res;
+    return ValidateIntPayloadValue8(InputLength, StartPosition);
   }
   if (Size == (uint32_t)SIZE16)
   {
     /* Field _int_payload_value16 */
-    uint64_t res = ValidateIntPayloadValue16(Sl);
-    if (EverParseIsSuccess(res))
-    {
-      uint32_t currentPosition = *Sl.pos;
-      *Sl.pos = currentPosition + (uint32_t)res;
-    }
-    return res;
+    return ValidateIntPayloadValue16(InputLength, StartPosition);
   }
   if (Size == (uint32_t)SIZE32)
   {
     /* Field _int_payload_value32 */
-    uint64_t res = ValidateIntPayloadValue32(Sl);
-    if (EverParseIsSuccess(res))
-    {
-      uint32_t currentPosition = *Sl.pos;
-      *Sl.pos = currentPosition + (uint32_t)res;
-    }
-    return res;
+    return ValidateIntPayloadValue32(InputLength, StartPosition);
   }
-  uint64_t res = EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE;
-  if (EverParseIsSuccess(res))
-  {
-    uint32_t currentPosition = *Sl.pos;
-    *Sl.pos = currentPosition + (uint32_t)res;
-  }
-  return res;
+  return EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE;
 }
 
-static inline uint64_t ValidateIntegerSize(EverParseInputBuffer Input)
+static inline uint64_t ValidateIntegerSize(uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _integer_size
         of type TaggedUnion._integer
 --*/
 {
-  uint32_t startPosition = *Input.pos;
-  uint64_t startPosition1 = (uint64_t)startPosition;
   /* Validating field size */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  uint32_t currentPosition = *Input.pos;
-  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - currentPosition);
-  uint64_t result;
-  if (hasBytes)
+  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
+  uint64_t endPositionOrError;
+  if (((uint64_t)InputLength - StartPosition) < (uint64_t)4U)
   {
-    result = (uint64_t)(uint32_t)4U;
+    endPositionOrError = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    result = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    endPositionOrError = StartPosition + (uint64_t)4U;
   }
-  return EverParseMaybeSetErrorCode(result, startPosition1, TAGGEDUNION__INTEGER__SIZE);
+  return
+    EverParseMaybeSetErrorCode(endPositionOrError,
+      StartPosition,
+      TAGGEDUNION__INTEGER__SIZE);
 }
 
-static inline uint64_t ValidateIntegerPayload(uint32_t Size, EverParseInputBuffer Input)
+static inline uint64_t
+ValidateIntegerPayload(uint32_t Size, uint32_t InputLength, uint64_t StartPosition)
 /*++
     Internal helper function:
         Validator for field _integer_payload
@@ -180,24 +154,21 @@ static inline uint64_t ValidateIntegerPayload(uint32_t Size, EverParseInputBuffe
 --*/
 {
   /* Validating field payload */
-  return ValidateIntPayload(Size, Input);
+  return ValidateIntPayload(Size, InputLength, StartPosition);
 }
 
-uint64_t TaggedUnionValidateInteger(EverParseInputBuffer Input)
+uint64_t
+TaggedUnionValidateInteger(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 {
   /* Field _integer_size */
-  uint64_t resultAftersize = ValidateIntegerSize(Input);
-  if (EverParseIsError(resultAftersize))
+  uint64_t positionAftersize = ValidateIntegerSize(InputLength, StartPosition);
+  if (EverParseIsError(positionAftersize))
   {
-    return resultAftersize;
+    return positionAftersize;
   }
-  uint8_t temp[4U] = { 0U };
-  uint32_t currentPosition = *Input.pos;
-  memcpy(temp, Input.buf + currentPosition, (uint32_t)4U * sizeof (uint8_t));
-  *Input.pos = currentPosition + (uint32_t)4U;
-  uint32_t res = Load32Le(temp);
-  uint32_t size = res;
+  uint8_t *base = Input;
+  uint32_t size = Load32Le(base + (uint32_t)StartPosition);
   /* Field _integer_payload */
-  return ValidateIntegerPayload(size, Input);
+  return ValidateIntegerPayload(size, InputLength, positionAftersize);
 }
 
