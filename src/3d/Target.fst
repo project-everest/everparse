@@ -791,7 +791,7 @@ let print_decls (modul: string) (ds:list decl) =
   Printf.sprintf
     "module %s\n\
      open Prelude\n\
-     open EverParse3d.Actions\n\
+     open EverParse3d.Actions.All\n\
      open WeakenTac\n\
      module B = LowStar.Buffer\n\n\
      include %s.Types\n\n\
@@ -810,7 +810,7 @@ let print_types_decls (modul:string) (ds:list decl) =
   Printf.sprintf
     "module %s.Types\n\
      open Prelude\n\
-     open EverParse3d.Actions\n\n\
+     open EverParse3d.Actions.All\n\n\
      module B = LowStar.Buffer\n\n\
      #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
      %s"
@@ -826,7 +826,7 @@ let print_decls_signature (mname: string) (ds:list decl) =
     Printf.sprintf
     "module %s\n\
      open Prelude\n\
-     open EverParse3d.Actions\n\
+     open EverParse3d.Actions.All\n\
      module B = LowStar.Buffer\n\
      include %s.Types\n\n\
      %s"

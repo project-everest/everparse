@@ -10,6 +10,9 @@ let lowparse_home = filename_concat (filename_concat qd_home "src") "lowparse"
 let ddd_home = filename_concat (filename_concat qd_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat qd_home "src") "3d") "prelude"
 
+let ddd_actions_home () =
+  filename_concat ddd_prelude_home "buffer"
+
 (* fstar.exe executable *)
 let fstar_exe = (filename_concat (filename_concat fstar_home "bin") "fstar.exe")
 
@@ -68,6 +71,7 @@ let fstar_args
 =
     "--odir" :: out_dir ::
       "--cache_dir" :: out_dir ::
+        "--include" :: ddd_actions_home () ::
         "--include" :: out_dir ::
           "--load_cmxs" :: "WeakenTac" ::
             fstar_args0
@@ -163,8 +167,12 @@ let all_krmls_in_dir
     Unix.closedir h;
     res
 
-let all_everparse_krmls =
-  all_krmls_in_dir ddd_prelude_home
+let all_everparse_krmls () =
+  let prelude = all_krmls_in_dir ddd_prelude_home in
+  let actions = all_krmls_in_dir (ddd_actions_home ()) in
+  let actions_base = List.map basename actions in
+  let prelude' = List.filter (fun f -> not (List.mem (basename f) actions_base)) prelude in
+  prelude' @ actions
 
 let remove_fst_and_krml_files
       out_dir
@@ -207,7 +215,7 @@ let krml_args skip_c_makefiles out_dir files_and_modules =
                          else l in
 		       l
                      )
-                     all_everparse_krmls
+                     (all_everparse_krmls ())
                      files_and_modules
   in
   let krml_files = List.rev krml_files in
@@ -553,7 +561,7 @@ let postprocess_c
   if not no_everparse_h
   then begin
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      copy (filename_concat ddd_home "EverParse.h") dest_everparse_h;
+      copy (filename_concat (ddd_actions_home ()) "EverParse.h") dest_everparse_h;
       copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h")
     end;
   (* clang-format the files if asked for *)

@@ -27,7 +27,10 @@ let print_gnu_make_rule
     let cmd =
       match r.ty with
       | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --odir %s" output_dir
-      | CC -> Printf.sprintf "$(CC) $(CFLAGS) -I %s -c" ("$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d")
+      | CC ->
+        let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
+        let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` "buffer" in
+        Printf.sprintf "$(CC) $(CFLAGS) -I %s -I %s -c" ddd_home ddd_actions_home
     in
     let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
     rule
