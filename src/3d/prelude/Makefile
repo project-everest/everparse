@@ -1,4 +1,4 @@
-all: tac_plugin buffer
+all: tac_plugin buffer extern
 
 FSTAR_HOME?=$(realpath ../../../../FStar)
 KREMLIN_HOME?=$(realpath ../../../../kremlin)
@@ -22,11 +22,16 @@ tac_plugin: WeakenTac.cmxs
 buffer: EverParse.rsp
 	+$(MAKE) -C buffer
 
+extern: EverParse.rsp
+	+$(MAKE) -C extern
+
 WeakenTac.cmxs: $(ALL_CHECKED_FILES)
 	$(FSTAR) --extract 'LowParse.Norm LowParse.TacLib WeakenTac' --codegen Plugin WeakenTac.fst
 	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -w -8 -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_Norm.ml LowParse_TacLib.ml WeakenTac.ml
 
 extract: EverParse.rsp
+
+verify: $(ALL_CHECKED_FILES)
 
 EverParse.rsp: $(ALL_KRML_FILES)
 	for f in $^ ; do echo $$f ; done > $@.tmp
@@ -43,8 +48,13 @@ EverParse.rsp: $(ALL_KRML_FILES)
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
-.PHONY: all clean tac_plugin buffer extract
+.PHONY: all clean tac_plugin buffer extract extern verify clean-buffer clean-extern
 
-clean:
+clean-buffer:
 	+$(MAKE) -C buffer clean || true
-	rm -f *.checked *.krml .depend *.cmi *.cmx *.cmxs WeakenTac.ml LowParse_TacLib.ml EverParse.rsp *.tmp
+
+clean-extern:
+	+$(MAKE) -C extern clean || true
+
+clean: clean-buffer clean-extern
+	rm -f *.checked *.krml .depend *.cmi *.cmx *.cmxs *.ml *.o EverParse.rsp *.tmp .depend.tmp *~
