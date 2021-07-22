@@ -29,7 +29,8 @@ EverParse.h: EverParse.rsp
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle 'LowParse.Low.ErrorCode+Prelude.StaticHeader+ResultOps+EverParse3d.InputStream.Extern.Base+EverParse3d.InputStream.Extern.Type=Prims,LowParse.\*,Prelude,Prelude.\*,Actions,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'LowParse.Low.ErrorCode+Prelude.StaticHeader+ResultOps+EverParse3d.InputStream.Extern.Base+EverParse3d.InputStream.Extern.Type=LowParse.\*,Prelude,Prelude.\*,Actions,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'Prims[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
 	  -header ../../noheader.txt \
