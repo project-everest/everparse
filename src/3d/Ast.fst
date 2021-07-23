@@ -246,23 +246,31 @@ type expr' =
 
 and expr = with_meta_t expr'
 
+/// Output expressions, for writing to the output types during validation
+
 noeq
 type out_expr' =
-  | OE_id : ident -> out_expr'
-  | OE_star : out_expr -> out_expr'
+  | OE_id     : ident -> out_expr'
+  | OE_star   : out_expr -> out_expr'
   | OE_addrof : out_expr -> out_expr'
-  | OE_deref : out_expr -> ident -> out_expr'
-  | OE_dot : out_expr -> ident -> out_expr'
+  | OE_deref  : out_expr -> ident -> out_expr'
+  | OE_dot    : out_expr -> ident -> out_expr'
 
-and out_expr = with_meta_t out_expr'
+/// out_expr_meta is (base identifier, base type, type of the expr)
+///
+/// It is populated during typechecking in Binding.fst
+
+and out_expr = { out_expr_node: with_meta_t out_expr';
+                 out_expr_meta: option (ident & typ & typ) }
+
+/// A type parameter is either an expression or an output expression
+
+and typ_param = either expr out_expr
 
 /// Types: all types are named and fully instantiated to expressions only
 ///   i.e., no type-parameterized types
 
-type typ_param = either expr out_expr
-
-noeq
-type typ' =
+and typ' =
   | Type_app : ident -> list typ_param -> typ'
   | Pointer : typ -> typ'
 and typ = with_meta_t typ'
@@ -470,7 +478,7 @@ let eq_idents (i1 i2:ident) : Tot bool =
 /// eq_typ: syntactic equalty of types
 
 let rec eq_out_expr (o1 o2:out_expr) : Tot bool =
-  match o1.v, o2.v with
+  match o1.out_expr_node.v, o2.out_expr_node.v with
   | OE_id i1, OE_id i2 -> eq_idents i1 i2
   | OE_star o1, OE_star o2
   | OE_addrof o1, OE_addrof o2 -> eq_out_expr o1 o2
@@ -708,7 +716,7 @@ and print_exprs (es:list expr) : Tot (list string) =
   | hd::tl -> print_expr hd :: print_exprs tl
 
 let rec print_out_expr o : ML string =
-  match o.v with
+  match o.out_expr_node.v with
   | OE_id i -> ident_to_string i
   | OE_star o -> Printf.sprintf "*(%s)" (print_out_expr o)
   | OE_addrof o -> Printf.sprintf "&(%s)" (print_out_expr o)
