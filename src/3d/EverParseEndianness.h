@@ -33,7 +33,7 @@ extern "C" {
 #include <string.h>
 #include <stdint.h>
 
-typedef char * const EverParseString;
+typedef const char * EverParseString;
 
 /* ... for Windows (MSVC)... not targeting XBOX 360! */
 #if defined(_MSC_VER)
@@ -84,6 +84,12 @@ typedef uint8_t BOOLEAN;
 #  define le32toh(x) OSSwapLittleToHostInt32(x)
 #  define htobe32(x) OSSwapHostToBigInt32(x)
 #  define be32toh(x) OSSwapBigToHostInt32(x)
+
+/* ... for other BSDs */
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+#  include <sys/endian.h>
+#elif defined(__OpenBSD__)
+#  include <endian.h>
 
 /* ... for Windows (GCC-like, e.g. mingw or clang) */
 #elif (defined(_WIN32) || defined(_WIN64)) &&                                  \

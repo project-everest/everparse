@@ -1,5 +1,11 @@
 (include_subdirs unqualified)
 
+#ifdef NO_EVERCRYPT
+(dirs * \ evercrypt)
+#else
+(dirs * \ sha)
+#endif
+
 (executable
   (name Main)
   (libraries
@@ -7,14 +13,21 @@
     menhirLib
     fstarlib
     process
+#ifdef NO_EVERCRYPT
+    sha
+#else
     hacl-star
+#endif
     yojson
+    ppx_deriving_yojson.runtime
     re
   )
+  (preprocess (pps ppx_deriving_yojson))
   (flags (:standard -w -8-9-11-26-27-33-39))
 )
 
 (ocamllex lexer)
+
 
 (menhir
   (modules parser)

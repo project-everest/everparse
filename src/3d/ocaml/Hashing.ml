@@ -2,7 +2,7 @@
 
 let hash_bool h b =
   let buf = Bytes.make 1 (char_of_int (if b then 1 else 0)) in
-  Hacl_star__EverCrypt.Hash.update h buf
+  HashingBase.update h buf
 
 (* Hash an integer *)
 
@@ -10,7 +10,7 @@ let hash_int h i =
   let i32 = Int32.of_int i in
   let buf = Bytes.create 4 in
   Bytes.set_int32_be buf 0 i32;
-  Hacl_star__EverCrypt.Hash.update h buf
+  HashingBase.update h buf
 
 (* Hash a file *)
 
@@ -21,7 +21,7 @@ let hash_file h f =
   let buf = Bytes.create len in
   let _ = input ch buf 0 len in
   close_in ch;
-  Hacl_star__EverCrypt.Hash.update h buf
+  HashingBase.update h buf
 
 let hash_file_option h = function
   | None -> hash_bool h false
@@ -31,18 +31,8 @@ let hash_file_option h = function
 
 let hash_string h s =
   hash_int h (String.length s);
-  Hacl_star__EverCrypt.Hash.update h (Bytes.of_string s)
+  HashingBase.update h (Bytes.of_string s)
 
-type t = Hacl_star__EverCrypt.Hash.t
-let alg = Hacl_star__SharedDefs.HashDefs.SHA2_256
-let hlen = Hacl_star__SharedDefs.HashDefs.digest_len alg
-
-let init () = Hacl_star__EverCrypt.Hash.init alg
-
-let finish h =
-  let buf = Bytes.create hlen in
-  Hacl_star__EverCrypt.Hash.finish h buf;
-  buf
 
 let char_of_int4 x =
   assert (0 <= x && x < 16);
@@ -73,7 +63,7 @@ type c_files = {
   }
 
 let hash f opt_c =
-  let h = init () in
+  let h = HashingBase.init () in
   hash_string h Version.everparse_version;
   hash_string h Version.fstar_commit;
   hash_string h Version.kremlin_commit;
@@ -94,7 +84,7 @@ let hash f opt_c =
         hash_file h assertions
      end
   end;
-  hex_of_bytes (finish h)
+  hex_of_bytes (HashingBase.finish h)
 
 (* load, check and save weak hashes from a C file *)
 
