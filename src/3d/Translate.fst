@@ -264,13 +264,28 @@ let rec translate_expr (e:A.expr) : ML T.expr =
    | This -> failwith "`this` should have been eliminated already"),
   e.A.range
 
+
+/// An output expression type parameter is translated to a getter
+///   applied to the base variable
+
+let translate_out_expr_typ_param (oe:out_expr) : ML T.expr =
+  let fn_name = Target.output_getter_name oe in
+  let base_var = Target.output_base_var oe in
+  (T.App (T.Ext fn_name)
+     [(T.Identifier base_var, oe.A.out_expr_node.A.range)]), oe.A.out_expr_node.A.range
+
+let translate_typ_param (p:typ_param) : ML T.expr =
+  match p with
+  | Inl e  -> translate_expr e
+  | Inr oe -> translate_out_expr_typ_param oe
+
 let rec translate_typ (t:A.typ) : ML T.typ =
   match t.v with
   | Pointer t ->
     let t' = translate_typ t in
     T.T_pointer t'
   | Type_app hd args ->
-    T.T_app hd (List.map (fun x -> Inr (translate_expr x)) args)
+    T.T_app hd (List.map (fun x -> Inr (translate_typ_param x)) args)
 
 let has_entrypoint (l:list A.attribute) =
   List.tryFind (function A.Entrypoint -> true | _ -> false) l
@@ -455,6 +470,22 @@ let make_reader (env:global_env) (t:T.typ) : ML T.reader =
   | Some r ->
     r
 
+/// To translate an assignment action, a star is translated as before
+///
+/// Other output expressions are translated to setters applied to the base variable and rhs
+
+let translate_action_assignment (lhs:A.out_expr) (rhs:A.expr) : ML T.atomic_action =
+  let open A in
+  match lhs.out_expr_node.v with
+  | OE_star ({out_expr_node={v=OE_id i}}) ->
+    T.Action_assignment i (translate_expr rhs)
+  | _ ->
+    let fn_name = Target.output_setter_name lhs in
+    let base_var = Target.output_base_var lhs in
+    let v = translate_expr rhs in
+    T.Action_call (Ast.with_dummy_range (Ast.to_ident' fn_name))
+      [(T.Identifier base_var, rhs.A.range); v]
+
 let rec translate_action (a:A.action) : ML T.action =
   let translate_atomic_action (a:A.atomic_action)
     : ML T.atomic_action
@@ -470,7 +501,7 @@ let rec translate_action (a:A.action) : ML T.action =
       | Action_deref i ->
         T.Action_deref i
       | Action_assignment lhs rhs ->
-        T.Action_assignment lhs (translate_expr rhs)
+        translate_action_assignment lhs rhs
       | Action_call f args ->
         T.Action_call f (List.map translate_expr args)
   in
@@ -1230,6 +1261,8 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_reader = reader;
     } in
     decls @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+
+  | OutputType _ -> []
 
 noeq
 type translate_env = {
