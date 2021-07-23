@@ -58,7 +58,8 @@ let () =
   H.add keywords "refining" REFINING;
   H.add keywords "as" AS;
   H.add keywords "module" MODULE;
-  H.add keywords "export" EXPORT
+  H.add keywords "export" EXPORT;
+  H.add keywords "output" OUTPUT
 
 let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
 
@@ -120,6 +121,7 @@ rule token =
   | "^"            { locate lexbuf BITWISE_XOR }
   | "~"            { locate lexbuf BITWISE_NOT }
   | "."            { locate lexbuf DOT }
+  | "->"           { locate lexbuf RARROW }
   | ","            { locate lexbuf COMMA }
   | ";"            { locate lexbuf SEMICOLON }
   | ":"            { locate lexbuf COLON }

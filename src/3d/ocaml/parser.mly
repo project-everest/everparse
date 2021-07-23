@@ -45,13 +45,13 @@
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
 %token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS
-%token          DEFINE LPAREN RPAREN LBRACE RBRACE DOT COMMA SEMICOLON COLON QUESTION
+%token          DEFINE LPAREN RPAREN LBRACE RBRACE DOT RARROW COMMA SEMICOLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
-%token          MODULE EXPORT
+%token          MODULE EXPORT OUTPUT
 %token          ENTRYPOINT REFINING ALIGNED
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -61,6 +61,7 @@
 %left AND
 %left BITWISE_OR
 %left BITWISE_XOR
+%left DOT RARROW
 %left BITWISE_AND
 %nonassoc NEQ DOUBLEEQ
 %nonassoc LEQ LESS_THAN GEQ GREATER_THAN
@@ -180,7 +181,11 @@ expr:
   | e=expr_no_range { with_range e $startpos }
 
 arguments:
- | es=right_flexible_nonempty_list(COMMA, expr)  { es }
+  | es=right_flexible_nonempty_list(COMMA, expr)  { es }
+
+typ_param:
+  | e=expr  { Inl e }
+  | oe=out_expr  { Inr oe }
 
 qident:
   | i=IDENT    { i }
@@ -188,7 +193,7 @@ qident:
 
 typ_no_range:
   | i=qident { Type_app(i, []) }
-  | hd=qident LPAREN a=arguments RPAREN { Type_app(hd, a) }
+  | hd=qident LPAREN a=right_flexible_nonempty_list(COMMA, typ_param) RPAREN { Type_app(hd, a) }
 
 typ:
   | t=typ_no_range { with_range t $startpos }
@@ -285,13 +290,25 @@ where_opt:
   | WHERE e=expr { Some e }
   | REQUIRES e=expr { Some e }
 
+out_expr_no_range:
+  | i=qident                                { OE_id i }
+  | STAR oe=out_expr                        { OE_star oe }
+  | BITWISE_AND oe=out_expr                 { OE_addrof oe }
+  | oe=out_expr RARROW f=qident             { OE_deref (oe, f) }
+  | oe=out_expr DOT f=qident                { OE_dot (oe, f) }
+  | LPAREN oe=out_expr_no_range RPAREN      { oe }
+
+out_expr:
+  | oe=out_expr_no_range    { {out_expr_node = with_range oe $startpos;
+                               out_expr_meta = None} }
+
 atomic_action:
   | RETURN e=expr SEMICOLON { Action_return e }
   | ABORT SEMICOLON         { Action_abort }
   | FIELD_POS SEMICOLON     { Action_field_pos }
   | FIELD_PTR SEMICOLON     { Action_field_ptr }
   | STAR i=IDENT SEMICOLON  { Action_deref i }
-  | STAR i=IDENT EQ e=expr SEMICOLON { Action_assignment(i, e) }
+  | oe=out_expr EQ e=expr SEMICOLON { Action_assignment(oe, e) }
   | f=IDENT LPAREN args=arguments RPAREN SEMICOLON { Action_call(f, args) }
 
 action_else:
@@ -323,6 +340,9 @@ typedef_pointer_name_opt:
   |                    { None }
   | COMMA STAR k=IDENT { Some k }
 
+out_field:
+  | t=maybe_pointer_typ f=IDENT  { Out_field_named (f, t) }
+
 decl_no_range:
   | MODULE i=IDENT EQ m=IDENT { ModuleAbbrev (i, m) }
   | DEFINE i=IDENT c=constant { Define (i, None, c) }
@@ -346,6 +366,12 @@ decl_no_range:
         let td = mk_td b i j k in
         CaseType(td, ps, (with_range (Identifier e) ($startpos(i)), cs))
     }
+  | OUTPUT TYPEDEF STRUCT i=IDENT
+    LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
+    j=IDENT p=typedef_pointer_name_opt SEMICOLON
+    {  let k = pointer_name j p in
+       let td = mk_td [] i j k in       
+       OutputType ({out_typ_names=td; out_typ_fields=out_flds; out_typ_is_union=false}) }
 
 block_comment_opt:
   |                 { None }
