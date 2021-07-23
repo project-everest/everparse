@@ -120,7 +120,8 @@ noeq
 type global_env = {
   ge_h: global_hash_t;
   ge_fd: field_num_ops_t;
-  ge_out_t: H.t ident' decl
+  ge_out_t: H.t ident' decl;  //a table for output types declarations
+  out_exprs: ref (list (out_expr & bool)); //AR: TODO: this maintains a list of all top-level output expressions, that are then printed by the Translator, but we need not maintain such a list here, Translator can do it
 }
 
 let all_nums ge = ge.ge_fd.all_nums ()
@@ -244,6 +245,9 @@ let remove_local (e:env) (i:ident) : ML unit =
   | _ -> ()
 
 let resolve_typedef_abbrev (env:env) (i:ident) =
+  match H.try_find (global_env_of_env env).ge_out_t i.v with
+  | Some ({d_decl={v=OutputType ({out_typ_names=names})}}) -> names.typedef_name
+  | _ ->
     match lookup env i with
     | Inr ({d_decl={v=Record names _ _ _}}, _)
     | Inr ({d_decl={v=CaseType names _ _}}, _) ->
@@ -459,7 +463,10 @@ let try_retype_arith_exprs (env:env) e1 e2 rng : ML (option (expr & expr & typ))
     | _ -> None
 
 let add_output_type (ge:global_env) (i:ident) (d:decl{OutputType? d.d_decl.v}) : ML unit =
-  H.insert ge.ge_out_t i.v d
+  let insert i = H.insert ge.ge_out_t i d in
+  insert i.v;
+  let td_abbrev = (OutputType?._0 d.d_decl.v).out_typ_names.typedef_abbrev in
+  insert td_abbrev.v
 
 let lookup_output_type (ge:global_env) (i:ident) : ML out_typ =
   match H.try_find ge.ge_out_t i.v with
@@ -488,38 +495,62 @@ let is_output_type (ge:global_env) (t:typ) : ML ident =
   | Type_app i [] -> ignore (lookup_output_type ge i); i
   | _ -> error (Printf.sprintf "Type %s is not an output type" (print_typ t)) t.range
 
-let rec check_out_expr (env:env) (oe0:out_expr) : ML (out_expr & typ) =
-  match oe0.v with
-  | OE_id i -> oe0, lookup_expr_name env i
+
+/// AR: TODO: should go, see the comment in the defn. of env above
+
+let add_out_expr (ge:global_env) (oe:out_expr{Some? oe.out_expr_meta}) (is_set:bool) : ML unit =
+  ge.out_exprs := !ge.out_exprs @ [oe, is_set]
+
+
+/// Also populates the base variable and base type fields of the output expression
+
+let rec check_out_expr (env:env) (oe0:out_expr) : ML (oe:out_expr{Some? oe.out_expr_meta}) =
+  match oe0.out_expr_node.v with
+  | OE_id i ->
+    let t = lookup_expr_name env i in
+    {oe0 with out_expr_meta = Some (i, t, t)}
   | OE_star oe ->
-    let oe, t = check_out_expr env oe in
-    (match t.v with
-     | Pointer t -> {oe0 with v=OE_star oe}, t
+    let oe = check_out_expr env oe in
+    let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
+    (match oe_t.v with
+     | Pointer t ->
+       {oe0 with
+        out_expr_node={oe0.out_expr_node with v=OE_star oe};
+        out_expr_meta=Some (oe_b, oe_bt, t)}
      | _ ->
        error
          (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a pointer type"
-           (print_out_expr oe0) (print_typ t)) oe.range)
+           (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_addrof oe ->
-    let oe, t = check_out_expr env oe in
-    {oe0 with v=OE_addrof oe}, with_range (Pointer t) oe.range
+    let oe = check_out_expr env oe in
+    let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
+    {oe0 with
+     out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
+     out_expr_meta=Some (oe_b, oe_bt, with_range (Pointer oe_t) oe.out_expr_node.range)}
   | OE_deref oe f ->
-    let oe, t = check_out_expr env oe in
-    (match t.v with
+    let oe = check_out_expr env oe in
+    let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
+    (match oe_t.v with
      | Pointer t ->
        let i = is_output_type (global_env_of_env env) t in
-       {oe0 with v=OE_deref oe f}, lookup_output_type_field (global_env_of_env env) i f
+       {oe0 with
+        out_expr_node={oe0.out_expr_node with v=OE_deref oe f};
+        out_expr_meta=Some (oe_b, oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
      | _ -> 
        error
          (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a pointer type"
-           (print_out_expr oe0) (print_typ t)) oe.range)
+           (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_dot oe f ->
-    let oe, t = check_out_expr env oe in
-    let i = is_output_type (global_env_of_env env) t in
-    {oe0 with v=OE_dot oe f}, lookup_output_type_field (global_env_of_env env) i f
+    let oe = check_out_expr env oe in
+    let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
+    let i = is_output_type (global_env_of_env env) oe_t in
+    {oe0 with
+     out_expr_node={oe0.out_expr_node with v=OE_dot oe f};
+     out_expr_meta=Some (oe_b, oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
 
 let range_of_typ_param (p:typ_param) = match p with
   | Inl e -> e.range
-  | Inr p -> p.range
+  | Inr p -> p.out_expr_node.range
 
 #push-options "--z3rlimit_factor 4"
 let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
@@ -827,8 +858,9 @@ and check_typ_param (env:env) (p:typ_param) : ML (typ_param & typ) =
     let e, t = check_expr env e in
     Inl e, t
   | Inr o ->
-    let o, t = check_out_expr env o in
-    Inr o, t
+    let o = check_out_expr env o in
+    add_out_expr (global_env_of_env env) o false;
+    Inr o, (let _, _, t = Some?.v o.out_expr_meta in t)
 
 #pop-options
 #push-options "--z3rlimit_factor 2"
@@ -860,19 +892,17 @@ let rec check_field_action (env:env) (f:field) (a:action)
           end
 
         | Action_assignment lhs rhs ->
-          let lhs, t = check_out_expr env lhs in
+          let lhs = check_out_expr env lhs in
+          let _, _, t = Some?.v lhs.out_expr_meta in
           let rhs, t' = check_expr env rhs in
-          //AR: TODO: need to check that assignment is only to an output expression, not say fields
-          // begin
-          // match t.v with
-          // | Pointer t0 ->
           if not (eq_typ env t t')
           then warning (Printf.sprintf
-                        "Assigning to pointer %s of type %s a value of incompatible type %s"
+                        "Assigning to %s of type %s a value of incompatible type %s"
                         (print_out_expr lhs)
                         (print_typ t)
                         (print_typ t'))
                      rhs.range;
+          add_out_expr (global_env_of_env env) lhs true;
           Action_assignment lhs rhs, tunit
           // | _ ->
           //   error "Assigning to a non-pointer" lhs.range
@@ -1189,10 +1219,26 @@ let elaborate_bit_fields env (fields:list field)
       in
       aux 0 None fields
 
+let rec check_output_field_type (ge:global_env) (t:typ) : ML unit =
+  match t.v with
+  | Type_app i [] ->
+    (match maybe_as_integer_typ i with
+     | Some _ -> ()
+     | _ -> ignore (lookup_output_type ge i))
+  | Pointer t -> check_output_field_type ge t
+  | _ -> error (Printf.sprintf "%s is not a valid output type" (print_typ t)) t.range
+
+let check_mutable_param (env:env) (p:param) : ML unit =
+  //a mutable parameter should have a pointer type
+  //and the base type may be a base type or an output type
+  let t, _, _ = p in
+  check_output_field_type (global_env_of_env env) t
+
 let check_params (env:env) (ps:list param) : ML unit =
-  ps |> List.iter (fun (t, p, _q) ->
-      let _ = check_typ true env t in
-      add_local env p t)
+  ps |> List.iter (fun (t, p, q) ->
+        if q = Mutable then check_mutable_param env (t, p, q)
+        else ignore (check_typ true env t);
+        add_local env p t)
 
 let rec weak_kind_of_fields (e: env) (l: list field) : ML weak_kind =
   match l with
@@ -1288,15 +1334,6 @@ let elaborate_record (e:global_env)
     in
     add_global e tdnames.typedef_name d (Inl attrs);
     d
-
-let rec check_output_field_type (ge:global_env) (t:typ) : ML unit =
-  match t.v with
-  | Type_app i [] ->
-    (match maybe_as_integer_typ i with
-     | Some _ -> ()
-     | _ -> ignore (lookup_output_type ge i))
-  | Pointer t -> check_output_field_type ge t
-  | _ -> error (Printf.sprintf "%s is not a valid output type" (print_typ t)) t.range
 
 let rec check_output_field (ge:global_env) (fld:out_field) : ML unit =
   match fld with
@@ -1414,6 +1451,7 @@ let initial_global_env () =
     ge_h = H.create 10;
     ge_fd = mk_field_num_ops ();
     ge_out_t = H.create 10;
+    out_exprs = alloc [];
   }
   in
   let nullary_decl i =
@@ -1459,6 +1497,9 @@ let get_exported_decls ge mname =
     else if d.d_exported
          then k::exported_decls, private_decls
          else exported_decls, k::private_decls) ge.ge_h ([], [])
+
+let get_output_exprs ge =
+  !ge.out_exprs
 
 let finish_module ge mname e_and_p =
   e_and_p |> snd |> List.iter (H.remove ge.ge_h);
