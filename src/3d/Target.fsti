@@ -257,3 +257,8 @@ val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string
 val print_c_entry (modul: string) (env: global_env) (ds:list decl)
   : ML (string & string)
+
+val output_setter_name (lhs:A.out_expr) : ML string
+val output_getter_name (lhs:A.out_expr) : ML string
+val output_base_var (lhs:A.out_expr) : ML A.ident
+val print_out_exprs (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string

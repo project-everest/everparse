@@ -1035,3 +1035,96 @@ let print_c_entry (modul: string)
   in
   header,
   impl
+
+
+/// Functions for printing setters and getters for output expressions
+
+
+let rec out_bt_name (t:A.typ) : ML string =
+  let open A in
+  match t.v with
+  | Type_app i [] -> ident_name i
+  | Pointer t -> out_bt_name t
+  | _ -> error "Impossible!" t.range
+
+let out_expr_bt_name (oe:A.out_expr) : ML string =
+  let open A in
+  match oe.out_expr_meta with
+  | Some (_, bt, _) -> out_bt_name bt
+  | _ -> error "Impossible!" oe.out_expr_node.range
+
+let out_expr_bt (oe:A.out_expr) : ML A.typ =
+  let open A in
+  match oe.out_expr_meta with
+  | Some (_, bt, _) -> bt
+  | _ -> error "Impossible!" oe.out_expr_node.range
+
+let out_expr_var (oe:A.out_expr) : ML A.ident =
+  let open A in
+  match oe.out_expr_meta with
+  | Some (i, _, _) -> i
+  | _ -> error "Impossible!" oe.out_expr_node.range
+
+let out_expr_t (oe:A.out_expr) : ML A.typ =
+  let open A in
+  match oe.out_expr_meta with
+  | Some (_, _, t) -> t
+  | _ -> error "Impossible!" oe.out_expr_node.range
+
+let rec out_fn_name (oe:A.out_expr) : ML string =
+  let open A in
+  match oe.out_expr_node.v with
+  | OE_id _ -> out_expr_bt_name oe
+  | OE_star oe -> Printf.sprintf "%s_star" (out_fn_name oe)
+  | OE_addrof oe -> Printf.sprintf "%s_addrof" (out_fn_name oe)
+  | OE_deref oe f -> Printf.sprintf "%s_deref_%s" (out_fn_name oe) (ident_name f)
+  | OE_dot oe f -> Printf.sprintf "%s_dot_%s" (out_fn_name oe) (ident_name f)
+
+let rec ast_typ_to_target_typ (t:A.typ) : ML typ =
+  let open A in
+  match t.v with
+  | Type_app i [] -> T_app i []
+  | Pointer t -> T_pointer (ast_typ_to_target_typ t)
+  | _ -> error "Impossible!" t.A.range
+
+let print_out_expr_set (oe:A.out_expr) : ML unit =
+  let open A in
+  let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
+  let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
+  let fn_arg1_name = out_expr_var oe in
+  let fn_arg2_t = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
+  let fn_arg2_name = "__v" in
+  let fn_body = Printf.sprintf "%s = %s;" (print_out_expr oe) fn_arg2_name in
+  let fn = Printf.sprintf "void %s (%s %s, %s %s){\n    %s;\n}\n"
+    fn_name
+    fn_arg1_t
+    (ident_name fn_arg1_name)
+    fn_arg2_t
+    fn_arg2_name
+    fn_body in
+  IO.print_string (Printf.sprintf "\n\n%s\n\n" fn)
+
+let print_out_expr_get (oe:A.out_expr) : ML unit =
+  let open A in
+  let fn_name = Printf.sprintf "get_%s" (out_fn_name oe) in
+  let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
+  let fn_arg1_name = out_expr_var oe in
+  let fn_res = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
+  let fn_body = Printf.sprintf "return %s;" (print_out_expr oe) in
+  let fn = Printf.sprintf "%s %s (%s %s){\n    %s;\n}\n"
+    fn_res
+    fn_name
+    fn_arg1_t
+    (ident_name fn_arg1_name)
+    fn_body in
+  IO.print_string (Printf.sprintf "\n\n%s\n\n" fn)
+
+let output_setter_name lhs = Printf.sprintf "set_%s" (out_fn_name lhs)
+let output_getter_name lhs = Printf.sprintf "get_%s" (out_fn_name lhs)
+let output_base_var lhs = out_expr_var lhs
+
+let print_out_exprs _ (oes:list (A.out_expr & bool)) : ML string =
+  IO.print_string (Printf.sprintf "Printing %d out exprs\n" (List.length oes));
+  List.iter (fun (oe, b) -> if b then print_out_expr_set oe else print_out_expr_get oe) oes;
+  ""
+  //String.concat "\n" (List.map print_out_expr oes)
