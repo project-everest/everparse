@@ -48,5 +48,7 @@ val initial_global_env (_:unit) : ML global_env
 
 val get_exported_decls (ge:global_env) (mname:string) : ML (list ident' & list ident')  //exported, private
 
+val get_output_exprs (ge:global_env) : ML (list (out_expr & bool))
+
 val finish_module (ge:global_env) (mname:string) (e_and_p:list ident' & list ident')
   : ML global_env
