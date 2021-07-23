@@ -61,14 +61,20 @@ and simplify_action_opt (env:T.env_t) (a:option action) : ML (option action) =
   match a with
   | None -> None
   | Some a -> Some (simplify_action env a)
+
+let simplify_typ_param (env:T.env_t) (p:typ_param) : ML typ_param =
+  match p with
+  | Inl e -> simplify_expr env e |> Inl
+  | _ -> p
+
 let rec simplify_typ (env:T.env_t) (t:typ)
   : ML typ
   = match t.v with
     | Pointer t -> {t with v=Pointer (simplify_typ env t)}
-    | Type_app s es ->
-      let es = List.map (simplify_expr env) es in
+    | Type_app s ps ->
+      let ps = List.map (simplify_typ_param env) ps in
       let s = B.resolve_typedef_abbrev (fst env) s in
-      { t with v = Type_app s es }
+      { t with v = Type_app s ps }
 
 let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   match f with
@@ -120,6 +126,8 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
                                  | DefaultCase f -> DefaultCase (simplify_field env f)) 
                          cases in
     decl_with_v d (CaseType tdnames params (hd, cases))
+
+  | OutputType _ -> d
 
 let simplify_prog benv senv (p:list decl) =
   List.map (simplify_decl (B.mk_env benv, senv)) p

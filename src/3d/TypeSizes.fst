@@ -392,6 +392,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       );
       extend_with_size_of_typedef_names env names size alignment;
       d
+    | OutputType _ -> d
 
 let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
   let env =

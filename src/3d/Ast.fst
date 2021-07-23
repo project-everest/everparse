@@ -259,6 +259,8 @@ type out_expr' =
 /// out_expr_meta is (base identifier, base type, type of the expr)
 ///
 /// It is populated during typechecking in Binding.fst
+///
+/// TODO: could we also store the string from the source spec, to print it as is later?
 
 and out_expr = { out_expr_node: with_meta_t out_expr';
                  out_expr_meta: option (ident & typ & typ) }

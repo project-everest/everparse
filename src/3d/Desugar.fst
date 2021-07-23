@@ -278,6 +278,19 @@ let resolve_enum_case (env:qenv) (ec:enum_case) : ML enum_case =
   | i, None -> resolve_ident env i, None
   | _ -> error "Unexpected enum_case in resolve_enum_case" (fst ec).range
 
+let rec resolve_out_field (env:qenv) (fld:out_field) : ML out_field =
+  match fld with
+  | Out_field_named i t -> Out_field_named i (resolve_typ env t)
+  | Out_field_anon l u -> Out_field_anon (resolve_out_fields env l) u
+
+and resolve_out_fields (env:qenv) (flds:list out_field) : ML (list out_field) =
+  List.map (resolve_out_field env) flds
+
+let resolve_out_type (env:qenv) (out_t:out_typ) : ML out_typ =
+  { out_t with
+    out_typ_names = resolve_typedef_names env out_t.out_typ_names;
+    out_typ_fields = List.map (resolve_out_field env) out_t.out_typ_fields }
+
 let resolve_decl' (env:qenv) (d:decl') : ML decl' =
   match d with
   | ModuleAbbrev i m -> push_module_abbrev env i.v.name m.v.name; d
@@ -298,7 +311,7 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let params, env = resolve_params env params in
     let sc = resolve_switch_case env sc in
     CaseType td_names params sc
-  | OutputType _ -> d
+  | OutputType out_t -> OutputType (resolve_out_type env out_t)
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 

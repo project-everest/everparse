@@ -36,6 +36,7 @@ let translate_module (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
         list Target.decl &
         StaticAssertions.static_asserts &
+        list (Ast.out_expr & bool) &
         env) =
 
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
@@ -65,8 +66,12 @@ let translate_module (en:env) (mname:string) (fn:string)
   
   let decls, senv = TypeSizes.size_of_decls benv en.typesizes_env decls in
 
+  Options.debug_print_string "=============Finished typesizes pass=============\n";
+
   let static_asserts = StaticAssertions.compute_static_asserts benv senv refinement in
-  
+
+  Options.debug_print_string "=============Finished static asserts pass=============\n";
+
   let decls = Simplify.simplify_prog benv senv decls in
   
   Options.debug_print_string "=============After simplify============\n";
@@ -84,12 +89,14 @@ let translate_module (en:env) (mname:string) (fn:string)
    decls,
    t_decls,
    static_asserts,
+   Binding.get_output_exprs benv,
    { binding_env = benv;
      typesizes_env = senv;
      translate_env = tenv }
 
 let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   (static_asserts:StaticAssertions.static_asserts)
+  (out_exprs:list (Ast.out_expr & bool))
   : ML unit =
 
   let types_fst_file =
@@ -150,12 +157,14 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
           modul) in
     FStar.IO.write_string c_static_asserts_file (StaticAssertions.print_static_asserts static_asserts);
     FStar.IO.close_write_file c_static_asserts_file
-  end
+  end;
+
+  ignore (Target.print_out_exprs modul out_exprs)
 
 let process_file (en:env) (fn:string) (modul:string) (emit_fstar:bool) : ML env =
-  let _decls, t_decls, static_asserts, en =
+  let _decls, t_decls, static_asserts, out_exprs, en =
     translate_module en modul fn in
-  if emit_fstar then emit_fstar_code en modul t_decls static_asserts
+  if emit_fstar then emit_fstar_code en modul t_decls static_asserts out_exprs
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
 
   let ds = Binding.get_exported_decls en.binding_env modul in

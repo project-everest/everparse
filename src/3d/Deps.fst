@@ -93,9 +93,14 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | This -> []
     | App _op args -> List.collect deps_of_expr args in
 
+  let deps_of_typ_param (p:typ_param) : ML (list string) =
+    match p with
+    | Inl e -> deps_of_expr e
+    | _ -> [] in  //AR: no dependencies from the output expressions
+
   let rec deps_of_typ (t:typ) : ML (list string) =
     match t.v with
-    | Type_app hd args -> (maybe_dep hd)@(List.collect deps_of_expr args)
+    | Type_app hd args -> (maybe_dep hd)@(List.collect deps_of_typ_param args)
     | Pointer t -> deps_of_typ t in
 
   let deps_of_atomic_action (ac:atomic_action) : ML (list string) =
@@ -169,7 +174,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (List.collect (fun f -> deps_of_struct_field f.v) flds)
     | CaseType _ params sc ->
       (deps_of_params params)@
-      (deps_of_switch_case sc) in
+      (deps_of_switch_case sc)
+    | OutputType _ -> []  //AR: no dependencies from the output types yet
+  in
 
   {
     sd_deps = List.collect deps_of_decl decls;
