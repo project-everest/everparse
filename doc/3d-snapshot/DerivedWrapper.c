@@ -67,10 +67,12 @@ static char* DerivedFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN DerivedCheckTriple(uint8_t *base, uint32_t len) {
-	uint64_t result = DerivedValidateTriple(len, base, 0);
+	uint32_t position = 0;
+	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
+	uint64_t result = DerivedValidateTriple(inputBuffer);
 	if (EverParseResultIsError(result)) {
 		DerivedEverParseError(
-	DerivedStructNameOfErr(result),
+			DerivedStructNameOfErr(result),
 			DerivedFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;
@@ -79,10 +81,12 @@ BOOLEAN DerivedCheckTriple(uint8_t *base, uint32_t len) {
 }
 
 BOOLEAN DerivedCheckQuad(uint8_t *base, uint32_t len) {
-	uint64_t result = DerivedValidateQuad(len, base, 0);
+	uint32_t position = 0;
+	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
+	uint64_t result = DerivedValidateQuad(inputBuffer);
 	if (EverParseResultIsError(result)) {
 		DerivedEverParseError(
-	DerivedStructNameOfErr(result),
+			DerivedStructNameOfErr(result),
 			DerivedFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

@@ -103,10 +103,12 @@ static char* TriangleFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN TriangleCheckTriangle(uint8_t *base, uint32_t len) {
-	uint64_t result = TriangleValidateTriangle(len, base, 0);
+	uint32_t position = 0;
+	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
+	uint64_t result = TriangleValidateTriangle(inputBuffer);
 	if (EverParseResultIsError(result)) {
 		TriangleEverParseError(
-	TriangleStructNameOfErr(result),
+			TriangleStructNameOfErr(result),
 			TriangleFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

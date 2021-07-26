@@ -10,9 +10,9 @@ extern "C" {
 #include "EverParse.h"
 
 
+#include "Triangle2.h"
 
-
-uint64_t SmokerValidateSmoker(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);
+uint64_t SmokerValidateSmoker(EverParseInputBuffer Input);
 
 #if defined(__cplusplus)
 }

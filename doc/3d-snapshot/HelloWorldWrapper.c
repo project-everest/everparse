@@ -79,10 +79,12 @@ static char* HelloWorldFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len) {
-	uint64_t result = HelloWorldValidatePoint(len, base, 0);
+	uint32_t position = 0;
+	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
+	uint64_t result = HelloWorldValidatePoint(inputBuffer);
 	if (EverParseResultIsError(result)) {
 		HelloWorldEverParseError(
-	HelloWorldStructNameOfErr(result),
+			HelloWorldStructNameOfErr(result),
 			HelloWorldFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

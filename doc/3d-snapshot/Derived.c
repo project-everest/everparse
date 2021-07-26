@@ -7,8 +7,7 @@ Auto-generated field identifier for error reporting
 */
 #define DERIVED__TRIPLE__THIRD ((uint64_t)26U)
 
-static inline uint64_t
-ValidateTriplePair(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
+static inline uint64_t ValidateTriplePair(EverParseInputBuffer Input)
 /*++
     Internal helper function:
         Validator for field _Triple_pair
@@ -16,36 +15,42 @@ ValidateTriplePair(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 --*/
 {
   /* SNIPPET_START: Triple */
-  return BaseValidatePair(InputLength, Input, StartPosition);
+  return BaseValidatePair(Input);
 }
 
-static inline uint64_t
-ValidateTripleThird(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
+static inline uint64_t ValidateTripleThird(EverParseInputBuffer Input)
 /*++
     Internal helper function:
         Validator for field _Triple_third
         of type Derived._Triple
 --*/
 {
+  uint32_t startPosition = *Input.pos;
+  uint64_t startPosition1 = (uint64_t)startPosition;
   /* Validating field third */
-  uint64_t endPositionOrError = BaseValidateUlong(InputLength, Input, StartPosition);
-  return EverParseMaybeSetErrorCode(endPositionOrError, StartPosition, DERIVED__TRIPLE__THIRD);
+  uint64_t result = BaseValidateUlong(Input);
+  return EverParseMaybeSetErrorCode(result, startPosition1, DERIVED__TRIPLE__THIRD);
 }
 
-uint64_t DerivedValidateTriple(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+uint64_t DerivedValidateTriple(EverParseInputBuffer Input)
 {
   /* Field _Triple_pair */
-  uint64_t positionAfterpair = ValidateTriplePair(Uu, Input, StartPosition);
-  if (EverParseIsError(positionAfterpair))
+  uint64_t resultAfterpair = ValidateTriplePair(Input);
+  if (EverParseIsError(resultAfterpair))
   {
-    return positionAfterpair;
+    return resultAfterpair;
   }
   /* Field _Triple_third */
-  return ValidateTripleThird(Uu, Input, positionAfterpair);
+  uint64_t res = ValidateTripleThird(Input);
+  if (EverParseIsSuccess(res))
+  {
+    uint32_t currentPosition = *Input.pos;
+    *Input.pos = currentPosition + (uint32_t)res;
+  }
+  return res;
 }
 
-static inline uint64_t
-ValidateQuad12(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
+static inline uint64_t ValidateQuad12(EverParseInputBuffer Input)
 /*++
     Internal helper function:
         Validator for field _Quad__12
@@ -53,11 +58,10 @@ ValidateQuad12(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 --*/
 {
   /* Validating field _12 */
-  return BaseValidatePair(InputLength, Input, StartPosition);
+  return BaseValidatePair(Input);
 }
 
-static inline uint64_t
-ValidateQuad34(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
+static inline uint64_t ValidateQuad34(EverParseInputBuffer Input)
 /*++
     Internal helper function:
         Validator for field _Quad__34
@@ -65,18 +69,18 @@ ValidateQuad34(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
 --*/
 {
   /* Validating field _34 */
-  return BaseValidatePair(InputLength, Input, StartPosition);
+  return BaseValidatePair(Input);
 }
 
-uint64_t DerivedValidateQuad(uint32_t Uu, uint8_t *Input, uint64_t StartPosition)
+uint64_t DerivedValidateQuad(EverParseInputBuffer Input)
 {
   /* Field _Quad__12 */
-  uint64_t positionAfter12 = ValidateQuad12(Uu, Input, StartPosition);
-  if (EverParseIsError(positionAfter12))
+  uint64_t resultAfter12 = ValidateQuad12(Input);
+  if (EverParseIsError(resultAfter12))
   {
-    return positionAfter12;
+    return resultAfter12;
   }
   /* Field _Quad__34 */
-  return ValidateQuad34(Uu, Input, positionAfter12);
+  return ValidateQuad34(Input);
 }
 

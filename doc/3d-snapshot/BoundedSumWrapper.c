@@ -41,10 +41,12 @@ static char* BoundedSumFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
-	uint64_t result = BoundedSumValidateBoundedSum(bound, len, base, 0);
+	uint32_t position = 0;
+	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
+	uint64_t result = BoundedSumValidateBoundedSum(bound, inputBuffer);
 	if (EverParseResultIsError(result)) {
 		BoundedSumEverParseError(
-	BoundedSumStructNameOfErr(result),
+			BoundedSumStructNameOfErr(result),
 			BoundedSumFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;
@@ -53,10 +55,12 @@ BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
 }
 
 BOOLEAN BoundedSumCheckMySum(uint8_t *base, uint32_t len) {
-	uint64_t result = BoundedSumValidateMySum(len, base, 0);
+	uint32_t position = 0;
+	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
+	uint64_t result = BoundedSumValidateMySum(inputBuffer);
 	if (EverParseResultIsError(result)) {
 		BoundedSumEverParseError(
-	BoundedSumStructNameOfErr(result),
+			BoundedSumStructNameOfErr(result),
 			BoundedSumFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

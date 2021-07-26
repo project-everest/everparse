@@ -71,10 +71,12 @@ static char* EnumConstraintFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN EnumConstraintCheckEnumConstraint(uint8_t *base, uint32_t len) {
-	uint64_t result = EnumConstraintValidateEnumConstraint(len, base, 0);
+	uint32_t position = 0;
+	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
+	uint64_t result = EnumConstraintValidateEnumConstraint(inputBuffer);
 	if (EverParseResultIsError(result)) {
 		EnumConstraintEverParseError(
-	EnumConstraintStructNameOfErr(result),
+			EnumConstraintStructNameOfErr(result),
 			EnumConstraintFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

@@ -2,7 +2,7 @@
 
 #include "BF.h"
 
-static inline uint64_t ValidateDummyEmp(uint64_t StartPosition)
+static inline uint64_t ValidateDummyEmp(EverParseInputBuffer Input)
 /*++
     Internal helper function:
         Validator for field _dummy_emp
@@ -10,16 +10,16 @@ static inline uint64_t ValidateDummyEmp(uint64_t StartPosition)
 --*/
 {
   /* Validating field emp */
-  return StartPosition;
+  return (uint64_t)0U;
 }
 
-uint64_t BfValidateDummy(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition)
+uint64_t BfValidateDummy(EverParseInputBuffer Input)
 {
   /* Field _dummy_emp */
-  return ValidateDummyEmp(StartPosition);
+  return ValidateDummyEmp(Input);
 }
 
-void BfReadDummy(uint32_t InputLength, uint8_t *Input, uint32_t StartPosition)
+void BfReadDummy(EverParseInputBuffer Input)
 {
   
 }

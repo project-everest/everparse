@@ -51,10 +51,12 @@ static char* BoundedSumWhereFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN BoundedSumWhereCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
-	uint64_t result = BoundedSumWhereValidateBoundedSum(bound, len, base, 0);
+	uint32_t position = 0;
+	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
+	uint64_t result = BoundedSumWhereValidateBoundedSum(bound, inputBuffer);
 	if (EverParseResultIsError(result)) {
 		BoundedSumWhereEverParseError(
-	BoundedSumWhereStructNameOfErr(result),
+			BoundedSumWhereStructNameOfErr(result),
 			BoundedSumWhereFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;
