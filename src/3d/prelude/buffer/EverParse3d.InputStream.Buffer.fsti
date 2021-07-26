@@ -16,16 +16,3 @@ val t : Type0
 noextract
 inline_for_extraction
 val inst : input_stream_inst t
-
-val make
-  (from: B.buffer U8.t)
-  (n: U32.t)
-: HST.ST t
-  (requires (fun h -> B.live h from /\ U32.v n == B.length from))
-  (ensures (fun h res h' ->
-    B.modifies (B.loc_buffer from) h h' /\
-    footprint res `B.loc_includes` B.loc_buffer from /\
-    (B.loc_unused_in h `B.loc_union` B.loc_buffer from) `B.loc_includes` footprint res /\
-    live res h' /\
-    get_remaining res h' == B.as_seq h from
-  ))

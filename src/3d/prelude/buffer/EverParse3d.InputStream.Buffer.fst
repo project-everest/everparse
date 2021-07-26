@@ -3,31 +3,7 @@ open EverParse3d.InputStream.Buffer.Aux
 
 (* Implementation for single buffers *)
 
-inline_for_extraction
-noextract
-let t = input_buffer
-
-unfold
-let _live
-  (x: t)
-  (h: HS.mem)
-: Tot prop
-=
-  B.live h x.buf /\
-  B.live h x.pos /\
-  U32.v (B.deref h x.pos) <= U32.v x.len /\
-  B.as_seq h x.buf == Ghost.reveal x.g_all_buf /\
-  Seq.slice (B.as_seq h x.buf) 0 (U32.v x.len) == Ghost.reveal x.g_all
-
-let _get_remaining
-  (x: t)
-  (h: HS.mem)
-: Ghost (Seq.seq U8.t)
-  (requires (_live x h))
-  (ensures (fun y -> Seq.length y <= U32.v x.len))
-= 
-  let i = U32.v (B.deref h x.pos) in
-  Seq.slice x.g_all i (Seq.length x.g_all)
+let t = t
 
 let _get_read
   (x: t)
@@ -83,9 +59,7 @@ let inst = {
 
   live = _live;
 
-  footprint = begin fun x ->
-    B.loc_buffer x.buf `B.loc_union` B.loc_buffer x.pos
-  end;
+  footprint = _footprint;
 
   live_not_unused_in = begin fun x h ->
     ()
@@ -164,16 +138,3 @@ let inst = {
 }
 
 #pop-options
-
-let make from n =
-  let h = HST.get () in
-  let g = Ghost.hide (B.as_seq h from) in
-  let pos = B.malloc HS.root 0ul 1ul in
-  {
-    buf = from;
-    len = n;
-    pos = pos;
-    g_all = g;
-    g_all_buf = g;
-    prf = ();
-  }

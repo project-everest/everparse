@@ -970,20 +970,15 @@ let print_c_entry (modul: string)
       Printf.sprintf
       "%s {\n\t\
          uint32_t position = 0;\n\t\
-         EverParseInputBuffer inputBuffer;\n\t\
-         inputBuffer.buf = base;\n\t\
-         inputBuffer.len = len;\n\t\
-         inputBuffer.pos = &position;\n\t\
-         {\n\t\t\
-             uint64_t result = %s(%s);\n\t\t\
-             if (EverParseResultIsError(result)) {\n\t\t\t\
-               %sEverParseError(\n\t\t\t\t\
-                  %sStructNameOfErr(result),\n\t\t\t\t\
-                  %sFieldNameOfErr (result),\n\t\t\t\t\
-                  EverParseErrorReasonOfResult(result));\n\t\t\t\
-               return FALSE;\n\t\t\
-             }\n\t\
-         };\n\t\
+         EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);\n\t\
+         uint64_t result = %s(%s);\n\t\
+         if (EverParseResultIsError(result)) {\n\t\t\
+           %sEverParseError(\n\t\t\t\
+              %sStructNameOfErr(result),\n\t\t\t\
+              %sFieldNameOfErr (result),\n\t\t\t\
+              EverParseErrorReasonOfResult(result));\n\t\t\
+           return FALSE;\n\t\
+         }\n\t\
          return TRUE;\n\
        }"
        signature
