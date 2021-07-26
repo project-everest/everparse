@@ -10,11 +10,11 @@ extern "C" {
 #include "EverParse.h"
 
 
-#include "Triangle2.h"
 
-uint64_t BaseValidateUlong(EverParseInputBuffer Sl);
 
-uint64_t BaseValidatePair(EverParseInputBuffer Input);
+uint64_t BaseValidateUlong(uint32_t InputLength, uint8_t *Input, uint64_t StartPosition);
+
+uint64_t BaseValidatePair(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)
 }

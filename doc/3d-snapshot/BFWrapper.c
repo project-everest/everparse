@@ -27,20 +27,13 @@ static char* BFFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN BfCheckDummy(uint8_t *base, uint32_t len) {
-	uint32_t position = 0;
-	EverParseInputBuffer inputBuffer;
-	inputBuffer.buf = base;
-	inputBuffer.len = len;
-	inputBuffer.pos = &position;
-	{
-		uint64_t result = BfValidateDummy(inputBuffer);
-		if (EverParseResultIsError(result)) {
-			BFEverParseError(
-				BFStructNameOfErr(result),
-				BFFieldNameOfErr (result),
-				EverParseErrorReasonOfResult(result));
-			return FALSE;
-		}
-	};
+	uint64_t result = BfValidateDummy(len, base, 0);
+	if (EverParseResultIsError(result)) {
+		BFEverParseError(
+	BFStructNameOfErr(result),
+			BFFieldNameOfErr (result),
+			EverParseErrorReasonOfResult(result));
+		return FALSE;
+	}
 	return TRUE;
 }
