@@ -28,9 +28,8 @@ EverParse.h: EverParse.rsp
 	$(KREMLIN_HOME)/krml \
 	  -skip-compilation \
 	  -skip-makefiles \
-	  -bundle 'C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
+	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
 	  -bundle 'LowParse.Low.ErrorCode+Prelude.StaticHeader+ResultOps+EverParse3d.InputStream.Buffer.Aux=LowParse.\*,Prelude,Prelude.\*,Actions,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
-	  -bundle 'Prims[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
 	  -header ../../noheader.txt \

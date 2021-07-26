@@ -34,6 +34,7 @@ extern "C" {
 #include <stdint.h>
 
 typedef char * const EverParseString;
+typedef EverParseString PrimsString;
 
 /* ... for Windows (MSVC)... not targeting XBOX 360! */
 #if defined(_MSC_VER)
