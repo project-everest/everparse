@@ -910,7 +910,8 @@ let validate_fldata_consumes_all
     I.is_prefix_of_prop truncatedInput input h3;
     res
   end
-#pop-options
+
+#restart-solver
 
 noextract
 inline_for_extraction
@@ -952,6 +953,8 @@ let validate_fldata
       else res
     end
   end
+
+#pop-options
 
 noextract
 inline_for_extraction
