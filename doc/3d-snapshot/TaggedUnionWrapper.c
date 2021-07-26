@@ -99,12 +99,10 @@ static char* TaggedUnionFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN TaggedUnionCheckInteger(uint8_t *base, uint32_t len) {
-	uint32_t position = 0;
-	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
-	uint64_t result = TaggedUnionValidateInteger(inputBuffer);
+	uint64_t result = TaggedUnionValidateInteger(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		TaggedUnionEverParseError(
-			TaggedUnionStructNameOfErr(result),
+	TaggedUnionStructNameOfErr(result),
 			TaggedUnionFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

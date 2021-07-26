@@ -10,9 +10,10 @@ extern "C" {
 #include "EverParse.h"
 
 
-#include "Triangle2.h"
 
-uint64_t GetFieldPtrValidateT(uint8_t **Out, EverParseInputBuffer Input);
+
+uint64_t
+GetFieldPtrValidateT(uint8_t **Out, uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)
 }

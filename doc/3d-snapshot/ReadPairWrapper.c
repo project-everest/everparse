@@ -87,12 +87,10 @@ static char* ReadPairFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN ReadPairCheckPair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len) {
-	uint32_t position = 0;
-	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
-	uint64_t result = ReadPairValidatePair(x, y, inputBuffer);
+	uint64_t result = ReadPairValidatePair(x, y, len, base, 0);
 	if (EverParseResultIsError(result)) {
 		ReadPairEverParseError(
-			ReadPairStructNameOfErr(result),
+	ReadPairStructNameOfErr(result),
 			ReadPairFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

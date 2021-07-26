@@ -27,12 +27,10 @@ static char* BFFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN BfCheckDummy(uint8_t *base, uint32_t len) {
-	uint32_t position = 0;
-	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
-	uint64_t result = BfValidateDummy(inputBuffer);
+	uint64_t result = BfValidateDummy(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		BFEverParseError(
-			BFStructNameOfErr(result),
+	BFStructNameOfErr(result),
 			BFFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

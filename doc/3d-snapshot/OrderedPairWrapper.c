@@ -83,12 +83,10 @@ static char* OrderedPairFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN OrderedPairCheckOrderedPair(uint8_t *base, uint32_t len) {
-	uint32_t position = 0;
-	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
-	uint64_t result = OrderedPairValidateOrderedPair(inputBuffer);
+	uint64_t result = OrderedPairValidateOrderedPair(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		OrderedPairEverParseError(
-			OrderedPairStructNameOfErr(result),
+	OrderedPairStructNameOfErr(result),
 			OrderedPairFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

@@ -91,12 +91,10 @@ static char* SmokerFieldNameOfErr(uint64_t err) {
 }
 
 BOOLEAN SmokerCheckSmoker(uint8_t *base, uint32_t len) {
-	uint32_t position = 0;
-	EverParseInputBuffer inputBuffer = EverParseMakeInputBuffer(base, len, &position);
-	uint64_t result = SmokerValidateSmoker(inputBuffer);
+	uint64_t result = SmokerValidateSmoker(len, base, 0);
 	if (EverParseResultIsError(result)) {
 		SmokerEverParseError(
-			SmokerStructNameOfErr(result),
+	SmokerStructNameOfErr(result),
 			SmokerFieldNameOfErr (result),
 			EverParseErrorReasonOfResult(result));
 		return FALSE;

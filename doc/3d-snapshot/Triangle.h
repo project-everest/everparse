@@ -10,9 +10,9 @@ extern "C" {
 #include "EverParse.h"
 
 
-#include "Triangle2.h"
 
-uint64_t TriangleValidateTriangle(EverParseInputBuffer Input);
+
+uint64_t TriangleValidateTriangle(uint32_t Uu, uint8_t *Input, uint64_t StartPosition);
 
 #if defined(__cplusplus)
 }
