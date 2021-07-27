@@ -3,16 +3,6 @@
 #include "ReadPair.h"
 void ReadPairEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
-typedef struct _ErrorFrame
-{
-	BOOLEAN filled;
-	uint32_t start_pos;
-	uint32_t end_pos;
-	const char *typename;
-	const char *fieldname;
-	const char *reason;
-} ErrorFrame;
-
 static
 void DefaultErrorHandler(
 	const char *typename,
@@ -24,7 +14,7 @@ void DefaultErrorHandler(
 	uint64_t start_pos,
 	uint64_t end_pos)
 {
-	ErrorFrame *frame = (ErrorFrame*)context;
+	EverParseErrorFrame *frame = (EverParseErrorFrame*)context;
 	if (!frame->filled)
 	{
 		frame->filled = TRUE;
@@ -37,7 +27,7 @@ void DefaultErrorHandler(
 }
 
 BOOLEAN ReadPairCheckPair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len) {
-	ErrorFrame frame;
+	EverParseErrorFrame frame;
 	frame.filled = FALSE;
 	uint64_t result = ReadPairValidatePair(x, y,  (uint8_t*)&frame, &DefaultErrorHandler, len, base, 0);
 	if (EverParseResultIsError(result))
