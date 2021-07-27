@@ -74,7 +74,7 @@ let error_handler_name =
 let error_handler_decl =
   let open A in
   let error_handler_id' = {
-    modul_name = Some "Actions";
+    modul_name = Some "EverParse3d.Actions.Base";
     name = "error_handler"
   } in
   let error_handler_id = with_range error_handler_id' dummy_range in
@@ -988,28 +988,25 @@ let print_c_entry (modul: string)
           {\n\t\
              BOOLEAN filled;\n\t\
              uint32_t start_pos;\n\t\
-             uint32_t end_pos;\n\t\
              const char *typename;\n\t\
              const char *fieldname;\n\t\
              const char *reason;\n\
           } ErrorFrame;\n\
           \n\
+          static\n\
           void DefaultErrorHandler(\n\t\
                               const char *typename,\n\t\
                               const char *fieldname,\n\t\
                               const char *reason,\n\t\
                               uint8_t *context,\n\t\
-                              uint32_t len,\n\t\
-                              uint8_t *base,\n\t\
-                              uint64_t start_pos,\n\t\
-                              uint64_t end_pos)\n\
+                              EverParseInputBuffer input,\n\t\
+                              uint32_t start_pos)\n\
           {\n\t\
             ErrorFrame *frame = (ErrorFrame*)context;\n\t\
             if (!frame->filled)\n\t\
             {\n\t\t\
               frame->filled = TRUE;\n\t\t\
               frame->start_pos = start_pos;\n\t\t\
-              frame->end_pos = end_pos;\n\t\t\
               frame->typename = typename;\n\t\t\
               frame->fieldname = fieldname;\n\t\t\
               frame->reason = reason;\n\t\
@@ -1020,7 +1017,9 @@ let print_c_entry (modul: string)
      Printf.sprintf
        "ErrorFrame frame;\n\t\
        frame.filled = FALSE;\n\t\
-       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, len, base, 0);\n\t\
+       uint32_t position = 0;\n\t\
+       EverParseInputBuffer input = EverParseMakeInputBuffer(base, len, &position);\n\t\
+       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input);\n\t\
        if (EverParseResultIsError(result))\n\t\
        {\n\t\t\
          if (frame.filled)\n\t\t\
