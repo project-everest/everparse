@@ -984,16 +984,7 @@ let print_c_entry (modul: string)
                   (ds:list decl)
     : ML (string & string)
     =  let default_error_handler =
-         "typedef struct _ErrorFrame\n\
-          {\n\t\
-             BOOLEAN filled;\n\t\
-             uint32_t start_pos;\n\t\
-             const char *typename;\n\t\
-             const char *fieldname;\n\t\
-             const char *reason;\n\
-          } ErrorFrame;\n\
-          \n\
-          static\n\
+         "static\n\
           void DefaultErrorHandler(\n\t\
                               const char *typename,\n\t\
                               const char *fieldname,\n\t\
@@ -1002,7 +993,7 @@ let print_c_entry (modul: string)
                               EverParseInputBuffer input,\n\t\
                               uint32_t start_pos)\n\
           {\n\t\
-            ErrorFrame *frame = (ErrorFrame*)context;\n\t\
+            EverParseErrorFrame *frame = (EverParseErrorFrame*)context;\n\t\
             if (!frame->filled)\n\t\
             {\n\t\t\
               frame->filled = TRUE;\n\t\t\
@@ -1015,7 +1006,7 @@ let print_c_entry (modul: string)
    in
    let wrapped_call name params =
      Printf.sprintf
-       "ErrorFrame frame;\n\t\
+       "EverParseErrorFrame frame;\n\t\
        frame.filled = FALSE;\n\t\
        uint32_t position = 0;\n\t\
        EverParseInputBuffer input = EverParseMakeInputBuffer(base, len, &position);\n\t\
