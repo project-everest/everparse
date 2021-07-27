@@ -994,6 +994,7 @@ let print_c_entry (modul: string)
              const char *reason;\n\
           } ErrorFrame;\n\
           \n\
+          static\n\
           void DefaultErrorHandler(\n\t\
                               const char *typename,\n\t\
                               const char *fieldname,\n\t\
