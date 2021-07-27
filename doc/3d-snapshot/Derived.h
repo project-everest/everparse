@@ -11,6 +11,7 @@ extern "C" {
 
 
 #include "Base.h"
+#include "Triangle2.h"
 
 uint64_t
 DerivedValidateTriple(
@@ -21,14 +22,10 @@ DerivedValidateTriple(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 );
 
 uint64_t
@@ -40,14 +37,10 @@ DerivedValidateQuad(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 );
 
 #if defined(__cplusplus)

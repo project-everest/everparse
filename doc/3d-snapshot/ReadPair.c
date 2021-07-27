@@ -12,14 +12,10 @@ ValidatePairFirst(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 /*++
     Internal helper function:
@@ -28,65 +24,71 @@ ValidatePairFirst(
 --*/
 {
   /* Validating field first */
-  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
-  uint64_t positionAfterPair;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  uint32_t positionBeforePair = *Input.pos;
+  uint32_t positionBeforePair1 = *Input.pos;
+  uint32_t positionBeforePair2 = *Input.pos;
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  uint32_t currentPosition = *Input.pos;
+  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - currentPosition);
+  uint64_t resultAfterPair;
+  if (hasBytes)
   {
-    positionAfterPair = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAfterPair = (uint64_t)(uint32_t)4U;
   }
   else
   {
-    positionAfterPair = StartPosition + (uint64_t)4U;
+    resultAfterPair = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  uint64_t positionAfterPair0;
-  if (EverParseIsSuccess(positionAfterPair))
+  uint64_t resultAfterPair0;
+  if (EverParseIsSuccess(resultAfterPair))
   {
-    positionAfterPair0 = positionAfterPair;
+    resultAfterPair0 = resultAfterPair;
   }
   else
   {
     Err("_Pair",
       "_Pair_first.base",
-      EverParseErrorReasonOfResult(positionAfterPair),
+      EverParseErrorReasonOfResult(resultAfterPair),
       Ctxt,
-      Uu,
       Input,
-      StartPosition,
-      positionAfterPair);
-    positionAfterPair0 = positionAfterPair;
+      positionBeforePair2);
+    resultAfterPair0 = resultAfterPair;
   }
-  uint64_t positionAfterPair1;
-  if (EverParseIsError(positionAfterPair0))
+  uint64_t resultAfterPair1;
+  if (EverParseIsError(resultAfterPair0))
   {
-    positionAfterPair1 = positionAfterPair0;
+    resultAfterPair1 = resultAfterPair0;
   }
   else
   {
-    uint8_t *base = Input;
-    uint32_t pair1 = Load32Le(base + (uint32_t)StartPosition);
+    uint8_t temp[4U] = { 0U };
+    uint32_t currentPosition = *Input.pos;
+    uint8_t *res = Input.buf + currentPosition;
+    *Input.pos = currentPosition + (uint32_t)4U;
+    uint8_t *temp1 = res;
+    uint32_t res0 = Load32Le(temp1);
+    uint32_t pair1 = res0;
     *X = pair1;
     if (TRUE)
     {
-      positionAfterPair1 = positionAfterPair0;
+      resultAfterPair1 = resultAfterPair0;
     }
     else
     {
-      positionAfterPair1 = EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
+      resultAfterPair1 = EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
     }
   }
-  if (EverParseIsSuccess(positionAfterPair1))
+  if (EverParseIsSuccess(resultAfterPair1))
   {
-    return positionAfterPair1;
+    return resultAfterPair1;
   }
   Err("_Pair",
     "_Pair_first",
-    EverParseErrorReasonOfResult(positionAfterPair1),
+    EverParseErrorReasonOfResult(resultAfterPair1),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterPair1);
-  return positionAfterPair1;
+    positionBeforePair);
+  return resultAfterPair1;
 }
 
 static inline uint64_t
@@ -99,14 +101,10 @@ ValidatePairSecond(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 /*++
     Internal helper function:
@@ -115,65 +113,71 @@ ValidatePairSecond(
 --*/
 {
   /* Validating field second */
-  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
-  uint64_t positionAfterPair;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  uint32_t positionBeforePair = *Input.pos;
+  uint32_t positionBeforePair1 = *Input.pos;
+  uint32_t positionBeforePair2 = *Input.pos;
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  uint32_t currentPosition = *Input.pos;
+  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - currentPosition);
+  uint64_t resultAfterPair;
+  if (hasBytes)
   {
-    positionAfterPair = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAfterPair = (uint64_t)(uint32_t)4U;
   }
   else
   {
-    positionAfterPair = StartPosition + (uint64_t)4U;
+    resultAfterPair = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  uint64_t positionAfterPair0;
-  if (EverParseIsSuccess(positionAfterPair))
+  uint64_t resultAfterPair0;
+  if (EverParseIsSuccess(resultAfterPair))
   {
-    positionAfterPair0 = positionAfterPair;
+    resultAfterPair0 = resultAfterPair;
   }
   else
   {
     Err("_Pair",
       "_Pair_second.base",
-      EverParseErrorReasonOfResult(positionAfterPair),
+      EverParseErrorReasonOfResult(resultAfterPair),
       Ctxt,
-      Uu,
       Input,
-      StartPosition,
-      positionAfterPair);
-    positionAfterPair0 = positionAfterPair;
+      positionBeforePair2);
+    resultAfterPair0 = resultAfterPair;
   }
-  uint64_t positionAfterPair1;
-  if (EverParseIsError(positionAfterPair0))
+  uint64_t resultAfterPair1;
+  if (EverParseIsError(resultAfterPair0))
   {
-    positionAfterPair1 = positionAfterPair0;
+    resultAfterPair1 = resultAfterPair0;
   }
   else
   {
-    uint8_t *base = Input;
-    uint32_t pair1 = Load32Le(base + (uint32_t)StartPosition);
+    uint8_t temp[4U] = { 0U };
+    uint32_t currentPosition = *Input.pos;
+    uint8_t *res = Input.buf + currentPosition;
+    *Input.pos = currentPosition + (uint32_t)4U;
+    uint8_t *temp1 = res;
+    uint32_t res0 = Load32Le(temp1);
+    uint32_t pair1 = res0;
     *Y = pair1;
     if (TRUE)
     {
-      positionAfterPair1 = positionAfterPair0;
+      resultAfterPair1 = resultAfterPair0;
     }
     else
     {
-      positionAfterPair1 = EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
+      resultAfterPair1 = EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
     }
   }
-  if (EverParseIsSuccess(positionAfterPair1))
+  if (EverParseIsSuccess(resultAfterPair1))
   {
-    return positionAfterPair1;
+    return resultAfterPair1;
   }
   Err("_Pair",
     "_Pair_second",
-    EverParseErrorReasonOfResult(positionAfterPair1),
+    EverParseErrorReasonOfResult(resultAfterPair1),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterPair1);
-  return positionAfterPair1;
+    positionBeforePair);
+  return resultAfterPair1;
 }
 
 uint64_t
@@ -187,53 +191,47 @@ ReadPairValidatePair(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 {
   /* Field _Pair_first */
-  uint64_t positionAfterPair = ValidatePairFirst(X, Ctxt, Err, Uu, Input, StartPosition);
-  uint64_t positionAfterfirst;
-  if (EverParseIsSuccess(positionAfterPair))
+  uint32_t positionBeforePair = *Input.pos;
+  uint64_t resultAfterPair = ValidatePairFirst(X, Ctxt, Err, Input);
+  uint64_t resultAfterfirst;
+  if (EverParseIsSuccess(resultAfterPair))
   {
-    positionAfterfirst = positionAfterPair;
+    resultAfterfirst = resultAfterPair;
   }
   else
   {
     Err("_Pair",
       "first",
-      EverParseErrorReasonOfResult(positionAfterPair),
+      EverParseErrorReasonOfResult(resultAfterPair),
       Ctxt,
-      Uu,
       Input,
-      StartPosition,
-      positionAfterPair);
-    positionAfterfirst = positionAfterPair;
+      positionBeforePair);
+    resultAfterfirst = resultAfterPair;
   }
-  if (EverParseIsError(positionAfterfirst))
+  if (EverParseIsError(resultAfterfirst))
   {
-    return positionAfterfirst;
+    return resultAfterfirst;
   }
   /* Field _Pair_second */
-  uint64_t positionAfterPair0 = ValidatePairSecond(Y, Ctxt, Err, Uu, Input, positionAfterfirst);
-  if (EverParseIsSuccess(positionAfterPair0))
+  uint32_t positionBeforePair0 = *Input.pos;
+  uint64_t resultAfterPair0 = ValidatePairSecond(Y, Ctxt, Err, Input);
+  if (EverParseIsSuccess(resultAfterPair0))
   {
-    return positionAfterPair0;
+    return resultAfterPair0;
   }
   Err("_Pair",
     "second",
-    EverParseErrorReasonOfResult(positionAfterPair0),
+    EverParseErrorReasonOfResult(resultAfterPair0),
     Ctxt,
-    Uu,
     Input,
-    positionAfterfirst,
-    positionAfterPair0);
-  return positionAfterPair0;
+    positionBeforePair0);
+  return resultAfterPair0;
 }
 
