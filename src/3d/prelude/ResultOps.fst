@@ -59,3 +59,16 @@ let is_range_okay (size offset access_size:U32.t)
   = let open U32 in
     size >=^ access_size &&
     size -^ access_size >=^ offset
+
+
+(* Context for default error handler *)
+
+noeq
+type error_frame = {
+  filled: bool;
+  start_pos: U32.t;
+  end_pos: U32.t;
+  typename: string;
+  fieldname: string;
+  reason: string;
+}
