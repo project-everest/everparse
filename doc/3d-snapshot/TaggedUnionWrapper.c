@@ -13,6 +13,7 @@ typedef struct _ErrorFrame
 	const char *reason;
 } ErrorFrame;
 
+static
 void DefaultErrorHandler(
 	const char *typename,
 	const char *fieldname,
