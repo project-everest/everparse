@@ -67,7 +67,6 @@ noeq
 type error_frame = {
   filled: bool;
   start_pos: U32.t;
-  end_pos: U32.t;
   typename: string;
   fieldname: string;
   reason: string;

@@ -994,14 +994,14 @@ let print_c_entry (modul: string)
                               uint32_t start_pos)\n\
           {\n\t\
             EverParseErrorFrame *frame = (EverParseErrorFrame*)context;\n\t\
-            if (!frame->filled)\n\t\
-            {\n\t\t\
-              frame->filled = TRUE;\n\t\t\
-              frame->start_pos = start_pos;\n\t\t\
-              frame->typename = typename;\n\t\t\
-              frame->fieldname = fieldname;\n\t\t\
-              frame->reason = reason;\n\t\
-            }\n\
+            EverParseDefaultErrorHandler(\n\t\t\
+              typename,\n\t\t\
+              fieldname,\n\t\t\
+              reason,\n\t\t\
+              frame,\n\t\t\
+              input,\n\t\t\
+              start_pos\n\t\
+            );\n\
           }" 
    in
    let wrapped_call name params =

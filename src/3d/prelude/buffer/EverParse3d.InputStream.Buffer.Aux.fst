@@ -92,3 +92,26 @@ let make_input_buffer from n pos =
     g_all_buf = g;
     prf = ();
   }
+
+(* default error handler *)
+
+let default_error_handler
+  (typename: string)
+  (fieldname: string)
+  (reason: string)
+  (context: B.pointer ResultOps.error_frame)
+  (input: input_buffer)
+  (start_pos: U32.t)
+: HST.Stack unit
+  (requires (fun h -> B.live h context))
+  (ensures (fun h _ h' -> B.modifies (B.loc_buffer context) h h'))
+=
+  if not ( !* context ).ResultOps.filled then begin
+    context *= {
+      ResultOps.filled = true;
+      ResultOps.start_pos = start_pos;
+      ResultOps.typename = typename;
+      ResultOps.fieldname = fieldname;
+      ResultOps.reason = reason;
+    }
+  end
