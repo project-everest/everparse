@@ -11,10 +11,14 @@ ValidatePointX(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -23,30 +27,29 @@ ValidatePointX(
 --*/
 {
   /* Validating field x */
-  uint32_t positionBeforePoint = *Input.pos;
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  uint32_t currentPosition = *Input.pos;
-  BOOLEAN hasBytes = (uint32_t)2U <= (Input.len - currentPosition);
-  uint64_t resultAfterPoint;
-  if (hasBytes)
+  uint64_t positionAfterPoint;
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)2U)
   {
-    resultAfterPoint = (uint64_t)(uint32_t)2U;
+    positionAfterPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    resultAfterPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterPoint = StartPosition + (uint64_t)2U;
   }
-  if (EverParseIsSuccess(resultAfterPoint))
+  if (EverParseIsSuccess(positionAfterPoint))
   {
-    return resultAfterPoint;
+    return positionAfterPoint;
   }
   Err("_point",
     "_point_x",
-    EverParseErrorReasonOfResult(resultAfterPoint),
+    EverParseErrorReasonOfResult(positionAfterPoint),
     Ctxt,
+    Uu,
     Input,
-    positionBeforePoint);
-  return resultAfterPoint;
+    StartPosition,
+    positionAfterPoint);
+  return positionAfterPoint;
 }
 
 static inline uint64_t
@@ -58,10 +61,14 @@ ValidatePointY(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -70,30 +77,29 @@ ValidatePointY(
 --*/
 {
   /* Validating field y */
-  uint32_t positionBeforePoint = *Input.pos;
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  uint32_t currentPosition = *Input.pos;
-  BOOLEAN hasBytes = (uint32_t)2U <= (Input.len - currentPosition);
-  uint64_t resultAfterPoint;
-  if (hasBytes)
+  uint64_t positionAfterPoint;
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)2U)
   {
-    resultAfterPoint = (uint64_t)(uint32_t)2U;
+    positionAfterPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    resultAfterPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterPoint = StartPosition + (uint64_t)2U;
   }
-  if (EverParseIsSuccess(resultAfterPoint))
+  if (EverParseIsSuccess(positionAfterPoint))
   {
-    return resultAfterPoint;
+    return positionAfterPoint;
   }
   Err("_point",
     "_point_y",
-    EverParseErrorReasonOfResult(resultAfterPoint),
+    EverParseErrorReasonOfResult(positionAfterPoint),
     Ctxt,
+    Uu,
     Input,
-    positionBeforePoint);
-  return resultAfterPoint;
+    StartPosition,
+    positionAfterPoint);
+  return positionAfterPoint;
 }
 
 uint64_t
@@ -105,63 +111,53 @@ HelloWorldValidatePoint(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 {
   /* Field _point_x */
-  uint32_t positionBeforePoint = *Input.pos;
-  uint64_t resultAfterPoint = ValidatePointX(Ctxt, Err, Input);
-  uint64_t res0;
-  if (EverParseIsSuccess(resultAfterPoint))
+  uint64_t positionAfterPoint = ValidatePointX(Ctxt, Err, Uu, Input, StartPosition);
+  uint64_t positionAfterx;
+  if (EverParseIsSuccess(positionAfterPoint))
   {
-    res0 = resultAfterPoint;
+    positionAfterx = positionAfterPoint;
   }
   else
   {
     Err("_point",
       "x",
-      EverParseErrorReasonOfResult(resultAfterPoint),
+      EverParseErrorReasonOfResult(positionAfterPoint),
       Ctxt,
+      Uu,
       Input,
-      positionBeforePoint);
-    res0 = resultAfterPoint;
+      StartPosition,
+      positionAfterPoint);
+    positionAfterx = positionAfterPoint;
   }
-  if (EverParseIsSuccess(res0))
+  if (EverParseIsError(positionAfterx))
   {
-    uint32_t currentPosition = *Input.pos;
-    *Input.pos = currentPosition + (uint32_t)res0;
-  }
-  uint64_t resultAfterx = res0;
-  if (EverParseIsError(resultAfterx))
-  {
-    return resultAfterx;
+    return positionAfterx;
   }
   /* Field _point_y */
-  uint32_t positionBeforePoint0 = *Input.pos;
-  uint64_t resultAfterPoint0 = ValidatePointY(Ctxt, Err, Input);
-  uint64_t res;
-  if (EverParseIsSuccess(resultAfterPoint0))
+  uint64_t positionAfterPoint0 = ValidatePointY(Ctxt, Err, Uu, Input, positionAfterx);
+  if (EverParseIsSuccess(positionAfterPoint0))
   {
-    res = resultAfterPoint0;
+    return positionAfterPoint0;
   }
-  else
-  {
-    Err("_point",
-      "y",
-      EverParseErrorReasonOfResult(resultAfterPoint0),
-      Ctxt,
-      Input,
-      positionBeforePoint0);
-    res = resultAfterPoint0;
-  }
-  if (EverParseIsSuccess(res))
-  {
-    uint32_t currentPosition = *Input.pos;
-    *Input.pos = currentPosition + (uint32_t)res;
-  }
-  return res;
+  Err("_point",
+    "y",
+    EverParseErrorReasonOfResult(positionAfterPoint0),
+    Ctxt,
+    Uu,
+    Input,
+    positionAfterx,
+    positionAfterPoint0);
+  return positionAfterPoint0;
 }
 
