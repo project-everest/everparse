@@ -11,14 +11,10 @@ ValidateDummyEmp(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 /*++
     Internal helper function:
@@ -27,20 +23,19 @@ ValidateDummyEmp(
 --*/
 {
   /* Validating field emp */
-  uint64_t positionAfterDummy = StartPosition;
-  if (EverParseIsSuccess(positionAfterDummy))
+  uint32_t positionBeforeDummy = *Input.pos;
+  uint64_t resultAfterDummy = (uint64_t)0U;
+  if (EverParseIsSuccess(resultAfterDummy))
   {
-    return positionAfterDummy;
+    return resultAfterDummy;
   }
   Err("_dummy",
     "_dummy_emp",
-    EverParseErrorReasonOfResult(positionAfterDummy),
+    EverParseErrorReasonOfResult(resultAfterDummy),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterDummy);
-  return positionAfterDummy;
+    positionBeforeDummy);
+  return resultAfterDummy;
 }
 
 uint64_t
@@ -52,34 +47,29 @@ BfValidateDummy(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 {
   /* Field _dummy_emp */
-  uint64_t positionAfterDummy = ValidateDummyEmp(Ctxt, Err, Uu, Input, StartPosition);
-  if (EverParseIsSuccess(positionAfterDummy))
+  uint32_t positionBeforeDummy = *Input.pos;
+  uint64_t resultAfterDummy = ValidateDummyEmp(Ctxt, Err, Input);
+  if (EverParseIsSuccess(resultAfterDummy))
   {
-    return positionAfterDummy;
+    return resultAfterDummy;
   }
   Err("_dummy",
     "emp",
-    EverParseErrorReasonOfResult(positionAfterDummy),
+    EverParseErrorReasonOfResult(resultAfterDummy),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterDummy);
-  return positionAfterDummy;
+    positionBeforeDummy);
+  return resultAfterDummy;
 }
 
-void BfReadDummy(uint32_t InputLength, uint8_t *Input, uint32_t StartPosition)
+void BfReadDummy(EverParseInputBuffer Input)
 {
   
 }

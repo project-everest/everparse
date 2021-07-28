@@ -11,14 +11,10 @@ ValidateBoundedSumLeft(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 /*++
     Internal helper function:
@@ -27,29 +23,30 @@ ValidateBoundedSumLeft(
 --*/
 {
   /* Validating field left */
-  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
-  uint64_t positionAfterBoundedSum;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  uint32_t positionBeforeBoundedSum = *Input.pos;
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  uint32_t currentPosition = *Input.pos;
+  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - currentPosition);
+  uint64_t resultAfterBoundedSum;
+  if (hasBytes)
   {
-    positionAfterBoundedSum = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAfterBoundedSum = (uint64_t)(uint32_t)4U;
   }
   else
   {
-    positionAfterBoundedSum = StartPosition + (uint64_t)4U;
+    resultAfterBoundedSum = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (EverParseIsSuccess(positionAfterBoundedSum))
+  if (EverParseIsSuccess(resultAfterBoundedSum))
   {
-    return positionAfterBoundedSum;
+    return resultAfterBoundedSum;
   }
   Err("_boundedSum",
     "_boundedSum_left",
-    EverParseErrorReasonOfResult(positionAfterBoundedSum),
+    EverParseErrorReasonOfResult(resultAfterBoundedSum),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterBoundedSum);
-  return positionAfterBoundedSum;
+    positionBeforeBoundedSum);
+  return resultAfterBoundedSum;
 }
 
 static inline uint64_t
@@ -63,14 +60,10 @@ ValidateBoundedSumRight(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 /*++
     Internal helper function:
@@ -79,63 +72,68 @@ ValidateBoundedSumRight(
 --*/
 {
   /* Validating field right */
-  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
-  uint64_t positionAfterBoundedSum;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  uint32_t positionBeforeBoundedSum = *Input.pos;
+  uint32_t positionBeforeBoundedSum1 = *Input.pos;
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  uint32_t currentPosition = *Input.pos;
+  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - currentPosition);
+  uint64_t resultAfterBoundedSum;
+  if (hasBytes)
   {
-    positionAfterBoundedSum = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAfterBoundedSum = (uint64_t)(uint32_t)4U;
   }
   else
   {
-    positionAfterBoundedSum = StartPosition + (uint64_t)4U;
+    resultAfterBoundedSum = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  uint64_t positionAfterBoundedSum0;
-  if (EverParseIsSuccess(positionAfterBoundedSum))
+  uint64_t resultAfterBoundedSum0;
+  if (EverParseIsSuccess(resultAfterBoundedSum))
   {
-    positionAfterBoundedSum0 = positionAfterBoundedSum;
+    resultAfterBoundedSum0 = resultAfterBoundedSum;
   }
   else
   {
     Err("_boundedSum",
       "_boundedSum_right",
-      EverParseErrorReasonOfResult(positionAfterBoundedSum),
+      EverParseErrorReasonOfResult(resultAfterBoundedSum),
       Ctxt,
-      Uu,
       Input,
-      StartPosition,
-      positionAfterBoundedSum);
-    positionAfterBoundedSum0 = positionAfterBoundedSum;
+      positionBeforeBoundedSum1);
+    resultAfterBoundedSum0 = resultAfterBoundedSum;
   }
-  uint64_t positionAfterBoundedSum1;
-  if (EverParseIsError(positionAfterBoundedSum0))
+  uint64_t resultAfterBoundedSum1;
+  if (EverParseIsError(resultAfterBoundedSum0))
   {
-    positionAfterBoundedSum1 = positionAfterBoundedSum0;
+    resultAfterBoundedSum1 = resultAfterBoundedSum0;
   }
   else
   {
     /* reading field value */
-    uint8_t *base = Input;
-    uint32_t boundedSum1 = Load32Le(base + (uint32_t)StartPosition);
+    uint8_t temp[4U] = { 0U };
+    uint32_t currentPosition = *Input.pos;
+    uint8_t *res = Input.buf + currentPosition;
+    *Input.pos = currentPosition + (uint32_t)4U;
+    uint8_t *temp1 = res;
+    uint32_t res0 = Load32Le(temp1);
+    uint32_t boundedSum1 = res0;
     /* start: checking constraint */
     BOOLEAN boundedSumConstraintIsOk = Left <= Bound && boundedSum1 <= (Bound - Left);
     /* end: checking constraint */
-    positionAfterBoundedSum1 =
+    resultAfterBoundedSum1 =
       EverParseCheckConstraintOk(boundedSumConstraintIsOk,
-        positionAfterBoundedSum0);
+        resultAfterBoundedSum0);
   }
-  if (EverParseIsSuccess(positionAfterBoundedSum1))
+  if (EverParseIsSuccess(resultAfterBoundedSum1))
   {
-    return positionAfterBoundedSum1;
+    return resultAfterBoundedSum1;
   }
   Err("_boundedSum",
     "_boundedSum_right.refinement",
-    EverParseErrorReasonOfResult(positionAfterBoundedSum1),
+    EverParseErrorReasonOfResult(resultAfterBoundedSum1),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterBoundedSum1);
-  return positionAfterBoundedSum1;
+    positionBeforeBoundedSum);
+  return resultAfterBoundedSum1;
 }
 
 uint64_t
@@ -148,81 +146,68 @@ BoundedSumWhereValidateBoundedSum(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 {
+  uint32_t startPosition = *Input.pos;
+  uint64_t startPosition1 = (uint64_t)startPosition;
   /* Validating field __precondition */
   BOOLEAN preconditionConstraintIsOk = Bound <= (uint32_t)(uint16_t)1729U;
   uint64_t
-  positionOrErrorAfterPrecondition =
+  resultAfterPrecondition =
     EverParseCheckConstraintOkWithFieldId(preconditionConstraintIsOk,
-      StartPosition,
-      StartPosition,
+      startPosition1,
+      startPosition1,
       (uint64_t)1U);
-  if (EverParseIsError(positionOrErrorAfterPrecondition))
+  if (EverParseIsError(resultAfterPrecondition))
   {
-    return positionOrErrorAfterPrecondition;
+    return resultAfterPrecondition;
   }
   /* Field _boundedSum_left */
-  uint64_t
-  positionAfterBoundedSum =
-    ValidateBoundedSumLeft(Ctxt,
-      Err,
-      Uu,
-      Input,
-      positionOrErrorAfterPrecondition);
-  uint64_t positionAfterleft;
-  if (EverParseIsSuccess(positionAfterBoundedSum))
+  uint32_t positionBeforeBoundedSum = *Input.pos;
+  uint64_t resultAfterBoundedSum = ValidateBoundedSumLeft(Ctxt, Err, Input);
+  uint64_t resultAfterleft;
+  if (EverParseIsSuccess(resultAfterBoundedSum))
   {
-    positionAfterleft = positionAfterBoundedSum;
+    resultAfterleft = resultAfterBoundedSum;
   }
   else
   {
     Err("_boundedSum",
       "left",
-      EverParseErrorReasonOfResult(positionAfterBoundedSum),
+      EverParseErrorReasonOfResult(resultAfterBoundedSum),
       Ctxt,
-      Uu,
       Input,
-      positionOrErrorAfterPrecondition,
-      positionAfterBoundedSum);
-    positionAfterleft = positionAfterBoundedSum;
+      positionBeforeBoundedSum);
+    resultAfterleft = resultAfterBoundedSum;
   }
-  if (EverParseIsError(positionAfterleft))
+  if (EverParseIsError(resultAfterleft))
   {
-    return positionAfterleft;
+    return resultAfterleft;
   }
-  uint8_t *base = Input;
-  uint32_t left = Load32Le(base + (uint32_t)positionOrErrorAfterPrecondition);
+  uint8_t temp[4U] = { 0U };
+  uint32_t currentPosition = *Input.pos;
+  uint8_t *res = Input.buf + currentPosition;
+  *Input.pos = currentPosition + (uint32_t)4U;
+  uint8_t *temp1 = res;
+  uint32_t res0 = Load32Le(temp1);
+  uint32_t left = res0;
   /* Field _boundedSum_right */
-  uint64_t
-  positionAfterBoundedSum0 =
-    ValidateBoundedSumRight(Bound,
-      left,
-      Ctxt,
-      Err,
-      Uu,
-      Input,
-      positionAfterleft);
-  if (EverParseIsSuccess(positionAfterBoundedSum0))
+  uint32_t positionBeforeBoundedSum0 = *Input.pos;
+  uint64_t resultAfterBoundedSum0 = ValidateBoundedSumRight(Bound, left, Ctxt, Err, Input);
+  if (EverParseIsSuccess(resultAfterBoundedSum0))
   {
-    return positionAfterBoundedSum0;
+    return resultAfterBoundedSum0;
   }
   Err("_boundedSum",
     "right",
-    EverParseErrorReasonOfResult(positionAfterBoundedSum0),
+    EverParseErrorReasonOfResult(resultAfterBoundedSum0),
     Ctxt,
-    Uu,
     Input,
-    positionAfterleft,
-    positionAfterBoundedSum0);
-  return positionAfterBoundedSum0;
+    positionBeforeBoundedSum0);
+  return resultAfterBoundedSum0;
 }
 

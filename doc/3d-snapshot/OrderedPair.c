@@ -11,14 +11,10 @@ ValidateOrderedPairLesser(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 /*++
     Internal helper function:
@@ -27,29 +23,30 @@ ValidateOrderedPairLesser(
 --*/
 {
   /* Validating field lesser */
-  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
-  uint64_t positionAfterOrderedPair;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  uint32_t positionBeforeOrderedPair = *Input.pos;
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  uint32_t currentPosition = *Input.pos;
+  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - currentPosition);
+  uint64_t resultAfterOrderedPair;
+  if (hasBytes)
   {
-    positionAfterOrderedPair = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAfterOrderedPair = (uint64_t)(uint32_t)4U;
   }
   else
   {
-    positionAfterOrderedPair = StartPosition + (uint64_t)4U;
+    resultAfterOrderedPair = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (EverParseIsSuccess(positionAfterOrderedPair))
+  if (EverParseIsSuccess(resultAfterOrderedPair))
   {
-    return positionAfterOrderedPair;
+    return resultAfterOrderedPair;
   }
   Err("_orderedPair",
     "_orderedPair_lesser",
-    EverParseErrorReasonOfResult(positionAfterOrderedPair),
+    EverParseErrorReasonOfResult(resultAfterOrderedPair),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterOrderedPair);
-  return positionAfterOrderedPair;
+    positionBeforeOrderedPair);
+  return resultAfterOrderedPair;
 }
 
 static inline uint64_t
@@ -62,14 +59,10 @@ ValidateOrderedPairGreater(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 /*++
     Internal helper function:
@@ -78,63 +71,68 @@ ValidateOrderedPairGreater(
 --*/
 {
   /* Validating field greater */
-  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
-  uint64_t positionAfterOrderedPair;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  uint32_t positionBeforeOrderedPair = *Input.pos;
+  uint32_t positionBeforeOrderedPair1 = *Input.pos;
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  uint32_t currentPosition = *Input.pos;
+  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - currentPosition);
+  uint64_t resultAfterOrderedPair;
+  if (hasBytes)
   {
-    positionAfterOrderedPair = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAfterOrderedPair = (uint64_t)(uint32_t)4U;
   }
   else
   {
-    positionAfterOrderedPair = StartPosition + (uint64_t)4U;
+    resultAfterOrderedPair = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  uint64_t positionAfterOrderedPair0;
-  if (EverParseIsSuccess(positionAfterOrderedPair))
+  uint64_t resultAfterOrderedPair0;
+  if (EverParseIsSuccess(resultAfterOrderedPair))
   {
-    positionAfterOrderedPair0 = positionAfterOrderedPair;
+    resultAfterOrderedPair0 = resultAfterOrderedPair;
   }
   else
   {
     Err("_orderedPair",
       "_orderedPair_greater",
-      EverParseErrorReasonOfResult(positionAfterOrderedPair),
+      EverParseErrorReasonOfResult(resultAfterOrderedPair),
       Ctxt,
-      Uu,
       Input,
-      StartPosition,
-      positionAfterOrderedPair);
-    positionAfterOrderedPair0 = positionAfterOrderedPair;
+      positionBeforeOrderedPair1);
+    resultAfterOrderedPair0 = resultAfterOrderedPair;
   }
-  uint64_t positionAfterOrderedPair1;
-  if (EverParseIsError(positionAfterOrderedPair0))
+  uint64_t resultAfterOrderedPair1;
+  if (EverParseIsError(resultAfterOrderedPair0))
   {
-    positionAfterOrderedPair1 = positionAfterOrderedPair0;
+    resultAfterOrderedPair1 = resultAfterOrderedPair0;
   }
   else
   {
     /* reading field value */
-    uint8_t *base = Input;
-    uint32_t orderedPair1 = Load32Le(base + (uint32_t)StartPosition);
+    uint8_t temp[4U] = { 0U };
+    uint32_t currentPosition = *Input.pos;
+    uint8_t *res = Input.buf + currentPosition;
+    *Input.pos = currentPosition + (uint32_t)4U;
+    uint8_t *temp1 = res;
+    uint32_t res0 = Load32Le(temp1);
+    uint32_t orderedPair1 = res0;
     /* start: checking constraint */
     BOOLEAN orderedPairConstraintIsOk = Lesser <= orderedPair1;
     /* end: checking constraint */
-    positionAfterOrderedPair1 =
+    resultAfterOrderedPair1 =
       EverParseCheckConstraintOk(orderedPairConstraintIsOk,
-        positionAfterOrderedPair0);
+        resultAfterOrderedPair0);
   }
-  if (EverParseIsSuccess(positionAfterOrderedPair1))
+  if (EverParseIsSuccess(resultAfterOrderedPair1))
   {
-    return positionAfterOrderedPair1;
+    return resultAfterOrderedPair1;
   }
   Err("_orderedPair",
     "_orderedPair_greater.refinement",
-    EverParseErrorReasonOfResult(positionAfterOrderedPair1),
+    EverParseErrorReasonOfResult(resultAfterOrderedPair1),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterOrderedPair1);
-  return positionAfterOrderedPair1;
+    positionBeforeOrderedPair);
+  return resultAfterOrderedPair1;
 }
 
 uint64_t
@@ -146,63 +144,54 @@ OrderedPairValidateOrderedPair(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input
 )
 {
   /* Field _orderedPair_lesser */
-  uint64_t
-  positionAfterOrderedPair = ValidateOrderedPairLesser(Ctxt, Err, Uu, Input, StartPosition);
-  uint64_t positionAfterlesser;
-  if (EverParseIsSuccess(positionAfterOrderedPair))
+  uint32_t positionBeforeOrderedPair = *Input.pos;
+  uint64_t resultAfterOrderedPair = ValidateOrderedPairLesser(Ctxt, Err, Input);
+  uint64_t resultAfterlesser;
+  if (EverParseIsSuccess(resultAfterOrderedPair))
   {
-    positionAfterlesser = positionAfterOrderedPair;
+    resultAfterlesser = resultAfterOrderedPair;
   }
   else
   {
     Err("_orderedPair",
       "lesser",
-      EverParseErrorReasonOfResult(positionAfterOrderedPair),
+      EverParseErrorReasonOfResult(resultAfterOrderedPair),
       Ctxt,
-      Uu,
       Input,
-      StartPosition,
-      positionAfterOrderedPair);
-    positionAfterlesser = positionAfterOrderedPair;
+      positionBeforeOrderedPair);
+    resultAfterlesser = resultAfterOrderedPair;
   }
-  if (EverParseIsError(positionAfterlesser))
+  if (EverParseIsError(resultAfterlesser))
   {
-    return positionAfterlesser;
+    return resultAfterlesser;
   }
-  uint8_t *base = Input;
-  uint32_t lesser = Load32Le(base + (uint32_t)StartPosition);
+  uint8_t temp[4U] = { 0U };
+  uint32_t currentPosition = *Input.pos;
+  uint8_t *res = Input.buf + currentPosition;
+  *Input.pos = currentPosition + (uint32_t)4U;
+  uint8_t *temp1 = res;
+  uint32_t res0 = Load32Le(temp1);
+  uint32_t lesser = res0;
   /* Field _orderedPair_greater */
-  uint64_t
-  positionAfterOrderedPair0 =
-    ValidateOrderedPairGreater(lesser,
-      Ctxt,
-      Err,
-      Uu,
-      Input,
-      positionAfterlesser);
-  if (EverParseIsSuccess(positionAfterOrderedPair0))
+  uint32_t positionBeforeOrderedPair0 = *Input.pos;
+  uint64_t resultAfterOrderedPair0 = ValidateOrderedPairGreater(lesser, Ctxt, Err, Input);
+  if (EverParseIsSuccess(resultAfterOrderedPair0))
   {
-    return positionAfterOrderedPair0;
+    return resultAfterOrderedPair0;
   }
   Err("_orderedPair",
     "greater",
-    EverParseErrorReasonOfResult(positionAfterOrderedPair0),
+    EverParseErrorReasonOfResult(resultAfterOrderedPair0),
     Ctxt,
-    Uu,
     Input,
-    positionAfterlesser,
-    positionAfterOrderedPair0);
-  return positionAfterOrderedPair0;
+    positionBeforeOrderedPair0);
+  return resultAfterOrderedPair0;
 }
 

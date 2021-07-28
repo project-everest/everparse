@@ -9,27 +9,26 @@ void DefaultErrorHandler(
 	const char *fieldname,
 	const char *reason,
 	uint8_t *context,
-	uint32_t len,
-	uint8_t *base,
-	uint64_t start_pos,
-	uint64_t end_pos)
+	EverParseInputBuffer input,
+	uint32_t start_pos)
 {
 	EverParseErrorFrame *frame = (EverParseErrorFrame*)context;
-	if (!frame->filled)
-	{
-		frame->filled = TRUE;
-		frame->start_pos = start_pos;
-		frame->end_pos = end_pos;
-		frame->typename = typename;
-		frame->fieldname = fieldname;
-		frame->reason = reason;
-	}
+	EverParseDefaultErrorHandler(
+		typename,
+		fieldname,
+		reason,
+		frame,
+		input,
+		start_pos
+	);
 }
 
 BOOLEAN ColorCheckColoredPoint(uint8_t *base, uint32_t len) {
 	EverParseErrorFrame frame;
 	frame.filled = FALSE;
-	uint64_t result = ColorValidateColoredPoint( (uint8_t*)&frame, &DefaultErrorHandler, len, base, 0);
+	uint32_t position = 0;
+	EverParseInputBuffer input = EverParseMakeInputBuffer(base, len, &position);
+	uint64_t result = ColorValidateColoredPoint( (uint8_t*)&frame, &DefaultErrorHandler, input);
 	if (EverParseResultIsError(result))
 	{
 		if (frame.filled)
