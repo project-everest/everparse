@@ -296,8 +296,8 @@ let translate_out_expr_typ_param (oe:out_expr) : ML T.expr =
 
 let translate_typ_param (p:typ_param) : ML T.expr =
   match p with
-  | Inl e  -> translate_expr e
-  | Inr oe -> translate_out_expr_typ_param oe
+  | A.Inl e  -> translate_expr e
+  | A.Inr oe -> translate_out_expr_typ_param oe
 
 let rec translate_typ (t:A.typ) : ML T.typ =
   match t.v with
@@ -1294,7 +1294,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     } in
     decls @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
-  | OutputType _ -> []
+  | OutputType out_t -> [with_comments (T.Output_type out_t) d.d_exported A.(d.d_decl.comments)]
 
 noeq
 type translate_env = {

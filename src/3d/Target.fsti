@@ -362,7 +362,8 @@ noeq
 type decl' =
   | Assumption : assumption -> decl'
   | Definition : definition -> decl' //the bool marks it for inline_for_extraction
-  | Type_decl : type_decl -> decl'
+  | Type_decl  : type_decl -> decl'
+  | Output_type: A.out_typ -> decl'
 
 let decl = decl' * decl_attributes
 

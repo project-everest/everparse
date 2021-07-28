@@ -405,11 +405,13 @@ let enum_case = ident & option (either int ident)
 
 /// Specification of output types
 
+[@@ PpxDerivingYoJson ]
 noeq
 type out_field =
   | Out_field_named: ident -> typ -> out_field
   | Out_field_anon : list out_field -> is_union:bool -> out_field
 
+[@@ PpxDerivingYoJson ]
 noeq
 type out_typ = {
   out_typ_names    : typedef_names;

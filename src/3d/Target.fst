@@ -755,6 +755,7 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
       (print_typedef_body mname td.decl_typ)
     `strcat`
     maybe_print_type_equality mname td
+  | Output_type _ -> ""
 
 /// Print a decl for M.fst
 ///
@@ -818,6 +819,7 @@ let print_decl_for_validators (mname:string) (d:decl) : ML string =
          (print_typedef_name mname td.decl_name)
          (print_typedef_typ td.decl_name)
          (print_reader mname r))
+  | Output_type _ -> ""
 
 let print_type_decl_signature (mname:string) (d:decl{Type_decl? (fst d)}) : ML string =
   match fst d with
@@ -870,6 +872,7 @@ let print_decl_signature (mname:string) (d:decl) : ML string =
     else if not ((snd d).is_exported || td.decl_name.td_entrypoint)
     then ""
     else print_type_decl_signature mname d
+  | Output_type _ -> ""
 
 let print_decls (modul: string) (ds:list decl) =
   let decls =
