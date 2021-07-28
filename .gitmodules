@@ -1,0 +1,9 @@
+[submodule "FStar"]
+	path = FStar
+	url = https://github.com/FStarLang/FStar.git
+[submodule "kremlin"]
+	path = kremlin
+	url = https://github.com/FStarLang/kremlin.git
+[submodule "hacl-star"]
+	path = hacl-star
+	url = https://github.com/project-everest/hacl-star.git
