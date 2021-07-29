@@ -15,3 +15,11 @@ type micro_step_t =
 type makefile_type =
   | MakefileGMake
   | MakefileNMake
+
+type input_stream_binding_t =
+  | InputStreamBuffer
+  | InputStreamExtern
+
+let string_of_input_stream_binding = function
+  | InputStreamBuffer -> "buffer"
+  | InputStreamExtern -> "extern"

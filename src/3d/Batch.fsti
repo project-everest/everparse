@@ -9,16 +9,19 @@ open FStar.All
    --batch. *)
 
 val pretty_print_source_modules
+  (_: input_stream_binding_t)
   (out_dir: string)
   (files_and_modules: list (string & string))
 : ML unit
 
 val verify_fst_file
+  (_: input_stream_binding_t)
   (out_dir: string)
   (file: string)
 : ML unit
 
 val extract_fst_file
+  (_: input_stream_binding_t)
   (out_dir: string)
   (file: string)
 : ML unit
@@ -32,6 +35,7 @@ val copy_clang_format
 : ML unit
 
 val produce_and_postprocess_one_c
+  (_: input_stream_binding_t)
   (clang_format: bool)
   (clang_format_executable: string)
   (out_dir: string)
@@ -41,6 +45,7 @@ val produce_and_postprocess_one_c
 : ML unit
 
 val postprocess_wrappers
+  (_: input_stream_binding_t)
   (clang_format: bool)
   (clang_format_executable: string)
   (out_dir: string)
@@ -48,6 +53,7 @@ val postprocess_wrappers
 : ML unit
 
 val postprocess_fst
+  (_: input_stream_binding_t)
   (clang_format: bool)
   (clang_format_executable: string)
   (skip_c_makefiles: bool)

@@ -73,6 +73,14 @@ let valid_check_hashes : string -> Tot bool = function
 
 let check_hashes : ref (option (valid_string valid_check_hashes)) = alloc None
 
+let valid_input_stream_binding : string -> Tot bool = function
+| "buffer"
+| "extern"
+  -> true
+| _ -> false
+
+let input_stream_binding : ref (option (valid_string valid_input_stream_binding)) = alloc None
+
 noeq
 type cmd_option_kind =
   | OptBool:
@@ -287,6 +295,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "clang_format" (OptBool clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and kremlin-args.rsp (--batch only)" [];
+    CmdOption "input_stream" (OptStringOption "buffer|extern" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
     CmdOption "debug" (OptBool debug) "Emit a lot of debugging output" [];
     CmdFStarOption ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message");
@@ -415,3 +424,9 @@ let get_skip_o_rules _ =
 
 let get_json () =
   !json
+
+let get_input_stream_binding _ =
+  match !input_stream_binding with
+  | None
+  | Some "buffer" -> InputStreamBuffer
+  | Some "extern" -> InputStreamExtern
