@@ -1418,6 +1418,8 @@ let get_exported_decls ge mname =
          then k::exported_decls, private_decls
          else exported_decls, k::private_decls) ge.ge_h ([], [])
 
+let is_output_type_ident ge i = Some? (H.try_find ge.ge_out_t i.v)
+
 let get_output_exprs ge =
   !ge.out_exprs
 

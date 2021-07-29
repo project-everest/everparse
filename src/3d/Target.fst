@@ -1136,6 +1136,13 @@ let print_c_entry (modul: string)
   impl
 
 
+let rec print_output_typ_as_fstar_type (t:typ) : ML string =
+  match t with
+  | T_pointer t ->
+    Printf.sprintf "p_%s" (print_output_typ_as_fstar_type t)
+  | T_app hd [] -> A.ident_name hd
+  | _ -> A.error "Impossible!" A.dummy_range
+
 /// Functions for printing setters and getters for output expressions
 
 
@@ -1186,6 +1193,18 @@ let rec ast_typ_to_target_typ (t:A.typ) : ML typ =
   | Pointer t -> T_pointer (ast_typ_to_target_typ t)
   | _ -> error "Impossible!" t.A.range
 
+let print_out_expr_set_fstar (oe:A.out_expr) : ML unit =
+  let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
+  //TODO: module name?
+  let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
+  let fn_arg2_t = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
+  IO.print_string
+    (Printf.sprintf "\n\nval %s : %s -> %s -> ST unit (fun h -> True) \
+       (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
+       fn_name
+       fn_arg1_t
+       fn_arg2_t)
+
 let print_out_expr_set (oe:A.out_expr) : ML unit =
   let open A in
   let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
@@ -1202,6 +1221,13 @@ let print_out_expr_set (oe:A.out_expr) : ML unit =
     fn_arg2_name
     fn_body in
   IO.print_string (Printf.sprintf "\n\n%s\n\n" fn)
+
+let print_out_expr_get_fstar (oe:A.out_expr) : ML unit =
+  let fn_name = Printf.sprintf "get_%s" (out_fn_name oe) in
+  let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
+  let fn_res = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
+  IO.print_string (Printf.sprintf "\n\nval %s : %s -> %s\n\n"
+    fn_name fn_arg1_t fn_res)
 
 let print_out_expr_get (oe:A.out_expr) : ML unit =
   let open A in
@@ -1224,6 +1250,14 @@ let output_base_var lhs = out_expr_var lhs
 
 let print_out_exprs _ (oes:list (A.out_expr & bool)) : ML string =
   IO.print_string (Printf.sprintf "Printing %d out exprs\n" (List.length oes));
-  List.iter (fun (oe, b) -> if b then print_out_expr_set oe else print_out_expr_get oe) oes;
+  List.iter (fun (oe, b) -> if b then
+    begin
+      print_out_expr_set oe;
+      print_out_expr_set_fstar oe
+    end
+    else begin
+      print_out_expr_get oe;
+      print_out_expr_get_fstar oe
+    end ) oes;
   ""
   //String.concat "\n" (List.map print_out_expr oes)
