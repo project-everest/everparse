@@ -235,6 +235,7 @@ let go () : ML unit =
   | Some t ->
     GenMakefile.write_makefile
       t
+      input_stream_binding
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())
       cmd_line_files

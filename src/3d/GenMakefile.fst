@@ -17,6 +17,7 @@ let input_dir = "$(EVERPARSE_INPUT_DIR)"
 let output_dir = "$(EVERPARSE_OUTPUT_DIR)"
 
 let print_gnu_make_rule
+  input_stream_binding
   (r: rule_t)
 : Tot string
 = 
@@ -29,7 +30,7 @@ let print_gnu_make_rule
       | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --odir %s" output_dir
       | CC ->
         let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
-        let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` "buffer" in
+        let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) in
         Printf.sprintf "$(CC) $(CFLAGS) -I %s -I %s -c" ddd_home ddd_actions_home
     in
     let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
@@ -278,6 +279,7 @@ let produce_makefile
   }
 
 let write_gnu_makefile
+  input_stream_binding
   (skip_o_rules: bool)
   (clang_format: bool)
   (files: list string)
@@ -286,7 +288,7 @@ let write_gnu_makefile
   let makefile = Options.get_makefile_name () in
   let file = FStar.IO.open_write_file makefile in
   let {graph = g; rules; all_files} = produce_makefile skip_o_rules clang_format files in
-  FStar.IO.write_string file (String.concat "" (List.Tot.map print_gnu_make_rule rules));
+  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_gnu_make_rule input_stream_binding) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       begin if ext <> "h"
@@ -309,6 +311,7 @@ let write_nmakefile = write_gnu_makefile
 let write_makefile
   (mtype: HashingOptions.makefile_type)
 : Tot (
+    (_: HashingOptions.input_stream_binding_t) ->
     (skip_o_rules: bool) ->
     (clang_format: bool) ->
     (files: list string) ->

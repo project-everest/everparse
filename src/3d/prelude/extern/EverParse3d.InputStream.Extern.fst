@@ -10,7 +10,7 @@ module Aux = EverParse3d.InputStream.Extern.Type
 
 inline_for_extraction
 noextract
-let t = Aux.input_stream
+let t = Aux.input_buffer
 
 let len_all
   (x: t)

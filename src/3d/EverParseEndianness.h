@@ -36,6 +36,8 @@ extern "C" {
 typedef const char * EverParseString;
 typedef EverParseString PrimsString;
 
+/* Incomplete type */
+typedef struct EverParseInputStreamBase_s * EverParseInputStreamBase;
 
 /* ... for Windows (MSVC)... not targeting XBOX 360! */
 #if defined(_MSC_VER)

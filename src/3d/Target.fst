@@ -1004,12 +1004,13 @@ let print_c_entry (modul: string)
             );\n\
           }" 
    in
+   let input_stream_binding = Options.get_input_stream_binding () in
    let wrapped_call name params =
      Printf.sprintf
        "EverParseErrorFrame frame;\n\t\
        frame.filled = FALSE;\n\t\
        uint32_t position = 0;\n\t\
-       EverParseInputBuffer input = EverParseMakeInputBuffer(base, len, &position);\n\t\
+       EverParseInputBuffer input = EverParseMakeInputBuffer(%s, &position);\n\t\
        uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input);\n\t\
        if (EverParseResultIsError(result))\n\t\
        {\n\t\t\
@@ -1020,6 +1021,10 @@ let print_c_entry (modul: string)
          return FALSE;\n\t\
        }\n\t\
        return TRUE;"
+       begin match input_stream_binding with
+       | HashingOptions.InputStreamBuffer -> "base, len"
+       | HashingOptions.InputStreamExtern -> "base"
+       end
        name
        params
        modul
@@ -1056,7 +1061,12 @@ let print_c_entry (modul: string)
       |> pascal_case
     in
     let signature =
-      Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+      begin match input_stream_binding with
+      | HashingOptions.InputStreamBuffer ->
+        Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+      | HashingOptions.InputStreamExtern ->
+        Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
+      end
        wrapper_name
        (print_params d.decl_name.td_params)
     in
