@@ -18,8 +18,15 @@ type makefile_type =
 
 type input_stream_binding_t =
   | InputStreamBuffer
-  | InputStreamExtern
+  | InputStreamExtern:
+    (include_file: string) ->
+    input_stream_binding_t
 
 let string_of_input_stream_binding = function
   | InputStreamBuffer -> "buffer"
-  | InputStreamExtern -> "extern"
+  | InputStreamExtern _ -> "extern"
+
+let input_stream_include = function
+  | InputStreamBuffer -> ""
+  | InputStreamExtern s -> s
+  

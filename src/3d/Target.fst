@@ -1023,7 +1023,7 @@ let print_c_entry (modul: string)
        return TRUE;"
        begin match input_stream_binding with
        | HashingOptions.InputStreamBuffer -> "base, len"
-       | HashingOptions.InputStreamExtern -> "base"
+       | HashingOptions.InputStreamExtern _ -> "base"
        end
        name
        params
@@ -1064,7 +1064,7 @@ let print_c_entry (modul: string)
       begin match input_stream_binding with
       | HashingOptions.InputStreamBuffer ->
         Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
-      | HashingOptions.InputStreamExtern ->
+      | HashingOptions.InputStreamExtern _ ->
         Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
       end
        wrapper_name
@@ -1111,6 +1111,16 @@ let print_c_entry (modul: string)
        #endif\n"
       (signatures |> String.concat "\n\n")
   in
+  let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
+  let header =
+    if input_stream_include = ""
+    then header
+    else Printf.sprintf
+      "#include \"%s\"\n\
+      %s"
+      input_stream_include
+      header
+  in
   let error_callback_proto =
     Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
       modul
@@ -1128,6 +1138,16 @@ let print_c_entry (modul: string)
       error_callback_proto
       default_error_handler
       (impls |> String.concat "\n\n")
+  in
+  let impl =
+    if input_stream_include = ""
+    then impl
+    else
+      Printf.sprintf
+        "#include \"%s\"\n\
+        %s"
+        input_stream_include
+        impl
   in
   header,
   impl

@@ -245,6 +245,12 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
                                   "-fextern-c" ::
                                   krml_args0 @ krml_files
     in
+    let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
+    let krml_args =
+      if input_stream_include = ""
+      then krml_args
+      else "-add-include" :: Printf.sprintf "\"%s\"" input_stream_include :: krml_args
+    in
     if skip_c_makefiles
     then "-skip-makefiles" :: krml_args
     else krml_args

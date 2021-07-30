@@ -15,16 +15,15 @@ void TestEverParseError(char *StructName, char *FieldName, char *Reason) {
 int main(void) {
   uint8_t *test = calloc(testSize, sizeof(uint8_t));
   if (test != NULL) {
-    EverParseInputStreamBase * testStreamP = EverParseCreate();
-    if (testStreamP != NULL) {
-      EverParseInputStreamBase testStream = *testStreamP;
+    EverParseInputStreamBase testStream = EverParseCreate();
+    if (testStream != NULL) {
       EverParsePush(testStream, test, testSize);
       EverParsePush(testStream, test, testSize);
       EverParsePush(testStream, test, testSize);
       if (TestCheckPoint(testStream)) {
         printf("Validation succeeded\n");
       }
-      free(testStreamP);
+      free(testStream);
     }
     free(test);
   }

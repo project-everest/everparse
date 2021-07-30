@@ -1,3 +1,4 @@
+#include "EverParseEndianness.h"
 #include "EverParseStream.h"
 #include <stdlib.h>
 
@@ -82,28 +83,22 @@ uint32_t EverParseEmpty(EverParseInputStreamBase const x) {
   return res;
 }
 
-EverParseInputStreamBase * EverParseCreate() {
-  EverParseInputStreamBase res_s = malloc(sizeof(struct EverParseInputStreamBase_s));
-  if (res_s == NULL) {
-    return NULL;
-  }
-  EverParseInputStreamBase * res = malloc(sizeof(EverParseInputStreamBase));
+EverParseInputStreamBase EverParseCreate() {
+  EverParseInputStreamBase res = malloc(sizeof(struct EverParseInputStreamBase_s));
   if (res == NULL) {
-    free(res_s);
     return NULL;
   }
-  res_s->head = NULL;
-  *res = res_s;
+  res->head = NULL;
   return res;
 }
 
-BOOLEAN EverParsePush(EverParseInputStreamBase const x, uint8_t * const buf, uint32_t const len) {
+int EverParsePush(EverParseInputStreamBase const x, uint8_t * const buf, uint32_t const len) {
   struct es_cell * cell = malloc(sizeof(struct es_cell));
   if (cell == NULL)
-    return FALSE;
+    return 0;
   cell->buf = buf;
   cell->len = len;
   cell->next = x->head;
   x->head = cell;
-  return TRUE;
+  return 1;
 }

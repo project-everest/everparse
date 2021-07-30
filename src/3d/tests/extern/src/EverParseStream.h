@@ -13,10 +13,10 @@ struct EverParseInputStreamBase_s {
   struct es_cell * head;
 };
 
-#include "EverParse.h"
+typedef struct EverParseInputStreamBase_s * EverParseInputStreamBase;
 
-EverParseInputStreamBase * EverParseCreate();
+EverParseInputStreamBase EverParseCreate();
 
-BOOLEAN EverParsePush(EverParseInputStreamBase x, uint8_t * buf, uint32_t len);
+int EverParsePush(EverParseInputStreamBase x, uint8_t * buf, uint32_t len);
 
 #endif // __EVERPARSESTREAM

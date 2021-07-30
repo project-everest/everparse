@@ -81,6 +81,8 @@ let valid_input_stream_binding : string -> Tot bool = function
 
 let input_stream_binding : ref (option (valid_string valid_input_stream_binding)) = alloc None
 
+let input_stream_include : ref (option vstring) = alloc None
+
 noeq
 type cmd_option_kind =
   | OptBool:
@@ -296,6 +298,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and kremlin-args.rsp (--batch only)" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
+    CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
     CmdOption "debug" (OptBool debug) "Emit a lot of debugging output" [];
     CmdFStarOption ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message");
@@ -429,4 +432,9 @@ let get_input_stream_binding _ =
   match !input_stream_binding with
   | None
   | Some "buffer" -> InputStreamBuffer
-  | Some "extern" -> InputStreamExtern
+  | Some "extern" ->
+    InputStreamExtern
+      begin match !input_stream_include with
+      | None -> ""
+      | Some s -> s
+      end
