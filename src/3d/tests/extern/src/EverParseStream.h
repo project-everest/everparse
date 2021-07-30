@@ -9,8 +9,14 @@ struct es_cell {
   struct es_cell * next;
 };
 
-typedef struct es_cell ** EverParseInputStreamBase;
+struct EverParseInputStreamBase_s {
+  struct es_cell * head;
+};
 
 #include "EverParse.h"
+
+EverParseInputStreamBase * EverParseCreate();
+
+BOOLEAN EverParsePush(EverParseInputStreamBase x, uint8_t * buf, uint32_t len);
 
 #endif // __EVERPARSESTREAM
