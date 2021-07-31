@@ -1009,9 +1009,8 @@ let print_c_entry (modul: string)
      Printf.sprintf
        "EverParseErrorFrame frame;\n\t\
        frame.filled = FALSE;\n\t\
-       uint32_t position = 0;\n\t\
-       EverParseInputBuffer input = EverParseMakeInputBuffer(%s, &position);\n\t\
-       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input);\n\t\
+       EverParseInputBuffer input = EverParseMakeInputBuffer(%s);\n\t\
+       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
        if (EverParseResultIsError(result))\n\t\
        {\n\t\t\
          if (frame.filled)\n\t\t\

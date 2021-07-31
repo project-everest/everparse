@@ -14,7 +14,7 @@ noeq
 type input_buffer = {
   buf: B.buffer U8.t;
   len: U32.t;
-  pos: B.pointer U32.t;
+  pos: B.pointer (Ghost.erased U32.t);
   g_all_buf: Ghost.erased (Seq.seq U8.t);
   g_all: Ghost.erased (Seq.seq U8.t);
   prf: squash (
@@ -62,7 +62,7 @@ let _get_remaining
 val make_input_buffer
   (from: B.buffer U8.t)
   (n: U32.t)
-  (pos: B.pointer U32.t)
+  (pos: B.pointer (Ghost.erased U32.t))
 : HST.Stack t
   (requires (fun h ->
     B.live h from /\

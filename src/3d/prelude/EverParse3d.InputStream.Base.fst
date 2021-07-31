@@ -52,9 +52,13 @@ class input_stream_inst (t: Type) : Type = {
 
   has:
     (x: t) ->
+    (pos: U32.t) ->
     (n: U32.t) ->
     HST.Stack bool
-    (requires (fun h -> live x h))
+    (requires (fun h ->
+      live x h /\
+      U32.v pos == Seq.length (get_read x h)
+    ))
     (ensures (fun h res h' ->
       B.modifies B.loc_none h h' /\
       (res == true <==> Seq.length (get_remaining x h) >= U32.v n)
@@ -62,6 +66,7 @@ class input_stream_inst (t: Type) : Type = {
 
   read:
     (x: t) ->
+    (pos: U32.t) ->
     (n: U32.t) ->
     (dst: B.buffer U8.t) ->
     HST.Stack (B.buffer U8.t)
@@ -69,6 +74,7 @@ class input_stream_inst (t: Type) : Type = {
       live x h /\
       B.live h dst /\
       B.loc_disjoint (footprint x) (B.loc_buffer dst) /\
+      U32.v pos == Seq.length (get_read x h) /\
       B.length dst == U32.v n /\
       Seq.length (get_remaining x h) >= U32.v n
     ))
@@ -84,9 +90,14 @@ class input_stream_inst (t: Type) : Type = {
 
   skip:
     (x: t) ->
+    (pos: U32.t) ->
     (n: U32.t) ->
     HST.Stack unit
-    (requires (fun h -> live x h /\ Seq.length (get_remaining x h) >= U32.v n))
+    (requires (fun h ->
+      live x h /\
+      U32.v pos == Seq.length (get_read x h) /\
+      Seq.length (get_remaining x h) >= U32.v n
+    ))
     (ensures (fun h _ h' ->
       let s = get_remaining x h in
       B.modifies (footprint x) h h' /\
@@ -96,21 +107,17 @@ class input_stream_inst (t: Type) : Type = {
 
   empty:
     (x: t) ->
-    HST.Stack unit
-    (requires (fun h -> live x h))
-    (ensures (fun h _ h' ->
+    (pos: U32.t) ->
+    HST.Stack U32.t
+    (requires (fun h ->
+      live x h /\
+      U32.v pos == Seq.length (get_read x h)
+    ))
+    (ensures (fun h res h' ->
       B.modifies (footprint x) h h' /\
       live x h' /\
+      U32.v res == Seq.length (get_read x h') /\
       get_remaining x h' `Seq.equal` Seq.empty
-    ));
-
-  get_read_count:
-    (x: t) ->
-    HST.Stack U32.t
-    (requires (fun h -> live x h))
-    (ensures (fun h res h' ->
-      B.modifies B.loc_none h h' /\
-      U32.v res == Seq.length (get_read x h)
     ));
 
   is_prefix_of:
@@ -142,10 +149,12 @@ class input_stream_inst (t: Type) : Type = {
 
   truncate:
     (x: t) ->
+    (pos: U32.t) ->
     (n: U32.t) ->
     HST.Stack t
     (requires (fun h ->
       live x h /\
+      U32.v pos == Seq.length (get_read x h) /\
       U32.v n <= Seq.length (get_remaining x h)
     ))
     (ensures (fun h res h' ->
@@ -182,4 +191,3 @@ let preserved'
       [SMTPat (get_read x h'); SMTPat (B.modifies l h h')];
     ]]
 = preserved x l h h'
-

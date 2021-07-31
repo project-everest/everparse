@@ -85,37 +85,31 @@ let inst = {
     ()
   end;
   
-  has = begin fun x n ->
-    let currentPosition = !* x.pos in
+  has = begin fun x currentPosition n ->
     n `U32.lte` (x.len `U32.sub` currentPosition)
   end;
 
-  read = begin fun x n dst ->
+  read = begin fun x currentPosition n dst ->
     let h0 = HST.get () in
-    let currentPosition = !* x.pos in
     let res = B.sub x.buf currentPosition n in
     x.pos *= currentPosition `U32.add` n;
     let h' = HST.get () in
-    assert (B.deref h' x.pos == currentPosition `U32.add` n);
+    assert (Ghost.reveal (B.deref h' x.pos) == currentPosition `U32.add` n);
     res
   end;
 
-  skip = begin fun x n ->
+  skip = begin fun x currentPosition n ->
     let h0 = HST.get () in
-    let currentPosition = !* x.pos in
     x.pos *= currentPosition `U32.add` n;
     let h' = HST.get () in
-    assert (B.deref h' x.pos == currentPosition `U32.add` n);
+    assert (Ghost.reveal (B.deref h' x.pos) == currentPosition `U32.add` n);
     ()
   end;
 
-  empty = begin fun x ->
+  empty = begin fun x _ ->
     let h0 = HST.get () in
-    x.pos *= x.len
-  end;
-
-  get_read_count = begin fun x ->
-    !* x.pos
+    x.pos *= x.len;
+    x.len
   end;
 
   is_prefix_of = _is_prefix_of;
@@ -124,8 +118,7 @@ let inst = {
 
   is_prefix_of_prop = _is_prefix_of_prop;
 
-  truncate = begin fun x n ->
-    let currentPosition = !* x.pos in
+  truncate = begin fun x currentPosition n ->
     {
       buf = x.buf;
       len = currentPosition `U32.add` n;

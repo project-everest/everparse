@@ -82,9 +82,13 @@ inline_for_extraction
 noextract
 let has
     (x: t)
+    (position: U32.t)
     (n: U32.t)
 :   HST.Stack bool
-    (requires (fun h -> live x h))
+    (requires (fun h ->
+      live x h /\
+      U32.v position == Seq.length (get_read x h)
+    ))
     (ensures (fun h res h' ->
       B.modifies B.loc_none h h' /\
       (res == true <==> Seq.length (get_remaining x h) >= U32.v n)
@@ -92,15 +96,17 @@ let has
 =
   if x.Aux.has_length
   then
-    let position = !* x.Aux.position in
     n `U32.lte` (x.Aux.length `U32.sub` position)
   else
     Aux.has x.Aux.base n
+
+#push-options "--z3rlimit 16"
 
 inline_for_extraction
 noextract
 let read
     (x: t)
+    (position: U32.t)
     (n: U32.t)
     (dst: B.buffer U8.t)
 :   HST.Stack (B.buffer U8.t)
@@ -108,6 +114,7 @@ let read
       live x h /\
       B.live h dst /\
       B.loc_disjoint (footprint x) (B.loc_buffer dst) /\
+      U32.v position == Seq.length (get_read x h) /\
       B.length dst == U32.v n /\
       Seq.length (get_remaining x h) >= U32.v n
     ))
@@ -122,19 +129,25 @@ let read
     ))
 = let dst = Aux.read x.Aux.base n dst in
   let h1 = HST.get () in
-  let position = !* x.Aux.position in
-  x.Aux.position *= position `U32.add` n;
+  x.Aux.position *= Ghost.hide (position `U32.add` n);
   let h2 = HST.get () in
   Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h1 h2;
   dst
+
+#pop-options
 
 inline_for_extraction
 noextract
 let skip
     (x: t)
+    (position: U32.t)
     (n: U32.t)
 :   HST.Stack unit
-    (requires (fun h -> live x h /\ Seq.length (get_remaining x h) >= U32.v n))
+    (requires (fun h ->
+      live x h /\
+      U32.v position == Seq.length (get_read x h) /\
+      Seq.length (get_remaining x h) >= U32.v n
+    ))
     (ensures (fun h _ h' ->
       let s = get_remaining x h in
       B.modifies (footprint x) h h' /\
@@ -143,8 +156,7 @@ let skip
     ))
 = Aux.skip x.Aux.base n;
   let h1 = HST.get () in
-  let position = !* x.Aux.position in
-  x.Aux.position *= position `U32.add` n;
+  x.Aux.position *= Ghost.hide (position `U32.add` n);
   let h2 = HST.get () in
   Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h1 h2
 
@@ -152,48 +164,38 @@ inline_for_extraction
 noextract
 let empty
     (x: t)
-:   HST.Stack unit
-    (requires (fun h -> live x h))
-    (ensures (fun h _ h' ->
+    (position: U32.t)
+:   HST.Stack U32.t
+    (requires (fun h ->
+      live x h /\
+      U32.v position == Seq.length (get_read x h)
+    ))
+    (ensures (fun h res h' ->
       B.modifies (footprint x) h h' /\
       live x h' /\
+      U32.v res == Seq.length (get_read x h') /\
       get_remaining x h' `Seq.equal` Seq.empty
     ))
 =
   if x.Aux.has_length
   then begin
     let h0 = HST.get () in
-    let position = !* x.Aux.position in
     let h1 = HST.get () in
     Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h0 h1;
     Aux.skip x.Aux.base (x.Aux.length `U32.sub` position);
     let h2 = HST.get () in
     x.Aux.position *= x.Aux.length;
     let h3 = HST.get () in
-    Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h2 h3
+    Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h2 h3;
+    x.Aux.length
   end else begin
     let skipped = Aux.empty x.Aux.base in
     let h2 = HST.get () in
-    let position = !* x.Aux.position in
     x.Aux.position *= position `U32.add` skipped;
     let h3 = HST.get () in
-    Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h2 h3
+    Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h2 h3;
+    position `U32.add` skipped
   end
-
-inline_for_extraction
-let get_read_count
-    (x: t)
-:   HST.Stack U32.t
-    (requires (fun h -> live x h))
-    (ensures (fun h res h' ->
-      B.modifies B.loc_none h h' /\
-      U32.v res == Seq.length (get_read x h)
-    ))
-= let h2 = HST.get () in
-  let read = !* x.Aux.position in
-  let h3 = HST.get () in
-  Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h2 h3;
-  read
 
 let is_prefix_of
     (x: t)
@@ -234,10 +236,12 @@ inline_for_extraction
 noextract
 let truncate
     (x: t)
+    (pos: U32.t)
     (n: U32.t)
 :   HST.Stack t
     (requires (fun h ->
       live x h /\
+      U32.v pos == Seq.length (get_read x h) /\
       U32.v n <= Seq.length (get_remaining x h)
     ))
     (ensures (fun h res h' ->
@@ -247,14 +251,10 @@ let truncate
       live res h' /\
       Seq.length (get_remaining res h') == U32.v n
     ))
-= let h2 = HST.get () in
-  let read = !* x.Aux.position in
-  let h3 = HST.get () in
-  Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h2 h3;
-  {
+= {
     Aux.base = x.Aux.base;
     Aux.has_length = true;
     Aux.position = x.Aux.position;
-    Aux.length = read `U32.add` n;
+    Aux.length = pos `U32.add` n;
     Aux.prf = ();
   }

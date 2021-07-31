@@ -13,7 +13,7 @@ type input_buffer = {
   base: t;
   has_length: bool;
   length: U32.t;
-  position: B.pointer U32.t;
+  position: B.pointer (Ghost.erased U32.t);
   prf: squash (
     B.loc_disjoint (footprint base) (B.loc_buffer position) /\
     (has_length == true ==> U32.v length <= U32.v (len_all base))
@@ -24,7 +24,7 @@ open LowStar.BufferOps
 
 let make_input_buffer
   (base: t)
-  (position: B.pointer U32.t)
+  (position: B.pointer (Ghost.erased U32.t))
 : HST.Stack input_buffer
   (requires (fun h ->
     B.loc_disjoint (footprint base) (B.loc_buffer position) /\

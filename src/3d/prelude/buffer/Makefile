@@ -54,7 +54,9 @@ EverParse.h: EverParse.rsp
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
-.PHONY: all extract clean
+verify: $(ALL_CHECKED_FILES)
+
+.PHONY: all extract clean verify
 
 clean:
 	rm -f *.checked *.krml EverParse.h EverParse.rsp .depend *.tmp .depend.tmp *~

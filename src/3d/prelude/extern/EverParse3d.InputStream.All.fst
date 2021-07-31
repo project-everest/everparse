@@ -17,7 +17,6 @@ let inst = {
   read = read;
   skip = skip;
   empty = empty;
-  get_read_count = get_read_count;
   is_prefix_of = is_prefix_of;
   get_suffix = get_suffix;
   is_prefix_of_prop = is_prefix_of_prop;
