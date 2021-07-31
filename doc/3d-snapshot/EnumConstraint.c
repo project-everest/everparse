@@ -27,14 +27,11 @@ ValidateEnumConstraintX(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input,
+  uint32_t Pos
 )
 /*++
     Internal helper function:
@@ -43,15 +40,16 @@ ValidateEnumConstraintX(
 --*/
 {
   /* Validating field x */
-  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - Pos);
   uint64_t positionAfterEnumConstraint;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (hasBytes)
   {
-    positionAfterEnumConstraint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterEnumConstraint = (uint64_t)(Pos + (uint32_t)4U);
   }
   else
   {
-    positionAfterEnumConstraint = StartPosition + (uint64_t)4U;
+    positionAfterEnumConstraint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   uint64_t positionAfterEnumConstraint0;
   if (EverParseIsSuccess(positionAfterEnumConstraint))
@@ -64,10 +62,8 @@ ValidateEnumConstraintX(
       "_enum_constraint_x",
       EverParseErrorReasonOfResult(positionAfterEnumConstraint),
       Ctxt,
-      Uu,
       Input,
-      StartPosition,
-      positionAfterEnumConstraint);
+      Pos);
     positionAfterEnumConstraint0 = positionAfterEnumConstraint;
   }
   uint64_t positionAfterEnumConstraint1;
@@ -78,8 +74,10 @@ ValidateEnumConstraintX(
   else
   {
     /* reading field value */
-    uint8_t *base = Input;
-    uint32_t enumConstraint1 = Load32Le(base + (uint32_t)StartPosition);
+    uint8_t temp[4U] = { 0U };
+    uint8_t *temp1 = Input.buf + Pos;
+    uint32_t res = Load32Le(temp1);
+    uint32_t enumConstraint1 = res;
     /* start: checking constraint */
     BOOLEAN
     enumConstraintConstraintIsOk = enumConstraint1 == (uint32_t)(uint8_t)0U || Col == GREEN;
@@ -96,10 +94,8 @@ ValidateEnumConstraintX(
     "_enum_constraint_x.refinement",
     EverParseErrorReasonOfResult(positionAfterEnumConstraint1),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterEnumConstraint1);
+    Pos);
   return positionAfterEnumConstraint1;
 }
 
@@ -112,26 +108,24 @@ EnumConstraintValidateEnumConstraint(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input,
+  uint32_t StartPosition
 )
 {
   /* Validating field col */
-  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - StartPosition);
   uint64_t positionAfterEnumConstraint;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  if (hasBytes)
   {
-    positionAfterEnumConstraint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterEnumConstraint = (uint64_t)(StartPosition + (uint32_t)4U);
   }
   else
   {
-    positionAfterEnumConstraint = StartPosition + (uint64_t)4U;
+    positionAfterEnumConstraint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   uint64_t positionAftercol;
   if (EverParseIsSuccess(positionAfterEnumConstraint))
@@ -144,28 +138,28 @@ EnumConstraintValidateEnumConstraint(
       "col",
       EverParseErrorReasonOfResult(positionAfterEnumConstraint),
       Ctxt,
-      Uu,
       Input,
-      StartPosition,
-      positionAfterEnumConstraint);
+      StartPosition);
     positionAftercol = positionAfterEnumConstraint;
   }
   if (EverParseIsError(positionAftercol))
   {
     return positionAftercol;
   }
-  uint8_t *base = Input;
-  uint32_t col = Load32Le(base + (uint32_t)StartPosition);
+  uint8_t temp[4U] = { 0U };
+  uint8_t *temp1 = Input.buf + StartPosition;
+  uint32_t res = Load32Le(temp1);
+  uint32_t col = res;
   BOOLEAN colConstraintIsOk = col == RED || col == GREEN || col == BLUE;
   uint64_t
-  positionOrErrorAftercol =
+  positionAftercol1 =
     EverParseCheckConstraintOkWithFieldId(colConstraintIsOk,
-      StartPosition,
+      (uint64_t)StartPosition,
       positionAftercol,
       (uint64_t)1U);
-  if (EverParseIsError(positionOrErrorAftercol))
+  if (EverParseIsError(positionAftercol1))
   {
-    return positionOrErrorAftercol;
+    return positionAftercol1;
   }
   /* Field _enum_constraint_x */
   uint64_t
@@ -173,9 +167,8 @@ EnumConstraintValidateEnumConstraint(
     ValidateEnumConstraintX(col,
       Ctxt,
       Err,
-      Uu,
       Input,
-      positionOrErrorAftercol);
+      (uint32_t)positionAftercol1);
   if (EverParseIsSuccess(positionAfterEnumConstraint0))
   {
     return positionAfterEnumConstraint0;
@@ -184,10 +177,8 @@ EnumConstraintValidateEnumConstraint(
     "x",
     EverParseErrorReasonOfResult(positionAfterEnumConstraint0),
     Ctxt,
-    Uu,
     Input,
-    positionOrErrorAftercol,
-    positionAfterEnumConstraint0);
+    (uint32_t)positionAftercol1);
   return positionAfterEnumConstraint0;
 }
 

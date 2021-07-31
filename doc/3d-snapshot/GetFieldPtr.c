@@ -11,14 +11,11 @@ ValidateTF1(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input,
+  uint32_t Pos
 )
 /*++
     Internal helper function:
@@ -27,27 +24,26 @@ ValidateTF1(
 --*/
 {
   /* SNIPPET_START: GetFieldPtr.T */
-  uint64_t positionAfterT;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)(uint32_t)(uint8_t)10U)
+  BOOLEAN hasBytes = (uint32_t)(uint8_t)10U <= (Input.len - Pos);
+  uint64_t res;
+  if (hasBytes)
   {
-    positionAfterT = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res = (uint64_t)(Pos + (uint32_t)(uint8_t)10U);
   }
   else
   {
-    positionAfterT = StartPosition + (uint64_t)(uint32_t)(uint8_t)10U;
+    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
+  if (EverParseIsSuccess(res))
+  {
+    
+  }
+  uint64_t positionAfterT = res;
   if (EverParseIsSuccess(positionAfterT))
   {
     return positionAfterT;
   }
-  Err("_T",
-    "_T_f1",
-    EverParseErrorReasonOfResult(positionAfterT),
-    Ctxt,
-    Uu,
-    Input,
-    StartPosition,
-    positionAfterT);
+  Err("_T", "_T_f1", EverParseErrorReasonOfResult(positionAfterT), Ctxt, Input, Pos);
   return positionAfterT;
 }
 
@@ -61,14 +57,11 @@ ValidateTF2(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input,
+  uint32_t Pos
 )
 /*++
     Internal helper function:
@@ -77,15 +70,21 @@ ValidateTF2(
 --*/
 {
   /* Validating field f2 */
-  uint64_t positionAfterT;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)(uint32_t)(uint8_t)20U)
+  BOOLEAN hasBytes = (uint32_t)(uint8_t)20U <= (Input.len - Pos);
+  uint64_t res;
+  if (hasBytes)
   {
-    positionAfterT = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res = (uint64_t)(Pos + (uint32_t)(uint8_t)20U);
   }
   else
   {
-    positionAfterT = StartPosition + (uint64_t)(uint32_t)(uint8_t)20U;
+    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
+  if (EverParseIsSuccess(res))
+  {
+    
+  }
+  uint64_t positionAfterT = res;
   uint64_t positionAfterT0;
   if (EverParseIsSuccess(positionAfterT))
   {
@@ -93,21 +92,13 @@ ValidateTF2(
   }
   else
   {
-    Err("_T",
-      "_T_f2.base",
-      EverParseErrorReasonOfResult(positionAfterT),
-      Ctxt,
-      Uu,
-      Input,
-      StartPosition,
-      positionAfterT);
+    Err("_T", "_T_f2.base", EverParseErrorReasonOfResult(positionAfterT), Ctxt, Input, Pos);
     positionAfterT0 = positionAfterT;
   }
   uint64_t positionAfterT1;
   if (EverParseIsSuccess(positionAfterT0))
   {
-    uint8_t *base = Input;
-    uint8_t *x = base + (uint32_t)StartPosition;
+    uint8_t *x = Input.buf + Pos;
     *Out = x;
     BOOLEAN actionSuccessT = TRUE;
     if (!actionSuccessT)
@@ -127,14 +118,7 @@ ValidateTF2(
   {
     return positionAfterT1;
   }
-  Err("_T",
-    "_T_f2",
-    EverParseErrorReasonOfResult(positionAfterT1),
-    Ctxt,
-    Uu,
-    Input,
-    StartPosition,
-    positionAfterT1);
+  Err("_T", "_T_f2", EverParseErrorReasonOfResult(positionAfterT1), Ctxt, Input, Pos);
   return positionAfterT1;
 }
 
@@ -148,18 +132,15 @@ GetFieldPtrValidateT(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    EverParseInputBuffer x4,
+    uint32_t x5
   ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
+  EverParseInputBuffer Input,
+  uint32_t Pos
 )
 {
   /* Field _T_f1 */
-  uint64_t positionAfterT = ValidateTF1(Ctxt, Err, Uu, Input, StartPosition);
+  uint64_t positionAfterT = ValidateTF1(Ctxt, Err, Input, Pos);
   uint64_t positionAfterf1;
   if (EverParseIsSuccess(positionAfterT))
   {
@@ -167,14 +148,7 @@ GetFieldPtrValidateT(
   }
   else
   {
-    Err("_T",
-      "f1",
-      EverParseErrorReasonOfResult(positionAfterT),
-      Ctxt,
-      Uu,
-      Input,
-      StartPosition,
-      positionAfterT);
+    Err("_T", "f1", EverParseErrorReasonOfResult(positionAfterT), Ctxt, Input, Pos);
     positionAfterf1 = positionAfterT;
   }
   if (EverParseIsError(positionAfterf1))
@@ -182,7 +156,7 @@ GetFieldPtrValidateT(
     return positionAfterf1;
   }
   /* Field _T_f2 */
-  uint64_t positionAfterT0 = ValidateTF2(Out, Ctxt, Err, Uu, Input, positionAfterf1);
+  uint64_t positionAfterT0 = ValidateTF2(Out, Ctxt, Err, Input, (uint32_t)positionAfterf1);
   if (EverParseIsSuccess(positionAfterT0))
   {
     return positionAfterT0;
@@ -191,10 +165,8 @@ GetFieldPtrValidateT(
     "f2",
     EverParseErrorReasonOfResult(positionAfterT0),
     Ctxt,
-    Uu,
     Input,
-    positionAfterf1,
-    positionAfterT0);
+    (uint32_t)positionAfterf1);
   return positionAfterT0;
 }
 
