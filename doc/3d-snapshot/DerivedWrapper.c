@@ -9,26 +9,27 @@ void DefaultErrorHandler(
 	const char *fieldname,
 	const char *reason,
 	uint8_t *context,
-	EverParseInputBuffer input,
-	uint32_t start_pos)
+	uint32_t len,
+	uint8_t *base,
+	uint64_t start_pos,
+	uint64_t end_pos)
 {
 	EverParseErrorFrame *frame = (EverParseErrorFrame*)context;
-	EverParseDefaultErrorHandler(
-		typename,
-		fieldname,
-		reason,
-		frame,
-		input,
-		start_pos
-	);
+	if (!frame->filled)
+	{
+		frame->filled = TRUE;
+		frame->start_pos = start_pos;
+		frame->end_pos = end_pos;
+		frame->typename = typename;
+		frame->fieldname = fieldname;
+		frame->reason = reason;
+	}
 }
 
 BOOLEAN DerivedCheckTriple(uint8_t *base, uint32_t len) {
 	EverParseErrorFrame frame;
 	frame.filled = FALSE;
-	uint32_t position = 0;
-	EverParseInputBuffer input = EverParseMakeInputBuffer(base, len, &position);
-	uint64_t result = DerivedValidateTriple( (uint8_t*)&frame, &DefaultErrorHandler, input);
+	uint64_t result = DerivedValidateTriple( (uint8_t*)&frame, &DefaultErrorHandler, len, base, 0);
 	if (EverParseResultIsError(result))
 	{
 		if (frame.filled)
@@ -43,9 +44,7 @@ BOOLEAN DerivedCheckTriple(uint8_t *base, uint32_t len) {
 BOOLEAN DerivedCheckQuad(uint8_t *base, uint32_t len) {
 	EverParseErrorFrame frame;
 	frame.filled = FALSE;
-	uint32_t position = 0;
-	EverParseInputBuffer input = EverParseMakeInputBuffer(base, len, &position);
-	uint64_t result = DerivedValidateQuad( (uint8_t*)&frame, &DefaultErrorHandler, input);
+	uint64_t result = DerivedValidateQuad( (uint8_t*)&frame, &DefaultErrorHandler, len, base, 0);
 	if (EverParseResultIsError(result))
 	{
 		if (frame.filled)
