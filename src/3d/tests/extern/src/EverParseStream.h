@@ -5,7 +5,7 @@
 
 struct es_cell {
   uint8_t * buf;
-  uint8_t len;
+  uint64_t len;
   struct es_cell * next;
 };
 
@@ -17,6 +17,6 @@ typedef struct EverParseInputStreamBase_s * EverParseInputStreamBase;
 
 EverParseInputStreamBase EverParseCreate();
 
-int EverParsePush(EverParseInputStreamBase x, uint8_t * buf, uint32_t len);
+int EverParsePush(EverParseInputStreamBase x, uint8_t * buf, uint64_t len);
 
 #endif // __EVERPARSESTREAM

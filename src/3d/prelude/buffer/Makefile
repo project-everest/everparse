@@ -17,10 +17,12 @@ ALREADY_CACHED=--already_cached '*,-EverParse3d.Actions.All,-EverParse3d.InputSt
 
 -include .depend
 
+FILTERED_KRML_FILES=$(filter-out ResultOps.krml Actions.krml,$(ALL_KRML_FILES))
+
 extract: EverParse.h
 
-EverParse.rsp: $(ALL_KRML_FILES) ../EverParse.rsp
-	for f in $(ALL_KRML_FILES) ; do echo $$f ; done > $@.tmp
+EverParse.rsp: $(FILTERED_KRML_FILES) ../EverParse.rsp
+	for f in $(FILTERED_KRML_FILES) ; do echo $$f ; done > $@.tmp
 	while read file ; do grep "^$$file"'$$' $@.tmp > /dev/null || { echo ../$$file >> $@.tmp ; } ; done < ../EverParse.rsp
 	mv $@.tmp $@
 
@@ -29,13 +31,13 @@ EverParse.h: EverParse.rsp
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle 'LowParse.Low.ErrorCode+Prelude.StaticHeader+ResultOps+EverParse3d.InputStream.Buffer.Aux=LowParse.\*,Prelude,Prelude.\*,Actions,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.InputStream.Buffer.Aux=LowParse.\*,Prelude,Prelude.\*,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
 	  -header ../../noheader.txt \
 	  -minimal \
 	  -add-include 'EverParse:"EverParseEndianness.h"' \
-	  -static-header 'Prelude.StaticHeader,LowParse.Low.Base,ResultOps,LowParse.Low.ErrorCode,EverParse3d.InputStream.\*' \
+	  -static-header 'Prelude.StaticHeader,LowParse.Low.Base,EverParse3d.ErrorCode,EverParse3d.InputStream.\*' \
 	  -no-prefix LowParse.Slice \
 	  -no-prefix LowParse.Low.BoundedInt \
 	  -fextern-c \

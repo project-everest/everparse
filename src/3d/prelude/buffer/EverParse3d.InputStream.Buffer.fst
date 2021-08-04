@@ -55,6 +55,27 @@ open LowStar.BufferOps
 
 #restart-solver
 
+module U64 = FStar.UInt64
+
+inline_for_extraction
+noextract
+let uint32_to_uint64
+  (x: U32.t)
+: Pure U64.t
+  (requires True)
+  (ensures (fun y -> U64.v y == U32.v x))
+= FStar.Int.Cast.uint32_to_uint64 x
+
+inline_for_extraction
+noextract
+let uint64_to_uint32
+  (x: U64.t)
+: Pure U32.t
+  (requires (U64.v x < 4294967296))
+  (ensures (fun y -> U32.v y == U64.v x))
+= FStar.Math.Lemmas.modulo_lemma (U64.v x) 4294967296;
+  FStar.Int.Cast.uint64_to_uint32 x
+
 let inst = {
 
   live = _live;
@@ -66,7 +87,7 @@ let inst = {
   end;
 
   len_all = begin fun x ->
-    x.len
+    uint32_to_uint64 x.len
   end;
 
   get_all = begin fun x ->
@@ -86,30 +107,28 @@ let inst = {
   end;
   
   has = begin fun x currentPosition n ->
-    n `U32.lte` (x.len `U32.sub` currentPosition)
+    n `U64.lte` (uint32_to_uint64 x.len `U64.sub` currentPosition)
   end;
 
   read = begin fun x currentPosition n dst ->
     let h0 = HST.get () in
-    let res = B.sub x.buf currentPosition n in
-    x.pos *= currentPosition `U32.add` n;
+    let res = B.sub x.buf (uint64_to_uint32 currentPosition) (uint64_to_uint32 n) in
+    x.pos *= uint64_to_uint32 (currentPosition `U64.add` n);
     let h' = HST.get () in
-    assert (Ghost.reveal (B.deref h' x.pos) == currentPosition `U32.add` n);
     res
   end;
 
   skip = begin fun x currentPosition n ->
     let h0 = HST.get () in
-    x.pos *= currentPosition `U32.add` n;
+    x.pos *= uint64_to_uint32 (currentPosition `U64.add` n);
     let h' = HST.get () in
-    assert (Ghost.reveal (B.deref h' x.pos) == currentPosition `U32.add` n);
     ()
   end;
 
   empty = begin fun x _ ->
     let h0 = HST.get () in
     x.pos *= x.len;
-    x.len
+    uint32_to_uint64 x.len
   end;
 
   is_prefix_of = _is_prefix_of;
@@ -121,9 +140,9 @@ let inst = {
   truncate = begin fun x currentPosition n ->
     {
       buf = x.buf;
-      len = currentPosition `U32.add` n;
+      len = uint64_to_uint32 (currentPosition `U64.add` n);
       pos = x.pos;
-      g_all = Ghost.hide (Seq.slice (Ghost.reveal x.g_all) 0 (U32.v currentPosition + U32.v n));
+      g_all = Ghost.hide (Seq.slice (Ghost.reveal x.g_all) 0 (U64.v currentPosition + U64.v n));
       g_all_buf = x.g_all_buf;
       prf = ();
     }

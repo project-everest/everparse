@@ -5,6 +5,7 @@ module EverParse3d.InputStream.Buffer.Aux
 module B = LowStar.Buffer
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 
@@ -99,19 +100,19 @@ let default_error_handler
   (typename: string)
   (fieldname: string)
   (reason: string)
-  (context: B.pointer ResultOps.error_frame)
+  (context: B.pointer EverParse3d.ErrorCode.error_frame)
   (input: input_buffer)
-  (start_pos: U32.t)
+  (start_pos: U64.t)
 : HST.Stack unit
   (requires (fun h -> B.live h context))
   (ensures (fun h _ h' -> B.modifies (B.loc_buffer context) h h'))
 =
-  if not ( !* context ).ResultOps.filled then begin
+  if not ( !* context ).EverParse3d.ErrorCode.filled then begin
     context *= {
-      ResultOps.filled = true;
-      ResultOps.start_pos = start_pos;
-      ResultOps.typename = typename;
-      ResultOps.fieldname = fieldname;
-      ResultOps.reason = reason;
+      EverParse3d.ErrorCode.filled = true;
+      EverParse3d.ErrorCode.start_pos = start_pos;
+      EverParse3d.ErrorCode.typename = typename;
+      EverParse3d.ErrorCode.fieldname = fieldname;
+      EverParse3d.ErrorCode.reason = reason;
     }
   end

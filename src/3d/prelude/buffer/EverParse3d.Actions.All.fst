@@ -9,4 +9,4 @@ let action_field_ptr
       #nz #wk (#k:Prelude.parser_kind nz wk) (#t:Type) (#p:Prelude.parser k t) (u:unit)
    = fun ctxt input startPosition ->
        let open LowParse.Slice in
-       LowStar.Buffer.offset input.EverParse3d.InputStream.Buffer.Aux.buf startPosition
+       LowStar.Buffer.offset input.EverParse3d.InputStream.Buffer.Aux.buf (FStar.Int.Cast.uint64_to_uint32 startPosition)

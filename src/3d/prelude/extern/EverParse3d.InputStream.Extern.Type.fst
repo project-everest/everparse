@@ -6,17 +6,19 @@ module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module U32 = FStar.UInt32
 module U8 = FStar.UInt8
+module LPE = EverParse3d.ErrorCode
+module U64 = FStar.UInt64
 
 inline_for_extraction
 noeq
 type input_buffer = {
   base: t;
   has_length: bool;
-  length: U32.t;
-  position: B.pointer (Ghost.erased U32.t);
+  length: LPE.pos_t;
+  position: B.pointer (Ghost.erased LPE.pos_t);
   prf: squash (
     B.loc_disjoint (footprint base) (B.loc_buffer position) /\
-    (has_length == true ==> U32.v length <= U32.v (len_all base))
+    (has_length == true ==> U64.v length <= U64.v (len_all base))
   );
 }
 
@@ -24,7 +26,7 @@ open LowStar.BufferOps
 
 let make_input_buffer
   (base: t)
-  (position: B.pointer (Ghost.erased U32.t))
+  (position: B.pointer (Ghost.erased LPE.pos_t))
 : HST.Stack input_buffer
   (requires (fun h ->
     B.loc_disjoint (footprint base) (B.loc_buffer position) /\
@@ -33,11 +35,11 @@ let make_input_buffer
   (ensures (fun h _ h' ->
     B.modifies (B.loc_buffer position) h h' 
   ))
-= position *= 0ul;
+= position *= 0uL;
   {
     base = base;
     has_length = false;
-    length = 0ul;
+    length = 0uL;
     position = position;
     prf = ();
   }
@@ -46,19 +48,19 @@ let default_error_handler
   (typename: string)
   (fieldname: string)
   (reason: string)
-  (context: B.pointer ResultOps.error_frame)
+  (context: B.pointer LPE.error_frame)
   (input: input_buffer)
-  (start_pos: U32.t)
+  (start_pos: U64.t)
 : HST.Stack unit
   (requires (fun h -> B.live h context))
   (ensures (fun h _ h' -> B.modifies (B.loc_buffer context) h h'))
 =
-  if not ( !* context ).ResultOps.filled then begin
+  if not ( !* context ).LPE.filled then begin
     context *= {
-      ResultOps.filled = true;
-      ResultOps.start_pos = start_pos;
-      ResultOps.typename = typename;
-      ResultOps.fieldname = fieldname;
-      ResultOps.reason = reason;
+      LPE.filled = true;
+      LPE.start_pos = start_pos;
+      LPE.typename = typename;
+      LPE.fieldname = fieldname;
+      LPE.reason = reason;
     }
   end

@@ -1,10 +1,11 @@
 module EverParse3d.InputStream.Base
 
 module U8 = FStar.UInt8
-module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
+module LPE = EverParse3d.ErrorCode
 
 noextract
 inline_for_extraction
@@ -23,15 +24,15 @@ class input_stream_inst (t: Type) : Type = {
     (requires (live x h))
     (ensures (B.loc_not_unused_in h `B.loc_includes` footprint x));
 
-  len_all: (x: t) -> GTot U32.t;
+  len_all: (x: t) -> GTot LPE.pos_t;
 
   get_all: (x: t) -> Ghost (Seq.seq U8.t)
     (requires True)
-    (ensures (fun y -> Seq.length y == U32.v (len_all x)));
+    (ensures (fun y -> Seq.length y == U64.v (len_all x)));
 
   get_remaining: (x: t) -> (h: HS.mem) -> Ghost (Seq.seq U8.t)
     (requires (live x h))
-    (ensures (fun y -> Seq.length y <= U32.v (len_all x)));
+    (ensures (fun y -> Seq.length y <= U64.v (len_all x)));
 
   get_read: (x: t) -> (h: HS.mem) -> Ghost (Seq.seq U8.t)
     (requires (live x h))
@@ -52,71 +53,71 @@ class input_stream_inst (t: Type) : Type = {
 
   has:
     (x: t) ->
-    (pos: U32.t) ->
-    (n: U32.t) ->
+    (pos: LPE.pos_t) ->
+    (n: U64.t) ->
     HST.Stack bool
     (requires (fun h ->
       live x h /\
-      U32.v pos == Seq.length (get_read x h)
+      U64.v pos == Seq.length (get_read x h)
     ))
     (ensures (fun h res h' ->
       B.modifies B.loc_none h h' /\
-      (res == true <==> Seq.length (get_remaining x h) >= U32.v n)
+      (res == true <==> Seq.length (get_remaining x h) >= U64.v n)
     ));
 
   read:
     (x: t) ->
-    (pos: U32.t) ->
-    (n: U32.t) ->
+    (pos: LPE.pos_t) ->
+    (n: U64.t) ->
     (dst: B.buffer U8.t) ->
     HST.Stack (B.buffer U8.t)
     (requires (fun h ->
       live x h /\
       B.live h dst /\
       B.loc_disjoint (footprint x) (B.loc_buffer dst) /\
-      U32.v pos == Seq.length (get_read x h) /\
-      B.length dst == U32.v n /\
-      Seq.length (get_remaining x h) >= U32.v n
+      U64.v pos == Seq.length (get_read x h) /\
+      B.length dst == U64.v n /\
+      Seq.length (get_remaining x h) >= U64.v n
     ))
     (ensures (fun h dst' h' ->
       let s = get_remaining x h in
       B.modifies (B.loc_buffer dst `B.loc_union` footprint x) h h' /\
-      B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U32.v n) /\
+      B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
       live x h' /\
       B.live h' dst' /\
       (B.loc_buffer dst `B.loc_union` footprint x) `B.loc_includes` B.loc_buffer dst' /\
-      get_remaining x h' `Seq.equal` Seq.slice s (U32.v n) (Seq.length s)
+      get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ));
 
   skip:
     (x: t) ->
-    (pos: U32.t) ->
-    (n: U32.t) ->
+    (pos: LPE.pos_t) ->
+    (n: U64.t) ->
     HST.Stack unit
     (requires (fun h ->
       live x h /\
-      U32.v pos == Seq.length (get_read x h) /\
-      Seq.length (get_remaining x h) >= U32.v n
+      U64.v pos == Seq.length (get_read x h) /\
+      Seq.length (get_remaining x h) >= U64.v n
     ))
     (ensures (fun h _ h' ->
       let s = get_remaining x h in
       B.modifies (footprint x) h h' /\
       live x h' /\
-      get_remaining x h' `Seq.equal` Seq.slice s (U32.v n) (Seq.length s)
+      get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ));
 
   empty:
     (x: t) ->
-    (pos: U32.t) ->
-    HST.Stack U32.t
+    (pos: LPE.pos_t) ->
+    HST.Stack LPE.pos_t
     (requires (fun h ->
       live x h /\
-      U32.v pos == Seq.length (get_read x h)
+      U64.v pos == Seq.length (get_read x h)
     ))
     (ensures (fun h res h' ->
       B.modifies (footprint x) h h' /\
       live x h' /\
-      U32.v res == Seq.length (get_read x h') /\
+      U64.v res == Seq.length (get_read x h') /\
       get_remaining x h' `Seq.equal` Seq.empty
     ));
 
@@ -149,24 +150,24 @@ class input_stream_inst (t: Type) : Type = {
 
   truncate:
     (x: t) ->
-    (pos: U32.t) ->
-    (n: U32.t) ->
+    (pos: LPE.pos_t) ->
+    (n: U64.t) ->
     HST.Stack t
     (requires (fun h ->
       live x h /\
-      U32.v pos == Seq.length (get_read x h) /\
-      U32.v n <= Seq.length (get_remaining x h)
+      U64.v pos == Seq.length (get_read x h) /\
+      U64.v n <= Seq.length (get_remaining x h)
     ))
     (ensures (fun h res h' ->
       B.modifies B.loc_none h h' /\
       res `is_prefix_of` x /\
       footprint res == footprint x /\
       live res h' /\
-      Seq.length (get_remaining res h') == U32.v n
+      Seq.length (get_remaining res h') == U64.v n
     ));
 }
 
-let length_all #t (#_: input_stream_inst t) (x: t) : GTot nat = U32.v (len_all x)
+let length_all #t (#_: input_stream_inst t) (x: t) : GTot nat = U64.v (len_all x)
 
 let preserved'
     (#t: Type)

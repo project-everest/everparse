@@ -29,6 +29,10 @@ module HST = FStar.HyperStack.ST
 // inline_for_extraction
 // let ___PUINT8 = LPL.puint8
 
+inline_for_extraction
+noextract
+let is_range_okay = EverParse3d.ErrorCode.is_range_okay
+
 let hinv = HS.mem -> Type
 let extends h1 h0 = forall #a #r #s (b:mbuffer a r s). {:pattern live h1 b} live h0 b ==> live h1 b
 let modifies_none_extends (h0 h1:HS.mem)
@@ -468,7 +472,7 @@ noextract
 inline_for_extraction
 val action_field_pos
       (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
-   : action p true_inv eloc_none false U32.t
+   : action p true_inv eloc_none false U64.t
 
 noextract
 inline_for_extraction

@@ -2,12 +2,12 @@
 #include "EverParseStream.h"
 #include <stdlib.h>
 
-BOOLEAN EverParseHas(EverParseInputStreamBase const x, uint32_t n) {
+BOOLEAN EverParseHas(EverParseInputStreamBase const x, uint64_t n) {
   if (n == 0)
     return TRUE;
   struct es_cell *head = x->head;
   while (head != NULL) {
-    uint32_t len = head->len;
+    uint64_t len = head->len;
     if (n <= len)
       return TRUE;
     n -= len;
@@ -16,12 +16,12 @@ BOOLEAN EverParseHas(EverParseInputStreamBase const x, uint32_t n) {
   return FALSE;
 }
 
-uint8_t *EverParseRead(EverParseInputStreamBase const x, uint32_t n, uint8_t * const dst) {
+uint8_t *EverParseRead(EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst) {
   /** assumes EverParseHas n */
   if (n == 0)
     return dst;
   struct es_cell *head = x->head;
-  uint32_t len = head->len;
+  uint64_t len = head->len;
   if (n <= len) {
     uint8_t *res = head->buf;
     head->buf += n;
@@ -48,13 +48,13 @@ uint8_t *EverParseRead(EverParseInputStreamBase const x, uint32_t n, uint8_t * c
   return dst;
 }
 
-void EverParseSkip(EverParseInputStreamBase const x, uint32_t n) {
+void EverParseSkip(EverParseInputStreamBase const x, uint64_t n) {
   /** assumes EverParseHas n */
   if (n == 0)
     return;
   {
     struct es_cell *head = x->head;
-    uint32_t len = head->len;
+    uint64_t len = head->len;
     while (n > len) {
       n -= len;
       head = head->next;
@@ -72,8 +72,8 @@ void EverParseSkip(EverParseInputStreamBase const x, uint32_t n) {
   }
 }
 
-uint32_t EverParseEmpty(EverParseInputStreamBase const x) {
-  uint32_t res = 0;
+uint64_t EverParseEmpty(EverParseInputStreamBase const x) {
+  uint64_t res = 0;
   struct es_cell *head = x->head;
   while (head != NULL) {
     res += head->len;
@@ -92,7 +92,7 @@ EverParseInputStreamBase EverParseCreate() {
   return res;
 }
 
-int EverParsePush(EverParseInputStreamBase const x, uint8_t * const buf, uint32_t const len) {
+int EverParsePush(EverParseInputStreamBase const x, uint8_t * const buf, uint64_t const len) {
   struct es_cell * cell = malloc(sizeof(struct es_cell));
   if (cell == NULL)
     return 0;

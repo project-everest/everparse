@@ -29,6 +29,90 @@ friend Prelude
 open Prelude
 module B = LowStar.Buffer
 module U8 = FStar.UInt8
+open ResultOps
+
+inline_for_extraction noextract
+let validate_nlist_constant_size_mod_ko (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
+  : Pure (validator_no_read (parse_nlist n p))
+  (requires (
+    let open LP in
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    U32.v n % k.LP.parser_kind_low <> 0
+  ))
+  (ensures (fun _ -> True))
+= 
+  (fun #rrel #rel sl len pos ->
+     let h = FStar.HyperStack.ST.get () in
+     [@inline_let]
+     let _ =
+       LPL.valid_facts (parse_nlist n p) h sl (LPL.uint64_to_uint32 pos)
+     in
+     [@inline_let]
+     let f () : Lemma
+       (requires (LPL.valid (parse_nlist n p) h sl (LPL.uint64_to_uint32 pos)))
+       (ensures False)
+     = let sq = LPL.bytes_of_slice_from h sl (LPL.uint64_to_uint32 pos) in
+       let sq' = Seq.slice sq 0 (U32.v n) in
+       LowParse.Spec.List.list_length_constant_size_parser_correct p sq' ;
+       let Some (l, _) = LP.parse (parse_nlist n p) sq in
+       assert (U32.v n == FStar.List.Tot.length l `Prims.op_Multiply` k.LP.parser_kind_low) ;
+       FStar.Math.Lemmas.cancel_mul_mod (FStar.List.Tot.length l) k.LP.parser_kind_low ;
+       assert (U32.v n % k.LP.parser_kind_low == 0)
+     in
+     [@inline_let]
+     let _ = Classical.move_requires f () in
+     ResultOps.validator_error_list_size_not_multiple
+  )
+
+#push-options "--z3rlimit 16"
+
+inline_for_extraction noextract
+let validate_nlist_total_constant_size' (n:U32.t) #wk (#k:parser_kind true wk) #t (p:parser k t)
+  : Pure (validator_no_read (parse_nlist n p))
+  (requires (
+    let open LP in
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal /\
+    k.parser_kind_low < 4294967296
+  ))
+  (ensures (fun _ -> True))
+= fun #rrel #rel sl len pos ->
+  if n `U32.rem` U32.uint_to_t k.LP.parser_kind_low = 0ul
+  then validate_nlist_total_constant_size_mod_ok n p sl len pos
+  else validate_nlist_constant_size_mod_ko n p sl len pos
+
+#pop-options
+
+inline_for_extraction noextract
+let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t)
+: Pure (validator_no_read (parse_nlist n p))
+  (requires (
+    let open LP in
+    k.parser_kind_subkind = Some ParserStrong /\
+    k.parser_kind_high = Some k.parser_kind_low /\
+    k.parser_kind_metadata = Some ParserKindMetadataTotal /\
+    k.parser_kind_low < 4294967296
+  ))
+  (ensures (fun _ -> True))
+=
+  if
+    if k.LP.parser_kind_low = 1
+    then true
+    else if n_is_const
+    then U32.v n % k.LP.parser_kind_low = 0
+    else false
+  then
+    validate_nlist_total_constant_size_mod_ok n p
+  else if
+    if n_is_const
+    then U32.v n % k.LP.parser_kind_low <> 0
+    else false
+  then
+    validate_nlist_constant_size_mod_ko n p
+  else
+    validate_nlist_total_constant_size' n p
 
 let app_ctxt = B.pointer U8.t
 let app_loc (x:app_ctxt) (l:eloc) : eloc = B.loc_buffer x `loc_union` l
@@ -1280,8 +1364,8 @@ let validate_t_at_most' (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:pars
   = fun ctxt err input startPosition ->
     let h = HST.get () in
     let _ =
-      LPL.valid_weaken kind_t_at_most (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition);
-      LPL.valid_facts (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition)
+      LPL.valid_weaken kind_t_at_most (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p parse_all_bytes) (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition);
+      LPL.valid_facts (LowParse.Spec.FLData.parse_fldata (LPC.nondep_then p parse_all_bytes) (U32.v n)) h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition)
     in
     if (Cast.uint32_to_uint64 (LPL.slice_length input) `U64.sub` startPosition) `U64.lt` Cast.uint32_to_uint64 n
     then
@@ -1290,8 +1374,8 @@ let validate_t_at_most' (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:pars
       [@inline_let] let input' = LPL.truncate_input_buffer input (LPL.uint64_to_uint32 startPosition `U32.add` n) in
       [@inline_let] let _ = R.readable_split h (LPL.perm_of input) (LPL.uint64_to_uint32 startPosition) (LPL.slice_length input') (LPL.slice_length input) in
       [@inline_let] let _ =
-        LPL.valid_facts (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes) h (LPL.slice_of input') (LPL.uint64_to_uint32 startPosition);
-        LPLC.valid_nondep_then h p LowParse.Spec.Bytes.parse_all_bytes (LPL.slice_of input') (LPL.uint64_to_uint32 startPosition)
+        LPL.valid_facts (LPC.nondep_then p parse_all_bytes) h (LPL.slice_of input') (LPL.uint64_to_uint32 startPosition);
+        LPLC.valid_nondep_then h p parse_all_bytes (LPL.slice_of input') (LPL.uint64_to_uint32 startPosition)
       in
       // FIXME: I'd need a name here
       let positionAfterContents = v ctxt err input' startPosition in
@@ -1301,7 +1385,7 @@ let validate_t_at_most' (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:pars
       then with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.slice_length input) positionAfterContents
       else
         [@inline_let] let _ =
-          LPL.valid_facts LowParse.Spec.Bytes.parse_all_bytes h (LPL.slice_of input') (LPL.uint64_to_uint32 positionAfterContents)
+          LPL.valid_facts parse_all_bytes h (LPL.slice_of input') (LPL.uint64_to_uint32 positionAfterContents)
         in
         with_drop_if (not ar) inv input (LPL.uint64_to_uint32 startPosition) (fun _ -> LPL.uint64_to_uint32 startPosition `U32.add` n) (startPosition `U64.add` Cast.uint32_to_uint64 n)
 
@@ -1655,7 +1739,7 @@ inline_for_extraction noextract
 let validate_all_bytes2 : validate_with_action_t parse_all_bytes true_inv eloc_none true =
   fun ctxt err #inputLength input startPosition ->
     let h = HST.get () in
-    LPL.valid_facts LowParse.Spec.Bytes.parse_all_bytes h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition);
+    LPL.valid_facts parse_all_bytes h (LPL.slice_of input) (LPL.uint64_to_uint32 startPosition);
     FStar.Int.Cast.uint32_to_uint64 inputLength
 
 let validate_all_bytes = validate_drop validate_all_bytes2

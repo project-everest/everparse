@@ -880,7 +880,7 @@ let print_decls (modul: string) (ds:list decl) =
      open WeakenTac\n\
      module B = LowStar.Buffer\n\n\
      include %s.Types\n\n\
-     #set-options \"--using_facts_from '* FStar Actions Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
+     #set-options \"--using_facts_from '* FStar Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
      %s"
      modul
      modul
@@ -991,7 +991,7 @@ let print_c_entry (modul: string)
                               const char *reason,\n\t\
                               uint8_t *context,\n\t\
                               EverParseInputBuffer input,\n\t\
-                              uint32_t start_pos)\n\
+                              uint64_t start_pos)\n\
           {\n\t\
             EverParseErrorFrame *frame = (EverParseErrorFrame*)context;\n\t\
             EverParseDefaultErrorHandler(\n\t\t\
@@ -1011,7 +1011,7 @@ let print_c_entry (modul: string)
        frame.filled = FALSE;\n\t\
        EverParseInputBuffer input = EverParseMakeInputBuffer(%s);\n\t\
        uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
-       if (EverParseResultIsError(result))\n\t\
+       if (EverParseIsError(result))\n\t\
        {\n\t\t\
          if (frame.filled)\n\t\t\
          {\n\t\t\t\

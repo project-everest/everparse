@@ -5,6 +5,8 @@ module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module U32 = FStar.UInt32
 module U8 = FStar.UInt8
+module LPE = EverParse3d.ErrorCode
+module U64 = FStar.UInt64
 
 assume
 val input_stream_base : Type0
@@ -32,18 +34,18 @@ val live_not_unused_in :
     (ensures (B.loc_not_unused_in h `B.loc_includes` footprint x))
 
 assume
-val len_all: (x: t) -> GTot U32.t
+val len_all: (x: t) -> GTot LPE.pos_t
 
 /// WARNING: the following assumes that no computations shall overflow
 assume
 val get_all: (x: t) -> Ghost (Seq.seq U8.t)
     (requires True)
-    (ensures (fun y -> Seq.length y == U32.v (len_all x)))
+    (ensures (fun y -> Seq.length y == U64.v (len_all x)))
 
 assume
 val get_remaining: (x: t) -> (h: HS.mem) -> Ghost (Seq.seq U8.t)
     (requires (live x h))
-    (ensures (fun y -> Seq.length y <= U32.v (len_all x)))
+    (ensures (fun y -> Seq.length y <= U64.v (len_all x)))
 
 assume
 val get_read: (x: t) -> (h: HS.mem) -> Ghost (Seq.seq U8.t)
@@ -67,58 +69,58 @@ val preserved:
 assume
 val has:
     (x: t) ->
-    (n: U32.t) ->
+    (n: U64.t) ->
     HST.Stack bool
     (requires (fun h -> live x h))
     (ensures (fun h res h' ->
       B.modifies B.loc_none h h' /\
-      (res == true <==> Seq.length (get_remaining x h) >= U32.v n)
+      (res == true <==> Seq.length (get_remaining x h) >= U64.v n)
     ))
 
 assume
 val read:
     (x: t) ->
-    (n: U32.t) ->
+    (n: U64.t) ->
     (dst: B.buffer U8.t) ->
     HST.Stack (B.buffer U8.t)
     (requires (fun h ->
       live x h /\
       B.live h dst /\
       B.loc_disjoint (footprint x) (B.loc_buffer dst) /\
-      B.length dst == U32.v n /\
-      Seq.length (get_remaining x h) >= U32.v n
+      B.length dst == U64.v n /\
+      Seq.length (get_remaining x h) >= U64.v n
     ))
     (ensures (fun h dst' h' ->
       let s = get_remaining x h in
       B.modifies (B.loc_buffer dst `B.loc_union` footprint x) h h' /\
-      B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U32.v n) /\
+      B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
       live x h' /\
       B.live h' dst' /\
       (B.loc_buffer dst `B.loc_union` footprint x) `B.loc_includes` B.loc_buffer dst' /\
-      get_remaining x h' `Seq.equal` Seq.slice s (U32.v n) (Seq.length s)
+      get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ))
 
 assume
 val skip:
     (x: t) ->
-    (n: U32.t) ->
+    (n: U64.t) ->
     HST.Stack unit
-    (requires (fun h -> live x h /\ Seq.length (get_remaining x h) >= U32.v n))
+    (requires (fun h -> live x h /\ Seq.length (get_remaining x h) >= U64.v n))
     (ensures (fun h _ h' ->
       let s = get_remaining x h in
       B.modifies (footprint x) h h' /\
       live x h' /\
-      get_remaining x h' `Seq.equal` Seq.slice s (U32.v n) (Seq.length s)
+      get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ))
 
 assume
 val empty:
     (x: t) ->
-    HST.Stack U32.t
+    HST.Stack U64.t
     (requires (fun h -> live x h))
     (ensures (fun h res h' ->
       B.modifies (footprint x) h h' /\
       live x h' /\
       get_remaining x h' `Seq.equal` Seq.empty /\
-      U32.v res == Seq.length (get_remaining x h)
+      U64.v res == Seq.length (get_remaining x h)
     ))

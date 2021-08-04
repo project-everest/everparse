@@ -33,7 +33,9 @@ extract: EverParse.rsp
 
 verify: $(ALL_CHECKED_FILES)
 
-EverParse.rsp: $(ALL_KRML_FILES)
+FILTERED_KRML_FILES=$(filter-out ResultOps.krml Actions.krml,$(ALL_KRML_FILES))
+
+EverParse.rsp: $(FILTERED_KRML_FILES)
 	for f in $^ ; do echo $$f ; done > $@.tmp
 	mv $@.tmp $@
 
