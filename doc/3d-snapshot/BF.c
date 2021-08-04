@@ -11,11 +11,14 @@ ValidateDummyEmp(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -24,7 +27,7 @@ ValidateDummyEmp(
 --*/
 {
   /* Validating field emp */
-  uint64_t positionAfterDummy = (uint64_t)Pos;
+  uint64_t positionAfterDummy = StartPosition;
   if (EverParseIsSuccess(positionAfterDummy))
   {
     return positionAfterDummy;
@@ -33,8 +36,10 @@ ValidateDummyEmp(
     "_dummy_emp",
     EverParseErrorReasonOfResult(positionAfterDummy),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterDummy);
   return positionAfterDummy;
 }
 
@@ -47,24 +52,34 @@ BfValidateDummy(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 {
   /* Field _dummy_emp */
-  uint64_t positionAfterDummy = ValidateDummyEmp(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterDummy = ValidateDummyEmp(Ctxt, Err, Uu, Input, StartPosition);
   if (EverParseIsSuccess(positionAfterDummy))
   {
     return positionAfterDummy;
   }
-  Err("_dummy", "emp", EverParseErrorReasonOfResult(positionAfterDummy), Ctxt, Input, Pos);
+  Err("_dummy",
+    "emp",
+    EverParseErrorReasonOfResult(positionAfterDummy),
+    Ctxt,
+    Uu,
+    Input,
+    StartPosition,
+    positionAfterDummy);
   return positionAfterDummy;
 }
 
-void BfReadDummy(EverParseInputBuffer Input, uint32_t Pos)
+void BfReadDummy(uint32_t InputLength, uint8_t *Input, uint32_t StartPosition)
 {
   
 }

@@ -17,11 +17,14 @@ ValidateIntPayloadValue32(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -30,16 +33,15 @@ ValidateIntPayloadValue32(
 --*/
 {
   /* Validating field value32 */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - Pos);
+  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAfterIntPayload;
-  if (hasBytes)
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
   {
-    positionAfterIntPayload = (uint64_t)(Pos + (uint32_t)4U);
+    positionAfterIntPayload = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    positionAfterIntPayload = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterIntPayload = StartPosition + (uint64_t)4U;
   }
   if (EverParseIsSuccess(positionAfterIntPayload))
   {
@@ -49,8 +51,10 @@ ValidateIntPayloadValue32(
     "_int_payload_value32",
     EverParseErrorReasonOfResult(positionAfterIntPayload),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterIntPayload);
   return positionAfterIntPayload;
 }
 
@@ -63,11 +67,14 @@ ValidateIntPayloadValue16(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -77,15 +84,14 @@ ValidateIntPayloadValue16(
 {
   /* Validating field value16 */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = (uint32_t)2U <= (Input.len - Pos);
   uint64_t positionAfterIntPayload;
-  if (hasBytes)
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)2U)
   {
-    positionAfterIntPayload = (uint64_t)(Pos + (uint32_t)2U);
+    positionAfterIntPayload = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    positionAfterIntPayload = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterIntPayload = StartPosition + (uint64_t)2U;
   }
   if (EverParseIsSuccess(positionAfterIntPayload))
   {
@@ -95,8 +101,10 @@ ValidateIntPayloadValue16(
     "_int_payload_value16",
     EverParseErrorReasonOfResult(positionAfterIntPayload),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterIntPayload);
   return positionAfterIntPayload;
 }
 
@@ -109,11 +117,14 @@ ValidateIntPayloadValue8(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -123,15 +134,14 @@ ValidateIntPayloadValue8(
 {
   /* Validating field value8 */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes = (uint32_t)1U <= (Input.len - Pos);
   uint64_t positionAfterIntPayload;
-  if (hasBytes)
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)1U)
   {
-    positionAfterIntPayload = (uint64_t)(Pos + (uint32_t)1U);
+    positionAfterIntPayload = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    positionAfterIntPayload = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterIntPayload = StartPosition + (uint64_t)1U;
   }
   if (EverParseIsSuccess(positionAfterIntPayload))
   {
@@ -141,8 +151,10 @@ ValidateIntPayloadValue8(
     "_int_payload_value8",
     EverParseErrorReasonOfResult(positionAfterIntPayload),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterIntPayload);
   return positionAfterIntPayload;
 }
 
@@ -156,22 +168,25 @@ ValidateIntPayload(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos0
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 {
   uint64_t positionAfterIntPayload;
   if (Size == (uint32_t)SIZE8)
   {
     /* Field _int_payload_value8 */
-    uint64_t positionAfterIntPayload0 = ValidateIntPayloadValue8(Ctxt, Err, Input, Pos0);
-    uint64_t res;
+    uint64_t
+    positionAfterIntPayload0 = ValidateIntPayloadValue8(Ctxt, Err, Uu, Input, StartPosition);
     if (EverParseIsSuccess(positionAfterIntPayload0))
     {
-      res = positionAfterIntPayload0;
+      positionAfterIntPayload = positionAfterIntPayload0;
     }
     else
     {
@@ -179,15 +194,12 @@ ValidateIntPayload(
         "_int_payload_ite_2",
         EverParseErrorReasonOfResult(positionAfterIntPayload0),
         Ctxt,
+        Uu,
         Input,
-        Pos0);
-      res = positionAfterIntPayload0;
+        StartPosition,
+        positionAfterIntPayload0);
+      positionAfterIntPayload = positionAfterIntPayload0;
     }
-    if (EverParseIsSuccess(res))
-    {
-      
-    }
-    positionAfterIntPayload = res;
   }
   else
   {
@@ -195,11 +207,11 @@ ValidateIntPayload(
     if (Size == (uint32_t)SIZE16)
     {
       /* Field _int_payload_value16 */
-      uint64_t positionAfterIntPayload = ValidateIntPayloadValue16(Ctxt, Err, Input, Pos0);
-      uint64_t res;
+      uint64_t
+      positionAfterIntPayload = ValidateIntPayloadValue16(Ctxt, Err, Uu, Input, StartPosition);
       if (EverParseIsSuccess(positionAfterIntPayload))
       {
-        res = positionAfterIntPayload;
+        positionAfterIntPayload0 = positionAfterIntPayload;
       }
       else
       {
@@ -207,15 +219,12 @@ ValidateIntPayload(
           "_int_payload_ite_1",
           EverParseErrorReasonOfResult(positionAfterIntPayload),
           Ctxt,
+          Uu,
           Input,
-          Pos0);
-        res = positionAfterIntPayload;
+          StartPosition,
+          positionAfterIntPayload);
+        positionAfterIntPayload0 = positionAfterIntPayload;
       }
-      if (EverParseIsSuccess(res))
-      {
-        
-      }
-      positionAfterIntPayload0 = res;
     }
     else
     {
@@ -223,11 +232,11 @@ ValidateIntPayload(
       if (Size == (uint32_t)SIZE32)
       {
         /* Field _int_payload_value32 */
-        uint64_t positionAfterIntPayload0 = ValidateIntPayloadValue32(Ctxt, Err, Input, Pos0);
-        uint64_t res;
+        uint64_t
+        positionAfterIntPayload0 = ValidateIntPayloadValue32(Ctxt, Err, Uu, Input, StartPosition);
         if (EverParseIsSuccess(positionAfterIntPayload0))
         {
-          res = positionAfterIntPayload0;
+          positionAfterIntPayload = positionAfterIntPayload0;
         }
         else
         {
@@ -235,23 +244,19 @@ ValidateIntPayload(
             "_int_payload_ite_0",
             EverParseErrorReasonOfResult(positionAfterIntPayload0),
             Ctxt,
+            Uu,
             Input,
-            Pos0);
-          res = positionAfterIntPayload0;
+            StartPosition,
+            positionAfterIntPayload0);
+          positionAfterIntPayload = positionAfterIntPayload0;
         }
-        if (EverParseIsSuccess(res))
-        {
-          
-        }
-        positionAfterIntPayload = res;
       }
       else
       {
         uint64_t positionAfterIntPayload0 = EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE;
-        uint64_t res;
         if (EverParseIsSuccess(positionAfterIntPayload0))
         {
-          res = positionAfterIntPayload0;
+          positionAfterIntPayload = positionAfterIntPayload0;
         }
         else
         {
@@ -259,15 +264,12 @@ ValidateIntPayload(
             "_int_payload_ite_0",
             EverParseErrorReasonOfResult(positionAfterIntPayload0),
             Ctxt,
+            Uu,
             Input,
-            Pos0);
-          res = positionAfterIntPayload0;
+            StartPosition,
+            positionAfterIntPayload0);
+          positionAfterIntPayload = positionAfterIntPayload0;
         }
-        if (EverParseIsSuccess(res))
-        {
-          
-        }
-        positionAfterIntPayload = res;
       }
       if (EverParseIsSuccess(positionAfterIntPayload))
       {
@@ -279,8 +281,10 @@ ValidateIntPayload(
           "_int_payload_ite_1",
           EverParseErrorReasonOfResult(positionAfterIntPayload),
           Ctxt,
+          Uu,
           Input,
-          Pos0);
+          StartPosition,
+          positionAfterIntPayload);
         positionAfterIntPayload0 = positionAfterIntPayload;
       }
     }
@@ -294,8 +298,10 @@ ValidateIntPayload(
         "_int_payload_ite_2",
         EverParseErrorReasonOfResult(positionAfterIntPayload0),
         Ctxt,
+        Uu,
         Input,
-        Pos0);
+        StartPosition,
+        positionAfterIntPayload0);
       positionAfterIntPayload = positionAfterIntPayload0;
     }
   }
@@ -307,8 +313,10 @@ ValidateIntPayload(
     "",
     EverParseErrorReasonOfResult(positionAfterIntPayload),
     Ctxt,
+    Uu,
     Input,
-    Pos0);
+    StartPosition,
+    positionAfterIntPayload);
   return positionAfterIntPayload;
 }
 
@@ -321,11 +329,14 @@ ValidateIntegerSize(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -334,16 +345,15 @@ ValidateIntegerSize(
 --*/
 {
   /* Validating field size */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - Pos);
+  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAfterInteger;
-  if (hasBytes)
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
   {
-    positionAfterInteger = (uint64_t)(Pos + (uint32_t)4U);
+    positionAfterInteger = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    positionAfterInteger = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterInteger = StartPosition + (uint64_t)4U;
   }
   if (EverParseIsSuccess(positionAfterInteger))
   {
@@ -353,8 +363,10 @@ ValidateIntegerSize(
     "_integer_size",
     EverParseErrorReasonOfResult(positionAfterInteger),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterInteger);
   return positionAfterInteger;
 }
 
@@ -368,11 +380,14 @@ ValidateIntegerPayload(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -381,7 +396,7 @@ ValidateIntegerPayload(
 --*/
 {
   /* Validating field payload */
-  uint64_t positionAfterInteger = ValidateIntPayload(Size, Ctxt, Err, Input, Pos);
+  uint64_t positionAfterInteger = ValidateIntPayload(Size, Ctxt, Err, Uu, Input, StartPosition);
   if (EverParseIsSuccess(positionAfterInteger))
   {
     return positionAfterInteger;
@@ -390,8 +405,10 @@ ValidateIntegerPayload(
     "_integer_payload",
     EverParseErrorReasonOfResult(positionAfterInteger),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterInteger);
   return positionAfterInteger;
 }
 
@@ -404,15 +421,18 @@ TaggedUnionValidateInteger(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 {
   /* Field _integer_size */
-  uint64_t positionAfterInteger = ValidateIntegerSize(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterInteger = ValidateIntegerSize(Ctxt, Err, Uu, Input, StartPosition);
   uint64_t positionAftersize;
   if (EverParseIsSuccess(positionAfterInteger))
   {
@@ -420,25 +440,25 @@ TaggedUnionValidateInteger(
   }
   else
   {
-    Err("_integer", "size", EverParseErrorReasonOfResult(positionAfterInteger), Ctxt, Input, Pos);
+    Err("_integer",
+      "size",
+      EverParseErrorReasonOfResult(positionAfterInteger),
+      Ctxt,
+      Uu,
+      Input,
+      StartPosition,
+      positionAfterInteger);
     positionAftersize = positionAfterInteger;
   }
   if (EverParseIsError(positionAftersize))
   {
     return positionAftersize;
   }
-  uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input.buf + Pos;
-  uint32_t res = Load32Le(temp1);
-  uint32_t size = res;
+  uint8_t *base = Input;
+  uint32_t size = Load32Le(base + (uint32_t)StartPosition);
   /* Field _integer_payload */
   uint64_t
-  positionAfterInteger0 =
-    ValidateIntegerPayload(size,
-      Ctxt,
-      Err,
-      Input,
-      (uint32_t)positionAftersize);
+  positionAfterInteger0 = ValidateIntegerPayload(size, Ctxt, Err, Uu, Input, positionAftersize);
   if (EverParseIsSuccess(positionAfterInteger0))
   {
     return positionAfterInteger0;
@@ -447,8 +467,10 @@ TaggedUnionValidateInteger(
     "payload",
     EverParseErrorReasonOfResult(positionAfterInteger0),
     Ctxt,
+    Uu,
     Input,
-    (uint32_t)positionAftersize);
+    positionAftersize,
+    positionAfterInteger0);
   return positionAfterInteger0;
 }
 

@@ -11,11 +11,14 @@ ValidateTriplePair(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -24,7 +27,7 @@ ValidateTriplePair(
 --*/
 {
   /* SNIPPET_START: Triple */
-  uint64_t positionAfterTriple = BaseValidatePair(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterTriple = BaseValidatePair(Ctxt, Err, Uu, Input, StartPosition);
   if (EverParseIsSuccess(positionAfterTriple))
   {
     return positionAfterTriple;
@@ -33,8 +36,10 @@ ValidateTriplePair(
     "_Triple_pair",
     EverParseErrorReasonOfResult(positionAfterTriple),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterTriple);
   return positionAfterTriple;
 }
 
@@ -47,11 +52,14 @@ ValidateTripleThird(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -60,7 +68,7 @@ ValidateTripleThird(
 --*/
 {
   /* Validating field third */
-  uint64_t positionAfterTriple = BaseValidateUlong(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterTriple = BaseValidateUlong(Ctxt, Err, Uu, Input, StartPosition);
   if (EverParseIsSuccess(positionAfterTriple))
   {
     return positionAfterTriple;
@@ -69,8 +77,10 @@ ValidateTripleThird(
     "_Triple_third",
     EverParseErrorReasonOfResult(positionAfterTriple),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterTriple);
   return positionAfterTriple;
 }
 
@@ -83,15 +93,18 @@ DerivedValidateTriple(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 {
   /* Field _Triple_pair */
-  uint64_t positionAfterTriple = ValidateTriplePair(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterTriple = ValidateTriplePair(Ctxt, Err, Uu, Input, StartPosition);
   uint64_t positionAfterpair;
   if (EverParseIsSuccess(positionAfterTriple))
   {
@@ -99,7 +112,14 @@ DerivedValidateTriple(
   }
   else
   {
-    Err("_Triple", "pair", EverParseErrorReasonOfResult(positionAfterTriple), Ctxt, Input, Pos);
+    Err("_Triple",
+      "pair",
+      EverParseErrorReasonOfResult(positionAfterTriple),
+      Ctxt,
+      Uu,
+      Input,
+      StartPosition,
+      positionAfterTriple);
     positionAfterpair = positionAfterTriple;
   }
   if (EverParseIsError(positionAfterpair))
@@ -107,28 +127,20 @@ DerivedValidateTriple(
     return positionAfterpair;
   }
   /* Field _Triple_third */
-  uint64_t
-  positionAfterTriple0 = ValidateTripleThird(Ctxt, Err, Input, (uint32_t)positionAfterpair);
-  uint64_t res;
+  uint64_t positionAfterTriple0 = ValidateTripleThird(Ctxt, Err, Uu, Input, positionAfterpair);
   if (EverParseIsSuccess(positionAfterTriple0))
   {
-    res = positionAfterTriple0;
+    return positionAfterTriple0;
   }
-  else
-  {
-    Err("_Triple",
-      "third",
-      EverParseErrorReasonOfResult(positionAfterTriple0),
-      Ctxt,
-      Input,
-      (uint32_t)positionAfterpair);
-    res = positionAfterTriple0;
-  }
-  if (EverParseIsSuccess(res))
-  {
-    
-  }
-  return res;
+  Err("_Triple",
+    "third",
+    EverParseErrorReasonOfResult(positionAfterTriple0),
+    Ctxt,
+    Uu,
+    Input,
+    positionAfterpair,
+    positionAfterTriple0);
+  return positionAfterTriple0;
 }
 
 static inline uint64_t
@@ -140,11 +152,14 @@ ValidateQuad12(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -153,12 +168,19 @@ ValidateQuad12(
 --*/
 {
   /* Validating field _12 */
-  uint64_t positionAfterQuad = BaseValidatePair(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterQuad = BaseValidatePair(Ctxt, Err, Uu, Input, StartPosition);
   if (EverParseIsSuccess(positionAfterQuad))
   {
     return positionAfterQuad;
   }
-  Err("_Quad", "_Quad__12", EverParseErrorReasonOfResult(positionAfterQuad), Ctxt, Input, Pos);
+  Err("_Quad",
+    "_Quad__12",
+    EverParseErrorReasonOfResult(positionAfterQuad),
+    Ctxt,
+    Uu,
+    Input,
+    StartPosition,
+    positionAfterQuad);
   return positionAfterQuad;
 }
 
@@ -171,11 +193,14 @@ ValidateQuad34(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -184,12 +209,19 @@ ValidateQuad34(
 --*/
 {
   /* Validating field _34 */
-  uint64_t positionAfterQuad = BaseValidatePair(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterQuad = BaseValidatePair(Ctxt, Err, Uu, Input, StartPosition);
   if (EverParseIsSuccess(positionAfterQuad))
   {
     return positionAfterQuad;
   }
-  Err("_Quad", "_Quad__34", EverParseErrorReasonOfResult(positionAfterQuad), Ctxt, Input, Pos);
+  Err("_Quad",
+    "_Quad__34",
+    EverParseErrorReasonOfResult(positionAfterQuad),
+    Ctxt,
+    Uu,
+    Input,
+    StartPosition,
+    positionAfterQuad);
   return positionAfterQuad;
 }
 
@@ -202,15 +234,18 @@ DerivedValidateQuad(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 {
   /* Field _Quad__12 */
-  uint64_t positionAfterQuad = ValidateQuad12(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterQuad = ValidateQuad12(Ctxt, Err, Uu, Input, StartPosition);
   uint64_t positionAfter12;
   if (EverParseIsSuccess(positionAfterQuad))
   {
@@ -218,7 +253,14 @@ DerivedValidateQuad(
   }
   else
   {
-    Err("_Quad", "_12", EverParseErrorReasonOfResult(positionAfterQuad), Ctxt, Input, Pos);
+    Err("_Quad",
+      "_12",
+      EverParseErrorReasonOfResult(positionAfterQuad),
+      Ctxt,
+      Uu,
+      Input,
+      StartPosition,
+      positionAfterQuad);
     positionAfter12 = positionAfterQuad;
   }
   if (EverParseIsError(positionAfter12))
@@ -226,7 +268,7 @@ DerivedValidateQuad(
     return positionAfter12;
   }
   /* Field _Quad__34 */
-  uint64_t positionAfterQuad0 = ValidateQuad34(Ctxt, Err, Input, (uint32_t)positionAfter12);
+  uint64_t positionAfterQuad0 = ValidateQuad34(Ctxt, Err, Uu, Input, positionAfter12);
   if (EverParseIsSuccess(positionAfterQuad0))
   {
     return positionAfterQuad0;
@@ -235,8 +277,10 @@ DerivedValidateQuad(
     "_34",
     EverParseErrorReasonOfResult(positionAfterQuad0),
     Ctxt,
+    Uu,
     Input,
-    (uint32_t)positionAfter12);
+    positionAfter12,
+    positionAfterQuad0);
   return positionAfterQuad0;
 }
 

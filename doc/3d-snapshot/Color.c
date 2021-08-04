@@ -26,23 +26,25 @@ ValidateColor(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos0
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 {
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - Pos0);
+  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAftercolor0;
-  if (hasBytes)
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
   {
-    positionAftercolor0 = (uint64_t)(Pos0 + (uint32_t)4U);
+    positionAftercolor0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    positionAftercolor0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAftercolor0 = StartPosition + (uint64_t)4U;
   }
   uint64_t positionAftercolor1;
   if (EverParseIsSuccess(positionAftercolor0))
@@ -51,7 +53,14 @@ ValidateColor(
   }
   else
   {
-    Err("color", "", EverParseErrorReasonOfResult(positionAftercolor0), Ctxt, Input, Pos0);
+    Err("color",
+      "",
+      EverParseErrorReasonOfResult(positionAftercolor0),
+      Ctxt,
+      Uu,
+      Input,
+      StartPosition,
+      positionAftercolor0);
     positionAftercolor1 = positionAftercolor0;
   }
   uint64_t positionAftercolor;
@@ -62,10 +71,8 @@ ValidateColor(
   else
   {
     /* reading field value */
-    uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input.buf + Pos0;
-    uint32_t res = Load32Le(temp1);
-    uint32_t color = res;
+    uint8_t *base = Input;
+    uint32_t color = Load32Le(base + (uint32_t)StartPosition);
     /* start: checking constraint */
     BOOLEAN colorConstraintIsOk = color == RED || color == GREEN || color == BLUE || FALSE;
     /* end: checking constraint */
@@ -79,8 +86,10 @@ ValidateColor(
     ".refinement",
     EverParseErrorReasonOfResult(positionAftercolor),
     Ctxt,
+    Uu,
     Input,
-    Pos0);
+    StartPosition,
+    positionAftercolor);
   return positionAftercolor;
 }
 
@@ -93,11 +102,14 @@ ValidateColoredPointCol(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -106,7 +118,7 @@ ValidateColoredPointCol(
 --*/
 {
   /* Validating field col */
-  uint64_t positionAfterColoredPoint = ValidateColor(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterColoredPoint = ValidateColor(Ctxt, Err, Uu, Input, StartPosition);
   if (EverParseIsSuccess(positionAfterColoredPoint))
   {
     return positionAfterColoredPoint;
@@ -115,8 +127,10 @@ ValidateColoredPointCol(
     "_coloredPoint_col",
     EverParseErrorReasonOfResult(positionAfterColoredPoint),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterColoredPoint);
   return positionAfterColoredPoint;
 }
 
@@ -129,11 +143,14 @@ ValidateColoredPointX(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -142,16 +159,15 @@ ValidateColoredPointX(
 --*/
 {
   /* Validating field x */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - Pos);
+  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAfterColoredPoint;
-  if (hasBytes)
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
   {
-    positionAfterColoredPoint = (uint64_t)(Pos + (uint32_t)4U);
+    positionAfterColoredPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    positionAfterColoredPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterColoredPoint = StartPosition + (uint64_t)4U;
   }
   if (EverParseIsSuccess(positionAfterColoredPoint))
   {
@@ -161,8 +177,10 @@ ValidateColoredPointX(
     "_coloredPoint_x",
     EverParseErrorReasonOfResult(positionAfterColoredPoint),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterColoredPoint);
   return positionAfterColoredPoint;
 }
 
@@ -175,11 +193,14 @@ ValidateColoredPointY(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -188,16 +209,15 @@ ValidateColoredPointY(
 --*/
 {
   /* Validating field y */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint32_t)4U <= (Input.len - Pos);
+  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
   uint64_t positionAfterColoredPoint;
-  if (hasBytes)
+  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
   {
-    positionAfterColoredPoint = (uint64_t)(Pos + (uint32_t)4U);
+    positionAfterColoredPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
   else
   {
-    positionAfterColoredPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfterColoredPoint = StartPosition + (uint64_t)4U;
   }
   if (EverParseIsSuccess(positionAfterColoredPoint))
   {
@@ -207,8 +227,10 @@ ValidateColoredPointY(
     "_coloredPoint_y",
     EverParseErrorReasonOfResult(positionAfterColoredPoint),
     Ctxt,
+    Uu,
     Input,
-    Pos);
+    StartPosition,
+    positionAfterColoredPoint);
   return positionAfterColoredPoint;
 }
 
@@ -221,15 +243,19 @@ ColorValidateColoredPoint(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
-    uint32_t x5
+    uint32_t x4,
+    uint8_t *x5,
+    uint64_t x6,
+    uint64_t x7
   ),
-  EverParseInputBuffer Input,
-  uint32_t Pos
+  uint32_t Uu,
+  uint8_t *Input,
+  uint64_t StartPosition
 )
 {
   /* Field _coloredPoint_col */
-  uint64_t positionAfterColoredPoint = ValidateColoredPointCol(Ctxt, Err, Input, Pos);
+  uint64_t
+  positionAfterColoredPoint = ValidateColoredPointCol(Ctxt, Err, Uu, Input, StartPosition);
   uint64_t positionAftercol;
   if (EverParseIsSuccess(positionAfterColoredPoint))
   {
@@ -241,8 +267,10 @@ ColorValidateColoredPoint(
       "col",
       EverParseErrorReasonOfResult(positionAfterColoredPoint),
       Ctxt,
+      Uu,
       Input,
-      Pos);
+      StartPosition,
+      positionAfterColoredPoint);
     positionAftercol = positionAfterColoredPoint;
   }
   if (EverParseIsError(positionAftercol))
@@ -251,15 +279,11 @@ ColorValidateColoredPoint(
   }
   /* Field _coloredPoint_x */
   uint64_t
-  positionAfterColoredPoint0 =
-    ValidateColoredPointX(Ctxt,
-      Err,
-      Input,
-      (uint32_t)positionAftercol);
-  uint64_t res0;
+  positionAfterColoredPoint0 = ValidateColoredPointX(Ctxt, Err, Uu, Input, positionAftercol);
+  uint64_t positionAfterx;
   if (EverParseIsSuccess(positionAfterColoredPoint0))
   {
-    res0 = positionAfterColoredPoint0;
+    positionAfterx = positionAfterColoredPoint0;
   }
   else
   {
@@ -267,41 +291,31 @@ ColorValidateColoredPoint(
       "x",
       EverParseErrorReasonOfResult(positionAfterColoredPoint0),
       Ctxt,
+      Uu,
       Input,
-      (uint32_t)positionAftercol);
-    res0 = positionAfterColoredPoint0;
+      positionAftercol,
+      positionAfterColoredPoint0);
+    positionAfterx = positionAfterColoredPoint0;
   }
-  if (EverParseIsSuccess(res0))
-  {
-    
-  }
-  uint64_t positionAfterx = res0;
   if (EverParseIsError(positionAfterx))
   {
     return positionAfterx;
   }
   /* Field _coloredPoint_y */
   uint64_t
-  positionAfterColoredPoint1 = ValidateColoredPointY(Ctxt, Err, Input, (uint32_t)positionAfterx);
-  uint64_t res;
+  positionAfterColoredPoint1 = ValidateColoredPointY(Ctxt, Err, Uu, Input, positionAfterx);
   if (EverParseIsSuccess(positionAfterColoredPoint1))
   {
-    res = positionAfterColoredPoint1;
+    return positionAfterColoredPoint1;
   }
-  else
-  {
-    Err("_coloredPoint",
-      "y",
-      EverParseErrorReasonOfResult(positionAfterColoredPoint1),
-      Ctxt,
-      Input,
-      (uint32_t)positionAfterx);
-    res = positionAfterColoredPoint1;
-  }
-  if (EverParseIsSuccess(res))
-  {
-    
-  }
-  return res;
+  Err("_coloredPoint",
+    "y",
+    EverParseErrorReasonOfResult(positionAfterColoredPoint1),
+    Ctxt,
+    Uu,
+    Input,
+    positionAfterx,
+    positionAfterColoredPoint1);
+  return positionAfterColoredPoint1;
 }
 
