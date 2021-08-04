@@ -16,6 +16,7 @@ let inst = {
   has = has;
   read = read;
   skip = skip;
+  skip_if_success = skip_if_success;
   empty = empty;
   is_prefix_of = is_prefix_of;
   get_suffix = get_suffix;

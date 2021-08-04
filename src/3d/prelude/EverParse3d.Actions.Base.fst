@@ -203,13 +203,10 @@ let validate_drop_true
 : Tot (validate_with_action_t' p inv l false)
 = fun ctxt err input pos ->
   let res = v ctxt err input pos in
-  if LPE.is_success res
-  then begin
-    let h1 = HST.get () in
-    I.skip input pos (res `U64.sub` pos);
-    let h2 = HST.get () in
-    assert (h2 `extends` h1)
-  end;
+  let h1 = HST.get () in
+  I.skip_if_success input pos res;
+  let h2 = HST.get () in
+  assert (h2 `extends` h1);
   res
 
 inline_for_extraction

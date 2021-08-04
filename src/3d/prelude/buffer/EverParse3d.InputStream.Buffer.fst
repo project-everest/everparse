@@ -125,6 +125,11 @@ let inst = {
     ()
   end;
 
+  skip_if_success = begin fun x currentPosition res ->
+    let pos0 = !* x.pos in
+    x.pos *= Ghost.hide (if EverParse3d.ErrorCode.is_success res then uint64_to_uint32 res else Ghost.reveal pos0)
+  end;
+
   empty = begin fun x _ ->
     let h0 = HST.get () in
     x.pos *= x.len;

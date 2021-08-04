@@ -162,6 +162,29 @@ let skip
   let h2 = HST.get () in
   Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h1 h2
 
+inline_for_extraction
+noextract
+let skip_if_success
+    (x: t)
+    (pos: LPE.pos_t)
+    (res: U64.t)
+:   HST.Stack unit
+    (requires (fun h ->
+      live x h /\
+      (LPE.is_success res ==> (
+        U64.v pos == Seq.length (get_read x h)) /\
+        U64.v res >= U64.v pos /\
+        U64.v pos + Seq.length (get_remaining x h) >= U64.v res
+    )))
+    (ensures (fun h _ h' ->
+      let s = get_remaining x h in
+      B.modifies (footprint x) h h' /\
+      live x h' /\
+      get_remaining x h' == (if LPE.is_success res then Seq.slice s (U64.v res - U64.v pos) (Seq.length s) else get_remaining x h)
+    ))
+= if LPE.is_success res
+  then skip x pos (res `U64.sub` pos)
+
 #push-options "--z3rlimit 16"
 
 inline_for_extraction
