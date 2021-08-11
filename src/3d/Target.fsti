@@ -378,4 +378,5 @@ val print_c_entry (modul: string) (env: global_env) (ds:list decl)
 val output_setter_name (lhs:A.out_expr) : ML string
 val output_getter_name (lhs:A.out_expr) : ML string
 val output_base_var (lhs:A.out_expr) : ML A.ident
-val print_out_exprs (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string
+val print_out_exprs_fstar (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string
+val print_out_exprs_c (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string

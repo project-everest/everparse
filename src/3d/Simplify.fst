@@ -44,11 +44,42 @@ let rec simplify_expr (env:T.env_t) (e:expr)
 
     | _ -> e
 
+let rec simplify_typ_param (env:T.env_t) (p:typ_param) : ML typ_param =
+  match p with
+  | Inl e -> simplify_expr env e |> Inl
+  | Inr oe -> simplify_out_expr env oe |> Inr
+
+and simplify_typ (env:T.env_t) (t:typ)
+  : ML typ
+  = match t.v with
+    | Pointer t -> {t with v=Pointer (simplify_typ env t)}
+    | Type_app s b ps ->
+      let ps = List.map (simplify_typ_param env) ps in
+      let s = B.resolve_typedef_abbrev (fst env) s in
+      { t with v = Type_app s b ps }
+
+and simplify_out_expr_node (env:T.env_t) (oe:with_meta_t out_expr')
+  : ML (with_meta_t out_expr')
+  = oe
+
+and simplify_out_expr_meta (env:T.env_t) (mopt:option (ident & typ & typ))
+  : ML (option (ident & typ & typ))
+  = match mopt with
+    | None -> None
+    | Some (id, bt, t) ->
+      Some (id, simplify_typ env bt, simplify_typ env t)
+
+and simplify_out_expr (env:T.env_t) (oe:out_expr) : ML out_expr =
+  {oe with
+   out_expr_node = simplify_out_expr_node env oe.out_expr_node;
+   out_expr_meta = simplify_out_expr_meta env oe.out_expr_meta}
+
 let simplify_atomic_action (env:T.env_t) (a:atomic_action)
   : ML atomic_action
   = match a with
     | Action_return e -> Action_return (simplify_expr env e)
-    | Action_assignment lhs rhs -> Action_assignment lhs (simplify_expr env rhs)
+    | Action_assignment lhs rhs ->
+      Action_assignment (simplify_out_expr env lhs) (simplify_expr env rhs)
     | Action_call f args -> Action_call f (List.map (simplify_expr env) args)
     | _ -> a //action mutable identifiers are not subject to substitution
 let rec simplify_action (env:T.env_t) (a:action) : ML action =
@@ -62,19 +93,6 @@ and simplify_action_opt (env:T.env_t) (a:option action) : ML (option action) =
   | None -> None
   | Some a -> Some (simplify_action env a)
 
-let simplify_typ_param (env:T.env_t) (p:typ_param) : ML typ_param =
-  match p with
-  | Inl e -> simplify_expr env e |> Inl
-  | _ -> p
-
-let rec simplify_typ (env:T.env_t) (t:typ)
-  : ML typ
-  = match t.v with
-    | Pointer t -> {t with v=Pointer (simplify_typ env t)}
-    | Type_app s b ps ->
-      let ps = List.map (simplify_typ_param env) ps in
-      let s = B.resolve_typedef_abbrev (fst env) s in
-      { t with v = Type_app s b ps }
 
 let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   match f with

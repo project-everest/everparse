@@ -525,8 +525,11 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
               match p with
               | Inl e -> (match try_cast_integer env (e, t') t with
                          | Some e -> Inl e
-                         | _ -> error "Argument type mismatch" (range_of_typ_param p))
-              | _ -> error "Argument type mismatch" (range_of_typ_param p)
+                         | _ -> error "Argument type mismatch-1" (range_of_typ_param p))
+              | _ ->
+                error (Printf.sprintf
+                         "Argument type mismatch-2 (%s vs %s)"
+                         (Ast.print_typ t) (Ast.print_typ t')) (range_of_typ_param p)
             end
             else p)
             params
@@ -1369,8 +1372,26 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_output_type e out_t.out_typ_names.typedef_name d;
     d
 
+let rec resolve_abbrev_in_out_typ (env:env) (t:typ) : ML typ =
+  match t.v with
+  | Type_app hd b args ->
+    {t with v = Type_app (resolve_typedef_abbrev env hd) b args}
+  | Pointer bt ->
+    {t with v = Pointer (resolve_abbrev_in_out_typ env bt)}
+
+let resolve_out_expr (env:env) (oe:out_expr)
+  : ML out_expr
+  = let meta =
+      match oe.out_expr_meta with
+      | None -> None
+      | Some (id, bt, t) ->
+        Some (id, resolve_abbrev_in_out_typ env bt, resolve_abbrev_in_out_typ env t) in
+    {oe with out_expr_meta = meta}
+
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
-  List.map (bind_decl g) p, g
+  let decls = List.map (bind_decl g) p in
+  g.out_exprs := !g.out_exprs |> List.map (fun (oe, b) -> resolve_out_expr (mk_env g) oe, b);
+  decls, g
 
 let initial_global_env () =
   let e = {

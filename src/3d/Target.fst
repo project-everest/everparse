@@ -316,7 +316,7 @@ let rec is_output_type (t:typ) : bool =
 
 let rec print_output_type (t:typ) : ML string =
   match t with
-  | T_app id _ _ -> A.ident_name id
+  | T_app id _ _ -> print_ident id
   | T_pointer t -> Printf.sprintf "p_%s" (print_output_type t)
   | _ -> failwith "Print: not an output type"
 
@@ -765,11 +765,12 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
       (print_typ mname typ)
       (print_expr mname expr)
   | Type_decl td ->
-    Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s\n\n"
+    let s = Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s\n\n"
       (print_typedef_name mname td.decl_name)
       (print_typedef_body mname td.decl_typ)
     `strcat`
-    maybe_print_type_equality mname td
+    maybe_print_type_equality mname td in
+    s
   | Output_type _ -> ""
 
 /// Print a decl for M.fst
@@ -897,9 +898,11 @@ let print_decls (modul: string) (ds:list decl) =
      open Actions\n\
      open WeakenTac\n\
      module B = LowStar.Buffer\n\n\
+     open %s.OutputTypes\n\n\
      include %s.Types\n\n\
      #set-options \"--using_facts_from '* FStar Actions Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
      %s"
+     modul
      modul
      modul
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n"
@@ -915,8 +918,10 @@ let print_types_decls (modul:string) (ds:list decl) =
      open Prelude\n\
      open Actions\n\n\
      module B = LowStar.Buffer\n\n\
+     open %s.OutputTypes\n\n\
      #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
      %s"
+     modul
      modul
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" 
        (ds |> List.map (print_decl_for_types modul)
@@ -931,8 +936,10 @@ let print_decls_signature (mname: string) (ds:list decl) =
      open Prelude\n\
      open Actions\n\
      module B = LowStar.Buffer\n\
+     open %s.OutputTypes\n\
      include %s.Types\n\n\
      %s"
+     mname
      mname
      mname
      (String.concat "\n" (ds |> List.map (print_decl_signature mname) |> List.filter (fun s -> s <> "")))
@@ -1203,84 +1210,107 @@ let rec ast_typ_to_target_typ (t:A.typ) : ML typ =
 
 module H = Hashtable
 
-let print_output_type_val (tbl:H.t string unit) (t:A.typ) : ML unit =
+type set = H.t string unit
+
+let print_output_type_val (tbl:set) (t:A.typ) : ML string =
   let tt = ast_typ_to_target_typ t in
   if is_output_type tt
   then let s = print_output_type tt in
        match H.try_find tbl s with
-       | Some _ -> ()
+       | Some _ -> ""
        | None ->
          H.insert tbl s ();
-         IO.print_string (Printf.sprintf "\n\nval %s : Type0\n\n" s)
+         Printf.sprintf "\n\nval %s : Type0\n\n" s
+  else ""
 
-let print_out_expr_set_fstar (oe:A.out_expr) : ML unit =
+let print_out_expr_set_fstar (tbl:set) (oe:A.out_expr) : ML string =
   let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
-  //TODO: module name?
-  let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
-  let fn_arg2_t = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
-  IO.print_string
-    (Printf.sprintf "\n\nval %s : %s -> %s -> ST unit (fun h -> True) \
-       (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
-       fn_name
-       fn_arg1_t
-       fn_arg2_t)
+  match H.try_find tbl fn_name with
+  | Some _ -> ""
+  | _ ->
+    H.insert tbl fn_name ();
+    //TODO: module name?
+    let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
+    let fn_arg2_t = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
+    Printf.sprintf "\n\nval %s : %s -> %s -> ST unit (fun h -> True) \
+      (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
+      fn_name
+      fn_arg1_t
+      fn_arg2_t
 
-let print_out_expr_set (oe:A.out_expr) : ML unit =
+let print_out_expr_set (tbl:set) (oe:A.out_expr) : ML string =
   let open A in
   let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
-  let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
-  let fn_arg1_name = out_expr_var oe in
-  let fn_arg2_t = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
-  let fn_arg2_name = "__v" in
-  let fn_body = Printf.sprintf "%s = %s;" (print_out_expr oe) fn_arg2_name in
-  let fn = Printf.sprintf "void %s (%s %s, %s %s){\n    %s;\n}\n"
-    fn_name
-    fn_arg1_t
-    (ident_name fn_arg1_name)
-    fn_arg2_t
-    fn_arg2_name
-    fn_body in
-  IO.print_string (Printf.sprintf "\n\n%s\n\n" fn)
+  match H.try_find tbl fn_name with
+  | Some _ -> ""
+  | _ ->
+    H.insert tbl fn_name ();
+    let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
+    let fn_arg1_name = out_expr_var oe in
+    let fn_arg2_t = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
+    let fn_arg2_name = "__v" in
+    let fn_body = Printf.sprintf "%s = %s;" (print_out_expr oe) fn_arg2_name in
+    let fn = Printf.sprintf "static inline void %s (%s %s, %s %s){\n    %s;\n}\n"
+      fn_name
+      fn_arg1_t
+      (ident_name fn_arg1_name)
+      fn_arg2_t
+      fn_arg2_name
+      fn_body in
+    Printf.sprintf "\n\n%s\n\n" fn
 
-let print_out_expr_get_fstar (oe:A.out_expr) : ML unit =
+let print_out_expr_get_fstar (tbl:set) (oe:A.out_expr) : ML string =
   let fn_name = Printf.sprintf "get_%s" (out_fn_name oe) in
-  let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
-  let fn_res = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
-  IO.print_string (Printf.sprintf "\n\nval %s : %s -> %s\n\n"
-    fn_name fn_arg1_t fn_res)
+  match H.try_find tbl fn_name with
+  | Some _ -> ""
+  | _ ->
+    H.insert tbl fn_name ();
+    let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
+    let fn_res = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
+    Printf.sprintf "\n\nval %s : %s -> %s\n\n" fn_name fn_arg1_t fn_res
 
-let print_out_expr_get (oe:A.out_expr) : ML unit =
+let print_out_expr_get(tbl:set) (oe:A.out_expr) : ML string =
   let open A in
   let fn_name = Printf.sprintf "get_%s" (out_fn_name oe) in
-  let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
-  let fn_arg1_name = out_expr_var oe in
-  let fn_res = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
-  let fn_body = Printf.sprintf "return %s;" (print_out_expr oe) in
-  let fn = Printf.sprintf "%s %s (%s %s){\n    %s;\n}\n"
-    fn_res
-    fn_name
-    fn_arg1_t
-    (ident_name fn_arg1_name)
-    fn_body in
-  IO.print_string (Printf.sprintf "\n\n%s\n\n" fn)
+  match H.try_find tbl fn_name with
+  | Some _ -> ""
+  | _ ->
+    H.insert tbl fn_name ();
+    let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
+    let fn_arg1_name = out_expr_var oe in
+    let fn_res = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
+    let fn_body = Printf.sprintf "return %s;" (print_out_expr oe) in
+    let fn = Printf.sprintf "static inline %s %s (%s %s){\n    %s;\n}\n"
+      fn_res
+      fn_name
+      fn_arg1_t
+      (ident_name fn_arg1_name)
+      fn_body in
+    Printf.sprintf "\n\n%s\n\n" fn
 
 let output_setter_name lhs = Printf.sprintf "set_%s" (out_fn_name lhs)
 let output_getter_name lhs = Printf.sprintf "get_%s" (out_fn_name lhs)
 let output_base_var lhs = out_expr_var lhs
 
-let print_out_exprs _ (oes:list (A.out_expr & bool)) : ML string =
-  IO.print_string (Printf.sprintf "Printing %d out exprs\n" (List.length oes));
+let print_out_exprs_fstar modul (oes:list (A.out_expr & bool)) : ML string =
   let tbl = H.create 10 in
-  List.iter (fun (oe, b) ->
-    print_output_type_val tbl (out_expr_bt oe);
-    print_output_type_val tbl (out_expr_t oe);
-    if b then begin
-      print_out_expr_set oe;
-      print_out_expr_set_fstar oe
-    end
-    else begin
-      print_out_expr_get oe;
-      print_out_expr_get_fstar oe
-    end ) oes;
-  ""
-  //String.concat "\n" (List.map print_out_expr oes)
+  let s = String.concat "" (oes |> List.map (fun (oe, b) ->
+    Printf.sprintf "%s%s%s"
+      (print_output_type_val tbl (out_expr_bt oe))
+      (print_output_type_val tbl (out_expr_t oe))
+      (if b then print_out_expr_set_fstar tbl oe
+       else print_out_expr_get_fstar tbl oe))) in
+  Printf.sprintf
+    "module %s.OutputTypes\n\n\
+    open FStar.HyperStack.ST\n\
+    open Prelude\n\
+    module B = LowStar.Monotonic.Buffer\n\n\
+    val output_loc : B.loc\n\n%s"
+    modul
+    s
+
+let print_out_exprs_c _ (oes:list (A.out_expr & bool)) : ML string =
+  let tbl = H.create 10 in
+  String.concat "" (oes |> List.map (fun (oe, b) ->
+    if b then print_out_expr_set tbl oe
+    else print_out_expr_get_fstar tbl oe))
