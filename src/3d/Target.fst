@@ -314,10 +314,11 @@ let rec is_output_type (t:typ) : bool =
   | T_pointer t -> is_output_type t
   | _ -> false
 
-let rec print_output_type (t:typ{is_output_type t}) : ML string =
+let rec print_output_type (t:typ) : ML string =
   match t with
   | T_app id _ _ -> A.ident_name id
   | T_pointer t -> Printf.sprintf "p_%s" (print_output_type t)
+  | _ -> failwith "Print: not an output type"
 
 let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   if is_output_type t
@@ -1200,6 +1201,18 @@ let rec ast_typ_to_target_typ (t:A.typ) : ML typ =
   | Pointer t -> T_pointer (ast_typ_to_target_typ t)
   | _ -> error "Impossible!" t.A.range
 
+module H = Hashtable
+
+let print_output_type_val (tbl:H.t string unit) (t:A.typ) : ML unit =
+  let tt = ast_typ_to_target_typ t in
+  if is_output_type tt
+  then let s = print_output_type tt in
+       match H.try_find tbl s with
+       | Some _ -> ()
+       | None ->
+         H.insert tbl s ();
+         IO.print_string (Printf.sprintf "\n\nval %s : Type0\n\n" s)
+
 let print_out_expr_set_fstar (oe:A.out_expr) : ML unit =
   let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
   //TODO: module name?
@@ -1257,8 +1270,11 @@ let output_base_var lhs = out_expr_var lhs
 
 let print_out_exprs _ (oes:list (A.out_expr & bool)) : ML string =
   IO.print_string (Printf.sprintf "Printing %d out exprs\n" (List.length oes));
-  List.iter (fun (oe, b) -> if b then
-    begin
+  let tbl = H.create 10 in
+  List.iter (fun (oe, b) ->
+    print_output_type_val tbl (out_expr_bt oe);
+    print_output_type_val tbl (out_expr_t oe);
+    if b then begin
       print_out_expr_set oe;
       print_out_expr_set_fstar oe
     end
