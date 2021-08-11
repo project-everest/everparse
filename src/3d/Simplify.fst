@@ -71,10 +71,10 @@ let rec simplify_typ (env:T.env_t) (t:typ)
   : ML typ
   = match t.v with
     | Pointer t -> {t with v=Pointer (simplify_typ env t)}
-    | Type_app s ps ->
+    | Type_app s b ps ->
       let ps = List.map (simplify_typ_param env) ps in
       let s = B.resolve_typedef_abbrev (fst env) s in
-      { t with v = Type_app s ps }
+      { t with v = Type_app s b ps }
 
 let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   match f with

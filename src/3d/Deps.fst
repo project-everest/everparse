@@ -100,7 +100,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
 
   let rec deps_of_typ (t:typ) : ML (list string) =
     match t.v with
-    | Type_app hd args -> (maybe_dep hd)@(List.collect deps_of_typ_param args)
+    | Type_app hd _ args -> (maybe_dep hd)@(List.collect deps_of_typ_param args)
     | Pointer t -> deps_of_typ t in
 
   let deps_of_atomic_action (ac:atomic_action) : ML (list string) =

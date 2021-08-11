@@ -192,8 +192,8 @@ qident:
   | m=IDENT DOT n=IDENT    { with_range ({modul_name=Some m.v.name; name=n.v.name}) $startpos }
 
 typ_no_range:
-  | i=qident { Type_app(i, []) }
-  | hd=qident LPAREN a=right_flexible_nonempty_list(COMMA, typ_param) RPAREN { Type_app(hd, a) }
+  | i=qident { Type_app(i, false, []) }
+  | hd=qident LPAREN a=right_flexible_nonempty_list(COMMA, typ_param) RPAREN { Type_app(hd, false, a) }
 
 typ:
   | t=typ_no_range { with_range t $startpos }
@@ -346,7 +346,7 @@ decl_no_range:
   | MODULE i=IDENT EQ m=IDENT { ModuleAbbrev (i, m) }
   | DEFINE i=IDENT c=constant { Define (i, None, c) }
   | t=IDENT ENUM i=IDENT LBRACE es=right_flexible_nonempty_list(COMMA, enum_case) RBRACE maybe_semi
-    { Enum(with_range (Type_app (t, [])) ($startpos(t)), i, es) }
+    { Enum(with_range (Type_app (t, false, [])) ($startpos(t)), i, es) }
   | b=attributes TYPEDEF t=typ i=IDENT SEMICOLON
     { TypeAbbrev (t, i) }
   | b=attributes TYPEDEF STRUCT i=IDENT ps=parameters w=where_opt

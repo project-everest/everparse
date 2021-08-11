@@ -292,7 +292,7 @@ and typ_param = either expr out_expr
 ///   i.e., no type-parameterized types
 
 and typ' =
-  | Type_app : ident -> list typ_param -> typ'
+  | Type_app : ident -> bool -> list typ_param -> typ'
   | Pointer : typ -> typ'
 and typ = with_meta_t typ'
 
@@ -533,8 +533,9 @@ let rec eq_typ_params (ps1 ps2:list typ_param) : Tot bool =
 
 let rec eq_typ (t1 t2:typ) : Tot bool =
   match t1.v, t2.v with
-  | Type_app hd1 ps1, Type_app hd2 ps2 ->
+  | Type_app hd1 b1 ps1, Type_app hd2 b2 ps2 ->
     eq_idents hd1 hd2
+    && b1 = b2
     && eq_typ_params ps1 ps2
   | Pointer t1, Pointer t2 ->
     eq_typ t1 t2
@@ -544,7 +545,7 @@ let rec eq_typ (t1 t2:typ) : Tot bool =
 let dummy_range = dummy_pos, dummy_pos
 let with_dummy_range x = with_range x dummy_range
 let to_ident' x = {modul_name=None;name=x}
-let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) [])
+let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) false [])
 let tbool = mk_prim_t "Bool"
 let tunit = mk_prim_t "unit"
 let tuint8 = mk_prim_t "UINT8"
@@ -601,7 +602,7 @@ let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
   | _ -> p
 let rec subst_typ (s:subst) (t:typ) : ML typ =
   match t.v with
-  | Type_app hd ps -> { t with v = Type_app hd (List.map (subst_typ_param s) ps) }
+  | Type_app hd b ps -> { t with v = Type_app hd b (List.map (subst_typ_param s) ps) }
   | Pointer t -> {t with v = Pointer (subst_typ s t) }
 let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   match f with
@@ -762,7 +763,7 @@ let print_typ_param p : ML string =
 
 let rec print_typ t : ML string =
   match t.v with
-  | Type_app i ps ->
+  | Type_app i _b ps ->
     begin
     match ps with
     | [] -> ident_to_string i
@@ -777,7 +778,7 @@ let rec print_typ t : ML string =
 
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with
-  | Type_app i [] -> as_integer_typ i
+  | Type_app i _b [] -> as_integer_typ i
   | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
 
 let print_qual = function

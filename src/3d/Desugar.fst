@@ -130,11 +130,16 @@ noeq
 type qenv = {
   mname : string;
   module_abbrevs : H.t string string;
+  output_types : H.t ident' unit;
   local_names : list string
 }
 
 let push_module_abbrev (env:qenv) (i m:string) : ML unit =
   H.insert env.module_abbrevs i m
+
+let push_output_type (env:qenv) (out_t:out_typ) : ML unit =
+  H.insert env.output_types out_t.out_typ_names.typedef_name.v ();
+  H.insert env.output_types out_t.out_typ_names.typedef_abbrev.v ()
 
 let push_name (env:qenv) (name:string) : qenv =
   { env with local_names = name::env.local_names }
@@ -181,8 +186,10 @@ let resolve_typ_param (env:qenv) (p:typ_param) : ML typ_param =
 
 let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
   match t with
-  | Type_app hd args ->
-    Type_app (resolve_ident env hd) (List.map (resolve_typ_param env) args)
+  | Type_app hd _ args ->
+    let hd = resolve_ident env hd in
+    let is_out = Some? (H.try_find env.output_types hd.v) in
+    Type_app hd is_out (List.map (resolve_typ_param env) args)
   | Pointer t -> Pointer (resolve_typ env t)
 
 and resolve_typ (env:qenv) (t:typ) : ML typ = { t with v = resolve_typ' env t.v }
@@ -311,14 +318,21 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let params, env = resolve_params env params in
     let sc = resolve_switch_case env sc in
     CaseType td_names params sc
-  | OutputType out_t -> OutputType (resolve_out_type env out_t)
+  | OutputType out_t ->
+    let out_t = resolve_out_type env out_t in
+    push_output_type env out_t;
+    OutputType out_t
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
 let desugar (mname:string) (p:prog) : ML prog =
   let decls, refinement = p in
   let decls = List.collect desugar_one_enum decls in
-  let env = {mname=mname; module_abbrevs=H.create 10; local_names=[]} in
+  let env = {
+    mname=mname;
+    module_abbrevs=H.create 10;
+    output_types=H.create 10;
+    local_names=[]} in
   let decls = List.map (resolve_decl env) decls in
   decls,
   (match refinement with

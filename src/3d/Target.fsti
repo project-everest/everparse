@@ -86,7 +86,7 @@ type action =
 noeq
 type typ =
   | T_false    : typ
-  | T_app      : hd:A.ident -> args:list index -> typ
+  | T_app      : hd:A.ident -> is_out:bool -> args:list index -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ

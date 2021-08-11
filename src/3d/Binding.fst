@@ -263,7 +263,7 @@ let type_of_constant rng (c:constant) : ML typ =
 let parser_may_fail (env:env) (t:typ) : ML bool =
   match t.v with
   | Pointer _ -> true
-  | Type_app hd _ ->
+  | Type_app hd _ _ ->
     match lookup env hd with
     | Inr (d, Inl attrs) -> attrs.may_fail
     | _ -> false
@@ -271,7 +271,7 @@ let parser_may_fail (env:env) (t:typ) : ML bool =
 let typ_is_integral env (t:typ) : ML bool =
   match t.v with
   | Pointer _ -> false
-  | Type_app hd _ ->
+  | Type_app hd _ _ ->
     match lookup env hd with
     | Inr (d, Inl attrs) -> Some? attrs.integral
     | _ -> false
@@ -279,7 +279,7 @@ let typ_is_integral env (t:typ) : ML bool =
 let tag_of_integral_typ env (t:typ) : ML (option _) =
   match t.v with
   | Pointer _ -> None
-  | Type_app hd _ ->
+  | Type_app hd _ _ ->
     match lookup env hd with
     | Inr (_, Inl attrs) -> attrs.integral
     | _ -> None
@@ -302,17 +302,17 @@ let parser_weak_kind (env:global_env) (id:ident) : ML (option _) =
 let typ_weak_kind env (t:typ) : ML (option weak_kind) =
   match t.v with
   | Pointer _ -> None
-  | Type_app hd _ -> parser_weak_kind env.globals hd
+  | Type_app hd _ _ -> parser_weak_kind env.globals hd
 
 let typ_has_reader env (t:typ) : ML bool =
   match t.v with
   | Pointer _ -> false
-  | Type_app hd _ ->
+  | Type_app hd _ _ ->
     has_reader env.globals hd
 
 let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
   match t.v with
-  | Type_app hd [] -> //type abbreviations are not parameterized
+  | Type_app hd _ [] -> //type abbreviations are not parameterized
     begin
     match lookup env hd with
     | Inr (d, _) ->
@@ -435,9 +435,11 @@ let lookup_output_type_field (ge:global_env) (i f:ident) : ML typ =
     error (Printf.sprintf "Cannot find output field %s:%s" (ident_to_string i) (ident_to_string f)) f.range
 
 let is_output_type (ge:global_env) (t:typ) : ML ident =
+  let err () : ML ident =
+    error (Printf.sprintf "Type %s is not an output type" (print_typ t)) t.range in
   match t.v with
-  | Type_app i [] -> ignore (lookup_output_type ge i); i
-  | _ -> error (Printf.sprintf "Type %s is not an output type" (print_typ t)) t.range
+  | Type_app i b [] -> if b then i else err ()
+  | _ -> err ()
 
 
 /// AR: TODO: should go, see the comment in the defn. of env above
@@ -505,7 +507,8 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
       then { t with v = Pointer (check_typ pointer_ok env t0) }
       else error (Printf.sprintf "Pointer types are not permissible here; got %s" (print_typ t)) t.range
 
-    | Type_app s ps ->
+    | Type_app _ true _ -> error "Impossible!" t.range
+    | Type_app s false ps ->
       match lookup env s with
       | Inl _ ->
         error (Printf.sprintf "%s is not a type" (ident_to_string s)) s.range
@@ -529,7 +532,7 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
             params
             ps
         in
-        {t with v = Type_app s ps}
+        {t with v = Type_app s false ps}
 
 and check_expr (env:env) (e:expr)
   : ML (expr & typ)
@@ -572,7 +575,7 @@ and check_expr (env:env) (e:expr)
       then error (Printf.sprintf "Casts are only supported on integral types; %s is not integral"
                     (print_typ from)) e.range
       else match from.v with
-           | Type_app i _ ->
+           | Type_app i false _ ->
              let from_t = as_integer_typ i in
              if integer_type_lub to from_t <> to
              then error (Printf.sprintf "Only widening casts are supported; casting %s to %s loses precision"
@@ -984,7 +987,8 @@ let check_switch (env:env) (s:switch_case)
     let tags_t_opt =
       match scrutinee_t.v with
       | Pointer _ -> fail_non_equality_type ()
-      | Type_app hd es ->
+      | Type_app hd true es -> error "Impossible!" head.range
+      | Type_app hd false es ->
         match try_lookup_enum_cases env hd with
         | Some enum -> Some enum
         | _ -> fail_non_equality_type ()
@@ -1156,10 +1160,11 @@ let elaborate_bit_fields env (fields:list field)
 
 let rec check_output_field_type (ge:global_env) (t:typ) : ML unit =
   match t.v with
-  | Type_app i [] ->
+  | Type_app i is_out [] ->
     (match maybe_as_integer_typ i with
      | Some _ -> ()
-     | _ -> ignore (lookup_output_type ge i))
+     | _ ->
+       if not is_out then error (Printf.sprintf "%s is not a valid output type" (print_typ t)) t.range)
   | Pointer t -> check_output_field_type ge t
   | _ -> error (Printf.sprintf "%s is not a valid output type" (print_typ t)) t.range
 

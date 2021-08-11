@@ -78,7 +78,7 @@ let error_handler_decl =
     name = "error_handler"
   } in
   let error_handler_id = with_range error_handler_id' dummy_range in
-  let typ = T_app error_handler_id [] in
+  let typ = T_app error_handler_id false [] in
   let a = Assumption (error_handler_name, typ) in
   a, default_attrs
 
@@ -308,10 +308,24 @@ let print_lam (#a:Type) (f:a -> ML string) (x:lam a) : ML string =
 let print_expr_lam (mname:string) (x:lam expr) : ML string =
   print_lam (print_expr mname) x
 
+let rec is_output_type (t:typ) : bool =
+  match t with
+  | T_app _ true [] -> true
+  | T_pointer t -> is_output_type t
+  | _ -> false
+
+let rec print_output_type (t:typ{is_output_type t}) : ML string =
+  match t with
+  | T_app id _ _ -> A.ident_name id
+  | T_pointer t -> Printf.sprintf "p_%s" (print_output_type t)
+
 let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
+  if is_output_type t
+  then print_output_type t
+  else
   match t with
   | T_false -> "False"
-  | T_app hd args ->
+  | T_app hd _ args ->
     Printf.sprintf "(%s %s)"
       (print_maybe_qualified_ident mname hd)
       (String.concat " " (print_indexes mname args))
@@ -725,7 +739,7 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
   match fst d with
   | Assumption _ -> ""
   
-  | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _, (Constant c, _)) ->
+  | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _ _, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
      (print_comments (snd d).comments)
      (print_field_id_name x)
@@ -933,19 +947,19 @@ let rec print_as_c_type (t:typ) : Tot string =
     match t with
     | T_pointer t ->
           Printf.sprintf "%s*" (print_as_c_type t)
-    | T_app {v={name="Bool"}} [] ->
+    | T_app {v={name="Bool"}} _ [] ->
           "BOOLEAN"
-    | T_app {v={name="UINT8"}} [] ->
+    | T_app {v={name="UINT8"}} _ [] ->
           "uint8_t"
-    | T_app {v={name="UINT16"}} [] ->
+    | T_app {v={name="UINT16"}} _ [] ->
           "uint16_t"
-    | T_app {v={name="UINT32"}} [] ->
+    | T_app {v={name="UINT32"}} _ [] ->
           "uint32_t"
-    | T_app {v={name="UINT64"}} [] ->
+    | T_app {v={name="UINT64"}} _ [] ->
           "uint64_t"
-    | T_app {v={name="PUINT8"}} [] ->
+    | T_app {v={name="PUINT8"}} _ [] ->
           "uint8_t*"
-    | T_app {v={name=x}} [] ->
+    | T_app {v={name=x}} _ [] ->
           x
     | _ ->
          "__UNKNOWN__"
@@ -1136,20 +1150,13 @@ let print_c_entry (modul: string)
   impl
 
 
-let rec print_output_typ_as_fstar_type (t:typ) : ML string =
-  match t with
-  | T_pointer t ->
-    Printf.sprintf "p_%s" (print_output_typ_as_fstar_type t)
-  | T_app hd [] -> A.ident_name hd
-  | _ -> A.error "Impossible!" A.dummy_range
-
 /// Functions for printing setters and getters for output expressions
 
 
 let rec out_bt_name (t:A.typ) : ML string =
   let open A in
   match t.v with
-  | Type_app i [] -> ident_name i
+  | Type_app i _ [] -> ident_name i
   | Pointer t -> out_bt_name t
   | _ -> error "Impossible!" t.range
 
@@ -1189,7 +1196,7 @@ let rec out_fn_name (oe:A.out_expr) : ML string =
 let rec ast_typ_to_target_typ (t:A.typ) : ML typ =
   let open A in
   match t.v with
-  | Type_app i [] -> T_app i []
+  | Type_app i b [] -> T_app i b []
   | Pointer t -> T_pointer (ast_typ_to_target_typ t)
   | _ -> error "Impossible!" t.A.range
 
