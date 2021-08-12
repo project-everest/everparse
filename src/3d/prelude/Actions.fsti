@@ -502,3 +502,10 @@ val action_weaken
       (#inv:slice_inv) (#l:eloc) (#b:_) (#a:_) (act:action p inv l b a)
       (#inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
    : action p inv' l' b a
+
+noextract
+inline_for_extraction
+val mk_external_action
+  (#nz:_) (#wk:_) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+  (#l:loc) ($f:unit -> Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1))
+  : action p true_inv l false unit

@@ -461,7 +461,7 @@ let rec print_action (mname:string) (a:action) : ML string =
       | Action_assignment lhs rhs ->
         Printf.sprintf "(action_assignment %s %s)" (print_ident lhs) (print_expr mname rhs)
       | Action_call f args ->
-        Printf.sprintf "(%s %s)" (print_ident f) (String.concat " " (List.map (print_expr mname) args))
+        Printf.sprintf "(mk_external_action (%s %s))" (print_ident f) (String.concat " " (List.map (print_expr mname) args))
   in
   match a with
   | Atomic_action a ->
@@ -1236,8 +1236,7 @@ let print_out_expr_set_fstar (tbl:set) (oe:A.out_expr) : ML string =
     let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
     let fn_arg2_t = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
     Printf.sprintf
-      "\n\nval %s (#nz:_) (#wk:_) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)\
-      (_:%s) (_:%s) : action p true_inv output_loc false unit\n\n"
+      "\n\nval %s (_:%s) (_:%s) (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
       fn_name
       fn_arg1_t
       fn_arg2_t

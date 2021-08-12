@@ -1781,3 +1781,7 @@ let action_weaken
       (#inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
    : action p inv' l' b a
    = act
+
+noextract
+inline_for_extraction
+let mk_external_action #_ #_ #_ #_ #_ #_ f = fun _ #_ _ _ _ -> f ()
