@@ -218,6 +218,8 @@ let krml_args skip_c_makefiles out_dir files_and_modules =
                      all_everparse_krmls
                      files_and_modules
   in
+  let output_files_lib_args = List.fold_left (fun accu (_, modul) ->
+                                  accu @ ["-library"; Printf.sprintf "%s.OutputTypes" modul]) [] files_and_modules in
   let krml_files = List.rev krml_files in
   let krml_args =
     "-tmpdir" :: out_dir ::
@@ -236,7 +238,7 @@ let krml_args skip_c_makefiles out_dir files_and_modules =
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
-                                  krml_args0 @ krml_files
+                                  output_files_lib_args @ krml_args0 @ krml_files
     in
     if skip_c_makefiles
     then "-skip-makefiles" :: krml_args
