@@ -106,10 +106,12 @@ let pretty_print_source_module
       (file, modul)
     : unit
   =
+  let output_types_fsti_file = filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul) in
   let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
   let fsti_file = Printf.sprintf "%si" fst_file in
   List.iter (pretty_print_source_file out_dir) [
+      output_types_fsti_file;
       types_fst_file;
       fsti_file;
       fst_file;
@@ -126,15 +128,18 @@ let verify_and_extract_module
       (file, modul)
     : unit
   =
+  let output_types_fsti_file = filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul) in
   let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
   let fsti_file = Printf.sprintf "%si" fst_file in
   List.iter (verify_fst_file out_dir) [
+      output_types_fsti_file;
       types_fst_file;
       fsti_file;
       fst_file;
   ];
   List.iter (extract_fst_file out_dir) [
+      output_types_fsti_file;
       types_fst_file;
       fst_file;
   ]
@@ -172,9 +177,11 @@ let remove_fst_and_krml_files
   =
   let root_name = filename_concat out_dir modul in
   List.iter remove_if_exists [
+      Printf.sprintf "%s.OutputTypes.fsti" root_name;
       Printf.sprintf "%s.Types.fst" root_name;
       Printf.sprintf "%s.fst" root_name;
       Printf.sprintf "%s.fsti" root_name;
+      Printf.sprintf "%s.OutputTypes.fsti.checked" root_name;
       Printf.sprintf "%s.Types.fst.checked" root_name;
       Printf.sprintf "%s.fst.checked" root_name;
       Printf.sprintf "%s.fsti.checked" root_name;
@@ -190,6 +197,7 @@ let krml_args skip_c_makefiles out_dir files_and_modules =
   let krml_files = List.fold_left
                      (fun accu (_, modul) ->
                        let l =
+                         filename_concat out_dir (Printf.sprintf "%s_OutputTypes.krml" modul) ::
                          filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
                          filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu
                        in

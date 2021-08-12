@@ -118,6 +118,7 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     open_write_file
       (Printf.sprintf "%s/%s.OutputTypes.fsti" (Options.get_output_dir ()) modul) in
   FStar.IO.write_string output_types_fsti_file (Target.print_out_exprs_fstar modul out_exprs);
+  FStar.IO.close_write_file output_types_fsti_file;
 
   let fst_file =
     open_write_file
