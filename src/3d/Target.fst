@@ -673,7 +673,7 @@ let print_typedef_body (mname:string) (b:typedef_body) : ML string =
 
 let print_typedef_actions_inv_and_fp (td:type_decl) =
     let pointers =
-      List.Tot.filter (fun (x, t) -> T_pointer? t) td.decl_name.td_params
+      List.Tot.filter (fun (x, t) -> not (is_output_type t) && T_pointer? t) td.decl_name.td_params
     in
     let inv =
       List.Tot.fold_right
@@ -1230,10 +1230,12 @@ let print_out_expr_set_fstar (tbl:set) (oe:A.out_expr) : ML string =
   | _ ->
     H.insert tbl fn_name ();
     //TODO: module name?
+    //AR: TODO: B.loc_none -> B.output_loc
     let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
     let fn_arg2_t = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
-    Printf.sprintf "\n\nval %s : %s -> %s -> ST unit (fun h -> True) \
-      (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
+    Printf.sprintf
+      "\n\nval %s (#nz:_) (#wk:_) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)\
+      (_:%s) (_:%s) : action p true_inv B.loc_none false unit\n\n"
       fn_name
       fn_arg1_t
       fn_arg2_t
@@ -1304,6 +1306,7 @@ let print_out_exprs_fstar modul (oes:list (A.out_expr & bool)) : ML string =
     "module %s.OutputTypes\n\n\
     open FStar.HyperStack.ST\n\
     open Prelude\n\
+    open Actions\n\
     module B = LowStar.Monotonic.Buffer\n\n\
     val output_loc : B.loc\n\n%s"
     modul
