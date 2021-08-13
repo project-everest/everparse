@@ -1225,6 +1225,19 @@ let print_output_type_val (tbl:set) (t:A.typ) : ML string =
          Printf.sprintf "\n\nval %s : Type0\n\n" s
   else ""
 
+let print_output_type_c_typedef (tbl:set) (t:A.typ) : ML string =
+  let tt = ast_typ_to_target_typ t in
+  if is_output_type tt
+  then let s = pascal_case (print_output_type tt) in
+       match H.try_find tbl s with
+       | Some _ -> ""
+       | None ->
+         H.insert tbl s ();
+         Printf.sprintf "\n\ntypedef %s %s;\n\n"
+           (print_as_c_type tt)
+           s
+  else ""
+       
 let print_out_expr_set_fstar (tbl:set) (oe:A.out_expr) : ML string =
   let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
   match H.try_find tbl fn_name with
@@ -1243,7 +1256,7 @@ let print_out_expr_set_fstar (tbl:set) (oe:A.out_expr) : ML string =
 
 let print_out_expr_set (tbl:set) (oe:A.out_expr) : ML string =
   let open A in
-  let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
+  let fn_name = pascal_case (Printf.sprintf "set_%s" (out_fn_name oe)) in
   match H.try_find tbl fn_name with
   | Some _ -> ""
   | _ ->
@@ -1274,7 +1287,7 @@ let print_out_expr_get_fstar (tbl:set) (oe:A.out_expr) : ML string =
 
 let print_out_expr_get(tbl:set) (oe:A.out_expr) : ML string =
   let open A in
-  let fn_name = Printf.sprintf "get_%s" (out_fn_name oe) in
+  let fn_name = pascal_case (Printf.sprintf "get_%s" (out_fn_name oe)) in
   match H.try_find tbl fn_name with
   | Some _ -> ""
   | _ ->
@@ -1309,12 +1322,15 @@ let print_out_exprs_fstar modul (oes:list (A.out_expr & bool)) : ML string =
     open Prelude\n\
     open Actions\n\
     module B = LowStar.Buffer\n\n\
-    val output_loc : B.loc\n\n%s"
+    noextract val output_loc : B.loc\n\n%s"
     modul
     s
 
 let print_out_exprs_c _ (oes:list (A.out_expr & bool)) : ML string =
   let tbl = H.create 10 in
   String.concat "" (oes |> List.map (fun (oe, b) ->
-    if b then print_out_expr_set tbl oe
-    else print_out_expr_get_fstar tbl oe))
+    Printf.sprintf "%s%s%s"
+      (print_output_type_c_typedef tbl (out_expr_bt oe))
+      (print_output_type_c_typedef tbl (out_expr_t oe))
+      (if b then print_out_expr_set tbl oe
+       else print_out_expr_get tbl oe)))
