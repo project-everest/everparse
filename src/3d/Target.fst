@@ -773,7 +773,8 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
     `strcat`
     maybe_print_type_equality mname td in
     s
-  | Output_type _ -> ""
+
+  | _ -> ""
 
 /// Print a decl for M.fst
 ///
@@ -837,7 +838,7 @@ let print_decl_for_validators (mname:string) (d:decl) : ML string =
          (print_typedef_name mname td.decl_name)
          (print_typedef_typ td.decl_name)
          (print_reader mname r))
-  | Output_type _ -> ""
+  | _ -> ""
 
 let print_type_decl_signature (mname:string) (d:decl{Type_decl? (fst d)}) : ML string =
   match fst d with
@@ -890,7 +891,7 @@ let print_decl_signature (mname:string) (d:decl) : ML string =
     else if not ((snd d).is_exported || td.decl_name.td_entrypoint)
     then ""
     else print_type_decl_signature mname d
-  | Output_type _ -> ""
+  | _ -> ""
 
 let print_decls (modul: string) (ds:list decl) =
   let decls =
@@ -1163,61 +1164,225 @@ let print_c_entry (modul: string)
 /// Functions for printing setters and getters for output expressions
 
 
-let rec out_bt_name (t:A.typ) : ML string =
-  let open A in
-  match t.v with
-  | Type_app i _ [] -> ident_name i
-  | Pointer t -> out_bt_name t
-  | _ -> error "Impossible!" t.range
+// let rec out_bt_name (t:A.typ) : ML string =
+//   let open A in
+//   match t.v with
+//   | Type_app i _ [] -> ident_name i
+//   | Pointer t -> out_bt_name t
+//   | _ -> error "Impossible!" t.range
 
-let out_expr_bt_name (oe:A.out_expr) : ML string =
-  let open A in
-  match oe.out_expr_meta with
-  | Some (_, bt, _) -> out_bt_name bt
-  | _ -> error "Impossible!" oe.out_expr_node.range
+// let out_expr_bt_name (oe:A.out_expr) : ML string =
+//   let open A in
+//   match oe.out_expr_meta with
+//   | Some (_, bt, _) -> out_bt_name bt
+//   | _ -> error "Impossible!" oe.out_expr_node.range
 
-let out_expr_bt (oe:A.out_expr) : ML A.typ =
-  let open A in
-  match oe.out_expr_meta with
-  | Some (_, bt, _) -> bt
-  | _ -> error "Impossible!" oe.out_expr_node.range
+// let out_expr_bt (oe:A.out_expr) : ML A.typ =
+//   let open A in
+//   match oe.out_expr_meta with
+//   | Some (_, bt, _) -> bt
+//   | _ -> error "Impossible!" oe.out_expr_node.range
 
-let out_expr_var (oe:A.out_expr) : ML A.ident =
-  let open A in
-  match oe.out_expr_meta with
-  | Some (i, _, _) -> i
-  | _ -> error "Impossible!" oe.out_expr_node.range
+// let out_expr_var (oe:A.out_expr) : ML A.ident =
+//   let open A in
+//   match oe.out_expr_meta with
+//   | Some (i, _, _) -> i
+//   | _ -> error "Impossible!" oe.out_expr_node.range
 
-let out_expr_t (oe:A.out_expr) : ML A.typ =
-  let open A in
-  match oe.out_expr_meta with
-  | Some (_, _, t) -> t
-  | _ -> error "Impossible!" oe.out_expr_node.range
+// let out_expr_t (oe:A.out_expr) : ML A.typ =
+//   let open A in
+//   match oe.out_expr_meta with
+//   | Some (_, _, t) -> t
+//   | _ -> error "Impossible!" oe.out_expr_node.range
 
-let rec out_fn_name (oe:A.out_expr) : ML string =
-  let open A in
-  match oe.out_expr_node.v with
-  | OE_id _ -> out_expr_bt_name oe
-  | OE_star oe -> Printf.sprintf "%s_star" (out_fn_name oe)
-  | OE_addrof oe -> Printf.sprintf "%s_addrof" (out_fn_name oe)
-  | OE_deref oe f -> Printf.sprintf "%s_deref_%s" (out_fn_name oe) (ident_name f)
-  | OE_dot oe f -> Printf.sprintf "%s_dot_%s" (out_fn_name oe) (ident_name f)
+// let rec out_fn_name (oe:A.out_expr) : ML string =
+//   let open A in
+//   match oe.out_expr_node.v with
+//   | OE_id _ -> out_expr_bt_name oe
+//   | OE_star oe -> Printf.sprintf "%s_star" (out_fn_name oe)
+//   | OE_addrof oe -> Printf.sprintf "%s_addrof" (out_fn_name oe)
+//   | OE_deref oe f -> Printf.sprintf "%s_deref_%s" (out_fn_name oe) (ident_name f)
+//   | OE_dot oe f -> Printf.sprintf "%s_dot_%s" (out_fn_name oe) (ident_name f)
 
-let rec ast_typ_to_target_typ (t:A.typ) : ML typ =
-  let open A in
-  match t.v with
-  | Type_app i b [] -> T_app i b []
-  | Pointer t -> T_pointer (ast_typ_to_target_typ t)
-  | _ -> error "Impossible!" t.A.range
+// let rec ast_typ_to_target_typ (t:A.typ) : ML typ =
+//   let open A in
+//   match t.v with
+//   | Type_app i b [] -> T_app i b []
+//   | Pointer t -> T_pointer (ast_typ_to_target_typ t)
+//   | _ -> error "Impossible!" t.A.range
+
+// module H = Hashtable
+
+// type set = H.t string unit
+
+// let print_output_type_val (tbl:set) (t:A.typ) : ML string =
+//   let tt = ast_typ_to_target_typ t in
+//   if is_output_type tt
+//   then let s = print_output_type tt in
+//        match H.try_find tbl s with
+//        | Some _ -> ""
+//        | None ->
+//          H.insert tbl s ();
+//          Printf.sprintf "\n\nval %s : Type0\n\n" s
+//   else ""
+
+// let print_output_type_c_typedef (tbl:set) (t:A.typ) : ML string =
+//   let tt = ast_typ_to_target_typ t in
+//   if is_output_type tt
+//   then let s = pascal_case (print_output_type tt) in
+//        match H.try_find tbl s with
+//        | Some _ -> ""
+//        | None ->
+//          H.insert tbl s ();
+//          Printf.sprintf "\n\ntypedef %s %s;\n\n"
+//            (print_as_c_type tt)
+//            s
+//   else ""
+       
+// let print_out_expr_set_fstar (tbl:set) (oe:A.out_expr) : ML string =
+//   let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
+//   match H.try_find tbl fn_name with
+//   | Some _ -> ""
+//   | _ ->
+//     H.insert tbl fn_name ();
+//     //TODO: module name?
+//     //AR: TODO: B.loc_none -> B.output_loc
+//     let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
+//     let fn_arg2_t = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
+//     Printf.sprintf
+//       "\n\nval %s (_:%s) (_:%s) (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
+//       fn_name
+//       fn_arg1_t
+//       fn_arg2_t
+
+// let print_out_expr_set (tbl:set) (oe:A.out_expr) : ML string =
+//   let open A in
+//   let fn_name = pascal_case (Printf.sprintf "set_%s" (out_fn_name oe)) in
+//   match H.try_find tbl fn_name with
+//   | Some _ -> ""
+//   | _ ->
+//     H.insert tbl fn_name ();
+//     let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
+//     let fn_arg1_name = out_expr_var oe in
+//     let fn_arg2_t = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
+//     let fn_arg2_name = "__v" in
+//     let fn_body = Printf.sprintf "%s = %s;" (print_out_expr oe) fn_arg2_name in
+//     let fn = Printf.sprintf "static inline void %s (%s %s, %s %s){\n    %s;\n}\n"
+//       fn_name
+//       fn_arg1_t
+//       (ident_name fn_arg1_name)
+//       fn_arg2_t
+//       fn_arg2_name
+//       fn_body in
+//     Printf.sprintf "\n\n%s\n\n" fn
+
+// let print_out_expr_get_fstar (tbl:set) (oe:A.out_expr) : ML string =
+//   let fn_name = Printf.sprintf "get_%s" (out_fn_name oe) in
+//   match H.try_find tbl fn_name with
+//   | Some _ -> ""
+//   | _ ->
+//     H.insert tbl fn_name ();
+//     let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
+//     let fn_res = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
+//     Printf.sprintf "\n\nval %s : %s -> %s\n\n" fn_name fn_arg1_t fn_res
+
+// let print_out_expr_get(tbl:set) (oe:A.out_expr) : ML string =
+//   let open A in
+//   let fn_name = pascal_case (Printf.sprintf "get_%s" (out_fn_name oe)) in
+//   match H.try_find tbl fn_name with
+//   | Some _ -> ""
+//   | _ ->
+//     H.insert tbl fn_name ();
+//     let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
+//     let fn_arg1_name = out_expr_var oe in
+//     let fn_res = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
+//     let fn_body = Printf.sprintf "return %s;" (print_out_expr oe) in
+//     let fn = Printf.sprintf "static inline %s %s (%s %s){\n    %s;\n}\n"
+//       fn_res
+//       fn_name
+//       fn_arg1_t
+//       (ident_name fn_arg1_name)
+//       fn_body in
+//     Printf.sprintf "\n\n%s\n\n" fn
+
+// let output_setter_name lhs = Printf.sprintf "set_%s" (out_fn_name lhs)
+// let output_getter_name lhs = Printf.sprintf "get_%s" (out_fn_name lhs)
+// let output_base_var lhs = out_expr_var lhs
+
+// let print_out_exprs_fstar modul (oes:list (A.out_expr & bool)) : ML string =
+//   let tbl = H.create 10 in
+//   let s = String.concat "" (oes |> List.map (fun (oe, b) ->
+//     Printf.sprintf "%s%s%s"
+//       (print_output_type_val tbl (out_expr_bt oe))
+//       (print_output_type_val tbl (out_expr_t oe))
+//       (if b then print_out_expr_set_fstar tbl oe
+//        else print_out_expr_get_fstar tbl oe))) in
+//   Printf.sprintf
+//     "module %s.OutputTypes\n\n\
+//     open FStar.HyperStack.ST\n\
+//     open Prelude\n\
+//     open Actions\n\
+//     module B = LowStar.Buffer\n\n\
+//     noextract val output_loc : B.loc\n\n%s"
+//     modul
+//     s
+
+// let print_out_exprs_c _ (oes:list (A.out_expr & bool)) : ML string =
+//   let tbl = H.create 10 in
+//   String.concat "" (oes |> List.map (fun (oe, b) ->
+//     Printf.sprintf "%s%s%s"
+//       (print_output_type_c_typedef tbl (out_expr_bt oe))
+//       (print_output_type_c_typedef tbl (out_expr_t oe))
+//       (if b then print_out_expr_set tbl oe
+//        else print_out_expr_get tbl oe)))
+// let print_output_type_decl (tbl:H.t string unit) (d:decl) : ML (string & string) =
+//   match fst d with
+//   | Output_type_val t ->
+//     let s = print_output_type t in
+//     (match H.try_find tbl s with
+//      | Some _ -> "", ""
+//      | None ->
+//        H.insert tbl s ();
+//        (Printf.sprintf "\n\nval %s : Type0\n\n" s),
+//        (Printf.sprintf "\n\ntypedef %s %s;\n\n" (print_as_c_type t) s))
+//   | Output_type_getter oe ret_typ arg_typ ->
+    
+
+    
+
+
+// let print_output_type_decls (modul:string) (ds:list decl)
+//   : ML (string & string)
+
+let rec out_bt_name (t:typ) : ML string =
+  match t with
+  | T_app i _ _ -> A.ident_name i
+  | T_pointer t -> out_bt_name t
+  | _ -> failwith "Impossible, out_bt_name!"
+
+let out_expr_bt_name (oe:output_expr) : ML string = out_bt_name oe.oe_bt
+
+let out_expr_bt (oe:output_expr) : ML typ = oe.oe_bt
+
+let out_expr_var (oe:output_expr) : ML A.ident = oe.oe_base_ident
+
+let out_expr_t (oe:output_expr) : ML typ = oe.oe_t
+
+let rec out_fn_name (oe:output_expr) : ML string =
+  match oe.oe_expr with
+  | T_OE_id _ -> out_expr_bt_name oe
+  | T_OE_star oe -> Printf.sprintf "%s_star" (out_fn_name oe)
+  | T_OE_addrof oe -> Printf.sprintf "%s_addrof" (out_fn_name oe)
+  | T_OE_deref oe f -> Printf.sprintf "%s_deref_%s" (out_fn_name oe) (A.ident_name f)
+  | T_OE_dot oe f -> Printf.sprintf "%s_dot_%s" (out_fn_name oe) (A.ident_name f)
 
 module H = Hashtable
 
 type set = H.t string unit
 
-let print_output_type_val (tbl:set) (t:A.typ) : ML string =
-  let tt = ast_typ_to_target_typ t in
-  if is_output_type tt
-  then let s = print_output_type tt in
+let print_output_type_val (tbl:set) (t:typ) : ML string =
+  if is_output_type t
+  then let s = print_output_type t in
        match H.try_find tbl s with
        | Some _ -> ""
        | None ->
@@ -1225,20 +1390,19 @@ let print_output_type_val (tbl:set) (t:A.typ) : ML string =
          Printf.sprintf "\n\nval %s : Type0\n\n" s
   else ""
 
-let print_output_type_c_typedef (tbl:set) (t:A.typ) : ML string =
-  let tt = ast_typ_to_target_typ t in
-  if is_output_type tt
-  then let s = pascal_case (print_output_type tt) in
+let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
+  if is_output_type t
+  then let s = pascal_case (print_output_type t) in
        match H.try_find tbl s with
        | Some _ -> ""
        | None ->
          H.insert tbl s ();
          Printf.sprintf "\n\ntypedef %s %s;\n\n"
-           (print_as_c_type tt)
+           (print_as_c_type t)
            s
   else ""
        
-let print_out_expr_set_fstar (tbl:set) (oe:A.out_expr) : ML string =
+let print_out_expr_set_fstar (tbl:set) (oe:output_expr) : ML string =
   let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
   match H.try_find tbl fn_name with
   | Some _ -> ""
@@ -1246,61 +1410,67 @@ let print_out_expr_set_fstar (tbl:set) (oe:A.out_expr) : ML string =
     H.insert tbl fn_name ();
     //TODO: module name?
     //AR: TODO: B.loc_none -> B.output_loc
-    let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
-    let fn_arg2_t = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
+    let fn_arg1_t = print_typ "" (out_expr_bt oe) in
+    let fn_arg2_t = print_typ "" (out_expr_t oe) in
     Printf.sprintf
       "\n\nval %s (_:%s) (_:%s) (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
       fn_name
       fn_arg1_t
       fn_arg2_t
 
-let print_out_expr_set (tbl:set) (oe:A.out_expr) : ML string =
-  let open A in
+let rec print_out_expr (oe:output_expr) : ML string =
+  match oe.oe_expr with
+  | T_OE_id i -> A.ident_to_string i
+  | T_OE_star o -> Printf.sprintf "*(%s)" (print_out_expr o)
+  | T_OE_addrof o -> Printf.sprintf "&(%s)" (print_out_expr o)
+  | T_OE_deref o i -> Printf.sprintf "(%s)->(%s)" (print_out_expr o) (A.ident_to_string i)
+  | T_OE_dot o i -> Printf.sprintf "(%s).(%s)" (print_out_expr o) (A.ident_to_string i)
+
+let print_out_expr_set (tbl:set) (oe:output_expr) : ML string =
   let fn_name = pascal_case (Printf.sprintf "set_%s" (out_fn_name oe)) in
   match H.try_find tbl fn_name with
   | Some _ -> ""
   | _ ->
     H.insert tbl fn_name ();
-    let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
+    let fn_arg1_t = print_as_c_type (out_expr_bt oe) in
     let fn_arg1_name = out_expr_var oe in
-    let fn_arg2_t = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
+    let fn_arg2_t = print_as_c_type (out_expr_t oe) in
     let fn_arg2_name = "__v" in
     let fn_body = Printf.sprintf "%s = %s;" (print_out_expr oe) fn_arg2_name in
     let fn = Printf.sprintf "static inline void %s (%s %s, %s %s){\n    %s;\n}\n"
       fn_name
       fn_arg1_t
-      (ident_name fn_arg1_name)
+      (A.ident_name fn_arg1_name)
       fn_arg2_t
       fn_arg2_name
       fn_body in
     Printf.sprintf "\n\n%s\n\n" fn
 
-let print_out_expr_get_fstar (tbl:set) (oe:A.out_expr) : ML string =
+let print_out_expr_get_fstar (tbl:set) (oe:output_expr) : ML string =
   let fn_name = Printf.sprintf "get_%s" (out_fn_name oe) in
   match H.try_find tbl fn_name with
   | Some _ -> ""
   | _ ->
     H.insert tbl fn_name ();
-    let fn_arg1_t = print_typ "" (ast_typ_to_target_typ (out_expr_bt oe)) in
-    let fn_res = print_typ "" (ast_typ_to_target_typ (out_expr_t oe)) in
+    let fn_arg1_t = print_typ "" (out_expr_bt oe) in
+    let fn_res = print_typ "" (out_expr_t oe) in
     Printf.sprintf "\n\nval %s : %s -> %s\n\n" fn_name fn_arg1_t fn_res
 
-let print_out_expr_get(tbl:set) (oe:A.out_expr) : ML string =
-  let open A in
+let print_out_expr_get(tbl:set) (oe:output_expr) : ML string =
   let fn_name = pascal_case (Printf.sprintf "get_%s" (out_fn_name oe)) in
   match H.try_find tbl fn_name with
   | Some _ -> ""
   | _ ->
     H.insert tbl fn_name ();
-    let fn_arg1_t = print_as_c_type (ast_typ_to_target_typ (out_expr_bt oe)) in
+    let fn_arg1_t = print_as_c_type (out_expr_bt oe) in
     let fn_arg1_name = out_expr_var oe in
-    let fn_res = print_as_c_type (ast_typ_to_target_typ (out_expr_t oe)) in
+    let fn_res = print_as_c_type (out_expr_t oe) in
     let fn_body = Printf.sprintf "return %s;" (print_out_expr oe) in
     let fn = Printf.sprintf "static inline %s %s (%s %s){\n    %s;\n}\n"
       fn_res
       fn_name
       fn_arg1_t
-      (ident_name fn_arg1_name)
+      (A.ident_name fn_arg1_name)
       fn_body in
     Printf.sprintf "\n\n%s\n\n" fn
 
@@ -1308,29 +1478,66 @@ let output_setter_name lhs = Printf.sprintf "set_%s" (out_fn_name lhs)
 let output_getter_name lhs = Printf.sprintf "get_%s" (out_fn_name lhs)
 let output_base_var lhs = out_expr_var lhs
 
-let print_out_exprs_fstar modul (oes:list (A.out_expr & bool)) : ML string =
+let print_out_exprs_fstar (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
-  let s = String.concat "" (oes |> List.map (fun (oe, b) ->
-    Printf.sprintf "%s%s%s"
-      (print_output_type_val tbl (out_expr_bt oe))
-      (print_output_type_val tbl (out_expr_t oe))
-      (if b then print_out_expr_set_fstar tbl oe
-       else print_out_expr_get_fstar tbl oe))) in
-  Printf.sprintf
+  let s = String.concat "" (ds |> List.map (fun d ->
+    match fst d with
+    | Output_type_expr oe is_get ->
+      Printf.sprintf "%s%s%s"
+        (print_output_type_val tbl (out_expr_bt oe))
+        (print_output_type_val tbl (out_expr_t oe))
+        (if not is_get then print_out_expr_set_fstar tbl oe
+         else print_out_expr_get_fstar tbl oe)
+    | _ -> "")) in
+   Printf.sprintf
     "module %s.OutputTypes\n\n\
-    open FStar.HyperStack.ST\n\
-    open Prelude\n\
-    open Actions\n\
-    module B = LowStar.Buffer\n\n\
-    noextract val output_loc : B.loc\n\n%s"
+     open FStar.HyperStack.ST\n\
+     open Prelude\n\
+     open Actions\n\
+     module B = LowStar.Buffer\n\n\
+     noextract val output_loc : B.loc\n\n%s"
     modul
     s
 
-let print_out_exprs_c _ (oes:list (A.out_expr & bool)) : ML string =
+let print_out_exprs_c _ (ds:decls) : ML string =
   let tbl = H.create 10 in
-  String.concat "" (oes |> List.map (fun (oe, b) ->
-    Printf.sprintf "%s%s%s"
-      (print_output_type_c_typedef tbl (out_expr_bt oe))
-      (print_output_type_c_typedef tbl (out_expr_t oe))
-      (if b then print_out_expr_set tbl oe
-       else print_out_expr_get tbl oe)))
+  String.concat "" (ds |> List.map (fun d ->
+    match fst d with
+    | Output_type_expr oe is_get ->
+      Printf.sprintf "%s%s%s"
+       (print_output_type_c_typedef tbl (out_expr_bt oe))
+        (print_output_type_c_typedef tbl (out_expr_t oe))
+        (if not is_get then print_out_expr_set tbl oe
+         else print_out_expr_get tbl oe)
+    | _ -> ""))
+
+
+// let print_out_exprs_fstar modul (oes:list (A.out_expr & bool)) : ML string =
+//   let tbl = H.create 10 in
+//   let s = String.concat "" (oes |> List.map (fun (oe, b) ->
+//     Printf.sprintf "%s%s%s"
+//       (print_output_type_val tbl (out_expr_bt oe))
+//       (print_output_type_val tbl (out_expr_t oe))
+//       (if b then print_out_expr_set_fstar tbl oe
+//        else print_out_expr_get_fstar tbl oe))) in
+//   Printf.sprintf
+//     "module %s.OutputTypes\n\n\
+// //     open FStar.HyperStack.ST\n\
+// //     open Prelude\n\
+// //     open Actions\n\
+// //     module B = LowStar.Buffer\n\n\
+// //     noextract val output_loc : B.loc\n\n%s"
+//     modul
+//     s
+
+// // let rec out_fn_name (oe:output_expr) : ML string =
+// //   let open A in
+// //   match oe.out_expr_node.v with
+// //   | OE_id _ -> out_expr_bt_name oe
+// //   | OE_star oe -> Printf.sprintf "%s_star" (out_fn_name oe)
+// //   | OE_addrof oe -> Printf.sprintf "%s_addrof" (out_fn_name oe)
+// //   | OE_deref oe f -> Printf.sprintf "%s_deref_%s" (out_fn_name oe) (ident_name f)
+// //   | OE_dot oe f -> Printf.sprintf "%s_dot_%s" (out_fn_name oe) (ident_name f)
+
+
+

@@ -359,13 +359,34 @@ type decl_attributes = {
 }
 
 noeq
+type output_expr' =
+  | T_OE_id : A.ident -> output_expr'
+  | T_OE_star : output_expr -> output_expr'
+  | T_OE_addrof : output_expr -> output_expr'
+  | T_OE_deref : output_expr -> A.ident -> output_expr'
+  | T_OE_dot : output_expr -> A.ident -> output_expr'
+
+and output_expr = {
+  oe_expr : output_expr';
+  oe_bt : typ;
+  oe_t : typ;
+  oe_base_ident : A.ident
+}
+  
+noeq
 type decl' =
   | Assumption : assumption -> decl'
   | Definition : definition -> decl' //the bool marks it for inline_for_extraction
   | Type_decl  : type_decl -> decl'
-  | Output_type: A.out_typ -> decl'
 
-let decl = decl' * decl_attributes
+  | Output_type_expr : output_expr -> is_get:bool -> decl'
+  // | Output_type_val    : typ -> decl'
+  // | Output_type_getter : get_name:string -> ret_typ:typ -> arg_typ:typ -> arg_name:string -> get_body:string -> decl'
+  // | Output_type_setter : set_name:string -> var_typ:typ -> var_name:string -> val_type:typ -> val_name:string -> set_body:string -> decl'
+
+type decl = decl' * decl_attributes
+
+type decls = list decl
 
 val error_handler_decl : decl
 val print_typ (mname:string) (t:typ) : ML string //(decreases t)
@@ -375,8 +396,10 @@ val print_decls_signature (modul: string) (ds:list decl) : ML string
 val print_c_entry (modul: string) (env: global_env) (ds:list decl)
   : ML (string & string)
 
-val output_setter_name (lhs:A.out_expr) : ML string
-val output_getter_name (lhs:A.out_expr) : ML string
-val output_base_var (lhs:A.out_expr) : ML A.ident
-val print_out_exprs_fstar (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string
-val print_out_exprs_c (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string
+val output_setter_name (lhs:output_expr) : ML string
+val output_getter_name (lhs:output_expr) : ML string
+val output_base_var (lhs:output_expr) : ML A.ident
+val print_out_exprs_fstar (modul:string) (ds:decls) : ML string
+val print_out_exprs_c (modul:string) (ds:decls) : ML string
+// val print_out_exprs_fstar (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string
+// val print_out_exprs_c (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string

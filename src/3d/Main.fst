@@ -117,7 +117,7 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   let output_types_fsti_file =
     open_write_file
       (Printf.sprintf "%s/%s.OutputTypes.fsti" (Options.get_output_dir ()) modul) in
-  FStar.IO.write_string output_types_fsti_file (Target.print_out_exprs_fstar modul out_exprs);
+  FStar.IO.write_string output_types_fsti_file (Target.print_out_exprs_fstar modul t_decls);
   FStar.IO.close_write_file output_types_fsti_file;
 
   let fst_file =
@@ -165,7 +165,7 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   let output_types_c_file =
     open_write_file
       (Printf.sprintf "%s/%s_OutputTypes.c" (Options.get_output_dir ()) modul) in
-  FStar.IO.write_string output_types_c_file (Target.print_out_exprs_c modul out_exprs);
+  FStar.IO.write_string output_types_c_file (Target.print_out_exprs_c modul t_decls);
 
   if StaticAssertions.has_static_asserts static_asserts then begin
     let c_static_asserts_file =
