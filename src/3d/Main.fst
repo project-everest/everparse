@@ -36,7 +36,6 @@ let translate_module (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
         list Target.decl &
         StaticAssertions.static_asserts &
-        list (Ast.out_expr & bool) &
         env) =
 
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
@@ -96,14 +95,12 @@ let translate_module (en:env) (mname:string) (fn:string)
    decls,
    t_decls,
    static_asserts,
-   Binding.get_output_exprs benv,
    { binding_env = benv;
      typesizes_env = senv;
      translate_env = tenv }
 
 let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   (static_asserts:StaticAssertions.static_asserts)
-  (out_exprs:list (Ast.out_expr & bool))
   : ML unit =
 
   let types_fst_file =
@@ -178,9 +175,9 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   end
 
 let process_file (en:env) (fn:string) (modul:string) (emit_fstar:bool) : ML env =
-  let _decls, t_decls, static_asserts, out_exprs, en =
+  let _decls, t_decls, static_asserts, en =
     translate_module en modul fn in
-  if emit_fstar then emit_fstar_code en modul t_decls static_asserts out_exprs
+  if emit_fstar then emit_fstar_code en modul t_decls static_asserts
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
 
   let ds = Binding.get_exported_decls en.binding_env modul in

@@ -72,7 +72,6 @@ noeq
 type global_env = {
   ge_h: global_hash_t;
   ge_out_t: H.t ident' decl;  //a table for output types declarations
-  out_exprs: ref (list (out_expr & bool)); //AR: TODO: this maintains a list of all top-level output expressions, that are then printed by the Translator, but we need not maintain such a list here, Translator can do it
 }
 
 /// Maps locally bound names, i.e., a field name to its type
@@ -442,12 +441,6 @@ let is_output_type (ge:global_env) (t:typ) : ML ident =
   | _ -> err ()
 
 
-/// AR: TODO: should go, see the comment in the defn. of env above
-
-let add_out_expr (ge:global_env) (oe:out_expr{Some? oe.out_expr_meta}) (is_set:bool) : ML unit =
-  ge.out_exprs := !ge.out_exprs @ [oe, is_set]
-
-
 /// Also populates the base variable and base type fields of the output expression
 
 let rec check_out_expr (env:env) (oe0:out_expr) : ML (oe:out_expr{Some? oe.out_expr_meta}) =
@@ -809,7 +802,6 @@ and check_typ_param (env:env) (p:typ_param) : ML (typ_param & typ) =
     Inl e, t
   | Inr o ->
     let o = check_out_expr env o in
-    add_out_expr (global_env_of_env env) o false;
     Inr o, (let _, _, t = Some?.v o.out_expr_meta in t)
 
 #pop-options
@@ -852,7 +844,6 @@ let rec check_field_action (env:env) (f:field) (a:action)
                         (print_typ t)
                         (print_typ t'))
                      rhs.range;
-          add_out_expr (global_env_of_env env) lhs true;
           Action_assignment lhs rhs, tunit
           // | _ ->
           //   error "Assigning to a non-pointer" lhs.range
@@ -1390,14 +1381,12 @@ let resolve_out_expr (env:env) (oe:out_expr)
 
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
   let decls = List.map (bind_decl g) p in
-  g.out_exprs := !g.out_exprs |> List.map (fun (oe, b) -> resolve_out_expr (mk_env g) oe, b);
   decls, g
 
 let initial_global_env () =
   let e = {
     ge_h = H.create 10;
     ge_out_t = H.create 10;
-    out_exprs = alloc [];
   }
   in
   let nullary_decl i =
@@ -1445,9 +1434,6 @@ let get_exported_decls ge mname =
          else exported_decls, k::private_decls) ge.ge_h ([], [])
 
 let is_output_type_ident ge i = Some? (H.try_find ge.ge_out_t i.v)
-
-let get_output_exprs ge =
-  !ge.out_exprs
 
 let finish_module ge mname e_and_p =
   e_and_p |> snd |> List.iter (H.remove ge.ge_h);
