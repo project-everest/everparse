@@ -1,5 +1,7 @@
 module ASN1.Base
 
+include LowParse.Spec.Base
+
 // ASN.1 Kinds
 
 module U32 = FStar.UInt32
@@ -7,7 +9,8 @@ module I32 = FStar.Int32
 module U8 = FStar.UInt8
 module B = FStar.Bytes
 module Seq = FStar.Seq
-module Set = FStar.Set
+module List = FStar.List.Tot
+//module Set = FStar.Set
 
 // ASN.1 Identifier
 
@@ -111,7 +114,7 @@ let asn1_terminal_type_of (k : asn1_terminal_k) : Type =
   | ASN1_TIME -> asn1_terminal_t ASN1_TIME
 *)
 
-noextract
+noeq noextract
 type asn1_content_k : Type =
 | ASN1_TERMINAL : asn1_terminal_k -> asn1_content_k
 | ASN1_SEQUENCE : #s : _ -> asn1_sequence_k s -> asn1_content_k
@@ -124,11 +127,9 @@ type asn1_content_k : Type =
 // Note that length does not matter here
 and asn1_k : Set.set asn1_id_t -> Type =
 | ASN1_ILC : id : asn1_id_t -> asn1_content_k -> asn1_k (Set.singleton id)
-| ASN1_CHOICE_ILC : #s : _ -> asn1_choice_k s -> asn1_k s
-
-and asn1_choice_k : Set.set asn1_id_t -> Type =
-| ASN1_CHOICE_SINGLETON : #s : _ -> asn1_k s -> asn1_choice_k s
-| ASN1_CHOICE_CONS : #s : _ -> asn1_k s -> #s' : _ -> asn1_choice_k s' -> squash (Set.disjoint s s') -> asn1_choice_k (Set.union s s')
+| ASN1_CHOICE_ILC : choices : list (asn1_id_t & asn1_content_k) {Cons? choices} -> 
+                    squash (List.noRepeats (List.map fst choices)) -> 
+                    asn1_k (Set.as_set (List.map fst choices))
 
 and asn1_sequence_k : Set.set asn1_id_t -> Type =
 | ASN1_SEQUENCE_NIL : asn1_sequence_k (Set.empty)
@@ -155,6 +156,33 @@ let v_of_default (#a : eqtype) (#v : a) (v' : default_tv v) : a =
   | Default -> v
   | Nondefault v'' -> v''
 
+let rec assoc_slt (#xT: eqtype) (#yT : Type) (l : list (xT & yT)) (x : xT) :
+  Lemma (requires Some? (List.assoc x l))
+        (ensures (let Some y = (List.assoc x l) in y << l))
+        (decreases l)
+= match l with
+  | (a, b) :: t -> if x = a then () else (assoc_slt t x)
+
+let idlookup_t_postcond (#key : eqtype) (id : key) (lc : list (key & Type)) (t : Type) : GTot Type0
+= (t << lc \/ t == False)
+
+let idlookup_t (#key : eqtype) (id : key) (lc : list (key & Type)) :
+  Pure Type
+  (requires True)
+  (ensures fun t -> idlookup_t_postcond id lc t)
+= let _ = List.assoc_mem id lc in
+  let res = List.assoc id lc in
+  match res with
+  | Some t -> 
+    let _ = List.assoc_memP_some id t lc in
+    let _ = assoc_slt lc id in
+    t  
+  | None -> 
+    let _ = List.assoc_memP_none id lc in
+    False 
+
+let make_gen_choice_type (#key : eqtype) (lc : list (key & Type)) = (id : key) & (idlookup_t id lc)
+
 let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
   match k with
   | ASN1_TERMINAL k' -> asn1_terminal_t k'
@@ -163,15 +191,18 @@ let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
   | ASN1_SET_OF k' -> asn1_t k'
   | ASN1_PREFIXED k' -> asn1_t k'
 
+and asn1_lc_t (lc : list (asn1_id_t & asn1_content_k)) : Tot (list (asn1_id_t & Type)) (decreases lc) =
+  match lc with
+  | Nil -> Nil 
+  | h :: t -> 
+    let (x, y) = h in
+    (x, asn1_content_t y) :: (asn1_lc_t t)
+
 and asn1_t (#s : _) (k : asn1_k s) : Tot Type (decreases k) =
   match k with
   | ASN1_ILC id k' -> asn1_content_t k'
-  | ASN1_CHOICE_ILC k' -> asn1_choice_t k'
-
-and asn1_choice_t (#s : _) (k : asn1_choice_k s) : Tot Type (decreases k) =
-  match k with
-  | ASN1_CHOICE_SINGLETON k' -> asn1_t k'
-  | ASN1_CHOICE_CONS k' k'' pf -> either (asn1_t k') (asn1_choice_t k'')
+  | ASN1_CHOICE_ILC lc pf -> 
+    make_gen_choice_type (asn1_lc_t lc)
 
 and asn1_sequence_t (#s : _) (k : asn1_sequence_k s) : Tot Type (decreases k) =
   match k with
@@ -179,6 +210,12 @@ and asn1_sequence_t (#s : _) (k : asn1_sequence_k s) : Tot Type (decreases k) =
   | ASN1_SEQUENCE_CONS_PLAIN h t -> (asn1_t h) & (asn1_sequence_t t)
   | ASN1_SEQUENCE_CONS_OPTIONAL h t pf -> (option (asn1_t h)) & (asn1_sequence_t t)
   | ASN1_SEQUENCE_CONS_DEFAULT_TERMINAL id defv t pf -> (default_tv defv) & (asn1_sequence_t t)
+
+type asn1_length_u32_t = U32.t
+
+noeq
+type gen_parser =
+| Mkgenparser : (k : parser_kind) -> (t : Type) -> (p : parser k t) -> gen_parser
 
 (*
 noeq
