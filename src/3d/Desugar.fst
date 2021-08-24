@@ -126,6 +126,10 @@ let desugar_one_enum (d:decl) : ML (list decl) =
 //   | _ -> d
 
 
+(*
+ * output_types table to set the is_output field in the Typ_app nodes
+ *)
+
 noeq
 type qenv = {
   mname : string;
@@ -182,12 +186,13 @@ and resolve_expr (env:qenv) (e:expr) : ML expr = { e with v = resolve_expr' env 
 let resolve_typ_param (env:qenv) (p:typ_param) : ML typ_param =
   match p with
   | Inl e -> resolve_expr env e |> Inl
-  | _ -> p
+  | _ -> p  //Currently not going inside output expressions, should we?
 
 let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
   match t with
   | Type_app hd _ args ->
     let hd = resolve_ident env hd in
+    //Set is_out argument to the Type_app appropriately
     let is_out = Some? (H.try_find env.output_types hd.v) in
     Type_app hd is_out (List.map (resolve_typ_param env) args)
   | Pointer t -> Pointer (resolve_typ env t)

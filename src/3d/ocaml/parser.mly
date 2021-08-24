@@ -191,6 +191,10 @@ qident:
   | i=IDENT    { i }
   | m=IDENT DOT n=IDENT    { with_range ({modul_name=Some m.v.name; name=n.v.name}) $startpos }
 
+(*
+ * Note that the is_output field is being set to false in the parser
+ *   It is set properly in the desugaring phase
+ *)
 typ_no_range:
   | i=qident { Type_app(i, false, []) }
   | hd=qident LPAREN a=right_flexible_nonempty_list(COMMA, typ_param) RPAREN { Type_app(hd, false, a) }
@@ -299,7 +303,7 @@ out_expr_no_range:
 
 out_expr:
   | oe=out_expr_no_range    { {out_expr_node = with_range oe $startpos;
-                               out_expr_meta = None} }
+                               out_expr_meta = None} }  //metadata is set after typechecking (Binding)
 
 atomic_action:
   | RETURN e=expr SEMICOLON { Action_return e }

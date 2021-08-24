@@ -405,6 +405,9 @@ let try_retype_arith_exprs (env:env) e1 e2 rng : ML (option (expr & expr & typ))
       None
     | _ -> None
 
+(*
+ * Add output type to the environment
+ *)
 let add_output_type (ge:global_env) (i:ident) (d:decl{OutputType? d.d_decl.v}) : ML unit =
   let insert i = H.insert ge.ge_out_t i d in
   insert i.v;
@@ -433,7 +436,7 @@ let lookup_output_type_field (ge:global_env) (i f:ident) : ML typ =
   | None ->
     error (Printf.sprintf "Cannot find output field %s:%s" (ident_to_string i) (ident_to_string f)) f.range
 
-let is_output_type (ge:global_env) (t:typ) : ML ident =
+let check_output_type (ge:global_env) (t:typ) : ML ident =
   let err () : ML ident =
     error (Printf.sprintf "Type %s is not an output type" (print_typ t)) t.range in
   match t.v with
@@ -441,9 +444,11 @@ let is_output_type (ge:global_env) (t:typ) : ML ident =
   | _ -> err ()
 
 
-/// Also populates the base variable and base type fields of the output expression
+/// Populated the output expression metadata
 
-let rec check_out_expr (env:env) (oe0:out_expr) : ML (oe:out_expr{Some? oe.out_expr_meta}) =
+let rec check_out_expr (env:env) (oe0:out_expr)
+  : ML (oe:out_expr{Some? oe.out_expr_meta}) =
+  
   match oe0.out_expr_node.v with
   | OE_id i ->
     let t = lookup_expr_name env i in
@@ -471,7 +476,7 @@ let rec check_out_expr (env:env) (oe0:out_expr) : ML (oe:out_expr{Some? oe.out_e
     let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
     (match oe_t.v with
      | Pointer t ->
-       let i = is_output_type (global_env_of_env env) t in
+       let i = check_output_type (global_env_of_env env) t in
        {oe0 with
         out_expr_node={oe0.out_expr_node with v=OE_deref oe f};
         out_expr_meta=Some (oe_b, oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
@@ -482,7 +487,7 @@ let rec check_out_expr (env:env) (oe0:out_expr) : ML (oe:out_expr{Some? oe.out_e
   | OE_dot oe f ->
     let oe = check_out_expr env oe in
     let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
-    let i = is_output_type (global_env_of_env env) oe_t in
+    let i = check_output_type (global_env_of_env env) oe_t in
     {oe0 with
      out_expr_node={oe0.out_expr_node with v=OE_dot oe f};
      out_expr_meta=Some (oe_b, oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
@@ -500,7 +505,8 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
       then { t with v = Pointer (check_typ pointer_ok env t0) }
       else error (Printf.sprintf "Pointer types are not permissible here; got %s" (print_typ t)) t.range
 
-    | Type_app _ true _ -> error "Impossible!" t.range
+    | Type_app _ true _ ->
+      error "Impossible, check_typ is not supposed to typecheck output types!" t.range
     | Type_app s false ps ->
       match lookup env s with
       | Inl _ ->
@@ -518,10 +524,10 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
               match p with
               | Inl e -> (match try_cast_integer env (e, t') t with
                          | Some e -> Inl e
-                         | _ -> error "Argument type mismatch-1" (range_of_typ_param p))
+                         | _ -> error "Argument type mismatch after trying integer cast" (range_of_typ_param p))
               | _ ->
                 error (Printf.sprintf
-                         "Argument type mismatch-2 (%s vs %s)"
+                         "Argument type mismatch (%s vs %s)"
                          (Ast.print_typ t) (Ast.print_typ t')) (range_of_typ_param p)
             end
             else p)
@@ -845,9 +851,6 @@ let rec check_field_action (env:env) (f:field) (a:action)
                         (print_typ t'))
                      rhs.range;
           Action_assignment lhs rhs, tunit
-          // | _ ->
-          //   error "Assigning to a non-pointer" lhs.range
-          // end
 
         | Action_call f args ->
           error "Extern calls are not yet supported" r
@@ -981,7 +984,9 @@ let check_switch (env:env) (s:switch_case)
     let tags_t_opt =
       match scrutinee_t.v with
       | Pointer _ -> fail_non_equality_type ()
-      | Type_app hd true es -> error "Impossible!" head.range
+      | Type_app _ true _ ->
+        error "Impossible, check_typ is not supposed to typecheck output types!" head.range
+
       | Type_app hd false es ->
         match try_lookup_enum_cases env hd with
         | Some enum -> Some enum
@@ -1152,21 +1157,26 @@ let elaborate_bit_fields env (fields:list field)
       in
       aux 0 None fields
 
-let rec check_output_field_type (ge:global_env) (t:typ) : ML unit =
+
+let rec check_integer_or_output_type (ge:global_env) (t:typ) : ML unit =
   match t.v with
-  | Type_app i is_out [] ->
+  | Type_app i is_out [] ->  //either it should be a base integer type, or an output type
     (match maybe_as_integer_typ i with
      | Some _ -> ()
      | _ ->
-       if not is_out then error (Printf.sprintf "%s is not a valid output type" (print_typ t)) t.range)
-  | Pointer t -> check_output_field_type ge t
-  | _ -> error (Printf.sprintf "%s is not a valid output type" (print_typ t)) t.range
+       if not is_out then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range)
+  | Pointer t -> check_integer_or_output_type ge t
+  | _ -> error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
 
 let check_mutable_param (env:env) (p:param) : ML unit =
   //a mutable parameter should have a pointer type
   //and the base type may be a base type or an output type
   let t, _, _ = p in
-  check_output_field_type (global_env_of_env env) t
+  match t.v with
+  | Pointer bt ->
+    check_integer_or_output_type (global_env_of_env env) bt
+  | _ ->
+    error (Printf.sprintf "%s is not a valid mutable parameter type, it is not a pointer type" (print_typ t)) t.range
 
 let check_params (env:env) (ps:list param) : ML unit =
   ps |> List.iter (fun (t, p, q) ->
@@ -1274,9 +1284,15 @@ let elaborate_record (e:global_env)
     add_global e tdnames.typedef_name d (Inl attrs);
     d
 
+(*
+ * An output field type is either a base type or another output type
+ *
+ * TODO: check field name shadowing
+ *)
+
 let rec check_output_field (ge:global_env) (fld:out_field) : ML unit =
   match fld with
-  | Out_field_named _ t -> check_output_field_type ge t
+  | Out_field_named _ t -> check_integer_or_output_type ge t
   | Out_field_anon l _ -> check_output_fields ge l
 
 and check_output_fields (ge:global_env) (flds:list out_field) : ML unit =
@@ -1363,25 +1379,8 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_output_type e out_t.out_typ_names.typedef_name d;
     d
 
-let rec resolve_abbrev_in_out_typ (env:env) (t:typ) : ML typ =
-  match t.v with
-  | Type_app hd b args ->
-    {t with v = Type_app (resolve_typedef_abbrev env hd) b args}
-  | Pointer bt ->
-    {t with v = Pointer (resolve_abbrev_in_out_typ env bt)}
-
-let resolve_out_expr (env:env) (oe:out_expr)
-  : ML out_expr
-  = let meta =
-      match oe.out_expr_meta with
-      | None -> None
-      | Some (id, bt, t) ->
-        Some (id, resolve_abbrev_in_out_typ env bt, resolve_abbrev_in_out_typ env t) in
-    {oe with out_expr_meta = meta}
-
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
-  let decls = List.map (bind_decl g) p in
-  decls, g
+  List.map (bind_decl g) p, g
 
 let initial_global_env () =
   let e = {
@@ -1432,8 +1431,6 @@ let get_exported_decls ge mname =
     else if d.d_exported
          then k::exported_decls, private_decls
          else exported_decls, k::private_decls) ge.ge_h ([], [])
-
-let is_output_type_ident ge i = Some? (H.try_find ge.ge_out_t i.v)
 
 let finish_module ge mname e_and_p =
   e_and_p |> snd |> List.iter (H.remove ge.ge_h);

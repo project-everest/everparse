@@ -24,6 +24,7 @@ module H = Hashtable
 module TS = TypeSizes
 open FStar.All
 open FStar.Pervasives
+open FStar.List.Tot
 
 noeq
 type global_env = {
@@ -172,7 +173,7 @@ let unit_parser =
     let unit_id = with_dummy_range (to_ident' "unit") in
     mk_parser pk_return unit_typ unit_id "none" (T.Parse_return unit_val)
 let pair_typ t1 t2 =
-    T.T_app (with_dummy_range (to_ident' "tuple2")) true [Inl t1; Inl t2]
+    T.T_app (with_dummy_range (to_ident' "tuple2")) false [Inl t1; Inl t2]
 let pair_value x y =
     T.Record (with_dummy_range (to_ident' "tuple2"))
              [(with_dummy_range (to_ident' "fst"), T.mk_expr (T.Identifier x));
@@ -284,6 +285,10 @@ let rec translate_expr (e:A.expr) : ML T.expr =
    | This -> failwith "`this` should have been eliminated already"),
   e.A.range
 
+(*
+ * Straightforward 1-1 translation
+ *)
+
 let rec translate_output_type (t:A.typ) : ML T.typ =
   match t.v with
   | Pointer t -> T.T_pointer (translate_output_type t)
@@ -307,11 +312,13 @@ and translate_out_expr (oe:out_expr) : ML T.output_expr =
       T.oe_bt = translate_output_type bt;
       T.oe_t = translate_output_type t;
       T.oe_base_ident = i }
-  | None -> failwith "Impossible!"
+  | None -> failwith "Impossible, translate_out_expr got an output expression node without metadata!"
   
 
-/// An output expression type parameter is translated to a getter
-///   applied to the base variable
+(*
+ * We create the Output_type_expr decl with these attributes,
+ *   they are not used for output types
+ *)
 
 let output_types_attributes = {
   T.is_hoisted = false;
@@ -319,10 +326,17 @@ let output_types_attributes = {
   T.should_inline = false;
   T.comments = [] }
 
+(*
+ * An output expression type parameter is translated to
+ *   an external function call
+ *
+ * In addition we emit a top-level Output_type_expr decl
+ *)
+
 let translate_out_expr_typ_param (oe:out_expr) : ML (T.expr & T.decls) =
   let t_oe = translate_out_expr oe in
-  let fn_name = Target.output_getter_name t_oe in
-  let base_var = Target.output_base_var t_oe in
+  let fn_name = T.output_getter_name t_oe in
+  let base_var = T.output_base_var t_oe in
   let te =
     (T.App (T.Ext fn_name)
       [(T.Identifier base_var, oe.A.out_expr_node.A.range)]), oe.A.out_expr_node.A.range in
@@ -339,10 +353,8 @@ let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
     let t', decls = translate_typ t in
     T.T_pointer t', decls
   | Type_app hd b args ->
-    let args, decls = List.fold_left (fun (args, decls) arg ->
-      let arg, ds = translate_typ_param arg in
-      args@[arg], decls@ds) ([], []) args in
-    T.T_app hd b (List.map Inr args), decls //(List.map (fun x -> Inr (translate_typ_param x)) args)
+    let args, decls = args |> List.map translate_typ_param |> List.split in
+    T.T_app hd b (List.map Inr args), List.flatten decls
 
 let has_entrypoint (l:list A.attribute) =
   List.tryFind (function A.Entrypoint -> true | _ -> false) l
@@ -350,14 +362,15 @@ let has_entrypoint (l:list A.attribute) =
 
 let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
   : ML (T.typedef_name & T.decls) =
-  let params, ds =
-    List.fold_left (fun (params, decls) (t, id, _) ->
-      let t, ds = translate_typ t in
-      params@[id, t], decls@ds) ([], []) params in //TODO: ignoring qualifier
+
+  let params, ds = params |> List.map (fun (t, id, _) ->  //TODO: ignores qualifier
+    let t, ds = translate_typ t in
+    (id, t), ds) |> List.split in
+
   let open T in
   { td_name = tdn.typedef_name;
     td_params = params;
-    td_entrypoint = has_entrypoint tdn.typedef_attributes }, ds
+    td_entrypoint = has_entrypoint tdn.typedef_attributes }, List.flatten ds
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
   let refinement i =
@@ -423,7 +436,8 @@ let rec parse_typ (env:global_env)
   | T_false ->
     mk_parser pk_impos T_false typename fieldname Parse_impos
 
-  | T.T_app _ true _ -> failwith "No parsers for output types"
+  | T.T_app _ true _ ->
+    failwith "Impossible, did not expect parse_typ to be called with an output type!"
 
   | T.T_app {v={name="nlist"}} false [Inr e; Inl t] ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
@@ -557,31 +571,24 @@ let make_reader (env:global_env) (t:T.typ) : ML T.reader =
 /// To translate an assignment action, a star is translated as before
 ///
 /// Other output expressions are translated to setters applied to the base variable and rhs
+///
+/// In addition a top-level Output_type_expr decl is emitted
 
 let translate_action_assignment (lhs:A.out_expr) (rhs:A.expr)
   : ML (T.atomic_action & T.decls) =
+
   let open A in
   match lhs.out_expr_node.v with
   | OE_star ({out_expr_node={v=OE_id i}}) ->
     T.Action_assignment i (translate_expr rhs), []
   | _ ->
     let t_lhs = translate_out_expr lhs in
-    let fn_name = Target.output_setter_name t_lhs in
-    let base_var = Target.output_base_var t_lhs in
+    let fn_name = T.output_setter_name t_lhs in
+    let base_var = T.output_base_var t_lhs in
     let v = translate_expr rhs in
     let act = T.Action_call (Ast.with_dummy_range (Ast.to_ident' fn_name))
       [(T.Identifier base_var, rhs.A.range); v] in
     act, [T.Output_type_expr t_lhs false, output_types_attributes]
-
-    // let oe_bt, decls1 = translate_typ (A.out_expr_bt lhs) in
-    // let oe_t, decls2 = translate_typ (A.out_expr_t lhs) in
-
-    // let decls = [
-    //   Target.Output_type_val oe_bt, output_types_attributes;
-    //   Target.Output_type_val oe_t, output_types_attributes;
-    //   Target.Output_type_getter lhs.out_expr_node.v oe_t oe_bt, output_types_attributes] in
-
-    // act, decls
 
 let rec translate_action (a:A.action) : ML (T.action & T.decls) =
   let translate_atomic_action (a:A.atomic_action)
@@ -1266,7 +1273,6 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
       match case with
       | DefaultCase _ -> failwith "Impossible"
       | Case e f ->
-        //let open T in
         let decls', sf = translate_one_case f in
         let guard = T.mk_expr (T.App T.Eq [sc; translate_expr e]) in
         let t = T.T_if_else guard sf.T.sf_typ t_else in
@@ -1330,9 +1336,8 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
   | Record tdn params _ ast_fields ->
     let tdn, ds1 = translate_typedef_name tdn params in
     let fields, ds2 =
-      List.fold_left (fun (fields, ds) f ->
-        let field, ds' = translate_field f in
-        fields@[field], ds@ds') ([], []) ast_fields in
+      let fields, ds2 = ast_fields |> List.map translate_field |> List.split in
+      fields, List.flatten ds2 in
     let hoists, fields = hoist_refinements env tdn fields in
     let p = parse_fields env tdn fields in
     let open T in
@@ -1366,7 +1371,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     } in
     ds1 @ ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
-  | OutputType out_t -> []
+  | OutputType out_t -> []  //No decl for output type specifications
 
 noeq
 type translate_env = {

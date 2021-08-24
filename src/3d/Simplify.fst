@@ -44,6 +44,10 @@ let rec simplify_expr (env:T.env_t) (e:expr)
 
     | _ -> e
 
+(*
+ * Simplify output expressions, mainly their metadata to resolve
+ *   abbrevs in the types that appear in the metadata
+ *)
 let rec simplify_typ_param (env:T.env_t) (p:typ_param) : ML typ_param =
   match p with
   | Inl e -> simplify_expr env e |> Inl

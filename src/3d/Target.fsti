@@ -86,7 +86,7 @@ type action =
 noeq
 type typ =
   | T_false    : typ
-  | T_app      : hd:A.ident -> is_out:bool -> args:list index -> typ
+  | T_app      : hd:A.ident -> is_out:bool -> args:list index -> typ  //the bool is true if the hd is an output type ident
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
@@ -358,6 +358,10 @@ type decl_attributes = {
   comments: list string;
 }
 
+
+/// Output expressions, mostly a mirror image of the AST output expressions,
+///   except the types in the metadata are Target types
+
 noeq
 type output_expr' =
   | T_OE_id : A.ident -> output_expr'
@@ -372,17 +376,21 @@ and output_expr = {
   oe_t : typ;
   oe_base_ident : A.ident
 }
-  
+
+(*
+ * For every output expression in the 3d program,
+ *   we add a new decl to the target AST
+ *
+ * This decl will then be used to emit F* and C code for output types
+ *)
+
 noeq
 type decl' =
   | Assumption : assumption -> decl'
   | Definition : definition -> decl' //the bool marks it for inline_for_extraction
   | Type_decl  : type_decl -> decl'
 
-  | Output_type_expr : output_expr -> is_get:bool -> decl'
-  // | Output_type_val    : typ -> decl'
-  // | Output_type_getter : get_name:string -> ret_typ:typ -> arg_typ:typ -> arg_name:string -> get_body:string -> decl'
-  // | Output_type_setter : set_name:string -> var_typ:typ -> var_name:string -> val_type:typ -> val_name:string -> set_body:string -> decl'
+  | Output_type_expr : output_expr -> is_get:bool -> decl'  //is_get boolean indicates that the output expression appears in a getter position, i.e. in a type parameter, it is false when the output expression is an assignment action lhs
 
 type decl = decl' * decl_attributes
 
@@ -396,8 +404,19 @@ val print_decls_signature (modul: string) (ds:list decl) : ML string
 val print_c_entry (modul: string) (env: global_env) (ds:list decl)
   : ML (string & string)
 
+(*
+ * The following 3 functions are used by Translate to get action names
+ *   for output expressions
+ *)
+
 val output_setter_name (lhs:output_expr) : ML string
 val output_getter_name (lhs:output_expr) : ML string
 val output_base_var (lhs:output_expr) : ML A.ident
+
+
+(*
+ * Used by Main
+ *)
+ 
 val print_out_exprs_fstar (modul:string) (ds:decls) : ML string
 val print_out_exprs_c (modul:string) (ds:decls) : ML string

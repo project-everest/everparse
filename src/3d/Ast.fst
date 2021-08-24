@@ -207,9 +207,8 @@ let maybe_as_integer_typ (i:ident) : ML (option integer_type) =
     | _ -> None
 
 let as_integer_typ (i:ident) : ML integer_type =
-  let err () = error ("Unknown integer type: " ^ ident_to_string i) i.range in
   match maybe_as_integer_typ i with
-  | None -> err ()
+  | None -> error ("Unknown integer type: " ^ ident_to_string i) i.range
   | Some t -> t
 
 /// Integer, hex and boolean constants
@@ -264,7 +263,11 @@ type expr' =
 
 and expr = with_meta_t expr'
 
-/// Output expressions, for writing to the output types during validation
+
+
+/// Syntax for output expressions
+///
+/// Output expressions may appear as type parameters or as lhs of assignment actions
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -272,17 +275,28 @@ type out_expr' =
   | OE_id     : ident -> out_expr'
   | OE_star   : out_expr -> out_expr'
   | OE_addrof : out_expr -> out_expr'
-  | OE_deref  : out_expr -> ident -> out_expr'
-  | OE_dot    : out_expr -> ident -> out_expr'
+  | OE_deref  : out_expr -> ident -> out_expr'  //deref a field
+  | OE_dot    : out_expr -> ident -> out_expr'  //read a field
 
-/// out_expr_meta is (base identifier, base type, type of the expr)
+/// Output expressions maintain metadata
+///   (base identifier, base type, type of the expr)
 ///
-/// It is populated during typechecking in Binding.fst
+/// where base identifier is the base variable name,
+///       base type is the type of the base identifier,
+///       and type of the output expression
 ///
-/// TODO: could we also store the string from the source spec, to print it as is later?
+/// The metadata is initially None after parsing,
+///   and is populated after typechecking (in Binding.fst)
+///
+/// It is used during emitting F* and C code
+/// For each output expression, we emit an action (external function call)
+///   whose signature requires all this
+///
+/// TODO: could we also store the source string for pretty printing?
 
 and out_expr = { out_expr_node: with_meta_t out_expr';
                  out_expr_meta: option (ident & typ & typ) }
+
 
 /// A type parameter is either an expression or an output expression
 
@@ -290,9 +304,18 @@ and typ_param = either expr out_expr
 
 /// Types: all types are named and fully instantiated to expressions only
 ///   i.e., no type-parameterized types
+///
+/// The is_output boolean indicates if this is an output type
+///
+/// It is set during the desugaring phase, the parser always sets it to false
+///   We could move it to the parser itself
+///
+/// Keeping this makes it easy to check whether a type is an output type
+///   Alternatively we would have to carry some environment along
+
 
 and typ' =
-  | Type_app : ident -> bool -> list typ_param -> typ'
+  | Type_app : ident -> is_output:bool -> list typ_param -> typ'
   | Pointer : typ -> typ'
 and typ = with_meta_t typ'
 
@@ -404,6 +427,9 @@ type typedef_names = {
 let enum_case = ident & option (either int ident)
 
 /// Specification of output types
+///
+/// Output types contain atomic fields,
+///   but they may also contain anonymous structs and unions
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -416,9 +442,8 @@ noeq
 type out_typ = {
   out_typ_names    : typedef_names;
   out_typ_fields   : list out_field;
-  out_typ_is_union : bool;
+  out_typ_is_union : bool;  //TODO: unclear if this field is needed
 }
-
 
 /// A 3d specification a list of declarations
 ///   - Define: macro definitions for constants
@@ -510,7 +535,7 @@ let eq_idents (i1 i2:ident) : Tot bool =
 
 /// eq_typ: syntactic equalty of types
 
-let rec eq_out_expr (o1 o2:out_expr) : Tot bool =
+let rec eq_out_expr (o1 o2:out_expr) : bool =
   match o1.out_expr_node.v, o2.out_expr_node.v with
   | OE_id i1, OE_id i2 -> eq_idents i1 i2
   | OE_star o1, OE_star o2
@@ -519,13 +544,13 @@ let rec eq_out_expr (o1 o2:out_expr) : Tot bool =
   | OE_dot o1 i1, OE_dot o2 i2 -> eq_idents i1 i2 && eq_out_expr o1 o2
   | _ -> false
 
-let eq_typ_param (p1 p2:typ_param) : Tot bool =
+let eq_typ_param (p1 p2:typ_param) : bool =
   match p1, p2 with
   | Inl e1, Inl e2 -> eq_expr e1 e2
   | Inr o1, Inr o2 -> eq_out_expr o1 o2
   | _ -> false
 
-let rec eq_typ_params (ps1 ps2:list typ_param) : Tot bool =
+let rec eq_typ_params (ps1 ps2:list typ_param) : bool =
   match ps1, ps2 with
   | [], [] -> true
   | p1::ps1, p2::ps2 -> eq_typ_param p1 p2 && eq_typ_params ps1 ps2
@@ -595,11 +620,13 @@ and subst_action_opt (s:subst) (a:option action) : ML (option action) =
   match a with
   | None -> None
   | Some a -> Some (subst_action s a)
+
+//No need to substitute in output expressions
 let subst_out_expr (s:subst) (o:out_expr) : out_expr = o
 let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
   match p with
   | Inl e -> Inl (subst_expr s e)
-  | _ -> p
+  | Inr oe -> Inr (subst_out_expr s oe)
 let rec subst_typ (s:subst) (t:typ) : ML typ =
   match t.v with
   | Type_app hd b ps -> { t with v = Type_app hd b (List.map (subst_typ_param s) ps) }
