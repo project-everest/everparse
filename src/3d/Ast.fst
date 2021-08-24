@@ -923,13 +923,3 @@ let weak_kind_glb (w1 w2: weak_kind) : Tot weak_kind =
   if w1 = w2
   then w1
   else WeakKindWeak
-
-let out_expr_bt (oe:out_expr) : ML typ =
-  match oe.out_expr_meta with
-  | Some (_, bt, _) -> bt
-  | _ -> error "Impossible!" oe.out_expr_node.range
-
-let out_expr_t (oe:out_expr) : ML typ =
-  match oe.out_expr_meta with
-  | Some (_, _, t) -> t
-  | _ -> error "Impossible!" oe.out_expr_node.range

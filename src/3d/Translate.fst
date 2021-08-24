@@ -328,20 +328,6 @@ let translate_out_expr_typ_param (oe:out_expr) : ML (T.expr & T.decls) =
       [(T.Identifier base_var, oe.A.out_expr_node.A.range)]), oe.A.out_expr_node.A.range in
   te, [T.Output_type_expr t_oe true, output_types_attributes]
   
-  //   Target.Output_type_val oe_bt, output_types_attributes;
-  //   Target.Output_type_val oe_t, output_types_attributes;
-  //   Target.Output_type_getter
-  //     (Printf.sprintf "get_%s" (Target.out_fn_name oe))
-  //     oe_t
-  //     oe_bt
-  //     (Target.ident_name (Target.out_expr_var oe))
-  // let oe_bt, decls1 = translate_typ (A.out_expr_bt oe) in
-  // let oe_t, decls2 = translate_typ (A.out_expr_t oe) in
-  // let decls = [
-  //   Target.Output_type_val oe_bt, output_types_attributes;
-  //   Target.Output_type_val oe_t, output_types_attributes;
-  //   Target.Output_type_getter oe.out_expr_node.v oe_t oe_bt, output_types_attributes] in
-  // te, decls1@decls2@decls
 let translate_typ_param (p:typ_param) : ML (T.expr & T.decls) =
   match p with
   | A.Inl e  -> translate_expr e, []

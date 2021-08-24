@@ -401,5 +401,3 @@ val output_getter_name (lhs:output_expr) : ML string
 val output_base_var (lhs:output_expr) : ML A.ident
 val print_out_exprs_fstar (modul:string) (ds:decls) : ML string
 val print_out_exprs_c (modul:string) (ds:decls) : ML string
-// val print_out_exprs_fstar (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string
-// val print_out_exprs_c (modul:string) (out_exprs:list (A.out_expr & bool)) : ML string

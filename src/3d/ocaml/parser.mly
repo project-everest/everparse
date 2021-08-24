@@ -51,7 +51,7 @@
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
 %token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
-%token          MODULE EXPORT OUTPUT
+%token          MODULE EXPORT OUTPUT UNION
 %token          ENTRYPOINT REFINING ALIGNED
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -341,6 +341,10 @@ typedef_pointer_name_opt:
 
 out_field:
   | t=maybe_pointer_typ f=IDENT  { Out_field_named (f, t) }
+  | STRUCT LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
+    { Out_field_anon (out_flds, false) }
+  | UNION LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
+    { Out_field_anon (out_flds, true) }
 
 decl_no_range:
   | MODULE i=IDENT EQ m=IDENT { ModuleAbbrev (i, m) }

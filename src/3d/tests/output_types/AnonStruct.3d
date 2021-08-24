@@ -1,0 +1,27 @@
+output
+typedef struct _OTPOINT {
+  UINT8     x;
+  struct {
+    UINT8   y;
+    UINT8   z;
+  };
+} OTPOINT;
+
+entrypoint
+typedef struct _FLATTPOINT (mutable OTPOINT* out) {
+    UINT8 x
+    {:on-success
+        out->x = x;
+        return true;
+    };
+    UINT8 y
+    {:on-success
+        out->y = y;
+        return true;
+    };
+    UINT8 z
+    {:on-success
+        out->z = z;
+        return true;
+    };
+} FLATTPOINT;
