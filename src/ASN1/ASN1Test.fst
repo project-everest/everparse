@@ -1,6 +1,7 @@
 module ASN1Test
 
 include ASN1.Low.Content.BOOLEAN
+include ASN1.Low.LengthU32
 
 open FStar.HyperStack.ST
 open FStar.HyperStack.IO
@@ -32,6 +33,7 @@ let test_asn1_boolean () : St bool =
   let open FStar.UInt32 in
   let open FStar.Bytes in
   let input = from_bytes buf in
+  let foo = LPL.validate (validate_asn1_lengthu32 ()) input (len buf) in
   if not (LPL.validate (validate_asn1_boolean ()) input (len buf)) then
     (print !$"Validator failed!"; false)
   else

@@ -114,24 +114,16 @@ let asn1_terminal_type_of (k : asn1_terminal_k) : Type =
   | ASN1_TIME -> asn1_terminal_t ASN1_TIME
 *)
 
-noeq noextract
-type asn1_content_k : Type =
-| ASN1_TERMINAL : asn1_terminal_k -> asn1_content_k
-| ASN1_SEQUENCE : #s : _ -> asn1_sequence_k s -> asn1_content_k
-| ASN1_SEQUENCE_OF : #s : _ -> asn1_k s -> asn1_content_k
-//| ASN1_SET : #s : _ -> asn1_set_k s -> asn1_content_k
-| ASN1_SET_OF : #s : _ -> asn1_k s -> asn1_content_k
-| ASN1_PREFIXED : #s : _ -> asn1_k s -> asn1_content_k
+type asn1_decorator : Type =
+| PLAIN
+| OPTION
+| DEFAULT
 
-// The complete ASN.1 kind is indexed by the set of valid first identifiers
-// Note that length does not matter here
-and asn1_k : Set.set asn1_id_t -> Type =
-| ASN1_ILC : id : asn1_id_t -> asn1_content_k -> asn1_k (Set.singleton id)
-| ASN1_CHOICE_ILC : choices : list (asn1_id_t & asn1_content_k) {Cons? choices} -> 
-                    squash (List.noRepeats (List.map fst choices)) -> 
-                    asn1_k (Set.as_set (List.map fst choices))
-
+(*
 and asn1_sequence_k : Set.set asn1_id_t -> Type =
+| ASN1_SEQUENCE : items : list ((s : Set.set asn1_id_t) & (asn1_decorated_k s)) ->
+                  pf : (asn1_sequence_k_wf items) ->
+                  asn1_sequence_k         
 | ASN1_SEQUENCE_NIL : asn1_sequence_k (Set.empty)
 | ASN1_SEQUENCE_CONS_PLAIN : #s : _ -> h : asn1_k s ->
                              #s' : _ -> t : asn1_sequence_k s'->
@@ -146,10 +138,53 @@ and asn1_sequence_k : Set.set asn1_id_t -> Type =
                                         #s : _ -> t : asn1_sequence_k s ->
                                         squash (~(Set.mem id s)) ->
                                         asn1_sequence_k (Set.union (Set.singleton id) s)
+*)
+
+
+let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) & asn1_decorator)) (s : Set.set asn1_id_t) : Type0 =
+  match li with
+  | [] -> True
+  | hd :: tl ->
+    let (s', d) = hd in
+    let s'' = match d with
+              | PLAIN -> Set.empty
+              | OPTION | DEFAULT -> Set.union s s' in
+    (Set.disjoint s s') /\ (asn1_sequence_k_wf' tl s'')
+    
+let asn1_sequence_k_wf (li : list ((Set.set asn1_id_t) & asn1_decorator)) : Type0 =
+  asn1_sequence_k_wf' li (Set.empty)
+
+let my_as_set = Set.as_set
+
+noeq noextract
+type asn1_content_k : Type =
+| ASN1_TERMINAL : asn1_terminal_k -> asn1_content_k
+| ASN1_SEQUENCE : items : list (asn1_gen_item_k) -> 
+                  pf : (asn1_sequence_k_wf (List.map (fun x -> match x with |(| s, d, _ |) -> (s, d) ) items)) ->
+                  asn1_content_k
+| ASN1_SEQUENCE_OF : #s : _ -> asn1_k s -> asn1_content_k
+//| ASN1_SET : #s : _ -> asn1_set_k s -> asn1_content_k
+| ASN1_SET_OF : #s : _ -> asn1_k s -> asn1_content_k
+| ASN1_PREFIXED : #s : _ -> asn1_k s -> asn1_content_k
+
+// The complete ASN.1 kind is indexed by the set of valid first identifiers
+// Note that length does not matter here
+and asn1_k : Set.set asn1_id_t -> Type =
+| ASN1_ILC : id : asn1_id_t -> asn1_content_k -> asn1_k (Set.singleton id)
+| ASN1_CHOICE_ILC : choices : list (asn1_id_t & asn1_content_k) -> 
+                    pf : ((Cons? choices) /\ (List.noRepeats (List.map fst choices))) -> 
+                    asn1_k (my_as_set (List.map fst choices))
+                    
+and asn1_decorated_k : Set.set asn1_id_t -> asn1_decorator -> Type =
+| ASN1_PLAIN_ILC : #s : _ -> k : asn1_k s -> asn1_decorated_k s PLAIN
+| ASN1_OPTION_ILC : #s : _ -> k : asn1_k s -> asn1_decorated_k s OPTION
+| ASN1_DEFAULT_TERMINAL : id : asn1_id_t -> #k : asn1_terminal_k -> defaultv : asn1_terminal_t k -> asn1_decorated_k (Set.singleton id) DEFAULT
+
+and asn1_gen_item_k : Type = s : Set.set asn1_id_t & d : asn1_decorator & asn1_decorated_k s d
 
 type default_tv (#a : eqtype) (v : a) =
 | Default : default_tv v
-| Nondefault  : v' : a{~(v' = v)} -> default_tv v  
+| Nondefault  : v' : a{~(v' = v)} -> default_tv v
 
 let v_of_default (#a : eqtype) (#v : a) (v' : default_tv v) : a =
   match v' with
@@ -183,10 +218,23 @@ let idlookup_t (#key : eqtype) (id : key) (lc : list (key & Type)) :
 
 let make_gen_choice_type (#key : eqtype) (lc : list (key & Type)) = (id : key) & (idlookup_t id lc)
 
+(*
+noeq noextract
+type asn1_content_k : Type =
+| ASN1_TERMINAL : asn1_terminal_k -> asn1_content_k
+| ASN1_SEQUENCE : items : list (asn1_gen_item_k) -> 
+                  pf : (asn1_sequence_k_wf (List.map (fun x -> match x with |(| s, d, _ |) -> (s, d) ) items)) ->
+                  asn1_content_k
+| ASN1_SEQUENCE_OF : #s : _ -> asn1_k s -> asn1_content_k
+//| ASN1_SET : #s : _ -> asn1_set_k s -> asn1_content_k
+| ASN1_SET_OF : #s : _ -> asn1_k s -> asn1_content_k
+| ASN1_PREFIXED : #s : _ -> asn1_k s -> asn1_content_k
+*)
+
 let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
   match k with
   | ASN1_TERMINAL k' -> asn1_terminal_t k'
-  | ASN1_SEQUENCE k' -> asn1_sequence_t k'
+  | ASN1_SEQUENCE items pf -> asn1_sequence_t items
   | ASN1_SEQUENCE_OF k' -> Seq.seq (asn1_t k')
   | ASN1_SET_OF k' -> asn1_t k'
   | ASN1_PREFIXED k' -> asn1_t k'
@@ -204,12 +252,18 @@ and asn1_t (#s : _) (k : asn1_k s) : Tot Type (decreases k) =
   | ASN1_CHOICE_ILC lc pf -> 
     make_gen_choice_type (asn1_lc_t lc)
 
-and asn1_sequence_t (#s : _) (k : asn1_sequence_k s) : Tot Type (decreases k) =
-  match k with
-  | ASN1_SEQUENCE_NIL -> unit
-  | ASN1_SEQUENCE_CONS_PLAIN h t -> (asn1_t h) & (asn1_sequence_t t)
-  | ASN1_SEQUENCE_CONS_OPTIONAL h t pf -> (option (asn1_t h)) & (asn1_sequence_t t)
-  | ASN1_SEQUENCE_CONS_DEFAULT_TERMINAL id defv t pf -> (default_tv defv) & (asn1_sequence_t t)
+and asn1_decorated_t (item : asn1_gen_item_k) : Tot Type =
+  match item with
+  | (| _, _, dk |) -> match dk with
+                    | ASN1_PLAIN_ILC k -> asn1_t k
+                    | ASN1_OPTION_ILC k -> (option (asn1_t k)) 
+                    | ASN1_DEFAULT_TERMINAL id defv -> (default_tv defv)
+
+and asn1_sequence_t (items : list asn1_gen_item_k) : Tot Type (decreases items) =
+  match items with
+  | Nil -> unit
+  | hd :: tl -> 
+    (asn1_decorated_t hd) * (asn1_sequence_t tl)
 
 type asn1_length_u32_t = U32.t
 
