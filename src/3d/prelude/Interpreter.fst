@@ -1,5 +1,6 @@
 module Interpreter
 module A = Actions
+module P = Prelude
 
 type integer_type =
   | UInt8
@@ -7,62 +8,28 @@ type integer_type =
   | UInt32
   | UInt64
 
-/// The same as A.op, but with `SizeOf` removed
-/// and arithmetic operators resolved to their types
-type op =
-  | Eq
-  | Neq
-  | And
-  | Or
-  | Not
-  | Plus of integer_type
-  | Minus of integer_type
-  | Mul of integer_type
-  | Division of integer_type
-  | Remainder of integer_type
-  | BitwiseAnd of integer_type
-  | BitwiseXor of integer_type
-  | BitwiseOr of integer_type
-  | BitwiseNot of integer_type
-  | ShiftRight of integer_type
-  | ShiftLeft of integer_type
-  | LT of integer_type
-  | GT of integer_type
-  | LE of integer_type
-  | GE of integer_type
-  | IfThenElse
-  | BitFieldOf of int //BitFieldOf(i, from, to)
-  | Cast : from:integer_type -> to:integer_type -> op
-  | Ext of string
-
 type itype = integer_type
 
-let itype_as_type (i:itype) : Type = int
-
-type constant : Type -> Type =
-  | Unit : constant unit
-  | Int  : i:itype -> int -> constant (itype_as_type i)
-  | XInt : i:itype -> string -> constant (itype_as_type i)   //hexadecimal constants
-  | Bool : bool -> constant bool
-
-/// Same as A.expr, but with `This` removed
-///
-/// Carrying around the range information from AST.expr so that we
-///   can report errors in terms of their 3d file locations
+let itype_as_type (i:itype) 
+  : Type 
+  = match i with
+    | UInt8 -> P.___UINT8
+    | UInt16 -> P.___UINT16
+    | UInt32 -> P.___UINT32
+    | UInt64 -> P.___UINT64
 
 let ident = string
 
-assume
-val expr : Type0
-
 type lam a = option ident & a
+
 module U32 = FStar.UInt32
 module LPL = EverParse3d.InputBuffer
 module B = LowStar.Buffer
+
 noeq
 type atomic_action : A.eloc -> A.slice_inv -> bool -> Type0 -> Type =
   | Action_return    : a:Type0 -> x:a -> atomic_action A.eloc_none A.true_inv false a
-  | Action_abort     : atomic_action A.eloc_none A.true_inv false unit
+  | Action_abort     : atomic_action A.eloc_none A.true_inv false bool
   | Action_field_pos : atomic_action A.eloc_none A.true_inv false U32.t
   | Action_field_ptr : atomic_action A.eloc_none A.true_inv true LPL.puint8
   | Action_deref     : a:Type0 -> x:B.pointer a -> atomic_action A.eloc_none (A.ptr_inv x) false a
@@ -184,7 +151,7 @@ let rec apply_dep_arrow_uncurred (param_types:list index_type)
         (apply_dep_arrow_uncurried_cons _ _ _ f (fst args))
         (snd args)
 
-module P = Prelude
+
 
 #push-options "--__temp_no_proj Interpreter"
 noeq
@@ -209,12 +176,17 @@ type global_binding = {
 
 let globals = list global_binding
 
-assume
-val lookup (env:globals) (name:ident) 
+let lookup (env:globals) (name:ident) 
   : option global_binding
-
-assume
-val parser_kind_of_itype (i:itype) : P.parser_kind true P.WeakKindStrongPrefix
+  = List.Tot.tryFind (fun b -> b.name = name) env
+  
+let parser_kind_of_itype (i:itype) 
+  : P.parser_kind true P.WeakKindStrongPrefix
+  = match i with
+    | UInt8 -> P.kind____UINT8
+    | UInt16 -> P.kind____UINT16
+    | UInt32 -> P.kind____UINT32
+    | UInt64 -> P.kind____UINT64
 
 (* A subset of F* types that the translation targets *)
 noeq
@@ -256,9 +228,6 @@ type typ (env:globals)
                -> #l2:_ -> #i2:_ -> #b2:_ -> t2:typ env pk l2 i2 b2
                -> typ env pk (A.eloc_union l1 l2) (A.conj_inv i1 i2) false
                
-  | T_pointer  : typ env P.impos_kind A.eloc_none A.true_inv false
-               -> typ env P.impos_kind A.eloc_none A.true_inv false
-  
   | T_with_action: #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk
                  -> #l1:_ -> #i1:_ -> #b1:_ -> typ env pk l1 i1 b1
                  -> #l2:_ -> #i2:_ -> #b2:_ -> action l2 i2 b2 bool
@@ -292,9 +261,6 @@ let rec as_type #nz #wk (#pk:P.parser_kind nz wk) #l #i #b (g:globals) (t:typ g 
     | T_if_else b t0 t1 -> 
       Prelude.t_ite b (as_type g t0) (as_type g t1)
 
-    | T_pointer t -> 
-      B.pointer (as_type g t)
-
     | T_with_action t _
     | T_with_comment t _ -> 
       as_type g t
@@ -303,12 +269,16 @@ let rec as_type #nz #wk (#pk:P.parser_kind nz wk) #l #i #b (g:globals) (t:typ g 
       itype_as_type i
 
     | T_app hd args -> 
-      let Some binding = lookup g hd in
-      apply_arrow binding.p_t args
+      apply_arrow (Some?.v (lookup g hd)).p_t args
 
-assume
-val itype_as_parser (i:itype) 
+let itype_as_parser (i:itype) 
   : P.parser (parser_kind_of_itype i) (itype_as_type i)
+  = match i with //returns Tot (P.parser (parser_kind_of_itype i) (itype_as_type i)) with
+    | UInt8 -> P.parse____UINT8
+    | UInt16 -> P.parse____UINT16
+    | UInt32 -> P.parse____UINT32
+    | UInt64 -> P.parse____UINT64
+
 module T = FStar.Tactics
 
 let rec as_parser #nz #wk (#pk:P.parser_kind nz wk) #l #i #b (g:globals) (t:typ g pk l i b)
@@ -316,73 +286,108 @@ let rec as_parser #nz #wk (#pk:P.parser_kind nz wk) #l #i #b (g:globals) (t:typ 
         (decreases t)
   = match t returns Tot (P.parser pk (as_type g t)) with
     | T_false -> 
-      assert_norm (as_type g T_false == False);
+      //assert_norm (as_type g T_false == False);
       P.parse_impos()
 
     | T_pair t1 t2 -> 
-      assert_norm (as_type g (T_pair t1 t2) == as_type g t1 * as_type g t2);
+      //assert_norm (as_type g (T_pair t1 t2) == as_type g t1 * as_type g t2);
       let p1 = as_parser g t1 in
       let p2 = as_parser g t2 in
       P.parse_pair p1 p2
 
     | T_dep_pair i t ->
-      assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));      
+      //assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));      
       let pi = itype_as_parser i in
       P.parse_dep_pair pi (fun (x:itype_as_type i) -> as_parser g (t x))
 
     | T_refine base refinement ->
-      assert_norm (as_type g (T_refine base refinement) == Prelude.refine (itype_as_type base) refinement);
+      //assert_norm (as_type g (T_refine base refinement) == Prelude.refine (itype_as_type base) refinement);
       let pi = itype_as_parser base in
       P.parse_filter pi refinement
 
     | T_if_else b t0 t1 -> 
-      assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
+      //assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
       let p0 (_:squash b) = as_parser g t0 in
       let p1 (_:squash (not b)) = as_parser g t1 in
       P.parse_ite b p0 p1
 
     | T_with_action t a ->
-      assert_norm (as_type g (T_with_action t a) == as_type g t);
+      //assert_norm (as_type g (T_with_action t a) == as_type g t);
       as_parser g t
       
     | T_with_dep_action i a ->
-      assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
+      //assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
       itype_as_parser i
       
     | T_with_comment t c -> 
-      assert_norm (as_type g (T_with_comment t c) == as_type g t);      
+      //assert_norm (as_type g (T_with_comment t c) == as_type g t);      
       as_parser g t
 
     | T_app hd args ->
-      assert (as_type g (T_app hd args) == apply_arrow (Some?.v (lookup g hd)).p_t args)
-         by (T.norm [delta_only [`%as_type]; zeta; iota];
-             T.smt());
+//      assert_norm (as_type g (T_app hd args) == apply_arrow (Some?.v (lookup g hd)).p_t args);
       apply_dep_arrow_uncurred _ _ (Some?.v (lookup g hd)).p_p args
 
-    | T_pointer t ->
-      admit()
-
-assume
-val itype_as_validator (i:itype)
+let itype_as_validator (i:itype)
   : A.validate_with_action_t (itype_as_parser i) A.true_inv A.eloc_none true
-
-assume 
-val itype_as_leaf_reader (i:itype)
+  = match i with
+    | UInt8 -> A.validate____UINT8
+    | UInt16 -> A.validate____UINT16
+    | UInt32 -> A.validate____UINT32
+    | UInt64 -> A.validate____UINT64
+    
+let itype_as_leaf_reader (i:itype)
   : A.leaf_reader (itype_as_parser i)
+  = match i with
+    | UInt8 -> A.read____UINT8
+    | UInt16 -> A.read____UINT16
+    | UInt32 -> A.read____UINT32
+    | UInt64 -> A.read____UINT64
 
-assume
-val action_as_action 
+let atomic_action_as_action
    (#nz #wk:_)
-   (#pk:P.parser_kind nz wk)
-   (#lt #it #bt:_) (g:globals) (p:typ g pk lt it bt)
-   (#l #i #b #t:_) (a:action l i b t) 
-  : A.action (as_parser g p) i l b t
+   (#pk:P.parser_kind nz wk) (#pt:Type)
+   (p:P.parser pk pt)
+   (#l #i #b #t:_) (a:atomic_action l i b t) 
+  : Tot (A.action p i l b t)
+  = match a with
+    | Action_return _ x ->
+      A.action_return x
+    | Action_abort ->
+      A.action_abort
+    | Action_field_pos ->
+      A.action_field_pos ()
+    | Action_field_ptr ->
+      A.action_field_ptr ()
+    | Action_deref _ x ->
+      A.action_deref x
+    | Action_assignment _ x rhs -> 
+      A.action_assignment x rhs
 
-assume
-val iaction_as_action 
-   (g:globals) (p:itype)
+let rec action_as_action
+   (#nz #wk:_)
+   (#pk:P.parser_kind nz wk) (#pt:_)
+   (p:P.parser pk pt)
    (#l #i #b #t:_) (a:action l i b t) 
-  : A.action (itype_as_parser p) i l b t
+  : Tot (A.action p i l b t)
+    (decreases a)
+  = match a with
+    | Atomic_action _ _ _ _ a ->
+      atomic_action_as_action p a
+
+    | Action_seq _ _ _ hd _ _ _ _ tl ->
+      let a1 = atomic_action_as_action p hd in
+      let tl = action_as_action p tl in
+      A.action_seq a1 tl
+
+    | Action_ite hd _ _ _ _ t _ _ _ e ->
+      let then_ (_:squash hd) = action_as_action p t in
+      let else_ (_:squash (not hd)) = action_as_action p e in
+      A.action_ite hd then_ else_
+      
+    | Action_let _ _ _ _ hd _ _ _ _ k ->
+      let head = atomic_action_as_action p hd in
+      let k x = action_as_action p (k x) in
+      A.action_bind "" head k
 
 let rec as_validator #nz #wk (#pk:P.parser_kind nz wk) #loc #inv #b (g:globals) (t:typ g pk loc inv b)
   : Tot (A.validate_with_action_t #nz #wk #pk #(as_type g t) (as_parser g t) inv loc b)
@@ -428,7 +433,7 @@ let rec as_validator #nz #wk (#pk:P.parser_kind nz wk) #loc #inv #b (g:globals) 
       assert_norm (as_parser g (T_with_action t a) == as_parser g t);      
       A.validate_with_success_action ""
         (as_validator g t)
-        (action_as_action g t a)
+        (action_as_action (as_parser g t) a)
 
     | T_with_dep_action i a ->
       assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
@@ -437,7 +442,7 @@ let rec as_validator #nz #wk (#pk:P.parser_kind nz wk) #loc #inv #b (g:globals) 
        A.validate_with_dep_action ""
         (itype_as_validator i)
         (itype_as_leaf_reader i)
-        (fun x -> iaction_as_action g i (a x)))
+        (fun x -> action_as_action (itype_as_parser i) (a x)))
 
     | T_with_comment t c ->
       assert_norm (as_type g (T_with_comment t c) == as_type g t);
@@ -445,29 +450,9 @@ let rec as_validator #nz #wk (#pk:P.parser_kind nz wk) #loc #inv #b (g:globals) 
       A.validate_with_comment "" (as_validator g t)
       
     | T_app hd args ->
-      assert (as_type g (T_app hd args) == apply_arrow (Some?.v (lookup g hd)).p_t args)
-         by (T.norm [delta_only [`%as_type]; zeta; iota];
-             T.smt());
-      assert (as_parser g (T_app hd args) == apply_dep_arrow_uncurred _ _ (Some?.v (lookup g hd)).p_p args)
-         by (T.trefl());
+      // assert_norm (as_type g (T_app hd args) == apply_arrow (Some?.v (lookup g hd)).p_t args);
+      // assert_norm (as_parser g (T_app hd args) == apply_dep_arrow_uncurred _ _ (Some?.v (lookup g hd)).p_p args);
       apply_dep_arrow_uncurred _ _ (Some?.v (lookup g hd)).p_v args
-      
-    | _ -> admit()
-    
-// and as_expr (g:env) (e:expr)
-//   : option typed_term
-//   = None
-  
-// assume
-// val parser_kind_nz (t:typ) : bool
 
-// assume
-// val parser_weak_kind (t:typ) : P.weak_kind
-
-// assume
-// val as_kind (t:typ) : P.parser_kind (parser_kind_nz t) (parser_weak_kind t)
-
-// assume
-// val as_parser (t:typ) : P.parser (as_kind t) (as_type t)
 
 
