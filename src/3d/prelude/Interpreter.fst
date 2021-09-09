@@ -292,8 +292,9 @@ type global_binding = {
 }
 #pop-options
 
-%splice[]
-       (ProjTac.mk_projs (`%global_binding))
+//Generate projectors with a tactic, because the default
+//projectors are not SMT-typeable
+%splice[] (ProjTac.mk_projs (`%global_binding))
 
 let name_of_binding = proj_0
 [@@specialize]
@@ -505,8 +506,8 @@ type typ
               false
                  
   | T_app:
-      hd:ident -> 
-      b:global_binding ->
+      hd:ident -> //the name isn't needed strictly speakinga
+      b:global_binding -> //what matters is its interpretation
       args:args_of (param_types_of_binding b) ->
       typ b.parser_kind
               (apply_arrow (inv_of_binding b) args)                     
