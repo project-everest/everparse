@@ -296,7 +296,10 @@ let globals = list global_binding
 [@@specialize]
 let lookup (env:globals) (name:ident) 
   : option global_binding
-  = List.Tot.tryFind (fun b -> b.name = name) env
+  = List.Tot.tryFind 
+    (fun b ->
+      match b with 
+      | { name = n } -> n = name) env
 
 (** Now we define the AST of 3D programs *)
 
@@ -738,3 +741,135 @@ Actions.validate_pair ""
     (Actions.validate_filter "" Actions.validate____UINT8 Actions.read____UINT8 (fun _ -> true) "" "")
     (Actions.validate_filter "" Actions.validate____UINT8 Actions.read____UINT8 (fun _ -> true) "" "")
 *)
+
+[@@specialize]
+let as_nullary_arrow (#res:Type u#a) (f:res)
+  : arrow [] res
+  = f
+
+[@@specialize]
+let u8_pair_binding 
+  : global_binding
+  = { name = "u8_pair";
+      param_types = [];
+      parser_kind_nz = _;
+      parser_weak_kind = _;
+      parser_kind = _;
+      inv = as_nullary_arrow (A.conj_inv A.true_inv A.true_inv);
+      loc = as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none);
+      allow_reading = _;
+      p_t = as_type u8_pair;
+      p_p = as_parser u8_pair;
+      p_v = validate_u8_pair}
+
+[@@specialize]
+let env1 = u8_pair_binding :: emp
+
+module U8 = FStar.UInt8
+
+[@@specialize]
+let u8_pair_param (i:P.___UINT8)
+  : typ env1 _ _ _ _
+  = T_pair (T_refine UInt8 (fun fst -> U8.(fst <^ i) ))
+           (T_refine UInt8 (fun snd -> U8.(snd >=^ i)))
+
+[@@T.postprocess_with specialize_tac]
+let validate_u8_pair_param (i:P.___UINT8)
+  = as_validator (u8_pair_param i)
+
+(* Produces:
+fun i ->
+    Actions.validate_pair ""
+      (Actions.validate_filter ""
+          Actions.validate____UINT8
+          Actions.read____UINT8
+          (fun fst -> fst <^ i)
+          ""
+          "")
+      (Actions.validate_filter ""
+          Actions.validate____UINT8
+          Actions.read____UINT8
+          (fun snd -> snd >=^ i)
+          ""
+          "")
+*)
+
+[@@specialize]
+let as_arrow_cons #is #k (i:param_type) (f: param_type_as_type i -> arrow is k)
+  : arrow (i::is) k
+  = f
+
+[@@specialize]
+let as_nullary_dep_arrow (#res:args_of [] -> Type) (f:res ())
+  : dep_arrow [] res
+  = f
+
+[@@specialize]
+let as_dep_arrow_cons i #is (#res:args_of (i::is) -> Type)
+                      (f: (x:param_type_as_type i -> dep_arrow is (fun xs -> res (x, xs))))
+  : dep_arrow (i::is) res
+  = f
+
+[@@specialize]
+let param_types = [IT_Base UInt8]
+
+let p_t
+  : arrow param_types Type
+  = as_arrow_cons (IT_Base UInt8) (fun i -> as_nullary_arrow (as_type (u8_pair_param i)))
+  
+let p_k = Prelude.and_then_kind
+              (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
+              (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
+
+let p_p 
+  : dep_arrow param_types (fun args -> P.parser p_k (apply_arrow p_t args))
+  = let f (i:param_type_as_type (IT_Base UInt8))
+      : dep_arrow [] (fun args -> P.parser p_k (apply_arrow p_t (i, args)))
+      = as_nullary_dep_arrow (as_parser (u8_pair_param i))
+    in
+    as_dep_arrow_cons (IT_Base UInt8) f
+
+[@@specialize]
+let p_v
+  : dep_arrow param_types 
+    (fun args -> A.validate_with_action_t 
+                 (apply_dep_arrow _ _ p_p args)
+                 _
+                 _ 
+                 _)
+  = let f (i:param_type_as_type (IT_Base UInt8))
+      : dep_arrow [] 
+          (fun args -> 
+            A.validate_with_action_t 
+                 (apply_dep_arrow _ _ p_p (i,args))
+                 _ _ _)
+      = as_nullary_dep_arrow (validate_u8_pair_param i)
+    in
+    as_dep_arrow_cons (IT_Base UInt8) f
+             
+[@@specialize]
+let u8_pair_param_binding 
+  : global_binding
+  = { name = "u8_pair_param";
+      param_types = [IT_Base UInt8];
+      parser_kind_nz = _;
+      parser_weak_kind = _;
+      parser_kind = _;
+      inv = as_arrow_cons #[] #A.slice_inv _ (fun _ -> as_nullary_arrow (A.conj_inv A.true_inv A.true_inv));
+      loc = as_arrow_cons #[] #A.eloc _ (fun _ -> as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none));
+      allow_reading = _;
+      p_t = p_t;
+      p_p = p_p;
+      p_v = p_v }
+
+[@@specialize]
+let env2 = u8_pair_param_binding :: env1
+
+let _ : squash (lookup env2 "u8_pair" == Some u8_pair_binding) =
+  assert_norm (lookup env2 "u8_pair" == Some u8_pair_binding)
+
+    
+// let u8_line
+//   : typ env2 _ _ _ _ 
+//   = T_app "u8_pair" []
+//            (T_app "u8_pair" [])
