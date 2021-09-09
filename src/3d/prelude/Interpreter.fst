@@ -50,6 +50,9 @@ module P = Prelude
    for t-validator is an instance of the 1st Futamura projection.
  *)
 
+(* An attribute to control partial evaluation *)
+let specialize = ()
+
 (** You can see the basic idea of the whole stack working at first on
     a very simple class of types---just the primitive integer types *)
     
@@ -88,6 +91,7 @@ let itype_as_parser (i:itype)
     | UInt64 -> P.parse____UINT64
 
 (* Interpretation of an itype as a leaf reader *)
+[@@specialize]
 let itype_as_leaf_reader (i:itype)
   : A.leaf_reader (itype_as_parser i)
   = match i with
@@ -98,6 +102,7 @@ let itype_as_leaf_reader (i:itype)
 
 (* Interpretation of an itype as a validator
    -- Notice that the type shows that it is related to the parser *)
+[@@specialize]
 let itype_as_validator (i:itype)
   : A.validate_with_action_t (itype_as_parser i) A.true_inv A.eloc_none true
   = match i with
@@ -164,12 +169,14 @@ let _illustrate_int_to_int_inhabitant
   = fun (x:P.___UINT8) -> x
 
 (* Coercion for nullary arrows --- useful in some proofs *)
+[@@specialize]
 let nullary_arrow (#res:Type u#a) (f:arrow [] res)
   : res
   = f
 
 (* Eliminating a single arrow by applying it
    --- useful in some proofs, rather than just writing `f x` *)
+[@@specialize]
 let apply (#i:param_type)
           (#is:list param_type)
           (#res:Type u#a)
@@ -180,6 +187,7 @@ let apply (#i:param_type)
 
 (* Eliminating an arrow entirely by applying 
    it to arguments for all its parameters *)
+[@@specialize]
 let rec apply_arrow (#is:list param_type)
                     (#k:Type)
                     (f: arrow is k)
@@ -214,6 +222,7 @@ let _illustrate_dep_int_to_int_inhabitant
     
 
 (* Eliminate a single dep_arrow into a native dependent -> *) 
+[@@specialize]
 let apply_dep_arrow_cons (i:_) (is:_)
                          (k: args_of (i::is) -> Type)
                          (f: dep_arrow (i::is) k)
@@ -222,6 +231,7 @@ let apply_dep_arrow_cons (i:_) (is:_)
 
 (* Eliminate a dep_arrow completely by applying to 
    all its arguments *)
+[@@specialize]
 let rec apply_dep_arrow (param_types:list param_type)
                         (k: args_of param_types -> Type)
                         (f: dep_arrow param_types k)
@@ -283,6 +293,7 @@ type global_binding = {
 
 let globals = list global_binding
 
+[@@specialize]
 let lookup (env:globals) (name:ident) 
   : option global_binding
   = List.Tot.tryFind (fun b -> b.name = name) env
@@ -339,6 +350,7 @@ type atomic_action
       atomic_action (A.ptr_inv x) (A.ptr_loc x) false unit
 
 (* Denotation of atomic_actions as A.action *)
+[@@specialize]
 let atomic_action_as_action
    (#nz #wk:_)
    (#pk:P.parser_kind nz wk) (#pt:Type)
@@ -390,6 +402,7 @@ type action
       action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t1
 
 (* Denotation of action as A.action *)
+[@@specialize]
 let rec action_as_action
    (#nz #wk:_)
    (#pk:P.parser_kind nz wk) (#pt:_)
@@ -543,8 +556,7 @@ type typ (env:globals)
 (* Type denotation of `typ` *)
 let rec as_type 
           #nz #wk (#pk:P.parser_kind nz wk)
-          #l #i #b
-          (g:globals)
+          #l #i #b #g
           (t:typ g pk l i b)
   : Tot Type0
     (decreases t)
@@ -552,20 +564,20 @@ let rec as_type
     | T_false -> False
 
     | T_pair t1 t2 ->
-      as_type g t1 & as_type g t2
+      as_type t1 & as_type t2
 
     | T_dep_pair i t -> 
-      x:itype_as_type i & as_type g (t x)
+      x:itype_as_type i & as_type (t x)
       
     | T_refine base refinement -> 
       Prelude.refine (itype_as_type base) refinement
 
     | T_if_else b t0 t1 -> 
-      Prelude.t_ite b (as_type g t0) (as_type g t1)
+      Prelude.t_ite b (as_type t0) (as_type t1)
 
     | T_with_action t _
     | T_with_comment t _ -> 
-      as_type g t
+      as_type t
 
     | T_with_dep_action i _ ->
       itype_as_type i
@@ -578,26 +590,25 @@ module T = FStar.Tactics
 (* Parser denotation of `typ` *)
 let rec as_parser 
           #nz #wk (#pk:P.parser_kind nz wk)
-          #l #i #b
-          (g:globals)
+          #l #i #b #g
           (t:typ g pk l i b)
-  : Tot (P.parser pk (as_type g t))
+  : Tot (P.parser pk (as_type t))
         (decreases t)
-  = match t returns Tot (P.parser pk (as_type g t)) with
+  = match t returns Tot (P.parser pk (as_type t)) with
     | T_false -> 
       //assert_norm (as_type g T_false == False);
       P.parse_impos()
 
     | T_pair t1 t2 -> 
       //assert_norm (as_type g (T_pair t1 t2) == as_type g t1 * as_type g t2);
-      let p1 = as_parser g t1 in
-      let p2 = as_parser g t2 in
+      let p1 = as_parser t1 in
+      let p2 = as_parser t2 in
       P.parse_pair p1 p2
 
     | T_dep_pair i t ->
       //assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));      
       let pi = itype_as_parser i in
-      P.parse_dep_pair pi (fun (x:itype_as_type i) -> as_parser g (t x))
+      P.parse_dep_pair pi (fun (x:itype_as_type i) -> as_parser (t x))
 
     | T_refine base refinement ->
       //assert_norm (as_type g (T_refine base refinement) == Prelude.refine (itype_as_type base) refinement);
@@ -606,13 +617,13 @@ let rec as_parser
 
     | T_if_else b t0 t1 -> 
       //assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
-      let p0 (_:squash b) = as_parser g t0 in
-      let p1 (_:squash (not b)) = as_parser g t1 in
+      let p0 (_:squash b) = as_parser t0 in
+      let p1 (_:squash (not b)) = as_parser t1 in
       P.parse_ite b p0 p1
 
     | T_with_action t a ->
       //assert_norm (as_type g (T_with_action t a) == as_type g t);
-      as_parser g t
+      as_parser t
       
     | T_with_dep_action i a ->
       //assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
@@ -620,46 +631,47 @@ let rec as_parser
       
     | T_with_comment t c -> 
       //assert_norm (as_type g (T_with_comment t c) == as_type g t);      
-      as_parser g t
+      as_parser t
 
     | T_app hd args ->
       //assert_norm (as_type g (T_app hd args) == apply_arrow (Some?.v (lookup g hd)).p_t args);
       apply_dep_arrow _ _ (Some?.v (lookup g hd)).p_p args
+
 
 (* The main result: 
    A validator denotation of `typ`
      related by construction to the parser
      and type denotations
 *)
+[@@specialize]
 let rec as_validator
           #nz #wk (#pk:P.parser_kind nz wk)
-          #loc #inv #b
-          (g:globals)
+          #loc #inv #b (#g:globals)
           (t:typ g pk inv loc b)
-  : Tot (A.validate_with_action_t #nz #wk #pk #(as_type g t) (as_parser g t) inv loc b)
+  : Tot (A.validate_with_action_t #nz #wk #pk #(as_type t) (as_parser t) inv loc b)
         (decreases t)
   = match t
-    returns Tot (A.validate_with_action_t (as_parser g t) inv loc b)
+    returns Tot (A.validate_with_action_t (as_parser t) inv loc b)
     with
     | T_false -> 
       A.validate_impos()
 
     | T_pair t1 t2 -> 
-      assert_norm (as_type g (T_pair t1 t2) == as_type g t1 * as_type g t2);
-      assert_norm (as_parser g (T_pair t1 t2) == P.parse_pair (as_parser g t1) (as_parser g t2));
+      assert_norm (as_type (T_pair t1 t2) == as_type t1 * as_type t2);
+      assert_norm (as_parser (T_pair t1 t2) == P.parse_pair (as_parser t1) (as_parser t2));
       A.validate_pair ""
-        (as_validator g t1)
-        (as_validator g t2)
+        (as_validator t1)
+        (as_validator t2)
 
     | T_dep_pair i t ->
-      assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));
-      assert_norm (as_parser g (T_dep_pair i t) == 
-                   P.parse_dep_pair (itype_as_parser i) (fun (x:itype_as_type i) -> as_parser g (t x)));
+      assert_norm (as_type (T_dep_pair i t) == x:itype_as_type i & as_type (t x));
+      assert_norm (as_parser (T_dep_pair i t) == 
+                   P.parse_dep_pair (itype_as_parser i) (fun (x:itype_as_type i) -> as_parser (t x)));
       A.validate_weaken_inv_loc inv loc
       (A.validate_dep_pair ""
         (itype_as_validator i)
         (itype_as_leaf_reader i)
-        (fun x -> as_validator g (t x)))
+        (fun x -> as_validator (t x)))
 
     | T_refine t f -> 
       A.validate_filter "" 
@@ -668,24 +680,24 @@ let rec as_validator
         f "" ""
 
     | T_if_else b t0 t1 -> 
-      assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
-      let p0 (_:squash b) = as_parser g t0 in
-      let p1 (_:squash (not b)) = as_parser g t1 in
-      assert_norm (as_parser g (T_if_else b t0 t1) == P.parse_ite b p0 p1);
-      let v0 (_:squash b) = as_validator g t0 in
-      let v1 (_:squash (not b)) = as_validator g t1 in      
+      assert_norm (as_type (T_if_else b t0 t1) == Prelude.t_ite b (as_type t0) (as_type t1));
+      let p0 (_:squash b) = as_parser t0 in
+      let p1 (_:squash (not b)) = as_parser t1 in
+      assert_norm (as_parser (T_if_else b t0 t1) == P.parse_ite b p0 p1);
+      let v0 (_:squash b) = as_validator t0 in
+      let v1 (_:squash (not b)) = as_validator t1 in      
       A.validate_ite b p0 v0 p1 v1
         
     | T_with_action t a ->
-      assert_norm (as_type g (T_with_action t a) == as_type g t);
-      assert_norm (as_parser g (T_with_action t a) == as_parser g t);      
+      assert_norm (as_type (T_with_action t a) == as_type t);
+      assert_norm (as_parser (T_with_action t a) == as_parser t);      
       A.validate_with_success_action ""
-        (as_validator g t)
-        (action_as_action (as_parser g t) a)
+        (as_validator t)
+        (action_as_action (as_parser t) a)
 
     | T_with_dep_action i a ->
-      assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
-      assert_norm (as_parser g (T_with_dep_action i a) == itype_as_parser i);      
+      assert_norm (as_type (T_with_dep_action i a <: typ g _ _ _ _) == itype_as_type i);
+      assert_norm (as_parser (T_with_dep_action i a <: typ g _ _ _ _) == itype_as_parser i);      
       A.validate_weaken_inv_loc inv loc (
        A.validate_with_dep_action ""
         (itype_as_validator i)
@@ -693,14 +705,36 @@ let rec as_validator
         (fun x -> action_as_action (itype_as_parser i) (a x)))
 
     | T_with_comment t c ->
-      assert_norm (as_type g (T_with_comment t c) == as_type g t);
-      assert_norm (as_parser g (T_with_comment t c) == as_parser g t);      
-      A.validate_with_comment "" (as_validator g t)
+      assert_norm (as_type (T_with_comment t c) == as_type t);
+      assert_norm (as_parser (T_with_comment t c) == as_parser t);      
+      A.validate_with_comment "" (as_validator t)
       
     | T_app hd args ->
-      // assert_norm (as_type g (T_app hd args) == apply_arrow (Some?.v (lookup g hd)).p_t args);
-      // assert_norm (as_parser g (T_app hd args) == apply_dep_arrow_uncurred _ _ (Some?.v (lookup g hd)).p_p args);
+      // assert_norm (as_type (T_app hd args) == apply_arrow (Some?.v (lookup hd)).p_t args);
+      // assert_norm (as_parser (T_app hd args) == apply_dep_arrow_uncurred _ _ (Some?.v (lookup hd)).p_p args);
       apply_dep_arrow _ _ (Some?.v (lookup g hd)).p_v args
 
+let specialize_tac ()
+  : T.Tac unit
+  = T.norm [zeta; iota; delta_attr [`%specialize]; delta_only [`%List.Tot.tryFind]];
+    T.trefl()
 
+[@@specialize]
+let emp : globals = []
 
+[@@specialize]
+let u8_pair
+  : typ emp _ _ _ _
+  = T_pair (T_refine UInt8 (fun _ -> true))
+           (T_refine UInt8 (fun _ -> true))
+
+[@@T.postprocess_with specialize_tac]
+let validate_u8_pair
+  = as_validator u8_pair
+
+(* In emacs, C-c C-s C-p shows the definition of validate_u8_pair as:
+
+Actions.validate_pair ""
+    (Actions.validate_filter "" Actions.validate____UINT8 Actions.read____UINT8 (fun _ -> true) "" "")
+    (Actions.validate_filter "" Actions.validate____UINT8 Actions.read____UINT8 (fun _ -> true) "" "")
+*)
