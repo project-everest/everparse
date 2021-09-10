@@ -22,6 +22,7 @@ module B = LowStar.Buffer
 module A = Actions
 module P = Prelude
 module ProjTac = Proj
+#push-options "--__temp_no_proj Interpreter" //we'll generate the projectors we need with a tactic
 
 (* This module defines a strongly typed abstract syntax for an
    intermediate representation of 3D programs. This is the type `typ`.
@@ -256,9 +257,26 @@ let rec apply_dep_arrow (param_types:list param_type)
    TODO: should be qualified by a module name *)
 let ident = string
 
-(* Now, we can define the type of an environment *)
+let coerce_pk #nz #wk (p:P.parser_kind nz wk)
+                      (_:squash (wk == P.WeakKindStrongPrefix) )
+  : P.parser_kind nz P.WeakKindStrongPrefix
+  = p
 
-#push-options "--__temp_no_proj Interpreter"
+let coerce_p_p (param_types:_) 
+               (res: (args_of param_types -> Type))
+               (res': (args_of param_types -> Type))
+               (p_p: dep_arrow param_types res)
+               ($pf:squash (res == res'))
+ : dep_arrow param_types res'
+ = p_p
+
+let leaf_reader #nz #wk (#k: P.parser_kind nz wk) #t (p:P.parser k t)
+  = _:squash (wk == P.WeakKindStrongPrefix /\ hasEq t) &
+    A.leaf_reader p
+
+
+(* Now, we can define the type of an environment *)
+module T = FStar.Tactics
 (* global_binding: A single entry in the environment *)
 noeq
 type global_binding = {
@@ -288,9 +306,11 @@ type global_binding = {
             A.validate_with_action_t (apply_dep_arrow _ _ p_p args)
                                      (apply_arrow inv args)
                                      (apply_arrow loc args)
-                                     allow_reading)
+                                     allow_reading);
+  p_reader: option (dep_arrow param_types
+                         (fun args -> 
+                            leaf_reader (apply_dep_arrow _ _ p_p args)))
 }
-#pop-options
 
 //Generate projectors with a tactic, because the default
 //projectors are not SMT-typeable
@@ -311,17 +331,15 @@ let type_of_binding = proj_8
 let parser_of_binding = proj_9
 [@@specialize]
 let validator_of_binding = proj_10
-
-let globals = list global_binding
-
 [@@specialize]
-let lookup (env:globals) (name:ident)
-  : option global_binding
-  = List.Tot.tryFind
-    (fun b ->
-      match b with
-      | { name = n } -> n = name) env
+let leaf_reader_of_binding = proj_11
 
+let has_reader (g:global_binding) = Some? (leaf_reader_of_binding g)
+let reader_binding = g:global_binding { has_reader g }
+let get_leaf_reader (r:reader_binding) (args:args_of (param_types_of_binding r)) 
+  : leaf_reader (apply_dep_arrow _ _ (parser_of_binding r) args)
+  = apply_dep_arrow _ _ (Some?.v (leaf_reader_of_binding r)) args
+  
 (** Now we define the AST of 3D programs *)
 
 (* The type of atomic actions.
@@ -478,7 +496,93 @@ let comments = list string
      produce boolean functions for those expressions that can be
      verified natively by F* for type correctness.
 *)
-#push-options "--__temp_no_proj Interpreter"
+module T = FStar.Tactics
+
+noeq
+type dtyp
+  : #nz:bool -> #wk:P.weak_kind ->
+    P.parser_kind nz wk ->
+    has_reader:bool ->
+    A.slice_inv ->
+    A.eloc ->
+    bool ->
+    Type =
+  | DT_IType:
+      i:itype ->
+      dtyp (parser_kind_of_itype i)
+           true
+           A.true_inv
+           A.eloc_none
+           true
+
+  | DT_App:
+      hd:ident -> //the name isn't needed, strictly speaking
+      b:global_binding -> //what matters is its interpretation
+      args:args_of (param_types_of_binding b) ->
+      dtyp b.parser_kind
+           (has_reader b)
+           (apply_arrow (inv_of_binding b) args)
+           (apply_arrow (loc_of_binding b) args)
+           (ar_of_binding b)
+
+let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b 
+                 (d:dtyp pk hr i l b)
+  : Type
+  = match d with
+    | DT_IType i -> 
+      itype_as_type i
+
+    | DT_App hd b args ->
+      apply_arrow (type_of_binding b) args
+      
+let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l #b 
+                         (d:dtyp pk true i l b)
+  : Lemma
+    (ensures hasEq (dtyp_as_type d))
+    [SMTPat (hasEq (dtyp_as_type d))]
+  = match d with
+    | DT_IType i -> 
+      ()
+
+    | DT_App hd b args ->
+      let (| _, _ |) = get_leaf_reader b args in ()
+  
+let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b 
+                   (d:dtyp pk hr i l b)
+  : P.parser pk (dtyp_as_type d)
+  = match d returns Tot (P.parser pk (dtyp_as_type d)) with
+    | DT_IType i -> 
+      itype_as_parser i
+
+    | DT_App hd b args ->
+      apply_dep_arrow _ _ (parser_of_binding b) args
+
+let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b 
+                      (d:dtyp pk hr i l b)
+  : A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i l b
+  = match d 
+    returns A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i l b
+    with
+    | DT_IType i -> 
+      itype_as_validator i
+
+    | DT_App hd b args ->
+      assert_norm (dtyp_as_type (DT_App hd b args) == apply_arrow (type_of_binding b) args);
+      assert_norm (dtyp_as_parser (DT_App hd b args) == apply_dep_arrow _ _ (parser_of_binding b) args);
+      apply_dep_arrow _ _ (validator_of_binding b) args
+
+let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l #b 
+                            (d:dtyp pk true i l b)
+  : A.leaf_reader (dtyp_as_parser d)
+  = match d 
+    returns A.leaf_reader (dtyp_as_parser d)
+    with
+    | DT_IType i -> 
+      itype_as_leaf_reader i
+    | DT_App hd b args -> 
+      let (| _, lr |) = get_leaf_reader b args in
+      lr
+
 noeq
 type typ
   : #nz:bool -> #wk:P.weak_kind ->
@@ -488,19 +592,13 @@ type typ
     bool ->
     Type =
   | T_false:
-      typ P.impos_kind
-              A.true_inv
-              A.eloc_none
-              true
+      typ P.impos_kind A.true_inv A.eloc_none true
 
-  | T_app:
-      hd:ident -> //the name isn't needed strictly speakinga
-      b:global_binding -> //what matters is its interpretation
-      args:args_of (param_types_of_binding b) ->
-      typ b.parser_kind
-              (apply_arrow (inv_of_binding b) args)
-              (apply_arrow (loc_of_binding b) args)
-              (ar_of_binding b)
+  | T_denoted :
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #has_reader:_ -> #i:_ -> #l:_ -> #b:_ ->
+      td:dtyp pk has_reader i l b ->
+      typ pk i l b
 
   | T_pair:
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
@@ -509,36 +607,31 @@ type typ
       #i2:_ -> #l2:_ -> #b2:_ ->
       t1:typ pk1 i1 l1 b1 ->
       t2:typ pk2 i2 l2 b2 ->
-      typ (P.and_then_kind pk1 pk2)
-              (A.conj_inv i1 i2)
-              (A.eloc_union l1 l2)
-              false
+      typ (P.and_then_kind pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_dep_pair:
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #i1:_ -> #l1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
-      #l1:_ -> #i1:_ -> #b2:_ ->
-      //the first component is a small type
-      t1:itype ->
+      #i2:_ -> #l2:_ -> #b2:_ ->
+      //the first component is a pre-denoted type with a reader
+      t1:dtyp pk1 true i1 l1 true ->
       //the second component is a function from denotations of t1
       //that's why it's a small type, so that we can speak about its
       //denotation here
-      t2:(itype_as_type t1 -> typ pk2 i1 l1 b2) ->
-      typ (P.and_then_kind (parser_kind_of_itype t1) pk2)
-              i1
-              l1
-              false
+      t2:(dtyp_as_type t1 -> typ pk2 i2 l2 b2) ->
+      typ (P.and_then_kind pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_refine:
-      //the first component is a small type
-      base:itype ->
-      //the second component is a function from denotations of t1
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #i1:_ -> #l1:_ ->
+      //the first component is a pre-denoted type with a reader
+      base:dtyp pk1 true i1 l1 true ->
+      //the second component is a function from denotations of base
       //but notice that its codomain is bool, rather than expr
       //That's to ensure that the refinement is already well-typed
-      refinement:(itype_as_type base -> bool) ->
-      typ (P.filter_kind (parser_kind_of_itype base))
-              A.true_inv
-              A.eloc_none
-              false
+      refinement:(dtyp_as_type base -> bool) ->
+      typ (P.filter_kind pk1) i1 l1 false
 
   | T_dep_pair_with_refinement:
       //This construct serves two purposes
@@ -546,15 +639,19 @@ type typ
       //    and dependent pair into a single form
       // 2. This allows the well-typedness of the continuation k
       //    to depend on the refinement of the first field
-      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
-      #i:_ -> #l:_ -> #b:_ ->
-      base:itype ->
-      refinement:(itype_as_type base -> bool) ->
-      k:(x:itype_as_type base { refinement x } -> typ pk i l b) ->
-      typ (P.and_then_kind (P.filter_kind (parser_kind_of_itype base)) pk)
-              i
-              l
-              false
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #i1:_ -> #l1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #i2:_ -> #l2:_ -> #b2:_ ->
+      //the first component is a pre-denoted type with a reader
+      base:dtyp pk1 true i1 l1 true ->
+      //the second component is a function from denotations of base
+      refinement:(dtyp_as_type base -> bool) ->
+      k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 l2 b2) ->
+      typ (P.and_then_kind (P.filter_kind pk1) pk2)
+          (A.conj_inv i1 i2)
+          (A.eloc_union l1 l2)
+          false
 
   | T_if_else:
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
@@ -563,10 +660,7 @@ type typ
       b:bool -> //A bool, rather than an expression
       t1:typ pk i1 l1 b1 ->
       t2:typ pk i2 l2 b2 ->
-      typ pk
-              (A.conj_inv i1 i2)
-              (A.eloc_union l1 l2)
-              false
+      typ pk (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_with_action:
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
@@ -574,19 +668,15 @@ type typ
       #l2:_ -> #i2:_ -> #b2:_ ->
       base:typ pk i1 l1 b1 ->
       act:action i2 l2 b2 bool ->
-      typ pk
-              (A.conj_inv i1 i2)
-              (A.eloc_union l1 l2)
-              false
+      typ pk (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_with_dep_action:
-      #l:_ -> #i:_ -> #b:_ ->
-      head:itype -> //dependent actoin, again head is a small type
-      act:(itype_as_type head -> action i l b bool) ->
-      typ (parser_kind_of_itype head)
-              i
-              l
-              false
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #i1:_ -> #l1:_ ->
+      #i2:_ -> #l2:_ -> #b2:_ ->
+      head:dtyp pk1 true i1 l1 true ->
+      act:(dtyp_as_type head -> action i2 l2 b2 bool) ->
+      typ pk1 (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_with_comment:
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
@@ -617,8 +707,9 @@ type typ
       typ P.kind_t_exact i l false
 
   | T_string:
-      element_type:itype ->
-      terminator:itype_as_type element_type ->
+      #pk1:P.parser_kind true P.WeakKindStrongPrefix ->
+      element_type:dtyp pk1 true A.true_inv A.eloc_none true ->
+      terminator:dtyp_as_type element_type ->
       typ P.parse_string_kind A.true_inv A.eloc_none false
 
 (* Type denotation of `typ` *)
@@ -631,20 +722,20 @@ let rec as_type
   = match t with
     | T_false -> False
 
-    | T_app hd b args ->
-      apply_arrow (type_of_binding b) args
+    | T_denoted td -> 
+      dtyp_as_type td
 
     | T_pair t1 t2 ->
       as_type t1 & as_type t2
 
     | T_dep_pair i t ->
-      x:itype_as_type i & as_type (t x)
+      x:dtyp_as_type i & as_type (t x)
 
     | T_refine base refinement ->
-      Prelude.refine (itype_as_type base) refinement
+      Prelude.refine (dtyp_as_type base) refinement
 
     | T_dep_pair_with_refinement base refinement t ->
-      x:Prelude.refine (itype_as_type base) refinement & as_type (t x)
+      x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
 
     | T_if_else b t0 t1 ->
       Prelude.t_ite b (as_type t0) (as_type t1)
@@ -654,7 +745,7 @@ let rec as_type
       as_type t
 
     | T_with_dep_action i _ ->
-      itype_as_type i
+      dtyp_as_type i
 
     | T_nlist n t ->
       Prelude.nlist n (as_type t)
@@ -665,11 +756,8 @@ let rec as_type
     | T_exact n t ->
       Prelude.t_exact n (as_type t)
 
-    | T_string terminator_t terminator ->
-      Prelude.cstring (itype_as_type terminator_t) terminator
-
-
-module T = FStar.Tactics
+    | T_string elt_t terminator ->
+      Prelude.cstring (dtyp_as_type elt_t) terminator
 
 (* Parser denotation of `typ` *)
 let rec as_parser
@@ -683,6 +771,9 @@ let rec as_parser
       //assert_norm (as_type g T_false == False);
       P.parse_impos()
 
+    | T_denoted d ->
+      dtyp_as_parser d
+
     | T_pair t1 t2 ->
       //assert_norm (as_type g (T_pair t1 t2) == as_type g t1 * as_type g t2);
       let p1 = as_parser t1 in
@@ -691,16 +782,16 @@ let rec as_parser
 
     | T_dep_pair i t ->
       //assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));
-      let pi = itype_as_parser i in
-      P.parse_dep_pair pi (fun (x:itype_as_type i) -> as_parser (t x))
+      let pi = dtyp_as_parser i in
+      P.parse_dep_pair pi (fun (x:dtyp_as_type i) -> as_parser (t x))
 
     | T_refine base refinement ->
       //assert_norm (as_type g (T_refine base refinement) == Prelude.refine (itype_as_type base) refinement);
-      let pi = itype_as_parser base in
+      let pi = dtyp_as_parser base in
       P.parse_filter pi refinement
 
     | T_dep_pair_with_refinement base refinement k ->
-      P.((itype_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
+      P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
 
     | T_if_else b t0 t1 ->
       //assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
@@ -714,15 +805,11 @@ let rec as_parser
 
     | T_with_dep_action i a ->
       //assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
-      itype_as_parser i
+      dtyp_as_parser i
 
     | T_with_comment t c ->
       //assert_norm (as_type g (T_with_comment t c) == as_type g t);
       as_parser t
-
-    | T_app hd b args ->
-      assert_norm (as_type (T_app hd b args) == apply_arrow (type_of_binding b) args);
-      apply_dep_arrow _ _ (parser_of_binding b) args
 
     | T_nlist n t ->
       Prelude.parse_nlist n (as_parser t)
@@ -733,9 +820,8 @@ let rec as_parser
     | T_exact n t ->
       Prelude.parse_t_exact n (as_parser t)
 
-    | T_string terminator_t terminator ->
-      Prelude.parse_string (itype_as_parser terminator_t) terminator
-
+    | T_string elt_t terminator ->
+      Prelude.parse_string (dtyp_as_parser elt_t) terminator
 
 (* The main result:
    A validator denotation of `typ`
@@ -755,6 +841,11 @@ let rec as_validator
     | T_false ->
       A.validate_impos()
 
+    | T_denoted td ->
+      assert_norm (as_type (T_denoted td) == dtyp_as_type td);
+      assert_norm (as_parser (T_denoted td) == dtyp_as_parser td);
+      dtyp_as_validator td
+
     | T_pair t1 t2 ->
       assert_norm (as_type (T_pair t1 t2) == as_type t1 * as_type t2);
       assert_norm (as_parser (T_pair t1 t2) == P.parse_pair (as_parser t1) (as_parser t2));
@@ -763,30 +854,32 @@ let rec as_validator
         (as_validator t2)
 
     | T_dep_pair i t ->
-      assert_norm (as_type (T_dep_pair i t) == x:itype_as_type i & as_type (t x));
+      assert_norm (as_type (T_dep_pair i t) == x:dtyp_as_type i & as_type (t x));
       assert_norm (as_parser (T_dep_pair i t) ==
-                   P.parse_dep_pair (itype_as_parser i) (fun (x:itype_as_type i) -> as_parser (t x)));
+                   P.parse_dep_pair (dtyp_as_parser i) (fun (x:dtyp_as_type i) -> as_parser (t x)));
       A.validate_weaken_inv_loc inv loc
       (A.validate_dep_pair ""
-        (itype_as_validator i)
-        (itype_as_leaf_reader i)
+        (dtyp_as_validator i)
+        (dtyp_as_leaf_reader i)
         (fun x -> as_validator (t x)))
 
     | T_refine t f ->
+      assert_norm (as_type (T_refine t f) == P.refine (dtyp_as_type t) f); admit();
+      assert_norm (as_parser (T_refine t f) == P.parse_filter (dtyp_as_parser t) f);
       A.validate_filter ""
-        (itype_as_validator t)
-        (itype_as_leaf_reader t)
+        (dtyp_as_validator t)
+        (dtyp_as_leaf_reader t)
         f "" ""
 
     | T_dep_pair_with_refinement base refinement k ->
       assert_norm (as_type (T_dep_pair_with_refinement base refinement k) ==
-                        x:Prelude.refine (itype_as_type base) refinement & as_type (k x));
+                        x:Prelude.refine (dtyp_as_type base) refinement & as_type (k x));
       assert_norm (as_parser (T_dep_pair_with_refinement base refinement k) ==
-                        P.((itype_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
+                        P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_weaken_inv_loc inv loc (
         A.validate_dep_pair_with_refinement false ""
-          (itype_as_validator base)
-          (itype_as_leaf_reader base)
+          (dtyp_as_validator base)
+          (dtyp_as_leaf_reader base)
           refinement
           (fun x -> as_validator (k x)))
 
@@ -807,23 +900,18 @@ let rec as_validator
         (action_as_action (as_parser t) a)
 
     | T_with_dep_action i a ->
-      assert_norm (as_type (T_with_dep_action i a) == itype_as_type i);
-      assert_norm (as_parser (T_with_dep_action i a) == itype_as_parser i);
+      assert_norm (as_type (T_with_dep_action i a) == dtyp_as_type i);
+      assert_norm (as_parser (T_with_dep_action i a) == dtyp_as_parser i);
       A.validate_weaken_inv_loc inv loc (
        A.validate_with_dep_action ""
-        (itype_as_validator i)
-        (itype_as_leaf_reader i)
-        (fun x -> action_as_action (itype_as_parser i) (a x)))
+        (dtyp_as_validator i)
+        (dtyp_as_leaf_reader i)
+        (fun x -> action_as_action (dtyp_as_parser i) (a x)))
 
     | T_with_comment t c ->
       assert_norm (as_type (T_with_comment t c) == as_type t);
       assert_norm (as_parser (T_with_comment t c) == as_parser t);
       A.validate_with_comment "" (as_validator t)
-
-    | T_app hd b args ->
-      assert_norm (as_type (T_app hd b args) == apply_arrow (type_of_binding b) args);
-      assert_norm (as_parser (T_app hd b args) == apply_dep_arrow _ _ (parser_of_binding b) args);
-      apply_dep_arrow _ _ (validator_of_binding b) args
 
     | T_nlist n t ->
       assert_norm (as_type (T_nlist n t) == Prelude.nlist n (as_type t));
@@ -841,10 +929,10 @@ let rec as_validator
       A.validate_t_exact n (as_validator t)
 
     | T_string elt_t terminator ->
-      assert_norm (as_type (T_string elt_t terminator) == Prelude.cstring (itype_as_type elt_t) terminator);
-      assert_norm (as_parser (T_string elt_t terminator) == Prelude.parse_string (itype_as_parser elt_t) terminator);
-      A.validate_string (itype_as_validator elt_t)
-                        (itype_as_leaf_reader elt_t)
+      assert_norm (as_type (T_string elt_t terminator) == Prelude.cstring (dtyp_as_type elt_t) terminator);
+      assert_norm (as_parser (T_string elt_t terminator) == Prelude.parse_string (dtyp_as_parser elt_t) terminator);
+      A.validate_string (dtyp_as_validator elt_t)
+                        (dtyp_as_leaf_reader elt_t)
                         terminator
 
 let specialize_tac ()
@@ -852,190 +940,190 @@ let specialize_tac ()
   = T.norm [zeta; iota; delta_attr [`%specialize]; delta_only [`%List.Tot.tryFind; `%proj_1; `%proj_5; `%proj_6; `%proj_10]];
     T.trefl()
 
-[@@specialize]
-let u8_pair
-  : typ _ _ _ _
-  = T_pair (T_refine UInt8 (fun _ -> true))
-           (T_refine UInt8 (fun _ -> true))
+// [@@specialize]
+// let u8_pair
+//   : typ _ _ _ _
+//   = T_pair (T_refine UInt8 (fun _ -> true))
+//            (T_refine UInt8 (fun _ -> true))
 
-[@@T.postprocess_with specialize_tac]
-let validate_u8_pair
-  = as_validator u8_pair
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_pair
+//   = as_validator u8_pair
 
-(* In emacs, C-c C-s C-p shows the definition of validate_u8_pair as:
+// (* In emacs, C-c C-s C-p shows the definition of validate_u8_pair as:
 
-Actions.validate_pair ""
-    (Actions.validate_filter "" Actions.validate____UINT8 Actions.read____UINT8 (fun _ -> true) "" "")
-    (Actions.validate_filter "" Actions.validate____UINT8 Actions.read____UINT8 (fun _ -> true) "" "")
-*)
+// Actions.validate_pair ""
+//     (Actions.validate_filter "" Actions.validate____UINT8 Actions.read____UINT8 (fun _ -> true) "" "")
+//     (Actions.validate_filter "" Actions.validate____UINT8 Actions.read____UINT8 (fun _ -> true) "" "")
+// *)
 
-[@@specialize]
-let as_nullary_arrow (#res:Type u#a) (f:res)
-  : arrow [] res
-  = f
+// [@@specialize]
+// let as_nullary_arrow (#res:Type u#a) (f:res)
+//   : arrow [] res
+//   = f
 
-[@@specialize]
-let u8_pair_binding
-  : global_binding
-  = { name = "u8_pair";
-      param_types = [];
-      parser_kind_nz = _;
-      parser_weak_kind = _;
-      parser_kind = _;
-      inv = as_nullary_arrow (A.conj_inv A.true_inv A.true_inv);
-      loc = as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none);
-      allow_reading = _;
-      p_t = as_type u8_pair;
-      p_p = as_parser u8_pair;
-      p_v = validate_u8_pair}
+// [@@specialize]
+// let u8_pair_binding
+//   : global_binding
+//   = { name = "u8_pair";
+//       param_types = [];
+//       parser_kind_nz = _;
+//       parser_weak_kind = _;
+//       parser_kind = _;
+//       inv = as_nullary_arrow (A.conj_inv A.true_inv A.true_inv);
+//       loc = as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none);
+//       allow_reading = _;
+//       p_t = as_type u8_pair;
+//       p_p = as_parser u8_pair;
+//       p_v = validate_u8_pair}
 
-module U8 = FStar.UInt8
+// module U8 = FStar.UInt8
 
-[@@specialize]
-let u8_pair_param (i:P.___UINT8)
-  : typ _ _ _ _
-  = T_pair (T_refine UInt8 (fun fst -> U8.(fst <^ i) ))
-           (T_refine UInt8 (fun snd -> U8.(snd >=^ i)))
+// [@@specialize]
+// let u8_pair_param (i:P.___UINT8)
+//   : typ _ _ _ _
+//   = T_pair (T_refine UInt8 (fun fst -> U8.(fst <^ i) ))
+//            (T_refine UInt8 (fun snd -> U8.(snd >=^ i)))
 
-[@@T.postprocess_with specialize_tac]
-let validate_u8_pair_param (i:P.___UINT8)
-  = as_validator (u8_pair_param i)
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_pair_param (i:P.___UINT8)
+//   = as_validator (u8_pair_param i)
 
-(* Produces:
-fun i ->
-    Actions.validate_pair ""
-      (Actions.validate_filter ""
-          Actions.validate____UINT8
-          Actions.read____UINT8
-          (fun fst -> fst <^ i)
-          ""
-          "")
-      (Actions.validate_filter ""
-          Actions.validate____UINT8
-          Actions.read____UINT8
-          (fun snd -> snd >=^ i)
-          ""
-          "")
-*)
+// (* Produces:
+// fun i ->
+//     Actions.validate_pair ""
+//       (Actions.validate_filter ""
+//           Actions.validate____UINT8
+//           Actions.read____UINT8
+//           (fun fst -> fst <^ i)
+//           ""
+//           "")
+//       (Actions.validate_filter ""
+//           Actions.validate____UINT8
+//           Actions.read____UINT8
+//           (fun snd -> snd >=^ i)
+//           ""
+//           "")
+// *)
 
-[@@specialize]
-let as_arrow_cons #is #k (i:param_type) (f: param_type_as_type i -> arrow is k)
-  : arrow (i::is) k
-  = f
+// [@@specialize]
+// let as_arrow_cons #is #k (i:param_type) (f: param_type_as_type i -> arrow is k)
+//   : arrow (i::is) k
+//   = f
 
-[@@specialize]
-let as_nullary_dep_arrow (#res:args_of [] -> Type) (f:res ())
-  : dep_arrow [] res
-  = f
+// [@@specialize]
+// let as_nullary_dep_arrow (#res:args_of [] -> Type) (f:res ())
+//   : dep_arrow [] res
+//   = f
 
-[@@specialize]
-let as_dep_arrow_cons i #is (#res:args_of (i::is) -> Type)
-                      (f: (x:param_type_as_type i -> dep_arrow is (fun xs -> res (x, xs))))
-  : dep_arrow (i::is) res
-  = f
+// [@@specialize]
+// let as_dep_arrow_cons i #is (#res:args_of (i::is) -> Type)
+//                       (f: (x:param_type_as_type i -> dep_arrow is (fun xs -> res (x, xs))))
+//   : dep_arrow (i::is) res
+//   = f
 
-[@@specialize]
-let param_types = [IT_Base UInt8]
+// [@@specialize]
+// let param_types = [IT_Base UInt8]
 
-let p_t
-  : arrow param_types Type
-  = as_arrow_cons (IT_Base UInt8) (fun i -> as_nullary_arrow (as_type (u8_pair_param i)))
+// let p_t
+//   : arrow param_types Type
+//   = as_arrow_cons (IT_Base UInt8) (fun i -> as_nullary_arrow (as_type (u8_pair_param i)))
 
-let p_k = Prelude.and_then_kind
-              (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
-              (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
+// let p_k = Prelude.and_then_kind
+//               (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
+//               (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
 
-let p_p
-  : dep_arrow param_types (fun args -> P.parser p_k (apply_arrow p_t args))
-  = let f (i:param_type_as_type (IT_Base UInt8))
-      : dep_arrow [] (fun args -> P.parser p_k (apply_arrow p_t (i, args)))
-      = as_nullary_dep_arrow (as_parser (u8_pair_param i))
-    in
-    as_dep_arrow_cons (IT_Base UInt8) f
+// let p_p
+//   : dep_arrow param_types (fun args -> P.parser p_k (apply_arrow p_t args))
+//   = let f (i:param_type_as_type (IT_Base UInt8))
+//       : dep_arrow [] (fun args -> P.parser p_k (apply_arrow p_t (i, args)))
+//       = as_nullary_dep_arrow (as_parser (u8_pair_param i))
+//     in
+//     as_dep_arrow_cons (IT_Base UInt8) f
 
-[@@specialize]
-let p_v
-  : dep_arrow param_types
-    (fun args -> A.validate_with_action_t
-                 (apply_dep_arrow _ _ p_p args)
-                 _
-                 _
-                 _)
-  = let f (i:param_type_as_type (IT_Base UInt8))
-      : dep_arrow []
-          (fun args ->
-            A.validate_with_action_t
-                 (apply_dep_arrow _ _ p_p (i,args))
-                 _ _ _)
-      = as_nullary_dep_arrow (validate_u8_pair_param i)
-    in
-    as_dep_arrow_cons (IT_Base UInt8) f
+// [@@specialize]
+// let p_v
+//   : dep_arrow param_types
+//     (fun args -> A.validate_with_action_t
+//                  (apply_dep_arrow _ _ p_p args)
+//                  _
+//                  _
+//                  _)
+//   = let f (i:param_type_as_type (IT_Base UInt8))
+//       : dep_arrow []
+//           (fun args ->
+//             A.validate_with_action_t
+//                  (apply_dep_arrow _ _ p_p (i,args))
+//                  _ _ _)
+//       = as_nullary_dep_arrow (validate_u8_pair_param i)
+//     in
+//     as_dep_arrow_cons (IT_Base UInt8) f
 
-[@@specialize]
-let u8_pair_param_binding
-  : global_binding
-  = { name = "u8_pair_param";
-      param_types = [IT_Base UInt8];
-      parser_kind_nz = _;
-      parser_weak_kind = _;
-      parser_kind = _;
-      inv = as_arrow_cons #[] #A.slice_inv _ (fun _ -> as_nullary_arrow (A.conj_inv A.true_inv A.true_inv));
-      loc = as_arrow_cons #[] #A.eloc _ (fun _ -> as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none));
-      allow_reading = _;
-      p_t = p_t;
-      p_p = p_p;
-      p_v = p_v }
+// [@@specialize]
+// let u8_pair_param_binding
+//   : global_binding
+//   = { name = "u8_pair_param";
+//       param_types = [IT_Base UInt8];
+//       parser_kind_nz = _;
+//       parser_weak_kind = _;
+//       parser_kind = _;
+//       inv = as_arrow_cons #[] #A.slice_inv _ (fun _ -> as_nullary_arrow (A.conj_inv A.true_inv A.true_inv));
+//       loc = as_arrow_cons #[] #A.eloc _ (fun _ -> as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none));
+//       allow_reading = _;
+//       p_t = p_t;
+//       p_p = p_p;
+//       p_v = p_v }
 
-[@@specialize]
-let nullary_args : args_of [] = ()
+// [@@specialize]
+// let nullary_args : args_of [] = ()
 
-[@@specialize]
-let u8_pair_ref
-  = T_app "u8_pair" u8_pair_binding nullary_args
+// [@@specialize]
+// let u8_pair_ref
+//   = T_app "u8_pair" u8_pair_binding nullary_args
 
-[@@specialize]
-let u8_line
-  = T_pair u8_pair_ref u8_pair_ref
+// [@@specialize]
+// let u8_line
+//   = T_pair u8_pair_ref u8_pair_ref
 
-[@@T.postprocess_with specialize_tac]
-let validate_u8_line
-  = as_validator u8_line
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_line
+//   = as_validator u8_line
 
-[@@specialize]
-let u8_rect
-  = T_pair
-      (T_pair u8_line u8_line)
-      (T_pair (T_pair u8_line u8_line)
-              (T_pair (T_pair u8_line u8_line)
-                      (T_pair u8_line u8_line)))
+// [@@specialize]
+// let u8_rect
+//   = T_pair
+//       (T_pair u8_line u8_line)
+//       (T_pair (T_pair u8_line u8_line)
+//               (T_pair (T_pair u8_line u8_line)
+//                       (T_pair u8_line u8_line)))
 
-let specialize_nbe_tac ()
-  : T.Tac unit
-  = T.norm [nbe; zeta; iota; delta_attr [`%specialize]; delta_only [`%List.Tot.tryFind; `%proj_1; `%proj_10]];
-    T.trefl()
+// let specialize_nbe_tac ()
+//   : T.Tac unit
+//   = T.norm [nbe; zeta; iota; delta_attr [`%specialize]; delta_only [`%List.Tot.tryFind; `%proj_1; `%proj_10]];
+//     T.trefl()
 
-[@@T.postprocess_with specialize_nbe_tac]
-let validate_u8_rect
-  = as_validator u8_rect
+// [@@T.postprocess_with specialize_nbe_tac]
+// let validate_u8_rect
+//   = as_validator u8_rect
 
-(**
-Generates:
+// (**
+// Generates:
 
-    Actions.validate_pair ""
-    (Actions.validate_pair ""
-        (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-        (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
-    (Actions.validate_pair ""
-        (Actions.validate_pair ""
-            (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-            (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
-        (Actions.validate_pair ""
-            (Actions.validate_pair ""
-                (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-                (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
-            (Actions.validate_pair ""
-                (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-                (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)))
-    )
+//     Actions.validate_pair ""
+//     (Actions.validate_pair ""
+//         (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
+//         (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
+//     (Actions.validate_pair ""
+//         (Actions.validate_pair ""
+//             (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
+//             (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
+//         (Actions.validate_pair ""
+//             (Actions.validate_pair ""
+//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
+//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
+//             (Actions.validate_pair ""
+//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
+//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)))
+//     )
 
- **)
+//  **)
