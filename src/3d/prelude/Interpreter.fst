@@ -42,8 +42,8 @@ module ProjTac = Proj
    denotation. That is, given a 3D program `t:typ` we can interpret it
    as validator to check that an input array of bytes conforms to the
    format specified by `t`. But, what we want ultimately is a C
-   program for a `t`-validator. 
-   
+   program for a `t`-validator.
+
    To achieve this, for any given concrete `t`, we partially evaluate
    this interpreter to get an EverParse validator specialized to `t`
    which can be extracted by F*/Kremlin as usual---this partial
@@ -56,7 +56,7 @@ let specialize = ()
 
 (** You can see the basic idea of the whole stack working at first on
     a very simple class of types---just the primitive integer types *)
-    
+
 (* Primitive integer types *)
 type itype =
   | UInt8
@@ -65,8 +65,8 @@ type itype =
   | UInt64
 
 (* Interpretation of itype as an F* type *)
-let itype_as_type (i:itype) 
-  : Type 
+let itype_as_type (i:itype)
+  : Type
   = match i with
     | UInt8 -> P.___UINT8
     | UInt16 -> P.___UINT16
@@ -74,7 +74,7 @@ let itype_as_type (i:itype)
     | UInt64 -> P.___UINT64
 
 (* Interpretation of itype as a parser kind *)
-let parser_kind_of_itype (i:itype) 
+let parser_kind_of_itype (i:itype)
   : P.parser_kind true P.WeakKindStrongPrefix
   = match i with
     | UInt8 -> P.kind____UINT8
@@ -83,7 +83,7 @@ let parser_kind_of_itype (i:itype)
     | UInt64 -> P.kind____UINT64
 
 (* Interpretation of an itype as a parser *)
-let itype_as_parser (i:itype) 
+let itype_as_parser (i:itype)
   : P.parser (parser_kind_of_itype i) (itype_as_type i)
   = match i with
     | UInt8 -> P.parse____UINT8
@@ -136,12 +136,12 @@ let itype_as_validator (i:itype)
 
 (* A parameter type is either an primitive integer
    or a pointer to a parameter type *)
-type param_type = 
+type param_type =
   | IT_Base of itype
   | IT_Pointer of param_type
 
 (* Denotation of a param_type *)
-let rec param_type_as_type (i:param_type) 
+let rec param_type_as_type (i:param_type)
   : Type0
   = match i with
     | IT_Base i -> itype_as_type i
@@ -150,7 +150,7 @@ let rec param_type_as_type (i:param_type)
 (* `args_of ps` is a nested pair, each of whose elements
    has a type corresponding to the denotation of the
    the ith parameter type in ps *)
-let rec args_of (ps:list param_type) = 
+let rec args_of (ps:list param_type) =
   match ps with
   | [] -> unit
   | i::ps -> param_type_as_type i & args_of ps
@@ -165,8 +165,8 @@ let rec arrow (is:list param_type) (res:Type u#a)
 
 (* Just an example to show the `arrow` type at work *)
 let _illustrate_int_to_int = arrow [IT_Base UInt8] P.___UINT8
-let _illustrate_int_to_int_inhabitant 
-  : _illustrate_int_to_int 
+let _illustrate_int_to_int_inhabitant
+  : _illustrate_int_to_int
   = fun (x:P.___UINT8) -> x
 
 (* Coercion for nullary arrows --- useful in some proofs *)
@@ -186,7 +186,7 @@ let apply (#i:param_type)
     : arrow is res
     = f x
 
-(* Eliminating an arrow entirely by applying 
+(* Eliminating an arrow entirely by applying
    it to arguments for all its parameters *)
 [@@specialize]
 let rec apply_arrow (#is:list param_type)
@@ -202,8 +202,8 @@ let rec apply_arrow (#is:list param_type)
    parameters in `ps` to to `f args` where `args : args_of ps`
    collects the bound variables of each dependent arrow *)
 let rec dep_arrow (is:list param_type) (f:args_of is -> Type)
-  = match is with 
-    | [] -> 
+  = match is with
+    | [] ->
       assert_norm (args_of is == unit);
       f ()
     | i::is ->
@@ -216,13 +216,13 @@ let _illustrate_eq_fun_t = x:P.___UINT8 -> y:P.___UINT8 { y == x }
 let _illustrate_eq_fun_t_inhabitant : _illustrate_eq_fun_t = fun x -> x
 let _illustrate_dep_int_to_int = dep_arrow [IT_Base UInt8] (fun x -> y:P.___UINT8{y == fst x})
 let _coerce_eq (a b:Type) (_:squash (a == b)) (x:a) : b = x
-let _illustrate_dep_int_to_int_inhabitant 
+let _illustrate_dep_int_to_int_inhabitant
   : _illustrate_dep_int_to_int
-  = assert_norm (_illustrate_dep_int_to_int == _illustrate_eq_fun_t); 
-    _coerce_eq _ _ () _illustrate_eq_fun_t_inhabitant    
-    
+  = assert_norm (_illustrate_dep_int_to_int == _illustrate_eq_fun_t);
+    _coerce_eq _ _ () _illustrate_eq_fun_t_inhabitant
 
-(* Eliminate a single dep_arrow into a native dependent -> *) 
+
+(* Eliminate a single dep_arrow into a native dependent -> *)
 [@@specialize]
 let apply_dep_arrow_cons (i:_) (is:_)
                          (k: args_of (i::is) -> Type)
@@ -230,7 +230,7 @@ let apply_dep_arrow_cons (i:_) (is:_)
    : x:param_type_as_type i -> dep_arrow is (fun (xs:args_of is) -> k (x, xs))
    = f
 
-(* Eliminate a dep_arrow completely by applying to 
+(* Eliminate a dep_arrow completely by applying to
    all its arguments *)
 [@@specialize]
 let rec apply_dep_arrow (param_types:list param_type)
@@ -239,7 +239,7 @@ let rec apply_dep_arrow (param_types:list param_type)
                         (args: args_of param_types)
   : k args
   = match param_types with
-    | [] -> 
+    | [] ->
       assert_norm (args_of [] == unit);
       (f <: dep_arrow [] k)
     | i::is ->
@@ -247,7 +247,7 @@ let rec apply_dep_arrow (param_types:list param_type)
       let f : dep_arrow (i::is) k = f in
       let args : args_of (i::is) = args in
       apply_dep_arrow
-        is 
+        is
         (fun xs -> k (fst args, xs))
         (apply_dep_arrow_cons _ _ _ f (fst args))
         (snd args)
@@ -263,8 +263,8 @@ let ident = string
 noeq
 type global_binding = {
   // The name being bound
-  name : ident; 
-  //Its parameter types  
+  name : ident;
+  //Its parameter types
   param_types: list param_type;
   //Parser metadata
   parser_kind_nz:bool; // Does it consume non-zero bytes?
@@ -282,8 +282,8 @@ type global_binding = {
   p_p : dep_arrow param_types
           (fun (args:args_of param_types) ->
             P.parser parser_kind (apply_arrow p_t args));
-  //Its validate-with-action denotationa          
-  p_v : dep_arrow param_types 
+  //Its validate-with-action denotationa
+  p_v : dep_arrow param_types
           (fun args ->
             A.validate_with_action_t (apply_dep_arrow _ _ p_p args)
                                      (apply_arrow inv args)
@@ -315,18 +315,18 @@ let validator_of_binding = proj_10
 let globals = list global_binding
 
 [@@specialize]
-let lookup (env:globals) (name:ident) 
+let lookup (env:globals) (name:ident)
   : option global_binding
-  = List.Tot.tryFind 
+  = List.Tot.tryFind
     (fun b ->
-      match b with 
+      match b with
       | { name = n } -> n = name) env
 
 (** Now we define the AST of 3D programs *)
 
 (* The type of atomic actions.
-   
-   `atomic_action l i b t`: is an atomic action that 
+
+   `atomic_action l i b t`: is an atomic action that
      - may modify locations `l`
      - relies on a memory invariant `i`
      - b, when set, indicates that the action can only run in a success handler
@@ -334,7 +334,7 @@ let lookup (env:globals) (name:ident)
 
    In comparison with with the 3D front-end's internal representation
    of actions, some notable differences
-   
+
      - The indexing structure tell us exactly the type to which these
        will translate. It's also worth comparing these types to the
        types of the action primitives in Actions.fsti---the indexing
@@ -346,7 +346,7 @@ let lookup (env:globals) (name:ident)
        value.
 *)
 noeq
-type atomic_action 
+type atomic_action
   : A.slice_inv -> A.eloc -> bool -> Type0 -> Type =
   | Action_return:
       #a:Type0 ->
@@ -355,18 +355,18 @@ type atomic_action
 
   | Action_abort:
       atomic_action A.true_inv A.eloc_none false bool
-  
+
   | Action_field_pos:
       atomic_action A.true_inv A.eloc_none false U32.t
-      
-  | Action_field_ptr: 
+
+  | Action_field_ptr:
       atomic_action A.true_inv A.eloc_none true LPL.puint8
-      
+
   | Action_deref:
       #a:Type0 ->
       x:B.pointer a ->
       atomic_action (A.ptr_inv x) A.eloc_none false a
-      
+
   | Action_assignment:
       #a:Type0 ->
       x:B.pointer a ->
@@ -380,7 +380,7 @@ let atomic_action_as_action
    (#pk:P.parser_kind nz wk) (#pt:Type)
    (#i #l #b #t:_)
    (p:P.parser pk pt)
-   (a:atomic_action i l b t) 
+   (a:atomic_action i l b t)
   : Tot (A.action p i l b t)
   = match a with
     | Action_return x ->
@@ -393,22 +393,22 @@ let atomic_action_as_action
       A.action_field_ptr ()
     | Action_deref x ->
       A.action_deref x
-    | Action_assignment x rhs -> 
+    | Action_assignment x rhs ->
       A.action_assignment x rhs
 
-(* A sub-language of monadic actions. 
+(* A sub-language of monadic actions.
 
    The indexing structure mirrors the indexes of the combinators in
-   Actions.fst 
+   Actions.fst
 *)
 noeq
-type action 
+type action
   : A.slice_inv -> A.eloc -> bool -> Type0 -> Type =
   | Atomic_action:
       #i:_ -> #l:_ -> #b:_ -> #t:_ ->
       atomic_action i l b t ->
       action i l b t
-      
+
   | Action_seq:
       #i0:_ -> #l0:_ -> #b0:_ -> hd:atomic_action i0 l0 b0 unit ->
       #i1:_ -> #l1:_ -> #b1:_ -> #t:_ -> tl:action i1 l1 b1 t ->
@@ -419,8 +419,8 @@ type action
       #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:action i0 l0 b0 t ->
       #i1:_ -> #l1:_ -> #b1:_ -> else_:action i1 l1 b1 t ->
       action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t
-      
-  | Action_let: 
+
+  | Action_let:
       #i0:_ -> #l0:_ -> #b0:_ -> #t0:_ -> head:atomic_action i0 l0 b0 t0 ->
       #i1:_ -> #l1:_ -> #b1:_ -> #t1:_ -> k:(t0 -> action i1 l1 b1 t1) ->
       action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t1
@@ -432,7 +432,7 @@ let rec action_as_action
    (#pk:P.parser_kind nz wk) (#pt:_)
    (#i #l #b #t:_)
    (p:P.parser pk pt)
-   (a:action i l b t) 
+   (a:action i l b t)
   : Tot (A.action p i l b t)
     (decreases a)
   = match a with
@@ -448,7 +448,7 @@ let rec action_as_action
       let then_ (_:squash hd) = action_as_action p t in
       let else_ (_:squash (not hd)) = action_as_action p e in
       A.action_ite hd then_ else_
-      
+
     | Action_let hd k ->
       let head = atomic_action_as_action p hd in
       let k x = action_as_action p (k x) in
@@ -480,7 +480,7 @@ let comments = list string
 *)
 #push-options "--__temp_no_proj Interpreter"
 noeq
-type typ 
+type typ
   : #nz:bool -> #wk:P.weak_kind ->
     P.parser_kind nz wk ->
     A.slice_inv ->
@@ -492,7 +492,16 @@ type typ
               A.true_inv
               A.eloc_none
               true
-  
+
+  | T_app:
+      hd:ident -> //the name isn't needed strictly speakinga
+      b:global_binding -> //what matters is its interpretation
+      args:args_of (param_types_of_binding b) ->
+      typ b.parser_kind
+              (apply_arrow (inv_of_binding b) args)
+              (apply_arrow (loc_of_binding b) args)
+              (ar_of_binding b)
+
   | T_pair:
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ -> #b1:_ ->
@@ -504,20 +513,11 @@ type typ
               (A.conj_inv i1 i2)
               (A.eloc_union l1 l2)
               false
-                 
-  | T_app:
-      hd:ident -> //the name isn't needed strictly speakinga
-      b:global_binding -> //what matters is its interpretation
-      args:args_of (param_types_of_binding b) ->
-      typ b.parser_kind
-              (apply_arrow (inv_of_binding b) args)                     
-              (apply_arrow (loc_of_binding b) args)
-              (ar_of_binding b)
-                     
+
   | T_dep_pair:
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
-      #l1:_ -> #i1:_ -> #b2:_ -> 
-      //the first component is a small type      
+      #l1:_ -> #i1:_ -> #b2:_ ->
+      //the first component is a small type
       t1:itype ->
       //the second component is a function from denotations of t1
       //that's why it's a small type, so that we can speak about its
@@ -525,11 +525,11 @@ type typ
       t2:(itype_as_type t1 -> typ pk2 i1 l1 b2) ->
       typ (P.and_then_kind (parser_kind_of_itype t1) pk2)
               i1
-              l1 
+              l1
               false
-               
+
   | T_refine:
-      //the first component is a small type  
+      //the first component is a small type
       base:itype ->
       //the second component is a function from denotations of t1
       //but notice that its codomain is bool, rather than expr
@@ -539,30 +539,46 @@ type typ
               A.true_inv
               A.eloc_none
               false
-               
+
+  | T_dep_pair_with_refinement:
+      //This construct serves two purposes
+      // 1. To avoid double fetches, we fold the refinement
+      //    and dependent pair into a single form
+      // 2. This allows the well-typedness of the continuation k
+      //    to depend on the refinement of the first field
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #i:_ -> #l:_ -> #b:_ ->
+      base:itype ->
+      refinement:(itype_as_type base -> bool) ->
+      k:(x:itype_as_type base { refinement x } -> typ pk i l b) ->
+      typ (P.and_then_kind (P.filter_kind (parser_kind_of_itype base)) pk)
+              i
+              l
+              false
+
   | T_if_else:
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #l1:_ -> #i1:_ -> #b1:_ ->
       #l2:_ -> #i2:_ -> #b2:_ ->
       b:bool -> //A bool, rather than an expression
       t1:typ pk i1 l1 b1 ->
-      t2:typ pk i2 l2 b2 ->      
-      typ pk 
+      t2:typ pk i2 l2 b2 ->
+      typ pk
               (A.conj_inv i1 i2)
               (A.eloc_union l1 l2)
               false
-               
+
   | T_with_action:
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #l1:_ -> #i1:_ -> #b1:_ ->
       #l2:_ -> #i2:_ -> #b2:_ ->
       base:typ pk i1 l1 b1 ->
       act:action i2 l2 b2 bool ->
-      typ pk 
+      typ pk
               (A.conj_inv i1 i2)
               (A.eloc_union l1 l2)
               false
-                 
+
   | T_with_dep_action:
       #l:_ -> #i:_ -> #b:_ ->
       head:itype -> //dependent actoin, again head is a small type
@@ -571,7 +587,7 @@ type typ
               i
               l
               false
-                     
+
   | T_with_comment:
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #l:_ -> #i:_ -> #b:_ ->
@@ -579,60 +595,102 @@ type typ
       c:comments ->
       typ pk i l b
 
+  | T_nlist:
+      #wk:_ -> #pk:P.parser_kind true wk ->
+      #i:_ -> #l:_ -> #b:_ ->
+      n:U32.t ->
+      t:typ pk i l b ->
+      typ P.kind_nlist i l false
+
+  | T_at_most:
+      #wk:_ -> #pk:P.parser_kind true wk ->
+      #i:_ -> #l:_ -> #b:_ ->
+      n:U32.t ->
+      t:typ pk i l b ->
+      typ P.kind_t_at_most i l false
+
+  | T_exact:
+      #wk:_ -> #pk:P.parser_kind true wk ->
+      #i:_ -> #l:_ -> #b:_ ->
+      n:U32.t ->
+      t:typ pk i l b ->
+      typ P.kind_t_exact i l false
+
+  | T_string:
+      element_type:itype ->
+      terminator:itype_as_type element_type ->
+      typ P.parse_string_kind A.true_inv A.eloc_none false
+
 (* Type denotation of `typ` *)
-let rec as_type 
+let rec as_type
           #nz #wk (#pk:P.parser_kind nz wk)
-          #l #i #b 
+          #l #i #b
           (t:typ pk l i b)
   : Tot Type0
     (decreases t)
   = match t with
     | T_false -> False
 
+    | T_app hd b args ->
+      apply_arrow (type_of_binding b) args
+
     | T_pair t1 t2 ->
       as_type t1 & as_type t2
 
-    | T_dep_pair i t -> 
+    | T_dep_pair i t ->
       x:itype_as_type i & as_type (t x)
-      
-    | T_refine base refinement -> 
+
+    | T_refine base refinement ->
       Prelude.refine (itype_as_type base) refinement
 
-    | T_if_else b t0 t1 -> 
+    | T_dep_pair_with_refinement base refinement t ->
+      x:Prelude.refine (itype_as_type base) refinement & as_type (t x)
+
+    | T_if_else b t0 t1 ->
       Prelude.t_ite b (as_type t0) (as_type t1)
 
     | T_with_action t _
-    | T_with_comment t _ -> 
+    | T_with_comment t _ ->
       as_type t
 
     | T_with_dep_action i _ ->
       itype_as_type i
 
-    | T_app hd b args -> 
-      apply_arrow (type_of_binding b) args
+    | T_nlist n t ->
+      Prelude.nlist n (as_type t)
+
+    | T_at_most n t ->
+      Prelude.t_at_most n (as_type t)
+
+    | T_exact n t ->
+      Prelude.t_exact n (as_type t)
+
+    | T_string terminator_t terminator ->
+      Prelude.cstring (itype_as_type terminator_t) terminator
+
 
 module T = FStar.Tactics
 
 (* Parser denotation of `typ` *)
-let rec as_parser 
+let rec as_parser
           #nz #wk (#pk:P.parser_kind nz wk)
           #l #i #b
           (t:typ pk l i b)
   : Tot (P.parser pk (as_type t))
         (decreases t)
   = match t returns Tot (P.parser pk (as_type t)) with
-    | T_false -> 
+    | T_false ->
       //assert_norm (as_type g T_false == False);
       P.parse_impos()
 
-    | T_pair t1 t2 -> 
+    | T_pair t1 t2 ->
       //assert_norm (as_type g (T_pair t1 t2) == as_type g t1 * as_type g t2);
       let p1 = as_parser t1 in
       let p2 = as_parser t2 in
       P.parse_pair p1 p2
 
     | T_dep_pair i t ->
-      //assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));      
+      //assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));
       let pi = itype_as_parser i in
       P.parse_dep_pair pi (fun (x:itype_as_type i) -> as_parser (t x))
 
@@ -641,7 +699,10 @@ let rec as_parser
       let pi = itype_as_parser base in
       P.parse_filter pi refinement
 
-    | T_if_else b t0 t1 -> 
+    | T_dep_pair_with_refinement base refinement k ->
+      P.((itype_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
+
+    | T_if_else b t0 t1 ->
       //assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
       let p0 (_:squash b) = as_parser t0 in
       let p1 (_:squash (not b)) = as_parser t1 in
@@ -650,21 +711,33 @@ let rec as_parser
     | T_with_action t a ->
       //assert_norm (as_type g (T_with_action t a) == as_type g t);
       as_parser t
-      
+
     | T_with_dep_action i a ->
       //assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
       itype_as_parser i
-      
-    | T_with_comment t c -> 
-      //assert_norm (as_type g (T_with_comment t c) == as_type g t);      
+
+    | T_with_comment t c ->
+      //assert_norm (as_type g (T_with_comment t c) == as_type g t);
       as_parser t
 
     | T_app hd b args ->
       assert_norm (as_type (T_app hd b args) == apply_arrow (type_of_binding b) args);
       apply_dep_arrow _ _ (parser_of_binding b) args
 
+    | T_nlist n t ->
+      Prelude.parse_nlist n (as_parser t)
 
-(* The main result: 
+    | T_at_most n t ->
+      Prelude.parse_t_at_most n (as_parser t)
+
+    | T_exact n t ->
+      Prelude.parse_t_exact n (as_parser t)
+
+    | T_string terminator_t terminator ->
+      Prelude.parse_string (itype_as_parser terminator_t) terminator
+
+
+(* The main result:
    A validator denotation of `typ`
      related by construction to the parser
      and type denotations
@@ -679,10 +752,10 @@ let rec as_validator
   = match t
     returns Tot (A.validate_with_action_t (as_parser t) inv loc b)
     with
-    | T_false -> 
+    | T_false ->
       A.validate_impos()
 
-    | T_pair t1 t2 -> 
+    | T_pair t1 t2 ->
       assert_norm (as_type (T_pair t1 t2) == as_type t1 * as_type t2);
       assert_norm (as_parser (T_pair t1 t2) == P.parse_pair (as_parser t1) (as_parser t2));
       A.validate_pair ""
@@ -691,7 +764,7 @@ let rec as_validator
 
     | T_dep_pair i t ->
       assert_norm (as_type (T_dep_pair i t) == x:itype_as_type i & as_type (t x));
-      assert_norm (as_parser (T_dep_pair i t) == 
+      assert_norm (as_parser (T_dep_pair i t) ==
                    P.parse_dep_pair (itype_as_parser i) (fun (x:itype_as_type i) -> as_parser (t x)));
       A.validate_weaken_inv_loc inv loc
       (A.validate_dep_pair ""
@@ -699,31 +772,43 @@ let rec as_validator
         (itype_as_leaf_reader i)
         (fun x -> as_validator (t x)))
 
-    | T_refine t f -> 
-      A.validate_filter "" 
+    | T_refine t f ->
+      A.validate_filter ""
         (itype_as_validator t)
         (itype_as_leaf_reader t)
         f "" ""
 
-    | T_if_else b t0 t1 -> 
+    | T_dep_pair_with_refinement base refinement k ->
+      assert_norm (as_type (T_dep_pair_with_refinement base refinement k) ==
+                        x:Prelude.refine (itype_as_type base) refinement & as_type (k x));
+      assert_norm (as_parser (T_dep_pair_with_refinement base refinement k) ==
+                        P.((itype_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
+      A.validate_weaken_inv_loc inv loc (
+        A.validate_dep_pair_with_refinement false ""
+          (itype_as_validator base)
+          (itype_as_leaf_reader base)
+          refinement
+          (fun x -> as_validator (k x)))
+
+    | T_if_else b t0 t1 ->
       assert_norm (as_type (T_if_else b t0 t1) == Prelude.t_ite b (as_type t0) (as_type t1));
       let p0 (_:squash b) = as_parser t0 in
       let p1 (_:squash (not b)) = as_parser t1 in
       assert_norm (as_parser (T_if_else b t0 t1) == P.parse_ite b p0 p1);
       let v0 (_:squash b) = as_validator t0 in
-      let v1 (_:squash (not b)) = as_validator t1 in      
+      let v1 (_:squash (not b)) = as_validator t1 in
       A.validate_ite b p0 v0 p1 v1
-        
+
     | T_with_action t a ->
       assert_norm (as_type (T_with_action t a) == as_type t);
-      assert_norm (as_parser (T_with_action t a) == as_parser t);      
+      assert_norm (as_parser (T_with_action t a) == as_parser t);
       A.validate_with_success_action ""
         (as_validator t)
         (action_as_action (as_parser t) a)
 
     | T_with_dep_action i a ->
       assert_norm (as_type (T_with_dep_action i a) == itype_as_type i);
-      assert_norm (as_parser (T_with_dep_action i a) == itype_as_parser i);      
+      assert_norm (as_parser (T_with_dep_action i a) == itype_as_parser i);
       A.validate_weaken_inv_loc inv loc (
        A.validate_with_dep_action ""
         (itype_as_validator i)
@@ -732,13 +817,35 @@ let rec as_validator
 
     | T_with_comment t c ->
       assert_norm (as_type (T_with_comment t c) == as_type t);
-      assert_norm (as_parser (T_with_comment t c) == as_parser t);      
+      assert_norm (as_parser (T_with_comment t c) == as_parser t);
       A.validate_with_comment "" (as_validator t)
-      
+
     | T_app hd b args ->
       assert_norm (as_type (T_app hd b args) == apply_arrow (type_of_binding b) args);
       assert_norm (as_parser (T_app hd b args) == apply_dep_arrow _ _ (parser_of_binding b) args);
       apply_dep_arrow _ _ (validator_of_binding b) args
+
+    | T_nlist n t ->
+      assert_norm (as_type (T_nlist n t) == Prelude.nlist n (as_type t));
+      assert_norm (as_parser (T_nlist n t) == Prelude.parse_nlist n (as_parser t));
+      A.validate_nlist n (as_validator t)
+
+    | T_at_most n t ->
+      assert_norm (as_type (T_at_most n t) == Prelude.t_at_most n (as_type t));
+      assert_norm (as_parser (T_at_most n t) == Prelude.parse_t_at_most n (as_parser t));
+      A.validate_t_at_most n (as_validator t)
+
+    | T_exact n t ->
+      assert_norm (as_type (T_exact n t) == Prelude.t_exact n (as_type t));
+      assert_norm (as_parser (T_exact n t) == Prelude.parse_t_exact n (as_parser t));
+      A.validate_t_exact n (as_validator t)
+
+    | T_string elt_t terminator ->
+      assert_norm (as_type (T_string elt_t terminator) == Prelude.cstring (itype_as_type elt_t) terminator);
+      assert_norm (as_parser (T_string elt_t terminator) == Prelude.parse_string (itype_as_parser elt_t) terminator);
+      A.validate_string (itype_as_validator elt_t)
+                        (itype_as_leaf_reader elt_t)
+                        terminator
 
 let specialize_tac ()
   : T.Tac unit
@@ -768,7 +875,7 @@ let as_nullary_arrow (#res:Type u#a) (f:res)
   = f
 
 [@@specialize]
-let u8_pair_binding 
+let u8_pair_binding
   : global_binding
   = { name = "u8_pair";
       param_types = [];
@@ -833,12 +940,12 @@ let param_types = [IT_Base UInt8]
 let p_t
   : arrow param_types Type
   = as_arrow_cons (IT_Base UInt8) (fun i -> as_nullary_arrow (as_type (u8_pair_param i)))
-  
+
 let p_k = Prelude.and_then_kind
               (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
               (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
 
-let p_p 
+let p_p
   : dep_arrow param_types (fun args -> P.parser p_k (apply_arrow p_t args))
   = let f (i:param_type_as_type (IT_Base UInt8))
       : dep_arrow [] (fun args -> P.parser p_k (apply_arrow p_t (i, args)))
@@ -848,24 +955,24 @@ let p_p
 
 [@@specialize]
 let p_v
-  : dep_arrow param_types 
-    (fun args -> A.validate_with_action_t 
+  : dep_arrow param_types
+    (fun args -> A.validate_with_action_t
                  (apply_dep_arrow _ _ p_p args)
                  _
-                 _ 
+                 _
                  _)
   = let f (i:param_type_as_type (IT_Base UInt8))
-      : dep_arrow [] 
-          (fun args -> 
-            A.validate_with_action_t 
+      : dep_arrow []
+          (fun args ->
+            A.validate_with_action_t
                  (apply_dep_arrow _ _ p_p (i,args))
                  _ _ _)
       = as_nullary_dep_arrow (validate_u8_pair_param i)
     in
     as_dep_arrow_cons (IT_Base UInt8) f
-             
+
 [@@specialize]
-let u8_pair_param_binding 
+let u8_pair_param_binding
   : global_binding
   = { name = "u8_pair_param";
       param_types = [IT_Base UInt8];
@@ -887,7 +994,7 @@ let u8_pair_ref
   = T_app "u8_pair" u8_pair_binding nullary_args
 
 [@@specialize]
-let u8_line 
+let u8_line
   = T_pair u8_pair_ref u8_pair_ref
 
 [@@T.postprocess_with specialize_tac]
@@ -895,8 +1002,8 @@ let validate_u8_line
   = as_validator u8_line
 
 [@@specialize]
-let u8_rect 
-  = T_pair 
+let u8_rect
+  = T_pair
       (T_pair u8_line u8_line)
       (T_pair (T_pair u8_line u8_line)
               (T_pair (T_pair u8_line u8_line)
