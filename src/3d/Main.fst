@@ -64,7 +64,7 @@ let translate_module (en:env) (mname:string) (fn:string)
     IO.print_string "\n"
   );
   
-  let decls = BitFields.eliminate benv decls in
+  let decls = BitFields.eliminate_decls benv decls in
   
   Options.debug_print_string "=============After bitflds=============\n";
   Options.debug_print_string (print_decls decls);
