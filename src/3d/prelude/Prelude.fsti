@@ -15,7 +15,6 @@
 *)
 module Prelude
 include Prelude.StaticHeader
-include ResultOps
 module U32 = FStar.UInt32
 module U16 = FStar.UInt16
 module U64 = FStar.UInt64
@@ -157,6 +156,18 @@ val parse_nlist (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (p:parser k t
   : Tot (parser kind_nlist (nlist n t))
 
 
+
+/////
+// Parse all of the remaining bytes of the input buffer
+/////
+noextract
+val all_bytes: Type0
+
+inline_for_extraction noextract
+val kind_all_bytes: parser_kind false WeakKindConsumesAll
+
+val parse_all_bytes: parser kind_all_bytes all_bytes
+
 ////////////////////////////////////////////////////////////////////////////////
 // Variable-sized element whose size in bytes is at most n
 ////////////////////////////////////////////////////////////////////////////////
@@ -219,17 +230,6 @@ val parse_string
   (p: parser k t)
   (terminator: t)
 : Tot (parser parse_string_kind (cstring t terminator))
-
-/////
-// Parse all of the remaining bytes of the input buffer
-/////
-noextract
-val all_bytes: Type0
-
-inline_for_extraction noextract
-val kind_all_bytes: parser_kind false WeakKindConsumesAll
-
-val parse_all_bytes: parser kind_all_bytes all_bytes
 
 noextract
 val all_zeros: Type0

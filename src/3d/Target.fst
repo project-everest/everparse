@@ -74,7 +74,7 @@ let error_handler_name =
 let error_handler_decl =
   let open A in
   let error_handler_id' = {
-    modul_name = Some "Actions";
+    modul_name = Some "EverParse3d.Actions.Base";
     name = "error_handler"
   } in
   let error_handler_id = with_range error_handler_id' dummy_range in
@@ -876,11 +876,11 @@ let print_decls (modul: string) (ds:list decl) =
   Printf.sprintf
     "module %s\n\
      open Prelude\n\
-     open Actions\n\
+     open EverParse3d.Actions.All\n\
      open WeakenTac\n\
      module B = LowStar.Buffer\n\n\
      include %s.Types\n\n\
-     #set-options \"--using_facts_from '* FStar Actions Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
+     #set-options \"--using_facts_from '* FStar Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
      %s"
      modul
      modul
@@ -895,7 +895,7 @@ let print_types_decls (modul:string) (ds:list decl) =
   Printf.sprintf
     "module %s.Types\n\
      open Prelude\n\
-     open Actions\n\n\
+     open EverParse3d.Actions.All\n\n\
      module B = LowStar.Buffer\n\n\
      #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
      %s"
@@ -911,7 +911,7 @@ let print_decls_signature (mname: string) (ds:list decl) =
     Printf.sprintf
     "module %s\n\
      open Prelude\n\
-     open Actions\n\
+     open EverParse3d.Actions.All\n\
      module B = LowStar.Buffer\n\
      include %s.Types\n\n\
      %s"
@@ -990,29 +990,28 @@ let print_c_entry (modul: string)
                               const char *fieldname,\n\t\
                               const char *reason,\n\t\
                               uint8_t *context,\n\t\
-                              uint32_t len,\n\t\
-                              uint8_t *base,\n\t\
-                              uint64_t start_pos,\n\t\
-                              uint64_t end_pos)\n\
+                              EverParseInputBuffer input,\n\t\
+                              uint64_t start_pos)\n\
           {\n\t\
             EverParseErrorFrame *frame = (EverParseErrorFrame*)context;\n\t\
-            if (!frame->filled)\n\t\
-            {\n\t\t\
-              frame->filled = TRUE;\n\t\t\
-              frame->start_pos = start_pos;\n\t\t\
-              frame->end_pos = end_pos;\n\t\t\
-              frame->typename = typename;\n\t\t\
-              frame->fieldname = fieldname;\n\t\t\
-              frame->reason = reason;\n\t\
-            }\n\
+            EverParseDefaultErrorHandler(\n\t\t\
+              typename,\n\t\t\
+              fieldname,\n\t\t\
+              reason,\n\t\t\
+              frame,\n\t\t\
+              input,\n\t\t\
+              start_pos\n\t\
+            );\n\
           }" 
    in
+   let input_stream_binding = Options.get_input_stream_binding () in
    let wrapped_call name params =
      Printf.sprintf
        "EverParseErrorFrame frame;\n\t\
        frame.filled = FALSE;\n\t\
-       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, len, base, 0);\n\t\
-       if (EverParseResultIsError(result))\n\t\
+       %s\
+       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, %s, 0);\n\t\
+       if (EverParseIsError(result))\n\t\
        {\n\t\t\
          if (frame.filled)\n\t\t\
          {\n\t\t\t\
@@ -1021,8 +1020,17 @@ let print_c_entry (modul: string)
          return FALSE;\n\t\
        }\n\t\
        return TRUE;"
+       begin match input_stream_binding with
+       | HashingOptions.InputStreamBuffer -> ""
+       | HashingOptions.InputStreamExtern _ ->
+         "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t"
+       end
        name
        params
+       begin match input_stream_binding with
+       | HashingOptions.InputStreamBuffer -> "base, len"
+       | HashingOptions.InputStreamExtern _ -> "input"
+       end
        modul
    in
    let print_one_validator (d:type_decl) : ML (string & string) =
@@ -1057,7 +1065,12 @@ let print_c_entry (modul: string)
       |> pascal_case
     in
     let signature =
-      Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+      begin match input_stream_binding with
+      | HashingOptions.InputStreamBuffer ->
+        Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+      | HashingOptions.InputStreamExtern _ ->
+        Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
+      end
        wrapper_name
        (print_params d.decl_name.td_params)
     in
@@ -1102,6 +1115,16 @@ let print_c_entry (modul: string)
        #endif\n"
       (signatures |> String.concat "\n\n")
   in
+  let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
+  let header =
+    if input_stream_include = ""
+    then header
+    else Printf.sprintf
+      "#include \"%s\"\n\
+      %s"
+      input_stream_include
+      header
+  in
   let error_callback_proto =
     Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
       modul
@@ -1119,6 +1142,16 @@ let print_c_entry (modul: string)
       error_callback_proto
       default_error_handler
       (impls |> String.concat "\n\n")
+  in
+  let impl =
+    if input_stream_include = ""
+    then impl
+    else
+      Printf.sprintf
+        "#include \"%s\"\n\
+        %s"
+        input_stream_include
+        impl
   in
   header,
   impl

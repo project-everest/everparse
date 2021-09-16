@@ -713,7 +713,7 @@ let rec check_field_action (env:env) (f:field) (a:action)
           Action_abort, tunit
 
         | Action_field_pos ->
-          Action_field_pos, tuint32
+          Action_field_pos, tuint64
 
         | Action_field_ptr ->
           Action_field_ptr, puint8
