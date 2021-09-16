@@ -979,10 +979,10 @@ let validate_total_constant_size_no_read'
   (#k: LP.parser_kind)
   (#t: Type)
   (p: LP.parser k t)
-  (sz: U32.t)
+  (sz: U64.t)
   (u: unit {
     k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
-    k.LP.parser_kind_low == U32.v sz /\
+    k.LP.parser_kind_low == U64.v sz /\
     k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
   })
   inv l
@@ -990,12 +990,12 @@ let validate_total_constant_size_no_read'
 = fun ctxt err input pos ->
   let h = HST.get () in
   LP.parser_kind_prop_equiv k p; 
-  let hasBytes = I.has input pos (Cast.uint32_to_uint64 sz) in
+  let hasBytes = I.has input pos sz in
   let h2 = HST.get () in
   modifies_address_liveness_insensitive_unused_in h h2;
   assert (h2 `extends` h);
   if hasBytes
-  then (pos `U64.add` Cast.uint32_to_uint64 sz)
+  then pos `U64.add` sz
   else LPE.set_validator_error_pos LPE.validator_error_not_enough_data pos
 
 inline_for_extraction
@@ -1005,10 +1005,10 @@ let validate_total_constant_size_no_read
   (#k: parser_kind nz wk)
   (#t: Type)
   (p: parser k t)
-  (sz: U32.t)
+  (sz: U64.t)
   (u: unit {
     k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
-    k.LP.parser_kind_low == U32.v sz /\
+    k.LP.parser_kind_low == U64.v sz /\
     k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
   })
   inv l
@@ -1031,7 +1031,7 @@ let validate_nlist_total_constant_size_mod_ok (n:U32.t) #wk (#k:parser_kind true
   let _ =
     parse_nlist_total_fixed_size_kind_correct n p
   in
-  validate_total_constant_size_no_read' (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) n () inv l
+  validate_total_constant_size_no_read' (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) (Cast.uint32_to_uint64 n) () inv l
 
 inline_for_extraction noextract
 let validate_nlist_constant_size_mod_ko (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t) inv l
@@ -1250,7 +1250,7 @@ let validate____UINT8
   : validator parse____UINT8
   = validate_with_comment
       "Checking that we have enough space for a UINT8, i.e., 1 byte"
-      (validate_total_constant_size_no_read parse____UINT8 1ul () _ _)
+      (validate_total_constant_size_no_read parse____UINT8 1uL () _ _)
 
 (* FIXME: Reading currently performs two copies, one from `read`, another from kremlib's implementations of load16_be, etc. *)
 
@@ -1261,106 +1261,108 @@ let lift_reader
   (#t: _)
   (p: parser k t)
   (r: LPL.leaf_reader p)
-  (sz: U32.t)
+  (sz32: U32.t)
+  (sz: U64.t)
 : Pure (leaf_reader p)
   (requires (
+    U32.v sz32 == U64.v sz /\
     k.LP.parser_kind_subkind == Some LP.ParserStrong /\
     k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
-    k.LP.parser_kind_low = U32.v sz /\
-    U32.v sz > 0
+    k.LP.parser_kind_low = U64.v sz /\
+    U64.v sz > 0
   ))
   (ensures (fun _ -> True))
 = fun input pos ->
   LP.parser_kind_prop_equiv k p;
   let h0 = HST.get () in
   HST.push_frame ();
-  let temp = B.alloca 0uy sz in
+  let temp = B.alloca 0uy sz32 in
   let h1 = HST.get () in
   I.live_not_unused_in input h0;
-  let temp = I.read input pos (Cast.uint32_to_uint64 sz) temp in
+  let temp = I.read input pos sz temp in
   let h2 = HST.get () in
   LP.parse_strong_prefix p (I.get_remaining input h0) (B.as_seq h2 temp);
-  LPL.valid_facts p h2 (LPL.make_slice temp sz) 0ul;
-  let res = r (LPL.make_slice temp sz) 0ul in
+  LPL.valid_facts p h2 (LPL.make_slice temp sz32) 0ul;
+  let res = r (LPL.make_slice temp sz32) 0ul in
   HST.pop_frame ();
   res
 
 inline_for_extraction noextract
 let read____UINT8
   : leaf_reader parse____UINT8
-= lift_reader _ LowParse.Low.Int.read_u8 1ul
+= lift_reader _ LowParse.Low.Int.read_u8 1ul 1uL
 
 inline_for_extraction noextract
 let validate____UINT16BE
   : validator parse____UINT16BE
   = validate_with_comment
       "Checking that we have enough space for a UINT16BE, i.e., 2 bytes"
-      (validate_total_constant_size_no_read parse____UINT16BE 2ul () _ _)
+      (validate_total_constant_size_no_read parse____UINT16BE 2uL () _ _)
 
 inline_for_extraction noextract
 let read____UINT16BE
   : leaf_reader parse____UINT16BE
-= lift_reader _ LowParse.Low.Int.read_u16 2ul
+= lift_reader _ LowParse.Low.Int.read_u16 2ul 2uL
 
 inline_for_extraction noextract
 let validate____UINT32BE
   : validator parse____UINT32BE
   = validate_with_comment
       "Checking that we have enough space for a UINT32BE, i.e., 4 bytes"
-      (validate_total_constant_size_no_read parse____UINT32BE 4ul () _ _)
+      (validate_total_constant_size_no_read parse____UINT32BE 4uL () _ _)
 
 inline_for_extraction noextract
 let read____UINT32BE
   : leaf_reader parse____UINT32BE
-= lift_reader _ LowParse.Low.Int.read_u32 4ul
+= lift_reader _ LowParse.Low.Int.read_u32 4ul 4uL
 
 inline_for_extraction noextract
 let validate____UINT64BE
   : validator parse____UINT64BE
   = validate_with_comment
       "Checking that we have enough space for a UINT64BE, i.e., 8 bytes"
-      (validate_total_constant_size_no_read parse____UINT64BE 8ul () _ _)
+      (validate_total_constant_size_no_read parse____UINT64BE 8uL () _ _)
 
 inline_for_extraction noextract
 let read____UINT64BE
   : leaf_reader parse____UINT64BE
-= lift_reader _ LowParse.Low.Int.read_u64 8ul
+= lift_reader _ LowParse.Low.Int.read_u64 8ul 8uL
 
 inline_for_extraction noextract
 let validate____UINT16
   : validator parse____UINT16
   = validate_with_comment
       "Checking that we have enough space for a UINT16, i.e., 2 bytes"
-      (validate_total_constant_size_no_read parse____UINT16 2ul () _ _)
+      (validate_total_constant_size_no_read parse____UINT16 2uL () _ _)
 
 inline_for_extraction noextract
 let read____UINT16
   : leaf_reader parse____UINT16
-= lift_reader _ LowParse.Low.BoundedInt.read_u16_le 2ul
+= lift_reader _ LowParse.Low.BoundedInt.read_u16_le 2ul 2uL
 
 inline_for_extraction noextract
 let validate____UINT32
   : validator parse____UINT32
   = validate_with_comment
       "Checking that we have enough space for a UINT32, i.e., 4 bytes"
-      (validate_total_constant_size_no_read parse____UINT32 4ul () _ _)
+      (validate_total_constant_size_no_read parse____UINT32 4uL () _ _)
 
 inline_for_extraction noextract
 let read____UINT32
   : leaf_reader parse____UINT32
-= lift_reader _ LowParse.Low.BoundedInt.read_u32_le 4ul
+= lift_reader _ LowParse.Low.BoundedInt.read_u32_le 4ul 4uL
 
 inline_for_extraction noextract
 let validate____UINT64
   : validator parse____UINT64
   = validate_with_comment
       "Checking that we have enough space for a UINT64, i.e., 8 bytes"
-      (validate_total_constant_size_no_read parse____UINT64 8ul () _ _)
+      (validate_total_constant_size_no_read parse____UINT64 8uL () _ _)
 
 inline_for_extraction noextract
 let read____UINT64
   : leaf_reader parse____UINT64
-= lift_reader _ LowParse.Low.Int.read_u64_le 8ul
+= lift_reader _ LowParse.Low.Int.read_u64_le 8ul 8uL
 
 inline_for_extraction noextract
 let validate_unit
