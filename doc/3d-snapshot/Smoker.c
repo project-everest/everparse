@@ -11,10 +11,11 @@ ValidateSmokerCigarettesConsumed(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -25,7 +26,7 @@ ValidateSmokerCigarettesConsumed(
 {
   /* Validating field cigarettesConsumed */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes = (uint64_t)1U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)1U <= (InputLength - Pos);
   uint64_t positionAfterSmoker;
   if (hasBytes)
   {
@@ -59,16 +60,17 @@ SmokerValidateSmoker(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Validating field age */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - StartPosition);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
   uint64_t positionAfterSmoker;
   if (hasBytes)
   {
@@ -100,7 +102,7 @@ SmokerValidateSmoker(
     return positionAfterage;
   }
   uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input.buf + (uint32_t)StartPosition;
+  uint8_t *temp1 = Input + (uint32_t)StartPosition;
   uint32_t res = Load32Le(temp1);
   uint32_t age = res;
   BOOLEAN ageConstraintIsOk = age >= (uint32_t)(uint8_t)21U;
@@ -111,7 +113,12 @@ SmokerValidateSmoker(
   }
   /* Field _smoker_cigarettesConsumed */
   uint64_t
-  positionAfterSmoker0 = ValidateSmokerCigarettesConsumed(Ctxt, Err, Input, positionAfterage1);
+  positionAfterSmoker0 =
+    ValidateSmokerCigarettesConsumed(Ctxt,
+      Err,
+      Input,
+      InputLength,
+      positionAfterage1);
   if (EverParseIsSuccess(positionAfterSmoker0))
   {
     return positionAfterSmoker0;

@@ -26,8 +26,7 @@ void DefaultErrorHandler(
 BOOLEAN ColoredPointCheckColoredPoint1(uint8_t *base, uint32_t len) {
 	EverParseErrorFrame frame;
 	frame.filled = FALSE;
-	EverParseInputBuffer input = EverParseMakeInputBuffer(base, len);
-	uint64_t result = ColoredPointValidateColoredPoint1( (uint8_t*)&frame, &DefaultErrorHandler, input, 0);
+	uint64_t result = ColoredPointValidateColoredPoint1( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -42,8 +41,7 @@ BOOLEAN ColoredPointCheckColoredPoint1(uint8_t *base, uint32_t len) {
 BOOLEAN ColoredPointCheckColoredPoint2(uint8_t *base, uint32_t len) {
 	EverParseErrorFrame frame;
 	frame.filled = FALSE;
-	EverParseInputBuffer input = EverParseMakeInputBuffer(base, len);
-	uint64_t result = ColoredPointValidateColoredPoint2( (uint8_t*)&frame, &DefaultErrorHandler, input, 0);
+	uint64_t result = ColoredPointValidateColoredPoint2( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)

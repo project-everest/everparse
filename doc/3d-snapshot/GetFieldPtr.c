@@ -11,10 +11,11 @@ ValidateTF1(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -24,7 +25,7 @@ ValidateTF1(
 --*/
 {
   /* SNIPPET_START: GetFieldPtr.T */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)(uint8_t)10U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)(uint32_t)(uint8_t)10U <= (InputLength - Pos);
   uint64_t res;
   if (hasBytes)
   {
@@ -53,10 +54,11 @@ ValidateTF2(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -66,7 +68,7 @@ ValidateTF2(
 --*/
 {
   /* Validating field f2 */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)(uint8_t)20U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)(uint32_t)(uint8_t)20U <= (InputLength - Pos);
   uint64_t res;
   if (hasBytes)
   {
@@ -90,7 +92,7 @@ ValidateTF2(
   uint64_t positionAfterT1;
   if (EverParseIsSuccess(positionAfterT0))
   {
-    uint8_t *x = Input.buf + (uint32_t)Pos;
+    uint8_t *x = Input + (uint32_t)Pos;
     *Out = x;
     BOOLEAN actionSuccessT = TRUE;
     if (!actionSuccessT)
@@ -124,15 +126,16 @@ GetFieldPtrValidateT(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 {
   /* Field _T_f1 */
-  uint64_t positionAfterT = ValidateTF1(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterT = ValidateTF1(Ctxt, Err, Input, InputLength, Pos);
   uint64_t positionAfterf1;
   if (EverParseIsSuccess(positionAfterT))
   {
@@ -148,7 +151,7 @@ GetFieldPtrValidateT(
     return positionAfterf1;
   }
   /* Field _T_f2 */
-  uint64_t positionAfterT0 = ValidateTF2(Out, Ctxt, Err, Input, positionAfterf1);
+  uint64_t positionAfterT0 = ValidateTF2(Out, Ctxt, Err, Input, InputLength, positionAfterf1);
   if (EverParseIsSuccess(positionAfterT0))
   {
     return positionAfterT0;

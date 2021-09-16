@@ -11,10 +11,11 @@ ValidateOrderedPairLesser(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -25,7 +26,7 @@ ValidateOrderedPairLesser(
 {
   /* Validating field lesser */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
   uint64_t positionAfterOrderedPair;
   if (hasBytes)
   {
@@ -60,10 +61,11 @@ ValidateOrderedPairGreater(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -74,7 +76,7 @@ ValidateOrderedPairGreater(
 {
   /* Validating field greater */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
   uint64_t positionAfterOrderedPair;
   if (hasBytes)
   {
@@ -110,7 +112,7 @@ ValidateOrderedPairGreater(
   {
     /* reading field value */
     uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input.buf + (uint32_t)Pos;
+    uint8_t *temp1 = Input + (uint32_t)Pos;
     uint32_t res = Load32Le(temp1);
     uint32_t orderedPair1 = res;
     /* start: checking constraint */
@@ -142,15 +144,17 @@ OrderedPairValidateOrderedPair(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 {
   /* Field _orderedPair_lesser */
-  uint64_t positionAfterOrderedPair = ValidateOrderedPairLesser(Ctxt, Err, Input, Pos);
+  uint64_t
+  positionAfterOrderedPair = ValidateOrderedPairLesser(Ctxt, Err, Input, InputLength, Pos);
   uint64_t positionAfterlesser;
   if (EverParseIsSuccess(positionAfterOrderedPair))
   {
@@ -171,7 +175,7 @@ OrderedPairValidateOrderedPair(
     return positionAfterlesser;
   }
   uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input.buf + (uint32_t)Pos;
+  uint8_t *temp1 = Input + (uint32_t)Pos;
   uint32_t res = Load32Le(temp1);
   uint32_t lesser = res;
   /* Field _orderedPair_greater */
@@ -181,6 +185,7 @@ OrderedPairValidateOrderedPair(
       Ctxt,
       Err,
       Input,
+      InputLength,
       positionAfterlesser);
   if (EverParseIsSuccess(positionAfterOrderedPair0))
   {

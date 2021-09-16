@@ -27,10 +27,11 @@ ValidateEnumConstraintX(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -41,7 +42,7 @@ ValidateEnumConstraintX(
 {
   /* Validating field x */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
   uint64_t positionAfterEnumConstraint;
   if (hasBytes)
   {
@@ -77,7 +78,7 @@ ValidateEnumConstraintX(
   {
     /* reading field value */
     uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input.buf + (uint32_t)Pos;
+    uint8_t *temp1 = Input + (uint32_t)Pos;
     uint32_t res = Load32Le(temp1);
     uint32_t enumConstraint1 = res;
     /* start: checking constraint */
@@ -110,16 +111,17 @@ EnumConstraintValidateEnumConstraint(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Validating field col */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - StartPosition);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
   uint64_t positionAfterEnumConstraint;
   if (hasBytes)
   {
@@ -151,7 +153,7 @@ EnumConstraintValidateEnumConstraint(
     return positionAftercol;
   }
   uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input.buf + (uint32_t)StartPosition;
+  uint8_t *temp1 = Input + (uint32_t)StartPosition;
   uint32_t res = Load32Le(temp1);
   uint32_t col = res;
   BOOLEAN colConstraintIsOk = col == RED || col == GREEN || col == BLUE;
@@ -167,6 +169,7 @@ EnumConstraintValidateEnumConstraint(
       Ctxt,
       Err,
       Input,
+      InputLength,
       positionAftercol1);
   if (EverParseIsSuccess(positionAfterEnumConstraint0))
   {

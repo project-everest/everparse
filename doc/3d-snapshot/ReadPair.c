@@ -12,10 +12,11 @@ ValidatePairFirst(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -26,7 +27,7 @@ ValidatePairFirst(
 {
   /* Validating field first */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
   uint64_t positionAfterPair;
   if (hasBytes)
   {
@@ -61,7 +62,7 @@ ValidatePairFirst(
   else
   {
     uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input.buf + (uint32_t)Pos;
+    uint8_t *temp1 = Input + (uint32_t)Pos;
     uint32_t res = Load32Le(temp1);
     uint32_t pair1 = res;
     *X = pair1;
@@ -99,10 +100,11 @@ ValidatePairSecond(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -113,7 +115,7 @@ ValidatePairSecond(
 {
   /* Validating field second */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
   uint64_t positionAfterPair;
   if (hasBytes)
   {
@@ -148,7 +150,7 @@ ValidatePairSecond(
   else
   {
     uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input.buf + (uint32_t)Pos;
+    uint8_t *temp1 = Input + (uint32_t)Pos;
     uint32_t res = Load32Le(temp1);
     uint32_t pair1 = res;
     *Y = pair1;
@@ -187,15 +189,16 @@ ReadPairValidatePair(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 {
   /* Field _Pair_first */
-  uint64_t positionAfterPair = ValidatePairFirst(X, Ctxt, Err, Input, Pos);
+  uint64_t positionAfterPair = ValidatePairFirst(X, Ctxt, Err, Input, InputLength, Pos);
   uint64_t positionAfterfirst;
   if (EverParseIsSuccess(positionAfterPair))
   {
@@ -211,7 +214,8 @@ ReadPairValidatePair(
     return positionAfterfirst;
   }
   /* Field _Pair_second */
-  uint64_t positionAfterPair0 = ValidatePairSecond(Y, Ctxt, Err, Input, positionAfterfirst);
+  uint64_t
+  positionAfterPair0 = ValidatePairSecond(Y, Ctxt, Err, Input, InputLength, positionAfterfirst);
   if (EverParseIsSuccess(positionAfterPair0))
   {
     return positionAfterPair0;

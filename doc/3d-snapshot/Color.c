@@ -26,15 +26,16 @@ ValidateColor(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos0
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos0);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos0);
   uint64_t positionAftercolor0;
   if (hasBytes)
   {
@@ -65,7 +66,7 @@ ValidateColor(
   {
     /* reading field value */
     uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input.buf + (uint32_t)Pos0;
+    uint8_t *temp1 = Input + (uint32_t)Pos0;
     uint32_t res = Load32Le(temp1);
     uint32_t color = res;
     /* start: checking constraint */
@@ -95,10 +96,11 @@ ValidateColoredPointCol(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -108,7 +110,7 @@ ValidateColoredPointCol(
 --*/
 {
   /* Validating field col */
-  uint64_t positionAfterColoredPoint = ValidateColor(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterColoredPoint = ValidateColor(Ctxt, Err, Input, InputLength, Pos);
   if (EverParseIsSuccess(positionAfterColoredPoint))
   {
     return positionAfterColoredPoint;
@@ -131,10 +133,11 @@ ValidateColoredPointX(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -145,7 +148,7 @@ ValidateColoredPointX(
 {
   /* Validating field x */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
   uint64_t positionAfterColoredPoint;
   if (hasBytes)
   {
@@ -179,10 +182,11 @@ ValidateColoredPointY(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -193,7 +197,7 @@ ValidateColoredPointY(
 {
   /* Validating field y */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
   uint64_t positionAfterColoredPoint;
   if (hasBytes)
   {
@@ -227,15 +231,17 @@ ColorValidateColoredPoint(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 {
   /* Field _coloredPoint_col */
-  uint64_t positionAfterColoredPoint = ValidateColoredPointCol(Ctxt, Err, Input, Pos);
+  uint64_t
+  positionAfterColoredPoint = ValidateColoredPointCol(Ctxt, Err, Input, InputLength, Pos);
   uint64_t positionAftercol;
   if (EverParseIsSuccess(positionAfterColoredPoint))
   {
@@ -257,7 +263,12 @@ ColorValidateColoredPoint(
   }
   /* Field _coloredPoint_x */
   uint64_t
-  positionAfterColoredPoint0 = ValidateColoredPointX(Ctxt, Err, Input, positionAftercol);
+  positionAfterColoredPoint0 =
+    ValidateColoredPointX(Ctxt,
+      Err,
+      Input,
+      InputLength,
+      positionAftercol);
   uint64_t res;
   if (EverParseIsSuccess(positionAfterColoredPoint0))
   {
@@ -279,7 +290,13 @@ ColorValidateColoredPoint(
     return positionAfterx;
   }
   /* Field _coloredPoint_y */
-  uint64_t positionAfterColoredPoint1 = ValidateColoredPointY(Ctxt, Err, Input, positionAfterx);
+  uint64_t
+  positionAfterColoredPoint1 =
+    ValidateColoredPointY(Ctxt,
+      Err,
+      Input,
+      InputLength,
+      positionAfterx);
   if (EverParseIsSuccess(positionAfterColoredPoint1))
   {
     return positionAfterColoredPoint1;

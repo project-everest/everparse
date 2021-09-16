@@ -26,8 +26,7 @@ void DefaultErrorHandler(
 BOOLEAN ReadPairCheckPair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len) {
 	EverParseErrorFrame frame;
 	frame.filled = FALSE;
-	EverParseInputBuffer input = EverParseMakeInputBuffer(base, len);
-	uint64_t result = ReadPairValidatePair(x, y,  (uint8_t*)&frame, &DefaultErrorHandler, input, 0);
+	uint64_t result = ReadPairValidatePair(x, y,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)

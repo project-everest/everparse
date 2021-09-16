@@ -11,10 +11,11 @@ ValidatePointX(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -25,7 +26,7 @@ ValidatePointX(
 {
   /* Validating field x */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = (uint64_t)2U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - Pos);
   uint64_t positionAfterPoint;
   if (hasBytes)
   {
@@ -54,10 +55,11 @@ ValidatePointY(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 /*++
@@ -68,7 +70,7 @@ ValidatePointY(
 {
   /* Validating field y */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = (uint64_t)2U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - Pos);
   uint64_t positionAfterPoint;
   if (hasBytes)
   {
@@ -97,15 +99,16 @@ HelloWorldValidatePoint(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    EverParseInputBuffer x4,
+    uint8_t *x4,
     uint64_t x5
   ),
-  EverParseInputBuffer Input,
+  uint8_t *Input,
+  uint64_t InputLength,
   uint64_t Pos
 )
 {
   /* Field _point_x */
-  uint64_t positionAfterPoint = ValidatePointX(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterPoint = ValidatePointX(Ctxt, Err, Input, InputLength, Pos);
   uint64_t res;
   if (EverParseIsSuccess(positionAfterPoint))
   {
@@ -122,7 +125,7 @@ HelloWorldValidatePoint(
     return positionAfterx;
   }
   /* Field _point_y */
-  uint64_t positionAfterPoint0 = ValidatePointY(Ctxt, Err, Input, positionAfterx);
+  uint64_t positionAfterPoint0 = ValidatePointY(Ctxt, Err, Input, InputLength, positionAfterx);
   if (EverParseIsSuccess(positionAfterPoint0))
   {
     return positionAfterPoint0;
