@@ -25,11 +25,11 @@ ValidateBoundedSumLeft(
 {
   /* Validating field left */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
   uint64_t positionAfterBoundedSum;
   if (hasBytes)
   {
-    positionAfterBoundedSum = Pos + (uint64_t)(uint32_t)4U;
+    positionAfterBoundedSum = Pos + (uint64_t)4U;
   }
   else
   {
@@ -75,11 +75,11 @@ ValidateBoundedSumRight(
 {
   /* Validating field right */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
   uint64_t positionAfterBoundedSum;
   if (hasBytes)
   {
-    positionAfterBoundedSum = Pos + (uint64_t)(uint32_t)4U;
+    positionAfterBoundedSum = Pos + (uint64_t)4U;
   }
   else
   {

@@ -31,11 +31,11 @@ ValidateIntPayloadValue32(
 {
   /* Validating field value32 */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
   uint64_t positionAfterIntPayload;
   if (hasBytes)
   {
-    positionAfterIntPayload = Pos + (uint64_t)(uint32_t)4U;
+    positionAfterIntPayload = Pos + (uint64_t)4U;
   }
   else
   {
@@ -79,11 +79,11 @@ ValidateIntPayloadValue16(
 {
   /* Validating field value16 */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)2U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)2U <= ((uint64_t)Input.len - Pos);
   uint64_t positionAfterIntPayload;
   if (hasBytes)
   {
-    positionAfterIntPayload = Pos + (uint64_t)(uint32_t)2U;
+    positionAfterIntPayload = Pos + (uint64_t)2U;
   }
   else
   {
@@ -127,11 +127,11 @@ ValidateIntPayloadValue8(
 {
   /* Validating field value8 */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)1U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)1U <= ((uint64_t)Input.len - Pos);
   uint64_t positionAfterIntPayload;
   if (hasBytes)
   {
-    positionAfterIntPayload = Pos + (uint64_t)(uint32_t)1U;
+    positionAfterIntPayload = Pos + (uint64_t)1U;
   }
   else
   {
@@ -328,11 +328,11 @@ ValidateIntegerSize(
 {
   /* Validating field size */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
   uint64_t positionAfterInteger;
   if (hasBytes)
   {
-    positionAfterInteger = Pos + (uint64_t)(uint32_t)4U;
+    positionAfterInteger = Pos + (uint64_t)4U;
   }
   else
   {

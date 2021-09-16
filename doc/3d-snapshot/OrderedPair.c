@@ -25,11 +25,11 @@ ValidateOrderedPairLesser(
 {
   /* Validating field lesser */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
   uint64_t positionAfterOrderedPair;
   if (hasBytes)
   {
-    positionAfterOrderedPair = Pos + (uint64_t)(uint32_t)4U;
+    positionAfterOrderedPair = Pos + (uint64_t)4U;
   }
   else
   {
@@ -74,11 +74,11 @@ ValidateOrderedPairGreater(
 {
   /* Validating field greater */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)(uint32_t)4U <= ((uint64_t)Input.len - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= ((uint64_t)Input.len - Pos);
   uint64_t positionAfterOrderedPair;
   if (hasBytes)
   {
-    positionAfterOrderedPair = Pos + (uint64_t)(uint32_t)4U;
+    positionAfterOrderedPair = Pos + (uint64_t)4U;
   }
   else
   {
