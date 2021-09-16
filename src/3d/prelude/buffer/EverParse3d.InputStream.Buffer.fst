@@ -3,7 +3,16 @@ open EverParse3d.InputStream.Buffer.Aux
 
 (* Implementation for single buffers *)
 
+module U64 = FStar.UInt64
+
 let t = t
+
+inline_for_extraction
+noextract
+let _tlen
+  (x: t)
+: Tot Type0
+= (len: U64.t { U64.v len == U32.v x.len })
 
 let _get_read
   (x: t)
@@ -105,9 +114,11 @@ let inst = {
   preserved = begin fun x l h h' ->
     ()
   end;
+
+  tlen = _tlen;
   
-  has = begin fun x currentPosition n ->
-    n `U64.lte` (uint32_to_uint64 x.len `U64.sub` currentPosition)
+  has = begin fun x xlen currentPosition n ->
+    n `U64.lte` (xlen `U64.sub` currentPosition)
   end;
 
   read = begin fun x currentPosition n dst ->
@@ -130,10 +141,10 @@ let inst = {
     x.pos *= Ghost.hide (if EverParse3d.ErrorCode.is_success res then uint64_to_uint32 res else Ghost.reveal pos0)
   end;
 
-  empty = begin fun x _ ->
+  empty = begin fun x xlen _ ->
     let h0 = HST.get () in
     x.pos *= x.len;
-    uint32_to_uint64 x.len
+    xlen
   end;
 
   is_prefix_of = _is_prefix_of;
@@ -151,6 +162,10 @@ let inst = {
       g_all_buf = x.g_all_buf;
       prf = ();
     }
+  end;
+
+  truncate_len = begin fun x currentPosition n truncated ->
+    currentPosition `U64.add` n
   end;
 }
 

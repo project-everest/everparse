@@ -14,7 +14,7 @@ module HST = FStar.HyperStack.ST
 noeq
 type input_buffer = {
   buf: B.buffer U8.t;
-  len: U32.t;
+  len: Ghost.erased U32.t;
   pos: B.pointer (Ghost.erased U32.t);
   g_all_buf: Ghost.erased (Seq.seq U8.t);
   g_all: Ghost.erased (Seq.seq U8.t);
@@ -60,41 +60,9 @@ let _get_remaining
   let i = U32.v (B.deref h x.pos) in
   Seq.slice x.g_all i (Seq.length x.g_all)
 
-val make_input_buffer
-  (from: B.buffer U8.t)
-  (n: U32.t)
-  (pos: B.pointer (Ghost.erased U32.t))
-: HST.Stack t
-  (requires (fun h ->
-    B.live h from /\
-    B.live h pos /\
-    B.loc_disjoint (B.loc_buffer from) (B.loc_buffer pos) /\
-    U32.v n == B.length from
-  ))
-  (ensures (fun h res h' ->
-    B.modifies (B.loc_buffer from `B.loc_union` B.loc_buffer pos) h h' /\
-    _footprint res `B.loc_includes` (B.loc_buffer from `B.loc_union` B.loc_buffer pos) /\
-    (B.loc_buffer from `B.loc_union` B.loc_buffer pos) `B.loc_includes` _footprint res /\
-    _live res h' /\
-    _get_remaining res h' == B.as_seq h from
-  ))
+(* default error handler *)
 
 open LowStar.BufferOps
-
-let make_input_buffer from n pos =
-  let h = HST.get () in
-  let g = Ghost.hide (B.as_seq h from) in
-  pos *= 0ul;
-  {
-    buf = from;
-    len = n;
-    pos = pos;
-    g_all = g;
-    g_all_buf = g;
-    prf = ();
-  }
-
-(* default error handler *)
 
 let default_error_handler
   (typename: string)

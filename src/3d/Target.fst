@@ -1009,8 +1009,8 @@ let print_c_entry (modul: string)
      Printf.sprintf
        "EverParseErrorFrame frame;\n\t\
        frame.filled = FALSE;\n\t\
-       EverParseInputBuffer input = EverParseMakeInputBuffer(%s);\n\t\
-       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
+       %s\
+       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, %s, 0);\n\t\
        if (EverParseIsError(result))\n\t\
        {\n\t\t\
          if (frame.filled)\n\t\t\
@@ -1021,11 +1021,16 @@ let print_c_entry (modul: string)
        }\n\t\
        return TRUE;"
        begin match input_stream_binding with
-       | HashingOptions.InputStreamBuffer -> "base, len"
-       | HashingOptions.InputStreamExtern _ -> "base"
+       | HashingOptions.InputStreamBuffer -> ""
+       | HashingOptions.InputStreamExtern _ ->
+         "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t"
        end
        name
        params
+       begin match input_stream_binding with
+       | HashingOptions.InputStreamBuffer -> "base, len"
+       | HashingOptions.InputStreamExtern _ -> "input"
+       end
        modul
    in
    let print_one_validator (d:type_decl) : ML (string & string) =

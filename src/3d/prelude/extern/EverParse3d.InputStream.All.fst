@@ -13,6 +13,7 @@ let inst = {
   get_remaining = get_remaining;
   get_read = get_read;
   preserved = preserved;
+  tlen = (fun _ -> unit);
   has = has;
   read = read;
   skip = skip;
@@ -22,4 +23,5 @@ let inst = {
   get_suffix = get_suffix;
   is_prefix_of_prop = is_prefix_of_prop;
   truncate = truncate;
+  truncate_len = truncate_len;
 }

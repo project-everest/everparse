@@ -84,6 +84,7 @@ inline_for_extraction
 noextract
 let has
     (x: t)
+    (_: unit)
     (position: LPE.pos_t)
     (n: U64.t)
 :   HST.Stack bool
@@ -102,7 +103,7 @@ let has
   else
     Aux.has x.Aux.base n
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 inline_for_extraction
 noextract
@@ -191,6 +192,7 @@ inline_for_extraction
 noextract
 let empty
     (x: t)
+    (_: unit)
     (position: LPE.pos_t)
 :   HST.Stack LPE.pos_t
     (requires (fun h ->
@@ -291,3 +293,25 @@ let truncate
     Aux.length = pos `U64.add` n;
     Aux.prf = ();
   }
+
+inline_for_extraction
+noextract
+let truncate_len
+    (x: t)
+    (pos: LPE.pos_t)
+    (n: U64.t)
+    (res: t)
+:   HST.Stack unit
+    (requires (fun h ->
+      live x h /\
+      U64.v pos == Seq.length (get_read x h) /\
+      U64.v n <= Seq.length (get_remaining x h) /\
+      res `is_prefix_of` x /\
+      footprint res == footprint x /\
+      live res h /\
+      Seq.length (get_remaining res h) == U64.v n
+    ))
+    (ensures (fun h res_len h' ->
+      B.modifies B.loc_none h h'
+    ))
+= ()

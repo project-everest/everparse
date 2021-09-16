@@ -51,8 +51,11 @@ class input_stream_inst (t: Type) : Type = {
       get_read x h' == get_read x h
     ));
 
+  tlen: t -> Type0;
+
   has:
     (x: t) ->
+    (len: tlen x) ->
     (pos: LPE.pos_t) ->
     (n: U64.t) ->
     HST.Stack bool
@@ -127,6 +130,7 @@ class input_stream_inst (t: Type) : Type = {
 
   empty:
     (x: t) ->
+    (len: tlen x) ->
     (pos: LPE.pos_t) ->
     HST.Stack LPE.pos_t
     (requires (fun h ->
@@ -184,6 +188,26 @@ class input_stream_inst (t: Type) : Type = {
       live res h' /\
       Seq.length (get_remaining res h') == U64.v n
     ));
+
+  truncate_len:
+    (x: t) ->
+    (pos: LPE.pos_t) ->
+    (n: U64.t) ->
+    (res: t) ->
+    HST.Stack (tlen res)
+    (requires (fun h ->
+      live x h /\
+      U64.v pos == Seq.length (get_read x h) /\
+      U64.v n <= Seq.length (get_remaining x h) /\
+      res `is_prefix_of` x /\
+      footprint res == footprint x /\
+      live res h /\
+      Seq.length (get_remaining res h) == U64.v n
+    ))
+    (ensures (fun h res_len h' ->
+      B.modifies B.loc_none h h'
+    ));
+  
 }
 
 let length_all #t (#_: input_stream_inst t) (x: t) : GTot nat = U64.v (len_all x)
