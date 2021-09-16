@@ -16,7 +16,7 @@ ValidateBoundedSumLeft(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -26,17 +26,17 @@ ValidateBoundedSumLeft(
 {
   /* SNIPPET_START: boundedSum */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
   uint64_t positionAfterBoundedSum;
   if (hasBytes)
   {
-    positionAfterBoundedSum = Pos + (uint64_t)4U;
+    positionAfterBoundedSum = StartPosition + (uint64_t)4U;
   }
   else
   {
     positionAfterBoundedSum =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        Pos);
+        StartPosition);
   }
   if (EverParseIsSuccess(positionAfterBoundedSum))
   {
@@ -47,7 +47,7 @@ ValidateBoundedSumLeft(
     EverParseErrorReasonOfResult(positionAfterBoundedSum),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterBoundedSum;
 }
 
@@ -67,7 +67,7 @@ ValidateBoundedSumRight(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -77,17 +77,17 @@ ValidateBoundedSumRight(
 {
   /* Validating field right */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
   uint64_t positionAfterBoundedSum;
   if (hasBytes)
   {
-    positionAfterBoundedSum = Pos + (uint64_t)4U;
+    positionAfterBoundedSum = StartPosition + (uint64_t)4U;
   }
   else
   {
     positionAfterBoundedSum =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        Pos);
+        StartPosition);
   }
   uint64_t positionAfterBoundedSum0;
   if (EverParseIsSuccess(positionAfterBoundedSum))
@@ -101,7 +101,7 @@ ValidateBoundedSumRight(
       EverParseErrorReasonOfResult(positionAfterBoundedSum),
       Ctxt,
       Input,
-      Pos);
+      StartPosition);
     positionAfterBoundedSum0 = positionAfterBoundedSum;
   }
   uint64_t positionAfterBoundedSum1;
@@ -113,7 +113,7 @@ ValidateBoundedSumRight(
   {
     /* reading field value */
     uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input + (uint32_t)Pos;
+    uint8_t *temp1 = Input + (uint32_t)StartPosition;
     uint32_t res = Load32Le(temp1);
     uint32_t boundedSum1 = res;
     /* start: checking constraint */
@@ -132,7 +132,7 @@ ValidateBoundedSumRight(
     EverParseErrorReasonOfResult(positionAfterBoundedSum1),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterBoundedSum1;
 }
 
@@ -151,11 +151,12 @@ BoundedSumValidateBoundedSum(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 {
   /* Field _boundedSum_left */
-  uint64_t positionAfterBoundedSum = ValidateBoundedSumLeft(Ctxt, Err, Input, InputLength, Pos);
+  uint64_t
+  positionAfterBoundedSum = ValidateBoundedSumLeft(Ctxt, Err, Input, InputLength, StartPosition);
   uint64_t positionAfterleft;
   if (EverParseIsSuccess(positionAfterBoundedSum))
   {
@@ -168,7 +169,7 @@ BoundedSumValidateBoundedSum(
       EverParseErrorReasonOfResult(positionAfterBoundedSum),
       Ctxt,
       Input,
-      Pos);
+      StartPosition);
     positionAfterleft = positionAfterBoundedSum;
   }
   if (EverParseIsError(positionAfterleft))
@@ -176,7 +177,7 @@ BoundedSumValidateBoundedSum(
     return positionAfterleft;
   }
   uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input + (uint32_t)Pos;
+  uint8_t *temp1 = Input + (uint32_t)StartPosition;
   uint32_t res = Load32Le(temp1);
   uint32_t left = res;
   /* Field _boundedSum_right */
@@ -216,7 +217,7 @@ ValidateMySumBound(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -226,17 +227,17 @@ ValidateMySumBound(
 {
   /* Validating field bound */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
   uint64_t positionAftermySum;
   if (hasBytes)
   {
-    positionAftermySum = Pos + (uint64_t)4U;
+    positionAftermySum = StartPosition + (uint64_t)4U;
   }
   else
   {
     positionAftermySum =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        Pos);
+        StartPosition);
   }
   if (EverParseIsSuccess(positionAftermySum))
   {
@@ -247,7 +248,7 @@ ValidateMySumBound(
     EverParseErrorReasonOfResult(positionAftermySum),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAftermySum;
 }
 
@@ -266,7 +267,7 @@ ValidateMySumSum(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -276,12 +277,23 @@ ValidateMySumSum(
 {
   /* Validating field sum */
   uint64_t
-  positionAftermySum = BoundedSumValidateBoundedSum(Bound, Ctxt, Err, Input, InputLength, Pos);
+  positionAftermySum =
+    BoundedSumValidateBoundedSum(Bound,
+      Ctxt,
+      Err,
+      Input,
+      InputLength,
+      StartPosition);
   if (EverParseIsSuccess(positionAftermySum))
   {
     return positionAftermySum;
   }
-  Err("mySum", "mySum_sum", EverParseErrorReasonOfResult(positionAftermySum), Ctxt, Input, Pos);
+  Err("mySum",
+    "mySum_sum",
+    EverParseErrorReasonOfResult(positionAftermySum),
+    Ctxt,
+    Input,
+    StartPosition);
   return positionAftermySum;
 }
 
@@ -299,11 +311,11 @@ BoundedSumValidateMySum(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 {
   /* Field mySum_bound */
-  uint64_t positionAftermySum = ValidateMySumBound(Ctxt, Err, Input, InputLength, Pos);
+  uint64_t positionAftermySum = ValidateMySumBound(Ctxt, Err, Input, InputLength, StartPosition);
   uint64_t positionAfterbound;
   if (EverParseIsSuccess(positionAftermySum))
   {
@@ -311,7 +323,12 @@ BoundedSumValidateMySum(
   }
   else
   {
-    Err("mySum", "bound", EverParseErrorReasonOfResult(positionAftermySum), Ctxt, Input, Pos);
+    Err("mySum",
+      "bound",
+      EverParseErrorReasonOfResult(positionAftermySum),
+      Ctxt,
+      Input,
+      StartPosition);
     positionAfterbound = positionAftermySum;
   }
   if (EverParseIsError(positionAfterbound))
@@ -319,7 +336,7 @@ BoundedSumValidateMySum(
     return positionAfterbound;
   }
   uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input + (uint32_t)Pos;
+  uint8_t *temp1 = Input + (uint32_t)StartPosition;
   uint32_t res = Load32Le(temp1);
   uint32_t bound = res;
   /* Field mySum_sum */

@@ -16,7 +16,7 @@ ValidatePointX(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -26,23 +26,28 @@ ValidatePointX(
 {
   /* Validating field x */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - Pos);
+  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - StartPosition);
   uint64_t positionAfterPoint;
   if (hasBytes)
   {
-    positionAfterPoint = Pos + (uint64_t)2U;
+    positionAfterPoint = StartPosition + (uint64_t)2U;
   }
   else
   {
     positionAfterPoint =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        Pos);
+        StartPosition);
   }
   if (EverParseIsSuccess(positionAfterPoint))
   {
     return positionAfterPoint;
   }
-  Err("_point", "_point_x", EverParseErrorReasonOfResult(positionAfterPoint), Ctxt, Input, Pos);
+  Err("_point",
+    "_point_x",
+    EverParseErrorReasonOfResult(positionAfterPoint),
+    Ctxt,
+    Input,
+    StartPosition);
   return positionAfterPoint;
 }
 
@@ -60,7 +65,7 @@ ValidatePointY(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -70,23 +75,28 @@ ValidatePointY(
 {
   /* Validating field y */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - Pos);
+  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - StartPosition);
   uint64_t positionAfterPoint;
   if (hasBytes)
   {
-    positionAfterPoint = Pos + (uint64_t)2U;
+    positionAfterPoint = StartPosition + (uint64_t)2U;
   }
   else
   {
     positionAfterPoint =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        Pos);
+        StartPosition);
   }
   if (EverParseIsSuccess(positionAfterPoint))
   {
     return positionAfterPoint;
   }
-  Err("_point", "_point_y", EverParseErrorReasonOfResult(positionAfterPoint), Ctxt, Input, Pos);
+  Err("_point",
+    "_point_y",
+    EverParseErrorReasonOfResult(positionAfterPoint),
+    Ctxt,
+    Input,
+    StartPosition);
   return positionAfterPoint;
 }
 
@@ -104,11 +114,11 @@ ValidatePoint(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 {
   /* Field _point_x */
-  uint64_t positionAfterPoint = ValidatePointX(Ctxt, Err, Input, InputLength, Pos);
+  uint64_t positionAfterPoint = ValidatePointX(Ctxt, Err, Input, InputLength, StartPosition);
   uint64_t res;
   if (EverParseIsSuccess(positionAfterPoint))
   {
@@ -116,7 +126,12 @@ ValidatePoint(
   }
   else
   {
-    Err("_point", "x", EverParseErrorReasonOfResult(positionAfterPoint), Ctxt, Input, Pos);
+    Err("_point",
+      "x",
+      EverParseErrorReasonOfResult(positionAfterPoint),
+      Ctxt,
+      Input,
+      StartPosition);
     res = positionAfterPoint;
   }
   uint64_t positionAfterx = res;
@@ -153,7 +168,7 @@ ValidateTriangleA(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -162,7 +177,7 @@ ValidateTriangleA(
 --*/
 {
   /* Validating field a */
-  uint64_t positionAfterTriangle = ValidatePoint(Ctxt, Err, Input, InputLength, Pos);
+  uint64_t positionAfterTriangle = ValidatePoint(Ctxt, Err, Input, InputLength, StartPosition);
   if (EverParseIsSuccess(positionAfterTriangle))
   {
     return positionAfterTriangle;
@@ -172,7 +187,7 @@ ValidateTriangleA(
     EverParseErrorReasonOfResult(positionAfterTriangle),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterTriangle;
 }
 
@@ -190,7 +205,7 @@ ValidateTriangleB(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -199,7 +214,7 @@ ValidateTriangleB(
 --*/
 {
   /* Validating field b */
-  uint64_t positionAfterTriangle = ValidatePoint(Ctxt, Err, Input, InputLength, Pos);
+  uint64_t positionAfterTriangle = ValidatePoint(Ctxt, Err, Input, InputLength, StartPosition);
   if (EverParseIsSuccess(positionAfterTriangle))
   {
     return positionAfterTriangle;
@@ -209,7 +224,7 @@ ValidateTriangleB(
     EverParseErrorReasonOfResult(positionAfterTriangle),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterTriangle;
 }
 
@@ -227,7 +242,7 @@ ValidateTriangleC(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -236,7 +251,7 @@ ValidateTriangleC(
 --*/
 {
   /* Validating field c */
-  uint64_t positionAfterTriangle = ValidatePoint(Ctxt, Err, Input, InputLength, Pos);
+  uint64_t positionAfterTriangle = ValidatePoint(Ctxt, Err, Input, InputLength, StartPosition);
   if (EverParseIsSuccess(positionAfterTriangle))
   {
     return positionAfterTriangle;
@@ -246,7 +261,7 @@ ValidateTriangleC(
     EverParseErrorReasonOfResult(positionAfterTriangle),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterTriangle;
 }
 
@@ -264,11 +279,12 @@ TriangleValidateTriangle(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 {
   /* Field _triangle_a */
-  uint64_t positionAfterTriangle = ValidateTriangleA(Ctxt, Err, Input, InputLength, Pos);
+  uint64_t
+  positionAfterTriangle = ValidateTriangleA(Ctxt, Err, Input, InputLength, StartPosition);
   uint64_t positionAftera;
   if (EverParseIsSuccess(positionAfterTriangle))
   {
@@ -276,7 +292,12 @@ TriangleValidateTriangle(
   }
   else
   {
-    Err("_triangle", "a", EverParseErrorReasonOfResult(positionAfterTriangle), Ctxt, Input, Pos);
+    Err("_triangle",
+      "a",
+      EverParseErrorReasonOfResult(positionAfterTriangle),
+      Ctxt,
+      Input,
+      StartPosition);
     positionAftera = positionAfterTriangle;
   }
   if (EverParseIsError(positionAftera))

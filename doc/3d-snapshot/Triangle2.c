@@ -16,7 +16,7 @@ ValidateTriangleCorners(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -28,19 +28,22 @@ ValidateTriangleCorners(
   uint64_t res;
   if ((uint32_t)4U * (uint32_t)(uint8_t)3U % (uint32_t)4U == (uint32_t)0U)
   {
-    BOOLEAN hasBytes = (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U) <= (InputLength - Pos);
+    BOOLEAN
+    hasBytes = (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U) <= (InputLength - StartPosition);
     if (hasBytes)
     {
-      res = Pos + (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U);
+      res = StartPosition + (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U);
     }
     else
     {
-      res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, Pos);
+      res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
     }
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE, Pos);
+    res =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE,
+        StartPosition);
   }
   uint64_t positionAfterTriangle = res;
   if (EverParseIsSuccess(positionAfterTriangle))
@@ -52,7 +55,7 @@ ValidateTriangleCorners(
     EverParseErrorReasonOfResult(positionAfterTriangle),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterTriangle;
 }
 
@@ -70,11 +73,12 @@ Triangle2ValidateTriangle(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 {
   /* Field _triangle_corners */
-  uint64_t positionAfterTriangle = ValidateTriangleCorners(Ctxt, Err, Input, InputLength, Pos);
+  uint64_t
+  positionAfterTriangle = ValidateTriangleCorners(Ctxt, Err, Input, InputLength, StartPosition);
   if (EverParseIsSuccess(positionAfterTriangle))
   {
     return positionAfterTriangle;
@@ -84,7 +88,7 @@ Triangle2ValidateTriangle(
     EverParseErrorReasonOfResult(positionAfterTriangle),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterTriangle;
 }
 

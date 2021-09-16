@@ -15,7 +15,7 @@ ValidateDummyEmp(
     uint64_t x5
   ),
   uint8_t *Input,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -24,7 +24,7 @@ ValidateDummyEmp(
 --*/
 {
   /* Validating field emp */
-  uint64_t positionAfterDummy = Pos;
+  uint64_t positionAfterDummy = StartPosition;
   if (EverParseIsSuccess(positionAfterDummy))
   {
     return positionAfterDummy;
@@ -34,7 +34,7 @@ ValidateDummyEmp(
     EverParseErrorReasonOfResult(positionAfterDummy),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterDummy;
 }
 
@@ -52,16 +52,21 @@ BfValidateDummy(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 {
   /* Field _dummy_emp */
-  uint64_t positionAfterDummy = ValidateDummyEmp(Ctxt, Err, Input, Pos);
+  uint64_t positionAfterDummy = ValidateDummyEmp(Ctxt, Err, Input, StartPosition);
   if (EverParseIsSuccess(positionAfterDummy))
   {
     return positionAfterDummy;
   }
-  Err("_dummy", "emp", EverParseErrorReasonOfResult(positionAfterDummy), Ctxt, Input, Pos);
+  Err("_dummy",
+    "emp",
+    EverParseErrorReasonOfResult(positionAfterDummy),
+    Ctxt,
+    Input,
+    StartPosition);
   return positionAfterDummy;
 }
 

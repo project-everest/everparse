@@ -26,7 +26,7 @@ Triangle2ValidateTriangle(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 );
 
 #if defined(__cplusplus)

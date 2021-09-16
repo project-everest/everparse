@@ -16,7 +16,7 @@ ValidateSmokerCigarettesConsumed(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -26,17 +26,17 @@ ValidateSmokerCigarettesConsumed(
 {
   /* Validating field cigarettesConsumed */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes = (uint64_t)1U <= (InputLength - Pos);
+  BOOLEAN hasBytes = (uint64_t)1U <= (InputLength - StartPosition);
   uint64_t positionAfterSmoker;
   if (hasBytes)
   {
-    positionAfterSmoker = Pos + (uint64_t)1U;
+    positionAfterSmoker = StartPosition + (uint64_t)1U;
   }
   else
   {
     positionAfterSmoker =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        Pos);
+        StartPosition);
   }
   if (EverParseIsSuccess(positionAfterSmoker))
   {
@@ -47,7 +47,7 @@ ValidateSmokerCigarettesConsumed(
     EverParseErrorReasonOfResult(positionAfterSmoker),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterSmoker;
 }
 

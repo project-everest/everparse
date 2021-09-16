@@ -32,7 +32,7 @@ ValidateEnumConstraintX(
   ),
   uint8_t *Input,
   uint64_t InputLength,
-  uint64_t Pos
+  uint64_t StartPosition
 )
 /*++
     Internal helper function:
@@ -42,17 +42,17 @@ ValidateEnumConstraintX(
 {
   /* Validating field x */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - Pos);
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
   uint64_t positionAfterEnumConstraint;
   if (hasBytes)
   {
-    positionAfterEnumConstraint = Pos + (uint64_t)4U;
+    positionAfterEnumConstraint = StartPosition + (uint64_t)4U;
   }
   else
   {
     positionAfterEnumConstraint =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        Pos);
+        StartPosition);
   }
   uint64_t positionAfterEnumConstraint0;
   if (EverParseIsSuccess(positionAfterEnumConstraint))
@@ -66,7 +66,7 @@ ValidateEnumConstraintX(
       EverParseErrorReasonOfResult(positionAfterEnumConstraint),
       Ctxt,
       Input,
-      Pos);
+      StartPosition);
     positionAfterEnumConstraint0 = positionAfterEnumConstraint;
   }
   uint64_t positionAfterEnumConstraint1;
@@ -78,7 +78,7 @@ ValidateEnumConstraintX(
   {
     /* reading field value */
     uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input + (uint32_t)Pos;
+    uint8_t *temp1 = Input + (uint32_t)StartPosition;
     uint32_t res = Load32Le(temp1);
     uint32_t enumConstraint1 = res;
     /* start: checking constraint */
@@ -98,7 +98,7 @@ ValidateEnumConstraintX(
     EverParseErrorReasonOfResult(positionAfterEnumConstraint1),
     Ctxt,
     Input,
-    Pos);
+    StartPosition);
   return positionAfterEnumConstraint1;
 }
 
