@@ -24,8 +24,9 @@ EVERPARSE_HOME=$(QD_HOME)
 
 # Command to run EverParse: path to either the 3d executable or the
 # everparse.sh or everparse.cmd script from the EverParse binary
-# package
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --input_stream extern --input_stream_include EverParseStream.h
+# package; followed by arguments
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe
+EVERPARSE_CMD=$(EVERPARSE_EXE) --input_stream extern --input_stream_include EverParseStream.h
 
 # Output directory for .c/.h files as well as temporary files (.fst,
 # .krml, etc.)
