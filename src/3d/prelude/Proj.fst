@@ -112,16 +112,16 @@ type monad (rr : Type) (m:Type0 -> Type0) : Type = {
            squash (bind c ret == c);
 }
 
-#set-options (* Look mom, *)"--no_smt" (* ! *)
+// #set-options (* Look mom, *)"--no_smt" (* ! *)
 
-%splice[proj_0; proj_1; proj_2; proj_3; proj_4] (mk_projs (`%monad))
+// %splice[proj_0; proj_1; proj_2; proj_3; proj_4] (mk_projs (`%monad))
 
-#set-options "--print_bound_var_types --print_implicits"
+// #set-options "--print_bound_var_types --print_implicits"
 
-type test : int -> Type =
- | MakeThisGuy :
-  i:int ->
-  x:int ->
-  test i
+// type test : int -> Type =
+//  | MakeThisGuy :
+//   i:int ->
+//   x:int ->
+//   test i
 
-%splice[] (mk_projs (`%test))
+// %splice[] (mk_projs (`%test))

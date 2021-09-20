@@ -949,7 +949,8 @@ let u8_dtyp = DT_IType UInt8
 let u8_pair
   : typ _ _ _ _
   = T_pair (T_denoted u8_dtyp) (T_denoted u8_dtyp)
-  
+
+#push-options "--query_stats --debug Interpreter --log_queries"
 [@@T.postprocess_with specialize_tac]
 let validate_u8_pair
   = as_validator u8_pair
@@ -1085,21 +1086,39 @@ let u8_pair_param_binding
 [@@specialize]
 let nullary_args : args_of [] = ()
 
+let mk_pair #nz1 #wk1 (#pk1:P.parser_kind nz1 wk1)
+            #i1 #l1 #b1 
+            #nz2 #wk2 (#pk2:P.parser_kind nz2 wk2)
+            #i2 #l2 #b2
+            (t1:typ pk1 i1 l1 b1)
+            (t2:typ pk2 i2 l2 b2)
+            (_:unit { normalize (nz1 == true) /\ normalize (wk1 == P.WeakKindStrongPrefix) })
+   : typ (P.and_then_kind pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
+   = T_pair t1 t2
+
+let u8_line_kind 
+  : P.parser_kind true P.WeakKindStrongPrefix 
+  = P.and_then_kind (pk_of_binding u8_pair_binding)
+                    (pk_of_binding u8_pair_binding)
+  
 [@@specialize]
 let u8_line
+  : typ #true #P.WeakKindStrongPrefix u8_line_kind _ _ _
   = T_pair (T_denoted u8_pair_dtyp) (T_denoted u8_pair_dtyp)
 
 [@@T.postprocess_with specialize_tac]
 let validate_u8_line
+  : A.validate_with_action_t _ _ _ _
   = as_validator u8_line
+
+let u8_rect_kind
+  : P.parser_kind true P.WeakKindStrongPrefix 
+  = P.and_then_kind u8_line_kind u8_line_kind
 
 [@@specialize]
 let u8_rect
-  = T_pair
-      (T_pair u8_line u8_line)
-      (T_pair (T_pair u8_line u8_line)
-              (T_pair (T_pair u8_line u8_line)
-                      (T_pair u8_line u8_line)))
+  : typ u8_rect_kind _ _ _ 
+  = T_pair u8_line u8_line
 
 let specialize_nbe_tac ()
   : T.Tac unit
@@ -1110,6 +1129,18 @@ let specialize_nbe_tac ()
 let validate_u8_rect
   = as_validator u8_rect
 
+[@@specialize]
+let u8_rect2
+  : typ _ _ _ _
+  = T_pair (T_pair (T_pair u8_rect u8_rect)
+                   (T_pair u8_rect u8_rect))
+           (T_pair (T_pair u8_rect u8_rect)
+                   (T_pair u8_rect u8_rect))                   
+
+[@@T.postprocess_with specialize_tac]
+let validate_u8_rect2
+  = as_validator u8_rect2
+//#push-options "--print_implicits"
 (**
 // Generates:
 
