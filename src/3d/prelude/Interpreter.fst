@@ -137,16 +137,19 @@ let itype_as_validator (i:itype)
 
 (* A parameter type is either an primitive integer
    or a pointer to a parameter type *)
+noeq
 type param_type =
-  | IT_Base of itype
-  | IT_Pointer of param_type
+  | PT_Base of itype
+  | PT_Pointer of param_type
+  | PT_Typedef of Type u#0
 
 (* Denotation of a param_type *)
 let rec param_type_as_type (i:param_type)
   : Type0
   = match i with
-    | IT_Base i -> itype_as_type i
-    | IT_Pointer t -> B.pointer (param_type_as_type t)
+    | PT_Base i -> itype_as_type i
+    | PT_Pointer t -> B.pointer (param_type_as_type t)
+    | PT_Typedef t -> t
 
 (* `args_of ps` is a nested pair, each of whose elements
    has a type corresponding to the denotation of the
@@ -165,7 +168,7 @@ let rec arrow (is:list param_type) (res:Type u#a)
     | i::is -> param_type_as_type i -> arrow is res
 
 (* Just an example to show the `arrow` type at work *)
-let _illustrate_int_to_int = arrow [IT_Base UInt8] P.___UINT8
+let _illustrate_int_to_int = arrow [PT_Base UInt8] P.___UINT8
 let _illustrate_int_to_int_inhabitant
   : _illustrate_int_to_int
   = fun (x:P.___UINT8) -> x
@@ -215,7 +218,7 @@ let rec dep_arrow (is:list param_type) (f:args_of is -> Type)
 (* Again, some examples to illustrate. A little harder to work with, but not impossible *)
 let _illustrate_eq_fun_t = x:P.___UINT8 -> y:P.___UINT8 { y == x }
 let _illustrate_eq_fun_t_inhabitant : _illustrate_eq_fun_t = fun x -> x
-let _illustrate_dep_int_to_int = dep_arrow [IT_Base UInt8] (fun x -> y:P.___UINT8{y == fst x})
+let _illustrate_dep_int_to_int = dep_arrow [PT_Base UInt8] (fun x -> y:P.___UINT8{y == fst x})
 let _coerce_eq (a b:Type) (_:squash (a == b)) (x:a) : b = x
 let _illustrate_dep_int_to_int_inhabitant
   : _illustrate_dep_int_to_int
@@ -1031,11 +1034,11 @@ let as_dep_arrow_cons i #is (#res:args_of (i::is) -> Type)
   = f
 
 [@@specialize]
-let param_types = [IT_Base UInt8]
+let param_types = [PT_Base UInt8]
 
 let p_t
   : arrow param_types Type
-  = as_arrow_cons (IT_Base UInt8) (fun i -> as_nullary_arrow (as_type (u8_pair_param i)))
+  = as_arrow_cons (PT_Base UInt8) (fun i -> as_nullary_arrow (as_type (u8_pair_param i)))
 
 let p_k = Prelude.and_then_kind
               (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
@@ -1043,11 +1046,11 @@ let p_k = Prelude.and_then_kind
 
 let p_p
   : dep_arrow param_types (fun args -> P.parser p_k (apply_arrow p_t args))
-  = let f (i:param_type_as_type (IT_Base UInt8))
+  = let f (i:param_type_as_type (PT_Base UInt8))
       : dep_arrow [] (fun args -> P.parser p_k (apply_arrow p_t (i, args)))
       = as_nullary_dep_arrow (as_parser (u8_pair_param i))
     in
-    as_dep_arrow_cons (IT_Base UInt8) f
+    as_dep_arrow_cons (PT_Base UInt8) f
 
 [@@specialize]
 let p_v
@@ -1057,7 +1060,7 @@ let p_v
                  _
                  _
                  _)
-  = let f (i:param_type_as_type (IT_Base UInt8))
+  = let f (i:param_type_as_type (PT_Base UInt8))
       : dep_arrow []
           (fun args ->
             A.validate_with_action_t
@@ -1065,13 +1068,13 @@ let p_v
                  _ _ _)
       = as_nullary_dep_arrow (validate_u8_pair_param i)
     in
-    as_dep_arrow_cons (IT_Base UInt8) f
+    as_dep_arrow_cons (PT_Base UInt8) f
 
 [@@specialize]
 let u8_pair_param_binding
   : global_binding
   = { name = "u8_pair_param";
-      param_types = [IT_Base UInt8];
+      param_types = [PT_Base UInt8];
       parser_kind_nz = _;
       parser_weak_kind = _;
       parser_kind = _;
@@ -1140,7 +1143,10 @@ let u8_rect2
 [@@T.postprocess_with specialize_tac]
 let validate_u8_rect2
   = as_validator u8_rect2
-//#push-options "--print_implicits"
+(* But there are still huge implicit terms in there
+   If you #push-options "--print_implicits"
+   and try to print the term, emacs will hang *)
+
 (**
 // Generates:
 
