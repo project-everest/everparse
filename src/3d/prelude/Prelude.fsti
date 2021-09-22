@@ -58,6 +58,7 @@ inline_for_extraction
 noextract
 val parser_kind (nz:bool) (wk: weak_kind) : Type0
 
+[@@erasable]
 inline_for_extraction
 noextract
 val parser (#nz:bool) (#wk: weak_kind) (k:parser_kind nz wk) (t:Type u#r) : Type u#r

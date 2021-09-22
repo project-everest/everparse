@@ -75,6 +75,7 @@ let itype_as_type (i:itype)
     | UInt64 -> P.___UINT64
 
 (* Interpretation of itype as a parser kind *)
+[@@specialize]
 let parser_kind_of_itype (i:itype)
   : P.parser_kind true P.WeakKindStrongPrefix
   = match i with
@@ -322,23 +323,34 @@ type global_binding = {
 let name_of_binding = proj_0
 [@@specialize]
 let param_types_of_binding = proj_1
+[@@specialize]
 let nz_of_binding = proj_2
+[@@specialize]
 let wk_of_binding = proj_3
+[@@specialize]
 let pk_of_binding = proj_4
 [@@specialize]
 let inv_of_binding = proj_5
 [@@specialize]
 let loc_of_binding = proj_6
+[@@specialize]
 let ar_of_binding = proj_7
+[@@specialize]
 let type_of_binding = proj_8
+[@@specialize]
 let parser_of_binding = proj_9
 [@@specialize]
 let validator_of_binding = proj_10
 [@@specialize]
 let leaf_reader_of_binding = proj_11
 
-let has_reader (g:global_binding) = Some? (leaf_reader_of_binding g)
+[@@specialize]
+let has_reader (g:global_binding) = 
+  match leaf_reader_of_binding g with
+  | Some _ -> true
+  | _ -> false
 let reader_binding = g:global_binding { has_reader g }
+[@@specialize]
 let get_leaf_reader (r:reader_binding) (args:args_of (param_types_of_binding r)) 
   : leaf_reader (apply_dep_arrow _ _ (parser_of_binding r) args)
   = apply_dep_arrow _ _ (Some?.v (leaf_reader_of_binding r)) args
@@ -522,7 +534,9 @@ type dtyp
       hd:ident -> //the name isn't needed, strictly speaking
       b:global_binding -> //what matters is its interpretation
       args:args_of (param_types_of_binding b) ->
-      dtyp b.parser_kind
+      dtyp #(nz_of_binding b)
+           #(wk_of_binding b)
+           (pk_of_binding b)
            (has_reader b)
            (apply_arrow (inv_of_binding b) args)
            (apply_arrow (loc_of_binding b) args)
@@ -579,13 +593,13 @@ let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b
 let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l #b 
                             (d:dtyp pk true i l b)
   : A.leaf_reader (dtyp_as_parser d)
-  = match d 
-    returns A.leaf_reader (dtyp_as_parser d)
-    with
+  = match d with
     | DT_IType i -> 
       itype_as_leaf_reader i
     | DT_App hd b args -> 
       let (| _, lr |) = get_leaf_reader b args in
+      assert_norm (dtyp_as_parser (DT_App hd b args) == 
+                   apply_dep_arrow _ _ (parser_of_binding b) args);
       lr
 
 noeq
@@ -833,7 +847,6 @@ let rec as_parser
      related by construction to the parser
      and type denotations
 *)
-[@@specialize]
 let rec as_validator
           #nz #wk (#pk:P.parser_kind nz wk)
           #loc #inv #b
@@ -940,9 +953,63 @@ let rec as_validator
                         (dtyp_as_leaf_reader elt_t)
                         terminator
 
+unfold
+let norm_steps =
+  [zeta; primops; iota; delta_attr [`%specialize];
+            delta_only [`%Some?;
+                        `%Some?.v;
+                        `%proj_1;
+                        `%proj_2;
+                        `%proj_3;
+                        `%proj_4;
+                        `%proj_5;
+                        `%proj_6;
+                        `%proj_7;
+                        `%proj_8;
+                        `%proj_9;
+                        `%proj_10;
+                        `%proj_11]]
+
+[@@specialize]
+let coerce_norm (#a:Type) (t:a) : norm norm_steps a = t
+
+let vt
+      (#nz:bool)
+      (#wk: _)
+      (#k:P.parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      ([@@@erasable] p:P.parser k t)
+      ([@@@erasable] inv:A.slice_inv)
+      ([@@@erasable] l:A.eloc)
+      (allow_reading:bool)
+  = A.validate_with_action_t p inv l allow_reading
+
+[@@specialize]
+let as_val
+          #nz #wk (#pk:P.parser_kind nz wk)
+          #loc #inv #b
+          (t:typ pk inv loc b)
+  : Tot (norm norm_steps (vt #nz #wk #pk #(as_type t) (as_parser t) inv loc b))
+  = let v = as_validator t in
+    coerce_norm v
+
 let specialize_tac ()
   : T.Tac unit
-  = T.norm [zeta; iota; delta_attr [`%specialize]; delta_only [`%List.Tot.tryFind; `%proj_1; `%proj_5; `%proj_6; `%proj_10]];
+  = T.norm [zeta; primops; iota; delta_attr [`%specialize];
+            delta_only [`%Some?;
+                        `%Some?.v;
+                        `%as_validator;
+                        `%proj_1;
+                        `%proj_2;
+                        `%proj_3;
+                        `%proj_4;
+                        `%proj_5;
+                        `%proj_6;
+                        `%proj_7;
+                        `%proj_8;
+                        `%proj_9;
+                        `%proj_10;
+                        `%proj_11]];
     T.trefl()
 
 [@@specialize]
@@ -953,10 +1020,10 @@ let u8_pair
   : typ _ _ _ _
   = T_pair (T_denoted u8_dtyp) (T_denoted u8_dtyp)
 
-#push-options "--query_stats --debug Interpreter --log_queries"
+#push-options "--query_stats --debug Interpreter --log_queries --print_implicits"
 [@@T.postprocess_with specialize_tac]
 let validate_u8_pair
-  = as_validator u8_pair
+  = as_val u8_pair
 
 (* In emacs, C-c C-s C-p shows the definition of validate_u8_pair as:
 
@@ -988,6 +1055,13 @@ let u8_pair_binding
 let u8_pair_dtyp = DT_App "u8_pair" u8_pair_binding ()
 
 module U8 = FStar.UInt8
+
+let tt = (T_denoted u8_pair_dtyp)
+
+[@@T.postprocess_with specialize_tac]
+let validate_u8_pair_pair
+  = as_val (T_pair (T_denoted u8_pair_dtyp)
+                   (T_denoted u8_pair_dtyp))
 
 [@@specialize]
 let u8_pair_param (i:P.___UINT8)
@@ -1135,14 +1209,20 @@ let validate_u8_rect
 [@@specialize]
 let u8_rect2
   : typ _ _ _ _
-  = T_pair (T_pair (T_pair u8_rect u8_rect)
+  = (T_pair (T_pair (T_pair u8_rect u8_rect)
                    (T_pair u8_rect u8_rect))
            (T_pair (T_pair u8_rect u8_rect)
-                   (T_pair u8_rect u8_rect))                   
+                   (T_pair u8_rect u8_rect)))
+    // (T_pair (T_pair (T_pair u8_rect u8_rect)
+    //                (T_pair u8_rect u8_rect))
+    //        (T_pair (T_pair u8_rect u8_rect)
+    //                (T_pair u8_rect u8_rect)))
 
-[@@T.postprocess_with specialize_tac]
+[@@T.postprocess_for_extraction_with specialize_tac]
 let validate_u8_rect2
-  = as_validator u8_rect2
+  = as_val u8_rect2
+#push-options "--print_implicits"
+
 (* But there are still huge implicit terms in there
    If you #push-options "--print_implicits"
    and try to print the term, emacs will hang *)
