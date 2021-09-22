@@ -1207,20 +1207,32 @@ let validate_u8_rect
   = as_validator u8_rect
 
 [@@specialize]
-let u8_rect2
+let u8_rect2_raw
   : typ _ _ _ _
-  = (T_pair (T_pair (T_pair u8_rect u8_rect)
-                   (T_pair u8_rect u8_rect))
-           (T_pair (T_pair u8_rect u8_rect)
-                   (T_pair u8_rect u8_rect)))
-    // (T_pair (T_pair (T_pair u8_rect u8_rect)
-    //                (T_pair u8_rect u8_rect))
-    //        (T_pair (T_pair u8_rect u8_rect)
-    //                (T_pair u8_rect u8_rect)))
+  = T_pair
+        (T_pair (T_pair (T_pair u8_rect u8_rect)
+                        (T_pair u8_rect u8_rect))
+                (T_pair (T_pair u8_rect u8_rect)
+                        (T_pair u8_rect u8_rect)))
+        (T_pair (T_pair (T_pair u8_rect u8_rect)
+                        (T_pair u8_rect u8_rect))
+                (T_pair (T_pair u8_rect u8_rect)
+                        (T_pair u8_rect u8_rect)))
 
-[@@T.postprocess_for_extraction_with specialize_tac]
+let kind_of #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : P.parser_kind (normalize_term nz) (normalize_term wk) = pk
+let inv_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.slice_inv = s
+let eloc_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.eloc = l
+let u8_rect2_kind = kind_of (u8_rect2_raw)
+let u8_rect2_inv = inv_of (u8_rect2_raw)
+let u8_rect2_eloc = eloc_of (u8_rect2_raw)
+[@@specialize]
+let u8_rect2
+  : typ u8_rect2_kind u8_rect2_inv u8_rect2_eloc _
+  = u8_rect2_raw
+//#push-options "--debug Interpreter --debug_level EraseErasableArgs"
+//[@@T.postprocess_with specialize_tac]
 let validate_u8_rect2
-  = as_val u8_rect2
+  = as_validator u8_rect2
 #push-options "--print_implicits"
 
 (* But there are still huge implicit terms in there
