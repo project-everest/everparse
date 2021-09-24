@@ -64,7 +64,7 @@ let translate_module (en:env) (mname:string) (fn:string)
     IO.print_string "\n"
   );
   
-  let decls = BitFields.eliminate benv decls in
+  let decls = BitFields.eliminate_decls benv decls in
   
   Options.debug_print_string "=============After bitflds=============\n";
   Options.debug_print_string (print_decls decls);
@@ -207,6 +207,7 @@ let produce_and_postprocess_c
   (* remove the current module from the deps *)
   let dep_files_and_modules = List.filter (fun (_, m) -> m <> modul) dep_files_and_modules in
   Batch.produce_and_postprocess_one_c
+    (Options.get_input_stream_binding ())
     (Options.get_clang_format ())
     (Options.get_clang_format_executable ())
     out_dir
@@ -230,6 +231,7 @@ let go () : ML unit =
     exit 0
   else
   (* for other modes, a nonempty list of files is needed on the command line, so if none are there, then we shall print the help message *)
+  let input_stream_binding = Options.get_input_stream_binding () in
   if Nil? cmd_line_files
   then let _ = Options.display_usage () in exit 1
   else
@@ -241,13 +243,14 @@ let go () : ML unit =
     | HashingOptions.MicroStepExtract -> Batch.extract_fst_file
     | HashingOptions.MicroStepVerify -> Batch.verify_fst_file
     in
-    List.iter (f out_dir) cmd_line_files
+    List.iter (f input_stream_binding out_dir) cmd_line_files
   | None ->
   (* Special mode: --makefile" *)
   match Options.get_makefile () with
   | Some t ->
     GenMakefile.write_makefile
       t
+      input_stream_binding
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())
       cmd_line_files
@@ -286,12 +289,13 @@ let go () : ML unit =
    (*
     * pretty print only the modules we emitted code for
     *)
-  Batch.pretty_print_source_modules out_dir
+  Batch.pretty_print_source_modules input_stream_binding out_dir
     (List.filter (fun (_, m) -> should_emit_fstar_code m) all_files_and_modules);
   (* Sub-mode of the default mode: --batch *)
   if Options.get_batch ()
   then
   let _ = Batch.postprocess_fst
+        input_stream_binding
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
         (Options.get_skip_c_makefiles ())
@@ -305,6 +309,7 @@ let go () : ML unit =
     (* If --batch is not set, then we also need to postprocess the wrappers and assertions
        (copyright header and clang-format) *)
     Batch.postprocess_wrappers
+        input_stream_binding
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
         out_dir all_files_and_modules

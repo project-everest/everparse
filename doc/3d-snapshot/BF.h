@@ -21,17 +21,15 @@ BfValidateDummy(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    uint8_t *x4,
+    uint64_t x5
   ),
-  uint32_t Uu,
   uint8_t *Input,
+  uint64_t InputLength,
   uint64_t StartPosition
 );
 
-void BfReadDummy(uint32_t InputLength, uint8_t *Input, uint32_t StartPosition);
+void BfReadDummy(uint8_t *Input, uint64_t Pos);
 
 #if defined(__cplusplus)
 }

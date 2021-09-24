@@ -20,7 +20,10 @@ modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
 clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(modules_static_assertions) $(addsuffix .h,$(modules_or_wrappers))
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern
+
+extern:
+	+$(MAKE) -C extern
 
 modules:
 	+$(MAKE) -C modules
@@ -39,8 +42,8 @@ batch-test:
 	$(3D) --odir out.batch --batch --no_copy_everparse_h --save_hashes $(positive_tests)
 	$(3D) --odir out.batch --batch --check_hashes strong $(positive_tests)
 	cp $(OTHER_HEADERS) out.batch
-	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(QD_HOME)/src/3d'
-	$(CXX) -o test-cpp.exe -I out.batch -I $(QD_HOME)/src/3d test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
+	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer'
+	$(CXX) -o test-cpp.exe -I out.batch -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
 	./test-cpp.exe
 
 inplace-hash-test:
@@ -60,4 +63,4 @@ batch-cleanup-test:
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern

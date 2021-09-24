@@ -142,5 +142,5 @@ let eliminate_one_decl (env:B.global_env) (d:decl) : ML decl =
     decl_with_v d (Record names params where fields)
   | _ -> d
 
-let eliminate (env:B.global_env) (ds:list decl) : ML (list decl) =
+let eliminate_decls (env:B.global_env) (ds:list decl) : ML (list decl) =
   List.map (eliminate_one_decl env) ds
