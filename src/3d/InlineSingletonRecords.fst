@@ -38,55 +38,56 @@ let choose_one (a b:option 'a) : ML (option 'a) =
                  
 let simplify_field (env:env) (f:field)
   : ML field
-  = f  //AR: TODO: handle this
-  
-  // let field = f.v in
-  //   let field = 
-  //     match field.field_type.v with
-  //     | Pointer _ -> failwith "Impossible: field types cannot be pointers"
-  //     | Type_app hd args ->
-  //       begin
-  //       match H.try_find env hd.v with
-  //       | None -> //not a singleton record
-  //         field
-  //       | Some (params, inlined_field) ->
-  //         let subst = 
-  //              List.map2 
-  //              (fun (_t, x, _q) e -> (x, e))
-  //              params args
-  //         in
-  //         let subst = (inlined_field.v.field_ident, with_dummy_range (Identifier field.field_ident)) :: subst in
-  //         let inlined_field = subst_field (mk_subst subst) inlined_field in
-  //         match field, inlined_field.v with
-  //         | { field_constraint = Some _ }, { field_constraint = Some _ } ->
-  //           failwith "Singleton field cannot be inlined because of duplicated refinements"
+  = let field = f.v in
+    let field = 
+      match field.field_type.v with
+      | Pointer _ -> failwith "Impossible: field types cannot be pointers"
+      | Type_app hd _ args ->
+        begin
+        match H.try_find env hd.v with
+        | None -> //not a singleton record
+          field
+        | Some (params, inlined_field) ->
+          let subst = 
+               List.map2 
+               (fun (_t, x, _q) e ->
+                match e with
+                | Inr _ -> failwith "Cannot inline singleton records with output type parameters"
+                | Inl e -> (x, e))
+               params args
+          in
+          let subst = (inlined_field.v.field_ident, with_dummy_range (Identifier field.field_ident)) :: subst in
+          let inlined_field = subst_field (mk_subst subst) inlined_field in
+          match field, inlined_field.v with
+          | { field_constraint = Some _ }, { field_constraint = Some _ } ->
+            failwith "Singleton field cannot be inlined because of duplicated refinements"
             
-  //         | { field_action = Some _ }, { field_action = Some _ } ->
-  //           failwith "Singleton field cannot be inlined because of duplicated actions"
+          | { field_action = Some _ }, { field_action = Some _ } ->
+            failwith "Singleton field cannot be inlined because of duplicated actions"
   
-  //         | { field_constraint = Some _ }, { field_action = Some _ } ->
-  //           failwith "Singleton field cannot be inlined because it would alter order of evaluation of refinement and action"
+          | { field_constraint = Some _ }, { field_action = Some _ } ->
+            failwith "Singleton field cannot be inlined because it would alter order of evaluation of refinement and action"
   
-  //         | { field_array_opt = FieldArrayQualified _ }, _
-  //         | _, { field_array_opt = FieldArrayQualified _ } ->
-  //           failwith "Singleton field cannot be inlined because it contains an array"
+          | { field_array_opt = FieldArrayQualified _ }, _
+          | _, { field_array_opt = FieldArrayQualified _ } ->
+            failwith "Singleton field cannot be inlined because it contains an array"
   
-  //         | { field_array_opt = FieldString _ }, _
-  //         | _, { field_array_opt = FieldString _ } ->
-  //           failwith "Singleton field cannot be inlined because it contains a string"
+          | { field_array_opt = FieldString _ }, _
+          | _, { field_array_opt = FieldString _ } ->
+            failwith "Singleton field cannot be inlined because it contains a string"
 
-  //         | { field_bitwidth = Some _ }, _        
-  //         | _, { field_bitwidth = Some _ } ->
-  //           failwith "Singleton field cannot be inlined because it contains a bitfield"
+          | { field_bitwidth = Some _ }, _        
+          | _, { field_bitwidth = Some _ } ->
+            failwith "Singleton field cannot be inlined because it contains a bitfield"
           
-  //         | _, _ ->
-  //           { field with 
-  //             field_type = inlined_field.v.field_type;
-  //             field_constraint = choose_one field.field_constraint inlined_field.v.field_constraint;
-  //             field_action = choose_one field.field_action inlined_field.v.field_action }
-  //       end
-  //   in
-  //   { f with v = field }
+          | _, _ ->
+            { field with 
+              field_type = inlined_field.v.field_type;
+              field_constraint = choose_one field.field_constraint inlined_field.v.field_constraint;
+              field_action = choose_one field.field_action inlined_field.v.field_action }
+        end
+    in
+    { f with v = field }
 
 let simplify_decl (env:env) (d:decl) : ML decl =
   match d.d_decl.v with
