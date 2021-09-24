@@ -1655,5 +1655,8 @@ let action_weaken
    : action p inv' l' b a
    = act
 
+noextract
+inline_for_extraction
+let mk_external_action #_ #_ #_ #_ #_ #_ f = fun _ _ _ -> f ()
 
 #pop-options
