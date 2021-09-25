@@ -1158,14 +1158,19 @@ let elaborate_bit_fields env (fields:list field)
       aux 0 None fields
 
 
+let allowed_base_types_as_output_types = [
+  "UINT8"; "UINT16"; "UINT32"; "UINT64";
+  "UINT16BE"; "UINT32BE"; "UINT64BE";
+  "PUINT8";
+  "Bool"
+]
+
 let rec check_integer_or_output_type (ge:global_env) (t:typ) : ML unit =
   match t.v with
-  | Type_app i is_out [] ->  //either it should be a base integer type, or an output type
-    (match maybe_as_integer_typ i with
-     | Some _ -> ()
-     | _ ->
-       if Ast.eq_typ t puint8 then ()
-       else if not is_out then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range)
+  | Type_app i is_out [] ->  //either it should be a base type, or an output type
+    if i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types
+    then ()
+    else if not is_out then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
   | Pointer t -> check_integer_or_output_type ge t
   | _ -> error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
 
