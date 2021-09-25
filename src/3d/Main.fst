@@ -99,6 +99,9 @@ let translate_module (en:env) (mname:string) (fn:string)
      typesizes_env = senv;
      translate_env = tenv }
 
+let has_out_exprs (t_decls:list Target.decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
+
 let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   (static_asserts:StaticAssertions.static_asserts)
   : ML unit =
@@ -111,11 +114,16 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   FStar.IO.write_string types_fst_file (Target.print_types_decls modul t_decls);
   FStar.IO.close_write_file types_fst_file;
 
-  let output_types_fsti_file =
-    open_write_file
-      (Printf.sprintf "%s/%s.OutputTypes.fsti" (Options.get_output_dir ()) modul) in
-  FStar.IO.write_string output_types_fsti_file (Target.print_out_exprs_fstar modul t_decls);
-  FStar.IO.close_write_file output_types_fsti_file;
+  let has_out_exprs = has_out_exprs t_decls in
+
+  if has_out_exprs
+  then begin
+    let output_types_fsti_file =
+      open_write_file
+        (Printf.sprintf "%s/%s.OutputTypes.fsti" (Options.get_output_dir ()) modul) in
+    FStar.IO.write_string output_types_fsti_file (Target.print_out_exprs_fstar modul t_decls);
+    FStar.IO.close_write_file output_types_fsti_file
+  end;
 
   let fst_file =
     open_write_file
@@ -159,10 +167,13 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file h_file
   end;
 
-  let output_types_c_file =
-    open_write_file
-      (Printf.sprintf "%s/%s_OutputTypes.c" (Options.get_output_dir ()) modul) in
-  FStar.IO.write_string output_types_c_file (Target.print_out_exprs_c modul t_decls);
+  if has_out_exprs
+  then begin
+    let output_types_c_file =
+      open_write_file
+        (Printf.sprintf "%s/%s_OutputTypes.c" (Options.get_output_dir ()) modul) in
+    FStar.IO.write_string output_types_c_file (Target.print_out_exprs_c modul t_decls)
+  end;
 
   if StaticAssertions.has_static_asserts static_asserts then begin
     let c_static_asserts_file =

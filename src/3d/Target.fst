@@ -899,7 +899,14 @@ let print_decl_signature (mname:string) (d:decl) : ML string =
     else print_type_decl_signature mname d
   | Output_type_expr _ _ -> ""
 
+let has_output_types (ds:list decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Output_type_expr? d) ds
+
 let print_decls (modul: string) (ds:list decl) =
+  let output_types_include =
+    if has_output_types ds
+    then Printf.sprintf "open %s.OutputTypes\n\n" modul
+    else "" in
   let decls =
   Printf.sprintf
     "module %s\n\
@@ -907,12 +914,12 @@ let print_decls (modul: string) (ds:list decl) =
      open EverParse3d.Actions.All\n\
      open WeakenTac\n\
      module B = LowStar.Buffer\n\n\
-     open %s.OutputTypes\n\n\
+     %s\
      include %s.Types\n\n\
      #set-options \"--using_facts_from '* FStar Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
      %s"
      modul
-     modul
+     output_types_include
      modul
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n"
        (ds |> List.map (print_decl_for_validators modul)
@@ -921,17 +928,21 @@ let print_decls (modul: string) (ds:list decl) =
   decls
 
 let print_types_decls (modul:string) (ds:list decl) =
+  let output_types_include =
+    if has_output_types ds
+    then Printf.sprintf "open %s.OutputTypes\n\n" modul
+    else "" in
   let decls =
   Printf.sprintf
     "module %s.Types\n\
      open Prelude\n\
      open EverParse3d.Actions.All\n\n\
      module B = LowStar.Buffer\n\n\
-     open %s.OutputTypes\n\n\
+     %s\
      #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
      %s"
      modul
-     modul
+     output_types_include
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" 
        (ds |> List.map (print_decl_for_types modul)
            |> List.filter (fun s -> s <> "")))
@@ -939,17 +950,21 @@ let print_types_decls (modul:string) (ds:list decl) =
   decls
 
 let print_decls_signature (mname: string) (ds:list decl) =
+  let output_types_include =
+    if has_output_types ds
+    then Printf.sprintf "open %s.OutputTypes\n\n" mname
+    else "" in
   let decls =
     Printf.sprintf
     "module %s\n\
      open Prelude\n\
      open EverParse3d.Actions.All\n\
      module B = LowStar.Buffer\n\
-     open %s.OutputTypes\n\
+     %s\
      include %s.Types\n\n\
      %s"
      mname
-     mname
+     output_types_include
      mname
      (String.concat "\n" (ds |> List.map (print_decl_signature mname) |> List.filter (fun s -> s <> "")))
   in

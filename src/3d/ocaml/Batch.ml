@@ -119,12 +119,10 @@ let pretty_print_source_module
   let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
   let fsti_file = Printf.sprintf "%si" fst_file in
-  List.iter (pretty_print_source_file input_stream_binding out_dir) [
-      output_types_fsti_file;
-      types_fst_file;
-      fsti_file;
-      fst_file;
-  ]
+  let all_files =
+    (if file_exists output_types_fsti_file then [output_types_fsti_file] else []) @
+    [types_fst_file; fsti_file; fst_file] in
+  List.iter (pretty_print_source_file input_stream_binding out_dir) all_files
 
 let pretty_print_source_modules
       input_stream_binding
@@ -139,21 +137,21 @@ let verify_and_extract_module
       (file, modul)
     : unit
   =
-  let output_types_fsti_file = filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul) in
+  let output_types_fsti_file =
+    let fn = filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul) in
+    if file_exists fn then [fn] else [] in
   let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
   let fsti_file = Printf.sprintf "%si" fst_file in
-  List.iter (verify_fst_file input_stream_binding out_dir) [
-      output_types_fsti_file;
+  List.iter (verify_fst_file input_stream_binding out_dir) (output_types_fsti_file@[
       types_fst_file;
       fsti_file;
       fst_file;
-  ];
-  List.iter (extract_fst_file input_stream_binding out_dir) [
-      output_types_fsti_file;
+  ]);
+  List.iter (extract_fst_file input_stream_binding out_dir) (output_types_fsti_file@[
       types_fst_file;
       fst_file;
-  ]
+  ])
 
 let is_krml
       filename
@@ -209,12 +207,29 @@ let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,Prelude.\\*,Prel
 let fstar_kremlib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
 
 let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
+  let has_output_types modul =
+    file_exists (filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul)) in
+
+  let output_types_krml modul =
+    if has_output_types modul
+    then [filename_concat out_dir (Printf.sprintf "%s_OutputTypes.krml" modul)]
+    else [] in
+
+  let output_types_lib_args modul =  
+    if has_output_types modul
+    then ["-library"; Printf.sprintf "%s.OutputTypes" modul]
+    else [] in
+
+  let output_types_prefix_args modul =
+    if has_output_types modul
+    then ["-no-prefix"; Printf.sprintf "%s.OutputTypes" modul]
+    else [] in
+
   let krml_files = List.fold_left
                      (fun accu (_, modul) ->
                        let l =
-                         filename_concat out_dir (Printf.sprintf "%s_OutputTypes.krml" modul) ::
-                         filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
-                         filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu
+			 (output_types_krml modul)@(filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
+                                                    filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu)
                        in
 
 		       let c_wrapper = Printf.sprintf "%sWrapper.c" modul in
@@ -234,9 +249,9 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
                      files_and_modules
   in
   let output_files_lib_args = List.fold_left (fun accu (_, modul) ->
-                                  accu @ ["-library"; Printf.sprintf "%s.OutputTypes" modul]) [] files_and_modules in
+                                  accu @ (output_types_lib_args modul)) [] files_and_modules in
   let output_files_no_prefix_args = List.fold_left (fun accu (_, modul) ->
-                                  accu @ ["-no-prefix"; Printf.sprintf "%s.OutputTypes" modul]) [] files_and_modules in
+                                  accu @ (output_types_prefix_args modul)) [] files_and_modules in
   let krml_files = List.rev krml_files in
   let krml_args =
     "-tmpdir" :: out_dir ::
