@@ -14,6 +14,7 @@ type dep_graph = {
   graph: dep_graph';
   modules_with_entrypoint: list string;
   modules_with_static_assertions: list string;
+  modules_with_output_types: list string
 }
 
 let all_edges_from (g:dep_graph') (node:string) : Tot (list edge) =
@@ -56,6 +57,7 @@ type scan_deps_t = {
   sd_deps: list string;
   sd_has_entrypoint: bool;
   sd_has_static_assertions: bool;
+  sd_has_output_types: bool
 }
 
 let scan_deps (fn:string) : ML scan_deps_t =
@@ -159,7 +161,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Some (Inr i) -> maybe_dep i
     | _ -> [] in
 
-  let rec deps_of_decl (d:decl) : ML (list string) =
+  let deps_of_decl (d:decl) : ML (list string) =
     match d.d_decl.v with
     | ModuleAbbrev i m ->
       H.insert abbrevs i.v.name m.v.name;
@@ -178,10 +180,14 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | OutputType _ -> []  //AR: no dependencies from the output types yet
   in
 
+  let has_output_types (ds:list decl) : bool =
+    List.Tot.existsb (fun d -> OutputType? d.d_decl.v) ds in
+
   {
     sd_deps = List.collect deps_of_decl decls;
     sd_has_entrypoint = has_entrypoint;
     sd_has_static_assertions = has_static_assertions;
+    sd_has_output_types = has_output_types decls
   }
 
 let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & list string)
@@ -190,7 +196,10 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
   let g, seen = acc in
   if List.mem mname seen then acc
   else
-    let {sd_has_entrypoint = has_entrypoint; sd_deps = deps; sd_has_static_assertions = has_static_assertions} =
+    let {sd_has_entrypoint = has_entrypoint;
+         sd_deps = deps;
+         sd_has_static_assertions = has_static_assertions;
+         sd_has_output_types = has_output_types} =
       scan_deps (Options.get_file_name (OS.concat dirname mname))
     in
     let edges = List.fold_left (fun edges dep ->
@@ -201,6 +210,7 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
       graph = g.graph @ edges;
       modules_with_entrypoint = (if has_entrypoint then mname :: g.modules_with_entrypoint else g.modules_with_entrypoint);
       modules_with_static_assertions = (if has_static_assertions then mname :: g.modules_with_static_assertions else g.modules_with_static_assertions);
+      modules_with_output_types = (if has_output_types then mname::g.modules_with_output_types else g.modules_with_output_types);
     }
     in
     List.fold_left (fun acc dep -> build_dep_graph_aux dirname dep acc)
@@ -211,6 +221,7 @@ let build_dep_graph_from_list files =
     graph = [];
     modules_with_entrypoint = [];
     modules_with_static_assertions = [];
+    modules_with_output_types = [];
   }
   in
   let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) (g0, []) files
@@ -243,3 +254,5 @@ let collect_and_sort_dependencies_from_graph (g: dep_graph) (files:list string) 
 let has_entrypoint g m = List.Tot.mem m g.modules_with_entrypoint
 
 let has_static_assertions g m = List.Tot.mem m g.modules_with_static_assertions
+
+let has_output_types g m = List.Tot.mem m g.modules_with_output_types
