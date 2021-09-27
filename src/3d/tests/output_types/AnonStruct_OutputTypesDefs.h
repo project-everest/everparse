@@ -17,5 +17,5 @@ typedef struct _OTPOINT {
 }
 #endif
 
-#define __TPoint_OutputTypes_H_DEFINED
+#define __AnonStruct_OutputTypes_H_DEFINED
 #endif
