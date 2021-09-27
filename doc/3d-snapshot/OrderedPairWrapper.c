@@ -5,7 +5,7 @@ void OrderedPairEverParseError(const char *StructName, const char *FieldName, co
 
 static
 void DefaultErrorHandler(
-	const char *typename,
+	const char *typename_s,
 	const char *fieldname,
 	const char *reason,
 	uint8_t *context,
@@ -14,7 +14,7 @@ void DefaultErrorHandler(
 {
 	EverParseErrorFrame *frame = (EverParseErrorFrame*)context;
 	EverParseDefaultErrorHandler(
-		typename,
+		typename_s,
 		fieldname,
 		reason,
 		frame,
@@ -31,7 +31,7 @@ BOOLEAN OrderedPairCheckOrderedPair(uint8_t *base, uint32_t len) {
 	{
 		if (frame.filled)
 		{
-			OrderedPairEverParseError(frame.typename, frame.fieldname, frame.reason);
+			OrderedPairEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
 		return FALSE;
 	}
