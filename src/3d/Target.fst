@@ -1244,7 +1244,7 @@ let print_output_type_val (tbl:set) (t:typ) : ML string =
        | Some _ -> ""
        | None ->
          H.insert tbl s ();
-         Printf.sprintf "\n\nval %s : Type0\n\n" s
+         Printf.sprintf "\n\ntype %s : Type0 = B.pointer UInt8.t\n\n" s
   else ""
 
 let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
@@ -1259,13 +1259,13 @@ let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
            s
   else ""
 
-let rec print_out_expr (oe:output_expr) : ML string =
-  match oe.oe_expr with
-  | T_OE_id i -> A.ident_to_string i
-  | T_OE_star o -> Printf.sprintf "*(%s)" (print_out_expr o)
-  | T_OE_addrof o -> Printf.sprintf "&(%s)" (print_out_expr o)
-  | T_OE_deref o i -> Printf.sprintf "(%s)->(%s)" (print_out_expr o) (A.ident_to_string i)
-  | T_OE_dot o i -> Printf.sprintf "(%s).(%s)" (print_out_expr o) (A.ident_to_string i)
+let rec print_out_expr' (oe:output_expr') (base_id:string) : ML string =
+  match oe with
+  | T_OE_id _ -> base_id
+  | T_OE_star o -> Printf.sprintf "*(%s)" (print_out_expr' o.oe_expr base_id)
+  | T_OE_addrof o -> Printf.sprintf "&(%s)" (print_out_expr' o.oe_expr base_id)
+  | T_OE_deref o i -> Printf.sprintf "(%s)->%s" (print_out_expr' o.oe_expr base_id) (A.ident_to_string i)
+  | T_OE_dot o i -> Printf.sprintf "(%s).%s" (print_out_expr' o.oe_expr base_id) (A.ident_to_string i)
 
 
 (*
@@ -1301,10 +1301,16 @@ let print_out_expr_set (tbl:set) (oe:output_expr) : ML string =
     let fn_arg1_name = oe.oe_base_ident in
     let fn_arg2_t = print_as_c_type oe.oe_t in
     let fn_arg2_name = "__v" in
-    let fn_body = Printf.sprintf "%s = %s;" (print_out_expr oe) fn_arg2_name in
-    let fn = Printf.sprintf "static inline void %s (%s %s, %s %s){\n    %s;\n}\n"
-      fn_name
+    let fn_body = Printf.sprintf
+      "struct %s ptr = (struct %s) %s;\n%s = %s;"
       fn_arg1_t
+      fn_arg1_t
+      fn_arg1_name.v.name
+      (print_out_expr' oe.oe_expr "ptr")
+      fn_arg2_name in
+    let fn = Printf.sprintf
+      "void %s (uint8_t *%s, %s %s){\n    %s;\n}\n"
+      fn_name
       (A.ident_name fn_arg1_name)
       fn_arg2_t
       fn_arg2_name
@@ -1337,12 +1343,14 @@ let print_out_expr_get(tbl:set) (oe:output_expr) : ML string =
     H.insert tbl fn_name ();
     let fn_arg1_t = print_as_c_type oe.oe_bt in
     let fn_arg1_name = oe.oe_base_ident in
-    let fn_res = print_as_c_type oe.oe_t in
-    let fn_body = Printf.sprintf "return %s;" (print_out_expr oe) in
-    let fn = Printf.sprintf "static inline %s %s (%s %s){\n    %s;\n}\n"
-      fn_res
-      fn_name
+    let fn_body = Printf.sprintf
+      "struct %s ptr = (struct %s) %s;\n\nreturn (uint8_t*) %s;"
       fn_arg1_t
+      fn_arg1_t
+      fn_arg1_name.v.name
+      (print_out_expr' oe.oe_expr "ptr") in
+    let fn = Printf.sprintf "uint8_t* %s (uint8_t *%s){\n    %s;\n}\n"
+      fn_name
       (A.ident_name fn_arg1_name)
       fn_body in
     Printf.sprintf "\n\n%s\n\n" fn
@@ -1372,14 +1380,13 @@ let print_out_exprs_fstar (modul:string) (ds:decls) : ML string =
     modul
     s
 
-let print_out_exprs_c _ (ds:decls) : ML string =
+let print_out_exprs_c modul (ds:decls) : ML string =
   let tbl = H.create 10 in
-  String.concat "" (ds |> List.map (fun d ->
-    match fst d with
-    | Output_type_expr oe is_get ->
-      Printf.sprintf "%s%s%s"
-       (print_output_type_c_typedef tbl oe.oe_bt)
-        (print_output_type_c_typedef tbl oe.oe_t)
-        (if not is_get then print_out_expr_set tbl oe
-         else print_out_expr_get tbl oe)
-    | _ -> ""))
+  (Printf.sprintf "#include<stdint.h>\n\n#include \"%s_OutputTypesDefs.h\"\n\n" modul)
+  ^
+  (String.concat "" (ds |> List.map (fun d ->
+     match fst d with
+     | Output_type_expr oe is_get ->
+       if not is_get then print_out_expr_set tbl oe
+       else print_out_expr_get tbl oe
+    | _ -> "")))
