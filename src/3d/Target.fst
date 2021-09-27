@@ -1366,9 +1366,9 @@ let print_out_exprs_fstar (modul:string) (ds:decls) : ML string =
     "module %s.OutputTypes\n\n\
      open FStar.HyperStack.ST\n\
      open Prelude\n\
-     open Actions\n\
+     open EverParse3d.Actions.All\n\
      module B = LowStar.Buffer\n\n\
-     noextract val output_loc : B.loc\n\n%s"
+     noextract val output_loc : eloc\n\n%s"
     modul
     s
 
