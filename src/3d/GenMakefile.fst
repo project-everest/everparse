@@ -178,13 +178,20 @@ let produce_fst_rules
       end
     )
     begin
+      begin if Deps.has_output_types g modul
+        then [
+          mk_filename (Printf.sprintf "%s_OutputTypes" modul) "c"
+        ]
+        else []
+      end `List.Tot.append`
       begin if Deps.has_entrypoint g modul
         then [
           mk_filename (Printf.sprintf "%sWrapper" modul) "h";
           mk_filename (Printf.sprintf "%sWrapper" modul) "c";
         ]
         else []
-      end `List.Tot.append` begin
+      end `List.Tot.append`
+      begin
         if Deps.has_static_assertions g modul
         then [mk_filename (Printf.sprintf "%sStaticAssertions" modul) "c"]
         else []
@@ -206,13 +213,36 @@ let produce_h_rules
       (if clang_format then [mk_filename "" "clang-format"] else []) `List.Tot.append`
       (if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [copyright] else []) `List.Tot.append`
       List.map (fun f -> mk_filename (Options.get_module_name f) "krml") all_files `List.Tot.append`
-      List.map (fun f -> mk_filename (Printf.sprintf "%s_Types" (Options.get_module_name f)) "krml") all_files
+      List.map (fun f -> mk_filename (Printf.sprintf "%s_Types" (Options.get_module_name f)) "krml") all_files `List.Tot.append`
+      List.concatMap (fun f ->
+        let m = Options.get_module_name f in
+        if Deps.has_output_types g m
+        then [mk_filename (Printf.sprintf "%s_OutputTypes" m) "krml"]
+        else []) all_files
       ;
     to = to; (* IMPORTANT: relies on the fact that kremlin generates .c files BEFORE .h files *)
     args = Printf.sprintf "--__produce_c_from_existing_krml %s" (mk_input_filename file);
   } ::
   [produce_nop_rule [to] (mk_filename (Options.get_module_name file) "h")]
 
+let produce_output_types_o_rule
+  (g:Deps.dep_graph)
+  (modul:string)
+: list rule_t
+=
+  if Deps.has_output_types g modul
+  then
+    let h = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "h" in
+    let c = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "c" in
+    let o = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "o" in
+    let defs = mk_filename (Printf.sprintf "%s_OutputTypesDefs" modul) "h" in
+    [{
+      ty = CC;
+      from = [c; h; defs];
+      to = o;
+      args = Printf.sprintf "-o %s %s" o c; }]
+  else []
+    
 let produce_o_rule
   (modul: string)
 : Tot rule_t
@@ -294,6 +324,7 @@ let produce_makefile
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule g) all_modules `List.Tot.append`
       List.Tot.concatMap (produce_static_assertions_o_rule g) all_modules `List.Tot.append`
+      List.Tot.concatMap (produce_output_types_o_rule g) all_modules `List.Tot.append`
       List.Tot.map produce_o_rule all_modules
     ) `List.Tot.append`
     List.concatMap (produce_fst_rules g clang_format) all_files `List.Tot.append`
