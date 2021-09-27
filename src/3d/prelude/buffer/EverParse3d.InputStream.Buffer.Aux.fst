@@ -65,7 +65,7 @@ let _get_remaining
 open LowStar.BufferOps
 
 let default_error_handler
-  (typename: string)
+  (typename_s: string)
   (fieldname: string)
   (reason: string)
   (context: B.pointer EverParse3d.ErrorCode.error_frame)
@@ -79,7 +79,7 @@ let default_error_handler
     context *= {
       EverParse3d.ErrorCode.filled = true;
       EverParse3d.ErrorCode.start_pos = start_pos;
-      EverParse3d.ErrorCode.typename = typename;
+      EverParse3d.ErrorCode.typename_s = typename_s;
       EverParse3d.ErrorCode.fieldname = fieldname;
       EverParse3d.ErrorCode.reason = reason;
     }
