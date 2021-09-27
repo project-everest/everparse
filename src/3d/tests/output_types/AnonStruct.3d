@@ -1,25 +1,25 @@
 output
 typedef struct _OTPOINT {
-  UINT8     x;
+  UINT32     x;
   struct {
-    UINT8   y;
-    UINT8   z;
+    UINT32   y;
+    UINT32   z;
   };
 } OTPOINT;
 
 entrypoint
 typedef struct _FLATTPOINT (mutable OTPOINT* out) {
-    UINT8 x
+    UINT32 x
     {:on-success
         out->x = x;
         return true;
     };
-    UINT8 y
+    UINT32 y
     {:on-success
         out->y = y;
         return true;
     };
-    UINT8 z
+    UINT32 z
     {:on-success
         out->z = z;
         return true;

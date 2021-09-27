@@ -6,10 +6,10 @@ extern "C" {
 #endif
 
 typedef struct _OTPOINT {
-  uint8_t     x;
+  uint32_t     x;
   struct {
-    uint8_t   y;
-    uint8_t   z;
+    uint32_t   y;
+    uint32_t   z;
   };
 } OTPOINT;
 
