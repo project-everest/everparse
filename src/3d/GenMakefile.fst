@@ -333,6 +333,7 @@ let produce_makefile
     List.Tot.map (produce_fsti_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_types_krml_rule g) all_modules `List.Tot.append`
+    List.Tot.concatMap (produce_output_types_krml_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_krml_rule g) all_modules `List.Tot.append`
     List.concatMap (produce_h_rules g clang_format) all_files
   in {
