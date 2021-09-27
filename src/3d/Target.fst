@@ -991,8 +991,10 @@ let rec print_as_c_type (t:typ) : Tot string =
           "uint64_t"
     | T_app {v={name="PUINT8"}} _ [] ->
           "uint8_t*"
-    | T_app {v={name=x}} _ [] ->
+    | T_app {v={name=x}} false [] ->
           x
+    | T_app {v={name=x}} true [] ->  //prefix the names of output types with struct
+          "struct " ^ x
     | _ ->
          "__UNKNOWN__"
 
@@ -1035,7 +1037,7 @@ let print_c_entry (modul: string)
     =  let default_error_handler =
          "static\n\
           void DefaultErrorHandler(\n\t\
-                              const char *typename,\n\t\
+                              const char *typename_s,\n\t\
                               const char *fieldname,\n\t\
                               const char *reason,\n\t\
                               uint8_t *context,\n\t\
@@ -1044,7 +1046,7 @@ let print_c_entry (modul: string)
           {\n\t\
             EverParseErrorFrame *frame = (EverParseErrorFrame*)context;\n\t\
             EverParseDefaultErrorHandler(\n\t\t\
-              typename,\n\t\t\
+              typename_s,\n\t\t\
               fieldname,\n\t\t\
               reason,\n\t\t\
               frame,\n\t\t\
@@ -1064,7 +1066,7 @@ let print_c_entry (modul: string)
        {\n\t\t\
          if (frame.filled)\n\t\t\
          {\n\t\t\t\
-           %sEverParseError(frame.typename, frame.fieldname, frame.reason);\n\t\t\
+           %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
          }\n\t\t\
          return FALSE;\n\t\
        }\n\t\
@@ -1100,7 +1102,10 @@ let print_c_entry (modul: string)
         String.concat
           ", "
           (List.Tot.map
-            (fun (id, t) -> print_ident id)
+            (fun (id, t) ->
+             if is_output_type t  //output type pointers are uint8_t* in the F* generated code
+             then ("(uint8_t*) " ^ print_ident id)
+             else print_ident id)
             ps)
        in
        match ps with
@@ -1183,11 +1188,13 @@ let print_c_entry (modul: string)
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
+       %s\
        %s\n\n\
        %s\n\n\
        %s\n"
       modul
       modul
+      (if has_output_types ds then Printf.sprintf "#include \"%s_OutputTypesDefs.h\"\n" modul else "")
       error_callback_proto
       default_error_handler
       (impls |> String.concat "\n\n")
@@ -1302,7 +1309,7 @@ let print_out_expr_set (tbl:set) (oe:output_expr) : ML string =
     let fn_arg2_t = print_as_c_type oe.oe_t in
     let fn_arg2_name = "__v" in
     let fn_body = Printf.sprintf
-      "struct %s ptr = (struct %s) %s;\n%s = %s;"
+      "%s ptr = (%s) %s;\n%s = %s;"
       fn_arg1_t
       fn_arg1_t
       fn_arg1_name.v.name
@@ -1344,7 +1351,7 @@ let print_out_expr_get(tbl:set) (oe:output_expr) : ML string =
     let fn_arg1_t = print_as_c_type oe.oe_bt in
     let fn_arg1_name = oe.oe_base_ident in
     let fn_body = Printf.sprintf
-      "struct %s ptr = (struct %s) %s;\n\nreturn (uint8_t*) %s;"
+      "%s ptr = (%s) %s;\n\nreturn (uint8_t*) %s;"
       fn_arg1_t
       fn_arg1_t
       fn_arg1_name.v.name
@@ -1382,7 +1389,13 @@ let print_out_exprs_fstar (modul:string) (ds:decls) : ML string =
 
 let print_out_exprs_c modul (ds:decls) : ML string =
   let tbl = H.create 10 in
-  (Printf.sprintf "#include<stdint.h>\n\n#include \"%s_OutputTypesDefs.h\"\n\n" modul)
+  (Printf.sprintf
+     "#include<stdint.h>\n\n\
+      #include \"%s_OutputTypesDefs.h\"\n\n\
+      #if defined(__cplusplus)\n\
+      extern \"C\" {\n\
+      #endif\n\n"
+     modul)
   ^
   (String.concat "" (ds |> List.map (fun d ->
      match fst d with
@@ -1390,3 +1403,7 @@ let print_out_exprs_c modul (ds:decls) : ML string =
        if not is_get then print_out_expr_set tbl oe
        else print_out_expr_get tbl oe
     | _ -> "")))
+  ^
+  ("#if defined(__cplusplus)\n\
+    }\n\
+   #endif\n\n")
