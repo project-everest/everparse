@@ -329,7 +329,7 @@ let produce_makefile
     ) `List.Tot.append`
     List.concatMap (produce_fst_rules g clang_format) all_files `List.Tot.append`
     List.Tot.map (produce_types_checked_rule g) all_modules `List.Tot.append`
-    List.concatMap (produce_output_types_fsti_checked_rule g) all_files `List.Tot.append`
+    List.concatMap (produce_output_types_fsti_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fsti_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_types_krml_rule g) all_modules `List.Tot.append`
