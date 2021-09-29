@@ -452,45 +452,45 @@ let rec check_out_expr (env:env) (oe0:out_expr)
   match oe0.out_expr_node.v with
   | OE_id i ->
     let t = lookup_expr_name env i in
-    {oe0 with out_expr_meta = Some (i, t, t)}
+    {oe0 with out_expr_meta = Some (t, t)}
   | OE_star oe ->
     let oe = check_out_expr env oe in
-    let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
+    let oe_bt, oe_t = Some?.v oe.out_expr_meta in
     (match oe_t.v with
      | Pointer t ->
        {oe0 with
         out_expr_node={oe0.out_expr_node with v=OE_star oe};
-        out_expr_meta=Some (oe_b, oe_bt, t)}
+        out_expr_meta=Some (oe_bt, t)}
      | _ ->
        error
          (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a pointer type"
            (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_addrof oe ->
     let oe = check_out_expr env oe in
-    let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
+    let oe_bt, oe_t = Some?.v oe.out_expr_meta in
     {oe0 with
      out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
-     out_expr_meta=Some (oe_b, oe_bt, with_range (Pointer oe_t) oe.out_expr_node.range)}
+     out_expr_meta=Some (oe_bt, with_range (Pointer oe_t) oe.out_expr_node.range)}
   | OE_deref oe f ->
     let oe = check_out_expr env oe in
-    let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
+    let oe_bt, oe_t = Some?.v oe.out_expr_meta in
     (match oe_t.v with
      | Pointer t ->
        let i = check_output_type (global_env_of_env env) t in
        {oe0 with
         out_expr_node={oe0.out_expr_node with v=OE_deref oe f};
-        out_expr_meta=Some (oe_b, oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
+        out_expr_meta=Some (oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
      | _ -> 
        error
          (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a pointer type"
            (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_dot oe f ->
     let oe = check_out_expr env oe in
-    let oe_b, oe_bt, oe_t = Some?.v oe.out_expr_meta in
+    let oe_bt, oe_t = Some?.v oe.out_expr_meta in
     let i = check_output_type (global_env_of_env env) oe_t in
     {oe0 with
      out_expr_node={oe0.out_expr_node with v=OE_dot oe f};
-     out_expr_meta=Some (oe_b, oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
+     out_expr_meta=Some (oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
 
 let range_of_typ_param (p:typ_param) = match p with
   | Inl e -> e.range
@@ -808,7 +808,7 @@ and check_typ_param (env:env) (p:typ_param) : ML (typ_param & typ) =
     Inl e, t
   | Inr o ->
     let o = check_out_expr env o in
-    Inr o, (let _, _, t = Some?.v o.out_expr_meta in t)
+    Inr o, (let _, t = Some?.v o.out_expr_meta in t)
 
 #pop-options
 #push-options "--z3rlimit_factor 2"
@@ -841,7 +841,7 @@ let rec check_field_action (env:env) (f:field) (a:action)
 
         | Action_assignment lhs rhs ->
           let lhs = check_out_expr env lhs in
-          let _, _, t = Some?.v lhs.out_expr_meta in
+          let _, t = Some?.v lhs.out_expr_meta in
           let rhs, t' = check_expr env rhs in
           if not (eq_typ env t t')
           then warning (Printf.sprintf

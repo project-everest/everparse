@@ -279,10 +279,9 @@ type out_expr' =
   | OE_dot    : out_expr -> ident -> out_expr'  //read a field
 
 /// Output expressions maintain metadata
-///   (base identifier, base type, type of the expr)
+///   (base type, type of the expr)
 ///
-/// where base identifier is the base variable name,
-///       base type is the type of the base identifier,
+/// where base type is the type of the base identifier,
 ///       and type of the output expression
 ///
 /// The metadata is initially None after parsing,
@@ -295,7 +294,7 @@ type out_expr' =
 /// TODO: could we also store the source string for pretty printing?
 
 and out_expr = { out_expr_node: with_meta_t out_expr';
-                 out_expr_meta: option (ident & typ & typ) }
+                 out_expr_meta: option (typ & typ) }
 
 
 /// A type parameter is either an expression or an output expression

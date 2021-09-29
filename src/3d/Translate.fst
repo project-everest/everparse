@@ -307,11 +307,10 @@ let rec translate_out_expr_node (oe:with_meta_t out_expr')
 and translate_out_expr (oe:out_expr) : ML T.output_expr =
   let oe' = translate_out_expr_node oe.out_expr_node in
   match oe.out_expr_meta with
-  | Some (i, bt, t) ->
+  | Some (bt, t) ->
     { T.oe_expr = oe';
       T.oe_bt = translate_output_type bt;
-      T.oe_t = translate_output_type t;
-      T.oe_base_ident = i }
+      T.oe_t = translate_output_type t }
   | None -> failwith "Impossible, translate_out_expr got an output expression node without metadata!"
   
 

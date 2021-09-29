@@ -66,12 +66,12 @@ and simplify_out_expr_node (env:T.env_t) (oe:with_meta_t out_expr')
   : ML (with_meta_t out_expr')
   = oe
 
-and simplify_out_expr_meta (env:T.env_t) (mopt:option (ident & typ & typ))
-  : ML (option (ident & typ & typ))
+and simplify_out_expr_meta (env:T.env_t) (mopt:option (typ & typ))
+  : ML (option (typ & typ))
   = match mopt with
     | None -> None
-    | Some (id, bt, t) ->
-      Some (id, simplify_typ env bt, simplify_typ env t)
+    | Some (bt, t) ->
+      Some (simplify_typ env bt, simplify_typ env t)
 
 and simplify_out_expr (env:T.env_t) (oe:out_expr) : ML out_expr =
   {oe with

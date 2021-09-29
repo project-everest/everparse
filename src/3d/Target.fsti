@@ -374,7 +374,6 @@ and output_expr = {
   oe_expr : output_expr';
   oe_bt : typ;
   oe_t : typ;
-  oe_base_ident : A.ident
 }
 
 (*

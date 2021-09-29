@@ -1309,6 +1309,14 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
       fn_arg1_t
       fn_arg2_t
 
+let rec base_id_of_output_expr (oe:output_expr) : A.ident =
+  match oe.oe_expr with
+  | T_OE_id id -> id
+  | T_OE_star oe
+  | T_OE_addrof oe
+  | T_OE_deref oe _
+  | T_OE_dot oe _ -> base_id_of_output_expr oe
+
 (*
  * C defn. for the setter for the output expression
  *)
@@ -1320,7 +1328,7 @@ let print_out_expr_set (tbl:set) (oe:output_expr) : ML string =
   | _ ->
     H.insert tbl fn_name ();
     let fn_arg1_t = print_as_c_type oe.oe_bt in
-    let fn_arg1_name = oe.oe_base_ident in
+    let fn_arg1_name = base_id_of_output_expr oe in
     let fn_arg2_t = print_as_c_type oe.oe_t in
     let fn_arg2_name = "__v" in
     let fn_body = Printf.sprintf
@@ -1362,7 +1370,7 @@ let print_out_expr_get(tbl:set) (oe:output_expr) : ML string =
   | _ ->
     H.insert tbl fn_name ();
     let fn_arg1_t = print_as_c_type oe.oe_bt in
-    let fn_arg1_name = oe.oe_base_ident in
+    let fn_arg1_name = base_id_of_output_expr oe in
     let fn_res = print_as_c_type oe.oe_t in
     let fn_body = Printf.sprintf "return %s;" (print_out_expr' oe.oe_expr) in
     let fn = Printf.sprintf "%s %s (%s %s){\n    %s;\n}\n"
@@ -1375,7 +1383,7 @@ let print_out_expr_get(tbl:set) (oe:output_expr) : ML string =
 
 let output_setter_name lhs = Printf.sprintf "set_%s" (out_fn_name lhs)
 let output_getter_name lhs = Printf.sprintf "get_%s" (out_fn_name lhs)
-let output_base_var lhs = lhs.oe_base_ident
+let output_base_var lhs = base_id_of_output_expr lhs
 
 let print_out_exprs_fstar (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
