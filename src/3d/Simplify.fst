@@ -121,6 +121,12 @@ let simplify_field (env:T.env_t) (f:field)
                        field_action = fact } in
     { f with v = sf }
 
+let rec simplify_out_fields (env:T.env_t) (flds:list out_field) : ML (list out_field) =
+  List.map (fun fld -> match fld with
+    | Out_field_named id t -> Out_field_named id (simplify_typ env t)
+    | Out_field_anon flds is_union ->
+      Out_field_anon (simplify_out_fields env flds) is_union) flds
+
 let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   match d.d_decl.v with
   | ModuleAbbrev _ _ -> d
@@ -149,7 +155,8 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
                          cases in
     decl_with_v d (CaseType tdnames params (hd, cases))
 
-  | OutputType _ -> d
+  | OutputType out_t ->
+    decl_with_v d (OutputType ({out_t with out_typ_fields=simplify_out_fields env out_t.out_typ_fields}))
 
 let simplify_prog benv senv (p:list decl) =
   List.map (simplify_decl (B.mk_env benv, senv)) p

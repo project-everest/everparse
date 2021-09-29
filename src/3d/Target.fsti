@@ -389,6 +389,7 @@ type decl' =
   | Assumption : assumption -> decl'
   | Definition : definition -> decl' //the bool marks it for inline_for_extraction
   | Type_decl  : type_decl -> decl'
+  | Output_type: A.out_typ -> decl'  //output types specifications, we keep them if we need to print them to C
 
   | Output_type_expr : output_expr -> is_get:bool -> decl'  //is_get boolean indicates that the output expression appears in a getter position, i.e. in a type parameter, it is false when the output expression is an assignment action lhs
 
@@ -420,3 +421,4 @@ val output_base_var (lhs:output_expr) : ML A.ident
  
 val print_out_exprs_fstar (modul:string) (ds:decls) : ML string
 val print_out_exprs_c (modul:string) (ds:decls) : ML string
+val print_output_types_defs (modul:string) (ds:decls) : ML string

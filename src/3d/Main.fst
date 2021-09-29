@@ -104,6 +104,7 @@ let has_out_exprs (t_decls:list Target.decl) : bool =
 
 let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   (static_asserts:StaticAssertions.static_asserts)
+  (emit_output_types_defs:bool)
   : ML unit =
 
   let types_fst_file =
@@ -167,12 +168,23 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file h_file
   end;
 
+  if emit_output_types_defs
+  then begin
+    let output_types_defs_file = open_write_file
+      (Printf.sprintf "%s/%s_OutputTypesDefs.h"
+         (Options.get_output_dir ())
+         modul) in
+    FStar.IO.write_string output_types_defs_file (Target.print_output_types_defs modul t_decls);
+    FStar.IO.close_write_file output_types_defs_file
+  end;
+
   if has_out_exprs
   then begin
     let output_types_c_file =
       open_write_file
         (Printf.sprintf "%s/%s_OutputTypes.c" (Options.get_output_dir ()) modul) in
-    FStar.IO.write_string output_types_c_file (Target.print_out_exprs_c modul t_decls)
+    FStar.IO.write_string output_types_c_file (Target.print_out_exprs_c modul t_decls);
+    FStar.IO.close_write_file output_types_c_file
   end;
 
   if StaticAssertions.has_static_asserts static_asserts then begin
@@ -185,10 +197,12 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file c_static_asserts_file
   end
 
-let process_file (en:env) (fn:string) (modul:string) (emit_fstar:bool) : ML env =
+let process_file (en:env) (fn:string) (modul:string) (emit_fstar:bool) (emit_output_types_defs:bool)
+  : ML env =
+  
   let _decls, t_decls, static_asserts, en =
     translate_module en modul fn in
-  if emit_fstar then emit_fstar_code en modul t_decls static_asserts
+  if emit_fstar then emit_fstar_code en modul t_decls static_asserts emit_output_types_defs
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
 
   let ds = Binding.get_exported_decls en.binding_env modul in
@@ -197,14 +211,17 @@ let process_file (en:env) (fn:string) (modul:string) (emit_fstar:bool) : ML env 
     typesizes_env = TypeSizes.finish_module en.typesizes_env modul ds;
     translate_env = Translate.finish_module en.translate_env modul ds }
 
-let process_files (files_and_modules:list (string & string)) (emit_fstar:string -> ML bool) : ML unit =
+let process_files (files_and_modules:list (string & string)) (emit_fstar:string -> ML bool)
+  (emit_output_types_defs:bool)
+  : ML unit =
+  
   IO.print_string (Printf.sprintf "Processing files: %s\n"
     (List.fold_left (fun acc fn ->
       Printf.sprintf "%s %s" acc fn) "" (List.map fst files_and_modules)));
   let env = initial_env () in
   files_and_modules
   |> List.fold_left (fun env (fn, modul) ->
-                    process_file env fn modul (emit_fstar modul)) env
+                    process_file env fn modul (emit_fstar modul) emit_output_types_defs) env
   |> ignore
 
 let produce_and_postprocess_c
@@ -293,7 +310,7 @@ let go () : ML unit =
     fun modul ->
       let b = Options.get_batch () in
       b || List.Tot.mem modul cmd_line_modules in
-  process_files all_files_and_modules should_emit_fstar_code;
+  process_files all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ());
   (* we need to pretty-print source modules in all cases, regardless of --batch,
      because of the Makefile scenario
    *)

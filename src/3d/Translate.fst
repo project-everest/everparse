@@ -1371,7 +1371,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     } in
     ds1 @ ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
-  | OutputType out_t -> []  //No decl for output type specifications
+  | OutputType out_t -> [with_comments (T.Output_type out_t) false []]  //No decl for output type specifications
 
 noeq
 type translate_env = {

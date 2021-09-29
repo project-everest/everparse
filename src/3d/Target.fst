@@ -780,6 +780,8 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
     `strcat`
     maybe_print_type_equality mname td
 
+  | Output_type _
+
   | Output_type_expr _ _ -> ""
 
 /// Print a decl for M.fst
@@ -844,6 +846,8 @@ let print_decl_for_validators (mname:string) (d:decl) : ML string =
          (print_typedef_name mname td.decl_name)
          (print_typedef_typ td.decl_name)
          (print_reader mname r))
+  
+  | Output_type _
   | Output_type_expr _ _ -> ""
 
 let print_type_decl_signature (mname:string) (d:decl{Type_decl? (fst d)}) : ML string =
@@ -897,6 +901,7 @@ let print_decl_signature (mname:string) (d:decl) : ML string =
     else if not ((snd d).is_exported || td.decl_name.td_entrypoint)
     then ""
     else print_type_decl_signature mname d
+  | Output_type _
   | Output_type_expr _ _ -> ""
 
 let has_output_types (ds:list decl) : bool =
@@ -1244,10 +1249,11 @@ type set = H.t string unit
  *   we need to print them only once each
  *)
 
-let rec base_output_type (t:typ) : A.ident =
+let rec base_output_type (t:typ) : ML A.ident =
   match t with
   | T_app id true [] -> id
   | T_pointer t -> base_output_type t
+  | _ -> failwith "Target.base_output_type called with a non-output type"
 
 let rec print_output_type_val (tbl:set) (t:typ) : ML string =
   let open A in
@@ -1412,3 +1418,57 @@ let print_out_exprs_c modul (ds:decls) : ML string =
   ("#if defined(__cplusplus)\n\
     }\n\
    #endif\n\n")
+
+let rec atyp_to_ttyp (t:A.typ) : ML typ =
+  match t.v with
+  | A.Pointer t ->
+    let t = atyp_to_ttyp t in
+    T_pointer t
+  | A.Type_app hd _b _args ->
+    T_app hd _b []
+
+let rec print_output_types_fields (flds:list A.out_field) : ML string =
+  List.fold_left (fun s fld ->
+    let fld_s =
+      match fld with
+      | A.Out_field_named id t ->
+        Printf.sprintf "%s    %s;\n" (print_as_c_type (atyp_to_ttyp t)) (A.ident_name id)
+      | A.Out_field_anon flds is_union ->
+        Printf.sprintf "%s  {\n %s };\n"
+          (if is_union then "union" else "struct")
+          (print_output_types_fields flds) in
+    s ^ fld_s) "" flds
+
+let print_out_typ (ot:A.out_typ) : ML string =
+  let open A in
+  Printf.sprintf
+    "\ntypedef %s %s {\n%s\n} %s;\n"
+    (if ot.out_typ_is_union then "union" else "struct")
+    (pascal_case (A.ident_name ot.out_typ_names.typedef_name))
+    (print_output_types_fields ot.out_typ_fields)
+    (pascal_case (A.ident_name ot.out_typ_names.typedef_name))
+
+let print_output_types_defs (modul:string) (ds:decls) : ML string =
+  let defs =
+    String.concat "\n\n" (List.map (fun (d, _) ->
+      match d with
+      | Output_type ot -> print_out_typ ot
+      | _ -> "") ds) in
+
+  Printf.sprintf
+    "#ifndef __%s_OutputTypesDefs_H\n\
+     #define __%s_OutputTypesDefs_H\n\n\
+     #if defined(__cplusplus)\n\
+     extern \"C\" {\n\
+     #endif\n\n\n\
+     %s\n\n\n\
+     #if defined(__cplusplus)\n\
+     }\n\
+     #endif\n\n\
+     #define __%s_OutputTypes_H_DEFINED\n\
+     #endif\n"
+
+    modul
+    modul
+    defs
+    modul

@@ -15,30 +15,10 @@ int main ()
 
   AnonStructCheckFlattpoint (&s2, (uint8_t *) &s1, 12);
   if (s2.x == 1 && s2.y == 2 && s2.z == 3) {
-    std::cout << "Outpyt types testcase success!" << std::endl;
+    std::cout << "Output types testcase (AnonStruct) success!" << std::endl;
     return 0;
   } else {
-    std::cout << "Output types testcase err!" << std::endl;
+    std::cout << "Output types testcase (AnonStruct) err!" << std::endl;
     return 1;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
