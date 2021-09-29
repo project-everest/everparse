@@ -125,6 +125,7 @@ rule token =
   | "->"           { locate lexbuf RARROW }
   | ","            { locate lexbuf COMMA }
   | ";"            { locate lexbuf SEMICOLON }
+  | "::"           { locate lexbuf COLON_COLON }
   | ":"            { locate lexbuf COLON }
   | "?"            { locate lexbuf QUESTION }
   | "{:on-success" { locate lexbuf LBRACE_ONSUCCESS }

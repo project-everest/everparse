@@ -38,6 +38,12 @@
                 else error ("Integer " ^s^ " is too large for the specified type") r
       in
       i, s', t
+
+  let mk_out_expr_from_ident id r = {
+    out_expr_node = with_range (OE_id id) r;
+    out_expr_meta = None
+  }
+
 %}
 
 %token<string>  INT XINT STRING
@@ -45,7 +51,7 @@
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
 %token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS
-%token          DEFINE LPAREN RPAREN LBRACE RBRACE DOT RARROW COMMA SEMICOLON COLON QUESTION
+%token          DEFINE LPAREN RPAREN LBRACE RBRACE DOT RARROW COMMA SEMICOLON COLON_COLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
@@ -189,7 +195,7 @@ typ_param:
 
 qident:
   | i=IDENT    { i }
-  | m=IDENT DOT n=IDENT    { with_range ({modul_name=Some m.v.name; name=n.v.name}) $startpos }
+  | m=IDENT COLON_COLON n=IDENT    { with_range ({modul_name=Some m.v.name; name=n.v.name}) $startpos }
 
 (*
  * Note that the is_output field is being set to false in the parser
@@ -293,10 +299,21 @@ where_opt:
   | WHERE e=expr { Some e }
   | REQUIRES e=expr { Some e }
 
+(*
+ * We are doing some dancing around here for an out expression being an ident
+ * The reason is that, an ident is also an expression
+ *   and a type parameter can either be an expression or output expression
+ * So if an ident appears as a type parameter, we would not know if
+ *   it is an expr or out_expr
+ *
+ * With this dancing around, idents are not out exprs and are always parsed as expressions
+ *)
 out_expr_no_range:
-  | i=qident                                { OE_id i }
+  | STAR oe=qident                          { OE_star (mk_out_expr_from_ident oe $startpos) }
   | STAR oe=out_expr                        { OE_star oe }
+  | BITWISE_AND oe=qident                   { OE_addrof (mk_out_expr_from_ident oe $startpos) }
   | BITWISE_AND oe=out_expr                 { OE_addrof oe }
+  | oe=qident RARROW f=qident               { OE_deref (mk_out_expr_from_ident oe $startpos, f) }
   | oe=out_expr RARROW f=qident             { OE_deref (oe, f) }
   | oe=out_expr DOT f=qident                { OE_dot (oe, f) }
   | LPAREN oe=out_expr_no_range RPAREN      { oe }

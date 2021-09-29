@@ -168,7 +168,7 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file h_file
   end;
 
-  if emit_output_types_defs
+  if has_out_exprs && emit_output_types_defs
   then begin
     let output_types_defs_file = open_write_file
       (Printf.sprintf "%s/%s_OutputTypesDefs.h"
