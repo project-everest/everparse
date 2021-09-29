@@ -51,3 +51,5 @@ val get_skip_o_rules : unit -> ML bool
 val get_json : unit -> ML bool
 
 val get_input_stream_binding : unit -> ML input_stream_binding_t
+
+val get_emit_output_types_defs : unit -> ML bool

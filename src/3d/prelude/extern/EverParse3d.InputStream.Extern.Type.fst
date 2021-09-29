@@ -45,7 +45,7 @@ let make_input_buffer
   }
 
 let default_error_handler
-  (typename: string)
+  (typename_s: string)
   (fieldname: string)
   (reason: string)
   (context: B.pointer LPE.error_frame)
@@ -59,7 +59,7 @@ let default_error_handler
     context *= {
       LPE.filled = true;
       LPE.start_pos = start_pos;
-      LPE.typename = typename;
+      LPE.typename_s = typename_s;
       LPE.fieldname = fieldname;
       LPE.reason = reason;
     }

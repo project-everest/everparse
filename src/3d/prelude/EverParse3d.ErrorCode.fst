@@ -161,7 +161,7 @@ noeq
 type error_frame = {
   filled: bool;
   start_pos: U64.t;
-  typename: string;
+  typename_s: string;
   fieldname: string;
   reason: string;
 }

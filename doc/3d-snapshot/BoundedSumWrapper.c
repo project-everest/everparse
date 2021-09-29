@@ -5,7 +5,7 @@ void BoundedSumEverParseError(const char *StructName, const char *FieldName, con
 
 static
 void DefaultErrorHandler(
-	const char *typename,
+	const char *typename_s,
 	const char *fieldname,
 	const char *reason,
 	uint8_t *context,
@@ -14,7 +14,7 @@ void DefaultErrorHandler(
 {
 	EverParseErrorFrame *frame = (EverParseErrorFrame*)context;
 	EverParseDefaultErrorHandler(
-		typename,
+		typename_s,
 		fieldname,
 		reason,
 		frame,
@@ -31,7 +31,7 @@ BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
 	{
 		if (frame.filled)
 		{
-			BoundedSumEverParseError(frame.typename, frame.fieldname, frame.reason);
+			BoundedSumEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
 		return FALSE;
 	}
@@ -46,7 +46,7 @@ BOOLEAN BoundedSumCheckMySum(uint8_t *base, uint32_t len) {
 	{
 		if (frame.filled)
 		{
-			BoundedSumEverParseError(frame.typename, frame.fieldname, frame.reason);
+			BoundedSumEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
 		return FALSE;
 	}

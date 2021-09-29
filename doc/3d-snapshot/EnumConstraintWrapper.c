@@ -5,7 +5,7 @@ void EnumConstraintEverParseError(const char *StructName, const char *FieldName,
 
 static
 void DefaultErrorHandler(
-	const char *typename,
+	const char *typename_s,
 	const char *fieldname,
 	const char *reason,
 	uint8_t *context,
@@ -14,7 +14,7 @@ void DefaultErrorHandler(
 {
 	EverParseErrorFrame *frame = (EverParseErrorFrame*)context;
 	EverParseDefaultErrorHandler(
-		typename,
+		typename_s,
 		fieldname,
 		reason,
 		frame,
@@ -31,7 +31,7 @@ BOOLEAN EnumConstraintCheckEnumConstraint(uint8_t *base, uint32_t len) {
 	{
 		if (frame.filled)
 		{
-			EnumConstraintEverParseError(frame.typename, frame.fieldname, frame.reason);
+			EnumConstraintEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
 		return FALSE;
 	}
