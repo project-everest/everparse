@@ -5,15 +5,15 @@
 extern "C" {
 #endif
 
-typedef struct _OPOINT {
+typedef struct _OPoint {
     uint8_t   x;
     uint32_t  y;
-} OPOINT;
+} OPoint;
 
-typedef struct _OTPOINT {
-    OPOINT    op;
+typedef struct _Otpoint {
+    OPoint    op;
     uint64_t  oz;
-} OTPOINT;
+} Otpoint;
 
 
 

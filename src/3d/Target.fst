@@ -974,30 +974,6 @@ let print_decls_signature (mname: string) (ds:list decl) =
   decls // ^ "\n" ^ dummy
 
 #push-options "--z3rlimit_factor 4"
-let rec print_as_c_type (t:typ) : Tot string =
-    let open Ast in
-    match t with
-    | T_pointer t ->
-          Printf.sprintf "%s*" (print_as_c_type t)
-    | T_app {v={name="Bool"}} _ [] ->
-          "BOOLEAN"
-    | T_app {v={name="UINT8"}} _ [] ->
-          "uint8_t"
-    | T_app {v={name="UINT16"}} _ [] ->
-          "uint16_t"
-    | T_app {v={name="UINT32"}} _ [] ->
-          "uint32_t"
-    | T_app {v={name="UINT64"}} _ [] ->
-          "uint64_t"
-    | T_app {v={name="PUINT8"}} _ [] ->
-          "uint8_t*"
-    | T_app {v={name=x}} false [] ->
-          x
-    | T_app {v={name=x}} true [] ->  //prefix the names of output types with struct
-          "struct " ^ x
-    | _ ->
-         "__UNKNOWN__"
-
 let pascal_case name : ML string =
   let chars = String.list_of_string name in
   let has_underscore = List.mem '_' chars in
@@ -1029,6 +1005,30 @@ let pascal_case name : ML string =
   else if String.length name = 0
   then name
   else String.uppercase (String.sub name 0 1) ^ String.sub name 1 (String.length name - 1)
+
+let rec print_as_c_type (t:typ) : ML string =
+    let open Ast in
+    match t with
+    | T_pointer t ->
+          Printf.sprintf "%s*" (print_as_c_type t)
+    | T_app {v={name="Bool"}} _ [] ->
+          "BOOLEAN"
+    | T_app {v={name="UINT8"}} _ [] ->
+          "uint8_t"
+    | T_app {v={name="UINT16"}} _ [] ->
+          "uint16_t"
+    | T_app {v={name="UINT32"}} _ [] ->
+          "uint32_t"
+    | T_app {v={name="UINT64"}} _ [] ->
+          "uint64_t"
+    | T_app {v={name="PUINT8"}} _ [] ->
+          "uint8_t*"
+    | T_app {v={name=x}} false [] ->
+          x
+    | T_app {v={name=x}} true [] ->
+          pascal_case x
+    | _ ->
+         "__UNKNOWN__"
 
 let print_c_entry (modul: string)
                   (env: global_env)
@@ -1085,11 +1085,11 @@ let print_c_entry (modul: string)
        modul
    in
    let print_one_validator (d:type_decl) : ML (string & string) =
-    let print_params (ps:list param) : Tot string =
+    let print_params (ps:list param) : ML string =
       let params =
         String.concat
           ", "
-          (List.Tot.map
+          (List.map
             (fun (id, t) -> Printf.sprintf "%s %s" (print_as_c_type t) (print_ident id))
             ps)
        in
@@ -1104,7 +1104,7 @@ let print_c_entry (modul: string)
           (List.Tot.map
             (fun (id, t) ->
              if is_output_type t  //output type pointers are uint8_t* in the F* generated code
-             then ("(uint8_t*) " ^ print_ident id)
+             then (print_ident id)
              else print_ident id)
             ps)
        in
@@ -1160,6 +1160,7 @@ let print_c_entry (modul: string)
   let header =
     Printf.sprintf
       "#include \"EverParseEndianness.h\"\n\
+       %s\
        #ifdef __cplusplus\n\
        extern \"C\" {\n\
        #endif\n\
@@ -1167,6 +1168,7 @@ let print_c_entry (modul: string)
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
+      (if has_output_types ds then Printf.sprintf "#include \"%s_OutputTypesDefs.h\"\n" modul else "")
       (signatures |> String.concat "\n\n")
   in
   let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
@@ -1188,13 +1190,11 @@ let print_c_entry (modul: string)
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
-       %s\
        %s\n\n\
        %s\n\n\
        %s\n"
       modul
       modul
-      (if has_output_types ds then Printf.sprintf "#include \"%s_OutputTypesDefs.h\"\n" modul else "")
       error_callback_proto
       default_error_handler
       (impls |> String.concat "\n\n")
@@ -1244,50 +1244,59 @@ type set = H.t string unit
  *   we need to print them only once each
  *)
 
-let print_output_type_val (tbl:set) (t:typ) : ML string =
+let rec base_output_type (t:typ) : A.ident =
+  match t with
+  | T_app id true [] -> id
+  | T_pointer t -> base_output_type t
+
+let rec print_output_type_val (tbl:set) (t:typ) : ML string =
+  let open A in
   if is_output_type t
   then let s = print_output_type t in
-       match H.try_find tbl s with
-       | Some _ -> ""
-       | None ->
-         H.insert tbl s ();
-         Printf.sprintf "\n\ntype %s : Type0 = B.pointer UInt8.t\n\n" s
+       if H.try_find tbl s <> None then ""
+       else let _ = H.insert tbl s () in
+            match t with
+            | T_app id true [] ->
+              Printf.sprintf "\n\nval %s : Type0\n\n" s
+            | T_pointer bt ->
+              let bs = print_output_type_val tbl bt in
+              bs ^ (Printf.sprintf "\n\ntype %s = B.pointer %s\n\n" s (print_output_type bt))
   else ""
 
-let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
-  if is_output_type t
-  then let s = pascal_case (print_output_type t) in
-       match H.try_find tbl s with
-       | Some _ -> ""
-       | None ->
-         H.insert tbl s ();
-         Printf.sprintf "\n\ntypedef %s %s;\n\n"
-           (print_as_c_type t)
-           s
-  else ""
+// let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
+//   if is_output_type t
+//   then let s = pascal_case (print_output_type t) in
+//        match H.try_find tbl s with
+//        | Some _ -> ""
+//        | None ->
+//          H.insert tbl s ();
+//          Printf.sprintf "\n\ntypedef %s %s;\n\n"
+//            (print_as_c_type t)
+//            s
+//   else ""
 
-let rec print_out_expr' (oe:output_expr') (base_id:string) : ML string =
+let rec print_out_expr' (oe:output_expr') : ML string =
   match oe with
-  | T_OE_id _ -> base_id
-  | T_OE_star o -> Printf.sprintf "*(%s)" (print_out_expr' o.oe_expr base_id)
-  | T_OE_addrof o -> Printf.sprintf "&(%s)" (print_out_expr' o.oe_expr base_id)
-  | T_OE_deref o i -> Printf.sprintf "(%s)->%s" (print_out_expr' o.oe_expr base_id) (A.ident_to_string i)
-  | T_OE_dot o i -> Printf.sprintf "(%s).%s" (print_out_expr' o.oe_expr base_id) (A.ident_to_string i)
+  | T_OE_id id -> A.ident_to_string id
+  | T_OE_star o -> Printf.sprintf "*(%s)" (print_out_expr' o.oe_expr)
+  | T_OE_addrof o -> Printf.sprintf "&(%s)" (print_out_expr' o.oe_expr)
+  | T_OE_deref o i -> Printf.sprintf "(%s)->%s" (print_out_expr' o.oe_expr) (A.ident_to_string i)
+  | T_OE_dot o i -> Printf.sprintf "(%s).%s" (print_out_expr' o.oe_expr) (A.ident_to_string i)
 
 
 (*
  * F* val for the setter for the output expression
  *)
 
-let print_out_expr_set_fstar (tbl:set) (oe:output_expr) : ML string =
+let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML string =
   let fn_name = Printf.sprintf "set_%s" (out_fn_name oe) in
   match H.try_find tbl fn_name with
   | Some _ -> ""
   | _ ->
     H.insert tbl fn_name ();
     //TODO: module name?
-    let fn_arg1_t = print_typ "" oe.oe_bt in
-    let fn_arg2_t = print_typ "" oe.oe_t in
+    let fn_arg1_t = print_typ mname oe.oe_bt in
+    let fn_arg2_t = print_typ mname oe.oe_t in
     Printf.sprintf
       "\n\nval %s (_:%s) (_:%s) (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
       fn_name
@@ -1309,15 +1318,13 @@ let print_out_expr_set (tbl:set) (oe:output_expr) : ML string =
     let fn_arg2_t = print_as_c_type oe.oe_t in
     let fn_arg2_name = "__v" in
     let fn_body = Printf.sprintf
-      "%s ptr = (%s) %s;\n%s = %s;"
-      fn_arg1_t
-      fn_arg1_t
-      fn_arg1_name.v.name
-      (print_out_expr' oe.oe_expr "ptr")
+      "%s = %s;"
+      (print_out_expr' oe.oe_expr)
       fn_arg2_name in
     let fn = Printf.sprintf
-      "void %s (uint8_t *%s, %s %s){\n    %s;\n}\n"
+      "void %s (%s %s, %s %s){\n    %s;\n}\n"
       fn_name
+      fn_arg1_t
       (A.ident_name fn_arg1_name)
       fn_arg2_t
       fn_arg2_name
@@ -1328,14 +1335,14 @@ let print_out_expr_set (tbl:set) (oe:output_expr) : ML string =
  * F* val for the getter for the output expression
  *)
 
-let print_out_expr_get_fstar (tbl:set) (oe:output_expr) : ML string =
+let print_out_expr_get_fstar (tbl:set) (mname:string) (oe:output_expr) : ML string =
   let fn_name = Printf.sprintf "get_%s" (out_fn_name oe) in
   match H.try_find tbl fn_name with
   | Some _ -> ""
   | _ ->
     H.insert tbl fn_name ();
-    let fn_arg1_t = print_typ "" oe.oe_bt in
-    let fn_res = print_typ "" oe.oe_t in
+    let fn_arg1_t = print_typ mname oe.oe_bt in
+    let fn_res = print_typ mname oe.oe_t in
     Printf.sprintf "\n\nval %s : %s -> %s\n\n" fn_name fn_arg1_t fn_res
 
 (*
@@ -1350,14 +1357,12 @@ let print_out_expr_get(tbl:set) (oe:output_expr) : ML string =
     H.insert tbl fn_name ();
     let fn_arg1_t = print_as_c_type oe.oe_bt in
     let fn_arg1_name = oe.oe_base_ident in
-    let fn_body = Printf.sprintf
-      "%s ptr = (%s) %s;\n\nreturn (uint8_t*) %s;"
-      fn_arg1_t
-      fn_arg1_t
-      fn_arg1_name.v.name
-      (print_out_expr' oe.oe_expr "ptr") in
-    let fn = Printf.sprintf "uint8_t* %s (uint8_t *%s){\n    %s;\n}\n"
+    let fn_res = print_as_c_type oe.oe_t in
+    let fn_body = Printf.sprintf "return %s;" (print_out_expr' oe.oe_expr) in
+    let fn = Printf.sprintf "%s %s (%s %s){\n    %s;\n}\n"
+      fn_res
       fn_name
+      fn_arg1_t
       (A.ident_name fn_arg1_name)
       fn_body in
     Printf.sprintf "\n\n%s\n\n" fn
@@ -1374,8 +1379,8 @@ let print_out_exprs_fstar (modul:string) (ds:decls) : ML string =
       Printf.sprintf "%s%s%s"
         (print_output_type_val tbl oe.oe_bt)
         (print_output_type_val tbl oe.oe_t)
-        (if not is_get then print_out_expr_set_fstar tbl oe
-         else print_out_expr_get_fstar tbl oe)
+        (if not is_get then print_out_expr_set_fstar tbl modul oe
+         else print_out_expr_get_fstar tbl modul oe)
     | _ -> "")) in
    Printf.sprintf
     "module %s.OutputTypes\n\n\

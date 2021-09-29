@@ -225,6 +225,11 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
     then ["-no-prefix"; Printf.sprintf "%s.OutputTypes" modul]
     else [] in
 
+  let output_types_include_args modul =
+    if has_output_types modul
+    then ["-add-include"; Printf.sprintf "\"%s_OutputTypesDefs.h\"" modul]
+    else [] in
+
   let krml_files = List.fold_left
                      (fun accu (_, modul) ->
                        let l =
@@ -252,6 +257,9 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
                                   accu @ (output_types_lib_args modul)) [] files_and_modules in
   let output_files_no_prefix_args = List.fold_left (fun accu (_, modul) ->
                                   accu @ (output_types_prefix_args modul)) [] files_and_modules in
+  let output_files_include_args = List.fold_left (fun accu (_, modul) ->
+                                  accu @ (output_types_include_args modul)) [] files_and_modules in
+
   let krml_files = List.rev krml_files in
   let krml_args =
     "-tmpdir" :: out_dir ::
@@ -270,7 +278,7 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
-                                  output_files_lib_args @ output_files_no_prefix_args @ krml_args0 @ krml_files
+                                  output_files_lib_args @ output_files_no_prefix_args @ output_files_include_args @ krml_args0 @ krml_files
     in
     let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
     let krml_args =

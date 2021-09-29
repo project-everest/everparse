@@ -5,13 +5,13 @@
 extern "C" {
 #endif
 
-typedef struct _OTPOINT {
+typedef struct _Otpoint {
   uint32_t     x;
   struct {
     uint32_t   y;
     uint32_t   z;
   };
-} OTPOINT;
+} Otpoint;
 
 #if defined(__cplusplus)
 }
