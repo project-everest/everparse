@@ -35,6 +35,5 @@ val bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env)
 
 val initial_global_env (_:unit) : ML global_env
 val get_exported_decls (ge:global_env) (mname:string) : ML (list ident' & list ident')  //exported, private
-
 val finish_module (ge:global_env) (mname:string) (e_and_p:list ident' & list ident')
   : ML global_env
