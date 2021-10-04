@@ -91,7 +91,7 @@ let extend_with_size_of_typedef_names (env:env_t) (names:typedef_names) (size:si
 let size_and_alignment_of_typ (env:env_t) (t:typ)
   : ML (size & alignment)
   = match t.v with
-    | Type_app i _ -> size_and_alignment_of_typename env i
+    | Type_app i _ _ -> size_and_alignment_of_typename env i
     | Pointer _ -> Variable, Some 8
 
 let size_of_typ (env:env_t) (t:typ)
@@ -134,7 +134,7 @@ let rec value_of_const_expr (env:env_t) (e:expr)
   | App SizeOf [{v=Identifier t}] ->
     begin
     try
-      match size_of_typ env (with_range (Type_app t []) t.range) with
+      match size_of_typ env (with_range (Type_app t false []) t.range) with
       | Fixed n
       | WithVariableSuffix n -> Some (Inr (UInt32, n))
       | _ -> None
@@ -214,7 +214,6 @@ let padding_field (env:env_t) (enclosing_struct:ident) (padding_msg:string) (n:i
   then []
   else (
     let field_name = gen_alignment_ident() in
-    let field_num = Binding.next_field_num enclosing_struct field_name (fst env) in
     let n_expr = with_range (Constant (Int UInt32 n)) dummy_range in
     FStar.IO.print_string
       (Printf.sprintf "Adding padding field in %s for %d bytes at %s\n"
@@ -227,7 +226,6 @@ let padding_field (env:env_t) (enclosing_struct:ident) (padding_msg:string) (n:i
       field_type = tuint8;
       field_array_opt=(if n = 1 then FieldScalar else FieldArrayQualified(n_expr, ByteArrayByteSize));
       field_constraint=None;
-      field_number=Some field_num;
       field_bitwidth=None;
       field_action=None
     } in
@@ -392,14 +390,14 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       );
       extend_with_size_of_typedef_names env names size alignment;
       d
+    | OutputType _ -> d
 
 let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
   let env =
     B.mk_env genv, senv in
     // {senv with sizes = H.create 10} in
   let ds = List.map (decl_size_with_alignment env) ds in
-  let ds' = Binding.add_field_error_code_decls (Binding.mk_env genv) in
-  ds'@ds, snd env
+  ds, snd env
 
 let finish_module en mname e_and_p =
   e_and_p |> snd |> List.iter (H.remove en);

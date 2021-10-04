@@ -23,6 +23,8 @@ module T = Target
 module H = Hashtable
 module TS = TypeSizes
 open FStar.All
+open FStar.Pervasives
+open FStar.List.Tot
 
 noeq
 type global_env = {
@@ -102,10 +104,12 @@ let mk_lam (f:(A.ident -> ML 'a)) : ML (T.lam 'a) =
 let map_lam (x:T.lam 'a) (g: 'a -> ML 'b) : ML (T.lam 'b) =
   fst x, g (snd x)
 
-let mk_parser k t p = T.({
+let mk_parser k t typename fieldname p = T.({
   p_kind = k;
   p_typ = t;
-  p_parser = p
+  p_parser = p;
+  p_typename = typename;
+  p_fieldname = fieldname
 })
 
 // Kind constructors
@@ -162,13 +166,14 @@ let pk_glb k1 k2 = T.({
 
 let false_typ = T.T_false
 let unit_typ =
-    T.T_app (with_dummy_range (to_ident' "unit")) []
+    T.T_app (with_dummy_range (to_ident' "unit")) false []
 let unit_val =
     T.(mk_expr (App (Ext "()") []))
 let unit_parser =
-    mk_parser pk_return unit_typ (T.Parse_return unit_val)
+    let unit_id = with_dummy_range (to_ident' "unit") in
+    mk_parser pk_return unit_typ unit_id "none" (T.Parse_return unit_val)
 let pair_typ t1 t2 =
-    T.T_app (with_dummy_range (to_ident' "tuple2")) [Inl t1; Inl t2]
+    T.T_app (with_dummy_range (to_ident' "tuple2")) false [Inl t1; Inl t2]
 let pair_value x y =
     T.Record (with_dummy_range (to_ident' "tuple2"))
              [(with_dummy_range (to_ident' "fst"), T.mk_expr (T.Identifier x));
@@ -176,7 +181,12 @@ let pair_value x y =
 let pair_parser n1 p1 p2 =
     let open T in
     let pt = pair_typ p1.p_typ p2.p_typ in
-    mk_parser (pk_and_then p1.p_kind p2.p_kind) pt (Parse_pair n1 p1 p2)
+    let t_id = with_dummy_range (to_ident' "tuple2") in
+    mk_parser (pk_and_then p1.p_kind p2.p_kind)
+              pt
+              t_id
+              "none"
+              (Parse_pair n1 p1 p2)
 let dep_pair_typ t1 (t2:(A.ident & T.typ)) : T.typ =
     T.T_dep_pair t1 t2
 let dep_pair_value x y : T.expr =
@@ -187,38 +197,49 @@ let dep_pair_value x y : T.expr =
 let dep_pair_parser n1 p1 (p2:A.ident & T.parser) =
   let open T in
   let t = T_dep_pair p1.p_typ (fst p2, (snd p2).p_typ) in
+  let t_id = with_dummy_range (to_ident' "dtuple2") in
   mk_parser
-      (pk_and_then p1.p_kind (snd p2).p_kind) t
+      (pk_and_then p1.p_kind (snd p2).p_kind) 
+      t
+      t_id
+      "none"
       (Parse_dep_pair n1 p1 (Some (fst p2), snd p2))
-let dep_pair_with_refinement_parser n1 f1 p1 (e:T.lam T.expr) (p2:A.ident & T.parser) =
+let dep_pair_with_refinement_parser n1 p1 (e:T.lam T.expr) (p2:A.ident & T.parser) =
   let open T in
   let t1 = T_refine p1.p_typ e in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
   let k1 = pk_filter p1.p_kind in
+  let t_id = with_dummy_range (to_ident' "dtuple2") in
   mk_parser
       (pk_and_then k1 (snd p2).p_kind)
       t
-      (Parse_dep_pair_with_refinement n1 f1 p1 e (Some (fst p2), snd p2))
-let dep_pair_with_refinement_and_action_parser n1 f1 p1 (e:T.lam T.expr) (a:T.lam T.action) (p2:A.ident & T.parser) =
+      t_id
+      "none"
+      (Parse_dep_pair_with_refinement n1 p1 e (Some (fst p2), snd p2))
+let dep_pair_with_refinement_and_action_parser n1 p1 (e:T.lam T.expr) (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
   let t1 = T_refine p1.p_typ e in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
   let k1 = pk_filter p1.p_kind in
+  let t_id = with_dummy_range (to_ident' "dtuple2") in  
   mk_parser
       (pk_and_then k1 (snd p2).p_kind)
       t
-      (Parse_dep_pair_with_refinement_and_action n1 f1 p1 e a (Some (fst p2), snd p2))
+      t_id
+      "none"
+      (Parse_dep_pair_with_refinement_and_action n1 p1 e a (Some (fst p2), snd p2))
 let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
   let t1 = p1.p_typ in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
   let k1 = p1.p_kind in
+  let t_id = with_dummy_range (to_ident' "dtuple2") in
   mk_parser
       (pk_and_then k1 (snd p2).p_kind)
       t
+      t_id
+      "none"
       (Parse_dep_pair_with_action p1 a (Some (fst p2), snd p2))
-
-
 let translate_op : A.op -> ML T.op = 
   let force_topt (o:option A.integer_type) 
     : ML integer_type
@@ -264,24 +285,91 @@ let rec translate_expr (e:A.expr) : ML T.expr =
    | This -> failwith "`this` should have been eliminated already"),
   e.A.range
 
-let rec translate_typ (t:A.typ) : ML T.typ =
+(*
+ * Straightforward 1-1 translation
+ *)
+
+let rec translate_output_type (t:A.typ) : ML T.typ =
+  match t.v with
+  | Pointer t -> T.T_pointer (translate_output_type t)
+  | Type_app id b [] -> T.T_app id b []
+  | _ -> failwith "Impossible, translate_output_type did not get an output type!"
+
+let rec translate_out_expr_node (oe:with_meta_t out_expr')
+  : ML T.output_expr' =
+  match oe.v with
+  | OE_id id -> T.T_OE_id id
+  | OE_star oe -> T.T_OE_star (translate_out_expr oe)
+  | OE_addrof oe -> T.T_OE_addrof (translate_out_expr oe)
+  | OE_deref oe id -> T.T_OE_deref (translate_out_expr oe) id
+  | OE_dot oe id -> T.T_OE_dot (translate_out_expr oe) id
+
+and translate_out_expr (oe:out_expr) : ML T.output_expr =
+  let oe' = translate_out_expr_node oe.out_expr_node in
+  match oe.out_expr_meta with
+  | Some (bt, t) ->
+    { T.oe_expr = oe';
+      T.oe_bt = translate_output_type bt;
+      T.oe_t = translate_output_type t }
+  | None -> failwith "Impossible, translate_out_expr got an output expression node without metadata!"
+  
+
+(*
+ * We create the Output_type_expr decl with these attributes,
+ *   they are not used for output types
+ *)
+
+let output_types_attributes = {
+  T.is_hoisted = false;
+  T.is_exported = false;
+  T.should_inline = false;
+  T.comments = [] }
+
+(*
+ * An output expression type parameter is translated to
+ *   an external function call
+ *
+ * In addition we emit a top-level Output_type_expr decl
+ *)
+
+let translate_out_expr_typ_param (oe:out_expr) : ML (T.expr & T.decls) =
+  let t_oe = translate_out_expr oe in
+  let fn_name = T.output_getter_name t_oe in
+  let base_var = T.output_base_var t_oe in
+  let te =
+    (T.App (T.Ext fn_name)
+      [(T.Identifier base_var, oe.A.out_expr_node.A.range)]), oe.A.out_expr_node.A.range in
+  te, [T.Output_type_expr t_oe true, output_types_attributes]
+  
+let translate_typ_param (p:typ_param) : ML (T.expr & T.decls) =
+  match p with
+  | A.Inl e  -> translate_expr e, []
+  | A.Inr oe -> translate_out_expr_typ_param oe
+
+let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
   match t.v with
   | Pointer t ->
-    let t' = translate_typ t in
-    T.T_pointer t'
-  | Type_app hd args ->
-    T.T_app hd (List.map (fun x -> Inr (translate_expr x)) args)
+    let t', decls = translate_typ t in
+    T.T_pointer t', decls
+  | Type_app hd b args ->
+    let args, decls = args |> List.map translate_typ_param |> List.split in
+    T.T_app hd b (List.map Inr args), List.flatten decls
 
 let has_entrypoint (l:list A.attribute) =
   List.tryFind (function A.Entrypoint -> true | _ -> false) l
   |> Some?
 
-let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param) : ML T.typedef_name =
-  let params = List.map (fun (t, id, _) -> id, translate_typ t) params in //TODO: ignoring qualifier
+let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
+  : ML (T.typedef_name & T.decls) =
+
+  let params, ds = params |> List.map (fun (t, id, _) ->  //TODO: ignores qualifier
+    let t, ds = translate_typ t in
+    (id, t), ds) |> List.split in
+
   let open T in
   { td_name = tdn.typedef_name;
     td_params = params;
-    td_entrypoint = has_entrypoint tdn.typedef_attributes }
+    td_entrypoint = has_entrypoint tdn.typedef_attributes }, List.flatten ds
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
   let refinement i =
@@ -337,59 +425,79 @@ let maybe_add_comment t copt =
     | None -> t
     | Some c -> T.T_with_comment t c
 
-let rec parse_typ (env:global_env) (name: A.ident) (t:T.typ) : ML T.parser =
+let rec parse_typ (env:global_env)
+                  (typename: A.ident) 
+                  (fieldname:string)
+                  (t:T.typ) : ML T.parser =
   let open T in
+  let extend_fieldname e = Printf.sprintf "%s.%s" fieldname e in
   match t with
   | T_false ->
-    mk_parser pk_impos T_false Parse_impos
+    mk_parser pk_impos T_false typename fieldname Parse_impos
 
-  | T.T_app {v={name="nlist"}} [Inr e; Inl t] ->
-    let pt = parse_typ env name t in
+  | T.T_app _ true _ ->
+    failwith "Impossible, did not expect parse_typ to be called with an output type!"
+
+  | T.T_app {v={name="nlist"}} false [Inr e; Inl t] ->
+    let pt = parse_typ env typename (extend_fieldname "element") t in
     mk_parser pk_list
               t
+              typename
+              fieldname
               (T.Parse_nlist e pt)
 
-  | T.T_app {v={name="t_at_most"}} [Inr e; Inl t] ->
-    let pt = parse_typ env name t in
+  | T.T_app {v={name="t_at_most"}} false [Inr e; Inl t] ->
+    let pt = parse_typ env typename (extend_fieldname "element") t in
     mk_parser pk_t_at_most
               t
+              typename
+              fieldname
               (T.Parse_t_at_most e pt)
 
-  | T.T_app {v={name="t_exact"}} [Inr e; Inl t] ->
-    let pt = parse_typ env name t in
+  | T.T_app {v={name="t_exact"}} false [Inr e; Inl t] ->
+    let pt = parse_typ env typename (extend_fieldname "element") t in
     mk_parser pk_t_exact
               t
+              typename
+              fieldname
               (T.Parse_t_exact e pt)
 
-  | T.T_app {v={name="cstring"}} [Inl t; Inr e] ->
-    let pt = parse_typ env name t in
+  | T.T_app {v={name="cstring"}} false [Inl t; Inr e] ->
+    let pt = parse_typ env typename (extend_fieldname "element") t in
     mk_parser pk_string
               t
+              typename
+              fieldname
               (T.Parse_string pt e)
 
-  | T.T_app hd args ->
-    mk_parser (pk_base hd (parser_kind_nz env hd) (parser_weak_kind env hd)) t (T.Parse_app hd args)
+  | T.T_app hd false args ->
+    mk_parser (pk_base hd (parser_kind_nz env hd) (parser_weak_kind env hd))
+              t
+              typename
+              fieldname
+              (T.Parse_app hd args)
 
   | T.T_refine t_base refinement ->
-    let base = parse_typ env name t_base in
-    let refined = T.Parse_refinement name base refinement in
-    mk_parser (pk_filter base.p_kind) t refined
+    let base = parse_typ env typename fieldname t_base in
+    let refined = T.Parse_refinement typename base refinement in
+    mk_parser (pk_filter base.p_kind) t typename (extend_fieldname "refinement") refined
 
   | T.T_if_else e t1 t2 ->
-    let p1 = parse_typ env name t1 in
-    let p2 = parse_typ env name t2 in
+    let p1 = parse_typ env typename fieldname t1 in
+    let p2 = parse_typ env typename fieldname t2 in
     let k, p1, p2 =
       if parser_kind_eq p1.p_kind p2.p_kind
       then p1.p_kind, p1, p2
       else let k = pk_glb p1.p_kind p2.p_kind in
            k,
-           mk_parser k t1 (Parse_weaken_right p1 p2.p_kind),
-           mk_parser k t2 (Parse_weaken_left p2 p1.p_kind)
+           mk_parser k t1 typename (extend_fieldname "case_left") (Parse_weaken_right p1 p2.p_kind),
+           mk_parser k t2 typename (extend_fieldname "case_right") (Parse_weaken_left p2 p1.p_kind)
     in
-    mk_parser k t (Parse_if_else e p1 p2)
+    mk_parser k t typename fieldname (Parse_if_else e p1 p2)
 
   | T.T_dep_pair t1 (x, t2) ->
-    dep_pair_parser name (parse_typ env name t1) (x, parse_typ env name t2)
+    dep_pair_parser typename (parse_typ env typename (extend_fieldname "first") t1) 
+                             (x, parse_typ env typename (extend_fieldname "second") t2)
 
   | T.T_with_action _ _
   | T.T_with_dep_action _ _ ->
@@ -401,27 +509,31 @@ let rec parse_typ (env:global_env) (name: A.ident) (t:T.typ) : ML T.parser =
       failwith "Impossible"
     | Some (t, None, Some (Inl a), copt) ->
       let t = maybe_add_comment t copt in
-      let p = parse_typ env name t in
-      mk_parser p.p_kind t (T.Parse_with_action name p a)
+      let p = parse_typ env typename (extend_fieldname "base") t in
+      mk_parser p.p_kind t typename fieldname (T.Parse_with_action typename p a)
     | Some (t, None, Some (Inr a), copt) ->
       let t = maybe_add_comment t copt in    
-      let p = parse_typ env name t in
-      mk_parser p.p_kind t (T.Parse_with_dep_action name p a)
+      let p = parse_typ env typename (extend_fieldname "base") t in
+      mk_parser p.p_kind t typename fieldname (T.Parse_with_dep_action typename p a)
     | Some (t, Some r, Some (Inl a), copt) ->
       let t = maybe_add_comment t copt in        
-      let p = parse_typ env name t in
+      let p = parse_typ env typename (extend_fieldname "base") t in
       mk_parser (pk_filter p.p_kind)
                 (T.T_refine t r)
-                (T.Parse_refinement_with_action name p r (Some underscore_ident, a))
+                typename
+                fieldname
+                (T.Parse_refinement_with_action typename p r (Some underscore_ident, a))
     | Some (t, Some r, Some (Inr a), copt) ->
       let t = maybe_add_comment t copt in            
-      let p = parse_typ env name t in
+      let p = parse_typ env typename (extend_fieldname "base") t in
       mk_parser (pk_filter p.p_kind)
                 (T.T_refine t r)
-                (T.Parse_refinement_with_action name p r a)
+                typename
+                fieldname
+                (T.Parse_refinement_with_action typename p r a)
     end
   | T.T_with_comment t c ->
-    let p = parse_typ env name t in
+    let p = parse_typ env typename fieldname t in
     { p with p_parser = T.Parse_with_comment p c }
 
   | T.T_pointer _ ->
@@ -436,10 +548,10 @@ let pv ar p v = T.({
 let rec read_typ (env:global_env) (t:T.typ) : ML (option T.reader) =
   let open T in
   match t with
-  | T_app ({v={name="UINT8"}}) [] -> Some Read_u8
-  | T_app ({v={name="UINT16"}}) [] -> Some Read_u16
-  | T_app ({v={name="UINT32"}}) [] -> Some Read_u32
-  | T.T_app hd args ->
+  | T_app ({v={name="UINT8"}}) _ [] -> Some Read_u8
+  | T_app ({v={name="UINT16"}}) _ [] -> Some Read_u16
+  | T_app ({v={name="UINT32"}}) _ [] -> Some Read_u32
+  | T.T_app hd false args ->
     if has_reader env hd
     then Some (T.Read_app hd args)
     else None
@@ -455,42 +567,73 @@ let make_reader (env:global_env) (t:T.typ) : ML T.reader =
   | Some r ->
     r
 
-let rec translate_action (a:A.action) : ML T.action =
+/// To translate an assignment action, a star is translated as before
+///
+/// Other output expressions are translated to setters applied to the base variable and rhs
+///
+/// In addition a top-level Output_type_expr decl is emitted
+
+let translate_action_assignment (lhs:A.out_expr) (rhs:A.expr)
+  : ML (T.atomic_action & T.decls) =
+
+  let open A in
+  match lhs.out_expr_node.v with
+  | OE_star ({out_expr_node={v=OE_id i}}) ->
+    T.Action_assignment i (translate_expr rhs), []
+  | _ ->
+    let t_lhs = translate_out_expr lhs in
+    let fn_name = T.output_setter_name t_lhs in
+    let base_var = T.output_base_var t_lhs in
+    let v = translate_expr rhs in
+    let act = T.Action_call (Ast.with_dummy_range (Ast.to_ident' fn_name))
+      [(T.Identifier base_var, rhs.A.range); v] in
+    act, [T.Output_type_expr t_lhs false, output_types_attributes]
+
+let rec translate_action (a:A.action) : ML (T.action & T.decls) =
   let translate_atomic_action (a:A.atomic_action)
-    : ML T.atomic_action
+    : ML (T.atomic_action & T.decls)
     = match a with
       | Action_return e ->
-        T.Action_return (translate_expr e)
+        T.Action_return (translate_expr e), []
       | Action_abort ->
-        T.Action_abort
+        T.Action_abort, []
       | Action_field_pos ->
-        T.Action_field_pos
+        T.Action_field_pos, []
       | Action_field_ptr ->
-        T.Action_field_ptr
+        T.Action_field_ptr, []
       | Action_deref i ->
-        T.Action_deref i
+        T.Action_deref i, []
       | Action_assignment lhs rhs ->
-        T.Action_assignment lhs (translate_expr rhs)
+        translate_action_assignment lhs rhs
       | Action_call f args ->
-        T.Action_call f (List.map translate_expr args)
+        T.Action_call f (List.map translate_expr args), []
   in
   match a.v with
   | Atomic_action a ->
-    T.Atomic_action (translate_atomic_action a)
+    let act, ds = translate_atomic_action a in
+    T.Atomic_action act, ds
 
   | Action_seq hd tl ->
-    T.Action_seq (translate_atomic_action hd) (translate_action tl)
+    let hd, ds1 = translate_atomic_action hd in
+    let tl, ds2 = translate_action tl in
+    T.Action_seq hd tl, ds1@ds2
 
   | Action_ite hd then_ (Some else_) ->
-    T.Action_ite (translate_expr hd) (translate_action then_) (translate_action else_)
+    let then_, ds_then = translate_action then_ in
+    let else_, ds_else = translate_action else_ in
+    T.Action_ite (translate_expr hd) then_ else_, ds_then @ ds_else
 
   | Action_ite hd then_ None ->
+    let then_, ds_then = translate_action then_ in
     T.Action_ite (translate_expr hd)
-                 (translate_action then_)
-                 (T.Atomic_action (T.Action_return (T.mk_expr (T.Constant A.Unit))))
+                 then_
+                 (T.Atomic_action (T.Action_return (T.mk_expr (T.Constant A.Unit)))),
+    ds_then
 
   | Action_let i a k ->
-    T.Action_let i (translate_atomic_action a) (translate_action k)
+    let a, ds1 = translate_atomic_action a in
+    let k, ds2 = translate_action k in
+    T.Action_let i a k, ds1 @ ds2
 
 let rec parser_is_constant_size_without_actions
   (env: global_env)
@@ -512,7 +655,7 @@ let rec parser_is_constant_size_without_actions
       then parser_is_constant_size_without_actions env tl
       else false
   | T.Parse_dep_pair _ parse_key (_, parse_value)
-  | T.Parse_dep_pair_with_refinement _ _ parse_key _ (_, parse_value)
+  | T.Parse_dep_pair_with_refinement _ parse_key _ (_, parse_value)
     -> (* the lambda identifier is not global, because the 3d syntax does not allow higher-order types *)
       if parser_is_constant_size_without_actions env parse_key
       then parser_is_constant_size_without_actions env parse_value
@@ -520,7 +663,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_t_at_most _ _
   | T.Parse_t_exact _ _  
   | T.Parse_dep_pair_with_action _ _ _
-  | T.Parse_dep_pair_with_refinement_and_action _ _ _ _ _ _
+  | T.Parse_dep_pair_with_refinement_and_action _ _ _ _ _
   | T.Parse_refinement_with_action _ _ _ _
   | T.Parse_with_dep_action _ _ _
   | T.Parse_with_action _ _ _
@@ -531,97 +674,117 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_refinement _ p _
   | T.Parse_weaken_left p _
   | T.Parse_weaken_right p _  
-  | T.Parse_with_error _ p
   | T.Parse_with_comment p _
     -> parser_is_constant_size_without_actions env p
 
+let unknown_type_ident = 
+  let open Ast in
+  let id = {
+    modul_name = None;
+    name = "<unknown>"
+  } in
+  with_range id dummy_range
+
 let rec make_validator (env:global_env) (p:T.parser) : ML T.validator =
   let open T in
+  let with_error_handler v =
+    pv v.v_allow_reading
+       v.v_parser
+       (Validate_with_error_handler p.p_typename p.p_fieldname v)
+  in
   match p.p_parser with
   | Parse_impos ->
-    pv true p Validate_impos
+    with_error_handler
+      (pv true p Validate_impos)
 
   | Parse_app hd args ->
-    pv (has_reader env hd) p (Validate_app hd args)
+    with_error_handler
+      (pv (has_reader env hd) p (Validate_app hd args))
 
   | Parse_nlist n p ->
-    if parser_is_constant_size_without_actions env p
-    then
-      pv false p (Validate_nlist_constant_size_without_actions n (make_validator env p))
-    else
-      pv false p (Validate_nlist n (make_validator env p))
+    with_error_handler
+      (if parser_is_constant_size_without_actions env p
+       then pv false p (Validate_nlist_constant_size_without_actions n (make_validator env p))
+       else pv false p (Validate_nlist n (make_validator env p)))
 
   | Parse_t_at_most n p ->
-    pv false p (Validate_t_at_most n (make_validator env p))  
+    with_error_handler
+      (pv false p (Validate_t_at_most n (make_validator env p)))
 
   | Parse_t_exact n p ->
-    pv false p (Validate_t_exact n (make_validator env p))  
+    with_error_handler
+      (pv false p (Validate_t_exact n (make_validator env p)))
 
   | Parse_return e ->
     pv true p Validate_return
 
   | Parse_pair n1 p1 p2 ->
-    pv false p (Validate_pair n1 (make_validator env p1) (make_validator env p2))
+     pv false p (Validate_pair n1 (make_validator env p1)
+                                  (make_validator env p2))
 
   | Parse_dep_pair n1 p1 k ->
-    pv false p (Validate_dep_pair
-            n1
-            (make_validator env p1)
-            (make_reader env p1.p_typ)
-            (map_lam k (make_validator env)))
+     pv false p (Validate_dep_pair
+                     n1
+                     (make_validator env p1)
+                     (make_reader env p1.p_typ)
+                     (map_lam k (make_validator env)))
 
-  | Parse_dep_pair_with_refinement n1 f1 p1 e k ->
+  | Parse_dep_pair_with_refinement n1 p1 e k ->
     let p1_is_constant_size_without_actions = parser_is_constant_size_without_actions env p1 in
-    let f1' = match B.lookup_field_num env.benv f1 with
-      | Some fn' -> fn'
-      | _ -> failwith (Printf.sprintf "Field `%d` not found" f1)
-    in
     pv false p (Validate_dep_pair_with_refinement
-                  p1_is_constant_size_without_actions
-                  n1
-                  f1'
-                  (make_validator env p1)
-                  (make_reader env p1.p_typ)
-                  e
-                  (map_lam k (make_validator env)))
+                      p1_is_constant_size_without_actions
+                      n1
+                      (make_validator env p1)
+                      (make_reader env p1.p_typ)
+                      e
+                      (map_lam k (make_validator env)))
 
   | Parse_dep_pair_with_action p1 a k ->
     pv false p (Validate_dep_pair_with_action
-                  (make_validator env p1)
-                  (make_reader env p1.p_typ)
-                  a
-                  (map_lam k (make_validator env)))
+                       (make_validator env p1)
+                       (make_reader env p1.p_typ)
+                       a
+                       (map_lam k (make_validator env)))
 
-  | Parse_dep_pair_with_refinement_and_action n1 f1 p1 e a k ->
+  | Parse_dep_pair_with_refinement_and_action n1 p1 e a k ->
     let p1_is_constant_size_without_actions = parser_is_constant_size_without_actions env p1 in
-    let f1' = match B.lookup_field_num env.benv f1 with
-      | Some fn' -> fn'
-      | _ -> failwith (Printf.sprintf "Field `%d` not found" f1)
-    in
     pv false p (Validate_dep_pair_with_refinement_and_action
-                   p1_is_constant_size_without_actions
-                   n1
-                   f1'
-                   (make_validator env p1)
-                   (make_reader env p1.p_typ)
-                   e
-                   a
-                   (map_lam k (make_validator env)))
+                     p1_is_constant_size_without_actions
+                     n1
+                     (make_validator env p1)
+                     (make_reader env p1.p_typ)
+                     e
+                     a
+                     (map_lam k (make_validator env)))
 
   | Parse_map p1 f ->
     pv false p (Validate_map (make_validator env p1) f)
 
   | Parse_refinement n1 p1 f ->
-    pv false p (Validate_refinement n1 (make_validator env p1) (make_reader env p1.p_typ) f)
+    with_error_handler 
+      (pv false p (Validate_refinement n1 
+                                       (make_validator env p1)
+                                       (make_reader env p1.p_typ)
+                                       f))
 
   | Parse_refinement_with_action n1 p1 f a ->
-    pv false p (Validate_refinement_with_action n1 (make_validator env p1) (make_reader env p1.p_typ) f a)
+    with_error_handler 
+      (pv false p (Validate_refinement_with_action n1 
+                                                   (make_validator env p1)
+                                                   (make_reader env p1.p_typ)
+                                                   f 
+                                                   a))
 
-  | Parse_with_action name p a ->
-    pv false p (Validate_with_action name (make_validator env p) a)
+  | Parse_with_action n1 p a ->
+    with_error_handler
+      (pv false p (Validate_with_action n1 (make_validator env p) a))
 
-  | Parse_with_dep_action name p a ->
-    pv false p (Validate_with_dep_action name (make_validator env p) (make_reader env p.p_typ) a)
+  | Parse_with_dep_action n1 p a ->
+    with_error_handler
+      (pv false p (Validate_with_dep_action n1 
+                     (make_validator env p)
+                     (make_reader env p.p_typ)
+                     a))
 
   | Parse_weaken_left p1 k ->
     let v1 = make_validator env p1 in
@@ -634,20 +797,13 @@ let rec make_validator (env:global_env) (p:T.parser) : ML T.validator =
   | Parse_if_else e p1 p2 ->
     pv false p (Validate_if_else e (make_validator env p1) (make_validator env p2))
 
-  | Parse_with_error f p ->
-    begin match B.lookup_field_num env.benv f with
-    | Some fn ->
-      let v = make_validator env p in
-      pv v.v_allow_reading p (Validate_with_error fn v)
-    | _ -> failwith (Printf.sprintf "Field `%d` not found" f)
-    end
-
   | Parse_with_comment p c ->
     let v = make_validator env p in
     pv v.v_allow_reading p (Validate_with_comment v c)
 
   | Parse_string elem zero ->
-    pv false p (Validate_string (make_validator env elem) (make_reader env elem.p_typ) zero)
+    with_error_handler
+      (pv false p (Validate_string (make_validator env elem) (make_reader env elem.p_typ) zero))
 
 // x:t1;
 // t2;
@@ -668,28 +824,29 @@ let make_zero (r: range) (t: typ) : ML T.expr =
   let it = typ_as_integer_type t in
   (T.Constant (Int it 0), r)
 
-let translate_field (f:A.field) : ML T.struct_field =
+#push-options "--z3rlimit_factor 4"
+let translate_field (f:A.field) : ML (T.struct_field & T.decls) =
     let sf = f.v in
-    let t = translate_typ sf.field_type in
+    let t, ds1 = translate_typ sf.field_type in
     let t =
         let mk_at_most t e : ML T.typ =
           let e = translate_expr e in
-          T.T_app (with_range (to_ident' "t_at_most") sf.field_type.range) [Inr e; Inl t]
+          T.T_app (with_range (to_ident' "t_at_most") sf.field_type.range) false [Inr e; Inl t]
         in
         match sf.field_array_opt with
         | FieldScalar -> t
         | FieldArrayQualified (e, ByteArrayByteSize)
         | FieldArrayQualified (e, ArrayByteSize) ->
           let e = translate_expr e in
-          T.T_app (with_range (to_ident' "nlist") sf.field_type.range) [Inr e; Inl t]
+          T.T_app (with_range (to_ident' "nlist") sf.field_type.range) false [Inr e; Inl t]
         | FieldArrayQualified (e, ArrayByteSizeAtMost) ->
           mk_at_most t e
         | FieldArrayQualified (e, ArrayByteSizeSingleElementArray) ->
           let e = translate_expr e in
-          T.T_app (with_range (to_ident' "t_exact") sf.field_type.range) [Inr e; Inl t]
+          T.T_app (with_range (to_ident' "t_exact") sf.field_type.range) false [Inr e; Inl t]
         | FieldString sz ->
           let r = sf.field_type.range in
-          let str = T.T_app (with_range (to_ident' "cstring") r) [Inl t; Inr (make_zero r sf.field_type)] in
+          let str = T.T_app (with_range (to_ident' "cstring") r) false [Inl t; Inr (make_zero r sf.field_type)] in
           begin match sz with
           | None -> str
           | Some e -> mk_at_most str e
@@ -701,13 +858,15 @@ let translate_field (f:A.field) : ML T.struct_field =
       | Some e ->
         T.T_refine t (Some sf.field_ident, translate_expr e)
     in
-    let t =
+    let t, ds2 =
       match sf.field_action with
-      | None -> t
+      | None -> t, []
       | Some (a, false) ->
-        T.T_with_action t (translate_action a)
+        let a, ds2 = translate_action a in
+        T.T_with_action t a, ds2
       | Some (a, _) ->
-        T.T_with_dep_action t (Some sf.field_ident, translate_action a)
+        let a, ds2 = translate_action a in
+        T.T_with_dep_action t (Some sf.field_ident, a), ds2
     in
     let t : T.typ =
       match f.comments with
@@ -724,8 +883,8 @@ let translate_field (f:A.field) : ML T.struct_field =
     else
       T.({sf_dependence=sf.field_dependence;
           sf_ident=sf.field_ident;
-          sf_typ=t;
-          sf_field_number=sf.field_number})
+          sf_typ=t}), ds1@ds2
+#pop-options
 
 let nondep_group = list T.field
 let grouped_fields = list (either T.field nondep_group)
@@ -776,16 +935,10 @@ let make_grouped_fields (fs:list T.field) : ML grouped_fields =
   gfs
 
 
-let parse_grouped_fields (env:global_env) (gfs:grouped_fields)
+let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields)
   : ML T.parser
   = let open T in
-    let parse_typ = parse_typ env in
-    let may_fail sf p =
-      match sf.sf_field_number with
-      | None -> p
-      | Some f ->
-        {p with p_parser = Parse_with_error f p}
-    in
+    let parse_typ (fieldname:A.ident) = parse_typ env typename Ast.(fieldname.v.name) in
     let rec aux (gfs:grouped_fields) : ML parser =
       match gfs with
       | [] ->
@@ -802,45 +955,33 @@ let parse_grouped_fields (env:global_env) (gfs:grouped_fields)
         | None ->
           dep_pair_parser
             sf.sf_ident
-            (may_fail sf (parse_typ sf.sf_ident sf.sf_typ))
+            (parse_typ sf.sf_ident sf.sf_typ)
             (sf.sf_ident, aux gfs)
             
         | Some (_, None, None, copt) ->
           dep_pair_parser
             sf.sf_ident
-            (may_fail sf (parse_typ sf.sf_ident (maybe_add_comment sf.sf_typ copt)))
+            (parse_typ sf.sf_ident (maybe_add_comment sf.sf_typ copt))
             (sf.sf_ident, aux gfs)
 
         | Some (t, Some e, None, copt) ->
-          let fn = match sf.sf_field_number with
-          | Some fn -> fn
-          | _ ->
-            failwith (Printf.sprintf "Field %s has no field number" (ident_to_string sf.sf_ident))
-          in
           dep_pair_with_refinement_parser
             sf.sf_ident
-            fn
-            (may_fail sf (parse_typ sf.sf_ident (maybe_add_comment t copt)))
+            (parse_typ sf.sf_ident (maybe_add_comment t copt))
             e
             (sf.sf_ident, aux gfs)
 
         | Some (t, Some e, Some a, copt) ->
-          let fn = match sf.sf_field_number with
-          | Some fn -> fn
-          | _ ->
-            failwith (Printf.sprintf "Field %s has no field number" (ident_to_string sf.sf_ident))
-          in
           dep_pair_with_refinement_and_action_parser
             sf.sf_ident
-            fn
-            (may_fail sf (parse_typ sf.sf_ident (maybe_add_comment t copt)))
+            (parse_typ sf.sf_ident (maybe_add_comment t copt))
             e
             (get_action a)
             (sf.sf_ident, aux gfs)
 
         | Some (t, None, Some a, copt) ->
           dep_pair_with_action_parser
-            (may_fail sf (parse_typ sf.sf_ident (maybe_add_comment t copt)))
+            (parse_typ sf.sf_ident (maybe_add_comment t copt))
             (get_action a)
             (sf.sf_ident, aux gfs)
         end
@@ -852,11 +993,11 @@ let parse_grouped_fields (env:global_env) (gfs:grouped_fields)
             | [] ->
               failwith "Unexpected empty non-dep group"
             | [sf] ->
-               may_fail sf (parse_typ sf.sf_ident sf.sf_typ)
+               parse_typ sf.sf_ident sf.sf_typ
             | sf::sfs ->
               pair_parser
                 sf.sf_ident
-                (may_fail sf (parse_typ sf.sf_ident sf.sf_typ))
+                (parse_typ sf.sf_ident sf.sf_typ)
                 (aux sfs)
         in
         aux gf
@@ -866,7 +1007,7 @@ let parse_grouped_fields (env:global_env) (gfs:grouped_fields)
           (fun (sf:struct_field) (p_tl:parser) ->
             pair_parser
               sf.sf_ident
-              (may_fail sf (parse_typ sf.sf_ident sf.sf_typ))
+              (parse_typ sf.sf_ident sf.sf_typ)
               p_tl)
           gf
           (aux gfs)
@@ -883,7 +1024,7 @@ let parse_fields (env:global_env) (tdn:T.typedef_name) (fs:list T.field)
   //     tdn.td_name.v 
   //     (List.map (fun x -> x.sf_ident.v) fs |> String.concat ", ")
   //     (print_grouped_fields gfs));
-  let p = parse_grouped_fields env gfs in
+  let p = parse_grouped_fields env tdn.td_name gfs in
   p
 
 let make_tdn (i:A.ident) =
@@ -947,7 +1088,7 @@ let rec hoist_typ
   = let open T in
     match t with
     | T_false -> [], t
-    | T_app _ _ -> [], t
+    | T_app _ _ _ -> [], t
     | T_dep_pair t1 (x, t2) ->
       let ds, t1 = hoist_typ fn genv env t1 in
       let ds', t2 = hoist_typ fn genv ((x, t1)::env) t2 in
@@ -962,7 +1103,7 @@ let rec hoist_typ
         let args = args in //@ [Identifier x] in
         let filter_name = fn ^ "_filter" in
         let id = maybe_gen_ident genv filter_name in
-        let result_type = T_app (with_dummy_range (to_ident' "bool")) [] in
+        let result_type = T_app (with_dummy_range (to_ident' "bool")) false [] in
         let body = e in
         let app = App (Ext id.A.v.name) (List.Tot.map (fun arg -> T.mk_expr arg) args) in
         (id, params, result_type, body),
@@ -1021,15 +1162,15 @@ let maybe_add_reader (genv:global_env)
     reader
 
 let hoist_one_type_definition (should_inline:bool)
-                              (genv:global_env) (env:env_t) (tdn:T.typedef_name)
-                              (prefix:string) (field_number:option field_num) (t:T.typ)
+                              (genv:global_env) (env:env_t) (orig_tdn:T.typedef_name)
+                              (prefix:string) (t:T.typ)
   : ML (T.decl & T.field_typ)
   =  let open T in
      let parse_typ = parse_typ genv in
      let type_name = prefix in //^ "_type" in
      let id = maybe_gen_ident genv type_name in
      let args = List.map (fun (x, _) -> Inr (T.mk_expr (Identifier x))) (List.rev env) in
-     let tdef = T_app id args in
+     let tdef = T_app id false args in
      let tdef =
        if should_inline
        then tdef
@@ -1038,18 +1179,15 @@ let hoist_one_type_definition (should_inline:bool)
                              prefix]
       in
       let body = t in
-      let comment = Printf.sprintf "    Internal helper function:\n        Validator for field %s\n        of type %s" prefix (ident_to_string tdn.td_name) in
+      let comment = Printf.sprintf "    Internal helper function:\n        Validator for field %s\n        of type %s"
+                                   prefix
+                                   (ident_to_string orig_tdn.td_name) in
       let tdn = {
           td_name = id;
           td_params = List.rev env;
           td_entrypoint = false
       } in
-      let t_parser = parse_typ id body in
-      let t_parser =
-        match field_number with
-        | None -> t_parser
-        | Some fn -> { t_parser with p_parser = Parse_with_error fn t_parser }
-      in
+      let t_parser = parse_typ orig_tdn.td_name type_name body in
       add_parser_kind_nz genv tdn.td_name t_parser.p_kind.pk_nz t_parser.p_kind.pk_weak_kind;
       add_parser_kind_is_constant_size genv tdn.td_name (parser_is_constant_size_without_actions genv t_parser);
       let reader = maybe_add_reader genv tdn body in
@@ -1079,8 +1217,8 @@ let hoist_field (genv:global_env) (env:env_t) (tdn:T.typedef_name) (f:T.field)
     then let f = { f with sf_typ = t } in
          d, f
     else
-      let td, tdef = hoist_one_type_definition false genv env tdn field_name f.sf_field_number t in
-      let f = { f with sf_typ = tdef; sf_field_number = None } in
+      let td, tdef = hoist_one_type_definition false genv env tdn field_name t in
+      let f = { f with sf_typ = tdef } in
       d@[td], f
 
 let hoist_refinements (genv:global_env) (tdn:T.typedef_name) (fields:list T.field)
@@ -1111,10 +1249,10 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
   let sc = translate_expr sc in
   let env = List.rev tdn.T.td_params in
   let translate_one_case f : ML _ = 
-    let sf = translate_field f in
+    let sf, ds = translate_field f in
     let decls, sfs = hoist_refinements genv tdn [sf] in
     let sf = List.hd sfs in
-    decls, sf
+    ds@decls, sf
   in
   let rest, default_t, decls =
     if List.length cases > 0
@@ -1134,12 +1272,11 @@ let translate_switch_case_type (genv:global_env) (tdn:T.typedef_name) (sw:Ast.sw
       match case with
       | DefaultCase _ -> failwith "Impossible"
       | Case e f ->
-        let open T in
         let decls', sf = translate_one_case f in
-        let guard = T.mk_expr (App Eq [sc; translate_expr e]) in
-        let t = T_if_else guard sf.sf_typ t_else in
-        let field_name = Printf.sprintf "%s_ite_%d" (ident_name tdn.td_name) n in
-        let td, tdef = hoist_one_type_definition true genv env tdn field_name None t in
+        let guard = T.mk_expr (T.App T.Eq [sc; translate_expr e]) in
+        let t = T.T_if_else guard sf.T.sf_typ t_else in
+        let field_name = Printf.sprintf "%s_ite_%d" (ident_name tdn.T.td_name) n in
+        let td, tdef = hoist_one_type_definition true genv env tdn field_name t in
         tdef, decls@decls'@[td], n + 1)
     rest
     (default_t, decls, 0)
@@ -1154,14 +1291,14 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     failwith (Printf.sprintf "Untyped definition remains after elaboration: %s" (ident_to_string i))
 
   | Define i (Some t) s ->
-    let t = translate_typ t in
-    [with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) d.d_exported d.d_decl.comments]
+    let t, ds = translate_typ t in
+    ds@[with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) d.d_exported d.d_decl.comments]
 
   | TypeAbbrev t i ->
     let tdn = make_tdn i in
-    let t = translate_typ t in
-    let tdn = translate_typedef_name tdn [] in
-    let p = parse_typ env i t in
+    let t, ds1 = translate_typ t in
+    let tdn, ds2 = translate_typedef_name tdn [] in
+    let p = parse_typ env i "" t in
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
@@ -1173,15 +1310,15 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_validator = make_validator env p;
         decl_reader = reader;
     } in
-    [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2@[with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | Enum t i ids ->
     let ids = Desugar.check_desugared_enum_cases ids in
     let tdn = make_tdn i in
-    let typ = translate_typ t in
-    let tdn = translate_typedef_name tdn [] in
+    let typ, ds1 = translate_typ t in
+    let tdn, ds2 = translate_typedef_name tdn [] in
     let refined_typ = make_enum_typ typ ids in
-    let p = parse_typ env i refined_typ in
+    let p = parse_typ env i "" refined_typ in
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
@@ -1193,11 +1330,13 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_validator = make_validator env p;
         decl_reader = reader;
     } in
-    [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2@[with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | Record tdn params _ ast_fields ->
-    let tdn = translate_typedef_name tdn params in
-    let fields = List.map translate_field ast_fields in
+    let tdn, ds1 = translate_typedef_name tdn params in
+    let fields, ds2 =
+      let fields, ds2 = ast_fields |> List.map translate_field |> List.split in
+      fields, List.flatten ds2 in
     let hoists, fields = hoist_refinements env tdn fields in
     let p = parse_fields env tdn fields in
     let open T in
@@ -1212,12 +1351,12 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_validator = make_validator env p;
           decl_reader = reader
     } in
-    hoists @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+   ds1@ds2@hoists @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | CaseType tdn0 params switch_case ->
-    let tdn = translate_typedef_name tdn0 params in
-    let t, decls = translate_switch_case_type env tdn switch_case in
-    let p = parse_typ env tdn0.typedef_name t in
+    let tdn, ds1 = translate_typedef_name tdn0 params in
+    let t, ds2 = translate_switch_case_type env tdn switch_case in
+    let p = parse_typ env tdn0.typedef_name "" t in
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
@@ -1229,7 +1368,9 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_validator = make_validator env p;
         decl_reader = reader;
     } in
-    decls @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+    ds1 @ ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+
+  | OutputType out_t -> [with_comments (T.Output_type out_t) false []]  //No decl for output type specifications
 
 noeq
 type translate_env = {

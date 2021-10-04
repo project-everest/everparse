@@ -42,7 +42,7 @@ let simplify_field (env:env) (f:field)
     let field = 
       match field.field_type.v with
       | Pointer _ -> failwith "Impossible: field types cannot be pointers"
-      | Type_app hd args ->
+      | Type_app hd _ args ->
         begin
         match H.try_find env hd.v with
         | None -> //not a singleton record
@@ -50,7 +50,10 @@ let simplify_field (env:env) (f:field)
         | Some (params, inlined_field) ->
           let subst = 
                List.map2 
-               (fun (_t, x, _q) e -> (x, e))
+               (fun (_t, x, _q) e ->
+                match e with
+                | Inr _ -> failwith "Cannot inline singleton records with output type parameters"
+                | Inl e -> (x, e))
                params args
           in
           let subst = (inlined_field.v.field_ident, with_dummy_range (Identifier field.field_ident)) :: subst in
@@ -123,6 +126,8 @@ let simplify_decl (env:env) (d:decl) : ML decl =
                                  | DefaultCase f -> DefaultCase (simplify_field env f)) 
                          cases in
     decl_with_v d (CaseType tdnames params (hd, cases))
+
+  | OutputType _ -> d
 
 let simplify_prog (p:list decl) =
   let env = H.create 10 in

@@ -234,7 +234,6 @@ make_everparse() {
     $cp -r $QD_HOME/src/3d/prelude everparse/src/3d/prelude
     $cp -r $QD_HOME/src/3d/.clang-format everparse/src/3d
     $cp -r $QD_HOME/src/3d/copyright.txt everparse/src/3d
-    $cp -r $QD_HOME/src/3d/EverParse.h everparse/src/3d/
     if $is_windows ; then $cp -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
     $cp -r $QD_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
     $cp -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/

@@ -16,3 +16,5 @@ let collect_and_sort_dependencies (files:list string) : ML (list string) =
 val has_entrypoint (g: dep_graph) (modul: string) : Tot bool
 
 val has_static_assertions (g: dep_graph) (modul: string) : Tot bool
+
+val has_output_types (g:dep_graph) (modul:string) : bool
