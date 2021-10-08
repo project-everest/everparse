@@ -87,7 +87,7 @@ let make_gen_choice_parser
 
 let make_asn1_choice_parser
   (lc : list (asn1_id_t * asn1_content_k) {Cons? lc})
-  (pf : List.noRepeats (List.map fst lc))
+  (pf : ((Cons? lc) /\ List.noRepeats (List.map fst lc)))
   (#s : _)
   (k : asn1_k s)
   (lp : list (asn1_id_t & gen_parser) {Cons? lp})

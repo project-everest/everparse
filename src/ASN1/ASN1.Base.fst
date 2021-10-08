@@ -141,7 +141,7 @@ and asn1_sequence_k : Set.set asn1_id_t -> Type =
 *)
 
 
-let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) & asn1_decorator)) (s : Set.set asn1_id_t) : Type0 =
+let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) & asn1_decorator)) (s : Set.set asn1_id_t) : Type =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -151,7 +151,7 @@ let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) & asn1_decorator)) (
               | OPTION | DEFAULT -> Set.union s s' in
     (Set.disjoint s s') /\ (asn1_sequence_k_wf' tl s'')
     
-let asn1_sequence_k_wf (li : list ((Set.set asn1_id_t) & asn1_decorator)) : Type0 =
+let asn1_sequence_k_wf (li : list ((Set.set asn1_id_t) & asn1_decorator)) : Tot Type =
   asn1_sequence_k_wf' li (Set.empty)
 
 let my_as_set = Set.as_set
@@ -241,7 +241,7 @@ let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
 
 and asn1_lc_t (lc : list (asn1_id_t & asn1_content_k)) : Tot (list (asn1_id_t & Type)) (decreases lc) =
   match lc with
-  | Nil -> Nil 
+  | [] -> [] 
   | h :: t -> 
     let (x, y) = h in
     (x, asn1_content_t y) :: (asn1_lc_t t)
@@ -261,15 +261,27 @@ and asn1_decorated_t (item : asn1_gen_item_k) : Tot Type =
 
 and asn1_sequence_t (items : list asn1_gen_item_k) : Tot Type (decreases items) =
   match items with
-  | Nil -> unit
+  | [] -> unit
+  | [hd] -> asn1_decorated_t hd
   | hd :: tl -> 
-    (asn1_decorated_t hd) * (asn1_sequence_t tl)
+    (asn1_decorated_t hd) & (asn1_sequence_t tl)
 
 type asn1_length_u32_t = U32.t
+
+let asn1_decorated_pure_t (item : asn1_gen_item_k) : Type =
+  match item with
+  | (| _, _, dk |) -> match dk with
+                     | ASN1_PLAIN_ILC k -> asn1_t k
+                     | ASN1_OPTION_ILC k -> asn1_t k
+                     | ASN1_DEFAULT_TERMINAL _ #k _ -> asn1_terminal_t k 
 
 noeq
 type gen_parser =
 | Mkgenparser : (k : parser_kind) -> (t : Type) -> (p : parser k t) -> gen_parser
+
+noeq
+type gen_decorated_parser_twin =
+| Mkgendcparser : (d : asn1_gen_item_k) -> (k : parser_kind) -> (p : parser k (asn1_decorated_pure_t d)) -> (fp : asn1_id_t -> parser k (asn1_decorated_pure_t d)) -> gen_decorated_parser_twin
 
 (*
 noeq
