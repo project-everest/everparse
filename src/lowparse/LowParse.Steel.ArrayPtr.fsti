@@ -36,47 +36,46 @@ open Steel.Memory
 open Steel.Effect
 open Steel.FractionalPermission
 open Steel.Effect.Atomic
-module U32 = FStar.UInt32
-module A = Steel.Array
+module A = Steel.C.Array
+module SZ = Steel.C.StdInt
 
-val t (t:Type u#0) : Type u#0
+val t (base: Type0) (t:Type u#0) : Type u#0
 
-val null (a: Type) : Tot (t a)
+val null (base: Type) (a: Type) : Tot (t base a)
 
-val g_is_null (#a: Type) (x: t a) : Ghost bool
+val g_is_null (#base #a: Type) (x: t base a) : Ghost bool
   (requires True)
-  (ensures (fun y -> y == true <==> x == null a))
+  (ensures (fun y -> y == true <==> x == null base a))
 
 [@@erasable]
-noeq type v (t: Type u#0) = {
-  array: A.array t;                      (* spatial permission range *)
+noeq type v (base: Type0) (t: Type u#0) = {
+  array: A.array base t; (* spatial permission range *)
   contents: Seq.lseq t (A.length array); (* actual contents *)
-  perm: perm;                            (* temporal permission *)
-  prf: squash (A.length array < 4294967296); (* TODO: remove and switch to size_t *)
+//  perm: perm;                            (* temporal permission *)
 }
 
-val is_arrayptr (#a:Type0) (r:t a) : slprop u#1
-val arrayptr_sel (#a:Type0) (r:t a) : selector (v a) (is_arrayptr r)
+val is_arrayptr (#base #a:Type0) (r:t base a) : slprop u#1
+val arrayptr_sel (#base #a:Type0) (r:t base a) : selector (v base a) (is_arrayptr r)
 
 [@@ __steel_reduce__]
-let varrayptr' #a r : vprop' =
+let varrayptr' #base #a r : vprop' =
   {hp = is_arrayptr r;
-   t = v a;
+   t = v base a;
    sel = arrayptr_sel r}
 
 [@@ __steel_reduce__]
 let varrayptr r = VUnit (varrayptr' r)
 
 [@@ __steel_reduce__]
-let sel (#a:Type) (#p:vprop) (r:t a)
+let sel (#base #a:Type) (#p:vprop) (r:t base a)
   (h:rmem p{FStar.Tactics.with_tactic selector_tactic (can_be_split p (varrayptr r) /\ True)})
-: GTot (v a)
+: GTot (v base a)
   = h (varrayptr r)
 
 val varrayptr_not_null
   (#opened: _)
-  (#a: Type)
-  (x: t a)
+  (#base #a: Type)
+  (x: t base a)
 : SteelGhost unit opened
     (varrayptr x)
     (fun _ -> varrayptr x)
@@ -87,13 +86,13 @@ val varrayptr_not_null
     )
 
 
-val is_arrayptr_or_null (#a:Type0) (r:t a) : slprop u#1
-val arrayptr_or_null_sel (#a:Type0) (r:t a) : selector (option (v a)) (is_arrayptr_or_null r)
+val is_arrayptr_or_null (#base #a:Type0) (r:t base a) : slprop u#1
+val arrayptr_or_null_sel (#base #a:Type0) (r:t base a) : selector (option (v base a)) (is_arrayptr_or_null r)
 
 [@@ __steel_reduce__]
-let varrayptr_or_null' #a r : vprop' =
+let varrayptr_or_null' #base #a r : vprop' =
   {hp = is_arrayptr_or_null r;
-   t = option (v a);
+   t = option (v base a);
    sel = arrayptr_or_null_sel r}
 
 [@@ __steel_reduce__]
@@ -101,8 +100,8 @@ let varrayptr_or_null r = VUnit (varrayptr_or_null' r)
 
 val intro_varrayptr_or_null_none
   (#opened: _)
-  (#a: Type)
-  (x: t a)
+  (#base #a: Type)
+  (x: t base a)
 : SteelGhost unit opened
     emp
     (fun _ -> varrayptr_or_null x)
@@ -111,8 +110,8 @@ val intro_varrayptr_or_null_none
 
 val intro_varrayptr_or_null_some
   (#opened: _)
-  (#a: Type)
-  (x: t a)
+  (#base #a: Type)
+  (x: t base a)
 : SteelGhost unit opened
     (varrayptr x)
     (fun _ -> varrayptr_or_null x)
@@ -124,8 +123,8 @@ val intro_varrayptr_or_null_some
 
 val elim_varrayptr_or_null_some
   (#opened: _)
-  (#a: Type)
-  (x: t a)
+  (#base #a: Type)
+  (x: t base a)
 : SteelGhost unit opened
     (varrayptr_or_null x)
     (fun _ -> varrayptr x)
@@ -137,8 +136,8 @@ val elim_varrayptr_or_null_some
 
 val elim_varrayptr_or_null_none
   (#opened: _)
-  (#a: Type)
-  (x: t a)
+  (#base #a: Type)
+  (x: t base a)
 : SteelGhost unit opened
     (varrayptr_or_null x)
     (fun _ -> emp)
@@ -150,8 +149,8 @@ val elim_varrayptr_or_null_none
 
 val is_null
   (#opened: _)
-  (#a: Type)
-  (x: t a)
+  (#base #a: Type)
+  (x: t base a)
 : SteelAtomicBase bool false opened Unobservable
     (varrayptr_or_null x)
     (fun _ -> varrayptr_or_null x)
@@ -165,98 +164,101 @@ val is_null
 
 (* Splitting an array (inspired from Steel.Array) *)
 
-val join (#opened: _) (#a:Type) (al ar:t a)
+val join (#opened: _) (#base #a:Type) (al ar:t base a)
   : SteelGhost unit opened
           (varrayptr al `star` varrayptr ar)
           (fun _ -> varrayptr al)
           (fun h ->
             A.adjacent (h (varrayptr al)).array (h (varrayptr ar)).array /\
-            (h (varrayptr al)).perm == (h (varrayptr ar)).perm
+True //            (h (varrayptr al)).perm == (h (varrayptr ar)).perm
           )
           (fun h _ h' ->
             let cl = h (varrayptr al) in
             let cr = h (varrayptr ar) in
             let c' = h' (varrayptr al) in
             A.merge_into cl.array cr.array c'.array /\
-            c'.perm == cl.perm /\
+//            c'.perm == cl.perm /\
             c'.contents == cl.contents `Seq.append` cr.contents
           )
 
-val split (#opened: _) (#a:Type) (x: t a) (i:U32.t)
-  : SteelAtomicBase (t a) false opened Unobservable
+val split (#opened: _) (#base #a:Type) (x: t base a) (i:SZ.size_t)
+  : SteelAtomicBase (t base a) false opened Unobservable
           (varrayptr x)
           (fun res -> varrayptr x `star` varrayptr res)
-          (fun h -> U32.v i <= A.length (h (varrayptr x)).array)
+          (fun h -> SZ.size_v i <= A.length (h (varrayptr x)).array)
           (fun h res h' ->
             let s = h (varrayptr x) in
             let sl = h' (varrayptr x) in
             let sr = h' (varrayptr res) in
-            U32.v i <= A.length s.array /\
+            SZ.size_v i <= A.length s.array /\
             A.merge_into sl.array sr.array s.array /\
-            sl.perm == s.perm /\
-            sr.perm == s.perm /\
-            sl.contents == Seq.slice s.contents 0 (U32.v i) /\
-            A.length sl.array == U32.v i /\
-            A.length sr.array == A.length s.array - U32.v i /\
-            sr.contents == Seq.slice s.contents (U32.v i) (A.length s.array) /\
+//            sl.perm == s.perm /\
+//            sr.perm == s.perm /\
+            sl.contents == Seq.slice s.contents 0 (SZ.size_v i) /\
+            A.length sl.array == SZ.size_v i /\
+            A.length sr.array == A.length s.array - SZ.size_v i /\
+            sr.contents == Seq.slice s.contents (SZ.size_v i) (A.length s.array) /\
             s.contents == sl.contents `Seq.append` sr.contents
           )
 
-val alloc (#a:Type) (x:a) (n:U32.t)
-  : Steel (t a)
+val base_t (a: Type0) (n: SZ.size_t) : Tot Type0
+
+val alloc (#a:Type) (x:a) (n:SZ.size_t)
+  : Steel (t (base_t a n) a)
              emp
              (fun r -> varrayptr_or_null r)
-             (requires fun _ -> U32.v n > 0)
+             (requires fun _ -> SZ.size_v n > 0)
              (ensures fun _ r h1 ->
                match g_is_null r, h1 (varrayptr_or_null r) with
                | true, None -> True
                | false, Some s ->
-                 A.length s.array == U32.v n /\
-                 s.contents == Seq.create (U32.v n) x /\
-                 s.perm == full_perm /\
+                 A.length s.array == SZ.size_v n /\
+                 s.contents == Seq.create (SZ.size_v n) x /\
+//                 s.perm == full_perm /\
                  A.freeable s.array
                | _ -> False
              )
 
-val index (#a:Type) (r: t a) (i:U32.t)
+val index (#base: Type) (#a:Type) (r: t base a) (i: SZ.size_t)
   : Steel a
              (varrayptr r)
              (fun _ -> varrayptr r)
-             (requires fun h -> U32.v i < A.length (h (varrayptr r)).array)
+             (requires fun h -> SZ.size_v i < A.length (h (varrayptr r)).array)
              (ensures fun h0 y h1 ->
                let s = h0 (varrayptr r) in
                h1 (varrayptr r) == s /\
-               U32.v i < A.length s.array /\
-               y == Seq.index s.contents (U32.v i))
+               SZ.size_v i < A.length s.array /\
+               y == Seq.index s.contents (SZ.size_v i))
 
-val upd (#a:Type) (r: t a) (i:U32.t) (x:a)
+val upd (#base: Type) (#a:Type) (r: t base a) (i:SZ.size_t) (x:a)
   : Steel unit
              (varrayptr r)
              (fun _ -> varrayptr r)
              (requires fun h ->
-               (h (varrayptr r)).perm == full_perm /\
-               U32.v i < A.length (h (varrayptr r)).array
+//               (h (varrayptr r)).perm == full_perm /\
+               SZ.size_v i < A.length (h (varrayptr r)).array
              )
              (ensures fun h0 _ h1 ->
                let s = h0 (varrayptr r) in
                let s' = h1 (varrayptr r) in
                s'.array == s.array /\
-               s'.perm == full_perm /\
-               U32.v i < A.length s.array /\
-               s'.contents == Seq.upd s.contents (U32.v i) x)
+//               s'.perm == full_perm /\
+               SZ.size_v i < A.length s.array /\
+               s'.contents == Seq.upd s.contents (SZ.size_v i) x)
 
-val free (#a:Type) (r:t a)
+val free (#base: Type) (#a:Type) (r:t base a)
   : Steel unit
              (varrayptr r)
              (fun _ -> emp)
              (requires fun h ->
-               (h (varrayptr r)).perm == full_perm /\
+//               (h (varrayptr r)).perm == full_perm /\
                A.freeable (h (varrayptr r)).array
              )
              (ensures fun _ _ _ -> True)
 
-val share (#opened: _) (#a: Type) (r: t a)
-  : SteelAtomicBase (t a) false opened Unobservable
+(*
+val share (#opened: _) (#base: Type) (#a: Type) (r: t base a)
+  : SteelAtomicBase (t base a) false opened Unobservable
     (varrayptr r)
     (fun res -> varrayptr r `star` varrayptr res)
     (fun _ -> True)
@@ -292,41 +294,45 @@ val gather
       s'.contents == s2.contents /\
       s'.perm == s1.perm `sum_perm` s2.perm
     )
+*)
 
 (* Entering and exiting the abstraction *)
 
-module P = Steel.Pointer
-
 val enter
-  (#opened: _)
+//  (#opened: _)
+  (#base: Type)
   (#a: Type)
-  (x: A.array a)
-  (p: perm)
-: SteelAtomicBase (t a) false opened Unobservable
-    (A.varrayp x p)
+  (x: A.array base a)
+//  (p: perm)
+: Steel (t base a) // false opened Unobservable
+    (A.varray x) // (A.varrayp x p)
     (fun res -> varrayptr res)
     (fun _ ->
-      let p = A.g_get_pointer x in
-      (P.g_is_null p == false ==> P.size_v (P.base_array_len (P.base p)) < 4294967296) // TODO: remove and use size_t instead
+      True
+//      let p = A.g_get_pointer x in
+//      (P.g_is_null p == false ==> P.size_v (P.base_array_len (P.base p)) < 4294967296) // TODO: remove and use size_t instead
     )
     (fun h res h' ->
       let s = h' (varrayptr res) in
       s.array == x /\
-      s.perm == p /\
-      s.contents == h (A.varrayp x p)
+//      s.perm == p /\
+      s.contents == h (A.varray x) // (A.varrayp x p)
     )
 
 val exit
-  (#opened: _)
+//  (#opened: _)
+  (#base: Type)
   (#a: Type)
-  (x: t a)
-: SteelAtomicBase (A.array a & perm) false opened Unobservable
+  (x: t base a)
+: Steel (A.array base a) // (* & perm) false opened Unobservable
     (varrayptr x)
-    (fun res -> A.varrayp (fst res) (snd res))
+    (fun res -> A.varray res) // A.varrayp (fst res) (snd res))
     (fun _ -> True)
     (fun h res h' ->
       let s = h (varrayptr x) in
-      fst res == s.array /\
-      snd res == s.perm /\
-      h' (A.varrayp (fst res) (snd res)) == s.contents
+      res == s.array /\
+      h' (A.varray res) == s.contents
+//      fst res == s.array /\
+//      snd res == s.perm /\
+//      h' (A.varrayp (fst res) (snd res)) == s.contents
     )

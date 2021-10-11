@@ -5,47 +5,52 @@ module S = Steel.Memory
 module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
-module A = Steel.Array
+module A = Steel.C.Array
 module AP = LowParse.Steel.ArrayPtr
-module U32 = FStar.UInt32
+module SZ = Steel.C.StdInt
 
 (* Right-to-left output buffer *)
 
-val t: Type0
+val t (base: Type0): Type0
 
-val null : t
+val null (base: Type) : t base
 
-val g_is_null (x: t) : Ghost bool
+val g_is_null (#base: Type) (x: t base) : Ghost bool
   (requires True)
-  (ensures (fun y -> y == true <==> x == null))
+  (ensures (fun y -> y == true <==> x == null base))
 
 val vp_hp
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : Tot (S.slprop u#1)
 
 val vp_sel
-  (x: t)
-: Tot (SE.selector (A.array byte) (vp_hp x))
+  (#base: Type)
+  (x: t base)
+: Tot (SE.selector (A.array base byte) (vp_hp x))
 
 [@SE.__steel_reduce__]
 let vp' 
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : Tot SE.vprop'
 = {
   SE.hp = vp_hp x;
-  SE.t = A.array byte;
+  SE.t = A.array base byte;
   SE.sel = vp_sel x;
 }
 
 [@SE.__steel_reduce__]
 let vp
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : Tot SE.vprop
 = SE.VUnit (vp' x)
 
 val vp_not_null
   (#opened: _)
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : SEA.SteelGhost unit opened
     (vp x)
     (fun _ -> vp x)
@@ -56,32 +61,37 @@ val vp_not_null
     )
 
 val vp_or_null_hp
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : Tot (S.slprop u#1)
 
 val vp_or_null_sel
-  (x: t)
-: Tot (SE.selector (option (A.array byte)) (vp_or_null_hp x))
+  (#base: Type)
+  (x: t base)
+: Tot (SE.selector (option (A.array base byte)) (vp_or_null_hp x))
 
 [@SE.__steel_reduce__]
 let vp_or_null' 
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : Tot SE.vprop'
 = {
   SE.hp = vp_or_null_hp x;
-  SE.t = option (A.array byte);
+  SE.t = option (A.array base byte);
   SE.sel = vp_or_null_sel x;
 }
 
 [@SE.__steel_reduce__]
 let vp_or_null
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : Tot SE.vprop
 = SE.VUnit (vp_or_null' x)
 
 val intro_vp_or_null_none
   (#opened: _)
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : SEA.SteelGhost unit opened
     SE.emp
     (fun _ -> vp_or_null x)
@@ -90,7 +100,8 @@ val intro_vp_or_null_none
 
 val intro_vp_or_null_some
   (#opened: _)
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : SEA.SteelGhost unit opened
     (vp x)
     (fun _ -> vp_or_null x)
@@ -102,7 +113,8 @@ val intro_vp_or_null_some
 
 val elim_vp_or_null_some
   (#opened: _)
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : SEA.SteelGhost unit opened
     (vp_or_null x)
     (fun _ -> vp x)
@@ -114,7 +126,8 @@ val elim_vp_or_null_some
 
 val elim_vp_or_null_none
   (#opened: _)
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : SEA.SteelGhost unit opened
     (vp_or_null x)
     (fun _ -> SE.emp)
@@ -126,7 +139,8 @@ val elim_vp_or_null_none
 
 val is_null
   (#opened: _)
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : SEA.SteelAtomicBase bool false opened SEA.Unobservable
     (vp_or_null x)
     (fun _ -> vp_or_null x)
@@ -139,21 +153,23 @@ val is_null
     )
 
 let make_vprop_post
-  (x: AP.t byte)
-  (res: t)
+  (#base: Type)
+  (x: AP.t base byte)
+  (res: t base)
 : Tot SE.vprop
 = 
   if g_is_null res then AP.varrayptr x else SE.emp
 
 val make
-  (x: AP.t byte)
-  (len: U32.t)
-: SE.Steel t
+  (#base: Type)
+  (x: AP.t base byte)
+  (len: SZ.size_t)
+: SE.Steel (t base)
     (AP.varrayptr x)
     (fun res -> vp_or_null res `SE.star` make_vprop_post x res)
     (fun h ->
-      (h (AP.varrayptr x)).AP.perm == SP.full_perm /\
-      A.length (h (AP.varrayptr x)).AP.array == U32.v len
+//      (h (AP.varrayptr x)).AP.perm == SP.full_perm /\
+      A.length (h (AP.varrayptr x)).AP.array == SZ.size_v len
     )
     (fun h res h' ->
       let s = h' (vp_or_null res) in
@@ -162,24 +178,26 @@ val make
       (g_is_null res == false ==> (
         Some? s /\
         (Some?.v s) == (h (AP.varrayptr x)).AP.array /\
-        A.length (Some?.v s) == U32.v len
+        A.length (Some?.v s) == SZ.size_v len
       ))
     )
 
-let alloc
-  (len: U32.t)
-: SE.Steel t
+val alloc
+  (len: SZ.size_t)
+: SE.Steel (t (AP.base_t byte len))
     SE.emp
     (fun res -> vp_or_null res)
-    (fun _ -> U32.v len > 0)
+    (fun _ -> SZ.size_v len > 0)
     (fun _ res h' ->
       match g_is_null res, h' (vp_or_null res) with
       | true, None -> True
       | false, Some a ->
-        A.length a == U32.v len /\
+        A.length a == SZ.size_v len /\
         A.freeable a
       | _ -> False
     )
+
+(*
 =
   let x = AP.alloc 0uy len in
   if AP.is_null x
@@ -206,43 +224,47 @@ let alloc
     end;
     SEA.return res
   end
+*)
 
 val len
-  (x: t)
-: SE.Steel U32.t
+  (#base: Type)
+  (x: t base)
+: SE.Steel SZ.size_t
     (vp x)
     (fun _ -> vp x)
     (fun _ -> True)
     (fun h len h' ->
       h (vp x) == h' (vp x) /\
-      A.length (h' (vp x)) == U32.v len
+      A.length (h' (vp x)) == SZ.size_v len
     )
 
 val split
-  (x: t)
-  (len: U32.t)
-: SE.Steel (AP.t byte)
+  (#base: Type)
+  (x: t base)
+  (len: SZ.size_t)
+: SE.Steel (AP.t base byte)
     (vp x)
     (fun res -> vp x `SE.star` AP.varrayptr res)
-    (fun h -> U32.v len <= A.length (h (vp x)))
+    (fun h -> SZ.size_v len <= A.length (h (vp x)))
     (fun h res h' ->
       let ar = (h' (AP.varrayptr res)).AP.array in
-      (h' (AP.varrayptr res)).AP.perm == SP.full_perm /\
+//      (h' (AP.varrayptr res)).AP.perm == SP.full_perm /\
       A.merge_into (h' (vp x)) ar (h (vp x)) /\
-      A.length ar == U32.v len
+      A.length ar == SZ.size_v len
     )
 
 val merge
-  (x: t)
-  (y: AP.t byte)
-  (len: U32.t)
+  (#base: Type)
+  (x: t base)
+  (y: AP.t base byte)
+  (len: SZ.size_t)
 : SE.Steel unit
     (vp x `SE.star` AP.varrayptr y)
     (fun res -> vp x)
     (fun h ->
       let ar = (h (AP.varrayptr y)).AP.array in
-      (h (AP.varrayptr y)).AP.perm == SP.full_perm /\
-      U32.v len == A.length ar /\
+//      (h (AP.varrayptr y)).AP.perm == SP.full_perm /\
+      SZ.size_v len == A.length ar /\
       A.adjacent (h (vp x)) ar
     )
     (fun h _ h' ->
@@ -250,7 +272,8 @@ val merge
     )
 
 val free
-  (x: t)
+  (#base: Type)
+  (x: t base)
 : SE.Steel unit
     (vp x)
     (fun _ -> SE.emp)

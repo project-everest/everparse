@@ -5,27 +5,31 @@ module S = Steel.Memory
 module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
-module A = Steel.Array
+module A = Steel.C.Array
 module AP = LowParse.Steel.ArrayPtr
+module SZ = Steel.C.StdInt
 
-module U32 = FStar.UInt32
 
 let parsed_size
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-: Tot Type0
-= (a: byte_array) ->
-  SE.Steel U32.t
+: Tot (Type u#1)
+=
+  (base: Type) ->
+  (a: byte_array base) ->
+  SE.Steel SZ.size_t
     (AP.varrayptr a)
     (fun _ -> AP.varrayptr a)
-    (fun h -> Some? (parse p (h (AP.varrayptr a)).AP.contents))
+    (fun h ->
+      Some? (parse p (h (AP.varrayptr a)).AP.contents)
+    )
     (fun h res h' ->
       let s = h (AP.varrayptr a) in
       h' (AP.varrayptr a) == s /\
       begin match parse p s.AP.contents with
       | None -> False
-      | Some (_, consumed) -> U32.v res == consumed
+      | Some (_, consumed) -> SZ.size_v res == consumed
       end
     )
 
@@ -33,48 +37,50 @@ let parsed_size_constant_size
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (sz: U32.t)
+  (sz: SZ.size_t)
 : Pure (parsed_size p)
     (requires (
       k.parser_kind_high == Some k.parser_kind_low /\
-      U32.v sz == k.parser_kind_low
+      SZ.size_v sz == k.parser_kind_low
     ))
     (ensures (fun _ -> True))
 =
-  fun a ->
+  fun base a ->
   parser_kind_prop_equiv k p;
-  let g = SEA.gget (AP.varrayptr a) in
+  let g : Ghost.erased (AP.v base byte) = SEA.gget (AP.varrayptr a) in
   assert (Some? (parse p g.AP.contents));
   SEA.return sz
 
 let get_parsed_size
+  (#base: _)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: parsed_size p)
-  (a: byte_array)
-: SE.Steel U32.t
+  (a: byte_array base)
+: SE.Steel SZ.size_t
     (vparse p a)
     (fun _ -> vparse p a)
     (fun _ -> True)
     (fun h res h' ->
       h' (vparse p a) == h (vparse p a) /\
-      U32.v res == A.length (array_of (h (vparse p a)))
+      SZ.size_v res == A.length (array_of (h (vparse p a)))
     )
 =
   elim_vparse p a;
   let _ = SEA.gget (AP.varrayptr a) in // FIXME: WHY WHY WHY is this needed?
-  let res = j a in
+  let res = j base a in
   intro_vparse p a;
   SEA.return res
 
 let peek_strong
+  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: parsed_size p)
-  (a: byte_array)
-: SE.Steel byte_array
+  (a: byte_array base)
+: SE.Steel (byte_array base)
     (AP.varrayptr a)
     (fun res -> vparse p a `SE.star` AP.varrayptr res)
     (fun h ->
@@ -87,31 +93,32 @@ let peek_strong
       let c_res = h' (AP.varrayptr res) in
       let consumed = A.length (array_of c_a') in
       A.merge_into (array_of c_a') c_res.AP.array c_a.AP.array /\
-      perm_of c_a' == c_a.AP.perm /\
-      c_res.AP.perm == c_a.AP.perm /\
+//      perm_of c_a' == c_a.AP.perm /\
+//      c_res.AP.perm == c_a.AP.perm /\
       is_byte_repr p c_a'.contents (Seq.slice c_a.AP.contents 0 consumed) /\
       consumed <= A.length c_a.AP.array /\
       c_res.AP.contents == Seq.slice c_a.AP.contents consumed (A.length c_a.AP.array)
     )
 =
-  let c_a = SEA.gget (AP.varrayptr a) in
-  let n = j a in
-  parse_strong_prefix p c_a.AP.contents (Seq.slice c_a.AP.contents 0 (U32.v n)); 
+  let c_a : Ghost.erased (AP.v base byte) = SEA.gget (AP.varrayptr a) in
+  let n = j base a in
+  parse_strong_prefix p c_a.AP.contents (Seq.slice c_a.AP.contents 0 (SZ.size_v n)); 
   let res = AP.split a n in
   intro_vparse p a;
   SEA.return res
 
 val memcpy
-  (dst: byte_array)
-  (src: byte_array)
-  (n: U32.t)
-: SE.Steel byte_array
+  (#base_dst #base_src: _)
+  (dst: byte_array base_dst)
+  (src: byte_array base_src)
+  (n: SZ.size_t)
+: SE.Steel (byte_array base_dst)
     (AP.varrayptr dst `SE.star` AP.varrayptr src)
     (fun _ -> AP.varrayptr dst `SE.star` AP.varrayptr src)
     (fun h ->
-      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
-      U32.v n <= A.length (h (AP.varrayptr src)).AP.array /\
-      U32.v n <= A.length (h (AP.varrayptr dst)).AP.array
+//      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
+      SZ.size_v n <= A.length (h (AP.varrayptr src)).AP.array /\
+      SZ.size_v n <= A.length (h (AP.varrayptr dst)).AP.array
     )
     (fun h res h' ->
       let s = h (AP.varrayptr src) in
@@ -119,76 +126,76 @@ val memcpy
       let d' = h' (AP.varrayptr dst) in
       res == dst /\
       h' (AP.varrayptr src) == s /\
-      d'.AP.perm == SP.full_perm /\
+//      d'.AP.perm == SP.full_perm /\
       d'.AP.array == d.AP.array /\
-      U32.v n <= A.length d.AP.array /\
-      U32.v n <= A.length s.AP.array /\
-      d'.AP.contents `Seq.equal` (Seq.slice s.AP.contents 0 (U32.v n) `Seq.append` Seq.slice d.AP.contents (U32.v n) (A.length d.AP.array))
+      SZ.size_v n <= A.length d.AP.array /\
+      SZ.size_v n <= A.length s.AP.array /\
+      d'.AP.contents `Seq.equal` (Seq.slice s.AP.contents 0 (SZ.size_v n) `Seq.append` Seq.slice d.AP.contents (SZ.size_v n) (A.length d.AP.array))
     )
-    (decreases (U32.v n))
+    (decreases (SZ.size_v n))
 
 let rec memcpy dst src n =
-  let g : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr dst) in
-  assert (g.AP.perm == SP.full_perm);
-  if n = 0ul
+//  let g : Ghost.erased (AP.v base_dst byte) = SEA.gget (AP.varrayptr dst) in
+//  assert (g.AP.perm == SP.full_perm);
+  if n = SZ.zero_size
   then SEA.return dst
   else begin
-    let j = n `U32.sub` 1ul in
+    let j = n `SZ.size_sub` SZ.one_size in
     let c = AP.index src j in
     AP.upd dst j c;
     memcpy dst src j
   end
 
 val copy_exact
+  (#base_src #base_dst: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: byte_array)
-  (dst: byte_array)
-  (n: U32.t)
+  (src: byte_array base_src)
+  (dst: byte_array base_dst)
+  (n: SZ.size_t)
 : SE.Steel unit
     (vparse p src `SE.star` AP.varrayptr dst)
     (fun _ -> vparse p src `SE.star` vparse p dst)
     (fun h ->
-      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
-      U32.v n == A.length (array_of (h (vparse p src))) /\
-      U32.v n == A.length (h (AP.varrayptr dst)).AP.array
+//      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
+      SZ.size_v n == A.length (array_of (h (vparse p src))) /\
+      SZ.size_v n == A.length (h (AP.varrayptr dst)).AP.array
     )
     (fun h _ h' ->
       let s = h (vparse p src) in
       let d = h (AP.varrayptr dst) in
       let d' = h' (vparse p dst) in
-      U32.v n == A.length (array_of s) /\
-      U32.v n == A.length d.AP.array /\
+      SZ.size_v n == A.length (array_of s) /\
+      SZ.size_v n == A.length d.AP.array /\
       h' (vparse p src) == s /\
       array_of d' == d.AP.array /\
-      perm_of d' == SP.full_perm /\
+//      perm_of d' == SP.full_perm /\
       d'.contents == s.contents
     )
 
-let copy_exact p src dst n =
+let copy_exact #base_src #base_dst p src dst n =
   elim_vparse p src;
   let _ = memcpy dst src n in
-  let gs : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr src) in
-  assert (U32.v n == A.length gs.AP.array); // FIXME: WHY WHY WHY is this needed for the equality on n in the postcond
-  let gd : Ghost.erased (AP.v byte) = SEA.gget (AP.varrayptr dst) in
-  assert (U32.v n == A.length gd.AP.array); // same here
-  assert (gd.AP.contents `Seq.equal` gs.AP.contents); // ok, this is expected because of `equal`
+  let gs : Ghost.erased (AP.v base_src byte) = SEA.gget (AP.varrayptr src) in
+  let gd : Ghost.erased (AP.v base_dst byte) = SEA.gget (AP.varrayptr dst) in
+  assert (gd.AP.contents `Seq.equal` gs.AP.contents);
   intro_vparse p src;
   intro_vparse p dst
 
 val copy_strong
+  (#base_src #base_dst: Type)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: parsed_size p)
-  (src: byte_array)
-  (dst: byte_array)
-: SE.Steel byte_array
+  (src: byte_array base_src)
+  (dst: byte_array base_dst)
+: SE.Steel (byte_array base_dst)
     (vparse p src `SE.star` AP.varrayptr dst)
     (fun res -> vparse p src `SE.star` vparse p dst `SE.star` AP.varrayptr res)
     (fun h ->
-      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
+//      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
       A.length (array_of (h (vparse p src))) <= A.length (h (AP.varrayptr dst)).AP.array
     )
     (fun h res h' ->
@@ -202,27 +209,30 @@ val copy_strong
         h' (vparse p src) == s /\
         A.merge_into (array_of d') r.AP.array d.AP.array /\
         d'.contents == s.contents /\
-        perm_of d' == SP.full_perm /\
+//        perm_of d' == SP.full_perm /\
         A.length (array_of s) == A.length (array_of d') /\ // TODO: this should be a consequence of the equality of the contents, via parser injectivity
-        r.AP.perm == SP.full_perm /\
+//        r.AP.perm == SP.full_perm /\
         r.AP.contents == Seq.slice d.AP.contents (A.length (array_of s)) (A.length d.AP.array)
       end
     )
 
-let copy_strong #_ #_ #p j src dst =
+let copy_strong #_ #_ #_ #_ #p j src dst =
   let n = get_parsed_size j src in
   let res = AP.split dst n in
   copy_exact p src dst n;
   SEA.reveal_star_3 (vparse p src) (vparse p dst) (AP.varrayptr res); // for can_be_split
   SEA.return res
 
+// [@@SEA.__steel_reduce__]
 let copy_weak_vprop
+  (#base_src: Type)
+  (#base_dst: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: byte_array)
-  (dst: byte_array)
-  (res: option byte_array)
+  (src: byte_array base_src)
+  (dst: byte_array base_dst)
+  (res: option (byte_array base_dst))
 : Tot SE.vprop
 = vparse p src `SE.star`
   begin if None? res
@@ -232,66 +242,76 @@ let copy_weak_vprop
 
 unfold
 let copy_weak_vprop_src
+  (#base_src: Type)
+  (#base_dst: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: byte_array)
-  (dst: byte_array)
-  (res: option byte_array)
+  (src: byte_array base_src)
+  (dst: byte_array base_dst)
+  (res: option (byte_array base_dst))
   (x: SE.t_of (copy_weak_vprop p src dst res))
-: Tot (v k t)
+: Tot (v base_src k t)
 = fst x
 
 unfold
 let copy_weak_vprop_dst_some
+  (#base_src: Type)
+  (#base_dst: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: byte_array)
-  (dst: byte_array)
-  (res: option byte_array)
+  (src: byte_array base_src)
+  (dst: byte_array base_dst)
+  (res: option (byte_array base_dst))
   (x: SE.t_of (copy_weak_vprop p src dst res))
-: Pure (v k t)
+: Pure (v base_dst k t)
   (requires (None? res == false))
   (ensures (fun _ -> True))
 = fst #(SE.t_of (vparse p dst)) #(SE.t_of (AP.varrayptr (Some?.v res))) (snd x)
 
 unfold
 let copy_weak_vprop_dst_none
+  (#base_src: Type)
+  (#base_dst: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: byte_array)
-  (dst: byte_array)
-  (res: option byte_array)
+  (src: byte_array base_src)
+  (dst: byte_array base_dst)
+  (res: option (byte_array base_dst))
   (x: SE.t_of (copy_weak_vprop p src dst res))
-: Pure (AP.v byte)
+: Pure (AP.v base_dst byte)
   (requires (None? res))
   (ensures (fun _ -> True))
 = snd x
 
 unfold
 let copy_weak_vprop_res
+  (#base_src: Type)
+  (#base_dst: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: byte_array)
-  (dst: byte_array)
-  (res: option byte_array)
+  (src: (byte_array base_src))
+  (dst: (byte_array base_dst))
+  (res: option (byte_array base_dst))
   (x: SE.t_of (copy_weak_vprop p src dst res))
-: Pure (AP.v byte)
+: Pure (AP.v base_dst byte)
   (requires (Some? res))
   (ensures (fun _ -> True))
 = snd #(SE.t_of (vparse p dst)) #(SE.t_of (AP.varrayptr (Some?.v res))) (snd x)
 
 let copy_weak_post
+  (#base_src: Type)
+  (#base_dst: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: byte_array)
-  (dst: byte_array)
+  (src: (byte_array base_src))
+  (dst: (byte_array base_dst))
   (h: SE.rmem (vparse p src `SE.star` AP.varrayptr dst))
-  (res0: option byte_array)
+  (res0: option (byte_array base_dst))
   (h': SE.rmem (copy_weak_vprop p src dst res0))
 : Tot prop
 =
@@ -308,45 +328,46 @@ let copy_weak_post
           let d = h (AP.varrayptr dst) in
           let r = copy_weak_vprop_res p src dst res0 x in
           A.merge_into (array_of d') r.AP.array d.AP.array /\
-          perm_of d' == SP.full_perm /\
+//          perm_of d' == SP.full_perm /\
           d'.contents == s.contents /\
           A.length (array_of s) == A.length (array_of d') /\ // TODO: this should be a consequence of the equality of the contents, via parser injectivity
-          r.AP.perm == SP.full_perm /\
+//          r.AP.perm == SP.full_perm /\
           r.AP.contents == Seq.slice d.AP.contents (A.length (array_of s)) (A.length d.AP.array)
       end
 
 val copy_weak
+  (#base_src: Type)
+  (#base_dst: Type)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: parsed_size p)
-  (src: byte_array)
-  (dst: byte_array)
-  (n: U32.t)
-: SE.Steel (option byte_array)
+  (src: (byte_array base_src))
+  (dst: (byte_array base_dst))
+  (n: SZ.size_t)
+: SE.Steel (option (byte_array base_dst))
     (vparse p src `SE.star` AP.varrayptr dst)
     (fun res -> copy_weak_vprop p src dst res)
     (fun h ->
-      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
-      A.length (h (AP.varrayptr dst)).AP.array == U32.v n
+//      (h (AP.varrayptr dst)).AP.perm == SP.full_perm /\
+      A.length (h (AP.varrayptr dst)).AP.array == SZ.size_v n
     )
     (fun h res0 h' ->
       copy_weak_post p src dst h res0 h'
     )
 
-let copy_weak #_ #_ #p j src dst n_dst =
+let copy_weak #base_src #base_dst #_ #_ #p j src dst n_dst =
   let n_src = get_parsed_size j src in
-  if n_dst `U32.lt` n_src
+  if not (n_src `SZ.size_le` n_dst) // n_dst `SZ.size_lt` n_src
   then begin
     SEA.reveal_star (vparse p src) (AP.varrayptr dst);
-    let res0 : option byte_array = None in
+    let res0 : option (byte_array base_dst) = None in
     SEA.change_equal_slprop
       (vparse p src `SE.star` AP.varrayptr dst)
       (copy_weak_vprop p src dst res0);
     SEA.return res0
   end else begin
     let res = AP.split dst n_src in
-    let _ = SEA.gget (AP.varrayptr dst) in // FIXME: WHY WHY WHY?
     copy_exact p src dst n_src;
     SEA.reveal_star (vparse p dst) (AP.varrayptr res);
     SEA.reveal_star (vparse p src) (vparse p dst `SE.star` AP.varrayptr res);
@@ -360,13 +381,14 @@ let copy_weak #_ #_ #p j src dst n_dst =
 module R2L = LowParse.Steel.R2LOutput
 
 val copy_strong_r2l
+  (#base_src #base_dst: _)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: parsed_size p)
-  (src: byte_array)
-  (dst: R2L.t)
-: SE.Steel byte_array
+  (src: byte_array base_src)
+  (dst: R2L.t base_dst)
+: SE.Steel (byte_array base_dst)
     (vparse p src `SE.star` R2L.vp dst)
     (fun res -> vparse p src `SE.star` R2L.vp dst `SE.star` vparse p res)
     (fun h ->
@@ -382,13 +404,13 @@ val copy_strong_r2l
         let r = h' (vparse p res) in
         h' (vparse p src) == s /\
         A.merge_into d' (array_of r) d /\
-        (perm_of r) == SP.full_perm /\
+//        (perm_of r) == SP.full_perm /\
         r.contents == s.contents /\
         A.length (array_of s) == A.length (array_of r) // TODO: this should be a consequence of the equality of the contents, via parser injectivity
       end
     )
 
-let copy_strong_r2l #_ #_ #p j src dst =
+let copy_strong_r2l #_ #_ #_ #_ #p j src dst =
   let n = get_parsed_size j src in
   let res = R2L.split dst n in
   copy_exact p src res n;
@@ -398,10 +420,11 @@ let copy_strong_r2l #_ #_ #p j src dst =
 (* TODO: generalize somehow to any vprop on option. *)
 
 let copy_weak_r2l_vprop
+  (#base: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (res: option byte_array)
+  (res: option (byte_array base))
 : Tot SE.vprop
 = if None? res
   then SE.emp
@@ -409,24 +432,26 @@ let copy_weak_r2l_vprop
 
 unfold
 let copy_weak_r2l_vprop_res
+  (#base: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (res: option byte_array)
+  (res: option (byte_array base))
   (x: SE.t_of (copy_weak_r2l_vprop p res))
-: Pure (v k t)
+: Pure (v base k t)
   (requires (Some? res))
   (ensures (fun _ -> True))
 = x
 
 let copy_weak_r2l_post
+  (#base_src #base_dst: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (src: byte_array)
-  (dst: R2L.t)
+  (src: byte_array base_src)
+  (dst: R2L.t base_dst)
   (h: SE.rmem (vparse p src `SE.star` R2L.vp dst))
-  (res0: option byte_array)
+  (res0: option (byte_array base_dst))
   (h': SE.rmem (vparse p src `SE.star` R2L.vp dst `SE.star` copy_weak_r2l_vprop p res0))
 : Tot prop
 =
@@ -445,20 +470,21 @@ let copy_weak_r2l_post
           let res = Some?.v res0 in
           let r = copy_weak_r2l_vprop_res p res0 (h' (copy_weak_r2l_vprop p res0)) in
           A.merge_into d' (array_of r) d /\
-          perm_of r == SP.full_perm /\
+//          perm_of r == SP.full_perm /\
           r.contents == s.contents /\
           A.length (array_of s) == A.length (array_of r) // TODO: this should be a consequence of the equality of the contents, via parser injectivity
       end
   end
 
 val copy_weak_r2l
+  (#base_src #base_dst: _)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: parsed_size p)
-  (src: byte_array)
-  (dst: R2L.t)
-: SE.Steel (option byte_array)
+  (src: byte_array base_src)
+  (dst: R2L.t base_dst)
+: SE.Steel (option (byte_array base_dst))
     (vparse p src `SE.star` R2L.vp dst)
     (fun res -> vparse p src `SE.star` R2L.vp dst `SE.star` copy_weak_r2l_vprop p res)
     (fun _ -> True)
@@ -466,12 +492,12 @@ val copy_weak_r2l
       copy_weak_r2l_post p src dst h res0 h'
     )
 
-let copy_weak_r2l #_ #_ #p j src dst =
+let copy_weak_r2l #base_src #base_dst #_ #_ #p j src dst =
   let n_dst = R2L.len dst in
   let n_src = get_parsed_size j src in
-  if n_dst `U32.lt` n_src
+  if not (n_src `SZ.size_le` n_dst) // n_dst `U32.lt` n_src
   then begin
-    let res0 : option byte_array = None in
+    let res0 : option (byte_array base_dst) = None in
     SEA.change_equal_slprop
       SE.emp
       (copy_weak_r2l_vprop p res0);
