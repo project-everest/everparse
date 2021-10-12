@@ -7,7 +7,7 @@ module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module A = Steel.C.Array
 module AP = LowParse.Steel.ArrayPtr
-module SZ = Steel.C.StdInt
+module SZ = Steel.C.StdInt.Base
 
 (* Right-to-left output buffer *)
 

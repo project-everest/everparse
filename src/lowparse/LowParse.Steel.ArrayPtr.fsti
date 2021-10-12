@@ -37,7 +37,7 @@ open Steel.Effect
 open Steel.FractionalPermission
 open Steel.Effect.Atomic
 module A = Steel.C.Array
-module SZ = Steel.C.StdInt
+module SZ = Steel.C.StdInt.Base
 
 val t (base: Type0) (t:Type u#0) : Type u#0
 

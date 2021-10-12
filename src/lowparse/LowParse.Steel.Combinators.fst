@@ -10,7 +10,7 @@ module SEA = Steel.Effect.Atomic
 module A = Steel.C.Array
 module AP = LowParse.Steel.ArrayPtr
 
-module SZ = Steel.C.StdInt
+module SZ = Steel.C.StdInt.Base
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 
