@@ -13,8 +13,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 *)
-module Actions
-module LPL = EverParse3d.InputBuffer
+module EverParse3d.Actions.Base
+module I = EverParse3d.InputStream.Base
 module Cast = FStar.Int.Cast
 module HS = FStar.HyperStack
 open FStar.HyperStack.ST
@@ -26,11 +26,12 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module HST = FStar.HyperStack.ST
 
-inline_for_extraction
-let ___PUINT8 = LPL.puint8
+// inline_for_extraction
+// let ___PUINT8 = LPL.puint8
 
-let triv = B.trivial_preorder LowParse.Bytes.byte
-let input_buffer_t = LPL.input_buffer_t
+inline_for_extraction
+noextract
+let is_range_okay = EverParse3d.ErrorCode.is_range_okay
 
 let hinv = HS.mem -> Type
 let extends h1 h0 = forall #a #r #s (b:mbuffer a r s). {:pattern live h1 b} live h0 b ==> live h1 b
@@ -40,10 +41,10 @@ let liveness_inv = i:hinv {
   forall h0 h1. {:pattern (i h1); (h1 `extends` h0)}  i h0 /\ h1 `extends` h0 ==> i h1
 }
 let mem_inv  = liveness_inv
-let slice_inv =  mbuffer LPL.byte triv triv -> mem_inv
+let slice_inv = loc -> mem_inv
 let inv_implies (inv0 inv1:slice_inv) =
-  forall (#len: U32.t) (i:input_buffer_t len) h.
-    inv0 (LPL.slice_of i).LPL.base h ==> inv1 (LPL.slice_of i).LPL.base h
+  forall i h.
+    inv0 i h ==> inv1 i h
 let true_inv : slice_inv = fun _ _ -> True
 let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h
 let eloc = FStar.Ghost.erased B.loc
@@ -53,7 +54,7 @@ let eloc_includes (l1 l2:eloc) = B.loc_includes l1 l2
 let ptr_loc #a (x:B.pointer a) : Tot eloc = B.loc_buffer x
 let ptr_inv #a (x:B.pointer a) : slice_inv = fun (sl:_) h -> B.live h x
 
-inline_for_extraction
+inline_for_extraction noextract
 val action
       (#nz:bool)
       (#wk: _)
@@ -66,7 +67,7 @@ val action
       (a:Type)
     : Type0
 
-inline_for_extraction
+inline_for_extraction noextract
 val validate_with_action_t
       (#nz:bool)
       (#wk: _)
@@ -78,8 +79,7 @@ val validate_with_action_t
       (allow_reading:bool)
     : Type0
 
-inline_for_extraction
-noextract
+inline_for_extraction noextract
 val validate_eta
       (#nz:bool)
       (#wk: _)
@@ -107,16 +107,15 @@ val act_with_comment
       (a: action p inv l b res)
 : Tot (action p inv l b res)
 
-inline_for_extraction
+inline_for_extraction noextract
 val leaf_reader
       (#nz:bool)
       (#k: parser_kind nz WeakKindStrongPrefix)
       (#t: Type)
       (p: parser k t)
- : Type0
+ : Type u#0
 
-inline_for_extraction
-noextract
+inline_for_extraction noextract
 val validate_with_success_action
       (name: string)
       (#nz:bool)
@@ -690,18 +689,7 @@ val action_field_pos
       (#[@@@erasable] t:Type)
       (#[@@@erasable] p:parser k t)
       (u:unit)
-   : action p true_inv eloc_none false U32.t
-
-noextract
-inline_for_extraction
-val action_field_ptr
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
-      (u:unit)
-   : action p true_inv eloc_none true LPL.puint8
+   : action p true_inv eloc_none false U64.t
 
 noextract
 inline_for_extraction
@@ -743,3 +731,10 @@ val action_weaken
       (act:action p inv l b a)
       (#[@@@erasable] inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
    : action p inv' l' b a
+
+noextract
+inline_for_extraction
+val mk_external_action
+  (#nz:_) (#wk:_) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
+  (#l:eloc) ($f:unit -> Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1))
+  : action p true_inv l false unit

@@ -158,9 +158,16 @@ let parse_nlist n #wk #k #t p
             (LowParse.Spec.FLData.parse_fldata (LowParse.Spec.List.parse_list p) (U32.v n))
             #false kind_nlist
 
+let all_bytes = Seq.seq LP.byte
+let kind_all_bytes = LowParse.Spec.Bytes.parse_all_bytes_kind
+let parse_all_bytes' : LP.bare_parser all_bytes = fun input -> Some (input, (Seq.length input <: LP.consumed_length input))
+let parse_all_bytes =
+  LP.parser_kind_prop_equiv kind_all_bytes parse_all_bytes';
+  parse_all_bytes'
+
 ////////////////////////////////////////////////////////////////////////////////
 module B32 = FStar.Bytes
-let t_at_most (n:U32.t) (t:Type) = t & B32.bytes
+let t_at_most (n:U32.t) (t:Type) = t & all_bytes
 let kind_t_at_most = kind_nlist
 inline_for_extraction noextract
 let parse_t_at_most n #nz #wk #k #t p
@@ -170,7 +177,7 @@ let parse_t_at_most n #nz #wk #k #t p
             #false 
             #WeakKindStrongPrefix
             (LowParse.Spec.FLData.parse_fldata 
-                (LPC.nondep_then p LowParse.Spec.Bytes.parse_all_bytes)
+                (LPC.nondep_then p parse_all_bytes)
                 (U32.v n))
             #false
             kind_t_at_most
@@ -275,85 +282,6 @@ let validate_nlist_total_constant_size_mod_ok (n:U32.t) #wk (#k:parser_kind true
          LPL.validate_total_constant_size_no_read (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) (FStar.Int.Cast.uint32_to_uint64 n) () sl len pos
       )
 
-inline_for_extraction noextract
-let validate_nlist_constant_size_mod_ko (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
-  : Pure (validator_no_read (parse_nlist n p))
-  (requires (
-    let open LP in
-    k.parser_kind_subkind == Some ParserStrong /\
-    k.parser_kind_high == Some k.parser_kind_low /\
-    U32.v n % k.LP.parser_kind_low <> 0
-  ))
-  (ensures (fun _ -> True))
-= 
-  (fun #rrel #rel sl len pos ->
-     let h = FStar.HyperStack.ST.get () in
-     [@inline_let]
-     let _ =
-       LPL.valid_facts (parse_nlist n p) h sl (LPL.uint64_to_uint32 pos)
-     in
-     [@inline_let]
-     let f () : Lemma
-       (requires (LPL.valid (parse_nlist n p) h sl (LPL.uint64_to_uint32 pos)))
-       (ensures False)
-     = let sq = LPL.bytes_of_slice_from h sl (LPL.uint64_to_uint32 pos) in
-       let sq' = Seq.slice sq 0 (U32.v n) in
-       LowParse.Spec.List.list_length_constant_size_parser_correct p sq' ;
-       let Some (l, _) = LP.parse (parse_nlist n p) sq in
-       assert (U32.v n == FStar.List.Tot.length l `Prims.op_Multiply` k.LP.parser_kind_low) ;
-       FStar.Math.Lemmas.cancel_mul_mod (FStar.List.Tot.length l) k.LP.parser_kind_low ;
-       assert (U32.v n % k.LP.parser_kind_low == 0)
-     in
-     [@inline_let]
-     let _ = Classical.move_requires f () in
-     validator_error_list_size_not_multiple
-  )
-
-inline_for_extraction noextract
-let validate_nlist_total_constant_size' (n:U32.t) #wk (#k:parser_kind true wk) #t (p:parser k t)
-  : Pure (validator_no_read (parse_nlist n p))
-  (requires (
-    let open LP in
-    k.parser_kind_subkind == Some ParserStrong /\
-    k.parser_kind_high == Some k.parser_kind_low /\
-    k.parser_kind_metadata == Some ParserKindMetadataTotal /\
-    k.parser_kind_low < 4294967296
-  ))
-  (ensures (fun _ -> True))
-= fun #rrel #rel sl len pos ->
-  if n `U32.rem` U32.uint_to_t k.LP.parser_kind_low = 0ul
-  then validate_nlist_total_constant_size_mod_ok n p sl len pos
-  else validate_nlist_constant_size_mod_ko n p sl len pos
-
-inline_for_extraction noextract
-let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t)
-: Pure (validator_no_read (parse_nlist n p))
-  (requires (
-    let open LP in
-    k.parser_kind_subkind = Some ParserStrong /\
-    k.parser_kind_high = Some k.parser_kind_low /\
-    k.parser_kind_metadata = Some ParserKindMetadataTotal /\
-    k.parser_kind_low < 4294967296
-  ))
-  (ensures (fun _ -> True))
-=
-  if
-    if k.LP.parser_kind_low = 1
-    then true
-    else if n_is_const
-    then U32.v n % k.LP.parser_kind_low = 0
-    else false
-  then
-    validate_nlist_total_constant_size_mod_ok n p
-  else if
-    if n_is_const
-    then U32.v n % k.LP.parser_kind_low <> 0
-    else false
-  then
-    validate_nlist_constant_size_mod_ko n p
-  else
-    validate_nlist_total_constant_size' n p
-
 module LUT = LowParse.Spec.ListUpTo
 
 inline_for_extraction
@@ -383,11 +311,6 @@ let parse_string
 =
   LowParse.Spec.Base.parser_kind_prop_equiv k p;
   LP.weaken parse_string_kind (LUT.parse_list_up_to (cond_string_up_to terminator) p (fun _ _ _ -> ()))
-
-
-let all_bytes = B32.bytes
-let kind_all_bytes = LowParse.Spec.Bytes.parse_all_bytes_kind
-let parse_all_bytes = LowParse.Spec.Bytes.parse_all_bytes
 
 inline_for_extraction noextract
 let is_zero (x: FStar.UInt8.t) : Tot bool = x = 0uy

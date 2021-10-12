@@ -1,6 +1,6 @@
 EverParse.h
 EverParse.rsp
-Makefile.basic
-Makefile.include
 *.ml
 *.cm*
+*.o
+*.tmp

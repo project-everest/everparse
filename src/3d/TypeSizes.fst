@@ -91,7 +91,7 @@ let extend_with_size_of_typedef_names (env:env_t) (names:typedef_names) (size:si
 let size_and_alignment_of_typ (env:env_t) (t:typ)
   : ML (size & alignment)
   = match t.v with
-    | Type_app i _ -> size_and_alignment_of_typename env i
+    | Type_app i _ _ -> size_and_alignment_of_typename env i
     | Pointer _ -> Variable, Some 8
 
 let size_of_typ (env:env_t) (t:typ)
@@ -134,7 +134,7 @@ let rec value_of_const_expr (env:env_t) (e:expr)
   | App SizeOf [{v=Identifier t}] ->
     begin
     try
-      match size_of_typ env (with_range (Type_app t []) t.range) with
+      match size_of_typ env (with_range (Type_app t false []) t.range) with
       | Fixed n
       | WithVariableSuffix n -> Some (Inr (UInt32, n))
       | _ -> None
@@ -390,6 +390,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       );
       extend_with_size_of_typedef_names env names size alignment;
       d
+    | OutputType _ -> d
 
 let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
   let env =
