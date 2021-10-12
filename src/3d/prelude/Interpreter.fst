@@ -17,9 +17,10 @@
 *)
 module Interpreter
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 module LPL = EverParse3d.InputBuffer
 module B = LowStar.Buffer
-module A = Actions
+module A = EverParse3d.Actions.All
 module P = Prelude
 module ProjTac = Proj
 #push-options "--__temp_no_proj Interpreter" //we'll generate the projectors we need with a tactic
@@ -318,31 +319,31 @@ type global_binding = {
 
 //Generate projectors with a tactic, because the default
 //projectors are not SMT-typeable
-%splice[] (ProjTac.mk_projs (`%global_binding))
-
-let name_of_binding = proj_0
-[@@specialize]
-let param_types_of_binding = proj_1
-[@@specialize]
-let nz_of_binding = proj_2
-[@@specialize]
-let wk_of_binding = proj_3
-[@@specialize]
-let pk_of_binding = proj_4
-[@@specialize]
-let inv_of_binding = proj_5
-[@@specialize]
-let loc_of_binding = proj_6
-[@@specialize]
-let ar_of_binding = proj_7
-[@@specialize]
-let type_of_binding = proj_8
-[@@specialize]
-let parser_of_binding = proj_9
-[@@specialize]
-let validator_of_binding = proj_10
-[@@specialize]
-let leaf_reader_of_binding = proj_11
+%splice[name_of_binding;
+        param_types_of_binding;
+        nz_of_binding;
+        wk_of_binding;
+        pk_of_binding;
+        inv_of_binding;
+        loc_of_binding;
+        ar_of_binding;
+        type_of_binding;
+        parser_of_binding;
+        validator_of_binding;
+        leaf_reader_of_binding]
+       (ProjTac.mk_projs (`%global_binding)
+                         ["name_of_binding";
+                          "param_types_of_binding";
+                          "nz_of_binding";
+                          "wk_of_binding";
+                          "pk_of_binding";
+                          "inv_of_binding";
+                          "loc_of_binding";
+                          "ar_of_binding";
+                          "type_of_binding";
+                          "parser_of_binding";
+                          "validator_of_binding";
+                          "leaf_reader_of_binding"])
 
 [@@specialize]
 let has_reader (g:global_binding) = 
@@ -350,11 +351,14 @@ let has_reader (g:global_binding) =
   | Some _ -> true
   | _ -> false
 let reader_binding = g:global_binding { has_reader g }
+
 [@@specialize]
 let get_leaf_reader (r:reader_binding) (args:args_of (param_types_of_binding r)) 
   : leaf_reader (apply_dep_arrow _ _ (parser_of_binding r) args)
-  = apply_dep_arrow _ _ (Some?.v (leaf_reader_of_binding r)) args
-  
+  = apply_dep_arrow _ _ 
+                    (Some?.v (leaf_reader_of_binding r))
+                    args
+
 (** Now we define the AST of 3D programs *)
 
 (* The type of atomic actions.
@@ -390,10 +394,10 @@ type atomic_action
       atomic_action A.true_inv A.eloc_none false bool
 
   | Action_field_pos:
-      atomic_action A.true_inv A.eloc_none false U32.t
+      atomic_action A.true_inv A.eloc_none false U64.t
 
   | Action_field_ptr:
-      atomic_action A.true_inv A.eloc_none true LPL.puint8
+      atomic_action A.true_inv A.eloc_none true A.___PUINT8
 
   | Action_deref:
       #a:Type0 ->
@@ -958,17 +962,18 @@ let norm_steps =
   [zeta; primops; iota; delta_attr [`%specialize];
             delta_only [`%Some?;
                         `%Some?.v;
-                        `%proj_1;
-                        `%proj_2;
-                        `%proj_3;
-                        `%proj_4;
-                        `%proj_5;
-                        `%proj_6;
-                        `%proj_7;
-                        `%proj_8;
-                        `%proj_9;
-                        `%proj_10;
-                        `%proj_11]]
+                        `%name_of_binding;
+                        `%param_types_of_binding;
+                        `%nz_of_binding;
+                        `%wk_of_binding;
+                        `%pk_of_binding;
+                        `%inv_of_binding;
+                        `%loc_of_binding;
+                        `%ar_of_binding;
+                        `%type_of_binding;
+                        `%parser_of_binding;
+                        `%validator_of_binding;
+                        `%leaf_reader_of_binding]]
 
 [@@specialize]
 let coerce_norm (#a:Type) (t:a) : norm norm_steps a = t
@@ -999,17 +1004,18 @@ let specialize_tac ()
             delta_only [`%Some?;
                         `%Some?.v;
                         `%as_validator;
-                        `%proj_1;
-                        `%proj_2;
-                        `%proj_3;
-                        `%proj_4;
-                        `%proj_5;
-                        `%proj_6;
-                        `%proj_7;
-                        `%proj_8;
-                        `%proj_9;
-                        `%proj_10;
-                        `%proj_11]];
+                        `%name_of_binding;
+                        `%param_types_of_binding;
+                        `%nz_of_binding;
+                        `%wk_of_binding;
+                        `%pk_of_binding;
+                        `%inv_of_binding;
+                        `%loc_of_binding;
+                        `%ar_of_binding;
+                        `%type_of_binding;
+                        `%parser_of_binding;
+                        `%validator_of_binding;
+                        `%leaf_reader_of_binding]];
     T.trefl()
 
 [@@specialize]
@@ -1020,7 +1026,6 @@ let u8_pair
   : typ _ _ _ _
   = T_pair (T_denoted u8_dtyp) (T_denoted u8_dtyp)
 
-#push-options "--query_stats --debug Interpreter --log_queries --print_implicits"
 [@@T.postprocess_with specialize_tac]
 let validate_u8_pair
   = as_val u8_pair
@@ -1197,10 +1202,10 @@ let u8_rect
   : typ u8_rect_kind _ _ _ 
   = T_pair u8_line u8_line
 
-let specialize_nbe_tac ()
-  : T.Tac unit
-  = T.norm [nbe; zeta; iota; delta_attr [`%specialize]; delta_only [`%List.Tot.tryFind; `%proj_1; `%proj_10]];
-    T.trefl()
+// let specialize_nbe_tac ()
+//   : T.Tac unit
+//   = T.norm [nbe; zeta; iota; delta_attr [`%specialize]; delta_only [`%List.Tot.tryFind; `%proj_1; `%proj_10]];
+//     T.trefl()
 
 [@@T.postprocess_with specialize_tac]
 let validate_u8_rect
@@ -1229,11 +1234,11 @@ let u8_rect2_eloc = eloc_of (u8_rect2_raw)
 let u8_rect2
   : typ u8_rect2_kind u8_rect2_inv u8_rect2_eloc _
   = u8_rect2_raw
-//#push-options "--debug Interpreter --debug_level EraseErasableArgs"
-//[@@T.postprocess_with specialize_tac]
+#push-options "--debug Interpreter --debug_level EraseErasableArgs"
+
+[@@T.postprocess_with specialize_tac]
 let validate_u8_rect2
   = as_validator u8_rect2
-#push-options "--print_implicits"
 
 (* But there are still huge implicit terms in there
    If you #push-options "--print_implicits"

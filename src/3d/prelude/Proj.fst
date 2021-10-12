@@ -7,7 +7,7 @@ let mkproj (unf:list string) (np:nat) (i:nat) : Tac unit =
   let _ = ignore (repeatn (np+1) intro) in
   let b = nth_binder (-1) in
   let r = t_destruct b in
-  dump "GGG";
+  // dump "GGG";
   // FIXME: if this is just t_destrcut (nth_binder (-1)), this tactic
   // fails when loaded from another file... ????
   match r with
@@ -15,11 +15,11 @@ let mkproj (unf:list string) (np:nat) (i:nat) : Tac unit =
     if (i >= arity) then
       fail "bad index";
     let bs = repeatn (arity+1) (fun () -> intro ()) in
-    dump "1";
+    // dump "1";
     rewrite (nth_binder (-1));
-    dump "2";
+    // dump "2";
     norm [iota; delta_only unf];
-    dump "3";
+    // dump "3";
     match List.Tot.nth bs i with
     | None -> fail "impossible, but I should be able to prove it"
     | Some b -> exact b
@@ -30,9 +30,9 @@ let mkproj (unf:list string) (np:nat) (i:nat) : Tac unit =
 exception NotFound
 
 let subst_map (ss : list (bv * fv)) (r:term) (t : term) : Tac term =
-  dump ("before = " ^ term_to_string t);
+  // dump ("before = " ^ term_to_string t);
   let t = fold_left (fun t (x, fv) -> subst x (mk_e_app (Tv_FVar fv) [r]) t) t ss in
-  dump ("after  = " ^ term_to_string t);
+  // dump ("after  = " ^ term_to_string t);
   t
 
 let rec embed_list_string (e : list string) : Tac term =
@@ -41,7 +41,7 @@ let rec embed_list_string (e : list string) : Tac term =
   | s::ss ->
     (`(`#(Tv_Const (C_String s))) :: (`#(embed_list_string ss)))
 
-let mk_proj_decl (tyqn:name) ctorname univs indices (params:list binder) (idx:nat) (fieldty : typ)
+let mk_proj_decl proj_name (tyqn:name) ctorname univs indices (params:list binder) (idx:nat) (fieldty : typ)
                  (unfold_names : list string)
                  (smap : list (bv & fv))
 : Tac (sigelt & fv)
@@ -49,7 +49,7 @@ let mk_proj_decl (tyqn:name) ctorname univs indices (params:list binder) (idx:na
   let np = List.Tot.length params in
   let ni = List.Tot.length indices in
   let tyfv = pack_fv tyqn in
-  let fv = pack_fv (cur_module () @ ["proj_" ^ string_of_int idx]) in
+  let fv = pack_fv (cur_module () @ [proj_name]) in
   let rty : binder = fresh_binder (mk_e_app (pack (Tv_FVar tyfv))
                                    (map binder_to_term (params @ indices)))
   in
@@ -68,10 +68,17 @@ let mk_proj_decl (tyqn:name) ctorname univs indices (params:list binder) (idx:na
     : sigelt_view
     = Sg_Let false [lb]
   in
-  dump ("returning : " ^ term_to_string (quote sv));
+  // dump ("returning : " ^ term_to_string (quote sv));
   (pack_sigelt sv, fv)
 
-let mk_projs (tyname:string) : Tac decls =
+#push-options "--fuel 2"
+let rec zip #a #b (x:list a) (y:list b { length x == length y })
+  : list (a & b)
+  = match x, y with
+    | [], [] -> []
+    | x::xs, y::ys -> (x,y) :: zip xs ys
+
+let mk_projs (tyname:string) (proj_names:list string) : Tac decls =
   let tyqn = explode_qn tyname in
   match lookup_typ (top_env ()) tyqn with
   | None ->
@@ -84,33 +91,37 @@ let mk_projs (tyname:string) : Tac decls =
       let indices = fst (collect_arr_bs typ) in
       let [ctor] = ctors in
       let (fields, _) = collect_arr_bs (snd ctor) in
+      if (List.Tot.length proj_names <> List.Tot.length fields)
+      then fail "Not enough record names";
+      let field_projectors = zip fields proj_names in
       let (decls, _, _, _) =
-        fold_left (fun (decls, smap, unfold_names, idx) field ->
-                     let (d, fv) = mk_proj_decl tyqn ctorname univs indices params idx (type_of_binder field) unfold_names smap in
+        fold_left (fun (decls, smap, unfold_names, idx) (field, proj_name) ->
+                     let (d, fv) = mk_proj_decl proj_name tyqn ctorname univs indices params idx (type_of_binder field) unfold_names smap in
                      (d::decls,
                       (bv_of_binder field,fv)::smap,
                       (implode_qn (inspect_fv fv))::unfold_names,
                       idx+1))
                   ([], [], [], 0)
-                  fields
+                  field_projectors
       in
       List.Tot.rev decls
     | _ ->
       fail "not an inductive"
+#pop-options
 
-#set-options "--__temp_no_proj Proj"
+// #set-options "--__temp_no_proj Proj"
 
-noeq
-type monad (rr : Type) (m:Type0 -> Type0) : Type = {
-  ret    : #a:_ -> a -> m a;
-  bind   : #a:_ -> #b:_ -> m a -> (a -> m b) -> m b;
-  assoc  : #a:_ -> #b:_ -> #c:_ -> x:m a -> f:(a -> m b) -> g:(b -> m c) ->
-                         squash (bind (bind x f) g == bind x (fun y -> bind (f y) g));
-  id1    : #a:_ -> #b:_ -> x:a -> f:(a -> m b) ->
-           squash (bind (ret x) f == f x);
-  id2    : #a:_ -> c:m a ->
-           squash (bind c ret == c);
-}
+// noeq
+// type monad (rr : Type) (m:Type0 -> Type0) : Type = {
+//   ret    : #a:_ -> a -> m a;
+//   bind   : #a:_ -> #b:_ -> m a -> (a -> m b) -> m b;
+//   assoc  : #a:_ -> #b:_ -> #c:_ -> x:m a -> f:(a -> m b) -> g:(b -> m c) ->
+//                          squash (bind (bind x f) g == bind x (fun y -> bind (f y) g));
+//   id1    : #a:_ -> #b:_ -> x:a -> f:(a -> m b) ->
+//            squash (bind (ret x) f == f x);
+//   id2    : #a:_ -> c:m a ->
+//            squash (bind c ret == c);
+// }
 
 // #set-options (* Look mom, *)"--no_smt" (* ! *)
 

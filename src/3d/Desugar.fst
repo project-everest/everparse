@@ -25,6 +25,9 @@ module H = Hashtable
    * Desugar enums with newly defined idents and explicit constant
      assignments to enums where all the tags are previously defined
      constants.
+
+   * Resolve module-qualified names, including the use of module 
+     abbreviations
 *)
 
 let check_desugared_enum_cases (cases:list enum_case) : ML (list ident) =

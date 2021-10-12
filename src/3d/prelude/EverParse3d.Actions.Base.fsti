@@ -41,12 +41,14 @@ let liveness_inv = i:hinv {
   forall h0 h1. {:pattern (i h1); (h1 `extends` h0)}  i h0 /\ h1 `extends` h0 ==> i h1
 }
 let mem_inv  = liveness_inv
+[@@erasable]
 let slice_inv = loc -> mem_inv
 let inv_implies (inv0 inv1:slice_inv) =
   forall i h.
     inv0 i h ==> inv1 i h
 let true_inv : slice_inv = fun _ _ -> True
 let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h
+[@@erasable]
 let eloc = FStar.Ghost.erased B.loc
 let eloc_union (l1 l2:eloc) : Tot eloc = B.loc_union l1 l2
 let eloc_none : eloc = B.loc_none
