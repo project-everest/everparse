@@ -23,14 +23,29 @@ noeq
 type env = {
   binding_env : Binding.global_env;
   typesizes_env : TypeSizes.size_env;
-  translate_env : Translate.translate_env
+  translate_env : either Translate.translate_env TranslateForInterpreter.translate_env
 }
 
 let initial_env () : ML env = {
   binding_env = Binding.initial_global_env ();
   typesizes_env = TypeSizes.initial_senv ();
-  translate_env = Translate.initial_translate_env ();
+  translate_env = 
+    if Options.get_interpret()
+    then Inr (TranslateForInterpreter.initial_translate_env())
+    else Inl (Translate.initial_translate_env ());
 }
+
+let left (x:either 'a 'b)
+  : ML 'a
+  = match x with
+    | Inl x -> x
+    | _ -> failwith "Expected left"
+
+let right (x:either 'a 'b)
+  : ML 'b
+  = match x with
+    | Inr x -> x
+    | _ -> failwith "Expected right"
 
 let translate_module (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
@@ -90,21 +105,31 @@ let translate_module (en:env) (mname:string) (fn:string)
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
   
-  let t_decls, tenv = Translate.translate_decls benv senv en.translate_env decls in
+  let t_decls, tenv = 
+    if Options.get_interpret()
+    then
+      let decls, env =
+        TranslateForInterpreter.translate_decls benv senv (right en.translate_env) decls
+      in
+      decls, Inr env
+    else
+      let decls, env = 
+        Translate.translate_decls benv senv (left en.translate_env) decls
+      in
+      decls, Inl env
+  in
 
-   decls,
-   t_decls,
-   static_asserts,
-   { binding_env = benv;
-     typesizes_env = senv;
-     translate_env = tenv }
+  decls,
+  t_decls,
+  static_asserts,
+  { binding_env = benv;
+    typesizes_env = senv;
+    translate_env = tenv }
 
 let has_out_exprs (t_decls:list Target.decl) : bool =
   List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
 
 let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
-  (static_asserts:StaticAssertions.static_asserts)
-  (emit_output_types_defs:bool)
   : ML unit =
 
   let types_fst_file =
@@ -140,8 +165,33 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
         (Options.get_output_dir())
         modul) in
   FStar.IO.write_string fsti_file (Target.print_decls_signature modul t_decls);
-  FStar.IO.close_write_file fsti_file;
+  FStar.IO.close_write_file fsti_file
 
+let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target.decl)
+  : ML unit
+  = let tds = InterpreterTarget.translate_decls t_decls in
+    let types_fst_file =
+      open_write_file
+        (Printf.sprintf "%s/%s.Types.fst"
+          (Options.get_output_dir ())
+          modul) in
+    FStar.IO.write_string types_fst_file (FStar.Printf.sprintf "module %s\nopen Interpreter\n" modul);          
+    FStar.IO.write_string types_fst_file (InterpreterTarget.print_type_decls modul tds);
+    FStar.IO.close_write_file types_fst_file;
+
+    let fst_file =
+      open_write_file
+        (Printf.sprintf "%s/%s.fst"
+          (Options.get_output_dir())
+          modul) in
+    FStar.IO.write_string fst_file (FStar.Printf.sprintf "module %s\nopen Interpreter\nmodule T = FStar.Tactics\n" modul);
+    FStar.IO.write_string fst_file (InterpreterTarget.print_validators modul tds);
+    FStar.IO.close_write_file fst_file
+
+let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
+                    (static_asserts:StaticAssertions.static_asserts)
+                    (emit_output_types_defs:bool)
+  : ML unit =
   //print wrapper only if there is an entrypoint
   if List.tryFind (fun (d, _) ->
     let open Target in
@@ -167,7 +217,7 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.write_string h_file wrapper_header;
     FStar.IO.close_write_file h_file
   end;
-
+  let has_out_exprs = has_out_exprs t_decls in
   if has_out_exprs && emit_output_types_defs
   then begin
     let output_types_defs_file = open_write_file
@@ -201,15 +251,25 @@ let process_file (en:env) (fn:string) (modul:string) (emit_fstar:bool) (emit_out
   : ML env =
   
   let _decls, t_decls, static_asserts, en =
-    translate_module en modul fn in
-  if emit_fstar then emit_fstar_code en modul t_decls static_asserts emit_output_types_defs
+      translate_module en modul fn
+  in
+  if emit_fstar 
+  then (
+    if Options.get_interpret()
+    then emit_fstar_code_for_interpreter en modul t_decls
+    else emit_fstar_code en modul t_decls;
+    emit_entrypoint en modul t_decls static_asserts emit_output_types_defs
+  )
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
 
   let ds = Binding.get_exported_decls en.binding_env modul in
   
   { binding_env = Binding.finish_module en.binding_env modul ds;
     typesizes_env = TypeSizes.finish_module en.typesizes_env modul ds;
-    translate_env = Translate.finish_module en.translate_env modul ds }
+    translate_env = 
+      if Options.get_interpret()
+      then en.translate_env
+      else Inl (Translate.finish_module (left en.translate_env) modul ds) }
 
 let process_files (files_and_modules:list (string & string)) (emit_fstar:string -> ML bool)
   (emit_output_types_defs:bool)

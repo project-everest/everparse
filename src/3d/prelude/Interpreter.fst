@@ -282,6 +282,7 @@ let leaf_reader #nz #wk (#k: P.parser_kind nz wk) #t (p:P.parser k t)
 
 (* Now, we can define the type of an environment *)
 module T = FStar.Tactics
+
 (* global_binding: A single entry in the environment *)
 noeq
 type global_binding = {
@@ -676,6 +677,28 @@ type typ
           (A.eloc_union l1 l2)
           false
 
+  | T_dep_pair_with_refinement_and_action:
+      //This construct serves two purposes
+      // 1. To avoid double fetches, we fold the refinement
+      //    and dependent pair and action into a single form
+      // 2. This allows the well-typedness of the continuation k
+      //    to depend on the refinement of the first field
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #i1:_ -> #l1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #i2:_ -> #l2:_ -> #b2:_ ->
+      #i3:_ -> #l3:_ -> #b3:_ ->      
+      //the first component is a pre-denoted type with a reader
+      base:dtyp pk1 true i1 l1 true ->
+      //the second component is a function from denotations of base
+      refinement:(dtyp_as_type base -> bool) ->
+      k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 l2 b2) ->
+      act:(dtyp_as_type base -> action i3 l3 b3 bool) ->
+      typ (P.and_then_kind (P.filter_kind pk1) pk2)
+          (A.conj_inv i1 (A.conj_inv i3 i2))
+          (A.eloc_union l1 (A.eloc_union l3 l2))
+          false
+
   | T_if_else:
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #l1:_ -> #i1:_ -> #b1:_ ->
@@ -760,6 +783,9 @@ let rec as_type
     | T_dep_pair_with_refinement base refinement t ->
       x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
 
+    | T_dep_pair_with_refinement_and_action base refinement t _ ->
+      x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
+
     | T_if_else b t0 t1 ->
       Prelude.t_ite b (as_type t0) (as_type t1)
 
@@ -814,6 +840,9 @@ let rec as_parser
       P.parse_filter pi refinement
 
     | T_dep_pair_with_refinement base refinement k ->
+      P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
+
+    | T_dep_pair_with_refinement_and_action base refinement k _ ->
       P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
 
     | T_if_else b t0 t1 ->
@@ -903,6 +932,19 @@ let rec as_validator
           (dtyp_as_validator base)
           (dtyp_as_leaf_reader base)
           refinement
+          (fun x -> as_validator (k x)))
+
+    | T_dep_pair_with_refinement_and_action base refinement k act ->
+      assert_norm (as_type (T_dep_pair_with_refinement_and_action base refinement k act) ==
+                        x:Prelude.refine (dtyp_as_type base) refinement & as_type (k x));
+      assert_norm (as_parser (T_dep_pair_with_refinement_and_action base refinement k act) ==
+                        P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
+      A.validate_weaken_inv_loc inv loc (
+        A.validate_dep_pair_with_refinement_and_action false ""
+          (dtyp_as_validator base)
+          (dtyp_as_leaf_reader base)
+          refinement
+          (fun x -> action_as_action (dtyp_as_parser base) (act x))
           (fun x -> as_validator (k x)))
 
     | T_if_else b t0 t1 ->
