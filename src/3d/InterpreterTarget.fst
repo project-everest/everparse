@@ -117,8 +117,8 @@ type typ : Type =
       terminator:expr ->
       typ
 
-let type_decl = A.ident & typ
-
+let type_decl = T.typedef_name & typ
+let decl = either T.decl type_decl
 
 let dtyp_of_app (hd:A.ident) (args:list T.index)
   : ML dtyp
@@ -136,7 +136,11 @@ let dtyp_of_app (hd:A.ident) (args:list T.index)
       DT_IType UInt64
 
     | _ ->
-      failwith (Printf.sprintf "Not yet handled: <%s>" hd.v.name)
+      DT_App hd
+        (List.map
+          (function Inl _ -> failwith "Unexpected type application"
+                  | Inr e -> e)
+          args)
 
 let tag_of_parser p
   = let open T in
@@ -174,13 +178,21 @@ let as_lam (x:T.lam 'a)
 
 let rec typ_of_parser (p:T.parser)
   : ML typ
-  = let dtyp_of_parser (p:T.parser)
+  = let rec dtyp_of_parser (p:T.parser)
       : ML dtyp
       = match p.p_parser with
         | T.Parse_app hd args ->
           dtyp_of_app hd args
+
+        | T.Parse_weaken_left p _
+        | T.Parse_weaken_right p _
+        | T.Parse_with_comment p _ ->
+          dtyp_of_parser p
+
         | _ ->
-          failwith "Expected a named type"
+          failwith
+            (Printf.sprintf "Expected a named type, got %s"
+              (T.print_parser "" p))
     in
     match p.p_parser with
     | T.Parse_impos ->
@@ -245,19 +257,22 @@ let rec typ_of_parser (p:T.parser)
     | T.Parse_refinement_with_action _ _ _ _ ->
       failwith "Not yet implemented"
 
-    | T.Parse_weaken_left _ _
-    | T.Parse_weaken_right _ _
+    | T.Parse_weaken_left p _
+    | T.Parse_weaken_right p _ ->
+      typ_of_parser p
+
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
 
 let translate_decls (ds:T.decls)
-  : ML (list type_decl)
-  = List.collect
+  : ML (list decl)
+  = List.map
       (function
         | (T.Type_decl td, _) ->
-          [td.decl_name.td_name, typ_of_parser td.decl_parser]
-        | _ ->
-          [])
+          Inr (td.decl_name, typ_of_parser td.decl_parser)
+
+        | d ->
+          Inl d)
       ds
 
 let print_ityp (i:itype) =
@@ -364,24 +379,39 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname d)
                      (T.print_expr mname z)
 
+let print_param mname (p:T.param) =
+  Printf.sprintf "(%s:%s)"
+    (fst p).v.name
+    (T.print_typ mname (snd p))
+
+let print_typedef_name mname (n:T.typedef_name) =
+  Printf.sprintf "%s %s"
+    (n.td_name.v.name)
+    (List.map (print_param mname) n.td_params |> String.concat " ")
+
 let print_type_decl mname (td:type_decl) =
   FStar.Printf.sprintf
-    "[@@specialize]\n
+    "[@@specialize]\n\
      let %s = %s\n"
-      (fst td).v.name
+      (print_typedef_name mname (fst td))
       (print_typ mname (snd td))
 
-let print_type_decls mname tds =
-  List.map (print_type_decl mname) tds |>
+let print_decl mname d =
+  match d with
+  | Inl d -> T.print_decls mname [d]
+  | Inr td -> print_type_decl mname td
+
+let print_decls mname tds =
+  List.map (print_decl mname) tds |>
   String.concat "\n\n"
 
 let print_validator (td:type_decl) =
   FStar.Printf.sprintf
-    "[@@T.postprocess_for_extraction_with specialize_tac]\n
+    "[@@T.postprocess_for_extraction_with specialize_tac]\n\
      let validate_%s = as_validator %s\n"
-      (fst td).v.name
-      (fst td).v.name
+      (fst td).td_name.v.name
+      (fst td).td_name.v.name
 
 let print_validators mname tds =
-  List.map print_validator tds |>
+  List.collect (function Inl _ -> [] | Inr x -> [print_validator x]) tds |>
   String.concat "\n\n"

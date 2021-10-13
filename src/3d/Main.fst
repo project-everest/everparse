@@ -176,7 +176,7 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target
           (Options.get_output_dir ())
           modul) in
     FStar.IO.write_string types_fst_file (FStar.Printf.sprintf "module %s\nopen Interpreter\n" modul);          
-    FStar.IO.write_string types_fst_file (InterpreterTarget.print_type_decls modul tds);
+    FStar.IO.write_string types_fst_file (InterpreterTarget.print_decls modul tds);
     FStar.IO.close_write_file types_fst_file;
 
     let fst_file =
@@ -186,7 +186,15 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target
           modul) in
     FStar.IO.write_string fst_file (FStar.Printf.sprintf "module %s\nopen Interpreter\nmodule T = FStar.Tactics\n" modul);
     FStar.IO.write_string fst_file (InterpreterTarget.print_validators modul tds);
-    FStar.IO.close_write_file fst_file
+    FStar.IO.close_write_file fst_file;
+
+    let fsti_file =
+      open_write_file
+        (Printf.sprintf "%s/%s.fsti"
+          (Options.get_output_dir())
+          modul) in
+    FStar.IO.write_string fsti_file (FStar.Printf.sprintf "module %s\n" modul);
+    FStar.IO.close_write_file fsti_file
 
 let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
                     (static_asserts:StaticAssertions.static_asserts)

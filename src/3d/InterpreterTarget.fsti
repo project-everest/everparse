@@ -20,13 +20,13 @@ module A = Ast
 module T = Target
 open Binding
 
-val type_decl : Type0
+val decl : Type0
 
 val translate_decls (ds:T.decls)
-  : ML (list type_decl)
+  : ML (list decl)
 
-val print_type_decls (mname:string) (ds:list type_decl)
+val print_decls (mname:string) (ds:list decl)
   : ML string
 
-val print_validators (mname:string) (ds:list type_decl)
+val print_validators (mname:string) (ds:list decl)
   : ML string
