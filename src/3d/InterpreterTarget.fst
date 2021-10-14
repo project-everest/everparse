@@ -1,5 +1,5 @@
 (*
-   Copyright 2019 Microsoft Research
+   Copyright 2021 Microsoft Research
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -117,7 +117,39 @@ type typ : Type =
       terminator:expr ->
       typ
 
-let type_decl = T.typedef_name & typ & T.parser_kind
+noeq
+type inv =
+  | Inv_true : inv
+  | Inv_conj : inv -> inv -> inv
+  | Inv_ptr  : A.ident -> inv
+  | Inv_name : A.ident -> list expr -> inv
+
+noeq
+type eloc =
+  | Eloc_none  : eloc
+  | Eloc_union : eloc -> eloc -> eloc
+  | Eloc_ptr   : A.ident -> eloc
+  | Eloc_name  : A.ident -> list expr -> eloc
+
+noeq
+type on_success =
+  | On_success : bool -> on_success
+  | On_success_named : A.ident -> list expr -> on_success
+  | On_success_union : on_success -> on_success -> on_success
+
+let inv_eloc = inv & eloc & on_success
+let inv_eloc_nil = Inv_true, Eloc_none, On_success false
+let inv_eloc_union (i, e, b) (i', e', b') = Inv_conj i i', Eloc_union e e', On_success_union b b'
+let inv_eloc_name hd args = Inv_name hd args, Eloc_name hd args, On_success_named hd args
+
+noeq
+type type_decl = {
+  name : T.typedef_name;
+  typ : typ;
+  kind : T.parser_kind;
+  inv_eloc : inv_eloc
+}
+
 let decl = either T.decl type_decl
 
 let itype_of_ident (hd:A.ident)
@@ -175,6 +207,103 @@ let as_lam (x:T.lam 'a)
       | Some i -> i
     in
     i, snd x
+
+let rec inv_eloc_of_action (a:T.action)
+  : ML inv_eloc
+  = let open T in
+    let of_atomic_action (a:T.atomic_action)
+      : ML inv_eloc
+      = match a with
+        | Action_return _
+        | Action_abort
+        | Action_field_pos -> inv_eloc_nil
+        | Action_field_ptr -> Inv_true, Eloc_none, On_success true
+        | Action_deref x -> Inv_ptr x, Eloc_none, On_success false
+        | Action_assignment x _ -> Inv_ptr x, Eloc_ptr x, On_success false
+        | Action_call _ _ -> failwith "Not yet handled (Action_call)"
+    in
+    match a with
+    | Atomic_action aa -> of_atomic_action aa
+    | Action_seq hd tl
+    | Action_let _ hd tl ->
+      inv_eloc_union (of_atomic_action hd) (inv_eloc_of_action tl)
+    | Action_ite _ a0 a1 ->
+      inv_eloc_union (inv_eloc_of_action a0) (inv_eloc_of_action a1)
+
+let rec inv_eloc_of_parser (p:T.parser)
+  : ML inv_eloc
+  = match p.p_parser with
+    | T.Parse_impos ->
+      inv_eloc_nil
+
+    | T.Parse_app hd args ->
+      let dt = dtyp_of_app hd args in
+      begin
+      match dt with
+      | DT_IType _ ->
+        inv_eloc_nil
+      | DT_App hd args ->
+        inv_eloc_name hd args
+      end
+
+    | T.Parse_if_else _ p q
+    | T.Parse_pair _ p q
+    | T.Parse_dep_pair _ p (_, q)
+    | T.Parse_dep_pair_with_refinement _ p _ (_, q) ->
+      inv_eloc_union (inv_eloc_of_parser p) (inv_eloc_of_parser q)
+
+    | T.Parse_weaken_left p _
+    | T.Parse_weaken_right p _
+    | T.Parse_refinement _ p _
+    | T.Parse_with_comment p _
+    | T.Parse_nlist _ p
+    | T.Parse_t_at_most _ p
+    | T.Parse_t_exact _ p ->
+      inv_eloc_of_parser p
+
+    | T.Parse_dep_pair_with_action p (_, a) (_, q)
+    | T.Parse_dep_pair_with_refinement_and_action _ p _ (_, a) (_, q) ->
+      inv_eloc_union (inv_eloc_of_parser p)
+                     (inv_eloc_union (inv_eloc_of_action a) (inv_eloc_of_parser q))
+
+    | T.Parse_with_action _ p a
+    | T.Parse_with_dep_action _ p (_, a) ->
+      inv_eloc_union (inv_eloc_of_parser p) (inv_eloc_of_action a)
+
+    | T.Parse_string p _ ->
+      inv_eloc_nil
+
+    | T.Parse_refinement_with_action _ _ _ _ ->
+      failwith "Not yet implemented"
+
+    | T.Parse_map _ _
+    | T.Parse_return _ -> failwith "Unnecessary"
+open FStar.List.Tot
+
+let rec free_vars_of_expr (e:T.expr)
+  : ML (list A.ident)
+  = let open T in
+    match fst e with
+    | Constant _ -> []
+    | Identifier i -> [i]
+    | App _ args -> List.collect free_vars_of_expr args
+    | Record _ args -> List.collect (fun (_, e) -> free_vars_of_expr e) args
+
+let rec free_vars_of_inv (i:inv)
+  : ML (list A.ident)
+  = match i with
+    | Inv_true -> []
+    | Inv_conj i j -> free_vars_of_inv i @ free_vars_of_inv j
+    | Inv_ptr x -> [x]
+    | Inv_name _ args -> List.collect free_vars_of_expr args
+
+let rec free_vars_of_eloc (e:eloc)
+  : ML (list A.ident)
+  = match e with
+    | Eloc_none -> []
+    | Eloc_union i j -> free_vars_of_eloc i @ free_vars_of_eloc j
+    | Eloc_ptr x -> [x]
+    | Eloc_name _ args -> List.collect free_vars_of_expr args
 
 let rec typ_of_parser (p:T.parser)
   : ML typ
@@ -269,9 +398,10 @@ let translate_decls (ds:T.decls)
   = List.map
       (function
         | (T.Type_decl td, _) ->
-          Inr (td.decl_name,
-               typ_of_parser td.decl_parser,
-               td.decl_parser.p_kind)
+          Inr ({ name = td.decl_name;
+                 typ = typ_of_parser td.decl_parser;
+                 kind = td.decl_parser.p_kind;
+                 inv_eloc = inv_eloc_of_parser td.decl_parser })
 
         | d ->
           Inl d)
@@ -393,20 +523,37 @@ let print_typedef_name mname (n:T.typedef_name) =
     (List.map (print_param mname) n.td_params |> String.concat " ")
 
 let print_type_decl mname (td:type_decl) =
-  let name, typ, k = td in
   FStar.Printf.sprintf
     "[@@specialize]\n\
      let def_%s = %s\n"
-      (print_typedef_name mname name)
-      (print_typ mname typ)
+      (print_typedef_name mname td.name)
+      (print_typ mname td.typ)
 
-let print_validator (td:type_decl) =
-  let name, typ, k = td in
-  FStar.Printf.sprintf
-    "[@@T.postprocess_for_extraction_with specialize_tac]\n\
-     let validate_%s %s = as_validator (def_%s %s)\n"
-      name.td_name.v.name
-      name.td_name.v.name
+let print_args mname (es:list expr) =
+    List.map (T.print_expr mname) es |> String.concat " "
+
+let rec print_inv mname (i:inv)
+  : ML string
+  = match i with
+    | Inv_true -> "A.true_inv"
+    | Inv_conj i j -> Printf.sprintf "(A.conj_inv %s %s)" (print_inv mname i) (print_inv mname j)
+    | Inv_ptr x -> Printf.sprintf "(A.ptr_inv %s)" (print_ident mname x)
+    | Inv_name hd args -> Printf.sprintf "(inv_%s %s)" (print_ident mname hd) (print_args mname args)
+
+let rec print_eloc mname (e:eloc)
+  : ML string
+  = match e with
+    | Eloc_none -> "A.eloc_none"
+    | Eloc_union i j -> Printf.sprintf "(A.eloc_union %s %s)" (print_eloc mname i) (print_eloc mname j)
+    | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (print_ident mname x)
+    | Eloc_name hd args -> Printf.sprintf "(eloc_%s %s)" (print_ident mname hd) (print_args mname args)
+
+let rec print_on_sucess mname (b:on_success)
+  : ML string
+  = match b with
+    | On_success b -> Printf.sprintf "%b" b
+    | On_success_union b0 b1 -> Printf.sprintf "(%s || %s)" (print_on_sucess mname b0) (print_on_sucess mname b1)
+    | On_success_named hd args -> Printf.sprintf "(on_success_%s %s)" (print_ident mname hd) (print_args mname args)
 
 let rec print_param_type mname (t:T.typ)
   : ML string
@@ -428,7 +575,9 @@ let rec print_param_type mname (t:T.typ)
 
 let print_binding mname (td:type_decl)
   : ML string
-  = let tdn, typ, k = td in
+  = let tdn = td.name in
+    let typ = td.typ in
+    let k = td.kind in
     let root_name = print_ident mname tdn.td_name in
     let param_types_literal =
          List.map (fun (_, t) -> print_param_type mname t) tdn.td_params |>
@@ -439,14 +588,16 @@ let print_binding mname (td:type_decl)
           root_name
           param_types_literal
     in
-    let binders =
-        List.map (print_param mname) tdn.td_params |>
+    let print_binders binders =
+        List.map (print_param mname) binders |>
         String.concat " "
     in
-    let args =
-        List.map (fun (i, _) -> print_ident mname i) tdn.td_params |>
+    let print_args binders =
+        List.map (fun (i, _) -> print_ident mname i) binders |>
         String.concat " "
     in
+    let binders = print_binders tdn.td_params in
+    let args = print_args tdn.td_params in
     let arg_tuple =
         List.fold_right
           (fun (x, _) out -> Printf.sprintf "(%s, %s)" (print_ident mname x) out)
@@ -501,39 +652,51 @@ let print_binding mname (td:type_decl)
                         root_name
                         f
    in
-   let inv_of_binding =
-     let f =
-         match tdn.td_params with
-          | [] ->
-            Printf.sprintf "(inv_of def_%s)" root_name
-          | _ ->
-            Printf.sprintf "(fun %s -> inv_of (def_%s %s))"
-                           binders
-                           root_name
-                           args
+   let print_inv_or_eloc tag ty defn fvs
+     : ML string
+     =
+     let fv_binders =
+         List.filter
+           (fun (i, _) ->
+             Some? (List.tryFind (fun j -> A.ident_name i = A.ident_name j) fvs))
+           tdn.td_params
      in
-     Printf.sprintf "let inv_%s : arrow param_types_%s A.slice_inv \n\
-                         = coerce (_ by (T.trefl())) %s"
+     let fv_binders_string = print_binders fv_binders in
+     let fv_args_string = print_args fv_binders in
+     let f =
+         match fv_binders with
+          | [] ->
+            defn
+          | _ ->
+            Printf.sprintf "(fun %s -> %s)"
+                           fv_binders_string
+                           defn
+     in
+     let s0 = Printf.sprintf "let %s_%s = %s\n" tag root_name f in
+     let body =
+       let body =
+         Printf.sprintf "%s_%s %s" tag root_name fv_args_string
+       in
+       match tdn.td_params with
+       | [] -> body
+       | _ -> Printf.sprintf "(fun %s -> %s)" binders body
+     in
+     let s1 = Printf.sprintf "let %s_arrow_%s : arrow param_types_%s %s = coerce (_ by (T.trefl())) %s\n"
+                    tag
                     root_name
                     root_name
-                    f
+                    ty
+                    body
+     in
+     s0 ^ s1
    in
-   let eloc_of_binding =
-     let f =
-         match tdn.td_params with
-          | [] ->
-            Printf.sprintf "(eloc_of def_%s)" root_name
-          | _ ->
-            Printf.sprintf "(fun %s -> eloc_of (def_%s %s))"
-                           binders
-                           root_name
-                           args
-     in
-     Printf.sprintf "let eloc_%s : arrow param_types_%s A.eloc \n\
-                         = coerce (_ by (T.trefl())) %s"
-                    root_name
-                    root_name
-                    f
+   let inv_eloc_of_binding =
+     let inv, eloc, _ = td.inv_eloc in
+     let fvs1 = free_vars_of_inv inv in
+     let fvs2 = free_vars_of_eloc eloc in
+     let s0 = print_inv_or_eloc "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2) in
+     let s1 = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
+     s0 ^ s1
    in
    let validator_of_binding =
        Printf.sprintf "[@@specialize]let validator_%s \n\
@@ -541,8 +704,8 @@ let print_binding mname (td:type_decl)
                              (fun args ->\n\
                                A.validate_with_action_t \n\
                                  (apply_dep_arrow _ _ parser_%s args)\n\
-                                 (apply_arrow inv_%s args)\n\
-                                 (apply_arrow eloc_%s args)\n\
+                                 (apply_arrow inv_arrow_%s args)\n\
+                                 (apply_arrow eloc_arrow_%s args)\n\
                                  false)\n\
                           = coerce (_ by (T.trefl())) validate_%s\n"
                         root_name
@@ -555,24 +718,33 @@ let print_binding mname (td:type_decl)
    let binding =
      Printf.sprintf "[@@specialize]let binding_%s \n\
                       : global_binding \n\
-                      = mk_global_binding [%s]\n\
-                           inv_%s\n\
-                           eloc_%s\n\
+                      = mk_global_binding\n\
+                           param_types_%s\n\
+                           inv_arrow_%s\n\
+                           eloc_arrow_%s\n\
                            validator_%s\n\
                            None"
                       root_name
-                      param_types_literal
+                      root_name
                       root_name
                       root_name
                       root_name
    in
    let dtyp_of_binding =
-     Printf.sprintf "[@@specialize]let dtyp_%s %s = DT_App \"%s\" binding_%s %s\n"
-       root_name
-       binders
-       root_name
-       root_name
-       arg_tuple
+     Printf.sprintf "[@@specialize]\n\
+                     let dtyp_%s %s\n\
+                       : dtyp kind_%s false (inv_%s %s) (eloc_%s %s) false\n\
+                       = coerce (_ by (T.trefl())) (DT_App \"%s\" binding_%s (coerce (_ by (T.trefl())) %s))\n"
+                     root_name
+                     binders
+                     root_name
+                     root_name
+                     args
+                     root_name
+                     args
+                     root_name
+                     root_name
+                     arg_tuple
    in
    String.concat "\n"
      [validate_binding;
@@ -580,8 +752,7 @@ let print_binding mname (td:type_decl)
       type_of_binding;
       pk_of_binding;
       parser_of_binding;
-      inv_of_binding;
-      eloc_of_binding;
+      inv_eloc_of_binding;
       validator_of_binding;
       binding;
       dtyp_of_binding]
