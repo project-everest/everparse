@@ -5,7 +5,6 @@ module S = Steel.Memory
 module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
-module A = Steel.C.Array
 module AP = LowParse.Steel.ArrayPtr
 module SZ = Steel.C.StdInt.Base
 
@@ -27,7 +26,7 @@ val vp_hp
 val vp_sel
   (#base: Type)
   (x: t base)
-: Tot (SE.selector (A.array base byte) (vp_hp x))
+: Tot (SE.selector (AP.array base byte) (vp_hp x))
 
 [@SE.__steel_reduce__]
 let vp' 
@@ -36,7 +35,7 @@ let vp'
 : Tot SE.vprop'
 = {
   SE.hp = vp_hp x;
-  SE.t = A.array base byte;
+  SE.t = AP.array base byte;
   SE.sel = vp_sel x;
 }
 
@@ -68,7 +67,7 @@ val vp_or_null_hp
 val vp_or_null_sel
   (#base: Type)
   (x: t base)
-: Tot (SE.selector (option (A.array base byte)) (vp_or_null_hp x))
+: Tot (SE.selector (option (AP.array base byte)) (vp_or_null_hp x))
 
 [@SE.__steel_reduce__]
 let vp_or_null' 
@@ -77,7 +76,7 @@ let vp_or_null'
 : Tot SE.vprop'
 = {
   SE.hp = vp_or_null_hp x;
-  SE.t = option (A.array base byte);
+  SE.t = option (AP.array base byte);
   SE.sel = vp_or_null_sel x;
 }
 
@@ -169,7 +168,7 @@ val make
     (fun res -> vp_or_null res `SE.star` make_vprop_post x res)
     (fun h ->
 //      (h (AP.varrayptr x)).AP.perm == SP.full_perm /\
-      A.length (h (AP.varrayptr x)).AP.array == SZ.size_v len
+      AP.length (h (AP.varrayptr x)).AP.array == SZ.size_v len
     )
     (fun h res h' ->
       let s = h' (vp_or_null res) in
@@ -178,7 +177,7 @@ val make
       (g_is_null res == false ==> (
         Some? s /\
         (Some?.v s) == (h (AP.varrayptr x)).AP.array /\
-        A.length (Some?.v s) == SZ.size_v len
+        AP.length (Some?.v s) == SZ.size_v len
       ))
     )
 
@@ -192,8 +191,8 @@ val alloc
       match g_is_null res, h' (vp_or_null res) with
       | true, None -> True
       | false, Some a ->
-        A.length a == SZ.size_v len /\
-        A.freeable a
+        AP.length a == SZ.size_v len /\
+        AP.freeable a
       | _ -> False
     )
 
@@ -235,7 +234,7 @@ val len
     (fun _ -> True)
     (fun h len h' ->
       h (vp x) == h' (vp x) /\
-      A.length (h' (vp x)) == SZ.size_v len
+      AP.length (h' (vp x)) == SZ.size_v len
     )
 
 val split
@@ -245,12 +244,12 @@ val split
 : SE.Steel (AP.t base byte)
     (vp x)
     (fun res -> vp x `SE.star` AP.varrayptr res)
-    (fun h -> SZ.size_v len <= A.length (h (vp x)))
+    (fun h -> SZ.size_v len <= AP.length (h (vp x)))
     (fun h res h' ->
       let ar = (h' (AP.varrayptr res)).AP.array in
 //      (h' (AP.varrayptr res)).AP.perm == SP.full_perm /\
-      A.merge_into (h' (vp x)) ar (h (vp x)) /\
-      A.length ar == SZ.size_v len
+      AP.merge_into (h' (vp x)) ar (h (vp x)) /\
+      AP.length ar == SZ.size_v len
     )
 
 val merge
@@ -264,11 +263,11 @@ val merge
     (fun h ->
       let ar = (h (AP.varrayptr y)).AP.array in
 //      (h (AP.varrayptr y)).AP.perm == SP.full_perm /\
-      SZ.size_v len == A.length ar /\
-      A.adjacent (h (vp x)) ar
+      SZ.size_v len == AP.length ar /\
+      AP.adjacent (h (vp x)) ar
     )
     (fun h _ h' ->
-      A.merge_into (h (vp x)) (h (AP.varrayptr y)).AP.array (h' (vp x))
+      AP.merge_into (h (vp x)) (h (AP.varrayptr y)).AP.array (h' (vp x))
     )
 
 val free
@@ -277,5 +276,5 @@ val free
 : SE.Steel unit
     (vp x)
     (fun _ -> SE.emp)
-    (fun h -> A.freeable (h (vp x)))
+    (fun h -> AP.freeable (h (vp x)))
     (fun _ _ _ -> True)

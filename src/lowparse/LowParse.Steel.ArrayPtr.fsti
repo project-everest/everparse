@@ -36,7 +36,6 @@ open Steel.Memory
 open Steel.Effect
 open Steel.FractionalPermission
 open Steel.Effect.Atomic
-module A = Steel.C.Array
 module SZ = Steel.C.StdInt.Base
 
 val t (base: Type0) (t:Type u#0) : Type u#0
@@ -47,10 +46,27 @@ val g_is_null (#base #a: Type) (x: t base a) : Ghost bool
   (requires True)
   (ensures (fun y -> y == true <==> x == null base a))
 
+noextract
+val array
+  (base: Type0)
+  (t: Type0)
+: Tot Type0
+
+val len
+  (#base #t: Type0)
+  (x: array base t)
+: GTot SZ.size_t
+
+let length
+  (#base #t: Type0)
+  (x: array base t)
+: GTot nat
+= SZ.size_v (len x)
+
 [@@erasable]
 noeq type v (base: Type0) (t: Type u#0) = {
-  array: A.array base t; (* spatial permission range *)
-  contents: Seq.lseq t (A.length array); (* actual contents *)
+  array: array base t; (* spatial permission range *)
+  contents: Seq.lseq t (length array); (* actual contents *)
 //  perm: perm;                            (* temporal permission *)
 }
 
@@ -164,19 +180,38 @@ val is_null
 
 (* Splitting an array (inspired from Steel.Array) *)
 
+val adjacent
+  (#base #t: Type0)
+  (x1 x2: array base t)
+: Tot prop
+
+val merge
+  (#base #t: Type0)
+  (x1 x2: array base t)
+: Ghost (array base t)
+  (requires (adjacent x1 x2))
+  (ensures (fun y -> length y == length x1 + length x2))
+
+let merge_into
+  (#base #t: Type0)
+  (x1 x2 y: array base t)
+: Tot prop
+= adjacent x1 x2 /\
+  merge x1 x2 == y
+
 val join (#opened: _) (#base #a:Type) (al ar:t base a)
   : SteelGhost unit opened
           (varrayptr al `star` varrayptr ar)
           (fun _ -> varrayptr al)
           (fun h ->
-            A.adjacent (h (varrayptr al)).array (h (varrayptr ar)).array /\
+            adjacent (h (varrayptr al)).array (h (varrayptr ar)).array /\
 True //            (h (varrayptr al)).perm == (h (varrayptr ar)).perm
           )
           (fun h _ h' ->
             let cl = h (varrayptr al) in
             let cr = h (varrayptr ar) in
             let c' = h' (varrayptr al) in
-            A.merge_into cl.array cr.array c'.array /\
+            merge_into cl.array cr.array c'.array /\
 //            c'.perm == cl.perm /\
             c'.contents == cl.contents `Seq.append` cr.contents
           )
@@ -185,23 +220,28 @@ val split (#opened: _) (#base #a:Type) (x: t base a) (i:SZ.size_t)
   : SteelAtomicBase (t base a) false opened Unobservable
           (varrayptr x)
           (fun res -> varrayptr x `star` varrayptr res)
-          (fun h -> SZ.size_v i <= A.length (h (varrayptr x)).array)
+          (fun h -> SZ.size_v i <= length (h (varrayptr x)).array)
           (fun h res h' ->
             let s = h (varrayptr x) in
             let sl = h' (varrayptr x) in
             let sr = h' (varrayptr res) in
-            SZ.size_v i <= A.length s.array /\
-            A.merge_into sl.array sr.array s.array /\
+            SZ.size_v i <= length s.array /\
+            merge_into sl.array sr.array s.array /\
 //            sl.perm == s.perm /\
 //            sr.perm == s.perm /\
             sl.contents == Seq.slice s.contents 0 (SZ.size_v i) /\
-            A.length sl.array == SZ.size_v i /\
-            A.length sr.array == A.length s.array - SZ.size_v i /\
-            sr.contents == Seq.slice s.contents (SZ.size_v i) (A.length s.array) /\
+            length sl.array == SZ.size_v i /\
+            length sr.array == length s.array - SZ.size_v i /\
+            sr.contents == Seq.slice s.contents (SZ.size_v i) (length s.array) /\
             s.contents == sl.contents `Seq.append` sr.contents
           )
 
 val base_t (a: Type0) (n: SZ.size_t) : Tot Type0
+
+val freeable
+  (#base #t: Type0)
+  (x: array base t)
+: Tot prop
 
 val alloc (#a:Type) (x:a) (n:SZ.size_t)
   : Steel (t (base_t a n) a)
@@ -212,10 +252,10 @@ val alloc (#a:Type) (x:a) (n:SZ.size_t)
                match g_is_null r, h1 (varrayptr_or_null r) with
                | true, None -> True
                | false, Some s ->
-                 A.length s.array == SZ.size_v n /\
+                 length s.array == SZ.size_v n /\
                  s.contents == Seq.create (SZ.size_v n) x /\
 //                 s.perm == full_perm /\
-                 A.freeable s.array
+                 freeable s.array
                | _ -> False
              )
 
@@ -223,11 +263,11 @@ val index (#base: Type) (#a:Type) (r: t base a) (i: SZ.size_t)
   : Steel a
              (varrayptr r)
              (fun _ -> varrayptr r)
-             (requires fun h -> SZ.size_v i < A.length (h (varrayptr r)).array)
+             (requires fun h -> SZ.size_v i < length (h (varrayptr r)).array)
              (ensures fun h0 y h1 ->
                let s = h0 (varrayptr r) in
                h1 (varrayptr r) == s /\
-               SZ.size_v i < A.length s.array /\
+               SZ.size_v i < length s.array /\
                y == Seq.index s.contents (SZ.size_v i))
 
 val upd (#base: Type) (#a:Type) (r: t base a) (i:SZ.size_t) (x:a)
@@ -236,14 +276,14 @@ val upd (#base: Type) (#a:Type) (r: t base a) (i:SZ.size_t) (x:a)
              (fun _ -> varrayptr r)
              (requires fun h ->
 //               (h (varrayptr r)).perm == full_perm /\
-               SZ.size_v i < A.length (h (varrayptr r)).array
+               SZ.size_v i < length (h (varrayptr r)).array
              )
              (ensures fun h0 _ h1 ->
                let s = h0 (varrayptr r) in
                let s' = h1 (varrayptr r) in
                s'.array == s.array /\
 //               s'.perm == full_perm /\
-               SZ.size_v i < A.length s.array /\
+               SZ.size_v i < length s.array /\
                s'.contents == Seq.upd s.contents (SZ.size_v i) x)
 
 val free (#base: Type) (#a:Type) (r:t base a)
@@ -252,7 +292,7 @@ val free (#base: Type) (#a:Type) (r:t base a)
              (fun _ -> emp)
              (requires fun h ->
 //               (h (varrayptr r)).perm == full_perm /\
-               A.freeable (h (varrayptr r)).array
+               freeable (h (varrayptr r)).array
              )
              (ensures fun _ _ _ -> True)
 
@@ -297,6 +337,14 @@ val gather
 *)
 
 (* Entering and exiting the abstraction *)
+module A = Steel.C.Array
+
+val array_of
+  (#base #t: Type0)
+  (x: array base t)
+: Ghost (A.array base t)
+  (requires True)
+  (ensures (fun y -> A.length y == length x))
 
 val enter
 //  (#opened: _)
@@ -314,7 +362,7 @@ val enter
     )
     (fun h res h' ->
       let s = h' (varrayptr res) in
-      s.array == x /\
+      array_of s.array == x /\
 //      s.perm == p /\
       s.contents == h (A.varray x) // (A.varrayp x p)
     )
@@ -330,7 +378,7 @@ val exit
     (fun _ -> True)
     (fun h res h' ->
       let s = h (varrayptr x) in
-      res == s.array /\
+      res == array_of s.array /\
       h' (A.varray res) == s.contents
 //      fst res == s.array /\
 //      snd res == s.perm /\

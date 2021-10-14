@@ -7,7 +7,6 @@ module SP = Steel.FractionalPermission
 module S = Steel.Memory
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
-module A = Steel.C.Array
 module AP = LowParse.Steel.ArrayPtr
 
 let leaf_reader
@@ -42,7 +41,7 @@ let exact_serializer
     (AP.varrayptr dst)
     (fun _ -> AP.varrayptr dst)
     (requires (fun h ->
-      A.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x) /\
+      AP.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x) /\
 True //      (h (AP.varrayptr dst)).AP.perm == SP.full_perm
     ))
     (ensures (fun h _ h' ->
@@ -66,7 +65,7 @@ let write_exact
     (AP.varrayptr dst)
     (fun _ -> vparse p dst)
     (requires (fun h ->
-      A.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x) /\
+      AP.length (h (AP.varrayptr dst)).AP.array == Seq.length (serialize s x) /\
 True //      (h (AP.varrayptr dst)).AP.perm == SP.full_perm
     ))
     (ensures (fun h _ h' ->

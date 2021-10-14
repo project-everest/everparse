@@ -5,7 +5,6 @@ module S = Steel.Memory
 module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
-module A = Steel.C.Array
 module AP = LowParse.Steel.ArrayPtr
 
 (* For now, we only support parsers with ParserStrong or ParserConsumesAll subkind. *)
@@ -48,18 +47,18 @@ val is_byte_repr_injective
   (requires (is_byte_repr p x b1 /\ is_byte_repr p x b2))
   (ensures (b1 == b2))
 
-let array_prop (#base: Type) (k: parser_kind) (a: A.array base byte) : Tot prop =
-  let l = A.length a in
+let array_prop (#base: Type) (k: parser_kind) (a: AP.array base byte) : Tot prop =
+  let l = AP.length a in
   k.parser_kind_low <= l /\
   (Some? k.parser_kind_high ==> l <= Some?.v k.parser_kind_high)
 
 let array_t (base: Type) (k: parser_kind) : Tot Type =
-  (array: A.array base byte { array_prop k array })
+  (array: AP.array base byte { array_prop k array })
 
 [@@erasable]
 noeq
 type v (base: Type) (k: parser_kind) (t: Type) = {
-  array_perm : (A.array base byte); // & SP.perm);
+  array_perm : (AP.array base byte); // & SP.perm);
   contents : t;
   array_perm_prf: squash (array_prop k ((* fst *) array_perm));
 }
@@ -78,7 +77,7 @@ let adjacent
   (v1: v base k1 t1)
   (v2: v base k2 t2)
 : Tot prop
-= A.adjacent (array_of v1) (array_of v2) /\
+= AP.adjacent (array_of v1) (array_of v2) /\
   True //  perm_of v1 == perm_of v2
 
 let merge_into
@@ -89,7 +88,7 @@ let merge_into
   (v2: v base k2 t2)
   (v: v base k t)
 : Tot prop
-= A.merge_into (array_of v1) (array_of v2) (array_of v) /\
+= AP.merge_into (array_of v1) (array_of v2) (array_of v) /\
 True //  perm_of v1 == perm_of v /\
 //  perm_of v2 == perm_of v
 

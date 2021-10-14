@@ -7,7 +7,6 @@ include LowParse.Spec.Combinators
 module S = Steel.Memory
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
-module A = Steel.C.Array
 module AP = LowParse.Steel.ArrayPtr
 
 module SZ = Steel.C.StdInt.Base
@@ -91,7 +90,7 @@ let destruct_pair
   let res = peek_strong j1 a in
   SEA.reveal_star (vparse p1 a) (AP.varrayptr res);
   let c1 : Ghost.erased (v base k1 t1) = SEA.gget (vparse p1 a) in // FIXME: WHY WHY WHY is the type annotation needed?
-  parse_strong_prefix p1 (Seq.slice b.AP.contents 0 (A.length (array_of c1))) b.AP.contents;
+  parse_strong_prefix p1 (Seq.slice b.AP.contents 0 (AP.length (array_of c1))) b.AP.contents;
   intro_vparse p2 res;
   SEA.return res
 
@@ -135,12 +134,11 @@ let construct_pair
   AP.join a1 a2;
   let g : Ghost.erased (AP.v base byte) = SEA.gget (AP.varrayptr a1) in // FIXME: same here
   nondep_then_eq p1 p2 g.AP.contents;
-  Seq.lemma_append_inj g1.AP.contents g2.AP.contents (Seq.slice g.AP.contents 0 (A.length (array_of v1))) (Seq.slice g.AP.contents (A.length (array_of v1)) (Seq.length g.AP.contents));
+  Seq.lemma_append_inj g1.AP.contents g2.AP.contents (Seq.slice g.AP.contents 0 (AP.length (array_of v1))) (Seq.slice g.AP.contents (AP.length (array_of v1)) (Seq.length g.AP.contents));
   parse_strong_prefix p1 g1.AP.contents g.AP.contents;
   intro_vparse (p1 `nondep_then` p2) a1
 
-#pop-options
-
+#restart-solver
 let size_pair
   (#k1: parser_kind)
   (#t1: Type)
@@ -160,6 +158,8 @@ let size_pair
   let len2 = j2 base a2 in
   AP.join a a2;
   SEA.return (len1 `SZ.size_add` len2)
+
+#pop-options
 
 val validate_synth
   (#k1: _) (#t1: _) (#p1: parser k1 t1) (v1: wvalidator p1)

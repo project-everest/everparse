@@ -4,7 +4,6 @@ include LowParse.Spec.Base
 module S = Steel.Memory
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
-module A = Steel.C.Array
 module AP = LowParse.Steel.ArrayPtr
 
 let is_byte_repr_injective
