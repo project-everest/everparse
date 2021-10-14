@@ -11,7 +11,7 @@
 #define HALT_MSG  0x00000003ul
 
 UINT32
-enum MessageType {
+enum _MessageType {
   INIT_MSG,
   QUERY_MSG,
   HALT_MSG

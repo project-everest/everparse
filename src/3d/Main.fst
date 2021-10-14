@@ -170,22 +170,22 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
 let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target.decl)
   : ML unit
   = let tds = InterpreterTarget.translate_decls t_decls in
-    let types_fst_file =
-      open_write_file
-        (Printf.sprintf "%s/%s.Types.fst"
-          (Options.get_output_dir ())
-          modul) in
-    FStar.IO.write_string types_fst_file (FStar.Printf.sprintf "module %s\nopen Interpreter\n" modul);          
-    FStar.IO.write_string types_fst_file (InterpreterTarget.print_decls modul tds);
-    FStar.IO.close_write_file types_fst_file;
 
     let fst_file =
       open_write_file
         (Printf.sprintf "%s/%s.fst"
           (Options.get_output_dir())
           modul) in
-    FStar.IO.write_string fst_file (FStar.Printf.sprintf "module %s\nopen Interpreter\nmodule T = FStar.Tactics\n" modul);
-    FStar.IO.write_string fst_file (InterpreterTarget.print_validators modul tds);
+    FStar.IO.write_string fst_file 
+      (FStar.Printf.sprintf "module %s\n\
+                             open Prelude\n\
+                             open EverParse3d.Actions.All\n\
+                             open Interpreter\n\
+                             module T = FStar.Tactics\n\
+                             module A = EverParse3d.Actions.All\n\
+                             module P = Prelude\n"
+                             modul);
+    FStar.IO.write_string fst_file (InterpreterTarget.print_decls modul tds);    
     FStar.IO.close_write_file fst_file;
 
     let fsti_file =

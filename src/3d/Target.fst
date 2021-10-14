@@ -745,10 +745,8 @@ let maybe_print_type_equality (mname:string) (td:type_decl) : ML string =
      | None -> "")
   else ""
 
-let print_decl_for_types (mname:string) (d:decl) : ML string =
+let print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string =
   match fst d with
-  | Assumption _ -> ""
-  
   | Definition (x, [], T_app ({Ast.v={Ast.name="field_id"}}) _ _, (Constant c, _)) ->
     Printf.sprintf "[@(CMacro)%s]\nlet %s = %s <: Tot field_id by (FStar.Tactics.trivial())\n\n"
      (print_comments (snd d).comments)
@@ -773,6 +771,21 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
       (print_typedef_name mname x_ps)
       (print_typ mname typ)
       (print_expr mname expr)
+
+let print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string =
+  match fst d with
+  | Assumption (x, t) ->
+    Printf.sprintf "assume\nval %s : %s\n\n"
+      (print_ident x)      
+      (print_typ mname t) 
+
+let print_decl_for_types (mname:string) (d:decl) : ML string =
+  match fst d with
+  | Assumption _ -> ""
+  
+  | Definition _ ->
+    print_definition mname d
+
   | Type_decl td ->
     Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s\n\n"
       (print_typedef_name mname td.decl_name)
@@ -801,10 +814,8 @@ let print_decl_for_validators (mname:string) (d:decl) : ML string =
   match fst d with
   | Definition _ -> ""
   
-  | Assumption (x, t) ->
-    Printf.sprintf "assume\nval %s : %s\n\n"
-      (print_ident x)      
-      (print_typ mname t) 
+  | Assumption _ ->
+    print_assumption mname d
 
   | Type_decl td ->
     (if false //not td.decl_name.td_entrypoint

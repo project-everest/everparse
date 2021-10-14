@@ -221,11 +221,12 @@ let rec dep_arrow (is:list param_type) (f:args_of is -> Type)
 let _illustrate_eq_fun_t = x:P.___UINT8 -> y:P.___UINT8 { y == x }
 let _illustrate_eq_fun_t_inhabitant : _illustrate_eq_fun_t = fun x -> x
 let _illustrate_dep_int_to_int = dep_arrow [PT_Base UInt8] (fun x -> y:P.___UINT8{y == fst x})
-let _coerce_eq (a b:Type) (_:squash (a == b)) (x:a) : b = x
+[@@specialize]
+let coerce (#a #b:Type) (_:squash (a == b)) (x:a) : b = x
 let _illustrate_dep_int_to_int_inhabitant
   : _illustrate_dep_int_to_int
   = assert_norm (_illustrate_dep_int_to_int == _illustrate_eq_fun_t);
-    _coerce_eq _ _ () _illustrate_eq_fun_t_inhabitant
+    coerce () _illustrate_eq_fun_t_inhabitant
 
 
 (* Eliminate a single dep_arrow into a native dependent -> *)
@@ -700,13 +701,14 @@ type typ
           false
 
   | T_if_else:
-      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #nz1:_ -> #wk1:_ -> #pk1:P.parser_kind nz1 wk1 ->
       #l1:_ -> #i1:_ -> #b1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->      
       #l2:_ -> #i2:_ -> #b2:_ ->
       b:bool -> //A bool, rather than an expression
-      t1:typ pk i1 l1 b1 ->
-      t2:typ pk i2 l2 b2 ->
-      typ pk (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
+      t1:typ pk1 i1 l1 b1 ->
+      t2:typ pk2 i2 l2 b2 ->
+      typ (P.glb pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_with_action:
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
@@ -847,8 +849,12 @@ let rec as_parser
 
     | T_if_else b t0 t1 ->
       //assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
-      let p0 (_:squash b) = as_parser t0 in
-      let p1 (_:squash (not b)) = as_parser t1 in
+      let p0 (_:squash b) = 
+        P.parse_weaken_right (as_parser t0) _
+      in
+      let p1 (_:squash (not b)) = 
+        P.parse_weaken_left (as_parser t1) _
+      in
       P.parse_ite b p0 p1
 
     | T_with_action t a ->
@@ -949,11 +955,15 @@ let rec as_validator
 
     | T_if_else b t0 t1 ->
       assert_norm (as_type (T_if_else b t0 t1) == Prelude.t_ite b (as_type t0) (as_type t1));
-      let p0 (_:squash b) = as_parser t0 in
-      let p1 (_:squash (not b)) = as_parser t1 in
+      let p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
+      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
       assert_norm (as_parser (T_if_else b t0 t1) == P.parse_ite b p0 p1);
-      let v0 (_:squash b) = as_validator t0 in
-      let v1 (_:squash (not b)) = as_validator t1 in
+      let v0 (_:squash b) = 
+        A.validate_weaken_right (as_validator t0) _
+      in
+      let v1 (_:squash (not b)) =
+        A.validate_weaken_left (as_validator t1) _
+      in
       A.validate_ite b p0 v0 p1 v1
 
     | T_with_action t a ->
@@ -1061,249 +1071,417 @@ let specialize_tac ()
     T.trefl()
 
 [@@specialize]
-let u8_dtyp = DT_IType UInt8
-  
-[@@specialize]
-let u8_pair
-  : typ _ _ _ _
-  = T_pair (T_denoted u8_dtyp) (T_denoted u8_dtyp)
-
-[@@T.postprocess_with specialize_tac]
-let validate_u8_pair
-  = as_val u8_pair
-
-(* In emacs, C-c C-s C-p shows the definition of validate_u8_pair as:
-
-Actions.validate_pair "" Actions.validate____UINT8 Actions.validate____UINT8
-*)
-
-[@@specialize]
-let as_nullary_arrow (#res:Type u#a) (f:res)
-  : arrow [] res
-  = f
-
-[@@specialize]
-let u8_pair_binding
-  : global_binding
-  = { name = "u8_pair";
-      param_types = [];
-      parser_kind_nz = _;
-      parser_weak_kind = _;
-      parser_kind = _;
-      inv = as_nullary_arrow (A.conj_inv A.true_inv A.true_inv);
-      loc = as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none);
-      allow_reading = _;
-      p_t = as_type u8_pair;
-      p_p = as_parser u8_pair;
-      p_v = validate_u8_pair; 
-      p_reader = None }
-
-[@@specialize]
-let u8_pair_dtyp = DT_App "u8_pair" u8_pair_binding ()
-
-module U8 = FStar.UInt8
-
-let tt = (T_denoted u8_pair_dtyp)
-
-[@@T.postprocess_with specialize_tac]
-let validate_u8_pair_pair
-  = as_val (T_pair (T_denoted u8_pair_dtyp)
-                   (T_denoted u8_pair_dtyp))
-
-[@@specialize]
-let u8_pair_param (i:P.___UINT8)
-  : typ _ _ _ _
-  = T_pair (T_refine u8_dtyp (fun fst -> U8.(fst <^ i) ))
-           (T_refine u8_dtyp (fun snd -> U8.(snd >=^ i)))
-
-[@@T.postprocess_with specialize_tac]
-let validate_u8_pair_param (i:P.___UINT8)
-  = as_validator (u8_pair_param i)
-
-(* Produces:
-fun i ->
-    Actions.validate_pair ""
-      (Actions.validate_filter ""
-          Actions.validate____UINT8
-          Actions.read____UINT8
-          (fun fst -> fst <^ i)
-          ""
-          "")
-      (Actions.validate_filter ""
-          Actions.validate____UINT8
-          Actions.read____UINT8
-          (fun snd -> snd >=^ i)
-          ""
-          "")
-
-*)
-
-[@@specialize]
-let as_arrow_cons #is #k (i:param_type) (f: param_type_as_type i -> arrow is k)
-  : arrow (i::is) k
-  = f
-
-[@@specialize]
-let as_nullary_dep_arrow (#res:args_of [] -> Type) (f:res ())
-  : dep_arrow [] res
-  = f
-
-[@@specialize]
-let as_dep_arrow_cons i #is (#res:args_of (i::is) -> Type)
-                      (f: (x:param_type_as_type i -> dep_arrow is (fun xs -> res (x, xs))))
-  : dep_arrow (i::is) res
-  = f
-
-[@@specialize]
-let param_types = [PT_Base UInt8]
-
-let p_t
-  : arrow param_types Type
-  = as_arrow_cons (PT_Base UInt8) (fun i -> as_nullary_arrow (as_type (u8_pair_param i)))
-
-let p_k = Prelude.and_then_kind
-              (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
-              (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
-
-let p_p
-  : dep_arrow param_types (fun args -> P.parser p_k (apply_arrow p_t args))
-  = let f (i:param_type_as_type (PT_Base UInt8))
-      : dep_arrow [] (fun args -> P.parser p_k (apply_arrow p_t (i, args)))
-      = as_nullary_dep_arrow (as_parser (u8_pair_param i))
-    in
-    as_dep_arrow_cons (PT_Base UInt8) f
-
-[@@specialize]
-let p_v
-  : dep_arrow param_types
-    (fun args -> A.validate_with_action_t
-                 (apply_dep_arrow _ _ p_p args)
-                 _
-                 _
-                 _)
-  = let f (i:param_type_as_type (PT_Base UInt8))
-      : dep_arrow []
-          (fun args ->
-            A.validate_with_action_t
-                 (apply_dep_arrow _ _ p_p (i,args))
-                 _ _ _)
-      = as_nullary_dep_arrow (validate_u8_pair_param i)
-    in
-    as_dep_arrow_cons (PT_Base UInt8) f
-
-[@@specialize]
-let u8_pair_param_binding
-  : global_binding
-  = { name = "u8_pair_param";
-      param_types = [PT_Base UInt8];
-      parser_kind_nz = _;
-      parser_weak_kind = _;
-      parser_kind = _;
-      inv = as_arrow_cons #[] #A.slice_inv _ (fun _ -> as_nullary_arrow (A.conj_inv A.true_inv A.true_inv));
-      loc = as_arrow_cons #[] #A.eloc _ (fun _ -> as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none));
-      allow_reading = _;
+let mk_global_binding (p:list param_type)
+                      #nz #wk (#pk:P.parser_kind nz wk)
+                      (inv:arrow p A.slice_inv)
+                      (loc:arrow p A.eloc)
+                      (#ar:bool)
+                      (#p_t : arrow p Type0)
+                      (#p_p : dep_arrow p (fun (args:args_of p) -> P.parser pk (apply_arrow p_t args)))
+                      (p_v : dep_arrow p
+                             (fun args ->
+                                A.validate_with_action_t (apply_dep_arrow _ _ p_p args)
+                                                         (apply_arrow inv args)
+                                                         (apply_arrow loc args)
+                                                         ar))
+                      (p_reader: option (dep_arrow p
+                         (fun args -> 
+                            leaf_reader (apply_dep_arrow _ _ p_p args))))
+   : global_binding
+   =
+    { name = "unnecessary";
+      param_types = p;
+      parser_kind_nz = nz;
+      parser_weak_kind = wk;
+      parser_kind = pk;
+      inv = inv;
+      loc = loc;
+      allow_reading = ar;
       p_t = p_t;
       p_p = p_p;
       p_v = p_v;
-      p_reader = None}
+      p_reader = p_reader}
 
-[@@specialize]
-let nullary_args : args_of [] = ()
-
-let mk_pair #nz1 #wk1 (#pk1:P.parser_kind nz1 wk1)
-            #i1 #l1 #b1 
-            #nz2 #wk2 (#pk2:P.parser_kind nz2 wk2)
-            #i2 #l2 #b2
-            (t1:typ pk1 i1 l1 b1)
-            (t2:typ pk2 i2 l2 b2)
-            (_:unit { normalize (nz1 == true) /\ normalize (wk1 == P.WeakKindStrongPrefix) })
-   : typ (P.and_then_kind pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
-   = T_pair t1 t2
-
-let u8_line_kind 
-  : P.parser_kind true P.WeakKindStrongPrefix 
-  = P.and_then_kind (pk_of_binding u8_pair_binding)
-                    (pk_of_binding u8_pair_binding)
-  
-[@@specialize]
-let u8_line
-  : typ #true #P.WeakKindStrongPrefix u8_line_kind _ _ _
-  = T_pair (T_denoted u8_pair_dtyp) (T_denoted u8_pair_dtyp)
-
-[@@T.postprocess_with specialize_tac]
-let validate_u8_line
-  : A.validate_with_action_t _ _ _ _
-  = as_validator u8_line
-
-let u8_rect_kind
-  : P.parser_kind true P.WeakKindStrongPrefix 
-  = P.and_then_kind u8_line_kind u8_line_kind
-
-[@@specialize]
-let u8_rect
-  : typ u8_rect_kind _ _ _ 
-  = T_pair u8_line u8_line
-
-// let specialize_nbe_tac ()
-//   : T.Tac unit
-//   = T.norm [nbe; zeta; iota; delta_attr [`%specialize]; delta_only [`%List.Tot.tryFind; `%proj_1; `%proj_10]];
-//     T.trefl()
-
-[@@T.postprocess_with specialize_tac]
-let validate_u8_rect
-  = as_validator u8_rect
-
-[@@specialize]
-let u8_rect2_raw
-  : typ _ _ _ _
-  = T_pair
-        (T_pair (T_pair (T_pair u8_rect u8_rect)
-                        (T_pair u8_rect u8_rect))
-                (T_pair (T_pair u8_rect u8_rect)
-                        (T_pair u8_rect u8_rect)))
-        (T_pair (T_pair (T_pair u8_rect u8_rect)
-                        (T_pair u8_rect u8_rect))
-                (T_pair (T_pair u8_rect u8_rect)
-                        (T_pair u8_rect u8_rect)))
-
-let kind_of #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : P.parser_kind (normalize_term nz) (normalize_term wk) = pk
 let inv_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.slice_inv = s
 let eloc_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.eloc = l
-let u8_rect2_kind = kind_of (u8_rect2_raw)
-let u8_rect2_inv = inv_of (u8_rect2_raw)
-let u8_rect2_eloc = eloc_of (u8_rect2_raw)
-[@@specialize]
-let u8_rect2
-  : typ u8_rect2_kind u8_rect2_inv u8_rect2_eloc _
-  = u8_rect2_raw
-#push-options "--debug Interpreter --debug_level EraseErasableArgs"
 
-[@@T.postprocess_with specialize_tac]
-let validate_u8_rect2
-  = as_validator u8_rect2
+// [@@specialize]
+// let u8_dtyp = DT_IType UInt8
+  
+// [@@specialize]
+// let u8_pair
+//   : typ _ _ _ _
+//   = T_pair (T_denoted u8_dtyp) (T_denoted u8_dtyp)
 
-(* But there are still huge implicit terms in there
-   If you #push-options "--print_implicits"
-   and try to print the term, emacs will hang *)
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_pair
+//   = as_val u8_pair
 
-(**
-// Generates:
+// (* In emacs, C-c C-s C-p shows the definition of validate_u8_pair as:
 
+// Actions.validate_pair "" Actions.validate____UINT8 Actions.validate____UINT8
+// *)
+
+// [@@specialize]
+// let as_nullary_arrow (#res:Type u#a) (f:res)
+//   : arrow [] res
+//   = f
+
+// [@@specialize]
+// let u8_pair_binding
+//   : global_binding
+//   = { name = "u8_pair";
+//       param_types = [];
+//       parser_kind_nz = _;
+//       parser_weak_kind = _;
+//       parser_kind = _;
+//       inv = as_nullary_arrow (A.conj_inv A.true_inv A.true_inv);
+//       loc = as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none);
+//       allow_reading = _;
+//       p_t = as_type u8_pair;
+//       p_p = as_parser u8_pair;
+//       p_v = validate_u8_pair; 
+//       p_reader = None }
+
+// [@@specialize]
+// let u8_pair_dtyp = DT_App "u8_pair" u8_pair_binding ()
+
+// module U8 = FStar.UInt8
+
+// let tt = (T_denoted u8_pair_dtyp)
+
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_pair_pair
+//   = as_val (T_pair (T_denoted u8_pair_dtyp)
+//                    (T_denoted u8_pair_dtyp))
+
+// [@@specialize]
+// let u8_pair_param (i:P.___UINT8)
+//   : typ _ _ _ _
+//   = T_pair (T_refine u8_dtyp (fun fst -> U8.(fst <^ i) ))
+//            (T_refine u8_dtyp (fun snd -> U8.(snd >=^ i)))
+
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_pair_param (i:P.___UINT8)
+//   = as_validator (u8_pair_param i)
+
+// (* Produces:
+// fun i ->
 //     Actions.validate_pair ""
-//     (Actions.validate_pair ""
-//         (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-//         (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
-//     (Actions.validate_pair ""
-//         (Actions.validate_pair ""
-//             (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-//             (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
-//         (Actions.validate_pair ""
-//             (Actions.validate_pair ""
-//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
-//             (Actions.validate_pair ""
-//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)))
-//     )
+//       (Actions.validate_filter ""
+//           Actions.validate____UINT8
+//           Actions.read____UINT8
+//           (fun fst -> fst <^ i)
+//           ""
+//           "")
+//       (Actions.validate_filter ""
+//           Actions.validate____UINT8
+//           Actions.read____UINT8
+//           (fun snd -> snd >=^ i)
+//           ""
+//           "")
 
-//  **)
+// *)
+
+// [@@specialize]
+// let as_arrow_cons #is #k (i:param_type) (f: param_type_as_type i -> arrow is k)
+//   : arrow (i::is) k
+//   = f
+
+// [@@specialize]
+// let as_dep_arrow_nil (#res:Type) (f:res)
+//   : dep_arrow [] (fun _ -> res)
+//   = f
+
+// let uncurry (#i:param_type) 
+//             (#is:list param_type)
+//             (res:param_type_as_type i -> args_of is -> Type)
+//   : args_of (i::is) -> Type
+//   = fun (x, xs) -> res x xs
+
+
+// [@@specialize]
+// let as_dep_arrow_cons i #is (#res:args_of (i::is) -> Type)
+//                       (f: (x:param_type_as_type i -> dep_arrow is (fun xs -> res (x, xs))))
+//   : dep_arrow (i::is) res
+//   = f
+
+// let eta_pair (f: ('a & 'b) -> 'c)
+//   : Lemma (forall (x:('a & 'b)). (let (a, b) = x in f (a, b)) == f x)
+//   = ()
+  
+// [@@specialize]
+// let coerce_cons (i:param_type) 
+//                 (is:list param_type)
+//                 (res: args_of (i::is) -> Type)
+//                 (f:dep_arrow (i::is) (fun (xi, xis) -> res (xi, xis)))
+//  : Tot (dep_arrow (i::is) (fun x -> res x))
+//      by (T.mapply (quote (eta_pair #(param_type_as_type i) #(args_of is) #Type)))
+//  = f
+ 
+// [@@specialize]
+// let rec as_dep_arrow_cons_alt (i:param_type) 
+//                       (#is:list param_type)
+//                       (#res:param_type_as_type i -> args_of is -> Type)
+//                       (f: (x:param_type_as_type i -> dep_arrow is (res x)))
+//   : Tot (dep_arrow (i::is) (uncurry res)) (decreases is)
+//   = match is with
+//     | [] -> fun x -> let r : dep_arrow [] (res x) = f x in
+//                  let u : args_of [] = () in
+//                  let r : res x u = r in 
+//                  let r : dep_arrow [] (fun xs -> uncurry res (x, xs)) = r in
+//                  r
+//     | j::js ->
+//            let f : (x:param_type_as_type i -> dep_arrow (j::js) (res x)) = f in
+//            let h : x:param_type_as_type i -> dep_arrow is (fun xis -> res x xis) =
+//              fun x -> 
+//                let res : param_type_as_type i -> args_of (j::js) -> Type = res in
+//                let f' : dep_arrow (j::js) (res x) = f x  in
+//                let f' : xj:param_type_as_type j -> dep_arrow js (fun xjs -> res x (xj, xjs)) = f' in
+//                let g  : dep_arrow (j::js) (uncurry (fun xj xjs -> res x (xj, xjs))) = as_dep_arrow_cons_alt j #js #(fun xj xjs -> res x (xj, xjs)) f' in
+//                let g  : dep_arrow (j::js) (fun (xj, xjs) -> res x (xj, xjs)) = g in
+//                coerce_cons j js _ g
+//            in
+//            h
+
+// [@@specialize]
+// let as_nullary_dep_arrow (#res:args_of [] -> Type) (f:res ())
+//   : dep_arrow [] res
+//   = f
+
+// [@@specialize]
+// let param_types = [PT_Base UInt8]
+
+// let p_t
+//   : arrow param_types Type
+//   = as_arrow_cons (PT_Base UInt8) (fun i -> as_nullary_arrow (as_type (u8_pair_param i)))
+
+// let p_k = Prelude.and_then_kind
+//               (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
+//               (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
+
+// let p_p'
+//   : dep_arrow [PT_Base (UInt8)]
+//     (fun (i, _) ->
+//             Prelude.parser p_k (as_type (u8_pair_param i)))
+//   = as_dep_arrow_cons_alt (PT_Base UInt8) (fun i -> as_dep_arrow_nil (as_parser (u8_pair_param i)))
+
+// let p_p
+//  : dep_arrow param_types (fun args -> P.parser p_k (apply_arrow p_t args))
+//   = let f (i:param_type_as_type (PT_Base UInt8))
+//      : dep_arrow [] (fun args -> P.parser p_k (apply_arrow p_t (i, args)))
+//       = as_nullary_dep_arrow (as_parser (u8_pair_param i))
+//     in
+//     as_dep_arrow_cons (PT_Base UInt8) f
+    
+                                      
+
+// [@@specialize]
+// let p_v
+//   : dep_arrow param_types
+//     (fun args -> A.validate_with_action_t
+//                  (apply_dep_arrow _ _ p_p args)
+//                  _
+//                  _
+//                  _)
+//   = let f (i:param_type_as_type (PT_Base UInt8))
+//       : dep_arrow []
+//           (fun args ->
+//             A.validate_with_action_t
+//                  (apply_dep_arrow _ _ p_p (i,args))
+//                  _ _ _)
+//       = as_nullary_dep_arrow (validate_u8_pair_param i)
+//     in
+//     as_dep_arrow_cons (PT_Base UInt8) f
+
+
+// [@@specialize]
+// let u8_pair_param_binding
+//   : global_binding
+//   = mk_global_binding
+//        [PT_Base UInt8]
+//        (as_arrow_cons #[] #A.slice_inv _ (fun _ -> as_nullary_arrow (A.conj_inv A.true_inv A.true_inv)))
+//        (as_arrow_cons #[] #A.eloc _ (fun _ -> as_nullary_arrow (A.eloc_union A.eloc_none A.eloc_none)))
+//        p_v
+//        None
+
+// [@@specialize]
+// let u8_pair_param_dtyp = DT_App "u8_pair_param" u8_pair_param_binding (0uy, ())
+// ////////////////////////////////////////////////////////////////////////////////
+// let coerce_tac () = 
+//   T.norm [delta_only [`%dep_arrow; `%args_of;`%param_type_as_type;`%itype_as_type];
+//           delta_attr [`%specialize];
+//           zeta;iota]; T.trefl()
+
+// [@@specialize]
+// let u8_pair_param_binary (i:P.___UINT8) (j:P.___UINT8)
+//   : typ _ _ _ _
+//   = T_pair (T_refine u8_dtyp (fun fst -> U8.(fst <^ i) ))
+//            (T_refine u8_dtyp (fun snd -> U8.(snd >=^ j)))
+
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_pair_param_binary (i:P.___UINT8) (j:P.___UINT8)
+//   = as_validator (u8_pair_param_binary i j)
+
+// [@@specialize]
+// unfold
+// let u8_pair_param_binary_types = [PT_Base UInt8; PT_Base UInt8]
+
+// let p_t_binary
+//   : arrow u8_pair_param_binary_types Type
+//   = _coerce_eq _ _ 
+//        (_ by (T.trefl()))
+//        (fun i j -> (as_type (u8_pair_param_binary i j)))
+
+// let p_k_binary =
+//   Prelude.and_then_kind
+//     (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
+//     (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
+
+// #push-options "--query_stats"
+// let p_p_binary
+//   : dep_arrow u8_pair_param_binary_types 
+//              (fun args -> P.parser p_k_binary (apply_arrow p_t_binary args))
+//   = _coerce_eq _ _ (_ by (T.trefl()))
+//                  (fun i j -> (as_parser (u8_pair_param_binary i j)))
+
+// let p_inv_binary 
+//   : arrow u8_pair_param_binary_types A.slice_inv
+//   = _coerce_eq _ _ 
+//                (_ by (T.trefl()))
+//                (fun (_:U8.t) (_:U8.t) -> A.conj_inv A.true_inv A.true_inv)
+
+// let p_loc_binary
+//   : arrow u8_pair_param_binary_types A.eloc
+//   = _coerce_eq _ _ 
+//                (_ by (T.trefl()))
+//                (fun (_:U8.t) (_:U8.t) -> A.eloc_union A.eloc_none A.eloc_none)
+
+// let p_v_binary
+//   : dep_arrow u8_pair_param_binary_types
+//     (fun args -> A.validate_with_action_t
+//                  (apply_dep_arrow _ _ p_p_binary args)
+//                  (apply_arrow p_inv_binary args)
+//                  (apply_arrow p_loc_binary args)
+//                  false)
+//   = _coerce_eq _ _ (_ by (T.trefl()))
+//                    validate_u8_pair_param_binary
+                   
+
+// let u8_pair_param_binding_binary =
+//  mk_global_binding
+//        [PT_Base UInt8; PT_Base UInt8]
+//        p_inv_binary
+//        p_loc_binary
+//        p_v_binary
+//        None
+
+// [@@specialize]
+// let u8_pair_param_dtyp_binary (x y : U8.t) 
+//   : dtyp _ false (A.conj_inv A.true_inv A.true_inv)
+//                  (A.eloc_union A.eloc_none A.eloc_none)
+//                  false
+//   = DT_App "u8_pair_param" u8_pair_param_binding_binary (x, (y, ()))
+
+// ////////////////////////////////////////////////////////////////////////////////
+
+// [@@specialize]
+// let nullary_args : args_of [] = ()
+
+// let mk_pair #nz1 #wk1 (#pk1:P.parser_kind nz1 wk1)
+//             #i1 #l1 #b1 
+//             #nz2 #wk2 (#pk2:P.parser_kind nz2 wk2)
+//             #i2 #l2 #b2
+//             (t1:typ pk1 i1 l1 b1)
+//             (t2:typ pk2 i2 l2 b2)
+//             (_:unit { normalize (nz1 == true) /\ normalize (wk1 == P.WeakKindStrongPrefix) })
+//    : typ (P.and_then_kind pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
+//    = T_pair t1 t2
+
+// let u8_line_kind 
+//   : P.parser_kind true P.WeakKindStrongPrefix 
+//   = P.and_then_kind (pk_of_binding u8_pair_binding)
+//                     (pk_of_binding u8_pair_binding)
+  
+// [@@specialize]
+// let u8_line
+//   : typ #true #P.WeakKindStrongPrefix u8_line_kind _ _ _
+//   = T_pair (T_denoted u8_pair_dtyp) (T_denoted u8_pair_dtyp)
+
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_line
+//   : A.validate_with_action_t _ _ _ _
+//   = as_validator u8_line
+
+// let u8_rect_kind
+//   : P.parser_kind true P.WeakKindStrongPrefix 
+//   = P.and_then_kind u8_line_kind u8_line_kind
+
+// [@@specialize]
+// let u8_rect
+//   : typ u8_rect_kind _ _ _ 
+//   = T_pair u8_line u8_line
+
+// // let specialize_nbe_tac ()
+// //   : T.Tac unit
+// //   = T.norm [nbe; zeta; iota; delta_attr [`%specialize]; delta_only [`%List.Tot.tryFind; `%proj_1; `%proj_10]];
+// //     T.trefl()
+
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_rect
+//   = as_validator u8_rect
+
+// [@@specialize]
+// let u8_rect2_raw
+//   : typ _ _ _ _
+//   = T_pair
+//         (T_pair (T_pair (T_pair u8_rect u8_rect)
+//                         (T_pair u8_rect u8_rect))
+//                 (T_pair (T_pair u8_rect u8_rect)
+//                         (T_pair u8_rect u8_rect)))
+//         (T_pair (T_pair (T_pair u8_rect u8_rect)
+//                         (T_pair u8_rect u8_rect))
+//                 (T_pair (T_pair u8_rect u8_rect)
+//                         (T_pair u8_rect u8_rect)))
+
+// let kind_of #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : P.parser_kind (normalize_term nz) (normalize_term wk) = pk
+// let inv_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.slice_inv = s
+// let eloc_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.eloc = l
+// let u8_rect2_kind = kind_of (u8_rect2_raw)
+// let u8_rect2_inv = inv_of (u8_rect2_raw)
+// let u8_rect2_eloc = eloc_of (u8_rect2_raw)
+// [@@specialize]
+// let u8_rect2
+//   : typ u8_rect2_kind u8_rect2_inv u8_rect2_eloc _
+//   = u8_rect2_raw
+// #push-options "--debug Interpreter --debug_level EraseErasableArgs"
+
+// [@@T.postprocess_with specialize_tac]
+// let validate_u8_rect2
+//   = as_validator u8_rect2
+
+// (* But there are still huge implicit terms in there
+//    If you #push-options "--print_implicits"
+//    and try to print the term, emacs will hang *)
+
+// (**
+// // Generates:
+
+// //     Actions.validate_pair ""
+// //     (Actions.validate_pair ""
+// //         (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
+// //         (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
+// //     (Actions.validate_pair ""
+// //         (Actions.validate_pair ""
+// //             (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
+// //             (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
+// //         (Actions.validate_pair ""
+// //             (Actions.validate_pair ""
+// //                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
+// //                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
+// //             (Actions.validate_pair ""
+// //                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
+// //                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)))
+// //     )
+
+// //  **)

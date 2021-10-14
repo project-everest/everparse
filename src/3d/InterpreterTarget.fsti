@@ -27,6 +27,3 @@ val translate_decls (ds:T.decls)
 
 val print_decls (mname:string) (ds:list decl)
   : ML string
-
-val print_validators (mname:string) (ds:list decl)
-  : ML string

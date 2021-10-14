@@ -117,23 +117,23 @@ type typ : Type =
       terminator:expr ->
       typ
 
-let type_decl = T.typedef_name & typ
+let type_decl = T.typedef_name & typ & T.parser_kind
 let decl = either T.decl type_decl
+
+let itype_of_ident (hd:A.ident)
+  : option itype
+  = match hd.v.name with
+    | "UINT8" -> Some UInt8
+    | "UINT16" -> Some UInt16
+    | "UINT32" -> Some UInt32
+    | "UINT64" -> Some UInt64
+    | _ -> None
 
 let dtyp_of_app (hd:A.ident) (args:list T.index)
   : ML dtyp
-  = match hd.v.name, args with
-    | "UINT8", [] ->
-      DT_IType UInt8
-
-    | "UINT16", [] ->
-      DT_IType UInt16
-
-    | "UINT32", [] ->
-      DT_IType UInt32
-
-    | "UINT64", [] ->
-      DT_IType UInt64
+  = match itype_of_ident hd, args with
+    | Some i, [] ->
+      DT_IType i
 
     | _ ->
       DT_App hd
@@ -269,7 +269,9 @@ let translate_decls (ds:T.decls)
   = List.map
       (function
         | (T.Type_decl td, _) ->
-          Inr (td.decl_name, typ_of_parser td.decl_parser)
+          Inr (td.decl_name,
+               typ_of_parser td.decl_parser,
+               td.decl_parser.p_kind)
 
         | d ->
           Inl d)
@@ -291,7 +293,7 @@ let print_dtyp (mname:string) (dt:dtyp) =
     Printf.sprintf "(DT_IType %s)" (print_ityp i)
 
   | DT_App hd args ->
-    Printf.sprintf "(DT_App %s %s)"
+    Printf.sprintf "(dtyp_%s %s)"
       (print_ident mname hd)
       (List.map (T.print_expr mname) args |> String.concat " ")
 
@@ -307,7 +309,8 @@ let rec print_typ (mname:string) (t:typ)
       "T_false"
 
     | T_denoted dt ->
-      print_dtyp mname dt
+      Printf.sprintf "(T_denoted %s)"
+                     (print_dtyp mname dt)
 
     | T_pair t1 t2 ->
       Printf.sprintf "(T_pair %s %s)"
@@ -390,28 +393,213 @@ let print_typedef_name mname (n:T.typedef_name) =
     (List.map (print_param mname) n.td_params |> String.concat " ")
 
 let print_type_decl mname (td:type_decl) =
+  let name, typ, k = td in
   FStar.Printf.sprintf
     "[@@specialize]\n\
-     let %s = %s\n"
-      (print_typedef_name mname (fst td))
-      (print_typ mname (snd td))
+     let def_%s = %s\n"
+      (print_typedef_name mname name)
+      (print_typ mname typ)
 
-let print_decl mname d =
+let print_validator (td:type_decl) =
+  let name, typ, k = td in
+  FStar.Printf.sprintf
+    "[@@T.postprocess_for_extraction_with specialize_tac]\n\
+     let validate_%s %s = as_validator (def_%s %s)\n"
+      name.td_name.v.name
+      name.td_name.v.name
+
+let rec print_param_type mname (t:T.typ)
+  : ML string
+  = let open T in
+    match t with
+    | T_app hd false [] ->
+      (match itype_of_ident hd with
+       | Some i ->
+         Printf.sprintf "(PT_Base %s)"
+                        (print_ityp i)
+       | None ->
+         Printf.sprintf "(PT_Typedef %s)"
+                        (print_ident mname hd))
+    | T_pointer t ->
+      Printf.sprintf "(PT_Pointer %s)"
+                     (print_param_type mname t)
+    | _ ->
+      failwith (Printf.sprintf "Unexpected param type: %s" (T.print_typ mname t))
+
+let print_binding mname (td:type_decl)
+  : ML string
+  = let tdn, typ, k = td in
+    let root_name = print_ident mname tdn.td_name in
+    let param_types_literal =
+         List.map (fun (_, t) -> print_param_type mname t) tdn.td_params |>
+         String.concat "; "
+    in
+    let param_types =
+        Printf.sprintf "[@@specialize]\nlet param_types_%s = [%s]\n"
+          root_name
+          param_types_literal
+    in
+    let binders =
+        List.map (print_param mname) tdn.td_params |>
+        String.concat " "
+    in
+    let args =
+        List.map (fun (i, _) -> print_ident mname i) tdn.td_params |>
+        String.concat " "
+    in
+    let arg_tuple =
+        List.fold_right
+          (fun (x, _) out -> Printf.sprintf "(%s, %s)" (print_ident mname x) out)
+          tdn.td_params
+          "()"
+    in
+    let validate_binding =
+        FStar.Printf.sprintf "[@@T.postprocess_for_extraction_with specialize_tac]\n\
+                             let validate_%s %s = as_validator (def_%s %s)\n"
+                             root_name
+                             binders
+                             root_name
+                             args
+    in
+    let type_of_binding =
+        let f =
+          match tdn.td_params with
+          | [] ->
+            Printf.sprintf "(as_type def_%s)" root_name
+          | _ ->
+            Printf.sprintf "(fun %s -> as_type (def_%s %s))"
+                           binders
+                           root_name
+                           args
+        in
+        Printf.sprintf "let type_%s : arrow param_types_%s Type = coerce (_ by (T.trefl())) %s\n"
+                       root_name
+                       root_name
+                       f
+   in
+   let pk_of_binding =
+     Printf.sprintf "let kind_%s = %s\n"
+       root_name
+       (T.print_kind mname k)
+   in
+   let parser_of_binding =
+       let f =
+          match tdn.td_params with
+          | [] ->
+            Printf.sprintf "(as_parser def_%s)" root_name
+          | _ ->
+            Printf.sprintf "(fun %s -> as_parser (def_%s %s))"
+                           binders
+                           root_name
+                           args
+       in
+       Printf.sprintf "let parser_%s : dep_arrow param_types_%s (fun args -> P.parser kind_%s (apply_arrow type_%s args))\n\
+                          = coerce (_ by (T.trefl())) %s\n"
+                        root_name
+                        root_name
+                        root_name
+                        root_name
+                        f
+   in
+   let inv_of_binding =
+     let f =
+         match tdn.td_params with
+          | [] ->
+            Printf.sprintf "(inv_of def_%s)" root_name
+          | _ ->
+            Printf.sprintf "(fun %s -> inv_of (def_%s %s))"
+                           binders
+                           root_name
+                           args
+     in
+     Printf.sprintf "let inv_%s : arrow param_types_%s A.slice_inv \n\
+                         = coerce (_ by (T.trefl())) %s"
+                    root_name
+                    root_name
+                    f
+   in
+   let eloc_of_binding =
+     let f =
+         match tdn.td_params with
+          | [] ->
+            Printf.sprintf "(eloc_of def_%s)" root_name
+          | _ ->
+            Printf.sprintf "(fun %s -> eloc_of (def_%s %s))"
+                           binders
+                           root_name
+                           args
+     in
+     Printf.sprintf "let eloc_%s : arrow param_types_%s A.eloc \n\
+                         = coerce (_ by (T.trefl())) %s"
+                    root_name
+                    root_name
+                    f
+   in
+   let validator_of_binding =
+       Printf.sprintf "[@@specialize]let validator_%s \n\
+                         : dep_arrow param_types_%s\n\
+                             (fun args ->\n\
+                               A.validate_with_action_t \n\
+                                 (apply_dep_arrow _ _ parser_%s args)\n\
+                                 (apply_arrow inv_%s args)\n\
+                                 (apply_arrow eloc_%s args)\n\
+                                 false)\n\
+                          = coerce (_ by (T.trefl())) validate_%s\n"
+                        root_name
+                        root_name
+                        root_name
+                        root_name
+                        root_name
+                        root_name
+   in
+   let binding =
+     Printf.sprintf "[@@specialize]let binding_%s \n\
+                      : global_binding \n\
+                      = mk_global_binding [%s]\n\
+                           inv_%s\n\
+                           eloc_%s\n\
+                           validator_%s\n\
+                           None"
+                      root_name
+                      param_types_literal
+                      root_name
+                      root_name
+                      root_name
+   in
+   let dtyp_of_binding =
+     Printf.sprintf "[@@specialize]let dtyp_%s %s = DT_App \"%s\" binding_%s %s\n"
+       root_name
+       binders
+       root_name
+       root_name
+       arg_tuple
+   in
+   String.concat "\n"
+     [validate_binding;
+      param_types;
+      type_of_binding;
+      pk_of_binding;
+      parser_of_binding;
+      inv_of_binding;
+      eloc_of_binding;
+      validator_of_binding;
+      binding;
+      dtyp_of_binding]
+
+let print_decl mname (d:decl) =
   match d with
-  | Inl d -> T.print_decls mname [d]
-  | Inr td -> print_type_decl mname td
+  | Inl d ->
+    begin
+    match fst d with
+    | T.Assumption _ -> T.print_assumption mname d
+    | T.Definition _ -> T.print_definition mname d
+    | _ -> ""
+    end
+  | Inr td ->
+    Printf.sprintf "%s\n%s\n"
+      (print_type_decl mname td)
+      (print_binding mname td)
 
 let print_decls mname tds =
   List.map (print_decl mname) tds |>
-  String.concat "\n\n"
-
-let print_validator (td:type_decl) =
-  FStar.Printf.sprintf
-    "[@@T.postprocess_for_extraction_with specialize_tac]\n\
-     let validate_%s = as_validator %s\n"
-      (fst td).td_name.v.name
-      (fst td).td_name.v.name
-
-let print_validators mname tds =
-  List.collect (function Inl _ -> [] | Inr x -> [print_validator x]) tds |>
   String.concat "\n\n"

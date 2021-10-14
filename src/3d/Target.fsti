@@ -400,8 +400,11 @@ val error_handler_decl : decl
 val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
 val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string //(decreases t)
+val print_kind (mname:string) (k:parser_kind) : Tot string
 val print_parser (mname:string) (p:parser) : ML string
 val print_action (mname:string) (a:action) : ML string
+val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
+val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string
 val print_decls (modul: string) (ds:list decl) : ML string
 val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string

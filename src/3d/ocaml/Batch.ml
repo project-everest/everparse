@@ -120,8 +120,7 @@ let pretty_print_source_module
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
   let fsti_file = Printf.sprintf "%si" fst_file in
   let all_files =
-    (if file_exists output_types_fsti_file then [output_types_fsti_file] else []) @
-    [types_fst_file; fsti_file; fst_file] in
+    List.filter file_exists [output_types_fsti_file; types_fst_file; fsti_file; fst_file] in
   List.iter (pretty_print_source_file input_stream_binding out_dir) all_files
 
 let pretty_print_source_modules
@@ -138,20 +137,21 @@ let verify_and_extract_module
     : unit
   =
   let output_types_fsti_file =
-    let fn = filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul) in
-    if file_exists fn then [fn] else [] in
-  let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
-  let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
-  let fsti_file = Printf.sprintf "%si" fst_file in
-  List.iter (verify_fst_file input_stream_binding out_dir) (output_types_fsti_file@[
-      types_fst_file;
-      fsti_file;
-      fst_file;
-  ]);
-  List.iter (extract_fst_file input_stream_binding out_dir) (output_types_fsti_file@[
-      types_fst_file;
-      fst_file;
-  ])
+    filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul)
+  in
+  let fst_file = 
+      filename_concat out_dir (Printf.sprintf "%s.fst" modul)
+  in
+  let types_fst_file = 
+      filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul)
+  in
+  let fsti_file = 
+      Printf.sprintf "%si" fst_file
+  in
+  let all_files = List.filter file_exists [output_types_fsti_file; fst_file; types_fst_file; fsti_file] in
+  let all_extract_files = List.filter file_exists [output_types_fsti_file; types_fst_file; fst_file] in  
+  List.iter (verify_fst_file input_stream_binding out_dir) all_files;
+  List.iter (extract_fst_file input_stream_binding out_dir) all_extract_files
 
 let is_krml
       filename
