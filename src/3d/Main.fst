@@ -23,7 +23,7 @@ noeq
 type env = {
   binding_env : Binding.global_env;
   typesizes_env : TypeSizes.size_env;
-  translate_env : either Translate.translate_env TranslateForInterpreter.translate_env
+  translate_env : either Translate.translate_env (TranslateForInterpreter.translate_env & InterpreterTarget.env)
 }
 
 let initial_env () : ML env = {
@@ -31,7 +31,7 @@ let initial_env () : ML env = {
   typesizes_env = TypeSizes.initial_senv ();
   translate_env = 
     if Options.get_interpret()
-    then Inr (TranslateForInterpreter.initial_translate_env())
+    then Inr (TranslateForInterpreter.initial_translate_env(), InterpreterTarget.create_env())
     else Inl (Translate.initial_translate_env ());
 }
 
@@ -108,10 +108,11 @@ let translate_module (en:env) (mname:string) (fn:string)
   let t_decls, tenv = 
     if Options.get_interpret()
     then
+      let env, env' = right en.translate_env in
       let decls, env =
-        TranslateForInterpreter.translate_decls benv senv (right en.translate_env) decls
+        TranslateForInterpreter.translate_decls benv senv env decls
       in
-      decls, Inr env
+      decls, Inr (env, env')
     else
       let decls, env = 
         Translate.translate_decls benv senv (left en.translate_env) decls
@@ -169,7 +170,8 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
 
 let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target.decl)
   : ML unit
-  = let tds = InterpreterTarget.translate_decls t_decls in
+  = let _, en = right en.translate_env in
+    let tds = InterpreterTarget.translate_decls en t_decls in
 
     let fst_file =
       open_write_file
@@ -185,16 +187,8 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target
                              module A = EverParse3d.Actions.All\n\
                              module P = Prelude\n"
                              modul);
-    FStar.IO.write_string fst_file (InterpreterTarget.print_decls modul tds);    
-    FStar.IO.close_write_file fst_file;
-
-    let fsti_file =
-      open_write_file
-        (Printf.sprintf "%s/%s.fsti"
-          (Options.get_output_dir())
-          modul) in
-    FStar.IO.write_string fsti_file (FStar.Printf.sprintf "module %s\n" modul);
-    FStar.IO.close_write_file fsti_file
+    FStar.IO.write_string fst_file (InterpreterTarget.print_decls en modul tds);    
+    FStar.IO.close_write_file fst_file
 
 let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
                     (static_asserts:StaticAssertions.static_asserts)

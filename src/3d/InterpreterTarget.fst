@@ -16,9 +16,10 @@
 module InterpreterTarget
 (* The abstract syntax for the code produced by 3d, targeting prelude/Interpreter.fst *)
 open FStar.All
+open FStar.List.Tot
 module A = Ast
 module T = Target
-open Binding
+module H = Hashtable
 
 let expr = T.expr
 let action = T.action
@@ -147,10 +148,58 @@ type type_decl = {
   name : T.typedef_name;
   typ : typ;
   kind : T.parser_kind;
-  inv_eloc : inv_eloc
+  inv_eloc : inv_eloc;
+  allow_reading: bool
 }
-
 let decl = either T.decl type_decl
+let env = H.t A.ident' type_decl
+let create_env (_:unit) : ML env = H.create 100
+
+let rec free_vars_of_expr (e:T.expr)
+  : ML (list A.ident)
+  = let open T in
+    match fst e with
+    | Constant _ -> []
+    | Identifier i -> [i]
+    | App _ args -> List.collect free_vars_of_expr args
+    | Record _ args -> List.collect (fun (_, e) -> free_vars_of_expr e) args
+
+let rec free_vars_of_inv (i:inv)
+  : ML (list A.ident)
+  = match i with
+    | Inv_true -> []
+    | Inv_conj i j -> free_vars_of_inv i @ free_vars_of_inv j
+    | Inv_ptr x -> [x]
+    | Inv_name _ args -> List.collect free_vars_of_expr args
+
+let rec free_vars_of_eloc (e:eloc)
+  : ML (list A.ident)
+  = match e with
+    | Eloc_none -> []
+    | Eloc_union i j -> free_vars_of_eloc i @ free_vars_of_eloc j
+    | Eloc_ptr x -> [x]
+    | Eloc_name _ args -> List.collect free_vars_of_expr args
+
+let free_vars_of_inv_eloc (i:inv_eloc) =
+  let i, j, _ = i in
+  free_vars_of_inv i @ free_vars_of_eloc j
+
+let filter_args_for_inv (args:list expr)
+                        (td:type_decl)
+  : ML (list expr)
+  = let fvs = free_vars_of_inv_eloc td.inv_eloc in
+    let args =
+      List.map2
+        (fun (b, _) a ->
+          if Some? (List.tryFind (fun j -> A.ident_name b = A.ident_name j) fvs)
+          then [a]
+          else [])
+        td.name.td_params
+        args
+    in
+    List.flatten args
+
+
 
 let itype_of_ident (hd:A.ident)
   : option itype
@@ -230,9 +279,10 @@ let rec inv_eloc_of_action (a:T.action)
     | Action_ite _ a0 a1 ->
       inv_eloc_union (inv_eloc_of_action a0) (inv_eloc_of_action a1)
 
-let rec inv_eloc_of_parser (p:T.parser)
+let rec inv_eloc_of_parser (en:env) (p:T.parser)
   : ML inv_eloc
-  = match p.p_parser with
+  = let inv_eloc_of_parser = inv_eloc_of_parser en in
+    match p.p_parser with
     | T.Parse_impos ->
       inv_eloc_nil
 
@@ -243,7 +293,12 @@ let rec inv_eloc_of_parser (p:T.parser)
       | DT_IType _ ->
         inv_eloc_nil
       | DT_App hd args ->
-        inv_eloc_name hd args
+        let td =
+          match H.try_find en hd.v with
+          | Some td -> td
+          | _ -> failwith (Printf.sprintf "Type decl not found for %s" (A.ident_to_string hd))
+        in
+        inv_eloc_name hd (filter_args_for_inv args td)
       end
 
     | T.Parse_if_else _ p q
@@ -278,32 +333,6 @@ let rec inv_eloc_of_parser (p:T.parser)
 
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
-open FStar.List.Tot
-
-let rec free_vars_of_expr (e:T.expr)
-  : ML (list A.ident)
-  = let open T in
-    match fst e with
-    | Constant _ -> []
-    | Identifier i -> [i]
-    | App _ args -> List.collect free_vars_of_expr args
-    | Record _ args -> List.collect (fun (_, e) -> free_vars_of_expr e) args
-
-let rec free_vars_of_inv (i:inv)
-  : ML (list A.ident)
-  = match i with
-    | Inv_true -> []
-    | Inv_conj i j -> free_vars_of_inv i @ free_vars_of_inv j
-    | Inv_ptr x -> [x]
-    | Inv_name _ args -> List.collect free_vars_of_expr args
-
-let rec free_vars_of_eloc (e:eloc)
-  : ML (list A.ident)
-  = match e with
-    | Eloc_none -> []
-    | Eloc_union i j -> free_vars_of_eloc i @ free_vars_of_eloc j
-    | Eloc_ptr x -> [x]
-    | Eloc_name _ args -> List.collect free_vars_of_expr args
 
 let rec typ_of_parser (p:T.parser)
   : ML typ
@@ -393,16 +422,43 @@ let rec typ_of_parser (p:T.parser)
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
 
-let translate_decls (ds:T.decls)
+let rec allow_reading_of_typ (en:env) (t:typ)
+  : ML bool
+  =
+  match t with
+  | T_with_comment t _ ->
+    allow_reading_of_typ en t
+
+  | T_denoted dt ->
+    begin
+    match dt with
+    | DT_IType _ -> true
+    | DT_App hd _ ->
+      match H.try_find en hd.v with
+      | None -> failwith "type not found"
+      | Some td -> td.allow_reading
+    end
+
+  | _ -> false
+
+let translate_decls (en:env) (ds:T.decls)
   : ML (list decl)
   = List.map
-      (function
-        | (T.Type_decl td, _) ->
-          Inr ({ name = td.decl_name;
-                 typ = typ_of_parser td.decl_parser;
-                 kind = td.decl_parser.p_kind;
-                 inv_eloc = inv_eloc_of_parser td.decl_parser })
-
+        (fun d ->
+          match d with
+          | (T.Type_decl td, _) ->
+            let t = typ_of_parser td.decl_parser in
+            let ar = allow_reading_of_typ en t in
+            let td =
+              { name = td.decl_name;
+                typ = typ_of_parser td.decl_parser;
+                kind = td.decl_parser.p_kind;
+                inv_eloc = inv_eloc_of_parser en td.decl_parser;
+                allow_reading = ar
+                }
+            in
+            H.insert en td.name.td_name.v td;
+            Inr td
         | d ->
           Inl d)
       ds
@@ -524,7 +580,8 @@ let print_typedef_name mname (n:T.typedef_name) =
 
 let print_type_decl mname (td:type_decl) =
   FStar.Printf.sprintf
-    "[@@specialize]\n\
+    "[@@specialize; noextract_to \"Kremlin\"]\n\
+     noextract\n\
      let def_%s = %s\n"
       (print_typedef_name mname td.name)
       (print_typ mname td.typ)
@@ -584,7 +641,7 @@ let print_binding mname (td:type_decl)
          String.concat "; "
     in
     let param_types =
-        Printf.sprintf "[@@specialize]\nlet param_types_%s = [%s]\n"
+        Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet param_types_%s = [%s]\n"
           root_name
           param_types_literal
     in
@@ -605,7 +662,7 @@ let print_binding mname (td:type_decl)
           "()"
     in
     let validate_binding =
-        FStar.Printf.sprintf "[@@T.postprocess_for_extraction_with specialize_tac]\n\
+        FStar.Printf.sprintf "[@@T.postprocess_with specialize_tac]\n\
                              let validate_%s %s = as_validator (def_%s %s)\n"
                              root_name
                              binders
@@ -623,13 +680,13 @@ let print_binding mname (td:type_decl)
                            root_name
                            args
         in
-        Printf.sprintf "let type_%s : arrow param_types_%s Type = coerce (_ by (T.trefl())) %s\n"
+        Printf.sprintf "[@@noextract_to \"Kremlin\"]\nnoextract\nlet type_%s : arrow param_types_%s Type = coerce (_ by (T.trefl())) %s\n"
                        root_name
                        root_name
                        f
    in
    let pk_of_binding =
-     Printf.sprintf "let kind_%s = %s\n"
+     Printf.sprintf "[@@noextract_to \"Kremlin\"]inline_for_extraction noextract\nlet kind_%s = %s\n"
        root_name
        (T.print_kind mname k)
    in
@@ -644,7 +701,7 @@ let print_binding mname (td:type_decl)
                            root_name
                            args
        in
-       Printf.sprintf "let parser_%s : dep_arrow param_types_%s (fun args -> P.parser kind_%s (apply_arrow type_%s args))\n\
+       Printf.sprintf "[@@noextract_to \"Kremlin\"]noextract let parser_%s : dep_arrow param_types_%s (fun args -> P.parser kind_%s (apply_arrow type_%s args))\n\
                           = coerce (_ by (T.trefl())) %s\n"
                         root_name
                         root_name
@@ -653,7 +710,7 @@ let print_binding mname (td:type_decl)
                         f
    in
    let print_inv_or_eloc tag ty defn fvs
-     : ML string
+     : ML (string & string)
      =
      let fv_binders =
          List.filter
@@ -672,7 +729,7 @@ let print_binding mname (td:type_decl)
                            fv_binders_string
                            defn
      in
-     let s0 = Printf.sprintf "let %s_%s = %s\n" tag root_name f in
+     let s0 = Printf.sprintf "[@@noextract_to \"Kremlin\"]noextract let %s_%s = %s\n" tag root_name f in
      let body =
        let body =
          Printf.sprintf "%s_%s %s" tag root_name fv_args_string
@@ -681,42 +738,64 @@ let print_binding mname (td:type_decl)
        | [] -> body
        | _ -> Printf.sprintf "(fun %s -> %s)" binders body
      in
-     let s1 = Printf.sprintf "let %s_arrow_%s : arrow param_types_%s %s = coerce (_ by (T.trefl())) %s\n"
+     let s1 = Printf.sprintf "[@@noextract_to \"Kremlin\"]noextract let %s_arrow_%s : arrow param_types_%s %s = coerce (_ by (T.trefl())) %s\n"
                     tag
                     root_name
                     root_name
                     ty
                     body
      in
-     s0 ^ s1
+     s0 ^ s1, fv_args_string
    in
-   let inv_eloc_of_binding =
+   let inv_eloc_of_binding, fv_args =
      let inv, eloc, _ = td.inv_eloc in
      let fvs1 = free_vars_of_inv inv in
      let fvs2 = free_vars_of_eloc eloc in
-     let s0 = print_inv_or_eloc "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2) in
-     let s1 = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
-     s0 ^ s1
+     let s0, _ = print_inv_or_eloc "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2) in
+     let s1, fv_args = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
+     s0 ^ s1, fv_args
+   in
+   let coerce_tac =
+     let steps =
+       let s =
+         ["param_types";
+         "kind";
+         "type";
+         "parser";
+         "inv";
+         "inv_arrow";
+         "eloc";
+         "eloc_arrow"]
+       in
+       let steps =
+         List.map (fun s -> Printf.sprintf "`%%%s_%s" s root_name) s |>
+         String.concat "; "
+       in
+       steps
+     in
+     Printf.sprintf "(coerce_tac [%s])" steps
    in
    let validator_of_binding =
-       Printf.sprintf "[@@specialize]let validator_%s \n\
+       Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet validator_%s \n\
                          : dep_arrow param_types_%s\n\
                              (fun args ->\n\
                                A.validate_with_action_t \n\
                                  (apply_dep_arrow _ _ parser_%s args)\n\
                                  (apply_arrow inv_arrow_%s args)\n\
                                  (apply_arrow eloc_arrow_%s args)\n\
-                                 false)\n\
-                          = coerce (_ by (T.trefl())) validate_%s\n"
+                                 %b)\n\
+                          = coerce (_ by %s) validate_%s\n"
                         root_name
                         root_name
                         root_name
                         root_name
                         root_name
+                        td.allow_reading
+                        coerce_tac
                         root_name
    in
    let binding =
-     Printf.sprintf "[@@specialize]let binding_%s \n\
+     Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet binding_%s \n\
                       : global_binding \n\
                       = mk_global_binding\n\
                            param_types_%s\n\
@@ -731,19 +810,22 @@ let print_binding mname (td:type_decl)
                       root_name
    in
    let dtyp_of_binding =
-     Printf.sprintf "[@@specialize]\n\
+     Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
+                     noextract\n\
                      let dtyp_%s %s\n\
-                       : dtyp kind_%s false (inv_%s %s) (eloc_%s %s) false\n\
-                       = coerce (_ by (T.trefl())) (DT_App \"%s\" binding_%s (coerce (_ by (T.trefl())) %s))\n"
+                       : dtyp kind_%s false (inv_%s %s) (eloc_%s %s) %b\n\
+                       = coerce (_ by (T.trefl())) (DT_App \"%s\" binding_%s (coerce (_ by %s) %s))\n"
                      root_name
                      binders
                      root_name
                      root_name
-                     args
+                     fv_args
                      root_name
-                     args
+                     fv_args
+                     td.allow_reading
                      root_name
                      root_name
+                     coerce_tac
                      arg_tuple
    in
    String.concat "\n"
@@ -771,6 +853,6 @@ let print_decl mname (d:decl) =
       (print_type_decl mname td)
       (print_binding mname td)
 
-let print_decls mname tds =
+let print_decls en mname tds =
   List.map (print_decl mname) tds |>
   String.concat "\n\n"

@@ -1105,6 +1105,27 @@ let mk_global_binding (p:list param_type)
 let inv_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.slice_inv = s
 let eloc_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.eloc = l
 
+let coerce_tac steps = 
+  let open FStar.List.Tot in
+  T.norm [delta_only ([`%dep_arrow;
+                      `%apply_dep_arrow;
+                      `%apply_arrow;
+                      `%param_type_as_type;
+                      `%apply_dep_arrow_cons;
+                      `%apply;
+                      `%itype_as_type;
+                      `%nullary_arrow;
+                      `%coerce;
+                      `%parser_kind_of_itype;
+                      `%fst;
+                      `%Mktuple2?._1;
+                      `%snd;
+                      `%Mktuple2?._2]@steps);
+         primops;             
+         zeta;
+         iota];
+  T.trefl()
+
 // [@@specialize]
 // let u8_dtyp = DT_IType UInt8
   

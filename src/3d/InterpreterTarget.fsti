@@ -21,9 +21,12 @@ module T = Target
 open Binding
 
 val decl : Type0
+val env : Type0
 
-val translate_decls (ds:T.decls)
+val create_env (_:unit) : ML env
+
+val translate_decls (e:env) (ds:T.decls)
   : ML (list decl)
 
-val print_decls (mname:string) (ds:list decl)
+val print_decls (e:env) (mname:string) (ds:list decl)
   : ML string
