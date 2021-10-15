@@ -185,7 +185,9 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target
                              open Interpreter\n\
                              module T = FStar.Tactics\n\
                              module A = EverParse3d.Actions.All\n\
-                             module P = Prelude\n"
+                             module P = Prelude\n\
+                             #push-options \"--fuel 0 --ifuel 0\"\n\
+                             #push-options \"--using_facts_from '* FStar Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n"
                              modul);
     FStar.IO.write_string fst_file (InterpreterTarget.print_decls en modul tds);    
     FStar.IO.close_write_file fst_file

@@ -614,8 +614,12 @@ let postprocess_c
   if not no_everparse_h
   then begin
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      copy (filename_concat (ddd_actions_home input_stream_binding) "EverParse.h") dest_everparse_h;
-      copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h")
+      let everparse_h_source = (filename_concat (ddd_actions_home input_stream_binding) "EverParse.h") in
+      if file_exists everparse_h_source
+      then copy everparse_h_source dest_everparse_h;
+      let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
+      if file_exists everparse_endianness_source
+      then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")
     end;
   (* clang-format the files if asked for *)
   if clang_format

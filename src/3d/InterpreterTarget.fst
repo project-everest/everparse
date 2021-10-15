@@ -29,6 +29,12 @@ type itype =
   | UInt16
   | UInt32
   | UInt64
+  | UInt16BE
+  | UInt32BE
+  | UInt64BE
+  | Unit
+  | AllBytes
+  | AllZeros
 
 noeq
 type dtyp : Type =
@@ -208,6 +214,12 @@ let itype_of_ident (hd:A.ident)
     | "UINT16" -> Some UInt16
     | "UINT32" -> Some UInt32
     | "UINT64" -> Some UInt64
+    | "UINT16BE" -> Some UInt16BE
+    | "UINT32BE" -> Some UInt32BE
+    | "UINT64BE" -> Some UInt64BE
+    | "unit" -> Some Unit
+    | "all_bytes" -> Some AllBytes
+    | "all_zeros" -> Some AllZeros
     | _ -> None
 
 let dtyp_of_app (hd:A.ident) (args:list T.index)
@@ -469,6 +481,12 @@ let print_ityp (i:itype) =
   | UInt16 -> "UInt16"
   | UInt32 -> "UInt32"
   | UInt64 -> "UInt64"
+  | UInt16BE -> "UInt16BE"
+  | UInt32BE -> "UInt32BE"
+  | UInt64BE -> "UInt64BE"
+  | Unit -> "Unit"
+  | AllBytes -> "AllBytes"
+  | AllZeros -> "AllZeros"
 
 let print_ident (mname:string) (i:A.ident) =
   T.print_maybe_qualified_ident mname i
@@ -680,13 +698,20 @@ let print_binding mname (td:type_decl)
                            root_name
                            args
         in
-        Printf.sprintf "[@@noextract_to \"Kremlin\"]\nnoextract\nlet type_%s : arrow param_types_%s Type = coerce (_ by (T.trefl())) %s\n"
+        Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                        noextract\n\
+                        let type_%s\n\
+                          : arrow param_types_%s Type\n\
+                          = coerce (_ by (coerce_arrow [`%%param_types_%s])) %s\n"
+                       root_name
                        root_name
                        root_name
                        f
    in
    let pk_of_binding =
-     Printf.sprintf "[@@noextract_to \"Kremlin\"]inline_for_extraction noextract\nlet kind_%s = %s\n"
+     Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                     inline_for_extraction noextract\n\
+                     let kind_%s = %s\n"
        root_name
        (T.print_kind mname k)
    in
@@ -701,8 +726,14 @@ let print_binding mname (td:type_decl)
                            root_name
                            args
        in
-       Printf.sprintf "[@@noextract_to \"Kremlin\"]noextract let parser_%s : dep_arrow param_types_%s (fun args -> P.parser kind_%s (apply_arrow type_%s args))\n\
-                          = coerce (_ by (T.trefl())) %s\n"
+       Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                       noextract\n\
+                       let parser_%s\n\
+                         : dep_arrow param_types_%s (fun args -> P.parser kind_%s (apply_arrow type_%s args))\n\
+                         = coerce (_ by (coerce_parser [`%%param_types_%s; `%%kind_%s; `%%type_%s])) %s\n"
+                        root_name
+                        root_name
+                        root_name
                         root_name
                         root_name
                         root_name
@@ -729,7 +760,11 @@ let print_binding mname (td:type_decl)
                            fv_binders_string
                            defn
      in
-     let s0 = Printf.sprintf "[@@noextract_to \"Kremlin\"]noextract let %s_%s = %s\n" tag root_name f in
+     let s0 = Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                              noextract\n\
+                              let %s_%s = %s\n"
+                              tag root_name f
+     in
      let body =
        let body =
          Printf.sprintf "%s_%s %s" tag root_name fv_args_string
@@ -738,12 +773,17 @@ let print_binding mname (td:type_decl)
        | [] -> body
        | _ -> Printf.sprintf "(fun %s -> %s)" binders body
      in
-     let s1 = Printf.sprintf "[@@noextract_to \"Kremlin\"]noextract let %s_arrow_%s : arrow param_types_%s %s = coerce (_ by (T.trefl())) %s\n"
-                    tag
-                    root_name
-                    root_name
-                    ty
-                    body
+     let s1 = Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                              noextract\n\
+                              let %s_arrow_%s\n\
+                                : arrow param_types_%s %s\n\
+                                = coerce (_ by (coerce_arrow [`%%param_types_%s])) %s\n"
+                             tag
+                             root_name
+                             root_name
+                             ty
+                             root_name
+                             body
      in
      s0 ^ s1, fv_args_string
    in
@@ -755,28 +795,28 @@ let print_binding mname (td:type_decl)
      let s1, fv_args = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
      s0 ^ s1, fv_args
    in
-   let coerce_tac =
-     let steps =
-       let s =
-         ["param_types";
-         "kind";
-         "type";
-         "parser";
-         "inv";
-         "inv_arrow";
-         "eloc";
-         "eloc_arrow"]
-       in
-       let steps =
-         List.map (fun s -> Printf.sprintf "`%%%s_%s" s root_name) s |>
-         String.concat "; "
-       in
-       steps
-     in
-     Printf.sprintf "(coerce_tac [%s])" steps
-   in
    let validator_of_binding =
-       Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet validator_%s \n\
+     let coerce_tac =
+       let steps =
+         let s =
+           ["param_types";
+           "kind";
+           "type";
+           "parser";
+           "inv";
+           "inv_arrow";
+           "eloc";
+           "eloc_arrow"]
+         in
+         let steps =
+           List.map (fun s -> Printf.sprintf "`%%%s_%s" s root_name) s |>
+           String.concat "; "
+         in
+         steps
+       in
+       Printf.sprintf "(coerce_validator [%s])" steps
+     in
+     Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet validator_%s \n\
                          : dep_arrow param_types_%s\n\
                              (fun args ->\n\
                                A.validate_with_action_t \n\
@@ -810,11 +850,25 @@ let print_binding mname (td:type_decl)
                       root_name
    in
    let dtyp_of_binding =
+     let coerce_dtyp_args =
+       Printf.sprintf "`%%binding_%s; `%%inv_arrow_%s; `%%eloc_arrow_%s; `%%param_types_%s"
+                      root_name
+                      root_name
+                      root_name
+                      root_name
+     in
+     let coerce_args_of_args =
+       Printf.sprintf "`%%binding_%s; `%%param_types_%s"
+                      root_name
+                      root_name
+     in
      Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
                      noextract\n\
                      let dtyp_%s %s\n\
                        : dtyp kind_%s false (inv_%s %s) (eloc_%s %s) %b\n\
-                       = coerce (_ by (T.trefl())) (DT_App \"%s\" binding_%s (coerce (_ by %s) %s))\n"
+                       = coerce (_ by (coerce_dtyp [%s]))\n\
+                                (DT_App \"%s\" binding_%s\n\
+                                  (coerce (_ by (coerce_args_of [%s])) %s))\n"
                      root_name
                      binders
                      root_name
@@ -823,9 +877,10 @@ let print_binding mname (td:type_decl)
                      root_name
                      fv_args
                      td.allow_reading
+                     coerce_dtyp_args
                      root_name
                      root_name
-                     coerce_tac
+                     coerce_args_of_args
                      arg_tuple
    in
    String.concat "\n"

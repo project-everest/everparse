@@ -22,6 +22,11 @@ OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
 all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types
 
+INTERPRETABLE_FILES=Pair Demo Align BoolSwitch Comments ErrorHandling TAtMost FieldDependence0 Arith
+INTERPRETABLE_TODO=TestActions1 Bitfields0 EnumDependence TestFieldPtr Enumerations Test_Synthetic1
+interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_FILES))
+interpret_todo: $(addsuffix .interpret, $(INTERPRETABLE_TODO))
+
 extern:
 	+$(MAKE) -C extern
 
@@ -63,7 +68,10 @@ batch-cleanup-test:
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
+%.interpret: %.3d
+	EVERPARSE_KREMLIN_OPTIONS=-skip-compilation $(3D) --no_copy_everparse_h --batch --interpret $^
+
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret
