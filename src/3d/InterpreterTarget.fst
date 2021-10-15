@@ -70,6 +70,12 @@ type typ : Type =
       refinement:lam expr ->
       typ
 
+  | T_refine_with_action:
+      base:dtyp ->
+      refinement:lam expr ->
+      a:lam action ->
+      typ
+
   | T_dep_pair_with_refinement:
       base:dtyp ->
       refinement:lam expr ->
@@ -205,8 +211,6 @@ let filter_args_for_inv (args:list expr)
     in
     List.flatten args
 
-
-
 let itype_of_ident (hd:A.ident)
   : option itype
   = match hd.v.name with
@@ -340,8 +344,8 @@ let rec inv_eloc_of_parser (en:env) (p:T.parser)
     | T.Parse_string p _ ->
       inv_eloc_nil
 
-    | T.Parse_refinement_with_action _ _ _ _ ->
-      failwith "Not yet implemented"
+    | T.Parse_refinement_with_action n p f (_, a) ->
+      inv_eloc_union (inv_eloc_of_parser p) (inv_eloc_of_action a)
 
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
@@ -424,8 +428,8 @@ let rec typ_of_parser (p:T.parser)
     | T.Parse_refinement _ p f ->
       T_refine (dtyp_of_parser p) (as_lam f)
 
-    | T.Parse_refinement_with_action _ _ _ _ ->
-      failwith "Not yet implemented"
+    | T.Parse_refinement_with_action _ p f a ->
+      T_refine_with_action (dtyp_of_parser p) (as_lam f) (as_lam a)
 
     | T.Parse_weaken_left p _
     | T.Parse_weaken_right p _ ->
@@ -531,6 +535,11 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname d)
                      (print_lam (T.print_expr mname) r)
 
+    | T_refine_with_action d r a ->
+      Printf.sprintf "(T_refine_with_action %s %s %s)"
+                     (print_dtyp mname d)
+                     (print_lam (T.print_expr mname) r)
+                     (print_lam (T.print_action mname) a)
 
     | T_dep_pair_with_refinement d r k ->
       Printf.sprintf "(T_dep_pair_with_refinement %s %s %s)"

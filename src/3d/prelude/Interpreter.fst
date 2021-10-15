@@ -721,6 +721,15 @@ type typ
       refinement:(dtyp_as_type base -> bool) ->
       typ (P.filter_kind pk1) i1 l1 false
 
+  | T_refine_with_action:
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #i1:_ -> #l1:_ ->
+      #i2:_ -> #l2:_ -> #b2:_ ->
+      base:dtyp pk1 true i1 l1 true ->
+      refinement:(dtyp_as_type base -> bool) ->
+      act:(dtyp_as_type base -> action i2 l2 b2 bool) ->
+      typ (P.filter_kind pk1) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
+  
   | T_dep_pair_with_refinement:
       //This construct serves two purposes
       // 1. To avoid double fetches, we fold the refinement
@@ -846,6 +855,9 @@ let rec as_type
     | T_refine base refinement ->
       Prelude.refine (dtyp_as_type base) refinement
 
+    | T_refine_with_action base refinement _ ->
+      Prelude.refine (dtyp_as_type base) refinement
+
     | T_dep_pair_with_refinement base refinement t ->
       x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
 
@@ -900,7 +912,8 @@ let rec as_parser
       let pi = dtyp_as_parser i in
       P.parse_dep_pair pi (fun (x:dtyp_as_type i) -> as_parser (t x))
 
-    | T_refine base refinement ->
+    | T_refine base refinement
+    | T_refine_with_action base refinement _ ->
       //assert_norm (as_type g (T_refine base refinement) == Prelude.refine (itype_as_type base) refinement);
       let pi = dtyp_as_parser base in
       P.parse_filter pi refinement
@@ -991,6 +1004,16 @@ let rec as_validator
         (dtyp_as_validator t)
         (dtyp_as_leaf_reader t)
         f "a" "a"
+
+    | T_refine_with_action t f a ->
+      assert_norm (as_type (T_refine_with_action t f a) == P.refine (dtyp_as_type t) f);
+      assert_norm (as_parser (T_refine_with_action t f a) == P.parse_filter (dtyp_as_parser t) f);
+      assert_norm (as_parser (T_refine t f) == P.parse_filter (dtyp_as_parser t) f);      
+      A.validate_filter_with_action "a"
+        (dtyp_as_validator t)
+        (dtyp_as_leaf_reader t)
+        f "a" "a"
+        (fun x -> action_as_action (as_parser (T_refine t f)) (a x))
 
     | T_dep_pair_with_refinement base refinement k ->
       assert_norm (as_type (T_dep_pair_with_refinement base refinement k) ==
