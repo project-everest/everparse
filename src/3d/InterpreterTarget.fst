@@ -662,7 +662,7 @@ let print_binding mname (td:type_decl)
           "()"
     in
     let validate_binding =
-        FStar.Printf.sprintf "[@@T.postprocess_with specialize_tac]\n\
+        FStar.Printf.sprintf "[@@T.postprocess_for_extraction_with specialize_tac]\n\
                              let validate_%s %s = as_validator (def_%s %s)\n"
                              root_name
                              binders

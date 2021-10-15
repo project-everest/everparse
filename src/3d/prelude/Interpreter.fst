@@ -67,6 +67,7 @@ type itype =
   | UInt64
 
 (* Interpretation of itype as an F* type *)
+[@@specialize]
 let itype_as_type (i:itype)
   : Type
   = match i with
@@ -548,6 +549,7 @@ type dtyp
            (apply_arrow (loc_of_binding b) args)
            (ar_of_binding b)
 
+[@@specialize]
 let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b 
                  (d:dtyp pk hr i l b)
   : Type
@@ -761,6 +763,7 @@ type typ
       typ P.parse_string_kind A.true_inv A.eloc_none false
 
 (* Type denotation of `typ` *)
+[@@specialize]
 let rec as_type
           #nz #wk (#pk:P.parser_kind nz wk)
           #l #i #b
@@ -901,12 +904,12 @@ let rec as_validator
     | T_denoted td ->
       assert_norm (as_type (T_denoted td) == dtyp_as_type td);
       assert_norm (as_parser (T_denoted td) == dtyp_as_parser td);
-      dtyp_as_validator td
+      A.validate_eta (dtyp_as_validator td)
 
     | T_pair t1 t2 ->
       assert_norm (as_type (T_pair t1 t2) == as_type t1 * as_type t2);
       assert_norm (as_parser (T_pair t1 t2) == P.parse_pair (as_parser t1) (as_parser t2));
-      A.validate_pair ""
+      A.validate_pair "a"
         (as_validator t1)
         (as_validator t2)
 
@@ -915,7 +918,7 @@ let rec as_validator
       assert_norm (as_parser (T_dep_pair i t) ==
                    P.parse_dep_pair (dtyp_as_parser i) (fun (x:dtyp_as_type i) -> as_parser (t x)));
       A.validate_weaken_inv_loc inv loc
-      (A.validate_dep_pair ""
+      (A.validate_dep_pair "a"
         (dtyp_as_validator i)
         (dtyp_as_leaf_reader i)
         (fun x -> as_validator (t x)))
@@ -923,10 +926,10 @@ let rec as_validator
     | T_refine t f ->
       assert_norm (as_type (T_refine t f) == P.refine (dtyp_as_type t) f);
       assert_norm (as_parser (T_refine t f) == P.parse_filter (dtyp_as_parser t) f);
-      A.validate_filter ""
+      A.validate_filter "a"
         (dtyp_as_validator t)
         (dtyp_as_leaf_reader t)
-        f "" ""
+        f "a" "a"
 
     | T_dep_pair_with_refinement base refinement k ->
       assert_norm (as_type (T_dep_pair_with_refinement base refinement k) ==
@@ -934,7 +937,7 @@ let rec as_validator
       assert_norm (as_parser (T_dep_pair_with_refinement base refinement k) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_weaken_inv_loc inv loc (
-        A.validate_dep_pair_with_refinement false ""
+        A.validate_dep_pair_with_refinement false "a"
           (dtyp_as_validator base)
           (dtyp_as_leaf_reader base)
           refinement
@@ -946,7 +949,7 @@ let rec as_validator
       assert_norm (as_parser (T_dep_pair_with_refinement_and_action base refinement k act) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_weaken_inv_loc inv loc (
-        A.validate_dep_pair_with_refinement_and_action false ""
+        A.validate_dep_pair_with_refinement_and_action false "a"
           (dtyp_as_validator base)
           (dtyp_as_leaf_reader base)
           refinement
@@ -969,7 +972,7 @@ let rec as_validator
     | T_with_action t a ->
       assert_norm (as_type (T_with_action t a) == as_type t);
       assert_norm (as_parser (T_with_action t a) == as_parser t);
-      A.validate_with_success_action ""
+      A.validate_with_success_action "a"
         (as_validator t)
         (action_as_action (as_parser t) a)
 
@@ -977,7 +980,7 @@ let rec as_validator
       assert_norm (as_type (T_with_dep_action i a) == dtyp_as_type i);
       assert_norm (as_parser (T_with_dep_action i a) == dtyp_as_parser i);
       A.validate_weaken_inv_loc inv loc (
-       A.validate_with_dep_action ""
+       A.validate_with_dep_action "a"
         (dtyp_as_validator i)
         (dtyp_as_leaf_reader i)
         (fun x -> action_as_action (dtyp_as_parser i) (a x)))
@@ -985,7 +988,7 @@ let rec as_validator
     | T_with_comment t c ->
       assert_norm (as_type (T_with_comment t c) == as_type t);
       assert_norm (as_parser (T_with_comment t c) == as_parser t);
-      A.validate_with_comment "" (as_validator t)
+      A.validate_with_comment "a" (as_validator t)
 
     | T_nlist n t ->
       assert_norm (as_type (T_nlist n t) == Prelude.nlist n (as_type t));
@@ -1067,7 +1070,11 @@ let specialize_tac ()
                         `%type_of_binding;
                         `%parser_of_binding;
                         `%validator_of_binding;
-                        `%leaf_reader_of_binding]];
+                        `%leaf_reader_of_binding;
+                        `%fst;
+                        `%snd;
+                        `%Mktuple2?._1;
+                        `%Mktuple2?._2]];
     T.trefl()
 
 [@@specialize]

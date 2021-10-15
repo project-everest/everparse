@@ -234,7 +234,8 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
                      (fun accu (_, modul) ->
                        let l =
 			 (output_types_krml modul)@(filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
-                                                    filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu)
+                                                    (* filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: *)
+                                                    accu)
                        in
 
 		       let c_wrapper = Printf.sprintf "%sWrapper.c" modul in
@@ -331,13 +332,14 @@ let produce_c_files
   =
   let krml_args = krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules in
   (* bundle M.Types.krml and EverParse into M *)
-  let krml_args =
+(*  let krml_args =
     let bundle_types = List.fold_left (fun acc (_, modul) ->
                            "-bundle"::(Printf.sprintf "%s=%s.Types"
                                          modul
                                          modul)::acc) [] files_and_modules in
     krml_args@bundle_types
   in
+    *)
   call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
 
 let produce_one_c_file
