@@ -213,6 +213,9 @@ val read_filter (#nz:_)
                 (f: (t -> bool))
     : reader (parse_filter p f)
 
+inline_for_extraction noextract
+val read_impos : reader (parse_impos())
+
 /// Parse a zero-terminated string
 
 noextract

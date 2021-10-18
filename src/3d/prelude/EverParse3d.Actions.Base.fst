@@ -1268,6 +1268,12 @@ let read_filter #nz
         p32 input pos
 
 inline_for_extraction noextract
+let read_impos 
+  : leaf_reader (parse_impos())
+  = fun sl pos -> 
+      false_elim ()
+
+inline_for_extraction noextract
 let validate____UINT8
   : validator parse____UINT8
   = validate_with_comment

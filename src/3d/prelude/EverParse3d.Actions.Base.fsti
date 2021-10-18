@@ -507,6 +507,10 @@ val read_filter
        (f: (t -> bool))
     : leaf_reader (parse_filter p f)
 
+inline_for_extraction noextract
+val read_impos
+    : leaf_reader (parse_impos())
+
 inline_for_extraction
 let validator #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   = validate_with_action_t p true_inv eloc_none true

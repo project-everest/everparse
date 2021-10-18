@@ -12,7 +12,7 @@ ROOT=$(wildcard *.fst) $(wildcard *.fsti)
 ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops'
 
 .depend: $(ROOT)
-	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims' > $@.tmp
+	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims -Interpreter -Proj' > $@.tmp
 	mv $@.tmp $@
 
 include .depend

@@ -361,24 +361,23 @@ type global_binding = {
   inv:arrow param_types A.slice_inv;
   //Write footprint of any of its actions
   loc:arrow param_types A.eloc;
-  //Whether the type can be read -- to avoid double fetches
-  allow_reading:bool;
   //Its type denotation
   p_t : arrow param_types Type0;
   //Its parser denotation
   p_p : dep_arrow param_types
           (fun (args:args_of param_types) ->
             P.parser parser_kind (apply_arrow p_t args));
+  //Whether the type can be read -- to avoid double fetches
+  p_reader: option (dep_arrow param_types
+                         (fun args -> 
+                            leaf_reader (apply_dep_arrow _ _ p_p args)));
   //Its validate-with-action denotationa
   p_v : dep_arrow param_types
           (fun args ->
             A.validate_with_action_t (apply_dep_arrow _ _ p_p args)
                                      (apply_arrow inv args)
                                      (apply_arrow loc args)
-                                     allow_reading);
-  p_reader: option (dep_arrow param_types
-                         (fun args -> 
-                            leaf_reader (apply_dep_arrow _ _ p_p args)))
+                                     (Some? p_reader));
 }
 
 //Generate projectors with a tactic, because the default
@@ -390,11 +389,10 @@ type global_binding = {
         pk_of_binding;
         inv_of_binding;
         loc_of_binding;
-        ar_of_binding;
         type_of_binding;
         parser_of_binding;
-        validator_of_binding;
-        leaf_reader_of_binding]
+        leaf_reader_of_binding;
+        validator_of_binding]
        (ProjTac.mk_projs (`%global_binding)
                          ["name_of_binding";
                           "param_types_of_binding";
@@ -403,11 +401,10 @@ type global_binding = {
                           "pk_of_binding";
                           "inv_of_binding";
                           "loc_of_binding";
-                          "ar_of_binding";
                           "type_of_binding";
                           "parser_of_binding";
-                          "validator_of_binding";
-                          "leaf_reader_of_binding"])
+                          "leaf_reader_of_binding";
+                          "validator_of_binding"])
 
 [@@specialize]
 let has_reader (g:global_binding) = 
@@ -588,7 +585,6 @@ type dtyp
     has_reader:bool ->
     A.slice_inv ->
     A.eloc ->
-    bool ->
     Type =
   | DT_IType:
       i:itype ->
@@ -596,7 +592,6 @@ type dtyp
            (allow_reader_of_itype i)
            A.true_inv
            A.eloc_none
-           (allow_reader_of_itype i)
 
   | DT_App:
       hd:ident -> //the name isn't needed, strictly speaking
@@ -608,11 +603,10 @@ type dtyp
            (has_reader b)
            (apply_arrow (inv_of_binding b) args)
            (apply_arrow (loc_of_binding b) args)
-           (ar_of_binding b)
 
 [@@specialize]
-let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b 
-                 (d:dtyp pk hr i l b)
+let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
+                 (d:dtyp pk hr i l)
   : Type
   = match d with
     | DT_IType i -> 
@@ -621,8 +615,8 @@ let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b
     | DT_App hd b args ->
       apply_arrow (type_of_binding b) args
       
-let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l #b 
-                         (d:dtyp pk true i l b)
+let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l
+                         (d:dtyp pk true i l)
   : Lemma
     (ensures hasEq (dtyp_as_type d))
     [SMTPat (hasEq (dtyp_as_type d))]
@@ -633,8 +627,8 @@ let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l #b
     | DT_App hd b args ->
       let (| _, _ |) = get_leaf_reader b args in ()
   
-let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b 
-                   (d:dtyp pk hr i l b)
+let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
+                   (d:dtyp pk hr i l)
   : P.parser pk (dtyp_as_type d)
   = match d returns Tot (P.parser pk (dtyp_as_type d)) with
     | DT_IType i -> 
@@ -644,11 +638,11 @@ let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b
       apply_dep_arrow _ _ (parser_of_binding b) args
 
 [@@specialize]
-let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b 
-                      (d:dtyp pk hr i l b)
-  : A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i l b
+let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
+                      (d:dtyp pk hr i l)
+  : A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i l hr
   = match d 
-    returns A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i l b
+    returns A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i l hr
     with
     | DT_IType i -> 
       itype_as_validator i
@@ -659,8 +653,8 @@ let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l #b
       apply_dep_arrow _ _ (validator_of_binding b) args
 
 [@@specialize]
-let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l #b 
-                            (d:dtyp pk true i l b)
+let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l 
+                            (d:dtyp pk true i l)
   : A.leaf_reader (dtyp_as_parser d)
   = match d with
     | DT_IType i -> 
@@ -684,9 +678,9 @@ type typ
 
   | T_denoted :
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
-      #has_reader:_ -> #i:_ -> #l:_ -> #b:_ ->
-      td:dtyp pk has_reader i l b ->
-      typ pk i l b
+      #has_reader:_ -> #i:_ -> #l:_ ->
+      td:dtyp pk has_reader i l ->
+      typ pk i l has_reader
 
   | T_pair:
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
@@ -703,7 +697,7 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #l2:_ -> #b2:bool ->
       //the first component is a pre-denoted type with a reader
-      t1:dtyp pk1 true i1 l1 true ->
+      t1:dtyp pk1 true i1 l1 ->
       //the second component is a function from denotations of t1
       //that's why it's a small type, so that we can speak about its
       //denotation here
@@ -714,7 +708,7 @@ type typ
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       //the first component is a pre-denoted type with a reader
-      base:dtyp pk1 true i1 l1 true ->
+      base:dtyp pk1 true i1 l1 ->
       //the second component is a function from denotations of base
       //but notice that its codomain is bool, rather than expr
       //That's to ensure that the refinement is already well-typed
@@ -725,7 +719,7 @@ type typ
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #i2:_ -> #l2:_ -> #b2:_ ->
-      base:dtyp pk1 true i1 l1 true ->
+      base:dtyp pk1 true i1 l1 ->
       refinement:(dtyp_as_type base -> bool) ->
       act:(dtyp_as_type base -> action i2 l2 b2 bool) ->
       typ (P.filter_kind pk1) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
@@ -741,7 +735,7 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #l2:_ -> #b2:_ ->
       //the first component is a pre-denoted type with a reader
-      base:dtyp pk1 true i1 l1 true ->
+      base:dtyp pk1 true i1 l1 ->
       //the second component is a function from denotations of base
       refinement:(dtyp_as_type base -> bool) ->
       k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 l2 b2) ->
@@ -756,7 +750,7 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #l2:_ -> #b2:_ ->
       #i3:_ -> #l3:_ -> #b3:_ ->      
-      base:dtyp pk1 true i1 l1 true ->
+      base:dtyp pk1 true i1 l1 ->
       k:(x:dtyp_as_type base -> typ pk2 i2 l2 b2) ->
       act:(dtyp_as_type base -> action i3 l3 b3 bool) ->
       typ (P.and_then_kind pk1 pk2)
@@ -776,7 +770,7 @@ type typ
       #i2:_ -> #l2:_ -> #b2:_ ->
       #i3:_ -> #l3:_ -> #b3:_ ->      
       //the first component is a pre-denoted type with a reader
-      base:dtyp pk1 true i1 l1 true ->
+      base:dtyp pk1 true i1 l1 ->
       //the second component is a function from denotations of base
       refinement:(dtyp_as_type base -> bool) ->
       k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 l2 b2) ->
@@ -808,7 +802,7 @@ type typ
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #i2:_ -> #l2:_ -> #b2:_ ->
-      head:dtyp pk1 true i1 l1 true ->
+      head:dtyp pk1 true i1 l1 ->
       act:(dtyp_as_type head -> action i2 l2 b2 bool) ->
       typ pk1 (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
@@ -842,7 +836,7 @@ type typ
 
   | T_string:
       #pk1:P.parser_kind true P.WeakKindStrongPrefix ->
-      element_type:dtyp pk1 true A.true_inv A.eloc_none true ->
+      element_type:dtyp pk1 true A.true_inv A.eloc_none ->
       terminator:dtyp_as_type element_type ->
       typ P.parse_string_kind A.true_inv A.eloc_none false
 
@@ -975,6 +969,25 @@ let rec as_parser
 
     | T_string elt_t terminator ->
       Prelude.parse_string (dtyp_as_parser elt_t) terminator
+
+[@@specialize]
+let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
+                  #loc #inv (t:typ pk inv loc true)
+  : leaf_reader (as_parser t)
+  = match t with
+    | T_denoted dt ->
+      assert_norm (as_type (T_denoted dt) == dtyp_as_type dt);
+      assert_norm (as_parser (T_denoted dt) == dtyp_as_parser dt);
+      (| (), dtyp_as_leaf_reader dt |)
+    | T_with_comment t _c ->
+      assert_norm (as_type (T_with_comment t _c) == as_type t);    
+      assert_norm (as_parser (T_with_comment t _c) == as_parser t);    
+      as_reader t
+    | T_false ->
+      assert_norm (as_type T_false == False);
+      assert_norm (as_parser T_false == P.parse_impos());
+      (| (), A.read_impos |)
+
 
 (* The main result:
    A validator denotation of `typ`
@@ -1139,7 +1152,6 @@ let norm_steps =
                         `%pk_of_binding;
                         `%inv_of_binding;
                         `%loc_of_binding;
-                        `%ar_of_binding;
                         `%type_of_binding;
                         `%parser_of_binding;
                         `%validator_of_binding;
@@ -1181,7 +1193,6 @@ let specialize_tac ()
                         `%pk_of_binding;
                         `%inv_of_binding;
                         `%loc_of_binding;
-                        `%ar_of_binding;
                         `%type_of_binding;
                         `%parser_of_binding;
                         `%validator_of_binding;
@@ -1197,32 +1208,32 @@ let mk_global_binding (p:list param_type)
                       #nz #wk (#pk:P.parser_kind nz wk)
                       (inv:arrow p A.slice_inv)
                       (loc:arrow p A.eloc)
-                      (#ar:bool)
                       (#p_t : arrow p Type0)
                       (#p_p : dep_arrow p (fun (args:args_of p) -> P.parser pk (apply_arrow p_t args)))
+                      (p_reader: option (dep_arrow p
+                         (fun args -> 
+                            leaf_reader (apply_dep_arrow _ _ p_p args))))
                       (p_v : dep_arrow p
                              (fun args ->
                                 A.validate_with_action_t (apply_dep_arrow _ _ p_p args)
                                                          (apply_arrow inv args)
                                                          (apply_arrow loc args)
-                                                         ar))
-                      (p_reader: option (dep_arrow p
-                         (fun args -> 
-                            leaf_reader (apply_dep_arrow _ _ p_p args))))
+                                                         (Some? p_reader)))
    : global_binding
    =
-    { name = "unnecessary";
+    {
+      name = "unnecessary";
       param_types = p;
       parser_kind_nz = nz;
       parser_weak_kind = wk;
       parser_kind = pk;
       inv = inv;
       loc = loc;
-      allow_reading = ar;
       p_t = p_t;
       p_p = p_p;
+      p_reader = p_reader;
       p_v = p_v;
-      p_reader = p_reader}
+    }
 
 let inv_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.slice_inv = s
 let eloc_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.eloc = l
@@ -1274,6 +1285,12 @@ let coerce_validator steps =
          iota];
   T.trefl()
 
+let coerce_reader steps =
+  let open FStar.List.Tot in
+  T.norm [delta_only (steps@[`%dep_arrow; `%apply_dep_arrow]);
+          zeta; 
+          iota];
+  T.trefl()
 
 let coerce_dtyp steps : T.Tac unit =
   let open FStar.List.Tot in
@@ -1283,7 +1300,6 @@ let coerce_dtyp steps : T.Tac unit =
                                `%leaf_reader_of_binding;
                                `%loc_of_binding;
                                `%inv_of_binding;
-                               `%ar_of_binding;
                                `%nz_of_binding;
                                `%wk_of_binding;
                                `%apply_arrow;

@@ -903,8 +903,20 @@ let print_binding mname (td:type_decl)
    let binding =
      let reader =
        if td.allow_reading
-       then Printf.sprintf ""
-       else None
+       then let reader =
+              match tdn.td_params with
+              | [] ->
+                Printf.sprintf "(as_reader def_%s)" root_name
+              | _ ->
+                Printf.sprintf "(fun %s -> as_reader (def_%s %s))"
+                               binders
+                               root_name
+                               args
+            in
+            Printf.sprintf "(Some (coerce (_ by (coerce_reader [`%%param_types_%s])) %s))"
+                           root_name
+                           reader
+       else "None"
      in
      Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet binding_%s \n\
                       : global_binding \n\
@@ -912,12 +924,13 @@ let print_binding mname (td:type_decl)
                            param_types_%s\n\
                            inv_arrow_%s\n\
                            eloc_arrow_%s\n\
-                           validator_%s\n\
-                           None"
+                           %s\n\
+                           validator_%s\n"
                       root_name
                       root_name
                       root_name
                       root_name
+                      reader
                       root_name
    in
    let dtyp_of_binding =
@@ -936,18 +949,18 @@ let print_binding mname (td:type_decl)
      Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
                      noextract\n\
                      let dtyp_%s %s\n\
-                       : dtyp kind_%s false (inv_%s %s) (eloc_%s %s) %b\n\
+                       : dtyp kind_%s %b (inv_%s %s) (eloc_%s %s)\n\
                        = coerce (_ by (coerce_dtyp [%s]))\n\
                                 (DT_App \"%s\" binding_%s\n\
                                   (coerce (_ by (coerce_args_of [%s])) %s))\n"
                      root_name
                      binders
                      root_name
-                     root_name
-                     fv_args
-                     root_name
-                     fv_args
                      td.allow_reading
+                     root_name
+                     fv_args
+                     root_name
+                     fv_args
                      coerce_dtyp_args
                      root_name
                      root_name

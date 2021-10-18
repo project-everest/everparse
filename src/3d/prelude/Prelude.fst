@@ -209,6 +209,13 @@ inline_for_extraction noextract
 let read_filter p32 f
     = LPLC.read_filter p32 f
 
+let read_impos : reader (parse_impos()) = 
+  fun #rrel #rel sl pos -> 
+    let h = FStar.HyperStack.ST.get() in
+    assert (LPLC.valid (parse_impos()) h sl pos);
+    LowParse.Low.Base.Spec.valid_equiv (parse_impos()) h sl pos;
+    false_elim ()
+  
 // ////////////////////////////////////////////////////////////////////////////////
 // // Validators
 // ////////////////////////////////////////////////////////////////////////////////

@@ -187,7 +187,7 @@ let remove_local (e:env) (i:ident) : ML unit =
     H.remove e.locals j
   | _ -> ()
 
-let resolve_typedef_abbrev (env:env) (i:ident) =
+let resolve_record_case_outputtype_name (env:env) (i:ident) =
   match H.try_find (global_env_of_env env).ge_out_t i.v with
   | Some ({d_decl={v=OutputType ({out_typ_names=names})}}) -> names.typedef_name
   | _ ->
@@ -309,7 +309,7 @@ let typ_has_reader env (t:typ) : ML bool =
   | Type_app hd _ _ ->
     has_reader env.globals hd
 
-let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
+let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
   match t.v with
   | Type_app hd _ [] -> //type abbreviations are not parameterized
     begin
@@ -317,8 +317,23 @@ let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
     | Inr (d, _) ->
       begin
       match d.d_decl.v with
-      | TypeAbbrev t _ -> unfold_typ_abbrevs env t
-      | Enum t _ _ -> unfold_typ_abbrevs env t
+      | TypeAbbrev t _ -> unfold_typ_abbrev_only env t
+      | _ -> t
+      end
+    | _ -> t
+    end
+  | _ -> t
+
+let rec unfold_typ_abbrev_and_enum (env:env) (t:typ) : ML typ =
+  match t.v with
+  | Type_app hd _ [] -> //type abbreviations are not parameterized
+    begin
+    match lookup env hd with
+    | Inr (d, _) ->
+      begin
+      match d.d_decl.v with
+      | TypeAbbrev t _ -> unfold_typ_abbrev_and_enum env t
+      | Enum t _ _ -> unfold_typ_abbrev_and_enum env t
       | _ -> t
       end
     | _ -> t
@@ -327,7 +342,7 @@ let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
 
 let size_of_integral_typ (env:env) (t:typ) r
   : ML int
-  = let t = unfold_typ_abbrevs env t in
+  = let t = unfold_typ_abbrev_and_enum env t in
     if not (typ_is_integral env t)
     then error (Printf.sprintf "Expected and integral type, got %s"
                                                 (print_typ t))
@@ -341,7 +356,7 @@ let size_of_integral_typ (env:env) (t:typ) r
 
 let eq_typ env t1 t2 =
   if Ast.eq_typ t1 t2 then true
-  else Ast.eq_typ (unfold_typ_abbrevs env t1) (unfold_typ_abbrevs env t2)
+  else Ast.eq_typ (unfold_typ_abbrev_and_enum env t1) (unfold_typ_abbrev_and_enum env t2)
 
 let eq_typs env ts =
   List.for_all (fun (t1, t2) -> eq_typ env t1 t2) ts
@@ -354,8 +369,8 @@ let try_cast_integer env et to : ML (option expr) =
   let i_from = typ_is_integral env from in
   if i_from && i_to
   then
-    let i_from = typ_as_integer_type (unfold_typ_abbrevs env from) in
-    let i_to = typ_as_integer_type (unfold_typ_abbrevs env to) in
+    let i_from = typ_as_integer_type (unfold_typ_abbrev_and_enum env from) in
+    let i_to = typ_as_integer_type (unfold_typ_abbrev_and_enum env to) in
     if i_from = i_to
     then Some e
     else if integer_type_leq i_from i_to
@@ -375,7 +390,7 @@ let try_retype_arith_exprs (env:env) e1 e2 rng : ML (option (expr & expr & typ))
                                                         (print_expr e2)
                                                         (print_typ t2))) in
   try
-    let t1, t2 = unfold_typ_abbrevs env t1, unfold_typ_abbrevs env t2 in
+    let t1, t2 = unfold_typ_abbrev_and_enum env t1, unfold_typ_abbrev_and_enum env t2 in
     if not (typ_is_integral env t1 `_and_`
             typ_is_integral env t2)
     then fail 1;

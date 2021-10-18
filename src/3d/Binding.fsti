@@ -23,12 +23,13 @@ val env : Type0
 val mk_env (g:global_env) : ML env
 val global_env_of_env (e:env) : ML global_env
 
-val resolve_typedef_abbrev (_:env) (_:ident): ML ident
+val resolve_record_case_outputtype_name (_:env) (_:ident): ML ident
 val lookup_expr_name (_:env) (_:ident) : ML typ
 val lookup_macro_definition (_:env) (_:ident) : ML (option expr)
 val has_reader (_:global_env) (_:ident) : ML bool
 val parser_kind_nz (env:global_env) (id:ident) : ML (option bool)
 val parser_weak_kind  (env:global_env) (id:ident) : ML (option weak_kind)
+val unfold_typ_abbrev_only (_:env) (t:typ) : ML typ
 val size_of_integral_typ (_:env) (_:typ) (_:range) : ML int
 val bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env)
 //val add_field_error_code_decls (ge: env) : ML (list decl)

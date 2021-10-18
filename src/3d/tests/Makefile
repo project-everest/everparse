@@ -23,7 +23,7 @@ OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types
 
 INTERPRETABLE_FILES=Pair Demo Align BoolSwitch Comments ErrorHandling \
-		    TAtMost FieldDependence0 Arith TestFieldPtr TestActions1 \
+		    TAtMost FieldDependence0 Arithmetic TestFieldPtr TestActions1 \
 		    Bitfields0 Enumerations
 INTERPRETABLE_TODO=EnumDependence Test_Synthetic1
 interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_FILES))
@@ -53,7 +53,7 @@ batch-test:
 	$(3D) --odir out.batch --batch --check_hashes strong $(positive_tests)
 	cp $(OTHER_HEADERS) out.batch
 	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer'
-	$(CXX) -o test-cpp.exe -I out.batch -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer test.cpp out.batch/ArithWrapper.o out.batch/Arith.o
+	$(CXX) -o test-cpp.exe -I out.batch -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer test.cpp out.batch/ArithmeticWrapper.o out.batch/Arithmetic.o
 	./test-cpp.exe
 
 inplace-hash-test:
