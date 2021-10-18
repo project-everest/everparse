@@ -517,8 +517,8 @@ type action
 
   | Action_ite :
       hd:bool ->
-      #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:action i0 l0 b0 t ->
-      #i1:_ -> #l1:_ -> #b1:_ -> else_:action i1 l1 b1 t ->
+      #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:(_:squash hd -> action i0 l0 b0 t) ->
+      #i1:_ -> #l1:_ -> #b1:_ -> else_:(_:squash (not hd) -> action i1 l1 b1 t) ->
       action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t
 
   | Action_let:
@@ -546,14 +546,14 @@ let rec action_as_action
       A.action_seq a1 tl
 
     | Action_ite hd t e ->
-      let then_ (_:squash hd) = action_as_action p t in
-      let else_ (_:squash (not hd)) = action_as_action p e in
+      let then_ (x:squash hd) = action_as_action p (t x) in
+      let else_ (x:squash (not hd)) = action_as_action p (e x) in
       A.action_ite hd then_ else_
 
     | Action_let hd k ->
       let head = atomic_action_as_action p hd in
       let k x = action_as_action p (k x) in
-      A.action_bind "" head k
+      A.action_bind "hd" head k
 
 (* Some AST nodes contain source comments that we propagate to the output *)
 let comments = list string
@@ -750,6 +750,20 @@ type typ
           (A.eloc_union l1 l2)
           false
 
+  | T_dep_pair_with_action:
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #i1:_ -> #l1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #i2:_ -> #l2:_ -> #b2:_ ->
+      #i3:_ -> #l3:_ -> #b3:_ ->      
+      base:dtyp pk1 true i1 l1 true ->
+      k:(x:dtyp_as_type base -> typ pk2 i2 l2 b2) ->
+      act:(dtyp_as_type base -> action i3 l3 b3 bool) ->
+      typ (P.and_then_kind pk1 pk2)
+          (A.conj_inv i1 (A.conj_inv i3 i2))
+          (A.eloc_union l1 (A.eloc_union l3 l2))
+          false
+
   | T_dep_pair_with_refinement_and_action:
       //This construct serves two purposes
       // 1. To avoid double fetches, we fold the refinement
@@ -832,6 +846,7 @@ type typ
       terminator:dtyp_as_type element_type ->
       typ P.parse_string_kind A.true_inv A.eloc_none false
 
+
 (* Type denotation of `typ` *)
 [@@specialize]
 let rec as_type
@@ -849,7 +864,8 @@ let rec as_type
     | T_pair t1 t2 ->
       as_type t1 & as_type t2
 
-    | T_dep_pair i t ->
+    | T_dep_pair i t
+    | T_dep_pair_with_action i t _ ->
       x:dtyp_as_type i & as_type (t x)
 
     | T_refine base refinement ->
@@ -907,7 +923,8 @@ let rec as_parser
       let p2 = as_parser t2 in
       P.parse_pair p1 p2
 
-    | T_dep_pair i t ->
+    | T_dep_pair i t
+    | T_dep_pair_with_action i t _ ->
       //assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));
       let pi = dtyp_as_parser i in
       P.parse_dep_pair pi (fun (x:dtyp_as_type i) -> as_parser (t x))
@@ -920,6 +937,7 @@ let rec as_parser
 
     | T_dep_pair_with_refinement base refinement k ->
       P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
+
 
     | T_dep_pair_with_refinement_and_action base refinement k _ ->
       P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
@@ -1026,6 +1044,19 @@ let rec as_validator
           (dtyp_as_leaf_reader base)
           refinement
           (fun x -> as_validator (k x)))
+
+
+    | T_dep_pair_with_action base t act ->
+      assert_norm (as_type (T_dep_pair_with_action base t act) ==
+                        x:dtyp_as_type base & as_type (t x));
+      assert_norm (as_parser (T_dep_pair_with_action base t act) ==
+                        P.(dtyp_as_parser base `parse_dep_pair` (fun x -> as_parser (t x))));
+      A.validate_weaken_inv_loc inv loc (
+        A.validate_dep_pair_with_action 
+          (dtyp_as_validator base)
+          (dtyp_as_leaf_reader base)
+          (fun x -> action_as_action (dtyp_as_parser base) (act x))
+          (fun x -> as_validator (t x)))
 
     | T_dep_pair_with_refinement_and_action base refinement k act ->
       assert_norm (as_type (T_dep_pair_with_refinement_and_action base refinement k act) ==

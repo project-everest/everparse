@@ -82,6 +82,12 @@ type typ : Type =
       k:lam typ ->
       typ
 
+  | T_dep_pair_with_action:
+      base:dtyp ->
+      k:lam typ ->
+      a:lam action ->
+      typ
+
   | T_dep_pair_with_refinement_and_action:
       base:dtyp ->
       refinement:lam expr ->
@@ -404,10 +410,8 @@ let rec typ_of_parser (p:T.parser)
       T_dep_pair_with_refinement (dtyp_of_parser p) (i, r) (j, typ_of_parser k)
 
     | T.Parse_dep_pair_with_action p a k ->
-      let a = as_lam a in
       let (i, k) = as_lam k in
-      let r = as_lam (None, T.mk_expr (T.Constant (A.Bool true))) in
-      T_dep_pair_with_refinement_and_action (dtyp_of_parser p) r (i, typ_of_parser k) a
+      T_dep_pair_with_action (dtyp_of_parser p) (i, typ_of_parser k) (as_lam a)
 
     | T.Parse_dep_pair_with_refinement_and_action _ p r a k ->
       let a = as_lam a in
@@ -505,10 +509,57 @@ let print_dtyp (mname:string) (dt:dtyp) =
       (print_ident mname hd)
       (List.map (T.print_expr mname) args |> String.concat " ")
 
-let print_lam (p:'a -> ML string) (x:lam 'a) =
+let print_lam (mname:string) (p:'a -> ML string) (x:lam 'a) =
   Printf.sprintf "(fun %s -> %s)"
-    (fst x).v.name
+    (print_ident mname (fst x))
     (p (snd x))
+
+let rec print_action (mname:string) (a:T.action)
+  : ML string
+  = let print_atomic_action (a:T.atomic_action)
+      : ML string
+      = match a with
+        | T.Action_return e ->
+          Printf.sprintf "(Action_return %s)"
+                          (T.print_expr mname e)
+        | T.Action_abort ->
+          "Action_abort"
+
+        | T.Action_field_pos ->
+          "Action_field_pos"
+
+        | T.Action_field_ptr ->
+          "Action_field_ptr"
+
+        | T.Action_deref i ->
+          Printf.sprintf "(Action_deref %s)"
+                          (print_ident mname i)
+
+        | T.Action_assignment lhs rhs ->
+          Printf.sprintf "(Action_assignment %s %s)"
+                         (print_ident mname lhs)
+                         (T.print_expr mname rhs)
+
+        | T.Action_call _ _ ->
+          failwith "Action_call: not yet supported"
+    in
+    match a with
+    | T.Atomic_action a ->
+      Printf.sprintf "(Atomic_action %s)"
+                     (print_atomic_action a)
+    | T.Action_seq hd tl ->
+      Printf.sprintf "(Action_seq %s %s)"
+        (print_atomic_action hd)
+        (print_action mname tl)
+    | T.Action_ite hd then_ else_ ->
+      Printf.sprintf "(Action_ite %s (fun _ -> %s) (fun _ -> %s))"
+        (T.print_expr mname hd)
+        (print_action mname then_)
+        (print_action mname else_)
+    | T.Action_let i a k ->
+      Printf.sprintf "(Action_let %s %s)"
+        (print_atomic_action a)
+        (print_lam mname (print_action mname) (i, k))
 
 let rec print_typ (mname:string) (t:typ)
   : ML string
@@ -528,31 +579,37 @@ let rec print_typ (mname:string) (t:typ)
     | T_dep_pair t k ->
       Printf.sprintf "(T_dep_pair %s %s)"
                      (print_dtyp mname t)
-                     (print_lam (print_typ mname) k)
+                     (print_lam mname (print_typ mname) k)
 
     | T_refine d r ->
       Printf.sprintf "(T_refine %s %s)"
                      (print_dtyp mname d)
-                     (print_lam (T.print_expr mname) r)
+                     (print_lam mname (T.print_expr mname) r)
 
     | T_refine_with_action d r a ->
       Printf.sprintf "(T_refine_with_action %s %s %s)"
                      (print_dtyp mname d)
-                     (print_lam (T.print_expr mname) r)
-                     (print_lam (T.print_action mname) a)
+                     (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (print_action mname) a)
 
     | T_dep_pair_with_refinement d r k ->
       Printf.sprintf "(T_dep_pair_with_refinement %s %s %s)"
                      (print_dtyp mname d)
-                     (print_lam (T.print_expr mname) r)
-                     (print_lam (print_typ mname) k)
+                     (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (print_typ mname) k)
+
+    | T_dep_pair_with_action d k a ->
+      Printf.sprintf "(T_dep_pair_with_action %s %s %s)"
+                     (print_dtyp mname d)
+                     (print_lam mname (print_typ mname) k)
+                     (print_lam mname (print_action mname) a)
 
     | T_dep_pair_with_refinement_and_action d r k a ->
       Printf.sprintf "(T_dep_pair_with_refinement_and_action %s %s %s %s)"
                      (print_dtyp mname d)
-                     (print_lam (T.print_expr mname) r)
-                     (print_lam (print_typ mname) k)
-                     (print_lam (T.print_action mname) a)
+                     (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (print_typ mname) k)
+                     (print_lam mname (print_action mname) a)
 
     | T_if_else e t1 t2 ->
       Printf.sprintf "(T_if_else %s %s %s)"
@@ -563,12 +620,12 @@ let rec print_typ (mname:string) (t:typ)
     | T_with_action p a ->
       Printf.sprintf "(T_with_action %s %s)"
                      (print_typ mname p)
-                     (T.print_action mname a)
+                     (print_action mname a)
 
     | T_with_dep_action d a ->
       Printf.sprintf "(T_with_dep_action %s %s)"
                      (print_dtyp mname d)
-                     (print_lam (T.print_action mname) a)
+                     (print_lam mname (print_action mname) a)
 
     | T_with_comment t c ->
       Printf.sprintf "(T_with_comment %s [%s])"
@@ -597,12 +654,12 @@ let rec print_typ (mname:string) (t:typ)
 
 let print_param mname (p:T.param) =
   Printf.sprintf "(%s:%s)"
-    (fst p).v.name
+    (print_ident mname (fst p))
     (T.print_typ mname (snd p))
 
 let print_typedef_name mname (n:T.typedef_name) =
   Printf.sprintf "%s %s"
-    (n.td_name.v.name)
+    (print_ident mname n.td_name)
     (List.map (print_param mname) n.td_params |> String.concat " ")
 
 let print_type_decl mname (td:type_decl) =
@@ -844,6 +901,11 @@ let print_binding mname (td:type_decl)
                         root_name
    in
    let binding =
+     let reader =
+       if td.allow_reading
+       then Printf.sprintf ""
+       else None
+     in
      Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet binding_%s \n\
                       : global_binding \n\
                       = mk_global_binding\n\
