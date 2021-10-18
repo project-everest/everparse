@@ -1213,12 +1213,14 @@ let mk_global_binding (p:list param_type)
                       (p_reader: option (dep_arrow p
                          (fun args -> 
                             leaf_reader (apply_dep_arrow _ _ p_p args))))
+                      (#b:bool)
                       (p_v : dep_arrow p
                              (fun args ->
                                 A.validate_with_action_t (apply_dep_arrow _ _ p_p args)
                                                          (apply_arrow inv args)
                                                          (apply_arrow loc args)
-                                                         (Some? p_reader)))
+                                                         b))
+                      (_:squash (b == Some? p_reader))
    : global_binding
    =
     {
@@ -1249,13 +1251,20 @@ let coerce_parser steps : T.Tac unit =
   let open FStar.List.Tot in
   T.norm [delta_only (steps @
                       [ `%dep_arrow;
+                        `%param_type_as_type;
+                        `%itype_as_type;
+                        `%apply;
                         `%parser_kind_of_itype;
                         `%allow_reader_of_itype;
                         `%parser_kind_nz_of_itype;
                         `%parser_weak_kind_of_itype;                        
                         `%apply_arrow;
                         `%nullary_arrow;
-                        `%coerce ]);
+                        `%coerce;
+                        `%fst;
+                        `%snd;
+                        `%Mktuple2?._1;
+                        `%Mktuple2?._2]);
           zeta;
           iota;
           primops];

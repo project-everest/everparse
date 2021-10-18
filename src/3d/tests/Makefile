@@ -24,8 +24,8 @@ all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules
 
 INTERPRETABLE_FILES=Pair Demo Align BoolSwitch Comments ErrorHandling \
 		    TAtMost FieldDependence0 Arithmetic TestFieldPtr TestActions1 \
-		    Bitfields0 Enumerations
-INTERPRETABLE_TODO=EnumDependence Test_Synthetic1
+		    Bitfields0 Enumerations Test_Synthetic1
+INTERPRETABLE_TODO=EnumDependence
 interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_FILES))
 interpret_todo: $(addsuffix .interpret, $(INTERPRETABLE_TODO))
 

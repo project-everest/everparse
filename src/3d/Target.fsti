@@ -397,6 +397,8 @@ type decl = decl' * decl_attributes
 type decls = list decl
 
 val error_handler_decl : decl
+val maybe_mname_prefix (mname:string) (i:A.ident) : string
+val print_ident (i:A.ident) : string
 val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
 val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string //(decreases t)

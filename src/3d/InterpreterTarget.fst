@@ -499,14 +499,20 @@ let print_ityp (i:itype) =
 let print_ident (mname:string) (i:A.ident) =
   T.print_maybe_qualified_ident mname i
 
+let print_derived_name (mname:string) (tag:string) (i:A.ident) =
+  Printf.sprintf "%s%s_%s"
+    (T.maybe_mname_prefix mname i)
+    tag
+    (T.print_ident i)
+
 let print_dtyp (mname:string) (dt:dtyp) =
   match dt with
   | DT_IType i ->
     Printf.sprintf "(DT_IType %s)" (print_ityp i)
 
   | DT_App hd args ->
-    Printf.sprintf "(dtyp_%s %s)"
-      (print_ident mname hd)
+    Printf.sprintf "(%s %s)"
+      (print_derived_name mname "dtyp" hd)
       (List.map (T.print_expr mname) args |> String.concat " ")
 
 let print_lam (mname:string) (p:'a -> ML string) (x:lam 'a) =
@@ -679,7 +685,7 @@ let rec print_inv mname (i:inv)
     | Inv_true -> "A.true_inv"
     | Inv_conj i j -> Printf.sprintf "(A.conj_inv %s %s)" (print_inv mname i) (print_inv mname j)
     | Inv_ptr x -> Printf.sprintf "(A.ptr_inv %s)" (print_ident mname x)
-    | Inv_name hd args -> Printf.sprintf "(inv_%s %s)" (print_ident mname hd) (print_args mname args)
+    | Inv_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "inv" hd) (print_args mname args)
 
 let rec print_eloc mname (e:eloc)
   : ML string
@@ -687,20 +693,19 @@ let rec print_eloc mname (e:eloc)
     | Eloc_none -> "A.eloc_none"
     | Eloc_union i j -> Printf.sprintf "(A.eloc_union %s %s)" (print_eloc mname i) (print_eloc mname j)
     | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (print_ident mname x)
-    | Eloc_name hd args -> Printf.sprintf "(eloc_%s %s)" (print_ident mname hd) (print_args mname args)
+    | Eloc_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "eloc" hd) (print_args mname args)
 
 let rec print_on_sucess mname (b:on_success)
   : ML string
   = match b with
     | On_success b -> Printf.sprintf "%b" b
     | On_success_union b0 b1 -> Printf.sprintf "(%s || %s)" (print_on_sucess mname b0) (print_on_sucess mname b1)
-    | On_success_named hd args -> Printf.sprintf "(on_success_%s %s)" (print_ident mname hd) (print_args mname args)
+    | On_success_named hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "on_success" hd) (print_args mname args)
 
 let rec print_param_type mname (t:T.typ)
   : ML string
-  = let open T in
-    match t with
-    | T_app hd false [] ->
+  = match t with
+    | T.T_app hd false [] ->
       (match itype_of_ident hd with
        | Some i ->
          Printf.sprintf "(PT_Base %s)"
@@ -708,7 +713,7 @@ let rec print_param_type mname (t:T.typ)
        | None ->
          Printf.sprintf "(PT_Typedef %s)"
                         (print_ident mname hd))
-    | T_pointer t ->
+    | T.T_pointer t ->
       Printf.sprintf "(PT_Pointer %s)"
                      (print_param_type mname t)
     | _ ->
@@ -925,7 +930,8 @@ let print_binding mname (td:type_decl)
                            inv_arrow_%s\n\
                            eloc_arrow_%s\n\
                            %s\n\
-                           validator_%s\n"
+                           validator_%s\n\
+                           (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
                       root_name
                       root_name
                       root_name
