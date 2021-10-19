@@ -406,6 +406,7 @@ type global_binding = {
                           "leaf_reader_of_binding";
                           "validator_of_binding"])
 
+
 [@@specialize]
 let has_reader (g:global_binding) = 
   match leaf_reader_of_binding g with
@@ -419,6 +420,66 @@ let get_leaf_reader (r:reader_binding) (args:args_of (param_types_of_binding r))
   = apply_dep_arrow _ _ 
                     (Some?.v (leaf_reader_of_binding r))
                     args
+
+(* global_binding: A single entry in the environment *)
+noeq
+type global_binding_alt = {
+  // The name being bound
+  name : ident;
+  //Parser metadata
+  parser_kind_nz:bool; // Does it consume non-zero bytes?
+  parser_weak_kind: P.weak_kind;
+  parser_kind: P.parser_kind parser_kind_nz parser_weak_kind;
+  //Memory invariant of any actions it contains
+  inv:A.slice_inv;
+  //Write footprint of any of its actions
+  loc:A.eloc;
+  //Its type denotation
+  p_t : Type0;
+  //Its parser denotation
+  p_p : P.parser parser_kind p_t;
+  //Whether the type can be read -- to avoid double fetches
+  p_reader: option (leaf_reader p_p);
+  //Its validate-with-action denotationa
+  p_v : A.validate_with_action_t p_p inv loc (Some? p_reader);
+}
+
+//Generate projectors with a tactic, because the default
+//projectors are not SMT-typeable
+%splice[name_of_binding_alt;
+        nz_of_binding_alt;
+        wk_of_binding_alt;
+        pk_of_binding_alt;
+        inv_of_binding_alt;
+        loc_of_binding_alt;
+        type_of_binding_alt;
+        parser_of_binding_alt;
+        leaf_reader_of_binding_alt;
+        validator_of_binding_alt]
+       (ProjTac.mk_projs (`%global_binding_alt)
+                         ["name_of_binding_alt";
+                          "nz_of_binding_alt";
+                          "wk_of_binding_alt";
+                          "pk_of_binding_alt";
+                          "inv_of_binding_alt";
+                          "loc_of_binding_alt";
+                          "type_of_binding_alt";
+                          "parser_of_binding_alt";
+                          "leaf_reader_of_binding_alt";
+                          "validator_of_binding_alt"])
+
+let has_reader_alt (g:global_binding_alt) = 
+  match leaf_reader_of_binding_alt g with
+  | Some _ -> true
+  | _ -> false
+
+let reader_binding_alt = g:global_binding_alt { has_reader_alt g }
+
+[@@specialize]
+let get_leaf_reader_alt (r:reader_binding_alt)
+  : leaf_reader (parser_of_binding_alt r)
+  = Some?.v (leaf_reader_of_binding_alt r)
+
 
 (** Now we define the AST of 3D programs *)
 
@@ -604,6 +665,17 @@ type dtyp
            (apply_arrow (inv_of_binding b) args)
            (apply_arrow (loc_of_binding b) args)
 
+  | DT_App_Alt:
+      params:list param_type ->
+      b:arrow params global_binding_alt ->
+      args: args_of params ->
+      dtyp #(nz_of_binding_alt (apply_arrow b args))
+           #(wk_of_binding_alt (apply_arrow b args))      
+           (pk_of_binding_alt (apply_arrow b args))
+           (has_reader_alt (apply_arrow b args))
+           (inv_of_binding_alt (apply_arrow b args))
+           (loc_of_binding_alt (apply_arrow b args))           
+           
 [@@specialize]
 let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
                  (d:dtyp pk hr i l)
@@ -614,6 +686,9 @@ let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
 
     | DT_App hd b args ->
       apply_arrow (type_of_binding b) args
+
+    | DT_App_Alt ps b args ->
+      type_of_binding_alt (apply_arrow b args)
       
 let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l
                          (d:dtyp pk true i l)
@@ -626,6 +701,10 @@ let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l
 
     | DT_App hd b args ->
       let (| _, _ |) = get_leaf_reader b args in ()
+
+    | DT_App_Alt ps b args ->
+      let (| _, _ |) = get_leaf_reader_alt (apply_arrow b args) in ()
+
   
 let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
                    (d:dtyp pk hr i l)
@@ -636,6 +715,9 @@ let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
 
     | DT_App hd b args ->
       apply_dep_arrow _ _ (parser_of_binding b) args
+
+    | DT_App_Alt _ b args ->
+      parser_of_binding_alt (apply_arrow b args)
 
 [@@specialize]
 let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
@@ -652,6 +734,11 @@ let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
       assert_norm (dtyp_as_parser (DT_App hd b args) == apply_dep_arrow _ _ (parser_of_binding b) args);
       apply_dep_arrow _ _ (validator_of_binding b) args
 
+    | DT_App_Alt ps b args ->
+      assert_norm (dtyp_as_type (DT_App_Alt ps b args) == (type_of_binding_alt (apply_arrow b args)));
+      assert_norm (dtyp_as_parser (DT_App_Alt ps b args) == parser_of_binding_alt (apply_arrow b args));
+      validator_of_binding_alt (apply_arrow b args)
+
 [@@specialize]
 let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l 
                             (d:dtyp pk true i l)
@@ -659,10 +746,17 @@ let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l
   = match d with
     | DT_IType i -> 
       itype_as_leaf_reader i
+
     | DT_App hd b args -> 
       let (| _, lr |) = get_leaf_reader b args in
       assert_norm (dtyp_as_parser (DT_App hd b args) == 
                    apply_dep_arrow _ _ (parser_of_binding b) args);
+      lr
+
+    | DT_App_Alt ps b args -> 
+      let (| _, lr |) = get_leaf_reader_alt (apply_arrow b args) in
+      assert_norm (dtyp_as_parser (DT_App_Alt ps b args) == 
+                   parser_of_binding_alt (apply_arrow b args));
       lr
 
 noeq
