@@ -672,7 +672,7 @@ let print_type_decl mname (td:type_decl) =
   FStar.Printf.sprintf
     "[@@specialize; noextract_to \"Kremlin\"]\n\
      noextract\n\
-     let def_%s = %s\n"
+     let def_%s = ( %s <: Tot (typ _ _ _ _) by (T.norm [delta_attr [`%%specialize]; zeta; iota; primops]; T.smt()))\n"
       (print_typedef_name mname td.name)
       (print_typ mname td.typ)
 

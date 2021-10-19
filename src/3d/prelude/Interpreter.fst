@@ -1182,7 +1182,11 @@ let as_val
 
 let specialize_tac ()
   : T.Tac unit
-  = T.norm [zeta; primops; iota; delta_attr [`%specialize];
+  = T.norm [nbe;
+            zeta;
+            primops;
+            iota;
+            delta_attr [`%specialize];
             delta_only [`%Some?;
                         `%Some?.v;
                         `%as_validator;
