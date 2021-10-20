@@ -38,8 +38,10 @@ open Steel.FractionalPermission
 open Steel.Effect.Atomic
 module SZ = Steel.C.StdInt.Base
 
+inline_for_extraction
 val t (base: Type0) (t:Type u#0) : Type u#0
 
+inline_for_extraction
 val null (base: Type) (a: Type) : Tot (t base a)
 
 val g_is_null (#base #a: Type) (x: t base a) : Ghost bool
@@ -103,10 +105,10 @@ val varrayptr_not_null
 
 
 val is_arrayptr_or_null (#base #a:Type0) (r:t base a) : slprop u#1
-val arrayptr_or_null_sel (#base #a:Type0) (r:t base a) : selector (option (v base a)) (is_arrayptr_or_null r)
+val arrayptr_or_null_sel (#base #a:Type0) (r:t base a) : GTot (selector (option (v base a)) (is_arrayptr_or_null r))
 
 [@@ __steel_reduce__]
-let varrayptr_or_null' #base #a r : vprop' =
+let varrayptr_or_null' #base #a r : GTot vprop' =
   {hp = is_arrayptr_or_null r;
    t = option (v base a);
    sel = arrayptr_or_null_sel r}
@@ -163,11 +165,13 @@ val elim_varrayptr_or_null_none
       h (varrayptr_or_null x) == None
     )
 
+inline_for_extraction
 val is_null
-  (#opened: _)
+//  (#opened: _)
   (#base #a: Type)
   (x: t base a)
-: SteelAtomicBase bool false opened Unobservable
+// : SteelAtomicBase bool false opened Unobservable
+: Steel bool
     (varrayptr_or_null x)
     (fun _ -> varrayptr_or_null x)
     (fun _ -> True)
@@ -216,6 +220,7 @@ True //            (h (varrayptr al)).perm == (h (varrayptr ar)).perm
             c'.contents == cl.contents `Seq.append` cr.contents
           )
 
+inline_for_extraction
 val split (#opened: _) (#base #a:Type) (x: t base a) (i:SZ.size_t)
   : SteelAtomicBase (t base a) false opened Unobservable
           (varrayptr x)
@@ -236,6 +241,7 @@ val split (#opened: _) (#base #a:Type) (x: t base a) (i:SZ.size_t)
             s.contents == sl.contents `Seq.append` sr.contents
           )
 
+inline_for_extraction
 val base_t (a: Type0) (n: SZ.size_t) : Tot Type0
 
 val freeable
@@ -243,6 +249,7 @@ val freeable
   (x: array base t)
 : Tot prop
 
+inline_for_extraction
 val alloc (#a:Type) (x:a) (n:SZ.size_t)
   : Steel (t (base_t a n) a)
              emp
@@ -259,6 +266,7 @@ val alloc (#a:Type) (x:a) (n:SZ.size_t)
                | _ -> False
              )
 
+inline_for_extraction
 val index (#base: Type) (#a:Type) (r: t base a) (i: SZ.size_t)
   : Steel a
              (varrayptr r)
@@ -270,6 +278,7 @@ val index (#base: Type) (#a:Type) (r: t base a) (i: SZ.size_t)
                SZ.size_v i < length s.array /\
                y == Seq.index s.contents (SZ.size_v i))
 
+inline_for_extraction
 val upd (#base: Type) (#a:Type) (r: t base a) (i:SZ.size_t) (x:a)
   : Steel unit
              (varrayptr r)
@@ -286,6 +295,7 @@ val upd (#base: Type) (#a:Type) (r: t base a) (i:SZ.size_t) (x:a)
                SZ.size_v i < length s.array /\
                s'.contents == Seq.upd s.contents (SZ.size_v i) x)
 
+inline_for_extraction
 val free (#base: Type) (#a:Type) (r:t base a)
   : Steel unit
              (varrayptr r)
@@ -346,6 +356,7 @@ val array_of
   (requires True)
   (ensures (fun y -> A.length y == length x))
 
+inline_for_extraction
 val enter
 //  (#opened: _)
   (#base: Type)
@@ -367,6 +378,7 @@ val enter
       s.contents == h (A.varray x) // (A.varrayp x p)
     )
 
+inline_for_extraction
 val exit
 //  (#opened: _)
   (#base: Type)
