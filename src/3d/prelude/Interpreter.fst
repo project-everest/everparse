@@ -730,14 +730,15 @@ let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
       itype_as_validator i
 
     | DT_App hd b args ->
-      assert_norm (dtyp_as_type (DT_App hd b args) == apply_arrow (type_of_binding b) args);
-      assert_norm (dtyp_as_parser (DT_App hd b args) == apply_dep_arrow _ _ (parser_of_binding b) args);
+      // assert_norm (dtyp_as_type (DT_App hd b args) == apply_arrow (type_of_binding b) args);
+      // assert_norm (dtyp_as_parser (DT_App hd b args) == apply_dep_arrow _ _ (parser_of_binding b) args);
       apply_dep_arrow _ _ (validator_of_binding b) args
 
     | DT_App_Alt ps b args ->
-      assert_norm (dtyp_as_type (DT_App_Alt ps b args) == (type_of_binding_alt (apply_arrow b args)));
-      assert_norm (dtyp_as_parser (DT_App_Alt ps b args) == parser_of_binding_alt (apply_arrow b args));
+      // assert_norm (dtyp_as_type (DT_App_Alt ps b args) == (type_of_binding_alt (apply_arrow b args)));
+      // assert_norm (dtyp_as_parser (DT_App_Alt ps b args) == parser_of_binding_alt (apply_arrow b args));
       validator_of_binding_alt (apply_arrow b args)
+
 
 [@@specialize]
 let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l 
@@ -1295,6 +1296,16 @@ let specialize_tac ()
                         `%parser_of_binding;
                         `%validator_of_binding;
                         `%leaf_reader_of_binding;
+                        `%name_of_binding_alt;
+                        `%nz_of_binding_alt;
+                        `%wk_of_binding_alt;
+                        `%pk_of_binding_alt;
+                        `%inv_of_binding_alt;
+                        `%loc_of_binding_alt;
+                        `%type_of_binding_alt;
+                        `%parser_of_binding_alt;
+                        `%validator_of_binding_alt;
+                        `%leaf_reader_of_binding_alt;
                         `%fst;
                         `%snd;
                         `%Mktuple2?._1;
@@ -1335,12 +1346,38 @@ let mk_global_binding (p:list param_type)
       p_v = p_v;
     }
 
+[@@specialize]
+let mk_global_binding_alt
+                      #nz #wk 
+                      (pk:P.parser_kind nz wk)
+                      (inv:A.slice_inv)
+                      (loc:A.eloc)
+                      (p_t : Type0)
+                      (p_p : P.parser pk p_t)
+                      (p_reader: option (leaf_reader p_p))
+                      (b:bool)
+                      (p_v : A.validate_with_action_t p_p inv loc b)
+                      (_:squash (b == Some? p_reader))
+   : global_binding_alt
+   = {
+       name = "";
+       parser_kind_nz = nz;
+       parser_weak_kind = wk;
+       parser_kind = pk;
+       inv = inv;
+       loc = loc;
+       p_t = p_t;
+       p_p = p_p;
+       p_reader = p_reader;
+       p_v = p_v
+     }
+
 let inv_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.slice_inv = s
 let eloc_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.eloc = l
 
 let coerce_arrow steps : T.Tac unit =
   let open FStar.List.Tot in
-  T.norm [delta_only (steps @ [ `%arrow ]);
+  T.norm [delta_only (steps @ [ `%arrow; `%param_type_as_type; `%itype_as_type ]);
           zeta;
           iota];
   T.trefl()
@@ -1412,7 +1449,38 @@ let coerce_dtyp steps : T.Tac unit =
                                `%apply_arrow;
                                `%coerce;
                                `%param_types_of_binding;
-                               `%nullary_arrow]);
+                               `%nullary_arrow;
+                               `%fst;
+                               `%snd;
+                               `%Mktuple2?._1;
+                               `%Mktuple2?._2                               
+                               ]);
+           zeta;
+           iota;
+           primops];
+  T.trefl()
+
+
+let coerce_dtyp_alt steps : T.Tac unit =
+  let open FStar.List.Tot in
+  T.norm [delta_only (steps @ [`%pk_of_binding_alt; 
+                               `%mk_global_binding_alt;
+                               `%has_reader_alt;
+                               `%leaf_reader_of_binding_alt;
+                               `%loc_of_binding_alt;
+                               `%inv_of_binding_alt;
+                               `%nz_of_binding_alt;
+                               `%wk_of_binding_alt;
+                               `%apply_arrow;
+                               `%apply;
+                               `%coerce;
+                               `%nullary_arrow;
+                               `%parser_kind_of_itype;
+                               `%fst;
+                               `%snd;
+                               `%Mktuple2?._1;
+                               `%Mktuple2?._2                               
+                              ]);
            zeta;
            iota;
            primops];
@@ -1422,6 +1490,30 @@ let coerce_args_of steps : T.Tac unit =
   let open FStar.List.Tot in
   T.norm [delta_only (steps @ [`%args_of;`%param_types_of_binding;`%mk_global_binding]); 
           zeta;
+           iota;
+           primops];
+  T.trefl()
+
+let coerce_args_of_alt steps : T.Tac unit =
+  let open FStar.List.Tot in
+  T.norm [delta_only (steps @ [`%args_of;`%param_types_of_binding;`%mk_global_binding;`%param_type_as_type;`%itype_as_type]); 
+          zeta;
+           iota;
+           primops];
+  T.trefl()
+
+
+let coerce_validator_alt steps : T.Tac unit =
+  let open FStar.List.Tot in
+  T.norm [delta_only (steps @ [`%parser_kind_of_itype;
+                               `%parser_kind_nz_of_itype;
+                               `%fst;
+                               `%snd;
+                               `%Mktuple2?._1;
+                               `%Mktuple2?._2;
+                               `%coerce
+                              ]);
+           zeta;
            iota;
            primops];
   T.trefl()

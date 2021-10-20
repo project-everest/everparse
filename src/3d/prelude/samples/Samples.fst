@@ -62,6 +62,26 @@ let u8_pair_param (i:P.___UINT8)
 let validate_u8_pair_param (i:P.___UINT8)
   = as_validator (u8_pair_param i)
 
+
+//let u8_pair_global_binding_alt (i:P.___UINT8) =
+
+[@@specialize]
+let u8_pair_global_binding_alt_param
+  : arrow [PT_Base UInt8] global_binding_alt
+  = coerce (_ by (T.trefl()))
+    (fun i ->  mk_global_binding_alt None (validate_u8_pair_param i) ( _ by (T.trefl())))
+
+[@@specialize]
+let kind_u8_pair = and_then_kind (filter_kind kind____UINT8) (filter_kind kind____UINT8)
+let inv_u8_pair = A.conj_inv A.true_inv A.true_inv
+let eloc_u8_pair = A.eloc_union A.eloc_none A.eloc_none
+[@@specialize]
+let u8_pair_param_dtyp_alt (i:P.___UINT8)
+  : dtyp kind_u8_pair false inv_u8_pair eloc_u8_pair
+  = coerce (_ by (T.trefl()))
+           (DT_App_Alt [PT_Base UInt8] u8_pair_global_binding_alt_param (coerce (_ by (T.trefl())) (i, ())))
+
+
 [@@specialize]
 let param_types = [PT_Base UInt8]
 
@@ -117,18 +137,16 @@ let u8_pair_param_dtyp x = DT_App "u8_pair_param" u8_pair_param_binding (x, ())
 
 let u8_line_kind
   : P.parser_kind true P.WeakKindStrongPrefix
-  = P.and_then_kind (pk_of_binding u8_pair_binding)
-                    (pk_of_binding u8_pair_binding)
+  = P.and_then_kind kind_u8_pair kind_u8_pair
 
 [@@specialize]
-let u8_line
-  : typ #true #P.WeakKindStrongPrefix u8_line_kind _ _ _
-  = T_pair (T_denoted u8_pair_dtyp) (T_denoted u8_pair_dtyp)
+let u8_line (x:P.___UINT8)
+  = T_pair (T_denoted (u8_pair_param_dtyp_alt x))
+           (T_denoted (u8_pair_param_dtyp_alt x))
 
 [@@T.postprocess_with specialize_tac]
-let validate_u8_line
-  : A.validate_with_action_t _ _ _ _
-  = as_validator u8_line
+let validate_u8_line (x:P.___UINT8)
+  = as_validator (u8_line x)
 
 let u8_rect_kind
   : P.parser_kind true P.WeakKindStrongPrefix

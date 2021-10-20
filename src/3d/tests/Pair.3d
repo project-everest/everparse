@@ -1,6 +1,6 @@
 entrypoint
-typedef struct _Pair
+typedef struct _Pair (UINT32 x, UINT32 y)
 {
-  UINT32 fst;
-  UINT32 snd;
+  UINT32 fst { fst <= x };
+  UINT32 snd { snd <= y };
 } Pair;
