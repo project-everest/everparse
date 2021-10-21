@@ -167,11 +167,10 @@ val elim_varrayptr_or_null_none
 
 inline_for_extraction
 val is_null
-//  (#opened: _)
+  (#opened: _)
   (#base #a: Type)
   (x: t base a)
-// : SteelAtomicBase bool false opened Unobservable
-: Steel bool
+: SteelAtomicBase bool false opened Unobservable
     (varrayptr_or_null x)
     (fun _ -> varrayptr_or_null x)
     (fun _ -> True)
@@ -358,12 +357,12 @@ val array_of
 
 inline_for_extraction
 val enter
-//  (#opened: _)
+  (#opened: _)
   (#base: Type)
   (#a: Type)
   (x: A.array base a)
 //  (p: perm)
-: Steel (t base a) // false opened Unobservable
+: SteelAtomicBase (t base a) false opened Unobservable
     (A.varray x) // (A.varrayp x p)
     (fun res -> varrayptr res)
     (fun _ ->
@@ -380,11 +379,11 @@ val enter
 
 inline_for_extraction
 val exit
-//  (#opened: _)
+  (#opened: _)
   (#base: Type)
   (#a: Type)
   (x: t base a)
-: Steel (A.array base a) // (* & perm) false opened Unobservable
+: SteelAtomicBase (A.array base a) (* & perm *) false opened Unobservable
     (varrayptr x)
     (fun res -> A.varray res) // A.varrayp (fst res) (snd res))
     (fun _ -> True)
