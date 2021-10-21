@@ -666,15 +666,13 @@ type dtyp
            (apply_arrow (loc_of_binding b) args)
 
   | DT_App_Alt:
-      params:list param_type ->
-      b:arrow params global_binding_alt ->
-      args: args_of params ->
-      dtyp #(nz_of_binding_alt (apply_arrow b args))
-           #(wk_of_binding_alt (apply_arrow b args))      
-           (pk_of_binding_alt (apply_arrow b args))
-           (has_reader_alt (apply_arrow b args))
-           (inv_of_binding_alt (apply_arrow b args))
-           (loc_of_binding_alt (apply_arrow b args))           
+      b:global_binding_alt ->
+      dtyp #(nz_of_binding_alt b)
+           #(wk_of_binding_alt b)
+           (pk_of_binding_alt b)
+           (has_reader_alt b)
+           (inv_of_binding_alt b)
+           (loc_of_binding_alt b)
            
 [@@specialize]
 let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
@@ -687,8 +685,8 @@ let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
     | DT_App hd b args ->
       apply_arrow (type_of_binding b) args
 
-    | DT_App_Alt ps b args ->
-      type_of_binding_alt (apply_arrow b args)
+    | DT_App_Alt b ->
+      type_of_binding_alt b
       
 let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l
                          (d:dtyp pk true i l)
@@ -702,8 +700,8 @@ let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l
     | DT_App hd b args ->
       let (| _, _ |) = get_leaf_reader b args in ()
 
-    | DT_App_Alt ps b args ->
-      let (| _, _ |) = get_leaf_reader_alt (apply_arrow b args) in ()
+    | DT_App_Alt b ->
+      let (| _, _ |) = get_leaf_reader_alt b in ()
 
   
 let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
@@ -716,8 +714,8 @@ let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
     | DT_App hd b args ->
       apply_dep_arrow _ _ (parser_of_binding b) args
 
-    | DT_App_Alt _ b args ->
-      parser_of_binding_alt (apply_arrow b args)
+    | DT_App_Alt b ->
+      parser_of_binding_alt b
 
 [@@specialize]
 let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
@@ -734,10 +732,10 @@ let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
       // assert_norm (dtyp_as_parser (DT_App hd b args) == apply_dep_arrow _ _ (parser_of_binding b) args);
       apply_dep_arrow _ _ (validator_of_binding b) args
 
-    | DT_App_Alt ps b args ->
+    | DT_App_Alt b ->
       // assert_norm (dtyp_as_type (DT_App_Alt ps b args) == (type_of_binding_alt (apply_arrow b args)));
       // assert_norm (dtyp_as_parser (DT_App_Alt ps b args) == parser_of_binding_alt (apply_arrow b args));
-      validator_of_binding_alt (apply_arrow b args)
+      validator_of_binding_alt b
 
 
 [@@specialize]
@@ -754,10 +752,10 @@ let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l
                    apply_dep_arrow _ _ (parser_of_binding b) args);
       lr
 
-    | DT_App_Alt ps b args -> 
-      let (| _, lr |) = get_leaf_reader_alt (apply_arrow b args) in
-      assert_norm (dtyp_as_parser (DT_App_Alt ps b args) == 
-                   parser_of_binding_alt (apply_arrow b args));
+    | DT_App_Alt b -> 
+      let (| _, lr |) = get_leaf_reader_alt b in
+      assert_norm (dtyp_as_parser (DT_App_Alt b) == 
+                   parser_of_binding_alt b);
       lr
 
 noeq
@@ -1235,46 +1233,6 @@ let rec as_validator
                         (dtyp_as_leaf_reader elt_t)
                         terminator
 
-unfold
-let norm_steps =
-  [zeta; primops; iota; delta_attr [`%specialize];
-            delta_only [`%Some?;
-                        `%Some?.v;
-                        `%name_of_binding;
-                        `%param_types_of_binding;
-                        `%nz_of_binding;
-                        `%wk_of_binding;
-                        `%pk_of_binding;
-                        `%inv_of_binding;
-                        `%loc_of_binding;
-                        `%type_of_binding;
-                        `%parser_of_binding;
-                        `%validator_of_binding;
-                        `%leaf_reader_of_binding]]
-
-[@@specialize]
-let coerce_norm (#a:Type) (t:a) : norm norm_steps a = t
-
-let vt
-      (#nz:bool)
-      (#wk: _)
-      (#k:P.parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      ([@@@erasable] p:P.parser k t)
-      ([@@@erasable] inv:A.slice_inv)
-      ([@@@erasable] l:A.eloc)
-      (allow_reading:bool)
-  = A.validate_with_action_t p inv l allow_reading
-
-[@@specialize]
-let as_val
-          #nz #wk (#pk:P.parser_kind nz wk)
-          #loc #inv #b
-          (t:typ pk inv loc b)
-  : Tot (norm norm_steps (vt #nz #wk #pk #(as_type t) (as_parser t) inv loc b))
-  = let v = as_validator t in
-    coerce_norm v
-
 let specialize_tac ()
   : T.Tac unit
   = T.norm [nbe;
@@ -1517,3 +1475,40 @@ let coerce_validator_alt steps : T.Tac unit =
            iota;
            primops];
   T.trefl()
+
+[@@specialize]
+let mk_dt_app_alt (x:global_binding_alt)
+    : dtyp #(nz_of_binding_alt x) 
+           #(wk_of_binding_alt x)
+           (pk_of_binding_alt x)
+           (has_reader_alt x)
+           (inv_of_binding_alt x)
+           (loc_of_binding_alt x)
+    = DT_App_Alt x
+
+[@@specialize]
+let mk_dt_app_alt_alt #nz #wk (pk:P.parser_kind nz wk) (b:bool) (inv:A.slice_inv) (loc:A.eloc)
+                  (x:global_binding_alt)
+                  (_:squash (nz == nz_of_binding_alt x /\
+                             wk == wk_of_binding_alt x /\
+                             pk == pk_of_binding_alt x /\
+                             b == has_reader_alt x /\
+                             inv == inv_of_binding_alt x /\
+                             loc == loc_of_binding_alt x))
+    : dtyp #nz #wk pk b inv loc
+    = DT_App_Alt x
+
+let coerce_dt_app_alt (steps:_) : T.Tac unit =
+  let open FStar.List.Tot in
+  T.norm [delta_only (steps@[`%nz_of_binding_alt;
+                        `%wk_of_binding_alt;
+                        `%pk_of_binding_alt;
+                        `%has_reader_alt;
+                        `%leaf_reader_of_binding_alt;                                 
+                        `%inv_of_binding_alt;
+                        `%loc_of_binding_alt;
+                        `%mk_global_binding_alt]);
+          zeta; 
+          iota;
+          simplify];
+  T.trivial()
