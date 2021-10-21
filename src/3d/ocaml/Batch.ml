@@ -74,7 +74,6 @@ let fstar_args
       "--cache_dir" :: out_dir ::
         "--include" :: ddd_actions_home input_stream_binding ::
         "--include" :: out_dir ::
-          "--load_cmxs" :: "WeakenTac" ::
             fstar_args0
 
 let verify_fst_file

@@ -666,13 +666,20 @@ type dtyp
            (apply_arrow (loc_of_binding b) args)
 
   | DT_App_Alt:
-      b:global_binding_alt ->
-      dtyp #(nz_of_binding_alt b)
-           #(wk_of_binding_alt b)
-           (pk_of_binding_alt b)
-           (has_reader_alt b)
-           (inv_of_binding_alt b)
-           (loc_of_binding_alt b)
+      #nz:bool ->
+      #wk:P.weak_kind ->
+      pk:P.parser_kind nz wk ->
+      has_reader:bool ->
+      inv:A.slice_inv ->
+      loc:A.eloc ->
+      x:global_binding_alt ->
+      _:squash (nz == nz_of_binding_alt x /\
+                wk == wk_of_binding_alt x /\
+                pk == pk_of_binding_alt x /\
+                has_reader == has_reader_alt x /\
+                inv == inv_of_binding_alt x /\
+                loc == loc_of_binding_alt x) ->
+      dtyp #nz #wk pk has_reader inv loc
            
 [@@specialize]
 let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
@@ -685,7 +692,7 @@ let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
     | DT_App hd b args ->
       apply_arrow (type_of_binding b) args
 
-    | DT_App_Alt b ->
+    | DT_App_Alt _ _ _ _ b _ ->
       type_of_binding_alt b
       
 let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l
@@ -700,7 +707,7 @@ let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l
     | DT_App hd b args ->
       let (| _, _ |) = get_leaf_reader b args in ()
 
-    | DT_App_Alt b ->
+    | DT_App_Alt _ _ _ _ b _ ->
       let (| _, _ |) = get_leaf_reader_alt b in ()
 
   
@@ -714,11 +721,14 @@ let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
     | DT_App hd b args ->
       apply_dep_arrow _ _ (parser_of_binding b) args
 
-    | DT_App_Alt b ->
+    | DT_App_Alt _ _ _ _ b _ ->
       parser_of_binding_alt b
 
 [@@specialize]
-let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
+let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk)
+                      (#hr:_)
+                      (#[@@@erasable] i:A.slice_inv)
+                      (#[@@@erasable] l:A.eloc)
                       (d:dtyp pk hr i l)
   : A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i l hr
   = match d 
@@ -732,15 +742,17 @@ let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
       // assert_norm (dtyp_as_parser (DT_App hd b args) == apply_dep_arrow _ _ (parser_of_binding b) args);
       apply_dep_arrow _ _ (validator_of_binding b) args
 
-    | DT_App_Alt b ->
+    | DT_App_Alt _ _ _ _ b _ ->
       // assert_norm (dtyp_as_type (DT_App_Alt ps b args) == (type_of_binding_alt (apply_arrow b args)));
       // assert_norm (dtyp_as_parser (DT_App_Alt ps b args) == parser_of_binding_alt (apply_arrow b args));
       validator_of_binding_alt b
 
 
 [@@specialize]
-let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l 
-                            (d:dtyp pk true i l)
+let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
+                        (#[@@@erasable] i:A.slice_inv)
+                        (#[@@@erasable] l:A.eloc)
+                        (d:dtyp pk true i l)
   : A.leaf_reader (dtyp_as_parser d)
   = match d with
     | DT_IType i -> 
@@ -752,10 +764,8 @@ let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #i #l
                    apply_dep_arrow _ _ (parser_of_binding b) args);
       lr
 
-    | DT_App_Alt b -> 
+    | DT_App_Alt _ _ _ _ b _ -> 
       let (| _, lr |) = get_leaf_reader_alt b in
-      assert_norm (dtyp_as_parser (DT_App_Alt b) == 
-                   parser_of_binding_alt b);
       lr
 
 noeq
@@ -935,7 +945,6 @@ type typ
 
 
 (* Type denotation of `typ` *)
-[@@specialize]
 let rec as_type
           #nz #wk (#pk:P.parser_kind nz wk)
           #l #i #b
@@ -1065,7 +1074,9 @@ let rec as_parser
 
 [@@specialize]
 let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
-                  #loc #inv (t:typ pk inv loc true)
+                  (#[@@@erasable] inv:A.slice_inv)
+                  (#[@@@erasable] loc:A.eloc)
+                  (t:typ pk inv loc true)
   : leaf_reader (as_parser t)
   = match t with
     | T_denoted dt ->
@@ -1089,7 +1100,9 @@ let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
 *)
 let rec as_validator
           #nz #wk (#pk:P.parser_kind nz wk)
-          #loc #inv #b
+          (#[@@@erasable] inv:A.slice_inv)
+          (#[@@@erasable] loc:A.eloc)
+          #b
           (t:typ pk inv loc b)
   : Tot (A.validate_with_action_t #nz #wk #pk #(as_type t) (as_parser t) inv loc b)
         (decreases t)
@@ -1233,9 +1246,9 @@ let rec as_validator
                         (dtyp_as_leaf_reader elt_t)
                         terminator
 
-let specialize_tac ()
+let specialize_tac steps (_:unit)
   : T.Tac unit
-  = T.norm [nbe;
+  = T.norm (steps@[
             zeta;
             primops;
             iota;
@@ -1267,7 +1280,7 @@ let specialize_tac ()
                         `%fst;
                         `%snd;
                         `%Mktuple2?._1;
-                        `%Mktuple2?._2]];
+                        `%Mktuple2?._2]]);
     T.trefl()
 
 [@@specialize]
@@ -1308,14 +1321,14 @@ let mk_global_binding (p:list param_type)
 let mk_global_binding_alt
                       #nz #wk 
                       (pk:P.parser_kind nz wk)
-                      (inv:A.slice_inv)
-                      (loc:A.eloc)
-                      (p_t : Type0)
-                      (p_p : P.parser pk p_t)
+                      ([@@@erasable] inv:A.slice_inv)
+                      ([@@@erasable] loc:A.eloc)
+                      ([@@@erasable] p_t : Type0)
+                      ([@@@erasable] p_p : P.parser pk p_t)
                       (p_reader: option (leaf_reader p_p))
                       (b:bool)
                       (p_v : A.validate_with_action_t p_p inv loc b)
-                      (_:squash (b == Some? p_reader))
+                      ([@@@erasable] pf:squash (b == Some? p_reader))
    : global_binding_alt
    = {
        name = "";
@@ -1330,8 +1343,6 @@ let mk_global_binding_alt
        p_v = p_v
      }
 
-let inv_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.slice_inv = s
-let eloc_of  #nz #wk #pk #s #l #b (t:typ #nz #wk pk s l b) : A.eloc = l
 
 let coerce_arrow steps : T.Tac unit =
   let open FStar.List.Tot in
@@ -1477,26 +1488,18 @@ let coerce_validator_alt steps : T.Tac unit =
   T.trefl()
 
 [@@specialize]
-let mk_dt_app_alt (x:global_binding_alt)
-    : dtyp #(nz_of_binding_alt x) 
-           #(wk_of_binding_alt x)
-           (pk_of_binding_alt x)
-           (has_reader_alt x)
-           (inv_of_binding_alt x)
-           (loc_of_binding_alt x)
-    = DT_App_Alt x
-
-[@@specialize]
-let mk_dt_app_alt_alt #nz #wk (pk:P.parser_kind nz wk) (b:bool) (inv:A.slice_inv) (loc:A.eloc)
-                  (x:global_binding_alt)
-                  (_:squash (nz == nz_of_binding_alt x /\
-                             wk == wk_of_binding_alt x /\
-                             pk == pk_of_binding_alt x /\
-                             b == has_reader_alt x /\
-                             inv == inv_of_binding_alt x /\
-                             loc == loc_of_binding_alt x))
+let mk_dt_app_alt_alt #nz #wk (pk:P.parser_kind nz wk) (b:bool)
+                      ([@@@erasable] inv:A.slice_inv)
+                      ([@@@erasable] loc:A.eloc)
+                      (x:global_binding_alt)
+                      ([@@@erasable] pf:squash (nz == nz_of_binding_alt x /\
+                                                wk == wk_of_binding_alt x /\
+                                                pk == pk_of_binding_alt x /\
+                                                b == has_reader_alt x /\
+                                                inv == inv_of_binding_alt x /\
+                                                loc == loc_of_binding_alt x))
     : dtyp #nz #wk pk b inv loc
-    = DT_App_Alt x
+    = DT_App_Alt pk b inv loc x pf
 
 let coerce_dt_app_alt (steps:_) : T.Tac unit =
   let open FStar.List.Tot in

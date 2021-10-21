@@ -751,7 +751,7 @@ let print_binding mname (td:type_decl)
           "()"
     in
     let validate_binding =
-        FStar.Printf.sprintf "[@@T.postprocess_for_extraction_with specialize_tac]\n\
+        FStar.Printf.sprintf "[@@T.postprocess_for_extraction_with (specialize_tac [])]\n\
                              let validate_%s %s = as_validator (def_%s %s)\n"
                              root_name
                              binders
@@ -1001,7 +1001,7 @@ let print_binding_alt mname (td:type_decl)
     let binders = print_binders tdn.td_params in
     let args = print_args tdn.td_params in
     let validate_binding =
-        FStar.Printf.sprintf "[@@T.postprocess_for_extraction_with specialize_tac]\n\
+        FStar.Printf.sprintf "[@@T.postprocess_for_extraction_with (specialize_tac [nbe])]\n\
                              let validate_%s %s = as_validator (def'_%s %s)\n"
                              root_name
                              binders
