@@ -10,28 +10,33 @@ module SZ = Steel.C.StdInt.Base
 
 (* Right-to-left output buffer *)
 
-val t (base: Type0): Type0
+inline_for_extraction
+val t (#base: Type0) (ap: AP.t base byte) : Type0
 
-val null (base: Type) : t base
+inline_for_extraction
+val null (#base: Type) (ap: AP.t base byte) : t ap
 
-val g_is_null (#base: Type) (x: t base) : Ghost bool
+val g_is_null (#base: Type) (#ap: AP.t base byte) (x: t ap) : Ghost bool
   (requires True)
-  (ensures (fun y -> y == true <==> x == null base))
+  (ensures (fun y -> y == true <==> x == null ap))
 
 val vp_hp
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : Tot (S.slprop u#1)
 
 val vp_sel
   (#base: Type)
-  (x: t base)
-: Tot (SE.selector (AP.array base byte) (vp_hp x))
+  (#ap: AP.t base byte)
+  (x: t ap)
+: GTot (SE.selector (AP.array base byte) (vp_hp x))
 
 [@SE.__steel_reduce__]
 let vp' 
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : Tot SE.vprop'
 = {
   SE.hp = vp_hp x;
@@ -42,14 +47,17 @@ let vp'
 [@SE.__steel_reduce__]
 let vp
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : Tot SE.vprop
 = SE.VUnit (vp' x)
 
+(*
 val vp_not_null
   (#opened: _)
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : SEA.SteelGhost unit opened
     (vp x)
     (fun _ -> vp x)
@@ -61,18 +69,21 @@ val vp_not_null
 
 val vp_or_null_hp
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : Tot (S.slprop u#1)
 
 val vp_or_null_sel
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : Tot (SE.selector (option (AP.array base byte)) (vp_or_null_hp x))
 
 [@SE.__steel_reduce__]
 let vp_or_null' 
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : Tot SE.vprop'
 = {
   SE.hp = vp_or_null_hp x;
@@ -83,14 +94,16 @@ let vp_or_null'
 [@SE.__steel_reduce__]
 let vp_or_null
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : Tot SE.vprop
 = SE.VUnit (vp_or_null' x)
 
 val intro_vp_or_null_none
   (#opened: _)
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : SEA.SteelGhost unit opened
     SE.emp
     (fun _ -> vp_or_null x)
@@ -100,7 +113,8 @@ val intro_vp_or_null_none
 val intro_vp_or_null_some
   (#opened: _)
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : SEA.SteelGhost unit opened
     (vp x)
     (fun _ -> vp_or_null x)
@@ -113,7 +127,8 @@ val intro_vp_or_null_some
 val elim_vp_or_null_some
   (#opened: _)
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : SEA.SteelGhost unit opened
     (vp_or_null x)
     (fun _ -> vp x)
@@ -126,7 +141,8 @@ val elim_vp_or_null_some
 val elim_vp_or_null_none
   (#opened: _)
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : SEA.SteelGhost unit opened
     (vp_or_null x)
     (fun _ -> SE.emp)
@@ -139,7 +155,8 @@ val elim_vp_or_null_none
 val is_null
   (#opened: _)
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : SEA.SteelAtomicBase bool false opened SEA.Unobservable
     (vp_or_null x)
     (fun _ -> vp_or_null x)
@@ -195,8 +212,6 @@ val alloc
         AP.freeable a
       | _ -> False
     )
-
-(*
 =
   let x = AP.alloc 0uy len in
   if AP.is_null x
@@ -225,9 +240,11 @@ val alloc
   end
 *)
 
+inline_for_extraction
 val len
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
 : SE.Steel SZ.size_t
     (vp x)
     (fun _ -> vp x)
@@ -237,9 +254,11 @@ val len
       AP.length (h' (vp x)) == SZ.size_v len
     )
 
+inline_for_extraction
 val split
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
   (len: SZ.size_t)
 : SE.Steel (AP.t base byte)
     (vp x)
@@ -252,9 +271,11 @@ val split
       AP.length ar == SZ.size_v len
     )
 
+inline_for_extraction
 val merge
   (#base: Type)
-  (x: t base)
+  (#ap: AP.t base byte)
+  (x: t ap)
   (y: AP.t base byte)
   (len: SZ.size_t)
 : SE.Steel unit
@@ -270,6 +291,7 @@ val merge
       AP.merge_into (h (vp x)) (h (AP.varrayptr y)).AP.array (h' (vp x))
     )
 
+(*
 val free
   (#base: Type)
   (x: t base)
@@ -278,3 +300,4 @@ val free
     (fun _ -> SE.emp)
     (fun h -> AP.freeable (h (vp x)))
     (fun _ _ _ -> True)
+*)

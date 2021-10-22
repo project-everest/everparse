@@ -1,335 +1,172 @@
 module LowParse.Steel.R2LOutput
 
-module P = Steel.Pointer
+module R = Steel.C.Reference
 
-noeq
-type t = {
-  ptr: AP.t byte;
-  len: P.t U32.t;
-  prf: squash (AP.g_is_null ptr == P.g_is_null len /\ (P.g_is_null len == false ==> (P.size_v (P.offset len) == 0 /\ P.size_v (P.base_array_len (P.base len)) == 1 /\ P.base_array_freeable (P.base len))));
-}
+let t #base ap = R.ptr base SZ.size_t (Steel.C.Opt.opt_pcm #SZ.size_t)
 
-let null = { ptr = AP.null _; len = P.null _; prf = (); }
+let null _ = R.null _ _ _
 
-let g_is_null x = AP.g_is_null x.ptr
+let g_is_null x = Steel.C.Ref.ptr_is_null x
 
-let vp0_refine
-  (x: t)
-  (y: SE.normal (SE.t_of (AP.varrayptr x.ptr `SE.star`  P.vptr_range x.len P.malloc_range)))
+let vp_refine1
+  (#base: Type)
+  (#ap: AP.t base byte)
+  (x: t ap)
+  (_: SE.t_of SE.emp)
 : Tot prop
-=
-  (fst y).AP.perm == SP.full_perm /\
-  A.length (fst y).AP.array == U32.v (Seq.index (snd y) 0)
+= Steel.C.Ref.ptr_is_null x == false
 
-let vp0_rewrite
-  (x: t)
-  (y: SE.normal (SE.t_of ((AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) `SE.vrefine` vp0_refine x)))
-: GTot (A.array byte)
-= (fst y).AP.array
+let vp_refine2
+  (#base: Type)
+  (#ap: AP.t base byte)
+  (x: t ap)
+  (_: SE.t_of (SE.emp `SE.vrefine` vp_refine1 x))
+  (xv: SE.normal (SE.t_of (R.pts_to_view x (Steel.C.Opt.opt_view SZ.size_t) `SE.star` AP.varrayptr ap)))
+: Tot prop
+= let (sz, v) = xv in AP.len v.AP.array == sz
 
-let vp0
-  (x: t)
+[@@SE.__steel_reduce__; SE.__reduce__]
+let vp_dep
+  (#base: Type)
+  (#ap: AP.t base byte)
+  (x: t ap)
+  (sq: SE.t_of (SE.emp `SE.vrefine` vp_refine1 x))
 : Tot SE.vprop
-= ((AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range)
-    `SE.vrefine` vp0_refine x)
-      `SE.vrewrite` vp0_rewrite x
+=
+  (R.pts_to_view x (Steel.C.Opt.opt_view SZ.size_t) `SE.star` AP.varrayptr ap)
+    `SE.vrefine`
+    vp_refine2 x sq
+ 
+let vp_rewrite
+  (#base: Type)
+  (#ap: AP.t base byte)
+  (x: t ap)
+  (xv: SE.normal (SE.t_of (SE.emp `SE.vrefine` vp_refine1 x `SE.vdep` vp_dep x)))
+: Tot (AP.array base byte)
+= let (| _, (_, v) |) = xv in v.AP.array
+
+[@@SE.__steel_reduce__; SE.__reduce__]
+let vp0
+  (#base: Type)
+  (#ap: AP.t base byte)
+  (x: t ap)
+: Tot SE.vprop
+= SE.emp `SE.vrefine` vp_refine1 x `SE.vdep` vp_dep x `SE.vrewrite` vp_rewrite x
 
 let vp_hp x = SE.hp_of (vp0 x)
+let vp_sel x = SE.sel_of (vp0 x)
 
-let vp_sel x = fun h -> SE.sel_of (vp0 x) h
+let intro_vdep2
+  (#opened: _)
+  (v: SE.vprop)
+  (g: SE.t_of v)
+  (q: SE.vprop)
+  (p: (SE.t_of v -> Tot SE.vprop))
+: SEA.SteelGhost unit opened
+    (v `SE.star` q)
+    (fun _ -> SE.vdep v p)
+    (requires (fun h ->
+      g == h v /\
+      q == p g
+    ))
+    (ensures (fun h _ h' ->
+      let x2 = h' (SE.vdep v p) in
+      g == h v /\
+      q == p g /\
+      dfst x2 == (h v) /\
+      dsnd x2 == (h q)
+    ))
+= SEA.intro_vdep v q p
 
 val intro_vp
   (#opened: _)
-  (x: t)
+  (#base: Type)
+  (#ap: AP.t base byte)
+  (x: t ap)
+  (sq: squash (Steel.C.Ref.ptr_is_null x == false))
 : SEA.SteelGhost unit opened
-    (AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range)
+    (AP.varrayptr ap `SE.star` R.pts_to_view x (Steel.C.Opt.opt_view SZ.size_t))
     (fun _ -> vp x)
-    (fun h ->
-      (h (AP.varrayptr x.ptr)).AP.perm == SP.full_perm /\
-      A.length (h (AP.varrayptr x.ptr)).AP.array == U32.v (P.ptr_sel0 P.malloc_range x.len h)
-    )
-    (fun h _ h'  ->
-      h' (vp x) == (h (AP.varrayptr x.ptr)).AP.array
-    )
+    (requires (fun h ->
+      AP.len (h (AP.varrayptr ap)).AP.array == h (R.pts_to_view x (Steel.C.Opt.opt_view SZ.size_t))
+    ))
+    (ensures (fun h _ h' ->
+      h' (vp x) == (h (AP.varrayptr ap)).AP.array
+    ))
 
-let intro_vp x =
-  SEA.reveal_star (AP.varrayptr x.ptr) (P.vptr_range x.len P.malloc_range);
-  SEA.intro_vrefine (AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) (vp0_refine x);
-  SEA.intro_vrewrite ((AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) `SE.vrefine` vp0_refine x) (vp0_rewrite x);
-  assert_norm 
-    (
-      ((AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) `SE.vrefine` vp0_refine x) `SEA.vrewrite` vp0_rewrite x ==
-      vp0 x
-    );
-  SEA.change_equal_slprop
-    (((AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) `SE.vrefine` vp0_refine x) `SEA.vrewrite` vp0_rewrite x)
-    (vp0 x);
+let intro_vp #_ #_ #ap x sq =
+  SEA.intro_vrefine SE.emp (vp_refine1 x);
+  let g = SEA.gget (SE.emp `SE.vrefine` vp_refine1 x) in
+  SEA.intro_vrefine (R.pts_to_view x (Steel.C.Opt.opt_view SZ.size_t) `SE.star` AP.varrayptr ap) (vp_refine2 x g);
+  intro_vdep2
+    (SE.emp `SE.vrefine` vp_refine1 x)
+    g
+    ((R.pts_to_view x (Steel.C.Opt.opt_view SZ.size_t) `SE.star` AP.varrayptr ap) `SE.vrefine` vp_refine2 x g)
+    (vp_dep x);
+  SEA.intro_vrewrite
+    (SE.emp `SE.vrefine` vp_refine1 x `SE.vdep` vp_dep x)
+    (vp_rewrite x);
   SEA.change_slprop_rel
     (vp0 x)
     (vp x)
-    (fun x y -> x == y)
-    (fun _ -> ())
+    (fun u v -> u == v)
+    (fun m -> 
+      assert_norm (SE.hp_of (vp0 x) == SE.hp_of (vp x));
+      assert_norm (SE.sel_of (vp0 x) m === SE.sel_of (vp x) m))
 
 val elim_vp
   (#opened: _)
-  (x: t)
-: SEA.SteelGhost unit opened
+  (#base: Type)
+  (#ap: AP.t base byte)
+  (x: t ap)
+: SEA.SteelGhost (squash (Steel.C.Ref.ptr_is_null x == false))
+                 opened
     (vp x)
-    (fun _ -> AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range)
-    (fun _ -> True)
-    (fun h _ h' ->
-      let ar = (h' (AP.varrayptr x.ptr)).AP.array in
-      (h' (AP.varrayptr x.ptr)).AP.perm == SP.full_perm /\
-      h (vp x) == ar /\
-      A.length (h (vp x)) == U32.v (P.ptr_sel0 P.malloc_range x.len h')
-    )
+    (fun _ -> AP.varrayptr ap `SE.star` R.pts_to_view x (Steel.C.Opt.opt_view SZ.size_t))
+    (requires (fun _ -> True))
+    (ensures (fun h _ h' ->
+      let ar = h (vp x) in
+      ar == (h' (AP.varrayptr ap)).AP.array /\
+      AP.len ar  == h' (R.pts_to_view x (Steel.C.Opt.opt_view SZ.size_t))
+    ))
 
-let elim_vp x =
+let elim_vp #_ #_ #ap x =
   SEA.change_slprop_rel
     (vp x)
     (vp0 x)
-    (fun x y -> x == y)
-    (fun _ -> ());
-  assert_norm 
-    (
-      vp0 x ==
-      ((AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) `SE.vrefine` vp0_refine x) `SEA.vrewrite` vp0_rewrite x
-    );
-  SEA.change_equal_slprop
-    (vp0 x)
-    (((AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) `SE.vrefine` vp0_refine x) `SEA.vrewrite` vp0_rewrite x);
-  SEA.elim_vrewrite ((AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) `SE.vrefine` vp0_refine x) (vp0_rewrite x);
-  let g2 = SEA.gget ((AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) `SE.vrefine` vp0_refine x) in // FIXME: WHY WHY WHY?
-  SEA.elim_vrefine (AP.varrayptr x.ptr `SE.star` P.vptr_range x.len P.malloc_range) (vp0_refine x);
-  SEA.reveal_star (AP.varrayptr x.ptr) (P.vptr_range x.len P.malloc_range)
+    (fun u v -> u == v)
+    (fun m -> 
+      assert_norm (SE.hp_of (vp0 x) == SE.hp_of (vp x));
+      assert_norm (SE.sel_of (vp0 x) m === SE.sel_of (vp x) m));
+  SEA.elim_vrewrite
+    (SE.emp `SE.vrefine` vp_refine1 x `SE.vdep` vp_dep x)
+    (vp_rewrite x);
+  let g = SEA.elim_vdep
+    (SE.emp `SE.vrefine` vp_refine1 x)
+    (vp_dep x)
+  in
+  SEA.elim_vrefine SE.emp (vp_refine1 x);
+  SEA.elim_vrefine (R.pts_to_view x (Steel.C.Opt.opt_view SZ.size_t) `SE.star` AP.varrayptr ap) (vp_refine2 x g)
 
-let vp_not_null x =
+let len x =
   elim_vp x;
-  AP.varrayptr_not_null x.ptr;
-  intro_vp x
-
-[@@SE.__steel_reduce__]
-let vp_or_null1
-  (x: t)
-: Tot SE.vprop
-= if g_is_null x
-  then SE.emp
-  else vp x
-
-let vp_or_null_rewrite
-  (x: t)
-  (r: SE.t_of (vp_or_null1 x))
-: GTot (option (A.array byte))
-= if g_is_null x
-  then None
-  else Some r
-
-[@@SE.__steel_reduce__]
-let vp_or_null0
-  (x: t)
-: Tot SE.vprop
-= vp_or_null1 x `SE.vrewrite` vp_or_null_rewrite x
-
-let vp_or_null_hp x = SE.hp_of (vp_or_null0 x)
-
-let vp_or_null_sel x = fun h -> SE.sel_of (vp_or_null0 x) h
-
-let intro_vp_or_null_none x =
-  assert (g_is_null x == true);
-  SEA.change_equal_slprop
-    SE.emp
-    (vp_or_null1 x);
-  SEA.intro_vrewrite (vp_or_null1 x) (vp_or_null_rewrite x);
-  SEA.change_slprop_rel
-    (vp_or_null0 x)
-    (vp_or_null x)
-    (fun u v -> u == v)
-    (fun _ -> ())
-
-let intro_vp_or_null_some x =
-  vp_not_null x;
-  SEA.change_equal_slprop
-    (vp x)
-    (vp_or_null1 x);
-  SEA.intro_vrewrite (vp_or_null1 x) (vp_or_null_rewrite x);
-  SEA.change_slprop_rel
-    (vp_or_null0 x)
-    (vp_or_null x)
-    (fun u v -> u == v)
-    (fun _ -> ())
-
-let elim_vp_or_null_some x =
-  SEA.change_slprop_rel
-    (vp_or_null x)
-    (vp_or_null0 x)
-    (fun u v -> u == v)
-    (fun _ -> ());
-  SEA.elim_vrewrite (vp_or_null1 x) (vp_or_null_rewrite x);
-  assert (g_is_null x == false);
-  SEA.change_equal_slprop
-    (vp_or_null1 x)
-    (vp x)
-
-let elim_vp_or_null_none x =
-  SEA.change_slprop_rel
-    (vp_or_null x)
-    (vp_or_null0 x)
-    (fun u v -> u == v)
-    (fun _ -> ());
-  SEA.elim_vrewrite (vp_or_null1 x) (vp_or_null_rewrite x);
-  assert (g_is_null x == true);
-  SEA.change_equal_slprop
-    (vp_or_null1 x)
-    SE.emp
-
-val intro_vp_or_null
-  (#opened: _)
-  (x: t)
-: SEA.SteelGhost unit opened
-    (AP.varrayptr_or_null x.ptr `SE.star` P.vptr_range_or_null x.len P.malloc_range)
-    (fun _ -> vp_or_null x)
-    (fun h ->
-      match g_is_null x, h (AP.varrayptr_or_null x.ptr), P.ptr_or_null_sel0 P.malloc_range x.len h with
-      | true, None, None -> True
-      | false, Some s, Some l ->
-        s.AP.perm == SP.full_perm /\
-        A.length s.AP.array == U32.v l
-      | _ -> False
-    )
-    (fun h _ h'  ->
-      match g_is_null x, h (AP.varrayptr_or_null x.ptr), h' (vp_or_null x) with
-      | true, None, None -> True
-      | false, Some s, Some c ->
-        c == s.AP.array
-      | _ -> False
-    )
-
-let intro_vp_or_null x =
-  if g_is_null x
-  then begin
-    AP.elim_varrayptr_or_null_none x.ptr;
-    P.assert_null x.len _;
-    intro_vp_or_null_none x
-  end else begin
-    AP.elim_varrayptr_or_null_some x.ptr;
-    P.assert_not_null x.len _;
-    intro_vp x;
-    intro_vp_or_null_some x 
-  end
-
-val elim_vp_or_null
-  (#opened: _)
-  (x: t)
-: SEA.SteelGhost unit opened
-    (vp_or_null x)
-    (fun _ -> AP.varrayptr_or_null x.ptr `SE.star` P.vptr_range_or_null x.len P.malloc_range)
-    (fun _ -> True)
-    (fun h _ h' ->
-      match g_is_null x, h (vp_or_null x), h' (AP.varrayptr_or_null x.ptr), P.ptr_or_null_sel0 P.malloc_range x.len h' with
-      | true, None, None, None -> True
-      | false, Some c, Some s, Some l ->
-        s.AP.perm == SP.full_perm /\
-        c == s.AP.array /\
-        U32.v l == A.length s.AP.array
-      | _ -> False
-    )
-
-let elim_vp_or_null x =
-  if g_is_null x
-  then begin
-    elim_vp_or_null_none x;
-    AP.intro_varrayptr_or_null_none x.ptr;
-    P.intro_vptr_range_or_null_none x.len P.malloc_range
-  end else begin
-    elim_vp_or_null_some x;
-    elim_vp x;
-    AP.intro_varrayptr_or_null_some x.ptr;
-    P.intro_vptr_range_or_null_some x.len P.malloc_range
-  end
-
-let is_null x =
-  elim_vp_or_null x;
-  let res = AP.is_null x.ptr in
-  intro_vp_or_null x;
+  let res = R.ref_read x in
+  intro_vp x ();
   SEA.return res
 
-let change_slprop_emp
- (#opened:_) (q:SE.vprop)
-  (l:(m:S.mem) -> Lemma
-    (requires S.interp (SE.hp_of SE.emp) m)
-    (ensures S.interp (SE.hp_of q) m)
-  ) : SEA.SteelGhostT unit opened SE.emp (fun _ -> q)
-= SEA.change_slprop_rel SE.emp q (fun _ _ -> True) (fun m -> l m)
-
-let make
-  x len
-=
-  let plen = P.malloc len in
-  if P.is_null plen _
-  then begin
-    P.assert_null plen _;
-    intro_vp_or_null_none null;
-    SEA.change_equal_slprop
-      (AP.varrayptr x)
-      (make_vprop_post x null);
-    SEA.return null
-  end else begin
-    P.assert_not_null plen _;
-    AP.varrayptr_not_null x;
-    let res = {
-      ptr = x;
-      len = plen;
-      prf = ();
-    }
-    in
-    SEA.change_equal_slprop
-      (AP.varrayptr x)
-      (AP.varrayptr res.ptr);
-    SEA.change_equal_slprop
-      (P.vptr_range plen P.malloc_range)
-      (P.vptr_range res.len P.malloc_range);
-    intro_vp res;
-    intro_vp_or_null_some res;
-    SEA.change_equal_slprop
-      SE.emp
-      (make_vprop_post x res);
-    SEA.return res
-  end
-
-let len
-  x
-=
+let split #_ #ap x ar_len =
+  let ap_len = len x in
+  let al_len = ap_len `SZ.size_sub` ar_len in
   elim_vp x;
-  let l = P.deref x.len _ in
-  intro_vp x;
-  SEA.return l
+  let ar = AP.split ap al_len in
+  Steel.C.Opt.opt_write_sel x al_len;
+  intro_vp x ();
+  SEA.return ar
 
-let split
-  x l
-=
-  let xlen = len x in
+let merge #_ #ap x ar ar_len =
+  let al_len = len x in
   elim_vp x;
-  let xlen' = xlen `U32.sub` l in
-  let g = SEA.gget (AP.varrayptr x.ptr) in
-  let res = AP.split x.ptr xlen' in
-  let g = SEA.gget (AP.varrayptr x.ptr) in
-  P.upd x.len _ xlen' ;
-  intro_vp x;
-  SEA.return res
-
-let merge
-  x y l
-=
-  let xlen = len x in
-  elim_vp x;
-  AP.join x.ptr y;
-  let xlen' = xlen `U32.add` l in
-  P.upd x.len _ xlen' ;
-  intro_vp x
-
-let free
-  x
-=
-  elim_vp x;
-  AP.free x.ptr;
-  P.free x.len _
+  AP.join ap ar;
+  let ap_len = al_len `SZ.size_add` ar_len in // MUST be done AFTER join, because of the no-overflow proof
+  Steel.C.Opt.opt_write_sel x ap_len;
+  intro_vp x ()
