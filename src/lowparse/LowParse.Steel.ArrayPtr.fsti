@@ -48,7 +48,7 @@ val g_is_null (#base #a: Type) (x: t base a) : Ghost bool
   (requires True)
   (ensures (fun y -> y == true <==> x == null base a))
 
-noextract
+[@@erasable]
 val array
   (base: Type0)
   (t: Type0)

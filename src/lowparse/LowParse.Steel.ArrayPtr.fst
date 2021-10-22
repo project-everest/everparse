@@ -64,7 +64,7 @@ let null base t0 = (A.null_from base t0, Ghost.hide None)
 let g_is_null x =
   g_is_null_from (fst0 x)
 
-let array base t = A.array base t
+let array base t = Ghost.erased (A.array base t)
 
 let len x = A.len x
 
@@ -123,7 +123,7 @@ val intro_varrayptr0
     ))
     (ensures (fun h _ h' ->
       let res = h' (varrayptr0 x) in
-      res.array == ar /\
+      Ghost.reveal res.array == ar /\
       res.contents == h (A.varray ar)
     ))
 
@@ -157,7 +157,7 @@ val elim_varrayptr0
       let ar = snd0 res in
       g_is_null x == false /\
       fst0 res == (Some?.v (snd0 x)).to /\
-      pres.array == Ghost.reveal ar /\
+      Ghost.reveal pres.array == Ghost.reveal ar /\
       h' (R.ghost_vptr (fst0 res)) == Ghost.reveal ar /\
       h' (A.varray ar) == pres.contents
     ))
@@ -198,7 +198,7 @@ val intro_varrayptr
     ))
     (ensures (fun h _ h' ->
       let res = h' (varrayptr x) in
-      res.array == ar /\
+      Ghost.reveal res.array == ar /\
       res.contents == h (A.varray ar)
     ))
 
@@ -228,7 +228,7 @@ val elim_varrayptr
       let ar = snd0 res in
       g_is_null x == false /\
       fst0 res == (Some?.v (snd0 x)).to /\
-      pres.array == Ghost.reveal ar /\
+      Ghost.reveal pres.array == ar /\
       h' (R.ghost_vptr (fst0 res)) == Ghost.reveal ar /\
       h' (A.varray ar) == pres.contents
     ))
@@ -364,8 +364,8 @@ let array_or_null_of_intro
       (Some? z ==> (
         Some?.v (snd0 res) == (Some?.v (snd0 x)).to /\
         (h' (R.ghost_vptr (Some?.v (snd0 res))) <: A.array_or_null base a) == fst0 res /\
-        (Some?.v z).array == fst0 res /\
-        (Some?.v z).contents == h' (A.varray (fst0 res))
+        Ghost.reveal (Some?.v z).array == fst0 res /\
+        h' (A.varray_or_null (fst0 res)) == Some ((Some?.v z).contents)
       ))
     )
 =
@@ -373,9 +373,7 @@ let array_or_null_of_intro
   then begin
     elim_varrayptr_or_null_none x;
     let res = (A.null base a, None) in
-    change_equal_slprop
-      emp
-      (A.varray_or_null (fst0 res));
+    A.intro_varray_or_null_none (fst0 res);
     change_equal_slprop
       emp
       (ghost_vptr_or_none (snd0 res));
@@ -389,7 +387,8 @@ let array_or_null_of_intro
       (ghost_vptr_or_none (snd0 res));
     change_equal_slprop
       (A.varray (snd0 tmp))
-      (A.varray_or_null (fst0 res));
+      (A.varray (fst0 res));
+    A.intro_varray_or_null_some (fst0 res);
     res
   end
 
@@ -418,32 +417,27 @@ let array_or_null_of_elim
       (None? z <==> None? (snd0 res)) /\
       (Some? z ==> (
         (h (R.ghost_vptr (Some?.v (snd0 res))) <: A.array_or_null base a) == fst0 res /\
-        (Some?.v z).array == fst0 res /\
-        (Some?.v z).contents == h (A.varray (fst0 res))
+        Ghost.reveal (Some?.v z).array == fst0 res /\
+        h (A.varray_or_null (fst0 res)) == Some ((Some?.v z).contents)
       ))
     )
 = if g_is_null x
   then begin
-    change_equal_slprop
-      (A.varray_or_null (fst0 res))
-      emp;
+    A.elim_varray_or_null_none (fst0 res);
     change_equal_slprop
       (ghost_vptr_or_none (snd0 res))
       emp;
     intro_varrayptr_or_null_none x
   end else begin
-    let ar : A.array base a = fst0 res in
-    change_equal_slprop
-      (A.varray_or_null (fst0 res))
-      (A.varray ar);
+    A.elim_varray_or_null_some (fst0 res);
     change_equal_slprop
       (ghost_vptr_or_none (snd0 res))
       (R.ghost_vptr (Some?.v (snd0 x)).to);
-    intro_varrayptr x ar ();
+    intro_varrayptr x (fst0 res) ();
     intro_varrayptr_or_null_some x
   end
 
-let is_null #base #a x
+let is_null #_ #base #a x
 =
   let tmp = array_or_null_of_intro x in
   let ar : (ar: A.array_or_null base a { ar == fst0 tmp }) =
@@ -472,3 +466,123 @@ let join al ar =
     (R.ghost_vptr (fst0 tmpl))
     (R.ghost_vptr (Some?.v (snd0 al)).to);
   intro_varrayptr al res ()
+
+let array_null_to_unique
+  (#base #t: Type)
+  (x: A.array_or_null base t)
+: Lemma
+  (A.g_is_null x <==> fst0 x == A.null_from base t)
+=
+  if A.g_is_null x
+  then ()
+  else
+    let aux () : Lemma
+      (requires (fst0 x == A.null_from base t))
+      (ensures False)
+    =
+      A.null_to_unique (snd0 x)
+    in
+    Classical.move_requires aux ()
+
+let split #_ #base #t0 x i =
+  let tmp = elim_varrayptr x in
+  let a = (fst0 x, snd0 (snd0 tmp)) in
+  change_equal_slprop
+    (A.varray (snd0 tmp))
+    (A.varray a);
+  let ar = A.split a i () in
+  R.ghost_write (fst0 tmp) (A.GPair?.fst (A.gsplit a i));
+  change_equal_slprop
+    (R.ghost_vptr (fst0 tmp))
+    (R.ghost_vptr (Some?.v (snd0 x)).to);
+  intro_varrayptr x (A.GPair?.fst (A.gsplit a i)) ();
+  let tmpr : R.ghost_ref (array' (fst0 ar)) = R.ghost_alloc ar in
+  array_null_to_unique ar;
+  let res : t base t0 = (fst0 ar, Ghost.hide (Some ({ from = fst0 ar; to = tmpr; }))) in
+  change_equal_slprop
+    (R.ghost_vptr tmpr)
+    (R.ghost_vptr (Some?.v (snd0 res)).to);
+  intro_varrayptr res ar ();
+  return res
+
+let base_t a n = A.array_pcm_carrier a n
+
+let freeable x = A.freeable x
+
+#set-options "--print_implicits"
+
+let alloc #t0 x n =
+  let ar = A.malloc x n in
+  if A.is_null ar
+  then begin
+    A.elim_varray_or_null_none ar;
+    let res = null _ _ in
+    intro_varrayptr_or_null_none res;
+    return res
+  end else begin
+    A.elim_varray_or_null_some ar;
+    let tmp : R.ghost_ref (array' (fst0 ar)) = R.ghost_alloc ar in
+    array_null_to_unique ar;
+    let res : t (base_t t0 n) t0 = (fst0 ar, Ghost.hide (Some ({ from = fst0 ar; to = tmp; }))) in
+    change_equal_slprop
+      (R.ghost_vptr tmp)
+      (R.ghost_vptr (Some?.v (snd0 res)).to);
+    intro_varrayptr res ar ();
+    intro_varrayptr_or_null_some res;
+    return res
+  end
+
+let index #base #a r i =
+  let tmp = elim_varrayptr r in
+  let ar : A.array base a = (fst0 r, snd0 (snd0 tmp)) in
+  change_equal_slprop
+    (A.varray (snd0 tmp))
+    (A.varray ar);
+  let res = A.index ar i in
+  change_equal_slprop
+    (R.ghost_vptr (fst0 tmp))
+    (R.ghost_vptr (Some?.v (snd0 r)).to);
+  intro_varrayptr r ar ();
+  return res
+
+let upd #base #a r i x =
+  let tmp = elim_varrayptr r in
+  let ar : A.array base a = (fst0 r, snd0 (snd0 tmp)) in
+  change_equal_slprop
+    (A.varray (snd0 tmp))
+    (A.varray ar);
+  A.upd ar i x;
+  change_equal_slprop
+    (R.ghost_vptr (fst0 tmp))
+    (R.ghost_vptr (Some?.v (snd0 r)).to);
+  intro_varrayptr r ar ()
+
+let free #base #a r =
+  let tmp = elim_varrayptr r in
+  let ar : A.array base a = (fst0 r, snd0 (snd0 tmp)) in
+  change_equal_slprop
+    (A.varray (snd0 tmp))
+    (A.varray ar);
+  A.free ar;
+  R.ghost_free (fst0 tmp)
+
+let array_of x = x
+
+let enter #_ #base #t0 ar =
+    let tmp : R.ghost_ref (array' (fst0 ar)) = R.ghost_alloc ar in
+    array_null_to_unique ar;
+    let res : t base t0 = (fst0 ar, Ghost.hide (Some ({ from = fst0 ar; to = tmp; }))) in
+    change_equal_slprop
+      (R.ghost_vptr tmp)
+      (R.ghost_vptr (Some?.v (snd0 res)).to);
+    intro_varrayptr res ar ();
+    return res
+
+let exit #_ #base #a r =
+  let tmp = elim_varrayptr r in
+  let ar : A.array base a = (fst0 r, snd0 (snd0 tmp)) in
+  change_equal_slprop
+    (A.varray (snd0 tmp))
+    (A.varray ar);
+  R.ghost_free (fst0 tmp);
+  return ar
