@@ -151,6 +151,7 @@ let parse_vldata_intro_impl
 
 let write_bounded_integer = LP.write_bounded_integer'
 
+#restart-solver
 let parse_vldata_intro_weak_impl
   #inv p min max
 = mk_repr_impl
