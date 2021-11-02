@@ -876,7 +876,6 @@ let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
       assert_norm (as_parser (T_false _n) == P.parse_impos());
       (| (), A.read_impos |)
 
-
 (* The main result:
    A validator denotation of `typ`
      related by construction to the parser
@@ -991,7 +990,7 @@ let rec as_validator
       let v1 (_:squash (not b)) =
         A.validate_weaken_left (as_validator typename t1) _
       in
-      A.validate_with_error_handler typename fn (A.validate_ite b p0 v0 p1 v1)
+      A.validate_ite b p0 v0 p1 v1
 
     | T_with_action fn t a ->
       assert_norm (as_type (T_with_action fn t a) == as_type t);

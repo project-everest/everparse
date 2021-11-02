@@ -173,6 +173,27 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target
   = let _, en = right en.translate_env in
     let tds = InterpreterTarget.translate_decls en t_decls in
 
+    let impl, iface =
+        InterpreterTarget.print_decls en modul tds
+    in
+    
+    let fsti_file =
+      open_write_file
+        (Printf.sprintf "%s/%s.fsti"
+          (Options.get_output_dir())
+          modul) in
+    FStar.IO.write_string fsti_file
+      (FStar.Printf.sprintf "module %s\n\
+                             open Interpreter\n\
+                             open Prelude\n\
+                             open EverParse3d.Actions.All\n\
+                             module A = EverParse3d.Actions.All\n\
+                             module P = Prelude\n\
+                             module B = LowStar.Buffer\n"
+                             modul);
+    FStar.IO.write_string fsti_file iface;
+    FStar.IO.close_write_file fsti_file;
+    
     let fst_file =
       open_write_file
         (Printf.sprintf "%s/%s.fst"
@@ -190,7 +211,7 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target
                              #push-options \"--fuel 0 --ifuel 0\"\n\
                              #push-options \"--using_facts_from 'Prims FStar.UInt FStar.UInt8 FStar.UInt16 FStar.UInt32 FStar.UInt64 Prelude Everparse3d FStar.Int.Cast %s'\"\n"
                              modul modul);
-    FStar.IO.write_string fst_file (InterpreterTarget.print_decls en modul tds);    
+    FStar.IO.write_string fst_file impl;    
     FStar.IO.close_write_file fst_file
 
 let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)

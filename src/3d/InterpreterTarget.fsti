@@ -29,4 +29,4 @@ val translate_decls (e:env) (ds:T.decls)
   : ML (list decl)
 
 val print_decls (e:env) (mname:string) (ds:list decl)
-  : ML string
+  : ML (string & string)

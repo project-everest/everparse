@@ -147,7 +147,7 @@ let verify_and_extract_module
   let fsti_file = 
       Printf.sprintf "%si" fst_file
   in
-  let all_files = List.filter file_exists [output_types_fsti_file; fst_file; types_fst_file; fsti_file] in
+  let all_files = List.filter file_exists [output_types_fsti_file; fsti_file; fst_file; types_fst_file] in
   let all_extract_files = List.filter file_exists [output_types_fsti_file; types_fst_file; fst_file] in  
   List.iter (verify_fst_file input_stream_binding out_dir) all_files;
   List.iter (extract_fst_file input_stream_binding out_dir) all_extract_files

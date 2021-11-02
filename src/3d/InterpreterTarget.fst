@@ -46,58 +46,64 @@ type dtyp : Type =
       args:list expr ->
       dtyp
 
+let non_empty_string = s:string { s <> "" }
+
+let nes (s:string)
+  : non_empty_string
+  = if s = "" then "missing" else s
+
 noeq
 type typ : Type =
   | T_false:
-      fn:string ->
+      fn:non_empty_string ->
       typ
 
   | T_denoted:
-      fn:string ->
+      fn:non_empty_string ->
       d:dtyp ->
       typ
 
   | T_pair:
-      fn:string ->
+      fn:non_empty_string ->
       t1:typ ->
       t2:typ ->
       typ
 
   | T_dep_pair:
-      fn:string ->
+      fn:non_empty_string ->
       t1:dtyp ->
       t2:lam typ ->
       typ
 
   | T_refine:
-      fn:string ->
+      fn:non_empty_string ->
       base:dtyp ->
       refinement:lam expr ->
       typ
 
   | T_refine_with_action:
-      fn:string ->
+      fn:non_empty_string ->
       base:dtyp ->
       refinement:lam expr ->
       a:lam action ->
       typ
 
   | T_dep_pair_with_refinement:
-      fn:string ->
+      fn:non_empty_string ->
       base:dtyp ->
       refinement:lam expr ->
       k:lam typ ->
       typ
 
   | T_dep_pair_with_action:
-      fn:string ->
+      fn:non_empty_string ->
       base:dtyp ->
       k:lam typ ->
       a:lam action ->
       typ
 
   | T_dep_pair_with_refinement_and_action:
-      fn:string ->
+      fn:non_empty_string ->
       base:dtyp ->
       refinement:lam expr ->
       k:lam typ ->
@@ -105,50 +111,50 @@ type typ : Type =
       typ
 
   | T_if_else:
-      fn:string ->
+      fn:non_empty_string ->
       b:expr ->
       t1:typ ->
       t2:typ ->
       typ
 
   | T_with_action:
-      fn:string ->
+      fn:non_empty_string ->
       base:typ ->
       act:action ->
       typ
 
   | T_with_dep_action:
-      fn:string ->
+      fn:non_empty_string ->
       head:dtyp ->
       act:lam action ->
       typ
 
   | T_with_comment:
-      fn:string ->
+      fn:non_empty_string ->
       t:typ ->
       c:string ->
       typ
 
   | T_nlist:
-      fn:string ->
+      fn:non_empty_string ->
       n:expr ->
       t:typ ->
       typ
 
   | T_at_most:
-      fn:string ->
+      fn:non_empty_string ->
       n:expr ->
       t:typ ->
       typ
 
   | T_exact:
-      fn:string ->
+      fn:non_empty_string ->
       n:expr ->
       t:typ ->
       typ
 
   | T_string:
-      fn:string ->
+      fn:non_empty_string ->
       element_type:dtyp ->
       terminator:expr ->
       typ
@@ -184,7 +190,8 @@ type type_decl = {
   typ : typ;
   kind : T.parser_kind;
   inv_eloc : inv_eloc;
-  allow_reading: bool
+  allow_reading: bool;
+  attrs : T.decl_attributes
 }
 let decl = either T.decl type_decl
 let env = H.t A.ident' type_decl
@@ -391,7 +398,7 @@ let rec typ_of_parser (p:T.parser)
             (Printf.sprintf "Expected a named type, got %s"
               (T.print_parser "" p))
     in
-    let fn = p.p_fieldname in
+    let fn = nes p.p_fieldname in
     match p.p_parser with
     | T.Parse_impos ->
       T_false fn
@@ -400,7 +407,7 @@ let rec typ_of_parser (p:T.parser)
       T_denoted fn (dtyp_of_parser p)
 
     | T.Parse_pair _ p q ->
-      T_pair fn (typ_of_parser p) (typ_of_parser q)
+      T_pair (nes p.p_fieldname) (typ_of_parser p) (typ_of_parser q)
 
     | T.Parse_with_comment p c ->
       T_with_comment fn (typ_of_parser p) (String.concat "; " c)
@@ -419,7 +426,7 @@ let rec typ_of_parser (p:T.parser)
 
     | T.Parse_dep_pair _ p k ->
       let i, k = as_lam k in
-      T_dep_pair p.p_fieldname
+      T_dep_pair (nes p.p_fieldname)
                  (dtyp_of_parser p)
                  (i, typ_of_parser k)
 
@@ -485,7 +492,7 @@ let translate_decls (en:env) (ds:T.decls)
   = List.map
         (fun d ->
           match d with
-          | (T.Type_decl td, _) ->
+          | (T.Type_decl td, attrs) ->
             let t = typ_of_parser td.decl_parser in
             let ar = allow_reading_of_typ en t in
             let td =
@@ -493,7 +500,8 @@ let translate_decls (en:env) (ds:T.decls)
                 typ = typ_of_parser td.decl_parser;
                 kind = td.decl_parser.p_kind;
                 inv_eloc = inv_eloc_of_parser en td.decl_parser;
-                allow_reading = ar
+                allow_reading = ar;
+                attrs = attrs
                 }
             in
             H.insert en td.name.td_name.v td;
@@ -754,8 +762,54 @@ let rec print_param_type mname (t:T.typ)
     | _ ->
       failwith (Printf.sprintf "Unexpected param type: %s" (T.print_typ mname t))
 
+let print_td_iface mname root_name binders args inv_eloc_binders inv_eloc_args ar pk_wk pk_nz =
+  let kind_t =
+    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                    inline_for_extraction\n\
+                    noextract\n\
+                    val kind_%s : P.parser_kind %b P.%s"
+      root_name
+      pk_nz
+      pk_wk
+  in
+  let inv_t =
+    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                    noextract\n\
+                    val inv_%s %s : A.slice_inv"
+      root_name
+      inv_eloc_binders
+  in
+  let eloc_t =
+    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                    noextract\n\
+                    val eloc_%s %s : A.eloc"
+      root_name
+      inv_eloc_binders
+  in
+  let def'_t =
+    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                    noextract\n\
+                    val def'_%s %s: typ kind_%s (inv_%s %s) (eloc_%s %s) %b"
+      root_name
+      binders
+      root_name
+      root_name inv_eloc_args
+      root_name inv_eloc_args
+      ar
+  in
+  let validator_t =
+    Printf.sprintf "val validate_%s %s : A.validate_with_action_t (as_parser (def'_%s %s)) (inv_%s %s) (eloc_%s %s) %b"
+      root_name
+      binders
+      root_name args
+      root_name inv_eloc_args
+      root_name inv_eloc_args
+      ar
+  in
+  String.concat "\n" [kind_t; inv_t; eloc_t; def'_t; validator_t]
+
 let print_binding mname (td:type_decl)
-  : ML string
+  : ML (string & string)
   = let tdn = td.name in
     let typ = td.typ in
     let k = td.kind in
@@ -779,17 +833,18 @@ let print_binding mname (td:type_decl)
                              root_name
                              args
     in
+    let weak_kind = A.print_weak_kind k.pk_weak_kind in
     let pk_of_binding =
      Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
                      inline_for_extraction noextract\n\
                      let kind_%s : P.parser_kind %b %s = coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s\n"
        root_name
        k.pk_nz
-       (A.print_weak_kind k.pk_weak_kind)
+       weak_kind
        (T.print_kind mname k)
     in
     let print_inv_or_eloc tag ty defn fvs
-      : ML (string & string)
+      : ML (string & string & string)
       = let fv_binders =
             List.filter
             (fun (i, _) ->
@@ -820,15 +875,15 @@ let print_binding mname (td:type_decl)
           | [] -> body
           | _ -> Printf.sprintf "(fun %s -> %s)" binders body
         in
-        s0, fv_args_string
+        s0, fv_binders_string, fv_args_string
    in
-   let inv_eloc_of_binding, fv_args =
+   let inv_eloc_of_binding, fv_binders, fv_args =
      let inv, eloc, _ = td.inv_eloc in
      let fvs1 = free_vars_of_inv inv in
      let fvs2 = free_vars_of_eloc eloc in
-     let s0, _ = print_inv_or_eloc "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2) in
-     let s1, fv_args = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
-     s0 ^ s1, fv_args
+     let s0, _, _ = print_inv_or_eloc "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2) in
+     let s1, fv_binders, fv_args = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
+     s0 ^ s1, fv_binders, fv_args
    in
    let def' =
       FStar.Printf.sprintf
@@ -927,6 +982,12 @@ let print_binding mname (td:type_decl)
                      root_name args
                      root_name
    in
+   let iface =
+     if td.name.td_entrypoint
+     ||  td.attrs.is_exported
+     then print_td_iface mname root_name binders args fv_binders fv_args td.allow_reading weak_kind k.pk_nz
+     else ""
+   in
    String.concat "\n"
      [pk_of_binding;
       inv_eloc_of_binding;
@@ -935,22 +996,41 @@ let print_binding mname (td:type_decl)
       (as_type_or_parser "parser");
       validate_binding;
       binding;
-      dtyp_of_binding]
+      dtyp_of_binding],
+   iface
 
-let print_decl mname (d:decl) =
+let print_decl mname (d:decl)
+  : ML (string & string) =
   match d with
   | Inl d ->
     begin
     match fst d with
-    | T.Assumption _ -> T.print_assumption mname d
-    | T.Definition _ -> T.print_definition mname d
-    | _ -> ""
+    | T.Assumption _ -> T.print_assumption mname d, ""
+    | T.Definition _ -> T.print_definition mname d, ""
+    | _ -> "", ""
     end
   | Inr td ->
+    let impl, iface =
+        print_binding mname td
+    in
     Printf.sprintf "%s\n%s\n"
       (print_type_decl mname td)
-      (print_binding mname td)
+      impl,
+    iface
+
+let rec unzip (x: list ('a & 'b))
+  : list 'a & list 'b
+  = match x with
+    | [] -> [], []
+    | (x,y)::tl ->
+      let xs, ys = unzip tl in
+      x::xs, y::ys
 
 let print_decls en mname tds =
-  List.map (print_decl mname) tds |>
-  String.concat "\n\n"
+  let impl, iface =
+    List.map (print_decl mname) tds |>
+    unzip
+  in
+  let iface = List.filter (fun x -> x <> "") iface in
+  String.concat "\n\n" impl,
+  String.concat "\n\n" iface
