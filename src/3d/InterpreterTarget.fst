@@ -49,46 +49,55 @@ type dtyp : Type =
 noeq
 type typ : Type =
   | T_false:
+      fn:string ->
       typ
 
   | T_denoted:
+      fn:string ->
       d:dtyp ->
       typ
 
   | T_pair:
+      fn:string ->
       t1:typ ->
       t2:typ ->
       typ
 
   | T_dep_pair:
+      fn:string ->
       t1:dtyp ->
       t2:lam typ ->
       typ
 
   | T_refine:
+      fn:string ->
       base:dtyp ->
       refinement:lam expr ->
       typ
 
   | T_refine_with_action:
+      fn:string ->
       base:dtyp ->
       refinement:lam expr ->
       a:lam action ->
       typ
 
   | T_dep_pair_with_refinement:
+      fn:string ->
       base:dtyp ->
       refinement:lam expr ->
       k:lam typ ->
       typ
 
   | T_dep_pair_with_action:
+      fn:string ->
       base:dtyp ->
       k:lam typ ->
       a:lam action ->
       typ
 
   | T_dep_pair_with_refinement_and_action:
+      fn:string ->
       base:dtyp ->
       refinement:lam expr ->
       k:lam typ ->
@@ -96,42 +105,50 @@ type typ : Type =
       typ
 
   | T_if_else:
+      fn:string ->
       b:expr ->
       t1:typ ->
       t2:typ ->
       typ
 
   | T_with_action:
+      fn:string ->
       base:typ ->
       act:action ->
       typ
 
   | T_with_dep_action:
+      fn:string ->
       head:dtyp ->
       act:lam action ->
       typ
 
   | T_with_comment:
+      fn:string ->
       t:typ ->
-      c:A.comments ->
+      c:string ->
       typ
 
   | T_nlist:
+      fn:string ->
       n:expr ->
       t:typ ->
       typ
 
   | T_at_most:
+      fn:string ->
       n:expr ->
       t:typ ->
       typ
 
   | T_exact:
+      fn:string ->
       n:expr ->
       t:typ ->
       typ
 
   | T_string:
+      fn:string ->
       element_type:dtyp ->
       terminator:expr ->
       typ
@@ -374,66 +391,68 @@ let rec typ_of_parser (p:T.parser)
             (Printf.sprintf "Expected a named type, got %s"
               (T.print_parser "" p))
     in
+    let fn = p.p_fieldname in
     match p.p_parser with
     | T.Parse_impos ->
-      T_false
+      T_false fn
 
     | T.Parse_app _ _ ->
-      T_denoted (dtyp_of_parser p)
+      T_denoted fn (dtyp_of_parser p)
 
     | T.Parse_pair _ p q ->
-      T_pair (typ_of_parser p) (typ_of_parser q)
+      T_pair fn (typ_of_parser p) (typ_of_parser q)
 
     | T.Parse_with_comment p c ->
-      T_with_comment (typ_of_parser p) c
+      T_with_comment fn (typ_of_parser p) (String.concat "; " c)
 
     | T.Parse_nlist n p ->
-      T_nlist n (typ_of_parser p)
+      T_nlist fn n (typ_of_parser p)
 
     | T.Parse_t_at_most n p ->
-      T_at_most n (typ_of_parser p)
+      T_at_most fn n (typ_of_parser p)
 
     | T.Parse_t_exact n p ->
-      T_exact n (typ_of_parser p)
+      T_exact fn n (typ_of_parser p)
 
     | T.Parse_if_else e p1 p2 ->
-      T_if_else e (typ_of_parser p1) (typ_of_parser p2)
+      T_if_else fn e (typ_of_parser p1) (typ_of_parser p2)
 
     | T.Parse_dep_pair _ p k ->
       let i, k = as_lam k in
-      T_dep_pair (dtyp_of_parser p)
+      T_dep_pair p.p_fieldname
+                 (dtyp_of_parser p)
                  (i, typ_of_parser k)
 
     | T.Parse_dep_pair_with_refinement _ p r k ->
       let i, r = as_lam r in
       let j, k = as_lam k in
-      T_dep_pair_with_refinement (dtyp_of_parser p) (i, r) (j, typ_of_parser k)
+      T_dep_pair_with_refinement fn (dtyp_of_parser p) (i, r) (j, typ_of_parser k)
 
     | T.Parse_dep_pair_with_action p a k ->
       let (i, k) = as_lam k in
-      T_dep_pair_with_action (dtyp_of_parser p) (i, typ_of_parser k) (as_lam a)
+      T_dep_pair_with_action fn (dtyp_of_parser p) (i, typ_of_parser k) (as_lam a)
 
     | T.Parse_dep_pair_with_refinement_and_action _ p r a k ->
       let a = as_lam a in
       let (i, k) = as_lam k in
       let r = as_lam r in
-      T_dep_pair_with_refinement_and_action (dtyp_of_parser p) r (i, typ_of_parser k) a
+      T_dep_pair_with_refinement_and_action fn (dtyp_of_parser p) r (i, typ_of_parser k) a
 
     | T.Parse_with_action _ p a ->
-      T_with_action (typ_of_parser p) a
+      T_with_action fn (typ_of_parser p) a
 
     | T.Parse_with_dep_action _ p a ->
       let a = as_lam a in
-      T_with_dep_action (dtyp_of_parser p) a
+      T_with_dep_action fn (dtyp_of_parser p) a
 
     | T.Parse_string p z ->
-      T_string (dtyp_of_parser p) z
+      T_string fn (dtyp_of_parser p) z
 
     | T.Parse_refinement _ p f ->
-      T_refine (dtyp_of_parser p) (as_lam f)
+      T_refine fn (dtyp_of_parser p) (as_lam f)
 
     | T.Parse_refinement_with_action _ p f a ->
-      T_refine_with_action (dtyp_of_parser p) (as_lam f) (as_lam a)
+      T_refine_with_action fn (dtyp_of_parser p) (as_lam f) (as_lam a)
 
     | T.Parse_weaken_left p _
     | T.Parse_weaken_right p _ ->
@@ -446,10 +465,10 @@ let rec allow_reading_of_typ (en:env) (t:typ)
   : ML bool
   =
   match t with
-  | T_with_comment t _ ->
+  | T_with_comment _ t _ ->
     allow_reading_of_typ en t
 
-  | T_denoted dt ->
+  | T_denoted _ dt ->
     begin
     match dt with
     | DT_IType _ -> true
@@ -570,91 +589,107 @@ let rec print_action (mname:string) (a:T.action)
 let rec print_typ (mname:string) (t:typ)
   : ML string
   = match t with
-    | T_false ->
-      "T_false"
+    | T_false fn ->
+      Printf.sprintf "(T_false \"%s\")" fn
 
-    | T_denoted dt ->
-      Printf.sprintf "(T_denoted %s)"
+    | T_denoted fn dt ->
+      Printf.sprintf "(T_denoted \"%s\" %s)"
+                     fn
                      (print_dtyp mname dt)
 
-    | T_pair t1 t2 ->
-      Printf.sprintf "(T_pair %s %s)"
+    | T_pair fn t1 t2 ->
+      Printf.sprintf "(T_pair \"%s\" %s %s)"
+                     fn
                      (print_typ mname t1)
                      (print_typ mname t2)
 
-    | T_dep_pair t k ->
-      Printf.sprintf "(T_dep_pair %s %s)"
+    | T_dep_pair fn t k ->
+      Printf.sprintf "(T_dep_pair \"%s\" %s %s)"
+                     fn
                      (print_dtyp mname t)
                      (print_lam mname (print_typ mname) k)
 
-    | T_refine d r ->
-      Printf.sprintf "(T_refine %s %s)"
+    | T_refine fn d r ->
+      Printf.sprintf "(T_refine \"%s\" %s %s)"
+                     fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
 
-    | T_refine_with_action d r a ->
-      Printf.sprintf "(T_refine_with_action %s %s %s)"
+    | T_refine_with_action fn d r a ->
+      Printf.sprintf "(T_refine_with_action \"%s\" %s %s %s)"
+                     fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
                      (print_lam mname (print_action mname) a)
 
-    | T_dep_pair_with_refinement d r k ->
-      Printf.sprintf "(T_dep_pair_with_refinement %s %s %s)"
+    | T_dep_pair_with_refinement fn d r k ->
+      Printf.sprintf "(T_dep_pair_with_refinement \"%s\" %s %s %s)"
+                     fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
                      (print_lam mname (print_typ mname) k)
 
-    | T_dep_pair_with_action d k a ->
-      Printf.sprintf "(T_dep_pair_with_action %s %s %s)"
+    | T_dep_pair_with_action fn d k a ->
+      Printf.sprintf "(T_dep_pair_with_action \"%s\" %s %s %s)"
+                     fn
                      (print_dtyp mname d)
                      (print_lam mname (print_typ mname) k)
                      (print_lam mname (print_action mname) a)
 
-    | T_dep_pair_with_refinement_and_action d r k a ->
-      Printf.sprintf "(T_dep_pair_with_refinement_and_action %s %s %s %s)"
+    | T_dep_pair_with_refinement_and_action fn d r k a ->
+      Printf.sprintf "(T_dep_pair_with_refinement_and_action \"%s\" %s %s %s %s)"
+                     fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
                      (print_lam mname (print_typ mname) k)
                      (print_lam mname (print_action mname) a)
 
-    | T_if_else e t1 t2 ->
-      Printf.sprintf "(T_if_else %s %s %s)"
+    | T_if_else fn e t1 t2 ->
+      Printf.sprintf "(T_if_else \"%s\" %s %s %s)"
+                     fn
                      (T.print_expr mname e)
                      (print_typ mname t1)
                      (print_typ mname t2)
 
-    | T_with_action p a ->
-      Printf.sprintf "(T_with_action %s %s)"
+    | T_with_action fn p a ->
+      Printf.sprintf "(T_with_action \"%s\" %s %s)"
+                     fn
                      (print_typ mname p)
                      (print_action mname a)
 
-    | T_with_dep_action d a ->
-      Printf.sprintf "(T_with_dep_action %s %s)"
+    | T_with_dep_action fn d a ->
+      Printf.sprintf "(T_with_dep_action \"%s\" %s %s)"
+                     fn
                      (print_dtyp mname d)
                      (print_lam mname (print_action mname) a)
 
-    | T_with_comment t c ->
-      Printf.sprintf "(T_with_comment %s [%s])"
+    | T_with_comment fn t c ->
+      Printf.sprintf "(T_with_comment \"%s\" %s \"%s\")"
+                     fn
                      (print_typ mname t)
-                     (List.map (Printf.sprintf "\"%s\"") c |> String.concat "; ")
+                     c
 
-    | T_nlist n t ->
-      Printf.sprintf "(T_nlist %s %s)"
+    | T_nlist fn n t ->
+      Printf.sprintf "(T_nlist \"%s\" %s %s)"
+                     fn
                      (T.print_expr mname n)
                      (print_typ mname t)
 
-    | T_at_most n t ->
-      Printf.sprintf "(T_at_most %s %s)"
+    | T_at_most fn n t ->
+      Printf.sprintf "(T_at_most \"%s\" %s %s)"
+                     fn
                      (T.print_expr mname n)
                      (print_typ mname t)
 
-    | T_exact n t ->
-      Printf.sprintf "(T_exact %s %s)"
+    | T_exact fn n t ->
+      Printf.sprintf "(T_exact \"%s\" %s %s)"
+                     fn
                      (T.print_expr mname n)
                      (print_typ mname t)
 
-    | T_string d z ->
-      Printf.sprintf "(T_string %s %s)"
+    | T_string fn d z ->
+      Printf.sprintf "(T_string \"%s\" %s %s)"
+                     fn
                      (print_dtyp mname d)
                      (T.print_expr mname z)
 
@@ -737,9 +772,10 @@ let print_binding mname (td:type_decl)
     let args = print_args tdn.td_params in
     let validate_binding =
         FStar.Printf.sprintf "[@@normalize_for_extraction specialization_steps]\n\
-                             let validate_%s %s = as_validator (def'_%s %s)\n"
+                             let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
                              root_name
                              binders
+                             root_name
                              root_name
                              args
     in

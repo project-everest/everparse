@@ -410,7 +410,7 @@ let rec action_as_action
       A.action_bind "hd" head k
 
 (* Some AST nodes contain source comments that we propagate to the output *)
-let comments = list string
+let comments = string
 
 (* The main type of 3D types. Some points to note:
 
@@ -544,15 +544,18 @@ type typ
     bool ->
     Type =
   | T_false:
+      fieldname:string ->      
       typ P.impos_kind A.true_inv A.eloc_none true
 
   | T_denoted :
+      fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #has_reader:_ -> #i:_ -> #l:_ ->
       td:dtyp pk has_reader i l ->
       typ pk i l has_reader
 
   | T_pair:
+      first_fieldname:string ->
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ -> #b1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
@@ -562,6 +565,7 @@ type typ
       typ (P.and_then_kind pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_dep_pair:
+      first_fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
@@ -575,6 +579,7 @@ type typ
       typ (P.and_then_kind pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_refine:
+      fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       //the first component is a pre-denoted type with a reader
@@ -586,6 +591,7 @@ type typ
       typ (P.filter_kind pk1) i1 l1 false
 
   | T_refine_with_action:
+      fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #i2:_ -> #l2:_ -> #b2:_ ->
@@ -600,6 +606,7 @@ type typ
       //    and dependent pair into a single form
       // 2. This allows the well-typedness of the continuation k
       //    to depend on the refinement of the first field
+      first_fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
@@ -615,6 +622,7 @@ type typ
           false
 
   | T_dep_pair_with_action:
+      fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
@@ -634,6 +642,7 @@ type typ
       //    and dependent pair and action into a single form
       // 2. This allows the well-typedness of the continuation k
       //    to depend on the refinement of the first field
+      first_fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
@@ -651,6 +660,7 @@ type typ
           false
 
   | T_if_else:
+      fieldname:string ->       
       #nz1:_ -> #wk1:_ -> #pk1:P.parser_kind nz1 wk1 ->
       #l1:_ -> #i1:_ -> #b1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->      
@@ -661,6 +671,7 @@ type typ
       typ (P.glb pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_with_action:
+      fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #l1:_ -> #i1:_ -> #b1:_ ->
       #l2:_ -> #i2:_ -> #b2:_ ->
@@ -669,6 +680,7 @@ type typ
       typ pk (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_with_dep_action:
+      fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #i2:_ -> #l2:_ -> #b2:_ ->
@@ -677,6 +689,7 @@ type typ
       typ pk1 (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_with_comment:
+      fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #l:_ -> #i:_ -> #b:_ ->
       t:typ pk i l b ->
@@ -684,6 +697,7 @@ type typ
       typ pk i l b
 
   | T_nlist:
+      fieldname:string ->       
       #wk:_ -> #pk:P.parser_kind true wk ->
       #i:_ -> #l:_ -> #b:_ ->
       n:U32.t ->
@@ -691,6 +705,7 @@ type typ
       typ P.kind_nlist i l false
 
   | T_at_most:
+      fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #i:_ -> #l:_ -> #b:_ ->
       n:U32.t ->
@@ -698,6 +713,7 @@ type typ
       typ P.kind_t_at_most i l false
 
   | T_exact:
+      fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #i:_ -> #l:_ -> #b:_ ->
       n:U32.t ->
@@ -705,6 +721,7 @@ type typ
       typ P.kind_t_exact i l false
 
   | T_string:
+      fieldname:string ->       
       #pk1:P.parser_kind true P.WeakKindStrongPrefix ->
       element_type:dtyp pk1 true A.true_inv A.eloc_none ->
       terminator:dtyp_as_type element_type ->
@@ -719,50 +736,50 @@ let rec as_type
   : Tot Type0
     (decreases t)
   = match t with
-    | T_false -> False
+    | T_false _ -> False
 
-    | T_denoted td -> 
+    | T_denoted _ td -> 
       dtyp_as_type td
 
-    | T_pair t1 t2 ->
+    | T_pair _ t1 t2 ->
       as_type t1 & as_type t2
 
-    | T_dep_pair i t
-    | T_dep_pair_with_action i t _ ->
+    | T_dep_pair _ i t
+    | T_dep_pair_with_action _ i t _ ->
       x:dtyp_as_type i & as_type (t x)
 
-    | T_refine base refinement ->
+    | T_refine _ base refinement ->
       Prelude.refine (dtyp_as_type base) refinement
 
-    | T_refine_with_action base refinement _ ->
+    | T_refine_with_action _ base refinement _ ->
       Prelude.refine (dtyp_as_type base) refinement
 
-    | T_dep_pair_with_refinement base refinement t ->
+    | T_dep_pair_with_refinement _ base refinement t ->
       x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
 
-    | T_dep_pair_with_refinement_and_action base refinement t _ ->
+    | T_dep_pair_with_refinement_and_action _ base refinement t _ ->
       x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
 
-    | T_if_else b t0 t1 ->
+    | T_if_else _ b t0 t1 ->
       Prelude.t_ite b (as_type t0) (as_type t1)
 
-    | T_with_action t _
-    | T_with_comment t _ ->
+    | T_with_action _ t _
+    | T_with_comment _ t _ ->
       as_type t
 
-    | T_with_dep_action i _ ->
+    | T_with_dep_action _ i _ ->
       dtyp_as_type i
 
-    | T_nlist n t ->
+    | T_nlist _ n t ->
       Prelude.nlist n (as_type t)
 
-    | T_at_most n t ->
+    | T_at_most _ n t ->
       Prelude.t_at_most n (as_type t)
 
-    | T_exact n t ->
+    | T_exact _ n t ->
       Prelude.t_exact n (as_type t)
 
-    | T_string elt_t terminator ->
+    | T_string _ elt_t terminator ->
       Prelude.cstring (dtyp_as_type elt_t) terminator
 
 (* Parser denotation of `typ` *)
@@ -773,39 +790,39 @@ let rec as_parser
   : Tot (P.parser pk (as_type t))
         (decreases t)
   = match t returns Tot (P.parser pk (as_type t)) with
-    | T_false ->
+    | T_false _ ->
       //assert_norm (as_type g T_false == False);
       P.parse_impos()
 
-    | T_denoted d ->
+    | T_denoted _ d ->
       dtyp_as_parser d
 
-    | T_pair t1 t2 ->
+    | T_pair _ t1 t2 ->
       //assert_norm (as_type g (T_pair t1 t2) == as_type g t1 * as_type g t2);
       let p1 = as_parser t1 in
       let p2 = as_parser t2 in
       P.parse_pair p1 p2
 
-    | T_dep_pair i t
-    | T_dep_pair_with_action i t _ ->
+    | T_dep_pair _ i t
+    | T_dep_pair_with_action _ i t _ ->
       //assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));
       let pi = dtyp_as_parser i in
       P.parse_dep_pair pi (fun (x:dtyp_as_type i) -> as_parser (t x))
 
-    | T_refine base refinement
-    | T_refine_with_action base refinement _ ->
+    | T_refine _ base refinement
+    | T_refine_with_action _ base refinement _ ->
       //assert_norm (as_type g (T_refine base refinement) == Prelude.refine (itype_as_type base) refinement);
       let pi = dtyp_as_parser base in
       P.parse_filter pi refinement
 
-    | T_dep_pair_with_refinement base refinement k ->
+    | T_dep_pair_with_refinement _ base refinement k ->
       P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
 
 
-    | T_dep_pair_with_refinement_and_action base refinement k _ ->
+    | T_dep_pair_with_refinement_and_action _ base refinement k _ ->
       P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
 
-    | T_if_else b t0 t1 ->
+    | T_if_else _ b t0 t1 ->
       //assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
       let p0 (_:squash b) = 
         P.parse_weaken_right (as_parser t0) _
@@ -815,28 +832,28 @@ let rec as_parser
       in
       P.parse_ite b p0 p1
 
-    | T_with_action t a ->
+    | T_with_action _ t a ->
       //assert_norm (as_type g (T_with_action t a) == as_type g t);
       as_parser t
 
-    | T_with_dep_action i a ->
+    | T_with_dep_action _ i a ->
       //assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
       dtyp_as_parser i
 
-    | T_with_comment t c ->
+    | T_with_comment _ t c ->
       //assert_norm (as_type g (T_with_comment t c) == as_type g t);
       as_parser t
 
-    | T_nlist n t ->
+    | T_nlist _ n t ->
       Prelude.parse_nlist n (as_parser t)
 
-    | T_at_most n t ->
+    | T_at_most _ n t ->
       Prelude.parse_t_at_most n (as_parser t)
 
-    | T_exact n t ->
+    | T_exact _ n t ->
       Prelude.parse_t_exact n (as_parser t)
 
-    | T_string elt_t terminator ->
+    | T_string _ elt_t terminator ->
       Prelude.parse_string (dtyp_as_parser elt_t) terminator
 
 [@@specialize]
@@ -846,17 +863,17 @@ let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
                   (t:typ pk inv loc true)
   : leaf_reader (as_parser t)
   = match t with
-    | T_denoted dt ->
-      assert_norm (as_type (T_denoted dt) == dtyp_as_type dt);
-      assert_norm (as_parser (T_denoted dt) == dtyp_as_parser dt);
+    | T_denoted _n dt ->
+      assert_norm (as_type (T_denoted _n dt) == dtyp_as_type dt);
+      assert_norm (as_parser (T_denoted _n dt) == dtyp_as_parser dt);
       (| (), dtyp_as_leaf_reader dt |)
-    | T_with_comment t _c ->
-      assert_norm (as_type (T_with_comment t _c) == as_type t);    
-      assert_norm (as_parser (T_with_comment t _c) == as_parser t);    
+    | T_with_comment _n t _c ->
+      assert_norm (as_type (T_with_comment _n t _c) == as_type t);    
+      assert_norm (as_parser (T_with_comment _n t _c) == as_parser t);    
       as_reader t
-    | T_false ->
-      assert_norm (as_type T_false == False);
-      assert_norm (as_parser T_false == P.parse_impos());
+    | T_false _n ->
+      assert_norm (as_type (T_false _n) == False);
+      assert_norm (as_parser (T_false _n) == P.parse_impos());
       (| (), A.read_impos |)
 
 
@@ -866,6 +883,7 @@ let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
      and type denotations
 *)
 let rec as_validator
+          (typename:string)
           #nz #wk (#pk:P.parser_kind nz wk)
           (#[@@@erasable] inv:A.slice_inv)
           (#[@@@erasable] loc:A.eloc)
@@ -876,142 +894,153 @@ let rec as_validator
   = match t
     returns Tot (A.validate_with_action_t (as_parser t) inv loc b)
     with
-    | T_false ->
-      A.validate_impos()
+    | T_false fn ->
+      A.validate_with_error_handler typename fn (A.validate_impos())
 
-    | T_denoted td ->
-      assert_norm (as_type (T_denoted td) == dtyp_as_type td);
-      assert_norm (as_parser (T_denoted td) == dtyp_as_parser td);
-      A.validate_eta (dtyp_as_validator td)
+    | T_denoted fn td ->
+      assert_norm (as_type (T_denoted fn td) == dtyp_as_type td);
+      assert_norm (as_parser (T_denoted fn td) == dtyp_as_parser td);
+      A.validate_with_error_handler typename fn (A.validate_eta (dtyp_as_validator td))
 
-    | T_pair t1 t2 ->
-      assert_norm (as_type (T_pair t1 t2) == as_type t1 * as_type t2);
-      assert_norm (as_parser (T_pair t1 t2) == P.parse_pair (as_parser t1) (as_parser t2));
-      A.validate_pair "a"
-        (as_validator t1)
-        (as_validator t2)
+    | T_pair fn t1 t2 ->
+      assert_norm (as_type (T_pair fn t1 t2) == as_type t1 * as_type t2);
+      assert_norm (as_parser (T_pair fn t1 t2) == P.parse_pair (as_parser t1) (as_parser t2));
+      A.validate_pair fn
+          (as_validator typename t1)
+          (as_validator typename t2)
 
-    | T_dep_pair i t ->
-      assert_norm (as_type (T_dep_pair i t) == x:dtyp_as_type i & as_type (t x));
-      assert_norm (as_parser (T_dep_pair i t) ==
+    | T_dep_pair fn i t ->
+      assert_norm (as_type (T_dep_pair fn i t) == x:dtyp_as_type i & as_type (t x));
+      assert_norm (as_parser (T_dep_pair fn i t) ==
                    P.parse_dep_pair (dtyp_as_parser i) (fun (x:dtyp_as_type i) -> as_parser (t x)));
       A.validate_weaken_inv_loc inv loc
-      (A.validate_dep_pair "a"
-        (dtyp_as_validator i)
-        (dtyp_as_leaf_reader i)
-        (fun x -> as_validator (t x)))
+          (A.validate_dep_pair fn
+              (A.validate_with_error_handler typename fn (dtyp_as_validator i))
+              (dtyp_as_leaf_reader i)
+              (fun x -> as_validator typename (t x)))
 
-    | T_refine t f ->
-      assert_norm (as_type (T_refine t f) == P.refine (dtyp_as_type t) f);
-      assert_norm (as_parser (T_refine t f) == P.parse_filter (dtyp_as_parser t) f);
-      A.validate_filter "a"
-        (dtyp_as_validator t)
-        (dtyp_as_leaf_reader t)
-        f "a" "a"
+    | T_refine fn t f ->
+      assert_norm (as_type (T_refine fn t f) == P.refine (dtyp_as_type t) f);
+      assert_norm (as_parser (T_refine fn t f) == P.parse_filter (dtyp_as_parser t) f);
+      A.validate_with_error_handler typename fn      
+        (A.validate_filter fn
+          (dtyp_as_validator t)
+          (dtyp_as_leaf_reader t)
+          f "reading field_value" "checking constraint")
 
-    | T_refine_with_action t f a ->
-      assert_norm (as_type (T_refine_with_action t f a) == P.refine (dtyp_as_type t) f);
-      assert_norm (as_parser (T_refine_with_action t f a) == P.parse_filter (dtyp_as_parser t) f);
-      assert_norm (as_parser (T_refine t f) == P.parse_filter (dtyp_as_parser t) f);      
-      A.validate_filter_with_action "a"
-        (dtyp_as_validator t)
-        (dtyp_as_leaf_reader t)
-        f "a" "a"
-        (fun x -> action_as_action (as_parser (T_refine t f)) (a x))
+    | T_refine_with_action fn t f a ->
+      assert_norm (as_type (T_refine_with_action fn t f a) == P.refine (dtyp_as_type t) f);
+      assert_norm (as_parser (T_refine_with_action fn t f a) == P.parse_filter (dtyp_as_parser t) f);
+      assert_norm (as_parser (T_refine fn t f) == P.parse_filter (dtyp_as_parser t) f);      
+      A.validate_with_error_handler typename fn            
+        (A.validate_filter_with_action fn
+          (dtyp_as_validator t)
+          (dtyp_as_leaf_reader t)
+          f "reading field_value" "checking constraint"
+          (fun x -> action_as_action (as_parser (T_refine fn t f)) (a x)))
 
-    | T_dep_pair_with_refinement base refinement k ->
-      assert_norm (as_type (T_dep_pair_with_refinement base refinement k) ==
+    | T_dep_pair_with_refinement fn base refinement k ->
+      assert_norm (as_type (T_dep_pair_with_refinement fn base refinement k) ==
                         x:Prelude.refine (dtyp_as_type base) refinement & as_type (k x));
-      assert_norm (as_parser (T_dep_pair_with_refinement base refinement k) ==
+      assert_norm (as_parser (T_dep_pair_with_refinement fn base refinement k) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
-      A.validate_weaken_inv_loc inv loc (
-        A.validate_dep_pair_with_refinement false "a"
-          (dtyp_as_validator base)
-          (dtyp_as_leaf_reader base)
-          refinement
-          (fun x -> as_validator (k x)))
+      A.validate_with_error_handler typename fn                              
+        (A.validate_weaken_inv_loc inv loc (
+          A.validate_dep_pair_with_refinement false fn
+            (dtyp_as_validator base)
+            (dtyp_as_leaf_reader base)
+            refinement
+            (fun x -> as_validator typename (k x))))
 
 
-    | T_dep_pair_with_action base t act ->
-      assert_norm (as_type (T_dep_pair_with_action base t act) ==
+    | T_dep_pair_with_action fn base t act ->
+      assert_norm (as_type (T_dep_pair_with_action fn base t act) ==
                         x:dtyp_as_type base & as_type (t x));
-      assert_norm (as_parser (T_dep_pair_with_action base t act) ==
+      assert_norm (as_parser (T_dep_pair_with_action fn base t act) ==
                         P.(dtyp_as_parser base `parse_dep_pair` (fun x -> as_parser (t x))));
-      A.validate_weaken_inv_loc inv loc (
-        A.validate_dep_pair_with_action 
-          (dtyp_as_validator base)
-          (dtyp_as_leaf_reader base)
-          (fun x -> action_as_action (dtyp_as_parser base) (act x))
-          (fun x -> as_validator (t x)))
+      A.validate_with_error_handler typename fn                              
+        (A.validate_weaken_inv_loc inv loc (
+          A.validate_dep_pair_with_action 
+            (dtyp_as_validator base)
+            (dtyp_as_leaf_reader base)
+            (fun x -> action_as_action (dtyp_as_parser base) (act x))
+            (fun x -> as_validator typename (t x))))
 
-    | T_dep_pair_with_refinement_and_action base refinement k act ->
-      assert_norm (as_type (T_dep_pair_with_refinement_and_action base refinement k act) ==
+    | T_dep_pair_with_refinement_and_action fn base refinement k act ->
+      assert_norm (as_type (T_dep_pair_with_refinement_and_action fn base refinement k act) ==
                         x:Prelude.refine (dtyp_as_type base) refinement & as_type (k x));
-      assert_norm (as_parser (T_dep_pair_with_refinement_and_action base refinement k act) ==
+      assert_norm (as_parser (T_dep_pair_with_refinement_and_action fn base refinement k act) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_weaken_inv_loc inv loc (
-        A.validate_dep_pair_with_refinement_and_action false "a"
-          (dtyp_as_validator base)
-          (dtyp_as_leaf_reader base)
-          refinement
-          (fun x -> action_as_action (dtyp_as_parser base) (act x))
-          (fun x -> as_validator (k x)))
+          A.validate_dep_pair_with_refinement_and_action false fn
+            (A.validate_with_error_handler typename fn                              
+              (dtyp_as_validator base))
+            (dtyp_as_leaf_reader base)
+            refinement
+            (fun x -> action_as_action (dtyp_as_parser base) (act x))
+            (fun x -> as_validator typename (k x)))
 
-    | T_if_else b t0 t1 ->
-      assert_norm (as_type (T_if_else b t0 t1) == Prelude.t_ite b (as_type t0) (as_type t1));
+    | T_if_else fn b t0 t1 ->
+      assert_norm (as_type (T_if_else fn b t0 t1) == Prelude.t_ite b (as_type t0) (as_type t1));
       let p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
       let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
-      assert_norm (as_parser (T_if_else b t0 t1) == P.parse_ite b p0 p1);
+      assert_norm (as_parser (T_if_else fn b t0 t1) == P.parse_ite b p0 p1);
       let v0 (_:squash b) = 
-        A.validate_weaken_right (as_validator t0) _
+        A.validate_weaken_right (as_validator typename t0) _
       in
       let v1 (_:squash (not b)) =
-        A.validate_weaken_left (as_validator t1) _
+        A.validate_weaken_left (as_validator typename t1) _
       in
-      A.validate_ite b p0 v0 p1 v1
+      A.validate_with_error_handler typename fn (A.validate_ite b p0 v0 p1 v1)
 
-    | T_with_action t a ->
-      assert_norm (as_type (T_with_action t a) == as_type t);
-      assert_norm (as_parser (T_with_action t a) == as_parser t);
-      A.validate_with_success_action "a"
-        (as_validator t)
-        (action_as_action (as_parser t) a)
+    | T_with_action fn t a ->
+      assert_norm (as_type (T_with_action fn t a) == as_type t);
+      assert_norm (as_parser (T_with_action fn t a) == as_parser t);
+      A.validate_with_error_handler typename fn 
+        (A.validate_with_success_action fn
+          (as_validator typename t)
+          (action_as_action (as_parser t) a))
 
-    | T_with_dep_action i a ->
-      assert_norm (as_type (T_with_dep_action i a) == dtyp_as_type i);
-      assert_norm (as_parser (T_with_dep_action i a) == dtyp_as_parser i);
-      A.validate_weaken_inv_loc inv loc (
-       A.validate_with_dep_action "a"
-        (dtyp_as_validator i)
-        (dtyp_as_leaf_reader i)
-        (fun x -> action_as_action (dtyp_as_parser i) (a x)))
+    | T_with_dep_action fn i a ->
+      assert_norm (as_type (T_with_dep_action fn i a) == dtyp_as_type i);
+      assert_norm (as_parser (T_with_dep_action fn i a) == dtyp_as_parser i);
+      A.validate_with_error_handler typename fn 
+        (A.validate_weaken_inv_loc inv loc (
+          A.validate_with_dep_action fn
+            (dtyp_as_validator i)
+            (dtyp_as_leaf_reader i)
+            (fun x -> action_as_action (dtyp_as_parser i) (a x))))
 
-    | T_with_comment t c ->
-      assert_norm (as_type (T_with_comment t c) == as_type t);
-      assert_norm (as_parser (T_with_comment t c) == as_parser t);
-      A.validate_with_comment "a" (as_validator t)
+    | T_with_comment fn t c ->
+      assert_norm (as_type (T_with_comment fn t c) == as_type t);
+      assert_norm (as_parser (T_with_comment fn t c) == as_parser t);
+      A.validate_with_comment c (as_validator typename t)
 
-    | T_nlist n t ->
-      assert_norm (as_type (T_nlist n t) == Prelude.nlist n (as_type t));
-      assert_norm (as_parser (T_nlist n t) == Prelude.parse_nlist n (as_parser t));
-      A.validate_nlist n (as_validator t)
+    | T_nlist fn n t ->
+      assert_norm (as_type (T_nlist fn n t) == Prelude.nlist n (as_type t));
+      assert_norm (as_parser (T_nlist fn n t) == Prelude.parse_nlist n (as_parser t));
+      A.validate_with_error_handler typename fn 
+        (A.validate_nlist n (as_validator typename t))
 
-    | T_at_most n t ->
-      assert_norm (as_type (T_at_most n t) == Prelude.t_at_most n (as_type t));
-      assert_norm (as_parser (T_at_most n t) == Prelude.parse_t_at_most n (as_parser t));
-      A.validate_t_at_most n (as_validator t)
+    | T_at_most fn n t ->
+      assert_norm (as_type (T_at_most fn n t) == Prelude.t_at_most n (as_type t));
+      assert_norm (as_parser (T_at_most fn n t) == Prelude.parse_t_at_most n (as_parser t));
+      A.validate_with_error_handler typename fn 
+        (A.validate_t_at_most n (as_validator typename t))
 
-    | T_exact n t ->
-      assert_norm (as_type (T_exact n t) == Prelude.t_exact n (as_type t));
-      assert_norm (as_parser (T_exact n t) == Prelude.parse_t_exact n (as_parser t));
-      A.validate_t_exact n (as_validator t)
+    | T_exact fn n t ->
+      assert_norm (as_type (T_exact fn n t) == Prelude.t_exact n (as_type t));
+      assert_norm (as_parser (T_exact fn n t) == Prelude.parse_t_exact n (as_parser t));
+      A.validate_with_error_handler typename fn 
+        (A.validate_t_exact n (as_validator typename t))
 
-    | T_string elt_t terminator ->
-      assert_norm (as_type (T_string elt_t terminator) == Prelude.cstring (dtyp_as_type elt_t) terminator);
-      assert_norm (as_parser (T_string elt_t terminator) == Prelude.parse_string (dtyp_as_parser elt_t) terminator);
-      A.validate_string (dtyp_as_validator elt_t)
-                        (dtyp_as_leaf_reader elt_t)
-                        terminator
+    | T_string fn elt_t terminator ->
+      assert_norm (as_type (T_string fn elt_t terminator) == Prelude.cstring (dtyp_as_type elt_t) terminator);
+      assert_norm (as_parser (T_string fn elt_t terminator) == Prelude.parse_string (dtyp_as_parser elt_t) terminator);
+      A.validate_with_error_handler typename fn 
+        (A.validate_string (dtyp_as_validator elt_t)
+                           (dtyp_as_leaf_reader elt_t)
+                           terminator)
 
 let specialization_steps =
   [nbe;
