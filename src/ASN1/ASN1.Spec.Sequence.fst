@@ -46,17 +46,17 @@ let defaultv_filter (#a : eqtype) (defaultv : a) : a -> GTot bool =
 let defaultv_synth (#a : eqtype) (defaultv : a) (v : a {~(v = defaultv)}) : default_tv defaultv =
   Nondefault v
 
-let parse_asn1_sequence_item_twin (id : asn1_id_t) (item : gen_decorated_parser_twin) :
-  Tot (parser (asn1_sequence_parser_kind []) (asn1_decorated_t (Mkgendcparser?.d item)))
+let parse_asn1_sequence_item_twin (item : gen_decorated_parser_twin) :
+  Tot (asn1_id_t -> parser (asn1_sequence_parser_kind []) (asn1_decorated_t (Mkgendcparser?.d item)))
 = match item with
   | Mkgendcparser d k p fp ->
     match d with
     | (| _, _, dk|) ->
          match dk with
-           | ASN1_PLAIN_ILC _ -> weaken (asn1_sequence_parser_kind []) (fp id)
-           | ASN1_OPTION_ILC _ -> weaken (asn1_sequence_parser_kind []) 
+           | ASN1_PLAIN_ILC _ -> fun id -> weaken (asn1_sequence_parser_kind []) (fp id)
+           | ASN1_OPTION_ILC _ -> fun id -> weaken (asn1_sequence_parser_kind []) 
                                  ((fp id) `parse_synth` (Some))
-           | ASN1_DEFAULT_TERMINAL _ defaultv -> 
+           | ASN1_DEFAULT_TERMINAL _ defaultv -> fun id ->
              weaken (asn1_sequence_parser_kind []) 
                     (((fp id)
                     `parse_filter`
@@ -65,12 +65,12 @@ let parse_asn1_sequence_item_twin (id : asn1_id_t) (item : gen_decorated_parser_
                     (defaultv_synth defaultv))
 
 let parse_asn1_sequence_item_twin_nondefault
-  (id : asn1_id_t)
   (item : gen_decorated_parser_twin)
+  (id : asn1_id_t)
   (input : bytes)
 : Lemma
-  (ensures (parse_defaultable_injective_cond (generate_defaultable_item item) (parse_asn1_sequence_item_twin id item) input))
-= let p = (parse_asn1_sequence_item_twin id item) in
+  (ensures (parse_defaultable_injective_cond (generate_defaultable_item item) (parse_asn1_sequence_item_twin item id) input))
+= let p = (parse_asn1_sequence_item_twin item id) in
   let t = asn1_decorated_pure_t (Mkgendcparser?.d item) in
   match item with
   | Mkgendcparser d _ _ fp ->
@@ -93,6 +93,84 @@ let parse_asn1_sequence_item_twin_nondefault
              let _ = parse_synth_eq ((fp id) `parse_filter` (defaultv_filter defaultv)) (defaultv_synth defaultv) input in
              ())
 
+let and_then_cases_injective_some
+  (#t: Type)
+  (#t' : Type)
+  (p': (option t -> Tot (bare_parser t')))
+: GTot Type0
+= forall (x1 x2: option t) (b1 b2: bytes) . {:pattern (parse (p' x1) b1); (parse (p' x2) b2)}
+  and_then_cases_injective_precond p' x1 x2 b1 b2 /\ Some? x1 /\ Some? x2 ==>
+  x1 == x2
+
+let and_then_cases_injective_some_intro
+  (#t:Type)
+  (#t':Type)
+  (p': (option t -> Tot (bare_parser t')))
+  (lem: (
+    (x1: option t) -> 
+    (x2: option t) ->
+    (b1: bytes) ->
+    (b2: bytes) ->
+    Lemma
+    (requires (and_then_cases_injective_precond p' x1 x2 b1 b2 /\ Some? x1 /\ Some? x2))
+    (ensures (x1 == x2))
+  ))
+: Lemma
+  (and_then_cases_injective_some p')
+= Classical.forall_intro_3 (fun x1 x2 b1 -> Classical.forall_intro (Classical.move_requires (lem x1 x2 b1)))
+
+let and_then_cases_injective_elim
+  (#t:Type)
+  (#t':Type)
+  (p': (t -> Tot (bare_parser t')))
+  (x1 x2 : t)
+  (b1 b2 : bytes)
+  : Lemma
+  (requires (and_then_cases_injective p' /\ and_then_cases_injective_precond p' x1 x2 b1 b2))
+  (ensures (x1 == x2))
+= () 
+
+let and_then_cases_injective_some_elim
+  (#t:Type)
+  (#t':Type)
+  (p': (option t -> Tot (bare_parser t')))
+  (x1 x2 : t)
+  (b1 b2 : bytes)
+  : Lemma
+  (requires (and_then_cases_injective_some p' /\ and_then_cases_injective_precond p' (Some x1) (Some x2) b1 b2))
+  (ensures (x1 == x2))
+= ()
+
+let parse_asn1_sequence_item_twin_cases_injective
+  (item : gen_decorated_parser_twin)
+: Lemma
+  (ensures (and_then_cases_injective (parse_asn1_sequence_item_twin item)))
+= match item with
+  | Mkgendcparser d _ _ fp ->
+    match d with
+    | (| _, _, dk|) ->
+        match dk with
+        | ASN1_PLAIN_ILC _ -> ()
+        | ASN1_OPTION_ILC _ -> 
+          let p = parse_asn1_sequence_item_twin item in
+          and_then_cases_injective_intro p (
+            fun id1 id2 b1 b2 ->
+              parse_synth_eq (fp id1) (Some) b1;
+              parse_synth_eq (fp id2) (Some) b2;
+              and_then_cases_injective_elim fp id1 id2 b1 b2
+          )
+        | ASN1_DEFAULT_TERMINAL _ defaultv ->
+          let p = parse_asn1_sequence_item_twin item in
+          and_then_cases_injective_intro p (
+            fun id1 id2 b1 b2 ->
+              parse_synth_eq ((fp id1) `parse_filter` (defaultv_filter defaultv)) (defaultv_synth defaultv) b1;
+              parse_synth_eq ((fp id2) `parse_filter` (defaultv_filter defaultv)) (defaultv_synth defaultv) b2;
+              parse_filter_eq (fp id1) (defaultv_filter defaultv) b1;
+              parse_filter_eq (fp id2) (defaultv_filter defaultv) b2;
+              and_then_cases_injective_elim fp id1 id2 b1 b2
+          )
+  
+
 (* FIXME: using option type as the state might cause problems for extracting the validator *)
 
 (* Thinking the loop as a fixpoint on option id so that disappears *)
@@ -113,23 +191,29 @@ let parse_asn1_sequence_item_twin_nondefault
 let make_asn1_sequence_parser_body_twin
   (itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
 //  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-  (ploop : (l : list (gen_decorated_parser_twin)) -> (st : (option asn1_id_t) {l << itemtwins}) -> (parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l))))
-  (id : asn1_id_t)
-  : Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
-    (requires (forall l. (l << itemtwins) ==> parse_defaultable_injective_cond_prop (generate_defaultable_items l) (ploop l (Some id))))
-    (ensures (fun p -> parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p))
-= match itemtwins with
+  (ploop : (l : list (gen_decorated_parser_twin) {l << itemtwins}) -> (st : (option asn1_id_t)) -> (parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l))))
+  : Pure (asn1_id_t -> parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
+    (requires (forall l. (l << itemtwins) ==> 
+    (forall id. parse_defaultable_injective_cond_prop (generate_defaultable_items l) (ploop l (Some id)))))
+    (ensures (fun fp -> 
+    (forall id. parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) (fp id))))
+= let (ret : (id : asn1_id_t) -> (p : (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
+       {parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p})) = fun id ->
+  (match itemtwins with
   | [hd] ->
     (match hd with
     | Mkgendcparser d k p fp ->
       match d with
       | (| s, de, dk |) ->
         if (Set.mem id s) then
-          let _ = Classical.forall_intro (parse_asn1_sequence_item_twin_nondefault id hd) in
-          let p = parse_asn1_sequence_item_twin id hd in
+          let _ = Classical.forall_intro (parse_asn1_sequence_item_twin_nondefault hd id) in
+          let (p : parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map Mkgendcparser?.d itemtwins))) = parse_asn1_sequence_item_twin hd id in
+          //assert (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p);
           p
         else
-          fail_parser _ _)
+          let p = fail_parser _ _ in
+          //assert (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p);
+          p)
   | hd :: tl ->
     let (p, ns) =
     (match hd with
@@ -137,7 +221,7 @@ let make_asn1_sequence_parser_body_twin
       match d with
       | (| s, de, dk |) ->
         if (Set.mem id s) then
-          (parse_asn1_sequence_item_twin id hd, None)
+          (parse_asn1_sequence_item_twin hd id, None)
         else
           match de with
           | PLAIN -> (fail_parser _ _, None)
@@ -152,7 +236,7 @@ let make_asn1_sequence_parser_body_twin
       match d with
       | (| s, de, dk |) ->
         if (Set.mem id s) then
-          let _ = Classical.forall_intro (parse_asn1_sequence_item_twin_nondefault id hd) in
+          let _ = Classical.forall_intro (parse_asn1_sequence_item_twin_nondefault hd id) in
           let _ = nondep_then_defaultable p (generate_defaultable_item hd) p' (generate_defaultable_items tl) in
           ()
         else
@@ -165,7 +249,101 @@ let make_asn1_sequence_parser_body_twin
             let _ =
               nondep_then_defaultable_snd p (generate_defaultable_item hd) p' (generate_defaultable_items tl) in
             ()) in
-    weaken (asn1_sequence_parser_kind itemtwins) (p `nondep_then` p')
+    let rp = weaken (asn1_sequence_parser_kind itemtwins) (p `nondep_then` p') in
+    //assert (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) rp);
+    rp) in
+    //assert (forall id. parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) (ret id));
+    ret  
+
+let make_asn1_sequence_parser_body_twin_and_then_cases_injective
+  (itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
+//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
+  (ploop : (l : list (gen_decorated_parser_twin) {l << itemtwins}) -> (st : (option asn1_id_t)) -> (parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l))))
+: Lemma 
+    (requires (forall l. (l << itemtwins) ==> 
+    (and_then_cases_injective_some (ploop l)) /\
+    (forall id. parse_defaultable_injective_cond_prop (generate_defaultable_items l) (ploop l (Some id)))))
+    (ensures (and_then_cases_injective (make_asn1_sequence_parser_body_twin itemtwins ploop)))
+= let p = make_asn1_sequence_parser_body_twin itemtwins ploop in
+    and_then_cases_injective_intro p (
+      fun id1 id2 b1 b2 ->
+      match itemtwins with
+      | [hd] ->     
+        (match hd with
+        | Mkgendcparser d k p fp ->
+          match d with
+          | (| s, de, dk |) ->
+            match (Set.mem id1 s), (Set.mem id2 s) with
+            | true, true -> 
+              parse_asn1_sequence_item_twin_cases_injective hd
+            | _, _ -> ())
+      | hd :: tl -> 
+        (match hd with
+        | Mkgendcparser d k p fp ->
+          match d with
+          | (| s, de, dk |) ->
+            match (Set.mem id1 s), (Set.mem id2 s) with
+            | true, true -> 
+              let p1 = parse_asn1_sequence_item_twin hd id1 in
+              let p2 = parse_asn1_sequence_item_twin hd id2 in
+              let p = ploop tl None in
+              parse_asn1_sequence_item_twin_cases_injective hd;
+              nondep_then_eq p1 p b1;
+              nondep_then_eq p2 p b2
+            | true, false -> 
+              (match de with
+              | PLAIN -> 
+                let p' = fail_parser (asn1_sequence_parser_kind []) (asn1_decorated_t d) in
+                let p = ploop tl None in
+                nondep_then_eq p' p b2
+              | _ ->  
+                let p1' = parse_asn1_sequence_item_twin hd id1 in
+                let p1 = ploop tl None in
+                let p2' = 
+                  let defv' = generate_defaultable_item hd in
+                  match defv' with
+                  | Some defv ->
+                  (weaken (asn1_sequence_parser_kind []) (parse_ret defv)) in
+                let p2 = ploop tl (Some id2) in
+                nondep_then_eq p1' p1 b1;
+                nondep_then_eq p2' p2 b2;
+                parse_asn1_sequence_item_twin_nondefault hd id1 b1)
+            | false, true ->   
+              (match de with
+              | PLAIN -> 
+                let p' = fail_parser (asn1_sequence_parser_kind []) (asn1_decorated_t d) in
+                let p = ploop tl None in
+                nondep_then_eq p' p b1
+              | _ ->  
+                let p1' = 
+                  let defv' = generate_defaultable_item hd in
+                  match defv' with
+                  | Some defv ->
+                  (weaken (asn1_sequence_parser_kind []) (parse_ret defv)) in
+                let p1 = ploop tl (Some id1) in
+                let p2' = parse_asn1_sequence_item_twin hd id2 in
+                let p2 = ploop tl None in
+                nondep_then_eq p1' p1 b1;
+                nondep_then_eq p2' p2 b2;
+                parse_asn1_sequence_item_twin_nondefault hd id2 b2)          
+            | false, false -> 
+              match de with
+              | PLAIN -> 
+                let p' = fail_parser (asn1_sequence_parser_kind []) (asn1_decorated_t d) in
+                let p = ploop tl None in
+                nondep_then_eq p' p b1;
+                nondep_then_eq p' p b2
+              | _ -> 
+                let p' =             
+                  let defv' = generate_defaultable_item hd in
+                  match defv' with
+                  | Some defv ->
+                    (weaken (asn1_sequence_parser_kind []) (parse_ret defv)) in
+                let p1 = ploop tl (Some id1) in
+                let p2 = ploop tl (Some id2) in
+                nondep_then_eq p' p1 b1;
+                nondep_then_eq p' p2 b2;
+                and_then_cases_injective_some_elim (ploop tl) id1 id2 b1 b2))
 
 let make_asn1_sequence_parser_body_twin_spec
   (#itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
@@ -175,9 +353,9 @@ let make_asn1_sequence_parser_body_twin_spec
 
 let make_asn1_sequence_parser_body
   (#itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
-  (st : option asn1_id_t)
 //  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
   (pbodytwin : asn1_id_t -> (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins))))
+  (st : option asn1_id_t)
   : Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
     (requires (make_asn1_sequence_parser_body_twin_spec pbodytwin))
     (ensures (fun p -> parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p))
@@ -193,18 +371,39 @@ let make_asn1_sequence_parser_body
   | _ -> and_then_defaultable p pbodytwin ov) in
   weaken (asn1_sequence_parser_kind itemtwins) (p `and_then` pbodytwin)
 
+let make_asn1_sequence_parser_body_and_then_cases_injective
+  (#itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
+//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
+  (pbodytwin : asn1_id_t -> (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins))))
+  : Lemma 
+    (requires (make_asn1_sequence_parser_body_twin_spec pbodytwin))
+    (ensures (and_then_cases_injective_some (make_asn1_sequence_parser_body pbodytwin)))
+= and_then_cases_injective_some_intro (make_asn1_sequence_parser_body pbodytwin)
+        (fun x1 x2 b1 b2 ->
+          match x1, x2 with
+          | None, _ -> _
+          | _, None -> _
+          | Some v1, Some v2 ->
+            let k = glb parse_asn1_identifier30_kind parse_ret_kind in
+            let p' = pbodytwin in
+            let p1 = weaken k (parse_ret v1) in
+            and_then_eq p1 p' b1;
+            let p2 = weaken k (parse_ret v2) in
+            and_then_eq p2 p' b2;
+            and_then_cases_injective_elim p' v1 v2 b1 b2)
+
 let make_asn1_sequence_parser_body_spec
   (itemtwins : list (gen_decorated_parser_twin))
-  (pbody : (l : list (gen_decorated_parser_twin) {Cons? l}) -> (st : option asn1_id_t {l << itemtwins \/ (l == itemtwins /\ 0 << 1)}) -> parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l)))
+  (pbody : (l : list (gen_decorated_parser_twin) {Cons? l /\ (l << itemtwins \/ (l == itemtwins /\ 0 << 1))}) -> (st : option asn1_id_t) -> parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l)))
 = match itemtwins with
   | [] -> True
-  | _ -> forall id. (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) (pbody itemtwins id))
+  | _ -> and_then_cases_injective_some (pbody itemtwins) /\ (forall id. (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) (pbody itemtwins id)))
 
 let make_asn1_sequence_parser_guard
   (itemtwins : list (gen_decorated_parser_twin))
 //  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
+  (pbody : (l : list (gen_decorated_parser_twin) {Cons? l /\ (l << itemtwins \/ (l == itemtwins /\ 0 << 1))}) -> (st : option asn1_id_t) -> parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l)))
   (st : option asn1_id_t)
-  (pbody : (l : list (gen_decorated_parser_twin) {Cons? l}) -> (st : option asn1_id_t {l << itemtwins \/ (l == itemtwins /\ 0 << 1)}) -> parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l)))
   : Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
     (requires (make_asn1_sequence_parser_body_spec itemtwins pbody))
     (ensures (fun p -> match st with
@@ -226,238 +425,60 @@ let make_asn1_sequence_parser_guard
              None in
          weaken (asn1_sequence_parser_kind itemtwins) (parse_defaultable defv p))  
 
+let make_asn1_sequence_parser_guard_and_then_cases_injective
+  (itemtwins : list (gen_decorated_parser_twin))
+//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
+  (pbody : (l : list (gen_decorated_parser_twin) {Cons? l /\ (l << itemtwins \/ (l == itemtwins /\ 0 << 1))}) -> (st : option asn1_id_t) -> parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l)))
+  : Lemma
+  (requires (make_asn1_sequence_parser_body_spec itemtwins pbody))
+  (ensures (and_then_cases_injective_some (make_asn1_sequence_parser_guard itemtwins pbody)))
+= match itemtwins with
+  | [] -> _
+  | _ -> and_then_cases_injective_some_intro (make_asn1_sequence_parser_guard itemtwins pbody)
+        (fun x1 x2 b1 b2 ->
+          match x1, x2 with
+          | None, _ -> _
+          | _, None -> _
+          | Some v1, Some v2 ->
+            let fp = pbody itemtwins in
+            defaultable_trivial_eq (fp x1);
+            defaultable_trivial_eq (fp x2);
+            and_then_cases_injective_some_elim fp v1 v2 b1 b2)
+
 let rec make_asn1_sequence_parser''
   (itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
 //  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-  (st : option asn1_id_t)
-: Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins))) 
+: Pure (option asn1_id_t -> parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins))) 
   (requires True)
-  (ensures fun p -> (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p))
+  (ensures fun fp -> 
+    (and_then_cases_injective_some fp) /\
+    (forall st. parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) (fp st)))
   (decreases %[itemtwins;0])
-= (assume (make_asn1_sequence_parser_body_twin_spec (make_asn1_sequence_parser_body_twin itemtwins make_asn1_sequence_parser')));
-  make_asn1_sequence_parser_body st (make_asn1_sequence_parser_body_twin itemtwins make_asn1_sequence_parser')
+= let p = make_asn1_sequence_parser_body_twin itemtwins make_asn1_sequence_parser' in
+  let _ = 
+    (make_asn1_sequence_parser_body_twin_and_then_cases_injective itemtwins make_asn1_sequence_parser') 
+  in
+  assert (make_asn1_sequence_parser_body_twin_spec p);
+  let _ = 
+    (make_asn1_sequence_parser_body_and_then_cases_injective p) 
+  in
+  make_asn1_sequence_parser_body p
 
 and make_asn1_sequence_parser'
   (itemtwins : list (gen_decorated_parser_twin))
 //  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-  (st : option asn1_id_t)
-: Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
+: Pure (option asn1_id_t -> parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
   (requires True)
-  (ensures fun p -> (match st with 
-                  | None -> True
-                  | Some _ -> parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p))
+  (ensures fun fp -> 
+    (and_then_cases_injective_some fp) /\
+    (forall id. parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) (fp (Some id))))
   (decreases %[itemtwins;1])
-= make_asn1_sequence_parser_guard itemtwins st (make_asn1_sequence_parser'')
+= assert (make_asn1_sequence_parser_body_spec itemtwins make_asn1_sequence_parser'');
+  let _ = (make_asn1_sequence_parser_guard_and_then_cases_injective itemtwins make_asn1_sequence_parser'') in
+  make_asn1_sequence_parser_guard itemtwins (make_asn1_sequence_parser'')
 
 let make_asn1_sequence_parser
   (itemtwins : list (gen_decorated_parser_twin))
 //  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
 : Tot (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
 = make_asn1_sequence_parser' itemtwins None
-
-(*
-
-(* refactor to reduce the generated code size *)
-
-let rec make_asn1_sequence_parser_body_twin
-  (itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
-//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-  (ploop : (l : list (gen_decorated_parser_twin) {l << itemtwins}) -> (parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l))))
-  (id : asn1_id_t)
-  : Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
-    (requires True)
-    (ensures (fun p -> parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p))
-= match itemtwins with
-  | [hd] ->
-    (match hd with
-    | Mkgendcparser d k p fp ->
-      match d with
-      | (| s, de, dk |) ->
-        if (Set.mem id s) then
-          let _ = Classical.forall_intro (parse_asn1_sequence_item_twin_nondefault id hd) in
-          let p = parse_asn1_sequence_item_twin id hd in
-          p
-        else
-          fail_parser _ _)
-  | hd :: tl ->
-    match hd with
-    | Mkgendcparser d k p fp ->
-      match d with
-      | (| s, de, dk |) ->
-        if (Set.mem id s) then
-          let _ = Classical.forall_intro (parse_asn1_sequence_item_twin_nondefault id hd) in
-          let p = parse_asn1_sequence_item_twin id hd in
-          let p' = ploop tl in
-          let _ = nondep_then_defaultable p (generate_defaultable_item hd) p' (generate_defaultable_items tl) in
-          weaken (asn1_sequence_parser_kind itemtwins) (p `nondep_then` p')
-        else
-          match de with
-          | PLAIN -> fail_parser _ _
-          | _ -> 
-            let defv' = generate_defaultable_item hd in
-            match defv' with
-            | Some defv ->
-            let p = parse_ret defv in
-            let p' = make_asn1_sequence_parser_body_twin tl ploop id in
-            let _ = nondep_then_defaultable_snd p (generate_defaultable_item hd) p' (generate_defaultable_items tl) in
-            weaken (asn1_sequence_parser_kind itemtwins) (p `nondep_then` p'))
-            
-
-let make_asn1_sequence_parser_body_twin_spec
-  (#itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
-  (pbodytwin : asn1_id_t -> (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins))))
-= (and_then_cases_injective pbodytwin)
-  /\ (forall (id : asn1_id_t). parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) (pbodytwin id))
-
-let make_asn1_sequence_parser_body
-  (#itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
-//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-  (pbodytwin : asn1_id_t -> (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins))))
-  : Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
-    (requires (make_asn1_sequence_parser_body_twin_spec pbodytwin))
-    (ensures (fun p -> parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p))
-= let ov = (generate_defaultable_items itemtwins) in
-  match ov with
-  | None -> weaken (asn1_sequence_parser_kind itemtwins) 
-                  (parse_asn1_identifier30 `and_then` pbodytwin)
-  | _ -> let _ = and_then_defaultable parse_asn1_identifier30 pbodytwin (generate_defaultable_items itemtwins) in
-        let p = parse_asn1_identifier30 `and_then` pbodytwin in
-        weaken (asn1_sequence_parser_kind itemtwins) p
-
-let make_asn1_sequence_parser_body_spec
-  (itemtwins : list (gen_decorated_parser_twin))
-  (pbody : (l : list (gen_decorated_parser_twin) {Cons? l /\ (l << itemtwins \/ (l === itemtwins /\ 0 << 1))}) -> parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l)))
-= match itemtwins with
-  | [] -> True
-  | _ -> (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) (pbody itemtwins))
-
-let make_asn1_sequence_parser_guard
-  (itemtwins : list (gen_decorated_parser_twin))
-//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-  (pbody : (l : list (gen_decorated_parser_twin) {Cons? l /\ (l << itemtwins \/ (l === itemtwins /\ 0 << 1))}) -> parser (asn1_sequence_parser_kind l) (asn1_sequence_t (List.map (Mkgendcparser?.d) l)))
-  : Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
-    (requires (make_asn1_sequence_parser_body_spec itemtwins pbody))
-    (ensures (fun _ -> True))
-= match itemtwins with
-  | [] -> weaken (asn1_sequence_parser_kind itemtwins) (parse_empty)
-  | _ -> weaken (asn1_sequence_parser_kind itemtwins)
-        (parse_defaultable (generate_defaultable_items itemtwins) (pbody itemtwins))
-
-let rec make_asn1_sequence_parser'
-  (itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
-//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-: Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins))) 
-  (requires True)
-  (ensures fun p -> (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p))
-  (decreases %[itemtwins;0])
-= (assume (make_asn1_sequence_parser_body_twin_spec (make_asn1_sequence_parser_body_twin itemtwins make_asn1_sequence_parser)));
-  make_asn1_sequence_parser_body (make_asn1_sequence_parser_body_twin itemtwins make_asn1_sequence_parser)
-
-and make_asn1_sequence_parser
-  (itemtwins : list (gen_decorated_parser_twin))
-//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-: Tot (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
-  (decreases %[itemtwins;1])
-= make_asn1_sequence_parser_guard itemtwins (make_asn1_sequence_parser')
-*)
-//#set-options "--query_stats --z3rlimit 32"
-
-(*
-let make_parser' : l:list -> (l':list {l' << l} -> (id -> parser) {cond1}) -> parser {cond2}
-
-let make_parser_twin' : l:list -> (l': list {l' << l} -> parser {cond2})) -> (id -> parser) {cond1}
-
-let rec make_parser_twin : (list -> (id -> parser)) {cond1} 
-  fun l -> make_parser_twin' l make_parser
-
-and make_parser : list -> parser {cond2}
-  fun l -> (make_parser' l make_parser_twin)))
-
-let rec make_asn1_sequence_parser_twin
-  (itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
-//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-  (id : asn1_id_t)
-  : Pure (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
-    (requires True)
-    (ensures (fun p -> and_then_cases_injective p))
-    (decreases %[itemtwins;0])
-= match itemtwins with
-  | [hd] ->
-    (match hd with
-    | Mkgendcparser d k p fp ->
-      match d with
-      | (| s, de, dk |) ->
-        if (Set.mem id s) then
-          parse_asn1_sequence_item_twin id fp
-        else
-          fail_parser _ _)
-  | hd :: tl -> 
-    match hd with
-    | Mkgendcparser d k p fp ->
-      match d with
-      | (| s, de, dk |) ->
-        if (Set.mem id s) then
-          weaken (asn1_sequence_parser_kind itemtwins)
-          ((parse_asn1_sequence_item_twin id fp)
-          `nondep_then`
-          (make_asn1_sequence_parser tl))
-        else
-          match de with
-          | PLAIN -> fail_parser _ _
-          | _ -> 
-            weaken (asn1_sequence_parser_kind itemtwins)
-            (((make_asn1_sequence_parser_twin tl id)
-            `parse_synth`
-            (fun suf -> (generate_defaultable_item hd), suf)))
-
-  (* if end_of_item_list then
-       error
-     else if id hits the first set then
-       call corresponding parser
-       add decorators
-     else
-       check decorator of first item
-       if OPTION/DEFAULT then
-         generate_defaultable_items
-         pass the id to myself
-       else
-         error *)
-           
-and make_asn1_sequence_parser
-  (itemtwins : list (gen_decorated_parser_twin))
-//  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-  : Tot (parser (asn1_sequence_parser_kind itemtwins) (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
-        (decreases %[itemtwins;1])
-= match itemtwins with
-  | [] -> weaken (asn1_sequence_parser_kind itemtwins) (parse_empty)
-  | _ -> weaken (asn1_sequence_parser_kind itemtwins)
-      (let sp =
-        (parse_asn1_identifier30
-        `and_then`
-//        (assume (and_then_cases_injective (make_asn1_sequence_parser_twin itemtwins));
-        make_asn1_sequence_parser_twin itemtwins)) in
-        (assume (parse_defaultable_injective_cond_prop (generate_defaultable_items_option itemtwins) sp));
-        parse_defaultable
-          (generate_defaultable_items_option itemtwins)
-          sp)
-(*  
-      let len = Seq.length input in
-      if len = 0 then
-        if check_defaultable itemtwins then
-          Some (generate_defaultable_items itemtwins, 0)
-        else
-          None
-      else
-        (* parse first id and pass it into parser_twin *)
-        admit ()
-*)
-(*
-and make_asn1_sequence_parser_sane
-    (itemtwins : list (gen_decorated_parser_twin))
-    (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
-    : parse_defaultable_injective_cond_prop 
-      (generate_defaultable_items_option itemtwins)
-      (and_then parse_asn1_identifier30 (make_asn1_sequence_parser_twin itemtwins pf))
-= admit()
-*)
-*)

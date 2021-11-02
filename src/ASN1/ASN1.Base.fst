@@ -1,6 +1,7 @@
 module ASN1.Base
 
 include LowParse.Spec.Base
+include LowParse.Spec.Combinators
 
 // ASN.1 Kinds
 
@@ -281,7 +282,7 @@ type gen_parser =
 
 noeq
 type gen_decorated_parser_twin =
-| Mkgendcparser : (d : asn1_gen_item_k) -> (k : parser_kind) -> (p : parser k (asn1_decorated_pure_t d)) -> (fp : asn1_id_t -> parser k (asn1_decorated_pure_t d)) -> gen_decorated_parser_twin
+| Mkgendcparser : (d : asn1_gen_item_k) -> (k : parser_kind) -> (p : parser k (asn1_decorated_pure_t d)) -> fp : (asn1_id_t -> parser k (asn1_decorated_pure_t d)) {and_then_cases_injective fp} -> gen_decorated_parser_twin
 
 (*
 noeq
