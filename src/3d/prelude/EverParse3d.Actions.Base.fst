@@ -1188,6 +1188,9 @@ let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parse
         pos `U64.add` Cast.uint32_to_uint64 n
       end
 
+#pop-options
+
+#push-options "--z3rlimit 64"
 #restart-solver
 
 noextract inline_for_extraction
