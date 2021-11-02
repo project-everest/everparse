@@ -13,6 +13,9 @@ ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops
 
 .depend: $(ROOT)
 	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims -Interpreter -Proj' > $@.tmp
+# horrible hack, since F* emits lines in .depend to extract Proj, Interperter and Prims, despite the directive above
+	sed -i -e 's/Proj.krml \\/prims.krml \\/g'  $@.tmp
+	sed -i -e 's/Interpreter.krml \\/prims.krml \\/g' $@.tmp
 	mv $@.tmp $@
 
 include .depend

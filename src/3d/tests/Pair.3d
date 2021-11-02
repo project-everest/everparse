@@ -1,3 +1,15 @@
+typedef struct _Simple
+{
+  UINT32 fst;
+  UINT32 snd;
+} Simple;
+
+typedef struct _P
+{
+  Simple fst;
+  Simple snd;
+} P;
+
 entrypoint
 typedef struct _Pair (UINT32 x, UINT32 y)
 {

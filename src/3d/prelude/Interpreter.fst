@@ -22,6 +22,7 @@ module LPL = EverParse3d.InputBuffer
 module B = LowStar.Buffer
 module A = EverParse3d.Actions.All
 module P = Prelude
+module T = FStar.Tactics
 module ProjTac = Proj
 #push-options "--__temp_no_proj Interpreter" //we'll generate the projectors we need with a tactic
 
@@ -96,7 +97,6 @@ let parser_kind_nz_of_itype (i:itype)
     | AllBytes
     | AllZeros -> false
     | _ -> true
-
 
 [@@specialize]
 let parser_weak_kind_of_itype (i:itype)
@@ -186,246 +186,22 @@ let itype_as_validator (i:itype)
    we'll given a denotation of programs in a _context_, where the
    context provides denotations for all the names defined previously
    which are in scope.
-
-   One interesting wrinkle is that type definitions in 3D are
-   parameterized by an arbitrary number of parameters. So, each name
-   in the context can have a denotation of a different arity---we'll
-   model that with a bit of generic programming.
-
-   Limitation: For now, we restrict the type of parameters to be
-   primitive integer types or pointers to parameter types.
-
-   TODO: We should lift this restriction to allow typedefs on
-   parameter types, and eventually to also support output types.
 *)
-
-(* A parameter type is either an primitive integer
-   or a pointer to a parameter type *)
-noeq
-type param_type =
-  | PT_Base of itype
-  | PT_Pointer of param_type
-  | PT_Typedef of Type u#0
-
-(* Denotation of a param_type *)
-let rec param_type_as_type (i:param_type)
-  : Type0
-  = match i with
-    | PT_Base i -> itype_as_type i
-    | PT_Pointer t -> B.pointer (param_type_as_type t)
-    | PT_Typedef t -> t
-
-(* `args_of ps` is a nested pair, each of whose elements
-   has a type corresponding to the denotation of the
-   the ith parameter type in ps *)
-let rec args_of (ps:list param_type) =
-  match ps with
-  | [] -> unit
-  | i::ps -> param_type_as_type i & args_of ps
-
-(* `arrow ps res` is a non-dependent curried arrow from
-   each of the parameters in ps to res *)
-let rec arrow (is:list param_type) (res:Type u#a)
-  : Type u#a
-  = match is with
-    | [] -> res
-    | i::is -> param_type_as_type i -> arrow is res
-
-(* Just an example to show the `arrow` type at work *)
-let _illustrate_int_to_int = arrow [PT_Base UInt8] P.___UINT8
-let _illustrate_int_to_int_inhabitant
-  : _illustrate_int_to_int
-  = fun (x:P.___UINT8) -> x
-
-(* Coercion for nullary arrows --- useful in some proofs *)
-[@@specialize]
-let nullary_arrow (#res:Type u#a) (f:arrow [] res)
-  : res
-  = f
-
-(* Eliminating a single arrow by applying it
-   --- useful in some proofs, rather than just writing `f x` *)
-[@@specialize]
-let apply (#i:param_type)
-          (#is:list param_type)
-          (#res:Type u#a)
-          (f:arrow (i::is) res)
-          (x:param_type_as_type i)
-    : arrow is res
-    = f x
-
-(* Eliminating an arrow entirely by applying
-   it to arguments for all its parameters *)
-[@@specialize]
-let rec apply_arrow (#is:list param_type)
-                    (#k:Type)
-                    (f: arrow is k)
-                    (args: args_of is)
-  : k
-  = match is with
-    | [] -> nullary_arrow f
-    | i::is -> apply_arrow (apply f (fst (args <: args_of (i::is)))) (snd (args <: args_of (i::is)))
-
-(* `dep_arrow ps f` is a dependent, curried arrow from each of the
-   parameters in `ps` to to `f args` where `args : args_of ps`
-   collects the bound variables of each dependent arrow *)
-let rec dep_arrow (is:list param_type) (f:args_of is -> Type)
-  = match is with
-    | [] ->
-      assert_norm (args_of is == unit);
-      f ()
-    | i::is ->
-      assert_norm (args_of (i::is) == (param_type_as_type i & args_of is));
-      x:param_type_as_type i ->
-      dep_arrow is (fun xs -> f (x, xs))
-
-(* Again, some examples to illustrate. A little harder to work with, but not impossible *)
-let _illustrate_eq_fun_t = x:P.___UINT8 -> y:P.___UINT8 { y == x }
-let _illustrate_eq_fun_t_inhabitant : _illustrate_eq_fun_t = fun x -> x
-let _illustrate_dep_int_to_int = dep_arrow [PT_Base UInt8] (fun x -> y:P.___UINT8{y == fst x})
-[@@specialize]
-let coerce (#a #b:Type) (_:squash (a == b)) (x:a) : b = x
-let _illustrate_dep_int_to_int_inhabitant
-  : _illustrate_dep_int_to_int
-  = assert_norm (_illustrate_dep_int_to_int == _illustrate_eq_fun_t);
-    coerce () _illustrate_eq_fun_t_inhabitant
-
-
-(* Eliminate a single dep_arrow into a native dependent -> *)
-[@@specialize]
-let apply_dep_arrow_cons (i:_) (is:_)
-                         (k: args_of (i::is) -> Type)
-                         (f: dep_arrow (i::is) k)
-   : x:param_type_as_type i -> dep_arrow is (fun (xs:args_of is) -> k (x, xs))
-   = f
-
-(* Eliminate a dep_arrow completely by applying to
-   all its arguments *)
-[@@specialize]
-let rec apply_dep_arrow (param_types:list param_type)
-                        (k: args_of param_types -> Type)
-                        (f: dep_arrow param_types k)
-                        (args: args_of param_types)
-  : k args
-  = match param_types with
-    | [] ->
-      assert_norm (args_of [] == unit);
-      (f <: dep_arrow [] k)
-    | i::is ->
-      assert_norm (args_of (i::is) == param_type_as_type i & args_of is);
-      let f : dep_arrow (i::is) k = f in
-      let args : args_of (i::is) = args in
-      apply_dep_arrow
-        is
-        (fun xs -> k (fst args, xs))
-        (apply_dep_arrow_cons _ _ _ f (fst args))
-        (snd args)
-
-(* Identifiers of top-level terms in 3D.
-   TODO: should be qualified by a module name *)
-let ident = string
-
-let coerce_pk #nz #wk (p:P.parser_kind nz wk)
-                      (_:squash (wk == P.WeakKindStrongPrefix) )
-  : P.parser_kind nz P.WeakKindStrongPrefix
-  = p
-
-let coerce_p_p (param_types:_) 
-               (res: (args_of param_types -> Type))
-               (res': (args_of param_types -> Type))
-               (p_p: dep_arrow param_types res)
-               ($pf:squash (res == res'))
- : dep_arrow param_types res'
- = p_p
 
 let leaf_reader #nz #wk (#k: P.parser_kind nz wk) #t (p:P.parser k t)
   = _:squash (wk == P.WeakKindStrongPrefix /\ hasEq t) &
     A.leaf_reader p
 
-
 (* Now, we can define the type of an environment *)
 module T = FStar.Tactics
 
-(* global_binding: A single entry in the environment *)
+(* global_binding: 
+
+   Represents the lifting of a fully applied a shallow F*
+   quadruple of {type, parser, validator, opt reader} 
+*)
 noeq
 type global_binding = {
-  // The name being bound
-  name : ident;
-  //Its parameter types
-  param_types: list param_type;
-  //Parser metadata
-  parser_kind_nz:bool; // Does it consume non-zero bytes?
-  parser_weak_kind: P.weak_kind;
-  parser_kind: P.parser_kind parser_kind_nz parser_weak_kind;
-  //Memory invariant of any actions it contains
-  inv:arrow param_types A.slice_inv;
-  //Write footprint of any of its actions
-  loc:arrow param_types A.eloc;
-  //Its type denotation
-  p_t : arrow param_types Type0;
-  //Its parser denotation
-  p_p : dep_arrow param_types
-          (fun (args:args_of param_types) ->
-            P.parser parser_kind (apply_arrow p_t args));
-  //Whether the type can be read -- to avoid double fetches
-  p_reader: option (dep_arrow param_types
-                         (fun args -> 
-                            leaf_reader (apply_dep_arrow _ _ p_p args)));
-  //Its validate-with-action denotationa
-  p_v : dep_arrow param_types
-          (fun args ->
-            A.validate_with_action_t (apply_dep_arrow _ _ p_p args)
-                                     (apply_arrow inv args)
-                                     (apply_arrow loc args)
-                                     (Some? p_reader));
-}
-
-//Generate projectors with a tactic, because the default
-//projectors are not SMT-typeable
-%splice[name_of_binding;
-        param_types_of_binding;
-        nz_of_binding;
-        wk_of_binding;
-        pk_of_binding;
-        inv_of_binding;
-        loc_of_binding;
-        type_of_binding;
-        parser_of_binding;
-        leaf_reader_of_binding;
-        validator_of_binding]
-       (ProjTac.mk_projs (`%global_binding)
-                         ["name_of_binding";
-                          "param_types_of_binding";
-                          "nz_of_binding";
-                          "wk_of_binding";
-                          "pk_of_binding";
-                          "inv_of_binding";
-                          "loc_of_binding";
-                          "type_of_binding";
-                          "parser_of_binding";
-                          "leaf_reader_of_binding";
-                          "validator_of_binding"])
-
-
-[@@specialize]
-let has_reader (g:global_binding) = 
-  match leaf_reader_of_binding g with
-  | Some _ -> true
-  | _ -> false
-let reader_binding = g:global_binding { has_reader g }
-
-[@@specialize]
-let get_leaf_reader (r:reader_binding) (args:args_of (param_types_of_binding r)) 
-  : leaf_reader (apply_dep_arrow _ _ (parser_of_binding r) args)
-  = apply_dep_arrow _ _ 
-                    (Some?.v (leaf_reader_of_binding r))
-                    args
-
-(* global_binding: A single entry in the environment *)
-noeq
-type global_binding_alt = {
-  // The name being bound
-  name : ident;
   //Parser metadata
   parser_kind_nz:bool; // Does it consume non-zero bytes?
   parser_weak_kind: P.weak_kind;
@@ -446,42 +222,52 @@ type global_binding_alt = {
 
 //Generate projectors with a tactic, because the default
 //projectors are not SMT-typeable
-%splice[name_of_binding_alt;
-        nz_of_binding_alt;
-        wk_of_binding_alt;
-        pk_of_binding_alt;
-        inv_of_binding_alt;
-        loc_of_binding_alt;
-        type_of_binding_alt;
-        parser_of_binding_alt;
-        leaf_reader_of_binding_alt;
-        validator_of_binding_alt]
-       (ProjTac.mk_projs (`%global_binding_alt)
-                         ["name_of_binding_alt";
-                          "nz_of_binding_alt";
-                          "wk_of_binding_alt";
-                          "pk_of_binding_alt";
-                          "inv_of_binding_alt";
-                          "loc_of_binding_alt";
-                          "type_of_binding_alt";
-                          "parser_of_binding_alt";
-                          "leaf_reader_of_binding_alt";
-                          "validator_of_binding_alt"])
+%splice[nz_of_binding;
+        wk_of_binding;
+        pk_of_binding;
+        inv_of_binding;
+        loc_of_binding;
+        type_of_binding;
+        parser_of_binding;
+        leaf_reader_of_binding;
+        validator_of_binding]
+       (ProjTac.mk_projs (`%global_binding)
+                         ["nz_of_binding";
+                          "wk_of_binding";
+                          "pk_of_binding";
+                          "inv_of_binding";
+                          "loc_of_binding";
+                          "type_of_binding";
+                          "parser_of_binding";
+                          "leaf_reader_of_binding";
+                          "validator_of_binding"])
 
-let has_reader_alt (g:global_binding_alt) = 
-  match leaf_reader_of_binding_alt g with
+let has_reader (g:global_binding) = 
+  match leaf_reader_of_binding g with
   | Some _ -> true
   | _ -> false
 
-let reader_binding_alt = g:global_binding_alt { has_reader_alt g }
+let reader_binding = g:global_binding { has_reader g }
 
 [@@specialize]
-let get_leaf_reader_alt (r:reader_binding_alt)
-  : leaf_reader (parser_of_binding_alt r)
-  = Some?.v (leaf_reader_of_binding_alt r)
-
+let get_leaf_reader (r:reader_binding)
+  : leaf_reader (parser_of_binding r)
+  = Some?.v (leaf_reader_of_binding r)
 
 (** Now we define the AST of 3D programs *)
+
+let action_binding
+      (inv:A.slice_inv)
+      (l:A.eloc)
+      (on_success:bool)
+      (a:Type)
+  : Type u#1 //in Universe 1 because it is polymorphic in t
+  = (#nz:bool) ->
+    (#wk:P.weak_kind) ->
+    (#k:P.parser_kind nz wk) ->
+    (#t:Type u#0) ->
+    (p:P.parser k t) ->
+    A.action p inv l on_success a
 
 (* The type of atomic actions.
 
@@ -506,7 +292,7 @@ let get_leaf_reader_alt (r:reader_binding_alt)
 *)
 noeq
 type atomic_action
-  : A.slice_inv -> A.eloc -> bool -> Type0 -> Type =
+  : A.slice_inv -> A.eloc -> bool -> Type0 -> Type u#1 =
   | Action_return:
       #a:Type0 ->
       x:a ->
@@ -532,6 +318,14 @@ type atomic_action
       rhs:a ->
       atomic_action (A.ptr_inv x) (A.ptr_loc x) false unit
 
+  | Action_call:
+      #inv:A.slice_inv ->
+      #loc:A.eloc ->
+      #b:bool ->
+      #t:Type0 ->
+      action_binding inv loc b t ->
+      atomic_action inv loc b t
+
 (* Denotation of atomic_actions as A.action *)
 [@@specialize]
 let atomic_action_as_action
@@ -554,6 +348,8 @@ let atomic_action_as_action
       A.action_deref x
     | Action_assignment x rhs ->
       A.action_assignment x rhs
+    | Action_call c ->
+      c p
 
 (* A sub-language of monadic actions.
 
@@ -562,7 +358,7 @@ let atomic_action_as_action
 *)
 noeq
 type action
-  : A.slice_inv -> A.eloc -> bool -> Type0 -> Type =
+  : A.slice_inv -> A.eloc -> bool -> Type0 -> Type u#1 =
   | Atomic_action:
       #i:_ -> #l:_ -> #b:_ -> #t:_ ->
       atomic_action i l b t ->
@@ -637,7 +433,6 @@ let comments = list string
      produce boolean functions for those expressions that can be
      verified natively by F* for type correctness.
 *)
-module T = FStar.Tactics
 
 noeq
 type dtyp
@@ -655,31 +450,23 @@ type dtyp
            A.eloc_none
 
   | DT_App:
-      hd:ident -> //the name isn't needed, strictly speaking
-      b:global_binding -> //what matters is its interpretation
-      args:args_of (param_types_of_binding b) ->
-      dtyp #(nz_of_binding b)
-           #(wk_of_binding b)
-           (pk_of_binding b)
-           (has_reader b)
-           (apply_arrow (inv_of_binding b) args)
-           (apply_arrow (loc_of_binding b) args)
-
-  | DT_App_Alt:
+    (* We give explicit names to the indices rather than
+       projecting them as a small optimization for the reduction
+       machinery ... it's no longer clear that the speedup is significant *)
       #nz:bool ->
       #wk:P.weak_kind ->
       pk:P.parser_kind nz wk ->
-      has_reader:bool ->
+      hr:bool ->
       inv:A.slice_inv ->
       loc:A.eloc ->
-      x:global_binding_alt ->
-      _:squash (nz == nz_of_binding_alt x /\
-                wk == wk_of_binding_alt x /\
-                pk == pk_of_binding_alt x /\
-                has_reader == has_reader_alt x /\
-                inv == inv_of_binding_alt x /\
-                loc == loc_of_binding_alt x) ->
-      dtyp #nz #wk pk has_reader inv loc
+      x:global_binding ->
+      _:squash (nz == nz_of_binding x /\
+                wk == wk_of_binding x /\
+                pk == pk_of_binding x /\
+                hr == has_reader x /\
+                inv == inv_of_binding x /\
+                loc == loc_of_binding x) ->
+      dtyp #nz #wk pk hr inv loc
            
 [@@specialize]
 let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
@@ -689,11 +476,8 @@ let dtyp_as_type #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
     | DT_IType i -> 
       itype_as_type i
 
-    | DT_App hd b args ->
-      apply_arrow (type_of_binding b) args
-
-    | DT_App_Alt _ _ _ _ b _ ->
-      type_of_binding_alt b
+    | DT_App _ _ _ _ b _ ->
+      type_of_binding b
       
 let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l
                          (d:dtyp pk true i l)
@@ -704,11 +488,8 @@ let dtyp_as_eqtype_lemma #nz #wk (#pk:P.parser_kind nz wk) #i #l
     | DT_IType i -> 
       ()
 
-    | DT_App hd b args ->
-      let (| _, _ |) = get_leaf_reader b args in ()
-
-    | DT_App_Alt _ _ _ _ b _ ->
-      let (| _, _ |) = get_leaf_reader_alt b in ()
+    | DT_App _ _ _ _ b _ ->
+      let (| _, _ |) = get_leaf_reader b in ()
 
   
 let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
@@ -718,11 +499,8 @@ let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #l
     | DT_IType i -> 
       itype_as_parser i
 
-    | DT_App hd b args ->
-      apply_dep_arrow _ _ (parser_of_binding b) args
-
-    | DT_App_Alt _ _ _ _ b _ ->
-      parser_of_binding_alt b
+    | DT_App _ _ _ _ b _ ->
+      parser_of_binding b
 
 [@@specialize]
 let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk)
@@ -737,15 +515,10 @@ let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk)
     | DT_IType i -> 
       itype_as_validator i
 
-    | DT_App hd b args ->
-      // assert_norm (dtyp_as_type (DT_App hd b args) == apply_arrow (type_of_binding b) args);
-      // assert_norm (dtyp_as_parser (DT_App hd b args) == apply_dep_arrow _ _ (parser_of_binding b) args);
-      apply_dep_arrow _ _ (validator_of_binding b) args
-
-    | DT_App_Alt _ _ _ _ b _ ->
+    | DT_App _ _ _ _ b _ ->
       // assert_norm (dtyp_as_type (DT_App_Alt ps b args) == (type_of_binding_alt (apply_arrow b args)));
       // assert_norm (dtyp_as_parser (DT_App_Alt ps b args) == parser_of_binding_alt (apply_arrow b args));
-      validator_of_binding_alt b
+      validator_of_binding b
 
 
 [@@specialize]
@@ -758,14 +531,8 @@ let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
     | DT_IType i -> 
       itype_as_leaf_reader i
 
-    | DT_App hd b args -> 
-      let (| _, lr |) = get_leaf_reader b args in
-      assert_norm (dtyp_as_parser (DT_App hd b args) == 
-                   apply_dep_arrow _ _ (parser_of_binding b) args);
-      lr
-
-    | DT_App_Alt _ _ _ _ b _ -> 
-      let (| _, lr |) = get_leaf_reader_alt b in
+    | DT_App _ _ _ _ b _ -> 
+      let (| _, lr |) = get_leaf_reader b in
       lr
 
 noeq
@@ -1246,80 +1013,37 @@ let rec as_validator
                         (dtyp_as_leaf_reader elt_t)
                         terminator
 
+let specialization_steps =
+  [nbe;
+   zeta;
+   primops;
+   iota;
+   delta_attr [`%specialize];
+   delta_only [`%Some?;
+               `%Some?.v;
+               `%as_validator;
+               `%nz_of_binding;
+               `%wk_of_binding;
+               `%pk_of_binding;
+               `%inv_of_binding;
+               `%loc_of_binding;
+               `%type_of_binding;
+               `%parser_of_binding;
+               `%validator_of_binding;
+               `%leaf_reader_of_binding;
+               `%fst;
+               `%snd;
+               `%Mktuple2?._1;
+               `%Mktuple2?._2]]
+
 let specialize_tac steps (_:unit)
   : T.Tac unit
-  = T.norm (steps@[
-            zeta;
-            primops;
-            iota;
-            delta_attr [`%specialize];
-            delta_only [`%Some?;
-                        `%Some?.v;
-                        `%as_validator;
-                        `%name_of_binding;
-                        `%param_types_of_binding;
-                        `%nz_of_binding;
-                        `%wk_of_binding;
-                        `%pk_of_binding;
-                        `%inv_of_binding;
-                        `%loc_of_binding;
-                        `%type_of_binding;
-                        `%parser_of_binding;
-                        `%validator_of_binding;
-                        `%leaf_reader_of_binding;
-                        `%name_of_binding_alt;
-                        `%nz_of_binding_alt;
-                        `%wk_of_binding_alt;
-                        `%pk_of_binding_alt;
-                        `%inv_of_binding_alt;
-                        `%loc_of_binding_alt;
-                        `%type_of_binding_alt;
-                        `%parser_of_binding_alt;
-                        `%validator_of_binding_alt;
-                        `%leaf_reader_of_binding_alt;
-                        `%fst;
-                        `%snd;
-                        `%Mktuple2?._1;
-                        `%Mktuple2?._2]]);
+  = let open FStar.List.Tot in
+    T.norm (steps@specialization_steps);
     T.trefl()
 
 [@@specialize]
-let mk_global_binding (p:list param_type)
-                      #nz #wk (#pk:P.parser_kind nz wk)
-                      (inv:arrow p A.slice_inv)
-                      (loc:arrow p A.eloc)
-                      (#p_t : arrow p Type0)
-                      (#p_p : dep_arrow p (fun (args:args_of p) -> P.parser pk (apply_arrow p_t args)))
-                      (p_reader: option (dep_arrow p
-                         (fun args -> 
-                            leaf_reader (apply_dep_arrow _ _ p_p args))))
-                      (#b:bool)
-                      (p_v : dep_arrow p
-                             (fun args ->
-                                A.validate_with_action_t (apply_dep_arrow _ _ p_p args)
-                                                         (apply_arrow inv args)
-                                                         (apply_arrow loc args)
-                                                         b))
-                      (_:squash (b == Some? p_reader))
-   : global_binding
-   =
-    {
-      name = "unnecessary";
-      param_types = p;
-      parser_kind_nz = nz;
-      parser_weak_kind = wk;
-      parser_kind = pk;
-      inv = inv;
-      loc = loc;
-      p_t = p_t;
-      p_p = p_p;
-      p_reader = p_reader;
-      p_v = p_v;
-    }
-
-[@@specialize]
-let mk_global_binding_alt
-                      #nz #wk 
+let mk_global_binding #nz #wk 
                       (pk:P.parser_kind nz wk)
                       ([@@@erasable] inv:A.slice_inv)
                       ([@@@erasable] loc:A.eloc)
@@ -1329,9 +1053,8 @@ let mk_global_binding_alt
                       (b:bool)
                       (p_v : A.validate_with_action_t p_p inv loc b)
                       ([@@@erasable] pf:squash (b == Some? p_reader))
-   : global_binding_alt
+   : global_binding
    = {
-       name = "";
        parser_kind_nz = nz;
        parser_weak_kind = wk;
        parser_kind = pk;
@@ -1343,136 +1066,10 @@ let mk_global_binding_alt
        p_v = p_v
      }
 
+[@@specialize]
+let coerce (#a #b:Type) (_:squash (a == b)) (x:a) : b = x
 
-let coerce_arrow steps : T.Tac unit =
-  let open FStar.List.Tot in
-  T.norm [delta_only (steps @ [ `%arrow; `%param_type_as_type; `%itype_as_type ]);
-          zeta;
-          iota];
-  T.trefl()
-
-let coerce_parser steps : T.Tac unit =
-  let open FStar.List.Tot in
-  T.norm [delta_only (steps @
-                      [ `%dep_arrow;
-                        `%param_type_as_type;
-                        `%itype_as_type;
-                        `%apply;
-                        `%parser_kind_of_itype;
-                        `%allow_reader_of_itype;
-                        `%parser_kind_nz_of_itype;
-                        `%parser_weak_kind_of_itype;                        
-                        `%apply_arrow;
-                        `%nullary_arrow;
-                        `%coerce;
-                        `%fst;
-                        `%snd;
-                        `%Mktuple2?._1;
-                        `%Mktuple2?._2]);
-          zeta;
-          iota;
-          primops];
-  T.trefl()
-
-let coerce_validator steps = 
-  let open FStar.List.Tot in
-  T.norm [delta_only ([`%dep_arrow;
-                      `%apply_dep_arrow;
-                      `%apply_arrow;
-                      `%param_type_as_type;
-                      `%apply_dep_arrow_cons;
-                      `%apply;
-                      `%itype_as_type;
-                      `%parser_kind_of_itype;
-                      `%allow_reader_of_itype;
-                      `%parser_kind_nz_of_itype;
-                      `%parser_weak_kind_of_itype;                        
-                      `%nullary_arrow;
-                      `%coerce;
-                      `%fst;
-                      `%Mktuple2?._1;
-                      `%snd;
-                      `%Mktuple2?._2]@steps);
-         primops;             
-         zeta;
-         iota];
-  T.trefl()
-
-let coerce_reader steps =
-  let open FStar.List.Tot in
-  T.norm [delta_only (steps@[`%dep_arrow; `%apply_dep_arrow]);
-          zeta; 
-          iota];
-  T.trefl()
-
-let coerce_dtyp steps : T.Tac unit =
-  let open FStar.List.Tot in
-  T.norm [delta_only (steps @ [`%pk_of_binding; 
-                               `%mk_global_binding;
-                               `%has_reader;
-                               `%leaf_reader_of_binding;
-                               `%loc_of_binding;
-                               `%inv_of_binding;
-                               `%nz_of_binding;
-                               `%wk_of_binding;
-                               `%apply_arrow;
-                               `%coerce;
-                               `%param_types_of_binding;
-                               `%nullary_arrow;
-                               `%fst;
-                               `%snd;
-                               `%Mktuple2?._1;
-                               `%Mktuple2?._2                               
-                               ]);
-           zeta;
-           iota;
-           primops];
-  T.trefl()
-
-
-let coerce_dtyp_alt steps : T.Tac unit =
-  let open FStar.List.Tot in
-  T.norm [delta_only (steps @ [`%pk_of_binding_alt; 
-                               `%mk_global_binding_alt;
-                               `%has_reader_alt;
-                               `%leaf_reader_of_binding_alt;
-                               `%loc_of_binding_alt;
-                               `%inv_of_binding_alt;
-                               `%nz_of_binding_alt;
-                               `%wk_of_binding_alt;
-                               `%apply_arrow;
-                               `%apply;
-                               `%coerce;
-                               `%nullary_arrow;
-                               `%parser_kind_of_itype;
-                               `%fst;
-                               `%snd;
-                               `%Mktuple2?._1;
-                               `%Mktuple2?._2                               
-                              ]);
-           zeta;
-           iota;
-           primops];
-  T.trefl()
-
-let coerce_args_of steps : T.Tac unit =
-  let open FStar.List.Tot in
-  T.norm [delta_only (steps @ [`%args_of;`%param_types_of_binding;`%mk_global_binding]); 
-          zeta;
-           iota;
-           primops];
-  T.trefl()
-
-let coerce_args_of_alt steps : T.Tac unit =
-  let open FStar.List.Tot in
-  T.norm [delta_only (steps @ [`%args_of;`%param_types_of_binding;`%mk_global_binding;`%param_type_as_type;`%itype_as_type]); 
-          zeta;
-           iota;
-           primops];
-  T.trefl()
-
-
-let coerce_validator_alt steps : T.Tac unit =
+let coerce_validator steps : T.Tac unit =
   let open FStar.List.Tot in
   T.norm [delta_only (steps @ [`%parser_kind_of_itype;
                                `%parser_kind_nz_of_itype;
@@ -1488,29 +1085,29 @@ let coerce_validator_alt steps : T.Tac unit =
   T.trefl()
 
 [@@specialize]
-let mk_dt_app_alt_alt #nz #wk (pk:P.parser_kind nz wk) (b:bool)
-                      ([@@@erasable] inv:A.slice_inv)
-                      ([@@@erasable] loc:A.eloc)
-                      (x:global_binding_alt)
-                      ([@@@erasable] pf:squash (nz == nz_of_binding_alt x /\
-                                                wk == wk_of_binding_alt x /\
-                                                pk == pk_of_binding_alt x /\
-                                                b == has_reader_alt x /\
-                                                inv == inv_of_binding_alt x /\
-                                                loc == loc_of_binding_alt x))
+let mk_dt_app #nz #wk (pk:P.parser_kind nz wk) (b:bool)
+              ([@@@erasable] inv:A.slice_inv)
+              ([@@@erasable] loc:A.eloc)
+              (x:global_binding)
+              ([@@@erasable] pf:squash (nz == nz_of_binding x /\
+                                        wk == wk_of_binding x /\
+                                        pk == pk_of_binding x /\
+                                        b == has_reader x /\
+                                        inv == inv_of_binding x /\
+                                        loc == loc_of_binding x))
     : dtyp #nz #wk pk b inv loc
-    = DT_App_Alt pk b inv loc x pf
+    = DT_App pk b inv loc x pf
 
-let coerce_dt_app_alt (steps:_) : T.Tac unit =
+let coerce_dt_app (steps:_) : T.Tac unit =
   let open FStar.List.Tot in
-  T.norm [delta_only (steps@[`%nz_of_binding_alt;
-                        `%wk_of_binding_alt;
-                        `%pk_of_binding_alt;
-                        `%has_reader_alt;
-                        `%leaf_reader_of_binding_alt;                                 
-                        `%inv_of_binding_alt;
-                        `%loc_of_binding_alt;
-                        `%mk_global_binding_alt]);
+  T.norm [delta_only (steps@[`%nz_of_binding;
+                        `%wk_of_binding;
+                        `%pk_of_binding;
+                        `%has_reader;
+                        `%leaf_reader_of_binding;                                 
+                        `%inv_of_binding;
+                        `%loc_of_binding;
+                        `%mk_global_binding]);
           zeta; 
           iota;
           simplify];

@@ -71,7 +71,7 @@ batch-cleanup-test:
 	@echo $(FSTAR_OPTIONS)
 
 %.interpret: %.3d
-	EVERPARSE_KREMLIN_OPTIONS=-skip-compilation $(3D) --no_copy_everparse_h --batch --interpret $^
+	$(3D) --batch --interpret $^
 
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe

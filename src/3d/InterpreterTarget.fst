@@ -725,271 +725,6 @@ let print_binding mname (td:type_decl)
     let typ = td.typ in
     let k = td.kind in
     let root_name = print_ident mname tdn.td_name in
-    let param_types_literal =
-         List.map (fun (_, t) -> print_param_type mname t) tdn.td_params |>
-         String.concat "; "
-    in
-    let param_types =
-        Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet param_types_%s = [%s]\n"
-          root_name
-          param_types_literal
-    in
-    let print_binders binders =
-        List.map (print_param mname) binders |>
-        String.concat " "
-    in
-    let print_args binders =
-        List.map (fun (i, _) -> print_ident mname i) binders |>
-        String.concat " "
-    in
-    let binders = print_binders tdn.td_params in
-    let args = print_args tdn.td_params in
-    let arg_tuple =
-        List.fold_right
-          (fun (x, _) out -> Printf.sprintf "(%s, %s)" (print_ident mname x) out)
-          tdn.td_params
-          "()"
-    in
-    let validate_binding =
-        FStar.Printf.sprintf "[@@T.postprocess_for_extraction_with (specialize_tac [])]\n\
-                             let validate_%s %s = as_validator (def_%s %s)\n"
-                             root_name
-                             binders
-                             root_name
-                             args
-    in
-    let type_of_binding =
-        let f =
-          match tdn.td_params with
-          | [] ->
-            Printf.sprintf "(as_type def_%s)" root_name
-          | _ ->
-            Printf.sprintf "(fun %s -> as_type (def_%s %s))"
-                           binders
-                           root_name
-                           args
-        in
-        Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
-                        noextract\n\
-                        let type_%s\n\
-                          : arrow param_types_%s Type\n\
-                          = coerce (_ by (coerce_arrow [`%%param_types_%s])) %s\n"
-                       root_name
-                       root_name
-                       root_name
-                       f
-   in
-   let pk_of_binding =
-     Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
-                     inline_for_extraction noextract\n\
-                     let kind_%s = %s\n"
-       root_name
-       (T.print_kind mname k)
-   in
-   let parser_of_binding =
-       let f =
-          match tdn.td_params with
-          | [] ->
-            Printf.sprintf "(as_parser def_%s)" root_name
-          | _ ->
-            Printf.sprintf "(fun %s -> as_parser (def_%s %s))"
-                           binders
-                           root_name
-                           args
-       in
-       Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
-                       noextract\n\
-                       let parser_%s\n\
-                         : dep_arrow param_types_%s (fun args -> P.parser kind_%s (apply_arrow type_%s args))\n\
-                         = coerce (_ by (coerce_parser [`%%param_types_%s; `%%kind_%s; `%%type_%s])) %s\n"
-                        root_name
-                        root_name
-                        root_name
-                        root_name
-                        root_name
-                        root_name
-                        root_name
-                        f
-   in
-   let print_inv_or_eloc tag ty defn fvs
-     : ML (string & string)
-     =
-     let fv_binders =
-         List.filter
-           (fun (i, _) ->
-             Some? (List.tryFind (fun j -> A.ident_name i = A.ident_name j) fvs))
-           tdn.td_params
-     in
-     let fv_binders_string = print_binders fv_binders in
-     let fv_args_string = print_args fv_binders in
-     let f =
-         match fv_binders with
-          | [] ->
-            defn
-          | _ ->
-            Printf.sprintf "(fun %s -> %s)"
-                           fv_binders_string
-                           defn
-     in
-     let s0 = Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
-                              noextract\n\
-                              let %s_%s = %s\n"
-                              tag root_name f
-     in
-     let body =
-       let body =
-         Printf.sprintf "%s_%s %s" tag root_name fv_args_string
-       in
-       match tdn.td_params with
-       | [] -> body
-       | _ -> Printf.sprintf "(fun %s -> %s)" binders body
-     in
-     let s1 = Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
-                              noextract\n\
-                              let %s_arrow_%s\n\
-                                : arrow param_types_%s %s\n\
-                                = coerce (_ by (coerce_arrow [`%%param_types_%s])) %s\n"
-                             tag
-                             root_name
-                             root_name
-                             ty
-                             root_name
-                             body
-     in
-     s0 ^ s1, fv_args_string
-   in
-   let inv_eloc_of_binding, fv_args =
-     let inv, eloc, _ = td.inv_eloc in
-     let fvs1 = free_vars_of_inv inv in
-     let fvs2 = free_vars_of_eloc eloc in
-     let s0, _ = print_inv_or_eloc "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2) in
-     let s1, fv_args = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
-     s0 ^ s1, fv_args
-   in
-   let validator_of_binding =
-     let coerce_tac =
-       let steps =
-         let s =
-           ["param_types";
-           "kind";
-           "type";
-           "parser";
-           "inv";
-           "inv_arrow";
-           "eloc";
-           "eloc_arrow"]
-         in
-         let steps =
-           List.map (fun s -> Printf.sprintf "`%%%s_%s" s root_name) s |>
-           String.concat "; "
-         in
-         steps
-       in
-       Printf.sprintf "(coerce_validator [%s])" steps
-     in
-     Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet validator_%s \n\
-                         : dep_arrow param_types_%s\n\
-                             (fun args ->\n\
-                               A.validate_with_action_t \n\
-                                 (apply_dep_arrow _ _ parser_%s args)\n\
-                                 (apply_arrow inv_arrow_%s args)\n\
-                                 (apply_arrow eloc_arrow_%s args)\n\
-                                 %b)\n\
-                          = coerce (_ by %s) validate_%s\n"
-                        root_name
-                        root_name
-                        root_name
-                        root_name
-                        root_name
-                        td.allow_reading
-                        coerce_tac
-                        root_name
-   in
-   let binding =
-     let reader =
-       if td.allow_reading
-       then let reader =
-              match tdn.td_params with
-              | [] ->
-                Printf.sprintf "(as_reader def_%s)" root_name
-              | _ ->
-                Printf.sprintf "(fun %s -> as_reader (def_%s %s))"
-                               binders
-                               root_name
-                               args
-            in
-            Printf.sprintf "(Some (coerce (_ by (coerce_reader [`%%param_types_%s])) %s))"
-                           root_name
-                           reader
-       else "None"
-     in
-     Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\nnoextract\nlet binding_%s \n\
-                      : global_binding \n\
-                      = mk_global_binding\n\
-                           param_types_%s\n\
-                           inv_arrow_%s\n\
-                           eloc_arrow_%s\n\
-                           %s\n\
-                           validator_%s\n\
-                           (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
-                      root_name
-                      root_name
-                      root_name
-                      root_name
-                      reader
-                      root_name
-   in
-   let dtyp_of_binding =
-     let coerce_dtyp_args =
-       Printf.sprintf "`%%binding_%s; `%%inv_arrow_%s; `%%eloc_arrow_%s; `%%param_types_%s"
-                      root_name
-                      root_name
-                      root_name
-                      root_name
-     in
-     let coerce_args_of_args =
-       Printf.sprintf "`%%binding_%s; `%%param_types_%s"
-                      root_name
-                      root_name
-     in
-     Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
-                     noextract\n\
-                     let dtyp_%s %s\n\
-                       : dtyp kind_%s %b (inv_%s %s) (eloc_%s %s)\n\
-                       = coerce (_ by (coerce_dtyp [%s]))\n\
-                                (DT_App \"%s\" binding_%s\n\
-                                  (coerce (_ by (coerce_args_of [%s])) %s))\n"
-                     root_name
-                     binders
-                     root_name
-                     td.allow_reading
-                     root_name
-                     fv_args
-                     root_name
-                     fv_args
-                     coerce_dtyp_args
-                     root_name
-                     root_name
-                     coerce_args_of_args
-                     arg_tuple
-   in
-   String.concat "\n"
-     [validate_binding;
-      param_types;
-      type_of_binding;
-      pk_of_binding;
-      parser_of_binding;
-      inv_eloc_of_binding;
-      validator_of_binding;
-      binding;
-      dtyp_of_binding]
-
-let print_binding_alt mname (td:type_decl)
-  : ML string
-  = let tdn = td.name in
-    let typ = td.typ in
-    let k = td.kind in
-    let root_name = print_ident mname tdn.td_name in
     let print_binders binders =
         List.map (print_param mname) binders |>
         String.concat " "
@@ -1001,7 +736,7 @@ let print_binding_alt mname (td:type_decl)
     let binders = print_binders tdn.td_params in
     let args = print_args tdn.td_params in
     let validate_binding =
-        FStar.Printf.sprintf "[@@T.postprocess_for_extraction_with (specialize_tac [nbe])]\n\
+        FStar.Printf.sprintf "[@@normalize_for_extraction specialization_steps]\n\
                              let validate_%s %s = as_validator (def'_%s %s)\n"
                              root_name
                              binders
@@ -1065,7 +800,7 @@ let print_binding_alt mname (td:type_decl)
           noextract\n\
           let def'_%s %s\n\
             : typ kind_%s (inv_%s %s) (eloc_%s %s) %b\n\
-            = coerce (_ by (coerce_validator_alt [`%%kind_%s; `%%inv_%s; `%%eloc_%s])) (def_%s %s)"
+            = coerce (_ by (coerce_validator [`%%kind_%s; `%%inv_%s; `%%eloc_%s])) (def_%s %s)"
           root_name
           binders
           root_name
@@ -1105,8 +840,8 @@ let print_binding_alt mname (td:type_decl)
      Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
                        noextract\n\
                        let binding_%s %s\n\
-                         : global_binding_alt \n\
-                         = mk_global_binding_alt\n\
+                         : global_binding\n\
+                         = mk_global_binding\n\
                                    kind_%s\n
                                    (inv_%s %s)\n
                                    (eloc_%s %s)\n
@@ -1140,9 +875,9 @@ let print_binding_alt mname (td:type_decl)
                      noextract\n\
                      let dtyp_%s %s\n\
                        : dtyp kind_%s %b (inv_%s %s) (eloc_%s %s)\n\
-                       = mk_dt_app_alt_alt kind_%s %b (inv_%s %s) (eloc_%s %s) \n\
+                       = mk_dt_app kind_%s %b (inv_%s %s) (eloc_%s %s) \n\
                                    (binding_%s %s)
-                                   (_ by (coerce_dt_app_alt [`%%binding_%s]))\n"
+                                   (_ by (coerce_dt_app [`%%binding_%s]))\n"
                      root_name
                      binders
                      root_name
@@ -1178,9 +913,7 @@ let print_decl mname (d:decl) =
   | Inr td ->
     Printf.sprintf "%s\n%s\n"
       (print_type_decl mname td)
-      (if Options.get_interpret_alt()
-       then print_binding_alt mname td
-       else print_binding mname td)
+      (print_binding mname td)
 
 let print_decls en mname tds =
   List.map (print_decl mname) tds |>
