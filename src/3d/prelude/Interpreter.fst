@@ -1067,7 +1067,13 @@ let mk_global_binding #nz #wk
      }
 
 [@@specialize]
-let coerce (#a #b:Type) (_:squash (a == b)) (x:a) : b = x
+inline_for_extraction
+let coerce (#[@@@erasable]a:Type)
+           (#[@@@erasable]b:Type)
+           ( [@@@erasable]pf:squash (a == b))
+           (x:a) 
+  : b 
+  = x
 
 let coerce_validator steps : T.Tac unit =
   let open FStar.List.Tot in
