@@ -209,6 +209,16 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
   let has_output_types modul =
     file_exists (filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul)) in
 
+  let has_types modul =
+    file_exists (filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul))
+  in
+
+  let types_krml modul =
+    if has_types modul
+    then [filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul)]
+    else []
+  in
+
   let output_types_krml modul =
     if has_output_types modul
     then [filename_concat out_dir (Printf.sprintf "%s_OutputTypes.krml" modul)]
@@ -232,8 +242,8 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
   let krml_files = List.fold_left
                      (fun accu (_, modul) ->
                        let l =
+                         (types_krml modul)@
 			 (output_types_krml modul)@(filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
-                                                    (* filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: *)
                                                     accu)
                        in
 
@@ -330,15 +340,21 @@ let produce_c_files
     : unit
   =
   let krml_args = krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules in
-  (* bundle M.Types.krml and EverParse into M *)
-(*  let krml_args =
+  (* if M.Types exists, then bundle M.Types.krml and EverParse into M *)
+  let krml_args =
+    let files_and_modules_with_types =
+      List.filter
+        (fun (_, modul) ->
+          Sys.file_exists (filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul))
+        )
+        files_and_modules
+    in
     let bundle_types = List.fold_left (fun acc (_, modul) ->
                            "-bundle"::(Printf.sprintf "%s=%s.Types"
                                          modul
-                                         modul)::acc) [] files_and_modules in
+                                         modul)::acc) [] files_and_modules_with_types in
     krml_args@bundle_types
   in
-    *)
   call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
 
 let produce_one_c_file
