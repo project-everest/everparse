@@ -573,7 +573,7 @@ let rec print_action (mname:string) (a:T.action)
           "Action_field_pos"
 
         | T.Action_field_ptr ->
-          "Action_field_ptr"
+          "(Action_field_ptr EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
 
         | T.Action_deref i ->
           Printf.sprintf "(Action_deref %s)"

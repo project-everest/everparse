@@ -1,2 +1,7 @@
 module EverParse3d.Actions.All
-include EverParse3d.Actions.Base
+
+let _ = EverParse3d.Actions.BackendFlagValue.backend_flag_value
+
+let ___PUINT8 = unit
+
+let action_field_ptr u = false_elim ()

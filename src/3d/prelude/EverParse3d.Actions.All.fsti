@@ -13,5 +13,5 @@ val action_field_ptr
       (#k:Prelude.parser_kind nz wk)
       (#[@@@erasable] t:Type)
       (#[@@@erasable] p:Prelude.parser k t)
-      (u:unit)
+      (u:squash (EverParse3d.Actions.BackendFlag.backend_flag == BackendFlagBuffer))
    : action p true_inv eloc_none true ___PUINT8

@@ -744,3 +744,11 @@ val mk_external_action
   (#nz:_) (#wk:_) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
   (#l:eloc) ($f:unit -> Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1))
   : action p true_inv l false unit
+
+// Some actions are valid only for specific backends (buffer, extern, etc.)
+
+[@@erasable]
+noeq
+type backend_flag_t =
+| BackendFlagBuffer
+| BackendFlagExtern
