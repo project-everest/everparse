@@ -22,11 +22,8 @@ OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
 all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test modules-interpret
 
-INTERPRETABLE_MODULES=Pair Demo Align BoolSwitch Comments ErrorHandling \
-		    TAtMost FieldDependence0 Arithmetic TestFieldPtr TestActions1 \
-		    EnumDependence
-#Bitfields0 Enumerations Test_Synthetic1 ; currently broken
-INTERPRETABLE_FILES=$(addsuffix .3d,$(INTERPRETABLE_MODULES))
+INTERPRETABLE_FILES=$(filter-out FAILNoEntrypoint.3d, $(wildcard *.3d))
+INTERPRETABLE_MODULES=$(basename $(INTERPRETABLE_FILES))
 interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_MODULES))
 
 extern:

@@ -344,7 +344,8 @@ type type_decl = {
   decl_typ: typedef_body;
   decl_parser: parser;
   decl_validator: validator;
-  decl_reader: option reader
+  decl_reader: option reader;
+  decl_is_enum : bool
 }
 
 let definition = A.ident * list param * typ * expr

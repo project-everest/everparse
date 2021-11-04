@@ -39,8 +39,6 @@ let choose_one (a b:option 'a) : ML (option 'a) =
 let simplify_field (env:env) (f:field)
   : ML field
   = let field = f.v in
-    if not field.field_dependence then f
-    else (
     let field = 
       match field.field_type.v with
       | Pointer _ -> failwith "Impossible: field types cannot be pointers"
@@ -101,7 +99,6 @@ let simplify_field (env:env) (f:field)
         end
     in
     { f with v = field }
-    )
 
 let simplify_decl (env:env) (d:decl) : ML decl =
   match d.d_decl.v with

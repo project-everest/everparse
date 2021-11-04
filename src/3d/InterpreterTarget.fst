@@ -496,12 +496,14 @@ let translate_decls (en:env) (ds:T.decls)
             let t = typ_of_parser td.decl_parser in
             let ar = allow_reading_of_typ en t in
             let refined =
-              match td.decl_typ with
-              | T.TD_abbrev t ->
-                if T.T_refine? t
-                then Some t
-                else None
-              | _ -> None
+              if td.decl_is_enum
+              then match td.decl_typ with
+                   | T.TD_abbrev t ->
+                     if T.T_refine? t
+                     then Some t
+                     else None
+                   | _ -> None
+              else None
             in
             let td =
               { name = td.decl_name;

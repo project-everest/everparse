@@ -1197,6 +1197,7 @@ let hoist_one_type_definition (should_inline:bool)
         decl_parser = t_parser;
         decl_validator = make_validator genv t_parser;
         decl_reader = reader;
+        decl_is_enum = false
       } in
       let td = Type_decl td in
       with_attrs td true false should_inline [comment],  //hoisted, not exported, should_inline
@@ -1309,6 +1310,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_parser = p;
         decl_validator = make_validator env p;
         decl_reader = reader;
+        decl_is_enum = false
     } in
     ds1@ds2@[with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
@@ -1329,6 +1331,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_parser = p;
         decl_validator = make_validator env p;
         decl_reader = reader;
+        decl_is_enum = true
     } in
     ds1@ds2@[with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
@@ -1349,7 +1352,8 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_typ = decl_typ;
           decl_parser = p;
           decl_validator = make_validator env p;
-          decl_reader = reader
+          decl_reader = reader;
+          decl_is_enum = false
     } in
    ds1@ds2@hoists @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
@@ -1364,9 +1368,10 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let td = {
         decl_name = tdn;
         decl_typ = TD_abbrev t;
-          decl_parser = p;
-          decl_validator = make_validator env p;
+        decl_parser = p;
+        decl_validator = make_validator env p;
         decl_reader = reader;
+        decl_is_enum = false
     } in
     ds1 @ ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
