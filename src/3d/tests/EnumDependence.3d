@@ -6,7 +6,6 @@ UINT32 enum AB {
        B
 }
 
-entrypoint
 typedef struct _UseAB {
   AB ab { ab == B };
   UINT32 c { c > ab };

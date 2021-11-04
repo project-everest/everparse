@@ -47,12 +47,10 @@ let right (x:either 'a 'b)
     | Inr x -> x
     | _ -> failwith "Expected right"
 
-let translate_module (en:env) (mname:string) (fn:string)
+let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
-        list Target.decl &
         StaticAssertions.static_asserts &
         env) =
-
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
   let decls, refinement = parse_prog fn in
 
@@ -85,15 +83,15 @@ let translate_module (en:env) (mname:string) (fn:string)
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
   
-  let decls, senv = TypeSizes.size_of_decls benv en.typesizes_env decls in
+  let decls = TypeSizes.size_of_decls benv en.typesizes_env decls in
 
   Options.debug_print_string "=============Finished typesizes pass=============\n";
 
-  let static_asserts = StaticAssertions.compute_static_asserts benv senv refinement in
+  let static_asserts = StaticAssertions.compute_static_asserts benv en.typesizes_env refinement in
 
   Options.debug_print_string "=============Finished static asserts pass=============\n";
 
-  let decls = Simplify.simplify_prog benv senv decls in
+  let decls = Simplify.simplify_prog benv en.typesizes_env decls in
   
   Options.debug_print_string "=============After simplify============\n";
   Options.debug_print_string (print_decls decls);
@@ -104,28 +102,45 @@ let translate_module (en:env) (mname:string) (fn:string)
   Options.debug_print_string "=============After inline singletons============\n";
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
+
+  let en = {
+    en with 
+      binding_env = benv
+  } in
+  decls,
+  static_asserts,
+  en
   
-  let t_decls, tenv = 
+let translate_module (en:env) (mname:string) (fn:string)
+  : ML (list Target.decl &
+        option (list InterpreterTarget.decl) &
+        StaticAssertions.static_asserts &
+        env) =
+
+  let decls, static_asserts, en = 
+      parse_check_and_desugar en mname fn
+  in      
+      
+  let t_decls, i_decls, tenv = 
     if Options.get_interpret()
     then
       let env, env' = right en.translate_env in
       let decls, env =
-        TranslateForInterpreter.translate_decls benv senv env decls
+        TranslateForInterpreter.translate_decls en.binding_env en.typesizes_env env decls
       in
-      decls, Inr (env, env')
+      let tds = InterpreterTarget.translate_decls env' decls in
+      decls, Some tds, Inr (env, env')
     else
       let decls, env = 
-        Translate.translate_decls benv senv (left en.translate_env) decls
+        Translate.translate_decls en.binding_env en.typesizes_env (left en.translate_env) decls
       in
-      decls, Inl env
+      decls, None, Inl env
   in
-
-  decls,
+  let en = { en with translate_env = tenv } in
   t_decls,
+  i_decls,
   static_asserts,
-  { binding_env = benv;
-    typesizes_env = senv;
-    translate_env = tenv }
+  en
 
 let has_out_exprs (t_decls:list Target.decl) : bool =
   List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
@@ -168,11 +183,10 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   FStar.IO.write_string fsti_file (Target.print_decls_signature modul t_decls);
   FStar.IO.close_write_file fsti_file
 
-let emit_fstar_code_for_interpreter (en:env) (modul:string) (t_decls:list Target.decl)
+let emit_fstar_code_for_interpreter (en:env) (modul:string) (tds:list InterpreterTarget.decl)
   : ML unit
   = let _, en = right en.translate_env in
-    let tds = InterpreterTarget.translate_decls en t_decls in
-
+    
     let impl, iface =
         InterpreterTarget.print_decls en modul tds
     in
@@ -276,22 +290,30 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
 let process_file (en:env) (fn:string) (modul:string) (emit_fstar:bool) (emit_output_types_defs:bool)
   : ML env =
   
-  let _decls, t_decls, static_asserts, en =
+  let t_decls, interpreter_decls_opt, static_asserts, en =
       translate_module en modul fn
   in
   if emit_fstar 
   then (
     if Options.get_interpret()
-    then emit_fstar_code_for_interpreter en modul t_decls
-    else emit_fstar_code en modul t_decls;
+    then (
+      match interpreter_decls_opt with
+      | None -> failwith "Impossible: interpreter mode expects interperter target decls"
+      | Some tds ->
+        emit_fstar_code_for_interpreter en modul tds
+    )
+    else (
+         emit_fstar_code en modul t_decls
+    );
     emit_entrypoint en modul t_decls static_asserts emit_output_types_defs
   )
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
 
   let ds = Binding.get_exported_decls en.binding_env modul in
-  
-  { binding_env = Binding.finish_module en.binding_env modul ds;
-    typesizes_env = TypeSizes.finish_module en.typesizes_env modul ds;
+  TypeSizes.finish_module en.typesizes_env modul ds;
+
+  { en with 
+    binding_env = Binding.finish_module en.binding_env modul ds;
     translate_env = 
       if Options.get_interpret()
       then en.translate_env
