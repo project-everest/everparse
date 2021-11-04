@@ -752,78 +752,8 @@ let rec print_eloc mname (e:eloc)
     | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (print_ident mname x)
     | Eloc_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "eloc" hd) (print_args mname args)
 
-let rec print_on_sucess mname (b:on_success)
-  : ML string
-  = match b with
-    | On_success b -> Printf.sprintf "%b" b
-    | On_success_union b0 b1 -> Printf.sprintf "(%s || %s)" (print_on_sucess mname b0) (print_on_sucess mname b1)
-    | On_success_named hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "on_success" hd) (print_args mname args)
-
-let rec print_param_type mname (t:T.typ)
-  : ML string
-  = match t with
-    | T.T_app hd false [] ->
-      (match itype_of_ident hd with
-       | Some i ->
-         Printf.sprintf "(PT_Base %s)"
-                        (print_ityp i)
-       | None ->
-         Printf.sprintf "(PT_Typedef %s)"
-                        (print_ident mname hd))
-    | T.T_pointer t ->
-      Printf.sprintf "(PT_Pointer %s)"
-                     (print_param_type mname t)
-    | _ ->
-      failwith (Printf.sprintf "Unexpected param type: %s" (T.print_typ mname t))
-
-let print_td_iface mname root_name binders args inv_eloc_binders inv_eloc_args ar pk_wk pk_nz =
-  let kind_t =
-    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
-                    inline_for_extraction\n\
-                    noextract\n\
-                    val kind_%s : P.parser_kind %b P.%s"
-      root_name
-      pk_nz
-      pk_wk
-  in
-  let inv_t =
-    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
-                    noextract\n\
-                    val inv_%s %s : A.slice_inv"
-      root_name
-      inv_eloc_binders
-  in
-  let eloc_t =
-    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
-                    noextract\n\
-                    val eloc_%s %s : A.eloc"
-      root_name
-      inv_eloc_binders
-  in
-  let def'_t =
-    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
-                    noextract\n\
-                    val def'_%s %s: typ kind_%s (inv_%s %s) (eloc_%s %s) %b"
-      root_name
-      binders
-      root_name
-      root_name inv_eloc_args
-      root_name inv_eloc_args
-      ar
-  in
-  let validator_t =
-    Printf.sprintf "val validate_%s %s : A.validate_with_action_t (as_parser (def'_%s %s)) (inv_%s %s) (eloc_%s %s) %b"
-      root_name
-      binders
-      root_name args
-      root_name inv_eloc_args
-      root_name inv_eloc_args
-      ar
-  in
-  String.concat "\n" [kind_t; inv_t; eloc_t; def'_t; validator_t]
-
 let print_binding mname (td:type_decl)
-  : ML (string & string)
+  : ML string
   = let tdn = td.name in
     let typ = td.typ in
     let k = td.kind in
@@ -1004,12 +934,6 @@ let print_binding mname (td:type_decl)
          root_name
          (T.print_typ mname t)
    in
-   let iface =
-     if td.name.td_entrypoint
-     ||  td.attrs.is_exported
-     then print_td_iface mname root_name binders args fv_binders fv_args td.allow_reading weak_kind k.pk_nz
-     else ""
-   in
    String.concat "\n"
      [pk_of_binding;
       inv_eloc_of_binding;
@@ -1019,27 +943,25 @@ let print_binding mname (td:type_decl)
       validate_binding;
       binding;
       dtyp_of_binding;
-      enum_typ_of_binding],
-   iface
+      enum_typ_of_binding]
 
 let print_decl mname (d:decl)
-  : ML (string & string) =
+  : ML string =
   match d with
   | Inl d ->
     begin
     match fst d with
-    | T.Assumption _ -> T.print_assumption mname d, ""
-    | T.Definition _ -> T.print_definition mname d, ""
-    | _ -> "", ""
+    | T.Assumption _ -> T.print_assumption mname d
+    | T.Definition _ -> T.print_definition mname d
+    | _ -> ""
     end
   | Inr td ->
-    let impl, iface =
+    let impl =
         print_binding mname td
     in
     Printf.sprintf "%s\n%s\n"
       (print_type_decl mname td)
-      impl,
-    iface
+      impl
 
 let rec unzip (x: list ('a & 'b))
   : list 'a & list 'b
@@ -1050,10 +972,8 @@ let rec unzip (x: list ('a & 'b))
       x::xs, y::ys
 
 let print_decls en mname tds =
-  let impl, iface =
+  let impl =
     List.map (print_decl mname) tds |>
-    unzip
+    String.concat "\n\n"
   in
-  let iface = List.filter (fun x -> x <> "") iface in
-  String.concat "\n\n" impl,
-  String.concat "\n\n" iface
+  impl

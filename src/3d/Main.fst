@@ -187,27 +187,10 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (tds:list Interprete
   : ML unit
   = let _, en = right en.translate_env in
     
-    let impl, iface =
+    let impl =
         InterpreterTarget.print_decls en modul tds
     in
-    
-    let fsti_file =
-      open_write_file
-        (Printf.sprintf "%s/%s.fsti"
-          (Options.get_output_dir())
-          modul) in
-    FStar.IO.write_string fsti_file
-      (FStar.Printf.sprintf "module %s\n\
-                             open Interpreter\n\
-                             open Prelude\n\
-                             open EverParse3d.Actions.All\n\
-                             module A = EverParse3d.Actions.All\n\
-                             module P = Prelude\n\
-                             module B = LowStar.Buffer\n"
-                             modul);
-    FStar.IO.write_string fsti_file iface;
-    FStar.IO.close_write_file fsti_file;
-    
+        
     let fst_file =
       open_write_file
         (Printf.sprintf "%s/%s.fst"
