@@ -151,6 +151,8 @@ let parse_vldata_intro_impl
 
 let write_bounded_integer = LP.write_bounded_integer'
 
+#push-options "--z3rlimit 32"
+
 let parse_vldata_intro_weak_impl
   #inv p min max
 = mk_repr_impl
@@ -175,6 +177,8 @@ let parse_vldata_intro_weak_impl
       IError "parse_vldata_intro_weak: out of bounds"
     end
   )
+
+#pop-options
 
 let parse_vldata_recast_impl
   #inv p min max min' max'
