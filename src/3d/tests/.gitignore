@@ -1,5 +1,6 @@
 out.inplace-hash
 out.batch
+out.batch-interpret
 out.fail.batch
 out.cleanup
 test-cpp.exe
