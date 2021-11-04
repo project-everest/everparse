@@ -108,7 +108,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
   let deps_of_atomic_action (ac:atomic_action) : ML (list string) =
     match ac with
     | Action_return e -> deps_of_expr e
-    | Action_abort | Action_field_pos | Action_field_ptr -> []
+    | Action_abort | Action_field_pos_64 | Action_field_ptr -> []
     | Action_deref _i -> []  //a local variable
     | Action_assignment _lhs rhs -> deps_of_expr rhs
     | Action_call hd args -> (maybe_dep hd)@(List.collect deps_of_expr args) in

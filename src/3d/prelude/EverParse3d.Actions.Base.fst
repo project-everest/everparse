@@ -1612,7 +1612,7 @@ let action_abort
 
 noextract
 inline_for_extraction
-let action_field_pos
+let action_field_pos_64
       #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
    : action p true_inv eloc_none false U64.t
    = fun _ _ pos -> pos

@@ -459,7 +459,7 @@ let rec print_action (mname:string) (a:action) : ML string =
       | Action_return e ->
         Printf.sprintf "(action_return %s)" (print_expr mname e)
       | Action_abort -> "(action_abort())"
-      | Action_field_pos -> "(action_field_pos())"
+      | Action_field_pos_64 -> "(action_field_pos_64())"
       | Action_field_ptr -> "(action_field_ptr EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
       | Action_deref i ->
         Printf.sprintf "(action_deref %s)" (print_ident i)

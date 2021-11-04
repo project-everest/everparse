@@ -5,7 +5,7 @@ entrypoint typedef struct _t (UINT32 a,
    // field `x` of struct `t`
    UINT32 x
     {:on-success
-       var i = field_pos;
+       var i = field_pos_64;
        *out_x = i;
        return true;
      };
@@ -13,7 +13,7 @@ entrypoint typedef struct _t (UINT32 a,
    UINT32 xx
     { x <= xx }
     {:on-success
-       var i = field_pos;
+       var i = field_pos_64;
        *out_xx = i;
        return true;
      };
@@ -21,7 +21,7 @@ entrypoint typedef struct _t (UINT32 a,
    UINT32 y
     { x <= y  && xx <= y }
     {:on-success
-      var i = field_pos;
+      var i = field_pos_64;
       *out_y = i;
       return true;
     };

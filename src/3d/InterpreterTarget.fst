@@ -311,7 +311,7 @@ let rec inv_eloc_of_action (a:T.action)
       = match a with
         | Action_return _
         | Action_abort
-        | Action_field_pos -> inv_eloc_nil
+        | Action_field_pos_64 -> inv_eloc_nil
         | Action_field_ptr -> Inv_true, Eloc_none, On_success true
         | Action_deref x -> Inv_ptr x, Eloc_none, On_success false
         | Action_assignment x _ -> Inv_ptr x, Eloc_ptr x, On_success false
@@ -569,8 +569,8 @@ let rec print_action (mname:string) (a:T.action)
         | T.Action_abort ->
           "Action_abort"
 
-        | T.Action_field_pos ->
-          "Action_field_pos"
+        | T.Action_field_pos_64 ->
+          "Action_field_pos_64"
 
         | T.Action_field_ptr ->
           "(Action_field_ptr EverParse3d.Actions.BackendFlagValue.backend_flag_value)"

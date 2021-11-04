@@ -688,7 +688,7 @@ val action_abort
 
 noextract
 inline_for_extraction
-val action_field_pos
+val action_field_pos_64
       (#nz:_)
       (#wk: _)
       (#k:parser_kind nz wk)

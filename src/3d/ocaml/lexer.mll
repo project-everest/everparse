@@ -50,7 +50,7 @@ let () =
   H.add keywords "if" IF;
   H.add keywords "else" ELSE;
   H.add keywords "mutable" MUTABLE;
-  H.add keywords "field_pos" FIELD_POS;
+  H.add keywords "field_pos_64" FIELD_POS_64;
   H.add keywords "field_ptr" FIELD_PTR;
   H.add keywords "var" VAR;
   H.add keywords "abort" ABORT;

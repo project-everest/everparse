@@ -597,8 +597,8 @@ let rec translate_action (a:A.action) : ML (T.action & T.decls) =
         T.Action_return (translate_expr e), []
       | Action_abort ->
         T.Action_abort, []
-      | Action_field_pos ->
-        T.Action_field_pos, []
+      | Action_field_pos_64 ->
+        T.Action_field_pos_64, []
       | Action_field_ptr ->
         T.Action_field_ptr, []
       | Action_deref i ->

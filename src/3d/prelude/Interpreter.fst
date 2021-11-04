@@ -301,7 +301,7 @@ type atomic_action
   | Action_abort:
       atomic_action A.true_inv A.eloc_none false bool
 
-  | Action_field_pos:
+  | Action_field_pos_64:
       atomic_action A.true_inv A.eloc_none false U64.t
 
   | Action_field_ptr:
@@ -341,8 +341,8 @@ let atomic_action_as_action
       A.action_return x
     | Action_abort ->
       A.action_abort
-    | Action_field_pos ->
-      A.action_field_pos ()
+    | Action_field_pos_64 ->
+      A.action_field_pos_64 ()
     | Action_field_ptr sq ->
       A.action_field_ptr sq
     | Action_deref x ->
