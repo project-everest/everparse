@@ -207,6 +207,7 @@ let resolve_atomic_action (env:qenv) (ac:atomic_action) : ML atomic_action =
   | Action_return e -> Action_return (resolve_expr env e)
   | Action_abort
   | Action_field_pos_64
+  | Action_field_pos_32
   | Action_field_ptr -> ac
   | Action_deref i -> Action_deref i  //most certainly a type parameter
   | Action_assignment lhs rhs ->

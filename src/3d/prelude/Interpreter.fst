@@ -304,6 +304,10 @@ type atomic_action
   | Action_field_pos_64:
       atomic_action A.true_inv A.eloc_none false U64.t
 
+  | Action_field_pos_32:
+      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
+      atomic_action A.true_inv A.eloc_none false U32.t
+
   | Action_field_ptr:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
       atomic_action A.true_inv A.eloc_none true A.___PUINT8
@@ -343,6 +347,8 @@ let atomic_action_as_action
       A.action_abort
     | Action_field_pos_64 ->
       A.action_field_pos_64 ()
+    | Action_field_pos_32 sq ->
+      A.action_field_pos_32 sq
     | Action_field_ptr sq ->
       A.action_field_ptr sq
     | Action_deref x ->

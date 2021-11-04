@@ -848,7 +848,7 @@ and check_typ_param (env:env) (p:typ_param) : ML (typ_param & typ) =
     Inr o, (let _, t = Some?.v o.out_expr_meta in t)
 
 #pop-options
-#push-options "--z3rlimit_factor 2"
+#push-options "--z3rlimit_factor 3"
 
 let rec check_field_action (env:env) (f:field) (a:action)
   : ML (action & typ)
@@ -864,6 +864,9 @@ let rec check_field_action (env:env) (f:field) (a:action)
 
         | Action_field_pos_64 ->
           Action_field_pos_64, tuint64
+
+        | Action_field_pos_32 ->
+          Action_field_pos_32, tuint32
 
         | Action_field_ptr ->
           Action_field_ptr, puint8
