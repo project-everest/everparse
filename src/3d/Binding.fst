@@ -229,6 +229,12 @@ let lookup_enum_cases (e:env) (i:ident)
     | Some (tags, t) -> tags, t
     | _ -> error (Printf.sprintf "Type %s is not an enumeration" (ident_to_string i)) i.range
 
+let is_enum (e:env) (t:typ) =
+  match t.v with
+  | Type_app i false [] ->
+    Some? (try_lookup_enum_cases e i)
+  | _ -> false
+
 let is_used (e:env) (i:ident) : ML bool =
   match H.try_find e.locals i.v with
   | Some (_, t, b) -> b
@@ -323,6 +329,22 @@ let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
     | _ -> t
     end
   | _ -> t
+
+let update_typ_abbrev (env:env) (i:ident) (t:typ) 
+  : ML unit
+  = match H.try_find env.globals.ge_h i.v with
+    | Some (d, ms) ->
+      let d_decl =
+        match d.d_decl.v with
+        | TypeAbbrev _ _ -> {d.d_decl with v = TypeAbbrev t i }
+        | _ -> failwith "Expected a type abbreviation"
+      in
+      let d = {d with d_decl = d_decl } in
+      let entry = (d, ms) in
+      H.insert env.globals.ge_h i.v entry
+      
+   | _ -> 
+     failwith "Type abbreviation not found"
 
 let rec unfold_typ_abbrev_and_enum (env:env) (t:typ) : ML typ =
   match t.v with
@@ -1279,8 +1301,10 @@ let elaborate_record (e:global_env)
           f.comments
       in
       let has_reader = typ_has_reader env f.v.field_type in
+      let is_enum = is_enum env f.v.field_type in
       if f.v.field_dependence
       && not has_reader
+      && not is_enum //if it's an enum, it can be inlined later to allow dependence
       then error "The type of this field does not have a reader, \
                   either because its values are too large \
                   or because reading it may incur a double fetch; \

@@ -111,7 +111,6 @@ type typ : Type =
       typ
 
   | T_if_else:
-      fn:non_empty_string ->
       b:expr ->
       t1:typ ->
       t2:typ ->
@@ -191,7 +190,8 @@ type type_decl = {
   kind : T.parser_kind;
   inv_eloc : inv_eloc;
   allow_reading: bool;
-  attrs : T.decl_attributes
+  attrs : T.decl_attributes;
+  enum_typ: option (t:T.typ {T.T_refine? t })
 }
 let decl = either T.decl type_decl
 let env = H.t A.ident' type_decl
@@ -422,7 +422,7 @@ let rec typ_of_parser (p:T.parser)
       T_exact fn n (typ_of_parser p)
 
     | T.Parse_if_else e p1 p2 ->
-      T_if_else fn e (typ_of_parser p1) (typ_of_parser p2)
+      T_if_else e (typ_of_parser p1) (typ_of_parser p2)
 
     | T.Parse_dep_pair _ p k ->
       let i, k = as_lam k in
@@ -495,13 +495,22 @@ let translate_decls (en:env) (ds:T.decls)
           | (T.Type_decl td, attrs) ->
             let t = typ_of_parser td.decl_parser in
             let ar = allow_reading_of_typ en t in
+            let refined =
+              match td.decl_typ with
+              | T.TD_abbrev t ->
+                if T.T_refine? t
+                then Some t
+                else None
+              | _ -> None
+            in
             let td =
               { name = td.decl_name;
                 typ = typ_of_parser td.decl_parser;
                 kind = td.decl_parser.p_kind;
                 inv_eloc = inv_eloc_of_parser en td.decl_parser;
                 allow_reading = ar;
-                attrs = attrs
+                attrs = attrs;
+                enum_typ = refined
                 }
             in
             H.insert en td.name.td_name.v td;
@@ -652,9 +661,8 @@ let rec print_typ (mname:string) (t:typ)
                      (print_lam mname (print_typ mname) k)
                      (print_lam mname (print_action mname) a)
 
-    | T_if_else fn e t1 t2 ->
-      Printf.sprintf "(T_if_else \"%s\" %s %s %s)"
-                     fn
+    | T_if_else e t1 t2 ->
+      Printf.sprintf "(T_if_else %s %s %s)"
                      (T.print_expr mname e)
                      (print_typ mname t1)
                      (print_typ mname t2)
@@ -982,6 +990,14 @@ let print_binding mname (td:type_decl)
                      root_name args
                      root_name
    in
+   let enum_typ_of_binding =
+     match td.enum_typ with
+     | None -> ""
+     | Some t ->
+       Printf.sprintf "let %s = %s\n"
+         root_name
+         (T.print_typ mname t)
+   in
    let iface =
      if td.name.td_entrypoint
      ||  td.attrs.is_exported
@@ -996,7 +1012,8 @@ let print_binding mname (td:type_decl)
       (as_type_or_parser "parser");
       validate_binding;
       binding;
-      dtyp_of_binding],
+      dtyp_of_binding;
+      enum_typ_of_binding],
    iface
 
 let print_decl mname (d:decl)

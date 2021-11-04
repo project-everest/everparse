@@ -1356,8 +1356,8 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let td = {
         decl_name = tdn;
         decl_typ = TD_abbrev t;
-          decl_parser = p;
-          decl_validator = make_validator env p;
+        decl_parser = p;
+        decl_validator = make_validator env p;
         decl_reader = reader;
     } in
     ds1 @ ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]

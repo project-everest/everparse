@@ -39,6 +39,19 @@ UINT32 enum Enum_ABC32 {
     DEF_C32
 }
 
+typedef struct Param(Enum8 tag) {
+  UINT8 field { field > tag };
+} Param;
+
+typedef struct UseParam {
+  UINT8 tag {
+     tag == DEF_A ||
+     tag == DEF_B ||
+     tag == DEF_C
+  };
+  Param(tag) p;
+} UseParam;
+
 //need an entry point or 3d will reject it
 entrypoint
 typedef struct _Dummy {

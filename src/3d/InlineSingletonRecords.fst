@@ -39,6 +39,8 @@ let choose_one (a b:option 'a) : ML (option 'a) =
 let simplify_field (env:env) (f:field)
   : ML field
   = let field = f.v in
+    if not field.field_dependence then f
+    else (
     let field = 
       match field.field_type.v with
       | Pointer _ -> failwith "Impossible: field types cannot be pointers"
@@ -58,36 +60,48 @@ let simplify_field (env:env) (f:field)
           in
           let subst = (inlined_field.v.field_ident, with_dummy_range (Identifier field.field_ident)) :: subst in
           let inlined_field = subst_field (mk_subst subst) inlined_field in
+          let error msg = 
+            let msg = 
+              Printf.sprintf "Other types depend on the value of this field, but this field cannot be read because %s"
+                            msg
+            in
+            error msg f.range
+          in
           match field, inlined_field.v with
-          | { field_constraint = Some _ }, { field_constraint = Some _ } ->
-            failwith "Singleton field cannot be inlined because of duplicated refinements"
-            
           | { field_action = Some _ }, { field_action = Some _ } ->
-            failwith "Singleton field cannot be inlined because of duplicated actions"
+            error "it has multiple actions"
   
           | { field_constraint = Some _ }, { field_action = Some _ } ->
-            failwith "Singleton field cannot be inlined because it would alter order of evaluation of refinement and action"
+            error "reading it would alter the order of evaluation of refinement and action"
   
           | { field_array_opt = FieldArrayQualified _ }, _
           | _, { field_array_opt = FieldArrayQualified _ } ->
-            failwith "Singleton field cannot be inlined because it contains an array"
+            error "it contains an array"
   
           | { field_array_opt = FieldString _ }, _
           | _, { field_array_opt = FieldString _ } ->
-            failwith "Singleton field cannot be inlined because it contains a string"
+            error "it contains a string"
 
           | { field_bitwidth = Some _ }, _        
           | _, { field_bitwidth = Some _ } ->
-            failwith "Singleton field cannot be inlined because it contains a bitfield"
+            error "it contains a bit field"
           
           | _, _ ->
+            let join_constraints c1 c2 =
+              match c1, c2 with
+              | None, None -> None
+              | Some c, None 
+              | None, Some c -> Some c
+              | Some c1, Some c2 -> Some (with_dummy_range (App And [c1;c2]))
+            in
             { field with 
               field_type = inlined_field.v.field_type;
-              field_constraint = choose_one field.field_constraint inlined_field.v.field_constraint;
+              field_constraint = join_constraints field.field_constraint inlined_field.v.field_constraint;
               field_action = choose_one field.field_action inlined_field.v.field_action }
         end
     in
     { f with v = field }
+    )
 
 let simplify_decl (env:env) (d:decl) : ML decl =
   match d.d_decl.v with
@@ -101,6 +115,45 @@ let simplify_decl (env:env) (d:decl) : ML decl =
     d
 
   | Enum t i cases ->
+    let field_name =
+      let s = 
+        reserved_prefix ^
+        "field_name_" ^
+        i.v.name
+      in
+      with_dummy_range (to_ident' s)
+    in
+    let exp e = with_dummy_range e in
+    let constraint =
+        let constr_opt =
+          List.fold_right 
+            (fun (i, _) out_opt -> 
+              let eq = with_dummy_range (App Eq [exp <| Identifier i; exp <| Identifier field_name]) in
+              match out_opt with
+              | None -> Some eq
+              | Some out -> Some (with_dummy_range (App Or [eq; out])))
+            cases
+            None
+        in
+        match constr_opt with
+        | Some e -> e
+        | None -> with_dummy_range (Constant (Bool false))
+    in
+    let field =
+        { field_dependence = false;
+          field_ident = field_name;
+          field_type = t;
+          field_array_opt = FieldScalar;
+          field_constraint = Some constraint;
+          field_bitwidth = None;
+          field_action = None }
+    in
+    let field = with_dummy_range field in
+    Options.debug_print_string 
+      (Printf.sprintf "For Enum %s, inserting field = %s\n"
+        i.v.name
+        (print_field field));
+    H.insert env i.v ([], field);
     d
     
   | Record tdnames params None [field] -> //singleton

@@ -137,7 +137,10 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   | Define i (Some t) c -> decl_with_v d (Define i (Some (simplify_typ env t)) c)
 
   | TypeAbbrev t i ->
-    decl_with_v d (TypeAbbrev (simplify_typ env t) i)
+    let t' = simplify_typ env t in
+    if Options.get_interpret() 
+    then B.update_typ_abbrev (fst env) i t';
+    decl_with_v d (TypeAbbrev t' i)
 
   | Enum t i cases ->
     let t = simplify_typ env t in

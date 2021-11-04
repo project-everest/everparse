@@ -660,7 +660,6 @@ type typ
           false
 
   | T_if_else:
-      fieldname:string ->       
       #nz1:_ -> #wk1:_ -> #pk1:P.parser_kind nz1 wk1 ->
       #l1:_ -> #i1:_ -> #b1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->      
@@ -760,7 +759,7 @@ let rec as_type
     | T_dep_pair_with_refinement_and_action _ base refinement t _ ->
       x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
 
-    | T_if_else _ b t0 t1 ->
+    | T_if_else b t0 t1 ->
       Prelude.t_ite b (as_type t0) (as_type t1)
 
     | T_with_action _ t _
@@ -822,7 +821,7 @@ let rec as_parser
     | T_dep_pair_with_refinement_and_action _ base refinement k _ ->
       P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
 
-    | T_if_else _ b t0 t1 ->
+    | T_if_else b t0 t1 ->
       //assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
       let p0 (_:squash b) = 
         P.parse_weaken_right (as_parser t0) _
@@ -979,11 +978,11 @@ let rec as_validator
             (fun x -> action_as_action (dtyp_as_parser base) (act x))
             (fun x -> as_validator typename (k x)))
 
-    | T_if_else fn b t0 t1 ->
-      assert_norm (as_type (T_if_else fn b t0 t1) == Prelude.t_ite b (as_type t0) (as_type t1));
+    | T_if_else b t0 t1 ->
+      assert_norm (as_type (T_if_else b t0 t1) == Prelude.t_ite b (as_type t0) (as_type t1));
       let p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
       let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
-      assert_norm (as_parser (T_if_else fn b t0 t1) == P.parse_ite b p0 p1);
+      assert_norm (as_parser (T_if_else b t0 t1) == P.parse_ite b p0 p1);
       let v0 (_:squash b) = 
         A.validate_weaken_right (as_validator typename t0) _
       in
