@@ -80,7 +80,7 @@ let readable_split_1
     assert (readable h p mid to)
   end
 
-#push-options "--fuel 17" // "--using_facts_from '*,-LowParse.Low.Base.serializer32_of_leaf_writer_strong_constant_size'"
+#push-options "--fuel 17 --z3rlimit 32" // "--using_facts_from '*,-LowParse.Low.Base.serializer32_of_leaf_writer_strong_constant_size'"
 #restart-solver
 
 let readable_split_2
