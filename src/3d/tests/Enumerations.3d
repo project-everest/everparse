@@ -39,11 +39,11 @@ UINT32 enum Enum_ABC32 {
     DEF_C32
 }
 
-typedef struct Param(Enum8 tag) {
+typedef struct _Param(Enum8 tag) {
   UINT8 field { field > tag };
 } Param;
 
-typedef struct UseParam {
+typedef struct _UseParam {
   UINT8 tag {
      tag == DEF_A ||
      tag == DEF_B ||

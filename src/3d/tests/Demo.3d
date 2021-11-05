@@ -46,18 +46,6 @@ casetype _MessageUnion(UINT32 tag) {
     Query query;
   case HALT_MSG:
     Halt halt;                
-  case INIT_MSG:
-    Init init;
-  case QUERY_MSG:
-    Query query;
-  case HALT_MSG:
-    Halt halt;                
-  case INIT_MSG:
-    Init init;
-  case QUERY_MSG:
-    Query query;
-  case HALT_MSG:
-    Halt halt;                
   }
 } MessageUnion, *P_MessageUnion;
 
