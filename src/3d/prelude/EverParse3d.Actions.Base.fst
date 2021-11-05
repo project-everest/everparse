@@ -1283,8 +1283,6 @@ let validate____UINT8
       "Checking that we have enough space for a UINT8, i.e., 1 byte"
       (validate_total_constant_size_no_read parse____UINT8 1uL () _ _)
 
-(* FIXME: Reading currently performs two copies, one from `read`, another from kremlib's implementations of load16_be, etc. *)
-
 inline_for_extraction noextract
 let lift_reader
   (#nz: _)
@@ -1297,26 +1295,15 @@ let lift_reader
 : Pure (leaf_reader p)
   (requires (
     U32.v sz32 == U64.v sz /\
+    U64.v sz > 0 /\
     k.LP.parser_kind_subkind == Some LP.ParserStrong /\
     k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
-    k.LP.parser_kind_low = U64.v sz /\
-    U64.v sz > 0
+    k.LP.parser_kind_low = U64.v sz
   ))
   (ensures (fun _ -> True))
 = fun input pos ->
   LP.parser_kind_prop_equiv k p;
-  let h0 = HST.get () in
-  HST.push_frame ();
-  let temp = B.alloca 0uy sz32 in
-  let h1 = HST.get () in
-  I.live_not_unused_in input h0;
-  let temp = I.read input pos sz temp in
-  let h2 = HST.get () in
-  LP.parse_strong_prefix p (I.get_remaining input h0) (B.as_seq h2 temp);
-  LPL.valid_facts p h2 (LPL.make_slice temp sz32) 0ul;
-  let res = r (LPL.make_slice temp sz32) 0ul in
-  HST.pop_frame ();
-  res
+  I.read t k p r input pos sz
 
 inline_for_extraction noextract
 let read____UINT8
