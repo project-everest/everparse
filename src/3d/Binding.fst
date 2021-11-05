@@ -167,19 +167,24 @@ let add_local (e:env) (i:ident) (t:typ) : ML unit =
   H.insert e.locals i.v (i'.v, t, false);
   H.insert e.locals i'.v (i'.v, t, false)
 
-let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes macro_signature)) =
+let try_lookup (e:env) (i:ident) : ML (option (either typ (decl & either decl_attributes macro_signature))) =
   match H.try_find e.locals i.v with
   | Some (_, t, true) ->
-    Inl t
+    Some (Inl t)
   | Some (j, t, false) ->  //mark it as used
     H.remove e.locals i.v;
     H.insert e.locals i.v (j, t, true);
-    Inl t
+    Some (Inl t)
   | None ->
     match H.try_find e.globals.ge_h i.v with
-    | Some d -> Inr d
-    | None -> error (Printf.sprintf "Variable %s not found" (ident_to_string i)) i.range
+    | Some d -> Some (Inr d)
+    | None -> None
 
+let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes macro_signature)) =
+  match try_lookup e i with
+  | None -> error (Printf.sprintf "Variable %s not found" (ident_to_string i)) i.range
+  | Some v -> v
+  
 let remove_local (e:env) (i:ident) : ML unit =
   match H.try_find e.locals i.v with
   | Some (j, _, _) ->
@@ -319,8 +324,8 @@ let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
   match t.v with
   | Type_app hd _ [] -> //type abbreviations are not parameterized
     begin
-    match lookup env hd with
-    | Inr (d, _) ->
+    match try_lookup env hd with
+    | Some (Inr (d, _)) ->
       begin
       match d.d_decl.v with
       | TypeAbbrev t _ -> unfold_typ_abbrev_only env t
@@ -506,7 +511,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
     let oe = check_out_expr env oe in
     let oe_bt, oe_t = Some?.v oe.out_expr_meta in
     {oe0 with
-     out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
+     out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
      out_expr_meta=Some (oe_bt, with_range (Pointer oe_t) oe.out_expr_node.range)}
   | OE_deref oe f ->
     let oe = check_out_expr env oe in

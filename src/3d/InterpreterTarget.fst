@@ -167,10 +167,11 @@ type inv =
 
 noeq
 type eloc =
-  | Eloc_none  : eloc
-  | Eloc_union : eloc -> eloc -> eloc
-  | Eloc_ptr   : A.ident -> eloc
-  | Eloc_name  : A.ident -> list expr -> eloc
+  | Eloc_none   : eloc
+  | Eloc_output : eloc
+  | Eloc_union  : eloc -> eloc -> eloc
+  | Eloc_ptr    : A.ident -> eloc
+  | Eloc_name   : A.ident -> list expr -> eloc
 
 noeq
 type on_success =
@@ -217,7 +218,8 @@ let rec free_vars_of_inv (i:inv)
 let rec free_vars_of_eloc (e:eloc)
   : ML (list A.ident)
   = match e with
-    | Eloc_none -> []
+    | Eloc_none
+    | Eloc_output -> []
     | Eloc_union i j -> free_vars_of_eloc i @ free_vars_of_eloc j
     | Eloc_ptr x -> [x]
     | Eloc_name _ args -> List.collect free_vars_of_expr args
@@ -316,7 +318,7 @@ let rec inv_eloc_of_action (a:T.action)
         | Action_field_ptr -> Inv_true, Eloc_none, On_success true
         | Action_deref x -> Inv_ptr x, Eloc_none, On_success false
         | Action_assignment x _ -> Inv_ptr x, Eloc_ptr x, On_success false
-        | Action_call _ _ -> failwith "Not yet handled (Action_call)"
+        | Action_call f args -> Inv_true, Eloc_output, On_success false
     in
     match a with
     | Atomic_action aa -> of_atomic_action aa
@@ -588,8 +590,10 @@ let rec print_action (mname:string) (a:T.action)
                          (print_ident mname lhs)
                          (T.print_expr mname rhs)
 
-        | T.Action_call _ _ ->
-          failwith "Action_call: not yet supported"
+        | T.Action_call hd args ->
+          Printf.sprintf "(Action_call (mk_action_binding (%s %s)))"
+                          (print_ident mname hd)
+                          (List.map (T.print_expr mname) args |> String.concat " ")
     in
     match a with
     | T.Atomic_action a ->
@@ -748,6 +752,7 @@ let rec print_eloc mname (e:eloc)
   : ML string
   = match e with
     | Eloc_none -> "A.eloc_none"
+    | Eloc_output -> "output_loc" //This is a bit sketchy
     | Eloc_union i j -> Printf.sprintf "(A.eloc_union %s %s)" (print_eloc mname i) (print_eloc mname j)
     | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (print_ident mname x)
     | Eloc_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "eloc" hd) (print_args mname args)

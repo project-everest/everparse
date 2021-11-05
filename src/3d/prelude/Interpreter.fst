@@ -269,6 +269,14 @@ let action_binding
     (p:P.parser k t) ->
     A.action p inv l on_success a
 
+[@@specialize]
+let mk_action_binding
+    (#l:A.eloc)
+    ($f:unit -> FStar.HyperStack.ST.Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1))
+  : action_binding A.true_inv l false unit
+  = fun (#nz:_) (#wk:_) (#k:P.parser_kind nz wk) (#t:Type u#0) (p:P.parser k t) ->
+      A.mk_external_action f
+
 (* The type of atomic actions.
 
    `atomic_action l i b t`: is an atomic action that

@@ -183,31 +183,47 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   FStar.IO.write_string fsti_file (Target.print_decls_signature modul t_decls);
   FStar.IO.close_write_file fsti_file
 
-let emit_fstar_code_for_interpreter (en:env) (modul:string) (tds:list InterpreterTarget.decl)
+let emit_fstar_code_for_interpreter (en:env) (modul:string) (tds:list T.decl) (itds:list InterpreterTarget.decl)
   : ML unit
   = let _, en = right en.translate_env in
     
     let impl =
-        InterpreterTarget.print_decls en modul tds
+        InterpreterTarget.print_decls en modul itds
     in
-        
+
+    let has_out = has_out_exprs tds in
+    if has_out
+    then begin
+      let output_types_fsti_file =
+        open_write_file
+          (Printf.sprintf "%s/%s.OutputTypes.fsti" (Options.get_output_dir ()) modul) in
+      FStar.IO.write_string output_types_fsti_file (Target.print_out_exprs_fstar modul tds);
+      FStar.IO.close_write_file output_types_fsti_file
+    end;
+
     let fst_file =
       open_write_file
         (Printf.sprintf "%s/%s.fst"
           (Options.get_output_dir())
           modul) in
+    let maybe_open_otypes =
+      if has_out
+      then Printf.sprintf "open %s.OutputTypes" modul
+      else ""
+    in
     FStar.IO.write_string fst_file 
       (FStar.Printf.sprintf "module %s\n\
                              open Prelude\n\
                              open EverParse3d.Actions.All\n\
                              open Interpreter\n\
+                             %s\n\
                              module T = FStar.Tactics\n\
                              module A = EverParse3d.Actions.All\n\
                              module B = LowStar.Buffer\n\
                              module P = Prelude\n\
                              #push-options \"--fuel 0 --ifuel 0\"\n\
                              #push-options \"--using_facts_from 'Prims FStar.UInt FStar.UInt8 FStar.UInt16 FStar.UInt32 FStar.UInt64 Prelude Everparse3d FStar.Int.Cast %s'\"\n"
-                             modul modul);
+                             modul maybe_open_otypes modul);
     FStar.IO.write_string fst_file impl;    
     FStar.IO.close_write_file fst_file
 
@@ -283,7 +299,7 @@ let process_file (en:env) (fn:string) (modul:string) (emit_fstar:bool) (emit_out
       match interpreter_decls_opt with
       | None -> failwith "Impossible: interpreter mode expects interperter target decls"
       | Some tds ->
-        emit_fstar_code_for_interpreter en modul tds
+        emit_fstar_code_for_interpreter en modul t_decls tds
     )
     else (
          emit_fstar_code en modul t_decls
