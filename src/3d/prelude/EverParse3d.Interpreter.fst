@@ -15,7 +15,7 @@
 
    Authors: N. Swamy, ...
 *)
-module Interpreter
+module EverParse3d.Interpreter
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module LPL = EverParse3d.InputBuffer
@@ -23,8 +23,8 @@ module B = LowStar.Buffer
 module A = EverParse3d.Actions.All
 module P = Prelude
 module T = FStar.Tactics
-module ProjTac = Proj
-#push-options "--__temp_no_proj Interpreter" //we'll generate the projectors we need with a tactic
+module ProjTac = EverParse3d.ProjectorTactic
+#push-options "--__temp_no_proj EverParse3d.Interpreter" //we'll generate the projectors we need with a tactic
 
 (* This module defines a strongly typed abstract syntax for an
    intermediate representation of 3D programs. This is the type `typ`.

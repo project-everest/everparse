@@ -215,7 +215,7 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (tds:list T.decl) (i
       (FStar.Printf.sprintf "module %s\n\
                              open Prelude\n\
                              open EverParse3d.Actions.All\n\
-                             open Interpreter\n\
+                             open EverParse3d.Interpreter\n\
                              %s\n\
                              module T = FStar.Tactics\n\
                              module A = EverParse3d.Actions.All\n\

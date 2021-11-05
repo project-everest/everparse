@@ -1,7 +1,7 @@
 module Samples
 open Prelude
 open EverParse3d.Actions
-open Interpreter
+open EverParse3d.Interpreter
 module T = FStar.Tactics
 module A = EverParse3d.Actions.All
 module P = Prelude
@@ -199,19 +199,19 @@ let validate_u8_rect2
 
 //     Actions.validate_pair ""
 //     (Actions.validate_pair ""
-//         (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-//         (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
+//         (Actions.validate_pair "" EverParse3d.Interpreter.validate_u8_pair EverParse3d.Interpreter.validate_u8_pair)
+//         (Actions.validate_pair "" EverParse3d.Interpreter.validate_u8_pair EverParse3d.Interpreter.validate_u8_pair))
 //     (Actions.validate_pair ""
 //         (Actions.validate_pair ""
-//             (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-//             (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
+//             (Actions.validate_pair "" EverParse3d.Interpreter.validate_u8_pair EverParse3d.Interpreter.validate_u8_pair)
+//             (Actions.validate_pair "" EverParse3d.Interpreter.validate_u8_pair EverParse3d.Interpreter.validate_u8_pair))
 //         (Actions.validate_pair ""
 //             (Actions.validate_pair ""
-//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair))
+//                 (Actions.validate_pair "" EverParse3d.Interpreter.validate_u8_pair EverParse3d.Interpreter.validate_u8_pair)
+//                 (Actions.validate_pair "" EverParse3d.Interpreter.validate_u8_pair EverParse3d.Interpreter.validate_u8_pair))
 //             (Actions.validate_pair ""
-//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)
-//                 (Actions.validate_pair "" Interpreter.validate_u8_pair Interpreter.validate_u8_pair)))
+//                 (Actions.validate_pair "" EverParse3d.Interpreter.validate_u8_pair EverParse3d.Interpreter.validate_u8_pair)
+//                 (Actions.validate_pair "" EverParse3d.Interpreter.validate_u8_pair EverParse3d.Interpreter.validate_u8_pair)))
 //     )
 
 //  **)
