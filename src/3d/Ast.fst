@@ -325,7 +325,8 @@ noeq
 type atomic_action =
   | Action_return of expr
   | Action_abort
-  | Action_field_pos
+  | Action_field_pos_64
+  | Action_field_pos_32
   | Action_field_ptr
   | Action_deref of ident
   | Action_assignment : lhs:out_expr -> rhs:expr -> atomic_action

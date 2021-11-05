@@ -167,19 +167,24 @@ let add_local (e:env) (i:ident) (t:typ) : ML unit =
   H.insert e.locals i.v (i'.v, t, false);
   H.insert e.locals i'.v (i'.v, t, false)
 
-let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes macro_signature)) =
+let try_lookup (e:env) (i:ident) : ML (option (either typ (decl & either decl_attributes macro_signature))) =
   match H.try_find e.locals i.v with
   | Some (_, t, true) ->
-    Inl t
+    Some (Inl t)
   | Some (j, t, false) ->  //mark it as used
     H.remove e.locals i.v;
     H.insert e.locals i.v (j, t, true);
-    Inl t
+    Some (Inl t)
   | None ->
     match H.try_find e.globals.ge_h i.v with
-    | Some d -> Inr d
-    | None -> error (Printf.sprintf "Variable %s not found" (ident_to_string i)) i.range
+    | Some d -> Some (Inr d)
+    | None -> None
 
+let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes macro_signature)) =
+  match try_lookup e i with
+  | None -> error (Printf.sprintf "Variable %s not found" (ident_to_string i)) i.range
+  | Some v -> v
+  
 let remove_local (e:env) (i:ident) : ML unit =
   match H.try_find e.locals i.v with
   | Some (j, _, _) ->
@@ -187,7 +192,7 @@ let remove_local (e:env) (i:ident) : ML unit =
     H.remove e.locals j
   | _ -> ()
 
-let resolve_typedef_abbrev (env:env) (i:ident) =
+let resolve_record_case_outputtype_name (env:env) (i:ident) =
   match H.try_find (global_env_of_env env).ge_out_t i.v with
   | Some ({d_decl={v=OutputType ({out_typ_names=names})}}) -> names.typedef_name
   | _ ->
@@ -228,6 +233,12 @@ let lookup_enum_cases (e:env) (i:ident)
   = match try_lookup_enum_cases e i with
     | Some (tags, t) -> tags, t
     | _ -> error (Printf.sprintf "Type %s is not an enumeration" (ident_to_string i)) i.range
+
+let is_enum (e:env) (t:typ) =
+  match t.v with
+  | Type_app i false [] ->
+    Some? (try_lookup_enum_cases e i)
+  | _ -> false
 
 let is_used (e:env) (i:ident) : ML bool =
   match H.try_find e.locals i.v with
@@ -309,7 +320,38 @@ let typ_has_reader env (t:typ) : ML bool =
   | Type_app hd _ _ ->
     has_reader env.globals hd
 
-let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
+let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
+  match t.v with
+  | Type_app hd _ [] -> //type abbreviations are not parameterized
+    begin
+    match try_lookup env hd with
+    | Some (Inr (d, _)) ->
+      begin
+      match d.d_decl.v with
+      | TypeAbbrev t _ -> unfold_typ_abbrev_only env t
+      | _ -> t
+      end
+    | _ -> t
+    end
+  | _ -> t
+
+let update_typ_abbrev (env:env) (i:ident) (t:typ) 
+  : ML unit
+  = match H.try_find env.globals.ge_h i.v with
+    | Some (d, ms) ->
+      let d_decl =
+        match d.d_decl.v with
+        | TypeAbbrev _ _ -> {d.d_decl with v = TypeAbbrev t i }
+        | _ -> failwith "Expected a type abbreviation"
+      in
+      let d = {d with d_decl = d_decl } in
+      let entry = (d, ms) in
+      H.insert env.globals.ge_h i.v entry
+      
+   | _ -> 
+     failwith "Type abbreviation not found"
+
+let rec unfold_typ_abbrev_and_enum (env:env) (t:typ) : ML typ =
   match t.v with
   | Type_app hd _ [] -> //type abbreviations are not parameterized
     begin
@@ -317,8 +359,8 @@ let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
     | Inr (d, _) ->
       begin
       match d.d_decl.v with
-      | TypeAbbrev t _ -> unfold_typ_abbrevs env t
-      | Enum t _ _ -> unfold_typ_abbrevs env t
+      | TypeAbbrev t _ -> unfold_typ_abbrev_and_enum env t
+      | Enum t _ _ -> unfold_typ_abbrev_and_enum env t
       | _ -> t
       end
     | _ -> t
@@ -327,7 +369,7 @@ let rec unfold_typ_abbrevs (env:env) (t:typ) : ML typ =
 
 let size_of_integral_typ (env:env) (t:typ) r
   : ML int
-  = let t = unfold_typ_abbrevs env t in
+  = let t = unfold_typ_abbrev_and_enum env t in
     if not (typ_is_integral env t)
     then error (Printf.sprintf "Expected and integral type, got %s"
                                                 (print_typ t))
@@ -341,7 +383,7 @@ let size_of_integral_typ (env:env) (t:typ) r
 
 let eq_typ env t1 t2 =
   if Ast.eq_typ t1 t2 then true
-  else Ast.eq_typ (unfold_typ_abbrevs env t1) (unfold_typ_abbrevs env t2)
+  else Ast.eq_typ (unfold_typ_abbrev_and_enum env t1) (unfold_typ_abbrev_and_enum env t2)
 
 let eq_typs env ts =
   List.for_all (fun (t1, t2) -> eq_typ env t1 t2) ts
@@ -354,8 +396,8 @@ let try_cast_integer env et to : ML (option expr) =
   let i_from = typ_is_integral env from in
   if i_from && i_to
   then
-    let i_from = typ_as_integer_type (unfold_typ_abbrevs env from) in
-    let i_to = typ_as_integer_type (unfold_typ_abbrevs env to) in
+    let i_from = typ_as_integer_type (unfold_typ_abbrev_and_enum env from) in
+    let i_to = typ_as_integer_type (unfold_typ_abbrev_and_enum env to) in
     if i_from = i_to
     then Some e
     else if integer_type_leq i_from i_to
@@ -375,7 +417,7 @@ let try_retype_arith_exprs (env:env) e1 e2 rng : ML (option (expr & expr & typ))
                                                         (print_expr e2)
                                                         (print_typ t2))) in
   try
-    let t1, t2 = unfold_typ_abbrevs env t1, unfold_typ_abbrevs env t2 in
+    let t1, t2 = unfold_typ_abbrev_and_enum env t1, unfold_typ_abbrev_and_enum env t2 in
     if not (typ_is_integral env t1 `_and_`
             typ_is_integral env t2)
     then fail 1;
@@ -469,7 +511,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
     let oe = check_out_expr env oe in
     let oe_bt, oe_t = Some?.v oe.out_expr_meta in
     {oe0 with
-     out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
+     out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
      out_expr_meta=Some (oe_bt, with_range (Pointer oe_t) oe.out_expr_node.range)}
   | OE_deref oe f ->
     let oe = check_out_expr env oe in
@@ -811,7 +853,7 @@ and check_typ_param (env:env) (p:typ_param) : ML (typ_param & typ) =
     Inr o, (let _, t = Some?.v o.out_expr_meta in t)
 
 #pop-options
-#push-options "--z3rlimit_factor 2"
+#push-options "--z3rlimit_factor 3"
 
 let rec check_field_action (env:env) (f:field) (a:action)
   : ML (action & typ)
@@ -825,8 +867,11 @@ let rec check_field_action (env:env) (f:field) (a:action)
         | Action_abort ->
           Action_abort, tunit
 
-        | Action_field_pos ->
-          Action_field_pos, tuint64
+        | Action_field_pos_64 ->
+          Action_field_pos_64, tuint64
+
+        | Action_field_pos_32 ->
+          Action_field_pos_32, tuint32
 
         | Action_field_ptr ->
           Action_field_ptr, puint8
@@ -1264,8 +1309,10 @@ let elaborate_record (e:global_env)
           f.comments
       in
       let has_reader = typ_has_reader env f.v.field_type in
+      let is_enum = is_enum env f.v.field_type in
       if f.v.field_dependence
       && not has_reader
+      && not is_enum //if it's an enum, it can be inlined later to allow dependence
       then error "The type of this field does not have a reader, \
                   either because its values are too large \
                   or because reading it may incur a double fetch; \

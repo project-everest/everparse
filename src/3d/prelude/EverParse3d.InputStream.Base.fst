@@ -6,6 +6,7 @@ module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module B = LowStar.Buffer
 module LPE = EverParse3d.ErrorCode
+module LP = LowParse.Low.Base
 
 noextract
 inline_for_extraction
@@ -69,26 +70,31 @@ class input_stream_inst (t: Type) : Type = {
     ));
 
   read:
+    (t': Type0) ->
+    (k: LP.parser_kind) ->
+    (p: LP.parser k t') ->
+    (r: LP.leaf_reader p) ->
     (x: t) ->
     (pos: LPE.pos_t) ->
     (n: U64.t) ->
-    (dst: B.buffer U8.t) ->
-    HST.Stack (B.buffer U8.t)
+    HST.Stack t'
     (requires (fun h ->
       live x h /\
-      B.live h dst /\
-      B.loc_disjoint (footprint x) (B.loc_buffer dst) /\
       U64.v pos == Seq.length (get_read x h) /\
-      B.length dst == U64.v n /\
-      Seq.length (get_remaining x h) >= U64.v n
+      k.LP.parser_kind_subkind == Some LP.ParserStrong /\
+      k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+      k.LP.parser_kind_low == U64.v n /\
+      U64.v n > 0 /\
+      U64.v n < 4294967296 /\
+      Some? (LP.parse p (get_remaining x h))
     ))
     (ensures (fun h dst' h' ->
       let s = get_remaining x h in
-      B.modifies (B.loc_buffer dst `B.loc_union` footprint x) h h' /\
-      B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
+      B.modifies (footprint x) h h' /\
+      Seq.length s >= U64.v n /\
+      LP.parse p (Seq.slice s 0 (U64.v n)) == Some (dst', U64.v n) /\
+      LP.parse p s == Some (dst', U64.v n) /\
       live x h' /\
-      B.live h' dst' /\
-      (B.loc_buffer dst `B.loc_union` footprint x) `B.loc_includes` B.loc_buffer dst' /\
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ));
 

@@ -59,8 +59,11 @@ and simplify_typ (env:T.env_t) (t:typ)
     | Pointer t -> {t with v=Pointer (simplify_typ env t)}
     | Type_app s b ps ->
       let ps = List.map (simplify_typ_param env) ps in
-      let s = B.resolve_typedef_abbrev (fst env) s in
-      { t with v = Type_app s b ps }
+      let s = B.resolve_record_case_outputtype_name (fst env) s in
+      let t = { t with v = Type_app s b ps } in
+      if Options.get_interpret()
+      then B.unfold_typ_abbrev_only (fst env) t
+      else t
 
 and simplify_out_expr_node (env:T.env_t) (oe:with_meta_t out_expr')
   : ML (with_meta_t out_expr')
@@ -134,7 +137,10 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   | Define i (Some t) c -> decl_with_v d (Define i (Some (simplify_typ env t)) c)
 
   | TypeAbbrev t i ->
-    decl_with_v d (TypeAbbrev (simplify_typ env t) i)
+    let t' = simplify_typ env t in
+    if Options.get_interpret() 
+    then B.update_typ_abbrev (fst env) i t';
+    decl_with_v d (TypeAbbrev t' i)
 
   | Enum t i cases ->
     let t = simplify_typ env t in

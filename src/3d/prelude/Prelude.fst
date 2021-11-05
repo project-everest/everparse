@@ -27,32 +27,10 @@ module U64 = FStar.UInt64
 // Parsers
 ////////////////////////////////////////////////////////////////////////////////
 
-let parser_kind_prop
-  (nz: bool)
-  (wk: weak_kind)
-  (k: LP.parser_kind)
-: Tot prop
-= (nz ==> (k.LP.parser_kind_low > 0)) /\
-  begin match wk with
-  | WeakKindStrongPrefix -> k.LP.parser_kind_subkind == Some LP.ParserStrong
-  | WeakKindConsumesAll -> k.LP.parser_kind_subkind == Some LP.ParserConsumesAll
-  | _ -> True
-  end
-
-inline_for_extraction
-noextract
-let parser_kind (nz:bool) (wk: weak_kind) =
-  k:LP.parser_kind { parser_kind_prop nz wk k }
-
 let parser k t = LP.parser k t
 
 let is_weaker_than #nz1 #wk1 (k:parser_kind nz1 wk1)
                    #nz2 #wk2 (k':parser_kind nz2 wk2) = k `LP.is_weaker_than` k'
-
-inline_for_extraction
-noextract
-let glb k1 k2
-    = LP.glb k1 k2
 
 let is_weaker_than_refl #nz #wk (k:parser_kind nz wk)
   : Lemma (ensures (is_weaker_than k k))
@@ -69,19 +47,12 @@ let is_weaker_than_glb #nz1 #wk1 (k1:parser_kind nz1 wk1)
   = ()
 
 /// Parser: return
-inline_for_extraction
-noextract
-let ret_kind = LPC.parse_ret_kind
 inline_for_extraction noextract
 let parse_ret #t (v:t)
   : Tot (parser ret_kind t)
   = LPC.parse_ret #t v
 
 /// Parser: bind
-inline_for_extraction
-noextract
-let and_then_kind k1 k2
-    = LPC.and_then_kind k1 k2
 inline_for_extraction noextract
 let parse_dep_pair p1 p2
   = LPC.parse_dtuple2 p1 p2
@@ -94,9 +65,6 @@ let parse_pair p1 p2
 /// Parser: map
 let injective_map a b = (a -> Tot b) //{LPC.synth_injective f}
 
-inline_for_extraction
-noextract
-let filter_kind k = LPC.parse_filter_kind k
 inline_for_extraction noextract
 let parse_filter p f
   = LPC.parse_filter p f
@@ -118,11 +86,6 @@ inline_for_extraction noextract
 let parse_weaken_right #nz #wk #k p k'
   = LP.weaken (glb k k') p
 
-inline_for_extraction
-noextract
-let impos_kind =
-  LPC.(strong_parser_kind 1 1 (Some ParserKindMetadataFail))
-
 /// Parser: unreachable, for default cases of exhaustive pattern matching
 inline_for_extraction noextract
 let parse_impos ()
@@ -134,20 +97,7 @@ let parse_impos ()
 let parse_ite e p1 p2
   = if e then p1 () else p2 ()
 
-
 let nlist (n:U32.t) (t:Type) = list t
-
-/// Lists/arrays
-inline_for_extraction
-noextract
-let kind_nlist =
-  let open LP in
-  {
-    parser_kind_low = 0;
-    parser_kind_high = None;
-    parser_kind_subkind = Some ParserStrong;
-    parser_kind_metadata = None
-  }
 
 inline_for_extraction noextract
 let parse_nlist n #wk #k #t p
@@ -159,8 +109,9 @@ let parse_nlist n #wk #k #t p
             #false kind_nlist
 
 let all_bytes = Seq.seq LP.byte
-let kind_all_bytes = LowParse.Spec.Bytes.parse_all_bytes_kind
-let parse_all_bytes' : LP.bare_parser all_bytes = fun input -> Some (input, (Seq.length input <: LP.consumed_length input))
+let parse_all_bytes' 
+  : LP.bare_parser all_bytes 
+  = fun input -> Some (input, (Seq.length input <: LP.consumed_length input))
 let parse_all_bytes =
   LP.parser_kind_prop_equiv kind_all_bytes parse_all_bytes';
   parse_all_bytes'
@@ -168,7 +119,6 @@ let parse_all_bytes =
 ////////////////////////////////////////////////////////////////////////////////
 module B32 = FStar.Bytes
 let t_at_most (n:U32.t) (t:Type) = t & all_bytes
-let kind_t_at_most = kind_nlist
 inline_for_extraction noextract
 let parse_t_at_most n #nz #wk #k #t p
   = let open LowParse.Spec.FLData in
@@ -184,7 +134,6 @@ let parse_t_at_most n #nz #wk #k #t p
 
 ////////////////////////////////////////////////////////////////////////////////
 let t_exact (n:U32.t) (t:Type) = t
-let kind_t_exact = kind_nlist
 inline_for_extraction noextract
 let parse_t_exact n #nz #wk #k #t p
   = let open LowParse.Spec.FLData in
@@ -209,6 +158,13 @@ inline_for_extraction noextract
 let read_filter p32 f
     = LPLC.read_filter p32 f
 
+let read_impos : reader (parse_impos()) = 
+  fun #rrel #rel sl pos -> 
+    let h = FStar.HyperStack.ST.get() in
+    assert (LPLC.valid (parse_impos()) h sl pos);
+    LowParse.Low.Base.Spec.valid_equiv (parse_impos()) h sl pos;
+    false_elim ()
+  
 // ////////////////////////////////////////////////////////////////////////////////
 // // Validators
 // ////////////////////////////////////////////////////////////////////////////////
@@ -299,13 +255,6 @@ let cstring
 : Tot Type0
 = LUT.parse_list_up_to_t (cond_string_up_to terminator)
 
-let parse_string_kind = {
-  LP.parser_kind_low = 1;
-  LP.parser_kind_high = None;
-  LP.parser_kind_subkind = Some LP.ParserStrong;
-  LP.parser_kind_metadata = None;
-}
-
 let parse_string
   #k #t p terminator
 =
@@ -316,7 +265,6 @@ inline_for_extraction noextract
 let is_zero (x: FStar.UInt8.t) : Tot bool = x = 0uy
 
 let all_zeros = list (LowParse.Spec.Combinators.parse_filter_refine is_zero)
-let kind_all_zeros = LowParse.Spec.List.parse_list_kind
 let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.parse_filter LowParse.Spec.Int.parse_u8 is_zero)
 
 
@@ -325,46 +273,32 @@ let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.p
 ////////////////////////////////////////////////////////////////////////////////
 
 /// UINT8
-inline_for_extraction noextract
-let kind____UINT8 = LowParse.Spec.Int.parse_u8_kind
 let parse____UINT8 = LowParse.Spec.Int.parse_u8
 let read____UINT8 = LowParse.Low.Int.read_u8
 
 /// UInt16BE
-inline_for_extraction noextract
-let kind____UINT16BE = LowParse.Spec.BoundedInt.parse_u16_kind
 let parse____UINT16BE = LowParse.Spec.Int.parse_u16
 let read____UINT16BE = LowParse.Low.Int.read_u16
 
 /// UInt32BE
-inline_for_extraction noextract
-let kind____UINT32BE = LowParse.Spec.BoundedInt.parse_u32_kind
 let parse____UINT32BE = LowParse.Spec.Int.parse_u32
 let read____UINT32BE = LowParse.Low.Int.read_u32
 
 /// UInt64BE
-inline_for_extraction noextract
-let kind____UINT64BE = LowParse.Spec.Int.parse_u64_kind
 let parse____UINT64BE = LowParse.Spec.Int.parse_u64
 let read____UINT64BE = LowParse.Low.Int.read_u64
 
 
 /// UInt16
-inline_for_extraction noextract
-let kind____UINT16 = LowParse.Spec.BoundedInt.parse_u16_kind
 let parse____UINT16 = LowParse.Spec.BoundedInt.parse_u16_le
 let read____UINT16 = LowParse.Low.BoundedInt.read_u16_le
 
 /// UInt32
-inline_for_extraction noextract
-let kind____UINT32 = LowParse.Spec.BoundedInt.parse_u32_kind
 let parse____UINT32 = LowParse.Spec.BoundedInt.parse_u32_le
 let read____UINT32 = LowParse.Low.BoundedInt.read_u32_le
 
 
 /// UInt64
-inline_for_extraction noextract
-let kind____UINT64 = LowParse.Spec.Int.parse_u64_kind
 let parse____UINT64 = LowParse.Spec.Int.parse_u64_le
 let read____UINT64 = LowParse.Low.Int.read_u64_le
   

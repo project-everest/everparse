@@ -27,7 +27,7 @@ ifdef KREMLIN_HOME
 endif
 INCLUDE_KREMLIN=--include $(KREMLIB) --include $(KREMLIB)/obj
 
-FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN) --already_cached *,-LowParse
+FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN)
 
 LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
 

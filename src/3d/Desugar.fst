@@ -25,6 +25,9 @@ module H = Hashtable
    * Desugar enums with newly defined idents and explicit constant
      assignments to enums where all the tags are previously defined
      constants.
+
+   * Resolve module-qualified names, including the use of module 
+     abbreviations
 *)
 
 let check_desugared_enum_cases (cases:list enum_case) : ML (list ident) =
@@ -203,7 +206,8 @@ let resolve_atomic_action (env:qenv) (ac:atomic_action) : ML atomic_action =
   match ac with
   | Action_return e -> Action_return (resolve_expr env e)
   | Action_abort
-  | Action_field_pos
+  | Action_field_pos_64
+  | Action_field_pos_32
   | Action_field_ptr -> ac
   | Action_deref i -> Action_deref i  //most certainly a type parameter
   | Action_assignment lhs rhs ->

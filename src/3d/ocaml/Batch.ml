@@ -74,7 +74,7 @@ let fstar_args
       "--cache_dir" :: out_dir ::
         "--include" :: ddd_actions_home input_stream_binding ::
         "--include" :: out_dir ::
-          "--load_cmxs" :: "WeakenTac" ::
+        "--load_cmxs" :: "WeakenTac" ::
             fstar_args0
 
 let verify_fst_file
@@ -120,8 +120,7 @@ let pretty_print_source_module
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
   let fsti_file = Printf.sprintf "%si" fst_file in
   let all_files =
-    (if file_exists output_types_fsti_file then [output_types_fsti_file] else []) @
-    [types_fst_file; fsti_file; fst_file] in
+    List.filter file_exists [output_types_fsti_file; types_fst_file; fsti_file; fst_file] in
   List.iter (pretty_print_source_file input_stream_binding out_dir) all_files
 
 let pretty_print_source_modules
@@ -138,20 +137,21 @@ let verify_and_extract_module
     : unit
   =
   let output_types_fsti_file =
-    let fn = filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul) in
-    if file_exists fn then [fn] else [] in
-  let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
-  let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
-  let fsti_file = Printf.sprintf "%si" fst_file in
-  List.iter (verify_fst_file input_stream_binding out_dir) (output_types_fsti_file@[
-      types_fst_file;
-      fsti_file;
-      fst_file;
-  ]);
-  List.iter (extract_fst_file input_stream_binding out_dir) (output_types_fsti_file@[
-      types_fst_file;
-      fst_file;
-  ])
+    filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul)
+  in
+  let fst_file = 
+      filename_concat out_dir (Printf.sprintf "%s.fst" modul)
+  in
+  let types_fst_file = 
+      filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul)
+  in
+  let fsti_file = 
+      Printf.sprintf "%si" fst_file
+  in
+  let all_files = List.filter file_exists [output_types_fsti_file; types_fst_file; fsti_file; fst_file] in
+  let all_extract_files = List.filter file_exists [output_types_fsti_file; types_fst_file; fst_file] in  
+  List.iter (verify_fst_file input_stream_binding out_dir) all_files;
+  List.iter (extract_fst_file input_stream_binding out_dir) all_extract_files
 
 let is_krml
       filename
@@ -210,6 +210,16 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
   let has_output_types modul =
     file_exists (filename_concat out_dir (Printf.sprintf "%s.OutputTypes.fsti" modul)) in
 
+  let has_types modul =
+    file_exists (filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul))
+  in
+
+  let types_krml modul =
+    if has_types modul
+    then [filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul)]
+    else []
+  in
+
   let output_types_krml modul =
     if has_output_types modul
     then [filename_concat out_dir (Printf.sprintf "%s_OutputTypes.krml" modul)]
@@ -233,8 +243,9 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
   let krml_files = List.fold_left
                      (fun accu (_, modul) ->
                        let l =
+                         (types_krml modul)@
 			 (output_types_krml modul)@(filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
-                                                    filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul) :: accu)
+                                                    accu)
                        in
 
 		       let c_wrapper = Printf.sprintf "%sWrapper.c" modul in
@@ -264,10 +275,9 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
   let krml_args =
     "-tmpdir" :: out_dir ::
       "-skip-compilation" ::
-        "-static-header" :: "LowParse.Low.Base,Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.InputBuffer.Aux,EverParse3d.InputStream.\\*" ::
+        "-static-header" :: "LowParse.Low.Base,Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.InputStream.\\*" ::
           "-no-prefix" :: "LowParse.Slice" ::
             "-no-prefix" :: "LowParse.Low.BoundedInt" ::
-              "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
                 "-library" :: everparse_only_bundle ::
                   "-warn-error" :: "-9@4-20" ::
                     "-fnoreturn-else" ::
@@ -330,12 +340,19 @@ let produce_c_files
     : unit
   =
   let krml_args = krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules in
-  (* bundle M.Types.krml and EverParse into M *)
+  (* if M.Types exists, then bundle M.Types.krml and EverParse into M *)
   let krml_args =
+    let files_and_modules_with_types =
+      List.filter
+        (fun (_, modul) ->
+          Sys.file_exists (filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul))
+        )
+        files_and_modules
+    in
     let bundle_types = List.fold_left (fun acc (_, modul) ->
                            "-bundle"::(Printf.sprintf "%s=%s.Types"
                                          modul
-                                         modul)::acc) [] files_and_modules in
+                                         modul)::acc) [] files_and_modules_with_types in
     krml_args@bundle_types
   in
   call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
@@ -612,8 +629,12 @@ let postprocess_c
   if not no_everparse_h
   then begin
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      copy (filename_concat (ddd_actions_home input_stream_binding) "EverParse.h") dest_everparse_h;
-      copy (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) (filename_concat out_dir "EverParseEndianness.h")
+      let everparse_h_source = (filename_concat (ddd_actions_home input_stream_binding) "EverParse.h") in
+      if file_exists everparse_h_source
+      then copy everparse_h_source dest_everparse_h;
+      let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
+      if file_exists everparse_endianness_source
+      then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")
     end;
   (* clang-format the files if asked for *)
   if clang_format

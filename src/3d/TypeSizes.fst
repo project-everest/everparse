@@ -397,9 +397,9 @@ let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
     B.mk_env genv, senv in
     // {senv with sizes = H.create 10} in
   let ds = List.map (decl_size_with_alignment env) ds in
-  ds, snd env
+  ds
 
 let finish_module en mname e_and_p =
-  e_and_p |> snd |> List.iter (H.remove en);
-  en
+  e_and_p |> snd |> List.iter (H.remove en)
+
   

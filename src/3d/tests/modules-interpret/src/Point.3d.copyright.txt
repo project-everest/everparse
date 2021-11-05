@@ -1,0 +1,4 @@
+/*
+Check inplace hashes:
+EVERPARSEHASHES
+*/

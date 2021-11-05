@@ -119,6 +119,16 @@ let valid_rewrite_parse_vldata
   );
 }
 
+
+val parse_bounded_integer'
+  (sz: integer_size)
+: Tot (p' : parser {
+    Parser?.t p' == LPI.bounded_integer (U32.v sz) /\
+    get_parser_kind p' == LPI.parse_bounded_integer_kind (U32.v sz)  /\
+    get_parser p' == LPI.parse_bounded_integer (U32.v sz)//  /\
+    // get_serializer p' == LPI.serialize_bounded_integer (U32.v sz)
+  })
+
 let parse_bounded_integer
   sz
 =

@@ -1,4 +1,4 @@
-#include "ArithWrapper.h"
+#include "ArithmeticWrapper.h"
 #include <stdint.h>
 #include <iostream>
 
@@ -8,11 +8,11 @@ uint8_t test[20] = {
 };
 
 extern "C"
-void ArithEverParseError(char *x, char *y, char *z) {
+void ArithmeticEverParseError(char *x, char *y, char *z) {
 }
 
 int main(int argc, char** argv) {
-  if (! (ArithCheckTest3(test, 20))) {
+  if (! (ArithmeticCheckTest3(test, 20))) {
       std::cout << "Validation failed, but that's fine" << std::endl;
   } else {
       std::cout << "Validation succeeded" << std::endl;
