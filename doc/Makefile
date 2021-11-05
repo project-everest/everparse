@@ -29,7 +29,7 @@ BUILDDIR      = _build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot 3d-ci
+.PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot 3d-ci %.diff-nobuild
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
@@ -57,6 +57,11 @@ $(3D_SNAPSHOT): 3d-snapshot/%: out/%
 all-diffs: $(3D_DIFF)
 
 %.diff: 3d-do-tests
+	diff -w -B out/$(basename $@) 3d-snapshot/$(basename $@)
+
+all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
+
+%.diff-nobuild:
 	diff -w -B out/$(basename $@) 3d-snapshot/$(basename $@)
 
 clean:
