@@ -85,6 +85,8 @@ let uint64_to_uint32
 = FStar.Math.Lemmas.modulo_lemma (U64.v x) 4294967296;
   FStar.Int.Cast.uint64_to_uint32 x
 
+module LP = LowParse.Low.Base
+
 let inst = {
 
   live = _live;
@@ -121,12 +123,16 @@ let inst = {
     n `U64.lte` (xlen `U64.sub` currentPosition)
   end;
 
-  read = begin fun x currentPosition n dst ->
-    let h0 = HST.get () in
-    let res = B.sub x.buf (uint64_to_uint32 currentPosition) (uint64_to_uint32 n) in
+  read = begin fun _ k p r x currentPosition n ->
+    let h = HST.get () in
+    LP.parser_kind_prop_equiv k p;
+    let dst' = B.sub x.buf (uint64_to_uint32 currentPosition) (uint64_to_uint32 n) in
     x.pos *= uint64_to_uint32 (currentPosition `U64.add` n);
-    let h' = HST.get () in
-    res
+    [@inline_let]
+    let sl = LP.make_slice dst' (uint64_to_uint32 n) in
+    LP.parse_strong_prefix p (_get_remaining x h) (B.as_seq h dst');
+    LP.valid_facts p h sl 0ul;
+    r sl 0ul
   end;
 
   skip = begin fun x currentPosition n ->
