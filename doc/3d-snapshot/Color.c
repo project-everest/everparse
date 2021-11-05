@@ -18,6 +18,81 @@ Enum constant
 #define BLUE ((uint32_t)42U)
 
 static inline uint64_t
+ValidateColor(
+  uint8_t *Ctxt,
+  void
+  (*Err)(
+    EverParseString x0,
+    EverParseString x1,
+    EverParseString x2,
+    uint8_t *x3,
+    uint8_t *x4,
+    uint64_t x5
+  ),
+  uint8_t *Input,
+  uint64_t InputLength,
+  uint64_t StartPosition
+)
+{
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
+  uint64_t positionAftercolor0;
+  if (hasBytes)
+  {
+    positionAftercolor0 = StartPosition + (uint64_t)4U;
+  }
+  else
+  {
+    positionAftercolor0 =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
+  }
+  uint64_t positionAftercolor1;
+  if (EverParseIsSuccess(positionAftercolor0))
+  {
+    positionAftercolor1 = positionAftercolor0;
+  }
+  else
+  {
+    Err("color",
+      "",
+      EverParseErrorReasonOfResult(positionAftercolor0),
+      Ctxt,
+      Input,
+      StartPosition);
+    positionAftercolor1 = positionAftercolor0;
+  }
+  uint64_t positionAftercolor;
+  if (EverParseIsError(positionAftercolor1))
+  {
+    positionAftercolor = positionAftercolor1;
+  }
+  else
+  {
+    /* reading field value */
+    uint8_t temp[4U] = { 0U };
+    uint8_t *temp1 = Input + (uint32_t)StartPosition;
+    uint32_t res = Load32Le(temp1);
+    uint32_t color = res;
+    /* start: checking constraint */
+    BOOLEAN colorConstraintIsOk = color == RED || color == GREEN || color == BLUE || FALSE;
+    /* end: checking constraint */
+    positionAftercolor = EverParseCheckConstraintOk(colorConstraintIsOk, positionAftercolor1);
+  }
+  if (EverParseIsSuccess(positionAftercolor))
+  {
+    return positionAftercolor;
+  }
+  Err("color",
+    ".refinement",
+    EverParseErrorReasonOfResult(positionAftercolor),
+    Ctxt,
+    Input,
+    StartPosition);
+  return positionAftercolor;
+}
+
+static inline uint64_t
 ValidateColoredPointCol(
   uint8_t *Ctxt,
   void
@@ -40,66 +115,19 @@ ValidateColoredPointCol(
 --*/
 {
   /* Validating field col */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
-  uint64_t positionAfterColoredPoint;
-  if (hasBytes)
-  {
-    positionAfterColoredPoint = StartPosition + (uint64_t)4U;
-  }
-  else
-  {
-    positionAfterColoredPoint =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
-  }
-  uint64_t positionAfterColoredPoint0;
+  uint64_t
+  positionAfterColoredPoint = ValidateColor(Ctxt, Err, Input, InputLength, StartPosition);
   if (EverParseIsSuccess(positionAfterColoredPoint))
   {
-    positionAfterColoredPoint0 = positionAfterColoredPoint;
-  }
-  else
-  {
-    Err("_coloredPoint",
-      "_coloredPoint_col",
-      EverParseErrorReasonOfResult(positionAfterColoredPoint),
-      Ctxt,
-      Input,
-      StartPosition);
-    positionAfterColoredPoint0 = positionAfterColoredPoint;
-  }
-  uint64_t positionAfterColoredPoint1;
-  if (EverParseIsError(positionAfterColoredPoint0))
-  {
-    positionAfterColoredPoint1 = positionAfterColoredPoint0;
-  }
-  else
-  {
-    /* reading field value */
-    uint8_t *dst_ = Input + (uint32_t)StartPosition;
-    uint32_t coloredPoint1 = Load32Le(dst_);
-    /* start: checking constraint */
-    BOOLEAN
-    coloredPointConstraintIsOk =
-      RED
-      == coloredPoint1
-      || GREEN == coloredPoint1 || BLUE == coloredPoint1;
-    /* end: checking constraint */
-    positionAfterColoredPoint1 =
-      EverParseCheckConstraintOk(coloredPointConstraintIsOk,
-        positionAfterColoredPoint0);
-  }
-  if (EverParseIsSuccess(positionAfterColoredPoint1))
-  {
-    return positionAfterColoredPoint1;
+    return positionAfterColoredPoint;
   }
   Err("_coloredPoint",
-    "_coloredPoint_col.refinement",
-    EverParseErrorReasonOfResult(positionAfterColoredPoint1),
+    "_coloredPoint_col",
+    EverParseErrorReasonOfResult(positionAfterColoredPoint),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterColoredPoint1;
+  return positionAfterColoredPoint;
 }
 
 static inline uint64_t
