@@ -274,10 +274,9 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
   let krml_args =
     "-tmpdir" :: out_dir ::
       "-skip-compilation" ::
-        "-static-header" :: "LowParse.Low.Base,Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.InputBuffer.Aux,EverParse3d.InputStream.\\*" ::
+        "-static-header" :: "LowParse.Low.Base,Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.InputStream.\\*" ::
           "-no-prefix" :: "LowParse.Slice" ::
             "-no-prefix" :: "LowParse.Low.BoundedInt" ::
-              "-no-prefix" :: "EverParse3d.InputBuffer.Aux" ::
                 "-library" :: everparse_only_bundle ::
                   "-warn-error" :: "-9@4-20" ::
                     "-fnoreturn-else" ::
