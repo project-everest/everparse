@@ -112,10 +112,9 @@ ValidateBoundedSumRight(
   else
   {
     /* reading field value */
-    uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input + (uint32_t)StartPosition;
-    uint32_t res = Load32Le(temp1);
-    uint32_t boundedSum1 = res;
+    uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
+    uint32_t res0 = res;
+    uint32_t boundedSum1 = res0;
     /* start: checking constraint */
     BOOLEAN boundedSumConstraintIsOk = Left <= Bound && boundedSum1 <= (Bound - Left);
     /* end: checking constraint */
@@ -176,10 +175,9 @@ BoundedSumValidateBoundedSum(
   {
     return positionAfterleft;
   }
-  uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input + (uint32_t)StartPosition;
-  uint32_t res = Load32Le(temp1);
-  uint32_t left = res;
+  uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
+  uint32_t res0 = res;
+  uint32_t left = res0;
   /* Field _boundedSum_right */
   uint64_t
   positionAfterBoundedSum0 =
@@ -335,10 +333,9 @@ BoundedSumValidateMySum(
   {
     return positionAfterbound;
   }
-  uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input + (uint32_t)StartPosition;
-  uint32_t res = Load32Le(temp1);
-  uint32_t bound = res;
+  uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
+  uint32_t res0 = res;
+  uint32_t bound = res0;
   /* Field mySum_sum */
   uint64_t
   positionAftermySum0 =
