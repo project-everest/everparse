@@ -18,7 +18,6 @@
 module Interpreter
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
-module LPL = EverParse3d.InputBuffer
 module B = LowStar.Buffer
 module A = EverParse3d.Actions.All
 module P = Prelude

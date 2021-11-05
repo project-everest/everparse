@@ -32,28 +32,28 @@ let slice_of #len x =
 
 let perm_of x = (snd x).p_perm
 
-let truncate_input_buffer #len0 x len =
-  match x with
-  | (base, perm) ->
-    [@inline_let]
-    let base' : base_t len = base in
-    [@inline_let]
-    let perm' : R.perm base' = perm.p_perm in
-    (base, ({ p_base = base'; p_perm = perm' }))
-
 let drop sl from to =
   match sl with
   | (base, perm) ->
     R.drop (perm.p_perm <: R.perm base) from to
 
 (* TODO: remove the slice here *)
-let read_with_perm #k #t #p r j #len sl pos =
+let read_with_perm #k #t #p r #len sl pos =
   match sl with
   | (base, _) ->
   [@inline_let] let sl' : LPL.slice triv triv = { LPL.base = base; LPL.len = len } in
-  let pos' = j sl' pos in
+  let h0 = HST.get () in
+  let pos' = Ghost.hide (LPL.get_valid_pos p h0 sl' pos) in
+  let res = r sl' pos in
+  let h1 = HST.get () in
+  R.valid_perm_frame h0 (perm_of sl) B.loc_none h1;
+  R.preserved_split (perm_of sl) 0ul pos (B.len base) h0 h1;
+  R.preserved_split (perm_of sl) pos pos' (B.len base) h0 h1;
   drop sl pos pos' ;
-  r sl' pos
+  let h2 = HST.get () in
+  R.preserved_trans (perm_of sl) 0ul pos h0 h1 h2;
+  R.preserved_trans (perm_of sl) pos' (B.len base) h0 h1 h2;
+  res
 
 let puint8 = B.buffer LPL.byte
 

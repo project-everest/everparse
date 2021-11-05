@@ -48,33 +48,20 @@ let valid_input_buffer
 
 inline_for_extraction
 noextract
-val truncate_input_buffer
-  (#len0: U32.t)
-  (sl: input_buffer_t len0)
-  (len: U32.t)
-: Pure (input_buffer_t len)
-  (requires (
-    U32.v len <= U32.v (slice_of sl).len
-  ))
-  (ensures (fun sl' ->
-    slice_of sl' == { base = (slice_of sl).base; len = len; } /\
-    perm_of sl' == perm_of sl
-  ))
-
-inline_for_extraction
-noextract
 val drop
   (#len: U32.t)
   (sl: input_buffer_t len)
-  (from: U32.t)
-  (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= U32.v (slice_of sl).LPL.len })
+  (from: Ghost.erased U32.t)
+  (to: Ghost.erased U32.t { U32.v from <= U32.v to /\ U32.v to <= U32.v (slice_of sl).LPL.len })
 : HST.Stack unit
   (requires (fun h ->
-    live_input_buffer h sl
+    R.readable h (perm_of sl) from to
   ))
   (ensures (fun h _ h' ->
-    B.modifies (R.loc_perm_from_to (perm_of sl) from to) h h' /\
+    B.modifies (R.loc_perm (perm_of sl)) h h' /\
     live_input_buffer h' sl /\
+    R.preserved (perm_of sl) 0ul from h h' /\
+    R.preserved (perm_of sl) to (B.len (slice_of sl).LPL.base) h h' /\
     R.unreadable h' (perm_of sl) from to
   ))
 
@@ -84,7 +71,6 @@ val read_with_perm
   (#t: Type u#0)
   (#p: parser k t)
   (r: leaf_reader p)
-  (j: jumper p)
   (#len: U32.t)
   (sl: input_buffer_t len)
   (pos: U32.t)
@@ -95,7 +81,9 @@ val read_with_perm
   ))
   (ensures (fun h res h' ->
     let pos' = get_valid_pos p h (slice_of sl) pos in
-    B.modifies (R.loc_perm_from_to (perm_of sl) pos pos') h h' /\
+    B.modifies (R.loc_perm (perm_of sl)) h h' /\
+    R.preserved (perm_of sl) 0ul pos h h' /\
+    R.preserved (perm_of sl) pos' (B.len (slice_of sl).LPL.base) h h' /\
     R.unreadable h' (perm_of sl) pos pos' /\
     res == contents p h (slice_of sl) pos
   ))

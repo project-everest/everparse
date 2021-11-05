@@ -6,6 +6,7 @@ module HST = FStar.HyperStack.ST
 module U32 = FStar.UInt32
 module LPL = LowParse.Low.Base
 
+// not erasable because Low* buffers of erased elements are not erasable
 inline_for_extraction noextract
 val perm (#t: Type) (b: B.buffer t) : Tot Type0
 
@@ -27,6 +28,13 @@ val valid_perm_prop (h: HS.mem) (#t: _) (#b: B.buffer t) (p: perm b)
   ))
   [SMTPat (valid_perm h p)]
 
+val preserved
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= B.length b })
+  (h h' : HS.mem)
+: Tot prop
+
 val valid_perm_frame
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -35,12 +43,13 @@ val valid_perm_frame
 : Lemma
   (requires (
     valid_perm h p /\
-    B.modifies (B.address_liveness_insensitive_locs `B.loc_union` l) h h' /\
+    B.modifies l h h' /\
     B.loc_disjoint (loc_perm p) l /\
     B.live h' b // because nothing prevents b from being deallocated
   ))
   (ensures (
-    valid_perm h' p
+    valid_perm h' p /\
+    preserved p 0ul (B.len b) h h'
   ))
 
 let valid_perm_frame_pat
@@ -56,7 +65,8 @@ let valid_perm_frame_pat
     B.live h' b // because nothing prevents b from being deallocated
   ))
   (ensures (
-    valid_perm h' p
+    valid_perm h' p /\
+    preserved p 0ul (B.len b) h h'
   ))
   [SMTPatOr [
     [ SMTPat (B.modifies l h h'); SMTPat (valid_perm h p) ] ;
@@ -64,122 +74,36 @@ let valid_perm_frame_pat
   ]]
 = valid_perm_frame h p l h'
 
-val perm_gsub
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (offset: U32.t)
-  (length: U32.t { U32.v offset + U32.v length <= B.length b })
-: GTot (perm (B.gsub b offset length))
-
-inline_for_extraction
-noextract
-val perm_sub
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (offset: U32.t)
-  (length: U32.t { U32.v offset + U32.v length <= B.length b })
-: HST.Stack (perm (B.gsub b offset length))
-  (requires (fun h -> valid_perm h p))
-  (ensures (fun h p' h' ->
-    h' == h /\
-    p' == perm_gsub p offset length
-  ))
-
-inline_for_extraction
-noextract
-val perm_offset
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (offset: U32.t { U32.v offset <= B.length b })
-: HST.Stack (perm (B.gsub b offset (B.len b `U32.sub` offset)))
-  (requires (fun h -> valid_perm h p))
-  (ensures (fun h p' h' ->
-    h' == h /\
-    p' == perm_gsub p offset (B.len b `U32.sub` offset)
-  ))
-
-val perm_gsub_gsub
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (offset1: U32.t)
-  (length1: U32.t { U32.v offset1 + U32.v length1 <= B.length b })
-  (offset2: U32.t)
-  (length2: U32.t { U32.v offset2 + U32.v length2 <= U32.v length1 })
-: Lemma
-  ( 
-    perm_gsub (perm_gsub p offset1 length1) offset2 length2 == LPL.coerce (perm (B.gsub (B.gsub b offset1 length1) offset2 length2)) (perm_gsub p (offset1 `U32.add` offset2) length2)
-  )
-  [SMTPat (perm_gsub (perm_gsub p offset1 length1) offset2 length2)]
-
-val perm_gsub_zero_length
-  (#t: _) (#b: B.buffer t) (p: perm b)
-: Lemma
-  (
-    B.gsub b 0ul (B.len b) == b /\
-    perm_gsub p 0ul (B.len b) == LPL.coerce (perm (B.gsub b 0ul (B.len b))) p
-  )
-
-val loc_perm_gsub
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (offset: U32.t)
-  (length: U32.t { U32.v offset + U32.v length <= B.length b })
-: Lemma
-  (loc_perm p `B.loc_includes` loc_perm (perm_gsub p offset length))
-  [SMTPat (loc_perm (perm_gsub p offset length))]
-
-let loc_perm_gsub_includes
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (offset1: U32.t)
-  (length1: U32.t)
-  (offset2: U32.t)
-  (length2: U32.t)
-: Lemma
-  (requires (
-    U32.v offset1 <= U32.v offset2 /\
-    U32.v offset2 + U32.v length2 <= U32.v offset1 + U32.v length1 /\
-    U32.v offset1 + U32.v length1 <= B.length b
-  ))
-  (ensures (
-    loc_perm (perm_gsub p offset1 length1) `B.loc_includes` loc_perm (perm_gsub p offset2 length2)
-  ))
-//  [SMTPat [loc_perm (perm_gsub p offset1 length1) `B.loc_includes` loc_perm (perm_gsub p offset2 length2)]]
-= perm_gsub_gsub p offset1 length1 (offset2 `U32.sub` offset1) length2
-
-val valid_perm_gsub
-  (h: HS.mem)
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (offset: U32.t)
-  (length: U32.t { U32.v offset + U32.v length <= B.length b })
-: Lemma
-  (requires (valid_perm h p))
-  (ensures (valid_perm h (perm_gsub p offset length)))
-  [SMTPat (valid_perm h (perm_gsub p offset length))]
-
-let loc_perm_from_to
+val preserved_refl
   (#t: _) (#b: B.buffer t) (p: perm b)
   (from: U32.t)
   (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= B.length b })
-: GTot B.loc
-= loc_perm (perm_gsub p from (to `U32.sub` from))
-
-val loc_perm_from_to_disjoint
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (from1: U32.t)
-  (to1: U32.t { U32.v from1 <= U32.v to1 /\ U32.v to1 <= B.length b })
-  (from2: U32.t)
-  (to2: U32.t { U32.v from2 <= U32.v to2 /\ U32.v to2 <= B.length b })
+  (h: HS.mem)
 : Lemma
-  (requires (U32.v to1 <= U32.v from2 \/ U32.v to2 <= U32.v from1))
-  (ensures (loc_perm_from_to p from1 to1 `B.loc_disjoint` loc_perm_from_to p from2 to2))
-  [SMTPat (loc_perm_from_to p from1 to1 `B.loc_disjoint` loc_perm_from_to p from2 to2)]
+  (preserved p from to h h)
 
-let loc_perm_from_to_includes
+val preserved_trans
   (#t: _) (#b: B.buffer t) (p: perm b)
-  (from1: U32.t)
-  (to1: U32.t { U32.v from1 <= U32.v to1 /\ U32.v to1 <= B.length b })
-  (from2: U32.t)
-  (to2: U32.t { U32.v from1 <= U32.v from2 /\ U32.v from2 <= U32.v to2 /\ U32.v to2 <= U32.v to1 })
+  (from: U32.t)
+  (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= B.length b })
+  (h1 h2 h3: HS.mem)
 : Lemma
-  (requires True)
-  (ensures (loc_perm_from_to p from1 to1 `B.loc_includes` loc_perm_from_to p from2 to2))
-  [SMTPat (loc_perm_from_to p from1 to1 `B.loc_includes` loc_perm_from_to p from2 to2)]
-= loc_perm_gsub_includes p from1 (to1 `U32.sub` from1) from2 (to2 `U32.sub` from2)
+  (requires (
+    preserved p from to h1 h2 /\
+    preserved p from to h2 h3
+  ))
+  (ensures (
+    preserved p from to h1 h3
+  ))
+
+val preserved_split
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+  (h h' : HS.mem)
+: Lemma
+  (preserved p from to h h' <==> (preserved p from mid h h' /\ preserved p mid to h h'))
 
 val readable
   (h: HS.mem)
@@ -198,18 +122,6 @@ val readable_prop
   (ensures (valid_perm h p))
   [SMTPat (readable h p from to)]
 
-val readable_gsub
-  (h: HS.mem)
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (offset: U32.t)
-  (length: U32.t { U32.v offset + U32.v length <= B.length b })
-  (from: U32.t)
-  (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= U32.v length })
-: Lemma
-  (requires (valid_perm h p))
-  (ensures (readable h (perm_gsub p offset length) from to <==> readable h p (offset `U32.add` from) (offset `U32.add` to)))
-  [SMTPat (readable h (perm_gsub p offset length) from to)]
-
 val readable_split
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -219,7 +131,22 @@ val readable_split
 : Lemma
   (readable h p from to <==> (readable h p from mid /\ readable h p mid to))
 
-val readable_frame
+val readable_frame0
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= B.length b })
+  (h' : HS.mem)
+: Lemma
+  (requires (
+    readable h p from to /\
+    preserved p from to h h'
+  ))
+  (ensures (
+    readable h' p from to
+  ))
+
+let readable_frame
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
   (from: U32.t)
@@ -230,7 +157,7 @@ val readable_frame
   (requires (
     readable h p from to /\
     B.modifies l h h' /\
-    B.loc_disjoint (loc_perm_from_to p from to) l /\
+    B.loc_disjoint (loc_perm p) l /\
     B.live h' b // because nothing prevents b from being deallocated
   ))
   (ensures (
@@ -240,6 +167,11 @@ val readable_frame
     [ SMTPat (B.modifies l h h'); SMTPat (readable h p from to) ] ;
     [ SMTPat (B.modifies l h h'); SMTPat (readable h' p from to) ] ;
   ]]
+=
+  valid_perm_frame h p l h' ;
+  preserved_split p 0ul from (B.len b) h h' ;
+  preserved_split p from to (B.len b) h h' ;
+  readable_frame0 h p from to h'
 
 val unreadable
   (h: HS.mem)
@@ -258,27 +190,13 @@ val unreadable_prop
   (ensures (unreadable h p from to))
   [SMTPat (readable h p from to)]
 
-val model : FStar.Ghost.erased bool
-
 val readable_not_unreadable
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
   (from: U32.t)
   (to: U32.t { U32.v from < (* important: not equal *) U32.v to /\ U32.v to <= B.length b })
 : Lemma
-  (FStar.Ghost.reveal model ==> (~ (readable h p from to /\ unreadable h p from to)))
-
-val unreadable_gsub
-  (h: HS.mem)
-  (#t: _) (#b: B.buffer t) (p: perm b)
-  (offset: U32.t)
-  (length: U32.t { U32.v offset + U32.v length <= B.length b })
-  (from: U32.t)
-  (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= U32.v length })
-: Lemma
-  (requires (valid_perm h p))
-  (ensures (unreadable h (perm_gsub p offset length) from to <==> unreadable h p (offset `U32.add` from) (offset `U32.add` to)))
-  [SMTPat (unreadable h (perm_gsub p offset length) from to)]
+  (~ (readable h p from to /\ unreadable h p from to))
 
 val unreadable_split
   (h: HS.mem)
@@ -296,6 +214,23 @@ val unreadable_empty
 : Lemma
   (unreadable h p i i)
 
+val unreadable_frame0
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= B.length b })
+  (h' : HS.mem)
+: Lemma
+  (requires (
+    (valid_perm h' p ==> (
+      valid_perm h p /\
+      unreadable h p from to /\
+      preserved p from to h h'
+  ))))
+  (ensures (
+    unreadable h' p from to
+  ))
+
 val unreadable_frame
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -309,7 +244,7 @@ val unreadable_frame
     (valid_perm h' p ==> (
       valid_perm h p /\
       unreadable h p from to /\
-      B.loc_disjoint (loc_perm_from_to p from to) l /\
+      B.loc_disjoint (loc_perm p) l /\
       B.live h' b // because nothing prevents b from being deallocated
   ))))
   (ensures (
@@ -324,14 +259,16 @@ inline_for_extraction
 noextract
 val drop
   (#t: _) (#b: B.buffer t) (p: perm b)
-  (from: U32.t)
-  (to: U32.t { U32.v from <= U32.v to /\ U32.v to <= B.length b })
+  (from: Ghost.erased U32.t)
+  (to: Ghost.erased U32.t { U32.v from <= U32.v to /\ U32.v to <= B.length b })
 : HST.Stack unit
   (requires (fun h ->
-    valid_perm h p
+    readable h p from to
   ))
   (ensures (fun h _ h' ->
-    B.modifies (loc_perm_from_to p from to) h h' /\
+    B.modifies (loc_perm p) h h' /\
     valid_perm h' p /\
+    preserved p 0ul from h h' /\
+    preserved p to (B.len b) h h' /\
     unreadable h' p from to
   ))
