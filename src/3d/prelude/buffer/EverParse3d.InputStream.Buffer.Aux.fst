@@ -2,6 +2,9 @@ module EverParse3d.InputStream.Buffer.Aux
 
 (* This module is here to break circularity in KReMLin bundles (because Prims must be in the EverParse bundle because of the string type, as opposed to C,FStar,LowStar.) *)
 
+module IB = EverParse3d.InputBuffer
+module IR = EverParse3d.Readable
+module LP = LowParse.Low.Base
 module B = LowStar.Buffer
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
@@ -13,16 +16,18 @@ module HST = FStar.HyperStack.ST
 
 noeq
 type input_buffer = {
-  buf: B.buffer U8.t;
+  len0: Ghost.erased U32.t;
+  buf: IB.input_buffer_t len0;
+  perm_of: IR.perm (IB.slice_of buf).LP.base;
   len: Ghost.erased U32.t;
   pos: B.pointer (Ghost.erased U32.t);
   g_all_buf: Ghost.erased (Seq.seq U8.t);
   g_all: Ghost.erased (Seq.seq U8.t);
   prf: squash (
-    U32.v len <= B.length buf /\
+    U32.v len <= U32.v len0 /\
     Seq.length g_all == U32.v len /\
-    B.loc_disjoint (B.loc_buffer buf) (B.loc_buffer pos) /\
-    Seq.length g_all_buf == B.length buf /\
+    B.loc_disjoint (B.loc_buffer (IB.slice_of buf).LP.base `B.loc_union` IR.loc_perm perm_of) (B.loc_buffer pos) /\
+    Seq.length g_all_buf == U32.v len0 /\
     Ghost.reveal g_all == Seq.slice g_all_buf 0 (U32.v len)
   );
 }
@@ -37,18 +42,20 @@ let _live
   (h: HS.mem)
 : Tot prop
 =
-  B.live h x.buf /\
+  IB.live_input_buffer h x.buf x.perm_of /\
   B.live h x.pos /\
   U32.v (B.deref h x.pos) <= U32.v x.len /\
-  B.as_seq h x.buf == Ghost.reveal x.g_all_buf /\
-  Seq.slice (B.as_seq h x.buf) 0 (U32.v x.len) == Ghost.reveal x.g_all
+  B.as_seq h (IB.slice_of x.buf).LP.base == Ghost.reveal x.g_all_buf /\
+  IR.unreadable h x.perm_of 0ul (B.deref h x.pos) /\
+  IR.readable h x.perm_of (B.deref h x.pos) x.len0 /\
+  Seq.slice (B.as_seq h (IB.slice_of x.buf).LP.base) 0 (U32.v x.len) == Ghost.reveal x.g_all
 
 let _footprint
   (x: t)
 : Ghost B.loc
   (requires True)
   (ensures (fun y -> B.address_liveness_insensitive_locs `B.loc_includes` y))
-= B.loc_buffer x.buf `B.loc_union` B.loc_buffer x.pos
+= B.loc_buffer (IB.slice_of x.buf).LP.base `B.loc_union` IR.loc_perm x.perm_of `B.loc_union` B.loc_buffer x.pos
 
 let _get_remaining
   (x: t)

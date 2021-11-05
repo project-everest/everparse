@@ -28,7 +28,9 @@ let _get_read
 let _is_prefix_of
   (x y: t)
 : Tot prop
-= x.buf == y.buf /\
+= x.len0 == y.len0 /\
+  x.buf == y.buf /\
+  x.perm_of == y.perm_of /\
   U32.v x.len <= U32.v y.len /\
   x.pos == y.pos /\
   x.g_all_buf == y.g_all_buf /\
@@ -86,6 +88,8 @@ let uint64_to_uint32
   FStar.Int.Cast.uint64_to_uint32 x
 
 module LP = LowParse.Low.Base
+module IB = EverParse3d.InputBuffer
+module IR = EverParse3d.Readable
 
 let inst = {
 
@@ -126,30 +130,65 @@ let inst = {
   read = begin fun _ k p r x currentPosition n ->
     let h = HST.get () in
     LP.parser_kind_prop_equiv k p;
-    let dst' = B.sub x.buf (uint64_to_uint32 currentPosition) (uint64_to_uint32 n) in
     x.pos *= uint64_to_uint32 (currentPosition `U64.add` n);
-    [@inline_let]
-    let sl = LP.make_slice dst' (uint64_to_uint32 n) in
-    LP.parse_strong_prefix p (_get_remaining x h) (B.as_seq h dst');
-    LP.valid_facts p h sl 0ul;
-    r sl 0ul
+    let h1 = HST.get () in
+    LP.parse_strong_prefix p (_get_remaining x h) (LP.bytes_of_slice_from_to h (IB.slice_of x.buf) (uint64_to_uint32 currentPosition) x.len0);
+    LP.parse_strong_prefix p (_get_remaining x h) (LP.bytes_of_slice_from_to h (IB.slice_of x.buf) (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n)));
+    LP.valid_facts p h (IB.slice_of x.buf) (uint64_to_uint32 currentPosition);
+    IR.readable_split' h x.perm_of (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n)) x.len0;
+    let res = IB.read_with_perm r x.buf (uint64_to_uint32 currentPosition) (uint64_to_uint32 n) x.perm_of in
+    let h' = HST.get () in
+    IR.unreadable_frame0 h1 x.perm_of 0ul (uint64_to_uint32 currentPosition) h' ;
+    IR.unreadable_merge' h' x.perm_of 0ul (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n));
+    IR.readable_frame0 h1 x.perm_of (uint64_to_uint32 (currentPosition `U64.add` n)) x.len0 h' ;
+    assert (IB.live_input_buffer h' x.buf x.perm_of);
+    assert (B.live h' x.pos);
+    assert (U32.v (B.deref h' x.pos) <= U32.v x.len);
+    assert (B.as_seq h' (IB.slice_of x.buf).LP.base == Ghost.reveal x.g_all_buf);
+    assert (IR.unreadable h' x.perm_of 0ul (B.deref h' x.pos));
+    assert (IR.readable h' x.perm_of (B.deref h' x.pos) x.len0);
+    assert (Seq.slice (B.as_seq h' (IB.slice_of x.buf).LP.base) 0 (U32.v x.len) == Ghost.reveal x.g_all);
+    res
   end;
 
   skip = begin fun x currentPosition n ->
     let h0 = HST.get () in
+    IR.readable_split' h0 x.perm_of (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n)) x.len0;
     x.pos *= uint64_to_uint32 (currentPosition `U64.add` n);
+    let h1 = HST.get () in
+    IB.drop x.buf (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n)) x.perm_of;
     let h' = HST.get () in
+    IR.unreadable_frame0 h1 x.perm_of 0ul (uint64_to_uint32 currentPosition) h';
+    IR.unreadable_merge' h' x.perm_of 0ul (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n));
+    IR.readable_frame0 h1 x.perm_of (uint64_to_uint32 (currentPosition `U64.add` n)) x.len0 h' ;
     ()
   end;
 
   skip_if_success = begin fun x currentPosition res ->
+    let h0 = HST.get () in
     let pos0 = !* x.pos in
-    x.pos *= Ghost.hide (if EverParse3d.ErrorCode.is_success res then uint64_to_uint32 res else Ghost.reveal pos0)
+    let pos1 = Ghost.hide (if EverParse3d.ErrorCode.is_success res then uint64_to_uint32 res else Ghost.reveal pos0) in
+    x.pos *= pos1;
+    let h1 = HST.get () in
+    IR.readable_split' h1 x.perm_of pos0 pos1 x.len0;
+    IB.drop x.buf pos0 pos1 x.perm_of;
+    let h2 = HST.get () in
+    IR.unreadable_frame0 h1 x.perm_of 0ul pos0 h2;
+    IR.unreadable_merge' h2 x.perm_of 0ul pos0 pos1;
+    IR.readable_frame0 h1 x.perm_of pos1 x.len0 h2
   end;
 
   empty = begin fun x xlen _ ->
     let h0 = HST.get () in
+    let pos0 = !* x.pos in
     x.pos *= x.len;
+    let h1 = HST.get () in
+    IR.readable_split' h1 x.perm_of pos0 x.len x.len0;
+    IB.drop x.buf pos0 x.len x.perm_of;
+    let h2 = HST.get () in
+    IR.unreadable_frame0 h1 x.perm_of 0ul pos0 h2;
+    IR.unreadable_merge' h2 x.perm_of 0ul pos0 x.len;
+    IR.readable_frame0 h1 x.perm_of x.len x.len0 h2;
     xlen
   end;
 
@@ -161,7 +200,9 @@ let inst = {
 
   truncate = begin fun x currentPosition n ->
     {
+      len0 = x.len0;
       buf = x.buf;
+      perm_of = x.perm_of;
       len = uint64_to_uint32 (currentPosition `U64.add` n);
       pos = x.pos;
       g_all = Ghost.hide (Seq.slice (Ghost.reveal x.g_all) 0 (U64.v currentPosition + U64.v n));

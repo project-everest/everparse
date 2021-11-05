@@ -8,7 +8,12 @@ module LPL = LowParse.Low.Base
 
 // not erasable because Low* buffers of erased elements are not erasable
 inline_for_extraction noextract
-val perm (#t: Type) (b: B.buffer t) : Tot Type0
+val perm0 (t: Type) : Tot Type0
+
+val perm_prop (#t: Type) (x: perm0 t) (b: B.buffer t) : Tot prop
+
+inline_for_extraction noextract
+let perm (#t: Type) (b: B.buffer t) = (x: perm0 t { perm_prop x b })
 
 val loc_perm (#t: _) (#b: B.buffer t) (p: perm b) : GTot B.loc
 
@@ -131,6 +136,31 @@ val readable_split
 : Lemma
   (readable h p from to <==> (readable h p from mid /\ readable h p mid to))
 
+let readable_split'
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+: Lemma
+  (requires (readable h p from to))
+  (ensures (readable h p from mid /\ readable h p mid to))
+= readable_split h p from mid to
+
+let readable_merge'
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+: Lemma
+  (requires (
+    readable h p from mid /\
+    readable h p mid to
+  ))
+  (ensures (readable h p from to))
+= readable_split h p from mid to
+
 val readable_frame0
   (h: HS.mem)
   (#t: _) (#b: B.buffer t) (p: perm b)
@@ -206,6 +236,31 @@ val unreadable_split
   (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
 : Lemma
   (unreadable h p from to <==> (unreadable h p from mid /\ unreadable h p mid to))
+
+let unreadable_split'
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+: Lemma
+  (requires (unreadable h p from to))
+  (ensures (unreadable h p from mid /\ unreadable h p mid to))
+= unreadable_split h p from mid to
+
+let unreadable_merge'
+  (h: HS.mem)
+  (#t: _) (#b: B.buffer t) (p: perm b)
+  (from: U32.t)
+  (mid: U32.t)
+  (to: U32.t { U32.v from <= U32.v mid /\ U32.v mid <= U32.v to /\ U32.v to <= B.length b })
+: Lemma
+  (requires (
+    unreadable h p from mid /\
+    unreadable h p mid to
+  ))
+  (ensures (unreadable h p from to))
+= unreadable_split h p from mid to
 
 val unreadable_empty
   (h: HS.mem)
