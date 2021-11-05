@@ -61,6 +61,7 @@ let produce_types_checked_rule
 
 let produce_output_types_fsti_checked_rule
   (g: Deps.dep_graph)
+  (skip_interface: bool)
   (modul: string)
 : list rule_t
 = if not (Deps.has_output_types g modul) then []
@@ -68,7 +69,7 @@ let produce_output_types_fsti_checked_rule
     let output_types_fsti = mk_filename modul "OutputTypes.fsti" in 
     [{
        ty = EverParse;
-       from = output_types_fsti :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul);
+       from = output_types_fsti :: List.Tot.map (fun m -> mk_filename m (if skip_interface then "fst.checked" else "fsti.checked")) (Deps.dependencies g modul);
        to = mk_filename modul "OutputTypes.fsti.checked";
        args = Printf.sprintf "--__micro_step verify %s" output_types_fsti;
      }]
@@ -337,7 +338,7 @@ let produce_makefile
     ) `List.Tot.append`
     List.concatMap (produce_fst_rules g skip_types clang_format) all_files `List.Tot.append`
     (if skip_types then [] else List.Tot.map (produce_types_checked_rule g) all_modules) `List.Tot.append`
-    (if skip_types then [] else List.concatMap (produce_output_types_fsti_checked_rule g) all_modules) `List.Tot.append`
+    List.concatMap (produce_output_types_fsti_checked_rule g skip_types) all_modules `List.Tot.append`
     (if skip_types then [] else List.Tot.map (produce_fsti_checked_rule g) all_modules) `List.Tot.append`
     List.Tot.map (produce_fst_checked_rule g skip_types) all_modules `List.Tot.append`
     (if skip_types then [] else List.Tot.map (produce_types_krml_rule g) all_modules) `List.Tot.append`
