@@ -136,19 +136,27 @@ let inst = {
     LP.parse_strong_prefix p (_get_remaining x h) (LP.bytes_of_slice_from_to h (IB.slice_of x.buf) (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n)));
     LP.valid_facts p h (IB.slice_of x.buf) (uint64_to_uint32 currentPosition);
     IR.readable_split' h x.perm_of (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n)) x.len0;
-    let res = IB.read_with_perm r x.buf (uint64_to_uint32 currentPosition) (uint64_to_uint32 n) x.perm_of in
-    let h' = HST.get () in
-    IR.unreadable_frame0 h1 x.perm_of 0ul (uint64_to_uint32 currentPosition) h' ;
-    IR.unreadable_merge' h' x.perm_of 0ul (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n));
-    IR.readable_frame0 h1 x.perm_of (uint64_to_uint32 (currentPosition `U64.add` n)) x.len0 h' ;
-    assert (IB.live_input_buffer h' x.buf x.perm_of);
-    assert (B.live h' x.pos);
-    assert (U32.v (B.deref h' x.pos) <= U32.v x.len);
-    assert (B.as_seq h' (IB.slice_of x.buf).LP.base == Ghost.reveal x.g_all_buf);
-    assert (IR.unreadable h' x.perm_of 0ul (B.deref h' x.pos));
-    assert (IR.readable h' x.perm_of (B.deref h' x.pos) x.len0);
-    assert (Seq.slice (B.as_seq h' (IB.slice_of x.buf).LP.base) 0 (U32.v x.len) == Ghost.reveal x.g_all);
-    res
+    let prf (h': HS.mem) : Lemma
+      (requires (
+        let pos = uint64_to_uint32 currentPosition in
+        let pos' = uint64_to_uint32 (currentPosition `U64.add` n) in
+        B.modifies (IR.loc_perm x.perm_of) h1 h' /\
+        IR.preserved x.perm_of 0ul pos h1 h' /\
+        IR.preserved x.perm_of pos' (B.len (IB.slice_of x.buf).LP.base) h1 h' /\
+        IR.unreadable h' x.perm_of pos pos' /\
+        IB.live_input_buffer h' x.buf x.perm_of
+      ))
+      (ensures (
+        IR.unreadable h' x.perm_of 0ul (B.deref h' x.pos) /\
+        IR.readable h' x.perm_of (B.deref h' x.pos) x.len0
+      ))
+      [SMTPat (B.modifies (IR.loc_perm x.perm_of) h1 h')] // this lemma *with SMT pattern* allows tail call to the reader, thus removing spurious temporary assignments in the generated C code
+    =
+      IR.unreadable_frame0 h1 x.perm_of 0ul (uint64_to_uint32 currentPosition) h' ;
+      IR.unreadable_merge' h' x.perm_of 0ul (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n));
+      IR.readable_frame0 h1 x.perm_of (uint64_to_uint32 (currentPosition `U64.add` n)) x.len0 h'
+    in
+    IB.read_with_perm r x.buf (uint64_to_uint32 currentPosition) (uint64_to_uint32 n) x.perm_of
   end;
 
   skip = begin fun x currentPosition n ->
