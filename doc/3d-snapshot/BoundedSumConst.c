@@ -111,9 +111,7 @@ ValidateBoundedSumRight(
   else
   {
     /* reading field value */
-    uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
-    uint32_t res0 = res;
-    uint32_t boundedSum1 = res0;
+    uint32_t boundedSum1 = Load32Le(Input + (uint32_t)StartPosition);
     /* start: checking constraint */
     BOOLEAN
     boundedSumConstraintIsOk =
@@ -187,9 +185,7 @@ entrypoint typedef struct _boundedSum {
   {
     return positionAfterleft;
   }
-  uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
-  uint32_t res0 = res;
-  uint32_t left = res0;
+  uint32_t left = Load32Le(Input + (uint32_t)StartPosition);
   /* Field _boundedSum_right */
   uint64_t
   positionAfterBoundedSum0 =

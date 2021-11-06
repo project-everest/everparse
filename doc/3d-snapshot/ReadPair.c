@@ -61,9 +61,7 @@ ValidatePairFirst(
   }
   else
   {
-    uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
-    uint32_t res0 = res;
-    uint32_t pair1 = res0;
+    uint32_t pair1 = Load32Le(Input + (uint32_t)StartPosition);
     *X = pair1;
     if (TRUE)
     {
@@ -148,9 +146,7 @@ ValidatePairSecond(
   }
   else
   {
-    uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
-    uint32_t res0 = res;
-    uint32_t pair1 = res0;
+    uint32_t pair1 = Load32Le(Input + (uint32_t)StartPosition);
     *Y = pair1;
     if (TRUE)
     {
