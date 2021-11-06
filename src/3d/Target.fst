@@ -487,7 +487,10 @@ let rec print_action (mname:string) (a:action) : ML string =
                    (print_atomic_action a)
                    (print_ident i)
                    (print_action mname k)
-
+  | Action_act a -> 
+    Printf.sprintf "(action_act %s)" 
+      (print_action mname a)
+      
 let rec print_validator (mname:string) (v:validator) : ML string = //(decreases v) =
   let is_unit_validator v =
     let open A in

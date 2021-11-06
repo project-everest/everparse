@@ -95,6 +95,7 @@ let rec simplify_action (env:T.env_t) (a:action) : ML action =
   | Action_seq hd tl -> {a with v = Action_seq (simplify_atomic_action env hd) (simplify_action env tl) }
   | Action_ite hd then_ else_ -> {a with v = Action_ite (simplify_expr env hd) (simplify_action env then_) (simplify_action_opt env else_) }
   | Action_let i aa k -> {a with v = Action_let i (simplify_atomic_action env aa) (simplify_action env k) }
+  | Action_act a -> { a with v = Action_act (simplify_action env a) }
 and simplify_action_opt (env:T.env_t) (a:option action) : ML (option action) =
   match a with
   | None -> None

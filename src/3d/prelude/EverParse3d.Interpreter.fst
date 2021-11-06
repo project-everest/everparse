@@ -394,6 +394,11 @@ type action
       #i1:_ -> #l1:_ -> #b1:_ -> #t1:_ -> k:(t0 -> action i1 l1 b1 t1) ->
       action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t1
 
+  | Action_act:
+      #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 l0 b0 unit ->
+      action i0 l0 b0 bool
+
+    
 (* Denotation of action as A.action *)
 [@@specialize]
 let rec action_as_action
@@ -422,6 +427,9 @@ let rec action_as_action
       let head = atomic_action_as_action p hd in
       let k x = action_as_action p (k x) in
       A.action_bind "hd" head k
+
+    | Action_act #i0 #l0 #b0 a ->
+      A.action_weaken (A.action_seq (action_as_action p a) (A.action_return true)) #i0 #l0
 
 (* Some AST nodes contain source comments that we propagate to the output *)
 let comments = string

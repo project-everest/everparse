@@ -1,5 +1,5 @@
 module Deps
-
+open FStar.List.Tot
 open FStar.IO
 open FStar.All
 open Ast
@@ -121,7 +121,8 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (deps_of_expr hd)@
       (deps_of_action then_)@
       (deps_of_opt deps_of_action else_)
-    | Action_let _i a k -> (deps_of_atomic_action a)@(deps_of_action k) in
+    | Action_let _i a k -> (deps_of_atomic_action a)@(deps_of_action k)
+    | Action_act a -> deps_of_action a in
 
   let deps_of_params params : ML (list string) =
     params |> List.collect (fun (t, _, _) -> deps_of_typ t) in

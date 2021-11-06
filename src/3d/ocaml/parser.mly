@@ -55,7 +55,7 @@
 %token          STAR DIV MINUS PLUS LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
-%token          MUTABLE LBRACE_ONSUCCESS FIELD_POS_64 FIELD_POS_32 FIELD_PTR VAR ABORT RETURN
+%token          MUTABLE LBRACE_ONSUCCESS LBRACE_ACT LBRACE_CHECK FIELD_POS_64 FIELD_POS_32 FIELD_PTR VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
 %token          MODULE EXPORT OUTPUT UNION
 %token          ENTRYPOINT REFINING ALIGNED
@@ -237,6 +237,8 @@ bitwidth:
 
 field_action:
   | LBRACE_ONSUCCESS a=action RBRACE { a, false }
+  | LBRACE_CHECK a=action RBRACE { a, false }
+  | LBRACE_ACT a=action RBRACE { with_range (Action_act a) $startpos(a), false }
 
 struct_field:
   | t=typ fn=IDENT bopt=option_of(bitwidth) aopt=array_annot c=option_of(refinement) a=option_of(field_action)

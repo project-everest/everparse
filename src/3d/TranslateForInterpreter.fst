@@ -637,6 +637,10 @@ let rec translate_action (a:A.action) : ML (T.action & T.decls) =
     let k, ds2 = translate_action k in
     T.Action_let i a k, ds1 @ ds2
 
+  | Action_act a ->
+    let a, ds = translate_action a in
+    T.Action_act a, ds
+
 let rec parser_is_constant_size_without_actions
   (env: global_env)
   (p: T.parser)

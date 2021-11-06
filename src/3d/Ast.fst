@@ -339,6 +339,7 @@ type action' =
   | Action_seq : hd:atomic_action -> tl:action -> action'
   | Action_ite : hd:expr -> then_:action -> else_:option action -> action'
   | Action_let : i:ident -> a:atomic_action -> k:action -> action'
+  | Action_act : action -> action'
 and action = with_meta_t action'
 
 
@@ -616,6 +617,7 @@ let rec subst_action (s:subst) (a:action) : ML action =
   | Action_seq hd tl -> {a with v = Action_seq (subst_atomic_action s hd) (subst_action s tl) }
   | Action_ite hd then_ else_ -> {a with v = Action_ite (subst_expr s hd) (subst_action s then_) (subst_action_opt s else_) }
   | Action_let i aa k -> {a with v = Action_let i (subst_atomic_action s aa) (subst_action s k) }
+  | Action_act a -> {a with v = Action_act (subst_action s a) }
 and subst_action_opt (s:subst) (a:option action) : ML (option action) =
   match a with
   | None -> None

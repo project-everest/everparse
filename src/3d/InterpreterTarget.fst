@@ -327,6 +327,8 @@ let rec inv_eloc_of_action (a:T.action)
       inv_eloc_union (of_atomic_action hd) (inv_eloc_of_action tl)
     | Action_ite _ a0 a1 ->
       inv_eloc_union (inv_eloc_of_action a0) (inv_eloc_of_action a1)
+    | Action_act a ->
+      inv_eloc_of_action a
 
 let rec inv_eloc_of_parser (en:env) (p:T.parser)
   : ML inv_eloc
@@ -612,6 +614,9 @@ let rec print_action (mname:string) (a:T.action)
       Printf.sprintf "(Action_let %s %s)"
         (print_atomic_action a)
         (print_lam mname (print_action mname) (i, k))
+    | T.Action_act a ->
+      Printf.sprintf "(Action_act %s)"
+        (print_action mname a)
 
 let rec print_typ (mname:string) (t:typ)
   : ML string
