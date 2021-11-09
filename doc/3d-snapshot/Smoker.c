@@ -101,9 +101,7 @@ SmokerValidateSmoker(
   {
     return positionAfterage;
   }
-  uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
-  uint32_t res0 = res;
-  uint32_t age = res0;
+  uint32_t age = Load32Le(Input + (uint32_t)StartPosition);
   BOOLEAN ageConstraintIsOk = age >= (uint32_t)(uint8_t)21U;
   uint64_t positionAfterage1 = EverParseCheckConstraintOk(ageConstraintIsOk, positionAfterage);
   if (EverParseIsError(positionAfterage1))

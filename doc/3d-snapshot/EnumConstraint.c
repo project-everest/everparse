@@ -77,9 +77,7 @@ ValidateEnumConstraintX(
   else
   {
     /* reading field value */
-    uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
-    uint32_t res0 = res;
-    uint32_t enumConstraint1 = res0;
+    uint32_t enumConstraint1 = Load32Le(Input + (uint32_t)StartPosition);
     /* start: checking constraint */
     BOOLEAN
     enumConstraintConstraintIsOk = enumConstraint1 == (uint32_t)(uint8_t)0U || Col == GREEN;
@@ -151,9 +149,7 @@ EnumConstraintValidateEnumConstraint(
   {
     return positionAftercol;
   }
-  uint32_t res = Load32Le(Input + (uint32_t)StartPosition);
-  uint32_t res0 = res;
-  uint32_t col = res0;
+  uint32_t col = Load32Le(Input + (uint32_t)StartPosition);
   BOOLEAN colConstraintIsOk = col == RED || col == GREEN || col == BLUE;
   uint64_t positionAftercol1 = EverParseCheckConstraintOk(colConstraintIsOk, positionAftercol);
   if (EverParseIsError(positionAftercol1))
