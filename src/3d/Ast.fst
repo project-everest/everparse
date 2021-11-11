@@ -263,7 +263,17 @@ type expr' =
 
 and expr = with_meta_t expr'
 
+/// A non-pointer type in the AST (see typ below) may be
+///   - A spec type, i.e. a type that has an interpretation in 3d, that 3d understands
+///   - An output type, may be used as the type of the parse tree constructed as part of actions
+///     This includes structs and unions, and actions support assignment to fields of output types
+///   - An extern type, an abstract, uninterpreted type
 
+[@@ PpxDerivingYoJson ]
+type t_kind =
+  | KindSpec
+  | KindOutput
+  | KindExtern
 
 /// Syntax for output expressions
 ///
@@ -304,17 +314,17 @@ and typ_param = either expr out_expr
 /// Types: all types are named and fully instantiated to expressions only
 ///   i.e., no type-parameterized types
 ///
-/// The is_output boolean indicates if this is an output type
+/// The t_kind field maintains the kind
 ///
-/// It is set during the desugaring phase, the parser always sets it to false
+/// It is set during the desugaring phase, the parser always sets it to KindSpec
 ///   We could move it to the parser itself
 ///
-/// Keeping this makes it easy to check whether a type is an output type
+/// Keeping this makes it easy to check whether a type is an output type or an extern type
 ///   Alternatively we would have to carry some environment along
 
 
 and typ' =
-  | Type_app : ident -> is_output:bool -> list typ_param -> typ'
+  | Type_app : ident -> t_kind -> list typ_param -> typ'
   | Pointer : typ -> typ'
 and typ = with_meta_t typ'
 
@@ -451,6 +461,13 @@ type out_typ = {
 ///   - Enum: enumerated type using existing constants or newly defined constants
 ///   - Record: a struct with refinements
 ///   - CaseType: an untagged union
+///
+///   - OutputType: an output type definition
+///       no validators are generated for these types,
+///       they are used only in the parse trees construction in the actions
+///   - ExternType: An abstract type declaration
+///   - ExternFn: An abstract function declaration, may be used in the actions
+
 [@@ PpxDerivingYoJson ]
 noeq
 type decl' =
@@ -460,7 +477,10 @@ type decl' =
   | Enum: typ -> ident -> list enum_case -> decl'
   | Record: names:typedef_names -> params:list param -> where:option expr -> fields:list field -> decl'
   | CaseType: typedef_names -> list param -> switch_case -> decl'
+
   | OutputType : out_typ -> decl'
+  | ExternType : typedef_names -> decl'
+  | ExternFn   : ident -> typ -> list param -> decl'
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -558,9 +578,9 @@ let rec eq_typ_params (ps1 ps2:list typ_param) : bool =
 
 let rec eq_typ (t1 t2:typ) : Tot bool =
   match t1.v, t2.v with
-  | Type_app hd1 b1 ps1, Type_app hd2 b2 ps2 ->
+  | Type_app hd1 k1 ps1, Type_app hd2 k2 ps2 ->
     eq_idents hd1 hd2
-    && b1 = b2
+    && k1 = k2
     && eq_typ_params ps1 ps2
   | Pointer t1, Pointer t2 ->
     eq_typ t1 t2
@@ -570,7 +590,7 @@ let rec eq_typ (t1 t2:typ) : Tot bool =
 let dummy_range = dummy_pos, dummy_pos
 let with_dummy_range x = with_range x dummy_range
 let to_ident' x = {modul_name=None;name=x}
-let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) false [])
+let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) KindSpec [])
 let tbool = mk_prim_t "Bool"
 let tunit = mk_prim_t "unit"
 let tuint8 = mk_prim_t "UINT8"
@@ -629,7 +649,7 @@ let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
   | Inr oe -> Inr (subst_out_expr s oe)
 let rec subst_typ (s:subst) (t:typ) : ML typ =
   match t.v with
-  | Type_app hd b ps -> { t with v = Type_app hd b (List.map (subst_typ_param s) ps) }
+  | Type_app hd k ps -> { t with v = Type_app hd k (List.map (subst_typ_param s) ps) }
   | Pointer t -> {t with v = Pointer (subst_typ s t) }
 let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   match f with
@@ -670,7 +690,9 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
     Record names (subst_params s params) (map_opt (subst_expr s) where) (List.map (subst_field s) fields)
   | CaseType names params cases ->
     CaseType names (subst_params s params) (subst_switch_case s cases)
-  | OutputType _ -> d
+  | OutputType _
+  | ExternType _
+  | ExternFn _ _ _ -> d
 let subst_decl (s:subst) (d:decl) : ML decl = decl_with_v d (subst_decl' s d.d_decl.v)
 
 (*** Printing the source AST; for debugging only **)
@@ -790,7 +812,7 @@ let print_typ_param p : ML string =
 
 let rec print_typ t : ML string =
   match t.v with
-  | Type_app i _b ps ->
+  | Type_app i _k ps ->
     begin
     match ps with
     | [] -> ident_to_string i
@@ -805,7 +827,7 @@ let rec print_typ t : ML string =
 
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with
-  | Type_app i _b [] -> as_integer_typ i
+  | Type_app i _k [] -> as_integer_typ i
   | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
 
 let print_qual = function
@@ -923,6 +945,8 @@ let print_decl' (d:decl') : ML string =
                     (ident_to_string td.typedef_abbrev)
                     (ident_to_string td.typedef_ptr_abbrev)
   | OutputType out_t -> "Printing for output types is TBD"
+  | ExternType _ -> "Printing for extern types is TBD"
+  | ExternFn _ _ _ -> "Printing for extern functions is TBD"
 
 let print_decl (d:decl) : ML string =
   match d.d_decl.comments with
