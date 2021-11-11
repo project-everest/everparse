@@ -50,10 +50,10 @@ int main ()
      vec->arr[0].y == 1 &&
      vec->arr[1].x == 2 &&
      vec->arr[1].y == 3) {
-    printf("%s\n", "Validation succeeded");
+    printf("%s\n", "Validation succeeded for extern vector");
     return 0;
   } else {
-    printf("%s\n", "Validation failed");
+    printf("%s\n", "Validation failed for extern vector");
     return 1;
   }
 }
