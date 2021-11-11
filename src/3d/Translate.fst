@@ -166,14 +166,14 @@ let pk_glb k1 k2 = T.({
 
 let false_typ = T.T_false
 let unit_typ =
-    T.T_app (with_dummy_range (to_ident' "unit")) false []
+    T.T_app (with_dummy_range (to_ident' "unit")) KindSpec []
 let unit_val =
     T.(mk_expr (App (Ext "()") []))
 let unit_parser =
     let unit_id = with_dummy_range (to_ident' "unit") in
     mk_parser pk_return unit_typ unit_id "none" (T.Parse_return unit_val)
 let pair_typ t1 t2 =
-    T.T_app (with_dummy_range (to_ident' "tuple2")) false [Inl t1; Inl t2]
+    T.T_app (with_dummy_range (to_ident' "tuple2")) KindSpec [Inl t1; Inl t2]
 let pair_value x y =
     T.Record (with_dummy_range (to_ident' "tuple2"))
              [(with_dummy_range (to_ident' "fst"), T.mk_expr (T.Identifier x));
@@ -435,10 +435,11 @@ let rec parse_typ (env:global_env)
   | T_false ->
     mk_parser pk_impos T_false typename fieldname Parse_impos
 
-  | T.T_app _ true _ ->
-    failwith "Impossible, did not expect parse_typ to be called with an output type!"
+  | T.T_app _ KindOutput _
+  | T.T_app _ KindExtern _ ->
+    failwith "Impossible, did not expect parse_typ to be called with an output/extern type!"
 
-  | T.T_app {v={name="nlist"}} false [Inr e; Inl t] ->
+  | T.T_app {v={name="nlist"}} KindSpec [Inr e; Inl t] ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
     mk_parser pk_list
               t
@@ -446,7 +447,7 @@ let rec parse_typ (env:global_env)
               fieldname
               (T.Parse_nlist e pt)
 
-  | T.T_app {v={name="t_at_most"}} false [Inr e; Inl t] ->
+  | T.T_app {v={name="t_at_most"}} KindSpec [Inr e; Inl t] ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
     mk_parser pk_t_at_most
               t
@@ -454,7 +455,7 @@ let rec parse_typ (env:global_env)
               fieldname
               (T.Parse_t_at_most e pt)
 
-  | T.T_app {v={name="t_exact"}} false [Inr e; Inl t] ->
+  | T.T_app {v={name="t_exact"}} KindSpec [Inr e; Inl t] ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
     mk_parser pk_t_exact
               t
@@ -462,7 +463,7 @@ let rec parse_typ (env:global_env)
               fieldname
               (T.Parse_t_exact e pt)
 
-  | T.T_app {v={name="cstring"}} false [Inl t; Inr e] ->
+  | T.T_app {v={name="cstring"}} KindSpec [Inl t; Inr e] ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
     mk_parser pk_string
               t
@@ -470,7 +471,7 @@ let rec parse_typ (env:global_env)
               fieldname
               (T.Parse_string pt e)
 
-  | T.T_app hd false args ->
+  | T.T_app hd KindSpec args ->
     mk_parser (pk_base hd (parser_kind_nz env hd) (parser_weak_kind env hd))
               t
               typename
@@ -551,7 +552,7 @@ let rec read_typ (env:global_env) (t:T.typ) : ML (option T.reader) =
   | T_app ({v={name="UINT8"}}) _ [] -> Some Read_u8
   | T_app ({v={name="UINT16"}}) _ [] -> Some Read_u16
   | T_app ({v={name="UINT32"}}) _ [] -> Some Read_u32
-  | T.T_app hd false args ->
+  | T.T_app hd KindSpec args ->
     if has_reader env hd
     then Some (T.Read_app hd args)
     else None
@@ -833,22 +834,22 @@ let translate_field (f:A.field) : ML (T.struct_field & T.decls) =
     let t =
         let mk_at_most t e : ML T.typ =
           let e = translate_expr e in
-          T.T_app (with_range (to_ident' "t_at_most") sf.field_type.range) false [Inr e; Inl t]
+          T.T_app (with_range (to_ident' "t_at_most") sf.field_type.range) KindSpec [Inr e; Inl t]
         in
         match sf.field_array_opt with
         | FieldScalar -> t
         | FieldArrayQualified (e, ByteArrayByteSize)
         | FieldArrayQualified (e, ArrayByteSize) ->
           let e = translate_expr e in
-          T.T_app (with_range (to_ident' "nlist") sf.field_type.range) false [Inr e; Inl t]
+          T.T_app (with_range (to_ident' "nlist") sf.field_type.range) KindSpec [Inr e; Inl t]
         | FieldArrayQualified (e, ArrayByteSizeAtMost) ->
           mk_at_most t e
         | FieldArrayQualified (e, ArrayByteSizeSingleElementArray) ->
           let e = translate_expr e in
-          T.T_app (with_range (to_ident' "t_exact") sf.field_type.range) false [Inr e; Inl t]
+          T.T_app (with_range (to_ident' "t_exact") sf.field_type.range) KindSpec [Inr e; Inl t]
         | FieldString sz ->
           let r = sf.field_type.range in
-          let str = T.T_app (with_range (to_ident' "cstring") r) false [Inl t; Inr (make_zero r sf.field_type)] in
+          let str = T.T_app (with_range (to_ident' "cstring") r) KindSpec [Inl t; Inr (make_zero r sf.field_type)] in
           begin match sz with
           | None -> str
           | Some e -> mk_at_most str e
@@ -1105,7 +1106,7 @@ let rec hoist_typ
         let args = args in //@ [Identifier x] in
         let filter_name = fn ^ "_filter" in
         let id = maybe_gen_ident genv filter_name in
-        let result_type = T_app (with_dummy_range (to_ident' "bool")) false [] in
+        let result_type = T_app (with_dummy_range (to_ident' "bool")) KindSpec [] in
         let body = e in
         let app = App (Ext id.A.v.name) (List.Tot.map (fun arg -> T.mk_expr arg) args) in
         (id, params, result_type, body),
@@ -1172,7 +1173,7 @@ let hoist_one_type_definition (should_inline:bool)
      let type_name = prefix in //^ "_type" in
      let id = maybe_gen_ident genv type_name in
      let args = List.map (fun (x, _) -> Inr (T.mk_expr (Identifier x))) (List.rev env) in
-     let tdef = T_app id false args in
+     let tdef = T_app id KindSpec args in
      let tdef =
        if should_inline
        then tdef
@@ -1378,6 +1379,15 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     ds1 @ ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
 
   | OutputType out_t -> [with_comments (T.Output_type out_t) false []]  //No decl for output type specifications
+
+  | ExternType tdnames -> [with_comments (T.Extern_type tdnames.typedef_name) false []]
+
+  | ExternFn f ret params ->
+    let ret, ds = translate_typ ret in
+    let params, ds = List.fold_left (fun (params, ds) (t, i, _) ->
+      let t, ds_t = translate_typ t in
+      params@[i, t],ds@ds_t) ([], ds) params in
+    [with_comments (T.Extern_fn f ret params) false []]
 
 noeq
 type translate_env = {
