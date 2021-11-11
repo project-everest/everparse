@@ -59,7 +59,7 @@ and simplify_typ (env:T.env_t) (t:typ)
     | Pointer t -> {t with v=Pointer (simplify_typ env t)}
     | Type_app s b ps ->
       let ps = List.map (simplify_typ_param env) ps in
-      let s = B.resolve_record_case_outputtype_name (fst env) s in
+      let s = B.resolve_record_case_output_extern_type_name (fst env) s in
       let t = { t with v = Type_app s b ps } in
       if Options.get_interpret()
       then B.unfold_typ_abbrev_only (fst env) t
@@ -163,6 +163,13 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
 
   | OutputType out_t ->
     decl_with_v d (OutputType ({out_t with out_typ_fields=simplify_out_fields env out_t.out_typ_fields}))
+
+  | ExternType tdnames -> d
+
+  | ExternFn f ret params ->
+    let ret = simplify_typ env ret in
+    let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
+    decl_with_v d (ExternFn f ret params)
 
 let simplify_prog benv senv (p:list decl) =
   List.map (simplify_decl (B.mk_env benv, senv)) p

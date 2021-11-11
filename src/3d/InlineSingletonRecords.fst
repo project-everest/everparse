@@ -177,7 +177,9 @@ let simplify_decl (env:env) (d:decl) : ML decl =
                          cases in
     decl_with_v d (CaseType tdnames params (hd, cases))
 
-  | OutputType _ -> d
+  | OutputType _
+  | ExternType _
+  | ExternFn _ _ _ -> d
 
 let simplify_prog (p:list decl) =
   let env = H.create 10 in
