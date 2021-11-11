@@ -82,7 +82,8 @@ type action =
   | Action_seq : hd:atomic_action -> tl:action -> action
   | Action_ite : hd:expr -> then_:action -> else_:action -> action
   | Action_let : i:A.ident -> a:atomic_action -> k:action -> action
-
+  | Action_act : action -> action
+  
 (* A subset of F* types that the translation targets *)
 noeq
 type typ =

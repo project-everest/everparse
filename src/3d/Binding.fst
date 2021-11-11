@@ -998,6 +998,14 @@ let rec check_field_action (env:env) (f:field) (a:action)
       remove_local env i;
       { a with v = Action_let i aa k }, t
 
+    | Action_act a ->
+      let a, t = check_field_action env f a in
+      if eq_typ env t tunit
+      then { a with v = Action_act a }, tbool
+      else error (Printf.sprintf "This ':act' action returns %s instead of unit"
+                                     (print_typ t))
+                 a.range
+
 #pop-options
 
 #push-options "--z3rlimit_factor 4"
@@ -1061,8 +1069,7 @@ let weak_kind_of_field (env: env) (f: field) : ML weak_kind =
 let weak_kind_of_case (env: env) (c: case) : ML weak_kind =
   match c with
   | DefaultCase f
-  | Case _ f
-    -> weak_kind_of_field env f
+  | Case _ f -> weak_kind_of_field env f
 
 #pop-options
 

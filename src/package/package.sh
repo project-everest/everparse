@@ -173,8 +173,9 @@ make_everparse() {
             done
             [[ -n $libevercrypt_dll ]]
             $cp $libevercrypt_dll everparse/bin/
-            $cp $(which libffi-6.dll) everparse/bin/
         fi
+        # copy libffi-6 in all cases (ocaml-sha also seems to need it)
+        $cp $(which libffi-6.dll) everparse/bin/
     else
         if [[ -z "$NO_EVERCRYPT" ]] ; then
             for f in $(ocamlfind printconf destdir)/stublibs $(cat $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
@@ -186,7 +187,8 @@ make_everparse() {
             done
             [[ -n $libevercrypt_so ]]
             $cp $libevercrypt_so everparse/bin/
-
+        fi
+        {
             # Locate libffi
             {
                 # Debian:
@@ -206,7 +208,7 @@ make_everparse() {
                 exit 1
             }
             $cp $libffi everparse/bin/
-        fi
+        }
         $cp $Z3_DIR/z3 everparse/bin/
     fi
 
@@ -260,8 +262,8 @@ make_everparse() {
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
     if [[ -z "$NO_EVERCRYPT" ]] ; then
         wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE
-        wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
     fi
+    wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
     if $is_windows ; then
         wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT
     fi

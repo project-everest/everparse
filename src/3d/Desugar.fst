@@ -14,6 +14,7 @@
    limitations under the License.
 *)
 module Desugar
+open FStar.List.Tot
 open FStar.Mul
 open Ast
 open FStar.All
@@ -237,6 +238,8 @@ let rec resolve_action' (env:qenv) (act:action') : ML action' =
     Action_ite (resolve_expr env hd) (resolve_action env then_) (map_opt (resolve_action env) else_)
   | Action_let i a k ->
     Action_let i (resolve_atomic_action env a) (resolve_action (push_name env i.v.name) k)
+  | Action_act a ->
+    Action_act (resolve_action env a)
 
 and resolve_action (env:qenv) (act:action) : ML action =
   { act with v = resolve_action' env act.v }
