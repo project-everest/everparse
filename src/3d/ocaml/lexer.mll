@@ -62,7 +62,8 @@ let () =
   H.add keywords "module" MODULE;
   H.add keywords "export" EXPORT;
   H.add keywords "output" OUTPUT;
-  H.add keywords "union" UNION
+  H.add keywords "union" UNION;
+  H.add keywords "extern" EXTERN
 
 let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
 
