@@ -145,6 +145,12 @@ let translate_module (en:env) (mname:string) (fn:string)
 let has_out_exprs (t_decls:list Target.decl) : bool =
   List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
 
+let has_extern_types (t_decls:list Target.decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Target.Extern_type? d) t_decls
+
+let has_extern_functions (t_decls:list Target.decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Target.Extern_fn? d) t_decls
+
 let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   : ML unit =
 
@@ -157,14 +163,16 @@ let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
   FStar.IO.close_write_file types_fst_file;
 
   let has_out_exprs = has_out_exprs t_decls in
+  let has_extern_types = has_extern_types t_decls in
+  let has_extern_fns = has_extern_functions t_decls in
 
-  if has_out_exprs
+  if has_out_exprs || has_extern_types || has_extern_fns
   then begin
-    let output_types_fsti_file =
+    let external_api_fsti_file =
       open_write_file
-        (Printf.sprintf "%s/%s.OutputTypes.fsti" (Options.get_output_dir ()) modul) in
-    FStar.IO.write_string output_types_fsti_file (Target.print_out_exprs_fstar modul t_decls);
-    FStar.IO.close_write_file output_types_fsti_file
+        (Printf.sprintf "%s/%s.ExternalAPI.fsti" (Options.get_output_dir ()) modul) in
+    FStar.IO.write_string external_api_fsti_file (Target.print_external_api_fstar modul t_decls);
+    FStar.IO.close_write_file external_api_fsti_file
   end;
 
   let fst_file =
@@ -191,14 +199,18 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (tds:list T.decl) (i
         InterpreterTarget.print_decls en modul itds
     in
 
-    let has_out = has_out_exprs tds in
-    if has_out
+    let has_external_api =
+      has_out_exprs tds ||
+      has_extern_types tds ||
+      has_extern_functions tds in
+
+    if has_external_api
     then begin
-      let output_types_fsti_file =
+      let external_api_fsti_file =
         open_write_file
-          (Printf.sprintf "%s/%s.OutputTypes.fsti" (Options.get_output_dir ()) modul) in
-      FStar.IO.write_string output_types_fsti_file (Target.print_out_exprs_fstar modul tds);
-      FStar.IO.close_write_file output_types_fsti_file
+          (Printf.sprintf "%s/%s.ExternalAPI.fsti" (Options.get_output_dir ()) modul) in
+      FStar.IO.write_string external_api_fsti_file (Target.print_external_api_fstar modul tds);
+      FStar.IO.close_write_file external_api_fsti_file
     end;
 
     let fst_file =
@@ -206,9 +218,9 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (tds:list T.decl) (i
         (Printf.sprintf "%s/%s.fst"
           (Options.get_output_dir())
           modul) in
-    let maybe_open_otypes =
-      if has_out
-      then Printf.sprintf "open %s.OutputTypes" modul
+    let maybe_open_external_api =
+      if has_external_api
+      then Printf.sprintf "open %s.ExternalAPI" modul
       else ""
     in
     FStar.IO.write_string fst_file 
@@ -223,7 +235,7 @@ let emit_fstar_code_for_interpreter (en:env) (modul:string) (tds:list T.decl) (i
                              module P = Prelude\n\
                              #push-options \"--fuel 0 --ifuel 0\"\n\
                              #push-options \"--using_facts_from 'Prims FStar.UInt FStar.UInt8 FStar.UInt16 FStar.UInt32 FStar.UInt64 Prelude Everparse3d FStar.Int.Cast %s'\"\n"
-                             modul maybe_open_otypes modul);
+                             modul maybe_open_external_api modul);
     FStar.IO.write_string fst_file impl;    
     FStar.IO.close_write_file fst_file
 
@@ -256,7 +268,17 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.write_string h_file wrapper_header;
     FStar.IO.close_write_file h_file
   end;
+
   let has_out_exprs = has_out_exprs t_decls in
+  let has_extern_types = has_extern_types t_decls in
+  let has_extern_fns = has_extern_functions t_decls in
+
+  (*
+   * If there are output types in the module
+   *   and emit_output_types_defs flag is set,
+   *   then emit output type definitions in M_OutputTypesDefs.h
+   *)
+
   if has_out_exprs && emit_output_types_defs
   then begin
     let output_types_defs_file = open_write_file
@@ -264,7 +286,57 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
          (Options.get_output_dir ())
          modul) in
     FStar.IO.write_string output_types_defs_file (Target.print_output_types_defs modul t_decls);
-    FStar.IO.close_write_file output_types_defs_file
+    FStar.IO.close_write_file output_types_defs_file;
+
+    (*
+     * Optimization: If the module has no extern types,
+     *   then M_ExternalTypedefs.h, that we require the programmer to provide,
+     *   only contains output type defs
+     *
+     * So generate M_ExteralTypedefs.h, with #include of M_OutputTypesDefs.h
+     *)
+
+    if not has_extern_types
+    then begin
+      let extern_typedefs_file = open_write_file
+        (Printf.sprintf "%s/%s_ExternalTypedefs.h"
+          (Options.get_output_dir ())
+          modul) in
+      FStar.IO.write_string extern_typedefs_file
+        (Printf.sprintf
+          "#ifndef __%s_ExternalTypedefs_H\n\
+           #define __%s_ExternalTypedefs_H\n
+           #if defined(__cplusplus)\n\
+           extern \"C\" {\n\
+           #endif\n\n\n\
+           #include \"%s_OutputTypesDefs.h\"\n\n\
+           #if defined(__cplusplus)\n\
+           }\n\
+           #endif\n\n\
+           #define __%s_ExternalTypedefs_H_DEFINED\n\
+           #endif\n"
+
+          modul
+          modul
+          modul
+          modul);
+      FStar.IO.close_write_file extern_typedefs_file
+    end
+  end;
+
+  (*
+   * Optimization: If M only has extern functions, and no types,
+   *   then the external typedefs file is trivially empty
+   *)
+
+  if has_extern_fns && not (has_out_exprs || has_extern_types)
+  then begin
+    let extern_typedefs_file = open_write_file
+      (Printf.sprintf "%s/%s_ExternalTypedefs.h"
+        (Options.get_output_dir ())
+        modul) in
+    FStar.IO.write_string extern_typedefs_file "\n";
+    FStar.IO.close_write_file extern_typedefs_file
   end;
 
   if has_out_exprs
