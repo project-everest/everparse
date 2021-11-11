@@ -28,6 +28,8 @@ module H = Hashtable
 
    * Resolve module-qualified names, including the use of module 
      abbreviations
+
+   * Set the kind (Spec/Output/Extern) in the type nodes
 *)
 
 let check_desugared_enum_cases (cases:list enum_case) : ML (list ident) =
@@ -130,7 +132,7 @@ let desugar_one_enum (d:decl) : ML (list decl) =
 
 
 (*
- * output_types table to set the is_output field in the Typ_app nodes
+ * output_types and extern_types tables to set the kind in the Typ_app nodes
  *)
 
 noeq
@@ -138,6 +140,7 @@ type qenv = {
   mname : string;
   module_abbrevs : H.t string string;
   output_types : H.t ident' unit;
+  extern_types : H.t ident' unit;
   local_names : list string
 }
 
@@ -148,6 +151,10 @@ let push_output_type (env:qenv) (out_t:out_typ) : ML unit =
   H.insert env.output_types out_t.out_typ_names.typedef_name.v ();
   H.insert env.output_types out_t.out_typ_names.typedef_abbrev.v ()
 
+let push_extern_type (env:qenv) (td:typedef_names) : ML unit =
+  H.insert env.extern_types td.typedef_name.v ();
+  H.insert env.extern_types td.typedef_abbrev.v ()
+
 let push_name (env:qenv) (name:string) : qenv =
   { env with local_names = name::env.local_names }
 
@@ -156,7 +163,8 @@ let prim_consts = [
   "UINT16BE"; "UINT32BE"; "UINT64BE";
   "field_id"; "PUINT8";
   "all_bytes"; "all_zeros";
-  "is_range_okay" ]
+  "is_range_okay";
+  "void" ]
 
 let resolve_ident (env:qenv) (i:ident) : ML ident =
   if List.mem i.v.name prim_consts  //it's a primitive constant, e.g. UINT8, leave as is
@@ -196,8 +204,13 @@ let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
   | Type_app hd _ args ->
     let hd = resolve_ident env hd in
     //Set is_out argument to the Type_app appropriately
-    let is_out = Some? (H.try_find env.output_types hd.v) in
-    Type_app hd is_out (List.map (resolve_typ_param env) args)
+    let k =
+      let is_out = Some? (H.try_find env.output_types hd.v) in
+      if is_out then KindOutput
+      else let is_extern = Some? (H.try_find env.extern_types hd.v) in
+           if is_extern then KindExtern
+           else KindSpec in
+    Type_app hd k (List.map (resolve_typ_param env) args)
   | Pointer t -> Pointer (resolve_typ env t)
 
 and resolve_typ (env:qenv) (t:typ) : ML typ = { t with v = resolve_typ' env t.v }
@@ -331,6 +344,15 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let out_t = resolve_out_type env out_t in
     push_output_type env out_t;
     OutputType out_t
+  | ExternType td_names ->
+    let td_names = resolve_typedef_names env td_names in
+    push_extern_type env td_names;
+    ExternType td_names
+  | ExternFn id ret params ->
+    let id = resolve_ident env id in
+    let ret = resolve_typ env ret in
+    let params, _ = resolve_params env params in
+    ExternFn id ret params
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
@@ -341,7 +363,9 @@ let desugar (mname:string) (p:prog) : ML prog =
     mname=mname;
     module_abbrevs=H.create 10;
     output_types=H.create 10;
+    extern_types=H.create 10;
     local_names=[]} in
+  H.insert env.extern_types (Ast.to_ident' "void") ();
   let decls = List.map (resolve_decl env) decls in
   decls,
   (match refinement with
