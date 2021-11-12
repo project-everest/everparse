@@ -33,12 +33,9 @@ inline_for_extraction
 noextract
 let is_range_okay = EverParse3d.ErrorCode.is_range_okay
 
-let hinv = HS.mem -> Type
-let extends h1 h0 = forall #a #r #s (b:mbuffer a r s). {:pattern live h1 b} live h0 b ==> live h1 b
-let modifies_none_extends (h0 h1:HS.mem)
-  : Lemma (modifies loc_none h0 h1 ==> h1 `extends` h0) = ()
+let hinv = HS.mem -> Tot Type0
 let liveness_inv = i:hinv {
-  forall h0 h1. {:pattern (i h1); (h1 `extends` h0)}  i h0 /\ h1 `extends` h0 ==> i h1
+  forall l h0 h1. {:pattern (i h1); (modifies l h0 h1)}  i h0 /\ modifies l h0 h1 /\ address_liveness_insensitive_locs `loc_includes` l ==> i h1
 }
 let mem_inv  = liveness_inv
 [@@erasable]
@@ -49,7 +46,7 @@ let inv_implies (inv0 inv1:slice_inv) =
 let true_inv : slice_inv = fun _ _ -> True
 let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h
 [@@erasable]
-let eloc = FStar.Ghost.erased B.loc
+let eloc = (l: FStar.Ghost.erased B.loc { B.address_liveness_insensitive_locs `B.loc_includes` l })
 let eloc_union (l1 l2:eloc) : Tot eloc = B.loc_union l1 l2
 let eloc_none : eloc = B.loc_none
 let eloc_includes (l1 l2:eloc) = B.loc_includes l1 l2

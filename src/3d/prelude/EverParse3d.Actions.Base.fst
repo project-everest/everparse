@@ -33,7 +33,6 @@ let action
       (ensures fun h0 _ h1 ->
         let sl = Ghost.reveal sl in
         modifies (app_loc ctxt l) h0 h1 /\
-        h1 `extends` h0 /\
         B.live h1 ctxt /\
         inv (I.footprint sl) h1)
 
@@ -119,7 +118,6 @@ let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv
   (ensures fun h res h' ->
     I.live sl h' /\
     modifies (app_loc ctxt l `loc_union` I.perm_footprint sl) h h' /\
-    h' `extends` h /\
     inv (I.footprint sl) h' /\
     B.live h' ctxt /\
     begin let s = I.get_remaining sl h in
@@ -166,7 +164,6 @@ let leaf_reader
     let s = I.get_remaining sl h in
     I.live sl h' /\
     modifies (I.perm_footprint sl) h h' /\
-    h' `extends` h /\
     begin match LP.parse p s with
     | None -> False
     | Some (y, len) ->
@@ -209,7 +206,6 @@ let validate_drop_true
   let h1 = HST.get () in
   I.skip_if_success input pos res;
   let h2 = HST.get () in
-  assert (h2 `extends` h1);
   res
 
 inline_for_extraction
@@ -740,7 +736,7 @@ let validate_list_inv
   (#t: Type)
   (p: LPL.parser k t)
   (inv: slice_inv)
-  (l: loc)
+  (l: eloc)
   (g0 g1: Ghost.erased HS.mem)
   (ctxt:app_ctxt)
   (sl: input_buffer_t)
@@ -752,7 +748,6 @@ let validate_list_inv
   let h1 = Ghost.reveal g1 in
   let res = Seq.index (as_seq h bres) 0 in
   inv (I.footprint sl) h0 /\
-  h `extends` h0 /\
   loc_not_unused_in h0 `loc_includes` app_loc ctxt l /\
   app_loc ctxt l `loc_disjoint` I.footprint sl /\
   app_loc ctxt l `loc_disjoint` loc_buffer bres /\
@@ -811,7 +806,6 @@ let validate_list_body
   then true
   else begin
     let h1 = HST.get () in
-    assert (h1 `extends` Ghost.reveal g0);
     modifies_address_liveness_insensitive_unused_in (Ghost.reveal g0) h1;
     let result = validate_drop v ctxt err sl sl_len position in
     upd bres 0ul result;
@@ -871,7 +865,7 @@ let validate_list'
   let h2 = HST.get () in
   HST.pop_frame ();
   let h' = HST.get () in
-  assert (h' `extends` h0);
+  assert (B.modifies (app_loc ctxt l `B.loc_union` I.perm_footprint sl) h0 h');
   LP.parser_kind_prop_equiv LPLL.parse_list_kind (LPLL.parse_list p);
   finalResult
 
@@ -909,7 +903,6 @@ let validate_fldata_consumes_all
   let hasEnoughBytes = I.has input input_length pos (Cast.uint32_to_uint64 n) in
   let h1 = HST.get () in
   modifies_address_liveness_insensitive_unused_in h h1;
-  assert (h1 `extends` h);
   if not hasEnoughBytes
   then LPE.set_validator_error_pos LPE.validator_error_not_enough_data pos
   else begin
@@ -917,7 +910,6 @@ let validate_fldata_consumes_all
     let truncatedInputLength = I.truncate_len input pos (Cast.uint32_to_uint64 n) truncatedInput in
     let h2 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h2;
-    assert (h2 `extends` h);
     I.is_prefix_of_prop truncatedInput input h2;
     assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n));
     let res = validate_drop v ctxt err truncatedInput truncatedInputLength pos in
@@ -944,7 +936,6 @@ let validate_fldata
   let hasEnoughBytes = I.has input input_length pos (Cast.uint32_to_uint64 n) in
   let h1 = HST.get () in
   modifies_address_liveness_insensitive_unused_in h h1;
-  assert (h1 `extends` h);
   if not hasEnoughBytes
   then LPE.set_validator_error_pos LPE.validator_error_not_enough_data pos
   else begin
@@ -952,7 +943,6 @@ let validate_fldata
     let truncatedInputLength = I.truncate_len input pos (Cast.uint32_to_uint64 n) truncatedInput in
     let h2 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h2;
-    assert (h2 `extends` h);
     I.is_prefix_of_prop truncatedInput input h2;
     assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n));
     let res = validate_drop v ctxt err truncatedInput truncatedInputLength pos in
@@ -964,7 +954,6 @@ let validate_fldata
       let stillHasBytes = I.has truncatedInput truncatedInputLength res 1uL in
       let h4 = HST.get () in
       modifies_address_liveness_insensitive_unused_in h h4;
-      assert (h4 `extends` h);
       if stillHasBytes
       then LPE.set_validator_error_pos LPE.validator_error_unexpected_padding res
       else res
@@ -1010,7 +999,6 @@ let validate_total_constant_size_no_read'
   let hasBytes = I.has input input_length pos sz in
   let h2 = HST.get () in
   modifies_address_liveness_insensitive_unused_in h h2;
-  assert (h2 `extends` h);
   if hasBytes
   then pos `U64.add` sz
   else LPE.set_validator_error_pos LPE.validator_error_not_enough_data pos
@@ -1161,7 +1149,6 @@ let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parse
     let hasBytes = I.has input input_length pos (Cast.uint32_to_uint64 n) in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h1;
-    assert (h1 `extends` h);
     if not hasBytes
     then
       LPE.set_validator_error_pos LPE.validator_error_not_enough_data pos
@@ -1170,7 +1157,6 @@ let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parse
       let truncatedInputLength = I.truncate_len input pos (Cast.uint32_to_uint64 n) truncatedInput in
       let h2 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h2 in
-      let _ = assert (h2 `extends` h) in
       let _ = I.is_prefix_of_prop truncatedInput input h2 in
       let _ = assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n)) in
       [@inline_let] let _ = LPC.nondep_then_eq p parse_all_bytes (I.get_remaining truncatedInput h2) in
@@ -1184,7 +1170,6 @@ let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parse
         let h4 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h h4;
         let _ = I.is_prefix_of_prop truncatedInput input h4 in
-        assert (h4 `extends` h);
         pos `U64.add` Cast.uint32_to_uint64 n
       end
 
@@ -1203,7 +1188,6 @@ let validate_t_exact (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser 
     let hasBytes = I.has input input_length pos (Cast.uint32_to_uint64 n) in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h1;
-    assert (h1 `extends` h);
     if not hasBytes
     then
       LPE.set_validator_error_pos LPE.validator_error_not_enough_data pos
@@ -1212,7 +1196,6 @@ let validate_t_exact (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser 
       let truncatedInputLength = I.truncate_len input pos (Cast.uint32_to_uint64 n) truncatedInput in
       let h2 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h2 in
-      let _ = assert (h2 `extends` h) in
       let _ = I.is_prefix_of_prop truncatedInput input h2 in
       let _ = assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n)) in
       [@inline_let] let _ = LPC.nondep_then_eq p parse_all_bytes (I.get_remaining truncatedInput h2) in
@@ -1225,7 +1208,6 @@ let validate_t_exact (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser 
         let stillHasBytes = I.has truncatedInput truncatedInputLength result 1uL in
         let h4 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h h4;
-        assert (h4 `extends` h);
         I.is_prefix_of_prop truncatedInput input h4;
         if stillHasBytes
         then LPE.set_validator_error_pos LPE.validator_error_unexpected_padding result
