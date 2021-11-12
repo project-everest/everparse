@@ -119,6 +119,16 @@ let valid_rewrite_parse_vldata
   );
 }
 
+
+val parse_bounded_integer'
+  (sz: integer_size)
+: Tot (p' : parser {
+    Parser?.t p' == LPI.bounded_integer (U32.v sz) /\
+    get_parser_kind p' == LPI.parse_bounded_integer_kind (U32.v sz)  /\
+    get_parser p' == LPI.parse_bounded_integer (U32.v sz)//  /\
+    // get_serializer p' == LPI.serialize_bounded_integer (U32.v sz)
+  })
+
 let parse_bounded_integer
   sz
 =
@@ -151,6 +161,8 @@ let parse_vldata_intro_impl
 
 let write_bounded_integer = LP.write_bounded_integer'
 
+#push-options "--z3rlimit 32"
+
 let parse_vldata_intro_weak_impl
   #inv p min max
 = mk_repr_impl
@@ -175,6 +187,8 @@ let parse_vldata_intro_weak_impl
       IError "parse_vldata_intro_weak: out of bounds"
     end
   )
+
+#pop-options
 
 let parse_vldata_recast_impl
   #inv p min max min' max'

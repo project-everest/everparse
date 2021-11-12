@@ -111,10 +111,7 @@ ValidateOrderedPairGreater(
   else
   {
     /* reading field value */
-    uint8_t temp[4U] = { 0U };
-    uint8_t *temp1 = Input + (uint32_t)StartPosition;
-    uint32_t res = Load32Le(temp1);
-    uint32_t orderedPair1 = res;
+    uint32_t orderedPair1 = Load32Le(Input + (uint32_t)StartPosition);
     /* start: checking constraint */
     BOOLEAN orderedPairConstraintIsOk = Lesser <= orderedPair1;
     /* end: checking constraint */
@@ -179,10 +176,7 @@ OrderedPairValidateOrderedPair(
   {
     return positionAfterlesser;
   }
-  uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input + (uint32_t)StartPosition;
-  uint32_t res = Load32Le(temp1);
-  uint32_t lesser = res;
+  uint32_t lesser = Load32Le(Input + (uint32_t)StartPosition);
   /* Field _orderedPair_greater */
   uint64_t
   positionAfterOrderedPair0 =

@@ -59,8 +59,11 @@ and simplify_typ (env:T.env_t) (t:typ)
     | Pointer t -> {t with v=Pointer (simplify_typ env t)}
     | Type_app s b ps ->
       let ps = List.map (simplify_typ_param env) ps in
-      let s = B.resolve_typedef_abbrev (fst env) s in
-      { t with v = Type_app s b ps }
+      let s = B.resolve_record_case_output_extern_type_name (fst env) s in
+      let t = { t with v = Type_app s b ps } in
+      if Options.get_interpret()
+      then B.unfold_typ_abbrev_only (fst env) t
+      else t
 
 and simplify_out_expr_node (env:T.env_t) (oe:with_meta_t out_expr')
   : ML (with_meta_t out_expr')
@@ -92,6 +95,7 @@ let rec simplify_action (env:T.env_t) (a:action) : ML action =
   | Action_seq hd tl -> {a with v = Action_seq (simplify_atomic_action env hd) (simplify_action env tl) }
   | Action_ite hd then_ else_ -> {a with v = Action_ite (simplify_expr env hd) (simplify_action env then_) (simplify_action_opt env else_) }
   | Action_let i aa k -> {a with v = Action_let i (simplify_atomic_action env aa) (simplify_action env k) }
+  | Action_act a -> { a with v = Action_act (simplify_action env a) }
 and simplify_action_opt (env:T.env_t) (a:option action) : ML (option action) =
   match a with
   | None -> None
@@ -134,7 +138,10 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   | Define i (Some t) c -> decl_with_v d (Define i (Some (simplify_typ env t)) c)
 
   | TypeAbbrev t i ->
-    decl_with_v d (TypeAbbrev (simplify_typ env t) i)
+    let t' = simplify_typ env t in
+    if Options.get_interpret() 
+    then B.update_typ_abbrev (fst env) i t';
+    decl_with_v d (TypeAbbrev t' i)
 
   | Enum t i cases ->
     let t = simplify_typ env t in
@@ -157,6 +164,13 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
 
   | OutputType out_t ->
     decl_with_v d (OutputType ({out_t with out_typ_fields=simplify_out_fields env out_t.out_typ_fields}))
+
+  | ExternType tdnames -> d
+
+  | ExternFn f ret params ->
+    let ret = simplify_typ env ret in
+    let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
+    decl_with_v d (ExternFn f ret params)
 
 let simplify_prog benv senv (p:list decl) =
   List.map (simplify_decl (B.mk_env benv, senv)) p

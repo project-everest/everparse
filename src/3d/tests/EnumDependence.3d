@@ -6,6 +6,12 @@ UINT32 enum AB {
        B
 }
 
+typedef struct _UseAB {
+  AB ab { ab == B };
+  UINT32 c { c > ab };
+} UseAB;
+
+
 casetype _C (AB ab) {
   switch (ab) {
   case A:
@@ -15,10 +21,9 @@ casetype _C (AB ab) {
   }
 } C;
 
-// FIXME: This definition now fails because of double fetches.
+
 entrypoint
 typedef struct _T {
-//  AB ab;
-//  C(ab) c;
-  UINT32 dummy;
+  AB ab { ab == B };
+  C(ab) c;
 } T;

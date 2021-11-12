@@ -729,8 +729,8 @@ let validate_impos ()
 noextract inline_for_extraction
 let validate_ite
   e p1 v1 p2 v2
-  = fun ctxt err input start_position ->
-      if e then validate_drop (v1 ()) ctxt err input start_position else validate_drop (v2 ()) ctxt err input start_position
+  = fun ctxt err input input_len start_position ->
+      if e then validate_drop (v1 ()) ctxt err input input_len start_position else validate_drop (v2 ()) ctxt err input input_len start_position
 
 module LPLL = LowParse.Spec.List
 
@@ -1188,6 +1188,9 @@ let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parse
         pos `U64.add` Cast.uint32_to_uint64 n
       end
 
+#pop-options
+
+#push-options "--z3rlimit 64"
 #restart-solver
 
 noextract inline_for_extraction
@@ -1268,13 +1271,17 @@ let read_filter #nz
         p32 input pos
 
 inline_for_extraction noextract
+let read_impos 
+  : leaf_reader (parse_impos())
+  = fun sl pos -> 
+      false_elim ()
+
+inline_for_extraction noextract
 let validate____UINT8
   : validator parse____UINT8
   = validate_with_comment
       "Checking that we have enough space for a UINT8, i.e., 1 byte"
       (validate_total_constant_size_no_read parse____UINT8 1uL () _ _)
-
-(* FIXME: Reading currently performs two copies, one from `read`, another from kremlib's implementations of load16_be, etc. *)
 
 inline_for_extraction noextract
 let lift_reader
@@ -1288,26 +1295,15 @@ let lift_reader
 : Pure (leaf_reader p)
   (requires (
     U32.v sz32 == U64.v sz /\
+    U64.v sz > 0 /\
     k.LP.parser_kind_subkind == Some LP.ParserStrong /\
     k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
-    k.LP.parser_kind_low = U64.v sz /\
-    U64.v sz > 0
+    k.LP.parser_kind_low = U64.v sz
   ))
   (ensures (fun _ -> True))
 = fun input pos ->
   LP.parser_kind_prop_equiv k p;
-  let h0 = HST.get () in
-  HST.push_frame ();
-  let temp = B.alloca 0uy sz32 in
-  let h1 = HST.get () in
-  I.live_not_unused_in input h0;
-  let temp = I.read input pos sz temp in
-  let h2 = HST.get () in
-  LP.parse_strong_prefix p (I.get_remaining input h0) (B.as_seq h2 temp);
-  LPL.valid_facts p h2 (LPL.make_slice temp sz32) 0ul;
-  let res = r (LPL.make_slice temp sz32) 0ul in
-  HST.pop_frame ();
-  res
+  I.read t k p r input pos sz
 
 inline_for_extraction noextract
 let read____UINT8
@@ -1603,7 +1599,7 @@ let action_abort
 
 noextract
 inline_for_extraction
-let action_field_pos
+let action_field_pos_64
       #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
    : action p true_inv eloc_none false U64.t
    = fun _ _ pos -> pos

@@ -69,7 +69,8 @@ noeq
 type atomic_action =
   | Action_return of expr
   | Action_abort
-  | Action_field_pos
+  | Action_field_pos_64
+  | Action_field_pos_32
   | Action_field_ptr
   | Action_deref of A.ident
   | Action_assignment : lhs:A.ident -> rhs:expr -> atomic_action
@@ -81,12 +82,13 @@ type action =
   | Action_seq : hd:atomic_action -> tl:action -> action
   | Action_ite : hd:expr -> then_:action -> else_:action -> action
   | Action_let : i:A.ident -> a:atomic_action -> k:action -> action
-
+  | Action_act : action -> action
+  
 (* A subset of F* types that the translation targets *)
 noeq
 type typ =
   | T_false    : typ
-  | T_app      : hd:A.ident -> is_out:bool -> args:list index -> typ  //the bool is true if the hd is an output type ident
+  | T_app      : hd:A.ident -> A.t_kind -> args:list index -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
@@ -344,7 +346,8 @@ type type_decl = {
   decl_typ: typedef_body;
   decl_parser: parser;
   decl_validator: validator;
-  decl_reader: option reader
+  decl_reader: option reader;
+  decl_is_enum : bool
 }
 
 let definition = A.ident * list param * typ * expr
@@ -392,12 +395,24 @@ type decl' =
 
   | Output_type_expr : output_expr -> is_get:bool -> decl'  //is_get boolean indicates that the output expression appears in a getter position, i.e. in a type parameter, it is false when the output expression is an assignment action lhs
 
+  | Extern_type : A.ident -> decl'
+  | Extern_fn : A.ident -> typ -> list param -> decl'
+
 type decl = decl' * decl_attributes
 
 type decls = list decl
 
 val error_handler_decl : decl
+val maybe_mname_prefix (mname:string) (i:A.ident) : string
+val print_ident (i:A.ident) : string
+val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
+val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string //(decreases t)
+val print_kind (mname:string) (k:parser_kind) : Tot string
+val print_parser (mname:string) (p:parser) : ML string
+val print_action (mname:string) (a:action) : ML string
+val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
+val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string
 val print_decls (modul: string) (ds:list decl) : ML string
 val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string
@@ -418,6 +433,6 @@ val output_base_var (lhs:output_expr) : ML A.ident
  * Used by Main
  *)
  
-val print_out_exprs_fstar (modul:string) (ds:decls) : ML string
+val print_external_api_fstar (modul:string) (ds:decls) : ML string
 val print_out_exprs_c (modul:string) (ds:decls) : ML string
 val print_output_types_defs (modul:string) (ds:decls) : ML string

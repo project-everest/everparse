@@ -55,9 +55,9 @@
 %token          STAR DIV MINUS PLUS LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
-%token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
+%token          MUTABLE LBRACE_ONSUCCESS LBRACE_ACT LBRACE_CHECK FIELD_POS_64 FIELD_POS_32 FIELD_PTR VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
-%token          MODULE EXPORT OUTPUT UNION
+%token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -198,12 +198,12 @@ qident:
   | m=IDENT COLON_COLON n=IDENT    { with_range ({modul_name=Some m.v.name; name=n.v.name}) $startpos }
 
 (*
- * Note that the is_output field is being set to false in the parser
+ * NOTE that the kind is being set to KindSpec here
  *   It is set properly in the desugaring phase
  *)
 typ_no_range:
-  | i=qident { Type_app(i, false, []) }
-  | hd=qident LPAREN a=right_flexible_nonempty_list(COMMA, typ_param) RPAREN { Type_app(hd, false, a) }
+  | i=qident { Type_app(i, KindSpec, []) }
+  | hd=qident LPAREN a=right_flexible_nonempty_list(COMMA, typ_param) RPAREN { Type_app(hd, KindSpec, a) }
 
 typ:
   | t=typ_no_range { with_range t $startpos }
@@ -237,6 +237,8 @@ bitwidth:
 
 field_action:
   | LBRACE_ONSUCCESS a=action RBRACE { a, false }
+  | LBRACE_CHECK a=action RBRACE { a, false }
+  | LBRACE_ACT a=action RBRACE { with_range (Action_act a) $startpos(a), false }
 
 struct_field:
   | t=typ fn=IDENT bopt=option_of(bitwidth) aopt=array_annot c=option_of(refinement) a=option_of(field_action)
@@ -325,7 +327,8 @@ out_expr:
 atomic_action:
   | RETURN e=expr SEMICOLON { Action_return e }
   | ABORT SEMICOLON         { Action_abort }
-  | FIELD_POS SEMICOLON     { Action_field_pos }
+  | FIELD_POS_64 SEMICOLON     { Action_field_pos_64 }
+  | FIELD_POS_32 SEMICOLON     { Action_field_pos_32 }
   | FIELD_PTR SEMICOLON     { Action_field_ptr }
   | STAR i=IDENT SEMICOLON  { Action_deref i }
   | oe=out_expr EQ e=expr SEMICOLON { Action_assignment(oe, e) }
@@ -371,7 +374,7 @@ decl_no_range:
   | MODULE i=IDENT EQ m=IDENT { ModuleAbbrev (i, m) }
   | DEFINE i=IDENT c=constant { Define (i, None, c) }
   | t=IDENT ENUM i=IDENT LBRACE es=right_flexible_nonempty_list(COMMA, enum_case) RBRACE maybe_semi
-    { Enum(with_range (Type_app (t, false, [])) ($startpos(t)), i, es) }
+    { Enum(with_range (Type_app (t, KindSpec, [])) ($startpos(t)), i, es) }
   | b=attributes TYPEDEF t=typ i=IDENT SEMICOLON
     { TypeAbbrev (t, i) }
   | b=attributes TYPEDEF STRUCT i=IDENT ps=parameters w=where_opt
@@ -390,12 +393,22 @@ decl_no_range:
         let td = mk_td b i j k in
         CaseType(td, ps, (with_range (Identifier e) ($startpos(i)), cs))
     }
+
   | OUTPUT TYPEDEF STRUCT i=IDENT
     LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
     j=IDENT p=typedef_pointer_name_opt SEMICOLON
     {  let k = pointer_name j p in
        let td = mk_td [] i j k in       
        OutputType ({out_typ_names=td; out_typ_fields=out_flds; out_typ_is_union=false}) }
+
+  | EXTERN TYPEDEF STRUCT i=IDENT j=IDENT
+    {  let k = pointer_name j None in
+       let td = mk_td [] i j k in
+       ExternType td
+    }
+
+  | EXTERN ret=typ i=IDENT ps=parameters
+    { ExternFn (i, ret, ps) }
 
 block_comment_opt:
   |                 { None }

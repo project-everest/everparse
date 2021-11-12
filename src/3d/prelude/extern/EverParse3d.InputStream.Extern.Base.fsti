@@ -8,24 +8,20 @@ module U8 = FStar.UInt8
 module LPE = EverParse3d.ErrorCode
 module U64 = FStar.UInt64
 
-assume
 val input_stream_base : Type0
 
 inline_for_extraction
 noextract
 let t = input_stream_base
 
-assume
 val live: t -> HS.mem -> Tot prop
 
-assume
 val footprint
   (x: t)
 : Ghost B.loc
   (requires True)
   (ensures (fun y -> B.address_liveness_insensitive_locs `B.loc_includes` y))
 
-assume
 val live_not_unused_in :
     (x: t) ->
     (h: HS.mem) ->
@@ -33,26 +29,21 @@ val live_not_unused_in :
     (requires (live x h))
     (ensures (B.loc_not_unused_in h `B.loc_includes` footprint x))
 
-assume
 val len_all: (x: t) -> GTot LPE.pos_t
 
 /// WARNING: the following assumes that no computations shall overflow
-assume
 val get_all: (x: t) -> Ghost (Seq.seq U8.t)
     (requires True)
     (ensures (fun y -> Seq.length y == U64.v (len_all x)))
 
-assume
 val get_remaining: (x: t) -> (h: HS.mem) -> Ghost (Seq.seq U8.t)
     (requires (live x h))
     (ensures (fun y -> Seq.length y <= U64.v (len_all x)))
 
-assume
 val get_read: (x: t) -> (h: HS.mem) -> Ghost (Seq.seq U8.t)
     (requires (live x h))
     (ensures (fun y -> get_all x `Seq.equal` (y `Seq.append` get_remaining x h)))
 
-assume
 val preserved:
     (x: t) ->
     (l: B.loc) ->
@@ -66,7 +57,6 @@ val preserved:
       get_read x h' == get_read x h
     ))
 
-assume
 val has:
     (x: t) ->
     (n: U64.t) ->
@@ -77,7 +67,6 @@ val has:
       (res == true <==> Seq.length (get_remaining x h) >= U64.v n)
     ))
 
-assume
 val read:
     (x: t) ->
     (n: U64.t) ->
@@ -95,12 +84,12 @@ val read:
       B.modifies (B.loc_buffer dst `B.loc_union` footprint x) h h' /\
       B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
       live x h' /\
+      B.live h' dst /\
       B.live h' dst' /\
       (B.loc_buffer dst `B.loc_union` footprint x) `B.loc_includes` B.loc_buffer dst' /\
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ))
 
-assume
 val skip:
     (x: t) ->
     (n: U64.t) ->
@@ -113,7 +102,6 @@ val skip:
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ))
 
-assume
 val empty:
     (x: t) ->
     HST.Stack U64.t

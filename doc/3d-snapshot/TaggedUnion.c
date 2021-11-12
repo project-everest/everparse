@@ -454,10 +454,7 @@ TaggedUnionValidateInteger(
   {
     return positionAftersize;
   }
-  uint8_t temp[4U] = { 0U };
-  uint8_t *temp1 = Input + (uint32_t)StartPosition;
-  uint32_t res = Load32Le(temp1);
-  uint32_t size = res;
+  uint32_t size = Load32Le(Input + (uint32_t)StartPosition);
   /* Field _integer_payload */
   uint64_t
   positionAfterInteger0 =

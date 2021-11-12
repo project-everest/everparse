@@ -104,10 +104,10 @@ let has
     Aux.has x.Aux.base n
 
 #push-options "--z3rlimit 64"
-
+#restart-solver
 inline_for_extraction
 noextract
-let read
+let read0
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -126,6 +126,7 @@ let read
       B.modifies (B.loc_buffer dst `B.loc_union` footprint x) h h' /\
       B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
       live x h' /\
+      B.live h' dst /\
       B.live h' dst' /\
       (B.loc_buffer dst `B.loc_union` footprint x) `B.loc_includes` B.loc_buffer dst' /\
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
@@ -136,6 +137,64 @@ let read
   let h2 = HST.get () in
   Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h1 h2;
   dst
+
+module LP = LowParse.Low.Base
+
+#restart-solver
+inline_for_extraction
+noextract
+let read
+    (t': Type0)
+    (k: LP.parser_kind)
+    (p: LP.parser k t')
+    (r: LP.leaf_reader p)
+    (x: t)
+    (pos: LPE.pos_t)
+    (n: U64.t)
+:   HST.Stack t'
+    (requires (fun h ->
+      live x h /\
+      U64.v pos == Seq.length (get_read x h) /\
+      k.LP.parser_kind_subkind == Some LP.ParserStrong /\
+      k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+      k.LP.parser_kind_low == U64.v n /\
+      U64.v n > 0 /\
+      U64.v n < 4294967296 /\
+      Some? (LP.parse p (get_remaining x h))
+    ))
+    (ensures (fun h dst' h' ->
+      let s = get_remaining x h in
+      B.modifies (footprint x) h h' /\
+      Seq.length s >= U64.v n /\
+      LP.parse p (Seq.slice s 0 (U64.v n)) == Some (dst', U64.v n) /\
+      LP.parse p s == Some (dst', U64.v n) /\
+      live x h' /\
+      get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
+    ))
+=
+  let h0 = HST.get () in
+  HST.push_frame ();
+  [@inline_let]
+  let n32 = LP.uint64_to_uint32 n in
+  let dst = B.alloca 0uy n32 in
+  let h1 = HST.get () in
+  preserved x B.loc_none h0 h1;
+  live_not_unused_in x h0;
+  LP.parser_kind_prop_equiv k p;
+  let dst' = read0 x pos n dst in
+  let h2 = HST.get () in
+  assert (Seq.length (B.as_seq h2 dst') == U64.v n);
+  [@inline_let]
+  let sl = LP.make_slice dst' n32 in
+  LP.parse_strong_prefix p (get_remaining x h1) (B.as_seq h2 dst');
+  LP.valid_facts p h2 sl 0ul;
+  let res = r sl 0ul in
+  let h3 = HST.get () in
+  preserved x B.loc_none h2 h3;
+  HST.pop_frame ();
+  let h4 = HST.get () in
+  preserved x (B.loc_region_only false (HS.get_tip h1)) h3 h4;
+  res
 
 #pop-options
 
@@ -246,8 +305,8 @@ let get_suffix
     (ensures (fun _ -> True))
 = Seq.slice (get_all y) (U64.v (len_all x)) (U64.v (len_all y))
 
-#push-options "--z3rlimit 16"
-
+#push-options "--z3rlimit 32"
+#restart-solver
 let is_prefix_of_prop
     (x: t)
     (y: t)

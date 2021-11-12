@@ -134,7 +134,7 @@ let rec value_of_const_expr (env:env_t) (e:expr)
   | App SizeOf [{v=Identifier t}] ->
     begin
     try
-      match size_of_typ env (with_range (Type_app t false []) t.range) with
+      match size_of_typ env (with_range (Type_app t KindSpec []) t.range) with
       | Fixed n
       | WithVariableSuffix n -> Some (Inr (UInt32, n))
       | _ -> None
@@ -390,16 +390,16 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       );
       extend_with_size_of_typedef_names env names size alignment;
       d
-    | OutputType _ -> d
+    | OutputType _
+    | ExternType _
+    | ExternFn _ _ _ -> d
 
 let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
   let env =
     B.mk_env genv, senv in
     // {senv with sizes = H.create 10} in
   let ds = List.map (decl_size_with_alignment env) ds in
-  ds, snd env
+  ds
 
 let finish_module en mname e_and_p =
-  e_and_p |> snd |> List.iter (H.remove en);
-  en
-  
+  e_and_p |> snd |> List.iter (H.remove en)
