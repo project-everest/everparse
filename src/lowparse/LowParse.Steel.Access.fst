@@ -6,7 +6,7 @@ module SP = Steel.FractionalPermission
 module SE = Steel.Effect
 module SEA = Steel.Effect.Atomic
 module AP = LowParse.Steel.ArrayPtr
-module SZ = Steel.C.StdInt.Base
+module SZ = LowParse.Steel.StdInt
 
 
 let parsed_size
