@@ -23,7 +23,7 @@ val env : Type0
 val mk_env (g:global_env) : ML env
 val global_env_of_env (e:env) : ML global_env
 
-val resolve_record_case_outputtype_name (_:env) (_:ident): ML ident
+val resolve_record_case_output_extern_type_name (_:env) (_:ident): ML ident
 val lookup_expr_name (_:env) (_:ident) : ML typ
 val lookup_macro_definition (_:env) (_:ident) : ML (option expr)
 val has_reader (_:global_env) (_:ident) : ML bool

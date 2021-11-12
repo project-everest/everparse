@@ -88,7 +88,7 @@ type action =
 noeq
 type typ =
   | T_false    : typ
-  | T_app      : hd:A.ident -> is_out:bool -> args:list index -> typ  //the bool is true if the hd is an output type ident
+  | T_app      : hd:A.ident -> A.t_kind -> args:list index -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
@@ -395,6 +395,9 @@ type decl' =
 
   | Output_type_expr : output_expr -> is_get:bool -> decl'  //is_get boolean indicates that the output expression appears in a getter position, i.e. in a type parameter, it is false when the output expression is an assignment action lhs
 
+  | Extern_type : A.ident -> decl'
+  | Extern_fn : A.ident -> typ -> list param -> decl'
+
 type decl = decl' * decl_attributes
 
 type decls = list decl
@@ -430,6 +433,6 @@ val output_base_var (lhs:output_expr) : ML A.ident
  * Used by Main
  *)
  
-val print_out_exprs_fstar (modul:string) (ds:decls) : ML string
+val print_external_api_fstar (modul:string) (ds:decls) : ML string
 val print_out_exprs_c (modul:string) (ds:decls) : ML string
 val print_output_types_defs (modul:string) (ds:decls) : ML string

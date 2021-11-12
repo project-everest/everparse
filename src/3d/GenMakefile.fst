@@ -59,19 +59,21 @@ let produce_types_checked_rule
     args = Printf.sprintf "--__micro_step verify %s" types_fst;
   }
 
-let produce_output_types_fsti_checked_rule
+let produce_external_api_fsti_checked_rule
   (g: Deps.dep_graph)
   (skip_interface: bool)
   (modul: string)
 : list rule_t
-= if not (Deps.has_output_types g modul) then []
+= if not (Deps.has_output_types g modul ||
+          Deps.has_extern_types g modul ||
+          Deps.has_extern_functions g modul) then []
   else
-    let output_types_fsti = mk_filename modul "OutputTypes.fsti" in 
+    let external_api_fsti = mk_filename modul "ExternalAPI.fsti" in 
     [{
        ty = EverParse;
-       from = output_types_fsti :: List.Tot.map (fun m -> mk_filename m (if skip_interface then "fst.checked" else "fsti.checked")) (Deps.dependencies g modul);
-       to = mk_filename modul "OutputTypes.fsti.checked";
-       args = Printf.sprintf "--__micro_step verify %s" output_types_fsti;
+       from = external_api_fsti :: List.Tot.map (fun m -> mk_filename m (if skip_interface then "fst.checked" else "fsti.checked")) (Deps.dependencies g modul);
+       to = mk_filename modul "ExternalAPI.fsti.checked";
+       args = Printf.sprintf "--__micro_step verify %s" external_api_fsti;
      }]
 
 let produce_fsti_checked_rule
@@ -111,18 +113,20 @@ let produce_types_krml_rule
     args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "Types.fst");
   }
 
-let produce_output_types_krml_rule
+let produce_external_api_krml_rule
   (g: Deps.dep_graph)
   (modul: string)
 : list rule_t
-= if not (Deps.has_output_types g modul) then []
+= if not (Deps.has_output_types g modul ||
+          Deps.has_extern_types g modul ||
+          Deps.has_extern_functions g modul) then []
   else
-    let output_types_fsti_checked = mk_filename modul "OutputTypes.fsti.checked" in 
+    let external_api_fsti_checked = mk_filename modul "ExternalAPI.fsti.checked" in 
     [{
        ty = EverParse;
-       from = output_types_fsti_checked :: List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul);
-       to = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "krml";
-       args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "OutputTypes.fsti");
+       from = external_api_fsti_checked :: List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul);
+       to = mk_filename (Printf.sprintf "%s_ExternalAPI" modul) "krml";
+       args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "ExternalAPI.fsti");
      }]
 
 let produce_krml_rule
@@ -170,8 +174,10 @@ let produce_fst_rules
     args = Printf.sprintf "--no_batch %s" (mk_input_filename file);
   } ::
   List.Tot.map (produce_nop_rule [to])
-    ((if Deps.has_output_types g modul
-      then [mk_filename modul "OutputTypes.fsti"]
+    ((if Deps.has_output_types g modul ||
+         Deps.has_extern_types g modul ||
+         Deps.has_extern_functions g modul
+      then [mk_filename modul "ExternalAPI.fsti"]
       else []) `List.Tot.append` (
         if skip_types then [] else [
           mk_filename modul "fsti";
@@ -224,8 +230,10 @@ let produce_h_rules
       (if skip_types then [] else List.map (fun f -> mk_filename (Printf.sprintf "%s_Types" (Options.get_module_name f)) "krml") all_files) `List.Tot.append`
       List.concatMap (fun f ->
         let m = Options.get_module_name f in
-        if Deps.has_output_types g m
-        then [mk_filename (Printf.sprintf "%s_OutputTypes" m) "krml"]
+        if Deps.has_output_types g m ||
+           Deps.has_extern_types g m ||
+           Deps.has_extern_functions g m
+        then [mk_filename (Printf.sprintf "%s_ExternalAPI" m) "krml"]
         else []) all_files
       ;
     to = to; (* IMPORTANT: relies on the fact that kremlin generates .c files BEFORE .h files *)
@@ -243,7 +251,7 @@ let produce_output_types_o_rule
     let h = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "h" in
     let c = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "c" in
     let o = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "o" in
-    let defs = mk_filename (Printf.sprintf "%s_OutputTypesDefs" modul) "h" in
+    let defs = mk_filename (Printf.sprintf "%s_ExternalTypedefs" modul) "h" in
     [{
       ty = CC;
       from = [c; h; defs];
@@ -338,11 +346,11 @@ let produce_makefile
     ) `List.Tot.append`
     List.concatMap (produce_fst_rules g skip_types clang_format) all_files `List.Tot.append`
     (if skip_types then [] else List.Tot.map (produce_types_checked_rule g) all_modules) `List.Tot.append`
-    List.concatMap (produce_output_types_fsti_checked_rule g skip_types) all_modules `List.Tot.append`
+    List.concatMap (produce_external_api_fsti_checked_rule g skip_types) all_modules `List.Tot.append`
     (if skip_types then [] else List.Tot.map (produce_fsti_checked_rule g) all_modules) `List.Tot.append`
     List.Tot.map (produce_fst_checked_rule g skip_types) all_modules `List.Tot.append`
     (if skip_types then [] else List.Tot.map (produce_types_krml_rule g) all_modules) `List.Tot.append`
-    List.Tot.concatMap (produce_output_types_krml_rule g) all_modules `List.Tot.append`
+    List.Tot.concatMap (produce_external_api_krml_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_krml_rule g) all_modules `List.Tot.append`
     List.concatMap (produce_h_rules g skip_types clang_format) all_files
   in {

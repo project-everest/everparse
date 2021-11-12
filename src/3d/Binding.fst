@@ -72,6 +72,8 @@ noeq
 type global_env = {
   ge_h: global_hash_t;
   ge_out_t: H.t ident' decl;  //a table for output types declarations
+  ge_extern_t: H.t ident' decl;  //a table for extern type declarations
+  ge_extern_fn: H.t ident' decl;  //a table for extern function declarations
 }
 
 /// Maps locally bound names, i.e., a field name to its type
@@ -107,6 +109,8 @@ let params_of_decl (d:decl) : list param =
   | Record _ params _ _
   | CaseType _ params _ -> params
   | OutputType _ -> []
+  | ExternType _ -> []
+  | ExternFn _ _ ps -> ps
 
 let check_shadow (e:H.t ident' 'a) (i:ident) (r:range) =
   match H.try_find e i.v with
@@ -192,15 +196,18 @@ let remove_local (e:env) (i:ident) : ML unit =
     H.remove e.locals j
   | _ -> ()
 
-let resolve_record_case_outputtype_name (env:env) (i:ident) =
+let resolve_record_case_output_extern_type_name (env:env) (i:ident) =
   match H.try_find (global_env_of_env env).ge_out_t i.v with
   | Some ({d_decl={v=OutputType ({out_typ_names=names})}}) -> names.typedef_name
   | _ ->
-    match lookup env i with
-    | Inr ({d_decl={v=Record names _ _ _}}, _)
-    | Inr ({d_decl={v=CaseType names _ _}}, _) ->
-      names.typedef_name
-    | _ -> i
+    (match H.try_find (global_env_of_env env).ge_extern_t i.v with
+     | Some ({d_decl={v=ExternType td_names}}) -> td_names.typedef_name
+     | _ ->
+       (match lookup env i with
+        | Inr ({d_decl={v=Record names _ _ _}}, _)
+        | Inr ({d_decl={v=CaseType names _ _}}, _) ->
+          names.typedef_name
+        | _ -> i))
 
 let lookup_expr_name (e:env) (i:ident) : ML typ =
   match lookup e i with
@@ -236,7 +243,7 @@ let lookup_enum_cases (e:env) (i:ident)
 
 let is_enum (e:env) (t:typ) =
   match t.v with
-  | Type_app i false [] ->
+  | Type_app i KindSpec [] ->
     Some? (try_lookup_enum_cases e i)
   | _ -> false
 
@@ -449,12 +456,33 @@ let try_retype_arith_exprs (env:env) e1 e2 rng : ML (option (expr & expr & typ))
 
 (*
  * Add output type to the environment
+ *
+ * TODO: check_shadow
  *)
 let add_output_type (ge:global_env) (i:ident) (d:decl{OutputType? d.d_decl.v}) : ML unit =
   let insert i = H.insert ge.ge_out_t i d in
   insert i.v;
   let td_abbrev = (OutputType?._0 d.d_decl.v).out_typ_names.typedef_abbrev in
   insert td_abbrev.v
+
+(*
+ * Add extern type to the environment
+ *
+ * TODO: check shadow
+ *)
+let add_extern_type (ge:global_env) (i:ident) (d:decl{ExternType? d.d_decl.v}) : ML unit =
+  let insert i = H.insert ge.ge_extern_t i d in
+  insert i.v;
+  let td_abbrev = (ExternType?._0 d.d_decl.v).typedef_abbrev in
+  insert td_abbrev.v
+
+(*
+ * Add extern function to the environment
+ *
+ * TODO: check shadow
+ *)
+let add_extern_fn (ge:global_env) (i:ident) (d:decl{ExternFn? d.d_decl.v}) : ML unit =
+  H.insert ge.ge_extern_fn i.v d
 
 let lookup_output_type (ge:global_env) (i:ident) : ML out_typ =
   match H.try_find ge.ge_out_t i.v with
@@ -478,11 +506,21 @@ let lookup_output_type_field (ge:global_env) (i f:ident) : ML typ =
   | None ->
     error (Printf.sprintf "Cannot find output field %s:%s" (ident_to_string i) (ident_to_string f)) f.range
 
+let lookup_extern_type (ge:global_env) (i:ident) : ML unit =
+  match H.try_find ge.ge_extern_t i.v with
+  | Some ({d_decl={v=ExternType _}}) -> ()
+  | _ -> error (Printf.sprintf "Cannot find declaration for extern type %s" (ident_to_string i)) i.range
+
+let lookup_extern_fn (ge:global_env) (f:ident) : ML (typ & list param) =
+  match H.try_find ge.ge_extern_fn f.v with
+  | Some ({d_decl={v=ExternFn _ ret ps}}) -> ret, ps
+  | _ -> error (Printf.sprintf "Cannot find declaration for extern function %s" (ident_to_string f)) f.range
+
 let check_output_type (ge:global_env) (t:typ) : ML ident =
   let err () : ML ident =
     error (Printf.sprintf "Type %s is not an output type" (print_typ t)) t.range in
   match t.v with
-  | Type_app i b [] -> if b then i else err ()
+  | Type_app i KindOutput [] -> i
   | _ -> err ()
 
 
@@ -547,36 +585,42 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
       then { t with v = Pointer (check_typ pointer_ok env t0) }
       else error (Printf.sprintf "Pointer types are not permissible here; got %s" (print_typ t)) t.range
 
-    | Type_app _ true _ ->
-      error "Impossible, check_typ is not supposed to typecheck output types!" t.range
-    | Type_app s false ps ->
-      match lookup env s with
-      | Inl _ ->
-        error (Printf.sprintf "%s is not a type" (ident_to_string s)) s.range
+    | Type_app s KindSpec ps ->
+      (match lookup env s with
+       | Inl _ ->
+         error (Printf.sprintf "%s is not a type" (ident_to_string s)) s.range
 
-      | Inr (d, _) ->
-        let params = params_of_decl d in
-        if List.length params <> List.length ps
-        then error (Printf.sprintf "Not enough arguments to %s" (ident_to_string s)) s.range;
-        let ps =
-          List.map2 (fun (t, _, _) p ->
-            let p, t' = check_typ_param env p in
-            if not (eq_typ env t t')
-            then begin
-              match p with
-              | Inl e -> (match try_cast_integer env (e, t') t with
-                         | Some e -> Inl e
-                         | _ -> error "Argument type mismatch after trying integer cast" (range_of_typ_param p))
-              | _ ->
-                error (Printf.sprintf
-                         "Argument type mismatch (%s vs %s)"
-                         (Ast.print_typ t) (Ast.print_typ t')) (range_of_typ_param p)
-            end
-            else p)
-            params
-            ps
-        in
-        {t with v = Type_app s false ps}
+       | Inr (d, _) ->
+         let params = params_of_decl d in
+         if List.length params <> List.length ps
+         then error (Printf.sprintf "Not enough arguments to %s" (ident_to_string s)) s.range;
+         let ps =
+           List.map2 (fun (t, _, _) p ->
+             let p, t' = check_typ_param env p in
+             if not (eq_typ env t t')
+             then begin
+               match p with
+               | Inl e -> (match try_cast_integer env (e, t') t with
+                          | Some e -> Inl e
+                          | _ -> error "Argument type mismatch after trying integer cast" (range_of_typ_param p))
+               | _ ->
+                 error (Printf.sprintf
+                          "Argument type mismatch (%s vs %s)"
+                          (Ast.print_typ t) (Ast.print_typ t')) (range_of_typ_param p)
+             end
+             else p)
+             params
+             ps
+         in
+         {t with v = Type_app s KindSpec ps})
+
+    | Type_app i KindExtern args ->
+      if List.length args <> 0
+      then error (Printf.sprintf "Cannot apply the extern type %s" (ident_to_string i)) i.range
+      else t
+
+    | Type_app _ KindOutput _ ->
+      error "Impossible, check_typ is not supposed to typecheck output types!" t.range
 
 and check_expr (env:env) (e:expr)
   : ML (expr & typ)
@@ -619,7 +663,7 @@ and check_expr (env:env) (e:expr)
       then error (Printf.sprintf "Casts are only supported on integral types; %s is not integral"
                     (print_typ from)) e.range
       else match from.v with
-           | Type_app i false _ ->
+           | Type_app i KindSpec _ ->
              let from_t = as_integer_typ i in
              if integer_type_lub to from_t <> to
              then error (Printf.sprintf "Only widening casts are supported; casting %s to %s loses precision"
@@ -898,7 +942,18 @@ let rec check_field_action (env:env) (f:field) (a:action)
           Action_assignment lhs rhs, tunit
 
         | Action_call f args ->
-          error "Extern calls are not yet supported" r
+          let ret_t, params = lookup_extern_fn (global_env_of_env env) f in
+          if List.length params <> List.length args
+          then error (Printf.sprintf "Insufficient arguments to extern function %s" (ident_to_string f)) f.range
+          else let args = List.map2 (fun (t, _, _) arg ->
+                 let arg, t_arg = check_expr env arg in
+                 if not (eq_typ env t t_arg)
+                 then error (Printf.sprintf "Argument type mismatch, expected %s whereas %s has type %s"
+                               (Ast.print_typ t)
+                               (Ast.print_expr arg)
+                               (Ast.print_typ t_arg)) arg.range
+                 else arg) params args in
+               Action_call f args, tunit
     in
     match a.v with
     | Atomic_action aa ->
@@ -1036,13 +1091,13 @@ let check_switch (env:env) (s:switch_case)
     let tags_t_opt =
       match scrutinee_t.v with
       | Pointer _ -> fail_non_equality_type ()
-      | Type_app _ true _ ->
-        error "Impossible, check_typ is not supposed to typecheck output types!" head.range
+      | Type_app hd KindSpec es ->
+        (match try_lookup_enum_cases env hd with
+         | Some enum -> Some enum
+         | _ -> fail_non_equality_type ())
+      | Type_app _ _ _ ->
+        error "Impossible, check_switch is not supposed to typecheck output/extern types!" head.range
 
-      | Type_app hd false es ->
-        match try_lookup_enum_cases env hd with
-        | Some enum -> Some enum
-        | _ -> fail_non_equality_type ()
     in
     let check_case (c:case{Case? c}) : ML case =
       let Case pat f = c in
@@ -1217,12 +1272,24 @@ let allowed_base_types_as_output_types = [
   "Bool"
 ]
 
+let rec check_mutable_param_type (ge:global_env) (t:typ) : ML unit =
+  let err () : ML unit =
+    error (Printf.sprintf "%s is not an integer or output or extern type" (print_typ t)) t.range in
+  match t.v with
+  | Type_app i k [] ->
+    if k = KindOutput || k = KindExtern ||
+       (i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types)
+    then ()
+    else err ()
+  | Pointer t -> check_mutable_param_type ge t
+  | _ -> err ()
+    
 let rec check_integer_or_output_type (ge:global_env) (t:typ) : ML unit =
   match t.v with
-  | Type_app i is_out [] ->  //either it should be a base type, or an output type
+  | Type_app i k [] ->  //either it should be a base type, or an output type
     if i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types
     then ()
-    else if not is_out then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
+    else if not (k = KindOutput) then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
   | Pointer t -> check_integer_or_output_type ge t
   | _ -> error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
 
@@ -1232,7 +1299,7 @@ let check_mutable_param (env:env) (p:param) : ML unit =
   let t, _, _ = p in
   match t.v with
   | Pointer bt ->
-    check_integer_or_output_type (global_env_of_env env) bt
+    check_mutable_param_type (global_env_of_env env) bt
   | _ ->
     error (Printf.sprintf "%s is not a valid mutable parameter type, it is not a pointer type" (print_typ t)) t.range
 
@@ -1439,6 +1506,18 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_output_type e out_t.out_typ_names.typedef_name d;
     d
 
+  | ExternType tdnames ->
+    add_extern_type e tdnames.typedef_name d;
+    d
+
+  | ExternFn f ret params ->
+    let env = mk_env e in
+    let ret = check_typ true env ret in
+    check_params env params;
+    let d = mk_decl (ExternFn f ret params) d.d_decl.range d.d_decl.comments d.d_exported in
+    add_extern_fn e f d;
+    d
+
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
   List.map (bind_decl g) p, g
 
@@ -1446,6 +1525,8 @@ let initial_global_env () =
   let e = {
     ge_h = H.create 10;
     ge_out_t = H.create 10;
+    ge_extern_t = H.create 10;
+    ge_extern_fn = H.create 10;
   }
   in
   let nullary_decl i =
@@ -1481,6 +1562,15 @@ let initial_global_env () =
     |> List.iter (fun (i, d) ->
         let i = with_dummy_range (to_ident' i) in
         add_global e i (nullary_decl i) (Inr d))
+  in
+  let _void =
+    let void_ident = with_dummy_range (to_ident' "void") in
+    add_extern_type e void_ident (mk_decl (ExternType ({
+      typedef_name = void_ident;
+      typedef_abbrev = void_ident;
+      typedef_ptr_abbrev = void_ident;
+      typedef_attributes = []
+    })) dummy_range [] false)
   in
   e
 
