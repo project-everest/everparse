@@ -97,6 +97,8 @@ let inst = {
 
   footprint = _footprint;
 
+  perm_footprint = _perm_footprint;
+
   live_not_unused_in = begin fun x h ->
     ()
   end;

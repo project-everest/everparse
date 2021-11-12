@@ -7,6 +7,7 @@ let t = t
 let inst = {
   live = live;
   footprint = footprint;
+  perm_footprint = perm_footprint;
   live_not_unused_in = live_not_unused_in;
   len_all = len_all;
   get_all = get_all;

@@ -118,7 +118,7 @@ let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv
   )
   (ensures fun h res h' ->
     I.live sl h' /\
-    modifies (app_loc ctxt l `loc_union` I.footprint sl) h h' /\
+    modifies (app_loc ctxt l `loc_union` I.perm_footprint sl) h h' /\
     h' `extends` h /\
     inv (I.footprint sl) h' /\
     B.live h' ctxt /\
@@ -165,7 +165,7 @@ let leaf_reader
   (ensures (fun h res h' ->
     let s = I.get_remaining sl h in
     I.live sl h' /\
-    modifies (I.footprint sl) h h' /\
+    modifies (I.perm_footprint sl) h h' /\
     h' `extends` h /\
     begin match LP.parse p s with
     | None -> False
@@ -781,7 +781,7 @@ let validate_list_inv
      valid (LPLL.parse_list p) h sl) /\
     (stop == true ==> (valid (LPLL.parse_list p) h sl /\ Seq.length (I.get_remaining sl h) == 0))
   ) /\
-  modifies (app_loc ctxt l `loc_union` loc_buffer bres `loc_union` I.footprint sl) h1 h
+  modifies (app_loc ctxt l `loc_union` loc_buffer bres `loc_union` I.perm_footprint sl) h1 h
 
 inline_for_extraction
 noextract
@@ -855,7 +855,7 @@ let validate_list'
     | None -> False
     | Some (_, len) -> I.get_remaining sl h' `Seq.equal` Seq.slice s len (Seq.length s) /\ U64.v res == Seq.length (I.get_read sl h')
     end) /\
-    modifies (app_loc ctxt l `B.loc_union` I.footprint sl) h h'
+    modifies (app_loc ctxt l `B.loc_union` I.perm_footprint sl) h h'
   ))
 = let h0 = HST.get () in
   let g0 = Ghost.hide h0 in
@@ -1432,7 +1432,7 @@ let validate_list_up_to_inv
   B.live h0 ctxt /\
   B.live h ctxt /\
   address_liveness_insensitive_locs `loc_includes` (app_loc ctxt loc_none) /\
-  B.modifies (B.loc_buffer bres `B.loc_union` I.footprint sl `B.loc_union` app_loc ctxt loc_none) h0 h /\
+  B.modifies (B.loc_buffer bres `B.loc_union` I.perm_footprint sl `B.loc_union` app_loc ctxt loc_none) h0 h /\
   begin
     let s = I.get_remaining sl h0 in
     let s' = I.get_remaining sl h in

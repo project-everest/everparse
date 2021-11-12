@@ -39,6 +39,13 @@ let footprint
   (ensures (fun y -> B.address_liveness_insensitive_locs `B.loc_includes` y))
 = Aux.footprint x.Aux.base `B.loc_union` B.loc_buffer x.Aux.position
 
+let perm_footprint
+  (x: t)
+: Ghost B.loc
+  (requires True)
+  (ensures (fun y -> footprint x `B.loc_includes` y))
+= footprint x
+
 let live_not_unused_in
     (x: t)
     (h: HS.mem)
@@ -123,7 +130,7 @@ let read0
     ))
     (ensures (fun h dst' h' ->
       let s = get_remaining x h in
-      B.modifies (B.loc_buffer dst `B.loc_union` footprint x) h h' /\
+      B.modifies (B.loc_buffer dst `B.loc_union` perm_footprint x) h h' /\
       B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
       live x h' /\
       B.live h' dst /\
@@ -164,7 +171,7 @@ let read
     ))
     (ensures (fun h dst' h' ->
       let s = get_remaining x h in
-      B.modifies (footprint x) h h' /\
+      B.modifies (perm_footprint x) h h' /\
       Seq.length s >= U64.v n /\
       LP.parse p (Seq.slice s 0 (U64.v n)) == Some (dst', U64.v n) /\
       LP.parse p s == Some (dst', U64.v n) /\
@@ -212,7 +219,7 @@ let skip
     ))
     (ensures (fun h _ h' ->
       let s = get_remaining x h in
-      B.modifies (footprint x) h h' /\
+      B.modifies (perm_footprint x) h h' /\
       live x h' /\
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ))
@@ -238,7 +245,7 @@ let skip_if_success
     )))
     (ensures (fun h _ h' ->
       let s = get_remaining x h in
-      B.modifies (footprint x) h h' /\
+      B.modifies (perm_footprint x) h h' /\
       live x h' /\
       get_remaining x h' == (if LPE.is_success res then Seq.slice s (U64.v res - U64.v pos) (Seq.length s) else get_remaining x h)
     ))
@@ -259,7 +266,7 @@ let empty
       U64.v position == Seq.length (get_read x h)
     ))
     (ensures (fun h res h' ->
-      B.modifies (footprint x) h h' /\
+      B.modifies (perm_footprint x) h h' /\
       live x h' /\
       U64.v res == Seq.length (get_read x h') /\
       get_remaining x h' `Seq.equal` Seq.empty
