@@ -104,6 +104,12 @@ let get_validator_error_kind (error: U64.t) : Tot (code: U64.t { 0 <= U64.v code
   normalize_term_spec (pow2 error_width);
   get_validator_error_field error 0 error_width
 
+let get_validator_error_kind_set_validator_error_kind (error: U64.t) (code: U64.t {0 < U64.v code /\ U64.v code < normalize_term (pow2 error_width)}) : Lemma
+  (get_validator_error_kind (set_validator_error_kind error code) == code)
+  [SMTPat (get_validator_error_kind (set_validator_error_kind error code))]
+= assert_norm (normalize_term (pow2 error_width) == pow2 error_width);
+  get_validator_error_field_set_validator_error_field error 0 error_width code
+
 [@ CMacro ]
 let validator_error_generic : validator_error = normalize_term (set_validator_error_kind 0uL 1uL)
 

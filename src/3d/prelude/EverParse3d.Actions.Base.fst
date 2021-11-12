@@ -129,6 +129,7 @@ let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv
       end
     else
       let s' = I.get_remaining sl h' in
+      (LPE.get_validator_error_kind res <> LPE.get_validator_error_kind LPE.validator_error_action_failed ==> None? (LP.parse p s)) /\
       Seq.length s' <= Seq.length s /\
       s' `Seq.equal` Seq.slice s (Seq.length s - Seq.length s') (Seq.length s)
     end
@@ -769,7 +770,8 @@ let validate_list_inv
     LPE.is_error res
   then
     // validation *or action* failed
-    stop == true
+    stop == true /\
+    (LPE.get_validator_error_kind res <> LPE.get_validator_error_kind LPE.validator_error_action_failed ==> ~ (valid (LPLL.parse_list p) h0 sl))
   else
     U64.v res == Seq.length (I.get_read sl h) /\
     (valid (LPLL.parse_list p) h0 sl <==>
@@ -845,10 +847,13 @@ let validate_list'
       Seq.length s' <= Seq.length s /\
       s' `Seq.equal` Seq.slice s (Seq.length s - Seq.length s') (Seq.length s)
     end /\
-    (LPE.is_success res ==> begin match LP.parse (LPLL.parse_list p) s with
-    | None -> False
-    | Some (_, len) -> I.get_remaining sl h' `Seq.equal` Seq.slice s len (Seq.length s) /\ U64.v res == Seq.length (I.get_read sl h')
-    end) /\
+    begin match LP.parse (LPLL.parse_list p) s with
+    | None -> LPE.is_success res == false
+    | Some (_, len) ->
+      if LPE.is_success res
+      then I.get_remaining sl h' `Seq.equal` Seq.slice s len (Seq.length s) /\ U64.v res == Seq.length (I.get_read sl h')
+      else LPE.get_validator_error_kind res == LPE.get_validator_error_kind LPE.validator_error_action_failed
+    end /\
     modifies (app_loc ctxt l `B.loc_union` I.perm_footprint sl) h h'
   ))
 = let h0 = HST.get () in
@@ -1423,7 +1428,8 @@ let validate_list_up_to_inv
     begin if LPE.is_error res
     then
       // validation *or action* failed
-      stop == true
+      stop == true /\
+      (LPE.get_validator_error_kind res <> LPE.get_validator_error_kind LPE.validator_error_action_failed ==> None? (LP.parse q s))
     else
     U64.v res == Seq.length (I.get_read sl h) /\
     begin if stop
