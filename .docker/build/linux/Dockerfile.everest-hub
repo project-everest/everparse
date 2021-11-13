@@ -1,0 +1,12 @@
+FROM projecteverest/everest-linux
+
+RUN rm -rf quackyducky mitls-fstar
+ADD --chown=test:test . quackyducky
+
+ARG CI_THREADS=16
+ENV FSTAR_HOME="$HOME/FStar"
+ENV KREMLIN_HOME="$HOME/kremlin"
+ENV HACL_HOME="$HOME/hacl-star"
+ENV QD_HOME="$HOME/quackyducky"
+
+RUN make -C quackyducky -j $CI_THREADS ci
