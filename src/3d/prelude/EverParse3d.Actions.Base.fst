@@ -333,7 +333,7 @@ let validate_dep_pair
 
 #pop-options
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 #restart-solver
 
 inline_for_extraction noextract
