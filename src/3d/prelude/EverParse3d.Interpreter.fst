@@ -1063,6 +1063,11 @@ let rec as_validator
                            (dtyp_as_leaf_reader elt_t)
                            terminator)
 
+let validator_of #nz #wk (#k:P.parser_kind nz wk) #i #l #b (t:typ k i l b) = 
+  A.validate_with_action_t (as_parser t) i l b
+let dtyp_of #nz #wk (#k:P.parser_kind nz wk) #i #l #b (t:typ k i l b) = 
+  dtyp k b i l
+
 let specialization_steps =
   [nbe;
    zeta;
@@ -1125,6 +1130,32 @@ let coerce (#[@@@erasable]a:Type)
   : b 
   = x
 
+
+[@@specialize]
+let mk_dtyp_app #nz #wk 
+                (pk:P.parser_kind nz wk)
+                ([@@@erasable] inv:A.slice_inv)
+                ([@@@erasable] loc:A.eloc)
+                ([@@@erasable] p_t : Type0)
+                ([@@@erasable] p_p : P.parser pk p_t)
+                (p_reader: option (leaf_reader p_p))
+                (b:bool)
+                (p_v : A.validate_with_action_t p_p inv loc b)
+                ([@@@erasable] pf:squash (b == Some? p_reader))
+   : dtyp #nz #wk pk b inv loc
+   = let gb = {
+       parser_kind_nz = nz;
+       parser_weak_kind = wk;
+       parser_kind = pk;
+       inv = inv;
+       loc = loc;
+       p_t = p_t;
+       p_p = p_p;
+       p_reader = p_reader;
+       p_v = p_v
+     } in
+     DT_App pk b inv loc gb ()
+
 let coerce_validator steps : T.Tac unit =
   let open FStar.List.Tot in
   T.norm [delta_only (steps @ [`%parser_kind_of_itype;
@@ -1140,19 +1171,6 @@ let coerce_validator steps : T.Tac unit =
            primops];
   T.trefl()
 
-[@@specialize]
-let mk_dt_app #nz #wk (pk:P.parser_kind nz wk) (b:bool)
-              ([@@@erasable] inv:A.slice_inv)
-              ([@@@erasable] loc:A.eloc)
-              (x:global_binding)
-              ([@@@erasable] pf:squash (nz == nz_of_binding x /\
-                                        wk == wk_of_binding x /\
-                                        pk == pk_of_binding x /\
-                                        b == has_reader x /\
-                                        inv == inv_of_binding x /\
-                                        loc == loc_of_binding x))
-    : dtyp #nz #wk pk b inv loc
-    = DT_App pk b inv loc x pf
 
 let coerce_dt_app (steps:_) : T.Tac unit =
   let open FStar.List.Tot in

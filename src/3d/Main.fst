@@ -199,7 +199,7 @@ let emit_fstar_code_for_interpreter (en:env)
   : ML unit
   = let _, en = right en.translate_env in
     
-    let impl =
+    let impl, iface =
         InterpreterTarget.print_decls en modul itds
     in
 
@@ -216,6 +216,24 @@ let emit_fstar_code_for_interpreter (en:env)
       FStar.IO.write_string external_api_fsti_file (Target.print_external_api_fstar modul tds);
       FStar.IO.close_write_file external_api_fsti_file
     end;
+
+    let fsti_file =
+      open_write_file
+        (Printf.sprintf "%s/%s.fsti"
+          (Options.get_output_dir())
+          modul) in
+    FStar.IO.write_string fsti_file
+      (FStar.Printf.sprintf "module %s\n\
+                             open EverParse3d.Prelude\n\
+                             open EverParse3d.Actions.All\n\
+                             open EverParse3d.Interpreter\n\
+                             module A = EverParse3d.Actions.All\n\
+                             module P = EverParse3d.Prelude\n\
+                             module B = LowStar.Buffer\n"
+                             modul);
+    FStar.IO.write_string fsti_file iface;
+    FStar.IO.close_write_file fsti_file;
+
 
     let fst_file =
       open_write_file
@@ -240,7 +258,7 @@ let emit_fstar_code_for_interpreter (en:env)
                              #push-options \"--fuel 0 --ifuel 0\"\n\
                              #push-options \"--using_facts_from 'Prims FStar.UInt FStar.UInt8 \
                                                                  FStar.UInt16 FStar.UInt32 FStar.UInt64 \
-                                                                 EverParse3d.Prelude FStar.Int.Cast %s'\"\n"
+                                                                 EverParse3d FStar.Int.Cast %s'\"\n"
                              modul maybe_open_external_api (all_modules |> String.concat " "));
     FStar.IO.write_string fst_file impl;    
     FStar.IO.close_write_file fst_file
