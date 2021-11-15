@@ -195,7 +195,7 @@ let print_arith_op
         | A.UInt64 -> "u64"
       in
       let r = match r with | Some r -> r | None -> A.dummy_range in
-      Printf.sprintf "Prelude.%s_%s %s"
+      Printf.sprintf "EverParse3d.Prelude.%s_%s %s"
         t fn (print_range r)
     else
       let m =
@@ -243,7 +243,7 @@ let print_op_with_range ropt o =
     let tfrom = print_integer_type from in
     let tto = print_integer_type to in
     if tfrom = tto
-    then "Prelude.id"
+    then "EverParse3d.Prelude.id"
     else Printf.sprintf "FStar.Int.Cast.%s_to_%s" tfrom tto
   | Ext s -> s
 
@@ -351,7 +351,7 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_typ mname t)
       (print_expr_lam mname e)
   | T_if_else e t1 t2 ->
-    Printf.sprintf "(t_ite %s %s %s)"
+    Printf.sprintf "(t_ite %s (fun _ -> %s) (fun _ -> %s))"
       (print_expr mname e)
       (print_typ mname t1)
       (print_typ mname t2)
@@ -951,13 +951,13 @@ let print_decls (modul: string) (ds:list decl) =
   let decls =
   Printf.sprintf
     "module %s\n\
-     open Prelude\n\
+     open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
      open WeakenTac\n\
      module B = LowStar.Buffer\n\n\
      %s\
      include %s.Types\n\n\
-     #set-options \"--using_facts_from '* FStar Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
+     #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
      %s"
      modul
      (external_api_include modul ds)
@@ -972,7 +972,7 @@ let print_types_decls (modul:string) (ds:list decl) =
   let decls =
   Printf.sprintf
     "module %s.Types\n\
-     open Prelude\n\
+     open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\n\
      module B = LowStar.Buffer\n\n\
      %s\
@@ -990,7 +990,7 @@ let print_decls_signature (mname: string) (ds:list decl) =
   let decls =
     Printf.sprintf
     "module %s\n\
-     open Prelude\n\
+     open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
      module B = LowStar.Buffer\n\
      %s\
@@ -1437,7 +1437,7 @@ let print_external_api_fstar (modul:string) (ds:decls) : ML string =
    Printf.sprintf
     "module %s.ExternalAPI\n\n\
      open FStar.HyperStack.ST\n\
-     open Prelude\n\
+     open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
      module B = LowStar.Buffer\n\n\
      noextract val output_loc : eloc\n\n%s"

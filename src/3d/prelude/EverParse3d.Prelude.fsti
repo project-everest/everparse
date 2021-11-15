@@ -13,8 +13,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 *)
-module Prelude
-include Prelude.StaticHeader
+module EverParse3d.Prelude
+include EverParse3d.Prelude.StaticHeader
 include EverParse3d.Kinds
 module U32 = FStar.UInt32
 module U16 = FStar.UInt16

@@ -1,11 +1,12 @@
 module EverParse3d.Actions.Base
-friend Prelude
+friend EverParse3d.Prelude
 
 module LPE = EverParse3d.ErrorCode
 open FStar.Tactics.Typeclasses
 
 module B = LowStar.Buffer
 module U8 = FStar.UInt8
+module P = EverParse3d.Prelude
 
 let app_ctxt = B.pointer U8.t
 let app_loc (x:app_ctxt) (l:eloc) : eloc = B.loc_buffer x `loc_union` l
@@ -333,7 +334,7 @@ let validate_dep_pair
 
 #pop-options
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 #restart-solver
 
 inline_for_extraction noextract
@@ -1255,7 +1256,7 @@ let read_filter #nz
     = fun input pos ->
         let h = HST.get () in
         assert (parse_filter p f == LPC.parse_filter #k #t p f);
-        assert_norm (Prelude.refine t f == LPC.parse_filter_refine f);
+        assert_norm (P.refine t f == LPC.parse_filter_refine f);
         LPC.parse_filter_eq p f (I.get_remaining input h);
         p32 input pos
 

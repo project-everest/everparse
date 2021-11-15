@@ -20,7 +20,7 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module B = LowStar.Buffer
 module A = EverParse3d.Actions.All
-module P = Prelude
+module P = EverParse3d.Prelude
 module T = FStar.Tactics
 module ProjTac = EverParse3d.ProjectorTactic
 #push-options "--__temp_no_proj EverParse3d.Interpreter" //we'll generate the projectors we need with a tactic
@@ -770,19 +770,19 @@ let rec as_type
       x:dtyp_as_type i & as_type (t x)
 
     | T_refine _ base refinement ->
-      Prelude.refine (dtyp_as_type base) refinement
+      P.refine (dtyp_as_type base) refinement
 
     | T_refine_with_action _ base refinement _ ->
-      Prelude.refine (dtyp_as_type base) refinement
+      P.refine (dtyp_as_type base) refinement
 
     | T_dep_pair_with_refinement _ base refinement t ->
-      x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
+      x:P.refine (dtyp_as_type base) refinement & as_type (t x)
 
     | T_dep_pair_with_refinement_and_action _ base refinement t _ ->
-      x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
+      x:P.refine (dtyp_as_type base) refinement & as_type (t x)
 
     | T_if_else b t0 t1 ->
-      Prelude.t_ite b (fun _ -> as_type (t0()))
+      P.t_ite b (fun _ -> as_type (t0()))
                       (fun _ -> as_type (t1()))
 
     | T_with_action _ t _
@@ -793,16 +793,16 @@ let rec as_type
       dtyp_as_type i
 
     | T_nlist _ n t ->
-      Prelude.nlist n (as_type t)
+      P.nlist n (as_type t)
 
     | T_at_most _ n t ->
-      Prelude.t_at_most n (as_type t)
+      P.t_at_most n (as_type t)
 
     | T_exact _ n t ->
-      Prelude.t_exact n (as_type t)
+      P.t_exact n (as_type t)
 
     | T_string _ elt_t terminator ->
-      Prelude.cstring (dtyp_as_type elt_t) terminator
+      P.cstring (dtyp_as_type elt_t) terminator
 
 (* Parser denotation of `typ` *)
 let rec as_parser
@@ -833,7 +833,7 @@ let rec as_parser
 
     | T_refine _ base refinement
     | T_refine_with_action _ base refinement _ ->
-      //assert_norm (as_type g (T_refine base refinement) == Prelude.refine (itype_as_type base) refinement);
+      //assert_norm (as_type g (T_refine base refinement) == P.refine (itype_as_type base) refinement);
       let pi = dtyp_as_parser base in
       P.parse_filter pi refinement
 
@@ -845,7 +845,7 @@ let rec as_parser
       P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
 
     | T_if_else b t0 t1 ->
-      //assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
+      //assert_norm (as_type g (T_if_else b t0 t1) == P.t_ite b (as_type g t0) (as_type g t1));
       let p0 (_:squash b) = 
         P.parse_weaken_right (as_parser (t0())) _
       in
@@ -867,16 +867,16 @@ let rec as_parser
       as_parser t
 
     | T_nlist _ n t ->
-      Prelude.parse_nlist n (as_parser t)
+      P.parse_nlist n (as_parser t)
 
     | T_at_most _ n t ->
-      Prelude.parse_t_at_most n (as_parser t)
+      P.parse_t_at_most n (as_parser t)
 
     | T_exact _ n t ->
-      Prelude.parse_t_exact n (as_parser t)
+      P.parse_t_exact n (as_parser t)
 
     | T_string _ elt_t terminator ->
-      Prelude.parse_string (dtyp_as_parser elt_t) terminator
+      P.parse_string (dtyp_as_parser elt_t) terminator
 
 [@@specialize]
 let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
@@ -962,7 +962,7 @@ let rec as_validator
 
     | T_dep_pair_with_refinement fn base refinement k ->
       assert_norm (as_type (T_dep_pair_with_refinement fn base refinement k) ==
-                        x:Prelude.refine (dtyp_as_type base) refinement & as_type (k x));
+                        x:P.refine (dtyp_as_type base) refinement & as_type (k x));
       assert_norm (as_parser (T_dep_pair_with_refinement fn base refinement k) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_with_error_handler typename fn                              
@@ -989,7 +989,7 @@ let rec as_validator
 
     | T_dep_pair_with_refinement_and_action fn base refinement k act ->
       assert_norm (as_type (T_dep_pair_with_refinement_and_action fn base refinement k act) ==
-                        x:Prelude.refine (dtyp_as_type base) refinement & as_type (k x));
+                        x:P.refine (dtyp_as_type base) refinement & as_type (k x));
       assert_norm (as_parser (T_dep_pair_with_refinement_and_action fn base refinement k act) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_weaken_inv_loc inv loc (
@@ -1002,7 +1002,7 @@ let rec as_validator
             (fun x -> as_validator typename (k x)))
 
     | T_if_else b t0 t1 ->
-      assert_norm (as_type (T_if_else b t0 t1) == Prelude.t_ite b (fun _ -> as_type (t0())) (fun _ -> as_type (t1 ())));
+      assert_norm (as_type (T_if_else b t0 t1) == P.t_ite b (fun _ -> as_type (t0())) (fun _ -> as_type (t1 ())));
       let p0 (_:squash b) = P.parse_weaken_right (as_parser (t0())) _ in
       let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser (t1())) _ in
       assert_norm (as_parser (T_if_else b t0 t1) == P.parse_ite b p0 p1);
@@ -1038,26 +1038,26 @@ let rec as_validator
       A.validate_with_comment c (as_validator typename t)
 
     | T_nlist fn n t ->
-      assert_norm (as_type (T_nlist fn n t) == Prelude.nlist n (as_type t));
-      assert_norm (as_parser (T_nlist fn n t) == Prelude.parse_nlist n (as_parser t));
+      assert_norm (as_type (T_nlist fn n t) == P.nlist n (as_type t));
+      assert_norm (as_parser (T_nlist fn n t) == P.parse_nlist n (as_parser t));
       A.validate_with_error_handler typename fn 
         (A.validate_nlist n (as_validator typename t))
 
     | T_at_most fn n t ->
-      assert_norm (as_type (T_at_most fn n t) == Prelude.t_at_most n (as_type t));
-      assert_norm (as_parser (T_at_most fn n t) == Prelude.parse_t_at_most n (as_parser t));
+      assert_norm (as_type (T_at_most fn n t) == P.t_at_most n (as_type t));
+      assert_norm (as_parser (T_at_most fn n t) == P.parse_t_at_most n (as_parser t));
       A.validate_with_error_handler typename fn 
         (A.validate_t_at_most n (as_validator typename t))
 
     | T_exact fn n t ->
-      assert_norm (as_type (T_exact fn n t) == Prelude.t_exact n (as_type t));
-      assert_norm (as_parser (T_exact fn n t) == Prelude.parse_t_exact n (as_parser t));
+      assert_norm (as_type (T_exact fn n t) == P.t_exact n (as_type t));
+      assert_norm (as_parser (T_exact fn n t) == P.parse_t_exact n (as_parser t));
       A.validate_with_error_handler typename fn 
         (A.validate_t_exact n (as_validator typename t))
 
     | T_string fn elt_t terminator ->
-      assert_norm (as_type (T_string fn elt_t terminator) == Prelude.cstring (dtyp_as_type elt_t) terminator);
-      assert_norm (as_parser (T_string fn elt_t terminator) == Prelude.parse_string (dtyp_as_parser elt_t) terminator);
+      assert_norm (as_type (T_string fn elt_t terminator) == P.cstring (dtyp_as_type elt_t) terminator);
+      assert_norm (as_parser (T_string fn elt_t terminator) == P.parse_string (dtyp_as_parser elt_t) terminator);
       A.validate_with_error_handler typename fn 
         (A.validate_string (dtyp_as_validator elt_t)
                            (dtyp_as_leaf_reader elt_t)

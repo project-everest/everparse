@@ -20,7 +20,7 @@ module HS = FStar.HyperStack
 open FStar.HyperStack.ST
 open LowStar.Buffer
 open LowStar.BufferOps
-open Prelude
+open EverParse3d.Prelude
 module B = LowStar.Buffer
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64

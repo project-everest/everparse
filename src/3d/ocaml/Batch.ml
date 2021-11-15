@@ -54,7 +54,7 @@ let krml out_dir =
 
 (* command lines *)
 let fstar_args0 =
-  "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,Prelude,EverParse3d.\\*,Spec" ::
+  "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,EverParse3d.\\*,Spec" ::
     "--include" :: lowparse_home ::
       "--include" :: kremlib ::
         "--include" :: (filename_concat kremlib "obj") ::
@@ -202,7 +202,7 @@ let remove_fst_and_krml_files
       Printf.sprintf "%s.krml" root_name;
     ]
 
-let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,Prelude.\\*,Prelude"
+let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*"
 
 let fstar_kremlib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
 
@@ -275,7 +275,7 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
   let krml_args =
     "-tmpdir" :: out_dir ::
       "-skip-compilation" ::
-        "-static-header" :: "LowParse.Low.Base,Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.InputStream.\\*" ::
+        "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.InputStream.\\*" ::
           "-no-prefix" :: "LowParse.Slice" ::
             "-no-prefix" :: "LowParse.Low.BoundedInt" ::
                 "-library" :: everparse_only_bundle ::

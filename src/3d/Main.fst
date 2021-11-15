@@ -229,18 +229,18 @@ let emit_fstar_code_for_interpreter (en:env)
     in
     FStar.IO.write_string fst_file 
       (FStar.Printf.sprintf "module %s\n\
-                             open Prelude\n\
+                             open EverParse3d.Prelude\n\
                              open EverParse3d.Actions.All\n\
                              open EverParse3d.Interpreter\n\
                              %s\n\
                              module T = FStar.Tactics\n\
                              module A = EverParse3d.Actions.All\n\
                              module B = LowStar.Buffer\n\
-                             module P = Prelude\n\
+                             module P = EverParse3d.Prelude\n\
                              #push-options \"--fuel 0 --ifuel 0\"\n\
                              #push-options \"--using_facts_from 'Prims FStar.UInt FStar.UInt8 \
                                                                  FStar.UInt16 FStar.UInt32 FStar.UInt64 \
-                                                                 Prelude Everparse3d FStar.Int.Cast %s'\"\n"
+                                                                 EverParse3d.Prelude FStar.Int.Cast %s'\"\n"
                              modul maybe_open_external_api (all_modules |> String.concat " "));
     FStar.IO.write_string fst_file impl;    
     FStar.IO.close_write_file fst_file
