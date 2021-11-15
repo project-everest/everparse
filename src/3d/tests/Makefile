@@ -54,8 +54,8 @@ batch-test:
 
 batch-interpret-test:
 	mkdir -p out.batch-interpret
-	$(3D) --odir out.batch-interpret --batch --interpret --no_copy_everparse_h --save_hashes $(INTERPRETABLE_FILES)
-	$(3D) --odir out.batch-interpret --batch --interpret --check_hashes strong $(INTERPRETABLE_FILES)
+	$(3D) --odir out.batch-interpret --batch --no_copy_everparse_h --save_hashes $(INTERPRETABLE_FILES)
+	$(3D) --odir out.batch-interpret --batch --check_hashes strong $(INTERPRETABLE_FILES)
 	cp $(OTHER_HEADERS) out.batch-interpret
 	+$(MAKE) -C out.batch-interpret -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer'
 	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
@@ -77,7 +77,7 @@ batch-cleanup-test:
 	@echo $(FSTAR_OPTIONS)
 
 %.interpret: %.3d
-	$(3D) --batch --interpret $^
+	$(3D) --batch $^
 
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe out.batch-interpret
