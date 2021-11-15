@@ -687,8 +687,8 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->      
       #l2:_ -> #i2:_ -> #b2:_ ->
       b:bool -> //A bool, rather than an expression
-      t1:typ pk1 i1 l1 b1 ->
-      t2:typ pk2 i2 l2 b2 ->
+      t1:(squash b -> typ pk1 i1 l1 b1) ->
+      t2:(squash (not b) -> typ pk2 i2 l2 b2) ->
       typ (P.glb pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
   | T_with_action:
@@ -782,7 +782,8 @@ let rec as_type
       x:Prelude.refine (dtyp_as_type base) refinement & as_type (t x)
 
     | T_if_else b t0 t1 ->
-      Prelude.t_ite b (as_type t0) (as_type t1)
+      Prelude.t_ite b (fun _ -> as_type (t0()))
+                      (fun _ -> as_type (t1()))
 
     | T_with_action _ t _
     | T_with_comment _ t _ ->
@@ -846,10 +847,10 @@ let rec as_parser
     | T_if_else b t0 t1 ->
       //assert_norm (as_type g (T_if_else b t0 t1) == Prelude.t_ite b (as_type g t0) (as_type g t1));
       let p0 (_:squash b) = 
-        P.parse_weaken_right (as_parser t0) _
+        P.parse_weaken_right (as_parser (t0())) _
       in
       let p1 (_:squash (not b)) = 
-        P.parse_weaken_left (as_parser t1) _
+        P.parse_weaken_left (as_parser (t1())) _
       in
       P.parse_ite b p0 p1
 
@@ -1001,15 +1002,15 @@ let rec as_validator
             (fun x -> as_validator typename (k x)))
 
     | T_if_else b t0 t1 ->
-      assert_norm (as_type (T_if_else b t0 t1) == Prelude.t_ite b (as_type t0) (as_type t1));
-      let p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
-      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
+      assert_norm (as_type (T_if_else b t0 t1) == Prelude.t_ite b (fun _ -> as_type (t0())) (fun _ -> as_type (t1 ())));
+      let p0 (_:squash b) = P.parse_weaken_right (as_parser (t0())) _ in
+      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser (t1())) _ in
       assert_norm (as_parser (T_if_else b t0 t1) == P.parse_ite b p0 p1);
       let v0 (_:squash b) = 
-        A.validate_weaken_right (as_validator typename t0) _
+        A.validate_weaken_right (as_validator typename (t0())) _
       in
       let v1 (_:squash (not b)) =
-        A.validate_weaken_left (as_validator typename t1) _
+        A.validate_weaken_left (as_validator typename (t1())) _
       in
       A.validate_ite b p0 v0 p1 v1
 

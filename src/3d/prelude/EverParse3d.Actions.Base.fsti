@@ -395,20 +395,23 @@ val validate_ite
        (#nz:_)
        (#wk: _)
        (#k:parser_kind nz wk)
-       (#[@@@erasable] a:Type)
-       (#[@@@erasable] b:Type)
+       (e:bool)
+       (#[@@@erasable] a:squash e -> Type)
+       (#[@@@erasable] b:squash (not e) -> Type)
        (#[@@@erasable] inv1:slice_inv)
        (#[@@@erasable] l1:eloc)
        (#ar1:_)
        (#[@@@erasable] inv2:slice_inv)
        (#[@@@erasable] l2:eloc)
        (#ar2:_)
-       (e:bool)
-       ([@@@erasable] p1:squash e -> parser k a)
+       ([@@@erasable] p1:squash e -> parser k (a()))
        (v1:(squash e -> validate_with_action_t (p1()) inv1 l1 ar1))
-       ([@@@erasable] p2:squash (not e) -> parser k b)
+       ([@@@erasable] p2:squash (not e) -> parser k (b()))
        (v2:(squash (not e) -> validate_with_action_t (p2()) inv2 l2 ar2))
-  : validate_with_action_t (parse_ite e p1 p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
+  : validate_with_action_t (parse_ite e p1 p2)
+                           (conj_inv inv1 inv2)
+                           (l1 `eloc_union` l2)
+                           false
 
 noextract inline_for_extraction
 val validate_nlist

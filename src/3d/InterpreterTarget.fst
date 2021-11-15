@@ -677,7 +677,7 @@ let rec print_typ (mname:string) (t:typ)
                      (print_lam mname (print_action mname) a)
 
     | T_if_else e t1 t2 ->
-      Printf.sprintf "(T_if_else %s %s %s)"
+      Printf.sprintf "(T_if_else %s (fun _ -> %s) (fun _ -> %s))"
                      (T.print_expr mname e)
                      (print_typ mname t1)
                      (print_typ mname t2)

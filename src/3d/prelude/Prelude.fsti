@@ -92,11 +92,16 @@ inline_for_extraction noextract
 val parse_impos (_:unit)
   : parser impos_kind False
 
-let t_ite (e:bool) (a:Type) (b:Type) = if e then a else b
+let t_ite (e:bool) (a:squash e -> Type) (b:squash (not e) -> Type)
+  : Type
+  = if e then a() else b()
 
-val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#a:Type) (#b:Type) (e:bool)
-              (p1:squash e -> parser k a)
-              (p2:squash (not e) -> parser k b)
+val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk)
+              (e:bool)
+              (#a:squash e -> Type)
+              (#b:squash (not e) -> Type)
+              (p1:squash e -> parser k (a()))
+              (p2:squash (not e) -> parser k (b()))
   : Tot (parser k (t_ite e a b))
 
 ////////////////////////////////////////////////////////////////////////////////

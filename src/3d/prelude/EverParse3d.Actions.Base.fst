@@ -727,7 +727,9 @@ noextract inline_for_extraction
 let validate_ite
   e p1 v1 p2 v2
   = fun ctxt err input input_len start_position ->
-      if e then validate_drop (v1 ()) ctxt err input input_len start_position else validate_drop (v2 ()) ctxt err input input_len start_position
+      if e 
+      then validate_drop (v1 ()) ctxt err input input_len start_position
+      else validate_drop (v2 ()) ctxt err input input_len start_position
 
 module LPLL = LowParse.Spec.List
 
