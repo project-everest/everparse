@@ -11,7 +11,7 @@ basic: $(SOURCE_FILES) basic.out
 
 
 interpret: $(SOURCE_FILES) interpret.out
-	$(EVERPARSE_CMD) --batch $(SOURCE_FILES) --interpret --odir interpret.out
+	$(EVERPARSE_CMD) --batch $(SOURCE_FILES) --odir interpret.out
 
 %.out:
 	mkdir -p $@

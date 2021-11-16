@@ -17,12 +17,6 @@ module EverParse3d.Kinds
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
 
-noextract
-type weak_kind =
-| WeakKindWeak
-| WeakKindStrongPrefix
-| WeakKindConsumesAll
-
 ////////////////////////////////////////////////////////////////////////////////
 // Parsers
 ////////////////////////////////////////////////////////////////////////////////
@@ -43,15 +37,6 @@ inline_for_extraction
 noextract
 let parser_kind (nz:bool) (wk: weak_kind) =
   k:LP.parser_kind { parser_kind_prop nz wk k }
-
-inline_for_extraction
-noextract
-let weak_kind_glb
-  (k1 k2: weak_kind)
-: Tot weak_kind
-= if k1 = k2
-  then k1
-  else WeakKindWeak
 
 inline_for_extraction
 noextract
@@ -159,8 +144,3 @@ inline_for_extraction noextract
 let kind____UINT64
   : parser_kind true WeakKindStrongPrefix
   = LowParse.Spec.Int.parse_u64_kind
-
-inline_for_extraction noextract
-let kind_unit
-  : parser_kind false WeakKindStrongPrefix
-  = ret_kind

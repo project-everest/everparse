@@ -10,7 +10,7 @@ typedef struct _CIRCLE {
 entrypoint typedef struct _T {
   T::THREE_D_POINT   p;
   CIRCLE             c;
-  UINT32             f1  { f1 == Constants::ONE };
+  UINT32             f1  { f1 == Constants::FIVE };
   UINT32             f2  { f2 == Constants::Four };
   UINT32             f3  { f3 == TEST_ONE }
 } T;

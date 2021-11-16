@@ -131,7 +131,10 @@ rule token =
   | "::"           { locate lexbuf COLON_COLON }
   | ":"            { locate lexbuf COLON }
   | "?"            { locate lexbuf QUESTION }
+  | "{:act"        { locate lexbuf LBRACE_ACT }
+  | "{:check"      { locate lexbuf LBRACE_CHECK }
   | "{:on-success" { locate lexbuf LBRACE_ONSUCCESS }
+
   | "{"            { locate lexbuf LBRACE }
   | "}"            { locate lexbuf RBRACE }
   | "[:byte-size"                { locate lexbuf LBRACK_BYTESIZE }

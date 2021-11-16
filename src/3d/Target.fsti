@@ -82,7 +82,8 @@ type action =
   | Action_seq : hd:atomic_action -> tl:action -> action
   | Action_ite : hd:expr -> then_:action -> else_:action -> action
   | Action_let : i:A.ident -> a:atomic_action -> k:action -> action
-
+  | Action_act : action -> action
+  
 (* A subset of F* types that the translation targets *)
 noeq
 type typ =
@@ -434,5 +435,6 @@ val output_base_var (lhs:output_expr) : ML A.ident
  *)
  
 val print_external_api_fstar (modul:string) (ds:decls) : ML string
+val print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string
 val print_out_exprs_c (modul:string) (ds:decls) : ML string
 val print_output_types_defs (modul:string) (ds:decls) : ML string

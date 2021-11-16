@@ -18,6 +18,10 @@ class input_stream_inst (t: Type) : Type = {
     (requires True)
     (ensures (fun y -> B.address_liveness_insensitive_locs `B.loc_includes` y));
 
+  perm_footprint: (x: t) -> Ghost B.loc
+    (requires True)
+    (ensures (fun y -> footprint x `B.loc_includes` y));
+
   live_not_unused_in:
     (x: t) ->
     (h: HS.mem) ->
@@ -90,7 +94,7 @@ class input_stream_inst (t: Type) : Type = {
     ))
     (ensures (fun h dst' h' ->
       let s = get_remaining x h in
-      B.modifies (footprint x) h h' /\
+      B.modifies (perm_footprint x) h h' /\
       Seq.length s >= U64.v n /\
       LP.parse p (Seq.slice s 0 (U64.v n)) == Some (dst', U64.v n) /\
       LP.parse p s == Some (dst', U64.v n) /\
@@ -110,7 +114,7 @@ class input_stream_inst (t: Type) : Type = {
     ))
     (ensures (fun h _ h' ->
       let s = get_remaining x h in
-      B.modifies (footprint x) h h' /\
+      B.modifies (perm_footprint x) h h' /\
       live x h' /\
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ));
@@ -129,7 +133,7 @@ class input_stream_inst (t: Type) : Type = {
     )))
     (ensures (fun h _ h' ->
       let s = get_remaining x h in
-      B.modifies (footprint x) h h' /\
+      B.modifies (perm_footprint x) h h' /\
       live x h' /\
       get_remaining x h' == (if LPE.is_success res then Seq.slice s (U64.v res - U64.v pos) (Seq.length s) else get_remaining x h)
     ));
@@ -144,7 +148,7 @@ class input_stream_inst (t: Type) : Type = {
       U64.v pos == Seq.length (get_read x h)
     ))
     (ensures (fun h res h' ->
-      B.modifies (footprint x) h h' /\
+      B.modifies (perm_footprint x) h h' /\
       live x h' /\
       U64.v res == Seq.length (get_read x h') /\
       get_remaining x h' `Seq.equal` Seq.empty
@@ -191,6 +195,7 @@ class input_stream_inst (t: Type) : Type = {
       B.modifies B.loc_none h h' /\
       res `is_prefix_of` x /\
       footprint res == footprint x /\
+      perm_footprint res == perm_footprint x /\
       live res h' /\
       Seq.length (get_remaining res h') == U64.v n
     ));
@@ -207,6 +212,7 @@ class input_stream_inst (t: Type) : Type = {
       U64.v n <= Seq.length (get_remaining x h) /\
       res `is_prefix_of` x /\
       footprint res == footprint x /\
+      perm_footprint res == perm_footprint x /\
       live res h /\
       Seq.length (get_remaining res h) == U64.v n
     ))

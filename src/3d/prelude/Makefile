@@ -1,4 +1,4 @@
-all: tac_plugin buffer extern
+all: verify buffer extern
 
 FSTAR_HOME?=$(realpath ../../../../FStar)
 KREMLIN_HOME?=$(realpath ../../../../kremlin)
@@ -6,31 +6,23 @@ OTHERFLAGS?=
 EVERPARSE_HOME=../../..
 
 FSTAR_OPTIONS=$(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib $(KREMLIN_HOME)/kremlib/obj) --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=10'
+#--z3cliopt 'smt.arith.nl=false' --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr wrapped
 FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
 
 ROOT=$(wildcard *.fst) $(wildcard *.fsti)
 ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops'
 
 .depend: $(ROOT)
-	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims -EverParse3d.Interpreter -EverParse3d.ProjectorTactic' > $@.tmp
-# horrible hack, since F* emits lines in .depend to extract Proj, Interperter and Prims, despite the directive above
-	sed -i -e 's/EverParse3d.ProjectorTactic.krml \\/prims.krml \\/g'  $@.tmp
-	sed -i -e 's/EverParse3d.Interpreter.krml \\/prims.krml \\/g' $@.tmp
+	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'Kremlin:*,-Prims,-EverParse3d.Interpreter,-EverParse3d.ProjectorTactic' > $@.tmp
 	mv $@.tmp $@
 
 include .depend
-
-tac_plugin: WeakenTac.cmxs
 
 buffer: EverParse.rsp
 	+$(MAKE) -C buffer
 
 extern: EverParse.rsp
 	+$(MAKE) -C extern
-
-WeakenTac.cmxs: $(ALL_CHECKED_FILES)
-	$(FSTAR) --extract 'LowParse.Norm LowParse.TacLib WeakenTac' --codegen Plugin WeakenTac.fst
-	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -w -8 -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_Norm.ml LowParse_TacLib.ml WeakenTac.ml
 
 extract: EverParse.rsp
 

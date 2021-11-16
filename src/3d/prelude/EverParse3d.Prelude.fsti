@@ -13,12 +13,14 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 *)
-module Prelude
-include Prelude.StaticHeader
+module EverParse3d.Prelude
+include EverParse3d.Prelude.StaticHeader
 include EverParse3d.Kinds
-module U32 = FStar.UInt32
+module U8 = FStar.UInt8
 module U16 = FStar.UInt16
+module U32 = FStar.UInt32
 module U64 = FStar.UInt64
+module C = FStar.Int.Cast
 
 let pow2_values (x:nat) : Lemma
   (let p = pow2 x in
@@ -92,11 +94,16 @@ inline_for_extraction noextract
 val parse_impos (_:unit)
   : parser impos_kind False
 
-let t_ite (e:bool) (a:Type) (b:Type) = if e then a else b
+let t_ite (e:bool) (a:squash e -> Type) (b:squash (not e) -> Type)
+  : Type
+  = if e then a() else b()
 
-val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#a:Type) (#b:Type) (e:bool)
-              (p1:squash e -> parser k a)
-              (p2:squash (not e) -> parser k b)
+val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk)
+              (e:bool)
+              (#a:squash e -> Type)
+              (#b:squash (not e) -> Type)
+              (p1:squash e -> parser k (a()))
+              (p2:squash (not e) -> parser k (b()))
   : Tot (parser k (t_ite e a b))
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -592,3 +599,45 @@ let u64_shift_left (r:Prims.range) (a:UInt64.t) (s:UInt32.t)
     (requires labeled r "Cannot verify u64 shift left" (UInt32.v s < UInt64.n))
     (ensures (fun c -> FStar.UInt.shift_left (UInt64.v a) (UInt32.v s) = UInt64.v c))
   = UInt64.shift_left a s
+
+let cast_mul_fits_8_16 (x y :U8.t)
+  : Lemma (
+           FStar.UInt.fits
+             ((U16.v (C.uint8_to_uint16 x))
+               `op_Multiply`
+              (U16.v (C.uint8_to_uint16 y)))
+              16)
+           [SMTPat ((U16.v (C.uint8_to_uint16 x))
+                      `op_Multiply`
+                   (U16.v (C.uint8_to_uint16 y)))]
+  = let n = U16.v (C.uint8_to_uint16 x) in
+    let m = U16.v (C.uint8_to_uint16 y) in
+    FStar.Math.Lemmas.lemma_mult_lt_sqr n m (pow2 8)
+
+let cast_mul_fits_16_32 (x y :U16.t)
+  : Lemma (
+           FStar.UInt.fits
+             ((U32.v (C.uint16_to_uint32 x))
+               `op_Multiply`
+              (U32.v (C.uint16_to_uint32 y)))
+              32)
+           [SMTPat ((U32.v (C.uint16_to_uint32 x))
+                      `op_Multiply`
+                   (U32.v (C.uint16_to_uint32 y)))]
+  = let n = U32.v (C.uint16_to_uint32 x) in
+    let m = U32.v (C.uint16_to_uint32 y) in
+    FStar.Math.Lemmas.lemma_mult_lt_sqr n m (pow2 16)
+
+let cast_mul_fits_32_64 (x y :U32.t)
+  : Lemma (
+           FStar.UInt.fits
+             ((U64.v (C.uint32_to_uint64 x))
+               `op_Multiply`
+              (U64.v (C.uint32_to_uint64 y)))
+              64)
+           [SMTPat ((U64.v (C.uint32_to_uint64 x))
+                      `op_Multiply`
+                      (U64.v (C.uint32_to_uint64 y)))]
+  = let n = U64.v (C.uint32_to_uint64 x) in
+    let m = U64.v (C.uint32_to_uint64 y) in
+    FStar.Math.Lemmas.lemma_mult_lt_sqr n m (pow2 32)

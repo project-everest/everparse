@@ -70,5 +70,7 @@ all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
 %.diff-nobuild:
 	diff -w -B out/$(basename $@) 3d-snapshot/$(basename $@)
 
+%.accept:
+	cp  out/$(basename $@) 3d-snapshot/$(basename $@)
 clean:
 	rm -rf out _build
