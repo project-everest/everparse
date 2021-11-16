@@ -18,7 +18,6 @@
 module EverParse3d.Interpreter
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
-module B = LowStar.Buffer
 module A = EverParse3d.Actions.All
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
@@ -271,7 +270,7 @@ let action_binding
 [@@specialize]
 let mk_action_binding
     (#l:A.eloc)
-    ($f:unit -> FStar.HyperStack.ST.Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1))
+    ($f: A.external_action l)
   : action_binding A.true_inv l false unit
   = fun (#nz:_) (#wk:_) (#k:P.parser_kind nz wk) (#t:Type u#0) (p:P.parser k t) ->
       A.mk_external_action f
@@ -321,12 +320,12 @@ type atomic_action
 
   | Action_deref:
       #a:Type0 ->
-      x:B.pointer a ->
+      x:A.bpointer a ->
       atomic_action (A.ptr_inv x) A.eloc_none false a
 
   | Action_assignment:
       #a:Type0 ->
-      x:B.pointer a ->
+      x:A.bpointer a ->
       rhs:a ->
       atomic_action (A.ptr_inv x) (A.ptr_loc x) false unit
 
@@ -398,7 +397,48 @@ type action
       #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 l0 b0 unit ->
       action i0 l0 b0 bool
 
-    
+let _inv_implies_refl (inv: A.slice_inv) : Lemma
+  (inv `A.inv_implies` inv)
+  [SMTPat (inv `A.inv_implies` inv)]
+= A.inv_implies_refl inv
+
+let _inv_implies_true (inv0: A.slice_inv) : Lemma
+  (inv0 `A.inv_implies` A.true_inv)
+  [SMTPat (inv0 `A.inv_implies` A.true_inv)]
+= A.inv_implies_true inv0
+
+let _inv_implies_conj (inv0 inv1 inv2: A.slice_inv) : Lemma
+  (requires (
+    inv0 `A.inv_implies` inv1 /\
+    inv0 `A.inv_implies` inv2
+  ))
+  (ensures (
+    inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2)
+  ))
+  [SMTPat (inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2))]
+= A.inv_implies_conj inv0 inv1 inv2 () ()
+
+let _eloc_includes_none (l1:A.eloc) : Lemma
+  (l1 `A.eloc_includes` A.eloc_none)
+  [SMTPat (l1 `A.eloc_includes` A.eloc_none)]
+= A.eloc_includes_none l1
+
+let _eloc_includes_union (l0: A.eloc) (l1 l2: A.eloc) : Lemma
+  (requires (
+    l0 `A.eloc_includes` l1 /\
+    l0 `A.eloc_includes` l2
+  ))
+  (ensures (
+    l0 `A.eloc_includes` (l1 `A.eloc_union` l2)
+  ))
+  [SMTPat (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))]
+= A.eloc_includes_union l0 l1 l2 () ()
+
+let _eloc_includes_refl (l: A.eloc) : Lemma
+  (l `A.eloc_includes` l)
+  [SMTPat (l `A.eloc_includes` l)]
+= A.eloc_includes_refl l
+
 (* Denotation of action as A.action *)
 [@@specialize]
 let rec action_as_action

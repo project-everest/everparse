@@ -144,8 +144,3 @@ inline_for_extraction noextract
 let kind____UINT64
   : parser_kind true WeakKindStrongPrefix
   = LowParse.Spec.Int.parse_u64_kind
-
-inline_for_extraction noextract
-let kind_unit
-  : parser_kind false WeakKindStrongPrefix
-  = ret_kind

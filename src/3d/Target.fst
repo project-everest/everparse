@@ -355,7 +355,7 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_expr mname e)
       (print_typ mname t1)
       (print_typ mname t2)
-  | T_pointer t -> Printf.sprintf "B.pointer (%s)" (print_typ mname t)
+  | T_pointer t -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
@@ -954,7 +954,6 @@ let print_decls (modul: string) (ds:list decl) =
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
      open WeakenTac\n\
-     module B = LowStar.Buffer\n\n\
      %s\
      include %s.Types\n\n\
      #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
@@ -974,7 +973,6 @@ let print_types_decls (modul:string) (ds:list decl) =
     "module %s.Types\n\
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\n\
-     module B = LowStar.Buffer\n\n\
      %s\
      #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
      %s"
@@ -992,7 +990,6 @@ let print_decls_signature (mname: string) (ds:list decl) =
     "module %s\n\
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
-     module B = LowStar.Buffer\n\
      %s\
      include %s.Types\n\n\
      %s"
@@ -1296,7 +1293,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
               Printf.sprintf "\n\nval %s : Type0\n\n" s
             | T_pointer bt ->
               let bs = print_output_type_val tbl bt in
-              bs ^ (Printf.sprintf "\n\ntype %s = B.pointer %s\n\n" s (print_output_type bt))
+              bs ^ (Printf.sprintf "\n\ntype %s = bpointer %s\n\n" s (print_output_type bt))
   else ""
 
 // let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
@@ -1439,7 +1436,6 @@ let print_external_api_fstar (modul:string) (ds:decls) : ML string =
      open FStar.HyperStack.ST\n\
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
-     module B = LowStar.Buffer\n\n\
      noextract val output_loc : eloc\n\n%s"
     modul
     s

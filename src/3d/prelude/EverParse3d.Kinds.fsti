@@ -115,5 +115,7 @@ val kind____UINT64
   : parser_kind true WeakKindStrongPrefix
 
 inline_for_extraction noextract
-val kind_unit
+let kind_unit
   : parser_kind false WeakKindStrongPrefix
+= ret_kind
+

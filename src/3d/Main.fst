@@ -254,7 +254,6 @@ let emit_fstar_code_for_interpreter (en:env)
                              %s\n\
                              module T = FStar.Tactics\n\
                              module A = EverParse3d.Actions.All\n\
-                             module B = LowStar.Buffer\n\
                              module P = EverParse3d.Prelude\n\
                              #push-options \"--fuel 0 --ifuel 0\"\n\
                              #push-options \"--using_facts_from 'Prims FStar.UInt FStar.UInt8 \
