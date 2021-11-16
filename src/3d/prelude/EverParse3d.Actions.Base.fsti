@@ -14,7 +14,6 @@
    limitations under the License.
 *)
 module EverParse3d.Actions.Base
-module I = EverParse3d.InputStream.Base
 module Cast = FStar.Int.Cast
 module HS = FStar.HyperStack
 open FStar.HyperStack.ST

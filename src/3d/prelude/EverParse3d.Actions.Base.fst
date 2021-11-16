@@ -1,5 +1,7 @@
 module EverParse3d.Actions.Base
+friend EverParse3d.Kinds
 friend EverParse3d.Prelude
+module I = EverParse3d.InputStream.Base
 
 module LPE = EverParse3d.ErrorCode
 open FStar.Tactics.Typeclasses

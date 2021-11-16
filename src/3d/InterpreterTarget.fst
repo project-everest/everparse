@@ -677,7 +677,7 @@ let rec print_typ (mname:string) (t:typ)
                      (print_lam mname (print_action mname) a)
 
     | T_if_else e t1 t2 ->
-      Printf.sprintf "(T_if_else %s (fun _ -> %s) (fun _ -> %s))"
+      Printf.sprintf "(T_cases %s %s %s)"
                      (T.print_expr mname e)
                      (print_typ mname t1)
                      (print_typ mname t2)
@@ -829,22 +829,7 @@ let print_binding mname (td:type_decl)
     in
     let binders = print_binders tdn.td_params in
     let args = print_args tdn.td_params in
-    let validate_binding =
-      let cinline =
-        if td.name.td_entrypoint
-        || td.attrs.is_exported
-        then ""
-        else "; CInline"
-      in
-      FStar.Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]\n\
-                             let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
-                             cinline
-                             root_name
-                             binders
-                             root_name
-                             root_name
-                             args
-    in
+    let def = print_type_decl mname td in
     let weak_kind = A.print_weak_kind k.pk_weak_kind in
     let pk_of_binding =
      Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
@@ -897,6 +882,7 @@ let print_binding mname (td:type_decl)
      let s1, fv_binders, fv_args = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
      s0 ^ s1, fv_binders, fv_args
    in
+
    let def' =
       FStar.Printf.sprintf
         "[@@specialize; noextract_to \"Kremlin\"]\n\
@@ -926,6 +912,22 @@ let print_binding mname (td:type_decl)
          tag
          root_name
          args
+   in
+   let validate_binding =
+      let cinline =
+        if td.name.td_entrypoint
+        || td.attrs.is_exported
+        then ""
+        else "; CInline"
+      in
+      FStar.Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]\n\
+                             let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
+                             cinline
+                             root_name
+                             binders
+                             root_name
+                             root_name
+                             args
    in
    let dtyp : string =
      let reader =
@@ -976,7 +978,8 @@ let print_binding mname (td:type_decl)
    in
    let impl =
      String.concat "\n"
-       [pk_of_binding;
+       [def;
+        pk_of_binding;
         inv_eloc_of_binding;
         def';
         (as_type_or_parser "type");
@@ -985,15 +988,21 @@ let print_binding mname (td:type_decl)
         dtyp;
         enum_typ_of_binding]
    in
-   let iface =
-       if td.name.td_entrypoint
-       || td.attrs.is_exported
-       then print_td_iface mname root_name binders args
-                           fv_binders fv_args td.allow_reading
-                           weak_kind k.pk_nz
-       else ""
-   in
-   impl, iface
+   impl, ""
+
+   // if Some? td.enum_typ
+   // && (td.name.td_entrypoint || td.attrs.is_exported)
+   // then "", impl //exported enums are fully revealed
+   // else if td.name.td_entrypoint
+   //      || td.attrs.is_exported
+   // then
+   //   let iface =
+   //     print_td_iface mname root_name binders args
+   //                    fv_binders fv_args td.allow_reading
+   //                    weak_kind k.pk_nz
+   //   in
+   //   impl, iface
+   // else impl, ""
 
 let print_decl mname (d:decl)
   : ML (string & string) =
@@ -1002,17 +1011,10 @@ let print_decl mname (d:decl)
     begin
     match fst d with
     | T.Assumption _ -> T.print_assumption mname d, ""
-    | T.Definition _ -> "", T.print_definition mname d
+    | T.Definition _ -> T.print_definition mname d, ""
     | _ -> "", ""
     end
-  | Inr td ->
-    let impl, iface =
-        print_binding mname td
-    in
-    Printf.sprintf "%s\n%s\n"
-      (print_type_decl mname td)
-      impl,
-    iface
+  | Inr td -> print_binding mname td
 
 let rec unzip (x: list ('a & 'b))
   : list 'a & list 'b

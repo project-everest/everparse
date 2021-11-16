@@ -691,6 +691,16 @@ type typ
       t2:(squash (not b) -> typ pk2 i2 l2 b2) ->
       typ (P.glb pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
 
+  | T_cases:
+      #nz1:_ -> #wk1:_ -> #pk1:P.parser_kind nz1 wk1 ->
+      #l1:_ -> #i1:_ -> #b1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->      
+      #l2:_ -> #i2:_ -> #b2:_ ->
+      b:bool -> //A bool, rather than an expression
+      t1:typ pk1 i1 l1 b1 ->
+      t2:typ pk2 i2 l2 b2 ->
+      typ (P.glb pk1 pk2) (A.conj_inv i1 i2) (A.eloc_union l1 l2) false
+
   | T_with_action:
       fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
@@ -785,6 +795,9 @@ let rec as_type
       P.t_ite b (fun _ -> as_type (t0()))
                       (fun _ -> as_type (t1()))
 
+    | T_cases b t0 t1 ->
+      P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1)
+
     | T_with_action _ t _
     | T_with_comment _ t _ ->
       as_type t
@@ -851,6 +864,16 @@ let rec as_parser
       in
       let p1 (_:squash (not b)) = 
         P.parse_weaken_left (as_parser (t1())) _
+      in
+      P.parse_ite b p0 p1
+
+    | T_cases b t0 t1 ->
+      //assert_norm (as_type g (T_if_else b t0 t1) == P.t_ite b (as_type g t0) (as_type g t1));
+      let p0 (_:squash b) = 
+        P.parse_weaken_right (as_parser t0) _
+      in
+      let p1 (_:squash (not b)) = 
+        P.parse_weaken_left (as_parser t1) _
       in
       P.parse_ite b p0 p1
 
@@ -1014,6 +1037,19 @@ let rec as_validator
       in
       A.validate_ite b p0 v0 p1 v1
 
+    | T_cases b t0 t1 ->
+      assert_norm (as_type (T_cases b t0 t1) == P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1));
+      let p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
+      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
+      assert_norm (as_parser (T_cases b t0 t1) == P.parse_ite b p0 p1);
+      let v0 (_:squash b) = 
+        A.validate_weaken_right (as_validator typename t0) _
+      in
+      let v1 (_:squash (not b)) =
+        A.validate_weaken_left (as_validator typename t1) _
+      in
+      A.validate_ite b p0 v0 p1 v1
+
     | T_with_action fn t a ->
       assert_norm (as_type (T_with_action fn t a) == as_type t);
       assert_norm (as_parser (T_with_action fn t a) == as_parser t);
@@ -1063,8 +1099,13 @@ let rec as_validator
                            (dtyp_as_leaf_reader elt_t)
                            terminator)
 
+[@@noextract_to "Kremlin"]
+inline_for_extraction noextract 
 let validator_of #nz #wk (#k:P.parser_kind nz wk) #i #l #b (t:typ k i l b) = 
   A.validate_with_action_t (as_parser t) i l b
+
+[@@noextract_to "Kremlin"]  
+inline_for_extraction noextract   
 let dtyp_of #nz #wk (#k:P.parser_kind nz wk) #i #l #b (t:typ k i l b) = 
   dtyp k b i l
 
@@ -1129,6 +1170,20 @@ let coerce (#[@@@erasable]a:Type)
            (x:a) 
   : b 
   = x
+
+[@@specialize]
+let mk_dt_app #nz #wk (pk:P.parser_kind nz wk) (b:bool)
+              ([@@@erasable] inv:A.slice_inv)
+              ([@@@erasable] loc:A.eloc)
+              (x:global_binding)
+              ([@@@erasable] pf:squash (nz == nz_of_binding x /\
+                                        wk == wk_of_binding x /\
+                                        pk == pk_of_binding x /\
+                                        b == has_reader x /\
+                                        inv == inv_of_binding x /\
+                                        loc == loc_of_binding x))
+    : dtyp #nz #wk pk b inv loc
+    = DT_App pk b inv loc x pf
 
 
 [@@specialize]

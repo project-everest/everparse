@@ -14,6 +14,7 @@
    limitations under the License.
 *)
 module EverParse3d.Prelude
+friend EverParse3d.Kinds
 module BF = LowParse.BitFields
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
