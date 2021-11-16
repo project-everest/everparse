@@ -289,7 +289,7 @@ type out_expr' =
   | OE_dot    : out_expr -> ident -> out_expr'  //read a field
 
 /// Output expressions maintain metadata
-///   (base type, type of the expr)
+///   (base type, type of the expr and its bitwidth, in case the expression is of a bitfield type)
 ///
 /// where base type is the type of the base identifier,
 ///       and type of the output expression
@@ -303,8 +303,14 @@ type out_expr' =
 ///
 /// TODO: could we also store the source string for pretty printing?
 
+and out_expr_meta_t = {
+  out_expr_base_t : typ;
+  out_expr_t : typ;
+  out_expr_bit_width : option int;
+}
+
 and out_expr = { out_expr_node: with_meta_t out_expr';
-                 out_expr_meta: option (typ & typ) }
+                 out_expr_meta: option out_expr_meta_t }
 
 
 /// A type parameter is either an expression or an output expression
@@ -438,13 +444,13 @@ let enum_case = ident & option (either int ident)
 
 /// Specification of output types
 ///
-/// Output types contain atomic fields,
+/// Output types contain atomic fields with optional bitwidths for bitfield types,
 ///   but they may also contain anonymous structs and unions
 
 [@@ PpxDerivingYoJson ]
 noeq
 type out_field =
-  | Out_field_named: ident -> typ -> out_field
+  | Out_field_named: ident -> typ -> bit_width:option int -> out_field
   | Out_field_anon : list out_field -> is_union:bool -> out_field
 
 [@@ PpxDerivingYoJson ]
