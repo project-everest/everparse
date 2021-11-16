@@ -1,4 +1,4 @@
-all: buffer extern
+all: verify buffer extern
 
 FSTAR_HOME?=$(realpath ../../../../FStar)
 KREMLIN_HOME?=$(realpath ../../../../kremlin)
@@ -13,10 +13,7 @@ ROOT=$(wildcard *.fst) $(wildcard *.fsti)
 ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops'
 
 .depend: $(ROOT)
-	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims -EverParse3d.Interpreter -EverParse3d.ProjectorTactic' > $@.tmp
-# horrible hack, since F* emits lines in .depend to extract Proj, Interperter and Prims, despite the directive above
-	sed -i -e 's/EverParse3d.ProjectorTactic.krml \\/prims.krml \\/g'  $@.tmp
-	sed -i -e 's/EverParse3d.Interpreter.krml \\/prims.krml \\/g' $@.tmp
+	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'Kremlin:*,-Prims,-EverParse3d.Interpreter,-EverParse3d.ProjectorTactic' > $@.tmp
 	mv $@.tmp $@
 
 include .depend
