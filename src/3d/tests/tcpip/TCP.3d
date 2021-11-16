@@ -1,5 +1,6 @@
 /*
 
+
   Specifying the format of TCP headers, from RFC 793, augmented to
   support more recent TCP option kinds and TCP flags.
 
@@ -50,48 +51,118 @@ typedef UINT16 URGENT_PTR;
 #define OPTION_KIND_SACK 0x05
 #define OPTION_KIND_TIMESTAMP 0x08
 
-typedef struct _MAX_SEG_SIZE_PAYLOAD(Bool MaxSegSizeAllowed)
+#define TCP_MAX_WSCALE        14
+#define TCP_SACK_SEEN         1
+
+output
+typedef struct _TCP_OPTIONS_RECEIVED
+{
+  UINT32        TS_RECENT_STAMP;
+  UINT32        TS_RECENT;
+  UINT32        RCV_TSVAL;
+  UINT32        RCV_TSECR;
+  UINT16        SAW_TSTAMP  : 1;
+  UINT16        TSTAMP_OK   : 1;
+  UINT16        DSACK       : 1;
+  UINT16        WSCALE_OK   : 1;
+  UINT16        SACK_OK     : 3;
+  UINT16        SMC_OK      : 1;
+  UINT16        SND_WSCALE  : 4;
+  UINT16        RCV_WSCALE  : 4;
+  UINT8         SAW_UNKNOWN : 1;
+  UINT8         UNUSED      : 7;
+  UINT8         NUM_SACKS;
+  UINT16        USER_MSS;
+  UINT16        MSS_CLAMP;
+} TCP_OPTIONS_RECEIVED;
+
+typedef struct _WINDOW_SCALE_PAYLOAD(Bool WindowScaleAllowed,
+                                     mutable TCP_OPTIONS_RECEIVED *OPT_RX)
+where WindowScaleAllowed
+{
+  UINT8 Length
+  {
+    Length == 3
+  };
+  UINT8 WindowScale
+  {:on-success
+    OPT_RX->WSCALE_OK = (UINT16) 1;
+    if((WindowScale <= TCP_MAX_WSCALE)){
+      OPT_RX->SND_WSCALE = (UINT16) WindowScale;
+      return true;
+    } else {
+      OPT_RX->SND_WSCALE = (UINT16) TCP_MAX_WSCALE;
+      return true;
+    }};
+} WINDOW_SCALE_PAYLOAD;
+
+entrypoint
+typedef struct _MAX_SEG_SIZE_PAYLOAD(Bool MaxSegSizeAllowed,
+                                     mutable TCP_OPTIONS_RECEIVED *OPT_RX)
 where MaxSegSizeAllowed
 {
   UINT8 Length
   {
     Length == 4
   };
-  UINT16 MaxSegSize;
+  UINT16 MaxSegSize
+  {:on-success
+    OPT_RX->MSS_CLAMP = MaxSegSize;
+    return true;}
 } MAX_SEG_SIZE_PAYLOAD;
 
-typedef struct _WINDOW_SCALE_PAYLOAD
+typedef struct _TIMESTAMP_PAYLOAD(Bool TIMESTAMPAllowed,
+                                  mutable TCP_OPTIONS_RECEIVED *OPT_RX)
+where TIMESTAMPAllowed
 {
-  UINT8 Length
-  {
-    Length == 3
-  };
-  UINT8 WindowScale;
-} WINDOW_SCALE_PAYLOAD;
-
-
-typedef struct _SELECTIVE_ACK_PAYLOAD
-{
-  UINT8 Length
-  {
-    Length == 10 ||
-    Length == 18 ||
-    Length == 26 ||
-    Length == 34
-  };
-  UINT8 SelectiveAck[:byte-size (Length - 2)];
-} SELECTIVE_ACK_PAYLOAD;
-
-typedef struct _TIMESTAMP_PAYLOAD
-{
-  UINT8 Length
+  UINT8        Length
   {
     Length == 10
   };
-  UINT8 TimeStamp[:byte-size (Length - 2)];
+  UINT32       Tsval;
+  UINT32       Tsecr
+  {:on-success
+    OPT_RX->SAW_TSTAMP = (UINT16) 1;
+    OPT_RX->RCV_TSVAL = Tsval;
+    OPT_RX->RCV_TSECR = Tsecr;
+    return true;};
 } TIMESTAMP_PAYLOAD;
 
-casetype _OPTION_PAYLOAD(UINT8 OptionKind, Bool MaxSegSizeAllowed)
+typedef struct _SackPerm_PAYLOAD(Bool SackPermAllowed,
+                                 mutable TCP_OPTIONS_RECEIVED *OPT_RX)
+where SackPermAllowed
+{
+  UINT8        Length
+  {
+    Length == 2
+  };
+  unit         Noop
+  {:on-success
+    OPT_RX->SACK_OK = (UINT16) TCP_SACK_SEEN;
+    OPT_RX->DSACK = (UINT16) 0;
+    OPT_RX->NUM_SACKS = (UINT8) 0;
+    return true;};
+} SackPermPayload;
+
+
+// typedef struct _SELECTIVE_ACK_PAYLOAD
+// {
+//   UINT8 Length
+//   {
+//     Length == 10 ||
+//     Length == 18 ||
+//     Length == 26 ||
+//     Length == 34
+//   };
+//   UINT8 SelectiveAck[:byte-size (Length - 2)];
+// } SELECTIVE_ACK_PAYLOAD;
+
+casetype _OPTION_PAYLOAD(UINT8 OptionKind,
+                         Bool WindowScaleAllowed,
+                         Bool MaxSegSizeAllowed,
+                         Bool TIMESTAMPAllowed,
+                         Bool SackPermAllowed,
+                         mutable TCP_OPTIONS_RECEIVED *OPT_RX)
 {
   switch(OptionKind)
   {
@@ -102,26 +173,36 @@ casetype _OPTION_PAYLOAD(UINT8 OptionKind, Bool MaxSegSizeAllowed)
        unit Noop;
 
      case OPTION_KIND_MAX_SEG_SIZE:
-       MAX_SEG_SIZE_PAYLOAD(MaxSegSizeAllowed) MaxSegSizePayload;
+       MAX_SEG_SIZE_PAYLOAD(MaxSegSizeAllowed, OPT_RX) MaxSegSizePayload;
 
      case OPTION_KIND_WINDOW_SCALE:
-       WINDOW_SCALE_PAYLOAD WindowScalePayload;
+       WINDOW_SCALE_PAYLOAD(WindowScaleAllowed, OPT_RX) WindowScalePayload;
 
      case OPTION_KIND_SACK_PERMITTED:
-       UINT8 SackPermittedPayload;
+       SackPermPayload(SackPermAllowed, OPT_RX) SackPermittedPayload;
 
-     case OPTION_KIND_SACK:
-       SELECTIVE_ACK_PAYLOAD SelectiveAckPayload;
+     // case OPTION_KIND_SACK:
+     //   SELECTIVE_ACK_PAYLOAD SelectiveAckPayload;
 
      case OPTION_KIND_TIMESTAMP:
-       TIMESTAMP_PAYLOAD TimestampPayload;
+       TIMESTAMP_PAYLOAD(TIMESTAMPAllowed, OPT_RX) TimestampPayload;
   } 
 } OPTION_PAYLOAD;
 
-typedef struct _OPTION(Bool MaxSegSizeAllowed)
+typedef struct _OPTION(Bool WindowScaleAllowed,
+                       Bool MaxSegSizeAllowed,
+                       Bool TIMESTAMPAllowed,
+                       Bool SackPermAllowed,
+                       mutable TCP_OPTIONS_RECEIVED *OPT_RX)
+
 {
-    UINT8 OptionKind;
-    OPTION_PAYLOAD(OptionKind, MaxSegSizeAllowed) OptionPayload;
+   UINT8 OptionKind;
+   OPTION_PAYLOAD(OptionKind,
+                  WindowScaleAllowed,
+                  MaxSegSizeAllowed,
+                  TIMESTAMPAllowed,
+                  SackPermAllowed,
+                  OPT_RX)                  OptionPayload;
 } OPTION;
 
 /*++
@@ -134,7 +215,7 @@ typedef struct _OPTION(Bool MaxSegSizeAllowed)
 
   --*/
 entrypoint
-typedef struct _TCP_HEADER(UINT32 SegmentLength)
+typedef struct _TCP_HEADER(UINT32 SegmentLength, Bool Estab, mutable TCP_OPTIONS_RECEIVED *OPT_RX)
 {
   PORT            SourcePort;
   PORT            DestinationPort;
@@ -172,6 +253,10 @@ typedef struct _TCP_HEADER(UINT32 SegmentLength)
   };
   //The SYN=1 condition indicates when MAX_SEG_SIZE option can be received
   //This is an array of options consuming
-  OPTION(SYN==1)  Options[:byte-size (DataOffset * 4) - sizeof(this)];
-  UINT8           Data[SegmentLength - (DataOffset * 4)];
+  OPTION(SYN==1,
+         Estab,
+         Estab,
+         SYN==1&&(!Estab),
+         OPT_RX)        Options[:byte-size (DataOffset * 4) - sizeof(this)];
+  UINT8                 Data[SegmentLength - (DataOffset * 4)];
 } TCP_HEADER;
