@@ -328,9 +328,7 @@ let is_prefix_of_prop
       get_read y h `Seq.equal` get_read x h /\
       get_remaining y h `Seq.equal` (get_remaining x h `Seq.append` get_suffix x y)
     ))
-=
-  ()
-
+= ()
 #pop-options
 
 inline_for_extraction

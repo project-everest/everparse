@@ -12,6 +12,21 @@ extern "C" {
 
 
 
+/*
+Enum constant
+*/
+#define ENUMCONSTRAINT_RED ((uint32_t)1U)
+
+/*
+Enum constant
+*/
+#define ENUMCONSTRAINT_GREEN ((uint32_t)2U)
+
+/*
+Enum constant
+*/
+#define ENUMCONSTRAINT_BLUE ((uint32_t)42U)
+
 uint64_t
 EnumConstraintValidateEnumConstraint(
   uint8_t *Ctxt,

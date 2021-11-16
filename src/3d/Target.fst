@@ -195,7 +195,7 @@ let print_arith_op
         | A.UInt64 -> "u64"
       in
       let r = match r with | Some r -> r | None -> A.dummy_range in
-      Printf.sprintf "Prelude.%s_%s %s"
+      Printf.sprintf "EverParse3d.Prelude.%s_%s %s"
         t fn (print_range r)
     else
       let m =
@@ -243,7 +243,7 @@ let print_op_with_range ropt o =
     let tfrom = print_integer_type from in
     let tto = print_integer_type to in
     if tfrom = tto
-    then "Prelude.id"
+    then "EverParse3d.Prelude.id"
     else Printf.sprintf "FStar.Int.Cast.%s_to_%s" tfrom tto
   | Ext s -> s
 
@@ -351,11 +351,11 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_typ mname t)
       (print_expr_lam mname e)
   | T_if_else e t1 t2 ->
-    Printf.sprintf "(t_ite %s %s %s)"
+    Printf.sprintf "(t_ite %s (fun _ -> %s) (fun _ -> %s))"
       (print_expr mname e)
       (print_typ mname t1)
       (print_typ mname t2)
-  | T_pointer t -> Printf.sprintf "B.pointer (%s)" (print_typ mname t)
+  | T_pointer t -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
@@ -951,13 +951,11 @@ let print_decls (modul: string) (ds:list decl) =
   let decls =
   Printf.sprintf
     "module %s\n\
-     open Prelude\n\
+     open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
-     open WeakenTac\n\
-     module B = LowStar.Buffer\n\n\
      %s\
      include %s.Types\n\n\
-     #set-options \"--using_facts_from '* FStar Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
+     #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
      %s"
      modul
      (external_api_include modul ds)
@@ -972,9 +970,8 @@ let print_types_decls (modul:string) (ds:list decl) =
   let decls =
   Printf.sprintf
     "module %s.Types\n\
-     open Prelude\n\
+     open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\n\
-     module B = LowStar.Buffer\n\n\
      %s\
      #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
      %s"
@@ -990,9 +987,8 @@ let print_decls_signature (mname: string) (ds:list decl) =
   let decls =
     Printf.sprintf
     "module %s\n\
-     open Prelude\n\
+     open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
-     module B = LowStar.Buffer\n\
      %s\
      include %s.Types\n\n\
      %s"
@@ -1296,7 +1292,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
               Printf.sprintf "\n\nval %s : Type0\n\n" s
             | T_pointer bt ->
               let bs = print_output_type_val tbl bt in
-              bs ^ (Printf.sprintf "\n\ntype %s = B.pointer %s\n\n" s (print_output_type bt))
+              bs ^ (Printf.sprintf "\n\ntype %s = bpointer %s\n\n" s (print_output_type bt))
   else ""
 
 // let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
@@ -1334,10 +1330,10 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
     let fn_arg1_t = print_typ mname oe.oe_bt in
     let fn_arg2_t = print_typ mname oe.oe_t in
     Printf.sprintf
-      "\n\nval %s (_:%s) (_:%s) (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
-      fn_name
-      fn_arg1_t
-      fn_arg2_t
+        "\n\nval %s (_:%s) (_:%s) : external_action output_loc\n\n"
+        fn_name
+        fn_arg1_t
+        fn_arg2_t
 
 let rec base_id_of_output_expr (oe:output_expr) : A.ident =
   match oe.oe_expr with
@@ -1436,12 +1432,38 @@ let print_external_api_fstar (modul:string) (ds:decls) : ML string =
     | _ -> "")) in
    Printf.sprintf
     "module %s.ExternalAPI\n\n\
-     open FStar.HyperStack.ST\n\
-     open Prelude\n\
+     open FStar.HyperStack.ST\n\    
+     open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
-     module B = LowStar.Buffer\n\n\
      noextract val output_loc : eloc\n\n%s"
     modul
+    s
+
+let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
+  let tbl = H.create 10 in
+  let s = String.concat "" (ds |> List.map (fun d ->
+    match fst d with
+    | Output_type_expr oe is_get ->
+      Printf.sprintf "%s%s%s"
+        (print_output_type_val tbl oe.oe_bt)
+        (print_output_type_val tbl oe.oe_t)
+        (if not is_get then print_out_expr_set_fstar tbl modul oe
+         else print_out_expr_get_fstar tbl modul oe)
+    | Extern_type i ->
+      Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
+    | Extern_fn f ret params ->
+      Printf.sprintf "\n\nval %s %s : external_action output_loc\n"
+        (print_ident f)
+        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
+          (print_ident i)
+          (print_typ modul t))))
+    | _ -> "")) in
+   Printf.sprintf
+    "module %s.ExternalAPI\n\n\
+     open EverParse3d.Prelude\n\
+     open EverParse3d.Actions.All\n\
+     noextract val output_loc : eloc\n\n%s"
+     modul
     s
 
 let print_out_exprs_c modul (ds:decls) : ML string =

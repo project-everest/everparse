@@ -29,8 +29,6 @@ BfValidateDummy(
   uint64_t StartPosition
 );
 
-void BfReadDummy(uint8_t *Input, uint64_t Pos);
-
 #if defined(__cplusplus)
 }
 #endif

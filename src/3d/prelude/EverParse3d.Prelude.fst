@@ -13,7 +13,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 *)
-module Prelude
+module EverParse3d.Prelude
+friend EverParse3d.Kinds
 module BF = LowParse.BitFields
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
@@ -194,7 +195,10 @@ let parse_nlist_total_fixed_size_aux
     Some? (LP.parse (parse_nlist n p) x)
   ))
 = let x' = Seq.slice x 0 (U32.v n) in
-  LowParse.Spec.List.parse_list_total_constant_size p (U32.v n / k.LP.parser_kind_low) x';
+  let cnt = (U32.v n / k.LP.parser_kind_low) in
+  FStar.Math.Lemmas.lemma_div_exact (U32.v n) k.LP.parser_kind_low;
+  FStar.Math.Lemmas.nat_over_pos_is_nat (U32.v n) k.LP.parser_kind_low;
+  LowParse.Spec.List.parse_list_total_constant_size p cnt x';
   LP.parser_kind_prop_equiv LowParse.Spec.List.parse_list_kind (LowParse.Spec.List.parse_list p)
 
 let parse_nlist_total_fixed_size_kind_correct
