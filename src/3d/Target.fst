@@ -953,10 +953,9 @@ let print_decls (modul: string) (ds:list decl) =
     "module %s\n\
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
-     open WeakenTac\n\
      %s\
      include %s.Types\n\n\
-     #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse -WeakenTac'\"\n\
+     #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
      %s"
      modul
      (external_api_include modul ds)
@@ -1330,16 +1329,8 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
     //TODO: module name?
     let fn_arg1_t = print_typ mname oe.oe_bt in
     let fn_arg2_t = print_typ mname oe.oe_t in
-    if Options.get_interpret()
-    then 
-      Printf.sprintf
+    Printf.sprintf
         "\n\nval %s (_:%s) (_:%s) : external_action output_loc\n\n"
-        fn_name
-        fn_arg1_t
-        fn_arg2_t
-    else 
-      Printf.sprintf
-        "\n\nval %s (_:%s) (_:%s) (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
         fn_name
         fn_arg1_t
         fn_arg2_t

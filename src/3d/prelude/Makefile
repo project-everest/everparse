@@ -1,4 +1,4 @@
-all: tac_plugin buffer extern
+all: buffer extern
 
 FSTAR_HOME?=$(realpath ../../../../FStar)
 KREMLIN_HOME?=$(realpath ../../../../kremlin)
@@ -21,17 +21,11 @@ ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops
 
 include .depend
 
-tac_plugin: WeakenTac.cmxs
-
 buffer: EverParse.rsp
 	+$(MAKE) -C buffer
 
 extern: EverParse.rsp
 	+$(MAKE) -C extern
-
-WeakenTac.cmxs: $(ALL_CHECKED_FILES)
-	$(FSTAR) --extract 'LowParse.Norm LowParse.TacLib WeakenTac' --codegen Plugin WeakenTac.fst
-	env OCAMLPATH=$(FSTAR_HOME)/bin/ ocamlfind ocamlopt -w -8 -shared -package fstar-tactics-lib -o WeakenTac.cmxs LowParse_Norm.ml LowParse_TacLib.ml WeakenTac.ml
 
 extract: EverParse.rsp
 

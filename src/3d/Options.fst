@@ -442,5 +442,3 @@ let get_input_stream_binding _ =
       | Some s -> s
       end
 let get_emit_output_types_defs () = !emit_output_types_defs
-
-let get_interpret () = true

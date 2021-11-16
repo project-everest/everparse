@@ -23,16 +23,14 @@ noeq
 type env = {
   binding_env : Binding.global_env;
   typesizes_env : TypeSizes.size_env;
-  translate_env : either Translate.translate_env (TranslateForInterpreter.translate_env & InterpreterTarget.env)
+  translate_env : (TranslateForInterpreter.translate_env & InterpreterTarget.env);
 }
 
 let initial_env () : ML env = {
   binding_env = Binding.initial_global_env ();
   typesizes_env = TypeSizes.initial_senv ();
   translate_env = 
-    if Options.get_interpret()
-    then Inr (TranslateForInterpreter.initial_translate_env(), InterpreterTarget.create_env())
-    else Inl (Translate.initial_translate_env ());
+    (TranslateForInterpreter.initial_translate_env(), InterpreterTarget.create_env());
 }
 
 let left (x:either 'a 'b)
@@ -122,19 +120,12 @@ let translate_module (en:env) (mname:string) (fn:string)
   in      
       
   let t_decls, i_decls, tenv = 
-    if Options.get_interpret()
-    then
-      let env, env' = right en.translate_env in
+      let env, env' = en.translate_env in
       let decls, env =
         TranslateForInterpreter.translate_decls en.binding_env en.typesizes_env env decls
       in
       let tds = InterpreterTarget.translate_decls env' decls in
-      decls, Some tds, Inr (env, env')
-    else
-      let decls, env = 
-        Translate.translate_decls en.binding_env en.typesizes_env (left en.translate_env) decls
-      in
-      decls, None, Inl env
+      decls, Some tds, (env, env')
   in
   let en = { en with translate_env = tenv } in
   t_decls,
@@ -151,53 +142,13 @@ let has_extern_types (t_decls:list Target.decl) : bool =
 let has_extern_functions (t_decls:list Target.decl) : bool =
   List.Tot.existsb (fun (d, _) -> Target.Extern_fn? d) t_decls
 
-let emit_fstar_code (en:env) (modul:string) (t_decls:list Target.decl)
-  : ML unit =
-
-  let types_fst_file =
-    open_write_file
-      (Printf.sprintf "%s/%s.Types.fst"
-        (Options.get_output_dir ())
-        modul) in
-  FStar.IO.write_string types_fst_file (Target.print_types_decls modul t_decls);
-  FStar.IO.close_write_file types_fst_file;
-
-  let has_out_exprs = has_out_exprs t_decls in
-  let has_extern_types = has_extern_types t_decls in
-  let has_extern_fns = has_extern_functions t_decls in
-
-  if has_out_exprs || has_extern_types || has_extern_fns
-  then begin
-    let external_api_fsti_file =
-      open_write_file
-        (Printf.sprintf "%s/%s.ExternalAPI.fsti" (Options.get_output_dir ()) modul) in
-    FStar.IO.write_string external_api_fsti_file (Target.print_external_api_fstar modul t_decls);
-    FStar.IO.close_write_file external_api_fsti_file
-  end;
-
-  let fst_file =
-    open_write_file
-      (Printf.sprintf "%s/%s.fst"
-        (Options.get_output_dir())
-        modul) in
-  FStar.IO.write_string fst_file (Target.print_decls modul t_decls);
-  FStar.IO.close_write_file fst_file;
-
-  let fsti_file =
-    open_write_file
-      (Printf.sprintf "%s/%s.fsti"
-        (Options.get_output_dir())
-        modul) in
-  FStar.IO.write_string fsti_file (Target.print_decls_signature modul t_decls);
-  FStar.IO.close_write_file fsti_file
-
 let emit_fstar_code_for_interpreter (en:env)
                                     (modul:string)
                                     (tds:list T.decl)
                                     (itds:list InterpreterTarget.decl)
                                     (all_modules:list string)
   : ML unit
-  = let _, en = right en.translate_env in
+  = let _, en = en.translate_env in
     
     let impl, iface =
         InterpreterTarget.print_decls en modul itds
@@ -390,15 +341,11 @@ let process_file (en:env)
   in
   if emit_fstar 
   then (
-    if Options.get_interpret()
-    then (
+    (
       match interpreter_decls_opt with
       | None -> failwith "Impossible: interpreter mode expects interperter target decls"
       | Some tds ->
         emit_fstar_code_for_interpreter en modul t_decls tds all_modules
-    )
-    else (
-         emit_fstar_code en modul t_decls
     );
     emit_entrypoint en modul t_decls static_asserts emit_output_types_defs
   )
@@ -410,9 +357,8 @@ let process_file (en:env)
   { en with 
     binding_env = Binding.finish_module en.binding_env modul ds;
     translate_env = 
-      if Options.get_interpret()
-      then en.translate_env
-      else Inl (Translate.finish_module (left en.translate_env) modul ds) }
+      en.translate_env;
+  }
 
 let process_files (files_and_modules:list (string & string))
                   (emit_fstar:string -> ML bool)
