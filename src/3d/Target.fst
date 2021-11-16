@@ -1329,7 +1329,19 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
     H.insert tbl fn_name ();
     //TODO: module name?
     let fn_arg1_t = print_typ mname oe.oe_bt in
-    let fn_arg2_t = print_typ mname oe.oe_t in
+    let fn_arg2_t =
+      (*
+       * If bitwidth is not None,
+       *   then output the size restriction in the refinement
+       * Is there a better way to output it?
+       *)
+      if oe.oe_bitwidth = None
+      then print_typ mname oe.oe_t
+      else begin
+        Printf.sprintf "(i:%s{FStar.UInt.size (FStar.Integers.v i) %d})"
+          (print_typ mname oe.oe_t)
+          (Some?.v oe.oe_bitwidth)
+      end in
     Printf.sprintf
       "\n\nval %s (_:%s) (_:%s) (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
       fn_name
@@ -1383,7 +1395,7 @@ let print_out_expr_get_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
   | _ ->
     H.insert tbl fn_name ();
     let fn_arg1_t = print_typ mname oe.oe_bt in
-    let fn_res = print_typ mname oe.oe_t in
+    let fn_res = print_typ mname oe.oe_t in  //No bitfields, we could enforce?
     Printf.sprintf "\n\nval %s : %s -> %s\n\n" fn_name fn_arg1_t fn_res
 
 (*
@@ -1474,8 +1486,13 @@ let rec print_output_types_fields (flds:list A.out_field) : ML string =
   List.fold_left (fun s fld ->
     let fld_s =
       match fld with
-      | A.Out_field_named id t ->
-        Printf.sprintf "%s    %s;\n" (print_as_c_type (atyp_to_ttyp t)) (A.ident_name id)
+      | A.Out_field_named id t bopt ->
+        Printf.sprintf "%s    %s%s;\n"
+          (print_as_c_type (atyp_to_ttyp t))
+          (A.ident_name id)
+          (match bopt with
+           | None -> ""
+           | Some n -> ":" ^ (string_of_int n))
       | A.Out_field_anon flds is_union ->
         Printf.sprintf "%s  {\n %s };\n"
           (if is_union then "union" else "struct")
