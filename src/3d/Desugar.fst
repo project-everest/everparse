@@ -309,7 +309,7 @@ let resolve_enum_case (env:qenv) (ec:enum_case) : ML enum_case =
 
 let rec resolve_out_field (env:qenv) (fld:out_field) : ML out_field =
   match fld with
-  | Out_field_named i t -> Out_field_named i (resolve_typ env t)
+  | Out_field_named i t n -> Out_field_named i (resolve_typ env t) n
   | Out_field_anon l u -> Out_field_anon (resolve_out_fields env l) u
 
 and resolve_out_fields (env:qenv) (flds:list out_field) : ML (list out_field) =

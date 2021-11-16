@@ -361,8 +361,12 @@ typedef_pointer_name_opt:
   |                    { None }
   | COMMA STAR k=IDENT { Some k }
 
+out_field_bitwidth_opt:
+  | COLON i=INT  { Some (Z.of_string i) }
+  |              { None   }
+
 out_field:
-  | t=maybe_pointer_typ f=IDENT  { Out_field_named (f, t) }
+  | t=maybe_pointer_typ f=IDENT bopt=out_field_bitwidth_opt  { Out_field_named (f, t, bopt) }
   | STRUCT LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
     { Out_field_anon (out_flds, false) }
   | UNION LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
