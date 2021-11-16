@@ -189,6 +189,15 @@ let emit_fstar_code_for_interpreter (en:env)
                                                                  EverParse3d FStar.Int.Cast %s'\"\n"
                              modul maybe_open_external_api (all_modules |> String.concat " ")
     in
+
+    let fst_file =
+      open_write_file
+        (Printf.sprintf "%s/%s.fst"
+          (Options.get_output_dir())
+          modul) in
+    FStar.IO.write_string fst_file module_prefix;
+    FStar.IO.write_string fst_file impl;    
+    FStar.IO.close_write_file fst_file;
                              
     let fsti_file =
       open_write_file
@@ -199,15 +208,7 @@ let emit_fstar_code_for_interpreter (en:env)
     FStar.IO.write_string fsti_file iface;
     FStar.IO.close_write_file fsti_file;
 
-
-    let fst_file =
-      open_write_file
-        (Printf.sprintf "%s/%s.fst"
-          (Options.get_output_dir())
-          modul) in
-    FStar.IO.write_string fst_file module_prefix;
-    FStar.IO.write_string fst_file impl;    
-    FStar.IO.close_write_file fst_file
+    ()
 
 let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
                     (static_asserts:StaticAssertions.static_asserts)
