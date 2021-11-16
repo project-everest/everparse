@@ -14,138 +14,106 @@
    limitations under the License.
 *)
 module EverParse3d.Kinds
-module LP = LowParse.Spec.Base
-module LPC = LowParse.Spec.Combinators
 
-////////////////////////////////////////////////////////////////////////////////
-// Parsers
-////////////////////////////////////////////////////////////////////////////////
+noextract
+type weak_kind =
+| WeakKindWeak
+| WeakKindStrongPrefix
+| WeakKindConsumesAll
 
-let parser_kind_prop
-  (nz: bool)
-  (wk: weak_kind)
-  (k: LP.parser_kind)
-: Tot prop
-= (nz ==> (k.LP.parser_kind_low > 0)) /\
-  begin match wk with
-  | WeakKindStrongPrefix -> k.LP.parser_kind_subkind == Some LP.ParserStrong
-  | WeakKindConsumesAll -> k.LP.parser_kind_subkind == Some LP.ParserConsumesAll
-  | _ -> True
-  end
 
 inline_for_extraction
 noextract
-let parser_kind (nz:bool) (wk: weak_kind) =
-  k:LP.parser_kind { parser_kind_prop nz wk k }
+let weak_kind_glb
+  (k1 k2: weak_kind)
+: Tot weak_kind
+= if k1 = k2
+  then k1
+  else WeakKindWeak
 
 inline_for_extraction
 noextract
-let glb (#nz1:bool) (#wk1: weak_kind) (k1:parser_kind nz1 wk1)
+val parser_kind (nz:bool) (wk: weak_kind) : Type0
+
+inline_for_extraction
+noextract
+val glb (#nz1:bool) (#wk1: weak_kind) (k1:parser_kind nz1 wk1)
         (#nz2:bool) (#wk2: weak_kind) (k2:parser_kind nz2 wk2)
     : parser_kind (nz1 && nz2) (weak_kind_glb wk1 wk2)
-    = LP.glb k1 k2
 
 /// Parser: return
 inline_for_extraction
 noextract
-let ret_kind
+val ret_kind
   : parser_kind false WeakKindStrongPrefix
-  = LPC.parse_ret_kind
 
 /// Parser: bind
 inline_for_extraction
 noextract
-let and_then_kind (#nz1:_) (k1:parser_kind nz1 WeakKindStrongPrefix)
+val and_then_kind (#nz1:_) (k1:parser_kind nz1 WeakKindStrongPrefix)
                   (#nz2:_) (#wk2: _) (k2:parser_kind nz2 wk2)
     : parser_kind (nz1 || nz2) wk2
-    = LPC.and_then_kind k1 k2
+
 
 inline_for_extraction
 noextract
-let filter_kind (#nz:_) (#wk: _) (k:parser_kind nz wk)
+val filter_kind (#nz:_) (#wk: _) (k:parser_kind nz wk)
   : parser_kind nz wk
-  = LPC.parse_filter_kind k
 
 inline_for_extraction
 noextract
-let impos_kind
+val impos_kind
   : parser_kind true WeakKindStrongPrefix
-  = LPC.(strong_parser_kind 1 1 (Some ParserKindMetadataFail))
 
 /// Lists/arrays
 inline_for_extraction
 noextract
-let kind_nlist
+val kind_nlist
   : parser_kind false WeakKindStrongPrefix
-  = let open LP in
-    {
-      parser_kind_low = 0;
-      parser_kind_high = None;
-      parser_kind_subkind = Some ParserStrong;
-      parser_kind_metadata = None
-    }
 
-let kind_all_bytes
+val kind_all_bytes
   : parser_kind false WeakKindConsumesAll
-  = LowParse.Spec.Bytes.parse_all_bytes_kind
 
-let kind_t_at_most
+val kind_t_at_most
   : parser_kind false WeakKindStrongPrefix
-  = kind_nlist
 
-let kind_t_exact
+val kind_t_exact
   : parser_kind false WeakKindStrongPrefix
-  = kind_nlist
 
-let parse_string_kind
+val parse_string_kind
   : parser_kind true WeakKindStrongPrefix
-  = {
-     LP.parser_kind_low = 1;
-     LP.parser_kind_high = None;
-     LP.parser_kind_subkind = Some LP.ParserStrong;
-     LP.parser_kind_metadata = None;
-    }
 
-let kind_all_zeros
+val kind_all_zeros
   : parser_kind false WeakKindConsumesAll
-  = LowParse.Spec.List.parse_list_kind
 
 inline_for_extraction noextract
-let kind____UINT8
+val kind____UINT8
   : parser_kind true WeakKindStrongPrefix
-  = LowParse.Spec.Int.parse_u8_kind
 
 inline_for_extraction noextract
-let kind____UINT16BE
+val kind____UINT16BE
   : parser_kind true WeakKindStrongPrefix
-  = LowParse.Spec.BoundedInt.parse_u16_kind
 
 inline_for_extraction noextract
-let kind____UINT32BE
+val kind____UINT32BE
   : parser_kind true WeakKindStrongPrefix
-  = LowParse.Spec.BoundedInt.parse_u32_kind
 
 inline_for_extraction noextract
-let kind____UINT64BE
+val kind____UINT64BE
   : parser_kind true WeakKindStrongPrefix
-  = LowParse.Spec.Int.parse_u64_kind
 
 inline_for_extraction noextract
-let kind____UINT16
+val kind____UINT16
   : parser_kind true WeakKindStrongPrefix
-  = LowParse.Spec.BoundedInt.parse_u16_kind
 
 inline_for_extraction noextract
-let kind____UINT32
+val kind____UINT32
   : parser_kind true WeakKindStrongPrefix
-  = LowParse.Spec.BoundedInt.parse_u32_kind
 
 inline_for_extraction noextract
-let kind____UINT64
+val kind____UINT64
   : parser_kind true WeakKindStrongPrefix
-  = LowParse.Spec.Int.parse_u64_kind
 
 inline_for_extraction noextract
-let kind_unit
+val kind_unit
   : parser_kind false WeakKindStrongPrefix
-  = ret_kind
