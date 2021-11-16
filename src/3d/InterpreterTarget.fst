@@ -988,21 +988,20 @@ let print_binding mname (td:type_decl)
         dtyp;
         enum_typ_of_binding]
    in
-   impl, ""
-
-   // if Some? td.enum_typ
-   // && (td.name.td_entrypoint || td.attrs.is_exported)
-   // then "", impl //exported enums are fully revealed
-   // else if td.name.td_entrypoint
-   //      || td.attrs.is_exported
-   // then
-   //   let iface =
-   //     print_td_iface mname root_name binders args
-   //                    fv_binders fv_args td.allow_reading
-   //                    weak_kind k.pk_nz
-   //   in
-   //   impl, iface
-   // else impl, ""
+   // impl, ""
+   if Some? td.enum_typ
+   && (td.name.td_entrypoint || td.attrs.is_exported)
+   then "", impl //exported enums are fully revealed
+   else if td.name.td_entrypoint
+        || td.attrs.is_exported
+   then
+     let iface =
+       print_td_iface mname root_name binders args
+                      fv_binders fv_args td.allow_reading
+                      weak_kind k.pk_nz
+     in
+     impl, iface
+   else impl, ""
 
 let print_decl mname (d:decl)
   : ML (string & string) =
@@ -1011,7 +1010,7 @@ let print_decl mname (d:decl)
     begin
     match fst d with
     | T.Assumption _ -> T.print_assumption mname d, ""
-    | T.Definition _ -> T.print_definition mname d, ""
+    | T.Definition _ -> "", T.print_definition mname d
     | _ -> "", ""
     end
   | Inr td -> print_binding mname td

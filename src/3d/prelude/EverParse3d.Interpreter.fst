@@ -1139,12 +1139,12 @@ let rec as_validator
                            (dtyp_as_leaf_reader elt_t)
                            terminator)
 
-[@@noextract_to "Kremlin"]
+[@@noextract_to "Kremlin"; specialize]
 inline_for_extraction noextract 
 let validator_of #nz #wk (#k:P.parser_kind nz wk) #i #l #b (t:typ k i l b) = 
   A.validate_with_action_t (as_parser t) i l b
 
-[@@noextract_to "Kremlin"]  
+[@@noextract_to "Kremlin"; specialize]  
 inline_for_extraction noextract   
 let dtyp_of #nz #wk (#k:P.parser_kind nz wk) #i #l #b (t:typ k i l b) = 
   dtyp k b i l
@@ -1259,7 +1259,9 @@ let coerce_validator steps : T.Tac unit =
                                `%snd;
                                `%Mktuple2?._1;
                                `%Mktuple2?._2;
-                               `%coerce
+                               `%coerce;
+                               `%validator_of;
+                               `%dtyp_of;
                               ]);
            zeta;
            iota;
