@@ -1330,11 +1330,19 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
     //TODO: module name?
     let fn_arg1_t = print_typ mname oe.oe_bt in
     let fn_arg2_t = print_typ mname oe.oe_t in
-    Printf.sprintf
-      "\n\nval %s (_:%s) (_:%s) (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
-      fn_name
-      fn_arg1_t
-      fn_arg2_t
+    if Options.get_interpret()
+    then 
+      Printf.sprintf
+        "\n\nval %s (_:%s) (_:%s) : external_action output_loc\n\n"
+        fn_name
+        fn_arg1_t
+        fn_arg2_t
+    else 
+      Printf.sprintf
+        "\n\nval %s (_:%s) (_:%s) (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
+        fn_name
+        fn_arg1_t
+        fn_arg2_t
 
 let rec base_id_of_output_expr (oe:output_expr) : A.ident =
   match oe.oe_expr with
@@ -1433,11 +1441,38 @@ let print_external_api_fstar (modul:string) (ds:decls) : ML string =
     | _ -> "")) in
    Printf.sprintf
     "module %s.ExternalAPI\n\n\
-     open FStar.HyperStack.ST\n\
+     open FStar.HyperStack.ST\n\    
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
      noextract val output_loc : eloc\n\n%s"
     modul
+    s
+
+let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
+  let tbl = H.create 10 in
+  let s = String.concat "" (ds |> List.map (fun d ->
+    match fst d with
+    | Output_type_expr oe is_get ->
+      Printf.sprintf "%s%s%s"
+        (print_output_type_val tbl oe.oe_bt)
+        (print_output_type_val tbl oe.oe_t)
+        (if not is_get then print_out_expr_set_fstar tbl modul oe
+         else print_out_expr_get_fstar tbl modul oe)
+    | Extern_type i ->
+      Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
+    | Extern_fn f ret params ->
+      Printf.sprintf "\n\nval %s %s : external_action output_loc\n"
+        (print_ident f)
+        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
+          (print_ident i)
+          (print_typ modul t))))
+    | _ -> "")) in
+   Printf.sprintf
+    "module %s.ExternalAPI\n\n\
+     open EverParse3d.Prelude\n\
+     open EverParse3d.Actions.All\n\
+     noextract val output_loc : eloc\n\n%s"
+     modul
     s
 
 let print_out_exprs_c modul (ds:decls) : ML string =
