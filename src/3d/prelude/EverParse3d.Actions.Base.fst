@@ -1,7 +1,13 @@
 module EverParse3d.Actions.Base
 friend EverParse3d.Kinds
 friend EverParse3d.Prelude
+open FStar.HyperStack.ST
+open LowStar.Buffer
+open LowStar.BufferOps
+module B = LowStar.Buffer
 module I = EverParse3d.InputStream.Base
+module HS = FStar.HyperStack
+module HST = FStar.HyperStack.ST
 
 module LPE = EverParse3d.ErrorCode
 open FStar.Tactics.Typeclasses
@@ -9,6 +15,35 @@ open FStar.Tactics.Typeclasses
 module B = LowStar.Buffer
 module U8 = FStar.UInt8
 module P = EverParse3d.Prelude
+
+let hinv = HS.mem -> Tot Type0
+let liveness_inv = i:hinv {
+  forall l h0 h1. {:pattern (i h1); (modifies l h0 h1)}  i h0 /\ modifies l h0 h1 /\ address_liveness_insensitive_locs `loc_includes` l ==> i h1
+}
+let mem_inv  = liveness_inv
+let slice_inv = loc -> mem_inv
+let inv_implies (inv0 inv1:slice_inv) =
+  forall i h.
+    inv0 i h ==> inv1 i h
+let true_inv : slice_inv = fun _ _ -> True
+let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h
+let eloc = (l: FStar.Ghost.erased B.loc { B.address_liveness_insensitive_locs `B.loc_includes` l })
+let eloc_union (l1 l2:eloc) : Tot eloc = B.loc_union l1 l2
+let eloc_none : eloc = B.loc_none
+let eloc_includes (l1 l2:eloc) = B.loc_includes l1 l2 /\ True
+
+let inv_implies_refl inv = ()
+let inv_implies_true inv0 = ()
+let inv_implies_conj inv0 inv1 inv2 h01 h02 = ()
+
+let eloc_includes_none l = ()
+let eloc_includes_union l0 l1 l2 h01 h02 = ()
+let eloc_includes_refl l = ()
+
+let bpointer a = B.pointer a
+let ptr_loc #a (x:B.pointer a) : Tot eloc = B.loc_buffer x
+let ptr_inv #a (x:B.pointer a) : slice_inv = fun (sl:_) h -> B.live h x
+
 
 let app_ctxt = B.pointer U8.t
 let app_loc (x:app_ctxt) (l:eloc) : eloc = B.loc_buffer x `loc_union` l
@@ -1643,6 +1678,9 @@ let action_weaken
       (#inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
    : action p inv' l' b a
    = act
+
+let external_action l =
+  unit -> Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1)
 
 noextract
 inline_for_extraction

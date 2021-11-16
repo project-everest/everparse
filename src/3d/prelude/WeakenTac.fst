@@ -4,27 +4,15 @@ open EverParse3d.Actions.Base
 
 module T = LowParse.TacLib
 
-let inv_implies_true (inv0:slice_inv) : Tot (squash (inv0 `inv_implies` true_inv)) = ()
+let inv_conj_implies_l (inv1 inv2: slice_inv) (inv0: slice_inv) (h: squash (inv1 `inv_implies` inv0)) : Tot (squash ((inv1 `conj_inv` inv2) `inv_implies` inv0)) = admit ()
 
-let inv_implies_conj (inv0 inv1 inv2: slice_inv) (h01: squash (inv0 `inv_implies` inv1)) (h02: squash (inv0 `inv_implies` inv2)) : Tot (squash (inv0 `inv_implies` (inv1 `conj_inv` inv2))) = ()
+let inv_conj_implies_r (inv1 inv2: slice_inv) (inv0: slice_inv) (h: squash (inv2 `inv_implies` inv0)) : Tot (squash ((inv1 `conj_inv` inv2) `inv_implies` inv0)) = admit ()
 
-let inv_conj_implies_l (inv1 inv2: slice_inv) (inv0: slice_inv) (h: squash (inv1 `inv_implies` inv0)) : Tot (squash ((inv1 `conj_inv` inv2) `inv_implies` inv0)) = ()
+let eloc_union_includes_l (l1 l2: eloc) (l0: eloc) (h: squash (l1 `eloc_includes` l0)) : Tot (squash ((l1 `eloc_union` l2) `eloc_includes` l0)) = admit ()
 
-let inv_conj_implies_r (inv1 inv2: slice_inv) (inv0: slice_inv) (h: squash (inv2 `inv_implies` inv0)) : Tot (squash ((inv1 `conj_inv` inv2) `inv_implies` inv0)) = ()
+let eloc_union_includes_r (l1 l2: eloc) (l0: eloc) (h: squash (l2 `eloc_includes` l0)) : Tot (squash ((l1 `eloc_union` l2) `eloc_includes` l0)) = admit ()
 
-let inv_implies_refl (inv: slice_inv) : Tot (squash (inv `inv_implies` inv)) = ()
-
-let eloc_includes_none (l1:eloc) : Tot (squash (l1 `eloc_includes` eloc_none)) = ()
-
-let eloc_includes_union (l0: eloc) (l1 l2: eloc) (h01: squash (l0 `eloc_includes` l1)) (h02: squash (l0 `eloc_includes` l2)) : Tot (squash (l0 `eloc_includes` (l1 `eloc_union` l2))) = ()
-
-let eloc_union_includes_l (l1 l2: eloc) (l0: eloc) (h: squash (l1 `eloc_includes` l0)) : Tot (squash ((l1 `eloc_union` l2) `eloc_includes` l0)) = ()
-
-let eloc_union_includes_r (l1 l2: eloc) (l0: eloc) (h: squash (l2 `eloc_includes` l0)) : Tot (squash ((l1 `eloc_union` l2) `eloc_includes` l0)) = ()
-
-let eloc_includes_refl (l: eloc) : Tot (squash (l `eloc_includes` l)) = ()
-
-let squash_1_to_2 (p: Type0) (_: squash p) : Tot (squash (squash p)) = ()
+let squash_1_to_2 (p: Type0) (_: squash p) : Tot (squash (squash p)) = admit ()
 
 [@@ noextract_to "Kremlin"]
 let rec subterm_appears_in_term
