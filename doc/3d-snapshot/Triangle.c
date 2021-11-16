@@ -2,8 +2,8 @@
 
 #include "Triangle.h"
 
-uint64_t
-TriangleValidatePoint(
+static inline uint64_t
+ValidatePoint(
   uint8_t *Ctxt,
   void
   (*Err)(
@@ -98,8 +98,7 @@ TriangleValidateTriangle(
 )
 {
   /* Validating field a */
-  uint64_t
-  positionAfterTriangle = TriangleValidatePoint(Ctxt, Err, Input, InputLength, StartPosition);
+  uint64_t positionAfterTriangle = ValidatePoint(Ctxt, Err, Input, InputLength, StartPosition);
   uint64_t positionAftera;
   if (EverParseIsSuccess(positionAfterTriangle))
   {
@@ -120,8 +119,7 @@ TriangleValidateTriangle(
     return positionAftera;
   }
   /* Validating field b */
-  uint64_t
-  positionAfterTriangle0 = TriangleValidatePoint(Ctxt, Err, Input, InputLength, positionAftera);
+  uint64_t positionAfterTriangle0 = ValidatePoint(Ctxt, Err, Input, InputLength, positionAftera);
   uint64_t positionAfterb;
   if (EverParseIsSuccess(positionAfterTriangle0))
   {
@@ -142,8 +140,7 @@ TriangleValidateTriangle(
     return positionAfterb;
   }
   /* Validating field c */
-  uint64_t
-  positionAfterTriangle1 = TriangleValidatePoint(Ctxt, Err, Input, InputLength, positionAfterb);
+  uint64_t positionAfterTriangle1 = ValidatePoint(Ctxt, Err, Input, InputLength, positionAfterb);
   if (EverParseIsSuccess(positionAfterTriangle1))
   {
     return positionAfterTriangle1;

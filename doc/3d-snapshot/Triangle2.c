@@ -2,8 +2,8 @@
 
 #include "Triangle2.h"
 
-uint64_t
-Triangle2ValidatePoint(
+static inline uint64_t
+ValidatePoint(
   uint8_t *Ctxt,
   void
   (*Err)(
@@ -127,7 +127,7 @@ Triangle2ValidateTriangle(
       {
         uint64_t
         positionAfterTriangle =
-          Triangle2ValidatePoint(Ctxt,
+          ValidatePoint(Ctxt,
             Err,
             truncatedInput,
             truncatedInputLength,

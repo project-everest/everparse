@@ -3,69 +3,6 @@
 #include "EnumConstraint.h"
 
 uint64_t
-EnumConstraintValidateColor(
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
-    uint8_t *x4,
-    uint64_t x5
-  ),
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-{
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
-  uint64_t positionAfter_refinement;
-  if (hasBytes)
-  {
-    positionAfter_refinement = StartPosition + (uint64_t)4U;
-  }
-  else
-  {
-    positionAfter_refinement =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
-  }
-  uint64_t positionAftercolor;
-  if (EverParseIsError(positionAfter_refinement))
-  {
-    positionAftercolor = positionAfter_refinement;
-  }
-  else
-  {
-    /* reading field_value */
-    uint32_t _refinement = Load32Le(Input + (uint32_t)StartPosition);
-    /* start: checking constraint */
-    BOOLEAN
-    _refinementConstraintIsOk =
-      _refinement
-      == ENUMCONSTRAINT_RED
-      || _refinement == ENUMCONSTRAINT_GREEN || _refinement == ENUMCONSTRAINT_BLUE || FALSE;
-    /* end: checking constraint */
-    positionAftercolor =
-      EverParseCheckConstraintOk(_refinementConstraintIsOk,
-        positionAfter_refinement);
-  }
-  if (EverParseIsSuccess(positionAftercolor))
-  {
-    return positionAftercolor;
-  }
-  Err("color",
-    ".refinement",
-    EverParseErrorReasonOfResult(positionAftercolor),
-    Ctxt,
-    Input,
-    StartPosition);
-  return positionAftercolor;
-}
-
-uint64_t
 EnumConstraintValidateEnumConstraint(
   uint8_t *Ctxt,
   void

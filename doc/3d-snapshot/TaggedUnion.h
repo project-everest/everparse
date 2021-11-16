@@ -19,24 +19,6 @@ extern "C" {
 #define TAGGEDUNION_SIZE32 ((uint8_t)32U)
 
 uint64_t
-TaggedUnionValidateIntPayload(
-  uint32_t Size,
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
-    uint8_t *x4,
-    uint64_t x5
-  ),
-  uint8_t *Input,
-  uint64_t InputLen,
-  uint64_t StartPosition
-);
-
-uint64_t
 TaggedUnionValidateInteger(
   uint8_t *Ctxt,
   void

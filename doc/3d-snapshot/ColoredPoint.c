@@ -2,8 +2,8 @@
 
 #include "ColoredPoint.h"
 
-uint64_t
-ColoredPointValidatePoint(
+static inline uint64_t
+ValidatePoint(
   uint8_t *Ctxt,
   void
   (*Err)(
@@ -133,12 +133,7 @@ ColoredPointValidateColoredPoint1(
   }
   /* Validating field pt */
   uint64_t
-  positionAfterColoredPoint10 =
-    ColoredPointValidatePoint(Ctxt,
-      Err,
-      Input,
-      InputLength,
-      positionAftercolor);
+  positionAfterColoredPoint10 = ValidatePoint(Ctxt, Err, Input, InputLength, positionAftercolor);
   if (EverParseIsSuccess(positionAfterColoredPoint10))
   {
     return positionAfterColoredPoint10;
@@ -171,12 +166,7 @@ ColoredPointValidateColoredPoint2(
 {
   /* Validating field pt */
   uint64_t
-  positionAfterColoredPoint2 =
-    ColoredPointValidatePoint(Ctxt,
-      Err,
-      Input,
-      InputLength,
-      StartPosition);
+  positionAfterColoredPoint2 = ValidatePoint(Ctxt, Err, Input, InputLength, StartPosition);
   uint64_t positionAfterpt;
   if (EverParseIsSuccess(positionAfterColoredPoint2))
   {

@@ -2,8 +2,8 @@
 
 #include "TaggedUnion.h"
 
-uint64_t
-TaggedUnionValidateIntPayload(
+static inline uint64_t
+ValidateIntPayload(
   uint32_t Size,
   uint8_t *Ctxt,
   void
@@ -174,7 +174,7 @@ TaggedUnionValidateInteger(
   /* Validating field payload */
   uint64_t
   positionAfterInteger0 =
-    TaggedUnionValidateIntPayload(size,
+    ValidateIntPayload(size,
       Ctxt,
       Err,
       Input,
