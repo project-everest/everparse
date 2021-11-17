@@ -489,13 +489,16 @@ let lookup_output_type (ge:global_env) (i:ident) : ML out_typ =
   | Some ({d_decl={v=OutputType out_t}}) -> out_t
   | _ -> error (Printf.sprintf "Cannot find output type %s" (ident_to_string i)) i.range
 
-let lookup_output_type_field (ge:global_env) (i f:ident) : ML typ =
+(*
+ * Returns the type of the field, with optional bitwidth if the field is a bitfield
+ *)
+let lookup_output_type_field (ge:global_env) (i f:ident) : ML (typ & option int) =
   let out_t = lookup_output_type ge i in
-  let rec find (flds:list out_field) : (option typ) =
+  let rec find (flds:list out_field) : (option (typ & option int)) =
     match flds with
     | [] -> None
-    | (Out_field_named f' t)::tl ->
-      if eq_idents f f' then Some t
+    | (Out_field_named f' t n)::tl ->
+      if eq_idents f f' then Some (t, n)
       else find tl
     | (Out_field_anon l _)::tl ->
       (match find l with
@@ -525,6 +528,8 @@ let check_output_type (ge:global_env) (t:typ) : ML ident =
 
 
 /// Populated the output expression metadata
+///
+/// We enforce that the spec cannot take address of output type bitfields
 
 let rec check_out_expr (env:env) (oe0:out_expr)
   : ML (oe:out_expr{Some? oe.out_expr_meta}) =
@@ -532,45 +537,86 @@ let rec check_out_expr (env:env) (oe0:out_expr)
   match oe0.out_expr_node.v with
   | OE_id i ->
     let t = lookup_expr_name env i in
-    {oe0 with out_expr_meta = Some (t, t)}
+    {oe0 with
+     out_expr_meta = Some ({
+       out_expr_base_t = t;
+       out_expr_t = t;
+       out_expr_bit_width = None})}
   | OE_star oe ->
     let oe = check_out_expr env oe in
-    let oe_bt, oe_t = Some?.v oe.out_expr_meta in
-    (match oe_t.v with
-     | Pointer t ->
+    let { out_expr_base_t = oe_bt;
+          out_expr_t = oe_t;
+          out_expr_bit_width = bopt } = Some?.v oe.out_expr_meta in
+    (match oe_t.v, bopt with
+     | Pointer t, None ->
        {oe0 with
         out_expr_node={oe0.out_expr_node with v=OE_star oe};
-        out_expr_meta=Some (oe_bt, t)}
+        out_expr_meta=Some ({ out_expr_base_t = oe_bt;
+                              out_expr_t = t;
+                              out_expr_bit_width = None })}
      | _ ->
        error
          (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a pointer type"
            (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_addrof oe ->
     let oe = check_out_expr env oe in
-    let oe_bt, oe_t = Some?.v oe.out_expr_meta in
-    {oe0 with
-     out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
-     out_expr_meta=Some (oe_bt, with_range (Pointer oe_t) oe.out_expr_node.range)}
+    let { out_expr_base_t = oe_bt;
+          out_expr_t = oe_t;
+          out_expr_bit_width = bopt } = Some?.v oe.out_expr_meta in
+    (match bopt with
+     | None ->
+       {oe0 with
+        out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
+        out_expr_meta=Some ({
+          out_expr_base_t = oe_bt;
+          out_expr_t = with_range (Pointer oe_t) oe.out_expr_node.range;
+          out_expr_bit_width = None })}
+     | _ ->
+       error
+         (Printf.sprintf "Cannot take address of a bit field %s"
+           (print_out_expr oe0)) oe.out_expr_node.range)
   | OE_deref oe f ->
     let oe = check_out_expr env oe in
-    let oe_bt, oe_t = Some?.v oe.out_expr_meta in
-    (match oe_t.v with
-     | Pointer t ->
+    let { out_expr_base_t = oe_bt;
+          out_expr_t = oe_t;
+          out_expr_bit_width = bopt }  = Some?.v oe.out_expr_meta in
+    (match oe_t.v, bopt with
+     | Pointer t, None ->
        let i = check_output_type (global_env_of_env env) t in
+       let out_expr_t, out_expr_bit_width = lookup_output_type_field
+         (global_env_of_env env)
+         i f in
        {oe0 with
         out_expr_node={oe0.out_expr_node with v=OE_deref oe f};
-        out_expr_meta=Some (oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
+        out_expr_meta=Some ({
+          out_expr_base_t = oe_bt;
+          out_expr_t = out_expr_t;
+          out_expr_bit_width = out_expr_bit_width})}
      | _ -> 
        error
          (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a pointer type"
            (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_dot oe f ->
     let oe = check_out_expr env oe in
-    let oe_bt, oe_t = Some?.v oe.out_expr_meta in
-    let i = check_output_type (global_env_of_env env) oe_t in
-    {oe0 with
-     out_expr_node={oe0.out_expr_node with v=OE_dot oe f};
-     out_expr_meta=Some (oe_bt, lookup_output_type_field (global_env_of_env env) i f)}
+    let { out_expr_base_t = oe_bt;
+          out_expr_t = oe_t;
+          out_expr_bit_width = bopt } = Some?.v oe.out_expr_meta in
+    (match bopt with
+     | None ->
+       let i = check_output_type (global_env_of_env env) oe_t in
+       let out_expr_t, out_expr_bit_width = lookup_output_type_field
+         (global_env_of_env env)
+         i f in
+       {oe0 with
+        out_expr_node={oe0.out_expr_node with v=OE_dot oe f};
+        out_expr_meta=Some ({
+          out_expr_base_t = oe_bt;
+          out_expr_t = out_expr_t;
+          out_expr_bit_width = out_expr_bit_width})}
+     | _ ->
+       error
+         (Printf.sprintf "Cannot take address of a bit field %s"
+           (print_out_expr oe0)) oe.out_expr_node.range)
 
 let range_of_typ_param (p:typ_param) = match p with
   | Inl e -> e.range
@@ -894,7 +940,13 @@ and check_typ_param (env:env) (p:typ_param) : ML (typ_param & typ) =
     Inl e, t
   | Inr o ->
     let o = check_out_expr env o in
-    Inr o, (let _, t = Some?.v o.out_expr_meta in t)
+    let { out_expr_t = t;
+          out_expr_bit_width = bopt } = Some?.v o.out_expr_meta in
+    (match bopt with
+     | None ->
+       Inr o, t
+     | _ ->
+       error ("Type parameter cannot be a bitfield") (range_of_typ_param p))
 
 #pop-options
 #push-options "--z3rlimit_factor 3"
@@ -930,7 +982,7 @@ let rec check_field_action (env:env) (f:field) (a:action)
 
         | Action_assignment lhs rhs ->
           let lhs = check_out_expr env lhs in
-          let _, t = Some?.v lhs.out_expr_meta in
+          let { out_expr_t = t } = Some?.v lhs.out_expr_meta in
           let rhs, t' = check_expr env rhs in
           if not (eq_typ env t t')
           then warning (Printf.sprintf
@@ -1415,11 +1467,13 @@ let elaborate_record (e:global_env)
  * An output field type is either a base type or another output type
  *
  * TODO: check field name shadowing
+ * TODO: check bit fields, do we check that the sum of bitwidths is ok etc.?
+ *       as of now, we don't check anything here
  *)
 
 let rec check_output_field (ge:global_env) (fld:out_field) : ML unit =
   match fld with
-  | Out_field_named _ t -> check_integer_or_output_type ge t
+  | Out_field_named _ t _bopt -> check_integer_or_output_type ge t
   | Out_field_anon l _ -> check_output_fields ge l
 
 and check_output_fields (ge:global_env) (flds:list out_field) : ML unit =

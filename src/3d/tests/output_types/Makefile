@@ -11,6 +11,7 @@ basic: $(SOURCE_FILES) basic.out
 	$(EVERPARSE_CMD) --batch AnonUnion.3d --odir basic.out
 	$(EVERPARSE_CMD) --batch AnonStruct.3d --odir basic.out
 	$(EVERPARSE_CMD) --batch ExternVector.3d --odir basic.out
+	$(EVERPARSE_CMD) --batch OutputBitFields.3d --odir basic.out
 	g++ -o basic.out/test1 -I basic.out $(addprefix basic.out/, AnonStruct_OutputTypes.c AnonStruct.c AnonStructWrapper.c) TestAnonStruct.cpp
 	./basic.out/test1
 	g++ -o basic.out/test2 -I basic.out $(addprefix basic.out/, TPoint_OutputTypes.c TPoint.c TPointWrapper.c) TestTPoint.cpp
@@ -23,6 +24,7 @@ interpret: $(SOURCE_FILES) interpret.out
 	$(EVERPARSE_CMD) --batch AnonUnion.3d --odir interpret.out
 	$(EVERPARSE_CMD) --batch AnonStruct.3d --odir interpret.out
 	$(EVERPARSE_CMD) --batch ExternVector.3d --odir interpret.out
+	$(EVERPARSE_CMD) --batch OutputBitFields.3d --odir interpret.out
 	g++ -o interpret.out/test1 -I interpret.out $(addprefix interpret.out/, AnonStruct_OutputTypes.c AnonStruct.c AnonStructWrapper.c) TestAnonStruct.cpp
 	./interpret.out/test1
 	g++ -o interpret.out/test2 -I interpret.out $(addprefix interpret.out/, TPoint_OutputTypes.c TPoint.c TPointWrapper.c) TestTPoint.cpp
