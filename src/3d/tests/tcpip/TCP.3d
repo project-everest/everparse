@@ -96,14 +96,12 @@ where WindowScaleAllowed
     Length == 3
   };
   UINT8 WindowScale
-  {:on-success
+  {:act
     OptRx->WSCALE_OK = (UINT16) 1;
     if((WindowScale <= TCP_MAX_WSCALE)){
       OptRx->SND_WSCALE = (UINT16) WindowScale;
-      return true;
     } else {
       OptRx->SND_WSCALE = (UINT16) TCP_MAX_WSCALE;
-      return true;
     }};
 } WINDOW_SCALE_PAYLOAD;
 
@@ -116,9 +114,8 @@ where MaxSegSizeAllowed
     Length == 4
   };
   UINT16 MaxSegSize
-  {:on-success
-    OptRx->MSS_CLAMP = MaxSegSize;
-    return true;}
+  {:act
+    OptRx->MSS_CLAMP = MaxSegSize;}
 } MAX_SEG_SIZE_PAYLOAD;
 
 typedef struct _TIMESTAMP_PAYLOAD(Bool TimeStampAllowed,
@@ -131,11 +128,10 @@ where TimeStampAllowed
   };
   UINT32       Tsval;
   UINT32       Tsecr
-  {:on-success
+  {:act
     OptRx->SAW_TSTAMP = (UINT16) 1;
     OptRx->RCV_TSVAL = Tsval;
-    OptRx->RCV_TSECR = Tsecr;
-    return true;};
+    OptRx->RCV_TSECR = Tsecr;};
 } TIMESTAMP_PAYLOAD;
 
 typedef struct _SackPerm_PAYLOAD(Bool SackPermAllowed,
@@ -147,11 +143,10 @@ where SackPermAllowed
     Length == 2
   };
   unit         Noop
-  {:on-success
+  {:act
     OptRx->SACK_OK = (UINT16) TCP_SACK_SEEN;
     OptRx->DSACK = (UINT16) 0;
-    OptRx->NUM_SACKS = (UINT8) 0;
-    return true;};
+    OptRx->NUM_SACKS = (UINT8) 0;};
 } SackPermPayload;
 
 typedef struct _SELECTIVE_ACK_PAYLOAD(mutable PUINT8 *SackPayload)
@@ -164,10 +159,9 @@ typedef struct _SELECTIVE_ACK_PAYLOAD(mutable PUINT8 *SackPayload)
     Length == 34
   };
   UINT8 SelectiveAck[:byte-size (Length - 2)]
-  {:on-success
+  {:act
     var x = field_ptr;
-    *SackPayload = x;
-    return true;};
+    *SackPayload = x;};
 } SELECTIVE_ACK_PAYLOAD;
 
 casetype _OPTION_PAYLOAD(UINT8 OptionKind,
