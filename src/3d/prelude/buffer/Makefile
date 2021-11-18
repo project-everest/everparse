@@ -17,12 +17,10 @@ ALREADY_CACHED=--already_cached '*,-EverParse3d.Actions.All,-EverParse3d.InputSt
 
 -include .depend
 
-FILTERED_KRML_FILES=$(filter-out ResultOps.krml Actions.krml,$(ALL_KRML_FILES))
-
 extract: EverParse.h
 
-EverParse.rsp: $(FILTERED_KRML_FILES) ../EverParse.rsp
-	for f in $(FILTERED_KRML_FILES) ; do echo $$f ; done > $@.tmp
+EverParse.rsp: $(ALL_KRML_FILES) ../EverParse.rsp
+	for f in $(ALL_KRML_FILES) ; do echo $$f ; done > $@.tmp
 	while read file ; do grep "^$$file"'$$' $@.tmp > /dev/null || { echo ../$$file >> $@.tmp ; } ; done < ../EverParse.rsp
 	mv $@.tmp $@
 
