@@ -1,4 +1,2 @@
-*
-!Makefile
-!*.3d
-!.gitignore
+interpret.out
+
