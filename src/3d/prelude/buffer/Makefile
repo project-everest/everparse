@@ -9,7 +9,7 @@ FSTAR_OPTIONS=$(addprefix --include , .. $(EVERPARSE_HOME)/src/lowparse $(KREMLI
 FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
 
 ROOT=$(wildcard *.fst) $(wildcard *.fsti)
-ALREADY_CACHED=--already_cached '*,-EverParse3d.Actions.All,-EverParse3d.InputStream.All,-EverParse3d.InputStream.Buffer,-EverParse3d.Actions.BackendFlag,-EverParse3d.Actions.BackendFlagValue'
+ALREADY_CACHED=--already_cached '*,-EverParse3d.Actions.All,-EverParse3d.InputStream.All,-EverParse3d.InputStream.Buffer,-EverParse3d.Actions.BackendFlag,-EverParse3d.Actions.BackendFlagValue,-EverParse3d.Readable,-EverParse3d.InputBuffer'
 
 .depend: $(ROOT)
 	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims' > $@.tmp
