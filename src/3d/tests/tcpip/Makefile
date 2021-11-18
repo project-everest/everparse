@@ -2,17 +2,24 @@ QD_HOME ?= $(realpath ../../../..)
 export QD_HOME
 EVERPARSE_HOME=$(QD_HOME)
 EVERPARSE_CMD=$(QD_HOME)/bin/3d.exe
-SOURCE_FILES=ICMP.3d IPV4.3d TCP.3d Ethernet.3d VXLAN.3d UDP.3d IPV6.3d
+SOURCE_FILES_NO_EXTERN=TCP.3d Ethernet.3d
+SOURCE_FILES_EXTERN=ICMP.3d IPV4.3d VXLAN.3d UDP.3d IPV6.3d
+SOURCE_FILES=$(SOURCE_FILES_NO_EXTERN) $(SOURCE_FILES_EXTERN)
 
-all: interpret
+all: interpret extern
 
 interpret: $(SOURCE_FILES) interpret.out
 	$(EVERPARSE_CMD) --batch $(SOURCE_FILES) --odir interpret.out
+	+$(MAKE) -C interpret.out/ -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-type-limits -Wno-ignored-qualifiers -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer'
+
+extern: $(SOURCE_FILES_EXTERN) extern.out
+	$(EVERPARSE_CMD) --input_stream extern --input_stream_include EverParseStream.h --batch $(SOURCE_FILES_EXTERN) --odir extern.out
+	+$(MAKE) -C extern.out/ -f Makefile.basic USER_TARGET=test USER_CFLAGS='-I ../extern -Wno-type-limits -Wno-ignored-qualifiers -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/extern'
 
 %.out:
 	mkdir -p $@
 
-.PHONY: all interpret
+.PHONY: all interpret extern clean
 
 INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/3d/prelude/buffer $(QD_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib/obj $(KREMLIN_HOME)/kremlib
 
@@ -20,3 +27,6 @@ FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 
 %.fst-in:
 	@echo $(FSTAR_OPTIONS)
+
+clean:
+	rm -rf interpret.out extern.out

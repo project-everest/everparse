@@ -17,7 +17,7 @@ evaluation directives.
   to extern C functions, whose F* prototypes are declared in
   extern/EverParse3d.InputStream.Extern.Base.fsti. This
   "implementation" is meant to link with an external C implementation
-  of byte streams. See ../tests/extern for an example of use.
+  of byte streams. See ../tests/tcpip for an example of use.
 
 * EverParse3d.Interpreter: the 3D AST and its type, parser and
   validator interpreters, and the partial evaluation directives (F*

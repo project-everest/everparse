@@ -72,3 +72,11 @@ around the TCP/IP protocol.
 
    * TCP_ExternalTypeDefs.h: a stub between TCP_ExternalAPI.h and
      TCP_OutputTypesDefs.h
+
+   For those data formats that do not use the field_ptr action, we
+   also generate a verified implementation of validators from
+   non-contiguous input data. Such code is generated into
+   extern.out. It has the same structure as interpret.out. The
+   generated C code there can compile and link with any handwritten
+   implementation for non-contiguous streams. Such an implementation
+   is provided in the extern/ subdirectory.
