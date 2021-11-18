@@ -984,14 +984,22 @@ let rec check_field_action (env:env) (f:field) (a:action)
           let lhs = check_out_expr env lhs in
           let { out_expr_t = t } = Some?.v lhs.out_expr_meta in
           let rhs, t' = check_expr env rhs in
+          let def_ret = Action_assignment lhs rhs, tunit in
           if not (eq_typ env t t')
-          then warning (Printf.sprintf
+          then begin
+            match try_cast_integer env (rhs, t') t with
+            | Some rhs ->
+              Action_assignment lhs rhs, tunit
+            | None ->
+              warning (Printf.sprintf
                         "Assigning to %s of type %s a value of incompatible type %s"
                         (print_out_expr lhs)
                         (print_typ t)
                         (print_typ t'))
                      rhs.range;
-          Action_assignment lhs rhs, tunit
+              def_ret
+           end
+           else def_ret
 
         | Action_call f args ->
           let ret_t, params = lookup_extern_fn (global_env_of_env env) f in
