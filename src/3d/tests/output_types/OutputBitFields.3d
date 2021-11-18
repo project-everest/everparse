@@ -1,9 +1,9 @@
 output
 typedef struct _OUTT {
-  UINT8   Saw_f:4;
-  UINT8   Saw_g:4;
-  UINT32  O_f;
-  UINT16  O_g;
+  UINT16   Saw_f:8;
+  UINT16   Saw_g:8;
+  UINT32   O_f;
+  UINT16   O_g;
 } OUTT;
 
 casetype _OPTION(UINT8 Kind, mutable OUTT *out) {

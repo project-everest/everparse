@@ -97,11 +97,11 @@ where WindowScaleAllowed
   };
   UINT8 WindowScale
   {:act
-    OptRx->WSCALE_OK = (UINT16) 1;
+    OptRx->WSCALE_OK = 1;
     if((WindowScale <= TCP_MAX_WSCALE)){
-      OptRx->SND_WSCALE = (UINT16) WindowScale;
+      OptRx->SND_WSCALE = WindowScale;
     } else {
-      OptRx->SND_WSCALE = (UINT16) TCP_MAX_WSCALE;
+      OptRx->SND_WSCALE = TCP_MAX_WSCALE;
     }};
 } WINDOW_SCALE_PAYLOAD;
 
@@ -129,7 +129,7 @@ where TimeStampAllowed
   UINT32       Tsval;
   UINT32       Tsecr
   {:act
-    OptRx->SAW_TSTAMP = (UINT16) 1;
+    OptRx->SAW_TSTAMP = 1;
     OptRx->RCV_TSVAL = Tsval;
     OptRx->RCV_TSECR = Tsecr;};
 } TIMESTAMP_PAYLOAD;
@@ -144,9 +144,9 @@ where SackPermAllowed
   };
   unit         Noop
   {:act
-    OptRx->SACK_OK = (UINT16) TCP_SACK_SEEN;
-    OptRx->DSACK = (UINT16) 0;
-    OptRx->NUM_SACKS = (UINT8) 0;};
+    OptRx->SACK_OK = TCP_SACK_SEEN;
+    OptRx->DSACK = 0;
+    OptRx->NUM_SACKS = 0;};
 } SackPermPayload;
 
 typedef struct _SELECTIVE_ACK_PAYLOAD(mutable PUINT8 *SackPayload)
