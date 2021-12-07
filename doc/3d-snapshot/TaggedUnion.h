@@ -12,6 +12,12 @@ extern "C" {
 
 
 
+#define TAGGEDUNION_SIZE8 ((uint8_t)8U)
+
+#define TAGGEDUNION_SIZE16 ((uint8_t)16U)
+
+#define TAGGEDUNION_SIZE32 ((uint8_t)32U)
+
 uint64_t
 TaggedUnionValidateInteger(
   uint8_t *Ctxt,

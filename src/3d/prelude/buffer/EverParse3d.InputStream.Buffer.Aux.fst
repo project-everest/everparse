@@ -57,6 +57,13 @@ let _footprint
   (ensures (fun y -> B.address_liveness_insensitive_locs `B.loc_includes` y))
 = B.loc_buffer (IB.slice_of x.buf).LP.base `B.loc_union` IR.loc_perm x.perm_of `B.loc_union` B.loc_buffer x.pos
 
+let _perm_footprint
+  (x: t)
+: Ghost B.loc
+  (requires True)
+  (ensures (fun y -> _footprint x `B.loc_includes` y))
+= IR.loc_perm x.perm_of `B.loc_union` B.loc_buffer x.pos
+
 let _get_remaining
   (x: t)
   (h: HS.mem)

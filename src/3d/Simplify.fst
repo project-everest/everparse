@@ -61,20 +61,22 @@ and simplify_typ (env:T.env_t) (t:typ)
       let ps = List.map (simplify_typ_param env) ps in
       let s = B.resolve_record_case_output_extern_type_name (fst env) s in
       let t = { t with v = Type_app s b ps } in
-      if Options.get_interpret()
-      then B.unfold_typ_abbrev_only (fst env) t
-      else t
+      B.unfold_typ_abbrev_only (fst env) t
 
 and simplify_out_expr_node (env:T.env_t) (oe:with_meta_t out_expr')
   : ML (with_meta_t out_expr')
   = oe
 
-and simplify_out_expr_meta (env:T.env_t) (mopt:option (typ & typ))
-  : ML (option (typ & typ))
+and simplify_out_expr_meta (env:T.env_t) (mopt:option out_expr_meta_t)
+  : ML (option out_expr_meta_t)
   = match mopt with
     | None -> None
-    | Some (bt, t) ->
-      Some (simplify_typ env bt, simplify_typ env t)
+    | Some ({ out_expr_base_t = bt;
+              out_expr_t = t;
+              out_expr_bit_width = n }) ->
+      Some ({ out_expr_base_t = simplify_typ env bt;
+              out_expr_t = simplify_typ env t;
+              out_expr_bit_width = n })
 
 and simplify_out_expr (env:T.env_t) (oe:out_expr) : ML out_expr =
   {oe with
@@ -127,7 +129,7 @@ let simplify_field (env:T.env_t) (f:field)
 
 let rec simplify_out_fields (env:T.env_t) (flds:list out_field) : ML (list out_field) =
   List.map (fun fld -> match fld with
-    | Out_field_named id t -> Out_field_named id (simplify_typ env t)
+    | Out_field_named id t n -> Out_field_named id (simplify_typ env t) n
     | Out_field_anon flds is_union ->
       Out_field_anon (simplify_out_fields env flds) is_union) flds
 
@@ -139,8 +141,7 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
 
   | TypeAbbrev t i ->
     let t' = simplify_typ env t in
-    if Options.get_interpret() 
-    then B.update_typ_abbrev (fst env) i t';
+    B.update_typ_abbrev (fst env) i t';
     decl_with_v d (TypeAbbrev t' i)
 
   | Enum t i cases ->
