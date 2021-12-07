@@ -181,7 +181,8 @@ let accessor
   #p1 #p2 #lens g
 = LP.accessor g
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
+#restart-solver
 
 let baccess
   #p1 #p2 #lens #g a b len
