@@ -9,4 +9,4 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build the Docker image
-      run: docker build . --file .docker/build/linux/Dockerfile.everest-hub --build-arg CI_THREADS=16
+      run: docker build . --file .docker/build/linux/Dockerfile.everest-hub --build-arg CI_THREADS=8
