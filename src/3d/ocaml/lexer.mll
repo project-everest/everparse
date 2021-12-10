@@ -50,7 +50,9 @@ let () =
   H.add keywords "if" IF;
   H.add keywords "else" ELSE;
   H.add keywords "mutable" MUTABLE;
-  H.add keywords "field_pos" FIELD_POS;
+  H.add keywords "field_pos_64" FIELD_POS_64;
+  H.add keywords "field_pos_32" FIELD_POS_32;
+  H.add keywords "field_pos" FIELD_POS_32; (* TODO: change to FIELD_POS_64 once ready *)
   H.add keywords "field_ptr" FIELD_PTR;
   H.add keywords "var" VAR;
   H.add keywords "abort" ABORT;
@@ -58,7 +60,10 @@ let () =
   H.add keywords "refining" REFINING;
   H.add keywords "as" AS;
   H.add keywords "module" MODULE;
-  H.add keywords "export" EXPORT
+  H.add keywords "export" EXPORT;
+  H.add keywords "output" OUTPUT;
+  H.add keywords "union" UNION;
+  H.add keywords "extern" EXTERN
 
 let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
 
@@ -120,11 +125,16 @@ rule token =
   | "^"            { locate lexbuf BITWISE_XOR }
   | "~"            { locate lexbuf BITWISE_NOT }
   | "."            { locate lexbuf DOT }
+  | "->"           { locate lexbuf RARROW }
   | ","            { locate lexbuf COMMA }
   | ";"            { locate lexbuf SEMICOLON }
+  | "::"           { locate lexbuf COLON_COLON }
   | ":"            { locate lexbuf COLON }
   | "?"            { locate lexbuf QUESTION }
+  | "{:act"        { locate lexbuf LBRACE_ACT }
+  | "{:check"      { locate lexbuf LBRACE_CHECK }
   | "{:on-success" { locate lexbuf LBRACE_ONSUCCESS }
+
   | "{"            { locate lexbuf LBRACE }
   | "}"            { locate lexbuf RBRACE }
   | "[:byte-size"                { locate lexbuf LBRACK_BYTESIZE }

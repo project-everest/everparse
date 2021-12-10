@@ -12,16 +12,6 @@ extern "C" {
 
 
 
-/*
- The following will fail because of integer overflow
-// SNIPPET_START: boundedSumNaive
-entrypoint typedef struct _boundedSum {
-  UINT32 left;
-  UINT32 right { left + right <= 42 };
-} boundedSum;
-// SNIPPET_END: boundedSumNaive
-
-*/
 uint64_t
 BoundedSumConstValidateBoundedSum(
   uint8_t *Ctxt,
@@ -31,13 +21,11 @@ BoundedSumConstValidateBoundedSum(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    uint8_t *x4,
+    uint64_t x5
   ),
-  uint32_t Uu,
   uint8_t *Input,
+  uint64_t InputLength,
   uint64_t StartPosition
 );
 

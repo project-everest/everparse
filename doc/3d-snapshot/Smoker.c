@@ -2,56 +2,6 @@
 
 #include "Smoker.h"
 
-static inline uint64_t
-ValidateSmokerCigarettesConsumed(
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
-  ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
-)
-/*++
-    Internal helper function:
-        Validator for field _smoker_cigarettesConsumed
-        of type Smoker._smoker
---*/
-{
-  /* Validating field cigarettesConsumed */
-  /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  uint64_t positionAfterSmoker;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)1U)
-  {
-    positionAfterSmoker = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-  }
-  else
-  {
-    positionAfterSmoker = StartPosition + (uint64_t)1U;
-  }
-  if (EverParseIsSuccess(positionAfterSmoker))
-  {
-    return positionAfterSmoker;
-  }
-  Err("_smoker",
-    "_smoker_cigarettesConsumed",
-    EverParseErrorReasonOfResult(positionAfterSmoker),
-    Ctxt,
-    Uu,
-    Input,
-    StartPosition,
-    positionAfterSmoker);
-  return positionAfterSmoker;
-}
-
 uint64_t
 SmokerValidateSmoker(
   uint8_t *Ctxt,
@@ -61,81 +11,86 @@ SmokerValidateSmoker(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    uint8_t *x4,
+    uint64_t x5
   ),
-  uint32_t Uu,
   uint8_t *Input,
+  uint64_t InputLength,
   uint64_t StartPosition
 )
 {
-  /* Validating field age */
-  /* Checking that we have enough space for a ULONG, i.e., 4 bytes */
-  uint64_t positionAfterSmoker;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)4U)
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  BOOLEAN hasBytes0 = (uint64_t)4U <= (InputLength - StartPosition);
+  uint64_t positionAfternone;
+  if (hasBytes0)
   {
-    positionAfterSmoker = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    positionAfternone = StartPosition + (uint64_t)4U;
   }
   else
   {
-    positionAfterSmoker = StartPosition + (uint64_t)4U;
+    positionAfternone =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  uint64_t positionAfterage;
+  uint64_t positionAfterSmoker;
+  if (EverParseIsError(positionAfternone))
+  {
+    positionAfterSmoker = positionAfternone;
+  }
+  else
+  {
+    uint32_t none = Load32Le(Input + (uint32_t)StartPosition);
+    BOOLEAN noneConstraintIsOk = none >= (uint32_t)(uint8_t)21U;
+    uint64_t
+    positionAfternone1 = EverParseCheckConstraintOk(noneConstraintIsOk, positionAfternone);
+    if (EverParseIsError(positionAfternone1))
+    {
+      positionAfterSmoker = positionAfternone1;
+    }
+    else
+    {
+      /* Validating field cigarettesConsumed */
+      /* Checking that we have enough space for a UINT8, i.e., 1 byte */
+      BOOLEAN hasBytes = (uint64_t)1U <= (InputLength - positionAfternone1);
+      uint64_t positionAfterSmoker0;
+      if (hasBytes)
+      {
+        positionAfterSmoker0 = positionAfternone1 + (uint64_t)1U;
+      }
+      else
+      {
+        positionAfterSmoker0 =
+          EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+            positionAfternone1);
+      }
+      uint64_t res;
+      if (EverParseIsSuccess(positionAfterSmoker0))
+      {
+        res = positionAfterSmoker0;
+      }
+      else
+      {
+        Err("_smoker",
+          "cigarettesConsumed",
+          EverParseErrorReasonOfResult(positionAfterSmoker0),
+          Ctxt,
+          Input,
+          positionAfternone1);
+        res = positionAfterSmoker0;
+      }
+      positionAfterSmoker = res;
+    }
+  }
   if (EverParseIsSuccess(positionAfterSmoker))
   {
-    positionAfterage = positionAfterSmoker;
-  }
-  else
-  {
-    Err("_smoker",
-      "age",
-      EverParseErrorReasonOfResult(positionAfterSmoker),
-      Ctxt,
-      Uu,
-      Input,
-      StartPosition,
-      positionAfterSmoker);
-    positionAfterage = positionAfterSmoker;
-  }
-  if (EverParseIsError(positionAfterage))
-  {
-    return positionAfterage;
-  }
-  uint8_t *base = Input;
-  uint32_t age = Load32Le(base + (uint32_t)StartPosition);
-  BOOLEAN ageConstraintIsOk = age >= (uint32_t)(uint8_t)21U;
-  uint64_t
-  positionOrErrorAfterage =
-    EverParseCheckConstraintOkWithFieldId(ageConstraintIsOk,
-      StartPosition,
-      positionAfterage,
-      (uint64_t)1U);
-  if (EverParseIsError(positionOrErrorAfterage))
-  {
-    return positionOrErrorAfterage;
-  }
-  /* Field _smoker_cigarettesConsumed */
-  uint64_t
-  positionAfterSmoker0 =
-    ValidateSmokerCigarettesConsumed(Ctxt,
-      Err,
-      Uu,
-      Input,
-      positionOrErrorAfterage);
-  if (EverParseIsSuccess(positionAfterSmoker0))
-  {
-    return positionAfterSmoker0;
+    return positionAfterSmoker;
   }
   Err("_smoker",
-    "cigarettesConsumed",
-    EverParseErrorReasonOfResult(positionAfterSmoker0),
+    "none",
+    EverParseErrorReasonOfResult(positionAfterSmoker),
     Ctxt,
-    Uu,
     Input,
-    positionOrErrorAfterage,
-    positionAfterSmoker0);
-  return positionAfterSmoker0;
+    StartPosition);
+  return positionAfterSmoker;
 }
 

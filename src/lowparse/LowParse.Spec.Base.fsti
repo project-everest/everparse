@@ -513,7 +513,7 @@ let default_parser_kind : (x: parser_kind {
   x
 #pop-options
 
-#set-options "--max_fuel 8 --max_ifuel 8"
+// #set-options "--max_fuel 8 --max_ifuel 8"
 
 module L = FStar.List.Tot
 
@@ -524,8 +524,8 @@ let rec glb_list_of
 : Pure parser_kind
   (requires True)
   (ensures (fun k ->
-    (forall kl . {:pattern (L.mem kl l)} L.mem kl l ==> k `is_weaker_than` (f kl))
-//    (forall k' . (Cons? l /\ (forall kl . L.mem kl l ==> k' `is_weaker_than` (f kl))) ==> k' `is_weaker_than` k)
+    (forall kl . L.mem kl l ==> k `is_weaker_than` (f kl))  /\
+    (forall k' . (Cons? l /\ (forall kl . L.mem kl l ==> k' `is_weaker_than` (f kl))) ==> k' `is_weaker_than` k)
   ))
 = match l with
   | [] -> default_parser_kind

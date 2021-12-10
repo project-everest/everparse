@@ -1,5 +1,5 @@
 module Deps
-
+open FStar.List.Tot
 open FStar.IO
 open FStar.All
 open Ast
@@ -14,6 +14,9 @@ type dep_graph = {
   graph: dep_graph';
   modules_with_entrypoint: list string;
   modules_with_static_assertions: list string;
+  modules_with_output_types: list string;
+  modules_with_extern_types: list string;
+  modules_with_extern_functions: list string
 }
 
 let all_edges_from (g:dep_graph') (node:string) : Tot (list edge) =
@@ -56,6 +59,9 @@ type scan_deps_t = {
   sd_deps: list string;
   sd_has_entrypoint: bool;
   sd_has_static_assertions: bool;
+  sd_has_output_types: bool;
+  sd_has_extern_types: bool;
+  sd_has_extern_functions: bool
 }
 
 let scan_deps (fn:string) : ML scan_deps_t =
@@ -93,15 +99,20 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | This -> []
     | App _op args -> List.collect deps_of_expr args in
 
+  let deps_of_typ_param (p:typ_param) : ML (list string) =
+    match p with
+    | Inl e -> deps_of_expr e
+    | _ -> [] in  //AR: no dependencies from the output expressions
+
   let rec deps_of_typ (t:typ) : ML (list string) =
     match t.v with
-    | Type_app hd args -> (maybe_dep hd)@(List.collect deps_of_expr args)
+    | Type_app hd _ args -> (maybe_dep hd)@(List.collect deps_of_typ_param args)
     | Pointer t -> deps_of_typ t in
 
   let deps_of_atomic_action (ac:atomic_action) : ML (list string) =
     match ac with
     | Action_return e -> deps_of_expr e
-    | Action_abort | Action_field_pos | Action_field_ptr -> []
+    | Action_abort | Action_field_pos_64 | Action_field_pos_32 | Action_field_ptr -> []
     | Action_deref _i -> []  //a local variable
     | Action_assignment _lhs rhs -> deps_of_expr rhs
     | Action_call hd args -> (maybe_dep hd)@(List.collect deps_of_expr args) in
@@ -114,7 +125,8 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (deps_of_expr hd)@
       (deps_of_action then_)@
       (deps_of_opt deps_of_action else_)
-    | Action_let _i a k -> (deps_of_atomic_action a)@(deps_of_action k) in
+    | Action_let _i a k -> (deps_of_atomic_action a)@(deps_of_action k)
+    | Action_act a -> deps_of_action a in
 
   let deps_of_params params : ML (list string) =
     params |> List.collect (fun (t, _, _) -> deps_of_typ t) in
@@ -154,7 +166,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Some (Inr i) -> maybe_dep i
     | _ -> [] in
 
-  let rec deps_of_decl (d:decl) : ML (list string) =
+  let deps_of_decl (d:decl) : ML (list string) =
     match d.d_decl.v with
     | ModuleAbbrev i m ->
       H.insert abbrevs i.v.name m.v.name;
@@ -169,12 +181,28 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (List.collect (fun f -> deps_of_struct_field f.v) flds)
     | CaseType _ params sc ->
       (deps_of_params params)@
-      (deps_of_switch_case sc) in
+      (deps_of_switch_case sc)
+    | OutputType _
+    | ExternType _
+    | ExternFn _ _ _ -> []  //AR: no dependencies from the output/extern types yet
+  in
+
+  let has_output_types (ds:list decl) : bool =
+    List.Tot.existsb (fun d -> OutputType? d.d_decl.v) ds in
+
+  let has_extern_types (ds:list decl) : bool =
+    List.Tot.existsb (fun d -> ExternType? d.d_decl.v) ds in
+
+  let has_extern_functions (ds:list decl) : bool =
+    List.Tot.existsb (fun d -> ExternFn? d.d_decl.v) ds in
 
   {
     sd_deps = List.collect deps_of_decl decls;
     sd_has_entrypoint = has_entrypoint;
     sd_has_static_assertions = has_static_assertions;
+    sd_has_output_types = has_output_types decls;
+    sd_has_extern_types = has_extern_types decls;
+    sd_has_extern_functions = has_extern_functions decls;
   }
 
 let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & list string)
@@ -183,7 +211,12 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
   let g, seen = acc in
   if List.mem mname seen then acc
   else
-    let {sd_has_entrypoint = has_entrypoint; sd_deps = deps; sd_has_static_assertions = has_static_assertions} =
+    let {sd_has_entrypoint = has_entrypoint;
+         sd_deps = deps;
+         sd_has_static_assertions = has_static_assertions;
+         sd_has_output_types = has_output_types;
+         sd_has_extern_types = has_extern_types;
+         sd_has_extern_functions = has_extern_functions} =
       scan_deps (Options.get_file_name (OS.concat dirname mname))
     in
     let edges = List.fold_left (fun edges dep ->
@@ -194,6 +227,9 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
       graph = g.graph @ edges;
       modules_with_entrypoint = (if has_entrypoint then mname :: g.modules_with_entrypoint else g.modules_with_entrypoint);
       modules_with_static_assertions = (if has_static_assertions then mname :: g.modules_with_static_assertions else g.modules_with_static_assertions);
+      modules_with_output_types = (if has_output_types then mname::g.modules_with_output_types else g.modules_with_output_types);
+      modules_with_extern_types = (if has_extern_types then mname::g.modules_with_extern_types else g.modules_with_extern_types);
+      modules_with_extern_functions = (if has_extern_functions then mname::g.modules_with_extern_functions else g.modules_with_extern_functions);
     }
     in
     List.fold_left (fun acc dep -> build_dep_graph_aux dirname dep acc)
@@ -204,6 +240,9 @@ let build_dep_graph_from_list files =
     graph = [];
     modules_with_entrypoint = [];
     modules_with_static_assertions = [];
+    modules_with_output_types = [];
+    modules_with_extern_types = [];
+    modules_with_extern_functions = []
   }
   in
   let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) (g0, []) files
@@ -236,3 +275,10 @@ let collect_and_sort_dependencies_from_graph (g: dep_graph) (files:list string) 
 let has_entrypoint g m = List.Tot.mem m g.modules_with_entrypoint
 
 let has_static_assertions g m = List.Tot.mem m g.modules_with_static_assertions
+
+let has_output_types g m = List.Tot.mem m g.modules_with_output_types
+
+let has_extern_types g m = List.Tot.mem m g.modules_with_extern_types
+
+let has_extern_functions g m = List.Tot.mem m g.modules_with_extern_functions
+

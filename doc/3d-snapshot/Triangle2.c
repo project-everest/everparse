@@ -2,10 +2,8 @@
 
 #include "Triangle2.h"
 
-typedef uint8_t *Dtuple2_uint8T___;
-
 static inline uint64_t
-ValidateTriangleCorners(
+ValidatePoint(
   uint8_t *Ctxt,
   void
   (*Err)(
@@ -13,51 +11,73 @@ ValidateTriangleCorners(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    uint8_t *x4,
+    uint64_t x5
   ),
-  uint32_t Uu,
   uint8_t *Input,
+  uint64_t InputLength,
   uint64_t StartPosition
 )
-/*++
-    Internal helper function:
-        Validator for field _triangle_corners
-        of type Triangle2._triangle
---*/
 {
-  /* Validating field corners */
-  uint64_t positionAfterTriangle;
-  if ((uint32_t)4U * (uint32_t)(uint8_t)3U % (uint32_t)4U == (uint32_t)0U)
+  /* Validating field x */
+  /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
+  BOOLEAN hasBytes0 = (uint64_t)2U <= (InputLength - StartPosition);
+  uint64_t positionAfterPoint;
+  if (hasBytes0)
   {
-    if (((uint64_t)Uu - StartPosition) < (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U))
-    {
-      positionAfterTriangle = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-    }
-    else
-    {
-      positionAfterTriangle = StartPosition + (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U);
-    }
+    positionAfterPoint = StartPosition + (uint64_t)2U;
   }
   else
   {
-    positionAfterTriangle = EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE;
+    positionAfterPoint =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterTriangle))
+  uint64_t res;
+  if (EverParseIsSuccess(positionAfterPoint))
   {
-    return positionAfterTriangle;
+    res = positionAfterPoint;
   }
-  Err("_triangle",
-    "_triangle_corners",
-    EverParseErrorReasonOfResult(positionAfterTriangle),
+  else
+  {
+    Err("_point",
+      "x",
+      EverParseErrorReasonOfResult(positionAfterPoint),
+      Ctxt,
+      Input,
+      StartPosition);
+    res = positionAfterPoint;
+  }
+  uint64_t positionAfterx = res;
+  if (EverParseIsError(positionAfterx))
+  {
+    return positionAfterx;
+  }
+  /* Validating field y */
+  /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
+  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - positionAfterx);
+  uint64_t positionAfterPoint0;
+  if (hasBytes)
+  {
+    positionAfterPoint0 = positionAfterx + (uint64_t)2U;
+  }
+  else
+  {
+    positionAfterPoint0 =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        positionAfterx);
+  }
+  if (EverParseIsSuccess(positionAfterPoint0))
+  {
+    return positionAfterPoint0;
+  }
+  Err("_point",
+    "y",
+    EverParseErrorReasonOfResult(positionAfterPoint0),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterTriangle);
-  return positionAfterTriangle;
+    positionAfterx);
+  return positionAfterPoint0;
 }
 
 uint64_t
@@ -69,18 +89,75 @@ Triangle2ValidateTriangle(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    uint8_t *x4,
+    uint64_t x5
   ),
-  uint32_t Uu,
   uint8_t *Input,
+  uint64_t InputLength,
   uint64_t StartPosition
 )
 {
-  /* Field _triangle_corners */
-  uint64_t positionAfterTriangle = ValidateTriangleCorners(Ctxt, Err, Uu, Input, StartPosition);
+  /* Validating field corners */
+  BOOLEAN
+  hasEnoughBytes =
+    (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U)
+    <= (InputLength - StartPosition);
+  uint64_t positionAfterTriangle;
+  if (!hasEnoughBytes)
+  {
+    positionAfterTriangle =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
+  }
+  else
+  {
+    uint8_t *truncatedInput = Input;
+    uint64_t
+    truncatedInputLength = StartPosition + (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U);
+    uint64_t result = StartPosition;
+    while (TRUE)
+    {
+      uint64_t position = *&result;
+      BOOLEAN ite;
+      if (!((uint64_t)1U <= (truncatedInputLength - position)))
+      {
+        ite = TRUE;
+      }
+      else
+      {
+        uint64_t
+        positionAfterTriangle =
+          ValidatePoint(Ctxt,
+            Err,
+            truncatedInput,
+            truncatedInputLength,
+            position);
+        uint64_t result1;
+        if (EverParseIsSuccess(positionAfterTriangle))
+        {
+          result1 = positionAfterTriangle;
+        }
+        else
+        {
+          Err("_triangle",
+            "corners.element",
+            EverParseErrorReasonOfResult(positionAfterTriangle),
+            Ctxt,
+            truncatedInput,
+            position);
+          result1 = positionAfterTriangle;
+        }
+        result = result1;
+        ite = EverParseIsError(result1);
+      }
+      if (ite)
+      {
+        break;
+      }
+    }
+    uint64_t res = result;
+    positionAfterTriangle = res;
+  }
   if (EverParseIsSuccess(positionAfterTriangle))
   {
     return positionAfterTriangle;
@@ -89,10 +166,8 @@ Triangle2ValidateTriangle(
     "corners",
     EverParseErrorReasonOfResult(positionAfterTriangle),
     Ctxt,
-    Uu,
     Input,
-    StartPosition,
-    positionAfterTriangle);
+    StartPosition);
   return positionAfterTriangle;
 }
 

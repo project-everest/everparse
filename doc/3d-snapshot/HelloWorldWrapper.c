@@ -5,36 +5,33 @@ void HelloWorldEverParseError(const char *StructName, const char *FieldName, con
 
 static
 void DefaultErrorHandler(
-	const char *typename,
+	const char *typename_s,
 	const char *fieldname,
 	const char *reason,
 	uint8_t *context,
-	uint32_t len,
-	uint8_t *base,
-	uint64_t start_pos,
-	uint64_t end_pos)
+	EverParseInputBuffer input,
+	uint64_t start_pos)
 {
 	EverParseErrorFrame *frame = (EverParseErrorFrame*)context;
-	if (!frame->filled)
-	{
-		frame->filled = TRUE;
-		frame->start_pos = start_pos;
-		frame->end_pos = end_pos;
-		frame->typename = typename;
-		frame->fieldname = fieldname;
-		frame->reason = reason;
-	}
+	EverParseDefaultErrorHandler(
+		typename_s,
+		fieldname,
+		reason,
+		frame,
+		input,
+		start_pos
+	);
 }
 
 BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len) {
 	EverParseErrorFrame frame;
 	frame.filled = FALSE;
-	uint64_t result = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, len, base, 0);
-	if (EverParseResultIsError(result))
+	uint64_t result = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
 	{
 		if (frame.filled)
 		{
-			HelloWorldEverParseError(frame.typename, frame.fieldname, frame.reason);
+			HelloWorldEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
 		return FALSE;
 	}

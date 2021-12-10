@@ -1,11 +1,12 @@
 entrypoint typedef struct _t (UINT32 a,
-                   mutable UINT32 *out_x,
-                   mutable UINT32 *out_xx,
-                   mutable UINT32 *out_y) {
+                   mutable UINT64 *out_x,
+                   mutable UINT32 *out_xx, // TODO: replace with UINT64* and test cast from UINT64 to UINT32
+                   mutable UINT32 *out_y // TODO: replace with UINT64* once field_pos is turned into 64-bit instead of 32-bit
+) {
    // field `x` of struct `t`
    UINT32 x
     {:on-success
-       var i = field_pos;
+       var i = field_pos_64;
        *out_x = i;
        return true;
      };
@@ -13,7 +14,7 @@ entrypoint typedef struct _t (UINT32 a,
    UINT32 xx
     { x <= xx }
     {:on-success
-       var i = field_pos;
+       var i = field_pos_32;
        *out_xx = i;
        return true;
      };

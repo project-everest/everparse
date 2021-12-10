@@ -192,20 +192,24 @@ let integer_type_lub (t1 t2: integer_type) : Tot integer_type =
 let integer_type_leq (t1 t2: integer_type) : bool =
   integer_type_lub t1 t2 = t2
 
-let as_integer_typ (i:ident) : ML integer_type =
-  let err () = error ("Unknown integer type: " ^ ident_to_string i) i.range in
+let maybe_as_integer_typ (i:ident) : ML (option integer_type) =
   if i.v.modul_name <> None
-  then err ()
+  then None
   else
     match i.v.name with
-    | "UINT8" -> UInt8
-    | "UINT16" -> UInt16
-    | "UINT32" -> UInt32
-    | "UINT64" -> UInt64
-  | "UINT16BE" -> UInt16
-  | "UINT32BE" -> UInt32
-  | "UINT64BE" -> UInt64
-    | _ -> err ()
+    | "UINT8" -> UInt8 |> Some
+    | "UINT16" -> UInt16 |> Some
+    | "UINT32" -> UInt32 |> Some
+    | "UINT64" -> UInt64 |> Some
+    | "UINT16BE" -> UInt16 |> Some
+    | "UINT32BE" -> UInt32 |> Some
+    | "UINT64BE" -> UInt64 |> Some
+    | _ -> None
+
+let as_integer_typ (i:ident) : ML integer_type =
+  match maybe_as_integer_typ i with
+  | None -> error ("Unknown integer type: " ^ ident_to_string i) i.range
+  | Some t -> t
 
 /// Integer, hex and boolean constants
 [@@ PpxDerivingYoJson ]
@@ -259,13 +263,74 @@ type expr' =
 
 and expr = with_meta_t expr'
 
-/// Types: all types are named and fully instantiated to expressions only
-///   i.e., no type-parameterized types
+/// A non-pointer type in the AST (see typ below) may be
+///   - A spec type, i.e. a type that has an interpretation in 3d, that 3d understands
+///   - An output type, may be used as the type of the parse tree constructed as part of actions
+///     This includes structs and unions, and actions support assignment to fields of output types
+///   - An extern type, an abstract, uninterpreted type
+
+[@@ PpxDerivingYoJson ]
+type t_kind =
+  | KindSpec
+  | KindOutput
+  | KindExtern
+
+/// Syntax for output expressions
+///
+/// Output expressions may appear as type parameters or as lhs of assignment actions
 
 [@@ PpxDerivingYoJson ]
 noeq
-type typ' =
-  | Type_app : ident -> list expr -> typ'
+type out_expr' =
+  | OE_id     : ident -> out_expr'
+  | OE_star   : out_expr -> out_expr'
+  | OE_addrof : out_expr -> out_expr'
+  | OE_deref  : out_expr -> ident -> out_expr'  //deref a field
+  | OE_dot    : out_expr -> ident -> out_expr'  //read a field
+
+/// Output expressions maintain metadata
+///   (base type, type of the expr and its bitwidth, in case the expression is of a bitfield type)
+///
+/// where base type is the type of the base identifier,
+///       and type of the output expression
+///
+/// The metadata is initially None after parsing,
+///   and is populated after typechecking (in Binding.fst)
+///
+/// It is used during emitting F* and C code
+/// For each output expression, we emit an action (external function call)
+///   whose signature requires all this
+///
+/// TODO: could we also store the source string for pretty printing?
+
+and out_expr_meta_t = {
+  out_expr_base_t : typ;
+  out_expr_t : typ;
+  out_expr_bit_width : option int;
+}
+
+and out_expr = { out_expr_node: with_meta_t out_expr';
+                 out_expr_meta: option out_expr_meta_t }
+
+
+/// A type parameter is either an expression or an output expression
+
+and typ_param = either expr out_expr
+
+/// Types: all types are named and fully instantiated to expressions only
+///   i.e., no type-parameterized types
+///
+/// The t_kind field maintains the kind
+///
+/// It is set during the desugaring phase, the parser always sets it to KindSpec
+///   We could move it to the parser itself
+///
+/// Keeping this makes it easy to check whether a type is an output type or an extern type
+///   Alternatively we would have to carry some environment along
+
+
+and typ' =
+  | Type_app : ident -> t_kind -> list typ_param -> typ'
   | Pointer : typ -> typ'
 and typ = with_meta_t typ'
 
@@ -276,10 +341,11 @@ noeq
 type atomic_action =
   | Action_return of expr
   | Action_abort
-  | Action_field_pos
+  | Action_field_pos_64
+  | Action_field_pos_32
   | Action_field_ptr
   | Action_deref of ident
-  | Action_assignment : lhs:ident -> rhs:expr -> atomic_action
+  | Action_assignment : lhs:out_expr -> rhs:expr -> atomic_action
   | Action_call : f:ident -> args:list expr -> atomic_action
 
 noeq
@@ -289,6 +355,7 @@ type action' =
   | Action_seq : hd:atomic_action -> tl:action -> action'
   | Action_ite : hd:expr -> then_:action -> else_:option action -> action'
   | Action_let : i:ident -> a:atomic_action -> k:action -> action'
+  | Action_act : action -> action'
 and action = with_meta_t action'
 
 
@@ -376,12 +443,38 @@ type typedef_names = {
 [@@ PpxDerivingYoJson ]
 let enum_case = ident & option (either int ident)
 
+/// Specification of output types
+///
+/// Output types contain atomic fields with optional bitwidths for bitfield types,
+///   but they may also contain anonymous structs and unions
+
+[@@ PpxDerivingYoJson ]
+noeq
+type out_field =
+  | Out_field_named: ident -> typ -> bit_width:option int -> out_field
+  | Out_field_anon : list out_field -> is_union:bool -> out_field
+
+[@@ PpxDerivingYoJson ]
+noeq
+type out_typ = {
+  out_typ_names    : typedef_names;
+  out_typ_fields   : list out_field;
+  out_typ_is_union : bool;  //TODO: unclear if this field is needed
+}
+
 /// A 3d specification a list of declarations
 ///   - Define: macro definitions for constants
 ///   - TypeAbbrev: macro definition of types
 ///   - Enum: enumerated type using existing constants or newly defined constants
 ///   - Record: a struct with refinements
 ///   - CaseType: an untagged union
+///
+///   - OutputType: an output type definition
+///       no validators are generated for these types,
+///       they are used only in the parse trees construction in the actions
+///   - ExternType: An abstract type declaration
+///   - ExternFn: An abstract function declaration, may be used in the actions
+
 [@@ PpxDerivingYoJson ]
 noeq
 type decl' =
@@ -391,6 +484,10 @@ type decl' =
   | Enum: typ -> ident -> list enum_case -> decl'
   | Record: names:typedef_names -> params:list param -> where:option expr -> fields:list field -> decl'
   | CaseType: typedef_names -> list param -> switch_case -> decl'
+
+  | OutputType : out_typ -> decl'
+  | ExternType : typedef_names -> decl'
+  | ExternFn   : ident -> typ -> list param -> decl'
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -443,6 +540,7 @@ let is_entrypoint d = match d.d_decl.v with
 
 /// eq_expr partially decides equality on expressions, by requiring
 /// syntactic equality
+
 let rec eq_expr (e1 e2:expr) : Tot bool (decreases e1) =
   match e1.v, e2.v with
   | Constant i, Constant j -> i = j
@@ -463,11 +561,34 @@ let eq_idents (i1 i2:ident) : Tot bool =
   i1.v.modul_name = i2.v.modul_name && i1.v.name = i2.v.name
 
 /// eq_typ: syntactic equalty of types
+
+let rec eq_out_expr (o1 o2:out_expr) : bool =
+  match o1.out_expr_node.v, o2.out_expr_node.v with
+  | OE_id i1, OE_id i2 -> eq_idents i1 i2
+  | OE_star o1, OE_star o2
+  | OE_addrof o1, OE_addrof o2 -> eq_out_expr o1 o2
+  | OE_deref o1 i1, OE_deref o2 i2
+  | OE_dot o1 i1, OE_dot o2 i2 -> eq_idents i1 i2 && eq_out_expr o1 o2
+  | _ -> false
+
+let eq_typ_param (p1 p2:typ_param) : bool =
+  match p1, p2 with
+  | Inl e1, Inl e2 -> eq_expr e1 e2
+  | Inr o1, Inr o2 -> eq_out_expr o1 o2
+  | _ -> false
+
+let rec eq_typ_params (ps1 ps2:list typ_param) : bool =
+  match ps1, ps2 with
+  | [], [] -> true
+  | p1::ps1, p2::ps2 -> eq_typ_param p1 p2 && eq_typ_params ps1 ps2
+  | _ -> false
+
 let rec eq_typ (t1 t2:typ) : Tot bool =
   match t1.v, t2.v with
-  | Type_app hd1 es1, Type_app hd2 es2 ->
+  | Type_app hd1 k1 ps1, Type_app hd2 k2 ps2 ->
     eq_idents hd1 hd2
-    && eq_exprs es1 es2
+    && k1 = k2
+    && eq_typ_params ps1 ps2
   | Pointer t1, Pointer t2 ->
     eq_typ t1 t2
   | _ -> false
@@ -476,7 +597,7 @@ let rec eq_typ (t1 t2:typ) : Tot bool =
 let dummy_range = dummy_pos, dummy_pos
 let with_dummy_range x = with_range x dummy_range
 let to_ident' x = {modul_name=None;name=x}
-let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) [])
+let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) KindSpec [])
 let tbool = mk_prim_t "Bool"
 let tunit = mk_prim_t "unit"
 let tuint8 = mk_prim_t "UINT8"
@@ -522,13 +643,21 @@ let rec subst_action (s:subst) (a:action) : ML action =
   | Action_seq hd tl -> {a with v = Action_seq (subst_atomic_action s hd) (subst_action s tl) }
   | Action_ite hd then_ else_ -> {a with v = Action_ite (subst_expr s hd) (subst_action s then_) (subst_action_opt s else_) }
   | Action_let i aa k -> {a with v = Action_let i (subst_atomic_action s aa) (subst_action s k) }
+  | Action_act a -> {a with v = Action_act (subst_action s a) }
 and subst_action_opt (s:subst) (a:option action) : ML (option action) =
   match a with
   | None -> None
   | Some a -> Some (subst_action s a)
+
+//No need to substitute in output expressions
+let subst_out_expr (s:subst) (o:out_expr) : out_expr = o
+let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
+  match p with
+  | Inl e -> Inl (subst_expr s e)
+  | Inr oe -> Inr (subst_out_expr s oe)
 let rec subst_typ (s:subst) (t:typ) : ML typ =
   match t.v with
-  | Type_app hd es -> { t with v = Type_app hd (List.map (subst_expr s) es) }
+  | Type_app hd k ps -> { t with v = Type_app hd k (List.map (subst_typ_param s) ps) }
   | Pointer t -> {t with v = Pointer (subst_typ s t) }
 let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   match f with
@@ -569,6 +698,9 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
     Record names (subst_params s params) (map_opt (subst_expr s) where) (List.map (subst_field s) fields)
   | CaseType names params cases ->
     CaseType names (subst_params s params) (subst_switch_case s cases)
+  | OutputType _
+  | ExternType _
+  | ExternFn _ _ _ -> d
 let subst_decl (s:subst) (d:decl) : ML decl = decl_with_v d (subst_decl' s d.d_decl.v)
 
 (*** Printing the source AST; for debugging only **)
@@ -673,16 +805,29 @@ and print_exprs (es:list expr) : Tot (list string) =
   | [] -> []
   | hd::tl -> print_expr hd :: print_exprs tl
 
+let rec print_out_expr o : ML string =
+  match o.out_expr_node.v with
+  | OE_id i -> ident_to_string i
+  | OE_star o -> Printf.sprintf "*(%s)" (print_out_expr o)
+  | OE_addrof o -> Printf.sprintf "&(%s)" (print_out_expr o)
+  | OE_deref o i -> Printf.sprintf "(%s)->(%s)" (print_out_expr o) (ident_to_string i)
+  | OE_dot o i -> Printf.sprintf "(%s).(%s)" (print_out_expr o) (ident_to_string i)
+
+let print_typ_param p : ML string =
+  match p with
+  | Inl e -> print_expr e
+  | Inr o -> print_out_expr o
+
 let rec print_typ t : ML string =
   match t.v with
-  | Type_app i es ->
+  | Type_app i _k ps ->
     begin
-    match es with
+    match ps with
     | [] -> ident_to_string i
     | _ ->
       Printf.sprintf "%s(%s)"
         (ident_to_string i)
-        (String.concat ", " (List.map print_expr es))
+        (String.concat ", " (List.map print_typ_param ps))
     end
   | Pointer t ->
      Printf.sprintf "(pointer %s)"
@@ -690,7 +835,7 @@ let rec print_typ t : ML string =
 
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with
-  | Type_app i [] -> as_integer_typ i
+  | Type_app i _k [] -> as_integer_typ i
   | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
 
 let print_qual = function
@@ -807,6 +952,9 @@ let print_decl' (d:decl') : ML string =
                     (print_switch_case switch_case)
                     (ident_to_string td.typedef_abbrev)
                     (ident_to_string td.typedef_ptr_abbrev)
+  | OutputType out_t -> "Printing for output types is TBD"
+  | ExternType _ -> "Printing for extern types is TBD"
+  | ExternFn _ _ _ -> "Printing for extern functions is TBD"
 
 let print_decl (d:decl) : ML string =
   match d.d_decl.comments with

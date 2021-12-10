@@ -2,106 +2,6 @@
 
 #include "HelloWorld.h"
 
-static inline uint64_t
-ValidatePointX(
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
-  ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
-)
-/*++
-    Internal helper function:
-        Validator for field _point_x
-        of type HelloWorld._point
---*/
-{
-  /* Validating field x */
-  /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  uint64_t positionAfterPoint;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)2U)
-  {
-    positionAfterPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-  }
-  else
-  {
-    positionAfterPoint = StartPosition + (uint64_t)2U;
-  }
-  if (EverParseIsSuccess(positionAfterPoint))
-  {
-    return positionAfterPoint;
-  }
-  Err("_point",
-    "_point_x",
-    EverParseErrorReasonOfResult(positionAfterPoint),
-    Ctxt,
-    Uu,
-    Input,
-    StartPosition,
-    positionAfterPoint);
-  return positionAfterPoint;
-}
-
-static inline uint64_t
-ValidatePointY(
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
-  ),
-  uint32_t Uu,
-  uint8_t *Input,
-  uint64_t StartPosition
-)
-/*++
-    Internal helper function:
-        Validator for field _point_y
-        of type HelloWorld._point
---*/
-{
-  /* Validating field y */
-  /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  uint64_t positionAfterPoint;
-  if (((uint64_t)Uu - StartPosition) < (uint64_t)2U)
-  {
-    positionAfterPoint = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-  }
-  else
-  {
-    positionAfterPoint = StartPosition + (uint64_t)2U;
-  }
-  if (EverParseIsSuccess(positionAfterPoint))
-  {
-    return positionAfterPoint;
-  }
-  Err("_point",
-    "_point_y",
-    EverParseErrorReasonOfResult(positionAfterPoint),
-    Ctxt,
-    Uu,
-    Input,
-    StartPosition,
-    positionAfterPoint);
-  return positionAfterPoint;
-}
-
 uint64_t
 HelloWorldValidatePoint(
   uint8_t *Ctxt,
@@ -111,22 +11,32 @@ HelloWorldValidatePoint(
     EverParseString x1,
     EverParseString x2,
     uint8_t *x3,
-    uint32_t x4,
-    uint8_t *x5,
-    uint64_t x6,
-    uint64_t x7
+    uint8_t *x4,
+    uint64_t x5
   ),
-  uint32_t Uu,
   uint8_t *Input,
+  uint64_t InputLength,
   uint64_t StartPosition
 )
 {
-  /* Field _point_x */
-  uint64_t positionAfterPoint = ValidatePointX(Ctxt, Err, Uu, Input, StartPosition);
-  uint64_t positionAfterx;
+  /* Validating field x */
+  /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
+  BOOLEAN hasBytes0 = (uint64_t)2U <= (InputLength - StartPosition);
+  uint64_t positionAfterPoint;
+  if (hasBytes0)
+  {
+    positionAfterPoint = StartPosition + (uint64_t)2U;
+  }
+  else
+  {
+    positionAfterPoint =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
+  }
+  uint64_t res;
   if (EverParseIsSuccess(positionAfterPoint))
   {
-    positionAfterx = positionAfterPoint;
+    res = positionAfterPoint;
   }
   else
   {
@@ -134,18 +44,29 @@ HelloWorldValidatePoint(
       "x",
       EverParseErrorReasonOfResult(positionAfterPoint),
       Ctxt,
-      Uu,
       Input,
-      StartPosition,
-      positionAfterPoint);
-    positionAfterx = positionAfterPoint;
+      StartPosition);
+    res = positionAfterPoint;
   }
+  uint64_t positionAfterx = res;
   if (EverParseIsError(positionAfterx))
   {
     return positionAfterx;
   }
-  /* Field _point_y */
-  uint64_t positionAfterPoint0 = ValidatePointY(Ctxt, Err, Uu, Input, positionAfterx);
+  /* Validating field y */
+  /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
+  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - positionAfterx);
+  uint64_t positionAfterPoint0;
+  if (hasBytes)
+  {
+    positionAfterPoint0 = positionAfterx + (uint64_t)2U;
+  }
+  else
+  {
+    positionAfterPoint0 =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        positionAfterx);
+  }
   if (EverParseIsSuccess(positionAfterPoint0))
   {
     return positionAfterPoint0;
@@ -154,10 +75,8 @@ HelloWorldValidatePoint(
     "y",
     EverParseErrorReasonOfResult(positionAfterPoint0),
     Ctxt,
-    Uu,
     Input,
-    positionAfterx,
-    positionAfterPoint0);
+    positionAfterx);
   return positionAfterPoint0;
 }
 

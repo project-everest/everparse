@@ -69,7 +69,8 @@ noeq
 type atomic_action =
   | Action_return of expr
   | Action_abort
-  | Action_field_pos
+  | Action_field_pos_64
+  | Action_field_pos_32
   | Action_field_ptr
   | Action_deref of A.ident
   | Action_assignment : lhs:A.ident -> rhs:expr -> atomic_action
@@ -81,12 +82,13 @@ type action =
   | Action_seq : hd:atomic_action -> tl:action -> action
   | Action_ite : hd:expr -> then_:action -> else_:action -> action
   | Action_let : i:A.ident -> a:atomic_action -> k:action -> action
-
+  | Action_act : action -> action
+  
 (* A subset of F* types that the translation targets *)
 noeq
 type typ =
   | T_false    : typ
-  | T_app      : hd:A.ident -> args:list index -> typ
+  | T_app      : hd:A.ident -> A.t_kind -> args:list index -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
@@ -344,7 +346,8 @@ type type_decl = {
   decl_typ: typedef_body;
   decl_parser: parser;
   decl_validator: validator;
-  decl_reader: option reader
+  decl_reader: option reader;
+  decl_is_enum : bool
 }
 
 let definition = A.ident * list param * typ * expr
@@ -358,18 +361,80 @@ type decl_attributes = {
   comments: list string;
 }
 
+
+/// Output expressions, mostly a mirror image of the AST output expressions,
+///   except the types in the metadata are Target types
+
+noeq
+type output_expr' =
+  | T_OE_id : A.ident -> output_expr'
+  | T_OE_star : output_expr -> output_expr'
+  | T_OE_addrof : output_expr -> output_expr'
+  | T_OE_deref : output_expr -> A.ident -> output_expr'
+  | T_OE_dot : output_expr -> A.ident -> output_expr'
+
+and output_expr = {
+  oe_expr : output_expr';
+  oe_bt : typ;
+  oe_t : typ;
+  oe_bitwidth: option int
+}
+
+(*
+ * For every output expression in the 3d program,
+ *   we add a new decl to the target AST
+ *
+ * This decl will then be used to emit F* and C code for output types
+ *)
+
 noeq
 type decl' =
   | Assumption : assumption -> decl'
   | Definition : definition -> decl' //the bool marks it for inline_for_extraction
-  | Type_decl : type_decl -> decl'
+  | Type_decl  : type_decl -> decl'
+  | Output_type: A.out_typ -> decl'  //output types specifications, we keep them if we need to print them to C
 
-let decl = decl' * decl_attributes
+  | Output_type_expr : output_expr -> is_get:bool -> decl'  //is_get boolean indicates that the output expression appears in a getter position, i.e. in a type parameter, it is false when the output expression is an assignment action lhs
+
+  | Extern_type : A.ident -> decl'
+  | Extern_fn : A.ident -> typ -> list param -> decl'
+
+type decl = decl' * decl_attributes
+
+type decls = list decl
 
 val error_handler_decl : decl
+val maybe_mname_prefix (mname:string) (i:A.ident) : string
+val print_ident (i:A.ident) : string
+val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
+val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string //(decreases t)
+val print_kind (mname:string) (k:parser_kind) : Tot string
+val print_parser (mname:string) (p:parser) : ML string
+val print_action (mname:string) (a:action) : ML string
+val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
+val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string
 val print_decls (modul: string) (ds:list decl) : ML string
 val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string
 val print_c_entry (modul: string) (env: global_env) (ds:list decl)
   : ML (string & string)
+
+(*
+ * The following 3 functions are used by Translate to get action names
+ *   for output expressions
+ *)
+
+val output_setter_name (lhs:output_expr) : ML string
+val output_getter_name (lhs:output_expr) : ML string
+val output_base_var (lhs:output_expr) : ML A.ident
+
+
+(*
+ * Used by Main
+ *)
+ 
+val print_external_api_fstar (modul:string) (ds:decls) : ML string
+val print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string
+val print_out_exprs_c (modul:string) (ds:decls) : ML string
+val print_output_types_defs (modul:string) (ds:decls) : ML string

@@ -52,7 +52,7 @@ let compute_static_asserts (benv:B.global_env)
               | None -> i
               | Some j -> j
             in
-            let t_j = with_dummy_range (Type_app j []) in
+            let t_j = with_dummy_range (Type_app j KindSpec []) in
             match TypeSizes.size_of_typ env t_j with
             | TypeSizes.Fixed n
             | TypeSizes.WithVariableSuffix n ->

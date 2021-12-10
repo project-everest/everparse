@@ -123,7 +123,7 @@ let validate_sum_aux_payload_if
 : Tot (if_combinator _ (validate_sum_aux_payload_eq t pc k))
 = validate_sum_aux_payload_if' t pc k
 
-#reset-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2 --using_facts_from '* -FStar.Int.Cast -LowParse.BitFields'"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2 --using_facts_from '* -FStar.Int.Cast -LowParse.BitFields'"
 // --query_stats  --smtencoding.elim_box true --smtencoding.l_arith_repr native --z3refresh"
 
 inline_for_extraction
@@ -159,7 +159,7 @@ let validate_sum_aux
     v_payload k' input len_after_tag
   end
 
-#reset-options
+#pop-options
 
 inline_for_extraction
 let validate_sum_aux_payload'
@@ -202,7 +202,7 @@ let validate_sum
 
 module HS = FStar.HyperStack
 
-#reset-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2"
+#push-options "--z3rlimit 128 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2"
 
 let valid_sum_intro
   (h: HS.mem)
@@ -234,7 +234,7 @@ let valid_sum_intro
   valid_facts (parse_sum t p pc) h input pos;
   parse_sum_eq t p pc (bytes_of_slice_from h input pos)
 
-#reset-options
+#pop-options
 
 inline_for_extraction
 let finalize_sum_case
@@ -635,6 +635,8 @@ let read_sum_cases
     (read_sum_cases' t pc pc32)
     k
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 let read_sum
   (#kt: parser_kind)
@@ -656,6 +658,8 @@ let read_sum
     let pos' = jump_enum_key j (sum_enum t) input pos in
     valid_facts (parse_sum_cases' t pc k) h input pos' ;
     read_sum_cases t pc pc32 destr k input pos'
+
+#pop-options
 
 inline_for_extraction
 let serialize32_sum_cases_t
@@ -785,7 +789,7 @@ let clens_sum_payload
     clens_get = (fun (x: sum_type s) -> synth_sum_case_recip s k x <: Ghost (sum_type_of_tag s k) (requires (sum_tag_of_data s x == k)) (ensures (fun _ -> True)));
   }
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 let gaccessor_clens_sum_payload'
   (t: sum)
@@ -807,6 +811,8 @@ let gaccessor_clens_sum_payload'
   in
   (res <: (res: _ { gaccessor_post'  (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k) input res } ))
 
+#push-options "--z3rlimit 64"
+
 let gaccessor_clens_sum_payload_injective
   (t: sum)
   (#kt: parser_kind)
@@ -825,6 +831,8 @@ let gaccessor_clens_sum_payload_injective
   parse_sum_eq'' t p pc sl' ;
   parse_injective (parse_sum t p pc) sl sl' ;
   parse_injective p sl sl'
+
+#pop-options
 
 let gaccessor_clens_sum_payload_no_lookahead
   (t: sum)
@@ -1589,6 +1597,8 @@ let read_dsum_cases
   | Unknown r ->
     read_dsum_cases' t f f32 g g32 (Unknown r) input pos
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 let read_dsum
   (#kt: parser_kind)
@@ -1612,6 +1622,8 @@ let read_dsum
   let pos' = jump_maybe_enum_key j (dsum_enum t) input pos  in
   valid_facts (parse_dsum_cases' t f g k) h input pos' ;
   read_dsum_cases t f f32 g g32 destr k input pos'
+
+#pop-options
 
 inline_for_extraction
 let serialize32_dsum_type_of_tag

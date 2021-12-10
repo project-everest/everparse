@@ -29,7 +29,7 @@ BUILDDIR      = _build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot 3d-ci
+.PHONY: help Makefile test all 3d clean 3d-do-tests 3d-do-interpreter-tests %.diff 3d-snapshot 3d-ci %.diff-nobuild
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
@@ -46,6 +46,12 @@ help:
 	cp $(AUX_HEADERS) out
 	+$(MAKE) -C out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 
+3d-do-interpreter-tests:
+	mkdir -p interpret.out
+	$(3D) --odir interpret.out --batch $(3D_FILES) --interpret
+	cp $(AUX_HEADERS) interpret.out
+	+$(MAKE) -C interpret.out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
+
 $(3D_OUT): out/%: 3d-do-tests
 
 $(3D_SNAPSHOT): 3d-snapshot/%: out/%
@@ -59,5 +65,12 @@ all-diffs: $(3D_DIFF)
 %.diff: 3d-do-tests
 	diff -w -B out/$(basename $@) 3d-snapshot/$(basename $@)
 
+all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
+
+%.diff-nobuild:
+	diff -w -B out/$(basename $@) 3d-snapshot/$(basename $@)
+
+%.accept:
+	cp  out/$(basename $@) 3d-snapshot/$(basename $@)
 clean:
 	rm -rf out _build

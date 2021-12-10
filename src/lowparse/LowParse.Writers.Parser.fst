@@ -128,6 +128,7 @@ let gaccess
   LP.parse_strong_prefix (Parser?.p p2).parser (B.as_seq h b1) (B.as_seq h b');
   let sl' = LP.make_slice b' (B.len b') in
   LP.valid_facts (Parser?.p p2).parser h sl' 0ul;
+  assert (B.as_seq h b' `Seq.equal` LP.bytes_of_slice_from h sl' 0ul);
   b'
 
 let gaccessor_frame1
@@ -180,7 +181,8 @@ let accessor
   #p1 #p2 #lens g
 = LP.accessor g
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
+#restart-solver
 
 let baccess
   #p1 #p2 #lens #g a b len
