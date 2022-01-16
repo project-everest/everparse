@@ -635,7 +635,7 @@ let read_sum_cases
     (read_sum_cases' t pc pc32)
     k
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction
 let read_sum
