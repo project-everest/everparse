@@ -28,7 +28,11 @@ int main (int argc, char **argv)
   vector<char> buf (sz);
   if (file.read (buf.data (), sz)) {
     cout << "file read, sz:" << sz << endl;
-    ElfCheckElf(sz, (uint8_t *) buf.data (), sz);
+    if (ElfCheckElf(sz, (uint8_t *) buf.data (), sz)) {
+      cout << "Validation succeeded" << endl;
+    } else {
+      cout << "Validation failed" << endl;
+    }
   }
   return 0;
 }

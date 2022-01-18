@@ -65,6 +65,7 @@ elf-test: ELF.3d
 	mkdir -p out.batch
 	$(3D) --odir out.batch --batch ELF.3d
 	g++ -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
+	./out.batch/elf-test ./a.out
 
 inplace-hash-test:
 	mkdir -p out.inplace-hash

@@ -131,13 +131,13 @@ typedef struct _PROGRAM_HEADER_TABLE_ENTRY (OFFSET ElfFileSize)
 
   //TODO: a loose check that the pointed to segment lies within the file
 
-  UINT32    P_FILESZ  { P_FILESZ < ElfFileSize &&
+  UINT64    P_FILESZ  { P_FILESZ < ElfFileSize &&
                         P_OFFSET <= ElfFileSize - P_FILESZ };
-  UINT32    P_MEMSZ;
+  UINT64    P_MEMSZ;
 
   //TODO: There is another constraints that it should be a power of 2
 
-  UINT32    P_ALIGN  { P_ALIGN == 0 || P_VADDR == P_OFFSET % P_ALIGN };
+  UINT64    P_ALIGN  { P_ALIGN == 0 || P_VADDR == P_OFFSET % P_ALIGN };
 } PROGRAM_HEADER_TABLE_ENTRY;
 
 typedef struct _PROGRAM_HEADER_TABLE (OFFSET ElfFileSize,
@@ -190,7 +190,7 @@ typedef struct _SECTION_HEADER_TABLE_ENTRY (OFFSET ElfFileSize,
   ADDRESS       SH_ADDR;
 
   OFFSET        SH_OFFSET;
-  UINT32        SH_SIZE        { SH_SIZE <= ElfFileSize && SH_OFFSET <= ElfFileSize - SH_SIZE };
+  UINT64        SH_SIZE        { SH_SIZE <= ElfFileSize && SH_OFFSET <= ElfFileSize - SH_SIZE };
 
   // It is another index in the Section Header Table
 
@@ -239,7 +239,11 @@ typedef struct _ELF (UINT64 ElfFileSize)  //TODO: using OFFSET fails
 
   E_IDENT          IDENT;
   ELF_TYPE         E_TYPE;  //TODO: should ET_NONE be rejected
-  ELF_MACHINE_TYPE E_MACHINE;
+
+  //TODO: I tried an enum for E_MACHINE,
+  //      but the cases in the spec don't seem to be exhaustive
+  
+  UINT16           E_MACHINE;
   UINT32           E_VERSION    { E_VERSION == 1 };
   ADDRESS          E_ENTRY;
   OFFSET           E_PHOFF      { E_PHOFF == 0 || sizeof (this) <= E_PHOFF };
@@ -247,34 +251,37 @@ typedef struct _ELF (UINT64 ElfFileSize)  //TODO: using OFFSET fails
   UINT32           E_FLAGS;
   UINT16           E_EHSIZE     { E_EHSIZE == sizeof (this) };
   UINT16           E_PHENTSIZE  { E_PHENTSIZE == sizeof (PROGRAM_HEADER_TABLE_ENTRY) };
+
+  //TODO: case when no sections!
   UINT16           E_PHNUM      { sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM <= E_SHOFF &&
                                   E_PHOFF <= E_SHOFF - (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM) };
+  
   UINT16           E_SHENTSIZE  { E_SHENTSIZE == sizeof (SECTION_HEADER_TABLE_ENTRY) };
-  UINT16           E_SHNUM      { (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM) <= ElfFileSize &&      
+  UINT16           E_SHNUM      { (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM) <= ElfFileSize &&
                                   E_SHOFF <= ElfFileSize - (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM) &&
-                                  ElfFileSize - (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM) <= MAX_UINT32            };
+                                  ElfFileSize - (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM) <= MAX_UINT32          };
   UINT16           E_SHSTRNDX;
 
   // ELF HEADER END
 
 
-  // Program Header Table
+  /* // Program Header Table */
 
-  PROGRAM_HEADER_TABLE_OPT (ElfFileSize,
-                            E_PHOFF != 0,
-                            E_EHSIZE,
-                            E_PHOFF,
-                            E_PHNUM)            PH_TABLE;
+  /* PROGRAM_HEADER_TABLE_OPT (ElfFileSize, */
+  /*                           E_PHOFF != 0, */
+  /*                           E_EHSIZE, */
+  /*                           E_PHOFF, */
+  /*                           E_PHNUM)            PH_TABLE; */
 
-  // Section Header Table
+  /* // Section Header Table */
 
-  SECTION_HEADER_TABLE_OPT (ElfFileSize,
-                            E_SHOFF != 0,
-                            E_PHOFF + (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM),
-                            E_SHOFF,
-                            E_SHNUM)            SH_TABLE;
+  /* SECTION_HEADER_TABLE_OPT (ElfFileSize, */
+  /*                           E_SHOFF != 0, */
+  /*                           E_PHOFF + (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM), */
+  /*                           E_SHOFF, */
+  /*                           E_SHNUM)            SH_TABLE; */
 
-  // TODO: Some bytes beyond the section header table?
+  /* // TODO: Some bytes beyond the section header table? */
 
-  UINT8        REMAINING[(UINT32) (ElfFileSize - (E_SHOFF + (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM)))];
+  /* UINT8        REMAINING[(UINT32) (ElfFileSize - (E_SHOFF + (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM)))]; */
 } ELF;
