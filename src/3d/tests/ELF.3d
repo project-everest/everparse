@@ -1,0 +1,279 @@
+#define MAX_UINT32 0xffffffff
+
+typedef UINT8 UCHAR;
+
+typedef struct _ZeroByte
+{
+    UINT8 zero { zero == 0 };
+} ZeroByte;
+
+// Address type is either UINT64 or UINT32 depending on the architecture
+// For now, the spec supports only 64 bit arch, later we could parameterize
+//   the Address type
+
+// The same goes for the OFFSET type
+
+typedef UINT64 ADDRESS;
+
+typedef UINT64 OFFSET;
+
+#define ELFMAG0    0x7f
+#define ELFMAG1    0x45  //'E'
+#define ELFMAG2    0x4c  //'L'
+#define ELFMAG3    0x46  //'F'
+
+UINT8 enum ELFCLASS
+{
+  ELFCLASSNONE = 0,
+  ELFCLASS32,
+  ELFCLASS64
+}
+  
+UINT8 enum ELFDATA
+{
+  ELFDATANONE = 0,
+  ELFDATA2LSB,
+  ELFDATA2MSB
+}
+
+UINT8 enum ELFOSABI
+{
+  ELFOSABI_NONE = 0,
+  ELFOSABI_SYSV,
+  ELFOSABI_HPUX,
+  ELFOSABI_NETBSD,
+  ELFOSABI_LINUX,
+  ELFOSABI_SOLARIS,
+  ELFOSABI_IRIX,
+  ELFOSABI_FREEBSD,
+  ELFOSABI_TRU64,
+  ELFOSABI_ARM,
+  ELFOSABI_STANDALONE,
+}
+
+#define E_IDENT_PADDING_SIZE    7
+
+typedef struct _E_IDENT
+{
+  //The first four bytes are 0x7f followed by 'E', 'L', and 'F'
+  
+  UCHAR    ZERO    { ZERO == ELFMAG0 };
+  UCHAR    ONE     { ONE == ELFMAG1 };
+  UCHAR    TWO     { TWO == ELFMAG2 };
+  UCHAR    THREE   { THREE == ELFMAG3 };
+
+  ELFCLASS FOUR   //architecture for this binary
+                  //TODO: should we say that it can't be ELFCLASSNONE to reject such binaries?
+    { FOUR == ELFCLASS64 };  //TODO: 64 only for now
+
+  
+  ELFDATA  FIVE;  //TODO: Ditto, reject ELFDATANONE?
+
+  UCHAR    SIX    { SIX == 1 };  //version is always set to 1
+
+  ELFOSABI SEVEN;
+
+  ZeroByte EIGHT;  //ABI version, always set to 0
+                   //TODO: should it be a soft constraint?
+
+  ZeroByte NINE_FIFTEEN[E_IDENT_PADDING_SIZE];  //padding
+} E_IDENT;
+
+
+UINT16 enum ELF_TYPE
+{
+  ET_NONE = 0,
+  ET_REL,
+  ET_EXEC,
+  ET_DYN,
+  ET_CORE
+}
+
+UINT16 enum ELF_MACHINE_TYPE
+{
+  EM_NONE = 0,
+  EM_M32,
+  EM_SPARC,
+  EM_386,
+  EM_68K,
+  EM_88K,
+  EM_860,
+  EM_MIPS,  //TODO: the documentation says "big-endian only",
+            //      should we check with the 5th byte in the E_IDENT array?
+  EM_PARISC,
+  EM_SPARC32PLUS,
+  EM_PPC,
+  EM_PPC64,
+  EM_S390,
+  EM_ARM,
+  EM_SH,
+  EM_SPARCV9,
+  EM_IA_64,
+  EM_X86_64,
+  EM_VAX
+}
+
+typedef struct _PROGRAM_HEADER_TABLE_ENTRY (OFFSET ElfFileSize)
+{
+  //TODO: It looks like this type has some defined values and then
+  //      some open ones for processor-specific usage, should we constrain it?        
+  UINT32    P_TYPE;
+
+  //TODO: it is a bitmask of flags
+  UINT32    P_FLAGS  { P_FLAGS <= 7 };
+
+  OFFSET    P_OFFSET;
+
+  ADDRESS   P_VADDR;
+
+  //TODO: Under BSD this must be zero, how do we identify BSD?
+  ADDRESS   P_PADDR;
+
+  //TODO: a loose check that the pointed to segment lies within the file
+
+  UINT32    P_FILESZ  { P_FILESZ < ElfFileSize &&
+                        P_OFFSET <= ElfFileSize - P_FILESZ };
+  UINT32    P_MEMSZ;
+
+  //TODO: There is another constraints that it should be a power of 2
+
+  UINT32    P_ALIGN  { P_ALIGN == 0 || P_VADDR == P_OFFSET % P_ALIGN };
+} PROGRAM_HEADER_TABLE_ENTRY;
+
+typedef struct _PROGRAM_HEADER_TABLE (OFFSET ElfFileSize,
+                                      UINT16 EhSize,
+                                      OFFSET PhOff,
+                                      UINT16 PhNum)
+where (EhSize <= PhOff)
+{
+  // TODO: Wanted to write here some possible gap after the ELF header
+  //       and the beginning of the Program Header table
+  //       Is there actually a gap or is it always contiguous?
+  // UINT8    ELF_HEADER_PH_TABLE_GAP[(UINT32) (PhOff - EhSize)]
+
+  PROGRAM_HEADER_TABLE_ENTRY(ElfFileSize)    PHTABLE[sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum]
+} PROGRAM_HEADER_TABLE;
+
+casetype _PROGRAM_HEADER_TABLE_OPT (OFFSET ElfFileSize,
+                                    Bool   HasProgramHeader,
+                                    UINT16 EhSize,
+                                    OFFSET PhOff,
+                                    UINT16 PhNum)
+{
+  switch (HasProgramHeader)
+  {
+    case false:
+      unit    Empty;
+    case true:
+      PROGRAM_HEADER_TABLE(ElfFileSize, EhSize, PhOff, PhNum)    Tbl;
+   }
+} PROGRAM_HEADER_TABLE_OPT;
+
+
+typedef struct _SECTION_HEADER_TABLE_ENTRY (OFFSET ElfFileSize,
+                                            UINT16 ShNum)
+{
+  // TODO: Offset into the section header string table,
+  //       whose section index is in the ELF Header
+  
+  UINT32        SH_NAME;
+
+  // TODO: Similar to type in the program header table entry,
+  //       is this an enum / any restrictions on its value?
+
+  UINT32        SH_TYPE;
+
+  // TODO: Constraints on this?
+
+  UINT64        SH_FLAGS;
+
+  ADDRESS       SH_ADDR;
+
+  OFFSET        SH_OFFSET;
+  UINT32        SH_SIZE        { SH_SIZE <= ElfFileSize && SH_OFFSET <= ElfFileSize - SH_SIZE };
+
+  // It is another index in the Section Header Table
+
+  UINT32        SH_LINK        { SH_LINK < ShNum };
+
+  UINT32        SH_INFO;
+
+  UINT64        SH_ADDRALIGN;
+  UINT64        SH_ENTSIZE;
+} SECTION_HEADER_TABLE_ENTRY;
+
+
+typedef struct _SECTION_HEADER_TABLE (OFFSET ElfFileSize,
+                                      OFFSET PhTableEnd,
+                                      OFFSET ShOff,
+                                      UINT16 ShNum)
+where (PhTableEnd <= ShOff)
+{
+  // TODO: See the note above in PROGRAM_HEADER_TABLE
+  
+  // UINT8        PHTABLE_SHTABLE_GAP[(UINT32) (ShOff - PhTableEnd)];
+
+  SECTION_HEADER_TABLE_ENTRY(ElfFileSize, ShNum)    SHTABLE[sizeof (SECTION_HEADER_TABLE_ENTRY) * ShNum];
+} SECTION_HEADER_TABLE;
+  
+
+casetype _SECTION_HEADER_TABLE_OPT (OFFSET ElfFileSize,
+                                    Bool   HasSectionHeader,
+                                    OFFSET PhTableEnd,
+                                    OFFSET ShOff,
+                                    UINT16 ShNum)
+{
+  switch (HasSectionHeader)
+  {
+    case false:
+      unit    Empty;
+    case true:
+      SECTION_HEADER_TABLE(ElfFileSize, PhTableEnd, ShOff, ShNum)    Tbl;
+  }
+} SECTION_HEADER_TABLE_OPT;
+
+entrypoint
+typedef struct _ELF (OFFSET ElfFileSize)
+{
+  // ELF HEADER BEGIN
+
+  E_IDENT          IDENT;
+  ELF_TYPE         E_TYPE;  //TODO: should ET_NONE be rejected
+  ELF_MACHINE_TYPE E_MACHINE;
+  UINT32           E_VERSION    { E_VERSION == 1 };
+  ADDRESS          E_ENTRY;
+  OFFSET           E_PHOFF      { E_PHOFF == 0 || sizeof (this) <= E_PHOFF };
+  OFFSET           E_SHOFF;
+  UINT32           E_FLAGS;
+  UINT16           E_EHSIZE     { E_EHSIZE == sizeof (this) };
+  UINT16           E_PHENTSIZE  { E_PHENTSIZE == sizeof (PROGRAM_HEADER_TABLE_ENTRY) };
+  UINT16           E_PHNUM      { sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM <= E_SHOFF &&
+                                  E_PHOFF <= E_SHOFF - (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM) };
+  UINT16           E_SHENTSIZE;
+  UINT16           E_SHNUM;
+  UINT16           E_SHSTRNDX;
+
+  // ELF HEADER END
+
+
+  // Program Header Table
+
+  PROGRAM_HEADER_TABLE_OPT (ElfFileSize,
+                            E_PHOFF != 0,
+                            E_EHSIZE,
+                            E_PHOFF,
+                            E_PHNUM)            PH_TABLE;
+
+  // Section Header Table
+
+  SECTION_HEADER_TABLE_OPT (ElfFileSize,
+                            E_SHOFF != 0,
+                            E_PHOFF + (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM),
+                            E_SHOFF,
+                            E_SHNUM)            SH_TABLE;
+
+  // TODO: Some bytes beyond the section header table?
+
+ 
+
+} ELF;
