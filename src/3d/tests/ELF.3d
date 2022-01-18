@@ -144,12 +144,12 @@ typedef struct _PROGRAM_HEADER_TABLE (OFFSET ElfFileSize,
                                       UINT16 EhSize,
                                       OFFSET PhOff,
                                       UINT16 PhNum)
-where (EhSize <= PhOff)
+where (EhSize <= PhOff && PhOff - EhSize <= MAX_UINT32)
 {
-  // TODO: Wanted to write here some possible gap after the ELF header
-  //       and the beginning of the Program Header table
-  //       Is there actually a gap or is it always contiguous?
-  // UINT8    ELF_HEADER_PH_TABLE_GAP[(UINT32) (PhOff - EhSize)]
+  //TODO: Not sure if Program Header Entry table starts just after the
+  //      ELF Header, so allow for some gap if there is
+
+  UINT8    ELF_HEADER_PH_TABLE_GAP[(UINT32) (PhOff - EhSize)];
 
   PROGRAM_HEADER_TABLE_ENTRY(ElfFileSize)    PHTABLE[sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum]
 } PROGRAM_HEADER_TABLE;
@@ -205,18 +205,18 @@ typedef struct _SECTION_HEADER_TABLE_ENTRY (OFFSET ElfFileSize,
 
 typedef struct _SECTION_HEADER_TABLE (OFFSET ElfFileSize,
                                       OFFSET PhTableEnd,
-                                      OFFSET ShOff,
+                                      UINT64 ShOff,  //TODO: Writing OFFSET here fails
                                       UINT16 ShNum)
-where (PhTableEnd <= ShOff)
+where (PhTableEnd <= ShOff && ShOff - PhTableEnd <= MAX_UINT32)
 {
-  // TODO: See the note above in PROGRAM_HEADER_TABLE
-  
-  // UINT8        PHTABLE_SHTABLE_GAP[(UINT32) (ShOff - PhTableEnd)];
+  //TODO: Allow for gap between the end of the Program Header Table and
+  //      beginning of the Section Header Table
+
+  UINT8        PHTABLE_SHTABLE_GAP[(UINT32) (ShOff - PhTableEnd)];
 
   SECTION_HEADER_TABLE_ENTRY(ElfFileSize, ShNum)    SHTABLE[sizeof (SECTION_HEADER_TABLE_ENTRY) * ShNum];
 } SECTION_HEADER_TABLE;
   
-
 casetype _SECTION_HEADER_TABLE_OPT (OFFSET ElfFileSize,
                                     Bool   HasSectionHeader,
                                     OFFSET PhTableEnd,
@@ -233,7 +233,7 @@ casetype _SECTION_HEADER_TABLE_OPT (OFFSET ElfFileSize,
 } SECTION_HEADER_TABLE_OPT;
 
 entrypoint
-typedef struct _ELF (OFFSET ElfFileSize)
+typedef struct _ELF (UINT64 ElfFileSize)  //TODO: using OFFSET fails
 {
   // ELF HEADER BEGIN
 
@@ -249,8 +249,10 @@ typedef struct _ELF (OFFSET ElfFileSize)
   UINT16           E_PHENTSIZE  { E_PHENTSIZE == sizeof (PROGRAM_HEADER_TABLE_ENTRY) };
   UINT16           E_PHNUM      { sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM <= E_SHOFF &&
                                   E_PHOFF <= E_SHOFF - (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM) };
-  UINT16           E_SHENTSIZE;
-  UINT16           E_SHNUM;
+  UINT16           E_SHENTSIZE  { E_SHENTSIZE == sizeof (SECTION_HEADER_TABLE_ENTRY) };
+  UINT16           E_SHNUM      { (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM) <= ElfFileSize &&      
+                                  E_SHOFF <= ElfFileSize - (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM) &&
+                                  ElfFileSize - (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM) <= MAX_UINT32            };
   UINT16           E_SHSTRNDX;
 
   // ELF HEADER END
@@ -274,6 +276,5 @@ typedef struct _ELF (OFFSET ElfFileSize)
 
   // TODO: Some bytes beyond the section header table?
 
- 
-
+  UINT8        REMAINING[(UINT32) (ElfFileSize - (E_SHOFF + (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM)))];
 } ELF;
