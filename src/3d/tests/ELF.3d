@@ -136,8 +136,9 @@ typedef struct _PROGRAM_HEADER_TABLE_ENTRY (OFFSET ElfFileSize)
   UINT64    P_MEMSZ;
 
   //TODO: There is another constraints that it should be a power of 2
+  //      This failed for me: { P_ALIGN == 0 || P_VADDR == P_OFFSET % P_ALIGN }
 
-  UINT64    P_ALIGN  { P_ALIGN == 0 || P_VADDR == P_OFFSET % P_ALIGN };
+  UINT64    P_ALIGN;
 } PROGRAM_HEADER_TABLE_ENTRY;
 
 typedef struct _PROGRAM_HEADER_TABLE (OFFSET ElfFileSize,
@@ -265,23 +266,23 @@ typedef struct _ELF (UINT64 ElfFileSize)  //TODO: using OFFSET fails
   // ELF HEADER END
 
 
-  /* // Program Header Table */
+  // Program Header Table
 
-  /* PROGRAM_HEADER_TABLE_OPT (ElfFileSize, */
-  /*                           E_PHOFF != 0, */
-  /*                           E_EHSIZE, */
-  /*                           E_PHOFF, */
-  /*                           E_PHNUM)            PH_TABLE; */
+  PROGRAM_HEADER_TABLE_OPT (ElfFileSize,
+                            E_PHOFF != 0,
+                            E_EHSIZE,
+                            E_PHOFF,
+                            E_PHNUM)            PH_TABLE;
 
-  /* // Section Header Table */
+  // Section Header Table
 
-  /* SECTION_HEADER_TABLE_OPT (ElfFileSize, */
-  /*                           E_SHOFF != 0, */
-  /*                           E_PHOFF + (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM), */
-  /*                           E_SHOFF, */
-  /*                           E_SHNUM)            SH_TABLE; */
+  SECTION_HEADER_TABLE_OPT (ElfFileSize,
+                            E_SHOFF != 0,
+                            E_PHOFF + (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM),
+                            E_SHOFF,
+                            E_SHNUM)            SH_TABLE;
 
-  /* // TODO: Some bytes beyond the section header table? */
+  // TODO: Some bytes beyond the section header table?
 
-  /* UINT8        REMAINING[(UINT32) (ElfFileSize - (E_SHOFF + (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM)))]; */
+  UINT8        REMAINING[(UINT32) (ElfFileSize - (E_SHOFF + (sizeof (SECTION_HEADER_TABLE_ENTRY) * E_SHNUM)))];
 } ELF;
