@@ -61,6 +61,10 @@ batch-interpret-test:
 	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
 	./test-cpp.exe
 
+elf-test: ELF.3d
+	mkdir -p out.batch
+	$(3D) --odir out.batch --batch ELF.3d
+	g++ -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
 
 inplace-hash-test:
 	mkdir -p out.inplace-hash
