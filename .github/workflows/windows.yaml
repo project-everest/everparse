@@ -1,0 +1,16 @@
+name: Build and test EverParse
+on: push
+jobs:
+  build:
+    runs-on: windows-2019
+    steps:
+      - name: Check out repo        
+        uses: actions/checkout@v2
+      - name: Build EverParse and its dependencies
+        shell: pwsh
+        run: |
+          .\src\package\windows\build-everparse.ps1
+      - name: Test EverParse
+        shell: cmd
+        run: |
+          .\everparse\everparse.cmd --version
