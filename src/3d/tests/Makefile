@@ -13,7 +13,7 @@ INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/3d/prelude/buffer $(QD_HOME)/s
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 
-positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
+positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d ELF.3d,$(wildcard *.3d))
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
 modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
@@ -22,7 +22,9 @@ OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
 all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test modules-interpret elf-test
 
-INTERPRETABLE_FILES=$(filter-out FAILNoEntrypoint.3d, $(wildcard *.3d))
+#AR: TODO: remove ELF.3d from here
+
+INTERPRETABLE_FILES=$(filter-out FAILNoEntrypoint.3d ELF.3d, $(wildcard *.3d))
 INTERPRETABLE_MODULES=$(basename $(INTERPRETABLE_FILES))
 interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_MODULES))
 
