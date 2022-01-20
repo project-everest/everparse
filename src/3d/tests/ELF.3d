@@ -218,11 +218,11 @@ typedef struct _PROGRAM_HEADER_TABLE_ENTRY (OFFSET ElfFileSize)
 casetype _PROGRAM_HEADER_TABLE_OPT (UINT16 PhNum,
 				    OFFSET ElfFileSize)
 {
-  switch (PhNum == 0)
+  switch (PhNum)
   {
-    case true:
+    case 0:
       unit    Empty;
-    case false:
+    default:
       PROGRAM_HEADER_TABLE_ENTRY(ElfFileSize)    Tbl[:byte-size sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum]
    }
 } PROGRAM_HEADER_TABLE_OPT;
@@ -350,17 +350,17 @@ casetype _SECTION_HEADER_TABLE_OPT (OFFSET PhTableEnd,
                                     UINT16 ShNum,
 				    OFFSET ElfFileSize)
 {
-  switch (ShNum == 0)
+  switch (ShNum)
   {
     //
     // When there is no Section Header table,
     // the following type ensures that there are at least ElfFileSize - PhTableEnd
     // bytes remaining in the file
     //
-    case true:
+    case 0:
       NO_SECTION_HEADER_TABLE(PhTableEnd, ElfFileSize)                   NoTbl;      
 
-    case false:
+    default:
       SECTION_HEADER_TABLE(PhTableEnd, ShOff, ShNum, ElfFileSize)        Tbl;
   }
 } SECTION_HEADER_TABLE_OPT;
