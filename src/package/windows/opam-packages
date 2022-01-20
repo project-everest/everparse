@@ -1,7 +1,7 @@
 ppx_deriving ppx_deriving
 ppx_deriving_yojson ppx_deriving_yojson
 zarith zarith
-pprint pprint
+pprint pprint.20211129
 wasm wasm
 process process
 fileutils fileutils
@@ -10,7 +10,7 @@ batteries batteries
 sqlite3 sqlite3
 menhirLib menhir
 fix fix
-sedlex sedlex
+sedlex sedlex.2.3
 ctypes ctypes
 visitors visitors
 ctypes.foreign ctypes-foreign
