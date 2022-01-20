@@ -1,3 +1,46 @@
+/*
+
+  3d Specification of the 64-bit ELF format
+
+  ELF resources: https://man7.org/linux/man-pages/man5/elf.5.html
+                 https://github.com/torvalds/linux/blob/master/include/uapi/linux/elf.h
+                 https://www.youtube.com/watch?v=nC1U1LJQL8o
+
+  An ELF file consists of an ELF header, a program header table, and a section header table.
+
+  Both the tables are optional.
+
+  The ELF header starts at offset 0 in the file, and among other fields, contains the
+  offsets of and the number of entries in the program header table and the section header table.
+
+  These two tables then describe the rest of the file. Roughly:
+              -------------------------------
+             |                               |
+             |                  -------------|------------------
+             |                 |             |                  | 
+             |                 |            \ /                \ /
+   ----------------------------------------------------------------------
+  |..|ph_offset|ph_num|..|sh_offset|sh_num|..|ph table|file data|sh table|
+   ----------------------------------------------------------------------
+
+  |<---------------ELF Header--------------->|
+
+  Where ph_table contains ph_num entries, sh_table contains sh_num entries,
+  and both describe sections in the rest of the file (i.e. in the file data part)
+
+  This specification validates the:
+  - ELF header
+  - Program Header table (that it contains ph_num entries,
+                          and points to valid parts of the rest of the file)
+  - Section Header table (that it contains sh_num entries,
+                          and points to valid parts of the rest of the file)
+
+  Though it is possible to do it in 3d, we do not validate individual sections/segments yet.
+
+  See the ELF type at the end, that's the entrypoint for the specification
+*/
+
+
 #define MAX_UINT32 0xffffffff
 
 typedef UINT8 UCHAR;
@@ -17,10 +60,37 @@ typedef UINT64 ADDRESS;
 
 typedef UINT64 OFFSET;
 
+//
+// The first 4 bytes of the e_ident array in the ELF header
+//
+
 #define ELFMAG0    0x7f
 #define ELFMAG1    0x45  //'E'
 #define ELFMAG2    0x4c  //'L'
 #define ELFMAG3    0x46  //'F'
+
+//
+// The largest allowed value of the E_PHNUM field in the ELF Header
+//
+
+#define PN_XNUM        0xffff
+
+//
+// The largest allowed value of the E_SHNUM field in the ELF Haeder
+//
+
+#define SHN_LORESERVE  0xff00
+
+//
+// Value of E_SHSTRNDX when the ELF file has no Section Header table
+//
+
+#define SHN_UNDEF      0
+
+//
+// Enums for ELF class, data, OS ABI
+// Used to type the fields in the ELF header
+//
 
 UINT8 enum ELFCLASS
 {
@@ -51,8 +121,17 @@ UINT8 enum ELFOSABI
   ELFOSABI_STANDALONE,
 }
 
+//
+// Last 7 bytes of the ELF header are 0s
+//
+  
 #define E_IDENT_PADDING_SIZE    7
 
+
+/*++
+  The e_ident array in the ELF header
+  --*/
+  
 typedef struct _E_IDENT
 {
   //The first four bytes are 0x7f followed by 'E', 'L', and 'F'
@@ -62,23 +141,24 @@ typedef struct _E_IDENT
   UCHAR    TWO     { TWO == ELFMAG2 };
   UCHAR    THREE   { THREE == ELFMAG3 };
 
-  ELFCLASS FOUR   //architecture for this binary
-                  //TODO: should we say that it can't be ELFCLASSNONE to reject such binaries?
-    { FOUR == ELFCLASS64 };  //TODO: 64 only for now
+  ELFCLASS FOUR    { FOUR == ELFCLASS64 };  //This 3d spec applies to 64-bit only currently
 
   
-  ELFDATA  FIVE;  //TODO: Ditto, reject ELFDATANONE?
+  ELFDATA  FIVE;
 
-  UCHAR    SIX    { SIX == 1 };  //version is always set to 1
+  UCHAR    SIX     { SIX == 1 };  //ELF specification version is always set to 1
 
   ELFOSABI SEVEN;
 
   ZeroByte EIGHT;  //ABI version, always set to 0
-                   //TODO: should it be a soft constraint?
 
-  ZeroByte NINE_FIFTEEN[E_IDENT_PADDING_SIZE];  //padding
+  ZeroByte NINE_FIFTEEN[E_IDENT_PADDING_SIZE];  //padding, remaining 7 bytes are 0
 } E_IDENT;
 
+
+/*++
+  The object file type
+  --*/
 
 UINT16 enum ELF_TYPE
 {
@@ -89,26 +169,26 @@ UINT16 enum ELF_TYPE
   ET_CORE
 }
 
+/*++
+
+  A Program Header table entry
+
+  Arguments:
+
+  * OFFSET ElfFileSize: Size of the ELF file
+
+  --*/
+  
 typedef struct _PROGRAM_HEADER_TABLE_ENTRY (OFFSET ElfFileSize)
 {
-  //
-  // TODO: It looks like this type has some defined values and then
-  //      some open ones for processor-specific usage, should we constrain it?        
-
   UINT32    P_TYPE;
 
-  //
-  // TODO: it is a bitmask of flags
-  //
   UINT32    P_FLAGS  { P_FLAGS <= 7 };
 
   OFFSET    P_OFFSET;
 
   ADDRESS   P_VADDR;
 
-  //
-  // TODO: Under BSD this must be zero?
-  //
   ADDRESS   P_PADDR;
 
   //
@@ -119,48 +199,59 @@ typedef struct _PROGRAM_HEADER_TABLE_ENTRY (OFFSET ElfFileSize)
                         P_OFFSET <= ElfFileSize - P_FILESZ };
   UINT64    P_MEMSZ;
 
-  //
-  // TODO: There is another constraints that it should be a power of 2
-  //       This failed on Linux: { P_ALIGN == 0 || P_VADDR == P_OFFSET % P_ALIGN }
-
   UINT64    P_ALIGN;
 } PROGRAM_HEADER_TABLE_ENTRY;
 
-casetype _PROGRAM_HEADER_TABLE_OPT (Bool   HasProgramHeaderTable,
-                                    UINT16 PhNum,
+
+/*++
+  Type for (optional) Program Header table
+
+  Arguments:
+ 
+  * UINT16 PhNum: number of Program Header table entries, from the ELF header
+
+  * OFFSET ElfFileSize: total size of the ELF file,
+    to check that all entries describe parts of the file that are in valid range
+
+  --*/
+
+casetype _PROGRAM_HEADER_TABLE_OPT (UINT16 PhNum,
 				    OFFSET ElfFileSize)
 {
-  switch (HasProgramHeaderTable)
+  switch (PhNum == 0)
   {
-    case false:
-      unit    Empty;
     case true:
+      unit    Empty;
+    case false:
       PROGRAM_HEADER_TABLE_ENTRY(ElfFileSize)    Tbl[:byte-size sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum]
    }
 } PROGRAM_HEADER_TABLE_OPT;
 
 
+//
 //When a section is of type SH_NOBITS, its size is not really the size that it occupies
+//
 
 #define SH_NOBITS        8
 
+/*++
+  
+  Type for the Section Header table entry
+
+  Arguments:
+
+  * UINT16 ShNum: number of Section Header table entries
+
+  * OFFSET ElfFileSize: size of the ELF file
+
+  --*/
 
 typedef struct _SECTION_HEADER_TABLE_ENTRY (UINT16 ShNum,
 					    OFFSET ElfFileSize)
 {
-  //
-  // TODO: Offset into the section header string table,
-  //       whose section index is in the ELF Header
-  
   UINT32        SH_NAME;
 
-  //
-  // TODO: Similar to type in the program header table entry,
-  //       is this an enum / any restrictions on its value?
-
   UINT32        SH_TYPE;
-
-  // TODO: Any constraints on this?
 
   UINT64        SH_FLAGS;
 
@@ -180,8 +271,25 @@ typedef struct _SECTION_HEADER_TABLE_ENTRY (UINT16 ShNum,
 } SECTION_HEADER_TABLE_ENTRY;
 
 
+/*++
+  
+  Type for the Section Header table, including the part of the ELF file
+  between the Program Header table and the Section Header table
+
+  Arguments:
+
+  * OFFSET PhTableEnd: the offset at which Program Header table ends
+
+  * UINT64 ShOff: offset of the Section Header table as in the ELF header
+
+  * UINT16 ShNum: number of Section Header table entries
+
+  * OFFSET ElfFileSize: size of the ELF file
+
+  --*/
+
 typedef struct _SECTION_HEADER_TABLE (OFFSET PhTableEnd,
-                                      UINT64 ShOff,  //TODO: Writing OFFSET here fails
+                                      UINT64 ShOff,
                                       UINT16 ShNum,
 				      OFFSET ElfFileSize)
 where (PhTableEnd <= ShOff && ShOff - PhTableEnd <= MAX_UINT32)
@@ -190,11 +298,28 @@ where (PhTableEnd <= ShOff && ShOff - PhTableEnd <= MAX_UINT32)
 
   SECTION_HEADER_TABLE_ENTRY(ShNum, ElfFileSize)    SHTABLE[:byte-size sizeof (SECTION_HEADER_TABLE_ENTRY) * ShNum];
 
+  //
+  // Check that we have consumed all the bytes in the file
+  //
+  
   unit        EndOfFile
   {:on-success var x = field_pos; return (x == ElfFileSize); };  
 } SECTION_HEADER_TABLE;
 
 
+/*++
+
+  An auxiliary type to just check that there are ElfFileSize - PhTableEnd
+  bytes after the Program Header table, when there is no Section Header table
+
+  Arguments:
+
+  * OFFSET PhTableEnd: the offset at which Program Header table ends
+  
+  * UINT64 ElfFileSize: size of the ELF file
+
+  --*/
+  
 typedef struct _NO_SECTION_HEADER_TABLE (OFFSET PhTableEnd,
 					 UINT64 ElfFileSize)
 where (PhTableEnd <= ElfFileSize && ElfFileSize - PhTableEnd <= MAX_UINT32)
@@ -203,36 +328,54 @@ where (PhTableEnd <= ElfFileSize && ElfFileSize - PhTableEnd <= MAX_UINT32)
 } NO_SECTION_HEADER_TABLE;
 
 
-casetype _SECTION_HEADER_TABLE_OPT (Bool   HasSectionHeaderTable,
-                                    OFFSET PhTableEnd,
+/*++
+
+  Type for the optional Section Header table
+
+  Arguments:
+
+  * OFFSET PhTableEnd: the offset at which Program Header table ends
+    If there is no Program Header table in the file, this is the end of the ELF header
+
+  * OFFSET ShOff: offset of the Section Header table as in the ELF header
+
+  * UINT16 ShNum: number of Section Header table entries
+
+  * OFFSET ElfFileSize: size of the ELF file
+
+  --*/
+
+casetype _SECTION_HEADER_TABLE_OPT (OFFSET PhTableEnd,
                                     OFFSET ShOff,
                                     UINT16 ShNum,
 				    OFFSET ElfFileSize)
 {
-  switch (HasSectionHeaderTable)
+  switch (ShNum == 0)
   {
-    case false:
-      NO_SECTION_HEADER_TABLE(PhTableEnd, ElfFileSize)                   NoTbl;      
+    //
+    // When there is no Section Header table,
+    // the following type ensures that there are at least ElfFileSize - PhTableEnd
+    // bytes remaining in the file
+    //
     case true:
+      NO_SECTION_HEADER_TABLE(PhTableEnd, ElfFileSize)                   NoTbl;      
+
+    case false:
       SECTION_HEADER_TABLE(PhTableEnd, ShOff, ShNum, ElfFileSize)        Tbl;
   }
 } SECTION_HEADER_TABLE_OPT;
 
-// The largest allowed value of the E_PHNUM field in the ELF Header
+/*++
+  
+  The main ELF type
 
-#define PN_XNUM        0xffff
+  Arguments:
 
-// The largest allowed value of the E_SHNUM field in the ELF Haeder
-
-#define SHN_LORESERVE  0xff00
-
-// Value of E_SHSTRNDX when the ELF file has no Section Header table
-
-#define SHN_UNDEF      0
-
+  * UINT64 ElfFileSize: the size of the ELF file
+  --*/
 
 entrypoint
-typedef struct _ELF (UINT64 ElfFileSize)  //TODO: using OFFSET fails
+typedef struct _ELF (UINT64 ElfFileSize)
 {
   // ELF HEADER BEGIN
 
@@ -264,7 +407,7 @@ typedef struct _ELF (UINT64 ElfFileSize)  //TODO: using OFFSET fails
 
   //
   // When the number of entries is more than PN_XNUM,
-  // the ELF spec describes an alternate scheme,
+  // the ELF spec describes an alternate scheme for getting E_PHNUM,
   // our 3d spec does not implement that alternate scheme yet
   //
   // Similarly for E_SHNUM
@@ -276,22 +419,18 @@ typedef struct _ELF (UINT64 ElfFileSize)  //TODO: using OFFSET fails
   // Else, is it always the case that the table starts immediately after the ELF Header?
   //
 
-  // Is E_PHENTSIZE fixed?
-  
   UINT16           E_PHNUM
-    { (E_PHNUM == 0 && E_PHOFF == 0) ||
-      (E_PHNUM < PN_XNUM &&
-       sizeof (this) == E_PHOFF &&
+    { (E_PHNUM == 0 && E_PHOFF == 0) ||  //no Program Header table
+      (0 < E_PHNUM && E_PHNUM < PN_XNUM &&
+       sizeof (this) == E_PHOFF &&  //Program Header table starts immediately after the ELF Header
        E_PHENTSIZE == sizeof (PROGRAM_HEADER_TABLE_ENTRY)) };
   
   UINT16           E_SHENTSIZE;
 
 
-  // Is E_SHENTSIZE fixed?
-  
   UINT16           E_SHNUM
-    { (E_SHNUM == 0 && E_SHOFF == 0) ||
-      (E_SHNUM < SHN_LORESERVE &&
+    { (E_SHNUM == 0 && E_SHOFF == 0) ||  // no Section Header table
+      (0 < E_SHNUM && E_SHNUM < SHN_LORESERVE &&
        E_SHENTSIZE == sizeof (SECTION_HEADER_TABLE_ENTRY)) };
 
   //
@@ -305,16 +444,14 @@ typedef struct _ELF (UINT64 ElfFileSize)  //TODO: using OFFSET fails
   // ELF HEADER END
 
 
-  // Program Header Table
+  // (Optional) Program Header table
 
-  PROGRAM_HEADER_TABLE_OPT (E_PHOFF != 0,
-                            E_PHNUM,
+  PROGRAM_HEADER_TABLE_OPT (E_PHNUM,
 			    ElfFileSize)            PH_TABLE;
 
-  // Section Header Table
+  // (Optional) Section Header Table
 
-  SECTION_HEADER_TABLE_OPT (E_SHOFF != 0,
-                            (E_PHNUM == 0) ? E_EHSIZE : E_PHOFF + (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM),
+  SECTION_HEADER_TABLE_OPT ((E_PHNUM == 0) ? E_EHSIZE : E_PHOFF + (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM),
                             E_SHOFF,
                             E_SHNUM,
 			    ElfFileSize)            SH_TABLE;
