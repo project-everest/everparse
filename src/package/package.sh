@@ -39,6 +39,9 @@ if ! Z3_DIR=$(dirname $(which $z3)) ; then
         wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
         unzip $z3_archive
         mv z3-4.8.5-x64-win z3
+        chmod +x z3/bin/z3.exe
+        if [[ -f z3/bin/*.dll ]] ; then chmod +x z3/bin/*.dll ; fi
+        if [[ -f z3/lib/*.dll ]] ; then chmod +x z3/lib/*.dll ; fi
     elif [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
         # Download a dependency-free z3
         z3_tagged=z3-4.8.5-linux-clang
@@ -49,7 +52,7 @@ if ! Z3_DIR=$(dirname $(which $z3)) ; then
         echo "z3 4.8.5 is missing, please add it to your PATH"
         exit 1
     fi
-    Z3_DIR="$PWD/z3"
+    Z3_DIR="$PWD/z3/bin"
     export PATH="$Z3_DIR:$PATH"
 fi
 
@@ -81,9 +84,10 @@ print_date_utc_of_iso_hr() {
 if [[ -z "$everparse_version" ]] ; then
     everparse_version=$(cat $QD_HOME/version.txt)
     everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
-    everparse_commit=$(git show --no-patch --format=%h)
-    if [[ $everparse_commit != $everparse_last_version ]] ; then
-        everparse_version=$everparse_commit
+    if everparse_commit=$(git show --no-patch --format=%h) ; then
+        if [[ $everparse_commit != $everparse_last_version ]] ; then
+            everparse_version=$everparse_commit
+        fi
     fi
 fi
 
@@ -112,17 +116,23 @@ make_everparse() {
         export KREMLIN_HOME=$(fixpath "$KREMLIN_HOME")
     fi
 
-    fstar_commit_id=$(print_component_commit_id "$FSTAR_HOME")
-    fstar_commit_date_iso=$(print_component_commit_date_iso "$FSTAR_HOME")
-    fstar_commit_date_hr=$(print_date_utc_of_iso_hr "$fstar_commit_date_iso")
-    kremlin_commit_id=$(print_component_commit_id "$KREMLIN_HOME")
-    kremlin_commit_date_iso=$(print_component_commit_date_iso "$KREMLIN_HOME")
-    kremlin_commit_date_hr=$(print_date_utc_of_iso_hr "$kremlin_commit_date_iso")
+    if fstar_commit_id=$(print_component_commit_id "$FSTAR_HOME") ; then
+        fstar_commit_date_iso=$(print_component_commit_date_iso "$FSTAR_HOME")
+        fstar_commit_date_hr=$(print_date_utc_of_iso_hr "$fstar_commit_date_iso")" UTC+0000"
+    fi
+    if kremlin_commit_id=$(print_component_commit_id "$KREMLIN_HOME") ; then
+        kremlin_commit_date_iso=$(print_component_commit_date_iso "$KREMLIN_HOME")
+        kremlin_commit_date_hr=$(print_date_utc_of_iso_hr "$kremlin_commit_date_iso")" UTC+0000"
+    fi
     z3_version_string=$($Z3_DIR/$z3 --version)
 
     # Rebuild F* and kremlin
     export OTHERFLAGS='--admit_smt_queries true'
     $MAKE -C "$FSTAR_HOME" "$@"
+    if [[ -z "$fstar_commit_id" ]] ; then
+        fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
+        fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
+    fi
     $MAKE -C "$KREMLIN_HOME" "$@" minimal
     $MAKE -C "$KREMLIN_HOME/kremlib" "$@" verify-all
 
@@ -162,7 +172,9 @@ make_everparse() {
     if $is_windows
     then
         $cp $LIBGMP10_DLL everparse/bin/
-        $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/
+        $cp $Z3_DIR/*.exe everparse/bin/
+        if [[ -f $Z3_DIR/*.dll ]] ; then $cp $Z3_DIR/*.dll everparse/bin/ ; fi
+        if [[ -f $Z3_DIR/../lib/*.dll ]] ; then cp $Z3_DIR/../lib/*.dll everparse/bin/ ; fi
         if [[ -z "$NO_EVERCRYPT" ]] ; then
             for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
                 libevercrypt_dll=$f/libevercrypt.dll
@@ -192,6 +204,10 @@ make_everparse() {
             # Locate libffi
             {
                 # Debian:
+                libffi=$(dpkg -L libffi7 | grep '/libffi.so.7$' | head -n 1)
+                [[ -n "$libffi" ]]
+            } || {
+                # Debian (older):
                 libffi=$(dpkg -L libffi6 | grep '/libffi.so.6$' | head -n 1)
                 [[ -n "$libffi" ]]
             } || {
@@ -245,8 +261,8 @@ make_everparse() {
         $cp -r $QD_HOME/src/package/README.pkg everparse/README
     fi
     echo "This is EverParse $everparse_version" >> everparse/README
-    echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr UTC+0000)" >> everparse/README
-    echo "Running with KReMLin $kremlin_commit_id ($kremlin_commit_date_hr UTC+0000)" >> everparse/README
+    echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr)" >> everparse/README
+    echo "Running with KReMLin $kremlin_commit_id ($kremlin_commit_date_hr)" >> everparse/README
     echo -n "Running with $z3_version_string" >> everparse/README
 
     # Download and copy clang-format
@@ -327,17 +343,20 @@ HELP
 
 case "$1" in
     -zip)
-        make_everparse
+        shift
+        make_everparse "$@"
             zip_everparse true
         ;;
 
     -zip-noversion)
-        make_everparse
+        shift
+        make_everparse "$@"
             zip_everparse false
         ;;
 
     -make)
-        make_everparse
+        shift
+        make_everparse "$@"
         ;;
 
     *)
