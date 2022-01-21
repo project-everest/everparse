@@ -71,7 +71,7 @@ package-noversion:
 	+src/package/package.sh -zip-noversion
 
 everparse:
-	+src/package/package.sh -make
+	+src/package/package.sh -make -j 12
 
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 
