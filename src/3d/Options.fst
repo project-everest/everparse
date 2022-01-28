@@ -330,7 +330,7 @@ let compute_options = compute_options_2
 
 let parse_cmd_line () : ML (list string) =
   let open FStar.Getopt in
-  let res = FStar.Getopt.parse_cmdline fstar_options (fun file -> input_file := file :: !input_file) in
+  let res = FStar.Getopt.parse_cmdline fstar_options (fun file -> input_file := file :: !input_file; Success) in
   match res with
   | Success -> !input_file
   | Help -> display_usage(); exit 0
