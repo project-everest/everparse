@@ -1,3 +1,5 @@
 # Bash scripts MUST have Unix line endings
 # cf. https://stackoverflow.com/questions/39527571/are-shell-scripts-sensitive-to-encoding-and-line-endings
 *.sh text eol=lf
+cygwin-packages text eol=lf
+opam-packages text eol=lf

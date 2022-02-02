@@ -42,8 +42,8 @@ EverParse.h: EverParse.rsp
 	  -no-prefix LowParse.Low.BoundedInt \
 	  -fextern-c \
 	  @$^
-	! test -e EverParse.c
-	! test -e SHOULDNOTBETHERE.h
+	test '!' -e EverParse.c
+	test '!' -e SHOULDNOTBETHERE.h
 
 %.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))
