@@ -52,17 +52,18 @@ if ! Z3_DIR=$(dirname $(which $z3)) ; then
         chmod +x z3/bin/z3.exe
         if [[ -f z3/bin/*.dll ]] ; then chmod +x z3/bin/*.dll ; fi
         if [[ -f z3/lib/*.dll ]] ; then chmod +x z3/lib/*.dll ; fi
+        Z3_DIR="$PWD/z3/bin"
     elif [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
         # Download a dependency-free z3
         z3_tagged=z3-4.8.5-linux-clang
         z3_archive=$z3_tagged-$platform.tar.gz
         wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
         tar xzf $z3_archive
+        Z3_DIR="$PWD/z3"
     else
         echo "z3 4.8.5 is missing, please add it to your PATH"
         exit 1
     fi
-    Z3_DIR="$PWD/z3/bin"
     export PATH="$Z3_DIR:$PATH"
 fi
 
