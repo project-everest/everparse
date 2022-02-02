@@ -76,3 +76,19 @@ typedef struct _Test_be {
   UINT32 y {y == x};
   UINT64 z {z == x};
 } Test_be;
+
+
+/*
+ * Check narrowing casts
+ *
+ * Narrowing casts are allowed only if narrowing does not lose any precision
+ *   or narrowing cast of x from t1 to t2 is allowed, if x fits in the valid t2 range
+ *
+ * So in this example, without the `where` clause, verification fails
+ */
+entrypoint
+typedef struct _Test_Narrowing_Cast (UINT64 x)
+where (x < MAX_UINT16)
+{
+  UINT16    f  { f == (UINT16) x };
+} Test_Narrowing_Cast;

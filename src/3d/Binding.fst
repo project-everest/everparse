@@ -711,19 +711,17 @@ and check_expr (env:env) (e:expr)
       else match from.v with
            | Type_app i KindSpec _ ->
              let from_t = as_integer_typ i in
-             if integer_type_lub to from_t <> to
-             then error (Printf.sprintf "Only widening casts are supported; casting %s to %s loses precision"
-                                (print_typ from)
-                                (print_integer_type to))
-                        e.range
-             else
-              let e = {e with v = App (Cast (Some from_t) to) [n]} in
-              let t = type_of_integer_type to in
-              Options.debug_print_string
-                (Printf.sprintf "--------------- %s has type %s\n"
-                             (print_expr e)
-                             (print_typ t));
-              e, t
+             // if integer_type_lub to from_t <> to
+             // then error (Printf.sprintf "Only widening casts are supported; casting %s to %s loses precision"
+             //                    (print_typ from)
+             //                    (print_integer_type to))
+             //            e.range
+             // else
+             let e = {e with v = App (Cast (Some from_t) to) [n]} in
+             let t = type_of_integer_type to in
+             Options.debug_print_string
+               (Printf.sprintf "--------------- %s has type %s\n" (print_expr e) (print_typ t));
+             e, t
            | _ -> failwith "Impossible: must be an integral type"
       end
 

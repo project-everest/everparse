@@ -13,16 +13,18 @@ INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/3d/prelude/buffer $(QD_HOME)/s
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 
-positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
+positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d ELF.3d,$(wildcard *.3d))
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
 modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
 clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(modules_static_assertions) $(addsuffix .h,$(modules_or_wrappers))
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test modules-interpret
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test modules-interpret elf-test
 
-INTERPRETABLE_FILES=$(filter-out FAILNoEntrypoint.3d, $(wildcard *.3d))
+#AR: TODO: remove ELF.3d from here
+
+INTERPRETABLE_FILES=$(filter-out FAILNoEntrypoint.3d ELF.3d, $(wildcard *.3d))
 INTERPRETABLE_MODULES=$(basename $(INTERPRETABLE_FILES))
 interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_MODULES))
 
@@ -61,6 +63,10 @@ batch-interpret-test:
 	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
 	./test-cpp.exe
 
+elf-test: ELF.3d
+	mkdir -p out.batch
+	$(3D) --odir out.batch --batch ELF.3d
+	g++ -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
 
 inplace-hash-test:
 	mkdir -p out.inplace-hash
