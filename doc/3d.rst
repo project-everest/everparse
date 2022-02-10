@@ -189,11 +189,15 @@ right-most options. Thus, any ``--no_clang_format`` will override any
 occurrence of ``--clang_format`` or ``--clang_format_executable`` to
 its left, and vice-versa.
 
-You can provide one or more ``input_files`` to EverParse. They must
-all bear the ``.3d`` file name extension, and their names must start
-with a capital letter. Then, ``EverParse.h`` and
-``EverParseEndianness.h`` will be shared across ``.c`` and ``.h``
-files produced for all the ``.3d`` files that you provided.
+You can provide one or more ``input_files`` to EverParse. Then,
+``EverParse.h`` and ``EverParseEndianness.h`` will be shared across
+``.c`` and ``.h`` files produced for all the ``.3d`` files that you
+provided.
+
+.. note::
+
+  EverParse input files must all bear the ``.3d`` file name extension,
+  and their names must start with a capital letter.
 
 Alternate mode: generating a Makefile
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
