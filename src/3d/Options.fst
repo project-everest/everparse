@@ -345,10 +345,19 @@ let split_3d_file_name fn =
 
 let get_file_name mname = mname ^ ".3d"
 
+let starts_with_capital (s: string) : Tot bool =
+  String.length s >= 1 &&
+  begin let first = String.sub s 0 1 in
+    String.compare first "A" >= 0 && String.compare first "Z" <= 0
+  end
+
 let get_module_name (file: string) =
     match split_3d_file_name file with
-    | Some nm -> nm
-    | None -> "DEFAULT"
+    | Some nm ->
+      if starts_with_capital nm
+      then nm
+      else failwith (Printf.sprintf "Input file name %s must start with a capital letter" file)
+    | None -> failwith (Printf.sprintf "Input file name %s must end with .3d" file)
 
 let get_output_dir () =
   match !output_dir with
