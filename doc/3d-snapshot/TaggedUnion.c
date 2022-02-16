@@ -2,6 +2,8 @@
 
 #include "TaggedUnion.h"
 
+
+#include "EverParse.h"
 static inline uint64_t
 ValidateIntPayload(
   uint32_t Size,

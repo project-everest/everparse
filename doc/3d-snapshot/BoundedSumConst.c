@@ -2,6 +2,8 @@
 
 #include "BoundedSumConst.h"
 
+
+#include "EverParse.h"
 uint64_t
 BoundedSumConstValidateBoundedSum(
   uint8_t *Ctxt,

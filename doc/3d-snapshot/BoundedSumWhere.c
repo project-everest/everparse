@@ -2,6 +2,8 @@
 
 #include "BoundedSumWhere.h"
 
+
+#include "EverParse.h"
 uint64_t
 BoundedSumWhereValidateBoundedSum(
   uint32_t Bound,

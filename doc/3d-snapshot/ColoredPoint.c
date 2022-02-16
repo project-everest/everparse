@@ -2,6 +2,8 @@
 
 #include "ColoredPoint.h"
 
+
+#include "EverParse.h"
 static inline uint64_t
 ValidatePoint(
   uint8_t *Ctxt,
