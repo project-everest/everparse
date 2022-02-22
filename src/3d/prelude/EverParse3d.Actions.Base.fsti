@@ -14,17 +14,10 @@
    limitations under the License.
 *)
 module EverParse3d.Actions.Base
-module I = EverParse3d.InputStream.Base
 module Cast = FStar.Int.Cast
-module HS = FStar.HyperStack
-open FStar.HyperStack.ST
-open LowStar.Buffer
-open LowStar.BufferOps
-open Prelude
-module B = LowStar.Buffer
+open EverParse3d.Prelude
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
-module HST = FStar.HyperStack.ST
 
 // inline_for_extraction
 // let ___PUINT8 = LPL.puint8
@@ -33,25 +26,35 @@ inline_for_extraction
 noextract
 let is_range_okay = EverParse3d.ErrorCode.is_range_okay
 
-let hinv = HS.mem -> Tot Type0
-let liveness_inv = i:hinv {
-  forall l h0 h1. {:pattern (i h1); (modifies l h0 h1)}  i h0 /\ modifies l h0 h1 /\ address_liveness_insensitive_locs `loc_includes` l ==> i h1
-}
-let mem_inv  = liveness_inv
 [@@erasable]
-let slice_inv = loc -> mem_inv
-let inv_implies (inv0 inv1:slice_inv) =
-  forall i h.
-    inv0 i h ==> inv1 i h
-let true_inv : slice_inv = fun _ _ -> True
-let conj_inv (i0 i1:slice_inv) : slice_inv = fun sl h -> i0 sl h /\ i1 sl h
+val slice_inv : Type u#1
+val inv_implies (inv0 inv1: slice_inv) : Tot prop
+val true_inv : slice_inv
+val conj_inv (i0 i1: slice_inv) : Tot slice_inv
 [@@erasable]
-let eloc = (l: FStar.Ghost.erased B.loc { B.address_liveness_insensitive_locs `B.loc_includes` l })
-let eloc_union (l1 l2:eloc) : Tot eloc = B.loc_union l1 l2
-let eloc_none : eloc = B.loc_none
-let eloc_includes (l1 l2:eloc) = B.loc_includes l1 l2
-let ptr_loc #a (x:B.pointer a) : Tot eloc = B.loc_buffer x
-let ptr_inv #a (x:B.pointer a) : slice_inv = fun (sl:_) h -> B.live h x
+val eloc : Type0
+val eloc_union (l1 l2: eloc) : Tot eloc
+val eloc_none : eloc
+val eloc_includes (l1 l2: eloc) : Tot prop
+
+val inv_implies_refl (inv: slice_inv) : Tot (squash (inv `inv_implies` inv))
+
+val inv_implies_true (inv0:slice_inv) : Tot (squash (inv0 `inv_implies` true_inv))
+
+val inv_implies_conj (inv0 inv1 inv2: slice_inv) (h01: squash (inv0 `inv_implies` inv1)) (h02: squash (inv0 `inv_implies` inv2)) : Tot (squash (inv0 `inv_implies` (inv1 `conj_inv` inv2)))
+
+val eloc_includes_none (l1:eloc) : Tot (squash (l1 `eloc_includes` eloc_none))
+
+val eloc_includes_union (l0: eloc) (l1 l2: eloc) (h01: squash (l0 `eloc_includes` l1)) (h02: squash (l0 `eloc_includes` l2)) : Tot (squash (l0 `eloc_includes` (l1 `eloc_union` l2)))
+
+val eloc_includes_refl (l: eloc) : Tot (squash (l `eloc_includes` l))
+
+inline_for_extraction
+noextract
+val bpointer (a: Type0) : Tot Type0
+
+val ptr_loc (#a: _) (x: bpointer a) : Tot eloc
+val ptr_inv (#a: _) (x: bpointer a) : Tot slice_inv
 
 inline_for_extraction noextract
 val action
@@ -706,8 +709,8 @@ val action_deref
       (#[@@@erasable] t:Type)
       (#[@@@erasable] p:parser k t)
       (#a:_)
-      (x:B.pointer a)
-   : action p (ptr_inv x) loc_none false a
+      (x:bpointer a)
+   : action p (ptr_inv x) eloc_none false a
 
 noextract
 inline_for_extraction
@@ -718,7 +721,7 @@ val action_assignment
       (#[@@@erasable] t:Type)
       (#[@@@erasable] p:parser k t)
       (#a:_)
-      (x:B.pointer a)
+      (x:bpointer a)
       (v:a)
    : action p (ptr_inv x) (ptr_loc x) false unit
 
@@ -738,11 +741,15 @@ val action_weaken
       (#[@@@erasable] inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
    : action p inv' l' b a
 
+inline_for_extraction
+noextract
+val external_action (l: eloc) : Tot Type0
+
 noextract
 inline_for_extraction
 val mk_external_action
   (#nz:_) (#wk:_) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
-  (#l:eloc) ($f:unit -> Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1))
+  (#l:eloc) ($f: external_action l)
   : action p true_inv l false unit
 
 // Some actions are valid only for specific backends (buffer, extern, etc.)

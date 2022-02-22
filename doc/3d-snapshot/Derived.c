@@ -2,80 +2,8 @@
 
 #include "Derived.h"
 
-static inline uint64_t
-ValidateTriplePair(
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
-    uint8_t *x4,
-    uint64_t x5
-  ),
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-/*++
-    Internal helper function:
-        Validator for field _Triple_pair
-        of type Derived._Triple
---*/
-{
-  /* SNIPPET_START: Triple */
-  uint64_t positionAfterTriple = BaseValidatePair(Ctxt, Err, Input, InputLength, StartPosition);
-  if (EverParseIsSuccess(positionAfterTriple))
-  {
-    return positionAfterTriple;
-  }
-  Err("_Triple",
-    "_Triple_pair",
-    EverParseErrorReasonOfResult(positionAfterTriple),
-    Ctxt,
-    Input,
-    StartPosition);
-  return positionAfterTriple;
-}
 
-static inline uint64_t
-ValidateTripleThird(
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
-    uint8_t *x4,
-    uint64_t x5
-  ),
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-/*++
-    Internal helper function:
-        Validator for field _Triple_third
-        of type Derived._Triple
---*/
-{
-  /* Validating field third */
-  uint64_t positionAfterTriple = BaseValidateUlong(Ctxt, Err, Input, InputLength, StartPosition);
-  if (EverParseIsSuccess(positionAfterTriple))
-  {
-    return positionAfterTriple;
-  }
-  Err("_Triple",
-    "_Triple_third",
-    EverParseErrorReasonOfResult(positionAfterTriple),
-    Ctxt,
-    Input,
-    StartPosition);
-  return positionAfterTriple;
-}
-
+#include "EverParse.h"
 uint64_t
 DerivedValidateTriple(
   uint8_t *Ctxt,
@@ -93,9 +21,8 @@ DerivedValidateTriple(
   uint64_t StartPosition
 )
 {
-  /* Field _Triple_pair */
-  uint64_t
-  positionAfterTriple = ValidateTriplePair(Ctxt, Err, Input, InputLength, StartPosition);
+  /* SNIPPET_START: Triple */
+  uint64_t positionAfterTriple = BaseValidatePair(Ctxt, Err, Input, InputLength, StartPosition);
   uint64_t positionAfterpair;
   if (EverParseIsSuccess(positionAfterTriple))
   {
@@ -115,9 +42,20 @@ DerivedValidateTriple(
   {
     return positionAfterpair;
   }
-  /* Field _Triple_third */
-  uint64_t
-  positionAfterTriple0 = ValidateTripleThird(Ctxt, Err, Input, InputLength, positionAfterpair);
+  /* Validating field third */
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - positionAfterpair);
+  uint64_t positionAfterTriple0;
+  if (hasBytes)
+  {
+    positionAfterTriple0 = positionAfterpair + (uint64_t)4U;
+  }
+  else
+  {
+    positionAfterTriple0 =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        positionAfterpair);
+  }
   if (EverParseIsSuccess(positionAfterTriple0))
   {
     return positionAfterTriple0;
@@ -129,80 +67,6 @@ DerivedValidateTriple(
     Input,
     positionAfterpair);
   return positionAfterTriple0;
-}
-
-static inline uint64_t
-ValidateQuad12(
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
-    uint8_t *x4,
-    uint64_t x5
-  ),
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-/*++
-    Internal helper function:
-        Validator for field _Quad__12
-        of type Derived._Quad
---*/
-{
-  /* Validating field _12 */
-  uint64_t positionAfterQuad = BaseValidatePair(Ctxt, Err, Input, InputLength, StartPosition);
-  if (EverParseIsSuccess(positionAfterQuad))
-  {
-    return positionAfterQuad;
-  }
-  Err("_Quad",
-    "_Quad__12",
-    EverParseErrorReasonOfResult(positionAfterQuad),
-    Ctxt,
-    Input,
-    StartPosition);
-  return positionAfterQuad;
-}
-
-static inline uint64_t
-ValidateQuad34(
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
-    uint8_t *x4,
-    uint64_t x5
-  ),
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-/*++
-    Internal helper function:
-        Validator for field _Quad__34
-        of type Derived._Quad
---*/
-{
-  /* Validating field _34 */
-  uint64_t positionAfterQuad = BaseValidatePair(Ctxt, Err, Input, InputLength, StartPosition);
-  if (EverParseIsSuccess(positionAfterQuad))
-  {
-    return positionAfterQuad;
-  }
-  Err("_Quad",
-    "_Quad__34",
-    EverParseErrorReasonOfResult(positionAfterQuad),
-    Ctxt,
-    Input,
-    StartPosition);
-  return positionAfterQuad;
 }
 
 uint64_t
@@ -222,8 +86,8 @@ DerivedValidateQuad(
   uint64_t StartPosition
 )
 {
-  /* Field _Quad__12 */
-  uint64_t positionAfterQuad = ValidateQuad12(Ctxt, Err, Input, InputLength, StartPosition);
+  /* Validating field _12 */
+  uint64_t positionAfterQuad = BaseValidatePair(Ctxt, Err, Input, InputLength, StartPosition);
   uint64_t positionAfter12;
   if (EverParseIsSuccess(positionAfterQuad))
   {
@@ -243,8 +107,8 @@ DerivedValidateQuad(
   {
     return positionAfter12;
   }
-  /* Field _Quad__34 */
-  uint64_t positionAfterQuad0 = ValidateQuad34(Ctxt, Err, Input, InputLength, positionAfter12);
+  /* Validating field _34 */
+  uint64_t positionAfterQuad0 = BaseValidatePair(Ctxt, Err, Input, InputLength, positionAfter12);
   if (EverParseIsSuccess(positionAfterQuad0))
   {
     return positionAfterQuad0;

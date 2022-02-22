@@ -1,8 +1,8 @@
-export #define ONE 1
-export #define TWO 2
+export #define FIVE 5
+export #define SIX 6
 
-#define THREE 3
-#define FOUR  4
+#define SEVEN 7
+#define EIGHT 8
 
 export
 UINT32 enum Nat {

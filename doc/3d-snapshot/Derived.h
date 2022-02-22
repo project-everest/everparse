@@ -7,11 +7,11 @@
 extern "C" {
 #endif
 
-#include "EverParse.h"
+
 
 
 #include "Base.h"
-
+#include "EverParse.h"
 uint64_t
 DerivedValidateTriple(
   uint8_t *Ctxt,

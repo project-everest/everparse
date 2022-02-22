@@ -677,7 +677,7 @@ let rec print_typ (mname:string) (t:typ)
                      (print_lam mname (print_action mname) a)
 
     | T_if_else e t1 t2 ->
-      Printf.sprintf "(T_if_else %s (fun _ -> %s) (fun _ -> %s))"
+      Printf.sprintf "(T_cases %s %s %s)"
                      (T.print_expr mname e)
                      (print_typ mname t1)
                      (print_typ mname t2)
@@ -762,8 +762,59 @@ let rec print_eloc mname (e:eloc)
     | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (print_ident mname x)
     | Eloc_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "eloc" hd) (print_args mname args)
 
+let print_td_iface mname root_name binders args inv_eloc_binders inv_eloc_args ar pk_wk pk_nz =
+  let kind_t =
+    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                    inline_for_extraction\n\
+                    noextract\n\
+                    val kind_%s : P.parser_kind %b P.%s"
+      root_name
+      pk_nz
+      pk_wk
+  in
+  let inv_t =
+    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                    noextract\n\
+                    val inv_%s %s : A.slice_inv"
+      root_name
+      inv_eloc_binders
+  in
+  let eloc_t =
+    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                    noextract\n\
+                    val eloc_%s %s : A.eloc"
+      root_name
+      inv_eloc_binders
+  in
+  let def'_t =
+    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+                    noextract\n\
+                    val def'_%s %s: typ kind_%s (inv_%s %s) (eloc_%s %s) %b"
+      root_name
+      binders
+      root_name
+      root_name inv_eloc_args
+      root_name inv_eloc_args
+      ar
+  in
+  let validator_t =
+    Printf.sprintf "val validate_%s %s : validator_of (def'_%s %s)"
+      root_name
+      binders
+      root_name args
+  in
+  let dtyp_t =
+    Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
+                    noextract\n\
+                    val dtyp_%s %s : dtyp_of (def'_%s %s)"
+      root_name
+      binders
+      root_name args
+  in
+  String.concat "\n\n" [kind_t; inv_t; eloc_t; def'_t; validator_t; dtyp_t]
+
 let print_binding mname (td:type_decl)
-  : ML string
+  : ML (string & string)
   = let tdn = td.name in
     let typ = td.typ in
     let k = td.kind in
@@ -778,15 +829,7 @@ let print_binding mname (td:type_decl)
     in
     let binders = print_binders tdn.td_params in
     let args = print_args tdn.td_params in
-    let validate_binding =
-        FStar.Printf.sprintf "[@@normalize_for_extraction specialization_steps]\n\
-                             let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
-                             root_name
-                             binders
-                             root_name
-                             root_name
-                             args
-    in
+    let def = print_type_decl mname td in
     let weak_kind = A.print_weak_kind k.pk_weak_kind in
     let pk_of_binding =
      Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
@@ -839,6 +882,7 @@ let print_binding mname (td:type_decl)
      let s1, fv_binders, fv_args = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
      s0 ^ s1, fv_binders, fv_args
    in
+
    let def' =
       FStar.Printf.sprintf
         "[@@specialize; noextract_to \"Kremlin\"]\n\
@@ -869,7 +913,23 @@ let print_binding mname (td:type_decl)
          root_name
          args
    in
-   let binding : string =
+   let validate_binding =
+      let cinline =
+        if td.name.td_entrypoint
+        || td.attrs.is_exported
+        then ""
+        else "; CInline"
+      in
+      FStar.Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]\n\
+                             let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
+                             cinline
+                             root_name
+                             binders
+                             root_name
+                             root_name
+                             args
+   in
+   let dtyp : string =
      let reader =
        if td.allow_reading
        then Printf.sprintf "(Some (as_reader (def_%s %s)))"
@@ -884,9 +944,9 @@ let print_binding mname (td:type_decl)
      in
      Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
                        noextract\n\
-                       let binding_%s %s\n\
-                         : global_binding\n\
-                         = mk_global_binding\n\
+                       let dtyp_%s %s\n\
+                         : dtyp kind_%s %b (inv_%s %s) (eloc_%s %s)\n\
+                         = mk_dtyp_app\n\
                                    kind_%s\n
                                    (inv_%s %s)\n
                                    (eloc_%s %s)\n
@@ -896,8 +956,8 @@ let print_binding mname (td:type_decl)
                                    %b\n\
                                    (coerce (_ by %s) (validate_%s %s))\n\
                                    (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
-                       root_name
-                       binders
+                       root_name  binders
+                       root_name td.allow_reading root_name fv_args root_name fv_args
                        root_name
                        root_name fv_args
                        root_name fv_args
@@ -908,34 +968,6 @@ let print_binding mname (td:type_decl)
                        td.allow_reading
                        coerce_validator root_name args
    in
-   let dtyp_of_binding =
-     let coerce_dtyp_args =
-       Printf.sprintf "`%%binding_%s; `%%kind_%s; `%%inv_%s; `%%eloc_%s"
-                      root_name
-                      root_name
-                      root_name
-                      root_name
-     in
-     Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
-                     noextract\n\
-                     let dtyp_%s %s\n\
-                       : dtyp kind_%s %b (inv_%s %s) (eloc_%s %s)\n\
-                       = mk_dt_app kind_%s %b (inv_%s %s) (eloc_%s %s) \n\
-                                   (binding_%s %s)
-                                   (_ by (coerce_dt_app [`%%binding_%s]))\n"
-                     root_name
-                     binders
-                     root_name
-                     td.allow_reading
-                     root_name fv_args
-                     root_name fv_args
-                     root_name
-                     td.allow_reading
-                     root_name fv_args
-                     root_name fv_args
-                     root_name args
-                     root_name
-   in
    let enum_typ_of_binding =
      match td.enum_typ with
      | None -> ""
@@ -944,34 +976,44 @@ let print_binding mname (td:type_decl)
          root_name
          (T.print_typ mname t)
    in
-   String.concat "\n"
-     [pk_of_binding;
-      inv_eloc_of_binding;
-      def';
-      (as_type_or_parser "type");
-      (as_type_or_parser "parser");
-      validate_binding;
-      binding;
-      dtyp_of_binding;
-      enum_typ_of_binding]
+   let impl =
+     String.concat "\n"
+       [def;
+        pk_of_binding;
+        inv_eloc_of_binding;
+        def';
+        (as_type_or_parser "type");
+        (as_type_or_parser "parser");
+        validate_binding;
+        dtyp;
+        enum_typ_of_binding]
+   in
+   // impl, ""
+   if Some? td.enum_typ
+   && (td.name.td_entrypoint || td.attrs.is_exported)
+   then "", impl //exported enums are fully revealed
+   else if td.name.td_entrypoint
+        || td.attrs.is_exported
+   then
+     let iface =
+       print_td_iface mname root_name binders args
+                      fv_binders fv_args td.allow_reading
+                      weak_kind k.pk_nz
+     in
+     impl, iface
+   else impl, ""
 
 let print_decl mname (d:decl)
-  : ML string =
+  : ML (string & string) =
   match d with
   | Inl d ->
     begin
     match fst d with
-    | T.Assumption _ -> T.print_assumption mname d
-    | T.Definition _ -> T.print_definition mname d
-    | _ -> ""
+    | T.Assumption _ -> T.print_assumption mname d, ""
+    | T.Definition _ -> "", T.print_definition mname d
+    | _ -> "", ""
     end
-  | Inr td ->
-    let impl =
-        print_binding mname td
-    in
-    Printf.sprintf "%s\n%s\n"
-      (print_type_decl mname td)
-      impl
+  | Inr td -> print_binding mname td
 
 let rec unzip (x: list ('a & 'b))
   : list 'a & list 'b
@@ -982,8 +1024,12 @@ let rec unzip (x: list ('a & 'b))
       x::xs, y::ys
 
 let print_decls en mname tds =
-  let impl =
-    List.map (print_decl mname) tds |>
-    String.concat "\n\n"
+  let impl, iface =
+    let impls, ifaces =
+      List.map (print_decl mname) tds |>
+      List.unzip
+    in
+    String.concat "\n\n" impls,
+    String.concat "\n\n" ifaces
   in
-  impl
+  impl, iface

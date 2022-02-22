@@ -99,11 +99,11 @@ let header_byte : bitsum' uint8 8 =
       )
   )
 
-[@filter_bitsum'_t_attr]
+[@@ filter_bitsum'_t_attr ; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [primops; iota; zeta; delta_attr [`%filter_bitsum'_t_attr]]; FStar.Tactics.trefl ())]
 let filter_header_byte
 : (x: FStar.UInt8.t) ->
   Tot (b: bool { b == filter_bitsum' header_byte x })
-= norm [primops; iota; zeta; delta_attr [`%filter_bitsum'_t_attr]]
+=
   (mk_filter_bitsum'_t' header_byte)
 
 (*

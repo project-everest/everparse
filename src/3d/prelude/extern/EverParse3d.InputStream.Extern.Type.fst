@@ -9,7 +9,6 @@ module U8 = FStar.UInt8
 module LPE = EverParse3d.ErrorCode
 module U64 = FStar.UInt64
 
-inline_for_extraction
 noeq
 type input_buffer = {
   base: t;
