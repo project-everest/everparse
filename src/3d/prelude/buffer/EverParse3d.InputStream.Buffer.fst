@@ -43,7 +43,7 @@ let _get_suffix
   (ensures (fun _ -> True))
 = Seq.slice (Ghost.reveal y.g_all) (U32.v x.len) (U32.v y.len)
 
-#push-options "--z3rlimit 32 --z3cliopt smt.arith.nl=false"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false"
 #restart-solver
 
 let _is_prefix_of_prop
@@ -60,7 +60,10 @@ let _is_prefix_of_prop
       _get_read y h `Seq.equal` _get_read x h /\
       _get_remaining y h `Seq.equal` (_get_remaining x h `Seq.append` _get_suffix x y)
   ))
-= ()
+=
+  assert (_live y h);
+  assert (_get_read y h `Seq.equal` _get_read x h);
+  assert (_get_remaining y h `Seq.equal` (_get_remaining x h `Seq.append` _get_suffix x y))
 
 open LowStar.BufferOps
 
