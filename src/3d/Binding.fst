@@ -23,6 +23,7 @@ module Binding
      -- computing which fields are dependent on others
 *)
 open FStar.Mul
+open FStar.List.Tot
 open Ast
 open FStar.All
 module H = Hashtable
@@ -98,6 +99,11 @@ let mk_env (g:global_env) =
     locals = H.create 10;
     globals = g }
 
+let env_of_global_env 
+  : global_env -> env
+  = let locals = H.create 1 in
+    fun g -> { this = None; locals; globals = g }
+    
 let global_env_of_env e = e.globals
 
 let params_of_decl (d:decl) : list param =
@@ -1330,25 +1336,27 @@ let allowed_base_types_as_output_types = [
   "Bool"
 ]
 
-let rec check_mutable_param_type (ge:global_env) (t:typ) : ML unit =
+let rec check_mutable_param_type (env:env) (t:typ) : ML unit =
   let err () : ML unit =
     error (Printf.sprintf "%s is not an integer or output or extern type" (print_typ t)) t.range in
+  let t = unfold_typ_abbrev_only env t in
   match t.v with
   | Type_app i k [] ->
     if k = KindOutput || k = KindExtern ||
        (i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types)
     then ()
     else err ()
-  | Pointer t -> check_mutable_param_type ge t
+  | Pointer t -> check_mutable_param_type env t
   | _ -> err ()
     
-let rec check_integer_or_output_type (ge:global_env) (t:typ) : ML unit =
+let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
+  let t = unfold_typ_abbrev_only env t in
   match t.v with
   | Type_app i k [] ->  //either it should be a base type, or an output type
     if i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types
     then ()
     else if not (k = KindOutput) then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
-  | Pointer t -> check_integer_or_output_type ge t
+  | Pointer t -> check_integer_or_output_type env t
   | _ -> error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
 
 let check_mutable_param (env:env) (p:param) : ML unit =
@@ -1357,7 +1365,7 @@ let check_mutable_param (env:env) (p:param) : ML unit =
   let t, _, _ = p in
   match t.v with
   | Pointer bt ->
-    check_mutable_param_type (global_env_of_env env) bt
+    check_mutable_param_type env bt
   | _ ->
     error (Printf.sprintf "%s is not a valid mutable parameter type, it is not a pointer type" (print_typ t)) t.range
 
@@ -1479,7 +1487,7 @@ let elaborate_record (e:global_env)
 
 let rec check_output_field (ge:global_env) (fld:out_field) : ML unit =
   match fld with
-  | Out_field_named _ t _bopt -> check_integer_or_output_type ge t
+  | Out_field_named _ t _bopt -> check_integer_or_output_type (env_of_global_env ge) t
   | Out_field_anon l _ -> check_output_fields ge l
 
 and check_output_fields (ge:global_env) (flds:list out_field) : ML unit =
