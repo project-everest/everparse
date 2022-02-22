@@ -123,7 +123,8 @@ let validate_sum_aux_payload_if
 : Tot (if_combinator _ (validate_sum_aux_payload_eq t pc k))
 = validate_sum_aux_payload_if' t pc k
 
-#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2 --using_facts_from '* -FStar.Int.Cast -LowParse.BitFields'"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Int.Cast -LowParse.BitFields'"
+
 // --query_stats  --smtencoding.elim_box true --smtencoding.l_arith_repr native --z3refresh"
 
 inline_for_extraction
