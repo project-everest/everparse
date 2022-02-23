@@ -90,6 +90,7 @@ open LowStar.BufferOps
 inline_for_extraction
 noextract
 let has
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _has_t: Aux.has_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)
@@ -115,6 +116,7 @@ let has
 inline_for_extraction
 noextract
 let read0
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _read_t: Aux.read_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -151,6 +153,7 @@ module LP = LowParse.Low.Base
 inline_for_extraction
 noextract
 let read
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _read_t: Aux.read_t)
     (t': Type0)
     (k: LP.parser_kind)
     (p: LP.parser k t')
@@ -201,6 +204,10 @@ let read
   HST.pop_frame ();
   let h4 = HST.get () in
   preserved x (B.loc_region_only false (HS.get_tip h1)) h3 h4;
+  assert (
+    let s = get_remaining x h0 in
+    get_remaining x h4 `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
+  );
   res
 
 #pop-options
@@ -208,6 +215,7 @@ let read
 inline_for_extraction
 noextract
 let skip
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _skip_t: Aux.skip_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -232,6 +240,7 @@ let skip
 inline_for_extraction
 noextract
 let skip_if_success
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _skip_t: Aux.skip_t)
     (x: t)
     (pos: LPE.pos_t)
     (res: U64.t)
@@ -257,6 +266,8 @@ let skip_if_success
 inline_for_extraction
 noextract
 let empty
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _skip_t: Aux.skip_t)
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _empty_t: Aux.empty_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)

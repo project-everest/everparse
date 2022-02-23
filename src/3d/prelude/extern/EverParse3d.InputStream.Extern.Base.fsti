@@ -57,7 +57,10 @@ val preserved:
       get_read x h' == get_read x h
     ))
 
+val has_t: Type0
+
 val has:
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _has_t: has_t) ->
     (x: t) ->
     (n: U64.t) ->
     HST.Stack bool
@@ -67,7 +70,10 @@ val has:
       (res == true <==> Seq.length (get_remaining x h) >= U64.v n)
     ))
 
+val read_t: Type0
+
 val read:
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _read_t: read_t) ->
     (x: t) ->
     (n: U64.t) ->
     (dst: B.buffer U8.t) ->
@@ -90,7 +96,10 @@ val read:
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ))
 
+val skip_t: Type0
+
 val skip:
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _skip_t: skip_t) ->
     (x: t) ->
     (n: U64.t) ->
     HST.Stack unit
@@ -102,7 +111,10 @@ val skip:
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ))
 
+val empty_t: Type0
+
 val empty:
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _empty_t: empty_t) ->
     (x: t) ->
     HST.Stack U64.t
     (requires (fun h -> live x h))

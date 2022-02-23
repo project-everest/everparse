@@ -2,6 +2,8 @@ module EverParse3d.InputStream.All
 
 open EverParse3d.InputStream.Extern
 
+module Aux = EverParse3d.InputStream.Extern.Base
+
 let t = t
 
 let inst = {
@@ -15,15 +17,15 @@ let inst = {
   get_read = get_read;
   preserved = preserved;
   tlen = (fun _ -> unit);
-  has_t = unit;
-  has = (fun #_ -> has);
-  read_t = unit;
-  read = (fun #_ -> read);
-  skip_t = unit;
-  skip = (fun #_ -> skip);
+  has_t = Aux.has_t;
+  has = has;
+  read_t = Aux.read_t;
+  read = read;
+  skip_t = Aux.skip_t;
+  skip = skip;
   skip_if_success = (fun #_ -> skip_if_success);
-  empty_t = unit;
-  empty = (fun #_ #_ -> empty);
+  empty_t = Aux.empty_t;
+  empty = empty;
   is_prefix_of = is_prefix_of;
   get_suffix = get_suffix;
   is_prefix_of_prop = is_prefix_of_prop;
