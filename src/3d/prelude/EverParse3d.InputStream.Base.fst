@@ -151,6 +151,7 @@ class input_stream_inst (t: Type) : Type = {
   empty_t: Type0;
   
   empty:
+    (# [FStar.Tactics.Typeclasses.tcresolve ()] skip_t ) ->
     (# [FStar.Tactics.Typeclasses.tcresolve ()] empty_t ) ->
     (x: t) ->
     (len: tlen x) ->
