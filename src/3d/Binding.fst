@@ -1018,10 +1018,10 @@ let rec check_field_action (env:env) (f:field) (a:action)
       let aa, t = check_atomic_action env a.range aa in
       { a with v=Atomic_action aa }, t
 
-    | Action_seq a0 as ->
+    | Action_seq a0 rest ->
       let a0, _ = check_atomic_action env a.range a0 in
-      let as, t = check_field_action env f as in
-      { a with v=Action_seq a0 as }, t
+      let rest, t = check_field_action env f rest in
+      { a with v=Action_seq a0 rest }, t
 
     | Action_ite hd then_ else_ ->
       let hd, t = check_expr env hd in
