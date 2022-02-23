@@ -127,10 +127,14 @@ let inst = {
   end;
 
   tlen = _tlen;
-  
+
+  has_t = unit;
+
   has = begin fun x xlen currentPosition n ->
     n `U64.lte` (xlen `U64.sub` currentPosition)
   end;
+
+  read_t = unit;
 
   read = begin fun _ k p r x currentPosition n ->
     let h = HST.get () in
@@ -164,6 +168,8 @@ let inst = {
     IB.read_with_perm r x.buf (uint64_to_uint32 currentPosition) (uint64_to_uint32 n) x.perm_of
   end;
 
+  skip_t = unit;
+
   skip = begin fun x currentPosition n ->
     let h0 = HST.get () in
     IR.readable_split' h0 x.perm_of (uint64_to_uint32 currentPosition) (uint64_to_uint32 (currentPosition `U64.add` n)) x.len0;
@@ -190,6 +196,8 @@ let inst = {
     IR.unreadable_merge' h2 x.perm_of 0ul pos0 pos1;
     IR.readable_frame0 h1 x.perm_of pos1 x.len0 h2
   end;
+
+  empty_t = unit;
 
   empty = begin fun x xlen _ ->
     let h0 = HST.get () in
