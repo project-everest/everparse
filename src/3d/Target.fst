@@ -1102,6 +1102,7 @@ let print_c_entry (modul: string)
        return TRUE;"
        begin match input_stream_binding with
        | HashingOptions.InputStreamBuffer -> ""
+       | HashingOptions.InputStreamStatic _
        | HashingOptions.InputStreamExtern _ ->
          "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t"
        end
@@ -1109,6 +1110,7 @@ let print_c_entry (modul: string)
        params
        begin match input_stream_binding with
        | HashingOptions.InputStreamBuffer -> "base, len"
+       | HashingOptions.InputStreamStatic _
        | HashingOptions.InputStreamExtern _ -> "input"
        end
        modul
@@ -1120,6 +1122,7 @@ let print_c_entry (modul: string)
     let params = 
       begin match input_stream_binding with
       | HashingOptions.InputStreamBuffer -> []
+      | HashingOptions.InputStreamStatic _
       | HashingOptions.InputStreamExtern _ -> [
           mk_param "_has" "EverParseHasT";
           mk_param "_read" "EverParseReadT";
@@ -1166,6 +1169,7 @@ let print_c_entry (modul: string)
       begin match input_stream_binding with
       | HashingOptions.InputStreamBuffer ->
         Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+      | HashingOptions.InputStreamStatic _
       | HashingOptions.InputStreamExtern _ ->
         Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
       end
