@@ -27,55 +27,7 @@ open FStar.List.Tot
 open Ast
 open FStar.All
 module H = Hashtable
-
-/// Computed attributes for a decl:
-///    -- its size in bytes
-///    -- whether or not it ends with a variable-length field (suffix)
-///    -- whether or not its validator may fail
-///    -- whether the type is an integral type, i.e., can it be decomposed into bitfields
-type decl_attributes = {
-  may_fail:bool;
-  integral:option integer_type;
-  has_reader:bool;
-  parser_weak_kind:weak_kind;
-  parser_kind_nz:option bool
-}
-
-noeq
-type macro_signature = {
-  macro_arguments_t: list typ;
-  macro_result_t: typ;
-  macro_defn_t:option expr
-}
-
-let nullary_macro t d = {
-  macro_arguments_t = [];
-  macro_result_t = t;
-  macro_defn_t = d
-}
-
-(* Type-checking environments *)
-
-/// global_env ge_h field is a hash (hence `_h`) table that:
-///  -- maps top-level identifiers to their corresponding declaration
-///  -- maps type identifiers to decl_attributes
-///  -- maps macro names to their types
-///
-/// global_env ge_fd field maps a unique numerical identifier to each
-/// "struct identifier - field (hence `_fd`) name" pair. It is part of
-/// the global environment so that numerical field identifiers are
-/// proper to the current module, and not shared across different .3d
-/// files given on the command line
-
-type global_hash_t = H.t ident' (decl & either decl_attributes macro_signature)
-
-noeq
-type global_env = {
-  ge_h: global_hash_t;
-  ge_out_t: H.t ident' decl;  //a table for output types declarations
-  ge_extern_t: H.t ident' decl;  //a table for extern type declarations
-  ge_extern_fn: H.t ident' decl;  //a table for extern function declarations
-}
+include GlobalEnv
 
 /// Maps locally bound names, i.e., a field name to its type
 ///  -- the bool signifies that this identifier has been used, and is
@@ -1337,17 +1289,26 @@ let allowed_base_types_as_output_types = [
 ]
 
 let rec check_mutable_param_type (env:env) (t:typ) : ML unit =
-  let err () : ML unit =
-    error (Printf.sprintf "%s is not an integer or output or extern type" (print_typ t)) t.range in
+  let err iopt : ML unit =
+    let otype = 
+      match iopt with
+      | None -> "None"
+      | Some i ->
+        match H.try_find env.globals.ge_out_t i.v with
+        | Some d ->
+          Printf.sprintf "(Some %s)" (print_decl d)
+        | _ -> "None"
+    in
+    error (Printf.sprintf "%s is not an integer or output or extern type (found decl %s)" (print_typ t) otype) t.range in
   let t = unfold_typ_abbrev_only env t in
   match t.v with
   | Type_app i k [] ->
     if k = KindOutput || k = KindExtern ||
        (i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types)
     then ()
-    else err ()
+    else err (Some i)
   | Pointer t -> check_mutable_param_type env t
-  | _ -> err ()
+  | _ -> err None
     
 let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
   let t = unfold_typ_abbrev_only env t in

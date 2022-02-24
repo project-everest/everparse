@@ -1,0 +1,16 @@
+typedef UINT32 U32;
+
+output
+typedef struct _PAIR {
+  U32 fst;
+  U32 snd;
+} PAIR;
+
+
+export
+typedef struct _WIRE_PAIR(mutable PAIR *out)
+{
+  UINT32BE fst {:act out->fst = fst; };
+  UINT32BE snd {:act out->snd = snd; };
+//  PAIR junk; // Crashes on this
+} WIRE_PAIR;

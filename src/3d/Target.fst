@@ -325,15 +325,27 @@ let rec is_extern_type (t:typ) : bool =
  *
  * They are abstract types in the emitted F* code
  *)
-let rec print_output_type (t:typ) : ML string =
-  match t with
-  | T_app id _ _ -> print_ident id
-  | T_pointer t -> Printf.sprintf "p_%s" (print_output_type t)
-  | _ -> failwith "Print: not an output type"
+let print_output_type (qual:bool) (t:typ) : ML string =
+  let rec aux (t:typ)
+    : ML (option string & string)
+    = match t with
+      | T_app id _ _ -> 
+        id.v.modul_name, print_ident id
+      | T_pointer t ->
+        let m, i = aux t in
+        m, Printf.sprintf "p_%s" i
+      | _ -> failwith "Print: not an output type"
+  in
+  let mopt, i = aux t in
+  if qual 
+  then match mopt with
+       | None -> i
+       | Some m -> Printf.sprintf "%s.ExternalAPI.%s" m i
+  else i
 
 let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   if is_output_type t
-  then print_output_type t
+  then print_output_type true t
   else
   match t with
   | T_false -> "False"
@@ -1284,7 +1296,7 @@ let rec base_output_type (t:typ) : ML A.ident =
 let rec print_output_type_val (tbl:set) (t:typ) : ML string =
   let open A in
   if is_output_type t
-  then let s = print_output_type t in
+  then let s = print_output_type false t in
        if H.try_find tbl s <> None then ""
        else let _ = H.insert tbl s () in
             match t with
@@ -1292,7 +1304,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
               Printf.sprintf "\n\nval %s : Type0\n\n" s
             | T_pointer bt ->
               let bs = print_output_type_val tbl bt in
-              bs ^ (Printf.sprintf "\n\ntype %s = bpointer %s\n\n" s (print_output_type bt))
+              bs ^ (Printf.sprintf "\n\ntype %s = bpointer %s\n\n" s (print_output_type false bt))
   else ""
 
 // let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
