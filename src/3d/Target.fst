@@ -1113,7 +1113,22 @@ let print_c_entry (modul: string)
        end
        modul
    in
+   let mk_param (name: string) (typ: string) : Tot param =
+     (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
+   in
    let print_one_validator (d:type_decl) : ML (string & string) =
+    let params = 
+      begin match input_stream_binding with
+      | HashingOptions.InputStreamBuffer -> []
+      | HashingOptions.InputStreamExtern _ -> [
+          mk_param "_has" "EverParseHasT";
+          mk_param "_read" "EverParseReadT";
+          mk_param "_skip" "EverParseSkipT";
+          mk_param "_empty" "EverParseEmptyT";
+        ]
+      end @
+      d.decl_name.td_params
+    in
     let print_params (ps:list param) : ML string =
       let params =
         String.concat
@@ -1155,7 +1170,7 @@ let print_c_entry (modul: string)
         Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
       end
        wrapper_name
-       (print_params d.decl_name.td_params)
+       (print_params params)
     in
     let validator_name =
        Printf.sprintf "%s_validate_%s"
@@ -1167,7 +1182,7 @@ let print_c_entry (modul: string)
       let body = 
         wrapped_call
           validator_name 
-          (print_arguments d.decl_name.td_params)
+          (print_arguments params)
       in
       Printf.sprintf "%s {\n\t%s\n}" signature body
     in
