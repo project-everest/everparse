@@ -11,6 +11,14 @@ let ddd_home = filename_concat (filename_concat qd_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat qd_home "src") "3d") "prelude"
 
 let ddd_actions_home input_stream_binding =
+  let input_stream_dir =
+    match string_of_input_stream_binding input_stream_binding with
+    | "static" -> "extern"
+    | s -> s
+  in
+  filename_concat ddd_prelude_home input_stream_dir
+
+let ddd_actions_c_home input_stream_binding =
   filename_concat ddd_prelude_home (string_of_input_stream_binding input_stream_binding)
 
 (* fstar.exe executable *)
@@ -628,7 +636,7 @@ let postprocess_c
   if not no_everparse_h
   then begin
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      let everparse_h_source = (filename_concat (ddd_actions_home input_stream_binding) "EverParse.h") in
+      let everparse_h_source = (filename_concat (ddd_actions_c_home input_stream_binding) "EverParse.h") in
       if file_exists everparse_h_source
       then copy everparse_h_source dest_everparse_h;
       let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
