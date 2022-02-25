@@ -37,6 +37,27 @@ nswamy, protz, taramana 5-Feb-2020
 typedef const char * EverParseString;
 typedef EverParseString PrimsString;
 
+#ifndef KRML_HOST_PRINTF
+#  include <stdio.h>
+#  define KRML_HOST_PRINTF printf
+#endif
+
+#ifndef KRML_HOST_EXIT
+#  include <stdlib.h>
+#  define KRML_HOST_EXIT exit
+#endif
+
+#define KRML_CHECK_SIZE(size_elt, sz)                                          \
+  do {                                                                         \
+    if (((size_t)(sz)) > ((size_t)(SIZE_MAX / (size_elt)))) {                  \
+      KRML_HOST_PRINTF(                                                        \
+          "Maximum allocatable size exceeded, aborting before overflow at "    \
+          "%s:%d\n",                                                           \
+          __FILE__, __LINE__);                                                 \
+      KRML_HOST_EXIT(253);                                                     \
+    }                                                                          \
+  } while (0)
+
 #  define htobe16(x) _byteswap_ushort(x)
 #  define htole16(x) (x)
 #  define be16toh(x) _byteswap_ushort(x)
