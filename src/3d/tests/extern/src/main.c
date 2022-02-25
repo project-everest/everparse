@@ -20,7 +20,7 @@ int main(void) {
       EverParsePush(testStream, test, testSize);
       EverParsePush(testStream, test, testSize);
       EverParsePush(testStream, test, testSize);
-      if (TestCheckPoint(0, 0, 0, 0, testStream)) {
+      if (TestCheckPoint(0, testStream)) {
         printf("Validation succeeded\n");
       }
       free(testStream);

@@ -21,32 +21,29 @@ EverParseInputStreamBase EverParseCreate();
 int EverParsePush(EverParseInputStreamBase x, uint8_t * buf, uint64_t len);
 
 // dummy types, they are not used
-typedef int EverParseHasT;
-typedef int EverParseReadT;
-typedef int EverParseSkipT;
-typedef int EverParseEmptyT;
+typedef int EverParseExtraT;
 
-BOOLEAN _EverParseHas(EverParseHasT const _unused,  EverParseInputStreamBase const x, uint64_t n);
+BOOLEAN _EverParseHas(EverParseExtraT const _unused,  EverParseInputStreamBase const x, uint64_t n);
 
-uint8_t *_EverParseRead(EverParseReadT const _unused, EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst);
+uint8_t *_EverParseRead(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst);
 
-void _EverParseSkip(EverParseSkipT const _unused, EverParseInputStreamBase const x, uint64_t n);
+void _EverParseSkip(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n);
 
-uint64_t _EverParseEmpty(EverParseEmptyT const _unused, EverParseInputStreamBase const x);
+uint64_t _EverParseEmpty(EverParseExtraT const _unused, EverParseInputStreamBase const x);
 
-static inline BOOLEAN EverParseHas(EverParseHasT const _unused,  EverParseInputStreamBase const x, uint64_t n) {
+static inline BOOLEAN EverParseHas(EverParseExtraT const _unused,  EverParseInputStreamBase const x, uint64_t n) {
   return _EverParseHas(_unused, x, n);
 }
 
-static inline uint8_t *EverParseRead(EverParseReadT const _unused, EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst) {
+static inline uint8_t *EverParseRead(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst) {
   return _EverParseRead(_unused, x, n, dst);
 }
 
-static inline void EverParseSkip(EverParseSkipT const _unused, EverParseInputStreamBase const x, uint64_t n) {
+static inline void EverParseSkip(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n) {
   _EverParseSkip(_unused, x, n);
 }
 
-static inline uint64_t EverParseEmpty(EverParseEmptyT const _unused, EverParseInputStreamBase const x) {
+static inline uint64_t EverParseEmpty(EverParseExtraT const _unused, EverParseInputStreamBase const x) {
   return _EverParseEmpty(_unused, x);
 }
 

@@ -95,13 +95,19 @@ void TestEverParseError(char *StructName, char *FieldName, char *Reason) {
 
 int main(void) {
   uint8_t *test = calloc(testSize, sizeof(uint8_t));
+  EverParseExtraT pfns = {
+    .has = &_EverParseHas,
+    .read = &_EverParseRead,
+    .skip = &_EverParseSkip,
+    .empty = &_EverParseEmpty
+  };
   if (test != NULL) {
     EverParseInputStreamBase testStream = EverParseCreate();
     if (testStream != NULL) {
       EverParsePush(testStream, test, testSize);
       EverParsePush(testStream, test, testSize);
       EverParsePush(testStream, test, testSize);
-      if (TestCheckPoint(&_EverParseHas, &_EverParseRead, &_EverParseSkip, &_EverParseEmpty, testStream)) {
+      if (TestCheckPoint(pfns, testStream)) {
         printf("Validation succeeded\n");
       }
       free(testStream);
