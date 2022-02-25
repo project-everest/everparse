@@ -1132,6 +1132,7 @@ let print_c_entry (modul: string)
    in
    let print_one_validator (d:type_decl) : ML (string & string) =
     let params = 
+      d.decl_name.td_params @
       begin match input_stream_binding with
       | HashingOptions.InputStreamBuffer -> []
       | HashingOptions.InputStreamStatic _
@@ -1141,8 +1142,7 @@ let print_c_entry (modul: string)
           mk_param "_skip" "EverParseSkipT";
           mk_param "_empty" "EverParseEmptyT";
         ]
-      end @
-      d.decl_name.td_params
+      end
     in
     let print_params (ps:list param) : ML string =
       let params =
