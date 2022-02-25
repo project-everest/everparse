@@ -55,6 +55,7 @@ let input_buffer_t = EverParse3d.InputStream.All.t
 let action
   p inv l on_success a
 =
+    (# [tcresolve ()] I.extra_t #input_buffer_t) ->
     ctxt: app_ctxt ->
     sl: input_buffer_t ->
     pos: LPE.pos_t ->
