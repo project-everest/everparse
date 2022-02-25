@@ -138,10 +138,7 @@ let error_handler = typename:string ->
 
 inline_for_extraction noextract
 let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
-  (# [tcresolve ()] I.has_t #input_buffer_t) ->
-  (# [tcresolve ()] I.read_t #input_buffer_t) ->
-  (# [tcresolve ()] I.skip_t #input_buffer_t) ->
-  (# [tcresolve ()] I.empty_t #input_buffer_t) ->
+  (# [tcresolve ()] I.extra_t #input_buffer_t) ->
   (ctxt: app_ctxt) ->
   (err : error_handler) ->
   (sl: input_buffer_t) ->
@@ -196,7 +193,7 @@ let leaf_reader
   (p: parser k t)
 : Tot Type
 =
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _read_t : I.read_t #input_buffer_t ) ->
+  (# [FStar.Tactics.Typeclasses.tcresolve ()] _extra_t : I.extra_t #input_buffer_t ) ->
   (sl: input_buffer_t) ->
   (pos: LPE.pos_t) ->
   Stack t
@@ -828,10 +825,7 @@ let validate_list_inv
 inline_for_extraction
 noextract
 let validate_list_body
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _has_t : I.has_t #input_buffer_t ) 
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _read_t : I.read_t #input_buffer_t ) 
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _skip_t : I.skip_t #input_buffer_t ) 
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _empty_t : I.empty_t #input_buffer_t ) 
+  (# [FStar.Tactics.Typeclasses.tcresolve ()] _extra_t : I.extra_t #input_buffer_t ) 
   (#k:LP.parser_kind)
   #t
   (#p:LP.parser k t)
@@ -866,10 +860,7 @@ let validate_list_body
 inline_for_extraction
 noextract
 let validate_list'
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _has_t : I.has_t #input_buffer_t ) 
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _read_t : I.read_t #input_buffer_t ) 
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _skip_t : I.skip_t #input_buffer_t ) 
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _empty_t : I.empty_t #input_buffer_t ) 
+  (# [FStar.Tactics.Typeclasses.tcresolve ()] _extra_t : I.extra_t #input_buffer_t ) 
   (#k:LP.parser_kind)
   #t
   (#p:LP.parser k t)
@@ -1496,10 +1487,7 @@ let validate_list_up_to_inv
 
 inline_for_extraction
 let validate_list_up_to_body
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _has_t : I.has_t #input_buffer_t ) 
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _read_t : I.read_t #input_buffer_t ) 
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _skip_t : I.skip_t #input_buffer_t ) 
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _empty_t : I.empty_t #input_buffer_t ) 
+  (# [FStar.Tactics.Typeclasses.tcresolve ()] _extra_t : I.extra_t #input_buffer_t ) 
   (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
   (#p: parser k t)

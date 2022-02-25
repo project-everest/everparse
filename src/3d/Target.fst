@@ -1137,10 +1137,7 @@ let print_c_entry (modul: string)
       | HashingOptions.InputStreamBuffer -> []
       | HashingOptions.InputStreamStatic _
       | HashingOptions.InputStreamExtern _ -> [
-          mk_param "_has" "EverParseHasT";
-          mk_param "_read" "EverParseReadT";
-          mk_param "_skip" "EverParseSkipT";
-          mk_param "_empty" "EverParseEmptyT";
+          mk_param "_extra" "EverParseExtraT";
         ]
       end
     in

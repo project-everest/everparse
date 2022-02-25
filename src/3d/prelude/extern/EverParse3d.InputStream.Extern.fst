@@ -90,7 +90,7 @@ open LowStar.BufferOps
 inline_for_extraction
 noextract
 let has
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _has_t: Aux.has_t)
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)
@@ -111,12 +111,12 @@ let has
   else
     Aux.has x.Aux.base n
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false"
 #restart-solver
 inline_for_extraction
 noextract
 let read0
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _read_t: Aux.read_t)
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -140,11 +140,17 @@ let read0
       (B.loc_buffer dst `B.loc_union` footprint x) `B.loc_includes` B.loc_buffer dst' /\
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ))
-= let dst = Aux.read x.Aux.base n dst in
+=
+  let h0 = HST.get () in
+  let dst = Aux.read x.Aux.base n dst in
   let h1 = HST.get () in
   x.Aux.position *= Ghost.hide (position `U64.add` n);
   let h2 = HST.get () in
   Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h1 h2;
+  assert (
+      let s = get_remaining x h0 in
+      get_remaining x h2 `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
+  );
   dst
 
 module LP = LowParse.Low.Base
@@ -153,7 +159,7 @@ module LP = LowParse.Low.Base
 inline_for_extraction
 noextract
 let read
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _read_t: Aux.read_t)
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (t': Type0)
     (k: LP.parser_kind)
     (p: LP.parser k t')
@@ -215,7 +221,7 @@ let read
 inline_for_extraction
 noextract
 let skip
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _skip_t: Aux.skip_t)
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -240,7 +246,7 @@ let skip
 inline_for_extraction
 noextract
 let skip_if_success
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _skip_t: Aux.skip_t)
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (pos: LPE.pos_t)
     (res: U64.t)
@@ -266,8 +272,7 @@ let skip_if_success
 inline_for_extraction
 noextract
 let empty
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _skip_t: Aux.skip_t)
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _empty_t: Aux.empty_t)
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)
