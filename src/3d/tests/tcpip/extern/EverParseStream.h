@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-#define KRML_CHECK_SIZE(_typ, _val)
-
 struct es_cell {
   uint8_t * buf;
   uint64_t len;
