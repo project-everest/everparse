@@ -82,6 +82,17 @@ uint64_t _EverParseEmpty(EverParseExtraT const _unused, EverParseInputStreamBase
   return res;
 }
 
+uint8_t *_EverParsePeep(EverParseExtraT const _unused, EverParseInputStreamBase x, uint64_t n) {
+  if (x == NULL)
+    return NULL;
+  struct es_cell *head = x->head;
+  if (head == NULL)
+    return NULL;
+  if (head->len < n)
+    return NULL;
+  return head->buf;
+}
+
 EverParseInputStreamBase EverParseCreate() {
   EverParseInputStreamBase res = malloc(sizeof(struct EverParseInputStreamBase_s));
   if (res == NULL) {

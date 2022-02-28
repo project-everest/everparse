@@ -31,6 +31,8 @@ void _EverParseSkip(EverParseExtraT const _unused, EverParseInputStreamBase cons
 
 uint64_t _EverParseEmpty(EverParseExtraT const _unused, EverParseInputStreamBase const x);
 
+uint8_t * _EverParsePeep(EverParseExtraT const _unused, EverParseInputStreamBase x, uint64_t n);
+
 static inline BOOLEAN EverParseHas(EverParseExtraT const _unused,  EverParseInputStreamBase const x, uint64_t n) {
   return _EverParseHas(_unused, x, n);
 }
@@ -46,5 +48,11 @@ static inline void EverParseSkip(EverParseExtraT const _unused, EverParseInputSt
 static inline uint64_t EverParseEmpty(EverParseExtraT const _unused, EverParseInputStreamBase const x) {
   return _EverParseEmpty(_unused, x);
 }
+
+static inline uint8_t
+*EverParsePeep(EverParseExtraT const _unused, EverParseInputStreamBase x, uint64_t n) {
+  return _EverParsePeep(_unused, x, n);
+}
+
 
 #endif // __EVERPARSESTREAM

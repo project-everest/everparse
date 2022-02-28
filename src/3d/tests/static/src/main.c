@@ -14,14 +14,19 @@ void TestEverParseError(char *StructName, char *FieldName, char *Reason) {
 
 int main(void) {
   uint8_t *test = calloc(testSize, sizeof(uint8_t));
+  uint8_t *out = NULL;
   if (test != NULL) {
     EverParseInputStreamBase testStream = EverParseCreate();
     if (testStream != NULL) {
       EverParsePush(testStream, test, testSize);
       EverParsePush(testStream, test, testSize);
       EverParsePush(testStream, test, testSize);
-      if (TestCheckPoint(0, testStream)) {
-        printf("Validation succeeded\n");
+      if (TestCheckPoint(&out, 0, testStream)) {
+        if (out == NULL) {
+          printf("Validation succeeded, but not enough contiguous bytes\n");
+        } else {
+          printf("Validation succeeded\n");
+        }
       }
       free(testStream);
     }
