@@ -480,6 +480,7 @@ let rec print_action (mname:string) (a:action) : ML string =
       | Action_field_pos_64 -> "(action_field_pos_64())"
       | Action_field_pos_32 -> "(action_field_pos_32 EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
       | Action_field_ptr -> "(action_field_ptr EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
+      | Action_field_ptr_after e -> Printf.sprintf "(action_field_ptr_after EverParse3d.Actions.BackendFlagValue.backend_flag_value %s)" (print_expr mname e)
       | Action_deref i ->
         Printf.sprintf "(action_deref %s)" (print_ident i)
       | Action_assignment lhs rhs ->

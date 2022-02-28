@@ -15,6 +15,18 @@ val action_field_ptr
       (#[@@@erasable] t:Type)
       (#[@@@erasable] p:P.parser k t)
       (u:squash (EverParse3d.Actions.BackendFlag.backend_flag == BackendFlagBuffer))
+   : action p true_inv eloc_none true ___PUINT8 // FIXME: here we can guarantee that this pointer will never be NULL
+
+noextract
+inline_for_extraction
+val action_field_ptr_after
+      (#nz:_)
+      (#wk: _)
+      (#k:P.parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:P.parser k t)
+      (u:squash (EverParse3d.Actions.BackendFlag.backend_flag == BackendFlagExtern))
+      (sz: FStar.UInt64.t)
    : action p true_inv eloc_none true ___PUINT8
 
 noextract
