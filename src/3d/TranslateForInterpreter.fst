@@ -590,6 +590,24 @@ let translate_action_assignment (lhs:A.out_expr) (rhs:A.expr)
       [(T.Identifier base_var, rhs.A.range); v] in
     act, [T.Output_type_expr t_lhs false, output_types_attributes]
 
+let translate_action_field_ptr_after (write_to:A.out_expr) (sz:A.expr)
+  : ML (T.atomic_action & T.decls)
+=
+  let open A in
+  match write_to.out_expr_node.v with
+  | OE_star ({out_expr_node={v=OE_id i}}) ->
+    T.Action_field_ptr_after (translate_expr sz) i, []
+  | _ ->
+    let t_write_to = translate_out_expr write_to in
+    let fn_name = T.output_setter_name t_write_to in
+    let base_var = T.output_base_var t_write_to in
+    let v = translate_expr sz in
+    let act = T.Action_field_ptr_after_with_setter v
+      (Ast.with_dummy_range (Ast.to_ident' fn_name))
+      (T.Identifier base_var, sz.A.range)
+    in
+    act, [T.Output_type_expr t_write_to false, output_types_attributes]
+
 let rec translate_action (a:A.action) : ML (T.action & T.decls) =
   let translate_atomic_action (a:A.atomic_action)
     : ML (T.atomic_action & T.decls)
@@ -604,8 +622,8 @@ let rec translate_action (a:A.action) : ML (T.action & T.decls) =
         T.Action_field_pos_32, []
       | Action_field_ptr ->
         T.Action_field_ptr, []
-      | Action_field_ptr_after e ->
-        T.Action_field_ptr_after (translate_expr e), []
+      | Action_field_ptr_after sz write_to ->
+        translate_action_field_ptr_after write_to sz
       | Action_deref i ->
         T.Action_deref i, []
       | Action_assignment lhs rhs ->

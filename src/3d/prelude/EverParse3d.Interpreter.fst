@@ -321,9 +321,17 @@ type atomic_action
   | Action_field_ptr_after:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       (sz: FStar.UInt64.t) ->
-      atomic_action A.true_inv A.eloc_none true A.___PUINT8
+      write_to: A.bpointer A.___PUINT8 ->
+      atomic_action (A.ptr_inv write_to) (A.ptr_loc write_to) false bool
+ 
+  | Action_field_ptr_after_with_setter:
+      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
+      (sz: FStar.UInt64.t) ->
+      (#out_loc: A.eloc) ->
+      write_to: (A.___PUINT8 -> Tot (A.external_action out_loc)) ->
+      atomic_action A.true_inv out_loc false bool
 
-  | Action_deref:
+ | Action_deref:
       #a:Type0 ->
       x:A.bpointer a ->
       atomic_action (A.ptr_inv x) A.eloc_none false a
@@ -358,12 +366,14 @@ let atomic_action_as_action
       A.action_abort
     | Action_field_pos_64 ->
       A.action_field_pos_64 ()
-    | Action_field_pos_32 sq ->
+    | Action_field_pos_32 sq  ->
       A.action_field_pos_32 sq
     | Action_field_ptr sq ->
       A.action_field_ptr sq
-    | Action_field_ptr_after sq sz ->
-      A.action_field_ptr_after sq sz
+    | Action_field_ptr_after sq sz write_to ->
+      A.action_field_ptr_after sq sz write_to
+    | Action_field_ptr_after_with_setter sq sz write_to ->
+      A.action_field_ptr_after_with_setter sq sz write_to
     | Action_deref x ->
       A.action_deref x
     | Action_assignment x rhs ->

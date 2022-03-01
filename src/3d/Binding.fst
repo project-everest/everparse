@@ -928,15 +928,25 @@ let rec check_field_action (env:env) (f:field) (a:action)
         | Action_field_ptr ->
           Action_field_ptr, puint8
 
-        | Action_field_ptr_after e ->
+        | Action_field_ptr_after e write_to ->
           let e, t = check_expr env e in
-          if eq_typ env t tuint64
-          then Action_field_ptr_after e, puint8
-          else
+          if not (eq_typ env t tuint64)
+          then
             error (Printf.sprintf "Argument type mismatch, expected %s whereas %s has type %s"
               (Ast.print_typ tuint64)
               (Ast.print_expr e)
               (Ast.print_typ t)) e.range
+          else
+            let write_to = check_out_expr env write_to in
+            let { out_expr_t = et } = Some?.v write_to.out_expr_meta in
+            if not (eq_typ env et puint8)
+            then
+              error (Printf.sprintf "Pointee type mismatch, expected %s whereas %s points to %s"
+                (Ast.print_typ puint8)
+                (Ast.print_out_expr write_to)
+                (Ast.print_typ et)) write_to.out_expr_node.range
+            else
+              Action_field_ptr_after e write_to, tbool
 
         | Action_deref i ->
           let t = lookup_expr_name env i in
