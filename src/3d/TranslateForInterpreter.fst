@@ -604,6 +604,8 @@ let rec translate_action (a:A.action) : ML (T.action & T.decls) =
         T.Action_field_pos_32, []
       | Action_field_ptr ->
         T.Action_field_ptr, []
+      | Action_field_ptr_after e ->
+        T.Action_field_ptr_after (translate_expr e), []
       | Action_deref i ->
         T.Action_deref i, []
       | Action_assignment lhs rhs ->

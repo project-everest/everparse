@@ -127,7 +127,9 @@ let inst = {
   end;
 
   tlen = _tlen;
-  
+
+  extra_t = unit;
+
   has = begin fun x xlen currentPosition n ->
     n `U64.lte` (xlen `U64.sub` currentPosition)
   end;

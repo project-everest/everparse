@@ -480,6 +480,7 @@ let rec print_action (mname:string) (a:action) : ML string =
       | Action_field_pos_64 -> "(action_field_pos_64())"
       | Action_field_pos_32 -> "(action_field_pos_32 EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
       | Action_field_ptr -> "(action_field_ptr EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
+      | Action_field_ptr_after e -> Printf.sprintf "(action_field_ptr_after EverParse3d.Actions.BackendFlagValue.backend_flag_value %s)" (print_expr mname e)
       | Action_deref i ->
         Printf.sprintf "(action_deref %s)" (print_ident i)
       | Action_assignment lhs rhs ->
@@ -1114,6 +1115,7 @@ let print_c_entry (modul: string)
        return TRUE;"
        begin match input_stream_binding with
        | HashingOptions.InputStreamBuffer -> ""
+       | HashingOptions.InputStreamStatic _
        | HashingOptions.InputStreamExtern _ ->
          "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t"
        end
@@ -1121,11 +1123,25 @@ let print_c_entry (modul: string)
        params
        begin match input_stream_binding with
        | HashingOptions.InputStreamBuffer -> "base, len"
+       | HashingOptions.InputStreamStatic _
        | HashingOptions.InputStreamExtern _ -> "input"
        end
        modul
    in
+   let mk_param (name: string) (typ: string) : Tot param =
+     (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
+   in
    let print_one_validator (d:type_decl) : ML (string & string) =
+    let params = 
+      d.decl_name.td_params @
+      begin match input_stream_binding with
+      | HashingOptions.InputStreamBuffer -> []
+      | HashingOptions.InputStreamStatic _
+      | HashingOptions.InputStreamExtern _ -> [
+          mk_param "_extra" "EverParseExtraT";
+        ]
+      end
+    in
     let print_params (ps:list param) : ML string =
       let params =
         String.concat
@@ -1163,11 +1179,12 @@ let print_c_entry (modul: string)
       begin match input_stream_binding with
       | HashingOptions.InputStreamBuffer ->
         Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+      | HashingOptions.InputStreamStatic _
       | HashingOptions.InputStreamExtern _ ->
         Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
       end
        wrapper_name
-       (print_params d.decl_name.td_params)
+       (print_params params)
     in
     let validator_name =
        Printf.sprintf "%s_validate_%s"
@@ -1179,7 +1196,7 @@ let print_c_entry (modul: string)
       let body = 
         wrapped_call
           validator_name 
-          (print_arguments d.decl_name.td_params)
+          (print_arguments params)
       in
       Printf.sprintf "%s {\n\t%s\n}" signature body
     in

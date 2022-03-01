@@ -344,6 +344,7 @@ type atomic_action =
   | Action_field_pos_64
   | Action_field_pos_32
   | Action_field_ptr
+  | Action_field_ptr_after: sz:expr -> atomic_action
   | Action_deref of ident
   | Action_assignment : lhs:out_expr -> rhs:expr -> atomic_action
   | Action_call : f:ident -> args:list expr -> atomic_action

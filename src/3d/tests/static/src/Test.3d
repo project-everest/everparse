@@ -1,0 +1,10 @@
+entrypoint
+typedef struct _POINT(mutable PUINT8 *out) {
+  UINT32  x;
+  UINT32  y {:on-success
+    var tmp = field_ptr_after(18uL);
+    *out = tmp;
+    return true;
+  };
+  UINT32  z;
+} POINT;

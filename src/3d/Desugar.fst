@@ -232,6 +232,7 @@ let resolve_atomic_action (env:qenv) (ac:atomic_action) : ML atomic_action =
   | Action_field_pos_64
   | Action_field_pos_32
   | Action_field_ptr -> ac
+  | Action_field_ptr_after e -> Action_field_ptr_after (resolve_expr env e)
   | Action_deref i -> Action_deref i  //most certainly a type parameter
   | Action_assignment lhs rhs ->
     Action_assignment lhs (resolve_expr env rhs)  //lhs is an action-local variable

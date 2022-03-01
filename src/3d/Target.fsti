@@ -72,6 +72,7 @@ type atomic_action =
   | Action_field_pos_64
   | Action_field_pos_32
   | Action_field_ptr
+  | Action_field_ptr_after of expr
   | Action_deref of A.ident
   | Action_assignment : lhs:A.ident -> rhs:expr -> atomic_action
   | Action_call : f:A.ident -> args:list expr -> atomic_action

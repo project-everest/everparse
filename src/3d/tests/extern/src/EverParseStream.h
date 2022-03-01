@@ -19,4 +19,7 @@ EverParseInputStreamBase EverParseCreate();
 
 int EverParsePush(EverParseInputStreamBase x, uint8_t * buf, uint64_t len);
 
+// dummy types, they are not used
+typedef int EverParseExtraT;
+
 #endif // __EVERPARSESTREAM

@@ -928,6 +928,16 @@ let rec check_field_action (env:env) (f:field) (a:action)
         | Action_field_ptr ->
           Action_field_ptr, puint8
 
+        | Action_field_ptr_after e ->
+          let e, t = check_expr env e in
+          if eq_typ env t tuint64
+          then Action_field_ptr_after e, puint8
+          else
+            error (Printf.sprintf "Argument type mismatch, expected %s whereas %s has type %s"
+              (Ast.print_typ tuint64)
+              (Ast.print_expr e)
+              (Ast.print_typ t)) e.range
+
         | Action_deref i ->
           let t = lookup_expr_name env i in
           begin

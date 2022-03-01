@@ -2,7 +2,7 @@
 #include "EverParseStream.h"
 #include <stdlib.h>
 
-BOOLEAN EverParseHas(EverParseInputStreamBase const x, uint64_t n) {
+BOOLEAN EverParseHas(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n) {
   if (n == 0)
     return TRUE;
   struct es_cell *head = x->head;
@@ -16,7 +16,7 @@ BOOLEAN EverParseHas(EverParseInputStreamBase const x, uint64_t n) {
   return FALSE;
 }
 
-uint8_t *EverParseRead(EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst) {
+uint8_t *EverParseRead(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst) {
   /** assumes EverParseHas n */
   if (n == 0)
     return dst;
@@ -48,7 +48,7 @@ uint8_t *EverParseRead(EverParseInputStreamBase const x, uint64_t n, uint8_t * c
   return dst;
 }
 
-void EverParseSkip(EverParseInputStreamBase const x, uint64_t n) {
+void EverParseSkip(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n) {
   /** assumes EverParseHas n */
   if (n == 0)
     return;
@@ -72,7 +72,7 @@ void EverParseSkip(EverParseInputStreamBase const x, uint64_t n) {
   }
 }
 
-uint64_t EverParseEmpty(EverParseInputStreamBase const x) {
+uint64_t EverParseEmpty(EverParseExtraT const _unused, EverParseInputStreamBase const x) {
   uint64_t res = 0;
   struct es_cell *head = x->head;
   while (head != NULL) {

@@ -152,23 +152,6 @@ val validate_with_error_handler
   : validate_with_action_t p1 inv1 l1 ar
 
 inline_for_extraction noextract
-val validate_with_error_action
-      (name: string)
-      (#nz:bool)
-      (#wk: _)
-      (#k1:parser_kind nz wk)
-      (#[@@@erasable] t1:Type)
-      (#[@@@erasable] p1:parser k1 t1)
-      (#[@@@erasable] inv1:slice_inv)
-      (#[@@@erasable] l1:eloc)
-      (#allow_reading:bool)
-      (v1:validate_with_action_t p1 inv1 l1 allow_reading)
-      (#[@@@erasable] inv2:slice_inv)
-      (#[@@@erasable] l2:eloc)
-      (a:action p1 inv2 l2 false bool)
-  : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
-
-inline_for_extraction noextract
 val validate_ret
   : validate_with_action_t (parse_ret ()) true_inv eloc_none true
 
