@@ -1098,12 +1098,13 @@ let print_c_entry (modul: string)
           }" 
    in
    let input_stream_binding = Options.get_input_stream_binding () in
-   let wrapped_call name params =
+   let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
+   let wrapped_call_buffer name params =
      Printf.sprintf
        "EverParseErrorFrame frame;\n\t\
        frame.filled = FALSE;\n\t\
        %s\
-       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, %s, 0);\n\t\
+       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t\
        if (EverParseIsError(result))\n\t\
        {\n\t\t\
          if (frame.filled)\n\t\t\
@@ -1113,20 +1114,31 @@ let print_c_entry (modul: string)
          return FALSE;\n\t\
        }\n\t\
        return TRUE;"
-       begin match input_stream_binding with
-       | HashingOptions.InputStreamBuffer -> ""
-       | HashingOptions.InputStreamStatic _
-       | HashingOptions.InputStreamExtern _ ->
-         "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t"
-       end
+       (if is_input_stream_buffer then ""
+        else "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t")
        name
        params
-       begin match input_stream_binding with
-       | HashingOptions.InputStreamBuffer -> "base, len"
-       | HashingOptions.InputStreamStatic _
-       | HashingOptions.InputStreamExtern _ -> "input"
-       end
        modul
+   in
+   let wrapped_call_stream name params =
+     Printf.sprintf
+       "EverParseErrorFrame frame =\n\t\
+             { .filled = FALSE,\n\t\
+               .typename_s = \"UNKNOWN\",\n\t\
+               .fieldname =  \"UNKNOWN\",\n\t\
+               .reason =   \"UNKNOWN\"\n\t\t\
+             };\n\
+       EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t\
+       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
+       uint64_t parsedSize = EverParseGetValidatorErrorPos(result);\n\
+       if (EverParseIsError(result))\n\t\
+       {\n\t\t\
+           EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+       }\n\t\
+       EverParseRetreat(_extra, base, parsedSize);\n\
+       return parsedSize;"
+       name
+       params
    in
    let mk_param (name: string) (typ: string) : Tot param =
      (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
@@ -1134,13 +1146,7 @@ let print_c_entry (modul: string)
    let print_one_validator (d:type_decl) : ML (string & string) =
     let params = 
       d.decl_name.td_params @
-      begin match input_stream_binding with
-      | HashingOptions.InputStreamBuffer -> []
-      | HashingOptions.InputStreamStatic _
-      | HashingOptions.InputStreamExtern _ -> [
-          mk_param "_extra" "EverParseExtraT";
-        ]
-      end
+      (if is_input_stream_buffer then [] else [mk_param "_extra" "EverParseExtraT"])
     in
     let print_params (ps:list param) : ML string =
       let params =
@@ -1176,15 +1182,13 @@ let print_c_entry (modul: string)
       |> pascal_case
     in
     let signature =
-      begin match input_stream_binding with
-      | HashingOptions.InputStreamBuffer ->
-        Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
-      | HashingOptions.InputStreamStatic _
-      | HashingOptions.InputStreamExtern _ ->
-        Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
-      end
-       wrapper_name
-       (print_params params)
+      if is_input_stream_buffer 
+      then Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+             wrapper_name
+            (print_params params)
+      else Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
+             wrapper_name
+             (print_params params)
     in
     let validator_name =
        Printf.sprintf "%s_validate_%s"
@@ -1194,9 +1198,9 @@ let print_c_entry (modul: string)
     in
     let impl =
       let body = 
-        wrapped_call
-          validator_name 
-          (print_arguments params)
+        if is_input_stream_buffer
+        then wrapped_call_buffer validator_name (print_arguments params)
+        else wrapped_call_stream validator_name (print_arguments params)
       in
       Printf.sprintf "%s {\n\t%s\n}" signature body
     in
@@ -1242,8 +1246,10 @@ let print_c_entry (modul: string)
       header
   in
   let error_callback_proto =
-    Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
-      modul
+    if HashingOptions.InputStreamBuffer? input_stream_binding
+    then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
+                         modul
+    else ""
   in
   let impl =
     Printf.sprintf
