@@ -968,7 +968,7 @@ let validate_fldata_consumes_all
 
 #pop-options
 
-#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false"
+#push-options "--z3rlimit_factor 16 --z3cliopt smt.arith.nl=false"
 #restart-solver
 
 noextract
