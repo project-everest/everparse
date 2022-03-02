@@ -110,10 +110,9 @@ let get_validator_error_kind_set_validator_error_kind (error: U64.t) (code: U64.
 = assert_norm (normalize_term (pow2 error_width) == pow2 error_width);
   get_validator_error_field_set_validator_error_field error 0 error_width code
 
-// This is a top-level lemma necessary for the correctness of the
-// 3d-generated wrappers
 let get_validator_error_pos_eq_pos (x: pos_t) : Lemma
   (get_validator_error_pos x == x)
+  [SMTPat (get_validator_error_pos x)]
 = BF.get_bitfield_size pos_width 64 (U64.v x) 0 pos_width;
   BF.get_bitfield_full #pos_width (U64.v x);
   BF.lt_pow2_get_bitfield_hi #64 (U64.v x) (64 - error_width);

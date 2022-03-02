@@ -179,17 +179,17 @@ let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv
     modifies (app_loc ctxt l `loc_union` I.perm_footprint sl) h h' /\
     inv (I.footprint sl) h' /\
     B.live h' ctxt /\
+    (((~ allow_reading) \/ LPE.is_error res) ==> U64.v (LPE.get_validator_error_pos res) == Seq.length (I.get_read sl h')) /\
     begin let s = I.get_remaining sl h in
     if LPE.is_success res
     then
       begin if allow_reading
       then U64.v res >= U64.v pos /\ valid_length p h sl (U64.v res - U64.v pos) /\ I.get_remaining sl h' == s
-      else valid_consumed p h h' sl /\ U64.v res == Seq.length (I.get_read sl h')
+      else valid_consumed p h h' sl
       end
     else
       let s' = I.get_remaining sl h' in
       (LPE.get_validator_error_kind res <> LPE.get_validator_error_kind LPE.validator_error_action_failed ==> None? (LP.parse p s)) /\
-      U64.v (LPE.get_validator_error_pos res) == Seq.length (I.get_read sl h') /\
       Seq.length s' <= Seq.length s /\
       s' `Seq.equal` Seq.slice s (Seq.length s - Seq.length s') (Seq.length s)
     end
