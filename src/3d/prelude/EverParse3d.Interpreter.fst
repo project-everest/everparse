@@ -1158,8 +1158,8 @@ let rec as_validator
 
 [@@noextract_to "Kremlin"; specialize]
 inline_for_extraction noextract 
-let validator_of #nz #wk (#k:P.parser_kind nz wk) #i #l #b (t:typ k i l b) = 
-  A.validate_with_action_t (as_parser t) i l b
+let validator_of #allow_reading #nz #wk (#k:P.parser_kind nz wk) #i #l (t:typ k i l allow_reading) = 
+  A.validate_with_action_t (as_parser t) i l allow_reading
 
 [@@noextract_to "Kremlin"; specialize]  
 inline_for_extraction noextract   
