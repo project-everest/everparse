@@ -189,6 +189,7 @@ let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv
     else
       let s' = I.get_remaining sl h' in
       (LPE.get_validator_error_kind res <> LPE.get_validator_error_kind LPE.validator_error_action_failed ==> None? (LP.parse p s)) /\
+      U64.v (LPE.get_validator_error_pos res) == Seq.length (I.get_read sl h') /\
       Seq.length s' <= Seq.length s /\
       s' `Seq.equal` Seq.slice s (Seq.length s - Seq.length s') (Seq.length s)
     end
@@ -252,8 +253,10 @@ let validate_with_success_action' (name: string) #nz #wk (#k1:parser_kind nz wk)
     then
          [@(rename_let ("action_success_" ^ name))]
          let b = a ctxt input pos0 pos1 in
+         let h2 = HST.get () in
+         modifies_address_liveness_insensitive_unused_in h1 h2;
          if not b
-         then LPE.validator_error_action_failed
+         then LPE.set_validator_error_pos LPE.validator_error_action_failed pos1
          else pos1
     else
          pos1
@@ -266,9 +269,7 @@ let validate_drop_true
 = fun ctxt err input input_length start_position ->
   [@inline_let] let pos = start_position in
   let res = v ctxt err input input_length pos in
-  let h1 = HST.get () in
   I.skip_if_success input pos res;
-  let h2 = HST.get () in
   res
 
 inline_for_extraction
@@ -416,7 +417,7 @@ let validate_dep_pair_with_refinement_and_action'
         else begin
              modifies_address_liveness_insensitive_unused_in h1 h2;
              if not (a field_value ctxt input startPosition res1)
-             then LPE.set_validator_error_pos LPE.validator_error_action_failed startPosition //action failed
+             then LPE.set_validator_error_pos LPE.validator_error_action_failed res1 //action failed
              else begin
                let h15 = HST.get () in
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
@@ -523,14 +524,12 @@ let validate_dep_pair_with_action
         let h2 = HST.get() in
         modifies_address_liveness_insensitive_unused_in h1 h2;
         let action_result = a field_value ctxt input startPosition res in
+        let h3 = HST.get () in
+        modifies_address_liveness_insensitive_unused_in h2 h3;
         if not action_result
-        then LPE.set_validator_error_pos LPE.validator_error_action_failed (LPE.get_validator_error_pos res) //action failed
-        else begin
-               let open LPL in
-               let h15 = HST.get () in
-               let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
+        then LPE.set_validator_error_pos LPE.validator_error_action_failed res //action failed
+        else
                validate_drop (v2 field_value) ctxt err input input_length res
-             end
       end
 
 inline_for_extraction noextract
@@ -700,8 +699,8 @@ let validate_filter_with_action
              let _ = modifies_address_liveness_insensitive_unused_in h h15 in
              if a field_value ctxt input pos0 res
              then res
-             else LPE.set_validator_error_pos LPE.validator_error_action_failed (LPE.get_validator_error_pos res)
-      else LPE.set_validator_error_pos LPE.validator_error_constraint_failed (LPE.get_validator_error_pos res)
+             else LPE.set_validator_error_pos LPE.validator_error_action_failed res
+      else LPE.set_validator_error_pos LPE.validator_error_constraint_failed res
     end
 
 inline_for_extraction noextract
@@ -726,7 +725,7 @@ let validate_with_dep_action
       let _ = modifies_address_liveness_insensitive_unused_in h h15 in
       if a field_value ctxt input pos0 res
       then res
-      else LPE.set_validator_error_pos LPE.validator_error_action_failed (LPE.get_validator_error_pos res)
+      else LPE.set_validator_error_pos LPE.validator_error_action_failed res
     end
 
 inline_for_extraction noextract
@@ -811,6 +810,7 @@ let validate_list_inv
   then
     // validation *or action* failed
     stop == true /\
+    U64.v (LPE.get_validator_error_pos res) == Seq.length (I.get_read sl h) /\
     (LPE.get_validator_error_kind res <> LPE.get_validator_error_kind LPE.validator_error_action_failed ==> ~ (valid (LPLL.parse_list p) h0 sl))
   else
     U64.v res == Seq.length (I.get_read sl h) /\
@@ -896,6 +896,7 @@ let validate_list'
       then I.get_remaining sl h' `Seq.equal` Seq.slice s len (Seq.length s) /\ U64.v res == Seq.length (I.get_read sl h')
       else LPE.get_validator_error_kind res == LPE.get_validator_error_kind LPE.validator_error_action_failed
     end /\
+    (LPE.is_success res == false ==> U64.v (LPE.get_validator_error_pos res) == Seq.length (I.get_read sl h')) /\
     modifies (app_loc ctxt l `B.loc_union` I.perm_footprint sl) h h'
   ))
 = let h0 = HST.get () in
@@ -1222,7 +1223,7 @@ let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parse
 
 #pop-options
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 128 --z3cliopt smt.arith.nl=false"
 #restart-solver
 
 noextract inline_for_extraction
@@ -1471,6 +1472,7 @@ let validate_list_up_to_inv
     then
       // validation *or action* failed
       stop == true /\
+      U64.v (LPE.get_validator_error_pos res) == Seq.length (I.get_read sl h) /\
       (LPE.get_validator_error_kind res <> LPE.get_validator_error_kind LPE.validator_error_action_failed ==> None? (LP.parse q s))
     else
     U64.v res == Seq.length (I.get_read sl h) /\

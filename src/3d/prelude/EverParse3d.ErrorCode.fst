@@ -110,6 +110,19 @@ let get_validator_error_kind_set_validator_error_kind (error: U64.t) (code: U64.
 = assert_norm (normalize_term (pow2 error_width) == pow2 error_width);
   get_validator_error_field_set_validator_error_field error 0 error_width code
 
+// This is a top-level lemma necessary for the correctness of the
+// 3d-generated wrappers
+let get_validator_error_pos_eq_pos (x: pos_t) : Lemma
+  (get_validator_error_pos x == x)
+= BF.get_bitfield_size pos_width 64 (U64.v x) 0 pos_width;
+  BF.get_bitfield_full #pos_width (U64.v x);
+  BF.lt_pow2_get_bitfield_hi #64 (U64.v x) (64 - error_width);
+  assert (BF.get_bitfield #64 (U64.v x) pos_width 64 == 0);
+  BF.get_bitfield_set_bitfield_other #64 (U64.v x) pos_width 64 0 0 pos_width;
+  BF.get_bitfield_set_bitfield_same #64 (U64.v x) pos_width 64 0;
+  BF.get_bitfield_partition_2 #64 (64 - error_width) (U64.v x)
+    (U64.v (BF.uint64.BF.set_bitfield x pos_width 64 0uL))
+
 [@ CMacro ]
 let validator_error_generic : validator_error = normalize_term (set_validator_error_kind 0uL 1uL)
 
