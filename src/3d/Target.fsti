@@ -72,7 +72,8 @@ type atomic_action =
   | Action_field_pos_64
   | Action_field_pos_32
   | Action_field_ptr
-  | Action_field_ptr_after of expr
+  | Action_field_ptr_after: sz: expr -> write_to:A.ident -> atomic_action
+  | Action_field_ptr_after_with_setter: sz: expr -> write_to_field:A.ident -> write_to_object:expr -> atomic_action
   | Action_deref of A.ident
   | Action_assignment : lhs:A.ident -> rhs:expr -> atomic_action
   | Action_call : f:A.ident -> args:list expr -> atomic_action

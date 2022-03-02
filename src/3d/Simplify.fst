@@ -89,6 +89,8 @@ let simplify_atomic_action (env:T.env_t) (a:atomic_action)
     | Action_return e -> Action_return (simplify_expr env e)
     | Action_assignment lhs rhs ->
       Action_assignment (simplify_out_expr env lhs) (simplify_expr env rhs)
+    | Action_field_ptr_after sz write_to ->
+      Action_field_ptr_after (simplify_expr env sz) (simplify_out_expr env write_to)
     | Action_call f args -> Action_call f (List.map (simplify_expr env) args)
     | _ -> a //action mutable identifiers are not subject to substitution
 let rec simplify_action (env:T.env_t) (a:action) : ML action =

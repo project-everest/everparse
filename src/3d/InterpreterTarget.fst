@@ -315,7 +315,8 @@ let rec inv_eloc_of_action (a:T.action)
         | Action_abort
         | Action_field_pos_32
         | Action_field_pos_64 -> inv_eloc_nil
-        | Action_field_ptr_after _
+        | Action_field_ptr_after _ write_to -> Inv_ptr write_to, Eloc_ptr write_to, On_success false
+        | Action_field_ptr_after_with_setter _ _ _ -> Inv_true, Eloc_output, On_success false
         | Action_field_ptr -> Inv_true, Eloc_none, On_success true
         | Action_deref x -> Inv_ptr x, Eloc_none, On_success false
         | Action_assignment x _ -> Inv_ptr x, Eloc_ptr x, On_success false
@@ -584,10 +585,18 @@ let rec print_action (mname:string) (a:T.action)
         | T.Action_field_ptr ->
           "(Action_field_ptr EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
 
-        | T.Action_field_ptr_after e ->
+        | T.Action_field_ptr_after sz write_to ->
           Printf.sprintf
-            "(Action_field_ptr_after EverParse3d.Actions.BackendFlagValue.backend_flag_value %s)"
-            (T.print_expr mname e)
+            "(Action_field_ptr_after EverParse3d.Actions.BackendFlagValue.backend_flag_value %s %s)"
+            (T.print_expr mname sz)
+            (T.print_ident write_to)
+
+        | T.Action_field_ptr_after_with_setter sz write_to_field write_to_obj ->
+          Printf.sprintf
+            "(Action_field_ptr_after_with_setter EverParse3d.Actions.BackendFlagValue.backend_flag_value %s (%s %s))"
+            (T.print_expr mname sz)
+            (T.print_ident write_to_field)
+            (T.print_expr mname write_to_obj)
 
         | T.Action_deref i ->
           Printf.sprintf "(Action_deref %s)"

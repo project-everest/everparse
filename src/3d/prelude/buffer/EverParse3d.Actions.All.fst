@@ -20,6 +20,8 @@ let action_field_ptr_after
       #nz #wk (#k:P.parser_kind nz wk) (#t:Type) (#p:P.parser k t) n
    = false_elim ()
 
+let action_field_ptr_after_with_setter _ = false_elim ()
+
 let action_field_pos_32
       #nz #wk (#k:P.parser_kind nz wk) (#t:Type) (#p:P.parser k t) (u:unit)
    = fun ctxt input startPosition _ ->

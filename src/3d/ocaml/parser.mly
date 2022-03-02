@@ -330,7 +330,7 @@ atomic_action:
   | FIELD_POS_64 SEMICOLON     { Action_field_pos_64 }
   | FIELD_POS_32 SEMICOLON     { Action_field_pos_32 }
   | FIELD_PTR SEMICOLON     { Action_field_ptr }
-  | FIELD_PTR_AFTER LPAREN e=expr RPAREN SEMICOLON { Action_field_ptr_after(e) }
+  | oe=out_expr EQ FIELD_PTR_AFTER LPAREN e=expr RPAREN SEMICOLON { Action_field_ptr_after(e, oe) }
   | STAR i=IDENT SEMICOLON  { Action_deref i }
   | oe=out_expr EQ e=expr SEMICOLON { Action_assignment(oe, e) }
   | f=IDENT LPAREN args=arguments RPAREN SEMICOLON { Action_call(f, args) }
