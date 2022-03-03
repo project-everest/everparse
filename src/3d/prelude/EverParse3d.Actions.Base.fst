@@ -998,6 +998,7 @@ let validate_fldata
     assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n));
     let res = validate_drop v ctxt err truncatedInput truncatedInputLength pos in
     let h3 = HST.get () in
+    modifies_address_liveness_insensitive_unused_in h h3;
     I.is_prefix_of_prop truncatedInput input h3;
     if LPE.is_error res
     then res
