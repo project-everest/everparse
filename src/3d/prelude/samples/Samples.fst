@@ -1,10 +1,10 @@
 module Samples
-open Prelude
+open EverParse3d.Prelude
 open EverParse3d.Actions
 open EverParse3d.Interpreter
 module T = FStar.Tactics
 module A = EverParse3d.Actions.All
-module P = Prelude
+module P = EverParse3d.Prelude
 #push-options "--query_stats"
 [@@specialize]
 let u8_dtyp = DT_IType UInt8
@@ -89,9 +89,9 @@ let p_t
   : arrow param_types Type
   = coerce (_ by (T.trefl())) (fun i -> as_type (u8_pair_param i))
 
-let p_k = Prelude.and_then_kind
-              (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
-              (Prelude.filter_kind (parser_kind_of_itype (UInt8)))
+let p_k = P.and_then_kind
+              (P.filter_kind (parser_kind_of_itype (UInt8)))
+              (P.filter_kind (parser_kind_of_itype (UInt8)))
 
 let p_p
  : dep_arrow param_types (fun args -> P.parser p_k (apply_arrow p_t args))

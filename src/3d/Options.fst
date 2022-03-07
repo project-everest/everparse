@@ -28,7 +28,6 @@ let cleanup : ref bool = alloc false
 let debug : ref bool = alloc false
 let inplace_hashes : ref (list vstring) = alloc []
 let input_file : ref (list string) = alloc []
-let interpret : ref bool = alloc false
 let json : ref bool = alloc false
 let no_copy_everparse_h : ref bool = alloc false
 let output_dir : ref (option vstring) = alloc None
@@ -306,7 +305,6 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
     CmdOption "debug" (OptBool debug) "Emit a lot of debugging output" [];
     CmdFStarOption ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message");
-    CmdOption "interpret" (OptBool interpret) "Translate to the F* 3D interpreter" [];
     CmdOption "json" (OptBool json) "Dump the AST in JSON format" [];
     CmdOption "makefile" (OptStringOption "gmake|nmake" valid_makefile makefile) "Do not produce anything, other than a Makefile to produce everything" [];
     CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile" [];
@@ -332,7 +330,7 @@ let compute_options = compute_options_2
 
 let parse_cmd_line () : ML (list string) =
   let open FStar.Getopt in
-  let res = FStar.Getopt.parse_cmdline fstar_options (fun file -> input_file := file :: !input_file) in
+  let res = FStar.Getopt.parse_cmdline fstar_options (fun file -> input_file := file :: !input_file; Success) in
   match res with
   | Success -> !input_file
   | Help -> display_usage(); exit 0
@@ -444,5 +442,3 @@ let get_input_stream_binding _ =
       | Some s -> s
       end
 let get_emit_output_types_defs () = !emit_output_types_defs
-
-let get_interpret () = !interpret

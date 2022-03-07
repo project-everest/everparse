@@ -31,19 +31,19 @@ EverParse.h: EverParse.rsp
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle 'Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.InputStream.Extern.Base+EverParse3d.InputStream.Extern.Type=LowParse.\*,Prelude,Prelude.\*,WeakenTac,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'EverParse3d.Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.InputStream.Extern.Base+EverParse3d.InputStream.Extern.Type=LowParse.\*,EverParse3d.\*[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
 	  -header ../../noheader.txt \
 	  -minimal \
 	  -add-include 'EverParse:"EverParseEndianness.h"' \
-	  -static-header 'Prelude.StaticHeader,LowParse.Low.Base,EverParse3d.ErrorCode,EverParse3d.InputStream.Extern.Type' \
+	  -static-header 'EverParse3d.Prelude.StaticHeader,LowParse.Low.Base,EverParse3d.ErrorCode,EverParse3d.InputStream.Extern.Type' \
 	  -no-prefix LowParse.Slice \
 	  -no-prefix LowParse.Low.BoundedInt \
 	  -fextern-c \
 	  @$^
-	! test -e EverParse.c
-	! test -e SHOULDNOTBETHERE.h
+	test '!' -e EverParse.c
+	test '!' -e SHOULDNOTBETHERE.h
 
 %.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))

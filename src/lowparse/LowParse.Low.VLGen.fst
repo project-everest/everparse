@@ -996,3 +996,101 @@ let valid_vlgen_intro_strong_prefix
     valid_pos_valid_exact p h input pos1 (pos1 `U32.add` len);
     valid_vlgen_intro min max pk s h input pos
 
+let valid_vlgen_weak'
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 (vmin) (vmax)))
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    U32.v pos1 + U32.v len < 4294967296 /\
+    valid (parse_fldata p (U32.v len)) h input pos1
+  )))
+  (ensures (
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    valid (parse_fldata p (U32.v len)) h input pos1 /\ (
+    let x = contents (parse_fldata p (U32.v len)) h input pos1 in
+    valid_content_pos (parse_vlgen_weak vmin vmax pk p) h input pos x (pos1 `U32.add` len)
+  ))))
+= valid_facts (parse_vlgen_weak (vmin) (vmax) pk p) h input pos;
+  parse_vlgen_weak_unfold (vmin) (vmax) pk p (bytes_of_slice_from h input pos);
+  valid_facts pk h input pos;
+  let pos1 = get_valid_pos pk h input pos in
+  let len = contents pk h input pos in
+  valid_facts (parse_fldata p (U32.v len)) h input pos1
+
+let valid_vlgen_weak_elim'
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 (vmin) (vmax)))
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  #rrel #rel
+  (input: slice rrel rel)
+  (pos: U32.t)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    valid (parse_vlgen_weak vmin vmax pk p) h input pos
+  ))
+  (ensures (
+    valid (parse_vlgen_weak vmin vmax pk p) h input pos /\
+    valid pk h input pos /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    U32.v pos1 + U32.v len < 4294967296 /\
+    valid (parse_fldata p (U32.v len)) h input pos1 /\ (
+    let pos1 = get_valid_pos pk h input pos in
+    let len = contents pk h input pos in
+    let x = contents (parse_fldata p (U32.v len)) h input pos1 in
+    valid_content_pos (parse_vlgen_weak vmin vmax pk p) h input pos x (pos1 `U32.add` len)
+  ))))
+= valid_facts (parse_vlgen_weak (vmin) (vmax) pk p) h input pos;
+  parse_vlgen_weak_unfold (vmin) (vmax) pk p (bytes_of_slice_from h input pos);
+  valid_facts pk h input pos;
+  let pos1 = get_valid_pos pk h input pos in
+  let len = contents pk h input pos in
+  valid_facts (parse_fldata p (U32.v len)) h input pos1
+
+inline_for_extraction
+let validate_vlgen_weak
+  (vmin: der_length_t)
+  (min: U32.t { U32.v min == vmin } )
+  (vmax: der_length_t)
+  (max: U32.t { U32.v max == vmax /\ U32.v min <= U32.v max } )
+  (#sk: parser_kind)
+  (#pk: parser sk (bounded_int32 (vmin) (vmax)))
+  (vk: validator pk)
+  (rk: leaf_reader pk)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v: validator p)
+: Tot (validator (parse_vlgen_weak (vmin) (vmax) pk p))
+= fun #rrel #rel input pos ->
+  let h = HST.get () in
+  [@inline_let] let _ =
+    Classical.move_requires (valid_vlgen_weak' vmin vmax pk p input (uint64_to_uint32 pos)) h;
+    Classical.move_requires (valid_vlgen_weak_elim' vmin vmax pk p input (uint64_to_uint32 pos)) h
+  in
+  let n = vk input pos in
+  if is_error n
+  then n
+  else begin
+    let len = rk input (uint64_to_uint32 pos) in
+    validate_fldata v (U32.v len) len input n
+  end

@@ -1,4 +1,4 @@
-module Prelude.StaticHeader
+module EverParse3d.Prelude.StaticHeader
 
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32

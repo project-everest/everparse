@@ -7,11 +7,11 @@
 extern "C" {
 #endif
 
+
+
+
+
 #include "EverParse.h"
-
-
-
-
 uint64_t
 BfValidateDummy(
   uint8_t *Ctxt,
@@ -28,8 +28,6 @@ BfValidateDummy(
   uint64_t InputLength,
   uint64_t StartPosition
 );
-
-void BfReadDummy(uint8_t *Input, uint64_t Pos);
 
 #if defined(__cplusplus)
 }
