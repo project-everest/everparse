@@ -276,13 +276,45 @@ let asn1_decorated_pure_t (item : asn1_gen_item_k) : Type =
                      | ASN1_OPTION_ILC k -> asn1_t k
                      | ASN1_DEFAULT_TERMINAL _ #k _ -> asn1_terminal_t k 
 
+type asn1_strong_parser_kind : parser_kind = {
+  parser_kind_metadata = None;
+  parser_kind_low = 0;
+  parser_kind_high = None;
+  parser_kind_subkind = Some ParserStrong;
+}
+
+type asn1_weak_parser_kind : parser_kind = {
+  parser_kind_metadata = None;
+  parser_kind_low = 0;
+  parser_kind_high = None;
+  parser_kind_subkind = None;
+}
+
+type asn1_strong_parser (t : Type) = parser asn1_strong_parser_kind t 
+
+type asn1_weak_parser (t : Type) = parser asn1_weak_parser_kind t
+
+noeq
+type gen_parser = 
+| Mkgenparser : (t : Type) -> (p : asn1_strong_parser t) -> gen_parser
+
+noeq
+type gen_decorated_parser_twin =
+| Mkgendcparser : (d : asn1_gen_item_k) -> (p : asn1_strong_parser (asn1_decorated_pure_t d)) 
+-> fp : (asn1_id_t -> asn1_strong_parser (asn1_decorated_pure_t d)) {and_then_cases_injective fp} ->
+gen_decorated_parser_twin
+
+(*
+
 noeq
 type gen_parser =
 | Mkgenparser : (k : parser_kind) -> (t : Type) -> (p : parser k t) -> gen_parser
 
 noeq
 type gen_decorated_parser_twin =
-| Mkgendcparser : (d : asn1_gen_item_k) -> (k : parser_kind) -> (p : parser k (asn1_decorated_pure_t d)) -> fp : (asn1_id_t -> parser k (asn1_decorated_pure_t d)) {and_then_cases_injective fp} -> gen_decorated_parser_twin
+| Mkgendcparser : (d : asn1_gen_item_k) -> (k : parser_kind) -> (p : parser k (asn1_decorated_pure_t d)) -> (k' : parser_kind) -> fp : (asn1_id_t -> parser k' (asn1_decorated_pure_t d)) {and_then_cases_injective fp} -> gen_decorated_parser_twin
+
+*)
 
 (*
 noeq

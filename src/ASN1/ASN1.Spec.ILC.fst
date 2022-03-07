@@ -12,6 +12,62 @@ include LowParse.Spec.VLGen
 module U32 = FStar.UInt32
 module Seq = FStar.Seq
 
+(* Haobin :
+   parse_vlgen_precond 0 4294967295 asn1_weak_parser_kind is currently false
+   because we don't have an universal upperbound on length for the content kinds
+   We don't want the whole thing to depend on the serializers either
+   The whole thing should be doable similar to that of VLData
+   which does not use DER length
+*)
+
+let get_serializer (#k : parser_kind) (#t : Type) (p : parser k t) : serializer p = admit ()
+
+let parse_asn1_LC 
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+: asn1_strong_parser (asn1_content_t ack)
+= let s = get_serializer p in
+  let _ = assume (parse_vlgen_precond 0 4294967295 asn1_weak_parser_kind) in
+  parse_bounded_vlgen 0 4294967295 parse_asn1_length_u32_t s
+  `parse_synth`
+  (synth_vlgen 0 4294967295 s)
+
+let parse_asn1_ILC
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+: asn1_strong_parser (asn1_content_t ack)
+= let p' = 
+    parse_asn1_identifier_u21
+    `parse_filter`
+    (fun id' -> id' = id)
+    `nondep_then`
+    parse_asn1_LC p
+    `parse_synth`
+    (snd) in
+  weaken asn1_strong_parser_kind p'
+
+let parse_asn1_ILC_twin
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+  (id' : asn1_id_t)
+: asn1_strong_parser (asn1_content_t ack)
+= if (id = id') then
+     parse_asn1_LC p
+  else
+     fail_parser _ _
+
+let parser_asn1_ILC_twin_case_injective
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+: Lemma
+  (and_then_cases_injective (parse_asn1_ILC_twin id p))
+= and_then_cases_injective_intro (parse_asn1_ILC_twin id p) (fun id1 id2 _ _ -> assert (id1 = id) ; assert (id2 = id))
+
+(*
+
 let parse_asn1_LC_kind (k: parser_kind) = parse_bounded_vlgen_kind (parse_asn1_length_u32_t_kind) 0 4294967295 k
 
 let parse_asn1_LC 
@@ -40,3 +96,27 @@ let parse_asn1_ILC
   parse_asn1_LC s
   `parse_synth`
   (snd)
+
+let parse_asn1_ILC_twin
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (#k : parser_kind)
+  (#p : parser k (asn1_content_t ack))
+  (s : serializer p { parse_vlgen_precond 0 4294967295 k })
+  (id' : asn1_id_t)
+: parser (parse_asn1_LC_kind k) (asn1_content_t ack)
+= if (id = id') then
+     parse_asn1_LC s
+  else
+     fail_parser _ _
+
+let parser_asn1_ILC_twin_case_injective
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (#k : parser_kind)
+  (#p : parser k (asn1_content_t ack))
+  (s : serializer p { parse_vlgen_precond 0 4294967295 k })
+: Lemma
+  (and_then_cases_injective (parse_asn1_ILC_twin id s))
+= and_then_cases_injective_intro (parse_asn1_ILC_twin id s) (fun id1 id2 _ _ -> assert (id1 = id) ; assert (id2 = id))
+*)
