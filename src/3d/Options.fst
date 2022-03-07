@@ -26,10 +26,10 @@ let clang_format : ref bool = alloc false
 let clang_format_executable : ref (option vstring) = alloc None
 let cleanup : ref bool = alloc false
 let debug : ref bool = alloc false
-let error_log : ref (option vstring) = alloc None
-let error_log_function : ref (option vstring) = alloc None
 let inplace_hashes : ref (list vstring) = alloc []
 let input_file : ref (list string) = alloc []
+let interpret : ref bool = alloc false
+let json : ref bool = alloc false
 let no_copy_everparse_h : ref bool = alloc false
 let output_dir : ref (option vstring) = alloc None
 let save_hashes : ref bool = alloc false
@@ -73,6 +73,18 @@ let valid_check_hashes : string -> Tot bool = function
 | _ -> false
 
 let check_hashes : ref (option (valid_string valid_check_hashes)) = alloc None
+
+let valid_input_stream_binding : string -> Tot bool = function
+| "buffer"
+| "extern"
+  -> true
+| _ -> false
+
+let input_stream_binding : ref (option (valid_string valid_input_stream_binding)) = alloc None
+
+let input_stream_include : ref (option vstring) = alloc None
+
+let emit_output_types_defs : ref bool = alloc true
 
 noeq
 type cmd_option_kind =
@@ -288,11 +300,14 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "clang_format" (OptBool clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and kremlin-args.rsp (--batch only)" [];
+    CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
+    CmdOption "input_stream" (OptStringOption "buffer|extern" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
+    CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
     CmdOption "debug" (OptBool debug) "Emit a lot of debugging output" [];
-    CmdOption "error_log" (OptStringOption "error log" always_valid error_log) "Set the stream to which to log errors (default 'stderr')" [];
-    CmdOption "error_log_function" (OptStringOption "error logging function" always_valid error_log_function) "Use a function to log errors (default 'fprintf')" [];
     CmdFStarOption ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message");
+    CmdOption "interpret" (OptBool interpret) "Translate to the F* 3D interpreter" [];
+    CmdOption "json" (OptBool json) "Dump the AST in JSON format" [];
     CmdOption "makefile" (OptStringOption "gmake|nmake" valid_makefile makefile) "Do not produce anything, other than a Makefile to produce everything" [];
     CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile" [];
     CmdOption "odir" (OptStringOption "output directory" always_valid output_dir) "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory" [];
@@ -340,16 +355,6 @@ let get_module_name (file: string) =
 let get_output_dir () =
   match !output_dir with
   | None -> "."
-  | Some s -> s
-
-let get_error_log () =
-  match !error_log with
-  | None -> "stderr"
-  | Some s -> s
-
-let get_error_log_function () =
-  match !error_log_function with
-  | None -> "fprintf"
   | Some s -> s
 
 let debug_print_string (s:string): ML unit =
@@ -424,3 +429,20 @@ let get_makefile_name _ =
 
 let get_skip_o_rules _ =
   !skip_o_rules
+
+let get_json () =
+  !json
+
+let get_input_stream_binding _ =
+  match !input_stream_binding with
+  | None
+  | Some "buffer" -> InputStreamBuffer
+  | Some "extern" ->
+    InputStreamExtern
+      begin match !input_stream_include with
+      | None -> ""
+      | Some s -> s
+      end
+let get_emit_output_types_defs () = !emit_output_types_defs
+
+let get_interpret () = !interpret

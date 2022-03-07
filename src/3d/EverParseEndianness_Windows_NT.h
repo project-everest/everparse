@@ -34,7 +34,8 @@ nswamy, protz, taramana 5-Feb-2020
 
 #  include <windef.h>
 
-typedef char * const EverParseString;
+typedef const char * EverParseString;
+typedef EverParseString PrimsString;
 
 #  define htobe16(x) _byteswap_ushort(x)
 #  define htole16(x) (x)

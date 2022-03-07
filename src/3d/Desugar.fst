@@ -14,6 +14,7 @@
    limitations under the License.
 *)
 module Desugar
+open FStar.List.Tot
 open FStar.Mul
 open Ast
 open FStar.All
@@ -25,6 +26,11 @@ module H = Hashtable
    * Desugar enums with newly defined idents and explicit constant
      assignments to enums where all the tags are previously defined
      constants.
+
+   * Resolve module-qualified names, including the use of module 
+     abbreviations
+
+   * Set the kind (Spec/Output/Extern) in the type nodes
 *)
 
 let check_desugared_enum_cases (cases:list enum_case) : ML (list ident) =
@@ -126,15 +132,29 @@ let desugar_one_enum (d:decl) : ML (list decl) =
 //   | _ -> d
 
 
+(*
+ * output_types and extern_types tables to set the kind in the Typ_app nodes
+ *)
+
 noeq
 type qenv = {
   mname : string;
   module_abbrevs : H.t string string;
+  output_types : H.t ident' unit;
+  extern_types : H.t ident' unit;
   local_names : list string
 }
 
 let push_module_abbrev (env:qenv) (i m:string) : ML unit =
   H.insert env.module_abbrevs i m
+
+let push_output_type (env:qenv) (out_t:out_typ) : ML unit =
+  H.insert env.output_types out_t.out_typ_names.typedef_name.v ();
+  H.insert env.output_types out_t.out_typ_names.typedef_abbrev.v ()
+
+let push_extern_type (env:qenv) (td:typedef_names) : ML unit =
+  H.insert env.extern_types td.typedef_name.v ();
+  H.insert env.extern_types td.typedef_abbrev.v ()
 
 let push_name (env:qenv) (name:string) : qenv =
   { env with local_names = name::env.local_names }
@@ -144,7 +164,8 @@ let prim_consts = [
   "UINT16BE"; "UINT32BE"; "UINT64BE";
   "field_id"; "PUINT8";
   "all_bytes"; "all_zeros";
-  "is_range_okay" ]
+  "is_range_okay";
+  "void" ]
 
 let resolve_ident (env:qenv) (i:ident) : ML ident =
   if List.mem i.v.name prim_consts  //it's a primitive constant, e.g. UINT8, leave as is
@@ -174,10 +195,23 @@ let rec resolve_expr' (env:qenv) (e:expr') : ML expr' =
 
 and resolve_expr (env:qenv) (e:expr) : ML expr = { e with v = resolve_expr' env e.v }
 
+let resolve_typ_param (env:qenv) (p:typ_param) : ML typ_param =
+  match p with
+  | Inl e -> resolve_expr env e |> Inl
+  | _ -> p  //Currently not going inside output expressions, should we?
+
 let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
   match t with
-  | Type_app hd args ->
-    Type_app (resolve_ident env hd) (List.map (resolve_expr env) args)
+  | Type_app hd _ args ->
+    let hd = resolve_ident env hd in
+    //Set is_out argument to the Type_app appropriately
+    let k =
+      let is_out = Some? (H.try_find env.output_types hd.v) in
+      if is_out then KindOutput
+      else let is_extern = Some? (H.try_find env.extern_types hd.v) in
+           if is_extern then KindExtern
+           else KindSpec in
+    Type_app hd k (List.map (resolve_typ_param env) args)
   | Pointer t -> Pointer (resolve_typ env t)
 
 and resolve_typ (env:qenv) (t:typ) : ML typ = { t with v = resolve_typ' env t.v }
@@ -186,7 +220,8 @@ let resolve_atomic_action (env:qenv) (ac:atomic_action) : ML atomic_action =
   match ac with
   | Action_return e -> Action_return (resolve_expr env e)
   | Action_abort
-  | Action_field_pos
+  | Action_field_pos_64
+  | Action_field_pos_32
   | Action_field_ptr -> ac
   | Action_deref i -> Action_deref i  //most certainly a type parameter
   | Action_assignment lhs rhs ->
@@ -203,6 +238,8 @@ let rec resolve_action' (env:qenv) (act:action') : ML action' =
     Action_ite (resolve_expr env hd) (resolve_action env then_) (map_opt (resolve_action env) else_)
   | Action_let i a k ->
     Action_let i (resolve_atomic_action env a) (resolve_action (push_name env i.v.name) k)
+  | Action_act a ->
+    Action_act (resolve_action env a)
 
 and resolve_action (env:qenv) (act:action) : ML action =
   { act with v = resolve_action' env act.v }
@@ -273,6 +310,19 @@ let resolve_enum_case (env:qenv) (ec:enum_case) : ML enum_case =
   | i, None -> resolve_ident env i, None
   | _ -> error "Unexpected enum_case in resolve_enum_case" (fst ec).range
 
+let rec resolve_out_field (env:qenv) (fld:out_field) : ML out_field =
+  match fld with
+  | Out_field_named i t -> Out_field_named i (resolve_typ env t)
+  | Out_field_anon l u -> Out_field_anon (resolve_out_fields env l) u
+
+and resolve_out_fields (env:qenv) (flds:list out_field) : ML (list out_field) =
+  List.map (resolve_out_field env) flds
+
+let resolve_out_type (env:qenv) (out_t:out_typ) : ML out_typ =
+  { out_t with
+    out_typ_names = resolve_typedef_names env out_t.out_typ_names;
+    out_typ_fields = List.map (resolve_out_field env) out_t.out_typ_fields }
+
 let resolve_decl' (env:qenv) (d:decl') : ML decl' =
   match d with
   | ModuleAbbrev i m -> push_module_abbrev env i.v.name m.v.name; d
@@ -293,13 +343,32 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let params, env = resolve_params env params in
     let sc = resolve_switch_case env sc in
     CaseType td_names params sc
+  | OutputType out_t ->
+    let out_t = resolve_out_type env out_t in
+    push_output_type env out_t;
+    OutputType out_t
+  | ExternType td_names ->
+    let td_names = resolve_typedef_names env td_names in
+    push_extern_type env td_names;
+    ExternType td_names
+  | ExternFn id ret params ->
+    let id = resolve_ident env id in
+    let ret = resolve_typ env ret in
+    let params, _ = resolve_params env params in
+    ExternFn id ret params
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
 let desugar (mname:string) (p:prog) : ML prog =
   let decls, refinement = p in
   let decls = List.collect desugar_one_enum decls in
-  let env = {mname=mname; module_abbrevs=H.create 10; local_names=[]} in
+  let env = {
+    mname=mname;
+    module_abbrevs=H.create 10;
+    output_types=H.create 10;
+    extern_types=H.create 10;
+    local_names=[]} in
+  H.insert env.extern_types (Ast.to_ident' "void") ();
   let decls = List.map (resolve_decl env) decls in
   decls,
   (match refinement with

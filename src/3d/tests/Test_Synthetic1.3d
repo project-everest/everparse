@@ -76,7 +76,7 @@ typedef struct _CONTAINER_1
   {
      MessageLength >= sizeof(this)
   };
-  UNION_1(Tag, MessageLength - sizeof(this)) union;
+  UNION_1(Tag, MessageLength - sizeof(this)) unionf;
 } CONTAINER_1;
 
 entrypoint

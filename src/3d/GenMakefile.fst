@@ -17,6 +17,7 @@ let input_dir = "$(EVERPARSE_INPUT_DIR)"
 let output_dir = "$(EVERPARSE_OUTPUT_DIR)"
 
 let print_gnu_make_rule
+  input_stream_binding
   (r: rule_t)
 : Tot string
 = 
@@ -27,7 +28,10 @@ let print_gnu_make_rule
     let cmd =
       match r.ty with
       | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --odir %s" output_dir
-      | CC -> Printf.sprintf "$(CC) $(CFLAGS) -I %s -c" ("$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d")
+      | CC ->
+        let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
+        let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) in
+        Printf.sprintf "$(CC) $(CFLAGS) -I %s -I %s -c" ddd_home ddd_actions_home
     in
     let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
     rule
@@ -55,6 +59,23 @@ let produce_types_checked_rule
     args = Printf.sprintf "--__micro_step verify %s" types_fst;
   }
 
+let produce_external_api_fsti_checked_rule
+  (g: Deps.dep_graph)
+  (skip_interface: bool)
+  (modul: string)
+: list rule_t
+= if not (Deps.has_output_types g modul ||
+          Deps.has_extern_types g modul ||
+          Deps.has_extern_functions g modul) then []
+  else
+    let external_api_fsti = mk_filename modul "ExternalAPI.fsti" in 
+    [{
+       ty = EverParse;
+       from = external_api_fsti :: List.Tot.map (fun m -> mk_filename m (if skip_interface then "fst.checked" else "fsti.checked")) (Deps.dependencies g modul);
+       to = mk_filename modul "ExternalAPI.fsti.checked";
+       args = Printf.sprintf "--__micro_step verify %s" external_api_fsti;
+     }]
+
 let produce_fsti_checked_rule
   (g: Deps.dep_graph)
   (modul: string)
@@ -69,12 +90,13 @@ let produce_fsti_checked_rule
 
 let produce_fst_checked_rule
   (g: Deps.dep_graph)
+  (skip_interface: bool)
   (modul: string)
 : Tot rule_t
 = let fst = mk_filename modul "fst" in
   {
     ty = EverParse;
-    from = fst :: mk_filename modul "fsti.checked" :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul);
+    from = fst :: (if skip_interface then [] else [mk_filename modul "fsti.checked"]) `List.Tot.append` List.Tot.map (fun m -> mk_filename m (if skip_interface then "fst.checked" else "fsti.checked")) (Deps.dependencies g modul);
     to = mk_filename modul "fst.checked";
     args = Printf.sprintf "--__micro_step verify %s" fst;
   }
@@ -90,6 +112,22 @@ let produce_types_krml_rule
     to = mk_filename (Printf.sprintf "%s_Types" modul) "krml";
     args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "Types.fst");
   }
+
+let produce_external_api_krml_rule
+  (g: Deps.dep_graph)
+  (modul: string)
+: list rule_t
+= if not (Deps.has_output_types g modul ||
+          Deps.has_extern_types g modul ||
+          Deps.has_extern_functions g modul) then []
+  else
+    let external_api_fsti_checked = mk_filename modul "ExternalAPI.fsti.checked" in 
+    [{
+       ty = EverParse;
+       from = external_api_fsti_checked :: List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul);
+       to = mk_filename (Printf.sprintf "%s_ExternalAPI" modul) "krml";
+       args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "ExternalAPI.fsti");
+     }]
 
 let produce_krml_rule
   (g: Deps.dep_graph)
@@ -117,24 +155,34 @@ let produce_nop_rule
 
 let produce_fst_rules
   (g: Deps.dep_graph)
+  (skip_types: bool)
   (clang_format: bool)
   (file: string)
 : FStar.All.ML (list rule_t)
 =
   let modul = Options.get_module_name file in
-  let to = mk_filename modul "Types.fst" in
+  let to =
+    (* IMPORTANT: which file is written by 3d.exe first? *)
+    mk_filename modul (if skip_types then "fst" else "Types.fst")
+  in
   {
     ty = EverParse;
     from =
       (if clang_format then [mk_filename "" "clang-format"] else []) `List.Tot.append`
       [mk_input_filename file];
-    to = to; (* IMPORTANT: relies on the fact that 3d writes the Types.fst first *)
+    to = to;
     args = Printf.sprintf "--no_batch %s" (mk_input_filename file);
   } ::
-  List.Tot.map (produce_nop_rule [to]) [
-    mk_filename modul "fsti";
-    mk_filename modul "fst";
-  ] `List.Tot.append`
+  List.Tot.map (produce_nop_rule [to])
+    ((if Deps.has_output_types g modul ||
+         Deps.has_extern_types g modul ||
+         Deps.has_extern_functions g modul
+      then [mk_filename modul "ExternalAPI.fsti"]
+      else []) `List.Tot.append` (
+        if skip_types then [] else [
+          mk_filename modul "fsti";
+          mk_filename modul "fst";
+      ])) `List.Tot.append`
   List.Tot.map
     (produce_nop_rule
       begin
@@ -143,13 +191,20 @@ let produce_fst_rules
       end
     )
     begin
+      begin if Deps.has_output_types g modul
+        then [
+          mk_filename (Printf.sprintf "%s_OutputTypes" modul) "c"
+        ]
+        else []
+      end `List.Tot.append`
       begin if Deps.has_entrypoint g modul
         then [
           mk_filename (Printf.sprintf "%sWrapper" modul) "h";
           mk_filename (Printf.sprintf "%sWrapper" modul) "c";
         ]
         else []
-      end `List.Tot.append` begin
+      end `List.Tot.append`
+      begin
         if Deps.has_static_assertions g modul
         then [mk_filename (Printf.sprintf "%sStaticAssertions" modul) "c"]
         else []
@@ -158,6 +213,7 @@ let produce_fst_rules
 
 let produce_h_rules
   (g: Deps.dep_graph)
+  (skip_types: bool)
   (clang_format: bool)
   (file: string)
 : FStar.All.ML (list rule_t)
@@ -171,13 +227,38 @@ let produce_h_rules
       (if clang_format then [mk_filename "" "clang-format"] else []) `List.Tot.append`
       (if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [copyright] else []) `List.Tot.append`
       List.map (fun f -> mk_filename (Options.get_module_name f) "krml") all_files `List.Tot.append`
-      List.map (fun f -> mk_filename (Printf.sprintf "%s_Types" (Options.get_module_name f)) "krml") all_files
+      (if skip_types then [] else List.map (fun f -> mk_filename (Printf.sprintf "%s_Types" (Options.get_module_name f)) "krml") all_files) `List.Tot.append`
+      List.concatMap (fun f ->
+        let m = Options.get_module_name f in
+        if Deps.has_output_types g m ||
+           Deps.has_extern_types g m ||
+           Deps.has_extern_functions g m
+        then [mk_filename (Printf.sprintf "%s_ExternalAPI" m) "krml"]
+        else []) all_files
       ;
     to = to; (* IMPORTANT: relies on the fact that kremlin generates .c files BEFORE .h files *)
     args = Printf.sprintf "--__produce_c_from_existing_krml %s" (mk_input_filename file);
   } ::
   [produce_nop_rule [to] (mk_filename (Options.get_module_name file) "h")]
 
+let produce_output_types_o_rule
+  (g:Deps.dep_graph)
+  (modul:string)
+: list rule_t
+=
+  if Deps.has_output_types g modul
+  then
+    let h = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "h" in
+    let c = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "c" in
+    let o = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "o" in
+    let defs = mk_filename (Printf.sprintf "%s_ExternalTypedefs" modul) "h" in
+    [{
+      ty = CC;
+      from = [c; h; defs];
+      to = o;
+      args = Printf.sprintf "-o %s %s" o c; }]
+  else []
+    
 let produce_o_rule
   (modul: string)
 : Tot rule_t
@@ -246,6 +327,7 @@ type produce_makefile_res = {
 }
 
 let produce_makefile
+  (skip_types: bool)
   (skip_o_rules: bool)
   (clang_format: bool)
   (files: list string)
@@ -259,15 +341,18 @@ let produce_makefile
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule g) all_modules `List.Tot.append`
       List.Tot.concatMap (produce_static_assertions_o_rule g) all_modules `List.Tot.append`
+      List.Tot.concatMap (produce_output_types_o_rule g) all_modules `List.Tot.append`
       List.Tot.map produce_o_rule all_modules
     ) `List.Tot.append`
-    List.concatMap (produce_fst_rules g clang_format) all_files `List.Tot.append`
-    List.Tot.map (produce_types_checked_rule g) all_modules `List.Tot.append`
-    List.Tot.map (produce_fsti_checked_rule g) all_modules `List.Tot.append`
-    List.Tot.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
-    List.Tot.map (produce_types_krml_rule g) all_modules `List.Tot.append`
+    List.concatMap (produce_fst_rules g skip_types clang_format) all_files `List.Tot.append`
+    (if skip_types then [] else List.Tot.map (produce_types_checked_rule g) all_modules) `List.Tot.append`
+    List.concatMap (produce_external_api_fsti_checked_rule g skip_types) all_modules `List.Tot.append`
+    (if skip_types then [] else List.Tot.map (produce_fsti_checked_rule g) all_modules) `List.Tot.append`
+    List.Tot.map (produce_fst_checked_rule g skip_types) all_modules `List.Tot.append`
+    (if skip_types then [] else List.Tot.map (produce_types_krml_rule g) all_modules) `List.Tot.append`
+    List.Tot.concatMap (produce_external_api_krml_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_krml_rule g) all_modules `List.Tot.append`
-    List.concatMap (produce_h_rules g clang_format) all_files
+    List.concatMap (produce_h_rules g skip_types clang_format) all_files
   in {
     graph = g;
     rules = rules;
@@ -275,6 +360,8 @@ let produce_makefile
   }
 
 let write_gnu_makefile
+  input_stream_binding
+  (skip_types: bool)
   (skip_o_rules: bool)
   (clang_format: bool)
   (files: list string)
@@ -282,8 +369,8 @@ let write_gnu_makefile
 =
   let makefile = Options.get_makefile_name () in
   let file = FStar.IO.open_write_file makefile in
-  let {graph = g; rules; all_files} = produce_makefile skip_o_rules clang_format files in
-  FStar.IO.write_string file (String.concat "" (List.Tot.map print_gnu_make_rule rules));
+  let {graph = g; rules; all_files} = produce_makefile skip_types skip_o_rules clang_format files in
+  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_gnu_make_rule input_stream_binding) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       begin if ext <> "h"
@@ -292,6 +379,11 @@ let write_gnu_makefile
       else []
       end `List.Tot.append`
       List.concatMap (fun f -> let m = Options.get_module_name f in if Deps.has_entrypoint g m then [mk_filename (Printf.sprintf "%sWrapper" m) ext] else []) all_files `List.Tot.append`
+      List.concatMap (fun f ->
+        let m = Options.get_module_name f in
+        if Deps.has_output_types g m
+        then [mk_filename (Printf.sprintf "%s_OutputTypes" m) ext]
+        else []) all_files  `List.Tot.append`
       List.map (fun f -> mk_filename (Options.get_module_name f) ext) all_files
     in
     FStar.IO.write_string file (Printf.sprintf "EVERPARSE_ALL_%s_FILES=%s\n" ext_cap (String.concat " " ln))
@@ -306,6 +398,8 @@ let write_nmakefile = write_gnu_makefile
 let write_makefile
   (mtype: HashingOptions.makefile_type)
 : Tot (
+    (_: HashingOptions.input_stream_binding_t) ->
+    (skip_types: bool) ->
     (skip_o_rules: bool) ->
     (clang_format: bool) ->
     (files: list string) ->

@@ -855,6 +855,7 @@ let get_bitfield_eq_2
     then nth_shift_left x (tot - hi) j
   )
 
+#restart-solver
 let bitfield_mask_eq_2 (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Lemma
   (
     bitfield_mask tot lo hi == U.shift_left #tot (U.lognot 0 `U.shift_right` (tot - (hi - lo))) lo

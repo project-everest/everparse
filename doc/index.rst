@@ -31,7 +31,7 @@ Releases
 --------
 
 We produce public releases under the form of a Windows or Linux
-standalone binary (amd64) package and a platform-independent source
+standalone binary (x86_64) package and a platform-independent source
 package.
 
 The latest release of EverParse can be found `here <https://github.com/project-everest/everparse/releases>`_.
@@ -39,7 +39,9 @@ The latest release of EverParse can be found `here <https://github.com/project-e
 Manual
 ------
 
-* :ref:`3d` (includes the full documentation of the EverParse Windows binary package)
+* :ref:`3d` (includes the full documentation of the EverParse binary package)
+
+* :ref:`build`
 
 In the News
 -----------
@@ -68,6 +70,21 @@ Papers
    :caption: Contents:
 
    3d
+   build
+
+
+Licenses
+========
+
+EverParse is Copyright 2018, 2019, 2020, 2021 Microsoft Corporation. All
+rights reserved. EverParse is free software, licensed by Microsoft
+Corporation under the `Apache License 2.0
+<https://github.com/project-everest/everparse/blob/master/LICENSE>`_.
+
+Additionally, the licenses of all dependencies included in the
+EverParse binary packages (F\*, KReMLin, z3, EverCrypt, clang-format) are all
+stored in the ``licenses/`` subdirectory of the EverParse binary
+package once extracted.
 
 
 Indices and tables

@@ -15,7 +15,7 @@
 *)
 module Prelude
 include Prelude.StaticHeader
-include ResultOps
+include EverParse3d.Kinds
 module U32 = FStar.UInt32
 module U16 = FStar.UInt16
 module U64 = FStar.UInt64
@@ -48,50 +48,15 @@ let pow2_values (x:nat) : Lemma
 // Parsers
 ////////////////////////////////////////////////////////////////////////////////
 
-noextract
-type weak_kind =
-| WeakKindWeak
-| WeakKindStrongPrefix
-| WeakKindConsumesAll
 
-inline_for_extraction
-noextract
-val parser_kind (nz:bool) (wk: weak_kind) : Type0
-
+[@@erasable]
 inline_for_extraction
 noextract
 val parser (#nz:bool) (#wk: weak_kind) (k:parser_kind nz wk) (t:Type u#r) : Type u#r
 
-inline_for_extraction
-noextract
-let weak_kind_glb
-  (k1 k2: weak_kind)
-: Tot weak_kind
-= if k1 = k2
-  then k1
-  else WeakKindWeak
-
-inline_for_extraction
-noextract
-val glb (#nz1:bool) (#wk1: weak_kind) (k1:parser_kind nz1 wk1)
-        (#nz2:bool) (#wk2: weak_kind) (k2:parser_kind nz2 wk2)
-    : parser_kind (nz1 && nz2) (weak_kind_glb wk1 wk2)
-
-/// Parser: return
-inline_for_extraction
-noextract
-val ret_kind : parser_kind false WeakKindStrongPrefix
-
 inline_for_extraction noextract
 val parse_ret (#t:Type) (v:t)
   : Tot (parser ret_kind t)
-
-/// Parser: bind
-inline_for_extraction
-noextract
-val and_then_kind (#nz1:_) (k1:parser_kind nz1 WeakKindStrongPrefix)
-                  (#nz2:_) (#wk2: _) (k2:parser_kind nz2 wk2)
-    : parser_kind (nz1 || nz2) wk2
 
 inline_for_extraction noextract
 val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1: Type) (p1: parser k1 t1)
@@ -107,10 +72,6 @@ val parse_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (p1:p
 /// Parser: filter
 let refine t (f:t -> bool) = x:t{f x}
 
-inline_for_extraction
-noextract
-val filter_kind (#nz:_) (#wk: _) (k:parser_kind nz wk) : parser_kind nz wk
-
 inline_for_extraction noextract
 val parse_filter (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t) (f:(t -> bool))
   : Tot (parser (filter_kind k) (refine t f))
@@ -125,10 +86,6 @@ inline_for_extraction noextract
 val parse_weaken_right (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t)
                        (#nz':_) (#wk': _) (k':parser_kind nz' wk')
   : Tot (parser (glb k k') t)
-
-inline_for_extraction
-noextract
-val impos_kind : parser_kind true WeakKindStrongPrefix
 
 /// Parser: unreachable, for default cases of exhaustive pattern matching
 inline_for_extraction noextract
@@ -147,25 +104,22 @@ val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#a:Type) (#b:Type) (e:boo
 ////////////////////////////////////////////////////////////////////////////////
 val nlist (n:U32.t) (t:Type u#r) : Type u#r
 
-/// Lists/arrays
-inline_for_extraction
-noextract
-val kind_nlist : parser_kind false WeakKindStrongPrefix
-
 inline_for_extraction noextract
 val parse_nlist (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (p:parser k t)
   : Tot (parser kind_nlist (nlist n t))
 
+/////
+// Parse all of the remaining bytes of the input buffer
+/////
+noextract
+val all_bytes: Type0
+
+val parse_all_bytes: parser kind_all_bytes all_bytes
 
 ////////////////////////////////////////////////////////////////////////////////
 // Variable-sized element whose size in bytes is at most n
 ////////////////////////////////////////////////////////////////////////////////
 val t_at_most (n:U32.t) (t:Type u#r) : Type u#r
-
-/// Lists/arrays
-inline_for_extraction
-noextract
-val kind_t_at_most : parser_kind false WeakKindStrongPrefix
 
 inline_for_extraction noextract
 val parse_t_at_most (n:U32.t) (#nz: _) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t)
@@ -175,11 +129,6 @@ val parse_t_at_most (n:U32.t) (#nz: _) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p
 // Variable-sized element whose size in bytes is exactly n
 ////////////////////////////////////////////////////////////////////////////////
 val t_exact (n:U32.t) (t:Type u#r) : Type u#r
-
-/// Lists/arrays
-inline_for_extraction
-noextract
-val kind_t_exact : parser_kind false WeakKindStrongPrefix
 
 inline_for_extraction noextract
 val parse_t_exact (n:U32.t) (#nz:bool) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t)
@@ -201,6 +150,9 @@ val read_filter (#nz:_)
                 (f: (t -> bool))
     : reader (parse_filter p f)
 
+inline_for_extraction noextract
+val read_impos : reader (parse_impos())
+
 /// Parse a zero-terminated string
 
 noextract
@@ -209,10 +161,6 @@ val cstring
   (terminator: t)
 : Tot Type0
 
-inline_for_extraction
-noextract
-val parse_string_kind : parser_kind true WeakKindStrongPrefix
-
 val parse_string
   (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
@@ -220,22 +168,8 @@ val parse_string
   (terminator: t)
 : Tot (parser parse_string_kind (cstring t terminator))
 
-/////
-// Parse all of the remaining bytes of the input buffer
-/////
-noextract
-val all_bytes: Type0
-
-inline_for_extraction noextract
-val kind_all_bytes: parser_kind false WeakKindConsumesAll
-
-val parse_all_bytes: parser kind_all_bytes all_bytes
-
 noextract
 val all_zeros: Type0
-
-inline_for_extraction noextract
-val kind_all_zeros: parser_kind false WeakKindConsumesAll
 
 val parse_all_zeros: parser kind_all_zeros all_zeros
 
@@ -248,8 +182,6 @@ let ___Bool = bool
 
 /// UINT8
 let ___UINT8 : eqtype = FStar.UInt8.t
-inline_for_extraction noextract
-val kind____UINT8 : parser_kind true WeakKindStrongPrefix
 val parse____UINT8 : parser kind____UINT8 ___UINT8
 val read____UINT8 : reader parse____UINT8
 
@@ -257,22 +189,16 @@ val read____UINT8 : reader parse____UINT8
 
 /// UInt16BE
 let ___UINT16BE : eqtype = U16.t
-inline_for_extraction noextract
-val kind____UINT16BE : parser_kind true WeakKindStrongPrefix
 val parse____UINT16BE : parser kind____UINT16BE ___UINT16BE
 val read____UINT16BE : reader parse____UINT16BE
 
 /// UInt32BE
 let ___UINT32BE : eqtype = U32.t
-inline_for_extraction noextract
-val kind____UINT32BE : parser_kind true WeakKindStrongPrefix
 val parse____UINT32BE : parser kind____UINT32BE ___UINT32BE
 val read____UINT32BE : reader parse____UINT32BE
 
 /// UInt64BE
 let ___UINT64BE : eqtype = U64.t
-inline_for_extraction noextract
-val kind____UINT64BE : parser_kind true WeakKindStrongPrefix
 val parse____UINT64BE : parser kind____UINT64BE ___UINT64BE
 val read____UINT64BE : reader parse____UINT64BE
 
@@ -280,32 +206,26 @@ val read____UINT64BE : reader parse____UINT64BE
 
 /// UInt16
 let ___UINT16 : eqtype = U16.t
-inline_for_extraction noextract
-val kind____UINT16 : parser_kind true WeakKindStrongPrefix
 val parse____UINT16 : parser kind____UINT16 ___UINT16
 val read____UINT16 : reader parse____UINT16
 
 /// UInt32
 let ___UINT32 : eqtype = U32.t
-inline_for_extraction noextract
-val kind____UINT32 : parser_kind true WeakKindStrongPrefix
 val parse____UINT32 : parser kind____UINT32 ___UINT32
 val read____UINT32 : reader parse____UINT32
 
 /// UInt64
 let ___UINT64 : eqtype = U64.t
-inline_for_extraction noextract
-val kind____UINT64 : parser_kind true WeakKindStrongPrefix
 val parse____UINT64 : parser kind____UINT64 ___UINT64
 val read____UINT64 : reader parse____UINT64
 
-inline_for_extraction noextract
-let kind_unit : parser_kind false WeakKindStrongPrefix = ret_kind
-let parse_unit : parser kind_unit unit = parse_ret ()
+let parse_unit
+  : parser kind_unit unit
+  = parse_ret ()
+
 inline_for_extraction noextract
 val read_unit
   : reader (parse_ret ())
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //Convenience lemmas for bounded arithmetic, especially on bitfields
@@ -318,7 +238,6 @@ let max_int_sizes
     )
   = let open FStar.UInt in
     normalize_term_spec (max_int 10)
-
 
 
 (*

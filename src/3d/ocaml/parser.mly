@@ -38,6 +38,12 @@
                 else error ("Integer " ^s^ " is too large for the specified type") r
       in
       i, s', t
+
+  let mk_out_expr_from_ident id r = {
+    out_expr_node = with_range (OE_id id) r;
+    out_expr_meta = None
+  }
+
 %}
 
 %token<string>  INT XINT STRING
@@ -45,13 +51,13 @@
 %token<bool>    BOOL
 %token<Ast.ident> IDENT
 %token          EQ DOUBLEEQ NEQ AND OR NOT EOF SIZEOF ENUM TYPEDEF STRUCT CASETYPE SWITCH CASE DEFAULT THIS
-%token          DEFINE LPAREN RPAREN LBRACE RBRACE DOT COMMA SEMICOLON COLON QUESTION
+%token          DEFINE LPAREN RPAREN LBRACE RBRACE DOT RARROW COMMA SEMICOLON COLON_COLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
-%token          MUTABLE LBRACE_ONSUCCESS FIELD_POS FIELD_PTR VAR ABORT RETURN
+%token          MUTABLE LBRACE_ONSUCCESS LBRACE_ACT LBRACE_CHECK FIELD_POS_64 FIELD_POS_32 FIELD_PTR VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
-%token          MODULE EXPORT
+%token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -61,6 +67,7 @@
 %left AND
 %left BITWISE_OR
 %left BITWISE_XOR
+%left DOT RARROW
 %left BITWISE_AND
 %nonassoc NEQ DOUBLEEQ
 %nonassoc LEQ LESS_THAN GEQ GREATER_THAN
@@ -180,15 +187,23 @@ expr:
   | e=expr_no_range { with_range e $startpos }
 
 arguments:
- | es=right_flexible_nonempty_list(COMMA, expr)  { es }
+  | es=right_flexible_nonempty_list(COMMA, expr)  { es }
+
+typ_param:
+  | e=expr  { Inl e }
+  | oe=out_expr  { Inr oe }
 
 qident:
   | i=IDENT    { i }
-  | m=IDENT DOT n=IDENT    { with_range ({modul_name=Some m.v.name; name=n.v.name}) $startpos }
+  | m=IDENT COLON_COLON n=IDENT    { with_range ({modul_name=Some m.v.name; name=n.v.name}) $startpos }
 
+(*
+ * NOTE that the kind is being set to KindSpec here
+ *   It is set properly in the desugaring phase
+ *)
 typ_no_range:
-  | i=qident { Type_app(i, []) }
-  | hd=qident LPAREN a=arguments RPAREN { Type_app(hd, a) }
+  | i=qident { Type_app(i, KindSpec, []) }
+  | hd=qident LPAREN a=right_flexible_nonempty_list(COMMA, typ_param) RPAREN { Type_app(hd, KindSpec, a) }
 
 typ:
   | t=typ_no_range { with_range t $startpos }
@@ -222,6 +237,8 @@ bitwidth:
 
 field_action:
   | LBRACE_ONSUCCESS a=action RBRACE { a, false }
+  | LBRACE_CHECK a=action RBRACE { a, false }
+  | LBRACE_ACT a=action RBRACE { with_range (Action_act a) $startpos(a), false }
 
 struct_field:
   | t=typ fn=IDENT bopt=option_of(bitwidth) aopt=array_annot c=option_of(refinement) a=option_of(field_action)
@@ -232,7 +249,6 @@ struct_field:
          field_type=t;
          field_array_opt=aopt;
          field_constraint=c;
-         field_number=None;
          field_bitwidth=bopt;
          field_action=a
         }
@@ -285,13 +301,37 @@ where_opt:
   | WHERE e=expr { Some e }
   | REQUIRES e=expr { Some e }
 
+(*
+ * We are doing some dancing around here for an out expression being an ident
+ * The reason is that, an ident is also an expression
+ *   and a type parameter can either be an expression or output expression
+ * So if an ident appears as a type parameter, we would not know if
+ *   it is an expr or out_expr
+ *
+ * With this dancing around, idents are not out exprs and are always parsed as expressions
+ *)
+out_expr_no_range:
+  | STAR oe=qident                          { OE_star (mk_out_expr_from_ident oe $startpos) }
+  | STAR oe=out_expr                        { OE_star oe }
+  | BITWISE_AND oe=qident                   { OE_addrof (mk_out_expr_from_ident oe $startpos) }
+  | BITWISE_AND oe=out_expr                 { OE_addrof oe }
+  | oe=qident RARROW f=qident               { OE_deref (mk_out_expr_from_ident oe $startpos, f) }
+  | oe=out_expr RARROW f=qident             { OE_deref (oe, f) }
+  | oe=out_expr DOT f=qident                { OE_dot (oe, f) }
+  | LPAREN oe=out_expr_no_range RPAREN      { oe }
+
+out_expr:
+  | oe=out_expr_no_range    { {out_expr_node = with_range oe $startpos;
+                               out_expr_meta = None} }  //metadata is set after typechecking (Binding)
+
 atomic_action:
   | RETURN e=expr SEMICOLON { Action_return e }
   | ABORT SEMICOLON         { Action_abort }
-  | FIELD_POS SEMICOLON     { Action_field_pos }
+  | FIELD_POS_64 SEMICOLON     { Action_field_pos_64 }
+  | FIELD_POS_32 SEMICOLON     { Action_field_pos_32 }
   | FIELD_PTR SEMICOLON     { Action_field_ptr }
   | STAR i=IDENT SEMICOLON  { Action_deref i }
-  | STAR i=IDENT EQ e=expr SEMICOLON { Action_assignment(i, e) }
+  | oe=out_expr EQ e=expr SEMICOLON { Action_assignment(oe, e) }
   | f=IDENT LPAREN args=arguments RPAREN SEMICOLON { Action_call(f, args) }
 
 action_else:
@@ -323,11 +363,18 @@ typedef_pointer_name_opt:
   |                    { None }
   | COMMA STAR k=IDENT { Some k }
 
+out_field:
+  | t=maybe_pointer_typ f=IDENT  { Out_field_named (f, t) }
+  | STRUCT LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
+    { Out_field_anon (out_flds, false) }
+  | UNION LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
+    { Out_field_anon (out_flds, true) }
+
 decl_no_range:
   | MODULE i=IDENT EQ m=IDENT { ModuleAbbrev (i, m) }
   | DEFINE i=IDENT c=constant { Define (i, None, c) }
   | t=IDENT ENUM i=IDENT LBRACE es=right_flexible_nonempty_list(COMMA, enum_case) RBRACE maybe_semi
-    { Enum(with_range (Type_app (t, [])) ($startpos(t)), i, es) }
+    { Enum(with_range (Type_app (t, KindSpec, [])) ($startpos(t)), i, es) }
   | b=attributes TYPEDEF t=typ i=IDENT SEMICOLON
     { TypeAbbrev (t, i) }
   | b=attributes TYPEDEF STRUCT i=IDENT ps=parameters w=where_opt
@@ -346,6 +393,22 @@ decl_no_range:
         let td = mk_td b i j k in
         CaseType(td, ps, (with_range (Identifier e) ($startpos(i)), cs))
     }
+
+  | OUTPUT TYPEDEF STRUCT i=IDENT
+    LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
+    j=IDENT p=typedef_pointer_name_opt SEMICOLON
+    {  let k = pointer_name j p in
+       let td = mk_td [] i j k in       
+       OutputType ({out_typ_names=td; out_typ_fields=out_flds; out_typ_is_union=false}) }
+
+  | EXTERN TYPEDEF STRUCT i=IDENT j=IDENT
+    {  let k = pointer_name j None in
+       let td = mk_td [] i j k in
+       ExternType td
+    }
+
+  | EXTERN ret=typ i=IDENT ps=parameters
+    { ExternFn (i, ret, ps) }
 
 block_comment_opt:
   |                 { None }
