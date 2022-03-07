@@ -12,25 +12,11 @@ include LowParse.Spec.VLGen
 module U32 = FStar.UInt32
 module Seq = FStar.Seq
 
-(* Haobin :
-   parse_vlgen_precond 0 4294967295 asn1_weak_parser_kind is currently false
-   because we don't have an universal upperbound on length for the content kinds
-   We don't want the whole thing to depend on the serializers either
-   The whole thing should be doable similar to that of VLData
-   which does not use DER length
-*)
-
-let get_serializer (#k : parser_kind) (#t : Type) (p : parser k t) : serializer p = admit ()
-
 let parse_asn1_LC 
   (#ack : asn1_content_k)
   (p : asn1_weak_parser (asn1_content_t ack))
 : asn1_strong_parser (asn1_content_t ack)
-= let s = get_serializer p in
-  let _ = assume (parse_vlgen_precond 0 4294967295 asn1_weak_parser_kind) in
-  parse_bounded_vlgen 0 4294967295 parse_asn1_length_u32_t s
-  `parse_synth`
-  (synth_vlgen 0 4294967295 s)
+= weaken _ (parse_vlgen_weak 0 4294967295 parse_asn1_length_u32_t p)
 
 let parse_asn1_ILC
   (id : asn1_id_t)
