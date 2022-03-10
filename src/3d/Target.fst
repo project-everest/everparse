@@ -1192,7 +1192,7 @@ let print_c_entry (modul: string)
       then Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
              wrapper_name
             (print_params params)
-      else Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
+      else Printf.sprintf "UINT64 %s(%sEverParseInputStreamBase base)"
              wrapper_name
              (print_params params)
     in
