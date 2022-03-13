@@ -22,7 +22,6 @@ module A = EverParse3d.Actions.All
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
 module ProjTac = EverParse3d.ProjectorTactic
-#push-options "--__temp_no_proj EverParse3d.Interpreter" //we'll generate the projectors we need with a tactic
 
 (* This module defines a strongly typed abstract syntax for an
    intermediate representation of 3D programs. This is the type `typ`.
@@ -198,6 +197,7 @@ module T = FStar.Tactics
    Represents the lifting of a fully applied a shallow F*
    quadruple of {type, parser, validator, opt reader} 
 *)
+[@@ no_auto_projectors]
 noeq
 type global_binding = {
   //Parser metadata
@@ -597,6 +597,7 @@ let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
       let (| _, lr |) = get_leaf_reader b in
       lr
 
+[@@ no_auto_projectors]
 noeq
 type typ
   : #nz:bool -> #wk:P.weak_kind ->
