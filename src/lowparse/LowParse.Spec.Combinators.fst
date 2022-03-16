@@ -32,7 +32,7 @@ let parse_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
 : Pure (parser k t2)
   (requires (
     synth_injective f2
@@ -45,7 +45,7 @@ let parse_synth_eq
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (b: bytes)
 : Lemma
   (requires (synth_injective f2))
@@ -60,7 +60,7 @@ let serialize_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
   (u: unit {
@@ -76,7 +76,7 @@ let serialize_synth_eq
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
   (u: unit {
@@ -93,7 +93,7 @@ let serialize_synth_upd_chain
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
   (u: unit {
@@ -129,7 +129,7 @@ let serialize_synth_upd_bw_chain
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
   (u: unit {
@@ -572,8 +572,8 @@ let serialize_nondep_then_upd_right_chain
 let make_total_constant_size_parser_compose
   (sz: nat)
   (t1 t2: Type)
-  (f1: ((s: bytes {Seq.length s == sz}) -> GTot t1))
-  (g2: t1 -> GTot t2)
+  (f1: ((s: bytes {Seq.length s == sz}) -> Tot t1))
+  (g2: t1 -> Tot t2)
 : Lemma
   (requires (
     make_total_constant_size_parser_precond sz t1 f1 /\
@@ -591,7 +591,7 @@ let parse_filter
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
 : Tot (parser (parse_filter_kind k) (parse_filter_refine f))
 = p `and_then` (parse_filter_payload f)
 
@@ -599,7 +599,7 @@ let parse_filter_eq
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
   (input: bytes)
 : Lemma
   (parse (parse_filter p f) input == (match parse p input with
@@ -616,7 +616,7 @@ let serialize_filter_correct
   (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
 : Lemma
   (serializer_correct (parse_filter p f) (serialize_filter' s f))
 = ()

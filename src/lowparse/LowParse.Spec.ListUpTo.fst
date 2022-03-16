@@ -269,7 +269,7 @@ let parse_list_up_to'_eq
 
 let close_parse_list_up_to
   (b: bytes)
-: GTot (n: nat { Seq.length b < n })
+: Tot (n: nat { Seq.length b < n })
 = Seq.length b + 1
 
 let parse_list_up_to_correct

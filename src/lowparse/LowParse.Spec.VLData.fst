@@ -10,7 +10,7 @@ module M = LowParse.Math
 
 let parse_vldata_gen
   (sz: integer_size)
-  (f: (bounded_integer sz -> GTot bool))
+  (f: (bounded_integer sz -> Tot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -27,7 +27,7 @@ let parse_vldata_gen
 
 let parse_vldata_gen_eq_def
   (sz: integer_size)
-  (f: (bounded_integer sz -> GTot bool))
+  (f: (bounded_integer sz -> Tot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)

@@ -14,7 +14,7 @@ type parse_ifthenelse_param = {
   parse_ifthenelse_payload_t: (bool -> Tot Type);
   parse_ifthenelse_payload_parser: ((b: bool) -> Tot (k: parser_kind & parser k (parse_ifthenelse_payload_t b)));
   parse_ifthenelse_t: Type;
-  parse_ifthenelse_synth: ((t: parse_ifthenelse_tag_t) -> (parse_ifthenelse_payload_t (parse_ifthenelse_tag_cond t)) -> GTot parse_ifthenelse_t);
+  parse_ifthenelse_synth: ((t: parse_ifthenelse_tag_t) -> (parse_ifthenelse_payload_t (parse_ifthenelse_tag_cond t)) -> Tot parse_ifthenelse_t);
   parse_ifthenelse_synth_injective: (
     (t1: parse_ifthenelse_tag_t) ->
     (x1: parse_ifthenelse_payload_t (parse_ifthenelse_tag_cond t1)) ->
@@ -80,8 +80,8 @@ let parse_ifthenelse_eq
   | Some (t, consumed_t) ->
       let b = p.parse_ifthenelse_tag_cond t in
       let input' = Seq.slice input consumed_t (Seq.length input) in
-      let f : (p.parse_ifthenelse_payload_t (p.parse_ifthenelse_tag_cond t) -> GTot p.parse_ifthenelse_t) = (p.parse_ifthenelse_synth) t in
-      let f' = coerce (p.parse_ifthenelse_payload_t b -> GTot p.parse_ifthenelse_t) f in
+      let f : (p.parse_ifthenelse_payload_t (p.parse_ifthenelse_tag_cond t) -> Tot p.parse_ifthenelse_t) = (p.parse_ifthenelse_synth) t in
+      let f' = coerce (p.parse_ifthenelse_payload_t b -> Tot p.parse_ifthenelse_t) f in
       parse_synth_eq
         #(dfst (p.parse_ifthenelse_payload_parser b))
         #(p.parse_ifthenelse_payload_t b)
