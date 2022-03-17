@@ -29,7 +29,7 @@ let rec generate_defaultable_items (itemtwins : list (gen_decorated_parser_twin)
   | [hd] -> generate_defaultable_item hd
   | hd :: tl -> mk_option_tuple (generate_defaultable_item hd) (generate_defaultable_items tl)
 
-let defaultv_filter (#a : eqtype) (defaultv : a) : a -> GTot bool =
+let defaultv_filter (#a : eqtype) (defaultv : a) : a -> Tot bool =
   fun v -> not (v = defaultv)
 
 let defaultv_synth (#a : eqtype) (defaultv : a) (v : a {~(v = defaultv)}) : default_tv defaultv =
