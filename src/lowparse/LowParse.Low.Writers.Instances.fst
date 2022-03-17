@@ -107,7 +107,7 @@ let swrite_filter
   (#p1: parser k1 t1)
   (#s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#space_beyond: nat)
-  (cond: (t1 -> GTot bool)) 
+  (cond: (t1 -> Tot bool)) 
   (w1: swriter s1 h0 space_beyond sout pout_from0 { cond (swvalue w1) } )
 : Tot (w2: swriter (serialize_filter s1 cond) h0 space_beyond sout pout_from0 {
     swvalue w2 == swvalue w1
@@ -134,7 +134,7 @@ let swrite_synth
   (#space_beyond: nat)
   (w1: swriter s1 h0 space_beyond sout pout_from0)
   (#t2: Type)
-  (f12: (t1 -> GTot t2))
+  (f12: (t1 -> Tot t2))
   (f21: (t2 -> GTot t1))
   (prf: squash (
     synth_injective f12 /\

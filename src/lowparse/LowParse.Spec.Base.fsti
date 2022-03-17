@@ -23,13 +23,13 @@ inline_for_extraction
 let consumed_length (b: bytes) : Tot Type = (n: nat { n <= Seq.length b } )
 
 inline_for_extraction
-let bare_parser (t:Type) : Tot Type = (b: bytes) -> GTot (option (t * consumed_length b))
+let bare_parser (t:Type) : Tot Type = (b: bytes) -> Tot (option (t * consumed_length b))
 
 let parse
   (#t: Type)
   (p: bare_parser t)
   (input: bytes)
-: GTot (option (t * consumed_length input))
+: Tot (option (t * consumed_length input))
 = p input
 
 (** Injectivity of parsing *)

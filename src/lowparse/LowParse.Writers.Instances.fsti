@@ -21,7 +21,7 @@ inline_for_extraction
 val parse_synth
   (p1: parser)
   (#t2: Type)
-  (f2: Parser?.t p1 -> GTot t2)
+  (f2: Parser?.t p1 -> Tot t2)
   (f1: t2 -> GTot (Parser?.t p1))
 : Pure parser
   (requires (
@@ -40,7 +40,7 @@ val parse_synth
 val valid_rewrite_parse_synth
   (p1: parser)
   (#t2: Type)
-  (f2: Parser?.t p1 -> GTot t2)
+  (f2: Parser?.t p1 -> Tot t2)
   (f1: t2 -> GTot (Parser?.t p1))
   (sq: squash (
     LP.synth_injective f2 /\
@@ -51,7 +51,7 @@ val valid_rewrite_parse_synth
 val valid_rewrite_parse_synth_recip
   (p1: parser)
   (#t2: Type)
-  (f2: Parser?.t p1 -> GTot t2)
+  (f2: Parser?.t p1 -> Tot t2)
   (f1: t2 -> GTot (Parser?.t p1))
   (sq: squash (
     LP.synth_injective f2 /\

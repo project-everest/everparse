@@ -22,7 +22,7 @@ let parse_seq_all_bytes_kind =
 
 let parse_seq_all_bytes'
   (input: bytes)
-: GTot (option (bytes * consumed_length input))
+: Tot (option (bytes * consumed_length input))
 = let len = Seq.length input in
     Some (input, len)
 

@@ -30,7 +30,7 @@ let bounded_integer_prop_equiv
 let decode_bounded_integer
   (i: integer_size)
   (b: bytes { Seq.length b == i } )
-: GTot (bounded_integer i)
+: Tot (bounded_integer i)
 = E.lemma_be_to_n_is_bounded b;
   M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i);
   U32.uint_to_t (E.be_to_n b)
@@ -108,7 +108,7 @@ let serialize_bounded_integer_spec sz x = ()
 let bounded_integer_of_le
   (i: integer_size)
   (b: bytes { Seq.length b == i } )
-: GTot (bounded_integer i)
+: Tot (bounded_integer i)
 = E.lemma_le_to_n_is_bounded b;
   M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i);
   U32.uint_to_t (E.le_to_n b)

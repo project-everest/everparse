@@ -4,7 +4,7 @@ include LowParse.Spec.FLData
 let parse_seq_flbytes_gen
   (sz: nat)
   (s: bytes { Seq.length s == sz } )
-: GTot (Seq.lseq byte sz)
+: Tot (Seq.lseq byte sz)
 = s
 
 let parse_seq_flbytes

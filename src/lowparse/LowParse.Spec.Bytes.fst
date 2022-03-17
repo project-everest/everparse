@@ -1,7 +1,7 @@
 module LowParse.Spec.Bytes
 include LowParse.Spec.VLGen
 
-module B32 = FStar.Bytes
+module B32 = LowParse.Bytes32
 module Seq = FStar.Seq
 module U32 = FStar.UInt32
 
@@ -18,9 +18,9 @@ let lt_pow2_32
 let parse_flbytes_gen
   (sz: nat { sz < 4294967296 } )
   (s: bytes { Seq.length s == sz } )
-: GTot (B32.lbytes sz)
+: Tot (B32.lbytes sz)
 = lt_pow2_32 sz;
-  B32.hide s
+  B32.b32_hide s
 
 let parse_flbytes
   (sz: nat { sz < 4294967296 } )
@@ -75,13 +75,13 @@ let parse_all_bytes_kind =
 
 let parse_all_bytes'
   (input: bytes)
-: GTot (option (B32.bytes * consumed_length input))
+: Tot (option (B32.bytes * consumed_length input))
 = let len = Seq.length input in
   if len >= 4294967296
   then None
   else begin
     lt_pow2_32 len;
-    Some (B32.hide input, len)
+    Some (B32.b32_hide input, len)
   end
 
 #set-options "--z3rlimit 16"

@@ -58,7 +58,7 @@ x2
 let synth_be_int
   (len: nat)
   (b: Seq.lseq byte len)
-: GTot (lint len)
+: Tot (lint len)
 = E.lemma_be_to_n_is_bounded b;
   E.be_to_n b
 
@@ -75,7 +75,7 @@ let synth_be_int_injective
 let synth_der_length_129
   (x: U8.t { x == 129uy } )
   (y: U8.t { U8.v y >= 128 } )
-: GTot (refine_with_tag tag_of_der_length x)
+: Tot (refine_with_tag tag_of_der_length x)
 = assert_norm (der_length_max == pow2 (8 * 126) - 1);
   assert_norm (pow2 7 == 128);
   assert_norm (pow2 8 == 256);
@@ -241,7 +241,7 @@ let parse_bounded_der_length_tag_cond
   (min: der_length_t)
   (max: der_length_t { min <= max })
   (x: U8.t)
-: GTot bool
+: Tot bool
 = let len = der_length_payload_size_of_tag x in der_length_payload_size min <= len && len <= der_length_payload_size max
 
 inline_for_extraction // for parser_kind
@@ -788,7 +788,7 @@ let der_length_payload_size_of_tag_inv32
 let synth_der_length_payload32
   (x: U8.t { der_length_payload_size_of_tag x <= 4 } )
   (y: refine_with_tag tag_of_der_length x)
-: GTot (refine_with_tag tag_of_der_length32 x)
+: Tot (refine_with_tag tag_of_der_length32 x)
 = let _ =
     assert_norm (der_length_max == pow2 (8 * 126) - 1);
     let _ = assert_norm (pow2 (8 * 2) == 65536) in
@@ -829,7 +829,7 @@ x
 let be_int_of_bounded_integer
   (len: integer_size)
   (x: nat { x < pow2 (8 * len) } )
-: GTot (bounded_integer len)
+: Tot (bounded_integer len)
 = integer_size_values len;
   assert_norm (pow2 (8 * 1) == 256);
   assert_norm (pow2 (8 * 2) == 65536);
@@ -923,7 +923,7 @@ let synth_bounded_der_length32
   (min: der_length_t)
   (max: der_length_t { min <= max /\ max < 4294967296 })
   (x: bounded_int min max)
-: GTot (bounded_int32 min max)
+: Tot (bounded_int32 min max)
 = U32.uint_to_t x
 
 let parse_bounded_der_length32

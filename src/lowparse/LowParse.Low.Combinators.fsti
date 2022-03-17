@@ -193,7 +193,7 @@ let valid_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
@@ -217,7 +217,7 @@ let valid_synth_intro
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
@@ -237,7 +237,7 @@ let validate_synth
   (#t2: Type)
   (#p1: parser k t1)
   (p1' : validator p1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (u: unit {
     synth_injective f2
   })
@@ -255,7 +255,7 @@ let jump_synth
   (#t2: Type)
   (#p1: parser k t1)
   (p1' : jumper p1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (u: unit {
     synth_injective f2
   })
@@ -530,7 +530,7 @@ let gaccessor_synth'
   (#t1: Type)
   (p1: parser k t1)
   (#t2: Type)
-  (f: t1 -> GTot t2)
+  (f: t1 -> Tot t2)
   (g: t2 -> GTot t1)
   (u: unit { synth_inverse f g /\ synth_injective f } )
   (input: bytes)
@@ -546,7 +546,7 @@ val gaccessor_synth
   (#t1: Type)
   (p1: parser k t1)
   (#t2: Type)
-  (f: t1 -> GTot t2)
+  (f: t1 -> Tot t2)
   (g: t2 -> GTot t1)
   (u: squash (synth_inverse f g /\ synth_injective f))
 : Tot (gaccessor (parse_synth p1 f) p1 (clens_synth g f))
@@ -556,7 +556,7 @@ val gaccessor_synth_eq
   (#t1: Type)
   (p1: parser k t1)
   (#t2: Type)
-  (f: t1 -> GTot t2)
+  (f: t1 -> Tot t2)
   (g: t2 -> GTot t1)
   (u: unit { synth_inverse f g /\ synth_injective f } )
   (input: bytes)
@@ -569,7 +569,7 @@ let accessor_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f: t1 -> GTot t2)
+  (f: t1 -> Tot t2)
   (g: t2 -> GTot t1)
   (u: unit { synth_inverse f g /\ synth_injective f } )
 : Tot (accessor (gaccessor_synth p1 f g u))
@@ -603,7 +603,7 @@ let gaccessor_synth_inv'
   (#t1: Type)
   (p1: parser k t1)
   (#t2: Type)
-  (f: t1 -> GTot t2)
+  (f: t1 -> Tot t2)
   (g: t2 -> GTot t1)
   (u: unit { synth_inverse f g /\ synth_injective f } )
   (input: bytes)
@@ -618,7 +618,7 @@ val gaccessor_synth_inv
   (#t1: Type)
   (p1: parser k t1)
   (#t2: Type)
-  (f: t1 -> GTot t2)
+  (f: t1 -> Tot t2)
   (g: t2 -> GTot t1)
   (u: squash (synth_inverse f g /\ synth_injective f))
 : Tot (gaccessor p1 (parse_synth p1 f) (clens_synth_inv g f))
@@ -628,7 +628,7 @@ val gaccessor_synth_inv_eq
   (#t1: Type)
   (p1: parser k t1)
   (#t2: Type)
-  (f: t1 -> GTot t2)
+  (f: t1 -> Tot t2)
   (g: t2 -> GTot t1)
   (u: unit { synth_inverse f g /\ synth_injective f } )
   (input: bytes)
@@ -641,7 +641,7 @@ let accessor_synth_inv
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f: t1 -> GTot t2)
+  (f: t1 -> Tot t2)
   (g: t2 -> GTot t1)
   (u: unit { synth_inverse f g /\ synth_injective f } )
 : Tot (accessor (gaccessor_synth_inv p1 f g u))
@@ -965,7 +965,7 @@ let make_total_constant_size_reader
   (sz: nat)
   (sz' : U32.t { U32.v sz' == sz } )
   (#t: Type)
-  (f: ((s: bytes {Seq.length s == sz}) -> GTot (t)))
+  (f: ((s: bytes {Seq.length s == sz}) -> Tot (t)))
   (u: unit {
     make_total_constant_size_parser_precond sz t f
   })
@@ -987,7 +987,7 @@ let valid_filter
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
   (input: slice rrel rel)
   (pos: U32.t)
 : Lemma
@@ -1009,7 +1009,7 @@ let validate_filter
   (#p: parser k t)
   (v32: validator p)
   (p32: leaf_reader p)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
   (f' : ((x: t) -> Tot (y: bool { y == f x } )))
 : Tot (validator (parse_filter p f))
 = fun #rrel #rel input pos ->
@@ -1031,7 +1031,7 @@ let validate_filter_with_error_code
   (#p: parser k t)
   (v32: validator p)
   (p32: leaf_reader p)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
   (f' : ((x: t) -> Tot (y: bool { y == f x } )))
   (c: error_code)
 : Tot (validator (parse_filter p f))
@@ -1051,7 +1051,7 @@ inline_for_extraction
 let validate_filter_ret
   (#t: Type0)
   (r: t)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
   (f' : ((x: t) -> Tot (y: bool { y == f x } )))
 : Tot (validator (parse_filter (parse_ret r) f))
 = fun #rrel #rel input pos ->
@@ -1066,7 +1066,7 @@ inline_for_extraction
 let validate_filter_ret_with_error_code
   (#t: Type0)
   (r: t)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
   (f' : ((x: t) -> Tot (y: bool { y == f x } )))
   (c: error_code)
 : Tot (validator (parse_filter (parse_ret r) f))
@@ -1084,7 +1084,7 @@ let jump_filter
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
 : Tot (jumper (parse_filter p f))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
@@ -1097,7 +1097,7 @@ let read_filter
   (#t: Type)
   (#p: parser k t)
   (p32: leaf_reader p)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
 : Tot (leaf_reader (parse_filter p f))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
@@ -1111,7 +1111,7 @@ let write_filter
   (#p: parser k t)
   (#s: serializer p)
   (s32: leaf_writer_strong s)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
 : Tot (leaf_writer_strong (serialize_filter s f))
 = fun x #rrel #rel input pos ->
   [@inline_let] let _ = serialized_length_eq s x in
@@ -1128,7 +1128,7 @@ let write_filter_weak
   (#p: parser k t)
   (#s: serializer p)
   (s32: leaf_writer_weak s)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
 : Tot (leaf_writer_weak (serialize_filter s f))
 = fun x #rrel #rel input pos ->
   [@inline_let] let _ = serialized_length_eq s x in
@@ -1145,7 +1145,7 @@ let serialize32_filter
   (#p: parser k t)
   (#s: serializer p)
   (s32: serializer32 s)
-  (f: (t -> GTot bool))
+  (f: (t -> Tot bool))
 : Tot (serializer32 (serialize_filter s f))
 = fun x #rrel #rel input pos ->
   s32 x input pos
@@ -1156,7 +1156,7 @@ let read_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (f2': (x: t1) -> Tot (y: t2 { y == f2 x } )) 
   (p1' : leaf_reader p1)
   (u: unit {
@@ -1189,7 +1189,7 @@ let read_inline_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (f2': (x: t1) -> Tot (y: t2 { y == f2 x } )) 
   (p1' : leaf_reader p1)
   (u: unit {
@@ -1224,7 +1224,7 @@ let write_synth
   (#s1: serializer p1)
   (s1' : leaf_writer_strong s1)
   (#t2: Type)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (g1: t2 -> GTot t1)
   (g1' : (x2: t2) -> Tot (x1: t1 { x1 == g1 x2 } ))
   (u: squash (synth_injective f2 /\ synth_inverse f2 g1))
@@ -1246,7 +1246,7 @@ let write_synth_weak
   (#s1: serializer p1)
   (s1' : leaf_writer_weak s1)
   (#t2: Type)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (g1: t2 -> GTot t1)
   (g1' : (x2: t2) -> Tot (x1: t1 { x1 == g1 x2 } ))
   (u: squash (synth_injective f2 /\ synth_inverse f2 g1))
@@ -1268,7 +1268,7 @@ let serialize32_synth
   (#s1: serializer p1)
   (s1' : serializer32 s1)
   (#t2: Type)
-  (f2: t1 -> GTot t2)
+  (f2: t1 -> Tot t2)
   (g1: t2 -> GTot t1)
   (g1' : (x2: t2) -> Tot (x1: t1 { x1 == g1 x2 } ))
   (u: squash (synth_injective f2 /\ synth_inverse f2 g1))
@@ -1288,7 +1288,7 @@ let validate_filter_and_then
   (#p1: parser k1 t1)
   (v1: validator p1)
   (p1': leaf_reader p1)
-  (f: (t1 -> GTot bool))
+  (f: (t1 -> Tot bool))
   (f' : ((x: t1) -> Tot (y: bool { y == f x } )))
   (#k2: parser_kind)
   (#t2: Type)
