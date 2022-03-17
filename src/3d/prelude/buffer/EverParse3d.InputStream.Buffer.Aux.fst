@@ -12,8 +12,6 @@ module U64 = FStar.UInt64
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 
-#set-options "--__temp_no_proj EverParse3d.InputStream.Buffer.Aux"
-
 noeq
 type input_buffer = {
   len0: Ghost.erased U32.t;
