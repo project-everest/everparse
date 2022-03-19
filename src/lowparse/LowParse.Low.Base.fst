@@ -2091,7 +2091,7 @@ let witness_valid_gen
   B.witness_p s.base (wvalid p s compl pos gpos' gv);
   IRepr pos gpos' gv ()
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 #restart-solver
 inline_for_extraction
 let recall_valid_gen

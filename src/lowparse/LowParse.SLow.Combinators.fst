@@ -45,8 +45,12 @@ inline_for_extraction
 let size32_empty : size32 #_ #_ #parse_empty serialize_empty
 = size32_ret () (fun _ -> ())
 
+module T = FStar.Tactics
+
 inline_for_extraction
-let parse32_false : parser32 parse_false = fun _ -> None
+let parse32_false : parser32 parse_false = 
+  (fun x -> assert_norm (parser32_correct parse_false x None);
+         None)
 
 inline_for_extraction
 let serialize32_false : serializer32 #_ #_ #parse_false serialize_false = fun input -> B32.empty_bytes
