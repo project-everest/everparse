@@ -3,7 +3,7 @@ include LowParse.Spec.Combinators
 
 module Seq = FStar.Seq
 
-noextract
+[@@(noextract_to "Kremlin")]
 inline_for_extraction
 noeq
 type parse_ifthenelse_param = {
