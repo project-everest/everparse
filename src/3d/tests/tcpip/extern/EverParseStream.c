@@ -102,3 +102,13 @@ int EverParsePush(EverParseInputStreamBase const x, uint8_t * const buf, uint64_
   x->head = cell;
   return 1;
 }
+
+
+void EverParseHandleError(EverParseExtraT _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason)
+{
+  printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", typename, fieldname, reason);
+}
+
+void EverParseRetreat(EverParseExtraT _dummy, EverParseInputStreamBase base, uint64_t parsedSize)
+{
+}
