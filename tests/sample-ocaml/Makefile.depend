@@ -3,6 +3,6 @@ include .qd_files
 
 all:
 	cat .qd_files > .depend
-	$(FSTAR) --dep full $(QD_FILES) >> .depend
+	$(FSTAR) --dep full $(QD_FILES) --extract '*,-FStar,-Prims' >> .depend
 
 .PHONY: all

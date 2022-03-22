@@ -6,7 +6,7 @@ cache/%.checked:
 	$(FSTAR) $(OTHERFLAGS) $<
 	@touch $@
 
-ocaml/%.ml:
+ocaml/generated/%.ml:
 	$(FSTAR) --codegen OCaml $(patsubst %.checked,%,$(notdir $<)) --extract_module $(basename $(patsubst %.checked,%,$(notdir $<))) --warn_error '@241'
 	@touch $@
 
@@ -29,6 +29,7 @@ test: extract
 	@echo $(FSTAR_OPTIONS)
 
 clean:
-	rm -rf .depend cache ocaml out test.exe *~
+	+$(MAKE) -C ocaml clean
+	rm -rf .depend cache out test.exe *~
 
 .PHONY: all depend verify extract clean build test

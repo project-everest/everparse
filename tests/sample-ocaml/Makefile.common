@@ -8,7 +8,7 @@ export LOWPARSE_HOME
 export KREMLIN_HOME
 export QD_HOME
 
-FSTAR_OPTIONS = --odir ocaml --cache_dir cache --cache_checked_modules \
+FSTAR_OPTIONS = --odir ocaml/generated --cache_dir cache --cache_checked_modules \
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
 		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include $(KREMLIN_HOME)/kremlib/obj --cmi
 

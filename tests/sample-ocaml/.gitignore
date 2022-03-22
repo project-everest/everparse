@@ -1,3 +1,4 @@
 cache
-ocaml
 test.exe
+ocaml/generated
+ocaml/dune-project

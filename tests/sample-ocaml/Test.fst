@@ -16,8 +16,7 @@ let employee_test
     emp.Employee.salary
 
 let main
-  (argc: Int32.t)
-  (argv: LowStar.Buffer.buffer C.String.t)
+  ()
 : ST C.exit_code
     (requires (fun h -> True))
     (ensures (fun _ _ _ -> True))
