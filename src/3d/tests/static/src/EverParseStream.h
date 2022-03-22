@@ -55,4 +55,16 @@ static inline uint8_t
 }
 
 
+
+static inline
+void EverParseHandleError(EverParseExtraT _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason)
+{
+  printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", typename, fieldname, reason);
+}
+
+static inline
+void EverParseRetreat(EverParseExtraT _dummy, EverParseInputStreamBase base, uint64_t parsedSize)
+{
+}
+
 #endif // __EVERPARSESTREAM
