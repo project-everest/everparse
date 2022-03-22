@@ -966,6 +966,9 @@ let validate_fldata_consumes_all
     res
   end
 
+#pop-options
+
+#push-options "--z3rlimit_factor 16 --z3cliopt smt.arith.nl=false"
 #restart-solver
 
 noextract
@@ -995,6 +998,7 @@ let validate_fldata
     assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n));
     let res = validate_drop v ctxt err truncatedInput truncatedInputLength pos in
     let h3 = HST.get () in
+    modifies_address_liveness_insensitive_unused_in h h3;
     I.is_prefix_of_prop truncatedInput input h3;
     if LPE.is_error res
     then res
@@ -1184,7 +1188,7 @@ let validate_nlist_constant_size_without_actions
   else
     validate_nlist n v
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit_factor 16 --z3cliopt smt.arith.nl=false"
 #restart-solver
 
 noextract inline_for_extraction
