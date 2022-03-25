@@ -85,10 +85,9 @@ let test (_:unit): Stack unit (fun _ -> true) (fun _ _ _ -> true) =
 
   pop_frame()
 
-// BUGBUG: HACK for Kremlin kremlib issue
+// BUGBUG: HACK for Karamel krmllib issue
 // Dummy function, to call some FStar.Bytes functions.  This
-// causes Kremlin to emit type declarations that are needed bytes
-// krembytes.h.
+// causes Karamel to emit type declarations that need FStar.Bytes
 let dummy (_:unit): Stack unit (fun _ -> true) (fun _ _ _ -> true) =
   assume false;
   push_frame();
