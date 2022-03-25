@@ -215,6 +215,7 @@ let read
   );
   res
 
+#restart-solver
 inline_for_extraction
 noextract
 let peep

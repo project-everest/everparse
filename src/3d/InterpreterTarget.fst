@@ -777,7 +777,7 @@ let rec print_eloc mname (e:eloc)
     | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (print_ident mname x)
     | Eloc_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "eloc" hd) (print_args mname args)
 
-let print_td_iface mname root_name binders args inv_eloc_binders inv_eloc_args ar pk_wk pk_nz =
+let print_td_iface is_entrypoint mname root_name binders args inv_eloc_binders inv_eloc_args ar pk_wk pk_nz =
   let kind_t =
     Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
                     inline_for_extraction\n\
@@ -813,9 +813,10 @@ let print_td_iface mname root_name binders args inv_eloc_binders inv_eloc_args a
       ar
   in
   let validator_t =
-    Printf.sprintf "val validate_%s %s : validator_of (def'_%s %s)"
+    Printf.sprintf "val validate_%s %s : validator_of %s (def'_%s %s)"
       root_name
       binders
+      (if is_entrypoint then "#false" else "")
       root_name args
   in
   let dtyp_t =
@@ -1011,7 +1012,8 @@ let print_binding mname (td:type_decl)
         || td.attrs.is_exported
    then
      let iface =
-       print_td_iface mname root_name binders args
+       print_td_iface td.name.td_entrypoint
+                      mname root_name binders args
                       fv_binders fv_args td.allow_reading
                       weak_kind k.pk_nz
      in

@@ -25,6 +25,9 @@ typedef struct {
   uint8_t * (*read)(EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst);
   void (*skip)(EverParseInputStreamBase const x, uint64_t n);
   uint64_t (*empty)(EverParseInputStreamBase const x);
+  void (*retreat)(EverParseInputStreamBase const x, uint64_t n);
+  void *errorContext;
+  void (*handleError) (void *errorContext, uint64_t pos, const char *typename, const char *fieldname, const char *reason);
 } EverParseExtraT;
 
 static inline BOOLEAN EverParseHas(EverParseExtraT const f,  EverParseInputStreamBase const x, uint64_t n) {
@@ -41,6 +44,16 @@ static inline void EverParseSkip(EverParseExtraT const f, EverParseInputStreamBa
 
 static inline uint64_t EverParseEmpty(EverParseExtraT const f, EverParseInputStreamBase const x) {
   return f.empty(x);
+}
+
+static inline void EverParseHandleError(EverParseExtraT const f, uint64_t pos, const char *typename, const char *fieldname, const char *reason)
+{
+  f.handleError(f.errorContext, pos, typename, fieldname, reason);
+}
+
+static inline void EverParseRetreat(EverParseExtraT const f, EverParseInputStreamBase const x, uint64_t pos)
+{
+  f.retreat(x, pos);
 }
 
 #endif // __EVERPARSESTREAM

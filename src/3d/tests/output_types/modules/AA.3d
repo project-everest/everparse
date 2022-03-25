@@ -1,3 +1,4 @@
+export
 typedef UINT32 U32;
 
 output

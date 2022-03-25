@@ -84,35 +84,62 @@ static uint64_t _EverParseEmpty(EverParseInputStreamBase const x) {
   return res;
 }
 
+void _EverParseRetreat(EverParseInputStreamBase const x, uint64_t n) {
+  printf("Warning, no retreat");
+}
+
 // This function is declared in the generated TestWrapper.c, but not
 // defined. It is the callback function called if the validator for
 // Test.T fails.
-void TestEverParseError(char *StructName, char *FieldName, char *Reason) {
+void _EverParseError(void *status, uint64_t position, const char *StructName, const char *FieldName, const char *Reason) {
   printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", StructName, FieldName, Reason);
+  *((BOOLEAN*)status) = FALSE;
 }
 
-#define testSize 18
-
-int main(void) {
-  uint8_t *test = calloc(testSize, sizeof(uint8_t));
-  EverParseExtraT pfns = {
-    .has = &_EverParseHas,
-    .read = &_EverParseRead,
-    .skip = &_EverParseSkip,
-    .empty = &_EverParseEmpty
+EverParseExtraT makeExtraT(void *ctx) {
+  EverParseExtraT out = {
+      .has = &_EverParseHas,
+      .read = &_EverParseRead,
+      .skip = &_EverParseSkip,
+      .empty = &_EverParseEmpty,
+      .handleError = &_EverParseError,
+      .retreat = &_EverParseRetreat,
+      .errorContext = ctx
   };
-  if (test != NULL) {
-    EverParseInputStreamBase testStream = EverParseCreate();
+  return out;
+}
+
+
+int test(uint32_t chunkSize, uint32_t numChunks) {
+  uint8_t *chunk = calloc(chunkSize, sizeof(uint8_t));
+  EverParseInputStreamBase testStream = EverParseCreate();
+  BOOLEAN status = TRUE;
+  uint32_t i = numChunks;
+  if (chunk != NULL) {
     if (testStream != NULL) {
-      EverParsePush(testStream, test, testSize);
-      EverParsePush(testStream, test, testSize);
-      EverParsePush(testStream, test, testSize);
-      if (TestCheckPoint(pfns, testStream)) {
-        printf("Validation succeeded\n");
+      while (i-- > 0) {
+        EverParsePush(testStream, chunk, chunkSize);
+      }
+      EverParseExtraT ex = makeExtraT(&status);
+      uint64_t bytesRead = TestCheckPoint(ex, testStream);
+      if (status) {
+        printf("Validation succeeded (chunk_size=%u, n_chunks=%u), read %u bytes\n", chunkSize, numChunks, bytesRead);
+      }
+      else {
+        printf("Validation failed (chunk_size=%u, n_chunks=%u), read %u bytes\n", chunkSize, numChunks, bytesRead);
       }
       free(testStream);
     }
-    free(test);
+    free(chunk);
   }
+  return status;
+}
+    
+int main(void) {
+  if (!test(2, 6)) { return 1; }
+  if (!test(3, 9)) { return 1; }
+  if (test(3, 3))  { return 1; }
+  if (test(2, 5))  { return 1; }
   return 0;
 }
+  
