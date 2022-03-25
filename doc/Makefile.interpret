@@ -2,6 +2,6 @@ INTERPRETABLE_FILES=$(wildcard *.3d)
 3D=../bin/3d.exe
 
 interpret_all: $(filter-out ConstColor.3d, $(INTERPRETABLE_FILES))
-	EVERPARSE_KREMLIN_OPTIONS=-skip-compilation $(3D) --no_copy_everparse_h --batch --interpret $^
+	EVERPARSE_KRML_OPTIONS=-skip-compilation $(3D) --no_copy_everparse_h --batch --interpret $^
 
 .PHONY: %.interpret

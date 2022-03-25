@@ -82,7 +82,7 @@ Corporation under the `Apache License 2.0
 <https://github.com/project-everest/everparse/blob/master/LICENSE>`_.
 
 Additionally, the licenses of all dependencies included in the
-EverParse binary packages (F\*, KReMLin, z3, EverCrypt, clang-format) are all
+EverParse binary packages (F\*, KaRaMeL, z3, EverCrypt, clang-format) are all
 stored in the ``licenses/`` subdirectory of the EverParse binary
 package once extracted.
 

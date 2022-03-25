@@ -5,7 +5,7 @@ all: html 3d
 
 export QD_HOME?=$(realpath ..)
 export FSTAR_HOME?=$(realpath $(QD_HOME)/../FStar)
-export KREMLIN_HOME?=$(realpath $(QD_HOME)/../kremlin)
+export KRML_HOME?=$(realpath $(QD_HOME)/../karamel)
 
 3D=../bin/3d.exe
 3D_EXCLUDE=ConstColor.3d
