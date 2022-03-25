@@ -2,8 +2,8 @@ PREFIX=Sample.AutoGen_
 QD_HOME=../..
 FSTAR_HOME?=../../../FStar
 LOWPARSE_HOME?=../../../mitls-fstar/src/lowparse
-INCLUDES=$(KREMLIN_HOME)/kremlib \
-	$(KREMLIN_HOME)/kremlib/obj \
+INCLUDES=$(KRML_HOME)/krmllib \
+	$(KRML_HOME)/krmllib/obj \
 	$(LOWPARSE_HOME)
 INCLUDES_OPTS=$(addprefix --include , $(INCLUDES))
 FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(INCLUDES_OPTS) $(OTHERFLAGS)

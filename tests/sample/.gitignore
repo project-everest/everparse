@@ -1,6 +1,6 @@
 .qd_files
 cache
-kremlin
+krml
 test.exe
 *.fst*
 !Test.fst

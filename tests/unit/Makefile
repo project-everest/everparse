@@ -1,10 +1,10 @@
 FSTAR_HOME ?= ../../../FStar
 LOWPARSE_HOME ?= ../../src/lowparse
-KREMLIN_HOME ?= ../../../kremlin
+KRML_HOME ?= ../../../karamel
 
 export FSTAR_HOME
 export LOWPARSE_HOME
-export KREMLIN_HOME
+export KRML_HOME
 
 ifdef NO_QD_VERIFY
 LAX_EXT=.lax
@@ -18,15 +18,15 @@ DEPEND_FILE=.depend$(LAX_EXT)
 CACHE_DIR=cache$(LAX_EXT)
 CHECKED_EXT=.checked$(LAX_EXT)
 
-FSTAR_OPTIONS = --odir kremlin --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
+FSTAR_OPTIONS = --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
-		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include $(KREMLIN_HOME)/kremlib/obj --include .. --cmi
+		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 
-HEADERS = $(addprefix -add-include ,'"kremlin/internal/compat.h"')
+HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
-KREMLIN = $(KREMLIN_HOME)/krml \
+KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
@@ -50,8 +50,8 @@ $(CACHE_DIR)/%$(CHECKED_EXT):
 	$(FSTAR) $(OTHERFLAGS) $<
 	@touch $@
 
-kremlin/%.krml:
-	$(FSTAR) --codegen Kremlin $(patsubst %$(CHECKED_EXT),%,$(notdir $<)) --extract_module $(basename $(patsubst %$(CHECKED_EXT),%,$(notdir $<))) --warn_error '@241'
+krml/%.krml:
+	$(FSTAR) --codegen krml $(patsubst %$(CHECKED_EXT),%,$(notdir $<)) --extract_module $(basename $(patsubst %$(CHECKED_EXT),%,$(notdir $<))) --warn_error '@241'
 	@touch $@
 
 $(DEPEND_FILE): $(QD_FILES) Makefile ../Test.fst
@@ -68,15 +68,15 @@ verify: $(patsubst %,$(CACHE_DIR)/%$(CHECKED_EXT),$(QD_FILES))
 	echo $*
 endif
 
-ALL_KRML_FILES := $(filter-out kremlin/prims.krml,$(ALL_KRML_FILES))
+ALL_KRML_FILES := $(filter-out krml/prims.krml,$(ALL_KRML_FILES))
 
 extract: $(ALL_KRML_FILES) # from .depend
 	-@mkdir out
-	$(KREMLIN) -skip-compilation $^
+	$(KRML) -skip-compilation $^
 
-test.exe: $(ALL_KRML_FILES) kremlin/Test.krml
+test.exe: $(ALL_KRML_FILES) krml/Test.krml
 	-@mkdir out
-	$(KREMLIN) $(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c -no-prefix Test $^ -o test.exe
+	$(KRML) $(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c -no-prefix Test $^ -o test.exe
 
 test: test.exe
 	./test.exe
