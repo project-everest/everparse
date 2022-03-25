@@ -3,13 +3,13 @@ export QD_HOME
 
 3D=$(QD_HOME)/bin/3d.exe
 
-KREMLIN_HOME ?= $(realpath ../../../../kremlin)
-export KREMLIN_HOME
+KRML_HOME ?= $(realpath ../../../../karamel)
+export KRML_HOME
 
 FSTAR_HOME ?= $(realpath ../../../../FStar)
 export FSTAR_HOME
 
-INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/3d/prelude/buffer $(QD_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib/obj $(KREMLIN_HOME)/kremlib
+INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/3d/prelude/buffer $(QD_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 

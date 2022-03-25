@@ -21,7 +21,7 @@ extern: $(SOURCE_FILES_EXTERN) extern.out
 
 .PHONY: all interpret extern clean
 
-INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/3d/prelude/buffer $(QD_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib/obj $(KREMLIN_HOME)/kremlib
+INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/3d/prelude/buffer $(QD_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 
