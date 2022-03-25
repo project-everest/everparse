@@ -46,7 +46,7 @@ module ProjTac = EverParse3d.ProjectorTactic
 
    To achieve this, for any given concrete `t`, we partially evaluate
    this interpreter to get an EverParse validator specialized to `t`
-   which can be extracted by F*/Kremlin as usual---this partial
+   which can be extracted by F*/KaRaMeL as usual---this partial
    evaluation of an interpreter to a compiler producing a C program
    for t-validator is an instance of the 1st Futamura projection.
  *)
@@ -1157,12 +1157,12 @@ let rec as_validator
                            (dtyp_as_leaf_reader elt_t)
                            terminator)
 
-[@@noextract_to "Kremlin"; specialize]
+[@@noextract_to "krml"; specialize]
 inline_for_extraction noextract 
 let validator_of #allow_reading #nz #wk (#k:P.parser_kind nz wk) #i #l (t:typ k i l allow_reading) = 
   A.validate_with_action_t (as_parser t) i l allow_reading
 
-[@@noextract_to "Kremlin"; specialize]  
+[@@noextract_to "krml"; specialize]  
 inline_for_extraction noextract   
 let dtyp_of #nz #wk (#k:P.parser_kind nz wk) #i #l #b (t:typ k i l b) = 
   dtyp k b i l
