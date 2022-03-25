@@ -17,7 +17,7 @@ nswamy, protz, taramana 5-Feb-2020
 
 --*/
 /* This is a hand-written header that selectively includes relevant bits from
- * kremlib.h -- it has to be updated manually to track upstream changes. */
+ * krmllib.h -- it has to be updated manually to track upstream changes. */
 
 #pragma once
 

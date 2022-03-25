@@ -66,7 +66,7 @@ let hash f opt_c =
   let h = HashingBase.init () in
   hash_string h Version.everparse_version;
   hash_string h Version.fstar_commit;
-  hash_string h Version.kremlin_commit;
+  hash_string h Version.karamel_commit;
   hash_file h f;
   begin match opt_c with
   | None -> hash_bool h false

@@ -25,9 +25,9 @@ get_fstar_commit() {
     )
 }
 
-get_kremlin_commit() {
+get_karamel_commit() {
     (
-	cd $KREMLIN_HOME
+	cd $KRML_HOME
         git show --no-patch --format=%h
     )
 }
@@ -35,4 +35,4 @@ get_kremlin_commit() {
 echo module Version > Version.fst
 echo "let everparse_version = \"$(get_everparse_version)\"" >> Version.fst
 echo "let fstar_commit = \"$(get_fstar_commit)\"" >> Version.fst
-echo "let kremlin_commit = \"$(get_kremlin_commit)\"" >> Version.fst
+echo "let karamel_commit = \"$(get_karamel_commit)\"" >> Version.fst
