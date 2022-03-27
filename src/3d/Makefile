@@ -1,7 +1,7 @@
 ROOT=Main.fst
 FSTAR_HOME?=$(realpath ../../../FStar)
 KRML_HOME?=$(realpath ../../../karamel)
-EVERPARSE_HOME=../..
+EVERPARSE_HOME=$(realpath ../..)
 
 INCLUDE_PATHS=
 OTHERFLAGS?=

@@ -1,6 +1,6 @@
 FSTAR_HOME ?= ../../../FStar
 KRML_HOME ?= ../../../karamel
-EVERPARSE_HOME ?= ../..
+EVERPARSE_HOME ?= $(realpath ../..)
 LOWPARSE_HOME ?= $(EVERPARSE_HOME)/src/lowparse
 
 export FSTAR_HOME

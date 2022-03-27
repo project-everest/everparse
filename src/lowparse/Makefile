@@ -9,7 +9,7 @@ all: verify-all
 ifndef FSTAR_HOME
   FSTAR_EXE=$(shell which fstar.exe)
   ifneq ($(.SHELLSTATUS),0)
-    FSTAR_HOME=../../../FStar
+    FSTAR_HOME=$(realpath ../../../FStar)
   endif
 endif
 ifdef FSTAR_HOME
@@ -19,7 +19,7 @@ endif
 ifndef KRML_HOME
   KRMLLIB=$(shell ocamlfind query karamel)
   ifneq ($(.SHELLSTATUS),0)
-    KRML_HOME=../../../karamel
+    KRML_HOME=$(realpath ../../../karamel)
   endif
 endif
 ifdef KRML_HOME

@@ -7,7 +7,7 @@ export EVERPARSE_HOME?=$(realpath ..)
 export FSTAR_HOME?=$(realpath $(EVERPARSE_HOME)/../FStar)
 export KRML_HOME?=$(realpath $(EVERPARSE_HOME)/../karamel)
 
-3D=../bin/3d.exe
+3D=$(EVERPARSE_HOME)/bin/3d.exe
 3D_EXCLUDE=ConstColor.3d
 3D_FILES=$(filter-out $(3D_EXCLUDE),$(wildcard *.3d))
 3D_MODULES=$(basename $(3D_FILES))

@@ -3,7 +3,7 @@ all: verify buffer extern
 FSTAR_HOME?=$(realpath ../../../../FStar)
 KRML_HOME?=$(realpath ../../../../karamel)
 OTHERFLAGS?=
-EVERPARSE_HOME=../../..
+EVERPARSE_HOME=$(realpath ../../..)
 
 FSTAR_OPTIONS=$(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj) --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=10'
 #--z3cliopt 'smt.arith.nl=false' --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr wrapped

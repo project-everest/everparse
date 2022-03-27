@@ -1,4 +1,4 @@
-EVERPARSE_HOME ?= ../..
+EVERPARSE_HOME ?= $(realpath ../..)
 QD_BUILD = _build/default/quackyducky.exe
 QD_BIN = $(EVERPARSE_HOME)/bin/qd.exe
 
