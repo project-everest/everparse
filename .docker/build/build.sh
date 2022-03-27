@@ -122,7 +122,7 @@ function rebuild_doc () {
 function test_mitls_parsers () {
         fetch_and_make_karamel &&
         OTHERFLAGS='--admit_smt_queries true' make -j $threads quackyducky lowparse &&
-        export_home QD "$(pwd)" &&
+        export_home EVERPARSE "$(pwd)" &&
         fetch_mitls &&
         make -j $threads -C $MITLS_HOME/src/parsers verify
 }
