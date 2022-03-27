@@ -25,11 +25,11 @@ fixpath () {
     fi
 }
 
-if [[ -z "$QD_HOME" ]] ; then
+if [[ -z "$EVERPARSE_HOME" ]] ; then
     # This file MUST be run from the EverParse root directory
-    export QD_HOME=$(fixpath $PWD)
+    export EVERPARSE_HOME=$(fixpath $PWD)
 else
-    export QD_HOME=$(fixpath "$QD_HOME")
+    export EVERPARSE_HOME=$(fixpath "$EVERPARSE_HOME")
 fi
 
 if $is_windows ; then
@@ -93,7 +93,7 @@ print_date_utc_of_iso_hr() {
 }
 
 if [[ -z "$everparse_version" ]] ; then
-    everparse_version=$(cat $QD_HOME/version.txt)
+    everparse_version=$(cat $EVERPARSE_HOME/version.txt)
     everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
     if everparse_commit=$(git show --no-patch --format=%h) ; then
         if [[ $everparse_commit != $everparse_last_version ]] ; then
@@ -170,7 +170,7 @@ make_everparse() {
     fi
 
     # Rebuild EverParse
-    $MAKE -C "$QD_HOME" "$@"
+    $MAKE -C "$EVERPARSE_HOME" "$@"
 
     # Copy dependencies and Z3
     mkdir -p everparse/bin
@@ -245,25 +245,25 @@ make_everparse() {
     $cp -r $KRML_HOME/misc everparse/
 
     # Copy EverParse
-    $cp $QD_HOME/bin/qd.exe everparse/bin/qd.exe
-    $cp -r $QD_HOME/bin/3d.exe everparse/bin/3d.exe
+    $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
+    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
     mkdir -p everparse/src/3d
-    $cp -r $QD_HOME/src/lowparse everparse/src/
+    $cp -r $EVERPARSE_HOME/src/lowparse everparse/src/
     if $is_windows ; then
-        $cp -r $QD_HOME/src/package/everparse.cmd everparse/
+        $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
     else
-        $cp -r $QD_HOME/src/package/everparse.sh everparse/
+        $cp -r $EVERPARSE_HOME/src/package/everparse.sh everparse/
     fi
-    $cp -r $QD_HOME/src/3d/prelude everparse/src/3d/prelude
-    $cp -r $QD_HOME/src/3d/.clang-format everparse/src/3d
-    $cp -r $QD_HOME/src/3d/copyright.txt everparse/src/3d
-    if $is_windows ; then $cp -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
-    $cp -r $QD_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
-    $cp -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/
+    $cp -r $EVERPARSE_HOME/src/3d/prelude everparse/src/3d/prelude
+    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
+    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
+    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
+    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
+    $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
     if $is_windows ; then
-        $cp -r $QD_HOME/src/package/README.Windows.pkg everparse/README
+        $cp -r $EVERPARSE_HOME/src/package/README.Windows.pkg everparse/README
     else
-        $cp -r $QD_HOME/src/package/README.pkg everparse/README
+        $cp -r $EVERPARSE_HOME/src/package/README.pkg everparse/README
     fi
     echo "This is EverParse $everparse_version" >> everparse/README
     echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr)" >> everparse/README
@@ -279,7 +279,7 @@ make_everparse() {
     mkdir -p everparse/licenses
     $cp $FSTAR_HOME/LICENSE everparse/licenses/FStar
     $cp $KRML_HOME/LICENSE everparse/licenses/KaRaMeL
-    $cp $QD_HOME/LICENSE everparse/licenses/EverParse
+    $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
     if [[ -z "$NO_EVERCRYPT" ]] ; then
         wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE

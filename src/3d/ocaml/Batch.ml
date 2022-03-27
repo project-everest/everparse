@@ -5,10 +5,10 @@ open HashingOptions
 let fstar_home = OS.getenv "FSTAR_HOME"
 let krml_home = OS.getenv "KRML_HOME"
 let krmllib = filename_concat krml_home "krmllib"
-let qd_home = OS.getenv "QD_HOME"
-let lowparse_home = filename_concat (filename_concat qd_home "src") "lowparse"
-let ddd_home = filename_concat (filename_concat qd_home "src") "3d"
-let ddd_prelude_home = filename_concat (filename_concat (filename_concat qd_home "src") "3d") "prelude"
+let everparse_home = OS.getenv "EVERPARSE_HOME"
+let lowparse_home = filename_concat (filename_concat everparse_home "src") "lowparse"
+let ddd_home = filename_concat (filename_concat everparse_home "src") "3d"
+let ddd_prelude_home = filename_concat (filename_concat (filename_concat everparse_home "src") "3d") "prelude"
 
 let ddd_actions_home input_stream_binding =
   let input_stream_dir =

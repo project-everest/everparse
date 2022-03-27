@@ -3,9 +3,9 @@
 
 all: html 3d
 
-export QD_HOME?=$(realpath ..)
-export FSTAR_HOME?=$(realpath $(QD_HOME)/../FStar)
-export KRML_HOME?=$(realpath $(QD_HOME)/../karamel)
+export EVERPARSE_HOME?=$(realpath ..)
+export FSTAR_HOME?=$(realpath $(EVERPARSE_HOME)/../FStar)
+export KRML_HOME?=$(realpath $(EVERPARSE_HOME)/../karamel)
 
 3D=../bin/3d.exe
 3D_EXCLUDE=ConstColor.3d

@@ -267,7 +267,7 @@ fetch and build EverParse sources:
    <https://github.com/project-everest/everparse>`_
    anywhere else.
 
-8. Set the ``QD_HOME`` environment variable to your EverParse clone
+8. Set the ``EVERPARSE_HOME`` environment variable to your EverParse clone
    as you chose it.
 
 9. Then, once you are all set up in your EverParse clone, you can

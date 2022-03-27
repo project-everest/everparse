@@ -1,12 +1,12 @@
 FSTAR_HOME ?= ../../../FStar
 KRML_HOME ?= ../../../karamel
-QD_HOME ?= ../..
-LOWPARSE_HOME ?= $(QD_HOME)/src/lowparse
+EVERPARSE_HOME ?= ../..
+LOWPARSE_HOME ?= $(EVERPARSE_HOME)/src/lowparse
 
 export FSTAR_HOME
 export LOWPARSE_HOME
 export KRML_HOME
-export QD_HOME
+export EVERPARSE_HOME
 
 FSTAR_OPTIONS = --odir krml --cache_dir cache --cache_checked_modules \
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \

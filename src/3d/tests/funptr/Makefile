@@ -8,19 +8,17 @@
 # EverParse-generated Makefile.
 all: world
 
-# QD_HOME is necessary for the 3d executable. It needs to point to the
-# root of the EverParse source tree. However, QD_HOME is not needed if
-# you run everparse.sh or everparse.cmd from the binary package.
-QD_HOME ?= $(realpath ../../../..)
-export QD_HOME
-
 ########################################################
 # Variables needed by the EverParse-generated Makefile #
 ########################################################
 
 # EVERPARSE_HOME: root of the EverParse tree (source tree or contents
 # of the binary package.)
-EVERPARSE_HOME=$(QD_HOME)
+# EVERPARSE_HOME is necessary for the 3d executable. It needs to point to the
+# root of the EverParse source tree. However, EVERPARSE_HOME is not needed if
+# you run everparse.sh or everparse.cmd from the binary package.
+EVERPARSE_HOME ?= $(realpath ../../../..)
+export EVERPARSE_HOME
 
 # Command to run EverParse: path to either the 3d executable or the
 # everparse.sh or everparse.cmd script from the EverParse binary

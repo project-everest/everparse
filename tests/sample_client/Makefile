@@ -1,7 +1,7 @@
 PREFIX=Sample.AutoGen_
-QD_HOME=../..
+EVERPARSE_HOME=../..
 FSTAR_HOME?=../../../FStar
-LOWPARSE_HOME?=../../../mitls-fstar/src/lowparse
+LOWPARSE_HOME?=$(EVERPARSE_HOME)/src/lowparse
 INCLUDES=$(KRML_HOME)/krmllib \
 	$(KRML_HOME)/krmllib/obj \
 	$(LOWPARSE_HOME)
