@@ -107,13 +107,13 @@ make_everparse() {
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
     if [[ -z "$FSTAR_HOME" ]] ; then
-        [[ -d FStar ]] || git clone --branch pnmadelaine_rename_kremlin https://github.com/FStarLang/FStar
+        [[ -d FStar ]] || git clone https://github.com/FStarLang/FStar
         export FSTAR_HOME=$(fixpath $PWD/FStar)
     else
         export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
     fi
     if [[ -z "$KRML_HOME" ]] ; then
-        { [[ -d karamel ]] || git clone --branch pnmadelaine_renaming https://github.com/FStarLang/karamel ; }
+        { [[ -d karamel ]] || git clone https://github.com/FStarLang/karamel ; }
         export KRML_HOME=$(fixpath $PWD/karamel)
     else
         export KRML_HOME=$(fixpath "$KRML_HOME")
