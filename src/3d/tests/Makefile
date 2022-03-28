@@ -1,15 +1,15 @@
-QD_HOME ?= $(realpath ../../..)
-export QD_HOME
+EVERPARSE_HOME ?= $(realpath ../../..)
+export EVERPARSE_HOME
 
-3D=$(QD_HOME)/bin/3d.exe
+3D=$(EVERPARSE_HOME)/bin/3d.exe
 
-KREMLIN_HOME ?= $(realpath ../../../../kremlin)
-export KREMLIN_HOME
+KRML_HOME ?= $(realpath ../../../../karamel)
+export KRML_HOME
 
 FSTAR_HOME ?= $(realpath ../../../../FStar)
 export FSTAR_HOME
 
-INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/3d/prelude/buffer $(QD_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib/obj $(KREMLIN_HOME)/kremlib
+INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 
@@ -65,8 +65,8 @@ batch-interpret-test:
 	$(3D) --odir out.batch-interpret --batch --no_copy_everparse_h --save_hashes $(INTERPRETABLE_FILES)
 	$(3D) --odir out.batch-interpret --batch --check_hashes strong $(INTERPRETABLE_FILES)
 	cp $(OTHER_HEADERS) out.batch-interpret
-	+$(MAKE) -C out.batch-interpret -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer'
-	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(QD_HOME)/src/3d -I $(QD_HOME)/src/3d/prelude/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
+	+$(MAKE) -C out.batch-interpret -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/src/3d/prelude/buffer'
+	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/src/3d/prelude/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
 	./test-cpp.exe
 
 elf-test: ELF.3d

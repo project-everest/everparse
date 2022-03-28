@@ -1126,12 +1126,12 @@ let u8_shift_right
   in
   y
 
-// inline_for_extraction // no, because of https://github.com/FStarLang/kremlin/issues/102
+// inline_for_extraction // no, because of https://github.com/FStarLang/karamel/issues/102
 let get_bitfield_gen8
   (x: U8.t) (lo: U32.t) (hi: U32.t {U32.v lo < U32.v hi /\ U32.v hi <= 8})
 : Tot (y: U8.t { U8.v y == get_bitfield (U8.v x) (U32.v lo) (U32.v hi) })
 = get_bitfield_eq_2 #8 (U8.v x) (U32.v lo) (U32.v hi);
-  (* NOTE: due to https://github.com/FStarLang/kremlin/issues/102 I need to introduce explicit let-bindings here *)
+  (* NOTE: due to https://github.com/FStarLang/karamel/issues/102 I need to introduce explicit let-bindings here *)
   let op1 = x `U8.shift_left` (8ul `U32.sub` hi) in
   let op2 = op1 `U8.shift_right` ((8ul `U32.sub` hi) `U32.add` lo) in
   op2
@@ -1142,7 +1142,7 @@ let set_bitfield_gen8
   (v: U8.t { U8.v v < pow2 (U32.v hi - U32.v lo) })
 : Tot (y: U8.t { U8.v y == set_bitfield (U8.v x) (U32.v lo) (U32.v hi) (U8.v v) })
 = bitfield_mask_eq_2 8 (U32.v lo) (U32.v hi);
-  (* NOTE: due to https://github.com/FStarLang/kremlin/issues/102 I need to introduce explicit let-bindings here *)
+  (* NOTE: due to https://github.com/FStarLang/karamel/issues/102 I need to introduce explicit let-bindings here *)
   let op0 = (U8.lognot 0uy) in
   let op1 = op0 `U8.shift_right` (8ul `U32.sub` (hi `U32.sub` lo)) in
   let op2 = op1 `U8.shift_left` lo in

@@ -1,6 +1,6 @@
-#include "kremlib.h"
+#include "krmllib.h"
 
-#include <kremlin/internal/compat.h>
+#include <krml/internal/compat.h>
 #include "LowParse_TestLib_Aux.h"
 
 FStar_Bytes_bytes LowParse_TestLib_SLow_load_file(Prims_string x0)

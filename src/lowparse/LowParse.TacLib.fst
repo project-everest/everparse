@@ -4,7 +4,7 @@ include LowParse.Norm
 
 module L = FStar.List.Tot
 
-[@@ noextract_to "Kremlin"]
+[@@ noextract_to "krml"]
 let conclude ()
 : Tac unit
 = // dump "conclude before";
@@ -20,12 +20,12 @@ let conclude ()
 //  dump "conclude after";
   qed ()
 
-[@@ noextract_to "Kremlin"]
+[@@ noextract_to "krml"]
 let solve_vc ()
 : Tac unit
 = exact_guard (quote ()); conclude ()
 
-[@@ noextract_to "Kremlin"]
+[@@ noextract_to "krml"]
 let rec app_head_rev_tail (t: term) :
   Tac (term * list argv)
 =
@@ -38,13 +38,13 @@ let rec app_head_rev_tail (t: term) :
   else
     (t, [])
 
-[@@ noextract_to "Kremlin"]
+[@@ noextract_to "krml"]
 let app_head_tail (t: term) :
     Tac (term * list argv)
 = let (x, l) = app_head_rev_tail t in
   (x, L.rev l)
 
-[@@ noextract_to "Kremlin"]
+[@@ noextract_to "krml"]
 let tassert (b: bool) : Tac (squash b) =
   if b
   then ()
@@ -52,14 +52,14 @@ let tassert (b: bool) : Tac (squash b) =
     let s = term_to_string (quote b) in
     fail ("Tactic assertion failed: " ^ s)
 
-[@@ noextract_to "Kremlin"]
+[@@ noextract_to "krml"]
 let rec to_all_goals (t: (unit -> Tac unit)) : Tac unit =
   if ngoals () = 0
   then ()
   else
     let _ = divide 1 t (fun () -> to_all_goals t) in ()
 
-[@@ noextract_to "Kremlin"]
+[@@ noextract_to "krml"]
 let rec intros_until_squash
   ()
 : Tac binder
@@ -69,7 +69,7 @@ let rec intros_until_squash
   then i
   else intros_until_squash ()
 
-[@@ noextract_to "Kremlin"]
+[@@ noextract_to "krml"]
 let rec intros_until_eq_hyp
   ()
 : Tac binder
@@ -88,7 +88,7 @@ let rec intros_until_eq_hyp
   then i
   else intros_until_eq_hyp ()
 
-[@@ noextract_to "Kremlin"]
+[@@ noextract_to "krml"]
 let pp_norm_tac () : Tac unit =
   norm norm_steps;
   trefl ();

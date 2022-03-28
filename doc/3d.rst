@@ -107,7 +107,7 @@ actual entrypoint executable is ``everparse.cmd`` (for Windows) or
 ``everparse.sh`` (for Linux.)
 
 Binary packages already contain all dependencies required by
-EverParse, such as F\*, KReMLin and z3, so no need to install anything
+EverParse, such as F\*, KaRaMeL and z3, so no need to install anything
 beforehand.
 
 The Windows binary package contains a `binary snapshot of clang-format
@@ -201,9 +201,9 @@ Alternate mode: generating a Makefile
 By default, with ``--batch``, given a ``.3d`` specification, EverParse
 produces ``.c`` and ``.h`` files by first producing ``.fsti`` and
 ``.fst`` files files containing verified F* specifications and
-implementations of validators, and then calling F* and KReMLin on each
+implementations of validators, and then calling F* and KaRaMeL on each
 such file to verify and extract them to C. EverParse will issue all
-such calls to F* and KReMLin sequentially.
+such calls to F* and KaRaMeL sequentially.
 
 Alternatively, with ``everparse.cmd --makefile gmake Test.3d`` (on
 Windows; use ``./everparse.sh`` on Linux), instead of producing ``.c``
