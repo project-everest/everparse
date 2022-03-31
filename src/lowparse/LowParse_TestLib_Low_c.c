@@ -1,6 +1,6 @@
-#include "kremlib.h"
-#include "kremlin/internal/compat.h"
-#include "kremlin/internal/types.h"
+#include "krmllib.h"
+#include "krml/internal/compat.h"
+#include "krml/internal/types.h"
 #include "LowParse_TestLib_Aux.h"
 
 typedef struct K___uint8_t__int32_t_s

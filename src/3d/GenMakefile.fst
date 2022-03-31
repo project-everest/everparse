@@ -205,7 +205,7 @@ let produce_h_rules
         then [mk_filename (Printf.sprintf "%s_ExternalAPI" m) "krml"]
         else []) all_files
       ;
-    to = to; (* IMPORTANT: relies on the fact that kremlin generates .c files BEFORE .h files *)
+    to = to; (* IMPORTANT: relies on the fact that KaRaMeL generates .c files BEFORE .h files *)
     args = Printf.sprintf "--__produce_c_from_existing_krml %s" (mk_input_filename file);
   } ::
   [produce_nop_rule [to] (mk_filename (Options.get_module_name file) "h")]

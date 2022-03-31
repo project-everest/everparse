@@ -26,23 +26,23 @@ function export_home() {
     fi
 }
 
-# By default, kremlin master works against F* stable. Can also be overridden.
-function fetch_kremlin() {
-    if [ ! -d kremlin ]; then
-        git clone https://github.com/FStarLang/kremlin kremlin
+# By default, karamel master works against F* stable. Can also be overridden.
+function fetch_karamel() {
+    if [ ! -d karamel ]; then
+        git clone https://github.com/FStarLang/karamel karamel
     fi
 
-    cd kremlin
+    cd karamel
     git fetch origin
-    local ref=$(jq -c -r '.RepoVersions["kremlin_version"]' "$rootPath/.docker/build/config.json" )
-    echo Switching to KreMLin $ref
+    local ref=$(jq -c -r '.RepoVersions["karamel_version"]' "$rootPath/.docker/build/config.json" )
+    echo Switching to KaRaMeL $ref
     git reset --hard $ref
     cd ..
-    export_home KREMLIN "$(pwd)/kremlin"
+    export_home KRML "$(pwd)/karamel"
 }
 
-function fetch_and_make_kremlin() {
-    fetch_kremlin
+function fetch_and_make_karamel() {
+    fetch_karamel
 
     # Default build target is minimal, unless specified otherwise
     local target
@@ -52,10 +52,10 @@ function fetch_and_make_kremlin() {
         target="$1"
     fi
 
-    make -C kremlin -j $threads $target ||
-        (cd kremlin && git clean -fdx && make -j $threads $target)
-    OTHERFLAGS='--admit_smt_queries true' make -C kremlin/kremlib -j $threads
-    export PATH="$(pwd)/kremlin:$PATH"
+    make -C karamel -j $threads $target ||
+        (cd karamel && git clean -fdx && make -j $threads $target)
+    OTHERFLAGS='--admit_smt_queries true' make -C karamel/krmllib -j $threads
+    export PATH="$(pwd)/karamel:$PATH"
 }
 
 function fetch_hacl() {
@@ -120,9 +120,9 @@ function rebuild_doc () {
 }
 
 function test_mitls_parsers () {
-        fetch_and_make_kremlin &&
+        fetch_and_make_karamel &&
         OTHERFLAGS='--admit_smt_queries true' make -j $threads quackyducky lowparse &&
-        export_home QD "$(pwd)" &&
+        export_home EVERPARSE "$(pwd)" &&
         fetch_mitls &&
         make -j $threads -C $MITLS_HOME/src/parsers verify
 }
@@ -139,7 +139,7 @@ function build_and_test_quackyducky() {
     # Rebuild the EverParse documentation and push it to project-everest.github.io
     rebuild_doc &&
     # Test EverParse proper
-    fetch_and_make_kremlin &&
+    fetch_and_make_karamel &&
     fetch_and_make_hacl &&
     env WITH_STEEL_C_ARRAY=1 make -j $threads -k ci &&
     # Build incrementality test

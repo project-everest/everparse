@@ -14,22 +14,22 @@ ifdef FSTAR_HOME
   FSTAR_EXE=$(FSTAR_HOME)/bin/fstar.exe
 endif
 
-ifndef KREMLIN_HOME
-  KREMLIB=$(shell ocamlfind query kremlin)
+ifndef KRML_HOME
+  KRMLLIB=$(shell ocamlfind query karamel)
   ifneq ($(.SHELLSTATUS),0)
-    KREMLIN_HOME=../../../kremlin
+    KRML_HOME=../../../karamel
   endif
 endif
-ifdef KREMLIN_HOME
-  KREMLIB=$(KREMLIN_HOME)/kremlib
-  KREMLIN_EXE=$(KREMLIN_HOME)/krml
+ifdef KRML_HOME
+  KRMLLIB=$(KRML_HOME)/krmllib
+  KRML_EXE=$(KRML_HOME)/krml
 else
-  KREMLIN_EXE=krml
+  KRML_EXE=krml
 endif
 
-INCLUDE_KREMLIN=--include $(KREMLIB) --include $(KREMLIB)/obj
+INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 
-FSTAR_OPTIONS += --use_hints --trivial_pre_for_unannotated_effectful_fns false --include $(LOWPARSE_HOME) --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN) --cmi
+FSTAR_OPTIONS += --use_hints --trivial_pre_for_unannotated_effectful_fns false --include $(LOWPARSE_HOME) --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) --cmi
 
 # NOTE: the cache dir and out dir for F* MUST be the same, because the
 # .krml files should be generated only once.
@@ -38,7 +38,7 @@ INTERMEDIATE_LEVEL=$(LOWPARSE_HOME)/LowParse_TestLib_SLow_c.c -ccopt -Wno-error-
 
 LOW_LEVEL=$(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c
 
-MY_KREMLIN=$(KREMLIN_EXE) -bundle 'LowParse.\*'  -add-include '"kremlin/internal/compat.h"'
+MY_KRML=$(KRML_EXE) -bundle 'LowParse.\*'  -add-include '"krml/internal/compat.h"'
 
 EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair ExampleDepLen ExampleConstInt32le ExampleWriters
 
@@ -76,33 +76,33 @@ $(FSTAR_OUT_DIR)/%.checked:
 # '--extract LowParse.SLow' would actually extract the whole
 # namespace, not only the module.
 $(FSTAR_OUT_DIR)/%.krml:
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --codegen Kremlin $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --codegen krml $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
 	touch $@
 
 $(EXAMPLES): %: %/a.out
 
 %/a.out:
-	$(MY_KREMLIN) $(KREMLIN_ARGS) -tmpdir $(EXAMPLE) -bundle LowParse$(EXAMPLE)'.Aux' -warn-error '@2' -no-prefix LowParse$(EXAMPLE) $(EXAMPLE_KRML_FILES) -o $@
+	$(MY_KRML) $(KRML_ARGS) -tmpdir $(EXAMPLE) -bundle LowParse$(EXAMPLE)'.Aux' -warn-error '@2' -no-prefix LowParse$(EXAMPLE) $(EXAMPLE_KRML_FILES) -o $@
 	$@
 
 extract-all: $(filter-out $(NOEXTRACT_EXAMPLES), $(EXAMPLES))
 
-Example: KREMLIN_ARGS=$(INTERMEDIATE_LEVEL)
-Example2: KREMLIN_ARGS=$(INTERMEDIATE_LEVEL)
-Example3: KREMLIN_ARGS=$(LOW_LEVEL)
-Example5: KREMLIN_ARGS=
-Example6: KREMLIN_ARGS=
-Example7: KREMLIN_ARGS=
-Example8: KREMLIN_ARGS=$(LOW_LEVEL)
-Example9: KREMLIN_ARGS=$(LOW_LEVEL)
-Example10: KREMLIN_ARGS=
-Example11: KREMLIN_ARGS=
-Example12: KREMLIN_ARGS=
-ExampleMono: KREMLIN_ARGS=
-ExamplePair: KREMLIN_ARGS=
-ExampleDepLen: KREMLIN_ARGS=
-ExampleConstInt32le: KREMLIN_ARGS=
-ExampleWriters: KREMLIN_ARGS=$(LOW_LEVEL)
+Example: KRML_ARGS=$(INTERMEDIATE_LEVEL)
+Example2: KRML_ARGS=$(INTERMEDIATE_LEVEL)
+Example3: KRML_ARGS=$(LOW_LEVEL)
+Example5: KRML_ARGS=
+Example6: KRML_ARGS=
+Example7: KRML_ARGS=
+Example8: KRML_ARGS=$(LOW_LEVEL)
+Example9: KRML_ARGS=$(LOW_LEVEL)
+Example10: KRML_ARGS=
+Example11: KRML_ARGS=
+Example12: KRML_ARGS=
+ExampleMono: KRML_ARGS=
+ExamplePair: KRML_ARGS=
+ExampleDepLen: KRML_ARGS=
+ExampleConstInt32le: KRML_ARGS=
+ExampleWriters: KRML_ARGS=$(LOW_LEVEL)
 
 .PHONY: all verify-all clean extract-all $(EXAMPLES) %.fst-in %.fsti-in
 

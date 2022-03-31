@@ -2,6 +2,8 @@
 
 #include "Color.h"
 
+
+
 uint64_t
 ColorValidateColoredPoint(
   uint8_t *Ctxt,

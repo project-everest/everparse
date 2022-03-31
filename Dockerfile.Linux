@@ -45,7 +45,7 @@ ADD --chown=test . everparse
 WORKDIR everparse
 
 # Build the package (skipping proofs)
-# this will also compile F* and KReMLin, since we did not fetch them through everest
+# this will also compile F* and KaRaMeL, since we did not fetch them through everest
 ARG EVEREST_THREADS=1
 # BUILD_ID is used by CI to avoid caching, starting from this point
 ARG BUILD_ID=0

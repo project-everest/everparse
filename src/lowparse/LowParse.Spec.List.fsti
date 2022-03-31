@@ -65,49 +65,12 @@ let parse_list_bare_consumes_all
   (consumes_all (parse_list_bare p))
 = Classical.forall_intro (Classical.move_requires (parse_list_bare_consumed p))
 
-#set-options "--z3rlimit 16"
-
-let parse_list_bare_injective
+val parse_list_bare_injective
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
 : Lemma
   (ensures (injective (parse_list_bare p)))
-= parser_kind_prop_equiv k p;
-  let f () : Lemma
-    (injective p)
-  = ()
-  in
-  let rec aux
-    (b1: bytes)
-    (b2: bytes)
-  : Lemma
-    (requires (injective_precond (parse_list_bare p) b1 b2))
-    (ensures (injective_postcond (parse_list_bare p) b1 b2))
-    (decreases (Seq.length b1 + Seq.length b2))
-  = if Seq.length b1 = 0
-    then begin
-      () // assert (Seq.equal b1 b2)
-    end else begin
-      assert (injective_precond p b1 b2);
-      f ();
-      assert (injective_postcond p b1 b2);
-      let (Some (_, len1)) = parse p b1 in
-      let (Some (_, len2)) = parse p b2 in
-      assert ((len1 <: nat) == (len2 <: nat));
-      let b1' : bytes = Seq.slice b1 len1 (Seq.length b1) in
-      let b2' : bytes = Seq.slice b2 len2 (Seq.length b2) in
-      aux b1' b2';
-      let (Some (_, len1')) = parse (parse_list_bare p) b1' in
-      let (Some (_, len2')) = parse (parse_list_bare p) b2' in
-      Seq.lemma_split (Seq.slice b1 0 (len1 + len1')) len1;
-      Seq.lemma_split (Seq.slice b2 0 (len2 + len2')) len2;
-      assert (injective_postcond (parse_list_bare p) b1 b2)
-    end
-  in
-  Classical.forall_intro_2 (fun b -> Classical.move_requires (aux b))
-
-#reset-options
 
 inline_for_extraction
 let parse_list_kind =
@@ -556,8 +519,6 @@ let serialize_list_snoc_upd_bw_chain
   ))
 = let j' = Seq.length (serialize s x) - i' - Seq.length s' in
   serialize_list_snoc_upd_chain s l1 x y j' s'
-
-#reset-options
 
 val list_length_constant_size_parser_correct
   (#k: parser_kind)

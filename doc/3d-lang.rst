@@ -723,7 +723,7 @@ caller to reconstruct a stack trace of a failing validation.
 EverParse generates a default error handler that records just the
 deepest validation failure that occurred.
 
-A fully worked example: TCP Segment Headers
+Fully worked examples: TCP Segment Headers
 -------------------------------------------
 
 The classic `IETF RFC 793 <https://tools.ietf.org/html/rfc793>`_ from
@@ -1067,3 +1067,293 @@ This can be instantiated with a procedure to, say, log an error.
 
 Alternatively, the default error handler in ``TCPWrapper.h`` can be
 replaced by a custom error handler of your choosing.
+
+
+Fully worked examples: ELF files
+---------------------------------
+
+ELF (Executable and Linkable Format) is a common, standard file format
+for various kinds of binary files (object files, executables, shared
+libraries, and core dumps). The file format is described as
+C-structures in the `elf.h
+<https://man7.org/linux/man-pages/man5/elf.5.html>`_ file.
+
+In this section we develop (parts of) a 3d specification for 64-bits
+ELF files and describe how it can be integrated in existing projects
+for validating potentially untrusted ELF files. A complete ELF
+specification can be found in the `3d test suite
+<https://github.com/project-everest/everparse/blob/master/src/3d/tests/ELF.3d>`_.
+
+An ELF file consists of an ELF header, followed by a program header
+table and a section header table. Both the tables are optional and
+describe the rest of the ELF file. The ELF header specifies the
+offsets and the number of entries in each of the tables. One
+interesting aspect of validating ELF files is then to check that both
+the tables contain the specified number of entries and point to the
+valid parts of the rest of the ELF file.
+
+The ELF header starts with a 16 byte array. The first four bytes of
+the array are fixed: 0x7f, followed by 'E', 'L', and 'F'. Other bytes
+of the array specify the binary architecture (32-bits or 64-bits),
+endianness, ELF specification version, target OS, and ABI version of
+the file. The last 7 bytes of the array are padding bytes set to 0. To
+be able to constrain the individual bytes of this array, we specify in
+3d as a struct.
+
+.. code-block:: c
+
+  typedef struct _E_IDENT
+  {
+    UCHAR    ZERO    { ZERO == 0x7f };
+    UCHAR    ONE     { ONE == 0x45 };
+    UCHAR    TWO     { TWO == 0x4c };
+    UCHAR    THREE   { THREE == 0x46 };
+  
+    //This 3d spec applies to 64-bit only currently
+    ELFCLASS FOUR    { FOUR == ELFCLASS64 };
+    
+    ELFDATA  FIVE;
+  
+    //ELF specification version is always set to 1
+    UCHAR    SIX     { SIX == 1 };
+  
+    ELFOSABI SEVEN;
+  
+    //ABI version, always set to 0
+    ZeroByte EIGHT;
+  
+    //padding, remaining 7 bytes are 0
+    ZeroByte NINE_FIFTEEN[E_IDENT_PADDING_SIZE];
+  } E_IDENT;
+
+(The omitted definitions can be found in the `full development
+<https://github.com/project-everest/everparse/blob/master/src/3d/tests/ELF.3d>`_.)
+
+
+Following this 16 byte array, the ELF header specifies the file type,
+file version, followed by fields of our interest: ``E_PHOFF``,
+``E_SHOFF`` (offsets of the two tables), and ``E_PHNUM``, ``E_SHNUM``
+(number of entries in the two tables).
+
+.. code-block:: c
+
+  // ELF HEADER BEGIN
+
+  E_IDENT          IDENT;
+  ELF_TYPE         E_TYPE       { E_TYPE != ET_NONE };
+
+  UINT16           E_MACHINE;
+  UINT32           E_VERSION    { E_VERSION == 1 };
+  ADDRESS          E_ENTRY;
+
+  //Program header table offset
+  OFFSET           E_PHOFF;
+
+  //Section header table offset
+  OFFSET           E_SHOFF;
+  
+  UINT32           E_FLAGS;
+
+  UINT16           E_EHSIZE     { E_EHSIZE == sizeof (this) };
+
+  UINT16           E_PHENTSIZE;
+
+  //Number of program header table entries
+  UINT16           E_PHNUM
+    { (E_PHNUM == 0 && E_PHOFF == 0) ||  //no Program Header table
+      (0 < E_PHNUM && E_PHNUM < PN_XNUM &&
+       sizeof (this) == E_PHOFF &&  //Program Header table starts immediately after the ELF Header
+       E_PHENTSIZE == sizeof (PROGRAM_HEADER_TABLE_ENTRY)) };
+  
+  UINT16           E_SHENTSIZE;
+
+  //Number of section header table entries
+  UINT16           E_SHNUM
+    { (E_SHNUM == 0 && E_SHOFF == 0) ||  // no Section Header table
+      (0 < E_SHNUM && E_SHNUM < SHN_LORESERVE &&
+       E_SHENTSIZE == sizeof (SECTION_HEADER_TABLE_ENTRY)) };
+
+  //Section header table index of the section names table
+  UINT16           E_SHSTRNDX
+    { (E_SHNUM == 0 && E_SHSTRNDX == SHN_UNDEF) ||
+      (0 < E_SHNUM  && E_SHSTRNDX < E_SHNUM) };
+	
+  // ELF HEADER END
+
+
+The constraint on ``E_PHNUM`` enforces that either the file has no
+program header table (``E_PHNUM == 0 && E_PHOFF == 0``) or the table
+has non-zero number of entries and it starts immediately after the ELF
+header (``sizeof (this)`` for the encapsulating struct type refers to
+the ELF header shown here). We add similar constraints to ``E_SHNUM``
+but do not add any check for ``E_SHOFF``, since unlike the
+program header table, the section header table does not have a fixed
+offset.
+
+The ELF header is followed by the two optional tables. We specify
+these optional tables using ``casetype``. First, the program header
+table:
+
+.. code-block:: c
+
+  casetype _PROGRAM_HEADER_TABLE_OPT (UINT16 PhNum,
+    				      OFFSET ElfFileSize)
+  {
+    switch (PhNum)
+    {
+      case 0:
+        unit    Empty;
+      default:
+        PROGRAM_HEADER_TABLE_ENTRY(ElfFileSize)    Tbl[:byte-size sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum]
+     }
+  } PROGRAM_HEADER_TABLE_OPT;
+
+
+The type ``PROGRAM_HEADER_TABLE_OPT`` is parameterized by
+the number of program header table entries, as specified in the ELF
+header, and the size of the ELF file; the latter allows us to check
+that the segments pointed to by the program header table entries are in 
+the file range.
+
+In case ``PhNum`` is 0, the type is the empty ``unit``
+type. Otherwise, it is an ``PROGRAM_HEADER_TABLE_ENTRY`` array of
+size ``sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum`` bytes where the type
+``PROGRAM_HEADER_TABLE_ENTRY`` describes a segment:
+
+
+.. code-block:: c
+
+  typedef struct _PROGRAM_HEADER_TABLE_ENTRY (OFFSET ElfFileSize)
+  {
+    UINT32    P_TYPE;
+
+    UINT32    P_FLAGS  { P_FLAGS <= 7 };
+
+    OFFSET    P_OFFSET;
+
+    ADDRESS   P_VADDR;
+
+    ADDRESS   P_PADDR;
+
+    //The constraint checks that the segment is in the file range
+    UINT64    P_FILESZ  { P_FILESZ < ElfFileSize &&
+                          P_OFFSET <= ElfFileSize - P_FILESZ };
+    UINT64    P_MEMSZ;
+
+    UINT64    P_ALIGN;
+  } PROGRAM_HEADER_TABLE_ENTRY;
+
+
+The specification of the section header table is also a ``casetype``:
+
+.. code-block:: c
+
+  casetype _SECTION_HEADER_TABLE_OPT (OFFSET PhTableEnd,
+                                      OFFSET ShOff,
+                                      UINT16 ShNum,
+  				      OFFSET ElfFileSize)
+  {
+    switch (ShNum)
+    {
+      case 0:
+        NO_SECTION_HEADER_TABLE(PhTableEnd, ElfFileSize)                   NoTbl;      
+
+      default:
+        SECTION_HEADER_TABLE(PhTableEnd, ShOff, ShNum, ElfFileSize)        Tbl;
+    }
+  } SECTION_HEADER_TABLE_OPT;
+
+
+We parameterize this type by the
+offset where the program header table ends, the section header table
+offset, number of section header table entries, and the size of the
+file.
+
+When number of entries is 0, the file does not have a section header
+table, but we still need to check that the file contains enough bytes
+after the program header table so that its total size is
+``ElfFileSize``. ``NO_SECTION_HEADER_TABLE`` specifies such a type:
+
+.. code-block:: c
+
+  typedef struct _NO_SECTION_HEADER_TABLE (OFFSET PhTableEnd,
+  					   UINT64 ElfFileSize)
+  where (PhTableEnd <= ElfFileSize && ElfFileSize - PhTableEnd <= MAX_UINT32)
+  {
+    UINT8        Rest[:byte-size (UINT32) (ElfFileSize - PhTableEnd)];
+  } NO_SECTION_HEADER_TABLE;
+
+
+The checks in the ``where`` clause ensure safety of the arithmetic
+operations.
+
+In case the section header table is non-empty, we specify (a) the
+bytes between the end of the program header table and the beginning of
+the section header table, (b) the section header table, and (c) final
+check that end of the section header table is the end of the file.
+
+.. code-block:: c
+
+  typedef struct _SECTION_HEADER_TABLE (OFFSET PhTableEnd,
+                                        UINT64 ShOff,
+                                        UINT16 ShNum,
+				        OFFSET ElfFileSize)
+  where (PhTableEnd <= ShOff && ShOff - PhTableEnd <= MAX_UINT32)
+  {
+    UINT8        PHTABLE_SHTABLE_GAP[(UINT32) (ShOff - PhTableEnd)];
+
+    SECTION_HEADER_TABLE_ENTRY(ShNum, ElfFileSize)    SHTABLE[:byte-size sizeof (SECTION_HEADER_TABLE_ENTRY) * ShNum];
+
+    // Check that we have consumed all the bytes in the file
+    unit        EndOfFile
+    {:on-success var x = field_pos; return (x == ElfFileSize); };  
+  } SECTION_HEADER_TABLE;
+
+
+The section header table, similar to the program header table, is an
+array of entries.
+  
+Finally, the top-level ELF format:
+
+.. code-block:: c
+
+
+  entrypoint
+  typedef struct _ELF (UINT64 ElfFileSize)
+  {
+    ... //ELF header as above
+
+    //Optional Program Header table
+    PROGRAM_HEADER_TABLE_OPT (E_PHNUM,
+			      ElfFileSize)            PH_TABLE;
+
+    //Optional Section Header Table
+    //Recall that the first argument is the end of the program header table
+    SECTION_HEADER_TABLE_OPT ((E_PHNUM == 0) ? E_EHSIZE : E_PHOFF + (sizeof (PROGRAM_HEADER_TABLE_ENTRY) * E_PHNUM),
+                              E_SHOFF,
+                              E_SHNUM,
+			      ElfFileSize)            SH_TABLE;
+  } ELF;
+
+
+Integrating ELF validator in existing code
+...........................................
+
+To compile the 3d specification to C code, download the latest
+`EverParse release
+<https://github.com/project-everest/everparse/releases>`_ and compile
+the 3d spec with the EverParse binary, e.g. for Windows:
+``everparse.cmd --batch ELF.3d``. This command generates
+``ELFWrapper.h`` and ``ELFWrapper.c`` files, with the top-level
+validation function as follows:
+
+.. code-block:: c
+
+  BOOLEAN ElfCheckElf(uint64_t ___ElfFileSize, uint8_t *base, uint32_t len);
+
+The actual validator implementation is generated in ``ELF.c``. To
+integrate these validators into existing C code, drop in these
+generated ``.c`` and ``.h`` files
+in the development and invoke ```ElfCheckElf`` as necessary.
+
+

@@ -1,11 +1,11 @@
 all: extract
 
 FSTAR_HOME?=$(realpath ../../../../../FStar)
-KREMLIN_HOME?=$(realpath ../../../../../kremlin)
+KRML_HOME?=$(realpath ../../../../../karamel)
 OTHERFLAGS?=
-EVERPARSE_HOME=../../../..
+EVERPARSE_HOME=$(realpath ../../../..)
 
-FSTAR_OPTIONS=$(addprefix --include , .. $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib $(KREMLIN_HOME)/kremlib/obj) --z3rlimit_factor 8 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100'
+FSTAR_OPTIONS=$(addprefix --include , .. $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj) --z3rlimit_factor 8 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100'
 FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
 
 ROOT=$(wildcard *.fst) $(wildcard *.fsti)
@@ -25,7 +25,7 @@ EverParse.rsp: $(ALL_KRML_FILES) ../EverParse.rsp
 	mv $@.tmp $@
 
 EverParse.h: EverParse.rsp
-	$(KREMLIN_HOME)/krml \
+	$(KRML_HOME)/krml \
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
@@ -40,11 +40,11 @@ EverParse.h: EverParse.rsp
 	  -no-prefix LowParse.Low.BoundedInt \
 	  -fextern-c \
 	  @$^
-	! test -e EverParse.c
-	! test -e SHOULDNOTBETHERE.h
+	test '!' -e EverParse.c
+	test '!' -e SHOULDNOTBETHERE.h
 
 %.krml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))
+	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml --extract_module $(basename $(notdir $(subst .checked,,$<)))
 	touch $@
 
 %.checked:

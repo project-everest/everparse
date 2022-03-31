@@ -16,5 +16,6 @@ typedef struct _BF2 {
 
 entrypoint
 typedef struct _dummy {
- unit emp;
+ unit emp1;
+ unit emp2;
 } dummy;

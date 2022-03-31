@@ -90,6 +90,7 @@ open LowStar.BufferOps
 inline_for_extraction
 noextract
 let has
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)
@@ -110,11 +111,11 @@ let has
   else
     Aux.has x.Aux.base n
 
-#push-options "--z3rlimit 64"
-#restart-solver
+#push-options "--z3rlimit 64 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactics -FStar.Reflection -FStar.Seq.Properties.slice_slice'"
 inline_for_extraction
 noextract
 let read0
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -138,11 +139,17 @@ let read0
       (B.loc_buffer dst `B.loc_union` footprint x) `B.loc_includes` B.loc_buffer dst' /\
       get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
     ))
-= let dst = Aux.read x.Aux.base n dst in
+=
+  let h0 = HST.get () in
+  let dst = Aux.read x.Aux.base n dst in
   let h1 = HST.get () in
   x.Aux.position *= Ghost.hide (position `U64.add` n);
   let h2 = HST.get () in
   Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h1 h2;
+  assert (
+      let s = get_remaining x h0 in
+      get_remaining x h2 `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
+  );
   dst
 
 module LP = LowParse.Low.Base
@@ -151,6 +158,7 @@ module LP = LowParse.Low.Base
 inline_for_extraction
 noextract
 let read
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (t': Type0)
     (k: LP.parser_kind)
     (p: LP.parser k t')
@@ -201,13 +209,51 @@ let read
   HST.pop_frame ();
   let h4 = HST.get () in
   preserved x (B.loc_region_only false (HS.get_tip h1)) h3 h4;
+  assert (
+    let s = get_remaining x h0 in
+    get_remaining x h4 `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
+  );
   res
+
+#restart-solver
+inline_for_extraction
+noextract
+let peep
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (x: t)
+    (position: LPE.pos_t)
+    (n: U64.t)
+:   HST.Stack (B.buffer U8.t)
+    (requires (fun h ->
+      live x h /\
+      U64.v position == Seq.length (get_read x h)
+    ))
+    (ensures (fun h dst' h' ->
+      let s = get_remaining x h in
+      B.modifies B.loc_none h h' /\
+      ((~ (B.g_is_null dst')) ==> (
+        Seq.length (get_remaining x h) >= U64.v n /\
+        B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
+        B.live h' dst' /\
+        footprint x `B.loc_includes` B.loc_buffer dst'
+      ))
+    ))
+=
+  let h0 = HST.get () in
+  if has x () position n
+  then begin
+    let h1 = HST.get () in
+    preserved x B.loc_none h0 h1;
+    Aux.peep x.Aux.base n
+  end else
+    B.null
 
 #pop-options
 
 inline_for_extraction
 noextract
 let skip
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -232,6 +278,7 @@ let skip
 inline_for_extraction
 noextract
 let skip_if_success
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (pos: LPE.pos_t)
     (res: U64.t)
@@ -257,6 +304,7 @@ let skip_if_success
 inline_for_extraction
 noextract
 let empty
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)
@@ -312,7 +360,7 @@ let get_suffix
     (ensures (fun _ -> True))
 = Seq.slice (get_all y) (U64.v (len_all x)) (U64.v (len_all y))
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 32 --fuel 0 --ifuel 1 --using_facts_from '* -FStar.Tactics -FStar.Reflection -FStar.Seq.Properties.slice_slice'"
 #restart-solver
 let is_prefix_of_prop
     (x: t)

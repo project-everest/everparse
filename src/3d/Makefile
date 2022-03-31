@@ -1,7 +1,7 @@
 ROOT=Main.fst
 FSTAR_HOME?=$(realpath ../../../FStar)
-KREMLIN_HOME?=$(realpath ../../../kremlin)
-EVERPARSE_HOME=../..
+KRML_HOME?=$(realpath ../../../karamel)
+EVERPARSE_HOME=$(realpath ../..)
 
 INCLUDE_PATHS=
 OTHERFLAGS?=
@@ -56,7 +56,7 @@ clean-3d:
 
 clean: clean-3d clean-prelude
 
-FSTAR_OPTIONS=$(OTHERFLAGS) $(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib $(KREMLIN_HOME)/kremlib/obj)
+FSTAR_OPTIONS=$(OTHERFLAGS) $(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj)
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)

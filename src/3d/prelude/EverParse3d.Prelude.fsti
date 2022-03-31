@@ -251,11 +251,6 @@ let max_int_sizes
  * AR: scaffolding for getting arithmetic error locations in the 3d file
  *)
 
-(* Identity function for endianness-only casts *)
-
-inline_for_extraction noextract
-let id (#t: Type) (x: t) : Tot t = x
-
 (*** UInt8 operations ***)
 unfold noextract
 let u8_add (r:Prims.range) (x y:UInt8.t)
@@ -599,6 +594,69 @@ let u64_shift_left (r:Prims.range) (a:UInt64.t) (s:UInt32.t)
     (requires labeled r "Cannot verify u64 shift left" (UInt32.v s < UInt64.n))
     (ensures (fun c -> FStar.UInt.shift_left (UInt64.v a) (UInt32.v s) = UInt64.v c))
   = UInt64.shift_left a s
+
+
+(*** Casts ***)
+
+
+(* Identity function for endianness-only casts *)
+
+inline_for_extraction noextract
+let id (#t: Type) (x: t) : Tot t = x
+
+(** Widening casts **)
+
+inline_for_extraction noextract
+let uint8_to_uint16 (x:U8.t) : (y:U16.t{U16.v y == U8.v x}) =
+  FStar.Int.Cast.uint8_to_uint16 x
+
+inline_for_extraction noextract
+let uint8_to_uint32 (x:U8.t) : (y:U32.t{U32.v y == U8.v x}) =
+  FStar.Int.Cast.uint8_to_uint32 x
+
+inline_for_extraction noextract
+let uint8_to_uint64 (x:U8.t) : (y:U64.t{U64.v y == U8.v x}) =
+  FStar.Int.Cast.uint8_to_uint64 x
+
+inline_for_extraction noextract
+let uint16_to_uint32 (x:U16.t) : (y:U32.t{U32.v y == U16.v x}) =
+  FStar.Int.Cast.uint16_to_uint32 x
+
+inline_for_extraction noextract
+let uint16_to_uint64 (x:U16.t) : (y:U64.t{U64.v y == U16.v x}) =
+  FStar.Int.Cast.uint16_to_uint64 x
+
+inline_for_extraction noextract
+let uint32_to_uint64 (x:U32.t) : (y:U64.t{U64.v y == U32.v x}) =
+  FStar.Int.Cast.uint32_to_uint64 x
+
+(** Narrowing casts, only when narrowing does not lose any precision **)
+
+inline_for_extraction noextract
+let uint16_to_uint8 (x:U16.t{FStar.UInt.fits (U16.v x) 8}) : (y:U8.t{U8.v y == U16.v x}) =
+  FStar.Int.Cast.uint16_to_uint8 x
+
+inline_for_extraction noextract
+let uint32_to_uint16 (x:U32.t{FStar.UInt.fits (U32.v x) 16}) : (y:U16.t{U16.v y == U32.v x}) =
+  FStar.Int.Cast.uint32_to_uint16 x
+
+inline_for_extraction noextract
+let uint32_to_uint8 (x:U32.t{FStar.UInt.fits (U32.v x) 8}) : (y:U8.t{U8.v y == U32.v x}) =
+  FStar.Int.Cast.uint32_to_uint8 x
+
+inline_for_extraction noextract
+let uint64_to_uint32 (x:U64.t{FStar.UInt.fits (U64.v x) 32}) : (y:U32.t{U32.v y == U64.v x}) =
+  FStar.Int.Cast.uint64_to_uint32 x
+
+inline_for_extraction noextract
+let uint64_to_uint16 (x:U64.t{FStar.UInt.fits (U64.v x) 16}) : (y:U16.t{U16.v y == U64.v x}) =
+  FStar.Int.Cast.uint64_to_uint16 x
+
+inline_for_extraction noextract
+let uint64_to_uint8 (x:U64.t{FStar.UInt.fits (U64.v x) 8}) : (y:U8.t{U8.v y == U64.v x}) =
+  FStar.Int.Cast.uint64_to_uint8 x
+
+(*** Lemma for casts ***)
 
 let cast_mul_fits_8_16 (x y :U8.t)
   : Lemma (

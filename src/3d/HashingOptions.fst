@@ -21,12 +21,16 @@ type input_stream_binding_t =
   | InputStreamExtern:
     (include_file: string) ->
     input_stream_binding_t
+  | InputStreamStatic:
+    (include_file: string) ->
+    input_stream_binding_t
 
 let string_of_input_stream_binding = function
   | InputStreamBuffer -> "buffer"
   | InputStreamExtern _ -> "extern"
+  | InputStreamStatic _ -> "static"
 
 let input_stream_include = function
   | InputStreamBuffer -> ""
+  | InputStreamStatic s
   | InputStreamExtern s -> s
-  

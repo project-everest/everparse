@@ -142,7 +142,8 @@ type qenv = {
   module_abbrevs : H.t string string;
   output_types : H.t ident' unit;
   extern_types : H.t ident' unit;
-  local_names : list string
+  local_names : list string;
+  global_env: GlobalEnv.global_env;
 }
 
 let push_module_abbrev (env:qenv) (i m:string) : ML unit =
@@ -200,17 +201,25 @@ let resolve_typ_param (env:qenv) (p:typ_param) : ML typ_param =
   | Inl e -> resolve_expr env e |> Inl
   | _ -> p  //Currently not going inside output expressions, should we?
 
+
+let kind_of_ident (env:qenv) (i:ident)
+  : ML t_kind
+  = let _or_ (b0 b1:bool) = b0 || b1 in
+    if  Some? (H.try_find env.output_types i.v) `_or_`
+        Some? (H.try_find env.global_env.ge_out_t i.v)
+    then KindOutput
+    else if
+        Some? (H.try_find env.extern_types i.v) `_or_`
+        Some? (H.try_find env.global_env.ge_extern_t i.v)    
+    then KindExtern
+    else KindSpec
+    
 let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
   match t with
   | Type_app hd _ args ->
     let hd = resolve_ident env hd in
     //Set is_out argument to the Type_app appropriately
-    let k =
-      let is_out = Some? (H.try_find env.output_types hd.v) in
-      if is_out then KindOutput
-      else let is_extern = Some? (H.try_find env.extern_types hd.v) in
-           if is_extern then KindExtern
-           else KindSpec in
+    let k = kind_of_ident env hd in
     Type_app hd k (List.map (resolve_typ_param env) args)
   | Pointer t -> Pointer (resolve_typ env t)
 
@@ -223,6 +232,7 @@ let resolve_atomic_action (env:qenv) (ac:atomic_action) : ML atomic_action =
   | Action_field_pos_64
   | Action_field_pos_32
   | Action_field_ptr -> ac
+  | Action_field_ptr_after e write_to -> Action_field_ptr_after (resolve_expr env e) write_to
   | Action_deref i -> Action_deref i  //most certainly a type parameter
   | Action_assignment lhs rhs ->
     Action_assignment lhs (resolve_expr env rhs)  //lhs is an action-local variable
@@ -359,7 +369,7 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
-let desugar (mname:string) (p:prog) : ML prog =
+let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
   let decls, refinement = p in
   let decls = List.collect desugar_one_enum decls in
   let env = {
@@ -367,7 +377,9 @@ let desugar (mname:string) (p:prog) : ML prog =
     module_abbrevs=H.create 10;
     output_types=H.create 10;
     extern_types=H.create 10;
-    local_names=[]} in
+    local_names=[];
+    global_env=genv
+  } in
   H.insert env.extern_types (Ast.to_ident' "void") ();
   let decls = List.map (resolve_decl env) decls in
   decls,

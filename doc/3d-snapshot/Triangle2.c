@@ -2,6 +2,8 @@
 
 #include "Triangle2.h"
 
+
+
 static inline uint64_t
 ValidatePoint(
   uint8_t *Ctxt,

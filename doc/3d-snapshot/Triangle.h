@@ -7,11 +7,11 @@
 extern "C" {
 #endif
 
+
+
+
+
 #include "EverParse.h"
-
-
-
-
 uint64_t
 TriangleValidateTriangle(
   uint8_t *Ctxt,

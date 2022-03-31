@@ -1,7 +1,6 @@
-QD_HOME ?= $(realpath ../../../..)
-export QD_HOME
-EVERPARSE_HOME=$(QD_HOME)
-EVERPARSE_CMD=$(QD_HOME)/bin/3d.exe
+EVERPARSE_HOME ?= $(realpath ../../../..)
+export EVERPARSE_HOME
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe
 SOURCE_FILES=TPoint.3d AnonStruct.3d AnonUnion.3d
 
 all: basic interpret
@@ -35,7 +34,7 @@ interpret: $(SOURCE_FILES) interpret.out
 FSTAR_HOME ?= $(realpath ../../../../../FStar)
 export FSTAR_HOME
 
-INCLUDES=$(QD_HOME)/src/3d/prelude $(QD_HOME)/src/3d/prelude/buffer $(QD_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib/obj $(KREMLIN_HOME)/kremlib
+INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 

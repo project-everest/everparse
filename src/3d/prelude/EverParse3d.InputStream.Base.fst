@@ -58,7 +58,10 @@ class input_stream_inst (t: Type) : Type = {
 
   tlen: t -> Type0;
 
+  extra_t: Type0;
+
   has:
+    (# [FStar.Tactics.Typeclasses.tcresolve () ] extra_t ) ->
     (x: t) ->
     (len: tlen x) ->
     (pos: LPE.pos_t) ->
@@ -72,8 +75,9 @@ class input_stream_inst (t: Type) : Type = {
       B.modifies B.loc_none h h' /\
       (res == true <==> Seq.length (get_remaining x h) >= U64.v n)
     ));
-
+  
   read:
+    (# [FStar.Tactics.Typeclasses.tcresolve ()] extra_t ) ->
     (t': Type0) ->
     (k: LP.parser_kind) ->
     (p: LP.parser k t') ->
@@ -103,6 +107,7 @@ class input_stream_inst (t: Type) : Type = {
     ));
 
   skip:
+    (# [FStar.Tactics.Typeclasses.tcresolve ()] extra_t ) ->
     (x: t) ->
     (pos: LPE.pos_t) ->
     (n: U64.t) ->
@@ -120,6 +125,7 @@ class input_stream_inst (t: Type) : Type = {
     ));
 
   skip_if_success:
+    (# [FStar.Tactics.Typeclasses.tcresolve ()] extra_t ) ->
     (x: t) ->
     (pos: LPE.pos_t) ->
     (res: U64.t) ->
@@ -137,8 +143,9 @@ class input_stream_inst (t: Type) : Type = {
       live x h' /\
       get_remaining x h' == (if LPE.is_success res then Seq.slice s (U64.v res - U64.v pos) (Seq.length s) else get_remaining x h)
     ));
-
+  
   empty:
+    (# [FStar.Tactics.Typeclasses.tcresolve ()] extra_t ) ->
     (x: t) ->
     (len: tlen x) ->
     (pos: LPE.pos_t) ->

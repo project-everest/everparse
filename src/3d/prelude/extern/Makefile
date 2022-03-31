@@ -1,11 +1,11 @@
 all: extract
 
 FSTAR_HOME?=$(realpath ../../../../../FStar)
-KREMLIN_HOME?=$(realpath ../../../../../kremlin)
+KRML_HOME?=$(realpath ../../../../../karamel)
 OTHERFLAGS?=
-EVERPARSE_HOME=../../../..
+EVERPARSE_HOME=$(realpath ../../../..)
 
-FSTAR_OPTIONS=$(addprefix --include , .. $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib $(KREMLIN_HOME)/kremlib/obj) --z3rlimit_factor 8 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100'
+FSTAR_OPTIONS=$(addprefix --include , .. $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj) --z3rlimit_factor 8 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100'
 FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
 
 ROOT=$(wildcard *.fst) $(wildcard *.fsti)
@@ -19,15 +19,18 @@ ALREADY_CACHED=--already_cached '*,-EverParse3d.Actions.All,-EverParse3d.InputSt
 
 FILTERED_KRML_FILES=$(filter-out ResultOps.krml Actions.krml,$(ALL_KRML_FILES))
 
-extract: EverParse.h
+extract: extract-extern extract-static
+
+extract-extern: EverParse.h
+
+extract-static: ../static/EverParse.h
 
 EverParse.rsp: $(FILTERED_KRML_FILES) ../EverParse.rsp
 	for f in $(FILTERED_KRML_FILES) ; do echo $$f ; done > $@.tmp
 	while read file ; do grep "^$$file"'$$' $@.tmp > /dev/null || { echo ../$$file >> $@.tmp ; } ; done < ../EverParse.rsp
 	mv $@.tmp $@
 
-EverParse.h: EverParse.rsp
-	$(KREMLIN_HOME)/krml \
+KRML_EXTERN = $(KRML_HOME)/krml \
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
@@ -40,13 +43,25 @@ EverParse.h: EverParse.rsp
 	  -static-header 'EverParse3d.Prelude.StaticHeader,LowParse.Low.Base,EverParse3d.ErrorCode,EverParse3d.InputStream.Extern.Type' \
 	  -no-prefix LowParse.Slice \
 	  -no-prefix LowParse.Low.BoundedInt \
-	  -fextern-c \
-	  @$^
-	! test -e EverParse.c
-	! test -e SHOULDNOTBETHERE.h
+	  -fextern-c
+
+KRML_STATIC = $(KRML_EXTERN) \
+	  -tmpdir ../static \
+	  -static-header EverParse3d.InputStream.Extern.Base
+
+EverParse.h: EverParse.rsp
+	$(KRML_EXTERN) @$^
+	test '!' -e EverParse.c
+	test '!' -e SHOULDNOTBETHERE.h
+
+../static/EverParse.h: EverParse.rsp
+	mkdir -p $(dir $@)
+	$(KRML_STATIC) @$^
+	test '!' -e $(dir $@)/EverParse.c
+	test '!' -e $(dir $@)/SHOULDNOTBETHERE.h
 
 %.krml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))
+	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml --extract_module $(basename $(notdir $(subst .checked,,$<)))
 	touch $@
 
 %.checked:
@@ -58,8 +73,8 @@ EverParse.h: EverParse.rsp
 
 verify: $(ALL_CHECKED_FILES)
 
-.PHONY: all extract clean verify
+.PHONY: all extract clean verify extract-extern extract-static
 
 clean:
-	rm -f *.checked *.krml EverParse.h EverParse.rsp .depend *.tmp .depend.tmp *~
+	rm -f *.checked *.krml EverParse.h EverParse.rsp .depend *.tmp .depend.tmp *~ ../static
 

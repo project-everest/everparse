@@ -3,14 +3,22 @@ open HashingOptions
 
 (* paths *)
 let fstar_home = OS.getenv "FSTAR_HOME"
-let kremlin_home = OS.getenv "KREMLIN_HOME"
-let kremlib = filename_concat kremlin_home "kremlib"
-let qd_home = OS.getenv "QD_HOME"
-let lowparse_home = filename_concat (filename_concat qd_home "src") "lowparse"
-let ddd_home = filename_concat (filename_concat qd_home "src") "3d"
-let ddd_prelude_home = filename_concat (filename_concat (filename_concat qd_home "src") "3d") "prelude"
+let krml_home = OS.getenv "KRML_HOME"
+let krmllib = filename_concat krml_home "krmllib"
+let everparse_home = OS.getenv "EVERPARSE_HOME"
+let lowparse_home = filename_concat (filename_concat everparse_home "src") "lowparse"
+let ddd_home = filename_concat (filename_concat everparse_home "src") "3d"
+let ddd_prelude_home = filename_concat (filename_concat (filename_concat everparse_home "src") "3d") "prelude"
 
 let ddd_actions_home input_stream_binding =
+  let input_stream_dir =
+    match string_of_input_stream_binding input_stream_binding with
+    | "static" -> "extern"
+    | s -> s
+  in
+  filename_concat ddd_prelude_home input_stream_dir
+
+let ddd_actions_c_home input_stream_binding =
   filename_concat ddd_prelude_home (string_of_input_stream_binding input_stream_binding)
 
 (* fstar.exe executable *)
@@ -24,7 +32,7 @@ let krml out_dir =
        let candidate = filename_concat dir file in
        if Sys.file_exists candidate then candidate else aux exn q
   in
-  let dir = kremlin_home in
+  let dir = krml_home in
   let dir_bin = filename_concat dir "bin" in
   if Sys.win32
   then
@@ -41,7 +49,7 @@ let krml out_dir =
         begin
           (* Here, Windows cannot even read symlinks *)
           let dir' = filename_concat (filename_concat dir "_build") "src" in
-          let candidate = aux true [(dir', "Kremlin.native")] in
+          let candidate = aux true [(dir', "Karamel.native")] in
           copy candidate target
         end;
         (true, target)
@@ -56,8 +64,8 @@ let krml out_dir =
 let fstar_args0 =
   "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,EverParse3d.\\*,Spec" ::
     "--include" :: lowparse_home ::
-      "--include" :: kremlib ::
-        "--include" :: (filename_concat kremlib "obj") ::
+      "--include" :: krmllib ::
+        "--include" :: (filename_concat krmllib "obj") ::
           "--include" :: ddd_prelude_home ::
             "--cmi" ::
             "--warn_error" :: "+241" ::
@@ -90,7 +98,7 @@ let fstar_modul_of_filename fst =
 
 let fstar_extract_args input_stream_binding out_dir fst =
   "--extract_module" :: fstar_modul_of_filename fst ::
-    "--codegen" :: "Kremlin" ::
+    "--codegen" :: "krml" ::
       (list_snoc (fstar_args input_stream_binding out_dir) fst)
 
 let extract_fst_file
@@ -156,7 +164,7 @@ let is_krml
       filename
   = Filename.check_suffix filename "krml"
 
-let krml_args0 = OS.getenv_array "EVERPARSE_KREMLIN_OPTIONS"
+let krml_args0 = OS.getenv_array "EVERPARSE_KRML_OPTIONS"
 
 let all_krmls_in_dir
       dir
@@ -203,7 +211,7 @@ let remove_fst_and_krml_files
 
 let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*"
 
-let fstar_kremlib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
+let fstar_krmllib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
 
 let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
   let has_external_api modul =
@@ -300,16 +308,16 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
     else krml_args
 
 let call_krml files_and_modules_cleanup out_dir krml_args =
-  (* append the everparse and kremlib bundles to the list of arguments *)
+  (* append the everparse and krmllib bundles to the list of arguments *)
   let krml_args = krml_args @ [
         "-bundle" ;
-        Printf.sprintf "%s,%s[rename=Lib,rename-prefix]" fstar_kremlib_bundle everparse_only_bundle;
+        Printf.sprintf "%s,%s[rename=Lib,rename-prefix]" fstar_krmllib_bundle everparse_only_bundle;
         "-bundle" ;
         Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
   ]
   in
   (* the argument list is too long, so we need to go through an argument file *)
-  let argfile = Filename.temp_file ~temp_dir:out_dir "kremlinargs" ".rsp" in
+  let argfile = Filename.temp_file ~temp_dir:out_dir "krmlargs" ".rsp" in
   let h = open_out argfile in
   let rec aux = function
     | [] -> ()
@@ -320,7 +328,7 @@ let call_krml files_and_modules_cleanup out_dir krml_args =
   aux krml_args;
   close_out h;
   let (is_temp_krml, krml) = krml out_dir in
-  print_endline (Printf.sprintf "KReMLin found at: %s" krml);
+  print_endline (Printf.sprintf "KaRaMeL found at: %s" krml);
   run_cmd krml [Printf.sprintf "@%s" argfile];
   begin match files_and_modules_cleanup with
   | Some files_and_modules ->
@@ -628,7 +636,7 @@ let postprocess_c
   if not no_everparse_h
   then begin
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      let everparse_h_source = (filename_concat (ddd_actions_home input_stream_binding) "EverParse.h") in
+      let everparse_h_source = (filename_concat (ddd_actions_c_home input_stream_binding) "EverParse.h") in
       if file_exists everparse_h_source
       then copy everparse_h_source dest_everparse_h;
       let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in

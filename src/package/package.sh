@@ -4,7 +4,7 @@ set -e
 set -x
 
 SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
-MAKE=$(which gmake >/dev/null 2>&1 && echo gmake || echo make)
+MAKE="$(which gmake >/dev/null 2>&1 && echo gmake || echo make) $EVERPARSE_MAKE_OPTS"
 DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 
 
@@ -17,9 +17,19 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
-if [[ -z "$QD_HOME" ]] ; then
+fixpath () {
+    if $is_windows ; then
+        cygpath -m "$1"
+    else
+        echo "$1"
+    fi
+}
+
+if [[ -z "$EVERPARSE_HOME" ]] ; then
     # This file MUST be run from the EverParse root directory
-    export QD_HOME=$PWD
+    export EVERPARSE_HOME=$(fixpath $PWD)
+else
+    export EVERPARSE_HOME=$(fixpath "$EVERPARSE_HOME")
 fi
 
 if $is_windows ; then
@@ -39,17 +49,21 @@ if ! Z3_DIR=$(dirname $(which $z3)) ; then
         wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
         unzip $z3_archive
         mv z3-4.8.5-x64-win z3
+        chmod +x z3/bin/z3.exe
+        if [[ -f z3/bin/*.dll ]] ; then chmod +x z3/bin/*.dll ; fi
+        if [[ -f z3/lib/*.dll ]] ; then chmod +x z3/lib/*.dll ; fi
+        Z3_DIR="$PWD/z3/bin"
     elif [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
         # Download a dependency-free z3
         z3_tagged=z3-4.8.5-linux-clang
         z3_archive=$z3_tagged-$platform.tar.gz
         wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
         tar xzf $z3_archive
+        Z3_DIR="$PWD/z3"
     else
         echo "z3 4.8.5 is missing, please add it to your PATH"
         exit 1
     fi
-    Z3_DIR="$PWD/z3"
     export PATH="$Z3_DIR:$PATH"
 fi
 
@@ -79,24 +93,17 @@ print_date_utc_of_iso_hr() {
 }
 
 if [[ -z "$everparse_version" ]] ; then
-    everparse_version=$(cat $QD_HOME/version.txt)
+    everparse_version=$(cat $EVERPARSE_HOME/version.txt)
     everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
-    everparse_commit=$(git show --no-patch --format=%h)
-    if [[ $everparse_commit != $everparse_last_version ]] ; then
-        everparse_version=$everparse_commit
+    if everparse_commit=$(git show --no-patch --format=%h) ; then
+        if [[ $everparse_commit != $everparse_last_version ]] ; then
+            everparse_version=$everparse_commit
+        fi
     fi
 fi
 
-fixpath () {
-    if $is_windows ; then
-        cygpath -m "$1"
-    else
-        echo "$1"
-    fi
-}
-
 make_everparse() {
-    # Verify if F* and KReMLin are here
+    # Verify if F* and KaRaMeL are here
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
     if [[ -z "$FSTAR_HOME" ]] ; then
@@ -105,26 +112,32 @@ make_everparse() {
     else
         export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
     fi
-    if [[ -z "$KREMLIN_HOME" ]] ; then
-        { [[ -d kremlin ]] || git clone https://github.com/FStarLang/kremlin ; }
-        export KREMLIN_HOME=$(fixpath $PWD/kremlin)
+    if [[ -z "$KRML_HOME" ]] ; then
+        { [[ -d karamel ]] || git clone https://github.com/FStarLang/karamel ; }
+        export KRML_HOME=$(fixpath $PWD/karamel)
     else
-        export KREMLIN_HOME=$(fixpath "$KREMLIN_HOME")
+        export KRML_HOME=$(fixpath "$KRML_HOME")
     fi
 
-    fstar_commit_id=$(print_component_commit_id "$FSTAR_HOME")
-    fstar_commit_date_iso=$(print_component_commit_date_iso "$FSTAR_HOME")
-    fstar_commit_date_hr=$(print_date_utc_of_iso_hr "$fstar_commit_date_iso")
-    kremlin_commit_id=$(print_component_commit_id "$KREMLIN_HOME")
-    kremlin_commit_date_iso=$(print_component_commit_date_iso "$KREMLIN_HOME")
-    kremlin_commit_date_hr=$(print_date_utc_of_iso_hr "$kremlin_commit_date_iso")
+    if fstar_commit_id=$(print_component_commit_id "$FSTAR_HOME") ; then
+        fstar_commit_date_iso=$(print_component_commit_date_iso "$FSTAR_HOME")
+        fstar_commit_date_hr=$(print_date_utc_of_iso_hr "$fstar_commit_date_iso")" UTC+0000"
+    fi
+    if karamel_commit_id=$(print_component_commit_id "$KRML_HOME") ; then
+        karamel_commit_date_iso=$(print_component_commit_date_iso "$KRML_HOME")
+        karamel_commit_date_hr=$(print_date_utc_of_iso_hr "$karamel_commit_date_iso")" UTC+0000"
+    fi
     z3_version_string=$($Z3_DIR/$z3 --version)
 
-    # Rebuild F* and kremlin
+    # Rebuild F* and KaRaMeL
     export OTHERFLAGS='--admit_smt_queries true'
     $MAKE -C "$FSTAR_HOME" "$@"
-    $MAKE -C "$KREMLIN_HOME" "$@" minimal
-    $MAKE -C "$KREMLIN_HOME/kremlib" "$@" verify-all
+    if [[ -z "$fstar_commit_id" ]] ; then
+        fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
+        fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
+    fi
+    $MAKE -C "$KRML_HOME" "$@" minimal
+    $MAKE -C "$KRML_HOME/krmllib" "$@" verify-all
 
     # Build the hacl-star package if not available
     if [[ -z "$NO_EVERCRYPT" ]] && ! ocamlfind query hacl-star ; then
@@ -138,6 +151,8 @@ make_everparse() {
         if [[ -z $HACL_HOME ]] ; then
             [[ -d hacl-star ]] || git clone https://github.com/project-everest/hacl-star
             HACL_HOME=$(fixpath $PWD/hacl-star)
+        else
+            HACL_HOME=$(fixpath "$HACL_HOME")
         fi
         if ! ocamlfind query hacl-star-raw ; then
             (cd $HACL_HOME/dist/gcc-compatible ; ./configure --disable-bzero)
@@ -155,14 +170,16 @@ make_everparse() {
     fi
 
     # Rebuild EverParse
-    $MAKE -C "$QD_HOME" "$@"
+    $MAKE -C "$EVERPARSE_HOME" "$@"
 
     # Copy dependencies and Z3
     mkdir -p everparse/bin
     if $is_windows
     then
         $cp $LIBGMP10_DLL everparse/bin/
-        $cp $Z3_DIR/*.exe $Z3_DIR/*.dll $Z3_DIR/*.lib everparse/bin/
+        $cp $Z3_DIR/*.exe everparse/bin/
+        if [[ -f $Z3_DIR/*.dll ]] ; then $cp $Z3_DIR/*.dll everparse/bin/ ; fi
+        if [[ -f $Z3_DIR/../lib/*.dll ]] ; then cp $Z3_DIR/../lib/*.dll everparse/bin/ ; fi
         if [[ -z "$NO_EVERCRYPT" ]] ; then
             for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
                 libevercrypt_dll=$f/libevercrypt.dll
@@ -192,6 +209,10 @@ make_everparse() {
             # Locate libffi
             {
                 # Debian:
+                libffi=$(dpkg -L libffi7 | grep '/libffi.so.7$' | head -n 1)
+                [[ -n "$libffi" ]]
+            } || {
+                # Debian (older):
                 libffi=$(dpkg -L libffi6 | grep '/libffi.so.6$' | head -n 1)
                 [[ -n "$libffi" ]]
             } || {
@@ -217,36 +238,36 @@ make_everparse() {
     $cp -r $FSTAR_HOME/bin/fstar-tactics-lib everparse/bin/
     $cp -r $FSTAR_HOME/ulib everparse/
 
-    # Copy KReMLin
-    $cp $KREMLIN_HOME/Kremlin.native everparse/bin/krml$exe
-    $cp -r $KREMLIN_HOME/kremlib everparse/
-    $cp -r $KREMLIN_HOME/include everparse/
-    $cp -r $KREMLIN_HOME/misc everparse/
+    # Copy KaRaMeL
+    $cp $KRML_HOME/Karamel.native everparse/bin/krml$exe
+    $cp -r $KRML_HOME/krmllib everparse/
+    $cp -r $KRML_HOME/include everparse/
+    $cp -r $KRML_HOME/misc everparse/
 
     # Copy EverParse
-    $cp $QD_HOME/bin/qd.exe everparse/bin/qd.exe
-    $cp -r $QD_HOME/bin/3d.exe everparse/bin/3d.exe
+    $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
+    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
     mkdir -p everparse/src/3d
-    $cp -r $QD_HOME/src/lowparse everparse/src/
+    $cp -r $EVERPARSE_HOME/src/lowparse everparse/src/
     if $is_windows ; then
-        $cp -r $QD_HOME/src/package/everparse.cmd everparse/
+        $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
     else
-        $cp -r $QD_HOME/src/package/everparse.sh everparse/
+        $cp -r $EVERPARSE_HOME/src/package/everparse.sh everparse/
     fi
-    $cp -r $QD_HOME/src/3d/prelude everparse/src/3d/prelude
-    $cp -r $QD_HOME/src/3d/.clang-format everparse/src/3d
-    $cp -r $QD_HOME/src/3d/copyright.txt everparse/src/3d
-    if $is_windows ; then $cp -r $QD_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
-    $cp -r $QD_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
-    $cp -r $QD_HOME/src/3d/noheader.txt everparse/src/3d/
+    $cp -r $EVERPARSE_HOME/src/3d/prelude everparse/src/3d/prelude
+    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
+    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
+    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
+    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
+    $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
     if $is_windows ; then
-        $cp -r $QD_HOME/src/package/README.Windows.pkg everparse/README
+        $cp -r $EVERPARSE_HOME/src/package/README.Windows.pkg everparse/README
     else
-        $cp -r $QD_HOME/src/package/README.pkg everparse/README
+        $cp -r $EVERPARSE_HOME/src/package/README.pkg everparse/README
     fi
     echo "This is EverParse $everparse_version" >> everparse/README
-    echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr UTC+0000)" >> everparse/README
-    echo "Running with KReMLin $kremlin_commit_id ($kremlin_commit_date_hr UTC+0000)" >> everparse/README
+    echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr)" >> everparse/README
+    echo "Running with KaRaMeL $karamel_commit_id ($karamel_commit_date_hr)" >> everparse/README
     echo -n "Running with $z3_version_string" >> everparse/README
 
     # Download and copy clang-format
@@ -257,8 +278,8 @@ make_everparse() {
     # licenses
     mkdir -p everparse/licenses
     $cp $FSTAR_HOME/LICENSE everparse/licenses/FStar
-    $cp $KREMLIN_HOME/LICENSE everparse/licenses/KReMLin
-    $cp $QD_HOME/LICENSE everparse/licenses/EverParse
+    $cp $KRML_HOME/LICENSE everparse/licenses/KaRaMeL
+    $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
     if [[ -z "$NO_EVERCRYPT" ]] ; then
         wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE
@@ -327,17 +348,20 @@ HELP
 
 case "$1" in
     -zip)
-        make_everparse
+        shift
+        make_everparse "$@"
             zip_everparse true
         ;;
 
     -zip-noversion)
-        make_everparse
+        shift
+        make_everparse "$@"
             zip_everparse false
         ;;
 
     -make)
-        make_everparse
+        shift
+        make_everparse "$@"
         ;;
 
     *)

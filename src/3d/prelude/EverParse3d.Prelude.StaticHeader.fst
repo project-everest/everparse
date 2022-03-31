@@ -16,7 +16,7 @@ let get_bitfield8
   (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 8})
 : Tot (i:U8.t{FStar.UInt.size (U8.v i) (U32.v bitsTo - U32.v bitsFrom)})
 = LBF.get_bitfield_eq_2 #8 (U8.v value) (U32.v bitsFrom) (U32.v bitsTo);
-  (* NOTE: due to https://github.com/FStarLang/kremlin/issues/102 I need to introduce explicit let-bindings here *)
+  (* NOTE: due to https://github.com/FStarLang/karamel/issues/102 I need to introduce explicit let-bindings here *)
   let op1 = value `U8.shift_left` (8ul `U32.sub` bitsTo) in
   let op2 = op1 `U8.shift_right` ((8ul `U32.sub` bitsTo) `U32.add` bitsFrom) in
   op2
