@@ -12,16 +12,16 @@ ifdef FSTAR_HOME
   FSTAR_EXE=$(FSTAR_HOME)/bin/fstar.exe
 endif
 
-ifndef KREMLIN_HOME
-  KREMLIB=$(shell ocamlfind query kremlin)
+ifndef KRML_HOME
+  KRMLLIB=$(shell ocamlfind query karamel)
   ifneq ($(.SHELLSTATUS),0)
-    KREMLIN_HOME=../../../../kremlin
+    KRML_HOME=../../../../karamel
   endif
 endif
-ifdef KREMLIN_HOME
-  KREMLIB=$(KREMLIN_HOME)/kremlib
+ifdef KRML_HOME
+  KRMLLIB=$(KRML_HOME)/krmllib
 endif
-INCLUDE_KREMLIN=--include $(KREMLIB) --include $(KREMLIB)/obj
+INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 
 # for LowParse
 INCLUDE_PATHS += ..
@@ -30,7 +30,7 @@ INCLUDE_PATHS += ..
 INCLUDE_PATHS += $(FSTAR_HOME)/ulib/experimental
 
 ALREADY_CACHED = --already_cached *,-LowParse.Steel
-FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KREMLIN) $(ALREADY_CACHED)
+FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
 
 LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
 

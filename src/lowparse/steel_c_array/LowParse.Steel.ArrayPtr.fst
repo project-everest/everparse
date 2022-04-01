@@ -30,7 +30,7 @@ type t
 }
 >>
 
-However, this dependent type does not extract to KReMLin very well (it is not inlined, etc.) Thus, instead, just like arrays, I can define t as a pair of an informative part and a ghost part, and move almost all dependency to the Ghost part, and express the remaining dependency between the informative part and the ghost part as a refinement:
+However, this dependent type does not extract to KaRaMeL very well (it is not inlined, etc.) Thus, instead, just like arrays, I can define t as a pair of an informative part and a ghost part, and move almost all dependency to the Ghost part, and express the remaining dependency between the informative part and the ghost part as a refinement:
 *)
 
 [@@erasable]
