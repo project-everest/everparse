@@ -30,6 +30,10 @@ INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 # for Steel
 INCLUDE_PATHS += $(FSTAR_HOME)/ulib/experimental
 
+# ifdef WITH_STEEL_C_ARRAY
+#   WITH_STEEL_ST_ARRAY ?= $(WITH_STEEL_C_ARRAY)
+# endif
+
 ALREADY_CACHED = --already_cached *,-LowParse
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
 
@@ -50,9 +54,14 @@ ifdef WITH_STEEL_C_ARRAY
 	+$(MAKE) -C $@
 endif
 
+steel_st_array: lowparse
+ifdef WITH_STEEL_ST_ARRAY
+	+$(MAKE) -C $@
+endif
+
 steel_array: lowparse
 
-verify-all: lowparse steel_c_array steel_array
+verify-all: lowparse steel_c_array steel_array steel_st_array
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
