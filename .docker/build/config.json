@@ -4,7 +4,7 @@
     "BaseContainerIsEverestImage" : true,
     "BaseContainerImageName" : "fstar",
     "BaseContainerImageTagOrCommitId": "latest",
-    "BranchName" : "john_ml_steel_c",
+    "BranchName" : "taramana_steel_st",
     "GithubCommitUrl" : "https://github.com/FStarLang/FStar/commit",
     "OnDemandBuildDefinition" : "FStar\\FStar-{agentOS}",
 
