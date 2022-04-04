@@ -325,3 +325,47 @@ let split (#opened: _) (#base #a:Type) (#value: v base a) (x: t base a) (i:SZ.si
           (True)
           (fun _ -> True)
 = SC.coerce_atomic (split' x i sq)
+
+let index' (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i: SZ.size_t)
+  (sq: squash (SZ.size_v i < length (array_of value)))
+  (_: unit)
+  : Steel.Effect.SteelT a
+             (arrayptr r value)
+             (fun y -> arrayptr r value `star` pure (y == Seq.index (contents_of' value) (SZ.size_v i)))
+= elim_arrayptr' r;
+  let res = S.index r i in
+  let _ = intro_arrayptr' r in
+  noop ();
+  SEA.return res
+
+let index (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i: SZ.size_t)
+  (sq: squash (SZ.size_v i < length (array_of value)))
+  : STT a
+             (arrayptr r value)
+             (fun y -> arrayptr r value `star` pure (y == Seq.index (contents_of' value) (SZ.size_v i)))
+= SC.coerce_steel (index' r i sq)
+
+let upd' (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i:SZ.size_t) (x:a)
+  (sq: squash (SZ.size_v i < length (array_of value)))
+  (_: unit)
+  : Steel.Effect.SteelT (v base a)
+             (arrayptr r value)
+             (fun value' -> arrayptr r value' `star` pure (
+               array_of value' == array_of value /\
+               contents_of' value' == Seq.upd (contents_of' value) (SZ.size_v i) x
+             ))
+= elim_arrayptr' r;
+  S.upd r i x;
+  let res = intro_arrayptr' r in
+  noop ();
+  res
+
+let upd (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i:SZ.size_t) (x:a)
+  (sq: squash (SZ.size_v i < length (array_of value)))
+  : STT (v base a)
+             (arrayptr r value)
+             (fun value' -> arrayptr r value' `star` pure (
+               array_of value' == array_of value /\
+               contents_of' value' == Seq.upd (contents_of' value) (SZ.size_v i) x
+             ))
+= SC.coerce_steel (upd' r i x sq)
