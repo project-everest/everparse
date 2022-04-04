@@ -77,7 +77,7 @@ fi
 
 if [[ -d everparse ]] ; then
     echo everparse/ is already there, please make way
-    exit 1
+    #exit 1
 fi
 
 print_component_commit_id() {
@@ -327,6 +327,44 @@ zip_everparse() {
         time tar cvzf everparse$ext everparse/*
     fi
     if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
+
+    # Create the nuget package
+
+    # We are in the top-level everparse root
+
+    nuget_base=nuget_package
+
+    if [[ -d $nuget_base ]] ; then
+        echo "Nuget base directory $nuget_base already exists, please make way"
+        exit 1
+    fi
+
+    mkdir -p $nuget_base
+
+    # Set up the directory structure for the nuget package
+    
+    # Copy README to nuget top-level
+    cp everparse/README $nuget_base
+    # Copy the manifest file to nuget top-level
+    cp src/package/EverParse.nuspec $nuget_base
+    # Create the content directory, and copy all the files there
+    mkdir -p $nuget_base/content
+    cp -R everparse/* $nuget_base/content
+
+    # Download nuget.exe to create the package
+    nuget_exe_url=https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+    wget -P $nuget_base $nuget_exe_url
+    chmod a+x $nuget_base/nuget.exe
+
+    # Run the pack command
+    pushd $nuget_base
+    mono nuget.exe pack ./EverParse.nuspec
+    cp Microsoft.EverParse.1.0.0.nupkg ..
+    popd
+
+    # Not doing any cleanup in the spirit of existing package
+
+    # TODO: push this package?
     
     # END
     true
