@@ -43,10 +43,33 @@ let make_input_buffer
     prf = ();
   }
 
+let make_input_buffer_with_length
+  (base: t)
+  (position: B.pointer (Ghost.erased LPE.pos_t))
+  (length: LPE.pos_t)
+: HST.Stack input_buffer
+  (requires (fun h ->
+    B.loc_disjoint (footprint base) (B.loc_buffer position) /\
+    B.live h position /\
+    U64.v length <= U64.v (len_all base)
+  ))
+  (ensures (fun h _ h' ->
+    B.modifies (B.loc_buffer position) h h' 
+  ))
+= position *= 0uL;
+  {
+    base = base;
+    has_length = true;
+    length = length;
+    position = position;
+    prf = ();
+  }
+
 let default_error_handler
   (typename_s: string)
   (fieldname: string)
   (reason: string)
+  (error_code: U64.t)
   (context: B.pointer LPE.error_frame)
   (input: input_buffer)
   (start_pos: U64.t)
@@ -61,5 +84,6 @@ let default_error_handler
       LPE.typename_s = typename_s;
       LPE.fieldname = fieldname;
       LPE.reason = reason;
+      LPE.error_code = error_code;
     }
   end
