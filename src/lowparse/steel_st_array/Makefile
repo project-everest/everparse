@@ -29,16 +29,17 @@ INCLUDE_PATHS += ..
 # for Steel
 INCLUDE_PATHS += $(FSTAR_HOME)/ulib/experimental
 
-ALREADY_CACHED = --already_cached *,-LowParse.Steel
+ALREADY_CACHED = --already_cached *,-LowParse.SteelST
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
 
 LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
 
 clean:
-	rm -rf *.checked *.source .depend
+	rm -rf *.checked *.source .depend .depend.tmp
 
 .depend: $(LOWPARSE_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@.tmp
+	mv $@.tmp $@
 
 include .depend
 
