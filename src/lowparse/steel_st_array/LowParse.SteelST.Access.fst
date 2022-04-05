@@ -6,8 +6,6 @@ module SZ = LowParse.Steel.StdInt
 
 open Steel.ST.Util
 
-#set-options "--ide_id_info_off"
-
 let parsed_size
   (#k: parser_kind)
   (#t: Type)
@@ -17,15 +15,16 @@ let parsed_size
   (base: Type) ->
   (va: AP.v base byte) ->
   (a: byte_array base) ->
-  (sq: squash (Some? (parse p (AP.contents_of va)))) ->
-  STT SZ.size_t
+  ST SZ.size_t
     (AP.arrayptr a va)
-    (fun res -> AP.arrayptr a va `star` pure (
+    (fun res -> AP.arrayptr a va)
+    (Some? (parse p (AP.contents_of va)))
+    (fun res -> 
       match parse p (AP.contents_of' va) with
       | None -> False
       | Some (_, consumed) ->
         SZ.size_v res == consumed
-    ))
+)
 
 let parsed_size_constant_size
   (#k: parser_kind)
@@ -39,7 +38,7 @@ let parsed_size_constant_size
     ))
     (ensures (fun _ -> True))
 =
-  fun base va a sq ->
+  fun base va a ->
   parser_kind_prop_equiv k p;
   noop ();
   return sz
@@ -52,23 +51,16 @@ let get_parsed_size
   (#vp: v base k t)
   (j: parsed_size p)
   (a: byte_array base)
-: STT SZ.size_t
+: ST SZ.size_t
     (aparse p a vp)
-    (fun res -> aparse p a vp `star` pure (SZ.size_v res == AP.length (array_of vp)))
+    (fun res -> aparse p a vp)
+    True
+    (fun res -> SZ.size_v res == AP.length (array_of vp))
 =
   let _ = elim_aparse p a in
-  elim_pure _; // FIXME: this can go away if I replace pure with ensures; but not if I also have exists_ in the post-resource of the callee. This is just to illustrate the intended style.
-  let res = j base _ a () in
-  elim_pure _;
-  let _ = intro_aparse p a () in
-  elim_pure _;
+  let res = j base _ a in
+  let _ = intro_aparse p a in
   return res
-
-let seq_slice
-  (#a:Type) (s:Seq.seq a) (i: nat) (j: nat) : Pure (Seq.seq a)
-  (requires (i <= j /\ j <= Seq.length s))
-  (ensures (fun _ -> True))
-= Seq.slice s i j
 
 let parse'
   (#a: Type)
@@ -80,6 +72,8 @@ let parse'
   | None -> None
   | Some (v, c) -> Some (v, c)
 
+#push-options "--z3rlimit 16"
+
 let peek_strong
   (#base: Type)
   (#k: parser_kind)
@@ -88,27 +82,25 @@ let peek_strong
   (#va: AP.v base byte)
   (j: parsed_size p)
   (a: byte_array base)
-  (sq: squash (
-    k.parser_kind_subkind == Some ParserStrong /\
-    Some? (parse p (AP.contents_of' va))
-  ))
-: STT (byte_array base)
+: ST (byte_array base)
     (AP.arrayptr a va)
     (fun res -> exists_ (fun vp -> aparse p a vp `star` exists_ (fun vres -> AP.arrayptr res vres `star` pure (
       let consumed = AP.length (array_of vp) in
       AP.merge_into (array_of vp) (AP.array_of vres) (AP.array_of va) /\
       consumed <= AP.length (AP.array_of va) /\
-      AP.contents_of' vres == seq_slice (AP.contents_of' va) consumed (AP.length (AP.array_of va)) /\
-      parse' p (seq_slice (AP.contents_of' va) 0 consumed) == Some (vp.contents, consumed)
+      AP.contents_of' vres == AP.seq_slice (AP.contents_of' va) consumed (AP.length (AP.array_of va)) /\
+      parse' p (AP.seq_slice (AP.contents_of' va) 0 consumed) == Some (vp.contents, consumed)
     ))))
+    (k.parser_kind_subkind == Some ParserStrong /\
+      Some? (parse p (AP.contents_of' va)))
+    (fun _ -> True)
 =
-  let n = j base _ a () in
-  elim_pure _;
-  parse_strong_prefix p (AP.contents_of va) (Seq.slice (AP.contents_of va) 0 (SZ.size_v n));
-  let res = AP.split a n () in
-  let _ = elim_exists () in
-  let _ = elim_exists () in
-  elim_pure _;
-  let _ = intro_aparse p a () in
-  elim_pure _;
+  let n = j base _ a in
+  parse_strong_prefix p (AP.contents_of' va) (AP.seq_slice (AP.contents_of' va) 0 (SZ.size_v n));
+  let res = AP.split a n in
+  let _ = gen_elim () in
+  let _ = intro_aparse p a in
+  noop ();
   return res
+
+#pop-options

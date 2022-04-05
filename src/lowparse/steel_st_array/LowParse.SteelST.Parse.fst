@@ -103,10 +103,11 @@ let intro_aparse
   (#va: AP.v base byte)
   (p: parser k t)
   (a: byte_array base)
-  (sq: squash (Some? (arrayptr_parse p va)))
-: STGhostT (v base k t) opened
+: STGhost (v base k t) opened
     (AP.arrayptr a va)
-    (fun vp -> aparse p a vp `star` pure (arrayptr_parse p va == Some vp))
+    (fun vp -> aparse p a vp)
+    (Some? (arrayptr_parse p va))
+    (fun vp -> arrayptr_parse p va == Some vp)
 = let vp = Some?.v (arrayptr_parse p va) in
   noop ();
   rewrite (aparse0 p a vp) (aparse p a vp); 
@@ -120,9 +121,11 @@ let elim_aparse
   (#vp: v base k t)
   (p: parser k t)
   (a: byte_array base)
-: STGhostT (AP.v base byte) opened
+: STGhost (AP.v base byte) opened
     (aparse p a vp)
-    (fun va -> AP.arrayptr a va `star` pure (arrayptr_parse p va == Some vp))
+    (fun va -> AP.arrayptr a va)
+    True
+    (fun va -> arrayptr_parse p va == Some vp)
 = let gva = elim_exists () in
   elim_pure _;
   let va = Ghost.reveal gva in

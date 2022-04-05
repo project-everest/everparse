@@ -162,11 +162,12 @@ let elim_arrayptr_or_null_some'
   (#base #a: Type)
   (#value: Ghost.erased (option (v base a)))
   (x: t base a)
-  (sq: squash (g_is_null x == false \/ Some? value))
   ()
-: SEA.SteelGhostT (v base a) opened
+: SEA.SteelGhost (v base a) opened
     (arrayptr_or_null x value)
-    (fun value' -> arrayptr x value' `star` pure (Ghost.reveal value == Some value'))
+    (fun value' -> arrayptr x value')
+    (fun _ -> g_is_null x == false \/ Some? value)
+    (fun _ value' _ -> Ghost.reveal value == Some value')
 = C.vselect_elim0 (S.varrayptr_or_null x) _;
   S.elim_varrayptr_or_null_some x;
   let res0 = C.vselect_intro0 (S.varrayptr x) in
@@ -181,22 +182,24 @@ let elim_arrayptr_or_null_some
   (#base #a: Type)
   (#value: Ghost.erased (option (v base a)))
   (x: t base a)
-  (sq: squash (g_is_null x == false \/ Some? value))
-: STGhostT (v base a) opened
+: STGhost (v base a) opened
     (arrayptr_or_null x value)
-    (fun value' -> arrayptr x value' `star` pure (Ghost.reveal value == Some value'))
-= SC.coerce_ghost (elim_arrayptr_or_null_some' x sq)
+    (fun value' -> arrayptr x value')
+    (g_is_null x == false \/ Some? value)
+    (fun value' -> Ghost.reveal value == Some value')
+= SC.coerce_ghost (elim_arrayptr_or_null_some' x)
 
 let elim_arrayptr_or_null_none'
   (#opened: _)
   (#base #a: Type)
   (#value: Ghost.erased (option (v base a)))
   (x: t base a)
-  (sq: squash (g_is_null x == true \/ None? value))
   ()
-: SEA.SteelGhostT unit opened
+: SEA.SteelGhost unit opened
     (arrayptr_or_null x value)
-    (fun _ -> pure (g_is_null x == true /\ Ghost.reveal value == None))
+    (fun _ -> emp)
+    (fun _ -> g_is_null x == true \/ None? value)
+    (fun _ _ _ -> g_is_null x == true /\ Ghost.reveal value == None)
 =
   C.vselect_elim0 (S.varrayptr_or_null x) _;
   S.elim_varrayptr_or_null_none x;
@@ -207,11 +210,12 @@ let elim_arrayptr_or_null_none
   (#base #a: Type)
   (#value: Ghost.erased (option (v base a)))
   (x: t base a)
-  (sq: squash (g_is_null x == true \/ None? value))
-: STGhostT unit opened
+: STGhost unit opened
     (arrayptr_or_null x value)
-    (fun _ -> pure (g_is_null x == true /\ Ghost.reveal value == None))
-= SC.coerce_ghost (elim_arrayptr_or_null_none' x sq)
+    (fun _ -> emp)
+    (g_is_null x == true \/ None? value)
+    (fun _ -> g_is_null x == true /\ Ghost.reveal value == None)
+= SC.coerce_ghost (elim_arrayptr_or_null_none' x)
 
 let is_null'
   (#opened: _)
@@ -221,9 +225,9 @@ let is_null'
   ()
 : SEA.SteelAtomicBase bool false opened Unobservable
     (arrayptr_or_null x value)
-    (fun res -> arrayptr_or_null x value `star` pure (res == None? value /\ res == g_is_null x))
+    (fun res -> arrayptr_or_null x value)
     (fun _ -> True)
-    (fun _ _ _ -> True)
+    (fun _ res _ -> res == None? value /\ res == g_is_null x)
 =
   C.vselect_elim0 (S.varrayptr_or_null x) _;
   let res = S.is_null x in
@@ -235,12 +239,11 @@ let is_null
   (#base #a: Type)
   (#value: Ghost.erased (option (v base a)))
   (x: t base a)
-  ()
 : STAtomicBase bool false opened Unobservable
     (arrayptr_or_null x value)
-    (fun res -> arrayptr_or_null x value `star` pure (res == None? value /\ res == g_is_null x))
+    (fun res -> arrayptr_or_null x value)
     (True)
-    (fun _ -> True)
+    (fun res -> res == None? value /\ res == g_is_null x)
 = SC.coerce_atomic (is_null' x)
 
 let adjacent = S.adjacent
@@ -254,16 +257,17 @@ let arrayptr0
 = S.varrayptr r `C.vselect` value
 
 let join' (#opened: _) (#base #a:Type) (#vl #vr: v base a) (al ar:t base a)
-  (sq: squash (
-    adjacent (array_of vl) (array_of vr)
-  ))
   (_: unit)
-  : SEA.SteelGhostT (v base a) opened
+  : SEA.SteelGhost (v base a) opened
           (arrayptr0 al vl `star` arrayptr ar vr)
-          (fun res -> arrayptr al res `star` pure (
+          (fun res -> arrayptr al res)
+          (fun _ ->
+             adjacent (array_of vl) (array_of vr)
+          )
+          (fun _ res _ ->
              merge_into (array_of vl) (array_of vr) (array_of res) /\
              contents_of' res == contents_of vl `Seq.append` contents_of vr
-          ))
+          )
 =
   elim_arrayptr' al;
   elim_arrayptr' ar;
@@ -273,33 +277,37 @@ let join' (#opened: _) (#base #a:Type) (#vl #vr: v base a) (al ar:t base a)
   res
 
 let join (#opened: _) (#base #a:Type) (#vl #vr: v base a) (al ar:t base a)
-  (sq: squash (
-    adjacent (array_of vl) (array_of vr)
-  ))
-  ()
-  : STGhostT (v base a) opened
+  : STGhost (v base a) opened
           (arrayptr al vl `star` arrayptr ar vr)
-          (fun res -> arrayptr al res `star` pure (
+          (fun res -> arrayptr al res)
+          (adjacent (array_of vl) (array_of vr))
+          (fun res ->
             merge_into (array_of vl) (array_of vr) (array_of res) /\
             contents_of res == contents_of vl `Seq.append` contents_of vr
-          ))
-= SC.coerce_ghost (join' al ar sq)
+          )
+= SC.coerce_ghost (join' al ar)
+
+let seq_slice
+  (#a:Type) (s:Seq.seq a) (i: nat) (j: nat) : Pure (Seq.seq a)
+  (requires (i <= j /\ j <= Seq.length s))
+  (ensures (fun _ -> True))
+= Seq.slice s i j
 
 let split' (#opened: _) (#base #a:Type) (#value: v base a) (x: t base a) (i:SZ.size_t)
-  (sq: squash (SZ.size_v i <= length (array_of value)))
   (_: unit)
   : SEA.SteelAtomicBase (t base a) false opened Unobservable
           (arrayptr x value)
           (fun res -> exists_ (fun vl -> exists_ (fun vr ->
             arrayptr x vl `star` arrayptr res vr `star` pure (
+            SZ.size_v i <= length (array_of value) /\
             merge_into (array_of vl) (array_of vr) (array_of value) /\
-            contents_of' vl == Seq.slice (contents_of value) 0 (SZ.size_v i) /\
+            contents_of' vl == seq_slice (contents_of' value) 0 (SZ.size_v i) /\
             length (array_of vl) == SZ.size_v i /\
             length (array_of vr) == length (array_of value) - SZ.size_v i /\
-            contents_of' vr == Seq.slice (contents_of value) (SZ.size_v i) (length (array_of value)) /\
+            contents_of' vr == seq_slice (contents_of' value) (SZ.size_v i) (length (array_of value)) /\
             contents_of' value == contents_of' vl `Seq.append` contents_of' vr
           ))))
-          (fun _ -> True)
+          (fun _ -> SZ.size_v i <= length (array_of value))
           (fun _ _ _ -> True)
 =
   elim_arrayptr' x;
@@ -310,28 +318,32 @@ let split' (#opened: _) (#base #a:Type) (#value: v base a) (x: t base a) (i:SZ.s
   SEA.return res
 
 let split (#opened: _) (#base #a:Type) (#value: v base a) (x: t base a) (i:SZ.size_t)
-  (sq: squash (SZ.size_v i <= length (array_of value)))
   : STAtomicBase (t base a) false opened Unobservable
           (arrayptr x value)
           (fun res -> exists_ (fun vl -> exists_ (fun vr ->
             arrayptr x vl `star` arrayptr res vr `star` pure (
+            SZ.size_v i <= length (array_of value) /\
             merge_into (array_of vl) (array_of vr) (array_of value) /\
-            contents_of' vl == Seq.slice (contents_of value) 0 (SZ.size_v i) /\
+            contents_of' vl == seq_slice (contents_of' value) 0 (SZ.size_v i) /\
             length (array_of vl) == SZ.size_v i /\
             length (array_of vr) == length (array_of value) - SZ.size_v i /\
-            contents_of' vr == Seq.slice (contents_of value) (SZ.size_v i) (length (array_of value)) /\
+            contents_of' vr == seq_slice (contents_of' value) (SZ.size_v i) (length (array_of value)) /\
             contents_of' value == contents_of' vl `Seq.append` contents_of' vr
           ))))
-          (True)
+          (SZ.size_v i <= length (array_of value))
           (fun _ -> True)
-= SC.coerce_atomic (split' x i sq)
+= SC.coerce_atomic (split' x i)
 
 let index' (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i: SZ.size_t)
-  (sq: squash (SZ.size_v i < length (array_of value)))
   (_: unit)
-  : Steel.Effect.SteelT a
+  : Steel.Effect.Steel a
              (arrayptr r value)
-             (fun y -> arrayptr r value `star` pure (y == Seq.index (contents_of' value) (SZ.size_v i)))
+             (fun y -> arrayptr r value)
+             (fun _ -> SZ.size_v i < length (array_of value))
+             (fun _ y _ ->
+               SZ.size_v i < length (array_of value) /\
+               y == Seq.index (contents_of' value) (SZ.size_v i)
+             )
 = elim_arrayptr' r;
   let res = S.index r i in
   let _ = intro_arrayptr' r in
@@ -339,21 +351,27 @@ let index' (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i: SZ.size_
   SEA.return res
 
 let index (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i: SZ.size_t)
-  (sq: squash (SZ.size_v i < length (array_of value)))
-  : STT a
+  : ST a
              (arrayptr r value)
-             (fun y -> arrayptr r value `star` pure (y == Seq.index (contents_of' value) (SZ.size_v i)))
-= SC.coerce_steel (index' r i sq)
+             (fun y -> arrayptr r value)
+             (SZ.size_v i < length (array_of value))
+             (fun y ->
+               SZ.size_v i < length (array_of value) /\
+               y == Seq.index (contents_of' value) (SZ.size_v i)
+             )
+= SC.coerce_steel (index' r i)
 
 let upd' (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i:SZ.size_t) (x:a)
-  (sq: squash (SZ.size_v i < length (array_of value)))
   (_: unit)
-  : Steel.Effect.SteelT (v base a)
+  : Steel.Effect.Steel (v base a)
              (arrayptr r value)
-             (fun value' -> arrayptr r value' `star` pure (
+             (fun value' -> arrayptr r value')
+             (fun _ -> SZ.size_v i < length (array_of value))
+             (fun _ value' _ ->
+               SZ.size_v i < length (array_of value) /\
                array_of value' == array_of value /\
                contents_of' value' == Seq.upd (contents_of' value) (SZ.size_v i) x
-             ))
+             )
 = elim_arrayptr' r;
   S.upd r i x;
   let res = intro_arrayptr' r in
@@ -361,11 +379,13 @@ let upd' (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i:SZ.size_t) 
   res
 
 let upd (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i:SZ.size_t) (x:a)
-  (sq: squash (SZ.size_v i < length (array_of value)))
-  : STT (v base a)
+  : ST (v base a)
              (arrayptr r value)
-             (fun value' -> arrayptr r value' `star` pure (
+             (fun value' -> arrayptr r value')
+             (SZ.size_v i < length (array_of value))
+             (fun value'->
+               SZ.size_v i < length (array_of value) /\
                array_of value' == array_of value /\
                contents_of' value' == Seq.upd (contents_of' value) (SZ.size_v i) x
-             ))
-= SC.coerce_steel (upd' r i x sq)
+             )
+= SC.coerce_steel (upd' r i x)
