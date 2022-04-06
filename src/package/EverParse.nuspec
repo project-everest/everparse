@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package >
   <metadata>
-    <id>Microsoft.EverParse</id>
+    <id>EverParse</id>
     <version>1.0.0</version>
     <authors>aseemr</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

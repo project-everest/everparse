@@ -328,40 +328,41 @@ zip_everparse() {
     fi
     if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
 
-    # Create the nuget package
+    if $is_windows ; then
+        # Create the nuget package
 
-    # We are in the top-level everparse root
+        # We are in the top-level everparse root
 
-    nuget_base=nuget_package
+        nuget_base=nuget_package
 
-    if [[ -d $nuget_base ]] ; then
-        echo "Nuget base directory $nuget_base already exists, please make way"
-        exit 1
+        if [[ -d $nuget_base ]] ; then
+            echo "Nuget base directory $nuget_base already exists, please make way"
+            exit 1
+        fi
+
+        mkdir -p $nuget_base
+
+        # Set up the directory structure for the nuget package
+        
+        # Copy README to nuget top-level
+        cp everparse/README $nuget_base
+        # Copy the manifest file to nuget top-level
+        cp src/package/EverParse.nuspec $nuget_base
+        # Create the content directory, and copy all the files there
+        mkdir -p $nuget_base/content
+        cp -R everparse/* $nuget_base/content
+
+        # Download nuget.exe to create the package
+        nuget_exe_url=https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+        wget $nuget_exe_url
+        chmod a+x nuget.exe
+
+        # Run the pack command
+        pushd $nuget_base
+        ../nuget.exe pack -Version $everparse_version ./EverParse.nuspec
+        cp EverParse.$everparse_version.0.0.nupkg ..
+        popd
     fi
-
-    mkdir -p $nuget_base
-
-    # Set up the directory structure for the nuget package
-    
-    # Copy README to nuget top-level
-    cp everparse/README $nuget_base
-    # Copy the manifest file to nuget top-level
-    cp src/package/EverParse.nuspec $nuget_base
-    # Create the content directory, and copy all the files there
-    mkdir -p $nuget_base/content
-    cp -R everparse/* $nuget_base/content
-
-    # Download nuget.exe to create the package
-    nuget_exe_url=https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-    wget -P $nuget_base $nuget_exe_url
-    chmod a+x $nuget_base/nuget.exe
-
-    # Run the pack command
-    pushd $nuget_base
-    mono nuget.exe pack ./EverParse.nuspec
-    cp Microsoft.EverParse.1.0.0.nupkg ..
-    popd
-
     # Not doing any cleanup in the spirit of existing package
 
     # TODO: push this package?
