@@ -41,24 +41,26 @@ fi
 platform=$(uname -m)
 z3=z3$exe
 if ! Z3_DIR=$(dirname $(which $z3)) ; then
-    if [[ -d z3 ]] ; then
-        true
-    elif $is_windows ; then
-        z3_tagged=Z3-4.8.5
-        z3_archive=z3-4.8.5-x64-win.zip
-        wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
-        unzip $z3_archive
-        mv z3-4.8.5-x64-win z3
-        chmod +x z3/bin/z3.exe
-        if [[ -f z3/bin/*.dll ]] ; then chmod +x z3/bin/*.dll ; fi
-        if [[ -f z3/lib/*.dll ]] ; then chmod +x z3/lib/*.dll ; fi
+    if $is_windows ; then
+        if ! [[ -d z3 ]] ; then
+            z3_tagged=Z3-4.8.5
+            z3_archive=z3-4.8.5-x64-win.zip
+            wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
+            unzip $z3_archive
+            mv z3-4.8.5-x64-win z3
+            chmod +x z3/bin/z3.exe
+            for f in z3/bin/*.dll ; do if [[ -f $f ]] ; then chmod +x $f ; fi ; done
+            if [[ -f z3/lib/*.dll ]] ; then chmod +x z3/lib/*.dll ; fi
+        fi
         Z3_DIR="$PWD/z3/bin"
     elif [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
-        # Download a dependency-free z3
-        z3_tagged=z3-4.8.5-linux-clang
-        z3_archive=$z3_tagged-$platform.tar.gz
-        wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
-        tar xzf $z3_archive
+        if ! [[ -d z3 ]] ; then
+            # Download a dependency-free z3
+            z3_tagged=z3-4.8.5-linux-clang
+            z3_archive=$z3_tagged-$platform.tar.gz
+            wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
+            tar xzf $z3_archive
+        fi
         Z3_DIR="$PWD/z3"
     else
         echo "z3 4.8.5 is missing, please add it to your PATH"
