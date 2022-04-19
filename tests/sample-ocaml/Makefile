@@ -1,16 +1,16 @@
 FSTAR_HOME ?= $(realpath ../../../FStar)
 LOWPARSE_HOME ?= $(realpath ../../src/lowparse)
-KREMLIN_HOME ?= $(realpath ../../../kremlin)
+KRML_HOME ?= $(realpath ../../../karamel)
 
 export FSTAR_HOME
 export LOWPARSE_HOME
-export KREMLIN_HOME
+export KRML_HOME
 
 EXTRACT_TO=ocaml/generated
 
 FSTAR_OPTIONS = --odir $(EXTRACT_TO) --cache_dir cache --cache_checked_modules \
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
-		--include $(LOWPARSE_HOME) --include $(KREMLIN_HOME)/kremlib --include $(KREMLIN_HOME)/kremlib/obj --cmi
+		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --cmi
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 

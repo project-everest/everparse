@@ -22,7 +22,7 @@ val der_length_max_eq : squash (der_length_max == pow2 (8 * 126) - 1)
 
 let der_length_t = (x: nat { x <= der_length_max })
 
-[@@(noextract_to "Kremlin")]
+[@@(noextract_to "krml")]
 val log256
   (x: nat { x > 0 })
 : Tot (y: nat { y > 0 /\ pow2 (8 * (y - 1)) <= x /\ x < pow2 (8 * y)})
@@ -67,7 +67,7 @@ let parse_der_length_payload_kind (x: U8.t) : Tot parser_kind =
   let len = der_length_payload_size_of_tag x in
   strong_parser_kind len len None
 
-[@@(noextract_to "Kremlin")]
+[@@(noextract_to "krml")]
 let tag_of_der_length
   (x: der_length_t)
 : Tot U8.t
@@ -79,7 +79,7 @@ let tag_of_der_length
     Math.pow2_lt_recip (8 * (len_len - 1)) (8 * 126);
     128uy `U8.add` U8.uint_to_t len_len
 
-[@@(noextract_to "Kremlin")]
+[@@(noextract_to "krml")]
 let der_length_payload_size
   (x: der_length_t)
 : Tot (y: nat { y <= 126 })
