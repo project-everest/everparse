@@ -325,15 +325,27 @@ let rec is_extern_type (t:typ) : bool =
  *
  * They are abstract types in the emitted F* code
  *)
-let rec print_output_type (t:typ) : ML string =
-  match t with
-  | T_app id _ _ -> print_ident id
-  | T_pointer t -> Printf.sprintf "p_%s" (print_output_type t)
-  | _ -> failwith "Print: not an output type"
+let print_output_type (qual:bool) (t:typ) : ML string =
+  let rec aux (t:typ)
+    : ML (option string & string)
+    = match t with
+      | T_app id _ _ -> 
+        id.v.modul_name, print_ident id
+      | T_pointer t ->
+        let m, i = aux t in
+        m, Printf.sprintf "p_%s" i
+      | _ -> failwith "Print: not an output type"
+  in
+  let mopt, i = aux t in
+  if qual 
+  then match mopt with
+       | None -> i
+       | Some m -> Printf.sprintf "%s.ExternalAPI.%s" m i
+  else i
 
 let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   if is_output_type t
-  then print_output_type t
+  then print_output_type true t
   else
   match t with
   | T_false -> "False"
@@ -468,6 +480,13 @@ let rec print_action (mname:string) (a:action) : ML string =
       | Action_field_pos_64 -> "(action_field_pos_64())"
       | Action_field_pos_32 -> "(action_field_pos_32 EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
       | Action_field_ptr -> "(action_field_ptr EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
+      | Action_field_ptr_after sz write_to ->
+        Printf.sprintf "(action_field_ptr_after EverParse3d.Actions.BackendFlagValue.backend_flag_value %s %s)" (print_expr mname sz) (print_ident write_to)
+      | Action_field_ptr_after_with_setter sz write_to_field write_to_obj ->
+        Printf.sprintf "(action_field_ptr_after_with_setter EverParse3d.Actions.BackendFlagValue.backend_flag_value %s (%s %s))"
+          (print_expr mname sz)
+          (print_ident write_to_field)
+          (print_expr mname write_to_obj)
       | Action_deref i ->
         Printf.sprintf "(action_deref %s)" (print_ident i)
       | Action_assignment lhs rhs ->
@@ -1085,12 +1104,13 @@ let print_c_entry (modul: string)
           }" 
    in
    let input_stream_binding = Options.get_input_stream_binding () in
-   let wrapped_call name params =
+   let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
+   let wrapped_call_buffer name params =
      Printf.sprintf
        "EverParseErrorFrame frame;\n\t\
        frame.filled = FALSE;\n\t\
        %s\
-       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, %s, 0);\n\t\
+       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t\
        if (EverParseIsError(result))\n\t\
        {\n\t\t\
          if (frame.filled)\n\t\t\
@@ -1100,20 +1120,40 @@ let print_c_entry (modul: string)
          return FALSE;\n\t\
        }\n\t\
        return TRUE;"
-       begin match input_stream_binding with
-       | HashingOptions.InputStreamBuffer -> ""
-       | HashingOptions.InputStreamExtern _ ->
-         "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t"
-       end
+       (if is_input_stream_buffer then ""
+        else "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t")
        name
        params
-       begin match input_stream_binding with
-       | HashingOptions.InputStreamBuffer -> "base, len"
-       | HashingOptions.InputStreamExtern _ -> "input"
-       end
        modul
    in
+   let wrapped_call_stream name params =
+     Printf.sprintf
+       "EverParseErrorFrame frame =\n\t\
+             { .filled = FALSE,\n\t\
+               .typename_s = \"UNKNOWN\",\n\t\
+               .fieldname =  \"UNKNOWN\",\n\t\
+               .reason =   \"UNKNOWN\"\n\t\t\
+             };\n\
+       EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t\
+       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
+       uint64_t parsedSize = EverParseGetValidatorErrorPos(result);\n\
+       if (EverParseIsError(result))\n\t\
+       {\n\t\t\
+           EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+       }\n\t\
+       EverParseRetreat(_extra, base, parsedSize);\n\
+       return parsedSize;"
+       name
+       params
+   in
+   let mk_param (name: string) (typ: string) : Tot param =
+     (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
+   in
    let print_one_validator (d:type_decl) : ML (string & string) =
+    let params = 
+      d.decl_name.td_params @
+      (if is_input_stream_buffer then [] else [mk_param "_extra" "EverParseExtraT"])
+    in
     let print_params (ps:list param) : ML string =
       let params =
         String.concat
@@ -1148,14 +1188,13 @@ let print_c_entry (modul: string)
       |> pascal_case
     in
     let signature =
-      begin match input_stream_binding with
-      | HashingOptions.InputStreamBuffer ->
-        Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
-      | HashingOptions.InputStreamExtern _ ->
-        Printf.sprintf "BOOLEAN %s(%sEverParseInputStreamBase base)"
-      end
-       wrapper_name
-       (print_params d.decl_name.td_params)
+      if is_input_stream_buffer 
+      then Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+             wrapper_name
+            (print_params params)
+      else Printf.sprintf "uint64_t %s(%sEverParseInputStreamBase base)"
+             wrapper_name
+             (print_params params)
     in
     let validator_name =
        Printf.sprintf "%s_validate_%s"
@@ -1165,9 +1204,9 @@ let print_c_entry (modul: string)
     in
     let impl =
       let body = 
-        wrapped_call
-          validator_name 
-          (print_arguments d.decl_name.td_params)
+        if is_input_stream_buffer
+        then wrapped_call_buffer validator_name (print_arguments params)
+        else wrapped_call_stream validator_name (print_arguments params)
       in
       Printf.sprintf "%s {\n\t%s\n}" signature body
     in
@@ -1213,8 +1252,10 @@ let print_c_entry (modul: string)
       header
   in
   let error_callback_proto =
-    Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
-      modul
+    if HashingOptions.InputStreamBuffer? input_stream_binding
+    then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
+                         modul
+    else ""
   in
   let impl =
     Printf.sprintf
@@ -1284,7 +1325,7 @@ let rec base_output_type (t:typ) : ML A.ident =
 let rec print_output_type_val (tbl:set) (t:typ) : ML string =
   let open A in
   if is_output_type t
-  then let s = print_output_type t in
+  then let s = print_output_type false t in
        if H.try_find tbl s <> None then ""
        else let _ = H.insert tbl s () in
             match t with
@@ -1292,7 +1333,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
               Printf.sprintf "\n\nval %s : Type0\n\n" s
             | T_pointer bt ->
               let bs = print_output_type_val tbl bt in
-              bs ^ (Printf.sprintf "\n\ntype %s = bpointer %s\n\n" s (print_output_type bt))
+              bs ^ (Printf.sprintf "\n\ntype %s = bpointer %s\n\n" s (print_output_type false bt))
   else ""
 
 // let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =

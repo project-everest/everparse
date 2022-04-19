@@ -1,11 +1,11 @@
 all: verify buffer extern
 
 FSTAR_HOME?=$(realpath ../../../../FStar)
-KREMLIN_HOME?=$(realpath ../../../../kremlin)
+KRML_HOME?=$(realpath ../../../../karamel)
 OTHERFLAGS?=
-EVERPARSE_HOME=../../..
+EVERPARSE_HOME=$(realpath ../../..)
 
-FSTAR_OPTIONS=$(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KREMLIN_HOME)/kremlib $(KREMLIN_HOME)/kremlib/obj) --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=10'
+FSTAR_OPTIONS=$(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj) --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=10'
 #--z3cliopt 'smt.arith.nl=false' --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr wrapped
 FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
 
@@ -13,7 +13,7 @@ ROOT=$(wildcard *.fst) $(wildcard *.fsti)
 ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops'
 
 .depend: $(ROOT)
-	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'Kremlin:*,-Prims,-EverParse3d.Interpreter,-EverParse3d.ProjectorTactic' > $@.tmp
+	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'krml:*,-Prims,-EverParse3d.Interpreter,-EverParse3d.ProjectorTactic' > $@.tmp
 	mv $@.tmp $@
 
 include .depend
@@ -35,7 +35,7 @@ EverParse.rsp: $(FILTERED_KRML_FILES)
 	mv $@.tmp $@
 
 %.krml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin --extract_module $(basename $(notdir $(subst .checked,,$<)))
+	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml --extract_module $(basename $(notdir $(subst .checked,,$<)))
 	touch $@
 
 %.checked:

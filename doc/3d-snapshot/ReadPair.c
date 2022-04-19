@@ -54,7 +54,7 @@ ReadPairValidatePair(
     {
       positionAfterPair =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          EverParseGetValidatorErrorPos(positionAfterfirst0));
+          positionAfterfirst0);
     }
   }
   uint64_t positionAfterfirst;
@@ -107,7 +107,7 @@ ReadPairValidatePair(
     {
       positionAfterPair0 =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          EverParseGetValidatorErrorPos(positionAftersecond));
+          positionAftersecond);
     }
   }
   if (EverParseIsSuccess(positionAfterPair0))

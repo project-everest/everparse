@@ -1,6 +1,6 @@
 module EverParse3d.InputStream.Buffer.Aux
 
-(* This module is here to break circularity in KReMLin bundles (because Prims must be in the EverParse bundle because of the string type, as opposed to C,FStar,LowStar.) *)
+(* This module is here to break circularity in KaRaMeL bundles (because Prims must be in the EverParse bundle because of the string type, as opposed to C,FStar,LowStar.) *)
 
 module IB = EverParse3d.InputBuffer
 module IR = EverParse3d.Readable
@@ -11,8 +11,6 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
-
-#set-options "--__temp_no_proj EverParse3d.InputStream.Buffer.Aux"
 
 noeq
 type input_buffer = {

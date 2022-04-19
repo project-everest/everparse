@@ -1,7 +1,7 @@
 #ifndef __LOWPARSE_TESTLIB_AUX_H
 #define __LOWPARSE_TESTLIB_AUX_H
 
-#include <kremlib.h>
+#include <krmllib.h>
 
 #include <stdlib.h>
 #include <stdio.h>
