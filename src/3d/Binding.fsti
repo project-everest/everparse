@@ -16,8 +16,7 @@
 module Binding
 open FStar.All
 open Ast
-
-val global_env : Type0
+include GlobalEnv
 
 val env : Type0
 val mk_env (g:global_env) : ML env

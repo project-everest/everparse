@@ -12,7 +12,7 @@ of the following cases:
 * You are not on Windows or Linux (however, there is no guarantee that
   the sources will compile under any such non-Windows-Linux system.)
 
-* You want to use your own copy of F\*, KReMLin or z3.
+* You want to use your own copy of F\*, KaRaMeL or z3.
 
 * You want to contribute to EverParse.
 
@@ -22,7 +22,7 @@ sources.
 Install dependencies
 --------------------
 
-EverParse, F\* and KReMLin are all components of the Everest
+EverParse, F\* and KaRaMeL are all components of the Everest
 project. Thus, the best way to install dependencies is to use the
 Everest script, as described below following the `website of the
 Everest project <https://project-everest.github.io/>`_, which
@@ -139,7 +139,7 @@ sources, you can build a binary package:
 
      This process is fully automatic. In particular, it automatically
      downloads a binary release of z3, and downloads and builds F\*,
-     KReMLin and EverCrypt.
+     KaRaMeL and EverCrypt.
 
      .. note::
 
@@ -204,12 +204,12 @@ fetch and build EverParse sources:
 
 
 2. Run ``./everest pull`` to fetch and pull the latest versions of F\*,
-   KReMLin and EverParse.
+   KaRaMeL and EverParse.
 
-3. Run ``./everest -j 1 FStar make kremlin make`` to
-   build F\* and KReMLin. The ``-j`` option introduces a
+3. Run ``./everest -j 1 FStar make karamel make`` to
+   build F\* and KaRaMeL. The ``-j`` option introduces a
    parallelism factor. You can also speed up the build by skipping
-   F\*, KReMLin and EverCrypt library proofs by setting the
+   F\*, KaRaMeL and EverCrypt library proofs by setting the
    ``OTHERFLAGS`` environment variable to ``"--admit_smt_queries
    true"``.
 
@@ -251,13 +251,13 @@ fetch and build EverParse sources:
    subdirectory of your Everest clone, which contains a clone of the
    latest F\*.
 
-6. Set the ``KREMLIN_HOME`` environment variable to the ``kremlin``
+6. Set the ``KRML_HOME`` environment variable to the ``karamel``
    subdirectory of your Everest clone, which contains a clone of the
-   latest KReMLin.
+   latest KaRaMeL.
 
    .. note::
       
-      If you already have your own copy of F\* or KReMLin, and if you
+      If you already have your own copy of F\* or KaRaMeL, and if you
       already know how to build them, then you can skip steps 1 to 5
       and set the environment variables accordingly.)
 
@@ -267,7 +267,7 @@ fetch and build EverParse sources:
    <https://github.com/project-everest/everparse>`_
    anywhere else.
 
-8. Set the ``QD_HOME`` environment variable to your EverParse clone
+8. Set the ``EVERPARSE_HOME`` environment variable to your EverParse clone
    as you chose it.
 
 9. Then, once you are all set up in your EverParse clone, you can

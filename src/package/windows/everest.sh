@@ -494,11 +494,11 @@ OCAML
       xpwd="$(pwd)"
   fi
 
-  magenta "Note: you *may* want to add ${xpwd}/FStar/bin and ${xpwd}/kremlin to your PATH"
+  magenta "Note: you *may* want to add ${xpwd}/FStar/bin and ${xpwd}/karamel to your PATH"
   [ -n "${FSTAR_HOME}" ] || \
     magenta "Note: you *may* want to export FSTAR_HOME=${xpwd}/FStar"
-  [ -n "${KREMLIN_HOME}" ] || \
-    magenta "Note: you *may* want to export KREMLIN_HOME=${xpwd}/kremlin"
+  [ -n "${KRML_HOME}" ] || \
+    magenta "Note: you *may* want to export KRML_HOME=${xpwd}/karamel"
   [ -n "${HACL_HOME}" ] || \
     magenta "Note: you *may* want to export HACL_HOME=${xpwd}/hacl-star"
 }

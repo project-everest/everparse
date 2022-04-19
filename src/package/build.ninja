@@ -5,7 +5,7 @@
 # in a separate file
 include vars.ninja
 
-FSTAR_OPTIONS = --cache_checked_modules --already_cached FStar,LowStar,C,Spec.Loops,LowParse --include $LOWPARSE_HOME --include $KREMLIN_HOME/kremlib --include $KREMLIN_HOME/kremlib/obj --include $DDD_HOME --warn_error +241 --z3rlimit_factor 4 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100' --cmi
+FSTAR_OPTIONS = --cache_checked_modules --already_cached FStar,LowStar,C,Spec.Loops,LowParse --include $LOWPARSE_HOME --include $KRML_HOME/krmllib --include $KRML_HOME/krmllib/obj --include $DDD_HOME --warn_error +241 --z3rlimit_factor 4 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100' --cmi
 
 FSTAR = $FSTAR_HOME/bin/fstar.exe --trace_error $FSTAR_OPTIONS
 
@@ -13,9 +13,9 @@ FSTAR = $FSTAR_HOME/bin/fstar.exe --trace_error $FSTAR_OPTIONS
 rule checked
   command = $FSTAR $in
 
-# Extract the F* files to KReMLin AST
+# Extract the F* files to KaRaMeL AST
 rule krml
-  command = $FSTAR --codegen Kremlin --extract_module $module $source
+  command = $FSTAR --codegen krml --extract_module $module $source
 
 # ninja does not support lists of prerequisites in a default target,
 # so we need to produce the ninja invocation as a .bat

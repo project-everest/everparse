@@ -5,9 +5,9 @@ set -x
 
 DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 
-if [[ -z "$QD_HOME" ]] ; then
+if [[ -z "$EVERPARSE_HOME" ]] ; then
     # This file MUST be run from the EverParse root directory
-    export QD_HOME=$PWD
+    export EVERPARSE_HOME=$PWD
 fi
 
 if [[ -z "$SATS_TOKEN" ]] ; then
@@ -30,13 +30,13 @@ git fetch --tags
 git pull --ff-only
 branchname=$(git rev-parse --abbrev-ref HEAD)
 
-everparse_version=$(cat $QD_HOME/version.txt)
+everparse_version=$(cat $EVERPARSE_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
 if [[ $everparse_commit != $everparse_last_version ]] ; then
     everparse_version=$($DATE '+v%Y.%m.%d')
-    echo $everparse_version > $QD_HOME/version.txt
-    git add $QD_HOME/version.txt
+    echo $everparse_version > $EVERPARSE_HOME/version.txt
+    git add $EVERPARSE_HOME/version.txt
     git commit -m "Release $everparse_version"
     git tag $everparse_version
 fi
