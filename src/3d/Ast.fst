@@ -358,7 +358,44 @@ type action' =
   | Action_let : i:ident -> a:atomic_action -> k:action -> action'
   | Action_act : action -> action'
 and action = with_meta_t action'
+open FStar.List.Tot
 
+let sequence_non_failing_actions (a0:action{Action_act? a0.v}) (a1:action {Action_act? a1.v})
+  : a:action{Action_act? a.v}
+  = let rec seq (a0:action) = 
+      let w a = 
+          with_range_and_comments a 
+            a1.range
+            (a0.comments @ a1.comments)
+      in
+      let Action_act a1 = a1.v in
+      match a0.v with
+      | Atomic_action a -> 
+        w (Action_seq a a1)
+  
+      | Action_seq a0 tl ->
+        w (Action_seq a0 (seq tl))
+  
+      | Action_ite hd th el ->
+        let th = seq th in
+        let el = 
+          match el with
+          | None -> Some a1
+          | Some el -> Some (seq el)
+        in
+        w (Action_ite hd th el)
+  
+      | Action_let i a k ->
+        w (Action_let i a (seq k))
+  
+      | Action_act a ->
+        seq a
+    in
+    let res = seq a0 in
+    with_range_and_comments (Action_act res)
+      res.range
+      res.comments
+            
 
 [@@ PpxDerivingYoJson ]
 type qualifier =
