@@ -161,7 +161,7 @@ noeq noextract
 type asn1_content_k : Type =
 | ASN1_TERMINAL : asn1_terminal_k -> asn1_content_k
 | ASN1_SEQUENCE : items : list (asn1_gen_item_k) -> 
-                  pf : (asn1_sequence_k_wf (List.map (fun x -> match x with |(| s, d, _ |) -> (s, d) ) items)) ->
+                  pf : squash (asn1_sequence_k_wf (List.map (fun x -> match x with |(| s, d, _ |) -> (s, d) ) items)) ->
                   asn1_content_k
 | ASN1_SEQUENCE_OF : #s : _ -> asn1_k s -> asn1_content_k
 //| ASN1_SET : #s : _ -> asn1_set_k s -> asn1_content_k
@@ -182,6 +182,9 @@ and asn1_decorated_k : Set.set asn1_id_t -> asn1_decorator -> Type =
 | ASN1_DEFAULT_TERMINAL : id : asn1_id_t -> #k : asn1_terminal_k -> defaultv : asn1_terminal_t k -> asn1_decorated_k (Set.singleton id) DEFAULT
 
 and asn1_gen_item_k : Type = s : Set.set asn1_id_t & d : asn1_decorator & asn1_decorated_k s d
+
+let mk_ASN1_GEN_ITEM (#s) (#d) (k : asn1_decorated_k s d) : asn1_gen_item_k =
+  (| s, d, k |)
 
 type default_tv (#a : eqtype) (v : a) =
 | Default : default_tv v
