@@ -2,6 +2,8 @@ module ASN1.Test.Interpreter
 
 open ASN1.Spec.Interpreter
 
+open LowParse.Spec.Base
+
 let bool_id : asn1_id_t = MK_ASN1_ID UNIVERSAL PRIMITIVE 5ul
 
 // This sample type from Antoine is not well-formed
@@ -22,3 +24,7 @@ let sigAlg : asn1_k (Set.singleton seq_id) =
       [ mk_ASN1_GEN_ITEM (ASN1_PLAIN_ILC (ASN1_ILC bool_id (ASN1_TERMINAL ASN1_BOOLEAN))) ;
         mk_ASN1_GEN_ITEM (ASN1_OPTION_ILC (ASN1_ILC bool_id (ASN1_TERMINAL ASN1_BOOLEAN))) ] 
        _ )
+
+
+let sigAlg_parser : parser _ (asn1_t (sigAlg)) =
+  asn1_as_parser sigAlg
