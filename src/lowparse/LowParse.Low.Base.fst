@@ -64,8 +64,6 @@ let make_accessor_from_pure
   in
   pos `U32.add` f (Ghost.hide (bytes_of_slice_from h sl pos))
 
-#pop-options
-
 inline_for_extraction
 let accessor_id
   (#k: parser_kind)
@@ -77,6 +75,8 @@ let accessor_id
   [@inline_let] let _ = slice_access_eq h (gaccessor_id p) input pos in
   [@inline_let] let _ = gaccessor_id_eq p (bytes_of_slice_from h input pos) in
   pos
+
+#pop-options
 
 inline_for_extraction
 let accessor_ext
@@ -1741,7 +1741,7 @@ let list_existsb
   let posn = list_find j f f' sl pos pos' in
   posn <> pos'
 
-#push-options "--fuel 2 --ifuel 0 --z3rlimit 64"
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 256 --query_stats"
 inline_for_extraction
 noextract
 let list_flatten_map
@@ -1879,6 +1879,8 @@ let list_flatten_map
   res
 #pop-options
 
+#push-options "--z3rlimit 16 --query_stats"
+
 inline_for_extraction
 noextract
 let list_map
@@ -2012,13 +2014,33 @@ let wvalid
   (gpos' : Ghost.erased U32.t)
   (gv: Ghost.erased t)
   (x: Seq.seq byte)
-: GTot Type0
+: GTot prop
 = 
   U32.v pos <= U32.v (Ghost.reveal gpos') /\
   U32.v (Ghost.reveal gpos') <= U32.v s.len /\
   U32.v s.len <= Seq.length x /\
   parse p (Seq.slice x (U32.v pos) (U32.v s.len)) == Some (Ghost.reveal gv, U32.v (Ghost.reveal gpos') - U32.v pos) /\
   compl pos (Ghost.reveal gv) (Ghost.reveal gpos') x
+
+let wvalid_valid_content_pos
+  (#t: Type) (#k: parser_kind) (p: parser k t) (#rrel #rel: _) (s: slice rrel rel)
+  (compl: compl_t t)
+  (pos: U32.t)
+  (gpos' : Ghost.erased U32.t)
+  (gv: Ghost.erased t)
+  (x: Seq.seq byte)
+  (h: HS.mem)
+: Lemma
+  (requires (
+    wvalid p s compl pos gpos' gv x /\
+    live_slice h s /\
+    x == B.as_seq h s.base
+  ))
+  (ensures (
+    valid_content_pos p h s pos gv gpos'
+  ))
+=
+  valid_facts p h s pos
 
 inline_for_extraction
 noeq
@@ -2045,7 +2067,7 @@ let irepr_pos'
   (ensures (fun y -> True))
 = Ghost.reveal (IRepr?.gpos' x)
 
-#set-options "--ifuel 1 --fuel 2"
+#push-options "--ifuel 1 --fuel 2"
 
 let irepr_pos'_post
   (#t: Type) (#k: parser_kind) (#p: parser k t) (#rrel #rel: _) (#s: slice rrel rel) (#compl: compl_t t) (x: irepr p s compl) : Lemma
@@ -2091,8 +2113,6 @@ let witness_valid_gen
   B.witness_p s.base (wvalid p s compl pos gpos' gv);
   IRepr pos gpos' gv ()
 
-#push-options "--z3rlimit 128"
-#restart-solver
 inline_for_extraction
 let recall_valid_gen
   (#t: Type)
@@ -2111,7 +2131,9 @@ let recall_valid_gen
     compl (irepr_pos i) (irepr_v i) (irepr_pos' i) (B.as_seq h s.base)
   ))
 = let h = HST.get () in
-  [@inline_let]
-  let _ = valid_facts p h s (irepr_pos i) in
-  B.recall_p s.base (wvalid p s compl (irepr_pos i) (IRepr?.gpos' i) (IRepr?.gv i))
+  B.recall_p s.base (wvalid p s compl (irepr_pos i) (IRepr?.gpos' i) (IRepr?.gv i));
+  wvalid_valid_content_pos p s compl (irepr_pos i) (IRepr?.gpos' i) (IRepr?.gv i) (B.as_seq h s.base) h
+
+#pop-options
+
 #pop-options

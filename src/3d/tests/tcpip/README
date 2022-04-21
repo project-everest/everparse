@@ -52,7 +52,7 @@ around the TCP/IP protocol.
    * UDP.fst.checked, UDP.fsti.checked: binary intermediate files
      recording object cache for F* verification
 
-   * UDP.krml: binary intermediate file recording KReMLin intermediate
+   * UDP.krml: binary intermediate file recording KaRaMeL intermediate
      AST code for extraction from F* to C
 
    For TCP, where the validator for TCP options populates a parse tree

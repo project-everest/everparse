@@ -1,10 +1,13 @@
-all: quackyducky lowparse 3d
+all: quackyducky lowparse 3d asn1
 
 lowparse:
 	+$(MAKE) -C src/lowparse
 
 3d: lowparse
 	+$(MAKE) -C src/3d
+
+asn1: lowparse
+	+$(MAKE) -C src/ASN1 verify
 
 quackyducky:
 	+$(MAKE) -C src/qd

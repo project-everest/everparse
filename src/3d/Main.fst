@@ -57,7 +57,7 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
 
-  let decls, refinement = Desugar.desugar mname (decls, refinement) in
+  let decls, refinement = Desugar.desugar en.binding_env mname (decls, refinement) in
 
   Options.debug_print_string "=============After desugaring=============\n";
   Options.debug_print_string (print_decls decls);

@@ -1,16 +1,11 @@
 all: verify test
 
-ifndef KREMLIN_HOME
-    $(error Please clone https://github.com/FStarLang/kremlin and point KREMLIN_HOME to that clone)
-endif
-
-ifndef EVERPARSE_HOME
-  $(error Please clone https://github.com/project-everest/everparse and point EVERPARSE_HOME to that clone)
-endif
+EVERPARSE_HOME ?= ../..
+KRML_HOME ?= $(EVERPARSE_HOME)/../karamel
 
 LOWPARSE_HOME=$(EVERPARSE_HOME)/src/lowparse
 
-INCLUDE_PATH = $(LOWPARSE_HOME) $(KREMLIN_HOME)/kremlib $(KREMLIN_HOME)/kremlib/obj
+INCLUDE_PATH = $(LOWPARSE_HOME) $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj
 
 OTHERFLAGS = --admit_smt_queries true
 
@@ -49,15 +44,15 @@ verify: $(ALL_CHECKED_FILES)
 	@echo $(FSTAR_OPTIONS)
 
 %.krml:
-	$(FSTAR) --codegen Kremlin $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
+	$(FSTAR) --codegen krml $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
 	touch $@
 
-kremlin.rsp: $(ALL_KRML_FILES)
+krml.rsp: $(ALL_KRML_FILES)
 	for f in $^ ; do echo $$f ; done > $@.tmp
 	mv $@.tmp $@
 
-Test.c: kremlin.rsp
-	$(KREMLIN_HOME)/krml \
+Test.c: krml.rsp
+	$(KRML_HOME)/krml \
 	  -bundle 'ASN1Test=ASN1Test.\*,Prims,FStar.\*,C.\*,C,LowStar.\*,LowParse.\*' \
 	  -no-prefix ASN1Test \
 	  -skip-makefiles \
@@ -69,6 +64,6 @@ test: ASN1Test.c # test.exe
 	cat $^
 
 clean:
-	-rm -rf *.checked *.krml .depend out *.c *.h *.o test.exe kremlin.rsp *.tmp compile_flags.txt
+	-rm -rf *.checked *.krml .depend out *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
 
 .PHONY: all verify clean depend test
