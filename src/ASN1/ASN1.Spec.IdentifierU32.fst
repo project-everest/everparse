@@ -2,9 +2,9 @@ module ASN1.Spec.IdentifierU32
 
 open ASN1.Base
 
-include LowParse.Spec.Base
-include LowParse.Spec.Combinators
-include LowParse.Spec.Int
+open LowParse.Spec.Base
+open LowParse.Spec.Combinators
+open LowParse.Spec.Int
 
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32

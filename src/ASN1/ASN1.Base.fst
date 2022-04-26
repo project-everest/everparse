@@ -1,7 +1,7 @@
 module ASN1.Base
 
-include LowParse.Spec.Base
-include LowParse.Spec.Combinators
+open LowParse.Spec.Base
+open LowParse.Spec.Combinators
 
 // ASN.1 Kinds
 

@@ -2,12 +2,12 @@ module ASN1.Spec.ILC
 
 open ASN1.Base
 
-include ASN1.Spec.IdentifierU32
-include ASN1.Spec.LengthU32
+open ASN1.Spec.IdentifierU32
+open ASN1.Spec.LengthU32
 
-include LowParse.Spec.Base
-include LowParse.Spec.Combinators
-include LowParse.Spec.VLGen
+open LowParse.Spec.Base
+open LowParse.Spec.Combinators
+open LowParse.Spec.VLGen
 
 module U32 = FStar.UInt32
 module Seq = FStar.Seq

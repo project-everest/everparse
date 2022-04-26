@@ -1,13 +1,13 @@
 module ASN1.Low.ILC
 
-include ASN1.Base
+open ASN1.Base
 
-include ASN1.Spec.ILC
-include ASN1.Low.LengthU32
-include ASN1.Low.IdentifierU32
+open ASN1.Spec.ILC
+open ASN1.Low.LengthU32
+open ASN1.Low.IdentifierU32
 
-include LowParse.Low.Combinators
-include LowParse.Low.VLGen
+open LowParse.Low.Combinators
+open LowParse.Low.VLGen
 
 module U32 = FStar.UInt32
 

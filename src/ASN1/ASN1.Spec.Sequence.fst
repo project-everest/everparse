@@ -2,10 +2,10 @@ module ASN1.Spec.Sequence
 
 open ASN1.Base
 
-include LowParse.Spec.Base
-include LowParse.Spec.Combinators
+open LowParse.Spec.Base
+open LowParse.Spec.Combinators
 
-include LowParse.Spec.Defaultable
+open LowParse.Spec.Defaultable
 
 open ASN1.Spec.IdentifierU32
 

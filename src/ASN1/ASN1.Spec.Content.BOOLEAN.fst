@@ -2,9 +2,9 @@ module ASN1.Spec.Content.BOOLEAN
 
 open ASN1.Base
 
-include LowParse.Spec.Base
-include LowParse.Spec.Combinators
-include LowParse.Spec.Int
+open LowParse.Spec.Base
+open LowParse.Spec.Combinators
+open LowParse.Spec.Int
 
 module U8 = FStar.UInt8
 
@@ -29,11 +29,10 @@ let encode_asn1_boolean (b : asn1_boolean_t) : parse_filter_refine is_valid_asn1
   | true -> asn1_boolean_TRUE_DER
   | false -> asn1_boolean_FALSE_DER
 
-inline_for_extraction
 let parse_asn1_boolean_t_kind = strong_parser_kind 1 1 None
 
 let parse_asn1_boolean : parser parse_asn1_boolean_t_kind asn1_boolean_t
-= parse_u8
+=  parse_u8
   `parse_filter`
   is_valid_asn1_boolean
   `parse_synth`
@@ -47,7 +46,7 @@ let lemma_parse_asn1_boolean_unfold input :
                          else
                            None
    | None -> None))
-= parser_kind_prop_equiv parse_asn1_boolean_t_kind parse_asn1_boolean;
+= parser_kind_prop_equiv asn1_weak_parser_kind parse_asn1_boolean;
   parser_kind_prop_equiv parse_u8_kind parse_u8;
   if Seq.length input > 0 then
   (parse_u8_spec input;

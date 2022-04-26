@@ -1,10 +1,10 @@
 module ASN1.Low.IdentifierU32
 
-include ASN1.Base
+open ASN1.Base
 
-include ASN1.Spec.IdentifierU32
+open ASN1.Spec.IdentifierU32
 
-include LowParse.Low.Combinators
+open LowParse.Low.Combinators
 
 module U8 = FStar.UInt8
 module HST = FStar.HyperStack.ST
@@ -22,7 +22,6 @@ let validate_asn1_identifier_tail (state : asn1_partial_id_t) (buf : byte)
   else
     validator_error_generic
   
-(*
 inline_for_extraction
 let validate_asn1_identifieru21 ()
 : Tot (validator parse_asn1_identifier_u21)
@@ -32,4 +31,4 @@ inline_for_extraction
 let read_asn1_identifieru21 ()
 : Tot (leaf_reader parse_asn1_identifier_u21)
 = admit ()
-*)
+

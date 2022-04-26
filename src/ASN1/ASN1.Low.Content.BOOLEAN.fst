@@ -1,8 +1,12 @@
 module ASN1.Low.Content.BOOLEAN
 
-include ASN1.Spec.Content.BOOLEAN
-include LowParse.Low.Combinators
-include LowParse.Low.Int
+open ASN1.Base
+
+open ASN1.Spec.Content.BOOLEAN
+
+open LowParse.Low.Base
+open LowParse.Low.Combinators
+open LowParse.Low.Int
 
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
@@ -26,7 +30,7 @@ let valid_asn1_boolean
   valid_facts parse_u8 h input pos;
   lemma_parse_asn1_boolean_unfold (bytes_of_slice_from h input pos)
 
-inline_for_extraction
+inline_for_extraction 
 let validate_asn1_boolean () : Tot (validator parse_asn1_boolean)
 = fun #rrel #rel (input : slice rrel rel) pos ->
   let h = HST.get() in

@@ -1,7 +1,7 @@
 module ASN1.Low.LengthU32
 
-include ASN1.Spec.LengthU32
-include LowParse.Low.Combinators
+open ASN1.Spec.LengthU32
+open LowParse.Low.Base
 
 module LPDER = LowParse.Low.DER
 module U32 = FStar.UInt32
