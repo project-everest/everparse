@@ -3,24 +3,26 @@ module ASN1.Spec.Interpreter
 include LowParse.Spec.Base
 include LowParse.Spec.Combinators
 
-include ASN1.Base
-include ASN1.Spec.Content.BOOLEAN
+open ASN1.Base
+open ASN1.Spec.Content.BOOLEAN
+open ASN1.Spec.Content.BITSTRING
+open ASN1.Spec.Content.OCTETSTRING
 
-include ASN1.Spec.ILC
-include ASN1.Spec.Choice
-include ASN1.Spec.Sequence
+open ASN1.Spec.ILC
+open ASN1.Spec.Choice
+open ASN1.Spec.Sequence
 
 module List = FStar.List.Tot
 
 let asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   match k with
   | ASN1_BOOLEAN -> weaken _ parse_asn1_boolean
+  | ASN1_BITSTRING -> parse_asn1_bitstring
+  | ASN1_OCTETSTRING -> parse_asn1_octetstring
   | _ -> fail_parser _ _  (* admit *)
 (*
   | ASN1_INTEGER -> admit ()
   | ASN1_ENUM -> admit ()
-  | ASN1_BITSTRING -> admit ()
-  | ASN1_OCTETSTRING -> admit ()
   | ASN1_NULL -> admit ()
   | ASN1_OID -> admit ()
   | ASN1_ROID -> admit ()
