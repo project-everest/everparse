@@ -55,8 +55,10 @@ function fetch_mitls() {
 
 function rebuild_doc () {
    if
-      [[ "$OS" != "Windows_NT" ]] &&
-      [[ "$branchname" == "master" ]]
+      [[ "$OS" != "Windows_NT" ]] && {
+          [[ "$branchname" == "master" ]] ||
+          [[ "$branchname" == "taramana_github_actions" ]]
+      }
    then
        git clone git@github.com:project-everest/project-everest.github.io project-everest-github-io &&
        rm -rf project-everest-github-io/everparse &&
