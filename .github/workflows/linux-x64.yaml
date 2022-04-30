@@ -18,7 +18,9 @@ jobs:
           if docker image inspect fstar:local-branch-$FSTAR_BRANCH ; then echo CI_FLAVOR=hierarchic >> $GITHUB_ENV ; else echo CI_FLAVOR=standalone >> $GITHUB_ENV ; fi
       - name: Build Everparse and its dependencies
         run: |
-          docker build -t everparse:local-branch-$GITHUB_REF_NAME -t everparse:local-commit-$GITHUB_SHA -f .docker/$CI_FLAVOR.Dockerfile --build-arg FSTAR_BRANCH=$FSTAR_BRANCH --build-arg CI_BRANCH=$GITHUB_REF_NAME .
+          docker buildx build --secret id=DZOMO_GITHUB_TOKEN -t everparse:local-branch-$GITHUB_REF_NAME -t everparse:local-commit-$GITHUB_SHA -f .docker/$CI_FLAVOR.Dockerfile --build-arg FSTAR_BRANCH=$FSTAR_BRANCH --build-arg CI_BRANCH=$GITHUB_REF_NAME .
+        env:
+          DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
       - name: Compute elapsed time
         if: ${{ always() }}
         run: |

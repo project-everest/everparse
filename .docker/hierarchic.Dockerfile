@@ -12,7 +12,7 @@ RUN eval $(opam env) && .docker/build/install-other-deps.sh
 # CI proper
 ARG CI_THREADS=24
 ARG CI_BRANCH=master
-RUN eval $(opam env) && .docker/build/build-hierarchic.sh $CI_THREADS $CI_BRANCH
+RUN --mount=type=secret,id=DZOMO_GITHUB_TOKEN eval $(opam env) && DZOMO_GITHUB_TOKEN=$(sudo cat /run/secrets/DZOMO_GITHUB_TOKEN) .docker/build/build-hierarchic.sh $CI_THREADS $CI_BRANCH
 
 WORKDIR $HOME
 ENV KRML_HOME $HOME/everparse/karamel

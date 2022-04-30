@@ -60,7 +60,8 @@ function rebuild_doc () {
           [[ "$branchname" == "taramana_github_actions" ]]
       }
    then
-       git clone git@github.com:project-everest/project-everest.github.io project-everest-github-io &&
+       [[ -n "$DZOMO_GITHUB_TOKEN" ]] &&
+       git clone https://"$DZOMO_GITHUB_TOKEN"@github.com/project-everest/project-everest.github.io project-everest-github-io &&
        rm -rf project-everest-github-io/everparse &&
        mkdir project-everest-github-io/everparse &&
        doc/ci.sh project-everest-github-io/everparse &&
