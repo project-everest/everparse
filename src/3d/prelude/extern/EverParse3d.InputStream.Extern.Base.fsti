@@ -91,7 +91,7 @@ val read:
       B.live h' dst /\
       B.live h' dst' /\
       (B.loc_buffer dst `B.loc_union` footprint x) `B.loc_includes` B.loc_buffer dst' /\
-      get_remaining x h' `Seq.equal` Seq.slice s (U64.v n) (Seq.length s)
+      get_remaining x h' == Seq.slice s (U64.v n) (Seq.length s)
     ))
 
 val peep:
