@@ -55,10 +55,8 @@ function fetch_mitls() {
 
 function rebuild_doc () {
    if
-      [[ "$OS" != "Windows_NT" ]] && {
-          [[ "$branchname" == "master" ]] ||
-          [[ "$branchname" == "taramana_github_actions" ]]
-      }
+      [[ "$OS" != "Windows_NT" ]] &&
+      [[ "$branchname" == "master" ]]
    then
        [[ -n "$DZOMO_GITHUB_TOKEN" ]] &&
        git clone https://"$DZOMO_GITHUB_TOKEN"@github.com/project-everest/project-everest.github.io project-everest-github-io &&
