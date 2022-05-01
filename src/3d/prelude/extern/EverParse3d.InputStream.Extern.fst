@@ -111,7 +111,7 @@ let has
   else
     Aux.has x.Aux.base n
 
-#push-options "--z3rlimit 64 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactics -FStar.Reflection -FStar.Seq.Properties.slice_slice'"
+#push-options "--z3rlimit 128 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactics -FStar.Reflection -FStar.Seq.Properties.slice_slice'"
 inline_for_extraction
 noextract
 let read0
