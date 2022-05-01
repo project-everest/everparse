@@ -349,8 +349,14 @@ zip_everparse() {
         # Copy the manifest file to nuget top-level
         cp src/package/EverParse.nuspec $nuget_base
         # Create the content directory, and copy all the files there
-        mkdir -p $nuget_base/content
-        cp -R everparse/* $nuget_base/content
+
+        #NOTE: this is creating the content dir with win- prefix,
+        #      since we are in if $is_windows
+        #      if someday we do it for linux also, change accordingly
+        
+        content_dir=$nuget_base/content/win-$platform
+        mkdir -p $content_dir
+        cp -R everparse/* $content_dir
 
         # Download nuget.exe to create the package
         nuget_exe_url=https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
@@ -359,8 +365,9 @@ zip_everparse() {
 
         # Run the pack command
         pushd $nuget_base
-        ../nuget.exe pack -Version $everparse_version ./EverParse.nuspec
-        cp EverParse.$everparse_version.0.0.nupkg ..
+        # Replace the Version with $everparse_version
+        ../nuget.exe pack -Version 1 ./EverParse.nuspec
+        cp EverParse.1.0.0.nupkg ..
         popd
     fi
     # Not doing any cleanup in the spirit of existing package
