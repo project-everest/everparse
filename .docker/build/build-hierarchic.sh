@@ -15,5 +15,3 @@ rootPath=$(pwd)
 result_file="result.txt"
 status_file="status.txt"
 exec_build $target
-
-grep Success < "$result_file"

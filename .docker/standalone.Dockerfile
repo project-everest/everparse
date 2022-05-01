@@ -3,8 +3,8 @@
 ARG ocaml_version=4.12
 FROM ocaml/opam:ubuntu-ocaml-$ocaml_version
 
-ADD --chown=opam:opam ./ everparse/
-WORKDIR everparse
+ADD --chown=opam:opam ./ $HOME/everparse/
+WORKDIR $HOME/everparse
 
 # CI dependencies: jq (to identify F* branch)
 RUN sudo apt-get install -y --no-install-recommends jq
@@ -25,3 +25,6 @@ ARG CI_THREADS=24
 ARG CI_BRANCH=master
 
 RUN --mount=type=secret,id=DZOMO_GITHUB_TOKEN eval $(opam env) && DZOMO_GITHUB_TOKEN=$(sudo cat /run/secrets/DZOMO_GITHUB_TOKEN) .docker/build/build-standalone.sh $CI_THREADS $CI_BRANCH
+
+WORKDIR $HOME
+ENV EVERPARSE_HOME=$HOME/everparse

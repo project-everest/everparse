@@ -23,12 +23,16 @@ jobs:
           if docker image inspect fstar:local-branch-$FSTAR_BRANCH ; then echo CI_FLAVOR=hierarchic >> $GITHUB_ENV ; else echo CI_FLAVOR=standalone >> $GITHUB_ENV ; fi
       - name: Build Everparse and its dependencies
         run: |
-          if { echo $GITHUB_REF_NAME | grep '/' ; } ; then
-            docker_build_tag_opt=
-          else
-            docker_build_tag_opt="-t karamel:local-branch-$GITHUB_REF_NAME"
+          ci_docker_image_tag=everparse:local-run-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT
+          docker buildx build --secret id=DZOMO_GITHUB_TOKEN -t $ci_docker_image_tag -f .docker/$CI_FLAVOR.Dockerfile --build-arg FSTAR_BRANCH=$FSTAR_BRANCH --build-arg CI_BRANCH=$GITHUB_REF_NAME .
+          ci_docker_status=$(docker run everparse:local-run-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT /bin/bash -c 'cat $EVERPARSE_HOME/status.txt' || echo false)
+          if $ci_docker_status ; then
+            if ! { echo $GITHUB_REF_NAME | grep '/' ; } ; then
+              docker tag $ci_docker_image_tag everparse:local-branch-$GITHUB_REF_NAME
+            fi
+            docker tag $ci_docker_image_tag everparse:local-commit-$GITHUB_SHA
           fi
-          docker buildx build --secret id=DZOMO_GITHUB_TOKEN $docker_build_tag_opt -t everparse:local-commit-$GITHUB_SHA -f .docker/$CI_FLAVOR.Dockerfile --build-arg FSTAR_BRANCH=$FSTAR_BRANCH --build-arg CI_BRANCH=$GITHUB_REF_NAME .
+          $ci_docker_status
         env:
           DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
       - name: Compute elapsed time
