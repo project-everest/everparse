@@ -203,7 +203,7 @@ let validate_sum
 
 module HS = FStar.HyperStack
 
-#push-options "--z3rlimit 128 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2"
+#push-options "--z3rlimit 256 --z3cliopt smt.arith.nl=false --initial_ifuel 8 --max_ifuel 8 --initial_fuel 2 --max_fuel 2"
 
 let valid_sum_intro
   (h: HS.mem)

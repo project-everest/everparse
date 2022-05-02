@@ -29,6 +29,6 @@
 
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
-        "karamel_version" : "origin/master"
+        "karamel_version" : "origin/taramana_github_actions"
     }
 }
