@@ -180,8 +180,7 @@ make_everparse() {
     then
         $cp $LIBGMP10_DLL everparse/bin/
         $cp $Z3_DIR/*.exe everparse/bin/
-        if [[ -f $Z3_DIR/*.dll ]] ; then $cp $Z3_DIR/*.dll everparse/bin/ ; fi
-        if [[ -f $Z3_DIR/../lib/*.dll ]] ; then cp $Z3_DIR/../lib/*.dll everparse/bin/ ; fi
+	find $Z3_DIR/.. -name *.dll -exec cp {} everparse/bin \;
         if [[ -z "$NO_EVERCRYPT" ]] ; then
             for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
                 libevercrypt_dll=$f/libevercrypt.dll
@@ -368,7 +367,8 @@ zip_everparse() {
         # Run the pack command
         pushd $nuget_base
         # Replace the Version with $everparse_version
-        ../nuget.exe pack -Version 1 ./EverParse.nuspec
+	# NoDefaultExcludes for .clang-format
+        ../nuget.exe pack -NoDefaultExcludes -Version 1 ./EverParse.nuspec
         cp EverParse.1.0.0.nupkg ..
         popd
     fi
