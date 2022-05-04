@@ -79,7 +79,7 @@ fi
 
 if [[ -d everparse ]] ; then
     echo everparse/ is already there, please make way
-    #exit 1
+    exit 1
 fi
 
 print_component_commit_id() {
