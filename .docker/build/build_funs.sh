@@ -103,7 +103,7 @@ function build_and_test_quackyducky() {
     # Test EverParse proper
     fetch_and_make_karamel &&
     fetch_and_make_hacl &&
-    make -j $threads -k ci &&
+    env WITH_STEEL_ST_ARRAY=1 make -j $threads -k ci &&
     # Build incrementality test
     pushd tests/sample && {
         {
