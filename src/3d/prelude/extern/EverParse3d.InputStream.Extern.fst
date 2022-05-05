@@ -220,10 +220,9 @@ let read
 
 #pop-options
 
-#push-options "--z3rlimit 64 --fuel 1 --ifuel 1 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactics -FStar.Reflection -FStar.Seq.Properties.slice_slice'"
+#push-options "--z3rlimit 64 --fuel 0 --ifuel 1 --using_facts_from '* -FStar.Tactics -FStar.Reflection -FStar.Seq.Properties.slice_slice'"
+inline_for_extraction noextract
 #restart-solver
-inline_for_extraction
-noextract
 let peep
     (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
@@ -250,9 +249,16 @@ let peep
   then begin
     let h1 = HST.get () in
     preserved x B.loc_none h0 h1;
-    Aux.peep x.Aux.base n
-  end else
-    B.null
+    let b1 = Aux.peep x.Aux.base n in
+    let h2 = HST.get () in
+    assert ((~ (B.g_is_null b1)) ==>
+            B.as_seq h2 b1 `Seq.equal` Seq.slice (get_remaining x h1) 0 (U64.v n));
+    assert (Seq.equal (get_remaining x h0) (get_remaining x h1));
+    assert ((~ (B.g_is_null b1)) ==> (
+        B.as_seq h2 b1 `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n)
+      ));
+    b1
+  end else B.null
 
 #pop-options
 
