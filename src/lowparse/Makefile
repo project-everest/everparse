@@ -40,13 +40,20 @@ clean:
 
 include .depend
 
-verify-all: $(ALL_CHECKED_FILES)
+lowparse: $(ALL_CHECKED_FILES)
+
+steel_st_array: lowparse
+ifdef WITH_STEEL_ST_ARRAY
+	+$(MAKE) -C $@
+endif
+
+verify-all: steel_st_array
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test
+.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test lowparse steel_st_array
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
