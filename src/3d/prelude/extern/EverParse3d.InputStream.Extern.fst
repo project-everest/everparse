@@ -220,9 +220,10 @@ let read
 
 #pop-options
 
-#push-options "--z3rlimit 64 --fuel 0 --ifuel 1 --using_facts_from '* -FStar.Tactics -FStar.Reflection -FStar.Seq.Properties.slice_slice'"
-inline_for_extraction noextract
 #restart-solver
+#push-options "--z3rlimit 64 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactics -FStar.Reflection -FStar.Seq.Properties.slice_slice'"
+inline_for_extraction
+noextract
 let peep
     (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
     (x: t)
@@ -245,20 +246,22 @@ let peep
     ))
 =
   let h0 = HST.get () in
-  if has x () position n
-  then begin
-    let h1 = HST.get () in
-    preserved x B.loc_none h0 h1;
-    let b1 = Aux.peep x.Aux.base n in
-    let h2 = HST.get () in
-    assert ((~ (B.g_is_null b1)) ==>
-            B.as_seq h2 b1 `Seq.equal` Seq.slice (get_remaining x h1) 0 (U64.v n));
-    assert (Seq.equal (get_remaining x h0) (get_remaining x h1));
-    assert ((~ (B.g_is_null b1)) ==> (
-        B.as_seq h2 b1 `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n)
-      ));
-    b1
-  end else B.null
+  let b = has x () position n in
+  let h1 = HST.get () in
+  assert (B.(modifies loc_none h0 h1));
+  preserved x B.loc_none h0 h1;
+  if b returns HST.Stack _ (requires fun h -> live x h /\
+                                       U64.v position == Seq.length (get_read x h))
+                           (ensures (fun h dst' h' ->
+                              let s = get_remaining x h in
+                              B.modifies B.loc_none h h' /\
+                              ((~ (B.g_is_null dst')) ==> (
+                                Seq.length (get_remaining x h) >= U64.v n /\
+                                B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
+                                B.live h' dst' /\
+                                footprint x `B.loc_includes` B.loc_buffer dst'))))                                       
+  then Aux.peep x.Aux.base n
+  else B.null
 
 #pop-options
 
