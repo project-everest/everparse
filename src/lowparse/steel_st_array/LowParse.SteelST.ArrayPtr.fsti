@@ -6,10 +6,6 @@ module SZ = LowParse.Steel.StdInt
 open Steel.ST.Util
 
 val t (t:Type u#0) : Type u#0
-val null (a: Type) : Tot (t a)
-val g_is_null (#a: Type) (x: t a) : Ghost bool
-  (requires True)
-  (ensures (fun y -> y == true <==> x == null a))
 
 [@@erasable]
 val array
@@ -54,79 +50,6 @@ val arrayptr
   (r: t a)
   ([@@@smt_fallback] value: v a)
 : Tot vprop
-
-val arrayptr_not_null
-  (#opened: _)
-  (#a: Type)
-  (#value: v a)
-  (x: t a)
-: STGhostT (squash (g_is_null x == false)) opened
-    (x `arrayptr` value)
-    (fun _ -> x `arrayptr` value)
-
-val arrayptr_or_null
-  (#a: Type0)
-  (r: t a)
-  ([@@@smt_fallback] value: Ghost.erased (option (v a)))
-: Tot vprop
-
-val intro_arrayptr_or_null_none
-  (#opened: _)
-  (#a: Type)
-  (x: t a)
-  (sq: squash (g_is_null x == true))
-: STGhostT unit opened
-    emp
-    (fun _ -> arrayptr_or_null x None)
-
-val intro_arrayptr_or_null_some
-  (#opened: _)
-  (#a: Type)
-  (#value: v a)
-  (x: t a)
-: STGhostT unit opened
-    (arrayptr x value)
-    (fun _ -> arrayptr_or_null x (Some value))
-
-let extract_some
-  (#a: Type)
-  (v: option a)
-  (sq: squash (Some? v))
-: Tot a
-= Some?.v v
-
-val elim_arrayptr_or_null_some
-  (#opened: _)
-  (#a: Type)
-  (#value: Ghost.erased (option (v a)))
-  (x: t a)
-: STGhost (v a) opened
-    (arrayptr_or_null x value)
-    (fun value' -> arrayptr x value')
-    (g_is_null x == false \/ Some? value)
-    (fun value' -> Ghost.reveal value == Some value')
-
-val elim_arrayptr_or_null_none
-  (#opened: _)
-  (#a: Type)
-  (#value: Ghost.erased (option (v a)))
-  (x: t a)
-: STGhost unit opened
-    (arrayptr_or_null x value)
-    (fun _ -> emp)
-    (g_is_null x == true \/ None? value)
-    (fun _ -> g_is_null x == true /\ Ghost.reveal value == None)
-
-val is_null
-  (#opened: _)
-  (#a: Type)
-  (#value: Ghost.erased (option (v a)))
-  (x: t a)
-: STAtomicBase bool false opened Unobservable
-    (arrayptr_or_null x value)
-    (fun res -> arrayptr_or_null x value)
-    (True)
-    (fun res -> res == None? value /\ res == g_is_null x)
 
 val adjacent
   (#t: Type0)
