@@ -28,7 +28,7 @@ let validate_fldata_gen
 : Pure (validator (parse_fldata p sz))
     (requires (SZ.size_v sz32 == sz))
     (ensures (fun _ -> True))
-= fun #_ #va a len err ->
+= fun #va a len err ->
   if len `SZ.size_lt` sz32
   then begin
       R.write err validator_error_not_enough_data;
@@ -69,7 +69,7 @@ let validate_fldata_consumes_all
 : Pure (validator (parse_fldata p sz))
     (requires (SZ.size_v sz32 == sz /\ k.parser_kind_subkind == Some ParserConsumesAll))
     (ensures (fun _ -> True))
-= fun #_ #va a len err ->
+= fun #va a len err ->
   if len `SZ.size_lt` sz32
   then begin
       R.write err validator_error_not_enough_data;
@@ -114,7 +114,7 @@ let validate_fldata_strong
 : Pure (validator (parse_fldata_strong s sz))
     (requires (SZ.size_v sz32 == sz))
     (ensures (fun _ -> True))
-= fun #_ #va a len err ->
+= fun #va a len err ->
   let res = validate_fldata v sz sz32 a len err in
   let _ = gen_elim () in
   return res
@@ -150,8 +150,8 @@ let intro_fldata
   (#t: Type)
   (p: parser k t)
   (sz: nat)
-  #base #va (a: byte_array base)
-: STGhost (v base (parse_fldata_kind sz k) t) opened
+  #va (a: byte_array)
+: STGhost (v (parse_fldata_kind sz k) t) opened
     (aparse p a va)
     (fun va' -> aparse (parse_fldata p sz) a va')
     (sz == AP.length (array_of' va))
@@ -168,8 +168,8 @@ let elim_fldata
   (#t: Type)
   (p: parser k t)
   (sz: nat)
-  #base #va (a: byte_array base)
-: STGhost (v base k t) opened
+  #va (a: byte_array)
+: STGhost (v k t) opened
     (aparse (parse_fldata p sz) a va)
     (fun va' -> aparse p a va')
     True
@@ -188,8 +188,8 @@ let intro_fldata_strong
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)
-  #base #va (a: byte_array base)
-: STGhost (v base (parse_fldata_kind sz k) (parse_fldata_strong_t s sz)) opened
+  #va (a: byte_array)
+: STGhost (v (parse_fldata_kind sz k) (parse_fldata_strong_t s sz)) opened
     (aparse p a va)
     (fun va' -> aparse (parse_fldata_strong s sz) a va')
     (sz == AP.length (array_of' va))
@@ -207,8 +207,8 @@ let elim_fldata_strong
   (#p: parser k t)
   (s: serializer p)
   (sz: nat)
-  #base (#va: v base (parse_fldata_kind sz k) (parse_fldata_strong_t s sz)) (a: byte_array base)
-: STGhost (v base k t) opened
+  (#va: v (parse_fldata_kind sz k) (parse_fldata_strong_t s sz)) (a: byte_array)
+: STGhost (v k t) opened
     (aparse (parse_fldata_strong s sz) a va)
     (fun va' -> aparse p a va')
     True

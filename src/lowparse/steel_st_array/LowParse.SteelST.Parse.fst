@@ -6,37 +6,36 @@ include LowParse.Spec.Base
 
 (* For now, we only support parsers with ParserStrong or ParserConsumesAll subkind. *)
 
-let byte_array (base: Type0) : Type0 = AP.t base byte
+let byte_array : Type0 = AP.t byte
 
-let array_prop (#base: Type) (k: parser_kind) (a: AP.array base byte) : Tot prop =
+let array_prop (k: parser_kind) (a: AP.array byte) : Tot prop =
   let l = AP.length a in
   k.parser_kind_low <= l /\
   (Some? k.parser_kind_high ==> l <= Some?.v k.parser_kind_high)
 
 [@@erasable]
 noeq
-type v (base: Type) (k: parser_kind) (t: Type) = {
-  array_perm : (AP.array base byte); // & SP.perm);
+type v (k: parser_kind) (t: Type) = {
+  array_perm : (AP.array byte); // & SP.perm);
   contents : t;
   array_perm_prf: squash (array_prop k ((* fst *) array_perm));
 }
 
-let array_t (base: Type) (k: parser_kind) : Tot Type =
-  (array: AP.array base byte { array_prop k array })
+let array_t (k: parser_kind) : Tot Type =
+  (array: AP.array byte { array_prop k array })
 
-let array_of (#base: Type) (#k: parser_kind) (#t: Type) (w: v base k t) : GTot (array_t base k) =
+let array_of (#k: parser_kind) (#t: Type) (w: v k t) : GTot (array_t k) =
   w.array_perm
 
-let array_of' (#base: Type) (#k: parser_kind) (#t: Type) (w: v base k t) : GTot (AP.array base byte) =
+let array_of' (#k: parser_kind) (#t: Type) (w: v k t) : GTot (AP.array byte) =
   array_of w
 
 let arrayptr_parse
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (va: AP.v base byte)
-: GTot (option (v base k t))
+  (va: AP.v byte)
+: GTot (option (v k t))
 =
   let s = AP.contents_of' va in
   match parse p s with
@@ -56,11 +55,10 @@ let arrayptr_parse
       None
 
 let arrayptr_parse_injective
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (va1 va2: AP.v base byte)
+  (va1 va2: AP.v byte)
 : Lemma
   (requires (
     let pa1 = arrayptr_parse p va1 in
@@ -77,36 +75,33 @@ let arrayptr_parse_injective
 
 [@@ __reduce__]
 let aparse0
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (a: byte_array base)
-  (vp: v base k t)
+  (a: byte_array)
+  (vp: v k t)
 : Tot vprop
 = exists_ (fun va ->
     AP.arrayptr a va `star` pure (arrayptr_parse p va == Some vp)
   )
 
 let aparse
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (a: byte_array base)
-  ([@@@ smt_fallback] vp: v base k t)
+  (a: byte_array)
+  ([@@@ smt_fallback] vp: v k t)
 : Tot vprop
 = aparse0 p a vp
 
 let intro_aparse
   (#opened: _)
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
-  (#va: AP.v base byte)
+  (#va: AP.v byte)
   (p: parser k t)
-  (a: byte_array base)
-: STGhost (v base k t) opened
+  (a: byte_array)
+: STGhost (v k t) opened
     (AP.arrayptr a va)
     (fun vp -> aparse p a vp)
     (Some? (arrayptr_parse p va))
@@ -123,13 +118,12 @@ let intro_aparse
 
 let elim_aparse
   (#opened: _)
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
-  (#vp: v base k t)
+  (#vp: v k t)
   (p: parser k t)
-  (a: byte_array base)
-: STGhost (AP.v base byte) opened
+  (a: byte_array)
+: STGhost (AP.v byte) opened
     (aparse p a vp)
     (fun va -> AP.arrayptr a va)
     True
@@ -148,13 +142,12 @@ let rewrite_aparse
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
-  (#base: _)
-  (#y1: v base k1 t1)
-  (a: byte_array base)
+  (#y1: v k1 t1)
+  (a: byte_array)
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
-: STGhost (v base k2 t2) opened
+: STGhost (v k2 t2) opened
     (aparse p1 a y1)
     (fun y2 -> aparse p2 a y2)
     (t1 == t2 /\ (forall bytes . parse p1 bytes == parse p2 bytes))

@@ -20,7 +20,7 @@ let validate_pair
   #k2 #t2 (#p2: parser k2 t2) (v2: validator p2)
 : Tot (validator (p1 `nondep_then` p2))
 =
-  fun #_ #va a len err ->
+  fun #va a len err ->
     nondep_then_eq p1 p2 (AP.contents_of' va);
     let s1 = v1 a len err in
     let _ = gen_elim () in
@@ -46,7 +46,7 @@ let jump_pair
   #k2 #t2 (#p2: parser k2 t2) (v2: jumper p2)
 : Tot (jumper (p1 `nondep_then` p2))
 =
-  fun #_ #va a ->
+  fun #va a ->
     nondep_then_eq p1 p2 (AP.contents_of' va);
     let s1 = v1 a in
     let _ = gen_elim () in
@@ -63,8 +63,8 @@ let g_split_pair
   #opened
   #k1 #t1 (p1: parser k1 t1)
   #k2 #t2 (p2: parser k2 t2)
-  #base #y (a: byte_array base)
-: STGhost (Ghost.erased (byte_array base)) opened
+  #y (a: byte_array)
+: STGhost (Ghost.erased (byte_array)) opened
     (aparse (p1 `nondep_then` p2) a y)
     (fun a2 -> exists_ (fun y1 -> exists_ (fun y2 ->
       aparse p1 a y1 `star`
@@ -85,8 +85,8 @@ let g_split_pair
 let split_pair'
   #k1 #t1 (#p1: parser k1 t1) (j1: jumper p1)
   #k2 #t2 (p2: parser k2 t2)
-  #base #y1 #y2 (a1: byte_array base) (a2: Ghost.erased (byte_array base))
-: ST (byte_array base)
+  #y1 #y2 (a1: byte_array) (a2: Ghost.erased (byte_array))
+: ST (byte_array)
     (aparse p1 a1 y1 `star` aparse p2 a2 y2)
     (fun res -> aparse p1 a1 y1 `star` aparse p2 res y2)
     (AP.adjacent (array_of y1) (array_of y2))
@@ -107,8 +107,8 @@ let split_pair
   #opened
   #k1 #t1 (#p1: parser k1 t1) (j1: jumper p1)
   #k2 #t2 (p2: parser k2 t2)
-  #base #y (a: byte_array base)
-: ST (byte_array base)
+  #y (a: byte_array)
+: ST (byte_array)
     (aparse (p1 `nondep_then` p2) a y)
     (fun a2 -> exists_ (fun y1 -> exists_ (fun y2 ->
       aparse p1 a y1 `star`
@@ -128,8 +128,8 @@ let merge_pair
   #opened
   #k1 #t1 (p1: parser k1 t1)
   #k2 #t2 (p2: parser k2 t2)
-  #base #y1 #y2 (a1 a2: byte_array base)
-: STGhost (v base (and_then_kind k1 k2) (t1 & t2)) opened
+  #y1 #y2 (a1 a2: byte_array)
+: STGhost (v (and_then_kind k1 k2) (t1 & t2)) opened
     (aparse p1 a1 y1 `star` aparse p2 a2 y2)
     (fun y ->
       aparse (p1 `nondep_then` p2) a1 y)
@@ -154,7 +154,7 @@ let validate_synth
   (sq: squash (synth_injective f2))
 : Tot (validator (p1 `parse_synth` f2))
 =
-  fun #_ #va a len err ->
+  fun #va a len err ->
   parse_synth_eq p1 f2 (AP.contents_of' va);
   let res = v1 a len err in
   let _ = gen_elim () in
@@ -166,7 +166,7 @@ let jump_synth
   (sq: squash (synth_injective f2))
 : Tot (jumper (p1 `parse_synth` f2))
 =
-  fun #_ #va a ->
+  fun #va a ->
   parse_synth_eq p1 f2 (AP.contents_of' va);
   let res = v1 a in
   let _ = gen_elim () in
@@ -176,9 +176,9 @@ let intro_synth
   #opened
   #k1 #t1 (p1: parser k1 t1)
   #t2 (f2: t1 -> GTot t2)
-  #base #va (a: byte_array base)
+  #va (a: byte_array)
   (sq: squash (synth_injective f2))
-: STGhost (v base k1 t2) opened
+: STGhost (v k1 t2) opened
     (aparse p1 a va)
     (fun va2 -> aparse (p1 `parse_synth` f2) a va2)
     True
@@ -194,9 +194,9 @@ let elim_synth
   #opened
   #k1 #t1 (p1: parser k1 t1)
   #t2 (f2: t1 -> GTot t2)
-  #base #va2 (a: byte_array base)
+  #va2 (a: byte_array)
   (sq: squash (synth_injective f2))
-: STGhost (v base k1 t1) opened
+: STGhost (v k1 t1) opened
     (aparse (p1 `parse_synth` f2) a va2)
     (fun va -> aparse p1 a va)
     True
@@ -221,7 +221,7 @@ let validate_filter
     (requires (k.parser_kind_subkind == Some ParserStrong))
     (ensures (fun _ -> True))
 =
-  fun #_ #va a len err ->
+  fun #va a len err ->
     parse_filter_eq p f (AP.contents_of' va);
     let sz = v a len err in
     let _ = gen_elim () in
@@ -255,7 +255,7 @@ let jump_filter
   (f2: t1 -> GTot bool)
 : Tot (jumper (p1 `parse_filter` f2))
 =
-  fun #_ #va a ->
+  fun #va a ->
   parse_filter_eq p1 f2 (AP.contents_of' va);
   let res = v1 a in
   let _ = gen_elim () in
@@ -265,13 +265,13 @@ let intro_filter
   #opened
   #k1 #t1 (p1: parser k1 t1)
   (f2: t1 -> GTot bool)
-  #base #va (a: byte_array base)
-: STGhost (v base (parse_filter_kind k1) (parse_filter_refine f2)) opened
+  #va (a: byte_array)
+: STGhost (v (parse_filter_kind k1) (parse_filter_refine f2)) opened
     (aparse p1 a va)
     (fun va2 -> aparse (p1 `parse_filter` f2) a va2)
     (f2 va.contents)
     (fun va2 ->
-      (array_of va2 <: AP.array base byte) == array_of va /\
+      (array_of va2 <: AP.array byte) == array_of va /\
       (va2.contents <: t1) == va.contents
     )
 = let va' = elim_aparse p1 a in
@@ -282,13 +282,13 @@ let elim_filter
   #opened
   #k1 #t1 (p1: parser k1 t1)
   (f2: t1 -> GTot bool)
-  #base (#va2: v base (parse_filter_kind k1) (parse_filter_refine f2)) (a: byte_array base)
-: STGhost (v base k1 t1) opened
+  (#va2: v (parse_filter_kind k1) (parse_filter_refine f2)) (a: byte_array)
+: STGhost (v k1 t1) opened
     (aparse (p1 `parse_filter` f2) a va2)
     (fun va -> aparse p1 a va)
     True
     (fun va ->
-      (array_of va2 <: AP.array base byte) == (array_of va <: AP.array base byte) /\
+      (array_of va2 <: AP.array byte) == (array_of va <: AP.array byte) /\
       (va2.contents <: t1) == (va.contents <: t1) /\
       f2 va.contents
     )
@@ -313,7 +313,7 @@ let validate_tagged_union
 : Pure (validator (parse_tagged_union pt tag_of_data p))
     (requires (kt.parser_kind_subkind == Some ParserStrong))
     (ensures (fun _ -> True))
-= fun #_ #va a len err ->
+= fun #va a len err ->
     parse_tagged_union_eq pt tag_of_data p (AP.contents_of' va);
     let s1 = vt a len err in
     let _ = gen_elim () in
@@ -352,7 +352,7 @@ let jump_tagged_union
 : Pure (jumper (parse_tagged_union pt tag_of_data p))
     (requires (kt.parser_kind_subkind == Some ParserStrong))
     (ensures (fun _ -> True))
-= fun #_ #va a ->
+= fun #va a ->
     parse_tagged_union_eq pt tag_of_data p (AP.contents_of' va);
     let s1 = vt a in
     let _ = gen_elim () in
@@ -371,17 +371,16 @@ let jump_tagged_union
 
 [@@__reduce__]
 let exists_tagged_union_payload0
-  (#base: Type)
   (kt: parser_kind)
   (#tag_t: Type)
   (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
-  (y: v base (and_then_kind kt k) data_t)
-  (u1: AP.array base byte)
+  (y: v (and_then_kind kt k) data_t)
+  (u1: AP.array byte)
   (tag: tag_t)
-  (a1 a2: byte_array base)
+  (a1 a2: byte_array)
 : Tot vprop
 = exists_ (fun y2 ->
     aparse (p tag) a2 y2 `star`
@@ -392,17 +391,16 @@ let exists_tagged_union_payload0
   )
 
 let exists_tagged_union_payload
-  (#base: Type)
   (kt: parser_kind)
   (#tag_t: Type)
   (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
-  (y: v base (and_then_kind kt k) data_t)
-  (u1: AP.array base byte)
+  (y: v (and_then_kind kt k) data_t)
+  (u1: AP.array byte)
   (tag: tag_t)
-  (a1 a2: byte_array base)
+  (a1 a2: byte_array)
 : Tot vprop
 = exists_tagged_union_payload0 kt tag_of_data p y u1 tag a1 a2
 
@@ -415,8 +413,8 @@ let split_tagged_union
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
-  #base #y (a1: byte_array base)
-: ST (byte_array base)
+  #y (a1: byte_array)
+: ST (byte_array)
     (aparse (parse_tagged_union pt tag_of_data p) a1 y)
     (fun a2 -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2))
     (kt.parser_kind_subkind == Some ParserStrong)
@@ -441,7 +439,7 @@ let ghost_tagged_union_tag
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
-  #base #y (a1: byte_array base) (a2: byte_array base)
+  #y (a1: byte_array) (a2: byte_array)
 : STGhostT (Ghost.erased tag_t) opened
     (exists_ (fun y1 -> aparse pt a1 y1 `star` exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2))
     (fun tag -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
@@ -467,7 +465,7 @@ let read_tagged_union_tag
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
-  #base #y (a1: byte_array base) (a2: byte_array base)
+  #y (a1: byte_array) (a2: byte_array)
 : STT tag_t
     (exists_ (fun y1 -> aparse pt a1 y1 `star` exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2))
     (fun tag -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
@@ -490,8 +488,8 @@ let intro_tagged_union
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
-  #base #y1 #k2 #t2 (#p2: parser k2 t2) (#y2: v base k2 t2) (a1: byte_array base) (a2: byte_array base)
-: STGhost (v base (and_then_kind kt k) data_t) opened
+  #y1 #k2 #t2 (#p2: parser k2 t2) (#y2: v k2 t2) (a1: byte_array) (a2: byte_array)
+: STGhost (v (and_then_kind kt k) data_t) opened
     (aparse pt a1 y1 `star` aparse p2 a2 y2)
     (fun y -> aparse (parse_tagged_union pt tag_of_data p) a1 y)
     (kt.parser_kind_subkind == Some ParserStrong /\
@@ -560,11 +558,10 @@ let exists_dtuple2_payload0
   (#k: parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
-  (#base: _)
-  (y: v base (and_then_kind kt k) (dtuple2 tag_t data_t))
-  (u1: AP.array base byte)
+  (y: v (and_then_kind kt k) (dtuple2 tag_t data_t))
+  (u1: AP.array byte)
   (tag: tag_t)
-  (a1 a2: byte_array base)
+  (a1 a2: byte_array)
 : Tot vprop
 = exists_tagged_union_payload kt dfst (fun x -> parse_synth (p x) (synth_dtuple2 x)) y u1 tag a1 a2
 
@@ -574,11 +571,10 @@ let exists_dtuple2_payload
   (#k: parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
-  (#base: _)
-  (y: v base (and_then_kind kt k) (dtuple2 tag_t data_t))
-  (u1: AP.array base byte)
+  (y: v (and_then_kind kt k) (dtuple2 tag_t data_t))
+  (u1: AP.array byte)
   (tag: tag_t)
-  (a1 a2: byte_array base)
+  (a1 a2: byte_array)
 : Tot vprop
 = exists_dtuple2_payload0 kt p y u1 tag a1 a2
 
@@ -590,8 +586,8 @@ let split_dtuple2
   (#k: parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
-  #base #y (a1: byte_array base)
-: ST (byte_array base)
+  #y (a1: byte_array)
+: ST (byte_array)
     (aparse (parse_dtuple2 pt p) a1 y)
     (fun a2 -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2))
     (kt.parser_kind_subkind == Some ParserStrong)
@@ -612,7 +608,7 @@ let ghost_dtuple2_tag
   (#k: parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
-  #base #y (a1: byte_array base) (a2: byte_array base)
+  #y (a1: byte_array) (a2: byte_array)
 : STGhostT (Ghost.erased tag_t) opened
     (exists_ (fun y1 -> aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2))
     (fun tag -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
@@ -641,7 +637,7 @@ let read_dtuple2_tag
   (#k: parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
-  #base #y (a1: byte_array base) (a2: byte_array base)
+  #y (a1: byte_array) (a2: byte_array)
 : STT tag_t
     (exists_ (fun y1 -> aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2))
     (fun tag -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
@@ -663,8 +659,8 @@ let intro_dtuple2
   (#k: parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
-  #base #y1 #k2 #t2 (#p2: parser k2 t2) (#y2: v base k2 t2) (a1: byte_array base) (a2: byte_array base)
-: STGhost (v base (and_then_kind kt k) (dtuple2 tag_t data_t)) opened
+  #y1 #k2 #t2 (#p2: parser k2 t2) (#y2: v k2 t2) (a1: byte_array) (a2: byte_array)
+: STGhost (v (and_then_kind kt k) (dtuple2 tag_t data_t)) opened
     (aparse pt a1 y1 `star` aparse p2 a2 y2)
     (fun y -> aparse (parse_dtuple2 pt p) a1 y)
     (kt.parser_kind_subkind == Some ParserStrong /\

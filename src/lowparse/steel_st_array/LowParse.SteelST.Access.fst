@@ -10,11 +10,10 @@ let jumper
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-: Tot (Type u#1)
+: Tot Type
 =
-  (#base: Type) ->
-  (#va: AP.v base byte) ->
-  (a: byte_array base) ->
+  (#va: AP.v byte) ->
+  (a: byte_array) ->
   ST SZ.size_t
     (AP.arrayptr a va)
     (fun res -> AP.arrayptr a va)
@@ -38,19 +37,18 @@ let jump_constant_size
     ))
     (ensures (fun _ -> True))
 =
-  fun #base #va a ->
+  fun #va a ->
   parser_kind_prop_equiv k p;
   noop ();
   return sz
 
 let get_parsed_size
-  (#base: _)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (#vp: v base k t)
+  (#vp: v k t)
   (j: jumper p)
-  (a: byte_array base)
+  (a: byte_array)
 : ST SZ.size_t
     (aparse p a vp)
     (fun res -> aparse p a vp)
@@ -76,13 +74,12 @@ let parse'
 
 let ghost_peek_strong
   (#opened: _)
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
-  (#va: AP.v base byte)
+  (#va: AP.v byte)
   (p: parser k t)
-  (a: byte_array base)
-: STGhost (Ghost.erased (byte_array base)) opened
+  (a: byte_array)
+: STGhost (Ghost.erased (byte_array)) opened
     (AP.arrayptr a va)
     (fun res -> exists_ (fun vp -> aparse p a vp `star` exists_ (fun vres -> AP.arrayptr res vres `star` pure (
       let consumed = AP.length (array_of vp) in
@@ -105,14 +102,13 @@ let ghost_peek_strong
   res
 
 let peek_strong_with_size
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
-  (#va: AP.v base byte)
+  (#va: AP.v byte)
   (p: parser k t)
-  (a: byte_array base)
+  (a: byte_array)
   (sz: SZ.size_t)
-: ST (byte_array base)
+: ST (byte_array)
     (AP.arrayptr a va)
     (fun res -> exists_ (fun vp -> aparse p a vp `star` exists_ (fun vres -> AP.arrayptr res vres `star` pure (
       let consumed = AP.length (array_of vp) in
@@ -138,14 +134,13 @@ let peek_strong_with_size
   return res
 
 let peek_strong
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (#va: AP.v base byte)
+  (#va: AP.v byte)
   (j: jumper p)
-  (a: byte_array base)
-: ST (byte_array base)
+  (a: byte_array)
+: ST (byte_array)
     (AP.arrayptr a va)
     (fun res -> exists_ (fun vp -> aparse p a vp `star` exists_ (fun vres -> AP.arrayptr res vres `star` pure (
       let consumed = AP.length (array_of vp) in
@@ -167,15 +162,14 @@ let peek_strong
 /// useful for validators, which need to roll back peek after reading some contents
 let unpeek_strong'
   (#opened: _)
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (#vp: v base k t)
-  (#vres: AP.v base byte)
-  (a: byte_array base)
-  (res: byte_array base)
-: STGhost (AP.v base byte) opened
+  (#vp: v k t)
+  (#vres: AP.v byte)
+  (a: byte_array)
+  (res: byte_array)
+: STGhost (AP.v byte) opened
     (aparse p a vp `star` AP.arrayptr res vres)
     (fun va -> AP.arrayptr a va)
     (AP.adjacent (array_of vp) (AP.array_of vres) /\
@@ -199,15 +193,14 @@ let unpeek_strong'
 
 let unpeek_strong
   (#opened: _)
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (#vp: v base k t)
-  (#vres: AP.v base byte)
-  (a: byte_array base)
-  (va: AP.v base byte)
-  (res: byte_array base)
+  (#vp: v k t)
+  (#vres: AP.v byte)
+  (a: byte_array)
+  (va: AP.v byte)
+  (res: byte_array)
 : STGhost unit opened
     (aparse p a vp `star` AP.arrayptr res vres)
     (fun _ -> AP.arrayptr a va)
@@ -230,13 +223,12 @@ let unpeek_strong
 
 let peek_consumes_all
   (#opened: _)
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (#va: AP.v base byte)
-  (a: byte_array base)
-: STGhost (v base k t) opened
+  (#va: AP.v byte)
+  (a: byte_array)
+: STGhost (v k t) opened
     (AP.arrayptr a va)
     (fun vp -> aparse p a vp)
     (k.parser_kind_subkind == Some ParserConsumesAll /\
@@ -254,9 +246,9 @@ let leaf_reader
   (#t: Type)
   (p: parser k t)
 : Tot Type
-= (#base: _) ->
+=
   (#va: _) ->
-  (a: byte_array base) ->
+  (a: byte_array) ->
   ST t
     (aparse p a va)
     (fun _ -> aparse p a va)

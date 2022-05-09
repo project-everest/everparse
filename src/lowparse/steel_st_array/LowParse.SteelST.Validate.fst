@@ -10,11 +10,10 @@ module SZ = LowParse.Steel.StdInt
 module R = Steel.ST.Reference
 
 let validator_prop
-  (#base: Type)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (b: AP.v base byte)
+  (b: AP.v byte)
   (v_err: U32.t)
   (res: SZ.size_t)
 : Tot prop
@@ -33,9 +32,8 @@ let validator
   (p: parser k t)
 : Tot Type
 = 
-  (#base: Type) ->
-  (#b: AP.v base byte) ->
-  (a: byte_array base) ->
+  (#b: AP.v byte) ->
+  (a: byte_array) ->
   (len: SZ.size_t) ->
   (err: R.ref U32.t) ->
   ST SZ.size_t
@@ -54,9 +52,8 @@ let debug_validator
   (p: parser k t)
 : Tot Type
 = 
-  (#base: Type) ->
-  (#b: AP.v base byte) ->
-  (a: byte_array base) ->
+  (#b: AP.v byte) ->
+  (a: byte_array) ->
   (len: SZ.size_t) ->
   (err: R.ref U32.t) ->
   ST SZ.size_t

@@ -5,40 +5,39 @@ open Steel.FractionalPermission
 module SZ = LowParse.Steel.StdInt
 open Steel.ST.Util
 
-val t (base: Type0) (t:Type u#0) : Type u#0
-val null (base: Type) (a: Type) : Tot (t base a)
-val g_is_null (#base #a: Type) (x: t base a) : Ghost bool
+val t (t:Type u#0) : Type u#0
+val null (a: Type) : Tot (t a)
+val g_is_null (#a: Type) (x: t a) : Ghost bool
   (requires True)
-  (ensures (fun y -> y == true <==> x == null base a))
+  (ensures (fun y -> y == true <==> x == null a))
 
 [@@erasable]
 val array
-  (base: Type0)
   (t: Type0)
 : Tot Type0
 
 val len
-  (#base #t: Type0)
-  (x: array base t)
+  (#t: Type0)
+  (x: array t)
 : GTot SZ.size_t
 
 let length
-  (#base #t: Type0)
-  (x: array base t)
+  (#t: Type0)
+  (x: array t)
 : GTot nat
 = SZ.size_v (len x)
 
 [@@erasable]
-val v (base: Type0) (t: Type u#0) : Tot Type0
+val v (t: Type u#0) : Tot Type0
 
-val array_of (#base: _) (#a: _) (v: v base a) : Tot (array base a)
-val contents_of (#base: _) (#a: _) (v: v base a) : GTot (Seq.lseq a (length (array_of v)))
-let contents_of' #base #a (v: v base a) : GTot (Seq.seq a) =
+val array_of (#a: _) (v: v a) : Tot (array a)
+val contents_of (#a: _) (v: v a) : GTot (Seq.lseq a (length (array_of v)))
+let contents_of' #a (v: v a) : GTot (Seq.seq a) =
   contents_of v
 
 val array_contents_inj
-  (#base: _) (#a: _)
-  (v1 v2: v base a)
+  (#a: _)
+  (v1 v2: v a)
 : Lemma
   (requires (
     array_of v1 == array_of v2 /\
@@ -51,30 +50,30 @@ val array_contents_inj
   ]]
 
 val arrayptr
-  (#base #a: Type0)
-  (r: t base a)
-  ([@@@smt_fallback] value: v base a)
+  (#a: Type0)
+  (r: t a)
+  ([@@@smt_fallback] value: v a)
 : Tot vprop
 
 val arrayptr_not_null
   (#opened: _)
-  (#base #a: Type)
-  (#value: v base a)
-  (x: t base a)
+  (#a: Type)
+  (#value: v a)
+  (x: t a)
 : STGhostT (squash (g_is_null x == false)) opened
     (x `arrayptr` value)
     (fun _ -> x `arrayptr` value)
 
 val arrayptr_or_null
-  (#base #a: Type0)
-  (r: t base a)
-  ([@@@smt_fallback] value: Ghost.erased (option (v base a)))
+  (#a: Type0)
+  (r: t a)
+  ([@@@smt_fallback] value: Ghost.erased (option (v a)))
 : Tot vprop
 
 val intro_arrayptr_or_null_none
   (#opened: _)
-  (#base #a: Type)
-  (x: t base a)
+  (#a: Type)
+  (x: t a)
   (sq: squash (g_is_null x == true))
 : STGhostT unit opened
     emp
@@ -82,9 +81,9 @@ val intro_arrayptr_or_null_none
 
 val intro_arrayptr_or_null_some
   (#opened: _)
-  (#base #a: Type)
-  (#value: v base a)
-  (x: t base a)
+  (#a: Type)
+  (#value: v a)
+  (x: t a)
 : STGhostT unit opened
     (arrayptr x value)
     (fun _ -> arrayptr_or_null x (Some value))
@@ -98,10 +97,10 @@ let extract_some
 
 val elim_arrayptr_or_null_some
   (#opened: _)
-  (#base #a: Type)
-  (#value: Ghost.erased (option (v base a)))
-  (x: t base a)
-: STGhost (v base a) opened
+  (#a: Type)
+  (#value: Ghost.erased (option (v a)))
+  (x: t a)
+: STGhost (v a) opened
     (arrayptr_or_null x value)
     (fun value' -> arrayptr x value')
     (g_is_null x == false \/ Some? value)
@@ -109,9 +108,9 @@ val elim_arrayptr_or_null_some
 
 val elim_arrayptr_or_null_none
   (#opened: _)
-  (#base #a: Type)
-  (#value: Ghost.erased (option (v base a)))
-  (x: t base a)
+  (#a: Type)
+  (#value: Ghost.erased (option (v a)))
+  (x: t a)
 : STGhost unit opened
     (arrayptr_or_null x value)
     (fun _ -> emp)
@@ -120,9 +119,9 @@ val elim_arrayptr_or_null_none
 
 val is_null
   (#opened: _)
-  (#base #a: Type)
-  (#value: Ghost.erased (option (v base a)))
-  (x: t base a)
+  (#a: Type)
+  (#value: Ghost.erased (option (v a)))
+  (x: t a)
 : STAtomicBase bool false opened Unobservable
     (arrayptr_or_null x value)
     (fun res -> arrayptr_or_null x value)
@@ -130,26 +129,26 @@ val is_null
     (fun res -> res == None? value /\ res == g_is_null x)
 
 val adjacent
-  (#base #t: Type0)
-  (x1 x2: array base t)
+  (#t: Type0)
+  (x1 x2: array t)
 : Tot prop
 
 val merge
-  (#base #t: Type0)
-  (x1 x2: array base t)
-: Ghost (array base t)
+  (#t: Type0)
+  (x1 x2: array t)
+: Ghost (array t)
   (requires (adjacent x1 x2))
   (ensures (fun y -> length y == length x1 + length x2))
 
 let merge_into
-  (#base #t: Type0)
-  (x1 x2 y: array base t)
+  (#t: Type0)
+  (x1 x2 y: array t)
 : Tot prop
 = adjacent x1 x2 /\
   merge x1 x2 == y
 
-val join (#opened: _) (#base #a:Type) (#vl #vr: v base a) (al ar:t base a)
-  : STGhost (v base a) opened
+val join (#opened: _) (#a:Type) (#vl #vr: v a) (al ar:t a)
+  : STGhost (v a) opened
           (arrayptr al vl `star` arrayptr ar vr)
           (fun res -> arrayptr al res)
           (adjacent (array_of vl) (array_of vr))
@@ -164,8 +163,8 @@ let seq_slice
   (ensures (fun _ -> True))
 = Seq.slice s i j
 
-val gsplit (#opened: _) (#base #a:Type) (#value: v base a) (x: t base a) (i:SZ.size_t)
-  : STGhost (Ghost.erased (t base a)) opened
+val gsplit (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
+  : STGhost (Ghost.erased (t a)) opened
           (arrayptr x value)
           (fun res -> exists_ (fun vl -> exists_ (fun vr ->
             arrayptr x vl `star` arrayptr res vr `star` pure (
@@ -180,15 +179,15 @@ val gsplit (#opened: _) (#base #a:Type) (#value: v base a) (x: t base a) (i:SZ.s
           (SZ.size_v i <= length (array_of value))
           (fun _ -> True)
 
-val split' (#opened: _) (#base #a:Type) (#vl #vr: v base a) (x: t base a) (i: SZ.size_t) (x': Ghost.erased (t base a))
-  : STAtomicBase (t base a) false opened Unobservable
+val split' (#opened: _) (#a:Type) (#vl #vr: v a) (x: t a) (i: SZ.size_t) (x': Ghost.erased (t a))
+  : STAtomicBase (t a) false opened Unobservable
           (arrayptr x vl `star` arrayptr x' vr)
           (fun res -> arrayptr x vl `star` arrayptr res vr)
           (adjacent (array_of vl) (array_of vr) /\ SZ.size_v i == length (array_of vl))
           (fun res -> res == Ghost.reveal x')
 
-let split (#opened: _) (#base #a:Type) (#value: v base a) (x: t base a) (i:SZ.size_t)
-  : STAtomicBase (t base a) false opened Unobservable
+let split (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
+  : STAtomicBase (t a) false opened Unobservable
           (arrayptr x value)
           (fun res -> exists_ (fun vl -> exists_ (fun vr ->
             arrayptr x vl `star` arrayptr res vr `star` pure (
@@ -207,7 +206,7 @@ let split (#opened: _) (#base #a:Type) (#value: v base a) (x: t base a) (i:SZ.si
   let res = split' x i gres in
   res
 
-val index (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i: SZ.size_t)
+val index (#a:Type) (#value: v a) (r: t a) (i: SZ.size_t)
   : ST a
              (arrayptr r value)
              (fun y -> arrayptr r value)
@@ -217,8 +216,8 @@ val index (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i: SZ.size_t
                y == Seq.index (contents_of' value) (SZ.size_v i)
              )
 
-val upd (#base: Type) (#a:Type) (#value: v base a) (r: t base a) (i:SZ.size_t) (x:a)
-  : ST (v base a)
+val upd (#a:Type) (#value: v a) (r: t a) (i:SZ.size_t) (x:a)
+  : ST (v a)
              (arrayptr r value)
              (fun value' -> arrayptr r value')
              (SZ.size_v i < length (array_of value))
