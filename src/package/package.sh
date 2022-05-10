@@ -377,6 +377,7 @@ zip_everparse() {
 	# NoDefaultExcludes for .clang-format file that nuget pack excludes
         ../nuget.exe pack -OutputFileNamesWithoutVersion -NoDefaultExcludes $everparse_nuget_version ./EverParse.nuspec
         cp EverParse.nupkg ..
+        if $with_version ; then mv ../EverParse.nupkg ../EverParse_"$everparse_version"_"$OS"_"$platform".nupkg ; fi
         popd
     fi
     # Not doing any cleanup in the spirit of existing package
