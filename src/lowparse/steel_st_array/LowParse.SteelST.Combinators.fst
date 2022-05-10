@@ -553,6 +553,36 @@ let read_and_then_tag
   let _ = rewrite_aparse a2 (p2 tag) in
   return tag
 
+let intro_and_then
+  (#opened: _)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: (t1 -> parser k2 t2))
+  (#k2': parser_kind)
+  (p2': parser k2' t2)
+  (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
+  #y1 #y2 (a1: byte_array) (a2: byte_array)
+: STGhost (v (and_then_kind k1 k2) t2) opened
+    (aparse p1 a1 y1 `star` aparse p2' a2 y2)
+    (fun y -> aparse (and_then p1 p2) a1 y)
+    (AP.adjacent (array_of' y1) (array_of' y2) /\
+      (forall bytes . parse p2' bytes == parse (p2 y1.contents) bytes))
+    (fun y ->
+      AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
+      y.contents == y2.contents
+    )
+= let va1 = elim_aparse _ a1 in
+  let va2 = elim_aparse _ a2 in
+  let va = AP.join a1 a2 in
+  let _ = gen_elim () in
+  and_then_eq p1 p2 (AP.contents_of' va);
+  parse_strong_prefix p1 (AP.contents_of' va1) (AP.contents_of' va);
+  assert (AP.contents_of' va2 `Seq.equal` Seq.slice (AP.contents_of' va) (AP.length (AP.array_of va1)) (AP.length (AP.array_of va)));
+  intro_aparse (and_then p1 p2) a1
+
 #restart-solver
 
 let validate_tagged_union
