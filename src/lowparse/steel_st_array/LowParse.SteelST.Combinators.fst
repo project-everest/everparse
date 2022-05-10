@@ -396,7 +396,6 @@ let jump_filter_and_then
   (v1: jumper p1)
   (p1': leaf_reader p1)
   (f: (t1 -> GTot bool))
-  (f' : ((x: t1) -> Tot (y: bool { y == f x } )))
   (#k2: parser_kind)
   (#t2: Type)
   (#p2: ((x: t1 { f x == true} ) -> parser k2 t2))
