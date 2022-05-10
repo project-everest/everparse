@@ -24,10 +24,12 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
+remote=https://${SATS_TOKEN}@github.com/project-everest/everparse.git
+
 git diff --staged --exit-code
 git diff --exit-code
-git fetch --tags
-git pull --ff-only
+git fetch $remote --tags
+git pull $remote --ff-only
 branchname=$(git rev-parse --abbrev-ref HEAD)
 
 everparse_version=$(cat $EVERPARSE_HOME/version.txt)
@@ -44,7 +46,7 @@ fi
 src/package/package.sh -zip
 
 # push my commit and the tag
-git push origin $branchname $everparse_version
+git push $remote $branchname $everparse_version
 
 platform=$(uname -m)
 
