@@ -299,6 +299,218 @@ let elim_filter
 #push-options "--z3rlimit 32 --query_stats"
 #restart-solver
 
+inline_for_extraction
+let validate_filter_and_then
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (v1: validator p1)
+  (p1': leaf_reader p1)
+  (f: (t1 -> GTot bool))
+  (f' : ((x: t1) -> Tot (y: bool { y == f x } )))
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: ((x: t1 { f x == true} ) -> parser k2 t2))
+  (v2: ((x1: t1 { f x1 == true } ) -> validator (p2 x1)))
+  (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
+: Tot (validator (parse_filter p1 f `and_then` p2))
+= fun #va a len err ->
+  and_then_eq (parse_filter p1 f) p2 (AP.contents_of' va);
+  parse_filter_eq p1 f (AP.contents_of' va);
+  let len1 = v1 a len err in
+  let _ = gen_elim () in
+  let verr = R.read err in
+  if verr = 0ul
+  then begin
+    noop ();
+    let a2 = peek_strong_with_size p1 a len1 in
+    let _ = gen_elim () in
+    let x = p1' a in
+    if not (f' x)
+    then begin
+      noop ();
+      unpeek_strong a va a2;
+      R.write err validator_error_constraint_failed;
+      return len1
+    end else begin
+      noop ();
+      let len2 = v2 x a2 (len `SZ.size_sub` len1) err in
+      let _ = gen_elim () in
+      unpeek_strong a va a2;
+      return (len1 `SZ.size_add` len2)
+    end
+  end else begin
+    noop ();
+    return len1
+  end
+
+inline_for_extraction
+let jump_filter_and_then
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (v1: jumper p1)
+  (p1': leaf_reader p1)
+  (f: (t1 -> GTot bool))
+  (f' : ((x: t1) -> Tot (y: bool { y == f x } )))
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: ((x: t1 { f x == true} ) -> parser k2 t2))
+  (v2: ((x1: t1 { f x1 == true } ) -> jumper (p2 x1)))
+  (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
+: Tot (jumper (parse_filter p1 f `and_then` p2))
+= fun #va a ->
+  and_then_eq (parse_filter p1 f) p2 (AP.contents_of' va);
+  parse_filter_eq p1 f (AP.contents_of' va);
+  let len1 = v1 a in
+  let _ = gen_elim () in
+  let a2 = peek_strong_with_size p1 a len1 in
+  let _ = gen_elim () in
+  let x = p1' a in
+  let len2 = v2 x a2 in
+  let _ = gen_elim () in
+  unpeek_strong a va a2;
+  return (len1 `SZ.size_add` len2)
+
+[@@__reduce__]
+let exists_and_then_payload0
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: (t1 -> parser k2 t2))
+  (y: v (and_then_kind k1 k2) t2)
+  (u1: AP.array byte)
+  (tag: t1)
+  (a1 a2: byte_array)
+: Tot vprop
+= exists_ (fun y2 ->
+    aparse (p2 tag) a2 y2 `star`
+    pure (
+      AP.merge_into u1 (array_of' y2) (array_of' y) /\
+      y.contents == y2.contents
+    )
+  )
+
+let exists_and_then_payload
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: (t1 -> parser k2 t2))
+  (y: v (and_then_kind k1 k2) t2)
+  (u1: AP.array byte)
+  (tag: t1)
+  (a1 a2: byte_array)
+: Tot vprop
+= exists_and_then_payload0 p1 p2 y u1 tag a1 a2
+
+let ghost_split_and_then
+  (#opened: _)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: (t1 -> parser k2 t2))
+  (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
+  (#va: _)
+  (a1: byte_array)
+: STGhostT (Ghost.erased byte_array) opened
+    (aparse (p1 `and_then` p2) a1 va)
+    (fun a2 -> exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_and_then_payload p1 p2 va (array_of' y1) y1.contents a1 a2))
+= let b = elim_aparse _ a1 in
+  and_then_eq p1 p2 (AP.contents_of' b);
+  let a2 = ghost_peek_strong p1 a1 in
+  let _ = gen_elim () in
+  let y1 = vpattern_replace (fun y1 -> aparse p1 a1 y1) in
+  let _ = intro_aparse (p2 y1.contents) a2 in
+  rewrite
+    (exists_and_then_payload0 p1 p2 va (array_of' y1) y1.contents a1 a2)
+    (exists_and_then_payload p1 p2 va (array_of' y1) y1.contents a1 a2);
+  a2
+
+let split_and_then
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: (t1 -> parser k2 t2))
+  (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
+  (#va: _)
+  (a1: byte_array)
+: STT byte_array
+    (aparse (p1 `and_then` p2) a1 va)
+    (fun a2 -> exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_and_then_payload p1 p2 va (array_of' y1) y1.contents a1 a2))
+= let ga2 = ghost_split_and_then p1 p2 u a1 in
+  let _ = gen_elim () in
+  let y1 = vpattern_replace (fun y1 -> aparse p1 a1 y1) in
+  rewrite
+    (exists_and_then_payload p1 p2 va (array_of' _) _ a1 ga2)
+    (exists_and_then_payload0 p1 p2 va (array_of' y1) y1.contents a1 ga2);
+  let _ = gen_elim () in
+  let a2 = hop_aparse_aparse j1 (p2 y1.contents) a1 ga2 in
+  rewrite
+    (exists_and_then_payload0 p1 p2 va (array_of' y1) y1.contents a1 a2)
+    (exists_and_then_payload p1 p2 va (array_of' y1) y1.contents a1 a2);
+  return a2
+
+let ghost_and_then_tag
+  (#opened: _)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: (t1 -> parser k2 t2))
+  (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
+  #y (a1: byte_array) (a2: byte_array)
+: STGhostT (Ghost.erased t1) opened
+    (exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_and_then_payload p1 p2 y (array_of' y1) y1.contents a1 a2))
+    (fun tag -> exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_ (fun y2 -> aparse (p2 tag) a2 y2 `star` pure (
+      AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
+      y1.contents == Ghost.reveal tag /\
+      y.contents == y2.contents
+    ))))
+= let _ = gen_elim () in
+  let y1 = vpattern (fun y1 -> aparse p1 a1 y1) in
+  let tag = Ghost.hide y1.contents in
+  rewrite
+    (exists_and_then_payload p1 p2 y (array_of' _) _ a1 a2)
+    (exists_and_then_payload0 p1 p2 y (array_of' y1) (Ghost.reveal tag) a1 a2);
+  let _ = gen_elim () in
+  tag
+
+let read_and_then_tag
+  (#opened: _)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (rt: leaf_reader p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: (t1 -> parser k2 t2))
+  (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
+  #y (a1: byte_array) (a2: byte_array)
+: STT t1
+    (exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_and_then_payload p1 p2 y (array_of' y1) y1.contents a1 a2))
+    (fun tag -> exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_ (fun y2 -> aparse (p2 tag) a2 y2 `star` pure (
+      AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
+      y1.contents == tag /\
+      y.contents == y2.contents
+    ))))
+= let _ = ghost_and_then_tag p1 p2 u a1 a2 in
+  let _ = gen_elim () in
+  let tag = rt a1 in
+  let _ = rewrite_aparse a2 (p2 tag) in
+  return tag
+
+#restart-solver
+
 let validate_tagged_union
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -404,6 +616,32 @@ let exists_tagged_union_payload
 : Tot vprop
 = exists_tagged_union_payload0 kt tag_of_data p y u1 tag a1 a2
 
+let ghost_split_tagged_union
+  (#opened: _)
+  (#kt: parser_kind)
+  (#tag_t: Type)
+  (pt: parser kt tag_t)
+  (#data_t: Type)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  #y (a1: byte_array)
+: STGhost (Ghost.erased (byte_array)) opened
+    (aparse (parse_tagged_union pt tag_of_data p) a1 y)
+    (fun a2 -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2))
+    (kt.parser_kind_subkind == Some ParserStrong)
+    (fun _ -> True)
+= let b = elim_aparse _ a1 in
+  parse_tagged_union_eq pt tag_of_data p (AP.contents_of' b);
+  let a2 = ghost_peek_strong pt a1 in
+  let _ = gen_elim () in
+  let y1 = vpattern_replace (fun y1 -> aparse pt a1 y1) in
+  let _ = intro_aparse (p y1.contents) a2 in
+  rewrite
+    (exists_tagged_union_payload0 kt tag_of_data p y (array_of' y1) y1.contents a1 a2)
+    (exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2);
+  a2
+
 let split_tagged_union
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -419,12 +657,14 @@ let split_tagged_union
     (fun a2 -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2))
     (kt.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
-= let b = elim_aparse _ a1 in
-  parse_tagged_union_eq pt tag_of_data p (AP.contents_of' b);
-  let a2 = peek_strong jt a1 in
+= let ga2 = ghost_split_tagged_union pt tag_of_data p a1 in
   let _ = gen_elim () in
   let y1 = vpattern_replace (fun y1 -> aparse pt a1 y1) in
-  let _ = intro_aparse (p y1.contents) a2 in
+  rewrite
+    (exists_tagged_union_payload kt tag_of_data p y (array_of' _) _ a1 ga2)
+    (exists_tagged_union_payload0 kt tag_of_data p y (array_of' y1) y1.contents a1 ga2);
+  let _ = gen_elim () in
+  let a2 = hop_aparse_aparse jt (p y1.contents) a1 ga2 in
   rewrite
     (exists_tagged_union_payload0 kt tag_of_data p y (array_of' y1) y1.contents a1 a2)
     (exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2);
