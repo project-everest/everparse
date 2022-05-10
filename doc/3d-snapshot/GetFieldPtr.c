@@ -59,10 +59,10 @@ GetFieldPtrValidateT(
             EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
               position);
         }
-        uint64_t res;
+        uint64_t result1;
         if (EverParseIsSuccess(positionAfterT))
         {
-          res = positionAfterT;
+          result1 = positionAfterT;
         }
         else
         {
@@ -72,9 +72,8 @@ GetFieldPtrValidateT(
             Ctxt,
             truncatedInput,
             position);
-          res = positionAfterT;
+          result1 = positionAfterT;
         }
-        uint64_t result1 = res;
         result = result1;
         ite = EverParseIsError(result1);
       }
@@ -83,8 +82,7 @@ GetFieldPtrValidateT(
         break;
       }
     }
-    uint64_t res = result;
-    positionAfterT = res;
+    positionAfterT = result;
   }
   uint64_t positionAfterf1;
   if (EverParseIsSuccess(positionAfterT))
@@ -137,10 +135,10 @@ GetFieldPtrValidateT(
             EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
               position);
         }
-        uint64_t res;
+        uint64_t result1;
         if (EverParseIsSuccess(positionAfterT))
         {
-          res = positionAfterT;
+          result1 = positionAfterT;
         }
         else
         {
@@ -150,9 +148,8 @@ GetFieldPtrValidateT(
             Ctxt,
             truncatedInput,
             position);
-          res = positionAfterT;
+          result1 = positionAfterT;
         }
-        uint64_t result1 = res;
         result = result1;
         ite = EverParseIsError(result1);
       }
@@ -161,8 +158,7 @@ GetFieldPtrValidateT(
         break;
       }
     }
-    uint64_t res = result;
-    positionAfterT0 = res;
+    positionAfterT0 = result;
   }
   uint64_t positionAfterf2;
   if (EverParseIsSuccess(positionAfterT0))

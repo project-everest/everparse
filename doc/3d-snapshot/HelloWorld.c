@@ -35,10 +35,10 @@ HelloWorldValidatePoint(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  uint64_t res;
+  uint64_t positionAfterx;
   if (EverParseIsSuccess(positionAfterPoint))
   {
-    res = positionAfterPoint;
+    positionAfterx = positionAfterPoint;
   }
   else
   {
@@ -48,9 +48,8 @@ HelloWorldValidatePoint(
       Ctxt,
       Input,
       StartPosition);
-    res = positionAfterPoint;
+    positionAfterx = positionAfterPoint;
   }
-  uint64_t positionAfterx = res;
   if (EverParseIsError(positionAfterx))
   {
     return positionAfterx;
