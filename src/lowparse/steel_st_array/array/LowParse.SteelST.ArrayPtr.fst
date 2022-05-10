@@ -137,3 +137,102 @@ let upd #elt #v r i x =
   noop ();
   rewrite (arrayptr0 r res) (arrayptr r res);
   return res
+
+let set_array_perm
+  (#t: Type)
+  (a: array t)
+  (p: perm)
+: Ghost (array t)
+    (requires True)
+    (ensures (fun y -> len y == len a /\ array_perm y == p))
+= {
+  a with array_perm = p
+}
+
+let set_array_perm_idem
+  (#t: Type)
+  (a: array t)
+  (p1 p2: perm)
+: Lemma
+  (set_array_perm (set_array_perm a p1) p2 == set_array_perm a p2)
+= ()
+
+let set_array_perm_eq
+  (#t: Type)
+  (a: array t)
+: Lemma
+  (set_array_perm a (array_perm a) == a)
+= ()
+
+let set_array_perm_adjacent
+  (#t: Type)
+  (a1 a2: array t)
+  (p: perm)
+: Lemma
+  (requires (adjacent a1 a2))
+  (ensures (
+    merge_into (set_array_perm a1 p) (set_array_perm a2 p) (set_array_perm (merge a1 a2) p)
+  ))
+= ()
+
+#set-options "--ide_id_info_off"
+
+let share
+  (#opened: _)
+  (#elt: Type)
+  (#x: v elt)
+  (a: t elt)
+  (p1 p2: perm)
+: STGhost (Ghost.erased (v elt & v elt)) opened
+    (arrayptr a x)
+    (fun res -> arrayptr a (fst res) `star` arrayptr a (snd res))
+    (array_perm (array_of x) == p1 `Steel.FractionalPermission.sum_perm` p2)
+    (fun res ->
+      contents_of' (fst res) == contents_of x /\
+      contents_of' (snd res) == contents_of x /\
+      array_of (fst res) == set_array_perm (array_of x) p1 /\
+      array_of (snd res) == set_array_perm (array_of x) p2
+    )
+= rewrite (arrayptr a x) (arrayptr0 a x);
+  let _ = gen_elim () in
+  let _ = SAS.share a _ p1 p2 in
+  let res1 = {
+    v_array = set_array_perm x.v_array p1;
+    v_contents = x.v_contents;
+  }
+  in
+  let res2 = {
+    v_array = set_array_perm x.v_array p2;
+    v_contents = x.v_contents;
+  }
+  in
+  let res = Ghost.hide (res1, res2) in
+  rewrite (arrayptr0 a (fst res)) (arrayptr a (fst res));
+  rewrite (arrayptr0 a (snd res)) (arrayptr a (snd res));
+  res
+
+let gather
+  (#opened: _)
+  (#elt: Type)
+  (#x1 #x2: v elt)
+  (a: t elt)
+: STGhost (v elt) opened
+    (arrayptr a x1 `star` arrayptr a x2)
+    (fun res -> arrayptr a res)
+    (array_of x1 == set_array_perm (array_of x2) (array_perm (array_of x1)))
+    (fun res ->
+      contents_of' res == contents_of x1 /\
+      contents_of' res == contents_of x2 /\
+      array_of res == set_array_perm (array_of x1) (array_perm (array_of x1) `Steel.FractionalPermission.sum_perm` array_perm (array_of x2))
+    )
+= rewrite (arrayptr a x1) (arrayptr0 a x1);
+  rewrite (arrayptr a x2) (arrayptr0 a x2);
+  let _ = gen_elim () in
+  SAS.gather a x1.v_array.array_perm x2.v_array.array_perm;
+  let res = {
+    v_array = set_array_perm x1.v_array (x1.v_array.array_perm `Steel.FractionalPermission.sum_perm` x2.v_array.array_perm);
+    v_contents = x1.v_contents;
+  }
+  in
+  rewrite (arrayptr0 a res) (arrayptr a res);
+  res
