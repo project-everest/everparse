@@ -4,7 +4,6 @@ module LowParse.Steel.StdInt
 open FStar.Mul
 
 module U32 = FStar.UInt32
-module I32 = FStar.Int32
 
 inline_for_extraction noextract // TODO: replace with primitive extraction
 val size_t : eqtype
@@ -24,6 +23,11 @@ inline_for_extraction noextract
 val mk_size_t (x: U32.t) : Pure size_t
   (requires True)
   (ensures (fun y -> size_v y == U32.v x))
+
+inline_for_extraction noextract
+val uint32_of_size_t (x: size_t) (y: Ghost.erased U32.t) : Pure U32.t
+  (requires (size_v x <= U32.v y))
+  (ensures (fun y -> size_v x == U32.v y))
 
 noextract
 val int_to_size_t (x: nat) : Pure size_t // should be Ghost, but need Pure to implement array views
