@@ -76,6 +76,7 @@ let check_hashes : ref (option (valid_string valid_check_hashes)) = alloc None
 let valid_input_stream_binding : string -> Tot bool = function
 | "buffer"
 | "extern"
+| "static"
   -> true
 | _ -> false
 
@@ -298,10 +299,10 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "check_inplace_hash" (OptList "file.3d=file.h" always_valid inplace_hashes) "Check hashes stored in one .h/.c file" [];
     CmdOption "clang_format" (OptBool clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
-    CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and kremlin-args.rsp (--batch only)" [];
+    CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and krml-args.rsp (--batch only)" [];
     CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
-    CmdOption "input_stream" (OptStringOption "buffer|extern" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
-    CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern)" [];
+    CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
+    CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
     CmdOption "debug" (OptBool debug) "Emit a lot of debugging output" [];
     CmdFStarOption ('h', "help", FStar.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0), "Show this help message");
@@ -432,13 +433,17 @@ let get_json () =
   !json
 
 let get_input_stream_binding _ =
+  let get_include () =
+    match !input_stream_include with
+    | None -> ""
+    | Some s -> s
+  in
   match !input_stream_binding with
   | None
   | Some "buffer" -> InputStreamBuffer
   | Some "extern" ->
-    InputStreamExtern
-      begin match !input_stream_include with
-      | None -> ""
-      | Some s -> s
-      end
+    InputStreamExtern (get_include ())
+  | Some "static" ->
+    InputStreamStatic (get_include ())
+
 let get_emit_output_types_defs () = !emit_output_types_defs

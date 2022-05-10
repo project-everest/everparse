@@ -2,6 +2,8 @@
 
 #include "Base.h"
 
+
+
 uint64_t
 BaseValidateUlong(
   uint8_t *Ctxt,
@@ -76,10 +78,10 @@ BaseValidatePair(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  uint64_t res;
+  uint64_t positionAfterfirst;
   if (EverParseIsSuccess(positionAfterPair))
   {
-    res = positionAfterPair;
+    positionAfterfirst = positionAfterPair;
   }
   else
   {
@@ -89,9 +91,8 @@ BaseValidatePair(
       Ctxt,
       Input,
       StartPosition);
-    res = positionAfterPair;
+    positionAfterfirst = positionAfterPair;
   }
-  uint64_t positionAfterfirst = res;
   if (EverParseIsError(positionAfterfirst))
   {
     return positionAfterfirst;

@@ -54,6 +54,7 @@ let () =
   H.add keywords "field_pos_32" FIELD_POS_32;
   H.add keywords "field_pos" FIELD_POS_32; (* TODO: change to FIELD_POS_64 once ready *)
   H.add keywords "field_ptr" FIELD_PTR;
+  H.add keywords "field_ptr_after" FIELD_PTR_AFTER;
   H.add keywords "var" VAR;
   H.add keywords "abort" ABORT;
   H.add keywords "return" RETURN;

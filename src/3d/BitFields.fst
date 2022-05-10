@@ -67,11 +67,26 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
       | Some (Inr bf) -> bf.v
       | _ -> failwith "Must have elaborated bitfield"
     in
-    let field_dependence, field_constraint, subst =
+    let field_dependence, field_constraint, field_action, subst =
       List.fold_left
-        (fun (dep, acc_constraint, subst) f ->
+        (fun (acc:(bool & _ & option (action & bool) & _)) f ->
+          let (dep, acc_constraint, acc_action, subst) = acc in
           let f = f.v in
-          let dep = dep || f.field_dependence in
+          let acc_action, acc_dep = 
+            match acc_action, f.field_action with
+            | None, None
+            | Some _, None -> acc_action, false
+            | None, Some (_, d) -> f.field_action, d
+            | Some (acc, dep_0), Some (fa, dep_1) ->
+              if Action_act? acc.v 
+              && Action_act? fa.v
+              then
+                Some (Ast.sequence_non_failing_actions acc fa, dep_0 || dep_1),
+                dep_0 || dep_1
+              else
+                failwith "Multiple, potentially failing actions are not supported on bitfields"
+          in
+          let dep = dep || acc_dep || f.field_dependence in
           let acc_constraint =
             match f.field_constraint, acc_constraint with
             | None, _ -> acc_constraint
@@ -86,8 +101,8 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
               mk_e (Constant (Int UInt32 (bitfield_attrs f).bitfield_to))]
           in
           let subst = (f.field_ident, mk_e bf_exp) :: subst in
-          dep, acc_constraint, subst)
-       (false, None, [])
+          dep, acc_constraint, acc_action, subst)
+       (false, None, None, [])
        fields
     in
     let struct_field = {
@@ -97,7 +112,7 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
       field_array_opt = FieldScalar;
       field_constraint = field_constraint;
       field_bitwidth = None;
-      field_action = None; //TODO conjunction of all actions on individual fields?
+      field_action = field_action;
     } in
     with_dummy_range struct_field,
     subst

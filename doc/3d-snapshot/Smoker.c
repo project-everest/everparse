@@ -2,6 +2,8 @@
 
 #include "Smoker.h"
 
+
+
 uint64_t
 SmokerValidateSmoker(
   uint8_t *Ctxt,
@@ -63,10 +65,9 @@ SmokerValidateSmoker(
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
             positionAfternone1);
       }
-      uint64_t res;
       if (EverParseIsSuccess(positionAfterSmoker0))
       {
-        res = positionAfterSmoker0;
+        positionAfterSmoker = positionAfterSmoker0;
       }
       else
       {
@@ -76,9 +77,8 @@ SmokerValidateSmoker(
           Ctxt,
           Input,
           positionAfternone1);
-        res = positionAfterSmoker0;
+        positionAfterSmoker = positionAfterSmoker0;
       }
-      positionAfterSmoker = res;
     }
   }
   if (EverParseIsSuccess(positionAfterSmoker))

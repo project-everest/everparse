@@ -23,58 +23,11 @@ module Binding
      -- computing which fields are dependent on others
 *)
 open FStar.Mul
+open FStar.List.Tot
 open Ast
 open FStar.All
 module H = Hashtable
-
-/// Computed attributes for a decl:
-///    -- its size in bytes
-///    -- whether or not it ends with a variable-length field (suffix)
-///    -- whether or not its validator may fail
-///    -- whether the type is an integral type, i.e., can it be decomposed into bitfields
-type decl_attributes = {
-  may_fail:bool;
-  integral:option integer_type;
-  has_reader:bool;
-  parser_weak_kind:weak_kind;
-  parser_kind_nz:option bool
-}
-
-noeq
-type macro_signature = {
-  macro_arguments_t: list typ;
-  macro_result_t: typ;
-  macro_defn_t:option expr
-}
-
-let nullary_macro t d = {
-  macro_arguments_t = [];
-  macro_result_t = t;
-  macro_defn_t = d
-}
-
-(* Type-checking environments *)
-
-/// global_env ge_h field is a hash (hence `_h`) table that:
-///  -- maps top-level identifiers to their corresponding declaration
-///  -- maps type identifiers to decl_attributes
-///  -- maps macro names to their types
-///
-/// global_env ge_fd field maps a unique numerical identifier to each
-/// "struct identifier - field (hence `_fd`) name" pair. It is part of
-/// the global environment so that numerical field identifiers are
-/// proper to the current module, and not shared across different .3d
-/// files given on the command line
-
-type global_hash_t = H.t ident' (decl & either decl_attributes macro_signature)
-
-noeq
-type global_env = {
-  ge_h: global_hash_t;
-  ge_out_t: H.t ident' decl;  //a table for output types declarations
-  ge_extern_t: H.t ident' decl;  //a table for extern type declarations
-  ge_extern_fn: H.t ident' decl;  //a table for extern function declarations
-}
+include GlobalEnv
 
 /// Maps locally bound names, i.e., a field name to its type
 ///  -- the bool signifies that this identifier has been used, and is
@@ -98,6 +51,11 @@ let mk_env (g:global_env) =
     locals = H.create 10;
     globals = g }
 
+let env_of_global_env 
+  : global_env -> env
+  = let locals = H.create 1 in
+    fun g -> { this = None; locals; globals = g }
+    
 let global_env_of_env e = e.globals
 
 let params_of_decl (d:decl) : list param =
@@ -970,6 +928,26 @@ let rec check_field_action (env:env) (f:field) (a:action)
         | Action_field_ptr ->
           Action_field_ptr, puint8
 
+        | Action_field_ptr_after e write_to ->
+          let e, t = check_expr env e in
+          if not (eq_typ env t tuint64)
+          then
+            error (Printf.sprintf "Argument type mismatch, expected %s whereas %s has type %s"
+              (Ast.print_typ tuint64)
+              (Ast.print_expr e)
+              (Ast.print_typ t)) e.range
+          else
+            let write_to = check_out_expr env write_to in
+            let { out_expr_t = et } = Some?.v write_to.out_expr_meta in
+            if not (eq_typ env et puint8)
+            then
+              error (Printf.sprintf "Pointee type mismatch, expected %s whereas %s points to %s"
+                (Ast.print_typ puint8)
+                (Ast.print_out_expr write_to)
+                (Ast.print_typ et)) write_to.out_expr_node.range
+            else
+              Action_field_ptr_after e write_to, tbool
+
         | Action_deref i ->
           let t = lookup_expr_name env i in
           begin
@@ -1018,10 +996,10 @@ let rec check_field_action (env:env) (f:field) (a:action)
       let aa, t = check_atomic_action env a.range aa in
       { a with v=Atomic_action aa }, t
 
-    | Action_seq a0 as ->
+    | Action_seq a0 rest ->
       let a0, _ = check_atomic_action env a.range a0 in
-      let as, t = check_field_action env f as in
-      { a with v=Action_seq a0 as }, t
+      let rest, t = check_field_action env f rest in
+      { a with v=Action_seq a0 rest }, t
 
     | Action_ite hd then_ else_ ->
       let hd, t = check_expr env hd in
@@ -1330,25 +1308,36 @@ let allowed_base_types_as_output_types = [
   "Bool"
 ]
 
-let rec check_mutable_param_type (ge:global_env) (t:typ) : ML unit =
-  let err () : ML unit =
-    error (Printf.sprintf "%s is not an integer or output or extern type" (print_typ t)) t.range in
+let rec check_mutable_param_type (env:env) (t:typ) : ML unit =
+  let err iopt : ML unit =
+    let otype = 
+      match iopt with
+      | None -> "None"
+      | Some i ->
+        match H.try_find env.globals.ge_out_t i.v with
+        | Some d ->
+          Printf.sprintf "(Some %s)" (print_decl d)
+        | _ -> "None"
+    in
+    error (Printf.sprintf "%s is not an integer or output or extern type (found decl %s)" (print_typ t) otype) t.range in
+  let t = unfold_typ_abbrev_only env t in
   match t.v with
   | Type_app i k [] ->
     if k = KindOutput || k = KindExtern ||
        (i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types)
     then ()
-    else err ()
-  | Pointer t -> check_mutable_param_type ge t
-  | _ -> err ()
+    else err (Some i)
+  | Pointer t -> check_mutable_param_type env t
+  | _ -> err None
     
-let rec check_integer_or_output_type (ge:global_env) (t:typ) : ML unit =
+let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
+  let t = unfold_typ_abbrev_only env t in
   match t.v with
   | Type_app i k [] ->  //either it should be a base type, or an output type
     if i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types
     then ()
     else if not (k = KindOutput) then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
-  | Pointer t -> check_integer_or_output_type ge t
+  | Pointer t -> check_integer_or_output_type env t
   | _ -> error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
 
 let check_mutable_param (env:env) (p:param) : ML unit =
@@ -1357,7 +1346,7 @@ let check_mutable_param (env:env) (p:param) : ML unit =
   let t, _, _ = p in
   match t.v with
   | Pointer bt ->
-    check_mutable_param_type (global_env_of_env env) bt
+    check_mutable_param_type env bt
   | _ ->
     error (Printf.sprintf "%s is not a valid mutable parameter type, it is not a pointer type" (print_typ t)) t.range
 
@@ -1479,7 +1468,7 @@ let elaborate_record (e:global_env)
 
 let rec check_output_field (ge:global_env) (fld:out_field) : ML unit =
   match fld with
-  | Out_field_named _ t _bopt -> check_integer_or_output_type ge t
+  | Out_field_named _ t _bopt -> check_integer_or_output_type (env_of_global_env ge) t
   | Out_field_anon l _ -> check_output_fields ge l
 
 and check_output_fields (ge:global_env) (flds:list out_field) : ML unit =

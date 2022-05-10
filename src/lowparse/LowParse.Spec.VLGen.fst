@@ -439,3 +439,135 @@ let serialize_vlgen_unfold
     ()
     input;
   serialize_bounded_vlgen_unfold min max ssk s input
+
+(* What if we are not sure the serializer exists? *)
+
+inline_for_extraction
+noextract
+let parse_vlgen_weak_payload_kind
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+: Tot parser_kind
+= strong_parser_kind min max None
+
+let parse_vlgen_weak_payload
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (bound: bounded_int32 min max)
+: Tot (parser (parse_vlgen_weak_payload_kind min max) t)
+= weaken (parse_vlgen_weak_payload_kind min max) (parse_fldata p (U32.v bound))
+
+let parse_vlgen_weak_payload_and_then_cases_injective
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Lemma
+  (and_then_cases_injective (parse_vlgen_weak_payload min max p))
+=
+  and_then_cases_injective_intro
+    (parse_vlgen_weak_payload min max p)
+    (fun (x1 x2: bounded_int32 min max) b1 b2 ->
+      parse_injective
+        p
+        (Seq.slice b1 0 (U32.v x1))
+        (Seq.slice b2 0 (U32.v x2))
+    )
+
+inline_for_extraction
+noextract
+let parse_vlgen_weak_kind
+  (kl: parser_kind)
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+: Tot parser_kind
+= and_then_kind kl (parse_vlgen_weak_payload_kind min max)
+
+let parse_vlgen_weak
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 min max))
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot (parser (parse_vlgen_weak_kind sk min max) t)
+=
+  parse_vlgen_weak_payload_and_then_cases_injective min max p;
+  pk `and_then` parse_vlgen_weak_payload min max p
+
+let parse_vlgen_weak_unfold
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 min max))
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (input: bytes)
+: Lemma
+  (let res = parse (parse_vlgen_weak min max pk p) input in
+    match parse pk input with
+    | None -> res == None
+    | Some (len, sz) ->
+      begin
+        if Seq.length input < sz + U32.v len
+        then res == None
+        else
+        let input' = Seq.slice input sz (sz + U32.v len) in
+        match parse p input' with
+        | Some (x, consumed_x) ->
+          if consumed_x = U32.v len
+          then
+            res == Some (x, sz + U32.v len)
+        else res == None
+      | _ -> res == None
+    end
+  )
+=
+  parse_vlgen_weak_payload_and_then_cases_injective min max p;
+  and_then_eq pk (parse_vlgen_weak_payload min max p) input
+
+let parse_vlgen_weak_eq_parse_bounded_vlgen
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 min max))
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (input: bytes)
+: Lemma
+  (match parse (parse_vlgen_weak min max pk p) input, parse (parse_bounded_vlgen min max pk s) input with
+  | None, None -> True
+  | Some (res1, consumed1), Some (res2, consumed2) ->
+    res1 == (res2 <: t) /\
+    consumed1 == consumed2
+  | _ -> False)
+=
+  parse_vlgen_weak_unfold min max pk p input;
+  parse_bounded_vlgen_unfold min max pk s input 
+
+let parse_vlgen_weak_eq_parse_vlgen
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 min max))
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (input: bytes)
+: Lemma
+  (requires (parse_vlgen_precond min max k))
+  (ensures (
+    parse (parse_vlgen_weak min max pk p) input == parse (parse_vlgen min max pk s) input
+  ))
+=
+  parse_vlgen_weak_unfold min max pk p input;
+  parse_vlgen_unfold min max pk s input 

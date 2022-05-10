@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>EverParse</id>
+    <version>1.0.0</version>
+    <authors>aseemr</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://project-everest.github.io/everparse/</projectUrl>
+    <description>EverParse: verified parsing for binary data formats</description>
+    <releaseNotes>Nuget package for EverParse</releaseNotes>
+    <copyright>Microsoft Research</copyright>
+    <tags>native</tags>
+  </metadata>
+</package>
