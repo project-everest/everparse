@@ -4,3 +4,6 @@
 [submodule "hacl-star"]
 	path = hacl-star
 	url = https://github.com/project-everest/hacl-star.git
+[submodule "karamel"]
+	path = karamel
+	url = https://github.com/FStarLang/karamel
