@@ -12,6 +12,50 @@ module SZ = LowParse.Steel.StdInt
 
 module T = FStar.Tactics
 
+inline_for_extraction
+let rewrite_validator
+  (#k1: parser_kind) (#t1: Type) (#p1: parser k1 t1) (v1: validator p1)
+  (#k2: parser_kind) (#t2: Type) (p2: parser k2 t2)
+: Pure (validator p2)
+  (requires (
+    t1 == t2 /\
+    (forall bytes . parse p1 bytes == parse p2 bytes)
+  ))
+  (ensures (fun _ -> True))
+= fun #va a len err ->
+  let res = v1 a len err in
+  let _ = gen_elim () in
+  return res
+
+inline_for_extraction
+let validate_weaken
+  (k1: parser_kind) (#k2: parser_kind) (#t: Type) (#p2: parser k2 t) (v2: validator p2)
+  (_: squash (k1 `is_weaker_than` k2))
+: Tot (validator (LowParse.Spec.Base.weaken k1 p2))
+= rewrite_validator v2 (LowParse.Spec.Base.weaken k1 p2)
+
+inline_for_extraction
+let rewrite_jumper
+  (#k1: parser_kind) (#t1: Type) (#p1: parser k1 t1) (v1: jumper p1)
+  (#k2: parser_kind) (#t2: Type) (p2: parser k2 t2)
+: Pure (jumper p2)
+  (requires (
+    t1 == t2 /\
+    (forall bytes . parse p1 bytes == parse p2 bytes)
+  ))
+  (ensures (fun _ -> True))
+= fun #va a ->
+  let res = v1 a in
+  let _ = gen_elim () in
+  return res
+
+inline_for_extraction
+let jump_weaken
+  (k1: parser_kind) (#k2: parser_kind) (#t: Type) (#p2: parser k2 t) (v2: jumper p2)
+  (_: squash (k1 `is_weaker_than` k2))
+: Tot (jumper (LowParse.Spec.Base.weaken k1 p2))
+= rewrite_jumper v2 (LowParse.Spec.Base.weaken k1 p2)
+
 #push-options "--z3rlimit 20"
 #restart-solver
 
