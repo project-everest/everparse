@@ -23,6 +23,11 @@ let length
 : GTot nat
 = SZ.size_v (len x)
 
+val array_perm
+  (#t: Type)
+  (x: array t)
+: GTot perm
+
 [@@erasable]
 val v (t: Type u#0) : Tot Type0
 
@@ -61,7 +66,7 @@ val merge
   (x1 x2: array t)
 : Ghost (array t)
   (requires (adjacent x1 x2))
-  (ensures (fun y -> length y == length x1 + length x2))
+  (ensures (fun y -> length y == length x1 + length x2 /\ array_perm y == array_perm x1 /\ array_perm y == array_perm x2))
 
 let merge_into
   (#t: Type0)
@@ -143,7 +148,7 @@ val upd (#a:Type) (#value: v a) (r: t a) (i:SZ.size_t) (x:a)
   : ST (v a)
              (arrayptr r value)
              (fun value' -> arrayptr r value')
-             (SZ.size_v i < length (array_of value))
+             (SZ.size_v i < length (array_of value) /\ array_perm (array_of value) == full_perm)
              (fun value'->
                SZ.size_v i < length (array_of value) /\
                array_of value' == array_of value /\

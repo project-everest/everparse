@@ -15,6 +15,8 @@ type array elt = {
 
 let len x = SZ.mk_size_t x.array_len
 
+let array_perm x = x.array_perm
+
 [@@erasable]
 noeq
 type v t = {
@@ -124,7 +126,6 @@ let index #_ #v r i =
 let upd #elt #v r i x =
   rewrite (arrayptr r v) (arrayptr0 r v);
   let _ = gen_elim () in
-  assume (v.v_array.array_perm == Steel.FractionalPermission.full_perm);
   let i' = SZ.uint32_of_size_t i (U32.uint_to_t (SZ.size_v i)) in
   let _ = vpattern_replace_erased (fun s -> SAS.pts_to r _ s) in
   let s' = SAS.write r i' x in
