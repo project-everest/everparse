@@ -75,6 +75,24 @@ let merge_into
 = adjacent x1 x2 /\
   merge x1 x2 == y
 
+val merge_assoc
+  (#t: Type0)
+  (x1 x2 x3: array t)
+: Lemma
+  (requires (
+    (adjacent x1 x2 /\ adjacent (merge x1 x2) x3) \/
+    (adjacent x2 x3 /\ adjacent x1 (merge x2 x3))
+  ))
+  (ensures (
+    adjacent x1 x2 /\ adjacent (merge x1 x2) x3 /\
+    adjacent x2 x3 /\ adjacent x1 (merge x2 x3) /\
+    merge (merge x1 x2) x3 == merge x1 (merge x2 x3)
+  ))
+  [SMTPatOr [
+    [SMTPat (adjacent (merge x1 x2) x3)];
+    [SMTPat (adjacent x1 (merge x2 x3))];
+  ]]
+
 val join (#opened: _) (#a:Type) (#vl #vr: v a) (al ar:t a)
   : STGhost (v a) opened
           (arrayptr al vl `star` arrayptr ar vr)

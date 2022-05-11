@@ -50,6 +50,38 @@ let merge x1 x2 = {
   array_base_len = x1.array_base_len;
 }
 
+let merge_assoc1
+  (#t: Type0)
+  (x1 x2 x3: array t)
+: Lemma
+  (requires (
+    (adjacent x1 x2 /\ adjacent (merge x1 x2) x3)
+  ))
+  (ensures (
+    adjacent x1 x2 /\ adjacent (merge x1 x2) x3 /\
+    adjacent x2 x3 /\ adjacent x1 (merge x2 x3) /\
+    merge (merge x1 x2) x3 == merge x1 (merge x2 x3)
+  ))
+= SAS.ptr_le_interpolate x1.array_ptr x2.array_ptr x3.array_ptr
+
+let merge_assoc2
+  (#t: Type0)
+  (x1 x2 x3: array t)
+: Lemma
+  (requires (
+    (adjacent x2 x3 /\ adjacent x1 (merge x2 x3))
+  ))
+  (ensures (
+    adjacent x1 x2 /\ adjacent (merge x1 x2) x3 /\
+    adjacent x2 x3 /\ adjacent x1 (merge x2 x3) /\
+    merge (merge x1 x2) x3 == merge x1 (merge x2 x3)
+  ))
+= SAS.ptr_le_trans x1.array_ptr x2.array_ptr x3.array_ptr
+
+let merge_assoc x1 x2 x3 =
+  Classical.move_requires (merge_assoc1 x1 x2) x3;
+  Classical.move_requires (merge_assoc2 x1 x2) x3
+
 let join #_ #a #vl #vr al ar =
   rewrite (arrayptr al vl) (arrayptr0 al vl);
   rewrite (arrayptr ar vr) (arrayptr0 ar vr);
