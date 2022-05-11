@@ -26,11 +26,11 @@ fi
 
 remote=https://${SATS_TOKEN}@github.com/project-everest/everparse.git
 
+branchname=$(git rev-parse --abbrev-ref HEAD)
 git diff --staged --exit-code
 git diff --exit-code
 git fetch $remote --tags
-git pull $remote --ff-only
-branchname=$(git rev-parse --abbrev-ref HEAD)
+git pull $remote $branchname --ff-only
 
 everparse_version=$(cat $EVERPARSE_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
