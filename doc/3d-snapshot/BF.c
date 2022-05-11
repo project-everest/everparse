@@ -23,10 +23,10 @@ BfValidateDummy(
 {
   /* Validating field emp1 */
   uint64_t positionAfterDummy = StartPosition;
-  uint64_t positionAfteremp1;
+  uint64_t res;
   if (EverParseIsSuccess(positionAfterDummy))
   {
-    positionAfteremp1 = positionAfterDummy;
+    res = positionAfterDummy;
   }
   else
   {
@@ -36,8 +36,9 @@ BfValidateDummy(
       Ctxt,
       Input,
       StartPosition);
-    positionAfteremp1 = positionAfterDummy;
+    res = positionAfterDummy;
   }
+  uint64_t positionAfteremp1 = res;
   if (EverParseIsError(positionAfteremp1))
   {
     return positionAfteremp1;

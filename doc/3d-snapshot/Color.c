@@ -88,10 +88,10 @@ ColorValidateColoredPoint(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAftercol_refinement0);
   }
-  uint64_t positionAfterx;
+  uint64_t res;
   if (EverParseIsSuccess(positionAfterColoredPoint0))
   {
-    positionAfterx = positionAfterColoredPoint0;
+    res = positionAfterColoredPoint0;
   }
   else
   {
@@ -101,8 +101,9 @@ ColorValidateColoredPoint(
       Ctxt,
       Input,
       positionAftercol_refinement0);
-    positionAfterx = positionAfterColoredPoint0;
+    res = positionAfterColoredPoint0;
   }
+  uint64_t positionAfterx = res;
   if (EverParseIsError(positionAfterx))
   {
     return positionAfterx;

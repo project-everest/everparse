@@ -180,8 +180,7 @@ make_everparse() {
     then
         $cp $LIBGMP10_DLL everparse/bin/
         $cp $Z3_DIR/*.exe everparse/bin/
-        if [[ -f $Z3_DIR/*.dll ]] ; then $cp $Z3_DIR/*.dll everparse/bin/ ; fi
-        if [[ -f $Z3_DIR/../lib/*.dll ]] ; then cp $Z3_DIR/../lib/*.dll everparse/bin/ ; fi
+	find $Z3_DIR/.. -name *.dll -exec cp {} everparse/bin \;
         if [[ -z "$NO_EVERCRYPT" ]] ; then
             for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
                 libevercrypt_dll=$f/libevercrypt.dll
@@ -329,6 +328,61 @@ zip_everparse() {
         time tar cvzf everparse$ext everparse/*
     fi
     if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
+
+    if $is_windows ; then
+        # Create the nuget package
+
+        # We are in the top-level everparse root
+
+        nuget_base=nuget_package
+
+        if [[ -d $nuget_base ]] ; then
+            echo "Nuget base directory $nuget_base already exists, please make way"
+            exit 1
+        fi
+
+        mkdir -p $nuget_base
+
+        # Set up the directory structure for the nuget package
+        
+        # Copy README to nuget top-level
+        cp everparse/README $nuget_base
+        # Copy the manifest file to nuget top-level
+        cp src/package/EverParse.nuspec $nuget_base
+        # Create the content directory, and copy all the files there
+
+        #NOTE: this is creating the content dir with win- prefix,
+        #      since we are in if $is_windows
+        #      if someday we do it for linux also, change accordingly
+        
+        content_dir=$nuget_base/content/win-$platform
+        mkdir -p $content_dir
+        cp -R everparse/* $content_dir
+
+        # Download nuget.exe to create the package
+        nuget_exe_url=https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+        wget $nuget_exe_url
+        chmod a+x nuget.exe
+
+        # Run the pack command
+        pushd $nuget_base
+
+        if [[ $everparse_commit != $everparse_last_version ]] ; then
+            # If no tag was set, then skip nuget package version
+            everparse_nuget_version=
+        else
+	    # Strip off the first v
+	    everparse_nuget_version="-Version ${everparse_version:1}"
+        fi
+	# NoDefaultExcludes for .clang-format file that nuget pack excludes
+        ../nuget.exe pack -OutputFileNamesWithoutVersion -NoDefaultExcludes $everparse_nuget_version ./EverParse.nuspec
+        cp EverParse.nupkg ..
+        if $with_version ; then mv ../EverParse.nupkg ../EverParse_"$everparse_version"_"$OS"_"$platform".nupkg ; fi
+        popd
+    fi
+    # Not doing any cleanup in the spirit of existing package
+
+    # TODO: push this package?
     
     # END
     true
