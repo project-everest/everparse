@@ -35,10 +35,10 @@ ValidatePoint(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  uint64_t positionAfterx;
+  uint64_t res;
   if (EverParseIsSuccess(positionAfterPoint))
   {
-    positionAfterx = positionAfterPoint;
+    res = positionAfterPoint;
   }
   else
   {
@@ -48,8 +48,9 @@ ValidatePoint(
       Ctxt,
       Input,
       StartPosition);
-    positionAfterx = positionAfterPoint;
+    res = positionAfterPoint;
   }
+  uint64_t positionAfterx = res;
   if (EverParseIsError(positionAfterx))
   {
     return positionAfterx;
@@ -112,10 +113,10 @@ ColoredPointValidateColoredPoint1(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  uint64_t positionAftercolor;
+  uint64_t res;
   if (EverParseIsSuccess(positionAfterColoredPoint1))
   {
-    positionAftercolor = positionAfterColoredPoint1;
+    res = positionAfterColoredPoint1;
   }
   else
   {
@@ -125,8 +126,9 @@ ColoredPointValidateColoredPoint1(
       Ctxt,
       Input,
       StartPosition);
-    positionAftercolor = positionAfterColoredPoint1;
+    res = positionAfterColoredPoint1;
   }
+  uint64_t positionAftercolor = res;
   if (EverParseIsError(positionAftercolor))
   {
     return positionAftercolor;
