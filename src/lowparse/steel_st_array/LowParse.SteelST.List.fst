@@ -228,14 +228,17 @@ let rec list_iter'
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)
-  (state: list t -> vprop)
+  (#t': Type)
+  (phi: Ghost.erased (t' -> t -> t'))
+  (state: t' -> list t -> vprop)
   (f: (
     (#va: _) ->
     (a: byte_array) ->
+    (accu: t') ->
     (l: Ghost.erased (list t)) ->
-    STT unit
-      (aparse p a va `star` state l)
-      (fun _ -> aparse p a va `star` state (List.Tot.snoc (Ghost.reveal l, va.contents)))
+    STT t'
+      (aparse p a va `star` state accu l)
+      (fun res -> aparse p a va `star` state res (List.Tot.snoc (Ghost.reveal l, va.contents)) `star` pure (res == Ghost.reveal phi accu va.contents))
   ))
   (#l1: Ghost.erased (list t))
   (#va1: _)
@@ -243,40 +246,44 @@ let rec list_iter'
   (#va2: _)
   (a2: byte_array)
   (len: SZ.size_t)
-: ST (v parse_list_kind (list t))
-    (aparse (parse_list p) a1 va1 `star` aparse (parse_list p) a2 va2 `star` state l1)
-    (fun va -> aparse (parse_list p) a1 va `star` state va.contents)
+  (init: t')
+: ST t'
+    (aparse (parse_list p) a1 va1 `star` aparse (parse_list p) a2 va2 `star` state init l1)
+    (fun res -> exists_ (fun va -> aparse (parse_list p) a1 va `star` state res va.contents `star` pure (
+      AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
+      va.contents == va1.contents `List.Tot.append` va2.contents /\
+      res == List.Tot.fold_left (Ghost.reveal phi) init va2.contents
+    )))
     (requires (
       k.parser_kind_subkind == Some ParserStrong /\
       AP.adjacent (array_of va1) (array_of va2) /\
       SZ.size_v len == AP.length (array_of va2) /\
       Ghost.reveal l1 == va1.contents
     ))
-    (ensures (fun va ->
-      AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
-      va.contents == va1.contents `List.Tot.append` va2.contents
-    ))
+    (ensures (fun _ -> True))
 = let _ = ghost_is_cons p a2 in
   if len = SZ.zero_size
   then
   begin
-    let res = list_append p a1 a2 in
+    let va = list_append p a1 a2 in
     List.Tot.append_l_nil va1.contents;
-    rewrite (state _) (state res.contents);
-    return res
+    rewrite (state _ _) (state init va.contents);
+    return init
   end
   else
   begin
     let a25 = elim_cons j a2 in
     let _ = gen_elim () in
     let sz = get_parsed_size j a2 in // FIXME: avoid calling j twice, we should have a version of hop_aparse_aparse taking a size instead
-    rewrite (state _) (state (Ghost.hide va1.contents));
-    f a2 (Ghost.hide va1.contents);
+    rewrite (state _ _) (state init (Ghost.hide va1.contents));
+    let accu = f a2 init (Ghost.hide va1.contents) in
+    let _ = gen_elim () in
     let _ = intro_singleton p a2 in
     List.Tot.append_assoc va1.contents [List.Tot.hd va2.contents] (List.Tot.tl va2.contents);
     let va1' = list_append p a1 a2 in
-    rewrite (state _) (state va1'.contents);
-    let res = list_iter' j state f a1 a25 (len `SZ.size_sub` sz) in
+    rewrite (state _ _) (state accu va1'.contents);
+    let res = list_iter' j phi state f a1 a25 (len `SZ.size_sub` sz) accu in
+    let _ = gen_elim () in
     return res
   end
 
@@ -306,38 +313,43 @@ let list_split_nil_l
   let _ = intro_nil p a in
   return a2
 
-#push-options "--z3rlimit 24"
+#push-options "--z3rlimit 32" // not even enough without FStarLang/FStar#2584
 
 let list_iter
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)
-  (state: list t -> vprop)
+  (#t': Type)
+  (phi: Ghost.erased (t' -> t -> t'))
+  (state: t' -> list t -> vprop)
   (f: (
     (#va: _) ->
     (a: byte_array) ->
+    (accu: t') ->
     (l: Ghost.erased (list t)) ->
-    STT unit
-      (aparse p a va `star` state l)
-      (fun _ -> aparse p a va `star` state (List.Tot.snoc (Ghost.reveal l, va.contents)))
+    STT t'
+      (aparse p a va `star` state accu l)
+      (fun res -> aparse p a va `star` state res (List.Tot.snoc (Ghost.reveal l, va.contents)) `star` pure (res == Ghost.reveal phi accu va.contents))
   ))
   (#va: _)
   (a: byte_array)
   (len: SZ.size_t)
-: ST unit
-    (aparse (parse_list p) a va `star` state [])
-    (fun _ -> aparse (parse_list p) a va `star` state va.contents)
+  (init: t')
+: ST t'
+    (aparse (parse_list p) a va `star` state init [])
+    (fun res -> aparse (parse_list p) a va `star` state res va.contents)
     (SZ.size_v len == AP.length (array_of va) /\
       k.parser_kind_subkind == Some ParserStrong
     )
-    (fun _ -> True)
+    (fun res -> res == List.Tot.fold_left (Ghost.reveal phi) init va.contents)
 = let a2 = list_split_nil_l p a in
   let _ = gen_elim () in // replacing with explicit elim_exists, elim_pure WILL NOT decrease rlimit
-  let va' = list_iter' j state f a a2 len in
-  // {assuming va' == va} will decrease rlimit to 16
-  rewrite (aparse (parse_list p) a va') (aparse (parse_list p) a va);
-  rewrite (state _) (state va.contents);
-  return ()
+  let res = list_iter' j phi state f a a2 len init in
+  let _ = gen_elim () in
+  List.Tot.append_nil_l va.contents; // FIXME: WHY WHY WHY?
+  rewrite (aparse (parse_list p) a _) (aparse (parse_list p) a va);
+  rewrite (state _ _) (state res va.contents);
+  return res
 
 #pop-options
