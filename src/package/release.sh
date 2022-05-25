@@ -54,9 +54,10 @@ else
     ext=.tar.gz
 fi
 
-archive=everparse_"$everparse_version"_"$OS"_"$platform""$ext"
+function upload_archive () {
+    archive="$1"
 
-docker build \
+    docker build \
        -t everparse-release:$everparse_version \
        -f src/package/Dockerfile.release \
        --build-arg SATS_FILE=$archive \
@@ -64,3 +65,11 @@ docker build \
        --build-arg SATS_COMMITISH=$branchname \
        --build-arg SATS_TOKEN=$SATS_TOKEN \
        .
+}
+
+upload_archive everparse_"$everparse_version"_"$OS"_"$platform""$ext"
+
+if $is_windows ; then
+    # Also upload the NuGet package to GitHub releases
+    upload_archive EverParse_"$everparse_version"_"$OS"_"$platform".nupkg
+fi

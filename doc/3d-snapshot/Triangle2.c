@@ -35,10 +35,10 @@ ValidatePoint(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  uint64_t res;
+  uint64_t positionAfterx;
   if (EverParseIsSuccess(positionAfterPoint))
   {
-    res = positionAfterPoint;
+    positionAfterx = positionAfterPoint;
   }
   else
   {
@@ -48,9 +48,8 @@ ValidatePoint(
       Ctxt,
       Input,
       StartPosition);
-    res = positionAfterPoint;
+    positionAfterx = positionAfterPoint;
   }
-  uint64_t positionAfterx = res;
   if (EverParseIsError(positionAfterx))
   {
     return positionAfterx;
@@ -157,8 +156,7 @@ Triangle2ValidateTriangle(
         break;
       }
     }
-    uint64_t res = result;
-    positionAfterTriangle = res;
+    positionAfterTriangle = result;
   }
   if (EverParseIsSuccess(positionAfterTriangle))
   {
