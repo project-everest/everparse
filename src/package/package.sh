@@ -367,17 +367,14 @@ zip_everparse() {
         # Run the pack command
         pushd $nuget_base
 
-        if [[ $everparse_commit != $everparse_last_version ]] ; then
-            # If no tag was set, then skip nuget package version
-            everparse_nuget_version=
-        else
-	    # Strip off the first v
-	    everparse_nuget_version="-Version ${everparse_version:1}"
-        fi
+
+	if [[ -z "$everparse_nuget_version" ]] ; then
+		everparse_nuget_version=1.0.0
+	fi
 	# NoDefaultExcludes for .clang-format file that nuget pack excludes
-        ../nuget.exe pack -OutputFileNamesWithoutVersion -NoDefaultExcludes $everparse_nuget_version ./EverParse.nuspec
+        ../nuget.exe pack -OutputFileNamesWithoutVersion -NoDefaultExcludes -Version $everparse_nuget_version ./EverParse.nuspec
         cp EverParse.nupkg ..
-        if $with_version ; then mv ../EverParse.nupkg ../EverParse_"$everparse_version"_"$OS"_"$platform".nupkg ; fi
+        if $with_version ; then mv ../EverParse.nupkg ../EverParse."$everparse_nuget_version".nupkg ; fi
         popd
     fi
     # Not doing any cleanup in the spirit of existing package
