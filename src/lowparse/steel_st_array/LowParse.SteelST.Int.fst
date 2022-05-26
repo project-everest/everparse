@@ -2,7 +2,7 @@ module LowParse.SteelST.Int
 include LowParse.Spec.Int
 include LowParse.SteelST.Validate
 include LowParse.SteelST.Access
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 module E = LowParse.SteelST.Endianness
 module EI = LowParse.Spec.Endianness.Instances

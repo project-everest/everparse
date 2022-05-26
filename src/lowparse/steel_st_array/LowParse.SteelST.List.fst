@@ -5,7 +5,7 @@ include LowParse.SteelST.Access
 
 module AP = LowParse.SteelST.ArrayPtr
 
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 let intro_nil
   (#opened: _)

@@ -8,7 +8,7 @@ module U32 = FStar.UInt32
 module SZ = LowParse.Steel.StdInt
 module AP = LowParse.SteelST.ArrayPtr
 
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 inline_for_extraction
 let validate_vldata_payload

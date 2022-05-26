@@ -4,7 +4,7 @@ include LowParse.SteelST.Parse
 module AP = LowParse.SteelST.ArrayPtr
 module SZ = LowParse.Steel.StdInt
 
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 let jumper
   (#k: parser_kind)

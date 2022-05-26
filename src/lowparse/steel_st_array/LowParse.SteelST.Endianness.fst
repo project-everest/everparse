@@ -1,6 +1,6 @@
 module LowParse.SteelST.Endianness
 include LowParse.Spec.Endianness
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 module AP = LowParse.SteelST.ArrayPtr
 module U8 = FStar.UInt8

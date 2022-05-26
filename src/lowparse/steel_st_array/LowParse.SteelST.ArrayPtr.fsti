@@ -3,7 +3,7 @@ module LowParse.SteelST.ArrayPtr
 open Steel.Memory
 open Steel.FractionalPermission
 module SZ = LowParse.Steel.StdInt
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 val t (t:Type u#0) : Type u#0
 

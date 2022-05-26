@@ -2,7 +2,7 @@ module LowParse.SteelST.FLData
 include LowParse.Spec.FLData
 include LowParse.SteelST.Validate
 include LowParse.SteelST.Access
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 module AP = LowParse.SteelST.ArrayPtr
 module R = Steel.ST.Reference

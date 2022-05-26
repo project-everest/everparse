@@ -1,7 +1,7 @@
 module LowParse.SteelST.Parse
 module AP = LowParse.SteelST.ArrayPtr
 
-open Steel.ST.Util
+open Steel.ST.GenElim
 include LowParse.Spec.Base
 
 (* For now, we only support parsers with ParserStrong or ParserConsumesAll subkind. *)

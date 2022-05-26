@@ -9,7 +9,7 @@ module E = LowParse.SteelST.Endianness
 module EI = LowParse.Spec.Endianness.Instances
 module AP = LowParse.SteelST.ArrayPtr
 
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 inline_for_extraction
 noextract

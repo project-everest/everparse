@@ -1,6 +1,6 @@
 module LowParse.SteelST.Validate
 include LowParse.SteelST.Parse
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 (* A validator that returns the number of bytes consumed. *)
 
