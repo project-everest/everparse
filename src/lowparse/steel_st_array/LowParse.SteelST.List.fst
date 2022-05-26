@@ -97,6 +97,8 @@ let ghost_elim_cons
   let _ = intro_aparse (parse_list p) a2 in
   a2
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 let elim_cons
   (#k: parser_kind)
@@ -120,6 +122,8 @@ let elim_cons
   let _ = gen_elim () in
   let res = hop_aparse_aparse j (parse_list p) a gres in
   res
+
+#pop-options
 
 let ghost_is_cons
   (#opened: _)
@@ -220,7 +224,7 @@ let intro_singleton
   parse_list_eq p (Seq.slice (AP.contents_of vb) (AP.length (AP.array_of vb)) (AP.length (AP.array_of vb)));
   intro_aparse (parse_list p) a
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 24"
 
 // TODO: replace this recursive function with a loop
 let rec list_iter'
@@ -344,7 +348,7 @@ let list_iter
     )
     (fun res -> res == List.Tot.fold_left (Ghost.reveal phi) init va.contents)
 = let a2 = list_split_nil_l p a in
-  let _ = gen_elim () in // replacing with explicit elim_exists, elim_pure WILL NOT decrease rlimit
+  let _ = gen_elim_dep () in // replacing with explicit elim_exists, elim_pure WILL NOT decrease rlimit
   let res = list_iter' j phi state f a a2 len init in
   let _ = gen_elim () in
   List.Tot.append_nil_l va.contents; // FIXME: WHY WHY WHY?
