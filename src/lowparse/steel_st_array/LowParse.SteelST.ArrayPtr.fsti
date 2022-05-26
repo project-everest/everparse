@@ -80,6 +80,7 @@ val merge_assoc
   (x1 x2 x3: array t)
 : Lemma
   (requires (
+    (adjacent x1 x2 /\ adjacent x2 x3) \/
     (adjacent x1 x2 /\ adjacent (merge x1 x2) x3) \/
     (adjacent x2 x3 /\ adjacent x1 (merge x2 x3))
   ))
@@ -89,6 +90,7 @@ val merge_assoc
     merge (merge x1 x2) x3 == merge x1 (merge x2 x3)
   ))
   [SMTPatOr [
+    [SMTPat (adjacent x1 x2); SMTPat (adjacent x2 x3)];
     [SMTPat (adjacent (merge x1 x2) x3)];
     [SMTPat (adjacent x1 (merge x2 x3))];
   ]]
