@@ -122,7 +122,8 @@ val gsplit (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
             length (array_of vl) == SZ.size_v i /\
             length (array_of vr) == length (array_of value) - SZ.size_v i /\
             contents_of' vr == seq_slice (contents_of' value) (SZ.size_v i) (length (array_of value)) /\
-            contents_of' value == contents_of' vl `Seq.append` contents_of' vr
+            contents_of' value == contents_of' vl `Seq.append` contents_of' vr /\
+            (SZ.size_v i == 0 ==> Ghost.reveal res == x)
           ))))
           (SZ.size_v i <= length (array_of value))
           (fun _ -> True)
@@ -145,7 +146,8 @@ let split (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
             length (array_of vl) == SZ.size_v i /\
             length (array_of vr) == length (array_of value) - SZ.size_v i /\
             contents_of' vr == seq_slice (contents_of' value) (SZ.size_v i) (length (array_of value)) /\
-            contents_of' value == contents_of' vl `Seq.append` contents_of' vr
+            contents_of' value == contents_of' vl `Seq.append` contents_of' vr /\
+            (SZ.size_v i == 0 ==> res == x)
           ))))
           (SZ.size_v i <= length (array_of value))
           (fun _ -> True)
