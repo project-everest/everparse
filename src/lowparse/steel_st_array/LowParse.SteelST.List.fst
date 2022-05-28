@@ -1056,16 +1056,22 @@ let list_map_inplace_le_opt_state0
   (#t': Type)
   (p': parser k' t')
   (phi: Ghost.erased (t -> t'))
-  (a0: byte_array)
+  (out0: byte_array)
+  (pout: R.ref byte_array)
+  (plen: R.ref SZ.size_t)
   (al: AP.array byte)
   (_: unit)
   (l: list t)
 : Tot vprop
-= exists_ (fun (wl: v _ _) ->
-    aparse (parse_list p') a0 wl `star` pure (
-    array_of' wl == al /\
+= exists_ (fun (wl: v _ _) -> exists_ (fun len -> exists_ (fun out -> exists_ (fun wout ->
+    aparse (parse_list p') out0 wl `star`
+    R.pts_to plen P.full_perm len `star`
+    R.pts_to pout P.full_perm out `star`
+    AP.arrayptr out wout `star` pure (
+    SZ.size_v len == AP.length (array_of' wl) /\
+    AP.merge_into (array_of' wl) (AP.array_of wout) al /\
     wl.contents == List.Tot.map phi l
-  ))
+  )))))
 
 let list_map_inplace_le_opt_state
   (#t: Type)
@@ -1073,21 +1079,27 @@ let list_map_inplace_le_opt_state
   (#t': Type)
   (p': parser k' t')
   (phi: Ghost.erased (t -> t'))
-  (a0: byte_array)
+  (out0: byte_array)
+  (pout: R.ref byte_array)
+  (plen: R.ref SZ.size_t)
   (al: AP.array byte)
   (q: unit)
   (l: list t)
 : Tot vprop
-= list_map_inplace_le_opt_state0 p' phi a0 al q l
+= list_map_inplace_le_opt_state0 p' phi out0 pout plen al q l
 
-assume val list_map_inplace_le_opt
+#push-options "--z3rlimit 96" // annotations such as explicit calls to AP.merge_assoc are USELESS here, do not help reduce rlimit
+
+#restart-solver
+inline_for_extraction
+let list_map_inplace_le_opt
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p { k.parser_kind_subkind == Some ParserStrong })
   (#k': parser_kind)
   (#t': Type)
-  (p': parser k' t' { k.parser_kind_subkind == Some ParserStrong })
+  (p': parser k' t' { k'.parser_kind_subkind == Some ParserStrong })
   (phi: Ghost.erased (t -> t'))
   (f: (
     (va: v k t { AP.length (array_of' va) > 0 }) ->
@@ -1117,6 +1129,60 @@ assume val list_map_inplace_le_opt
       AP.merge_into (array_of' vout') (AP.array_of vres') (merge_opt (AP.array_of vout) va.array) /\
       vout'.contents == List.Tot.map phi va.contents
     )))))
+= let al0 = AP.array_of vout in
+  let afull = merge_opt al0 va.array in
+  let out1 = AP.split out SZ.zero_size in
+  let _ = gen_elim () in
+  let _ = intro_nil p' out in
+  let plen = R.alloc SZ.zero_size in
+  let pout = R.alloc out1 in
+  rewrite
+    (list_map_inplace_le_opt_state0 p' phi out pout plen al0 () [])
+    (list_map_inplace_le_opt_state p' phi out pout plen al0 () []);
+  list_iter_consumes_with_array
+    j
+    (fun _ _ -> ())
+    (list_map_inplace_le_opt_state p' phi out pout plen)
+    (fun va1 a1 al1 accu l ->
+      rewrite
+        (list_map_inplace_le_opt_state p' phi out pout plen _ _ _)
+        (list_map_inplace_le_opt_state0 p' phi out pout plen al1 () l);
+      let _ = gen_elim () in
+      let out1 = read_replace pout in
+      vpattern_rewrite (fun out1 -> AP.arrayptr out1 _) out1;
+      let len1 = f va1 a1 _ out1 in
+      let _ = gen_elim () in
+      let len = R.read plen in
+      let len' = SZ.size_add len len1 in
+      R.write plen len';
+      let _ = elim_aparse p' out1 in
+      let out2 = AP.split' out1 len1 _ in
+      let _ = intro_aparse p' out1 in
+      R.write pout out2;
+      let vout1' = intro_singleton p' out1 in
+      let _ = list_append p' out out1 in
+      let al1' = AP.merge al1 (array_of' va1) in
+      let l' = Ghost.hide (l `List.Tot.append` [va1.contents]) in
+      List.Tot.map_append phi l [va1.contents];
+      noop ();
+      rewrite
+        (list_map_inplace_le_opt_state0 p' phi out pout plen al1' () l')
+        (list_map_inplace_le_opt_state p' phi out pout plen al1' () l');
+      return ()
+    )
+    a len al0 ()
+    ;
+  let _ = gen_elim () in
+  rewrite
+    (list_map_inplace_le_opt_state p' phi out pout plen _ _ _)
+    (list_map_inplace_le_opt_state0 p' phi out pout plen afull () va.contents);
+  let _ = gen_elim () in
+  let res = R.read plen in
+  R.free pout;
+  R.free plen;
+  return res
+
+#pop-options
 
 #push-options "--z3rlimit 16"
 
@@ -1128,7 +1194,7 @@ let list_map_inplace_le
   (j: jumper p { k.parser_kind_subkind == Some ParserStrong })
   (#k': parser_kind)
   (#t': Type)
-  (p': parser k' t' { k.parser_kind_subkind == Some ParserStrong })
+  (p': parser k' t' { k'.parser_kind_subkind == Some ParserStrong })
   (phi: Ghost.erased (t -> t'))
   (f: (
     (va: v k t { AP.length (array_of' va) > 0 }) ->
@@ -1195,7 +1261,7 @@ let list_map_inplace_eq_state
   (q: unit)
   (l: list t)
 : Tot vprop
-= list_map_inplace_le_opt_state0 p' phi a0 al q l
+= list_map_inplace_eq_state0 p' phi a0 al q l
 
 #push-options "--z3rlimit 16"
 
