@@ -1049,6 +1049,37 @@ let list_iter_opt
     return res
   end
 
+[@@__reduce__]
+let list_map_inplace_le_opt_state0
+  (#t: Type)
+  (#k': parser_kind)
+  (#t': Type)
+  (p': parser k' t')
+  (phi: Ghost.erased (t -> t'))
+  (a0: byte_array)
+  (al: AP.array byte)
+  (_: unit)
+  (l: list t)
+: Tot vprop
+= exists_ (fun (wl: v _ _) ->
+    aparse (parse_list p') a0 wl `star` pure (
+    array_of' wl == al /\
+    wl.contents == List.Tot.map phi l
+  ))
+
+let list_map_inplace_le_opt_state
+  (#t: Type)
+  (#k': parser_kind)
+  (#t': Type)
+  (p': parser k' t')
+  (phi: Ghost.erased (t -> t'))
+  (a0: byte_array)
+  (al: AP.array byte)
+  (q: unit)
+  (l: list t)
+: Tot vprop
+= list_map_inplace_le_opt_state0 p' phi a0 al q l
+
 assume val list_map_inplace_le_opt
   (#k: parser_kind)
   (#t: Type)
@@ -1135,36 +1166,38 @@ let list_map_inplace_le
 
 #pop-options
 
-assume val list_map_inplace_eq_opt
-  (#k: parser_kind)
+[@@__reduce__]
+let list_map_inplace_eq_state0
   (#t: Type)
-  (#p: parser k t)
-  (j: jumper p { k.parser_kind_subkind == Some ParserStrong })
   (#k': parser_kind)
   (#t': Type)
-  (p': parser k' t' { k.parser_kind_subkind == Some ParserStrong })
+  (p': parser k' t')
   (phi: Ghost.erased (t -> t'))
-  (f: (
-    (va: v k t { AP.length (array_of' va) > 0 }) -> // TODO: add write permissions
-    (a: byte_array) ->
-    STT (v k' t')
-      (aparse p a va)
-      (fun va' -> aparse p' a va' `star` pure (
-        array_of' va' == array_of' va /\
-        va'.contents == Ghost.reveal phi va.contents
-      ))
+  (a0: byte_array)
+  (al: AP.array byte)
+  (_: unit)
+  (l: list t)
+: Tot vprop
+= exists_ (fun (wl: v _ _) ->
+    aparse (parse_list p') a0 wl `star` pure (
+    array_of' wl == al /\
+    wl.contents == List.Tot.map phi l
   ))
-  (#va: _)
-  (a: byte_array)
-  (len: SZ.size_t)
-: ST _
-    (aparse_list p a va)
-    (fun va' -> aparse_list p' a va')
-    (SZ.size_v len == length_opt va.array)  // TODO: add write permissions
-    (fun va' ->
-      va'.array == va.array /\
-      va'.contents == List.Tot.map phi va.contents
-    )
+
+let list_map_inplace_eq_state
+  (#t: Type)
+  (#k': parser_kind)
+  (#t': Type)
+  (p': parser k' t')
+  (phi: Ghost.erased (t -> t'))
+  (a0: byte_array)
+  (al: AP.array byte)
+  (q: unit)
+  (l: list t)
+: Tot vprop
+= list_map_inplace_le_opt_state0 p' phi a0 al q l
+
+#push-options "--z3rlimit 16"
 
 inline_for_extraction
 let list_map_inplace_eq
@@ -1174,7 +1207,7 @@ let list_map_inplace_eq
   (j: jumper p { k.parser_kind_subkind == Some ParserStrong })
   (#k': parser_kind)
   (#t': Type)
-  (p': parser k' t' { k.parser_kind_subkind == Some ParserStrong })
+  (p': parser k' t' { k'.parser_kind_subkind == Some ParserStrong })
   (phi: Ghost.erased (t -> t'))
   (f: (
     (va: v k t { AP.length (array_of' va) > 0 }) -> // TODO: add write permissions
@@ -1197,15 +1230,88 @@ let list_map_inplace_eq
       array_of' va' == array_of' va /\
       va'.contents == List.Tot.map phi va.contents
     )
-= let _ = ghost_is_cons p a in
+= list_split_nil_l p a;
+  let _ = gen_elim () in
+  let vr0 = vpattern_replace (fun vr -> aparse_list p a vr) in
+  let _ = elim_nil p a in
+  let va0 = intro_nil p' a in
+  let al = array_of' va0 in
+  noop ();
+  rewrite
+    (list_map_inplace_eq_state0 p' phi a al () [])
+    (list_map_inplace_eq_state p' phi a al () []);
+  list_iter_consumes_with_array
+    j
+    (fun _ _ -> ())
+    (list_map_inplace_eq_state p' phi a)
+    (fun va1 a1 al1 accu l ->
+      rewrite
+        (list_map_inplace_eq_state p' phi a _ _ _)
+        (list_map_inplace_eq_state0 p' phi a al1 () l);
+      let _ = gen_elim () in
+      let _ = f va1 a1 in
+      let _ = gen_elim () in
+      let _ = intro_singleton p' a1 in 
+      let va' = list_append p' a a1 in
+      let al1' = array_of' va' in
+      let l' = Ghost.hide (l `List.Tot.append` [va1.contents]) in
+      List.Tot.map_append phi l [va1.contents];
+      noop ();
+      rewrite
+        (list_map_inplace_eq_state0 p' phi a al1' () l')
+        (list_map_inplace_eq_state p' phi a al1' () l');
+      return ()
+    )
+    a len al ()
+    ;
+  let _ = gen_elim () in
+  rewrite
+    (list_map_inplace_eq_state p' phi a _ _ _)
+    (list_map_inplace_eq_state0 p' phi a (array_of' va) () va.contents);
+  let _ = gen_elim () in
+  let res = vpattern_replace (fun va' -> aparse (parse_list p') a va') in
+  return res
+
+#pop-options
+
+inline_for_extraction
+let list_map_inplace_eq_opt
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p { k.parser_kind_subkind == Some ParserStrong })
+  (#k': parser_kind)
+  (#t': Type)
+  (p': parser k' t' { k'.parser_kind_subkind == Some ParserStrong })
+  (phi: Ghost.erased (t -> t'))
+  (f: (
+    (va: v k t { AP.length (array_of' va) > 0 }) -> // TODO: add write permissions
+    (a: byte_array) ->
+    STT (v k' t')
+      (aparse p a va)
+      (fun va' -> aparse p' a va' `star` pure (
+        array_of' va' == array_of' va /\
+        va'.contents == Ghost.reveal phi va.contents
+      ))
+  ))
+  (#va: _)
+  (a: byte_array)
+  (len: SZ.size_t)
+: ST _
+    (aparse_list p a va)
+    (fun va' -> aparse_list p' a va')
+    (SZ.size_v len == length_opt va.array)  // TODO: add write permissions
+    (fun va' ->
+      va'.array == va.array /\
+      va'.contents == List.Tot.map phi va.contents
+    )
+= let _ = ghost_is_cons_opt p a in
   if len = SZ.zero_size
   then begin
-    let _ = elim_nil p a in
-    let res = intro_nil p' a in
-    return res
+    elim_aparse_list_nil p a _;
+    intro_aparse_list_nil p' a
   end else begin
-    let _ = intro_aparse_list_cons p a _ in
-    let _ = list_map_inplace_eq_opt j p' phi f a len in
-    let res = elim_aparse_list_cons p' a _ in
-    return res
+    let _ = elim_aparse_list_cons p a _ in
+    let _ = list_map_inplace_eq j p' phi f a len in
+    intro_aparse_list_cons p' a _
   end
