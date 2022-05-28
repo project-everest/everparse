@@ -224,77 +224,6 @@ let intro_singleton
   parse_list_eq p (Seq.slice (AP.contents_of vb) (AP.length (AP.array_of vb)) (AP.length (AP.array_of vb)));
   intro_aparse (parse_list p) a
 
-(*
-#push-options "--z3rlimit 24"
-
-// TODO: replace this recursive function with a loop
-let rec list_iter'
-  (#k: parser_kind)
-  (#t: Type)
-  (#p: parser k t)
-  (j: jumper p)
-  (#t': Type)
-  (phi: Ghost.erased (t' -> t -> t'))
-  (state: t' -> list t -> vprop)
-  (f: (
-    (#va: _) ->
-    (a: byte_array) ->
-    (accu: t') ->
-    (l: Ghost.erased (list t)) ->
-    STT t'
-      (aparse p a va `star` state accu l)
-      (fun res -> aparse p a va `star` state res (List.Tot.snoc (Ghost.reveal l, va.contents)) `star` pure (res == Ghost.reveal phi accu va.contents))
-  ))
-  (#l1: Ghost.erased (list t))
-  (#va1: _)
-  (a1: byte_array)
-  (#va2: _)
-  (a2: byte_array)
-  (len: SZ.size_t)
-  (init: t')
-: ST t'
-    (aparse (parse_list p) a1 va1 `star` aparse (parse_list p) a2 va2 `star` state init l1)
-    (fun res -> exists_ (fun va -> aparse (parse_list p) a1 va `star` state res va.contents `star` pure (
-      AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
-      va.contents == va1.contents `List.Tot.append` va2.contents /\
-      res == List.Tot.fold_left (Ghost.reveal phi) init va2.contents
-    )))
-    (requires (
-      k.parser_kind_subkind == Some ParserStrong /\
-      AP.adjacent (array_of va1) (array_of va2) /\
-      SZ.size_v len == AP.length (array_of va2) /\
-      Ghost.reveal l1 == va1.contents
-    ))
-    (ensures (fun _ -> True))
-= let _ = ghost_is_cons p a2 in
-  if len = SZ.zero_size
-  then
-  begin
-    let va = list_append p a1 a2 in
-    List.Tot.append_l_nil va1.contents;
-    rewrite (state _ _) (state init va.contents);
-    return init
-  end
-  else
-  begin
-    let a25 = elim_cons j a2 in
-    let _ = gen_elim () in
-    let sz = get_parsed_size j a2 in // FIXME: avoid calling j twice, we should have a version of hop_aparse_aparse taking a size instead
-    rewrite (state _ _) (state init (Ghost.hide va1.contents));
-    let accu = f a2 init (Ghost.hide va1.contents) in
-    let _ = gen_elim () in
-    let _ = intro_singleton p a2 in
-    List.Tot.append_assoc va1.contents [List.Tot.hd va2.contents] (List.Tot.tl va2.contents);
-    let va1' = list_append p a1 a2 in
-    rewrite (state _ _) (state accu va1'.contents);
-    let res = list_iter' j phi state f a1 a25 (len `SZ.size_sub` sz) accu in
-    let _ = gen_elim () in
-    return res
-  end
-
-#pop-options
-*)
-
 let array_opt = Ghost.erased (option (AP.array byte))
 
 let length_opt (a: array_opt) : GTot nat =
@@ -389,7 +318,7 @@ let elim_aparse_list_nil (#opened: _) (#k: parser_kind) (#t: Type) (p: parser k 
     (aparse_list p a w)
     (fun _ -> emp)
     (Nil? w.contents)
-    (fun _ -> True)
+    (fun _ -> None? w.array)
 = rewrite (aparse_list p a w) emp
 
 let elim_aparse_list_cons (#opened: _) (#k: parser_kind) (#t: Type) (p: parser k t) (a: byte_array) (w: vl t)
@@ -575,6 +504,7 @@ let list_iter_gen_inv0
   (state: option (AP.array byte) -> t' -> list t -> vprop)
   (init: t')
   (l0: list t)
+  (afull: option (AP.array byte))
   (pa: R.ref byte_array)
   (plen: R.ref SZ.size_t)
   (paccu: R.ref t')
@@ -591,7 +521,7 @@ let list_iter_gen_inv0
     l0 == l `List.Tot.append` va.contents /\
     cont == Cons? va.contents /\
     (enable_arrays ==> (
-      Some? al /\ adjacent_opt (Some?.v al) va.array
+      Some? al /\ Some? afull /\ merge_opt_into (Some?.v al) va.array (Some?.v afull)
   )))))))))
 
 let list_iter_gen_inv
@@ -604,23 +534,24 @@ let list_iter_gen_inv
   (state: option (AP.array byte) -> t' -> list t -> vprop)
   (init: t')
   (l0: list t)
+  (afull: option (AP.array byte))
   (pa: R.ref byte_array)
   (plen: R.ref SZ.size_t)
   (paccu: R.ref t')
   (cont: bool)
 : Tot vprop
-= list_iter_gen_inv0 p phi enable_arrays state init l0 pa plen paccu cont
+= list_iter_gen_inv0 p phi enable_arrays state init l0 afull pa plen paccu cont
 
-let list_iter_gen_inv_intro #opened #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont
+let list_iter_gen_inv_intro #opened #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont
 : STGhostT unit opened
-    (list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont)
-    (fun _ -> list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont)
+    (list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont)
+    (fun _ -> list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont)
 = noop () // by F* unification rather than the framing tactic
 
-let list_iter_gen_inv_elim #opened #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont
+let list_iter_gen_inv_elim #opened #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont
 : STGhostT unit opened
-    (list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont)
-    (fun _ -> list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont)
+    (list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont)
+    (fun _ -> list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont)
 = noop () // by F* unification rather than the framing tactic
 
 module L = Steel.ST.Loops
@@ -671,9 +602,28 @@ let list_append_cons_r
   (l1 `List.Tot.append` (x :: l2) == (l1 `List.Tot.append` [x]) `List.Tot.append` l2)
 = List.Tot.append_assoc l1 [x] l2
 
+let merge_opt_into_r
+  (a1: AP.array byte)
+  (a2: option (AP.array byte))
+  (a3: AP.array byte)
+  (a2': AP.array byte)
+  (a21: AP.array byte)
+  (a22: option (AP.array byte))
+: Lemma
+  (requires (
+    merge_opt_into a1 a2 a3 /\
+    a2 == Some a2' /\
+    merge_opt_into a21 a22 a2'
+  ))
+  (ensures (
+    AP.adjacent a1 a21 /\
+    merge_opt_into (AP.merge a1 a21) a22 a3 
+  ))
+= ()
+
 #set-options "--ide_id_info_off"
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 inline_for_extraction
@@ -699,24 +649,23 @@ let list_iter_gen_body
         l' == List.Tot.snoc (Ghost.reveal l, va.contents) /\
         res == Ghost.reveal phi accu va.contents
   ))))))
-  (#va: _)
-  (a: byte_array)
-  (len: SZ.size_t)
-  (al: Ghost.erased (option (AP.array byte)))
+  (va: _)
   (init: t')
+  (afull: Ghost.erased (option (AP.array byte)))
   (pa: R.ref byte_array)
   (plen: R.ref SZ.size_t)
   (paccu: R.ref t')
   ()
 : STT unit
-    (list_iter_gen_inv p phi enable_arrays state init va.contents pa plen paccu true)
-    (fun _ -> exists_ (list_iter_gen_inv p phi enable_arrays state init va.contents pa plen paccu))
+    (list_iter_gen_inv p phi enable_arrays state init va.contents afull pa plen paccu true)
+    (fun _ -> exists_ (list_iter_gen_inv p phi enable_arrays state init va.contents afull pa plen paccu))
 =
-      list_iter_gen_inv_elim p phi enable_arrays state init va.contents pa plen paccu _;
+      list_iter_gen_inv_elim p phi enable_arrays state init va.contents afull pa plen paccu _;
       let _ = gen_elim () in
       let a = read_replace pa in
       vpattern_rewrite (fun a_ -> aparse_list p a_ _) a;
-      let _ = elim_aparse_list_cons p a _ in
+      let va1 = vpattern (fun va1 -> aparse_list p a va1) in
+      let va1' = elim_aparse_list_cons p a _ in
       let a' = ghost_elim_cons p a in
       let _ = gen_elim () in
       let alen = get_parsed_size j a in
@@ -737,18 +686,21 @@ let list_iter_gen_body
       list_fold_left_snoc phi init l va_.contents;
       Classical.impl_intro_gen
         #(Ghost.reveal enable_arrays)
-        #(fun _ -> Some? al' /\ adjacent_opt (Some?.v al') vq.array)
-        (fun _ -> merge_opt_assoc (Some?.v al) (array_of' va_) vq.array);
+        #(fun _ -> Some? al' /\ Some? afull /\ merge_opt_into (Some?.v al') vq.array (Some?.v afull))
+        (fun _ ->
+          merge_opt_into_r (Some?.v al) va1.array (Some?.v afull) (array_of' va1') (array_of' va_) vq.array
+        );
       R.write plen len';
       R.write pa a';
       R.write paccu accu';
-      list_iter_gen_inv_intro p phi enable_arrays state init va.contents pa plen paccu (Cons? vq.contents);
+      list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu (Cons? vq.contents);
       return ()
 
 #pop-options
 
 #push-options "--z3rlimit 32"
 
+#restart-solver
 inline_for_extraction
 let list_iter_gen
   (#k: parser_kind)
@@ -781,7 +733,7 @@ let list_iter_gen
     (aparse_list p a va `star` state al init [])
     (fun res -> exists_ (fun al' ->
       state al' res va.contents `star` pure (
-      // (Ghost.reveal enable_arrays ==> (Some? al /\ Some? al' /\ merge_opt_into (Some?.v al) va.array (Some?.v al'))) /\
+      (Ghost.reveal enable_arrays ==> (Some? al /\ Some? al' /\ merge_opt_into (Some?.v al) va.array (Some?.v al'))) /\
       res == List.Tot.fold_left (Ghost.reveal phi) init va.contents      
     )))
     (SZ.size_v len == length_opt va.array /\
@@ -789,26 +741,42 @@ let list_iter_gen
       (Ghost.reveal enable_arrays ==> (Some? al /\ adjacent_opt (Some?.v al) va.array))
     )
     (fun res -> True)
-= let pa = R.alloc a in
+= let compute_afull // to have an opaque definition of afull, and avoid reduction
+    (opened: _)
+  : STGhost (Ghost.erased (option (AP.array byte))) opened
+      emp
+      (fun _ -> emp)
+      True
+      (fun afull ->
+        Ghost.reveal enable_arrays ==> (
+          Some? al /\ Some? afull /\ merge_opt_into (Some?.v al) va.array (Some?.v afull)
+      ))
+  = noop ();
+    if Ghost.reveal enable_arrays
+    then Ghost.hide (Some (merge_opt (Some?.v al) va.array))
+    else Ghost.hide None
+  in
+  let afull = compute_afull _ in
+  let pa = R.alloc a in
   let plen = R.alloc len in
   let paccu = R.alloc init in
-  list_iter_gen_inv_intro p phi enable_arrays state init va.contents pa plen paccu (Cons? va.contents);
+  list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu (Cons? va.contents);
   L.while_loop
-    (list_iter_gen_inv p phi enable_arrays state init va.contents pa plen paccu)
+    (list_iter_gen_inv p phi enable_arrays state init va.contents afull pa plen paccu)
     (fun _ ->
       let _ = gen_elim () in
-      list_iter_gen_inv_elim p phi enable_arrays state init va.contents pa plen paccu _;
+      list_iter_gen_inv_elim p phi enable_arrays state init va.contents afull pa plen paccu _;
       let _ = gen_elim () in
       let a = read_replace pa in
       vpattern_rewrite (fun a_ -> aparse_list p a_ _) a;
       let _ = ghost_is_cons_opt p a in
       let len = R.read plen in
       let res = SZ.zero_size `SZ.size_lt` len in
-      list_iter_gen_inv_intro p phi enable_arrays state init va.contents pa plen paccu res;
+      list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu res;
       return res
     )
-    (list_iter_gen_body j phi enable_arrays state f #va a len al init pa plen paccu);
-  list_iter_gen_inv_elim p phi enable_arrays state init va.contents pa plen paccu _;
+    (list_iter_gen_body j phi enable_arrays state f va init afull pa plen paccu);
+  list_iter_gen_inv_elim p phi enable_arrays state init va.contents afull pa plen paccu _;
   let _ = gen_elim () in
   let l' = vpattern_erased (fun l' -> state _ _ l') in
   List.Tot.append_l_nil l';
@@ -816,6 +784,7 @@ let list_iter_gen
   vpattern_rewrite (fun a' -> aparse_list p a' _) a';
   elim_aparse_list_nil p a' _;
   let res = R.read paccu in
+  let ar' = vpattern_erased (fun ar' -> state ar' _ _) in
   vpattern_rewrite (fun res -> state _ res _) res;
   vpattern_rewrite (fun l' -> state _ _ l') va.contents;
   R.free paccu;
@@ -1079,110 +1048,3 @@ let list_iter_opt
     rewrite (state _ _) (state res va.contents);
     return res
   end
-
-(*
-admit_ ();
-  return (magic ())
-
-let gres = ghost_elim_cons p a in
-  let _ = gen_elim () in
-  let res = hop_aparse_aparse j (parse_list p) a gres in
-  res
-
-
-(*
-let va' = elim_aparse (parse_list p) a in
-  parse_list_eq p (AP.contents_of va');
-  let a2 = AP.split a SZ.zero_size in
-  let _ = gen_elim () in
-  let _ = intro_aparse (parse_list p) a2 in
-  let _ = intro_nil p a in
-  return a2
-
-let list_split_nil_l
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (#va: v parse_list_kind (list t))
-  (a: byte_array)
-: STT byte_array
-    (aparse (parse_list p) a va)
-    (fun res -> exists_ (fun (va1: v parse_list_kind (list t)) -> exists_ (fun (va2: v parse_list_kind (list t)) ->
-      aparse (parse_list p) a va1 `star`
-      aparse (parse_list p) res va2 `star` pure (
-      AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
-      AP.length (array_of va2) == AP.length (array_of va) /\
-      va1.contents == [] /\
-      va2.contents == va.contents
-    ))))
-= let va' = elim_aparse (parse_list p) a in
-  parse_list_eq p (AP.contents_of va');
-  let a2 = AP.split a SZ.zero_size in
-  let _ = gen_elim () in
-  let _ = intro_aparse (parse_list p) a2 in
-  let _ = intro_nil p a in
-  return a2
-
-
-let list_iter_gen_prefix
-  (#t: Type)
-  (va: v parse_list_kind (list t))
-  (ar: byte_array)
-  (vr: v parse_list_kind (list t))
-  (vl: v parse_list_kind (list t))
-: Tot prop
-= 
-  AP.merge_into (array_of' vl) (array_of' vr) (array_of va) /\
-  vl.contents == va.contents
-
-
-(*
-= let a2 = list_split_nil_l p a in
-  let _ = gen_elim_dep () in // replacing with explicit elim_exists, elim_pure WILL NOT decrease rlimit
-  let res = list_iter' j phi state f a a2 len init in
-  let _ = gen_elim () in
-  List.Tot.append_nil_l va.contents; // FIXME: WHY WHY WHY?
-  rewrite (aparse (parse_list p) a _) (aparse (parse_list p) a va);
-  rewrite (state _ _) (state res va.contents);
-  return res
-*)
-
-
-let list_iter
-  (#k: parser_kind)
-  (#t: Type)
-  (#p: parser k t)
-  (j: jumper p)
-  (#t': Type)
-  (phi: Ghost.erased (t' -> t -> t'))
-  (state: t' -> list t -> vprop)
-  (f: (
-    (#va: _) ->
-    (a: byte_array) ->
-    (accu: t') ->
-    (l: Ghost.erased (list t)) ->
-    STT t'
-      (aparse p a va `star` state accu l)
-      (fun res -> aparse p a va `star` state res (List.Tot.snoc (Ghost.reveal l, va.contents)) `star` pure (res == Ghost.reveal phi accu va.contents))
-  ))
-  (#va: _)
-  (a: byte_array)
-  (len: SZ.size_t)
-  (init: t')
-: ST t'
-    (aparse (parse_list p) a va `star` state init [])
-    (fun res -> aparse (parse_list p) a va `star` state res va.contents)
-    (SZ.size_v len == AP.length (array_of va) /\
-      k.parser_kind_subkind == Some ParserStrong
-    )
-    (fun res -> res == List.Tot.fold_left (Ghost.reveal phi) init va.contents)
-= let a2 = list_split_nil_l p a in
-  let _ = gen_elim_dep () in // replacing with explicit elim_exists, elim_pure WILL NOT decrease rlimit
-  let res = list_iter' j phi state f a a2 len init in
-  let _ = gen_elim () in
-  List.Tot.append_nil_l va.contents; // FIXME: WHY WHY WHY?
-  rewrite (aparse (parse_list p) a _) (aparse (parse_list p) a va);
-  rewrite (state _ _) (state res va.contents);
-  return res
-
-#pop-options
