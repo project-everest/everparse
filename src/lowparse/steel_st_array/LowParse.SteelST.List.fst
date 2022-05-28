@@ -527,40 +527,230 @@ let elim_aparse_list
     res
   end
 
-#push-options "--z3rlimit 16"
+inline_for_extraction
+let elim_cons_opt_with_length
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#va1: v k t)
+  (#va2: v _ _)
+  (a: byte_array)
+  (len1: SZ.size_t)
+  (a2: Ghost.erased byte_array)
+: ST byte_array
+    (aparse p a va1 `star` aparse (parse_list p) a2 va2)
+    (fun a2' -> exists_ (fun (va1': v k t) -> exists_ (fun va2' ->
+      aparse p a va1' `star`
+      aparse_list p a2' va2' `star` pure (
+      AP.adjacent (array_of' va1) (array_of' va2) /\
+      merge_opt_into (array_of va1') va2'.array (AP.merge (array_of' va1) (array_of' va2)) /\
+      va1'.contents == va1.contents /\
+      va2'.contents == va2.contents /\
+      AP.length (array_of' va1) == AP.length (array_of' va1') /\
+      AP.length (array_of' va2) == length_opt va2'.array
+    ))))
+    (k.parser_kind_subkind == Some ParserStrong /\
+      AP.adjacent (array_of' va1) (array_of' va2) /\
+      SZ.size_v len1 == AP.length (array_of va1)
+    )
+    (fun _ -> True)
+= let _ = elim_aparse p a in
+  let a2' = hop_arrayptr_aparse (parse_list p) a len1 a2 in
+  intro_aparse_list p a a2';
+  let _ = gen_elim () in
+  let _ = intro_aparse p a in
+  return a2'
+
+module R = Steel.ST.Reference
+module P = Steel.FractionalPermission
+
+[@@__reduce__]
+let list_iter_gen_inv0
+  (#k: parser_kind)
+  (#t: Type)
+  (#t': Type)
+  (p: parser k t)
+  (phi: t' -> t -> t')
+  (enable_arrays: bool)
+  (state: option (AP.array byte) -> t' -> list t -> vprop)
+  (init: t')
+  (l0: list t)
+  (pa: R.ref byte_array)
+  (plen: R.ref SZ.size_t)
+  (paccu: R.ref t')
+  (cont: bool)
+: Tot vprop
+= exists_ (fun a -> exists_ (fun va -> exists_ (fun len -> exists_ (fun accu -> exists_ (fun al -> exists_ (fun l ->
+    R.pts_to pa P.full_perm a `star`
+    aparse_list p a va `star`
+    R.pts_to plen P.full_perm len `star`
+    R.pts_to paccu P.full_perm accu `star`
+    state al accu l `star` pure (
+    SZ.size_v len == length_opt va.array /\
+    accu == List.Tot.fold_left phi init l /\
+    l0 == l `List.Tot.append` va.contents /\
+    cont == Cons? va.contents /\
+    (enable_arrays ==> (
+      Some? al /\ adjacent_opt (Some?.v al) va.array
+  )))))))))
+
+let list_iter_gen_inv
+  (#k: parser_kind)
+  (#t: Type)
+  (#t': Type)
+  (p: parser k t)
+  (phi: t' -> t -> t')
+  (enable_arrays: bool)
+  (state: option (AP.array byte) -> t' -> list t -> vprop)
+  (init: t')
+  (l0: list t)
+  (pa: R.ref byte_array)
+  (plen: R.ref SZ.size_t)
+  (paccu: R.ref t')
+  (cont: bool)
+: Tot vprop
+= list_iter_gen_inv0 p phi enable_arrays state init l0 pa plen paccu cont
+
+let list_iter_gen_inv_intro #opened #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont
+: STGhostT unit opened
+    (list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont)
+    (fun _ -> list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont)
+= noop () // by F* unification rather than the framing tactic
+
+let list_iter_gen_inv_elim #opened #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont
+: STGhostT unit opened
+    (list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont)
+    (fun _ -> list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 pa plen paccu cont)
+= noop () // by F* unification rather than the framing tactic
+
+module L = Steel.ST.Loops
 
 inline_for_extraction
-let elim_cons_opt
+let read_replace
+  (#t: _)
+  (#p: _)
+  (#v: Ghost.erased t)
+  (r: R.ref t)
+: ST t
+    (R.pts_to r p v)
+    (fun res -> R.pts_to r p res)
+    True
+    (fun res -> Ghost.reveal v == res)
+= let res = R.read r in
+  return res
+
+let vpattern_rewrite
+  (#opened: _)
+  (#a: Type)
+  (#x1: a)
+  (p: a -> vprop)
+  (x2: a)
+: STGhost unit opened
+    (p x1)
+    (fun _ -> p x2)
+    (x1 == x2)
+    (fun _ -> True)
+= rewrite (p x1) (p x2)
+
+let list_fold_left_snoc
+  (#a #b: Type)
+  (f: a -> b -> Tot a)
+  (init: a)
+  (l1: list b)
+  (x: b)
+: Lemma
+  (List.Tot.fold_left f init (l1 `List.Tot.append` [x]) == f (List.Tot.fold_left f init l1) x)
+= List.Tot.fold_left_append f l1 [x]
+
+let list_append_cons_r
+  (#a: Type)
+  (l1: list a)
+  (x: a)
+  (l2: list a)
+: Lemma
+  (l1 `List.Tot.append` (x :: l2) == (l1 `List.Tot.append` [x]) `List.Tot.append` l2)
+= List.Tot.append_assoc l1 [x] l2
+
+#set-options "--ide_id_info_off"
+
+#push-options "--z3rlimit 128"
+
+#restart-solver
+inline_for_extraction
+let list_iter_gen_body
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (j: jumper p)
+  (j: jumper p {k.parser_kind_subkind == Some ParserStrong})
+  (#t': Type)
+  (phi: Ghost.erased (t' -> t -> t'))
+  (enable_arrays: Ghost.erased bool)
+  (state: option (AP.array byte) -> t' -> list t -> vprop)
+  (f: (
+    (va: v k t { AP.length (array_of' va) > 0 }) ->
+    (a: byte_array) ->
+    (al: Ghost.erased (option (AP.array byte)) { (Ghost.reveal enable_arrays ==> (Some? al /\ AP.adjacent (Some?.v al) (array_of' va))) } ) ->
+    (accu: t') ->
+    (l: Ghost.erased (list t)) ->
+    STT t'
+      (aparse p a va `star` state al accu l)
+      (fun res -> exists_ (fun al' -> exists_ (fun l' -> state al' res l' `star` pure (
+        (Ghost.reveal enable_arrays ==> (Some? al' /\ AP.merge_into (Some?.v al) (array_of' va) (Some?.v al'))) /\
+        l' == List.Tot.snoc (Ghost.reveal l, va.contents) /\
+        res == Ghost.reveal phi accu va.contents
+  ))))))
   (#va: _)
   (a: byte_array)
-: ST byte_array
-    (aparse_list p a va)
-    (fun a2 -> exists_ (fun (va1: v k t) -> exists_ (fun va2 ->
-      aparse p a va1 `star`
-      aparse_list p a2 va2 `star` pure (
-      Some? va.array /\
-      merge_opt_into (array_of va1) va2.array (Some?.v va.array) /\
-      va.contents == va1.contents :: va2.contents /\
-      AP.length (array_of va1) > 0
-    ))))
-    (Cons? va.contents /\ k.parser_kind_subkind == Some ParserStrong)
-    (fun _ -> True)
-= let _ = elim_aparse_list_cons p a _ in
-  let res = elim_cons j a in
-  let _ = gen_elim () in
-  let _ = elim_aparse p a in
-  intro_aparse_list p a res;
-  let _ = gen_elim () in
-  let _ = intro_aparse p a in
-  return res
+  (len: SZ.size_t)
+  (al: Ghost.erased (option (AP.array byte)))
+  (init: t')
+  (pa: R.ref byte_array)
+  (plen: R.ref SZ.size_t)
+  (paccu: R.ref t')
+  ()
+: STT unit
+    (list_iter_gen_inv p phi enable_arrays state init va.contents pa plen paccu true)
+    (fun _ -> exists_ (list_iter_gen_inv p phi enable_arrays state init va.contents pa plen paccu))
+=
+      list_iter_gen_inv_elim p phi enable_arrays state init va.contents pa plen paccu _;
+      let _ = gen_elim () in
+      let a = read_replace pa in
+      vpattern_rewrite (fun a_ -> aparse_list p a_ _) a;
+      let _ = elim_aparse_list_cons p a _ in
+      let a' = ghost_elim_cons p a in
+      let _ = gen_elim () in
+      let alen = get_parsed_size j a in
+      let a' = elim_cons_opt_with_length p a alen a' in
+      let _ = gen_elim () in
+      let accu = R.read paccu in
+      let l = vpattern_replace_erased (fun l -> state _ _ l) in
+      let al = vpattern_replace_erased (fun al -> state al _ _) in
+      vpattern_rewrite (fun accu -> state _ accu _) accu;
+      let va_ = vpattern (fun va -> aparse p a va) in
+      let vq = vpattern (fun vq -> aparse_list p a' vq) in
+      let accu' = f _ a al accu l in
+      let _ = gen_elim () in
+      let len = R.read plen in
+      let len' = len `SZ.size_sub` alen in
+      let al' = vpattern_erased (fun al' -> state al' _ _) in
+      list_append_cons_r l va_.contents vq.contents;
+      list_fold_left_snoc phi init l va_.contents;
+      Classical.impl_intro_gen
+        #(Ghost.reveal enable_arrays)
+        #(fun _ -> Some? al' /\ adjacent_opt (Some?.v al') vq.array)
+        (fun _ -> merge_opt_assoc (Some?.v al) (array_of' va_) vq.array);
+      R.write plen len';
+      R.write pa a';
+      R.write paccu accu';
+      list_iter_gen_inv_intro p phi enable_arrays state init va.contents pa plen paccu (Cons? vq.contents);
+      return ()
 
 #pop-options
 
-assume val list_iter_gen
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+let list_iter_gen
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -591,7 +781,7 @@ assume val list_iter_gen
     (aparse_list p a va `star` state al init [])
     (fun res -> exists_ (fun al' ->
       state al' res va.contents `star` pure (
-      (Ghost.reveal enable_arrays ==> (Some? al /\ Some? al' /\ merge_opt_into (Some?.v al) va.array (Some?.v al'))) /\
+      // (Ghost.reveal enable_arrays ==> (Some? al /\ Some? al' /\ merge_opt_into (Some?.v al) va.array (Some?.v al'))) /\
       res == List.Tot.fold_left (Ghost.reveal phi) init va.contents      
     )))
     (SZ.size_v len == length_opt va.array /\
@@ -599,8 +789,41 @@ assume val list_iter_gen
       (Ghost.reveal enable_arrays ==> (Some? al /\ adjacent_opt (Some?.v al) va.array))
     )
     (fun res -> True)
+= let pa = R.alloc a in
+  let plen = R.alloc len in
+  let paccu = R.alloc init in
+  list_iter_gen_inv_intro p phi enable_arrays state init va.contents pa plen paccu (Cons? va.contents);
+  L.while_loop
+    (list_iter_gen_inv p phi enable_arrays state init va.contents pa plen paccu)
+    (fun _ ->
+      let _ = gen_elim () in
+      list_iter_gen_inv_elim p phi enable_arrays state init va.contents pa plen paccu _;
+      let _ = gen_elim () in
+      let a = read_replace pa in
+      vpattern_rewrite (fun a_ -> aparse_list p a_ _) a;
+      let _ = ghost_is_cons_opt p a in
+      let len = R.read plen in
+      let res = SZ.zero_size `SZ.size_lt` len in
+      list_iter_gen_inv_intro p phi enable_arrays state init va.contents pa plen paccu res;
+      return res
+    )
+    (list_iter_gen_body j phi enable_arrays state f #va a len al init pa plen paccu);
+  list_iter_gen_inv_elim p phi enable_arrays state init va.contents pa plen paccu _;
+  let _ = gen_elim () in
+  let l' = vpattern_erased (fun l' -> state _ _ l') in
+  List.Tot.append_l_nil l';
+  let a' = read_replace pa in
+  vpattern_rewrite (fun a' -> aparse_list p a' _) a';
+  elim_aparse_list_nil p a' _;
+  let res = R.read paccu in
+  vpattern_rewrite (fun res -> state _ res _) res;
+  vpattern_rewrite (fun l' -> state _ _ l') va.contents;
+  R.free paccu;
+  R.free plen;
+  R.free pa;
+  return res
 
-#set-options "--ide_id_info_off"
+#pop-options
 
 inline_for_extraction
 let list_iter_consumes_with_array
