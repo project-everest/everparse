@@ -204,6 +204,62 @@ let rec list_append
 
 #pop-options
 
+let rec valid_list_total_constant_size
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: bytes)
+: Lemma
+  (requires (
+    k.parser_kind_low > 0 /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal
+  ))
+  (ensures (
+      Seq.length b % k.parser_kind_low == 0 <==> Some? (parse (parse_list p) b)
+  ))
+  (decreases (Seq.length b))
+= parse_list_eq p b;
+  if Seq.length b = 0
+  then ()
+  else begin
+    parser_kind_prop_equiv k p;
+    if Seq.length b < k.parser_kind_low
+    then FStar.Math.Lemmas.modulo_lemma (Seq.length b) k.parser_kind_low
+    else begin
+      FStar.Math.Lemmas.sub_div_mod_1 (Seq.length b) k.parser_kind_low;
+      valid_list_total_constant_size p (Seq.slice b k.parser_kind_low (Seq.length b))
+    end
+  end
+
+module R = Steel.ST.Reference
+
+inline_for_extraction
+let validate_list_total_constant_size
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (sz: SZ.size_t)
+: Pure (validator (parse_list p))
+    (requires (
+      k.parser_kind_low > 0 /\
+      k.parser_kind_low == SZ.size_v sz /\
+      k.parser_kind_high == Some k.parser_kind_low /\
+      k.parser_kind_metadata == Some ParserKindMetadataTotal
+    ))
+    (ensures (fun _ -> True))
+= fun #b a len err ->
+  valid_list_total_constant_size p (AP.contents_of b);
+  parser_kind_prop_equiv parse_list_kind (parse_list p);
+  if len `SZ.size_mod` sz = SZ.zero_size
+  then begin
+    noop ();
+    return len
+  end else begin
+    R.write err validator_error_not_enough_data;
+    return SZ.zero_size
+  end
+
 let intro_singleton
   (#opened: _)
   (#k: parser_kind)
@@ -490,7 +546,6 @@ let elim_cons_opt_with_length
   let _ = intro_aparse p a in
   return a2'
 
-module R = Steel.ST.Reference
 module P = Steel.FractionalPermission
 
 [@@__reduce__]

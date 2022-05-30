@@ -26,4 +26,6 @@ let size_mul x y = U32.mul x y
 
 let size_div x y = U32.div x y
 
+let size_mod x y = U32.rem x y
+
 let size_le x y = U32.lte x y
