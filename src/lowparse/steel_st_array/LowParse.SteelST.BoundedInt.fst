@@ -110,6 +110,7 @@ let read_bounded_integer
   | 3 -> read_bounded_integer_3 ()
   | 4 -> read_bounded_integer_4 ()
 
+inline_for_extraction
 let read_bounded_integer'
   (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
 : Tot (leaf_reader (parse_bounded_integer (U32.v i)))

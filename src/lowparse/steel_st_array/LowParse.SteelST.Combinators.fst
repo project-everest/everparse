@@ -59,6 +59,7 @@ let jump_weaken
 #push-options "--z3rlimit 20"
 #restart-solver
 
+inline_for_extraction
 let validate_pair
   #k1 #t1 (#p1: parser k1 t1) (v1: validator p1)
   #k2 #t2 (#p2: parser k2 t2) (v2: validator p2)
@@ -85,6 +86,7 @@ let validate_pair
       return s1
     end
 
+inline_for_extraction
 let jump_pair
   #k1 #t1 (#p1: parser k1 t1) (v1: jumper p1)
   #k2 #t2 (#p2: parser k2 t2) (v2: jumper p2)
@@ -126,6 +128,7 @@ let g_split_pair
   let _ = intro_aparse p2 res in
   res
 
+inline_for_extraction
 let split_pair'
   #k1 #t1 (#p1: parser k1 t1) (j1: jumper p1)
   #k2 #t2 (p2: parser k2 t2)
@@ -147,6 +150,7 @@ let split_pair'
     (aparse p1 a1 y1);
   return res
 
+inline_for_extraction
 let split_pair
   #opened
   #k1 #t1 (#p1: parser k1 t1) (j1: jumper p1)
@@ -192,6 +196,7 @@ let merge_pair
   assert (AP.contents_of' va2 `Seq.equal` Seq.slice (AP.contents_of' va) (AP.length (AP.array_of va1)) (AP.length (AP.array_of va)));
   intro_aparse (p1 `nondep_then` p2) a1
 
+inline_for_extraction
 let validate_synth
   #k1 #t1 (#p1: parser k1 t1) (v1: validator p1)
   #t2 (f2: t1 -> GTot t2)
@@ -204,6 +209,7 @@ let validate_synth
   let _ = gen_elim () in
   return res
 
+inline_for_extraction
 let jump_synth
   #k1 #t1 (#p1: parser k1 t1) (v1: jumper p1)
   #t2 (f2: t1 -> GTot t2)
@@ -252,11 +258,13 @@ let elim_synth
   parse_synth_eq p1 f2 (AP.contents_of' va');
   intro_aparse p1 a
 
+[@CMacro]
 let validator_error_constraint_failed  = 2ul
 
 #push-options "--z3rlimit 16"
 #restart-solver
 
+inline_for_extraction
 let validate_filter
   #k #t (#p: parser k t) (v: validator p) (r: leaf_reader p)
   (f: t -> GTot bool)
@@ -294,6 +302,7 @@ let validate_filter
 
 #pop-options
 
+inline_for_extraction
 let jump_filter
   #k1 #t1 (#p1: parser k1 t1) (v1: jumper p1)
   (f2: t1 -> GTot bool)
@@ -475,6 +484,7 @@ let ghost_split_and_then
     (exists_and_then_payload p1 p2 va (array_of' y1) y1.contents a1 a2);
   a2
 
+inline_for_extraction
 let split_and_then
   (#k1: parser_kind)
   (#t1: Type)
@@ -528,6 +538,7 @@ let ghost_and_then_tag
   let _ = gen_elim () in
   tag
 
+inline_for_extraction
 let read_and_then_tag
   (#opened: _)
   (#k1: parser_kind)
@@ -584,6 +595,7 @@ let intro_and_then
 
 #restart-solver
 
+inline_for_extraction
 let validate_tagged_union
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -623,6 +635,7 @@ let validate_tagged_union
       return s1
     end
 
+inline_for_extraction
 let jump_tagged_union
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -715,6 +728,7 @@ let ghost_split_tagged_union
     (exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2);
   a2
 
+inline_for_extraction
 let split_tagged_union
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -769,6 +783,7 @@ let ghost_tagged_union_tag
   let _ = gen_elim () in
   tag
 
+inline_for_extraction
 let read_tagged_union_tag
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -824,6 +839,7 @@ let intro_tagged_union
   assert (AP.contents_of' va2 `Seq.equal` Seq.slice (AP.contents_of' va) (AP.length (AP.array_of va1)) (AP.length (AP.array_of va)));
   intro_aparse (parse_tagged_union pt tag_of_data p) a1
 
+inline_for_extraction
 let validate_dtuple2
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -844,6 +860,7 @@ let validate_dtuple2
     (fun x -> parse_synth (p x) (synth_dtuple2 x))
     (fun x -> validate_synth (v x) (synth_dtuple2 x) ())
 
+inline_for_extraction
 let jump_dtuple2
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -891,6 +908,7 @@ let exists_dtuple2_payload
 : Tot vprop
 = exists_dtuple2_payload0 kt p y u1 tag a1 a2
 
+inline_for_extraction
 let split_dtuple2
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -942,6 +960,7 @@ let ghost_dtuple2_tag
   let _ = rewrite_aparse a2 (p gtag) in
   gtag
 
+inline_for_extraction
 let read_dtuple2_tag
   (#kt: parser_kind)
   (#tag_t: Type)

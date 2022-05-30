@@ -26,6 +26,7 @@ let validator_prop
   | _ -> False
   end
 
+inline_for_extraction
 let validator
   (#k: parser_kind)
   (#t: Type)
@@ -46,6 +47,7 @@ let validator
     (fun _ -> True)
 
 // For debugging purposes only: "validator" without precondition
+inline_for_extraction
 let debug_validator
   (#k: parser_kind)
   (#t: Type)
@@ -64,8 +66,10 @@ let debug_validator
     (SZ.size_v len == AP.length (AP.array_of b))
     (fun _ -> True)
 
+[@CMacro]
 let validator_error_not_enough_data : U32.t = 1ul
 
+inline_for_extraction
 let validate_total_constant_size
   (#k: parser_kind)
   (#t: Type)

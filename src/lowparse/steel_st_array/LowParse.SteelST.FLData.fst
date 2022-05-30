@@ -8,6 +8,7 @@ module AP = LowParse.SteelST.ArrayPtr
 module R = Steel.ST.Reference
 module SZ = LowParse.Steel.StdInt
 
+[@CMacro]
 let validator_error_wrong_size = 3ul
 
 let assertf (#opened_invariants:_)

@@ -6,6 +6,7 @@ module SZ = LowParse.Steel.StdInt
 
 open Steel.ST.GenElim
 
+inline_for_extraction
 let jumper
   (#k: parser_kind)
   (#t: Type)
@@ -25,6 +26,7 @@ let jumper
         SZ.size_v res == consumed
 )
 
+inline_for_extraction
 let hop_arrayptr_aparse
   (#k: parser_kind)
   (#t: Type)
@@ -46,6 +48,7 @@ let hop_arrayptr_aparse
   rewrite (aparse p res va2') (aparse p res va2);
   return res
 
+inline_for_extraction
 let hop_aparse_arrayptr
   (#k: parser_kind)
   (#t: Type)
@@ -68,6 +71,7 @@ let hop_aparse_arrayptr
   rewrite (aparse p a1 va1') (aparse p a1 va1);
   return res
 
+inline_for_extraction
 let hop_aparse_aparse
   (#k1: parser_kind)
   (#t1: Type)
@@ -91,6 +95,7 @@ let hop_aparse_aparse
   rewrite (aparse p2 res va2') (aparse p2 res va2);
   return res
 
+inline_for_extraction
 let jump_constant_size
   (#k: parser_kind)
   (#t: Type)
@@ -108,6 +113,7 @@ let jump_constant_size
   noop ();
   return sz
 
+inline_for_extraction
 let get_parsed_size
   (#k: parser_kind)
   (#t: Type)
@@ -167,6 +173,7 @@ let ghost_peek_strong
   let _ = intro_aparse p a in
   res
 
+inline_for_extraction
 let peek_strong_with_size
   (#k: parser_kind)
   (#t: Type)
@@ -199,6 +206,7 @@ let peek_strong_with_size
   let _ = intro_aparse _ a in
   return res
 
+inline_for_extraction
 let peek_strong
   (#k: parser_kind)
   (#t: Type)
@@ -307,6 +315,7 @@ let peek_consumes_all
   parser_kind_prop_equiv k p;
   intro_aparse p a
 
+inline_for_extraction
 let leaf_reader
   (#k: parser_kind)
   (#t: Type)
