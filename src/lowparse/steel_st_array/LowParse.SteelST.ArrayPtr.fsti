@@ -5,6 +5,7 @@ open Steel.FractionalPermission
 module SZ = LowParse.Steel.StdInt
 open Steel.ST.GenElim
 
+inline_for_extraction
 val t (t:Type u#0) : Type u#0
 
 [@@erasable]
@@ -105,6 +106,7 @@ val join (#opened: _) (#a:Type) (#vl #vr: v a) (al ar:t a)
             contents_of res == contents_of vl `Seq.append` contents_of vr
           )
 
+[@@noextract_to "krml"]
 let seq_slice
   (#a:Type) (s:Seq.seq a) (i: nat) (j: nat) : Pure (Seq.seq a)
   (requires (i <= j /\ j <= Seq.length s))
@@ -128,6 +130,7 @@ val gsplit (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
           (SZ.size_v i <= length (array_of value))
           (fun _ -> True)
 
+inline_for_extraction
 val split' (#opened: _) (#a:Type) (#vl #vr: v a) (x: t a) (i: SZ.size_t) (x': Ghost.erased (t a))
   : STAtomicBase (t a) false opened Unobservable
           (arrayptr x vl `star` arrayptr x' vr)
@@ -135,6 +138,7 @@ val split' (#opened: _) (#a:Type) (#vl #vr: v a) (x: t a) (i: SZ.size_t) (x': Gh
           (adjacent (array_of vl) (array_of vr) /\ SZ.size_v i == length (array_of vl))
           (fun res -> res == Ghost.reveal x')
 
+inline_for_extraction
 let split (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
   : STAtomicBase (t a) false opened Unobservable
           (arrayptr x value)
@@ -156,6 +160,7 @@ let split (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
   let res = split' x i gres in
   res
 
+inline_for_extraction
 val index (#a:Type) (#value: v a) (r: t a) (i: SZ.size_t)
   : ST a
              (arrayptr r value)
@@ -166,6 +171,7 @@ val index (#a:Type) (#value: v a) (r: t a) (i: SZ.size_t)
                y == Seq.index (contents_of' value) (SZ.size_v i)
              )
 
+inline_for_extraction
 val upd (#a:Type) (#value: v a) (r: t a) (i:SZ.size_t) (x:a)
   : ST (v a)
              (arrayptr r value)
