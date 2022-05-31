@@ -27,17 +27,30 @@ let validate_p : validator q = validate_vldata_gen 1 (unconstrained_bounded_inte
 
 let state (_: U16.t) (_: list U16.t) : Tot vprop = emp
 
-#restart-solver
-inline_for_extraction
-let body
-  (va: v _ _) a accu (l: Ghost.erased (list U16.t))
-: STT U16.t (aparse parse_u16 a va `star` state accu l) (fun res -> aparse parse_u16 a va `star` state res (List.Tot.snoc (Ghost.reveal l, va.contents)) `star` pure (res == Ghost.reveal u16_max accu va.contents))
+// inline_for_extraction // this would blow up F* when extracting test() below
+let iter_max
+  (#va: _)
+  (a: byte_array)
+  (len: SZ.size_t)
+: ST U16.t
+    (aparse (parse_list parse_u16) a va)
+    (fun _ -> aparse (parse_list parse_u16) a va)
+    (SZ.size_v len == A.length (array_of' va))
+    (fun _ -> True)
 =
+    rewrite emp (state _ _);
+    let res = list_iter jump_u16 u16_max state
+      (fun va a accu l ->
         rewrite (state _ _) emp;
         let wa = read_u16 a in
         let res = u16_max accu wa in
         rewrite emp (state _ _);
         return res
+      )
+      a len 0us
+    in
+    rewrite (state _ _) emp;
+    return res
 
 #push-options "--z3rlimit 64"
 
@@ -60,12 +73,7 @@ let test (a: byte_array) (#va: _) (len: SZ.size_t) (perr: R.ref U32.t)
     let _ = gen_elim () in
     let acsz = read_bounded_integer _ a in
     let ac = hop_aparse_aparse (jump_bounded_integer 1) _ a gac in
-    rewrite emp (state _ _);
-    let res = list_iter jump_u16 u16_max state
-      body
-      ac (SZ.mk_size_t acsz) 0us
-    in
-    rewrite (state _ _) emp;
+    let res = iter_max ac (SZ.mk_size_t acsz) in
     let _ = intro_vldata_gen _ _ _ a ac in
     let va' = elim_aparse p a in
     parse_injective p (Seq.slice (A.contents_of' va) 0 (SZ.size_v sz)) (A.contents_of' va');

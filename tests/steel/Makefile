@@ -24,21 +24,13 @@ KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
-	 -bundle 'Test=C,LowParse.\*' \
+	 -bundle 'Test=Steel.\*,C,LowParse.\*' \
 	 $(HEADERS) \
 	 -warn-error '@2'
 
 QD_FILES = $(wildcard *.fst *.fsti)
 
 all: depend verify test
-
-# Don't re-verify standard library
-$(CACHE_DIR)/FStar.%$(CHECKED_EXT) \
-$(CACHE_DIR)/LowStar.%$(CHECKED_EXT) \
-$(CACHE_DIR)/C.%$(CHECKED_EXT) \
-$(CACHE_DIR)/LowParse.%$(CHECKED_EXT):
-	$(FSTAR) --admit_smt_queries true $<
-	@touch $@
 
 $(CACHE_DIR)/%$(CHECKED_EXT):
 	$(FSTAR) $(OTHERFLAGS) $<
@@ -49,7 +41,7 @@ krml/%.krml:
 	@touch $@
 
 $(DEPEND_FILE): $(QD_FILES) Makefile ../Test.fst
-	$(FSTAR) --dep full --extract '*,-Steel,-FStar.NMST,-FStar.NMSTTotal,-FStar.MST,-FStar.MSTTotal' $(QD_FILES) Test.fst > $@
+	$(FSTAR) --dep full --extract '*,-Steel,+Steel.ST.Loops,-FStar.NMST,-FStar.NMSTTotal,-FStar.MST,-FStar.MSTTotal' $(QD_FILES) Test.fst > $@
 
 depend: $(DEPEND_FILE)
 
@@ -73,6 +65,6 @@ test: test.exe
 	@echo $(FSTAR_OPTIONS)
 
 clean:
-	-rm -rf cache cache.lax .depend .depend.lax out
+	-rm -rf cache cache.lax .depend .depend.lax out krml test.exe
 
 .PHONY: all depend verify extract clean build test
