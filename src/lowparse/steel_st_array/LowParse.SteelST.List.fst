@@ -548,6 +548,30 @@ let elim_cons_opt_with_length
 
 module P = Steel.FractionalPermission
 
+let list_iter_gen_prop
+  (#t: Type)
+  (#t': Type)
+  (phi: t' -> t -> t')
+  (enable_arrays: bool)
+  (init: t')
+  (l0: list t)
+  (afull: option (AP.array byte))
+  (va: _)
+  (len: _)
+  (accu: _)
+  (al: _)
+  (l: _)
+  (cont: _)
+: Tot prop
+= 
+    SZ.size_v len == length_opt va.array /\
+    accu == List.Tot.fold_left phi init l /\
+    l0 == l `List.Tot.append` va.contents /\
+    cont == Cons? va.contents /\
+    (enable_arrays ==> (
+      Some? al /\ Some? afull /\ merge_opt_into (Some?.v al) va.array (Some?.v afull)
+    ))
+
 [@@__reduce__]
 let list_iter_gen_inv0
   (#k: parser_kind)
@@ -563,6 +587,7 @@ let list_iter_gen_inv0
   (pa: R.ref byte_array)
   (plen: R.ref SZ.size_t)
   (paccu: R.ref t')
+  (pcont: R.ref bool)
   (cont: bool)
 : Tot vprop
 = exists_ (fun a -> exists_ (fun va -> exists_ (fun len -> exists_ (fun accu -> exists_ (fun al -> exists_ (fun l ->
@@ -570,14 +595,10 @@ let list_iter_gen_inv0
     aparse_list p a va `star`
     R.pts_to plen P.full_perm len `star`
     R.pts_to paccu P.full_perm accu `star`
+    R.pts_to pcont P.full_perm cont `star`
     state al accu l `star` pure (
-    SZ.size_v len == length_opt va.array /\
-    accu == List.Tot.fold_left phi init l /\
-    l0 == l `List.Tot.append` va.contents /\
-    cont == Cons? va.contents /\
-    (enable_arrays ==> (
-      Some? al /\ Some? afull /\ merge_opt_into (Some?.v al) va.array (Some?.v afull)
-  )))))))))
+    list_iter_gen_prop phi enable_arrays init l0 afull va len accu al l cont
+  )))))))
 
 let list_iter_gen_inv
   (#k: parser_kind)
@@ -593,20 +614,21 @@ let list_iter_gen_inv
   (pa: R.ref byte_array)
   (plen: R.ref SZ.size_t)
   (paccu: R.ref t')
+  (pcont: R.ref bool)
   (cont: bool)
 : Tot vprop
-= list_iter_gen_inv0 p phi enable_arrays state init l0 afull pa plen paccu cont
+= list_iter_gen_inv0 p phi enable_arrays state init l0 afull pa plen paccu pcont cont
 
-let list_iter_gen_inv_intro #opened #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont
+let list_iter_gen_inv_intro #opened #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu pcont cont
 : STGhostT unit opened
-    (list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont)
-    (fun _ -> list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont)
+    (list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu pcont cont)
+    (fun _ -> list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu pcont cont)
 = noop () // by F* unification rather than the framing tactic
 
-let list_iter_gen_inv_elim #opened #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont
+let list_iter_gen_inv_elim #opened #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu pcont cont
 : STGhostT unit opened
-    (list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont)
-    (fun _ -> list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu cont)
+    (list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu pcont cont)
+    (fun _ -> list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu pcont cont)
 = noop () // by F* unification rather than the framing tactic
 
 module L = Steel.ST.Loops
@@ -678,7 +700,7 @@ let merge_opt_into_r
 
 #set-options "--ide_id_info_off"
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 inline_for_extraction
@@ -710,12 +732,13 @@ let list_iter_gen_body
   (pa: R.ref byte_array)
   (plen: R.ref SZ.size_t)
   (paccu: R.ref t')
+  (pcont: R.ref bool)
   ()
 : STT unit
-    (list_iter_gen_inv p phi enable_arrays state init va.contents afull pa plen paccu true)
-    (fun _ -> exists_ (list_iter_gen_inv p phi enable_arrays state init va.contents afull pa plen paccu))
+    (list_iter_gen_inv p phi enable_arrays state init va.contents afull pa plen paccu pcont true)
+    (fun _ -> exists_ (list_iter_gen_inv p phi enable_arrays state init va.contents afull pa plen paccu pcont))
 =
-      list_iter_gen_inv_elim p phi enable_arrays state init va.contents afull pa plen paccu _;
+      list_iter_gen_inv_elim p phi enable_arrays state init va.contents afull pa plen paccu pcont _;
       let _ = gen_elim () in
       let a = read_replace pa in
       vpattern_rewrite (fun a_ -> aparse_list p a_ _) a;
@@ -732,6 +755,7 @@ let list_iter_gen_body
       vpattern_rewrite (fun accu -> state _ accu _) accu;
       let va_ = vpattern (fun va -> aparse p a va) in
       let vq = vpattern (fun vq -> aparse_list p a' vq) in
+      let _ = ghost_is_cons_opt p a' in
       let accu' = f _ a al accu l in
       let _ = gen_elim () in
       let len = R.read plen in
@@ -748,10 +772,26 @@ let list_iter_gen_body
       R.write plen len';
       R.write pa a';
       R.write paccu accu';
-      list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu (Cons? vq.contents);
+      R.write pcont (len' <> SZ.zero_size);
+      list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu pcont _;
       return ()
 
 #pop-options
+
+  let compute_afull
+    (enable_arrays: Ghost.erased bool)
+    (va: _)
+    (al: Ghost.erased (option (AP.array byte)))
+  : Pure (Ghost.erased (option (AP.array byte)))
+      (Ghost.reveal enable_arrays ==> (Some? al /\ adjacent_opt (Some?.v al) va.array))
+      (fun afull ->
+        Ghost.reveal enable_arrays ==> (
+          Some? al /\ Some? afull /\ merge_opt_into (Some?.v al) va.array (Some?.v afull)
+      ))
+  =
+    if Ghost.reveal enable_arrays
+    then Ghost.hide (Some (merge_opt (Some?.v al) va.array))
+    else Ghost.hide None
 
 #push-options "--z3rlimit 32"
 
@@ -796,42 +836,26 @@ let list_iter_gen
       (Ghost.reveal enable_arrays ==> (Some? al /\ adjacent_opt (Some?.v al) va.array))
     )
     (fun res -> True)
-= let compute_afull // to have an opaque definition of afull, and avoid reduction
-    (opened: _)
-  : STGhost (Ghost.erased (option (AP.array byte))) opened
-      emp
-      (fun _ -> emp)
-      True
-      (fun afull ->
-        Ghost.reveal enable_arrays ==> (
-          Some? al /\ Some? afull /\ merge_opt_into (Some?.v al) va.array (Some?.v afull)
-      ))
-  = noop ();
-    if Ghost.reveal enable_arrays
-    then Ghost.hide (Some (merge_opt (Some?.v al) va.array))
-    else Ghost.hide None
-  in
-  let afull = compute_afull _ in
+=
+  let afull = compute_afull enable_arrays va al in
   let pa = R.alloc a in
   let plen = R.alloc len in
   let paccu = R.alloc init in
-  list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu (Cons? va.contents);
+  let pcont = R.alloc (len <> SZ.zero_size) in
+  let _ = ghost_is_cons_opt p a in
+  list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu pcont _;
   L.while_loop
-    (list_iter_gen_inv p phi enable_arrays state init va.contents afull pa plen paccu)
+    (list_iter_gen_inv p phi enable_arrays state init va.contents afull pa plen paccu pcont)
     (fun _ ->
       let _ = gen_elim () in
-      list_iter_gen_inv_elim p phi enable_arrays state init va.contents afull pa plen paccu _;
+      list_iter_gen_inv_elim p phi enable_arrays state init va.contents afull pa plen paccu pcont _;
       let _ = gen_elim () in
-      let a = read_replace pa in
-      vpattern_rewrite (fun a_ -> aparse_list p a_ _) a;
-      let _ = ghost_is_cons_opt p a in
-      let len = R.read plen in
-      let res = SZ.zero_size `SZ.size_lt` len in
-      list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu res;
+      let res = read_replace pcont in
+      list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu pcont res;
       return res
     )
-    (list_iter_gen_body j phi enable_arrays state f va init afull pa plen paccu);
-  list_iter_gen_inv_elim p phi enable_arrays state init va.contents afull pa plen paccu _;
+    (list_iter_gen_body j phi enable_arrays state f va init afull pa plen paccu pcont);
+  list_iter_gen_inv_elim p phi enable_arrays state init va.contents afull pa plen paccu pcont _;
   let _ = gen_elim () in
   let l' = vpattern_erased (fun l' -> state _ _ l') in
   List.Tot.append_l_nil l';
@@ -842,6 +866,7 @@ let list_iter_gen
   let ar' = vpattern_erased (fun ar' -> state ar' _ _) in
   vpattern_rewrite (fun res -> state _ res _) res;
   vpattern_rewrite (fun l' -> state _ _ l') va.contents;
+  R.free pcont;
   R.free paccu;
   R.free plen;
   R.free pa;
@@ -888,7 +913,9 @@ let list_iter_consumes_with_array
       adjacent_opt al va.array
     )
     (fun res -> True)
-= let state0 x = match x with None -> (fun _ _ -> pure False) | Some x' -> state x' in
+= [@inline_let]
+  let state0 x = match x with None -> (fun _ _ -> pure False) | Some x' -> state x' in
+  [@inline_let]
   let state0_is_some (#opened: _) al accu l : STGhost unit opened (state0 al accu l) (fun _ -> state0 al accu l) True (fun _ -> Some? al) =
     if Some? al
     then noop ()
@@ -1104,6 +1131,21 @@ let list_iter_opt
     return res
   end
 
+let list_map_inplace_le_opt_prop
+  (#t: Type)
+  (#t': Type)
+  (phi: Ghost.erased (t -> t'))
+  (al: AP.array byte)
+  (l: list t)
+  (wl: v parse_list_kind _)
+  (len: _)
+  (wout: _)
+: Tot prop
+=
+    SZ.size_v len == AP.length (array_of' wl) /\
+    AP.merge_into (array_of' wl) (AP.array_of wout) al /\
+    wl.contents == List.Tot.map phi l
+
 [@@__reduce__]
 let list_map_inplace_le_opt_state0
   (#t: Type)
@@ -1123,9 +1165,7 @@ let list_map_inplace_le_opt_state0
     R.pts_to plen P.full_perm len `star`
     R.pts_to pout P.full_perm out `star`
     AP.arrayptr out wout `star` pure (
-    SZ.size_v len == AP.length (array_of' wl) /\
-    AP.merge_into (array_of' wl) (AP.array_of wout) al /\
-    wl.contents == List.Tot.map phi l
+    list_map_inplace_le_opt_prop phi al l wl len wout
   )))))
 
 let list_map_inplace_le_opt_state
@@ -1143,7 +1183,7 @@ let list_map_inplace_le_opt_state
 : Tot vprop
 = list_map_inplace_le_opt_state0 p' phi out0 pout plen al q l
 
-#push-options "--z3rlimit 96" // annotations such as explicit calls to AP.merge_assoc are USELESS here, do not help reduce rlimit
+#push-options "--z3rlimit 64"
 
 #restart-solver
 inline_for_extraction
