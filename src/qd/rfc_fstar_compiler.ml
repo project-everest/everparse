@@ -630,6 +630,11 @@ let write_api o i ?param:(p=None) has_lserializer is_private (md: parser_kind_me
     wh i "val %s_parser32%s: LS.parser32 %s\n\n" n parg pparse;
     wh i "val %s_serializer32%s: LS.serializer32 %s\n\n" n parg pser;
     ws has_lserializer i "val %s_size32%s: LSZ.size32 %s\n\n" n parg pser;
+    begin if has_lserializer && !emit_eq
+    then match p with
+    | None -> w i "let %s_equals (x1 x2: %s) : Tot bool = x1 = x2\n\n" n n
+    | _ -> w i "let %s_equals%s (x1 x2: %s k) : Tot bool = x1 = x2\n\n" n parg n
+    end;
     if need_validator md bmin bmax then
       wl i "val %s_validator%s: LL.validator %s\n\n" n parg pparse
     else
