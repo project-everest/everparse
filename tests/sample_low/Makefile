@@ -11,7 +11,7 @@ krml/%.krml:
 	@touch $@
 
 .qd_files: $(QD) $(RFC)
-	$(QD) -low $(RFC)
+	$(QD) -low -eq $(RFC)
 	+$(MAKE) -f Makefile.qd_files
 
 -include .depend

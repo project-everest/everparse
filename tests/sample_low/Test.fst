@@ -24,10 +24,16 @@ let employee_test
 
 let data_test
   (d: Data.data)
+  (d2: Data.data)
 : ST (LP.slice (B.trivial_preorder _) (B.trivial_preorder _))
     (requires (fun _ -> True))
     (ensures (fun _ _ _ -> True))
-= let sz = Data.data_size32 d in
+= let d =
+    if d `Data.data_equals` d2
+    then d
+    else d2
+  in
+  let sz = Data.data_size32 d in
   let b = B.malloc FStar.HyperStack.root 0uy sz in
   let _ = Data.data_lserializer d b 0ul in
   LP.make_slice b sz
