@@ -647,19 +647,6 @@ let read_replace
 = let res = R.read r in
   return res
 
-let vpattern_rewrite
-  (#opened: _)
-  (#a: Type)
-  (#x1: a)
-  (p: a -> vprop)
-  (x2: a)
-: STGhost unit opened
-    (p x1)
-    (fun _ -> p x2)
-    (x1 == x2)
-    (fun _ -> True)
-= rewrite (p x1) (p x2)
-
 let list_fold_left_snoc
   (#a #b: Type)
   (f: a -> b -> Tot a)
