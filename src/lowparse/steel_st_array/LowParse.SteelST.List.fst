@@ -260,6 +260,174 @@ let validate_list_total_constant_size
     return SZ.zero_size
   end
 
+module U32 = FStar.UInt32
+
+let validate_list_pred
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (va0: _)
+  (len0: SZ.size_t)
+  (va: _)
+  (vl: _)
+  (len: _)
+  (verr: U32.t)
+  (cont: _)
+: Tot prop
+= AP.contents_of va0 `Seq.equal` (AP.contents_of vl `Seq.append` AP.contents_of va) /\
+  AP.merge_into (AP.array_of vl) (AP.array_of va) (AP.array_of va0) /\
+  Some? (parse (parse_list p) (AP.contents_of va0)) == Some? (parse (parse_list p) (AP.contents_of va)) /\
+  SZ.size_v len0 == AP.length (AP.array_of va0) /\
+  SZ.size_v len == AP.length (AP.array_of vl) /\
+  ((~ (verr == 0ul)) ==> None? (parse (parse_list p) (AP.contents_of va0))) /\
+  (cont == true ==> (verr == 0ul /\ ~ (len == len0))) /\
+  ((cont == false /\ verr == 0ul) ==> len == len0)
+
+[@@__reduce__]
+let validate_list_inv0
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (a0: byte_array)
+  (va0: _)
+  (len0: SZ.size_t)
+  (plen: R.ref SZ.size_t)
+  (err: R.ref U32.t)
+  (cont: bool)
+: Tot vprop
+= exists_ (fun len -> exists_ (fun vl -> exists_ (fun a -> exists_ (fun va -> exists_ (fun verr ->
+    R.pts_to plen full_perm len `star`
+    AP.arrayptr a0 vl `star`
+    AP.arrayptr a va `star`
+    R.pts_to err full_perm verr `star`
+    pure (validate_list_pred p va0 len0 va vl len verr cont)
+  )))))
+
+let validate_list_inv
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (a0: byte_array)
+  (va0: _)
+  (len0: SZ.size_t)
+  (plen: R.ref SZ.size_t)
+  (err: R.ref U32.t)
+  (cont: bool)
+: Tot vprop
+= validate_list_inv0 p a0 va0 len0 plen err cont
+
+module L = Steel.ST.Loops
+
+inline_for_extraction
+let validate_list_test
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#va0: _)
+  (a0: _)
+  (len0: _)
+  (err: _)
+  (plen: _)
+  ()
+: STT bool
+    (exists_ (validate_list_inv p a0 va0 len0 plen err))
+    (validate_list_inv p a0 va0 len0 plen err)
+=
+      let _ = gen_elim () in
+      let gcont = vpattern_erased (validate_list_inv p a0 va0 len0 plen err) in
+      rewrite (validate_list_inv p a0 va0 len0 plen err _) (validate_list_inv0 p a0 va0 len0 plen err gcont);
+      let _ = gen_elim () in
+      let va = vpattern (fun va -> AP.arrayptr a0 _ `star` AP.arrayptr _ va) in
+      parse_list_eq p (AP.contents_of va);
+      let len = R.read plen in
+      let verr = R.read err in
+      let cont = (len <> len0 && verr = 0ul) in
+      noop ();
+      rewrite (validate_list_inv0 p a0 va0 len0 plen err cont) (validate_list_inv p a0 va0 len0 plen err cont);
+      return cont
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+inline_for_extraction
+let validate_list_body
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v: validator p)
+  (#va0: _)
+  (a0: _)
+  (len0: _)
+  (err: _)
+  (plen: _)
+  ()
+: STT unit
+    (validate_list_inv p a0 va0 len0 plen err true)
+    (fun _ -> exists_ (validate_list_inv p a0 va0 len0 plen err))
+= rewrite (validate_list_inv p a0 va0 len0 plen err true) (validate_list_inv0 p a0 va0 len0 plen err true);
+  let _ = gen_elim () in
+  let len = R.read plen in
+  let a = AP.split' a0 len _ in
+  let va = vpattern (fun va -> AP.arrayptr a va) in
+  parse_list_eq p (AP.contents_of va);
+  let lenr = len0 `SZ.size_sub` len in
+  let len1 = v a lenr err in
+  let _ = gen_elim () in
+  let verr = R.read err in
+  if verr <> 0ul returns STT unit _ (fun _ -> exists_ (validate_list_inv p a0 va0 len0 plen err)) // necessary in general, but I am using if-then-else only in terminal position
+  then begin
+    noop ();
+    rewrite (validate_list_inv0 p a0 va0 len0 plen err false) (validate_list_inv p a0 va0 len0 plen err false);
+    return ()
+  end else if len1 = SZ.zero_size 
+  then begin
+    R.write err validator_error_not_enough_data;
+    noop (); // (Error) folding guard g2 of e2 in the lcomp; The SMT solver could not prove the query, try to spell your proof in more detail or increase fuel/ifuel
+    rewrite (validate_list_inv0 p a0 va0 len0 plen err false) (validate_list_inv p a0 va0 len0 plen err false);
+    return ()
+  end else begin
+    let len' = len `SZ.size_add` len1 in
+    R.write plen len';
+    let _ = AP.gsplit a len1 in
+    let _ = gen_elim () in
+    let _ = AP.join a0 a in
+    rewrite (validate_list_inv0 p a0 va0 len0 plen err (len' <> len0)) (validate_list_inv p a0 va0 len0 plen err (len' <> len0));
+    return ()
+  end
+
+#pop-options
+
+#push-options "--z3rlimit 16"
+
+inline_for_extraction
+let validate_list
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v: validator p)
+: Tot (validator (parse_list p))
+= fun #va0 a0 len0 err ->
+  parse_list_eq p (AP.contents_of va0);
+  let plen = R.alloc SZ.zero_size in
+  let _ = AP.gsplit a0 SZ.zero_size in
+  let _ = gen_elim () in
+  rewrite (validate_list_inv0 p a0 va0 len0 plen err (len0 <> SZ.zero_size)) (validate_list_inv p a0 va0 len0 plen err (len0 <> SZ.zero_size));
+  L.while_loop
+    (validate_list_inv p a0 va0 len0 plen err)
+    (validate_list_test p a0 len0 err plen)
+    (validate_list_body v a0 len0 err plen);
+  rewrite (validate_list_inv p a0 va0 len0 plen err false) (validate_list_inv0 p a0 va0 len0 plen err false);
+  let _ = gen_elim () in
+  let va = vpattern (fun va -> AP.arrayptr a0 _ `star` AP.arrayptr _ va) in
+  parse_list_eq p (AP.contents_of va);
+  parser_kind_prop_equiv parse_list_kind (parse_list p);
+  let _ = AP.join a0 _ in
+  R.free plen;
+  noop ();
+  return len0
+
+#pop-options
+
 let intro_singleton
   (#opened: _)
   (#k: parser_kind)
@@ -630,8 +798,6 @@ let list_iter_gen_inv_elim #opened #k #t #t' p phi enable_arrays state init l0 a
     (list_iter_gen_inv #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu pcont cont)
     (fun _ -> list_iter_gen_inv0 #k #t #t' p phi enable_arrays state init l0 afull pa plen paccu pcont cont)
 = noop () // by F* unification rather than the framing tactic
-
-module L = Steel.ST.Loops
 
 inline_for_extraction
 let read_replace
