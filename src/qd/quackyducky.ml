@@ -119,6 +119,9 @@ let _ = Arg.parse [
   ("-high", Arg.Unit (fun () -> emit_low := false),
     " Generate functional implementation only");
 
+  ("-eq", Arg.Unit (fun () -> emit_eq := true),
+    " Generate equality functions for simple types");
+
 ] (fun s -> (ifile := s :: !ifile)) (sprintf "QuackyDucky %s\n%s"
 	ver "Generates verified parsers and their specification from RFC");
 	List.iter rfc_load !ifile

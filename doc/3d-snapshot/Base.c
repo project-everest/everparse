@@ -78,10 +78,10 @@ BaseValidatePair(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  uint64_t positionAfterfirst;
+  uint64_t res;
   if (EverParseIsSuccess(positionAfterPair))
   {
-    positionAfterfirst = positionAfterPair;
+    res = positionAfterPair;
   }
   else
   {
@@ -91,8 +91,9 @@ BaseValidatePair(
       Ctxt,
       Input,
       StartPosition);
-    positionAfterfirst = positionAfterPair;
+    res = positionAfterPair;
   }
+  uint64_t positionAfterfirst = res;
   if (EverParseIsError(positionAfterfirst))
   {
     return positionAfterfirst;
