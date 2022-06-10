@@ -35,12 +35,15 @@ git pull $remote $branchname --ff-only
 everparse_version=$(cat $EVERPARSE_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
+everparse_nuget_version=1.0.0
 if [[ $everparse_commit != $everparse_last_version ]] ; then
     everparse_version=$($DATE '+v%Y.%m.%d')
     echo $everparse_version > $EVERPARSE_HOME/version.txt
     git add $EVERPARSE_HOME/version.txt
     git commit -m "Release $everparse_version"
     git tag $everparse_version
+    #strip the v
+    everparse_nuget_version=${everparse_version:1}
 fi
 
 src/package/package.sh -zip
@@ -73,5 +76,5 @@ upload_archive everparse_"$everparse_version"_"$OS"_"$platform""$ext"
 
 if $is_windows ; then
     # Also upload the NuGet package to GitHub releases
-    upload_archive EverParse_"$everparse_version"_"$OS"_"$platform".nupkg
+    upload_archive EverParse."$everparse_nuget_version".nupkg
 fi
