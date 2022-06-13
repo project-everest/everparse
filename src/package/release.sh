@@ -35,16 +35,15 @@ git pull $remote $branchname --ff-only
 everparse_version=$(cat $EVERPARSE_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
-everparse_nuget_version=1.0.0
 if [[ $everparse_commit != $everparse_last_version ]] ; then
     everparse_version=$($DATE '+v%Y.%m.%d')
     echo $everparse_version > $EVERPARSE_HOME/version.txt
     git add $EVERPARSE_HOME/version.txt
     git commit -m "Release $everparse_version"
     git tag $everparse_version
-    #strip the v
-    everparse_nuget_version=${everparse_version:1}
 fi
+#strip the v
+everparse_nuget_version=${everparse_version:1}
 
 src/package/package.sh -zip
 
