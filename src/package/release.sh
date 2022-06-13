@@ -43,7 +43,7 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
     git tag $everparse_version
 fi
 #strip the v
-everparse_nuget_version=${everparse_version:1}
+export everparse_nuget_version=${everparse_version:1}
 
 src/package/package.sh -zip
 
