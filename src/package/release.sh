@@ -42,6 +42,8 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
     git commit -m "Release $everparse_version"
     git tag $everparse_version
 fi
+#strip the v
+export everparse_nuget_version=${everparse_version:1}
 
 src/package/package.sh -zip
 
@@ -73,5 +75,5 @@ upload_archive everparse_"$everparse_version"_"$OS"_"$platform""$ext"
 
 if $is_windows ; then
     # Also upload the NuGet package to GitHub releases
-    upload_archive EverParse_"$everparse_version"_"$OS"_"$platform".nupkg
+    upload_archive EverParse."$everparse_nuget_version".nupkg
 fi
