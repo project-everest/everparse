@@ -122,3 +122,47 @@ let rec sem
   | PPair p1 p2 -> fold_pair (sem p1) (sem p2)
   | PList p -> fold_list (sem p)
   | PChoice f p -> fold_choice (fun x -> sem (p x)) <: fold_t state_t (type_of_typ (TChoice f))
+
+(* Step-by-step serialization *)
+
+noeq
+type hole_t
+  : typ -> Type
+= | HU8: hole_t TU8
+  | HPairL: (l: typ) -> hole_t l -> (r: typ) -> hole_t (TPair l r)
+  | HPairR: (l: typ) -> (v: type_of_typ l) -> (r: typ) -> hole_t r -> hole_t (TPair l r)
+  | HList: (t: typ) -> (l: list (type_of_typ t)) -> hole_t (TList t)
+  | HListCons: (t: typ) -> (l: list (type_of_typ t)) -> hole_t t -> hole_t (TList t)
+  | HChoiceTag: (f: (bool -> typ)) -> hole_t (TChoice f)
+  | HChoicePayload: (f: (bool -> typ)) -> (tag: bool) -> hole_t (f tag) -> hole_t (TChoice f)
+
+let rec init_hole
+  (t: typ)
+: Tot (hole_t t)
+= match t with
+  | TU8 -> HU8
+  | TPair l r -> HPairL l (init_hole l) r
+  | TList t -> HList t []
+  | TChoice f -> HChoiceTag f
+
+noeq
+type hole_or_value_t
+  (t: typ)
+= | Value: type_of_typ t -> hole_or_value_t t
+  | Hole: hole_t t -> hole_or_value_t t
+
+noeq
+type transition
+  : (#t: typ) -> hole_t t -> hole_or_value_t t -> Type
+= | TransU8: (v: U8.t) -> transition HU8 (Value v)
+  | TransPairLH: (l: typ) -> (h1: hole_t l) -> (h2: hole_t l) -> transition h1 (Hole h2) -> (r: typ) -> transition (HPairL l h1 r) (Hole (HPairL l h2 r))
+  | TransPairLV: (l: typ) -> (h: hole_t l) -> (v: type_of_typ l) -> transition h (Value v) -> (r: typ) -> transition (HPairL l h r) (Hole (HPairR l v r (init_hole r)))
+  | TransPairRH: (l: typ) -> (v: type_of_typ l) -> (r: typ) -> (h1: hole_t r) -> (h2: hole_t r) -> transition h1 (Hole h2) -> transition (HPairR l v r h1) (Hole (HPairR l v r h2))
+  | TransPairRV: (l: typ) -> (vl: type_of_typ l) -> (r: typ) -> (h: hole_t r) -> (vr: type_of_typ r) -> transition h (Value vr) -> transition (HPairR l vl r h) (Value (vl, vr))
+  | TransListNil: (t: typ) -> (l: list (type_of_typ t)) -> transition (HList t l) (Value l)
+  | TransListSnoc: (t: typ) -> (l: list (type_of_typ t)) -> transition (HList t l) (Hole (HListCons t l (init_hole t)))
+  | TransListSnocH: (t: typ) -> (l: list (type_of_typ t)) -> (h1: hole_t t) -> (h2: hole_t t) -> transition (HListCons t l h1) (Hole (HListCons t l h2))
+  | TransListSnocV: (t: typ) -> (l: list (type_of_typ t)) -> (h: hole_t t) -> (v: type_of_typ t) -> transition h (Value v) -> transition (HListCons t l h) (Hole (HList t (l `List.Tot.append` [v])))
+  | TransListChoiceTag: (f: (bool -> typ)) -> (tag: bool) -> transition (HChoiceTag f) (Hole (HChoicePayload f tag (init_hole (f tag))))
+  | TransListChoicePayloadH: (f: (bool -> typ)) -> (tag: bool) -> (h1: hole_t (f tag)) -> (h2: hole_t (f tag)) -> transition h1 (Hole h2) -> transition (HChoicePayload f tag h1) (Hole (HChoicePayload f tag h2))
+  | TransListChoicePayloadV: (f: (bool -> typ)) -> (tag: bool) -> (h: hole_t (f tag)) -> (v: type_of_typ (f tag)) -> transition h (Value v) -> transition (HChoicePayload f tag h) (Value (| tag, v |))
