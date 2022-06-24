@@ -162,43 +162,155 @@ let rec sem
 (* Step-by-step serialization *)
 
 noeq
-type hole_t
+type base_context_t
+  : typ -> typ -> Type
+= | CPairL: (l: typ) -> (r: typ) -> base_context_t (TPair l r) l
+  | CPairR: (l: typ) -> (vl: type_of_typ l) -> (r: typ) -> base_context_t (TPair l r) r
+  | CListCons: (t: typ) -> (l: list (type_of_typ t)) -> base_context_t (TList t) t
+  | CChoicePayload: (f: (bool -> typ)) -> (tag: bool) -> base_context_t (TChoice f) (f tag)
+
+noeq
+type context_t
+  : typ -> typ -> Type
+= | CNil: (#t: typ) -> context_t t t
+  | CSnoc: (#t1: typ) -> (#t2: typ) -> (#t3: typ) -> context_t t1 t2 -> base_context_t t2 t3 -> context_t t1 t3
+
+let rec concat_context
+  (#t1 #t2 #t4: typ)
+  (c12: context_t t1 t2)
+  (c24: context_t t2 t4)
+: Tot (context_t t1 t4)
+  (decreases c24)
+= match c24 with
+  | CNil -> c12
+  | CSnoc c23 b34 -> CSnoc (concat_context c12 c23) b34
+
+noeq
+type base_hole_t
   : typ -> Type
-= | HU8: hole_t TU8
-  | HPairL: (l: typ) -> hole_t l -> (r: typ) -> hole_t (TPair l r)
-  | HPairR: (l: typ) -> (v: type_of_typ l) -> (r: typ) -> hole_t r -> hole_t (TPair l r)
-  | HList: (t: typ) -> (l: list (type_of_typ t)) -> hole_t (TList t)
-  | HListCons: (t: typ) -> (l: list (type_of_typ t)) -> hole_t t -> hole_t (TList t)
-  | HChoiceTag: (f: (bool -> typ)) -> hole_t (TChoice f)
-  | HChoicePayload: (f: (bool -> typ)) -> (tag: bool) -> hole_t (f tag) -> hole_t (TChoice f)
+= | HU8: base_hole_t TU8
+  | HList: (t: typ) -> (l: list (type_of_typ t)) -> base_hole_t (TList t)
+  | HChoiceTag: (f: (bool -> typ)) -> base_hole_t (TChoice f)
+
+noeq
+type hole_t
+= {
+  root: typ;
+  leaf: typ;
+  context: context_t root leaf;
+  hole: base_hole_t leaf;
+}
 
 let rec init_hole
   (t: typ)
-: Tot (hole_t t)
+: Pure hole_t
+  (requires True)
+  (ensures (fun res -> res.root == t))
 = match t with
-  | TU8 -> HU8
-  | TPair l r -> HPairL l (init_hole l) r
-  | TList t -> HList t []
-  | TChoice f -> HChoiceTag f
+  | TU8 -> { root = TU8; leaf = TU8; context = CNil; hole = HU8 }
+  | TList t -> { root = TList t; leaf = TList t; context = CNil; hole = HList t [] }
+  | TChoice f -> { root = TChoice f; leaf = TChoice f; context = CNil; hole = HChoiceTag f }
+  | TPair l r ->
+    let h = init_hole l in
+    { root = TPair l r; leaf = h.leaf; context = concat_context (CSnoc CNil (CPairL l r)) h.context; hole = h.hole }
 
 noeq
 type hole_or_value_t
   (t: typ)
 = | Value: type_of_typ t -> hole_or_value_t t
-  | Hole: hole_t t -> hole_or_value_t t
+  | Hole: (h: hole_t { h.root == t }) -> hole_or_value_t t
 
-noeq
-type transition
-  : (#t: typ) -> hole_t t -> hole_or_value_t t -> Type
-= | TransU8: (v: U8.t) -> transition HU8 (Value v)
-  | TransPairLH: (l: typ) -> (h1: hole_t l) -> (h2: hole_t l) -> transition h1 (Hole h2) -> (r: typ) -> transition (HPairL l h1 r) (Hole (HPairL l h2 r))
-  | TransPairLV: (l: typ) -> (h: hole_t l) -> (v: type_of_typ l) -> transition h (Value v) -> (r: typ) -> transition (HPairL l h r) (Hole (HPairR l v r (init_hole r)))
-  | TransPairRH: (l: typ) -> (v: type_of_typ l) -> (r: typ) -> (h1: hole_t r) -> (h2: hole_t r) -> transition h1 (Hole h2) -> transition (HPairR l v r h1) (Hole (HPairR l v r h2))
-  | TransPairRV: (l: typ) -> (vl: type_of_typ l) -> (r: typ) -> (h: hole_t r) -> (vr: type_of_typ r) -> transition h (Value vr) -> transition (HPairR l vl r h) (Value (vl, vr))
-  | TransListNil: (t: typ) -> (l: list (type_of_typ t)) -> transition (HList t l) (Value l)
-  | TransListSnoc: (t: typ) -> (l: list (type_of_typ t)) -> transition (HList t l) (Hole (HListCons t l (init_hole t)))
-  | TransListSnocH: (t: typ) -> (l: list (type_of_typ t)) -> (h1: hole_t t) -> (h2: hole_t t) -> transition (HListCons t l h1) (Hole (HListCons t l h2))
-  | TransListSnocV: (t: typ) -> (l: list (type_of_typ t)) -> (h: hole_t t) -> (v: type_of_typ t) -> transition h (Value v) -> transition (HListCons t l h) (Hole (HList t (l `List.Tot.append` [v])))
-  | TransListChoiceTag: (f: (bool -> typ)) -> (tag: bool) -> transition (HChoiceTag f) (Hole (HChoicePayload f tag (init_hole (f tag))))
-  | TransListChoicePayloadH: (f: (bool -> typ)) -> (tag: bool) -> (h1: hole_t (f tag)) -> (h2: hole_t (f tag)) -> transition h1 (Hole h2) -> transition (HChoicePayload f tag h1) (Hole (HChoicePayload f tag h2))
-  | TransListChoicePayloadV: (f: (bool -> typ)) -> (tag: bool) -> (h: hole_t (f tag)) -> (v: type_of_typ (f tag)) -> transition h (Value v) -> transition (HChoicePayload f tag h) (Value (| tag, v |))
+let mk_choice_value
+  (tag: bool)
+  (f: bool -> typ)
+  (v: type_of_typ (f tag))
+: Tot (type_of_typ (TChoice f))
+= (| tag, v |)
+
+let rec fill_context
+  (#root: typ)
+  (#leaf: typ)
+  (c: context_t root leaf)
+  (v: type_of_typ leaf)
+: Tot (hole_or_value_t root)
+  (decreases c)
+= match c with
+  | CNil ->
+    Value v
+  | CSnoc c' (CPairL l r) ->
+    let h = init_hole r in
+    Hole ({ root = root; leaf = h.leaf; context = concat_context (CSnoc c' (CPairR l v r)) h.context; hole = h.hole })
+  | CSnoc c' (CPairR l vl r) ->
+    fill_context c' (vl, v)
+  | CSnoc c' (CListCons t l) ->
+    Hole ({ root = root; leaf = _; context = c'; hole = HList t (l `List.Tot.append` [v] )})
+  | CSnoc c' (CChoicePayload f tag) ->
+    fill_context c' (mk_choice_value tag f v)
+
+let transition'_u8
+  (v: U8.t)
+  (h: hole_t { h.leaf == TU8 })
+: Tot (hole_or_value_t h.root)
+= fill_context h.context v
+
+let transition_u8
+  (t: typ)
+  (v: U8.t)
+: Tot (stt (hole_or_value_t t) unit (fun s -> Hole? s /\ (Hole?.h s).leaf == TU8) (fun _ _ _ -> True))
+= fun s ->
+  let Hole h = s in
+  ((), transition'_u8 v h)
+
+let transition'_list_nil
+  (h: hole_t { TList? h.leaf })
+: Tot (hole_or_value_t h.root)
+= let TList t = h.leaf in
+  fill_context h.context ([] <: list (type_of_typ t))
+
+let transition_list_nil
+  (t: typ)
+: Tot (stt (hole_or_value_t t) unit (fun s -> Hole? s /\ TList? (Hole?.h s).leaf) (fun _ _ _ -> True))
+= fun s ->
+  let Hole h = s in
+  ((), transition'_list_nil h)
+
+let transition'_list_cons
+  (h: hole_t { TList? h.leaf })
+: Tot (hole_or_value_t h.root)
+= let TList t = h.leaf in
+  let HList _ l = h.hole in
+  let h' = init_hole t in
+  Hole ({
+    root = h.root;
+    leaf = h'.leaf;
+    context = concat_context (CSnoc h.context (CListCons t l)) h'.context;
+    hole = h'.hole;
+  })
+
+let transition_list_cons
+  (t: typ)
+: Tot (stt (hole_or_value_t t) unit (fun s -> Hole? s /\ TList? (Hole?.h s).leaf) (fun _ _ _ -> True))
+= fun s ->
+  let Hole h = s in
+  ((), transition'_list_cons h)
+
+let transition'_choice_tag
+  (h: hole_t { TChoice? h.leaf })
+  (tag: bool)
+: Tot (hole_or_value_t h.root)
+= let TChoice f = h.leaf in
+  let h' = init_hole (f tag) in
+  Hole ({
+    root = h.root;
+    leaf = h'.leaf;
+    context = concat_context (CSnoc h.context (CChoicePayload f tag)) h'.context;
+    hole = h'.hole;
+  })
+
+let transition_choice_tag
+  (t: typ)
+  (tag: bool)
+: Tot (stt (hole_or_value_t t) unit (fun s -> Hole? s /\ TChoice? (Hole?.h s).leaf) (fun _ _ _ -> True))
+= fun s ->
+  let Hole h = s in
+  ((), transition'_choice_tag h tag)
