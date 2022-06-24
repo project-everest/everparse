@@ -45,6 +45,8 @@ let stt (state_t: Type) (ret_t: Type) (pre: state_t -> prop) (post: state_t -> r
 
 let ret (#state_t: Type) (#ret_t: Type) (x: ret_t) : Tot (stt state_t ret_t (fun _ -> True) (fun s x' s' -> s == s' /\ x == x')) = fun s -> (x, s)
 
+let skip (#state_t: Type) () : Tot (stt state_t unit (fun _ -> True) (fun _ _ _ -> True)) = ret ()
+
 let bind (#state_t: Type) (#ret1_t #ret2_t: Type)
   (#pre1: state_t -> prop)
   (#post1: state_t -> ret1_t -> state_t -> prop)
@@ -314,3 +316,19 @@ let transition_choice_tag
 = fun s ->
   let Hole h = s in
   ((), transition'_choice_tag h tag)
+
+#push-options "--admit_smt_queries true"
+
+let _ : prog (hole_or_value_t (TPair TU8 TU8)) (fun _ _ _ _ -> unit) _ _ (TPair TU8 TU8) =
+  PPair
+    (PU8 (fun x1 -> transition_u8 _ x1) (fun _ -> ()))
+    (PU8 (fun x2 -> transition_u8 _ x2) (fun _ -> ()))
+
+let _ : prog (hole_or_value_t (TPair TU8 TU8)) (fun _ _ _ _ -> unit) _ _ (TPair TU8 TU8) =
+  PSeq
+    (PPair
+      (PRet _ (skip ()) ())
+      (PU8 (fun x2 -> transition_u8 _ x2) (fun _ -> ())))
+    (PPair
+      (PU8 (fun x1 -> transition_u8 _ x1) (fun _ -> ()))
+      (PRet _ (skip ()) ()))
