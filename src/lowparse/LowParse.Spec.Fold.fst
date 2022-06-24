@@ -45,6 +45,8 @@ let stt (state_t: Type) (ret_t: Type) (pre: state_t -> prop) (post: state_t -> r
 
 let ret (#state_t: Type) (#ret_t: Type) (x: ret_t) : Tot (stt state_t ret_t (fun _ -> True) (fun s x' s' -> s == s' /\ x == x')) = fun s -> (x, s)
 
+let get (#state_t: Type) () : Tot (stt state_t (Ghost.erased state_t) (fun _ -> True) (fun s x' s' -> s == s' /\ s == Ghost.reveal x')) = fun s -> (Ghost.hide s, s)
+
 let skip (#state_t: Type) () : Tot (stt state_t unit (fun _ -> True) (fun _ _ _ -> True)) = ret ()
 
 let bind (#state_t: Type) (#ret1_t #ret2_t: Type)
@@ -69,97 +71,190 @@ let bind (#state_t: Type) (#ret1_t #ret2_t: Type)
 let weaken (#state_t: Type) (pre: state_t -> prop) (post: state_t -> prop) : Pure (stt state_t unit pre (fun _ _ -> post)) (requires (forall s . pre s ==> post s)) (ensures (fun _ -> True)) =
   fun s -> ((), s)
 
-let fold_t (state_t: Type) (pre post: state_t -> prop) (t: Type) : Tot Type = (t -> stt state_t unit pre (fun _ _ -> post))
+let fold_t (state_t: Type) (t: Type) (ret_t: Type) (pre: state_t -> prop) (post: t -> state_t -> ret_t -> state_t -> prop) : Tot Type = ((v: t) -> stt state_t ret_t pre (post v))
+
+let fold_pair_post
+  (#state_t: Type)
+  #t1 #ret1
+  (post1: t1 -> state_t -> ret1 -> state_t -> prop)
+  #t2 #ret2
+  (post2: (x: ret1) -> t2 -> state_t -> ret2 -> state_t -> prop)
+  (v: (t1 & t2))
+  (s0: state_t)
+  (r2: ret2)
+  (s2: state_t)
+: Tot prop
+= exists s1 r1 . post1 (fst v) s0 r1 s1 /\ post2 r1 (snd v) s1 r2 s2
 
 let fold_pair
   (#state_t: Type)
-  (#pre1 #post1 #pre2 #post2: state_t -> prop)
-  (#t1 #t2: Type)
-  (f1: fold_t state_t pre1 post1 t1)
-  (f2: fold_t state_t pre2 post2 t2)
-: Pure (fold_t state_t pre1 post2 (t1 & t2))
-    (requires (forall s . post1 s ==> pre2 s))
+  #t1 #ret1 #pre1 #post1
+  (f1: fold_t state_t t1 ret1 pre1 post1)
+  #t2 #ret2 (#pre2: ret1 -> _) (#post2: ret1 -> _)
+  (f2: (x: ret1) -> fold_t state_t t2 ret2 (pre2 x) (post2 x))
+: Pure (fold_t state_t (t1 & t2) ret2 pre1 (fold_pair_post post1 post2))
+    (requires (
+      (forall s v1 r1 s' . post1 v1 s r1 s' ==> pre2 r1 s')
+    ))
     (ensures (fun _ -> True))
-= fun (x1, x2) -> bind (f1 x1) (fun _ -> f2 x2)
+= fun x s0 ->
+    let x1 = fst x in
+    let x2 = snd x in
+    let (r1, s1) = f1 x1 s0 in
+    f2 r1 x2 s1
 
 let fold_list
   (#state_t: Type)
   (#inv: state_t -> prop)
   (#t: Type)
-  (f: fold_t state_t inv inv t)
-: Tot (fold_t state_t inv inv (list t))
+  (f: fold_t state_t t unit inv (fun _ _ _ -> inv))
+: Tot (fold_t state_t (list t) unit inv (fun _ _ _ -> inv))
 = fun l x -> ((), (List.Tot.fold_left (fun (state: state_t { inv state }) x -> snd (f x state)) x l <: state_t))
+
+let fold_choice_post
+  (#state_t: Type)
+  (#ret_t: Type)
+  (#t: bool -> Type)
+  (post: (x: bool) -> t x -> state_t -> ret_t -> state_t -> prop)
+  (v: (x: bool & t x))
+  (s: state_t)
+  (r: ret_t)
+  (s': state_t)
+: Tot prop
+= post (dfst v) (dsnd v) s r s'
 
 let fold_choice
   (#state_t: Type)
-  (#pre #post: state_t -> prop)
+  (#ret_t: Type)
   (#t: bool -> Type)
-  (f: (x: bool) -> fold_t state_t pre post (t x))
-: Tot (fold_t state_t pre post (x: bool & t x))
+  (#pre: state_t -> prop)
+  (#post: (x: bool) -> t x -> state_t -> ret_t -> state_t -> prop)
+  (f: (x: bool) -> fold_t state_t (t x) ret_t pre (post x))
+: Tot (fold_t state_t (x: bool & t x) ret_t pre (fold_choice_post post))
 = fun w -> if (dfst w) then f true (dsnd w) else f false (dsnd w)
+
+let bind_fold_post
+  (#state_t: Type)
+  #t #ret1
+  (post1: t -> state_t -> ret1 -> state_t -> prop)
+  #ret2
+  (post2: (x: ret1) -> t -> state_t -> ret2 -> state_t -> prop)
+  (v: t)
+  (s0: state_t)
+  (r2: ret2)
+  (s2: state_t)
+: Tot prop
+= exists s1 r1 . post1 v s0 r1 s1 /\ post2 r1 v s1 r2 s2
 
 let bind_fold
   (#state_t: Type)
-  (#ret_t: Type)
+  (#t: Type)
+  (#ret1: Type)
   (#pre1: _)
   (#post1: _)
-  (#pre2 #post2: _)
-  (#t: Type)
-  (f: stt state_t ret_t pre1 post1)
-  (g: ret_t -> fold_t state_t pre2 post2 t)
-: Pure (fold_t state_t pre1 post2 t)
-    (requires (forall s r s' . post1 s r s' ==> pre2 s'))
+  (#ret2: _)
+  (#pre2: _)
+  (#post2: _)
+  (f: fold_t state_t t ret1 pre1 post1)
+  (g: (x: ret1) -> fold_t state_t t ret2 (pre2 x) (post2 x))
+: Pure (fold_t state_t t ret2 pre1 (bind_fold_post post1 post2))
+    (requires (forall s v r s' . post1 s v r s' ==> pre2 r s'))
     (ensures (fun _ -> True))
-= fun x -> bind f (fun r -> g r x)
-
-let seq_fold
-  (#state_t: Type)
-  (#pre1 #post1 #pre2 #post2: _)
-  (#t: Type)
-  (f1: fold_t state_t pre1 post1 t)
-  (f2: fold_t state_t pre2 post2 t)
-: Pure (fold_t state_t pre1 post2 t)
-    (requires (forall s . post1 s ==> pre2 s))
-    (ensures (fun _ -> True))
-= fun x -> bind (f1 x) (fun _ -> f2 x)
+= fun v s0 ->
+  let (r1, s1) = f v s0 in
+  g r1 v s1
 
 let ret_fold
   (#state_t: Type)
+  (#ret_t: Type)
   (#pre #post: _)
   (#t: Type)
-  (f: stt state_t unit pre (fun _ _ -> post))
-: Tot (fold_t state_t pre post t)
+  (f: stt state_t ret_t pre post)
+: Tot (fold_t state_t t ret_t pre (fun _ -> post))
 = fun _ -> f
+
+noeq
+type action
+  (state_t: Type)
+  (action_impl_t: (t: Type) -> (pre: _) -> (post: _) -> stt state_t t pre post -> Type)
+  (t: Type)
+  (pre: _)
+  (post: _)
+= {
+  action_spec: stt state_t t pre post;
+  action_impl: action_impl_t _ _ _ action_spec;
+}
 
 noeq
 type prog
   (state_t: Type)
-  (action_t: (t: Type) -> (pre: _) -> (post: _) -> stt state_t t pre post -> Type)
-: (state_t -> prop) -> (state_t -> prop) -> typ -> Type
-= | PRet: (#pre: _) -> (#post: _) -> (t: typ) -> (s: stt state_t unit pre (fun _ _ -> post)) -> action_t _ pre (fun _ _ -> post) s -> prog state_t action_t pre post t
-  | PSeq: (#t: typ) -> (#pre1: _) -> (#post1: (_ -> prop)) -> (#pre2: (_ -> prop)  { forall s . post1 s ==> pre2 s }) -> (#post2: _) -> prog state_t action_t pre1 post1 t -> prog state_t action_t pre2 post2 t -> prog state_t action_t pre1 post2 t
-  | PBind: (#r: Type) -> (#pre1: _) -> (#post1: (_ -> _ -> _ -> prop)) -> (#pre2: (_ -> prop) { forall s0 r1 s1 . post1 s0 r1 s1 ==> pre2 s1 }) -> (#post2: _) -> (#t: typ) -> (s: stt state_t r pre1 post1) -> action_t r pre1 post1 s -> (r -> prog state_t action_t pre2 post2 t) -> prog state_t action_t pre1 post2 t
-  | PU8: (#pre: _) -> (#post: _) -> (s: (U8.t -> stt state_t unit pre (fun _ _ -> post))) -> ((x: U8.t) -> action_t _ _ _ (s x)) -> prog state_t action_t pre post TU8
-  | PPair: (#t1: typ) -> (#t2: typ) -> (#pre1: _) -> (#post1: (_ -> prop)) -> (#pre2: (_ -> prop) { forall s . post1 s ==> pre2 s }) -> (#post2: _) -> prog state_t action_t pre1 post1 t1 -> prog state_t action_t pre2 post2 t2 -> prog state_t action_t pre1 post2 (TPair t1 t2)
-  | PList: (#t: typ) -> (#inv: _) -> prog state_t action_t inv inv t -> prog state_t action_t inv inv (TList t)
-  | PChoice: (f: (bool -> typ)) -> (#pre: _) -> (#post: _) -> ((x: bool) -> prog state_t action_t pre post (f x)) -> prog state_t action_t pre post (TChoice f)
+  (action_impl_t: (t: Type) -> (pre: _) -> (post: _) -> stt state_t t pre post -> Type)
+: (t: typ) -> (ret_t: Type) -> (state_t -> prop) -> (type_of_typ t -> state_t -> ret_t -> state_t -> prop) -> Type
+= | PRet:
+      (#t: typ) ->
+      (#ret_t: Type) -> (#pre: _) -> (#post: _) ->
+      action state_t action_impl_t ret_t pre post ->
+      prog state_t action_impl_t t ret_t pre (fun _ -> post)
+  | PBind:
+      (#t: typ) ->
+      (#ret1: Type) ->
+      (#pre1: _) ->
+      (#post1: _) ->
+      (#ret2: _) ->
+      (#pre2: _) ->
+      (#post2: _) ->
+      (f: prog state_t action_impl_t t ret1 pre1 post1) ->
+      (g: ((x: ret1) -> prog state_t action_impl_t t ret2 (pre2 x) (post2 x)) {
+        forall s v r s' . post1 s v r s' ==> pre2 r s'
+      }) ->
+      prog state_t action_impl_t t ret2 pre1 (bind_fold_post post1 post2)
+  | PU8:
+      (#ret_t: _) -> (#pre: _) -> (#post: _) ->
+      ((x: U8.t) -> action state_t action_impl_t ret_t pre (post x)) ->
+      prog state_t action_impl_t TU8 ret_t pre post
+  | PPair:
+      (#t1: _) ->
+      (#ret1: _) ->
+      (#pre1: _) ->
+      (#post1: _) ->
+      (f1: prog state_t action_impl_t t1 ret1 pre1 post1) ->
+      (#t2: _) ->
+      (#ret2: _) ->
+      (#pre2: (ret1 -> _)) ->
+      (#post2: (ret1 -> _)) ->
+      (f2: ((x: ret1) -> prog state_t action_impl_t t2 ret2 (pre2 x) (post2 x)) {
+        forall s v1 r1 s' . post1 v1 s r1 s' ==> pre2 r1 s'
+      }) ->
+      prog state_t action_impl_t (TPair t1 t2) ret2 pre1 (fold_pair_post post1 post2)
+  | PList:
+      (#t: typ) ->
+      (#inv: _) ->
+      prog state_t action_impl_t t unit inv (fun _ _ _ -> inv) ->
+      prog state_t action_impl_t (TList t) unit inv (fun _ _ _ -> inv)
+  | PChoice:
+      (t: (bool -> typ)) -> // FIXME: WHY WHY WHY does this argument need to be explicit? (if not, then I get "this pattern binds to an inaccessible argument" in `sem` below)
+      (#ret_t: Type) ->
+      (#pre: (state_t -> prop)) ->
+      (#post: ((x: bool) -> type_of_typ (t x) -> state_t -> ret_t -> state_t -> prop)) ->
+      ((x: bool) -> prog state_t action_impl_t (t x) ret_t pre (post x)) ->
+      prog state_t action_impl_t (TChoice t) ret_t pre (fold_choice_post post)
 
 let rec sem
   (#state_t: Type)
-  (#action_t: (t: Type) -> (pre: _) -> (post: _) -> stt state_t t pre post -> Type)
-  (#pre: _)
-  (#post: _)
+  (#action_impl_t: (t: Type) -> (pre: _) -> (post: _) -> stt state_t t pre post -> Type)
   (#t: typ)
-  (p: prog state_t action_t pre post t)
-: Tot (fold_t state_t pre post (type_of_typ t))
-= match p returns fold_t state_t pre post (type_of_typ t) with
-  | PRet _ s _ -> ret_fold s
-  | PSeq p1 p2 -> seq_fold (sem p1) (sem p2)
-  | PBind s _ p -> bind_fold s (fun x -> sem (p x))
-  | PU8 s _ -> s
-  | PPair p1 p2 -> fold_pair (sem p1) (sem p2)
+  (#ret_t: Type)
+  (#pre: state_t -> prop)
+  (#post: type_of_typ t -> state_t -> ret_t -> state_t -> prop)
+  (p: prog state_t action_impl_t t ret_t pre post)
+: Tot (fold_t state_t (type_of_typ t) ret_t pre post)
+= match p returns (fold_t state_t (type_of_typ t) ret_t pre post) with
+  | PRet s -> ret_fold s.action_spec
+  | PBind s p -> bind_fold (sem s) (fun x -> sem (p x))
+  | PU8 s -> (fun x -> (s x).action_spec)
+  | PPair p1 p2 -> fold_pair (sem p1) (fun r -> sem (p2 r))
   | PList p -> fold_list (sem p)
-  | PChoice f p -> fold_choice (fun x -> sem (p x)) <: fold_t state_t pre post (type_of_typ (TChoice f))
+  | PChoice f (* here, "inaccessible argument" *) p -> fold_choice (fun x -> sem (p x)) <: fold_t state_t (type_of_typ (TChoice f)) ret_t pre post
 
 (* Step-by-step serialization *)
 
@@ -317,18 +412,32 @@ let transition_choice_tag
   let Hole h = s in
   ((), transition'_choice_tag h tag)
 
+let mk_unit_action
+  (#state_t: Type)
+  (#t: Type)
+  (#pre: _)
+  (#post: _)
+  (f: stt state_t t pre post)
+: Tot (action state_t (fun _ _ _ _ -> unit) t pre post)
+= {
+  action_spec = f;
+  action_impl = ();
+}
+
 #push-options "--admit_smt_queries true"
 
-let _ : prog (hole_or_value_t (TPair TU8 TU8)) (fun _ _ _ _ -> unit) _ _ (TPair TU8 TU8) =
+let _ : prog (hole_or_value_t (TPair TU8 TU8)) (fun _ _ _ _ -> unit) (TPair TU8 TU8) unit _ _ =
   PPair
-    (PU8 (fun x1 -> transition_u8 _ x1) (fun _ -> ()))
-    (PU8 (fun x2 -> transition_u8 _ x2) (fun _ -> ()))
+    (PU8 (fun x1 -> mk_unit_action (transition_u8 _ x1)))
+    (fun _ -> PU8 (fun x2 -> mk_unit_action (transition_u8 _ x2)))
 
-let _ : prog (hole_or_value_t (TPair TU8 TU8)) (fun _ _ _ _ -> unit) _ _ (TPair TU8 TU8) =
-  PSeq
+let _ : prog (hole_or_value_t (TPair TU8 TU8)) (fun _ _ _ _ -> unit) (TPair TU8 TU8) unit _ _ =
+  PBind
     (PPair
-      (PRet _ (skip ()) ())
-      (PU8 (fun x2 -> transition_u8 _ x2) (fun _ -> ())))
-    (PPair
-      (PU8 (fun x1 -> transition_u8 _ x1) (fun _ -> ()))
-      (PRet _ (skip ()) ()))
+      (PRet (mk_unit_action (ret ())))
+      (fun _ -> PU8 (fun x2 -> mk_unit_action (transition_u8 _ x2))))
+    (fun _ -> PPair
+      (PU8 (fun x1 -> mk_unit_action (transition_u8 _ x1)))
+      (fun _ -> PRet (mk_unit_action (ret ()))))
+
+#pop-options
