@@ -348,7 +348,7 @@ let make_asn1_sequence_parser_body
 = let k = glb parse_asn1_identifier30_kind parse_ret_kind in
   let p = 
   (match st with
-   | None -> weaken k parse_asn1_identifier30
+   | None -> weaken k parse_asn1_identifier32
    | Some id -> weaken k (parse_ret id)) in
   let _ = 
   (let ov = generate_defaultable_items itemtwins in

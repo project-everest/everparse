@@ -88,7 +88,7 @@ let make_asn1_choice_parser
   Pure (asn1_strong_parser (asn1_t k))
   (requires (s == Set.as_set (List.map fst lc)) /\ (k == ASN1_CHOICE_ILC lc pf) /\ (asn1_lc_t lc == extract_types lp))
   (ensures fun _ -> True)
-= weaken asn1_strong_parser_kind (make_gen_choice_parser parse_asn1_identifier_u21 lp)
+= weaken asn1_strong_parser_kind (make_gen_choice_parser parse_asn1_identifier_U32 lp)
 
 let make_asn1_choice_parser_twin
   (lc : list (asn1_id_t * asn1_content_k) {Cons? lc})

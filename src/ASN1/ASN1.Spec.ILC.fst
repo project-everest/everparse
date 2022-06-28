@@ -24,7 +24,7 @@ let parse_asn1_ILC
   (p : asn1_weak_parser (asn1_content_t ack))
 : asn1_strong_parser (asn1_content_t ack)
 = let p' = 
-    parse_asn1_identifier_u21
+    parse_asn1_identifier_U32
     `parse_filter`
     (fun id' -> id' = id)
     `nondep_then`
