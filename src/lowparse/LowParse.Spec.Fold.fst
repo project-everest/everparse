@@ -180,27 +180,33 @@ let ret_fold
 = fun _ -> f
 
 noeq
-type action
-  (state_t: Type)
-  (action_impl_t: (t: Type) -> (pre: _) -> (post: _) -> stt state_t t pre post -> Type)
-  (t: Type)
-  (pre: _)
-  (post: _)
-= {
-  action_spec: stt state_t t pre post;
-  action_impl: action_impl_t _ _ _ action_spec;
-}
-
-noeq
 type prog
   (state_t: Type)
-  (action_impl_t: (t: Type) -> (pre: _) -> (post: _) -> stt state_t t pre post -> Type)
+  (action_t: (ret_t: Type) -> (pre: state_t -> prop) -> (post: state_t -> ret_t -> state_t -> prop) -> Type)
 : (t: typ) -> (ret_t: Type) -> (state_t -> prop) -> (type_of_typ t -> state_t -> ret_t -> state_t -> prop) -> Type
-= | PRet:
+= | PSubcomp:
+      (#t: typ) ->
+      (#ret_t: Type) ->
+      (pre_out: (state_t -> prop)) ->
+      (#pre_in: (state_t -> prop) {
+        forall s . pre_out s ==> pre_in s
+      }) ->
+      (#post_in: (type_of_typ t -> state_t -> ret_t -> state_t -> prop)) ->
+      prog state_t action_t t ret_t pre_in post_in ->
+      (post_out: (type_of_typ t -> state_t -> ret_t -> state_t -> prop) {
+        forall v s r s' . post_in v s r s' ==> post_out v s r s'
+      }) ->
+      prog state_t action_t t ret_t pre_out post_out
+  | PRet:
+      (#t: typ) ->
+      (#ret_t: Type) ->
+      (v: ret_t) ->
+      prog state_t action_t t ret_t (fun _ -> True) (fun _ s res s' -> s' == s /\ res == v)
+  | PAction:
       (#t: typ) ->
       (#ret_t: Type) -> (#pre: _) -> (#post: _) ->
-      action state_t action_impl_t ret_t pre post ->
-      prog state_t action_impl_t t ret_t pre (fun _ -> post)
+      action_t ret_t pre post ->
+      prog state_t action_t t ret_t pre (fun _ -> post)
   | PBind:
       (#t: typ) ->
       (#ret1: Type) ->
@@ -209,58 +215,61 @@ type prog
       (#ret2: _) ->
       (#pre2: _) ->
       (#post2: _) ->
-      (f: prog state_t action_impl_t t ret1 pre1 post1) ->
-      (g: ((x: ret1) -> prog state_t action_impl_t t ret2 (pre2 x) (post2 x)) {
+      (f: prog state_t action_t t ret1 pre1 post1) ->
+      (g: ((x: ret1) -> prog state_t action_t t ret2 (pre2 x) (post2 x)) {
         forall s v r s' . post1 s v r s' ==> pre2 r s'
       }) ->
-      prog state_t action_impl_t t ret2 pre1 (bind_fold_post pre1 post1 pre2 post2)
+      prog state_t action_t t ret2 pre1 (bind_fold_post pre1 post1 pre2 post2)
   | PU8:
-      (#ret_t: _) -> (#pre: _) -> (#post: _) ->
-      ((x: U8.t) -> action state_t action_impl_t ret_t pre (post x)) ->
-      prog state_t action_impl_t TU8 ret_t pre post
+      // the base action on a leaf type just reads the value;
+      // use PBind with PAction and others to perform operations on that value
+      prog state_t action_t TU8 U8.t (fun _ -> True) (fun x s res s' -> s == s' /\ res == x)
   | PPair:
       (#t1: _) ->
       (#ret1: _) ->
       (#pre1: _) ->
       (#post1: _) ->
-      (f1: prog state_t action_impl_t t1 ret1 pre1 post1) ->
+      (f1: prog state_t action_t t1 ret1 pre1 post1) ->
       (#t2: _) ->
       (#ret2: _) ->
       (#pre2: (ret1 -> _)) ->
       (#post2: (ret1 -> _)) ->
-      (f2: ((x: ret1) -> prog state_t action_impl_t t2 ret2 (pre2 x) (post2 x)) {
+      (f2: ((x: ret1) -> prog state_t action_t t2 ret2 (pre2 x) (post2 x)) {
         forall s v1 r1 s' . post1 v1 s r1 s' ==> pre2 r1 s'
       }) ->
-      prog state_t action_impl_t (TPair t1 t2) ret2 pre1 (fold_pair_post pre1 post1 pre2 post2)
+      prog state_t action_t (TPair t1 t2) ret2 pre1 (fold_pair_post pre1 post1 pre2 post2)
   | PList:
       (#t: typ) ->
       (#inv: _) ->
-      prog state_t action_impl_t t unit inv (fun _ _ _ -> inv) ->
-      prog state_t action_impl_t (TList t) unit inv (fun _ _ _ -> inv)
+      prog state_t action_t t unit inv (fun _ _ _ -> inv) ->
+      prog state_t action_t (TList t) unit inv (fun _ _ _ -> inv)
   | PChoice:
       (t: (bool -> typ)) -> // FIXME: WHY WHY WHY does this argument need to be explicit? (if not, then I get "this pattern binds to an inaccessible argument" in `sem` below)
       (#ret_t: Type) ->
       (#pre: (state_t -> prop)) ->
       (#post: ((x: bool) -> type_of_typ (t x) -> state_t -> ret_t -> state_t -> prop)) ->
-      ((x: bool) -> prog state_t action_impl_t (t x) ret_t pre (post x)) ->
-      prog state_t action_impl_t (TChoice t) ret_t pre (fold_choice_post post)
+      ((x: bool) -> prog state_t action_t (t x) ret_t pre (post x)) ->
+      prog state_t action_t (TChoice t) ret_t pre (fold_choice_post post)
 
 let rec sem
   (#state_t: Type)
-  (#action_impl_t: (t: Type) -> (pre: _) -> (post: _) -> stt state_t t pre post -> Type)
+  (#action_t: (t: Type) -> (pre: _) -> (post: _) -> Type)
+  (action_sem: ((#t: Type) -> (#pre: _) -> (#post: _) -> action_t t pre post -> stt state_t t pre post))
   (#t: typ)
   (#ret_t: Type)
   (#pre: state_t -> prop)
   (#post: type_of_typ t -> state_t -> ret_t -> state_t -> prop)
-  (p: prog state_t action_impl_t t ret_t pre post)
+  (p: prog state_t action_t t ret_t pre post)
 : Tot (fold_t state_t (type_of_typ t) ret_t pre post)
 = match p returns (fold_t state_t (type_of_typ t) ret_t pre post) with
-  | PRet s -> ret_fold s.action_spec
-  | PBind s p -> bind_fold (sem s) (fun x -> sem (p x))
-  | PU8 s -> (fun x -> (s x).action_spec)
-  | PPair p1 p2 -> fold_pair (sem p1) (fun r -> sem (p2 r))
-  | PList p -> fold_list (sem p)
-  | PChoice f (* here, "inaccessible argument" *) p -> fold_choice (fun x -> sem (p x)) <: fold_t state_t (type_of_typ (TChoice f)) ret_t pre post
+  | PSubcomp _ p _ -> (fun v -> sem action_sem p v)
+  | PRet v -> ret_fold (ret v)
+  | PAction a -> ret_fold (action_sem a)
+  | PBind s p -> bind_fold (sem action_sem s) (fun x -> sem action_sem (p x))
+  | PU8 -> (fun x -> ret x)
+  | PPair p1 p2 -> fold_pair (sem action_sem p1) (fun r -> sem action_sem (p2 r))
+  | PList p -> fold_list (sem action_sem p)
+  | PChoice f (* here, "inaccessible argument" *) p -> fold_choice (fun x -> sem action_sem (p x)) <: fold_t state_t (type_of_typ (TChoice f)) ret_t pre post
 
 (* Step-by-step serialization *)
 
@@ -466,13 +475,27 @@ let transition'_u8
 : Tot (hole_or_value_t erase_values h.root)
 = fill_context h.context v
 
+let ser_state (t: typ) : Tot Type = hole_or_value_t false t
+
+let transition_u8_pre
+  (#t: typ)
+  (s: ser_state t)
+: Tot prop
+= Hole? s /\ (Hole?.h s).leaf == TU8
+
+let transition_u8_post
+  (#t: typ)
+  (s: ser_state t)
+  (_: unit)
+  (s': ser_state t)
+: Tot prop
+= transition_u8_pre s /\
+  hole_or_value_erase_values s' == transition'_u8 (Hole?.h (hole_or_value_erase_values s)) ()
+
 let transition_u8
   (t: typ)
   (v: U8.t)
-: Tot (stt (hole_or_value_t false t) unit (fun s -> Hole? s /\ (Hole?.h s).leaf == TU8) (fun s _ s' ->
-      Hole? s /\ (Hole?.h s).leaf == TU8 /\
-      hole_or_value_erase_values s' == transition'_u8 (Hole?.h (hole_or_value_erase_values s)) ()
-  ))
+: Tot (stt (hole_or_value_t false t) unit transition_u8_pre transition_u8_post)
 = fun s ->
   let Hole h = s in
   erase_values_fill_context h.context v;
@@ -555,30 +578,37 @@ let transition_choice_tag
   erase_values_concat_context (CSnoc h.context (CChoicePayload f tag)) h'.context;
   ((), transition'_choice_tag h tag)
 
-let mk_unit_action
-  (#state_t: Type)
-  (#t: Type)
-  (#pre: _)
-  (#post: _)
-  (f: stt state_t t pre post)
-: Tot (action state_t (fun _ _ _ _ -> unit) t pre post)
-= {
-  action_spec = f;
-  action_impl = ();
-}
+noeq
+type ser_action
+  (t: typ)
+: (ret_t: Type) -> (ser_state t -> prop) -> (ser_state t -> ret_t -> ser_state t -> prop) -> Type
+= | SerU8:
+      (v: U8.t) ->
+      ser_action t unit transition_u8_pre transition_u8_post
+  | SerListNil:
+      ser_action t unit (fun s -> Hole? s /\ TList? (Hole?.h s).leaf) (fun s _ s' ->
+        Hole? s /\ TList? (Hole?.h s).leaf /\
+        hole_or_value_erase_values s' == transition'_list_nil (Hole?.h (hole_or_value_erase_values s))
+      )
+  | SerListCons:
+      ser_action t unit (fun s -> Hole? s /\ TList? (Hole?.h s).leaf) (fun s _ s' ->
+        Hole? s /\ TList? (Hole?.h s).leaf /\
+        hole_or_value_erase_values s' == transition'_list_cons (Hole?.h (hole_or_value_erase_values s))
+      )
+  | SerChoiceTag:
+      (tag: bool) ->
+      ser_action t unit (fun s -> Hole? s /\ TChoice? (Hole?.h s).leaf) (fun s _ s' ->
+        Hole? s /\ TChoice? (Hole?.h s).leaf /\
+        hole_or_value_erase_values s' == transition'_choice_tag (Hole?.h (hole_or_value_erase_values s)) tag
+      )
 
-let _ : prog (hole_or_value_t false (TPair TU8 TU8)) (fun _ _ _ _ -> unit) (TPair TU8 TU8) unit _ _ =
-  PPair
-    (PBind
-      (PRet (mk_unit_action (state_assert (fun s -> s == Hole (init_hole false (TPair TU8 TU8))))))
-      (fun _ -> PU8 (fun x1 -> mk_unit_action (transition_u8 _ x1))))
-    (fun _ -> PU8 (fun x2 -> mk_unit_action (transition_u8 _ x2)))
-
-let _ : prog (hole_or_value_t false (TPair TU8 TU8)) (fun _ _ _ _ -> unit) (TPair TU8 TU8) unit _ _ =
-  PBind
-    (PPair
-      (PRet (mk_unit_action (state_assert (fun s -> s == Hole (init_hole false (TPair TU8 TU8))))))
-      (fun _ -> PU8 (fun x2 -> mk_unit_action (transition_u8 _ x2))))
-    (fun _ -> PPair
-       (PU8 (fun x1 -> mk_unit_action (transition_u8 _ x1)))
-       (fun _ -> PRet (mk_unit_action (ret ()))))
+let ser_action_sem
+  (#t: typ)
+  (#ret_t: _) (#pre: _) (#post: _)
+  (s: ser_action t ret_t pre post)
+: Tot (stt (ser_state t) ret_t pre post)
+= match s with
+  | SerU8 v -> transition_u8 t v
+  | SerListNil -> transition_list_nil t
+  | SerListCons -> transition_list_cons t
+  | SerChoiceTag tag -> transition_choice_tag t tag
