@@ -311,47 +311,21 @@ let rec context_erase_values
   | CNil -> CNil
   | CSnoc c b -> CSnoc (context_erase_values c) (base_context_erase_values b)
 
-let rec concat_context
-  (#erase_values: bool)
-  (#t1 #t2 #t4: typ)
-  (c12: context_t erase_values t1 t2)
-  (c24: context_t erase_values t2 t4)
-: Tot (context_t erase_values t1 t4)
-  (decreases c24)
-= match c24 with
-  | CNil -> c12
-  | CSnoc c23 b34 -> CSnoc (concat_context c12 c23) b34
-
-let rec erase_values_concat_context
-  (#erase_values: bool)
-  (#t1 #t2 #t4: typ)
-  (c12: context_t erase_values t1 t2)
-  (c24: context_t erase_values t2 t4)
-: Lemma
-  (requires True)
-  (ensures (context_erase_values (c12 `concat_context` c24) == context_erase_values c12 `concat_context` context_erase_values c24))
-  (decreases c24)
-= match c24 with
-  | CNil -> ()
-  | CSnoc c23 b34 -> erase_values_concat_context c12 c23
-
 noeq
-type base_hole_t
+type hole_or_value_t
   (erase_values: bool)
-  : typ -> Type
-= | HU8: base_hole_t erase_values TU8
-  | HList: (t: typ) -> (l: (if erase_values then unit else list (type_of_typ t))) -> base_hole_t erase_values (TList t)
-  | HChoiceTag: (f: (bool -> typ)) -> base_hole_t erase_values (TChoice f)
+  (t: typ)
+= | HVHole
+  | HVValue: (if erase_values then unit else type_of_typ t) -> hole_or_value_t erase_values t
 
-let base_hole_erase_values
-  (#erase_values: bool)
-  (#t: typ)
-  (x: base_hole_t erase_values t)
-: Tot (base_hole_t true t)
-= match x with
-  | HU8 -> HU8
-  | HList t _ -> HList t ()
-  | HChoiceTag f -> HChoiceTag f
+let hole_or_value_erase_values
+  (#erase_values: _)
+  (#t: _)
+  (h: hole_or_value_t erase_values t)
+: Tot (hole_or_value_t true t)
+= match h with
+  | HVHole -> HVHole
+  | HVValue _ -> HVValue ()
 
 noeq
 type hole_t
@@ -360,7 +334,7 @@ type hole_t
   root: typ;
   leaf: typ;
   context: context_t erase_values root leaf;
-  hole: base_hole_t erase_values leaf;
+  hole: hole_or_value_t erase_values leaf;
 }
 
 let hole_erase_values
@@ -371,52 +345,8 @@ let hole_erase_values
   root = x.root;
   leaf = x.leaf;
   context = context_erase_values x.context;
-  hole = base_hole_erase_values x.hole;
+  hole = hole_or_value_erase_values x.hole;
 }
-
-let rec init_hole
-  (erase_values: bool)
-  (t: typ)
-: Pure (hole_t erase_values)
-  (requires True)
-  (ensures (fun res -> res.root == t))
-= match t with
-  | TU8 -> { root = TU8; leaf = TU8; context = CNil; hole = HU8 }
-  | TList t -> { root = TList t; leaf = TList t; context = CNil; hole = HList t (if erase_values then () else ([] <: list (type_of_typ t))) }
-  | TChoice f -> { root = TChoice f; leaf = TChoice f; context = CNil; hole = HChoiceTag f }
-  | TPair l r ->
-    let h = init_hole erase_values l in
-    { root = TPair l r; leaf = h.leaf; context = concat_context (CSnoc CNil (CPairL l r)) h.context; hole = h.hole }
-
-let rec erase_values_init_hole
-  (erase_values: bool)
-  (t: typ)
-: Lemma
-  (hole_erase_values (init_hole erase_values t) == init_hole true t)
-= match t with
-  | TU8 -> ()
-  | TList t -> ()
-  | TChoice f -> ()
-  | TPair l r ->
-    erase_values_init_hole erase_values l;
-    let h = init_hole erase_values l in
-    erase_values_concat_context (CSnoc CNil (CPairL l r)) h.context
-
-noeq
-type hole_or_value_t
-  (erase_values: bool)
-  (t: typ)
-= | Value: (if erase_values then unit else type_of_typ t) -> hole_or_value_t erase_values t
-  | Hole: (h: hole_t erase_values { h.root == t }) -> hole_or_value_t erase_values t
-
-let hole_or_value_erase_values
-  (#erase_values: _)
-  (#t: typ)
-  (h: hole_or_value_t erase_values t)
-: Tot (hole_or_value_t true t)
-= match h with
-  | Value _ -> Value ()
-  | Hole h -> Hole (hole_erase_values h)
 
 let mk_choice_value
   (tag: bool)
@@ -425,190 +355,122 @@ let mk_choice_value
 : Tot (type_of_typ (TChoice f))
 = (| tag, v |)
 
-let rec fill_context
+let close_hole
   (#erase_values: bool)
-  (#root: typ)
-  (#leaf: typ)
-  (c: context_t erase_values root leaf)
-  (v: (if erase_values then unit else type_of_typ leaf))
-: Tot (hole_or_value_t erase_values root)
-  (decreases c)
-= match c with
-  | CNil ->
-    Value v
-  | CSnoc c' (CPairL l r) ->
-    let h = init_hole erase_values r in
-    Hole ({ root = root; leaf = h.leaf; context = concat_context (CSnoc c' (CPairR l v r)) h.context; hole = h.hole })
-  | CSnoc c' (CPairR l vl r) ->
-    fill_context c' (if erase_values then () else (vl, v))
-  | CSnoc c' (CListCons t l) ->
-    Hole ({ root = root; leaf = _; context = c'; hole = HList t (if erase_values then () else l `List.Tot.append` [v] )})
-  | CSnoc c' (CChoicePayload f tag) ->
-    fill_context c' (if erase_values then () else mk_choice_value tag f v)
-
-let rec erase_values_fill_context
-  (#erase_values: bool)
-  (#root: typ)
-  (#leaf: typ)
-  (c: context_t erase_values root leaf)
-  (v: (if erase_values then unit else type_of_typ leaf))
-: Lemma
-  (requires True)
-  (ensures (hole_or_value_erase_values (fill_context c v) == fill_context (context_erase_values c) ()))
-  (decreases c)
-= match c with
-  | CNil -> ()
-  | CSnoc c' (CPairL l r) ->
-    erase_values_init_hole erase_values r;
-    let h = init_hole erase_values r in
-    erase_values_concat_context (CSnoc c' (CPairR l v r)) h.context
-  | CSnoc c' (CPairR l vl r) ->
-    erase_values_fill_context c' (if erase_values then () else (vl, v))
-  | CSnoc c' (CListCons t l) -> ()
-  | CSnoc c' (CChoicePayload f tag) ->
-    erase_values_fill_context c' (if erase_values then () else mk_choice_value tag f v)
-
-let transition'_u8
-  (#erase_values: bool)
-  (h: hole_t erase_values { h.leaf == TU8 })
-  (v: (if erase_values then unit else U8.t))
-: Tot (hole_or_value_t erase_values h.root)
-= fill_context h.context v
-
-let ser_state (t: typ) : Tot Type = hole_or_value_t false t
-
-let transition_u8_pre
-  (#t: typ)
-  (s: ser_state t)
-: Tot prop
-= Hole? s /\ (Hole?.h s).leaf == TU8
-
-let transition_u8_post
-  (#t: typ)
-  (s: ser_state t)
-  (_: unit)
-  (s': ser_state t)
-: Tot prop
-= transition_u8_pre s /\
-  hole_or_value_erase_values s' == transition'_u8 (Hole?.h (hole_or_value_erase_values s)) ()
-
-let transition_u8
-  (t: typ)
-  (v: U8.t)
-: Tot (stt (hole_or_value_t false t) unit transition_u8_pre transition_u8_post)
-= fun s ->
-  let Hole h = s in
-  erase_values_fill_context h.context v;
-  ((), transition'_u8 h v)
-
-let transition'_list_nil
-  (#erase_values: bool)
-  (h: hole_t erase_values { TList? h.leaf })
-: Tot (hole_or_value_t erase_values h.root)
-= let TList t = h.leaf in
-  fill_context h.context (if erase_values then () else ([] <: list (type_of_typ t)))
-
-let transition_list_nil
-  (t: typ)
-: Tot (stt (hole_or_value_t false t) unit (fun s -> Hole? s /\ TList? (Hole?.h s).leaf) (fun s _ s' ->
-    Hole? s /\ TList? (Hole?.h s).leaf /\
-    hole_or_value_erase_values s' == transition'_list_nil (Hole?.h (hole_or_value_erase_values s))
+  (x: hole_t erase_values)
+: Pure (hole_t erase_values)
+  (requires (
+    CSnoc? x.context /\
+    HVValue? x.hole
   ))
-= fun s ->
-  let Hole h = s in
-  let TList t' = h.leaf in
-  erase_values_fill_context h.context ([] <: list (type_of_typ t'));
-  ((), transition'_list_nil h)
+  (ensures (fun _ -> True))
+= let CSnoc c' c = x.context in
+  let HVValue v = x.hole in
+  match c with
+  | CPairL l r ->
+    {
+      root = x.root;
+      leaf = r;
+      context = CSnoc c' (CPairR l v r);
+      hole = HVHole;
+    }
+  | CPairR l vl r ->
+    {
+      root = x.root;
+      leaf = _;
+      context = c';
+      hole = HVValue (if erase_values then () else (vl, v));
+    }
+  | CListCons t l ->
+    {
+      root = x.root;
+      leaf = _;
+      context = c';
+      hole = HVValue (if erase_values then () else List.Tot.append l [v]);
+    }
+  | CChoicePayload f tag ->
+    {
+      root = x.root;
+      leaf = _;
+      context = c';
+      hole = HVValue (if erase_values then () else mk_choice_value tag f v)
+    }
 
-let transition'_list_cons
+let fill_hole
   (#erase_values: bool)
-  (h: hole_t erase_values { TList? h.leaf })
-: Tot (hole_or_value_t erase_values h.root)
-= let TList t = h.leaf in
-  let HList _ l = h.hole in
-  let h' = init_hole erase_values t in
-  Hole ({
-    root = h.root;
-    leaf = h'.leaf;
-    context = concat_context (CSnoc h.context (CListCons t l)) h'.context;
-    hole = h'.hole;
-  })
+  (x: hole_t erase_values)
+  (v: (if erase_values then unit else type_of_typ x.leaf))
+: Pure (hole_t erase_values)
+  (requires (HVHole? x.hole))
+  (ensures (fun _ -> True))
+= {
+    x with
+    hole = HVValue v;
+  }
 
-let transition_list_cons
-  (t: typ)
-: Tot (stt (hole_or_value_t false t) unit (fun s -> Hole? s /\ TList? (Hole?.h s).leaf) (fun s _ s' ->
-    Hole? s /\ TList? (Hole?.h s).leaf /\
-    hole_or_value_erase_values s' == transition'_list_cons (Hole?.h (hole_or_value_erase_values s))
+let start_pair
+  (#erase_values: bool)
+  (x: hole_t erase_values)
+: Pure (hole_t erase_values)
+  (requires (
+    HVHole? x.hole /\
+    TPair? x.leaf
   ))
-= fun s ->
-  let Hole h = s in
-  let TList t' = h.leaf in
-  let HList _ l = h.hole in
-  erase_values_init_hole false t';
-  let h' = init_hole false t' in
-  erase_values_concat_context (CSnoc h.context (CListCons t' l)) h'.context;
-  ((), transition'_list_cons h)
+  (ensures (fun _ -> True))
+= let TPair l r = x.leaf in
+  {
+    root = x.root;
+    leaf = l;
+    context = CSnoc x.context (CPairL l r);
+    hole = HVHole;
+  }
 
-let transition'_choice_tag
+let start_list
   (#erase_values: bool)
-  (h: hole_t erase_values { TChoice? h.leaf })
+  (x: hole_t erase_values)
+: Pure (hole_t erase_values)
+  (requires (
+    HVHole? x.hole /\
+    TList? x.leaf
+  ))
+  (ensures (fun _ -> True))
+= let TList t = x.leaf in
+  fill_hole x (if erase_values then () else ([] <: list (type_of_typ t)))
+
+let list_snoc
+  (#erase_values: bool)
+  (x: hole_t erase_values)
+: Pure (hole_t erase_values)
+  (requires (
+    HVValue? x.hole /\
+    TList? x.leaf
+  ))
+  (ensures (fun _ -> True))
+= let TList t = x.leaf in
+  let HVValue l = x.hole in
+  {
+    root = x.root;
+    leaf = t;
+    context = CSnoc x.context (CListCons t l);
+    hole = HVHole;
+  }
+
+let choice_tag
+  (#erase_values: bool)
+  (x: hole_t erase_values)
   (tag: bool)
-: Tot (hole_or_value_t erase_values h.root)
-= let TChoice f = h.leaf in
-  let h' = init_hole erase_values (f tag) in
-  Hole ({
-    root = h.root;
-    leaf = h'.leaf;
-    context = concat_context (CSnoc h.context (CChoicePayload f tag)) h'.context;
-    hole = h'.hole;
-  })
-
-let transition_choice_tag
-  (t: typ)
-  (tag: bool)
-: Tot (stt (hole_or_value_t false t) unit (fun s -> Hole? s /\ TChoice? (Hole?.h s).leaf) (fun s _ s' ->
-    Hole? s /\ TChoice? (Hole?.h s).leaf /\
-    hole_or_value_erase_values s' == transition'_choice_tag (Hole?.h (hole_or_value_erase_values s)) tag
+: Pure (hole_t erase_values)
+  (requires (
+    HVHole? x.hole /\
+    TChoice? x.leaf
   ))
-= fun s ->
-  let Hole h = s in
-  let TChoice f = h.leaf in
-  erase_values_init_hole false (f tag);
-  let h' = init_hole false (f tag) in
-  erase_values_concat_context (CSnoc h.context (CChoicePayload f tag)) h'.context;
-  ((), transition'_choice_tag h tag)
+  (ensures (fun _ -> True))
+= let TChoice f = x.leaf in
+  {
+    root = x.root;
+    leaf = f tag;
+    context = CSnoc x.context (CChoicePayload f tag);
+    hole = HVHole;
+  }
 
-noeq
-type ser_action
-  (t: typ)
-: (ret_t: Type) -> (ser_state t -> prop) -> (ser_state t -> ret_t -> ser_state t -> prop) -> Type
-= | SerU8:
-      (v: U8.t) ->
-      ser_action t unit transition_u8_pre transition_u8_post
-  | SerListNil:
-      ser_action t unit (fun s -> Hole? s /\ TList? (Hole?.h s).leaf) (fun s _ s' ->
-        Hole? s /\ TList? (Hole?.h s).leaf /\
-        hole_or_value_erase_values s' == transition'_list_nil (Hole?.h (hole_or_value_erase_values s))
-      )
-  | SerListCons:
-      ser_action t unit (fun s -> Hole? s /\ TList? (Hole?.h s).leaf) (fun s _ s' ->
-        Hole? s /\ TList? (Hole?.h s).leaf /\
-        hole_or_value_erase_values s' == transition'_list_cons (Hole?.h (hole_or_value_erase_values s))
-      )
-  | SerChoiceTag:
-      (tag: bool) ->
-      ser_action t unit (fun s -> Hole? s /\ TChoice? (Hole?.h s).leaf) (fun s _ s' ->
-        Hole? s /\ TChoice? (Hole?.h s).leaf /\
-        hole_or_value_erase_values s' == transition'_choice_tag (Hole?.h (hole_or_value_erase_values s)) tag
-      )
-
-let ser_action_sem
-  (#t: typ)
-  (#ret_t: _) (#pre: _) (#post: _)
-  (s: ser_action t ret_t pre post)
-: Tot (stt (ser_state t) ret_t pre post)
-= match s with
-  | SerU8 v -> transition_u8 t v
-  | SerListNil -> transition_list_nil t
-  | SerListCons -> transition_list_cons t
-  | SerChoiceTag tag -> transition_choice_tag t tag
+let ser_state = hole_t false
