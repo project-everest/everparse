@@ -408,52 +408,50 @@ let ser_state (i: ser_index) : Tot Type0 = (x: hole_t false {
 })
 
 let ser_close_hole
-  (#root: typ)
-  (#mid: typ)
-  (#leaf: typ)
-  (c': context_t true root mid)
-  (c: base_context_t true mid leaf)
-: Tot (let h : ser_index = Mkhole_t _ _ (CSnoc c' c) (HVValue ()) in
-  stt ser_state unit h (ret_post (close_hole h)))
+  (x: ser_index)
+  (sq: squash (
+    CSnoc? x.context /\
+    HVValue? x.hole
+  ))
+: Tot (stt ser_state unit x (ret_post (close_hole x)))
 = fun h -> (| (), close_hole h |)
 
 let ser_u8
-  (#root: typ)
-  (c: context_t true root TU8)
-  (v: U8.t)
-: Tot (stt ser_state unit (Mkhole_t _ _ c HVHole) (ret_post (Mkhole_t _ _ c (HVValue ()))))
+  (x: ser_index)
+  (v: U8.t {
+    x.leaf == TU8 /\
+    HVHole? x.hole
+  })
+: Tot (stt ser_state unit x (ret_post (fill_hole x ())))
 = fun h -> (| (), fill_hole h v |)
 
 let ser_start_pair
-  (#root: typ)
-  (#tl #tr: typ)
-  (c: context_t true root (TPair tl tr))
-: Tot (stt ser_state unit (Mkhole_t _ _ c HVHole) (ret_post (start_pair (Mkhole_t _ _ c HVHole))))
+  (x: ser_index)
+  (sq: squash (
+    TPair? x.leaf /\
+    HVHole? x.hole
+  ))
+: Tot (stt ser_state unit x (ret_post (start_pair x)))
 = fun h -> (| (), start_pair h |)
 
 noeq
 type ser_action
 : (ret_t: Type) -> ser_index -> (ret_t -> ser_index) -> Type
 = | SCloseHole:
-      (#root: typ) ->
-      (#mid: typ) ->
-      (#leaf: typ) ->
-      (#c': context_t true root mid) ->
-      (#c: base_context_t true mid leaf) ->
-      unit ->
-      ser_action unit (Mkhole_t _ _ (CSnoc c' c) (HVValue ())) (ret_post (close_hole (Mkhole_t _ _ (CSnoc c' c) (HVValue ()))))
+      (#x: ser_index) ->
+      squash (CSnoc? x.context /\ HVValue? x.hole) ->
+      ser_action unit x (ret_post (close_hole x))
   | SU8:
-      (#root: typ) ->
-      (#c: context_t true root TU8) ->
-      (v: U8.t) ->
-      ser_action unit (Mkhole_t _ _ c HVHole) (ret_post (Mkhole_t _ _ c (HVValue ())))
+      (#x: ser_index) ->
+      (v: U8.t {
+        x.leaf == TU8 /\
+        HVHole? x.hole
+      }) ->
+      ser_action unit x (ret_post (fill_hole x ()))
   | SStartPair:
-      (#root: typ) ->
-      (#tl: typ) ->
-      (#tr: typ) ->
-      (#c: context_t true root (TPair tl tr)) ->
-      unit ->
-      ser_action unit (Mkhole_t _ _ c HVHole) (ret_post (start_pair (Mkhole_t _ _ c HVHole)))
+      (#x: ser_index) ->
+      squash (TPair? x.leaf /\ HVHole? x.hole) ->
+      ser_action unit x (ret_post (start_pair x))
 
 let ser_action_sem
   (#ret_t: Type)
@@ -462,9 +460,9 @@ let ser_action_sem
   (a: ser_action ret_t pre post)
 : Tot (stt ser_state ret_t pre post)
 = match a with
-  | SCloseHole #_ #_ #_ #c' #c _ -> ser_close_hole c' c
-  | SU8 #_ #c v -> ser_u8 c v
-  | SStartPair #_ #_ #_ #c _ -> ser_start_pair c
+  | SCloseHole #x _ -> ser_close_hole x ()
+  | SU8 #x v -> ser_u8 x v
+  | SStartPair #x _ -> ser_start_pair x ()
 
 (*
 let test0 : prog _ ser_action _ _ (Mkhole_t (TPair TU8 TU8) _ CNil HVHole) _ =
