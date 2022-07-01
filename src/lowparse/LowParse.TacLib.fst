@@ -4,9 +4,6 @@ include LowParse.Norm
 
 module L = FStar.List.Tot
 
-let apply (t : term) : Tac unit =
-  t_apply true false true t
-
 [@@ noextract_to "krml"]
 let conclude ()
 : Tac unit
