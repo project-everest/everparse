@@ -69,8 +69,16 @@ type asn1_octetstring_t = B.bytes
 
 type asn1_null_t = unit
 
-//TODO
-type asn1_oid_t = unit
+let asn1_OID_wf' (value1 value2 : U32.t) =
+  (U32.v value1 < 2 /\ U32.v value2 < 40) \/ (U32.v value1 = 2 /\ U32.v value2 < 256 - 80)
+
+let asn1_OID_wf (l : list U32.t) =
+  List.length l >= 2 /\
+  (match l with
+  | value1 :: value2 :: tl -> asn1_OID_wf' value1 value2)
+
+type asn1_oid_t = 
+  (l : list U32.t {asn1_OID_wf l})
 
 type asn1_roid_t = unit
 

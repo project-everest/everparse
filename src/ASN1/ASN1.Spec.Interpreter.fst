@@ -8,6 +8,7 @@ open ASN1.Spec.Content.BOOLEAN
 open ASN1.Spec.Content.BITSTRING
 open ASN1.Spec.Content.OCTETSTRING
 open ASN1.Spec.Content.NULL
+open ASN1.Spec.Content.OIDU32
 
 open ASN1.Spec.ILC
 open ASN1.Spec.Choice
@@ -21,11 +22,11 @@ let asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_termi
   | ASN1_BITSTRING -> parse_asn1_bitstring
   | ASN1_OCTETSTRING -> parse_asn1_octetstring
   | ASN1_NULL -> parse_asn1_null
+  | ASN1_OID -> parse_asn1_OIDU32
   | _ -> fail_parser _ _  (* admit *)
 (*
   | ASN1_INTEGER -> admit ()
   | ASN1_ENUM -> admit ()
-  | ASN1_OID -> admit ()
   | ASN1_ROID -> admit ()
   | ASN1_TIME -> admit ()
 *)  

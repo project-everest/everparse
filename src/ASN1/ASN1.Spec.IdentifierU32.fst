@@ -456,8 +456,6 @@ let rec parse_asn1_identifier_loop
     let _ = (lemma_parse_asn1_identifier_loop'_cases_injective i c) in
     (parse_asn1_identifier_loop' i c)
 
-#push-options "--print_implicits --query_stats"
-
 let initialize_partial_state 
   (b : byte)
 : Pure asn1_partial_id_t
@@ -609,6 +607,96 @@ let lemma_parse_asn1_identifier_head_inj ()
         )
  )
 
+let parse_asn1_identifier_head_alt
+  (buf : byte)
+: parser parse_asn1_identifier_head_kind (U32.t)
+= if (U8.v buf < 128) then
+    weaken (parse_asn1_identifier_head_kind) (parse_ret (Cast.uint8_to_uint32 buf))
+  else
+    (let b = U8.sub buf 128uy in
+    if (b = 0uy) then
+      fail_parser _ _
+    else
+      (let state = (initialize_partial_state b) in
+      parse_cast
+        U32.t
+        (fun x -> 0 < U32.v x /\ partial_state_prefixr state x)
+        (fun _ -> True)
+        (fun _ -> _)
+        (parse_asn1_identifier_head' state)))
+
+let lemma_parse_asn1_identifier_head_alt_inj ()
+: Lemma (ensures (and_then_cases_injective parse_asn1_identifier_head_alt))
+= let p = parse_asn1_identifier_head_alt in
+  and_then_cases_injective_intro p (fun buf1 buf2 b1 b2 ->
+    match (parse (p buf1) b1) with
+    | Some (state1, l1) -> match (parse (p buf2) b2) with
+      | Some (state2, l2) ->
+        (if (U8.v buf1 < 128) then
+          (if (U8.v buf2 < 128) then
+            _
+          else
+            (let buf2' = U8.sub buf2 128uy in
+            if (U8.v buf2' = 0) then
+              _
+            else
+            (
+              let state2' = initialize_partial_state buf2' in
+              let state2 = parse_cast_inverse
+                U32.t
+                (fun x -> 0 < U32.v x /\ partial_state_prefixr state2' x)
+                (fun _ -> True)
+                (fun _ -> _)
+                (parse_asn1_identifier_head' state2')
+                b2 state2 l2
+              in
+              partial_state_bound_separation 0 state1 state2
+            )
+            )
+          )
+        else
+          (
+          let buf1' = U8.sub buf1 128uy in
+          if (U8.v buf1' = 0) then
+            _
+          else
+          (
+            let state1' = initialize_partial_state buf1' in
+            let state1 = parse_cast_inverse
+              U32.t
+              (fun x -> 0 < U32.v x /\ partial_state_prefixr state1' x)
+              (fun _ -> True)
+              (fun _ -> _)
+              (parse_asn1_identifier_head' state1')
+              b1 state1 l1
+            in
+            (if (U8.v buf2 < 128) then
+              _
+              else
+              (
+                let buf2' = U8.sub buf2 128uy in
+                if (U8.v buf2' = 0) then
+                  _
+                else
+                (
+                  let state2' = initialize_partial_state buf2' in
+                  let state2 = parse_cast_inverse
+                    U32.t
+                    (fun x -> 0 < U32.v x /\ partial_state_prefixr state2' x)
+                    (fun _ -> True)
+                    (fun _ -> _)
+                    (parse_asn1_identifier_head' state2')
+                    b2 state2 l2
+                  in
+                  initialize_partial_state_inj buf1' buf2'
+                )
+              )
+            )
+          )
+          )
+        )
+ )
+
 let parse_asn1_identifier_first_kind = strong_parser_kind 0 5 None
 
 let parse_asn1_identifier_first'
@@ -694,9 +782,6 @@ let encode_asn1_first_byte
   (id_flag : asn1_id_flag_t)
   (b : byte {0 <= U8.v b /\ U8.v b <= 31})
 : byte
-//   {decode_asn1_identifier_class (U8.shift_right buf 6ul) = id_class /\
-//    decode_asn1_identifier_flag (U8.rem (U8.shift_right buf 5ul) 2uy) = id_flag /\
-//    U8.rem buf 32uy = b})
 = let b0 = (match id_class with
            | UNIVERSAL -> 0uy
            | APPLICATION -> 1uy
@@ -809,3 +894,7 @@ let parse_asn1_identifier_U32 : asn1_strong_parser (asn1_id_t)
   `and_then`
   parse_asn1_identifier_first)
 
+let parse_asn1_identifier_U32_alt : parser parse_asn1_identifier_first_kind U32.t
+= let _ = lemma_parse_asn1_identifier_head_alt_inj () in
+  weaken (parse_asn1_identifier_first_kind)
+  (parse_u8 `and_then` parse_asn1_identifier_head_alt)

@@ -345,10 +345,10 @@ let make_asn1_sequence_parser_body
   : Pure (asn1_weak_parser (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
     (requires (make_asn1_sequence_parser_body_twin_spec pbodytwin))
     (ensures (fun p -> parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p))
-= let k = glb parse_asn1_identifier30_kind parse_ret_kind in
+= let k = glb asn1_strong_parser_kind parse_ret_kind in
   let p = 
   (match st with
-   | None -> weaken k parse_asn1_identifier32
+   | None -> weaken k parse_asn1_identifier_U32
    | Some id -> weaken k (parse_ret id)) in
   let _ = 
   (let ov = generate_defaultable_items itemtwins in
@@ -370,7 +370,7 @@ let make_asn1_sequence_parser_body_and_then_cases_injective
           | None, _ -> _
           | _, None -> _
           | Some v1, Some v2 ->
-            let k = glb parse_asn1_identifier30_kind parse_ret_kind in
+            let k = glb asn1_strong_parser_kind parse_ret_kind in
             let p' = pbodytwin in
             let p1 = weaken k (parse_ret v1) in
             and_then_eq p1 p' b1;
