@@ -39,53 +39,51 @@ let rec parser_of_typ (t: typ) : Tot (parser pkind (type_of_typ t)) =
     weaken _ (parse_vldata 1 (parse_list (parser_of_typ t')))
   | TChoice f -> weaken _ (parse_dtuple2 parse_bool (fun x -> parser_of_typ (f x)))
 
-let stt (#state_i: Type) (state_t: (state_i -> Type)) (ret_t: Type) (pre: state_i) (post: (ret_t -> state_i)) : Tot Type = (state_t pre -> Tot (y: ret_t & state_t (post y)))
+let stt (#state_i: Type) (state_t: (state_i -> Type)) (ret_t: Type) (pre: state_i) (post: (state_i)) : Tot Type = (state_t pre -> Tot (ret_t & state_t (post)))
 
-let ret_post #state_i (#ret_t: Type) (i: state_i) (x: ret_t) : Tot state_i = i
-
-let ret #state_t #pre (#ret_t: Type) (x: ret_t) : Tot (stt state_t ret_t pre (ret_post pre)) = fun s -> (| x, s |)
+let ret #state_t #pre (#ret_t: Type) (x: ret_t) : Tot (stt state_t ret_t pre (pre)) = fun s -> (x, s)
 
 let bind #state_i #state_t (#ret1_t #ret2_t: Type)
   (#pre1: state_i)
-  (#post1: ret1_t -> state_i)
+  (#post1: state_i)
   (f1: stt state_t ret1_t pre1 post1)
-  (#post2: ret2_t -> state_i)
-  (f2: (r1: ret1_t) -> stt state_t ret2_t (post1 r1) post2)
+  (#post2: state_i)
+  (f2: (r1: ret1_t) -> stt state_t ret2_t (post1) post2)
 : Tot (stt state_t ret2_t pre1 post2)
 = fun state0 ->
-    let (| r1, state1 |) = f1 state0 in
-    let (| r2, state2 |) = f2 r1 state1 in
-    (| r2, state2 |)
+    let (r1, state1) = f1 state0 in
+    let (r2, state2) = f2 r1 state1 in
+    (r2, state2)
 
-let fold_t #state_i (state_t: (state_i -> Type)) (t: Type) (ret_t: Type) (pre: state_i) (post: ret_t -> state_i) : Tot Type = ((v: t) -> stt state_t ret_t pre post)
+let fold_t #state_i (state_t: (state_i -> Type)) (t: Type) (ret_t: Type) (pre: state_i) (post: state_i) : Tot Type = ((v: t) -> stt state_t ret_t pre post)
 
 let fold_pair
   #state_t
   #t1 #ret1 #pre1 #post1
   (f1: fold_t state_t t1 ret1 pre1 post1)
   #t2 #ret2 (#post2: _)
-  (f2: (x: ret1) -> fold_t state_t t2 ret2 (post1 x) post2)
+  (f2: (x: ret1) -> fold_t state_t t2 ret2 (post1) post2)
 : Tot (fold_t state_t (t1 & t2) ret2 pre1 post2)
 = fun x s0 ->
     let x1 = fst x in
     let x2 = snd x in
-    let (| r1, s1 |) = f1 x1 s0 in
+    let (r1, s1) = f1 x1 s0 in
     f2 r1 x2 s1
 
 let fold_list
   #state_i #state_t
   (inv: state_i)
   (#t: Type)
-  (f: fold_t state_t t unit inv (ret_post inv))
-: Tot (fold_t state_t (list t) unit inv (ret_post inv))
-= fun l x -> (| (), (List.Tot.fold_left (fun (state: state_t inv) x -> dsnd (f x state)) x l <: state_t inv) |)
+  (f: fold_t state_t t unit inv (inv))
+: Tot (fold_t state_t (list t) unit inv (inv))
+= fun l x -> ((), (List.Tot.fold_left (fun (state: state_t inv) x -> snd (f x state)) x l <: state_t inv) )
 
 let fold_choice
   #state_i #state_t
   (#ret_t: Type)
   (#t: bool -> Type)
   (#pre: state_i)
-  (#post: ret_t -> state_i)
+  (#post: _)
   (f: (x: bool) -> fold_t state_t (t x) ret_t pre post)
 : Tot (fold_t state_t (x: bool & t x) ret_t pre post)
 = fun w -> if (dfst w) then f true (dsnd w) else f false (dsnd w)
@@ -99,10 +97,10 @@ let bind_fold
   (#ret2: _)
   (#post2: _)
   (f: fold_t state_t t ret1 pre1 post1)
-  (g: (x: ret1) -> fold_t state_t t ret2 (post1 x) post2)
+  (g: (x: ret1) -> fold_t state_t t ret2 (post1) post2)
 : Tot (fold_t state_t t ret2 pre1 post2)
 = fun v s0 ->
-  let (| r1, s1 |) = f v s0 in
+  let (r1, s1) = f v s0 in
   g r1 v s1
 
 let action_fold
@@ -120,21 +118,21 @@ let fold_read
   (#pre: _)
   (#t: Type)
   ()
-: Tot (fold_t state_t t t pre (ret_post pre))
+: Tot (fold_t state_t t t pre (pre))
 = fun x -> ret x
 
 noeq
 type prog
   (#state_i: Type)
   (state_t: state_i -> Type)
-  (action_t: (ret_t: Type) -> (pre: state_i) -> (post: ret_t -> state_i) -> Type)
-: (t: typ) -> (ret_t: Type) -> state_i -> (ret_t -> state_i) -> Type
+  (action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
+: (t: typ) -> (ret_t: Type) -> state_i -> (state_i) -> Type
 = | PRet:
       (#ret_t: Type) ->
       (#i: state_i) ->
       (#t: typ) ->
       (v: ret_t) ->
-      prog state_t action_t t ret_t i (ret_post i)
+      prog state_t action_t t ret_t i (i)
   | PAction:
       (#t: typ) ->
       (#ret_t: Type) -> (#pre: _) -> (#post: _) ->
@@ -148,13 +146,13 @@ type prog
       (#ret2: _) ->
       (#post2: _) ->
       (f: prog state_t action_t t ret1 pre1 post1) ->
-      (g: ((x: ret1) -> prog state_t action_t t ret2 (post1 x) post2)) ->
+      (g: ((x: ret1) -> prog state_t action_t t ret2 (post1) post2)) ->
       prog state_t action_t t ret2 pre1 post2
   | PU8:
       // the base action on a leaf type just reads the value;
       // use PBind with PAction and others to perform operations on that value
       (i: state_i) ->
-      prog state_t action_t TU8 U8.t i (ret_post i)
+      prog state_t action_t TU8 U8.t i (i)
   | PPair:
       (#t1: _) ->
       (#ret1: _) ->
@@ -164,13 +162,13 @@ type prog
       (#t2: _) ->
       (#ret2: _) ->
       (#post2: _) ->
-      (f2: ((x: ret1) -> prog state_t action_t t2 ret2 (post1 x) post2)) ->
+      (f2: ((x: ret1) -> prog state_t action_t t2 ret2 (post1) post2)) ->
       prog state_t action_t (TPair t1 t2) ret2 pre1 post2
   | PList:
       (#t: typ) ->
       (inv: _) ->
-      prog state_t action_t t unit inv (ret_post inv) ->
-      prog state_t action_t (TList t) unit inv (ret_post inv)
+      prog state_t action_t t unit inv (inv) ->
+      prog state_t action_t (TList t) unit inv (inv)
   | PChoice:
       (#t: (bool -> typ)) ->
       (#ret_t: Type) ->
@@ -191,13 +189,25 @@ let rec sem
 : Tot (fold_t state_t (type_of_typ t) ret_t pre post)
   (decreases p)
 = match p returns (fold_t state_t (type_of_typ t) ret_t pre post) with
-  | PRet v -> action_fold (ret v) <: fold_t state_t (type_of_typ t) ret_t _ (ret_post _)
+  | PRet v -> action_fold (ret v) <: fold_t state_t (type_of_typ t) ret_t _ (_)
   | PAction a -> action_fold (action_sem a)
   | PBind s p -> bind_fold (sem action_sem s) (fun x -> sem action_sem (p x))
-  | PU8 _ -> fold_read () <: fold_t state_t (type_of_typ t) ret_t _ (ret_post _)
+  | PU8 _ -> fold_read () <: fold_t state_t (type_of_typ t) ret_t _ (_)
   | PPair p1 p2 -> fold_pair (sem action_sem p1) (fun r -> sem action_sem (p2 r))
   | PList inv p -> fold_list inv (sem action_sem p)
   | PChoice p -> fold_choice (fun x -> sem action_sem (p x)) <: fold_t state_t (type_of_typ (TChoice _)) ret_t pre post
+
+let pseq
+  #state_t #action_t
+  (#t: typ)
+  (#pre1: _)
+  (#post1: _)
+  (#ret2: _)
+  (#post2: _)
+  (f: prog state_t action_t t unit pre1 post1)
+  (g: prog state_t action_t t ret2 (post1) post2)
+: Tot (prog state_t action_t t ret2 pre1 post2)
+= PBind f (fun _ -> g)
 
 (* Step-by-step serialization *)
 
@@ -285,13 +295,11 @@ let mk_choice_value
 
 let close_hole
   (#erase_values: bool)
-  (x: hole_t erase_values)
-: Pure (hole_t erase_values)
-  (requires (
+  (x: hole_t erase_values {
     CSnoc? x.context /\
     HVValue? x.hole
-  ))
-  (ensures (fun _ -> True))
+  })
+: Tot (hole_t erase_values)
 = let CSnoc c' c = x.context in
   let HVValue v = x.hole in
   match c with
@@ -326,11 +334,11 @@ let close_hole
 
 let fill_hole
   (#erase_values: bool)
-  (x: hole_t erase_values)
+  (x: hole_t erase_values {
+    HVHole? x.hole
+  })
   (v: (if erase_values then unit else type_of_typ x.leaf))
-: Pure (hole_t erase_values)
-  (requires (HVHole? x.hole))
-  (ensures (fun _ -> True))
+: Tot (hole_t erase_values)
 = {
     x with
     hole = HVValue v;
@@ -338,13 +346,11 @@ let fill_hole
 
 let start_pair
   (#erase_values: bool)
-  (x: hole_t erase_values)
-: Pure (hole_t erase_values)
-  (requires (
+  (x: hole_t erase_values {
     HVHole? x.hole /\
     TPair? x.leaf
-  ))
-  (ensures (fun _ -> True))
+  })
+: Tot (hole_t erase_values)
 = let TPair l r = x.leaf in
   {
     root = x.root;
@@ -355,25 +361,21 @@ let start_pair
 
 let start_list
   (#erase_values: bool)
-  (x: hole_t erase_values)
-: Pure (hole_t erase_values)
-  (requires (
+  (x: hole_t erase_values {
     HVHole? x.hole /\
     TList? x.leaf
-  ))
-  (ensures (fun _ -> True))
+  })
+: Tot (hole_t erase_values)
 = let TList t = x.leaf in
   fill_hole x (if erase_values then () else ([] <: list (type_of_typ t)))
 
 let list_snoc
   (#erase_values: bool)
-  (x: hole_t erase_values)
-: Pure (hole_t erase_values)
-  (requires (
+  (x: hole_t erase_values {
     HVValue? x.hole /\
     TList? x.leaf
-  ))
-  (ensures (fun _ -> True))
+  })
+: Tot (hole_t erase_values)
 = let TList t = x.leaf in
   let HVValue l = x.hole in
   {
@@ -385,14 +387,12 @@ let list_snoc
 
 let choice_tag
   (#erase_values: bool)
-  (x: hole_t erase_values)
-  (tag: bool)
-: Pure (hole_t erase_values)
-  (requires (
+  (x: hole_t erase_values {
     HVHole? x.hole /\
     TChoice? x.leaf
-  ))
-  (ensures (fun _ -> True))
+  })
+  (tag: bool)
+: Tot (hole_t erase_values)
 = let TChoice f = x.leaf in
   {
     root = x.root;
@@ -413,8 +413,8 @@ let ser_close_hole
     CSnoc? x.context /\
     HVValue? x.hole
   ))
-: Tot (stt ser_state unit x (ret_post (close_hole x)))
-= fun h -> (| (), close_hole h |)
+: Tot (stt ser_state unit x (close_hole x))
+= fun h -> ((), close_hole h)
 
 let ser_u8
   (x: ser_index)
@@ -422,8 +422,8 @@ let ser_u8
     x.leaf == TU8 /\
     HVHole? x.hole
   })
-: Tot (stt ser_state unit x (ret_post (fill_hole x ())))
-= fun h -> (| (), fill_hole h v |)
+: Tot (stt ser_state unit x (fill_hole x ()))
+= fun h -> ((), fill_hole h v)
 
 let ser_start_pair
   (x: ser_index)
@@ -431,41 +431,75 @@ let ser_start_pair
     TPair? x.leaf /\
     HVHole? x.hole
   ))
-: Tot (stt ser_state unit x (ret_post (start_pair x)))
-= fun h -> (| (), start_pair h |)
+: Tot (stt ser_state unit x (start_pair x))
+= fun h -> ((), start_pair h)
 
 noeq
 type ser_action
-: (ret_t: Type) -> ser_index -> (ret_t -> ser_index) -> Type
+: (ret_t: Type) -> ser_index -> (ser_index) -> Type
 = | SCloseHole:
       (#x: ser_index) ->
       squash (CSnoc? x.context /\ HVValue? x.hole) ->
-      ser_action unit x (ret_post (close_hole x))
+      ser_action unit x (close_hole x)
   | SU8:
       (#x: ser_index) ->
-      (v: U8.t {
+      (v: U8.t) ->
+      squash (
         x.leaf == TU8 /\
         HVHole? x.hole
-      }) ->
-      ser_action unit x (ret_post (fill_hole x ()))
+      ) ->
+      ser_action unit x (fill_hole x ())
   | SStartPair:
       (#x: ser_index) ->
       squash (TPair? x.leaf /\ HVHole? x.hole) ->
-      ser_action unit x (ret_post (start_pair x))
+      ser_action unit x (start_pair x)
 
 let ser_action_sem
   (#ret_t: Type)
   (#pre: ser_index)
-  (#post: (ret_t -> ser_index))
+  (#post: (ser_index))
   (a: ser_action ret_t pre post)
 : Tot (stt ser_state ret_t pre post)
 = match a with
   | SCloseHole #x _ -> ser_close_hole x ()
-  | SU8 #x v -> ser_u8 x v
+  | SU8 #x v _ -> ser_u8 x v
   | SStartPair #x _ -> ser_start_pair x ()
 
-(*
-let test0 : prog _ ser_action _ _ (Mkhole_t (TPair TU8 TU8) _ CNil HVHole) _ =
+let initial_ser_index
+  (ty: typ)
+: Tot ser_index
+= Mkhole_t ty _ CNil HVHole
+
+let final_ser_index
+  (ty: typ)
+: Tot ser_index
+= Mkhole_t ty _ CNil (HVValue ())
+
+let initial_ser_state
+  (ty: typ)
+: Tot (ser_state (initial_ser_index ty))
+= {
+    root = ty;
+    leaf = _;
+    context = CNil;
+    hole = HVHole;
+  }
+
+let initial_ser_state_complete
+  (ty: typ)
+: Lemma
+  (forall (s: ser_state (initial_ser_index ty)) . s == initial_ser_state ty)
+= ()
+
+let final_ser_state
+  (ty: typ)
+  (v: type_of_typ ty)
+: Tot (ser_state (final_ser_index ty))
+= {
+    root = ty; leaf = _; context = CNil; hole = HVValue v;
+  }
+
+let test1 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ =
   PBind
     (PAction (SStartPair ()))
     (fun _ ->
@@ -474,7 +508,7 @@ let test0 : prog _ ser_action _ _ (Mkhole_t (TPair TU8 TU8) _ CNil HVHole) _ =
             (PU8 _)
             (fun v ->
               PBind
-                (PAction (SU8 v))
+                (PAction (SU8 v ()))
                 (fun _ -> PAction (SCloseHole ()))
             )
          )
@@ -483,8 +517,51 @@ let test0 : prog _ ser_action _ _ (Mkhole_t (TPair TU8 TU8) _ CNil HVHole) _ =
             (PU8 _)
             (fun v ->
               PBind
-                (PAction (SU8 v))
+                (PAction (SU8 v ()))
                 (fun _ -> PAction (SCloseHole ()))
             )
          )
     )
+
+let test2 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ =
+  PPair
+    (PU8 _)
+    (fun lhs -> PBind
+      (PU8 _)
+      (fun rhs -> PBind
+        (PAction (SStartPair ()))
+        (fun _ -> PBind
+          (PAction (SU8 lhs ()))
+          (fun _ -> PBind
+            (PAction (SCloseHole ()))
+            (fun _ -> PBind
+              (PAction (SU8 rhs ()))
+              (fun _ -> PAction (SCloseHole ()))
+            )
+          )
+        )
+      )
+    )
+
+let test3 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ =
+  PPair
+    (PU8 _)
+    (fun lhs -> PBind
+      (PU8 _)
+      (fun rhs -> PBind
+        (PAction (SStartPair ()))
+        (fun _ -> PBind
+          (PAction (SU8 rhs ()))
+          (fun _ -> PBind
+            (PAction (SCloseHole ()))
+            (fun _ -> PBind
+              (PAction (SU8 lhs ()))
+              (fun _ -> PAction (SCloseHole ()))
+            )
+          )
+        )
+      )
+    )
+
+let _ : squash (forall (v: type_of_typ (TPair TU8 TU8)) s . sem ser_action_sem test3 v s == ((), final_ser_state (TPair TU8 TU8) (snd v, fst v))) =
+  assert_norm (forall (v: type_of_typ (TPair TU8 TU8)) . sem ser_action_sem test3 v (initial_ser_state (TPair TU8 TU8)) == ((), final_ser_state (TPair TU8 TU8) (snd v, fst v)))
