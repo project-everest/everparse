@@ -47,6 +47,7 @@ let rec be_to_n_chop_leading_zeros
   E.reveal_be_to_n s';
   let sm = Seq.slice s 1 (Seq.length s) in
   E.reveal_be_to_n sm;
+  assert_norm (pow2 8 == 256);
   if Seq.length s = 1
   then ()
   else begin
@@ -513,6 +514,47 @@ let interval_equiv (n: nat) (x: int) : Lemma
   Classical.move_requires f ();
   Classical.forall_intro (Classical.move_requires g)
 
+let rec some_log256
+  (x: nat)
+: Pure nat
+  (requires True)
+  (ensures (fun n -> n > 0 /\ x < pow2 (8 * n)))
+  (decreases x)
+= assert_norm (pow2 8 == 256);
+  if x < 256
+  then 1
+  else begin
+    FStar.Math.Lemmas.euclidean_division_definition x 256;
+    let n' = some_log256 (x / 256) in
+    FStar.Math.Lemmas.pow2_plus (8 * n') 8;
+    n' + 1
+  end
+
+let interval_intro_gen
+  (x: int)
+: Pure nat
+  (requires True)
+  (ensures (fun n -> n > 0 /\ interval n x))
+= if x >= 0
+  then begin
+    let n = some_log256 x in
+    FStar.Math.Lemmas.pow2_le_compat (8 * (n + 1) - 1) (8 * n);
+    n + 1
+  end
+  else begin
+    let n = some_log256 (- x) in
+    FStar.Math.Lemmas.pow2_le_compat (8 * (n + 1) - 1) (8 * n);
+    n + 1
+  end
+
+let domain_intro_gen
+  (x: int)
+: Pure nat
+  (requires True)
+  (ensures (fun n -> domain n x))
+= let n' = interval_intro_gen x in
+  interval_elim n' x
+
 (* Correctness: the representation is minimal *)
 
 let positive_interval_minimal
@@ -633,3 +675,269 @@ let domain_unique
 = if n1 <= n2
   then domain_unique' n1 n2 x
   else domain_unique' n2 n1 x
+
+(* Parser *)
+
+module LP = LowParse.Spec.Combinators
+
+let valid_unsigned_repr
+  (b: LP.bytes)
+: Tot bool
+= let n = Seq.length b in
+  n > 0 &&
+  begin if n = 1
+  then true
+  else
+    let c0 = Seq.index b 0 in
+    let c1 = Seq.index b 1 in
+    not ((c0 = 0uy && c1 `U8.lt` 128uy) || (c0 = 255uy && 127uy `U8.lt` c1))
+  end
+
+let integer_in_domain (n: nat) : Tot Type0 = (i: int { domain n i })
+
+let rec be_to_n_zero
+  (n: nat)
+: Lemma
+  (E.be_to_n (Seq.create n 0uy) == 0)
+= let s = Seq.create n 0uy in
+  E.reveal_be_to_n s;
+  assert (Seq.length s == n);
+  if n = 0
+  then ()
+  else begin
+    assert (Seq.slice s 0 (Seq.length s - 1) `Seq.equal` Seq.create (n - 1) 0uy);
+    be_to_n_zero (n - 1)
+  end
+
+let be_to_n_singleton
+  (s: LP.bytes)
+: Lemma
+  (requires (
+    Seq.length s == 1
+  ))
+  (ensures (
+    Seq.length s == 1 /\
+    E.be_to_n s == U8.v (Seq.index s 0)
+  ))
+= E.reveal_be_to_n s;
+  E.reveal_be_to_n (Seq.slice s 0 (Seq.length s - 1))
+
+let mk_integer_aux
+  (b: LP.bytes)
+: Tot (option (integer_in_domain (Seq.length b)))
+= if valid_unsigned_repr b
+  then Some begin
+    let u = E.be_to_n b in
+    let c0 = Seq.index b 0 in
+    if c0 = 0uy
+    then
+      if Seq.length b = 1
+      then begin
+        be_to_n_singleton b;
+        u
+      end
+      else begin
+        inner_positive_interval_intro b;
+        u
+      end
+    else if c0 `U8.lt` 128uy
+    then begin
+      outer_positive_interval_intro b;
+      u
+    end
+    else
+      let s = u - pow2 (8 * Seq.length b) in // cast from unsigned to signed for negative numbers
+      if c0 `U8.lt` 255uy
+      then begin
+        outer_negative_interval_intro b;
+        s
+      end
+      else if Seq.length b = 1
+      then begin
+        be_to_n_singleton b;
+        assert_norm (pow2 8 == 256);
+        assert (s == -1);
+        s
+      end
+      else begin
+        inner_negative_interval_intro b;
+        s
+      end
+  end else None
+
+let mk_integer'_eq'
+  (b: LP.bytes)
+: Lemma
+  (requires (valid_unsigned_repr b))
+  (ensures (
+    let u = E.be_to_n b in
+    let s = Some?.v (mk_integer_aux b) in
+    (s >= 0 <==> s == u) /\
+    (s < 0 <==> s == u - pow2 (8 * Seq.length b))
+  ))
+= let n = Seq.length b in
+  let u = E.be_to_n b in
+  let s = Some?.v (mk_integer_aux b) in
+  FStar.Math.Lemmas.pow2_plus (8 * n - 1) 1;
+  Classical.move_requires inner_positive_interval_intro b;
+  Classical.move_requires outer_positive_interval_intro b; 
+  Classical.move_requires inner_negative_interval_intro b;
+  Classical.move_requires outer_negative_interval_intro b; 
+  Classical.move_requires (inner_positive_interval_elim n) s;
+  Classical.move_requires (outer_positive_interval_elim n) s;
+  Classical.move_requires (inner_negative_interval_elim n) s;
+  Classical.move_requires (outer_negative_interval_elim n) s;
+  Classical.move_requires be_to_n_singleton b
+
+let mk_integer'_eq
+  (b: LP.bytes)
+: Lemma
+  (requires (valid_unsigned_repr b))
+  (ensures (
+    let u = E.be_to_n b in
+    let s = Some?.v (mk_integer_aux b) in
+    (s >= 0 <==> u < pow2 (8 * Seq.length b - 1)) /\
+    (s >= 0 <==> s == u) /\
+    (s < 0 <==> s == u - pow2 (8 * Seq.length b))
+  ))
+= let n = Seq.length b in
+  let u = E.be_to_n b in
+  let s = Some?.v (mk_integer_aux b) in
+  mk_integer'_eq' b;
+  interval_intro n s;
+  FStar.Math.Lemmas.pow2_plus (8 * n - 1) 1
+
+let mk_integer'
+  (b: LP.bytes)
+: Pure int
+  (requires (valid_unsigned_repr b))
+  (ensures (fun _ -> True))
+= let u = E.be_to_n b in
+  if u < pow2 (8 * Seq.length b - 1)
+  then u
+  else u - pow2 (8 * Seq.length b)
+
+let mk_integer
+  (sz: nat)
+  (b: LP.bytes { Seq.length b == sz })
+: Tot (option (integer_in_domain sz))
+= if valid_unsigned_repr b
+  then Some (
+    mk_integer'_eq b;
+    mk_integer' b
+  )
+  else None
+
+let mk_integer_inj_1
+  (sz: nat)
+  (b1 b2: Seq.lseq LP.byte sz)
+: Lemma
+  (requires (LP.make_constant_size_parser_precond_precond sz (integer_in_domain sz) (mk_integer sz) b1 b2))
+  (ensures (Seq.equal b1 b2))
+= mk_integer'_eq b1;
+  mk_integer'_eq b2;
+  E.be_to_n_inj b1 b2
+
+let mk_integer_inj_2
+  (sz: nat)
+  (b1 b2: Seq.lseq LP.byte sz)
+: Lemma
+  (LP.make_constant_size_parser_precond_precond sz (integer_in_domain sz) (mk_integer sz) b1 b2 ==> Seq.equal b1 b2)
+= Classical.move_requires (mk_integer_inj_1 sz b1) b2
+
+let mk_integer_inj
+  (sz: nat)
+: Lemma
+  (LP.make_constant_size_parser_precond sz (integer_in_domain sz) (mk_integer sz))
+= Classical.forall_intro_2 (mk_integer_inj_2 sz)
+
+let parse_integer_of_size
+  (sz: nat)
+: Tot (LP.parser (LP.constant_size_parser_kind sz) (integer_in_domain sz))
+= mk_integer_inj sz;
+  LP.make_constant_size_parser sz (integer_in_domain sz) (mk_integer sz)
+
+let bounded_integer_tag
+  (bound: nat)
+: Tot Type0
+= (sz: nat { sz <= bound })
+
+let integer_in_interval
+  (bound: nat)
+: Tot Type0
+= (x: int { interval bound x })
+
+let tag_of_bounded_integer_payload
+  (bound: nat)
+  (x: integer_in_interval bound)
+: Tot (bounded_integer_tag bound)
+= interval_elim bound x
+
+let synth_bounded_integer_payload
+  (bound: nat)
+  (tag: bounded_integer_tag bound)
+  (x: integer_in_domain tag)
+: Tot (LP.refine_with_tag (tag_of_bounded_integer_payload bound) tag)
+= interval_intro tag x;
+  interval_weaken tag bound x;
+  domain_unique tag (tag_of_bounded_integer_payload bound x) x;
+  x
+
+let parse_bounded_integer_payload
+  (bound: nat)
+  (tag: bounded_integer_tag bound)
+: Tot (LP.parser (LP.strong_parser_kind 0 bound None) (LP.refine_with_tag (tag_of_bounded_integer_payload bound) tag))
+= LP.weaken (LP.strong_parser_kind 0 bound None) (parse_integer_of_size tag)
+  `LP.parse_synth` synth_bounded_integer_payload bound tag
+
+let parse_bounded_integer
+  (bound: nat)
+  (#kt: LP.parser_kind)
+  (p: LP.parser kt (bounded_integer_tag bound) {
+    kt.LP.parser_kind_subkind == Some LP.ParserStrong
+  })
+: Tot (LP.parser (kt `LP.and_then_kind` LP.strong_parser_kind 0 bound None) (integer_in_interval bound))
+= LP.parse_tagged_union
+    p
+    (tag_of_bounded_integer_payload bound)
+    (parse_bounded_integer_payload bound)
+
+let tag_of_integer_payload
+  (x: int)
+: Tot nat
+= domain_intro_gen x
+
+let synth_integer_payload
+  (tag: nat)
+  (x: integer_in_domain tag)
+: Tot (LP.refine_with_tag tag_of_integer_payload tag)
+= domain_unique tag (tag_of_integer_payload x) x;
+  x
+
+inline_for_extraction
+noextract
+let parse_integer_payload_kind : LP.parser_kind =
+  let open LP in
+  {
+    parser_kind_low = 0;
+    parser_kind_high = None;
+    parser_kind_subkind = Some ParserStrong;
+    parser_kind_metadata = None;
+  }
+
+let parse_integer_payload
+  (tag: nat)
+: Tot (LP.parser parse_integer_payload_kind (LP.refine_with_tag (tag_of_integer_payload) tag))
+= LP.weaken parse_integer_payload_kind (parse_integer_of_size tag)
+  `LP.parse_synth` synth_integer_payload tag
+
+let parse_integer
+  (#kt: LP.parser_kind)
+  (p: LP.parser kt nat {
+    kt.LP.parser_kind_subkind == Some LP.ParserStrong
+  })
+: Tot (LP.parser (kt `LP.and_then_kind` parse_integer_payload_kind) int)
+= LP.parse_tagged_union
+    p
+    (tag_of_integer_payload)
+    (parse_integer_payload)
