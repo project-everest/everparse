@@ -21,7 +21,8 @@ module U64 = FStar.UInt64
 module A = EverParse3d.Actions.All
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
-module ProjTac = EverParse3d.ProjectorTactic
+open FStar.List.Tot
+
 
 (* This module defines a strongly typed abstract syntax for an
    intermediate representation of 3D programs. This is the type `typ`.
@@ -197,7 +198,6 @@ module T = FStar.Tactics
    Represents the lifting of a fully applied a shallow F*
    quadruple of {type, parser, validator, opt reader} 
 *)
-[@@ no_auto_projectors]
 noeq
 type global_binding = {
   //Parser metadata
@@ -218,27 +218,27 @@ type global_binding = {
   p_v : A.validate_with_action_t p_p inv loc (Some? p_reader);
 }
 
-//Generate projectors with a tactic, because the default
-//projectors are not SMT-typeable
-%splice[nz_of_binding;
-        wk_of_binding;
-        pk_of_binding;
-        inv_of_binding;
-        loc_of_binding;
-        type_of_binding;
-        parser_of_binding;
-        leaf_reader_of_binding;
-        validator_of_binding]
-       (ProjTac.mk_projs (`%global_binding)
-                         ["nz_of_binding";
-                          "wk_of_binding";
-                          "pk_of_binding";
-                          "inv_of_binding";
-                          "loc_of_binding";
-                          "type_of_binding";
-                          "parser_of_binding";
-                          "leaf_reader_of_binding";
-                          "validator_of_binding"])
+let projector_names : list string = [
+  `%Mkglobal_binding?.parser_kind_nz;
+  `%Mkglobal_binding?.parser_weak_kind;
+  `%Mkglobal_binding?.parser_kind;
+  `%Mkglobal_binding?.inv;
+  `%Mkglobal_binding?.loc;
+  `%Mkglobal_binding?.p_t;
+  `%Mkglobal_binding?.p_p;
+  `%Mkglobal_binding?.p_reader;
+  `%Mkglobal_binding?.p_v;
+]
+
+let nz_of_binding = Mkglobal_binding?.parser_kind_nz
+let wk_of_binding = Mkglobal_binding?.parser_weak_kind
+let pk_of_binding = Mkglobal_binding?.parser_kind
+let inv_of_binding = Mkglobal_binding?.inv
+let loc_of_binding = Mkglobal_binding?.loc
+let type_of_binding = Mkglobal_binding?.p_t
+let parser_of_binding = Mkglobal_binding?.p_p
+let leaf_reader_of_binding = Mkglobal_binding?.p_reader
+let validator_of_binding = Mkglobal_binding?.p_v
 
 let has_reader (g:global_binding) = 
   match leaf_reader_of_binding g with
@@ -1173,22 +1173,22 @@ let specialization_steps =
    primops;
    iota;
    delta_attr [`%specialize];
-   delta_only [`%Some?;
-               `%Some?.v;
-               `%as_validator;
-               `%nz_of_binding;
-               `%wk_of_binding;
-               `%pk_of_binding;
-               `%inv_of_binding;
-               `%loc_of_binding;
-               `%type_of_binding;
-               `%parser_of_binding;
-               `%validator_of_binding;
-               `%leaf_reader_of_binding;
-               `%fst;
-               `%snd;
-               `%Mktuple2?._1;
-               `%Mktuple2?._2]]
+   delta_only ([`%Some?;
+                `%Some?.v;
+                `%as_validator;
+                `%nz_of_binding;
+                `%wk_of_binding;
+                `%pk_of_binding;
+                `%inv_of_binding;
+                `%loc_of_binding;
+                `%type_of_binding;
+                `%parser_of_binding;
+                `%validator_of_binding;
+                `%leaf_reader_of_binding;
+                `%fst;
+                `%snd;
+                `%Mktuple2?._1;
+                `%Mktuple2?._2]@projector_names)]
 
 let specialize_tac steps (_:unit)
   : T.Tac unit
@@ -1296,7 +1296,7 @@ let coerce_dt_app (steps:_) : T.Tac unit =
                         `%leaf_reader_of_binding;                                 
                         `%inv_of_binding;
                         `%loc_of_binding;
-                        `%mk_global_binding]);
+                        `%mk_global_binding]@projector_names);
           zeta; 
           iota;
           simplify];

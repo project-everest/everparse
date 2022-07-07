@@ -44,10 +44,13 @@ quackyducky-unit-test: gen-test lowparse
 quackyducky-sample-test: quackyducky lowparse
 	+$(MAKE) -C tests/sample
 
+quackyducky-sample-low-test: quackyducky lowparse
+	+$(MAKE) -C tests/sample_low
+
 quackyducky-sample0-test: quackyducky lowparse
 	+$(MAKE) -C tests/sample0
 
-quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test
+quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
 test: lowparse-test quackyducky-test 3d-test
 
