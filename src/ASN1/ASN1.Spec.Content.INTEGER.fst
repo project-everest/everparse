@@ -145,20 +145,6 @@ let outer_positive_interval_elim (n: nat) (x: int) : Lemma
   be_to_n_leading_zeros s;
   be_to_n_msb s
 
-let outer_positive_interval_unique' (n1 n2: nat) (x: int) : Lemma
-  (requires (n1 <= n2 /\ outer_positive_interval n1 x /\ outer_positive_interval n2 x))
-  (ensures (n1 == n2))
-= if n1 = n2
-  then ()
-  else FStar.Math.Lemmas.pow2_le_compat (8 * (n2 - 1)) (8 * n1 - 1)
-
-let outer_positive_interval_unique (n1 n2: nat) (x: int) : Lemma
-  (requires (outer_positive_interval n1 x /\ outer_positive_interval n2 x))
-  (ensures (n1 == n2))
-= if n1 <= n2
-  then outer_positive_interval_unique' n1 n2 x
-  else outer_positive_interval_unique' n2 n1 x
-
 let inner_positive_interval (n: nat) (x: int) : Tot prop =
   n > 1 /\
   x >= pow2 (8 * (n - 1) - 1) /\
@@ -192,29 +178,6 @@ let inner_positive_interval_elim (n: nat) (x: int) : Lemma
   be_to_n_leading_zeros s;
   be_to_n_chop_leading_zeros s;
   be_to_n_msb (Seq.slice s 1 (Seq.length s))
-
-let inner_positive_interval_unique' (n1 n2: nat) (x: int) : Lemma
-  (requires (n1 <= n2 /\ inner_positive_interval n1 x /\ inner_positive_interval n2 x))
-  (ensures (n1 == n2))
-= if n1 = n2
-  then ()
-  else FStar.Math.Lemmas.pow2_le_compat (8 * (n2 - 1) - 1) (8 * (n1 - 1))
-
-let inner_positive_interval_unique (n1 n2: nat) (x: int) : Lemma
-  (requires (inner_positive_interval n1 x /\ inner_positive_interval n2 x))
-  (ensures (n1 == n2))
-= if n1 <= n2
-  then inner_positive_interval_unique' n1 n2 x
-  else inner_positive_interval_unique' n2 n1 x
-
-let inner_positive_not_outer (n1 n2: nat) (x: int) : Lemma
-  (requires (
-    inner_positive_interval n1 x /\ outer_positive_interval n2 x
-  ))
-  (ensures False)
-= if n1 <= n2
-  then FStar.Math.Lemmas.pow2_le_compat (8 * (n2 - 1)) (8 * (n1 - 1))
-  else FStar.Math.Lemmas.pow2_le_compat (8 * (n1 - 1) - 1) (8 * n2 - 1)
 
 let rec be_to_n_leading_ones
   (s: Seq.seq U8.t)
@@ -348,24 +311,6 @@ let outer_negative_interval_elim (n: nat) (x: int) : Lemma
   be_to_n_msb s;
   be_to_n_leading_ones s
 
-let outer_negative_interval_unique' (n1 n2: nat) (x: int) : Lemma
-  (requires (n1 <= n2 /\ outer_negative_interval n1 x /\ outer_negative_interval n2 x))
-  (ensures (n1 == n2))
-= if n1 = n2
-  then ()
-  else begin
-    pow2_8_n_255 (n2 - 1);
-    FStar.Math.Lemmas.pow2_plus (8 * n1 - 1) 1;
-    FStar.Math.Lemmas.pow2_le_compat (8 * (n2 - 1)) (8 * n1 - 1)
-  end
-
-let outer_negative_interval_unique (n1 n2: nat) (x: int) : Lemma
-  (requires (outer_negative_interval n1 x /\ outer_negative_interval n2 x))
-  (ensures (n1 == n2))
-= if n1 <= n2
-  then outer_negative_interval_unique' n1 n2 x
-  else outer_negative_interval_unique' n2 n1 x
-
 let inner_negative_interval (n: nat) (x: int) : Tot prop =
   n > 1 /\
   x + pow2 (8 * n) >= pow2 (8 * (n - 1)) * 255 /\
@@ -423,32 +368,6 @@ let inner_negative_interval_elim (n: nat) (x: int) : Lemma
   be_to_n_chop_leading_ones s;
   be_to_n_msb s';
   FStar.Math.Lemmas.pow2_lt_compat (8 * (n - 1)) (8 * (n - 1) - 1)
-
-let inner_negative_interval_unique' (n1 n2: nat) (x: int) : Lemma
-  (requires (n1 <= n2 /\ inner_negative_interval n1 x /\ inner_negative_interval n2 x))
-  (ensures (n1 == n2))
-=
-  inner_negative_interval_elim n1 x;
-  inner_negative_interval_elim n2 x;
-  be_to_n_chop_leading_ones_recip (E.n_to_be n1 (x + pow2 (8 * n1))) (E.n_to_be n2 (x + pow2 (8 * n2)))
-
-let inner_negative_interval_unique (n1 n2: nat) (x: int) : Lemma
-  (requires (inner_negative_interval n1 x /\ inner_negative_interval n2 x))
-  (ensures (n1 == n2))
-= if n1 <= n2
-  then inner_negative_interval_unique' n1 n2 x
-  else inner_negative_interval_unique' n2 n1 x
-
-let negative_not_positive (n1 n2: nat) (x: int) : Lemma
-  (requires (
-    (outer_negative_interval n1 x \/ inner_negative_interval n1 x) /\
-    (outer_positive_interval n2 x \/ inner_positive_interval n2 x)
-  ))
-  (ensures False)
-= Classical.move_requires (outer_negative_interval_elim n1) x;
-  Classical.move_requires (inner_negative_interval_elim n1) x;
-  Classical.move_requires (outer_positive_interval_elim n2) x;
-  Classical.move_requires (inner_positive_interval_elim n2) x
 
 (* Sanity-check: the whole signed interval is covered *)
 
@@ -693,3 +612,24 @@ let negative_interval_minimal'
   assert_norm (pow2 1 == 2);
   be_to_n_msb (E.n_to_be n' (x + pow2 (8 * n')));
   negative_interval_minimal n x n'
+
+let domain_unique'
+  (n1 n2: nat)
+  (x: int)
+: Lemma
+  (requires (n1 <= n2 /\ domain n1 x /\ domain n2 x))
+  (ensures (n1 == n2))
+= interval_intro n1 x;
+  if x < 0
+  then negative_interval_minimal' n2 x n1
+  else positive_interval_minimal' n2 x n1
+
+let domain_unique
+  (n1 n2: nat)
+  (x: int)
+: Lemma
+  (requires (domain n1 x /\ domain n2 x))
+  (ensures (n1 == n2))
+= if n1 <= n2
+  then domain_unique' n1 n2 x
+  else domain_unique' n2 n1 x
