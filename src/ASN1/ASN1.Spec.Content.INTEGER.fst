@@ -941,3 +941,109 @@ let parse_integer
     p
     (tag_of_integer_payload)
     (parse_integer_payload)
+
+(* Serializer *)
+
+let mk_bytes
+  (n: nat)
+  (x: int)
+: Pure (Seq.lseq LP.byte n)
+    (requires (domain n x))
+    (ensures (fun s ->
+      valid_unsigned_repr s /\
+      mk_integer' s == x
+    ))
+= assert_norm (pow2 8 == 256);
+  assert_norm (pow2 7 == 128);
+  if (n = 1 && (x = 0 || x = -1))
+  then
+    if x = 0
+    then begin
+      let s = Seq.create 1 0uy in
+      be_to_n_singleton s;
+      s
+    end else begin
+      let s = Seq.create 1 255uy in
+      be_to_n_singleton s;
+      s
+    end
+  else begin
+    Classical.move_requires (inner_positive_interval_elim n) x;
+    Classical.move_requires (inner_negative_interval_elim n) x;
+    Classical.move_requires (outer_positive_interval_elim n) x;
+    Classical.move_requires (outer_negative_interval_elim n) x;
+    if x >= 0
+    then begin
+      let s = E.n_to_be n x in
+      mk_integer'_eq s;
+      s
+    end else begin
+      let s = E.n_to_be n (x + pow2 (8 * n)) in
+      mk_integer'_eq s;
+      s
+    end
+  end
+
+let serialize_integer_of_size
+  (sz: nat)
+: Tot (LP.serializer (parse_integer_of_size sz))
+= fun (x: integer_in_domain sz) -> mk_bytes sz x
+
+let synth_bounded_integer_payload_recip
+  (bound: nat)
+  (tag: bounded_integer_tag bound)
+  (x: LP.refine_with_tag (tag_of_bounded_integer_payload bound) tag)
+: Tot (integer_in_domain tag)
+= x
+
+let serialize_bounded_integer_payload
+  (bound: nat)
+  (tag: bounded_integer_tag bound)
+: Tot (LP.serializer (parse_bounded_integer_payload bound tag))
+= LP.serialize_synth
+    _
+    (synth_bounded_integer_payload bound tag)
+    (LP.serialize_weaken _ (serialize_integer_of_size tag))
+    (synth_bounded_integer_payload_recip bound tag)
+    ()
+
+let serialize_bounded_integer
+  (bound: nat)
+  (#kt: LP.parser_kind)
+  (#p: LP.parser kt (bounded_integer_tag bound))
+  (s: LP.serializer p {
+    kt.LP.parser_kind_subkind == Some LP.ParserStrong
+  })
+: Tot (LP.serializer (parse_bounded_integer bound p))
+= LP.serialize_tagged_union
+    s
+    (tag_of_bounded_integer_payload bound)
+    (serialize_bounded_integer_payload bound)
+
+let synth_integer_payload_recip
+  (tag: nat)
+  (x: LP.refine_with_tag (tag_of_integer_payload) tag)
+: Tot (integer_in_domain tag)
+= x
+
+let serialize_integer_payload
+  (tag: nat)
+: Tot (LP.serializer (parse_integer_payload tag))
+= LP.serialize_synth
+    _
+    (synth_integer_payload tag)
+    (LP.serialize_weaken _ (serialize_integer_of_size tag))
+    (synth_integer_payload_recip tag)
+    ()
+
+let serialize_integer
+  (#kt: LP.parser_kind)
+  (#p: LP.parser kt nat)
+  (s: LP.serializer p {
+    kt.LP.parser_kind_subkind == Some LP.ParserStrong
+  })
+: Tot (LP.serializer (parse_integer p))
+= LP.serialize_tagged_union
+    s
+    (tag_of_integer_payload)
+    (serialize_integer_payload)
