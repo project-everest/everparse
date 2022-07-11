@@ -4,6 +4,20 @@ include LowParse.SLow.Enum
 
 module T = LowParse.TacLib
 
+//
+// The enum tactic solves goals of type ?u:eqtype with enum types that are
+//   in the environment at type Type0
+// So typechecking such uvars fails since F* 2635 bug fix
+//   (since uvar solutions are checked with smt off)
+//
+// To circumvent that, we use t_apply with tc_resolve_uvars flag on,
+//   so that ?u will be typechecked as soon as it is resolved,
+//   resulting in an smt guard that will be added to the proofstate
+//
+
+let apply (t:T.term) : T.Tac unit =
+  T.t_apply true false true t
+
 noextract
 let parse32_maybe_enum_key_tac
   (#k: parser_kind)
@@ -14,7 +28,7 @@ let parse32_maybe_enum_key_tac
   ()
 : T.Tac unit
 = let fu = quote (parse32_maybe_enum_key_gen #k #key #repr #p p32 e) in
-  T.apply fu;
+  apply fu;
   T.iseq [
     T.solve_vc;
     T.solve_vc;
@@ -33,7 +47,7 @@ let parse32_enum_key_tac
 : T.Tac unit
 = T.tassert (Cons? e);
   let fu = quote (parse32_enum_key_gen #k #key #repr p e) in
-  T.apply fu;
+  apply fu;
   T.iseq [
     T.solve_vc;
     T.solve_vc;
@@ -52,7 +66,7 @@ let serialize32_enum_key_gen_tac
   ()
 : T.Tac unit
 = let fu = quote (serialize32_enum_key_gen #k #key #repr #p #s s32 e) in
-  T.apply fu;
+  apply fu;
   T.iseq [
     T.solve_vc;
     T.solve_vc;
@@ -72,7 +86,7 @@ let serialize32_maybe_enum_key_tac
   ()
 : T.Tac unit
 = let fu = quote (serialize32_maybe_enum_key_gen #k #key #repr #p #s s32 e) in
-  T.apply fu;
+  apply fu;
   T.iseq [
     T.solve_vc;
     T.solve_vc;
@@ -92,7 +106,7 @@ let size32_enum_key_gen_tac
   ()
 : T.Tac unit
 = let fu = quote (size32_enum_key_gen #k #key #repr #p #s s32 e) in
-  T.apply fu;
+  apply fu;
   T.iseq [
     T.solve_vc;
     T.solve_vc;
@@ -112,7 +126,7 @@ let size32_maybe_enum_key_tac
   ()
 : T.Tac unit
 = let fu = quote (size32_maybe_enum_key_gen #k #key #repr #p #s s32 e) in
-  T.apply fu;
+  apply fu;
   T.iseq [
     T.solve_vc;
     T.solve_vc;
