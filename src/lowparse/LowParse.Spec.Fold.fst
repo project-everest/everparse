@@ -215,10 +215,10 @@ noeq
 type base_context_t
   (erase_values: bool)
   : typ -> typ -> Type
-= | CPairL: (l: typ) -> (r: typ) -> base_context_t erase_values (TPair l r) l
-  | CPairR: (l: typ) -> (vl: (if erase_values then unit else type_of_typ l)) -> (r: typ) -> base_context_t erase_values (TPair l r) r
-  | CListCons: (t: typ) -> (l: (if erase_values then unit else list (type_of_typ t))) -> base_context_t erase_values (TList t) t
-  | CChoicePayload: (f: (bool -> typ)) -> (tag: bool) -> base_context_t erase_values (TChoice f) (f tag)
+= | CPairR: (l: typ) -> (r: typ) -> base_context_t erase_values r (TPair l r)
+  | CPairL: (l: typ) -> (r: typ) -> (vr: (if erase_values then unit else type_of_typ r)) -> base_context_t erase_values l (TPair l r)
+  | CListCons: (t: typ) -> (l: (if erase_values then unit else list (type_of_typ t))) -> base_context_t erase_values t (TList t)
+  | CChoicePayload: (f: (bool -> typ)) -> (t': typ) -> base_context_t erase_values t' (TChoice f) // tag is not serialized yet
 
 let base_context_erase_values
   (#erase_values: bool)
@@ -227,17 +227,17 @@ let base_context_erase_values
   (x: base_context_t erase_values t1 t2)
 : Tot (base_context_t true t1 t2)
 = match x with
-  | CPairL l r -> CPairL l r
-  | CPairR l _ r -> CPairR l () r
+  | CPairL l r _ -> CPairL l r ()
+  | CPairR l r -> CPairR l r
   | CListCons t _ -> CListCons t ()
-  | CChoicePayload f tag -> CChoicePayload f tag
+  | CChoicePayload f t' -> CChoicePayload f t'
 
 noeq
 type context_t
   (erase_values: bool)
   : typ -> typ -> Type
 = | CNil: (#t: typ) -> context_t erase_values t t
-  | CSnoc: (#t1: typ) -> (#t2: typ) -> (#t3: typ) -> context_t erase_values t1 t2 -> base_context_t erase_values t2 t3 -> context_t erase_values t1 t3
+  | CCons: (#t1: typ) -> (#t2: typ) -> (#t3: typ) -> base_context_t erase_values t1 t2 -> context_t erase_values t2 t3 -> context_t erase_values t1 t3
 
 let rec context_erase_values
   (#erase_values: bool)
@@ -247,14 +247,16 @@ let rec context_erase_values
   (decreases x)
 = match x with
   | CNil -> CNil
-  | CSnoc c b -> CSnoc (context_erase_values c) (base_context_erase_values b)
+  | CCons b c -> CCons (base_context_erase_values b) (context_erase_values c)
 
 noeq
 type hole_or_value_t
   (erase_values: bool)
-  (t: typ)
-= | HVHole
-  | HVValue: (if erase_values then unit else type_of_typ t) -> hole_or_value_t erase_values t
+: typ -> Type
+= | HVHole: (t: typ) -> hole_or_value_t erase_values t
+  | HVIncompleteList: (t: typ) -> (if erase_values then unit else list (type_of_typ t)) -> hole_or_value_t erase_values (TList t)
+  | HVChoicePayload: (f: (bool -> typ)) -> (t': typ) -> (if erase_values then unit else type_of_typ t') -> hole_or_value_t erase_values (TChoice f)
+  | HVValue: (t: typ) -> (if erase_values then unit else type_of_typ t) -> hole_or_value_t erase_values t
 
 let hole_or_value_erase_values
   (#erase_values: _)
@@ -262,16 +264,18 @@ let hole_or_value_erase_values
   (h: hole_or_value_t erase_values t)
 : Tot (hole_or_value_t true t)
 = match h with
-  | HVHole -> HVHole
-  | HVValue _ -> HVValue ()
+  | HVHole t -> HVHole t
+  | HVIncompleteList t _ -> HVIncompleteList t ()
+  | HVChoicePayload f t' _ -> HVChoicePayload f t' ()
+  | HVValue t _ -> HVValue t ()
 
 noeq
 type hole_t
   (erase_values: bool)
 = {
-  root: typ;
   leaf: typ;
-  context: context_t erase_values root leaf;
+  root: typ;
+  context: context_t erase_values leaf root;
   hole: hole_or_value_t erase_values leaf;
 }
 
@@ -286,50 +290,43 @@ let hole_erase_values
   hole = hole_or_value_erase_values x.hole;
 }
 
-let mk_choice_value
-  (tag: bool)
-  (f: bool -> typ)
-  (v: type_of_typ (f tag))
-: Tot (type_of_typ (TChoice f))
-= (| tag, v |)
-
 let close_hole
   (#erase_values: bool)
   (x: hole_t erase_values {
-    CSnoc? x.context /\
+    CCons? x.context /\
     HVValue? x.hole
   })
 : Tot (hole_t erase_values)
-= let CSnoc c' c = x.context in
-  let HVValue v = x.hole in
+= let CCons c c' = x.context in
+  let HVValue _ v = x.hole in
   match c with
-  | CPairL l r ->
+  | CPairR l r ->
     {
       root = x.root;
-      leaf = r;
-      context = CSnoc c' (CPairR l v r);
-      hole = HVHole;
+      leaf = l;
+      context = CCons (CPairL l r v) c';
+      hole = HVHole _;
     }
-  | CPairR l vl r ->
+  | CPairL l r vr ->
     {
       root = x.root;
       leaf = _;
       context = c';
-      hole = HVValue (if erase_values then () else (vl, v));
+      hole = HVValue _ (if erase_values then () else (v, vr));
     }
   | CListCons t l ->
     {
       root = x.root;
       leaf = _;
       context = c';
-      hole = HVValue (if erase_values then () else List.Tot.append l [v]);
+      hole = HVIncompleteList t (if erase_values then () else v::l);
     }
-  | CChoicePayload f tag ->
+  | CChoicePayload f _ ->
     {
       root = x.root;
       leaf = _;
       context = c';
-      hole = HVValue (if erase_values then () else mk_choice_value tag f v)
+      hole = HVChoicePayload f _ (if erase_values then () else v)
     }
 
 let fill_hole
@@ -341,7 +338,7 @@ let fill_hole
 : Tot (hole_t erase_values)
 = {
     x with
-    hole = HVValue v;
+    hole = HVValue _ v;
   }
 
 let start_pair
@@ -354,9 +351,9 @@ let start_pair
 = let TPair l r = x.leaf in
   {
     root = x.root;
-    leaf = l;
-    context = CSnoc x.context (CPairL l r);
-    hole = HVHole;
+    leaf = r;
+    context = CCons (CPairR l r) x.context;
+    hole = HVHole _;
   }
 
 let start_list
@@ -367,38 +364,76 @@ let start_list
   })
 : Tot (hole_t erase_values)
 = let TList t = x.leaf in
-  fill_hole x (if erase_values then () else ([] <: list (type_of_typ t)))
+  {
+    x with
+    hole = HVIncompleteList t (if erase_values then () else ([] <: list (type_of_typ t)));
+  }
 
-let list_snoc
+let list_cons
   (#erase_values: bool)
   (x: hole_t erase_values {
-    HVValue? x.hole /\
+    HVIncompleteList? x.hole /\
     TList? x.leaf
   })
 : Tot (hole_t erase_values)
 = let TList t = x.leaf in
-  let HVValue l = x.hole in
+  let HVIncompleteList _ l = x.hole in
   {
     root = x.root;
     leaf = t;
-    context = CSnoc x.context (CListCons t l);
-    hole = HVHole;
+    context = CCons (CListCons t l) x.context;
+    hole = HVHole _;
   }
 
-let choice_tag
+let end_list
+  (#erase_values: bool)
+  (x: hole_t erase_values {
+    HVIncompleteList? x.hole
+  })
+: Tot (hole_t erase_values)
+= let TList t = x.leaf in
+  {
+    x with
+    hole = HVValue (TList t) (if erase_values then () else ([] <: list (type_of_typ t)));
+  }
+
+let start_choice
   (#erase_values: bool)
   (x: hole_t erase_values {
     HVHole? x.hole /\
     TChoice? x.leaf
   })
-  (tag: bool)
+  (t': typ)
 : Tot (hole_t erase_values)
 = let TChoice f = x.leaf in
   {
     root = x.root;
-    leaf = f tag;
-    context = CSnoc x.context (CChoicePayload f tag);
-    hole = HVHole;
+    leaf = t';
+    context = CCons (CChoicePayload f t') x.context;
+    hole = HVHole _;
+  }
+
+let mk_choice_value
+  (tag: bool)
+  (f: bool -> typ)
+  (v: type_of_typ (f tag))
+: Tot (type_of_typ (TChoice f))
+= (| tag, v |)
+
+let end_choice
+  (#erase_values: bool)
+  (x: hole_t erase_values)
+  (tag: bool {
+    HVChoicePayload? x.hole /\
+    begin let HVChoicePayload f t' _ = x.hole in
+    f tag == t'
+    end
+  })
+: Tot (hole_t erase_values)
+= let HVChoicePayload f t' v = x.hole in
+  {
+    x with
+    hole = HVValue _ (if erase_values then () else mk_choice_value tag f v);
   }
 
 let ser_index : Type0 = hole_t true
@@ -410,7 +445,7 @@ let ser_state (i: ser_index) : Tot Type0 = (x: hole_t false {
 let ser_close_hole
   (x: ser_index)
   (sq: squash (
-    CSnoc? x.context /\
+    CCons? x.context /\
     HVValue? x.hole
   ))
 : Tot (stt ser_state unit x (close_hole x))
@@ -439,7 +474,7 @@ type ser_action
 : (ret_t: Type) -> ser_index -> (ser_index) -> Type
 = | SCloseHole:
       (#x: ser_index) ->
-      squash (CSnoc? x.context /\ HVValue? x.hole) ->
+      squash (CCons? x.context /\ HVValue? x.hole) ->
       ser_action unit x (close_hole x)
   | SU8:
       (#x: ser_index) ->
@@ -468,12 +503,12 @@ let ser_action_sem
 let initial_ser_index
   (ty: typ)
 : Tot ser_index
-= Mkhole_t ty _ CNil HVHole
+= Mkhole_t ty _ CNil (HVHole _)
 
 let final_ser_index
   (ty: typ)
 : Tot ser_index
-= Mkhole_t ty _ CNil (HVValue ())
+= Mkhole_t ty _ CNil (HVValue _ ())
 
 let initial_ser_state
   (ty: typ)
@@ -482,7 +517,7 @@ let initial_ser_state
     root = ty;
     leaf = _;
     context = CNil;
-    hole = HVHole;
+    hole = HVHole _;
   }
 
 let initial_ser_state_complete
@@ -496,7 +531,7 @@ let final_ser_state
   (v: type_of_typ ty)
 : Tot (ser_state (final_ser_index ty))
 = {
-    root = ty; leaf = _; context = CNil; hole = HVValue v;
+    root = ty; leaf = _; context = CNil; hole = HVValue _ v;
   }
 
 let test1 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ =
@@ -523,8 +558,8 @@ let test1 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ 
          )
     )
 
-let _ : squash (forall (v: type_of_typ (TPair TU8 TU8)) s . sem ser_action_sem test1 v s == ((), final_ser_state (TPair TU8 TU8) v)) =
-  assert_norm (forall (v: type_of_typ (TPair TU8 TU8)) . sem ser_action_sem test1 v (initial_ser_state (TPair TU8 TU8)) == ((), final_ser_state (TPair TU8 TU8) v))
+let _ : squash (forall (v: type_of_typ (TPair TU8 TU8)) s . sem ser_action_sem test1 v s == ((), final_ser_state (TPair TU8 TU8) (snd v, fst v))) =
+  assert_norm (forall (v: type_of_typ (TPair TU8 TU8)) . sem ser_action_sem test1 v (initial_ser_state (TPair TU8 TU8)) == ((), final_ser_state (TPair TU8 TU8) (snd v, fst v)))
 
 let test2 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ (* final_ser_index (TPair TU8 TU8) *) =
   PPair
@@ -546,8 +581,8 @@ let test2 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ 
       )
     )
 
-let _ : squash (forall (v: type_of_typ (TPair TU8 TU8)) s . sem ser_action_sem test2 v s == ((), final_ser_state (TPair TU8 TU8) v)) =
-  assert_norm (forall (v: type_of_typ (TPair TU8 TU8)) . sem ser_action_sem test2 v (initial_ser_state (TPair TU8 TU8)) == ((), final_ser_state (TPair TU8 TU8) v))
+let _ : squash (forall (v: type_of_typ (TPair TU8 TU8)) s . sem ser_action_sem test2 v s == ((), final_ser_state (TPair TU8 TU8) (snd v, fst v))) =
+  assert_norm (forall (v: type_of_typ (TPair TU8 TU8)) . sem ser_action_sem test2 v (initial_ser_state (TPair TU8 TU8)) == ((), final_ser_state (TPair TU8 TU8) (snd v, fst v)))
 
 (*
 frame_out :
@@ -581,5 +616,5 @@ let test3 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ 
       )
     )
 
-let _ : squash (forall (v: type_of_typ (TPair TU8 TU8)) s . sem ser_action_sem test3 v s == ((), final_ser_state (TPair TU8 TU8) (snd v, fst v))) =
-  assert_norm (forall (v: type_of_typ (TPair TU8 TU8)) . sem ser_action_sem test3 v (initial_ser_state (TPair TU8 TU8)) == ((), final_ser_state (TPair TU8 TU8) (snd v, fst v)))
+let _ : squash (forall (v: type_of_typ (TPair TU8 TU8)) s . sem ser_action_sem test3 v s == ((), final_ser_state (TPair TU8 TU8) v)) =
+  assert_norm (forall (v: type_of_typ (TPair TU8 TU8)) . sem ser_action_sem test3 v (initial_ser_state (TPair TU8 TU8)) == ((), final_ser_state (TPair TU8 TU8) v))
