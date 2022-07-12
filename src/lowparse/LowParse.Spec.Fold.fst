@@ -523,7 +523,10 @@ let test1 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ 
          )
     )
 
-let test2 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ =
+let _ : squash (forall (v: type_of_typ (TPair TU8 TU8)) s . sem ser_action_sem test1 v s == ((), final_ser_state (TPair TU8 TU8) v)) =
+  assert_norm (forall (v: type_of_typ (TPair TU8 TU8)) . sem ser_action_sem test1 v (initial_ser_state (TPair TU8 TU8)) == ((), final_ser_state (TPair TU8 TU8) v))
+
+let test2 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ (* final_ser_index (TPair TU8 TU8) *) =
   PPair
     (PU8 _)
     (fun lhs -> PBind
@@ -542,6 +545,21 @@ let test2 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ 
         )
       )
     )
+
+let _ : squash (forall (v: type_of_typ (TPair TU8 TU8)) s . sem ser_action_sem test2 v s == ((), final_ser_state (TPair TU8 TU8) v)) =
+  assert_norm (forall (v: type_of_typ (TPair TU8 TU8)) . sem ser_action_sem test2 v (initial_ser_state (TPair TU8 TU8)) == ((), final_ser_state (TPair TU8 TU8) v))
+
+(*
+frame_out :
+  (ty: typ) ->
+  prog ser_state ser_action _ _ (initial_ser_index ty) (final_ser_index ty) ->
+  (c: ctxt) ->
+  prog ser_state ser_action _ _ (c `prepend` initial_ser_index ty) (c `prepend` final_ser_index ty)
+
+PBind
+  PBind (SStartPair ()) PBind (frame_out test2) (SCloseHole ())
+  PBind (SStartPair ()) PBind (frame_out test2) (SCloseHole ())
+*)
 
 let test3 : prog ser_state ser_action _ _ (initial_ser_index (TPair TU8 TU8)) _ =
   PPair
