@@ -811,6 +811,7 @@ let read_replace
     True
     (fun res -> Ghost.reveal v == res)
 = let res = R.read r in
+  noop (); // necessary since FStarLang/FStar#2639
   return res
 
 let list_fold_left_snoc
