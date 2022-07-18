@@ -13,7 +13,6 @@ CHECKED_EXT=.checked
 FSTAR_OPTIONS = --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
 		--already_cached '*,-Test' \
 		--include $(FSTAR_HOME)/ulib/experimental \
-		--include $(LOWPARSE_HOME)/steel_st_array --include $(LOWPARSE_HOME)/steel_st_array/array \
 		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
