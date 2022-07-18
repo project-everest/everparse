@@ -1,5 +1,5 @@
 module LowParse.SteelST.ArrayPtr
-module SA = Steel.ST.Array0
+module SA = Steel.ST.Array
 module U32 = FStar.UInt32
 
 let t elt = SA.ptr elt
@@ -56,6 +56,9 @@ let merge_assoc x1 x2 x3 =
 let join #_ #a #vl #vr al ar =
   rewrite (arrayptr al vl) (arrayptr0 al vl);
   rewrite (arrayptr ar vr) (arrayptr0 ar vr);
+  rewrite
+    (SA.pts_to vr.v_array.array_ptr vr.v_array.array_perm vr.v_contents)
+    (SA.pts_to vr.v_array.array_ptr vl.v_array.array_perm vr.v_contents);
   let _ = gen_elim () in
   SA.ghost_join vl.v_array.array_ptr vr.v_array.array_ptr ();
   let res = {
@@ -127,7 +130,7 @@ let upd #elt #v r i x =
   rewrite (arrayptr r v) (arrayptr0 r v);
   let _ = gen_elim () in
   let a = (| r, Ghost.hide (SA.length v.v_array.array_ptr) |) in
-  rewrite (arrayptr1 v) (SA.pts_to a v.v_array.array_perm v.v_contents);
+  rewrite (arrayptr1 v) (SA.pts_to a full_perm v.v_contents);
   let i' = SZ.uint32_of_size_t i (U32.uint_to_t (SZ.size_v i)) in
   SA.upd a i' x;
   let s' = vpattern_replace_erased (fun s -> SA.pts_to _ _ s) in
