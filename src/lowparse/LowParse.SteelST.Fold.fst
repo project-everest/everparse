@@ -146,6 +146,18 @@ let parse_some_chunk
     end;
   }
 
+let parse_some_chunk_empty
+: squash
+  ((parse_some_chunk parse_empty ()).chunk_p Seq.empty)
+= ()
+
+let parse_some_chunk_empty_weaken
+  (k: parser_kind)
+: Lemma
+  (requires (k `is_weaker_than` parse_ret_kind))
+  (ensures (parse_some_chunk (weaken k parse_empty) ()).chunk_p Seq.empty)
+= ()
+
 let concat_chunks_p
   (f1 f2: chunk_desc)
   (input: bytes)
@@ -182,14 +194,6 @@ let concat_chunks
     end;
   }
 
-let true_chunk : chunk_desc =
-  {
-    chunk_p = (fun _ -> True);
-    chunk_len = (fun _ -> 0);
-    chunk_prefix = (fun _ _ -> ());
-    chunk_append = (fun _ _ -> ());
-  }
-
 let exact_chunk
   (f: chunk_desc)
   (input: bytes)
@@ -219,7 +223,7 @@ let exact_chunk_intro
   (ensures (exact_chunk f (Seq.slice input 0 (f.chunk_len input))))
 = f.chunk_prefix input (f.chunk_len input)
 
-let exact_chunk_concat_chunks_empty_l
+let exact_chunk_concat_chunks_empty_l_intro
   (f12 f23: chunk_desc)
   (input23: bytes)
 : Lemma
@@ -237,7 +241,21 @@ let exact_chunk_concat_chunks_empty_l
   exact_chunk_concat_chunks f12 f23 input12 input23;
   assert ((input12 `Seq.append` input23) `Seq.equal` input23)
 
-let exact_chunk_concat_chunks_empty_r
+let exact_chunk_concat_chunks_empty_l_elim
+  (f12 f23: chunk_desc)
+  (input23: bytes)
+: Lemma
+  (requires (
+    f12.chunk_p Seq.empty /\
+    exact_chunk (f12 `concat_chunks` f23) input23
+  ))
+  (ensures (
+    exact_chunk f23 input23
+  ))
+= f12.chunk_append Seq.empty input23;
+  assert ((Seq.empty `Seq.append` input23) `Seq.equal` input23)
+
+let exact_chunk_concat_chunks_empty_r_intro
   (f12 f23: chunk_desc)
   (input12: bytes)
 : Lemma
@@ -255,13 +273,29 @@ let exact_chunk_concat_chunks_empty_r
   exact_chunk_concat_chunks f12 f23 input12 input23;
   assert ((input12 `Seq.append` input23) `Seq.equal` input12)
 
+let exact_chunk_concat_chunks_empty_r_elim
+  (f12 f23: chunk_desc)
+  (input12: bytes)
+: Lemma
+  (requires (
+    exact_chunk (f12 `concat_chunks` f23) input12 /\
+    f23.chunk_p Seq.empty
+  ))
+  (ensures (
+    exact_chunk f12 input12
+  ))
+= let cl = f12.chunk_len input12 in
+  let input23 = Seq.slice input12 cl (Seq.length input12) in
+  f23.chunk_append Seq.empty input23;
+  assert (input23 `Seq.equal` (Seq.empty `Seq.append` input23))
+
 let rec parse_context
   (#t1 #t2: typ)
   (c: context_t false t1 t2)
 : Tot chunk_desc
   (decreases c)
 = match c with
-  | CNil -> true_chunk
+  | CNil -> parse_some_chunk parse_empty ()
   | CCons bc c' ->
     parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc) `concat_chunks`
     parse_context c'
@@ -350,7 +384,7 @@ let array_chunk
 : Tot vprop
 = array_chunk' f a va
 
-let array_chunk_concat_chunks
+let intro_concat_chunks
   (#opened: _)
   (#va1: _)
   (#va2: _)
@@ -373,6 +407,109 @@ let array_chunk_concat_chunks
   rewrite (array_chunk' (f1 `concat_chunks` f2) a1 va) (array_chunk (f1 `concat_chunks` f2) a1 va);
   va
 
+let intro_concat_chunks_nil_l
+  (#opened: _)
+  (#va2: _)
+  (f1: chunk_desc)
+  (f2: chunk_desc)
+  (a2: byte_array)
+: STGhost unit opened
+    (array_chunk f2 a2 va2)
+    (fun _ -> array_chunk (f1 `concat_chunks` f2) a2 va2)
+    (f1.chunk_p Seq.empty)
+    (fun _ -> True)
+= rewrite (array_chunk f2 a2 va2) (array_chunk' f2 a2 va2);
+  let _ = gen_elim () in
+  let va2' = vpattern_replace (AP.arrayptr a2) in
+  exact_chunk_concat_chunks_empty_l_intro f1 f2 (AP.contents_of' va2');
+  noop ();
+  rewrite (array_chunk' (f1 `concat_chunks` f2) a2 va2) (array_chunk (f1 `concat_chunks` f2) a2 va2)
+
+let intro_concat_chunks_nil_r
+  (#opened: _)
+  (#va1: _)
+  (f1: chunk_desc)
+  (f2: chunk_desc)
+  (a1: byte_array)
+: STGhost unit opened
+    (array_chunk f1 a1 va1)
+    (fun _ -> array_chunk (f1 `concat_chunks` f2) a1 va1)
+    (f2.chunk_p Seq.empty)
+    (fun _ -> True)
+= rewrite (array_chunk f1 a1 va1) (array_chunk' f1 a1 va1);
+  let _ = gen_elim () in
+  let va1' = vpattern_replace (AP.arrayptr a1) in
+  exact_chunk_concat_chunks_empty_r_intro f1 f2 (AP.contents_of' va1');
+  noop ();
+  rewrite (array_chunk' (f1 `concat_chunks` f2) a1 va1) (array_chunk (f1 `concat_chunks` f2) a1 va1)
+
+module SZ = LowParse.Steel.StdInt
+
+let ghost_elim_concat_chunks
+  (#opened: _)
+  (#va: _)
+  (f1 f2: chunk_desc)
+  (a: byte_array)
+: STGhostT (Ghost.erased byte_array) opened
+    (array_chunk (f1 `concat_chunks` f2) a va)
+    (fun ar -> exists_ (fun v1 -> exists_ (fun v2 ->
+      array_chunk f1 a v1 `star`
+      array_chunk f2 ar v2 `star` pure (
+      AP.merge_into v1 v2 va
+    ))))
+= rewrite (array_chunk (f1 `concat_chunks` f2) a va) (array_chunk' (f1 `concat_chunks` f2) a va);
+  let _ = gen_elim () in
+  let va0 = vpattern_replace (AP.arrayptr a) in
+  exact_chunk_intro f1 (AP.contents_of' va0);
+  let cl = f1.chunk_len (AP.contents_of' va0) in
+  let cl' = SZ.int_to_size_t cl in
+  let ar = AP.gsplit a cl' in
+  let _ = gen_elim () in
+  let va1 = vpattern_replace (AP.arrayptr a) in
+  let va2 = vpattern_replace (AP.arrayptr ar) in
+  let v1 = AP.array_of va1 in
+  let v2 = AP.array_of va2 in
+  noop ();
+  rewrite (array_chunk' f1 a v1) (array_chunk f1 a v1);
+  rewrite (array_chunk' f2 ar v2) (array_chunk f2 ar v2);
+  ar
+
+let elim_concat_chunks_nil_l
+  (#opened: _)
+  (#va2: _)
+  (f1: chunk_desc)
+  (f2: chunk_desc)
+  (a2: byte_array)
+: STGhost unit opened
+    (array_chunk (f1 `concat_chunks` f2) a2 va2)
+    (fun _ -> array_chunk f2 a2 va2)
+    (f1.chunk_p Seq.empty)
+    (fun _ -> True)
+= rewrite (array_chunk (f1 `concat_chunks` f2) a2 va2) (array_chunk' (f1 `concat_chunks` f2) a2 va2);
+  let _ = gen_elim () in
+  let va2' = vpattern_replace (AP.arrayptr a2) in
+  exact_chunk_concat_chunks_empty_l_elim f1 f2 (AP.contents_of' va2');
+  noop ();
+  rewrite (array_chunk' f2 a2 va2) (array_chunk f2 a2 va2)
+
+let elim_concat_chunks_nil_r
+  (#opened: _)
+  (#va1: _)
+  (f1: chunk_desc)
+  (f2: chunk_desc)
+  (a1: byte_array)
+: STGhost unit opened
+    (array_chunk (f1 `concat_chunks` f2) a1 va1)
+    (fun _ -> array_chunk f1 a1 va1)
+    (f2.chunk_p Seq.empty)
+    (fun _ -> True)
+= rewrite (array_chunk (f1 `concat_chunks` f2) a1 va1) (array_chunk' (f1 `concat_chunks` f2) a1 va1);
+  let _ = gen_elim () in
+  let va1' = vpattern_replace (AP.arrayptr a1) in
+  exact_chunk_concat_chunks_empty_r_elim f1 f2 (AP.contents_of' va1');
+  noop ();
+  rewrite (array_chunk' f1 a1 va1) (array_chunk f1 a1 va1)
+
 let intro_parse_some_chunk
   (#opened: _)
   (#k: _)
@@ -393,6 +530,19 @@ let intro_parse_some_chunk
   rewrite (array_chunk' (parse_some_chunk p v) a va') (array_chunk (parse_some_chunk p v) a va');
   va'
 
+let intro_parse_some_chunk_auto
+  (#opened: _)
+  (#k: _)
+  (#t: _)
+  (#va: _)
+  (p: parser k t)
+  (a: byte_array)
+: STGhostT unit opened
+    (aparse p a va)
+    (fun va' -> array_chunk (parse_some_chunk p va.contents) a (array_of' va))
+= let _ = intro_parse_some_chunk p va.contents a in
+  rewrite (array_chunk _ a _) (array_chunk _ a _)
+
 let elim_parse_some_chunk
   (#opened: _)
   (#k: _)
@@ -412,3 +562,224 @@ let elim_parse_some_chunk
 = rewrite (array_chunk (parse_some_chunk p w) a va) (array_chunk' (parse_some_chunk p w) a va);
   let _ = gen_elim () in
   intro_aparse p a
+
+let rewrite_parse_some_chunk
+  (#opened: _)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#v1: t1)
+  (#va: AP.array byte)
+  (a: byte_array)
+  (#k2: parser_kind)
+  (p2: parser k2 t1)
+: STGhost unit opened
+    (array_chunk (parse_some_chunk p1 v1) a va)
+    (fun y2 -> array_chunk (parse_some_chunk p2 v1) a va)
+    (forall bytes . parse p1 bytes == parse p2 bytes)
+    (fun _ -> True)
+= let _ = elim_parse_some_chunk p1 v1 a in
+  let _ = rewrite_aparse a p2 in
+  let _ = intro_parse_some_chunk p2 v1 a in
+  rewrite
+    (array_chunk _ a _)
+    (array_chunk (parse_some_chunk p2 v1) a va)
+
+module LP = LowParse.Spec.Base
+
+let intro_weaken_parse_some_chunk
+  (#opened: _)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#v1: t1)
+  (#va: AP.array byte)
+  (k2: parser_kind { k2 `is_weaker_than` k1 })
+  (a: byte_array)
+: STGhostT unit opened
+    (array_chunk (parse_some_chunk p1 v1) a va)
+    (fun y2 -> array_chunk (parse_some_chunk (LP.weaken k2 p1) v1) a va)
+= rewrite_parse_some_chunk a (LP.weaken k2 p1)
+
+let elim_weaken_parse_some_chunk
+  (#opened: _)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#v1: t1)
+  (#va: AP.array byte)
+  (#k2: parser_kind)
+  (a: byte_array)
+  (_: squash (k2 `is_weaker_than` k1))
+: STGhostT unit opened
+    (array_chunk (parse_some_chunk (LP.weaken k2 p1) v1) a va)
+    (fun y2 -> array_chunk (parse_some_chunk p1 v1) a va)
+= rewrite_parse_some_chunk a p1
+
+let impl_close_hole_CPairR
+  (#opened: _)
+  (#va: _)
+  (x: hole_t false)
+  (sq: squash (
+    CCons? x.context /\
+    HVValue? x.hole
+  ))
+  (out: byte_array)
+: STGhost unit opened
+    (array_chunk (parse_hole x) out va)
+    (fun _ -> array_chunk (parse_hole (close_hole x)) out va)
+    (let CCons c c' = x.context in CPairR? c)
+    (fun _ -> True)
+= let CCons c c' = x.context in
+  let HVValue r v = x.hole in
+  rewrite
+    (array_chunk (parse_hole x) out va)
+    (array_chunk
+      (parse_some_chunk (LP.weaken default_parser_kind (parser_of_typ r)) v `concat_chunks`
+        (parse_some_chunk (LP.weaken default_parser_kind parse_empty) () `concat_chunks` parse_context c')
+      )
+      out va);
+  let ar = ghost_elim_concat_chunks _ _ out in
+  let _ = gen_elim () in
+  elim_concat_chunks_nil_l _ _ ar;
+  let _ = intro_concat_chunks _ _ out ar in
+  intro_concat_chunks_nil_l (parse_some_chunk (LP.weaken default_parser_kind parse_empty) ()) _ out;
+  rewrite
+    (array_chunk _ out _)
+    (array_chunk (parse_hole (close_hole x)) out va)
+
+open LowParse.SteelST.Combinators
+
+let impl_close_hole_CPairL
+  (#opened: _)
+  (#va: _)
+  (x: hole_t false)
+  (sq: squash (
+    CCons? x.context /\
+    HVValue? x.hole
+  ))
+  (out: byte_array)
+: STGhost unit opened
+    (array_chunk (parse_hole x) out va)
+    (fun _ -> array_chunk (parse_hole (close_hole x)) out va)
+    (let CCons c c' = x.context in CPairL? c)
+    (fun _ -> True)
+= let CCons c c' = x.context in
+  let CPairL _ r vr = c in
+  let HVValue l vl = x.hole in
+  rewrite
+    (array_chunk (parse_hole x) out va)
+    (array_chunk
+      (parse_some_chunk (LP.weaken default_parser_kind (parser_of_typ l)) vl `concat_chunks`
+        (parse_some_chunk (LP.weaken default_parser_kind (parser_of_typ r)) vr `concat_chunks` parse_context c')
+      )
+      out va);
+  let a2 = ghost_elim_concat_chunks _ _ out in
+  let _ = gen_elim () in
+  let a3 = ghost_elim_concat_chunks _ _ a2 in
+  let _ = gen_elim () in
+  elim_weaken_parse_some_chunk out ();
+  elim_weaken_parse_some_chunk a2 ();
+  let _ = elim_parse_some_chunk _ _ out in
+  let _ = elim_parse_some_chunk _ _ a2 in
+  let _ = merge_pair _ _ out a2 in
+  let _ = intro_parse_some_chunk_auto _ out in
+  intro_weaken_parse_some_chunk default_parser_kind out;
+  let _ = intro_concat_chunks _ _ out a3 in
+  rewrite
+    (array_chunk _ out _)
+    (array_chunk (parse_hole (close_hole x)) out va)
+
+open LowParse.SteelST.List
+
+let impl_close_hole_CListCons
+  (#opened: _)
+  (#va: _)
+  (x: hole_t false)
+  (sq: squash (
+    CCons? x.context /\
+    HVValue? x.hole
+  ))
+  (out: byte_array)
+: STGhost unit opened
+    (array_chunk (parse_hole x) out va)
+    (fun _ -> array_chunk (parse_hole (close_hole x)) out va)
+    (let CCons c c' = x.context in CListCons? c)
+    (fun _ -> True)
+= let CCons c c' = x.context in
+  let CListCons t l = c in
+  let HVValue t' v' = x.hole in
+  let v : type_of_typ t = coerce (type_of_typ t) v' in
+  rewrite
+    (array_chunk (parse_hole x) out va)
+    (array_chunk
+      (parse_some_chunk (LP.weaken default_parser_kind (parser_of_typ t)) v `concat_chunks`
+        (parse_some_chunk (LP.weaken default_parser_kind (parse_list (parser_of_typ t))) l `concat_chunks` parse_context c')
+      )
+      out va);
+  let a2 = ghost_elim_concat_chunks _ _ out in
+  let _ = gen_elim () in
+  let a3 = ghost_elim_concat_chunks _ _ a2 in
+  let _ = gen_elim () in
+  elim_weaken_parse_some_chunk out ();
+  elim_weaken_parse_some_chunk a2 ();
+  let _ = elim_parse_some_chunk _ _ out in
+  let _ = elim_parse_some_chunk _ _ a2 in
+  let _ = intro_cons _ out a2 in
+  let _ = intro_parse_some_chunk_auto _ out in
+  intro_weaken_parse_some_chunk default_parser_kind out;
+  let _ = intro_concat_chunks _ _ out a3 in
+  rewrite
+    (array_chunk _ out _)
+    (array_chunk (parse_hole (close_hole x)) out va)
+
+let impl_close_hole_CChoicePayload
+  (#opened: _)
+  (#va: _)
+  (x: hole_t false)
+  (sq: squash (
+    CCons? x.context /\
+    HVValue? x.hole
+  ))
+  (out: byte_array)
+: STGhost unit opened
+    (array_chunk (parse_hole x) out va)
+    (fun _ -> array_chunk (parse_hole (close_hole x)) out va)
+    (let CCons c c' = x.context in CChoicePayload? c)
+    (fun _ -> True)
+= let CCons c c' = x.context in
+  let HVValue t v = x.hole in
+  rewrite
+    (array_chunk (parse_hole x) out va)
+    (array_chunk (parse_some_chunk (LP.weaken default_parser_kind (parser_of_typ t)) v `concat_chunks`
+        (parse_some_chunk (LP.weaken default_parser_kind parse_empty) () `concat_chunks` parse_context c')
+    )
+      out va);
+  let a2 = ghost_elim_concat_chunks _ _ out in
+  let _ = gen_elim () in
+  elim_concat_chunks_nil_l _ _ a2;
+  let _ = intro_concat_chunks _ _ out a2 in
+  rewrite
+    (array_chunk _ out _)
+    (array_chunk (parse_hole (close_hole x)) out va)
+
+let impl_close_hole
+  (#opened: _)
+  (#va: _)
+  (x: hole_t false)
+  (sq: squash (
+    CCons? x.context /\
+    HVValue? x.hole
+  ))
+  (out: byte_array)
+: STGhostT unit opened
+    (array_chunk (parse_hole x) out va)
+    (fun _ -> array_chunk (parse_hole (close_hole x)) out va)
+= let CCons c c' = x.context in
+  if CPairL? c
+  then impl_close_hole_CPairL x sq out
+  else if CPairR? c
+  then impl_close_hole_CPairR x sq out
+  else if CListCons? c
+  then impl_close_hole_CListCons x sq out
+  else impl_close_hole_CChoicePayload x sq out
