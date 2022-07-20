@@ -15,30 +15,6 @@ let rec type_of_typ (t: typ) : Tot Type0 = match t with
 | TList t' -> list (type_of_typ t') // we ignore the serializer for now
 | TChoice f -> (x: bool & type_of_typ (f x)) 
 
-open LowParse.Spec.Int
-open LowParse.Spec.List
-open LowParse.Spec.VLData
-
-let pkind = {
-  parser_kind_low = 0;
-  parser_kind_high = None;
-  parser_kind_subkind = Some ParserStrong;
-  parser_kind_metadata = None;
-}
-
-let parse_bool : parser _ bool =
-  LowParse.Spec.Enum.parse_enum_key parse_u8 [(true, 1uy); (false, 0uy)]
-  `parse_synth`
-  (fun x -> x <: bool)
-
-let rec parser_of_typ (t: typ) : Tot (parser pkind (type_of_typ t)) =
-  match t returns parser pkind (type_of_typ t) with
-  | TU8 -> weaken _ parse_u8
-  | TPair t1 t2 -> nondep_then (parser_of_typ t1) (parser_of_typ t2)
-  | TList t' ->
-    weaken _ (parse_vldata 1 (parse_list (parser_of_typ t')))
-  | TChoice f -> weaken _ (parse_dtuple2 parse_bool (fun x -> parser_of_typ (f x)))
-
 let stt (#state_i: Type) (state_t: (state_i -> Type)) (ret_t: Type) (pre: state_i) (post: (state_i)) : Tot Type = (state_t pre -> Tot (ret_t & state_t (post)))
 
 let ret #state_t #pre (#ret_t: Type) (x: ret_t) : Tot (stt state_t ret_t pre (pre)) = fun s -> (x, s)
