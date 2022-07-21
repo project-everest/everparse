@@ -201,6 +201,17 @@ let exact_chunk
 = f.chunk_p input /\
   f.chunk_len input == Seq.length input
 
+let exact_chunk_parse_some_chunk
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (v: t)
+  (b: bytes)
+: Lemma
+  (requires (parse p b == Some (v, Seq.length b)))
+  (ensures (exact_chunk (parse_some_chunk p v) b))
+= assert (parse_chunk p v b (Seq.length b))
+
 let exact_chunk_concat_chunks
   (f12 f23: chunk_desc)
   (input12 input23: bytes)
@@ -1036,3 +1047,198 @@ let mk_initial_hole_array
   k sz ha
 
 #pop-options
+
+(* The failing case: what if the output buffer is too small to accommodate the output? *)
+
+let chunk_desc_ge (larger smaller: chunk_desc) : Tot prop =
+  forall (b: bytes) . exact_chunk larger b ==> (exists (n: nat) . n <= Seq.length b /\ exact_chunk smaller (Seq.slice b n (Seq.length b)))
+
+let chunk_desc_ge_implies
+  (larger smaller: chunk_desc)
+  (b: bytes)
+  (limit: nat)
+: Lemma
+  (requires (
+    chunk_desc_ge larger smaller /\
+    (forall b0 . exact_chunk smaller b0 ==> Seq.length b0 > limit) /\
+    exact_chunk larger b
+  ))
+  (ensures (
+    Seq.length b > limit
+  ))
+= ()
+
+let chunk_desc_ge_elim (larger smaller: chunk_desc)
+  (b: bytes)
+: Ghost nat
+    (requires (
+      chunk_desc_ge larger smaller /\
+      exact_chunk larger b
+    ))
+    (ensures (fun n ->
+      n <= Seq.length b /\
+      exact_chunk smaller (Seq.slice b n (Seq.length b))
+    ))
+= FStar.IndefiniteDescription.indefinite_description_ghost _ (fun n -> n <= Seq.length b /\ exact_chunk smaller (Seq.slice b n (Seq.length b))) 
+
+let chunk_desc_ge_intro (larger smaller: chunk_desc)
+  (f: (
+    (b: bytes) -> Lemma
+    (requires (
+      exact_chunk larger b
+    ))
+    (ensures (exists (n: nat) .
+      n <= Seq.length b /\
+      exact_chunk smaller (Seq.slice b n (Seq.length b))
+    ))
+  ))
+: Lemma
+  (chunk_desc_ge larger smaller)
+= Classical.forall_intro (Classical.move_requires f)
+
+let chunk_desc_ge_intro_exact (larger smaller: chunk_desc)
+  (f: (
+    (b: bytes) -> Lemma
+    (requires (
+      exact_chunk larger b
+    ))
+    (ensures (exists (n: nat) .
+      exact_chunk smaller b
+    ))
+  ))
+: Lemma
+  (chunk_desc_ge larger smaller)
+= chunk_desc_ge_intro larger smaller (fun b -> f b)
+
+let chunk_desc_ge_intro' (larger smaller: chunk_desc)
+  (f: (
+    (b: bytes) -> Ghost nat
+    (requires (
+      exact_chunk larger b
+    ))
+    (ensures (fun n ->
+      n <= Seq.length b /\
+      exact_chunk smaller (Seq.slice b n (Seq.length b))
+    ))
+  ))
+: Lemma
+  (chunk_desc_ge larger smaller)
+= chunk_desc_ge_intro larger smaller (fun b -> let _ = f b in ())
+
+let chunk_desc_ge_refl (l: chunk_desc) : Lemma
+  (chunk_desc_ge l l)
+= ()
+
+let chunk_desc_ge_trans (l1 l2 l3: chunk_desc) : Lemma
+  ((chunk_desc_ge l1 l2 /\ chunk_desc_ge l2 l3) ==> chunk_desc_ge l1 l3)
+= ()
+
+let chunk_desc_ge_zero (l1 l2: chunk_desc) : Lemma
+  (requires (
+    l2.chunk_p Seq.empty
+  ))
+  (ensures (
+    chunk_desc_ge l1 l2
+  ))
+= ()
+
+let chunk_desc_ge_concat_chunk_intro (l1 l2: chunk_desc) : Lemma
+  (chunk_desc_ge (l1 `concat_chunks` l2) l2)
+= ()
+
+let chunk_desc_ge_concat_chunk_compat (l1 l2 l: chunk_desc) : Lemma
+  (requires (chunk_desc_ge l1 l2))
+  (ensures (chunk_desc_ge (l1 `concat_chunks` l) (l2 `concat_chunks` l)))
+= chunk_desc_ge_intro (l1 `concat_chunks` l) (l2 `concat_chunks` l) (fun b ->
+    let cl = l1.chunk_len b in
+    exact_chunk_intro l1 b;
+    let br = Seq.slice b cl (Seq.length b) in
+    assert (exact_chunk l br);
+    let bl = Seq.slice b 0 cl in
+    let n = chunk_desc_ge_elim l1 l2 bl in
+    let suff = Seq.slice bl n (Seq.length bl) in
+    exact_chunk_concat_chunks l2 l suff br;
+    assert (Seq.slice b n (Seq.length b) `Seq.equal` (suff `Seq.append` br))
+  )
+
+let chunk_desc_ge_zero_l (l0 l1: chunk_desc) : Lemma
+  (requires (
+    l0.chunk_p Seq.empty
+  ))
+  (ensures (
+    chunk_desc_ge l1 (l0 `concat_chunks` l1)
+  ))
+= chunk_desc_ge_intro_exact l1 (l0 `concat_chunks` l1) (fun b ->
+    exact_chunk_concat_chunks_empty_l_intro l0 l1 b
+  )
+
+let chunk_desc_ge_zero_r (l1 l0: chunk_desc) : Lemma
+  (requires (
+    l0.chunk_p Seq.empty
+  ))
+  (ensures (
+    chunk_desc_ge l1 (l1 `concat_chunks` l0)
+  ))
+= chunk_desc_ge_intro_exact l1 (l1 `concat_chunks` l0) (fun b ->
+    exact_chunk_concat_chunks_empty_r_intro l1 l0 b
+  )
+
+let chunk_desc_ge_assoc_l_r (l1 l2 l3: chunk_desc) : Lemma
+  (chunk_desc_ge ((l1 `concat_chunks` l2) `concat_chunks` l3) (l1 `concat_chunks` (l2 `concat_chunks` l3)))
+= ()
+
+let chunk_desc_ge_assoc_r_l (l1 l2 l3: chunk_desc) : Lemma
+  (chunk_desc_ge (l1 `concat_chunks` (l2 `concat_chunks` l3)) ((l1 `concat_chunks` l2) `concat_chunks` l3))
+= ()
+
+let chunk_desc_ge_parse_pair
+  (#k1: _)
+  (#t1: _)
+  (p1: parser k1 t1)
+  (#k2: _)
+  (#t2: _)
+  (p2: parser k2 t2)
+  (v1: _)
+  (v2: _)
+: Lemma
+  (requires (k1.parser_kind_subkind == Some ParserStrong))
+  (ensures (
+    chunk_desc_ge (parse_some_chunk (p1 `nondep_then` p2) (v1, v2)) (parse_some_chunk p1 v1 `concat_chunks` parse_some_chunk p2 v2)
+  ))
+= chunk_desc_ge_intro_exact (parse_some_chunk (p1 `nondep_then` p2) (v1, v2)) (parse_some_chunk p1 v1 `concat_chunks` parse_some_chunk p2 v2) (fun b ->
+    nondep_then_eq p1 p2 b;
+    let Some (_, consumed) = parse p1 b in
+    Seq.lemma_split b consumed;
+    let bl = Seq.slice b 0 consumed in
+    parse_strong_prefix p1 b bl;
+    let br = Seq.slice b consumed (Seq.length b) in
+    exact_chunk_parse_some_chunk p1 v1 bl;
+    exact_chunk_parse_some_chunk p2 v2 br;
+    exact_chunk_concat_chunks (parse_some_chunk p1 v1) (parse_some_chunk p2 v2) bl br;
+    assert (exact_chunk (parse_some_chunk p1 v1 `concat_chunks`parse_some_chunk p2 v2) b)
+  )
+
+let chunk_desc_ge_parse_pair_test
+  (#k1: _)
+  (#t1: _)
+  (p1: parser k1 t1)
+  (#k2: _)
+  (#t2: _)
+  (p2: parser k2 t2)
+  (v1: _)
+  (v2: _)
+: Lemma
+  (requires (k1.parser_kind_subkind == Some ParserStrong))
+  (ensures (
+    chunk_desc_ge (parse_some_chunk (p1 `nondep_then` p2) (v1, v2)) (parse_some_chunk p1 v1 `concat_chunks` (parse_some_chunk parse_empty () `concat_chunks` parse_some_chunk p2 v2))
+  ))
+=
+  let chunk_desc_ge_trans' (l1 l2 l3: chunk_desc) : Lemma
+    ((chunk_desc_ge l1 l2 /\ chunk_desc_ge l2 l3) ==> chunk_desc_ge l1 l3)
+    [SMTPat (chunk_desc_ge l1 l2); SMTPat (chunk_desc_ge l2 l3)]
+  = chunk_desc_ge_trans l1 l2 l3
+  in
+  chunk_desc_ge_parse_pair p1 p2 v1 v2;
+  chunk_desc_ge_zero_r (parse_some_chunk p1 v1) (parse_some_chunk parse_empty ());
+  chunk_desc_ge_concat_chunk_compat (parse_some_chunk p1 v1) (parse_some_chunk p1 v1 `concat_chunks` parse_some_chunk parse_empty ()) (parse_some_chunk p2 v2);
+  chunk_desc_ge_assoc_l_r (parse_some_chunk p1 v1) (parse_some_chunk parse_empty ()) (parse_some_chunk p2 v2)
