@@ -783,3 +783,256 @@ let impl_close_hole
   else if CListCons? c
   then impl_close_hole_CListCons x sq out
   else impl_close_hole_CChoicePayload x sq out
+
+inline_for_extraction
+noeq
+type context_arrays : AP.array byte -> Type0 =
+| CANil: (a: AP.array byte) -> context_arrays a
+| CACons: (b: byte_array) -> (a0: AP.array byte) -> (al: AP.array byte) -> (ar: AP.array byte) -> squash (AP.merge_into al ar a0) -> (c: context_arrays ar) -> context_arrays a0
+
+let true_chunk : chunk_desc =
+{
+  chunk_p = (fun _ -> True);
+  chunk_len = (fun _ -> 0);
+  chunk_prefix = (fun _ _ -> ());
+  chunk_append = (fun _ _ -> ());
+}
+
+let intro_empty_chunk
+  (#opened: _)
+  (#va: AP.v byte)
+  (f: chunk_desc)
+  (a: byte_array)
+: STGhost (AP.array byte) opened
+    (AP.arrayptr a va)
+    (fun va' -> array_chunk f a va')
+    (AP.length (AP.array_of va) == 0 /\
+      f.chunk_p Seq.empty)
+    (fun va' -> va' == AP.array_of va)
+=
+  let va' = AP.array_of va in
+  assert (AP.contents_of' va `Seq.equal` Seq.empty);
+  exact_chunk_intro f (AP.contents_of' va);
+  noop ();
+  rewrite
+    (array_chunk' f a va')
+    (array_chunk f a va');
+  va'
+
+let elim_empty_chunk
+  (#opened: _)
+  (#va: AP.array byte)
+  (f: chunk_desc)
+  (a: byte_array)
+: STGhost (AP.v byte) opened
+    (array_chunk f a va)
+    (fun va' -> AP.arrayptr a va')
+    (f.chunk_p Seq.empty)
+    (fun va' -> 
+      AP.array_of va' == va /\
+      AP.contents_of' va' `Seq.equal` Seq.empty)
+=
+  rewrite (array_chunk f a va) (array_chunk' f a va);
+  let _ = gen_elim () in
+  let va' = vpattern_replace (AP.arrayptr a) in
+  f.chunk_append Seq.empty (AP.contents_of' va');
+  assert (AP.contents_of' va' `Seq.equal` (Seq.empty `Seq.append` AP.contents_of' va'));
+  noop ();
+  va'
+
+let rec parse_context_arrays
+  (#tfrom: typ)
+  (#tto: typ)
+  (c: context_t false tfrom tto)
+  (b: byte_array)
+  (#a: AP.array byte)
+  (ca: context_arrays a)
+: Tot vprop
+  (decreases c)
+= if CNil? c
+  then
+    if CANil? ca
+    then array_chunk true_chunk b a
+    else pure False
+  else
+    if CACons? ca
+    then array_chunk (parse_some_chunk (parser_of_base_context (CCons?.bc c)) (value_of_base_context (CCons?.bc c))) b (CACons?.al ca) `star` parse_context_arrays (CCons?.c c) (CACons?.b ca) (CACons?.c ca)
+    else pure False
+
+let intro_parse_context_arrays_nil
+  (#opened: _)
+  (ty: typ)
+  (b: byte_array)
+  (a: AP.array byte)
+: STGhostT unit opened
+    (array_chunk true_chunk b a)
+    (fun _ -> parse_context_arrays (CNil #_ #ty) b (CANil a))
+= rewrite
+    (array_chunk true_chunk b a)
+    (parse_context_arrays (CNil #_ #ty) b (CANil a))
+
+let elim_parse_context_arrays_nil
+  (#opened: _)
+  (#tfrom #tto: typ)
+  (c0: context_t false tfrom tto)
+  (b: byte_array)
+  (#a: AP.array byte)
+  (c: context_arrays a)
+: STGhost unit opened
+    (parse_context_arrays c0 b c)
+    (fun _ -> array_chunk true_chunk b a)
+    (CNil? c0)
+    (fun _ -> CANil? c)
+= if CANil? c
+  then
+    rewrite
+      (parse_context_arrays c0 b c)
+      (array_chunk true_chunk b a)
+  else begin
+    rewrite
+      (parse_context_arrays c0 b c)
+      (pure False);
+    let _ = gen_elim () in
+    rewrite
+      emp
+      (array_chunk true_chunk b a)
+  end
+
+let intro_parse_context_arrays_cons
+  (#opened: _)
+  (#t1: typ)
+  (#t2: typ)
+  (#t3: typ)
+  (bc: base_context_t false t1 t2)
+  (c0: context_t false t2 t3)
+  (bl: byte_array)
+  (br: byte_array)
+  (al: AP.array byte)
+  (ar: AP.array byte)
+  (c: context_arrays ar)
+  (sq: squash (AP.adjacent al ar))
+: STGhostT unit opened
+    (array_chunk (parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc)) bl al `star` parse_context_arrays c0 br c)
+    (fun _ -> parse_context_arrays (CCons bc c0) bl (CACons br (AP.merge al ar) al ar () c))
+=
+  assert_norm (
+    (parse_context_arrays (CCons bc c0) bl (CACons br (AP.merge al ar) al ar () c)) == (array_chunk (parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc)) bl al `star` parse_context_arrays c0 br c)  
+  );
+  rewrite
+    (array_chunk (parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc)) bl al `star` parse_context_arrays c0 br c)
+    (parse_context_arrays (CCons bc c0) bl (CACons br (AP.merge al ar) al ar () c))
+
+let elim_parse_context_arrays_cons
+  (#opened: _)
+  (#tfrom #tto: typ)
+  (c0: context_t false tfrom tto)
+  (b: byte_array)
+  (#a: AP.array byte)
+  (c: context_arrays a)
+  (sq: squash (CCons? c0))
+: STGhostT (squash (CACons? c)) opened
+    (parse_context_arrays c0 b c)
+    (fun _ ->
+      array_chunk (parse_some_chunk (parser_of_base_context (CCons?.bc c0)) (value_of_base_context (CCons?.bc c0))) b (CACons?.al c) `star`
+      parse_context_arrays (CCons?.c c0) (CACons?.b c) (CACons?.c c)
+    )
+= let CCons bc c0' = c0 in
+  if CACons? c
+  then begin
+    let CACons br' a' al' ar' sq' c' = c in
+    assert_norm (
+      parse_context_arrays (CCons bc c0') b (CACons br' a' al' ar' sq' c') ==
+        array_chunk (parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc)) b al' `star`
+        parse_context_arrays c0' br' c'
+    );
+  rewrite
+    (parse_context_arrays c0 b c)
+    (array_chunk (parse_some_chunk (parser_of_base_context (CCons?.bc c0)) (value_of_base_context (CCons?.bc c0))) b (CACons?.al c) `star`
+      parse_context_arrays (CCons?.c c0) (CACons?.b c) (CACons?.c c)
+    )
+  end else begin
+    rewrite
+      (parse_context_arrays c0 b c)
+      (pure False);
+    let _ = gen_elim () in
+    rewrite
+      emp
+      (array_chunk (parse_some_chunk (parser_of_base_context (CCons?.bc c0)) (value_of_base_context (CCons?.bc c0))) b (CACons?.al c) `star`
+      parse_context_arrays (CCons?.c c0) (CACons?.b c) (CACons?.c c))
+  end
+
+inline_for_extraction
+noeq
+type hole_arrays =
+{
+  ha_hole_a: AP.array byte;
+  ha_hole_b: byte_array;
+  ha_context_a: AP.array byte;
+  ha_context_b: byte_array;
+  ha_context: context_arrays ha_context_a;
+  ha_prf: squash (AP.adjacent ha_hole_a ha_context_a);
+}
+
+[@@__reduce__]
+let parse_hole_arrays'
+  (h: hole_t false)
+  (ha: hole_arrays)
+: Tot vprop
+= array_chunk (parse_some_chunk (parser_of_hole_or_value h.hole) (value_of_hole_or_value h.hole)) ha.ha_hole_b ha.ha_hole_a `star`
+  parse_context_arrays h.context ha.ha_context_b ha.ha_context
+
+let parse_hole_arrays
+  (h: hole_t false)
+  (ha: hole_arrays)
+: Tot vprop
+= parse_hole_arrays' h ha
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+let mk_initial_hole_array
+  (#vb: AP.v byte)
+  (ty: typ)
+  (b: byte_array)
+  (sz: SZ.size_t)
+  (kpre: vprop)
+  (kpost: vprop)
+  (k: (
+    (sz': SZ.size_t) ->
+    (ha: hole_arrays) ->
+    STT unit
+      (kpre `star` parse_hole_arrays (initial_ser_state ty) ha `star`
+        exists_ (fun vl -> AP.arrayptr b vl `star` pure (
+          AP.merge_into (AP.array_of vl) (AP.merge ha.ha_hole_a ha.ha_context_a) (AP.array_of vb) /\
+          AP.length (AP.array_of vl) == SZ.size_v sz'
+      )))
+      (fun _ -> kpost)
+  ))
+: ST unit
+    (kpre `star` AP.arrayptr b vb)
+    (fun _ -> kpost)
+    (SZ.size_v sz == AP.length (AP.array_of vb))
+    (fun _ -> True)
+= let bh = AP.split b sz in
+  let _ = gen_elim () in
+  let bc = AP.split bh SZ.zero_size in
+  let _ = gen_elim () in
+  let ah = intro_empty_chunk (parse_some_chunk (weaken default_parser_kind parse_empty) ()) bh in
+  let ac = intro_empty_chunk true_chunk bc in
+  intro_parse_context_arrays_nil ty bc _;
+  [@@inline_let]
+  let ha = {
+    ha_hole_a = ah;
+    ha_hole_b = bh;
+    ha_context_a = ac;
+    ha_context_b = bc;
+    ha_context = CANil _;
+    ha_prf = ();
+  }
+  in
+  rewrite
+    (array_chunk _ bh _ `star` parse_context_arrays _ bc _)
+    (parse_hole_arrays (initial_ser_state ty) ha);
+  k sz ha
+
+#pop-options

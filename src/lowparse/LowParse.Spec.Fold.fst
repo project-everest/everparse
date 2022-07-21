@@ -213,7 +213,7 @@ type context_t
   (erase_values: bool)
   : typ -> typ -> Type
 = | CNil: (#t: typ) -> context_t erase_values t t
-  | CCons: (#t1: typ) -> (#t2: typ) -> (#t3: typ) -> base_context_t erase_values t1 t2 -> context_t erase_values t2 t3 -> context_t erase_values t1 t3
+  | CCons: (#t1: typ) -> (#t2: typ) -> (#t3: typ) -> (bc: base_context_t erase_values t1 t2) -> (c: context_t erase_values t2 t3) -> context_t erase_values t1 t3
 
 let rec context_erase_values
   (#erase_values: bool)
