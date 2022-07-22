@@ -46,13 +46,23 @@ let fold_pair
     let (r1, s1) = f1 x1 s0 in
     f2 r1 x2 s1
 
+let fold_list_f
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv (inv))
+  (state: state_t inv)
+  (x: t)
+: Tot (state_t inv)
+= snd (f x state)
+
 let fold_list
   #state_i #state_t
   (inv: state_i)
   (#t: Type)
   (f: fold_t state_t t unit inv (inv))
 : Tot (fold_t state_t (list t) unit inv (inv))
-= fun l x -> ((), (List.Tot.fold_left (fun (state: state_t inv) x -> snd (f x state)) x l <: state_t inv) )
+= fun l x -> ((), List.Tot.fold_left (fold_list_f inv f) x l)
 
 let fold_choice
   #state_i #state_t
@@ -131,11 +141,11 @@ type prog
       prog state_t action_t TU8 U8.t i (i)
   | PPair:
       (#t1: _) ->
+      (#t2: _) ->
       (#ret1: _) ->
       (#pre1: _) ->
       (#post1: _) ->
       (f1: prog state_t action_t t1 ret1 pre1 post1) ->
-      (#t2: _) ->
       (#ret2: _) ->
       (#post2: _) ->
       (f2: ((x: ret1) -> prog state_t action_t t2 ret2 (post1) post2)) ->
@@ -225,6 +235,30 @@ let rec context_erase_values
   | CNil -> CNil
   | CCons b c -> CCons (base_context_erase_values b) (context_erase_values c)
 
+
+let rec concat_contexts
+  (#erase_values: _)
+  (#t1 #t2 #t3: _)
+  (c12: context_t erase_values t1 t2)
+  (c23: context_t erase_values t2 t3)
+: Tot (context_t erase_values t1 t3)
+  (decreases c12)
+= match c12 with
+  | CNil -> c23
+  | CCons b15 c52 -> CCons b15 (concat_contexts c52 c23)
+
+let rec erase_values_concat_contexts
+  (#erase_values: _)
+  (#t1 #t2 #t3: _)
+  (c12: context_t erase_values t1 t2)
+  (c23: context_t erase_values t2 t3)
+: Lemma
+  (ensures (context_erase_values (concat_contexts c12 c23) == concat_contexts (context_erase_values c12) (context_erase_values c23)))
+  (decreases c12)
+= match c12 with
+  | CNil -> ()
+  | CCons b15 c52 -> erase_values_concat_contexts c52 c23
+
 noeq
 type hole_or_value_t
   (erase_values: bool)
@@ -265,6 +299,28 @@ let hole_erase_values
   context = context_erase_values x.context;
   hole = hole_or_value_erase_values x.hole;
 }
+
+let hole_concat_context
+  (#erase_values: bool)
+  (#t: typ)
+  (x: hole_t erase_values)
+  (c: context_t erase_values x.root t)
+: Tot (hole_t erase_values)
+= {
+    root = t;
+    leaf = x.leaf;
+    context = concat_contexts x.context c;
+    hole = x.hole;
+  }
+
+let erase_values_hole_concat_context
+  (#erase_values: bool)
+  (#t: typ)
+  (x: hole_t erase_values)
+  (c: context_t erase_values x.root t)
+: Lemma
+  (hole_erase_values (hole_concat_context x c) == hole_concat_context (hole_erase_values x) (context_erase_values c))
+= erase_values_concat_contexts x.context c
 
 let close_hole
   (#erase_values: bool)
@@ -412,14 +468,15 @@ let end_choice
     hole = HVValue _ (if erase_values then () else mk_choice_value tag f v);
   }
 
-let ser_index : Type0 = hole_t true
+let ser_index (root: typ) : Type0 = (h: hole_t true { h.root == root })
 
-let ser_state (i: ser_index) : Tot Type0 = (x: hole_t false {
+let ser_state (#root: typ) (i: ser_index root) : Tot Type0 = (x: hole_t false {
   hole_erase_values x == i
 })
 
 let ser_close_hole
-  (x: ser_index)
+  (#root: typ)
+  (x: ser_index root)
   (sq: squash (
     CCons? x.context /\
     HVValue? x.hole
@@ -428,7 +485,8 @@ let ser_close_hole
 = fun h -> ((), close_hole h)
 
 let ser_u8
-  (x: ser_index)
+  (#root: typ)
+  (x: ser_index root)
   (v: U8.t {
     x.leaf == TU8 /\
     HVHole? x.hole
@@ -437,7 +495,8 @@ let ser_u8
 = fun h -> ((), fill_hole h v)
 
 let ser_start_pair
-  (x: ser_index)
+  (#root: typ)
+  (x: ser_index root)
   (sq: squash (
     TPair? x.leaf /\
     HVHole? x.hole
@@ -447,13 +506,14 @@ let ser_start_pair
 
 noeq
 type ser_action
-: (ret_t: Type) -> ser_index -> (ser_index) -> Type
+  (#root: typ)
+: (ret_t: Type) -> ser_index root -> (ser_index) root -> Type
 = | SCloseHole:
-      (#x: ser_index) ->
+      (#x: ser_index root) ->
       squash (CCons? x.context /\ HVValue? x.hole) ->
       ser_action unit x (close_hole x)
   | SU8:
-      (#x: ser_index) ->
+      (#x: ser_index root) ->
       (v: U8.t) ->
       squash (
         x.leaf == TU8 /\
@@ -461,29 +521,191 @@ type ser_action
       ) ->
       ser_action unit x (fill_hole x ())
   | SStartPair:
-      (#x: ser_index) ->
+      (#x: ser_index root) ->
       squash (TPair? x.leaf /\ HVHole? x.hole) ->
       ser_action unit x (start_pair x)
 
 let ser_action_sem
+  (#root: typ)
   (#ret_t: Type)
-  (#pre: ser_index)
-  (#post: (ser_index))
+  (#pre: ser_index root)
+  (#post: (ser_index root))
   (a: ser_action ret_t pre post)
 : Tot (stt ser_state ret_t pre post)
 = match a with
-  | SCloseHole #x _ -> ser_close_hole x ()
-  | SU8 #x v _ -> ser_u8 x v
-  | SStartPair #x _ -> ser_start_pair x ()
+  | SCloseHole #_ #x _ -> ser_close_hole x ()
+  | SU8 #_ #x v _ -> ser_u8 x v
+  | SStartPair #_ #x _ -> ser_start_pair x ()
+
+let ser_action_concat_context
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (#t': typ)
+  (a: ser_action ret_t pre post)
+  (c: context_t true pre.root t')
+: Tot (ser_action ret_t (hole_concat_context pre c) (hole_concat_context post c))
+= match a with
+  | SCloseHole _ -> SCloseHole ()
+  | SU8 v _ -> SU8 v ()
+  | SStartPair _ -> SStartPair #t' ()
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let sem_ser_action_concat_context
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (#t': typ)
+  (a: ser_action ret_t pre post)
+  (s: ser_state pre)
+  (c: context_t false pre.root t')
+: Lemma
+  (
+    let (v, s') = ser_action_sem a s in
+    let sc = hole_concat_context s c in
+    hole_erase_values sc == hole_concat_context pre (context_erase_values c) /\
+    ser_action_sem (ser_action_concat_context a (context_erase_values c)) sc ==
+      (v, hole_concat_context s' c)
+  )
+=
+  let (v, s') = ser_action_sem a s in
+  let sc = hole_concat_context s c in
+  erase_values_hole_concat_context s c
+
+#pop-options
+
+let rec prog_concat_context
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (#ty: typ)
+  (#t': typ)
+  (p: prog ser_state ser_action ty ret_t pre post)
+  (c: context_t true pre.root t')
+: Tot (prog ser_state (ser_action #t') ty ret_t (hole_concat_context pre c) (hole_concat_context post c))
+  (decreases p)
+= match p with
+  | PRet v -> PRet v
+  | PAction a -> PAction (ser_action_concat_context a c)
+  | PBind f g -> PBind (prog_concat_context f c) (fun x -> prog_concat_context (g x) c)
+  | PU8 i -> PU8 (hole_concat_context i c)
+  | PPair f1 f2 -> PPair (prog_concat_context f1 c) (fun x -> prog_concat_context (f2 x) c)
+  | PList i f -> PList _ (prog_concat_context f c)
+  | PChoice f -> PChoice (fun x -> prog_concat_context (f x) c)
+
+let rec fold_list_concat_context
+  (#root: typ)
+  (#inv: ser_index root)
+  (#t: Type)
+  (f: fold_t ser_state t unit inv inv)
+  (#t': typ)
+  (c: context_t false root t')
+  (g: fold_t (ser_state #t') t unit (hole_concat_context inv (context_erase_values c)) (hole_concat_context inv (context_erase_values c)))
+  (prf: (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (requires (
+      let (v, s') = f i s in
+      hole_erase_values (hole_concat_context s c) == hole_concat_context (hole_erase_values s) (context_erase_values c) /\
+      hole_erase_values (hole_concat_context s' c) == hole_concat_context (hole_erase_values s') (context_erase_values c)
+    ))
+    (ensures (let (v, s') = f i s in
+      g i (hole_concat_context s c) == (v, hole_concat_context s' c)
+    ))
+  )
+  (input: list t)
+  (s: ser_state inv)
+: Lemma
+  (ensures (
+    let (v, s') = fold_list inv f input s in
+    hole_erase_values (hole_concat_context s c) == hole_concat_context (hole_erase_values s) (context_erase_values c) /\
+    hole_erase_values (hole_concat_context s' c) == hole_concat_context (hole_erase_values s') (context_erase_values c) /\
+    fold_list (hole_concat_context inv (context_erase_values c)) g input (hole_concat_context s c) ==
+      (v, hole_concat_context s' c)
+  ))
+  (decreases input)
+= erase_values_hole_concat_context s c;
+  match input with
+  | [] -> ()
+  | hd :: tl ->
+    let (_, s') = f hd s in
+    erase_values_hole_concat_context s' c;
+    prf hd s;
+    fold_list_concat_context f c g prf tl s'
+
+#push-options "--split_queries" // "--z3rlimit 64"
+#restart-solver
+
+let rec sem_prog_concat_context
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (#ty: typ)
+  (#t': typ)
+  (p: prog ser_state ser_action ty ret_t pre post)
+  (input: type_of_typ ty)
+  (s: ser_state pre)
+  (c: context_t false root t')
+: Lemma
+  (ensures (
+    let (v, s') = sem ser_action_sem p input s in
+    let sc = hole_concat_context s c in
+    let sc' = hole_concat_context s' c in
+    hole_erase_values sc == hole_concat_context pre (context_erase_values c) /\
+    hole_erase_values sc' == hole_concat_context post (context_erase_values c) /\
+    sem ser_action_sem (prog_concat_context p (context_erase_values c)) input sc ==
+      (v, sc')
+  ))
+  (decreases p)
+= 
+  let (v, s') = sem ser_action_sem p input s in
+  let sc = hole_concat_context s c in
+  let sc' = hole_concat_context s' c in
+  erase_values_hole_concat_context s c;
+  erase_values_hole_concat_context s' c;
+  match p with
+  | PAction a ->
+    sem_ser_action_concat_context a s c
+  | PBind f g ->
+    sem_prog_concat_context f input s c;
+    let (vf, sf) = sem ser_action_sem f input s in
+    sem_prog_concat_context (g vf) input sf c
+  | PPair #_ #_ #_ #t1 #t2 f1 f2 ->
+    let (i1, i2) = (input <: (type_of_typ t1 & type_of_typ t2)) in
+    sem_prog_concat_context f1 i1 s c;
+    let (v1, s1) = sem ser_action_sem f1 i1 s in
+    sem_prog_concat_context (f2 v1) i2 s1 c
+  | PU8 _ -> ()
+  | PRet _ -> ()
+  | PChoice #_ #_ #_ #t f ->
+    let (| tag, pl |) = (input <: (type_of_typ (TChoice t))) in
+    sem_prog_concat_context (f tag) pl s c
+  | PList inv body ->
+    fold_list_concat_context
+      (sem ser_action_sem body)
+      c
+      (sem ser_action_sem (prog_concat_context body (context_erase_values c)))
+      (fun elt st ->
+        sem_prog_concat_context body elt st c
+      )
+      input
+      s
+
+#pop-options
 
 let initial_ser_index
   (ty: typ)
-: Tot ser_index
+: Tot (ser_index ty)
 = Mkhole_t ty _ CNil (HVHole _)
 
 let final_ser_index
   (ty: typ)
-: Tot ser_index
+: Tot (ser_index ty)
 = Mkhole_t ty _ CNil (HVValue _ ())
 
 let initial_ser_state
