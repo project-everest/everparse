@@ -1053,18 +1053,37 @@ let mk_initial_hole_array
 let chunk_desc_ge (larger smaller: chunk_desc) : Tot prop =
   forall (b: bytes) . exact_chunk larger b ==> (exists (n: nat) . n <= Seq.length b /\ exact_chunk smaller (Seq.slice b n (Seq.length b)))
 
-let chunk_desc_ge_implies
+let chunk_exceeds_limit
+  (c: chunk_desc)
+  (limit: nat)
+: Tot prop
+= forall b0 . exact_chunk c b0 ==> Seq.length b0 > limit
+
+let chunk_desc_ge_implies'
   (larger smaller: chunk_desc)
   (b: bytes)
   (limit: nat)
 : Lemma
   (requires (
     chunk_desc_ge larger smaller /\
-    (forall b0 . exact_chunk smaller b0 ==> Seq.length b0 > limit) /\
+    chunk_exceeds_limit smaller limit /\
     exact_chunk larger b
   ))
   (ensures (
     Seq.length b > limit
+  ))
+= ()
+
+let chunk_desc_ge_implies
+  (larger smaller: chunk_desc)
+  (limit: nat)
+: Lemma
+  (requires (
+    chunk_desc_ge larger smaller /\
+    chunk_exceeds_limit smaller limit
+  ))
+  (ensures (
+    chunk_exceeds_limit larger limit
   ))
 = ()
 
@@ -1242,3 +1261,76 @@ let chunk_desc_ge_parse_pair_test
   chunk_desc_ge_zero_r (parse_some_chunk p1 v1) (parse_some_chunk parse_empty ());
   chunk_desc_ge_concat_chunk_compat (parse_some_chunk p1 v1) (parse_some_chunk p1 v1 `concat_chunks` parse_some_chunk parse_empty ()) (parse_some_chunk p2 v2);
   chunk_desc_ge_assoc_l_r (parse_some_chunk p1 v1) (parse_some_chunk parse_empty ()) (parse_some_chunk p2 v2)
+
+module U8 = FStar.UInt8
+
+open LowParse.SteelST.Int
+
+let chunk_exceeds_limit_intro_serialize
+  (#k: _)
+  (#t: _)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: t)
+  (limit: nat)
+: Lemma
+  (requires (Seq.length (serialize s x) > limit))
+  (ensures (chunk_exceeds_limit (parse_some_chunk p x) limit))
+= let prf
+    (b0: bytes)
+  : Lemma
+    (requires (exact_chunk (parse_some_chunk p x) b0))
+    (ensures (Seq.length b0 > limit))
+    [SMTPat (exact_chunk (parse_some_chunk p x) b0)]
+  = parse_injective p b0 (serialize s x)
+  in
+  ()
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let ser_u8
+  (#vb: AP.v byte)
+  (x: U8.t)
+  (b: byte_array)
+  (sz: SZ.size_t)
+  (kpre: vprop)
+  (kpost: bool -> vprop)
+  (k_success: (
+    (vl: AP.v byte) ->
+    (vr: AP.array byte) ->
+    (br: byte_array) ->
+    (sz': SZ.size_t) ->
+    ST bool
+      (kpre `star` AP.arrayptr b vl `star` array_chunk (parse_some_chunk parse_u8 x) br vr)
+      (fun b -> kpost b)
+      (AP.merge_into (AP.array_of vl) vr (AP.array_of vb) /\
+        SZ.size_v sz' == AP.length (AP.array_of vl))
+      (fun _ -> True)
+  ))
+  (k_failure: (
+    (vb': AP.v byte) ->
+    ST bool
+      (kpre `star` AP.arrayptr b vb')
+      (fun b -> kpost b)
+      (AP.array_of vb' == AP.array_of vb /\
+        chunk_exceeds_limit (parse_some_chunk parse_u8 x) (AP.length (AP.array_of vb)))
+      (fun b -> b == false)
+  ))
+: ST bool
+    (kpre `star` AP.arrayptr b vb)
+    (fun b -> kpost b)
+    (SZ.size_v sz == AP.length (AP.array_of vb) /\
+      AP.array_perm (AP.array_of vb) == full_perm)
+    (fun _ -> True)
+= if sz `SZ.size_lt` SZ.mk_size_t 1ul
+  then begin
+    chunk_exceeds_limit_intro_serialize serialize_u8 x (SZ.size_v sz);
+    k_failure vb
+  end else begin
+    let sz' = SZ.size_sub sz (SZ.mk_size_t 1ul) in
+    let br = AP.split b sz' in
+    let _ = gen_elim () in
+    let _ = write_u8 x br in
+    let _ = intro_parse_some_chunk _ _ _ in
+    k_success _ _ _ sz'
+  end
