@@ -2,6 +2,7 @@ module LowParse.SteelST.Int
 include LowParse.Spec.Int
 include LowParse.SteelST.Validate
 include LowParse.SteelST.Access
+include LowParse.SteelST.Write
 open Steel.ST.GenElim
 
 module E = LowParse.SteelST.Endianness
@@ -32,6 +33,19 @@ let read_u8 : leaf_reader parse_u8 =
   return res
 
 inline_for_extraction
+noextract
+let n_to_be_1 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_n_to_be EI.uint8 1)
+
+inline_for_extraction
+let write_u8 : exact_writer serialize_u8 =
+  fun x a ->
+    let va1 = n_to_be_1 x a (SZ.mk_size_t 1ul) in
+    parser_kind_prop_equiv parse_u8_kind parse_u8;
+    parse_u8_spec (AP.contents_of' va1);
+    let va2 = intro_aparse parse_u8 a in
+    return va2
+
+inline_for_extraction
 let validate_u16 : validator parse_u16 =
   validate_total_constant_size parse_u16 (SZ.mk_size_t 2ul)
 
@@ -52,6 +66,19 @@ let read_u16 : leaf_reader parse_u16 =
   let _ = intro_aparse parse_u16 a in
   rewrite (aparse parse_u16 a _) (aparse parse_u16 a va);
   return res
+
+inline_for_extraction
+noextract
+let n_to_be_2 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_n_to_be EI.uint16 2)
+
+inline_for_extraction
+let write_u16 : exact_writer serialize_u16 =
+  fun x a ->
+    let va1 = n_to_be_2 x a (SZ.mk_size_t 2ul) in
+    parser_kind_prop_equiv parse_u16_kind parse_u16;
+    parse_u16_spec (AP.contents_of' va1);
+    let va2 = intro_aparse parse_u16 a in
+    return va2
 
 inline_for_extraction
 let validate_u32 : validator parse_u32 =
@@ -76,6 +103,19 @@ let read_u32 : leaf_reader parse_u32 =
   return res
 
 inline_for_extraction
+noextract
+let n_to_be_4 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_n_to_be EI.uint32 4)
+
+inline_for_extraction
+let write_u32 : exact_writer serialize_u32 =
+  fun x a ->
+    let va1 = n_to_be_4 x a (SZ.mk_size_t 4ul) in
+    parser_kind_prop_equiv parse_u32_kind parse_u32;
+    parse_u32_spec (AP.contents_of' va1);
+    let va2 = intro_aparse parse_u32 a in
+    return va2
+
+inline_for_extraction
 let validate_u64 : validator parse_u64 =
   validate_total_constant_size parse_u64 (SZ.mk_size_t 8ul)
 
@@ -96,3 +136,16 @@ let read_u64 : leaf_reader parse_u64 =
   let _ = intro_aparse parse_u64 a in
   rewrite (aparse parse_u64 a _) (aparse parse_u64 a va);
   return res
+
+inline_for_extraction
+noextract
+let n_to_be_8 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_n_to_be EI.uint64 8)
+
+inline_for_extraction
+let write_u64 : exact_writer serialize_u64 =
+  fun x a ->
+    let va1 = n_to_be_8 x a (SZ.mk_size_t 8ul) in
+    parser_kind_prop_equiv parse_u64_kind parse_u64;
+    parse_u64_spec (AP.contents_of' va1);
+    let va2 = intro_aparse parse_u64 a in
+    return va2

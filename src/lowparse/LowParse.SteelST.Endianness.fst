@@ -101,7 +101,9 @@ let rec mk_be_to_n
   then be_to_n_1 u
   else be_to_n_S (mk_be_to_n u (len - 1))
 
-(*
+// Disclaimer: a function of type n_to_be_t is ultimately meant to be called with a buffer of size len, so we do not care about any output bytes beyond position len.
+
+[@@__reduce__]
 inline_for_extraction
 noextract
 let n_to_be_t
@@ -110,8 +112,25 @@ let n_to_be_t
   (u: uinttype t tot)
   (len: nat { len <= tot })
 : Tot Type
-= (n: t { u.v n < pow2 (8 * len) }) ->
-  Tot (b: B.bytes { B.reveal b `Seq.equal` E.n_to_be len (u.v n) })
+= (n: t) ->
+  (x: AP.t U8.t) ->
+  (#v: AP.v U8.t) ->
+  (pos: SZ.size_t) ->
+  ST (AP.v U8.t)
+    (AP.arrayptr x v)
+    (fun v' -> AP.arrayptr x v')
+    (SZ.size_v pos == len /\
+      len <= AP.length (AP.array_of v) /\
+      AP.array_perm (AP.array_of v) == full_perm /\
+      u.v n < pow2 (8 * len)
+    )
+    (fun v' ->
+      SZ.size_v pos == len /\
+      len <= AP.length (AP.array_of v) /\
+      AP.array_of v' == AP.array_of v /\
+      u.v n < pow2 (8 * len) /\
+      Seq.slice (AP.contents_of' v') 0 len `Seq.equal` n_to_be len (u.v n)
+    )
 
 inline_for_extraction
 noextract
@@ -120,7 +139,23 @@ let n_to_be_0
   (#tot: nat)
   (u: uinttype t tot)
 : Tot (n_to_be_t u 0)
-= fun _ -> B.empty_bytes
+= fun _ x #v _ ->
+  E.reveal_be_to_n (Seq.slice (AP.contents_of v) 0 0);
+  return v
+
+inline_for_extraction
+noextract
+let n_to_be_1
+  (#t: Type)
+  (#tot: nat)
+  (u: uinttype t tot { tot > 0 })
+: Tot (n_to_be_t u 1)
+= fun n x _ ->
+  E.reveal_n_to_be 1 (u.v n);
+  E.reveal_n_to_be 0 (u.v n / pow2 8);
+  let n' = u.to_byte n in
+  let v' = AP.upd x SZ.zero_size n' in
+  return v'
 
 inline_for_extraction
 noextract
@@ -128,16 +163,17 @@ let n_to_be_S
   (#t: Type)
   (#tot: nat)
   (#u: uinttype t tot)
-  (#len: nat {len + 1 <= tot /\ tot < pow2 32})
+  (#len: nat {len + 1 <= tot})
   (ih: n_to_be_t u len)
 : Tot (n_to_be_t u (len + 1))
-= fun n ->
+= fun n x pos ->
   reveal_n_to_be (len + 1) (u.v n);
   let lo = u.to_byte n in
   let hi = u.div256 n in
-  let seq_hi = ih hi in
-  let seq_lo = B.create 1ul lo in
-  seq_hi `B.append` seq_lo
+  let pos' = pos `SZ.size_sub` SZ.one_size in
+  let _ = ih hi x pos' in
+  let v' = AP.upd x pos' lo in
+  return v'
 
 [@must_reduce]
 noextract
@@ -145,13 +181,16 @@ let rec mk_n_to_be
   (#t: Type)
   (#tot: nat)
   (u: uinttype t tot)
-  (len: nat {len <= tot /\ tot < pow2 32})
+  (len: nat {len <= tot})
 : Tot (n_to_be_t u len)
   (decreases len)
 = if len = 0
   then n_to_be_0 u
+  else if len = 1
+  then n_to_be_1 u
   else n_to_be_S (mk_n_to_be u (len - 1))
 
+(*
 inline_for_extraction
 noextract
 let le_to_n_t
