@@ -264,9 +264,9 @@ type hole_or_value_t
   (erase_values: bool)
 : typ -> Type
 = | HVHole: (t: typ) -> hole_or_value_t erase_values t
-  | HVIncompleteList: (t: typ) -> (if erase_values then unit else list (type_of_typ t)) -> hole_or_value_t erase_values (TList t)
-  | HVChoicePayload: (f: (bool -> typ)) -> (t': typ) -> (if erase_values then unit else type_of_typ t') -> hole_or_value_t erase_values (TChoice f)
-  | HVValue: (t: typ) -> (if erase_values then unit else type_of_typ t) -> hole_or_value_t erase_values t
+  | HVIncompleteList: (t: typ) -> (v: (if erase_values then unit else list (type_of_typ t))) -> hole_or_value_t erase_values (TList t)
+  | HVChoicePayload: (f: (bool -> typ)) -> (t': typ) -> (v: (if erase_values then unit else type_of_typ t')) -> hole_or_value_t erase_values (TChoice f)
+  | HVValue: (t: typ) -> (v: (if erase_values then unit else type_of_typ t)) -> hole_or_value_t erase_values t
 
 let hole_or_value_erase_values
   (#erase_values: _)

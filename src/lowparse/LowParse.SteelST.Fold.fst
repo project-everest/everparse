@@ -201,7 +201,7 @@ let exact_chunk
 = f.chunk_p input /\
   f.chunk_len input == Seq.length input
 
-let exact_chunk_parse_some_chunk
+let exact_chunk_parse_some_chunk'
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -211,6 +211,16 @@ let exact_chunk_parse_some_chunk
   (requires (parse p b == Some (v, Seq.length b)))
   (ensures (exact_chunk (parse_some_chunk p v) b))
 = assert (parse_chunk p v b (Seq.length b))
+
+let exact_chunk_parse_some_chunk
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (v: t)
+  (b: bytes)
+: Lemma
+  (parse p b == Some (v, Seq.length b) <==> exact_chunk (parse_some_chunk p v) b)
+= Classical.move_requires (exact_chunk_parse_some_chunk' p v) b
 
 let exact_chunk_concat_chunks
   (f12 f23: chunk_desc)
@@ -1134,6 +1144,28 @@ let chunk_desc_ge_intro_exact (larger smaller: chunk_desc)
   (chunk_desc_ge larger smaller)
 = chunk_desc_ge_intro larger smaller (fun b -> f b)
 
+let chunk_desc_ge_intro_exact_parse_some_chunk
+  (#k1: _)
+  (#t: _)
+  (p1: parser k1 t)
+  (#k2: _)
+  (p2: parser k2 t)
+  (v: t)
+: Lemma
+  (requires (
+    forall b . parse p1 b == parse p2 b
+  ))
+  (ensures (
+    chunk_desc_ge (parse_some_chunk p1 v) (parse_some_chunk p2 v)
+  ))
+= chunk_desc_ge_intro_exact
+    (parse_some_chunk p1 v)
+    (parse_some_chunk p2 v)
+    (fun b ->
+      exact_chunk_parse_some_chunk p1 v b;
+      exact_chunk_parse_some_chunk p2 v b
+    )
+
 let chunk_desc_ge_intro' (larger smaller: chunk_desc)
   (f: (
     (b: bytes) -> Ghost nat
@@ -1258,7 +1290,7 @@ let chunk_desc_ge_parse_pair_test
   ))
 =
   let chunk_desc_ge_trans' (l1 l2 l3: chunk_desc) : Lemma
-    ((chunk_desc_ge l1 l2 /\ chunk_desc_ge l2 l3) ==> chunk_desc_ge l1 l3)
+    (ensures ((chunk_desc_ge l1 l2 /\ chunk_desc_ge l2 l3) ==> chunk_desc_ge l1 l3))
     [SMTPat (chunk_desc_ge l1 l2); SMTPat (chunk_desc_ge l2 l3)]
   = chunk_desc_ge_trans l1 l2 l3
   in
@@ -1319,7 +1351,7 @@ let impl_ser_u8
       (fun b -> kpost b)
       (AP.array_of vb' == AP.array_of vb /\
         chunk_exceeds_limit (parse_some_chunk parse_u8 x) (AP.length (AP.array_of vb)))
-      (fun b -> b == false)
+      (fun _ -> True)
   ))
 : ST bool
     (kpre `star` AP.arrayptr b vb)
@@ -1387,7 +1419,7 @@ let prog_impl_t
         AP.merge_into (AP.array_of vl) (array_of_hole out) (AP.array_of vb') /\
         chunk_exceeds_limit (parse_hole h') (AP.length (AP.array_of vb'))
       )
-      (fun b -> b == false)
+      (fun _ -> True)
   )) ->
   ST bool
     (kpre `star` aparse (parser_of_typ ty) bin vbin `star`
@@ -1398,3 +1430,242 @@ let prog_impl_t
       AP.adjacent (AP.array_of vl) (array_of_hole out)
     )
     (fun _ -> True)
+
+module R = Steel.ST.Reference
+
+let run_prog_post_true_prop
+  (#root: typ)
+  (#ret_t: Type)
+  (#ty: typ)
+  (p: prog ser_state ser_action ty ret_t (initial_ser_index root) (final_ser_index root))
+  (vbin: v pkind (type_of_typ ty))
+  (vbout: AP.v byte)
+  (vl': AP.v byte)
+  (vret' : ret_t)
+  (vsz' : SZ.size_t)
+  (vr': v pkind (type_of_typ root))
+: Tot prop
+=
+  let (vr, s') = sem ser_action_sem p vbin.contents (initial_ser_state root) in
+  let HVValue _ v' = s'.hole in
+  vr == vret' /\
+  AP.merge_into (AP.array_of vl') (array_of' vr') (AP.array_of vbout) /\
+  SZ.size_v vsz' == AP.length (AP.array_of vl') /\
+  vr'.contents == v'
+
+[@@__reduce__]
+let run_prog_post_true
+  (#root: typ)
+  (#ret_t: Type)
+  (#ty: typ)
+  (p: prog ser_state ser_action ty ret_t (initial_ser_index root) (final_ser_index root))
+  (vbin: _)
+  (vbout: AP.v byte)
+  (bin: byte_array)
+  (bout: byte_array)
+  (bret: R.ref ret_t)
+  (bsz: R.ref SZ.size_t)
+: Tot vprop
+=
+      exists_ (fun vl' -> exists_ (fun vret' -> exists_ (fun vsz' ->
+        aparse (parser_of_typ ty) bin vbin `star`
+        AP.arrayptr bout vl' `star`
+        R.pts_to bret full_perm vret' `star`
+        R.pts_to bsz full_perm vsz' `star`
+        (
+            exists_ (fun br' -> exists_ (fun vr' ->
+              aparse (parser_of_typ root) br' vr' `star`
+              pure (
+                run_prog_post_true_prop p vbin vbout vl' vret' vsz' vr'
+              )
+            ))
+        )
+      )))
+
+let run_prog_post_false_prop
+  (#root: typ)
+  (#ret_t: Type)
+  (#ty: typ)
+  (p: prog ser_state ser_action ty ret_t (initial_ser_index root) (final_ser_index root))
+  (vbin: v pkind (type_of_typ ty))
+  (vbout: AP.v byte)
+  (vl' : AP.v byte)
+  (vsz' : SZ.size_t)
+: Tot prop
+=
+  let (_, s') = sem ser_action_sem p vbin.contents (initial_ser_state root) in
+  let HVValue _ v' = s'.hole in
+  AP.array_of vl' == AP.array_of vbout /\
+  SZ.size_v vsz' == AP.length (AP.array_of vbout) /\
+  chunk_exceeds_limit (parse_some_chunk (parser_of_typ root) v') (SZ.size_v vsz')
+
+[@@__reduce__]
+let run_prog_post_false
+  (#root: typ)
+  (#ret_t: Type)
+  (#ty: typ)
+  (p: prog ser_state ser_action ty ret_t (initial_ser_index root) (final_ser_index root))
+  (vbin: _)
+  (vbout: AP.v byte)
+  (bin: byte_array)
+  (bout: byte_array)
+  (bret: R.ref ret_t)
+  (bsz: R.ref SZ.size_t)
+: Tot vprop
+=
+      exists_ (fun vl' -> exists_ (fun vret' -> exists_ (fun vsz' ->
+        aparse (parser_of_typ ty) bin vbin `star`
+        AP.arrayptr bout vl' `star`
+        R.pts_to bret full_perm vret' `star`
+        R.pts_to bsz full_perm vsz' `star`
+        (
+            pure (
+              run_prog_post_false_prop p vbin vbout vl' vsz'
+            )
+        )
+      )))
+
+let run_prog_post
+  (#root: typ)
+  (#ret_t: Type)
+  (#ty: typ)
+  (p: prog ser_state ser_action ty ret_t (initial_ser_index root) (final_ser_index root))
+  (vbin: _)
+  (vbout: AP.v byte)
+  (bin: byte_array)
+  (bout: byte_array)
+  (bret: R.ref ret_t)
+  (bsz: R.ref SZ.size_t)
+  (b: bool)
+: Tot vprop
+= if b
+  then run_prog_post_true p vbin vbout bin bout bret bsz
+  else run_prog_post_false p vbin vbout bin bout bret bsz
+
+let get_final_state_value
+  (ty: typ)
+  (h: ser_state (final_ser_index ty))
+: Tot (type_of_typ ty)
+= HVValue?.v h.hole
+
+#push-options "--split_queries --z3rlimit 64"
+#restart-solver
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let run_prog
+  (#root: typ)
+  (#ret_t: Type)
+  (#ty: typ)
+  (#p: prog ser_state ser_action ty ret_t (initial_ser_index root) (final_ser_index root))
+  (i: prog_impl_t p)
+  (#vbin: _)
+  (#vbout: AP.v byte)
+  (#vret: Ghost.erased ret_t)
+  (#vsz: Ghost.erased SZ.size_t)
+  (bin: byte_array)
+  (bout: byte_array)
+  (bret: R.ref ret_t)
+  (bsz: R.ref SZ.size_t)
+: ST bool
+    (aparse (parser_of_typ ty) bin vbin `star`
+      AP.arrayptr bout vbout `star`
+      R.pts_to bret full_perm vret `star`
+      R.pts_to bsz full_perm vsz)
+    (fun b ->
+      run_prog_post p vbin vbout bin bout bret bsz b)
+    (
+      SZ.size_v vsz == AP.length (AP.array_of vbout) /\
+      AP.array_perm (AP.array_of vbout) == full_perm
+    )
+    (fun _ -> True)
+=
+  assert (default_parser_kind `is_weaker_than` parse_ret_kind);
+  assert (default_parser_kind `is_weaker_than` pkind);
+  let sz = R.read bsz in
+  let br_hole = AP.split bout sz in
+  let _ = gen_elim () in
+  let br_ctxt = AP.split br_hole SZ.zero_size in
+  let _ = gen_elim () in
+  let ac = intro_empty_chunk true_chunk br_ctxt in
+  intro_parse_context_arrays_nil root br_ctxt _;
+  parse_some_chunk_empty_weaken default_parser_kind;
+  let ah = intro_empty_chunk (parse_some_chunk (weaken default_parser_kind parse_empty) ()) br_hole in
+  [@@inline_let]
+  let h =
+    {
+      ha_hole_a = ah;
+      ha_hole_b = br_hole;
+      ha_context_a = ac;
+      ha_context_b = br_ctxt;
+      ha_context = CANil _;
+      ha_prf = ();
+    }
+  in
+  let s' : Ghost.erased (ser_state (final_ser_index root)) = Ghost.hide (
+    sndp (sem ser_action_sem p vbin.contents (initial_ser_state root))
+  )
+  in
+  let v' : Ghost.erased (type_of_typ root) = Ghost.hide (get_final_state_value root s') in
+  rewrite
+    (array_chunk _ br_hole _ `star` parse_context_arrays _ br_ctxt _)
+    (parse_hole_arrays (initial_ser_state root) h);
+  i
+    bin
+    bout
+    sz
+    h
+    (initial_ser_state root)
+    (
+      R.pts_to bret full_perm vret `star`
+      R.pts_to bsz full_perm vsz
+    )
+    (run_prog_post p vbin vbout bin bout bret bsz)
+    (fun vl' sz' h' _ v ->
+      let bh = h'.ha_hole_b in
+      let ah = h'.ha_hole_a in
+      let bc = Ghost.hide h'.ha_context_b in
+      let c = Ghost.hide h'.ha_context in
+      rewrite
+        (parse_hole_arrays _ h')
+        (array_chunk (parse_some_chunk (weaken default_parser_kind (parser_of_typ root)) v') bh ah `star` parse_context_arrays (CNil #_ #root) bc c);
+      let _ = elim_parse_some_chunk _ _ bh in
+      let _ = rewrite_aparse bh (parser_of_typ root) in
+      let _ = elim_parse_context_arrays_nil _ bc _ in
+      let _ = elim_empty_chunk _ bc in
+      let vh1 = elim_aparse _ bh in
+      let vh2 = AP.join bh bc in
+      Seq.append_empty_r (AP.contents_of' vh1);
+      let _ = intro_aparse (parser_of_typ root) bh in
+      R.write bret v;
+      R.write bsz sz';
+      rewrite
+        (run_prog_post_true p vbin vbout bin bout bret bsz)
+        (run_prog_post p vbin vbout bin bout bret bsz true);
+      return true
+    )
+    (fun vb' ->
+      let _ : squash (chunk_exceeds_limit (parse_some_chunk (parser_of_typ root) v') (SZ.size_v sz)) =
+        let chunk_desc_ge_trans' (l1 l2 l3: chunk_desc) : Lemma
+          (ensures ((chunk_desc_ge l1 l2 /\ chunk_desc_ge l2 l3) ==> chunk_desc_ge l1 l3))
+          [SMTPat (chunk_desc_ge l1 l2); SMTPat (chunk_desc_ge l2 l3)]
+        = chunk_desc_ge_trans l1 l2 l3
+        in
+        chunk_desc_ge_zero_r (parse_some_chunk (weaken default_parser_kind (parser_of_typ root)) v') (parse_some_chunk parse_empty ());
+        chunk_desc_ge_intro_exact_parse_some_chunk
+          (parser_of_typ root)
+          (weaken default_parser_kind (parser_of_typ root))
+          v';
+        chunk_desc_ge_implies
+          (parse_some_chunk (parser_of_typ root) v')
+          (parse_hole s')
+          (SZ.size_v sz)
+      in
+      noop ();
+      rewrite
+        (run_prog_post_false p vbin vbout bin bout bret bsz)
+        (run_prog_post p vbin vbout bin bout bret bsz false);
+      return false
+    )
+
+#pop-options
