@@ -984,6 +984,11 @@ type hole_arrays =
   ha_prf: squash (AP.adjacent ha_hole_a ha_context_a);
 }
 
+let array_of_hole
+  (h: hole_arrays)
+: Tot (AP.array byte)
+= AP.merge h.ha_hole_a h.ha_context_a
+
 [@@__reduce__]
 let parse_hole_arrays'
   (h: hole_t false)
@@ -1014,7 +1019,7 @@ let mk_initial_hole_array
     STT unit
       (kpre `star` parse_hole_arrays (initial_ser_state ty) ha `star`
         exists_ (fun vl -> AP.arrayptr b vl `star` pure (
-          AP.merge_into (AP.array_of vl) (AP.merge ha.ha_hole_a ha.ha_context_a) (AP.array_of vb) /\
+          AP.merge_into (AP.array_of vl) (array_of_hole ha) (AP.array_of vb) /\
           AP.length (AP.array_of vl) == SZ.size_v sz'
       )))
       (fun _ -> kpost)
@@ -1288,7 +1293,7 @@ let chunk_exceeds_limit_intro_serialize
 
 inline_for_extraction
 [@@noextract_to "krml"]
-let ser_u8
+let impl_ser_u8
   (#vb: AP.v byte)
   (x: U8.t)
   (b: byte_array)
@@ -1334,3 +1339,62 @@ let ser_u8
     let _ = intro_parse_some_chunk _ _ _ in
     k_success _ _ _ sz'
   end
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let prog_impl_t
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (#ty: typ)
+  (p: prog ser_state ser_action ty ret_t pre post)
+: Tot Type
+= (#vbin: _) ->
+  (#vl: AP.v byte) ->
+  (bin: byte_array) ->
+  (bout: byte_array) ->
+  (sz: SZ.size_t) ->
+  (out: hole_arrays) ->
+  (h: Ghost.erased (ser_state pre)) ->
+  (kpre: vprop) ->
+  (kpost: (bool -> vprop)) ->
+  (k_success: (
+    (vl': AP.v byte) ->
+    (sz': SZ.size_t) ->
+    (out': hole_arrays) ->
+    (h': Ghost.erased (ser_state post)) ->
+    (v: ret_t) ->
+    ST bool
+      (kpre `star` aparse (parser_of_typ ty) bin vbin `star`
+        AP.arrayptr bout vl' `star` parse_hole_arrays h' out')
+      (fun b -> kpost b)
+      (
+        AP.adjacent (AP.array_of vl) (array_of_hole out) /\
+        AP.merge_into (AP.array_of vl') (array_of_hole out') (AP.merge (AP.array_of vl) (array_of_hole out)) /\
+        sem ser_action_sem p vbin.contents h == (v, Ghost.reveal h') /\
+        SZ.size_v sz' == AP.length (AP.array_of vl')
+      )
+      (fun _ -> True)
+  )) ->
+  (k_failure: (
+    (vb': AP.v byte) ->
+    ST bool
+      (kpre `star` aparse (parser_of_typ ty) bin vbin `star` AP.arrayptr bout vb')
+      (fun b -> kpost b)
+      (
+        let (_, h') = sem ser_action_sem p vbin.contents h in
+        AP.merge_into (AP.array_of vl) (array_of_hole out) (AP.array_of vb') /\
+        chunk_exceeds_limit (parse_hole h') (AP.length (AP.array_of vb'))
+      )
+      (fun b -> b == false)
+  )) ->
+  ST bool
+    (kpre `star` aparse (parser_of_typ ty) bin vbin `star`
+      AP.arrayptr bout vl `star` parse_hole_arrays h out)
+    (fun b -> kpost b)
+    (SZ.size_v sz == AP.length (AP.array_of vl) /\
+      AP.array_perm (AP.array_of vl) == full_perm /\
+      AP.adjacent (AP.array_of vl) (array_of_hole out)
+    )
+    (fun _ -> True)
