@@ -223,7 +223,7 @@ let parse_der_length_weak : parser parse_der_length_weak_kind der_length_t
     tag_of_der_length
     (fun x -> weaken parse_der_length_payload_kind_weak (parse_der_length_payload x))
 
-noextract
+[@@(noextract_to "krml")]
 let parse_bounded_der_length_payload_kind
   (min: der_length_t)
   (max: der_length_t { min <= max } )
@@ -264,7 +264,7 @@ let parse_bounded_der_length_payload
       `parse_filter` (fun (y: refine_with_tag tag_of_der_length x) -> min <= y && y <= max)
       `parse_synth` (fun (y: refine_with_tag tag_of_der_length x { min <= y && y <= max }) -> (y <: refine_with_tag (tag_of_bounded_der_length min max) x)))
 
-noextract
+[@@(noextract_to "krml")]
 let parse_bounded_der_length_kind
   (min: der_length_t)
   (max: der_length_t { min <= max } )

@@ -30,3 +30,15 @@ typedef struct _T {
     UINT8  f1:1  { f1 == 0 };
     UINT8  f2:7;
 } T;
+
+//bitfields with actions
+typedef struct _BFA (mutable UINT8 *outx, mutable UINT8 *outy, mutable UINT8 *outz) {
+   UINT8 x : 4
+     { x > 0 }
+     {:act *outx = x; };
+   UINT8 y:2
+     {:act *outy = y; };
+   UINT8 z:2
+     {:act *outz = z; };     
+   UINT32 blah;
+} BFA;
