@@ -1036,3 +1036,28 @@ let impl_bind
       f ();
       k_failure vb'
     )
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let impl_ret
+  (#root: typ)
+  (#ret_t: Type)
+  (#i: ser_index root)
+  (#t: typ)
+  (v: ret_t)
+: Tot (prog_impl_t (PRet #_ #_ #_ #ret_t #i #t v))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  k_success vl sz out h v
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let impl_u8
+  (#root: typ)
+  (i: ser_index root)
+: Tot (prog_impl_t (PU8 #_ #_ #_ i))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  let _ = rewrite_aparse bin parse_u8 in
+  let w = read_u8 bin in
+  let vbin' = rewrite_aparse bin (parser_of_typ TU8) in
+  rewrite (aparse _ bin _) (aparse (parser_of_typ TU8) bin vbin);
+  k_success vl sz out h w
