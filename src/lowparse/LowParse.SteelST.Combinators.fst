@@ -257,6 +257,29 @@ let elim_synth
   parse_synth_eq p1 f2 (AP.contents_of' va');
   intro_aparse p1 a
 
+inline_for_extraction
+let read_synth
+  #k1 #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
+  #t2 (f2: t1 -> GTot t2)
+  (f2': (x: t1) -> Tot (y: t2 { y == f2 x }))
+  (sq: squash (synth_injective f2))
+: Tot (leaf_reader (p1 `parse_synth` f2))
+= fun #va a ->
+  let _ = elim_synth p1 f2 a () in
+  let r1 = r a in
+  let r2 : t2 = f2' r1 in
+  let va' = intro_synth p1 f2 a () in
+  rewrite (aparse (p1 `parse_synth` f2) a va') (aparse (p1 `parse_synth` f2) a va);
+  return r2
+
+inline_for_extraction
+let read_synth'
+  #k1 #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
+  #t2 (f2: t1 -> Tot t2)
+  (sq: squash (synth_injective f2))
+: Tot (leaf_reader (p1 `parse_synth` f2))
+= read_synth r f2 (fun x -> f2 x) sq
+
 [@CMacro]
 let validator_error_constraint_failed  = 2ul
 
@@ -347,6 +370,18 @@ let elim_filter
 = let va' = elim_aparse (p1 `parse_filter` f2) a in
   parse_filter_eq p1 f2 (AP.contents_of' va');
   intro_aparse p1 a
+
+inline_for_extraction
+let read_filter
+  #k1 #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
+  (f2: (t1 -> GTot bool))
+: Tot (leaf_reader (parse_filter p1 f2))
+= fun #va a ->
+  let _ = elim_filter p1 f2 a in
+  let res = r a in
+  let va' = intro_filter p1 f2 a in
+  rewrite (aparse (parse_filter p1 f2) a va') (aparse (parse_filter p1 f2) a va);
+  return res
 
 #push-options "--z3rlimit 32 --query_stats"
 #restart-solver
