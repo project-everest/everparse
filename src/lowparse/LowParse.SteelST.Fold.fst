@@ -5,6 +5,9 @@ open Steel.ST.GenElim
 open LowParse.Spec.Int
 open LowParse.Spec.List
 open LowParse.Spec.VLData
+open LowParse.SteelST.Combinators
+open LowParse.SteelST.List
+open LowParse.SteelST.Int
 
 module AP = LowParse.SteelST.ArrayPtr
 module LP = LowParse.Spec.Base
@@ -17,10 +20,27 @@ let pkind = {
   parser_kind_metadata = None;
 }
 
-let parse_bool : parser _ bool =
-  LowParse.Spec.Enum.parse_enum_key parse_u8 [(true, 1uy); (false, 0uy)]
-  `parse_synth`
-  (fun x -> x <: bool)
+let parse_bool : parser (parse_filter_kind parse_u8_kind) bool =
+  parse_u8
+    `parse_filter`
+    (fun x -> (x = 1uy || x = 0uy))
+    `parse_synth`
+    (fun x -> (x = 1uy))
+
+let serialize_bool : serializer parse_bool =
+  serialize_synth
+    (parse_u8 `parse_filter` (fun x -> (x = 1uy || x = 0uy)))
+    (fun x -> (x = 1uy))
+    (serialize_u8 `serialize_filter` (fun x -> (x = 1uy || x = 0uy)))
+    (fun y -> if y then 1uy else 0uy)
+    ()
+
+inline_for_extraction
+let read_bool : leaf_reader parse_bool =
+  read_synth'
+    (read_filter read_u8 (fun x -> (x = 1uy || x = 0uy)))
+    (fun x -> (x = 1uy))
+    ()
 
 let rec parser_of_typ (t: typ) : Tot (parser pkind (type_of_typ t)) =
   match t returns parser pkind (type_of_typ t) with
@@ -171,8 +191,6 @@ let impl_close_hole_CPairR
     (array_chunk _ out _)
     (array_chunk (parse_hole (close_hole x)) out va)
 
-open LowParse.SteelST.Combinators
-
 let impl_close_hole_CPairL
   (#opened: _)
   (#va: _)
@@ -212,8 +230,6 @@ let impl_close_hole_CPairL
   rewrite
     (array_chunk _ out _)
     (array_chunk (parse_hole (close_hole x)) out va)
-
-open LowParse.SteelST.List
 
 let impl_close_hole_CListCons
   (#opened: _)
@@ -564,8 +580,6 @@ let chunk_desc_ge_parse_pair_test
   chunk_desc_ge_assoc_l_r (parse_some_chunk p1 v1) (parse_some_chunk parse_empty ()) (parse_some_chunk p2 v2)
 
 module U8 = FStar.UInt8
-
-open LowParse.SteelST.Int
 
 inline_for_extraction
 [@@noextract_to "krml"]
@@ -1123,6 +1137,60 @@ let impl_pair
         chunk_desc_ge_implies (parse_hole h') (parse_hole h1) (AP.length (AP.array_of vb'))
       in
       f ();
+      k_failure vb'
+    )
+
+#pop-options
+
+let parser_of_choice_payload
+  (t: (bool -> typ))
+  (x: bool)
+: Tot (parser pkind (type_of_typ (t x)))
+= parser_of_typ (t x)
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let impl_choice
+  (#root: typ)
+  (#t: (bool -> typ))
+  (#ret_t: Type)
+  (#pre: _)
+  (#post: _)
+  (f: (x: bool) -> prog (ser_state #root) ser_action (t x) ret_t pre post)
+  (impl_f1: (x: bool) -> prog_impl_t (f x))
+: Tot (prog_impl_t (PChoice f))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  rewrite_with_tactic (aparse (parser_of_typ (TChoice t)) bin vbin) (aparse (weaken pkind (parse_dtuple2 parse_bool (parser_of_choice_payload t))) bin vbin);
+  let _ = rewrite_aparse bin (parse_dtuple2 parse_bool (parser_of_choice_payload t)) in
+  let bin_pl = split_dtuple2
+    (jump_constant_size parse_bool (SZ.mk_size_t 1ul))
+    (parser_of_choice_payload t)
+    bin
+  in
+  let tag = read_dtuple2_tag read_bool (parser_of_choice_payload t) bin bin_pl in
+  let _ = gen_elim () in
+  let vbin_tag = vpattern_replace (aparse parse_bool bin) in
+  let vbin_pl = rewrite_aparse bin_pl (parser_of_typ (t tag)) in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse parse_bool bin vbin_tag `star` aparse (parser_of_typ (t tag)) bin_pl vbin_pl)
+    (fun _ -> aparse (parser_of_typ (TChoice t)) bin vbin)
+  =
+    let _ = intro_dtuple2 parse_bool (parser_of_choice_payload t) bin bin_pl in
+    let vbin' = rewrite_aparse bin (weaken pkind (parse_dtuple2 parse_bool (parser_of_choice_payload t))) in
+    rewrite_with_tactic (aparse (weaken pkind (parse_dtuple2 parse_bool (parser_of_choice_payload t))) bin vbin') (aparse (parser_of_typ (TChoice t)) bin vbin');
+    rewrite (aparse (parser_of_typ (TChoice t)) bin vbin') (aparse (parser_of_typ (TChoice t)) bin vbin)
+  in
+  impl_f1 tag
+    bin_pl bout sz out h (kpre `star` aparse parse_bool bin vbin_tag) kpost
+    (fun vl1 sz1 out1 h1 v1 ->
+      restore ();
+      k_success vl1 sz1 out1 h1 v1
+    )
+    (fun vb' ->
+      restore ();
       k_failure vb'
     )
 
