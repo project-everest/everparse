@@ -152,7 +152,6 @@ let split_pair'
 
 inline_for_extraction
 let split_pair
-  #opened
   #k1 #t1 (#p1: parser k1 t1) (j1: jumper p1)
   #k2 #t2 (p2: parser k2 t2)
   #y (a: byte_array)

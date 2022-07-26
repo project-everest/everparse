@@ -1061,3 +1061,69 @@ let impl_u8
   let vbin' = rewrite_aparse bin (parser_of_typ TU8) in
   rewrite (aparse _ bin _) (aparse (parser_of_typ TU8) bin vbin);
   k_success vl sz out h w
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let impl_pair
+  (#root: typ)
+  (#t1: typ)
+  (#t2: typ)
+  (#ret1: Type)
+  (#pre1: _)
+  (#post1: _)
+  (f1: prog (ser_state #root) ser_action t1 ret1 pre1 post1)
+  (impl_f1: prog_impl_t f1)
+  (j1: jumper (parser_of_typ t1)) // MUST be computed OUTSIDE of impl_pair
+  (#ret2: _)
+  (#post2: _)
+  (f2: ((x: ret1) -> prog ser_state ser_action t2 ret2 post1 post2))
+  (impl_f2: ((x: ret1) -> prog_impl_t (f2 x)))
+: Tot (prog_impl_t (PPair f1 f2))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  let _ = rewrite_aparse bin (nondep_then (parser_of_typ t1) (parser_of_typ t2)) in
+  let bin2 = split_pair j1 (parser_of_typ t2) bin in
+  let _ = gen_elim () in
+  let vbin1 = vpattern_replace (aparse (parser_of_typ t1) bin) in
+  let vbin2 = vpattern_replace (aparse (parser_of_typ t2) bin2) in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse (parser_of_typ t1) bin vbin1 `star` aparse (parser_of_typ t2) bin2 vbin2)
+    (fun _ -> aparse (parser_of_typ (TPair t1 t2)) bin vbin)
+  =
+    let _ = merge_pair (parser_of_typ t1) (parser_of_typ t2) bin bin2 in
+    let vbin' = rewrite_aparse bin (parser_of_typ (TPair t1 t2)) in
+    rewrite (aparse _ bin vbin') (aparse (parser_of_typ (TPair t1 t2)) bin vbin)
+  in
+  impl_f1
+    bin bout sz out h (kpre `star` aparse (parser_of_typ t2) bin2 vbin2) kpost
+    (fun vl1 sz1 out1 h1 v1 ->
+      impl_f2 v1
+        bin2 bout sz1 out1 h1 (kpre `star` aparse (parser_of_typ t1) bin vbin1) kpost
+        (fun vl2 sz2 out2 h2 v2 ->
+          restore ();
+          k_success vl2 sz2 out2 h2 v2
+        )
+        (fun vb' ->
+          restore ();
+          k_failure vb'
+        )
+    )
+    (fun vb' ->
+      restore ();
+      let f () : Lemma
+      (
+        let (_, h') = sem ser_action_sem (PPair f1 f2) vbin.contents h in
+        parse_hole h' `chunk_exceeds_limit` AP.length (AP.array_of vb')
+      ) =
+        let (_, h') = sem ser_action_sem (PPair f1 f2) vbin.contents h in
+        let (v1, h1) = sem ser_action_sem f1 (fst vbin.contents) h in
+        prog_sem_chunk_desc_ge (f2 v1) (snd vbin.contents) h1;
+        chunk_desc_ge_implies (parse_hole h') (parse_hole h1) (AP.length (AP.array_of vb'))
+      in
+      f ();
+      k_failure vb'
+    )
+
+#pop-options
