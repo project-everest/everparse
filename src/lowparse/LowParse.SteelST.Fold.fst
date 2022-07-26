@@ -889,7 +889,7 @@ let run_prog
       return true
     )
     (fun vb' ->
-      let _ : squash (chunk_exceeds_limit (parse_some_chunk (parser_of_typ root) v') (SZ.size_v sz)) =
+      let f () : Lemma (chunk_exceeds_limit (parse_some_chunk (parser_of_typ root) v') (SZ.size_v sz)) =
         chunk_desc_ge_zero_r (parse_some_chunk (weaken default_parser_kind (parser_of_typ root)) v') (parse_some_chunk parse_empty ());
         chunk_desc_ge_intro_exact_parse_some_chunk
           (parser_of_typ root)
@@ -900,6 +900,7 @@ let run_prog
           (parse_hole s')
           (SZ.size_v sz)
       in
+      f ();
       noop ();
       rewrite
         (run_prog_post_false p vbin vbout bin bout bret bsz)
@@ -908,3 +909,130 @@ let run_prog
     )
 
 #pop-options
+
+let ser_action_sem_chunk_desc_ge
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (a: ser_action ret_t pre post)
+  (s: ser_state pre)
+: Lemma
+  (ensures (
+    let (_, s') = ser_action_sem a s in
+    parse_hole s' `chunk_desc_ge` parse_hole s
+  ))
+= admit ()
+
+let rec fold_list_chunk_desc_ge
+  (#root: typ)
+  (#inv: ser_index root)
+  (#t: Type)
+  (f: fold_t ser_state t unit inv inv)
+  (prf: (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (ensures (let (v, s') = f i s in
+      parse_hole s' `chunk_desc_ge` parse_hole s
+    ))
+  )
+  (input: list t)
+  (s: ser_state inv)
+: Lemma
+  (ensures (
+    let (v, s') = fold_list inv f input s in
+    parse_hole s' `chunk_desc_ge` parse_hole s
+  ))
+  (decreases input)
+= match input with
+  | [] -> ()
+  | hd :: tl ->
+    prf hd s;
+    let (_, s') = f hd s in
+    fold_list_chunk_desc_ge f prf tl s'
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+let rec prog_sem_chunk_desc_ge
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (#ty: typ)
+  (p: prog ser_state ser_action ty ret_t pre post)
+  (input: type_of_typ ty)
+  (s: ser_state pre)
+: Lemma
+  (ensures (
+    let (_, s') = sem ser_action_sem p input s in
+    parse_hole s' `chunk_desc_ge` parse_hole s
+  ))
+  (decreases p)
+= match p with
+  | PRet _ -> ()
+  | PAction a ->
+    ser_action_sem_chunk_desc_ge a s
+  | PBind f g ->
+    prog_sem_chunk_desc_ge f input s;
+    let (v1, s1) = sem ser_action_sem f input s in
+    prog_sem_chunk_desc_ge (g v1) input s1
+  | PU8 _ -> ()
+  | PPair #_ #_ #_ #t1 #t2 f1 f2 ->
+    let (input1, input2) = (input <: type_of_typ (TPair t1 t2)) in
+    prog_sem_chunk_desc_ge f1 input1 s;
+    let (v1, s1) = sem ser_action_sem f1 input1 s in
+    prog_sem_chunk_desc_ge (f2 v1) input2 s1
+  | PList i f ->
+    fold_list_chunk_desc_ge
+      (sem ser_action_sem f)
+      (fun i s -> prog_sem_chunk_desc_ge f i s)
+      input
+      s
+  | PChoice #_ #_ #_ #t f ->
+    let (| tag, payload |) = (input <: type_of_typ (TChoice t)) in
+    prog_sem_chunk_desc_ge (f tag) payload s
+
+#pop-options
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let impl_bind
+  (#root: typ)
+  (#t: typ)
+  (#ret1: Type)
+  (#pre1: _)
+  (#post1: _)
+  (#ret2: _)
+  (#post2: _)
+  (f: prog (ser_state #root) ser_action t ret1 pre1 post1)
+  (impl_f: prog_impl_t f)
+  (g: ((x: ret1) -> prog ser_state ser_action t ret2 post1 post2))
+  (impl_g: ((x: ret1) -> prog_impl_t (g x)))
+: Tot (prog_impl_t (PBind f g))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  impl_f
+    bin bout sz out h kpre kpost
+    (fun vl1 sz1 out1 h1 v1 ->
+      impl_g v1
+        bin bout sz1 out1 h1 kpre kpost
+        (fun vl2 sz2 out2 h2 v2 ->
+          k_success vl2 sz2 out2 h2 v2
+        )
+        (fun vb' ->
+          k_failure vb'
+        )
+    )
+    (fun vb' ->
+      let f () : Lemma
+      (
+        let (_, h') = sem ser_action_sem (PBind f g) vbin.contents h in
+        parse_hole h' `chunk_exceeds_limit` AP.length (AP.array_of vb')
+      ) =
+        let (_, h') = sem ser_action_sem (PBind f g) vbin.contents h in
+        let (v1, h1) = sem ser_action_sem f vbin.contents h in
+        prog_sem_chunk_desc_ge (g v1) vbin.contents h1;
+        chunk_desc_ge_implies (parse_hole h') (parse_hole h1) (AP.length (AP.array_of vb'))
+      in
+      f ();
+      k_failure vb'
+    )
