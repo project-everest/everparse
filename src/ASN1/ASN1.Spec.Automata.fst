@@ -239,9 +239,7 @@ let automata_parser_body_rhs
         let data' = dp.update_next s data ch in
         automata_bare_parser_body s' data'
         `parse_synth`
-        (fun ret ->
-          id_cast dp.ret_t (dp.post_t s' data') (dp.post_t s data) (dp.lemma_cast_ret s data ch) ret
-        )
+        (id_cast dp.ret_t (dp.post_t s' data') (dp.post_t s data) (dp.lemma_cast_ret s data ch))
 
 let bp_of (cp : automata_control_param)
  (bp: parser base_parser_kind cp.ch_t) : Tot (automata_bare_parser_param cp) =
@@ -250,10 +248,18 @@ let bp_of (cp : automata_control_param)
   ch_t_bare_parser_valid = (fun _ -> parser_kind_prop_equiv base_parser_kind bp);
  }
 
+let automata_bare_parser_body_erase_refinement_synth
+  (cp : automata_control_param)
+  (dp : automata_data_param cp)
+  (s : cp.control_t)
+  (data: dp.partial_t {dp.pre_t s data})
+  (ret : dp.ret_t {dp.post_t s data ret})
+: Tot dp.ret_t
+= ret
+
 let automata_bare_parser_body_erase_refinement
   (cp : automata_control_param)
   (dp : automata_data_param cp)
-  (bp : parser base_parser_kind cp.ch_t)
   (s : cp.control_t)
   (automata_bare_parser_body: (
     (data : dp.partial_t {dp.pre_t s data}) ->
@@ -261,7 +267,64 @@ let automata_bare_parser_body_erase_refinement
   ))
   (data : dp.partial_t {dp.pre_t s data})
 : Tot (parser automata_parser_kind dp.ret_t)
-= automata_bare_parser_body data `parse_synth` (fun x -> x <: dp.ret_t)
+= automata_bare_parser_body data `parse_synth` automata_bare_parser_body_erase_refinement_synth cp dp s data
+
+(* TODO: seal this module behind an interface, to prevent these SMTPats from leaking *)
+
+let and_then_eq
+  (#k: parser_kind)
+  (#t:Type)
+  (p:parser k t)
+  (#k': parser_kind)
+  (#t':Type)
+  (p': (t -> Tot (parser k' t')))
+: Lemma
+  (requires (and_then_cases_injective p'))
+  (ensures (forall input . parse (and_then p p') input == and_then_bare p p' input))
+  [SMTPat (and_then p p')]
+= let aux
+    (input: bytes)
+  : Lemma
+    (ensures (parse (and_then p p') input == and_then_bare p p' input))
+    [SMTPat (parse (and_then p p') input)]
+  = and_then_eq p p' input
+  in
+  ()
+
+let parse_filter_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (f: (t -> Tot bool))
+: Lemma
+  (forall input . parse (parse_filter p f) input == (match parse p input with
+  | None -> None
+  | Some (x, consumed) ->
+    if f x
+    then Some (x, consumed)
+    else None
+  ))
+  [SMTPat (parse_filter p f)]
+= Classical.forall_intro (parse_filter_eq p f)
+
+let parse_synth_eq
+  (#k: parser_kind)
+  (#t1: Type)
+  (#t2: Type)
+  (p1: parser k t1)
+  (f2: t1 -> Tot t2)
+: Lemma
+  (requires (synth_injective f2))
+  (ensures (forall b . parse (parse_synth p1 f2) b == parse_synth' p1 f2 b))
+  [SMTPat (parse_synth p1 f2)]
+= let aux
+    (b: bytes)
+  : Lemma
+    (parse (parse_synth p1 f2) b == parse_synth' p1 f2 b)
+    [SMTPat (parse (parse_synth p1 f2) b)]
+  = parse_synth_eq p1 f2 b
+  in
+  ()
 
 let automata_parser_body_rhs_and_then_cases_injective_gen
   (cp : automata_control_param)
@@ -276,7 +339,7 @@ let automata_parser_body_rhs_and_then_cases_injective_gen
   (automata_bare_parser_body_inj: (
     (s: cp.control_t) ->
     Lemma
-    (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp bp s (automata_bare_parser_body s)))
+    (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp s (automata_bare_parser_body s)))
   ))
   (s : cp.control_t)
   (data1 : dp.partial_t {dp.pre_t s data1})
@@ -294,34 +357,7 @@ let automata_parser_body_rhs_and_then_cases_injective_gen
     ch1 == ch2 /\
     data1 == data2
   ))
-=
-  assert_norm (automata_parser_body_rhs cp dp automata_bare_parser_body s data1 ch1 == (
-    if cp.termination_check s ch1
-       then
-         weaken automata_parser_kind (parse_ret (dp.update_term s data1 ch1))
-       else
-         let s' = cp.next_state s ch1 in
-         let data' = dp.update_next s data1 ch1 in
-         automata_bare_parser_body s' data'
-         `parse_synth`
-         (fun ret ->
-           id_cast dp.ret_t (dp.post_t s' data') (dp.post_t s data1) (dp.lemma_cast_ret s data1 ch1) ret
-         )
-    ));
-  assert_norm (automata_parser_body_rhs cp dp automata_bare_parser_body s data2 ch2 == (
-    if cp.termination_check s ch2
-    then
-      weaken automata_parser_kind (parse_ret (dp.update_term s data2 ch2))
-    else
-      let s' = cp.next_state s ch2 in
-      let data' = dp.update_next s data2 ch2 in
-      automata_bare_parser_body s' data'
-      `parse_synth`
-      (fun ret ->
-         id_cast dp.ret_t (dp.post_t s' data') (dp.post_t s data2) (dp.lemma_cast_ret s data2 ch2) ret
-      )
-  ));
-  if cp.termination_check s ch1 then
+= if cp.termination_check s ch1 then
   (
     let ret1 = dp.update_term s data1 ch1 in
     if cp.termination_check s ch2 then
@@ -329,9 +365,6 @@ let automata_parser_body_rhs_and_then_cases_injective_gen
     else
       let s2' = cp.next_state s ch2 in
       let data2' = dp.update_next s data2 ch2 in
-      let _ = parse_synth_eq (automata_bare_parser_body s2' data2') (fun ret ->
-        id_cast dp.ret_t (dp.post_t s2' data2') (dp.post_t s data2) (dp.lemma_cast_ret s data2 ch2) ret
-      ) x2 in
       let Some (ret2, _) = parse (automata_bare_parser_body s2' data2') x2 in
       pp.lemma_update_term_next_non_intersect s data1 data2 ch1 ch2 ret1 ret2
   )
@@ -339,9 +372,6 @@ let automata_parser_body_rhs_and_then_cases_injective_gen
   (
     let s1' = cp.next_state s ch1 in
     let data1' = dp.update_next s data1 ch1 in
-    let _ = parse_synth_eq (automata_bare_parser_body s1' data1') (fun ret ->
-      id_cast dp.ret_t (dp.post_t s1' data1') (dp.post_t s data1) (dp.lemma_cast_ret s data1 ch1) ret
-    ) x1 in
     let Some (ret1, _) = parse (automata_bare_parser_body s1' data1') x1 in
     if cp.termination_check s ch2 then
        let ret2 = dp.update_term s data2 ch2 in
@@ -350,19 +380,12 @@ let automata_parser_body_rhs_and_then_cases_injective_gen
     (
       let s2' = cp.next_state s ch2 in
       let data2' = dp.update_next s data2 ch2 in
-      let _ = parse_synth_eq (automata_bare_parser_body s2' data2') (fun ret ->
-        id_cast dp.ret_t (dp.post_t s2' data2') (dp.post_t s data2) (dp.lemma_cast_ret s data2 ch2) ret
-      ) x2 in
       let Some (ret2, _) = parse (automata_bare_parser_body s2' data2') x2 in
       let _ : squash (s1' == s2') =
         Classical.move_requires (pp.lemma_update_next_non_intersect s data1 data2 ch1 ch2 ret1) ret2
       in
       automata_bare_parser_body_inj s1';
-      assert_norm (automata_bare_parser_body_erase_refinement cp dp bp s1' (automata_bare_parser_body s1') data1' == parse_synth (automata_bare_parser_body s1' data1') (fun x -> x <: dp.ret_t));
-      assert_norm (automata_bare_parser_body_erase_refinement cp dp bp s2' (automata_bare_parser_body s2') data2' == parse_synth (automata_bare_parser_body s2' data2') (fun x -> x <: dp.ret_t));
-      parse_synth_eq (automata_bare_parser_body s1' data1') (fun x -> x <: dp.ret_t) x1;
-      parse_synth_eq (automata_bare_parser_body s2' data2') (fun x -> x <: dp.ret_t) x2;
-      assert (and_then_cases_injective_precond (automata_bare_parser_body_erase_refinement cp dp bp s1' (automata_bare_parser_body s1')) data1' data2' x1 x2);
+      assert (and_then_cases_injective_precond (automata_bare_parser_body_erase_refinement cp dp s1' (automata_bare_parser_body s1')) data1' data2' x1 x2);
       pp.lemma_update_next_inj2 s data1 data2 ch1 ch2
     )
   )
@@ -380,7 +403,7 @@ let automata_parser_body_rhs_and_then_cases_injective
   (automata_bare_parser_body_inj: (
     (s: cp.control_t) ->
     Lemma
-    (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp bp s (automata_bare_parser_body s)))
+    (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp s (automata_bare_parser_body s)))
   ))
   (s : cp.control_t)
   (data : dp.partial_t {dp.pre_t s data})
@@ -407,7 +430,7 @@ let automata_parser_body
   (automata_bare_parser_body_inj: (
     (s: cp.control_t) ->
     Lemma
-    (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp bp s (automata_bare_parser_body s)))
+    (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp s (automata_bare_parser_body s)))
   ))
   (s : cp.control_t)
   (data : dp.partial_t {dp.pre_t s data})
@@ -415,7 +438,7 @@ let automata_parser_body
 = automata_parser_body_rhs_and_then_cases_injective cp dp bp pp automata_bare_parser_body automata_bare_parser_body_inj s data;
   weaken
     automata_parser_kind
-    (bp `parse_filter` (fun ch -> (not (cp.fail_check s ch))) `and_then` automata_parser_body_rhs cp dp automata_bare_parser_body s data)
+    ((bp `parse_filter` not_fail_check cp s) `and_then` automata_parser_body_rhs cp dp automata_bare_parser_body s data)
 
 noeq
 type automata_parser_t
@@ -431,7 +454,7 @@ type automata_parser_t
     abp_body_inj: (
       (s : cp.control_t) ->
       Lemma
-      (ensures (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp bp s (abp_parse s))))
+      (ensures (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp s (abp_parse s))))
     );
   }
 
@@ -454,29 +477,15 @@ let rec automata_parser_3
   let prf
     (s : cp.control_t)
   : Lemma
-    (ensures (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp bp s (phi s))))
-  = and_then_cases_injective_intro (automata_bare_parser_body_erase_refinement cp dp bp s (phi s)) (fun data1 data2 b1 b2 ->
-      assert_norm (automata_bare_parser_body_erase_refinement cp dp bp s (phi s) data1 == parse_synth (phi s data1) (fun x -> (x <: dp.ret_t)));
-      assert_norm (automata_bare_parser_body_erase_refinement cp dp bp s (phi s) data2 == parse_synth (phi s data2) (fun x -> (x <: dp.ret_t)));
-      parse_synth_eq
-        (phi s data1)
-        (fun x -> (x <: dp.ret_t))
-        b1;
-      parse_synth_eq
-        (phi s data2)
-        (fun x -> (x <: dp.ret_t))
-        b2;      
+    (ensures (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp s (phi s))))
+  = and_then_cases_injective_intro (automata_bare_parser_body_erase_refinement cp dp s (phi s)) (fun data1 data2 b1 b2 ->
+      assert_norm (automata_bare_parser_body_erase_refinement cp dp s (phi s) data1 == parse_synth (phi s data1) (automata_bare_parser_body_erase_refinement_synth cp dp s data1));
+      assert_norm (automata_bare_parser_body_erase_refinement cp dp s (phi s) data2 == parse_synth (phi s data2) (automata_bare_parser_body_erase_refinement_synth cp dp s data2));
       if fuel = 0
       then ()
       else
         let _ = automata_parser_body_rhs_and_then_cases_injective cp dp bp pp (automata_parser_3 cp dp bp pp (fuel - 1)).abp_parse (automata_parser_3 cp dp bp pp (fuel - 1)).abp_body_inj s data1 in
         let _ = automata_parser_body_rhs_and_then_cases_injective cp dp bp pp (automata_parser_3 cp dp bp pp (fuel - 1)).abp_parse (automata_parser_3 cp dp bp pp (fuel - 1)).abp_body_inj s data2 in
-        let _ = assert_norm (automata_parser_body cp dp bp pp (automata_parser_3 cp dp bp pp (fuel - 1)).abp_parse (automata_parser_3 cp dp bp pp (fuel - 1)).abp_body_inj s data1 == weaken automata_parser_kind (and_then (bp `parse_filter` (fun ch -> not (cp.fail_check s ch))) (automata_parser_body_rhs cp dp (automata_parser_3 cp dp bp pp (fuel - 1)).abp_parse s data1))) in
-        let _ = assert_norm (automata_parser_body cp dp bp pp (automata_parser_3 cp dp bp pp (fuel - 1)).abp_parse (automata_parser_3 cp dp bp pp (fuel - 1)).abp_body_inj s data2 == weaken automata_parser_kind (and_then (bp `parse_filter` (fun ch -> not (cp.fail_check s ch))) (automata_parser_body_rhs cp dp (automata_parser_3 cp dp bp pp (fuel - 1)).abp_parse s data2))) in
-        let _ = and_then_eq (bp `parse_filter` (fun ch -> not (cp.fail_check s ch))) (automata_parser_body_rhs cp dp (automata_parser_3 cp dp bp pp (fuel - 1)).abp_parse s data1) b1 in
-        let _ = and_then_eq (bp `parse_filter` (fun ch -> not (cp.fail_check s ch))) (automata_parser_body_rhs cp dp (automata_parser_3 cp dp bp pp (fuel - 1)).abp_parse s data2) b2 in
-        parse_filter_eq bp (fun ch -> not (cp.fail_check s ch)) b1;
-        parse_filter_eq bp (fun ch -> not (cp.fail_check s ch)) b2;
         let Some (ch1, consumed1) = parse bp b1 in
         let Some (ch2, consumed2) = parse bp b2 in
         let b1' = Seq.slice b1 consumed1 (Seq.length b1) in
@@ -507,7 +516,7 @@ let automata_parser_body_inj
   (fuel: nat)
 : (s : cp.control_t) ->
   Lemma
-  (ensures (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp bp s (automata_parser_2 cp dp bp pp fuel s))))
+  (ensures (and_then_cases_injective (automata_bare_parser_body_erase_refinement cp dp s (automata_parser_2 cp dp bp pp fuel s))))
 = (automata_parser_3 cp dp bp pp fuel).abp_body_inj
 
 let rec automata_parser_2_eq
@@ -528,30 +537,16 @@ let rec automata_parser_2_eq
 = assert_norm (automata_parser_2 cp dp bp pp fuel s data == (if fuel = 0
   then fail_parser automata_parser_kind _
   else automata_parser_body cp dp bp pp (automata_parser_2 cp dp bp pp (fuel - 1)) (automata_parser_body_inj cp dp bp pp (fuel - 1)) s data));
-  assert (automata_parser_2 cp dp bp pp fuel s data == automata_parser_body cp dp bp pp (automata_parser_2 cp dp bp pp (fuel - 1)) (automata_parser_body_inj cp dp bp pp (fuel - 1)) s data);
-  assert (parse (automata_parser_2 cp dp bp pp fuel s data) b == parse (automata_parser_body cp dp bp pp (automata_parser_2 cp dp bp pp (fuel - 1)) (automata_parser_body_inj cp dp bp pp (fuel - 1)) s data) b);
   automata_parser_body_rhs_and_then_cases_injective cp dp bp pp (automata_parser_2 cp dp bp pp (fuel - 1)) (automata_parser_body_inj cp dp bp pp (fuel - 1)) s data;
   assert_norm (automata_parser_body cp dp bp pp (automata_parser_2 cp dp bp pp (fuel - 1)) (automata_parser_body_inj cp dp bp pp (fuel - 1)) s data == 
     weaken
       automata_parser_kind
-      (bp `parse_filter` (fun ch -> (not (cp.fail_check s ch))) `and_then` automata_parser_body_rhs cp dp (automata_parser_2 cp dp bp pp (fuel - 1)) s data)
+      ((bp `parse_filter` not_fail_check cp s) `and_then` automata_parser_body_rhs cp dp (automata_parser_2 cp dp bp pp (fuel - 1)) s data)
     );
-  parse_filter_eq bp (fun ch -> not (cp.fail_check s ch)) b;
-  automata_parser_body_rhs_and_then_cases_injective cp dp bp pp (automata_parser_2 cp dp bp pp (fuel - 1)) (automata_parser_body_inj cp dp bp pp (fuel - 1)) s data;
-  and_then_eq
-    (parse_filter bp (fun ch -> not (cp.fail_check s ch)))
-    (automata_parser_body_rhs cp dp (automata_parser_2 cp dp bp pp (fuel - 1)) s data)
-    b;
-  match parse (parse_filter bp (fun ch -> not (cp.fail_check s ch))) b with
+  match parse (parse_filter bp (not_fail_check cp s )) b with
   | None -> ()
   | Some (ch, consumed) ->
     let b' = Seq.slice b consumed (Seq.length b) in
-    assert (parse (automata_parser_2 cp dp bp pp fuel s data) b == begin
-      match parse (automata_parser_body_rhs cp dp (automata_parser_2 cp dp bp pp (fuel - 1)) s data ch) b' with
-      | None -> None
-      | Some (x, consumed') -> Some (x, consumed + consumed')
-      end
-    );
     assert_norm (automata_parser_body_rhs cp dp (automata_parser_2 cp dp bp pp (fuel - 1)) s data ch == (
       if cp.termination_check s ch
       then
@@ -561,9 +556,7 @@ let rec automata_parser_2_eq
         let data' = dp.update_next s data ch in
         automata_parser_2 cp dp bp pp (fuel - 1) s' data'
         `parse_synth`
-        (fun ret ->
-          id_cast dp.ret_t (dp.post_t s' data') (dp.post_t s data) (dp.lemma_cast_ret s data ch) ret
-        )
+        (id_cast dp.ret_t (dp.post_t s' data') (dp.post_t s data) (dp.lemma_cast_ret s data ch))
     ));
     if cp.termination_check s ch
     then
@@ -571,12 +564,6 @@ let rec automata_parser_2_eq
     else begin
       let s' = cp.next_state s ch in
       let data' = dp.update_next s data ch in
-      parse_synth_eq
-        (automata_parser_2 cp dp bp pp (fuel - 1) s' data')
-        (fun ret ->
-          id_cast dp.ret_t (dp.post_t s' data') (dp.post_t s data) (dp.lemma_cast_ret s data ch) ret
-        )
-        b';
       parser_kind_prop_equiv base_parser_kind bp;
       automata_parser_2_eq cp dp bp pp s' data' (fuel - 1) b'
     end
