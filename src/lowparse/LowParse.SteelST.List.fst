@@ -397,6 +397,46 @@ let validate_list_body
 
 #pop-options
 
+inline_for_extraction // TODO: move to Steel library with primitive Karamel extraction
+let with_local
+  (#t: Type)
+  (init: t)
+  (#pre: vprop)
+  (#ret_t: Type)
+  (#post: ret_t -> vprop)
+  (body: (r: R.ref t) ->
+    STT ret_t
+    (R.pts_to r full_perm init `star` pre)
+    (fun v -> exists_ (R.pts_to r full_perm) `star` post v)
+  )
+: STF ret_t pre post True (fun _ -> True)
+= let r = R.alloc init in
+  let v = body r in
+  let _ = gen_elim () in
+  R.free r;
+  return v
+
+module GR = Steel.ST.GhostReference
+
+inline_for_extraction // this one is fine
+let with_ghost_local
+  (#t: Type)
+  (init: Ghost.erased t)
+  (#pre: vprop)
+  (#ret_t: Type)
+  (#post: ret_t -> vprop)
+  (body: (r: GR.ref t) ->
+    STT ret_t
+    (GR.pts_to r full_perm init `star` pre)
+    (fun v -> exists_ (GR.pts_to r full_perm) `star` post v)
+  )
+: STF ret_t pre post True (fun _ -> True)
+= let r = GR.alloc init in
+  let v = body r in
+  let _ = gen_elim () in
+  GR.free r;
+  return v
+
 #push-options "--z3rlimit 16"
 
 inline_for_extraction
@@ -408,7 +448,7 @@ let validate_list
 : Tot (validator (parse_list p))
 = fun #va0 a0 len0 err ->
   parse_list_eq p (AP.contents_of va0);
-  let plen = R.alloc SZ.zero_size in
+  with_local SZ.zero_size (fun plen ->
   let _ = AP.gsplit a0 SZ.zero_size in
   let _ = gen_elim () in
   rewrite (validate_list_inv0 p a0 va0 len0 plen err (len0 <> SZ.zero_size)) (validate_list_inv p a0 va0 len0 plen err (len0 <> SZ.zero_size));
@@ -422,8 +462,8 @@ let validate_list
   parse_list_eq p (AP.contents_of va);
   parser_kind_prop_equiv parse_list_kind (parse_list p);
   let _ = AP.join a0 _ in
-  R.free plen;
-  noop ();
+  noop ()
+  );
   return len0
 
 #pop-options
@@ -992,10 +1032,10 @@ let list_iter_gen
     (fun res -> True)
 =
   let afull = compute_afull enable_arrays va al in
-  let pa = R.alloc a in
-  let plen = R.alloc len in
-  let paccu = R.alloc init in
-  let pcont = R.alloc (len <> SZ.zero_size) in
+  with_local a (fun pa ->
+  with_local len (fun plen ->
+  with_local init (fun paccu ->
+  with_local (len <> SZ.zero_size) (fun pcont ->
   let _ = ghost_is_cons_opt p a in
   list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu pcont _;
   L.while_loop
@@ -1020,11 +1060,8 @@ let list_iter_gen
   let ar' = vpattern_erased (fun ar' -> state ar' _ _) in
   vpattern_rewrite (fun res -> state _ res _) res;
   vpattern_rewrite (fun l' -> state _ _ l') va.contents;
-  R.free pcont;
-  R.free paccu;
-  R.free plen;
-  R.free pa;
   return res
+  ))))
 
 #pop-options
 
@@ -1383,8 +1420,9 @@ let list_map_inplace_le_opt
   let out1 = AP.split out SZ.zero_size in
   let _ = gen_elim () in
   let _ = intro_nil p' out in
-  let plen = R.alloc SZ.zero_size in
-  let pout = R.alloc out1 in
+  with_local SZ.zero_size (fun plen ->
+  with_local out1 (fun pout ->
+  noop ();
   rewrite
     (list_map_inplace_le_opt_state0 p' phi out pout plen al0 () [])
     (list_map_inplace_le_opt_state p' phi out pout plen al0 () []);
@@ -1427,9 +1465,9 @@ let list_map_inplace_le_opt
     (list_map_inplace_le_opt_state0 p' phi out pout plen afull () va.contents);
   let _ = gen_elim () in
   let res = R.read plen in
-  R.free pout;
-  R.free plen;
+  noop ();
   return res
+  ))
 
 #pop-options
 
