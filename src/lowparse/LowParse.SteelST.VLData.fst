@@ -168,3 +168,45 @@ let intro_vldata_gen
   parse_vldata_gen_eq_def sz f p;
   let _ = intro_and_then (parse_filter (parse_bounded_integer sz) f) (parse_vldata_payload sz f p) _ () a a2 in
   rewrite_aparse a _
+
+inline_for_extraction
+let elim_vldata
+  (sz: integer_size) // must be a constant
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#va: _)
+  (a: byte_array)
+: STT byte_array
+    (aparse (parse_vldata sz p) a va)
+    (fun a2 -> exists_ (fun va1 -> exists_ (fun va2 ->
+      aparse (parse_bounded_integer sz) a va1 `star`
+      aparse p a2 va2 `star` pure (
+      AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
+      U32.v va1.contents == AP.length (array_of va2) /\
+      (va2.contents <: t) == va.contents
+    ))))
+= let res = elim_vldata_gen sz (unconstrained_bounded_integer _) p a in
+  let _ = gen_elim () in
+  return res
+
+let intro_vldata
+  (#opened: _)
+  (sz: integer_size) // must be a constant
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#va1: _)
+  (#va2: _)
+  (a a2: byte_array)
+: STGhost (v (parse_vldata_gen_kind sz k) t) opened
+    (aparse (parse_bounded_integer sz) a va1 `star` aparse p a2 va2)
+    (fun va -> aparse (parse_vldata sz p) a va)
+    (AP.adjacent (array_of va1) (array_of va2) /\
+      U32.v va1.contents == AP.length (array_of va2)
+    )
+    (fun va ->
+      AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
+      (va2.contents <: t) == va.contents
+    )
+= intro_vldata_gen sz (unconstrained_bounded_integer _) p a a2
