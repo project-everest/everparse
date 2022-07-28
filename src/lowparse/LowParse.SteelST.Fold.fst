@@ -651,17 +651,17 @@ let prog_impl_t
   (out: hole_arrays) ->
   (h: Ghost.erased (ser_state pre)) ->
   (kpre: vprop) ->
-  (kpost: (bool -> vprop)) ->
+  (kpost: vprop) ->
   (k_success: (
     (vl': AP.v byte) ->
     (sz': SZ.size_t) ->
     (out': hole_arrays) ->
     (h': Ghost.erased (ser_state post)) ->
     (v: ret_t) ->
-    ST bool
+    ST unit
       (kpre `star` aparse (parser_of_typ ty) bin vbin `star`
         AP.arrayptr bout vl' `star` parse_hole_arrays h' out')
-      (fun b -> kpost b)
+      (fun _ -> kpost)
       (
         AP.adjacent (AP.array_of vl) (array_of_hole out) /\
         AP.merge_into (AP.array_of vl') (array_of_hole out') (AP.merge (AP.array_of vl) (array_of_hole out)) /\
@@ -672,9 +672,9 @@ let prog_impl_t
   )) ->
   (k_failure: (
     (vb': AP.v byte) ->
-    ST bool
+    ST unit
       (kpre `star` aparse (parser_of_typ ty) bin vbin `star` AP.arrayptr bout vb')
-      (fun b -> kpost b)
+      (fun _ -> kpost)
       (
         let (_, h') = sem ser_action_sem p vbin.contents h in
         AP.merge_into (AP.array_of vl) (array_of_hole out) (AP.array_of vb') /\
@@ -682,10 +682,10 @@ let prog_impl_t
       )
       (fun _ -> True)
   )) ->
-  ST bool
+  ST unit
     (kpre `star` aparse (parser_of_typ ty) bin vbin `star`
       AP.arrayptr bout vl `star` parse_hole_arrays h out)
-    (fun b -> kpost b)
+    (fun _ -> kpost)
     (SZ.size_v sz == AP.length (AP.array_of vl) /\
       AP.array_perm (AP.array_of vl) == full_perm /\
       AP.adjacent (AP.array_of vl) (array_of_hole out)
@@ -872,6 +872,7 @@ let run_prog
   rewrite
     (array_chunk _ br_hole _ `star` parse_context_arrays _ br_ctxt _)
     (parse_hole_arrays (initial_ser_state root) h);
+  with_local true (fun bres ->
   i
     bin
     bout
@@ -879,10 +880,14 @@ let run_prog
     h
     (initial_ser_state root)
     (
+      R.pts_to bres full_perm true `star`
       R.pts_to bret full_perm vret `star`
       R.pts_to bsz full_perm vsz
     )
-    (run_prog_post p vbin vbout bin bout bret bsz)
+    (exists_ (fun b ->
+      R.pts_to bres full_perm b `star`
+      run_prog_post p vbin vbout bin bout bret bsz b
+    ))
     (fun vl' sz' h' _ v ->
       let bh = h'.ha_hole_b in
       let ah = h'.ha_hole_a in
@@ -901,10 +906,11 @@ let run_prog
       let _ = intro_aparse (parser_of_typ root) bh in
       R.write bret v;
       R.write bsz sz';
+      R.write bres true;
       rewrite
         (run_prog_post_true p vbin vbout bin bout bret bsz)
         (run_prog_post p vbin vbout bin bout bret bsz true);
-      return true
+      return ()
     )
     (fun vb' ->
       let f () : Lemma (chunk_exceeds_limit (parse_some_chunk (parser_of_typ root) v') (SZ.size_v sz)) =
@@ -919,12 +925,19 @@ let run_prog
           (SZ.size_v sz)
       in
       f ();
-      noop ();
+      R.write bres false;
       rewrite
         (run_prog_post_false p vbin vbout bin bout bret bsz)
         (run_prog_post p vbin vbout bin bout bret bsz false);
-      return false
-    )
+      return ()
+    );
+  let _ = gen_elim () in
+  let res = R.read bres in
+  rewrite
+    (run_prog_post p vbin vbout bin bout bret bsz _)
+    (run_prog_post p vbin vbout bin bout bret bsz res);
+  return res
+  )
 
 #pop-options
 
