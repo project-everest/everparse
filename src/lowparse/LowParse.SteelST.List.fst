@@ -1668,3 +1668,107 @@ let list_map_inplace_eq_opt
     let _ = list_map_inplace_eq j p' phi f a len in
     intro_aparse_list_cons p' a _
   end
+
+[@@__reduce__]
+let list_iter_with_interrupt_state0
+  (#t: Type)
+  (state: bool -> list t -> vprop)
+  (bcont: R.ref bool)
+  (_: unit)
+  (l: list t)
+: Tot vprop
+= exists_ (fun cont ->
+    R.pts_to bcont full_perm cont `star`
+    state cont l
+  )
+
+let list_iter_with_interrupt_state
+  (#t: Type)
+  (state: bool -> list t -> vprop)
+  (bcont: R.ref bool)
+  (_: unit)
+  (l: list t)
+: Tot vprop
+= list_iter_with_interrupt_state0 state bcont () l
+
+inline_for_extraction
+let list_iter_with_interrupt
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (state: bool -> list t -> vprop)
+  (f_true: (
+    (va: v k t { AP.length (array_of' va) > 0 }) ->
+    (a: byte_array) ->
+    (l: Ghost.erased (list t)) ->
+    STT bool
+      (aparse p a va `star` state true l)
+      (fun res -> aparse p a va `star` state res (List.Tot.snoc (Ghost.reveal l, va.contents)))
+  ))
+  (f_false: (
+    (#opened: _) ->
+    (va: v k t { AP.length (array_of' va) > 0 }) ->
+    (a: byte_array) ->
+    (l: Ghost.erased (list t)) ->
+    STGhostT unit opened
+      (aparse p a va `star` state false l)
+      (fun res -> aparse p a va `star` state false (List.Tot.snoc (Ghost.reveal l, va.contents)))
+  ))  
+  (#va: v parse_list_kind (list t))
+  (a: byte_array)
+  (len: SZ.size_t)
+: ST bool
+    (aparse (parse_list p) a va `star` state true [])
+    (fun res -> aparse (parse_list p) a va `star` state res va.contents)
+    (SZ.size_v len == AP.length (array_of va) /\
+      k.parser_kind_subkind == Some ParserStrong
+    )
+    (fun _ -> True)
+= with_local true (fun bcont ->
+    noop ();
+    rewrite
+      (list_iter_with_interrupt_state0 state bcont () [])
+      (list_iter_with_interrupt_state state bcont () []);
+    list_iter // TODO: write an optimized version with real loop interruption instead
+      j
+      (fun _ _ -> ())
+      (list_iter_with_interrupt_state state bcont)
+      (fun va a accu l ->
+        noop ();
+        rewrite
+          (list_iter_with_interrupt_state state bcont accu l)
+          (list_iter_with_interrupt_state0 state bcont () l);
+        noop ();
+        let _ = gen_elim () in
+        let cont = read_replace bcont in
+        if cont
+        then begin
+          noop ();
+          rewrite (state _ l) (state true l);
+          let cont' = f_true va a l in
+          let _ = R.write bcont cont' in
+          rewrite
+            (list_iter_with_interrupt_state0 state bcont () (List.Tot.snoc (Ghost.reveal l, va.contents)))
+            (list_iter_with_interrupt_state state bcont () (List.Tot.snoc (Ghost.reveal l, va.contents)));
+          return ()
+        end else begin
+          noop ();
+          rewrite (state _ l) (state false l);
+          f_false va a l;
+          rewrite (state _ _) (state cont (List.Tot.snoc (Ghost.reveal l, va.contents)));
+          rewrite
+            (list_iter_with_interrupt_state0 state bcont () (List.Tot.snoc (Ghost.reveal l, va.contents)))
+            (list_iter_with_interrupt_state state bcont () (List.Tot.snoc (Ghost.reveal l, va.contents)));
+          return ()
+        end
+      )
+      a len ();
+    rewrite
+      (list_iter_with_interrupt_state state bcont _ va.contents)
+      (list_iter_with_interrupt_state0 state bcont () va.contents);
+    let _ = gen_elim () in
+    let res = R.read bcont in
+    rewrite (state _ va.contents) (state res va.contents);
+    return res
+  )
