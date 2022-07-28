@@ -327,7 +327,7 @@ inline_for_extraction
 noeq
 type context_arrays : AP.array byte -> Type0 =
 | CANil: (a: AP.array byte) -> context_arrays a
-| CACons: (b: byte_array) -> (a0: AP.array byte) -> (al: AP.array byte) -> (ar: AP.array byte) -> squash (AP.merge_into al ar a0) -> (c: context_arrays ar) -> context_arrays a0
+| CACons: (b: byte_array) -> (a0: AP.array byte) -> (al: AP.array byte) -> (sz: SZ.size_t) -> (ar: AP.array byte) -> squash (AP.merge_into al ar a0 /\ SZ.size_v sz == AP.length al) -> (c: context_arrays ar) -> context_arrays a0
 
 let rec parse_context_arrays
   (#tfrom: typ)
@@ -397,19 +397,20 @@ let intro_parse_context_arrays_cons
   (bl: byte_array)
   (br: byte_array)
   (al: AP.array byte)
+  (sz: SZ.size_t)
   (ar: AP.array byte)
   (c: context_arrays ar)
-  (sq: squash (AP.adjacent al ar))
+  (sq: squash (AP.adjacent al ar /\ SZ.size_v sz == AP.length al))
 : STGhostT unit opened
     (array_chunk (parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc)) bl al `star` parse_context_arrays c0 br c)
-    (fun _ -> parse_context_arrays (CCons bc c0) bl (CACons br (AP.merge al ar) al ar () c))
+    (fun _ -> parse_context_arrays (CCons bc c0) bl (CACons br (AP.merge al ar) al sz ar () c))
 =
   assert_norm (
-    (parse_context_arrays (CCons bc c0) bl (CACons br (AP.merge al ar) al ar () c)) == (array_chunk (parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc)) bl al `star` parse_context_arrays c0 br c)  
+    (parse_context_arrays (CCons bc c0) bl (CACons br (AP.merge al ar) al sz ar () c)) == (array_chunk (parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc)) bl al `star` parse_context_arrays c0 br c)  
   );
   rewrite
     (array_chunk (parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc)) bl al `star` parse_context_arrays c0 br c)
-    (parse_context_arrays (CCons bc c0) bl (CACons br (AP.merge al ar) al ar () c))
+    (parse_context_arrays (CCons bc c0) bl (CACons br (AP.merge al ar) al sz ar () c))
 
 let elim_parse_context_arrays_cons
   (#opened: _)
@@ -428,9 +429,9 @@ let elim_parse_context_arrays_cons
 = let CCons bc c0' = c0 in
   if CACons? c
   then begin
-    let CACons br' a' al' ar' sq' c' = c in
+    let CACons br' a' al' sz' ar' sq' c' = c in
     assert_norm (
-      parse_context_arrays (CCons bc c0') b (CACons br' a' al' ar' sq' c') ==
+      parse_context_arrays (CCons bc c0') b (CACons br' a' al' sz' ar' sq' c') ==
         array_chunk (parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc)) b al' `star`
         parse_context_arrays c0' br' c'
     );
@@ -456,10 +457,11 @@ type hole_arrays =
 {
   ha_hole_a: AP.array byte;
   ha_hole_b: byte_array;
+  ha_hole_sz: SZ.size_t;
   ha_context_a: AP.array byte;
   ha_context_b: byte_array;
   ha_context: context_arrays ha_context_a;
-  ha_prf: squash (AP.adjacent ha_hole_a ha_context_a);
+  ha_prf: squash (AP.adjacent ha_hole_a ha_context_a /\ SZ.size_v ha_hole_sz == AP.length ha_hole_a);
 }
 
 let array_of_hole
@@ -518,6 +520,7 @@ let mk_initial_hole_array
   let ha = {
     ha_hole_a = ah;
     ha_hole_b = bh;
+    ha_hole_sz = SZ.zero_size;
     ha_context_a = ac;
     ha_context_b = bc;
     ha_context = CANil _;
@@ -854,6 +857,7 @@ let run_prog
     {
       ha_hole_a = ah;
       ha_hole_b = br_hole;
+      ha_hole_sz = SZ.zero_size;
       ha_context_a = ac;
       ha_context_b = br_ctxt;
       ha_context = CANil _;
