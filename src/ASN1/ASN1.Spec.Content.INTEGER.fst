@@ -8,7 +8,7 @@ module U8 = FStar.UInt8
 open FStar.Mul
 
 // Make all integer proofs (pow2, etc.) explicit
-#set-options "--z3cliopt smt.arith.nl=false --fuel 0"
+#push-options "--z3cliopt smt.arith.nl=false --fuel 0"
 
 let rec be_to_n_leading_zeros
   (s: Seq.seq U8.t)
@@ -1047,3 +1047,48 @@ let serialize_integer
     s
     (tag_of_integer_payload)
     (serialize_integer_payload)
+
+#pop-options
+
+(* Implementations with machine integer types *)
+
+inline_for_extraction
+noextract
+noeq
+type int_t (nbytes: pos) (i_t: Type0) = {
+  v: (i_t -> Tot (integer_in_interval nbytes));
+  int_to_t: (integer_in_interval nbytes -> Tot i_t);
+  v_int_to_t: ((x: integer_in_interval nbytes) -> Lemma (v (int_to_t x) == x));
+  int_to_t_v: ((x: i_t) -> Lemma (int_to_t (v x) == x));
+}
+
+let parse_signed_integer
+  (#nbytes: pos)
+  (#i_t: Type0)
+  (i: int_t nbytes i_t)
+  (#kt: LP.parser_kind)
+  (p: LP.parser kt (bounded_integer_tag nbytes) {
+    kt.LP.parser_kind_subkind == Some LP.ParserStrong
+  })
+: Tot (LP.parser (kt `LP.and_then_kind` LP.strong_parser_kind 0 nbytes None) i_t)
+= Classical.forall_intro i.v_int_to_t;
+  parse_bounded_integer nbytes p `LP.parse_synth` (fun x -> i.int_to_t x)
+
+module I32 = FStar.Int32
+
+inline_for_extraction
+noextract
+let int32: int_t 4 I32.t = {
+  v = (fun x -> I32.v x);
+  int_to_t = (fun x -> I32.int_to_t x);
+  v_int_to_t = (fun _ -> ());
+  int_to_t_v = (fun _ -> ());
+}
+
+let parse_int32
+  (#kt: LP.parser_kind)
+  (p: LP.parser kt (bounded_integer_tag 4) {
+    kt.LP.parser_kind_subkind == Some LP.ParserStrong
+  })
+: Tot (LP.parser (kt `LP.and_then_kind` LP.strong_parser_kind 0 4 None) I32.t)
+= parse_signed_integer int32 p
