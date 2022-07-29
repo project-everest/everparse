@@ -902,6 +902,55 @@ let parse_bounded_integer
     (tag_of_bounded_integer_payload bound)
     (parse_bounded_integer_payload bound)
 
+let mk_integer'_inj'
+  (b1 b2: LP.bytes)
+: Lemma
+  (requires (valid_unsigned_repr b1 /\ valid_unsigned_repr b2 /\ mk_integer' b1 == mk_integer' b2))
+  (ensures (b1 == b2))
+= mk_integer'_eq' b1;
+  mk_integer'_eq' b2;
+  let n = mk_integer' b1 in
+  domain_unique (Seq.length b1) (Seq.length b2) n;
+  mk_integer_inj_1 (Seq.length b1) b1 b2
+
+let mk_integer'_inj
+  (b1 b2: LP.bytes)
+: Lemma
+  ((valid_unsigned_repr b1 /\ valid_unsigned_repr b2 /\ mk_integer' b1 == mk_integer' b2) ==> (b1 == b2))
+= Classical.move_requires (mk_integer'_inj' b1) b2
+
+let parse_untagged_bounded_integer_kind (bound: nat) : LP.parser_kind = {
+  LP.parser_kind_low = 0;
+  LP.parser_kind_high = Some bound;
+  LP.parser_kind_subkind = None;
+  LP.parser_kind_metadata = None;
+}
+
+let parse_untagged_bounded_integer'
+  (bound: nat)
+  (x: LP.bytes)
+: Tot (option (integer_in_interval bound & LP.consumed_length x))
+= let l = Seq.length x in
+  if l > bound
+  then None
+  else if valid_unsigned_repr x
+  then begin
+    mk_integer'_eq' x;
+    let l = Seq.length x in
+    let r = mk_integer' x in
+    interval_intro l r;
+    interval_weaken l bound r;
+    Some (r, l)
+  end else
+    None
+
+let parse_untagged_bounded_integer
+  (bound: nat)
+: Tot (LP.parser (parse_untagged_bounded_integer_kind bound) (integer_in_interval bound))
+= Classical.forall_intro_2 mk_integer'_inj;
+  LP.parser_kind_prop_equiv (parse_untagged_bounded_integer_kind bound) (parse_untagged_bounded_integer' bound);
+  parse_untagged_bounded_integer' bound
+
 let tag_of_integer_payload
   (x: int)
 : Tot nat
@@ -1020,6 +1069,14 @@ let serialize_bounded_integer
     (tag_of_bounded_integer_payload bound)
     (serialize_bounded_integer_payload bound)
 
+let serialize_untagged_bounded_integer
+  (bound: nat)
+: Tot (LP.serializer (parse_untagged_bounded_integer bound))
+= (fun (x: integer_in_interval bound) ->
+    let d = interval_elim bound x in
+    mk_bytes d x <: LP.bytes
+  )
+
 let synth_integer_payload_recip
   (tag: nat)
   (x: LP.refine_with_tag (tag_of_integer_payload) tag)
@@ -1062,17 +1119,13 @@ type int_t (nbytes: pos) (i_t: Type0) = {
   int_to_t_v: ((x: i_t) -> Lemma (int_to_t (v x) == x));
 }
 
-let parse_signed_integer
+let parse_untagged_signed_integer
   (#nbytes: pos)
   (#i_t: Type0)
   (i: int_t nbytes i_t)
-  (#kt: LP.parser_kind)
-  (p: LP.parser kt (bounded_integer_tag nbytes) {
-    kt.LP.parser_kind_subkind == Some LP.ParserStrong
-  })
-: Tot (LP.parser (kt `LP.and_then_kind` LP.strong_parser_kind 0 nbytes None) i_t)
+: Tot (LP.parser (parse_untagged_bounded_integer_kind nbytes) i_t)
 = Classical.forall_intro i.v_int_to_t;
-  parse_bounded_integer nbytes p `LP.parse_synth` (fun x -> i.int_to_t x)
+  parse_untagged_bounded_integer nbytes `LP.parse_synth` (fun x -> i.int_to_t x)
 
 module I32 = FStar.Int32
 
@@ -1085,10 +1138,6 @@ let int32: int_t 4 I32.t = {
   int_to_t_v = (fun _ -> ());
 }
 
-let parse_int32
-  (#kt: LP.parser_kind)
-  (p: LP.parser kt (bounded_integer_tag 4) {
-    kt.LP.parser_kind_subkind == Some LP.ParserStrong
-  })
-: Tot (LP.parser (kt `LP.and_then_kind` LP.strong_parser_kind 0 4 None) I32.t)
-= parse_signed_integer int32 p
+let parse_untagged_int32
+: LP.parser (parse_untagged_bounded_integer_kind 4) I32.t
+= parse_untagged_signed_integer int32
