@@ -44,10 +44,14 @@ type asn1_terminal_k : Type =
 | ASN1_ENUM
 | ASN1_BITSTRING
 | ASN1_OCTETSTRING
+| ASN1_PRINTABLESTRING
+| ASN1_UTF8STRING
 | ASN1_NULL
 | ASN1_OID
 | ASN1_ROID
-| ASN1_TIME
+| ASN1_UTCTIME
+| ASN1_GENERALIZEDTIME
+| ASN1_PREFIXED_TERMINAL : asn1_id_t -> asn1_terminal_k -> asn1_terminal_k
 
 type asn1_boolean_t = bool
 
@@ -67,6 +71,10 @@ type asn1_bitstring_t =
 
 type asn1_octetstring_t = B.bytes
 
+type asn1_utf8string_t = unit
+
+type asn1_printablestring_t = unit
+
 type asn1_null_t = unit
 
 let asn1_OID_wf' (value1 value2 : U32.t) =
@@ -82,19 +90,25 @@ type asn1_oid_t =
 
 type asn1_roid_t = unit
 
-type asn1_time_t = unit
+type asn1_utctime_t = unit
 
-let asn1_terminal_t (k : asn1_terminal_k) : Type =
+type asn1_generalizedtime_t = unit
+
+let rec asn1_terminal_t (k : asn1_terminal_k) : eqtype =
   match k with
   | ASN1_BOOLEAN -> asn1_boolean_t
   | ASN1_INTEGER -> asn1_integer_t
   | ASN1_ENUM -> asn1_enum_t
   | ASN1_BITSTRING -> asn1_bitstring_t
   | ASN1_OCTETSTRING -> asn1_octetstring_t
+  | ASN1_UTF8STRING -> asn1_utf8string_t
+  | ASN1_PRINTABLESTRING -> asn1_printablestring_t
   | ASN1_NULL -> asn1_null_t
   | ASN1_OID -> asn1_oid_t
   | ASN1_ROID -> asn1_roid_t
-  | ASN1_TIME -> asn1_time_t
+  | ASN1_UTCTIME -> asn1_utctime_t
+  | ASN1_GENERALIZEDTIME -> asn1_generalizedtime_t
+  | ASN1_PREFIXED_TERMINAL _ k -> asn1_terminal_t k
 
 // Those two ways of implementation should be equivalent except for a layer of wrapper which is unnecessary
 
@@ -175,13 +189,19 @@ type asn1_content_k : Type =
 //| ASN1_SET : #s : _ -> asn1_set_k s -> asn1_content_k
 | ASN1_SET_OF : #s : _ -> asn1_k s -> asn1_content_k
 | ASN1_PREFIXED : #s : _ -> asn1_k s -> asn1_content_k
+| ASN1_ANY_OID : supported : list (asn1_oid_t * asn1_gen_item_k) -> 
+                 pf : squash (List.noRepeats (List.map fst supported)) -> 
+                 asn1_content_k
+| ASN1_ANY_INTEGER : supported : list (asn1_integer_t * asn1_gen_item_k) -> 
+                 pf : squash (List.noRepeats (List.map fst supported)) -> 
+                 asn1_content_k
 
 // The complete ASN.1 kind is indexed by the set of valid first identifiers
 // Note that length does not matter here
 and asn1_k : Set.set asn1_id_t -> Type =
 | ASN1_ILC : id : asn1_id_t -> asn1_content_k -> asn1_k (Set.singleton id)
 | ASN1_CHOICE_ILC : choices : list (asn1_id_t & asn1_content_k) -> 
-                    pf : ((Cons? choices) /\ (List.noRepeats (List.map fst choices))) -> 
+                    pf : squash ((Cons? choices) /\ (List.noRepeats (List.map fst choices))) -> 
                     asn1_k (my_as_set (List.map fst choices))
                     
 and asn1_decorated_k : Set.set asn1_id_t -> asn1_decorator -> Type =
@@ -250,6 +270,15 @@ let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
   | ASN1_SEQUENCE_OF k' -> Seq.seq (asn1_t k')
   | ASN1_SET_OF k' -> asn1_t k'
   | ASN1_PREFIXED k' -> asn1_t k'
+  | ASN1_ANY_OID ls pf -> make_gen_choice_type (asn1_any_t asn1_oid_t ls)
+  | ASN1_ANY_INTEGER ls pf -> make_gen_choice_type (asn1_any_t asn1_integer_t ls)
+
+and asn1_any_t (t : eqtype) (ls : list (t * asn1_gen_item_k)) : Tot (list (t & Type)) (decreases ls) =
+  match ls with
+  | [] -> [] 
+  | h :: tl -> 
+    let (x, y) = h in
+    (x, asn1_decorated_t y) :: (asn1_any_t t tl)
 
 and asn1_lc_t (lc : list (asn1_id_t & asn1_content_k)) : Tot (list (asn1_id_t & Type)) (decreases lc) =
   match lc with

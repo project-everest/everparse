@@ -16,13 +16,14 @@ open ASN1.Spec.Sequence
 
 module List = FStar.List.Tot
 
-let asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
+let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   match k with
   | ASN1_BOOLEAN -> weaken _ parse_asn1_boolean
   | ASN1_BITSTRING -> parse_asn1_bitstring
   | ASN1_OCTETSTRING -> parse_asn1_octetstring
   | ASN1_NULL -> parse_asn1_null
   | ASN1_OID -> parse_asn1_OIDU32
+  | ASN1_PREFIXED_TERMINAL id k -> weaken asn1_weak_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (asn1_terminal_as_parser k))
   | _ -> fail_parser _ _  (* admit *)
 (*
   | ASN1_INTEGER -> admit ()
@@ -31,13 +32,15 @@ let asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_termi
   | ASN1_TIME -> admit ()
 *)  
 
-let rec asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_content_t k)) (decreases k) =
+and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_content_t k)) (decreases k) =
   match k with
   | ASN1_TERMINAL k' -> asn1_terminal_as_parser k'
   | ASN1_SEQUENCE items pf -> make_asn1_sequence_parser (asn1_sequence_as_parser items)
   | ASN1_SEQUENCE_OF k' -> fail_parser _ _ (* admit Seq.seq (asn1_t k') *)
   | ASN1_SET_OF k' -> weaken _ (asn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (asn1_as_parser k')
+  | ASN1_ANY_OID ls pf -> fail_parser _ _
+  | ASN1_ANY_INTEGER ls pf -> fail_parser _ _
 
 and asn1_lc_as_parser (lc : list (asn1_id_t & asn1_content_k)) : Tot (lp : list (asn1_id_t & gen_parser) {asn1_lc_t lc == extract_types lp})  (decreases lc) =
   match lc with
