@@ -1300,7 +1300,8 @@ let impl_list_hole_inv_false
   (h0: ser_state inv)
   (l: list (type_of_typ t))
 : Tot vprop
-= exists_ (R.pts_to bout_sz full_perm) `star`
+= pure (chunk_exceeds_limit (parse_hole (sndp (fold_list inv (sem ser_action_sem f) l h0))) (AP.length a0)) `star`
+  exists_ (R.pts_to bout_sz full_perm) `star`
   exists_ (GR.pts_to gh full_perm) `star`
   exists_ (GR.pts_to gout full_perm) `star`
   exists_ (R.pts_to bhead full_perm) `star`
@@ -1309,8 +1310,7 @@ let impl_list_hole_inv_false
   exists_ (fun vout ->
     AP.arrayptr bout vout `star`
     pure (
-      AP.array_of vout == a0 /\
-      chunk_exceeds_limit (parse_hole (sndp (fold_list inv (sem ser_action_sem f) l h0))) (AP.length a0)
+      AP.array_of vout == a0
     )
   )
 
@@ -1512,6 +1512,44 @@ let fold_list_snoc
     f x state1)))
 = fold_list_append inv f state l [x]
 
+inline_for_extraction
+let impl_list_body_false
+  (#root: typ)
+  (#t: typ)
+  (#inv: _)
+  (f: prog (ser_state #root) ser_action t unit inv inv)
+  (bout: byte_array)
+  (bout_sz: R.ref SZ.size_t)
+  (bhead: R.ref byte_array)
+  (bhead_sz: R.ref SZ.size_t)
+  (btail: R.ref byte_array)
+  (gh: GR.ref (ser_state inv))
+  (gout: GR.ref hole_arrays)
+  (a0: AP.array byte)
+  (h0: Ghost.erased (ser_state inv))
+  (#opened: _)
+  (va: v pkind (type_of_typ t) { AP.length (array_of' va) > 0 })
+  (a: byte_array)
+  (l: Ghost.erased (list (type_of_typ t)))
+: STGhostT unit opened
+    (aparse (parser_of_typ t) a va `star` impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h0 false l)
+    (fun _ -> aparse (parser_of_typ t) a va `star` impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h0 false (List.Tot.snoc (Ghost.reveal l, va.contents)))
+=
+  rewrite
+    (impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h0 false l)
+    (impl_list_hole_inv_false f bout bout_sz bhead bhead_sz btail gh gout a0 h0 l);
+  elim_pure _;
+  fold_list_snoc inv (sem ser_action_sem f) h0 l va.contents;
+  prog_sem_chunk_desc_ge f va.contents (sndp (fold_list inv (sem ser_action_sem f) l h0));
+  chunk_desc_ge_implies
+    (parse_hole (sndp (fold_list inv (sem ser_action_sem f) (List.Tot.snoc (Ghost.reveal l, va.contents)) h0)))
+    (parse_hole (sndp (fold_list inv (sem ser_action_sem f) l h0)))
+    (AP.length a0);
+  noop ();
+  rewrite
+    (impl_list_hole_inv_false f bout bout_sz bhead bhead_sz btail gh gout a0 h0 (List.Tot.snoc (Ghost.reveal l, va.contents)))
+    (impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h0 false (List.Tot.snoc (Ghost.reveal l, va.contents)))
+
 #push-options "--z3rlimit 32"
 #restart-solver
 
@@ -1557,7 +1595,7 @@ let impl_list
       j
       (impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h)
       (magic ())
-      (fun _ _ _ -> admit_ ())
+      (impl_list_body_false f bout bout_sz bhead bhead_sz btail gh gout a0 h)
       bin_l
       (SZ.mk_size_t in_sz)
     in
