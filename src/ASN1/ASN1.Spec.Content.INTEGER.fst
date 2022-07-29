@@ -919,15 +919,15 @@ let mk_integer'_inj
   ((valid_unsigned_repr b1 /\ valid_unsigned_repr b2 /\ mk_integer' b1 == mk_integer' b2) ==> (b1 == b2))
 = Classical.move_requires (mk_integer'_inj' b1) b2
 
-let parse_untagged_bounded_integer_kind (bound: nat) : LP.parser_kind = {
-  LP.parser_kind_low = 0;
+let parse_untagged_bounded_integer_kind (bound: pos) : LP.parser_kind = {
+  LP.parser_kind_low = 1;
   LP.parser_kind_high = Some bound;
   LP.parser_kind_subkind = None;
   LP.parser_kind_metadata = None;
 }
 
 let parse_untagged_bounded_integer'
-  (bound: nat)
+  (bound: pos)
   (x: LP.bytes)
 : Tot (option (integer_in_interval bound & LP.consumed_length x))
 = let l = Seq.length x in
@@ -945,7 +945,7 @@ let parse_untagged_bounded_integer'
     None
 
 let parse_untagged_bounded_integer
-  (bound: nat)
+  (bound: pos)
 : Tot (LP.parser (parse_untagged_bounded_integer_kind bound) (integer_in_interval bound))
 = Classical.forall_intro_2 mk_integer'_inj;
   LP.parser_kind_prop_equiv (parse_untagged_bounded_integer_kind bound) (parse_untagged_bounded_integer' bound);
@@ -1070,7 +1070,7 @@ let serialize_bounded_integer
     (serialize_bounded_integer_payload bound)
 
 let serialize_untagged_bounded_integer
-  (bound: nat)
+  (bound: pos)
 : Tot (LP.serializer (parse_untagged_bounded_integer bound))
 = (fun (x: integer_in_interval bound) ->
     let d = interval_elim bound x in
