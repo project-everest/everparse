@@ -2,12 +2,10 @@ module LowParse.SteelST.Fold
 include LowParse.SteelST.Fold.Base
 
 open Steel.ST.GenElim
-open LowParse.Spec.Int
-open LowParse.Spec.List
-open LowParse.Spec.VLData
 open LowParse.SteelST.Combinators
 open LowParse.SteelST.List
 open LowParse.SteelST.Int
+open LowParse.SteelST.VLData
 
 module AP = LowParse.SteelST.ArrayPtr
 module LP = LowParse.Spec.Base
@@ -483,6 +481,27 @@ let parse_hole_arrays
 : Tot vprop
 = parse_hole_arrays' h ha
 
+let parse_hole_arrays_empty_context
+  (#opened: _)
+  (h: hole_t false)
+  (ha: hole_arrays)
+: STGhost unit opened
+    (parse_hole_arrays h ha)
+    (fun _ -> parse_hole_arrays h ha)
+    (CNil? h.context)
+    (fun _ -> CANil? ha.ha_context)
+= rewrite
+    (parse_hole_arrays h ha)
+    (parse_hole_arrays' h ha);
+  elim_parse_context_arrays_nil h.context ha.ha_context_b ha.ha_context;
+  intro_parse_context_arrays_nil h.root ha.ha_context_b ha.ha_context_a;
+  rewrite
+    (parse_context_arrays _ _ _)
+    (parse_context_arrays h.context ha.ha_context_b ha.ha_context);
+  rewrite
+    (parse_hole_arrays' h ha)
+    (parse_hole_arrays h ha)
+  
 #push-options "--z3rlimit 32"
 
 inline_for_extraction
@@ -1210,5 +1229,342 @@ let impl_choice
       restore ();
       k_failure vb'
     )
+
+#pop-options
+
+module GR = Steel.ST.GhostReference
+
+let impl_list_hole_inv_true_prop
+  (#root: typ)
+  (#t: typ)
+  (#inv: _)
+  (f: prog (ser_state #root) ser_action t unit inv inv)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (l: list (type_of_typ t))
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (h: ser_state inv)
+  (out: hole_arrays)
+: Tot prop
+=
+  SZ.size_v vout_sz == AP.length (AP.array_of vout) /\
+  AP.merge_into (AP.array_of vout) (array_of_hole out) a0 /\
+  fold_list inv (sem ser_action_sem f) l h0 == ((), h)
+
+[@@__reduce__]
+let impl_list_hole_inv_true
+  (#root: typ)
+  (#t: typ)
+  (#inv: _)
+  (f: prog (ser_state #root) ser_action t unit inv inv)
+  (bout: byte_array)
+  (bout_sz: R.ref SZ.size_t)
+  (bhead: R.ref byte_array)
+  (bhead_sz: R.ref SZ.size_t)
+  (btail: R.ref byte_array)
+  (gh: GR.ref (ser_state inv))
+  (gout: GR.ref hole_arrays)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (l: list (type_of_typ t))
+: Tot vprop
+= exists_ (fun vout -> exists_ (fun vout_sz -> exists_ (fun (h: ser_state inv) -> exists_ (fun out ->
+    AP.arrayptr bout vout `star`
+    R.pts_to bout_sz full_perm vout_sz `star`
+    GR.pts_to gh full_perm h `star`
+    GR.pts_to gout full_perm out `star`
+    parse_hole_arrays h out `star`
+    R.pts_to bhead full_perm out.ha_hole_b `star`
+    R.pts_to bhead_sz full_perm out.ha_hole_sz `star`
+    R.pts_to btail full_perm out.ha_context_b `star`
+    pure (
+      impl_list_hole_inv_true_prop f a0 h0 l vout vout_sz h out
+    )
+  ))))
+
+[@@__reduce__]
+let impl_list_hole_inv_false
+  (#root: typ)
+  (#t: typ)
+  (#inv: _)
+  (f: prog (ser_state #root) ser_action t unit inv inv)
+  (bout: byte_array)
+  (bout_sz: R.ref SZ.size_t)
+  (bhead: R.ref byte_array)
+  (bhead_sz: R.ref SZ.size_t)
+  (btail: R.ref byte_array)
+  (gh: GR.ref (ser_state inv))
+  (gout: GR.ref hole_arrays)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (l: list (type_of_typ t))
+: Tot vprop
+= exists_ (R.pts_to bout_sz full_perm) `star`
+  exists_ (GR.pts_to gh full_perm) `star`
+  exists_ (GR.pts_to gout full_perm) `star`
+  exists_ (R.pts_to bhead full_perm) `star`
+  exists_ (R.pts_to bhead_sz full_perm) `star`
+  exists_ (R.pts_to btail full_perm) `star`
+  exists_ (fun vout ->
+    AP.arrayptr bout vout `star`
+    pure (
+      AP.array_of vout == a0 /\
+      chunk_exceeds_limit (parse_hole (sndp (fold_list inv (sem ser_action_sem f) l h0))) (AP.length a0)
+    )
+  )
+
+let impl_list_hole_inv
+  (#root: typ)
+  (#t: typ)
+  (#inv: _)
+  (f: prog (ser_state #root) ser_action t unit inv inv)
+  (bout: byte_array)
+  (bout_sz: R.ref SZ.size_t)
+  (bhead: R.ref byte_array)
+  (bhead_sz: R.ref SZ.size_t)
+  (btail: R.ref byte_array)
+  (gh: GR.ref (ser_state inv))
+  (gout: GR.ref hole_arrays)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (cont: bool)
+  (l: list (type_of_typ t))
+: Tot vprop
+= if cont
+  then impl_list_hole_inv_true f bout bout_sz bhead bhead_sz btail gh gout a0 h0 l
+  else impl_list_hole_inv_false f bout bout_sz bhead bhead_sz btail gh gout a0 h0 l
+
+inline_for_extraction
+let impl_list_post_true
+  (#root: typ)
+  (#t: typ)
+  (#inv: _)
+  (f: prog (ser_state #root) ser_action t unit inv inv)
+  (vbin: _)
+  (vl: _)
+  (bin: byte_array)
+  (bout: byte_array)
+  (out: hole_arrays)
+  (h: Ghost.erased (ser_state inv))
+  (kpre kpost: vprop)
+  (k_success: (
+    (vl': AP.v byte) ->
+    (sz': SZ.size_t) ->
+    (out': hole_arrays) ->
+    (h': Ghost.erased (ser_state inv)) ->
+    (v: unit) ->
+    ST unit
+      (kpre `star` aparse (parser_of_typ (TList t)) bin vbin `star`
+        AP.arrayptr bout vl' `star` parse_hole_arrays h' out')
+      (fun _ -> kpost)
+      (
+        AP.adjacent (AP.array_of vl) (array_of_hole out) /\
+        AP.merge_into (AP.array_of vl') (array_of_hole out') (AP.merge (AP.array_of vl) (array_of_hole out)) /\
+        sem ser_action_sem (PList inv f) vbin.contents h == (v, Ghost.reveal h') /\
+        SZ.size_v sz' == AP.length (AP.array_of vl')
+      )
+      (fun _ -> True)
+  ))
+  (bout_sz: R.ref SZ.size_t)
+  (bhead: R.ref byte_array)
+  (bhead_sz: R.ref SZ.size_t)
+  (btail: R.ref byte_array)
+  (gh: GR.ref (ser_state inv))
+  (gout: GR.ref hole_arrays)
+  (a0: AP.array byte)
+  (cont: bool)
+  (l: Ghost.erased (list (type_of_typ t)))
+: ST unit
+    (kpre `star` aparse (parser_of_typ (TList t)) bin vbin `star`
+      impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h cont l)
+    (fun _ ->
+      kpost `star`
+      exists_ (R.pts_to bout_sz full_perm) `star`
+      exists_ (R.pts_to bhead full_perm) `star`
+      exists_ (R.pts_to bhead_sz full_perm) `star`
+      exists_ (R.pts_to btail full_perm) `star`
+      exists_ (GR.pts_to gh full_perm) `star`
+      exists_ (GR.pts_to gout full_perm)
+    )
+    (AP.merge_into (AP.array_of vl) (array_of_hole out) a0 /\
+      cont == true /\
+      Ghost.reveal l == vbin.contents /\
+      CNil? inv.context)
+    (fun _ -> True)
+=
+      rewrite
+        (impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h cont l)
+        (impl_list_hole_inv_true f bout bout_sz bhead bhead_sz btail gh gout a0 h l);
+      let _ = gen_elim () in
+      let sz' = R.read bout_sz in
+      let h' = GR.read gh in
+      let gout' = GR.read gout in
+      let head' = R.read bhead in
+      let head_sz' = R.read bhead_sz in
+      let tail' = R.read btail in
+      parse_hole_arrays_empty_context _ _;
+      [@inline_let] // CRITICAL to avoid extracting whole struct values
+      let out' = {
+        ha_hole_a = gout'.ha_hole_a;
+        ha_hole_b = head';
+        ha_hole_sz = head_sz';
+        ha_context_a = gout'.ha_context_a;
+        ha_context_b = tail';
+        ha_context = CANil _;
+        ha_prf = gout'.ha_prf;
+      }
+      in
+      rewrite
+        (parse_hole_arrays _ _)
+        (parse_hole_arrays h' out');
+      k_success _ sz' out' h' ();
+      noop () // for automatic intro_exists
+
+inline_for_extraction
+let impl_list_post_false
+  (#root: typ)
+  (#t: typ)
+  (#inv: _)
+  (f: prog (ser_state #root) ser_action t unit inv inv)
+  (vbin: _)
+  (vl: _)
+  (bin: byte_array)
+  (bout: byte_array)
+  (out: hole_arrays)
+  (h: Ghost.erased (ser_state inv))
+  (kpre kpost: vprop)
+  (k_failure: (
+    (vb': AP.v byte) ->
+    ST unit
+      (kpre `star` aparse (parser_of_typ (TList t)) bin vbin `star` AP.arrayptr bout vb')
+      (fun _ -> kpost)
+      (
+        let (_, h') = sem ser_action_sem (PList inv f) vbin.contents h in
+        AP.merge_into (AP.array_of vl) (array_of_hole out) (AP.array_of vb') /\
+        chunk_exceeds_limit (parse_hole h') (AP.length (AP.array_of vb'))
+      )
+      (fun _ -> True)
+  ))
+  (bout_sz: R.ref SZ.size_t)
+  (bhead: R.ref byte_array)
+  (bhead_sz: R.ref SZ.size_t)
+  (btail: R.ref byte_array)
+  (gh: GR.ref (ser_state inv))
+  (gout: GR.ref hole_arrays)
+  (a0: AP.array byte)
+  (cont: bool)
+  (l: Ghost.erased (list (type_of_typ t)))
+: ST unit
+    (kpre `star` aparse (parser_of_typ (TList t)) bin vbin `star`
+      impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h cont l)
+    (fun _ ->
+      kpost `star`
+      exists_ (R.pts_to bout_sz full_perm) `star`
+      exists_ (R.pts_to bhead full_perm) `star`
+      exists_ (R.pts_to bhead_sz full_perm) `star`
+      exists_ (R.pts_to btail full_perm) `star`
+      exists_ (GR.pts_to gh full_perm) `star`
+      exists_ (GR.pts_to gout full_perm)
+    )
+    (AP.merge_into (AP.array_of vl) (array_of_hole out) a0 /\
+      cont == false /\
+      Ghost.reveal l == vbin.contents /\
+      CNil? inv.context)
+    (fun _ -> True)
+= 
+      rewrite
+        (impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h cont l)
+        (impl_list_hole_inv_false f bout bout_sz bhead bhead_sz btail gh gout a0 h l);
+      let _ = gen_elim () in
+      k_failure _;
+      noop () // for automatic intro_exists
+
+let rec fold_list_append
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv (inv))
+  (state: state_t inv)
+  (l1 l2: list t)
+: Lemma
+  (ensures (fold_list inv f (l1 `List.Tot.append` l2) state ==
+    (let (_, state1) = fold_list inv f l1 state in
+    fold_list inv f l2 state1)))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | a :: q ->
+    let (_, state0) = f a state in
+    fold_list_append inv f state0 q l2
+
+let fold_list_snoc
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv (inv))
+  (state: state_t inv)
+  (l: list t)
+  (x: t)
+: Lemma
+  (ensures (fold_list inv f (List.Tot.snoc (l, x)) state ==
+    (let (_, state1) = fold_list inv f l state in
+    f x state1)))
+= fold_list_append inv f state l [x]
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+inline_for_extraction
+let impl_list
+  (#root: typ)
+  (#t: typ)
+  (#inv: _)
+  (f: prog (ser_state #root) ser_action t unit inv inv)
+  (impl_f: prog_impl_t f)
+  (j: jumper (parser_of_typ t)) // MUST be computed OUTSIDE of impl_list
+: Pure (prog_impl_t (PList inv f))
+    (requires (CNil? inv.context))
+    (ensures (fun _ -> True))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  let _ = rewrite_aparse bin (parse_vldata 4 (parse_list (parser_of_typ t))) in
+  let bin_l = elim_vldata 4 (parse_list (parser_of_typ t)) bin in
+  let _ = gen_elim () in
+  let vl_sz = vpattern_replace (aparse (parse_bounded_integer 4) bin) in
+  let vl_l = vpattern_replace (aparse (parse_list (parser_of_typ t)) bin_l) in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse (parse_bounded_integer 4) bin vl_sz `star`
+      aparse (parse_list (parser_of_typ t)) bin_l vl_l)
+    (fun _ -> aparse (parser_of_typ (TList t)) bin vbin)
+  =
+    let _ = intro_vldata 4 (parse_list (parser_of_typ t)) bin bin_l in
+    let vbin' = rewrite_aparse bin (parser_of_typ (TList t)) in
+    rewrite (aparse _ bin _) (aparse (parser_of_typ (TList t)) bin vbin)
+  in
+  let in_sz = read_bounded_integer 4 bin in
+  let a0 = Ghost.hide (AP.merge (AP.array_of vl) (array_of_hole out)) in
+  with_local sz (fun bout_sz ->
+  with_local out.ha_hole_b (fun bhead ->
+  with_local out.ha_hole_sz (fun bhead_sz ->
+  with_local out.ha_context_b (fun btail ->
+  with_ghost_local h (fun gh ->
+  with_ghost_local out (fun gout ->
+    noop ();
+    rewrite
+      (impl_list_hole_inv_true f bout bout_sz bhead bhead_sz btail gh gout a0 h [])
+      (impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h true []);
+    let cont = list_iter_with_interrupt
+      j
+      (impl_list_hole_inv f bout bout_sz bhead bhead_sz btail gh gout a0 h)
+      (magic ())
+      (fun _ _ _ -> admit_ ())
+      bin_l
+      (SZ.mk_size_t in_sz)
+    in
+    restore ();
+    if cont
+    then impl_list_post_true f vbin vl bin bout out h kpre kpost k_success bout_sz bhead bhead_sz btail gh gout a0 cont _
+    else impl_list_post_false f vbin vl bin bout out h kpre kpost k_failure bout_sz bhead bhead_sz btail gh gout a0 cont _
+  ))))))
 
 #pop-options
