@@ -598,44 +598,44 @@ let chunk_desc_ge_parse_pair_test
 =
   chunk_desc_ge_parse_pair p1 p2 v1 v2;
   chunk_desc_ge_zero_r (parse_some_chunk p1 v1) (parse_some_chunk parse_empty ());
-  chunk_desc_ge_concat_chunk_compat (parse_some_chunk p1 v1) (parse_some_chunk p1 v1 `concat_chunks` parse_some_chunk parse_empty ()) (parse_some_chunk p2 v2);
+  chunk_desc_ge_concat_chunk_compat_r (parse_some_chunk p1 v1) (parse_some_chunk p1 v1 `concat_chunks` parse_some_chunk parse_empty ()) (parse_some_chunk p2 v2);
   chunk_desc_ge_assoc_l_r (parse_some_chunk p1 v1) (parse_some_chunk parse_empty ()) (parse_some_chunk p2 v2)
 
 module U8 = FStar.UInt8
 
 inline_for_extraction
 [@@noextract_to "krml"]
-let impl_ser_u8
+let impl_ser_u8'
   (#vb: AP.v byte)
   (x: U8.t)
   (b: byte_array)
   (sz: SZ.size_t)
   (kpre: vprop)
-  (kpost: bool -> vprop)
+  (kpost: vprop)
   (k_success: (
     (vl: AP.v byte) ->
     (vr: AP.array byte) ->
     (br: byte_array) ->
     (sz': SZ.size_t) ->
-    ST bool
+    ST unit
       (kpre `star` AP.arrayptr b vl `star` array_chunk (parse_some_chunk parse_u8 x) br vr)
-      (fun b -> kpost b)
+      (fun _ -> kpost)
       (AP.merge_into (AP.array_of vl) vr (AP.array_of vb) /\
         SZ.size_v sz' == AP.length (AP.array_of vl))
       (fun _ -> True)
   ))
   (k_failure: (
     (vb': AP.v byte) ->
-    ST bool
+    ST unit
       (kpre `star` AP.arrayptr b vb')
-      (fun b -> kpost b)
+      (fun _ -> kpost)
       (AP.array_of vb' == AP.array_of vb /\
         chunk_exceeds_limit (parse_some_chunk parse_u8 x) (AP.length (AP.array_of vb)))
       (fun _ -> True)
   ))
-: ST bool
+: ST unit
     (kpre `star` AP.arrayptr b vb)
-    (fun b -> kpost b)
+    (fun _ -> kpost)
     (SZ.size_v sz == AP.length (AP.array_of vb) /\
       AP.array_perm (AP.array_of vb) == full_perm)
     (fun _ -> True)
@@ -651,6 +651,119 @@ let impl_ser_u8
     let _ = intro_parse_some_chunk _ _ _ in
     k_success _ _ _ sz'
   end
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let action_impl_t
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (p: ser_action ret_t pre post)
+: Tot Type
+= (#vl: AP.v byte) ->
+  (bout: byte_array) ->
+  (sz: SZ.size_t) ->
+  (out: hole_arrays) ->
+  (h: Ghost.erased (ser_state pre)) ->
+  (kpre: vprop) ->
+  (kpost: vprop) ->
+  (k_success: (
+    (vl': AP.v byte) ->
+    (sz': SZ.size_t) ->
+    (out': hole_arrays) ->
+    (h': Ghost.erased (ser_state post)) ->
+    (v: ret_t) ->
+    ST unit
+      (kpre `star`
+        AP.arrayptr bout vl' `star` parse_hole_arrays h' out')
+      (fun _ -> kpost)
+      (
+        AP.adjacent (AP.array_of vl) (array_of_hole out) /\
+        AP.merge_into (AP.array_of vl') (array_of_hole out') (AP.merge (AP.array_of vl) (array_of_hole out)) /\
+        ser_action_sem p h == (v, Ghost.reveal h') /\
+        SZ.size_v sz' == AP.length (AP.array_of vl')
+      )
+      (fun _ -> True)
+  )) ->
+  (k_failure: (
+    (vb': AP.v byte) ->
+    ST unit
+      (kpre `star` AP.arrayptr bout vb')
+      (fun _ -> kpost)
+      (
+        let (_, h') = ser_action_sem p h in
+        AP.merge_into (AP.array_of vl) (array_of_hole out) (AP.array_of vb') /\
+        chunk_exceeds_limit (parse_hole h') (AP.length (AP.array_of vb'))
+      )
+      (fun _ -> True)
+  )) ->
+  ST unit
+    (kpre `star`
+      AP.arrayptr bout vl `star` parse_hole_arrays h out)
+    (fun _ -> kpost)
+    (SZ.size_v sz == AP.length (AP.array_of vl) /\
+      AP.array_perm (AP.array_of vl) == full_perm /\
+      AP.adjacent (AP.array_of vl) (array_of_hole out)
+    )
+    (fun _ -> True)
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let impl_ser_u8
+  (#root: _)
+  (#pre: ser_index root)
+  (w: U8.t)
+  (sq: squash (pre.leaf == TU8 /\ HVHole? pre.hole /\ CNil? pre.context))
+: Tot (action_impl_t (SU8 #_ #pre w ()))
+= fun #vl bout sz out h kpre kpost k_success k_failure ->
+  rewrite
+    (parse_hole_arrays h out)
+    (parse_hole_arrays' h out);
+  let _ = elim_empty_chunk _ out.ha_hole_b in
+  let _ = AP.join bout out.ha_hole_b in
+  impl_ser_u8'
+    w
+    bout
+    sz
+    (parse_context_arrays h.context out.ha_context_b out.ha_context `star` kpre)
+    kpost
+    (fun vl vr br sz' ->
+      intro_weaken_parse_some_chunk default_parser_kind br;
+      [@inline_let]
+      let out' = {
+        ha_hole_a = vr;
+        ha_hole_b = br;
+        ha_hole_sz = sz `SZ.size_sub` sz';
+        ha_context = out.ha_context;
+        ha_context_a = out.ha_context_a;
+        ha_context_b = out.ha_context_b;
+        ha_prf = ();
+      }
+      in
+      let h' = Ghost.hide (fill_hole h w) in
+      rewrite
+        (array_chunk _ br vr `star` parse_context_arrays _ _ _)
+        (parse_hole_arrays h' out');
+      k_success vl sz' out' h' ()
+    )
+    (fun vb ->
+      chunk_desc_ge_intro_exact_parse_some_chunk
+        (weaken default_parser_kind (parser_of_typ TU8))
+        parse_u8
+        w;
+      chunk_desc_ge_concat_chunk_intro_r
+        (parse_some_chunk (weaken default_parser_kind (parser_of_typ TU8)) w)
+        (parse_context h.context);
+      chunk_desc_ge_implies
+        (parse_hole (fill_hole h w))
+        (parse_some_chunk parse_u8 w)
+        (AP.length (AP.array_of vb));
+      elim_parse_context_arrays_nil _ _ _;
+      let _ = elim_empty_chunk empty_chunk _ in
+      let vb' = AP.join bout _ in
+      k_failure vb'
+    )
 
 inline_for_extraction
 [@@noextract_to "krml"]
@@ -710,6 +823,23 @@ let prog_impl_t
       AP.adjacent (AP.array_of vl) (array_of_hole out)
     )
     (fun _ -> True)
+
+inline_for_extraction
+let impl_action
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (p: ser_action ret_t pre post)
+  (impl_p: action_impl_t p)
+  (t: typ)
+: Tot (prog_impl_t (PAction #_ #_ #_ #t p))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  impl_p bout sz out h
+    (aparse (parser_of_typ t) bin vbin `star` kpre)
+    kpost
+    k_success
+    k_failure
 
 module R = Steel.ST.Reference
 
