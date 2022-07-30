@@ -348,6 +348,20 @@ val reveal_chunk_exceeds_limit
 : Lemma
   (chunk_exceeds_limit c limit <==> (forall b0 . exact_chunk c b0 ==> Seq.length b0 > limit))
 
+val chunk_exceeds_limit_concat_r
+  (c: chunk_desc)
+  (limit: nat)
+  (c': chunk_desc)
+  (b: bytes)
+: Lemma
+  (requires (
+    chunk_exceeds_limit c limit /\
+    exact_chunk c' b
+  ))
+  (ensures (
+    chunk_exceeds_limit (c `concat_chunks` c') (limit + Seq.length b)
+  ))
+
 val chunk_desc_ge_implies
   (larger smaller: chunk_desc)
   (limit: nat)
@@ -415,12 +429,19 @@ val chunk_desc_ge_zero (l1 l2: chunk_desc) : Lemma
     chunk_desc_ge l1 l2
   ))
 
-val chunk_desc_ge_concat_chunk_intro (l1 l2: chunk_desc) : Lemma
+val chunk_desc_ge_concat_chunk_intro_l (l1 l2: chunk_desc) : Lemma
   (chunk_desc_ge (l1 `concat_chunks` l2) l2)
 
-val chunk_desc_ge_concat_chunk_compat (l1 l2 l: chunk_desc) : Lemma
+val chunk_desc_ge_concat_chunk_intro_r (l1 l2: chunk_desc) : Lemma
+  (chunk_desc_ge (l1 `concat_chunks` l2) l1)
+
+val chunk_desc_ge_concat_chunk_compat_r (l1 l2 l: chunk_desc) : Lemma
   (requires (chunk_desc_ge l1 l2))
   (ensures (chunk_desc_ge (l1 `concat_chunks` l) (l2 `concat_chunks` l)))
+
+val chunk_desc_ge_concat_chunk_compat_l (l1 l2 l: chunk_desc) : Lemma
+  (requires (chunk_desc_ge l1 l2))
+  (ensures (chunk_desc_ge (l `concat_chunks` l1) (l `concat_chunks` l2)))
 
 val chunk_desc_ge_zero_l (l0 l1: chunk_desc) : Lemma
   (requires (

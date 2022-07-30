@@ -7,24 +7,25 @@ noeq
 type chunk_desc
 = {
     chunk_p: bytes -> prop;
-    chunk_len: (input: bytes) -> Ghost nat (requires (chunk_p input)) (ensures (fun res -> res <= Seq.length input));
+    chunk_len: nat;
+    chunk_p_ge_len: (input: bytes) -> Lemma
+      (requires (chunk_p input))
+      (ensures (Seq.length input >= chunk_len));
     chunk_prefix: (input: bytes) -> (prefix: nat) -> Lemma
       (requires (
         chunk_p input /\
-        chunk_len input <= prefix /\
+        chunk_len <= prefix /\
         prefix <= Seq.length input
       ))
       (ensures (
-        chunk_p (Seq.slice input 0 prefix) /\
-        chunk_len (Seq.slice input 0 prefix) == chunk_len input
+        chunk_p (Seq.slice input 0 prefix)
       ));
     chunk_append: (input: bytes) -> (input': bytes) -> Lemma
       (requires (
         chunk_p input
       ))
       (ensures (
-        chunk_p (input `Seq.append` input') /\
-        chunk_len (input `Seq.append` input') == chunk_len input
+        chunk_p (input `Seq.append` input')
       ));
   }
 
@@ -48,16 +49,16 @@ let parse_chunk_unique
   (#t: Type)
   (p: parser k t)
   (v: t)
-  (input: bytes)
+  (input1 input2: bytes)
   (chunk1 chunk2: nat)
 : Lemma
   (requires (
-    parse_chunk p v input chunk1 /\
-    parse_chunk p v input chunk2
+    parse_chunk p v input1 chunk1 /\
+    parse_chunk p v input2 chunk2
   ))
   (ensures (chunk1 == chunk2))
-  [SMTPat (parse_chunk p v input chunk1); SMTPat (parse_chunk p v input chunk2)]
-= parse_injective p (Seq.slice input 0 chunk1) (Seq.slice input 0 chunk2)
+  [SMTPat (parse_chunk p v input1 chunk1); SMTPat (parse_chunk p v input2 chunk2)]
+= parse_injective p (Seq.slice input1 0 chunk1) (Seq.slice input2 0 chunk2)
 
 let parse_some_chunk_f
   (#k: parser_kind)
@@ -73,11 +74,13 @@ let get_chunk_length_f
   (#t: Type)
   (p: parser k t)
   (v: t)
-  (input: bytes)
-: Ghost nat
-    (requires parse_some_chunk_f p v input)
-    (ensures (fun chunk -> parse_chunk p v input chunk))
-= FStar.IndefiniteDescription.indefinite_description_ghost _ (parse_chunk p v input)
+: GTot nat
+= if FStar.StrongExcludedMiddle.strong_excluded_middle (exists (input: bytes) . parse_some_chunk_f p v input)
+  then
+    let input = FStar.IndefiniteDescription.indefinite_description_ghost _ (parse_some_chunk_f p v) in
+    FStar.IndefiniteDescription.indefinite_description_ghost _ (parse_chunk p v input)
+  else
+    0
 
 let parse_some_chunk
   (#k: parser_kind)
@@ -85,16 +88,16 @@ let parse_some_chunk
   (p: parser k t)
   (v: t)
 : Tot chunk_desc
-= {
+= let cl = get_chunk_length_f p v in
+  {
     chunk_p = parse_some_chunk_f p v;
-    chunk_len = get_chunk_length_f p v;
+    chunk_len = cl;
+    chunk_p_ge_len = (fun _ -> ());
     chunk_prefix = begin fun input prefix ->
-      let cl = get_chunk_length_f p v input in
       let input' = Seq.slice input 0 prefix in
       assert (parse_chunk p v input' cl)
     end;
     chunk_append = begin fun input input' ->
-      let cl = get_chunk_length_f p v input in
       assert (Seq.slice (input `Seq.append` input') 0 cl `Seq.equal` Seq.slice input 0 cl);
       assert (parse_chunk p v (input `Seq.append` input') cl)      
     end;
@@ -104,33 +107,27 @@ let concat_chunks_p
   (f1 f2: chunk_desc)
   (input: bytes)
 : Tot prop
-= f1.chunk_p input /\
-  f2.chunk_p (Seq.slice input (f1.chunk_len input) (Seq.length input))
-
-let concat_chunks_len
-  (f1 f2: chunk_desc)
-  (input: bytes)
-: Ghost nat
-    (requires (concat_chunks_p f1 f2 input))
-    (ensures (fun res -> res <= Seq.length input))
-= let cl = f1.chunk_len input in
-  cl + f2.chunk_len (Seq.slice input cl (Seq.length input))
+= 
+  f1.chunk_p input /\
+  Seq.length input >= f1.chunk_len /\
+  f2.chunk_p (Seq.slice input (f1.chunk_len) (Seq.length input))
 
 let concat_chunks
   (f1 f2: chunk_desc)
 : Tot chunk_desc
 = {
     chunk_p = concat_chunks_p f1 f2;
-    chunk_len = concat_chunks_len f1 f2;
+    chunk_len = f1.chunk_len + f2.chunk_len;
+    chunk_p_ge_len = (fun input -> f1.chunk_p_ge_len input; f2.chunk_p_ge_len (Seq.slice input f1.chunk_len (Seq.length input)));
     chunk_prefix = begin fun input prefix ->
       f1.chunk_prefix input prefix;
-      let cl = f1.chunk_len input in
+      let cl = f1.chunk_len in
       assert (Seq.slice (Seq.slice input cl (Seq.length input)) 0 (prefix - cl) `Seq.equal` Seq.slice (Seq.slice input 0 prefix) cl (Seq.length (Seq.slice input 0 prefix)));
       f2.chunk_prefix (Seq.slice input cl (Seq.length input)) (prefix - cl)
     end;
     chunk_append = begin fun input input' ->
       f1.chunk_append input input';
-      let cl = f1.chunk_len input in
+      let cl = f1.chunk_len in
       assert ((Seq.slice input cl (Seq.length input) `Seq.append` input') `Seq.equal` Seq.slice (input `Seq.append` input') cl (Seq.length (input `Seq.append` input')));
       f2.chunk_append (Seq.slice input cl (Seq.length input)) input'
     end;
@@ -141,7 +138,7 @@ let exact_chunk
   (input: bytes)
 : Tot prop
 = f.chunk_p input /\
-  f.chunk_len input == Seq.length input
+  f.chunk_len == Seq.length input
 
 let exact_chunk_parse_some_chunk'
   (#k: parser_kind)
@@ -164,11 +161,12 @@ let exact_chunk_parse_some_chunk
   (parse p b == Some (v, Seq.length b) <==> exact_chunk (parse_some_chunk p v) b)
 = Classical.move_requires (exact_chunk_parse_some_chunk' p v) b
 
-let exact_chunk_empty f = ()
+let exact_chunk_empty f = Classical.move_requires f.chunk_p_ge_len Seq.empty
 
 let exact_chunk_empty_unique f input =
   Seq.append_empty_l input;
   f.chunk_append Seq.empty input;
+  exact_chunk_empty f;
   assert (exact_chunk f input ==> input `Seq.equal` Seq.empty)
 
 let exact_chunk_concat_chunks_intro
@@ -190,16 +188,39 @@ let exact_chunk_intro
   (input: bytes)
 : Lemma
   (requires (f.chunk_p input))
-  (ensures (exact_chunk f (Seq.slice input 0 (f.chunk_len input))))
-= f.chunk_prefix input (f.chunk_len input)
+  (ensures (
+    Seq.length input >= f.chunk_len /\
+    exact_chunk f (Seq.slice input 0 (f.chunk_len))
+  ))
+= f.chunk_p_ge_len input;
+  f.chunk_prefix input (f.chunk_len)
+
+let exact_chunk_concat_chunks_elim'
+  (f12 f23: chunk_desc)
+  (input: bytes)
+: Lemma
+  (requires (
+    exact_chunk (f12 `concat_chunks` f23) input
+  ))
+  (ensures (
+    Seq.length input >= f12.chunk_len /\
+    begin
+      let input12 = Seq.slice input 0 f12.chunk_len in
+      let input23 = Seq.slice input f12.chunk_len (Seq.length input) in
+      exact_chunk f12 input12 /\
+      exact_chunk f23 input23 /\
+      input == input12 `Seq.append` input23
+    end
+  ))
+=
+  exact_chunk_intro f12 input;
+  let cl = f12.chunk_len in
+  Seq.lemma_split input cl
 
 let exact_chunk_concat_chunks_elim
   f12 f23 input
-=
-  exact_chunk_intro f12 input;
-  let cl = f12.chunk_len input in
-  Seq.lemma_split input cl;
-  Seq.split input cl
+= exact_chunk_concat_chunks_elim' f12 f23 input;
+  Seq.split input f12.chunk_len
 
 let array_chunk_prop
   (f: chunk_desc)
@@ -303,7 +324,7 @@ let ghost_elim_concat_chunks
   let _ = gen_elim () in
   let va0 = vpattern_replace (AP.arrayptr a) in
   exact_chunk_intro f1 (AP.contents_of' va0);
-  let cl = f1.chunk_len (AP.contents_of' va0) in
+  let cl = f1.chunk_len in
   let cl' = SZ.int_to_size_t cl in
   let ar = AP.gsplit a cl' in
   let _ = gen_elim () in
@@ -417,7 +438,8 @@ let rewrite_parse_some_chunk
 let empty_chunk : chunk_desc =
 {
   chunk_p = (fun _ -> True);
-  chunk_len = (fun _ -> 0);
+  chunk_len = 0;
+  chunk_p_ge_len = (fun _ -> ());
   chunk_prefix = (fun _ _ -> ());
   chunk_append = (fun _ _ -> ());
 }
@@ -462,6 +484,7 @@ let elim_empty_chunk
   let _ = gen_elim () in
   let va' = vpattern_replace (AP.arrayptr a) in
   f.chunk_append Seq.empty (AP.contents_of' va');
+  exact_chunk_empty f;
   assert (AP.contents_of' va' `Seq.equal` (Seq.empty `Seq.append` AP.contents_of' va'));
   noop ();
   va'
@@ -469,29 +492,24 @@ let elim_empty_chunk
 (* The failing case: what if the output buffer is too small to accommodate the output? *)
 
 let chunk_desc_ge (larger smaller: chunk_desc) : Tot prop =
-  forall (b: bytes) . exact_chunk larger b ==> (exists (n: nat) . n <= Seq.length b /\ exact_chunk smaller (Seq.slice b n (Seq.length b)))
+  (exists b . larger.chunk_p b) ==> (
+    (exists b . smaller.chunk_p b) /\
+    larger.chunk_len >= smaller.chunk_len
+  )
 
 let chunk_exceeds_limit
   (c: chunk_desc)
   (limit: nat)
 : Tot prop
-= forall b0 . exact_chunk c b0 ==> Seq.length b0 > limit
+= (exists b . c.chunk_p b) ==>
+  c.chunk_len > limit
 
-let reveal_chunk_exceeds_limit c limit = ()
+let reveal_chunk_exceeds_limit c limit =
+  Classical.forall_intro (Classical.move_requires c.chunk_p_ge_len);
+  Classical.forall_intro (Classical.move_requires (exact_chunk_intro c))
 
-let chunk_desc_ge_implies'
-  (larger smaller: chunk_desc)
-  (b: bytes)
-  (limit: nat)
-: Lemma
-  (requires (
-    chunk_desc_ge larger smaller /\
-    chunk_exceeds_limit smaller limit /\
-    exact_chunk larger b
-  ))
-  (ensures (
-    Seq.length b > limit
-  ))
+let chunk_exceeds_limit_concat_r
+  c limit c' b
 = ()
 
 let chunk_desc_ge_implies
@@ -507,34 +525,6 @@ let chunk_desc_ge_implies
   ))
 = ()
 
-let chunk_desc_ge_elim (larger smaller: chunk_desc)
-  (b: bytes)
-: Ghost nat
-    (requires (
-      chunk_desc_ge larger smaller /\
-      exact_chunk larger b
-    ))
-    (ensures (fun n ->
-      n <= Seq.length b /\
-      exact_chunk smaller (Seq.slice b n (Seq.length b))
-    ))
-= FStar.IndefiniteDescription.indefinite_description_ghost _ (fun n -> n <= Seq.length b /\ exact_chunk smaller (Seq.slice b n (Seq.length b))) 
-
-let chunk_desc_ge_intro (larger smaller: chunk_desc)
-  (f: (
-    (b: bytes) -> Lemma
-    (requires (
-      exact_chunk larger b
-    ))
-    (ensures (exists (n: nat) .
-      n <= Seq.length b /\
-      exact_chunk smaller (Seq.slice b n (Seq.length b))
-    ))
-  ))
-: Lemma
-  (chunk_desc_ge larger smaller)
-= Classical.forall_intro (Classical.move_requires f)
-
 let chunk_desc_ge_intro_exact (larger smaller: chunk_desc)
   (f: (
     (b: bytes) -> Lemma
@@ -547,22 +537,8 @@ let chunk_desc_ge_intro_exact (larger smaller: chunk_desc)
   ))
 : Lemma
   (chunk_desc_ge larger smaller)
-= chunk_desc_ge_intro larger smaller (fun b -> f b)
-
-let chunk_desc_ge_intro' (larger smaller: chunk_desc)
-  (f: (
-    (b: bytes) -> Ghost nat
-    (requires (
-      exact_chunk larger b
-    ))
-    (ensures (fun n ->
-      n <= Seq.length b /\
-      exact_chunk smaller (Seq.slice b n (Seq.length b))
-    ))
-  ))
-: Lemma
-  (chunk_desc_ge larger smaller)
-= chunk_desc_ge_intro larger smaller (fun b -> let _ = f b in ())
+= Classical.forall_intro (Classical.move_requires f);
+  Classical.forall_intro (Classical.move_requires (exact_chunk_intro larger))
 
 let chunk_desc_ge_refl (l: chunk_desc) : Lemma
   (chunk_desc_ge l l)
@@ -579,25 +555,68 @@ let chunk_desc_ge_zero (l1 l2: chunk_desc) : Lemma
   (ensures (
     chunk_desc_ge l1 l2
   ))
-= ()
+= l2.chunk_p_ge_len Seq.empty
 
-let chunk_desc_ge_concat_chunk_intro (l1 l2: chunk_desc) : Lemma
+let chunk_desc_ge_concat_chunk_intro_l (l1 l2: chunk_desc) : Lemma
   (chunk_desc_ge (l1 `concat_chunks` l2) l2)
 = ()
 
-let chunk_desc_ge_concat_chunk_compat (l1 l2 l: chunk_desc) : Lemma
+let chunk_desc_ge_concat_chunk_intro_r (l1 l2: chunk_desc) : Lemma
+  (chunk_desc_ge (l1 `concat_chunks` l2) l1)
+= ()
+
+let chunk_desc_ge_intro_exists (larger smaller: chunk_desc)
+  (sq: squash (
+    ((exists i . larger.chunk_p i) /\ (exists i . smaller.chunk_p i)) ==>
+    larger.chunk_len >= smaller.chunk_len
+  ))
+  (f:
+    (i: bytes) ->
+    Lemma
+      (requires (larger.chunk_p i))
+      (ensures (exists j . smaller.chunk_p j))
+  )
+: Lemma
+  (larger `chunk_desc_ge` smaller)
+= Classical.forall_intro (Classical.move_requires f)
+
+(*
+let chunk_desc_ge_intro_exists (larger smaller: chunk_desc)
+  (sq: squash (
+    ((exists i . larger.chunk_p i) /\ (exists i . smaller.chunk_p i)) ==>
+    larger.chunk_len >= smaller.chunk_len
+  ))
+  (f:
+    (i: bytes) ->
+    Ghost bytes
+      (requires (larger.chunk_p i))
+      (ensures (fun j -> smaller.chunk_p j))
+  )
+: Lemma
+  (larger `chunk_desc_ge` smaller)
+= assert (forall i . larger.chunk_p i ==> smaller.chunk_p (f i))
+*)
+
+let chunk_desc_ge_concat_chunk_compat_r (l1 l2 l: chunk_desc) : Lemma
   (requires (chunk_desc_ge l1 l2))
   (ensures (chunk_desc_ge (l1 `concat_chunks` l) (l2 `concat_chunks` l)))
-= chunk_desc_ge_intro (l1 `concat_chunks` l) (l2 `concat_chunks` l) (fun b ->
-    let cl = l1.chunk_len b in
-    exact_chunk_intro l1 b;
-    let br = Seq.slice b cl (Seq.length b) in
-    assert (exact_chunk l br);
-    let bl = Seq.slice b 0 cl in
-    let n = chunk_desc_ge_elim l1 l2 bl in
-    let suff = Seq.slice bl n (Seq.length bl) in
-    exact_chunk_concat_chunks_intro l2 l suff br;
-    assert (Seq.slice b n (Seq.length b) `Seq.equal` (suff `Seq.append` br))
+= chunk_desc_ge_intro_exists (l1 `concat_chunks` l) (l2 `concat_chunks` l) ()
+  (fun i ->
+    exact_chunk_intro (l1 `concat_chunks` l) i;
+    let (i1', i') = exact_chunk_concat_chunks_elim l1 l (Seq.slice i 0 (l1 `concat_chunks` l).chunk_len) in
+    let i2 = FStar.IndefiniteDescription.indefinite_description_ghost _ l2.chunk_p in
+    exact_chunk_intro l2 i2;
+    exact_chunk_concat_chunks_intro l2 l (Seq.slice i2 0 l2.chunk_len) i'
+  )
+
+let chunk_desc_ge_concat_chunk_compat_l l1 l2 l =
+  chunk_desc_ge_intro_exists (l `concat_chunks` l1) (l `concat_chunks` l2) ()
+  (fun i ->
+    exact_chunk_intro (l `concat_chunks` l1) i;
+    let (i', i1') = exact_chunk_concat_chunks_elim l l1 (Seq.slice i 0 (l `concat_chunks` l1).chunk_len) in
+    let i2 = FStar.IndefiniteDescription.indefinite_description_ghost _ l2.chunk_p in
+    exact_chunk_intro l2 i2;
+    exact_chunk_concat_chunks_intro l l2 i' (Seq.slice i2 0 l2.chunk_len)
   )
 
 let chunk_desc_ge_zero_l (l0 l1: chunk_desc) : Lemma
@@ -640,7 +659,8 @@ let chunk_exceeds_limit_intro_serialize
 : Lemma
   (requires (Seq.length (serialize s x) > limit))
   (ensures (chunk_exceeds_limit (parse_some_chunk p x) limit))
-= let prf
+= reveal_chunk_exceeds_limit (parse_some_chunk p x) limit; 
+  let prf
     (b0: bytes)
   : Lemma
     (requires (exact_chunk (parse_some_chunk p x) b0))
