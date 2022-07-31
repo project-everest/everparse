@@ -969,6 +969,7 @@ let run_prog
   (#ty: typ)
   (#p: prog ser_state ser_action ty ret_t (initial_ser_index root) (final_ser_index root))
   (i: prog_impl_t p)
+  ()
   (#vbin: _)
   (#vbout: AP.v byte)
   (#vret: Ghost.erased ret_t)

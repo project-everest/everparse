@@ -40,7 +40,7 @@ krml/%.krml:
 	@touch $@
 
 $(DEPEND_FILE): $(QD_FILES) Makefile ../Test.fst
-	$(FSTAR) --dep full --extract '*,-Steel,+Steel.Loops,-FStar.NMST,-FStar.NMSTTotal,-FStar.MST,-FStar.MSTTotal' $(QD_FILES) Test.fst > $@
+	$(FSTAR) --dep full --extract '*,-Steel,+Steel.Loops,-FStar.NMST,-FStar.NMSTTotal,-FStar.MST,-FStar.MSTTotal,-LowParse.SteelST.Fold' $(QD_FILES) Test.fst > $@
 
 depend: $(DEPEND_FILE)
 

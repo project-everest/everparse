@@ -14,6 +14,35 @@ open LowParse.SteelST.List
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 
+module F = LowParse.SteelST.Fold
+
+let test_prog_1 = F.run_prog
+  (F.impl_bind
+    _
+    (F.impl_u8 (F.initial_ser_index F.TU8))
+    _
+    (fun w ->
+      F.impl_action
+        _
+        (F.impl_ser_u8 w ())
+        _
+    )
+  )
+
+(* // FIXME: this one OOMs at F* extraction to krml
+let test_prog_2 = F.run_prog
+      (F.impl_bind
+        _
+        (F.impl_action _ (F.impl_ser_u8 #_ #(F.initial_ser_index F.TU8) 42uy ()) _)
+        _
+        (fun _ -> F.impl_list
+          _
+          (F.impl_ret #_ #_ #_ #F.TU8 ())
+          (jump_weaken F.pkind (jump_constant_size parse_u8  SZ.one_size) ())
+        )
+      )
+*)
+
 inline_for_extraction noextract
 let u16_max (x1 x2: U16.t) : Tot U16.t
 = if x1 `U16.lte` x2 then x2 else x1
@@ -53,7 +82,7 @@ let iter_max
     rewrite (state _ _) emp;
     return res
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 128"
 
 let test (a: byte_array) (#va: _) (len: SZ.size_t) (perr: R.ref U32.t)
 : ST U16.t
