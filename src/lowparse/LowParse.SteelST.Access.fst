@@ -49,22 +49,22 @@ let hop_arrayptr_aparse
   return res
 
 inline_for_extraction
-let hop_aparse_arrayptr
+let hop_aparse_arrayptr_with_size
   (#k: parser_kind)
   (#t: Type)
-  (#p: parser k t)
-  (j: jumper p)
+  (p: parser k t)
   (#va1: _)
   (#va2: _)
   (a1: byte_array)
+  (sz: SZ.size_t)
   (a2: Ghost.erased byte_array)
 : ST byte_array
     (aparse p a1 va1 `star` AP.arrayptr a2 va2)
     (fun res -> aparse p a1 va1 `star` AP.arrayptr res va2)
-    (AP.adjacent (array_of va1) (AP.array_of va2))
+    (AP.adjacent (array_of va1) (AP.array_of va2) /\
+      SZ.size_v sz == AP.length (array_of va1))
     (fun res -> res == Ghost.reveal a2)
 = let _ = elim_aparse p a1 in
-  let sz = j a1 in
   let res = AP.split' a1 sz a2 in
   let _ = gen_elim () in
   let va1' = intro_aparse p a1 in
@@ -72,25 +72,26 @@ let hop_aparse_arrayptr
   return res
 
 inline_for_extraction
-let hop_aparse_aparse
+let hop_aparse_aparse_with_size
   (#k1: parser_kind)
   (#t1: Type)
-  (#p1: parser k1 t1)
-  (j1: jumper p1)
+  (p1: parser k1 t1)
   (#k2: _)
   (#t2: _)
   (p2: parser k2 t2)
   (#va1: _)
   (#va2: _)
   (a1: byte_array)
+  (sz: SZ.size_t)
   (a2: Ghost.erased byte_array)
 : ST byte_array
     (aparse p1 a1 va1 `star` aparse p2 a2 va2)
     (fun res -> aparse p1 a1 va1 `star` aparse p2 res va2)
-    (AP.adjacent (array_of va1) (array_of va2))
+    (AP.adjacent (array_of va1) (array_of va2) /\
+      SZ.size_v sz == AP.length (array_of va1))
     (fun res -> res == Ghost.reveal a2)
 = let _ = elim_aparse p2 a2 in
-  let res = hop_aparse_arrayptr j1 a1 a2 in
+  let res = hop_aparse_arrayptr_with_size p1 a1 sz a2 in
   let va2' = intro_aparse p2 res in
   rewrite (aparse p2 res va2') (aparse p2 res va2);
   return res
@@ -130,6 +131,48 @@ let get_parsed_size
   let _ = elim_aparse p a in
   let res = j a in
   let _ = intro_aparse p a in
+  return res
+
+inline_for_extraction
+let hop_aparse_arrayptr
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (#va1: _)
+  (#va2: _)
+  (a1: byte_array)
+  (a2: Ghost.erased byte_array)
+: ST byte_array
+    (aparse p a1 va1 `star` AP.arrayptr a2 va2)
+    (fun res -> aparse p a1 va1 `star` AP.arrayptr res va2)
+    (AP.adjacent (array_of va1) (AP.array_of va2))
+    (fun res -> res == Ghost.reveal a2)
+= let sz = get_parsed_size j a1 in
+  hop_aparse_arrayptr_with_size p a1 sz a2
+
+inline_for_extraction
+let hop_aparse_aparse
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (j1: jumper p1)
+  (#k2: _)
+  (#t2: _)
+  (p2: parser k2 t2)
+  (#va1: _)
+  (#va2: _)
+  (a1: byte_array)
+  (a2: Ghost.erased byte_array)
+: ST byte_array
+    (aparse p1 a1 va1 `star` aparse p2 a2 va2)
+    (fun res -> aparse p1 a1 va1 `star` aparse p2 res va2)
+    (AP.adjacent (array_of va1) (array_of va2))
+    (fun res -> res == Ghost.reveal a2)
+= let _ = elim_aparse p2 a2 in
+  let res = hop_aparse_arrayptr j1 a1 a2 in
+  let va2' = intro_aparse p2 res in
+  rewrite (aparse p2 res va2') (aparse p2 res va2);
   return res
 
 let parse'
