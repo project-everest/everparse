@@ -1065,6 +1065,57 @@ let list_iter_gen
 
 #pop-options
 
+unfold
+let list_iter_consumes_with_array_body_post0
+  (k: parser_kind)
+  (#t: Type)
+  (#t': Type)
+  (phi: Ghost.erased (t' -> t -> t'))
+  (va: v k t { AP.length (array_of' va) > 0 })
+  (al: AP.array byte { AP.adjacent al (array_of' va) })
+  (accu: t')
+  (l: Ghost.erased (list t))
+  (al': AP.array byte)
+  (l': list t)
+  (res: t')
+: Tot prop
+=
+  AP.merge_into al (array_of' va) al' /\
+  l' == List.Tot.snoc (Ghost.reveal l, va.contents) /\
+  res == Ghost.reveal phi accu va.contents
+
+let list_iter_consumes_with_array_body_post
+  (k: parser_kind)
+  (#t: Type)
+  (#t': Type)
+  (phi: Ghost.erased (t' -> t -> t'))
+  (va: v k t { AP.length (array_of' va) > 0 })
+  (al: AP.array byte { AP.adjacent al (array_of' va) })
+  (accu: t')
+  (l: Ghost.erased (list t))
+  (al': AP.array byte)
+  (l': list t)
+  (res: t')
+: Tot prop
+= list_iter_consumes_with_array_body_post0 k phi va al accu l al' l' res
+
+let list_iter_consumes_with_array_body_post_intro
+  (k: parser_kind)
+  (#t: Type)
+  (#t': Type)
+  (phi: Ghost.erased (t' -> t -> t'))
+  (va: v k t { AP.length (array_of' va) > 0 })
+  (al: AP.array byte { AP.adjacent al (array_of' va) })
+  (accu: t')
+  (l: Ghost.erased (list t))
+  (al': AP.array byte)
+  (l': list t)
+  (res: t')
+: Lemma
+  (requires (list_iter_consumes_with_array_body_post0 k phi va al accu l al' l' res))
+  (ensures (list_iter_consumes_with_array_body_post k phi va al accu l al' l' res))
+= ()
+
 inline_for_extraction
 let list_iter_consumes_with_array
   (#k: parser_kind)
@@ -1083,9 +1134,7 @@ let list_iter_consumes_with_array
     STT t'
       (aparse p a va `star` state al accu l)
       (fun res -> exists_ (fun al' -> exists_ (fun l' -> state al' res l' `star` pure (
-        AP.merge_into al (array_of' va) al' /\
-        l' == List.Tot.snoc (Ghost.reveal l, va.contents) /\
-        res == Ghost.reveal phi accu va.contents
+        list_iter_consumes_with_array_body_post k phi va al accu l al' l' res
   ))))))
   (#va: _)
   (a: byte_array)
@@ -1136,6 +1185,127 @@ let list_iter_consumes_with_array
   let al' = vpattern_replace_erased (fun al' -> state0 al' _ _) in
   rewrite (state0 _ _ _) (state (Some?.v al') res va.contents);
   return res
+
+unfold
+let list_length_state_prop0
+  (#t: Type)
+  (ar: AP.array byte)
+  (l: list t)
+  (vl: v parse_list_kind (list t))
+  (len: SZ.size_t)
+: Tot prop
+=
+  ar == array_of' vl /\
+  l == vl.contents /\
+  SZ.size_v len <= AP.length ar /\ // necessary to prevent integer overflow; true since each element consumes at least one byte
+  SZ.size_v len == List.Tot.length l
+
+let list_length_state_prop
+  (#t: Type)
+  (ar: AP.array byte)
+  (l: list t)
+  (vl: v parse_list_kind (list t))
+  (len: SZ.size_t)
+: Tot prop
+= list_length_state_prop0 ar l vl len
+
+[@@__reduce__]
+let list_length_state0
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (a0: byte_array)
+  (blen: R.ref SZ.size_t)
+  (ar: AP.array byte)
+  ()
+  (l: list t)
+: Tot vprop
+= exists_ (fun (vl: v _ _) -> exists_ (fun len ->
+    aparse (parse_list p) a0 vl `star`
+    R.pts_to blen full_perm len `star`
+    pure (
+      list_length_state_prop ar l vl len
+    )
+  ))
+
+let list_length_state
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (a0: byte_array)
+  (blen: R.ref SZ.size_t)
+  (ar: AP.array byte)
+  ()
+  (l: list t)
+: Tot vprop
+= list_length_state0 p a0 blen ar () l
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+inline_for_extraction
+let list_length
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (#va0: v _ _)
+  (a0: byte_array)
+  (len: SZ.size_t)
+: ST SZ.size_t
+    (aparse (parse_list p) a0 va0)
+    (fun _ -> aparse (parse_list p) a0 va0)
+    (SZ.size_v len == AP.length (array_of' va0) /\
+      k.parser_kind_subkind == Some ParserStrong)
+    (fun res -> SZ.size_v res == List.Tot.length va0.contents)
+= let a1 = list_split_nil_l _ a0 in
+  let _ = gen_elim () in
+  let vl : v _ _ = vpattern (aparse (parse_list p) a0) in
+  let ar = array_of' vl in
+  let phi (_: unit) (_: t) : Tot unit = () in
+  with_local SZ.zero_size (fun blen ->
+    noop ();
+    rewrite
+      (list_length_state0 p a0 blen ar () [])
+      (list_length_state p a0 blen ar () []);
+    list_iter_consumes_with_array
+      j
+      phi
+      (list_length_state p a0 blen)
+      (fun va a al accu l ->
+        rewrite
+          (list_length_state p a0 blen al _ l)
+          (list_length_state0 p a0 blen al () l);
+        let _ = gen_elim () in
+        let len = R.read blen in
+        let _ = intro_singleton _ a in
+        let vl' = list_append _ a0 a in
+        let al' = array_of' vl' in
+        let l' = Ghost.hide (List.Tot.snoc (Ghost.reveal l, va.contents)) in
+        List.Tot.append_length l [va.contents];
+        let len' = len `SZ.size_add` SZ.one_size in
+        R.write blen len';
+        list_iter_consumes_with_array_body_post_intro k phi va al accu l al' l' ();
+        noop ();
+        rewrite
+          (list_length_state0 p a0 blen al' () l')
+          (list_length_state p a0 blen al' () l');
+        return ()
+      )
+      a0
+      len
+      ar
+      ();
+    let _ = gen_elim () in
+    rewrite
+      (list_length_state p a0 blen _ _ _)
+      (list_length_state0 p a0 blen (array_of' va0) () va0.contents);
+    let _ = gen_elim () in
+    let res = R.read blen in
+    return (res <: (res: SZ.size_t { SZ.size_v res == List.Tot.length va0.contents }))
+  )
+
+#pop-options
 
 inline_for_extraction
 let list_iter_consumes
@@ -1426,9 +1596,10 @@ let list_map_inplace_le_opt
   rewrite
     (list_map_inplace_le_opt_state0 p' phi out pout plen al0 () [])
     (list_map_inplace_le_opt_state p' phi out pout plen al0 () []);
+  let psi (_: unit) (_: t) : Tot unit = () in
   list_iter_consumes_with_array
     j
-    (fun _ _ -> ())
+    psi
     (list_map_inplace_le_opt_state p' phi out pout plen)
     (fun va1 a1 al1 accu l ->
       rewrite
@@ -1451,6 +1622,7 @@ let list_map_inplace_le_opt
       let al1' = AP.merge al1 (array_of' va1) in
       let l' = Ghost.hide (l `List.Tot.append` [va1.contents]) in
       List.Tot.map_append phi l [va1.contents];
+      list_iter_consumes_with_array_body_post_intro k psi va1 al1 accu l al1' l' ();
       noop ();
       rewrite
         (list_map_inplace_le_opt_state0 p' phi out pout plen al1' () l')
@@ -1589,13 +1761,14 @@ let list_map_inplace_eq
   let _ = elim_nil p a in
   let va0 = intro_nil p' a in
   let al = array_of' va0 in
+  let psi (_: unit) (_: t) : Tot unit = () in
   noop ();
   rewrite
     (list_map_inplace_eq_state0 p' phi a al () [])
     (list_map_inplace_eq_state p' phi a al () []);
   list_iter_consumes_with_array
     j
-    (fun _ _ -> ())
+    psi
     (list_map_inplace_eq_state p' phi a)
     (fun va1 a1 al1 accu l ->
       rewrite
@@ -1609,6 +1782,7 @@ let list_map_inplace_eq
       let al1' = array_of' va' in
       let l' = Ghost.hide (l `List.Tot.append` [va1.contents]) in
       List.Tot.map_append phi l [va1.contents];
+      list_iter_consumes_with_array_body_post_intro k psi va1 al1 accu l al1' l' ();
       noop ();
       rewrite
         (list_map_inplace_eq_state0 p' phi a al1' () l')
