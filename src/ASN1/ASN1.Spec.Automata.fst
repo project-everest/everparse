@@ -74,7 +74,8 @@ type automata_data_param (cp : automata_control_param) = {
                    (data : partial_t {pre_t state data}) ->
                    (ch : cp.ch_t {cp.fail_check state ch = false /\ cp.termination_check state ch = false}) ->
                    (ret : ret_t) ->
-                   (post_t (cp.next_state state ch) (update_next state data ch) ret ==> post_t state data ret)
+                   Lemma (requires (post_t (cp.next_state state ch) (update_next state data ch) ret))
+                         (ensures (post_t state data ret))
 }
 
 (*
@@ -104,17 +105,14 @@ let automata_cp_dp_small_step
 noeq
 type automata_bare_parser_param (cp : automata_control_param) = {
   ch_t_bare_parser : bare_parser cp.ch_t;
-  ch_t_bare_parser_valid : ((b : bytes) ->
-    Lemma (match (parse ch_t_bare_parser b) with
-                    | Some (_, n) -> n > 0
-                    | None -> True))
+  ch_t_bare_parser_valid : unit -> Lemma (parses_at_least 1 ch_t_bare_parser)
 }
 
 let id_cast
   (t : eqtype)
   (p1 : t -> Type0)
   (p2 : t -> Type0)
-  (lem : (x : t -> (Lemma (p1 x ==> p2 x))))
+  (lem : (x : t -> (Lemma (requires p1 x) (ensures p2 x))))
   (x : t {p1 x})
 : (x' : t {p2 x'})
 = let _ = lem x in
@@ -141,7 +139,7 @@ let rec automata_bare_parser'
         (
         let s' = cp.next_state s ch in
         let data' = dp.update_next s data ch in
-        let _ = bp.ch_t_bare_parser_valid b in
+        let _ = bp.ch_t_bare_parser_valid () in
         let (b' : bytes{Seq.length b' < Seq.length b}) = Seq.slice b l (Seq.length b) in
         match (automata_bare_parser' cp dp bp s' data' b') with
         | None -> None
@@ -279,10 +277,10 @@ let rec automata_bare_parser'_pf1_aux
       let s'1 = cp.next_state s ch1 in
       let s'2 = cp.next_state s ch2 in
       let x'1 = dp.update_next s x1 ch1 in
-      let _ = bp.ch_t_bare_parser_valid b1 in
+      let _ = bp.ch_t_bare_parser_valid () in
       let (b'1 : bytes{Seq.length b'1 < Seq.length b1}) = Seq.slice b1 l01 (Seq.length b1) in
       let x'2 = dp.update_next s x2 ch2 in
-      let _ = bp.ch_t_bare_parser_valid b2 in
+      let _ = bp.ch_t_bare_parser_valid () in
       let (b'2 : bytes{Seq.length b'2 < Seq.length b2}) = Seq.slice b2 l02 (Seq.length b2) in
       if s'1 = s'2 then
       (
@@ -343,9 +341,9 @@ let rec automata_bare_parser'_pf2_aux
     (
       let s' = cp.next_state s ch1 in
       let x' = dp.update_next s x ch1 in
-      let _ = bp.ch_t_bare_parser_valid b1 in
+      let _ = bp.ch_t_bare_parser_valid () in
       let (b'1 : bytes{Seq.length b'1 < Seq.length b1}) = Seq.slice b1 l01 (Seq.length b1) in
-      let _ = bp.ch_t_bare_parser_valid b2 in
+      let _ = bp.ch_t_bare_parser_valid () in
       let (b'2 : bytes{Seq.length b'2 < Seq.length b2}) = Seq.slice b2 l01 (Seq.length b2) in
       automata_bare_parser'_pf2_aux cp dp bp pp s' x' b'1 b'2
     )
@@ -408,9 +406,9 @@ let rec automata_bare_parser'_pf3_aux
       let s'2 = cp.next_state s ch2 in
       let x'1 = dp.update_next s x ch1 in
       let x'2 = dp.update_next s x ch2 in
-      let _ = bp.ch_t_bare_parser_valid b1 in
+      let _ = bp.ch_t_bare_parser_valid () in
       let (b'1 : bytes{Seq.length b'1 < Seq.length b1}) = Seq.slice b1 l01 (Seq.length b1) in
-      let _ = bp.ch_t_bare_parser_valid b2 in
+      let _ = bp.ch_t_bare_parser_valid () in
       let (b'2 : bytes{Seq.length b'2 < Seq.length b2}) = Seq.slice b2 l02 (Seq.length b2) in
       if s'1 = s'2 then
       (

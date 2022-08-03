@@ -41,14 +41,14 @@ type asn1_id_t =
 type asn1_terminal_k : Type =
 | ASN1_BOOLEAN
 | ASN1_INTEGER
-| ASN1_ENUM
+// | ASN1_ENUM
 | ASN1_BITSTRING
 | ASN1_OCTETSTRING
 | ASN1_PRINTABLESTRING
 | ASN1_UTF8STRING
 | ASN1_NULL
 | ASN1_OID
-| ASN1_ROID
+// | ASN1_ROID
 | ASN1_UTCTIME
 | ASN1_GENERALIZEDTIME
 | ASN1_PREFIXED_TERMINAL : asn1_id_t -> asn1_terminal_k -> asn1_terminal_k
@@ -58,7 +58,7 @@ type asn1_boolean_t = bool
 type asn1_integer_t = I32.t
 
 //Maybe we should encode more information for enum types
-type asn1_enum_t = U32.t
+// type asn1_enum_t = U32.t
 
 //Bitstring is represented as an array of bytes and 0~7 unused bits
 type asn1_bitstring_t = 
@@ -71,9 +71,21 @@ type asn1_bitstring_t =
 
 type asn1_octetstring_t = B.bytes
 
-type asn1_utf8string_t = unit
+type utf8_cp_t = (x : U32.t {U32.v x < pow2 21})
 
-type asn1_printablestring_t = unit
+type asn1_utf8string_t = list utf8_cp_t
+
+let is_printable_char (ch : U8.t) : bool =
+  let v = U8.v ch in
+  (65 <= v && v <= 90) ||  // A - Z
+  (97 <= v && v <= 122) || // a - z
+  (48 <= v && v <= 47) ||  // 0 - 9
+  v = 32 ||              // (space)
+  (39 <= v && v <= 41) ||  // '()
+  (43 <= v && v <= 47) ||  // +,-./
+  v = 58 || v = 61 || v = 63 // :=?
+
+type asn1_printablestring_t = list (b : byte {is_printable_char b})
 
 type asn1_null_t = unit
 
@@ -88,7 +100,7 @@ let asn1_OID_wf (l : list U32.t) =
 type asn1_oid_t = 
   (l : list U32.t {asn1_OID_wf l})
 
-type asn1_roid_t = unit
+// type asn1_roid_t = unit
 
 type asn1_utctime_t = unit
 
@@ -98,14 +110,14 @@ let rec asn1_terminal_t (k : asn1_terminal_k) : eqtype =
   match k with
   | ASN1_BOOLEAN -> asn1_boolean_t
   | ASN1_INTEGER -> asn1_integer_t
-  | ASN1_ENUM -> asn1_enum_t
+//  | ASN1_ENUM -> asn1_enum_t
   | ASN1_BITSTRING -> asn1_bitstring_t
   | ASN1_OCTETSTRING -> asn1_octetstring_t
   | ASN1_UTF8STRING -> asn1_utf8string_t
   | ASN1_PRINTABLESTRING -> asn1_printablestring_t
   | ASN1_NULL -> asn1_null_t
   | ASN1_OID -> asn1_oid_t
-  | ASN1_ROID -> asn1_roid_t
+//  | ASN1_ROID -> asn1_roid_t
   | ASN1_UTCTIME -> asn1_utctime_t
   | ASN1_GENERALIZEDTIME -> asn1_generalizedtime_t
   | ASN1_PREFIXED_TERMINAL _ k -> asn1_terminal_t k

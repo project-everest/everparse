@@ -5,8 +5,11 @@ include LowParse.Spec.Combinators
 
 open ASN1.Base
 open ASN1.Spec.Content.BOOLEAN
+open ASN1.Spec.Content.INTEGER
 open ASN1.Spec.Content.BITSTRING
 open ASN1.Spec.Content.OCTETSTRING
+open ASN1.Spec.Content.UTF8STRING
+open ASN1.Spec.Content.PRINTABLESTRING
 open ASN1.Spec.Content.NULL
 open ASN1.Spec.Content.OIDU32
 
@@ -19,18 +22,16 @@ module List = FStar.List.Tot
 let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   match k with
   | ASN1_BOOLEAN -> weaken _ parse_asn1_boolean
+  | ASN1_INTEGER -> weaken _ parse_untagged_int32
   | ASN1_BITSTRING -> parse_asn1_bitstring
   | ASN1_OCTETSTRING -> parse_asn1_octetstring
+  | ASN1_UTF8STRING -> parse_asn1_utf8string
+  | ASN1_PRINTABLESTRING -> parse_asn1_printablestring
   | ASN1_NULL -> parse_asn1_null
   | ASN1_OID -> parse_asn1_OIDU32
+  | ASN1_UTCTIME -> fail_parser _ _ (* admit *)
+  | ASN1_GENERALIZEDTIME -> fail_parser _ _ (* admit *)
   | ASN1_PREFIXED_TERMINAL id k -> weaken asn1_weak_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (asn1_terminal_as_parser k))
-  | _ -> fail_parser _ _  (* admit *)
-(*
-  | ASN1_INTEGER -> admit ()
-  | ASN1_ENUM -> admit ()
-  | ASN1_ROID -> admit ()
-  | ASN1_TIME -> admit ()
-*)  
 
 and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_content_t k)) (decreases k) =
   match k with
@@ -39,8 +40,8 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
   | ASN1_SEQUENCE_OF k' -> fail_parser _ _ (* admit Seq.seq (asn1_t k') *)
   | ASN1_SET_OF k' -> weaken _ (asn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (asn1_as_parser k')
-  | ASN1_ANY_OID ls pf -> fail_parser _ _
-  | ASN1_ANY_INTEGER ls pf -> fail_parser _ _
+  | ASN1_ANY_OID ls pf -> fail_parser _ _ (* admit *)
+  | ASN1_ANY_INTEGER ls pf -> fail_parser _ _ (* admit *)
 
 and asn1_lc_as_parser (lc : list (asn1_id_t & asn1_content_k)) : Tot (lp : list (asn1_id_t & gen_parser) {asn1_lc_t lc == extract_types lp})  (decreases lc) =
   match lc with
