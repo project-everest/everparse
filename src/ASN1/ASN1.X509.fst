@@ -105,7 +105,7 @@ let serialNumber_ilc
 
 let algorithmIdentifier_ilc
 = ASN1_ILC sequence_id
-    (ASN1_ANY_OID supported_algorithms supported_algorithms_wf)
+    (ASN1_ANY_OID oid_id supported_algorithms supported_algorithms_wf)
 
 let signature_ilc = algorithmIdentifier_ilc
 

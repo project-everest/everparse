@@ -201,11 +201,13 @@ type asn1_content_k : Type =
 //| ASN1_SET : #s : _ -> asn1_set_k s -> asn1_content_k
 | ASN1_SET_OF : #s : _ -> asn1_k s -> asn1_content_k
 | ASN1_PREFIXED : #s : _ -> asn1_k s -> asn1_content_k
-| ASN1_ANY_OID : supported : list (asn1_oid_t * asn1_gen_item_k) -> 
-                 pf : squash (List.noRepeats (List.map fst supported)) -> 
+| ASN1_ANY_OID : asn1_id_t ->
+                 supported : list (asn1_oid_t * asn1_gen_item_k) -> 
+                 pf : squash ((Cons? supported) /\ List.noRepeats (List.map fst supported)) -> 
                  asn1_content_k
-| ASN1_ANY_INTEGER : supported : list (asn1_integer_t * asn1_gen_item_k) -> 
-                 pf : squash (List.noRepeats (List.map fst supported)) -> 
+| ASN1_ANY_INTEGER : asn1_id_t ->
+                 supported : list (asn1_integer_t * asn1_gen_item_k) -> 
+                 pf : squash ((Cons? supported) /\ List.noRepeats (List.map fst supported)) -> 
                  asn1_content_k
 
 // The complete ASN.1 kind is indexed by the set of valid first identifiers
@@ -279,11 +281,11 @@ let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
   match k with
   | ASN1_TERMINAL k' -> asn1_terminal_t k'
   | ASN1_SEQUENCE items pf -> asn1_sequence_t items
-  | ASN1_SEQUENCE_OF k' -> Seq.seq (asn1_t k')
+  | ASN1_SEQUENCE_OF k' ->  list (asn1_t k')
   | ASN1_SET_OF k' -> asn1_t k'
   | ASN1_PREFIXED k' -> asn1_t k'
-  | ASN1_ANY_OID ls pf -> make_gen_choice_type (asn1_any_t asn1_oid_t ls)
-  | ASN1_ANY_INTEGER ls pf -> make_gen_choice_type (asn1_any_t asn1_integer_t ls)
+  | ASN1_ANY_OID id ls pf -> make_gen_choice_type (asn1_any_t asn1_oid_t ls)
+  | ASN1_ANY_INTEGER id ls pf -> make_gen_choice_type (asn1_any_t asn1_integer_t ls)
 
 and asn1_any_t (t : eqtype) (ls : list (t * asn1_gen_item_k)) : Tot (list (t & Type)) (decreases ls) =
   match ls with
@@ -347,8 +349,8 @@ type asn1_strong_parser (t : Type) = parser asn1_strong_parser_kind t
 type asn1_weak_parser (t : Type) = parser asn1_weak_parser_kind t
 
 noeq
-type gen_parser = 
-| Mkgenparser : (t : Type) -> (p : asn1_strong_parser t) -> gen_parser
+type gen_parser (k : parser_kind) = 
+| Mkgenparser : (t : Type) -> (p : parser k t) -> gen_parser k
 
 noeq
 type gen_decorated_parser_twin =

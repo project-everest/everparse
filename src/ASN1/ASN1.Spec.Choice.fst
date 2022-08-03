@@ -41,19 +41,19 @@ let rec make_gen_choice_kind
 
 let tag_of_gen_choice_type (#key : eqtype) (lc : list (key & Type)) : make_gen_choice_type lc -> Tot key = dfst
 
-let extract_types (#t : eqtype) (lc : list (t & gen_parser)) =
+let extract_types (#t : eqtype) (#k : parser_kind) (lc : list (t & (gen_parser k))) =
   List.map (fun x -> (fst x, Mkgenparser?.t (snd x))) lc
 
-let project_tags (#t : eqtype) (lc : list (t & gen_parser)) =
+let project_tags (#t : eqtype) (#k : parser_kind) (lc : list (t & (gen_parser k))) =
 tag_of_gen_choice_type (extract_types lc)
 
-let attach_tag (#t : eqtype) (lc : list (t & gen_parser)) (id : t) (x :  idlookup_t id (extract_types lc)) : 
+let attach_tag (#t : eqtype) (#k : parser_kind) (lc : list (t & (gen_parser k))) (id : t) (x :  idlookup_t id (extract_types lc)) : 
   (refine_with_tag (project_tags lc) id)
 = Mkdtuple2 id x
 
-let rec make_gen_choice_payload_parser
+let rec make_gen_choice_strong_payload_parser
   (#t : eqtype)
-  (lc : list (t & gen_parser) {Cons? lc})
+  (lc : list (t & (gen_parser asn1_strong_parser_kind)) {Cons? lc})
 //  (pf : List.noRepeats (List.map fst lc))
   : Tot (id : t -> asn1_strong_parser 
                   (refine_with_tag (project_tags lc) id))
@@ -67,50 +67,50 @@ let rec make_gen_choice_payload_parser
     else      
       (match tl with
       | nil -> fail_parser asn1_strong_parser_kind (refine_with_tag (project_tags lc) id)
-      | _ -> make_gen_choice_payload_parser tl id)
+      | _ -> make_gen_choice_strong_payload_parser tl id)
 
-let make_gen_choice_parser
+let make_gen_choice_strong_parser
   (#t : eqtype)
   (#k : parser_kind)
   (p : parser k t)
-  (lc : list (t & gen_parser) {Cons? lc})
+  (lc : list (t & (gen_parser asn1_strong_parser_kind)) {Cons? lc})
   //(pf : List.noRepeats (List.map fst lc))
   : parser (and_then_kind k asn1_strong_parser_kind) (make_gen_choice_type (extract_types lc))
-= parse_tagged_union p (tag_of_gen_choice_type (extract_types lc)) (make_gen_choice_payload_parser lc)
+= parse_tagged_union p (tag_of_gen_choice_type (extract_types lc)) (make_gen_choice_strong_payload_parser lc)
 
 let make_asn1_choice_parser
   (lc : list (asn1_id_t * asn1_content_k) {Cons? lc})
   (pf : squash ((Cons? lc) /\ List.noRepeats (List.map fst lc)))
   (#s : _)
   (k : asn1_k s)
-  (lp : list (asn1_id_t & gen_parser) {Cons? lp})
+  (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)) {Cons? lp})
   : 
   Pure (asn1_strong_parser (asn1_t k))
   (requires (s == Set.as_set (List.map fst lc)) /\ (k == ASN1_CHOICE_ILC lc pf) /\ (asn1_lc_t lc == extract_types lp))
   (ensures fun _ -> True)
-= weaken asn1_strong_parser_kind (make_gen_choice_parser parse_asn1_identifier_U32 lp)
+= weaken asn1_strong_parser_kind (make_gen_choice_strong_parser parse_asn1_identifier_U32 lp)
 
 let make_asn1_choice_parser_twin
   (lc : list (asn1_id_t * asn1_content_k) {Cons? lc})
   (pf : squash ((Cons? lc) /\ List.noRepeats (List.map fst lc)))
   (#s : _)
   (k : asn1_k s)
-  (lp : list (asn1_id_t & gen_parser) {Cons? lp})
+  (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)) {Cons? lp})
   (id' : asn1_id_t)
   : 
   Pure (asn1_strong_parser (asn1_t k))
   (requires (s == Set.as_set (List.map fst lc)) /\ (k == ASN1_CHOICE_ILC lc pf) /\ (asn1_lc_t lc == extract_types lp))
   (ensures fun _ -> True)
-= parse_tagged_union_payload (project_tags lp) (make_gen_choice_payload_parser lp) id'
+= parse_tagged_union_payload (project_tags lp) (make_gen_choice_strong_payload_parser lp) id'
 
 let make_asn1_choice_parser_twin_cases_injective
   (lc : list (asn1_id_t * asn1_content_k) {Cons? lc})
   (pf : squash ((Cons? lc) /\ List.noRepeats (List.map fst lc)))
   (#s : _)
   (k : asn1_k s)
-  (lp : list (asn1_id_t & gen_parser) {Cons? lp})
+  (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)) {Cons? lp})
   : 
   Lemma 
   (requires (s == Set.as_set (List.map fst lc)) /\ (k == ASN1_CHOICE_ILC lc pf) /\ (asn1_lc_t lc == extract_types lp))
   (ensures and_then_cases_injective (make_asn1_choice_parser_twin lc pf k lp))
-= parse_tagged_union_payload_and_then_cases_injective (project_tags lp) (make_gen_choice_payload_parser lp)
+= parse_tagged_union_payload_and_then_cases_injective (project_tags lp) (make_gen_choice_strong_payload_parser lp)
