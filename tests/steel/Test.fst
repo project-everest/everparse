@@ -29,7 +29,6 @@ let test_prog_1 = F.run_prog
     )
   )
 
-(* // FIXME: this one OOMs at F* extraction to krml
 let test_prog_2 = F.run_prog
       (F.impl_bind
         _
@@ -41,7 +40,6 @@ let test_prog_2 = F.run_prog
           (jump_weaken F.pkind (jump_constant_size parse_u8  SZ.one_size) ())
         )
       )
-*)
 
 inline_for_extraction noextract
 let u16_max (x1 x2: U16.t) : Tot U16.t
@@ -57,7 +55,8 @@ let validate_p : validator q = validate_vldata_gen 1 (unconstrained_bounded_inte
 
 let state (_: U16.t) (_: list U16.t) : Tot vprop = emp
 
-// inline_for_extraction // this would blow up F* when extracting test() below
+inline_for_extraction
+noextract
 let iter_max
   (#va: _)
   (a: byte_array)
