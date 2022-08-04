@@ -3,6 +3,8 @@ module ASN1.Base
 open LowParse.Spec.Base
 open LowParse.Spec.Combinators
 
+open ASN1.Spec.Time
+
 // ASN.1 Kinds
 
 module U32 = FStar.UInt32
@@ -102,9 +104,9 @@ type asn1_oid_t =
 
 // type asn1_roid_t = unit
 
-type asn1_utctime_t = unit
+type asn1_utctime_t = (b : B.bytes {is_valid_ASN1UTCTIME b})
 
-type asn1_generalizedtime_t = unit
+type asn1_generalizedtime_t = (b : B.bytes {is_valid_ASN1GENERALIZEDTIME b})
 
 let rec asn1_terminal_t (k : asn1_terminal_k) : eqtype =
   match k with

@@ -4,6 +4,7 @@ include LowParse.Spec.Base
 include LowParse.Spec.Combinators
 include LowParse.Spec.List
 include LowParse.Spec.Defaultable
+include LowParse.Spec.Bytes
 
 open ASN1.Base
 open ASN1.Spec.Content.BOOLEAN
@@ -14,6 +15,7 @@ open ASN1.Spec.Content.UTF8STRING
 open ASN1.Spec.Content.PRINTABLESTRING
 open ASN1.Spec.Content.NULL
 open ASN1.Spec.Content.OIDU32
+open ASN1.Spec.Content.TIME
 
 open ASN1.Spec.ILC
 open ASN1.Spec.Choice
@@ -88,8 +90,8 @@ let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_t
   | ASN1_PRINTABLESTRING -> parse_asn1_printablestring
   | ASN1_NULL -> parse_asn1_null
   | ASN1_OID -> parse_asn1_OIDU32
-  | ASN1_UTCTIME -> fail_parser _ _ (* admit *)
-  | ASN1_GENERALIZEDTIME -> fail_parser _ _ (* admit *)
+  | ASN1_UTCTIME -> parse_asn1_UTCTIME
+  | ASN1_GENERALIZEDTIME -> parse_asn1_GENERALIZEDTIME
   | ASN1_PREFIXED_TERMINAL id k -> weaken asn1_weak_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (asn1_terminal_as_parser k))
 
 and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_content_t k)) (decreases k) =
