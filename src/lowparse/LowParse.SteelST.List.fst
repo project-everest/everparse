@@ -5,6 +5,7 @@ include LowParse.SteelST.List.Iter.ReadOnly
 include LowParse.SteelST.List.Iter.WithInterrupt
 include LowParse.SteelST.List.Map
 include LowParse.SteelST.List.Length
+include LowParse.SteelST.List.Nth
 
 (*
 inline_for_extraction
