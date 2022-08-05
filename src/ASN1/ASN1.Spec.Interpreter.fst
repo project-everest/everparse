@@ -24,62 +24,6 @@ open ASN1.Spec.Any
 
 module List = FStar.List.Tot
 
-let generate_defaultable_item (item : asn1_gen_item_k) :
-  Tot (option (asn1_decorated_t item))
-= match item with
-  | (| _, _, dk |) -> match dk with
-                       | ASN1_PLAIN_ILC k -> None
-                       | ASN1_OPTION_ILC k -> Some (None #(asn1_t k)) 
-                       | ASN1_DEFAULT_TERMINAL id #k defv -> Some (Default #(asn1_terminal_t k) #defv)
-
-let asn1_decorated_item_as_parser_aux (item : asn1_gen_item_k) (p : asn1_strong_parser (asn1_decorated_pure_t item)) :
-  Tot (asn1_strong_parser (asn1_decorated_t item))
-= match item with
-  | (| _, _, dk|) ->
-         match dk with
-         | ASN1_PLAIN_ILC _ -> p
-         | ASN1_OPTION_ILC _ -> p `parse_synth` (Some)
-         | ASN1_DEFAULT_TERMINAL _ defaultv ->
-                    ((p
-                    `parse_filter`
-                    (defaultv_filter defaultv))
-                    `parse_synth`
-                    (defaultv_synth defaultv))
-
-let asn1_decorated_item_as_parser_aux_non_default
-  (item : asn1_gen_item_k)
-  (p : asn1_strong_parser (asn1_decorated_pure_t item))
-  (input : bytes)
-: Lemma
-  (ensures (parse_defaultable_injective_cond (generate_defaultable_item item) (asn1_decorated_item_as_parser_aux item p) input))
-= let p' = (asn1_decorated_item_as_parser_aux item p) in
-  match item with
-  | (| _, _, dk|) ->
-        match dk with
-        | ASN1_PLAIN_ILC _ -> _
-        | ASN1_OPTION_ILC _ -> 
-          let defv = generate_defaultable_item item in
-          (match parse p' input with
-           | None -> ()
-           | Some (v, _) -> 
-             let _ = parse_synth_eq p (Some) input in
-             assert (Some? #(asn1_decorated_pure_t item) v);
-             ())
-        | ASN1_DEFAULT_TERMINAL _ defaultv ->
-          let defv = generate_defaultable_item item in
-          (match parse p' input with
-           | None -> ()
-           | Some (v, _) -> 
-             let _ = parse_synth_eq (p `parse_filter` (defaultv_filter defaultv)) (defaultv_synth defaultv) input in
-             ())
-
-let asn1_decorated_item_as_weak_parser
-  (item : asn1_gen_item_k)
-  (p : asn1_strong_parser (asn1_decorated_pure_t item))
-: asn1_weak_parser (asn1_decorated_t item)
-= let _ = Classical.forall_intro (asn1_decorated_item_as_parser_aux_non_default item p) in
-  parse_defaultable (generate_defaultable_item item) (asn1_decorated_item_as_parser_aux item p)
-
 let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   match k with
   | ASN1_BOOLEAN -> weaken _ parse_asn1_boolean
@@ -96,28 +40,27 @@ let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_t
 
 and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_content_t k)) (decreases k) =
   match k with
+  | ASN1_RESTRICTED_TERMINAL k' is_valid -> weaken _ ((asn1_terminal_as_parser k') `parse_filter` is_valid)
   | ASN1_TERMINAL k' -> asn1_terminal_as_parser k'
-  | ASN1_SEQUENCE items pf -> make_asn1_sequence_parser (asn1_sequence_as_parser items)
+  | ASN1_SEQUENCE gitems -> make_asn1_sequence_parser (asn1_sequence_as_parser (dfst gitems))
   | ASN1_SEQUENCE_OF k' -> weaken asn1_weak_parser_kind (parse_list (asn1_as_parser k'))
   | ASN1_SET_OF k' -> weaken _ (asn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (asn1_as_parser k')
-  | ASN1_ANY_OID id ls pf -> make_asn1_any_OIDU32_parser id ls pf k (asn1_ls_as_parser asn1_oid_t ls)
-  | ASN1_ANY_INTEGER id ls pf -> make_asn1_any_INTEGER_parser id ls pf k (asn1_ls_as_parser asn1_integer_t ls)
+  | ASN1_ANY_OID id ls fb pf -> 
+    (match fb with
+    | None -> make_asn1_closed_any_OIDU32_parser id ls pf k (asn1_ls_as_parser asn1_oid_t ls)
+    | Some gitems -> make_asn1_open_any_OIDU32_parser id ls gitems (make_asn1_sequence_parser (asn1_sequence_as_parser (dfst gitems))) pf k (asn1_ls_as_parser asn1_oid_t ls))
+  | ASN1_ANY_INTEGER id ls fb pf ->
+    (match fb with
+    | None -> make_asn1_closed_any_INTEGER_parser id ls pf k (asn1_ls_as_parser asn1_integer_t ls)
+    | Some gitems -> make_asn1_open_any_INTEGER_parser id ls gitems (make_asn1_sequence_parser (asn1_sequence_as_parser (dfst gitems))) pf k (asn1_ls_as_parser asn1_integer_t ls))
 
-and asn1_ls_as_parser (t : eqtype) (ls : list (t * asn1_gen_item_k)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t t ls == extract_types lp}) (decreases ls) =
+and asn1_ls_as_parser (t : eqtype) (ls : list (t * asn1_gen_items_k)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t t ls == extract_types lp}) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
     let (x, y) = h in
-    let yp = match y with
-             | (| _, _, dk |) -> match dk with
-                                | ASN1_PLAIN_ILC k -> asn1_as_parser k
-                                | ASN1_OPTION_ILC k -> asn1_as_parser k
-                                | ASN1_DEFAULT_TERMINAL id #k defv ->
-                                  let p = asn1_terminal_as_parser k in
-                                  (parse_asn1_ILC id #(ASN1_TERMINAL k) p)
-    in                              
-    (x, Mkgenparser _ (asn1_decorated_item_as_weak_parser y yp)) :: (asn1_ls_as_parser t tl)
+    (x, Mkgenparser _ (make_asn1_sequence_parser (asn1_sequence_as_parser (dfst y)))) :: (asn1_ls_as_parser t tl)
 
 and asn1_lc_as_parser (lc : list (asn1_id_t & asn1_content_k)) : Tot (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)) {asn1_lc_t lc == extract_types lp})  (decreases lc) =
   match lc with
@@ -154,6 +97,9 @@ and asn1_decorated_as_parser_twin (item : asn1_gen_item_k) : Tot (gp : gen_decor
                     | ASN1_DEFAULT_TERMINAL id #k defv ->
                       let p = asn1_terminal_as_parser k in
                       Mkgendcparser item (parse_asn1_ILC id #(ASN1_TERMINAL k) p) (parse_asn1_ILC_twin id #(ASN1_TERMINAL k) p)
+                    | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k is_valid defv ->
+                      let p : asn1_weak_parser (asn1_decorated_pure_t item) = weaken _ ((asn1_terminal_as_parser k) `parse_filter` is_valid) in
+                      Mkgendcparser item (parse_asn1_ILC id #(ASN1_RESTRICTED_TERMINAL k is_valid) p) (parse_asn1_ILC_twin id #(ASN1_RESTRICTED_TERMINAL k is_valid) p)
 
 and asn1_sequence_as_parser (items : list asn1_gen_item_k) : Tot (lp : list gen_decorated_parser_twin {List.map (Mkgendcparser?.d) lp == items}) (decreases items) =
   match items with
