@@ -99,6 +99,12 @@ let supported_algorithms
 let supported_algorithms_wf : squash (List.noRepeats (List.map fst supported_algorithms))
 = _
 
+let fallback_sequence_bitstring
+= ASN1_ILC sequence_id (ASN1_TERMINAL ASN1_BITSTRING)
+
+let fallback_sequence_bitstring_field_list_with_pf : asn1_gen_items_k
+= (| [OPTION ^: fallback_sequence_bitstring], _ |)
+
 let version_id = mk_custom_id 0ul
 
 //Warning: no restriction on the version value
@@ -111,7 +117,7 @@ let serialNumber_ilc
 
 let algorithmIdentifier_ilc
 = ASN1_ILC sequence_id
-    (ASN1_ANY_OID oid_id supported_algorithms None supported_algorithms_wf)
+    (ASN1_ANY_OID oid_id supported_algorithms (Some fallback_sequence_bitstring_field_list_with_pf) supported_algorithms_wf)
 
 let signature_ilc = algorithmIdentifier_ilc
 
