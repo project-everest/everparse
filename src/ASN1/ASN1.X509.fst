@@ -83,12 +83,18 @@ let md5WithRSAEncryption_oid : asn1_oid_t = [1ul; 2ul; 840ul; 113549ul; 1ul; 1ul
 let sha_1WithRSAEncryption_oid : asn1_oid_t = [1ul; 2ul; 840ul; 113549ul; 1ul; 1ul; 5ul]
 
 let default_NULL_field
-= mk_ASN1_GEN_ITEM (ASN1_DEFAULT_TERMINAL null_id #(ASN1_NULL) ())
+= (ASN1_DEFAULT_TERMINAL null_id #(ASN1_NULL) ())
+
+let default_NULL_field_list
+= [DEFAULT ^: default_NULL_field]
+
+let default_NULL_field_list_with_pf : asn1_gen_items_k
+= (|default_NULL_field_list, _|)
 
 let supported_algorithms
-= [(md2WithRSAEncryption_oid, default_NULL_field);
-   (md5WithRSAEncryption_oid, default_NULL_field);
-   (sha_1WithRSAEncryption_oid, default_NULL_field)]
+= [(md2WithRSAEncryption_oid, default_NULL_field_list_with_pf);
+   (md5WithRSAEncryption_oid, default_NULL_field_list_with_pf);
+   (sha_1WithRSAEncryption_oid, default_NULL_field_list_with_pf)]
 
 let supported_algorithms_wf : squash (List.noRepeats (List.map fst supported_algorithms))
 = _
@@ -105,7 +111,7 @@ let serialNumber_ilc
 
 let algorithmIdentifier_ilc
 = ASN1_ILC sequence_id
-    (ASN1_ANY_OID oid_id supported_algorithms supported_algorithms_wf)
+    (ASN1_ANY_OID oid_id supported_algorithms None supported_algorithms_wf)
 
 let signature_ilc = algorithmIdentifier_ilc
 
@@ -124,9 +130,9 @@ let attributeValue_ilc = directoryString_ilc
 
 let attributeTypeAndValue_ilc
 = ASN1_ILC sequence_id
-    (ASN1_SEQUENCE [
+    (ASN1_SEQUENCE (| [
       PLAIN ^: attributeType_ilc;
-      PLAIN ^: attributeValue_ilc] _)
+      PLAIN ^: attributeValue_ilc], _|))
 
 let relativeDistinguishedName_ilc
 = ASN1_ILC set_id
@@ -152,9 +158,9 @@ let notAfter = asn1_time_k
 
 let validity_ilc
 = ASN1_ILC sequence_id
-    (ASN1_SEQUENCE [
+    (ASN1_SEQUENCE (|[
       PLAIN ^: notBefore;
-      PLAIN ^: notAfter] _)
+      PLAIN ^: notAfter], _|))
 
 let subject_ilc = name_ilc
 
@@ -165,9 +171,9 @@ let subjectPublicKey_ilc
 
 let subjectPublicKeyInfo_ilc
 = ASN1_ILC sequence_id
-    (ASN1_SEQUENCE [
+    (ASN1_SEQUENCE (|[
       PLAIN ^: algorithm_ilc;
-      PLAIN ^: subjectPublicKey_ilc] _)
+      PLAIN ^: subjectPublicKey_ilc], _|))
 
 let uniqueIdentifier_c
 = (ASN1_TERMINAL ASN1_BITSTRING)
@@ -199,10 +205,10 @@ let extnValue_ilc
 
 let extension_ilc
 = ASN1_ILC sequence_id
-    (ASN1_SEQUENCE [
+    (ASN1_SEQUENCE (|[
      PLAIN ^: extnID_ilc;
      DEFAULT ^: critical_field;
-     PLAIN ^: extnValue_ilc] _)
+     PLAIN ^: extnValue_ilc], _|))
 
 let extensions_id = mk_custom_id 3ul
 
@@ -219,7 +225,7 @@ let extensions_ilc
 
 let x509_TBSCertificate_ilc
 = ASN1_ILC sequence_id 
-    (ASN1_SEQUENCE [
+    (ASN1_SEQUENCE (|[
       DEFAULT ^: version_field;
       PLAIN ^: serialNumber_ilc;
       PLAIN ^: signature_ilc;
@@ -229,7 +235,7 @@ let x509_TBSCertificate_ilc
       PLAIN ^: subjectPublicKeyInfo_ilc;
       OPTION ^: issuerUniqueId_ilc;
       OPTION ^: subjectUniqueId_ilc;
-      OPTION ^: extensions_ilc] _)
+      OPTION ^: extensions_ilc], _|))
     
 #pop-options
 
@@ -240,10 +246,10 @@ let signatureValue_ilc
 
 let x509_certificate_ilc
 = ASN1_ILC sequence_id
-    (ASN1_SEQUENCE [
+    (ASN1_SEQUENCE (|[
       PLAIN ^: x509_TBSCertificate_ilc;
       PLAIN ^: signatureAlgorithm_ilc;
-      PLAIN ^: signatureValue_ilc] _)
+      PLAIN ^: signatureValue_ilc], _|))
 
 // let's go boom!
 
