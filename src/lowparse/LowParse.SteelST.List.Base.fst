@@ -372,7 +372,7 @@ let validate_list_body
 
 #pop-options
 
-inline_for_extraction // TODO: move to Steel library with primitive Karamel extraction
+inline_for_extraction
 let with_local
   (#t: Type)
   (init: t)
@@ -385,11 +385,7 @@ let with_local
     (fun v -> exists_ (R.pts_to r full_perm) `star` post v)
   )
 : STF ret_t pre post True (fun _ -> True)
-= let r = R.alloc init in
-  let v = body r in
-  let _ = gen_elim () in
-  R.free r;
-  return v
+= R.with_local init body
 
 inline_for_extraction // this one is fine
 let with_ghost_local
@@ -404,11 +400,7 @@ let with_ghost_local
     (fun v -> exists_ (GR.pts_to r full_perm) `star` post v)
   )
 : STF ret_t pre post True (fun _ -> True)
-= let r = GR.alloc init in
-  let v = body r in
-  let _ = gen_elim () in
-  GR.free r;
-  return v
+= GR.with_local init body
 
 #push-options "--z3rlimit 16"
 

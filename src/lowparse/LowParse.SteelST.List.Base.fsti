@@ -181,7 +181,7 @@ val validate_list_total_constant_size
     ))
     (ensures (fun _ -> True))
 
-inline_for_extraction // TODO: move to Steel library with primitive Karamel extraction
+inline_for_extraction
 val with_local
   (#t: Type)
   (init: t)
