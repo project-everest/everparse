@@ -138,9 +138,9 @@ let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) & asn1_decorator)) (
 let asn1_sequence_k_wf (li : list ((Set.set asn1_id_t) & asn1_decorator)) : Tot Type =
   asn1_sequence_k_wf' li (Set.empty)
 
-let my_as_set = Set.as_set
+let my_as_set l = Set.as_set l
 
-noeq noextract
+noeq //noextract
 type asn1_content_k : Type =
 | ASN1_RESTRICTED_TERMINAL : (k : asn1_terminal_k) -> (is_valid : (asn1_terminal_t k) -> bool) -> asn1_content_k
 | ASN1_TERMINAL : asn1_terminal_k -> asn1_content_k

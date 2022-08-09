@@ -964,7 +964,7 @@ let synth_integer_payload
   x
 
 inline_for_extraction
-noextract
+//noextract
 let parse_integer_payload_kind : LP.parser_kind =
   let open LP in
   {
@@ -1110,7 +1110,7 @@ let serialize_integer
 (* Implementations with machine integer types *)
 
 inline_for_extraction
-noextract
+// noextract
 noeq
 type int_t (nbytes: pos) (i_t: Type0) = {
   v: (i_t -> Tot (integer_in_interval nbytes));
@@ -1130,7 +1130,7 @@ let parse_untagged_signed_integer
 module I32 = FStar.Int32
 
 inline_for_extraction
-noextract
+// noextract
 let int32: int_t 4 I32.t = {
   v = (fun x -> I32.v x);
   int_to_t = (fun x -> I32.int_to_t x);

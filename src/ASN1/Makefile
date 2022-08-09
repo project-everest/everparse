@@ -1,4 +1,4 @@
-all: verify test
+all: verify extract
 
 EVERPARSE_HOME ?= ../..
 KRML_HOME ?= $(EVERPARSE_HOME)/../karamel
@@ -7,14 +7,13 @@ LOWPARSE_HOME=$(EVERPARSE_HOME)/src/lowparse
 
 INCLUDE_PATH = $(LOWPARSE_HOME) $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj
 
-OTHERFLAGS = --admit_smt_queries true
-
 FSTAR_OPTIONS = --cache_checked_modules \
 		--already_cached *,-ASN1Test,-ASN1 \
-		$(SKIP_VERIFICATION) \
 		--cmi \
+	        --odir out/extracted \
 		$(addprefix --include ,$(INCLUDE_PATH)) \
 		$(OTHERFLAGS)
+
 
 ifdef FSTAR_HOME
 FSTAR_EXE = $(FSTAR_HOME)/bin/fstar.exe
@@ -23,10 +22,12 @@ FSTAR_EXE = fstar.exe
 endif
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
 
-ALL_SOURCE_FILES = $(wildcard *.fst *.fsti)
+NOT_INCLUDED=ASN1.Test.Interpreter.fst $(wildcard ASN1.Low.*) ASN1Test.fst
+
+ALL_SOURCE_FILES = $(filter-out $(NOT_INCLUDED), $(wildcard *.fst *.fsti))
 
 .depend: $(ALL_SOURCE_FILES) Makefile
-	$(FSTAR) --dep full $(ALL_SOURCE_FILES) > $@.tmp
+	$(FSTAR) --dep full --extract '* -Prims -FStar -LowParse.Low -ASN1Test -ASN1.Low' $(ALL_SOURCE_FILES) > $@.tmp
 	mv $@.tmp $@
 
 depend: .depend
@@ -40,10 +41,15 @@ $(ALL_CHECKED_FILES): %.checked:
 verify: $(ALL_CHECKED_FILES)
 	echo $*
 
+extract: $(ALL_ML_FILES)
+
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
-%.krml:
+out/extracted/%.ml:
+	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen OCaml --extract_module $(basename $(notdir $(subst .checked,,$<)))
+
+out/%.krml:
 	$(FSTAR) --codegen krml $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
 	touch $@
 
@@ -65,5 +71,6 @@ test: ASN1Test.c # test.exe
 
 clean:
 	-rm -rf *.checked *.krml .depend out *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
+	$(MAKE) -C out clean
 
 .PHONY: all verify clean depend test
