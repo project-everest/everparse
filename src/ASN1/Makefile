@@ -10,7 +10,7 @@ INCLUDE_PATH = $(LOWPARSE_HOME) $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj
 FSTAR_OPTIONS = --cache_checked_modules \
 		--already_cached *,-ASN1Test,-ASN1 \
 		--cmi \
-	        --odir out/extracted \
+	        --odir ocaml/extracted \
 		$(addprefix --include ,$(INCLUDE_PATH)) \
 		$(OTHERFLAGS)
 
@@ -46,10 +46,10 @@ extract: $(ALL_ML_FILES)
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
 
-out/extracted/%.ml:
+ocaml/extracted/%.ml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen OCaml --extract_module $(basename $(notdir $(subst .checked,,$<)))
 
-out/%.krml:
+ocaml/%.krml:
 	$(FSTAR) --codegen krml $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
 	touch $@
 
@@ -70,7 +70,7 @@ test: ASN1Test.c # test.exe
 	cat $^
 
 clean:
-	-rm -rf *.checked *.krml .depend out *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
-	$(MAKE) -C out clean
+	-rm -rf *.checked *.krml .depend *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
+	$(MAKE) -C ocaml clean
 
 .PHONY: all verify clean depend test
