@@ -99,6 +99,58 @@ let action_fold
 : Tot (fold_t state_t t ret_t pre post)
 = fun _ -> f
 
+let rec fold_for
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (from: nat) (to: int)
+  (f: (x: nat { from <= x /\ x <= to }) -> fold_t state_t t unit inv inv)
+: Tot (fold_t state_t t unit inv inv)
+  (decreases (if to < from then 0 else to - from + 1))
+= if from > to
+  then action_fold (ret ())
+  else bind_fold (f from) (fun _ -> fold_for inv (from + 1) to f)
+
+let fold_list_index
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (idx: (n: nat) -> Tot (i: nat { i < n }))
+  (f: fold_t state_t t unit inv inv)
+: Tot (fold_t state_t (list t) unit inv inv)
+= fun l -> f (List.Tot.index l (idx (List.Tot.length l)))
+
+let fold_list_index'
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (n: nat)
+  (idx: (i: nat { i < n }))
+  (f: fold_t state_t t unit inv inv)
+: Tot (fold_t state_t (l: list t { List.Tot.length l == n }) unit inv inv)
+= fun l -> f (List.Tot.index l idx)
+
+let fold_for_list'
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (n: nat)
+  (idx: (i: nat { i < n }) -> Tot (i: nat { i < n }))
+: Tot (fold_t state_t (l: list t { List.Tot.length l == n }) unit inv inv)
+= fold_for inv 0 (n - 1) (fun j -> fold_list_index' inv n (idx j) f)
+
+let fold_for_list
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (idx: (n: nat) -> (i: nat { i < n }) -> Tot (i: nat { i < n }))
+: Tot (fold_t state_t (list t) unit inv inv)
+= fun l ->
+  let n = List.Tot.length l in
+  fold_for_list' inv f n (idx n) l
+
 let fold_read
   #state_t
   (#pre: _)
