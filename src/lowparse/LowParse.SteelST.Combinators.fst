@@ -195,6 +195,72 @@ let merge_pair
   assert (AP.contents_of' va2 `Seq.equal` Seq.slice (AP.contents_of' va) (AP.length (AP.array_of va1)) (AP.length (AP.array_of va)));
   intro_aparse (p1 `nondep_then` p2) a1
 
+let clens_fst
+  (t1: Type)
+  (t2: Type)
+: Tot (clens (t1 & t2) t1)
+= {
+  clens_cond = (fun (x: (t1 & t2)) -> True);
+  clens_get = fst;
+(*  
+  clens_put = (fun x y -> (y, snd x));
+  clens_get_put = (fun x y -> ());
+  clens_put_put = (fun x y y' -> ());
+  clens_put_get = (fun x -> ());
+*)
+}
+
+inline_for_extraction
+let with_pair_fst
+  #k1 #t1 (p1: parser k1 t1)
+  #k2 #t2 (p2: parser k2 t2)
+: Pure (accessor (p1 `nondep_then` p2) p1 (clens_fst _ _))
+    (k1.parser_kind_subkind == Some ParserStrong)
+    (fun _ -> True)
+= fun #va a body ->
+  let pi = AP.array_perm (array_of' va) in
+  let _ = share_aparse (nondep_then p1 p2) a (half_perm pi) (half_perm pi) in
+  let ar = g_split_pair p1 p2 a in
+  let _ = gen_elim () in
+  let res = body a in
+  let va1 = merge_pair p1 p2 a ar in
+  let _ = gather_aparse (nondep_then p1 p2) #va1 a in
+  rewrite (aparse (nondep_then p1 p2) a _) (aparse (nondep_then p1 p2) a va);
+  return res
+
+let clens_snd
+  (t1: Type)
+  (t2: Type)
+: Tot (clens (t1 & t2) t2)
+= {
+  clens_cond = (fun (x: (t1 & t2)) -> True);
+  clens_get = snd;
+(*  
+  clens_put = (fun x y -> (fst x, y));
+  clens_get_put = (fun x y -> ());
+  clens_put_put = (fun x y y' -> ());
+  clens_put_get = (fun x -> ());
+*)
+}
+
+inline_for_extraction
+let with_pair_snd
+  #k1 #t1 (#p1: parser k1 t1) (j1: jumper p1)
+  #k2 #t2 (p2: parser k2 t2)
+: Pure (accessor (p1 `nondep_then` p2) p2 (clens_snd _ _))
+    (k1.parser_kind_subkind == Some ParserStrong)
+    (fun _ -> True)
+= fun #va a body ->
+  let pi = AP.array_perm (array_of' va) in
+  let _ = share_aparse (nondep_then p1 p2) a (half_perm pi) (half_perm pi) in
+  let ar = split_pair j1 p2 a in
+  let _ = gen_elim () in
+  let res = body ar in
+  let va1 = merge_pair p1 p2 a ar in
+  let _ = gather_aparse (nondep_then p1 p2) #va1 a in
+  rewrite (aparse (nondep_then p1 p2) a _) (aparse (nondep_then p1 p2) a va);
+  return res
+
 inline_for_extraction
 let validate_synth
   #k1 #t1 (#p1: parser k1 t1) (v1: validator p1)
@@ -627,6 +693,7 @@ let intro_and_then
   assert (AP.contents_of' va2 `Seq.equal` Seq.slice (AP.contents_of' va) (AP.length (AP.array_of va1)) (AP.length (AP.array_of va)));
   intro_aparse (and_then p1 p2) a1
 
+#push-options "--z3rlimit 64"
 #restart-solver
 
 inline_for_extraction
@@ -668,6 +735,8 @@ let validate_tagged_union
       noop ();
       return s1
     end
+
+#pop-options
 
 inline_for_extraction
 let jump_tagged_union

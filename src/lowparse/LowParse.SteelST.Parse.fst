@@ -159,3 +159,51 @@ let rewrite_aparse
     )
 = let _ = elim_aparse p1 a in
   intro_aparse p2 a
+
+let share_aparse
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (#va: v k t)
+  (p: parser k t)
+  (a: byte_array)
+  (p1 p2: perm)
+: STGhost (Ghost.erased (v k t & v k t)) opened
+    (aparse p a va)
+    (fun res -> aparse p a (fstp res) `star` aparse p a (sndp res))
+    (AP.array_perm (array_of va) == p1 `Steel.FractionalPermission.sum_perm` p2)
+    (fun res ->
+      (fst res).contents == va.contents /\
+      (snd res).contents == va.contents /\
+      array_of (fst res) == AP.set_array_perm (array_of va) p1 /\
+      array_of (snd res) == AP.set_array_perm (array_of va) p2
+    )
+= let _ = elim_aparse p a in
+  let ares = AP.share a p1 p2 in
+  let va1 = intro_aparse #_ #_ #_ #(fst ares) p a in
+  let va2 = intro_aparse p a in
+  let res = Ghost.hide (va1, va2) in
+  rewrite (aparse p a va1) (aparse p a (fstp res));
+  rewrite (aparse p a va2) (aparse p a (sndp res));
+  res
+
+let gather_aparse
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#x1 #x2: v k t)
+  (a: byte_array)
+: STGhost (v k t) opened
+    (aparse p a x1 `star` aparse p a x2)
+    (fun res -> aparse p a res)
+    (array_of x1 == AP.set_array_perm (array_of x2) (AP.array_perm (array_of x1)))
+    (fun res ->
+      res.contents == x1.contents /\
+      res.contents == x2.contents /\
+      array_of res == AP.set_array_perm (array_of x1) (AP.array_perm (array_of x1) `Steel.FractionalPermission.sum_perm` AP.array_perm (array_of x2))
+    )
+= let y1 = elim_aparse #_ #_ #_ #x1 p a in
+  let y2 = elim_aparse p a in
+  let y = AP.gather #_ #_ #y1 #y2 a in
+  intro_aparse p a

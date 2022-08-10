@@ -372,3 +372,93 @@ let leaf_reader
     (fun _ -> aparse p a va)
     True
     (fun res -> res == va.contents)
+
+(* Accessors *)
+
+include LowParse.CLens
+
+inline_for_extraction
+let accessor
+  (#kfrom: parser_kind)
+  (#tfrom: Type)
+  (pfrom: parser kfrom tfrom)
+  (#kto: parser_kind)
+  (#tto: Type)
+  (pto: parser kto tto)
+  (l: clens tfrom tto)
+: Tot Type
+= (#va: v kfrom tfrom) ->
+  (a: byte_array) ->
+  (#kpre: vprop) ->
+  (#tret: Type) ->
+  (#kpost: (tret -> vprop)) ->
+  (body: (
+    (#va': v kfrom tfrom) ->
+    (#vb': v kto tto) ->
+    (b: byte_array) ->
+    ST tret
+      (kpre `star` aparse pfrom a va' `star` aparse pto b vb')
+      (fun r -> kpost r `star` aparse pfrom a va' `star` aparse pto b vb')
+      (va'.contents == va.contents /\
+        l.clens_cond va.contents /\
+        vb'.contents == l.clens_get va.contents)
+      (fun _ -> True)
+  )) ->
+  STF tret
+    (kpre `star` aparse pfrom a va)
+    (fun r -> kpost r `star` aparse pfrom a va)
+    (l.clens_cond va.contents)
+    (fun _ -> True)
+
+inline_for_extraction
+let accessor_id
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot (accessor p p (clens_id _))
+= fun #vb b body ->
+    let pi = AP.array_perm (array_of' vb) in
+    let r = share_aparse p b (half_perm pi) (half_perm pi) in
+    let res = body #(fstp r) b in
+    let _ = gather_aparse p #(fstp r) b in
+    rewrite (aparse p b _) (aparse p b vb);
+    return res
+
+inline_for_extraction
+let accessor_compose
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl12: clens t1 t2)
+  (a12: accessor p1 p2 cl12)
+  (#k3: parser_kind)
+  (#t3: Type)
+  (#p3: parser k3 t3)
+  (#cl23: clens t2 t3)
+  (a23: accessor p2 p3 cl23)
+: Tot (accessor p1 p3 (clens_compose cl12 cl23))
+= fun b1 body ->
+  a12 b1 (fun b2 ->
+    a23 b2 (fun b3 ->
+      body b3
+    )
+  )
+
+inline_for_extraction
+let accessor_ext
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl12: clens t1 t2)
+  (acc: accessor p1 p2 cl12)
+  (cl12': clens t1 t2)
+: Pure (accessor p1 p2 cl12')
+    (clens_eq cl12 cl12')
+    (fun _ -> True)
+= acc
