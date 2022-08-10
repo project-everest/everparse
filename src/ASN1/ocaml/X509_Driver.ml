@@ -12,18 +12,23 @@ let lp_bytes_of_bytes (b:FStar_Bytes.bytes)
 let main = 
   let argc = Array.length Sys.argv in
   if argc <> 2
-  then failwith "Usage: X509_Driver filename"
+  then (
+     print_string "Usage: X509_Driver filename\n";
+     exit 1
+  )
   else (
     let filename = Sys.argv.(1) in
-    let file = Core.In_channel.create ~binary:true filename in
     try
+      let file = Core.In_channel.create ~binary:true filename in
       let str = Core.In_channel.input_all file in
       Core.In_channel.close file;
       let b = FStar_Bytes.bytes_of_string str in
-      match ASN1_X509.parse_cert (lp_bytes_of_bytes b) with
-      | None -> print_string "parsing failed\n"
+      let b = lp_bytes_of_bytes b in
+      print_string ("About to parse " ^ string_of_int (Z.to_int (FStar_Bytes.length str)) ^ " bytes from " ^ filename ^ " ... \n");
+      match ASN1_X509.parse_cert b with
+      | None -> print_string "parsing failed\n"; exit 2
       | Some (_, n) -> 
-        print_string ("parsing succeeded consuming " ^ Z.to_string n ^ " bytes")
+        print_string ("parsing succeeded consuming " ^ Z.to_string n ^ " bytes\n")
     with
-     _ -> failwith (filename ^ " could not be read")
+     _ -> print_string (filename ^ " could not be read\n"); exit 3
   )

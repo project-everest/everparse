@@ -5,7 +5,6 @@
   (libraries
     batteries
     fstarlib
-    fstar-tactics-lib
     process
     yojson
     ppx_deriving_yojson.runtime
