@@ -889,10 +889,13 @@ let lemma_parse_asn1_identifier_first_inj ()
 
 let parse_asn1_identifier_U32 : asn1_strong_parser (asn1_id_t)
 = let _ = lemma_parse_asn1_identifier_first_inj () in
+  ASN1.Spec.Debug.parse_debug "parse_asn1_identifier_U32"
+  begin
   weaken (asn1_strong_parser_kind)
   (parse_u8
   `and_then`
   parse_asn1_identifier_first)
+  end
 
 let parse_asn1_identifier_U32_alt : parser parse_asn1_identifier_first_kind U32.t
 = let _ = lemma_parse_asn1_identifier_head_alt_inj () in
