@@ -112,7 +112,7 @@ let make_asn1_closed_any_INTEGER_parser
 : Pure (asn1_weak_parser (asn1_content_t k))
   (requires ((k == ASN1_ANY_INTEGER id ls None pf) /\ (asn1_any_t asn1_integer_t ls == extract_types lp)))
   (ensures fun _ -> True)
-= weaken asn1_weak_parser_kind (make_gen_choice_weak_parser (parse_asn1_ILC id #(ASN1_TERMINAL ASN1_INTEGER) (weaken _ parse_untagged_int32)) lp)
+= weaken asn1_weak_parser_kind (make_gen_choice_weak_parser (parse_asn1_ILC id #(ASN1_TERMINAL ASN1_INTEGER) (weaken _ ((parse_untagged_bounded_integer 20) `parse_synth` (fun x -> x <: int)))) lp)
 
 let make_asn1_open_any_OIDU32_parser
   (id : asn1_id_t)
@@ -138,4 +138,4 @@ let make_asn1_open_any_INTEGER_parser
 : Pure (asn1_weak_parser (asn1_content_t k))
   (requires ((k == ASN1_ANY_INTEGER id ls (Some fbk) pf) /\ (asn1_any_t asn1_integer_t ls == extract_types lp)))
   (ensures fun _ -> True)
-= weaken asn1_weak_parser_kind (make_gen_choice_with_fallback_weak_parser (parse_asn1_ILC id #(ASN1_TERMINAL ASN1_INTEGER) (weaken _ parse_untagged_int32)) lp (Mkgenparser _ fbp))
+= weaken asn1_weak_parser_kind (make_gen_choice_with_fallback_weak_parser (parse_asn1_ILC id #(ASN1_TERMINAL ASN1_INTEGER) (weaken _ ((parse_untagged_bounded_integer 20) `parse_synth` (fun x -> x <: int)))) lp (Mkgenparser _ fbp))
