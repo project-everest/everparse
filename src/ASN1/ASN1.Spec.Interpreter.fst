@@ -22,11 +22,10 @@ open ASN1.Spec.ILC
 open ASN1.Spec.Choice
 open ASN1.Spec.Sequence
 open ASN1.Spec.Any
-open ASN1.Spec.Debug
 
 module List = FStar.List.Tot
 
-let rec asn1_terminal_as_parser' (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
+let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   match k with
   | ASN1_BOOLEAN -> weaken _ parse_asn1_boolean
   | ASN1_INTEGER -> weaken _ ((parse_untagged_bounded_integer 20) `parse_synth` (fun x -> x <: int))
@@ -39,12 +38,9 @@ let rec asn1_terminal_as_parser' (k : asn1_terminal_k) : asn1_weak_parser (asn1_
   | ASN1_OID -> parse_asn1_OIDU32
   | ASN1_UTCTIME -> parse_asn1_UTCTIME
   | ASN1_GENERALIZEDTIME -> parse_asn1_GENERALIZEDTIME
-  | ASN1_PREFIXED_TERMINAL id k -> weaken asn1_weak_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (asn1_terminal_as_parser' k))
+  | ASN1_PREFIXED_TERMINAL id k -> weaken asn1_weak_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (asn1_terminal_as_parser k))
 
-let asn1_terminal_as_parser (k: asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k) =
-  parse_debug "asn1_terminal_as_parser" (asn1_terminal_as_parser' k)
-
-let rec asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_content_t k)) (decreases k) =
+and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_content_t k)) (decreases k) =
   match k with
   | ASN1_RESTRICTED_TERMINAL k' is_valid -> weaken _ ((asn1_terminal_as_parser k') `parse_filter` is_valid)
   | ASN1_TERMINAL k' -> asn1_terminal_as_parser k'
@@ -77,8 +73,8 @@ and asn1_lc_as_parser (lc : list (asn1_id_t & asn1_content_k)) : Tot (lp : list 
 
 and asn1_as_parser (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_t k)) (decreases k) =
   match k with
-  | ASN1_ILC id k' -> parse_debug "ASN1_ILC" (parse_asn1_ILC id (asn1_content_as_parser k'))
-  | ASN1_CHOICE_ILC lc pf -> parse_debug "ASN1_CHOICE_ILC" (make_asn1_choice_parser lc pf k (asn1_lc_as_parser lc))
+  | ASN1_ILC id k' -> parse_asn1_ILC id (asn1_content_as_parser k')
+  | ASN1_CHOICE_ILC lc pf -> make_asn1_choice_parser lc pf k (asn1_lc_as_parser lc)
 
 and asn1_as_parser_twin (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_t k) & (fp : (asn1_id_t -> asn1_strong_parser (asn1_t k)) {and_then_cases_injective fp})) (decreases k) =
   match k with
