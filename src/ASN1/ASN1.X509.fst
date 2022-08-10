@@ -135,7 +135,7 @@ let fallback_sequence_bitstring_field_list_with_pf : asn1_gen_items_k
 let version_id = mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0
 
 let version_field : asn1_k _
-= ASN1_ILC version_id (ASN1_RESTRICTED_TERMINAL (ASN1_PREFIXED_TERMINAL integer_id ASN1_INTEGER) (fun x -> x = 2l))
+= ASN1_ILC version_id (ASN1_RESTRICTED_TERMINAL (ASN1_PREFIXED_TERMINAL integer_id ASN1_INTEGER) (fun x -> x = 2))
 
 let serialNumber_ilc
 = ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER)
@@ -309,7 +309,7 @@ let id_ce_basicConstraints = id_ce /+ 19
 
 let basicConstraints_cA_field = ASN1_DEFAULT_TERMINAL boolean_id #(ASN1_BOOLEAN) false
 
-let pathLenConstraint = ASN1_ILC integer_id (ASN1_RESTRICTED_TERMINAL ASN1_INTEGER (fun x -> Int32.v x >= 0))
+let pathLenConstraint = ASN1_ILC integer_id (ASN1_RESTRICTED_TERMINAL ASN1_INTEGER (fun x -> x >= 0))
 
 let basicConstraints_ilc
 = ASN1_ILC sequence_id

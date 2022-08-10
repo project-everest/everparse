@@ -29,7 +29,7 @@ module List = FStar.List.Tot
 let rec asn1_terminal_as_parser' (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   match k with
   | ASN1_BOOLEAN -> weaken _ parse_asn1_boolean
-  | ASN1_INTEGER -> weaken _ parse_untagged_int32
+  | ASN1_INTEGER -> weaken _ ((parse_untagged_bounded_integer 20) `parse_synth` (fun x -> x <: int))
   | ASN1_BITSTRING -> parse_asn1_bitstring
   | ASN1_OCTETSTRING -> parse_asn1_octetstring
   | ASN1_UTF8STRING -> parse_asn1_utf8string

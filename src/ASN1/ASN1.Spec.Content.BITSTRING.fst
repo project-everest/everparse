@@ -13,10 +13,7 @@ let filter_asn1_bitstring_unused (u : U8.t)
 
 let filter_asn1_bitstring_payload (u : U8.t {0 <= U8.v u /\ U8.v u <= 7}) (b : B.bytes)
 = if (U8.v u = 0) then
-    if (B.length b = 0) then
-      true
-    else
-      false
+    true
   else if (B.length b > 0) then
         let lastb = B.index b (B.length b - 1) in
         let mask = pow2 (U8.v u) in

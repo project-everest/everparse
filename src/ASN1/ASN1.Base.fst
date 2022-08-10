@@ -57,7 +57,7 @@ type asn1_terminal_k : Type =
 
 type asn1_boolean_t = bool
 
-type asn1_integer_t = I32.t
+type asn1_integer_t = int
 
 //Bitstring is represented as an array of bytes and 0~7 unused bits
 type asn1_bitstring_t = 
@@ -78,7 +78,7 @@ let is_printable_char (ch : U8.t) : bool =
   let v = U8.v ch in
   (65 <= v && v <= 90) ||  // A - Z
   (97 <= v && v <= 122) || // a - z
-  (48 <= v && v <= 47) ||  // 0 - 9
+  (48 <= v && v <= 57) ||  // 0 - 9
   v = 32 ||              // (space)
   (39 <= v && v <= 41) ||  // '()
   (43 <= v && v <= 47) ||  // +,-./
