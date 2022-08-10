@@ -1,3 +1,5 @@
+export OCAMLPATH += $(FSTAR_HOME)/bin
+
 all:
 	dune build
 
