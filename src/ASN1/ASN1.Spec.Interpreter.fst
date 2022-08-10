@@ -13,6 +13,7 @@ open ASN1.Spec.Content.BITSTRING
 open ASN1.Spec.Content.OCTETSTRING
 open ASN1.Spec.Content.UTF8STRING
 open ASN1.Spec.Content.PRINTABLESTRING
+open ASN1.Spec.Content.IA5STRING
 open ASN1.Spec.Content.NULL
 open ASN1.Spec.Content.OIDU32
 open ASN1.Spec.Content.TIME
@@ -32,6 +33,7 @@ let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_t
   | ASN1_OCTETSTRING -> parse_asn1_octetstring
   | ASN1_UTF8STRING -> parse_asn1_utf8string
   | ASN1_PRINTABLESTRING -> parse_asn1_printablestring
+  | ASN1_IA5STRING -> parse_asn1_ia5string
   | ASN1_NULL -> parse_asn1_null
   | ASN1_OID -> parse_asn1_OIDU32
   | ASN1_UTCTIME -> parse_asn1_UTCTIME

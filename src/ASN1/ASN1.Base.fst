@@ -47,6 +47,7 @@ type asn1_terminal_k : Type =
 | ASN1_OCTETSTRING
 | ASN1_PRINTABLESTRING
 | ASN1_UTF8STRING
+| ASN1_IA5STRING
 | ASN1_NULL
 | ASN1_OID
 // | ASN1_ROID
@@ -85,13 +86,17 @@ let is_printable_char (ch : U8.t) : bool =
 
 type asn1_printablestring_t = list (b : byte {is_printable_char b})
 
+let is_ia5_char (ch : U8.t) : bool = U8.v ch < 128
+
+type asn1_ia5string_t = list (b : byte {is_ia5_char b})
+
 type asn1_null_t = unit
 
 let asn1_OID_wf' (value1 value2 : U32.t) =
-  (U32.v value1 < 2 /\ U32.v value2 < 40) \/ (U32.v value1 = 2 /\ U32.v value2 < 256 - 80)
+  (U32.v value1 < 2 && U32.v value2 < 40) || (U32.v value1 = 2 && U32.v value2 < 256 - 80)
 
 let asn1_OID_wf (l : list U32.t) =
-  List.length l >= 2 /\
+  List.length l >= 2 &&
   (match l with
   | value1 :: value2 :: tl -> asn1_OID_wf' value1 value2)
 
@@ -113,6 +118,7 @@ let rec asn1_terminal_t (k : asn1_terminal_k) : eqtype =
   | ASN1_OCTETSTRING -> asn1_octetstring_t
   | ASN1_UTF8STRING -> asn1_utf8string_t
   | ASN1_PRINTABLESTRING -> asn1_printablestring_t
+  | ASN1_IA5STRING -> asn1_ia5string_t
   | ASN1_NULL -> asn1_null_t
   | ASN1_OID -> asn1_oid_t
 //  | ASN1_ROID -> asn1_roid_t
@@ -177,10 +183,13 @@ and asn1_decorated_k : Set.set asn1_id_t -> asn1_decorator -> Type =
 
 and asn1_gen_item_k : Type = s : Set.set asn1_id_t & d : asn1_decorator & asn1_decorated_k s d
 
-and asn1_gen_items_k : Type = items : list (asn1_gen_item_k) & squash (asn1_sequence_k_wf (List.map (fun x -> match x with |(| s, d, _ |) -> (s, d) ) items))
+and asn1_gen_items_k : Type = items : list (asn1_gen_item_k) & squash (asn1_sequence_k_wf (List.map (fun x -> let (| s, d, _ |) = x in (s, d) ) items))
 
 let mk_ASN1_GEN_ITEM (#s) (#d) (k : asn1_decorated_k s d) : asn1_gen_item_k =
   (| s, d, k |)
+
+let mk_ASN1_GEN_ITEMS (items : list asn1_gen_item_k) (#pf : squash (asn1_sequence_k_wf (List.map (fun x -> let (| s, d, _ |) = x in (s, d) ) items))) : asn1_gen_items_k =
+  (| items, pf |)
 
 type default_tv (#a : eqtype) (v : a) =
 | Default : default_tv v
