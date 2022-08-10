@@ -22,7 +22,7 @@ FSTAR_EXE = fstar.exe
 endif
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
 
-NOT_INCLUDED=ASN1.Test.Interpreter.fst $(wildcard ASN1.Low.*) ASN1Test.fst
+NOT_INCLUDED=ASN1.Test.Interpreter.fst $(wildcard ASN1.Low.*) ASN1Test.fst $(wildcard ASN1.bak*)
 
 ALL_SOURCE_FILES = $(filter-out $(NOT_INCLUDED), $(wildcard *.fst *.fsti))
 
