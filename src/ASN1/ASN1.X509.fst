@@ -84,11 +84,19 @@ let set_id = mk_constant_constructed_id 17
 
 let printablestring_id = mk_constant_id 19
 
+let teletexstring_id = mk_constant_id 20
+
 let ia5string_id = mk_constant_id 22
 
 let utctime_id = mk_constant_id 23
 
 let generalizedtime_id = mk_constant_id 24
+
+let visiblestring_id = mk_constant_id 26
+
+let universalstring_id = mk_constant_id 28
+
+let bMPstring_id = mk_constant_id 30
 
 // TODO: insert list of supported algorithms here
 
@@ -103,6 +111,12 @@ let md5WithRSAEncryption_oid = mk_oid [1;2;840;113549;1;1;4]
 let sha_1WithRSAEncryption_oid = mk_oid [1;2;840;113549;1;1;5]
 
 let sha256WithRSAEncryption_oid = mk_oid [1;2;840;113549;1;1;11]
+
+let sha384WithRSAEncryption_oid = pkcs_1 /+ 12
+
+let sha512WithRSAEncryption_oid = pkcs_1 /+ 13
+
+let sha224WithRSAEncryption_oid = pkcs_1 /+ 14
 
 let option_NULL_field
 = ASN1_ILC null_id (ASN1_TERMINAL ASN1_NULL)
@@ -256,6 +270,9 @@ let supported_algorithms
    (md5WithRSAEncryption_oid, option_NULL_field_list_with_pf);
    (sha_1WithRSAEncryption_oid, option_NULL_field_list_with_pf);
    (sha256WithRSAEncryption_oid, option_NULL_field_list_with_pf);
+   (sha384WithRSAEncryption_oid, option_NULL_field_list_with_pf);
+   (sha512WithRSAEncryption_oid, option_NULL_field_list_with_pf);
+   (sha224WithRSAEncryption_oid, option_NULL_field_list_with_pf);
    (id_dsa_with_sha1, omitted_field_list_with_pf);
    (id_ecdsa_with_sha1, omitted_field_list_with_pf);
    (id_dsa, dss_params_fields);
@@ -294,14 +311,22 @@ let attributeType_ilc
 let directoryString_ilc
 = ASN1_CHOICE_ILC 
   [(printablestring_id, ASN1_TERMINAL ASN1_PRINTABLESTRING);
-   (utf8string_id, ASN1_TERMINAL ASN1_UTF8STRING)]
+   (utf8string_id, ASN1_TERMINAL ASN1_UTF8STRING);
+   (universalstring_id, ASN1_TERMINAL ASN1_OCTETSTRING);
+   (bMPstring_id, ASN1_TERMINAL ASN1_OCTETSTRING);
+   (teletexstring_id, ASN1_TERMINAL ASN1_OCTETSTRING)]
   _
 
 let attributeValue_ilc = directoryString_ilc
 
+let emailAddress_oid = mk_oid [1;2;840;113549;1;9;1]
+
+let emailAddress_field : asn1_gen_items_k
+= (| [PLAIN ^: (ASN1_ILC ia5string_id (ASN1_TERMINAL ASN1_IA5STRING))], _ |)
+
 let attributeTypeAndValue_ilc
 = ASN1_ILC sequence_id
-    (ASN1_ANY_OID oid_id [] (Some (|[PLAIN ^: attributeValue_ilc], _|)) _)
+    (ASN1_ANY_OID oid_id [emailAddress_oid, emailAddress_field] (Some (|[PLAIN ^: attributeValue_ilc], _|)) _)
 
 let relativeDistinguishedName_ilc
 = ASN1_ILC set_id
@@ -380,13 +405,13 @@ let id_ad_caIssuers = id_ad /+ 1
 let id_ad_ocsp = id_ad /+ 2
 
 let accessMethod_ilc
-= ASN1_ILC oid_id (ASN1_RESTRICTED_TERMINAL ASN1_OID (fun oid -> oid = id_ad_caIssuers && oid = id_ad_ocsp))
+= ASN1_ILC oid_id (ASN1_RESTRICTED_TERMINAL ASN1_OID (fun oid -> oid = id_ad_caIssuers || oid = id_ad_ocsp))
 
 let generalName_ilc
 = ASN1_CHOICE_ILC 
   [(((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) ^* "email") (ASN1_TERMINAL ASN1_IA5STRING));
    (((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2) ^* "dns") (ASN1_TERMINAL ASN1_IA5STRING));
-   (((mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 4) ^* "x500") rDNSequence_c);
+   (((mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 4) ^* "x500") (ASN1_PREFIXED name_ilc));
    (((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 6) ^* "uri") (ASN1_TERMINAL ASN1_IA5STRING));
    (((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 7) ^* "ip") (ASN1_TERMINAL ASN1_IA5STRING));
    (((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 8) ^* "registeredID") (ASN1_TERMINAL ASN1_OID))]
@@ -493,10 +518,39 @@ let id_qt = id_pkix /+ 2
 
 let id_qt_cps = id_qt /+ 1
 
-let supported_policyQualifier
-= [(id_qt_cps, qualifier_fields_with_pf)]
+let id_qt_unotice = id_qt /+ 2
 
-let supported_policyQualifier_wf : squash (List.noRepeats (List.map fst supported_policyQualifier)) = _
+// Warning: Not enforcing the length
+
+let displayText_ilc 
+= ASN1_CHOICE_ILC [
+    (ia5string_id, ASN1_TERMINAL ASN1_IA5STRING);
+    (visiblestring_id, ASN1_TERMINAL ASN1_OCTETSTRING);
+    (bMPstring_id, ASN1_TERMINAL ASN1_OCTETSTRING);
+    (utf8string_id, ASN1_TERMINAL ASN1_OCTETSTRING)
+    ] _
+
+let noticeReference_ilc
+= ASN1_ILC sequence_id
+    (ASN1_SEQUENCE (| [
+      PLAIN ^: displayText_ilc;
+      PLAIN ^: (ASN1_ILC sequence_id (ASN1_SEQUENCE_OF (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))))], _|))
+
+let userNotice_ilc
+= ASN1_ILC sequence_id (ASN1_SEQUENCE (| [
+    OPTION ^: noticeReference_ilc;
+    OPTION ^: displayText_ilc], _|))
+
+let userNotice_fields_with_pf : asn1_gen_items_k
+= (| [PLAIN ^: userNotice_ilc], _ |)
+
+let supported_policyQualifier
+= [(id_qt_cps, qualifier_fields_with_pf);
+   (id_qt_unotice, userNotice_fields_with_pf)]
+
+let supported_policyQualifier_wf : squash (List.noRepeats (List.map fst supported_policyQualifier)) = 
+  assert (id_qt_cps <> id_qt_unotice) by (Tactics.compute());
+  _
 
 let policyQualifierInfo_ilc
 = ASN1_ILC sequence_id (ASN1_ANY_OID oid_id supported_policyQualifier None supported_policyQualifier_wf)
