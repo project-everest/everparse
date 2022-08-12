@@ -92,15 +92,9 @@ let generalizedtime_id = mk_constant_id 24
 
 // TODO: insert list of supported algorithms here
 
-(*
-let md2_oid : asn1_oid_t = [1ul; 2ul; 840ul; 113549ul; 2ul; 2ul]
+let pkcs_1 = mk_oid [1;2;840;113549;1;1]
 
-let md5_oid : asn1_oid_t = [1ul; 2ul; 840ul; 113549ul; 2ul; 5ul]
-
-let id_sha1_oid : asn1_oid_t = [1ul; 3ul; 14ul; 3ul; 2ul; 26ul]
-*)
-
-let rSAEncryption_oid = mk_oid [1;2;840;113549;1;1;1]
+let rSAEncryption_oid = pkcs_1 /+ 1
 
 let md2WithRSAEncryption_oid = mk_oid [1;2;840;113549;1;1;2]
 
@@ -119,12 +113,155 @@ let option_NULL_field_list
 let option_NULL_field_list_with_pf : asn1_gen_items_k
 = (|option_NULL_field_list, _|)
 
+let id_dsa_with_sha1 = mk_oid [1;2;840;10040;4;3]
+
+let omitted_field
+= ASN1_DEFAULT_TERMINAL null_id #ASN1_NULL ()
+
+let omitted_field_list_with_pf : asn1_gen_items_k
+= (| [DEFAULT ^: omitted_field], _ |)
+
+let ansi_X9_62 = mk_oid [1;2;840;10045]
+
+let id_ecSigType = ansi_X9_62 /+ 4
+
+let id_ecdsa_with_sha1 = id_ecSigType /+ 1
+
+let id_dsa = mk_oid [1;2;840;10040;4;1]
+
+let dss_params_ilc
+= ASN1_ILC sequence_id 
+    (ASN1_SEQUENCE (| [
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|))
+
+let dss_params_fields : asn1_gen_items_k
+= (| [OPTION ^: dss_params_ilc], _ |)
+
+let dhpublicnumber = mk_oid [1;2;840;10046;2;1]
+
+let validationParms_ilc
+= ASN1_ILC sequence_id 
+    (ASN1_SEQUENCE (| [
+      PLAIN ^: (ASN1_ILC bit_string_id (ASN1_TERMINAL ASN1_BITSTRING));
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|))
+
+let domainParameters_ilc
+= ASN1_ILC sequence_id
+    (ASN1_SEQUENCE (| [
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
+      OPTION ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
+      OPTION ^: validationParms_ilc], _|))
+
+let domainParameters_fields : asn1_gen_items_k
+= (| [PLAIN ^: domainParameters_ilc], _|)
+
+let id_keyExchangeAlgorithm = mk_oid [2;16;840;1;101;2;1;1;22]
+
+let kEA_Parms_Id_field : asn1_gen_items_k
+= (| [PLAIN ^: (ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING))], _|)
+
+let id_public_key_type = ansi_X9_62 /+ 2
+
+let id_ecPublicKey = id_public_key_type /+ 1
+
+let curve
+= ASN1_ILC sequence_id 
+    (ASN1_SEQUENCE (| [
+      PLAIN ^: (ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING));
+      PLAIN ^: (ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING));
+      OPTION ^: (ASN1_ILC bit_string_id (ASN1_TERMINAL ASN1_BITSTRING))], _|))
+      
+let eCPVer_ilc 
+= ASN1_ILC integer_id (ASN1_RESTRICTED_TERMINAL ASN1_INTEGER (fun x -> x = 1))
+
+let id_fieldType = ansi_X9_62 /+ 1
+
+let prime_field_oid = id_fieldType /+ 1
+
+let prime_p : asn1_gen_items_k
+= (| [PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _ |)
+
+let characteristic_two_field_oid = id_fieldType /+ 2
+
+(*
+
+let id_characteristic_two_basis = characteristic_two_field_oid /+ 1
+
+let gnBasis_oid = id_characteristic_two_basis /+ 1
+
+let gnBasis_parameters : asn1_gen_items_k
+= (| [PLAIN ^: (ASN1_ILC null_id (ASN1_TERMINAL ASN1_NULL))], _ |)
+
+let tpBasis_oid = id_characteristic_two_basis /+ 2
+
+let tpBasis_parameters : asn1_gen_items_k
+= (| [PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|)
+
+let ppBasis_oid = id_characteristic_two_basis /+ 3
+
+let pentanomial_ilc
+= ASN1_ILC sequence_id 
+    (ASN1_SEQUENCE (| [
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
+      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|))
+
+let ppBasis_paramters : asn1_gen_items_k
+= (| [PLAIN ^: pentanomial_ilc], _|)
+
+*)
+
+// Warning : Unsupported usage of any
+
+let characteristic_two_ilc
+= ASN1_ILC sequence_id (ASN1_TERMINAL ASN1_OCTETSTRING)
+
+let characteristic_two_field : asn1_gen_items_k
+= (| [PLAIN ^: characteristic_two_ilc], _|)
+
+let fieldId_ilc
+= assert (prime_field_oid <> characteristic_two_field_oid);
+  ASN1_ILC sequence_id 
+   (ASN1_ANY_OID oid_id [(prime_field_oid, prime_p); (characteristic_two_field_oid, characteristic_two_field)] None _)
+
+let eCParameters_c
+= (ASN1_SEQUENCE (| [
+    PLAIN ^: eCPVer_ilc;
+    PLAIN ^: fieldId_ilc;
+    PLAIN ^: curve;
+    PLAIN ^: (ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING));
+    PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
+    OPTION ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|))
+
+// Warning: Not filtering with the list of named curves
+
+let ecpkParameters
+= assert (sequence_id <> oid_id);
+  assert (null_id <> oid_id);
+  ASN1_CHOICE_ILC [
+    (sequence_id, eCParameters_c);
+    (oid_id, ASN1_TERMINAL ASN1_OID);
+    (null_id, ASN1_TERMINAL ASN1_NULL)] _
+
+let ecpkParameters_field : asn1_gen_items_k
+= (| [PLAIN ^: ecpkParameters], _ |)
+
 let supported_algorithms
 = [(rSAEncryption_oid, option_NULL_field_list_with_pf);
    (md2WithRSAEncryption_oid, option_NULL_field_list_with_pf);
    (md5WithRSAEncryption_oid, option_NULL_field_list_with_pf);
    (sha_1WithRSAEncryption_oid, option_NULL_field_list_with_pf);
-   (sha256WithRSAEncryption_oid, option_NULL_field_list_with_pf)]
+   (sha256WithRSAEncryption_oid, option_NULL_field_list_with_pf);
+   (id_dsa_with_sha1, omitted_field_list_with_pf);
+   (id_ecdsa_with_sha1, omitted_field_list_with_pf);
+   (id_dsa, dss_params_fields);
+   (dhpublicnumber, domainParameters_fields);
+   (id_keyExchangeAlgorithm, kEA_Parms_Id_field);
+   (id_ecPublicKey, ecpkParameters_field)]
 
 let fallback_sequence_bitstring
 = ASN1_ILC sequence_id (ASN1_TERMINAL ASN1_OCTETSTRING)
