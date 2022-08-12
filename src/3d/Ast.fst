@@ -243,6 +243,7 @@ type op =
   | LE of option integer_type
   | GE of option integer_type
   | IfThenElse
+  | HashIfThenElse  
   | BitFieldOf of int //BitFieldOf_n(i, from, to); the integer is the size of i in bits
   | SizeOf
   | Cast : from:option integer_type -> to:integer_type -> op
@@ -526,6 +527,7 @@ type decl' =
   | OutputType : out_typ -> decl'
   | ExternType : typedef_names -> decl'
   | ExternFn   : ident -> typ -> list param -> decl'
+  | CompileTimeFlag : ident -> decl'  
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -738,7 +740,8 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
     CaseType names (subst_params s params) (subst_switch_case s cases)
   | OutputType _
   | ExternType _
-  | ExternFn _ _ _ -> d
+  | ExternFn _ _ _
+  | CompileTimeFlag _ -> d
 let subst_decl (s:subst) (d:decl) : ML decl = decl_with_v d (subst_decl' s d.d_decl.v)
 
 (*** Printing the source AST; for debugging only **)
@@ -790,6 +793,7 @@ let print_op = function
   | LE _ -> "<="
   | GE _ -> ">="
   | IfThenElse -> "ifthenelse"
+  | HashIfThenElse -> "#ifthenelse"  
   | BitFieldOf i -> Printf.sprintf "bitfield_of(%d)" i
   | SizeOf -> "sizeof"
   | Cast _ t -> "(" ^ print_integer_type t ^ ")"
@@ -993,6 +997,7 @@ let print_decl' (d:decl') : ML string =
   | OutputType out_t -> "Printing for output types is TBD"
   | ExternType _ -> "Printing for extern types is TBD"
   | ExternFn _ _ _ -> "Printing for extern functions is TBD"
+  | CompileTimeFlag i -> Printf.sprintf "[@@IfDef]val %s : bool" i.v.name
 
 let print_decl (d:decl) : ML string =
   match d.d_decl.comments with

@@ -274,8 +274,10 @@ let translate_op : A.op -> ML T.op =
   | Cast (Some from) to -> T.Cast from to
   | Ext s -> T.Ext s
   | Cast None _
+  | HashIfThenElse  
   | SizeOf -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
                                   (Ast.print_op op))
+
 
 let rec translate_expr (e:A.expr) : ML T.expr =
   (match e.v with
@@ -321,9 +323,11 @@ and translate_out_expr (oe:out_expr) : ML T.output_expr =
 
 let output_types_attributes = {
   T.is_hoisted = false;
+  T.is_if_def = false;
   T.is_exported = false;
   T.should_inline = false;
-  T.comments = [] }
+  T.comments = [] 
+}
 
 (*
  * An output expression type parameter is translated to
@@ -1098,13 +1102,13 @@ let rec free_vars_expr (genv:global_env)
     | Record _ fields ->
       List.fold_left (fun out (_, e) -> free_vars_expr genv env out e) out fields
 
-let with_attrs (d:T.decl') (h:bool) (e:bool) (i:bool) (c:list string)
+let with_attrs (d:T.decl') (h:bool) (ifdef:bool) (e:bool) (i:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = h; is_exported = e; should_inline = i; comments = c } )
+  = d, T.({ is_hoisted = h; is_if_def = ifdef; is_exported = e; should_inline = i; comments = c } )
 
 let with_comments (d:T.decl') (e:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = false; is_exported = e; should_inline = false; comments = c } )
+  = d, T.({ is_hoisted = false; is_if_def=false; is_exported = e; should_inline = false; comments = c } )
 
 let rec hoist_typ
           (fn:string)
@@ -1138,7 +1142,7 @@ let rec hoist_typ
       in
       let d = Definition def in
       let t = T_refine t1 (None, app) in
-      ds@[with_attrs d true false true []],  //hoisted, not exported, inlineable
+      ds@[with_attrs d true false false true []],  //hoisted, not exported, inlineable
       t
 
     | T_refine t1 (None, e) ->
@@ -1227,7 +1231,7 @@ let hoist_one_type_definition (should_inline:bool)
         decl_is_enum = false        
       } in
       let td = Type_decl td in
-      with_attrs td true false should_inline [comment],  //hoisted, not exported, should_inline
+      with_attrs td true false false should_inline [comment],  //hoisted, not exported, should_inline
       tdef
 
 let hoist_field (genv:global_env) (env:env_t) (tdn:T.typedef_name) (f:T.field)
@@ -1403,7 +1407,11 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let params, ds = List.fold_left (fun (params, ds) (t, i, _) ->
       let t, ds_t = translate_typ t in
       params@[i, t],ds@ds_t) ([], ds) params in
-    [with_comments (T.Extern_fn f ret params) false []]
+    ds @ [with_comments (T.Extern_fn f ret params) false []]
+
+  | CompileTimeFlag i ->
+    let t, ds_t = translate_typ tbool in
+    ds_t @ [with_attrs (T.Assumption (i, t)) false true false false []]
 
 noeq
 type translate_env = {

@@ -175,5 +175,8 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
     decl_with_v d (ExternFn f ret params)
 
+  | CompileTimeFlag i -> d
+  
+
 let simplify_prog benv senv (p:list decl) =
   List.map (simplify_decl (B.mk_env benv, senv)) p

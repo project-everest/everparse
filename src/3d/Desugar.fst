@@ -31,7 +31,14 @@ module H = Hashtable
      abbreviations
 
    * Set the kind (Spec/Output/Extern) in the type nodes
+
+   * Find variables in HashIfThenElse and hoist them as assumptions
+     and rewrite HashIfThenElse to IfThenElse
 *)
+
+#push-options "--warn_error -272" //intentional top-level effect
+let auxiliary_decls : ref (list decl) = FStar.ST.alloc []
+#pop-options
 
 let check_desugared_enum_cases (cases:list enum_case) : ML (list ident) =
     List.map
@@ -187,14 +194,61 @@ let resolve_ident (env:qenv) (i:ident) : ML ident =
                 | Some m -> { i with v = { i.v with modul_name = Some m } }))
 
 
-let rec resolve_expr' (env:qenv) (e:expr') : ML expr' =
+let rec collect_ifdef_guards (env:qenv) (e:expr) 
+  : ML unit
+  = match e.v with
+    | This -> error "'this' is not allowed in the guard of an #if" e.range
+    | Constant _ -> ()
+    | Identifier i ->
+      if List.mem i.v.name env.local_names  //it's a local name (e.g. a parameter name)
+      then error (Printf.sprintf "Identifier %s is not a compile-time macro but is used in a #if" i.v.name) e.range
+      else (
+        //declare ident, if not already declared      
+        let aux = !auxiliary_decls in
+        match List.tryFind 
+                (fun d -> 
+                  match d.d_decl.v with
+                  | CompileTimeFlag j -> i.v.name = j.v.name
+                  | _ -> false)
+                aux
+        with
+        | None -> 
+          IO.print_string (Printf.sprintf "Adding declaration of %s\n" i.v.name);
+          let d = mk_decl (CompileTimeFlag i) e.range [] false in
+          auxiliary_decls := d :: aux
+        | Some _ -> () //already declared
+
+      )
+    | App op args ->
+      begin 
+      match op with
+      | And
+      | Or
+      | Not -> List.iter (collect_ifdef_guards env) args
+      | _ -> error "Only boolean expressions over identifiers are supported in #if guards" e.range
+      end
+
+let rec resolve_expr' (env:qenv) (e:expr') r : ML expr' =
   match e with
   | Constant _ -> e
   | Identifier i -> Identifier (resolve_ident env i)
   | This -> e
-  | App op args -> App op (List.map (resolve_expr env) args)
+  | App op args -> 
+    let args = List.map (resolve_expr env) args in
+    match op with
+    | HashIfThenElse ->
+      begin
+      match args with 
+      | [guard; br1; br2] ->
+        collect_ifdef_guards env guard;//mark any variables as top-level IfDef symbols
+        App IfThenElse args //rewrite away the HashIfThenElse
+      | _ -> error "Unexpected arguments to a #if/#else" r
+      end
+      
+    | _ ->
+      App op args
 
-and resolve_expr (env:qenv) (e:expr) : ML expr = { e with v = resolve_expr' env e.v }
+and resolve_expr (env:qenv) (e:expr) : ML expr = { e with v = resolve_expr' env e.v e.range }
 
 let resolve_typ_param (env:qenv) (p:typ_param) : ML typ_param =
   match p with
@@ -366,10 +420,12 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let ret = resolve_typ env ret in
     let params, _ = resolve_params env params in
     ExternFn id ret params
+  | CompileTimeFlag i -> d
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
 let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
+  auxiliary_decls := [];
   let decls, refinement = p in
   let decls = List.collect desugar_one_enum decls in
   let env = {
@@ -382,7 +438,8 @@ let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
   } in
   H.insert env.extern_types (Ast.to_ident' "void") ();
   let decls = List.map (resolve_decl env) decls in
-  decls,
+  let aux = List.rev (!auxiliary_decls) in
+  aux@decls,
   (match refinement with
    | None -> None
    | Some tr ->

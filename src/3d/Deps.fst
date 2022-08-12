@@ -186,6 +186,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | OutputType _
     | ExternType _
     | ExternFn _ _ _ -> []  //AR: no dependencies from the output/extern types yet
+    | CompileTimeFlag _ -> []
   in
 
   let has_output_types (ds:list decl) : bool =

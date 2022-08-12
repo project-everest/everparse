@@ -59,6 +59,7 @@
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
 %token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
+%token          HASH_IF HASH_ELSE HASH_ENDIF
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
 %start <Ast.expr> expr_top
@@ -107,6 +108,10 @@ rel_op:
 else_opt:
   |             { None   }
   | ELSE LBRACE e=expr RBRACE { Some e }
+
+hash_else_opt:
+  |             { None   }
+  | HASH_ELSE e=expr { Some e }
 
 atomic_expr:
   | i=qident   { Identifier i }
@@ -178,6 +183,16 @@ expr_no_range:
         in
         App(IfThenElse, [e;e1;e2])
     }
+  | HASH_IF e=atomic_or_paren_expr e1=expr e2=hash_else_opt HASH_ENDIF
+    {
+        let e2 =
+            match e2 with
+            | None -> with_range (Constant (Bool true)) $startpos
+            | Some e2 -> e2
+        in
+        App(HashIfThenElse, [e;e1;e2])
+    }
+  
   | i=IDENT LPAREN es=arguments RPAREN
     {
        App(Ext i.v.name, es)

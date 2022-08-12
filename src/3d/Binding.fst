@@ -69,6 +69,7 @@ let params_of_decl (d:decl) : list param =
   | OutputType _ -> []
   | ExternType _ -> []
   | ExternFn _ _ ps -> ps
+  | CompileTimeFlag _ -> []
 
 let check_shadow (e:H.t ident' 'a) (i:ident) (r:range) =
   match H.try_find e i.v with
@@ -1565,6 +1566,11 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     check_params env params;
     let d = mk_decl (ExternFn f ret params) d.d_decl.range d.d_decl.comments d.d_exported in
     add_extern_fn e f d;
+    d
+
+  | CompileTimeFlag i ->
+    let ms = nullary_macro tbool None in
+    add_global e i d (Inr ms); 
     d
 
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =

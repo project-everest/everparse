@@ -107,6 +107,9 @@ rule token =
   | line_comment as c { Ast.comments_buffer.push (locate_pos lexbuf c); token lexbuf }
   | "/*++"         { block_comment ("", Lexing.lexeme_start_p lexbuf) lexbuf }
   | "/*"           { multi_line_comment lexbuf }
+  | "#if"          { locate lexbuf HASH_IF }
+  | "#else"        { locate lexbuf HASH_ELSE }
+  | "#endif"       { locate lexbuf HASH_ENDIF }  
   | "("            { locate lexbuf LPAREN }
   | ")"            { locate lexbuf RPAREN }
   | "<<"           { locate lexbuf SHIFT_LEFT }
