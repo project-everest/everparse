@@ -130,6 +130,17 @@ let fold_list_index'
 : Tot (fold_t state_t (l: list t { List.Tot.length l == n }) unit inv inv)
 = fun l -> f (List.Tot.index l idx)
 
+let fold_list_index''
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (n: nat)
+  (idx: (i: nat { i < n }) -> Tot (i: nat { i < n }))
+  (j: nat {j < n})
+: Tot (fold_t state_t (l: list t {List.Tot.length l == n}) unit inv inv)
+= fold_list_index' inv n (idx j) f
+
 let fold_for_list'
   #state_i #state_t
   (inv: state_i)
@@ -138,7 +149,7 @@ let fold_for_list'
   (n: nat)
   (idx: (i: nat { i < n }) -> Tot (i: nat { i < n }))
 : Tot (fold_t state_t (l: list t { List.Tot.length l == n }) unit inv inv)
-= fold_for inv 0 (n - 1) (fun j -> fold_list_index' inv n (idx j) f)
+= fold_for inv 0 (n - 1) (fold_list_index'' inv f n idx)
 
 let fold_for_list
   #state_i #state_t
@@ -158,6 +169,20 @@ let fold_read
   ()
 : Tot (fold_t state_t t t pre (pre))
 = fun x -> ret x
+
+module SZ = LowParse.Steel.StdInt
+
+inline_for_extraction
+noeq
+type array_index_fn = {
+  array_index_f_nat: ((n: nat) -> (x: nat {x < n}) -> (y: nat {y < n}));
+  array_index_f_sz: ((n: SZ.size_t) -> (x: SZ.size_t) -> Pure SZ.size_t (SZ.size_v x < SZ.size_v n) (fun y -> SZ.size_v y == array_index_f_nat (SZ.size_v n) (SZ.size_v x)));
+}
+
+let array_index_reverse = {
+  array_index_f_nat = (fun n x -> n - 1 - x);
+  array_index_f_sz = (fun n x -> (n `SZ.size_sub` SZ.one_size) `SZ.size_sub` x);
+}
 
 noeq
 type prog
@@ -207,6 +232,12 @@ type prog
       (inv: _) ->
       prog state_t action_t t unit inv (inv) ->
       prog state_t action_t (TList t) unit inv (inv)
+  | PListFor:
+      (#t: typ) ->
+      (inv: _) ->
+      (idx: array_index_fn) ->
+      prog state_t action_t t unit inv (inv) ->
+      prog state_t action_t (TList t) unit inv (inv)
   | PChoice:
       (#t: (bool -> typ)) ->
       (#ret_t: Type) ->
@@ -233,6 +264,7 @@ let rec sem
   | PU8 _ -> fold_read () <: fold_t state_t (type_of_typ t) ret_t _ (_)
   | PPair p1 p2 -> fold_pair (sem action_sem p1) (fun r -> sem action_sem (p2 r))
   | PList inv p -> fold_list inv (sem action_sem p)
+  | PListFor inv idx p -> fold_for_list inv (sem action_sem p) idx.array_index_f_nat
   | PChoice p -> fold_choice (fun x -> sem action_sem (p x)) <: fold_t state_t (type_of_typ (TChoice _)) ret_t pre post
 
 let pseq
@@ -648,6 +680,7 @@ let rec prog_concat_context
   | PU8 i -> PU8 (hole_concat_context i c)
   | PPair f1 f2 -> PPair (prog_concat_context f1 c) (fun x -> prog_concat_context (f2 x) c)
   | PList i f -> PList _ (prog_concat_context f c)
+  | PListFor i idx f -> PListFor _ idx (prog_concat_context f c) 
   | PChoice f -> PChoice (fun x -> prog_concat_context (f x) c)
 
 let rec fold_list_concat_context
@@ -688,6 +721,94 @@ let rec fold_list_concat_context
     erase_values_hole_concat_context s' c;
     prf hd s;
     fold_list_concat_context f c g prf tl s'
+
+let rec fold_for_concat_context
+  (#root: typ)
+  (#inv: ser_index root)
+  (#t: Type)
+  (from: nat) (to: int)
+  (f: (x: nat { from <= x /\ x <= to }) -> fold_t ser_state t unit inv inv)
+  (#t': typ)
+  (c: context_t false root t')
+  (g: (x: nat { from <= x /\ x <= to }) -> fold_t (ser_state #t') t unit (hole_concat_context inv (context_erase_values c)) (hole_concat_context inv (context_erase_values c)))
+  (prf: (x: nat { from <= x /\ x <= to }) -> (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (requires (
+      let (v, s') = f x i s in
+      hole_erase_values (hole_concat_context s c) == hole_concat_context (hole_erase_values s) (context_erase_values c) /\
+      hole_erase_values (hole_concat_context s' c) == hole_concat_context (hole_erase_values s') (context_erase_values c)
+    ))
+    (ensures (let (v, s') = f x i s in
+      g x i (hole_concat_context s c) == (v, hole_concat_context s' c)
+    ))
+  )
+  (input: t)
+  (s: ser_state inv)
+: Lemma
+  (ensures (
+    let (v, s') = fold_for inv from to f input s in
+    hole_erase_values (hole_concat_context s c) == hole_concat_context (hole_erase_values s) (context_erase_values c) /\
+    hole_erase_values (hole_concat_context s' c) == hole_concat_context (hole_erase_values s') (context_erase_values c) /\
+    fold_for (hole_concat_context inv (context_erase_values c)) from to g input (hole_concat_context s c) ==
+      (v, hole_concat_context s' c)
+  ))
+  (decreases (if to < from then 0 else to - from + 1))
+= erase_values_hole_concat_context s c;
+  if from > to
+  then ()
+  else begin
+    let (_, s') = f from input s in
+    erase_values_hole_concat_context s' c;
+    prf from input s;
+    fold_for_concat_context (from + 1) to f c g prf input s'
+  end
+
+let fold_for_list_concat_context
+  (#root: typ)
+  (#inv: ser_index root)
+  (#t: Type)
+  (f: fold_t ser_state t unit inv inv)
+  (idx: (n: nat) -> (i: nat { i < n }) -> Tot (i: nat { i < n }))
+  (#t': typ)
+  (c: context_t false root t')
+  (g: fold_t (ser_state #t') t unit (hole_concat_context inv (context_erase_values c)) (hole_concat_context inv (context_erase_values c)))
+  (prf: (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (requires (
+      let (v, s') = f i s in
+      hole_erase_values (hole_concat_context s c) == hole_concat_context (hole_erase_values s) (context_erase_values c) /\
+      hole_erase_values (hole_concat_context s' c) == hole_concat_context (hole_erase_values s') (context_erase_values c)
+    ))
+    (ensures (let (v, s') = f i s in
+      g i (hole_concat_context s c) == (v, hole_concat_context s' c)
+    ))
+  )
+  (input: list t)
+  (s: ser_state inv)
+: Lemma
+  (ensures (
+    let (v, s') = fold_for_list inv f idx input s in
+    hole_erase_values (hole_concat_context s c) == hole_concat_context (hole_erase_values s) (context_erase_values c) /\
+    hole_erase_values (hole_concat_context s' c) == hole_concat_context (hole_erase_values s') (context_erase_values c) /\
+    fold_for_list (hole_concat_context inv (context_erase_values c)) g idx input (hole_concat_context s c) ==
+      (v, hole_concat_context s' c)
+  ))
+  (decreases input)
+= let n = List.Tot.length input in
+  erase_values_hole_concat_context s c;
+  assert (fold_for_list inv f idx input s == fold_for_list' inv f n (idx n) input s);
+  assert (fold_for_list' inv f n (idx n) input s == fold_for inv 0 (n - 1) (fold_list_index'' inv f n (idx n)) input s) by (FStar.Tactics.trefl ());
+  assert (fold_for_list inv f idx input s == fold_for inv 0 (n - 1) (fold_list_index'' inv f n (idx n)) input s);
+  let s0 = hole_concat_context s c in
+  assert (fold_for_list _ g idx input s0 == fold_for_list' _ g n (idx n) input s0);
+  assert (fold_for_list' _ g n (idx n) input s0 == fold_for _ 0 (n - 1) (fold_list_index'' _ g n (idx n)) input s0) by (FStar.Tactics.trefl ());
+  assert (fold_for_list _ g idx input s0 == fold_for _ 0 (n - 1) (fold_list_index'' _ g n (idx n)) input s0);
+  fold_for_concat_context 0 (n - 1)
+    (fold_list_index'' inv f n (idx n))
+    c
+    (fold_list_index'' _ g n (idx n))
+    (fun x (i: list t { List.Tot.length i == n }) s -> prf (List.Tot.index i (idx n x)) s)
+    input s
 
 #push-options "--split_queries" // "--z3rlimit 64"
 #restart-solver
@@ -740,6 +861,17 @@ let rec sem_prog_concat_context
   | PList inv body ->
     fold_list_concat_context
       (sem ser_action_sem body)
+      c
+      (sem ser_action_sem (prog_concat_context body (context_erase_values c)))
+      (fun elt st ->
+        sem_prog_concat_context body elt st c
+      )
+      input
+      s
+  | PListFor inv idx body ->
+    fold_for_list_concat_context
+      (sem ser_action_sem body)
+      idx.array_index_f_nat
       c
       (sem ser_action_sem (prog_concat_context body (context_erase_values c)))
       (fun elt st ->

@@ -1131,6 +1131,61 @@ let rec fold_list_chunk_desc_ge
     let (_, s') = f hd s in
     fold_list_chunk_desc_ge f prf tl s'
 
+let rec fold_for_chunk_desc_ge
+  (#root: typ)
+  (#inv: ser_index root)
+  (#t: Type)
+  (from: nat) (to: int)
+  (f: (x: nat { from <= x /\ x <= to }) -> fold_t ser_state t unit inv inv)
+  (prf: (x: nat { from <= x /\ x <= to }) -> (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (ensures (let (v, s') = f x i s in
+      parse_hole s' `chunk_desc_ge` parse_hole s
+    ))
+  )
+  (input: t)
+  (s: ser_state inv)
+: Lemma
+  (ensures (
+    let (v, s') = fold_for inv from to f input s in
+    parse_hole s' `chunk_desc_ge` parse_hole s
+  ))
+  (decreases (if to < from then 0 else to - from + 1))
+= if from > to
+  then ()
+  else begin
+    let (_, s') = f from input s in
+    prf from input s;
+    fold_for_chunk_desc_ge (from + 1) to f prf input s'
+  end
+
+let fold_for_list_chunk_desc_ge
+  (#root: typ)
+  (#inv: ser_index root)
+  (#t: Type)
+  (f: fold_t ser_state t unit inv inv)
+  (idx: (n: nat) -> (i: nat { i < n }) -> Tot (i: nat { i < n }))
+  (prf: (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (ensures (let (v, s') = f i s in
+      parse_hole s' `chunk_desc_ge` parse_hole s
+    ))
+  )
+  (input: list t)
+  (s: ser_state inv)
+: Lemma
+  (ensures (
+    let (v, s') = fold_for_list inv f idx input s in
+    parse_hole s' `chunk_desc_ge` parse_hole s
+  ))
+=
+  let n = List.Tot.length input in
+  assert (fold_for_list inv f idx input s == fold_for inv 0 (n - 1) (fold_list_index'' inv f n (idx n)) input s) by (FStar.Tactics.trefl ());
+  fold_for_chunk_desc_ge 0 (n - 1)
+    (fold_list_index'' inv f n (idx n))
+    (fun x (i: list t { List.Tot.length i == n }) s -> prf (List.Tot.index i (idx n x)) s)
+    input s
+
 #push-options "--z3rlimit 32"
 #restart-solver
 
@@ -1166,6 +1221,13 @@ let rec prog_sem_chunk_desc_ge
   | PList i f ->
     fold_list_chunk_desc_ge
       (sem ser_action_sem f)
+      (fun i s -> prog_sem_chunk_desc_ge f i s)
+      input
+      s
+  | PListFor i idx f ->
+    fold_for_list_chunk_desc_ge
+      (sem ser_action_sem f)
+      idx.array_index_f_nat
       (fun i s -> prog_sem_chunk_desc_ge f i s)
       input
       s
