@@ -1,0 +1,12 @@
+entrypoint
+typedef struct _PointConditional {
+  UINT32 x;
+  UINT32 y
+  {
+    #if (ABOVE_DIAGONAL && SOMETHING_ELSE)
+        x <= y
+    #else
+        y <= x
+    #endif
+  };
+} PointConditional;
