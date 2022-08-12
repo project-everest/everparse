@@ -41,6 +41,10 @@ let mk_oid_app (oid : asn1_oid_t) (x : UInt.uint_t 32) : asn1_oid_t
 
 let op_Slash_Plus = mk_oid_app
 
+// WHY WHY WHY
+let map_tags (items : list asn1_gen_item_k) =
+  List.map (fun x -> let (| s, d, _|) = x in (s, d)) items
+
 // for choices
 
 let op_Hat_Star (id : asn1_id_t) (name : string) : asn1_content_k -> (asn1_id_t * asn1_content_k)
@@ -572,11 +576,18 @@ let certificatePolicies_expansion
 let id_ce_authorityKeyIdentifier = id_ce /+ 35
 
 let authorityKeyIdentifier_ilc
-= ASN1_ILC sequence_id
-    (ASN1_SEQUENCE (|[
-      OPTION ^: (ASN1_ILC (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 0) (ASN1_TERMINAL ASN1_OCTETSTRING));
-      OPTION ^: (ASN1_ILC (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 1) generalNames_c);
-      OPTION ^: (ASN1_ILC (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2) (ASN1_TERMINAL ASN1_INTEGER))], _|))
+= let id0 = mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 0 in
+  let id1 = mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 1 in
+  let id2 = mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2 in
+  let fields = [
+      OPTION ^: (ASN1_ILC id0 (ASN1_TERMINAL ASN1_OCTETSTRING));
+      OPTION ^: (ASN1_ILC id1 generalNames_c);
+      OPTION ^: (ASN1_ILC id2 (ASN1_TERMINAL ASN1_INTEGER))] in
+  let tags = map_tags fields in
+  let pf : squash (asn1_sequence_k_wf tags) = assert (asn1_sequence_k_wf tags) by
+(Tactics.compute(); Tactics.smt()) in
+  ASN1_ILC sequence_id
+    (ASN1_SEQUENCE (| fields, pf|))
 
 let authorityKeyIdentifier_expansion
 = mk_expansion (DEFAULT ^: critical_field_MUST_false) authorityKeyIdentifier_ilc
@@ -618,10 +629,6 @@ let extensions_id = mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 3
 
 let extensions_ilc
 = ASN1_ILC extensions_id (ASN1_PREFIXED extensions_ilc')
-
-// WHY WHY WHY
-let map_tags (items : list asn1_gen_item_k) =
-  List.map (fun x -> let (| s, d, _|) = x in (s, d)) items
 
 #push-options "--max_fuel 16"
 
