@@ -142,6 +142,19 @@ val array_chunk
   (va: AP.array byte)
 : Tot vprop
 
+val elim_array_chunk
+  (#opened: _)
+  (f: chunk_desc)
+  (a: byte_array)
+  (va: AP.array byte)
+: STGhost (AP.v byte) opened
+    (array_chunk f a va)
+    (fun va' -> AP.arrayptr a va')
+    True
+    (fun va' ->
+      AP.array_of va' == va /\
+      exact_chunk f (AP.contents_of va'))
+
 val intro_concat_chunks
   (#opened: _)
   (#va1: _)

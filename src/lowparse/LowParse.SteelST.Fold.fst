@@ -83,7 +83,7 @@ let rec parse_context
 : Tot chunk_desc
   (decreases c)
 = match c with
-  | CNil -> parse_some_chunk parse_empty ()
+  | CNil -> empty_chunk
   | CCons bc c' ->
     parse_some_chunk (parser_of_base_context bc) (value_of_base_context bc) `concat_chunks`
     parse_context c'
@@ -449,6 +449,32 @@ let elim_parse_context_arrays_cons
       parse_context_arrays (CCons?.c c0) (CACons?.b c) (CACons?.c c))
   end
 
+let rec parse_context_arrays_parse_context
+  (#opened: _)
+  (#tfrom #tto: typ)
+  (c0: context_t false tfrom tto)
+  (b: byte_array)
+  (#a: AP.array byte)
+  (c: context_arrays a)
+: STGhostT unit opened
+    (parse_context_arrays c0 b c)
+    (fun _ -> array_chunk (parse_context c0) b a)
+    (decreases c0)
+= if CNil? c0
+  then begin
+    elim_parse_context_arrays_nil c0 b c;
+    rewrite
+      (array_chunk _ _ _)
+      (array_chunk (parse_context c0) b a)
+  end else begin
+    let _ = elim_parse_context_arrays_cons c0 b c () in
+    parse_context_arrays_parse_context (CCons?.c c0) (CACons?.b c) (CACons?.c c);
+    let _ = intro_concat_chunks _ _ b _ in
+    rewrite
+      (array_chunk _ _ _)
+      (array_chunk (parse_context c0) b a)
+  end
+
 inline_for_extraction
 noeq
 type hole_arrays =
@@ -714,7 +740,7 @@ let impl_ser_u8
   (#root: _)
   (#pre: ser_index root)
   (w: U8.t)
-  (sq: squash (pre.leaf == TU8 /\ HVHole? pre.hole /\ CNil? pre.context))
+  (sq: squash (pre.leaf == TU8 /\ HVHole? pre.hole))
 : Tot (action_impl_t (SU8 #_ #pre w ()))
 = fun #vl bout sz out h kpre kpost k_success k_failure ->
   rewrite
@@ -748,19 +774,21 @@ let impl_ser_u8
       k_success vl sz' out' h' ()
     )
     (fun vb ->
+      let _ = parse_context_arrays_parse_context _ _ _ in
+      let vr = elim_array_chunk _ _ _ in
       chunk_desc_ge_intro_exact_parse_some_chunk
         (weaken default_parser_kind (parser_of_typ TU8))
         parse_u8
         w;
-      chunk_desc_ge_concat_chunk_intro_r
-        (parse_some_chunk (weaken default_parser_kind (parser_of_typ TU8)) w)
-        (parse_context h.context);
       chunk_desc_ge_implies
-        (parse_hole (fill_hole h w))
+        (parse_some_chunk (weaken default_parser_kind (parser_of_typ TU8)) w)
         (parse_some_chunk parse_u8 w)
         (AP.length (AP.array_of vb));
-      elim_parse_context_arrays_nil _ _ _;
-      let _ = elim_empty_chunk empty_chunk _ in
+      chunk_exceeds_limit_concat_r
+        (parse_some_chunk (weaken default_parser_kind (parser_of_typ TU8)) w)
+        (AP.length (AP.array_of vb))
+        (parse_context h.context)
+        (AP.contents_of vr);
       let vb' = AP.join bout _ in
       k_failure vb'
     )
@@ -1599,7 +1627,7 @@ let run_prog
     )
     (fun vb' ->
       let f () : Lemma (chunk_exceeds_limit (parse_some_chunk (parser_of_typ root) v') (SZ.size_v sz)) =
-        chunk_desc_ge_zero_r (parse_some_chunk (weaken default_parser_kind (parser_of_typ root)) v') (parse_some_chunk parse_empty ());
+        chunk_desc_ge_zero_r (parse_some_chunk (weaken default_parser_kind (parser_of_typ root)) v') empty_chunk;
         chunk_desc_ge_intro_exact_parse_some_chunk
           (parser_of_typ root)
           (weaken default_parser_kind (parser_of_typ root))

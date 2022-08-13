@@ -247,6 +247,14 @@ let array_chunk
 : Tot vprop
 = array_chunk' f a va
 
+let elim_array_chunk
+  f a va
+= rewrite
+    (array_chunk f a va)
+    (array_chunk' f a va);
+  let _ = gen_elim () in
+  vpattern_replace (AP.arrayptr a)
+
 let intro_concat_chunks
   (#opened: _)
   (#va1: _)
