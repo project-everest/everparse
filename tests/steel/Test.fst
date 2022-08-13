@@ -38,6 +38,9 @@ let test_prog_2 = F.run_prog
           _
           (F.impl_ret #_ #_ #_ #F.TU8 ())
           (jump_weaken F.pkind (jump_constant_size parse_u8  SZ.one_size) ())
+          (F.with_context_arrays_ptr_nil F.TU8)
+          (F.load_context_arrays_ptr_nil F.TU8)
+          (F.store_context_arrays_ptr_nil F.TU8)
         )
       )
 
