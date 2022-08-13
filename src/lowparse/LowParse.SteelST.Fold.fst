@@ -767,13 +767,15 @@ let impl_ser_u8
 
 inline_for_extraction
 [@@noextract_to "krml"]
-let prog_impl_t
+let fold_impl_t
   (#root: typ)
   (#ret_t: Type)
   (#pre: ser_index root)
   (#post: (ser_index root))
-  (#ty: typ)
-  (p: prog ser_state ser_action ty ret_t pre post)
+  (#ty: Type)
+  (#kty: parser_kind)
+  (pty: parser kty ty)
+  (p: fold_t (ser_state #root) ty ret_t pre post)
 : Tot Type
 = (#vbin: _) ->
   (#vl: AP.v byte) ->
@@ -791,13 +793,13 @@ let prog_impl_t
     (h': Ghost.erased (ser_state post)) ->
     (v: ret_t) ->
     ST unit
-      (kpre `star` aparse (parser_of_typ ty) bin vbin `star`
+      (kpre `star` aparse pty bin vbin `star`
         AP.arrayptr bout vl' `star` parse_hole_arrays h' out')
       (fun _ -> kpost)
       (
         AP.adjacent (AP.array_of vl) (array_of_hole out) /\
         AP.merge_into (AP.array_of vl') (array_of_hole out') (AP.merge (AP.array_of vl) (array_of_hole out)) /\
-        sem ser_action_sem p vbin.contents h == (v, Ghost.reveal h') /\
+        p vbin.contents h == (v, Ghost.reveal h') /\
         SZ.size_v sz' == AP.length (AP.array_of vl')
       )
       (fun _ -> True)
@@ -805,17 +807,17 @@ let prog_impl_t
   (k_failure: (
     (vb': AP.v byte) ->
     ST unit
-      (kpre `star` aparse (parser_of_typ ty) bin vbin `star` AP.arrayptr bout vb')
+      (kpre `star` aparse pty bin vbin `star` AP.arrayptr bout vb')
       (fun _ -> kpost)
       (
-        let (_, h') = sem ser_action_sem p vbin.contents h in
+        let (_, h') = p vbin.contents h in
         AP.merge_into (AP.array_of vl) (array_of_hole out) (AP.array_of vb') /\
         chunk_exceeds_limit (parse_hole h') (AP.length (AP.array_of vb'))
       )
       (fun _ -> True)
   )) ->
   ST unit
-    (kpre `star` aparse (parser_of_typ ty) bin vbin `star`
+    (kpre `star` aparse pty bin vbin `star`
       AP.arrayptr bout vl `star` parse_hole_arrays h out)
     (fun _ -> kpost)
     (SZ.size_v sz == AP.length (AP.array_of vl) /\
@@ -823,6 +825,18 @@ let prog_impl_t
       AP.adjacent (AP.array_of vl) (array_of_hole out)
     )
     (fun _ -> True)
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let prog_impl_t
+  (#root: typ)
+  (#ret_t: Type)
+  (#pre: ser_index root)
+  (#post: (ser_index root))
+  (#ty: typ)
+  (p: prog ser_state ser_action ty ret_t pre post)
+: Tot Type
+= fold_impl_t (parser_of_typ ty) (sem ser_action_sem p)
 
 inline_for_extraction
 let impl_action
@@ -842,6 +856,527 @@ let impl_action
     k_failure
 
 module R = Steel.ST.Reference
+
+(* loading and storing context *)
+
+let rec context_arrays_shape
+  (#tfrom: typ)
+  (#tto: typ)
+  (c: context_t true tfrom tto)
+  (#a: AP.array byte)
+  (ca: context_arrays a)
+: Tot prop
+  (decreases c)
+= (CNil? c == CANil? ca) /\
+  (CCons? c ==>
+    context_arrays_shape (CCons?.c c) (CACons?.c ca))
+
+let rec parse_context_arrays_shape
+  (#opened: _)
+  (#tfrom: typ)
+  (#tto: typ)
+  (c: context_t false tfrom tto)
+  (b: byte_array)
+  (#a: AP.array byte)
+  (ca: context_arrays a)
+: STGhost unit opened
+    (parse_context_arrays c b ca)
+    (fun _ -> parse_context_arrays c b ca)
+    True
+    (fun _ -> context_arrays_shape (context_erase_values c) ca)
+    (decreases c)
+= if CNil? c
+  then begin
+    elim_parse_context_arrays_nil c b ca;
+    intro_parse_context_arrays_nil tfrom b _;
+    rewrite
+      (parse_context_arrays _ _ _)
+      (parse_context_arrays c b ca)
+  end else begin
+    let _ = elim_parse_context_arrays_cons c b ca () in
+    parse_context_arrays_shape (CCons?.c c) (CACons?.b ca) (CACons?.c ca);
+    intro_parse_context_arrays_cons _ _ _ _ _ (CACons?.sz ca) _ _ ();
+    rewrite
+      (parse_context_arrays _ _ _)
+      (parse_context_arrays c b ca)
+  end
+
+inline_for_extraction
+noeq
+type context_arrays_ptr : Type0 =
+| CAPNil: context_arrays_ptr
+| CAPCons:
+  (b: R.ref byte_array) ->
+  (bsz: R.ref SZ.size_t) ->
+  (c: context_arrays_ptr) ->
+  context_arrays_ptr
+
+let rec context_arrays_pts_to
+  (cp: context_arrays_ptr)
+  (#a: AP.array byte)
+  (c: context_arrays a)
+: Tot vprop
+  (decreases c)
+= if CANil? c
+  then pure (CAPNil? cp == true)
+  else if CAPNil? cp
+  then pure False
+  else
+    R.pts_to (CAPCons?.b cp) full_perm (CACons?.b c) `star`
+    R.pts_to (CAPCons?.bsz cp) full_perm (CACons?.sz c) `star`
+    context_arrays_pts_to (CAPCons?.c cp) (CACons?.c c)
+
+let intro_context_arrays_pts_to_nil
+  (#opened: _)
+  (a: AP.array byte)
+: STGhostT unit opened
+    emp
+    (fun _ -> context_arrays_pts_to CAPNil (CANil a))
+= rewrite
+    (pure (CANil? (CANil a) == true))
+    (context_arrays_pts_to CAPNil (CANil a))
+
+let elim_context_arrays_pts_to_nil
+  (#opened: _)
+  (cp: context_arrays_ptr)
+  (#a: AP.array byte)
+  (c: context_arrays a)
+: STGhost unit opened
+    (context_arrays_pts_to cp c)
+    (fun _ -> emp)
+    (CAPNil? cp \/ CANil? c)
+    (fun _ -> CANil? c /\ CAPNil? cp)
+= if CANil? c
+  then begin
+    rewrite
+      (context_arrays_pts_to cp c)
+      (pure (CAPNil? cp == true));
+    let _ = gen_elim () in
+    ()
+  end else begin
+    rewrite
+      (context_arrays_pts_to cp c)
+      (pure False);
+    let _ = gen_elim () in
+    ()
+  end
+
+let intro_context_arrays_pts_to_cons
+  (#opened: _)
+  (bb: R.ref byte_array)
+  (bsz: R.ref SZ.size_t)
+  (cp: context_arrays_ptr)
+  (b: byte_array)
+  (a0: AP.array byte)
+  (al: AP.array byte)
+  (sz: SZ.size_t)
+  (ar: AP.array byte)
+  (sq: squash (AP.merge_into al ar a0 /\ SZ.size_v sz == AP.length al))
+  (c: context_arrays ar)
+: STGhostT unit opened
+    (R.pts_to bb full_perm b `star`
+      R.pts_to bsz full_perm sz `star`
+      context_arrays_pts_to cp c)
+    (fun _ -> context_arrays_pts_to (CAPCons bb bsz cp) (CACons b a0 al sz ar sq c))
+= rewrite
+    (R.pts_to bb full_perm b `star`
+      R.pts_to bsz full_perm sz `star`
+      context_arrays_pts_to cp c)
+    (context_arrays_pts_to (CAPCons bb bsz cp) (CACons b a0 al sz ar sq c))
+
+let elim_context_arrays_pts_to_cons
+  (#opened: _)
+  (cp: context_arrays_ptr)
+  (#a: AP.array byte)
+  (c: context_arrays a)
+: STGhost (squash (CACons? c /\ CAPCons? cp)) opened
+    (context_arrays_pts_to cp c)
+    (fun _ ->
+      R.pts_to (CAPCons?.b cp) full_perm (CACons?.b c) `star`
+      R.pts_to (CAPCons?.bsz cp) full_perm (CACons?.sz c) `star`
+      context_arrays_pts_to (CAPCons?.c cp) (CACons?.c c))
+    (CACons? c \/ CAPCons? cp)
+    (fun _ -> True)
+= if CANil? c
+  then begin
+    rewrite
+      (context_arrays_pts_to cp c)
+      (pure (CAPNil? cp == true));
+    let _ = gen_elim () in
+    assert False;
+    rewrite // by contradiction
+      emp
+      (R.pts_to (CAPCons?.b cp) full_perm (CACons?.b c) `star`
+        R.pts_to (CAPCons?.bsz cp) full_perm (CACons?.sz c) `star`
+        context_arrays_pts_to (CAPCons?.c cp) (CACons?.c c))
+  end else
+  if CAPNil? cp
+  then begin
+    rewrite
+      (context_arrays_pts_to cp c)
+      (pure False);
+    let _ = gen_elim () in
+    rewrite // by contradiction
+      emp
+      (R.pts_to (CAPCons?.b cp) full_perm (CACons?.b c) `star`
+        R.pts_to (CAPCons?.bsz cp) full_perm (CACons?.sz c) `star`
+        context_arrays_pts_to (CAPCons?.c cp) (CACons?.c c))
+  end else
+  begin
+    rewrite
+      (context_arrays_pts_to cp c)
+      (R.pts_to (CAPCons?.b cp) full_perm (CACons?.b c) `star`
+        R.pts_to (CAPCons?.bsz cp) full_perm (CACons?.sz c) `star`
+        context_arrays_pts_to (CAPCons?.c cp) (CACons?.c c))
+  end
+
+inline_for_extraction
+let with_context_arrays_ptr_t
+  (#tfrom #tto: typ)
+  (ci: context_t true tfrom tto)
+: Tot Type
+= (#a: AP.array byte) ->
+  (c: context_arrays a) ->
+  (kpre: vprop) ->
+  (tret: Type) ->
+  (kpost: (tret -> vprop)) ->
+  (k: (
+    (cp: context_arrays_ptr) ->
+    STT tret
+      (kpre `star` context_arrays_pts_to cp c)
+      (fun r -> kpost r `star` exists_ (fun a -> exists_ (context_arrays_pts_to cp #a)))
+  )) ->
+  ST tret
+    kpre
+    kpost
+    (context_arrays_shape ci c)
+    (fun _ -> True)
+
+inline_for_extraction
+let with_context_arrays_ptr_nil
+  (t: Ghost.erased typ)
+: with_context_arrays_ptr_t (CNil #_ #t)
+= fun #a c kpre tret kpost k ->
+    [@inline_let]
+    let cp = CAPNil in
+    intro_context_arrays_pts_to_nil a;
+    rewrite (context_arrays_pts_to _ _) (context_arrays_pts_to cp c);
+    let res = k cp in
+    let _ = gen_elim () in
+    elim_context_arrays_pts_to_nil _ _;
+    return res
+
+inline_for_extraction
+let with_context_arrays_ptr_cons
+  (#t1 #t2 #t3: Ghost.erased typ)
+  (bi: Ghost.erased (base_context_t true t1 t2))
+  (ci: Ghost.erased (context_t true t2 t3))
+  (w: with_context_arrays_ptr_t ci)
+: Tot (with_context_arrays_ptr_t (CCons bi ci))
+= fun #a c kpre tret kpost k ->
+  with_local (CACons?.b c) (fun b ->
+  with_local (CACons?.sz c) (fun bsz ->
+    w
+      (CACons?.c c)
+      (kpre `star`
+        R.pts_to b full_perm (CACons?.b c) `star`
+        R.pts_to bsz full_perm (CACons?.sz c))
+      tret
+      (fun r -> kpost r `star`
+        exists_ (R.pts_to b full_perm) `star`
+        exists_ (R.pts_to bsz full_perm))
+      (fun cp ->
+        [@inline_let] // CRITICAL for extraction
+        let cp' = CAPCons b bsz cp in
+        rewrite
+          (R.pts_to b _ _ `star` R.pts_to bsz _ _ `star` context_arrays_pts_to _ _)
+          (context_arrays_pts_to cp' c);
+        let res = k cp' in
+        let _ = gen_elim () in
+        let _ = elim_context_arrays_pts_to_cons cp' _ in
+        let vb = vpattern_replace_erased (R.pts_to (CAPCons?.b cp') full_perm) in
+        rewrite (R.pts_to (CAPCons?.b cp') full_perm _) (R.pts_to b full_perm vb);
+        let vsz = vpattern_replace_erased (R.pts_to (CAPCons?.bsz cp') full_perm) in
+        rewrite (R.pts_to (CAPCons?.bsz cp') full_perm _) (R.pts_to bsz full_perm vsz);
+        let vc = vpattern_replace_erased (context_arrays_pts_to _) in
+        rewrite (context_arrays_pts_to _ _) (context_arrays_pts_to cp vc);
+        return res
+      )
+  ))
+
+inline_for_extraction
+let load_context_arrays_ptr_t
+  (#tfrom #tto: typ)
+  (ci: context_t true tfrom tto)
+: Tot Type
+= (#a: AP.array byte) ->
+  (gc: Ghost.erased (context_arrays a)) ->
+  (cp: context_arrays_ptr) ->
+  (kpre: vprop) ->
+  (tret: Type) ->
+  (kpost: (tret -> vprop)) ->
+  (k: (
+    (c: context_arrays a) ->
+    ST tret
+      (kpre `star` context_arrays_pts_to cp c)
+      kpost
+      (Ghost.reveal gc == c)
+      (fun _ -> True)
+  )) ->
+  ST tret
+    (kpre `star` context_arrays_pts_to cp gc)
+    kpost
+    (context_arrays_shape ci gc)
+    (fun _ -> True)
+
+inline_for_extraction
+let load_context_arrays_ptr_nil
+  (t: Ghost.erased typ)
+: Tot (load_context_arrays_ptr_t (CNil #_ #t))
+= fun #a gc cp kpre tret kpost k ->
+    elim_context_arrays_pts_to_nil cp gc;
+    [@inline_let]
+    let c = CANil a in
+    intro_context_arrays_pts_to_nil a;
+    rewrite (context_arrays_pts_to _ _) (context_arrays_pts_to cp c);
+    k c
+
+inline_for_extraction
+let load_context_arrays_ptr_cons
+  (#t1 #t2 #t3: Ghost.erased typ)
+  (bi: Ghost.erased (base_context_t true t1 t2))
+  (ci: Ghost.erased (context_t true t2 t3))
+  (w: load_context_arrays_ptr_t ci)
+: Tot (load_context_arrays_ptr_t (CCons bi ci))
+= fun #a gc cp kpre tret kpost k ->
+    let _ = elim_context_arrays_pts_to_cons cp gc in
+    let b = R.read (CAPCons?.b cp) in
+    let sz = R.read (CAPCons?.bsz cp) in
+    w
+      (CACons?.c gc)
+      (CAPCons?.c cp)
+      (kpre `star`
+        R.pts_to (CAPCons?.b cp) full_perm (CACons?.b gc) `star`
+        R.pts_to (CAPCons?.bsz cp) full_perm (CACons?.sz gc))
+      tret
+      kpost
+      (fun c ->
+        [@inline_let] // CRITICAL for extraction
+        let c' = CACons
+          b
+          a
+          (CACons?.al gc)
+          sz
+          (CACons?.ar gc)
+          ()
+          c
+        in
+        rewrite
+          (R.pts_to (CAPCons?.b cp) _ _ `star` R.pts_to (CAPCons?.bsz cp) _ _ `star` context_arrays_pts_to _ _)
+          (context_arrays_pts_to cp c');
+        k c'
+      )
+
+inline_for_extraction
+let store_context_arrays_ptr_t
+  (#tfrom #tto: typ)
+  (ci: context_t true tfrom tto)
+: Tot Type
+= 
+  (cp: context_arrays_ptr) ->
+  (#a0: _) ->
+  (gc0: Ghost.erased (context_arrays a0)) ->
+  (#a: _) ->
+  (c: context_arrays a) ->
+  ST unit
+    (context_arrays_pts_to cp gc0)
+    (fun _ -> context_arrays_pts_to cp c)
+    (context_arrays_shape ci gc0 /\ context_arrays_shape ci c)
+    (fun _ -> True)
+
+inline_for_extraction
+let store_context_arrays_ptr_nil
+  (t: Ghost.erased typ)
+: Tot (store_context_arrays_ptr_t (CNil #_ #t))
+= fun cp #a0 gc0 #a c ->
+    elim_context_arrays_pts_to_nil cp gc0;
+    intro_context_arrays_pts_to_nil a;
+    rewrite (context_arrays_pts_to _ _) (context_arrays_pts_to cp c)
+
+inline_for_extraction
+let store_context_arrays_ptr_cons
+  (#t1 #t2 #t3: Ghost.erased typ)
+  (bi: Ghost.erased (base_context_t true t1 t2))
+  (ci: Ghost.erased (context_t true t2 t3))
+  (w: store_context_arrays_ptr_t ci)
+: Tot (store_context_arrays_ptr_t (CCons bi ci))
+= fun cp #a0 gc0 #a c ->
+  let _ = elim_context_arrays_pts_to_cons cp _ in
+  w _ _ (CACons?.c c);
+  R.write (CAPCons?.b cp) (CACons?.b c);
+  R.write (CAPCons?.bsz cp) (CACons?.sz c);
+  intro_context_arrays_pts_to_cons (CAPCons?.b cp) (CAPCons?.bsz cp) (CAPCons?.c cp) (CACons?.b c) (CACons?.a0 c) (CACons?.al c) (CACons?.sz c) (CACons?.ar c) () (CACons?.c c);
+  rewrite
+    (context_arrays_pts_to _ _)
+    (context_arrays_pts_to cp c)
+
+inline_for_extraction
+noeq
+type hole_arrays_ptr =
+{
+  hap_hole_b: R.ref byte_array;
+  hap_hole_sz: R.ref SZ.size_t;
+  hap_context_b: R.ref byte_array;
+  hap_context: context_arrays_ptr;
+}
+
+[@@__reduce__]
+let hole_arrays_pts_to0
+  (p: hole_arrays_ptr)
+  (a: hole_arrays)
+: Tot vprop
+= R.pts_to p.hap_hole_b full_perm a.ha_hole_b `star`
+  R.pts_to p.hap_hole_sz full_perm a.ha_hole_sz `star`
+  R.pts_to p.hap_context_b full_perm a.ha_context_b `star`
+  context_arrays_pts_to p.hap_context a.ha_context
+
+let hole_arrays_pts_to
+  (p: hole_arrays_ptr)
+  (a: hole_arrays)
+: Tot vprop
+= hole_arrays_pts_to0 p a
+
+inline_for_extraction
+let with_hole_arrays_ptr
+  (hi: Ghost.erased (hole_t true))
+  (w: with_context_arrays_ptr_t hi.context)
+  (a: hole_arrays)
+  (kpre: vprop)
+  (tret: Type)
+  (kpost: (tret -> vprop))
+  (k: (
+    (p: hole_arrays_ptr) ->
+    STT tret
+      (kpre `star` hole_arrays_pts_to p a)
+      (fun r -> kpost r `star` exists_ (hole_arrays_pts_to p))
+  ))
+: ST tret
+    kpre
+    kpost
+    (context_arrays_shape hi.context a.ha_context)
+    (fun _ -> True)
+= with_local a.ha_hole_b (fun b ->
+  with_local a.ha_hole_sz (fun bsz ->
+  with_local a.ha_context_b (fun bcb ->
+    w a.ha_context
+      (kpre `star`
+        R.pts_to b full_perm a.ha_hole_b `star`
+        R.pts_to bsz full_perm a.ha_hole_sz `star`
+        R.pts_to bcb full_perm a.ha_context_b)
+      tret
+      (fun r -> kpost r `star`
+        exists_ (R.pts_to b full_perm) `star`
+        exists_ (R.pts_to bsz full_perm) `star`
+        exists_ (R.pts_to bcb full_perm))
+      (fun cp ->
+        [@inline_let] // CRITICAL for extraction
+        let p = {
+          hap_hole_b = b;
+          hap_hole_sz = bsz;
+          hap_context_b = bcb;
+          hap_context = cp;
+        }
+        in
+        rewrite
+          (R.pts_to b _ _ `star` R.pts_to bsz _ _ `star` R.pts_to bcb _ _ `star` context_arrays_pts_to _ _)
+          (hole_arrays_pts_to p a);
+        let res = k p in
+        let _ = gen_elim () in
+        let ga' = vpattern_replace_erased (hole_arrays_pts_to p) in
+        rewrite
+          (hole_arrays_pts_to p _)
+          (R.pts_to b full_perm ga'.ha_hole_b `star` R.pts_to bsz full_perm ga'.ha_hole_sz `star` R.pts_to bcb full_perm ga'.ha_context_b `star` context_arrays_pts_to cp ga'.ha_context);
+        return res
+      )
+  )))
+
+inline_for_extraction
+let load_hole_arrays_ptr
+  (hi: Ghost.erased (hole_t true))
+  (w: load_context_arrays_ptr_t hi.context)
+  (gh: Ghost.erased (hole_arrays))
+  (hp: hole_arrays_ptr)
+  (kpre: vprop)
+  (tret: Type)
+  (kpost: (tret -> vprop))
+  (k: (
+    (h: hole_arrays) ->
+    ST tret
+      (kpre `star` hole_arrays_pts_to hp h)
+      kpost
+      (Ghost.reveal gh == h)
+      (fun _ -> True)
+  ))
+: ST tret
+    (kpre `star` hole_arrays_pts_to hp gh)
+    kpost
+    (context_arrays_shape hi.context gh.ha_context)
+    (fun _ -> True)
+= rewrite
+    (hole_arrays_pts_to hp gh)
+    (hole_arrays_pts_to0 hp gh);
+  let b = read_replace hp.hap_hole_b in
+  let sz = read_replace hp.hap_hole_sz in
+  let cb = read_replace hp.hap_context_b in
+  w
+    gh.ha_context
+    hp.hap_context
+    (kpre `star`
+      R.pts_to hp.hap_hole_b full_perm b `star`
+      R.pts_to hp.hap_hole_sz full_perm sz `star`
+      R.pts_to hp.hap_context_b full_perm cb)
+    tret
+    kpost
+    (fun c ->
+      [@inline_let] // CRITICAL for extraction
+      let h = {
+        ha_hole_a = gh.ha_hole_a;
+        ha_hole_b = b;
+        ha_hole_sz = sz;
+        ha_context_a = gh.ha_context_a;
+        ha_context_b = cb;
+        ha_context = c;
+        ha_prf = gh.ha_prf;
+      }
+      in
+      rewrite
+        (R.pts_to hp.hap_hole_b _ _ `star` R.pts_to hp.hap_hole_sz _ _ `star` R.pts_to hp.hap_context_b _ _ `star` context_arrays_pts_to _ _)
+        (hole_arrays_pts_to hp h);
+      k h
+    )
+
+inline_for_extraction
+let store_hole_arrays_ptr
+  (hi: Ghost.erased (hole_t true))
+  (w: store_context_arrays_ptr_t hi.context)
+  (hp: hole_arrays_ptr)
+  (gh0: Ghost.erased hole_arrays)
+  (h: hole_arrays)
+: ST unit
+    (hole_arrays_pts_to hp gh0)
+    (fun _ -> hole_arrays_pts_to hp h)
+    (context_arrays_shape hi.context gh0.ha_context /\ context_arrays_shape hi.context h.ha_context)
+    (fun _ -> True)
+= rewrite
+    (hole_arrays_pts_to hp gh0)
+    (hole_arrays_pts_to0 hp gh0);
+  R.write hp.hap_hole_b h.ha_hole_b;
+  R.write hp.hap_hole_sz h.ha_hole_sz;
+  R.write hp.hap_context_b h.ha_context_b;
+  w hp.hap_context gh0.ha_context h.ha_context;
+  rewrite
+    (hole_arrays_pts_to0 hp h)
+    (hole_arrays_pts_to hp h)
 
 let run_prog_post_true_prop
   (#root: typ)
