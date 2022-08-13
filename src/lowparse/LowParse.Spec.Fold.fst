@@ -103,34 +103,27 @@ let rec fold_for
   #state_i #state_t
   (inv: state_i)
   (#t: Type)
-  (from: nat) (to: int)
-  (f: (x: nat { from <= x /\ x <= to }) -> fold_t state_t t unit inv inv)
+  (from: nat) (to: nat)
+  (f: (x: nat { from <= x /\ x < to }) -> fold_t state_t t unit inv inv)
 : Tot (fold_t state_t t unit inv inv)
-  (decreases (if to < from then 0 else to - from + 1))
-= if from > to
+  (decreases (if to <= from then 0 else to - from + 1))
+= if from >= to
   then action_fold (ret ())
   else bind_fold (f from) (fun _ -> fold_for inv (from + 1) to f)
 
-let fold_list_index
-  #state_i #state_t
-  (inv: state_i)
-  (#t: Type)
-  (idx: (n: nat) -> Tot (i: nat { i < n }))
-  (f: fold_t state_t t unit inv inv)
-: Tot (fold_t state_t (list t) unit inv inv)
-= fun l -> f (List.Tot.index l (idx (List.Tot.length l)))
+let nlist (n: nat) (t: Type) = (l: list t { List.Tot.length l == n })
 
-let fold_list_index'
+let fold_list_index
   #state_i #state_t
   (inv: state_i)
   (#t: Type)
   (n: nat)
   (idx: (i: nat { i < n }))
   (f: fold_t state_t t unit inv inv)
-: Tot (fold_t state_t (l: list t { List.Tot.length l == n }) unit inv inv)
+: Tot (fold_t state_t (nlist n t) unit inv inv)
 = fun l -> f (List.Tot.index l idx)
 
-let fold_list_index''
+let fold_list_index_of
   #state_i #state_t
   (inv: state_i)
   (#t: Type)
@@ -138,8 +131,8 @@ let fold_list_index''
   (n: nat)
   (idx: (i: nat { i < n }) -> Tot (i: nat { i < n }))
   (j: nat {j < n})
-: Tot (fold_t state_t (l: list t {List.Tot.length l == n}) unit inv inv)
-= fold_list_index' inv n (idx j) f
+: Tot (fold_t state_t (nlist n t) unit inv inv)
+= fold_list_index inv n (idx j) f
 
 let fold_for_list'
   #state_i #state_t
@@ -148,8 +141,8 @@ let fold_for_list'
   (f: fold_t state_t t unit inv inv)
   (n: nat)
   (idx: (i: nat { i < n }) -> Tot (i: nat { i < n }))
-: Tot (fold_t state_t (l: list t { List.Tot.length l == n }) unit inv inv)
-= fold_for inv 0 (n - 1) (fold_list_index'' inv f n idx)
+: Tot (fold_t state_t (nlist n t) unit inv inv)
+= fold_for inv 0 n (fold_list_index_of inv f n idx)
 
 let fold_for_list
   #state_i #state_t
@@ -726,12 +719,12 @@ let rec fold_for_concat_context
   (#root: typ)
   (#inv: ser_index root)
   (#t: Type)
-  (from: nat) (to: int)
-  (f: (x: nat { from <= x /\ x <= to }) -> fold_t ser_state t unit inv inv)
+  (from: nat) (to: nat)
+  (f: (x: nat { from <= x /\ x < to }) -> fold_t ser_state t unit inv inv)
   (#t': typ)
   (c: context_t false root t')
-  (g: (x: nat { from <= x /\ x <= to }) -> fold_t (ser_state #t') t unit (hole_concat_context inv (context_erase_values c)) (hole_concat_context inv (context_erase_values c)))
-  (prf: (x: nat { from <= x /\ x <= to }) -> (i: t) -> (s: ser_state inv) ->
+  (g: (x: nat { from <= x /\ x < to }) -> fold_t (ser_state #t') t unit (hole_concat_context inv (context_erase_values c)) (hole_concat_context inv (context_erase_values c)))
+  (prf: (x: nat { from <= x /\ x < to }) -> (i: t) -> (s: ser_state inv) ->
     Lemma
     (requires (
       let (v, s') = f x i s in
@@ -752,9 +745,9 @@ let rec fold_for_concat_context
     fold_for (hole_concat_context inv (context_erase_values c)) from to g input (hole_concat_context s c) ==
       (v, hole_concat_context s' c)
   ))
-  (decreases (if to < from then 0 else to - from + 1))
+  (decreases (if to <= from then 0 else to - from + 1))
 = erase_values_hole_concat_context s c;
-  if from > to
+  if from >= to
   then ()
   else begin
     let (_, s') = f from input s in
@@ -796,18 +789,12 @@ let fold_for_list_concat_context
   (decreases input)
 = let n = List.Tot.length input in
   erase_values_hole_concat_context s c;
-  assert (fold_for_list inv f idx input s == fold_for_list' inv f n (idx n) input s);
-  assert (fold_for_list' inv f n (idx n) input s == fold_for inv 0 (n - 1) (fold_list_index'' inv f n (idx n)) input s) by (FStar.Tactics.trefl ());
-  assert (fold_for_list inv f idx input s == fold_for inv 0 (n - 1) (fold_list_index'' inv f n (idx n)) input s);
   let s0 = hole_concat_context s c in
-  assert (fold_for_list _ g idx input s0 == fold_for_list' _ g n (idx n) input s0);
-  assert (fold_for_list' _ g n (idx n) input s0 == fold_for _ 0 (n - 1) (fold_list_index'' _ g n (idx n)) input s0) by (FStar.Tactics.trefl ());
-  assert (fold_for_list _ g idx input s0 == fold_for _ 0 (n - 1) (fold_list_index'' _ g n (idx n)) input s0);
-  fold_for_concat_context 0 (n - 1)
-    (fold_list_index'' inv f n (idx n))
+  fold_for_concat_context 0 n
+    (fold_list_index_of inv f n (idx n))
     c
-    (fold_list_index'' _ g n (idx n))
-    (fun x (i: list t { List.Tot.length i == n }) s -> prf (List.Tot.index i (idx n x)) s)
+    (fold_list_index_of _ g n (idx n))
+    (fun x (i: nlist n t) s -> prf (List.Tot.index i (idx n x)) s)
     input s
 
 #push-options "--split_queries" // "--z3rlimit 64"

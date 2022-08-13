@@ -1715,9 +1715,9 @@ let rec fold_for_chunk_desc_ge
   (#root: typ)
   (#inv: ser_index root)
   (#t: Type)
-  (from: nat) (to: int)
-  (f: (x: nat { from <= x /\ x <= to }) -> fold_t ser_state t unit inv inv)
-  (prf: (x: nat { from <= x /\ x <= to }) -> (i: t) -> (s: ser_state inv) ->
+  (from: nat) (to: nat)
+  (f: (x: nat { from <= x /\ x < to }) -> fold_t ser_state t unit inv inv)
+  (prf: (x: nat { from <= x /\ x < to }) -> (i: t) -> (s: ser_state inv) ->
     Lemma
     (ensures (let (v, s') = f x i s in
       parse_hole s' `chunk_desc_ge` parse_hole s
@@ -1730,8 +1730,8 @@ let rec fold_for_chunk_desc_ge
     let (v, s') = fold_for inv from to f input s in
     parse_hole s' `chunk_desc_ge` parse_hole s
   ))
-  (decreases (if to < from then 0 else to - from + 1))
-= if from > to
+  (decreases (if to <= from then 0 else to - from + 1))
+= if from >= to
   then ()
   else begin
     let (_, s') = f from input s in
@@ -1760,10 +1760,9 @@ let fold_for_list_chunk_desc_ge
   ))
 =
   let n = List.Tot.length input in
-  assert (fold_for_list inv f idx input s == fold_for inv 0 (n - 1) (fold_list_index'' inv f n (idx n)) input s) by (FStar.Tactics.trefl ());
-  fold_for_chunk_desc_ge 0 (n - 1)
-    (fold_list_index'' inv f n (idx n))
-    (fun x (i: list t { List.Tot.length i == n }) s -> prf (List.Tot.index i (idx n x)) s)
+  fold_for_chunk_desc_ge 0 (n)
+    (fold_list_index_of inv f n (idx n))
+    (fun x (i: nlist n t) s -> prf (List.Tot.index i (idx n x)) s)
     input s
 
 #push-options "--z3rlimit 32"
@@ -2006,6 +2005,165 @@ let impl_choice
 #pop-options
 
 module GR = Steel.ST.GhostReference
+
+assume
+val impl_for
+  (#root: typ)
+  (#inv: ser_index root)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from <= x /\ x < SZ.size_v to }) -> fold_t ser_state t unit inv inv))
+  (prf: (x: nat { SZ.size_v from <= x /\ x < SZ.size_v to }) -> (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (ensures (let (v, s') = Ghost.reveal f x i s in
+      parse_hole s' `chunk_desc_ge` parse_hole s
+    ))
+  )
+  (fi: (x: SZ.size_t { SZ.size_v from <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t p (Ghost.reveal f (SZ.size_v x)))
+: Tot (fold_impl_t p (fold_for inv (SZ.size_v from) (SZ.size_v to) f))
+
+[@@__reduce__]
+let parse_nlist0
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot (parser (parse_filter_kind parse_list_kind) (nlist n t))
+= parse_list p `parse_filter` (fun l -> List.Tot.length l = n) `parse_synth` (fun x -> (x <: (nlist n t)))
+
+let parse_nlist
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot (parser (parse_filter_kind parse_list_kind) (nlist n t))
+= parse_nlist0 n p
+
+let intro_nlist
+  (#opened: _)
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#vb: v parse_list_kind (list t))
+  (b: byte_array)
+: STGhost (v (parse_filter_kind parse_list_kind) (nlist n t)) opened
+    (aparse (parse_list p) b vb)
+    (fun vb' -> aparse (parse_nlist n p) b vb')
+    (List.Tot.length vb.contents == n)
+    (fun vb' ->
+      array_of' vb' == array_of' vb /\
+      (vb'.contents <: list t) == vb.contents
+    )
+= let _ = intro_filter _ (fun l -> List.Tot.length l = n) b in
+  let _ = intro_synth _ (fun (x: parse_filter_refine _) -> (x <: (nlist n t))) b () in
+  rewrite_aparse b (parse_nlist n p)
+
+let elim_nlist
+  (#opened: _)
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#vb: v (parse_filter_kind parse_list_kind) (nlist n t))
+  (b: byte_array)
+: STGhost (v parse_list_kind (list t)) opened
+    (aparse (parse_nlist n p) b vb)
+    (fun vb' -> aparse (parse_list p) b vb')
+    True
+    (fun vb' ->
+      array_of' vb' == array_of' vb /\
+      (vb.contents <: list t) == vb'.contents
+    )
+= let _ = rewrite_aparse b (parse_nlist0 n p) in
+  let _ = elim_synth _ _ b () in
+  elim_filter _ _ b
+
+assume val impl_list_index
+  (#root: typ)
+  (#inv: ser_index root)
+  (#t: Type)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (jp: jumper p)
+  (n: SZ.size_t)
+  (idx: (i: SZ.size_t { SZ.size_v i < SZ.size_v n }))
+  (f: Ghost.erased (fold_t ser_state t unit inv inv))
+  (fi: fold_impl_t p f) 
+: Tot (fold_impl_t (parse_nlist (SZ.size_v n) p) (fold_list_index inv (SZ.size_v n) (SZ.size_v idx) f))
+
+inline_for_extraction
+let impl_list_index_of
+  (#root: typ)
+  (#inv: ser_index root)
+  (#t: Type)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (jp: jumper p)
+  (f: Ghost.erased (fold_t ser_state t unit inv inv))
+  (fi: fold_impl_t p f) 
+  (n: SZ.size_t)
+  (idx: Ghost.erased ((i: nat { i < SZ.size_v n }) -> Tot (i: nat { i < SZ.size_v n })))
+  (idx' : (i: SZ.size_t) -> Pure SZ.size_t (requires SZ.size_v i < SZ.size_v n) (ensures fun j -> SZ.size_v j == Ghost.reveal idx (SZ.size_v i)))
+  (j: SZ.size_t {SZ.size_v j < SZ.size_v n})
+: Tot (fold_impl_t (parse_nlist (SZ.size_v n) p) (fold_list_index_of inv f (SZ.size_v n) idx (SZ.size_v j)))
+= impl_list_index jp n (idx' j) f fi
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+inline_for_extraction
+let impl_list_for
+  (#root: typ)
+  (#t: typ)
+  (#inv: _)
+  (f: prog (ser_state #root) ser_action t unit inv inv)
+  (fi: prog_impl_t f)
+  (j: jumper (parser_of_typ t))
+  (idx: array_index_fn)
+: Tot (prog_impl_t (PListFor inv idx f))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  let _ = rewrite_aparse bin (parse_vldata 4 (parse_list (parser_of_typ t))) in
+  let bin_l = elim_vldata 4 (parse_list (parser_of_typ t)) bin in
+  let _ = gen_elim () in
+  let vl_sz = vpattern_replace (aparse (parse_bounded_integer 4) bin) in
+  let _ = vpattern_replace (aparse (parse_list (parser_of_typ t)) bin_l) in
+  let in_sz = read_bounded_integer 4 bin in
+  let a0 = Ghost.hide (AP.merge (AP.array_of vl) (array_of_hole out)) in
+  let n = list_length j bin_l (SZ.mk_size_t in_sz) in
+  let vl_l = intro_nlist (SZ.size_v n) _ bin_l in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse (parse_bounded_integer 4) bin vl_sz `star`
+      aparse (parse_nlist (SZ.size_v n) (parser_of_typ t)) bin_l vl_l)
+    (fun _ -> aparse (parser_of_typ (TList t)) bin vbin)
+  =
+    let _ = elim_nlist _ _ bin_l in
+    let _ = intro_vldata 4 (parse_list (parser_of_typ t)) bin bin_l in
+    let vbin' = rewrite_aparse bin (parser_of_typ (TList t)) in
+    rewrite (aparse _ bin _) (aparse (parser_of_typ (TList t)) bin vbin)
+  in
+  impl_for
+    (parse_nlist (SZ.size_v n) (parser_of_typ t))
+    SZ.zero_size
+    n
+    (fold_list_index_of inv (sem ser_action_sem f) (SZ.size_v n) (idx.array_index_f_nat (SZ.size_v n)))
+    (fun x i s -> prog_sem_chunk_desc_ge f (List.Tot.index i (idx.array_index_f_nat (SZ.size_v n) x)) s)
+    (impl_list_index_of j (sem ser_action_sem f) fi n (idx.array_index_f_nat (SZ.size_v n)) (idx.array_index_f_sz n))
+    bin_l bout sz out h
+    (kpre `star` aparse (parse_bounded_integer 4) bin vl_sz)
+    kpost
+    (fun vl' sz' out' h' v' ->
+      restore ();
+      k_success vl' sz' out' h' v'
+    )
+    (fun vb' ->
+      restore ();
+      k_failure vb'
+    )
+
+#pop-options
 
 let impl_list_hole_inv_true_prop
   (#root: typ)
