@@ -2,7 +2,6 @@ module LowParse.SteelST.Fold.Base
 open Steel.ST.Util
 include LowParse.SteelST.Parse
 include LowParse.Spec.Base
-include LowParse.Spec.Fold
 
 module AP = LowParse.SteelST.ArrayPtr
 module LP = LowParse.Spec.Base

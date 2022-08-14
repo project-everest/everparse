@@ -1,5 +1,6 @@
 module LowParse.SteelST.Fold
 include LowParse.SteelST.Fold.Base
+include LowParse.Spec.SerializationState
 
 open Steel.ST.GenElim
 open LowParse.SteelST.Combinators
