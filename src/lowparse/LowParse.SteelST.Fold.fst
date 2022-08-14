@@ -2572,6 +2572,96 @@ let elim_impl_for_inv_aux_false_strong
   impl_for_inv_aux_false_prop_chunk_exceeds_limit inv from0 to f l a0 h0 vout gfrom prf;
   gfrom
 
+inline_for_extraction
+let impl_for_post
+  (#root: typ)
+  (inv: ser_index root)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (bin: byte_array)
+  (vl: v k t)
+  (bout: byte_array)
+  (bout_sz: R.ref SZ.size_t)
+  (bh: hole_arrays_ptr)
+  (a0: AP.array byte)
+  (h0: Ghost.erased (ser_state inv))
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (vl0: AP.v byte)
+  (out0: hole_arrays)
+  (kpre kpost: vprop)
+  (k_success: (
+    (vl': AP.v byte) ->
+    (sz': SZ.size_t) ->
+    (out': hole_arrays) ->
+    (h': Ghost.erased (ser_state inv)) ->
+    (v: unit) ->
+    ST unit
+      (kpre `star` aparse p bin vl `star`
+        AP.arrayptr bout vl' `star` parse_hole_arrays h' out')
+      (fun _ -> kpost)
+      (
+        AP.adjacent (AP.array_of vl0) (array_of_hole out0) /\
+        AP.merge_into (AP.array_of vl') (array_of_hole out') (AP.merge (AP.array_of vl0) (array_of_hole out0)) /\
+        fold_for inv (SZ.size_v from0) (SZ.size_v to) f vl.contents h0 == (v, Ghost.reveal h') /\
+        SZ.size_v sz' == AP.length (AP.array_of vl')
+      )
+      (fun _ -> True)
+  ))
+  (k_failure: (
+    (vb': AP.v byte) ->
+    ST unit
+      (kpre `star` aparse p bin vl `star` AP.arrayptr bout vb')
+      (fun _ -> kpost)
+      (
+        let (_, h') = fold_for inv (SZ.size_v from0) (SZ.size_v to) f vl.contents h0 in
+        AP.merge_into (AP.array_of vl0) (array_of_hole out0) (AP.array_of vb') /\
+        chunk_exceeds_limit (parse_hole h') (AP.length (AP.array_of vb'))
+      )
+      (fun _ -> True)
+  ))
+  (prf: (x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (ensures (let (v, s') = Ghost.reveal f x i s in
+      parse_hole s' `chunk_desc_ge` parse_hole s
+    ))
+  )
+  (wl: load_context_arrays_ptr_t inv.context)
+: ST unit
+    (kpre `star` impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont false)
+    (fun _ -> kpost `star`
+      exists_ (R.pts_to bout_sz full_perm) `star`
+      exists_ (hole_arrays_pts_to bh) `star`
+      exists_ (R.pts_to bfrom full_perm) `star`
+      exists_ (R.pts_to b_no_interrupt full_perm) `star`
+      exists_ (R.pts_to bcont full_perm)
+    )
+    (AP.merge_into (AP.array_of vl0) (array_of_hole out0) a0)
+    (fun _ -> True)
+=
+    rewrite
+      (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont false)
+      (impl_for_inv0 inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont false);
+    let _ = gen_elim () in
+    let no_interrupt = read_replace b_no_interrupt in
+    if no_interrupt
+    then begin
+      let h' = elim_impl_for_inv_aux_true _ _ _ _ _ _ _ _ _ _ _ _ _ in
+      parse_hole_arrays_context_arrays_shape _ _;
+      let sz' = read_replace bout_sz in
+      load_hole_arrays_ptr inv wl _ bh (fun (out': hole_arrays) ->
+         vpattern_rewrite (parse_hole_arrays _) out';
+         k_success _ sz' out' h' ()
+      )
+    end else begin
+      let from = elim_impl_for_inv_aux_false_strong inv from0 to f prf vl.contents _ _ _ _ _ _ _ _ in
+      k_failure _
+    end
+
 #push-options "--z3rlimit 32"
 #restart-solver
 
@@ -2612,24 +2702,7 @@ let impl_for
       (impl_for_inv inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont)
       (impl_for_test inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont)
       (impl_for_body inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont fi wl ws);
-    rewrite
-      (impl_for_inv inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont false)
-      (impl_for_inv0 inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont false);
-    let _ = gen_elim () in
-    let no_interrupt = read_replace b_no_interrupt in
-    if no_interrupt
-    then begin
-      let h' = elim_impl_for_inv_aux_true _ _ _ _ _ _ _ _ _ _ _ _ _ in
-      parse_hole_arrays_context_arrays_shape _ _;
-      let sz' = read_replace bout_sz in
-      load_hole_arrays_ptr inv wl _ bh (fun (out': hole_arrays) ->
-         vpattern_rewrite (parse_hole_arrays _) out';
-         k_success _ sz' out' h' ()
-      )
-    end else begin
-      let from = elim_impl_for_inv_aux_false_strong inv from to f prf vbin.contents _ _ _ _ _ _ _ _ in
-      k_failure _
-    end
+    impl_for_post inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont vl out kpre kpost k_success k_failure prf wl
   )))))
 
 #pop-options
