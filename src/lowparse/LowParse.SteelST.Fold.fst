@@ -2081,7 +2081,11 @@ let elim_nlist
   let _ = elim_synth _ _ b () in
   elim_filter _ _ b
 
-assume val impl_list_index
+#push-options "--z3rlimit 32"
+#restart-solver
+
+inline_for_extraction
+let impl_list_index
   (#root: typ)
   (#inv: ser_index root)
   (#t: Type)
@@ -2092,7 +2096,44 @@ assume val impl_list_index
   (idx: (i: SZ.size_t { SZ.size_v i < SZ.size_v n }))
   (f: Ghost.erased (fold_t ser_state t unit inv inv))
   (fi: fold_impl_t p f) 
-: Tot (fold_impl_t (parse_nlist (SZ.size_v n) p) (fold_list_index inv (SZ.size_v n) (SZ.size_v idx) f))
+: Pure (fold_impl_t (parse_nlist (SZ.size_v n) p) (fold_list_index inv (SZ.size_v n) (SZ.size_v idx) f))
+    (requires  k.parser_kind_subkind == Some ParserStrong)
+    (ensures (fun _ -> True))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  let _ = elim_nlist _ _ bin in
+  let b = list_nth jp bin idx in
+  let _ = gen_elim () in
+  let vbin_l = vpattern_replace (aparse (parse_list p) bin) in
+  let vb = vpattern_replace (aparse p b) in
+  let vbin_r = vpattern_replace (aparse (parse_list p) (list_nth_tail _ _ _ _)) in
+  let bin_r = vpattern_replace_erased (fun bin_r -> aparse (parse_list p) bin_r vbin_r) in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse (parse_list p) bin vbin_l `star`
+      aparse p b vb `star`
+      aparse (parse_list p) bin_r vbin_r)
+    (fun _ -> aparse (parse_nlist (SZ.size_v n) p) bin vbin)
+  = let _ = intro_cons p b bin_r in
+    let _ = list_append p bin b in
+    let _ = intro_nlist (SZ.size_v n) p bin in
+    rewrite
+      (aparse (parse_nlist (SZ.size_v n) p) bin _)
+      (aparse (parse_nlist (SZ.size_v n) p) bin vbin)
+  in
+  fi b bout sz out h
+    (kpre `star`
+      aparse (parse_list p) bin vbin_l `star`
+      aparse (parse_list p) bin_r vbin_r)
+    kpost
+    (fun vl' sz' out' h' v' ->
+      restore ();
+      k_success vl' sz' out' h' v'
+    )
+    (fun vb' ->
+      restore ();
+      k_failure vb'
+    )
+
+#pop-options
 
 inline_for_extraction
 let impl_list_index_of
@@ -2108,7 +2149,9 @@ let impl_list_index_of
   (idx: Ghost.erased ((i: nat { i < SZ.size_v n }) -> Tot (i: nat { i < SZ.size_v n })))
   (idx' : (i: SZ.size_t) -> Pure SZ.size_t (requires SZ.size_v i < SZ.size_v n) (ensures fun j -> SZ.size_v j == Ghost.reveal idx (SZ.size_v i)))
   (j: SZ.size_t {SZ.size_v j < SZ.size_v n})
-: Tot (fold_impl_t (parse_nlist (SZ.size_v n) p) (fold_list_index_of inv f (SZ.size_v n) idx (SZ.size_v j)))
+: Pure (fold_impl_t (parse_nlist (SZ.size_v n) p) (fold_list_index_of inv f (SZ.size_v n) idx (SZ.size_v j)))
+    (requires  k.parser_kind_subkind == Some ParserStrong)
+    (ensures (fun _ -> True))
 = impl_list_index jp n (idx' j) f fi
 
 #push-options "--z3rlimit 32"

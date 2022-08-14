@@ -30,6 +30,8 @@ let list_nth_post
   AP.length (array_of' ve) > 0 /\
   va0.contents == vl.contents `List.Tot.append` (ve.contents :: vr.contents) /\
   List.Tot.length vl.contents == SZ.size_v i /\
+  SZ.size_v i < List.Tot.length va0.contents /\
+  List.Tot.index va0.contents (SZ.size_v i) == ve.contents /\
   AP.adjacent (array_of' ve) (array_of' vr) /\
   AP.merge_into (array_of' vl) (AP.merge (array_of' ve) (array_of' vr)) (array_of' va0)
 
@@ -55,4 +57,27 @@ val list_nth
       k.parser_kind_subkind == Some ParserStrong /\
       SZ.size_v i < List.Tot.length va0.contents
     )
+    (fun _ -> True)
+
+val list_nth_restore
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#vl: v parse_list_kind (list t))
+  (#ve: v k t)
+  (#vr: v parse_list_kind (list t))
+  (#p: parser k t)
+  (a0: byte_array)
+  (va0: v _ _)
+  (i: SZ.size_t)
+  (e: byte_array)
+  (a: byte_array)
+: STGhost unit opened
+    (
+      aparse (parse_list p) a0 vl `star`
+      aparse p e ve `star`
+      aparse (parse_list p) (list_nth_tail a0 i e a) vr
+    )
+    (fun _ -> aparse (parse_list p) a0 va0)
+    (list_nth_post k va0 i vl ve vr)
     (fun _ -> True)

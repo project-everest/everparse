@@ -268,6 +268,23 @@ let list_split
 
 #pop-options
 
+let rec list_index_eq
+  (#t: Type)
+  (ll: list t)
+  (x: t)
+  (lr: list t)
+: Lemma
+  (ensures (
+    let i = List.Tot.length ll in
+    let l = ll `List.Tot.append` (x :: lr) in
+    i < List.Tot.length l /\
+    List.Tot.index l i == x
+  ))
+  (decreases ll)
+= match ll with
+  | [] -> ()
+  | a :: q -> list_index_eq q x lr
+
 #push-options "--z3rlimit 32"
 #restart-solver
 
@@ -302,7 +319,10 @@ let list_nth
   list_append_is_cons_r vl.contents ve0.contents;
   let a = ghost_elim_cons p e in
   let _ = gen_elim () in
-  let vr = vpattern_replace (aparse (parse_list p) a) in
+  let vr : v _ _ = vpattern_replace (aparse (parse_list p) a) in
+  let ve : v _ _ = vpattern_replace (aparse p e) in
+  list_index_eq vl.contents ve.contents vr.contents;
+  noop ();
   rewrite
     (aparse (parse_list p) a _)
     (aparse (parse_list p) (list_nth_tail a0 i e a) vr);
