@@ -2006,8 +2006,577 @@ let impl_choice
 
 module GR = Steel.ST.GhostReference
 
-assume
-val impl_for
+unfold
+let impl_for_inv_true_prop0
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t ser_state t unit inv inv))
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (from: SZ.size_t)
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (h: ser_state inv)
+  (out: hole_arrays)
+  (cont: bool)
+: Tot prop
+=
+  SZ.size_v vout_sz == AP.length (AP.array_of vout) /\
+  AP.array_perm (AP.array_of vout) == full_perm /\
+  AP.merge_into (AP.array_of vout) (array_of_hole out) a0 /\
+  SZ.size_v from0 <= SZ.size_v from /\
+  fold_for inv (SZ.size_v from0) (SZ.size_v (if SZ.size_v from <= SZ.size_v to then from else to)) f l h0 == ((), h) /\
+  (cont == (SZ.size_v from < SZ.size_v to))
+
+let impl_for_inv_true_prop
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t ser_state t unit inv inv))
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (from: SZ.size_t)
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (h: ser_state inv)
+  (out: hole_arrays)
+  (cont: bool)
+: Tot prop
+= impl_for_inv_true_prop0 inv from0 to f l a0 h0 from vout vout_sz h out cont
+
+[@@__reduce__]
+let impl_for_inv_aux_true
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t ser_state t unit inv inv))
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (out: hole_arrays)
+  (from: SZ.size_t)
+  (cont: bool)
+: Tot vprop
+= exists_ (fun (h: ser_state inv) ->
+    parse_hole_arrays h out `star`
+    pure (
+      impl_for_inv_true_prop inv from0 to f l a0 h0 from vout vout_sz h out cont
+    )
+  )
+
+let fold_for_loop_body
+  #state_i (state_t: _)
+  (inv: state_i)
+  (t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+: Tot Type
+= Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv)
+
+let impl_for_inv_aux_false_prop
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (cont: bool)
+  (from: SZ.size_t)
+: Tot prop
+=
+    SZ.size_v from0 <= SZ.size_v from /\ SZ.size_v from <= SZ.size_v to /\
+    chunk_exceeds_limit (parse_hole (sndp (fold_for inv (SZ.size_v from0) (SZ.size_v from) f l h0))) (AP.length a0) /\
+    cont == false /\
+    AP.array_of vout == a0
+
+[@@__reduce__]
+let impl_for_inv_aux_false0
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (cont: bool)
+  (from: SZ.size_t)
+: Tot vprop
+=
+  pure (impl_for_inv_aux_false_prop inv from0 to f l a0 h0 vout cont from)
+
+let impl_for_inv_aux_false
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (cont: bool)
+: (from: SZ.size_t) ->
+  Tot vprop
+=
+  impl_for_inv_aux_false0 inv from0 to f l a0 h0 vout cont
+
+let intro_impl_for_inv_aux_false
+  (#opened: _)
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (cont: bool)
+  (from: SZ.size_t)
+: STGhost unit opened
+    emp
+    (fun _ -> impl_for_inv_aux_false inv from0 to f l a0 h0 vout cont from)
+    (impl_for_inv_aux_false_prop inv from0 to f l a0 h0 vout cont from)
+    (fun _ -> True)
+= noop ();
+  rewrite
+    (impl_for_inv_aux_false0 inv from0 to f l a0 h0 vout cont from)
+    (impl_for_inv_aux_false inv from0 to f l a0 h0 vout cont from)
+
+let impl_for_inv_aux
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (out: hole_arrays)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: Tot vprop
+= if no_interrupt
+  then impl_for_inv_aux_true inv from0 to f l a0 h0 vout vout_sz out from cont
+  else exists_ (impl_for_inv_aux_false inv from0 to f l a0 h0 vout cont)
+
+let intro_impl_for_inv_aux_true
+  (#opened: _)
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (out: hole_arrays)
+  (from: SZ.size_t)
+  (cont: bool)
+  (h: ser_state inv)
+: STGhost unit opened
+    (parse_hole_arrays h out)
+    (fun _ -> impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from true cont)
+    (impl_for_inv_true_prop inv from0 to f l a0 h0 from vout vout_sz h out cont)
+    (fun _ -> True)
+= intro_pure (
+    impl_for_inv_true_prop inv from0 to f l a0 h0 from vout vout_sz h out cont
+  );
+  rewrite
+    (impl_for_inv_aux_true inv from0 to f l a0 h0 vout vout_sz out from cont)
+    (impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from true cont)
+
+let elim_impl_for_inv_aux_true
+  (#opened: _)
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (out: hole_arrays)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: STGhost (Ghost.erased (ser_state inv)) opened
+    (impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from no_interrupt cont)
+    (fun h -> parse_hole_arrays h out)
+    (no_interrupt == true)
+    (fun h -> impl_for_inv_true_prop inv from0 to f l a0 h0 from vout vout_sz h out cont)
+= 
+  rewrite
+    (impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from no_interrupt cont)
+    (impl_for_inv_aux_true inv from0 to f l a0 h0 vout vout_sz out from cont);
+  let gh = elim_exists () in
+  let _ = gen_elim () in
+  gh
+
+let elim_impl_for_inv_aux_false
+  (#opened: _)
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (out: hole_arrays)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: STGhost (Ghost.erased SZ.size_t) opened
+    (impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from no_interrupt cont)
+    (fun _ -> emp)
+    (no_interrupt == false)
+    (fun from ->
+      impl_for_inv_aux_false_prop inv from0 to f l a0 h0 vout cont from
+    )
+=
+  rewrite
+    (impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from no_interrupt cont)
+    (exists_ (impl_for_inv_aux_false0 inv from0 to f l a0 h0 vout cont));
+  let gfrom = elim_exists () in
+  let _ = gen_elim () in
+  gfrom
+
+let impl_for_inv_aux_cont_true
+  (#opened: _)
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (out: hole_arrays)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: STGhost unit opened
+    (impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from no_interrupt cont)
+    (fun _ -> impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from no_interrupt cont)
+    (cont == true)
+    (fun h -> no_interrupt == true)
+= if no_interrupt
+  then noop ()
+  else begin
+    let _ = elim_impl_for_inv_aux_false _ _ _ _ _ _ _ _ _ _ _ _ _ in
+    rewrite // by contradiction
+      emp
+      (impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from no_interrupt cont)
+  end
+
+[@@__reduce__]
+let impl_for_inv0
+  (#root: typ)
+  (inv: ser_index root)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (bin: byte_array)
+  (vl: v k t)
+  (bout: byte_array)
+  (bout_sz: R.ref SZ.size_t)
+  (bh: hole_arrays_ptr)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (cont: bool)
+: Tot vprop
+= exists_ (fun vout -> exists_ (fun vout_sz -> exists_ (fun out -> exists_ (fun from -> exists_ (fun no_interrupt ->
+    aparse p bin vl `star`
+    AP.arrayptr bout vout `star`
+    R.pts_to bout_sz full_perm vout_sz `star`
+    hole_arrays_pts_to bh out `star`
+    R.pts_to bfrom full_perm from `star`
+    R.pts_to b_no_interrupt full_perm no_interrupt `star`
+    R.pts_to bcont full_perm cont `star`
+    impl_for_inv_aux inv from0 to f vl.contents a0 h0 vout vout_sz out from no_interrupt cont
+  )))))
+
+let impl_for_inv
+  (#root: typ)
+  (inv: ser_index root)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (bin: byte_array)
+  (vl: v k t)
+  (bout: byte_array)
+  (bout_sz: R.ref SZ.size_t)
+  (bh: hole_arrays_ptr)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (cont: bool)
+: Tot vprop
+= impl_for_inv0 inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont cont
+
+inline_for_extraction
+let impl_for_test
+  (#root: typ)
+  (inv: ser_index root)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (bin: byte_array)
+  (vl: v k t)
+  (bout: byte_array)
+  (bout_sz: R.ref SZ.size_t)
+  (bh: hole_arrays_ptr)
+  (a0: AP.array byte)
+  (h0: Ghost.erased (ser_state inv))
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (_: unit)
+: STT bool
+    (exists_ (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont))
+    (fun cont -> impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont cont)
+= let gcont = elim_exists () in
+  rewrite
+    (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont gcont)
+    (impl_for_inv0 inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont gcont);
+  let _ = gen_elim () in
+  let cont = R.read bcont in
+  rewrite
+    (impl_for_inv0 inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont gcont)
+    (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont cont);
+  return cont
+
+let rec fold_for_snoc_nat
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (from0 to: nat)
+  (f: (x: nat { from0 <= x /\ x < to }) -> fold_t state_t t unit inv inv)
+  (from: nat)
+  (i: t)
+  (s: state_t inv)
+: Lemma
+  (requires (from0 <= from /\ from < to))
+  (ensures (
+    let (_, s1) = fold_for inv from0 from f i s in
+    fold_for inv from0 (from + 1) f i s == Ghost.reveal f (from) i s1
+  ))
+  (decreases (from - from0))
+= if from = from0
+  then ()
+  else
+    let (_, s1) = Ghost.reveal f from0 i s in
+    fold_for_snoc_nat inv (from0 + 1) to f from i s1
+
+let fold_for_snoc
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body state_t inv t from0 to)
+  (from: SZ.size_t)
+  (i: t)
+  (s: state_t inv)
+: Lemma
+  (requires (SZ.size_v from0 <= SZ.size_v from /\ SZ.size_v from < SZ.size_v to))
+  (ensures (
+    let (_, s1) = fold_for inv (SZ.size_v from0) (SZ.size_v from) f i s in
+    fold_for inv (SZ.size_v from0) (SZ.size_v from + 1) f i s == Ghost.reveal f (SZ.size_v from) i s1
+  ))
+= fold_for_snoc_nat inv (SZ.size_v from0) (SZ.size_v to) f (SZ.size_v from) i s
+
+inline_for_extraction
+let impl_for_body
+  (#root: typ)
+  (inv: ser_index root)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (bin: byte_array)
+  (vl: v k t)
+  (bout: byte_array)
+  (bout_sz: R.ref SZ.size_t)
+  (bh: hole_arrays_ptr)
+  (a0: AP.array byte)
+  (h0: Ghost.erased (ser_state inv))
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (fi: (x: SZ.size_t { SZ.size_v from0 <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t p (Ghost.reveal f (SZ.size_v x)))
+  (wl: load_context_arrays_ptr_t inv.context)
+  (ws: store_context_arrays_ptr_t inv.context)
+  (_: unit)
+: STT unit
+    (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont true)
+    (fun _ -> exists_ (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont))
+=
+  rewrite
+    (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont true)
+    (impl_for_inv0 inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont true);
+  let _ = gen_elim () in
+  impl_for_inv_aux_cont_true _ _ _ _ _ _ _ _ _ _ _ _ _;
+  vpattern_rewrite (R.pts_to b_no_interrupt full_perm) true;
+  let _ = elim_impl_for_inv_aux_true _ _ _ _ _ _ _ _ _ _ _ _ _ in
+  parse_hole_arrays_context_arrays_shape _ _;
+  let from1 = read_replace bfrom in
+  let sz1 = read_replace bout_sz in
+  let from2 = SZ.size_add from1 SZ.one_size in
+  fold_for_snoc inv from0 to f from1 vl.contents h0;
+  load_hole_arrays_ptr inv wl _ bh (fun out1 ->
+    vpattern_rewrite (parse_hole_arrays _) out1;
+    fi from1 bin bout sz1 out1 _
+      (
+        R.pts_to bfrom full_perm from1 `star`
+        R.pts_to bout_sz full_perm sz1 `star`
+        R.pts_to b_no_interrupt full_perm true `star`
+        R.pts_to bcont full_perm true `star`
+        hole_arrays_pts_to bh out1
+      )
+      (exists_ (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont))
+      (fun vout2 sz2 out2 h2 _ ->
+        R.write bfrom from2;
+        R.write bout_sz sz2;
+        parse_hole_arrays_context_arrays_shape _ _;
+        store_hole_arrays_ptr inv ws bh _ out2;
+        let cont2 = from2 `SZ.size_lt` to in
+        R.write bcont cont2;
+        intro_impl_for_inv_aux_true inv from0 to f vl.contents a0 h0 vout2 sz2 out2 from2 cont2 h2;
+        rewrite
+          (impl_for_inv0 inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont cont2)
+          (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont cont2);        
+        noop ()
+      )
+      (fun vb' ->
+        R.write b_no_interrupt false;
+        R.write bcont false;
+        intro_impl_for_inv_aux_false inv from0 to f vl.contents a0 h0 vb' false from2;
+        rewrite
+          (exists_ (impl_for_inv_aux_false inv from0 to f vl.contents a0 h0 vb' false))
+          (impl_for_inv_aux inv from0 to f vl.contents a0 h0 vb' sz1 out1 from1 false false);
+        rewrite
+          (impl_for_inv0 inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont false)
+          (impl_for_inv inv p from0 to f bin vl bout bout_sz bh a0 h0 bfrom b_no_interrupt bcont false);
+        noop ()
+      )
+  )
+
+let rec impl_for_inv_aux_false_prop_chunk_exceeds_limit
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (from: SZ.size_t)
+  (prf: (x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (ensures (let (v, s') = Ghost.reveal f x i s in
+      parse_hole s' `chunk_desc_ge` parse_hole s
+    ))
+  )
+: Lemma
+  (requires (
+    SZ.size_v from0 <= SZ.size_v from /\ SZ.size_v from <= SZ.size_v to /\
+    chunk_exceeds_limit (parse_hole (sndp (fold_for inv (SZ.size_v from0) (SZ.size_v from) f l h0))) (AP.length a0)
+  ))
+  (ensures (
+    chunk_exceeds_limit (parse_hole (sndp (fold_for inv (SZ.size_v from0) (SZ.size_v to) f l h0))) (AP.length a0)
+  ))
+  (decreases (SZ.size_v to - SZ.size_v from))
+= if SZ.size_v to = SZ.size_v from
+  then ()
+  else begin
+    fold_for_snoc inv from0 to f from l h0;
+    let (_, h1) = fold_for inv (SZ.size_v from0) (SZ.size_v from) f l h0 in
+    prf (SZ.size_v from) l h1;
+    let from' = SZ.size_add from SZ.one_size in
+    let (_, h2) = fold_for inv (SZ.size_v from0) (SZ.size_v from') f l h0 in
+    chunk_desc_ge_implies
+      (parse_hole h2)
+      (parse_hole h1)
+      (AP.length a0);
+    impl_for_inv_aux_false_prop_chunk_exceeds_limit inv from0 to f l a0 h0 vout (SZ.size_add from SZ.one_size) prf
+  end
+
+let elim_impl_for_inv_aux_false_strong
+  (#opened: _)
+  (#root: typ)
+  (inv: ser_index root)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: fold_for_loop_body ser_state inv t from0 to)
+  (prf: (x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> (i: t) -> (s: ser_state inv) ->
+    Lemma
+    (ensures (let (v, s') = Ghost.reveal f x i s in
+      parse_hole s' `chunk_desc_ge` parse_hole s
+    ))
+  )
+  (l: t)
+  (a0: AP.array byte)
+  (h0: ser_state inv)
+  (vout: AP.v byte)
+  (vout_sz: SZ.size_t)
+  (out: hole_arrays)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: STGhost (Ghost.erased SZ.size_t) opened
+    (impl_for_inv_aux inv from0 to f l a0 h0 vout vout_sz out from no_interrupt cont)
+    (fun _ -> emp)
+    (no_interrupt == false)
+    (fun from ->
+      impl_for_inv_aux_false_prop inv from0 to f l a0 h0 vout cont from /\
+      chunk_exceeds_limit (parse_hole (sndp (fold_for inv (SZ.size_v from0) (SZ.size_v to) f l h0))) (AP.length a0)
+    )
+= let gfrom = elim_impl_for_inv_aux_false _ _ _ _ _ _ _ _ _ _ _ _ _ in
+  impl_for_inv_aux_false_prop_chunk_exceeds_limit inv from0 to f l a0 h0 vout gfrom prf;
+  gfrom
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+inline_for_extraction
+let impl_for
   (#root: typ)
   (#inv: ser_index root)
   (#k: parser_kind)
@@ -2022,7 +2591,48 @@ val impl_for
     ))
   )
   (fi: (x: SZ.size_t { SZ.size_v from <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t p (Ghost.reveal f (SZ.size_v x)))
+  (wc: with_context_arrays_ptr_t inv.context) // same
+  (wl: load_context_arrays_ptr_t inv.context)
+  (ws: store_context_arrays_ptr_t inv.context)
 : Tot (fold_impl_t p (fold_for inv (SZ.size_v from) (SZ.size_v to) f))
+= fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
+  parse_hole_arrays_context_arrays_shape _ _;
+  let cont = from `SZ.size_lt` to in
+  let a0 = AP.merge (AP.array_of vl) (array_of_hole out) in
+  with_local sz (fun bout_sz ->
+  with_hole_arrays_ptr inv wc out (fun bh ->
+  with_local from (fun bfrom ->
+  with_local true (fun b_no_interrupt ->
+  with_local cont (fun bcont ->
+    intro_impl_for_inv_aux_true inv from to f vbin.contents a0 h vl sz out from cont h;
+    rewrite
+      (impl_for_inv0 inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont cont)
+      (impl_for_inv inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont cont);
+    Steel.ST.Loops.while_loop
+      (impl_for_inv inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont)
+      (impl_for_test inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont)
+      (impl_for_body inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont fi wl ws);
+    rewrite
+      (impl_for_inv inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont false)
+      (impl_for_inv0 inv p from to f bin vbin bout bout_sz bh a0 h bfrom b_no_interrupt bcont false);
+    let _ = gen_elim () in
+    let no_interrupt = read_replace b_no_interrupt in
+    if no_interrupt
+    then begin
+      let h' = elim_impl_for_inv_aux_true _ _ _ _ _ _ _ _ _ _ _ _ _ in
+      parse_hole_arrays_context_arrays_shape _ _;
+      let sz' = read_replace bout_sz in
+      load_hole_arrays_ptr inv wl _ bh (fun (out': hole_arrays) ->
+         vpattern_rewrite (parse_hole_arrays _) out';
+         k_success _ sz' out' h' ()
+      )
+    end else begin
+      let from = elim_impl_for_inv_aux_false_strong inv from to f prf vbin.contents _ _ _ _ _ _ _ _ in
+      k_failure _
+    end
+  )))))
+
+#pop-options
 
 [@@__reduce__]
 let parse_nlist0
@@ -2166,6 +2776,9 @@ let impl_list_for
   (fi: prog_impl_t f)
   (j: jumper (parser_of_typ t))
   (idx: array_index_fn)
+  (wc: with_context_arrays_ptr_t inv.context) // same
+  (wl: load_context_arrays_ptr_t inv.context)
+  (ws: store_context_arrays_ptr_t inv.context)
 : Tot (prog_impl_t (PListFor inv idx f))
 = fun #vbin #vl bin bout sz out h kpre kpost k_success k_failure ->
   let _ = rewrite_aparse bin (parse_vldata 4 (parse_list (parser_of_typ t))) in
@@ -2194,6 +2807,7 @@ let impl_list_for
     (fold_list_index_of inv (sem ser_action_sem f) (SZ.size_v n) (idx.array_index_f_nat (SZ.size_v n)))
     (fun x i s -> prog_sem_chunk_desc_ge f (List.Tot.index i (idx.array_index_f_nat (SZ.size_v n) x)) s)
     (impl_list_index_of j (sem ser_action_sem f) fi n (idx.array_index_f_nat (SZ.size_v n)) (idx.array_index_f_sz n))
+    wc wl ws
     bin_l bout sz out h
     (kpre `star` aparse (parse_bounded_integer 4) bin vl_sz)
     kpost
