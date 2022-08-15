@@ -449,3 +449,64 @@ let impl_pair
       restore ();
       k_failure vb' h2 v2
     )
+
+let parser_of_choice_payload
+  (#k: parser_kind)
+  (t: (bool -> Type))
+  (f: (x: bool) -> parser k (t x))
+  (x: bool)
+: Tot (parser k (t x))
+= f x
+
+let fold_choice'
+  #state_i #state_t
+  (#ret_t: Type)
+  (#t: bool -> Type)
+  (#pre: state_i)
+  (#post: _)
+  (f: (x: bool) -> fold_t state_t (t x) ret_t pre post)
+: Tot (fold_t state_t (dtuple2 bool t) ret_t pre post)
+= fun w -> if (dfst w) then f true (dsnd w) else f false (dsnd w)
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let impl_choice
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (#t: (bool -> Type))
+  (#ret_t: Type)
+  (#pre: _)
+  (#post: _)
+  (f: (x: bool) -> fold_t state_t (t x) ret_t pre post)
+  (#k: parser_kind)
+  (p: (x: bool) -> parser k (t x))
+  (impl_f: (x: bool) -> fold_impl_t cl (p x) (f x))
+: Tot (fold_impl_t cl (parse_dtuple2 parse_bool p) (fold_choice' f))
+= fun kpre kpost #vbin bin bout h k_success k_failure ->
+  let bin_pl = split_dtuple2
+    (jump_constant_size parse_bool (SZ.mk_size_t 1ul))
+    p
+    bin
+  in
+  let tag = read_dtuple2_tag read_bool p bin bin_pl in
+  let _ = gen_elim () in
+  let vbin_tag = vpattern_replace (aparse parse_bool bin) in
+  let vbin_pl = vpattern_replace (aparse (p tag) bin_pl) in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse parse_bool bin vbin_tag `star` aparse (p tag) bin_pl vbin_pl)
+    (fun _ -> aparse (parse_dtuple2 parse_bool p) bin vbin)
+  =
+    let _ = intro_dtuple2 parse_bool p bin bin_pl in
+    rewrite (aparse _ bin _) (aparse (parse_dtuple2 parse_bool p) bin vbin)
+  in
+  impl_f tag
+    (kpre `star` aparse parse_bool bin vbin_tag) kpost
+    bin_pl bout h
+    (fun bout' h' v' ->
+      restore ();
+      k_success bout' h' v'
+    )
+    (fun vb' h' v' ->
+      restore ();
+      k_failure vb' h' v'
+    )
