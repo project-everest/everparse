@@ -16,6 +16,28 @@ module U32 = FStar.UInt32
 
 module F = LowParse.SteelST.Fold
 
+#set-options "--ide_id_info_off"
+
+let test_accessor
+  (#vb: v _ _)
+  (b: byte_array)
+: STT U16.t
+    (aparse (parse_u16 `nondep_then` parse_u16) b vb)
+    (fun r -> aparse (parse_u16 `nondep_then` parse_u16) b vb `star`
+      pure (U16.v r == U16.v (fst vb.contents) \/ U16.v r == U16.v (snd vb.contents)))
+= with_pair_fst _ _ b (fun bf ->
+    with_pair_snd jump_u16 _ b (fun bs ->
+      let f = read_u16 bf in
+      let s = read_u16 bs in
+      let res = 
+        if f `U16.lt` s
+        then s
+        else f
+      in
+      noop ();
+      return res
+  ))
+
 let test_prog_1 = F.run_prog
   (F.impl_bind
     _
