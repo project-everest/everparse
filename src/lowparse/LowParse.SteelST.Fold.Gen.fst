@@ -458,16 +458,6 @@ let parser_of_choice_payload
 : Tot (parser k (t x))
 = f x
 
-let fold_choice'
-  #state_i #state_t
-  (#ret_t: Type)
-  (#t: bool -> Type)
-  (#pre: state_i)
-  (#post: _)
-  (f: (x: bool) -> fold_t state_t (t x) ret_t pre post)
-: Tot (fold_t state_t (dtuple2 bool t) ret_t pre post)
-= fun w -> if (dfst w) then f true (dsnd w) else f false (dsnd w)
-
 inline_for_extraction
 [@@noextract_to "krml"]
 let impl_choice
@@ -481,7 +471,7 @@ let impl_choice
   (#k: parser_kind)
   (p: (x: bool) -> parser k (t x))
   (impl_f: (x: bool) -> fold_impl_t cl (p x) (f x))
-: Tot (fold_impl_t cl (parse_dtuple2 parse_bool p) (fold_choice' f))
+: Tot (fold_impl_t cl (parse_dtuple2 parse_bool p) (fold_choice f))
 = fun kpre kpost #vbin bin bout h k_success k_failure ->
   let bin_pl = split_dtuple2
     (jump_constant_size parse_bool (SZ.mk_size_t 1ul))

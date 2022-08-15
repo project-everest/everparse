@@ -254,13 +254,6 @@ let start_choice
     hole = HVHole _;
   }
 
-let mk_choice_value
-  (tag: bool)
-  (f: bool -> typ)
-  (v: type_of_typ (f tag))
-: Tot (type_of_typ (TChoice f))
-= (| tag, v |)
-
 let end_choice
   (#erase_values: bool)
   (x: hole_t erase_values)

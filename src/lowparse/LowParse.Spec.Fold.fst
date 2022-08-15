@@ -9,11 +9,38 @@ type typ =
 | TList: (elt: typ) -> typ
 | TChoice: (bool -> typ) -> typ
 
+let type_of_payload
+  (f: bool -> typ { forall x . f x << TChoice f })
+  (type_of_typ: (t: typ { t << TChoice f }) -> Tot Type0)
+  (x: bool)
+: Tot Type0
+= type_of_typ (f x)
+
 let rec type_of_typ (t: typ) : Tot Type0 = match t with
 | TU8 -> U8.t
 | TPair t1 t2 -> (type_of_typ t1 & type_of_typ t2)
 | TList t' -> list (type_of_typ t') // we ignore the serializer for now
-| TChoice f -> (x: bool & type_of_typ (f x)) 
+| TChoice f -> dtuple2 bool (type_of_payload f type_of_typ)
+
+let type_of_payload'
+  (f: bool -> typ)
+: Pure (bool -> Type0)
+    (requires True)
+    (ensures (fun v ->
+      type_of_typ (TChoice f) == dtuple2 bool v /\
+      (forall x . v x == type_of_typ (f x))
+    ))
+= let v = fun x -> type_of_typ (f x) in
+  assert_norm (type_of_typ (TChoice f) == dtuple2 bool v);
+  v
+
+let mk_choice_value
+  (tag: bool)
+  (f: bool -> typ)
+  (v: type_of_typ (f tag))
+: Tot (type_of_typ (TChoice f))
+= let v' : dtuple2 bool (type_of_payload' f) = (| tag, v |) in
+  v'
 
 let stt (#state_i: Type) (state_t: (state_i -> Type)) (ret_t: Type) (pre: state_i) (post: (state_i)) : Tot Type = (state_t pre -> Tot (ret_t & state_t (post)))
 
@@ -71,7 +98,7 @@ let fold_choice
   (#pre: state_i)
   (#post: _)
   (f: (x: bool) -> fold_t state_t (t x) ret_t pre post)
-: Tot (fold_t state_t (x: bool & t x) ret_t pre post)
+: Tot (fold_t state_t (dtuple2 bool t) ret_t pre post)
 = fun w -> if (dfst w) then f true (dsnd w) else f false (dsnd w)
 
 let bind_fold
