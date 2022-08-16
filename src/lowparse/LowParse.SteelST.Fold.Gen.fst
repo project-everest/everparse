@@ -1156,3 +1156,199 @@ let impl_for
       (impl_for_body cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont fi wl ws);
     impl_for_post cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont kpre kpost k_success k_failure prf wl
   ))))
+
+[@@__reduce__]
+let parse_nlist0
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot (parser (parse_filter_kind parse_list_kind) (nlist n t))
+= parse_list p `parse_filter` (fun l -> List.Tot.length l = n) `parse_synth` (fun x -> (x <: (nlist n t)))
+
+let parse_nlist
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot (parser (parse_filter_kind parse_list_kind) (nlist n t))
+= parse_nlist0 n p
+
+let intro_nlist
+  (#opened: _)
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#vb: v parse_list_kind (list t))
+  (b: byte_array)
+: STGhost (v (parse_filter_kind parse_list_kind) (nlist n t)) opened
+    (aparse (parse_list p) b vb)
+    (fun vb' -> aparse (parse_nlist n p) b vb')
+    (List.Tot.length vb.contents == n)
+    (fun vb' ->
+      array_of' vb' == array_of' vb /\
+      (vb'.contents <: list t) == vb.contents
+    )
+= let _ = intro_filter _ (fun l -> List.Tot.length l = n) b in
+  let _ = intro_synth _ (fun (x: parse_filter_refine _) -> (x <: (nlist n t))) b () in
+  rewrite_aparse b (parse_nlist n p)
+
+let elim_nlist
+  (#opened: _)
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#vb: v (parse_filter_kind parse_list_kind) (nlist n t))
+  (b: byte_array)
+: STGhost (v parse_list_kind (list t)) opened
+    (aparse (parse_nlist n p) b vb)
+    (fun vb' -> aparse (parse_list p) b vb')
+    True
+    (fun vb' ->
+      array_of' vb' == array_of' vb /\
+      (vb.contents <: list t) == vb'.contents
+    )
+= let _ = rewrite_aparse b (parse_nlist0 n p) in
+  let _ = elim_synth _ _ b () in
+  elim_filter _ _ b
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+inline_for_extraction
+let impl_list_index
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (jp: jumper p)
+  (n: SZ.size_t)
+  (idx: (i: SZ.size_t { SZ.size_v i < SZ.size_v n }))
+  (f: Ghost.erased (fold_t state_t t unit inv inv))
+  (fi: fold_impl_t cl p f)
+: Pure (fold_impl_t cl (parse_nlist (SZ.size_v n) p) (fold_list_index inv (SZ.size_v n) (SZ.size_v idx) f))
+    (requires  k.parser_kind_subkind == Some ParserStrong)
+    (ensures (fun _ -> True))
+= fun kpre kpost #vbin bin bout h k_success k_failure ->
+  let _ = elim_nlist _ _ bin in
+  let b = list_nth jp bin idx in
+  let _ = gen_elim () in
+  let vbin_l = vpattern_replace (aparse (parse_list p) bin) in
+  let vb = vpattern_replace (aparse p b) in
+  let vbin_r = vpattern_replace (aparse (parse_list p) (list_nth_tail _ _ _ _)) in
+  let bin_r = vpattern_replace_erased (fun bin_r -> aparse (parse_list p) bin_r vbin_r) in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse (parse_list p) bin vbin_l `star`
+      aparse p b vb `star`
+      aparse (parse_list p) bin_r vbin_r)
+    (fun _ -> aparse (parse_nlist (SZ.size_v n) p) bin vbin)
+  = let _ = intro_cons p b bin_r in
+    let _ = list_append p bin b in
+    let _ = intro_nlist (SZ.size_v n) p bin in
+    rewrite
+      (aparse (parse_nlist (SZ.size_v n) p) bin _)
+      (aparse (parse_nlist (SZ.size_v n) p) bin vbin)
+  in
+  fi
+    (kpre `star`
+      aparse (parse_list p) bin vbin_l `star`
+      aparse (parse_list p) bin_r vbin_r)
+    kpost
+    b bout h
+    (fun out' h' v' ->
+      restore ();
+      k_success out' h' v'
+    )
+    (fun vb' h' v' ->
+      restore ();
+      k_failure vb' h' v'
+    )
+
+#pop-options
+
+inline_for_extraction
+let impl_list_index_of
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (jp: jumper p)
+  (f: Ghost.erased (fold_t state_t t unit inv inv))
+  (fi: fold_impl_t cl p f) 
+  (n: SZ.size_t)
+  (idx: Ghost.erased ((i: nat { i < SZ.size_v n }) -> Tot (i: nat { i < SZ.size_v n })))
+  (idx' : (i: SZ.size_t) -> Pure SZ.size_t (requires SZ.size_v i < SZ.size_v n) (ensures fun j -> SZ.size_v j == Ghost.reveal idx (SZ.size_v i)))
+  (j: SZ.size_t {SZ.size_v j < SZ.size_v n})
+: Pure (fold_impl_t cl (parse_nlist (SZ.size_v n) p) (fold_list_index_of inv f (SZ.size_v n) idx (SZ.size_v j)))
+    (requires  k.parser_kind_subkind == Some ParserStrong)
+    (ensures (fun _ -> True))
+= impl_list_index cl inv jp n (idx' j) f fi
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+inline_for_extraction
+let impl_for_list
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (j: jumper p)
+  (fi: fold_impl_t cl p f)
+  (prf: fold_state_inc cl f)
+  (idx: array_index_fn)
+  (wc: with_ll_state_ptr_t cl inv)
+  (wl: load_ll_state_ptr_t cl inv)
+  (ws: store_ll_state_ptr_t cl inv)
+: Pure (fold_impl_t cl (parse_vldata 4 (parse_list p)) (fold_for_list inv f idx.array_index_f_nat))
+    (requires  k.parser_kind_subkind == Some ParserStrong)
+    (ensures (fun _ -> True))
+= fun kpre kpost #vbin bin bout h k_success k_failure ->
+  let bin_l = elim_vldata 4 (parse_list p) bin in
+  let _ = gen_elim () in
+  let vl_sz = vpattern_replace (aparse (parse_bounded_integer 4) bin) in
+  let _ = vpattern_replace (aparse (parse_list p) bin_l) in
+  let in_sz = read_bounded_integer 4 bin in
+  let n = list_length j bin_l (SZ.mk_size_t in_sz) in
+  let vl_l = intro_nlist (SZ.size_v n) _ bin_l in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse (parse_bounded_integer 4) bin vl_sz `star`
+      aparse (parse_nlist (SZ.size_v n) p) bin_l vl_l)
+    (fun _ -> aparse (parse_vldata 4 (parse_list p)) bin vbin)
+  =
+    let _ = elim_nlist _ _ bin_l in
+    let _ = intro_vldata 4 (parse_list p) bin bin_l in
+    let vbin' = rewrite_aparse bin (parse_vldata 4 (parse_list p)) in
+    rewrite (aparse _ bin _) (aparse (parse_vldata 4 (parse_list p)) bin vbin)
+  in
+  impl_for
+    cl inv
+    (parse_nlist (SZ.size_v n) p)
+    SZ.zero_size
+    n
+    (fold_list_index_of inv f (SZ.size_v n) (idx.array_index_f_nat (SZ.size_v n)))
+    (fun x i s -> prf (List.Tot.index i (idx.array_index_f_nat (SZ.size_v n) x)) s)
+    (impl_list_index_of cl inv j f fi n (idx.array_index_f_nat (SZ.size_v n)) (idx.array_index_f_sz n))
+    wc wl ws
+    (kpre `star` aparse (parse_bounded_integer 4) bin vl_sz)
+    kpost
+    bin_l bout h
+    (fun out' h' v' ->
+      restore ();
+      k_success out' h' v'
+    )
+    (fun vb' h' v' ->
+      restore ();
+      k_failure vb' h' v'
+    )
+
+#pop-options
