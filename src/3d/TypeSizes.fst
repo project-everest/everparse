@@ -288,7 +288,7 @@ let rec size_and_alignment_of_field (env:env_t)
       let s, a = size_and_alignment_of_atomic_field env af in
       f, s, a
 
-    | RecordField fields ->
+    | RecordField fields field_name ->
       let aligned_field_size
             (offset:size)
             (max_align:alignment)
@@ -329,11 +329,11 @@ let rec size_and_alignment_of_field (env:env_t)
       let size = size `sum_size` (Fixed pad_size) in
       let fields_rev = end_padding @ fields_rev in
       let fields = List.rev fields_rev in
-      { f with v = RecordField fields }, 
+      { f with v = RecordField fields field_name }, 
       size, 
       max_align
 
-    | SwitchCaseField swc ->
+    | SwitchCaseField swc field_name ->
       let case_sizes =
         List.map
           (function
@@ -394,7 +394,7 @@ let rec size_and_alignment_of_field (env:env_t)
                f.range
       );
       let swc = fst swc, cases in
-      let f = { f with v = SwitchCaseField swc } in
+      let f = { f with v = SwitchCaseField swc field_name } in
       f, size, alignment
         
 
@@ -411,15 +411,17 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       d
 
     | Record names params where fields ->
-      let { v = RecordField fields }, size, max_align = 
-        size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (RecordField fields))
+      let dummy_ident = with_dummy_range (to_ident' "_") in
+      let { v = RecordField fields _ }, size, max_align = 
+        size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (RecordField fields dummy_ident))
       in
       extend_with_size_of_typedef_names env names size max_align;
       decl_with_v d (Record names params where fields)
 
     | CaseType names params cases ->
-      let { v = SwitchCaseField cases }, size, alignment = 
-        size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (SwitchCaseField cases))
+      let dummy_ident = with_dummy_range (to_ident' "_") in    
+      let { v = SwitchCaseField cases _ }, size, alignment = 
+        size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (SwitchCaseField cases dummy_ident))
       in
       extend_with_size_of_typedef_names env names size alignment;
       decl_with_v d (CaseType names params cases)

@@ -287,7 +287,6 @@ let translate_op : A.op -> ML T.op =
   | Cast (Some from) to -> T.Cast from to
   | Ext s -> T.Ext s
   | Cast None _
-  | HashIfThenElse  
   | SizeOf -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
                                   (Ast.print_op op))
 
@@ -297,6 +296,7 @@ let rec translate_expr (e:A.expr) : ML T.expr =
    | Constant c -> T.Constant c
    | Identifier i -> T.Identifier i
    | App op exprs -> T.App (translate_op op) (List.map translate_expr exprs)
+   | Static _ -> failwith "`static` should have been eliminated already"
    | This -> failwith "`this` should have been eliminated already"),
   e.A.range
 
@@ -928,7 +928,7 @@ type grouped_fields =
   | DependentField    : hd:T.field -> tl:grouped_fields -> grouped_fields
   | NonDependentField : hd:T.field -> tl:grouped_fields -> grouped_fields
   | ITEGroup          : e:T.expr -> then_:grouped_fields -> else_:grouped_fields -> grouped_fields
-  | GroupThen         : struct:grouped_fields -> rest:grouped_fields -> grouped_fields
+  | GroupThen         : id:A.ident -> struct:grouped_fields -> rest:grouped_fields -> grouped_fields
 
 let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields)
   : ML T.parser
@@ -998,13 +998,12 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
         let else_ = aux else_ in
         ite_parser typename id.v.name e then_ else_
 
-      | GroupThen gfs rest -> (
+      | GroupThen id gfs rest -> (
         match rest with
         | Empty_grouped_field ->
           aux gfs
 
         | _ -> 
-          let id = gen_ident None in
           pair_parser id
             (aux gfs)
             (aux rest)
@@ -1231,33 +1230,34 @@ let hoist_refinements (genv:global_env) (tdn:T.typedef_name) (fields:list T.fiel
     in
     decls, List.rev fields
 
-let type_of_grouped_fields (gfs:grouped_fields) : T.typ = admit()
-
 let rec field_as_grouped_fields (f:A.field)
-  : ML (grouped_fields & T.decls)
+  : ML (A.ident & grouped_fields & T.decls)
   = match f.v with
     | AtomicField af ->
       let sf, ds = translate_atomic_field af in
-      NonDependentField sf Empty_grouped_field, ds
+      sf.sf_ident, NonDependentField sf Empty_grouped_field, ds
 
-    | RecordField fs ->
-      List.fold_right
-        (fun f (gfs, ds_out) ->
-          match f.v with
-          | AtomicField af -> 
-            let sf, ds = translate_atomic_field af in
-            if sf.sf_dependence
-            then DependentField sf gfs, ds@ds_out
-            else NonDependentField sf gfs, ds@ds_out
+    | RecordField fs field_name ->
+      let gfs, ds =
+        List.fold_right
+          (fun f (gfs, ds_out) ->
+            match f.v with
+            | AtomicField af -> 
+              let sf, ds = translate_atomic_field af in
+              if sf.sf_dependence
+              then DependentField sf gfs, ds@ds_out
+              else NonDependentField sf gfs, ds@ds_out
+  
+            | RecordField _ _
+            | SwitchCaseField _ _ ->
+              let id, gf, ds = field_as_grouped_fields f in
+              GroupThen id gf gfs, ds@ds_out)
+          fs
+          (Empty_grouped_field, [])
+      in
+      field_name, gfs, ds
 
-          | RecordField _ 
-          | SwitchCaseField _ ->
-            let gf, ds = field_as_grouped_fields f in
-            GroupThen gf gfs, ds@ds_out)
-        fs
-        (Empty_grouped_field, [])
-
-    | SwitchCaseField swc ->
+    | SwitchCaseField swc field_name ->
       let sc, cases = swc in
       let sc = translate_expr sc in
       let false_field =
@@ -1273,7 +1273,7 @@ let rec field_as_grouped_fields (f:A.field)
           let rest, last = List.splitAt (List.length cases - 1) cases in
           match last with
           | [DefaultCase f] ->
-            let gfs, ds = field_as_grouped_fields f in
+            let _, gfs, ds = field_as_grouped_fields f in
             rest, gfs, ds
           
           | _ -> 
@@ -1281,22 +1281,31 @@ let rec field_as_grouped_fields (f:A.field)
           else
             cases, false_field, []
       in
-      List.fold_right
-        (fun case (else_group, decls') ->
-          match case with
-          | DefaultCase _ -> failwith "Impossible"
-          | Case p f ->
-            let gfs, decls = field_as_grouped_fields f in
-            let guard = T.mk_expr (T.App T.Eq [sc; translate_expr p]) in
-            ITEGroup guard gfs else_group, decls@decls')
-        rest
-        (default_group, decls)
+      let gfs, ds =
+        List.fold_right
+          (fun case (else_group, decls') ->
+            match case with
+            | DefaultCase _ -> failwith "Impossible"
+            | Case p f ->
+              let _, gfs, decls = field_as_grouped_fields f in
+              let guard =
+                match p.v with
+                | Constant (Bool true) ->
+                  // simplify (sc == true) to just (sc)
+                  sc
+                | _ -> T.mk_expr (T.App T.Eq [sc; translate_expr p])
+              in
+              ITEGroup guard gfs else_group, decls@decls')
+          rest
+          (default_group, decls)
+      in
+      field_name, gfs, ds
     
 let parse_field (env:global_env)
                 (typename:A.ident)
                 (f:A.field) 
   : ML (T.parser & T.decls)
-  = let gfs, decls = field_as_grouped_fields f in
+  = let _, gfs, decls = field_as_grouped_fields f in
     parse_grouped_fields env typename gfs, decls
 
   
@@ -1352,7 +1361,8 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
 
   | Record tdn params _ ast_fields ->
     let tdn, ds1 = translate_typedef_name tdn params in
-    let p, ds2 = parse_field env tdn.td_name (with_dummy_range (RecordField ast_fields)) in
+    let dummy_ident = with_dummy_range (to_ident' "_") in
+    let p, ds2 = parse_field env tdn.td_name (with_dummy_range (RecordField ast_fields dummy_ident)) in
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
@@ -1370,7 +1380,8 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
 
   | CaseType tdn0 params switch_case ->
     let tdn, ds1 = translate_typedef_name tdn0 params in
-    let p, ds2 = parse_field env tdn.td_name (with_dummy_range (SwitchCaseField switch_case)) in
+    let dummy_ident = with_dummy_range (to_ident' "_") in    
+    let p, ds2 = parse_field env tdn.td_name (with_dummy_range (SwitchCaseField switch_case dummy_ident)) in
     // let t, ds2 = translate_switch_case_type env tdn switch_case in
     // let p = parse_typ env tdn0.typedef_name "" t in
     let open T in

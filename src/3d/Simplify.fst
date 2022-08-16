@@ -133,8 +133,8 @@ let rec simplify_field (env:T.env_t) (f:field)
   : ML field
   = match f.v with
     | AtomicField af -> { f with v = AtomicField (simplify_atomic_field env af) }
-    | RecordField fs -> { f with v = RecordField (List.map (simplify_field env) fs) }
-    | SwitchCaseField swc -> { f with v = SwitchCaseField (simplify_switch_case env swc) }
+    | RecordField fs i -> { f with v = RecordField (List.map (simplify_field env) fs) i }
+    | SwitchCaseField swc i -> { f with v = SwitchCaseField (simplify_switch_case env swc) i }
 
 and simplify_switch_case (env:T.env_t) (c:switch_case)
   : ML switch_case = 

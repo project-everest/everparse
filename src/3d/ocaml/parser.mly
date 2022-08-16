@@ -190,7 +190,8 @@ expr_no_range:
             | None -> with_range (Constant (Bool true)) $startpos
             | Some e2 -> e2
         in
-        App(HashIfThenElse, [e;e1;e2])
+        let e = with_range (Static e) ($startpos(e)) in
+        App(IfThenElse, [e;e1;e2])
     }
   
   | i=IDENT LPAREN es=arguments RPAREN
@@ -255,7 +256,7 @@ field_action:
   | LBRACE_CHECK a=action RBRACE { a, false }
   | LBRACE_ACT a=action RBRACE { with_range (Action_act a) $startpos(a), false }
 
-struct_field:
+atomic_field:
   | t=typ fn=IDENT bopt=option_of(bitwidth) aopt=array_annot c=option_of(refinement) a=option_of(field_action)
     {
         {
@@ -269,15 +270,73 @@ struct_field:
         }
     }
 
+anonymous_struct_field:
+  | STRUCT LBRACE fields=right_flexible_nonempty_list(SEMICOLON, field) RBRACE fn=IDENT
+    {
+        RecordField(fields, fn)
+    }
+
+anonymous_casetype_field:
+  | SWITCH LPAREN i=IDENT RPAREN LBRACE cs=cases RBRACE fn=IDENT
+    {
+        let e = with_range (Identifier i) ($startpos(i)) in
+        SwitchCaseField((e, cs), fn)
+    }
+
+static_conditional_field:
+  | HASH_IF e=atomic_or_paren_expr f_then=fields HASH_ELSE f_else=fields HASH_ENDIF
+    {
+        let tt = with_range (Constant (Bool true)) ($startpos(e)) in
+        let dummy_identifier = with_range (to_ident' "_") ($startpos(e)) in
+        let f_then =
+            match f_then with
+            | [f] -> f
+            | _ -> with_range (RecordField(f_then, dummy_identifier)) ($startpos(f_then))
+        in
+        let f_else =
+            match f_else with
+            | [f] -> f
+            | _ -> with_range (RecordField(f_else, dummy_identifier)) ($startpos(f_else))
+        in
+        let case_then = Case (tt, f_then) in
+        let case_else = DefaultCase f_else in
+        let e = with_range (Static e) ($startpos(e)) in
+        SwitchCaseField ((e, [case_then; case_else]), dummy_identifier)
+    }
+    
 field:
-  | f = struct_field
+  | f = atomic_field
     {
       let comms = Ast.comments_buffer.flush () in
       let range = (mk_pos $startpos, mk_pos $startpos) in
       let af' = with_range_and_comments f range comms in
       with_range_and_comments (AtomicField af') range comms
     }
+    
+  | rf = anonymous_struct_field
+    {
+      let comms = Ast.comments_buffer.flush () in
+      let range = (mk_pos $startpos, mk_pos $startpos) in
+      with_range_and_comments rf range comms
+    }
 
+  | cf = anonymous_casetype_field
+    {
+      let comms = Ast.comments_buffer.flush () in
+      let range = (mk_pos $startpos, mk_pos $startpos) in
+      with_range_and_comments cf range comms
+    }
+
+  | cf = static_conditional_field
+    {
+      let comms = Ast.comments_buffer.flush () in
+      let range = (mk_pos $startpos, mk_pos $startpos) in
+      with_range_and_comments cf range comms
+    }
+
+fields:
+  | fields=right_flexible_nonempty_list(SEMICOLON, field)
+   { fields }
 
 immutable_parameter:
   | t=typ i=IDENT { (t, i, Immutable) }
@@ -399,7 +458,7 @@ decl_no_range:
   | b=attributes TYPEDEF t=typ i=IDENT SEMICOLON
     { TypeAbbrev (t, i) }
   | b=attributes TYPEDEF STRUCT i=IDENT ps=parameters w=where_opt
-    LBRACE fields=right_flexible_nonempty_list(SEMICOLON, field)
+    LBRACE fields=fields
     RBRACE j=IDENT p=typedef_pointer_name_opt SEMICOLON
     {  let k = pointer_name j p in
        Record(mk_td b i j k, ps, w, fields)
@@ -462,6 +521,7 @@ type_refinement:
             type_map = type_map
           }
     }
+
 
 prog:
   | d=decl r=option_of(type_refinement) EOF

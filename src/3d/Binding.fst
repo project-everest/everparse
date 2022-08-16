@@ -667,6 +667,9 @@ and check_expr (env:env) (e:expr)
       let t = lookup_expr_name env i in
       e, t
 
+    | Static _ -> 
+      failwith "Static expressions should have been desugared already"
+      
     | This ->
       error "`this` is not a valid expression" e.range
 
@@ -1130,8 +1133,8 @@ let weak_kind_of_list (wa:'a -> ML weak_kind) (xs:list 'a) : ML weak_kind =
 let rec weak_kind_of_field (env: env) (f: field) : ML weak_kind =
   match f.v with
   | AtomicField f -> weak_kind_of_atomic_field env f
-  | RecordField f -> weak_kind_of_record env f
-  | SwitchCaseField f -> weak_kind_of_switch_case env f
+  | RecordField f _ -> weak_kind_of_record env f
+  | SwitchCaseField f _ -> weak_kind_of_switch_case env f
 
 and weak_kind_of_record env (fs:record) : ML weak_kind =
   match fs with
@@ -1252,6 +1255,11 @@ let check_switch (check_field:check_field_t) (env:env) (s:switch_case)
     (head, cases)
 #pop-options
 
+let is_bound_locally (env:env) (i:ident) = 
+  match H.try_find env.locals i.v with
+  | None -> false
+  | Some _ -> true
+  
 let rec check_record (check_field:check_field_t) (env:env) (fs:record)
   : ML record
   = let env = copy_env env in //locals of a record do not escape the record
@@ -1266,13 +1274,13 @@ let rec check_record (check_field:check_field_t) (env:env) (fs:record)
             let af = check_atomic_field env true af in
             { f with v = AtomicField af }
 
-          | RecordField fs ->
+          | RecordField fs i ->
             let fs = check_record check_field env fs in
-            { f with v = RecordField fs }
+            {f with v = RecordField fs i }
 
-          | SwitchCaseField swc ->
+          | SwitchCaseField swc i ->
             let swc = check_switch check_field env swc in
-            { f with v = SwitchCaseField swc })
+            { f with v = SwitchCaseField swc i})
         fs
     in
             
@@ -1280,8 +1288,8 @@ let rec check_record (check_field:check_field_t) (env:env) (fs:record)
     let nfields = List.length fields in
     let fields = fields |> List.mapi (fun i f ->
       match f.v with
-      | RecordField _
-      | SwitchCaseField _ -> f
+      | RecordField _ _
+      | SwitchCaseField _ _ -> f
       | AtomicField af ->
         let sf = af.v in
         let used = is_used env sf.field_ident in
@@ -1306,18 +1314,37 @@ let rec check_record (check_field:check_field_t) (env:env) (fs:record)
     in
     fields
 
+
+let name_of_field (f:field) : ident =
+    match f.v with
+    | AtomicField af -> af.v.field_ident
+    | RecordField _ i
+    | SwitchCaseField _ i -> i
+
+let check_field_names_unique (f:list field)
+  : ML unit
+  = match f with
+    | [] 
+    | [_] -> ()
+    | hd::tl -> 
+      let i = name_of_field hd in
+      if List.for_all (fun f' -> not (eq_idents (name_of_field f') i)) tl
+      then ()
+      else error (Printf.sprintf "Field name %s is not unique" i.v.name) i.range
+
 let rec check_field (env:env) (f:field) 
   : ML field
   = match f.v with
     | AtomicField af ->
       { f with v = AtomicField (check_atomic_field env false af) }
 
-    | RecordField fs ->
-      { f with v = RecordField (check_record check_field env fs) }
+    | RecordField fs i ->
+      check_field_names_unique fs;
+      { f with v = RecordField (check_record check_field env fs) i }
 
-    | SwitchCaseField swc ->
-      { f with v = SwitchCaseField (check_switch check_field env swc) }    
-
+    | SwitchCaseField swc i ->
+      { f with v = SwitchCaseField (check_switch check_field env swc) i }    
+  
 (** Computes a layout for bit fields,
     decorating each field with a bitfield index
     and a bit range within that bitfield to store the given field.
@@ -1326,7 +1353,7 @@ let rec check_field (env:env) (f:field)
     separate phase, see BitFields.fst
  *)
 let elaborate_bit_fields env (fields:list field)
-  : ML (list field)
+  : ML (out:list field { List.length out == List.length fields })
   = let bf_index : ref int = ST.alloc 0 in
     let get_bf_index () = !bf_index in
     let next_bf_index () = bf_index := !bf_index + 1 in
@@ -1349,7 +1376,7 @@ let elaborate_bit_fields env (fields:list field)
         Some (sf.field_type, to, remaining_size)
     in
     let rec aux open_bit_field fields
-      : ML (list field)
+      : ML (out:list field { List.length out == List.length fields } )
       = match fields with
         | [] ->
           []
@@ -1357,37 +1384,29 @@ let elaborate_bit_fields env (fields:list field)
         | hd::tl ->
           begin
           match hd.v with
-          | RecordField fs -> 
+          | RecordField fs hd_fieldname -> 
             next_bf_index();
             let fs = aux None fs in
-            let hd = { hd with v = RecordField fs } in
+            let hd = { hd with v = RecordField fs hd_fieldname } in
             next_bf_index();          
             hd :: aux None tl
 
-          | SwitchCaseField (e, cases) ->
+          | SwitchCaseField (e, cases) hd_fieldname ->
             next_bf_index();          
             let cases = 
               List.map 
                 (function 
                   | Case p f -> 
-                    let fs = aux None [f] in
-                    begin
-                    match fs with
-                    | [f] -> Case p f
-                    | _ -> Case p (with_range_and_comments (RecordField fs) f.range f.comments)
-                    end
+                    let [f] = aux None [f] in
+                    Case p f
                     
                   | DefaultCase f ->
-                    let fs = aux None [f] in
-                    begin
-                    match fs with
-                    | [f] -> DefaultCase f
-                    | _ -> DefaultCase (with_range_and_comments (RecordField fs) f.range f.comments)
-                    end)
+                    let [f] = aux None [f] in
+                    DefaultCase f)
                 cases
             in
             next_bf_index();          
-            let hd = { hd with v = SwitchCaseField (e, cases) } in
+            let hd = { hd with v = SwitchCaseField (e, cases) hd_fieldname } in
             hd :: aux None tl
 
          | AtomicField af ->

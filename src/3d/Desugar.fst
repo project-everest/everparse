@@ -32,8 +32,8 @@ module H = Hashtable
 
    * Set the kind (Spec/Output/Extern) in the type nodes
 
-   * Find variables in HashIfThenElse and hoist them as assumptions
-     and rewrite HashIfThenElse to IfThenElse
+   * Finds variables in Static expressions and hoists them as assumptions
+     and removes the Static
 *)
 
 #push-options "--warn_error -272" //intentional top-level effect
@@ -198,6 +198,7 @@ let rec collect_ifdef_guards (env:qenv) (e:expr)
   : ML unit
   = match e.v with
     | This -> error "'this' is not allowed in the guard of an #if" e.range
+    | Static _ -> failwith "static should have been eliminated already"
     | Constant _ -> ()
     | Identifier i ->
       if List.mem i.v.name env.local_names  //it's a local name (e.g. a parameter name)
@@ -233,20 +234,14 @@ let rec resolve_expr' (env:qenv) (e:expr') r : ML expr' =
   | Constant _ -> e
   | Identifier i -> Identifier (resolve_ident env i)
   | This -> e
+  | Static e' ->
+    let e' = resolve_expr env e' in
+    collect_ifdef_guards env e';//mark any variables as top-level IfDef symbols
+    e'.v
+  
   | App op args -> 
     let args = List.map (resolve_expr env) args in
-    match op with
-    | HashIfThenElse ->
-      begin
-      match args with 
-      | [guard; br1; br2] ->
-        collect_ifdef_guards env guard;//mark any variables as top-level IfDef symbols
-        App IfThenElse args //rewrite away the HashIfThenElse
-      | _ -> error "Unexpected arguments to a #if/#else" r
-      end
-      
-    | _ ->
-      App op args
+    App op args    
 
 and resolve_expr (env:qenv) (e:expr) : ML expr = { e with v = resolve_expr' env e.v e.range }
 
@@ -340,8 +335,8 @@ let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
 let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
   match ff.v with
   | AtomicField f -> let f, e = resolve_atomic_field env f in {ff with v = AtomicField f}, e
-  | RecordField f -> let fs, _ = resolve_fields env f in  {ff with v = RecordField fs}, env //record fields are not in scope outside the record
-  | SwitchCaseField f -> let f = resolve_switch_case env f in {ff with v = SwitchCaseField f}, env
+  | RecordField f i -> let fs, _ = resolve_fields env f in  {ff with v = RecordField fs i}, env //record fields are not in scope outside the record
+  | SwitchCaseField f i -> let f = resolve_switch_case env f in {ff with v = SwitchCaseField f i}, env
 
 and resolve_atomic_field (env:qenv) (f:atomic_field) : ML (atomic_field & qenv) =
   let resolve_atomic_field' (env:qenv) (sf:atomic_field') : ML atomic_field' =

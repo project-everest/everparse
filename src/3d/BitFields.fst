@@ -37,8 +37,8 @@ let group_bit_fields (rewrite_composite_field: field -> ML field)
   = List.fold_right
       (fun field out ->
         match field.v with
-        | RecordField _
-        | SwitchCaseField _ ->
+        | RecordField _ _
+        | SwitchCaseField _ _ ->
           Inl (rewrite_composite_field field) :: out
 
         | AtomicField af ->
@@ -132,7 +132,7 @@ let rec rewrite_field (env:B.global_env) (f:field)
   = match f.v with
     | AtomicField _ -> f
           
-    | RecordField fs -> 
+    | RecordField fs field_name -> 
       let gfs = group_bit_fields (rewrite_field env) fs in
       let fs, subst =
           List.fold_right
@@ -146,9 +146,9 @@ let rec rewrite_field (env:B.global_env) (f:field)
             ([], [])
       in
       let fs = List.map (subst_field (mk_subst subst)) fs in
-      { f with v = RecordField fs }
+      { f with v = RecordField fs field_name }
 
-    | SwitchCaseField (e, cases) ->
+    | SwitchCaseField (e, cases) field_name ->
       let cases = 
           List.map
             (function
@@ -159,13 +159,14 @@ let rec rewrite_field (env:B.global_env) (f:field)
                 DefaultCase (rewrite_field env f))
             cases
       in
-      { f with v = SwitchCaseField (e, cases) }
+      { f with v = SwitchCaseField (e, cases) field_name }
 
    
 let eliminate_one_decl (env:B.global_env) (d:decl) : ML decl =
   match d.d_decl.v with
   | Record names params where fields ->
-    let { v = RecordField fields } = rewrite_field env (with_dummy_range (RecordField fields)) in
+    let i = with_dummy_range (to_ident' "_") in
+    let { v = RecordField fields _ } = rewrite_field env (with_dummy_range (RecordField fields i)) in
     List.iter (fun f ->
       Options.debug_print_string
             (Printf.sprintf "Bitfields: Field %s has comments <%s>\n"

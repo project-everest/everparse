@@ -97,6 +97,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Constant _ -> []
     | Identifier i -> maybe_dep i
     | This -> []
+    | Static e -> deps_of_expr e
     | App _op args -> List.collect deps_of_expr args in
 
   let deps_of_typ_param (p:typ_param) : ML (list string) =
@@ -157,8 +158,8 @@ let scan_deps (fn:string) : ML scan_deps_t =
   let rec deps_of_field (f:field) : ML (list string) = 
     match f.v with
     | AtomicField af -> deps_of_atomic_field af
-    | RecordField fs -> List.collect deps_of_field fs
-    | SwitchCaseField swc -> deps_of_switch_case swc
+    | RecordField fs _ -> List.collect deps_of_field fs
+    | SwitchCaseField swc _ -> deps_of_switch_case swc
   and deps_of_case (c:case) : ML (list string) =
     match c with
     | Case e f -> (deps_of_expr e)@(deps_of_field f)

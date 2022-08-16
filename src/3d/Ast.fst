@@ -243,7 +243,6 @@ type op =
   | LE of option integer_type
   | GE of option integer_type
   | IfThenElse
-  | HashIfThenElse  
   | BitFieldOf of int //BitFieldOf_n(i, from, to); the integer is the size of i in bits
   | SizeOf
   | Cast : from:option integer_type -> to:integer_type -> op
@@ -259,6 +258,7 @@ noeq
 type expr' =
   | Constant of constant
   | Identifier of ident
+  | Static of expr //the guard of a #if; must be made from compile-time constants only
   | This
   | App : op -> list expr -> expr'
 
@@ -452,8 +452,8 @@ and atomic_field = with_meta_t atomic_field'
 
 and field' =
   | AtomicField of atomic_field
-  | RecordField of record
-  | SwitchCaseField of switch_case
+  | RecordField : record -> ident -> field'
+  | SwitchCaseField : switch_case -> ident -> field'
 
 and field = with_meta_t field'
 
@@ -676,6 +676,7 @@ let rec subst_expr (s:subst) (e:expr) : ML expr =
   | Constant _
   | This -> e
   | Identifier i -> apply s i
+  | Static e -> { e with v = Static (subst_expr s e) }
   | App op es -> {e with v = App op (List.map (subst_expr s) es)}
 let subst_atomic_action (s:subst) (aa:atomic_action) : ML atomic_action =
   match aa with
@@ -713,8 +714,8 @@ let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
 let rec subst_field (s:subst) (ff:field) : ML field =
   match ff.v with
   | AtomicField f -> {ff with v = AtomicField (subst_atomic_field s f)}
-  | RecordField f -> {ff with v = RecordField (subst_record s f)}
-  | SwitchCaseField f -> {ff with v = SwitchCaseField (subst_switch_case s f)}
+  | RecordField f i -> {ff with v = RecordField (subst_record s f) i}
+  | SwitchCaseField f i -> {ff with v = SwitchCaseField (subst_switch_case s f) i}
 and subst_atomic_field (s:subst) (f:atomic_field) : ML atomic_field =
   let sf = f.v in
   let a =
@@ -806,7 +807,6 @@ let print_op = function
   | LE _ -> "<="
   | GE _ -> ">="
   | IfThenElse -> "ifthenelse"
-  | HashIfThenElse -> "#ifthenelse"  
   | BitFieldOf i -> Printf.sprintf "bitfield_of(%d)" i
   | SizeOf -> "sizeof"
   | Cast _ t -> "(" ^ print_integer_type t ^ ")"
@@ -820,6 +820,8 @@ let rec print_expr (e:expr) : Tot string =
     print_ident i
   | This ->
     "this"
+  | Static e -> 
+    Printf.sprintf "static(%s)" (print_expr e)
   | App Eq [e1; e2] ->
     Printf.sprintf "(%s = %s)" (print_expr e1) (print_expr e2)
   | App And [e1; e2] ->
@@ -928,8 +930,8 @@ let print_bitfield (bf:option field_bitwidth_t) =
 let rec print_field (f:field) : ML string =
   match f.v with
   | AtomicField f -> print_atomic_field f
-  | RecordField f -> print_record f
-  | SwitchCaseField f -> print_switch_case f
+  | RecordField f i -> Printf.sprintf "%s %s" (print_record f) i.v.name
+  | SwitchCaseField f i -> Printf.sprintf "%s %s" (print_switch_case f) i.v. name
   
 and print_record (f:record) : ML string = 
   List.map print_field f |>
@@ -1053,6 +1055,6 @@ let weak_kind_glb (w1 w2: weak_kind) : Tot weak_kind =
 let field_tag_equal (f0 f1:field) = 
   match f0.v, f1.v with
   | AtomicField _, AtomicField _
-  | RecordField _, RecordField _
-  | SwitchCaseField _, SwitchCaseField _ -> true
+  | RecordField _ _, RecordField _ _
+  | SwitchCaseField _ _, SwitchCaseField _ _ -> true
   | _ -> false
