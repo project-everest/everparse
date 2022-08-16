@@ -1352,3 +1352,344 @@ let impl_for_list
     )
 
 #pop-options
+
+(* list fold *)
+
+let impl_list_hole_inv_prop
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (h0: state_t inv)
+  (l: list t)
+  (h: state_t inv)
+: Tot prop
+=
+  fold_list inv f l h0 == ((), h)
+
+[@@__reduce__]
+let impl_list_hole_inv_true
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (bh: ll_state_ptr)
+  (h0: state_t inv)
+  (l: list t)
+: Tot vprop
+= exists_ (fun (h: state_t inv) -> exists_ (fun out ->
+    cl.ll_state_match h out `star`
+    cl.ll_state_pts_to bh out `star`
+    pure (
+      impl_list_hole_inv_prop inv f h0 l h
+    )
+  ))
+
+[@@__reduce__]
+let impl_list_hole_inv_false
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (bh: ll_state_ptr)
+  (h0: state_t inv)
+  (l: list t)
+: Tot vprop
+= 
+  exists_ (cl.ll_state_pts_to bh) `star`
+  exists_ (fun h -> exists_ (fun out' ->
+    cl.ll_state_failure h out' `star`
+    pure (impl_list_hole_inv_prop inv f h0 l h)
+  ))
+
+let impl_list_hole_inv
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (bh: ll_state_ptr)
+  (h0: state_t inv)
+  (cont: bool)
+  (l: list t)
+: Tot vprop
+= if cont
+  then impl_list_hole_inv_true cl inv f bh h0 l
+  else impl_list_hole_inv_false cl inv f bh h0 l
+
+inline_for_extraction
+let impl_list_post_true
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (f: Ghost.erased (fold_t state_t t unit inv inv))
+  (#k: parser_kind)
+  (p: parser k t)
+  (w: load_ll_state_ptr_t cl inv)
+  (#vbin: _)
+  (bin: byte_array)
+  (h: Ghost.erased (state_t inv))
+  (kpre kpost: vprop)
+  (k_success: (
+    (out': ll_state) ->
+    (h': Ghost.erased (state_t inv)) ->
+    (v: unit) ->
+    ST unit
+      (kpre `star` aparse (parse_vldata 4 (parse_list p)) bin vbin `star`
+        cl.ll_state_match h' out')
+      (fun _ -> kpost)
+      (
+        fold_list inv f vbin.contents h == (v, Ghost.reveal h')
+      )
+      (fun _ -> True)
+  ))
+  (bh: ll_state_ptr)
+  (cont: bool)
+  (l: Ghost.erased (list t))
+: ST unit
+    (kpre `star` aparse (parse_vldata 4 (parse_list p)) bin vbin `star`
+      impl_list_hole_inv cl inv f bh h cont l)
+    (fun _ ->
+      kpost `star`
+      exists_ (cl.ll_state_pts_to bh)
+    )
+    (cont == true /\
+      Ghost.reveal l == vbin.contents)
+    (fun _ -> True)
+=
+  rewrite
+    (impl_list_hole_inv cl inv f bh h cont l)
+    (impl_list_hole_inv_true cl inv f bh h l);
+  let _ = gen_elim () in
+  cl.ll_state_match_shape _ _;
+  w bh (fun out' ->
+    vpattern_rewrite (cl.ll_state_match _) out';
+    k_success _ _ ()
+  )
+
+inline_for_extraction
+let impl_list_post_false
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (f: Ghost.erased (fold_t state_t t unit inv inv))
+  (#k: parser_kind)
+  (p: parser k t)
+  (#vbin: _)
+  (bin: byte_array)
+  (h: Ghost.erased (state_t inv))
+  (kpre kpost: vprop)
+  (k_failure: (
+    (vb': Ghost.erased ll_fstate) ->
+    (h': Ghost.erased (state_t inv)) ->
+    (v: Ghost.erased unit) ->
+    ST unit
+      (kpre `star` aparse (parse_vldata 4 (parse_list p)) bin vbin `star` cl.ll_state_failure h' vb')
+      (fun _ -> kpost)
+      (
+        fold_list inv f vbin.contents h == (Ghost.reveal v, Ghost.reveal h')
+      )
+      (fun _ -> True)
+  ))
+  (bh: ll_state_ptr)
+  (cont: bool)
+  (l: Ghost.erased (list t))
+: ST unit
+    (kpre `star` aparse (parse_vldata 4 (parse_list p)) bin vbin `star`
+      impl_list_hole_inv cl inv f bh h cont l)
+    (fun _ ->
+      kpost `star`
+      exists_ (cl.ll_state_pts_to bh)
+    )
+    (cont == false /\
+      Ghost.reveal l == vbin.contents)
+    (fun _ -> True)
+=
+  rewrite
+    (impl_list_hole_inv cl inv f bh h cont l)
+    (impl_list_hole_inv_false cl inv f bh h l);
+  let _ = gen_elim () in
+  k_failure _ _ ()
+
+let rec fold_list_append
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv (inv))
+  (state: state_t inv)
+  (l1 l2: list t)
+: Lemma
+  (ensures (fold_list inv f (l1 `List.Tot.append` l2) state ==
+    (let (_, state1) = fold_list inv f l1 state in
+    fold_list inv f l2 state1)))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | a :: q ->
+    let (_, state0) = f a state in
+    fold_list_append inv f state0 q l2
+
+let fold_list_snoc
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv (inv))
+  (state: state_t inv)
+  (l: list t)
+  (x: t)
+: Lemma
+  (ensures (fold_list inv f (List.Tot.snoc (l, x)) state ==
+    (let (_, state1) = fold_list inv f l state in
+    f x state1)))
+= fold_list_append inv f state l [x]
+
+inline_for_extraction
+let impl_list_body_false
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (f: Ghost.erased (fold_t state_t t unit inv inv))
+  (prf: fold_state_inc cl f)
+  (#k: parser_kind)
+  (p: parser k t)
+  (bh: ll_state_ptr)
+  (h0: Ghost.erased (state_t inv))
+  (#opened: _)
+  (va: v k t { AP.length (array_of' va) > 0 })
+  (a: byte_array)
+  (l: Ghost.erased (list t))
+: STGhostT unit opened
+    (aparse p a va `star` impl_list_hole_inv cl inv f bh h0 false l)
+    (fun _ -> aparse p a va `star` impl_list_hole_inv cl inv f bh h0 false (List.Tot.snoc (Ghost.reveal l, va.contents)))
+= rewrite
+    (impl_list_hole_inv cl inv f bh h0 false l)
+    (impl_list_hole_inv_false cl inv f bh h0 l);
+  let _ = gen_elim () in
+  fold_list_snoc inv f h0 l va.contents;
+  prf va.contents (sndp (fold_list inv f l h0));
+  cl.ll_state_failure_inc _ _ (sndp (fold_list inv f (List.Tot.snoc (Ghost.reveal l, va.contents)) h0));
+  rewrite
+    (impl_list_hole_inv_false cl inv f bh h0 (List.Tot.snoc (Ghost.reveal l, va.contents)))
+    (impl_list_hole_inv cl inv f bh h0 false (List.Tot.snoc (Ghost.reveal l, va.contents)))
+
+inline_for_extraction
+let impl_list_body_true
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (f: Ghost.erased (fold_t state_t t unit inv inv))
+  (#k: parser_kind)
+  (p: parser k t)
+  (impl_f: fold_impl_t cl p f)
+  (wl: load_ll_state_ptr_t cl inv)
+  (ws: store_ll_state_ptr_t cl inv)
+  (bh: ll_state_ptr)
+  (h0: Ghost.erased (state_t inv))
+  (va: v k t { AP.length (array_of' va) > 0 })
+  (a: byte_array)
+  (l: Ghost.erased (list t))
+: STT bool
+    (aparse p a va `star` impl_list_hole_inv cl inv f bh h0 true l)
+    (fun res -> aparse p a va `star` impl_list_hole_inv cl inv f bh h0 res (List.Tot.snoc (Ghost.reveal l, va.contents)))
+= with_local true (fun bres ->
+    rewrite
+      (impl_list_hole_inv cl inv f bh h0 true l)
+      (impl_list_hole_inv_true cl inv f bh h0 l);
+    let _ = gen_elim () in
+    cl.ll_state_match_shape _ _;
+    wl bh (fun out ->
+      fold_list_snoc inv f h0 l va.contents;
+      vpattern_rewrite (cl.ll_state_match _) out;
+      impl_f
+        (cl.ll_state_pts_to bh out `star` R.pts_to bres full_perm true)
+        (aparse p a va `star` exists_ (fun res -> R.pts_to bres full_perm res `star` impl_list_hole_inv cl inv f bh h0 res (List.Tot.snoc (Ghost.reveal l, va.contents))))
+        a
+        out
+        _
+        (fun out' h' _ ->
+          cl.ll_state_match_shape _ _;
+          ws bh out' ;
+          rewrite
+            (impl_list_hole_inv_true cl inv f bh h0 (List.Tot.snoc (Ghost.reveal l, va.contents)))
+            (impl_list_hole_inv cl inv f bh h0 true (List.Tot.snoc (Ghost.reveal l, va.contents)));
+          noop ()
+        )
+        (fun vb' h' _ ->
+          R.write bres false;
+          rewrite
+            (impl_list_hole_inv_false cl inv f bh h0 (List.Tot.snoc (Ghost.reveal l, va.contents)))
+            (impl_list_hole_inv cl inv f bh h0 false (List.Tot.snoc (Ghost.reveal l, va.contents)));
+          noop ()
+        )
+      ;
+      let _ = gen_elim () in
+      let res = R.read bres in
+      rewrite
+        (impl_list_hole_inv cl inv f bh h0 _ _)
+        (impl_list_hole_inv cl inv f bh h0 res (List.Tot.snoc (Ghost.reveal l, va.contents)));
+      return res
+  ))
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+inline_for_extraction
+let impl_list
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (f: Ghost.erased (fold_t state_t t unit inv inv))
+  (prf: fold_state_inc cl f)
+  (#k: parser_kind)
+  (p: parser k t)
+  (impl_f: fold_impl_t cl p f)
+  (j: jumper p) // MUST be computed OUTSIDE of impl_list
+  (wc: with_ll_state_ptr_t cl inv) // same
+  (wl: load_ll_state_ptr_t cl inv)
+  (ws: store_ll_state_ptr_t cl inv)
+: Pure (fold_impl_t cl (parse_vldata 4 (parse_list p)) (fold_list inv f))
+    (requires (k.parser_kind_subkind == Some ParserStrong))
+    (ensures (fun _ -> True))
+= fun kpre kpost #vbin bin bout h k_success k_failure ->
+  let _ = rewrite_aparse bin (parse_vldata 4 (parse_list p)) in
+  let bin_l = elim_vldata 4 (parse_list p) bin in
+  let _ = gen_elim () in
+  let vl_sz = vpattern_replace (aparse (parse_bounded_integer 4) bin) in
+  let vl_l = vpattern_replace (aparse (parse_list p) bin_l) in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse (parse_bounded_integer 4) bin vl_sz `star`
+      aparse (parse_list p) bin_l vl_l)
+    (fun _ -> aparse (parse_vldata 4 (parse_list p)) bin vbin)
+  =
+    let _ = intro_vldata 4 (parse_list p) bin bin_l in
+    vpattern_rewrite (aparse _ bin) vbin
+  in
+  let in_sz = read_bounded_integer 4 bin in
+  cl.ll_state_match_shape _ _;
+  wc bout (fun bh ->
+    noop ();
+    rewrite
+      (impl_list_hole_inv_true cl inv f bh h [])
+      (impl_list_hole_inv cl inv f bh h true []);
+    let cont = list_iter_with_interrupt
+      j
+      (impl_list_hole_inv cl inv f bh h)
+      (impl_list_body_true cl inv f p impl_f wl ws bh h)
+      (impl_list_body_false cl inv f prf p bh h)
+      bin_l
+      (SZ.mk_size_t in_sz)
+    in
+    restore ();
+    if cont
+    then impl_list_post_true cl inv f p wl bin h kpre kpost k_success bh cont _
+    else impl_list_post_false cl inv f p bin h kpre kpost k_failure bh cont _
+  )
+
+#pop-options
