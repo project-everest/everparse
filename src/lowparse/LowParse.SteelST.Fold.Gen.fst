@@ -45,10 +45,10 @@ let read_bool : leaf_reader parse_bool =
 inline_for_extraction
 noeq
 type low_level_state
-  (state_i: Type) (state_t: state_i -> Type) (ll_state: Type) (ll_state_ptr: Type) (ll_fstate: Type)
+  (state_i: Type) (state_t: state_i -> Type) (ll_state: Type) (ll_state_ptr: Type)
 = {
     ll_state_match: ((#i: state_i) -> (h: state_t i) -> ll_state -> vprop);
-    ll_state_failure: ((#i: state_i) -> (h: state_t i) -> ll_fstate -> vprop);
+    ll_state_failure: ((#i: state_i) -> (h: state_t i) -> vprop);
     state_ge: ((#i1: state_i) -> (s1: state_t i1) -> (#i2: state_i) -> (s2: state_t i2) -> prop);
     state_ge_refl: (
       (#i: state_i) -> (s: state_t i) ->
@@ -68,11 +68,11 @@ type low_level_state
     );
     ll_state_failure_inc: (
       (#opened: _) ->
-      (#i1: state_i) -> (s1: state_t i1) -> (s: ll_fstate) ->
+      (#i1: state_i) -> (s1: state_t i1) ->
       (#i2: state_i) -> (s2: state_t i2) ->
       STGhost unit opened
-        (ll_state_failure s1 s)
-        (fun _ -> ll_state_failure s2 s)
+        (ll_state_failure s1)
+        (fun _ -> ll_state_failure s2)
         (state_ge s2 s1)
         (fun _ -> True)
     );
@@ -93,8 +93,8 @@ type low_level_state
 
 inline_for_extraction
 let with_ll_state_ptr_t
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type) (#ll_fstate: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (i: state_i)
 : Tot Type
 =
@@ -112,8 +112,8 @@ let with_ll_state_ptr_t
 
 inline_for_extraction
 let load_ll_state_ptr_t
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type) (#ll_fstate: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (i: state_i)
 : Tot Type
 =
@@ -138,8 +138,8 @@ let load_ll_state_ptr_t
 
 inline_for_extraction
 let store_ll_state_ptr_t
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type) (#ll_fstate: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (i: state_i)
 : Tot Type
 = (#gl: Ghost.erased ll_state) ->
@@ -154,8 +154,8 @@ let store_ll_state_ptr_t
 inline_for_extraction
 [@@noextract_to "krml"]
 let stt_impl_t'
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
@@ -179,11 +179,10 @@ let stt_impl_t'
       (fun _ -> True)
   )) ->
   (k_failure: (
-    (bout': Ghost.erased ll_fstate) ->
     (h': Ghost.erased (state_t post)) ->
     (v: Ghost.erased ret_t) ->
     ST unit
-      (kpre `star` cl.ll_state_failure h' bout')
+      (kpre `star` cl.ll_state_failure h')
       (fun _ -> kpost)
       (
         p h == (Ghost.reveal v, Ghost.reveal h')
@@ -198,8 +197,8 @@ let stt_impl_t'
 inline_for_extraction
 [@@noextract_to "krml"]
 let stt_impl_t
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
@@ -213,8 +212,8 @@ let stt_impl_t
 inline_for_extraction
 [@@noextract_to "krml"]
 let fold_impl_t
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
@@ -234,8 +233,8 @@ let fold_impl_t
 
 inline_for_extraction
 let impl_action
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
@@ -251,8 +250,8 @@ let impl_action
 inline_for_extraction
 [@@noextract_to "krml"]
 let impl_ret
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ret_t: Type)
   (i: state_i)
   (v: ret_t)
@@ -262,8 +261,8 @@ let impl_ret
 
 inline_for_extraction
 let impl_rewrite_parser
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
@@ -291,15 +290,15 @@ let impl_rewrite_parser
         restore ();
         k_success bout1 h1 v1
       )
-      (fun vb' h1 v1 ->
+      (fun h1 v1 ->
         restore ();
-        k_failure vb' h1 v1)
+        k_failure h1 v1)
 
 inline_for_extraction
 [@@noextract_to "krml"]
 let impl_read
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ret_t: Type)
   (i: state_i)
   (#ty: Type)
@@ -312,8 +311,8 @@ let impl_read
     k_success bout h v
 
 let stt_state_inc
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
@@ -324,8 +323,8 @@ let stt_state_inc
   (snd (p s) `cl.state_ge` s)
 
 let fold_state_inc
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
@@ -361,8 +360,8 @@ let get_return_value
 
 [@@noextract_to "krml"]
 let impl_bind
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#ty: Type)
   (#kty: parser_kind)
   (pty: parser kty ty)
@@ -384,19 +383,19 @@ let impl_bind
         impl_g v1
           kpre kpost bin bout1 h1 k_success k_failure
       )
-      (fun vb' h1 v1 ->
+      (fun h1 v1 ->
         let h2 = get_return_state (g v1 vbin.contents) h1 in
         let v2 = get_return_value (g v1 vbin.contents) h1 in
         g_prf v1 vbin.contents h1;
-        cl.ll_state_failure_inc h1 vb' h2;
-        k_failure vb' h2 v2
+        cl.ll_state_failure_inc h1 h2;
+        k_failure h2 v2
       )
 
 inline_for_extraction
 [@@noextract_to "krml"]
 let impl_pair
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#t1: Type)
   (#t2: Type)
   (#ret1: Type)
@@ -440,18 +439,18 @@ let impl_pair
           restore ();
           k_success bout2 h2 v2
         )
-        (fun vb' h2 v2 ->
+        (fun h2 v2 ->
           restore ();
-          k_failure vb' h2 v2
+          k_failure h2 v2
         )
     )
-    (fun vb' h1 v1 ->
+    (fun h1 v1 ->
       let h2 = get_return_state (f2 v1 vbin2.contents) h1 in
       let v2 = get_return_value (f2 v1 vbin2.contents) h1 in
       f2_prf v1 vbin2.contents h1;
-      cl.ll_state_failure_inc h1 vb' h2;
+      cl.ll_state_failure_inc h1 h2;
       restore ();
-      k_failure vb' h2 v2
+      k_failure h2 v2
     )
 
 let parser_of_choice_payload
@@ -465,8 +464,8 @@ let parser_of_choice_payload
 inline_for_extraction
 [@@noextract_to "krml"]
 let impl_choice
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (#t: (bool -> Type))
   (#ret_t: Type)
   (#pre: _)
@@ -500,13 +499,12 @@ let impl_choice
       restore ();
       k_success bout' h' v'
     )
-    (fun vb' h' v' ->
+    (fun h' v' ->
       restore ();
-      k_failure vb' h' v'
+      k_failure h' v'
     )
 
 module R = Steel.ST.Reference
-module GR = Steel.ST.GhostReference
 
 (* for loop *)
 
@@ -544,8 +542,8 @@ let impl_for_inv_true_prop
 
 [@@__reduce__]
 let impl_for_inv_aux_true
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -590,8 +588,8 @@ let impl_for_inv_aux_false_prop
 
 [@@__reduce__]
 let impl_for_inv_aux_false0
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -603,13 +601,13 @@ let impl_for_inv_aux_false0
 : Tot vprop
 =
   exists_ (fun h ->
-    exists_ (cl.ll_state_failure h) `star`
+    cl.ll_state_failure h `star`
     pure (impl_for_inv_aux_false_prop inv from0 to f l h0 h cont from)
   )
 
 let impl_for_inv_aux_false
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -624,8 +622,8 @@ let impl_for_inv_aux_false
 
 let intro_impl_for_inv_aux_false
   (#opened: _)
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -635,9 +633,8 @@ let intro_impl_for_inv_aux_false
   (cont: bool)
   (from: SZ.size_t)
   (h: state_t inv)
-  (out: ll_fstate)
 : STGhost unit opened
-    (cl.ll_state_failure h out)
+    (cl.ll_state_failure h)
     (fun _ -> impl_for_inv_aux_false cl inv from0 to f l h0 cont from)
     (impl_for_inv_aux_false_prop inv from0 to f l h0 h cont from)
     (fun _ -> True)
@@ -647,8 +644,8 @@ let intro_impl_for_inv_aux_false
     (impl_for_inv_aux_false cl inv from0 to f l h0 cont from)
 
 let impl_for_inv_aux
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -665,9 +662,9 @@ let impl_for_inv_aux
   else exists_ (impl_for_inv_aux_false cl inv from0 to f l h0 cont)
 
 let intro_impl_for_inv_aux_true
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  #state_i #state_t #ll_state #ll_state_ptr
   (#opened: _)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -692,8 +689,8 @@ let intro_impl_for_inv_aux_true
 
 let elim_impl_for_inv_aux_true
   #opened
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -717,22 +714,10 @@ let elim_impl_for_inv_aux_true
   let _ = gen_elim () in
   gh
 
-[@@erasable]
-noeq
-type impl_for_inv_aux_false_t
-  (#state_i: _) (state_t: _)
-  (ll_fstate: Type)
-  (inv: state_i)
-= {
-    iff_from: SZ.size_t;
-    iff_h: state_t inv;
-    iff_out: ll_fstate;
-  }
-
 let elim_impl_for_inv_aux_false
   #opened
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -743,12 +728,12 @@ let elim_impl_for_inv_aux_false
   (from: SZ.size_t)
   (no_interrupt: bool)
   (cont: bool)
-: STGhost (impl_for_inv_aux_false_t state_t ll_fstate inv) opened
+: STGhost (Ghost.erased (SZ.size_t & state_t inv)) opened
     (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
-    (fun r -> cl.ll_state_failure r.iff_h r.iff_out)
+    (fun r -> cl.ll_state_failure (sndp r))
     (no_interrupt == false)
     (fun r ->
-      impl_for_inv_aux_false_prop inv from0 to f l h0 r.iff_h cont r.iff_from
+      impl_for_inv_aux_false_prop inv from0 to f l h0 (sndp r) cont (fstp r)
     )
 =
   rewrite
@@ -756,21 +741,15 @@ let elim_impl_for_inv_aux_false
     (exists_ (impl_for_inv_aux_false0 cl inv from0 to f l h0 cont));
   let from' = elim_exists () in
   let _ = gen_elim () in
-  let h = vpattern (fun h -> cl.ll_state_failure h _) in
-  let out' = vpattern (fun out' -> cl.ll_state_failure _ out') in
-  let r = {
-    iff_from = from';
-    iff_h = h;
-    iff_out = out';
-  }
-  in
-  rewrite (cl.ll_state_failure _ _) (cl.ll_state_failure r.iff_h r.iff_out);
+  let h = vpattern (fun h -> cl.ll_state_failure h) in
+  let r = Ghost.hide (Ghost.reveal from', h) in
+  rewrite (cl.ll_state_failure _) (cl.ll_state_failure (sndp r));
   r
 
 let impl_for_inv_aux_cont_true
   (#opened: _)
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -791,14 +770,14 @@ let impl_for_inv_aux_cont_true
   else begin
     let _ = elim_impl_for_inv_aux_false _ _ _ _ _ _ _ _ _ _ _ in
     rewrite // by contradiction
-      (cl.ll_state_failure _ _)
+      (cl.ll_state_failure _)
       (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
   end
 
 [@@__reduce__]
 let impl_for_inv0
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: parser_kind)
   (#t: Type)
@@ -824,8 +803,8 @@ let impl_for_inv0
   )))
 
 let impl_for_inv
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: parser_kind)
   (#t: Type)
@@ -845,8 +824,8 @@ let impl_for_inv
 
 inline_for_extraction
 let impl_for_test
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: parser_kind)
   (#t: Type)
@@ -899,8 +878,8 @@ let rec fold_for_snoc
 
 inline_for_extraction
 let impl_for_body
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: parser_kind)
   (#t: Type)
@@ -956,10 +935,10 @@ let impl_for_body
           (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont cont2);
         noop ()
       )
-      (fun vb' h2 _ ->
+      (fun h2 _ ->
         R.write b_no_interrupt false;
         R.write bcont false;
-        intro_impl_for_inv_aux_false cl inv from0 to f vl.contents h0 false from2 h2 vb';
+        intro_impl_for_inv_aux_false cl inv from0 to f vl.contents h0 false from2 h2;
         rewrite
           (exists_ (impl_for_inv_aux_false cl inv from0 to f vl.contents h0 false))
           (impl_for_inv_aux cl inv from0 to f vl.contents h0 out1 from1 false false);
@@ -971,8 +950,8 @@ let impl_for_body
   )
 
 let rec fold_for_inc_aux
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: nat) (to: nat)
@@ -1005,8 +984,8 @@ let rec fold_for_inc_aux
   end
 
 let fold_for_inc
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: nat) (to: nat)
@@ -1019,9 +998,9 @@ let fold_for_inc
   else fold_for_inc_aux cl inv from0 to f i h from0 prf
 
 let elim_impl_for_inv_aux_false_strong
-  #opened
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (#opened: _)
+  (#state_i: _) (#state_t: _) (#ll_state: _) (#ll_state_ptr: _)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (from0: SZ.size_t) (to: SZ.size_t)
@@ -1033,25 +1012,23 @@ let elim_impl_for_inv_aux_false_strong
   (from: SZ.size_t)
   (no_interrupt: bool)
   (cont: bool)
-: STGhost (Ghost.erased (state_t inv & ll_fstate)) opened
+: STGhost (Ghost.erased (state_t inv)) opened
     (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
-    (fun r -> cl.ll_state_failure (fstp r) (sndp r))
+    (fun r -> cl.ll_state_failure r)
     (no_interrupt == false)
     (fun r ->
-      fstp r == sndp (fold_for inv (SZ.size_v from0) (SZ.size_v to) f l h0)
+      Ghost.reveal r == sndp (fold_for inv (SZ.size_v from0) (SZ.size_v to) f l h0)
     )
 = let r0 = elim_impl_for_inv_aux_false _ _ _ _ _ _ _ _ _ _ _ in
-  fold_for_inc_aux cl inv (SZ.size_v from0) (SZ.size_v to) f l h0 (SZ.size_v r0.iff_from) prf;
-  let h = get_return_state (fold_for inv (SZ.size_v from0) (SZ.size_v to) f l) h0 in
-  let res = Ghost.hide (Ghost.reveal h, r0.iff_out) in
-  cl.ll_state_failure_inc r0.iff_h r0.iff_out h;
-  rewrite (cl.ll_state_failure _ _) (cl.ll_state_failure (fstp res) (sndp res));
+  fold_for_inc_aux cl inv (SZ.size_v from0) (SZ.size_v to) f l h0 (SZ.size_v (fstp r0)) prf;
+  let res = get_return_state (fold_for inv (SZ.size_v from0) (SZ.size_v to) f l) h0 in
+  cl.ll_state_failure_inc (sndp r0) res;
   res
 
 inline_for_extraction
 let impl_for_post
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: parser_kind)
   (#t: Type)
@@ -1081,13 +1058,12 @@ let impl_for_post
       (fun _ -> True)
   ))
   (k_failure: (
-    (bout': Ghost.erased ll_fstate) ->
     (h': Ghost.erased (state_t inv)) ->
     (v: Ghost.erased unit) ->
     ST unit
       (kpre `star`
         aparse p bin vl `star`
-        cl.ll_state_failure h' bout')
+        cl.ll_state_failure h')
       (fun _ -> kpost)
       (
         fold_for inv (SZ.size_v from0) (SZ.size_v to) f vl.contents h0 == (Ghost.reveal v, Ghost.reveal h')
@@ -1120,13 +1096,13 @@ let impl_for_post
       )
     end else begin
       let r = elim_impl_for_inv_aux_false_strong cl inv from0 to f prf vl.contents _ _ _ _ _ in
-      k_failure (sndp r) (fstp r) ()
+      k_failure r ()
     end
 
 inline_for_extraction
 let impl_for
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: parser_kind)
   (#t: Type)
@@ -1219,8 +1195,8 @@ let elim_nlist
 
 inline_for_extraction
 let impl_list_index
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (#k: parser_kind)
@@ -1263,17 +1239,17 @@ let impl_list_index
       restore ();
       k_success out' h' v'
     )
-    (fun vb' h' v' ->
+    (fun h' v' ->
       restore ();
-      k_failure vb' h' v'
+      k_failure h' v'
     )
 
 #pop-options
 
 inline_for_extraction
 let impl_list_index_of
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (#k: parser_kind)
@@ -1295,8 +1271,8 @@ let impl_list_index_of
 
 inline_for_extraction
 let impl_for_list
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (f: fold_t state_t t unit inv inv)
@@ -1346,9 +1322,9 @@ let impl_for_list
       restore ();
       k_success out' h' v'
     )
-    (fun vb' h' v' ->
+    (fun h' v' ->
       restore ();
-      k_failure vb' h' v'
+      k_failure h' v'
     )
 
 #pop-options
@@ -1369,8 +1345,8 @@ let impl_list_hole_inv_prop
 
 [@@__reduce__]
 let impl_list_hole_inv_true
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (f: fold_t state_t t unit inv inv)
@@ -1388,8 +1364,8 @@ let impl_list_hole_inv_true
 
 [@@__reduce__]
 let impl_list_hole_inv_false
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (f: fold_t state_t t unit inv inv)
@@ -1399,14 +1375,14 @@ let impl_list_hole_inv_false
 : Tot vprop
 = 
   exists_ (cl.ll_state_pts_to bh) `star`
-  exists_ (fun h -> exists_ (fun out' ->
-    cl.ll_state_failure h out' `star`
+  exists_ (fun h ->
+    cl.ll_state_failure h `star`
     pure (impl_list_hole_inv_prop inv f h0 l h)
-  ))
+  )
 
 let impl_list_hole_inv
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (f: fold_t state_t t unit inv inv)
@@ -1421,8 +1397,8 @@ let impl_list_hole_inv
 
 inline_for_extraction
 let impl_list_post_true
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
@@ -1472,8 +1448,8 @@ let impl_list_post_true
 
 inline_for_extraction
 let impl_list_post_false
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
@@ -1484,11 +1460,10 @@ let impl_list_post_false
   (h: Ghost.erased (state_t inv))
   (kpre kpost: vprop)
   (k_failure: (
-    (vb': Ghost.erased ll_fstate) ->
     (h': Ghost.erased (state_t inv)) ->
     (v: Ghost.erased unit) ->
     ST unit
-      (kpre `star` aparse (parse_vldata 4 (parse_list p)) bin vbin `star` cl.ll_state_failure h' vb')
+      (kpre `star` aparse (parse_vldata 4 (parse_list p)) bin vbin `star` cl.ll_state_failure h')
       (fun _ -> kpost)
       (
         fold_list inv f vbin.contents h == (Ghost.reveal v, Ghost.reveal h')
@@ -1513,7 +1488,7 @@ let impl_list_post_false
     (impl_list_hole_inv cl inv f bh h cont l)
     (impl_list_hole_inv_false cl inv f bh h l);
   let _ = gen_elim () in
-  k_failure _ _ ()
+  k_failure _ ()
 
 let rec fold_list_append
   #state_i #state_t
@@ -1549,8 +1524,8 @@ let fold_list_snoc
 
 inline_for_extraction
 let impl_list_body_false
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
@@ -1572,15 +1547,15 @@ let impl_list_body_false
   let _ = gen_elim () in
   fold_list_snoc inv f h0 l va.contents;
   prf va.contents (sndp (fold_list inv f l h0));
-  cl.ll_state_failure_inc _ _ (sndp (fold_list inv f (List.Tot.snoc (Ghost.reveal l, va.contents)) h0));
+  cl.ll_state_failure_inc _ (sndp (fold_list inv f (List.Tot.snoc (Ghost.reveal l, va.contents)) h0));
   rewrite
     (impl_list_hole_inv_false cl inv f bh h0 (List.Tot.snoc (Ghost.reveal l, va.contents)))
     (impl_list_hole_inv cl inv f bh h0 false (List.Tot.snoc (Ghost.reveal l, va.contents)))
 
 inline_for_extraction
 let impl_list_body_true
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
@@ -1620,7 +1595,7 @@ let impl_list_body_true
             (impl_list_hole_inv cl inv f bh h0 true (List.Tot.snoc (Ghost.reveal l, va.contents)));
           noop ()
         )
-        (fun vb' h' _ ->
+        (fun h' _ ->
           R.write bres false;
           rewrite
             (impl_list_hole_inv_false cl inv f bh h0 (List.Tot.snoc (Ghost.reveal l, va.contents)))
@@ -1641,8 +1616,8 @@ let impl_list_body_true
 
 inline_for_extraction
 let impl_list
-  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
