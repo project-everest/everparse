@@ -146,19 +146,25 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | FieldArrayQualified (e, _) -> deps_of_expr e
     | FieldString eopt -> deps_of_opt deps_of_expr eopt in
 
-  let deps_of_struct_field (sf:struct_field) : ML (list string) =
-    (deps_of_typ sf.field_type)@
-    (deps_of_field_array_t sf.field_array_opt)@
-    (deps_of_opt deps_of_expr sf.field_constraint)@
-    (deps_of_opt deps_of_field_bitwidth_t sf.field_bitwidth)@
-    (deps_of_opt (fun (a, _) -> deps_of_action a) sf.field_action) in
+  let deps_of_atomic_field (af:atomic_field) : ML (list string) =
+      let af = af.v in
+      (deps_of_typ af.field_type)@
+      (deps_of_field_array_t af.field_array_opt)@
+      (deps_of_opt deps_of_expr af.field_constraint)@
+      (deps_of_opt deps_of_field_bitwidth_t af.field_bitwidth)@
+      (deps_of_opt (fun (a, _) -> deps_of_action a) af.field_action) in
 
-  let deps_of_case (c:case) : ML (list string) =
+  let rec deps_of_field (f:field) : ML (list string) = 
+    match f.v with
+    | AtomicField af -> deps_of_atomic_field af
+    | RecordField fs -> List.collect deps_of_field fs
+    | SwitchCaseField swc -> deps_of_switch_case swc
+  and deps_of_case (c:case) : ML (list string) =
     match c with
-    | Case e f -> (deps_of_expr e)@(deps_of_struct_field f.v)
-    | DefaultCase f -> deps_of_struct_field f.v in
-
-  let deps_of_switch_case (sc:switch_case) : ML (list string) =
+    | Case e f -> (deps_of_expr e)@(deps_of_field f)
+    | DefaultCase f -> deps_of_field f
+    
+  and deps_of_switch_case (sc:switch_case) : ML (list string) =
     let e, l = sc in
     (deps_of_expr e)@(List.collect deps_of_case l) in
 
@@ -179,7 +185,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Record _ params wopt flds ->
       (deps_of_params params)@
       (deps_of_opt deps_of_expr wopt)@
-      (List.collect (fun f -> deps_of_struct_field f.v) flds)
+      (List.collect deps_of_field flds)
     | CaseType _ params sc ->
       (deps_of_params params)@
       (deps_of_switch_case sc)

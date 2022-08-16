@@ -51,6 +51,15 @@ let mk_env (g:global_env) =
     locals = H.create 10;
     globals = g }
 
+let copy_env (e:env) =
+  let locals = H.create 10 in
+  H.iter (fun k v -> H.insert locals k v) e.locals;
+  {
+    this = e.this;
+    globals = e.globals;
+    locals = locals
+  }
+  
 let env_of_global_env 
   : global_env -> env
   = let locals = H.create 1 in
@@ -908,7 +917,7 @@ and check_typ_param (env:env) (p:typ_param) : ML (typ_param & typ) =
 #pop-options
 #push-options "--z3rlimit_factor 3"
 
-let rec check_field_action (env:env) (f:field) (a:action)
+let rec check_field_action (env:env) (f:atomic_field) (a:action)
   : ML (action & typ)
   = let check_atomic_action env (r:range) (a:atomic_action)
       : ML (atomic_action & typ)
@@ -1046,8 +1055,8 @@ let rec check_field_action (env:env) (f:field) (a:action)
 #pop-options
 
 #push-options "--z3rlimit_factor 4"
-let check_field (env:env) (extend_scope: bool) (f:field)
-  : ML field
+let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
+  : ML atomic_field
   = let sf = f.v in
     let sf_field_type = check_typ false env sf.field_type in
     let check_annot (e: expr) : ML expr =
@@ -1096,23 +1105,65 @@ let check_field (env:env) (extend_scope: bool) (f:field)
 let is_strong_prefix_field_array (a: field_array_t) : Tot bool =
   not (FieldScalar? a)
 
-let weak_kind_of_field (env: env) (f: field) : ML weak_kind =
+let weak_kind_of_atomic_field (env: env) (f: atomic_field) : ML weak_kind =
   if is_strong_prefix_field_array f.v.field_array_opt
   then WeakKindStrongPrefix
   else match typ_weak_kind env f.v.field_type with
   | Some e -> e
   | None -> failwith (Printf.sprintf "cannot find the weak kind of field %s : %s" (print_ident f.v.field_ident) (print_typ f.v.field_type))
 
-let weak_kind_of_case (env: env) (c: case) : ML weak_kind =
+let weak_kind_of_list (wa:'a -> ML weak_kind) (xs:list 'a) : ML weak_kind =
+  let k =
+    List.fold_left 
+      (fun out f -> 
+        let fk = wa f in
+        match out with
+        | None -> Some fk
+        | Some o -> Some (weak_kind_glb o fk))
+      None
+      xs
+  in
+  match k with
+  | None -> WeakKindWeak
+  | Some k -> k
+
+let rec weak_kind_of_field (env: env) (f: field) : ML weak_kind =
+  match f.v with
+  | AtomicField f -> weak_kind_of_atomic_field env f
+  | RecordField f -> weak_kind_of_record env f
+  | SwitchCaseField f -> weak_kind_of_switch_case env f
+
+and weak_kind_of_record env (fs:record) : ML weak_kind =
+  match fs with
+  | [] -> WeakKindStrongPrefix
+  | [a] -> weak_kind_of_field env a
+  | a :: q ->
+    let wk = weak_kind_of_field env a in
+    if wk <> WeakKindStrongPrefix
+    then failwith
+          (Printf.sprintf "weak_kind_of_fields: \
+                           field %s should be of strong kind \
+                           instead of %s"
+                           (print_field a)
+                           (print_weak_kind wk))
+    else weak_kind_of_record env q
+
+and weak_kind_of_switch_case env (s:switch_case) : ML weak_kind =
+  let _, cases = s in
+  weak_kind_of_list (weak_kind_of_case env) cases
+  
+and weak_kind_of_case (env: env) (c: case) : ML weak_kind =
   match c with
   | DefaultCase f
   | Case _ f -> weak_kind_of_field env f
 
 #pop-options
 
+let check_field_t = env -> field -> ML field
+
 #push-options "--z3rlimit_factor 8"
-let check_switch (env:env) (s:switch_case)
-  : ML (switch_case & decl_attributes)
+let check_switch (check_field:check_field_t) (env:env) (s:switch_case)
+  : ML switch_case
   = let head, cases = s in
     let head, scrutinee_t = check_expr env head in
     let fail_non_equality_type (#a:Type) ()  : ML (option a) =
@@ -1139,7 +1190,7 @@ let check_switch (env:env) (s:switch_case)
     let check_case (c:case{Case? c}) : ML case =
       let Case pat f = c in
       let pat, pat_t = check_expr env pat in
-      let f = check_field env false f in
+      let f = check_field env f in
       let pat = //check type of patterns
         match tags_t_opt with
         | None ->
@@ -1181,7 +1232,7 @@ let check_switch (env:env) (s:switch_case)
     in
     let check_default_case (c:case{DefaultCase? c}) : ML case =
        let DefaultCase f = c in
-       let f = check_field env false f in
+       let f = check_field env f in
        DefaultCase f
     in
     let cases =
@@ -1194,28 +1245,78 @@ let check_switch (env:env) (s:switch_case)
            | DefaultCase f ->
               if default_ok then false
               else raise (error "default is only allowed in the last case"
-                                f.v.field_ident.range))
+                                f.range))
         cases
         true
     in
-    let wk = match cases with
-    | [] -> failwith "no cases in switch"
-    | c :: cases' ->
-      List.fold_left
-        (fun wk case -> weak_kind_glb wk (weak_kind_of_case env case))
-        (weak_kind_of_case env c)
-        cases'
-    in
-    let attrs = {
-      may_fail = false;
-      integral = None;
-      has_reader = false;
-      parser_weak_kind = wk;
-      parser_kind_nz = None
-    } in
-    (head, cases), attrs
+    (head, cases)
 #pop-options
 
+let rec check_record (check_field:check_field_t) (env:env) (fs:record)
+  : ML record
+  = let env = copy_env env in //locals of a record do not escape the record
+  
+    (* Elaborate and check each field in order;
+       Checking each field extends the local environment with the name of that field *)
+    let fields = 
+      List.map 
+        (fun f ->
+          match f.v with
+          | AtomicField af ->
+            let af = check_atomic_field env true af in
+            { f with v = AtomicField af }
+
+          | RecordField fs ->
+            let fs = check_record check_field env fs in
+            { f with v = RecordField fs }
+
+          | SwitchCaseField swc ->
+            let swc = check_switch check_field env swc in
+            { f with v = SwitchCaseField swc })
+        fs
+    in
+            
+    (* Infer which of the fields are dependent by seeing which of them are used in refinements *)
+    let nfields = List.length fields in
+    let fields = fields |> List.mapi (fun i f ->
+      match f.v with
+      | RecordField _
+      | SwitchCaseField _ -> f
+      | AtomicField af ->
+        let sf = af.v in
+        let used = is_used env sf.field_ident in
+        let last_field = i = (nfields - 1) in
+        let dependent = used || (Some? sf.field_constraint && not last_field) in
+        let af =
+          with_range_and_comments
+            ({ sf with field_dependence = dependent })
+            af.range
+            af.comments
+        in
+        let has_reader = typ_has_reader env af.v.field_type in
+        let is_enum = is_enum env af.v.field_type in
+        if af.v.field_dependence
+        && not has_reader
+        && not is_enum //if it's an enum, it can be inlined later to allow dependence
+        then error "The type of this field does not have a reader, \
+                    either because its values are too large \
+                    or because reading it may incur a double fetch; \
+                    subsequent fields cannot depend on it" af.range
+        else { f with v = AtomicField af })
+    in
+    fields
+
+let rec check_field (env:env) (f:field) 
+  : ML field
+  = match f.v with
+    | AtomicField af ->
+      { f with v = AtomicField (check_atomic_field env false af) }
+
+    | RecordField fs ->
+      { f with v = RecordField (check_record check_field env fs) }
+
+    | SwitchCaseField swc ->
+      { f with v = SwitchCaseField (check_switch check_field env swc) }    
 
 (** Computes a layout for bit fields,
     decorating each field with a bitfield index
@@ -1226,7 +1327,11 @@ let check_switch (env:env) (s:switch_case)
  *)
 let elaborate_bit_fields env (fields:list field)
   : ML (list field)
-  = let new_bit_field index sf bw r : ML (field & option (typ & int & int)) =
+  = let bf_index : ref int = ST.alloc 0 in
+    let get_bf_index () = !bf_index in
+    let next_bf_index () = bf_index := !bf_index + 1 in
+    let new_bit_field (sf:atomic_field') bw r : ML (atomic_field & option (typ & int & int)) =
+        let index = get_bf_index () in
         let size = size_of_integral_typ env sf.field_type r in
         let bit_size = 8 * size in
         let remaining_size = bit_size - bw.v in
@@ -1243,63 +1348,103 @@ let elaborate_bit_fields env (fields:list field)
         with_range sf r,
         Some (sf.field_type, to, remaining_size)
     in
-    let rec aux bf_index open_bit_field fields
+    let rec aux open_bit_field fields
       : ML (list field)
       = match fields with
         | [] ->
           []
 
         | hd::tl ->
-          let sf = hd.v in
-          match sf.field_bitwidth, open_bit_field with
-          | None, None ->
-            hd :: aux bf_index open_bit_field tl
+          begin
+          match hd.v with
+          | RecordField fs -> 
+            next_bf_index();
+            let fs = aux None fs in
+            let hd = { hd with v = RecordField fs } in
+            next_bf_index();          
+            hd :: aux None tl
 
-          | None, Some _ ->  //end the bit field
-            hd :: aux (bf_index + 1) None tl
+          | SwitchCaseField (e, cases) ->
+            next_bf_index();          
+            let cases = 
+              List.map 
+                (function 
+                  | Case p f -> 
+                    let fs = aux None [f] in
+                    begin
+                    match fs with
+                    | [f] -> Case p f
+                    | _ -> Case p (with_range_and_comments (RecordField fs) f.range f.comments)
+                    end
+                    
+                  | DefaultCase f ->
+                    let fs = aux None [f] in
+                    begin
+                    match fs with
+                    | [f] -> DefaultCase f
+                    | _ -> DefaultCase (with_range_and_comments (RecordField fs) f.range f.comments)
+                    end)
+                cases
+            in
+            next_bf_index();          
+            let hd = { hd with v = SwitchCaseField (e, cases) } in
+            hd :: aux None tl
 
-          | Some (Inr _), _ ->
-            failwith "Bitfield is already elaborated"
+         | AtomicField af ->
+           let sf = af.v in
+           match sf.field_bitwidth, open_bit_field with
+           | None, None ->
+             hd :: aux open_bit_field tl
+  
+           | None, Some _ ->  //end the bit field
+             next_bf_index();
+             hd :: aux None tl
 
-          | Some (Inl bw), None ->
-            let hd, open_bit_field = new_bit_field bf_index sf bw hd.range in
-            let tl = aux bf_index open_bit_field tl in
-            hd :: tl
+           | Some (Inr _), _ ->
+             failwith "Bitfield is already elaborated"
 
-          | Some (Inl bw), Some (bit_field_typ, pos, remaining_size) ->
-            Options.debug_print_string
-              (Printf.sprintf
-                "Field type = %s; bit_field_type = %s\n"
-                  (print_typ sf.field_type)
-                  (print_typ bit_field_typ));
+           | Some (Inl bw), None ->
+             let af, open_bit_field = new_bit_field sf bw hd.range in
+             let tl = aux open_bit_field tl in
+             { hd with v = AtomicField af } :: tl
 
-            if remaining_size < bw.v //not enough space in this bit field, start a new one
-            then let next_index = bf_index + 1 in
-                 let hd, open_bit_field = new_bit_field next_index sf bw hd.range in
-                 let tl = aux next_index open_bit_field tl in
-                 hd :: tl
-            else //extend this bit field
-                 begin
+           | Some (Inl bw), Some (bit_field_typ, pos, remaining_size) ->
+             Options.debug_print_string
+               (Printf.sprintf
+                 "Field type = %s; bit_field_type = %s\n"
+                   (print_typ sf.field_type)
+                   (print_typ bit_field_typ));
+
+             if remaining_size < bw.v //not enough space in this bit field, start a new one
+             then let _ = next_bf_index () in
+                  let af, open_bit_field = new_bit_field sf bw hd.range in
+                  let tl = aux open_bit_field tl in
+                  { hd with v = AtomicField af } :: tl
+             else //extend this bit field
+                  begin
                    if not (eq_typ env sf.field_type bit_field_typ)
                    then raise (error "Packing fields of different types into the same bit field is not yet supported" hd.range);
                    let remaining_size = remaining_size - bw.v in
                    let from = pos in
                    let to = pos + bw.v in
+                   let index = get_bf_index() in
                    let bf_attr = {
                        bitfield_width = bw.v;
-                       bitfield_identifier = bf_index;
+                       bitfield_identifier = index;
                        bitfield_type = bit_field_typ;
                        bitfield_from = from;
                        bitfield_to = to
                    } in
                    let sf = { sf with field_bitwidth = Some (Inr (with_range bf_attr bw.range)) } in
-                   let hd = { hd with v = sf } in
+                   let af = { af with v = sf } in
+                   let hd = { hd with v = AtomicField af } in
                    let open_bit_field = Some (bit_field_typ, to, remaining_size) in
-                   let tl = aux bf_index open_bit_field tl in
+                   let tl = aux open_bit_field tl in
                    hd :: tl
                  end
+         end
       in
-      aux 0 None fields
+      aux None fields
 
 
 let allowed_base_types_as_output_types = [
@@ -1357,30 +1502,15 @@ let check_params (env:env) (ps:list param) : ML unit =
         else ignore (check_typ true env t);
         add_local env p t)
 
-let rec weak_kind_of_fields (e: env) (l: list field) : ML weak_kind =
-  match l with
-  | [] -> WeakKindStrongPrefix
-  | [a] -> weak_kind_of_field e a
-  | a :: q ->
-    let wk = weak_kind_of_field e a in
-    if wk <> WeakKindStrongPrefix
-    then failwith
-          (Printf.sprintf "weak_kind_of_fields: \
-                           field %s : %s should be of strong kind \
-                           instead of %s"
-                           (print_ident a.v.field_ident)
-                           (print_typ a.v.field_type)
-                           (print_weak_kind wk))
-    else weak_kind_of_fields e q
 
-let elaborate_record (e:global_env)
-                     (tdnames:Ast.typedef_names)
-                     (params:list param)
-                     (where:option expr)
-                     (fields:list field)
-                     (range:range)
-                     (comments:comments)
-                     (is_exported:bool)
+let elaborate_record_decl (e:global_env)
+                          (tdnames:Ast.typedef_names)
+                          (params:list param)
+                          (where:option expr)
+                          (fields:list field)
+                          (range:range)
+                          (comments:comments)
+                          (is_exported:bool)
   : ML decl
   = let env = { mk_env e with this=Some tdnames.typedef_name } in
 
@@ -1410,37 +1540,13 @@ let elaborate_record (e:global_env)
             field_action = None
           }
         in
-        w, [with_range field e.range]
+        let af = with_range (AtomicField (with_range field e.range)) e.range in
+        w, [af]
     in
 
     (* Elaborate and check each field in order;
        Checking each field extends the local environment with the name of that field *)
-    let fields = fields |> List.map (check_field env true) in
-
-    (* Infer which of the fields are dependent by seeing which of them are used in refinements *)
-    let nfields = List.length fields in
-    let fields = fields |> List.mapi (fun i f ->
-      let sf = f.v in
-      let used = is_used env sf.field_ident in
-      let last_field = i = (nfields - 1) in
-      let dependent = used || (Some? sf.field_constraint && not last_field) in
-      let f =
-        with_range_and_comments
-          ({ sf with field_dependence = dependent })
-          f.range
-          f.comments
-      in
-      let has_reader = typ_has_reader env f.v.field_type in
-      let is_enum = is_enum env f.v.field_type in
-      if f.v.field_dependence
-      && not has_reader
-      && not is_enum //if it's an enum, it can be inlined later to allow dependence
-      then error "The type of this field does not have a reader, \
-                  either because its values are too large \
-                  or because reading it may incur a double fetch; \
-                  subsequent fields cannot depend on it" f.range
-      else f)
-    in
+    let fields = check_record check_field env fields in
 
     let fields = maybe_unit_field@fields in
 
@@ -1452,7 +1558,7 @@ let elaborate_record (e:global_env)
         may_fail = false; //only its fields may fail; not the struct itself
         integral = None;
         has_reader = false;
-        parser_weak_kind = weak_kind_of_fields env fields;
+        parser_weak_kind = weak_kind_of_record env fields;
         parser_kind_nz = None
       }
     in
@@ -1541,12 +1647,20 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     d
 
   | Record tdnames params where fields ->
-    elaborate_record e tdnames params where fields d.d_decl.range d.d_decl.comments d.d_exported
+    elaborate_record_decl e tdnames params where fields d.d_decl.range d.d_decl.comments d.d_exported
 
   | CaseType tdnames params switch ->
     let env = { mk_env e with this=Some tdnames.typedef_name } in
     check_params env params;
-    let switch, attrs = check_switch env switch in
+    let switch = check_switch check_field env switch in
+    let wk = weak_kind_of_switch_case env switch in 
+    let attrs = {
+      may_fail = false;
+      integral = None;
+      has_reader = false;
+      parser_weak_kind = wk;
+      parser_kind_nz = None
+    } in
     let d = mk_decl (CaseType tdnames params switch) d.d_decl.range d.d_decl.comments d.d_exported in
     add_global e tdnames.typedef_name d (Inl attrs);
     d

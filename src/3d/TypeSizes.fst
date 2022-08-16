@@ -158,7 +158,7 @@ let rec value_of_const_expr (env:env_t) (e:expr)
     end
   | _ -> None
 
-let size_and_alignment_of_field (env:env_t) (f:field)
+let size_and_alignment_of_atomic_field (env:env_t) (f:atomic_field)
   : ML (size & alignment)
   = let base_size, align = size_and_alignment_of_typ env f.v.field_type in
     let size =
@@ -207,7 +207,7 @@ let gen_alignment_ident
         dummy_range
 #pop-options
 
-let padding_field (env:env_t) (enclosing_struct:ident) (padding_msg:string) (n:int)
+let padding_field (env:env_t) (diag_enclosing_type_name:ident (* for diagnostics only *)) (padding_msg:string) (n:int)
   : ML (list field)
   =
   if n <= 0
@@ -215,9 +215,10 @@ let padding_field (env:env_t) (enclosing_struct:ident) (padding_msg:string) (n:i
   else (
     let field_name = gen_alignment_ident() in
     let n_expr = with_range (Constant (Int UInt32 n)) dummy_range in
+    let nm = ident_to_string diag_enclosing_type_name in
     FStar.IO.print_string
       (Printf.sprintf "Adding padding field in %s for %d bytes at %s\n"
-                       (ident_to_string enclosing_struct)
+                       nm
                        n
                        padding_msg);
     let sf = {
@@ -229,16 +230,22 @@ let padding_field (env:env_t) (enclosing_struct:ident) (padding_msg:string) (n:i
       field_bitwidth=None;
       field_action=None
     } in
-    [with_dummy_range sf]
+    let af = with_dummy_range sf in
+    let f = with_dummy_range (AtomicField af) in
+    [f]
   )
 
 let should_align (td:typedef_names)
   : bool
   = List.Tot.Base.mem Aligned td.typedef_attributes
 
-let alignment_padding env (enclosing_name:typedef_names) (msg:string) (offset:size) (a:alignment)
+let alignment_padding env (should_align:bool) 
+                          (diag_enclosing_type_name:ident (* for diagnostics only *))
+                          (msg:string)
+                          (offset:size)
+                          (a:alignment)
   : ML (int & list field)
-  = if not (should_align enclosing_name)
+  = if not should_align
     then 0, []
     else (
       let pad_size =
@@ -256,7 +263,7 @@ let alignment_padding env (enclosing_name:typedef_names) (msg:string) (offset:si
             0
       in
       pad_size,
-      padding_field env enclosing_name.typedef_name msg pad_size
+      padding_field env diag_enclosing_type_name msg pad_size
     )
 
 let sum_size (n : size) (m:size)
@@ -269,29 +276,29 @@ let sum_size (n : size) (m:size)
       | WithVariableSuffix m -> WithVariableSuffix (n + m)
       | Variable -> WithVariableSuffix n
 
-let decl_size_with_alignment (env:env_t) (d:decl)
-  : ML decl
-  = match d.d_decl.v with
-    | ModuleAbbrev _ _ -> d
-    | Define _ _ _ -> d
+open FStar.List.Tot
 
-    | TypeAbbrev t i
-    | Enum t i _ ->
-      let s, a = size_and_alignment_of_typ env t in
-      extend_with_size_of_ident env i s a;
-      d
+let rec size_and_alignment_of_field (env:env_t)
+                                    (should_align:bool)
+                                    (diag_enclosing_type_name:ident)
+                                    (f:field) 
+  : ML (res:(field & size & alignment) { let f', _, _ = res in field_tag_equal f f' })
+  = match f.v with
+    | AtomicField af ->
+      let s, a = size_and_alignment_of_atomic_field env af in
+      f, s, a
 
-    | Record names params where fields ->
+    | RecordField fields ->
       let aligned_field_size
             (offset:size)
             (max_align:alignment)
             (fields:list field)
             (f:field)
         : ML (size & alignment & list field)
-        = let field_size, field_alignment = size_and_alignment_of_field env f in
+        = let field, field_size, field_alignment = size_and_alignment_of_field env should_align diag_enclosing_type_name f in
           let pad_size, padding_field =
-            let msg = Printf.sprintf "(preceding field %s)" (ident_to_string f.v.field_ident) in
-            alignment_padding env names msg offset field_alignment
+            let msg = Printf.sprintf "(preceding field %s)" (print_field field) in
+            alignment_padding env should_align diag_enclosing_type_name msg offset field_alignment
           in
           let offset =
             (offset `sum_size` (Fixed pad_size)) `sum_size`
@@ -317,23 +324,29 @@ let decl_size_with_alignment (env:env_t) (d:decl)
           fields
       in
       let pad_size, end_padding =
-          alignment_padding env names "(end padding)" size max_align
+          alignment_padding env should_align diag_enclosing_type_name "(end padding)" size max_align
       in
       let size = size `sum_size` (Fixed pad_size) in
       let fields_rev = end_padding @ fields_rev in
       let fields = List.rev fields_rev in
-      extend_with_size_of_typedef_names env names size max_align;
-      decl_with_v d (Record names params where fields)
+      { f with v = RecordField fields }, 
+      size, 
+      max_align
 
-    | CaseType names params cases ->
+    | SwitchCaseField swc ->
       let case_sizes =
         List.map
           (function
-            | Case _ f
+            | Case p f -> 
+              let f, s, a = size_and_alignment_of_field env should_align diag_enclosing_type_name f in
+              Case p f, (s, a)
+            
             | DefaultCase f ->
-              size_and_alignment_of_field env f)
-          (snd cases)
+              let f, s, a = size_and_alignment_of_field env should_align diag_enclosing_type_name f in
+              DefaultCase f, (s, a))
+          (snd swc)
       in
+      let cases, size_and_alignments = List.unzip case_sizes in
       let combine_size_and_alignment
           (accum_size, accum_align)
           (f_size, f_align)
@@ -358,7 +371,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
         List.fold_left
           combine_size_and_alignment
           (None, None)
-          case_sizes
+          size_and_alignments
       in
       let size =
         match size with
@@ -366,18 +379,10 @@ let decl_size_with_alignment (env:env_t) (d:decl)
         | Some s -> s
       in
       let alignment = if Fixed? size then alignment else None in
-      let all_fixed =
-        List.for_all
-          (fun (size, _) ->
-            match size with
-            | Fixed _ -> true
-            | _ -> false)
-          case_sizes
-      in
-      if should_align names
+      if should_align
       then (
         let all_cases_fixed =
-          List.for_all (function (Fixed _, _) -> true | _ -> false) case_sizes
+          List.for_all (function (Fixed _, _) -> true | _ -> false) size_and_alignments
         in
         if all_cases_fixed
         && not (Fixed? size)
@@ -386,10 +391,39 @@ let decl_size_with_alignment (env:env_t) (d:decl)
                all cases of a union with a fixed size \
                must have the same size; \
                union padding is not yet supported"
-               d.d_decl.range
+               f.range
       );
-      extend_with_size_of_typedef_names env names size alignment;
+      let swc = fst swc, cases in
+      let f = { f with v = SwitchCaseField swc } in
+      f, size, alignment
+        
+
+let decl_size_with_alignment (env:env_t) (d:decl)
+  : ML decl
+  = match d.d_decl.v with
+    | ModuleAbbrev _ _ -> d
+    | Define _ _ _ -> d
+
+    | TypeAbbrev t i
+    | Enum t i _ ->
+      let s, a = size_and_alignment_of_typ env t in
+      extend_with_size_of_ident env i s a;
       d
+
+    | Record names params where fields ->
+      let { v = RecordField fields }, size, max_align = 
+        size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (RecordField fields))
+      in
+      extend_with_size_of_typedef_names env names size max_align;
+      decl_with_v d (Record names params where fields)
+
+    | CaseType names params cases ->
+      let { v = SwitchCaseField cases }, size, alignment = 
+        size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (SwitchCaseField cases))
+      in
+      extend_with_size_of_typedef_names env names size alignment;
+      decl_with_v d (CaseType names params cases)
+
     | OutputType _
     | ExternType _
     | ExternFn _ _ _

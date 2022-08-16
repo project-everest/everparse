@@ -274,7 +274,8 @@ field:
     {
       let comms = Ast.comments_buffer.flush () in
       let range = (mk_pos $startpos, mk_pos $startpos) in
-      with_range_and_comments f range comms
+      let af' = with_range_and_comments f range comms in
+      with_range_and_comments (AtomicField af') range comms
     }
 
 

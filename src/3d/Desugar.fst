@@ -337,8 +337,14 @@ let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
   | FieldString None -> farr
   | FieldString (Some e) -> FieldString (Some (resolve_expr env e))
 
-let resolve_field (env:qenv) (f:field) : ML (field & qenv) =
-  let resolve_struct_field (env:qenv) (sf:struct_field) : ML struct_field =
+let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
+  match ff.v with
+  | AtomicField f -> let f, e = resolve_atomic_field env f in {ff with v = AtomicField f}, e
+  | RecordField f -> let fs, _ = resolve_fields env f in  {ff with v = RecordField fs}, env //record fields are not in scope outside the record
+  | SwitchCaseField f -> let f = resolve_switch_case env f in {ff with v = SwitchCaseField f}, env
+
+and resolve_atomic_field (env:qenv) (f:atomic_field) : ML (atomic_field & qenv) =
+  let resolve_atomic_field' (env:qenv) (sf:atomic_field') : ML atomic_field' =
     { sf with
       field_type = resolve_typ env sf.field_type;
       field_array_opt = resolve_field_array_t env sf.field_array_opt;
@@ -347,14 +353,14 @@ let resolve_field (env:qenv) (f:field) : ML (field & qenv) =
       field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action } in
 
   let env = push_name env f.v.field_ident.v.name in
-  { f with v = resolve_struct_field env f.v }, env
+  { f with v = resolve_atomic_field' env f.v }, env
 
-let resolve_fields (env:qenv) (flds:list field) : ML (list field & qenv) =
+and resolve_fields (env:qenv) (flds:list field) : ML (list field & qenv) =
   List.fold_left (fun (flds, env) f ->
     let f, env = resolve_field env f in
     flds@[f], env) ([], env) flds
 
-let resolve_switch_case (env:qenv) (sc:switch_case) : ML switch_case =
+and resolve_switch_case (env:qenv) (sc:switch_case) : ML switch_case = //case fields do not escape their scope
   let resolve_case (env:qenv) (c:case) : ML case =
     match c with
     | Case e f -> Case (resolve_expr env e) (fst (resolve_field env f))

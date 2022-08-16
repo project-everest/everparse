@@ -28,34 +28,43 @@ module H = Hashtable
 
 *)
 
-let bitfield_group = int & typ & list field
+let bitfield_group = int & typ & list atomic_field
 let grouped_fields = either field bitfield_group
 
-let group_bit_fields (fields: list field)
+let group_bit_fields (rewrite_composite_field: field -> ML field)
+                     (fields: list field)
   : ML (list grouped_fields)
   = List.fold_right
       (fun field out ->
-        match field.v.field_bitwidth with
-        | None ->
-          Inl field :: out
+        match field.v with
+        | RecordField _
+        | SwitchCaseField _ ->
+          Inl (rewrite_composite_field field) :: out
 
-        | Some (Inl _) ->
-          failwith "Bit fields should have been elaborated already"
+        | AtomicField af ->
+          match af.v.field_bitwidth with
+          | None ->
+            Inl field :: out
 
-        | Some (Inr bf) ->
-          match out with
-          | Inr (index, typ, fields)::tl ->
-            if index = bf.v.bitfield_identifier
-            then Inr(index, typ, field::fields) :: tl //extend this bitfield group
-            else Inr(bf.v.bitfield_identifier, bf.v.bitfield_type, [field]) :: out //new bitfield group
+          | Some (Inl _) ->
+            failwith "Bit fields should have been elaborated already"
 
-          | _ -> Inr (bf.v.bitfield_identifier, bf.v.bitfield_type, [field]) :: out //new bitfield group
+          | Some (Inr bf) ->
+            match out with
+            | Inr (index, typ, atomic_fields)::tl ->
+              if index = bf.v.bitfield_identifier
+              then Inr(index, typ, af :: atomic_fields) :: tl //extend this bitfield group
+              else Inr(bf.v.bitfield_identifier, bf.v.bitfield_type, [af]) :: out //new bitfield group
+
+            | _ -> Inr (bf.v.bitfield_identifier, bf.v.bitfield_type, [af]) :: out //new bitfield group
         )
        fields
        []
 
+let subst' = list (ident & expr)
+
 let coalesce_grouped_bit_field env (f:bitfield_group)
-  : ML (field & list (ident & expr))
+  : ML (field & subst')
   = let id, typ, fields = f in
     let size = B.size_of_integral_typ env typ typ.range in
     let bitsize = 8 * size in
@@ -114,45 +123,61 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
       field_bitwidth = None;
       field_action = field_action;
     } in
-    with_dummy_range struct_field,
+    let af = with_dummy_range struct_field in
+    with_dummy_range (AtomicField af),
     subst
+  
+let rec rewrite_field (env:B.global_env) (f:field) 
+  : ML (f':field  {field_tag_equal f f'})
+  = match f.v with
+    | AtomicField _ -> f
+          
+    | RecordField fs -> 
+      let gfs = group_bit_fields (rewrite_field env) fs in
+      let fs, subst =
+          List.fold_right
+            (fun f (fields, subst) ->
+               match f with
+               | Inl f -> (f::fields, subst)
+               | Inr gf ->
+                 let f, subst' = coalesce_grouped_bit_field (B.mk_env env) gf in
+                 f::fields, subst'@subst)
+            gfs
+            ([], [])
+      in
+      let fs = List.map (subst_field (mk_subst subst)) fs in
+      { f with v = RecordField fs }
 
-let coalesce_fields (env:B.global_env) (fields:list field)
-  : ML (list field & list (ident & expr))
-  = let fs = group_bit_fields fields in
-    let fs, subst =
-      List.fold_right
-        (fun f (fields, subst) ->
-          match f with
-          | Inl f -> (f::fields, subst)
-          | Inr gf ->
-            let f, subst' = coalesce_grouped_bit_field (B.mk_env env) gf in
-            f::fields, subst'@subst)
-        fs
-        ([], [])
-    in
-    fs,
-    subst
+    | SwitchCaseField (e, cases) ->
+      let cases = 
+          List.map
+            (function
+              | Case p f ->
+                Case p (rewrite_field env f)
+                    
+              | DefaultCase f ->
+                DefaultCase (rewrite_field env f))
+            cases
+      in
+      { f with v = SwitchCaseField (e, cases) }
 
+   
 let eliminate_one_decl (env:B.global_env) (d:decl) : ML decl =
   match d.d_decl.v with
   | Record names params where fields ->
-    let fields, subst = coalesce_fields env fields in
+    let { v = RecordField fields } = rewrite_field env (with_dummy_range (RecordField fields)) in
     List.iter (fun f ->
       Options.debug_print_string
             (Printf.sprintf "Bitfields: Field %s has comments <%s>\n"
-                  (print_ident f.v.field_ident)
+                  (print_field f)
                   (String.concat "\n" f.comments))) fields;
 
-    List.iter (fun (i, e) ->
-      Options.debug_print_string (Printf.sprintf "subst(%s -> %s)\n" (ident_to_string i) (print_expr e)))
-      subst;
-    let fields = List.map (subst_field (mk_subst subst)) fields in
     let fields =
       match fields with
-      | [f] -> //just one field, it need no longer be dependent
-        let sf = { f.v with field_dependence = false } in
-        [{ f with v = sf }]
+      | [{v=AtomicField af; range; comments}] -> //just one field, it need no longer be dependent
+        let af' = { af.v with field_dependence = false } in
+        let af' = { af with v = af' } in
+        [{v=AtomicField af; range; comments}]
       | _ -> fields
     in
     decl_with_v d (Record names params where fields)

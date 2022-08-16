@@ -17,7 +17,7 @@ module InlineSingletonRecords
 open Ast
 open FStar.All
 module H = Hashtable
-type singleton_record = list param & field
+type singleton_record = list param & atomic_field
 let env = H.t ident' singleton_record
 
 (*
@@ -36,8 +36,8 @@ let choose_one (a b:option 'a) : ML (option 'a) =
   | _, Some fc -> Some fc
   | _ -> None
                  
-let simplify_field (env:env) (f:field)
-  : ML field
+let simplify_atomic_field (env:env) (f:atomic_field)
+  : ML atomic_field
   = let field = f.v in
     let field = 
       match field.field_type.v with
@@ -63,7 +63,7 @@ let simplify_field (env:env) (f:field)
                params args
             in
             let subst = (inlined_field.v.field_ident, with_dummy_range (Identifier field.field_ident)) :: subst in
-            let inlined_field = subst_field (mk_subst subst) inlined_field in
+            let inlined_field = subst_atomic_field (mk_subst subst) inlined_field in
             let error msg = 
               let msg = 
                 Printf.sprintf "Other types depend on the value of this field, but this field cannot be read because %s"
@@ -106,6 +106,25 @@ let simplify_field (env:env) (f:field)
     in
     { f with v = field }
 
+let rec simplify_field (env:env) (f:field) 
+  : ML field
+  = match f.v with
+    | AtomicField f -> { f with v = AtomicField (simplify_atomic_field env f) }
+    | RecordField fs -> { f with v = RecordField (List.map (simplify_field env) fs) }
+    | SwitchCaseField swc -> { f with v = SwitchCaseField (simplify_switch_case env swc) }
+
+and simplify_switch_case (env:env) (swc:switch_case) 
+  : ML switch_case
+  = let e, cases = swc in
+    let cases =
+      List.map
+        (function Case p f -> Case p (simplify_field env f)
+                | DefaultCase f -> DefaultCase (simplify_field env f))
+        cases
+    in
+    e, cases
+    
+  
 let simplify_decl (env:env) (d:decl) : ML decl =
   match d.d_decl.v with
   | ModuleAbbrev _ _ ->
@@ -151,15 +170,15 @@ let simplify_decl (env:env) (d:decl) : ML decl =
           field_bitwidth = None;
           field_action = None }
     in
-    let field = with_dummy_range field in
+    let af = with_dummy_range field in
     Options.debug_print_string 
       (Printf.sprintf "For Enum %s, inserting field = %s\n"
         i.v.name
-        (print_field field));
-    H.insert env i.v ([], field);
+        (print_atomic_field af));
+    H.insert env i.v ([], af);
     d
     
-  | Record tdnames params None [field] -> //singleton
+  | Record tdnames params None [{v = AtomicField field; range; comments}] -> //singleton
     begin
     match field.v with
     | { field_array_opt = FieldArrayQualified _ }
@@ -167,21 +186,19 @@ let simplify_decl (env:env) (d:decl) : ML decl =
     | { field_bitwidth = Some _ } ->
        d
     | _ -> 
-      let field = simplify_field env field in
+      let af = simplify_atomic_field env field in
       H.insert env tdnames.typedef_name.v (params, field);
+      let field = with_range_and_comments (AtomicField af) range comments in
       decl_with_v d (Record tdnames params None [field])
     end
-  
+
   | Record tdnames params wopt fields ->
     let fields = List.map (simplify_field env) fields in
     decl_with_v d (Record tdnames params wopt fields)
 
   | CaseType tdnames params switch ->
-    let hd, cases = switch in
-    let cases = List.map (function Case e f -> Case e (simplify_field env f)
-                                 | DefaultCase f -> DefaultCase (simplify_field env f)) 
-                         cases in
-    decl_with_v d (CaseType tdnames params (hd, cases))
+    let switch = simplify_switch_case env switch in
+    decl_with_v d (CaseType tdnames params switch)
 
   | OutputType _
   | ExternType _
