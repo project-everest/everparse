@@ -50,6 +50,11 @@ type low_level_state
     ll_state_match: ((#i: state_i) -> (h: state_t i) -> ll_state -> vprop);
     ll_state_failure: ((#i: state_i) -> (h: state_t i) -> ll_fstate -> vprop);
     state_ge: ((#i1: state_i) -> (s1: state_t i1) -> (#i2: state_i) -> (s2: state_t i2) -> prop);
+    state_ge_refl: (
+      (#i: state_i) -> (s: state_t i) ->
+      Lemma
+      (state_ge s s)
+    );
     state_ge_trans: (
       (#i1: state_i) -> (s1: state_t i1) ->
       (#i2: state_i) -> (s2: state_t i2) ->
@@ -112,7 +117,7 @@ let load_ll_state_ptr_t
   (i: state_i)
 : Tot Type
 =
-  (#gl: ll_state) ->
+  (#gl: Ghost.erased ll_state) ->
   (p: ll_state_ptr) ->
   (#kpre: vprop) ->
   (#t: Type) ->
@@ -132,13 +137,12 @@ let load_ll_state_ptr_t
     (fun _ -> True)
 
 inline_for_extraction
-let store_ll_state_ptr
+let store_ll_state_ptr_t
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type) (#ll_fstate: Type)
   (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
   (i: state_i)
 : Tot Type
-= (i: state_i) ->
-  (#gl: ll_state) ->
+= (#gl: Ghost.erased ll_state) ->
   (p: ll_state_ptr) ->
   (l': ll_state) ->
   ST unit
@@ -500,3 +504,655 @@ let impl_choice
       restore ();
       k_failure vb' h' v'
     )
+
+module R = Steel.ST.Reference
+module GR = Steel.ST.GhostReference
+
+(* for loop *)
+
+unfold
+let impl_for_inv_true_prop0
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (from: SZ.size_t)
+  (h: state_t inv)
+  (cont: bool)
+: Tot prop
+=
+  SZ.size_v from0 <= SZ.size_v from /\
+  fold_for inv (SZ.size_v from0) (SZ.size_v (if SZ.size_v from <= SZ.size_v to then from else to)) f l h0 == ((), h) /\
+  (cont == (SZ.size_v from < SZ.size_v to))
+
+let impl_for_inv_true_prop
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (from: SZ.size_t)
+  (h: state_t inv)
+  (cont: bool)
+: Tot prop
+= impl_for_inv_true_prop0 inv from0 to f l h0 from h cont
+
+[@@__reduce__]
+let impl_for_inv_aux_true
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (out: ll_state)
+  (from: SZ.size_t)
+  (cont: bool)
+: Tot vprop
+= exists_ (fun (h: state_t inv) ->
+    cl.ll_state_match h out `star`
+    pure (
+      impl_for_inv_true_prop inv from0 to f l h0 from h cont
+    )
+  )
+
+let fold_for_loop_body
+  #state_i (state_t: _)
+  (inv: state_i)
+  (t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+: Tot Type
+= Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv)
+
+let impl_for_inv_aux_false_prop
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (h: state_t inv)
+  (cont: bool)
+  (from: SZ.size_t)
+: Tot prop
+=
+    SZ.size_v from0 <= SZ.size_v from /\ SZ.size_v from <= SZ.size_v to /\
+    fold_for inv (SZ.size_v from0) (SZ.size_v from) f l h0 == ((), h) /\
+    cont == false
+
+[@@__reduce__]
+let impl_for_inv_aux_false0
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (cont: bool)
+  (from: SZ.size_t)
+: Tot vprop
+=
+  exists_ (fun h ->
+    exists_ (cl.ll_state_failure h) `star`
+    pure (impl_for_inv_aux_false_prop inv from0 to f l h0 h cont from)
+  )
+
+let impl_for_inv_aux_false
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (cont: bool)
+: (from: SZ.size_t) ->
+  Tot vprop
+=
+  impl_for_inv_aux_false0 cl inv from0 to f l h0 cont
+
+let intro_impl_for_inv_aux_false
+  (#opened: _)
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (cont: bool)
+  (from: SZ.size_t)
+  (h: state_t inv)
+  (out: ll_fstate)
+: STGhost unit opened
+    (cl.ll_state_failure h out)
+    (fun _ -> impl_for_inv_aux_false cl inv from0 to f l h0 cont from)
+    (impl_for_inv_aux_false_prop inv from0 to f l h0 h cont from)
+    (fun _ -> True)
+= noop ();
+  rewrite
+    (impl_for_inv_aux_false0 cl inv from0 to f l h0 cont from)
+    (impl_for_inv_aux_false cl inv from0 to f l h0 cont from)
+
+let impl_for_inv_aux
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (out: ll_state)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: Tot vprop
+= if no_interrupt
+  then impl_for_inv_aux_true cl inv from0 to f l h0 out from cont
+  else exists_ (impl_for_inv_aux_false cl inv from0 to f l h0 cont)
+
+let intro_impl_for_inv_aux_true
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (#opened: _)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (out: ll_state)
+  (from: SZ.size_t)
+  (cont: bool)
+  (h: state_t inv)
+: STGhost unit opened
+    (cl.ll_state_match h out)
+    (fun _ -> impl_for_inv_aux cl inv from0 to f l h0 out from true cont)
+    (impl_for_inv_true_prop inv from0 to f l h0 from h cont)
+    (fun _ -> True)
+= intro_pure (
+    impl_for_inv_true_prop inv from0 to f l h0 from h cont
+  );
+  rewrite
+    (impl_for_inv_aux_true cl inv from0 to f l h0 out from cont)
+    (impl_for_inv_aux cl inv from0 to f l h0 out from true cont)
+
+let elim_impl_for_inv_aux_true
+  #opened
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (out: ll_state)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: STGhost (Ghost.erased (state_t inv)) opened
+    (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
+    (fun h -> cl.ll_state_match h out)
+    (no_interrupt == true)
+    (fun h -> impl_for_inv_true_prop inv from0 to f l h0 from h cont)
+=
+  rewrite
+    (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
+    (impl_for_inv_aux_true cl inv from0 to f l h0 out from cont);
+  let gh = elim_exists () in
+  let _ = gen_elim () in
+  gh
+
+[@@erasable]
+noeq
+type impl_for_inv_aux_false_t
+  (#state_i: _) (state_t: _)
+  (ll_fstate: Type)
+  (inv: state_i)
+= {
+    iff_from: SZ.size_t;
+    iff_h: state_t inv;
+    iff_out: ll_fstate;
+  }
+
+let elim_impl_for_inv_aux_false
+  #opened
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (out: ll_state)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: STGhost (impl_for_inv_aux_false_t state_t ll_fstate inv) opened
+    (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
+    (fun r -> cl.ll_state_failure r.iff_h r.iff_out)
+    (no_interrupt == false)
+    (fun r ->
+      impl_for_inv_aux_false_prop inv from0 to f l h0 r.iff_h cont r.iff_from
+    )
+=
+  rewrite
+    (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
+    (exists_ (impl_for_inv_aux_false0 cl inv from0 to f l h0 cont));
+  let from' = elim_exists () in
+  let _ = gen_elim () in
+  let h = vpattern (fun h -> cl.ll_state_failure h _) in
+  let out' = vpattern (fun out' -> cl.ll_state_failure _ out') in
+  let r = {
+    iff_from = from';
+    iff_h = h;
+    iff_out = out';
+  }
+  in
+  rewrite (cl.ll_state_failure _ _) (cl.ll_state_failure r.iff_h r.iff_out);
+  r
+
+let impl_for_inv_aux_cont_true
+  (#opened: _)
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (out: ll_state)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: STGhost unit opened
+    (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
+    (fun _ -> impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
+    (cont == true)
+    (fun h -> no_interrupt == true)
+= if no_interrupt
+  then noop ()
+  else begin
+    let _ = elim_impl_for_inv_aux_false _ _ _ _ _ _ _ _ _ _ _ in
+    rewrite // by contradiction
+      (cl.ll_state_failure _ _)
+      (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
+  end
+
+[@@__reduce__]
+let impl_for_inv0
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (bin: byte_array)
+  (vl: v k t)
+  (bh: ll_state_ptr)
+  (h0: state_t inv)
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (cont: bool)
+: Tot vprop
+= exists_ (fun out -> exists_ (fun from -> exists_ (fun no_interrupt ->
+    aparse p bin vl `star`
+    cl.ll_state_pts_to bh out `star`
+    R.pts_to bfrom full_perm from `star`
+    R.pts_to b_no_interrupt full_perm no_interrupt `star`
+    R.pts_to bcont full_perm cont `star`
+    impl_for_inv_aux cl inv from0 to f vl.contents h0 out from no_interrupt cont
+  )))
+
+let impl_for_inv
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (bin: byte_array)
+  (vl: v k t)
+  (bh: ll_state_ptr)
+  (h0: state_t inv)
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (cont: bool)
+: Tot vprop
+= impl_for_inv0 cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont cont
+
+inline_for_extraction
+let impl_for_test
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (bin: byte_array)
+  (vl: v k t)
+  (bh: ll_state_ptr)
+  (h0: Ghost.erased (state_t inv))
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (_: unit)
+: STT bool
+    (exists_ (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont))
+    (fun cont -> impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont cont)
+= let gcont = elim_exists () in
+  rewrite
+    (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont gcont)
+    (impl_for_inv0 cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont gcont);
+  let _ = gen_elim () in
+  let cont = R.read bcont in
+  rewrite
+    (impl_for_inv0 cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont gcont)
+    (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont cont);
+  return cont
+
+let rec fold_for_snoc
+  #state_i #state_t
+  (inv: state_i)
+  (#t: Type)
+  (from0 to: nat)
+  (f: (x: nat { from0 <= x /\ x < to }) -> fold_t state_t t unit inv inv)
+  (from: nat)
+  (i: t)
+  (s: state_t inv)
+: Lemma
+  (requires (from0 <= from /\ from < to))
+  (ensures (
+    let (_, s1) = fold_for inv from0 from f i s in
+    fold_for inv from0 (from + 1) f i s == Ghost.reveal f (from) i s1
+  ))
+  (decreases (from - from0))
+= if from = from0
+  then ()
+  else
+    let (_, s1) = Ghost.reveal f from0 i s in
+    fold_for_snoc inv (from0 + 1) to f from i s1
+
+inline_for_extraction
+let impl_for_body
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (bin: byte_array)
+  (vl: v k t)
+  (bh: ll_state_ptr)
+  (h0: Ghost.erased (state_t inv))
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (fi: (x: SZ.size_t { SZ.size_v from0 <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t cl p (Ghost.reveal f (SZ.size_v x)))
+  (wl: load_ll_state_ptr_t cl inv)
+  (ws: store_ll_state_ptr_t cl inv)
+  (_: unit)
+: STT unit
+    (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont true)
+    (fun _ -> exists_ (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont))
+=
+  rewrite
+    (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont true)
+    (impl_for_inv0 cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont true);
+  let _ = gen_elim () in
+  impl_for_inv_aux_cont_true cl inv from0 to f vl.contents h0 _ _ _ _;
+  vpattern_rewrite (R.pts_to b_no_interrupt full_perm) true;
+  let _ = elim_impl_for_inv_aux_true cl inv from0 to f vl.contents h0 _ _ _ _ in
+  cl.ll_state_match_shape _ _;
+  let from1 = read_replace bfrom in
+  let from2 = SZ.size_add from1 SZ.one_size in
+  fold_for_snoc inv (SZ.size_v from0) (SZ.size_v to) f (SZ.size_v from1) vl.contents h0;
+  wl bh (fun out1 ->
+    vpattern_rewrite (cl.ll_state_match _) out1;
+    fi from1
+      (
+        R.pts_to b_no_interrupt full_perm true `star`
+        R.pts_to bcont full_perm true `star`
+        R.pts_to bfrom full_perm from1 `star`
+        cl.ll_state_pts_to bh out1
+      )
+      (exists_ (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont))
+      bin out1 _
+      (fun out2 h2 _ ->
+        R.write bfrom from2;
+        cl.ll_state_match_shape _ _;
+        ws bh out2;
+        let cont2 = from2 `SZ.size_lt` to in
+        R.write bcont cont2;
+        intro_impl_for_inv_aux_true cl inv from0 to f vl.contents h0 out2 from2 cont2 h2;
+        rewrite
+          (impl_for_inv0 cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont cont2)
+          (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont cont2);
+        noop ()
+      )
+      (fun vb' h2 _ ->
+        R.write b_no_interrupt false;
+        R.write bcont false;
+        intro_impl_for_inv_aux_false cl inv from0 to f vl.contents h0 false from2 h2 vb';
+        rewrite
+          (exists_ (impl_for_inv_aux_false cl inv from0 to f vl.contents h0 false))
+          (impl_for_inv_aux cl inv from0 to f vl.contents h0 out1 from1 false false);
+        rewrite
+          (impl_for_inv0 cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont false)
+          (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont false);
+        noop ()
+      )
+  )
+
+let rec fold_for_inc_aux
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: nat) (to: nat)
+  (f: ((x: nat { from0 <= x /\ x < to }) -> fold_t state_t t unit inv inv))
+  (l: t)
+  (h0: state_t inv)
+  (from: nat)
+  (prf: (x: nat { from0 <= x /\ x < to }) -> fold_state_inc cl (f x))
+: Lemma
+  (requires (
+    from0 <= from /\ from <= to
+  ))
+  (ensures (
+    sndp (fold_for inv from0 to f l h0) `cl.state_ge`
+    sndp (fold_for inv from0 from f l h0)
+  ))
+  (decreases (to - from))
+= 
+  let (_, h1) = fold_for inv from0 from f l h0 in
+  if to = from
+  then cl.state_ge_refl h1
+  else begin
+    fold_for_snoc inv from0 to f from l h0;
+    prf from l h1;
+    let from' = from + 1 in
+    fold_for_inc_aux cl inv from0 to f l h0 from' prf;
+    let (_, h2) = fold_for inv from0 from' f l h0 in
+    let (_, h3) = fold_for inv from0 to f l h0 in
+    cl.state_ge_trans h3 h2 h1
+  end
+
+let fold_for_inc
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: nat) (to: nat)
+  (f: ((x: nat { from0 <= x /\ x < to }) -> fold_t state_t t unit inv inv))
+  (prf: (x: nat { from0 <= x /\ x < to }) -> fold_state_inc cl (f x))
+: Tot (fold_state_inc cl (fold_for inv from0 to f))
+= fun i h ->
+  if from0 > to
+  then cl.state_ge_refl h
+  else fold_for_inc_aux cl inv from0 to f i h from0 prf
+
+let elim_impl_for_inv_aux_false_strong
+  #opened
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#t: Type)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (prf: (x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_state_inc cl (Ghost.reveal f x))
+  (l: t)
+  (h0: state_t inv)
+  (out: ll_state)
+  (from: SZ.size_t)
+  (no_interrupt: bool)
+  (cont: bool)
+: STGhost (Ghost.erased (state_t inv & ll_fstate)) opened
+    (impl_for_inv_aux cl inv from0 to f l h0 out from no_interrupt cont)
+    (fun r -> cl.ll_state_failure (fstp r) (sndp r))
+    (no_interrupt == false)
+    (fun r ->
+      fstp r == sndp (fold_for inv (SZ.size_v from0) (SZ.size_v to) f l h0)
+    )
+= let r0 = elim_impl_for_inv_aux_false _ _ _ _ _ _ _ _ _ _ _ in
+  fold_for_inc_aux cl inv (SZ.size_v from0) (SZ.size_v to) f l h0 (SZ.size_v r0.iff_from) prf;
+  let h = get_return_state (fold_for inv (SZ.size_v from0) (SZ.size_v to) f l) h0 in
+  let res = Ghost.hide (Ghost.reveal h, r0.iff_out) in
+  cl.ll_state_failure_inc r0.iff_h r0.iff_out h;
+  rewrite (cl.ll_state_failure _ _) (cl.ll_state_failure (fstp res) (sndp res));
+  res
+
+inline_for_extraction
+let impl_for_post
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from0: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (bin: byte_array)
+  (vl: v k t)
+  (bh: ll_state_ptr)
+  (h0: Ghost.erased (state_t inv))
+  (bfrom: R.ref SZ.size_t)
+  (b_no_interrupt: R.ref bool)
+  (bcont: R.ref bool)
+  (kpre kpost: vprop)
+  (k_success: (
+    (bout': ll_state) ->
+    (h': Ghost.erased (state_t inv)) ->
+    (v: unit) ->
+    ST unit
+      (kpre `star`
+        aparse p bin vl `star`
+        cl.ll_state_match h' bout')
+      (fun _ -> kpost)
+      (
+        fold_for inv (SZ.size_v from0) (SZ.size_v to) f vl.contents h0 == (v, Ghost.reveal h')
+      )
+      (fun _ -> True)
+  ))
+  (k_failure: (
+    (bout': Ghost.erased ll_fstate) ->
+    (h': Ghost.erased (state_t inv)) ->
+    (v: Ghost.erased unit) ->
+    ST unit
+      (kpre `star`
+        aparse p bin vl `star`
+        cl.ll_state_failure h' bout')
+      (fun _ -> kpost)
+      (
+        fold_for inv (SZ.size_v from0) (SZ.size_v to) f vl.contents h0 == (Ghost.reveal v, Ghost.reveal h')
+      )
+      (fun _ -> True)
+  ))
+  (prf: (x: nat { SZ.size_v from0 <= x /\ x < SZ.size_v to }) -> fold_state_inc cl (Ghost.reveal f x))
+  (wl: load_ll_state_ptr_t cl inv)
+: STT unit
+    (kpre `star` impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont false)
+    (fun _ -> kpost `star`
+      exists_ (cl.ll_state_pts_to bh) `star`
+      exists_ (R.pts_to bfrom full_perm) `star`
+      exists_ (R.pts_to b_no_interrupt full_perm) `star`
+      exists_ (R.pts_to bcont full_perm)
+    )
+=
+    rewrite
+      (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont false)
+      (impl_for_inv0 cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont false);
+    let _ = gen_elim () in
+    let no_interrupt = read_replace b_no_interrupt in
+    if no_interrupt
+    then begin
+      let h' = elim_impl_for_inv_aux_true  cl inv from0 to f vl.contents _ _ _ _ _ in
+      cl.ll_state_match_shape _ _;
+      wl bh (fun out' ->
+        vpattern_rewrite (cl.ll_state_match _) out';
+        k_success out' h' ()
+      )
+    end else begin
+      let r = elim_impl_for_inv_aux_false_strong cl inv from0 to f prf vl.contents _ _ _ _ _ in
+      k_failure (sndp r) (fstp r) ()
+    end
+
+inline_for_extraction
+let impl_for
+  #state_i #state_t #ll_state #ll_state_ptr #ll_fstate
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr ll_fstate)
+  (inv: state_i)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (from: SZ.size_t) (to: SZ.size_t)
+  (f: Ghost.erased ((x: nat { SZ.size_v from <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
+  (prf: (x: nat { SZ.size_v from <= x /\ x < SZ.size_v to }) -> fold_state_inc cl (Ghost.reveal f x))
+  (fi: (x: SZ.size_t { SZ.size_v from <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t cl p (Ghost.reveal f (SZ.size_v x)))
+  (wc: with_ll_state_ptr_t cl inv) // same
+  (wl: load_ll_state_ptr_t cl inv)
+  (ws: store_ll_state_ptr_t cl inv)
+: Tot (fold_impl_t cl p (fold_for inv (SZ.size_v from) (SZ.size_v to) f))
+= fun kpre kpost #vbin bin bout h k_success k_failure ->
+  cl.ll_state_match_shape _ _;
+  let cont = from `SZ.size_lt` to in
+  wc bout (fun bh ->
+  with_local from (fun bfrom ->
+  with_local true (fun b_no_interrupt ->
+  with_local cont (fun bcont ->
+    intro_impl_for_inv_aux_true cl inv from to f vbin.contents h bout from cont h;
+    rewrite
+      (impl_for_inv0 cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont cont)
+      (impl_for_inv cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont cont);
+    Steel.ST.Loops.while_loop
+      (impl_for_inv cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont)
+      (impl_for_test cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont)
+      (impl_for_body cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont fi wl ws);
+    impl_for_post cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont kpre kpost k_success k_failure prf wl
+  ))))
