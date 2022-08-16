@@ -16,6 +16,11 @@ let type_of_payload
 : Tot Type0
 = type_of_typ (f x)
 
+// to be used with delta_attr to compute the Steel code synthesis
+// before extraction to C
+noeq type specialize : Type0 =
+
+[@@specialize] // mostly for scalar types
 let rec type_of_typ (t: typ) : Tot Type0 = match t with
 | TU8 -> U8.t
 | TPair t1 t2 -> (type_of_typ t1 & type_of_typ t2)
@@ -199,6 +204,7 @@ type array_index_fn = {
   array_index_f_sz: ((n: SZ.size_t) -> (x: SZ.size_t) -> Pure SZ.size_t (SZ.size_v x < SZ.size_v n) (fun y -> SZ.size_v y == array_index_f_nat (SZ.size_v n) (SZ.size_v x)));
 }
 
+inline_for_extraction
 let array_index_reverse = {
   array_index_f_nat = (fun n x -> n - 1 - x);
   array_index_f_sz = (fun n x -> (n `SZ.size_sub` SZ.one_size) `SZ.size_sub` x);

@@ -1668,3 +1668,207 @@ let impl_list
   )
 
 #pop-options
+
+(* Implementing programs *)
+
+[@@specialize]
+noeq
+type action_impl
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (action_t: (t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
+  (action_sem: ((#t: Type) -> (#pre: _) -> (#post: _) -> action_t t pre post -> stt state_t t pre post))
+= {
+    a_inc: (
+      (#t: Type) ->
+      (#pre: state_i) ->
+      (#post: state_i) ->
+      (a: action_t t pre post) ->
+      stt_state_inc cl (action_sem a)
+    );
+    a_impl: (
+      (#t: Type) ->
+      (#pre: state_i) ->
+      (#post: state_i) ->
+      (a: action_t t pre post) ->
+      stt_impl_t cl (action_sem a)
+    );
+  }
+
+[@@specialize]
+noeq
+type ll_state_ptr_ops
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+= {
+    with_ll_state_ptr: (
+      (inv: state_i) ->
+      with_ll_state_ptr_t cl inv
+    );
+    load_ll_state_ptr: (
+      (inv: state_i) ->
+      load_ll_state_ptr_t cl inv
+    );
+    store_ll_state_ptr: (
+      (inv: state_i) ->
+      store_ll_state_ptr_t cl inv
+    );
+  }
+
+let rec fold_list_inc'
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (prf: fold_state_inc cl f)
+  (input: list t)
+  (s: state_t inv)
+: Lemma
+  (ensures (
+    let (v, s') = fold_list inv f input s in
+    s' `cl.state_ge` s
+  ))
+  (decreases input)
+= match input with
+  | [] -> cl.state_ge_refl s
+  | hd :: tl ->
+    prf hd s;
+    let (_, s1) = f hd s in
+    fold_list_inc' cl inv f prf tl s1;
+    let (_, s2) = fold_list inv f tl s1 in
+    cl.state_ge_trans s2 s1 s
+
+let fold_list_inc
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (prf: fold_state_inc cl f)
+: Tot (fold_state_inc cl (fold_list inv f))
+= fold_list_inc' cl inv f prf
+
+let fold_for_list_inc
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (inv: state_i)
+  (#t: Type)
+  (f: fold_t state_t t unit inv inv)
+  (prf: fold_state_inc cl f)
+  (idx: ((n: nat) -> (x: nat {x < n}) -> (y: nat {y < n})))
+: Tot (fold_state_inc cl (fold_for_list inv f idx))
+= fun l s ->
+  let n = List.Tot.length l in
+  fold_for_inc cl inv 0 n (fold_list_index_of inv f n (idx n))
+    (fun i l s -> prf (List.Tot.index l (idx n i)) s)
+    l s
+
+let rec prog_inc
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#action_t: (t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
+  (#action_sem: ((#t: Type) -> (#pre: _) -> (#post: _) -> action_t t pre post -> stt state_t t pre post))
+  (a_cl: action_impl cl action_t action_sem)
+  (#ret_t: Type)
+  (#pre: state_i)
+  (#post: state_i)
+  (#ty: typ)
+  (p: prog state_t action_t ty ret_t pre post)
+: Tot (fold_state_inc cl (sem action_sem p))
+  (decreases p)
+= fun input s ->
+  match p with
+  | PRet _ -> cl.state_ge_refl s
+  | PAction a ->
+    a_cl.a_inc a s
+  | PBind f g ->
+    prog_inc a_cl f input s;
+    let (v1, s1) = sem action_sem f input s in
+    prog_inc a_cl (g v1) input s1;
+    let (_, s2) = sem action_sem (g v1) input s1 in
+    cl.state_ge_trans s2 s1 s
+  | PU8 _ -> cl.state_ge_refl s
+  | PPair #_ #_ #_ #t1 #t2 f1 f2 ->
+    let (input1, input2) = (input <: type_of_typ (TPair t1 t2)) in
+    prog_inc a_cl f1 input1 s;
+    let (v1, s1) = sem action_sem f1 input1 s in
+    prog_inc a_cl (f2 v1) input2 s1;
+    let (_, s2) = sem action_sem (f2 v1) input2 s1 in
+    cl.state_ge_trans s2 s1 s
+  | PList i f ->
+    fold_list_inc
+      cl
+      (sem action_sem f)
+      (fun i s -> prog_inc a_cl f i s)
+      input
+      s
+  | PListFor i idx f ->
+    fold_for_list_inc
+      cl
+      _
+      (sem action_sem f)
+      (prog_inc a_cl f)
+      idx.array_index_f_nat
+      input
+      s
+  | PChoice #_ #_ #_ #t f ->
+    let (| tag, payload |) = (input <: type_of_typ (TChoice t)) in
+    prog_inc a_cl (f tag) payload s
+
+let rec parser_of_typ (t: typ) : Tot (parser pkind (type_of_typ t)) =
+  match t returns parser pkind (type_of_typ t) with
+  | TU8 -> weaken _ parse_u8
+  | TPair t1 t2 -> weaken _ (nondep_then (parser_of_typ t1) (parser_of_typ t2))
+  | TList t' ->
+    weaken _ (parse_vldata 4 (parse_list (parser_of_typ t')))
+  | TChoice f -> weaken _ (parse_dtuple2 parse_bool (fun x -> parser_of_typ (f x)))
+
+inline_for_extraction
+let jump_ifthenelse
+  (#k: parser_kind)
+  (#t: bool -> Type)
+  (p: (x: bool) -> parser k (t x))
+  (jtrue: jumper (p true))
+  (jfalse: jumper (p false))
+  (x: bool)
+: Tot (jumper (p x))
+= fun a ->
+  if x
+  then jtrue a
+  else jfalse a
+
+[@@specialize]
+let rec jumper_of_typ (t: typ) : Tot (jumper (parser_of_typ t)) =
+  match t returns jumper (parser_of_typ t) with
+  | TU8 -> jump_weaken _ (jump_constant_size parse_u8 SZ.one_size) ()
+  | TPair t1 t2 -> jump_weaken _ (jump_pair (jumper_of_typ t1) (jumper_of_typ t2)) ()
+  | TList t' ->
+    jump_weaken _
+      (jump_vldata_gen 4 (unconstrained_bounded_integer 4) (parse_list (parser_of_typ t')))
+      ()
+  | TChoice f ->
+    jump_weaken _
+      (jump_dtuple2
+        (jump_constant_size parse_bool SZ.one_size)
+        read_bool
+        _
+        (jump_ifthenelse (fun x -> parser_of_typ (f x)) (jumper_of_typ (f true)) (jumper_of_typ (f false))))
+      ()
+
+[@@specialize]
+let rec impl
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#action_t: (t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
+  (#action_sem: ((#t: Type) -> (#pre: _) -> (#post: _) -> action_t t pre post -> stt state_t t pre post))
+  (a_cl: action_impl cl action_t action_sem)
+  (ptr_cl: ll_state_ptr_ops cl)
+  (#ret_t: Type)
+  (#pre: state_i)
+  (#post: state_i)
+  (#ty: typ)
+  (p: prog state_t action_t ty ret_t pre post)
+: Tot (fold_impl_t cl (parser_of_typ ty) (sem action_sem p))
+  (decreases p)
+= admit ()
