@@ -44,6 +44,19 @@
     out_expr_meta = None
   }
 
+  let unit_atomic_field' rng =
+      let dummy_identifier = with_range (to_ident' "_empty_") rng in
+      {
+         field_dependence=false;
+         field_ident=dummy_identifier;
+         field_type=tunit;
+         field_array_opt=FieldScalar;
+         field_constraint=None;
+         field_bitwidth=None;
+         field_action=None
+      }
+
+  
 %}
 
 %token<string>  INT XINT STRING
@@ -59,7 +72,7 @@
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
 %token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
-%token          HASH_IF HASH_ELSE HASH_ENDIF
+%token          HASH_IF HASH_ELSE HASH_ENDIF HASH_ELIF
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
 %start <Ast.expr> expr_top
@@ -110,8 +123,9 @@ else_opt:
   | ELSE LBRACE e=expr RBRACE { Some e }
 
 hash_else_opt:
-  |             { None   }
-  | HASH_ELSE e=expr { Some e }
+  | HASH_ENDIF                  { None   }
+  | HASH_ELSE e=expr HASH_ENDIF { Some e }
+  | HASH_ELIF e=hash_if_body    { Some (with_range e ($startpos)) }
 
 atomic_expr:
   | i=qident   { Identifier i }
@@ -126,6 +140,18 @@ castable_expr:
   |               { None }
   | e=atomic_expr { Some e }
   | LPAREN e=expr RPAREN { Some e.v }
+
+hash_if_body:
+  | e=atomic_or_paren_expr e1=expr e2=hash_else_opt
+    {
+        let e2 =
+            match e2 with
+            | None -> with_range (Constant (Bool true)) $startpos
+            | Some e2 -> e2
+        in
+        let e = with_range (Static e) ($startpos(e)) in
+        App(IfThenElse, [e;e1;e2])
+    }
 
 expr_no_range:
   | e=atomic_expr { e }
@@ -183,16 +209,8 @@ expr_no_range:
         in
         App(IfThenElse, [e;e1;e2])
     }
-  | HASH_IF e=atomic_or_paren_expr e1=expr e2=hash_else_opt HASH_ENDIF
-    {
-        let e2 =
-            match e2 with
-            | None -> with_range (Constant (Bool true)) $startpos
-            | Some e2 -> e2
-        in
-        let e = with_range (Static e) ($startpos(e)) in
-        App(IfThenElse, [e;e1;e2])
-    }
+  | HASH_IF e=hash_if_body
+    { e }
   
   | i=IDENT LPAREN es=arguments RPAREN
     {
@@ -271,7 +289,7 @@ atomic_field:
     }
 
 anonymous_struct_field:
-  | STRUCT LBRACE fields=right_flexible_nonempty_list(SEMICOLON, field) RBRACE fn=IDENT
+  | STRUCT LBRACE fields=fields RBRACE fn=IDENT
     {
         RecordField(fields, fn)
     }
@@ -283,29 +301,42 @@ anonymous_casetype_field:
         SwitchCaseField((e, cs), fn)
     }
 
-static_conditional_field:
-  | HASH_IF e=atomic_or_paren_expr f_then=fields HASH_ELSE f_else=fields HASH_ENDIF
+maybe_hash_else_fields:
+  | HASH_ENDIF                          { None }
+  | HASH_ELSE f_else=option_of(fields) HASH_ENDIF { f_else }
+  | HASH_ELIF f=static_conditional_body { Some [with_range f ($startpos)] }
+
+static_conditional_body:
+  | e=atomic_or_paren_expr f_then=option_of(fields) f_else=maybe_hash_else_fields
     {
         let tt = with_range (Constant (Bool true)) ($startpos(e)) in
         let dummy_identifier = with_range (to_ident' "_") ($startpos(e)) in
-        let f_then =
-            match f_then with
+        let as_field fopt rng =
+            let unit_atomic_field = AtomicField (with_range (unit_atomic_field' rng) rng) in
+            let unit_field = with_range unit_atomic_field rng in
+            let fields =
+                match fopt with
+                | None -> [unit_field]
+                | Some fs -> fs
+            in
+            match fields with
             | [f] -> f
-            | _ -> with_range (RecordField(f_then, dummy_identifier)) ($startpos(f_then))
+            | _ -> with_range (RecordField(fields, dummy_identifier)) rng
         in
-        let f_else =
-            match f_else with
-            | [f] -> f
-            | _ -> with_range (RecordField(f_else, dummy_identifier)) ($startpos(f_else))
-        in
+        let f_then = as_field f_then ($startpos(f_then)) in
+        let f_else = as_field f_else ($startpos(f_else)) in
         let case_then = Case (tt, f_then) in
         let case_else = DefaultCase f_else in
         let e = with_range (Static e) ($startpos(e)) in
         SwitchCaseField ((e, [case_then; case_else]), dummy_identifier)
     }
+  
+static_conditional_field:
+  | HASH_IF f=static_conditional_body
+    { f }
     
 field:
-  | f = atomic_field
+  | f = atomic_field SEMICOLON
     {
       let comms = Ast.comments_buffer.flush () in
       let range = (mk_pos $startpos, mk_pos $startpos) in
@@ -313,14 +344,14 @@ field:
       with_range_and_comments (AtomicField af') range comms
     }
     
-  | rf = anonymous_struct_field
+  | rf = anonymous_struct_field SEMICOLON
     {
       let comms = Ast.comments_buffer.flush () in
       let range = (mk_pos $startpos, mk_pos $startpos) in
       with_range_and_comments rf range comms
     }
 
-  | cf = anonymous_casetype_field
+  | cf = anonymous_casetype_field SEMICOLON
     {
       let comms = Ast.comments_buffer.flush () in
       let range = (mk_pos $startpos, mk_pos $startpos) in
@@ -335,7 +366,7 @@ field:
     }
 
 fields:
-  | fields=right_flexible_nonempty_list(SEMICOLON, field)
+  | fields=nonempty_list(field)
    { fields }
 
 immutable_parameter:
@@ -361,7 +392,7 @@ case:
   | DEFAULT COLON f=field { DefaultCase f }
 
 cases:
-  | cs=right_flexible_nonempty_list(SEMICOLON, case) { cs }
+  | cs=nonempty_list(case) { cs }
 
 attribute:
   | ENTRYPOINT { Entrypoint }

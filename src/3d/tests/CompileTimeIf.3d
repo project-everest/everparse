@@ -3,10 +3,12 @@ typedef struct _PointConditional {
   UINT32 x;
   UINT32 y
   {
-    #if (ABOVE_DIAGONAL && SOMETHING_ELSE)
+    #if (ABOVE_DIAGONAL && STRICT)
+        x < y
+    #elif ABOVE_DIAGONAL
         x <= y
-    #else
-        y <= x
+    #else 
+        true
     #endif
   };
 } PointConditional;

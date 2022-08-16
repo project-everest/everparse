@@ -108,6 +108,7 @@ rule token =
   | "/*++"         { block_comment ("", Lexing.lexeme_start_p lexbuf) lexbuf }
   | "/*"           { multi_line_comment lexbuf }
   | "#if"          { locate lexbuf HASH_IF }
+  | "#elif"        { locate lexbuf HASH_ELIF }  
   | "#else"        { locate lexbuf HASH_ELSE }
   | "#endif"       { locate lexbuf HASH_ENDIF }  
   | "("            { locate lexbuf LPAREN }
