@@ -396,6 +396,7 @@ let rec prog_concat_context
   | PAction a -> PAction (ser_action_concat_context a c)
   | PBind f g -> PBind (prog_concat_context f c) (fun x -> prog_concat_context (g x) c)
   | PU8 i -> PU8 (hole_concat_context i c)
+  | PIf x ptrue pfalse -> PIf x (fun _ -> prog_concat_context (ptrue ()) c) (fun _ -> prog_concat_context (pfalse ()) c)
   | PPair f1 f2 -> PPair (prog_concat_context f1 c) (fun x -> prog_concat_context (f2 x) c)
   | PList i f -> PList _ (prog_concat_context f c)
   | PListFor i idx f -> PListFor _ idx (prog_concat_context f c) 
@@ -565,6 +566,10 @@ let rec sem_prog_concat_context
     sem_prog_concat_context f1 i1 s c;
     let (v1, s1) = sem ser_action_sem f1 i1 s in
     sem_prog_concat_context (f2 v1) i2 s1 c
+  | PIf x ptrue pfalse ->
+    if x
+    then sem_prog_concat_context (ptrue ()) input s c
+    else sem_prog_concat_context (pfalse ()) input s c
   | PU8 _ -> ()
   | PRet _ -> ()
   | PChoice #_ #_ #_ #t f ->

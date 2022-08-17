@@ -237,6 +237,15 @@ type prog
       (f: prog state_t action_t t ret1 pre1 post1) ->
       (g: ((x: ret1) -> prog state_t action_t t ret2 (post1) post2)) ->
       prog state_t action_t t ret2 pre1 post2
+  | PIf:
+      (#t: typ) ->
+      (#ret: Type) ->
+      (#pre: state_i) ->
+      (#post: state_i) ->
+      (x: bool) ->
+      (squash (x == true) -> prog state_t action_t t ret pre post) ->
+      (squash (x == false) -> prog state_t action_t t ret pre post) ->
+      prog state_t action_t t ret pre post
   | PU8:
       // the base action on a leaf type just reads the value;
       // use PBind with PAction and others to perform operations on that value
@@ -287,6 +296,7 @@ let rec sem
   | PRet v -> action_fold (ret v) <: fold_t state_t (type_of_typ t) ret_t _ (_)
   | PAction a -> action_fold (action_sem a)
   | PBind s p -> bind_fold (sem action_sem s) (fun x -> sem action_sem (p x))
+  | PIf x ptrue pfalse -> if x then sem action_sem (ptrue ()) else sem action_sem (pfalse ())
   | PU8 _ -> fold_read () <: fold_t state_t (type_of_typ t) ret_t _ (_)
   | PPair p1 p2 -> fold_pair (sem action_sem p1) (fun r -> sem action_sem (p2 r))
   | PList inv p -> fold_list inv (sem action_sem p)

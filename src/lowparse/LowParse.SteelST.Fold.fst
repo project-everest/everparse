@@ -1798,6 +1798,10 @@ let rec prog_sem_chunk_desc_ge
     prog_sem_chunk_desc_ge f1 input1 s;
     let (v1, s1) = sem ser_action_sem f1 input1 s in
     prog_sem_chunk_desc_ge (f2 v1) input2 s1
+  | PIf x ptrue pfalse ->
+    if x
+    then prog_sem_chunk_desc_ge (ptrue ()) input s
+    else prog_sem_chunk_desc_ge (pfalse ()) input s
   | PList i f ->
     fold_list_chunk_desc_ge
       (sem ser_action_sem f)

@@ -1789,6 +1789,10 @@ let rec prog_inc
     let (_, s2) = sem action_sem (g v1) input s1 in
     cl.state_ge_trans s2 s1 s
   | PU8 _ -> cl.state_ge_refl s
+  | PIf x ptrue pfalse ->
+    if x
+    then prog_inc a_cl (ptrue ()) input s
+    else prog_inc a_cl (pfalse ()) input s
   | PPair #_ #_ #_ #t1 #t2 f1 f2 ->
     let (input1, input2) = (input <: type_of_typ (TPair t1 t2)) in
     prog_inc a_cl f1 input1 s;
