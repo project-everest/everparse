@@ -238,7 +238,7 @@ let impl_action
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
-  (p: stt state_t ret_t pre post)
+  (p: Ghost.erased (stt state_t ret_t pre post))
   (pi: stt_impl_t cl p)
   (#ty: Type)
   (#kty: parser_kind)
@@ -267,7 +267,7 @@ let impl_rewrite_parser
   (#pre: state_i)
   (#post: state_i)
   (#ty: Type)
-  (p: fold_t state_t ty ret_t pre post)
+  (p: Ghost.erased (fold_t state_t ty ret_t pre post))
   (#kty: parser_kind)
   (#pty: parser kty ty)
   (pi: fold_impl_t cl pty p)
@@ -299,7 +299,6 @@ inline_for_extraction
 let impl_read
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (#ret_t: Type)
   (i: state_i)
   (#ty: Type)
   (#kty: parser_kind)
@@ -370,11 +369,11 @@ let impl_bind
   (#post1: _)
   (#ret2: _)
   (#post2: _)
-  (f: fold_t state_t ty ret1 pre1 post1)
+  (f: Ghost.erased (fold_t state_t ty ret1 pre1 post1))
   (impl_f: fold_impl_t cl pty f)
-  (g: ((x: ret1) -> fold_t state_t ty ret2 post1 post2))
-  (impl_g: ((x: ret1) -> fold_impl_t cl pty (g x)))
-  (g_prf: ((x: ret1) -> fold_state_inc cl (g x)))
+  (g: Ghost.erased ((x: ret1) -> fold_t state_t ty ret2 post1 post2))
+  (impl_g: ((x: ret1) -> fold_impl_t cl pty (Ghost.reveal g x)))
+  (g_prf: ((x: ret1) -> fold_state_inc cl (Ghost.reveal g x)))
 : Tot (fold_impl_t cl pty (bind_fold f g))
 = fun kpre kpost (#vbin: v kty ty) (bin: byte_array) bout h k_success k_failure ->
     impl_f
@@ -384,12 +383,34 @@ let impl_bind
           kpre kpost bin bout1 h1 k_success k_failure
       )
       (fun h1 v1 ->
-        let h2 = get_return_state (g v1 vbin.contents) h1 in
-        let v2 = get_return_value (g v1 vbin.contents) h1 in
+        let h2 = get_return_state (Ghost.reveal g v1 vbin.contents) h1 in
+        let v2 = get_return_value (Ghost.reveal g v1 vbin.contents) h1 in
         g_prf v1 vbin.contents h1;
         cl.ll_state_failure_inc h1 h2;
         k_failure h2 v2
       )
+
+inline_for_extraction
+[@@noextract_to "krml"]
+let impl_if
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#t: Type)
+  (#ret: Type)
+  (#pre: _)
+  (#post: _)
+  (x: bool)
+  (f1: Ghost.erased (squash (x == true) -> fold_t state_t t ret pre post))
+  (#k: parser_kind)
+  (p: parser k t)
+  (impl_f1: squash (x == true) -> fold_impl_t cl p (Ghost.reveal f1 ()))
+  (f2: Ghost.erased (squash (x == false) -> fold_t state_t t ret pre post))
+  (impl_f2: squash (x == false) -> fold_impl_t cl p (Ghost.reveal f2 ()))
+: Tot (fold_impl_t cl p (if x then Ghost.reveal f1 () else Ghost.reveal f2 ()))
+= fun kpre kpost #vbin bin bout h k_success k_failure ->
+    if x
+    then impl_f1 () kpre kpost bin bout h k_success k_failure
+    else impl_f2 () kpre kpost bin bout h k_success k_failure
 
 inline_for_extraction
 [@@noextract_to "krml"]
@@ -401,18 +422,18 @@ let impl_pair
   (#ret1: Type)
   (#pre1: _)
   (#post1: _)
-  (f1: fold_t state_t t1 ret1 pre1 post1)
+  (f1: Ghost.erased (fold_t state_t t1 ret1 pre1 post1))
   (#k1: parser_kind)
   (#p1: parser k1 t1)
   (impl_f1: fold_impl_t cl p1 f1)
   (j1: jumper p1) // MUST be computed OUTSIDE of impl_pair
   (#ret2: _)
   (#post2: _)
-  (f2: ((x: ret1) -> fold_t state_t t2 ret2 post1 post2))
+  (f2: Ghost.erased ((x: ret1) -> fold_t state_t t2 ret2 post1 post2))
   (#k2: parser_kind)
   (#p2: parser k2 t2)
-  (impl_f2: ((x: ret1) -> fold_impl_t cl p2 (f2 x)))
-  (f2_prf: ((x: ret1) -> fold_state_inc cl (f2 x))) 
+  (impl_f2: ((x: ret1) -> fold_impl_t cl p2 (Ghost.reveal f2 x)))
+  (f2_prf: ((x: ret1) -> fold_state_inc cl (Ghost.reveal f2 x))) 
 : Pure (fold_impl_t cl (p1 `nondep_then` p2) (fold_pair f1 f2))
     (requires (k1.parser_kind_subkind == Some ParserStrong))
     (ensures (fun _ -> True))
@@ -445,8 +466,8 @@ let impl_pair
         )
     )
     (fun h1 v1 ->
-      let h2 = get_return_state (f2 v1 vbin2.contents) h1 in
-      let v2 = get_return_value (f2 v1 vbin2.contents) h1 in
+      let h2 = get_return_state (Ghost.reveal f2 v1 vbin2.contents) h1 in
+      let v2 = get_return_value (Ghost.reveal f2 v1 vbin2.contents) h1 in
       f2_prf v1 vbin2.contents h1;
       cl.ll_state_failure_inc h1 h2;
       restore ();
@@ -470,10 +491,10 @@ let impl_choice
   (#ret_t: Type)
   (#pre: _)
   (#post: _)
-  (f: (x: bool) -> fold_t state_t (t x) ret_t pre post)
+  (f: Ghost.erased ((x: bool) -> fold_t state_t (t x) ret_t pre post))
   (#k: parser_kind)
   (p: (x: bool) -> parser k (t x))
-  (impl_f: (x: bool) -> fold_impl_t cl (p x) (f x))
+  (impl_f: (x: bool) -> fold_impl_t cl (p x) (Ghost.reveal f x))
 : Tot (fold_impl_t cl (parse_dtuple2 parse_bool p) (fold_choice f))
 = fun kpre kpost #vbin bin bout h k_success k_failure ->
   let bin_pl = split_dtuple2
@@ -1275,7 +1296,7 @@ let impl_for_list
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
-  (f: fold_t state_t t unit inv inv)
+  (f: Ghost.erased (fold_t state_t t unit inv inv))
   (#k: parser_kind)
   (#p: parser k t)
   (j: jumper p)
@@ -1826,7 +1847,7 @@ let rec parser_of_typ (t: typ) : Tot (parser pkind (type_of_typ t)) =
   | TPair t1 t2 -> weaken _ (nondep_then (parser_of_typ t1) (parser_of_typ t2))
   | TList t' ->
     weaken _ (parse_vldata 4 (parse_list (parser_of_typ t')))
-  | TChoice f -> weaken _ (parse_dtuple2 parse_bool (fun x -> parser_of_typ (f x)))
+  | TChoice f -> weaken _ (parse_dtuple2 parse_bool #_ #(type_of_payload' f) (fun x -> parser_of_typ (f x)))
 
 inline_for_extraction
 let jump_ifthenelse
@@ -1873,6 +1894,88 @@ let rec impl
   (#post: state_i)
   (#ty: typ)
   (p: prog state_t action_t ty ret_t pre post)
-: Tot (fold_impl_t cl (parser_of_typ ty) (sem action_sem p))
+: Tot (fold_impl_t cl #ret_t #pre #post #(type_of_typ ty) #pkind (parser_of_typ ty) (sem action_sem p))
   (decreases p)
-= admit ()
+= match p with
+  | PRet #_ #_ #_ #_ #i v ->
+      coerce _ (impl_action cl (ret v) (impl_ret cl i v) (parser_of_typ ty))
+  | PAction a ->
+      coerce _ (impl_action cl _ (a_cl.a_impl a) (parser_of_typ ty))
+  | PBind f g ->
+      coerce _ (impl_bind cl (parser_of_typ ty) (sem action_sem f) (coerce _ (impl a_cl ptr_cl f)) (fun x -> sem action_sem (g x)) (fun x -> coerce _ (impl a_cl ptr_cl (g x))) (fun x -> prog_inc a_cl (g x)) <: fold_impl_t cl (parser_of_typ ty) (sem action_sem (PBind f g)))
+  | PIf x ptrue pfalse ->
+      coerce _ (impl_if cl x (fun _ -> sem action_sem (ptrue ())) (parser_of_typ ty) (fun _ -> coerce _ (impl a_cl ptr_cl (ptrue ()))) (fun _ -> sem action_sem (pfalse ())) (fun _ -> coerce _ (impl a_cl ptr_cl (pfalse ()))))
+  | PU8 i ->
+      coerce _ (impl_rewrite_parser cl (fold_read ()) (impl_read cl i read_u8) (parser_of_typ ty))
+  | PPair #_ #_ #_ #t1 #t2 f1 f2 ->
+      assert_norm (sem action_sem (PPair f1 f2) == fold_pair (sem action_sem f1) (fun x -> sem action_sem (f2 x)));
+      coerce _
+        (impl_rewrite_parser
+          cl
+          (fold_pair (sem action_sem f1) (fun x -> sem action_sem (f2 x)))
+          (impl_pair cl
+            (sem action_sem f1)
+            (impl a_cl ptr_cl f1)
+            (jumper_of_typ t1)
+            (fun x -> sem action_sem (f2 x))
+            (fun x -> impl a_cl ptr_cl (f2 x))
+            (fun x -> prog_inc a_cl (f2 x))
+          )
+          (parser_of_typ (TPair t1 t2))
+        )
+  | PList #_ #_ #_ #ty inv f ->
+      coerce _
+        (impl_rewrite_parser
+          cl
+          (fold_list inv (sem action_sem f))
+          (impl_list
+            cl
+            inv
+            (sem action_sem f)
+            (prog_inc a_cl f)
+            (parser_of_typ ty)
+            (impl a_cl ptr_cl f)
+            (jumper_of_typ ty)
+            (ptr_cl.with_ll_state_ptr inv)
+            (ptr_cl.load_ll_state_ptr inv)
+            (ptr_cl.store_ll_state_ptr inv)
+          )
+          (parser_of_typ (TList ty))
+        )
+  | PListFor #_ #_ #_ #ty inv idx f ->
+      coerce _
+        (impl_rewrite_parser
+          cl
+          (fold_for_list inv (sem action_sem f) idx.array_index_f_nat)
+          (impl_for_list
+            cl
+            inv
+            (sem action_sem f)
+            (jumper_of_typ ty)
+            (impl a_cl ptr_cl f)
+            (prog_inc a_cl f)
+            idx
+            (ptr_cl.with_ll_state_ptr inv)
+            (ptr_cl.load_ll_state_ptr inv)
+            (ptr_cl.store_ll_state_ptr inv)
+          )
+          (parser_of_typ (TList ty))
+        )
+  | PChoice #_ #_ #_ #t f ->
+      assert_norm (sem action_sem (PChoice f) == fold_choice #_ #_ #_ #(type_of_payload' t) (fun x -> sem action_sem (f x)));
+      assert_norm (parser_of_typ (TChoice t) == weaken pkind (parse_dtuple2 parse_bool #_ #(type_of_payload' t) (fun x -> parser_of_typ (t x))));
+      coerce _
+        (impl_rewrite_parser
+          cl
+          (fold_choice #_ #_ #_ #(type_of_payload' t) (fun x -> sem action_sem (f x)))
+          #_
+          #(parse_dtuple2 parse_bool #_ #(type_of_payload' t) (fun x -> parser_of_typ (t x)))
+          (impl_choice
+            cl
+            #(type_of_payload' t)
+            (fun x -> sem action_sem (f x))
+            (fun x -> parser_of_typ (t x))
+            (fun x -> impl a_cl ptr_cl (f x))
+          )
+          (parser_of_typ (TChoice t))
+        )

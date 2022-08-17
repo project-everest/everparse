@@ -301,7 +301,7 @@ let rec sem
   | PPair p1 p2 -> fold_pair (sem action_sem p1) (fun r -> sem action_sem (p2 r))
   | PList inv p -> fold_list inv (sem action_sem p)
   | PListFor inv idx p -> fold_for_list inv (sem action_sem p) idx.array_index_f_nat
-  | PChoice p -> fold_choice (fun x -> sem action_sem (p x)) <: fold_t state_t (type_of_typ (TChoice _)) ret_t pre post
+  | PChoice #_ #_ #_ #t p -> fold_choice #_ #_ #_ #(type_of_payload' t) (fun x -> sem action_sem (p x))
 
 let pseq
   #state_t #action_t
