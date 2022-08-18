@@ -358,6 +358,7 @@ let get_return_value
 = fstp (p s)
 
 [@@noextract_to "krml"]
+inline_for_extraction
 let impl_bind
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)

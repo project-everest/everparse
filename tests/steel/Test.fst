@@ -15,6 +15,7 @@ module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 
 module F = LowParse.SteelST.Fold
+module Printf_dummy = LowStar.Printf // for dependencies only
 
 #set-options "--ide_id_info_off"
 
@@ -65,6 +66,144 @@ let test_prog_2 = F.run_prog
           (F.store_context_arrays_ptr_nil F.TU8)
         )
       )
+
+module P = LowParse.SteelST.Fold.Print
+module G = LowParse.SteelST.Fold.Gen
+
+noextract
+[@@G.specialize]
+let test_print_u8 : G.prog P.state_t P.action_t _ unit () () =
+  G.PBind
+    (G.PU8 ())
+    (fun x -> G.PBind
+      (G.PAction (P.PrintString "uint8:"))
+      (fun _ -> G.PBind
+        (G.PAction (P.PrintU8 x))
+        (fun _ -> G.PAction (P.PrintString ";"))
+      )
+    )
+
+noextract
+[@@G.specialize]
+let pchoice
+  (#state_i: Type)
+  (#state_t: state_i -> Type)
+  (#action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
+  (#ret_t: Type)
+  (#pre: _)
+  (#post: _)
+  (#ttrue: G.typ)
+  (ptrue: G.prog state_t action_t ttrue ret_t pre post)
+  (#tfalse: G.typ)
+  (pfalse: G.prog state_t action_t tfalse ret_t pre post)
+: Tot (G.prog state_t action_t (G.TChoice (fun b -> if b then ttrue else tfalse)) ret_t pre post)
+= G.PChoice
+    (fun b -> G.PIf #_ #_ #_ #(if b then ttrue else tfalse) b (fun _ -> ptrue) (fun _ -> pfalse))
+
+noextract
+[@@G.specialize]
+let test_print_choice
+  (#ttrue: G.typ)
+  (ptrue: G.prog P.state_t P.action_t ttrue unit () ())
+  (#tfalse: G.typ)
+  (pfalse: G.prog P.state_t P.action_t tfalse unit () ())
+: Tot (G.prog P.state_t P.action_t (G.TChoice (fun b -> if b then ttrue else tfalse)) unit () ())
+= G.PBind
+    (G.PAction (P.PrintString "choice:"))
+    (fun _ -> pchoice
+      (G.PBind
+        (G.PAction (P.PrintString "true{"))
+        (fun _ -> G.PBind
+          ptrue
+          (fun _ -> G.PAction (P.PrintString "};"))
+        )
+      )
+      (G.PBind
+        (G.PAction (P.PrintString "false{"))
+        (fun _ -> G.PBind
+          pfalse
+          (fun _ -> G.PAction (P.PrintString "};"))
+        )
+      )
+    )
+
+noextract
+[@@G.specialize]
+let test_print_list
+  (#t: G.typ)
+  (p: G.prog P.state_t P.action_t t unit () ())
+: Tot (G.prog P.state_t P.action_t (G.TList t) unit () ())
+= G.PBind
+    (G.PAction (P.PrintString "list:["))
+    (fun _ -> G.PBind
+      (G.PList () p)
+      (fun _ -> G.PAction (P.PrintString "];"))
+    )
+
+noextract
+[@@G.specialize]
+let prog_test_pretty_print : G.prog P.state_t P.action_t _ unit () () =
+  G.PPair
+    test_print_u8
+    (fun _ ->
+      test_print_choice
+        (test_print_list test_print_u8)
+        test_print_u8
+    )
+
+module T = FStar.Tactics
+
+inline_for_extraction
+noextract
+[@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
+let specialize_impl_test_pretty_print : G.fold_impl_t _ _ (G.sem P.action_sem prog_test_pretty_print) = G.impl P.a_cl P.ptr_cl prog_test_pretty_print
+
+// [@@__reduce__]
+noextract
+let type_of_prog
+  (#state_i: Type)
+  (#state_t: state_i -> Type)
+  (#action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
+  (#ret_t: Type)
+  (#pre: _)
+  (#post: _)
+  (#t: G.typ)
+  (p: G.prog state_t action_t t ret_t pre post)
+: Tot G.typ
+= t
+
+let test_pretty_print
+  (#vb: v G.pkind (G.type_of_typ (type_of_prog prog_test_pretty_print)))
+  (b: byte_array)
+: STT unit
+    (aparse (G.parser_of_typ (type_of_prog prog_test_pretty_print)) b vb)
+    (fun _ -> aparse (G.parser_of_typ (type_of_prog prog_test_pretty_print)) b vb)
+=
+  rewrite (aparse _ b vb) (aparse _ b vb);
+  rewrite emp (P.cl.G.ll_state_match _ _);
+  specialize_impl_test_pretty_print
+    emp
+    (aparse (G.parser_of_typ (type_of_prog prog_test_pretty_print)) b vb)
+    b
+    ()
+    ()
+    (fun _ _ _ ->
+      rewrite
+        (P.cl.G.ll_state_match () ())
+        emp;
+      rewrite
+        (aparse _ b vb)
+        (aparse _ b vb)
+    )
+    (fun _ _ ->
+      rewrite
+        (P.cl.G.ll_state_failure _)
+        (pure False);
+      let _ = gen_elim () in
+      rewrite
+        (aparse _ b vb)
+        (aparse _ b vb)
+    )
 
 inline_for_extraction noextract
 let u16_max (x1 x2: U16.t) : Tot U16.t

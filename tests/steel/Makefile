@@ -23,7 +23,7 @@ KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
-	 -bundle 'Test=Steel.\*,C,LowParse.\*' \
+	 -bundle 'Test=Steel.\*,C,LowStar.\*,LowParse.\*' \
 	 $(HEADERS) \
 	 -warn-error '@2'
 
