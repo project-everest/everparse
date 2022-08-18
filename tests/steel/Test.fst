@@ -158,52 +158,10 @@ noextract
 [@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
 let specialize_impl_test_pretty_print : G.fold_impl_t _ _ (G.sem P.action_sem prog_test_pretty_print) = G.impl P.a_cl P.ptr_cl prog_test_pretty_print
 
-// [@@__reduce__]
-noextract
-let type_of_prog
-  (#state_i: Type)
-  (#state_t: state_i -> Type)
-  (#action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
-  (#ret_t: Type)
-  (#pre: _)
-  (#post: _)
-  (#t: G.typ)
-  (p: G.prog state_t action_t t ret_t pre post)
-: Tot G.typ
-= t
-
-let test_pretty_print
-  (#vb: v G.pkind (G.type_of_typ (type_of_prog prog_test_pretty_print)))
-  (b: byte_array)
-: STT unit
-    (aparse (G.parser_of_typ (type_of_prog prog_test_pretty_print)) b vb)
-    (fun _ -> aparse (G.parser_of_typ (type_of_prog prog_test_pretty_print)) b vb)
-=
-  rewrite (aparse _ b vb) (aparse _ b vb);
-  rewrite emp (P.cl.G.ll_state_match _ _);
-  specialize_impl_test_pretty_print
-    emp
-    (aparse (G.parser_of_typ (type_of_prog prog_test_pretty_print)) b vb)
-    b
-    ()
-    ()
-    (fun _ _ _ ->
-      rewrite
-        (P.cl.G.ll_state_match () ())
-        emp;
-      rewrite
-        (aparse _ b vb)
-        (aparse _ b vb)
-    )
-    (fun _ _ ->
-      rewrite
-        (P.cl.G.ll_state_failure _)
-        (pure False);
-      let _ = gen_elim () in
-      rewrite
-        (aparse _ b vb)
-        (aparse _ b vb)
-    )
+let test_pretty_print =
+  G.extract_impl_fold
+    specialize_impl_test_pretty_print
+    P.mk_ll_state
 
 inline_for_extraction noextract
 let u16_max (x1 x2: U16.t) : Tot U16.t

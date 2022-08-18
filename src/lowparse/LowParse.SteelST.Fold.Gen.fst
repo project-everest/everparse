@@ -1980,3 +1980,229 @@ let rec impl
           )
           (parser_of_typ (TChoice t))
         )
+
+inline_for_extraction
+let mk_ll_state_t
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (vpre: vprop)
+  (#pre: state_i)
+  (h: state_t pre)
+: Tot Type
+= (#kpre: vprop) ->
+  (#tret: Type) ->
+  (#kpost: (tret -> vprop)) ->
+  (k: (
+    (out: ll_state) ->
+    STT tret
+      (kpre `star` cl.ll_state_match h out)
+      kpost
+  )) ->
+  STF tret (kpre `star` vpre) kpost True (fun _ -> True)
+
+let extract_impl_unit_post
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (pre post: state_i)
+  (f: stt state_t unit pre post)
+  (h: state_t pre)
+  (b: bool)
+: Tot vprop
+= let h' = get_return_state f h in
+  if b
+  then exists_ (cl.ll_state_match h')
+  else cl.ll_state_failure h'
+
+inline_for_extraction
+let extract_impl_stt'_unit
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#pre #post: state_i)
+  (f: Ghost.erased (stt state_t unit pre post))
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+  (kpre0: vprop)
+  (fi: (kpre: vprop) -> (kpost: vprop) -> stt_impl_t' cl f (kpre0 `star` kpre) kpost)
+: STT bool
+    (vpre `star` kpre0)
+    (fun res -> extract_impl_unit_post cl pre post f h res `star` kpre0)
+= mk (fun out ->
+    with_local true (fun bres ->
+      fi
+        (R.pts_to bres full_perm true)
+        (kpre0 `star` exists_ (fun res ->
+          R.pts_to bres full_perm res `star`
+          extract_impl_unit_post cl pre post f h res
+        ))
+        out
+        h
+        (fun out' h' _ ->
+          rewrite
+            (exists_ (cl.ll_state_match h'))
+            (extract_impl_unit_post cl pre post f h true);
+          noop ()
+        )
+        (fun h' _ ->
+          R.write bres false;
+          rewrite
+            (cl.ll_state_failure h')
+            (extract_impl_unit_post cl pre post f h false);
+          noop ()
+        );
+      let _ = gen_elim () in
+      let res = R.read bres in
+      vpattern_rewrite (extract_impl_unit_post cl pre post f h) res;
+      return res
+    )
+  )
+
+inline_for_extraction
+let extract_impl_stt_unit
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#pre #post: state_i)
+  (#f: Ghost.erased (stt state_t unit pre post))
+  (fi: stt_impl_t cl f)
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+: STT bool
+    (vpre)
+    (fun res -> extract_impl_unit_post cl pre post f h res)
+= extract_impl_stt'_unit
+    f mk emp fi
+
+inline_for_extraction
+let extract_impl_fold_unit
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#pre #post: state_i)
+  (#t: Type)
+  (#f: Ghost.erased (fold_t state_t t unit pre post))
+  (#k: parser_kind)
+  (#p: parser k t)
+  (fi: fold_impl_t cl p f)
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+  (#vbin: v k t)
+  (bin: byte_array)
+: STT bool
+    (vpre `star` aparse p bin vbin)
+    (fun res -> extract_impl_unit_post cl pre post (Ghost.reveal f vbin.contents) h res `star` aparse p bin vbin)
+= extract_impl_stt'_unit
+    (Ghost.reveal f vbin.contents)
+    mk
+    (aparse p bin vbin)
+    (fun kpre kpost -> fi kpre kpost #vbin bin)
+
+let extract_impl_post
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (pre post: state_i)
+  (#ret_t: Type)
+  (r: R.ref ret_t)
+  (f: stt state_t ret_t pre post)
+  (h: state_t pre)
+  (b: bool)
+: Tot vprop
+= let h' = get_return_state f h in
+  let v = get_return_value f h in
+  if b
+  then exists_ (cl.ll_state_match h') `star` R.pts_to r full_perm v
+  else cl.ll_state_failure h' `star` exists_ (R.pts_to r full_perm)
+
+inline_for_extraction
+let extract_impl_stt'
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#pre #post: state_i)
+  (#rett: Type)
+  (f: Ghost.erased (stt state_t rett pre post))
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+  (kpre0: vprop)
+  (fi: (kpre: vprop) -> (kpost: vprop) -> stt_impl_t' cl f (kpre0 `star` kpre) kpost)
+  (r: R.ref rett)
+: STT bool
+    (vpre `star` kpre0 `star` exists_ (R.pts_to r full_perm))
+    (fun res -> extract_impl_post cl pre post r f h res `star` kpre0)
+= mk (fun out ->
+    with_local true (fun bres ->
+      fi
+        (R.pts_to bres full_perm true `star`
+          exists_ (R.pts_to r full_perm))
+        (kpre0 `star` exists_ (fun res ->
+          R.pts_to bres full_perm res `star`
+          extract_impl_post cl pre post r f h res
+        ))
+        out
+        h
+        (fun out' h' v ->
+          let _ = gen_elim () in
+          R.write r v;
+          rewrite
+            (exists_ (cl.ll_state_match h') `star` R.pts_to r full_perm v)
+            (extract_impl_post cl pre post r f h true);
+          noop ()
+        )
+        (fun h' _ ->
+          R.write bres false;
+          rewrite
+            (cl.ll_state_failure h' `star` exists_ (R.pts_to r full_perm))
+            (extract_impl_post cl pre post r f h false);
+          noop ()
+        );
+      let _ = gen_elim () in
+      let res = R.read bres in
+      vpattern_rewrite (extract_impl_post cl pre post r f h) res;
+      return res
+    )
+  )
+
+inline_for_extraction
+let extract_impl_stt
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#pre #post: state_i)
+  (#t: Type)
+  (#f: Ghost.erased (stt state_t t pre post))
+  (fi: stt_impl_t cl f)
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+  (r: R.ref t)
+: STT bool
+    (vpre `star` exists_ (R.pts_to r full_perm))
+    (fun res -> extract_impl_post cl pre post r f h res)
+= extract_impl_stt'
+    f mk emp fi r
+
+inline_for_extraction
+let extract_impl_fold
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#pre #post: state_i)
+  (#t: Type)
+  (#rett: Type)
+  (#f: Ghost.erased (fold_t state_t t rett pre post))
+  (#k: parser_kind)
+  (#p: parser k t)
+  (fi: fold_impl_t cl p f)
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+  (vbin: v k t)
+  (bin: byte_array)
+  (r: R.ref rett)
+: STT bool
+    (vpre `star` aparse p bin vbin `star` exists_ (R.pts_to r full_perm))
+    (fun res -> extract_impl_post cl pre post r (Ghost.reveal f vbin.contents) h res `star` aparse p bin vbin)
+= extract_impl_stt'
+    (Ghost.reveal f vbin.contents)
+    mk
+    (aparse p bin vbin)
+    (fun kpre kpost -> fi kpre kpost #vbin bin)
+    r

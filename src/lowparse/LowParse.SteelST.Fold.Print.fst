@@ -112,3 +112,9 @@ let ptr_cl
     load_ll_state_ptr = load_ll_state_ptr;
     store_ll_state_ptr = store_ll_state_ptr;
   }
+
+inline_for_extraction
+let mk_ll_state : mk_ll_state_t cl emp #() () =
+  fun k ->
+    rewrite emp (cl.ll_state_match () ());
+    k ()
