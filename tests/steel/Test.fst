@@ -159,9 +159,40 @@ noextract
 let specialize_impl_test_pretty_print : G.fold_impl_t _ _ (G.sem P.action_sem prog_test_pretty_print) = G.impl P.a_cl P.ptr_cl prog_test_pretty_print
 
 let test_pretty_print =
-  G.extract_impl_fold
+  G.extract_impl_fold_unit
     specialize_impl_test_pretty_print
     P.mk_ll_state
+
+[@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
+let validate_test_pretty_print : validator (G.parser_of_typ (G.typ_of_prog prog_test_pretty_print)) = G.validator_of_typ (G.typ_of_prog prog_test_pretty_print)
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let full_test_pretty_print
+  (#vb: A.v byte)
+  (b: byte_array)
+  (len: SZ.size_t)
+: ST unit (A.arrayptr b vb) (fun _ -> A.arrayptr b vb)
+    (A.length (A.array_of vb) == SZ.size_v len)
+    (fun _ -> True)
+= with_local 0ul (fun perr ->
+    let sz = validate_test_pretty_print b len perr in
+    let _ = gen_elim () in
+    let err = read_replace perr in
+    if err = 0ul
+    then begin
+      let _ = ghost_peek_strong (G.parser_of_typ (G.typ_of_prog prog_test_pretty_print)) b in
+      let _ = gen_elim () in
+      let _ = test_pretty_print _ b in
+      P.elim_extract_impl_unit_post _ _ _;
+      unpeek_strong b _ _
+    end else begin
+      Steel.ST.Printf.print_string "invalid data"
+    end
+  )
+
+#pop-options
 
 inline_for_extraction noextract
 let u16_max (x1 x2: U16.t) : Tot U16.t
@@ -203,40 +234,36 @@ let iter_max
     rewrite (state _ _) emp;
     return res
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 64"
+#restart-solver
 
-let test (a: byte_array) (#va: _) (len: SZ.size_t) (perr: R.ref U32.t)
+let test (a: byte_array) (#va: _) (len: SZ.size_t)
 : ST U16.t
-  (A.arrayptr a va `star` exists_ (fun v -> R.pts_to perr full_perm v))
-  (fun _ -> A.arrayptr a va `star` exists_ (fun v -> R.pts_to perr full_perm v))
+  (A.arrayptr a va)
+  (fun _ -> A.arrayptr a va)
   (SZ.size_v len == A.length (A.array_of va))
   (fun _ -> True)
-= let _ = gen_elim () in
-  R.write perr 0ul;
+= with_local 0ul (fun perr ->
   let sz = validate_p a len perr in
   let _ = gen_elim () in
   let err = R.read perr in
   if err = 0ul
   then begin
-    let ar = peek_strong_with_size p a sz in
+    let ar = ghost_peek_strong p a in
     let _ = gen_elim () in
     let gac = ghost_elim_vldata_gen _ _ _ a in
     let _ = gen_elim () in
     let acsz = read_bounded_integer _ a in
     let ac = hop_aparse_aparse (jump_bounded_integer 1) _ a gac in
     let res = iter_max ac (SZ.mk_size_t acsz) in
-    let _ = intro_vldata_gen _ _ _ a ac in
-    let va' = elim_aparse p a in
-    parse_injective p (Seq.slice (A.contents_of' va) 0 (SZ.size_v sz)) (A.contents_of' va');
-    Seq.lemma_split (A.contents_of' va) (SZ.size_v sz);
-    let _ = A.join a ar in
+    let _ = intro_vldata_gen 1 (unconstrained_bounded_integer 1) _ a ac in
+    unpeek_strong a va ar;
     return res
   end
   else begin
     noop ();
     return 0us
   end
+  )
 
 #pop-options
-
-let main () = C.EXIT_SUCCESS

@@ -118,3 +118,68 @@ let mk_ll_state : mk_ll_state_t cl emp #() () =
   fun k ->
     rewrite emp (cl.ll_state_match () ());
     k ()
+
+let elim_extract_impl_unit_post
+  (#opened: _)
+  (#pre #post: state_i)
+  (f: stt state_t unit pre post)
+  (h: state_t pre)
+  (b: bool)
+: STGhost unit opened
+    (extract_impl_unit_post cl pre post f h b)
+    (fun _ -> emp)
+    True
+    (fun _ -> b == true)
+=
+  let h' = get_return_state f h in
+  if b
+  then begin
+    rewrite
+      (extract_impl_unit_post cl pre post f h b)
+      (exists_ (cl.ll_state_match h'));
+    let _ = gen_elim () in
+    rewrite (cl.ll_state_match _ _) emp
+  end else begin
+    rewrite
+      (extract_impl_unit_post cl pre post f h b)
+      (pure False);
+    let _ = gen_elim () in
+    noop ()
+  end
+
+module R = Steel.ST.Reference
+
+let elim_extract_impl_post
+  (#opened: _)
+  (#pre #post: state_i)
+  (#ret_t: Type)
+  (r: R.ref ret_t)
+  (f: stt state_t ret_t pre post)
+  (h: state_t pre)
+  (b: bool)
+: STGhost (Ghost.erased ret_t) opened
+    (extract_impl_post cl pre post r f h b)
+    (fun v -> R.pts_to r full_perm v)
+    True
+    (fun v ->
+      b == true /\
+      v == get_return_value f h
+    )
+=
+  let h' = get_return_state f h in
+  let v = get_return_value f h in
+  if b
+  then begin
+    rewrite
+      (extract_impl_post cl pre post r f h b)
+      (exists_ (cl.ll_state_match h') `star` R.pts_to r full_perm v);
+    let _ = gen_elim () in
+    rewrite (cl.ll_state_match _ _) emp;
+    v
+  end else begin
+    rewrite
+      (extract_impl_post cl pre post r f h b)
+      (pure False `star` exists_ (R.pts_to r full_perm));
+    let _ = gen_elim () in
+    vpattern_replace_erased (R.pts_to r full_perm)
+  end

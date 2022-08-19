@@ -281,6 +281,19 @@ type prog
       ((x: bool) -> prog state_t action_t (t x) ret_t pre post) ->
       prog state_t action_t (TChoice t) ret_t pre post
 
+[@@specialize; noextract_to "krml"]
+let typ_of_prog
+  (#state_i: Type)
+  (#state_t: state_i -> Type)
+  (#action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
+  (#t: typ)
+  (#ret_t: Type)
+  (#pre: state_i)
+  (#post: state_i)
+  (p: prog state_t action_t t ret_t pre post)
+: Tot typ
+= t
+
 let rec sem
   #state_t
   (#action_t: (t: Type) -> (pre: _) -> (post: _) -> Type)

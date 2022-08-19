@@ -36,6 +36,18 @@ let serialize_bool : serializer parse_bool =
     ()
 
 inline_for_extraction
+let validate_bool : validator parse_bool =
+  validate_synth
+    (validate_filter
+      validate_u8
+      read_u8
+      (fun x -> (x = 1uy || x = 0uy))
+      (fun x -> (x = 1uy || x = 0uy))
+    )
+    (fun x -> (x = 1uy))
+    ()
+
+inline_for_extraction
 let read_bool : leaf_reader parse_bool =
   read_synth'
     (read_filter read_u8 (fun x -> (x = 1uy || x = 0uy)))
@@ -1851,6 +1863,39 @@ let rec parser_of_typ (t: typ) : Tot (parser pkind (type_of_typ t)) =
   | TChoice f -> weaken _ (parse_dtuple2 parse_bool #_ #(type_of_payload' f) (fun x -> parser_of_typ (f x)))
 
 inline_for_extraction
+let validate_ifthenelse
+  (#k: parser_kind)
+  (#t: bool -> Type)
+  (p: (x: bool) -> parser k (t x))
+  (jtrue: validator (p true))
+  (jfalse: validator (p false))
+  (x: bool)
+: Tot (validator (p x))
+= fun a len err ->
+  if x
+  then coerce (validator (p x)) jtrue a len err
+  else coerce (validator (p x)) jfalse a len err
+
+[@@specialize]
+let rec validator_of_typ (t: typ) : Tot (validator (parser_of_typ t)) =
+  match t returns validator (parser_of_typ t) with
+  | TU8 -> validate_weaken _ validate_u8 ()
+  | TPair t1 t2 -> validate_weaken _ (validate_pair (validator_of_typ t1) (validator_of_typ t2)) ()
+  | TList t' ->
+    validate_weaken _
+      (validate_vldata_gen 4 (unconstrained_bounded_integer 4) (fun _ -> true) (validate_list (validator_of_typ t')))
+      ()
+  | TChoice f ->
+    validate_weaken _
+      (validate_dtuple2
+        validate_bool
+        read_bool
+        _
+        (validate_ifthenelse (fun x -> parser_of_typ (f x)) (validator_of_typ (f true)) (validator_of_typ (f false)))
+      )
+      ()
+
+inline_for_extraction
 let jump_ifthenelse
   (#k: parser_kind)
   (#t: bool -> Type)
@@ -2086,7 +2131,7 @@ let extract_impl_fold_unit
   (#vpre: vprop)
   (#h: Ghost.erased (state_t pre))
   (mk: mk_ll_state_t cl vpre h)
-  (#vbin: v k t)
+  (vbin: v k t)
   (bin: byte_array)
 : STT bool
     (vpre `star` aparse p bin vbin)

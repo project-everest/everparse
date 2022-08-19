@@ -51,14 +51,14 @@ verify: $(patsubst %,$(CACHE_DIR)/%$(CHECKED_EXT),$(QD_FILES))
 
 ALL_KRML_FILES := $(filter-out krml/prims.krml,$(ALL_KRML_FILES))
 
-test.exe: $(ALL_KRML_FILES)
+test.exe: $(ALL_KRML_FILES) main.c
 	-@mkdir out
 	$(KRML) -no-prefix Test $^ -o test.exe
 
 extract: test.exe
 
-test: test.exe
-	./test.exe
+test: test.exe input.dat
+	./test.exe input.dat
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
