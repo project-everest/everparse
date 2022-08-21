@@ -18,8 +18,11 @@ let rewrite_validator
   (#k2: parser_kind) (#t2: Type) (p2: parser k2 t2)
 : Pure (validator p2)
   (requires (
-    t1 == t2 /\
-    (forall bytes . parse p1 bytes == parse p2 bytes)
+    (forall bytes . (
+      Some? (parse p1 bytes) == Some? (parse p2 bytes) /\ (
+      (Some? (parse p1 bytes) /\ Some? (parse p2 bytes)) ==>
+      sndp (Some?.v (parse p1 bytes)) == sndp (Some?.v (parse p2 bytes))
+    )))
   ))
   (ensures (fun _ -> True))
 = fun #va a len err ->
@@ -1148,3 +1151,12 @@ let elim_parse_strict
     )
 = let _ = elim_aparse (parse_strict p) b in
   intro_aparse p b
+
+inline_for_extraction
+let validate_strict
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (w: validator p)
+: Tot (validator (parse_strict p))
+= rewrite_validator w _
