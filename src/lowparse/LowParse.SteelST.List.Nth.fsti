@@ -37,7 +37,7 @@ let list_nth_post
 
 inline_for_extraction
 val list_nth
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (j: jumper p)

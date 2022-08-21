@@ -178,7 +178,7 @@ let list_iter_with_interrupt_close
 
 inline_for_extraction
 let list_iter_with_interrupt_test
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (state: bool -> list t -> vprop)
@@ -220,7 +220,7 @@ let int_sub_intro (a b c: nat) : Lemma
 
 inline_for_extraction
 let list_iter_with_interrupt_body
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)
@@ -288,7 +288,7 @@ let list_iter_with_interrupt_body
 
 inline_for_extraction
 let list_iter_with_interrupt
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)

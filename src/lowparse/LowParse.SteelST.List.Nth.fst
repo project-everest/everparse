@@ -136,7 +136,7 @@ let list_append_is_cons_r
 
 inline_for_extraction
 let list_split_test
-  (#k: _)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (p: parser k t)
   (a0: byte_array)
@@ -168,7 +168,7 @@ let list_split_test
 
 inline_for_extraction
 let list_split_body
-  (#k: _)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (j: jumper p)
@@ -219,7 +219,7 @@ let list_split_body
 
 inline_for_extraction
 let list_split
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (j: jumper p)
@@ -290,7 +290,7 @@ let rec list_index_eq
 
 inline_for_extraction
 let list_nth
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (j: jumper p)

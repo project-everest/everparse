@@ -84,7 +84,7 @@ let ghost_elim_cons
 
 inline_for_extraction
 let elim_cons
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)
@@ -215,7 +215,7 @@ let rec valid_list_total_constant_size
 
 inline_for_extraction
 let validate_list_total_constant_size
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (sz: SZ.size_t)
@@ -295,7 +295,7 @@ let validate_list_inv
 
 inline_for_extraction
 let validate_list_test
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (#va0: _)
@@ -326,7 +326,7 @@ let validate_list_test
 #restart-solver
 inline_for_extraction
 let validate_list_body
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
@@ -406,7 +406,7 @@ let with_ghost_local
 
 inline_for_extraction
 let validate_list
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
@@ -631,7 +631,7 @@ let elim_aparse_list
 
 inline_for_extraction
 let elim_cons_opt_with_length
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (#va1: v k t)

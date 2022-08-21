@@ -83,7 +83,7 @@ val ghost_elim_cons
 
 inline_for_extraction
 val elim_cons
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (j: jumper p)
@@ -168,7 +168,7 @@ val valid_list_total_constant_size
 
 inline_for_extraction
 val validate_list_total_constant_size
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (sz: SZ.size_t)
@@ -211,7 +211,7 @@ val with_ghost_local
 
 inline_for_extraction
 val validate_list
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
@@ -450,7 +450,7 @@ val elim_aparse_list
 
 inline_for_extraction
 val elim_cons_opt_with_length
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (#va1: v k t)

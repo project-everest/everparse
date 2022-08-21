@@ -20,15 +20,12 @@ let assertf (#opened_invariants:_)
 
 inline_for_extraction
 let validate_fldata_gen
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
-  (sz: nat)
   (sz32: SZ.size_t)
-: Pure (validator (parse_fldata p sz))
-    (requires (SZ.size_v sz32 == sz))
-    (ensures (fun _ -> True))
+: Tot (validator (parse_fldata p (SZ.size_v sz32)))
 = fun #va a len err ->
   if len `SZ.size_lt` sz32
   then begin
@@ -61,14 +58,13 @@ let validate_fldata_gen
 
 inline_for_extraction
 let validate_fldata_consumes_all
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
-  (sz: nat)
   (sz32: SZ.size_t)
-: Pure (validator (parse_fldata p sz))
-    (requires (SZ.size_v sz32 == sz /\ k.parser_kind_subkind == Some ParserConsumesAll))
+: Pure (validator (parse_fldata p (SZ.size_v sz32)))
+    (requires (k.parser_kind_subkind == Some ParserConsumesAll))
     (ensures (fun _ -> True))
 = fun #va a len err ->
   if len `SZ.size_lt` sz32
@@ -94,14 +90,11 @@ let validate_fldata
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
-  (sz: nat)
   (sz32: SZ.size_t)
-: Pure (validator (parse_fldata p sz))
-    (requires (SZ.size_v sz32 == sz))
-    (ensures (fun _ -> True))
+: Tot (validator (parse_fldata p (SZ.size_v sz32)))
 = if k.parser_kind_subkind = Some ParserConsumesAll
-  then validate_fldata_consumes_all v sz sz32
-  else validate_fldata_gen v sz sz32
+  then validate_fldata_consumes_all v sz32
+  else validate_fldata_gen v sz32
 
 inline_for_extraction
 let validate_fldata_strong
@@ -110,40 +103,31 @@ let validate_fldata_strong
   (#p: parser k t)
   (s: serializer p)
   (v: validator p)
-  (sz: nat)
   (sz32: SZ.size_t)
-: Pure (validator (parse_fldata_strong s sz))
-    (requires (SZ.size_v sz32 == sz))
-    (ensures (fun _ -> True))
+: Tot (validator (parse_fldata_strong s (SZ.size_v sz32)))
 = fun #va a len err ->
-  let res = validate_fldata v sz sz32 a len err in
+  let res = validate_fldata v sz32 a len err in
   let _ = gen_elim () in
   return res
 
 inline_for_extraction
 let jump_fldata
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
-  (sz: nat)
   (sz32: SZ.size_t)
-: Pure (jumper (parse_fldata p sz))
-    (requires (SZ.size_v sz32 == sz))
-    (ensures (fun _ -> True))
-= jump_constant_size (parse_fldata p sz) sz32
+: Tot (jumper (parse_fldata p (SZ.size_v sz32)))
+= jump_constant_size (parse_fldata p (SZ.size_v sz32)) sz32
 
 inline_for_extraction
 let jump_fldata_strong
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-  (sz: nat)
   (sz32: SZ.size_t)
-: Pure (jumper (parse_fldata_strong s sz))
-    (requires (SZ.size_v sz32 == sz))
-    (ensures (fun _ -> True))
-= jump_constant_size (parse_fldata_strong s sz) sz32
+: Tot (jumper (parse_fldata_strong s (SZ.size_v sz32)))
+= jump_constant_size (parse_fldata_strong s (SZ.size_v sz32)) sz32
 
 let intro_fldata
   (#opened: _)

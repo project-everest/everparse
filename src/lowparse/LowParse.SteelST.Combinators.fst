@@ -14,8 +14,8 @@ module T = FStar.Tactics
 
 inline_for_extraction
 let rewrite_validator
-  (#k1: parser_kind) (#t1: Type) (#p1: parser k1 t1) (v1: validator p1)
-  (#k2: parser_kind) (#t2: Type) (p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (v1: validator p1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type) (p2: parser k2 t2)
 : Pure (validator p2)
   (requires (
     (forall bytes . (
@@ -32,19 +32,22 @@ let rewrite_validator
 
 inline_for_extraction
 let validate_weaken
-  (k1: parser_kind) (#k2: parser_kind) (#t: Type) (#p2: parser k2 t) (v2: validator p2)
+  (k1: Ghost.erased parser_kind) (#k2: Ghost.erased parser_kind) (#t: Type) (#p2: parser k2 t) (v2: validator p2)
   (_: squash (k1 `is_weaker_than` k2))
 : Tot (validator (LowParse.Spec.Base.weaken k1 p2))
 = rewrite_validator v2 (LowParse.Spec.Base.weaken k1 p2)
 
 inline_for_extraction
 let rewrite_jumper
-  (#k1: parser_kind) (#t1: Type) (#p1: parser k1 t1) (v1: jumper p1)
-  (#k2: parser_kind) (#t2: Type) (p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (v1: jumper p1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type) (p2: parser k2 t2)
 : Pure (jumper p2)
   (requires (
-    t1 == t2 /\
-    (forall bytes . parse p1 bytes == parse p2 bytes)
+    (forall bytes . (
+      Some? (parse p2 bytes) ==> (
+        Some? (parse p1 bytes) /\
+        sndp (Some?.v (parse p1 bytes)) == sndp (Some?.v (parse p2 bytes))
+    )))
   ))
   (ensures (fun _ -> True))
 = fun #va a ->
@@ -54,7 +57,7 @@ let rewrite_jumper
 
 inline_for_extraction
 let jump_weaken
-  (k1: parser_kind) (#k2: parser_kind) (#t: Type) (#p2: parser k2 t) (v2: jumper p2)
+  (k1: Ghost.erased parser_kind) (#k2: Ghost.erased parser_kind) (#t: Type) (#p2: parser k2 t) (v2: jumper p2)
   (_: squash (k1 `is_weaker_than` k2))
 : Tot (jumper (LowParse.Spec.Base.weaken k1 p2))
 = rewrite_jumper v2 (LowParse.Spec.Base.weaken k1 p2)
@@ -64,8 +67,8 @@ let jump_weaken
 
 inline_for_extraction
 let validate_pair
-  #k1 #t1 (#p1: parser k1 t1) (v1: validator p1)
-  #k2 #t2 (#p2: parser k2 t2) (v2: validator p2)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (v1: validator p1)
+  (#k2: Ghost.erased parser_kind) #t2 (#p2: parser k2 t2) (v2: validator p2)
 : Tot (validator (p1 `nondep_then` p2))
 =
   fun #va a len err ->
@@ -91,8 +94,8 @@ let validate_pair
 
 inline_for_extraction
 let jump_pair
-  #k1 #t1 (#p1: parser k1 t1) (v1: jumper p1)
-  #k2 #t2 (#p2: parser k2 t2) (v2: jumper p2)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (v1: jumper p1)
+  (#k2: Ghost.erased parser_kind) #t2 (#p2: parser k2 t2) (v2: jumper p2)
 : Tot (jumper (p1 `nondep_then` p2))
 =
   fun #va a ->
@@ -133,8 +136,8 @@ let g_split_pair
 
 inline_for_extraction
 let split_pair'
-  #k1 #t1 (#p1: parser k1 t1) (j1: jumper p1)
-  #k2 #t2 (p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (j1: jumper p1)
+  (#k2: Ghost.erased parser_kind) #t2 (p2: parser k2 t2)
   #y1 #y2 (a1: byte_array) (a2: Ghost.erased (byte_array))
 : ST (byte_array)
     (aparse p1 a1 y1 `star` aparse p2 a2 y2)
@@ -155,8 +158,8 @@ let split_pair'
 
 inline_for_extraction
 let split_pair
-  #k1 #t1 (#p1: parser k1 t1) (j1: jumper p1)
-  #k2 #t2 (p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (j1: jumper p1)
+  (#k2: Ghost.erased parser_kind) #t2 (p2: parser k2 t2)
   #y (a: byte_array)
 : ST (byte_array)
     (aparse (p1 `nondep_then` p2) a y)
@@ -215,8 +218,8 @@ let clens_fst
 
 inline_for_extraction
 let with_pair_fst
-  #k1 #t1 (p1: parser k1 t1)
-  #k2 #t2 (p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) #t1 (p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) #t2 (p2: parser k2 t2)
 : Pure (accessor (p1 `nondep_then` p2) p1 (clens_fst _ _))
     (k1.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
@@ -248,8 +251,8 @@ let clens_snd
 
 inline_for_extraction
 let with_pair_snd
-  #k1 #t1 (#p1: parser k1 t1) (j1: jumper p1)
-  #k2 #t2 (p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (j1: jumper p1)
+  (#k2: Ghost.erased parser_kind) #t2 (p2: parser k2 t2)
 : Pure (accessor (p1 `nondep_then` p2) p2 (clens_snd _ _))
     (k1.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
@@ -266,7 +269,7 @@ let with_pair_snd
 
 inline_for_extraction
 let validate_synth
-  #k1 #t1 (#p1: parser k1 t1) (v1: validator p1)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (v1: validator p1)
   #t2 (f2: t1 -> GTot t2)
   (sq: squash (synth_injective f2))
 : Tot (validator (p1 `parse_synth` f2))
@@ -279,7 +282,7 @@ let validate_synth
 
 inline_for_extraction
 let jump_synth
-  #k1 #t1 (#p1: parser k1 t1) (v1: jumper p1)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (v1: jumper p1)
   #t2 (f2: t1 -> GTot t2)
   (sq: squash (synth_injective f2))
 : Tot (jumper (p1 `parse_synth` f2))
@@ -328,7 +331,7 @@ let elim_synth
 
 inline_for_extraction
 let read_synth
-  #k1 #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
   #t2 (f2: t1 -> GTot t2)
   (f2': (x: t1) -> Tot (y: t2 { y == f2 x }))
   (sq: squash (synth_injective f2))
@@ -343,7 +346,7 @@ let read_synth
 
 inline_for_extraction
 let read_synth'
-  #k1 #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
   #t2 (f2: t1 -> Tot t2)
   (sq: squash (synth_injective f2))
 : Tot (leaf_reader (p1 `parse_synth` f2))
@@ -357,7 +360,7 @@ let validator_error_constraint_failed  = 2ul
 
 inline_for_extraction
 let validate_filter
-  #k #t (#p: parser k t) (v: validator p) (r: leaf_reader p)
+  (#k: Ghost.erased parser_kind) #t (#p: parser k t) (v: validator p) (r: leaf_reader p)
   (f: t -> GTot bool)
   (f' : ((x: t) -> Tot (y: bool { y == f x } )))
 : Pure (validator (p  `parse_filter` f))
@@ -395,7 +398,7 @@ let validate_filter
 
 inline_for_extraction
 let jump_filter
-  #k1 #t1 (#p1: parser k1 t1) (v1: jumper p1)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (v1: jumper p1)
   (f2: t1 -> GTot bool)
 : Tot (jumper (p1 `parse_filter` f2))
 =
@@ -442,7 +445,7 @@ let elim_filter
 
 inline_for_extraction
 let read_filter
-  #k1 #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
   (f2: (t1 -> GTot bool))
 : Tot (leaf_reader (parse_filter p1 f2))
 = fun #va a ->
@@ -457,7 +460,7 @@ let read_filter
 
 inline_for_extraction
 let validate_filter_and_then
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
   (v1: validator p1)
@@ -502,7 +505,7 @@ let validate_filter_and_then
 
 inline_for_extraction
 let jump_filter_and_then
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
   (v1: jumper p1)
@@ -589,11 +592,11 @@ let ghost_split_and_then
 
 inline_for_extraction
 let split_and_then
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
   (j1: jumper p1)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#t2: Type)
   (p2: (t1 -> parser k2 t2))
   (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
@@ -644,11 +647,11 @@ let ghost_and_then_tag
 inline_for_extraction
 let read_and_then_tag
   (#opened: _)
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
   (rt: leaf_reader p1)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#t2: Type)
   (p2: (t1 -> parser k2 t2))
   (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
@@ -701,14 +704,14 @@ let intro_and_then
 
 inline_for_extraction
 let validate_tagged_union
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (vt: validator pt)
   (rt: leaf_reader pt)
   (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
   (v: (t: tag_t) -> Tot (validator (p t)))
 : Pure (validator (parse_tagged_union pt tag_of_data p))
@@ -739,18 +742,16 @@ let validate_tagged_union
       return s1
     end
 
-#pop-options
-
 inline_for_extraction
 let jump_tagged_union
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (vt: jumper pt)
   (rt: leaf_reader pt)
   (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
   (v: (t: tag_t) -> Tot (jumper (p t)))
 : Pure (jumper (parse_tagged_union pt tag_of_data p))
@@ -770,6 +771,8 @@ let jump_tagged_union
     let _ = gen_elim () in
     let _ = AP.join a ar in
     return (s1 `SZ.size_add` s2)
+
+#pop-options
 
 #pop-options
 
@@ -836,13 +839,13 @@ let ghost_split_tagged_union
 
 inline_for_extraction
 let split_tagged_union
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (jt: jumper pt)
   (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
   #y (a1: byte_array)
 : ST (byte_array)
@@ -891,13 +894,13 @@ let ghost_tagged_union_tag
 
 inline_for_extraction
 let read_tagged_union_tag
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (rt: leaf_reader pt)
   (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
   #y (a1: byte_array) (a2: byte_array)
 : STT tag_t
@@ -947,12 +950,12 @@ let intro_tagged_union
 
 inline_for_extraction
 let validate_dtuple2
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (vt: validator pt)
   (rt: leaf_reader pt)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
   (v: (t: tag_t) -> Tot (validator (p t)))
@@ -968,12 +971,12 @@ let validate_dtuple2
 
 inline_for_extraction
 let jump_dtuple2
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (vt: jumper pt)
   (rt: leaf_reader pt)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
   (v: (t: tag_t) -> Tot (jumper (p t)))
@@ -1016,11 +1019,11 @@ let exists_dtuple2_payload
 
 inline_for_extraction
 let split_dtuple2
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (vt: jumper pt)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
   #y (a1: byte_array)
@@ -1068,11 +1071,11 @@ let ghost_dtuple2_tag
 
 inline_for_extraction
 let read_dtuple2_tag
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (rt: leaf_reader pt)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
   #y (a1: byte_array) (a2: byte_array)

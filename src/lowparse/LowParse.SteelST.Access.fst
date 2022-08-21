@@ -28,7 +28,7 @@ let jumper
 
 inline_for_extraction
 let hop_arrayptr_aparse
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (#va1: _)
@@ -50,7 +50,7 @@ let hop_arrayptr_aparse
 
 inline_for_extraction
 let hop_aparse_arrayptr_with_size
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (#va1: _)
@@ -73,10 +73,10 @@ let hop_aparse_arrayptr_with_size
 
 inline_for_extraction
 let hop_aparse_aparse_with_size
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#t1: Type)
   (p1: parser k1 t1)
-  (#k2: _)
+  (#k2: Ghost.erased parser_kind)
   (#t2: _)
   (p2: parser k2 t2)
   (#va1: _)
@@ -98,7 +98,7 @@ let hop_aparse_aparse_with_size
 
 inline_for_extraction
 let jump_constant_size
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (sz: SZ.size_t)
@@ -116,7 +116,7 @@ let jump_constant_size
 
 inline_for_extraction
 let get_parsed_size
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (#vp: v k t)
@@ -135,7 +135,7 @@ let get_parsed_size
 
 inline_for_extraction
 let hop_aparse_arrayptr
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)
@@ -153,11 +153,11 @@ let hop_aparse_arrayptr
 
 inline_for_extraction
 let hop_aparse_aparse
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
   (j1: jumper p1)
-  (#k2: _)
+  (#k2: Ghost.erased parser_kind)
   (#t2: _)
   (p2: parser k2 t2)
   (#va1: _)
@@ -218,7 +218,7 @@ let ghost_peek_strong
 
 inline_for_extraction
 let peek_strong_with_size
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#va: AP.v byte)
   (p: parser k t)
@@ -251,7 +251,7 @@ let peek_strong_with_size
 
 inline_for_extraction
 let peek_strong
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (#va: AP.v byte)
@@ -412,7 +412,7 @@ let accessor
 
 inline_for_extraction
 let accessor_id
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
 : Tot (accessor p p (clens_id _))
@@ -426,10 +426,10 @@ let accessor_id
 
 inline_for_extraction
 let accessor_compose
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#t2: Type)
   (#p2: parser k2 t2)
   (#cl12: clens t1 t2)
@@ -449,10 +449,10 @@ let accessor_compose
 
 inline_for_extraction
 let accessor_ext
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#t2: Type)
   (#p2: parser k2 t2)
   (#cl12: clens t1 t2)
