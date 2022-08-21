@@ -1,4 +1,6 @@
 module LowParse.SteelST.Fold
+
+(*
 include LowParse.SteelST.Fold.Base
 include LowParse.Spec.SerializationState
 
@@ -3312,3 +3314,4 @@ let impl_list
   )))
 
 #pop-options
+*)

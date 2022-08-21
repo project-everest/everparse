@@ -14,7 +14,6 @@ open LowParse.SteelST.List
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 
-module F = LowParse.SteelST.Fold
 module Printf_dummy = LowStar.Printf // for dependencies only
 
 #set-options "--ide_id_info_off"
@@ -38,34 +37,6 @@ let test_accessor
       noop ();
       return res
   ))
-
-let test_prog_1 = F.run_prog
-  (F.impl_bind
-    _
-    (F.impl_u8 (F.initial_ser_index F.TU8))
-    _
-    (fun w ->
-      F.impl_action
-        _
-        (F.impl_ser_u8 w ())
-        _
-    )
-  )
-
-let test_prog_2 = F.run_prog
-      (F.impl_bind
-        _
-        (F.impl_action _ (F.impl_ser_u8 #_ #(F.initial_ser_index F.TU8) 42uy ()) _)
-        _
-        (fun _ -> F.impl_list
-          _
-          (F.impl_ret #_ #_ #_ #F.TU8 ())
-          (jump_weaken F.pkind (jump_constant_size parse_u8  SZ.one_size) ())
-          (F.with_context_arrays_ptr_nil F.TU8)
-          (F.load_context_arrays_ptr_nil F.TU8)
-          (F.store_context_arrays_ptr_nil F.TU8)
-        )
-      )
 
 module P = LowParse.SteelST.Fold.Print
 module G = LowParse.SteelST.Fold.Gen
