@@ -571,3 +571,79 @@ let parse_vlgen_weak_eq_parse_vlgen
 =
   parse_vlgen_weak_unfold min max pk p input;
   parse_vlgen_unfold min max pk s input 
+
+let parse_vlgen_alt_payload_kind : parser_kind = {
+  parser_kind_low = 0;
+  parser_kind_high = None;
+  parser_kind_subkind = Some ParserStrong;
+  parser_kind_metadata = None;
+}
+
+let synth_vlgen_alt_payload
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (x: (n: nat & parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))))
+: Tot t
+= dsnd x
+
+let synth_vlgen_alt_payload_injective
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Lemma
+  (synth_injective (synth_vlgen_alt_payload p))
+  [SMTPat (synth_injective (synth_vlgen_alt_payload p))]
+= synth_injective_intro'
+    (synth_vlgen_alt_payload p)
+    (fun (x x' : (n: nat & parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) ->
+      let b = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> parser_matches (parse_fldata p (dfst x)) (dsnd x) b) in
+      let b' = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> parser_matches (parse_fldata p (dfst x')) (dsnd x') b) in
+      parse_injective p (Seq.slice b 0 (dfst x)) (Seq.slice b' 0 (dfst x'))
+    )
+
+let parse_vlgen_alt
+  (#sk: parser_kind)
+  (pk: parser sk nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot (parser (and_then_kind sk parse_vlgen_alt_payload_kind) t)
+= (pk `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))))
+    `parse_synth`
+    synth_vlgen_alt_payload p
+
+let parse_vlgen_alt_eq
+  (#sk: parser_kind)
+  (pk: parser sk nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (input: bytes)
+: Lemma
+  (parse (parse_vlgen_alt pk p) input == (
+    match parse pk input with
+    | None -> None
+    | Some (len, sz) ->
+      begin
+        if Seq.length input < sz + len
+        then None
+        else
+          let input' = Seq.slice input sz (sz + len) in
+          match parse p input' with
+          | None -> None
+          | Some (x, consumed_x) ->
+            if consumed_x = len
+            then
+              Some (x, sz + len)
+            else None
+      end
+  ))
+= parse_synth_eq
+    (pk `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))))
+    (synth_vlgen_alt_payload p)
+    input;
+  parse_dtuple2_eq
+    pk
+    (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
+    input

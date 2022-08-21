@@ -1678,6 +1678,45 @@ let serialize_weaken
 : Tot (serializer (weaken k' p))
 = serialize_ext _ s (weaken k' p)
 
+let parser_matches
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (x: t)
+  (b: bytes)
+: Tot prop
+= match parse p b with
+  | Some (x', _) -> x == x'
+  | _ -> False
+
+let parser_range
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot Type
+= (x: t {exists b . parser_matches p x b})
+
+let parse_strict'
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: bytes)
+: GTot (option (parser_range p & consumed_length b))
+= match parse p b with
+  | None -> None
+  | Some (x, len) -> Some (x, len)
+
+let parse_strict
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot (parser k (parser_range p))
+= parser_kind_prop_equiv k p;
+  parser_kind_prop_equiv k (parse_strict' p);
+  assert (forall b1 b2 . injective_precond (parse_strict' p) b1 b2 ==> injective_precond p b1 b2);
+  assert (forall b1 b2 . no_lookahead_on_precond (parse_strict' p) b1 b2 ==> no_lookahead_on_precond p b1 b2);
+  parse_strict' p
+
 (* Helpers to define `if` combinators *)
 
 let cond_true (cond: bool) : Tot Type = (u: unit { cond == true } )

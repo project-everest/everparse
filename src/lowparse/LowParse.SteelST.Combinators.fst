@@ -1112,3 +1112,39 @@ let intro_dtuple2
   let _ = intro_synth (p tag) (synth_dtuple2 tag) a2 () in
   let _ = intro_tagged_union pt dfst (fun x -> parse_synth (p x) (synth_dtuple2 x)) a1 a2 in
   rewrite_aparse a1 (parse_dtuple2 pt p)
+
+let intro_parse_strict
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#vb: v k t)
+  (b: byte_array)
+: STGhost (v k (parser_range p)) opened
+    (aparse p b vb)
+    (fun vb' -> aparse (parse_strict p) b vb')
+    True
+    (fun vb' ->
+      array_of' vb' == array_of' vb /\
+      vb.contents == vb'.contents
+    )
+= let _ = elim_aparse p b in
+  intro_aparse (parse_strict p) b
+
+let elim_parse_strict
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#vb: v k (parser_range p))
+  (b: byte_array)
+: STGhost (v k t) opened
+    (aparse (parse_strict p) b vb)
+    (fun vb' -> aparse p b vb')
+    True
+    (fun vb' ->
+      array_of' vb' == array_of' vb /\
+      vb'.contents == vb.contents
+    )
+= let _ = elim_aparse (parse_strict p) b in
+  intro_aparse p b
