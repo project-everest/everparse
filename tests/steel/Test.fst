@@ -24,9 +24,9 @@ let test_accessor
 : STT U16.t
     (aparse (parse_u16 `nondep_then` parse_u16) b vb)
     (fun r -> aparse (parse_u16 `nondep_then` parse_u16) b vb `star`
-      pure (U16.v r == U16.v (fst vb.contents) \/ U16.v r == U16.v (snd vb.contents)))
-= with_pair_fst _ _ b (fun bf ->
-    with_pair_snd jump_u16 _ b (fun bs ->
+      pure (U16.v r == U16.v (fstp vb.contents) \/ U16.v r == U16.v (sndp vb.contents)))
+= with_pair_fst parse_u16 parse_u16 b (fun bf ->
+    with_pair_snd jump_u16 parse_u16 b (fun bs ->
       let f = read_u16 bf in
       let s = read_u16 bs in
       let res = 
@@ -41,11 +41,44 @@ let test_accessor
 module P = LowParse.SteelST.Fold.Print
 module G = LowParse.SteelST.Fold.Gen
 
+[@@G.specialize; noextract_to "krml"]
+type scalar_t = | U8 | U32 | Bool
+
+[@@G.specialize; noextract_to "krml"]
+inline_for_extraction
+let type_of_scalar (s: scalar_t) : Tot Type =
+  match s with
+  | U8 -> FStar.UInt8.t
+  | U32 -> FStar.UInt32.t
+  | Bool -> bool
+
+[@@G.specialize; noextract_to "krml"]
+let p_of_s (s: scalar_t) : G.scalar_ops (type_of_scalar s) =
+  match s with
+  | U8 -> {
+           G.scalar_parser = weaken G.pkind parse_u8;
+           G.scalar_validator = validate_weaken _ validate_u8 ();
+           G.scalar_reader = read_weaken _ read_u8;
+           G.scalar_jumper = jump_weaken _ jump_u8 ();
+         }
+  | U32 -> {
+           G.scalar_parser = weaken G.pkind parse_u32;
+           G.scalar_validator = validate_weaken _ validate_u32 ();
+           G.scalar_reader = read_weaken _ read_u32;
+           G.scalar_jumper = jump_weaken _ jump_u32 ();
+         }
+  | Bool -> {
+           G.scalar_parser = weaken G.pkind G.parse_bool;
+           G.scalar_validator = validate_weaken _ G.validate_bool ();
+           G.scalar_reader = read_weaken _ G.read_bool;
+           G.scalar_jumper = jump_weaken _ (jump_constant_size G.parse_bool SZ.one_size) ();
+         }
+
 noextract
 [@@G.specialize]
-let test_print_u8 : G.prog P.state_t P.action_t _ unit () () =
+let test_print_u8 : G.prog type_of_scalar P.state_t P.action_t _ unit () () =
   G.PBind
-    (G.PU8 ())
+    (G.PScalar () U8)
     (fun x -> G.PBind
       (G.PAction (P.PrintString "uint8:"))
       (fun _ -> G.PBind
@@ -63,22 +96,22 @@ let pchoice
   (#ret_t: Type)
   (#pre: _)
   (#post: _)
-  (#ttrue: G.typ)
-  (ptrue: G.prog state_t action_t ttrue ret_t pre post)
-  (#tfalse: G.typ)
-  (pfalse: G.prog state_t action_t tfalse ret_t pre post)
-: Tot (G.prog state_t action_t (G.TChoice (fun b -> if b then ttrue else tfalse)) ret_t pre post)
+  (#ttrue: G.typ type_of_scalar)
+  (ptrue: G.prog type_of_scalar state_t action_t ttrue ret_t pre post)
+  (#tfalse: G.typ type_of_scalar)
+  (pfalse: G.prog type_of_scalar state_t action_t tfalse ret_t pre post)
+: Tot (G.prog type_of_scalar state_t action_t (G.TChoice Bool (fun b -> G.TIf b (fun _ -> ttrue) (fun _ -> tfalse))) ret_t pre post)
 = G.PChoice
-    (fun b -> G.PIf #_ #_ #_ #(if b then ttrue else tfalse) b (fun _ -> ptrue) (fun _ -> pfalse))
+    (fun b -> G.PIfT b (fun _ -> ptrue) (fun _ -> pfalse))
 
 noextract
 [@@G.specialize]
 let test_print_choice
-  (#ttrue: G.typ)
-  (ptrue: G.prog P.state_t P.action_t ttrue unit () ())
-  (#tfalse: G.typ)
-  (pfalse: G.prog P.state_t P.action_t tfalse unit () ())
-: Tot (G.prog P.state_t P.action_t (G.TChoice (fun b -> if b then ttrue else tfalse)) unit () ())
+  (#ttrue: G.typ type_of_scalar)
+  (ptrue: G.prog type_of_scalar P.state_t P.action_t ttrue unit () ())
+  (#tfalse: G.typ type_of_scalar)
+  (pfalse: G.prog type_of_scalar P.state_t P.action_t tfalse unit () ())
+: Tot (G.prog type_of_scalar P.state_t P.action_t (G.TChoice Bool (fun b -> G.TIf b (fun _ -> ttrue) (fun _ -> tfalse))) unit () ())
 = G.PBind
     (G.PAction (P.PrintString "choice:"))
     (fun _ -> pchoice
@@ -101,19 +134,19 @@ let test_print_choice
 noextract
 [@@G.specialize]
 let test_print_list
-  (#t: G.typ)
-  (p: G.prog P.state_t P.action_t t unit () ())
-: Tot (G.prog P.state_t P.action_t (G.TList t) unit () ())
+  (#t: G.typ type_of_scalar)
+  (p: G.prog type_of_scalar P.state_t P.action_t t unit () ())
+: Tot (G.prog type_of_scalar P.state_t P.action_t (G.TList U32 SZ.mk_size_t t) unit () ())
 = G.PBind
     (G.PAction (P.PrintString "list:["))
     (fun _ -> G.PBind
-      (G.PList () p)
+      (G.PList U32 SZ.mk_size_t _ p)
       (fun _ -> G.PAction (P.PrintString "];"))
     )
 
 noextract
 [@@G.specialize]
-let prog_test_pretty_print : G.prog P.state_t P.action_t _ unit () () =
+let prog_test_pretty_print : G.prog type_of_scalar P.state_t P.action_t _ unit () () =
   G.PPair
     test_print_u8
     (fun _ ->
@@ -127,7 +160,7 @@ module T = FStar.Tactics
 inline_for_extraction
 noextract
 [@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
-let specialize_impl_test_pretty_print : G.fold_impl_t _ _ (G.sem P.action_sem prog_test_pretty_print) = G.impl P.a_cl P.ptr_cl prog_test_pretty_print
+let specialize_impl_test_pretty_print : G.fold_impl_t _ _ (G.sem P.action_sem prog_test_pretty_print) = G.impl p_of_s P.a_cl P.ptr_cl prog_test_pretty_print
 
 let test_pretty_print =
   G.extract_impl_fold_unit
@@ -135,7 +168,7 @@ let test_pretty_print =
     P.mk_ll_state
 
 [@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
-let validate_test_pretty_print : validator (G.parser_of_typ (G.typ_of_prog prog_test_pretty_print)) = G.validator_of_typ (G.typ_of_prog prog_test_pretty_print)
+let validate_test_pretty_print : validator (G.parser_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)) = G.validator_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)
 
 #push-options "--z3rlimit 16"
 #restart-solver
@@ -153,7 +186,7 @@ let full_test_pretty_print
     let err = read_replace perr in
     if err = 0ul
     then begin
-      let _ = ghost_peek_strong (G.parser_of_typ (G.typ_of_prog prog_test_pretty_print)) b in
+      let _ = ghost_peek_strong (G.parser_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)) b in
       let _ = gen_elim () in
       let _ = test_pretty_print _ b in
       P.elim_extract_impl_unit_post _ _ _;
