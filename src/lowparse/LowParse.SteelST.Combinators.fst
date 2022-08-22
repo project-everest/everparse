@@ -31,6 +31,22 @@ let rewrite_validator
   return res
 
 inline_for_extraction
+let rewrite_validator'
+  (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (v1: validator p1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type) (p2: parser k2 t2)
+  (prf: (
+    (b: bytes) ->
+    Lemma
+    (Some? (parse p1 b) == Some? (parse p2 b) /\ (
+      (Some? (parse p1 b) /\ Some? (parse p2 b)) ==>
+      sndp (Some?.v (parse p1 b)) == sndp (Some?.v (parse p2 b))
+    ))
+  ))
+: Tot (validator p2)
+= Classical.forall_intro prf;
+  rewrite_validator v1 p2
+
+inline_for_extraction
 let validate_weaken
   (k1: Ghost.erased parser_kind) (#k2: Ghost.erased parser_kind) (#t: Type) (#p2: parser k2 t) (v2: validator p2)
   (_: squash (k1 `is_weaker_than` k2))
@@ -54,6 +70,22 @@ let rewrite_jumper
   let res = v1 a in
   let _ = gen_elim () in
   return res
+
+inline_for_extraction
+let rewrite_jumper'
+  (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (v1: jumper p1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type) (p2: parser k2 t2)
+  (prf: (
+    (b: bytes) ->
+    Lemma
+    (Some? (parse p2 b) ==> (
+      Some? (parse p1 b) /\
+      sndp (Some?.v (parse p1 b)) == sndp (Some?.v (parse p2 b))
+    ))
+  ))
+: Tot (jumper p2)
+= Classical.forall_intro prf;
+  rewrite_jumper v1 p2
 
 inline_for_extraction
 let jump_weaken
@@ -1157,9 +1189,18 @@ let elim_parse_strict
 
 inline_for_extraction
 let validate_strict
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (w: validator p)
 : Tot (validator (parse_strict p))
 = rewrite_validator w _
+
+inline_for_extraction
+let jump_strict
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (w: jumper p)
+: Tot (jumper (parse_strict p))
+= rewrite_jumper w _

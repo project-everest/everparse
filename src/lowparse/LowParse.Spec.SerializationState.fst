@@ -1,11 +1,13 @@
 module LowParse.Spec.SerializationState
 include LowParse.Spec.Fold
 
+
 module U8 = FStar.UInt8
 module SZ = LowParse.Steel.StdInt
 
 (* Step-by-step serialization *)
 
+(*
 noeq
 type base_context_t
   (erase_values: bool)
