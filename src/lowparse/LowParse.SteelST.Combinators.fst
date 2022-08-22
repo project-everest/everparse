@@ -94,6 +94,21 @@ let jump_weaken
 : Tot (jumper (LowParse.Spec.Base.weaken k1 p2))
 = rewrite_jumper v2 (LowParse.Spec.Base.weaken k1 p2)
 
+inline_for_extraction
+let read_weaken
+  (#k: Ghost.erased parser_kind)
+  (k': Ghost.erased parser_kind { k' `is_weaker_than` k })
+  (#t: Type)
+  (#p: parser k t)
+  (r: leaf_reader p)
+: Tot (leaf_reader (LowParse.Spec.Base.weaken k' p))
+= fun #va a ->
+  let _ = rewrite_aparse a p in
+  let res = r a in
+  let _ = rewrite_aparse a (LowParse.Spec.Base.weaken k' p) in
+  vpattern_rewrite (aparse (LowParse.Spec.Base.weaken k' p) a) va;
+  return res
+
 #push-options "--z3rlimit 20"
 #restart-solver
 
