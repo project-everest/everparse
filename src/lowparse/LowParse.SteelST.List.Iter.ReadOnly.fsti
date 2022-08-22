@@ -8,7 +8,7 @@ module SZ = LowParse.Steel.StdInt
 
 inline_for_extraction
 val list_iter
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (j: jumper p)
@@ -38,7 +38,7 @@ val list_iter
 
 inline_for_extraction
 val list_iter_opt
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (j: jumper p)

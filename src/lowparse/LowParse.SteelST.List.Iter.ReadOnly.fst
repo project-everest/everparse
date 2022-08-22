@@ -39,7 +39,7 @@ let list_iter_state
 
 inline_for_extraction
 let list_iter
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)
@@ -101,7 +101,7 @@ let list_iter
 
 inline_for_extraction
 let list_iter_opt
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)

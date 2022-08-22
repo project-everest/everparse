@@ -94,7 +94,7 @@ let list_iter_gen_inv_elim #opened #k #t #t' p phi enable_arrays state init l0 a
 #restart-solver
 inline_for_extraction
 let list_iter_gen_body
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p {k.parser_kind_subkind == Some ParserStrong})

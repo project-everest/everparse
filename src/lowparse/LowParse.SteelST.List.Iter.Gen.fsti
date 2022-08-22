@@ -9,7 +9,7 @@ open Steel.ST.Util
 
 inline_for_extraction
 val list_iter_gen
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)

@@ -59,7 +59,7 @@ let list_iter_consumes_with_array_body_post_intro
 
 inline_for_extraction
 val list_iter_consumes_with_array
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (j: jumper p)
