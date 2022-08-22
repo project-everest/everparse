@@ -237,10 +237,10 @@ noeq
 type prog
   (#scalar_t: Type)
   (type_of_scalar: (scalar_t -> Type))
-  (#state_i: Type)
-  (state_t: state_i -> Type)
-  (action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
-: (t: typ type_of_scalar) -> (ret_t: Type) -> state_i -> (state_i) -> Type
+  (#state_i: Type u#a)
+  (state_t: state_i -> Type u#b)
+  (action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type u#c)
+: (t: typ type_of_scalar) -> (ret_t: Type) -> state_i -> (state_i) -> Type u#(max 1 (max a (max b c)))
 = | PRet:
       (#ret_t: Type) ->
       (#i: state_i) ->
