@@ -1,5 +1,6 @@
 module LowParse.SteelST.Fold.SerializationState
 open Steel.ST.GenElim
+open LowParse.SteelST.Write
 open LowParse.SteelST.Fold.Gen
 open LowParse.SteelST.Combinators
 open LowParse.SteelST.List.Base
@@ -162,6 +163,19 @@ let spec_if0
 : Tot (stt (state_t0 type_of_scalar) unit (IParseValue t :: s) (IParseValue (TIf b t1 t2) :: s))
 = function SCons (VParseValue _ v) st -> ((), SCons (VParseValue (TIf b t1 t2) (coerce _ v)) st)
 
+let spec_if
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (s: state_i0 type_of_scalar)
+  (t: typ type_of_scalar)
+  (b: bool)
+  (t1: (squash (b == true) -> typ type_of_scalar))
+  (t2: (squash (b == false) -> typ type_of_scalar))
+  (sq: squash (t == ifthenelse b t1 t2))
+  (ppre: (state_t0 _ (IParseValue t :: s) -> prop))
+: Tot (stt (state_t type_of_scalar) (H.act_ret_t (spec_if0 s t b t1 t2 sq) ppre) ({ H.i = (IParseValue t :: s); p = ppre }) ({ H.i = (IParseValue (TIf b t1 t2) :: s); p = H.sem_act_post (spec_if0 s t b t1 t2 sq) ppre }))
+= H.sem_act (spec_if0 s t b t1 t2 sq) ppre
+
 let spec_choice_post
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
@@ -250,6 +264,22 @@ let parsed_size_some_elim
     parsed_size p v == Some (Seq.length b)
   ))
 = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> exactly_parses_on p v b)
+
+let parsed_size_rewrite
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (v: t)
+  (#k': parser_kind)
+  (p': parser k' t)
+: Lemma
+  (requires (forall b . parse p' b == parse p b))
+  (ensures (parsed_size p' v == parsed_size p v))
+= match parsed_size p v with
+  | None -> ()
+  | Some _ ->
+    let b = parsed_size_some_elim p v in
+    parsed_size_some_intro p' v b
 
 let type_of_state_i_item
   (#scalar_t: Type)
@@ -363,7 +393,17 @@ noeq
 type ll_state'
 : AP.array byte -> Type
 = | LNil: (a: AP.v byte) -> squash (AP.length (AP.array_of a) == 0) -> ll_state' (AP.array_of a)
-  | LCons: (a0: AP.array byte) -> (a1: AP.array byte) -> (sz1: SZ.size_t) -> (b2: byte_array) -> (a2: AP.array byte) -> squash (AP.merge_into a1 a2 a0 /\ SZ.size_v sz1 == AP.length a1) -> (s2: ll_state' a2) -> ll_state' a0
+  | LCons:
+    (a0: AP.array byte) ->
+    (a1: AP.array byte) ->
+    (sz1: SZ.size_t) ->
+    (b2: byte_array) ->
+    (a2: AP.array byte) ->
+    squash (
+      AP.merge_into a1 a2 a0 /\
+      SZ.size_v sz1 == AP.length a1
+    ) ->
+    (s2: ll_state' a2) -> ll_state' a0
 
 let rec ll_state'_length
   (#a: AP.array byte)
@@ -1423,3 +1463,348 @@ let ptr_cl
 : Tot (ll_state_ptr_ops (cl p_of_s b b_sz a))
 = H.ptr_cl (ptr_cl0 p_of_s b b_sz a)
 
+(* Implementations *)
+
+let write0_inc
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: state_i0 type_of_scalar)
+  (t: typ type_of_scalar)
+  (v: type_of_typ t)
+: Tot (stt_state_inc (cl0 p_of_s b b_sz a) (spec_write0 s t v))
+= fun _ -> ()
+
+[@@__reduce__]
+let r_to_l_write_post_failure
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (v: t)
+  (b: byte_array)
+  (a: AP.array byte)
+: Tot vprop
+= exists_ (fun vb' ->
+    AP.arrayptr b vb' `star` pure (
+    AP.array_of vb' == a /\
+    parsed_size p v `option_nat_ge` Some (AP.length a + 1)
+  ))
+
+[@@__reduce__]
+let r_to_l_write_post_success
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (w: t)
+  (b: byte_array)
+  (a: AP.array byte)
+  (sz: SZ.size_t)
+: Tot vprop
+= exists_ (fun vbl -> exists_ (fun br -> exists_ (fun (vbr: v k t) ->
+    AP.arrayptr b vbl `star`
+    aparse p br vbr `star` pure (
+    AP.merge_into (AP.array_of vbl) (array_of' vbr) a /\
+    vbr.contents == w /\
+    SZ.size_v sz == AP.length (AP.array_of vbl)
+  ))))
+
+let r_to_l_write_post
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (w: t)
+  (b: byte_array)
+  (a: AP.array byte)
+  (sz: SZ.size_t)
+  (success: bool)
+: Tot vprop
+= if success
+  then r_to_l_write_post_success p w b a sz
+  else r_to_l_write_post_failure p w b a
+
+inline_for_extraction
+let r_to_l_write_t
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot Type
+= (w: t) ->
+  (b: byte_array) ->
+  (vb0: AP.v byte) ->
+  (b_sz: R.ref SZ.size_t) ->
+  (sz: Ghost.erased SZ.size_t) ->
+  ST bool
+    (AP.arrayptr b vb0 `star`
+      R.pts_to b_sz full_perm sz)
+    (fun success ->
+      exists_ (fun sz' ->
+        R.pts_to b_sz full_perm sz' `star`
+        r_to_l_write_post p w b (AP.array_of vb0) sz' success
+    ))
+    (AP.array_perm (AP.array_of vb0) == full_perm /\
+      SZ.size_v sz == AP.length (AP.array_of vb0)
+    )
+    (fun _ -> True)
+
+let r_to_l_write_post_rewrite
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#k': parser_kind)
+  (p': parser k' t)
+  (w: t)
+  (b: byte_array)
+  (a: AP.array byte)
+  (sz: SZ.size_t)
+  (success: bool)
+: STGhost unit opened
+    (r_to_l_write_post p w b a sz success)
+    (fun _ -> r_to_l_write_post p' w b a sz success)
+    (forall input . parse p' input == parse p input)
+    (fun _ -> True)
+= if success
+  then begin
+    rewrite
+      (r_to_l_write_post p w b a sz success)
+      (r_to_l_write_post_success p w b a sz);
+    let _ = gen_elim () in
+    let br = vpattern_replace (fun br -> aparse _ br _) in
+    let _ = rewrite_aparse br p' in
+    rewrite
+      (r_to_l_write_post_success p' w b a sz)
+      (r_to_l_write_post p' w b a sz success)
+  end else begin
+    rewrite
+      (r_to_l_write_post p w b a sz success)
+      (r_to_l_write_post_failure p w b a);
+    let _ = gen_elim () in
+    parsed_size_rewrite p w p';
+    noop ();
+    rewrite
+      (r_to_l_write_post_failure p' w b a)
+      (r_to_l_write_post p' w b a sz success)
+  end
+
+inline_for_extraction
+let r_to_l_write_rewrite
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (w: r_to_l_write_t p)
+  (#k': parser_kind)
+  (p': parser k' t)
+: Pure (r_to_l_write_t p')
+    (requires (forall input . parse p' input == parse p input))
+    (ensures (fun _ -> True))
+= fun x b vb0 b_sz sz ->
+    let success = w x b vb0 b_sz sz in
+    let _ = gen_elim () in
+    r_to_l_write_post_rewrite p p' x b _ _ success;
+    return success
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+inline_for_extraction
+let r_to_l_write_constant_size
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: exact_writer s)
+  (sz0: SZ.size_t)
+: Pure (r_to_l_write_t p)
+    (requires (
+      k.parser_kind_high == Some k.parser_kind_low /\
+      k.parser_kind_low == SZ.size_v sz0
+    ))
+    (ensures (fun _ -> True))
+=
+  fun x b vb0 b_sz _ ->
+    parsed_size_some_intro p x (serialize s x);
+    let sz = read_replace b_sz in
+    if sz `SZ.size_lt` sz0
+    then begin
+      noop ();
+      rewrite
+        (r_to_l_write_post_failure p x b (AP.array_of vb0))
+        (r_to_l_write_post p x b (AP.array_of vb0) sz false);
+      return false
+    end else begin
+      let sz' = sz `SZ.size_sub` sz0 in
+      let br = AP.split b sz' in
+      let _ = gen_elim () in
+      let _ = w x br in
+      R.write b_sz sz';
+      rewrite
+        (r_to_l_write_post_success p x b (AP.array_of vb0) sz') 
+        (r_to_l_write_post p x b (AP.array_of vb0) sz' true);
+      return true
+    end
+
+#pop-options
+
+let aparse_parsed_size
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: byte_array)
+  (vb: v k t)
+: STGhost unit opened
+    (aparse p b vb)
+    (fun _ -> aparse p b vb)
+    True
+    (fun _ -> parsed_size p vb.contents == Some (AP.length (array_of' vb)))
+= let vb' = elim_aparse _ b in
+  parsed_size_some_intro p vb.contents (AP.contents_of vb');
+  let _ = intro_aparse p b in
+  rewrite
+    (aparse p b _)
+    (aparse p b vb)
+
+let rec ll_state_match'_size_of_state_t0
+  (#opened: _)
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (#i: state_i0 type_of_scalar)
+  (s: state_t0 type_of_scalar i)
+  (b: byte_array)
+  (a: AP.array byte)
+  (ls: ll_state' a)
+: STGhost unit opened
+    (ll_state_match' p_of_s s b a ls)
+    (fun _ -> ll_state_match' p_of_s s b a ls)
+    True
+    (fun _ -> size_of_state_t0 p_of_s s == Some (AP.length a))
+    (decreases ls)
+= match ls with
+  | LNil vb _ ->
+    rewrite
+      (ll_state_match' p_of_s s b a ls)
+      (AP.arrayptr b vb `star` pure (SNil? s == true));
+    let _ = gen_elim () in
+    rewrite
+      (AP.arrayptr b vb `star` pure (SNil? s == true))
+      (ll_state_match' p_of_s s b a ls)
+  | LCons _ a1 _ b' a' _ ls' ->
+    begin match s with
+    | SNil ->
+      rewrite
+        (ll_state_match' p_of_s s b a ls)
+        (pure False);
+      let _ = gen_elim () in
+      rewrite // by contradiction
+        emp
+        (ll_state_match' p_of_s s b a ls)
+    | SCons s1 s' ->
+      rewrite
+        (ll_state_match' p_of_s s b a ls)
+        (ll_state_item_match0 p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' a' ls');
+      let _ = gen_elim () in
+      ll_state_match'_size_of_state_t0 p_of_s _ _ _ _;
+      aparse_parsed_size _ _ _;
+      rewrite
+        (ll_state_item_match0 p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' a' ls')
+        (ll_state_match' p_of_s s b a ls)
+    end
+
+let ll_state_match_size_of_state_t0
+  (#opened: _)
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (#i: state_i0 type_of_scalar)
+  (s: state_t0 type_of_scalar i)
+  (ls: ll_state a)
+: STGhost unit opened
+    ((cl0 p_of_s b b_sz a).ll_state_match s ls)
+    (fun _ -> (cl0 p_of_s b b_sz a).ll_state_match s ls)
+    True
+    (fun _ -> size_of_state_t0 p_of_s s == Some (AP.length ls.ll_a))
+= rewrite
+    ((cl0 p_of_s b b_sz a).ll_state_match s ls)
+    (ll_state_match0 p_of_s b b_sz a s ls);
+  let _ = gen_elim () in
+  ll_state_match'_size_of_state_t0 p_of_s _ _ _ _;
+  rewrite
+    (ll_state_match0 p_of_s b b_sz a s ls)
+    ((cl0 p_of_s b b_sz a).ll_state_match s ls)
+
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false"
+#restart-solver
+
+inline_for_extraction
+let impl_write
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: Ghost.erased (state_i0 type_of_scalar))
+  (t: typ type_of_scalar)
+  (w: r_to_l_write_t (parser_of_typ p_of_s t))
+  (x: type_of_typ t)
+: Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_write0 s t x))
+= fun kpre kpost out h k_success k_failure ->
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParseValue t :: s)) = get_return_state (spec_write0 s t x) h in
+    rewrite
+      ((cl0 p_of_s b b_sz a).ll_state_match h out)
+      (ll_state_match0 p_of_s b b_sz a h out);
+    let _ = gen_elim () in
+    let sz = R.read b_sz in
+    let succ = w x b _ b_sz _ in
+    let _ = gen_elim () in
+    if succ
+    then begin
+      let sz' = read_replace b_sz in
+      rewrite
+        (r_to_l_write_post _ x b _ _ _)
+        (r_to_l_write_post_success (parser_of_typ p_of_s t) x b (AP.array_of out.ll_free) sz');
+      let _ = gen_elim () in
+      let bw = hop_arrayptr_aparse _ b sz' _ in
+      let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParseValue t)) in
+      let vbl' = vpattern_replace (AP.arrayptr b) in
+      [@inline_let]
+      let out' : ll_state a = {
+        ll_free = vbl';
+        ll_b = bw;
+        ll_a = AP.merge (array_of' vbw) out.ll_a;
+        ll_s = LCons _ (array_of' vbw) (sz `SZ.size_sub` sz') out.ll_b out.ll_a () out.ll_s;
+        ll_prf = ();
+      }
+      in
+      noop ();
+      rewrite
+        (ll_state_item_match0 p_of_s (VParseValue t x) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _)
+        (ll_state_match' p_of_s h' out'.ll_b out'.ll_a out'.ll_s);
+      vpattern_rewrite (AP.arrayptr b) out'.ll_free;
+      rewrite
+        (ll_state_match0 p_of_s b b_sz a h' out')
+        ((cl0 p_of_s b b_sz a).ll_state_match h' out');
+      k_success out' h' ()
+    end else begin
+      rewrite
+        (r_to_l_write_post _ x b _ _ _)
+        (r_to_l_write_post_failure (parser_of_typ p_of_s t) x b (AP.array_of out.ll_free));
+      let _ = gen_elim () in
+      parsed_size_rewrite (parser_of_typ p_of_s t) x (parser_of_state_i_item p_of_s (IParseValue t));
+      ll_state_match'_size_of_state_t0 p_of_s _ _ _ _;
+      let _ = wipe_ll_state_match' p_of_s _ _ _ _ in
+      let _ = AP.join b _ in
+      rewrite
+        (ll_state_failure0 p_of_s b b_sz a h')
+        ((cl0 p_of_s b b_sz a).ll_state_failure h');
+      k_failure h' ()
+    end
+
+#pop-options
