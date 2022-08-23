@@ -1027,9 +1027,8 @@ let mk_initial_state
   )
 = coerce _ (H.mk_ll_state_eq (mk_initial_state0 p_of_s vb b b_sz))
 
-// NOTE: I could very well implement this with exists_ as a
-// pre-resource, leveraging hop_arrayptr_aparse, but I can't make
-// sense of this scenario
+// NOTE: I implement this with exists_, leveraging
+// hop_arrayptr_aparse, because of extract_impl_*_post
 
 inline_for_extraction
 let elim_ll_state_match_final0
@@ -1042,9 +1041,8 @@ let elim_ll_state_match_final0
   (t: Ghost.erased (state_i_item type_of_scalar))
   (i: Ghost.erased (state_i0 type_of_scalar))
   (s: Ghost.erased (state_t0 type_of_scalar i))
-  (ls: ll_state a)
 : ST byte_array
-    ((cl0 p_of_s b b_sz a).ll_state_match s ls)
+    (exists_ ((cl0 p_of_s b b_sz a).ll_state_match s))
     (fun b' -> exists_ (fun vb -> exists_ (fun sz -> exists_ (fun (vb': v default_parser_kind (type_of_state_i_item t)) ->
       AP.arrayptr b vb `star`
       R.pts_to b_sz full_perm sz `star`
@@ -1056,7 +1054,8 @@ let elim_ll_state_match_final0
     )))))
     (Ghost.reveal i == [Ghost.reveal t])
     (fun _ -> True)
-= rewrite
+= let ls = elim_exists () in
+  rewrite
     ((cl0 p_of_s b b_sz a).ll_state_match s ls)
     (ll_state_match0 p_of_s b b_sz a s ls);
   let _ = gen_elim () in
@@ -1072,7 +1071,10 @@ let elim_ll_state_match_final0
   Seq.append_empty_r (AP.contents_of' vbl);
   let _ = AP.join #_ #_ #_ #vbz ls.ll_b _ in
   let _ = intro_aparse (parser_of_state_i_item p_of_s t) ls.ll_b in
-  return ls.ll_b
+  let sz = R.read b_sz in
+  let res = hop_arrayptr_aparse _ b sz ls.ll_b in
+  noop ();
+  return res
 
 #push-options "--z3rlimit 32"
 #restart-solver
@@ -1088,9 +1090,8 @@ let elim_ll_state_match_final
   (t: Ghost.erased (state_i_item type_of_scalar))
   (i: Ghost.erased (state_i type_of_scalar))
   (s: Ghost.erased (state_t type_of_scalar i))
-  (ls: ll_state a)
 : ST byte_array
-    ((cl p_of_s b b_sz a).ll_state_match s ls)
+    (exists_ ((cl p_of_s b b_sz a).ll_state_match s))
     (fun b' -> exists_ (fun vb -> exists_ (fun sz -> exists_ (fun (vb': v default_parser_kind (type_of_state_i_item t)) ->
       AP.arrayptr b vb `star`
       R.pts_to b_sz full_perm sz `star`
@@ -1103,11 +1104,12 @@ let elim_ll_state_match_final
     ((Ghost.reveal i).i == [Ghost.reveal t])
     (fun _ -> True)
 =
+  let ls = elim_exists () in
   let s0 : Ghost.erased (state_t0 type_of_scalar i.H.i) = Ghost.hide (Ghost.reveal s) in
   rewrite
     ((cl p_of_s b b_sz a).ll_state_match s ls)
     ((cl0 p_of_s b b_sz a).ll_state_match s0 ls);
-  let res = elim_ll_state_match_final0 p_of_s b b_sz a t (i.H.i) s0 ls in
+  let res = elim_ll_state_match_final0 p_of_s b b_sz a t (i.H.i) s0 in
   let _ = gen_elim () in
   return res
 
