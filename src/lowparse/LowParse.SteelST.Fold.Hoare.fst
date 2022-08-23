@@ -118,26 +118,26 @@ inline_for_extraction
 let impl_act
   (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
   (#cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
-  (#ret_t: Type) (#pre: state_i0) (#post: state_i0)
-  (#f: stt state_t0 ret_t pre post)
+  (#ret_t: Type) (pre: Ghost.erased state_i0) (post: Ghost.erased state_i0)
+  (f: Ghost.erased (stt state_t0 ret_t (Ghost.reveal pre) (Ghost.reveal post)))
   (fi: stt_impl_t cl0 f)
   (ppre: (state_t0 pre -> prop))
 : Tot (stt_impl_t (cl cl0) (sem_act f ppre))
 = fun kpre kpost out h k_success k_failure ->
-    let h0 : Ghost.erased (state_t0 pre) = Ghost.hide (Ghost.reveal h) in
+    let h0 : Ghost.erased (state_t0 (Ghost.reveal pre)) = Ghost.hide (Ghost.reveal h) in
     rewrite
       ((cl cl0).ll_state_match _ _)
       (cl0.ll_state_match h0 out);
     fi kpre kpost _ _
       (fun out' h0' v0' ->
-        let h' : Ghost.erased (state_t state_t0 ({i=post; p=sem_act_post f ppre})) = Ghost.hide (Ghost.reveal h0') in
+        let h' : Ghost.erased (state_t state_t0 ({i=Ghost.reveal post; p=sem_act_post f ppre})) = Ghost.hide (Ghost.reveal h0') in
         rewrite
           (cl0.ll_state_match _ _)
           ((cl cl0).ll_state_match h' out');
         k_success _ _ v0'
       )
-      (fun (h0': Ghost.erased (state_t0 post)) (v0': Ghost.erased ret_t) ->
-        let h' : Ghost.erased (state_t state_t0 ({i=post; p=sem_act_post f ppre})) = Ghost.hide (Ghost.reveal h0') in
+      (fun (h0': Ghost.erased (state_t0 (Ghost.reveal post))) (v0': Ghost.erased ret_t) ->
+        let h' : Ghost.erased (state_t state_t0 ({i=Ghost.reveal post; p=sem_act_post f ppre})) = Ghost.hide (Ghost.reveal h0') in
         let v' : Ghost.erased (act_ret_t f ppre) = Ghost.hide (Ghost.reveal v0') in
         rewrite
           (cl0.ll_state_failure _)
@@ -149,12 +149,12 @@ inline_for_extraction
 let impl_weaken
   (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
   (cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
-  (i: state_i0)
+  (i: Ghost.erased state_i0)
   (pre post: (state_t0 i -> prop))
   (sq: squash (forall h . pre h ==> post h))
-: Tot (stt_impl_t (cl cl0) (sem_weaken i pre post sq))
+: Tot (stt_impl_t (cl cl0) (sem_weaken (Ghost.reveal i) pre post sq))
 = fun kpre kpost out h k_success k_failure ->
-    let h' : Ghost.erased (state_t state_t0 ({i=i; p=post})) = Ghost.hide (Ghost.reveal h) in
+    let h' : Ghost.erased (state_t state_t0 ({i=Ghost.reveal i; p=post})) = Ghost.hide (Ghost.reveal h) in
     rewrite
       ((cl cl0).ll_state_match h out)
       ((cl cl0).ll_state_match h' out);
@@ -164,11 +164,11 @@ inline_for_extraction
 let impl_assert
   (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
   (cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
-  (i: state_i0)
+  (i: Ghost.erased state_i0)
   (p: (state_t0 i -> prop))
   (q: prop)
   (sq: squash (forall h . p h ==> q))
-: Tot (stt_impl_t (cl cl0) (sem_assert i p q sq))
+: Tot (stt_impl_t (cl cl0) (sem_assert (Ghost.reveal i) p q sq))
 = fun kpre kpost out h k_success k_failure ->
     assert (p h);
     k_success _ _ ()
@@ -186,7 +186,7 @@ let a_impl
   (a: action_t action_sem0 ret_t pre post)
 : Tot (stt_impl_t (cl cl0) (action_sem action_sem0 a))
 = match a with
-  | Act a ppre -> LowParse.Spec.Base.coerce _ (impl_act (a_impl0 a) ppre)
+  | Act a ppre -> LowParse.Spec.Base.coerce _ (impl_act #state_i0 #state_t0 #ll_state #ll_state_ptr #cl0 (Ghost.hide pre.i) (Ghost.hide post.i) (Ghost.hide (action_sem0 a))  (coerce _ (a_impl0 a)) ppre)
   | Weaken i post sq -> LowParse.Spec.Base.coerce _ (impl_weaken cl0 i.i i.p post sq)
   | Assert i q sq -> LowParse.Spec.Base.coerce _ (impl_assert cl0 i.i i.p q sq)
 
@@ -215,7 +215,7 @@ inline_for_extraction
 let with_ll_state_ptr
   (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
   (#cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
-  (i: state_i state_t0)
+  (i: Ghost.erased (state_i state_t0))
   (w: with_ll_state_ptr_t cl0 i.i)
 : Tot (with_ll_state_ptr_t (cl cl0) i)
 = fun l k -> 
@@ -235,7 +235,7 @@ inline_for_extraction
 let load_ll_state_ptr
   (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
   (#cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
-  (i: state_i state_t0)
+  (i: Ghost.erased (state_i state_t0))
   (w: load_ll_state_ptr_t cl0 i.i)
 : Tot (load_ll_state_ptr_t (cl cl0) i)
 = fun #gl p k ->
@@ -253,7 +253,7 @@ inline_for_extraction
 let store_ll_state_ptr
   (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
   (#cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
-  (i: state_i state_t0)
+  (i: Ghost.erased (state_i state_t0))
   (w: store_ll_state_ptr_t cl0 i.i)
 : Tot (store_ll_state_ptr_t (cl cl0) i)
 = fun #gl p l' ->
@@ -272,8 +272,8 @@ let ptr_cl
   (ptr_cl0: ll_state_ptr_ops cl0)
 : Tot (ll_state_ptr_ops (cl cl0))
 = {
-    with_ll_state_ptr = (fun i -> with_ll_state_ptr i (ptr_cl0.with_ll_state_ptr i.i));
-    load_ll_state_ptr = (fun i -> load_ll_state_ptr i (ptr_cl0.load_ll_state_ptr i.i));
+    with_ll_state_ptr = (fun (i: state_i state_t0) -> with_ll_state_ptr i (ptr_cl0.with_ll_state_ptr i.i));
+    load_ll_state_ptr = (fun (i: state_i state_t0) -> load_ll_state_ptr i (ptr_cl0.load_ll_state_ptr i.i));
     store_ll_state_ptr = (fun i -> store_ll_state_ptr i (ptr_cl0.store_ll_state_ptr i.i));
   }
 
@@ -282,8 +282,8 @@ let mk_ll_state
   (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
   (#cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
   (#vpre: vprop)
-  (#pre: state_i state_t0)
-  (h: state_t state_t0 pre)
+  (#pre: Ghost.erased (state_i state_t0))
+  (h: Ghost.erased (state_t state_t0 pre))
   (mk: mk_ll_state_t cl0 vpre #pre.i h)
 : Tot (mk_ll_state_t (cl cl0) vpre h)
 = fun k ->
@@ -299,21 +299,22 @@ let mk_ll_state0
   (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
   (#cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
   (#vpre: vprop)
-  (#pre: state_i0)
-  (#h: state_t0 pre)
-  (mk: mk_ll_state_t cl0 vpre h)
+  (#pre: Ghost.erased state_i0)
+  (#h: Ghost.erased (state_t0 pre))
+  (mk: mk_ll_state_t cl0 vpre #pre (Ghost.reveal h))
   (ppre: (state_t0 pre -> prop))
   (sq: squash (ppre h))
-: Tot (mk_ll_state_t (cl cl0) vpre #({i=pre; p=ppre}) h)
-= mk_ll_state h mk
+: Tot (mk_ll_state_t (cl cl0) vpre #({i=Ghost.reveal pre; p=ppre}) h)
+= let h' : Ghost.erased (state_t state_t0 ({i=Ghost.reveal pre; p=ppre})) = Ghost.hide (Ghost.reveal h) in
+  coerce _ (mk_ll_state #_ #_ #_ #_ #cl0 #vpre #({i = Ghost.reveal pre; p = ppre }) h' (coerce _ mk))
 
 inline_for_extraction
 let mk_ll_state_eq
   (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
   (#cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
   (#vpre: vprop)
-  (#pre: state_i0)
-  (#h: state_t0 pre)
-  (mk: mk_ll_state_t cl0 vpre h)
-: Tot (mk_ll_state_t (cl cl0) vpre #({i=pre; p=(fun h' -> h' == h)}) h)
-= mk_ll_state0 mk (fun h' -> h' == h) ()
+  (#pre: Ghost.erased state_i0)
+  (#h: Ghost.erased (state_t0 (Ghost.reveal pre)))
+  (mk: mk_ll_state_t cl0 vpre (Ghost.reveal h))
+: Tot (mk_ll_state_t (cl cl0) vpre #({i=Ghost.reveal pre; p=(fun h' -> h' == Ghost.reveal h)}) (Ghost.reveal h))
+= mk_ll_state0 mk (fun h' -> h' == Ghost.reveal h) ()

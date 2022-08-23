@@ -226,7 +226,7 @@ let parsed_size_none
   (None? (parsed_size p v) <==> (forall b . ~ (exactly_parses_on p v b)))
 = ()
 
-let parsed_size_some
+let parsed_size_some_intro
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -237,6 +237,19 @@ let parsed_size_some
   (ensures (parsed_size p v == Some (Seq.length b)))
 = let b' = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> exactly_parses_on p v b) in
   parse_injective p b' b
+
+let parsed_size_some_elim
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (v: t)
+: Ghost bytes
+  (requires (Some? (parsed_size p v)))
+  (ensures (fun b ->
+    exactly_parses_on p v b /\
+    parsed_size p v == Some (Seq.length b)
+  ))
+= FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> exactly_parses_on p v b)
 
 let type_of_state_i_item
   (#scalar_t: Type)
@@ -591,6 +604,15 @@ let state_ge
 : Tot prop
 = (size_of_state_t0 p_of_s s1 `option_nat_ge` size_of_state_t0 p_of_s s2) == true
 
+let ll_state_shape'
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (i: state_i0 type_of_scalar)
+  (#a0: AP.array byte)
+  (ls: ll_state' a0)
+: Tot prop
+= ll_state'_length ls == List.Tot.length i
+
 let ll_state_shape
   (#scalar_t: Type)
   (type_of_scalar: (scalar_t -> Type))
@@ -598,7 +620,7 @@ let ll_state_shape
   (i: state_i0 type_of_scalar)
   (l: ll_state a0)
 : Tot prop
-= ll_state'_length l.ll_s == List.Tot.length i
+= ll_state_shape' i l.ll_s
 
 let rec ll_state_match'_shape
   (#opened: _)
@@ -614,7 +636,7 @@ let rec ll_state_match'_shape
     (ll_state_match' p_of_s s b a ls)
     (fun _ -> ll_state_match' p_of_s s b a ls)
     True
-    (fun _ -> ll_state'_length ls == List.Tot.length i)
+    (fun _ -> ll_state_shape' i ls)
     (decreases ls)
 = match ls with
   | LNil vb _ ->
@@ -692,7 +714,7 @@ let rec wipe_ll_state_match' // necessary in case of failure. This also explains
       AP.join b b'
     end
 
-let wipe_ll_state_match
+let wipe_ll_state_match0
   (#opened: _)
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
@@ -765,6 +787,67 @@ let rec ll_state_pts_to'
     | x :: l' -> R.pts_to (fstx x) full_perm sz1 `star` R.pts_to (sndx x) full_perm b' `star` ll_state_pts_to' l' ls'
     end
 
+let elim_ll_state_pts_to'_nil
+  (#opened: _)
+  (#a: AP.array byte)
+  (lsp: ll_state_ptr')
+  (ls: ll_state' a)
+: STGhost unit opened
+    (ll_state_pts_to' lsp ls)
+    (fun _ -> emp)
+    (LNil? ls \/ Nil? lsp)
+    (fun _ -> LNil? ls /\ Nil? lsp)
+= if LNil? ls
+  then begin
+    rewrite (ll_state_pts_to' lsp ls) (pure (Nil? lsp == true));
+    let _ = gen_elim () in
+    ()
+  end else
+    match lsp with
+    | [] ->
+      rewrite (ll_state_pts_to' lsp ls) (pure False);
+      let _ = gen_elim () in
+      ()
+    | _ ->
+      assert False;
+      rewrite (ll_state_pts_to' lsp ls) emp
+
+let elim_ll_state_pts_to'_cons
+  (#opened: _)
+  (#a: AP.array byte)
+  (lsp: ll_state_ptr')
+  (ls: ll_state' a)
+: STGhost (squash (LCons? ls /\ Cons? lsp)) opened
+    (ll_state_pts_to' lsp ls)
+    (fun _ -> R.pts_to (fstx (list_hd lsp)) full_perm (LCons?.sz1 ls) `star` R.pts_to (sndx (list_hd lsp)) full_perm (LCons?.b2 ls) `star` ll_state_pts_to' (list_tl lsp) (LCons?.s2 ls))
+    (LCons? ls \/ Cons? lsp)
+    (fun _ -> True)
+= if LNil? ls
+  then begin
+    rewrite
+      (ll_state_pts_to' lsp ls)
+      (pure (Nil? lsp == true));
+    let _ = gen_elim () in
+    assert False;
+    rewrite
+      emp
+      (R.pts_to (fstx (list_hd lsp)) full_perm (LCons?.sz1 ls) `star` R.pts_to (sndx (list_hd lsp)) full_perm (LCons?.b2 ls) `star` ll_state_pts_to' (list_tl lsp) (LCons?.s2 ls))
+  end else
+    match lsp with
+    | [] ->
+      rewrite
+        (ll_state_pts_to' lsp ls)
+        (pure False);
+      let _ = gen_elim () in
+      assert False;
+      rewrite
+        emp
+        (R.pts_to (fstx (list_hd lsp)) full_perm (LCons?.sz1 ls) `star` R.pts_to (sndx (list_hd lsp)) full_perm (LCons?.b2 ls) `star` ll_state_pts_to' (list_tl lsp) (LCons?.s2 ls))
+    | _ ->
+      rewrite
+        (ll_state_pts_to' lsp ls)
+        (R.pts_to (fstx (list_hd lsp)) full_perm (LCons?.sz1 ls) `star` R.pts_to (sndx (list_hd lsp)) full_perm (LCons?.b2 ls) `star` ll_state_pts_to' (list_tl lsp) (LCons?.s2 ls))
+
 [@@__reduce__]
 let ll_state_pts_to0
   (a: AP.array byte)
@@ -826,6 +909,27 @@ let cl
   (a: AP.array byte)
 : Tot (low_level_state (state_i type_of_scalar) (state_t type_of_scalar) (ll_state a) ll_state_ptr)
 = H.cl (cl0 p_of_s b b_sz a)
+
+let wipe_ll_state_match
+  (#opened: _)
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (#i: state_i type_of_scalar)
+  (s: state_t type_of_scalar i)
+  (ls: ll_state a)
+: STGhost (AP.v byte) opened
+    ((cl p_of_s b b_sz a).ll_state_match s ls)
+    (fun vb -> AP.arrayptr b vb `star` exists_ (R.pts_to b_sz full_perm))
+    True
+    (fun vb -> AP.array_of vb == a)
+= rewrite
+    ((cl p_of_s b b_sz a).ll_state_match s ls)
+    (ll_state_match p_of_s b b_sz a #i.i s ls);
+  wipe_ll_state_match0 p_of_s b b_sz a _ _
 
 let initial_index0
   (#scalar_t: Type)
@@ -1008,4 +1112,312 @@ let elim_ll_state_match_final
   return res
 
 #pop-options
+
+inline_for_extraction
+let with_ll_state_ptr'_t
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (i: state_i0 type_of_scalar)
+: Tot Type
+= (a: AP.array byte) ->
+  (l: ll_state' a) ->
+  (#kpre: vprop) ->
+  (#t: Type) ->
+  (#kpost: (t -> vprop)) ->
+  (k: (
+    (p: ll_state_ptr') ->
+    STT t
+      (kpre `star` ll_state_pts_to' p l)
+      (fun r -> kpost r `star` exists_ (fun a' -> exists_ (ll_state_pts_to' #a' p)))
+  )) ->
+  STF t kpre kpost (ll_state_shape' i l) (fun _ -> True)
+
+inline_for_extraction
+let with_ll_state_ptr0
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (i: Ghost.erased (state_i0 type_of_scalar))
+  (w: with_ll_state_ptr'_t i)
+: Tot (with_ll_state_ptr_t (cl0 p_of_s b b_sz a) i)
+= fun l k ->
+    w _ l.ll_s (fun p' ->
+      with_local l.ll_b (fun pb ->
+        [@inline_let]
+        let p : ll_state_ptr = (pb, p') in
+        rewrite
+          (R.pts_to pb full_perm _ `star` ll_state_pts_to' _ _)
+          (ll_state_pts_to a p l);
+        let res = k _ in
+        let l' = elim_exists () in
+        rewrite
+          (ll_state_pts_to a p l')
+          (ll_state_pts_to0 a p l');
+        vpattern_rewrite (fun b -> R.pts_to b _ _) pb;
+        vpattern_rewrite (fun p' -> ll_state_pts_to' p' _) p';
+        return res
+      )
+    )
+
+inline_for_extraction
+let with_ll_state_ptr'_nil
+  (#scalar_t: Type)
+  (type_of_scalar: (scalar_t -> Type))
+: Tot (with_ll_state_ptr'_t #_ #type_of_scalar [])
+= fun a l k ->
+    [@inline_let]
+    let pl : ll_state_ptr' = [] in
+    noop ();
+    rewrite (pure (Nil? pl == true)) (ll_state_pts_to' pl l);
+    let res = k _ in
+    let _ = gen_elim () in
+    elim_ll_state_pts_to'_nil _ _;
+    return res
+
+inline_for_extraction
+let with_ll_state_ptr'_cons
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (s: Ghost.erased (state_i_item type_of_scalar))
+  (s': Ghost.erased (state_i0 type_of_scalar))
+  (w: with_ll_state_ptr'_t (Ghost.reveal s'))
+: Tot (with_ll_state_ptr'_t (Ghost.reveal s :: Ghost.reveal s'))
+= fun a l k ->
+    with_local (LCons?.sz1 l) (fun bsz ->
+    with_local (LCons?.b2 l) (fun bb ->
+    w _ (LCons?.s2 l) (fun bs' ->
+      [@inline_let]
+      let bs : ll_state_ptr' = (bsz, bb) :: bs' in
+      rewrite (R.pts_to bsz _ _ `star` R.pts_to bb _ _ `star` ll_state_pts_to' _ _) (ll_state_pts_to' bs l);
+      let res = k _ in
+      let a' = elim_exists () in
+      let l' = elim_exists () in
+      let _ = elim_ll_state_pts_to'_cons _ _ in
+      vpattern_rewrite (fun x -> R.pts_to #SZ.size_t x _ _) bsz;
+      vpattern_rewrite (fun x -> R.pts_to #byte_array x _ _) bb;
+      vpattern_rewrite (fun x -> ll_state_pts_to' x _) bs';
+      return res
+    )))
+
+[@@specialize]
+let rec with_ll_state_ptr'
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (s: state_i0 type_of_scalar)
+: Tot (with_ll_state_ptr'_t s)
+  (decreases s)
+= match s with
+  | [] -> with_ll_state_ptr'_nil type_of_scalar
+  | s :: s' -> with_ll_state_ptr'_cons s s' (with_ll_state_ptr' s')
+
+inline_for_extraction
+let load_ll_state_ptr'_t
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (i: state_i0 type_of_scalar)
+: Tot Type
+=
+  (#a: AP.array byte) ->
+  (#gl: Ghost.erased (ll_state' a)) ->
+  (p: ll_state_ptr') ->
+  (#kpre: vprop) ->
+  (#t: Type) ->
+  (#kpost: (t -> vprop)) ->
+  (k: (
+    (l: ll_state' a) ->
+    ST t
+       (kpre `star` ll_state_pts_to' p l)
+       kpost
+       (l == Ghost.reveal gl)
+       (fun _ -> True)
+  )) ->
+  STF t
+    (kpre `star` ll_state_pts_to' p gl)
+    kpost
+    (ll_state_shape' i gl)
+    (fun _ -> True)
+
+inline_for_extraction
+let load_ll_state_ptr0
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (i: Ghost.erased (state_i0 type_of_scalar))
+  (w: load_ll_state_ptr'_t i)
+: Tot (load_ll_state_ptr_t (cl0 p_of_s b b_sz a) i)
+= fun #gl p k ->
+  rewrite
+    ((cl0 p_of_s b b_sz a).ll_state_pts_to p gl)
+    (ll_state_pts_to0 a p gl);
+  let b1 = read_replace (fstx p) in
+  w (sndx p) (fun l' ->
+    [@inline_let]
+    let l : ll_state a = {
+      ll_free = gl.ll_free;
+      ll_b = b1;
+      ll_a = gl.ll_a;
+      ll_s = l';
+      ll_prf = ();
+    }
+    in
+    rewrite
+      (R.pts_to _ _ _ `star` ll_state_pts_to' _ _)
+      ((cl0 p_of_s b b_sz a).ll_state_pts_to p l);
+    k _
+  )
+
+inline_for_extraction
+let load_ll_state_ptr'_nil
+  (#scalar_t: Type)
+  (type_of_scalar: (scalar_t -> Type))
+: Tot (load_ll_state_ptr'_t #_ #type_of_scalar [])
+= fun #a #gl p k ->
+    let _ = elim_ll_state_pts_to'_nil _ _ in
+    [@inline_let]
+    let l : ll_state' a = LNil (LNil?.a gl) () in
+    rewrite
+      (pure (Nil? p == true))
+      (ll_state_pts_to' p l);
+    k _
+
+inline_for_extraction
+let load_ll_state_ptr'_cons
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (s: Ghost.erased (state_i_item type_of_scalar))
+  (s': Ghost.erased (state_i0 type_of_scalar))
+  (w: load_ll_state_ptr'_t (Ghost.reveal s'))
+: Tot (load_ll_state_ptr'_t (Ghost.reveal s :: Ghost.reveal s'))
+= fun #a #gl p k ->
+    let _ = elim_ll_state_pts_to'_cons _ _ in
+    let sz1 = R.read #SZ.size_t _ in
+    let b2 = R.read #byte_array _ in
+    w _ (fun l' ->
+      [@inline_let]
+      let l : ll_state' a = LCons a (LCons?.a1 gl) sz1 b2 (LCons?.a2 gl) () l' in
+      rewrite
+        (R.pts_to #SZ.size_t _ _ _ `star` R.pts_to #byte_array _ _ _ `star` ll_state_pts_to' _ _)
+        (ll_state_pts_to' p l);
+      k _
+    )
+
+[@@specialize]
+let rec load_ll_state_ptr'
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (s: state_i0 type_of_scalar)
+: Tot (load_ll_state_ptr'_t s)
+  (decreases s)
+= match s with
+  | [] -> load_ll_state_ptr'_nil type_of_scalar
+  | s :: s' -> load_ll_state_ptr'_cons s s' (load_ll_state_ptr' s')
+
+inline_for_extraction
+let store_ll_state_ptr'_t
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (i: state_i0 type_of_scalar)
+: Tot Type
+= (#a: AP.array byte) ->
+  (#gl: Ghost.erased (ll_state' a)) ->
+  (p: ll_state_ptr') ->
+  (#a': AP.array byte) ->
+  (l': ll_state' a') ->
+  ST unit
+     (ll_state_pts_to' p gl)
+     (fun _ -> ll_state_pts_to' p l')
+     (ll_state_shape' i gl /\ ll_state_shape' i l')
+     (fun _ -> True)
+
+inline_for_extraction
+let store_ll_state_ptr0
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (i: Ghost.erased (state_i0 type_of_scalar))
+  (w: store_ll_state_ptr'_t i)
+: Tot (store_ll_state_ptr_t (cl0 p_of_s b b_sz a) i)
+= fun #gl p l ->
+    rewrite
+      ((cl0 p_of_s b b_sz a).ll_state_pts_to p gl)
+      (ll_state_pts_to0 a p gl);
+    R.write _ l.ll_b;
+    w _ l.ll_s;
+    rewrite
+      (R.pts_to _ _ _ `star` ll_state_pts_to' _ _)
+      ((cl0 p_of_s b b_sz a).ll_state_pts_to p l)
+
+inline_for_extraction
+let store_ll_state_ptr'_nil
+  (#scalar_t: Type)
+  (type_of_scalar: (scalar_t -> Type))
+: Tot (store_ll_state_ptr'_t #_ #type_of_scalar [])
+= fun #a #gl p l ->
+    let _ = elim_ll_state_pts_to'_nil _ _ in
+    rewrite
+      (pure (Nil? p == true))
+      (ll_state_pts_to' p l)
+
+inline_for_extraction
+let store_ll_state_ptr'_cons
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (s: Ghost.erased (state_i_item type_of_scalar))
+  (s': Ghost.erased (state_i0 type_of_scalar))
+  (w: store_ll_state_ptr'_t (Ghost.reveal s'))
+: Tot (store_ll_state_ptr'_t (Ghost.reveal s :: Ghost.reveal s'))
+= fun #a #gl p l ->
+    let _ = elim_ll_state_pts_to'_cons _ _ in
+    R.write _ (LCons?.sz1 l);
+    R.write _ (LCons?.b2 l);
+    w _ (LCons?.s2 l);
+    rewrite
+      (R.pts_to #SZ.size_t _ _ _ `star` R.pts_to #byte_array _ _ _ `star` ll_state_pts_to' _ _)
+      (ll_state_pts_to' p l)
+
+[@@specialize]
+let rec store_ll_state_ptr'
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (s: state_i0 type_of_scalar)
+: Tot (store_ll_state_ptr'_t s)
+  (decreases s)
+= match s with
+  | [] -> store_ll_state_ptr'_nil type_of_scalar
+  | s :: s' -> store_ll_state_ptr'_cons s s' (store_ll_state_ptr' s')
+
+[@@specialize]
+let ptr_cl0
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+: Tot (ll_state_ptr_ops (cl0 p_of_s b b_sz a))
+= {
+    with_ll_state_ptr = (fun (i: state_i0 type_of_scalar) -> with_ll_state_ptr0 p_of_s b b_sz a i (with_ll_state_ptr' i));
+    load_ll_state_ptr = (fun i -> load_ll_state_ptr0 p_of_s b b_sz a i (load_ll_state_ptr' i));
+    store_ll_state_ptr = (fun i -> store_ll_state_ptr0 p_of_s b b_sz a i (store_ll_state_ptr' i));
+  }
+
+[@@specialize]
+let ptr_cl
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+: Tot (ll_state_ptr_ops (cl p_of_s b b_sz a))
+= H.ptr_cl (ptr_cl0 p_of_s b b_sz a)
 
