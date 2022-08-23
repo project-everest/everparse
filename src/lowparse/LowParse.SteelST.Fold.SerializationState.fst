@@ -1808,3 +1808,50 @@ let impl_write
     end
 
 #pop-options
+
+#push-options "--z3rlimit 16 --z3cliopt smt.arith.nl=false"
+#restart-solver
+
+inline_for_extraction
+let impl_nil
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: Ghost.erased (state_i0 type_of_scalar))
+  (t: typ type_of_scalar)
+: Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_nil0 s t))
+= fun kpre kpost out h k_success k_failure ->
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParseList t :: s)) = get_return_state (spec_nil0 s t) h in
+    rewrite
+      ((cl0 p_of_s b b_sz a).ll_state_match h out)
+      (ll_state_match0 p_of_s b b_sz a h out);
+    let _ = gen_elim () in
+    let sz = R.read b_sz in
+    let bw = AP.split b sz in
+    let _ = gen_elim () in
+    let _ = intro_nil (parser_of_typ p_of_s t) bw in
+    let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParseList t)) in
+    let vbl' = vpattern_replace (AP.arrayptr b) in
+    [@inline_let]
+    let out' : ll_state a = {
+      ll_free = vbl';
+      ll_b = bw;
+      ll_a = AP.merge (array_of' vbw) out.ll_a;
+      ll_s = LCons _ (array_of' vbw) SZ.zero_size out.ll_b out.ll_a () out.ll_s;
+      ll_prf = ();
+    }
+    in
+    noop ();
+    rewrite
+      (ll_state_item_match0 p_of_s (VParseList t []) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _)
+      (ll_state_match' p_of_s h' out'.ll_b out'.ll_a out'.ll_s);
+    vpattern_rewrite (AP.arrayptr b) out'.ll_free;
+    rewrite
+      (ll_state_match0 p_of_s b b_sz a h' out')
+    ((cl0 p_of_s b b_sz a).ll_state_match h' out');
+    k_success out' h' ()
+
+#pop-options
