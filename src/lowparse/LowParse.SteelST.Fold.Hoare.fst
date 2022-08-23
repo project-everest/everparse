@@ -318,3 +318,14 @@ let mk_ll_state_eq
   (mk: mk_ll_state_t cl0 vpre (Ghost.reveal h))
 : Tot (mk_ll_state_t (cl cl0) vpre #({i=Ghost.reveal pre; p=(fun h' -> h' == Ghost.reveal h)}) (Ghost.reveal h))
 = mk_ll_state0 mk (fun h' -> h' == Ghost.reveal h) ()
+
+let no_fail
+  (#state_i0: Type) (#state_t0: (state_i0 -> Type)) (#ll_state: _) (#ll_state_ptr: _)
+  (#cl0: low_level_state state_i0 state_t0 ll_state ll_state_ptr)
+  (no_fail0: no_ll_state_failure_t cl0)
+: Tot (no_ll_state_failure_t (cl cl0))
+= fun h ->
+    rewrite
+      ((cl cl0).ll_state_failure h)
+      (cl0.ll_state_failure h);
+    no_fail0 _

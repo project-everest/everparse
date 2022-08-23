@@ -152,3 +152,9 @@ let ptr_cl
     load_ll_state_ptr = load_ll_state_ptr r;
     store_ll_state_ptr = store_ll_state_ptr r;
   }
+
+let no_fail (#t: Type) (r: R.ref t) : no_ll_state_failure_t (cl r) =
+  fun h ->
+    rewrite ((cl r).ll_state_failure h) (pure False);
+    let _ = gen_elim () in
+    ()

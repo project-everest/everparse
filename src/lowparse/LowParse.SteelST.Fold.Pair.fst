@@ -74,6 +74,21 @@ let ll_state_failure_preserved
     )))
 
 [@@__reduce__]
+let ll_state_failure_body
+  (#state_i1: Type) (#state_t1: state_i1 -> Type) (#ll_state1: Type) (#ll_state_ptr1: Type)
+  (cl1: low_level_state state_i1 state_t1 ll_state1 ll_state_ptr1)
+  (#state_i2: Type) (#state_t2: state_i2 -> Type) (#ll_state2: Type) (#ll_state_ptr2: Type)
+  (cl2: low_level_state state_i2 state_t2 ll_state2 ll_state_ptr2)
+  (#i: (state_i1 & state_i2))
+  (h: state_t state_t1 state_t2 i)
+  (fail: bool)
+: Tot vprop
+=   (choose_cl cl1 cl2 fail).ll_state_failure 
+      #(curry_boole_proj i fail)
+      (curry_boole_proj h fail) `star`
+    ll_state_failure_preserved cl1 cl2 fail
+
+[@@__reduce__]
 let ll_state_failure
   (#state_i1: Type) (#state_t1: state_i1 -> Type) (#ll_state1: Type) (#ll_state_ptr1: Type)
   (cl1: low_level_state state_i1 state_t1 ll_state1 ll_state_ptr1)
@@ -83,10 +98,7 @@ let ll_state_failure
   (h: state_t state_t1 state_t2 i)
 : Tot vprop
 = exists_ (fun (fail: bool) ->
-    (choose_cl cl1 cl2 fail).ll_state_failure 
-      #(curry_boole_proj i fail)
-      (curry_boole_proj h fail) `star`
-    ll_state_failure_preserved cl1 cl2 fail
+    ll_state_failure_body cl1 cl2 h fail
   )
 
 let intro_ll_state_failure
@@ -505,3 +517,64 @@ let mk_ll_state
         ((cl cl1 cl2).ll_state_match (h1, h2) (out1, out2));
       k _
     ))
+
+let choose_no_fail
+  (#state_i1: Type) (#state_t1: state_i1 -> Type) (#ll_state1: Type) (#ll_state_ptr1: Type)
+  (#cl1: low_level_state state_i1 state_t1 ll_state1 ll_state_ptr1)
+  (no_fail1: no_ll_state_failure_t cl1)
+  (#state_i2: Type) (#state_t2: state_i2 -> Type) (#ll_state2: Type) (#ll_state_ptr2: Type)
+  (#cl2: low_level_state state_i2 state_t2 ll_state2 ll_state_ptr2)
+  (no_fail2: no_ll_state_failure_t cl2)
+  (b: bool)
+: Tot (no_ll_state_failure_t (choose_cl cl1 cl2 b))
+= if b
+  then coerce _ no_fail1
+  else coerce _ no_fail2
+
+let no_fail
+  (#state_i1: Type) (#state_t1: state_i1 -> Type) (#ll_state1: Type) (#ll_state_ptr1: Type)
+  (#cl1: low_level_state state_i1 state_t1 ll_state1 ll_state_ptr1)
+  (no_fail1: no_ll_state_failure_t cl1)
+  (#state_i2: Type) (#state_t2: state_i2 -> Type) (#ll_state2: Type) (#ll_state_ptr2: Type)
+  (#cl2: low_level_state state_i2 state_t2 ll_state2 ll_state_ptr2)
+  (no_fail2: no_ll_state_failure_t cl2)
+: Tot (no_ll_state_failure_t (cl cl1 cl2))
+= fun #i h ->
+  rewrite
+    ((cl cl1 cl2).ll_state_failure h)
+    (ll_state_failure cl1 cl2 h);
+  let fail = elim_exists () in
+  choose_no_fail no_fail1 no_fail2 _ _;
+  rewrite // by contradiction
+    (ll_state_failure_preserved cl1 cl2 fail)
+    emp
+
+let ll_state_failure_elim_no_fail
+  (#opened: _)
+  (#state_i1: Type) (#state_t1: state_i1 -> Type) (#ll_state1: Type) (#ll_state_ptr1: Type)
+  (cl1: low_level_state state_i1 state_t1 ll_state1 ll_state_ptr1)
+  (#state_i2: Type) (#state_t2: state_i2 -> Type) (#ll_state2: Type) (#ll_state_ptr2: Type)
+  (cl2: low_level_state state_i2 state_t2 ll_state2 ll_state_ptr2)
+  (b: bool)
+  (no_fail: no_ll_state_failure_t (choose_cl cl1 cl2 b))
+  (#i: _)
+  (h: state_t state_t1 state_t2 i)
+: STGhostT unit opened
+    ((cl cl1 cl2).ll_state_failure h)
+    (fun _ -> ll_state_failure_body cl1 cl2 h (notp b))
+=
+  rewrite
+    ((cl cl1 cl2).ll_state_failure h)
+    (ll_state_failure cl1 cl2 h);
+  let fail = elim_exists () in
+  if Ghost.reveal fail = b
+  then begin
+    coerce (no_ll_state_failure_t (choose_cl cl1 cl2 fail)) no_fail _;
+    rewrite // by contradiction
+      (ll_state_failure_preserved cl1 cl2 fail)
+      (ll_state_failure_body cl1 cl2 h (notp b))
+  end else begin
+    rewrite
+      (ll_state_failure_body cl1 cl2 h fail)
+      (ll_state_failure_body cl1 cl2 h (notp b))
+  end

@@ -2669,3 +2669,131 @@ let extract_impl_fold
     (aparse p bin vbin)
     (fun kpre kpost -> fi kpre kpost #vbin bin)
     r
+
+let no_ll_state_failure_t
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+: Tot Type
+= (#opened: _) ->
+  (#i: state_i) ->
+  (h: state_t i) ->
+  STGhost unit opened
+    (cl.ll_state_failure h)
+    (fun _ -> emp)
+    (True)
+    (fun _ -> False)
+
+inline_for_extraction
+let extract_impl_stt'_no_failure
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (no_fail: no_ll_state_failure_t cl)
+  (#pre #post: state_i)
+  (#rett: Type)
+  (f: Ghost.erased (stt state_t rett pre post))
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+  (kpre0: vprop)
+  (fi: (kpre: vprop) -> (kpost: vprop) -> stt_impl_t' cl f (kpre0 `star` kpre) kpost)
+  (dummy: rett) // because Steel doesn't have uninitialized references yet
+: STT rett
+    (vpre `star` kpre0)
+    (fun res -> 
+      exists_ (fun (h': state_t post) ->
+        exists_ (cl.ll_state_match h') `star`
+        kpre0 `star`
+        pure (Ghost.reveal f (Ghost.reveal h) == (res, h'))
+    ))
+= mk (fun out ->
+    with_local dummy (fun bres ->
+      fi
+        (exists_ (R.pts_to bres full_perm))
+        (kpre0 `star`
+          exists_ (fun res -> exists_ (fun (h': state_t post) ->
+            R.pts_to bres full_perm res `star`
+            exists_ (cl.ll_state_match h') `star`
+            pure (Ghost.reveal f (Ghost.reveal h) == (res, h'))
+        )))
+        out
+        h
+        (fun out' h' v ->
+          let _ = gen_elim () in
+          R.write bres v;
+          noop ()
+        )
+        (fun h' _ ->
+          no_fail _;
+          rewrite // by contradiction
+            (exists_ (R.pts_to bres full_perm))
+            (exists_ (fun res -> exists_ (fun (h': state_t post) ->
+              R.pts_to bres full_perm res `star`
+              exists_ (cl.ll_state_match h') `star`
+              pure (Ghost.reveal f (Ghost.reveal h) == (res, h'))
+            )))
+        );
+      let _ = gen_elim () in
+      let res = R.read bres in
+      return res
+    )
+  )
+
+inline_for_extraction
+let extract_impl_stt_no_failure
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (no_fail: no_ll_state_failure_t cl)
+  (#pre #post: state_i)
+  (#t: Type)
+  (#f: Ghost.erased (stt state_t t pre post))
+  (fi: stt_impl_t cl f)
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+  (dummy: t) // because Steel doesn't have uninitialized references yet
+: STT t
+    vpre
+    (fun res -> 
+      exists_ (fun (h': state_t post) ->
+        exists_ (cl.ll_state_match h') `star`
+        pure (Ghost.reveal f (Ghost.reveal h) == (res, h'))
+    ))
+= let res = extract_impl_stt'_no_failure no_fail f mk emp fi dummy in
+  let _ = gen_elim () in
+  return res
+
+inline_for_extraction
+let extract_impl_fold_no_failure
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (no_fail: no_ll_state_failure_t cl)
+  (#pre #post: state_i)
+  (#t: Type)
+  (#rett: Type)
+  (#f: Ghost.erased (fold_t state_t t rett pre post))
+  (#k: parser_kind)
+  (#p: parser k t)
+  (fi: fold_impl_t cl p f)
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+  (vbin: v k t)
+  (bin: byte_array)
+  (dummy: rett)
+: STT rett
+    (vpre `star` aparse p bin vbin)
+    (fun res -> 
+      aparse p bin vbin `star`
+      exists_ (fun (h': state_t post) ->
+        exists_ (cl.ll_state_match h') `star`
+        pure (Ghost.reveal f vbin.contents (Ghost.reveal h) == (res, h'))
+    ))
+= let res = extract_impl_stt'_no_failure no_fail
+    (Ghost.reveal f vbin.contents)
+    mk
+    (aparse p bin vbin)
+    (fun kpre kpost -> fi kpre kpost #vbin bin)
+    dummy
+  in
+  let _ = gen_elim () in
+  return res

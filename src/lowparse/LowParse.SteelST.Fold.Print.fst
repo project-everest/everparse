@@ -183,3 +183,9 @@ let elim_extract_impl_post
     let _ = gen_elim () in
     vpattern_replace_erased (R.pts_to r full_perm)
   end
+
+let no_fail : no_ll_state_failure_t cl =
+  fun h ->
+    rewrite (cl.ll_state_failure h) (pure False);
+    let _ = gen_elim () in
+    ()

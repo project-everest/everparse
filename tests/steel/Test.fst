@@ -160,17 +160,46 @@ module T = FStar.Tactics
 inline_for_extraction
 noextract
 [@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
-let specialize_impl_test_pretty_print : G.fold_impl_t _ _ (G.sem P.action_sem prog_test_pretty_print) = G.impl p_of_s P.a_cl P.ptr_cl prog_test_pretty_print
+let specialize_impl_test_pretty_print0 =
+  G.impl p_of_s P.a_cl P.ptr_cl prog_test_pretty_print
+
+noextract
+let typ_of_test_pretty_print =
+  G.typ_of_prog prog_test_pretty_print
+
+noextract
+let type_of_test_pretty_print =
+  G.type_of_typ (G.typ_of_prog prog_test_pretty_print)
+
+noextract
+let parser_of_test_pretty_print : parser G.pkind type_of_test_pretty_print =
+  G.parser_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)
+
+noextract
+let sem_of_test_pretty_print : G.fold_t P.state_t type_of_test_pretty_print unit () () =
+  G.sem P.action_sem prog_test_pretty_print
+
+inline_for_extraction
+noextract
+let specialize_impl_test_pretty_print : G.fold_impl_t P.cl parser_of_test_pretty_print sem_of_test_pretty_print =
+  specialize_impl_test_pretty_print0
 
 let test_pretty_print =
-  G.extract_impl_fold_unit
+  G.extract_impl_fold_no_failure
+    P.no_fail
     specialize_impl_test_pretty_print
     P.mk_ll_state
 
 [@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
-let validate_test_pretty_print : validator (G.parser_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)) = G.validator_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)
+inline_for_extraction
+noextract
+let validate_test_pretty_print0 =
+  G.validator_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)
 
-#push-options "--z3rlimit 16"
+let validate_test_pretty_print : validator parser_of_test_pretty_print =
+  validate_test_pretty_print0
+
+#push-options "--z3rlimit 64"
 #restart-solver
 
 let full_test_pretty_print
@@ -186,10 +215,11 @@ let full_test_pretty_print
     let err = read_replace perr in
     if err = 0ul
     then begin
-      let _ = ghost_peek_strong (G.parser_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)) b in
+      let _ = ghost_peek_strong parser_of_test_pretty_print b in
       let _ = gen_elim () in
-      let _ = test_pretty_print _ b in
-      P.elim_extract_impl_unit_post _ _ _;
+      let _ = test_pretty_print _ b () in
+      let _ = gen_elim () in
+      rewrite (P.cl.ll_state_match _ _) emp;
       unpeek_strong b _ _
     end else begin
       Steel.ST.Printf.print_string "invalid data"
