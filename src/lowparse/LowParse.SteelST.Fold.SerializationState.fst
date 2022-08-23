@@ -1809,6 +1809,18 @@ let impl_write
 
 #pop-options
 
+let nil0_inc
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: state_i0 type_of_scalar)
+  (t: typ type_of_scalar)
+: Tot (stt_state_inc (cl0 p_of_s b b_sz a) (spec_nil0 s t))
+= fun _ -> ()
+
 #push-options "--z3rlimit 16 --z3cliopt smt.arith.nl=false"
 #restart-solver
 
