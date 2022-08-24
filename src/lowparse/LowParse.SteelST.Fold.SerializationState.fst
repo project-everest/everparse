@@ -2378,3 +2378,113 @@ let impl_list
     end
 
 #pop-options
+
+let choice_inc
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: state_i0 type_of_scalar)
+  (sc: scalar_t)
+  (t: typ type_of_scalar)
+  (ppre: (state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s) -> prop))
+  (t': (type_of_scalar sc -> typ type_of_scalar))
+  (sq: squash (forall (h: state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s)) . ppre h ==> t == t' (VParseValue?.v (SCons?.s h)))) // user proof obligation!
+: Tot (stt_state_inc (cl p_of_s b b_sz a) (spec_choice s sc t ppre t' sq))
+= fun h ->
+  let SCons (VParseValue _ v1) (SCons (VParseValue _ v2) _) = h in
+  let w = mk_choice_value sc v1 t' v2 in
+  match parsed_size (weaken default_parser_kind (parser_of_typ p_of_s (TChoice sc t'))) w with
+  | None -> ()
+  | Some _ ->
+    let b = parsed_size_some_elim (weaken default_parser_kind (parser_of_typ p_of_s (TChoice sc t'))) w in
+    assert_norm (parser_of_typ p_of_s (TChoice sc t') == weaken pkind (parse_dtuple2 (p_of_s sc).scalar_parser #_ #(type_of_payload' sc t') (fun x -> parser_of_typ p_of_s (t' x))));
+    parse_dtuple2_eq
+      (p_of_s sc).scalar_parser
+      #_ #(type_of_payload' sc t')
+      (fun x -> parser_of_typ p_of_s (t' x))
+      b;
+    let Some (_, len1) = parse (p_of_s sc).scalar_parser b in
+    let b1 = Seq.slice b 0 len1 in
+    let b2 = Seq.slice b len1 (Seq.length b) in
+    parse_strong_prefix (p_of_s sc).scalar_parser b b1;
+    parsed_size_some_intro (weaken default_parser_kind (p_of_s sc).scalar_parser) v1 b1;
+    let Some _ = parse (parser_of_typ p_of_s (t' v1)) b2 in // FIXME: WHY WHY WHY do I need to bring this into SMT context?
+    parsed_size_some_intro (weaken default_parser_kind (parser_of_typ p_of_s t)) v2 b2
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+inline_for_extraction
+let impl_choice
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: state_i0 type_of_scalar)
+  (sc: scalar_t)
+  (t: typ type_of_scalar)
+  (ppre: (state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s) -> prop))
+  (t': (type_of_scalar sc -> typ type_of_scalar))
+  (sq: squash (forall (h: state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s)) . ppre h ==> t == t' (VParseValue?.v (SCons?.s h)))) // user proof obligation!
+: Tot (stt_impl_t (cl p_of_s b b_sz a) (spec_choice s sc t ppre t' sq))
+= fun kpre kpost out (h: Ghost.erased (state_t type_of_scalar ({i = IParseValue (TScalar sc) :: IParseValue t :: s; p = ppre}))) k_success k_failure ->
+    let h' : Ghost.erased (state_t type_of_scalar ({ i = IParseValue (TChoice sc t') :: s; p = spec_choice_post s sc t ppre t'})) =
+      get_return_state (spec_choice s sc t ppre t' sq) h
+    in
+    rewrite
+      ((cl p_of_s b b_sz a).ll_state_match h out)
+      (ll_state_match0 p_of_s b b_sz a h out);
+    let _ = gen_elim () in
+    let _ = elim_ll_state_match'_cons p_of_s _ _ _ _ _ in
+    rewrite
+      (ll_state_item_match p_of_s _ _ _)
+      (ll_state_item_match0 p_of_s (SCons?.s h) out.ll_b (LCons?.a1 out.ll_s));
+    let _ = gen_elim () in
+    let _ = rewrite_aparse _ (p_of_s sc).scalar_parser in
+    let _ = elim_ll_state_match'_cons p_of_s _ _ _ _ _ in
+    rewrite
+      (ll_state_item_match p_of_s _ _ _)
+      (ll_state_item_match0 p_of_s (SCons?.s (SCons?.s' h)) (LCons?.b2 out.ll_s) (LCons?.a1 (LCons?.s2 out.ll_s)));
+    let _ = gen_elim () in
+    let _ = rewrite_aparse (LCons?.b2 out.ll_s) (parser_of_typ p_of_s t) in
+    let _ = intro_dtuple2
+      (p_of_s sc).scalar_parser
+      #_ #(type_of_payload' sc t') (fun x -> parser_of_typ p_of_s (t' x))
+      out.ll_b _
+    in
+    assert_norm (parser_of_typ p_of_s (TChoice sc t') == weaken pkind (parse_dtuple2 (p_of_s sc).scalar_parser #_ #(type_of_payload' sc t') (fun x -> parser_of_typ p_of_s (t' x))));
+    let vbw = rewrite_aparse out.ll_b (parser_of_state_i_item p_of_s (SCons?.i (FStar.Ghost.reveal h'))) in
+    [@inline_let]
+    let out' : ll_state a = {
+      ll_sz0 = out.ll_sz0;
+      ll_free = out.ll_free;
+      ll_b = out.ll_b;
+      ll_sz = out.ll_sz;
+      ll_a = out.ll_a;
+      ll_s = LCons
+        _ _
+        (array_of' vbw)
+        (LCons?.sz1 out.ll_s `SZ.size_add` LCons?.sz1 (LCons?.s2 out.ll_s))
+        (LCons?.b2 (LCons?.s2 out.ll_s))
+        _ _ ()
+        (LCons?.s2 (LCons?.s2 out.ll_s));
+      ll_prf = ();
+    }
+    in
+    noop ();
+    rewrite
+      (ll_state_item_match0 p_of_s (SCons?.s h') out.ll_b (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
+      (ll_state_match' p_of_s h' out'.ll_b out'.ll_sz out'.ll_a out'.ll_s);
+    vpattern_rewrite (AP.arrayptr b) out'.ll_free;
+    rewrite
+      (ll_state_match0 p_of_s b b_sz a h' out')
+      ((cl p_of_s b b_sz a).ll_state_match h' out');
+    k_success out' h' ()
+
+#pop-options
+
