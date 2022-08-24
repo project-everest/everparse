@@ -1903,3 +1903,90 @@ let impl_nil
     k_success out' h' ()
 
 #pop-options
+
+let cons0_inc
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: state_i0 type_of_scalar)
+  (t: typ type_of_scalar)
+: Tot (stt_state_inc (cl0 p_of_s b b_sz a) (spec_cons0 s t))
+= fun s ->
+  let SCons (VParseValue _ hd) (SCons (VParseList _ tl) _) = s in
+  match parsed_size (weaken default_parser_kind (parse_list (parser_of_typ p_of_s t))) (hd :: tl) with
+  | None -> ()
+  | Some _ ->
+    let b = parsed_size_some_elim (weaken default_parser_kind (parse_list (parser_of_typ p_of_s t))) (hd :: tl) in
+    parse_list_eq (parser_of_typ p_of_s t) b;
+    let Some (_, len1) = parse (parser_of_typ p_of_s t) b in
+    let b1 = Seq.slice b 0 len1 in
+    let b2 = Seq.slice b len1 (Seq.length b) in
+    parse_strong_prefix (parser_of_typ p_of_s t) b b1;
+    parsed_size_some_intro (weaken default_parser_kind (parser_of_typ p_of_s t)) hd b1;
+    parsed_size_some_intro (weaken default_parser_kind (parse_list (parser_of_typ p_of_s t))) tl b2
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+inline_for_extraction
+let impl_cons
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: Ghost.erased (state_i0 type_of_scalar))
+  (t: typ type_of_scalar)
+: Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_cons0 s t))
+= fun kpre kpost out h k_success k_failure ->
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParseList t :: s)) = get_return_state (spec_cons0 s t) h in
+    rewrite
+      ((cl0 p_of_s b b_sz a).ll_state_match h out)
+      (ll_state_match0 p_of_s b b_sz a h out);
+    let _ = gen_elim () in
+    let _ = elim_ll_state_match'_cons p_of_s _ _ _ _ _ in
+    rewrite
+      (ll_state_item_match p_of_s _ _ _)
+      (ll_state_item_match0 p_of_s (SCons?.s h) out.ll_b (LCons?.a1 out.ll_s));
+    let _ = gen_elim () in
+    let _ = rewrite_aparse _ (parser_of_typ p_of_s t) in
+    let _ = elim_ll_state_match'_cons p_of_s _ _ _ _ _ in
+    rewrite
+      (ll_state_item_match p_of_s _ _ _)
+      (ll_state_item_match0 p_of_s (SCons?.s (SCons?.s' h)) (LCons?.b2 out.ll_s) (LCons?.a1 (LCons?.s2 out.ll_s)));
+    let _ = gen_elim () in
+    let _ = rewrite_aparse (LCons?.b2 out.ll_s) (parse_list (parser_of_typ p_of_s t)) in
+    let vbw = intro_cons (parser_of_typ p_of_s t) out.ll_b (LCons?.b2 out.ll_s) in // FIXME: WHY WHY WHY is F* blowing up here?
+    [@inline_let]
+    let out' : ll_state a = {
+      ll_sz0 = out.ll_sz0;
+      ll_free = out.ll_free;
+      ll_b = out.ll_b;
+      ll_sz = out.ll_sz;
+      ll_a = out.ll_a;
+      ll_s = LCons
+        _ _
+        (array_of' vbw)
+        (LCons?.sz1 out.ll_s `SZ.size_add` LCons?.sz1 (LCons?.s2 out.ll_s))
+        (LCons?.b2 (LCons?.s2 out.ll_s))
+        _ _ ()
+        (LCons?.s2 (LCons?.s2 out.ll_s));
+      ll_prf = ();
+    }
+    in
+    let _ = rewrite_aparse out.ll_b (parser_of_state_i_item p_of_s (SCons?.i (FStar.Ghost.reveal h'))) in
+    noop ();
+    rewrite
+      (ll_state_item_match0 p_of_s (SCons?.s h') out.ll_b (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
+      (ll_state_match' p_of_s h' out'.ll_b out'.ll_sz out'.ll_a out'.ll_s);
+    vpattern_rewrite (AP.arrayptr b) out'.ll_free;
+    rewrite
+      (ll_state_match0 p_of_s b b_sz a h' out')
+      ((cl0 p_of_s b b_sz a).ll_state_match h' out');
+    k_success out' h' ()
+
+#pop-options
