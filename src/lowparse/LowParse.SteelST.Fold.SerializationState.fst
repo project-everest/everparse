@@ -2078,3 +2078,59 @@ let impl_pair
 
 #pop-options
 
+let if0_inc
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b0: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: state_i0 type_of_scalar)
+  (t: typ type_of_scalar)
+  (b: bool)
+  (t1: (squash (b == true) -> typ type_of_scalar))
+  (t2: (squash (b == false) -> typ type_of_scalar))
+  (sq: squash (t == ifthenelse b t1 t2))
+: Tot (stt_state_inc (cl0 p_of_s b0 b_sz a) (spec_if0 s t b t1 t2 sq))
+= fun _ -> ()
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+inline_for_extraction
+let impl_if
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: Ghost.erased (state_i0 type_of_scalar))
+  (t: typ type_of_scalar)
+  (x: bool)
+  (t1: (squash (x == true) -> typ type_of_scalar))
+  (t2: (squash (x == false) -> typ type_of_scalar))
+  (sq: squash (t == ifthenelse x t1 t2))
+: Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_if0 s t x t1 t2 sq))
+= fun kpre kpost out h k_success k_failure ->
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParseValue (TIf x t1 t2) :: s)) = get_return_state (spec_if0 s t x t1 t2 sq) h in
+    rewrite
+      ((cl0 p_of_s b b_sz a).ll_state_match h out)
+      (ll_state_match0 p_of_s b b_sz a h out);
+    let _ = gen_elim () in
+    let _ = elim_ll_state_match'_cons p_of_s _ _ _ _ _ in
+    rewrite
+      (ll_state_item_match p_of_s _ _ _)
+      (ll_state_item_match0 p_of_s (SCons?.s h) out.ll_b (LCons?.a1 out.ll_s));
+    let _ = gen_elim () in
+    let _ = rewrite_aparse out.ll_b (parser_of_state_i_item p_of_s (SCons?.i (FStar.Ghost.reveal h'))) in
+    noop ();
+    rewrite
+      (ll_state_item_match0 p_of_s (SCons?.s h') out.ll_b (LCons?.a1 out.ll_s) `star` ll_state_match' p_of_s _ _ _ _ _)
+      (ll_state_match' p_of_s h' out.ll_b out.ll_sz out.ll_a out.ll_s);
+    rewrite
+      (ll_state_match0 p_of_s b b_sz a h' out)
+      ((cl0 p_of_s b b_sz a).ll_state_match h' out);
+    k_success out h' ()
+
+#pop-options
