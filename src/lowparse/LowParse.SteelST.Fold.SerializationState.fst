@@ -391,39 +391,52 @@ module AP = LowParse.SteelST.ArrayPtr
 inline_for_extraction // CRITICAL for extraction
 noeq
 type ll_state'
-: AP.array byte -> Type
-= | LNil: (a: AP.v byte) -> squash (AP.length (AP.array_of a) == 0) -> ll_state' (AP.array_of a)
+: Ghost.erased SZ.size_t -> AP.array byte -> Type
+= | LNil:
+    (a: AP.v byte) ->
+    squash (AP.length (AP.array_of a) == 0) ->
+    ll_state' SZ.zero_size (AP.array_of a)
   | LCons:
+    (sz0: Ghost.erased SZ.size_t) -> // to prove absence of integer overflow
     (a0: AP.array byte) ->
     (a1: AP.array byte) ->
     (sz1: SZ.size_t) ->
     (b2: byte_array) ->
+    (sz2: Ghost.erased SZ.size_t) ->
     (a2: AP.array byte) ->
     squash (
       AP.merge_into a1 a2 a0 /\
-      SZ.size_v sz1 == AP.length a1
+      SZ.size_v sz1 == AP.length a1 /\
+      SZ.size_v sz0 == SZ.size_v sz1 + SZ.size_v sz2
     ) ->
-    (s2: ll_state' a2) -> ll_state' a0
+    (s2: ll_state' sz2 a2) -> ll_state' sz0 a0
 
 let rec ll_state'_length
+  (#sz: Ghost.erased (SZ.size_t))
   (#a: AP.array byte)
-  (l: ll_state' a)
+  (l: ll_state' sz a)
 : Tot nat
   (decreases l)
 = match l with
   | LNil _ _ -> 0
-  | LCons _ _ _ _ _ _ l' -> 1 + ll_state'_length l'
+  | LCons _ _ _ _ _ _ _ _ l' -> 1 + ll_state'_length l'
 
 inline_for_extraction // CRITICAL for extraction
 noeq
 type ll_state
   (a0: AP.array byte)
 = {
+    ll_sz0: Ghost.erased SZ.size_t; // to prove absence of integer overflow
     ll_free: AP.v byte;
     ll_b: byte_array;
+    ll_sz: Ghost.erased SZ.size_t;
     ll_a: AP.array byte;
-    ll_s: ll_state' ll_a;
-    ll_prf: squash (AP.merge_into (AP.array_of ll_free) ll_a a0);
+    ll_s: ll_state' ll_sz ll_a;
+    ll_prf: squash (
+      AP.merge_into (AP.array_of ll_free) ll_a a0 /\
+      SZ.size_v ll_sz0 == AP.length a0 /\
+      SZ.size_v ll_sz0 == AP.length (AP.array_of ll_free) + SZ.size_v ll_sz
+    );
   }
 
 [@@__reduce__]
@@ -459,16 +472,17 @@ let rec ll_state_match'
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
+  (sz: Ghost.erased SZ.size_t)
   (a: AP.array byte)
-  (ls: ll_state' a)
+  (ls: ll_state' sz a)
 : Tot vprop
   (decreases ls)
 = match ls with
   | LNil vb _ -> AP.arrayptr b vb `star` pure (SNil? s == true)
-  | LCons _ a1 _ b' a' _ ls' ->
+  | LCons _ _ a1 _ b' sz' a' _ ls' ->
     begin match s with
     | SNil -> pure False
-    | SCons s1 s' -> ll_state_item_match p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' a' ls'
+    | SCons s1 s' -> ll_state_item_match p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' sz' a' ls'
     end
 
 let elim_ll_state_match'_nil
@@ -479,10 +493,11 @@ let elim_ll_state_match'_nil
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
+  (sz: Ghost.erased SZ.size_t)
   (a: AP.array byte)
-  (ls: ll_state' a)
+  (ls: ll_state' sz a)
 : STGhost (squash (LNil? ls /\ Nil? i /\ SNil? s)) opened
-    (ll_state_match' p_of_s s b a ls)
+    (ll_state_match' p_of_s s b sz a ls)
     (fun _ ->
       AP.arrayptr b (LNil?.a ls)
     )
@@ -491,15 +506,15 @@ let elim_ll_state_match'_nil
 = match ls with
   | LNil _ _ ->
     rewrite
-      (ll_state_match' p_of_s s b a ls)
+      (ll_state_match' p_of_s s b sz a ls)
       (AP.arrayptr b (LNil?.a ls) `star` pure (SNil? s == true));
     let _ = gen_elim () in
     ()
-  | LCons _ _ _ _ _ _ _ ->
+  | LCons _ _ _ _ _ _ _ _ _ ->
     begin match s with
     | SNil ->
       rewrite
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_match' p_of_s s b sz a ls)
         (pure False);
       let _ = gen_elim () in
       assert False;
@@ -512,7 +527,7 @@ let elim_ll_state_match'_nil
       assert False;
       let r : squash (LNil? ls /\ Nil? i /\ SNil? s) = () in
       rewrite // by contradiction
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_match' p_of_s s b sz a ls)
         (AP.arrayptr b (LNil?.a ls));
       r
     end
@@ -525,20 +540,21 @@ let elim_ll_state_match'_cons
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
+  (sz: Ghost.erased SZ.size_t)
   (a: AP.array byte)
-  (ls: ll_state' a)
+  (ls: ll_state' sz a)
 : STGhost (squash (LCons? ls /\ Cons? i /\ SCons? s)) opened
-    (ll_state_match' p_of_s s b a ls)
+    (ll_state_match' p_of_s s b sz a ls)
     (fun _ ->
       ll_state_item_match p_of_s (SCons?.s s) b (LCons?.a1 ls) `star`
-      ll_state_match' p_of_s (SCons?.s' s) (LCons?.b2 ls) (LCons?.a2 ls) (LCons?.s2 ls)
+      ll_state_match' p_of_s (SCons?.s' s) (LCons?.b2 ls) (LCons?.sz2 ls) (LCons?.a2 ls) (LCons?.s2 ls)
     )
     (LCons? ls \/ Cons? i \/ SCons? s)
     (fun _ -> True)
 = match ls with
   | LNil vb _ ->
     rewrite
-      (ll_state_match' p_of_s s b a ls)
+      (ll_state_match' p_of_s s b sz a ls)
       (AP.arrayptr b vb `star` pure (SNil? s == true));
     let _ = gen_elim () in
     assert False;
@@ -546,13 +562,13 @@ let elim_ll_state_match'_cons
     rewrite // by contradiction
       (AP.arrayptr b vb)
       (ll_state_item_match p_of_s (SCons?.s s) b (LCons?.a1 ls) `star`
-        ll_state_match' p_of_s (SCons?.s' s) (LCons?.b2 ls) (LCons?.a2 ls) (LCons?.s2 ls));
+        ll_state_match' p_of_s (SCons?.s' s) (LCons?.b2 ls) (LCons?.sz2 ls) (LCons?.a2 ls) (LCons?.s2 ls));
     r
-  | LCons _ _ _ _ _ _ _ ->
+  | LCons _ _ _ _ _ _ _ _ _ ->
     begin match s with
     | SNil ->
       rewrite
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_match' p_of_s s b sz a ls)
         (pure False);
       let _ = gen_elim () in
       assert False;
@@ -560,14 +576,14 @@ let elim_ll_state_match'_cons
       rewrite // by contradiction
         emp
         (ll_state_item_match p_of_s (SCons?.s s) b (LCons?.a1 ls) `star`
-          ll_state_match' p_of_s (SCons?.s' s) (LCons?.b2 ls) (LCons?.a2 ls) (LCons?.s2 ls));
+          ll_state_match' p_of_s (SCons?.s' s) (LCons?.b2 ls) (LCons?.sz2 ls) (LCons?.a2 ls) (LCons?.s2 ls));
       r
     | _ ->
       let r : squash (LCons? ls /\ Cons? i /\ SCons? s) = () in
       rewrite
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_match' p_of_s s b sz a ls)
         (ll_state_item_match p_of_s (SCons?.s s) b (LCons?.a1 ls) `star`
-          ll_state_match' p_of_s (SCons?.s' s) (LCons?.b2 ls) (LCons?.a2 ls) (LCons?.s2 ls));
+          ll_state_match' p_of_s (SCons?.s' s) (LCons?.b2 ls) (LCons?.sz2 ls) (LCons?.a2 ls) (LCons?.s2 ls));
       r
     end
 
@@ -588,7 +604,7 @@ let ll_state_match0
 = exists_ (fun sz ->
     R.pts_to b_sz full_perm sz `star`
     AP.arrayptr b ls.ll_free `star`
-    ll_state_match' p_of_s s ls.ll_b ls.ll_a ls.ll_s `star`
+    ll_state_match' p_of_s s ls.ll_b ls.ll_sz ls.ll_a ls.ll_s `star`
     pure (SZ.size_v sz == AP.length (AP.array_of ls.ll_free) /\ AP.array_perm (AP.array_of ls.ll_free) == full_perm)
   )
 
@@ -648,8 +664,9 @@ let ll_state_shape'
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (i: state_i0 type_of_scalar)
+  (#sz0: SZ.size_t)
   (#a0: AP.array byte)
-  (ls: ll_state' a0)
+  (ls: ll_state' sz0 a0)
 : Tot prop
 = ll_state'_length ls == List.Tot.length i
 
@@ -670,41 +687,42 @@ let rec ll_state_match'_shape
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
+  (sz: Ghost.erased SZ.size_t)
   (a: AP.array byte)
-  (ls: ll_state' a)
+  (ls: ll_state' sz a)
 : STGhost unit opened
-    (ll_state_match' p_of_s s b a ls)
-    (fun _ -> ll_state_match' p_of_s s b a ls)
+    (ll_state_match' p_of_s s b sz a ls)
+    (fun _ -> ll_state_match' p_of_s s b sz a ls)
     True
     (fun _ -> ll_state_shape' i ls)
     (decreases ls)
 = match ls with
   | LNil vb _ ->
     rewrite
-      (ll_state_match' p_of_s s b a ls)
+      (ll_state_match' p_of_s s b sz a ls)
       (AP.arrayptr b vb `star` pure (SNil? s == true));
     let _ = gen_elim () in
      rewrite
       (AP.arrayptr b vb `star` pure (SNil? s == true))
-      (ll_state_match' p_of_s s b a ls)
-  | LCons _ a1 _ b' a' _ ls' ->
+      (ll_state_match' p_of_s s b sz a ls)
+  | LCons _ _ a1 _ b' sz' a' _ ls' ->
     begin match s with
     | SNil ->
       rewrite
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_match' p_of_s s b sz a ls)
         (pure False);
       let _ = gen_elim () in
       rewrite // by contradiction
         emp
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_match' p_of_s s b sz a ls)
     | SCons s1 s' ->
       rewrite
-        (ll_state_match' p_of_s s b a ls)
-        (ll_state_item_match p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' a' ls');
-      ll_state_match'_shape p_of_s s' b' a' ls';
+        (ll_state_match' p_of_s s b sz a ls)
+        (ll_state_item_match p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' sz' a' ls');
+      ll_state_match'_shape p_of_s s' b' sz' a' ls';
       rewrite
-        (ll_state_item_match p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' a' ls')
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_item_match p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' sz' a' ls')
+        (ll_state_match' p_of_s s b sz a ls)
     end
 
 let rec wipe_ll_state_match' // necessary in case of failure. This also explains why I need the byte_array available outside of ll_state'
@@ -715,25 +733,26 @@ let rec wipe_ll_state_match' // necessary in case of failure. This also explains
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
+  (sz: Ghost.erased SZ.size_t)
   (a: AP.array byte)
-  (ls: ll_state' a)
+  (ls: ll_state' sz a)
 : STGhost (AP.v byte) opened
-    (ll_state_match' p_of_s s b a ls)
+    (ll_state_match' p_of_s s b sz a ls)
     (fun vb -> AP.arrayptr b vb)
     True
     (fun vb -> AP.array_of vb == a)
 = match ls with
   | LNil vb _ ->
     rewrite
-      (ll_state_match' p_of_s s b a ls)
+      (ll_state_match' p_of_s s b sz a ls)
       (AP.arrayptr b vb `star` pure (SNil? s == true));
     let _ = gen_elim () in
     vb
-  | LCons _ a1 _ b' a' _ ls' ->
+  | LCons _ _ a1 _ b' sz' a' _ ls' ->
     begin match s with
     | SNil ->
       rewrite
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_match' p_of_s s b sz a ls)
         (pure False);
       let _ = gen_elim () in
       let vb : AP.v byte = false_elim () in
@@ -743,9 +762,9 @@ let rec wipe_ll_state_match' // necessary in case of failure. This also explains
       vb
     | SCons s1 s' -> 
       rewrite
-        (ll_state_match' p_of_s s b a ls)
-        (ll_state_item_match p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' a' ls');
-      let _ = wipe_ll_state_match' p_of_s s' b' a' ls' in
+        (ll_state_match' p_of_s s b sz a ls)
+        (ll_state_item_match p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' sz' a' ls');
+      let _ = wipe_ll_state_match' p_of_s s' b' sz' a' ls' in
       rewrite
         (ll_state_item_match p_of_s s1 b a1)
         (ll_state_item_match0 p_of_s s1 b a1);
@@ -774,7 +793,7 @@ let wipe_ll_state_match0
     (ll_state_match p_of_s b b_sz a s ls)
     (ll_state_match0 p_of_s b b_sz a s ls);
   let _ = gen_elim () in
-  let _ = wipe_ll_state_match' p_of_s _ _ _ _ in
+  let _ = wipe_ll_state_match' p_of_s _ _ _ _ _ in
   AP.join b _
 
 inline_for_extraction
@@ -814,14 +833,15 @@ let list_tl
 #set-options "--ide_id_info_off"
 
 let rec ll_state_pts_to'
+  (#sz: Ghost.erased SZ.size_t)
   (#a: AP.array byte)
   (lsp: ll_state_ptr')
-  (ls: ll_state' a)
+  (ls: ll_state' sz a)
 : Tot vprop
   (decreases ls)
 = match ls with
   | LNil _ _ -> pure (Nil? lsp == true)
-  | LCons _ a1 sz1 b' a' _ ls' ->
+  | LCons _ _ a1 sz1 b' _ a' _ ls' ->
     begin match lsp with
     | [] -> pure False
     | x :: l' -> R.pts_to (fstx x) full_perm sz1 `star` R.pts_to (sndx x) full_perm b' `star` ll_state_pts_to' l' ls'
@@ -829,9 +849,10 @@ let rec ll_state_pts_to'
 
 let elim_ll_state_pts_to'_nil
   (#opened: _)
+  (#sz: Ghost.erased SZ.size_t)
   (#a: AP.array byte)
   (lsp: ll_state_ptr')
-  (ls: ll_state' a)
+  (ls: ll_state' sz a)
 : STGhost unit opened
     (ll_state_pts_to' lsp ls)
     (fun _ -> emp)
@@ -854,9 +875,10 @@ let elim_ll_state_pts_to'_nil
 
 let elim_ll_state_pts_to'_cons
   (#opened: _)
+  (#sz: Ghost.erased SZ.size_t)
   (#a: AP.array byte)
   (lsp: ll_state_ptr')
-  (ls: ll_state' a)
+  (ls: ll_state' sz a)
 : STGhost (squash (LCons? ls /\ Cons? lsp)) opened
     (ll_state_pts_to' lsp ls)
     (fun _ -> R.pts_to (fstx (list_hd lsp)) full_perm (LCons?.sz1 ls) `star` R.pts_to (sndx (list_hd lsp)) full_perm (LCons?.b2 ls) `star` ll_state_pts_to' (list_tl lsp) (LCons?.s2 ls))
@@ -932,7 +954,7 @@ let cl0
         (ll_state_match p_of_s b b_sz a #i h l)
         (ll_state_match0 p_of_s b b_sz a #i h l);
       let _ = gen_elim () in
-      ll_state_match'_shape p_of_s _ _ _ _;
+      ll_state_match'_shape p_of_s _ _ _ _ _;
       rewrite
         (ll_state_match0 p_of_s b b_sz a #i h l)
         (ll_state_match p_of_s b b_sz a #i h l)
@@ -1017,8 +1039,10 @@ let mk_initial_state0
   let vbz = vpattern_replace (AP.arrayptr bz) in
   [@inline_let] // CRITICAL for extraction
   let pb : ll_state (AP.array_of vb) = {
+    ll_sz0 = sz;
     ll_free = ll_free;
     ll_b = bz;
+    ll_sz = SZ.zero_size;
     ll_a = AP.array_of vbz;
     ll_s = LNil vbz ();
     ll_prf = ();
@@ -1029,7 +1053,7 @@ let mk_initial_state0
     (AP.arrayptr b pb.ll_free);
   rewrite
     (AP.arrayptr bz _ `star` pure (SNil? (initial_state0 type_of_scalar) == true))
-    (ll_state_match' p_of_s (initial_state0 type_of_scalar) pb.ll_b pb.ll_a pb.ll_s);
+    (ll_state_match' p_of_s (initial_state0 type_of_scalar) pb.ll_b pb.ll_sz pb.ll_a pb.ll_s);
   rewrite
     (ll_state_match0 p_of_s b b_sz (AP.array_of vb) (initial_state0 type_of_scalar) pb)
     ((cl0 p_of_s b b_sz (AP.array_of vb)).ll_state_match (initial_state0 type_of_scalar) pb);
@@ -1099,8 +1123,8 @@ let elim_ll_state_match_final0
     ((cl0 p_of_s b b_sz a).ll_state_match s ls)
     (ll_state_match0 p_of_s b b_sz a s ls);
   let _ = gen_elim () in
-  let _ = elim_ll_state_match'_cons p_of_s _ _ _ _ in
-  let _ = elim_ll_state_match'_nil p_of_s _ _ _ _ in
+  let _ = elim_ll_state_match'_cons p_of_s _ _ _ _ _ in
+  let _ = elim_ll_state_match'_nil p_of_s _ _ _ _ _ in
   rewrite
     (ll_state_item_match p_of_s (SCons?.s s) _ _)
     (ll_state_item_match0 p_of_s (SCons?.s s) ls.ll_b (LCons?.a1 ls.ll_s));
@@ -1161,8 +1185,9 @@ let with_ll_state_ptr'_t
   (#type_of_scalar: (scalar_t -> Type))
   (i: state_i0 type_of_scalar)
 : Tot Type
-= (a: AP.array byte) ->
-  (l: ll_state' a) ->
+= (sz: Ghost.erased SZ.size_t) ->
+  (a: AP.array byte) ->
+  (l: ll_state' sz a) ->
   (#kpre: vprop) ->
   (#t: Type) ->
   (#kpost: (t -> vprop)) ->
@@ -1170,7 +1195,7 @@ let with_ll_state_ptr'_t
     (p: ll_state_ptr') ->
     STT t
       (kpre `star` ll_state_pts_to' p l)
-      (fun r -> kpost r `star` exists_ (fun a' -> exists_ (ll_state_pts_to' #a' p)))
+      (fun r -> kpost r `star` exists_ (fun sz' -> exists_ (fun a' -> exists_ (ll_state_pts_to' #sz' #a' p))))
   )) ->
   STF t kpre kpost (ll_state_shape' i l) (fun _ -> True)
 
@@ -1186,7 +1211,7 @@ let with_ll_state_ptr0
   (w: with_ll_state_ptr'_t i)
 : Tot (with_ll_state_ptr_t (cl0 p_of_s b b_sz a) i)
 = fun l k ->
-    w _ l.ll_s (fun p' ->
+    w _ _ l.ll_s (fun p' ->
       with_local l.ll_b (fun pb ->
         [@inline_let]
         let p : ll_state_ptr = (pb, p') in
@@ -1209,7 +1234,7 @@ let with_ll_state_ptr'_nil
   (#scalar_t: Type)
   (type_of_scalar: (scalar_t -> Type))
 : Tot (with_ll_state_ptr'_t #_ #type_of_scalar [])
-= fun a l k ->
+= fun _ a l k ->
     [@inline_let]
     let pl : ll_state_ptr' = [] in
     noop ();
@@ -1227,14 +1252,15 @@ let with_ll_state_ptr'_cons
   (s': Ghost.erased (state_i0 type_of_scalar))
   (w: with_ll_state_ptr'_t (Ghost.reveal s'))
 : Tot (with_ll_state_ptr'_t (Ghost.reveal s :: Ghost.reveal s'))
-= fun a l k ->
+= fun _ a l k ->
     with_local (LCons?.sz1 l) (fun bsz ->
     with_local (LCons?.b2 l) (fun bb ->
-    w _ (LCons?.s2 l) (fun bs' ->
+    w _ _ (LCons?.s2 l) (fun bs' ->
       [@inline_let]
       let bs : ll_state_ptr' = (bsz, bb) :: bs' in
       rewrite (R.pts_to bsz _ _ `star` R.pts_to bb _ _ `star` ll_state_pts_to' _ _) (ll_state_pts_to' bs l);
       let res = k _ in
+      let sz' = elim_exists () in
       let a' = elim_exists () in
       let l' = elim_exists () in
       let _ = elim_ll_state_pts_to'_cons _ _ in
@@ -1262,14 +1288,15 @@ let load_ll_state_ptr'_t
   (i: state_i0 type_of_scalar)
 : Tot Type
 =
+  (#sz: Ghost.erased SZ.size_t) ->
   (#a: AP.array byte) ->
-  (#gl: Ghost.erased (ll_state' a)) ->
+  (#gl: Ghost.erased (ll_state' sz a)) ->
   (p: ll_state_ptr') ->
   (#kpre: vprop) ->
   (#t: Type) ->
   (#kpost: (t -> vprop)) ->
   (k: (
-    (l: ll_state' a) ->
+    (l: ll_state' sz a) ->
     ST t
        (kpre `star` ll_state_pts_to' p l)
        kpost
@@ -1301,8 +1328,10 @@ let load_ll_state_ptr0
   w (sndx p) (fun l' ->
     [@inline_let]
     let l : ll_state a = {
+      ll_sz0 = gl.ll_sz0;
       ll_free = gl.ll_free;
       ll_b = b1;
+      ll_sz = gl.ll_sz;
       ll_a = gl.ll_a;
       ll_s = l';
       ll_prf = ();
@@ -1319,10 +1348,10 @@ let load_ll_state_ptr'_nil
   (#scalar_t: Type)
   (type_of_scalar: (scalar_t -> Type))
 : Tot (load_ll_state_ptr'_t #_ #type_of_scalar [])
-= fun #a #gl p k ->
+= fun #sz #a #gl p k ->
     let _ = elim_ll_state_pts_to'_nil _ _ in
     [@inline_let]
-    let l : ll_state' a = LNil (LNil?.a gl) () in
+    let l : ll_state' sz a = LNil (LNil?.a gl) () in
     rewrite
       (pure (Nil? p == true))
       (ll_state_pts_to' p l);
@@ -1336,13 +1365,13 @@ let load_ll_state_ptr'_cons
   (s': Ghost.erased (state_i0 type_of_scalar))
   (w: load_ll_state_ptr'_t (Ghost.reveal s'))
 : Tot (load_ll_state_ptr'_t (Ghost.reveal s :: Ghost.reveal s'))
-= fun #a #gl p k ->
+= fun #sz #a #gl p k ->
     let _ = elim_ll_state_pts_to'_cons _ _ in
     let sz1 = R.read #SZ.size_t _ in
     let b2 = R.read #byte_array _ in
     w _ (fun l' ->
       [@inline_let]
-      let l : ll_state' a = LCons a (LCons?.a1 gl) sz1 b2 (LCons?.a2 gl) () l' in
+      let l : ll_state' sz a = LCons _ a (LCons?.a1 gl) sz1 b2 (LCons?.sz2 gl) (LCons?.a2 gl) () l' in
       rewrite
         (R.pts_to #SZ.size_t _ _ _ `star` R.pts_to #byte_array _ _ _ `star` ll_state_pts_to' _ _)
         (ll_state_pts_to' p l);
@@ -1366,11 +1395,13 @@ let store_ll_state_ptr'_t
   (#type_of_scalar: (scalar_t -> Type))
   (i: state_i0 type_of_scalar)
 : Tot Type
-= (#a: AP.array byte) ->
-  (#gl: Ghost.erased (ll_state' a)) ->
+= (#sz: Ghost.erased SZ.size_t) ->
+  (#a: AP.array byte) ->
+  (#gl: Ghost.erased (ll_state' sz a)) ->
   (p: ll_state_ptr') ->
+  (#sz' : Ghost.erased SZ.size_t) ->
   (#a': AP.array byte) ->
-  (l': ll_state' a') ->
+  (l': ll_state' sz' a') ->
   ST unit
      (ll_state_pts_to' p gl)
      (fun _ -> ll_state_pts_to' p l')
@@ -1403,7 +1434,7 @@ let store_ll_state_ptr'_nil
   (#scalar_t: Type)
   (type_of_scalar: (scalar_t -> Type))
 : Tot (store_ll_state_ptr'_t #_ #type_of_scalar [])
-= fun #a #gl p l ->
+= fun p l ->
     let _ = elim_ll_state_pts_to'_nil _ _ in
     rewrite
       (pure (Nil? p == true))
@@ -1417,7 +1448,7 @@ let store_ll_state_ptr'_cons
   (s': Ghost.erased (state_i0 type_of_scalar))
   (w: store_ll_state_ptr'_t (Ghost.reveal s'))
 : Tot (store_ll_state_ptr'_t (Ghost.reveal s :: Ghost.reveal s'))
-= fun #a #gl p l ->
+= fun p l ->
     let _ = elim_ll_state_pts_to'_cons _ _ in
     R.write _ (LCons?.sz1 l);
     R.write _ (LCons?.b2 l);
@@ -1675,43 +1706,44 @@ let rec ll_state_match'_size_of_state_t0
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
+  (sz: Ghost.erased SZ.size_t)
   (a: AP.array byte)
-  (ls: ll_state' a)
+  (ls: ll_state' sz a)
 : STGhost unit opened
-    (ll_state_match' p_of_s s b a ls)
-    (fun _ -> ll_state_match' p_of_s s b a ls)
+    (ll_state_match' p_of_s s b sz a ls)
+    (fun _ -> ll_state_match' p_of_s s b sz a ls)
     True
     (fun _ -> size_of_state_t0 p_of_s s == Some (AP.length a))
     (decreases ls)
 = match ls with
   | LNil vb _ ->
     rewrite
-      (ll_state_match' p_of_s s b a ls)
+      (ll_state_match' p_of_s s b sz a ls)
       (AP.arrayptr b vb `star` pure (SNil? s == true));
     let _ = gen_elim () in
     rewrite
       (AP.arrayptr b vb `star` pure (SNil? s == true))
-      (ll_state_match' p_of_s s b a ls)
-  | LCons _ a1 _ b' a' _ ls' ->
+      (ll_state_match' p_of_s s b sz a ls)
+  | LCons _ _ a1 _ b' sz' a' _ ls' ->
     begin match s with
     | SNil ->
       rewrite
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_match' p_of_s s b sz a ls)
         (pure False);
       let _ = gen_elim () in
       rewrite // by contradiction
         emp
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_match' p_of_s s b sz a ls)
     | SCons s1 s' ->
       rewrite
-        (ll_state_match' p_of_s s b a ls)
-        (ll_state_item_match0 p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' a' ls');
+        (ll_state_match' p_of_s s b sz a ls)
+        (ll_state_item_match0 p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' sz' a' ls');
       let _ = gen_elim () in
-      ll_state_match'_size_of_state_t0 p_of_s _ _ _ _;
+      ll_state_match'_size_of_state_t0 p_of_s _ _ _ _ _;
       aparse_parsed_size _ _ _;
       rewrite
-        (ll_state_item_match0 p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' a' ls')
-        (ll_state_match' p_of_s s b a ls)
+        (ll_state_item_match0 p_of_s s1 b a1 `star` ll_state_match' p_of_s s' b' sz' a' ls')
+        (ll_state_match' p_of_s s b sz a ls)
     end
 
 let ll_state_match_size_of_state_t0
@@ -1734,7 +1766,7 @@ let ll_state_match_size_of_state_t0
     ((cl0 p_of_s b b_sz a).ll_state_match s ls)
     (ll_state_match0 p_of_s b b_sz a s ls);
   let _ = gen_elim () in
-  ll_state_match'_size_of_state_t0 p_of_s _ _ _ _;
+  ll_state_match'_size_of_state_t0 p_of_s _ _ _ _ _;
   rewrite
     (ll_state_match0 p_of_s b b_sz a s ls)
     ((cl0 p_of_s b b_sz a).ll_state_match s ls)
@@ -1776,17 +1808,19 @@ let impl_write
       let vbl' = vpattern_replace (AP.arrayptr b) in
       [@inline_let]
       let out' : ll_state a = {
+        ll_sz0 = out.ll_sz0;
         ll_free = vbl';
         ll_b = bw;
+        ll_sz = SZ.size_add (sz `SZ.size_sub` sz') out.ll_sz;
         ll_a = AP.merge (array_of' vbw) out.ll_a;
-        ll_s = LCons _ (array_of' vbw) (sz `SZ.size_sub` sz') out.ll_b out.ll_a () out.ll_s;
+        ll_s = LCons _ _ (array_of' vbw) (sz `SZ.size_sub` sz') out.ll_b out.ll_sz out.ll_a () out.ll_s;
         ll_prf = ();
       }
       in
       noop ();
       rewrite
-        (ll_state_item_match0 p_of_s (VParseValue t x) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _)
-        (ll_state_match' p_of_s h' out'.ll_b out'.ll_a out'.ll_s);
+        (ll_state_item_match0 p_of_s (VParseValue t x) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
+        (ll_state_match' p_of_s h' out'.ll_b out'.ll_sz out'.ll_a out'.ll_s);
       vpattern_rewrite (AP.arrayptr b) out'.ll_free;
       rewrite
         (ll_state_match0 p_of_s b b_sz a h' out')
@@ -1798,8 +1832,8 @@ let impl_write
         (r_to_l_write_post_failure (parser_of_typ p_of_s t) x b (AP.array_of out.ll_free));
       let _ = gen_elim () in
       parsed_size_rewrite (parser_of_typ p_of_s t) x (parser_of_state_i_item p_of_s (IParseValue t));
-      ll_state_match'_size_of_state_t0 p_of_s _ _ _ _;
-      let _ = wipe_ll_state_match' p_of_s _ _ _ _ in
+      ll_state_match'_size_of_state_t0 p_of_s _ _ _ _ _;
+      let _ = wipe_ll_state_match' p_of_s _ _ _ _ _ in
       let _ = AP.join b _ in
       rewrite
         (ll_state_failure0 p_of_s b b_sz a h')
@@ -1849,17 +1883,19 @@ let impl_nil
     let vbl' = vpattern_replace (AP.arrayptr b) in
     [@inline_let]
     let out' : ll_state a = {
+      ll_sz0 = out.ll_sz0;
       ll_free = vbl';
       ll_b = bw;
+      ll_sz = out.ll_sz;
       ll_a = AP.merge (array_of' vbw) out.ll_a;
-      ll_s = LCons _ (array_of' vbw) SZ.zero_size out.ll_b out.ll_a () out.ll_s;
+      ll_s = LCons _ _ (array_of' vbw) SZ.zero_size out.ll_b out.ll_sz out.ll_a () out.ll_s;
       ll_prf = ();
     }
     in
     noop ();
     rewrite
-      (ll_state_item_match0 p_of_s (VParseList t []) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _)
-      (ll_state_match' p_of_s h' out'.ll_b out'.ll_a out'.ll_s);
+      (ll_state_item_match0 p_of_s (VParseList t []) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
+      (ll_state_match' p_of_s h' out'.ll_b out'.ll_sz out'.ll_a out'.ll_s);
     vpattern_rewrite (AP.arrayptr b) out'.ll_free;
     rewrite
       (ll_state_match0 p_of_s b b_sz a h' out')
