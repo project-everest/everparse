@@ -25,6 +25,58 @@ open ASN1.Spec.Any
 
 module List = FStar.List.Tot
 
+(*
+
+let make_asn1_closed_any_OIDU32_parser
+  (id : asn1_id_t)
+  (ls : list (asn1_oid_t * asn1_gen_items_k))
+  (pf : squash((List.noRepeats (List.map fst ls))))
+  (k : asn1_content_k)
+  (lp : list (asn1_oid_t & (gen_parser asn1_weak_parser_kind)))
+: Pure (asn1_weak_parser (asn1_content_t k))
+  (requires ((k == ASN1_ANY_OID id ls None pf) /\ (asn1_any_t asn1_oid_t ls == extract_types lp)))
+  (ensures fun _ -> True)
+= weaken asn1_weak_parser_kind (make_gen_choice_weak_parser (parse_asn1_ILC id #(ASN1_TERMINAL ASN1_OID) parse_asn1_OIDU32) lp)
+
+let make_asn1_closed_any_INTEGER_parser
+  (id : asn1_id_t)
+  (ls : list (asn1_integer_t * asn1_gen_items_k))
+  (pf : squash(List.noRepeats (List.map fst ls)))
+  (k : asn1_content_k)
+  (lp : list (asn1_integer_t & (gen_parser asn1_weak_parser_kind)))
+: Pure (asn1_weak_parser (asn1_content_t k))
+  (requires ((k == ASN1_ANY_INTEGER id ls None pf) /\ (asn1_any_t asn1_integer_t ls == extract_types lp)))
+  (ensures fun _ -> True)
+= weaken asn1_weak_parser_kind (make_gen_choice_weak_parser (parse_asn1_ILC id #(ASN1_TERMINAL ASN1_INTEGER) (weaken _ ((parse_untagged_bounded_integer 20) `parse_synth` (fun x -> x <: int)))) lp)
+
+let make_asn1_open_any_OIDU32_parser
+  (id : asn1_id_t)
+  (ls : list (asn1_oid_t * asn1_gen_items_k))
+  (fbk : asn1_gen_items_k)
+  (fbp : asn1_weak_parser (asn1_sequence_t (dfst fbk)))
+  (pf : squash((List.noRepeats (List.map fst ls))))
+  (k : asn1_content_k)
+  (lp : list (asn1_oid_t & (gen_parser asn1_weak_parser_kind)))
+: Pure (asn1_weak_parser (asn1_content_t k))
+  (requires ((k == ASN1_ANY_OID id ls (Some fbk) pf) /\ (asn1_any_t asn1_oid_t ls == extract_types lp)))
+  (ensures fun _ -> True)
+= weaken asn1_weak_parser_kind (make_gen_choice_with_fallback_weak_parser (parse_asn1_ILC id #(ASN1_TERMINAL ASN1_OID) parse_asn1_OIDU32) lp (Mkgenparser _ fbp))
+
+let make_asn1_open_any_INTEGER_parser
+  (id : asn1_id_t)
+  (ls : list (asn1_integer_t * asn1_gen_items_k))
+  (fbk : asn1_gen_items_k)
+  (fbp : asn1_weak_parser (asn1_sequence_t (dfst fbk)))
+  (pf : squash((List.noRepeats (List.map fst ls))))
+  (k : asn1_content_k)
+  (lp : list (asn1_integer_t & (gen_parser asn1_weak_parser_kind)))
+: Pure (asn1_weak_parser (asn1_content_t k))
+  (requires ((k == ASN1_ANY_INTEGER id ls (Some fbk) pf) /\ (asn1_any_t asn1_integer_t ls == extract_types lp)))
+  (ensures fun _ -> True)
+= weaken asn1_weak_parser_kind (make_gen_choice_with_fallback_weak_parser (parse_asn1_ILC id #(ASN1_TERMINAL ASN1_INTEGER) (weaken _ ((parse_untagged_bounded_integer 20) `parse_synth` (fun x -> x <: int)))) lp (Mkgenparser _ fbp))
+
+*)
+
 let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   match k with
   | ASN1_BOOLEAN -> weaken _ parse_asn1_boolean
@@ -48,14 +100,33 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
   | ASN1_SEQUENCE_OF k' -> weaken asn1_weak_parser_kind (parse_list (asn1_as_parser k'))
   | ASN1_SET_OF k' -> weaken _ (asn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (asn1_as_parser k')
-  | ASN1_ANY_OID id ls fb pf -> 
-    (match fb with
-    | None -> make_asn1_closed_any_OIDU32_parser id ls pf k (asn1_ls_as_parser asn1_oid_t ls)
-    | Some gitems -> make_asn1_open_any_OIDU32_parser id ls gitems (make_asn1_sequence_parser (asn1_sequence_as_parser (dfst gitems))) pf k (asn1_ls_as_parser asn1_oid_t ls))
-  | ASN1_ANY_INTEGER id ls fb pf ->
-    (match fb with
-    | None -> make_asn1_closed_any_INTEGER_parser id ls pf k (asn1_ls_as_parser asn1_integer_t ls)
-    | Some gitems -> make_asn1_open_any_INTEGER_parser id ls gitems (make_asn1_sequence_parser (asn1_sequence_as_parser (dfst gitems))) pf k (asn1_ls_as_parser asn1_integer_t ls))
+  | ASN1_ANY_DEFINED_BY prefix id key_k ls ofb pf_wf pf_sup -> 
+    let itemtwins = asn1_sequence_as_parser prefix in
+    let key_p_twin = 
+      (let kc = ASN1_TERMINAL key_k in
+      let p = asn1_terminal_as_parser key_k in
+      let _ = parser_asn1_ILC_twin_case_injective id #kc p in
+      Mkparsertwin #asn1_strong_parser_kind #(asn1_terminal_t key_k) (parse_asn1_ILC id #kc p) (parse_asn1_ILC_twin id #kc p))
+    in
+    let key_p = Mkparsertwin?.p key_p_twin in
+    let key_fp = Mkparsertwin?.fp key_p_twin in
+    let supported_p = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+    (match ofb with
+    | None -> 
+      let suffix_p_twin = (Mkparsertwin #asn1_weak_parser_kind #(make_gen_choice_type (extract_types supported_p))
+        (weaken asn1_weak_parser_kind (make_gen_choice_weak_parser key_p supported_p))
+        (let _ = make_gen_choice_weak_parser_twin_and_then_cases_injective key_fp supported_p in
+         fun id -> weaken asn1_weak_parser_kind (make_gen_choice_weak_parser_twin key_fp supported_p id)))
+      in
+      make_asn1_sequence_any_parser itemtwins suffix_p_twin
+    | Some gitems -> 
+      let fallback_p = Mkgenparser _ (make_asn1_sequence_parser (asn1_sequence_as_parser (dfst gitems))) in
+      let suffix_p_twin = (Mkparsertwin #asn1_weak_parser_kind #(make_gen_choice_type_with_fallback (extract_types supported_p) (Mkgenparser?.t fallback_p))
+        (weaken asn1_weak_parser_kind (make_gen_choice_with_fallback_weak_parser key_p supported_p fallback_p))
+        (let _ = make_gen_choice_with_fallback_weak_parser_twin_and_then_cases_injective key_fp supported_p fallback_p in
+         fun id -> weaken asn1_weak_parser_kind (make_gen_choice_with_fallback_weak_parser_twin key_fp supported_p fallback_p id))) 
+      in
+      make_asn1_sequence_any_parser itemtwins suffix_p_twin) 
 
 and asn1_ls_as_parser (t : eqtype) (ls : list (t * asn1_gen_items_k)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t t ls == extract_types lp}) (decreases ls) =
   match ls with
@@ -75,6 +146,7 @@ and asn1_as_parser (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_t k))
   match k with
   | ASN1_ILC id k' -> parse_asn1_ILC id (asn1_content_as_parser k')
   | ASN1_CHOICE_ILC lc pf -> make_asn1_choice_parser lc pf k (asn1_lc_as_parser lc)
+  | ASN1_ANY_ILC -> parse_asn1_anyILC
 
 and asn1_as_parser_twin (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_t k) & (fp : (asn1_id_t -> asn1_strong_parser (asn1_t k)) {and_then_cases_injective fp})) (decreases k) =
   match k with
@@ -86,6 +158,9 @@ and asn1_as_parser_twin (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_
     let lp = asn1_lc_as_parser lc in
     let _ = make_asn1_choice_parser_twin_cases_injective lc pf k lp in
     (make_asn1_choice_parser lc pf k lp, make_asn1_choice_parser_twin lc pf k lp)
+  | ASN1_ANY_ILC -> 
+    let _ = parse_asn1_anyILC_twin_and_then_cases_injective () in
+    (parse_asn1_anyILC, parse_asn1_anyILC_twin)
 
 and asn1_decorated_as_parser_twin (item : asn1_gen_item_k) : Tot (gp : gen_decorated_parser_twin {Mkgendcparser?.d gp == item}) =
   match item with

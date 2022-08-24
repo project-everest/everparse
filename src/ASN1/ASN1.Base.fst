@@ -155,16 +155,14 @@ type asn1_content_k : Type =
 //| ASN1_SET : #s : _ -> asn1_set_k s -> asn1_content_k
 | ASN1_SET_OF : #s : _ -> asn1_k s -> asn1_content_k
 | ASN1_PREFIXED : #s : _ -> asn1_k s -> asn1_content_k
-| ASN1_ANY_OID : asn1_id_t ->
-                 supported : list (asn1_oid_t * asn1_gen_items_k) -> 
-                 fallback : option asn1_gen_items_k ->
-                 pf : squash (List.noRepeats (List.map fst supported)) -> 
-                 asn1_content_k
-| ASN1_ANY_INTEGER : asn1_id_t ->
-                 supported : list (asn1_integer_t * asn1_gen_items_k) -> 
-                 fallback : option asn1_gen_items_k ->
-                 pf : squash (List.noRepeats (List.map fst supported)) -> 
-                 asn1_content_k
+| ASN1_ANY_DEFINED_BY : prefix : list asn1_gen_item_k ->
+             id : asn1_id_t ->
+             key_k : asn1_terminal_k ->
+             supported : list ((asn1_terminal_t key_k) * asn1_gen_items_k) -> 
+             fallback : option asn1_gen_items_k ->
+             pf_wf : squash (asn1_sequence_k_wf (List.append (List.map (fun x -> let (| s, d, _ |) = x in (s, d)) prefix) [(Set.singleton id, PLAIN)])) ->
+             pf_sup : squash (List.noRepeats (List.map fst supported)) -> 
+             asn1_content_k
 
 // The complete ASN.1 kind is indexed by the set of valid first identifiers
 // Note that length does not matter here
@@ -173,6 +171,7 @@ and asn1_k : Set.set asn1_id_t -> Type =
 | ASN1_CHOICE_ILC : choices : list (asn1_id_t & asn1_content_k) -> 
                     pf : squash (List.noRepeats (List.map fst choices)) -> 
                     asn1_k (my_as_set (List.map fst choices))
+| ASN1_ANY_ILC : asn1_k (Set.complement (Set.empty))                   
                     
 and asn1_decorated_k : Set.set asn1_id_t -> asn1_decorator -> Type =
 | ASN1_PLAIN_ILC : #s : _ -> k : asn1_k s -> asn1_decorated_k s PLAIN
@@ -187,9 +186,6 @@ and asn1_gen_items_k : Type = items : list (asn1_gen_item_k) & squash (asn1_sequ
 
 let mk_ASN1_GEN_ITEM (#s) (#d) (k : asn1_decorated_k s d) : asn1_gen_item_k =
   (| s, d, k |)
-
-let mk_ASN1_GEN_ITEMS (items : list asn1_gen_item_k) (#pf : squash (asn1_sequence_k_wf (List.map (fun x -> let (| s, d, _ |) = x in (s, d) ) items))) : asn1_gen_items_k =
-  (| items, pf |)
 
 type default_tv (#a : eqtype) (v : a) =
 | Default : default_tv v
@@ -255,14 +251,12 @@ let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
   | ASN1_SEQUENCE_OF k' ->  list (asn1_t k')
   | ASN1_SET_OF k' -> asn1_t k'
   | ASN1_PREFIXED k' -> asn1_t k'
-  | ASN1_ANY_OID id ls ofb pf -> 
-    (match ofb with
-    | None -> make_gen_choice_type (asn1_any_t asn1_oid_t ls)
-    | Some fb -> make_gen_choice_type_with_fallback (asn1_any_t asn1_oid_t ls) (asn1_sequence_t (dfst fb)))
-  | ASN1_ANY_INTEGER id ls ofb pf ->
-    (match ofb with
-    | None -> make_gen_choice_type (asn1_any_t asn1_integer_t ls)
-    | Some fb -> make_gen_choice_type_with_fallback (asn1_any_t asn1_integer_t ls) (asn1_sequence_t (dfst fb)))
+  | ASN1_ANY_DEFINED_BY prefix id key_k ls ofb pf_wf pf_sup -> 
+    let suffix_t =
+      (match ofb with
+      | None -> make_gen_choice_type (asn1_any_t (asn1_terminal_t key_k) ls)
+      | Some fb -> make_gen_choice_type_with_fallback (asn1_any_t (asn1_terminal_t key_k) ls) (asn1_sequence_t (dfst fb))) in
+    asn1_sequence_any_t prefix suffix_t
 
 and asn1_any_t (t : eqtype) (ls : list (t * asn1_gen_items_k)) : Tot (list (t & Type)) (decreases ls) =
   match ls with
@@ -281,8 +275,8 @@ and asn1_lc_t (lc : list (asn1_id_t & asn1_content_k)) : Tot (list (asn1_id_t & 
 and asn1_t (#s : _) (k : asn1_k s) : Tot Type (decreases k) =
   match k with
   | ASN1_ILC id k' -> asn1_content_t k'
-  | ASN1_CHOICE_ILC lc pf -> 
-    make_gen_choice_type (asn1_lc_t lc)
+  | ASN1_CHOICE_ILC lc pf -> make_gen_choice_type (asn1_lc_t lc)
+  | ASN1_ANY_ILC -> asn1_id_t & asn1_octetstring_t
 
 and asn1_decorated_t (item : asn1_gen_item_k) : Tot Type =
   match item with
@@ -295,9 +289,16 @@ and asn1_decorated_t (item : asn1_gen_item_k) : Tot Type =
 and asn1_sequence_t (items : list asn1_gen_item_k) : Tot Type (decreases items) =
   match items with
   | [] -> unit
-  | [hd] -> asn1_decorated_t hd
+  | [hd] -> (asn1_decorated_t hd)
   | hd :: tl -> 
     (asn1_decorated_t hd) & (asn1_sequence_t tl)
+
+and asn1_sequence_any_t (items : list asn1_gen_item_k) (suffix_t : Type) : Tot Type (decreases items) =
+  match items with
+  | [] -> suffix_t
+  | [hd] -> (asn1_decorated_t hd) & suffix_t
+  | hd :: tl -> 
+    (asn1_decorated_t hd) & (asn1_sequence_any_t tl suffix_t)
 
 type asn1_length_u32_t = U32.t
 
@@ -332,8 +333,11 @@ type gen_parser (k : parser_kind) =
 | Mkgenparser : (t : Type) -> (p : parser k t) -> gen_parser k
 
 noeq
+type parser_twin (k : parser_kind) (t : Type) =
+| Mkparsertwin : (p : parser k t) -> (fp : (asn1_id_t -> parser k t) {and_then_cases_injective fp} ) -> parser_twin k t
+
+noeq
 type gen_decorated_parser_twin =
 | Mkgendcparser : (d : asn1_gen_item_k) -> (p : asn1_strong_parser (asn1_decorated_pure_t d)) 
 -> fp : (asn1_id_t -> asn1_strong_parser (asn1_decorated_pure_t d)) {and_then_cases_injective fp} ->
 gen_decorated_parser_twin
-
