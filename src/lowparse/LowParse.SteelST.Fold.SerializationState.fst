@@ -4,6 +4,7 @@ open LowParse.SteelST.Write
 open LowParse.SteelST.Fold.Gen
 open LowParse.SteelST.Combinators
 open LowParse.SteelST.List.Base
+open LowParse.Spec.VLGen
 
 module SZ = LowParse.Steel.StdInt
 module H = LowParse.SteelST.Fold.Hoare
@@ -2132,5 +2133,248 @@ let impl_if
       (ll_state_match0 p_of_s b b_sz a h' out)
       ((cl0 p_of_s b b_sz a).ll_state_match h' out);
     k_success out h' ()
+
+#pop-options
+
+let list0_inc
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b0: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: state_i0 type_of_scalar)
+  (sc: scalar_t)
+  (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
+  (t: typ type_of_scalar)
+: Tot (stt_state_inc (cl0 p_of_s b0 b_sz a) (spec_list0 s sc sz t))
+= fun h ->
+  let h' = get_return_state (spec_list0 s sc sz t) h in
+  let scp = (p_of_s sc).scalar_parser in
+  let tp = parser_of_typ p_of_s t in
+  match parsed_size (weaken default_parser_kind (parse_splist scp sz tp)) (VParseValue?.v (SCons?.s h')) with
+  | None -> ()
+  | _ ->
+    let b = parsed_size_some_elim (weaken default_parser_kind (parse_splist scp sz tp)) (VParseValue?.v (SCons?.s h')) in
+    let szp = ((scp `parse_synth` sz) `parse_synth` SZ.size_v) in
+    parse_vlgen_alt_eq
+      szp
+      (parse_list tp)
+      b;
+    let Some (_, len1) = parse szp b in
+    let b2 = Seq.slice b len1 (Seq.length b) in
+    parsed_size_some_intro (weaken default_parser_kind (parse_list tp)) (VParseList?.v (SCons?.s h)) b2
+
+let parsed_size_parse_splist_no_size
+  (#st: Type)
+  (#sk: parser_kind)
+  (sp: parser sk st)
+  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (l: list t)
+  (sl: nat)
+: Lemma
+  (requires (
+    parsed_size (parse_list p) l == Some sl /\
+    (forall x . SZ.size_v (sz x) <> sl)
+  ))
+  (ensures (
+    parsed_size (parse_splist sp sz p) l == None
+  ))
+= match parsed_size (parse_splist sp sz p) l with
+  | None -> ()
+  | _ ->
+    let b = parsed_size_some_elim (parse_splist sp sz p) l in
+    parse_vlgen_alt_eq
+      ((sp `parse_synth` sz) `parse_synth` SZ.size_v)
+      (parse_list p)
+      b;
+    let Some (_, len1) = parse ((sp `parse_synth` sz) `parse_synth` SZ.size_v) b in
+    parsed_size_some_intro (parse_list p) l (Seq.slice b len1 (Seq.length b));
+    parse_synth_eq
+      (sp `parse_synth` sz)
+      SZ.size_v
+      b;
+    parse_synth_eq sp sz b
+
+let parsed_size_parse_splist
+  (#st: Type)
+  (#sk: parser_kind)
+  (sp: parser sk st)
+  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (l: list t)
+  (x: st)
+: Lemma
+  (requires (
+    sk.parser_kind_subkind == Some ParserStrong /\
+    parsed_size (parse_list p) l == Some (SZ.size_v (sz x))
+  ))
+  (ensures (
+    parsed_size (parse_splist sp sz p) l ==
+      parsed_size sp x `option_nat_plus` parsed_size (parse_list p) l
+  ))
+= match parsed_size sp x with
+  | None ->
+    begin match parsed_size (parse_splist sp sz p) l with
+    | None -> ()
+    | _ ->
+      let b = parsed_size_some_elim (parse_splist sp sz p) l in
+      parse_vlgen_alt_eq
+        ((sp `parse_synth` sz) `parse_synth` SZ.size_v)
+        (parse_list p)
+        b;
+      let Some (_, len1) = parse ((sp `parse_synth` sz) `parse_synth` SZ.size_v) b in
+      parsed_size_some_intro (parse_list p) l (Seq.slice b len1 (Seq.length b));
+      parse_synth_eq
+        (sp `parse_synth` sz)
+        SZ.size_v
+        b;
+      parse_synth_eq sp sz b;
+      let b1 = Seq.slice b 0 len1 in
+      parse_strong_prefix sp b b1;
+      parsed_size_some_intro sp x b1
+    end
+  | _ ->
+    let b1 = parsed_size_some_elim sp x in
+    let b2 = parsed_size_some_elim (parse_list p) l in
+    let b = b1 `Seq.append` b2 in
+    assert (b2 `Seq.equal` Seq.slice b (Seq.length b1) (Seq.length b));
+    parse_strong_prefix sp b1 b;
+    parse_synth_eq sp sz b;
+    parse_synth_eq
+      (sp `parse_synth` sz)
+      SZ.size_v
+      b;
+    parse_vlgen_alt_eq
+      ((sp `parse_synth` sz) `parse_synth` SZ.size_v)
+      (parse_list p)
+      b;
+    parsed_size_some_intro (parse_splist sp sz p) l b
+
+let get_state_head_list
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (#t: typ type_of_scalar)
+  (#s: Ghost.erased (state_i0 type_of_scalar))
+  (h: Ghost.erased (state_t0 type_of_scalar (IParseList t :: s)))
+: Tot (Ghost.erased (list (type_of_typ t)))
+= VParseList?.v (SCons?.s (Ghost.reveal h))
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+inline_for_extraction
+let impl_list
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (b: byte_array)
+  (b_sz: R.ref SZ.size_t)
+  (a: AP.array byte)
+  (s: Ghost.erased (state_i0 type_of_scalar))
+  (sc: scalar_t)
+  (wc: r_to_l_write_t (p_of_s sc).scalar_parser)
+  (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
+  (t: typ type_of_scalar)
+  (sz'_ex: ((s: SZ.size_t) -> (b: bool { forall x . sz x == s ==> b == true })))
+  (sz': ((s: SZ.size_t { sz'_ex s == true }) -> (x: type_of_scalar sc { sz x == s })))
+: Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_list0 s sc sz t))
+= fun kpre kpost out (h: Ghost.erased (state_t0 type_of_scalar (IParseList t :: s))) k_success k_failure ->
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParseValue (TList sc sz t) :: s)) = get_return_state (spec_list0 s sc sz t) h in
+    rewrite
+      ((cl0 p_of_s b b_sz a).ll_state_match h out)
+      (ll_state_match0 p_of_s b b_sz a h out);
+    let _ = gen_elim () in
+    let _ = elim_ll_state_match'_cons p_of_s _ _ _ _ _ in
+    rewrite
+      (ll_state_item_match p_of_s _ _ _)
+      (ll_state_item_match0 p_of_s (SCons?.s h) out.ll_b (LCons?.a1 out.ll_s));
+    let _ = gen_elim () in
+    let _ = rewrite_aparse out.ll_b (parse_list (parser_of_typ p_of_s t)) in
+    aparse_parsed_size _ out.ll_b _;
+    parsed_size_rewrite (parse_splist (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t)) (get_state_head_list h) (parser_of_state_i_item p_of_s (IParseValue (TList sc sz t)));
+    let free_sz = R.read b_sz in
+    let ex = sz'_ex (LCons?.sz1 out.ll_s) in
+    if ex
+    then begin
+      let x = sz' (LCons?.sz1 out.ll_s) in
+      let succ = wc x b _ b_sz _ in
+      if succ
+      then begin
+        let _ = gen_elim () in
+        let free_sz' = read_replace b_sz in
+        rewrite
+          (r_to_l_write_post _ _ _ _ _ _)
+          (r_to_l_write_post_success (p_of_s sc).scalar_parser x b (AP.array_of out.ll_free) free_sz');
+        let _ = gen_elim () in
+        let bw = hop_arrayptr_aparse (p_of_s sc).scalar_parser b free_sz' _ in
+        let _ = intro_synth _ sz bw () in
+        let _ = intro_parse_splist (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) bw out.ll_b in
+        let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParseValue (TList sc sz t))) in
+        let vbl' = vpattern (AP.arrayptr b) in
+        let tag_sz = free_sz `SZ.size_sub` free_sz' in
+        [@inline_let]
+        let out' : ll_state a = {
+          ll_sz0 = out.ll_sz0;
+          ll_free = vbl';
+          ll_b = bw;
+          ll_sz = Ghost.hide (tag_sz `SZ.size_add` out.ll_sz);
+          ll_a = AP.merge (array_of' vbw) (LCons?.a2 out.ll_s);
+          ll_s = LCons
+            _ _
+            (array_of' vbw)
+            (tag_sz `SZ.size_add` LCons?.sz1 out.ll_s)
+            (LCons?.b2 out.ll_s)
+            (LCons?.sz2 out.ll_s)
+            (LCons?.a2 out.ll_s)
+            ()
+            (LCons?.s2 out.ll_s);
+          ll_prf = ();
+        }
+        in
+        vpattern_rewrite (AP.arrayptr b) out'.ll_free;
+        rewrite
+          (ll_state_item_match0 p_of_s (VParseValue (TList sc sz t) (get_state_head_list h)) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
+          (ll_state_match' p_of_s h' out'.ll_b out'.ll_sz out'.ll_a out'.ll_s);
+        rewrite
+          (ll_state_match0 p_of_s b b_sz a h' out')
+          ((cl0 p_of_s b b_sz a).ll_state_match h' out');
+        k_success out' h' ()
+      end else begin
+        // could not write size to output buffer
+        parsed_size_parse_splist (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) (get_state_head_list h) x;
+        let _ = gen_elim () in
+        rewrite
+          (r_to_l_write_post _ _ _ _ _ _)
+          (r_to_l_write_post_failure (p_of_s sc).scalar_parser x b (AP.array_of out.ll_free));
+        let _ = gen_elim () in
+        let _ = elim_aparse _ _ in
+        let _ = AP.join b _ in
+        ll_state_match'_size_of_state_t0 p_of_s _ _ _ _ _;
+        let _ = wipe_ll_state_match' p_of_s _ _ _ _ _ in
+        let _ = AP.join b _ in
+        rewrite
+          (ll_state_failure0 p_of_s b b_sz a h')
+          ((cl0 p_of_s b b_sz a).ll_state_failure h');
+        k_failure h' ()
+      end
+    end else begin
+      // no sc element corresponds to size
+      parsed_size_parse_splist_no_size (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) (get_state_head_list h) (AP.length (LCons?.a1 out.ll_s));
+      let _ = elim_aparse _ _ in
+      let _ = AP.join b _ in
+      ll_state_match'_size_of_state_t0 p_of_s _ _ _ _ _;
+      let _ = wipe_ll_state_match' p_of_s _ _ _ _ _ in
+      let _ = AP.join b _ in
+      rewrite
+        (ll_state_failure0 p_of_s b b_sz a h')
+        ((cl0 p_of_s b b_sz a).ll_state_failure h');
+      k_failure h' ()
+    end
 
 #pop-options
