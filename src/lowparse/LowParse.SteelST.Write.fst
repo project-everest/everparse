@@ -85,7 +85,7 @@ let write_constant_size
     ))
     (ensures (fun _ -> True))
 = fun x a ->
-  let ar = AP.split a sz in
+  let _ = AP.gsplit a sz in
   let _ = gen_elim () in
   let _ = w x a in
   return sz

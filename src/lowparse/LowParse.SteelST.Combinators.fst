@@ -2,6 +2,7 @@ module LowParse.SteelST.Combinators
 include LowParse.Spec.Combinators
 include LowParse.SteelST.Validate
 include LowParse.SteelST.Access
+include LowParse.SteelST.Write
 open Steel.ST.GenElim
 
 module AP = LowParse.SteelST.ArrayPtr
@@ -399,6 +400,82 @@ let read_synth'
 : Tot (leaf_reader (p1 `parse_synth` f2))
 = read_synth r f2 (fun x -> f2 x) sq
 
+inline_for_extraction
+let write_synth
+  (#k: parser_kind)
+  (#t1: Type)
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: writer s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> GTot t1))
+  (f21': ((x: t2) -> Tot (y: t1 { y == f21 x })))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (writer (serialize_synth p f12 s f21 ()))
+= fun x a ->
+  serialize_synth_eq p f12 s f21 () x;
+  let y = f21' x in
+  let sz = w y a in
+  let _ = gen_elim () in
+  let _ = intro_synth p f12 a () in
+  return sz
+
+inline_for_extraction
+let write_synth'
+  (#k: parser_kind)
+  (#t1: Type)
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: writer s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> Tot t1))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (writer (serialize_synth p f12 s f21 ()))
+= write_synth w f12 f21 (fun x -> f21 x) ()
+
+inline_for_extraction
+let exact_write_synth
+  (#k: parser_kind)
+  (#t1: Type)
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: exact_writer s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> GTot t1))
+  (f21': ((x: t2) -> Tot (y: t1 { y == f21 x })))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (exact_writer (serialize_synth p f12 s f21 ()))
+= fun x a ->
+  serialize_synth_eq p f12 s f21 () x;
+  let y = f21' x in
+  let _ = w y a in
+  intro_synth p f12 a ()
+
+inline_for_extraction
+let exact_write_synth'
+  (#k: parser_kind)
+  (#t1: Type)
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: exact_writer s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> Tot t1))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (exact_writer (serialize_synth p f12 s f21 ()))
+= exact_write_synth w f12 f21 (fun x -> f21 x) ()
+
 [@CMacro]
 let validator_error_constraint_failed  = 2ul
 
@@ -501,6 +578,34 @@ let read_filter
   let va' = intro_filter p1 f2 a in
   rewrite (aparse (parse_filter p1 f2) a va') (aparse (parse_filter p1 f2) a va);
   return res
+
+inline_for_extraction
+let write_filter
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: writer s)
+  (f: (t -> GTot bool))
+: Tot (writer (serialize_filter s f))
+= fun x a ->
+  let sz = w x a in
+  let _ = gen_elim () in
+  let _ = intro_filter p f a in
+  return sz
+
+inline_for_extraction
+let exact_write_filter
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: exact_writer s)
+  (f: (t -> GTot bool))
+: Tot (exact_writer (serialize_filter s f))
+= fun x a ->
+  let _ = w x a in
+  intro_filter p f a
 
 #push-options "--z3rlimit 32 --query_stats"
 #restart-solver
