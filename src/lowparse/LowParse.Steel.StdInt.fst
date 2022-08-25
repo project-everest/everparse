@@ -29,3 +29,9 @@ let size_div x y = U32.div x y
 let size_mod x y = U32.rem x y
 
 let size_le x y = U32.lte x y
+
+let to_u8 x = FStar.Int.Cast.uint32_to_uint8 x
+
+let to_u16 x = FStar.Int.Cast.uint32_to_uint16 x
+
+let to_u32 x = x

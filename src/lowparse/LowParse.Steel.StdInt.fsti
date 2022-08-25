@@ -79,3 +79,24 @@ let zero_size : (zero_size: size_t { size_v zero_size == 0 }) = mk_size_t 0ul
 
 inline_for_extraction
 let one_size : (zero_size: size_t { size_v zero_size == 1 }) = mk_size_t 1ul
+
+inline_for_extraction
+val to_u8
+  (x: size_t)
+: Pure FStar.UInt8.t
+  (requires (size_v x <= 255))
+  (ensures (fun y -> FStar.UInt8.v y == size_v x))
+
+inline_for_extraction
+val to_u16
+  (x: size_t)
+: Pure FStar.UInt16.t
+  (requires (size_v x <= 65535))
+  (ensures (fun y -> FStar.UInt16.v y == size_v x))
+
+inline_for_extraction
+val to_u32
+  (x: size_t)
+: Pure FStar.UInt32.t
+  (requires (size_v x <= 4294967295))
+  (ensures (fun y -> FStar.UInt32.v y == size_v x))
