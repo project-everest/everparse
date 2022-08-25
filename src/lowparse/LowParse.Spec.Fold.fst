@@ -322,6 +322,24 @@ type prog
       ((x: type_of_scalar s) -> prog type_of_scalar state_t action_t (t x) ret_t pre post) ->
       prog type_of_scalar state_t action_t (TChoice s t) ret_t pre post
 
+[@@specialize]
+let pbind
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (#state_i: Type u#a)
+  (#state_t: state_i -> Type u#b)
+  (#action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type u#c)
+  (#t: typ type_of_scalar)
+  (#ret1: Type)
+  (#pre1: _)
+  (#post1: _)
+  (#ret2: _)
+  (#post2: _)
+  (f: prog type_of_scalar state_t action_t t ret1 pre1 post1)
+  (g: ((pre2: state_i) -> squash (pre2 == post1) -> (x: ret1) -> prog type_of_scalar state_t action_t t ret2 pre2 post2))
+: prog type_of_scalar state_t action_t t ret2 pre1 post2
+= PBind f (g post1 ())
+
 [@@specialize; noextract_to "krml"]
 let typ_of_prog
   (#scalar_t: Type)

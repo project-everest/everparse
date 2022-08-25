@@ -228,6 +228,111 @@ let full_test_pretty_print
 
 #pop-options
 
+module W = LowParse.SteelST.Fold.SerializationState
+
+noextract
+[@@G.specialize]
+let test_write1 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) _ unit (W.initial_index type_of_scalar) _
+= G.PBind
+    (G.PScalar _ U32)
+    (fun v1 -> G.PBind
+      (G.PAction (W.AWrite _ U32 v1))
+      (fun _ -> G.PAction (W.AWeaken _ (W.index_with_trivial_postcond [W.IParseValue (G.TScalar U32)]) ()))
+    )
+
+// FIXME: WHY WHY WHY do I need those i0, i1, etc. annotations to typecheck this program? Without them, F* will blow up, increasing memory consumption and not returning
+noextract
+[@@G.specialize]
+let test_write2 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) _ unit (W.initial_index type_of_scalar) _
+= let i0 = W.initial_index type_of_scalar in
+  G.PPair
+    (G.PScalar i0 U32)
+    (fun v1 -> G.PBind
+      (G.PScalar i0 U32)
+      (fun v2 -> 
+        let i1 = W.i_nil i0 (G.TScalar U32) in
+        G.PBind
+        (G.PAction (W.ANil i0 (G.TScalar U32)))
+        (fun _ -> 
+        let i2 = W.i_write i1 U32 v2 in
+        G.PBind
+          (G.PAction (W.AWrite i1 U32 v2))
+          (fun _ -> 
+            let i3 = W.i_cons i2 (G.TScalar U32) () in
+            G.PBind
+            (G.PAction (W.ACons i2 (G.TScalar U32) ()))
+            (fun _ -> 
+              let i4 = W.i_write i3 U32 v1 in
+              G.PBind
+              (G.PAction (W.AWrite i3 U32 v1))
+              (fun _ -> 
+                let i5 = W.i_cons i4 (G.TScalar U32) () in
+                G.PBind
+                (G.PAction (W.ACons i4 (G.TScalar U32) ()))
+                (fun _ -> 
+                  let i6 = W.i_list i5 U32 SZ.mk_size_t (G.TScalar U32) () in
+                  G.PBind
+                  (G.PAction
+                    (W.AList i5
+                      U32 SZ.mk_size_t
+                      (fun x -> x `SZ.size_le` SZ.mk_size_t 4294967295ul)
+                      (fun x -> SZ.to_u32 x)
+                      (G.TScalar U32)
+                      ()
+                  ))
+                  (fun _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParseValue (G.TList U32 SZ.mk_size_t (G.TScalar U32))]) ()))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
+noextract
+[@@G.specialize]
+let test_write3 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) _ unit (W.initial_index type_of_scalar) _
+=
+  let i0 = W.initial_index type_of_scalar in
+  G.PPair
+    (G.PScalar i0 U32)
+    (fun v1 -> G.PBind
+      (G.PScalar i0 U32)
+      (fun v2 -> 
+        G.pbind
+        (G.PAction (W.ANil i0 (G.TScalar U32)))
+        (fun (i1: W.state_i type_of_scalar) _ _ -> 
+        G.pbind
+          (G.PAction (W.AWrite i1 U32 v2))
+          (fun (i2: W.state_i type_of_scalar) _ _ -> 
+            G.pbind
+            (G.PAction (W.ACons i2 (G.TScalar U32) ()))
+            (fun (i3: W.state_i type_of_scalar) _ _ -> 
+              G.pbind
+              (G.PAction (W.AWrite i3 U32 v1))
+              (fun (i4: W.state_i type_of_scalar) _ _ -> 
+                G.pbind
+                (G.PAction (W.ACons i4 (G.TScalar U32) ()))
+                (fun (i5: W.state_i type_of_scalar) _ _ -> 
+                  G.pbind
+                  (G.PAction
+                    (W.AList i5
+                      U32 SZ.mk_size_t
+                      (fun x -> x `SZ.size_le` SZ.mk_size_t 4294967295ul)
+                      (fun x -> SZ.to_u32 x)
+                      (G.TScalar U32)
+                      ()
+                  ))
+                  (fun (i6: W.state_i type_of_scalar) _ _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParseValue (G.TList U32 SZ.mk_size_t (G.TScalar U32))]) ()))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
+
 inline_for_extraction noextract
 let u16_max (x1 x2: U16.t) : Tot U16.t
 = if x1 `U16.lte` x2 then x2 else x1
