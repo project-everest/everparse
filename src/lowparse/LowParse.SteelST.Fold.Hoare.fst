@@ -305,7 +305,8 @@ let mk_ll_state0
   (ppre: (state_t0 pre -> prop))
   (sq: squash (ppre h))
 : Tot (mk_ll_state_t (cl cl0) vpre #({i=Ghost.reveal pre; p=ppre}) h)
-= let h' : Ghost.erased (state_t state_t0 ({i=Ghost.reveal pre; p=ppre})) = Ghost.hide (Ghost.reveal h) in
+= [@inline_let] // this is a nasty one
+  let h' : Ghost.erased (state_t state_t0 ({i=Ghost.reveal pre; p=ppre})) = Ghost.hide (Ghost.reveal h) in
   coerce _ (mk_ll_state #_ #_ #_ #_ #cl0 #vpre #({i = Ghost.reveal pre; p = ppre }) h' (coerce _ mk))
 
 inline_for_extraction

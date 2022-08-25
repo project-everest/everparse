@@ -30,40 +30,6 @@ type scalar_ops (t: Type) = {
   scalar_reader: leaf_reader scalar_parser;
 }
 
-let parse_bool : parser (parse_filter_kind parse_u8_kind) bool =
-  parse_u8
-    `parse_filter`
-    (fun x -> (x = 1uy || x = 0uy))
-    `parse_synth`
-    (fun x -> (x = 1uy))
-
-let serialize_bool : serializer parse_bool =
-  serialize_synth
-    (parse_u8 `parse_filter` (fun x -> (x = 1uy || x = 0uy)))
-    (fun x -> (x = 1uy))
-    (serialize_u8 `serialize_filter` (fun x -> (x = 1uy || x = 0uy)))
-    (fun y -> if y then 1uy else 0uy)
-    ()
-
-inline_for_extraction
-let validate_bool : validator parse_bool =
-  validate_synth
-    (validate_filter
-      validate_u8
-      read_u8
-      (fun x -> (x = 1uy || x = 0uy))
-      (fun x -> (x = 1uy || x = 0uy))
-    )
-    (fun x -> (x = 1uy))
-    ()
-
-inline_for_extraction
-let read_bool : leaf_reader parse_bool =
-  read_synth'
-    (read_filter read_u8 (fun x -> (x = 1uy || x = 0uy)))
-    (fun x -> (x = 1uy))
-    ()
-
 inline_for_extraction
 noeq
 type low_level_state

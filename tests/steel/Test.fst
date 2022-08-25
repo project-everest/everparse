@@ -38,6 +38,54 @@ let test_accessor
       return res
   ))
 
+let parse_bool : parser (parse_filter_kind parse_u8_kind) bool =
+  parse_u8
+    `parse_filter`
+    (fun x -> (x = 1uy || x = 0uy))
+    `parse_synth`
+    (fun x -> (x = 1uy))
+
+let serialize_bool : serializer parse_bool =
+  serialize_synth
+    (parse_u8 `parse_filter` (fun x -> (x = 1uy || x = 0uy)))
+    (fun x -> (x = 1uy))
+    (serialize_u8 `serialize_filter` (fun x -> (x = 1uy || x = 0uy)))
+    (fun y -> if y then 1uy else 0uy)
+    ()
+
+inline_for_extraction
+noextract
+let validate_bool : validator parse_bool =
+  validate_synth
+    (validate_filter
+      validate_u8
+      read_u8
+      (fun x -> (x = 1uy || x = 0uy))
+      (fun x -> (x = 1uy || x = 0uy))
+    )
+    (fun x -> (x = 1uy))
+    ()
+
+inline_for_extraction
+noextract
+let read_bool : leaf_reader parse_bool =
+  read_synth'
+    (read_filter read_u8 (fun x -> (x = 1uy || x = 0uy)))
+    (fun x -> (x = 1uy))
+    ()
+
+inline_for_extraction
+noextract
+let write_bool: exact_writer serialize_bool =
+  exact_write_synth'
+    (exact_write_filter
+      write_u8
+      (fun x -> (x = 1uy || x = 0uy))
+    )
+    (fun x -> (x = 1uy))
+    (fun y -> if y then 1uy else 0uy)
+    ()
+
 module P = LowParse.SteelST.Fold.Print
 module G = LowParse.SteelST.Fold.Gen
 
@@ -68,10 +116,10 @@ let p_of_s (s: scalar_t) : G.scalar_ops (type_of_scalar s) =
            G.scalar_jumper = jump_weaken _ jump_u32 ();
          }
   | Bool -> {
-           G.scalar_parser = weaken G.pkind G.parse_bool;
-           G.scalar_validator = validate_weaken _ G.validate_bool ();
-           G.scalar_reader = read_weaken _ G.read_bool;
-           G.scalar_jumper = jump_weaken _ (jump_constant_size G.parse_bool SZ.one_size) ();
+           G.scalar_parser = weaken G.pkind parse_bool;
+           G.scalar_validator = validate_weaken _ validate_bool ();
+           G.scalar_reader = read_weaken _ read_bool;
+           G.scalar_jumper = jump_weaken _ (jump_constant_size parse_bool SZ.one_size) ();
          }
 
 noextract
@@ -332,6 +380,25 @@ let test_write3 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
       )
     )
 
+[@@G.specialize]
+noextract
+let w_of_s
+  (s: scalar_t)
+: Tot (W.r_to_l_write_t (p_of_s s).scalar_parser)
+= match s with
+  | U8 -> coerce _ (W.r_to_l_write_rewrite (W.r_to_l_write_constant_size write_u8 SZ.one_size) (p_of_s s).scalar_parser)
+  | U32 -> coerce _ (W.r_to_l_write_rewrite (W.r_to_l_write_constant_size write_u32 (SZ.mk_size_t 4ul)) (p_of_s s).scalar_parser)
+  | Bool -> coerce _ (W.r_to_l_write_rewrite (W.r_to_l_write_constant_size write_bool SZ.one_size) (p_of_s s).scalar_parser)
+
+inline_for_extraction noextract
+[@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
+let specialize_test_write3 b b_sz a =
+  G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz a) (W.ptr_cl p_of_s b b_sz a) test_write3
+
+let extract_test_write3 vb b b_sz =
+  G.extract_impl_fold_unit
+    (specialize_test_write3 b b_sz (A.array_of vb))
+    (W.mk_initial_state p_of_s vb b b_sz)
 
 inline_for_extraction noextract
 let u16_max (x1 x2: U16.t) : Tot U16.t
