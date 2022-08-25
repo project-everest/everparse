@@ -400,6 +400,170 @@ let extract_test_write3 vb b b_sz =
     (specialize_test_write3 b b_sz (A.array_of vb))
     (W.mk_initial_state p_of_s vb b b_sz)
 
+noextract
+[@@G.specialize]
+let tif = G.TIf #_ #type_of_scalar
+
+noextract
+[@@G.specialize]
+let tchoice = G.TChoice #_ #type_of_scalar
+
+let state_assert_postcond
+  (i: W.state_i type_of_scalar)
+  (p: (W.state_t _ i -> prop))
+  (sq: squash (
+    forall (h: W.state_t _ i) . p h
+  ))
+  (h': W.state_t0 type_of_scalar i.i)
+: Tot prop
+= i.p h' /\ p h'
+
+noextract
+[@@G.specialize]
+let state_assert_post
+  (i: W.state_i type_of_scalar)
+  (p: (W.state_t _ i -> prop))
+  (sq: squash (
+    forall (h: W.state_t _ i) . p h
+  ))
+: Tot (W.state_i type_of_scalar)
+= { i = i.i; p = state_assert_postcond i p sq }
+
+noextract
+[@@G.specialize]
+let state_assert
+  (i: W.state_i type_of_scalar)
+  (p: (W.state_t _ i -> prop))
+  (sq: squash (
+    forall (h: W.state_t _ i) . p h
+  ))
+: Tot (W.action_t type_of_scalar unit i (state_assert_post i p ()))
+= W.AWeaken i (state_assert_post i p ()) ()
+
+noextract
+[@@G.specialize]
+let test_write4_if_true
+  (b: bool)
+  (sq: squash (b == true))
+: Tot (G.typ type_of_scalar)
+= G.TList U32 SZ.mk_size_t (G.TScalar U8)
+
+noextract
+[@@G.specialize]
+let test_write4_if_false
+  (b: bool)
+  (sq: squash (b == false))
+: Tot (G.typ type_of_scalar)
+= G.TScalar U8
+
+noextract
+[@@G.specialize]
+let test_write4_choice_payload
+  (b: bool)
+: Tot (G.typ type_of_scalar)
+= tif b (test_write4_if_true b) (test_write4_if_false b)
+
+// #push-options "--debug Test --debug_level Norm"
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+noextract
+[@@G.specialize;
+  T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
+let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) _ unit (W.initial_index type_of_scalar) _
+=
+  let i0 = W.initial_index type_of_scalar in
+  G.PBind
+    (G.PScalar i0 U32) // dummy read, I am only testing actions here
+    (fun _ -> G.pbind
+      (G.PAction (W.ANil i0 (G.TScalar U8)))
+      (fun (i1: W.state_i type_of_scalar) _ _ -> G.pbind
+        (G.PAction (W.AWrite i1 U8 104uy))
+        (fun (i2: W.state_i type_of_scalar) _ _ -> G.pbind
+          (G.PAction (W.ACons i2 (G.TScalar U8) ()))
+          (fun (i3: W.state_i type_of_scalar) _ _ -> G.pbind
+            (G.PAction (W.AWrite i3 U8 117uy))
+            (fun (i4: W.state_i type_of_scalar) _ _ -> G.pbind
+              (G.PAction (W.ACons i4 (G.TScalar U8) ()))
+              (fun (i5: W.state_i type_of_scalar) _ _ -> G.pbind
+                (G.PAction (W.AWrite i5 U8 98uy))
+                (fun (i6: W.state_i type_of_scalar) _ _ -> G.pbind
+                  (G.PAction (W.ACons i6 (G.TScalar U8) ()))
+                  (fun (i7: W.state_i type_of_scalar) _ _ -> G.pbind
+                    (G.PAction (W.AList i7
+                      U32 SZ.mk_size_t
+                      (fun x -> x `SZ.size_le` SZ.mk_size_t 4294967295ul)
+                      (fun x -> SZ.to_u32 x)
+                      (G.TScalar U8)
+                      ()
+                    ))
+                    (fun (i8: W.state_i type_of_scalar) _ _ -> G.pbind
+                      (G.PAction (W.AIf i8
+                        (G.TList U32 SZ.mk_size_t (G.TScalar U8))
+                        true
+                        (test_write4_if_true true)
+                        (test_write4_if_false true)
+                        ()
+                      ))
+                      (fun (i9: W.state_i type_of_scalar) _ _ -> G.pbind
+                        (G.PAction (W.AWrite i9 Bool true))
+                        (fun (i10: W.state_i type_of_scalar) _ _ -> G.pbind
+                          (G.PAction (
+                            W.AChoice i10
+                            Bool
+                            (tif true
+                              (test_write4_if_true true)
+                              (test_write4_if_false true)
+                            )
+                            test_write4_choice_payload
+                            ()
+                          ))
+                          (fun (i11: W.state_i type_of_scalar) _ _ -> G.pbind
+                            (G.PAction (W.AWrite i11 U8 70uy))
+                            (fun (i12: W.state_i type_of_scalar) _ _ -> G.pbind
+                              (G.PAction (W.APair i12
+                                (G.TScalar U8)
+                                (tchoice Bool test_write4_choice_payload)
+                                ()
+                              ))
+                              (fun (i13: W.state_i type_of_scalar) _ _ ->
+                                G.PAction (W.AWeaken i13
+                                  (W.index_with_trivial_postcond [W.IParseValue
+                                    (G.TPair
+                                      (G.TScalar U8)
+                                      (tchoice Bool test_write4_choice_payload)
+                                    )
+                                  ])
+                                  ()
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
+#pop-options
+
+inline_for_extraction noextract
+[@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
+let specialize_test_write4 b b_sz a =
+  G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz a) (W.ptr_cl p_of_s b b_sz a) test_write4
+
+let extract_test_write4 vb b b_sz =
+  G.extract_impl_fold_unit
+    (specialize_test_write4 b b_sz (A.array_of vb))
+    (W.mk_initial_state p_of_s vb b b_sz)
+
 inline_for_extraction noextract
 let u16_max (x1 x2: U16.t) : Tot U16.t
 = if x1 `U16.lte` x2 then x2 else x1
