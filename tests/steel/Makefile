@@ -13,7 +13,7 @@ CHECKED_EXT=.checked
 FSTAR_OPTIONS = --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
 		--already_cached '*,-Test' \
 		--include $(FSTAR_HOME)/ulib/experimental \
-		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi
+		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --cmi
 
 FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
 
@@ -22,7 +22,7 @@ HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
-	 -tmpdir out -I .. \
+	 -tmpdir out \
 	 -bundle 'Test=Steel.\*,C,LowStar.\*,LowParse.\*' \
 	 $(HEADERS) \
 	 -warn-error '@2'
@@ -39,7 +39,7 @@ krml/%.krml:
 	$(FSTAR) --codegen krml $(patsubst %$(CHECKED_EXT),%,$(notdir $<)) --extract_module $(basename $(patsubst %$(CHECKED_EXT),%,$(notdir $<))) --warn_error '@241'
 	@touch $@
 
-$(DEPEND_FILE): $(QD_FILES) Makefile ../Test.fst
+$(DEPEND_FILE): $(QD_FILES) Makefile
 	$(FSTAR) --dep full --extract '*,-Steel,+Steel.Loops,-FStar.NMST,-FStar.NMSTTotal,-FStar.MST,-FStar.MSTTotal,-LowParse.SteelST.Fold' $(QD_FILES) Test.fst > $@
 
 depend: $(DEPEND_FILE)
