@@ -4,6 +4,7 @@ module U32 = FStar.UInt32
 module List = FStar.List.Tot
 
 open ASN1.Base
+open ASN1.Syntax
 
 (* Known looseness from rfc5280 section-4:
    . Enforcing version must be 2 (v3)
@@ -14,93 +15,6 @@ open ASN1.Base
    . Backward compatibility for Name
    . Only support algorithms and extensions included in the list
 *)
-
-//shorthands
-
-let mk_constant_id (x : UInt.uint_t 32) : asn1_id_t
-= MK_ASN1_ID UNIVERSAL PRIMITIVE (U32.uint_to_t x)
-
-let mk_constant_constructed_id (x : UInt.uint_t 32) : asn1_id_t
-= MK_ASN1_ID UNIVERSAL CONSTRUCTED (U32.uint_to_t x)
-
-let mk_custom_id (c : asn1_id_class_t) (f : asn1_id_flag_t) (x : UInt.uint_t 32) : asn1_id_t
-= MK_ASN1_ID c f (U32.uint_to_t x)
-
-let rec mk_u32list (l : list (UInt.uint_t 32)) : list U32.t
-= match l with
-  | [] -> []
-  | hd :: tl -> (U32.uint_to_t hd) :: (mk_u32list tl)
-
-let mk_oid (l : list (UInt.uint_t 32)) : Pure (asn1_oid_t)
-  (requires asn1_OID_wf (mk_u32list l))
-  (ensures fun _ -> True)
-= mk_u32list l
-
-let mk_oid_app (oid : asn1_oid_t) (x : UInt.uint_t 32) : asn1_oid_t
-= List.append oid [U32.uint_to_t x]
-
-let op_Slash_Plus = mk_oid_app
-
-// WHY WHY WHY
-let map_tags (items : list asn1_gen_item_k) =
-  List.map (fun x -> let (| s, d, _|) = x in (s, d)) items
-
-// for choices
-
-let op_Hat_Star (id : asn1_id_t) (name : string) : asn1_content_k -> (asn1_id_t * asn1_content_k)
-= fun f -> (id, f)
-
-// for sequences
-
-let field_type (s : Set.set asn1_id_t) (d : asn1_decorator) 
-= match d with
-  | DEFAULT -> asn1_decorated_k s d
-  | _ -> asn1_k s
-
-let op_Hat_Colon (#s : Set.set asn1_id_t)  
-  (d : asn1_decorator) 
-  (f : field_type s d)
-: asn1_gen_item_k
-= match d with
-  | DEFAULT -> mk_ASN1_GEN_ITEM #s #d f
-  | PLAIN -> mk_ASN1_GEN_ITEM (ASN1_PLAIN_ILC #s f)
-  | OPTION -> mk_ASN1_GEN_ITEM (ASN1_OPTION_ILC #s f)
-
-// constants
-
-let boolean_id = mk_constant_id 1
-
-let integer_id = mk_constant_id 2
-
-let bit_string_id = mk_constant_id 3
-
-let octet_string_id = mk_constant_id 4
-
-let null_id = mk_constant_id 5
-
-let oid_id = mk_constant_id 6
-
-let utf8string_id = mk_constant_id 12
-
-let sequence_id = mk_constant_constructed_id 16
-
-let set_id = mk_constant_constructed_id 17
-
-let printablestring_id = mk_constant_id 19
-
-let teletexstring_id = mk_constant_id 20
-
-let ia5string_id = mk_constant_id 22
-
-let utctime_id = mk_constant_id 23
-
-let generalizedtime_id = mk_constant_id 24
-
-let visiblestring_id = mk_constant_id 26
-
-let universalstring_id = mk_constant_id 28
-
-let bMPstring_id = mk_constant_id 30
 
 // TODO: insert list of supported algorithms here
 
@@ -122,22 +36,13 @@ let sha512WithRSAEncryption_oid = pkcs_1 /+ 13
 
 let sha224WithRSAEncryption_oid = pkcs_1 /+ 14
 
-let option_NULL_field
-= ASN1_ILC null_id (ASN1_TERMINAL ASN1_NULL)
-
-let option_NULL_field_list
-= [OPTION ^: option_NULL_field]
-
-let option_NULL_field_list_with_pf : asn1_gen_items_k
-= (|option_NULL_field_list, _|)
+let option_NULL_parameters
+= mk_gen_items ["parameters" *^ (OPTION ^: asn1_null)] (_ by (seq_tac ()))
 
 let id_dsa_with_sha1 = mk_oid [1;2;840;10040;4;3]
 
-let omitted_field
-= ASN1_DEFAULT_TERMINAL null_id #ASN1_NULL ()
-
-let omitted_field_list_with_pf : asn1_gen_items_k
-= (| [DEFAULT ^: omitted_field], _ |)
+let omitted_parameters
+= mk_gen_items ["parameters" *^ (DEFAULT ^: mk_default_field asn1_null ())] (_ by (seq_tac ()))
 
 let ansi_X9_62 = mk_oid [1;2;840;10045]
 
@@ -147,244 +52,226 @@ let id_ecdsa_with_sha1 = id_ecSigType /+ 1
 
 let id_dsa = mk_oid [1;2;840;10040;4;1]
 
-let dss_params_ilc
-= ASN1_ILC sequence_id 
-    (ASN1_SEQUENCE (| [
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|))
+let dss_parms 
+= asn1_sequence 
+  ["p" *^ (PLAIN ^: asn1_integer); 
+   "q" *^ (PLAIN ^: asn1_integer);
+   "g" *^ (PLAIN ^: asn1_integer)]
+  (_ by (seq_tac ()))
 
-let dss_params_fields : asn1_gen_items_k
-= (| [OPTION ^: dss_params_ilc], _ |)
+let dss_parms_field
+= mk_gen_items ["parameters" *^ (OPTION ^: dss_parms)] (_ by (seq_tac ()))
 
 let dhpublicnumber = mk_oid [1;2;840;10046;2;1]
 
-let validationParms_ilc
-= ASN1_ILC sequence_id 
-    (ASN1_SEQUENCE (| [
-      PLAIN ^: (ASN1_ILC bit_string_id (ASN1_TERMINAL ASN1_BITSTRING));
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|))
+let validationParms
+= asn1_sequence
+  ["seed" *^ (PLAIN ^: asn1_bitstring);
+   "pgenCounter" *^ (PLAIN ^: asn1_integer)]
+  (_ by (seq_tac ()))
 
-let domainParameters_ilc
-= ASN1_ILC sequence_id
-    (ASN1_SEQUENCE (| [
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
-      OPTION ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
-      OPTION ^: validationParms_ilc], _|))
+let domainParameters 
+= asn1_sequence
+  ["p" *^ (PLAIN ^: asn1_integer);
+   "g" *^ (PLAIN ^: asn1_integer);
+   "q" *^ (PLAIN ^: asn1_integer);
+   "j" *^ (OPTION ^: asn1_integer);
+   "validationParms" *^ (OPTION ^: validationParms)]
+  (_ by (seq_tac ()))
 
-let domainParameters_fields : asn1_gen_items_k
-= (| [PLAIN ^: domainParameters_ilc], _|)
+let domainParameters_field
+= mk_gen_items ["parameters" *^ (PLAIN ^: domainParameters)] (_ by (seq_tac ()))
 
 let id_keyExchangeAlgorithm = mk_oid [2;16;840;1;101;2;1;1;22]
 
-let kEA_Parms_Id_field : asn1_gen_items_k
-= (| [PLAIN ^: (ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING))], _|)
+let kEA_Parms_Id_field
+= mk_gen_items ["parameters" *^ (PLAIN ^: asn1_octetstring)] (_ by (seq_tac ()))
 
 let id_public_key_type = ansi_X9_62 /+ 2
 
 let id_ecPublicKey = id_public_key_type /+ 1
 
+let fieldElement = asn1_octetstring
+
 let curve
-= ASN1_ILC sequence_id 
-    (ASN1_SEQUENCE (| [
-      PLAIN ^: (ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING));
-      PLAIN ^: (ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING));
-      OPTION ^: (ASN1_ILC bit_string_id (ASN1_TERMINAL ASN1_BITSTRING))], _|))
-      
-let eCPVer_ilc 
-= ASN1_ILC integer_id (ASN1_RESTRICTED_TERMINAL ASN1_INTEGER (fun x -> x = 1))
+= asn1_sequence
+  ["a" *^ (PLAIN ^: fieldElement);
+   "b" *^ (PLAIN ^: fieldElement);
+   "seed" *^ (OPTION ^: asn1_bitstring)]
+  (_ by (seq_tac ()))
+
+let eCPVer
+= mk_restricted_field asn1_integer (fun x -> x = 1)
 
 let id_fieldType = ansi_X9_62 /+ 1
 
 let prime_field_oid = id_fieldType /+ 1
 
-let prime_p : asn1_gen_items_k
-= (| [PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _ |)
+let prime_p
+= mk_gen_items ["parameters" *^ (PLAIN ^: asn1_integer)] (_ by (seq_tac ()))
 
 let characteristic_two_field_oid = id_fieldType /+ 2
-
-(*
 
 let id_characteristic_two_basis = characteristic_two_field_oid /+ 1
 
 let gnBasis_oid = id_characteristic_two_basis /+ 1
 
-let gnBasis_parameters : asn1_gen_items_k
-= (| [PLAIN ^: (ASN1_ILC null_id (ASN1_TERMINAL ASN1_NULL))], _ |)
+let gnBasis_parameters
+= mk_gen_items [PLAIN ^: asn1_null] (_ by (seq_tac ()))
 
 let tpBasis_oid = id_characteristic_two_basis /+ 2
 
-let tpBasis_parameters : asn1_gen_items_k
-= (| [PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|)
+let tpBasis_parameters
+= mk_gen_items ["Trinomial" *^ (PLAIN ^: asn1_integer)] (_ by (seq_tac ()))
 
 let ppBasis_oid = id_characteristic_two_basis /+ 3
 
-let pentanomial_ilc
-= ASN1_ILC sequence_id 
-    (ASN1_SEQUENCE (| [
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
-      PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|))
+let pentanomial
+= asn1_sequence [
+    "k1" *^ (PLAIN ^: asn1_integer);
+    "k2" *^ (PLAIN ^: asn1_integer);
+    "k3" *^ (PLAIN ^: asn1_integer)]
+    (_ by (seq_tac ()))
 
-let ppBasis_paramters : asn1_gen_items_k
-= (| [PLAIN ^: pentanomial_ilc], _|)
+let ppBasis_parameters
+= mk_gen_items ["Pentanomial" *^ (PLAIN ^: pentanomial)] (_ by (seq_tac ()))
 
-*)
+let characteristic_two
+= asn1_any_oid_prefix
+    ["m" *^ (PLAIN ^: asn1_integer)]
+    "basis"
+    [(gnBasis_oid, gnBasis_parameters);
+     (tpBasis_oid, tpBasis_parameters);
+     (ppBasis_oid, ppBasis_parameters)]
+    (_ by (seq_tac ()))
+    (_ by (choice_tac ()))
 
-// Warning : Unsupported usage of any
+let characteristic_two_field
+= mk_gen_items ["parameters" *^ (PLAIN ^: characteristic_two)] (_ by (seq_tac ()))
 
-let characteristic_two_ilc
-= ASN1_ILC sequence_id (ASN1_TERMINAL ASN1_OCTETSTRING)
+let fieldID
+= asn1_any_oid
+    "fieldType"
+    [(prime_field_oid, prime_p);
+     (characteristic_two_field_oid, characteristic_two_field)]
+    (_ by (seq_tac ()))
+    (_ by (choice_tac ()))
 
-let characteristic_two_field : asn1_gen_items_k
-= (| [PLAIN ^: characteristic_two_ilc], _|)
-
-let fieldId_ilc
-= assert (prime_field_oid <> characteristic_two_field_oid);
-  ASN1_ILC sequence_id 
-   (ASN1_ANY_OID oid_id [(prime_field_oid, prime_p); (characteristic_two_field_oid, characteristic_two_field)] None _)
-
-let eCParameters_c
-= (ASN1_SEQUENCE (| [
-    PLAIN ^: eCPVer_ilc;
-    PLAIN ^: fieldId_ilc;
-    PLAIN ^: curve;
-    PLAIN ^: (ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING));
-    PLAIN ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER));
-    OPTION ^: (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))], _|))
+let eCParameters
+= asn1_sequence [
+    "version" *^ (PLAIN ^: eCPVer);
+    "fieldID" *^ (PLAIN ^: fieldID);
+    "curve" *^ (PLAIN ^: curve);
+    "base" *^ (PLAIN ^: asn1_octetstring);
+    "order" *^ (PLAIN ^: asn1_integer);
+    "cofactor" *^ (OPTION ^: asn1_integer)]
+    (_ by (seq_tac ()))
 
 // Warning: Not filtering with the list of named curves
 
 let ecpkParameters
-= assert (sequence_id <> oid_id);
-  assert (null_id <> oid_id);
-  ASN1_CHOICE_ILC [
-    (sequence_id, eCParameters_c);
-    (oid_id, ASN1_TERMINAL ASN1_OID);
-    (null_id, ASN1_TERMINAL ASN1_NULL)] _
+= asn1_choice [
+    "ecParameters" ^* eCParameters;
+    "namedCurve" ^* asn1_oid;
+    "implicitlyCA" ^* asn1_null]
+    (_ by (choice_tac ()))
 
-let ecpkParameters_field : asn1_gen_items_k
-= (| [PLAIN ^: ecpkParameters], _ |)
+let ecpkParameters_field
+= mk_gen_items ["parameters" *^ (PLAIN ^: ecpkParameters)] (_ by (seq_tac ()))
 
 let supported_algorithms
-= [(rSAEncryption_oid, option_NULL_field_list_with_pf);
-   (md2WithRSAEncryption_oid, option_NULL_field_list_with_pf);
-   (md5WithRSAEncryption_oid, option_NULL_field_list_with_pf);
-   (sha_1WithRSAEncryption_oid, option_NULL_field_list_with_pf);
-   (sha256WithRSAEncryption_oid, option_NULL_field_list_with_pf);
-   (sha384WithRSAEncryption_oid, option_NULL_field_list_with_pf);
-   (sha512WithRSAEncryption_oid, option_NULL_field_list_with_pf);
-   (sha224WithRSAEncryption_oid, option_NULL_field_list_with_pf);
-   (id_dsa_with_sha1, omitted_field_list_with_pf);
-   (id_ecdsa_with_sha1, omitted_field_list_with_pf);
-   (id_dsa, dss_params_fields);
-   (dhpublicnumber, domainParameters_fields);
+= [(rSAEncryption_oid, option_NULL_parameters);
+   (md2WithRSAEncryption_oid, option_NULL_parameters);
+   (md5WithRSAEncryption_oid, option_NULL_parameters);
+   (sha_1WithRSAEncryption_oid, option_NULL_parameters);
+   (sha256WithRSAEncryption_oid, option_NULL_parameters);
+   (sha384WithRSAEncryption_oid, option_NULL_parameters);
+   (sha512WithRSAEncryption_oid, option_NULL_parameters);
+   (sha224WithRSAEncryption_oid, option_NULL_parameters);
+   (id_dsa_with_sha1, omitted_parameters);
+   (id_ecdsa_with_sha1, omitted_parameters);
+   (id_dsa, dss_parms_field);
+   (dhpublicnumber, domainParameters_field);
    (id_keyExchangeAlgorithm, kEA_Parms_Id_field);
    (id_ecPublicKey, ecpkParameters_field)]
 
-let fallback_sequence_bitstring
-= ASN1_ILC sequence_id (ASN1_TERMINAL ASN1_OCTETSTRING)
+let version
+= mk_restricted_field asn1_integer (fun x -> x = 2)
 
-let fallback_sequence_bitstring_field_list_with_pf : asn1_gen_items_k
-= (| [OPTION ^: fallback_sequence_bitstring], _ |)
+let certificateSerialNumber = asn1_integer
 
-let version_id = mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0
+let ignoreUnknownCrypto
+= mk_gen_items [OPTION ^: asn1_any] (_ by (seq_tac ()))
 
-let version_field : asn1_k _
-= ASN1_ILC version_id (ASN1_RESTRICTED_TERMINAL (ASN1_PREFIXED_TERMINAL integer_id ASN1_INTEGER) (fun x -> x = 2))
+let algorithmIdentifier
+= asn1_any_oid_with_fallback
+    "algorithm"
+    supported_algorithms
+    ignoreUnknownCrypto
+    (_ by (seq_tac ()))
+    (_ by (choice_tac ()))
 
-let serialNumber_ilc
-= ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER)
-
-let algorithmIdentifier_ilc
-= ASN1_ILC sequence_id
-    (ASN1_ANY_OID oid_id supported_algorithms (Some fallback_sequence_bitstring_field_list_with_pf) 
-    (assert (List.noRepeats (List.map fst supported_algorithms)) by (Tactics.trivial ())))
-
-let signature_ilc = algorithmIdentifier_ilc
-
-let attributeType_ilc
-= ASN1_ILC oid_id (ASN1_TERMINAL ASN1_OID)
+let attributeType = asn1_oid
 
 //Warning: backward compatibility
 
 //Warning: a list of constants might be needed here
 
-let directoryString_ilc
-= ASN1_CHOICE_ILC 
-  [(printablestring_id, ASN1_TERMINAL ASN1_PRINTABLESTRING);
-   (utf8string_id, ASN1_TERMINAL ASN1_UTF8STRING);
-   (universalstring_id, ASN1_TERMINAL ASN1_OCTETSTRING);
-   (bMPstring_id, ASN1_TERMINAL ASN1_OCTETSTRING);
-   (teletexstring_id, ASN1_TERMINAL ASN1_OCTETSTRING)]
-  _
+let directoryString
+= asn1_choice [
+    "telextexString" ^* asn1_teletexstring;
+    "printableString" ^* asn1_printablestring;
+    "universalString" ^* asn1_universalstring;
+    "utf8String" ^* asn1_utf8string;
+    "bmpString" ^* asn1_bMPstring]
+    (_ by (choice_tac ()))
 
-let attributeValue_ilc = directoryString_ilc
+let attributeValue = directoryString
+
+let attributeValue_field
+= mk_gen_items ["value" *^ (PLAIN ^: attributeValue)] (_ by (seq_tac ()))
 
 let emailAddress_oid = mk_oid [1;2;840;113549;1;9;1]
 
-let emailAddress_field : asn1_gen_items_k
-= (| [PLAIN ^: (ASN1_ILC ia5string_id (ASN1_TERMINAL ASN1_IA5STRING))], _ |)
+let emailAddress_field
+= mk_gen_items ["value" *^ (PLAIN ^: asn1_ia5string)] (_ by (seq_tac ()))
 
-let attributeTypeAndValue_ilc
-= ASN1_ILC sequence_id
-    (ASN1_ANY_OID oid_id [emailAddress_oid, emailAddress_field] (Some (|[PLAIN ^: attributeValue_ilc], _|)) _)
+let attributeTypeAndValue
+= asn1_any_oid_with_fallback
+    "type"
+    [emailAddress_oid, emailAddress_field]
+    attributeValue_field
+    (_ by (seq_tac ()))
+    (_ by (choice_tac ()))
 
-let relativeDistinguishedName_ilc
-= ASN1_ILC set_id
-    (ASN1_SET_OF attributeTypeAndValue_ilc)
+let relativeDistinguishedName
+= asn1_set_of attributeTypeAndValue
 
-let rDNSequence_c
-= ASN1_SEQUENCE_OF relativeDistinguishedName_ilc
+let rDNSequence
+= asn1_sequence_of relativeDistinguishedName
 
-let name_ilc
-= ASN1_CHOICE_ILC [(sequence_id, rDNSequence_c)] _
+let name
+= asn1_choice ["rsnSequence" ^* rDNSequence] (_ by (choice_tac ()))
 
-let issuer_ilc = name_ilc
+let time
+= asn1_choice [
+    "utcTime" ^* asn1_utctime;
+    "generalTime" ^* asn1_generalizedtime]
+    (_ by (choice_tac ()))
 
-let asn1_time_k : asn1_k _
-= ASN1_CHOICE_ILC 
-  [(utctime_id, (ASN1_TERMINAL ASN1_UTCTIME)); 
-   (generalizedtime_id, (ASN1_TERMINAL ASN1_GENERALIZEDTIME))]
-  _
-  
-let notBefore = asn1_time_k
+let validity
+= asn1_sequence [
+    "notBefore" *^ (PLAIN ^: time);
+    "notAfter" *^ (PLAIN ^: time)]
+    (_ by (seq_tac ()))
 
-let notAfter = asn1_time_k
+let subjectPublicKeyInfo
+= asn1_sequence [
+    "algorithm" *^ (PLAIN ^: algorithmIdentifier);
+    "subjectPublicKey" *^ (PLAIN ^: asn1_bitstring)]
+    (_ by (seq_tac ()))
 
-let validity_ilc
-= ASN1_ILC sequence_id
-    (ASN1_SEQUENCE (|[
-      PLAIN ^: notBefore;
-      PLAIN ^: notAfter], _|))
-
-let subject_ilc = name_ilc
-
-let algorithm_ilc = algorithmIdentifier_ilc
-
-let subjectPublicKey_ilc
-= ASN1_ILC bit_string_id (ASN1_TERMINAL ASN1_BITSTRING)
-
-let subjectPublicKeyInfo_ilc
-= ASN1_ILC sequence_id
-    (ASN1_SEQUENCE (|[
-      PLAIN ^: algorithm_ilc;
-      PLAIN ^: subjectPublicKey_ilc], _|))
-
-let uniqueIdentifier_c
-= (ASN1_TERMINAL ASN1_BITSTRING)
-
-let issuerUniqueId_id = mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1
-
-let issuerUniqueId_ilc
-= ASN1_ILC issuerUniqueId_id uniqueIdentifier_c
-
-let subjectUniqueId_id = mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2
-
-let subjectUniqueId_ilc
-= ASN1_ILC subjectUniqueId_id uniqueIdentifier_c
+let uniqueIdentifier = asn1_bitstring
 
 let id_pkix = mk_oid [1;3;6;1;5;5;7]
 
@@ -392,15 +279,12 @@ let id_pe = id_pkix /+ 1
 
 let id_pe_authorityInformationAccess = id_pe /+ 1
 
-//Warning: Using the mitls spec which is loosened from rfc5280
+//Warning: Partly using the mitls spec which is loosened from rfc5280
 
-let mk_expansion (critical : asn1_gen_item_k) (#s : _) (value : asn1_k s) : Pure asn1_gen_items_k
-  (requires (asn1_sequence_k_wf ([(fun x -> match x with |(| s, d, _ |) -> (s, d)) critical; (Set.singleton octet_string_id, PLAIN)])))
-  (ensures fun _ -> True)
-= let f = fun (x : asn1_gen_item_k) -> match x with | (|s, d, _|) -> (s, d) in
-  let items = [critical; PLAIN ^: (ASN1_ILC octet_string_id (ASN1_PREFIXED value))] in
-  assert (List.map f items == [f critical; (Set.singleton octet_string_id, PLAIN)]);
-  (| items, _ |)
+let mk_expansion (critical : asn1_gen_item_k) (#s : _) (value : asn1_k s)
+  (pf : squash (asn1_sequence_k_wf [proj2_of_3 critical; (Set.singleton octetstring_id, PLAIN)]))
+= let items = [critical; "extnValue" *^ (PLAIN ^: (ASN1_ILC octetstring_id (ASN1_PREFIXED value)))] in
+  mk_gen_items items pf
 
 let id_ad = id_pkix /+ 48
 
@@ -408,115 +292,103 @@ let id_ad_caIssuers = id_ad /+ 1
 
 let id_ad_ocsp = id_ad /+ 2
 
-let accessMethod_ilc
-= ASN1_ILC oid_id (ASN1_RESTRICTED_TERMINAL ASN1_OID (fun oid -> oid = id_ad_caIssuers || oid = id_ad_ocsp))
+let accessMethod
+= mk_restricted_field asn1_oid (fun oid -> oid = id_ad_caIssuers || oid = id_ad_ocsp)
 
-let generalName_ilc
-= ASN1_CHOICE_ILC 
-  [(((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) ^* "email") (ASN1_TERMINAL ASN1_IA5STRING));
-   (((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2) ^* "dns") (ASN1_TERMINAL ASN1_IA5STRING));
-   (((mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 4) ^* "x500") (ASN1_PREFIXED name_ilc));
-   (((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 6) ^* "uri") (ASN1_TERMINAL ASN1_IA5STRING));
-   (((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 7) ^* "ip") (ASN1_TERMINAL ASN1_IA5STRING));
-   (((mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 8) ^* "registeredID") (ASN1_TERMINAL ASN1_OID))]
-  _
+let generalName
+= asn1_choice [
+    "rfc822Name" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) asn1_ia5string);
+    "dNSName" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2) asn1_ia5string);
+    "directoryName" ^* (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 4) name);
+    "uniformResourceIdentifier" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 6) asn1_ia5string);
+    "iPAddress" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 7) asn1_ia5string);
+    "registeredID" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 8) asn1_oid)]
+    (_ by (choice_tac ()))
 
-let generalNames_ilc = ASN1_ILC sequence_id (ASN1_SEQUENCE_OF generalName_ilc)
+let generalNames = asn1_sequence_of generalName
 
-let generalNames_c = ASN1_SEQUENCE_OF generalName_ilc
+let accessDescription
+= asn1_sequence [
+    "accessMethod" *^ (PLAIN ^: asn1_oid);
+    "accessLocation" *^ (PLAIN ^: generalName)]
+    (_ by (seq_tac ()))
 
-let accessLocation_ilc
-= generalName_ilc
-
-let accessDescription_ilc
-= ASN1_ILC sequence_id 
-   (ASN1_SEQUENCE (|[
-     PLAIN ^: accessMethod_ilc;
-     PLAIN ^: accessLocation_ilc], _|))
-
-let authorityInfoAccessSyntax_ilc
-= ASN1_ILC sequence_id
-    (ASN1_SEQUENCE_OF accessDescription_ilc)
+let authorityInfoAccessSyntax = asn1_sequence_of accessDescription
 
 let critical_field
-= ASN1_DEFAULT_TERMINAL boolean_id #(ASN1_BOOLEAN) false
+= mk_default_field asn1_boolean false
 
 let critical_field_MUST_false
-= ASN1_DEFAULT_RESTRICTED_TERMINAL boolean_id #(ASN1_BOOLEAN) (fun b -> b = false) false
+= mk_restricted_default_field asn1_boolean (fun b -> b = false) false
 
 let critical_field_MUST_true
-= ASN1_ILC boolean_id (ASN1_RESTRICTED_TERMINAL ASN1_BOOLEAN (fun b -> b))
+= mk_restricted_field asn1_boolean (fun b -> b = true)
 
-let authorityInformationAcess_expansion
-= mk_expansion (DEFAULT ^: critical_field_MUST_false) authorityInfoAccessSyntax_ilc
+let authorityInformationAccess_expansion
+= mk_expansion (DEFAULT ^: critical_field_MUST_false) authorityInfoAccessSyntax (_ by (seq_tac ()))
 
 let id_ce = mk_oid [2;5;29]
 
 let id_ce_subjectKeyIdentifier = id_ce /+ 14
 
-let subjectKeyIdentifier_ilc = ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING)
+let keyIdentifier = asn1_octetstring
+
+let subjectKeyIdentifier = keyIdentifier
 
 let subjectKeyIdentifier_expansion 
-= mk_expansion (DEFAULT ^: critical_field_MUST_false) subjectKeyIdentifier_ilc
+= mk_expansion (DEFAULT ^: critical_field_MUST_false) subjectKeyIdentifier (_ by (seq_tac ()))
 
 let id_ce_keyUsage = id_ce /+ 15
 
-let keyUsage_ilc = ASN1_ILC bit_string_id (ASN1_TERMINAL ASN1_BITSTRING)
+let keyUsage = asn1_bitstring
 
 let keyUsage_expansion
-= mk_expansion (DEFAULT ^: critical_field) keyUsage_ilc
+= mk_expansion (DEFAULT ^: critical_field) keyUsage (_ by (seq_tac ()))
 
 let id_ce_subjectAlternativeName = id_ce /+ 17
 
 let subjectAlternativeName_expansion 
-= mk_expansion (DEFAULT ^: critical_field) generalNames_ilc
+= mk_expansion (DEFAULT ^: critical_field) generalNames (_ by (seq_tac ()))
 
 let id_ce_basicConstraints = id_ce /+ 19
 
-let basicConstraints_cA_field = ASN1_DEFAULT_TERMINAL boolean_id #(ASN1_BOOLEAN) false
-
-let pathLenConstraint = ASN1_ILC integer_id (ASN1_RESTRICTED_TERMINAL ASN1_INTEGER (fun x -> x >= 0))
-
-let basicConstraints_ilc
-= ASN1_ILC sequence_id
-    (ASN1_SEQUENCE (|[
-     DEFAULT ^: basicConstraints_cA_field;
-     OPTION ^: pathLenConstraint], _ |))
+let basicConstraints
+= asn1_sequence [
+    "cA" *^ (DEFAULT ^: (mk_default_field asn1_boolean false));
+    "pathLenConstraint" *^ (OPTION ^: (mk_restricted_field asn1_integer (fun x -> x >= 0)))]
+    (_ by (seq_tac ()))
 
 let basicConstraints_expansion
-= mk_expansion (DEFAULT ^: critical_field) basicConstraints_ilc
+= mk_expansion (DEFAULT ^: critical_field) basicConstraints (_ by (seq_tac ()))
 
 let id_ce_cRLDistributionPoints = id_ce /+ 31
 
-let distributionPointName_ilc
-= ASN1_CHOICE_ILC [
-    (((mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) ^* "fullName") (generalNames_c));
-    (((mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 1) ^* "nameRelativeToCRLIssuer") (rDNSequence_c))] _
+let distributionPointName
+= asn1_choice [
+    "fullName" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) generalNames);
+    "nameRelativeToCRLIssuer" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 1) relativeDistinguishedName)]
+    (_ by (choice_tac ()))
 
-let reasonFlags_ilc
-= ASN1_ILC bit_string_id (ASN1_TERMINAL ASN1_BITSTRING)
+let reasonFlags = asn1_bitstring
 
-let distributionPoint_ilc
-= ASN1_ILC sequence_id 
-    (ASN1_SEQUENCE (|[
-     OPTION ^: (ASN1_ILC (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) (ASN1_PREFIXED distributionPointName_ilc));
-     OPTION ^: (ASN1_ILC (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 1) (ASN1_PREFIXED reasonFlags_ilc));
-     OPTION ^: (ASN1_ILC (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 2) (ASN1_PREFIXED generalNames_ilc))], _ |))
+let distributionPoint
+= asn1_sequence [
+    "distributionPoint" *^ (OPTION ^: (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) distributionPointName));
+    "reasons" *^ (OPTION ^: (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) reasonFlags));
+    "cRLIssuer" *^ (OPTION ^: (mk_retagged (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 2) generalNames))]
+    (_ by (seq_tac ()))
 
 let cRLDistributionPoints
-= ASN1_ILC sequence_id (ASN1_SEQUENCE_OF distributionPoint_ilc)
+= asn1_sequence_of distributionPoint
 
 let cRLDistributionPoints_expansion
-= mk_expansion (DEFAULT ^: critical_field) cRLDistributionPoints
+= mk_expansion (DEFAULT ^: critical_field) cRLDistributionPoints (_ by (seq_tac ()))
 
 let id_ce_certificatePolicies = id_ce /+ 32
 
-let cPSuri_c = ASN1_TERMINAL ASN1_IA5STRING
+let cPSuri = asn1_ia5string
 
-let qualifier_ilc = ASN1_CHOICE_ILC [(ia5string_id, cPSuri_c)] _
-
-let qualifier_fields_with_pf : asn1_gen_items_k
-= (| [PLAIN ^: qualifier_ilc], _ |)
+let cPSuri_field = mk_gen_items ["qualifier" *^ (PLAIN ^: cPSuri)] (_ by (seq_tac ()))
 
 let id_qt = id_pkix /+ 2
 
@@ -526,82 +398,76 @@ let id_qt_unotice = id_qt /+ 2
 
 // Warning: Not enforcing the length
 
-let displayText_ilc 
-= ASN1_CHOICE_ILC [
-    (ia5string_id, ASN1_TERMINAL ASN1_IA5STRING);
-    (visiblestring_id, ASN1_TERMINAL ASN1_OCTETSTRING);
-    (bMPstring_id, ASN1_TERMINAL ASN1_OCTETSTRING);
-    (utf8string_id, ASN1_TERMINAL ASN1_OCTETSTRING)
-    ] _
+let displayText
+= asn1_choice [
+    "ia5String" ^* asn1_ia5string;
+    "visibleString" ^* asn1_visiblestring;
+    "bmpString" ^* asn1_bMPstring;
+    "utf8String" ^* asn1_utf8string]
+    (_ by (choice_tac ()))
 
-let noticeReference_ilc
-= ASN1_ILC sequence_id
-    (ASN1_SEQUENCE (| [
-      PLAIN ^: displayText_ilc;
-      PLAIN ^: (ASN1_ILC sequence_id (ASN1_SEQUENCE_OF (ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER))))], _|))
+let noticeReference
+= asn1_sequence [
+    "organization" *^ (PLAIN ^: displayText);
+    "noticeNumbers" *^ (PLAIN ^: (asn1_sequence_of asn1_integer))]
+    (_ by (seq_tac ()))
 
-let userNotice_ilc
-= ASN1_ILC sequence_id (ASN1_SEQUENCE (| [
-    OPTION ^: noticeReference_ilc;
-    OPTION ^: displayText_ilc], _|))
+let userNotice
+= asn1_sequence [
+    "noticeRef" *^ (OPTION ^: noticeReference);
+    "explicitText" *^ (OPTION ^: displayText)]
+    (_ by (seq_tac ()))
 
-let userNotice_fields_with_pf : asn1_gen_items_k
-= (| [PLAIN ^: userNotice_ilc], _ |)
+let userNotice_field
+= mk_gen_items ["qualifier" *^ (PLAIN ^: userNotice)] (_ by (seq_tac ()))
 
 let supported_policyQualifier
-= [(id_qt_cps, qualifier_fields_with_pf);
-   (id_qt_unotice, userNotice_fields_with_pf)]
+= [(id_qt_cps, cPSuri_field);
+   (id_qt_unotice, userNotice_field)]
 
-let supported_policyQualifier_wf : squash (List.noRepeats (List.map fst supported_policyQualifier)) = 
-  assert (id_qt_cps <> id_qt_unotice) by (Tactics.compute());
-  _
+let policyQualifierInfo
+= asn1_any_oid
+    "policyQulifierId"
+    supported_policyQualifier
+    (_ by (seq_tac ()))
+    (_ by (choice_tac ()))
 
-let policyQualifierInfo_ilc
-= ASN1_ILC sequence_id (ASN1_ANY_OID oid_id supported_policyQualifier None supported_policyQualifier_wf)
+let certPolicyId = asn1_oid
 
-let policyIdentifier_ilc = ASN1_ILC oid_id (ASN1_TERMINAL ASN1_OID)
+let policyInformation
+= asn1_sequence [
+    "policyIdentifier" *^ (PLAIN ^: certPolicyId);
+    "policyQualifiers" *^ (OPTION ^: asn1_sequence_of policyQualifierInfo)]
+    (_ by (seq_tac ())) 
 
-let policyInformation_ilc
-= ASN1_ILC sequence_id 
-    (ASN1_SEQUENCE (|[
-     PLAIN ^: policyIdentifier_ilc;
-     OPTION ^: (ASN1_ILC sequence_id (ASN1_SEQUENCE_OF policyQualifierInfo_ilc))], _|))
-
-let certificatePolicies_ilc
-= ASN1_ILC sequence_id (ASN1_SEQUENCE_OF policyInformation_ilc)
+let certificatePolicies
+= asn1_sequence_of policyInformation
 
 let certificatePolicies_expansion
-= mk_expansion (DEFAULT ^: critical_field) certificatePolicies_ilc
+= mk_expansion (DEFAULT ^: critical_field) certificatePolicies (_ by (seq_tac ()))
 
 let id_ce_authorityKeyIdentifier = id_ce /+ 35
 
-let authorityKeyIdentifier_ilc
-= let id0 = mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 0 in
-  let id1 = mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 1 in
-  let id2 = mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2 in
-  let fields = [
-      OPTION ^: (ASN1_ILC id0 (ASN1_TERMINAL ASN1_OCTETSTRING));
-      OPTION ^: (ASN1_ILC id1 generalNames_c);
-      OPTION ^: (ASN1_ILC id2 (ASN1_TERMINAL ASN1_INTEGER))] in
-  let tags = map_tags fields in
-  let pf : squash (asn1_sequence_k_wf tags) = assert (asn1_sequence_k_wf tags) by
-(Tactics.compute(); Tactics.smt()) in
-  ASN1_ILC sequence_id
-    (ASN1_SEQUENCE (| fields, pf|))
+// Warning: Not handling both being present
+let authorityKeyIdentifier
+= asn1_sequence [
+    "KeyIdentifier" *^ (OPTION ^: (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 0) asn1_octetstring));
+    "authorityCertIssuer" *^ (OPTION ^: (mk_retagged (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 1) generalNames));
+    "authorityCertSerialNumber" *^ (OPTION ^: (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2) asn1_integer))]
+    (_ by (seq_tac ()))
 
 let authorityKeyIdentifier_expansion
-= mk_expansion (DEFAULT ^: critical_field_MUST_false) authorityKeyIdentifier_ilc
+= mk_expansion (DEFAULT ^: critical_field_MUST_false) authorityKeyIdentifier (_ by (seq_tac ()))
 
 let id_ce_extKeyUsage = id_ce /+ 37
 
-let extKeyUsageSyntax_ilc
-= ASN1_ILC sequence_id (ASN1_SEQUENCE_OF (ASN1_ILC oid_id (ASN1_TERMINAL ASN1_OID)))
-
+let extKeyUsageSyntax = asn1_sequence_of asn1_oid
+  
 let extKeyUsage_expansion
-= mk_expansion (DEFAULT ^: critical_field) extKeyUsageSyntax_ilc
+= mk_expansion (DEFAULT ^: critical_field) extKeyUsageSyntax (_ by (seq_tac ()))
 
 let supported_extensions 
-= [(id_pe_authorityInformationAccess, authorityInformationAcess_expansion);
+= [(id_pe_authorityInformationAccess, authorityInformationAccess_expansion);
    (id_ce_subjectKeyIdentifier, subjectKeyIdentifier_expansion);
    (id_ce_keyUsage, keyUsage_expansion);
    (id_ce_subjectAlternativeName, subjectAlternativeName_expansion);
@@ -611,70 +477,53 @@ let supported_extensions
    (id_ce_authorityKeyIdentifier, authorityKeyIdentifier_expansion);
    (id_ce_extKeyUsage, extKeyUsage_expansion)]
 
-let extnValue_fallback_ilc
-= ASN1_ILC octet_string_id (ASN1_TERMINAL ASN1_OCTETSTRING)
+let extension_fallback
+= mk_gen_items [
+    "critical" *^ (DEFAULT ^: critical_field_MUST_false);
+    "extnValue" *^ (PLAIN ^: asn1_octetstring)]
+    (_ by (seq_tac ()))
 
-let extension_fallback_with_pf : asn1_gen_items_k
-= (|[ DEFAULT ^: critical_field_MUST_false;
-      PLAIN ^: extnValue_fallback_ilc], _|)
+let extension
+= asn1_any_oid_with_fallback
+    "extnId"
+    supported_extensions
+    extension_fallback
+    (_ by (seq_tac ()))
+    (_ by (choice_tac ()))
 
-let extension_ilc
-= ASN1_ILC sequence_id
-    (ASN1_ANY_OID oid_id supported_extensions (Some extension_fallback_with_pf) (assert (List.noRepeats (List.map fst supported_extensions)) by (Tactics.trivial ())))
+let extensions
+= asn1_sequence_of extension
 
-let extensions_ilc' 
-= ASN1_ILC sequence_id (ASN1_SEQUENCE_OF extension_ilc)
+#push-options "--z3rlimit 16"
 
-let extensions_id = mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 3
-
-let extensions_ilc
-= ASN1_ILC extensions_id (ASN1_PREFIXED extensions_ilc')
-
-#push-options "--max_fuel 16"
-
-let fields = [
-      PLAIN ^: version_field;
-      PLAIN ^: serialNumber_ilc;
-      PLAIN ^: signature_ilc;
-      PLAIN ^: issuer_ilc;
-      PLAIN ^: validity_ilc;
-      PLAIN ^: subject_ilc;
-      PLAIN ^: subjectPublicKeyInfo_ilc;
-      OPTION ^: issuerUniqueId_ilc;
-      OPTION ^: subjectUniqueId_ilc;
-      PLAIN ^: extensions_ilc]
-
-let tags = map_tags fields
-
-let pf : squash (asn1_sequence_k_wf tags) = assert (asn1_sequence_k_wf tags) by (Tactics.compute() ; Tactics.smt())
-
-let x509_TBSCertificate_ilc
-= ASN1_ILC sequence_id 
-    (ASN1_SEQUENCE (|fields, pf|))
+let x509_TBSCertificate
+= asn1_sequence [
+    "version" *^ (PLAIN ^: (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) version));
+    "serialNumber" *^ (PLAIN ^: certificateSerialNumber);
+    "signature" *^ (PLAIN ^: algorithmIdentifier);
+    "issuer" *^ (PLAIN ^: name);
+    "validity" *^ (PLAIN ^: validity);
+    "subject" *^ (PLAIN ^: name);
+    "subjectPublicKeyInfo" *^ (PLAIN ^: subjectPublicKeyInfo);
+    "issuerUniqueID" *^ (OPTION ^: (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) uniqueIdentifier));
+    "subjectUniqueID" *^ (OPTION ^: (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2) uniqueIdentifier));
+    "extensions" *^ (PLAIN ^: (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 3) extensions))]
+    (_ by (seq_tac ()))
 
 #pop-options
 
-let signatureAlgorithm_ilc = algorithmIdentifier_ilc
-
-let signatureValue_ilc
-= ASN1_ILC bit_string_id (ASN1_TERMINAL ASN1_BITSTRING)
-
-let x509_certificate_ilc
-= let fields = [
-      PLAIN ^: x509_TBSCertificate_ilc;
-      PLAIN ^: signatureAlgorithm_ilc;
-      PLAIN ^: signatureValue_ilc] in
-  let tags = map_tags fields in
-  let pf : squash (asn1_sequence_k_wf tags) = assert (asn1_sequence_k_wf tags) by
-(Tactics.compute(); Tactics.smt()) in
-  ASN1_ILC sequence_id
-    (ASN1_SEQUENCE (|fields, pf|))
+let x509_certificate
+= asn1_sequence [
+    "tbsCertificate" *^ (PLAIN ^: x509_TBSCertificate);
+    "signatureAlgorithm" *^ (PLAIN ^: algorithmIdentifier);
+    "signatureValue" *^ (PLAIN ^: asn1_bitstring)]
+    (_ by (seq_tac ()))
 
 // let's go boom!
 
 open ASN1.Spec.Interpreter
 
-let x509_certificate_parser = asn1_as_parser x509_certificate_ilc
+let x509_certificate_parser = asn1_as_parser x509_certificate
 
 
 [@@normalize_for_extraction [delta;
@@ -682,3 +531,10 @@ let x509_certificate_parser = asn1_as_parser x509_certificate_ilc
                              iota;
                              primops]]
 let parse_cert (b:bytes) = x509_certificate_parser b
+
+[@@normalize_for_extraction [delta;
+                             zeta;
+                             iota;
+                             primops]]
+let dparse_cert (b:bytes) = dasn1_as_parser x509_certificate b
+

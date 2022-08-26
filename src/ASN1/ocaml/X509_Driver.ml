@@ -11,9 +11,9 @@ let lp_bytes_of_bytes (b:FStar_Bytes.bytes)
   
 let main = 
   let argc = Array.length Sys.argv in
-  if argc <> 2
+  if argc <> 2 && argc <> 3 
   then (
-     print_string "Usage: X509_Driver filename\n";
+     print_string "Usage: X509_Driver filename [-debug]\n";
      exit 1
   )
   else (
@@ -25,7 +25,8 @@ let main =
       let b = FStar_Bytes.bytes_of_string str in
       let b = lp_bytes_of_bytes b in
       print_string ("About to parse " ^ string_of_int (Z.to_int (FStar_Bytes.length str)) ^ " bytes from " ^ filename ^ " ... \n");
-      match ASN1_X509.parse_cert b with
+      let p = if argc <> 2 then (ASN1_X509.dparse_cert) else (ASN1_X509.parse_cert) in
+      match p b with
       | None -> print_string "parsing failed\n"; exit 2
       | Some (_, n) -> 
         print_string ("parsing succeeded consuming " ^ Z.to_string n ^ " bytes\n")

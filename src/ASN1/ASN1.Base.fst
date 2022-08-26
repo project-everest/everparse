@@ -131,20 +131,48 @@ type asn1_decorator : Type =
 | OPTION
 | DEFAULT
 
-let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) & asn1_decorator)) (s : Set.set asn1_id_t) : Type =
+let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) * asn1_decorator)) (s : Set.set asn1_id_t) : Type =
   match li with
   | [] -> True
   | hd :: tl ->
     let (s', d) = hd in
-    let s'' = match d with
-              | PLAIN -> Set.empty
-              | OPTION | DEFAULT -> Set.union s s' in
-    (Set.disjoint s s') /\ (asn1_sequence_k_wf' tl s'')
-    
-let asn1_sequence_k_wf (li : list ((Set.set asn1_id_t) & asn1_decorator)) : Tot Type =
-  asn1_sequence_k_wf' li (Set.empty)
+    Set.disjoint s s' /\
+    (match d with
+    | PLAIN -> asn1_sequence_k_wf tl
+    | OPTION | DEFAULT -> asn1_sequence_k_wf' tl (Set.union s s'))
+
+and asn1_sequence_k_wf (li : list ((Set.set asn1_id_t) * asn1_decorator)) : Type =
+  match li with
+  | [] -> True
+  | hd :: tl ->
+    let (s', d) = hd in 
+    match d with
+    | PLAIN -> asn1_sequence_k_wf tl
+    | OPTION | DEFAULT -> asn1_sequence_k_wf' tl s'
 
 let my_as_set l = Set.as_set l
+
+let proj2_of_3 (#a #b : Type) (#c : a -> b -> Type) (x : dtuple3 a (fun _ -> b) c) : a * b = 
+  let (| xa, xb, _ |) = x in (xa, xb)
+
+let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : list ((Set.set asn1_id_t) * asn1_decorator)) (s : Set.set asn1_id_t) : Type =
+  match li with
+  | [] -> Set.disjoint s ks
+  | hd :: tl ->
+    let (s', d) = hd in
+    Set.disjoint s s' /\
+    (match d with
+    | PLAIN -> asn1_any_prefix_k_wf ks tl
+    | OPTION | DEFAULT -> asn1_any_prefix_k_wf' ks tl (Set.union s s'))
+
+and asn1_any_prefix_k_wf (ks : Set.set asn1_id_t) (li : list ((Set.set asn1_id_t) * asn1_decorator)) : Type =
+  match li with
+  | [] -> True
+  | hd :: tl ->
+    let (s', d) = hd in 
+    match d with
+    | PLAIN -> asn1_any_prefix_k_wf ks tl
+    | OPTION | DEFAULT -> asn1_any_prefix_k_wf' ks tl s'
 
 noeq //noextract
 type asn1_content_k : Type =
@@ -160,7 +188,7 @@ type asn1_content_k : Type =
              key_k : asn1_terminal_k ->
              supported : list ((asn1_terminal_t key_k) * asn1_gen_items_k) -> 
              fallback : option asn1_gen_items_k ->
-             pf_wf : squash (asn1_sequence_k_wf (List.append (List.map (fun x -> let (| s, d, _ |) = x in (s, d)) prefix) [(Set.singleton id, PLAIN)])) ->
+             pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton id) (List.map proj2_of_3 prefix)) ->
              pf_sup : squash (List.noRepeats (List.map fst supported)) -> 
              asn1_content_k
 
@@ -182,7 +210,7 @@ and asn1_decorated_k : Set.set asn1_id_t -> asn1_decorator -> Type =
 
 and asn1_gen_item_k : Type = s : Set.set asn1_id_t & d : asn1_decorator & asn1_decorated_k s d
 
-and asn1_gen_items_k : Type = items : list (asn1_gen_item_k) & squash (asn1_sequence_k_wf (List.map (fun x -> let (| s, d, _ |) = x in (s, d) ) items))
+and asn1_gen_items_k : Type = items : list (asn1_gen_item_k) & squash (asn1_sequence_k_wf (List.map proj2_of_3 items))
 
 let mk_ASN1_GEN_ITEM (#s) (#d) (k : asn1_decorated_k s d) : asn1_gen_item_k =
   (| s, d, k |)

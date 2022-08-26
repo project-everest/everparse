@@ -19,18 +19,13 @@ let mk_custom_id (c : asn1_id_class_t) (f : asn1_id_flag_t) (x : UInt.uint_t 32)
 
 // for OID definitions
 
-let rec mk_u32list (l : list (UInt.uint_t 32)) : list U32.t
-= match l with
-  | [] -> []
-  | hd :: tl -> (U32.uint_to_t hd) :: (mk_u32list tl)
-
 let mk_oid (l : list (UInt.uint_t 32)) : Pure (asn1_oid_t)
-  (requires asn1_OID_wf (mk_u32list l))
+  (requires asn1_OID_wf (List.map U32.uint_to_t l))
   (ensures fun _ -> True)
-= mk_u32list l
+= List.map U32.uint_to_t l
 
 let mk_oid_app (oid : asn1_oid_t) (x : UInt.uint_t 32) : asn1_oid_t
-= List.append oid [U32.uint_to_t x]
+= norm[zeta;iota;delta;primops;nbe] (List.append oid [U32.uint_to_t x])
 
 let op_Slash_Plus = mk_oid_app
 
@@ -62,9 +57,10 @@ let op_Hat_Star (name : string) (#s) (x : asn1_k s {is_ILC x}) : (asn1_id_t * as
 = match x with
   | ASN1_ILC id c -> (id, c)
 
-let no_repeats_by_norm () =  T.norm [delta;zeta;primops;iota]; T.trefl ()
+noextract
+let choice_tac () = T.norm [iota;zeta;delta;primops]; T.trefl () 
 
-let asn1_choice (ls : list (asn1_id_t * asn1_content_k)) (#[no_repeats_by_norm() ] pf : squash (List.noRepeats (List.map fst ls) ))
+let asn1_choice (ls : list (asn1_id_t * asn1_content_k)) (pf : squash (List.noRepeats (List.map fst ls) ))
 = ASN1_CHOICE_ILC ls pf
 
 // for sequences
@@ -108,9 +104,10 @@ let op_Hat_Colon (#s : Set.set asn1_id_t)
   | PLAIN -> mk_ASN1_GEN_ITEM (ASN1_PLAIN_ILC #s f)
   | OPTION -> mk_ASN1_GEN_ITEM (ASN1_OPTION_ILC #s f)
 
-let seq_wf_by_norm_smt () =  T.norm [delta;zeta;primops;iota]; T.smt ()
+noextract
+let seq_tac () =  T.norm[iota;zeta;delta;primops;simplify]; T.smt()
 
-let mk_gen_items (items : list asn1_gen_item_k) (#[seq_wf_by_norm_smt ()] pf : squash (asn1_sequence_k_wf (List.map (fun x -> let (| s, d, _ |) = x in (s, d) ) items))) : asn1_gen_items_k
+let mk_gen_items (items : list asn1_gen_item_k) (pf : squash (asn1_sequence_k_wf (List.map proj2_of_3 items))) : asn1_gen_items_k
 = (| items, pf |)
 
 // constants
@@ -123,9 +120,9 @@ let integer_id = mk_constant_id 2
 
 let asn1_integer = ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER)
 
-let bit_string_id = mk_constant_id 3
+let bitstring_id = mk_constant_id 3
 
-let asn1_bitstring = ASN1_ILC boolean_id (ASN1_TERMINAL ASN1_BITSTRING)
+let asn1_bitstring = ASN1_ILC bitstring_id (ASN1_TERMINAL ASN1_BITSTRING)
 
 let octetstring_id = mk_constant_id 4
 
@@ -145,7 +142,7 @@ let asn1_utf8string = ASN1_ILC utf8string_id (ASN1_TERMINAL ASN1_UTF8STRING)
 
 let sequence_id = mk_constant_constructed_id 16
 
-let asn1_sequence (items : list asn1_gen_item_k) (#[seq_wf_by_norm_smt ()] pf : squash (asn1_sequence_k_wf (List.map (fun x -> let (| s, d, _ |) = x in (s, d) ) items)))
+let asn1_sequence (items : list asn1_gen_item_k) (pf : squash (asn1_sequence_k_wf (List.map proj2_of_3 items)))
 = ASN1_ILC sequence_id (ASN1_SEQUENCE (| items, pf |))
 
 let asn1_sequence_of (#s) (item : asn1_k s) = ASN1_ILC sequence_id (ASN1_SEQUENCE_OF item)
@@ -190,20 +187,25 @@ let asn1_bMPstring = ASN1_ILC bMPstring_id (ASN1_TERMINAL ASN1_OCTETSTRING)
 
 let asn1_any = ASN1_ANY_ILC
 
-let asn1_any_oid 
-  (name : string)
-  (supported : list (asn1_oid_t * asn1_gen_items_k)) 
-  (fallback : option asn1_gen_items_k)
-  (#[seq_wf_by_norm_smt ()] pfwf : squash (asn1_sequence_k_wf (List.append (List.map (fun x -> let (| s, d, _ |) = x in (s, d)) []) [(Set.singleton oid_id, PLAIN)])))
-  (#[no_repeats_by_norm ()] pfsup : squash (List.noRepeats (List.map fst supported)))
-= ASN1_ILC sequence_id (ASN1_ANY_DEFINED_BY [] oid_id ASN1_OID supported fallback pfwf pfsup)
-
-let ans1_any_oid_prefix
+let asn1_any_oid_prefix
   (prefix : list asn1_gen_item_k)
   (name : string)
   (supported : list (asn1_oid_t * asn1_gen_items_k)) 
-  (fallback : option asn1_gen_items_k)
-  (#[seq_wf_by_norm_smt ()] pfwf : squash (asn1_sequence_k_wf (List.append (List.map (fun x -> let (| s, d, _ |) = x in (s, d)) prefix) [(Set.singleton oid_id, PLAIN)])))
-  (#[no_repeats_by_norm ()] pfsup : squash (List.noRepeats (List.map fst supported)))
-= ASN1_ILC sequence_id (ASN1_ANY_DEFINED_BY prefix oid_id ASN1_OID supported fallback pfwf pfsup)
+  (pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton oid_id) (List.map proj2_of_3 prefix)))
+  (pf_sup : squash (List.noRepeats (List.map fst supported)))
+= ASN1_ILC sequence_id (ASN1_ANY_DEFINED_BY prefix oid_id ASN1_OID supported None pf_wf pf_sup)
 
+let asn1_any_oid
+  (name : string)
+  (supported : list (asn1_oid_t * asn1_gen_items_k)) 
+  (pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton oid_id) (List.map proj2_of_3 [])))
+  (pf_sup : squash (List.noRepeats (List.map fst supported)))
+= ASN1_ILC sequence_id (ASN1_ANY_DEFINED_BY [] oid_id ASN1_OID supported None pf_wf pf_sup)
+
+let asn1_any_oid_with_fallback
+  (name : string)
+  (supported : list (asn1_oid_t * asn1_gen_items_k)) 
+  (fallback : asn1_gen_items_k)
+  (pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton oid_id) (List.map proj2_of_3 [])))
+  (pf_sup : squash (List.noRepeats (List.map fst supported)))
+= ASN1_ILC sequence_id (ASN1_ANY_DEFINED_BY [] oid_id ASN1_OID supported (Some fallback) pf_wf pf_sup)
