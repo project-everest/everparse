@@ -58,7 +58,8 @@ test.exe: $(ALL_KRML_FILES) main.c
 extract: test.exe
 
 test: test.exe input.dat
-	./test.exe input.dat
+	./test.exe
+	diff input.dat output.dat
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
