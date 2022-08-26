@@ -276,6 +276,50 @@ let full_test_pretty_print
 
 #pop-options
 
+inline_for_extraction
+noextract
+let fstx
+  (#a #b: Type)
+  (x: (a & b))
+: Tot a
+= match x with
+  (x1, _) -> x1
+
+inline_for_extraction
+noextract
+let sndx
+  (#a #b: Type)
+  (x: (a & b))
+: Tot b
+= match x with
+  (_, x2) -> x2
+
+noextract
+[@@G.specialize]
+let prog_test_pretty_print_pair : G.prog type_of_scalar P.state_t P.action_t _ unit () () =
+  G.PBind
+    (G.PPair
+      (G.PScalar _ U8)
+      (fun v1 -> G.PBind
+        (G.PScalar _ U8)
+        (fun v2 -> G.PRet (v1, v2))
+      )
+    )
+    (fun v ->
+      let v1 = fstx v in
+      let v2 = sndx v in
+      G.PBind
+        (G.PAction (P.PrintU8 v1))
+        (fun _ -> G.PAction (P.PrintU8 v2))
+    )
+
+[@@normalize_for_extraction [delta_attr [`%G.specialize]; iota; zeta; primops]]
+let test_pretty_print_pair =
+  G.extract_impl_fold_no_failure
+    P.no_fail
+    (G.impl p_of_s P.a_cl P.ptr_cl prog_test_pretty_print_pair)
+    P.mk_ll_state
+
 module W = LowParse.SteelST.Fold.SerializationState
 
 noextract
