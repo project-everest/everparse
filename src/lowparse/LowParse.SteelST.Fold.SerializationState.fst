@@ -2685,6 +2685,44 @@ let action_sem
   | AAssert i q _ ->
     coerce _ (H.sem_assert i.i i.p q ())
 
+let state_assert_postcond
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (i: state_i type_of_scalar)
+  (p: (state_t _ i -> prop))
+  (sq: squash (
+    forall (h: state_t _ i) . p h
+  ))
+  (h': state_t0 type_of_scalar i.i)
+: Tot prop
+= i.p h' /\ p h'
+
+noextract
+[@@specialize]
+let state_assert_post
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (i: state_i type_of_scalar)
+  (p: (state_t _ i -> prop))
+  (sq: squash (
+    forall (h: state_t _ i) . p h
+  ))
+: Tot (state_i type_of_scalar)
+= { i = i.i; p = state_assert_postcond i p sq }
+
+noextract
+[@@specialize]
+let state_assert
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (i: state_i type_of_scalar)
+  (p: (state_t _ i -> prop))
+  (sq: squash (
+    forall (h: state_t _ i) . p h
+  ))
+: Tot (action_t type_of_scalar unit i (state_assert_post i p ()))
+= AWeaken i (state_assert_post i p ()) ()
+
 [@specialize]
 let a_impl
   (#scalar_t: Type)

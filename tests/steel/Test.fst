@@ -408,38 +408,6 @@ noextract
 [@@G.specialize]
 let tchoice = G.TChoice #_ #type_of_scalar
 
-let state_assert_postcond
-  (i: W.state_i type_of_scalar)
-  (p: (W.state_t _ i -> prop))
-  (sq: squash (
-    forall (h: W.state_t _ i) . p h
-  ))
-  (h': W.state_t0 type_of_scalar i.i)
-: Tot prop
-= i.p h' /\ p h'
-
-noextract
-[@@G.specialize]
-let state_assert_post
-  (i: W.state_i type_of_scalar)
-  (p: (W.state_t _ i -> prop))
-  (sq: squash (
-    forall (h: W.state_t _ i) . p h
-  ))
-: Tot (W.state_i type_of_scalar)
-= { i = i.i; p = state_assert_postcond i p sq }
-
-noextract
-[@@G.specialize]
-let state_assert
-  (i: W.state_i type_of_scalar)
-  (p: (W.state_t _ i -> prop))
-  (sq: squash (
-    forall (h: W.state_t _ i) . p h
-  ))
-: Tot (W.action_t type_of_scalar unit i (state_assert_post i p ()))
-= W.AWeaken i (state_assert_post i p ()) ()
-
 noextract
 [@@G.specialize]
 let test_write4_if_true
