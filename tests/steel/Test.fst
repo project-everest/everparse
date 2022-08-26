@@ -554,14 +554,10 @@ let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
 
 #pop-options
 
-inline_for_extraction noextract
-[@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
-let specialize_test_write4 b b_sz a =
-  G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz a) (W.ptr_cl p_of_s b b_sz a) test_write4
-
+[@@normalize_for_extraction [delta_attr [`%G.specialize]; iota; zeta; primops]]
 let extract_test_write4 vb b b_sz =
   G.extract_impl_fold_unit
-    (specialize_test_write4 b b_sz (A.array_of vb))
+    (G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz (A.array_of vb)) (W.ptr_cl p_of_s b b_sz (A.array_of vb)) test_write4)
     (W.mk_initial_state p_of_s vb b b_sz)
 
 inline_for_extraction noextract
