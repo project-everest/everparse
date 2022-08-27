@@ -14,17 +14,20 @@ module AP = LowParse.SteelST.ArrayPtr
 module LP = LowParse.Spec.Base
 module SZ = LowParse.Steel.StdInt
 
-let pkind = {
-  parser_kind_low = 1;
+let pkind
+  (ne pr: bool)
+: Tot parser_kind
+= {
+  parser_kind_low = if ne then 1 else 0;
   parser_kind_high = None;
-  parser_kind_subkind = Some ParserStrong;
+  parser_kind_subkind = Some (if pr then ParserConsumesAll else ParserStrong);
   parser_kind_metadata = None;
 }
 
 [@@specialize]
 noeq
 type scalar_ops (t: Type) = {
-  scalar_parser: parser pkind t;
+  scalar_parser: parser (pkind true false) t;
   scalar_validator: validator scalar_parser;
   scalar_jumper: jumper scalar_parser;
   scalar_reader: leaf_reader scalar_parser;
@@ -198,6 +201,12 @@ let stt_impl_t
   stt_impl_t' cl p kpre kpost
 
 inline_for_extraction
+let size_of
+  (ar: AP.array byte)
+: Tot Type
+= (s: SZ.size_t { SZ.size_v s == AP.length ar })
+
+inline_for_extraction
 [@@noextract_to "krml"]
 let fold_impl_t
   #state_i #state_t #ll_state #ll_state_ptr
@@ -208,6 +217,7 @@ let fold_impl_t
   (#ty: Type)
   (#kty: parser_kind)
   (pty: parser kty ty)
+  (with_size: bool)
   (p: fold_t state_t ty ret_t pre post)
 : Tot Type
 =
@@ -215,6 +225,7 @@ let fold_impl_t
   (kpost: vprop) ->
   (#vbin: v kty ty) ->
   (bin: byte_array) ->
+  (bin_sz: (if with_size then size_of (array_of' vbin) else unit)) ->
   stt_impl_t' cl (p vbin.contents)
     (kpre `star` aparse pty bin vbin)
     kpost
@@ -231,8 +242,9 @@ let impl_action
   (#ty: Type)
   (#kty: parser_kind)
   (pty: parser kty ty)
-: Tot (fold_impl_t cl pty (action_fold p))
-= fun kpre kpost (#vbin: v kty ty) (bin: byte_array) ->
+  (with_size: bool)
+: Tot (fold_impl_t cl pty with_size (action_fold p))
+= fun kpre kpost (#vbin: v kty ty) (bin: byte_array) _ ->
     pi (kpre `star` aparse pty bin vbin) kpost
 
 inline_for_extraction
@@ -258,13 +270,14 @@ let impl_rewrite_parser
   (p: Ghost.erased (fold_t state_t ty ret_t pre post))
   (#kty: Ghost.erased parser_kind)
   (#pty: parser kty ty)
-  (pi: fold_impl_t cl pty p)
+  (#with_size: bool)
+  (pi: fold_impl_t cl pty with_size p)
   (#kty': Ghost.erased parser_kind)
   (pty': parser kty' ty)
-: Pure (fold_impl_t cl pty' p)
+: Pure (fold_impl_t cl pty' with_size p)
     (requires (forall x . parse pty' x == parse pty x))
     (ensures (fun _ -> True))
-= fun kpre kpost (#vbin': v kty' ty) (bin: byte_array) bout h k_success k_failure ->
+= fun kpre kpost (#vbin': v kty' ty) (bin: byte_array) bin_sz bout h k_success k_failure ->
     let vbin : v kty ty = rewrite_aparse bin pty in
     let restore (#opened: _) () : STGhostT unit opened
       (aparse pty bin vbin)
@@ -273,7 +286,7 @@ let impl_rewrite_parser
       vpattern_rewrite (aparse pty' bin) vbin'
     in
     pi
-      kpre kpost #vbin bin bout h
+      kpre kpost #vbin bin bin_sz bout h
       (fun bout1 h1 v1 ->
         restore ();
         k_success bout1 h1 v1
@@ -292,8 +305,9 @@ let impl_read
   (#kty: Ghost.erased parser_kind)
   (#pty: parser kty ty)
   (rty: leaf_reader pty)
-: Tot (fold_impl_t cl pty (fold_read #state_i #state_t #i #ty ()))
-= fun kpre kpost (#vbin: v kty ty) (bin: byte_array) bout h k_success k_failure ->
+  (with_size: bool)
+: Tot (fold_impl_t cl pty with_size (fold_read #state_i #state_t #i #ty ()))
+= fun kpre kpost (#vbin: v kty ty) (bin: byte_array) _ bout h k_success k_failure ->
     let v = rty bin in
     k_success bout h v
 
@@ -359,17 +373,18 @@ let impl_bind
   (#ret2: _)
   (#post2: _)
   (f: Ghost.erased (fold_t state_t ty ret1 pre1 post1))
-  (impl_f: fold_impl_t cl pty f)
+  (with_size: bool)
+  (impl_f: fold_impl_t cl pty with_size f)
   (g: Ghost.erased ((x: ret1) -> fold_t state_t ty ret2 post1 post2))
-  (impl_g: ((x: ret1) -> fold_impl_t cl pty (Ghost.reveal g x)))
+  (impl_g: ((x: ret1) -> fold_impl_t cl pty with_size (Ghost.reveal g x)))
   (g_prf: ((x: ret1) -> fold_state_inc cl (Ghost.reveal g x)))
-: Tot (fold_impl_t cl pty (bind_fold f g))
-= fun kpre kpost (#vbin: v kty ty) (bin: byte_array) bout h k_success k_failure ->
+: Tot (fold_impl_t cl pty with_size (bind_fold f g))
+= fun kpre kpost (#vbin: v kty ty) (bin: byte_array) bin_sz bout h k_success k_failure ->
     impl_f
-      kpre kpost bin bout h
+      kpre kpost bin bin_sz bout h
       (fun bout1 h1 v1 ->
         impl_g v1
-          kpre kpost bin bout1 h1 k_success k_failure
+          kpre kpost bin bin_sz bout1 h1 k_success k_failure
       )
       (fun h1 v1 ->
         let h2 = get_return_state (Ghost.reveal g v1 vbin.contents) h1 in
@@ -410,16 +425,17 @@ let impl_if_gen
   (f1: Ghost.erased (squash (x == true) -> fold_t state_t (t1 ()) ret pre post))
   (#k: Ghost.erased parser_kind)
   (p1: (squash (x == true) -> parser k (t1 ())))
-  (impl_f1: squash (x == true) -> fold_impl_t cl (p1 ()) (Ghost.reveal f1 ()))
+  (with_size: bool)
+  (impl_f1: squash (x == true) -> fold_impl_t cl (p1 ()) with_size (Ghost.reveal f1 ()))
   (t2: (squash (x == false) -> Type))
   (f2: Ghost.erased (squash (x == false) -> fold_t state_t (t2 ()) ret pre post))
   (p2: (squash (x == false) -> parser k (t2 ())))
-  (impl_f2: squash (x == false) -> fold_impl_t cl (p2 ()) (Ghost.reveal f2 ()))
-: Tot (fold_impl_t cl #ret #pre #post #(ifthenelse x t1 t2) #k (ifthenelse_dep x t1 t2 (parser k) p1 p2) (ifthenelse_dep x t1 t2 (fun t -> fold_t state_t t ret pre post) (Ghost.reveal f1) (Ghost.reveal f2)))
-= fun kpre kpost #vbin bin bout h k_success k_failure ->
+  (impl_f2: squash (x == false) -> fold_impl_t cl (p2 ()) with_size (Ghost.reveal f2 ()))
+: Tot (fold_impl_t cl #ret #pre #post #(ifthenelse x t1 t2) #k (ifthenelse_dep x t1 t2 (parser k) p1 p2) with_size (ifthenelse_dep x t1 t2 (fun t -> fold_t state_t t ret pre post) (Ghost.reveal f1) (Ghost.reveal f2)))
+= fun kpre kpost #vbin bin bin_sz bout h k_success k_failure ->
     if x
-    then coerce (fold_impl_t cl #ret #pre #post #(ifthenelse x t1 t2) #k (ifthenelse_dep x t1 t2 (parser k) p1 p2) (ifthenelse_dep x t1 t2 (fun t -> fold_t state_t t ret pre post) (Ghost.reveal f1) (Ghost.reveal f2))) (impl_f1 ()) kpre kpost bin bout h k_success k_failure
-    else coerce (fold_impl_t cl #ret #pre #post #(ifthenelse x t1 t2) #k (ifthenelse_dep x t1 t2 (parser k) p1 p2) (ifthenelse_dep x t1 t2 (fun t -> fold_t state_t t ret pre post) (Ghost.reveal f1) (Ghost.reveal f2))) (impl_f2 ()) kpre kpost bin bout h k_success k_failure
+    then coerce (fold_impl_t cl #ret #pre #post #(ifthenelse x t1 t2) #k (ifthenelse_dep x t1 t2 (parser k) p1 p2) with_size (ifthenelse_dep x t1 t2 (fun t -> fold_t state_t t ret pre post) (Ghost.reveal f1) (Ghost.reveal f2))) (impl_f1 ()) kpre kpost bin bin_sz bout h k_success k_failure
+    else coerce (fold_impl_t cl #ret #pre #post #(ifthenelse x t1 t2) #k (ifthenelse_dep x t1 t2 (parser k) p1 p2) with_size (ifthenelse_dep x t1 t2 (fun t -> fold_t state_t t ret pre post) (Ghost.reveal f1) (Ghost.reveal f2))) (impl_f2 ()) kpre kpost bin bin_sz bout h k_success k_failure
 
 inline_for_extraction
 [@@noextract_to "krml"]
@@ -434,11 +450,12 @@ let impl_if
   (f1: Ghost.erased (squash (x == true) -> fold_t state_t t ret pre post))
   (#k: Ghost.erased parser_kind)
   (p: parser k t)
-  (impl_f1: squash (x == true) -> fold_impl_t cl p (Ghost.reveal f1 ()))
+  (with_size: bool)
+  (impl_f1: squash (x == true) -> fold_impl_t cl p with_size (Ghost.reveal f1 ()))
   (f2: Ghost.erased (squash (x == false) -> fold_t state_t t ret pre post))
-  (impl_f2: squash (x == false) -> fold_impl_t cl p (Ghost.reveal f2 ()))
-: Tot (fold_impl_t cl p (if x then Ghost.reveal f1 () else Ghost.reveal f2 ()))
-= coerce _ (impl_if_gen cl x (fun _ -> t) f1 (fun _ -> p) impl_f1 (fun _ -> t) f2 (fun _ -> p) impl_f2)
+  (impl_f2: squash (x == false) -> fold_impl_t cl p with_size (Ghost.reveal f2 ()))
+: Tot (fold_impl_t cl p with_size (if x then Ghost.reveal f1 () else Ghost.reveal f2 ()))
+= coerce _ (impl_if_gen cl x (fun _ -> t) f1 (fun _ -> p) with_size impl_f1 (fun _ -> t) f2 (fun _ -> p) impl_f2)
 
 inline_for_extraction
 [@@noextract_to "krml"]
@@ -453,21 +470,24 @@ let impl_pair
   (f1: Ghost.erased (fold_t state_t t1 ret1 pre1 post1))
   (#k1: Ghost.erased parser_kind)
   (#p1: parser k1 t1)
-  (impl_f1: fold_impl_t cl p1 f1)
+  (impl_f1: fold_impl_t cl p1 false f1)
   (j1: jumper p1) // MUST be computed OUTSIDE of impl_pair
   (#ret2: _)
   (#post2: _)
   (f2: Ghost.erased ((x: ret1) -> fold_t state_t t2 ret2 post1 post2))
   (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 t2)
-  (impl_f2: ((x: ret1) -> fold_impl_t cl p2 (Ghost.reveal f2 x)))
+  (with_size: bool)
+  (impl_f2: ((x: ret1) -> fold_impl_t cl p2 with_size (Ghost.reveal f2 x)))
   (f2_prf: ((x: ret1) -> fold_state_inc cl (Ghost.reveal f2 x))) 
-: Pure (fold_impl_t cl (p1 `nondep_then` p2) (fold_pair f1 f2))
+: Pure (fold_impl_t cl (p1 `nondep_then` p2) with_size (fold_pair f1 f2))
     (requires (k1.parser_kind_subkind == Some ParserStrong))
     (ensures (fun _ -> True))
-= fun kpre kpost #vbin bin bout h k_success k_failure ->
-  let bin2 = split_pair j1 p2 bin in
+= fun kpre kpost #vbin bin bin_sz bout h k_success k_failure ->
+  let _ = g_split_pair _ _ _ in
   let _ = gen_elim () in
+  let bin1_sz = get_parsed_size j1 _ in
+  let bin2 = hop_aparse_aparse_with_size p1 p2 _ bin1_sz _ in
   let vbin1 = vpattern_replace (aparse p1 bin) in
   let vbin2 = vpattern_replace (aparse p2 bin2) in
   let restore (#opened: _) () : STGhostT unit opened
@@ -479,11 +499,11 @@ let impl_pair
   in
   impl_f1
     (kpre `star` aparse p2 bin2 vbin2) kpost
-    bin bout h
+    bin () bout h
     (fun bout1 h1 v1 ->
       impl_f2 v1
         (kpre `star` aparse p1 bin vbin1) kpost
-        bin2 bout1 h1
+        bin2 (if with_size then bin_sz `SZ.size_sub` bin1_sz else ()) bout1 h1
         (fun bout2 h2 v2 ->
           restore ();
           k_success bout2 h2 v2
@@ -528,16 +548,20 @@ let impl_choice
   (r: leaf_reader ktp)
   (#k: parser_kind)
   (p: (x: kt) -> parser k (t x))
-  (impl_f: (x: kt) -> fold_impl_t cl (p x) (Ghost.reveal f x))
-: Pure (fold_impl_t cl (parse_dtuple2 ktp p) (fold_choice f))
+  (with_size: bool)
+  (impl_f: (x: kt) -> fold_impl_t cl (p x) with_size (Ghost.reveal f x))
+: Pure (fold_impl_t cl (parse_dtuple2 ktp p) with_size (fold_choice f))
     (requires (ktk.parser_kind_subkind == Some ParserStrong))
     (ensures (fun _ -> True))
-= fun kpre kpost #vbin bin bout h k_success k_failure ->
-  let bin_pl = split_dtuple2
-    j
+= fun kpre kpost #vbin bin bin_sz bout h k_success k_failure ->
+  let _ = ghost_split_dtuple2
+    ktp
     p
     bin
   in
+  let _ = gen_elim () in
+  let bin1_sz = get_parsed_size j bin in
+  let bin_pl = hop_dtuple2_tag_with_size ktp p bin bin1_sz _ in
   let tag = read_dtuple2_tag r p bin bin_pl in
   let _ = gen_elim () in
   let vbin_tag = vpattern_replace (aparse ktp bin) in
@@ -551,7 +575,7 @@ let impl_choice
   in
   impl_f tag
     (kpre `star` aparse ktp bin vbin_tag) kpost
-    bin_pl bout h
+    bin_pl (if with_size then bin_sz `SZ.size_sub` bin1_sz else ()) bout h
     (fun bout' h' v' ->
       restore ();
       k_success bout' h' v'
@@ -950,7 +974,7 @@ let impl_for_body
   (bfrom: R.ref SZ.size_t)
   (b_no_interrupt: R.ref bool)
   (bcont: R.ref bool)
-  (fi: (x: SZ.size_t { SZ.size_v from0 <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t cl p (Ghost.reveal f (SZ.size_v x)))
+  (fi: (x: SZ.size_t { SZ.size_v from0 <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t cl p false (Ghost.reveal f (SZ.size_v x)))
   (wl: load_ll_state_ptr_t cl inv)
   (ws: store_ll_state_ptr_t cl inv)
   (_: unit)
@@ -979,7 +1003,7 @@ let impl_for_body
         cl.ll_state_pts_to bh out1
       )
       (exists_ (impl_for_inv cl inv p from0 to f bin vl bh h0 bfrom b_no_interrupt bcont))
-      bin out1 _
+      bin () out1 _
       (fun out2 h2 _ ->
         R.write bfrom from2;
         cl.ll_state_match_shape _ _;
@@ -1167,12 +1191,13 @@ let impl_for
   (from: SZ.size_t) (to: SZ.size_t)
   (f: Ghost.erased ((x: nat { SZ.size_v from <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
   (prf: (x: nat { SZ.size_v from <= x /\ x < SZ.size_v to }) -> fold_state_inc cl (Ghost.reveal f x))
-  (fi: (x: SZ.size_t { SZ.size_v from <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t cl p (Ghost.reveal f (SZ.size_v x)))
+  (fi: (x: SZ.size_t { SZ.size_v from <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t cl p false (Ghost.reveal f (SZ.size_v x)))
+  (with_size: bool)
   (wc: with_ll_state_ptr_t cl inv) // same
   (wl: load_ll_state_ptr_t cl inv)
   (ws: store_ll_state_ptr_t cl inv)
-: Tot (fold_impl_t cl p (fold_for inv (SZ.size_v from) (SZ.size_v to) f))
-= fun kpre kpost #vbin bin bout h k_success k_failure ->
+: Tot (fold_impl_t cl p with_size (fold_for inv (SZ.size_v from) (SZ.size_v to) f))
+= fun kpre kpost #vbin bin _ bout h k_success k_failure ->
   cl.ll_state_match_shape _ _;
   let cont = from `SZ.size_lt` to in
   wc bout (fun bh ->
@@ -1371,7 +1396,7 @@ let jump_vlgen_alt_sz
     (synth_vlgen_alt_payload p)
     (synth_vlgen_alt_payload_injective p)
 
-let parse_splist
+let parse_size_prefixed
   (#st: Type)
   (#sk: parser_kind)
   (sp: parser sk st)
@@ -1379,13 +1404,13 @@ let parse_splist
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-: Tot (parser (sk `and_then_kind` parse_vlgen_alt_payload_kind) (list t))
+: Tot (parser (sk `and_then_kind` parse_vlgen_alt_payload_kind) t)
 = parse_vlgen_alt
     ((sp `parse_synth` sz) `parse_synth` (SZ.size_v))
-    (parse_list p)
+    p
 
 inline_for_extraction
-let validate_splist
+let validate_size_prefixed
   (#st: Type)
   (#sk: Ghost.erased parser_kind)
   (#sp: parser sk st)
@@ -1395,18 +1420,18 @@ let validate_splist
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (v: validator p)
-: Pure (validator (parse_splist sp sz p)) 
+  (v: ((s: SZ.size_t) -> validator (parse_fldata p (SZ.size_v s))))
+: Pure (validator (parse_size_prefixed sp sz p)) 
     (requires (sk.parser_kind_subkind == Some ParserStrong))
     (ensures (fun _ -> True))
 =
     validate_vlgen_alt_sz
       (validate_synth sv sz ())
       (read_synth sr sz (fun x -> sz x) ())
-      (validate_fldata_consumes_all (validate_list v))
+      v
 
 inline_for_extraction
-let jump_splist
+let jump_size_prefixed
   (#st: Type)
   (#sk: Ghost.erased parser_kind)
   (#sp: parser sk st)
@@ -1416,19 +1441,19 @@ let jump_splist
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
-: Pure (jumper (parse_splist sp sz p)) 
+: Pure (jumper (parse_size_prefixed sp sz p)) 
     (requires (sk.parser_kind_subkind == Some ParserStrong))
     (ensures (fun _ -> True))
 =
     jump_vlgen_alt_sz
       (jump_synth sv sz ())
       (read_synth sr sz (fun x -> sz x) ())
-      (parse_list p)
+      p
 
 #push-options "--z3rlimit 16"
 #restart-solver
 
-let intro_parse_splist
+let intro_parse_size_prefixed
   (#opened: _)
   (#st: Type)
   (#sk: Ghost.erased parser_kind)
@@ -1443,8 +1468,8 @@ let intro_parse_splist
   (b: byte_array)
 : STGhost (v _ _) opened
     (aparse (parse_synth sp sz) bs vbs `star`
-      aparse (parse_list p) b vb)
-    (fun vbs' -> aparse (parse_splist sp sz p) bs vbs')
+      aparse p b vb)
+    (fun vbs' -> aparse (parse_size_prefixed sp sz p) bs vbs')
     (sk.parser_kind_subkind == Some ParserStrong /\
       AP.adjacent (array_of' vbs) (array_of' vb) /\
       SZ.size_v vbs.contents == AP.length (array_of' vb))
@@ -1454,19 +1479,19 @@ let intro_parse_splist
     )
 = let n = SZ.size_v vbs.contents in
   let _ = intro_fldata _ n b in
-  let _ = rewrite_aparse b (weaken parse_vlgen_alt_payload_kind (parse_fldata (parse_list p) n)) in
+  let _ = rewrite_aparse b (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)) in
   let _ = intro_parse_strict _ b in
   let _ = intro_synth _ SZ.size_v bs () in
   let _ = intro_dtuple2
     _
     #_
-    #(fun n -> parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata (parse_list p) n)))
-    (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata (parse_list p) n)))
+    #(fun n -> parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
+    (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
     bs b
   in
-  let _ = intro_synth _ (synth_vlgen_alt_payload (parse_list p)) bs (synth_vlgen_alt_payload_injective (parse_list p)) in
-  assert_norm (parse_splist sp sz p == (((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata (parse_list p) n)))) `parse_synth` synth_vlgen_alt_payload (parse_list p));
-  rewrite_aparse bs (parse_splist sp sz p)
+  let _ = intro_synth _ (synth_vlgen_alt_payload p) bs (synth_vlgen_alt_payload_injective p) in
+  assert_norm (parse_size_prefixed sp sz p == (((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) `parse_synth` synth_vlgen_alt_payload p);
+  rewrite_aparse bs (parse_size_prefixed sp sz p)
 
 #pop-options
 
@@ -1474,35 +1499,35 @@ let intro_parse_splist
 #restart-solver
 
 inline_for_extraction
-let elim_parse_splist
+let elim_parse_size_prefixed
+  (#opened: _)
   (#st: Type)
   (#sk: Ghost.erased parser_kind)
-  (#sp: parser sk st)
-  (j: jumper sp)
+  (sp: parser sk st)
   (sz: (st -> SZ.size_t) { synth_injective sz })
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
   (#vb: v _ _)
   (b: byte_array)
-: ST byte_array
-    (aparse (parse_splist sp sz p) b vb)
+: STGhost (Ghost.erased byte_array) opened
+    (aparse (parse_size_prefixed sp sz p) b vb)
     (fun bl -> exists_ (fun (vb': v _ _) -> exists_ (fun (vbl: v _ _) ->
       aparse (parse_synth sp sz) b vb' `star`
-      aparse (parse_list p) bl vbl `star` pure (
+      aparse p bl vbl `star` pure (
       AP.merge_into (array_of' vb') (array_of' vbl) (array_of' vb) /\
       SZ.size_v vb'.contents == AP.length (array_of' vbl) /\
       vbl.contents == vb.contents
     ))))
     (sk.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
-= synth_vlgen_alt_payload_injective (parse_list p);
-  assert_norm (parse_splist sp sz p == (((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata (parse_list p) n)))) `parse_synth` synth_vlgen_alt_payload (parse_list p));
-  let _ = rewrite_aparse b ((((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata (parse_list p) n)))) `parse_synth` synth_vlgen_alt_payload (parse_list p)) in
+= synth_vlgen_alt_payload_injective p;
+  assert_norm (parse_size_prefixed sp sz p == (((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) `parse_synth` synth_vlgen_alt_payload p);
+  let _ = rewrite_aparse b ((((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) `parse_synth` synth_vlgen_alt_payload p) in
   let _ = elim_synth _ _ b () in
-  let bl = split_dtuple2
-    (jump_synth (jump_synth j sz ()) SZ.size_v ())
-    (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata (parse_list p) n)))
+  let bl = ghost_split_dtuple2
+    (parse_synth (parse_synth sp sz) SZ.size_v)
+    (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
     b
   in
   let _ = gen_elim () in
@@ -1510,9 +1535,69 @@ let elim_parse_splist
   let _ = gen_elim () in
   let _ = elim_synth _ _ b () in
   let _ = elim_parse_strict _ bl in
-  let _ = rewrite_aparse bl (parse_fldata (parse_list p) n) in
-  let _ = elim_fldata (parse_list p) _ bl in
-  return bl
+  let _ = rewrite_aparse bl (parse_fldata p n) in
+  let _ = elim_fldata p _ bl in
+  bl
+
+inline_for_extraction
+let impl_size_prefixed
+  #state_i #state_t #ll_state #ll_state_ptr
+  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#st: Type)
+  (#sk: Ghost.erased parser_kind)
+  (#sp: parser sk st)
+  (sj: jumper sp)
+  (sr: leaf_reader sp)
+  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (#t: Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#ret_t: _) (#pre: _) (#post: _)
+  (f: Ghost.erased (fold_t state_t t ret_t pre post))
+  (body_with_size: bool)
+  (fi: fold_impl_t cl p body_with_size f)
+  (with_size: bool)
+: Pure (fold_impl_t cl (parse_size_prefixed sp sz p) with_size (Ghost.reveal f))
+    (requires (sk.parser_kind_subkind == Some ParserStrong))
+    (ensures (fun _ -> True))
+= fun kpre kpost #vbin bin _ bout h k_success k_failure ->
+  let _ = elim_parse_size_prefixed sp sz p bin in
+  let _ = gen_elim () in
+  let v_hdr = vpattern_replace (aparse (parse_synth sp sz) bin) in
+  let sz_pl =
+    if body_with_size
+    returns ST (if body_with_size then SZ.size_t else unit)
+      (aparse (parse_synth sp sz) bin v_hdr)
+      (fun _ -> aparse (parse_synth sp sz) bin v_hdr)
+      True
+      (fun sz_pl -> body_with_size ==> sz_pl == v_hdr.contents)
+    then read_synth' sr sz () bin
+    else return ()
+  in
+  let b_pl = hop_aparse_aparse (jump_synth sj sz ()) _ bin _ in
+  let v_pl = vpattern_replace (aparse p b_pl) in
+  let restore (#opened: _) () : STGhostT unit opened
+    (aparse (parse_synth sp sz) bin v_hdr `star`
+      aparse p b_pl v_pl)
+    (fun _ -> aparse (parse_size_prefixed sp sz p) bin vbin)
+  = let _ = intro_parse_size_prefixed _ _ _ _ _ in
+    vpattern_rewrite (aparse (parse_size_prefixed sp sz p) bin) vbin
+  in
+  noop ();
+  fi
+    (kpre `star`
+      aparse (parse_synth sp sz) bin v_hdr)
+    kpost
+    b_pl sz_pl
+    bout h
+    (fun out' h' v' ->
+      restore ();
+      k_success out' h' v'
+    )
+    (fun h' v' ->
+      restore ();
+      k_failure h' v'
+    )
 
 inline_for_extraction
 let impl_list_index
@@ -1526,11 +1611,12 @@ let impl_list_index
   (n: SZ.size_t)
   (idx: (i: SZ.size_t { SZ.size_v i < SZ.size_v n }))
   (f: Ghost.erased (fold_t state_t t unit inv inv))
-  (fi: fold_impl_t cl p f)
-: Pure (fold_impl_t cl (parse_nlist (SZ.size_v n) p) (fold_list_index inv (SZ.size_v n) (SZ.size_v idx) f))
+  (fi: fold_impl_t cl p false f)
+  (with_size: bool)
+: Pure (fold_impl_t cl (parse_nlist (SZ.size_v n) p) with_size (fold_list_index inv (SZ.size_v n) (SZ.size_v idx) f))
     (requires  k.parser_kind_subkind == Some ParserStrong)
     (ensures (fun _ -> True))
-= fun kpre kpost #vbin bin bout h k_success k_failure ->
+= fun kpre kpost #vbin bin _ bout h k_success k_failure ->
   let _ = elim_nlist _ _ bin in
   let b = list_nth jp bin idx in
   let _ = gen_elim () in
@@ -1555,7 +1641,7 @@ let impl_list_index
       aparse (parse_list p) bin vbin_l `star`
       aparse (parse_list p) bin_r vbin_r)
     kpost
-    b bout h
+    b () bout h
     (fun out' h' v' ->
       restore ();
       k_success out' h' v'
@@ -1577,15 +1663,16 @@ let impl_list_index_of
   (#p: parser k t)
   (jp: jumper p)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
-  (fi: fold_impl_t cl p f) 
+  (fi: fold_impl_t cl p false f)
+  (with_size: bool)
   (n: SZ.size_t)
   (idx: Ghost.erased ((i: nat { i < SZ.size_v n }) -> Tot (i: nat { i < SZ.size_v n })))
   (idx' : (i: SZ.size_t) -> Pure SZ.size_t (requires SZ.size_v i < SZ.size_v n) (ensures fun j -> SZ.size_v j == Ghost.reveal idx (SZ.size_v i)))
   (j: SZ.size_t {SZ.size_v j < SZ.size_v n})
-: Pure (fold_impl_t cl (parse_nlist (SZ.size_v n) p) (fold_list_index_of inv f (SZ.size_v n) idx (SZ.size_v j)))
+: Pure (fold_impl_t cl (parse_nlist (SZ.size_v n) p) with_size (fold_list_index_of inv f (SZ.size_v n) idx (SZ.size_v j)))
     (requires  k.parser_kind_subkind == Some ParserStrong)
     (ensures (fun _ -> True))
-= impl_list_index cl inv jp n (idx' j) f fi
+= impl_list_index cl inv jp n (idx' j) f fi with_size
 
 #push-options "--z3rlimit 16"
 #restart-solver
@@ -1597,42 +1684,30 @@ let impl_for_list
   (inv: state_i)
   (#t: Type)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
-  (#st: Type)
-  (#sk: Ghost.erased parser_kind)
-  (#sp: parser sk st)
-  (sj: jumper sp)
-  (sr: leaf_reader sp)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
   (#k: parser_kind)
   (#p: parser k t)
   (j: jumper p)
-  (fi: fold_impl_t cl p f)
+  (fi: fold_impl_t cl p false f)
   (prf: fold_state_inc cl f)
   (idx: array_index_fn)
   (wc: with_ll_state_ptr_t cl inv)
   (wl: load_ll_state_ptr_t cl inv)
   (ws: store_ll_state_ptr_t cl inv)
-: Pure (fold_impl_t cl (parse_splist sp sz p) (fold_for_list inv f idx.array_index_f_nat))
+: Pure (fold_impl_t cl (parse_list p) true (fold_for_list inv f idx.array_index_f_nat))
     (requires (
-      sk.parser_kind_subkind == Some ParserStrong /\
       k.parser_kind_subkind == Some ParserStrong
     ))
     (ensures (fun _ -> True))
-= fun kpre kpost #vbin bin bout h k_success k_failure ->
-  let bin_l = elim_parse_splist sj sz p bin in
-  let _ = gen_elim () in
-  let vl_sz = vpattern_replace (aparse (parse_synth sp sz) bin) in
-  let in_sz = read_synth' sr sz () bin in
-  let n = list_length j bin_l in_sz in
-  let vl_l = intro_nlist (SZ.size_v n) _ bin_l in
+= fun kpre kpost #vbin bin in_sz bout h k_success k_failure ->
+  let n = list_length j bin in_sz in
+  let vl_l = intro_nlist (SZ.size_v n) _ bin in
   let restore (#opened: _) () : STGhostT unit opened
-    (aparse (parse_synth sp sz) bin vl_sz `star`
-      aparse (parse_nlist (SZ.size_v n) p) bin_l vl_l)
-    (fun _ -> aparse (parse_splist sp sz p) bin vbin)
+    (
+      aparse (parse_nlist (SZ.size_v n) p) bin vl_l)
+    (fun _ -> aparse (parse_list p) bin vbin)
   =
-    let _ = elim_nlist _ _ bin_l in
-    let _ = intro_parse_splist sp sz p bin bin_l in
-    rewrite (aparse _ bin _) (aparse (parse_splist sp sz p) bin vbin)
+    let _ = elim_nlist _ _ bin in
+    rewrite (aparse _ bin _) (aparse (parse_list p) bin vbin)
   in
   impl_for
     cl inv
@@ -1641,11 +1716,11 @@ let impl_for_list
     n
     (fold_list_index_of inv f (SZ.size_v n) (idx.array_index_f_nat (SZ.size_v n)))
     (fun x i s -> prf (List.Tot.index i (idx.array_index_f_nat (SZ.size_v n) x)) s)
-    (impl_list_index_of cl inv j f fi n (idx.array_index_f_nat (SZ.size_v n)) (idx.array_index_f_sz n))
-    wc wl ws
-    (kpre `star` aparse (parse_synth sp sz) bin vl_sz)
+    (impl_list_index_of cl inv j f fi false n (idx.array_index_f_nat (SZ.size_v n)) (idx.array_index_f_sz n))
+    false wc wl ws
+    kpre
     kpost
-    bin_l bout h
+    bin () bout h
     (fun out' h' v' ->
       restore ();
       k_success out' h' v'
@@ -1730,10 +1805,6 @@ let impl_list_post_true
   (inv: state_i)
   (#t: Type)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
-  (#st: Type)
-  (#sk: Ghost.erased parser_kind)
-  (sp: parser sk st)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
   (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (w: load_ll_state_ptr_t cl inv)
@@ -1746,7 +1817,7 @@ let impl_list_post_true
     (h': Ghost.erased (state_t inv)) ->
     (v: unit) ->
     ST unit
-      (kpre `star` aparse (parse_splist sp sz p) bin vbin `star`
+      (kpre `star` aparse (parse_list p) bin vbin `star`
         cl.ll_state_match h' out')
       (fun _ -> kpost)
       (
@@ -1758,7 +1829,7 @@ let impl_list_post_true
   (cont: bool)
   (l: Ghost.erased (list t))
 : ST unit
-    (kpre `star` aparse (parse_splist sp sz p) bin vbin `star`
+    (kpre `star` aparse (parse_list p) bin vbin `star`
       impl_list_hole_inv cl inv f bh h cont l)
     (fun _ ->
       kpost `star`
@@ -1785,10 +1856,6 @@ let impl_list_post_false
   (inv: state_i)
   (#t: Type)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
-  (#st: Type)
-  (#sk: Ghost.erased parser_kind)
-  (sp: parser sk st)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
   (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (#vbin: _)
@@ -1799,7 +1866,7 @@ let impl_list_post_false
     (h': Ghost.erased (state_t inv)) ->
     (v: Ghost.erased unit) ->
     ST unit
-      (kpre `star` aparse (parse_splist sp sz p) bin vbin `star` cl.ll_state_failure h')
+      (kpre `star` aparse (parse_list p) bin vbin `star` cl.ll_state_failure h')
       (fun _ -> kpost)
       (
         fold_list inv f vbin.contents h == (Ghost.reveal v, Ghost.reveal h')
@@ -1810,7 +1877,7 @@ let impl_list_post_false
   (cont: bool)
   (l: Ghost.erased (list t))
 : ST unit
-    (kpre `star` aparse (parse_splist sp sz p) bin vbin `star`
+    (kpre `star` aparse (parse_list p) bin vbin `star`
       impl_list_hole_inv cl inv f bh h cont l)
     (fun _ ->
       kpost `star`
@@ -1897,7 +1964,7 @@ let impl_list_body_true
   (f: Ghost.erased (fold_t state_t t unit inv inv))
   (#k: Ghost.erased parser_kind)
   (p: parser k t)
-  (impl_f: fold_impl_t cl p f)
+  (impl_f: fold_impl_t cl p false f)
   (wl: load_ll_state_ptr_t cl inv)
   (ws: store_ll_state_ptr_t cl inv)
   (bh: ll_state_ptr)
@@ -1920,7 +1987,7 @@ let impl_list_body_true
       impl_f
         (cl.ll_state_pts_to bh out `star` R.pts_to bres full_perm true)
         (aparse p a va `star` exists_ (fun res -> R.pts_to bres full_perm res `star` impl_list_hole_inv cl inv f bh h0 res (List.Tot.snoc (Ghost.reveal l, va.contents))))
-        a
+        a ()
         out
         _
         (fun out' h' _ ->
@@ -1958,39 +2025,19 @@ let impl_list
   (#t: Type)
   (f: Ghost.erased (fold_t state_t t unit inv inv))
   (prf: fold_state_inc cl f)
-  (#st: Type)
-  (#sk: Ghost.erased parser_kind)
-  (#sp: parser sk st)
-  (sj: jumper sp)
-  (sr: leaf_reader sp)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
   (#k: Ghost.erased parser_kind)
   (p: parser k t)
-  (impl_f: fold_impl_t cl p f)
+  (impl_f: fold_impl_t cl p false f)
   (j: jumper p) // MUST be computed OUTSIDE of impl_list
   (wc: with_ll_state_ptr_t cl inv) // same
   (wl: load_ll_state_ptr_t cl inv)
   (ws: store_ll_state_ptr_t cl inv)
-: Pure (fold_impl_t cl (parse_splist sp sz p) (fold_list inv f))
+: Pure (fold_impl_t cl (parse_list p) true (fold_list inv f))
     (requires (
-      sk.parser_kind_subkind == Some ParserStrong /\
       k.parser_kind_subkind == Some ParserStrong
     ))
     (ensures (fun _ -> True))
-= fun kpre kpost #vbin bin bout h k_success k_failure ->
-  let bin_l = elim_parse_splist sj sz p bin in
-  let _ = gen_elim () in
-  let vl_sz = vpattern_replace (aparse (parse_synth sp sz) bin) in
-  let vl_l = vpattern_replace (aparse (parse_list p) bin_l) in
-  let in_sz = read_synth' sr sz () bin in
-  let restore (#opened: _) () : STGhostT unit opened
-    (aparse (parse_synth sp sz) bin vl_sz `star`
-      aparse (parse_list p) bin_l vl_l)
-    (fun _ -> aparse (parse_splist sp sz p) bin vbin)
-  =
-    let _ = intro_parse_splist sp sz p bin bin_l in
-    rewrite (aparse _ bin _) (aparse (parse_splist sp sz p) bin vbin)
-  in
+= fun kpre kpost #vl_l bin in_sz bout h k_success k_failure ->
   cl.ll_state_match_shape _ _;
   wc bout (fun bh ->
     noop ();
@@ -2002,13 +2049,12 @@ let impl_list
       (impl_list_hole_inv cl inv f bh h)
       (impl_list_body_true cl inv f p impl_f wl ws bh h)
       (impl_list_body_false cl inv f prf p bh h)
-      bin_l
+      bin
       in_sz
     in
-    restore ();
     if cont
-    then impl_list_post_true cl inv f sp sz p wl bin h kpre kpost k_success bh cont _
-    else impl_list_post_false cl inv f sp sz p bin h kpre kpost k_failure bh cont _
+    then impl_list_post_true cl inv f p wl bin h kpre kpost k_success bh cont _
+    else impl_list_post_false cl inv f p bin h kpre kpost k_failure bh cont _
   )
 
 #pop-options
@@ -2119,7 +2165,8 @@ let rec prog_inc
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
-  (#ty: typ type_of_scalar)
+  (#ne #pr: bool)
+  (#ty: typ type_of_scalar ne pr)
   (p: prog type_of_scalar state_t action_t ty ret_t pre post)
 : Tot (fold_state_inc cl (sem action_sem p))
   (decreases p)
@@ -2143,21 +2190,21 @@ let rec prog_inc
     if x
     then prog_inc a_cl (ptrue ()) (coerce _ input) s
     else prog_inc a_cl (pfalse ()) (coerce _ input) s
-  | PPair #_ #_ #_ #_ #_ #t1 #t2 f1 f2 ->
+  | PPair #_ #_ #_ #_ #_ #_ #t1 #_ #_ #t2 f1 f2 ->
     let (input1, input2) = (input <: type_of_typ (TPair t1 t2)) in
     prog_inc a_cl f1 input1 s;
     let (v1, s1) = sem action_sem f1 input1 s in
     prog_inc a_cl (f2 v1) input2 s1;
     let (_, s2) = sem action_sem (f2 v1) input2 s1 in
     cl.state_ge_trans s2 s1 s
-  | PList _ _ i f ->
+  | PList i f ->
     fold_list_inc
       cl
       (sem action_sem f)
       (fun i s -> prog_inc a_cl f i s)
       input
       s
-  | PListFor _ _ i idx f ->
+  | PListFor i idx f ->
     fold_for_list_inc
       cl
       _
@@ -2166,22 +2213,29 @@ let rec prog_inc
       idx.array_index_f_nat
       input
       s
-  | PChoice #_ #_ #_ #_ #_ #sc #t f ->
+  | PChoice #_ #_ #_ #_ #_ #sc #_ #_ #t f ->
     let (| tag, payload |) = (input <: type_of_typ (TChoice sc t)) in
     prog_inc a_cl (f tag) payload s
+  | PSizePrefixed _ _ p ->
+    prog_inc a_cl p (coerce _ input) s
 
 let rec parser_of_typ
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
-  (t: typ type_of_scalar)
-: Tot (parser pkind (type_of_typ t)) =
-  match t returns parser pkind (type_of_typ t) with
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
+: Tot (parser (pkind ne pr) (type_of_typ t))
+  (decreases t)
+= match t returns parser (pkind ne pr) (type_of_typ t) with
   | TScalar s -> (p_of_s s).scalar_parser
   | TPair t1 t2 -> weaken _ (nondep_then (parser_of_typ p_of_s t1) (parser_of_typ p_of_s t2))
   | TIf b ttrue tfalse -> parser_of_typ p_of_s (if b then ttrue () else tfalse ())
-  | TList s sz t' -> parse_splist (p_of_s s).scalar_parser sz (parser_of_typ p_of_s t')
+  | TList t' -> parse_list (parser_of_typ p_of_s t')
   | TChoice s f -> weaken _ (parse_dtuple2 (p_of_s s).scalar_parser #_ #(type_of_payload' s f) (fun x -> parser_of_typ p_of_s (f x)))
+  | TUnit -> weaken _ parse_empty
+  | TFalse ne pr -> fail_parser (pkind ne pr) (squash False)
+  | TSizePrefixed sc sz t -> weaken _ (parse_size_prefixed (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t))
 
 inline_for_extraction
 let validate_ifthenelse
@@ -2204,12 +2258,15 @@ let rec validator_of_typ
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
-  (t: typ type_of_scalar)
-: Tot (validator (parser_of_typ p_of_s t)) =
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
+: Tot (validator (parser_of_typ p_of_s t))
+  (decreases t)
+=
   match t returns validator (parser_of_typ p_of_s t) with
-  | TScalar s -> (p_of_s s).scalar_validator
+  | TScalar s -> coerce _ ((p_of_s s).scalar_validator)
   | TPair t1 t2 -> validate_weaken _ (validate_pair (validator_of_typ p_of_s t1) (validator_of_typ p_of_s t2)) ()
-  | TList s sz t' -> coerce _ (validate_splist (p_of_s s).scalar_validator (p_of_s s).scalar_reader sz (validator_of_typ p_of_s t'))
+  | TList t' -> coerce _ (validate_list (validator_of_typ p_of_s t'))
   | TIf b ttrue tfalse ->
     coerce _
       (validate_ifthenelse
@@ -2230,6 +2287,20 @@ let rec validator_of_typ
         (fun x -> (validator_of_typ p_of_s (f x)))
       )
       ()
+  | TSizePrefixed s sz #_ #pr' t' ->
+    validate_weaken _
+      (validate_size_prefixed
+        (p_of_s s).scalar_validator
+        (p_of_s s).scalar_reader
+        sz
+        (if pr'
+        then (fun sz -> validate_fldata_consumes_all (validator_of_typ p_of_s t') sz)
+        else (fun sz -> validate_fldata_gen (validator_of_typ p_of_s t') sz)
+        )
+      )
+      ()
+  | TUnit -> coerce _ (validate_weaken (pkind false false) (validate_total_constant_size parse_empty SZ.zero_size) ())
+  | TFalse _ _ -> validate_fail _ _ ()
 
 inline_for_extraction
 let jump_ifthenelse
@@ -2252,12 +2323,15 @@ let rec jumper_of_typ
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
-  (t: typ type_of_scalar)
-: Tot (jumper (parser_of_typ p_of_s t)) =
+  (#ne: bool)
+  (t: typ type_of_scalar ne false)
+: Tot (jumper (parser_of_typ p_of_s t))
+  (decreases t)
+=
   match t returns jumper (parser_of_typ p_of_s t) with
   | TScalar s -> (p_of_s s).scalar_jumper
-  | TPair t1 t2 -> jump_weaken _ (jump_pair (jumper_of_typ p_of_s t1) (jumper_of_typ p_of_s t2)) ()
-  | TList s sz t' -> jump_splist (p_of_s s).scalar_jumper (p_of_s s).scalar_reader sz (parser_of_typ p_of_s t')
+  | TPair t1 t2 -> jump_weaken (pkind ne false) (jump_pair (jumper_of_typ p_of_s t1) (jumper_of_typ p_of_s t2)) ()
+  | TSizePrefixed s sz t' -> jump_size_prefixed (p_of_s s).scalar_jumper (p_of_s s).scalar_reader sz (parser_of_typ p_of_s t')
   | TIf b ttrue tfalse ->
     jump_ifthenelse
       b
@@ -2269,7 +2343,7 @@ let rec jumper_of_typ
       (fun _ -> jumper_of_typ p_of_s (tfalse ()))
   | TChoice s f ->
     coerce _
-      (jump_weaken pkind
+      (jump_weaken (pkind ne false)
         (jump_dtuple2
           (p_of_s s).scalar_jumper
           (p_of_s s).scalar_reader
@@ -2278,6 +2352,8 @@ let rec jumper_of_typ
         )
         ()
       )
+  | TUnit -> jump_constant_size parse_empty SZ.zero_size
+  | TFalse ne pr -> jump_fail _ _ ()
 
 [@@specialize]
 let rec impl
@@ -2293,33 +2369,37 @@ let rec impl
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
-  (#ty: typ type_of_scalar)
+  (#ne: bool)
+  (#pr: bool)
+  (#ty: typ type_of_scalar ne pr)
   (p: prog type_of_scalar state_t action_t ty ret_t pre post)
-: Tot (fold_impl_t cl #ret_t #pre #post #(type_of_typ ty) #pkind (parser_of_typ p_of_s ty) (sem action_sem p))
+: Tot (fold_impl_t cl #ret_t #pre #post #(type_of_typ ty) #(pkind ne pr) (parser_of_typ p_of_s ty) pr (sem action_sem p))
   (decreases p)
 = match p with
   | PRet #_ #_ #_ #_ #_ #_ #i v ->
-      coerce _ (impl_action cl (ret v) (impl_ret cl i v) (parser_of_typ p_of_s ty))
+      coerce _ (impl_action cl (ret v) (impl_ret cl i v) (parser_of_typ p_of_s ty) pr)
   | PAction a ->
-      coerce _ (impl_action cl _ (a_cl.a_impl a) (parser_of_typ p_of_s ty))
+      coerce _ (impl_action cl _ (a_cl.a_impl a) (parser_of_typ p_of_s ty) pr)
   | PBind f g ->
-      coerce _ (impl_bind cl (parser_of_typ p_of_s ty) (sem action_sem f) (coerce _ (impl p_of_s a_cl ptr_cl f)) (fun x -> sem action_sem (g x)) (fun x -> coerce _ (impl p_of_s a_cl ptr_cl (g x))) (fun x -> prog_inc a_cl (g x)) <: fold_impl_t cl (parser_of_typ p_of_s ty) (sem action_sem (PBind f g)))
+      coerce _ (impl_bind cl (parser_of_typ p_of_s ty) (sem action_sem f) pr (coerce _ (impl p_of_s a_cl ptr_cl f)) (fun x -> sem action_sem (g x)) (fun x -> coerce _ (impl p_of_s a_cl ptr_cl (g x))) (fun x -> prog_inc a_cl (g x)) <: fold_impl_t cl (parser_of_typ p_of_s ty) pr (sem action_sem (PBind f g)))
   | PIfP x ptrue pfalse ->
       coerce _
         (impl_if
           cl x
           (fun _ -> sem action_sem (ptrue ()))
           (parser_of_typ p_of_s ty)
+          pr
           (fun _ -> coerce _ (impl p_of_s a_cl ptr_cl (ptrue ()))) (fun _ -> sem action_sem (pfalse ()))
           (fun _ -> coerce _ (impl p_of_s a_cl ptr_cl (pfalse ())))
         )
-  | PIfT x #ttrue ptrue #tfalse pfalse ->
+  | PIfT x #_ #_ #ttrue ptrue #tfalse pfalse ->
       coerce _
         (impl_if_gen
           cl x
           (fun _ -> type_of_typ (ttrue ()))
           (fun _ -> sem action_sem (ptrue ()))
           (fun _ -> parser_of_typ p_of_s (ttrue ()))
+          pr
           (fun _ -> impl p_of_s a_cl ptr_cl (ptrue ()))
           (fun _ -> type_of_typ (tfalse ()))
           (fun _ -> sem action_sem (pfalse ()))
@@ -2327,36 +2407,53 @@ let rec impl
           (fun _ -> impl p_of_s a_cl ptr_cl (pfalse ()))
         )
   | PScalar i s ->
-      coerce _ (impl_read cl i (p_of_s s).scalar_reader)
-  | PPair #_ #_ #_ #_ #_ #t1 #t2 f1 f2 ->
+      coerce _ (impl_read cl i (p_of_s s).scalar_reader pr)
+  | PPair #_ #_ #_ #_ #_ #_ #t1 #_ #_ #t2 f1 f2 ->
       assert_norm (sem action_sem (PPair f1 f2) == fold_pair (sem action_sem f1) (fun x -> sem action_sem (f2 x)));
       coerce _
         (impl_rewrite_parser
           cl
           (fold_pair (sem action_sem f1) (fun x -> sem action_sem (f2 x)))
+          #_ #_ #pr
           (impl_pair cl
             (sem action_sem f1)
             (impl p_of_s a_cl ptr_cl f1)
             (jumper_of_typ p_of_s t1)
             (fun x -> sem action_sem (f2 x))
+            pr
             (fun x -> impl p_of_s a_cl ptr_cl (f2 x))
             (fun x -> prog_inc a_cl (f2 x))
           )
           (parser_of_typ p_of_s (TPair t1 t2))
         )
-  | PList #_ #_ #_ #_ #_ #ty s sz inv f ->
+  | PSizePrefixed #_ #_ #_ #_ #_ #_ #_ #pr' #ty sc sz f ->
+      coerce _
+        (impl_rewrite_parser
+          cl
+          (sem action_sem f)
+          (impl_size_prefixed
+            cl
+            (p_of_s sc).scalar_jumper
+            (p_of_s sc).scalar_reader
+            sz
+            (sem action_sem f)
+            pr'
+            (impl p_of_s a_cl ptr_cl f)
+            pr
+          )
+          (parser_of_typ p_of_s (TSizePrefixed sc sz ty))
+        )
+  | PList #_ #_ #_ #_ #_ #ty inv f ->
       coerce _
         (impl_rewrite_parser
           cl
           (fold_list inv (sem action_sem f))
+          #_ #_ #true
           (impl_list
             cl
             inv
             (sem action_sem f)
             (prog_inc a_cl f)
-            (p_of_s s).scalar_jumper
-            (p_of_s s).scalar_reader
-            sz
             (parser_of_typ p_of_s ty)
             (impl p_of_s a_cl ptr_cl f)
             (jumper_of_typ p_of_s ty)
@@ -2364,20 +2461,18 @@ let rec impl
             (ptr_cl.load_ll_state_ptr inv)
             (ptr_cl.store_ll_state_ptr inv)
           )
-          (parser_of_typ p_of_s (TList s sz ty))
+          (parser_of_typ p_of_s (TList ty))
         )
-  | PListFor #_ #_ #_ #_ #_ #ty s sz inv idx f ->
+  | PListFor #_ #_ #_ #_ #_ #ty inv idx f ->
       coerce _
         (impl_rewrite_parser
           cl
           (fold_for_list inv (sem action_sem f) idx.array_index_f_nat)
+          #_ #_ #true
           (impl_for_list
             cl
             inv
             (sem action_sem f)
-            (p_of_s s).scalar_jumper
-            (p_of_s s).scalar_reader
-            sz
             (jumper_of_typ p_of_s ty)
             (impl p_of_s a_cl ptr_cl f)
             (prog_inc a_cl f)
@@ -2386,17 +2481,18 @@ let rec impl
             (ptr_cl.load_ll_state_ptr inv)
             (ptr_cl.store_ll_state_ptr inv)
           )
-          (parser_of_typ p_of_s (TList s sz ty))
+          (parser_of_typ p_of_s (TList ty))
         )
-  | PChoice #_ #_ #_ #_ #_ #s #t f ->
+  | PChoice #_ #_ #_ #_ #_ #s #_ #_ #t f ->
       assert_norm (sem action_sem (PChoice f) == fold_choice #_ #_ #_ #(type_of_scalar s) #(type_of_payload' s t) (fun x -> sem action_sem (f x)));
-      assert_norm (parser_of_typ p_of_s (TChoice s t) == weaken pkind (parse_dtuple2 (p_of_s s).scalar_parser #_ #(type_of_payload' s t) (fun x -> parser_of_typ p_of_s (t x))));
+      assert_norm (parser_of_typ p_of_s (TChoice s t) == weaken (pkind ne pr) (parse_dtuple2 (p_of_s s).scalar_parser #_ #(type_of_payload' s t) (fun x -> parser_of_typ p_of_s (t x))));
       coerce _
         (impl_rewrite_parser
           cl
           (fold_choice #_ #_ #_ #(type_of_scalar s) #(type_of_payload' s t) (fun x -> sem action_sem (f x)))
           #_
           #(parse_dtuple2 (p_of_s s).scalar_parser #_ #(type_of_payload' s t) (fun x -> parser_of_typ p_of_s (t x)))
+          #pr
           (impl_choice
             cl
             #(type_of_scalar s)
@@ -2405,6 +2501,7 @@ let rec impl
             (p_of_s s).scalar_jumper
             (p_of_s s).scalar_reader
             (fun x -> parser_of_typ p_of_s (t x))
+            pr
             (fun x -> impl p_of_s a_cl ptr_cl (f x))
           )
           (parser_of_typ p_of_s (TChoice s t))
@@ -2511,12 +2608,14 @@ let extract_impl_fold_unit
   (#f: Ghost.erased (fold_t state_t t unit pre post))
   (#k: parser_kind)
   (#p: parser k t)
-  (fi: fold_impl_t cl p f)
+  (#with_size: bool)
+  (fi: fold_impl_t cl p with_size f)
   (#vpre: vprop)
   (#h: Ghost.erased (state_t pre))
   (mk: mk_ll_state_t cl vpre h)
   (vbin: v k t)
   (bin: byte_array)
+  (bin_sz: (if with_size then size_of (array_of' vbin) else unit))
 : STT bool
     (vpre `star` aparse p bin vbin)
     (fun res -> extract_impl_unit_post cl pre post (Ghost.reveal f vbin.contents) h res `star` aparse p bin vbin)
@@ -2524,7 +2623,7 @@ let extract_impl_fold_unit
     (Ghost.reveal f vbin.contents)
     mk
     (aparse p bin vbin)
-    (fun kpre kpost -> fi kpre kpost #vbin bin)
+    (fun kpre kpost -> fi kpre kpost #vbin bin bin_sz)
 
 let extract_impl_post
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
@@ -2619,12 +2718,14 @@ let extract_impl_fold
   (#f: Ghost.erased (fold_t state_t t rett pre post))
   (#k: parser_kind)
   (#p: parser k t)
-  (fi: fold_impl_t cl p f)
+  (#with_size: bool)
+  (fi: fold_impl_t cl p with_size f)
   (#vpre: vprop)
   (#h: Ghost.erased (state_t pre))
   (mk: mk_ll_state_t cl vpre h)
   (vbin: v k t)
   (bin: byte_array)
+  (bin_sz: (if with_size then size_of (array_of' vbin) else unit))
   (r: R.ref rett)
 : STT bool
     (vpre `star` aparse p bin vbin `star` exists_ (R.pts_to r full_perm))
@@ -2633,7 +2734,7 @@ let extract_impl_fold
     (Ghost.reveal f vbin.contents)
     mk
     (aparse p bin vbin)
-    (fun kpre kpost -> fi kpre kpost #vbin bin)
+    (fun kpre kpost -> fi kpre kpost #vbin bin bin_sz)
     r
 
 let no_ll_state_failure_t
@@ -2739,12 +2840,14 @@ let extract_impl_fold_no_failure
   (#f: Ghost.erased (fold_t state_t t rett pre post))
   (#k: parser_kind)
   (#p: parser k t)
-  (fi: fold_impl_t cl p f)
+  (#with_size: bool)
+  (fi: fold_impl_t cl p with_size f)
   (#vpre: vprop)
   (#h: Ghost.erased (state_t pre))
   (mk: mk_ll_state_t cl vpre h)
   (vbin: v k t)
   (bin: byte_array)
+  (bin_sz: (if with_size then size_of (array_of' vbin) else unit))
   (dummy: rett)
 : STT rett
     (vpre `star` aparse p bin vbin)
@@ -2758,7 +2861,7 @@ let extract_impl_fold_no_failure
     (Ghost.reveal f vbin.contents)
     mk
     (aparse p bin vbin)
-    (fun kpre kpost -> fi kpre kpost #vbin bin)
+    (fun kpre kpost -> fi kpre kpost #vbin bin bin_sz)
     dummy
   in
   let _ = gen_elim () in

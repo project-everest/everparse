@@ -104,19 +104,19 @@ let type_of_scalar (s: scalar_t) : Tot Type =
 let p_of_s (s: scalar_t) : G.scalar_ops (type_of_scalar s) =
   match s with
   | U8 -> {
-           G.scalar_parser = weaken G.pkind parse_u8;
+           G.scalar_parser = weaken (G.pkind true false) parse_u8;
            G.scalar_validator = validate_weaken _ validate_u8 ();
            G.scalar_reader = read_weaken _ read_u8;
            G.scalar_jumper = jump_weaken _ jump_u8 ();
          }
   | U32 -> {
-           G.scalar_parser = weaken G.pkind parse_u32;
+           G.scalar_parser = weaken (G.pkind true false) parse_u32;
            G.scalar_validator = validate_weaken _ validate_u32 ();
            G.scalar_reader = read_weaken _ read_u32;
            G.scalar_jumper = jump_weaken _ jump_u32 ();
          }
   | Bool -> {
-           G.scalar_parser = weaken G.pkind parse_bool;
+           G.scalar_parser = weaken (G.pkind true false) parse_bool;
            G.scalar_validator = validate_weaken _ validate_bool ();
            G.scalar_reader = read_weaken _ read_bool;
            G.scalar_jumper = jump_weaken _ (jump_constant_size parse_bool SZ.one_size) ();
@@ -144,9 +144,10 @@ let pchoice
   (#ret_t: Type)
   (#pre: _)
   (#post: _)
-  (#ttrue: G.typ type_of_scalar)
+  (#ne #pr: bool)
+  (#ttrue: G.typ type_of_scalar ne pr)
   (ptrue: G.prog type_of_scalar state_t action_t ttrue ret_t pre post)
-  (#tfalse: G.typ type_of_scalar)
+  (#tfalse: G.typ type_of_scalar ne pr)
   (pfalse: G.prog type_of_scalar state_t action_t tfalse ret_t pre post)
 : Tot (G.prog type_of_scalar state_t action_t (G.TChoice Bool (fun b -> G.TIf b (fun _ -> ttrue) (fun _ -> tfalse))) ret_t pre post)
 = G.PChoice
@@ -155,9 +156,10 @@ let pchoice
 noextract
 [@@G.specialize]
 let test_print_choice
-  (#ttrue: G.typ type_of_scalar)
+  (#ne #pr: bool)
+  (#ttrue: G.typ type_of_scalar ne pr)
   (ptrue: G.prog type_of_scalar P.state_t P.action_t ttrue unit () ())
-  (#tfalse: G.typ type_of_scalar)
+  (#tfalse: G.typ type_of_scalar ne pr)
   (pfalse: G.prog type_of_scalar P.state_t P.action_t tfalse unit () ())
 : Tot (G.prog type_of_scalar P.state_t P.action_t (G.TChoice Bool (fun b -> G.TIf b (fun _ -> ttrue) (fun _ -> tfalse))) unit () ())
 = G.PBind
@@ -182,13 +184,13 @@ let test_print_choice
 noextract
 [@@G.specialize]
 let test_print_list
-  (#t: G.typ type_of_scalar)
+  (#t: G.typ type_of_scalar true false)
   (p: G.prog type_of_scalar P.state_t P.action_t t unit () ())
-: Tot (G.prog type_of_scalar P.state_t P.action_t (G.TList U32 SZ.mk_size_t t) unit () ())
+: Tot (G.prog type_of_scalar P.state_t P.action_t (G.TSizePrefixed U32 SZ.mk_size_t (G.TList t)) unit () ())
 = G.PBind
     (G.PAction (P.PrintString "list:["))
     (fun _ -> G.PBind
-      (G.PList U32 SZ.mk_size_t _ p)
+      (G.PSizePrefixed U32 SZ.mk_size_t (G.PList _ p))
       (fun _ -> G.PAction (P.PrintString "];"))
     )
 
@@ -220,7 +222,7 @@ let type_of_test_pretty_print =
   G.type_of_typ (G.typ_of_prog prog_test_pretty_print)
 
 noextract
-let parser_of_test_pretty_print : parser G.pkind type_of_test_pretty_print =
+let parser_of_test_pretty_print : parser (G.pkind true false) type_of_test_pretty_print =
   G.parser_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)
 
 noextract
@@ -229,7 +231,7 @@ let sem_of_test_pretty_print : G.fold_t P.state_t type_of_test_pretty_print unit
 
 inline_for_extraction
 noextract
-let specialize_impl_test_pretty_print : G.fold_impl_t P.cl parser_of_test_pretty_print sem_of_test_pretty_print =
+let specialize_impl_test_pretty_print : G.fold_impl_t P.cl parser_of_test_pretty_print false sem_of_test_pretty_print =
   specialize_impl_test_pretty_print0
 
 let test_pretty_print =
@@ -265,7 +267,7 @@ let full_test_pretty_print
     then begin
       let _ = ghost_peek_strong parser_of_test_pretty_print b in
       let _ = gen_elim () in
-      let _ = test_pretty_print _ b () in
+      let _ = test_pretty_print _ b () () in
       let _ = gen_elim () in
       rewrite (P.cl.ll_state_match _ _) emp;
       unpeek_strong b _ _
@@ -329,7 +331,7 @@ let test_write1 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
     (G.PScalar _ U32)
     (fun v1 -> G.PBind
       (G.PAction (W.AWrite _ U32 v1))
-      (fun _ -> G.PAction (W.AWeaken _ (W.index_with_trivial_postcond [W.IParseValue (G.TScalar U32)]) ()))
+      (fun _ -> G.PAction (W.AWeaken _ (W.index_with_trivial_postcond [W.IParse (G.TScalar U32)]) ()))
     )
 
 // FIXME: WHY WHY WHY do I need those i0, i1, etc. annotations to typecheck this program? Without them, F* will blow up, increasing memory consumption and not returning
@@ -362,17 +364,17 @@ let test_write2 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                 G.PBind
                 (G.PAction (W.ACons i4 (G.TScalar U32) ()))
                 (fun _ -> 
-                  let i6 = W.i_list i5 U32 SZ.mk_size_t (G.TScalar U32) () in
+                  let i6 = W.i_size_prefixed i5 U32 SZ.mk_size_t (G.TList (G.TScalar U32)) () in
                   G.PBind
                   (G.PAction
-                    (W.AList i5
+                    (W.ASizePrefixed i5
                       U32 SZ.mk_size_t
                       (fun x -> x `SZ.size_le` SZ.mk_size_t 4294967295ul)
                       (fun x -> SZ.to_u32 x)
-                      (G.TScalar U32)
+                      (G.TList (G.TScalar U32))
                       ()
                   ))
-                  (fun _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParseValue (G.TList U32 SZ.mk_size_t (G.TScalar U32))]) ()))
+                  (fun _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParse (G.TSizePrefixed U32 SZ.mk_size_t (G.TList (G.TScalar U32)))]) ()))
                 )
               )
             )
@@ -408,14 +410,14 @@ let test_write3 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                 (fun (i5: W.state_i type_of_scalar) _ _ -> 
                   G.pbind
                   (G.PAction
-                    (W.AList i5
+                    (W.ASizePrefixed i5
                       U32 SZ.mk_size_t
                       (fun x -> x `SZ.size_le` SZ.mk_size_t 4294967295ul)
                       (fun x -> SZ.to_u32 x)
-                      (G.TScalar U32)
+                      (G.TList (G.TScalar U32))
                       ()
                   ))
-                  (fun (i6: W.state_i type_of_scalar) _ _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParseValue (G.TList U32 SZ.mk_size_t (G.TScalar U32))]) ()))
+                  (fun (i6: W.state_i type_of_scalar) _ _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParse (G.TSizePrefixed U32 SZ.mk_size_t (G.TList (G.TScalar U32)))]) ()))
                 )
               )
             )
@@ -446,7 +448,7 @@ let extract_test_write3 vb b b_sz =
 
 noextract
 [@@G.specialize]
-let tif = G.TIf #_ #type_of_scalar
+let tif #ne #pr = G.TIf #_ #type_of_scalar #ne #pr
 
 noextract
 [@@G.specialize]
@@ -457,22 +459,22 @@ noextract
 let test_write4_if_true
   (b: bool)
   (sq: squash (b == true))
-: Tot (G.typ type_of_scalar)
-= G.TList U32 SZ.mk_size_t (G.TScalar U8)
+: Tot (G.typ type_of_scalar true false)
+= G.TSizePrefixed U32 SZ.mk_size_t (G.TList (G.TScalar U8))
 
 noextract
 [@@G.specialize]
 let test_write4_if_false
   (b: bool)
   (sq: squash (b == false))
-: Tot (G.typ type_of_scalar)
+: Tot (G.typ type_of_scalar true false)
 = G.TScalar U8
 
 noextract
 [@@G.specialize]
 let test_write4_choice_payload
   (b: bool)
-: Tot (G.typ type_of_scalar)
+: Tot (G.typ type_of_scalar true false)
 = tif b (test_write4_if_true b) (test_write4_if_false b)
 
 // #push-options "--debug Test --debug_level Norm"
@@ -483,12 +485,10 @@ let test_write4_choice_payload
 noextract
 [@@G.specialize;
   T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
-let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) _ unit (W.initial_index type_of_scalar) _
+let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) G.TUnit unit (W.initial_index type_of_scalar) _
 =
   let i0 = W.initial_index type_of_scalar in
-  G.PBind
-    (G.PScalar i0 U32) // dummy read, I am only testing actions here
-    (fun _ -> G.pbind
+    (G.pbind
       (G.PAction (W.ANil i0 (G.TScalar U8)))
       (fun (i1: W.state_i type_of_scalar) _ _ -> G.pbind
         (G.PAction (W.AWrite i1 U8 104uy))
@@ -503,16 +503,16 @@ let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                 (fun (i6: W.state_i type_of_scalar) _ _ -> G.pbind
                   (G.PAction (W.ACons i6 (G.TScalar U8) ()))
                   (fun (i7: W.state_i type_of_scalar) _ _ -> G.pbind
-                    (G.PAction (W.AList i7
+                    (G.PAction (W.ASizePrefixed i7
                       U32 SZ.mk_size_t
                       (fun x -> x `SZ.size_le` SZ.mk_size_t 4294967295ul)
                       (fun x -> SZ.to_u32 x)
-                      (G.TScalar U8)
+                      (G.TList (G.TScalar U8))
                       ()
                     ))
                     (fun (i8: W.state_i type_of_scalar) _ _ -> G.pbind
                       (G.PAction (W.AIf i8
-                        (G.TList U32 SZ.mk_size_t (G.TScalar U8))
+                        (G.TSizePrefixed U32 SZ.mk_size_t (G.TList (G.TScalar U8)))
                         true
                         (test_write4_if_true true)
                         (test_write4_if_false true)
@@ -541,7 +541,7 @@ let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                               ))
                               (fun (i13: W.state_i type_of_scalar) _ _ ->
                                 G.PAction (W.AWeaken i13
-                                  (W.index_with_trivial_postcond [W.IParseValue
+                                  (W.index_with_trivial_postcond [W.IParse
                                     (G.TPair
                                       (G.TScalar U8)
                                       (tchoice Bool test_write4_choice_payload)

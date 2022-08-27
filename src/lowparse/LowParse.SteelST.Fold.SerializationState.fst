@@ -17,8 +17,7 @@ type state_i_item
   (#scalar_t: Type)
   (type_of_scalar: (scalar_t -> Type))
 =
-| IParseValue: typ type_of_scalar -> state_i_item type_of_scalar
-| IParseList: typ type_of_scalar -> state_i_item type_of_scalar
+| IParse: (#ne: bool) -> (#pr: bool) -> typ type_of_scalar ne pr -> state_i_item type_of_scalar
 
 [@@specialize]
 let state_i0
@@ -33,8 +32,7 @@ type state_t_item
   (type_of_scalar: (scalar_t -> Type))
 : state_i_item type_of_scalar -> Type
 =
-| VParseValue: (t: typ type_of_scalar) -> (v: type_of_typ t) -> state_t_item type_of_scalar (IParseValue t)
-| VParseList: (t: typ type_of_scalar) -> (v: list (type_of_typ t)) -> state_t_item type_of_scalar (IParseList t)
+| VParse: (#ne: bool) -> (#pr: bool) -> (t: typ type_of_scalar ne pr) -> (v: type_of_typ t) -> state_t_item type_of_scalar (IParse t)
 
 noeq
 type state_t0
@@ -67,10 +65,11 @@ let spec_write0
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i0 type_of_scalar)
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
   (v: type_of_typ t)
-: Tot (stt (state_t0 type_of_scalar) unit s (IParseValue t :: s))
-= fun st -> ((), SCons (VParseValue t v) st)
+: Tot (stt (state_t0 type_of_scalar) unit s (IParse t :: s))
+= fun st -> ((), SCons (VParse t v) st)
 
 [@@specialize]
 let i_write
@@ -82,7 +81,7 @@ let i_write
 : Tot (state_i type_of_scalar)
 = 
       ({
-        i = IParseValue (TScalar t) :: s.i;
+        i = IParse (TScalar t) :: s.i;
         p = H.sem_act_post (spec_write0 s.i (TScalar t) v) s.p;
       })
 
@@ -90,20 +89,20 @@ let spec_nil0
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i0 type_of_scalar)
-  (t: typ type_of_scalar)
-: Tot (stt (state_t0 type_of_scalar) unit s (IParseList t :: s))
-= fun st -> ((), SCons (VParseList t []) st)
+  (t: typ type_of_scalar true false)
+: Tot (stt (state_t0 type_of_scalar) unit s (IParse (TList t) :: s))
+= fun st -> ((), SCons (VParse (TList t) []) st)
 
 [@@specialize]
 let i_nil
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i type_of_scalar)
-  (t: typ type_of_scalar)
+  (t: typ type_of_scalar true false)
 : Tot (state_i type_of_scalar)
 =
       ({
-        i = IParseList t :: s.i;
+        i = IParse (TList t) :: s.i;
         p = H.sem_act_post (spec_nil0 s.i t) s.p;
       })
 
@@ -111,9 +110,9 @@ let spec_cons0
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i0 type_of_scalar)
-  (t: typ type_of_scalar)
-: Tot (stt (state_t0 type_of_scalar) unit (IParseValue t :: IParseList t :: s) (IParseList t :: s))
-= function SCons (VParseValue _ v) (SCons (VParseList _ l) st) -> ((), SCons (VParseList t (v :: l)) st)
+  (t: typ type_of_scalar true false)
+: Tot (stt (state_t0 type_of_scalar) unit (IParse t :: IParse (TList t) :: s) (IParse (TList t) :: s))
+= function SCons (VParse _ v) (SCons (VParse (TList _) l) st) -> ((), SCons (VParse (TList t) (v :: l)) st)
 
 [@@specialize]
 inline_for_extraction
@@ -136,126 +135,137 @@ let i_cons
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i type_of_scalar)
-  (t: typ type_of_scalar)
+  (t: typ type_of_scalar true false)
   (sq: squash (
       Cons? s.i /\
-      list_hd s.i == IParseValue t /\
+      list_hd s.i == IParse t /\
       Cons? (list_tl s.i) /\
-      list_hd (list_tl s.i) == IParseList t
+      list_hd (list_tl s.i) == IParse (TList t)
   ))
 : Tot (state_i type_of_scalar)
 =
-      ({ H.i = IParseList t :: list_tl (list_tl s.i); H.p =H.sem_act_post (spec_cons0 (list_tl (list_tl s.i)) t) s.p }) 
+      ({ H.i = IParse (TList t) :: list_tl (list_tl s.i); H.p =H.sem_act_post (spec_cons0 (list_tl (list_tl s.i)) t) s.p }) 
 
-let spec_list0
+let spec_size_prefixed0
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
   (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
-  (t: typ type_of_scalar)
-: Tot (stt (state_t0 type_of_scalar) unit (IParseList t :: s) (IParseValue (TList sc sz t) :: s))
-= function SCons (VParseList _ l) st -> ((), SCons (VParseValue (TList sc sz t) l) st)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
+: Tot (stt (state_t0 type_of_scalar) unit (IParse t :: s) (IParse (TSizePrefixed sc sz t) :: s))
+= function SCons (VParse t l) st -> ((), SCons (VParse (TSizePrefixed sc sz t) (coerce _ l)) st)
 
 [@@specialize]
-let i_list
+let i_size_prefixed
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i type_of_scalar)
   (sc: scalar_t)
   (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
   (sq: squash (
     Cons? s.i /\
-    list_hd s.i == IParseList t
+    list_hd s.i == IParse t
   ))
 : Tot (state_i type_of_scalar)
 =
-      ({ H.i = IParseValue (TList sc sz t) :: list_tl s.i; H.p = H.sem_act_post (spec_list0 (list_tl s.i) sc sz t) s.p })
+      ({ H.i = IParse (TSizePrefixed sc sz t) :: list_tl s.i; H.p = H.sem_act_post (spec_size_prefixed0 (list_tl s.i) sc sz t) s.p })
 
 let spec_pair0
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i0 type_of_scalar)
-  (t1 t2: typ type_of_scalar)
-: Tot (stt (state_t0 type_of_scalar) unit (IParseValue t1 :: IParseValue t2 :: s) (IParseValue (TPair t1 t2) :: s))
-= function SCons (VParseValue _ v1) (SCons (VParseValue _ v2) st) -> ((), SCons (VParseValue (TPair t1 t2) (v1, v2)) st)
+  (#ne1: bool)
+  (t1: typ type_of_scalar ne1 false)
+  (#ne2 #pr2: bool)
+  (t2: typ type_of_scalar ne2 pr2)
+: Tot (stt (state_t0 type_of_scalar) unit (IParse t1 :: IParse t2 :: s) (IParse (TPair t1 t2) :: s))
+= function SCons (VParse _ v1) (SCons (VParse _ v2) st) -> ((), SCons (VParse (TPair t1 t2) (v1, v2)) st)
 
 [@@specialize]
 let i_pair
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i type_of_scalar)
-  (t1: typ type_of_scalar)
-  (t2: typ type_of_scalar)
+  (#ne1: bool)
+  (t1: typ type_of_scalar ne1 false)
+  (#ne2 #pr2: bool)
+  (t2: typ type_of_scalar ne2 pr2)
   (sq: squash (
     Cons? s.i /\
-    list_hd s.i == IParseValue t1 /\
+    list_hd s.i == IParse t1 /\
     Cons? (list_tl s.i) /\
-    list_hd (list_tl s.i) == IParseValue t2
+    list_hd (list_tl s.i) == IParse t2
   ))
 : Tot (state_i type_of_scalar)
-= ({ H.i = IParseValue (TPair t1 t2) :: list_tl (list_tl s.i); H.p= H.sem_act_post (spec_pair0 (list_tl (list_tl s.i)) t1 t2) s.p })
+= ({ H.i = IParse (TPair t1 t2) :: list_tl (list_tl s.i); H.p= H.sem_act_post (spec_pair0 (list_tl (list_tl s.i)) t1 t2) s.p })
 
 let spec_if0
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i0 type_of_scalar)
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
   (b: bool)
-  (t1: (squash (b == true) -> typ type_of_scalar))
-  (t2: (squash (b == false) -> typ type_of_scalar))
+  (t1: (squash (b == true) -> typ type_of_scalar ne pr))
+  (t2: (squash (b == false) -> typ type_of_scalar ne pr))
   (sq: squash (t == ifthenelse b t1 t2))
-: Tot (stt (state_t0 type_of_scalar) unit (IParseValue t :: s) (IParseValue (TIf b t1 t2) :: s))
-= function SCons (VParseValue _ v) st -> ((), SCons (VParseValue (TIf b t1 t2) (coerce _ v)) st)
+: Tot (stt (state_t0 type_of_scalar) unit (IParse t :: s) (IParse (TIf b t1 t2) :: s))
+= function SCons (VParse _ v) st -> ((), SCons (VParse (TIf b t1 t2) (coerce _ v)) st)
 
 [@@specialize]
 let i_if
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i type_of_scalar)
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
   (b: bool)
-  (t1: (squash (b == true) -> typ type_of_scalar))
-  (t2: (squash (b == false) -> typ type_of_scalar))
+  (t1: (squash (b == true) -> typ type_of_scalar ne pr))
+  (t2: (squash (b == false) -> typ type_of_scalar ne pr))
   (sq: squash (
     t == ifthenelse b t1 t2 /\
     Cons? s.i /\
-    list_hd s.i == IParseValue t
+    list_hd s.i == IParse t
   ))
 : Tot (state_i type_of_scalar)
-= ({ H.i = (IParseValue (TIf b t1 t2) :: list_tl s.i); p = H.sem_act_post (spec_if0 (list_tl s.i) t b t1 t2 ()) s.p })
+= ({ H.i = (IParse (TIf b t1 t2) :: list_tl s.i); p = H.sem_act_post (spec_if0 (list_tl s.i) t b t1 t2 ()) s.p })
 
 let spec_choice_post
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
-  (t: typ type_of_scalar)
-  (ppre: (state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s) -> prop))
-  (t': (type_of_scalar sc -> typ type_of_scalar))
-  (h': state_t0 _ (IParseValue (TChoice sc t') :: s))
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
+  (ppre: (state_t0 _ (IParse (TScalar sc) :: IParse t :: s) -> prop))
+  (t': (type_of_scalar sc -> typ type_of_scalar ne pr))
+  (h': state_t0 _ (IParse (TChoice sc t') :: s))
 : Tot prop
-= exists (h: state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s)) .
+= exists (h: state_t0 _ (IParse (TScalar sc) :: IParse t :: s)) .
     ppre h /\
-    t == t' (VParseValue?.v (SCons?.s h)) /\
-    h' == SCons (VParseValue (TChoice sc t') (mk_choice_value sc (VParseValue?.v (SCons?.s h)) t' (VParseValue?.v (SCons?.s (SCons?.s' h))))) (SCons?.s' (SCons?.s' h))
+    t == t' (VParse?.v (SCons?.s h)) /\
+    h' == SCons (VParse (TChoice sc t') (mk_choice_value sc (VParse?.v (SCons?.s h)) t' (VParse?.v (SCons?.s (SCons?.s' h))))) (SCons?.s' (SCons?.s' h))
 
 let spec_choice
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
-  (t: typ type_of_scalar)
-  (ppre: (state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s) -> prop))
-  (t': (type_of_scalar sc -> typ type_of_scalar))
-  (sq: squash (forall (h: state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s)) . ppre h ==> t == t' (VParseValue?.v (SCons?.s h)))) // user proof obligation!
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
+  (ppre: (state_t0 _ (IParse (TScalar sc) :: IParse t :: s) -> prop))
+  (t': (type_of_scalar sc -> typ type_of_scalar ne pr))
+  (sq: squash (forall (h: state_t0 _ (IParse (TScalar sc) :: IParse t :: s)) . ppre h ==> t == t' (VParse?.v (SCons?.s h)))) // user proof obligation!
 : Tot (stt (state_t type_of_scalar) unit
-    ({ H.i = IParseValue (TScalar sc) :: IParseValue t :: s; H.p = ppre })
-    ({ H.i = IParseValue (TChoice sc t') :: s; H.p = spec_choice_post s sc t ppre t' })
+    ({ H.i = IParse (TScalar sc) :: IParse t :: s; H.p = ppre })
+    ({ H.i = IParse (TChoice sc t') :: s; H.p = spec_choice_post s sc t ppre t' })
   )
-= function SCons (VParseValue _ tag) (SCons (VParseValue _ value) st) ->
-    ((), SCons (VParseValue _ (mk_choice_value sc tag t' value)) st)
+= function SCons (VParse _ tag) (SCons (VParse _ value) st) ->
+    ((), SCons (VParse _ (mk_choice_value sc tag t' value)) st)
 
 [@@specialize]
 let i_choice
@@ -263,17 +273,18 @@ let i_choice
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i type_of_scalar)
   (sc: scalar_t)
-  (t: typ type_of_scalar)
-  (t': (type_of_scalar sc -> typ type_of_scalar))
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
+  (t': (type_of_scalar sc -> typ type_of_scalar ne pr))
   (sq: squash (
     Cons? s.i /\
-    list_hd s.i == IParseValue (TScalar sc) /\
+    list_hd s.i == IParse (TScalar sc) /\
     Cons? (list_tl s.i) /\
-    list_hd (list_tl s.i) == IParseValue t /\
-    (forall (h: state_t _ s) . s.p h ==> t == t' (VParseValue?.v (SCons?.s h)))  // user proof obligation!
+    list_hd (list_tl s.i) == IParse t /\
+    (forall (h: state_t _ s) . s.p h ==> t == t' (VParse?.v (SCons?.s h)))  // user proof obligation!
   ))
 : Tot (state_i type_of_scalar)
-= ({ H.i = IParseValue (TChoice sc t') :: list_tl (list_tl s.i); H.p = spec_choice_post (list_tl (list_tl s.i)) sc t s.p t' })
+= ({ H.i = IParse (TChoice sc t') :: list_tl (list_tl s.i); H.p = spec_choice_post (list_tl (list_tl s.i)) sc t s.p t' })
 
 let exactly_parses_on
   (#k: parser_kind)
@@ -355,18 +366,24 @@ let type_of_state_i_item
   (s: state_i_item type_of_scalar)
 : Tot Type
 = match s with
-  | IParseValue t -> type_of_typ t
-  | IParseList t -> list (type_of_typ t)
+  | IParse t -> type_of_typ t
+
+let kind_of_state_i_item
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (s: state_i_item type_of_scalar)
+: Tot parser_kind
+= match s with
+  | IParse #_ #_ #ne #pr _ -> pkind ne pr
 
 let parser_of_state_i_item
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (s: state_i_item type_of_scalar)
-: Tot (parser default_parser_kind (type_of_state_i_item s))
+: Tot (parser (kind_of_state_i_item s) (type_of_state_i_item s))
 = match s with
-  | IParseValue t -> weaken _ (parser_of_typ p_of_s t)
-  | IParseList t -> weaken _ (parse_list (parser_of_typ p_of_s t))
+  | IParse t -> parser_of_typ p_of_s t
 
 let value_of_state_t_item
   (#scalar_t: Type)
@@ -375,8 +392,7 @@ let value_of_state_t_item
   (s: state_t_item type_of_scalar i)
 : Tot (type_of_state_i_item i)
 = match s with
-  | VParseValue _ v -> v
-  | VParseList _ v -> v
+  | VParse _ v -> v
 
 let size_of_state_t_item
   (#scalar_t: Type)
@@ -1170,7 +1186,7 @@ let elim_ll_state_match_final0
   (s: Ghost.erased (state_t0 type_of_scalar i))
 : ST byte_array
     (exists_ ((cl0 p_of_s b b_sz a).ll_state_match s))
-    (fun b' -> exists_ (fun vb -> exists_ (fun sz -> exists_ (fun (vb': v default_parser_kind (type_of_state_i_item t)) ->
+    (fun b' -> exists_ (fun vb -> exists_ (fun sz -> exists_ (fun (vb': v (kind_of_state_i_item t) (type_of_state_i_item t)) ->
       AP.arrayptr b vb `star`
       R.pts_to b_sz full_perm sz `star`
       aparse (parser_of_state_i_item p_of_s t) b' vb' `star` pure (
@@ -1219,7 +1235,7 @@ let elim_ll_state_match_final
   (s: Ghost.erased (state_t type_of_scalar i))
 : ST byte_array
     (exists_ ((cl p_of_s b b_sz a).ll_state_match s))
-    (fun b' -> exists_ (fun vb -> exists_ (fun sz -> exists_ (fun (vb': v default_parser_kind (type_of_state_i_item t)) ->
+    (fun b' -> exists_ (fun vb -> exists_ (fun sz -> exists_ (fun (vb': v (kind_of_state_i_item t) (type_of_state_i_item t)) ->
       AP.arrayptr b vb `star`
       R.pts_to b_sz full_perm sz `star`
       aparse (parser_of_state_i_item p_of_s t) b' vb' `star` pure (
@@ -1567,7 +1583,8 @@ let write0_inc
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
   (v: type_of_typ t)
 : Tot (stt_state_inc (cl0 p_of_s b b_sz a) (spec_write0 s t v))
 = fun _ -> ()
@@ -1846,12 +1863,13 @@ let impl_write
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
   (w: r_to_l_write_t (parser_of_typ p_of_s t))
   (x: type_of_typ t)
 : Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_write0 s t x))
 = fun kpre kpost out h k_success k_failure ->
-    let h' : Ghost.erased (state_t0 type_of_scalar (IParseValue t :: s)) = get_return_state (spec_write0 s t x) h in
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParse t :: s)) = get_return_state (spec_write0 s t x) h in
     rewrite
       ((cl0 p_of_s b b_sz a).ll_state_match h out)
       (ll_state_match0 p_of_s b b_sz a h out);
@@ -1867,7 +1885,7 @@ let impl_write
         (r_to_l_write_post_success (parser_of_typ p_of_s t) x b (AP.array_of out.ll_free) sz');
       let _ = gen_elim () in
       let bw = hop_arrayptr_aparse _ b sz' _ in
-      let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParseValue t)) in
+      let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParse t)) in
       let vbl' = vpattern_replace (AP.arrayptr b) in
       [@inline_let]
       let out' : ll_state a = {
@@ -1882,7 +1900,7 @@ let impl_write
       in
       noop ();
       rewrite
-        (ll_state_item_match0 p_of_s (VParseValue t x) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
+        (ll_state_item_match0 p_of_s (VParse t x) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
         (ll_state_match' p_of_s h' out'.ll_b out'.ll_sz out'.ll_a out'.ll_s);
       vpattern_rewrite (AP.arrayptr b) out'.ll_free;
       rewrite
@@ -1894,7 +1912,7 @@ let impl_write
         (r_to_l_write_post _ x b _ _ _)
         (r_to_l_write_post_failure (parser_of_typ p_of_s t) x b (AP.array_of out.ll_free));
       let _ = gen_elim () in
-      parsed_size_rewrite (parser_of_typ p_of_s t) x (parser_of_state_i_item p_of_s (IParseValue t));
+      parsed_size_rewrite (parser_of_typ p_of_s t) x (parser_of_state_i_item p_of_s (IParse t));
       ll_state_match'_size_of_state_t0 p_of_s _ _ _ _ _;
       let _ = wipe_ll_state_match' p_of_s _ _ _ _ _ in
       let _ = AP.join b _ in
@@ -1914,7 +1932,7 @@ let nil0_inc
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
-  (t: typ type_of_scalar)
+  (t: typ type_of_scalar true false)
 : Tot (stt_state_inc (cl0 p_of_s b b_sz a) (spec_nil0 s t))
 = fun _ -> ()
 
@@ -1930,10 +1948,10 @@ let impl_nil
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
-  (t: typ type_of_scalar)
+  (t: typ type_of_scalar true false)
 : Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_nil0 s t))
 = fun kpre kpost out h k_success k_failure ->
-    let h' : Ghost.erased (state_t0 type_of_scalar (IParseList t :: s)) = get_return_state (spec_nil0 s t) h in
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParse (TList t) :: s)) = get_return_state (spec_nil0 s t) h in
     rewrite
       ((cl0 p_of_s b b_sz a).ll_state_match h out)
       (ll_state_match0 p_of_s b b_sz a h out);
@@ -1942,7 +1960,7 @@ let impl_nil
     let bw = AP.split b sz in
     let _ = gen_elim () in
     let _ = intro_nil (parser_of_typ p_of_s t) bw in
-    let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParseList t)) in
+    let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParse (TList t))) in
     let vbl' = vpattern_replace (AP.arrayptr b) in
     [@inline_let]
     let out' : ll_state a = {
@@ -1957,7 +1975,7 @@ let impl_nil
     in
     noop ();
     rewrite
-      (ll_state_item_match0 p_of_s (VParseList t []) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
+      (ll_state_item_match0 p_of_s (VParse (TList t) []) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
       (ll_state_match' p_of_s h' out'.ll_b out'.ll_sz out'.ll_a out'.ll_s);
     vpattern_rewrite (AP.arrayptr b) out'.ll_free;
     rewrite
@@ -1975,21 +1993,21 @@ let cons0_inc
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
-  (t: typ type_of_scalar)
+  (t: typ type_of_scalar true false)
 : Tot (stt_state_inc (cl0 p_of_s b b_sz a) (spec_cons0 s t))
 = fun s ->
-  let SCons (VParseValue _ hd) (SCons (VParseList _ tl) _) = s in
-  match parsed_size (weaken default_parser_kind (parse_list (parser_of_typ p_of_s t))) (hd :: tl) with
+  let SCons (VParse _ hd) (SCons (VParse _ tl) _) = s in
+  match parsed_size (parse_list (parser_of_typ p_of_s t)) (hd :: tl) with
   | None -> ()
   | Some _ ->
-    let b = parsed_size_some_elim (weaken default_parser_kind (parse_list (parser_of_typ p_of_s t))) (hd :: tl) in
+    let b = parsed_size_some_elim (parse_list (parser_of_typ p_of_s t)) (hd :: tl) in
     parse_list_eq (parser_of_typ p_of_s t) b;
     let Some (_, len1) = parse (parser_of_typ p_of_s t) b in
     let b1 = Seq.slice b 0 len1 in
     let b2 = Seq.slice b len1 (Seq.length b) in
     parse_strong_prefix (parser_of_typ p_of_s t) b b1;
-    parsed_size_some_intro (weaken default_parser_kind (parser_of_typ p_of_s t)) hd b1;
-    parsed_size_some_intro (weaken default_parser_kind (parse_list (parser_of_typ p_of_s t))) tl b2
+    parsed_size_some_intro (parser_of_typ p_of_s t) hd b1;
+    parsed_size_some_intro (parse_list (parser_of_typ p_of_s t)) tl b2
 
 #push-options "--z3rlimit 64"
 #restart-solver
@@ -2003,10 +2021,10 @@ let impl_cons
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
-  (t: typ type_of_scalar)
+  (t: typ type_of_scalar true false)
 : Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_cons0 s t))
 = fun kpre kpost out h k_success k_failure ->
-    let h' : Ghost.erased (state_t0 type_of_scalar (IParseList t :: s)) = get_return_state (spec_cons0 s t) h in
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParse (TList t) :: s)) = get_return_state (spec_cons0 s t) h in
     rewrite
       ((cl0 p_of_s b b_sz a).ll_state_match h out)
       (ll_state_match0 p_of_s b b_sz a h out);
@@ -2062,21 +2080,24 @@ let pair0_inc
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
-  (t1 t2: typ type_of_scalar)
+  (#ne1: bool)
+  (t1: typ type_of_scalar ne1 false)
+  (#ne2 #pr2: bool)
+  (t2: typ type_of_scalar ne2 pr2)
 : Tot (stt_state_inc (cl0 p_of_s b b_sz a) (spec_pair0 s t1 t2))
 = fun s ->
-  let SCons (VParseValue _ v1) (SCons (VParseValue _ v2) _) = s in
-  match parsed_size (weaken default_parser_kind (parser_of_typ p_of_s (TPair t1 t2))) (v1, v2) with
+  let SCons (VParse _ v1) (SCons (VParse _ v2) _) = s in
+  match parsed_size (parser_of_typ p_of_s (TPair t1 t2)) (v1, v2) with
   | None -> ()
   | Some _ ->
-    let b = parsed_size_some_elim (weaken default_parser_kind (parser_of_typ p_of_s (TPair t1 t2))) (v1, v2) in
+    let b = parsed_size_some_elim (parser_of_typ p_of_s (TPair t1 t2)) (v1, v2) in
     nondep_then_eq (parser_of_typ p_of_s t1) (parser_of_typ p_of_s t2) b;
     let Some (_, len1) = parse (parser_of_typ p_of_s t1) b in
     let b1 = Seq.slice b 0 len1 in
     let b2 = Seq.slice b len1 (Seq.length b) in
     parse_strong_prefix (parser_of_typ p_of_s t1) b b1;
-    parsed_size_some_intro (weaken default_parser_kind (parser_of_typ p_of_s t1)) v1 b1;
-    parsed_size_some_intro (weaken default_parser_kind (parser_of_typ p_of_s t2)) v2 b2
+    parsed_size_some_intro (parser_of_typ p_of_s t1) v1 b1;
+    parsed_size_some_intro (parser_of_typ p_of_s t2) v2 b2
 
 #push-options "--z3rlimit 64"
 #restart-solver
@@ -2090,10 +2111,13 @@ let impl_pair
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
-  (t1 t2: typ type_of_scalar)
+  (#ne1: bool)
+  (t1: typ type_of_scalar ne1 false)
+  (#ne2 #pr2: bool)
+  (t2: typ type_of_scalar ne2 pr2)
 : Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_pair0 s t1 t2))
 = fun kpre kpost out h k_success k_failure ->
-    let h' : Ghost.erased (state_t0 type_of_scalar (IParseValue (TPair t1 t2) :: s)) = get_return_state (spec_pair0 s t1 t2) h in
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParse (TPair t1 t2) :: s)) = get_return_state (spec_pair0 s t1 t2) h in
     rewrite
       ((cl0 p_of_s b b_sz a).ll_state_match h out)
       (ll_state_match0 p_of_s b b_sz a h out);
@@ -2149,10 +2173,11 @@ let if0_inc
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
   (b: bool)
-  (t1: (squash (b == true) -> typ type_of_scalar))
-  (t2: (squash (b == false) -> typ type_of_scalar))
+  (t1: (squash (b == true) -> typ type_of_scalar ne pr))
+  (t2: (squash (b == false) -> typ type_of_scalar ne pr))
   (sq: squash (t == ifthenelse b t1 t2))
 : Tot (stt_state_inc (cl0 p_of_s b0 b_sz a) (spec_if0 s t b t1 t2 sq))
 = fun _ -> ()
@@ -2169,14 +2194,15 @@ let impl_if
   (b_sz: R.ref SZ.size_t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
   (x: bool)
-  (t1: (squash (x == true) -> typ type_of_scalar))
-  (t2: (squash (x == false) -> typ type_of_scalar))
+  (t1: (squash (x == true) -> typ type_of_scalar ne pr))
+  (t2: (squash (x == false) -> typ type_of_scalar ne pr))
   (sq: squash (t == ifthenelse x t1 t2))
 : Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_if0 s t x t1 t2 sq))
 = fun kpre kpost out h k_success k_failure ->
-    let h' : Ghost.erased (state_t0 type_of_scalar (IParseValue (TIf x t1 t2) :: s)) = get_return_state (spec_if0 s t x t1 t2 sq) h in
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParse (TIf x t1 t2) :: s)) = get_return_state (spec_if0 s t x t1 t2 sq) h in
     rewrite
       ((cl0 p_of_s b b_sz a).ll_state_match h out)
       (ll_state_match0 p_of_s b b_sz a h out);
@@ -2198,7 +2224,7 @@ let impl_if
 
 #pop-options
 
-let list0_inc
+let size_prefixed0_inc
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
@@ -2208,26 +2234,27 @@ let list0_inc
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
   (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
-  (t: typ type_of_scalar)
-: Tot (stt_state_inc (cl0 p_of_s b0 b_sz a) (spec_list0 s sc sz t))
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
+: Tot (stt_state_inc (cl0 p_of_s b0 b_sz a) (spec_size_prefixed0 s sc sz t))
 = fun h ->
-  let h' = get_return_state (spec_list0 s sc sz t) h in
+  let h' = get_return_state (spec_size_prefixed0 s sc sz t) h in
   let scp = (p_of_s sc).scalar_parser in
   let tp = parser_of_typ p_of_s t in
-  match parsed_size (weaken default_parser_kind (parse_splist scp sz tp)) (VParseValue?.v (SCons?.s h')) with
+  match parsed_size (weaken (pkind true false) (parse_size_prefixed scp sz tp)) (coerce _ (VParse?.v (SCons?.s h'))) with
   | None -> ()
   | _ ->
-    let b = parsed_size_some_elim (weaken default_parser_kind (parse_splist scp sz tp)) (VParseValue?.v (SCons?.s h')) in
+    let b = parsed_size_some_elim (weaken (pkind true false) (parse_size_prefixed scp sz tp)) (coerce _ (VParse?.v (SCons?.s h'))) in
     let szp = ((scp `parse_synth` sz) `parse_synth` SZ.size_v) in
     parse_vlgen_alt_eq
       szp
-      (parse_list tp)
+      tp
       b;
     let Some (_, len1) = parse szp b in
     let b2 = Seq.slice b len1 (Seq.length b) in
-    parsed_size_some_intro (weaken default_parser_kind (parse_list tp)) (VParseList?.v (SCons?.s h)) b2
+    parsed_size_some_intro tp (VParse?.v (SCons?.s h)) b2
 
-let parsed_size_parse_splist_no_size
+let parsed_size_parse_size_prefixed_no_size
   (#st: Type)
   (#sk: parser_kind)
   (sp: parser sk st)
@@ -2235,33 +2262,33 @@ let parsed_size_parse_splist_no_size
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (l: list t)
+  (l: t)
   (sl: nat)
 : Lemma
   (requires (
-    parsed_size (parse_list p) l == Some sl /\
+    parsed_size p l == Some sl /\
     (forall x . SZ.size_v (sz x) <> sl)
   ))
   (ensures (
-    parsed_size (parse_splist sp sz p) l == None
+    parsed_size (parse_size_prefixed sp sz p) l == None
   ))
-= match parsed_size (parse_splist sp sz p) l with
+= match parsed_size (parse_size_prefixed sp sz p) l with
   | None -> ()
   | _ ->
-    let b = parsed_size_some_elim (parse_splist sp sz p) l in
+    let b = parsed_size_some_elim (parse_size_prefixed sp sz p) l in
     parse_vlgen_alt_eq
       ((sp `parse_synth` sz) `parse_synth` SZ.size_v)
-      (parse_list p)
+      p
       b;
     let Some (_, len1) = parse ((sp `parse_synth` sz) `parse_synth` SZ.size_v) b in
-    parsed_size_some_intro (parse_list p) l (Seq.slice b len1 (Seq.length b));
+    parsed_size_some_intro p l (Seq.slice b len1 (Seq.length b));
     parse_synth_eq
       (sp `parse_synth` sz)
       SZ.size_v
       b;
     parse_synth_eq sp sz b
 
-let parsed_size_parse_splist
+let parsed_size_parse_size_prefixed
   (#st: Type)
   (#sk: parser_kind)
   (sp: parser sk st)
@@ -2269,29 +2296,29 @@ let parsed_size_parse_splist
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (l: list t)
+  (l: t)
   (x: st)
 : Lemma
   (requires (
     sk.parser_kind_subkind == Some ParserStrong /\
-    parsed_size (parse_list p) l == Some (SZ.size_v (sz x))
+    parsed_size p l == Some (SZ.size_v (sz x))
   ))
   (ensures (
-    parsed_size (parse_splist sp sz p) l ==
-      parsed_size sp x `option_nat_plus` parsed_size (parse_list p) l
+    parsed_size (parse_size_prefixed sp sz p) l ==
+      parsed_size sp x `option_nat_plus` parsed_size p l
   ))
 = match parsed_size sp x with
   | None ->
-    begin match parsed_size (parse_splist sp sz p) l with
+    begin match parsed_size (parse_size_prefixed sp sz p) l with
     | None -> ()
     | _ ->
-      let b = parsed_size_some_elim (parse_splist sp sz p) l in
+      let b = parsed_size_some_elim (parse_size_prefixed sp sz p) l in
       parse_vlgen_alt_eq
         ((sp `parse_synth` sz) `parse_synth` SZ.size_v)
-        (parse_list p)
+        p
         b;
       let Some (_, len1) = parse ((sp `parse_synth` sz) `parse_synth` SZ.size_v) b in
-      parsed_size_some_intro (parse_list p) l (Seq.slice b len1 (Seq.length b));
+      parsed_size_some_intro p l (Seq.slice b len1 (Seq.length b));
       parse_synth_eq
         (sp `parse_synth` sz)
         SZ.size_v
@@ -2303,7 +2330,7 @@ let parsed_size_parse_splist
     end
   | _ ->
     let b1 = parsed_size_some_elim sp x in
-    let b2 = parsed_size_some_elim (parse_list p) l in
+    let b2 = parsed_size_some_elim p l in
     let b = b1 `Seq.append` b2 in
     assert (b2 `Seq.equal` Seq.slice b (Seq.length b1) (Seq.length b));
     parse_strong_prefix sp b1 b;
@@ -2314,24 +2341,25 @@ let parsed_size_parse_splist
       b;
     parse_vlgen_alt_eq
       ((sp `parse_synth` sz) `parse_synth` SZ.size_v)
-      (parse_list p)
+      p
       b;
-    parsed_size_some_intro (parse_splist sp sz p) l b
+    parsed_size_some_intro (parse_size_prefixed sp sz p) l b
 
 let get_state_head_list
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
-  (#t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (#t: typ type_of_scalar ne pr)
   (#s: Ghost.erased (state_i0 type_of_scalar))
-  (h: Ghost.erased (state_t0 type_of_scalar (IParseList t :: s)))
-: Tot (Ghost.erased (list (type_of_typ t)))
-= VParseList?.v (SCons?.s (Ghost.reveal h))
+  (h: Ghost.erased (state_t0 type_of_scalar (IParse t :: s)))
+: Tot (Ghost.erased (type_of_typ t))
+= VParse?.v (SCons?.s (Ghost.reveal h))
 
 #push-options "--z3rlimit 64"
 #restart-solver
 
 inline_for_extraction
-let impl_list
+let impl_size_prefixed
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
@@ -2342,12 +2370,13 @@ let impl_list
   (sc: scalar_t)
   (wc: r_to_l_write_t (p_of_s sc).scalar_parser)
   (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
   (sz'_ex: ((s: SZ.size_t) -> (b: bool { forall x . sz x == s ==> b == true })))
   (sz': ((s: SZ.size_t { sz'_ex s == true }) -> (x: type_of_scalar sc { sz x == s })))
-: Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_list0 s sc sz t))
-= fun kpre kpost out (h: Ghost.erased (state_t0 type_of_scalar (IParseList t :: s))) k_success k_failure ->
-    let h' : Ghost.erased (state_t0 type_of_scalar (IParseValue (TList sc sz t) :: s)) = get_return_state (spec_list0 s sc sz t) h in
+: Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_size_prefixed0 s sc sz t))
+= fun kpre kpost out (h: Ghost.erased (state_t0 type_of_scalar (IParse t :: s))) k_success k_failure ->
+    let h' : Ghost.erased (state_t0 type_of_scalar (IParse (TSizePrefixed sc sz t) :: s)) = get_return_state (spec_size_prefixed0 s sc sz t) h in
     rewrite
       ((cl0 p_of_s b b_sz a).ll_state_match h out)
       (ll_state_match0 p_of_s b b_sz a h out);
@@ -2357,9 +2386,9 @@ let impl_list
       (ll_state_item_match p_of_s _ _ _)
       (ll_state_item_match0 p_of_s (SCons?.s h) out.ll_b (LCons?.a1 out.ll_s));
     let _ = gen_elim () in
-    let _ = rewrite_aparse out.ll_b (parse_list (parser_of_typ p_of_s t)) in
+    let _ = rewrite_aparse out.ll_b (parser_of_typ p_of_s t) in
     aparse_parsed_size _ out.ll_b _;
-    parsed_size_rewrite (parse_splist (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t)) (get_state_head_list h) (parser_of_state_i_item p_of_s (IParseValue (TList sc sz t)));
+    parsed_size_rewrite (parse_size_prefixed (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t)) (get_state_head_list h) (parser_of_state_i_item p_of_s (IParse (TSizePrefixed sc sz t)));
     let free_sz = R.read b_sz in
     let ex = sz'_ex (LCons?.sz1 out.ll_s) in
     if ex
@@ -2376,8 +2405,8 @@ let impl_list
         let _ = gen_elim () in
         let bw = hop_arrayptr_aparse (p_of_s sc).scalar_parser b free_sz' _ in
         let _ = intro_synth _ sz bw () in
-        let _ = intro_parse_splist (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) bw out.ll_b in
-        let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParseValue (TList sc sz t))) in
+        let _ = intro_parse_size_prefixed (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) bw out.ll_b in
+        let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParse (TSizePrefixed sc sz t))) in
         let vbl' = vpattern (AP.arrayptr b) in
         let tag_sz = free_sz `SZ.size_sub` free_sz' in
         [@inline_let]
@@ -2401,7 +2430,7 @@ let impl_list
         in
         vpattern_rewrite (AP.arrayptr b) out'.ll_free;
         rewrite
-          (ll_state_item_match0 p_of_s (VParseValue (TList sc sz t) (get_state_head_list h)) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
+          (ll_state_item_match0 p_of_s (VParse (TSizePrefixed sc sz t) (get_state_head_list h')) bw (array_of' vbw) `star` ll_state_match' p_of_s _ _ _ _ _)
           (ll_state_match' p_of_s h' out'.ll_b out'.ll_sz out'.ll_a out'.ll_s);
         rewrite
           (ll_state_match0 p_of_s b b_sz a h' out')
@@ -2409,7 +2438,7 @@ let impl_list
         k_success out' h' ()
       end else begin
         // could not write size to output buffer
-        parsed_size_parse_splist (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) (get_state_head_list h) x;
+        parsed_size_parse_size_prefixed (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) (get_state_head_list h) x;
         let _ = gen_elim () in
         rewrite
           (r_to_l_write_post _ _ _ _ _ _)
@@ -2427,7 +2456,7 @@ let impl_list
       end
     end else begin
       // no sc element corresponds to size
-      parsed_size_parse_splist_no_size (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) (get_state_head_list h) (AP.length (LCons?.a1 out.ll_s));
+      parsed_size_parse_size_prefixed_no_size (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) (get_state_head_list h) (AP.length (LCons?.a1 out.ll_s));
       let _ = elim_aparse _ _ in
       let _ = AP.join b _ in
       ll_state_match'_size_of_state_t0 p_of_s _ _ _ _ _;
@@ -2441,6 +2470,9 @@ let impl_list
 
 #pop-options
 
+#push-options "--z3rlimit 16"
+#restart-solver
+
 let choice_inc
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
@@ -2450,19 +2482,20 @@ let choice_inc
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
-  (t: typ type_of_scalar)
-  (ppre: (state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s) -> prop))
-  (t': (type_of_scalar sc -> typ type_of_scalar))
-  (sq: squash (forall (h: state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s)) . ppre h ==> t == t' (VParseValue?.v (SCons?.s h)))) // user proof obligation!
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
+  (ppre: (state_t0 _ (IParse (TScalar sc) :: IParse t :: s) -> prop))
+  (t': (type_of_scalar sc -> typ type_of_scalar ne pr))
+  (sq: squash (forall (h: state_t0 _ (IParse (TScalar sc) :: IParse t :: s)) . ppre h ==> t == t' (VParse?.v (SCons?.s h)))) // user proof obligation!
 : Tot (stt_state_inc (cl p_of_s b b_sz a) (spec_choice s sc t ppre t' sq))
 = fun h ->
-  let SCons (VParseValue _ v1) (SCons (VParseValue _ v2) _) = h in
+  let SCons (VParse _ v1) (SCons (VParse _ v2) _) = h in
   let w = mk_choice_value sc v1 t' v2 in
-  match parsed_size (weaken default_parser_kind (parser_of_typ p_of_s (TChoice sc t'))) w with
+  match parsed_size (parser_of_typ p_of_s (TChoice sc t')) w with
   | None -> ()
   | Some _ ->
-    let b = parsed_size_some_elim (weaken default_parser_kind (parser_of_typ p_of_s (TChoice sc t'))) w in
-    assert_norm (parser_of_typ p_of_s (TChoice sc t') == weaken pkind (parse_dtuple2 (p_of_s sc).scalar_parser #_ #(type_of_payload' sc t') (fun x -> parser_of_typ p_of_s (t' x))));
+    let b = parsed_size_some_elim (parser_of_typ p_of_s (TChoice sc t')) w in
+    assert_norm (parser_of_typ p_of_s (TChoice sc t') == weaken (pkind true pr) (parse_dtuple2 (p_of_s sc).scalar_parser #_ #(type_of_payload' sc t') (fun x -> parser_of_typ p_of_s (t' x))));
     parse_dtuple2_eq
       (p_of_s sc).scalar_parser
       #_ #(type_of_payload' sc t')
@@ -2472,9 +2505,11 @@ let choice_inc
     let b1 = Seq.slice b 0 len1 in
     let b2 = Seq.slice b len1 (Seq.length b) in
     parse_strong_prefix (p_of_s sc).scalar_parser b b1;
-    parsed_size_some_intro (weaken default_parser_kind (p_of_s sc).scalar_parser) v1 b1;
-    let Some _ = parse (parser_of_typ p_of_s (t' v1)) b2 in // FIXME: WHY WHY WHY do I need to bring this into SMT context?
-    parsed_size_some_intro (weaken default_parser_kind (parser_of_typ p_of_s t)) v2 b2
+    parsed_size_some_intro (p_of_s sc).scalar_parser v1 b1;
+    assert (exactly_parses_on (parser_of_typ p_of_s (t' v1)) (coerce _ v2) b2);
+    parsed_size_some_intro (parser_of_typ p_of_s t) v2 b2
+
+#pop-options
 
 #push-options "--z3rlimit 64"
 #restart-solver
@@ -2489,13 +2524,14 @@ let impl_choice
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
-  (t: typ type_of_scalar)
-  (ppre: (state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s) -> prop))
-  (t': (type_of_scalar sc -> typ type_of_scalar))
-  (sq: squash (forall (h: state_t0 _ (IParseValue (TScalar sc) :: IParseValue t :: s)) . ppre h ==> t == t' (VParseValue?.v (SCons?.s h)))) // user proof obligation!
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
+  (ppre: (state_t0 _ (IParse (TScalar sc) :: IParse t :: s) -> prop))
+  (t': (type_of_scalar sc -> typ type_of_scalar ne pr))
+  (sq: squash (forall (h: state_t0 _ (IParse (TScalar sc) :: IParse t :: s)) . ppre h ==> t == t' (VParse?.v (SCons?.s h)))) // user proof obligation!
 : Tot (stt_impl_t (cl p_of_s b b_sz a) (spec_choice s sc t ppre t' sq))
-= fun kpre kpost out (h: Ghost.erased (state_t type_of_scalar ({i = IParseValue (TScalar sc) :: IParseValue t :: s; p = ppre}))) k_success k_failure ->
-    let h' : Ghost.erased (state_t type_of_scalar ({ i = IParseValue (TChoice sc t') :: s; p = spec_choice_post s sc t ppre t'})) =
+= fun kpre kpost out (h: Ghost.erased (state_t type_of_scalar ({i = IParse (TScalar sc) :: IParse t :: s; p = ppre}))) k_success k_failure ->
+    let h' : Ghost.erased (state_t type_of_scalar ({ i = IParse (TChoice sc t') :: s; p = spec_choice_post s sc t ppre t'})) =
       get_return_state (spec_choice s sc t ppre t' sq) h
     in
     rewrite
@@ -2519,7 +2555,7 @@ let impl_choice
       #_ #(type_of_payload' sc t') (fun x -> parser_of_typ p_of_s (t' x))
       out.ll_b _
     in
-    assert_norm (parser_of_typ p_of_s (TChoice sc t') == weaken pkind (parse_dtuple2 (p_of_s sc).scalar_parser #_ #(type_of_payload' sc t') (fun x -> parser_of_typ p_of_s (t' x))));
+    assert_norm (parser_of_typ p_of_s (TChoice sc t') == weaken (pkind true pr) (parse_dtuple2 (p_of_s sc).scalar_parser #_ #(type_of_payload' sc t') (fun x -> parser_of_typ p_of_s (t' x))));
     let vbw = rewrite_aparse out.ll_b (parser_of_state_i_item p_of_s (SCons?.i (FStar.Ghost.reveal h'))) in
     [@inline_let]
     let out' : ll_state a = {
@@ -2566,48 +2602,51 @@ type action_t
       (i_write s t v)
   | ANil:
     (s: state_i type_of_scalar) ->
-    (t: typ type_of_scalar) ->
+    (t: typ type_of_scalar true false) ->
     action_t type_of_scalar
       (H.act_ret_t (spec_nil0 s.i t) s.p)
       s
       (i_nil s t)
   | ACons:
     (s: state_i type_of_scalar) ->
-    (t: typ type_of_scalar) ->
+    (t: typ type_of_scalar true false) ->
     (sq: squash (
       Cons? s.i /\
-      list_hd s.i == IParseValue t /\
+      list_hd s.i == IParse t /\
       Cons? (list_tl s.i) /\
-      list_hd (list_tl s.i) == IParseList t
+      list_hd (list_tl s.i) == IParse (TList t)
     )) ->
     action_t type_of_scalar
       (H.act_ret_t (spec_cons0 (list_tl (list_tl s.i)) t) s.p)
       s
       (i_cons s t ())
-  | AList:
+  | ASizePrefixed:
     (s: state_i type_of_scalar) ->
     (sc: scalar_t) ->
     (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz }) ->
     (sz'_ex: ((s: SZ.size_t) -> (b: bool { forall x . sz x == s ==> b == true }))) ->
     (sz': ((s: SZ.size_t { sz'_ex s == true }) -> (x: type_of_scalar sc { sz x == s }))) ->
-    (t: typ type_of_scalar) ->
+    (#ne: bool) -> (#pr: bool) ->
+    (t: typ type_of_scalar ne pr) ->
     (sq: squash (
       Cons? s.i /\
-      list_hd s.i == IParseList t
+      list_hd s.i == IParse t
     )) ->
     action_t type_of_scalar
-      (H.act_ret_t (spec_list0 (list_tl s.i) sc sz t) s.p)
+      (H.act_ret_t (spec_size_prefixed0 (list_tl s.i) sc sz t) s.p)
       s
-      (i_list s sc sz t ())
+      (i_size_prefixed s sc sz t ())
   | APair:
     (s: state_i type_of_scalar) ->
-    (t1: typ type_of_scalar) ->
-    (t2: typ type_of_scalar) ->
+    (#ne1: bool) ->
+    (t1: typ type_of_scalar ne1 false) ->
+    (#ne2: bool) -> (#pr2: bool) ->
+    (t2: typ type_of_scalar ne2 pr2) ->
     (sq: squash (
       Cons? s.i /\
-      list_hd s.i == IParseValue t1 /\
+      list_hd s.i == IParse t1 /\
       Cons? (list_tl s.i) /\
-      list_hd (list_tl s.i) == IParseValue t2
+      list_hd (list_tl s.i) == IParse t2
     )) ->
     action_t type_of_scalar
       (H.act_ret_t (spec_pair0 (list_tl (list_tl s.i)) t1 t2) s.p)
@@ -2615,14 +2654,15 @@ type action_t
       (i_pair s t1 t2 ())
   | AIf:
     (s: state_i type_of_scalar) ->
-    (t: typ type_of_scalar) ->
+    (#ne: _) -> (#pr: _) ->
+    (t: typ type_of_scalar ne pr) ->
     (b: bool) ->
-    (t1: (squash (b == true) -> typ type_of_scalar)) ->
-    (t2: (squash (b == false) -> typ type_of_scalar)) ->
+    (t1: (squash (b == true) -> typ type_of_scalar ne pr)) ->
+    (t2: (squash (b == false) -> typ type_of_scalar ne pr)) ->
     (sq: squash (
       t == ifthenelse b t1 t2 /\
       Cons? s.i /\
-      list_hd s.i == IParseValue t
+      list_hd s.i == IParse t
     )) ->
     action_t type_of_scalar
       (H.act_ret_t (spec_if0 (list_tl s.i) t b t1 t2 ()) s.p)
@@ -2631,14 +2671,15 @@ type action_t
   | AChoice:
     (s: state_i type_of_scalar) ->
     (sc: scalar_t) ->
-    (t: typ type_of_scalar) ->
-    (t': (type_of_scalar sc -> typ type_of_scalar)) ->
+    (#ne: _) -> (#pr: _) ->
+    (t: typ type_of_scalar ne pr) ->
+    (t': (type_of_scalar sc -> typ type_of_scalar ne pr)) ->
     (sq: squash (
       Cons? s.i /\
-      list_hd s.i == IParseValue (TScalar sc) /\
+      list_hd s.i == IParse (TScalar sc) /\
       Cons? (list_tl s.i) /\
-      list_hd (list_tl s.i) == IParseValue t /\
-      (forall (h: state_t _ s) . s.p h ==> t == t' (VParseValue?.v (SCons?.s h)))  // user proof obligation!
+      list_hd (list_tl s.i) == IParse t /\
+      (forall (h: state_t _ s) . s.p h ==> t == t' (VParse?.v (SCons?.s h)))  // user proof obligation!
     )) ->
     action_t type_of_scalar
       unit
@@ -2672,8 +2713,8 @@ let action_sem
     H.sem_act (spec_nil0 s.i t) s.p
   | ACons s t _ ->
     H.sem_act (spec_cons0 (list_tl (list_tl s.i)) t) s.p
-  | AList s sc sz _ _ t _ ->
-    H.sem_act (spec_list0 (list_tl s.i) sc sz t) s.p
+  | ASizePrefixed s sc sz _ _ t _ ->
+    H.sem_act (spec_size_prefixed0 (list_tl s.i) sc sz t) s.p
   | APair s t1 t2 _ ->
     H.sem_act (spec_pair0 (list_tl (list_tl s.i)) t1 t2) s.p
   | AIf s t b t1 t2 _ ->
@@ -2723,6 +2764,9 @@ let state_assert
 : Tot (action_t type_of_scalar unit i (state_assert_post i p ()))
 = AWeaken i (state_assert_post i p ()) ()
 
+#push-options "--z3rlimit 16"
+#restart-solver
+
 [@specialize]
 let a_impl
   (#scalar_t: Type)
@@ -2744,8 +2788,8 @@ let a_impl
     coerce _ (H.impl_act _ _ _ (impl_nil p_of_s b b_sz a s.i t) s.p)
   | ACons s t _ ->
     coerce _ (H.impl_act _ _ _ (impl_cons p_of_s b b_sz a (list_tl (list_tl s.i)) t) s.p)
-  | AList s sc sz sz'_ex sz' t _ ->
-    coerce _ (H.impl_act _ _ _ (impl_list p_of_s b b_sz a (list_tl s.i) sc (w_of_s sc) sz t sz'_ex sz') s.p)
+  | ASizePrefixed s sc sz sz'_ex sz' t _ ->
+    coerce _ (H.impl_act _ _ _ (impl_size_prefixed p_of_s b b_sz a (list_tl s.i) sc (w_of_s sc) sz t sz'_ex sz') s.p)
   | APair s t1 t2 _ ->
     coerce _ (H.impl_act _ _ _ (impl_pair p_of_s b b_sz a (list_tl (list_tl s.i)) t1 t2) s.p)
   | AIf s t bt t1 t2 _ ->
@@ -2756,6 +2800,8 @@ let a_impl
     coerce _ (H.impl_weaken (cl0 p_of_s b b_sz a) i.i i.p j.p ())
   | AAssert i q sq ->
     coerce _ (H.impl_assert (cl0 p_of_s b b_sz a) i.i i.p q ())
+
+#pop-options
 
 [@@specialize]
 let a_cl
@@ -2773,7 +2819,7 @@ let a_cl
       | AWrite s t v -> write0_inc p_of_s b b_sz a s.i (TScalar t) v h
       | ANil s t -> nil0_inc p_of_s b b_sz a s.i t h
       | ACons s t _ -> cons0_inc p_of_s b b_sz a (list_tl (list_tl s.i)) t h
-      | AList s sc sz _ _ t _ -> list0_inc p_of_s b b_sz a (list_tl s.i) sc sz t h
+      | ASizePrefixed s sc sz _ _ t _ -> size_prefixed0_inc p_of_s b b_sz a (list_tl s.i) sc sz t h
       | APair s t1 t2 _ -> pair0_inc p_of_s b b_sz a (list_tl (list_tl s.i)) t1 t2 h
       | AIf s t bt t1 t2 _ -> if0_inc p_of_s b b_sz a (list_tl s.i) t bt t1 t2 () h
       | AChoice s sc t t' _ -> choice_inc p_of_s b b_sz a (list_tl (list_tl s.i)) sc t s.p t' () h

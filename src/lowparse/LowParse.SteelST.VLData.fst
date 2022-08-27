@@ -103,6 +103,7 @@ let ghost_elim_vldata_gen
     ()
     a
   in
+  let _ = gen_elim () in
   let tag = ghost_and_then_tag
     (parse_filter (parse_bounded_integer sz) f)
     (parse_vldata_payload sz f p)

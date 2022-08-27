@@ -479,6 +479,25 @@ let exact_write_synth'
 [@CMacro]
 let validator_error_constraint_failed  = 2ul
 
+inline_for_extraction
+let validate_fail
+  (k: parser_kind)
+  (t: Type)
+  (sq: squash (fail_parser_kind_precond k))
+: Tot (validator (fail_parser k t))
+= fun _ _ err ->
+    R.write err validator_error_constraint_failed;
+    return SZ.zero_size
+
+inline_for_extraction
+let jump_fail
+  (k: parser_kind)
+  (t: Type)
+  (sq: squash (fail_parser_kind_precond k))
+: Tot (jumper (fail_parser k t))
+= fun a ->
+    return SZ.zero_size // by contradiction
+
 #push-options "--z3rlimit 16"
 #restart-solver
 
@@ -779,17 +798,15 @@ let ghost_and_then_tag
   (#t2: Type)
   (p2: (t1 -> parser k2 t2))
   (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
-  #y (a1: byte_array) (a2: byte_array)
+  #y #y1 (a1: byte_array) (a2: byte_array)
 : STGhostT (Ghost.erased t1) opened
-    (exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_and_then_payload p1 p2 y (array_of' y1) y1.contents a1 a2))
-    (fun tag -> exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_ (fun y2 -> aparse (p2 tag) a2 y2 `star` pure (
+    (aparse p1 a1 y1 `star` exists_and_then_payload p1 p2 y (array_of' y1) y1.contents a1 a2)
+    (fun tag -> aparse p1 a1 y1 `star` exists_ (fun y2 -> aparse (p2 tag) a2 y2 `star` pure (
       AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
       y1.contents == Ghost.reveal tag /\
       y.contents == y2.contents
-    ))))
-= let _ = gen_elim () in
-  let y1 = vpattern (fun y1 -> aparse p1 a1 y1) in
-  let tag = Ghost.hide y1.contents in
+    )))
+= let tag = Ghost.hide y1.contents in
   rewrite
     (exists_and_then_payload p1 p2 y (array_of' _) _ a1 a2)
     (exists_and_then_payload0 p1 p2 y (array_of' y1) (Ghost.reveal tag) a1 a2);
@@ -807,14 +824,14 @@ let read_and_then_tag
   (#t2: Type)
   (p2: (t1 -> parser k2 t2))
   (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
-  #y (a1: byte_array) (a2: byte_array)
+  #y #y1 (a1: byte_array) (a2: byte_array)
 : STT t1
-    (exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_and_then_payload p1 p2 y (array_of' y1) y1.contents a1 a2))
-    (fun tag -> exists_ (fun y1 -> aparse p1 a1 y1 `star` exists_ (fun y2 -> aparse (p2 tag) a2 y2 `star` pure (
+    (aparse p1 a1 y1 `star` exists_and_then_payload p1 p2 y (array_of' y1) y1.contents a1 a2)
+    (fun tag -> aparse p1 a1 y1 `star` exists_ (fun y2 -> aparse (p2 tag) a2 y2 `star` pure (
       AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
       y1.contents == tag /\
       y.contents == y2.contents
-    ))))
+    )))
 = let _ = ghost_and_then_tag p1 p2 u a1 a2 in
   let _ = gen_elim () in
   let tag = rt a1 in
@@ -1027,17 +1044,15 @@ let ghost_tagged_union_tag
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
-  #y (a1: byte_array) (a2: byte_array)
+  #y #y1 (a1: byte_array) (a2: byte_array)
 : STGhostT (Ghost.erased tag_t) opened
-    (exists_ (fun y1 -> aparse pt a1 y1 `star` exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2))
-    (fun tag -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
+    (aparse pt a1 y1 `star` exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2)
+    (fun tag -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
       AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
       y1.contents == Ghost.reveal tag /\
-      y.contents == y2.contents
-    ))))
-= let _ = gen_elim () in
-  let y1 = vpattern (fun y1 -> aparse pt a1 y1) in
-  let tag = Ghost.hide y1.contents in
+      (y.contents <: data_t) == y2.contents
+    )))
+= let tag = Ghost.hide y1.contents in
   rewrite
     (exists_tagged_union_payload kt tag_of_data p y (array_of' _) _ a1 a2)
     (exists_tagged_union_payload0 kt tag_of_data p y (array_of' y1) (Ghost.reveal tag) a1 a2);
@@ -1054,14 +1069,14 @@ let read_tagged_union_tag
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: Ghost.erased parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
-  #y (a1: byte_array) (a2: byte_array)
+  #y #y1 (a1: byte_array) (a2: byte_array)
 : STT tag_t
-    (exists_ (fun y1 -> aparse pt a1 y1 `star` exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2))
-    (fun tag -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
+    (aparse pt a1 y1 `star` exists_tagged_union_payload kt tag_of_data p y (array_of' y1) y1.contents a1 a2)
+    (fun tag -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
       AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
       y1.contents == tag /\
-      y.contents == y2.contents
-    ))))
+      (y.contents <: data_t) == y2.contents
+    )))
 = let _ = ghost_tagged_union_tag pt tag_of_data p a1 a2 in
   let _ = gen_elim () in
   let tag = rt a1 in
@@ -1170,6 +1185,58 @@ let exists_dtuple2_payload
 = exists_dtuple2_payload0 kt p y u1 tag a1 a2
 
 inline_for_extraction
+let ghost_split_dtuple2
+  (#opened: _)
+  (#kt: parser_kind)
+  (#tag_t: Type)
+  (pt: parser kt tag_t)
+  (#k: parser_kind)
+  (#data_t: tag_t -> Type)
+  (p: (t: tag_t) -> Tot (parser k (data_t t)))
+  #y (a1: byte_array)
+: STGhost (Ghost.erased byte_array) opened
+    (aparse (parse_dtuple2 pt p) a1 y)
+    (fun a2 -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2))
+    (kt.parser_kind_subkind == Some ParserStrong)
+    (fun _ -> True)
+= let a2 = ghost_split_tagged_union pt _ _ a1 in
+  let _ = gen_elim () in
+  let y1 = vpattern_replace (fun y1 -> aparse pt a1 y1) in
+  rewrite
+    (exists_dtuple2_payload0 kt p y _ _ a1 a2)
+    (exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2);
+  a2
+
+inline_for_extraction
+let hop_dtuple2_tag_with_size
+  (#kt: Ghost.erased parser_kind)
+  (#tag_t: Type)
+  (pt: parser kt tag_t)
+  (#k: Ghost.erased parser_kind)
+  (#data_t: tag_t -> Type)
+  (p: (t: tag_t) -> Tot (parser k (data_t t)))
+  #y #y1 (a1: byte_array) (sz1: SZ.size_t) (a2: Ghost.erased byte_array)
+: ST byte_array
+    (aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2)
+    (fun a2' -> aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2')
+    (kt.parser_kind_subkind == Some ParserStrong /\
+      SZ.size_v sz1 == AP.length (array_of' y1))
+    (fun _ -> True)
+= assert (
+    (exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2) ==
+    (exists_tagged_union_payload0 kt dfst (fun x -> parse_synth (p x) (synth_dtuple2 x)) y (array_of' y1) y1.contents a1 a2)
+  ) by (FStar.Tactics.trefl ());
+  rewrite
+    (exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2)
+    (exists_tagged_union_payload0 kt dfst (fun x -> parse_synth (p x) (synth_dtuple2 x)) y (array_of' y1) y1.contents a1 a2);
+  let _ = gen_elim () in
+  let a2' = hop_aparse_aparse_with_size _ _ a1 sz1 a2 in
+  rewrite
+    (exists_tagged_union_payload0 kt dfst (fun x -> parse_synth (p x) (synth_dtuple2 x)) y (array_of' y1) y1.contents a1 a2')
+    (exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2');
+  return a2'
+
+inline_for_extraction
 let split_dtuple2
   (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
@@ -1184,12 +1251,10 @@ let split_dtuple2
     (fun a2 -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2))
     (kt.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
-= let a2 = split_tagged_union vt _ _ a1 in
+= let _ = ghost_split_dtuple2 _ _ _ in
   let _ = gen_elim () in
-  let y1 = vpattern_replace (fun y1 -> aparse pt a1 y1) in
-  rewrite
-    (exists_dtuple2_payload0 kt p y _ _ a1 a2)
-    (exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2);
+  let sz1 = get_parsed_size vt _ in
+  let a2 = hop_dtuple2_tag_with_size _ _ _ sz1 _ in
   return a2
 
 let ghost_dtuple2_tag
@@ -1200,16 +1265,15 @@ let ghost_dtuple2_tag
   (#k: parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
-  #y (a1: byte_array) (a2: byte_array)
+  #y #y1 (a1: byte_array) (a2: byte_array)
 : STGhostT (Ghost.erased tag_t) opened
-    (exists_ (fun y1 -> aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2))
-    (fun tag -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
+    (aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2)
+    (fun tag -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
       AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
       y1.contents == Ghost.reveal tag /\
       y.contents == (| Ghost.reveal tag, y2.contents |)
-    ))))
-= let _ = gen_elim () in
-  let y1 = vpattern_replace (fun y1 -> aparse pt a1 y1) in
+    )))
+=
   rewrite
     (exists_dtuple2_payload kt p y _ _ a1 a2)
     (exists_dtuple2_payload0 kt p y (array_of' y1) y1.contents a1 a2);
@@ -1230,14 +1294,14 @@ let read_dtuple2_tag
   (#k: Ghost.erased parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
-  #y (a1: byte_array) (a2: byte_array)
+  #y #y1 (a1: byte_array) (a2: Ghost.erased byte_array)
 : STT tag_t
-    (exists_ (fun y1 -> aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2))
-    (fun tag -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
+    (aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2)
+    (fun tag -> aparse pt a1 y1 `star` exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
       AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
       y1.contents == tag /\
       y.contents == (| tag, y2.contents |)
-    ))))
+    )))
 = let _ = ghost_dtuple2_tag pt p a1 a2 in
   let _ = gen_elim () in
   let tag = rt a1 in

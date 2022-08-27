@@ -53,8 +53,8 @@ int test_write () {
 }
 
 int main (int argc, char* argv[]) {
-  int ret = test_read ();
+  int ret = test_write ();
   if (ret)
     return ret;
-  return (test_write ());
+  return (test_read ());
 }

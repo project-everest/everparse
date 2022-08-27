@@ -11,21 +11,32 @@ noeq type specialize : Type0 =
 [@@specialize]
 noeq
 type typ
-  (#scalar_t: Type)
-  (type_of_scalar: (scalar_t -> Type))
+  (#scalar_t: Type u#a)
+  (type_of_scalar: (scalar_t -> Type u#(max a b)))
+: (* nonempty: *) bool -> (* must_be_size_prefixed: *) bool -> Type u#(max a b)
 =
-| TScalar: scalar_t -> typ type_of_scalar
-| TPair: typ type_of_scalar -> typ type_of_scalar -> typ type_of_scalar
-| TList: (s: scalar_t) -> (sz: (type_of_scalar s -> SZ.size_t) {synth_injective sz}) -> (elt: typ type_of_scalar) -> typ type_of_scalar
-| TIf: (b: bool) -> (squash (b == true) -> typ type_of_scalar) -> (squash (b == false) -> typ type_of_scalar) -> typ type_of_scalar
-| TChoice: (s: scalar_t) -> (type_of_scalar s -> typ type_of_scalar) -> typ type_of_scalar
+| TFalse: (ne: bool) -> (pr: bool) -> typ type_of_scalar ne pr
+| TUnit: typ type_of_scalar false false
+| TScalar: scalar_t -> typ type_of_scalar true false
+| TPair: (#ne1: bool) -> typ type_of_scalar ne1 false ->  (#ne2: bool) -> (#pr2: bool) -> typ type_of_scalar ne2 pr2 -> typ type_of_scalar (ne1 || ne2) pr2
+| TIf:
+    (#ne: bool) ->
+    (#pr: bool) ->
+    (b: bool) -> 
+    (squash (b == true) -> typ type_of_scalar ne pr) ->
+    (squash (b == false) -> typ type_of_scalar ne pr) ->
+    typ type_of_scalar ne pr
+| TChoice: (s: scalar_t) -> (#ne: bool) -> (#pr: bool) -> (type_of_scalar s -> typ type_of_scalar ne pr) -> typ type_of_scalar true pr
+| TSizePrefixed: (s: scalar_t) -> (sz: (type_of_scalar s -> SZ.size_t) {synth_injective sz}) -> (#ne: bool) -> (#pr: bool) -> typ type_of_scalar ne pr -> typ type_of_scalar true false
+| TList: typ type_of_scalar true false -> typ type_of_scalar false true
 
 let type_of_payload
   (#scalar_t: Type)
   (type_of_scalar: (scalar_t -> Type))
   (s: scalar_t)
-  (f: type_of_scalar s -> typ type_of_scalar { forall (x: type_of_scalar s) . f x << TChoice s f })
-  (type_of_typ: (t: typ type_of_scalar { t << TChoice s f }) -> Tot Type0)
+  (#ne #pr: bool)
+  (f: type_of_scalar s -> typ type_of_scalar ne pr { forall (x: type_of_scalar s) . f x << TChoice s f })
+  (type_of_typ: ((t: typ type_of_scalar ne pr { t << TChoice s f }) -> Tot Type0))
   (x: type_of_scalar s)
 : Tot Type0
 = type_of_typ (f x)
@@ -34,20 +45,26 @@ let type_of_payload
 let rec type_of_typ
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
-  (t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (t: typ type_of_scalar ne pr)
 : Tot Type
+  (decreases t)
 = match t with
 | TScalar s -> type_of_scalar s
 | TPair t1 t2 -> (type_of_typ t1 & type_of_typ t2)
-| TList _ _ t' -> list (type_of_typ t') // we ignore the serializer for now
+| TList t' -> list (type_of_typ t') // we ignore the serializer for now
 | TIf b ttrue tfalse -> if b then type_of_typ (ttrue ()) else type_of_typ (tfalse ())
 | TChoice s f -> dtuple2 (type_of_scalar s) (type_of_payload type_of_scalar s f type_of_typ)
+| TSizePrefixed _ _ t -> type_of_typ t
+| TUnit -> unit
+| TFalse _ _ -> squash False
 
 let type_of_payload'
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (s: scalar_t)
-  (f: type_of_scalar s -> typ type_of_scalar)
+  (#ne #pr: bool)
+  (f: type_of_scalar s -> typ type_of_scalar ne pr)
 : Pure (type_of_scalar s -> Type)
     (requires True)
     (ensures (fun v ->
@@ -63,7 +80,8 @@ let mk_choice_value
   (#type_of_scalar: (scalar_t -> Type))
   (s: scalar_t)
   (tag: type_of_scalar s)
-  (f: (type_of_scalar s -> typ type_of_scalar))
+  (#ne #pr: bool)
+  (f: (type_of_scalar s -> typ type_of_scalar ne pr))
   (v: type_of_typ (f tag))
 : Tot (type_of_typ (TChoice s f))
 = let v' : dtuple2 (type_of_scalar s) (type_of_payload' s f) = (| tag, v |) in
@@ -235,25 +253,32 @@ let array_index_reverse = {
 
 noeq
 type prog
-  (#scalar_t: Type)
-  (type_of_scalar: (scalar_t -> Type))
+  (#scalar_t: Type0)
+  (type_of_scalar: (scalar_t -> Type0))
   (#state_i: Type u#a)
   (state_t: state_i -> Type u#b)
-  (action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type u#c)
-: (t: typ type_of_scalar) -> (ret_t: Type) -> state_i -> (state_i) -> Type u#(max 1 (max a (max b c)))
-= | PRet:
+  (action_t: (ret_t: Type0) -> (pre: state_i) -> (post: state_i) -> Type u#c)
+: (#ne: bool) -> (#pr: bool) -> (t: typ type_of_scalar ne pr) -> (ret_t: Type0) -> state_i -> (state_i) -> Type u#(max 1 a b c)
+=
+  | PRet:
       (#ret_t: Type) ->
       (#i: state_i) ->
-      (#t: typ type_of_scalar) ->
+      (#ne: bool) ->
+      (#pr: bool) ->
+      (#t: typ type_of_scalar ne pr) ->
       (v: ret_t) ->
       prog type_of_scalar state_t action_t t ret_t i (i)
   | PAction:
-      (#t: typ type_of_scalar) ->
+      (#ne: bool) ->
+      (#pr: bool) ->
+      (#t: typ type_of_scalar ne pr) ->
       (#ret_t: Type) -> (#pre: _) -> (#post: _) ->
       action_t ret_t pre post ->
       prog type_of_scalar state_t action_t t ret_t pre post
   | PBind:
-      (#t: typ type_of_scalar) ->
+      (#ne: bool) ->
+      (#pr: bool) ->
+      (#t: typ type_of_scalar ne pr) ->
       (#ret1: Type) ->
       (#pre1: _) ->
       (#post1: _) ->
@@ -263,7 +288,9 @@ type prog
       (g: ((x: ret1) -> prog type_of_scalar state_t action_t t ret2 (post1) post2)) ->
       prog type_of_scalar state_t action_t t ret2 pre1 post2
   | PIfP:
-      (#t: typ type_of_scalar) ->
+      (#ne: bool) ->
+      (#pr: bool) ->
+      (#t: typ type_of_scalar ne pr) ->
       (#ret: Type) ->
       (#pre: state_i) ->
       (#post: state_i) ->
@@ -276,9 +303,11 @@ type prog
       (#pre: state_i) ->
       (#post: state_i) ->
       (b: bool) ->
-      (#ttrue: (squash (b == true) -> typ type_of_scalar)) ->
+      (#ne: bool) ->
+      (#pr: bool) ->
+      (#ttrue: (squash (b == true) -> typ type_of_scalar ne pr)) ->
       (ptrue: (squash (b == true) -> prog type_of_scalar state_t action_t (ttrue ()) ret_t pre post)) ->
-      (#tfalse: (squash (b == false) -> typ type_of_scalar)) ->
+      (#tfalse: (squash (b == false) -> typ type_of_scalar ne pr)) ->
       (pfalse: (squash (b == false) -> prog type_of_scalar state_t action_t (tfalse ()) ret_t pre post)) ->
       prog type_of_scalar state_t action_t (TIf b ttrue tfalse) ret_t pre post
   | PScalar:
@@ -288,8 +317,11 @@ type prog
       (s: scalar_t) ->
       prog type_of_scalar state_t action_t (TScalar s) (type_of_scalar s) i (i)
   | PPair:
-      (#t1: _) ->
-      (#t2: _) ->
+      (#ne1: bool) ->
+      (#t1: typ type_of_scalar ne1 false) ->
+      (#ne2: bool) ->
+      (#pr2: bool) ->
+      (#t2: typ type_of_scalar ne2 pr2) ->
       (#ret1: _) ->
       (#pre1: _) ->
       (#post1: _) ->
@@ -299,28 +331,37 @@ type prog
       (f2: ((x: ret1) -> prog type_of_scalar state_t action_t t2 ret2 (post1) post2)) ->
       prog type_of_scalar state_t action_t (TPair t1 t2) ret2 pre1 post2
   | PList:
-      (#t: typ type_of_scalar) ->
-      (s: scalar_t) ->
-      (sz: (type_of_scalar s -> SZ.size_t) {synth_injective sz}) ->
+      (#t: typ type_of_scalar true false) ->
       (inv: _) ->
       prog type_of_scalar state_t action_t t unit inv (inv) ->
-      prog type_of_scalar state_t action_t (TList s sz t) unit inv (inv)
+      prog type_of_scalar state_t action_t (TList t) unit inv (inv)
   | PListFor:
-      (#t: typ type_of_scalar) ->
-      (s: scalar_t) ->
-      (sz: (type_of_scalar s -> SZ.size_t) {synth_injective sz}) ->
+      (#t: typ type_of_scalar true false) ->
       (inv: _) ->
       (idx: array_index_fn) ->
       prog type_of_scalar state_t action_t t unit inv (inv) ->
-      prog type_of_scalar state_t action_t (TList s sz t) unit inv (inv)
+      prog type_of_scalar state_t action_t (TList t) unit inv (inv)
   | PChoice:
       (#s: scalar_t) ->
-      (#t: (type_of_scalar s -> typ type_of_scalar)) ->
+      (#ne: bool) ->
+      (#pr: bool) ->
+      (#t: (type_of_scalar s -> typ type_of_scalar ne pr)) ->
       (#ret_t: Type) ->
       (#pre: _) ->
       (#post: _) ->
       ((x: type_of_scalar s) -> prog type_of_scalar state_t action_t (t x) ret_t pre post) ->
       prog type_of_scalar state_t action_t (TChoice s t) ret_t pre post
+  | PSizePrefixed:
+      (#ret_t: Type) ->
+      (#ne: bool) ->
+      (#pr: bool) ->
+      (#t: typ type_of_scalar ne pr) ->
+      (s: scalar_t) ->
+      (sz: (type_of_scalar s -> SZ.size_t) {synth_injective sz}) ->
+      (#pre: _) ->
+      (#post: _) ->
+      prog type_of_scalar state_t action_t t ret_t pre post ->
+      prog type_of_scalar state_t action_t (TSizePrefixed s sz t) ret_t pre post
 
 [@@specialize]
 let pbind
@@ -329,7 +370,8 @@ let pbind
   (#state_i: Type u#a)
   (#state_t: state_i -> Type u#b)
   (#action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type u#c)
-  (#t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (#t: typ type_of_scalar ne pr)
   (#ret1: Type)
   (#pre1: _)
   (#post1: _)
@@ -347,12 +389,13 @@ let typ_of_prog
   (#state_i: Type)
   (#state_t: state_i -> Type)
   (#action_t: (ret_t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
-  (#t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (#t: typ type_of_scalar ne pr)
   (#ret_t: Type)
   (#pre: state_i)
   (#post: state_i)
   (p: prog type_of_scalar state_t action_t t ret_t pre post)
-: Tot (typ type_of_scalar)
+: Tot (typ type_of_scalar ne pr)
 = t
 
 let rec sem
@@ -361,7 +404,8 @@ let rec sem
   #state_t
   (#action_t: (t: Type) -> (pre: _) -> (post: _) -> Type)
   (action_sem: ((#t: Type) -> (#pre: _) -> (#post: _) -> action_t t pre post -> stt state_t t pre post))
-  (#t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (#t: typ type_of_scalar ne pr)
   (#ret_t: Type)
   (#pre: _)
   (#post: _)
@@ -376,15 +420,17 @@ let rec sem
   | PIfT x ptrue pfalse -> if x then coerce _ (sem action_sem (ptrue ())) else coerce _ (sem action_sem (pfalse ()))
   | PScalar _ _ -> fold_read () <: fold_t state_t (type_of_typ t) ret_t _ (_)
   | PPair p1 p2 -> fold_pair (sem action_sem p1) (fun r -> sem action_sem (p2 r))
-  | PList _ _ inv p -> fold_list inv (sem action_sem p)
-  | PListFor _ _ inv idx p -> fold_for_list inv (sem action_sem p) idx.array_index_f_nat
-  | PChoice #_ #_ #_ #_ #_ #s #t p -> fold_choice #_ #_ #_ #_ #(type_of_payload' s t) (fun x -> sem action_sem (p x))
+  | PList inv p -> fold_list inv (sem action_sem p)
+  | PListFor inv idx p -> fold_for_list inv (sem action_sem p) idx.array_index_f_nat
+  | PChoice #_ #_ #_ #_ #_ #s #_ #_ #t p -> fold_choice #_ #_ #_ #_ #(type_of_payload' s t) (fun x -> sem action_sem (p x))
+  | PSizePrefixed _ _ p -> coerce _ (sem action_sem p)
 
 let pseq
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   #state_t #action_t
-  (#t: typ type_of_scalar)
+  (#ne #pr: bool)
+  (#t: typ type_of_scalar ne pr)
   (#pre1: _)
   (#post1: _)
   (#ret2: _)
