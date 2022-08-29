@@ -187,7 +187,9 @@ GetFieldPtrValidateT(
     BOOLEAN actionSuccessF2 = TRUE;
     if (!actionSuccessF2)
     {
-      positionAfterT1 = EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
+      positionAfterT1 =
+        EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
+          positionAfterf2);
     }
     else
     {

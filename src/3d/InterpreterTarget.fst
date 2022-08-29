@@ -315,6 +315,8 @@ let rec inv_eloc_of_action (a:T.action)
         | Action_abort
         | Action_field_pos_32
         | Action_field_pos_64 -> inv_eloc_nil
+        | Action_field_ptr_after _ write_to -> Inv_ptr write_to, Eloc_ptr write_to, On_success false
+        | Action_field_ptr_after_with_setter _ _ _ -> Inv_true, Eloc_output, On_success false
         | Action_field_ptr -> Inv_true, Eloc_none, On_success true
         | Action_deref x -> Inv_ptr x, Eloc_none, On_success false
         | Action_assignment x _ -> Inv_ptr x, Eloc_ptr x, On_success false
@@ -583,6 +585,19 @@ let rec print_action (mname:string) (a:T.action)
         | T.Action_field_ptr ->
           "(Action_field_ptr EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
 
+        | T.Action_field_ptr_after sz write_to ->
+          Printf.sprintf
+            "(Action_field_ptr_after EverParse3d.Actions.BackendFlagValue.backend_flag_value %s %s)"
+            (T.print_expr mname sz)
+            (T.print_ident write_to)
+
+        | T.Action_field_ptr_after_with_setter sz write_to_field write_to_obj ->
+          Printf.sprintf
+            "(Action_field_ptr_after_with_setter EverParse3d.Actions.BackendFlagValue.backend_flag_value %s (%s %s))"
+            (T.print_expr mname sz)
+            (T.print_ident write_to_field)
+            (T.print_expr mname write_to_obj)
+
         | T.Action_deref i ->
           Printf.sprintf "(Action_deref %s)"
                           (print_ident mname i)
@@ -736,7 +751,7 @@ let print_typedef_name mname (n:T.typedef_name) =
 
 let print_type_decl mname (td:type_decl) =
   FStar.Printf.sprintf
-    "[@@specialize; noextract_to \"Kremlin\"]\n\
+    "[@@specialize; noextract_to \"krml\"]\n\
      noextract\n\
      let def_%s = ( %s <: Tot (typ _ _ _ _) by (T.norm [delta_attr [`%%specialize]; zeta; iota; primops]; T.smt()))\n"
       (print_typedef_name mname td.name)
@@ -762,9 +777,9 @@ let rec print_eloc mname (e:eloc)
     | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (print_ident mname x)
     | Eloc_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "eloc" hd) (print_args mname args)
 
-let print_td_iface mname root_name binders args inv_eloc_binders inv_eloc_args ar pk_wk pk_nz =
+let print_td_iface is_entrypoint mname root_name binders args inv_eloc_binders inv_eloc_args ar pk_wk pk_nz =
   let kind_t =
-    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+    Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     inline_for_extraction\n\
                     noextract\n\
                     val kind_%s : P.parser_kind %b P.%s"
@@ -773,21 +788,21 @@ let print_td_iface mname root_name binders args inv_eloc_binders inv_eloc_args a
       pk_wk
   in
   let inv_t =
-    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+    Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
                     val inv_%s %s : A.slice_inv"
       root_name
       inv_eloc_binders
   in
   let eloc_t =
-    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+    Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
                     val eloc_%s %s : A.eloc"
       root_name
       inv_eloc_binders
   in
   let def'_t =
-    Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+    Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
                     val def'_%s %s: typ kind_%s (inv_%s %s) (eloc_%s %s) %b"
       root_name
@@ -798,13 +813,14 @@ let print_td_iface mname root_name binders args inv_eloc_binders inv_eloc_args a
       ar
   in
   let validator_t =
-    Printf.sprintf "val validate_%s %s : validator_of (def'_%s %s)"
+    Printf.sprintf "val validate_%s %s : validator_of %s (def'_%s %s)"
       root_name
       binders
+      (if is_entrypoint then "#false" else "")
       root_name args
   in
   let dtyp_t =
-    Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
+    Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                     noextract\n\
                     val dtyp_%s %s : dtyp_of (def'_%s %s)"
       root_name
@@ -832,7 +848,7 @@ let print_binding mname (td:type_decl)
     let def = print_type_decl mname td in
     let weak_kind = A.print_weak_kind k.pk_weak_kind in
     let pk_of_binding =
-     Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                      inline_for_extraction noextract\n\
                      let kind_%s : P.parser_kind %b %s = coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s\n"
        root_name
@@ -859,7 +875,7 @@ let print_binding mname (td:type_decl)
                            fv_binders_string
                            defn
         in
-        let s0 = Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+        let s0 = Printf.sprintf "[@@noextract_to \"krml\"]\n\
                                  noextract\n\
                                  let %s_%s = %s\n"
                                  tag root_name f
@@ -885,7 +901,7 @@ let print_binding mname (td:type_decl)
 
    let def' =
       FStar.Printf.sprintf
-        "[@@specialize; noextract_to \"Kremlin\"]\n\
+        "[@@specialize; noextract_to \"krml\"]\n\
           noextract\n\
           let def'_%s %s\n\
             : typ kind_%s (inv_%s %s) (eloc_%s %s) %b\n\
@@ -903,7 +919,7 @@ let print_binding mname (td:type_decl)
           args
    in
    let as_type_or_parser tag =
-       Printf.sprintf "[@@noextract_to \"Kremlin\"]\n\
+       Printf.sprintf "[@@noextract_to \"krml\"]\n\
                        noextract\n
                        let %s_%s %s = (as_%s (def'_%s %s))"
          tag
@@ -942,7 +958,7 @@ let print_binding mname (td:type_decl)
          root_name
          root_name
      in
-     Printf.sprintf "[@@specialize; noextract_to \"Kremlin\"]\n\
+     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                        noextract\n\
                        let dtyp_%s %s\n\
                          : dtyp kind_%s %b (inv_%s %s) (eloc_%s %s)\n\
@@ -996,7 +1012,8 @@ let print_binding mname (td:type_decl)
         || td.attrs.is_exported
    then
      let iface =
-       print_td_iface mname root_name binders args
+       print_td_iface td.name.td_entrypoint
+                      mname root_name binders args
                       fv_binders fv_args td.allow_reading
                       weak_kind k.pk_nz
      in
