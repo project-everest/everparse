@@ -13,7 +13,7 @@ let rec parse_list_aux
   (#t: Type)
   (p: parser k t)
   (b: bytes)
-: Tot (option (list t * (consumed_length b)))
+: GTot (option (list t * (consumed_length b)))
   (decreases (Seq.length b))
 = if Seq.length b = 0
   then 
