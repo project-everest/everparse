@@ -142,14 +142,14 @@ let parse_enum_key_cond
   (#key #repr: eqtype)
   (e: enum key repr)
   (r: repr)
-: Tot bool
+: GTot bool
 = list_mem r (list_map snd e)
 
 let parse_enum_key_synth
   (#key #repr: eqtype)
   (e: enum key repr)
   (r: repr { parse_enum_key_cond e r == true } )
-: Tot (enum_key e)
+: GTot (enum_key e)
 = enum_key_of_repr e r
 
 let parse_enum_key

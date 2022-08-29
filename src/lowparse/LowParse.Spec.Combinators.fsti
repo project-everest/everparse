@@ -14,7 +14,7 @@ module T = FStar.Tactics
 let make_constant_size_parser_aux
   (sz: nat)
   (t: Type)
-  (f: ((s: bytes {Seq.length s == sz}) -> Tot (option t)))
+  (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
 : Tot (bare_parser t)
 = fun (s: bytes) ->
   if Seq.length s < sz
@@ -56,7 +56,7 @@ let make_constant_size_parser_precond'
 let make_constant_size_parser_injective
   (sz: nat)
   (t: Type)
-  (f: ((s: bytes {Seq.length s == sz}) -> Tot (option t)))
+  (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
 : Lemma
   (requires (
     make_constant_size_parser_precond sz t f
@@ -90,7 +90,7 @@ let constant_size_parser_kind
 let make_constant_size_parser
   (sz: nat)
   (t: Type)
-  (f: ((s: bytes {Seq.length s == sz}) -> Tot (option t)))
+  (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
 : Pure (
     parser
       (constant_size_parser_kind sz)
@@ -116,7 +116,7 @@ let make_total_constant_size_parser_precond
 let make_total_constant_size_parser
   (sz: nat)
   (t: Type)
-  (f: ((s: bytes {Seq.length s == sz}) -> Tot t))
+  (f: ((s: bytes {Seq.length s == sz}) -> GTot t))
 : Pure (
     parser
       (total_constant_size_parser_kind sz)
@@ -476,11 +476,11 @@ val and_then_eq
 
 /// monadic return for the parser monad
 unfold
-let parse_fret' (#t #t':Type) (f: t -> Tot t') (v:t) : Tot (bare_parser t') =
+let parse_fret' (#t #t':Type) (f: t -> GTot t') (v:t) : Tot (bare_parser t') =
   fun (b: bytes) -> Some (f v, (0 <: consumed_length b))
 
 unfold
-let parse_fret (#t #t':Type) (f: t -> Tot t') (v:t) : Tot (parser parse_ret_kind t') =
+let parse_fret (#t #t':Type) (f: t -> GTot t') (v:t) : Tot (parser parse_ret_kind t') =
   [@inline_let] let _ = parser_kind_prop_equiv parse_ret_kind (parse_fret' f v) in
   parse_fret' f v
 
@@ -520,7 +520,7 @@ let parse_synth'
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
 : Tot (bare_parser t2)
 = fun b -> match parse p1 b with
   | None -> None
@@ -531,7 +531,7 @@ val parse_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
 : Pure (parser k t2)
   (requires (
     synth_injective f2
@@ -543,7 +543,7 @@ val parse_synth_eq
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (b: bytes)
 : Lemma
   (requires (synth_injective f2))
@@ -565,7 +565,7 @@ val bare_serialize_synth_correct
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
 : Lemma
@@ -647,7 +647,7 @@ val serialize_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
   (u: unit {
@@ -661,7 +661,7 @@ val serialize_synth_eq
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
   (u: unit {
@@ -677,7 +677,7 @@ let serialize_synth_eq'
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
   (u: unit {
@@ -698,7 +698,7 @@ val serialize_synth_upd_chain
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
   (u: unit {
@@ -731,7 +731,7 @@ val serialize_synth_upd_bw_chain
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (g1: t2 -> GTot t1)
   (u: unit {
@@ -1506,15 +1506,15 @@ let serialize_strengthen
 = Classical.forall_intro (serialize_strengthen_correct p2 prf s);
   serialize_strengthen' p2 prf s
 
-let compose (#t1 #t2 #t3: Type) (f1: t1 -> Tot t2) (f2: t2 -> Tot t3) (x: t1) : Tot t3 =
+let compose (#t1 #t2 #t3: Type) (f1: t1 -> GTot t2) (f2: t2 -> GTot t3) (x: t1) : GTot t3 =
   let y1 = f1 x in
   f2 y1
 
 val make_total_constant_size_parser_compose
   (sz: nat)
   (t1 t2: Type)
-  (f1: ((s: bytes {Seq.length s == sz}) -> Tot t1))
-  (g2: t1 -> Tot t2)
+  (f1: ((s: bytes {Seq.length s == sz}) -> GTot t1))
+  (g2: t1 -> GTot t2)
 : Lemma
   (requires (
     make_total_constant_size_parser_precond sz t1 f1 /\
@@ -1533,14 +1533,14 @@ unfold
 let lift_parser'
   (#k: parser_kind)
   (#t: Type)
-  (f: unit -> Tot (parser k t))
+  (f: unit -> GTot (parser k t))
 : Tot (bare_parser t)
 = fun (input: bytes) -> parse (f ()) input
 
 let lift_parser_correct
   (#k: parser_kind)
   (#t: Type)
-  (f: unit -> Tot (parser k t))
+  (f: unit -> GTot (parser k t))
 : Lemma
   (parser_kind_prop k (lift_parser' f))
 = parser_kind_prop_ext k (f ()) (lift_parser' f)
@@ -1548,7 +1548,7 @@ let lift_parser_correct
 let lift_parser
   (#k: parser_kind)
   (#t: Type)
-  (f: unit -> Tot (parser k t))
+  (f: unit -> GTot (parser k t))
 : Tot (parser k t)
 = lift_parser_correct f;
   lift_parser' f
@@ -1565,7 +1565,7 @@ let lift_serializer'
 let lift_serializer_correct
   (#k: parser_kind)
   (#t: Type)
-  (#f: unit -> Tot (parser k t))
+  (#f: unit -> GTot (parser k t))
   (s: unit -> GTot (serializer (f ())))
 : Lemma
   (serializer_correct (lift_parser f) (lift_serializer' s))
@@ -1574,7 +1574,7 @@ let lift_serializer_correct
 let lift_serializer
   (#k: parser_kind)
   (#t: Type)
-  (#f: unit -> Tot (parser k t))
+  (#f: unit -> GTot (parser k t))
   (s: unit -> GTot (serializer (f ())))
 : Tot (serializer #k #t (lift_parser f))
 = lift_serializer_correct #k #t #f s;
@@ -1605,7 +1605,7 @@ let parse_filter_refine (#t: Type) (f: (t -> GTot bool)) =
 
 let parse_filter_payload
   (#t: Type)
-  (f: (t -> Tot bool))
+  (f: (t -> GTot bool))
   (v: t)
 : Tot (parser parse_filter_payload_kind (parse_filter_refine f))
 = let p = lift_parser (fun () ->
@@ -1623,14 +1623,14 @@ val parse_filter
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (f: (t -> Tot bool))
+  (f: (t -> GTot bool))
 : Tot (parser (parse_filter_kind k) (parse_filter_refine f))
 
 val parse_filter_eq
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (f: (t -> Tot bool))
+  (f: (t -> GTot bool))
   (input: bytes)
 : Lemma
   (parse (parse_filter p f) input == (match parse p input with
@@ -1655,7 +1655,7 @@ val serialize_filter_correct
   (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-  (f: (t -> Tot bool))
+  (f: (t -> GTot bool))
 : Lemma
   (serializer_correct (parse_filter p f) (serialize_filter' s f))
 
@@ -1664,7 +1664,7 @@ let serialize_filter
   (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-  (f: (t -> Tot bool))
+  (f: (t -> GTot bool))
 : Tot (serializer (parse_filter p f))
 = serialize_filter_correct s f;
   serialize_filter' s f

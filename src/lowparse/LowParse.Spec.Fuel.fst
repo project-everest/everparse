@@ -201,7 +201,7 @@ let parser_kind_prop_fuel_ext
 let close_by_fuel
   (#t: Type)
   (f: (nat -> Tot (bare_parser t)))
-  (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
+  (closure: ((b: bytes) -> GTot (n: nat { Seq.length b < n })))
 : Tot (bare_parser t)
 = fun x -> f (closure x) x
 
@@ -209,7 +209,7 @@ let close_by_fuel_correct
   (#t: Type)
   (k: parser_kind)
   (f: (nat -> Tot (bare_parser t)))
-  (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
+  (closure: ((b: bytes) -> GTot (n: nat { Seq.length b < n })))
   (f_ext: (
     (fuel: nat) ->
     (b: bytes { Seq.length b < fuel }) ->

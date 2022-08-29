@@ -3,7 +3,7 @@ open LowParse.Spec.Combinators
 
 let decode_u8
   (b: bytes { Seq.length b == 1 } )
-: Tot U8.t
+: GTot U8.t
 = Seq.index b 0
 
 let decode_u8_injective () : Lemma
@@ -30,7 +30,7 @@ let serialize_u8_spec x = ()
 
 let decode_u16
   (b: bytes { Seq.length b == 2 } )
-: Tot U16.t
+: GTot U16.t
 = E.lemma_be_to_n_is_bounded b;
   U16.uint_to_t (E.be_to_n b)
 
@@ -69,7 +69,7 @@ let serialize_u16 =
 
 let decode_u32
   (b: bytes { Seq.length b == 4 } )
-: Tot U32.t
+: GTot U32.t
 = E.lemma_be_to_n_is_bounded b;
   U32.uint_to_t (E.be_to_n b)
 
@@ -106,7 +106,7 @@ let serialize_u32 =
 
 let decode_u64
   (b: bytes { Seq.length b == 8 } )
-: Tot U64.t
+: GTot U64.t
 = E.lemma_be_to_n_is_bounded b;
   U64.uint_to_t (E.be_to_n b)
 
@@ -142,7 +142,7 @@ let serialize_u64 =
 
 let decode_u64_le
   (b: bytes { Seq.length b == 8 } )
-: Tot U64.t
+: GTot U64.t
 = E.lemma_le_to_n_is_bounded b;
   U64.uint_to_t (E.le_to_n b)
 
