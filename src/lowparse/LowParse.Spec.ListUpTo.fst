@@ -286,7 +286,7 @@ let parse_list_up_to_correct
     (ensures (consumed > 0))
   ))
 : Lemma
-  (parser_kind_prop (parse_list_up_to_kind k) (close_by_fuel (parse_list_up_to' cond p) close_parse_list_up_to))
+  (parser_kind_prop (parse_list_up_to_kind k) (close_by_fuel' (parse_list_up_to' cond p) close_parse_list_up_to))
 = close_by_fuel_correct
     (parse_list_up_to_kind k)
     (parse_list_up_to' cond p) 
@@ -308,7 +308,7 @@ let parse_list_up_to
   (prf: consumes_if_not_cond cond p)
 : Tot (parser (parse_list_up_to_kind k) (parse_list_up_to_t cond))
 = parse_list_up_to_correct #k #t cond p prf;
-  close_by_fuel (parse_list_up_to' cond p) close_parse_list_up_to
+  close_by_fuel' (parse_list_up_to' cond p) close_parse_list_up_to
 
 let parse_list_up_to_eq
   (#k: parser_kind)
