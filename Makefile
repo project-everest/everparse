@@ -57,7 +57,7 @@ quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-samp
 
 test: lowparse-test quackyducky-test 3d-test asn1-test
 
-ci: lowparse-test quackyducky-test 3d-ci
+ci: lowparse-test quackyducky-test 3d-ci asn1-test
 
 clean-3d:
 	+$(MAKE) -C src/3d clean
