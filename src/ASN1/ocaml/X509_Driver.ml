@@ -19,9 +19,10 @@ let main =
   else (
     let filename = Sys.argv.(1) in
     try
-      let file = Core.In_channel.create ~binary:true filename in
-      let str = Core.In_channel.input_all file in
-      Core.In_channel.close file;
+      let file = open_in_bin filename in
+      let filelen = in_channel_length file in
+      let str = really_input_string file filelen in
+      close_in file;
       let b = FStar_Bytes.bytes_of_string str in
       let b = lp_bytes_of_bytes b in
       print_string ("About to parse " ^ string_of_int (Z.to_int (FStar_Bytes.length str)) ^ " bytes from " ^ filename ^ " ... \n");
