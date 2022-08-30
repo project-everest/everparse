@@ -7,9 +7,9 @@ open ASN1.Spec.LengthU32
 
 open ASN1.Spec.Content.OCTETSTRING
 
-open LowParse.Spec.Base
-open LowParse.Spec.Combinators
-open LowParse.Spec.VLGen
+open LowParse.Tot.Base
+open LowParse.Tot.Combinators
+open LowParse.Tot.VLGen
 
 module U32 = FStar.UInt32
 module Seq = FStar.Seq

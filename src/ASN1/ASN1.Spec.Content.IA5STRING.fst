@@ -2,9 +2,9 @@ module ASN1.Spec.Content.IA5STRING
 
 open ASN1.Base
 
-open LowParse.Spec.Combinators
-open LowParse.Spec.Int
-open LowParse.Spec.List
+open LowParse.Tot.Combinators
+open LowParse.Tot.Int
+open LowParse.Tot.List
 
 module U8 = FStar.UInt8
 

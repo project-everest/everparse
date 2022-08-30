@@ -1,5 +1,5 @@
 module ASN1.Debug
-open LowParse.Spec.Base
+open LowParse.Tot.Base
 
 val parse_debug
   (#t: Type)
@@ -17,4 +17,4 @@ val print_debug
 : Pure t
     (requires True)
     (ensures (fun v' -> v' == v))
-    
+
