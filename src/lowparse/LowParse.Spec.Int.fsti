@@ -11,7 +11,9 @@ module U64 = FStar.UInt64
 inline_for_extraction
 let parse_u8_kind : parser_kind = total_constant_size_parser_kind 1
 
-val parse_u8: parser parse_u8_kind U8.t
+val tot_parse_u8: tot_parser parse_u8_kind U8.t
+
+let parse_u8: parser parse_u8_kind U8.t = tot_parse_u8
 
 val parse_u8_spec
   (b: bytes)
