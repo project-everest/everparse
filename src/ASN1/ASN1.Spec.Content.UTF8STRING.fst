@@ -3,9 +3,9 @@ module ASN1.Spec.Content.UTF8STRING
 open ASN1.Base
 open ASN1.Spec.Automata
 
-open LowParse.Spec.Combinators
-open LowParse.Spec.Int
-open LowParse.Spec.List
+open LowParse.Tot.Combinators
+open LowParse.Tot.Int
+open LowParse.Tot.List
 
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
@@ -13,6 +13,19 @@ module U32 = FStar.UInt32
 module Cast = FStar.Int.Cast
 
 open FStar.Mul
+
+let _ = assert_norm (pow2 16 == 65536)
+let _ = assert_norm (pow2 9 == 512)
+let _ = assert_norm (pow2 3 == 8)
+let _ = assert_norm (pow2 6 == 64)
+let _ = assert_norm (pow2 12 == 4096)
+let _ = assert_norm (pow2 18 == 262144)
+let _ = assert_norm (pow2 11 == 2048)
+let _ = assert_norm (pow2 21 == 2097152)
+let _ = assert_norm (pow2 15 == 32768)
+let _ = assert_norm (pow2 32 == 4294967296)
+let _ = assert_norm (pow2 7 == 128)
+let _ = assert_norm (pow2 20 == 1048576)
 
 type utf8_cp_s =
 | Init | S3 | S3' | S2 | S2' | S1

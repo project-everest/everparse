@@ -2,9 +2,9 @@ module ASN1.Spec.LengthU32
 
 open ASN1.Base
 
-open LowParse.Spec.Base
+open LowParse.Tot.Base
 
-module LPDER = LowParse.Spec.DER
+module LPDER = LowParse.Tot.DER
 
 (* Ref: X.690 8.1.3 9.1 10.1 *)
 

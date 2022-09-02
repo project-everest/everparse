@@ -788,7 +788,7 @@ let der_length_payload_size_of_tag_inv32
 let synth_der_length_payload32
   (x: U8.t { der_length_payload_size_of_tag x <= 4 } )
   (y: refine_with_tag tag_of_der_length x)
-: Tot (refine_with_tag tag_of_der_length32 x)
+: GTot (refine_with_tag tag_of_der_length32 x)
 = let _ =
     assert_norm (der_length_max == pow2 (8 * 126) - 1);
     let _ = assert_norm (pow2 (8 * 2) == 65536) in
@@ -829,7 +829,7 @@ x
 let be_int_of_bounded_integer
   (len: integer_size)
   (x: nat { x < pow2 (8 * len) } )
-: Tot (bounded_integer len)
+: GTot (bounded_integer len)
 = integer_size_values len;
   assert_norm (pow2 (8 * 1) == 256);
   assert_norm (pow2 (8 * 2) == 65536);

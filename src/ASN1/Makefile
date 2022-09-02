@@ -1,4 +1,4 @@
-all: verify extract
+all: verify
 
 EVERPARSE_HOME ?= ../..
 KRML_HOME ?= $(EVERPARSE_HOME)/../karamel
@@ -66,8 +66,11 @@ Test.c: krml.rsp
 	  -o $@ \
 	  @$^
 
-test: ASN1Test.c # test.exe
-	cat $^
+# test: ASN1Test.c # test.exe
+#	cat $^
+
+test: extract
+	$(MAKE) -C ocaml
 
 clean:
 	-rm -rf *.checked *.krml .depend *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt

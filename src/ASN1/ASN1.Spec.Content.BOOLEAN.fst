@@ -2,9 +2,9 @@ module ASN1.Spec.Content.BOOLEAN
 
 open ASN1.Base
 
-open LowParse.Spec.Base
-open LowParse.Spec.Combinators
-open LowParse.Spec.Int
+open LowParse.Tot.Base
+open LowParse.Tot.Combinators
+open LowParse.Tot.Int
 
 module U8 = FStar.UInt8
 

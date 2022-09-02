@@ -13,7 +13,7 @@ let rec parse_list_aux
   (#t: Type)
   (p: parser k t)
   (b: bytes)
-: Tot (option (list t * (consumed_length b)))
+: GTot (option (list t * (consumed_length b)))
   (decreases (Seq.length b))
 = if Seq.length b = 0
   then 
@@ -129,6 +129,39 @@ val parse_list_eq'
 	  | _ -> None
         end
   )))
+
+val tot_parse_list
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+: Pure (tot_parser parse_list_kind (list t))
+    (requires True)
+    (ensures (fun y ->
+      forall x . parse y x == parse (parse_list #k p) x
+    ))
+
+let tot_parse_list_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+  (b: bytes)
+: Lemma
+  (parse (tot_parse_list p) b == (
+    if Seq.length b = 0
+    then 
+      Some ([], (0 <: consumed_length b))
+    else
+      match parse p b with
+      | None -> None
+      | Some (v, n) ->
+        if n = 0
+        then None (* elements cannot be empty *)
+        else
+          match parse (tot_parse_list p) (Seq.slice b n (Seq.length b)) with
+	  | Some (l, n') -> Some (v :: l, (n + n' <: consumed_length b))
+	  | _ -> None
+  ))
+= parse_list_eq #k p b
 
 let rec bare_serialize_list
   (#k: parser_kind)

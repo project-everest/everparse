@@ -1,10 +1,10 @@
 module ASN1.Spec.Interpreter
 
-include LowParse.Spec.Base
-include LowParse.Spec.Combinators
-include LowParse.Spec.List
-include LowParse.Spec.Defaultable
-include LowParse.Spec.Bytes
+include LowParse.Tot.Base
+include LowParse.Tot.Combinators
+include LowParse.Tot.List
+include LowParse.Tot.Defaultable
+include LowParse.Tot.Bytes
 
 include ASN1.Debug
 

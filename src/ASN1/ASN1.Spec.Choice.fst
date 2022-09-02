@@ -2,8 +2,8 @@ module ASN1.Spec.Choice
 
 open ASN1.Base
 
-open LowParse.Spec.Base
-open LowParse.Spec.Combinators
+open LowParse.Tot.Base
+open LowParse.Tot.Combinators
 
 open ASN1.Spec.IdentifierU32
 

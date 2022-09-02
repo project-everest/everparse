@@ -241,7 +241,7 @@ let serialize_nlist_cons
 let bounded_count_prop
   (min max: nat)
   (x: U32.t)
-: Tot bool
+: GTot bool
 = min <= U32.v x && U32.v x <= max
 
 inline_for_extraction

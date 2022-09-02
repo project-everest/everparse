@@ -7,10 +7,15 @@ let parse_seq_flbytes_gen
 : Tot (Seq.lseq byte sz)
 = s
 
+let tot_parse_seq_flbytes
+  (sz: nat)
+: Tot (tot_parser (total_constant_size_parser_kind sz) (Seq.lseq byte sz))
+= tot_make_total_constant_size_parser sz (Seq.lseq byte sz) (parse_seq_flbytes_gen sz)
+
 let parse_seq_flbytes
   (sz: nat)
 : Tot (parser (total_constant_size_parser_kind sz) (Seq.lseq byte sz))
-= make_total_constant_size_parser sz (Seq.lseq byte sz) (parse_seq_flbytes_gen sz)
+= tot_parse_seq_flbytes sz
 
 let serialize_seq_flbytes'
   (sz: nat)

@@ -678,7 +678,7 @@ let domain_unique
 
 (* Parser *)
 
-module LP = LowParse.Spec.Combinators
+module LP = LowParse.Tot.Combinators
 
 let valid_unsigned_repr
   (b: LP.bytes)

@@ -18,9 +18,9 @@ let lt_pow2_32
 let parse_flbytes_gen
   (sz: nat { sz < 4294967296 } )
   (s: bytes { Seq.length s == sz } )
-: Tot (B32.lbytes sz)
+: GTot (B32.lbytes sz)
 = lt_pow2_32 sz;
-  B32.b32_hide s
+  B32.hide s
 
 let parse_flbytes
   (sz: nat { sz < 4294967296 } )
@@ -109,9 +109,12 @@ let parse_all_bytes_correct () : Lemma
 = parser_kind_prop_equiv parse_all_bytes_kind parse_all_bytes';
   parse_all_bytes_injective ()
 
-let parse_all_bytes : parser parse_all_bytes_kind B32.bytes =
+let tot_parse_all_bytes : tot_parser parse_all_bytes_kind B32.bytes =
   parse_all_bytes_correct ();
   parse_all_bytes'
+
+let parse_all_bytes : parser parse_all_bytes_kind B32.bytes =
+  tot_parse_all_bytes
 
 let serialize_all_bytes'
   (input: B32.bytes)
