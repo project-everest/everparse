@@ -19,7 +19,7 @@ function export_home() {
 
 function fetch_hacl() {
     if [ ! -d hacl-star ]; then
-        git clone https://github.com/project-everest/hacl-star hacl-star
+        git clone https://github.com/hacl-star/hacl-star hacl-star
     fi
 
     cd hacl-star
