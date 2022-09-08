@@ -10,6 +10,7 @@ open ASN1.Spec.Sequence
 open ASN1.Spec.IdentifierU32
 
 module List = FStar.List.Tot
+module Set = FStar.Set
 
 let rec make_gen_choice_weak_payload_parser
   (#t : eqtype)

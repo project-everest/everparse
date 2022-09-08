@@ -9,6 +9,7 @@ open ASN1.Spec.IdentifierU32
 
 module Math = FStar.Math.Lib
 module List = FStar.List.Tot
+module Set = FStar.Set
 
 (*
 
