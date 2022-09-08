@@ -2,8 +2,8 @@ module ASN1.Spec.Content.BITSTRING
 
 open ASN1.Base
 
-open LowParse.Spec.Combinators
-open LowParse.Spec.Bytes
+open LowParse.Tot.Combinators
+open LowParse.Tot.Bytes
 
 module U8 = FStar.UInt8
 module B = FStar.Bytes

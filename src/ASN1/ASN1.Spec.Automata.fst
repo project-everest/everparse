@@ -1,7 +1,7 @@
 module ASN1.Spec.Automata
 
-open LowParse.Spec.Base
-open LowParse.Spec.Combinators
+open LowParse.Tot.Base
+open LowParse.Tot.Combinators
 
 open ASN1.Base
 
@@ -127,7 +127,7 @@ let rec automata_bare_parser'
   (b : bytes)
 : Tot (option ((ret : dp.ret_t {dp.post_t s data ret}) * (consumed_length b)))
   (decreases (Seq.length b))
-= match (parse bp.ch_t_bare_parser b) with
+= match (bp.ch_t_bare_parser b) with
   | None -> None
   | Some (ch, l) ->
     if cp.fail_check s ch then
@@ -137,6 +137,7 @@ let rec automata_bare_parser'
         Some (dp.update_term s data ch, l)
       else
         (
+        let _ = assert (parse bp.ch_t_bare_parser b == Some (ch, l)) in // SMT pattern on `parse`
         let s' = cp.next_state s ch in
         let data' = dp.update_next s data ch in
         let _ = bp.ch_t_bare_parser_valid () in

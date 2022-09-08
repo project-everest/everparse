@@ -30,6 +30,19 @@ let parse_defaultable (#k: parser_kind) (#t : Type) (defaultablev : option t) (p
   parser_kind_prop_equiv (parse_defaultable_kind k) (parse_defaultable_bare defaultablev p);
   parse_defaultable_bare defaultablev p
 
+let tot_parse_defaultable_bare (#k: parser_kind) (#t : Type) (defaultablev : option t) (p: tot_parser k t) : Tot (tot_bare_parser t) =
+  fun (input : bytes) ->
+    match defaultablev with
+    | None -> p input
+    | Some v -> if (Seq.length input = 0) then Some (v, 0) else (p input)
+
+let tot_parse_defaultable #k #t defaultablev p =
+  parser_kind_prop_ext
+    (parse_defaultable_kind k) 
+    (parse_defaultable #k defaultablev p)
+    (tot_parse_defaultable_bare defaultablev p);
+  tot_parse_defaultable_bare defaultablev p
+
 let and_then_defaultable'
   (#k : parser_kind)
   (#t : eqtype)

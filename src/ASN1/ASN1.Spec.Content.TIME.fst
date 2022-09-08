@@ -1,7 +1,7 @@
 module ASN1.Spec.Content.TIME
 
-open LowParse.Spec.Combinators
-open LowParse.Spec.Bytes
+open LowParse.Tot.Combinators
+open LowParse.Tot.Bytes
 
 open ASN1.Base
 open ASN1.Spec.Time

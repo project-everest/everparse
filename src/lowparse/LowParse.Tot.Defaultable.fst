@@ -1,44 +1,20 @@
-module LowParse.Spec.Defaultable
-include LowParse.Spec.Base
-include LowParse.Spec.Combinators
-
-let mk_option_tuple
-  (#t #t' : Type)
-  (a : option t)
-  (b : option t')
-: option (t * t')
-= match a, b with
-  | None, _
-  | _, None -> None
-  | Some u, Some v -> Some (u, v)
-
-let parse_defaultable_kind (k : parser_kind) : Tot parser_kind = {
-  parser_kind_metadata = None;
-  parser_kind_low = 0;
-  parser_kind_high = k.parser_kind_high;
-  parser_kind_subkind = None;
-}
+module LowParse.Tot.Defaultable
+include LowParse.Spec.Defaultable
+include LowParse.Tot.Combinators
 
 let parse_defaultable_injective_cond (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) (b : bytes) : GTot Type0 =
-  match defaultablev with
-  | None -> True
-  | Some v -> match (parse p b) with
-    | None -> True
-    | Some (v', _) -> ~ (v == v')
+  parse_defaultable_injective_cond #k defaultablev p b
 
 let parse_defaultable_injective_cond_prop (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) : GTot Type0 =
-  forall (b : bytes) . parse_defaultable_injective_cond defaultablev p b
-
+  parse_defaultable_injective_cond_prop #k defaultablev p
 
 val parse_defaultable (#k: parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) : Pure (parser (parse_defaultable_kind k) t) 
   (requires (parse_defaultable_injective_cond_prop defaultablev p))
-  (ensures (fun _ -> True))
-
-val tot_parse_defaultable (#k: parser_kind) (#t : Type) (defaultablev : option t) (p : tot_parser k t) : Pure (tot_parser (parse_defaultable_kind k) t) 
-  (requires (parse_defaultable_injective_cond_prop #k defaultablev p))
   (ensures (fun y ->
     forall x . parse y x == parse (parse_defaultable #k defaultablev p) x
   ))
+
+let parse_defaultable #k #t = tot_parse_defaultable #k #t
 
 val and_then_defaultable
   (#k : parser_kind)
@@ -51,6 +27,9 @@ val and_then_defaultable
 : Lemma
   (requires (and_then_cases_injective fp /\ (forall (v : t). parse_defaultable_injective_cond_prop defv (fp v))))
   (ensures (parse_defaultable_injective_cond_prop defv (p `and_then` fp)))
+
+let and_then_defaultable #k #t p #k' #t' fp defv =
+  and_then_defaultable #k #t p #k' #t' fp defv
 
 val nondep_then_defaultable
   (#k : parser_kind)
@@ -65,6 +44,9 @@ val nondep_then_defaultable
   (requires (parse_defaultable_injective_cond_prop defv p))
   (ensures (parse_defaultable_injective_cond_prop (mk_option_tuple defv defv') (p `nondep_then` p')))
 
+let nondep_then_defaultable #k #t p defv #k' #t' p' defv' =
+  nondep_then_defaultable #k #t p defv #k' #t' p' defv'
+
 val nondep_then_defaultable_snd
   (#k : parser_kind)
   (#t : Type)
@@ -78,12 +60,17 @@ val nondep_then_defaultable_snd
   (requires (parse_defaultable_injective_cond_prop defv' p'))
   (ensures (parse_defaultable_injective_cond_prop (mk_option_tuple defv defv') (p `nondep_then` p')))
 
+let nondep_then_defaultable_snd #k #t p defv #k' #t' p' defv' =
+  nondep_then_defaultable_snd #k #t p defv #k' #t' p' defv'
+
 val defaultable_trivial_eq
   (#k : parser_kind)
   (#t : Type)
   (p : parser k t)
 : Lemma
   (ensures (forall input. parse (parse_defaultable None p) input == parse p input))
+
+let defaultable_trivial_eq #k #t p = defaultable_trivial_eq #k #t p
 
 val eq_defaultable
   (#k : parser_kind)
@@ -95,3 +82,5 @@ val eq_defaultable
 : Lemma
   (requires (parse_defaultable_injective_cond_prop defv p) /\ (forall input. parse p input == parse p' input))
   (ensures (parse_defaultable_injective_cond_prop defv p'))
+
+let eq_defaultable #k #t p defv #k' p' = eq_defaultable #k #t p defv #k' p'

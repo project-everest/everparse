@@ -2,10 +2,10 @@ module ASN1.Spec.Sequence
 
 open ASN1.Base
 
-open LowParse.Spec.Base
-open LowParse.Spec.Combinators
+open LowParse.Tot.Base
+open LowParse.Tot.Combinators
 
-open LowParse.Spec.Defaultable
+open LowParse.Tot.Defaultable
 
 open ASN1.Spec.IdentifierU32
 
@@ -240,7 +240,7 @@ let make_asn1_sequence_parser_body_twin
           (parse_asn1_sequence_item_twin hd id, None)
         else
           match de with
-          | PLAIN -> (fail_parser _ _, None)
+          | PLAIN -> (fail_parser asn1_strong_parser_kind _, None)
           | _ -> 
             let defv' = generate_defaultable_item hd in
             match defv' with
@@ -376,7 +376,7 @@ let make_asn1_sequence_parser_body
     (requires (make_asn1_sequence_parser_body_twin_spec pbodytwin))
     (ensures (fun p -> parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p))
 = let k = glb asn1_strong_parser_kind parse_ret_kind in
-  let p = 
+  let p =
   (match st with
    | None -> weaken k parse_asn1_identifier_U32
    | Some id -> weaken k (parse_ret id)) in

@@ -1,10 +1,10 @@
 module ASN1.Spec.Interpreter
 
-include LowParse.Spec.Base
-include LowParse.Spec.Combinators
-include LowParse.Spec.List
-include LowParse.Spec.Defaultable
-include LowParse.Spec.Bytes
+include LowParse.Tot.Base
+include LowParse.Tot.Combinators
+include LowParse.Tot.List
+include LowParse.Tot.Defaultable
+include LowParse.Tot.Bytes
 
 include ASN1.Debug
 
@@ -24,6 +24,7 @@ open ASN1.Spec.ILC
 open ASN1.Spec.Choice
 open ASN1.Spec.Sequence
 open ASN1.Spec.Any
+open ASN1.Spec.Set
 
 module List = FStar.List.Tot
 
@@ -49,7 +50,7 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
   | ASN1_TERMINAL k' -> dasn1_terminal_as_parser k'
   | ASN1_SEQUENCE gitems -> make_asn1_sequence_parser (dasn1_sequence_as_parser (dfst gitems))
   | ASN1_SEQUENCE_OF k' -> weaken asn1_weak_parser_kind (parse_list (dasn1_as_parser k'))
-  | ASN1_SET_OF k' -> weaken _ (dasn1_as_parser k')
+  | ASN1_SET_OF k' -> parse_asn1_set_of (dasn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (dasn1_as_parser k')
   | ASN1_ANY_DEFINED_BY prefix id key_k ls ofb pf pf' -> 
     let itemtwins = dasn1_sequence_as_parser prefix in
@@ -155,7 +156,7 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
   | ASN1_TERMINAL k' -> asn1_terminal_as_parser k'
   | ASN1_SEQUENCE gitems -> make_asn1_sequence_parser (asn1_sequence_as_parser (dfst gitems))
   | ASN1_SEQUENCE_OF k' -> weaken asn1_weak_parser_kind (parse_list (asn1_as_parser k'))
-  | ASN1_SET_OF k' -> weaken _ (asn1_as_parser k')
+  | ASN1_SET_OF k' -> parse_asn1_set_of (asn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (asn1_as_parser k')
   | ASN1_ANY_DEFINED_BY prefix id key_k ls ofb pf pf' -> 
     let itemtwins = asn1_sequence_as_parser prefix in

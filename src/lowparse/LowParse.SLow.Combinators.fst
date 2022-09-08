@@ -221,7 +221,7 @@ let parse32_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (f2': (x: t1) -> Tot (y: t2 { y == f2 x } )) 
   (p1' : parser32 p1)
   (u: unit {
@@ -256,7 +256,7 @@ let serialize32_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (s1' : serializer32 s1)
   (g1: t2 -> GTot t1)
@@ -277,7 +277,7 @@ let serialize32_synth'
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (s1' : serializer32 s1)
   (g1: t2 -> Tot t1)
@@ -293,7 +293,7 @@ let parse32_filter
   (#t: Type)
   (#p: parser k t)
   (p32: parser32 p)
-  (f: (t -> Tot bool))
+  (f: (t -> GTot bool))
   (g: ((x: t) -> Tot (b: bool { b == f x } )))
 : Tot (parser32 (parse_filter p f))
 = fun (input: bytes32) ->
@@ -318,7 +318,7 @@ let serialize32_filter
   (#p: parser k t)
   (#s: serializer p)
   (s32: serializer32 s)
-  (f: (t -> Tot bool))
+  (f: (t -> GTot bool))
 : Tot (serializer32 #_ #_ #(parse_filter p f) (serialize_filter s f))
 = fun (input: t { f input == true } ) -> s32 input
 
@@ -327,7 +327,7 @@ let make_constant_size_parser32
   (sz: nat)
   (sz' : U32.t { U32.v sz' == sz } )
   (#t: Type)
-  (f: ((s: bytes {Seq.length s == sz}) -> Tot (option t)))
+  (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
   (u: unit {
     make_constant_size_parser_precond sz t f
   } )
@@ -349,7 +349,7 @@ let make_total_constant_size_parser32
   (sz: nat)
   (sz' : U32.t { U32.v sz' == sz } )
   (#t: Type)
-  (f: ((s: bytes {Seq.length s == sz}) -> Tot (t)))
+  (f: ((s: bytes {Seq.length s == sz}) -> GTot (t)))
   (u: unit {
     make_total_constant_size_parser_precond sz t f
   })
@@ -414,7 +414,7 @@ let size32_filter
   (#p: parser k t)
   (#s: serializer p)
   (s32: size32 s)
-  (f: (t -> Tot bool))
+  (f: (t -> GTot bool))
 : Tot (size32 #_ #_ #(parse_filter p f) (serialize_filter s f))
 = fun x -> s32 x
 
@@ -424,7 +424,7 @@ let size32_synth
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (s1' : size32 s1)
   (g1: t2 -> GTot t1)
@@ -446,7 +446,7 @@ let size32_synth'
   (#t1: Type)
   (#t2: Type)
   (p1: parser k t1)
-  (f2: t1 -> Tot t2)
+  (f2: t1 -> GTot t2)
   (s1: serializer p1)
   (s1' : size32 s1)
   (g1: t2 -> Tot t1)
@@ -531,7 +531,7 @@ inline_for_extraction
 let lift_parser32
   (#k: parser_kind)
   (#t: Type)
-  (f: unit -> Tot (parser k t))
+  (f: unit -> GTot (parser k t))
   (f32: parser32 (f ()))
 : Tot (parser32 (lift_parser f))
 = fun x -> f32 x
@@ -540,7 +540,7 @@ inline_for_extraction
 let lift_serializer32
   (#k: parser_kind)
   (#t: Type)
-  (f: unit -> Tot (parser k t))
+  (f: unit -> GTot (parser k t))
   (s: unit -> GTot (serializer (f ())))
   (s32: serializer32 (s ()))
 : Tot (serializer32 (lift_serializer #k #t #f s))

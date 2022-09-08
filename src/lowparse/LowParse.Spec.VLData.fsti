@@ -96,7 +96,7 @@ let parse_vldata_gen_kind_correct
 
 val parse_vldata_gen
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -104,7 +104,7 @@ val parse_vldata_gen
 
 val parse_vldata_gen_eq_def
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -122,7 +122,7 @@ val parse_vldata_gen_eq_def
 
 let parse_vldata_gen_eq
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -156,7 +156,7 @@ let parse_vldata_gen_eq
 
 let parse_vldata_gen_eq_some_elim
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -182,7 +182,7 @@ let parse_vldata_gen_eq_some_elim
 let unconstrained_bounded_integer
   (sz: integer_size)
   (i: bounded_integer sz)
-: Tot bool
+: GTot bool
 = true
 
 let parse_vldata
@@ -492,7 +492,7 @@ let serialize_bounded_vldata_strong_aux
 
 let serialize_vldata_gen_correct_aux
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -536,7 +536,7 @@ let serialize_vldata_gen_correct_aux
 
 let serialize_vldata_gen_correct
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)

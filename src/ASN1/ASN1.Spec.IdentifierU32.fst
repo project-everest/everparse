@@ -2,9 +2,9 @@ module ASN1.Spec.IdentifierU32
 
 open ASN1.Base
 
-open LowParse.Spec.Base
-open LowParse.Spec.Combinators
-open LowParse.Spec.Int
+open LowParse.Tot.Base
+open LowParse.Tot.Combinators
+open LowParse.Tot.Int
 
 open FStar.Mul
 
@@ -303,7 +303,7 @@ let parse_cast_inverse
       (x <: (x : t {p2 x}))
   in
   let _ = parse_synth_eq #k #(x : t{p1 x}) #(x : t{p2 x}) p id_cast b in
-  match (parse p b) with
+  match p b with
   | Some (x, l) -> x
   
 

@@ -198,10 +198,10 @@ let parser_kind_prop_fuel_ext
 = no_lookahead_fuel_ext fuel f1 f2;
   injective_fuel_ext fuel f1 f2
 
-let close_by_fuel
+let close_by_fuel'
   (#t: Type)
   (f: (nat -> Tot (bare_parser t)))
-  (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
+  (closure: ((b: bytes) -> GTot (n: nat { Seq.length b < n })))
 : Tot (bare_parser t)
 = fun x -> f (closure x) x
 
@@ -209,7 +209,7 @@ let close_by_fuel_correct
   (#t: Type)
   (k: parser_kind)
   (f: (nat -> Tot (bare_parser t)))
-  (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
+  (closure: ((b: bytes) -> GTot (n: nat { Seq.length b < n })))
   (f_ext: (
     (fuel: nat) ->
     (b: bytes { Seq.length b < fuel }) ->
@@ -222,21 +222,36 @@ let close_by_fuel_correct
     (parser_kind_prop_fuel fuel k (f fuel))
   ))
 : Lemma
-  (parser_kind_prop k (close_by_fuel f closure))
+  (parser_kind_prop k (close_by_fuel' f closure))
 = let prf
     (fuel: nat)
   : Lemma
-    (parser_kind_prop_fuel fuel k (close_by_fuel f closure))
+    (parser_kind_prop_fuel fuel k (close_by_fuel' f closure))
   = f_prop fuel;
     let g
       (b: bytes { Seq.length b < fuel })
     : Lemma
-      (parse (close_by_fuel f closure) b == parse (f fuel) b)
+      (parse (close_by_fuel' f closure) b == parse (f fuel) b)
     = f_ext fuel b
     in
     Classical.forall_intro g;
-    parser_kind_prop_fuel_ext fuel k (close_by_fuel f closure) (f fuel)
+    parser_kind_prop_fuel_ext fuel k (close_by_fuel' f closure) (f fuel)
   in
   Classical.forall_intro prf;
-  parser_kind_prop_fuel_correct k (close_by_fuel f closure);
-  parser_kind_prop_equiv k (close_by_fuel f closure)
+  parser_kind_prop_fuel_correct k (close_by_fuel' f closure);
+  parser_kind_prop_equiv k (close_by_fuel' f closure)
+
+let close_by_fuel
+  (#k: parser_kind)
+  (#t: Type)
+  (f: (nat -> Tot (parser k t)))
+  (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
+  (f_ext: (
+    (fuel: nat) ->
+    (b: bytes { Seq.length b < fuel }) ->
+    Lemma
+    (f fuel b == f (closure b) b)
+  ))
+: Tot (parser k t)
+= close_by_fuel_correct k f closure f_ext (fun fuel -> parser_kind_prop_equiv k (f fuel));
+  close_by_fuel' f closure

@@ -33,6 +33,9 @@ lowparse-unit-test: lowparse
 
 3d-test: 3d-unit-test 3d-doc-test
 
+asn1-test: asn1
+	+$(MAKE) -C src/ASN1 test
+
 lowparse-bitfields-test: lowparse
 	+$(MAKE) -C tests/bitfields
 
@@ -52,9 +55,9 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: lowparse-test quackyducky-test 3d-test
+test: lowparse-test quackyducky-test 3d-test asn1-test
 
-ci: lowparse-test quackyducky-test 3d-ci
+ci: lowparse-test quackyducky-test 3d-ci asn1-test
 
 clean-3d:
 	+$(MAKE) -C src/3d clean
@@ -68,7 +71,7 @@ clean-quackyducky:
 clean: clean-3d clean-lowparse clean-quackyducky
 	rm -rf bin
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test 3d-doc-ci 3d-ci ci clean-3d clean-lowparse clean-quackyducky
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test 3d-doc-ci 3d-ci ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
 
 release:
 	+src/package/release.sh

@@ -22,7 +22,7 @@ let validate_vldata_payload
 inline_for_extraction
 let validate_vldata_gen
   (sz: integer_size) // must be a constant
-  (f: ((x: bounded_integer sz) -> Tot bool))
+  (f: ((x: bounded_integer sz) -> GTot bool))
   (f' : ((x: bounded_integer sz) -> Tot (y: bool { y == f x })))
   (#k: parser_kind)
   (#t: Type)
@@ -46,7 +46,7 @@ module HS = FStar.HyperStack
 let valid_vldata_gen_elim
   (h: HS.mem)
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -80,7 +80,7 @@ let valid_vldata_gen_elim
 inline_for_extraction
 let jump_vldata_gen
   (sz: integer_size) // must be a constant
-  (f: ((x: bounded_integer sz) -> Tot bool))
+  (f: ((x: bounded_integer sz) -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -237,7 +237,7 @@ let jump_bounded_vldata_strong
 let valid_vldata_gen_intro
   (h: HS.mem)
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -269,7 +269,7 @@ let valid_vldata_gen_intro
 inline_for_extraction
 let finalize_vldata_gen
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)

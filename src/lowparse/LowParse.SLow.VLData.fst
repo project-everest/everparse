@@ -24,7 +24,7 @@ let parse32_vldata_payload
 inline_for_extraction
 let parse32_vldata_gen
   (sz: integer_size)
-  (f: (bounded_integer sz -> Tot bool))
+  (f: (bounded_integer sz -> GTot bool))
   (f' : (x: bounded_integer sz) -> Tot (y: bool {y == f x}))
   (#k: parser_kind)
   (#t: Type)

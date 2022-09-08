@@ -3,10 +3,10 @@ module ASN1.Spec.Content.OIDU32
 open ASN1.Base
 open ASN1.Spec.IdentifierU32
 
-open LowParse.Spec.Base
-open LowParse.Spec.Combinators
-open LowParse.Spec.Int
-open LowParse.Spec.List
+open LowParse.Tot.Base
+open LowParse.Tot.Combinators
+open LowParse.Tot.Int
+open LowParse.Tot.List
 
 open FStar.Mul
 
