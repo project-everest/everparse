@@ -300,3 +300,37 @@ let tot_parse_byte_sorted_list
     (parse_byte_sorted_list (prop_order_of_bool_order byte_order) #_ #k p)
     p';
   p'
+
+module A = ASN1.Base
+
+let rec lex_byte_order'
+  (n1: nat)
+  (b1: Seq.lseq LPC.byte n1)
+  (n2: nat)
+  (b2: Seq.lseq LPC.byte n2)
+: Tot bool
+  (decreases (n1 + n2))
+= if n1 = 0
+  then true
+  else if n2 = 0
+  then false
+  else
+    let x1 = Seq.index b1 0 in
+    let x2 = Seq.index b2 0 in
+    if x1 `FStar.UInt8.lt` x2
+    then true
+    else if x2 `FStar.UInt8.lt` x1
+    then false
+    else lex_byte_order' (n1 - 1) (Seq.slice b1 1 n1) (n2 - 1) (Seq.slice b2 1 n2)
+
+let lex_byte_order
+  (b1: Seq.seq LPC.byte)
+  (b2: Seq.seq LPC.byte)
+: Tot bool
+= lex_byte_order' (Seq.length b1) b1 (Seq.length b2) b2
+
+let parse_asn1_set_of
+  (#t: Type)
+  (p: A.asn1_strong_parser t)
+: Tot (A.asn1_weak_parser (list t))
+= LPT.weaken _ (tot_parse_byte_sorted_list lex_byte_order p)
