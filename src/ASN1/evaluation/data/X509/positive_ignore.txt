@@ -1,0 +1,41 @@
+// Unsupported directorystring
+108.13.120.254.results.1.der
+// Unsupported generalname
+108.7.38.244.results.1.der
+109.110.225.66.results.1.der
+109.123.160.21.results.1.der
+109.123.78.166.results.1.der
+109.127.6.141.results.1.der
+109.164.141.14.results.1.der
+109.164.235.44.results.1.der
+109.164.236.40.results.1.der
+// Invalid Printablestring
+109.104.64.212.results.1.der
+// Invalid UTCTime
+108.0.160.2.results.1.der
+108.0.160.20.results.1.der
+108.0.160.22.results.1.der
+108.0.160.23.results.1.der
+108.0.160.24.results.1.der
+108.0.160.25.results.1.der
+108.0.160.26.results.1.der
+108.0.160.27.results.1.der
+108.0.160.28.results.1.der
+108.0.160.29.results.1.der
+108.0.160.3.results.1.der
+108.0.160.30.results.1.der
+108.0.160.6.results.1.der
+108.0.160.7.results.1.der
+109.164.240.145.results.1.der
+// Invalid empty sequence of in SubjectAltName
+108.0.186.10.results.1.der
+108.18.135.26.results.1.der
+109.104.2.45.results.1.der
+109.164.128.61.results.1.der
+// Overly large serial number
+109.126.8.20.results.1.der
+109.126.8.20.results.2.der
+109.127.210.106.results.1.der
+109.127.210.66.results.1.der
+109.127.212.3.results.1.der
+109.164.238.169.results.1.der
