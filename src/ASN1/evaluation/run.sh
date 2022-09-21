@@ -1,3 +1,4 @@
+#!/bin/bash
 format=$1
 subfolder=$2
 declare -i NCORRECT=0
