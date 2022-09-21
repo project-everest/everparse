@@ -119,7 +119,7 @@ Triangle2ValidateTriangle(
     uint64_t result = StartPosition;
     while (TRUE)
     {
-      uint64_t position = *&result;
+      uint64_t position = result;
       BOOLEAN ite;
       if (!((uint64_t)1U <= (truncatedInputLength - position)))
       {
