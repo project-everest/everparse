@@ -271,13 +271,20 @@ let make_gen_choice_type (#key : eqtype) (lc : list (key & Type)) = (id : key) &
 
 let make_gen_choice_type_with_fallback (#key : eqtype) (lc : list (key & Type)) (fb : Type) = (id : key) & (idlookup_with_fallback_t id lc fb)
 
+let isNonEmpty (#t : Type) (l : list t)
+= match l with
+  | [] -> false
+  | _ -> true
+
+let non_empty_list (t : Type) = l : (list t) {isNonEmpty l}
+
 let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
   match k with
   | ASN1_RESTRICTED_TERMINAL k' is_valid -> parse_filter_refine is_valid
   | ASN1_TERMINAL k' -> asn1_terminal_t k'
   | ASN1_SEQUENCE gitems -> asn1_sequence_t (dfst gitems)
-  | ASN1_SEQUENCE_OF k' ->  list (asn1_t k')
-  | ASN1_SET_OF k' -> list (asn1_t k')
+  | ASN1_SEQUENCE_OF k' ->  non_empty_list (asn1_t k')
+  | ASN1_SET_OF k' -> non_empty_list (asn1_t k') 
   | ASN1_PREFIXED k' -> asn1_t k'
   | ASN1_ANY_DEFINED_BY prefix id key_k ls ofb pf_wf pf_sup -> 
     let suffix_t =

@@ -236,10 +236,16 @@ let emailAddress_oid = mk_oid [1;2;840;113549;1;9;1]
 let emailAddress_field
 = mk_gen_items ["value" *^ (PLAIN ^: asn1_ia5string)] (_ by (seq_tac ()))
 
+let domainComponent_oid = mk_oid [0;9;2342;19200300;100;1;25]
+
+let domainComponent_field
+= mk_gen_items ["value" *^ (PLAIN ^: asn1_ia5string)] (_ by (seq_tac ()))
+
 let attributeTypeAndValue
 = asn1_any_oid_with_fallback
     "type"
-    [emailAddress_oid, emailAddress_field]
+    [(emailAddress_oid, emailAddress_field);
+     (domainComponent_oid, domainComponent_field)]
     attributeValue_field
     (_ by (seq_tac ()))
     (_ by (choice_tac ()))
@@ -286,6 +292,51 @@ let mk_expansion (critical : asn1_gen_item_k) (#s : _) (value : asn1_k s)
 = let items = [critical; "extnValue" *^ (PLAIN ^: (ASN1_ILC octetstring_id (ASN1_PREFIXED value)))] in
   mk_gen_items items pf
 
+let critical_field
+= mk_default_field asn1_boolean false
+
+let critical_field_MUST_false
+= mk_restricted_default_field asn1_boolean (fun b -> b = false) false
+
+let critical_field_MUST_true
+= mk_restricted_field asn1_boolean (fun b -> b = true)
+
+let id_pe_ipAddrBlocks = id_pe /+ 7
+
+//Can be refined
+
+let iPAddress = asn1_bitstring
+
+let iPAddressRange
+= asn1_sequence [
+    "min" *^ (PLAIN ^: iPAddress);
+    "max" *^ (PLAIN ^: iPAddress)]
+    (_ by (seq_tac ()))
+    
+let iPAddressOrRange
+= asn1_choice [
+    "addressPrefix" ^* iPAddress;
+    "addressRange" ^* iPAddressRange]
+    (_ by (choice_tac ()))
+    
+let iPAddressChoice
+= asn1_choice [
+    "inherit" ^* asn1_null;
+    "addressesOrRanges" ^* (asn1_sequence_of iPAddressOrRange)]
+    (_ by (choice_tac ()))
+
+let iPAddressFamily
+= asn1_sequence [
+    "addressFamily" *^ (PLAIN ^: (mk_restricted_field asn1_octetstring (fun s -> let l = Bytes.length s in 2 <= l && l <= 3)));
+    "ipAddressChoice" *^ (PLAIN ^: iPAddressChoice)]
+    (_ by (seq_tac ()))
+
+let iPAddrBlocks
+= asn1_sequence_of iPAddressFamily
+
+let iPAddrBlocks_expansion
+= mk_expansion (DEFAULT ^: critical_field) iPAddrBlocks (_ by (seq_tac ()))
+
 let id_ad = id_pkix /+ 48
 
 let id_ad_caIssuers = id_ad /+ 1
@@ -301,7 +352,7 @@ let generalName
     "dNSName" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2) asn1_ia5string);
     "directoryName" ^* (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 4) name);
     "uniformResourceIdentifier" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 6) asn1_ia5string);
-    "iPAddress" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 7) asn1_ia5string);
+    "iPAddress" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 7) asn1_octetstring);
     "registeredID" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 8) asn1_oid)]
     (_ by (choice_tac ()))
 
@@ -314,15 +365,6 @@ let accessDescription
     (_ by (seq_tac ()))
 
 let authorityInfoAccessSyntax = asn1_sequence_of accessDescription
-
-let critical_field
-= mk_default_field asn1_boolean false
-
-let critical_field_MUST_false
-= mk_restricted_default_field asn1_boolean (fun b -> b = false) false
-
-let critical_field_MUST_true
-= mk_restricted_field asn1_boolean (fun b -> b = true)
 
 let authorityInformationAccess_expansion
 = mk_expansion (DEFAULT ^: critical_field_MUST_false) authorityInfoAccessSyntax (_ by (seq_tac ()))
@@ -468,6 +510,7 @@ let extKeyUsage_expansion
 
 let supported_extensions 
 = [(id_pe_authorityInformationAccess, authorityInformationAccess_expansion);
+   (id_pe_ipAddrBlocks, iPAddrBlocks_expansion);
    (id_ce_subjectKeyIdentifier, subjectKeyIdentifier_expansion);
    (id_ce_keyUsage, keyUsage_expansion);
    (id_ce_subjectAlternativeName, subjectAlternativeName_expansion);
@@ -507,7 +550,7 @@ let x509_TBSCertificate
     "subjectPublicKeyInfo" *^ (PLAIN ^: subjectPublicKeyInfo);
     "issuerUniqueID" *^ (OPTION ^: (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) uniqueIdentifier));
     "subjectUniqueID" *^ (OPTION ^: (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2) uniqueIdentifier));
-    "extensions" *^ (PLAIN ^: (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 3) extensions))]
+    "extensions" *^ (OPTION ^: (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 3) extensions))]
     (_ by (seq_tac ()))
 
 #pop-options

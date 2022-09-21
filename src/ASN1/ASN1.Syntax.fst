@@ -161,7 +161,7 @@ let asn1_teletexstring = ASN1_ILC teletexstring_id (ASN1_TERMINAL ASN1_OCTETSTRI
 
 let ia5string_id = mk_constant_id 22
 
-let asn1_ia5string = ASN1_ILC ia5string_id (ASN1_TERMINAL ASN1_OCTETSTRING)
+let asn1_ia5string = ASN1_ILC ia5string_id (ASN1_TERMINAL ASN1_IA5STRING)
 
 let utctime_id = mk_constant_id 23
 

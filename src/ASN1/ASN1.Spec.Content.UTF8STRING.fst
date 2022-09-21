@@ -155,7 +155,7 @@ let lemma_mul_lt_lt_lt (a b c d : nat)
         (ensures (c < b * d))
 = _
 
-#push-options "--z3rlimit 64 --fuel 4 --ifuel 0"
+#push-options "--z3rlimit 128 --fuel 8 --ifuel 0"
 
 let lemma_cast_ret
   (state : utf8_cp_s)

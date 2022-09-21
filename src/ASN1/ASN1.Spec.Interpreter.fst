@@ -28,6 +28,19 @@ open ASN1.Spec.Set
 
 module List = FStar.List.Tot
 
+let parse_non_empty_list 
+  (#k : parser_kind)
+  (#t : Type)
+  (p : parser k t)
+: asn1_weak_parser (non_empty_list t)
+= weaken _ ((parse_list p) `parse_filter` isNonEmpty)
+
+let parse_non_empty_set 
+  (#t : Type)
+  (p : asn1_strong_parser t)
+: asn1_weak_parser (non_empty_list t)
+= (parse_asn1_set_of p) `parse_filter` isNonEmpty
+
 let rec dasn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   parse_debug #(asn1_terminal_t k) #(asn1_weak_parser_kind) "asn1_terminal_as_parser"
   (match k with
@@ -49,8 +62,8 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
   | ASN1_RESTRICTED_TERMINAL k' is_valid -> weaken _ ((dasn1_terminal_as_parser k') `parse_filter` is_valid)
   | ASN1_TERMINAL k' -> dasn1_terminal_as_parser k'
   | ASN1_SEQUENCE gitems -> make_asn1_sequence_parser (dasn1_sequence_as_parser (dfst gitems))
-  | ASN1_SEQUENCE_OF k' -> weaken asn1_weak_parser_kind (parse_list (dasn1_as_parser k'))
-  | ASN1_SET_OF k' -> parse_asn1_set_of (dasn1_as_parser k')
+  | ASN1_SEQUENCE_OF k' -> parse_non_empty_list (dasn1_as_parser k')
+  | ASN1_SET_OF k' -> parse_non_empty_set (dasn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (dasn1_as_parser k')
   | ASN1_ANY_DEFINED_BY prefix id key_k ls ofb pf pf' -> 
     let itemtwins = dasn1_sequence_as_parser prefix in
@@ -72,7 +85,7 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
       in
       make_asn1_sequence_any_parser itemtwins suffix_p_twin
     | Some gitems -> 
-      let fallback_p = Mkgenparser _ (make_asn1_sequence_parser (dasn1_sequence_as_parser (dfst gitems))) in
+      let fallback_p = Mkgenparser _ (parse_debug "parse_any_fallback" (make_asn1_sequence_parser (dasn1_sequence_as_parser (dfst gitems)))) in
       let suffix_p_twin = (Mkparsertwin #asn1_weak_parser_kind #(make_gen_choice_type_with_fallback (extract_types supported_p) (Mkgenparser?.t fallback_p))
         (weaken asn1_weak_parser_kind (make_gen_choice_with_fallback_weak_parser key_p supported_p fallback_p))
         (let _ = make_gen_choice_with_fallback_weak_parser_twin_and_then_cases_injective key_fp supported_p fallback_p in
@@ -98,21 +111,24 @@ and dasn1_as_parser (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_t k)
   match k with
   | ASN1_ILC id k' -> parse_debug "ASN1_ILC" (parse_asn1_ILC id (dasn1_content_as_parser k'))
   | ASN1_CHOICE_ILC lc pf -> parse_debug "ASN1_CHOICE" (make_asn1_choice_parser lc pf k (dasn1_lc_as_parser lc))
-  | ASN1_ANY_ILC -> parse_asn1_anyILC
+  | ASN1_ANY_ILC -> parse_debug "ASN1_ANY" (parse_asn1_anyILC)
 
 and dasn1_as_parser_twin (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_t k) & (fp : (asn1_id_t -> asn1_strong_parser (asn1_t k)) {and_then_cases_injective fp})) (decreases k) =
   match k with
   | ASN1_ILC id k' -> 
     let p = dasn1_content_as_parser k' in
     let _ = parser_asn1_ILC_twin_case_injective id p in
-    (parse_debug "ASN1_ILC" (parse_asn1_ILC id p), parse_asn1_ILC_twin id p)
+    (parse_debug "ASN1_ILC" (parse_asn1_ILC id p), 
+     parse_debugf "ASN1_ILC_f" (parse_asn1_ILC_twin id p))
   | ASN1_CHOICE_ILC lc pf ->
     let lp = dasn1_lc_as_parser lc in
     let _ = make_asn1_choice_parser_twin_cases_injective lc pf k lp in
-    (parse_debug "ASN1_CHOICE" (make_asn1_choice_parser lc pf k lp), make_asn1_choice_parser_twin lc pf k lp)
+    (parse_debug "ASN1_CHOICE" (make_asn1_choice_parser lc pf k lp),
+     parse_debugf "ASN1_CHOICE_f" (make_asn1_choice_parser_twin lc pf k lp))
   | ASN1_ANY_ILC -> 
     let _ = parse_asn1_anyILC_twin_and_then_cases_injective () in
-    (parse_asn1_anyILC, parse_asn1_anyILC_twin)
+    (parse_debug "ASN1_ANY" (parse_asn1_anyILC), 
+     parse_debugf "ASN1_ANY_f" (parse_asn1_anyILC_twin))
 
 and dasn1_decorated_as_parser_twin (item : asn1_gen_item_k) : Tot (gp : gen_decorated_parser_twin {Mkgendcparser?.d gp == item}) =
   match item with
@@ -155,8 +171,8 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
   | ASN1_RESTRICTED_TERMINAL k' is_valid -> weaken _ ((asn1_terminal_as_parser k') `parse_filter` is_valid)
   | ASN1_TERMINAL k' -> asn1_terminal_as_parser k'
   | ASN1_SEQUENCE gitems -> make_asn1_sequence_parser (asn1_sequence_as_parser (dfst gitems))
-  | ASN1_SEQUENCE_OF k' -> weaken asn1_weak_parser_kind (parse_list (asn1_as_parser k'))
-  | ASN1_SET_OF k' -> parse_asn1_set_of (asn1_as_parser k')
+  | ASN1_SEQUENCE_OF k' -> parse_non_empty_list (asn1_as_parser k')
+  | ASN1_SET_OF k' -> parse_non_empty_set (asn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (asn1_as_parser k')
   | ASN1_ANY_DEFINED_BY prefix id key_k ls ofb pf pf' -> 
     let itemtwins = asn1_sequence_as_parser prefix in

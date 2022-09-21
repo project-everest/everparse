@@ -1,4 +1,4 @@
-all: verify
+all: verify extract
 
 EVERPARSE_HOME ?= ../..
 KRML_HOME ?= $(EVERPARSE_HOME)/../karamel

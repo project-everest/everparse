@@ -18,3 +18,11 @@ val print_debug
     (requires True)
     (ensures (fun v' -> v' == v))
 
+val parse_debugf
+  (#t #t': Type)
+  (#k: parser_kind)
+  (msg: string)
+  (fp: t' -> parser k t)
+: Pure (t' -> parser k t)
+    (requires True)
+    (ensures (fun f -> forall x input . parse (f x) input == parse (fp x) input))

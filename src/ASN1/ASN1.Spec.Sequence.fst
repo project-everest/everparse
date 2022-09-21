@@ -221,15 +221,10 @@ let make_asn1_sequence_parser_body_twin
     | Mkgendcparser d p fp ->
       match d with
       | (| s, de, dk |) ->
-        if (Set.mem id s) then
-          let _ = Classical.forall_intro (parse_asn1_sequence_item_twin_nondefault hd id) in
-          let (p : asn1_weak_parser (asn1_sequence_t (List.map Mkgendcparser?.d itemtwins))) = weaken _ (parse_asn1_sequence_item_twin hd id) in
+        let _ = Classical.forall_intro (parse_asn1_sequence_item_twin_nondefault hd id) in
+        let (p : asn1_weak_parser (asn1_sequence_t (List.map Mkgendcparser?.d itemtwins))) = weaken _ (parse_asn1_sequence_item_twin hd id) in
           //assert (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p);
-          p
-        else
-          let p = fail_parser _ _ in
-          //assert (parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) p);
-          p)
+        p)
   | hd :: tl ->
     let (p, ns) =
     (match hd with
@@ -289,10 +284,7 @@ let make_asn1_sequence_parser_body_twin_and_then_cases_injective
         | Mkgendcparser d p fp ->
           match d with
           | (| s, de, dk |) ->
-            match (Set.mem id1 s), (Set.mem id2 s) with
-            | true, true -> 
-              parse_asn1_sequence_item_twin_cases_injective hd
-            | _, _ -> ())
+              parse_asn1_sequence_item_twin_cases_injective hd)
       | hd :: tl -> 
         (match hd with
         | Mkgendcparser d p fp ->
