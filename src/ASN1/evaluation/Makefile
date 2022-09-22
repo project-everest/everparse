@@ -1,9 +1,9 @@
+all:
+	+$(MAKE) prepare
+	+$(MAKE) run
+
 prepare:
 	unzip data.zip -d .
-
-all: 
-	prepare
-	run
 
 run_CRL_positive:
 	./run.sh CRL positive

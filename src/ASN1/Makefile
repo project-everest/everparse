@@ -74,7 +74,7 @@ compile: extract
 	cp ocaml/_build/default/ASN1_Parser.exe evaluation/
 	chmod +w evaluation/ASN1_Parser.exe
 
-test: compile
+test: eval
 
 eval: compile
 	$(MAKE) -C evaluation
