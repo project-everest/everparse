@@ -1,32 +1,56 @@
-#!/bin/bash
 format=$1
 subfolder=$2
-declare -i NCORRECT=0
+declare -i result=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
 declare -i TOT=0
 declare -i failed=0
+declare -i ignore=0
+
 for file in data/$format/$subfolder/*.der
 do
+  TOT=$TOT+1
+  ignore=0
   filebase=$(basename $file)
-  grep -q $filebase data/$format/"$subfolder"_ignore.txt
+  grep -q $filebase data/$format/"$subfolder"_ignore.txt 
   if [ $? -eq 0 ]; then
-    echo "Ignored due to semantic erros"
+    result[1]=${result[1]}+1
+    echo "Ignored due to white list:" $filebase
+    ignore=1
   else 
-    ./ASN1_Parser.exe $format "$file" > /dev/null
-    if [ $? -eq 0 ]; then
-      NCORRECT=$NCORRECT+1
-    else
-      if [ $failed -eq 0 ]; then
-        firstfail=$file
+    if [ "$format" = "CRL" ]; then
+      filesize=$(wc -c $file | awk '{print $1}')
+      if [ $filesize -ge 100000 ]; then
+        result[1]=${result[1]}+1
+        echo "Ignored due to filesize:" $filebase
+        ignore=1
       fi
-      failed=$failed+1
-    fi
-    TOT=$TOT+1
-    if [ $(expr $TOT % 100) -eq 0 ]; then
-      echo Succeeded "$NCORRECT"/"$TOT"
     fi
   fi
+  if [ $ignore -eq 0 ]; then
+    ./ASN1_Parser.exe $format "$file" > /dev/null
+    ret=$?
+    if [ "$subfolder" = "negative" ]; then
+      if [ $ret -ne 0 ]; then
+        ret=1
+      fi
+    fi
+    result[$ret]=${result[$ret]}+1
+  fi
+  if [ $(expr $TOT % 1000) -eq 0 ]; then
+    echo Processed "$TOT"
+  fi
+  if [ $TOT -eq 1 ]; then
+    firstfile=$filebase
+  fi
+  lastfile=$filebase
 done
 
-echo Succeeded "$NCORRECT"/"$TOT"
+echo First: $firstfile
+echo Last: $lastfile
 
-echo First failure is "$firstfail"
+echo Total: $TOT
+
+for i in ${!result[@]}; do
+  echo Exit with return value "$i": ${result[$i]}
+done
+
+

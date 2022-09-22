@@ -1,4 +1,9 @@
-all: run
+prepare:
+	unzip data.zip -d .
+
+all: 
+	prepare
+	run
 
 run_CRL_positive:
 	./run.sh CRL positive
@@ -14,4 +19,4 @@ run_X509_negative:
 
 run: run_X509_negative run_X509_positive run_CRL_negative run_CRL_positive
 
-.PHONY: all run run_X509_negative run_X509_positive run_CRL_negative run_CRL_positive
+.PHONY: prepare all run run_X509_negative run_X509_positive run_CRL_negative run_CRL_positive
