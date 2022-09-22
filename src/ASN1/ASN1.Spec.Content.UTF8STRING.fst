@@ -218,6 +218,7 @@ let control_s_sym_ord
   | S3' -> 4 
   | Init -> 5
 
+#restart-solver
 let lemma_update_next_non_intersect_init_sym
   (data1 : partial_t {pre_t Init data1})
   (data2 : partial_t {pre_t Init data2})

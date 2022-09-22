@@ -1,4 +1,4 @@
-all: verify extract
+all: verify compile
 
 EVERPARSE_HOME ?= ../..
 KRML_HOME ?= $(EVERPARSE_HOME)/../karamel
@@ -8,7 +8,7 @@ LOWPARSE_HOME=$(EVERPARSE_HOME)/src/lowparse
 INCLUDE_PATH = $(LOWPARSE_HOME) $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj
 
 FSTAR_OPTIONS = --cache_checked_modules \
-		--already_cached *,-ASN1Test,-ASN1 \
+		--already_cached *,-ASN1Test,-ASN1,-LowParse.Spec.Defaultable,-LowParse.Tot.Defaultable \
 		--cmi \
 	        --odir ocaml/extracted \
 		$(addprefix --include ,$(INCLUDE_PATH)) \
@@ -69,11 +69,18 @@ Test.c: krml.rsp
 # test: ASN1Test.c # test.exe
 #	cat $^
 
-test: extract
+compile: extract
 	$(MAKE) -C ocaml
+	cp ocaml/_build/default/ASN1_Parser.exe evaluation/
+	chmod +w evaluation/ASN1_Parser.exe
+
+test: compile
+
+eval: compile
+	$(MAKE) -C evaluation
 
 clean:
 	-rm -rf *.checked *.krml .depend *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
 	$(MAKE) -C ocaml clean
 
-.PHONY: all verify clean depend test
+.PHONY: all verify clean depend compile test eval

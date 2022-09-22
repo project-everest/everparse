@@ -6,7 +6,7 @@ open LowParse.Spec.Base
 
 let bool_id : asn1_id_t = MK_ASN1_ID UNIVERSAL PRIMITIVE 5ul
 
-// This sample type from Antoine is not well-formed
+// This sample type is not well-formed
 //
 // let sigAlg (seq_id:_) : asn1_k _ =
 // ASN1_ILC seq_id (
