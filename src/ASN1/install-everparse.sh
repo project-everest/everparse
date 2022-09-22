@@ -12,13 +12,13 @@ fi
 
 git clone https://github.com/project-everest/everest.git everest
 pushd everest
-if ! ./everest "$NO_INTERACTIVE" opam z3 ; then
+if ! ./everest $NO_INTERACTIVE opam z3 ; then
     echo "Please follow the instructions above and re-run this script"
     exit 1
 fi
 export PATH=$PWD/z3/bin:$PATH
-./everest "$NO_INTERACTIVE" reset
-./everest "$NO_INTERACTIVE" -j "$CI_THREADS" FStar make karamel make
+./everest $NO_INTERACTIVE reset
+./everest $NO_INTERACTIVE -j "$CI_THREADS" FStar make karamel make
 make -C everparse -j "$CI_THREADS" lowparse
 
 echo "Please set the following environment variables:"
