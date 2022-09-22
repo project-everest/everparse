@@ -35,7 +35,7 @@ type asn1_id_t =
 
 //ASN.1 kinds and High-level types
 
-//Nik: Can we describe the correspondence between the kind and the type by defining a function that maps a kind to its type. In that way, we can get the parsers from the partial computation of the function on a template which is slick.
+//Can we describe the correspondence between the kind and the type by defining a function that maps a kind to its type. In that way, we can get the parsers from the partial computation of the function on a template which is slick.
 
 //A hack for dependency on default
 
