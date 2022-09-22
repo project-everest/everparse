@@ -54,9 +54,9 @@ let id_dsa = mk_oid [1;2;840;10040;4;1]
 
 let dss_parms 
 = asn1_sequence 
-  ["p" *^ (PLAIN ^: asn1_integer); 
-   "q" *^ (PLAIN ^: asn1_integer);
-   "g" *^ (PLAIN ^: asn1_integer)]
+  ["p" *^ (PLAIN ^: asn1_bounded_integer 200); 
+   "q" *^ (PLAIN ^: asn1_bounded_integer 200);
+   "g" *^ (PLAIN ^: asn1_bounded_integer 200)]
   (_ by (seq_tac ()))
 
 let dss_parms_field
@@ -236,6 +236,21 @@ let emailAddress_oid = mk_oid [1;2;840;113549;1;9;1]
 let emailAddress_field
 = mk_gen_items ["value" *^ (PLAIN ^: asn1_ia5string)] (_ by (seq_tac ()))
 
+let unstructuredName_oid = mk_oid [1;2;840;113549;1;9;2]
+
+let pKCS9String 
+= asn1_choice [
+    "telextexString" ^* asn1_teletexstring;
+    "printableString" ^* asn1_printablestring;
+    "universalString" ^* asn1_universalstring;
+    "utf8String" ^* asn1_utf8string;
+    "bmpString" ^* asn1_bMPstring;
+    "ia5String" ^* asn1_ia5string]
+    (_ by (choice_tac ()))
+
+let unstructuredName_field
+= mk_gen_items ["id" *^ (PLAIN ^: pKCS9String)] (_ by (seq_tac ()))
+
 let domainComponent_oid = mk_oid [0;9;2342;19200300;100;1;25]
 
 let domainComponent_field
@@ -245,7 +260,8 @@ let attributeTypeAndValue
 = asn1_any_oid_with_fallback
     "type"
     [(emailAddress_oid, emailAddress_field);
-     (domainComponent_oid, domainComponent_field)]
+     (domainComponent_oid, domainComponent_field);
+     (unstructuredName_oid, unstructuredName_field)]
     attributeValue_field
     (_ by (seq_tac ()))
     (_ by (choice_tac ()))
@@ -346,8 +362,17 @@ let id_ad_ocsp = id_ad /+ 2
 let accessMethod
 = mk_restricted_field asn1_oid (fun oid -> oid = id_ad_caIssuers || oid = id_ad_ocsp)
 
+let otherName
+= asn1_any_oid_with_fallback
+    "type-id"
+    []
+    (mk_gen_items ["value" *^ (PLAIN ^: (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) asn1_any))] (_ by (seq_tac ())))
+    (_ by (seq_tac ()))
+    (_ by (choice_tac ()))
+
 let generalName
 = asn1_choice [
+    "otherName" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) otherName);
     "rfc822Name" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) asn1_ia5string);
     "dNSName" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 2) asn1_ia5string);
     "directoryName" ^* (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 4) name);

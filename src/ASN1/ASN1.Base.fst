@@ -4,6 +4,7 @@ open LowParse.Tot.Base
 open LowParse.Tot.Combinators
 
 open ASN1.Spec.Time
+open ASN1.Spec.Content.INTEGER
 
 // ASN.1 Kinds
 
@@ -41,7 +42,7 @@ type asn1_id_t =
 
 type asn1_terminal_k : Type =
 | ASN1_BOOLEAN
-| ASN1_INTEGER
+| ASN1_INTEGER : (bound : pos) -> asn1_terminal_k
 // | ASN1_ENUM
 | ASN1_BITSTRING
 | ASN1_OCTETSTRING
@@ -57,7 +58,7 @@ type asn1_terminal_k : Type =
 
 type asn1_boolean_t = bool
 
-type asn1_integer_t = int
+type asn1_integer_t (bound : pos) = integer_in_interval bound
 
 //Bitstring is represented as an array of bytes and 0~7 unused bits
 type asn1_bitstring_t = 
@@ -112,7 +113,7 @@ type asn1_generalizedtime_t = (b : B.bytes {is_valid_ASN1GENERALIZEDTIME b})
 let rec asn1_terminal_t (k : asn1_terminal_k) : eqtype =
   match k with
   | ASN1_BOOLEAN -> asn1_boolean_t
-  | ASN1_INTEGER -> asn1_integer_t
+  | ASN1_INTEGER bound -> asn1_integer_t bound
 //  | ASN1_ENUM -> asn1_enum_t
   | ASN1_BITSTRING -> asn1_bitstring_t
   | ASN1_OCTETSTRING -> asn1_octetstring_t
@@ -139,7 +140,7 @@ let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) * asn1_decorator)) (
     Set.disjoint s s' /\
     (match d with
     | PLAIN -> asn1_sequence_k_wf tl
-    | OPTION | DEFAULT -> asn1_sequence_k_wf' tl (Set.union s s'))
+    | _ -> asn1_sequence_k_wf' tl (Set.union s s'))
 
 and asn1_sequence_k_wf (li : list ((Set.set asn1_id_t) * asn1_decorator)) : Type =
   match li with

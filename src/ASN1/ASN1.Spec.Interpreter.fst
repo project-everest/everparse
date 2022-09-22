@@ -45,7 +45,7 @@ let rec dasn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_
   parse_debug #(asn1_terminal_t k) #(asn1_weak_parser_kind) "asn1_terminal_as_parser"
   (match k with
   | ASN1_BOOLEAN -> weaken _ parse_asn1_boolean
-  | ASN1_INTEGER -> weaken _ ((parse_untagged_bounded_integer 20) `parse_synth` (fun x -> x <: int))
+  | ASN1_INTEGER bound -> weaken _ (parse_untagged_bounded_integer bound)
   | ASN1_BITSTRING -> parse_asn1_bitstring
   | ASN1_OCTETSTRING -> parse_asn1_octetstring
   | ASN1_UTF8STRING -> parse_asn1_utf8string
@@ -154,7 +154,7 @@ and dasn1_sequence_as_parser (items : list asn1_gen_item_k) : Tot (lp : list gen
 let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   match k with
   | ASN1_BOOLEAN -> weaken _ parse_asn1_boolean
-  | ASN1_INTEGER -> weaken _ ((parse_untagged_bounded_integer 20) `parse_synth` (fun x -> x <: int))
+  | ASN1_INTEGER bound -> weaken _ (parse_untagged_bounded_integer bound)
   | ASN1_BITSTRING -> parse_asn1_bitstring
   | ASN1_OCTETSTRING -> parse_asn1_octetstring
   | ASN1_UTF8STRING -> parse_asn1_utf8string

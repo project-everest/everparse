@@ -5,11 +5,17 @@ open ASN1.Syntax
 
 module X509 = ASN1.X509
 
+let extension_fallback
+= mk_gen_items [
+    "critical" *^ (DEFAULT ^: X509.critical_field);
+    "extnValue" *^ (PLAIN ^: asn1_octetstring)]
+    (_ by (seq_tac ()))
+
 let crlExtension 
 = asn1_any_oid_with_fallback
     "extnId"
     []
-    X509.extension_fallback
+    extension_fallback
     (_ by (seq_tac ()))
     (_ by (choice_tac ()))
 
@@ -28,7 +34,7 @@ let revokedCertificates = asn1_sequence_of revokedCertificate
 
 let tBSCertList 
 = asn1_sequence [
-    "version" *^ (PLAIN ^: version);
+    "version" *^ (OPTION ^: version);
     "signature" *^ (PLAIN ^: X509.algorithmIdentifier);
     "issuer" *^ (PLAIN ^: X509.name);
     "thisUpdate" *^ (PLAIN ^: X509.time);

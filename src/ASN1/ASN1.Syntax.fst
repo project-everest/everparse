@@ -118,7 +118,9 @@ let asn1_boolean = ASN1_ILC boolean_id (ASN1_TERMINAL ASN1_BOOLEAN)
 
 let integer_id = mk_constant_id 2
 
-let asn1_integer = ASN1_ILC integer_id (ASN1_TERMINAL ASN1_INTEGER)
+let asn1_bounded_integer (bound : pos) = ASN1_ILC integer_id (ASN1_TERMINAL (ASN1_INTEGER bound))
+
+let asn1_integer = asn1_bounded_integer 20
 
 let bitstring_id = mk_constant_id 3
 

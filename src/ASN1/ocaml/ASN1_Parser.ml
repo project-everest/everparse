@@ -27,7 +27,7 @@ let check_certificate_version (s : string) : bool
          true
 
 let check_directorytype (s : string) : bool
-  = let pattern = Str.regexp_string "\x06\x03\x55\x04\x06\x16" in
+  = let pattern = Str.regexp "\x06\x03\x55\x04\\(.\\|\x0A\\)\x16" in
     try (let _ = Str.search_forward pattern s 0 in 
          print_string "Found invalid directory string type\n";
          true) with
@@ -42,7 +42,7 @@ let check_directorytype2 (s : string) : bool
 
 let check_omitted_default2 (s:string)
   : bool
-  = let pattern = Str.regexp_string "\x06\x03\x55\x1D\x0F\x01\x01\x00" in
+  = let pattern = Str.regexp "\x06\x03\x55\x1D.\x01\x01\x00" in
     try (let _ = Str.search_forward pattern s 0 in 
          print_string "Found default field not omitted in extension\n";
          true) with
@@ -50,26 +50,60 @@ let check_omitted_default2 (s:string)
 
 let check_wrong_timeformat (s:string)
   :bool
-  = let pattern = Str.regexp "{|\x17\x11|}.............0000" in
+  = let pattern = Str.regexp "\x17\x11[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\\(+\\|-\\)0000" in
     try (let _ = Str.search_forward pattern s 0 in 
          print_string "Found invalid time format\n";
          true) with
       Not_found -> false
 
+let check_empty_sequence (s:string)
+  : bool
+  = let pattern = Str.regexp_string "\x30\x09\x06\x03\x55\x1D\x11\x04\x02\x30\x00" in
+    try (let _ = Str.search_forward pattern s 0 in 
+         print_string "Found empty sequence in SubjectAlternativeName extension\n";
+         true) with
+      Not_found -> false
+
+let check_bad_boolean (s:string)
+  : bool
+  = let pattern = Str.regexp_string "\x06\x03\x55\x1D\x13\x01\x01\x01" in
+    try (let _ = Str.search_forward pattern s 0 in 
+         print_string "Found bad boolean in BasicConstraints\n";
+         true) with
+      Not_found -> false
+
+let check_overly_large (s:string)
+  : bool
+  = let pattern = Str.regexp_string "\xA0\x03\x02\x01\x02" in
+    try (let x = Str.search_forward pattern s 0 in 
+         let lch = String.get s (x + 6) in
+         if int_of_char lch > 20 then
+           (print_string "Found overly large serial number\n";
+           true)
+         else
+           false) with
+      Not_found -> false
+
 let get_failure_reason (s:string)
   : int
-  = if check_omitted_default s then 
+  = if check_certificate_version s then
       3
-    else if check_certificate_version s then
-      3
-    else if check_directorytype s then
-      3
-    else if check_directorytype2 s then
-      3
+    else if check_omitted_default s then 
+      4
     else if check_omitted_default2 s then
-      3
+      4
+    else if check_directorytype s then
+      5
+    else if check_directorytype2 s then
+      5
     else if check_wrong_timeformat s then
-      3
+      6
+    else if check_overly_large s then
+      6
+    else if check_bad_boolean s then
+      6
+    else if check_empty_sequence s then
+      7
     else
       2
 
