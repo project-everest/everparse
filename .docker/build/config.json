@@ -29,7 +29,7 @@
 
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
-        "hacl_version" : "origin/main",
+        "hacl_version" : "origin/_taramana_621",
         "karamel_version" : "origin/master"
     }
 }
