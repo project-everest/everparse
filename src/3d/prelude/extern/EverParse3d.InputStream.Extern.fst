@@ -21,7 +21,6 @@ let len_all
   then x.Aux.length
   else Aux.len_all x.Aux.base
 
-unfold
 let live
   (x: t)
   (m: HS.mem)
