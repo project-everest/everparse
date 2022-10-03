@@ -12,9 +12,10 @@ ValidatePoint(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -45,6 +46,7 @@ ValidatePoint(
     Err("_point",
       "x",
       EverParseErrorReasonOfResult(positionAfterPoint),
+      EverParseGetValidatorErrorKind(positionAfterPoint),
       Ctxt,
       Input,
       StartPosition);
@@ -76,6 +78,7 @@ ValidatePoint(
   Err("_point",
     "y",
     EverParseErrorReasonOfResult(positionAfterPoint0),
+    EverParseGetValidatorErrorKind(positionAfterPoint0),
     Ctxt,
     Input,
     positionAfterx);
@@ -90,9 +93,10 @@ ColoredPointValidateColoredPoint1(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -123,6 +127,7 @@ ColoredPointValidateColoredPoint1(
     Err("_coloredPoint1",
       "color",
       EverParseErrorReasonOfResult(positionAfterColoredPoint1),
+      EverParseGetValidatorErrorKind(positionAfterColoredPoint1),
       Ctxt,
       Input,
       StartPosition);
@@ -143,6 +148,7 @@ ColoredPointValidateColoredPoint1(
   Err("_coloredPoint1",
     "pt",
     EverParseErrorReasonOfResult(positionAfterColoredPoint10),
+    EverParseGetValidatorErrorKind(positionAfterColoredPoint10),
     Ctxt,
     Input,
     positionAftercolor);
@@ -157,9 +163,10 @@ ColoredPointValidateColoredPoint2(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -179,6 +186,7 @@ ColoredPointValidateColoredPoint2(
     Err("_coloredPoint2",
       "pt",
       EverParseErrorReasonOfResult(positionAfterColoredPoint2),
+      EverParseGetValidatorErrorKind(positionAfterColoredPoint2),
       Ctxt,
       Input,
       StartPosition);
@@ -209,6 +217,7 @@ ColoredPointValidateColoredPoint2(
   Err("_coloredPoint2",
     "color",
     EverParseErrorReasonOfResult(positionAfterColoredPoint20),
+    EverParseGetValidatorErrorKind(positionAfterColoredPoint20),
     Ctxt,
     Input,
     positionAfterpt);

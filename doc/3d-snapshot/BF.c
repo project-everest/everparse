@@ -12,9 +12,10 @@ BfValidateDummy(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -33,6 +34,7 @@ BfValidateDummy(
     Err("_dummy",
       "emp1",
       EverParseErrorReasonOfResult(positionAfterDummy),
+      EverParseGetValidatorErrorKind(positionAfterDummy),
       Ctxt,
       Input,
       StartPosition);
@@ -52,6 +54,7 @@ BfValidateDummy(
   Err("_dummy",
     "emp2",
     EverParseErrorReasonOfResult(positionAfterDummy0),
+    EverParseGetValidatorErrorKind(positionAfterDummy0),
     Ctxt,
     Input,
     positionAfteremp1);

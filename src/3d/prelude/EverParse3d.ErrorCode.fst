@@ -182,4 +182,5 @@ type error_frame = {
   typename_s: string;
   fieldname: string;
   reason: string;
+  error_code: U64.t
 }

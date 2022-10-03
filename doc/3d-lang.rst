@@ -654,6 +654,7 @@ An error handling callback is a C procedure with the following signature:
     const char *TypeName,
     const char *FieldName,
     const char *ErrorReason,
+    uint64_t ErrorCode,
     uint8_t *Context,
     uint32_t Length,
     uint8_t *Base,
@@ -693,16 +694,16 @@ the following arguments:
 
   * The ``FieldName`` argument is name of the field ``f``
 
-  * The ``ErrorReason`` argument is one of the following:
-
-    - "generic error"
-    - "not enough data"
-    - "impossible"
-    - "list size not multiple of element size"
-    - "action failed"
-    - "constraint failed"
-    - "unexpected padding"
-    - "unspecified"
+  * The ``ErrorReason`` and ``ErrorCode`` arguments are related and can be one of the following pairs:
+    
+    - "generic error", ``EVERPARSE_ERROR_GENERIC`` (1uL)
+    - "not enough data", ``EVERPARSE_ERROR_NOT_ENOUGH_DATA`` (2uL)
+    - "impossible", ``EVERPARSE_ERROR_IMPOSSIBLE`` (3uL)
+    - "list size not multiple of element size", ``EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE`` (4uL)
+    - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (5uL)
+    - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (6uL)
+    - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (7uL)
+    - "unspecified", with the ``ErrorCode > 7uL``
 
   * The ``Context`` argument is the user-provided ``Context`` pointer
     
@@ -1060,7 +1061,8 @@ implementation of
    void TcpEverParseError(
         const char *TypeName,
         const char *FieldName,
-        const char *Reason);
+        const char *Reason,
+        uint64_t ErrorCode)
                 
 
 This can be instantiated with a procedure to, say, log an error.

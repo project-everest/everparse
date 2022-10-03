@@ -12,9 +12,10 @@ ColorValidateColoredPoint(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -65,6 +66,7 @@ ColorValidateColoredPoint(
     Err("_coloredPoint",
       "col.refinement",
       EverParseErrorReasonOfResult(positionAfterColoredPoint),
+      EverParseGetValidatorErrorKind(positionAfterColoredPoint),
       Ctxt,
       Input,
       StartPosition);
@@ -98,6 +100,7 @@ ColorValidateColoredPoint(
     Err("_coloredPoint",
       "x",
       EverParseErrorReasonOfResult(positionAfterColoredPoint0),
+      EverParseGetValidatorErrorKind(positionAfterColoredPoint0),
       Ctxt,
       Input,
       positionAftercol_refinement0);
@@ -129,6 +132,7 @@ ColorValidateColoredPoint(
   Err("_coloredPoint",
     "y",
     EverParseErrorReasonOfResult(positionAfterColoredPoint1),
+    EverParseGetValidatorErrorKind(positionAfterColoredPoint1),
     Ctxt,
     Input,
     positionAfterx);

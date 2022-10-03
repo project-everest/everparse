@@ -57,7 +57,7 @@ static inline uint8_t
 
 
 static inline
-void EverParseHandleError(EverParseExtraT _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason)
+void EverParseHandleError(EverParseExtraT _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason, uint64_t error_code)
 {
   printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", typename, fieldname, reason);
 }

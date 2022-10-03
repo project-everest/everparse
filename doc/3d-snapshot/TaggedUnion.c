@@ -13,9 +13,10 @@ ValidateIntPayload(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLen,
@@ -45,6 +46,7 @@ ValidateIntPayload(
     Err("_int_payload",
       "missing",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
+      EverParseGetValidatorErrorKind(positionAfterIntPayload),
       Ctxt,
       Input,
       StartPosition);
@@ -73,6 +75,7 @@ ValidateIntPayload(
     Err("_int_payload",
       "missing",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
+      EverParseGetValidatorErrorKind(positionAfterIntPayload),
       Ctxt,
       Input,
       StartPosition);
@@ -101,6 +104,7 @@ ValidateIntPayload(
     Err("_int_payload",
       "missing",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
+      EverParseGetValidatorErrorKind(positionAfterIntPayload),
       Ctxt,
       Input,
       StartPosition);
@@ -117,6 +121,7 @@ ValidateIntPayload(
   Err("_int_payload",
     "missing",
     EverParseErrorReasonOfResult(positionAfterIntPayload),
+    EverParseGetValidatorErrorKind(positionAfterIntPayload),
     Ctxt,
     Input,
     StartPosition);
@@ -131,9 +136,10 @@ TaggedUnionValidateInteger(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -163,6 +169,7 @@ TaggedUnionValidateInteger(
     Err("_integer",
       "size",
       EverParseErrorReasonOfResult(positionAfterInteger),
+      EverParseGetValidatorErrorKind(positionAfterInteger),
       Ctxt,
       Input,
       StartPosition);
@@ -189,6 +196,7 @@ TaggedUnionValidateInteger(
   Err("_integer",
     "payload",
     EverParseErrorReasonOfResult(positionAfterInteger0),
+    EverParseGetValidatorErrorKind(positionAfterInteger0),
     Ctxt,
     Input,
     positionAftersize);

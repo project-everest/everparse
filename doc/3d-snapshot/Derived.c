@@ -12,9 +12,10 @@ DerivedValidateTriple(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -33,6 +34,7 @@ DerivedValidateTriple(
     Err("_Triple",
       "pair",
       EverParseErrorReasonOfResult(positionAfterTriple),
+      EverParseGetValidatorErrorKind(positionAfterTriple),
       Ctxt,
       Input,
       StartPosition);
@@ -63,6 +65,7 @@ DerivedValidateTriple(
   Err("_Triple",
     "third",
     EverParseErrorReasonOfResult(positionAfterTriple0),
+    EverParseGetValidatorErrorKind(positionAfterTriple0),
     Ctxt,
     Input,
     positionAfterpair);
@@ -77,9 +80,10 @@ DerivedValidateQuad(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -98,6 +102,7 @@ DerivedValidateQuad(
     Err("_Quad",
       "_12",
       EverParseErrorReasonOfResult(positionAfterQuad),
+      EverParseGetValidatorErrorKind(positionAfterQuad),
       Ctxt,
       Input,
       StartPosition);
@@ -116,6 +121,7 @@ DerivedValidateQuad(
   Err("_Quad",
     "_34",
     EverParseErrorReasonOfResult(positionAfterQuad0),
+    EverParseGetValidatorErrorKind(positionAfterQuad0),
     Ctxt,
     Input,
     positionAfter12);
