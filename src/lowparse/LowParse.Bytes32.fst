@@ -62,3 +62,21 @@ let reveal_empty' : squash (reveal empty_bytes == Seq.empty) =
 let reveal_empty () : Lemma
   (reveal empty_bytes == Seq.empty)
 = ()
+
+let b32_equal
+  (b1 b2: bytes)
+: Lemma
+  (requires (reveal b1 `Seq.equal` reveal b2))
+  (ensures (b1 == b2))
+= ()
+
+let rec b32_hide (s: Seq.seq FStar.UInt8.t { Seq.length s < pow2 32 }) : Tot (res: bytes { res == hide s })
+  (decreases (Seq.length s))
+=
+  let res : bytes =
+    if Seq.length s = 0
+    then empty_bytes
+    else append (create 1ul (Seq.index s 0)) (b32_hide (Seq.slice s 1 (Seq.length s)))
+  in
+  b32_equal res (hide s);
+  res

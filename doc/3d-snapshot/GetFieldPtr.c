@@ -39,7 +39,7 @@ GetFieldPtrValidateT(
     uint64_t result = StartPosition;
     while (TRUE)
     {
-      uint64_t position = *&result;
+      uint64_t position = result;
       BOOLEAN ite;
       if (!((uint64_t)1U <= (truncatedInputLength - position)))
       {
@@ -124,7 +124,7 @@ GetFieldPtrValidateT(
     uint64_t result = positionAfterf1;
     while (TRUE)
     {
-      uint64_t position = *&result;
+      uint64_t position = result;
       BOOLEAN ite;
       if (!((uint64_t)1U <= (truncatedInputLength - position)))
       {

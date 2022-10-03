@@ -41,24 +41,26 @@ fi
 platform=$(uname -m)
 z3=z3$exe
 if ! Z3_DIR=$(dirname $(which $z3)) ; then
-    if [[ -d z3 ]] ; then
-        true
-    elif $is_windows ; then
-        z3_tagged=Z3-4.8.5
-        z3_archive=z3-4.8.5-x64-win.zip
-        wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
-        unzip $z3_archive
-        mv z3-4.8.5-x64-win z3
-        chmod +x z3/bin/z3.exe
-        if [[ -f z3/bin/*.dll ]] ; then chmod +x z3/bin/*.dll ; fi
-        if [[ -f z3/lib/*.dll ]] ; then chmod +x z3/lib/*.dll ; fi
+    if $is_windows ; then
+        if ! [[ -d z3 ]] ; then
+            z3_tagged=Z3-4.8.5
+            z3_archive=z3-4.8.5-x64-win.zip
+            wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
+            unzip $z3_archive
+            mv z3-4.8.5-x64-win z3
+            chmod +x z3/bin/z3.exe
+            for f in z3/bin/*.dll ; do if [[ -f $f ]] ; then chmod +x $f ; fi ; done
+            if [[ -f z3/lib/*.dll ]] ; then chmod +x z3/lib/*.dll ; fi
+        fi
         Z3_DIR="$PWD/z3/bin"
     elif [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
-        # Download a dependency-free z3
-        z3_tagged=z3-4.8.5-linux-clang
-        z3_archive=$z3_tagged-$platform.tar.gz
-        wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
-        tar xzf $z3_archive
+        if ! [[ -d z3 ]] ; then
+            # Download a dependency-free z3
+            z3_tagged=z3-4.8.5-linux-clang
+            z3_archive=$z3_tagged-$platform.tar.gz
+            wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
+            tar xzf $z3_archive
+        fi
         Z3_DIR="$PWD/z3"
     else
         echo "z3 4.8.5 is missing, please add it to your PATH"
@@ -149,7 +151,7 @@ make_everparse() {
             export OCAMLPATH="$OCAMLFIND_DESTDIR:$OCAMLPATH"
         fi
         if [[ -z $HACL_HOME ]] ; then
-            [[ -d hacl-star ]] || git clone https://github.com/project-everest/hacl-star
+            [[ -d hacl-star ]] || git clone https://github.com/hacl-star/hacl-star
             HACL_HOME=$(fixpath $PWD/hacl-star)
         else
             HACL_HOME=$(fixpath "$HACL_HOME")
@@ -178,8 +180,7 @@ make_everparse() {
     then
         $cp $LIBGMP10_DLL everparse/bin/
         $cp $Z3_DIR/*.exe everparse/bin/
-        if [[ -f $Z3_DIR/*.dll ]] ; then $cp $Z3_DIR/*.dll everparse/bin/ ; fi
-        if [[ -f $Z3_DIR/../lib/*.dll ]] ; then cp $Z3_DIR/../lib/*.dll everparse/bin/ ; fi
+	find $Z3_DIR/.. -name *.dll -exec cp {} everparse/bin \;
         if [[ -z "$NO_EVERCRYPT" ]] ; then
             for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
                 libevercrypt_dll=$f/libevercrypt.dll
@@ -282,7 +283,7 @@ make_everparse() {
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
     if [[ -z "$NO_EVERCRYPT" ]] ; then
-        wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE
+        wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/hacl-star/hacl-star/main/LICENSE
     fi
     wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
     if $is_windows ; then
@@ -327,6 +328,58 @@ zip_everparse() {
         time tar cvzf everparse$ext everparse/*
     fi
     if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
+
+    if $is_windows ; then
+        # Create the nuget package
+
+        # We are in the top-level everparse root
+
+        nuget_base=nuget_package
+
+        if [[ -d $nuget_base ]] ; then
+            echo "Nuget base directory $nuget_base already exists, please make way"
+            exit 1
+        fi
+
+        mkdir -p $nuget_base
+
+        # Set up the directory structure for the nuget package
+        
+        # Copy README to nuget top-level
+        cp everparse/README $nuget_base
+        # Copy the manifest file to nuget top-level
+        cp src/package/EverParse.nuspec $nuget_base
+        # Create the content directory, and copy all the files there
+
+        #NOTE: this is creating the content dir with win- prefix,
+        #      since we are in if $is_windows
+        #      if someday we do it for linux also, change accordingly
+        
+        content_dir=$nuget_base/content/win-$platform
+        mkdir -p $content_dir
+        cp -R everparse/* $content_dir
+
+        # Download nuget.exe to create the package
+        nuget_exe_url=https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+        wget $nuget_exe_url
+        chmod a+x nuget.exe
+
+        # Run the pack command
+        pushd $nuget_base
+
+
+	if [[ -z "$everparse_nuget_version" ]] ; then
+		everparse_nuget_version=1.0.0
+	fi
+	# NoDefaultExcludes for .clang-format file that nuget pack excludes
+        ../nuget.exe pack -OutputFileNamesWithoutVersion -NoDefaultExcludes -Version $everparse_nuget_version ./EverParse.nuspec
+        cp EverParse.nupkg ..
+        if $with_version ; then mv ../EverParse.nupkg ../EverParse."$everparse_nuget_version".nupkg ; fi
+        popd
+    fi
+    # Not doing any cleanup in the spirit of existing package
+
+    # TODO: push this package?
     
     # END
     true

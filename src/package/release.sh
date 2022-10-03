@@ -24,11 +24,13 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
+remote=https://${SATS_TOKEN}@github.com/project-everest/everparse.git
+
+branchname=$(git rev-parse --abbrev-ref HEAD)
 git diff --staged --exit-code
 git diff --exit-code
-git fetch --tags
-git pull --ff-only
-branchname=$(git rev-parse --abbrev-ref HEAD)
+git fetch $remote --tags
+git pull $remote $branchname --ff-only
 
 everparse_version=$(cat $EVERPARSE_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
@@ -40,11 +42,13 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
     git commit -m "Release $everparse_version"
     git tag $everparse_version
 fi
+#strip the v
+export everparse_nuget_version=${everparse_version:1}
 
 src/package/package.sh -zip
 
 # push my commit and the tag
-git push origin $branchname $everparse_version
+git push $remote $branchname $everparse_version
 
 platform=$(uname -m)
 
@@ -54,9 +58,10 @@ else
     ext=.tar.gz
 fi
 
-archive=everparse_"$everparse_version"_"$OS"_"$platform""$ext"
+function upload_archive () {
+    archive="$1"
 
-docker build \
+    docker build \
        -t everparse-release:$everparse_version \
        -f src/package/Dockerfile.release \
        --build-arg SATS_FILE=$archive \
@@ -64,3 +69,11 @@ docker build \
        --build-arg SATS_COMMITISH=$branchname \
        --build-arg SATS_TOKEN=$SATS_TOKEN \
        .
+}
+
+upload_archive everparse_"$everparse_version"_"$OS"_"$platform""$ext"
+
+if $is_windows ; then
+    # Also upload the NuGet package to GitHub releases
+    upload_archive EverParse."$everparse_nuget_version".nupkg
+fi

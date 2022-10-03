@@ -14,6 +14,7 @@ let opt_some    = ref "Some"
 let opt_type    = ref "option"
 let emit_high   = ref true
 let emit_low    = ref true
+let emit_eq     = ref false
 let types_from  = ref ""
 let types_to    = ref ""
 
