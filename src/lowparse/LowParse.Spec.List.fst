@@ -103,6 +103,33 @@ let parse_list_eq'
   )))
 = ()
 
+let rec tot_parse_list_aux
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+  (b: bytes)
+: Pure (option (list t * (consumed_length b)))
+    (requires True)
+    (ensures (fun y -> y == parse_list_aux #k p b))
+    (decreases (Seq.length b))
+= if Seq.length b = 0
+  then 
+    Some ([], (0 <: consumed_length b))
+  else
+    match p b with
+    | None -> None
+    | Some (v, n) ->
+      if n = 0
+      then None (* elements cannot be empty *)
+      else
+        match tot_parse_list_aux p (Seq.slice b n (Seq.length b)) with
+	| Some (l, n') -> Some (v :: l, (n + n' <: consumed_length b))
+	| _ -> None
+
+let tot_parse_list #k #t p =
+  parser_kind_prop_ext parse_list_kind (parse_list #k p) (tot_parse_list_aux p);
+  tot_parse_list_aux p
+
 let bare_serialize_list_correct
   (#k: parser_kind)
   (#t: Type)
