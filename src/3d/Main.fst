@@ -362,6 +362,20 @@ let process_file (en:env)
       en.translate_env;
   }
 
+let emit_config_as_fstar_module ()
+  : ML unit
+  = match Deps.get_config () with
+    | None -> raise (Error ("'--__micro_step emitconfig' expects the '--config' option to also be set"))
+    | Some (cfg, config_module_name) ->
+      let fst_file_contents = Config.emit_config_as_fstar_module config_module_name cfg in
+      let fst_file =
+        open_write_file
+          (Printf.sprintf "%s/%s.fst"
+            (Options.get_output_dir())
+            config_module_name) in
+      FStar.IO.write_string fst_file fst_file_contents;
+      FStar.IO.close_write_file fst_file
+
 let process_files (files_and_modules:list (string & string))
                   (emit_fstar:string -> ML bool)
                   (emit_output_types_defs:bool)
@@ -372,11 +386,12 @@ let process_files (files_and_modules:list (string & string))
                     (List.map fst files_and_modules |> String.concat " "));
   let all_modules = List.map snd files_and_modules in
   let env = initial_env () in
+  if Options.get_batch() then emit_config_as_fstar_module();
   files_and_modules
   |> List.fold_left (fun env (fn, modul) ->
                     process_file env fn modul (emit_fstar modul) emit_output_types_defs all_modules) env
   |> ignore
-
+  
 let produce_and_postprocess_c
   (out_dir: string)
   (file: string)
@@ -399,13 +414,19 @@ let produce_and_postprocess_c
 let go () : ML unit =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
   let cmd_line_files = Options.parse_cmd_line() in
-  let c = Deps.get_config () in
+  let cfg_opt = Deps.get_config () in
   (* Special mode: --check_inplace_hashes *)
   let inplace_hashes = Options.get_check_inplace_hashes () in
   if Cons? inplace_hashes
   then Batch.check_inplace_hashes inplace_hashes
   else
   let micro_step = Options.get_micro_step () in
+  if micro_step = Some HashingOptions.MicroStepEmitConfig
+  then (
+    emit_config_as_fstar_module ();
+    exit 0
+  )
+  else
   if micro_step = Some HashingOptions.MicroStepCopyClangFormat
   then
   (* Special mode: --__micro_step copy_clang_format *)

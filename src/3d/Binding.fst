@@ -78,7 +78,6 @@ let params_of_decl (d:decl) : list param =
   | OutputType _ -> []
   | ExternType _ -> []
   | ExternFn _ _ ps -> ps
-  | CompileTimeFlag _ -> []
 
 let check_shadow (e:H.t ident' 'a) (i:ident) (r:range) =
   match H.try_find e i.v with
@@ -1701,20 +1700,17 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_extern_fn e f d;
     d
 
-  | CompileTimeFlag i ->
-    let ms = nullary_macro tbool None in
-    add_global e i d (Inr ms); 
-    d
-
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
   List.map (bind_decl g) p, g
 
 let initial_global_env () =
+  let cfg = Deps.get_config () in
   let e = {
     ge_h = H.create 10;
     ge_out_t = H.create 10;
     ge_extern_t = H.create 10;
     ge_extern_fn = H.create 10;
+    ge_cfg = cfg
   }
   in
   let nullary_decl i =
@@ -1759,6 +1755,18 @@ let initial_global_env () =
       typedef_ptr_abbrev = void_ident;
       typedef_attributes = []
     })) dummy_range [] false)
+  in
+  let _ = 
+    match cfg with
+    | None -> ()
+    | Some (cfg, module_name) ->
+      List.iter 
+        (fun flag ->
+          let ms = nullary_macro tbool None in
+          let i = with_dummy_range { to_ident' flag with modul_name = Some module_name } in
+          let d = mk_decl (ExternFn i tbool []) dummy_range [] false in
+          add_global e i d (Inr ms))
+        cfg.compile_time_flags.flags
   in
   e
 

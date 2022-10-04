@@ -1410,10 +1410,6 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
       params@[i, t],ds@ds_t) ([], ds) params in
     ds @ [with_comments (T.Extern_fn f ret params) false []]
 
-  | CompileTimeFlag i ->
-    let t, ds_t = translate_typ tbool in
-    ds_t @ [with_attrs (T.Assumption (i, t)) false true false false []]
-
 noeq
 type translate_env = {
   t_has_reader: H.t ident' bool;

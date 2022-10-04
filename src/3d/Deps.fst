@@ -193,7 +193,6 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | OutputType _
     | ExternType _
     | ExternFn _ _ _ -> []  //AR: no dependencies from the output/extern types yet
-    | CompileTimeFlag _ -> []
   in
 
   let has_output_types (ds:list decl) : bool =
@@ -291,11 +290,18 @@ let has_extern_types g m = List.Tot.mem m g.modules_with_extern_types
 
 let has_extern_functions g m = List.Tot.mem m g.modules_with_extern_functions
 
-let get_config () =
+
+#push-options "--warn_error -272"
+let parsed_config : ref (option (Config.config & string)) = ST.alloc None
+#pop-options
+
+let parse_config () =
   match Options.get_config_file () with
   | None -> None
   | Some fn -> 
-    if not (OS.file_exists fn)
+    let module_name = Options.config_module_name () in
+    if None? module_name then failwith "Impossible"
+    else if not (OS.file_exists fn)
     then raise (Error ("Unable to file configuration file: " ^ fn))
     else 
       let s = 
@@ -304,7 +310,7 @@ let get_config () =
         | _ -> raise (Error ("Unable to read configuration file: "^fn))
       in
       match JSON.config_of_json s with
-      | Pervasives.Inl c -> Some c
+      | Pervasives.Inl c -> Some (c, Some?.v module_name)
       | Pervasives.Inr err -> 
         let msg = 
           Printf.sprintf "Unable to parse configuration: %s\n\
@@ -314,3 +320,11 @@ let get_config () =
                           (JSON.config_to_json { compile_time_flags = { flags = ["FLAG1"; "FLAG2"; "FLAG3"];
                                                                         include_file = "flags.h" }}) in
         raise (Error msg)
+
+let get_config () = 
+  match !parsed_config with
+  | Some c -> Some c
+  | None ->
+    let copt = parse_config () in
+    parsed_config := copt;
+    copt

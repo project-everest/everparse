@@ -36,10 +36,6 @@ module H = Hashtable
      and removes the Static
 *)
 
-#push-options "--warn_error -272" //intentional top-level effect
-let auxiliary_decls : ref (list decl) = FStar.ST.alloc []
-#pop-options
-
 let check_desugared_enum_cases (cases:list enum_case) : ML (list ident) =
     List.map
       (function
@@ -176,6 +172,18 @@ let prim_consts = [
   "void" ]
 
 let resolve_ident (env:qenv) (i:ident) : ML ident =
+  let resolve_to_current_module i =
+    { i with v = { i.v with modul_name = Some env.mname } }
+  in
+  let maybe_resolve_as_ifdef i 
+    : ML ident
+    = match env.global_env.ge_cfg with
+      | None -> resolve_to_current_module i
+      | Some (cfg, cfg_module_name) ->
+        if List.mem i.v.name cfg.compile_time_flags.flags
+        then { i with v = { i.v with modul_name = Some cfg_module_name } }
+        else resolve_to_current_module i
+  in
   if List.mem i.v.name prim_consts  //it's a primitive constant, e.g. UINT8, leave as is
   then i
   else if List.mem i.v.name env.local_names  //it's a local name (e.g. a parameter name)
@@ -187,7 +195,7 @@ let resolve_ident (env:qenv) (i:ident) : ML ident =
                         i.range
              else i)  //return the local name as is
        else (match i.v.modul_name with  //it's a top-level name
-             | None -> { i with v = { i.v with modul_name = Some env.mname } }  //if unqualified, add current module
+             | None -> maybe_resolve_as_ifdef i
              | Some m ->  //if already qualified, check if it is an abbreviation
                (match H.try_find env.module_abbrevs m with
                 | None -> i
@@ -196,30 +204,20 @@ let resolve_ident (env:qenv) (i:ident) : ML ident =
 
 let rec collect_ifdef_guards (env:qenv) (e:expr) 
   : ML unit
-  = match e.v with
+  = let check_resolved_to_ifdef i =
+      match env.global_env.ge_cfg with
+      | None -> false
+      | Some (cfg, cfg_module_name) ->
+        List.mem i.v.name cfg.compile_time_flags.flags
+        && i.v.modul_name = Some cfg_module_name
+    in
+    match e.v with
     | This -> error "'this' is not allowed in the guard of an #if" e.range
     | Static _ -> failwith "static should have been eliminated already"
     | Constant _ -> ()
     | Identifier i ->
-      if List.mem i.v.name env.local_names  //it's a local name (e.g. a parameter name)
+      if not (check_resolved_to_ifdef i)
       then error (Printf.sprintf "Identifier %s is not a compile-time macro but is used in a #if" i.v.name) e.range
-      else (
-        //declare ident, if not already declared      
-        let aux = !auxiliary_decls in
-        match List.tryFind 
-                (fun d -> 
-                  match d.d_decl.v with
-                  | CompileTimeFlag j -> i.v.name = j.v.name
-                  | _ -> false)
-                aux
-        with
-        | None -> 
-          IO.print_string (Printf.sprintf "Adding declaration of %s\n" i.v.name);
-          let d = mk_decl (CompileTimeFlag i) e.range [] false in
-          auxiliary_decls := d :: aux
-        | Some _ -> () //already declared
-
-      )
     | App op args ->
       begin 
       match op with
@@ -421,12 +419,10 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let ret = resolve_typ env ret in
     let params, _ = resolve_params env params in
     ExternFn id ret params
-  | CompileTimeFlag i -> d
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
 let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
-  auxiliary_decls := [];
   let decls, refinement = p in
   let decls = List.collect desugar_one_enum decls in
   let env = {
@@ -439,8 +435,7 @@ let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
   } in
   H.insert env.extern_types (Ast.to_ident' "void") ();
   let decls = List.map (resolve_decl env) decls in
-  let aux = List.rev (!auxiliary_decls) in
-  aux@decls,
+  decls,
   (match refinement with
    | None -> None
    | Some tr ->
