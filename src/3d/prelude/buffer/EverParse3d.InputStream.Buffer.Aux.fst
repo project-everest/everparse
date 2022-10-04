@@ -80,6 +80,7 @@ let default_error_handler
   (typename_s: string)
   (fieldname: string)
   (reason: string)
+  (error_code: U64.t)
   (context: B.pointer EverParse3d.ErrorCode.error_frame)
   (input: input_buffer)
   (start_pos: U64.t)
@@ -94,5 +95,6 @@ let default_error_handler
       EverParse3d.ErrorCode.typename_s = typename_s;
       EverParse3d.ErrorCode.fieldname = fieldname;
       EverParse3d.ErrorCode.reason = reason;
+      EverParse3d.ErrorCode.error_code = error_code;      
     }
   end

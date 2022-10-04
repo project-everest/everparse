@@ -134,9 +134,11 @@ let valid
   Some? (LP.parse p (I.get_remaining sl h))
 
 inline_for_extraction
-let error_handler = typename:string ->
-                    fieldname:string ->
-                    error_reason:string ->
+let error_handler = 
+    typename:string ->
+    fieldname:string ->
+    error_reason:string ->
+    error_code:U64.t ->
     ctxt: app_ctxt ->
     sl: input_buffer_t ->
     pos: LPE.pos_t ->
@@ -308,7 +310,7 @@ let validate_with_error_handler (typename:string)
     if LPE.is_success pos1
     then pos1
     else (
-         err typename fieldname (LPE.error_reason_of_result pos1) ctxt input pos0;
+         err typename fieldname (LPE.error_reason_of_result pos1) (LPE.get_validator_error_kind pos1) ctxt input pos0;
          pos1
     )
 

@@ -1080,6 +1080,16 @@ let rec print_as_c_type (t:typ) : ML string =
     | _ ->
          "__UNKNOWN__"
 
+let error_code_macros = 
+   //To be kept consistent with EverParse3d.ErrorCode.error_reason_of_result
+   "#define EVERPARSE_ERROR_GENERIC 1uL\n\
+    #define EVERPARSE_ERROR_NOT_ENOUGH_DATA 2uL\n\
+    #define EVERPARSE_ERROR_IMPOSSIBLE 3uL\n\
+    #define EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE 4uL\n\
+    #define EVERPARSE_ERROR_ACTION_FAILED 5uL\n\
+    #define EVERPARSE_ERROR_CONSTRAINT_FAILED 6uL\n\
+    #define EVERPARSE_ERROR_UNEXPECTED_PADDING 7uL\n"
+
 let print_c_entry (modul: string)
                   (env: global_env)
                   (ds:list decl)
@@ -1090,6 +1100,7 @@ let print_c_entry (modul: string)
                               const char *typename_s,\n\t\
                               const char *fieldname,\n\t\
                               const char *reason,\n\t\
+                              uint64_t error_code,\n\t\
                               uint8_t *context,\n\t\
                               EverParseInputBuffer input,\n\t\
                               uint64_t start_pos)\n\
@@ -1099,6 +1110,7 @@ let print_c_entry (modul: string)
               typename_s,\n\t\t\
               fieldname,\n\t\t\
               reason,\n\t\t\
+              error_code,\n\t\t\
               frame,\n\t\t\
               input,\n\t\t\
               start_pos\n\t\
@@ -1134,14 +1146,15 @@ let print_c_entry (modul: string)
              { .filled = FALSE,\n\t\
                .typename_s = \"UNKNOWN\",\n\t\
                .fieldname =  \"UNKNOWN\",\n\t\
-               .reason =   \"UNKNOWN\"\n\t\t\
+               .reason =   \"UNKNOWN\",\n\t\
+               .error_code = 0uL\n\
              };\n\
        EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t\
        uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
        uint64_t parsedSize = EverParseGetValidatorErrorPos(result);\n\
        if (EverParseIsError(result))\n\t\
        {\n\t\t\
-           EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+           EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
        }\n\t\
        EverParseRetreat(_extra, base, parsedSize);\n\
        return parsedSize;"
@@ -1230,6 +1243,7 @@ let print_c_entry (modul: string)
   let header =
     Printf.sprintf
       "#include \"EverParseEndianness.h\"\n\
+       %s\n\
        %s\
        #ifdef __cplusplus\n\
        extern \"C\" {\n\
@@ -1238,6 +1252,7 @@ let print_c_entry (modul: string)
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
+      error_code_macros
       (if has_output_types ds || has_extern_types ds
        then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
        else "")
