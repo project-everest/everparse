@@ -39,4 +39,13 @@ Indeed, EverParse is part of [Project Everest](https://project-everest.github.io
 `make`
 
 ### Running
-`./bin/qd.exe -help`
+
+Everparse offers two different executables:
+
+* `./bin/qd.exe` (or `quackyducky` when using the Docker file in `./example`): this executable produces parser/serializer pairs in F* given an input description similar to C types.
+
+    An example of use of `quackyducky` is detailed in [this documentation]("./example/README.md").
+* `./bin/3d.exe` or (`3d`when using the Docker file in `./example`): this executable produces validators in F* given a description in 3d description language.
+
+    The documentation for this executable can be found [here]("https://project-everest.github.io/everparse/3d.html").
+
