@@ -398,6 +398,7 @@ let produce_and_postprocess_c
 let go () : ML unit =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
   let cmd_line_files = Options.parse_cmd_line() in
+  let c = Deps.get_config () in
   (* Special mode: --check_inplace_hashes *)
   let inplace_hashes = Options.get_check_inplace_hashes () in
   if Cons? inplace_hashes

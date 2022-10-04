@@ -291,3 +291,26 @@ let has_extern_types g m = List.Tot.mem m g.modules_with_extern_types
 
 let has_extern_functions g m = List.Tot.mem m g.modules_with_extern_functions
 
+let get_config () =
+  match Options.get_config_file () with
+  | None -> None
+  | Some fn -> 
+    if not (OS.file_exists fn)
+    then raise (Error ("Unable to file configuration file: " ^ fn))
+    else 
+      let s = 
+        try OS.file_contents fn
+        with
+        | _ -> raise (Error ("Unable to read configuration file: "^fn))
+      in
+      match JSON.config_of_json s with
+      | Pervasives.Inl c -> Some c
+      | Pervasives.Inr err -> 
+        let msg = 
+          Printf.sprintf "Unable to parse configuration: %s\n\
+                          A sample configuration is shown below:\n\
+                          %s"
+                          err
+                          (JSON.config_to_json { compile_time_flags = { flags = ["FLAG1"; "FLAG2"; "FLAG3"];
+                                                                        include_file = "flags.h" }}) in
+        raise (Error msg)

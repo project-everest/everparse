@@ -18,3 +18,5 @@ val extension: string -> Tot string
 
 
 val file_exists: string -> FStar.All.ML bool
+
+val file_contents: string -> FStar.All.ML string

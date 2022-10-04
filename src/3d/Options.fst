@@ -25,6 +25,7 @@ let batch : ref bool = alloc false
 let clang_format : ref bool = alloc false
 let clang_format_executable : ref (option vstring) = alloc None
 let cleanup : ref bool = alloc false
+let config_file : ref (option vstring) = alloc None
 let debug : ref bool = alloc false
 let inplace_hashes : ref (list vstring) = alloc []
 let input_file : ref (list string) = alloc []
@@ -300,6 +301,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "clang_format" (OptBool clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and krml-args.rsp (--batch only)" [];
+    CmdOption "config" (OptStringOption "config file" always_valid config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
     CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
@@ -447,3 +449,5 @@ let get_input_stream_binding _ =
     InputStreamStatic (get_include ())
 
 let get_emit_output_types_defs () = !emit_output_types_defs
+
+let get_config_file () = !config_file
