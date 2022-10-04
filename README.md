@@ -48,4 +48,3 @@ Everparse offers two different executables:
 * `./bin/3d.exe` or (`3d`when using the Docker file in `./example`): this executable produces validators in F* given a description in 3d description language.
 
     The documentation for this executable can be found [here](https://project-everest.github.io/everparse/3d.html).
-
