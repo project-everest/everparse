@@ -48,4 +48,4 @@ In the docker container:
 - `cd /pwd/files` to go to the `./files` folder next to this README file.
 - run `quackyducky -odir code -low specs.qd` command to generate the F* code files in `code` folder. It will generate `.fst` and `.fsti` files that contain the parsers, serialisers and proofs.
 - run `cd code &&
-fstar --z3rlimit 250 --cache_dir cache --cache_checked_modules --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse  --include $LOWPARSE_HOME --include $KRML_HOME/krmllib --include $KRML_HOME/krmllib/obj --cmi  --expose_interfaces  *.fst *.fsti ` to verify the F* code. If the verification times out, you can modify the value of the option `--z3rlimit`.
+fstar --z3rlimit 3000 --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse  --include $LOWPARSE_HOME --include $KRML_HOME/krmllib --include $KRML_HOME/krmllib/obj --cmi --expose_interfaces *.fst *.fsti ` to verify the F* code. If the verification times out, you can modify the value of the option `--z3rlimit`.
