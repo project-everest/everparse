@@ -20,7 +20,7 @@ typedef struct _POINT (mutable OPOINT* out) {
     {:on-success
         out->y = y;
         return true;
-    }
+    };
 } POINT;
 
 entrypoint

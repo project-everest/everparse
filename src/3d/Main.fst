@@ -365,7 +365,7 @@ let process_file (en:env)
 let emit_config_as_fstar_module ()
   : ML unit
   = match Deps.get_config () with
-    | None -> raise (Error ("'--__micro_step emitconfig' expects the '--config' option to also be set"))
+    | _ -> ()
     | Some (cfg, config_module_name) ->
       let fst_file_contents = Config.emit_config_as_fstar_module config_module_name cfg in
       let fst_file =

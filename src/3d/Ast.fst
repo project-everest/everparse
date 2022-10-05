@@ -651,6 +651,18 @@ let tuint16 = mk_prim_t "UINT16"
 let tuint32 = mk_prim_t "UINT32"
 let tuint64 = mk_prim_t "UINT64"
 let tunknown = mk_prim_t "?"
+let unit_atomic_field rng = 
+    let dummy_identifier = with_range (to_ident' "_empty_") rng in
+    let f = {
+         field_dependence=false;
+         field_ident=dummy_identifier;
+         field_type=tunit;
+         field_array_opt=FieldScalar;
+         field_constraint=None;
+         field_bitwidth=None;
+         field_action=None
+        } in
+    with_range f rng
 
 let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
   match o with

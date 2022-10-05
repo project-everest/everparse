@@ -44,18 +44,6 @@
     out_expr_meta = None
   }
 
-  let unit_atomic_field' rng =
-      let dummy_identifier = with_range (to_ident' "_empty_") rng in
-      {
-         field_dependence=false;
-         field_ident=dummy_identifier;
-         field_type=tunit;
-         field_array_opt=FieldScalar;
-         field_constraint=None;
-         field_bitwidth=None;
-         field_action=None
-      }
-
   
 %}
 
@@ -311,9 +299,8 @@ static_conditional_body:
     {
         let tt = with_range (Constant (Bool true)) ($startpos(e)) in
         let dummy_identifier = with_range (to_ident' "_") ($startpos(e)) in
-        let as_field fopt rng =
-            let unit_atomic_field = AtomicField (with_range (unit_atomic_field' rng) rng) in
-            let unit_field = with_range unit_atomic_field rng in
+        let as_field fopt posn =
+            let unit_field = with_range (AtomicField (unit_atomic_field (mk_pos posn, mk_pos posn))) posn in
             let fields =
                 match fopt with
                 | None -> [unit_field]
@@ -321,7 +308,7 @@ static_conditional_body:
             in
             match fields with
             | [f] -> f
-            | _ -> with_range (RecordField(fields, dummy_identifier)) rng
+            | _ -> with_range (RecordField(fields, dummy_identifier)) posn
         in
         let f_then = as_field f_then ($startpos(f_then)) in
         let f_else = as_field f_else ($startpos(f_else)) in

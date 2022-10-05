@@ -50,7 +50,7 @@ typedef struct _STRUCT_3 (UINT32 TotalLen)
             offset >= sizeof(this)
         };
     UINT32_Alias4   f4 { f4 == 0 };
-    UINT8           buffer[TotalLen - sizeof(this)]
+    UINT8           buffer[TotalLen - sizeof(this)];
 } STRUCT_3;
 
 

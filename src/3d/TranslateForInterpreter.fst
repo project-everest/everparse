@@ -924,11 +924,11 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
 
 noeq
 type grouped_fields =
-  | Empty_grouped_field
+  // | Empty_grouped_field
   | DependentField    : hd:T.field -> tl:grouped_fields -> grouped_fields
-  | NonDependentField : hd:T.field -> tl:grouped_fields -> grouped_fields
+  | NonDependentField : hd:T.field -> tl:option grouped_fields -> grouped_fields
   | ITEGroup          : e:T.expr -> then_:grouped_fields -> else_:grouped_fields -> grouped_fields
-  | GroupThen         : id:A.ident -> struct:grouped_fields -> rest:grouped_fields -> grouped_fields
+  | GroupThen         : id:A.ident -> struct:grouped_fields -> rest:option grouped_fields -> grouped_fields
 
 let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields)
   : ML T.parser
@@ -936,9 +936,8 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
     let parse_typ (fieldname:A.ident) = parse_typ env typename Ast.(fieldname.v.name) in
     let rec aux (gfs:grouped_fields) : ML parser =
       match gfs with
-      | Empty_grouped_field ->
-        failwith "Unexpected empty list of fields"
-
+      // | Empty_grouped_field ->
+      //   failwith "Unexpected empty list of fields"
       | DependentField sf gfs ->
         //This a dependent pair, gfs cannot be empty
         let get_action = function
@@ -983,10 +982,10 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
 
       | NonDependentField sf rest -> (
         match rest with
-        | Empty_grouped_field -> 
+        | None ->
           parse_typ sf.sf_ident sf.sf_typ
 
-        | _ -> 
+        | Some rest -> 
           pair_parser sf.sf_ident
             (parse_typ sf.sf_ident sf.sf_typ)
             (aux rest)
@@ -1000,10 +999,10 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
 
       | GroupThen id gfs rest -> (
         match rest with
-        | Empty_grouped_field ->
+        | None ->
           aux gfs
 
-        | _ -> 
+        | Some rest -> 
           pair_parser id
             (aux gfs)
             (aux rest)
@@ -1235,25 +1234,31 @@ let rec field_as_grouped_fields (f:A.field)
   = match f.v with
     | AtomicField af ->
       let sf, ds = translate_atomic_field af in
-      sf.sf_ident, NonDependentField sf Empty_grouped_field, ds
+      sf.sf_ident, NonDependentField sf None, ds
 
     | RecordField fs field_name ->
       let gfs, ds =
-        List.fold_right
+        List.fold_right #_ #(option grouped_fields & T.decls)
           (fun f (gfs, ds_out) ->
             match f.v with
             | AtomicField af -> 
               let sf, ds = translate_atomic_field af in
-              if sf.sf_dependence
-              then DependentField sf gfs, ds@ds_out
-              else NonDependentField sf gfs, ds@ds_out
+              if sf.sf_dependence && Some? gfs
+              then Some (DependentField sf (Some?.v gfs)), ds@ds_out
+              else Some (NonDependentField sf gfs), ds@ds_out
   
             | RecordField _ _
             | SwitchCaseField _ _ ->
               let id, gf, ds = field_as_grouped_fields f in
-              GroupThen id gf gfs, ds@ds_out)
+              Some (GroupThen id gf gfs), ds@ds_out)
           fs
-          (Empty_grouped_field, [])
+          (None, [])
+      in
+      let gfs, ds =
+        if None? gfs
+        then let sf, ds' = translate_atomic_field (unit_atomic_field f.range) in
+             NonDependentField sf None, ds@ds'
+        else Some?.v gfs, ds
       in
       field_name, gfs, ds
 
@@ -1265,7 +1270,7 @@ let rec field_as_grouped_fields (f:A.field)
           T.( { sf_typ = T.T_false;
                 sf_ident = gen_ident None;
                 sf_dependence = false } ) 
-          Empty_grouped_field
+          None
       in
       let rest, default_group, decls =
         if List.length cases > 0
