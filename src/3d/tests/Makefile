@@ -97,4 +97,4 @@ batch-cleanup-test:
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe out.batch-interpret
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules modules-interpret tcpip extern %.interpret batch-interpret-test static funptr
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules modules-interpret tcpip extern %.interpret batch-interpret-test static funptr ifdefs

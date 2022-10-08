@@ -365,7 +365,6 @@ let process_file (en:env)
 let emit_config_as_fstar_module ()
   : ML unit
   = match Deps.get_config () with
-    | _ -> ()
     | Some (cfg, config_module_name) ->
       let fst_file_contents = Config.emit_config_as_fstar_module config_module_name cfg in
       let fst_file =
@@ -375,6 +374,8 @@ let emit_config_as_fstar_module ()
             config_module_name) in
       FStar.IO.write_string fst_file fst_file_contents;
       FStar.IO.close_write_file fst_file
+    | _ -> ()
+      
 
 let process_files (files_and_modules:list (string & string))
                   (emit_fstar:string -> ML bool)
