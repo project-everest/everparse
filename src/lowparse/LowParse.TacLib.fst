@@ -65,7 +65,7 @@ let rec intros_until_squash
 : Tac binder
 = let i = intro () in
   let (tm, _) = app_head_tail (cur_goal ()) in
-  if tm `term_eq` (`squash)
+  if tm `is_fvar` (`%squash)
   then i
   else intros_until_squash ()
 
@@ -76,11 +76,11 @@ let rec intros_until_eq_hyp
 = let i = intro () in
   let (sq, ar) = app_head_tail (type_of_binder i) in
   let cond =
-    if sq `term_eq` (`squash) then
+    if sq `is_fvar` (`%squash) then
       match ar with
       | (ar1, _) :: _ ->
         let (eq, _) = app_head_tail ar1 in
-        eq `term_eq` (`eq2)
+        eq `is_fvar` (`%eq2)
       | _ -> false
     else false
   in
