@@ -1,0 +1,5 @@
+struct {
+    uint64 id;
+    uint16 size;
+    uint8 arr[size];
+} message;
