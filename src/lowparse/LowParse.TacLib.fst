@@ -26,23 +26,9 @@ let solve_vc ()
 = exact_guard (quote ()); conclude ()
 
 [@@ noextract_to "krml"]
-let rec app_head_rev_tail (t: term) :
-  Tac (term * list argv)
-=
-  let ins = inspect t in
-  if Tv_App? ins
-  then
-    let (Tv_App u v) = ins in
-    let (x, l) = app_head_rev_tail u in
-    (x, v :: l)
-  else
-    (t, [])
-
-[@@ noextract_to "krml"]
 let app_head_tail (t: term) :
     Tac (term * list argv)
-= let (x, l) = app_head_rev_tail t in
-  (x, L.rev l)
+= collect_app t
 
 [@@ noextract_to "krml"]
 let tassert (b: bool) : Tac (squash b) =
