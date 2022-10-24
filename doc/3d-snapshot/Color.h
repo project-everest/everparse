@@ -12,17 +12,17 @@ extern "C" {
 
 
 #include "EverParse.h"
-/*
+/**
 Enum constant
 */
 #define COLOR_RED ((uint32_t)1U)
 
-/*
+/**
 Enum constant
 */
 #define COLOR_GREEN ((uint32_t)2U)
 
-/*
+/**
 Enum constant
 */
 #define COLOR_BLUE ((uint32_t)42U)
