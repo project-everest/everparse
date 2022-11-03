@@ -40,7 +40,7 @@ help:
 
 3d: 3d-do-tests
 
-3d-ci:  $(3D_DIFF) test_compile_time_ifs
+3d-ci:  $(3D_DIFF)
 
 3d-do-tests:
 	mkdir -p out
