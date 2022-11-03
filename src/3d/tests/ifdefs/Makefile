@@ -74,8 +74,7 @@ clean:
 #######################################################
 
 # Specify the behavior of the default rule
-# excluding AnonNestedStructIfDefs.o for now, since we hit krml bug #293
-world: $(EVERPARSE_OUTPUT_DIR)/CompileTimeIf.o $(EVERPARSE_ALL_C_FILES) batch
+world: $(EVERPARSE_OUTPUT_DIR)/CompileTimeIf.o $(EVERPARSE_OUTPUT_DIR)/AnonNestedStructIfDefs.o $(EVERPARSE_ALL_C_FILES) batch
 
 #######################################################
 # Also test batch mode

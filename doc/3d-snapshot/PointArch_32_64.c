@@ -23,59 +23,63 @@ ValidateInt(
 )
 {
   #if ARCH64
-  /* Validating field x */
-  /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  BOOLEAN hasBytes = (uint64_t)8U <= (InputLen - StartPosition);
-  uint64_t positionAfterInt;
-  if (hasBytes)
   {
-    positionAfterInt = StartPosition + (uint64_t)8U;
-  }
-  else
-  {
-    positionAfterInt =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
-  }
-  if (EverParseIsSuccess(positionAfterInt))
-  {
+    /* Validating field x */
+    /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
+    BOOLEAN hasBytes = (uint64_t)8U <= (InputLen - StartPosition);
+    uint64_t positionAfterInt;
+    if (hasBytes)
+    {
+      positionAfterInt = StartPosition + (uint64_t)8U;
+    }
+    else
+    {
+      positionAfterInt =
+        EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+          StartPosition);
+    }
+    if (EverParseIsSuccess(positionAfterInt))
+    {
+      return positionAfterInt;
+    }
+    Err("_INT",
+      "x",
+      EverParseErrorReasonOfResult(positionAfterInt),
+      EverParseGetValidatorErrorKind(positionAfterInt),
+      Ctxt,
+      Input,
+      StartPosition);
     return positionAfterInt;
   }
-  Err("_INT",
-    "x",
-    EverParseErrorReasonOfResult(positionAfterInt),
-    EverParseGetValidatorErrorKind(positionAfterInt),
-    Ctxt,
-    Input,
-    StartPosition);
-  return positionAfterInt;
   #else
-  /* Validating field x */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLen - StartPosition);
-  uint64_t positionAfterInt;
-  if (hasBytes)
   {
-    positionAfterInt = StartPosition + (uint64_t)4U;
-  }
-  else
-  {
-    positionAfterInt =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
-  }
-  if (EverParseIsSuccess(positionAfterInt))
-  {
+    /* Validating field x */
+    /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+    BOOLEAN hasBytes = (uint64_t)4U <= (InputLen - StartPosition);
+    uint64_t positionAfterInt;
+    if (hasBytes)
+    {
+      positionAfterInt = StartPosition + (uint64_t)4U;
+    }
+    else
+    {
+      positionAfterInt =
+        EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+          StartPosition);
+    }
+    if (EverParseIsSuccess(positionAfterInt))
+    {
+      return positionAfterInt;
+    }
+    Err("_INT",
+      "x",
+      EverParseErrorReasonOfResult(positionAfterInt),
+      EverParseGetValidatorErrorKind(positionAfterInt),
+      Ctxt,
+      Input,
+      StartPosition);
     return positionAfterInt;
   }
-  Err("_INT",
-    "x",
-    EverParseErrorReasonOfResult(positionAfterInt),
-    EverParseGetValidatorErrorKind(positionAfterInt),
-    Ctxt,
-    Input,
-    StartPosition);
-  return positionAfterInt;
   #endif
 }
 
