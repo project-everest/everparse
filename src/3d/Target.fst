@@ -57,6 +57,7 @@ let rec parser_kind_eq k k' =
 
 let default_attrs = {
     is_hoisted = false;
+    is_if_def = false;
     is_exported = false;
     should_inline = false;
     comments = []
@@ -804,7 +805,8 @@ let print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
 let print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string =
   match fst d with
   | Assumption (x, t) ->
-    Printf.sprintf "assume\nval %s : %s\n\n"
+    Printf.sprintf "%sassume\nval %s : %s\n\n"
+      (if (snd d).is_if_def then "[@@ CIfDef ]\n" else "")
       (print_ident x)      
       (print_typ mname t) 
 

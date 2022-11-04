@@ -75,4 +75,5 @@ type global_env = {
   ge_out_t: H.t ident' decl;  //a table for output types declarations
   ge_extern_t: H.t ident' decl;  //a table for extern type declarations
   ge_extern_fn: H.t ident' decl;  //a table for extern function declarations
+  ge_cfg: option (Config.config & string)
 }

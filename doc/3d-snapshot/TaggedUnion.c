@@ -44,7 +44,7 @@ ValidateIntPayload(
       return positionAfterIntPayload;
     }
     Err("_int_payload",
-      "missing",
+      "value8",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
       EverParseGetValidatorErrorKind(positionAfterIntPayload),
       Ctxt,
@@ -73,7 +73,7 @@ ValidateIntPayload(
       return positionAfterIntPayload;
     }
     Err("_int_payload",
-      "missing",
+      "value16",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
       EverParseGetValidatorErrorKind(positionAfterIntPayload),
       Ctxt,
@@ -102,7 +102,7 @@ ValidateIntPayload(
       return positionAfterIntPayload;
     }
     Err("_int_payload",
-      "missing",
+      "value32",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
       EverParseGetValidatorErrorKind(positionAfterIntPayload),
       Ctxt,
@@ -119,7 +119,7 @@ ValidateIntPayload(
     return positionAfterIntPayload;
   }
   Err("_int_payload",
-    "missing",
+    "_x_2",
     EverParseErrorReasonOfResult(positionAfterIntPayload),
     EverParseGetValidatorErrorKind(positionAfterIntPayload),
     Ctxt,
