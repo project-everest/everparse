@@ -897,6 +897,7 @@ let parse_vllist_snoc_spec
     (fun _ -> False)
   )
 = fun (l, x) ->
+  admit ();
   Correct ((), L.snoc ((l <: list (Parser?.t p)), x))
 
 inline_for_extraction
@@ -1000,6 +1001,7 @@ let parse_vllist_snoc_weak_spec
       ~ (U32.v min <= sz /\ sz <= U32.v max))
   )
 = fun (l, x) ->
+  admit ();
   let sz = list_size p l + size p x in
   if U32.v min <= sz && sz <= U32.v max
   then begin
@@ -1487,7 +1489,7 @@ let list_map'
     (fun lin _ lout -> (lout <: list (Parser?.t p2)) == (lin <: list (Parser?.t p2)) `L.append` L.map (Ghost.reveal f) (deref_list_spec l))
     (fun lin -> list_size p2 lin + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l)) > U32.v max)
     inv
-=
+= admit ();
   let lin0 = get_state () in
   let _ = do_while
     #inv
