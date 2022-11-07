@@ -897,6 +897,7 @@ let parse_vllist_snoc_spec
     (fun _ -> False)
   )
 = fun (l, x) ->
+  assert (parse_vllist_pred p min max (L.snoc (l, x)));
   Correct ((), L.snoc ((l <: list (Parser?.t p)), x))
 
 inline_for_extraction
@@ -1003,6 +1004,7 @@ let parse_vllist_snoc_weak_spec
   let sz = list_size p l + size p x in
   if U32.v min <= sz && sz <= U32.v max
   then begin
+    assert (parse_vllist_pred p min max (L.snoc (l, x)));
     Correct ((), L.snoc ((l <: list (Parser?.t p)), x))
   end else
     Error "parse_vllist_snoc_weak: out of bounds"
@@ -1487,8 +1489,7 @@ let list_map'
     (fun lin _ lout -> (lout <: list (Parser?.t p2)) == (lin <: list (Parser?.t p2)) `L.append` L.map (Ghost.reveal f) (deref_list_spec l))
     (fun lin -> list_size p2 lin + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l)) > U32.v max)
     inv
-=
-  let lin0 = get_state () in
+= let lin0 = get_state () in
   let _ = do_while
     #inv
     #(parse_vllist p2 min max)
@@ -1496,6 +1497,8 @@ let list_map'
     (fun lin l1 cond ->
       lin0 `L.append` L.map (Ghost.reveal f) (deref_list_spec l) ==
       lin  `L.append` L.map (Ghost.reveal f) (deref_list_spec l1) /\
+      (list_size p2 lin0 + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l)) ==
+       list_size p2 lin + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l1))) /\
       (cond == false ==> deref_list_spec l1 == [])
     )
     (fun _ l1 -> L.length (deref_list_spec l1))
