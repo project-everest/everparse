@@ -15,6 +15,7 @@ module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 
 module Printf_dummy = LowStar.Printf // for dependencies only
+module C = C // for dependencies only (_zero_for_deref)
 
 #set-options "--ide_id_info_off"
 
