@@ -11,7 +11,8 @@ type micro_step_t =
   | MicroStepVerify
   | MicroStepExtract
   | MicroStepCopyClangFormat
-
+  | MicroStepEmitConfig
+  
 type makefile_type =
   | MakefileGMake
   | MakefileNMake

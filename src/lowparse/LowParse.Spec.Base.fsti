@@ -350,6 +350,16 @@ let parser
 = (f: bare_parser t { parser_kind_prop k f } )
 
 inline_for_extraction
+let tot_bare_parser (t:Type) : Tot Type = (b: bytes) -> Tot (option (t * consumed_length b))
+
+[@unifier_hint_injective]
+let tot_parser
+  (k: parser_kind)
+  (t: Type)
+: Tot Type
+= (f: tot_bare_parser t { parser_kind_prop k f } )
+
+inline_for_extraction
 let get_parser_kind
   (#k: parser_kind)
   (#t: Type)
@@ -411,6 +421,22 @@ let weaken (k1: parser_kind) (#k2: parser_kind) (#t: Type) (p2: parser k2 t) : P
 = let p = coerce_to_bare_parser t k2 p2 in
   is_weaker_than_correct k1 k2 p;
   p <: parser k1 t
+
+unfold let coerce_to_tot_bare_parser (t:Type) (k2:parser_kind) (p:tot_parser k2 t)
+  :Tot (tot_bare_parser t) = p
+
+let tot_weaken (k1: parser_kind) (#k2: parser_kind) (#t: Type) (p2: tot_parser k2 t) : Pure (tot_parser k1 t)
+  (requires (k1 `is_weaker_than` k2))
+  (ensures (fun _ -> True))
+= let p = coerce_to_tot_bare_parser t k2 p2 in
+  is_weaker_than_correct k1 k2 p;
+  p <: tot_parser k1 t
+
+// inline_for_extraction
+let tot_strengthen (k: parser_kind) (#t: Type) (f: tot_bare_parser t) : Pure (tot_parser k t)
+  (requires (parser_kind_prop k f))
+  (ensures (fun _ -> True))
+= f
 
 // inline_for_extraction
 let strengthen (k: parser_kind) (#t: Type) (f: bare_parser t) : Pure (parser k t)

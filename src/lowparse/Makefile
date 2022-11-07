@@ -48,6 +48,16 @@ lowparse: $(ALL_CHECKED_FILES)
 
 verify-all: lowparse
 
+tot: $(filter LowParse.Tot.%,$(ALL_CHECKED_FILES))
+
+spec: $(filter LowParse.Spec.%,$(ALL_CHECKED_FILES))
+
+slow: $(filter LowParse.SLow.%,$(ALL_CHECKED_FILES))
+
+low: $(filter LowParse.Low.%,$(ALL_CHECKED_FILES))
+
+.PHONY: tot spec slow low
+
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@

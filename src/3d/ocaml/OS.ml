@@ -113,3 +113,10 @@ let rename ol ne =
 
 
 let file_exists s = Sys.file_exists s
+
+let file_contents f =
+  let ic = open_in_bin f in
+  let l = in_channel_length ic in
+  let s = really_input_string ic l in
+  close_in ic;
+  s

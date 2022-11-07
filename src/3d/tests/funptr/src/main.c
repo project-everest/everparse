@@ -91,7 +91,7 @@ void _EverParseRetreat(EverParseInputStreamBase const x, uint64_t n) {
 // This function is declared in the generated TestWrapper.c, but not
 // defined. It is the callback function called if the validator for
 // Test.T fails.
-void _EverParseError(void *status, uint64_t position, const char *StructName, const char *FieldName, const char *Reason) {
+void _EverParseError(void *status, uint64_t position, const char *StructName, const char *FieldName, const char *Reason, uint64_t error_code) {
   printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", StructName, FieldName, Reason);
   *((BOOLEAN*)status) = FALSE;
 }

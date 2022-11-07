@@ -151,7 +151,7 @@ make_everparse() {
             export OCAMLPATH="$OCAMLFIND_DESTDIR:$OCAMLPATH"
         fi
         if [[ -z $HACL_HOME ]] ; then
-            [[ -d hacl-star ]] || git clone https://github.com/project-everest/hacl-star
+            [[ -d hacl-star ]] || git clone https://github.com/hacl-star/hacl-star
             HACL_HOME=$(fixpath $PWD/hacl-star)
         else
             HACL_HOME=$(fixpath "$HACL_HOME")
@@ -283,7 +283,7 @@ make_everparse() {
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
     if [[ -z "$NO_EVERCRYPT" ]] ; then
-        wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/project-everest/hacl-star/master/LICENSE
+        wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/hacl-star/hacl-star/main/LICENSE
     fi
     wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
     if $is_windows ; then

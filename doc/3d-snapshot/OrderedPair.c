@@ -12,9 +12,10 @@ OrderedPairValidateOrderedPair(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -44,6 +45,7 @@ OrderedPairValidateOrderedPair(
     Err("_orderedPair",
       "lesser",
       EverParseErrorReasonOfResult(positionAfterOrderedPair),
+      EverParseGetValidatorErrorKind(positionAfterOrderedPair),
       Ctxt,
       Input,
       StartPosition);
@@ -91,6 +93,7 @@ OrderedPairValidateOrderedPair(
   Err("_orderedPair",
     "greater.refinement",
     EverParseErrorReasonOfResult(positionAfterOrderedPair0),
+    EverParseGetValidatorErrorKind(positionAfterOrderedPair0),
     Ctxt,
     Input,
     positionAfterlesser);

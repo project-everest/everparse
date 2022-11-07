@@ -105,6 +105,41 @@ let make_constant_size_parser
   parser_kind_prop_equiv (constant_size_parser_kind sz) p;
   p
 
+let tot_make_constant_size_parser_aux
+  (sz: nat)
+  (t: Type)
+  (f: ((s: bytes {Seq.length s == sz}) -> Tot (option t)))
+: Tot (tot_bare_parser t)
+= fun (s: bytes) ->
+  if Seq.length s < sz
+  then None
+  else begin
+    let s' : bytes = Seq.slice s 0 sz in
+    match f s' with
+    | None -> None
+    | Some v ->
+      let (sz: consumed_length s) = sz in
+      Some (v, sz)
+  end
+
+let tot_make_constant_size_parser
+  (sz: nat)
+  (t: Type)
+  (f: ((s: bytes {Seq.length s == sz}) -> Tot (option t)))
+: Pure (
+    tot_parser
+      (constant_size_parser_kind sz)
+      t
+  )
+  (requires (
+    make_constant_size_parser_precond sz t f
+  ))
+  (ensures (fun _ -> True))
+= let p : tot_bare_parser t = tot_make_constant_size_parser_aux sz t f in
+  make_constant_size_parser_injective sz t f;
+  parser_kind_prop_equiv (constant_size_parser_kind sz) p;
+  p
+
 let make_total_constant_size_parser_precond
   (sz: nat)
   (t: Type)
@@ -130,12 +165,28 @@ let make_total_constant_size_parser
   parser_kind_prop_equiv (total_constant_size_parser_kind sz) p;
   p
 
+let tot_make_total_constant_size_parser
+  (sz: nat)
+  (t: Type)
+  (f: ((s: bytes {Seq.length s == sz}) -> Tot t))
+: Pure (
+    tot_parser
+      (total_constant_size_parser_kind sz)
+      t
+  )
+  (requires (
+    make_total_constant_size_parser_precond sz t f
+  ))
+  (ensures (fun _ -> True))
+= let p : tot_bare_parser t = tot_make_constant_size_parser sz t (fun x -> Some (f x)) in
+  parser_kind_prop_equiv (total_constant_size_parser_kind sz) p;
+  p
 
 (** Combinators *)
 
 /// monadic return for the parser monad
 unfold
-let parse_ret' (#t:Type) (v:t) : Tot (bare_parser t) =
+let parse_ret' (#t:Type) (v:t) : Tot (tot_bare_parser t) =
   fun (b: bytes) -> Some (v, (0 <: consumed_length b))
 
 // unfold
@@ -143,9 +194,12 @@ inline_for_extraction
 let parse_ret_kind : parser_kind =
   strong_parser_kind 0 0 (Some ParserKindMetadataTotal)
 
-let parse_ret (#t:Type) (v:t) : Tot (parser parse_ret_kind t) =
+let tot_parse_ret (#t:Type) (v:t) : Tot (tot_parser parse_ret_kind t) =
   parser_kind_prop_equiv parse_ret_kind (parse_ret' v);
   parse_ret' v
+
+let parse_ret (#t:Type) (v:t) : Tot (parser parse_ret_kind t) =
+  tot_parse_ret v
 
 let serialize_ret
   (#t: Type)
@@ -172,8 +226,18 @@ let fail_parser_kind_precond
 
 let fail_parser'
   (t: Type)
-: Tot (bare_parser t)
+: Tot (tot_bare_parser t)
 = fun _ -> None
+
+let tot_fail_parser
+  (k: parser_kind)
+  (t: Type)
+: Pure (tot_parser k t)
+  (requires (fail_parser_kind_precond k))
+  (ensures (fun _ -> True))
+= let p = fail_parser' t in
+  parser_kind_prop_equiv k p;
+  tot_strengthen k p
 
 let fail_parser
   (k: parser_kind)
@@ -181,9 +245,7 @@ let fail_parser
 : Pure (parser k t)
   (requires (fail_parser_kind_precond k))
   (ensures (fun _ -> True))
-= let p = fail_parser' t in
-  parser_kind_prop_equiv k p;
-  strengthen k p
+= tot_fail_parser k t
 
 let fail_serializer
   (k: parser_kind {fail_parser_kind_precond k} )
@@ -473,6 +535,21 @@ val and_then_eq
   (requires (and_then_cases_injective p'))
   (ensures (parse (and_then p p') input == and_then_bare p p' input))
 
+val tot_and_then
+  (#k: parser_kind)
+  (#t:Type)
+  (p:tot_parser k t)
+  (#k': parser_kind)
+  (#t':Type)
+  (p': (t -> Tot (tot_parser k' t')))
+: Pure (tot_parser (and_then_kind k k') t')
+  (requires (
+    and_then_cases_injective p'
+  ))
+  (ensures (fun y ->
+    forall x . parse y x == parse (and_then #k p #k' p') x
+  ))
+
 
 /// monadic return for the parser monad
 unfold
@@ -548,6 +625,44 @@ val parse_synth_eq
 : Lemma
   (requires (synth_injective f2))
   (ensures (parse (parse_synth p1 f2) b == parse_synth' p1 f2 b))
+
+let parse_synth_eq2
+  (#k: parser_kind)
+  (#t1: Type)
+  (#t2: Type)
+  (p1: parser k t1)
+  (f2: t1 -> GTot t2)
+  (sq: squash (synth_injective f2))
+  (b: bytes)
+: Lemma
+  (ensures (parse (parse_synth p1 f2) b == parse_synth' p1 f2 b))
+= parse_synth_eq p1 f2 b
+
+val tot_parse_synth
+  (#k: parser_kind)
+  (#t1: Type)
+  (#t2: Type)
+  (p1: tot_parser k t1)
+  (f2: t1 -> Tot t2)
+: Pure (tot_parser k t2)
+  (requires (
+    synth_injective f2
+  ))
+  (ensures (fun y ->
+    forall x . parse y x == parse (parse_synth #k p1 f2) x
+  ))
+
+let tot_parse_synth_eq
+  (#k: parser_kind)
+  (#t1: Type)
+  (#t2: Type)
+  (p1: tot_parser k t1)
+  (f2: t1 -> Tot t2)
+  (b: bytes)
+: Lemma
+  (requires (synth_injective f2))
+  (ensures (parse (tot_parse_synth p1 f2) b == parse_synth' #k p1 f2 b))
+= parse_synth_eq #k p1 f2 b
 
 let bare_serialize_synth
   (#k: parser_kind)
@@ -692,6 +807,21 @@ let serialize_synth_eq'
 : Lemma
   (ensures (y1 == y2))
 = serialize_synth_eq p1 f2 s1 g1 u x
+
+let serialize_tot_synth
+  (#k: parser_kind)
+  (#t1: Type)
+  (#t2: Type)
+  (p1: tot_parser k t1)
+  (f2: t1 -> Tot t2)
+  (s1: serializer p1)
+  (g1: t2 -> GTot t1)
+  (u: unit {
+    synth_inverse f2 g1 /\
+    synth_injective f2
+  })
+: Tot (serializer #k (tot_parse_synth p1 f2))
+= serialize_ext #k _ (serialize_synth #k p1 f2 s1 g1 u) _
 
 val serialize_synth_upd_chain
   (#k: parser_kind)
@@ -870,6 +1000,55 @@ val parse_tagged_union_eq_gen
 : Lemma
   (parse (parse_tagged_union pt tag_of_data p) input == bare_parse_tagged_union pt' tag_of_data k' p' input)
 
+let tot_parse_tagged_union_payload
+  (#tag_t: Type)
+  (#data_t: Type)
+  (tag_of_data: (data_t -> Tot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (tot_parser k (refine_with_tag tag_of_data t)))
+  (tg: tag_t)
+: Pure (tot_parser k data_t)
+    (requires True)
+    (ensures (fun y ->
+      forall x . parse y x == parse (parse_tagged_union_payload tag_of_data #k p tg) x
+    ))
+= tot_parse_synth #k #(refine_with_tag tag_of_data tg) (p tg) (synth_tagged_union_data tag_of_data tg)
+
+val tot_parse_tagged_union
+  (#kt: parser_kind)
+  (#tag_t: Type)
+  (pt: tot_parser kt tag_t)
+  (#data_t: Type)
+  (tag_of_data: (data_t -> Tot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (tot_parser k (refine_with_tag tag_of_data t)))
+: Pure (tot_parser (and_then_kind kt k) data_t)
+    (requires True)
+    (ensures (fun y ->
+      forall x . parse y x == parse (parse_tagged_union #kt pt tag_of_data #k p) x
+    ))
+
+let tot_parse_tagged_union_eq
+  (#kt: parser_kind)
+  (#tag_t: Type)
+  (pt: tot_parser kt tag_t)
+  (#data_t: Type)
+  (tag_of_data: (data_t -> Tot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (tot_parser k (refine_with_tag tag_of_data t)))
+  (input: bytes)
+: Lemma
+  (parse (tot_parse_tagged_union pt tag_of_data p) input == (match parse pt input with
+  | None -> None
+  | Some (tg, consumed_tg) ->
+    let input_tg = Seq.slice input consumed_tg (Seq.length input) in
+    begin match parse (p tg) input_tg with
+    | Some (x, consumed_x) -> Some ((x <: data_t), consumed_tg + consumed_x)
+    | None -> None
+    end
+  ))
+= parse_tagged_union_eq #kt pt tag_of_data #k p input
+
 let bare_serialize_tagged_union
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -975,6 +1154,23 @@ val serialize_tagged_union_eq
   (requires (kt.parser_kind_subkind == Some ParserStrong))
   (ensures (serialize (serialize_tagged_union st tag_of_data s) input == bare_serialize_tagged_union st tag_of_data s input))
   [SMTPat (serialize (serialize_tagged_union st tag_of_data s) input)]
+
+let serialize_tot_tagged_union
+  (#kt: parser_kind)
+  (#tag_t: Type)
+  (#pt: tot_parser kt tag_t)
+  (st: serializer #kt pt)
+  (#data_t: Type)
+  (tag_of_data: (data_t -> Tot tag_t))
+  (#k: parser_kind)
+  (#p: (t: tag_t) -> Tot (tot_parser k (refine_with_tag tag_of_data t)))
+  (s: (t: tag_t) -> Tot (serializer #k (p t)))
+: Pure (serializer #(and_then_kind kt k) (tot_parse_tagged_union pt tag_of_data p))
+  (requires (kt.parser_kind_subkind == Some ParserStrong))
+  (ensures (fun _ -> True))
+= serialize_ext _
+    (serialize_tagged_union st tag_of_data s)
+    _
 
 (* Dependent pairs *)
 
@@ -1143,6 +1339,19 @@ val nondep_then_eq
     | _ -> None
     end
   | _ -> None
+  ))
+
+val tot_nondep_then
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: tot_parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: tot_parser k2 t2)
+: Pure (tot_parser (and_then_kind k1 k2) (t1 * t2))
+  (requires True)
+  (ensures (fun y ->
+    forall x . parse y x == parse (nondep_then #k1 p1 #k2 p2) x
   ))
 
 let bare_serialize_nondep_then
@@ -1641,6 +1850,33 @@ val parse_filter_eq
     else None
   ))
 
+val tot_parse_filter
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+  (f: (t -> Tot bool))
+: Pure (tot_parser (parse_filter_kind k) (parse_filter_refine f))
+  (requires True)
+  (ensures (fun y ->
+    forall x . parse y x == parse (parse_filter #k p f) x
+  ))
+
+let tot_parse_filter_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+  (f: (t -> Tot bool))
+  (input: bytes)
+: Lemma
+  (parse (tot_parse_filter p f) input == (match parse p input with
+  | None -> None
+  | Some (x, consumed) ->
+    if f x
+    then Some (x, consumed)
+    else None
+  ))
+= parse_filter_eq #k p f input
+
 let serialize_filter'
   (#k: parser_kind)
   (#t: Type)
@@ -1669,6 +1905,15 @@ let serialize_filter
 = serialize_filter_correct s f;
   serialize_filter' s f
 
+let serialize_tot_filter
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: serializer #k p)
+  (f: (t -> Tot bool))
+: Tot (serializer (tot_parse_filter p f))
+= serialize_ext #(parse_filter_kind k) _ (serialize_filter s f) #(parse_filter_kind k) _
+
 let serialize_weaken
   (#k: parser_kind)
   (#t: Type)
@@ -1677,6 +1922,15 @@ let serialize_weaken
   (s: serializer p { k' `is_weaker_than` k })
 : Tot (serializer (weaken k' p))
 = serialize_ext _ s (weaken k' p)
+
+let serialize_tot_weaken
+  (#k: parser_kind)
+  (#t: Type)
+  (k' : parser_kind)
+  (#p: tot_parser k t)
+  (s: serializer #k p { k' `is_weaker_than` k })
+: Tot (serializer #k' (tot_weaken k' p))
+= serialize_ext #k _ s #k' (tot_weaken k' p)
 
 let parser_matches
   (#k: parser_kind)

@@ -21,7 +21,6 @@ let len_all
   then x.Aux.length
   else Aux.len_all x.Aux.base
 
-unfold
 let live
   (x: t)
   (m: HS.mem)
@@ -250,18 +249,28 @@ let peep
   let h1 = HST.get () in
   assert (B.(modifies loc_none h0 h1));
   preserved x B.loc_none h0 h1;
-  if b returns HST.Stack _ (requires fun h -> live x h /\
-                                       U64.v position == Seq.length (get_read x h))
-                           (ensures (fun h dst' h' ->
-                              let s = get_remaining x h in
-                              B.modifies B.loc_none h h' /\
-                              ((~ (B.g_is_null dst')) ==> (
-                                Seq.length (get_remaining x h) >= U64.v n /\
-                                B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
-                                B.live h' dst' /\
-                                footprint x `B.loc_includes` B.loc_buffer dst'))))                                       
-  then Aux.peep x.Aux.base n
-  else B.null
+  let dst =
+    if b returns HST.Stack _ (requires fun h -> live x h /\
+                                         U64.v position == Seq.length (get_read x h))
+                             (ensures (fun h dst' h' ->
+                                let s = get_remaining x h in
+                                B.modifies B.loc_none h h' /\
+                                ((~ (B.g_is_null dst')) ==> (
+                                  Seq.length (get_remaining x h) >= U64.v n /\
+                                  B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
+                                  B.live h' dst' /\
+                                  footprint x `B.loc_includes` B.loc_buffer dst'))))
+    then Aux.peep x.Aux.base n
+    else B.null
+  in
+  let h2 = HST.get () in
+  assert (B.modifies B.loc_none h0 h2);
+  assert ((~ (B.g_is_null dst)) ==>
+          (Seq.length (get_remaining x h0) >= U64.v n /\
+           B.as_seq h2 dst `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n) /\
+           B.live h2 dst /\
+           footprint x `B.loc_includes` B.loc_buffer dst));
+  dst
 
 #pop-options
 

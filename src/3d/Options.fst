@@ -15,6 +15,30 @@ let valid_string
 
 let always_valid (_: string) : Tot bool = true
 
+let starts_with_capital (s: string) : Tot bool =
+  String.length s >= 1 &&
+  begin let first = String.sub s 0 1 in
+    String.compare first "A" >= 0 && String.compare first "Z" <= 0
+  end
+
+let ends_with (s:string) (suffix:string) : bool =
+  let l = String.length s in
+  let sl = String.length suffix in
+  if sl > l || sl = 0
+  then false
+  else let suffix' = String.sub s (l - sl) sl in
+       suffix = suffix'
+
+let check_config_file_name (fn:string) 
+  : bool
+  = let fn = OS.basename fn in
+    starts_with_capital fn &&
+    ends_with fn ".3d.config"
+
+let strip_suffix (fn:string) (sfx:string { ends_with fn sfx })
+  : string
+  = String.sub fn 0 (String.length fn - String.length sfx)
+  
 inline_for_extraction
 let vstring = valid_string always_valid
 
@@ -25,6 +49,7 @@ let batch : ref bool = alloc false
 let clang_format : ref bool = alloc false
 let clang_format_executable : ref (option vstring) = alloc None
 let cleanup : ref bool = alloc false
+let config_file : ref (option (valid_string check_config_file_name)) = alloc None
 let debug : ref bool = alloc false
 let inplace_hashes : ref (list vstring) = alloc []
 let input_file : ref (list string) = alloc []
@@ -40,6 +65,7 @@ let valid_micro_step (str: string) : Tot bool = match str with
   | "verify"
   | "extract"
   | "copy_clang_format"
+  | "emit_config"
     -> true
   | _ -> false
 
@@ -300,6 +326,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "clang_format" (OptBool clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and krml-args.rsp (--batch only)" [];
+    CmdOption "config" (OptStringOption "config file" check_config_file_name config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
     CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
@@ -316,7 +343,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdFStarOption (let open FStar.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
-    CmdOption "__micro_step" (OptStringOption "verify|extract" valid_micro_step micro_step) "micro step" [];
+    CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|emit_config" valid_micro_step micro_step) "micro step" [];
     CmdOption "__produce_c_from_existing_krml" (OptBool produce_c_from_existing_krml) "produce C from .krml files" [];
     CmdOption "__skip_deps" (OptBool skip_deps) "skip dependency analysis, assume all dependencies are specified on the command line" [];
   ];
@@ -348,8 +375,11 @@ let get_file_name mname = mname ^ ".3d"
 
 let get_module_name (file: string) =
     match split_3d_file_name file with
-    | Some nm -> nm
-    | None -> "DEFAULT"
+    | Some nm ->
+      if starts_with_capital nm
+      then nm
+      else failwith (Printf.sprintf "Input file name %s must start with a capital letter" file)
+    | None -> failwith (Printf.sprintf "Input file name %s must end with .3d" file)
 
 let get_output_dir () =
   match !output_dir with
@@ -408,6 +438,7 @@ let get_micro_step _ =
   | Some "verify" -> Some MicroStepVerify
   | Some "extract" -> Some MicroStepExtract
   | Some "copy_clang_format" -> Some MicroStepCopyClangFormat
+  | Some "emit_config" -> Some MicroStepEmitConfig
 
 let get_produce_c_from_existing_krml _ =
   !produce_c_from_existing_krml
@@ -447,3 +478,13 @@ let get_input_stream_binding _ =
     InputStreamStatic (get_include ())
 
 let get_emit_output_types_defs () = !emit_output_types_defs
+
+let get_config_file () = 
+  match !config_file with
+  | None -> None
+  | Some s -> Some s
+
+let config_module_name () =
+  match !config_file with
+  | None -> None
+  | Some s -> Some (strip_suffix (OS.basename s) ".3d.config")

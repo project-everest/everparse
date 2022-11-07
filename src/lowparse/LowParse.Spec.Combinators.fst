@@ -27,6 +27,30 @@ let and_then_eq
   (ensures (parse (and_then p p') input == and_then_bare p p' input))
 = ()
 
+let tot_and_then_bare (#t:Type) (#t':Type)
+                (p:tot_bare_parser t)
+                (p': (t -> Tot (tot_bare_parser t'))) :
+                Tot (tot_bare_parser t') =
+    fun (b: bytes) ->
+    match p b with
+    | Some (v, l) ->
+      begin
+	let p'v = p' v in
+	let s' : bytes = Seq.slice b l (Seq.length b) in
+	match p'v s' with
+	| Some (v', l') ->
+	  let res : consumed_length b = l + l' in
+	  Some (v', res)
+	| None -> None
+      end
+    | None -> None
+
+let tot_and_then #k #t p #k' #t' p' =
+  let f : tot_bare_parser t' = tot_and_then_bare p p' in
+  and_then_correct #k p #k' p' ;
+  parser_kind_prop_ext (and_then_kind k k') (and_then_bare p p') f;
+  f
+
 let parse_synth
   (#k: parser_kind)
   (#t1: Type)
@@ -51,6 +75,19 @@ let parse_synth_eq
   (requires (synth_injective f2))
   (ensures (parse (parse_synth p1 f2) b == parse_synth' p1 f2 b))
 = ()
+
+unfold
+let tot_parse_fret' (#t #t':Type) (f: t -> Tot t') (v:t) : Tot (tot_bare_parser t') =
+  fun (b: bytes) -> Some (f v, (0 <: consumed_length b))
+
+unfold
+let tot_parse_fret (#t #t':Type) (f: t -> Tot t') (v:t) : Tot (tot_parser parse_ret_kind t') =
+  [@inline_let] let _ = parser_kind_prop_equiv parse_ret_kind (tot_parse_fret' f v) in
+  tot_parse_fret' f v
+
+let tot_parse_synth
+  #k #t1 #t2 p1 f2
+= coerce (tot_parser k t2) (tot_and_then p1 (fun v1 -> tot_parse_fret f2 v1))
 
 let bare_serialize_synth_correct #k #t1 #t2 p1 f2 s1 g1 =
   ()
@@ -227,6 +264,10 @@ let parse_tagged_union_eq_gen
     parse_synth_eq #k #(refine_with_tag tag_of_data tg) (p tg) (synth_tagged_union_data tag_of_data tg) input_tg;
     lem_p' tg input_tg
 
+let tot_parse_tagged_union #kt #tag_t pt #data_t tag_of_data #k p =
+  parse_tagged_union_payload_and_then_cases_injective tag_of_data #k p;
+  pt `tot_and_then` tot_parse_tagged_union_payload tag_of_data p
+
 let serialize_tagged_union
   (#kt: parser_kind)
   (#tag_t: Type)
@@ -353,6 +394,27 @@ let nondep_then_eq
   by (T.norm [delta_only [`%nondep_then;]])
   
 = ()
+
+let tot_nondep_then_bare
+  (#t1: Type)
+  (p1: tot_bare_parser t1)
+  (#t2: Type)
+  (p2: tot_bare_parser t2)
+: Tot (tot_bare_parser (t1 & t2))
+= fun b -> match p1 b with
+  | Some (x1, consumed1) ->
+    let b' = Seq.slice b consumed1 (Seq.length b) in
+    begin match p2 b' with
+    | Some (x2, consumed2) ->
+      Some ((x1, x2), consumed1 + consumed2)
+    | _ -> None
+    end
+  | _ -> None
+
+let tot_nondep_then #k1 #t1 p1 #k2 #t2 p2 =
+  Classical.forall_intro (nondep_then_eq #k1 p1 #k2 p2);
+  parser_kind_prop_ext (and_then_kind k1 k2) (nondep_then #k1 p1 #k2 p2) (tot_nondep_then_bare p1 p2);
+  tot_nondep_then_bare p1 p2
 
 let serialize_nondep_then
   (#k1: parser_kind)
@@ -610,6 +672,25 @@ let parse_filter_eq
     else None
   ))
 = ()
+
+let tot_parse_filter_payload
+  (#t: Type)
+  (f: (t -> Tot bool))
+  (v: t)
+: Tot (tot_parser parse_filter_payload_kind (parse_filter_refine f))
+= let p : tot_bare_parser (parse_filter_refine f) =
+    if f v
+    then
+      let v' : (x: t { f x == true } ) = v in
+      tot_weaken parse_filter_payload_kind (tot_parse_ret v')
+    else tot_fail_parser parse_filter_payload_kind (parse_filter_refine f)
+  in
+  parser_kind_prop_equiv parse_filter_payload_kind p;
+  p
+
+let tot_parse_filter
+  #k #t p f
+= p `tot_and_then` (tot_parse_filter_payload f)
 
 let serialize_filter_correct
   (#k: parser_kind)

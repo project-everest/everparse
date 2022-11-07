@@ -16,10 +16,14 @@ friend LowParse.Spec.Int
 
 let read_u8 : leaf_reader parse_u8 =
   decode_u8_injective ();
-  make_total_constant_size_reader 1 1ul
-    decode_u8
-    ()
-    (fun #rrel #rel b pos -> B.index b pos)
+  leaf_reader_ext
+    (make_total_constant_size_reader 1 1ul
+      decode_u8
+      ()
+      (fun #rrel #rel b pos -> B.index b pos)
+    )
+    _
+    (fun _ -> ())
 
 inline_for_extraction
 let read_u16 =

@@ -3,16 +3,16 @@ open LowParse.Spec.Combinators
 
 let decode_u8
   (b: bytes { Seq.length b == 1 } )
-: GTot U8.t
+: Tot U8.t
 = Seq.index b 0
 
 let decode_u8_injective () : Lemma
   (make_total_constant_size_parser_precond 1 U8.t decode_u8)
 = ()
 
-let parse_u8 =
+let tot_parse_u8 =
   decode_u8_injective ();
-  make_total_constant_size_parser 1 U8.t decode_u8
+  tot_make_total_constant_size_parser 1 U8.t decode_u8
 
 let parse_u8_spec
   b

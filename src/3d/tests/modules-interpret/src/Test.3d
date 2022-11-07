@@ -12,7 +12,7 @@ entrypoint typedef struct _T {
   CIRCLE             c;
   UINT32             f1  { f1 == Constants::FIVE };
   UINT32             f2  { f2 == Constants::Four };
-  UINT32             f3  { f3 == TEST_ONE }
+  UINT32             f3  { f3 == TEST_ONE };
 } T;
 
 refining "Foobar.h" {
