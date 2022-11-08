@@ -33,7 +33,7 @@ let validate_vldata_gen
   (v: validator p)
 : Tot (validator (parse_vldata_gen sz f p))
 = parse_vldata_gen_eq_def sz f p;
-  rewrite_validator
+  coerce _ (
     (validate_filter_and_then
       (validate_bounded_integer sz)
       (read_bounded_integer sz)
@@ -42,7 +42,7 @@ let validate_vldata_gen
       #_ #_ #(parse_vldata_payload sz f p)
       (validate_vldata_payload sz f v)
       ())
-    (parse_vldata_gen sz f p)
+  )
 
 inline_for_extraction
 let jump_vldata_payload

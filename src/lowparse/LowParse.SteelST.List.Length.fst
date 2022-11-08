@@ -82,7 +82,7 @@ let list_length
   let vl : v _ _ = vpattern (aparse (parse_list p) a0) in
   let ar = array_of' vl in
   let phi (_: unit) (_: t) : Tot unit = () in
-  with_local SZ.zero_size (fun blen ->
+  let res : (res: SZ.size_t { SZ.size_v res == List.Tot.length va0.contents }) = with_local SZ.zero_size (fun blen ->
     noop ();
     rewrite
       (list_length_state0 p a0 blen ar () [])
@@ -121,8 +121,12 @@ let list_length
       (list_length_state0 p a0 blen (array_of' va0) () va0.contents);
     let _ = gen_elim () in
     let res = R.read blen in
-    return (res <: (res: SZ.size_t { SZ.size_v res == List.Tot.length va0.contents }))
+    let res' : (res: SZ.size_t { SZ.size_v res == List.Tot.length va0.contents }) = res in
+    noop ();
+    return res'
   )
+  in
+  return res
 
 #pop-options
 

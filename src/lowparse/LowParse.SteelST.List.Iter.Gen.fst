@@ -25,7 +25,10 @@ let list_iter_gen_prop
     l0 == l `List.Tot.append` va.contents /\
     cont == Cons? va.contents /\
     (enable_arrays ==> (
-      Some? al /\ Some? afull /\ merge_opt_into (Some?.v al) va.array (Some?.v afull)
+//      Some? al /\ Some? afull /\ merge_opt_into (Some?.v al) va.array (Some?.v afull)
+        match al, afull with
+        | Some v_al, Some v_afull -> merge_opt_into v_al va.array v_afull
+        | _ -> False
     ))
 
 module R = Steel.ST.Reference
@@ -188,14 +191,60 @@ module L = Steel.ST.Loops
 
 #restart-solver
 inline_for_extraction
-let list_iter_gen
-  #k #t #p j #t' phi enable_arrays state f #va a len al init
+let list_iter_gen_with
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (#t': Type0)
+  (phi: Ghost.erased (t' -> t -> t'))
+  (enable_arrays: Ghost.erased bool)
+  (state: option (AP.array byte) -> t' -> list t -> vprop)
+  (f: (
+    (va: v k t { AP.length (array_of' va) > 0 }) ->
+    (a: byte_array) ->
+    (al: Ghost.erased (option (AP.array byte)) { (Ghost.reveal enable_arrays ==> (Some? al /\ AP.adjacent (Some?.v al) (array_of' va))) } ) ->
+    (accu: t') ->
+    (l: Ghost.erased (list t)) ->
+    STT t'
+      (aparse p a va `star` state al accu l)
+      (fun res -> exists_ (fun al' -> exists_ (fun l' -> state al' res l' `star` pure (
+        (Ghost.reveal enable_arrays ==> (Some? al' /\ AP.merge_into (Some?.v al) (array_of' va) (Some?.v al'))) /\
+        l' == List.Tot.snoc (Ghost.reveal l, va.contents) /\
+        res == Ghost.reveal phi accu va.contents
+  ))))))
+  (#va: _)
+  (a: byte_array)
+  (len: SZ.size_t)
+  (al: Ghost.erased (option (AP.array byte)))
+  (init: t')
+  (pa: R.ref byte_array)
+  (plen: R.ref SZ.size_t)
+  (paccu: R.ref t')
+  (pcont: R.ref bool)
+: ST t'
+    (aparse_list p a va `star` state al init [] `star`
+      R.pts_to pa full_perm a `star`
+      R.pts_to plen full_perm len `star`
+      R.pts_to paccu full_perm init `star`
+      R.pts_to pcont full_perm (len <> SZ.zero_size)
+    )
+    (fun res -> exists_ (fun al' ->
+      state al' res va.contents `star` pure (
+      list_iter_gen_post phi enable_arrays al al' va init res
+    )) `star`
+      exists_ (R.pts_to pa full_perm) `star`
+      exists_ (R.pts_to plen full_perm) `star`
+      exists_ (R.pts_to paccu full_perm) `star`
+      exists_ (R.pts_to pcont full_perm)
+    )
+    (SZ.size_v len == length_opt va.array /\
+      k.parser_kind_subkind == Some ParserStrong /\
+      (Ghost.reveal enable_arrays ==> (Some? al /\ adjacent_opt (Some?.v al) va.array))
+    )
+    (fun res -> True)
 =
   let afull = compute_afull enable_arrays va al in
-  with_local a (fun pa ->
-  with_local len (fun plen ->
-  with_local init (fun paccu ->
-  with_local (len <> SZ.zero_size) (fun pcont ->
   let _ = ghost_is_cons_opt p a in
   list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu pcont _;
   L.while_loop
@@ -220,7 +269,18 @@ let list_iter_gen
   let ar' = vpattern_erased (fun ar' -> state ar' _ _) in
   vpattern_rewrite (fun res -> state _ res _) res;
   vpattern_rewrite (fun l' -> state _ _ l') va.contents;
+  noop ();
   return res
+
+inline_for_extraction
+let list_iter_gen
+  #k #t #p j #t' phi enable_arrays state f #va a len al init
+=
+  with_local a (fun pa ->
+  with_local len (fun plen ->
+  with_local init (fun paccu ->
+  with_local (len <> SZ.zero_size) (fun pcont ->
+    list_iter_gen_with j phi enable_arrays state f a len al init pa plen paccu pcont 
   ))))
 
 #pop-options

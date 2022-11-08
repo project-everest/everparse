@@ -7,6 +7,20 @@ module SZ = LowParse.Steel.StdInt
 
 open Steel.ST.Util
 
+let list_iter_gen_post
+  (#t #t': Type)
+  (phi: Ghost.erased (t' -> t -> t'))
+  (enable_arrays: Ghost.erased bool)
+  (al: Ghost.erased (option (AP.array byte)))
+  (al': option (AP.array byte))
+  (va: vl t)
+  (init: t')
+  (res: t')
+: prop
+=
+  (Ghost.reveal enable_arrays ==> (Some? al /\ Some? al' /\ merge_opt_into (Some?.v al) va.array (Some?.v al'))) /\
+  res == List.Tot.fold_left (Ghost.reveal phi) init va.contents
+
 inline_for_extraction
 val list_iter_gen
   (#k: Ghost.erased parser_kind)
@@ -39,8 +53,7 @@ val list_iter_gen
     (aparse_list p a va `star` state al init [])
     (fun res -> exists_ (fun al' ->
       state al' res va.contents `star` pure (
-      (Ghost.reveal enable_arrays ==> (Some? al /\ Some? al' /\ merge_opt_into (Some?.v al) va.array (Some?.v al'))) /\
-      res == List.Tot.fold_left (Ghost.reveal phi) init va.contents      
+      list_iter_gen_post phi enable_arrays al al' va init res
     )))
     (SZ.size_v len == length_opt va.array /\
       k.parser_kind_subkind == Some ParserStrong /\

@@ -1306,8 +1306,10 @@ let parse_vlgen_alt_sz_eq
   parse_synth_eq (sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) (synth_vlgen_alt_sz p) b;
   parse_dtuple2_eq sp (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n')))) b
 
+#restart-solver
+
 inline_for_extraction
-let validate_vlgen_alt_sz
+let validate_vlgen_alt_sz_1
   (#sk: Ghost.erased parser_kind)
   (#sp: parser sk SZ.size_t)
   (sv: validator sp)
@@ -1319,15 +1321,9 @@ let validate_vlgen_alt_sz
     (sz32: SZ.size_t) ->
     Tot (validator (parse_fldata p (SZ.size_v sz32)))
   ))
-: Pure (validator (parse_vlgen_alt (sp `parse_synth` SZ.size_v) p))
-    (requires sk.parser_kind_subkind == Some ParserStrong)
-    (ensures (fun _ -> True))
-=
-  validate_synth
-    (rewrite_validator'
-      #_ #_ 
-      #((sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) `parse_synth` synth_vlgen_alt_sz p)
-      (validate_synth
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong))
+: validator ((sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) `parse_synth` synth_vlgen_alt_sz p)
+=       (validate_synth
         (validate_dtuple2
           sv
           sr
@@ -1344,13 +1340,57 @@ let validate_vlgen_alt_sz
         (synth_vlgen_alt_sz p)
         (synth_vlgen_alt_sz_injective p)
       )
+
+inline_for_extraction
+let validate_vlgen_alt_sz_2
+  (#sk: Ghost.erased parser_kind)
+  (#sp: parser sk SZ.size_t)
+  (sv: validator sp)
+  (sr: leaf_reader sp)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (validate_fldata: (
+    (sz32: SZ.size_t) ->
+    Tot (validator (parse_fldata p (SZ.size_v sz32)))
+  ))
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong))
+: Tot (validator ((sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) `parse_synth` synth_vlgen_alt_sz p))
+= coerce _ (
+    (rewrite_validator'
+      #_ #_ 
+      #((sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) `parse_synth` synth_vlgen_alt_sz p)
+      (validate_vlgen_alt_sz_1 sv sr validate_fldata ())
       ((sp `parse_synth` SZ.size_v) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))))
       (fun b ->
         parse_vlgen_alt_sz_eq sp p b
       )
     )
-    (synth_vlgen_alt_payload p)
-    (synth_vlgen_alt_payload_injective p)
+  )
+
+inline_for_extraction
+let validate_vlgen_alt_sz
+  (#sk: Ghost.erased parser_kind)
+  (#sp: parser sk SZ.size_t)
+  (sv: validator sp)
+  (sr: leaf_reader sp)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (validate_fldata: (
+    (sz32: SZ.size_t) ->
+    Tot (validator (parse_fldata p (SZ.size_v sz32)))
+  ))
+: Pure (validator (parse_vlgen_alt (sp `parse_synth` SZ.size_v) p))
+    (requires sk.parser_kind_subkind == Some ParserStrong)
+    (ensures (fun _ -> True))
+= (synth_vlgen_alt_payload_injective p);
+  coerce _ (
+    validate_synth
+      (validate_vlgen_alt_sz_2 sv sr validate_fldata ())
+      (synth_vlgen_alt_payload p)
+      (synth_vlgen_alt_payload_injective p)
+  )
 
 inline_for_extraction
 let jump_vlgen_alt_sz
@@ -2253,6 +2293,19 @@ let validate_ifthenelse
   then coerce (validator #k #(ifthenelse x ttrue tfalse) (ifthenelse_dep x ttrue tfalse (parser k) ptrue pfalse)) (jtrue ()) a len err
   else coerce (validator #k #(ifthenelse x ttrue tfalse) (ifthenelse_dep x ttrue tfalse (parser k) ptrue pfalse)) (jfalse ()) a len err
 
+inline_for_extraction
+let validate_TPair
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (#ne1 #ne2 #pr2: bool)
+  (t1: typ type_of_scalar ne1 false)
+  (v1: validator (parser_of_typ p_of_s t1))
+  (t2: typ type_of_scalar ne2 pr2)
+  (v2: validator (parser_of_typ p_of_s t2))
+: Tot (validator (parser_of_typ p_of_s (TPair t1 t2)))
+= validate_weaken (pkind (ne1 || ne2) pr2) (validate_pair v1 v2) ()
+
 [@@specialize]
 let rec validator_of_typ
   (#scalar_t: Type)
@@ -2265,7 +2318,7 @@ let rec validator_of_typ
 =
   match t returns validator (parser_of_typ p_of_s t) with
   | TScalar s -> coerce _ ((p_of_s s).scalar_validator)
-  | TPair t1 t2 -> validate_weaken _ (validate_pair (validator_of_typ p_of_s t1) (validator_of_typ p_of_s t2)) ()
+  | TPair t1 t2 -> coerce _ (validate_TPair p_of_s t1 (validator_of_typ p_of_s t1) t2 (validator_of_typ p_of_s t2))
   | TList t' -> coerce _ (validate_list (validator_of_typ p_of_s t'))
   | TIf b ttrue tfalse ->
     coerce _
@@ -2279,7 +2332,8 @@ let rec validator_of_typ
         (fun _ -> validator_of_typ p_of_s (tfalse ()))
       )
   | TChoice s f ->
-    validate_weaken _
+    coerce _ (
+    validate_weaken (pkind true pr)
       (validate_dtuple2
         (p_of_s s).scalar_validator
         (p_of_s s).scalar_reader
@@ -2287,8 +2341,10 @@ let rec validator_of_typ
         (fun x -> (validator_of_typ p_of_s (f x)))
       )
       ()
+    )
   | TSizePrefixed s sz #_ #pr' t' ->
-    validate_weaken _
+    coerce _ (
+    validate_weaken (pkind true false)
       (validate_size_prefixed
         (p_of_s s).scalar_validator
         (p_of_s s).scalar_reader
@@ -2299,6 +2355,7 @@ let rec validator_of_typ
         )
       )
       ()
+    )
   | TUnit -> coerce _ (validate_weaken (pkind false false) (validate_total_constant_size parse_empty SZ.zero_size) ())
   | TFalse _ _ -> validate_fail _ _ ()
 
@@ -2600,6 +2657,28 @@ let extract_impl_stt_unit
     f mk emp fi
 
 inline_for_extraction
+let extract_impl_fold_unit_t
+  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
+  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
+  (#pre #post: state_i)
+  (#t: Type)
+  (#f: Ghost.erased (fold_t state_t t unit pre post))
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#with_size: bool)
+  (fi: fold_impl_t cl p with_size f)
+  (#vpre: vprop)
+  (#h: Ghost.erased (state_t pre))
+  (mk: mk_ll_state_t cl vpre h)
+: Tot Type
+= (vbin: v k t) ->
+  (bin: byte_array) ->
+  (bin_sz: (if with_size then size_of (array_of' vbin) else unit)) ->
+  STT bool
+    (vpre `star` aparse p bin vbin)
+    (fun res -> extract_impl_unit_post cl pre post (Ghost.reveal f vbin.contents) h res `star` aparse p bin vbin)
+
+inline_for_extraction
 let extract_impl_fold_unit
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2613,13 +2692,9 @@ let extract_impl_fold_unit
   (#vpre: vprop)
   (#h: Ghost.erased (state_t pre))
   (mk: mk_ll_state_t cl vpre h)
-  (vbin: v k t)
-  (bin: byte_array)
-  (bin_sz: (if with_size then size_of (array_of' vbin) else unit))
-: STT bool
-    (vpre `star` aparse p bin vbin)
-    (fun res -> extract_impl_unit_post cl pre post (Ghost.reveal f vbin.contents) h res `star` aparse p bin vbin)
-= extract_impl_stt'_unit
+: Tot (extract_impl_fold_unit_t fi mk)
+= fun vbin bin bin_sz ->
+  extract_impl_stt'_unit
     (Ghost.reveal f vbin.contents)
     mk
     (aparse p bin vbin)

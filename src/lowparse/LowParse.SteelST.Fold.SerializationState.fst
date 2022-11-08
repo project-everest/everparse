@@ -593,7 +593,9 @@ let elim_ll_state_match'_nil
       (ll_state_match' p_of_s s b sz a ls)
       (AP.arrayptr b (LNil?.a ls) `star` pure (SNil? s == true));
     let _ = gen_elim () in
-    ()
+    let sq : squash (LNil? ls /\ Nil? i /\ SNil? s) = () in
+    noop ();
+    sq
   | LCons _ _ _ _ _ _ _ _ _ ->
     begin match s with
     | SNil ->
@@ -1589,6 +1591,19 @@ let write0_inc
 : Tot (stt_state_inc (cl0 p_of_s b b_sz a) (spec_write0 s t v))
 = fun _ -> ()
 
+let r_to_l_write_post_failure_prop
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (v: t)
+  (b: byte_array)
+  (a: AP.array byte)
+  (vb': AP.v byte)
+: Tot prop
+=
+    AP.array_of vb' == a /\
+    parsed_size p v `option_nat_ge` Some (AP.length a + 1)
+
 [@@__reduce__]
 let r_to_l_write_post_failure
   (#k: parser_kind)
@@ -1599,10 +1614,8 @@ let r_to_l_write_post_failure
   (a: AP.array byte)
 : Tot vprop
 = exists_ (fun vb' ->
-    AP.arrayptr b vb' `star` pure (
-    AP.array_of vb' == a /\
-    parsed_size p v `option_nat_ge` Some (AP.length a + 1)
-  ))
+    AP.arrayptr b vb' `star` pure (r_to_l_write_post_failure_prop p v b a vb')
+  )
 
 [@@__reduce__]
 let r_to_l_write_post_success

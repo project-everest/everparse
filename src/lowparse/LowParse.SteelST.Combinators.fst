@@ -110,7 +110,7 @@ let read_weaken
   vpattern_rewrite (aparse (LowParse.Spec.Base.weaken k' p) a) va;
   return res
 
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 24"
 #restart-solver
 
 inline_for_extraction
@@ -129,10 +129,12 @@ let validate_pair
       let ar = AP.split a s1 in
       let _ = gen_elim () in
       let len2 = len `SZ.size_sub` s1 in
-      let s2 = v2 ar (len `SZ.size_sub` s1) err in
+      let s2 = v2 ar len2 err in
       let _ = gen_elim () in
-      let _ = AP.join a ar in
-      return (s1 `SZ.size_add` s2)
+      let aj = AP.join a ar in
+      let sz = s1 `SZ.size_add` s2 in
+      noop ();
+      return sz
     end
     else
     begin
@@ -667,7 +669,9 @@ let validate_filter_and_then
       let len2 = v2 x a2 (len `SZ.size_sub` len1) err in
       let _ = gen_elim () in
       unpeek_strong a va a2;
-      return (len1 `SZ.size_add` len2)
+      let len' = len1 `SZ.size_add` len2 in
+      noop ();
+      return len'
     end
   end else begin
     noop ();
@@ -903,7 +907,9 @@ let validate_tagged_union
       let s2 = v tag ar (len `SZ.size_sub` s1) err in
       let _ = gen_elim () in
       let _ = AP.join a ar in
-      return (s1 `SZ.size_add` s2)
+      let len' = s1 `SZ.size_add` s2 in
+      noop ();
+      return len'
     end
     else
     begin
