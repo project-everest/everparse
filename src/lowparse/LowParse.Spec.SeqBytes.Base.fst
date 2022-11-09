@@ -4,13 +4,18 @@ include LowParse.Spec.FLData
 let parse_seq_flbytes_gen
   (sz: nat)
   (s: bytes { Seq.length s == sz } )
-: GTot (Seq.lseq byte sz)
+: Tot (Seq.lseq byte sz)
 = s
+
+let tot_parse_seq_flbytes
+  (sz: nat)
+: Tot (tot_parser (total_constant_size_parser_kind sz) (Seq.lseq byte sz))
+= tot_make_total_constant_size_parser sz (Seq.lseq byte sz) (parse_seq_flbytes_gen sz)
 
 let parse_seq_flbytes
   (sz: nat)
 : Tot (parser (total_constant_size_parser_kind sz) (Seq.lseq byte sz))
-= make_total_constant_size_parser sz (Seq.lseq byte sz) (parse_seq_flbytes_gen sz)
+= tot_parse_seq_flbytes sz
 
 let serialize_seq_flbytes'
   (sz: nat)

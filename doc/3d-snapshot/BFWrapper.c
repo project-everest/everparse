@@ -8,6 +8,7 @@ void DefaultErrorHandler(
 	const char *typename_s,
 	const char *fieldname,
 	const char *reason,
+	uint64_t error_code,
 	uint8_t *context,
 	EverParseInputBuffer input,
 	uint64_t start_pos)
@@ -17,6 +18,7 @@ void DefaultErrorHandler(
 		typename_s,
 		fieldname,
 		reason,
+		error_code,
 		frame,
 		input,
 		start_pos

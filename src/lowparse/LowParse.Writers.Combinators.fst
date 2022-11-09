@@ -139,6 +139,8 @@ let parse_bounded_integer
 
 module HST = FStar.HyperStack.ST
 
+#push-options "--z3rlimit 32"
+
 let parse_vldata_intro_impl
   #inv p min max
 = mk_repr_impl
@@ -160,8 +162,6 @@ let parse_vldata_intro_impl
   )
 
 let write_bounded_integer = LP.write_bounded_integer'
-
-#push-options "--z3rlimit 32"
 
 let parse_vldata_intro_weak_impl
   #inv p min max

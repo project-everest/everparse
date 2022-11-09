@@ -12,9 +12,10 @@ ValidatePoint(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -45,6 +46,7 @@ ValidatePoint(
     Err("_point",
       "x",
       EverParseErrorReasonOfResult(positionAfterPoint),
+      EverParseGetValidatorErrorKind(positionAfterPoint),
       Ctxt,
       Input,
       StartPosition);
@@ -76,6 +78,7 @@ ValidatePoint(
   Err("_point",
     "y",
     EverParseErrorReasonOfResult(positionAfterPoint0),
+    EverParseGetValidatorErrorKind(positionAfterPoint0),
     Ctxt,
     Input,
     positionAfterx);
@@ -90,9 +93,10 @@ Triangle2ValidateTriangle(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -119,7 +123,7 @@ Triangle2ValidateTriangle(
     uint64_t result = StartPosition;
     while (TRUE)
     {
-      uint64_t position = *&result;
+      uint64_t position = result;
       BOOLEAN ite;
       if (!((uint64_t)1U <= (truncatedInputLength - position)))
       {
@@ -144,6 +148,7 @@ Triangle2ValidateTriangle(
           Err("_triangle",
             "corners.element",
             EverParseErrorReasonOfResult(positionAfterTriangle),
+            EverParseGetValidatorErrorKind(positionAfterTriangle),
             Ctxt,
             truncatedInput,
             position);
@@ -167,6 +172,7 @@ Triangle2ValidateTriangle(
   Err("_triangle",
     "corners",
     EverParseErrorReasonOfResult(positionAfterTriangle),
+    EverParseGetValidatorErrorKind(positionAfterTriangle),
     Ctxt,
     Input,
     StartPosition);

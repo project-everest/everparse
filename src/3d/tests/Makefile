@@ -20,13 +20,16 @@ modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
 clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(modules_static_assertions) $(addsuffix .h,$(modules_or_wrappers))
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test modules-interpret elf-test static funptr
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test modules-interpret elf-test static funptr ifdefs
 
 #AR: TODO: remove ELF.3d from here
 
 INTERPRETABLE_FILES=$(filter-out FAILNoEntrypoint.3d ELF.3d, $(wildcard *.3d))
 INTERPRETABLE_MODULES=$(basename $(INTERPRETABLE_FILES))
 interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_MODULES))
+
+ifdefs:
+	+$(MAKE) -C ifdefs
 
 extern:
 	+$(MAKE) -C extern
@@ -94,4 +97,4 @@ batch-cleanup-test:
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe out.batch-interpret
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules modules-interpret tcpip extern %.interpret batch-interpret-test static funptr
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules modules-interpret tcpip extern %.interpret batch-interpret-test static funptr ifdefs

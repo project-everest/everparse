@@ -13,9 +13,10 @@ GetFieldPtrValidateT(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
-    uint8_t *x3,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -38,7 +39,7 @@ GetFieldPtrValidateT(
     uint64_t result = StartPosition;
     while (TRUE)
     {
-      uint64_t position = *&result;
+      uint64_t position = result;
       BOOLEAN ite;
       if (!((uint64_t)1U <= (truncatedInputLength - position)))
       {
@@ -69,6 +70,7 @@ GetFieldPtrValidateT(
           Err("_T",
             "f1.element",
             EverParseErrorReasonOfResult(positionAfterT),
+            EverParseGetValidatorErrorKind(positionAfterT),
             Ctxt,
             truncatedInput,
             position);
@@ -93,7 +95,13 @@ GetFieldPtrValidateT(
   }
   else
   {
-    Err("_T", "f1", EverParseErrorReasonOfResult(positionAfterT), Ctxt, Input, StartPosition);
+    Err("_T",
+      "f1",
+      EverParseErrorReasonOfResult(positionAfterT),
+      EverParseGetValidatorErrorKind(positionAfterT),
+      Ctxt,
+      Input,
+      StartPosition);
     positionAfterf1 = positionAfterT;
   }
   if (EverParseIsError(positionAfterf1))
@@ -116,7 +124,7 @@ GetFieldPtrValidateT(
     uint64_t result = positionAfterf1;
     while (TRUE)
     {
-      uint64_t position = *&result;
+      uint64_t position = result;
       BOOLEAN ite;
       if (!((uint64_t)1U <= (truncatedInputLength - position)))
       {
@@ -147,6 +155,7 @@ GetFieldPtrValidateT(
           Err("_T",
             "f2.base.element",
             EverParseErrorReasonOfResult(positionAfterT),
+            EverParseGetValidatorErrorKind(positionAfterT),
             Ctxt,
             truncatedInput,
             position);
@@ -174,6 +183,7 @@ GetFieldPtrValidateT(
     Err("_T",
       "f2.base",
       EverParseErrorReasonOfResult(positionAfterT0),
+      EverParseGetValidatorErrorKind(positionAfterT0),
       Ctxt,
       Input,
       positionAfterf1);
@@ -204,7 +214,13 @@ GetFieldPtrValidateT(
   {
     return positionAfterT1;
   }
-  Err("_T", "f2", EverParseErrorReasonOfResult(positionAfterT1), Ctxt, Input, positionAfterf1);
+  Err("_T",
+    "f2",
+    EverParseErrorReasonOfResult(positionAfterT1),
+    EverParseGetValidatorErrorKind(positionAfterT1),
+    Ctxt,
+    Input,
+    positionAfterf1);
   return positionAfterT1;
 }
 

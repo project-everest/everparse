@@ -31,6 +31,9 @@ module H = Hashtable
      abbreviations
 
    * Set the kind (Spec/Output/Extern) in the type nodes
+
+   * Finds variables in Static expressions and hoists them as assumptions
+     and removes the Static
 *)
 
 let check_desugared_enum_cases (cases:list enum_case) : ML (list ident) =
@@ -169,6 +172,18 @@ let prim_consts = [
   "void" ]
 
 let resolve_ident (env:qenv) (i:ident) : ML ident =
+  let resolve_to_current_module i =
+    { i with v = { i.v with modul_name = Some env.mname } }
+  in
+  let maybe_resolve_as_ifdef i 
+    : ML ident
+    = match env.global_env.ge_cfg with
+      | None -> resolve_to_current_module i
+      | Some (cfg, cfg_module_name) ->
+        if List.mem i.v.name cfg.compile_time_flags.flags
+        then { i with v = { i.v with modul_name = Some cfg_module_name } }
+        else resolve_to_current_module i
+  in
   if List.mem i.v.name prim_consts  //it's a primitive constant, e.g. UINT8, leave as is
   then i
   else if List.mem i.v.name env.local_names  //it's a local name (e.g. a parameter name)
@@ -180,21 +195,53 @@ let resolve_ident (env:qenv) (i:ident) : ML ident =
                         i.range
              else i)  //return the local name as is
        else (match i.v.modul_name with  //it's a top-level name
-             | None -> { i with v = { i.v with modul_name = Some env.mname } }  //if unqualified, add current module
+             | None -> maybe_resolve_as_ifdef i
              | Some m ->  //if already qualified, check if it is an abbreviation
                (match H.try_find env.module_abbrevs m with
                 | None -> i
                 | Some m -> { i with v = { i.v with modul_name = Some m } }))
 
 
-let rec resolve_expr' (env:qenv) (e:expr') : ML expr' =
+let rec collect_ifdef_guards (env:qenv) (e:expr) 
+  : ML unit
+  = let check_resolved_to_ifdef i =
+      match env.global_env.ge_cfg with
+      | None -> false
+      | Some (cfg, cfg_module_name) ->
+        List.mem i.v.name cfg.compile_time_flags.flags
+        && i.v.modul_name = Some cfg_module_name
+    in
+    match e.v with
+    | This -> error "'this' is not allowed in the guard of an #if" e.range
+    | Static _ -> failwith "static should have been eliminated already"
+    | Constant _ -> ()
+    | Identifier i ->
+      if not (check_resolved_to_ifdef i)
+      then error (Printf.sprintf "Identifier %s is not a compile-time macro but is used in a #if" i.v.name) e.range
+    | App op args ->
+      begin 
+      match op with
+      | And
+      | Or
+      | Not -> List.iter (collect_ifdef_guards env) args
+      | _ -> error "Only boolean expressions over identifiers are supported in #if guards" e.range
+      end
+
+let rec resolve_expr' (env:qenv) (e:expr') r : ML expr' =
   match e with
   | Constant _ -> e
   | Identifier i -> Identifier (resolve_ident env i)
   | This -> e
-  | App op args -> App op (List.map (resolve_expr env) args)
+  | Static e' ->
+    let e' = resolve_expr env e' in
+    collect_ifdef_guards env e';//mark any variables as top-level IfDef symbols
+    e'.v
+  
+  | App op args -> 
+    let args = List.map (resolve_expr env) args in
+    App op args    
 
-and resolve_expr (env:qenv) (e:expr) : ML expr = { e with v = resolve_expr' env e.v }
+and resolve_expr (env:qenv) (e:expr) : ML expr = { e with v = resolve_expr' env e.v e.range }
 
 let resolve_typ_param (env:qenv) (p:typ_param) : ML typ_param =
   match p with
@@ -283,8 +330,14 @@ let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
   | FieldString None -> farr
   | FieldString (Some e) -> FieldString (Some (resolve_expr env e))
 
-let resolve_field (env:qenv) (f:field) : ML (field & qenv) =
-  let resolve_struct_field (env:qenv) (sf:struct_field) : ML struct_field =
+let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
+  match ff.v with
+  | AtomicField f -> let f, e = resolve_atomic_field env f in {ff with v = AtomicField f}, e
+  | RecordField f i -> let fs, _ = resolve_fields env f in  {ff with v = RecordField fs i}, env //record fields are not in scope outside the record
+  | SwitchCaseField f i -> let f = resolve_switch_case env f in {ff with v = SwitchCaseField f i}, env
+
+and resolve_atomic_field (env:qenv) (f:atomic_field) : ML (atomic_field & qenv) =
+  let resolve_atomic_field' (env:qenv) (sf:atomic_field') : ML atomic_field' =
     { sf with
       field_type = resolve_typ env sf.field_type;
       field_array_opt = resolve_field_array_t env sf.field_array_opt;
@@ -293,14 +346,14 @@ let resolve_field (env:qenv) (f:field) : ML (field & qenv) =
       field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action } in
 
   let env = push_name env f.v.field_ident.v.name in
-  { f with v = resolve_struct_field env f.v }, env
+  { f with v = resolve_atomic_field' env f.v }, env
 
-let resolve_fields (env:qenv) (flds:list field) : ML (list field & qenv) =
+and resolve_fields (env:qenv) (flds:list field) : ML (list field & qenv) =
   List.fold_left (fun (flds, env) f ->
     let f, env = resolve_field env f in
     flds@[f], env) ([], env) flds
 
-let resolve_switch_case (env:qenv) (sc:switch_case) : ML switch_case =
+and resolve_switch_case (env:qenv) (sc:switch_case) : ML switch_case = //case fields do not escape their scope
   let resolve_case (env:qenv) (c:case) : ML case =
     match c with
     | Case e f -> Case (resolve_expr env e) (fst (resolve_field env f))

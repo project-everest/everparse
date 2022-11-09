@@ -155,10 +155,18 @@ let verify_and_extract_module
   let fsti_file = 
       Printf.sprintf "%si" fst_file
   in
-  let all_files = List.filter file_exists [external_api_fsti_file; types_fst_file; fsti_file; fst_file] in
-  let all_extract_files = List.filter file_exists [external_api_fsti_file; types_fst_file; fst_file] in  
-  List.iter (verify_fst_file input_stream_binding out_dir) all_files;
-  List.iter (extract_fst_file input_stream_binding out_dir) all_extract_files
+  let all_files = [external_api_fsti_file; types_fst_file; fsti_file; fst_file] in
+  let all_extract_files = [external_api_fsti_file; types_fst_file; fst_file] in  
+  let all_files, all_extract_files = 
+    match Deps.get_config () with
+    | None -> all_files, all_extract_files
+    | Some (_, module_name) -> 
+      let cfg_fst_name = filename_concat out_dir (Printf.sprintf "%s.fst" module_name) in
+      cfg_fst_name::all_files,
+      cfg_fst_name::all_extract_files
+  in
+  List.iter (verify_fst_file input_stream_binding out_dir) (List.filter file_exists all_files);
+  List.iter (extract_fst_file input_stream_binding out_dir) (List.filter file_exists all_extract_files)
 
 let is_krml
       filename
@@ -271,6 +279,11 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
                      (all_everparse_krmls input_stream_binding)
                      files_and_modules
   in
+  let krml_files =
+    match Options.config_module_name () with
+    | None -> krml_files
+    | Some m -> filename_concat out_dir (Printf.sprintf "%s.krml" m) :: krml_files
+  in
   let external_api_lib_args = List.fold_left (fun accu (_, modul) ->
                                   accu @ (external_api_lib_args modul)) [] files_and_modules in
   let external_api_no_prefix_args = List.fold_left (fun accu (_, modul) ->
@@ -296,16 +309,27 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
                                     external_api_lib_args @ external_api_no_prefix_args @ external_typedefs_include_args @ krml_args0 @ krml_files
-    in
-    let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
-    let krml_args =
+  in
+  let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
+  let krml_args =
       if input_stream_include = ""
       then krml_args
       else "-add-include" :: Printf.sprintf "\"%s\"" input_stream_include :: krml_args
-    in
+  in
+  let krml_args =
     if skip_c_makefiles
     then "-skip-makefiles" :: krml_args
     else krml_args
+  in
+  let krml_args =
+    match Deps.get_config () with
+    | None -> krml_args
+    | Some (cfg, module_name) ->
+      let include_file = Printf.sprintf "\"%s\"" cfg.compile_time_flags.include_file in
+      "-no-prefix" :: module_name :: "-add-include" :: include_file  :: krml_args
+  in
+  krml_args
+  
 
 let call_krml files_and_modules_cleanup out_dir krml_args =
   (* append the everparse and krmllib bundles to the list of arguments *)

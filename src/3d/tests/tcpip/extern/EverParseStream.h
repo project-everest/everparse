@@ -23,7 +23,7 @@ int EverParsePush(EverParseInputStreamBase x, uint8_t * buf, uint64_t len);
 typedef int EverParseExtraT;
 
 
-void EverParseHandleError(EverParseExtraT _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason);
+void EverParseHandleError(EverParseExtraT _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason, uint64_t error_code);
 void EverParseRetreat(EverParseExtraT _dummy, EverParseInputStreamBase base, uint64_t parsedSize);
 
 #endif // __EVERPARSESTREAM
