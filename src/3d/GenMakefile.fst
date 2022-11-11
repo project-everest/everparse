@@ -47,6 +47,41 @@ let mk_filename
 : Tot string
 = output_dir `OS.concat` (Printf.sprintf "%s.%s" modul ext)
 
+let add_cfg_file_dep ext deps
+  : FStar.All.ML (list string)
+  = match Options.config_module_name () with
+    | None -> deps
+    | Some module_name -> deps `List.Tot.append` [mk_filename module_name ext]
+  
+let produce_config_fst_file_rule ()
+: FStar.All.ML (list rule_t)
+= match Options.config_module_name (), Options.get_config_file() with
+  | Some module_name, Some cfg_file_name ->
+    let fst_file_name = mk_filename module_name "fst" in
+    let checked_file_name = mk_filename module_name "fst.checked" in
+    let krml_file_name = mk_filename module_name "krml" in
+    let fst_rule = {
+      ty = EverParse;
+      from = [cfg_file_name];
+      to = fst_file_name;
+      args = "--__micro_step emit_config"
+    } in
+    let fst_checked_rule = {
+      ty = EverParse;
+      from = [fst_file_name];
+      to =  checked_file_name;
+      args = Printf.sprintf "--__micro_step verify %s" fst_file_name;
+    } in
+    let krml_rule = {
+      ty = EverParse;
+      from = [checked_file_name];
+      to =  krml_file_name;
+      args = Printf.sprintf "--__micro_step extract %s" fst_file_name;        
+    } in
+    [fst_rule; fst_checked_rule; krml_rule]
+  | _ -> []
+
+
 let produce_external_api_fsti_checked_rule
   (g: Deps.dep_graph)
   (modul: string)
@@ -78,11 +113,11 @@ let produce_fsti_checked_rule
 let produce_fst_checked_rule
   (g: Deps.dep_graph)
   (modul: string)
-: Tot rule_t
+: FStar.All.ML rule_t
 = let fst = mk_filename modul "fst" in
   {
     ty = EverParse;
-    from = fst :: mk_filename modul "fsti.checked" :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul);
+    from = add_cfg_file_dep "fst.checked" (fst :: mk_filename modul "fsti.checked" :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul));
     to = mk_filename modul "fst.checked";
     args = Printf.sprintf "--__micro_step verify %s" fst;
   }
@@ -106,11 +141,13 @@ let produce_external_api_krml_rule
 let produce_krml_rule
   (g: Deps.dep_graph)
   (modul: string)
-: Tot rule_t
+: FStar.All.ML rule_t
 =
   {
     ty = EverParse;
-    from = mk_filename modul "fst.checked" :: List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul);
+    from = add_cfg_file_dep "fst.checked" 
+            (mk_filename modul "fst.checked" :: 
+              List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul));
     to = mk_filename modul "krml";
     args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "fst");
   }
@@ -194,16 +231,18 @@ let produce_h_rules
   {
     ty = EverParse;
     from =
-      (if clang_format then [mk_filename "" "clang-format"] else []) `List.Tot.append`
-      (if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [copyright] else []) `List.Tot.append`
-      List.map (fun f -> mk_filename (Options.get_module_name f) "krml") all_files `List.Tot.append`
-      List.concatMap (fun f ->
-        let m = Options.get_module_name f in
-        if Deps.has_output_types g m ||
-           Deps.has_extern_types g m ||
-           Deps.has_extern_functions g m
-        then [mk_filename (Printf.sprintf "%s_ExternalAPI" m) "krml"]
-        else []) all_files
+      add_cfg_file_dep "krml" (
+        (if clang_format then [mk_filename "" "clang-format"] else []) `List.Tot.append`
+        (if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [copyright] else []) `List.Tot.append`
+        List.map (fun f -> mk_filename (Options.get_module_name f) "krml") all_files `List.Tot.append`
+        List.concatMap (fun f ->
+          let m = Options.get_module_name f in
+          if Deps.has_output_types g m ||
+            Deps.has_extern_types g m ||
+            Deps.has_extern_functions g m
+          then [mk_filename (Printf.sprintf "%s_ExternalAPI" m) "krml"]
+          else []) all_files
+      )
       ;
     to = to; (* IMPORTANT: relies on the fact that KaRaMeL generates .c files BEFORE .h files *)
     args = Printf.sprintf "--__produce_c_from_existing_krml %s" (mk_input_filename file);
@@ -315,10 +354,11 @@ let produce_makefile
     List.concatMap (produce_fst_rules g clang_format) all_files `List.Tot.append`
     List.concatMap (produce_external_api_fsti_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fsti_checked_rule g) all_modules `List.Tot.append`
-    List.Tot.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
+    List.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
     List.Tot.concatMap (produce_external_api_krml_rule g) all_modules `List.Tot.append`
-    List.Tot.map (produce_krml_rule g) all_modules `List.Tot.append`
-    List.concatMap (produce_h_rules g clang_format) all_files
+    List.map (produce_krml_rule g) all_modules `List.Tot.append`
+    List.concatMap (produce_h_rules g clang_format) all_files `List.Tot.append`
+    produce_config_fst_file_rule ()
   in {
     graph = g;
     rules = rules;

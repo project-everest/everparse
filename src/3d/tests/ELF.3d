@@ -223,8 +223,8 @@ casetype _PROGRAM_HEADER_TABLE_OPT (UINT16 PhNum,
     case 0:
       unit    Empty;
     default:
-      PROGRAM_HEADER_TABLE_ENTRY(ElfFileSize)    Tbl[:byte-size sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum]
-   }
+      PROGRAM_HEADER_TABLE_ENTRY(ElfFileSize)    Tbl[:byte-size sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum];
+  }
 } PROGRAM_HEADER_TABLE_OPT;
 
 

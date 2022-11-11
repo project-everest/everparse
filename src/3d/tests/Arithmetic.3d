@@ -6,7 +6,7 @@ where param < 100uy
 {
   UINT8 field1  { field1 < param + 1uy };
   UINT16 field2 { field2 < MAX_UINT16 - (UINT16)field1 };
-  UINT32 field3 { field3 < 0xbeefbadd - (UINT32)field2 }
+  UINT32 field3 { field3 < 0xbeefbadd - (UINT32)field2 };
 } Test;
 
 entrypoint
@@ -15,7 +15,7 @@ where param < 100uy
 {
   UINT8 field1  { field1 < param + 1uy };
   UINT16 field2 { field2 < MAX_UINT16 - field1 };
-  UINT32 field3 { field3 < 0xbeefbadd - field2 }
+  UINT32 field3 { field3 < 0xbeefbadd - field2 };
 } Test2;
 
 #define Case1 0x02
@@ -47,7 +47,7 @@ typedef struct _Test3
                   field3 == field2 / field1 ||
                   field3 == (UINT32)field2 * field1 ||
                   (field2 >= field1 && field3 == field2 - field1)
-                }
+                };
 } Test3;
 
 // Check that all operators are translated as expected

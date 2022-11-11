@@ -1,7 +1,7 @@
 typedef struct _BF {
    UINT32 x : 6;
    UINT32 y : 10 { y <= 900 };
-   UINT32 z : 16 { y + z <= 60000 }
+   UINT32 z : 16 { y + z <= 60000 };
 } BF, *PBF;
 
 entrypoint

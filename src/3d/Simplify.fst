@@ -112,8 +112,8 @@ let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   | FieldArrayQualified (e, b) -> FieldArrayQualified (simplify_expr env e, b)
   | FieldString sz -> FieldString (map_opt (simplify_expr env) sz)
 
-let simplify_field (env:T.env_t) (f:field)
-  : ML field
+let simplify_atomic_field (env:T.env_t) (f:atomic_field)
+  : ML atomic_field
   = let sf = f.v in
     let ft = simplify_typ env sf.field_type in
     let fa = simplify_field_array env sf.field_array_opt in
@@ -129,6 +129,26 @@ let simplify_field (env:T.env_t) (f:field)
                        field_action = fact } in
     { f with v = sf }
 
+let rec simplify_field (env:T.env_t) (f:field)
+  : ML field
+  = match f.v with
+    | AtomicField af -> { f with v = AtomicField (simplify_atomic_field env af) }
+    | RecordField fs i -> { f with v = RecordField (List.map (simplify_field env) fs) i }
+    | SwitchCaseField swc i -> { f with v = SwitchCaseField (simplify_switch_case env swc) i }
+
+and simplify_switch_case (env:T.env_t) (c:switch_case)
+  : ML switch_case = 
+  let (e, cases) = c in
+  let e = simplify_expr env e in
+  let cases =
+    List.map 
+      (function Case e f -> Case (simplify_expr env e) (simplify_field env f)
+              | DefaultCase f -> DefaultCase (simplify_field env f))
+      cases
+  in
+  e, cases
+  
+   
 let rec simplify_out_fields (env:T.env_t) (flds:list out_field) : ML (list out_field) =
   List.map (fun fld -> match fld with
     | Out_field_named id t n -> Out_field_named id (simplify_typ env t) n
@@ -158,12 +178,8 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
 
   | CaseType tdnames params switch ->
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in 
-    let hd, cases = switch in
-    let hd = simplify_expr env hd in
-    let cases = List.map (function Case e f -> Case (simplify_expr env e) (simplify_field env f)
-                                 | DefaultCase f -> DefaultCase (simplify_field env f)) 
-                         cases in
-    decl_with_v d (CaseType tdnames params (hd, cases))
+    let switch = simplify_switch_case env switch in
+    decl_with_v d (CaseType tdnames params switch)
 
   | OutputType out_t ->
     decl_with_v d (OutputType ({out_t with out_typ_fields=simplify_out_fields env out_t.out_typ_fields}))
@@ -174,6 +190,7 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     let ret = simplify_typ env ret in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
     decl_with_v d (ExternFn f ret params)
+  
 
 let simplify_prog benv senv (p:list decl) =
   List.map (simplify_decl (B.mk_env benv, senv)) p

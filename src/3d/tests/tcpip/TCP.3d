@@ -115,7 +115,8 @@ where MaxSegSizeAllowed
   };
   UINT16 MaxSegSize
   {:act
-    OptRx->MSS_CLAMP = MaxSegSize;}
+    OptRx->MSS_CLAMP = MaxSegSize;
+  };
 } MAX_SEG_SIZE_PAYLOAD;
 
 typedef struct _TIMESTAMP_PAYLOAD(Bool TimeStampAllowed,
@@ -131,7 +132,8 @@ where TimeStampAllowed
   {:act
     OptRx->SAW_TSTAMP = 1;
     OptRx->RCV_TSVAL = Tsval;
-    OptRx->RCV_TSECR = Tsecr;};
+    OptRx->RCV_TSECR = Tsecr;
+  };
 } TIMESTAMP_PAYLOAD;
 
 typedef struct _SackPerm_PAYLOAD(Bool SackPermAllowed,
