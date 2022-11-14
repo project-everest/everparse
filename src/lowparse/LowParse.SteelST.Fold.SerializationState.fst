@@ -2083,8 +2083,7 @@ let impl_cons
       ((cl0 p_of_s b b_sz a).ll_state_match h' out');
     k_success out' h' ()
 
-#pop-options
-
+#restart-solver
 let pair0_inc
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
@@ -2112,7 +2111,6 @@ let pair0_inc
     parsed_size_some_intro (parser_of_typ p_of_s t1) v1 b1;
     parsed_size_some_intro (parser_of_typ p_of_s t2) v2 b2
 
-#push-options "--z3rlimit 64"
 #restart-solver
 
 inline_for_extraction
@@ -2481,9 +2479,6 @@ let impl_size_prefixed
       k_failure h' ()
     end
 
-#pop-options
-
-#push-options "--z3rlimit 16"
 #restart-solver
 
 let choice_inc
@@ -2522,9 +2517,6 @@ let choice_inc
     assert (exactly_parses_on (parser_of_typ p_of_s (t' v1)) (coerce _ v2) b2);
     parsed_size_some_intro (parser_of_typ p_of_s t) v2 b2
 
-#pop-options
-
-#push-options "--z3rlimit 64"
 #restart-solver
 
 inline_for_extraction

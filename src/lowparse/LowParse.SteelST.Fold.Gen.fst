@@ -2306,6 +2306,74 @@ let validate_TPair
 : Tot (validator (parser_of_typ p_of_s (TPair t1 t2)))
 = validate_weaken (pkind (ne1 || ne2) pr2) (validate_pair v1 v2) ()
 
+inline_for_extraction
+let validate_TChoice
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (s: scalar_t)
+  (#ne: bool)
+  (#pr: bool)
+  (body: (type_of_scalar s -> typ type_of_scalar ne pr))
+  (body_v: ((k: type_of_scalar s) -> validator (parser_of_typ p_of_s (body k))))
+: Tot (validator (parser_of_typ p_of_s (TChoice s body)))
+= 
+  validate_weaken (pkind true pr)
+    (validate_dtuple2
+      (p_of_s s).scalar_validator
+      (p_of_s s).scalar_reader
+      _
+      body_v
+    )
+    ()
+
+inline_for_extraction
+let validate_TSizePrefixed
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (s: scalar_t)
+  (sz: (type_of_scalar s -> SZ.size_t) {synth_injective sz})
+  (#ne: bool)
+  (#pr: bool)
+  (t: typ type_of_scalar ne pr)
+  (v: validator (parser_of_typ p_of_s t))
+: Tot (validator (parser_of_typ p_of_s (TSizePrefixed s sz t)))
+= validate_weaken (pkind true false)
+    (validate_size_prefixed
+      (p_of_s s).scalar_validator
+      (p_of_s s).scalar_reader
+      sz
+      (if pr
+      then (fun sz -> validate_fldata_consumes_all v sz)
+      else (fun sz -> validate_fldata_gen v sz)
+      )
+    )
+    ()
+
+inline_for_extraction
+let validate_TIf
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (#ne: bool)
+  (#pr: bool)
+  (b: bool)
+  (ttrue: (squash (b == true) -> typ type_of_scalar ne pr))
+  (vtrue: ((sq: squash (b == true)) -> validator (parser_of_typ p_of_s (ttrue ()))))
+  (tfalse: (squash (b == false) -> typ type_of_scalar ne pr))
+  (vfalse: ((sq: squash (b == false)) -> validator (parser_of_typ p_of_s (tfalse ()))))
+: Tot (validator (parser_of_typ p_of_s (TIf b ttrue tfalse)))
+= coerce _ (validate_ifthenelse
+    b
+    (fun _ -> type_of_typ (ttrue ()))
+    (fun _ -> type_of_typ (tfalse ()))
+    (fun _ -> parser_of_typ p_of_s (ttrue ()))
+    (fun _ -> parser_of_typ p_of_s (tfalse ()))
+    vtrue
+    vfalse
+  )
+
 [@@specialize]
 let rec validator_of_typ
   (#scalar_t: Type)
@@ -2321,41 +2389,11 @@ let rec validator_of_typ
   | TPair t1 t2 -> coerce _ (validate_TPair p_of_s t1 (validator_of_typ p_of_s t1) t2 (validator_of_typ p_of_s t2))
   | TList t' -> coerce _ (validate_list (validator_of_typ p_of_s t'))
   | TIf b ttrue tfalse ->
-    coerce _
-      (validate_ifthenelse
-        b
-        (fun _ -> type_of_typ (ttrue ()))
-        (fun _ -> type_of_typ (tfalse ()))
-        (fun _ -> parser_of_typ p_of_s (ttrue ()))
-        (fun _ -> parser_of_typ p_of_s (tfalse ()))
-        (fun _ -> validator_of_typ p_of_s (ttrue ()))
-        (fun _ -> validator_of_typ p_of_s (tfalse ()))
-      )
+    coerce _ (validate_TIf p_of_s b ttrue (fun _ -> validator_of_typ p_of_s (ttrue ())) tfalse (fun _ -> validator_of_typ p_of_s (tfalse ())))
   | TChoice s f ->
-    coerce _ (
-    validate_weaken (pkind true pr)
-      (validate_dtuple2
-        (p_of_s s).scalar_validator
-        (p_of_s s).scalar_reader
-        _
-        (fun x -> (validator_of_typ p_of_s (f x)))
-      )
-      ()
-    )
+    coerce _ (validate_TChoice p_of_s s f (fun x -> (validator_of_typ p_of_s (f x))))
   | TSizePrefixed s sz #_ #pr' t' ->
-    coerce _ (
-    validate_weaken (pkind true false)
-      (validate_size_prefixed
-        (p_of_s s).scalar_validator
-        (p_of_s s).scalar_reader
-        sz
-        (if pr'
-        then (fun sz -> validate_fldata_consumes_all (validator_of_typ p_of_s t') sz)
-        else (fun sz -> validate_fldata_gen (validator_of_typ p_of_s t') sz)
-        )
-      )
-      ()
-    )
+    coerce _ (validate_TSizePrefixed p_of_s s sz t' (validator_of_typ p_of_s t'))
   | TUnit -> coerce _ (validate_weaken (pkind false false) (validate_total_constant_size parse_empty SZ.zero_size) ())
   | TFalse _ _ -> validate_fail _ _ ()
 
