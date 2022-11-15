@@ -346,4 +346,4 @@ let parse_bounded_vldata_intro_ho'
     let x = destr_repr_spec _ _ _ _ _ _ _ f () in True
   );
   parse_vldata_intro_ho' p min max f;
-  valid_rewrite _ _ _ _ _ (valid_rewrite_parse_bounded_vldata_intro _ _ _ _)
+  valid_rewrite _ _ _ _ inv (valid_rewrite_parse_bounded_vldata_intro _ _ _ _)
