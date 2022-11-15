@@ -241,7 +241,6 @@ let test_pretty_print =
     specialize_impl_test_pretty_print
     P.mk_ll_state
 
-(*
 [@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
 inline_for_extraction
 noextract
@@ -279,7 +278,6 @@ let full_test_pretty_print
   )
 
 #pop-options
-*)
 
 inline_for_extraction
 noextract
