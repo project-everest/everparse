@@ -1,5 +1,4 @@
 module LowParse.SteelST.Fold.Gen
-include LowParse.Spec.Fold
 
 #set-options "--ide_id_info_off"
 
@@ -10,227 +9,6 @@ open LowParse.SteelST.Int
 open LowParse.SteelST.FLData
 open LowParse.Spec.VLGen
 
-module AP = LowParse.SteelST.ArrayPtr
-module LP = LowParse.Spec.Base
-module SZ = LowParse.Steel.StdInt
-
-let pkind
-  (ne pr: bool)
-: Tot parser_kind
-= {
-  parser_kind_low = if ne then 1 else 0;
-  parser_kind_high = None;
-  parser_kind_subkind = Some (if pr then ParserConsumesAll else ParserStrong);
-  parser_kind_metadata = None;
-}
-
-[@@specialize]
-noeq
-type scalar_ops (t: Type) = {
-  scalar_parser: parser (pkind true false) t;
-  scalar_validator: validator scalar_parser;
-  scalar_jumper: jumper scalar_parser;
-  scalar_reader: leaf_reader scalar_parser;
-}
-
-inline_for_extraction
-noeq
-type low_level_state
-  (state_i: Type) (state_t: state_i -> Type) (ll_state: Type) (ll_state_ptr: Type)
-= {
-    ll_state_match: ((#i: state_i) -> (h: state_t i) -> ll_state -> vprop);
-    ll_state_failure: ((#i: state_i) -> (h: state_t i) -> vprop);
-    state_ge: ((#i1: state_i) -> (s1: state_t i1) -> (#i2: state_i) -> (s2: state_t i2) -> prop);
-    state_ge_refl: (
-      (#i: state_i) -> (s: state_t i) ->
-      Lemma
-      (state_ge s s)
-    );
-    state_ge_trans: (
-      (#i1: state_i) -> (s1: state_t i1) ->
-      (#i2: state_i) -> (s2: state_t i2) ->
-      (#i3: state_i) -> (s3: state_t i3) ->
-      Lemma
-      (requires (
-        state_ge s1 s2 /\
-        state_ge s2 s3
-      ))
-      (ensures (state_ge s1 s3))
-    );
-    ll_state_failure_inc: (
-      (#opened: _) ->
-      (#i1: state_i) -> (s1: state_t i1) ->
-      (#i2: state_i) -> (s2: state_t i2) ->
-      STGhost unit opened
-        (ll_state_failure s1)
-        (fun _ -> ll_state_failure s2)
-        (state_ge s2 s1)
-        (fun _ -> True)
-    );
-    ll_state_shape: (state_i -> ll_state -> prop);
-    ll_state_match_shape: (
-      (#opened: _) ->
-      (#i: state_i) ->
-      (h: state_t i) ->
-      (l: ll_state) ->
-      STGhost unit opened
-        (ll_state_match h l)
-        (fun _ -> ll_state_match h l)
-        True
-        (fun _ -> ll_state_shape i l)
-    );
-    ll_state_pts_to: (ll_state_ptr -> ll_state -> vprop);
-  }
-
-inline_for_extraction
-let with_ll_state_ptr_t
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (i: state_i)
-: Tot Type
-=
-  (l: ll_state) ->
-  (#kpre: vprop) ->
-  (#t: Type) ->
-  (#kpost: (t -> vprop)) ->
-  (k: (
-    (p: ll_state_ptr) ->
-    STT t
-      (kpre `star` cl.ll_state_pts_to p l)
-      (fun r -> kpost r `star` exists_ (cl.ll_state_pts_to p))
-  )) ->
-  STF t kpre kpost (cl.ll_state_shape i l) (fun _ -> True)
-
-inline_for_extraction
-let load_ll_state_ptr_t
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (i: state_i)
-: Tot Type
-=
-  (#gl: Ghost.erased ll_state) ->
-  (p: ll_state_ptr) ->
-  (#kpre: vprop) ->
-  (#t: Type) ->
-  (#kpost: (t -> vprop)) ->
-  (k: (
-    (l: ll_state) ->
-    ST t
-       (kpre `star` cl.ll_state_pts_to p l)
-       kpost
-       (l == Ghost.reveal gl)
-       (fun _ -> True)
-  )) ->
-  STF t
-    (kpre `star` cl.ll_state_pts_to p gl)
-    kpost
-    (cl.ll_state_shape i gl)
-    (fun _ -> True)
-
-inline_for_extraction
-let store_ll_state_ptr_t
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (i: state_i)
-: Tot Type
-= (#gl: Ghost.erased ll_state) ->
-  (p: ll_state_ptr) ->
-  (l': ll_state) ->
-  ST unit
-     (cl.ll_state_pts_to p gl)
-     (fun _ -> cl.ll_state_pts_to p l')
-     (cl.ll_state_shape i gl /\ cl.ll_state_shape i l')
-     (fun _ -> True)
-
-inline_for_extraction
-[@@noextract_to "krml"]
-let stt_impl_t'
-  #state_i #state_t #ll_state #ll_state_ptr
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (#ret_t: Type)
-  (#pre: state_i)
-  (#post: state_i)
-  (p: stt state_t ret_t pre post)
-  (kpre: vprop)
-  (kpost: vprop)
-: Tot Type
-= (bout: ll_state) ->
-  (h: Ghost.erased (state_t pre)) ->
-  (k_success: (
-    (bout': ll_state) ->
-    (h': Ghost.erased (state_t post)) ->
-    (v: ret_t) ->
-    ST unit
-      (kpre `star`
-        cl.ll_state_match h' bout')
-      (fun _ -> kpost)
-      (
-        p h == (v, Ghost.reveal h')
-      )
-      (fun _ -> True)
-  )) ->
-  (k_failure: (
-    (h': Ghost.erased (state_t post)) ->
-    (v: Ghost.erased ret_t) ->
-    ST unit
-      (kpre `star` cl.ll_state_failure h')
-      (fun _ -> kpost)
-      (
-        p h == (Ghost.reveal v, Ghost.reveal h')
-      )
-      (fun _ -> True)
-  )) ->
-  STT unit
-    (kpre `star`
-      cl.ll_state_match h bout)
-    (fun _ -> kpost)
-
-inline_for_extraction
-[@@noextract_to "krml"]
-let stt_impl_t
-  #state_i #state_t #ll_state #ll_state_ptr
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (#ret_t: Type)
-  (#pre: state_i)
-  (#post: state_i)
-  (p: stt state_t ret_t pre post)
-: Tot Type
-=
-  (kpre: vprop) ->
-  (kpost: vprop) ->
-  stt_impl_t' cl p kpre kpost
-
-inline_for_extraction
-let size_of
-  (ar: AP.array byte)
-: Tot Type
-= (s: SZ.size_t { SZ.size_v s == AP.length ar })
-
-inline_for_extraction
-[@@noextract_to "krml"]
-let fold_impl_t
-  #state_i #state_t #ll_state #ll_state_ptr
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (#ret_t: Type)
-  (#pre: state_i)
-  (#post: state_i)
-  (#ty: Type)
-  (#kty: parser_kind)
-  (pty: parser kty ty)
-  (with_size: bool)
-  (p: fold_t state_t ty ret_t pre post)
-: Tot Type
-=
-  (kpre: vprop) ->
-  (kpost: vprop) ->
-  (#vbin: v kty ty) ->
-  (bin: byte_array) ->
-  (bin_sz: (if with_size then size_of (array_of' vbin) else unit)) ->
-  stt_impl_t' cl (p vbin.contents)
-    (kpre `star` aparse pty bin vbin)
-    kpost
-
-inline_for_extraction
 let impl_action
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -247,8 +25,6 @@ let impl_action
 = fun kpre kpost (#vbin: v kty ty) (bin: byte_array) _ ->
     pi (kpre `star` aparse pty bin vbin) kpost
 
-inline_for_extraction
-[@@noextract_to "krml"]
 let impl_ret
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -259,7 +35,6 @@ let impl_ret
 = fun kpre kpost bout h k_success k_failure ->
     k_success bout h v
 
-inline_for_extraction
 let impl_rewrite_parser
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -295,8 +70,6 @@ let impl_rewrite_parser
         restore ();
         k_failure h1 v1)
 
-inline_for_extraction
-[@@noextract_to "krml"]
 let impl_read
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -311,56 +84,6 @@ let impl_read
     let v = rty bin in
     k_success bout h v
 
-let stt_state_inc
-  #state_i #state_t #ll_state #ll_state_ptr
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (#ret_t: Type)
-  (#pre: state_i)
-  (#post: state_i)
-  (p: stt state_t ret_t pre post)
-: Tot Type
-= (s: state_t pre) ->
-  Lemma
-  (snd (p s) `cl.state_ge` s)
-
-let fold_state_inc
-  #state_i #state_t #ll_state #ll_state_ptr
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (#ret_t: Type)
-  (#pre: state_i)
-  (#post: state_i)
-  (#ty: Type)
-  (p: fold_t state_t ty ret_t pre post)
-: Tot Type
-= (i: ty) ->
-  stt_state_inc cl (p i)
-
-let get_return_state
-  #state_i #state_t
-  (#ret_t: Type)
-  (#pre: state_i)
-  (#post: state_i)
-  (p: stt state_t ret_t pre post)
-  (s: state_t pre)
-: Pure (Ghost.erased (state_t post))
-    (requires True)
-    (ensures (fun y -> Ghost.reveal y == sndp (p s)))
-= sndp (p s)
-
-let get_return_value
-  #state_i #state_t
-  (#ret_t: Type)
-  (#pre: state_i)
-  (#post: state_i)
-  (p: stt state_t ret_t pre post)
-  (s: state_t pre)
-: Pure (Ghost.erased ret_t)
-    (requires True)
-    (ensures (fun y -> Ghost.reveal y == fstp (p s)))
-= fstp (p s)
-
-[@@noextract_to "krml"]
-inline_for_extraction
 let impl_bind
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -394,26 +117,6 @@ let impl_bind
         k_failure h2 v2
       )
 
-let ifthenelse
-  (#t: Type)
-  (b: bool)
-  (vtrue: (squash (b == true) -> t))
-  (vfalse: (squash (b == false) -> t))
-: Tot t
-= if b then vtrue () else vfalse ()
-
-let ifthenelse_dep
-  (b: bool)
-  (ttrue: (squash (b == true) -> Type))
-  (tfalse: (squash (b == false) -> Type))
-  (pi: (Type -> Type))
-  (ptrue: (squash (b == true) -> pi (ttrue ())))
-  (pfalse: (squash (b == false) -> pi (tfalse ())))
-: Tot (pi (ifthenelse b ttrue tfalse))
-= if b then ptrue () else pfalse ()
-
-inline_for_extraction
-[@@noextract_to "krml"]
 let impl_if_gen
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -437,8 +140,6 @@ let impl_if_gen
     then coerce (fold_impl_t cl #ret #pre #post #(ifthenelse x t1 t2) #k (ifthenelse_dep x t1 t2 (parser k) p1 p2) with_size (ifthenelse_dep x t1 t2 (fun t -> fold_t state_t t ret pre post) (Ghost.reveal f1) (Ghost.reveal f2))) (impl_f1 ()) kpre kpost bin bin_sz bout h k_success k_failure
     else coerce (fold_impl_t cl #ret #pre #post #(ifthenelse x t1 t2) #k (ifthenelse_dep x t1 t2 (parser k) p1 p2) with_size (ifthenelse_dep x t1 t2 (fun t -> fold_t state_t t ret pre post) (Ghost.reveal f1) (Ghost.reveal f2))) (impl_f2 ()) kpre kpost bin bin_sz bout h k_success k_failure
 
-inline_for_extraction
-[@@noextract_to "krml"]
 let impl_if
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -457,8 +158,6 @@ let impl_if
 : Tot (fold_impl_t cl p with_size (if x then Ghost.reveal f1 () else Ghost.reveal f2 ()))
 = coerce _ (impl_if_gen cl x (fun _ -> t) f1 (fun _ -> p) with_size impl_f1 (fun _ -> t) f2 (fun _ -> p) impl_f2)
 
-inline_for_extraction
-[@@noextract_to "krml"]
 let impl_pair
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -522,17 +221,6 @@ let impl_pair
       k_failure h2 v2
     )
 
-let parser_of_choice_payload
-  (#kt: Type)
-  (#k: parser_kind)
-  (t: (kt -> Type))
-  (f: (x: kt) -> parser k (t x))
-  (x: kt)
-: Tot (parser k (t x))
-= f x
-
-inline_for_extraction
-[@@noextract_to "krml"]
 let impl_choice
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -1180,7 +868,8 @@ let impl_for_post
       k_failure r ()
     end
 
-inline_for_extraction
+#set-options "--print_universes --print_implicits"
+
 let impl_for
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -1214,23 +903,6 @@ let impl_for
       (impl_for_body cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont fi wl ws);
     impl_for_post cl inv p from to f bin vbin bh h bfrom b_no_interrupt bcont kpre kpost k_success k_failure prf wl
   ))))
-
-[@@__reduce__]
-let parse_nlist0
-  (n: nat)
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-: Tot (parser (parse_filter_kind parse_list_kind) (nlist n t))
-= parse_list p `parse_filter` (fun l -> List.Tot.length l = n) `parse_synth` (fun x -> (x <: (nlist n t)))
-
-let parse_nlist
-  (n: nat)
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-: Tot (parser (parse_filter_kind parse_list_kind) (nlist n t))
-= parse_nlist0 n p
 
 let intro_nlist
   (#opened: _)
@@ -1271,25 +943,6 @@ let elim_nlist
 = let _ = rewrite_aparse b (parse_nlist0 n p) in
   let _ = elim_synth _ _ b () in
   elim_filter _ _ b
-
-let synth_vlgen_alt_sz
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (x: (n: SZ.size_t & parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n)))))
-: GTot (n: nat & parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
-= (| SZ.size_v (dfst x), dsnd x |)
-
-let synth_vlgen_alt_sz_injective
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-: Lemma
-  (synth_injective (synth_vlgen_alt_sz p))
-  [SMTPat (synth_injective (synth_vlgen_alt_sz p))]
-= ()
-
-let size_v_injective : squash (synth_injective SZ.size_v) = ()
 
 let parse_vlgen_alt_sz_eq
   (#sk: parser_kind)
@@ -1436,20 +1089,6 @@ let jump_vlgen_alt_sz
     (synth_vlgen_alt_payload p)
     (synth_vlgen_alt_payload_injective p)
 
-let parse_size_prefixed
-  (#st: Type)
-  (#sk: parser_kind)
-  (sp: parser sk st)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-: Tot (parser (sk `and_then_kind` parse_vlgen_alt_payload_kind) t)
-= parse_vlgen_alt
-    ((sp `parse_synth` sz) `parse_synth` (SZ.size_v))
-    p
-
-inline_for_extraction
 let validate_size_prefixed
   (#st: Type)
   (#sk: Ghost.erased parser_kind)
@@ -1470,7 +1109,6 @@ let validate_size_prefixed
       (read_synth sr sz (fun x -> sz x) ())
       v
 
-inline_for_extraction
 let jump_size_prefixed
   (#st: Type)
   (#sk: Ghost.erased parser_kind)
@@ -1538,7 +1176,6 @@ let intro_parse_size_prefixed
 #push-options "--z3rlimit 32"
 #restart-solver
 
-inline_for_extraction
 let elim_parse_size_prefixed
   (#opened: _)
   (#st: Type)
@@ -1579,7 +1216,6 @@ let elim_parse_size_prefixed
   let _ = elim_fldata p _ bl in
   bl
 
-inline_for_extraction
 let impl_size_prefixed
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -1639,7 +1275,6 @@ let impl_size_prefixed
       k_failure h' v'
     )
 
-inline_for_extraction
 let impl_list_index
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -1693,7 +1328,6 @@ let impl_list_index
 
 #pop-options
 
-inline_for_extraction
 let impl_list_index_of
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -1717,7 +1351,6 @@ let impl_list_index_of
 #push-options "--z3rlimit 16"
 #restart-solver
 
-inline_for_extraction
 let impl_for_list
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2101,50 +1734,6 @@ let impl_list
 
 (* Implementing programs *)
 
-[@@specialize]
-noeq
-type action_impl
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (action_t: (t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
-  (action_sem: ((#t: Type) -> (#pre: _) -> (#post: _) -> action_t t pre post -> stt state_t t pre post))
-= {
-    a_inc: (
-      (#t: Type) ->
-      (#pre: state_i) ->
-      (#post: state_i) ->
-      (a: action_t t pre post) ->
-      stt_state_inc cl (action_sem a)
-    );
-    a_impl: (
-      (#t: Type) ->
-      (#pre: state_i) ->
-      (#post: state_i) ->
-      (a: action_t t pre post) ->
-      stt_impl_t cl (action_sem a)
-    );
-  }
-
-[@@specialize]
-noeq
-type ll_state_ptr_ops
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-= {
-    with_ll_state_ptr: (
-      (inv: state_i) ->
-      with_ll_state_ptr_t cl inv
-    );
-    load_ll_state_ptr: (
-      (inv: state_i) ->
-      load_ll_state_ptr_t cl inv
-    );
-    store_ll_state_ptr: (
-      (inv: state_i) ->
-      store_ll_state_ptr_t cl inv
-    );
-  }
-
 let rec fold_list_inc'
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2259,25 +1848,6 @@ let rec prog_inc
   | PSizePrefixed _ _ p ->
     prog_inc a_cl p (coerce _ input) s
 
-let rec parser_of_typ
-  (#scalar_t: Type)
-  (#type_of_scalar: (scalar_t -> Type))
-  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
-  (#ne #pr: bool)
-  (t: typ type_of_scalar ne pr)
-: Tot (parser (pkind ne pr) (type_of_typ t))
-  (decreases t)
-= match t returns parser (pkind ne pr) (type_of_typ t) with
-  | TScalar s -> (p_of_s s).scalar_parser
-  | TPair t1 t2 -> weaken _ (nondep_then (parser_of_typ p_of_s t1) (parser_of_typ p_of_s t2))
-  | TIf b ttrue tfalse -> parser_of_typ p_of_s (if b then ttrue () else tfalse ())
-  | TList t' -> parse_list (parser_of_typ p_of_s t')
-  | TChoice s f -> weaken _ (parse_dtuple2 (p_of_s s).scalar_parser #_ #(type_of_payload' s f) (fun x -> parser_of_typ p_of_s (f x)))
-  | TUnit -> weaken _ parse_empty
-  | TFalse ne pr -> fail_parser (pkind ne pr) (squash False)
-  | TSizePrefixed sc sz t -> weaken _ (parse_size_prefixed (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t))
-
-inline_for_extraction
 let validate_ifthenelse
   (#k: parser_kind)
   (x: bool)
@@ -2293,7 +1863,6 @@ let validate_ifthenelse
   then coerce (validator #k #(ifthenelse x ttrue tfalse) (ifthenelse_dep x ttrue tfalse (parser k) ptrue pfalse)) (jtrue ()) a len err
   else coerce (validator #k #(ifthenelse x ttrue tfalse) (ifthenelse_dep x ttrue tfalse (parser k) ptrue pfalse)) (jfalse ()) a len err
 
-inline_for_extraction
 let validate_TPair
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
@@ -2306,7 +1875,6 @@ let validate_TPair
 : Tot (validator (parser_of_typ p_of_s (TPair t1 t2)))
 = validate_weaken (pkind (ne1 || ne2) pr2) (validate_pair v1 v2) ()
 
-inline_for_extraction
 let validate_TChoice
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
@@ -2327,7 +1895,6 @@ let validate_TChoice
     )
     ()
 
-inline_for_extraction
 let validate_TSizePrefixed
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
@@ -2351,7 +1918,6 @@ let validate_TSizePrefixed
     )
     ()
 
-inline_for_extraction
 let validate_TIf
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
@@ -2374,30 +1940,30 @@ let validate_TIf
     vfalse
   )
 
-[@@specialize]
-let rec validator_of_typ
+let validate_TList
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
-  (#ne #pr: bool)
-  (t: typ type_of_scalar ne pr)
-: Tot (validator (parser_of_typ p_of_s t))
-  (decreases t)
-=
-  match t returns validator (parser_of_typ p_of_s t) with
-  | TScalar s -> coerce _ ((p_of_s s).scalar_validator)
-  | TPair t1 t2 -> coerce _ (validate_TPair p_of_s t1 (validator_of_typ p_of_s t1) t2 (validator_of_typ p_of_s t2))
-  | TList t' -> coerce _ (validate_list (validator_of_typ p_of_s t'))
-  | TIf b ttrue tfalse ->
-    coerce _ (validate_TIf p_of_s b ttrue (fun _ -> validator_of_typ p_of_s (ttrue ())) tfalse (fun _ -> validator_of_typ p_of_s (tfalse ())))
-  | TChoice s f ->
-    coerce _ (validate_TChoice p_of_s s f (fun x -> (validator_of_typ p_of_s (f x))))
-  | TSizePrefixed s sz #_ #pr' t' ->
-    coerce _ (validate_TSizePrefixed p_of_s s sz t' (validator_of_typ p_of_s t'))
-  | TUnit -> coerce _ (validate_weaken (pkind false false) (validate_total_constant_size parse_empty SZ.zero_size) ())
-  | TFalse _ _ -> validate_fail _ _ ()
+  (#t: typ type_of_scalar true false)
+  (v: validator (parser_of_typ p_of_s t))
+: Tot (validator (parser_of_typ p_of_s (TList t)))
+= LowParse.SteelST.List.validate_list v
 
-inline_for_extraction
+let validate_TUnit
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+: Tot (validator (parser_of_typ p_of_s TUnit))
+= validate_weaken (pkind false false) (validate_total_constant_size parse_empty SZ.zero_size) ()
+
+let validate_TFalse
+  (#scalar_t: Type)
+  (#type_of_scalar: (scalar_t -> Type))
+  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
+  (ne pr: bool)
+: Tot (validator (parser_of_typ p_of_s (TFalse ne pr)))
+= validate_fail _ _ ()
+
 let jump_ifthenelse
   (#k: parser_kind)
   (x: bool)
@@ -2413,228 +1979,6 @@ let jump_ifthenelse
   then coerce (jumper #k #(ifthenelse x ttrue tfalse) (ifthenelse_dep x ttrue tfalse (parser k) ptrue pfalse)) (jtrue ()) a
   else coerce (jumper #k #(ifthenelse x ttrue tfalse) (ifthenelse_dep x ttrue tfalse (parser k) ptrue pfalse)) (jfalse ()) a
 
-[@@specialize]
-let rec jumper_of_typ
-  (#scalar_t: Type)
-  (#type_of_scalar: (scalar_t -> Type))
-  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
-  (#ne: bool)
-  (t: typ type_of_scalar ne false)
-: Tot (jumper (parser_of_typ p_of_s t))
-  (decreases t)
-=
-  match t returns jumper (parser_of_typ p_of_s t) with
-  | TScalar s -> (p_of_s s).scalar_jumper
-  | TPair t1 t2 -> jump_weaken (pkind ne false) (jump_pair (jumper_of_typ p_of_s t1) (jumper_of_typ p_of_s t2)) ()
-  | TSizePrefixed s sz t' -> jump_size_prefixed (p_of_s s).scalar_jumper (p_of_s s).scalar_reader sz (parser_of_typ p_of_s t')
-  | TIf b ttrue tfalse ->
-    jump_ifthenelse
-      b
-      (fun _ -> type_of_typ (ttrue ()))
-      (fun _ -> type_of_typ (tfalse ()))
-      (fun _ -> parser_of_typ p_of_s (ttrue ()))
-      (fun _ -> parser_of_typ p_of_s (tfalse ()))
-      (fun _ -> jumper_of_typ p_of_s (ttrue ()))
-      (fun _ -> jumper_of_typ p_of_s (tfalse ()))
-  | TChoice s f ->
-    coerce _
-      (jump_weaken (pkind ne false)
-        (jump_dtuple2
-          (p_of_s s).scalar_jumper
-          (p_of_s s).scalar_reader
-          _
-          (fun x -> jumper_of_typ p_of_s (f x))
-        )
-        ()
-      )
-  | TUnit -> jump_constant_size parse_empty SZ.zero_size
-  | TFalse ne pr -> jump_fail _ _ ()
-
-[@@specialize]
-let rec impl
-  (#scalar_t: Type)
-  (#type_of_scalar: (scalar_t -> Type))
-  (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (#action_t: (t: Type) -> (pre: state_i) -> (post: state_i) -> Type)
-  (#action_sem: ((#t: Type) -> (#pre: _) -> (#post: _) -> action_t t pre post -> stt state_t t pre post))
-  (a_cl: action_impl cl action_t action_sem)
-  (ptr_cl: ll_state_ptr_ops cl)
-  (#ret_t: Type)
-  (#pre: state_i)
-  (#post: state_i)
-  (#ne: bool)
-  (#pr: bool)
-  (#ty: typ type_of_scalar ne pr)
-  (p: prog type_of_scalar state_t action_t ty ret_t pre post)
-: Tot (fold_impl_t cl #ret_t #pre #post #(type_of_typ ty) #(pkind ne pr) (parser_of_typ p_of_s ty) pr (sem action_sem p))
-  (decreases p)
-= match p with
-  | PRet #_ #_ #_ #_ #_ #_ #i v ->
-      coerce _ (impl_action cl (ret v) (impl_ret cl i v) (parser_of_typ p_of_s ty) pr)
-  | PAction a ->
-      coerce _ (impl_action cl _ (a_cl.a_impl a) (parser_of_typ p_of_s ty) pr)
-  | PBind f g ->
-      coerce _ (impl_bind cl (parser_of_typ p_of_s ty) (sem action_sem f) pr (coerce _ (impl p_of_s a_cl ptr_cl f)) (fun x -> sem action_sem (g x)) (fun x -> coerce _ (impl p_of_s a_cl ptr_cl (g x))) (fun x -> prog_inc a_cl (g x)) <: fold_impl_t cl (parser_of_typ p_of_s ty) pr (sem action_sem (PBind f g)))
-  | PIfP x ptrue pfalse ->
-      coerce _
-        (impl_if
-          cl x
-          (fun _ -> sem action_sem (ptrue ()))
-          (parser_of_typ p_of_s ty)
-          pr
-          (fun _ -> coerce _ (impl p_of_s a_cl ptr_cl (ptrue ()))) (fun _ -> sem action_sem (pfalse ()))
-          (fun _ -> coerce _ (impl p_of_s a_cl ptr_cl (pfalse ())))
-        )
-  | PIfT x #_ #_ #ttrue ptrue #tfalse pfalse ->
-      coerce _
-        (impl_if_gen
-          cl x
-          (fun _ -> type_of_typ (ttrue ()))
-          (fun _ -> sem action_sem (ptrue ()))
-          (fun _ -> parser_of_typ p_of_s (ttrue ()))
-          pr
-          (fun _ -> impl p_of_s a_cl ptr_cl (ptrue ()))
-          (fun _ -> type_of_typ (tfalse ()))
-          (fun _ -> sem action_sem (pfalse ()))
-          (fun _ -> parser_of_typ p_of_s (tfalse ()))
-          (fun _ -> impl p_of_s a_cl ptr_cl (pfalse ()))
-        )
-  | PScalar i s ->
-      coerce _ (impl_read cl i (p_of_s s).scalar_reader pr)
-  | PPair #_ #_ #_ #_ #_ #_ #t1 #_ #_ #t2 f1 f2 ->
-      assert_norm (sem action_sem (PPair f1 f2) == fold_pair (sem action_sem f1) (fun x -> sem action_sem (f2 x)));
-      coerce _
-        (impl_rewrite_parser
-          cl
-          (fold_pair (sem action_sem f1) (fun x -> sem action_sem (f2 x)))
-          #_ #_ #pr
-          (impl_pair cl
-            (sem action_sem f1)
-            (impl p_of_s a_cl ptr_cl f1)
-            (jumper_of_typ p_of_s t1)
-            (fun x -> sem action_sem (f2 x))
-            pr
-            (fun x -> impl p_of_s a_cl ptr_cl (f2 x))
-            (fun x -> prog_inc a_cl (f2 x))
-          )
-          (parser_of_typ p_of_s (TPair t1 t2))
-        )
-  | PSizePrefixed #_ #_ #_ #_ #_ #_ #_ #pr' #ty sc sz f ->
-      coerce _
-        (impl_rewrite_parser
-          cl
-          (sem action_sem f)
-          (impl_size_prefixed
-            cl
-            (p_of_s sc).scalar_jumper
-            (p_of_s sc).scalar_reader
-            sz
-            (sem action_sem f)
-            pr'
-            (impl p_of_s a_cl ptr_cl f)
-            pr
-          )
-          (parser_of_typ p_of_s (TSizePrefixed sc sz ty))
-        )
-  | PList #_ #_ #_ #_ #_ #ty inv f ->
-      coerce _
-        (impl_rewrite_parser
-          cl
-          (fold_list inv (sem action_sem f))
-          #_ #_ #true
-          (impl_list
-            cl
-            inv
-            (sem action_sem f)
-            (prog_inc a_cl f)
-            (parser_of_typ p_of_s ty)
-            (impl p_of_s a_cl ptr_cl f)
-            (jumper_of_typ p_of_s ty)
-            (ptr_cl.with_ll_state_ptr inv)
-            (ptr_cl.load_ll_state_ptr inv)
-            (ptr_cl.store_ll_state_ptr inv)
-          )
-          (parser_of_typ p_of_s (TList ty))
-        )
-  | PListFor #_ #_ #_ #_ #_ #ty inv idx f ->
-      coerce _
-        (impl_rewrite_parser
-          cl
-          (fold_for_list inv (sem action_sem f) idx.array_index_f_nat)
-          #_ #_ #true
-          (impl_for_list
-            cl
-            inv
-            (sem action_sem f)
-            (jumper_of_typ p_of_s ty)
-            (impl p_of_s a_cl ptr_cl f)
-            (prog_inc a_cl f)
-            idx
-            (ptr_cl.with_ll_state_ptr inv)
-            (ptr_cl.load_ll_state_ptr inv)
-            (ptr_cl.store_ll_state_ptr inv)
-          )
-          (parser_of_typ p_of_s (TList ty))
-        )
-  | PChoice #_ #_ #_ #_ #_ #s #_ #_ #t f ->
-      assert_norm (sem action_sem (PChoice f) == fold_choice #_ #_ #_ #(type_of_scalar s) #(type_of_payload' s t) (fun x -> sem action_sem (f x)));
-      assert_norm (parser_of_typ p_of_s (TChoice s t) == weaken (pkind ne pr) (parse_dtuple2 (p_of_s s).scalar_parser #_ #(type_of_payload' s t) (fun x -> parser_of_typ p_of_s (t x))));
-      coerce _
-        (impl_rewrite_parser
-          cl
-          (fold_choice #_ #_ #_ #(type_of_scalar s) #(type_of_payload' s t) (fun x -> sem action_sem (f x)))
-          #_
-          #(parse_dtuple2 (p_of_s s).scalar_parser #_ #(type_of_payload' s t) (fun x -> parser_of_typ p_of_s (t x)))
-          #pr
-          (impl_choice
-            cl
-            #(type_of_scalar s)
-            #(type_of_payload' s t)
-            (fun x -> sem action_sem (f x))
-            (p_of_s s).scalar_jumper
-            (p_of_s s).scalar_reader
-            (fun x -> parser_of_typ p_of_s (t x))
-            pr
-            (fun x -> impl p_of_s a_cl ptr_cl (f x))
-          )
-          (parser_of_typ p_of_s (TChoice s t))
-        )
-
-inline_for_extraction
-let mk_ll_state_t
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (vpre: vprop)
-  (#pre: state_i)
-  (h: state_t pre)
-: Tot Type
-= (#kpre: vprop) ->
-  (#tret: Type) ->
-  (#kpost: (tret -> vprop)) ->
-  (k: (
-    (out: ll_state) ->
-    STT tret
-      (kpre `star` cl.ll_state_match h out)
-      kpost
-  )) ->
-  STF tret (kpre `star` vpre) kpost True (fun _ -> True)
-
-let extract_impl_unit_post
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (pre post: state_i)
-  (f: stt state_t unit pre post)
-  (h: state_t pre)
-  (b: bool)
-: Tot vprop
-= let h' = get_return_state f h in
-  if b
-  then exists_ (cl.ll_state_match h')
-  else cl.ll_state_failure h'
-
-inline_for_extraction
 let extract_impl_stt'_unit
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2678,7 +2022,6 @@ let extract_impl_stt'_unit
     )
   )
 
-inline_for_extraction
 let extract_impl_stt_unit
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2694,29 +2037,6 @@ let extract_impl_stt_unit
 = extract_impl_stt'_unit
     f mk emp fi
 
-inline_for_extraction
-let extract_impl_fold_unit_t
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (#pre #post: state_i)
-  (#t: Type)
-  (#f: Ghost.erased (fold_t state_t t unit pre post))
-  (#k: parser_kind)
-  (#p: parser k t)
-  (#with_size: bool)
-  (fi: fold_impl_t cl p with_size f)
-  (#vpre: vprop)
-  (#h: Ghost.erased (state_t pre))
-  (mk: mk_ll_state_t cl vpre h)
-: Tot Type
-= (vbin: v k t) ->
-  (bin: byte_array) ->
-  (bin_sz: (if with_size then size_of (array_of' vbin) else unit)) ->
-  STT bool
-    (vpre `star` aparse p bin vbin)
-    (fun res -> extract_impl_unit_post cl pre post (Ghost.reveal f vbin.contents) h res `star` aparse p bin vbin)
-
-inline_for_extraction
 let extract_impl_fold_unit
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2738,23 +2058,6 @@ let extract_impl_fold_unit
     (aparse p bin vbin)
     (fun kpre kpost -> fi kpre kpost #vbin bin bin_sz)
 
-let extract_impl_post
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-  (pre post: state_i)
-  (#ret_t: Type)
-  (r: R.ref ret_t)
-  (f: stt state_t ret_t pre post)
-  (h: state_t pre)
-  (b: bool)
-: Tot vprop
-= let h' = get_return_state f h in
-  let v = get_return_value f h in
-  if b
-  then exists_ (cl.ll_state_match h') `star` R.pts_to r full_perm v
-  else cl.ll_state_failure h' `star` exists_ (R.pts_to r full_perm)
-
-inline_for_extraction
 let extract_impl_stt'
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2803,7 +2106,6 @@ let extract_impl_stt'
     )
   )
 
-inline_for_extraction
 let extract_impl_stt
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2821,7 +2123,6 @@ let extract_impl_stt
 = extract_impl_stt'
     f mk emp fi r
 
-inline_for_extraction
 let extract_impl_fold
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2850,26 +2151,12 @@ let extract_impl_fold
     (fun kpre kpost -> fi kpre kpost #vbin bin bin_sz)
     r
 
-let no_ll_state_failure_t
-  (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
-  (cl: low_level_state state_i state_t ll_state ll_state_ptr)
-: Tot Type
-= (#opened: _) ->
-  (#i: state_i) ->
-  (h: state_t i) ->
-  STGhost unit opened
-    (cl.ll_state_failure h)
-    (fun _ -> emp)
-    (True)
-    (fun _ -> False)
-
-inline_for_extraction
 let extract_impl_stt'_no_failure
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (no_fail: no_ll_state_failure_t cl)
   (#pre #post: state_i)
-  (#rett: Type)
+  (#rett: Type0)
   (f: Ghost.erased (stt state_t rett pre post))
   (#vpre: vprop)
   (#h: Ghost.erased (state_t pre))
@@ -2918,7 +2205,6 @@ let extract_impl_stt'_no_failure
     )
   )
 
-inline_for_extraction
 let extract_impl_stt_no_failure
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
@@ -2942,7 +2228,6 @@ let extract_impl_stt_no_failure
   let _ = gen_elim () in
   return res
 
-inline_for_extraction
 let extract_impl_fold_no_failure
   (#state_i: Type) (#state_t: state_i -> Type) (#ll_state: Type) (#ll_state_ptr: Type)
   (#cl: low_level_state state_i state_t ll_state ll_state_ptr)
