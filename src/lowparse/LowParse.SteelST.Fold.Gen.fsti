@@ -577,23 +577,6 @@ val elim_nlist
       (vb.contents <: list t) == vb'.contents
     )
 
-let synth_vlgen_alt_sz
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (x: (n: SZ.size_t & parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n)))))
-: GTot (n: nat & parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
-= (| SZ.size_v (dfst x), dsnd x |)
-
-let synth_vlgen_alt_sz_injective
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-: Lemma
-  (synth_injective (synth_vlgen_alt_sz p))
-  [SMTPat (synth_injective (synth_vlgen_alt_sz p))]
-= ()
-
 let size_v_injective : squash (synth_injective SZ.size_v) = ()
 
 let parse_size_prefixed

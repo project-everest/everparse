@@ -579,11 +579,27 @@ let parse_vlgen_alt_payload_kind : parser_kind = {
   parser_kind_metadata = None;
 }
 
+let parse_vlgen_alt_body_t
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: nat)
+: Tot Type
+= parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))
+
+let parse_vlgen_alt_body
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: nat)
+: Tot (parser _ (parse_vlgen_alt_body_t p n))
+= parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))
+
 let synth_vlgen_alt_payload
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (x: (n: nat & parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))))
+  (x: dtuple2 nat (parse_vlgen_alt_body_t p))
 : Tot t
 = dsnd x
 
@@ -596,7 +612,7 @@ let synth_vlgen_alt_payload_injective
   [SMTPat (synth_injective (synth_vlgen_alt_payload p))]
 = synth_injective_intro'
     (synth_vlgen_alt_payload p)
-    (fun (x x' : (n: nat & parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) ->
+    (fun (x x' : dtuple2 nat (parse_vlgen_alt_body_t p)) ->
       let b = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> parser_matches (parse_fldata p (dfst x)) (dsnd x) b) in
       let b' = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> parser_matches (parse_fldata p (dfst x')) (dsnd x') b) in
       parse_injective p (Seq.slice b 0 (dfst x)) (Seq.slice b' 0 (dfst x'))
@@ -609,7 +625,7 @@ let parse_vlgen_alt
   (#t: Type)
   (p: parser k t)
 : Tot (parser (and_then_kind sk parse_vlgen_alt_payload_kind) t)
-= (pk `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))))
+= (pk `parse_dtuple2` parse_vlgen_alt_body p)
     `parse_synth`
     synth_vlgen_alt_payload p
 
@@ -640,10 +656,10 @@ let parse_vlgen_alt_eq
       end
   ))
 = parse_synth_eq
-    (pk `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))))
+    (pk `parse_dtuple2` parse_vlgen_alt_body p)
     (synth_vlgen_alt_payload p)
     input;
   parse_dtuple2_eq
     pk
-    (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
+    (parse_vlgen_alt_body p)
     input

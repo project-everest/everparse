@@ -944,6 +944,43 @@ let elim_nlist
   let _ = elim_synth _ _ b () in
   elim_filter _ _ b
 
+#restart-solver
+
+let parse_vlgen_alt_body_sz_t
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: SZ.size_t)
+: Tot Type
+= parse_vlgen_alt_body_t p (SZ.size_v n)
+
+let synth_vlgen_alt_sz_payload
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (x: dtuple2 _ (parse_vlgen_alt_body_sz_t p))
+: GTot t
+= dsnd x
+
+let synth_vlgen_alt_sz_payload_injective
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Lemma
+  (synth_injective (synth_vlgen_alt_sz_payload p))
+  [SMTPat (synth_injective (synth_vlgen_alt_sz_payload p))]
+= synth_vlgen_alt_payload_injective p;
+  assert (forall (x: dtuple2 _ (parse_vlgen_alt_body_sz_t p)) . synth_vlgen_alt_sz_payload p x == synth_vlgen_alt_payload p (| SZ.size_v (dfst x), dsnd x |) )
+
+let parse_vlgen_alt_sz_body
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n': SZ.size_t)
+: Tot (parser _ (parse_vlgen_alt_body_sz_t p n'))
+=
+  parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n')))
+
 let parse_vlgen_alt_sz_eq
   (#sk: parser_kind)
   (sp: parser sk SZ.size_t)
@@ -952,17 +989,31 @@ let parse_vlgen_alt_sz_eq
   (p: parser k t)
   (b: bytes)
 : Lemma
-  (parse ((sp `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) b ==
-    parse ((sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) `parse_synth` synth_vlgen_alt_sz p) b)
-= parse_dtuple2_eq (sp `parse_synth` (SZ.size_v)) (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))) b;
-  parse_synth_eq sp (SZ.size_v) b;
-  parse_synth_eq (sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) (synth_vlgen_alt_sz p) b;
-  parse_dtuple2_eq sp (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n')))) b
-
-#restart-solver
+  (parse (parse_vlgen_alt (sp `parse_synth` SZ.size_v) p) b ==
+    parse (((sp `parse_dtuple2` parse_vlgen_alt_sz_body p) `parse_synth` synth_vlgen_alt_sz_payload p)) b)
+= parse_vlgen_alt_eq (sp `parse_synth` SZ.size_v) p b;
+  parse_synth_eq sp SZ.size_v b;
+  parse_synth_eq (sp `parse_dtuple2` parse_vlgen_alt_sz_body p) (synth_vlgen_alt_sz_payload p) b;
+  parse_dtuple2_eq sp (parse_vlgen_alt_sz_body p) b
 
 inline_for_extraction
-let validate_vlgen_alt_sz_1
+let validate_vlgen_alt_sz_body
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (validate_fldata: (
+    (sz32: SZ.size_t) ->
+    Tot (validator (parse_fldata p (SZ.size_v sz32)))
+  ))
+  (n': SZ.size_t)
+: Tot (validator (parse_vlgen_alt_sz_body p n'))
+= // FIXME: validate_strict breaks at extraction
+  rewrite_validator
+    (validate_weaken parse_vlgen_alt_payload_kind (validate_fldata n') ())
+    (parse_vlgen_alt_sz_body p n')
+
+inline_for_extraction
+let validate_vlgen_alt_sz'
   (#sk: Ghost.erased parser_kind)
   (#sp: parser sk SZ.size_t)
   (sv: validator sp)
@@ -975,51 +1026,16 @@ let validate_vlgen_alt_sz_1
     Tot (validator (parse_fldata p (SZ.size_v sz32)))
   ))
   (sq: squash (sk.parser_kind_subkind == Some ParserStrong))
-: validator ((sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) `parse_synth` synth_vlgen_alt_sz p)
-=       (validate_synth
+: validator ((sp `parse_dtuple2` parse_vlgen_alt_sz_body p) `parse_synth` synth_vlgen_alt_sz_payload p)
+= validate_synth
         (validate_dtuple2
           sv
           sr
-          (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))
-          (fun n' ->
-            validate_strict
-              (validate_weaken
-                parse_vlgen_alt_payload_kind
-                (validate_fldata n')
-                ()
-              )
-          )
+          (parse_vlgen_alt_sz_body p)
+          (validate_vlgen_alt_sz_body validate_fldata)
         )
-        (synth_vlgen_alt_sz p)
-        (synth_vlgen_alt_sz_injective p)
-      )
-
-inline_for_extraction
-let validate_vlgen_alt_sz_2
-  (#sk: Ghost.erased parser_kind)
-  (#sp: parser sk SZ.size_t)
-  (sv: validator sp)
-  (sr: leaf_reader sp)
-  (#k: Ghost.erased parser_kind)
-  (#t: Type)
-  (#p: parser k t)
-  (validate_fldata: (
-    (sz32: SZ.size_t) ->
-    Tot (validator (parse_fldata p (SZ.size_v sz32)))
-  ))
-  (sq: squash (sk.parser_kind_subkind == Some ParserStrong))
-: Tot (validator ((sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) `parse_synth` synth_vlgen_alt_sz p))
-= coerce _ (
-    (rewrite_validator'
-      #_ #_ 
-      #((sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) `parse_synth` synth_vlgen_alt_sz p)
-      (validate_vlgen_alt_sz_1 sv sr validate_fldata ())
-      ((sp `parse_synth` SZ.size_v) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))))
-      (fun b ->
-        parse_vlgen_alt_sz_eq sp p b
-      )
-    )
-  )
+        (synth_vlgen_alt_sz_payload p)
+        (synth_vlgen_alt_sz_payload_injective p)
 
 inline_for_extraction
 let validate_vlgen_alt_sz
@@ -1037,13 +1053,43 @@ let validate_vlgen_alt_sz
 : Pure (validator (parse_vlgen_alt (sp `parse_synth` SZ.size_v) p))
     (requires sk.parser_kind_subkind == Some ParserStrong)
     (ensures (fun _ -> True))
-= (synth_vlgen_alt_payload_injective p);
-  coerce _ (
-    validate_synth
-      (validate_vlgen_alt_sz_2 sv sr validate_fldata ())
-      (synth_vlgen_alt_payload p)
-      (synth_vlgen_alt_payload_injective p)
-  )
+= rewrite_validator'
+    (validate_vlgen_alt_sz'
+      sv
+      sr
+      validate_fldata
+      ()
+    )
+    (parse_vlgen_alt (sp `parse_synth` SZ.size_v) p)
+    (fun b -> parse_vlgen_alt_sz_eq sp p b)
+
+inline_for_extraction
+let jump_vlgen_alt_sz'
+  (#sk: Ghost.erased parser_kind)
+  (#sp: parser sk SZ.size_t)
+  (sv: jumper sp)
+  (sr: leaf_reader sp)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong))
+: jumper ((sp `parse_dtuple2` parse_vlgen_alt_sz_body p) `parse_synth` synth_vlgen_alt_sz_payload p)
+= jump_synth
+        (jump_dtuple2
+          sv
+          sr
+          (parse_vlgen_alt_sz_body p)
+          (fun n' ->
+            jump_strict
+              (jump_weaken
+                parse_vlgen_alt_payload_kind
+                (jump_fldata p n')
+                ()
+              )
+          )
+        )
+        (synth_vlgen_alt_sz_payload p)
+        (synth_vlgen_alt_sz_payload_injective p)
 
 inline_for_extraction
 let jump_vlgen_alt_sz
@@ -1054,40 +1100,18 @@ let jump_vlgen_alt_sz
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
-: Pure (jumper (parse_vlgen_alt (sp `parse_synth` (SZ.size_v)) p))
+: Pure (jumper (parse_vlgen_alt (sp `parse_synth` SZ.size_v) p))
     (requires sk.parser_kind_subkind == Some ParserStrong)
     (ensures (fun _ -> True))
-=
-  synth_vlgen_alt_payload_injective p;
-  assert_norm (parse_vlgen_alt (sp `parse_synth` SZ.size_v) p == ((sp `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) `parse_synth` synth_vlgen_alt_payload p);
-  jump_synth
-    (rewrite_jumper'
-      #_ #_ 
-      #((sp `parse_dtuple2` (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))) `parse_synth` synth_vlgen_alt_sz p)
-      (jump_synth
-        (jump_dtuple2
-          sv
-          sr
-          (fun n' -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p (SZ.size_v n'))))
-          (fun n' ->
-            jump_strict
-              (jump_weaken
-                parse_vlgen_alt_payload_kind
-                (jump_fldata p n')
-                ()
-              )
-          )
-        )
-        (synth_vlgen_alt_sz p)
-        (synth_vlgen_alt_sz_injective p)
-      )
-      ((sp `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))))
-      (fun b ->
-        parse_vlgen_alt_sz_eq sp p b
-      )
+= rewrite_jumper'
+    (jump_vlgen_alt_sz'
+      sv
+      sr
+      p
+      ()
     )
-    (synth_vlgen_alt_payload p)
-    (synth_vlgen_alt_payload_injective p)
+    (parse_vlgen_alt (sp `parse_synth` SZ.size_v) p)
+    (fun b -> parse_vlgen_alt_sz_eq sp p b)
 
 let validate_size_prefixed
   (#st: Type)
@@ -1159,16 +1183,16 @@ let intro_parse_size_prefixed
   let _ = intro_fldata _ n b in
   let _ = rewrite_aparse b (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)) in
   let _ = intro_parse_strict _ b in
-  let _ = intro_synth _ SZ.size_v bs () in
+  let vbs = intro_synth _ SZ.size_v bs () in
+  let _ = rewrite_aparse b (parse_vlgen_alt_body p vbs.contents) in
   let _ = intro_dtuple2
     _
     #_
-    #(fun n -> parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
-    (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
+    #(parse_vlgen_alt_body_t p)
+    (parse_vlgen_alt_body p)
     bs b
   in
   let _ = intro_synth _ (synth_vlgen_alt_payload p) bs (synth_vlgen_alt_payload_injective p) in
-  assert_norm (parse_size_prefixed sp sz p == (((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) `parse_synth` synth_vlgen_alt_payload p);
   rewrite_aparse bs (parse_size_prefixed sp sz p)
 
 #pop-options
@@ -1199,18 +1223,18 @@ let elim_parse_size_prefixed
     (sk.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
 = synth_vlgen_alt_payload_injective p;
-  assert_norm (parse_size_prefixed sp sz p == (((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) `parse_synth` synth_vlgen_alt_payload p);
-  let _ = rewrite_aparse b ((((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))) `parse_synth` synth_vlgen_alt_payload p) in
+  let _ = rewrite_aparse b ((((sp `parse_synth` sz) `parse_synth` (SZ.size_v)) `parse_dtuple2` parse_vlgen_alt_body p) `parse_synth` synth_vlgen_alt_payload p) in
   let _ = elim_synth _ _ b () in
   let bl = ghost_split_dtuple2
     (parse_synth (parse_synth sp sz) SZ.size_v)
-    (fun n -> parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n)))
+    (parse_vlgen_alt_body p)
     b
   in
   let _ = gen_elim () in
   let n = ghost_dtuple2_tag _ _ b bl in
   let _ = gen_elim () in
   let _ = elim_synth _ _ b () in
+  let _ = rewrite_aparse bl (parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))) in
   let _ = elim_parse_strict _ bl in
   let _ = rewrite_aparse bl (parse_fldata p n) in
   let _ = elim_fldata p _ bl in
@@ -1911,6 +1935,8 @@ let validate_TSizePrefixed
       (p_of_s s).scalar_validator
       (p_of_s s).scalar_reader
       sz
+      #_ #_ #(parser_of_typ p_of_s t)
+//      (fun (sz: SZ.size_t) -> admit_validator ())
       (if pr
       then (fun sz -> validate_fldata_consumes_all v sz)
       else (fun sz -> validate_fldata_gen v sz)
