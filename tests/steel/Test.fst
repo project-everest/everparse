@@ -257,7 +257,7 @@ let full_test_pretty_print
   (#vb: A.v byte)
   (b: byte_array)
   (len: SZ.size_t)
-: ST unit (A.arrayptr b vb) (fun _ -> A.arrayptr b vb)
+: ST C.exit_code (A.arrayptr b vb) (fun _ -> A.arrayptr b vb)
     (A.length (A.array_of vb) == SZ.size_v len)
     (fun _ -> True)
 = with_local 0ul (fun perr ->
@@ -271,9 +271,11 @@ let full_test_pretty_print
       let _ = test_pretty_print _ b () () in
       let _ = gen_elim () in
       rewrite (P.cl.ll_state_match _ _) emp;
-      unpeek_strong b _ _
+      unpeek_strong b _ _;
+      return C.EXIT_SUCCESS
     end else begin
-      Steel.ST.Printf.print_string "invalid data"
+      Steel.ST.Printf.print_string "invalid data";
+      return C.EXIT_FAILURE
     end
   )
 

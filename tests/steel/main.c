@@ -26,10 +26,10 @@ int test_read () {
     close(file);
     return 5;
   }
-  full_test_pretty_print(b, len);
+  int res = full_test_pretty_print(b, len);
   munmap(b, len);
   close(file);
-  return 0;
+  return res;
 }
 
 #define output_length 9
