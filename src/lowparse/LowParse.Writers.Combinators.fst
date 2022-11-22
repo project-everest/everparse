@@ -139,7 +139,7 @@ let parse_bounded_integer
 
 module HST = FStar.HyperStack.ST
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 let parse_vldata_intro_impl
   #inv p min max
