@@ -296,8 +296,7 @@ let parse_vldata_intro_ho
     )
     inv
 =
-  let int_size = log256 max in
-  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  start (parse_bounded_integer (log256 max)) (write_bounded_integer (log256 max)) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vldata_intro _ _ _
 
@@ -324,8 +323,7 @@ let parse_vldata_intro_ho'
     )
     inv
 =
-  let int_size = log256 max in
-  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  start (parse_bounded_integer (log256 max)) (write_bounded_integer (log256 max)) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vldata_intro _ _ _
 
@@ -338,7 +336,7 @@ let parse_vldata_intro_frame
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
 : Write unit ((frame `parse_pair` parse_bounded_integer (log256 (max))) `parse_pair` p) (frame `parse_pair` parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun ((fr, _), vin) _ (fr', vout) -> fr == fr' /\ (vin <: Parser?.t p) == (vout <: Parser?.t p)) inv
 = valid_rewrite _ _ _ _ _ (valid_rewrite_parse_pair_assoc_1 _ _ _);
-  frame2 _ _ _ _ _ _ _ _ (fun _ -> parse_vldata_intro p min max)
+  frame2 _ _ _ _ _ _ _ inv (fun _ -> parse_vldata_intro p min max)
 
 let parse_vldata_intro_weak_spec
   (p: parser)
@@ -402,8 +400,7 @@ let parse_vldata_intro_weak_ho
     )
     inv
 =
-  let int_size = log256 max in
-  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  start (parse_bounded_integer (log256 max)) (write_bounded_integer (log256 max)) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vldata_intro_weak _ _ _
 
@@ -428,8 +425,7 @@ let parse_vldata_intro_weak_ho'
     )
     inv
 =
-  let int_size = log256 max in
-  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  start (parse_bounded_integer (log256 max)) (write_bounded_integer (log256 max)) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vldata_intro_weak _ _ _
 
@@ -443,7 +439,7 @@ let parse_vldata_intro_weak_frame
 : EWrite unit ((frame `parse_pair` parse_bounded_integer (log256 (max))) `parse_pair` p) (frame `parse_pair` parse_vldata p min max) (fun _ -> True) (fun ((fr, _), vin) _ (fr', vout) -> fr == fr' /\ (vin <: Parser?.t p) == (vout <: Parser?.t p)) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)) inv
 = 
   valid_rewrite _ _ _ _ _ (valid_rewrite_parse_pair_assoc_1 _ _ _);
-  frame2 _ _ _ _ _ _ _ _ (fun _ -> parse_vldata_intro_weak p min max)
+  frame2 _ _ _ _ _ _ _ inv (fun _ -> parse_vldata_intro_weak p min max)
 
 let parse_vldata_recast_spec
   (p: parser)

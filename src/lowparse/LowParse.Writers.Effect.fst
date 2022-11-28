@@ -69,7 +69,7 @@ let read_subcomp_impl
 
 let lift_pure_read_impl
   a wp f_pure_spec_for_impl l
-=
+= FStar.Monotonic.Pure.elim_pure_wp_monotonicity wp;
   fun _ -> Correct (f_pure_spec_for_impl ())
 
 let failwith_impl
