@@ -2,7 +2,7 @@ module LowParse.Spec.Fold
 include LowParse.Spec.Combinators
 
 module U8 = FStar.UInt8
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 // to be used with delta_attr to compute the Steel code synthesis
 // before extraction to C
@@ -27,7 +27,7 @@ type typ
     (squash (b == false) -> typ type_of_scalar ne pr) ->
     typ type_of_scalar ne pr
 | TChoice: (s: scalar_t) -> (#ne: bool) -> (#pr: bool) -> (type_of_scalar s -> typ type_of_scalar ne pr) -> typ type_of_scalar true pr
-| TSizePrefixed: (s: scalar_t) -> (sz: (type_of_scalar s -> SZ.size_t) {synth_injective sz}) -> (#ne: bool) -> (#pr: bool) -> typ type_of_scalar ne pr -> typ type_of_scalar true false
+| TSizePrefixed: (s: scalar_t) -> (sz: (type_of_scalar s -> SZ.t) {synth_injective sz}) -> (#ne: bool) -> (#pr: bool) -> typ type_of_scalar ne pr -> typ type_of_scalar true false
 | TList: typ type_of_scalar true false -> typ type_of_scalar false true
 
 let type_of_payload
@@ -236,19 +236,19 @@ let fold_read
 : Tot (fold_t state_t t t pre (pre))
 = fun x -> ret x
 
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 inline_for_extraction
 noeq
 type array_index_fn = {
   array_index_f_nat: ((n: nat) -> (x: nat {x < n}) -> (y: nat {y < n}));
-  array_index_f_sz: ((n: SZ.size_t) -> (x: SZ.size_t) -> Pure SZ.size_t (SZ.size_v x < SZ.size_v n) (fun y -> SZ.size_v y == array_index_f_nat (SZ.size_v n) (SZ.size_v x)));
+  array_index_f_sz: ((n: SZ.t) -> (x: SZ.t) -> Pure SZ.t (SZ.v x < SZ.v n) (fun y -> SZ.v y == array_index_f_nat (SZ.v n) (SZ.v x)));
 }
 
 inline_for_extraction
 let array_index_reverse = {
   array_index_f_nat = (fun n x -> n - 1 - x);
-  array_index_f_sz = (fun n x -> (n `SZ.size_sub` SZ.one_size) `SZ.size_sub` x);
+  array_index_f_sz = (fun n x -> (n `SZ.sub` 1sz) `SZ.sub` x);
 }
 
 noeq
@@ -357,7 +357,7 @@ type prog
       (#pr: bool) ->
       (#t: typ type_of_scalar ne pr) ->
       (s: scalar_t) ->
-      (sz: (type_of_scalar s -> SZ.size_t) {synth_injective sz}) ->
+      (sz: (type_of_scalar s -> SZ.t) {synth_injective sz}) ->
       (#pre: _) ->
       (#post: _) ->
       prog type_of_scalar state_t action_t t ret_t pre post ->

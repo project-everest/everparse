@@ -6,7 +6,7 @@ open LowParse.SteelST.Combinators
 open LowParse.SteelST.List.Base
 open LowParse.Spec.VLGen
 
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 module H = LowParse.SteelST.Fold.Hoare
 
 (* Step-by-step serialization *)
@@ -151,7 +151,7 @@ let spec_size_prefixed0
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
-  (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
+  (sz: (type_of_scalar sc -> SZ.t) { synth_injective sz })
   (#ne #pr: bool)
   (t: typ type_of_scalar ne pr)
 : Tot (stt (state_t0 type_of_scalar) unit (IParse t :: s) (IParse (TSizePrefixed sc sz t) :: s))
@@ -163,7 +163,7 @@ let i_size_prefixed
   (#type_of_scalar: (scalar_t -> Type))
   (s: state_i type_of_scalar)
   (sc: scalar_t)
-  (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
+  (sz: (type_of_scalar sc -> SZ.t) { synth_injective sz })
   (#ne #pr: bool)
   (t: typ type_of_scalar ne pr)
   (sq: squash (
@@ -475,28 +475,28 @@ module AP = LowParse.SteelST.ArrayPtr
 inline_for_extraction // CRITICAL for extraction
 noeq
 type ll_state'
-: Ghost.erased SZ.size_t -> AP.array byte -> Type
+: Ghost.erased SZ.t -> AP.array byte -> Type
 = | LNil:
     (a: AP.v byte) ->
     squash (AP.length (AP.array_of a) == 0) ->
-    ll_state' SZ.zero_size (AP.array_of a)
+    ll_state' 0sz (AP.array_of a)
   | LCons:
-    (sz0: Ghost.erased SZ.size_t) -> // to prove absence of integer overflow
+    (sz0: Ghost.erased SZ.t) -> // to prove absence of integer overflow
     (a0: AP.array byte) ->
     (a1: AP.array byte) ->
-    (sz1: SZ.size_t) ->
+    (sz1: SZ.t) ->
     (b2: byte_array) ->
-    (sz2: Ghost.erased SZ.size_t) ->
+    (sz2: Ghost.erased SZ.t) ->
     (a2: AP.array byte) ->
     squash (
       AP.merge_into a1 a2 a0 /\
-      SZ.size_v sz1 == AP.length a1 /\
-      SZ.size_v sz0 == SZ.size_v sz1 + SZ.size_v sz2
+      SZ.v sz1 == AP.length a1 /\
+      SZ.v sz0 == SZ.v sz1 + SZ.v sz2
     ) ->
     (s2: ll_state' sz2 a2) -> ll_state' sz0 a0
 
 let rec ll_state'_length
-  (#sz: Ghost.erased (SZ.size_t))
+  (#sz: Ghost.erased (SZ.t))
   (#a: AP.array byte)
   (l: ll_state' sz a)
 : Tot nat
@@ -510,16 +510,16 @@ noeq
 type ll_state
   (a0: AP.array byte)
 = {
-    ll_sz0: Ghost.erased SZ.size_t; // to prove absence of integer overflow
+    ll_sz0: Ghost.erased SZ.t; // to prove absence of integer overflow
     ll_free: AP.v byte;
     ll_b: byte_array;
-    ll_sz: Ghost.erased SZ.size_t;
+    ll_sz: Ghost.erased SZ.t;
     ll_a: AP.array byte;
     ll_s: ll_state' ll_sz ll_a;
     ll_prf: squash (
       AP.merge_into (AP.array_of ll_free) ll_a a0 /\
-      SZ.size_v ll_sz0 == AP.length a0 /\
-      SZ.size_v ll_sz0 == AP.length (AP.array_of ll_free) + SZ.size_v ll_sz
+      SZ.v ll_sz0 == AP.length a0 /\
+      SZ.v ll_sz0 == AP.length (AP.array_of ll_free) + SZ.v ll_sz
     );
   }
 
@@ -556,7 +556,7 @@ let rec ll_state_match'
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
-  (sz: Ghost.erased SZ.size_t)
+  (sz: Ghost.erased SZ.t)
   (a: AP.array byte)
   (ls: ll_state' sz a)
 : Tot vprop
@@ -577,7 +577,7 @@ let elim_ll_state_match'_nil
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
-  (sz: Ghost.erased SZ.size_t)
+  (sz: Ghost.erased SZ.t)
   (a: AP.array byte)
   (ls: ll_state' sz a)
 : STGhost (squash (LNil? ls /\ Nil? i /\ SNil? s)) opened
@@ -626,7 +626,7 @@ let elim_ll_state_match'_cons
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
-  (sz: Ghost.erased SZ.size_t)
+  (sz: Ghost.erased SZ.t)
   (a: AP.array byte)
   (ls: ll_state' sz a)
 : STGhost (squash (LCons? ls /\ Cons? i /\ SCons? s)) opened
@@ -681,7 +681,7 @@ let ll_state_match0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
@@ -691,7 +691,7 @@ let ll_state_match0
     R.pts_to b_sz full_perm sz `star`
     AP.arrayptr b ls.ll_free `star`
     ll_state_match' p_of_s s ls.ll_b ls.ll_sz ls.ll_a ls.ll_s `star`
-    pure (SZ.size_v sz == AP.length (AP.array_of ls.ll_free) /\ AP.array_perm (AP.array_of ls.ll_free) == full_perm)
+    pure (SZ.v sz == AP.length (AP.array_of ls.ll_free) /\ AP.array_perm (AP.array_of ls.ll_free) == full_perm)
   )
 
 let ll_state_match
@@ -699,7 +699,7 @@ let ll_state_match
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
@@ -713,7 +713,7 @@ let ll_state_failure0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
@@ -729,7 +729,7 @@ let ll_state_failure
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
@@ -750,7 +750,7 @@ let ll_state_shape'
   (#scalar_t: Type)
   (#type_of_scalar: (scalar_t -> Type))
   (i: state_i0 type_of_scalar)
-  (#sz0: SZ.size_t)
+  (#sz0: SZ.t)
   (#a0: AP.array byte)
   (ls: ll_state' sz0 a0)
 : Tot prop
@@ -773,7 +773,7 @@ let rec ll_state_match'_shape
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
-  (sz: Ghost.erased SZ.size_t)
+  (sz: Ghost.erased SZ.t)
   (a: AP.array byte)
   (ls: ll_state' sz a)
 : STGhost unit opened
@@ -819,7 +819,7 @@ let rec wipe_ll_state_match' // necessary in case of failure. This also explains
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
-  (sz: Ghost.erased SZ.size_t)
+  (sz: Ghost.erased SZ.t)
   (a: AP.array byte)
   (ls: ll_state' sz a)
 : STGhost (AP.v byte) opened
@@ -865,7 +865,7 @@ let wipe_ll_state_match0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
@@ -883,7 +883,7 @@ let wipe_ll_state_match0
   AP.join b _
 
 inline_for_extraction
-let ll_state_ptr' = list (R.ref SZ.size_t & R.ref byte_array)
+let ll_state_ptr' = list (R.ref SZ.t & R.ref byte_array)
 
 inline_for_extraction
 let ll_state_ptr = (R.ref byte_array & ll_state_ptr')
@@ -905,7 +905,7 @@ let sndx
 #set-options "--ide_id_info_off"
 
 let rec ll_state_pts_to'
-  (#sz: Ghost.erased SZ.size_t)
+  (#sz: Ghost.erased SZ.t)
   (#a: AP.array byte)
   (lsp: ll_state_ptr')
   (ls: ll_state' sz a)
@@ -921,7 +921,7 @@ let rec ll_state_pts_to'
 
 let elim_ll_state_pts_to'_nil
   (#opened: _)
-  (#sz: Ghost.erased SZ.size_t)
+  (#sz: Ghost.erased SZ.t)
   (#a: AP.array byte)
   (lsp: ll_state_ptr')
   (ls: ll_state' sz a)
@@ -947,7 +947,7 @@ let elim_ll_state_pts_to'_nil
 
 let elim_ll_state_pts_to'_cons
   (#opened: _)
-  (#sz: Ghost.erased SZ.size_t)
+  (#sz: Ghost.erased SZ.t)
   (#a: AP.array byte)
   (lsp: ll_state_ptr')
   (ls: ll_state' sz a)
@@ -1002,7 +1002,7 @@ let cl0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
 : Tot (low_level_state (state_i0 type_of_scalar) (state_t0 type_of_scalar) (ll_state a) ll_state_ptr)
 = {
@@ -1039,7 +1039,7 @@ let cl
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
 : Tot (low_level_state (state_i type_of_scalar) (state_t type_of_scalar) (ll_state a) ll_state_ptr)
 = H.cl (cl0 p_of_s b b_sz a)
@@ -1050,7 +1050,7 @@ let wipe_ll_state_match
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (#i: state_i type_of_scalar)
   (s: state_t type_of_scalar i)
@@ -1093,13 +1093,13 @@ let mk_initial_state0
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (vb: AP.v byte)
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
 : Tot (mk_ll_state_t
     (cl0 p_of_s b b_sz (AP.array_of vb))
     (AP.arrayptr b vb `star`
       (exists_ (fun sz ->
         R.pts_to b_sz full_perm sz `star`
-        pure (SZ.size_v sz == AP.length (AP.array_of vb) /\ AP.array_perm (AP.array_of vb) == full_perm)
+        pure (SZ.v sz == AP.length (AP.array_of vb) /\ AP.array_perm (AP.array_of vb) == full_perm)
     )))
     (initial_state0 type_of_scalar)
   )
@@ -1115,7 +1115,7 @@ let mk_initial_state0
     ll_sz0 = sz;
     ll_free = ll_free;
     ll_b = bz;
-    ll_sz = SZ.zero_size;
+    ll_sz = 0sz;
     ll_a = AP.array_of vbz;
     ll_s = LNil vbz ();
     ll_prf = ();
@@ -1152,13 +1152,13 @@ let mk_initial_state
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (vb: AP.v byte)
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
 : Tot (mk_ll_state_t
     (cl p_of_s b b_sz (AP.array_of vb))
     (AP.arrayptr b vb `star`
       (exists_ (fun sz ->
         R.pts_to b_sz full_perm sz `star`
-        pure (SZ.size_v sz == AP.length (AP.array_of vb))
+        pure (SZ.v sz == AP.length (AP.array_of vb))
     )))
     (initial_state type_of_scalar)
   )
@@ -1181,7 +1181,7 @@ let elim_ll_state_match_final0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (t: Ghost.erased (state_i_item type_of_scalar))
   (i: Ghost.erased (state_i0 type_of_scalar))
@@ -1192,7 +1192,7 @@ let elim_ll_state_match_final0
       AP.arrayptr b vb `star`
       R.pts_to b_sz full_perm sz `star`
       aparse (parser_of_state_i_item p_of_s t) b' vb' `star` pure (
-      SZ.size_v sz == AP.length (AP.array_of vb) /\
+      SZ.v sz == AP.length (AP.array_of vb) /\
       Ghost.reveal i == [Ghost.reveal t] /\
       vb'.contents == value_of_state_t_item (SCons?.s s) /\
       AP.merge_into (AP.array_of vb) (array_of' vb') a
@@ -1230,7 +1230,7 @@ let elim_ll_state_match_final
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (t: Ghost.erased (state_i_item type_of_scalar))
   (i: Ghost.erased (state_i type_of_scalar))
@@ -1241,7 +1241,7 @@ let elim_ll_state_match_final
       AP.arrayptr b vb `star`
       R.pts_to b_sz full_perm sz `star`
       aparse (parser_of_state_i_item p_of_s t) b' vb' `star` pure (
-      SZ.size_v sz == AP.length (AP.array_of vb) /\
+      SZ.v sz == AP.length (AP.array_of vb) /\
       (Ghost.reveal i).i == [Ghost.reveal t] /\
       vb'.contents == value_of_state_t_item (SCons?.s s) /\
       AP.merge_into (AP.array_of vb) (array_of' vb') a
@@ -1266,7 +1266,7 @@ let with_ll_state_ptr'_t
   (#type_of_scalar: (scalar_t -> Type))
   (i: state_i0 type_of_scalar)
 : Tot Type
-= (sz: Ghost.erased SZ.size_t) ->
+= (sz: Ghost.erased SZ.t) ->
   (a: AP.array byte) ->
   (l: ll_state' sz a) ->
   (#kpre: vprop) ->
@@ -1286,7 +1286,7 @@ let with_ll_state_ptr0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (i: Ghost.erased (state_i0 type_of_scalar))
   (w: with_ll_state_ptr'_t i)
@@ -1345,7 +1345,7 @@ let with_ll_state_ptr'_cons
       let a' = elim_exists () in
       let l' = elim_exists () in
       let _ = elim_ll_state_pts_to'_cons _ _ in
-      vpattern_rewrite (fun x -> R.pts_to #SZ.size_t x _ _) bsz;
+      vpattern_rewrite (fun x -> R.pts_to #SZ.t x _ _) bsz;
       vpattern_rewrite (fun x -> R.pts_to #byte_array x _ _) bb;
       vpattern_rewrite (fun x -> ll_state_pts_to' x _) bs';
       return res
@@ -1369,7 +1369,7 @@ let load_ll_state_ptr'_t
   (i: state_i0 type_of_scalar)
 : Tot Type
 =
-  (#sz: Ghost.erased SZ.size_t) ->
+  (#sz: Ghost.erased SZ.t) ->
   (#a: AP.array byte) ->
   (#gl: Ghost.erased (ll_state' sz a)) ->
   (p: ll_state_ptr') ->
@@ -1396,7 +1396,7 @@ let load_ll_state_ptr0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (i: Ghost.erased (state_i0 type_of_scalar))
   (w: load_ll_state_ptr'_t i)
@@ -1448,13 +1448,13 @@ let load_ll_state_ptr'_cons
 : Tot (load_ll_state_ptr'_t (Ghost.reveal s :: Ghost.reveal s'))
 = fun #sz #a #gl p k ->
     let _ = elim_ll_state_pts_to'_cons _ _ in
-    let sz1 = R.read #SZ.size_t _ in
+    let sz1 = R.read #SZ.t _ in
     let b2 = R.read #byte_array _ in
     w _ (fun l' ->
       [@inline_let]
       let l : ll_state' sz a = LCons _ a (LCons?.a1 gl) sz1 b2 (LCons?.sz2 gl) (LCons?.a2 gl) () l' in
       rewrite
-        (R.pts_to #SZ.size_t _ _ _ `star` R.pts_to #byte_array _ _ _ `star` ll_state_pts_to' _ _)
+        (R.pts_to #SZ.t _ _ _ `star` R.pts_to #byte_array _ _ _ `star` ll_state_pts_to' _ _)
         (ll_state_pts_to' p l);
       k _
     )
@@ -1476,11 +1476,11 @@ let store_ll_state_ptr'_t
   (#type_of_scalar: (scalar_t -> Type))
   (i: state_i0 type_of_scalar)
 : Tot Type
-= (#sz: Ghost.erased SZ.size_t) ->
+= (#sz: Ghost.erased SZ.t) ->
   (#a: AP.array byte) ->
   (#gl: Ghost.erased (ll_state' sz a)) ->
   (p: ll_state_ptr') ->
-  (#sz' : Ghost.erased SZ.size_t) ->
+  (#sz' : Ghost.erased SZ.t) ->
   (#a': AP.array byte) ->
   (l': ll_state' sz' a') ->
   ST unit
@@ -1495,7 +1495,7 @@ let store_ll_state_ptr0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (i: Ghost.erased (state_i0 type_of_scalar))
   (w: store_ll_state_ptr'_t i)
@@ -1535,7 +1535,7 @@ let store_ll_state_ptr'_cons
     R.write _ (LCons?.b2 l);
     w _ (LCons?.s2 l);
     rewrite
-      (R.pts_to #SZ.size_t _ _ _ `star` R.pts_to #byte_array _ _ _ `star` ll_state_pts_to' _ _)
+      (R.pts_to #SZ.t _ _ _ `star` R.pts_to #byte_array _ _ _ `star` ll_state_pts_to' _ _)
       (ll_state_pts_to' p l)
 
 [@@specialize]
@@ -1555,7 +1555,7 @@ let ptr_cl0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
 : Tot (ll_state_ptr_ops (cl0 p_of_s b b_sz a))
 = {
@@ -1570,7 +1570,7 @@ let ptr_cl
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
 : Tot (ll_state_ptr_ops (cl p_of_s b b_sz a))
 = H.ptr_cl (ptr_cl0 p_of_s b b_sz a)
@@ -1582,7 +1582,7 @@ let write0_inc
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (#ne #pr: bool)
@@ -1625,14 +1625,14 @@ let r_to_l_write_post_success
   (w: t)
   (b: byte_array)
   (a: AP.array byte)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
 : Tot vprop
 = exists_ (fun vbl -> exists_ (fun br -> exists_ (fun (vbr: v k t) ->
     AP.arrayptr b vbl `star`
     aparse p br vbr `star` pure (
     AP.merge_into (AP.array_of vbl) (array_of' vbr) a /\
     vbr.contents == w /\
-    SZ.size_v sz == AP.length (AP.array_of vbl)
+    SZ.v sz == AP.length (AP.array_of vbl)
   ))))
 
 let r_to_l_write_post
@@ -1642,7 +1642,7 @@ let r_to_l_write_post
   (w: t)
   (b: byte_array)
   (a: AP.array byte)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
   (success: bool)
 : Tot vprop
 = if success
@@ -1658,8 +1658,8 @@ let r_to_l_write_t
 = (w: t) ->
   (b: byte_array) ->
   (vb0: AP.v byte) ->
-  (b_sz: R.ref SZ.size_t) ->
-  (sz: Ghost.erased SZ.size_t) ->
+  (b_sz: R.ref SZ.t) ->
+  (sz: Ghost.erased SZ.t) ->
   ST bool
     (AP.arrayptr b vb0 `star`
       R.pts_to b_sz full_perm sz)
@@ -1669,7 +1669,7 @@ let r_to_l_write_t
         r_to_l_write_post p w b (AP.array_of vb0) sz' success
     ))
     (AP.array_perm (AP.array_of vb0) == full_perm /\
-      SZ.size_v sz == AP.length (AP.array_of vb0)
+      SZ.v sz == AP.length (AP.array_of vb0)
     )
     (fun _ -> True)
 
@@ -1683,7 +1683,7 @@ let r_to_l_write_post_rewrite
   (w: t)
   (b: byte_array)
   (a: AP.array byte)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
   (success: bool)
 : STGhost unit opened
     (r_to_l_write_post p w b a sz success)
@@ -1740,18 +1740,18 @@ let r_to_l_write_constant_size
   (#p: parser k t)
   (#s: serializer p)
   (w: exact_writer s)
-  (sz0: SZ.size_t)
+  (sz0: SZ.t)
 : Pure (r_to_l_write_t p)
     (requires (
       k.parser_kind_high == Some k.parser_kind_low /\
-      k.parser_kind_low == SZ.size_v sz0
+      k.parser_kind_low == SZ.v sz0
     ))
     (ensures (fun _ -> True))
 =
   fun x b vb0 b_sz _ ->
     parsed_size_some_intro p x (serialize s x);
     let sz = read_replace b_sz in
-    if sz `SZ.size_lt` sz0
+    if sz `SZ.lt` sz0
     then begin
       noop ();
       rewrite
@@ -1759,7 +1759,7 @@ let r_to_l_write_constant_size
         (r_to_l_write_post p x b (AP.array_of vb0) sz false);
       return false
     end else begin
-      let sz' = sz `SZ.size_sub` sz0 in
+      let sz' = sz `SZ.sub` sz0 in
       let br = AP.split b sz' in
       let _ = gen_elim () in
       let _ = w x br in
@@ -1799,7 +1799,7 @@ let rec ll_state_match'_size_of_state_t0
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
   (b: byte_array)
-  (sz: Ghost.erased SZ.size_t)
+  (sz: Ghost.erased SZ.t)
   (a: AP.array byte)
   (ls: ll_state' sz a)
 : STGhost unit opened
@@ -1845,7 +1845,7 @@ let ll_state_match_size_of_state_t0
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (#i: state_i0 type_of_scalar)
   (s: state_t0 type_of_scalar i)
@@ -1873,7 +1873,7 @@ let impl_write
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
   (#ne #pr: bool)
@@ -1905,9 +1905,9 @@ let impl_write
         ll_sz0 = out.ll_sz0;
         ll_free = vbl';
         ll_b = bw;
-        ll_sz = SZ.size_add (sz `SZ.size_sub` sz') out.ll_sz;
+        ll_sz = SZ.add (sz `SZ.sub` sz') out.ll_sz;
         ll_a = AP.merge (array_of' vbw) out.ll_a;
-        ll_s = LCons _ _ (array_of' vbw) (sz `SZ.size_sub` sz') out.ll_b out.ll_sz out.ll_a () out.ll_s;
+        ll_s = LCons _ _ (array_of' vbw) (sz `SZ.sub` sz') out.ll_b out.ll_sz out.ll_a () out.ll_s;
         ll_prf = ();
       }
       in
@@ -1942,7 +1942,7 @@ let nil0_inc
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (t: typ type_of_scalar true false)
@@ -1958,7 +1958,7 @@ let impl_nil
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
   (t: typ type_of_scalar true false)
@@ -1982,7 +1982,7 @@ let impl_nil
       ll_b = bw;
       ll_sz = out.ll_sz;
       ll_a = AP.merge (array_of' vbw) out.ll_a;
-      ll_s = LCons _ _ (array_of' vbw) SZ.zero_size out.ll_b out.ll_sz out.ll_a () out.ll_s;
+      ll_s = LCons _ _ (array_of' vbw) 0sz out.ll_b out.ll_sz out.ll_a () out.ll_s;
       ll_prf = ();
     }
     in
@@ -2003,7 +2003,7 @@ let cons0_inc
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (t: typ type_of_scalar true false)
@@ -2031,7 +2031,7 @@ let impl_cons
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
   (t: typ type_of_scalar true false)
@@ -2065,7 +2065,7 @@ let impl_cons
       ll_s = LCons
         _ _
         (array_of' vbw)
-        (LCons?.sz1 out.ll_s `SZ.size_add` LCons?.sz1 (LCons?.s2 out.ll_s))
+        (LCons?.sz1 out.ll_s `SZ.add` LCons?.sz1 (LCons?.s2 out.ll_s))
         (LCons?.b2 (LCons?.s2 out.ll_s))
         _ _ ()
         (LCons?.s2 (LCons?.s2 out.ll_s));
@@ -2089,7 +2089,7 @@ let pair0_inc
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (#ne1: bool)
@@ -2119,7 +2119,7 @@ let impl_pair
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
   (#ne1: bool)
@@ -2156,7 +2156,7 @@ let impl_pair
       ll_s = LCons
         _ _
         (array_of' vbw)
-        (LCons?.sz1 out.ll_s `SZ.size_add` LCons?.sz1 (LCons?.s2 out.ll_s))
+        (LCons?.sz1 out.ll_s `SZ.add` LCons?.sz1 (LCons?.s2 out.ll_s))
         (LCons?.b2 (LCons?.s2 out.ll_s))
         _ _ ()
         (LCons?.s2 (LCons?.s2 out.ll_s));
@@ -2181,7 +2181,7 @@ let if0_inc
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b0: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (#ne #pr: bool)
@@ -2202,7 +2202,7 @@ let impl_if
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
   (#ne #pr: bool)
@@ -2240,11 +2240,11 @@ let size_prefixed0_inc
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b0: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
-  (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
+  (sz: (type_of_scalar sc -> SZ.t) { synth_injective sz })
   (#ne #pr: bool)
   (t: typ type_of_scalar ne pr)
 : Tot (stt_state_inc (cl0 p_of_s b0 b_sz a) (spec_size_prefixed0 s sc sz t))
@@ -2256,7 +2256,7 @@ let size_prefixed0_inc
   | None -> ()
   | _ ->
     let b = parsed_size_some_elim (weaken (pkind true false) (parse_size_prefixed scp sz tp)) (coerce _ (VParse?.v (SCons?.s h'))) in
-    let szp = ((scp `parse_synth` sz) `parse_synth` SZ.size_v) in
+    let szp = ((scp `parse_synth` sz) `parse_synth` size_v) in
     parse_vlgen_alt_eq
       szp
       tp
@@ -2269,7 +2269,7 @@ let parsed_size_parse_size_prefixed_no_size
   (#st: Type)
   (#sk: parser_kind)
   (sp: parser sk st)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (sz: (st -> SZ.t) { synth_injective sz })
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2278,7 +2278,7 @@ let parsed_size_parse_size_prefixed_no_size
 : Lemma
   (requires (
     parsed_size p l == Some sl /\
-    (forall x . SZ.size_v (sz x) <> sl)
+    (forall x . SZ.v (sz x) <> sl)
   ))
   (ensures (
     parsed_size (parse_size_prefixed sp sz p) l == None
@@ -2288,14 +2288,14 @@ let parsed_size_parse_size_prefixed_no_size
   | _ ->
     let b = parsed_size_some_elim (parse_size_prefixed sp sz p) l in
     parse_vlgen_alt_eq
-      ((sp `parse_synth` sz) `parse_synth` SZ.size_v)
+      ((sp `parse_synth` sz) `parse_synth` size_v)
       p
       b;
-    let Some (_, len1) = parse ((sp `parse_synth` sz) `parse_synth` SZ.size_v) b in
+    let Some (_, len1) = parse ((sp `parse_synth` sz) `parse_synth` size_v) b in
     parsed_size_some_intro p l (Seq.slice b len1 (Seq.length b));
     parse_synth_eq
       (sp `parse_synth` sz)
-      SZ.size_v
+      size_v
       b;
     parse_synth_eq sp sz b
 
@@ -2303,7 +2303,7 @@ let parsed_size_parse_size_prefixed
   (#st: Type)
   (#sk: parser_kind)
   (sp: parser sk st)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (sz: (st -> SZ.t) { synth_injective sz })
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -2312,7 +2312,7 @@ let parsed_size_parse_size_prefixed
 : Lemma
   (requires (
     sk.parser_kind_subkind == Some ParserStrong /\
-    parsed_size p l == Some (SZ.size_v (sz x))
+    parsed_size p l == Some (SZ.v (sz x))
   ))
   (ensures (
     parsed_size (parse_size_prefixed sp sz p) l ==
@@ -2325,14 +2325,14 @@ let parsed_size_parse_size_prefixed
     | _ ->
       let b = parsed_size_some_elim (parse_size_prefixed sp sz p) l in
       parse_vlgen_alt_eq
-        ((sp `parse_synth` sz) `parse_synth` SZ.size_v)
+        ((sp `parse_synth` sz) `parse_synth` size_v)
         p
         b;
-      let Some (_, len1) = parse ((sp `parse_synth` sz) `parse_synth` SZ.size_v) b in
+      let Some (_, len1) = parse ((sp `parse_synth` sz) `parse_synth` size_v) b in
       parsed_size_some_intro p l (Seq.slice b len1 (Seq.length b));
       parse_synth_eq
         (sp `parse_synth` sz)
-        SZ.size_v
+        size_v
         b;
       parse_synth_eq sp sz b;
       let b1 = Seq.slice b 0 len1 in
@@ -2348,10 +2348,10 @@ let parsed_size_parse_size_prefixed
     parse_synth_eq sp sz b;
     parse_synth_eq
       (sp `parse_synth` sz)
-      SZ.size_v
+      size_v
       b;
     parse_vlgen_alt_eq
-      ((sp `parse_synth` sz) `parse_synth` SZ.size_v)
+      ((sp `parse_synth` sz) `parse_synth` size_v)
       p
       b;
     parsed_size_some_intro (parse_size_prefixed sp sz p) l b
@@ -2375,16 +2375,16 @@ let impl_size_prefixed
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: Ghost.erased (state_i0 type_of_scalar))
   (sc: scalar_t)
   (wc: r_to_l_write_t (p_of_s sc).scalar_parser)
-  (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz })
+  (sz: (type_of_scalar sc -> SZ.t) { synth_injective sz })
   (#ne #pr: bool)
   (t: typ type_of_scalar ne pr)
-  (sz'_ex: ((s: SZ.size_t) -> (b: bool { forall x . sz x == s ==> b == true })))
-  (sz': ((s: SZ.size_t { sz'_ex s == true }) -> (x: type_of_scalar sc { sz x == s })))
+  (sz'_ex: ((s: SZ.t) -> (b: bool { forall x . sz x == s ==> b == true })))
+  (sz': ((s: SZ.t { sz'_ex s == true }) -> (x: type_of_scalar sc { sz x == s })))
 : Tot (stt_impl_t (cl0 p_of_s b b_sz a) (spec_size_prefixed0 s sc sz t))
 = fun kpre kpost out (h: Ghost.erased (state_t0 type_of_scalar (IParse t :: s))) k_success k_failure ->
     let h' : Ghost.erased (state_t0 type_of_scalar (IParse (TSizePrefixed sc sz t) :: s)) = get_return_state (spec_size_prefixed0 s sc sz t) h in
@@ -2419,18 +2419,18 @@ let impl_size_prefixed
         let _ = intro_parse_size_prefixed (p_of_s sc).scalar_parser sz (parser_of_typ p_of_s t) bw out.ll_b in
         let vbw = rewrite_aparse bw (parser_of_state_i_item p_of_s (IParse (TSizePrefixed sc sz t))) in
         let vbl' = vpattern (AP.arrayptr b) in
-        let tag_sz = free_sz `SZ.size_sub` free_sz' in
+        let tag_sz = free_sz `SZ.sub` free_sz' in
         [@inline_let]
         let out' : ll_state a = {
           ll_sz0 = out.ll_sz0;
           ll_free = vbl';
           ll_b = bw;
-          ll_sz = Ghost.hide (tag_sz `SZ.size_add` out.ll_sz);
+          ll_sz = Ghost.hide (tag_sz `SZ.add` out.ll_sz);
           ll_a = AP.merge (array_of' vbw) (LCons?.a2 out.ll_s);
           ll_s = LCons
             _ _
             (array_of' vbw)
-            (tag_sz `SZ.size_add` LCons?.sz1 out.ll_s)
+            (tag_sz `SZ.add` LCons?.sz1 out.ll_s)
             (LCons?.b2 out.ll_s)
             (LCons?.sz2 out.ll_s)
             (LCons?.a2 out.ll_s)
@@ -2486,7 +2486,7 @@ let choice_inc
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
@@ -2525,7 +2525,7 @@ let impl_choice
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (s: state_i0 type_of_scalar)
   (sc: scalar_t)
@@ -2572,7 +2572,7 @@ let impl_choice
       ll_s = LCons
         _ _
         (array_of' vbw)
-        (LCons?.sz1 out.ll_s `SZ.size_add` LCons?.sz1 (LCons?.s2 out.ll_s))
+        (LCons?.sz1 out.ll_s `SZ.add` LCons?.sz1 (LCons?.s2 out.ll_s))
         (LCons?.b2 (LCons?.s2 out.ll_s))
         _ _ ()
         (LCons?.s2 (LCons?.s2 out.ll_s));
@@ -2628,9 +2628,9 @@ type action_t
   | ASizePrefixed:
     (s: state_i type_of_scalar) ->
     (sc: scalar_t) ->
-    (sz: (type_of_scalar sc -> SZ.size_t) { synth_injective sz }) ->
-    (sz'_ex: ((s: SZ.size_t) -> (b: bool { forall x . sz x == s ==> b == true }))) ->
-    (sz': ((s: SZ.size_t { sz'_ex s == true }) -> (x: type_of_scalar sc { sz x == s }))) ->
+    (sz: (type_of_scalar sc -> SZ.t) { synth_injective sz }) ->
+    (sz'_ex: ((s: SZ.t) -> (b: bool { forall x . sz x == s ==> b == true }))) ->
+    (sz': ((s: SZ.t { sz'_ex s == true }) -> (x: type_of_scalar sc { sz x == s }))) ->
     (#ne: bool) -> (#pr: bool) ->
     (t: typ type_of_scalar ne pr) ->
     (sq: squash (
@@ -2779,7 +2779,7 @@ let a_impl
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (w_of_s: ((s: scalar_t) -> r_to_l_write_t (p_of_s s).scalar_parser))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
   (#ret_t: Type)
   (#pre: state_i type_of_scalar)
@@ -2815,7 +2815,7 @@ let a_cl
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (w_of_s: ((s: scalar_t) -> r_to_l_write_t (p_of_s s).scalar_parser))
   (b: byte_array)
-  (b_sz: R.ref SZ.size_t)
+  (b_sz: R.ref SZ.t)
   (a: AP.array byte)
 : Tot (action_impl (cl p_of_s b b_sz a) (action_t type_of_scalar) (action_sem type_of_scalar))
 = {

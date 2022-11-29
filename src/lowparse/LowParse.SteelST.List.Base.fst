@@ -218,11 +218,11 @@ let validate_list_total_constant_size
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
 : Pure (validator (parse_list p))
     (requires (
       k.parser_kind_low > 0 /\
-      k.parser_kind_low == SZ.size_v sz /\
+      k.parser_kind_low == SZ.v sz /\
       k.parser_kind_high == Some k.parser_kind_low /\
       k.parser_kind_metadata == Some ParserKindMetadataTotal
     ))
@@ -230,13 +230,13 @@ let validate_list_total_constant_size
 = fun #b a len err ->
   valid_list_total_constant_size p (AP.contents_of b);
   parser_kind_prop_equiv parse_list_kind (parse_list p);
-  if len `SZ.size_mod` sz = SZ.zero_size
+  if len `SZ.rem` sz = 0sz
   then begin
     noop ();
     return len
   end else begin
     R.write err validator_error_not_enough_data;
-    return SZ.zero_size
+    return 0sz
   end
 
 let validate_list_pred
@@ -244,7 +244,7 @@ let validate_list_pred
   (#t: Type)
   (p: parser k t)
   (va0: _)
-  (len0: SZ.size_t)
+  (len0: SZ.t)
   (va: _)
   (vl: _)
   (len: _)
@@ -254,8 +254,8 @@ let validate_list_pred
 = AP.contents_of va0 `Seq.equal` (AP.contents_of vl `Seq.append` AP.contents_of va) /\
   AP.merge_into (AP.array_of vl) (AP.array_of va) (AP.array_of va0) /\
   Some? (parse (parse_list p) (AP.contents_of va0)) == Some? (parse (parse_list p) (AP.contents_of va)) /\
-  SZ.size_v len0 == AP.length (AP.array_of va0) /\
-  SZ.size_v len == AP.length (AP.array_of vl) /\
+  SZ.v len0 == AP.length (AP.array_of va0) /\
+  SZ.v len == AP.length (AP.array_of vl) /\
   ((~ (verr == 0ul)) ==> None? (parse (parse_list p) (AP.contents_of va0))) /\
   (cont == true ==> (verr == 0ul /\ ~ (len == len0))) /\
   ((cont == false /\ verr == 0ul) ==> len == len0)
@@ -267,8 +267,8 @@ let validate_list_inv0
   (p: parser k t)
   (a0: byte_array)
   (va0: _)
-  (len0: SZ.size_t)
-  (plen: R.ref SZ.size_t)
+  (len0: SZ.t)
+  (plen: R.ref SZ.t)
   (err: R.ref U32.t)
   (cont: bool)
 : Tot vprop
@@ -286,8 +286,8 @@ let validate_list_inv
   (p: parser k t)
   (a0: byte_array)
   (va0: _)
-  (len0: SZ.size_t)
-  (plen: R.ref SZ.size_t)
+  (len0: SZ.t)
+  (plen: R.ref SZ.t)
   (err: R.ref U32.t)
   (cont: bool)
 : Tot vprop
@@ -345,7 +345,7 @@ let validate_list_body
   let a = AP.split' a0 len _ in
   let va = vpattern (fun va -> AP.arrayptr a va) in
   parse_list_eq p (AP.contents_of va);
-  let lenr = len0 `SZ.size_sub` len in
+  let lenr = len0 `SZ.sub` len in
   let len1 = v a lenr err in
   let _ = gen_elim () in
   let verr = R.read err in
@@ -354,14 +354,14 @@ let validate_list_body
     noop ();
     rewrite (validate_list_inv0 p a0 va0 len0 plen err false) (validate_list_inv p a0 va0 len0 plen err false);
     return ()
-  end else if len1 = SZ.zero_size 
+  end else if len1 = 0sz 
   then begin
     R.write err validator_error_not_enough_data;
     noop (); // (Error) folding guard g2 of e2 in the lcomp; The SMT solver could not prove the query, try to spell your proof in more detail or increase fuel/ifuel
     rewrite (validate_list_inv0 p a0 va0 len0 plen err false) (validate_list_inv p a0 va0 len0 plen err false);
     return ()
   end else begin
-    let len' = len `SZ.size_add` len1 in
+    let len' = len `SZ.add` len1 in
     R.write plen len';
     let _ = AP.gsplit a len1 in
     let _ = gen_elim () in
@@ -413,10 +413,10 @@ let validate_list
 : Tot (validator (parse_list p))
 = fun #va0 a0 len0 err ->
   parse_list_eq p (AP.contents_of va0);
-  with_local SZ.zero_size (fun plen ->
-  let _ = AP.gsplit a0 SZ.zero_size in
+  with_local 0sz (fun plen ->
+  let _ = AP.gsplit a0 0sz in
   let _ = gen_elim () in
-  rewrite (validate_list_inv0 p a0 va0 len0 plen err (len0 <> SZ.zero_size)) (validate_list_inv p a0 va0 len0 plen err (len0 <> SZ.zero_size));
+  rewrite (validate_list_inv0 p a0 va0 len0 plen err (len0 <> 0sz)) (validate_list_inv p a0 va0 len0 plen err (len0 <> 0sz));
   L.while_loop
     (validate_list_inv p a0 va0 len0 plen err)
     (validate_list_test p a0 len0 err plen)
@@ -563,7 +563,7 @@ let intro_aparse_list
 let list_split_nil_l
   #opened #k #t p #va a
 = let _ = elim_aparse (parse_list p) a in
-  let ar = AP.gsplit a SZ.zero_size in
+  let ar = AP.gsplit a 0sz in
   let _ = gen_elim () in
   let va' = intro_aparse (parse_list p) ar in
   rewrite (aparse (parse_list p) ar va') (aparse (parse_list p) a va');
@@ -637,7 +637,7 @@ let elim_cons_opt_with_length
   (#va1: v k t)
   (#va2: v _ _)
   (a: byte_array)
-  (len1: SZ.size_t)
+  (len1: SZ.t)
   (a2: Ghost.erased byte_array)
 : ST byte_array
     (aparse p a va1 `star` aparse (parse_list p) a2 va2)
@@ -653,7 +653,7 @@ let elim_cons_opt_with_length
     ))))
     (k.parser_kind_subkind == Some ParserStrong /\
       AP.adjacent (array_of' va1) (array_of' va2) /\
-      SZ.size_v len1 == AP.length (array_of va1)
+      SZ.v len1 == AP.length (array_of va1)
     )
     (fun _ -> True)
 = let _ = elim_aparse p a in

@@ -4,7 +4,7 @@ include LowParse.SteelST.List.Base
 open Steel.ST.Util
 
 module AP = LowParse.SteelST.ArrayPtr
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 unfold
 let list_iter_consumes_with_array_body_post0
@@ -79,7 +79,7 @@ val list_iter_consumes_with_array
   ))))))
   (#va: _)
   (a: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
   (al: AP.array byte)
   (init: t')
 : ST t'
@@ -89,7 +89,7 @@ val list_iter_consumes_with_array
       merge_opt_into al va.array al' /\
       res == List.Tot.fold_left (Ghost.reveal phi) init va.contents      
     )))
-    (SZ.size_v len == length_opt va.array /\
+    (SZ.v len == length_opt va.array /\
       k.parser_kind_subkind == Some ParserStrong /\
       adjacent_opt al va.array
     )

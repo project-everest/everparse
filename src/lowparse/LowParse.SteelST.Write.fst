@@ -1,6 +1,6 @@
 module LowParse.SteelST.Write
 module AP = LowParse.SteelST.ArrayPtr
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 open Steel.ST.GenElim
 
@@ -17,12 +17,12 @@ let writer
   (#va: _) ->
   (x: t) ->
   (a: byte_array) ->
-  ST SZ.size_t
+  ST SZ.t
     (AP.arrayptr a va)
     (fun sz -> exists_ (fun vl -> aparse p a vl `star` exists_ (fun ar -> exists_ (fun vr -> AP.arrayptr ar vr `star` pure (
       AP.merge_into (array_of' vl) (AP.array_of vr) (AP.array_of va) /\
       vl.contents == x /\
-      SZ.size_v sz == AP.length (array_of' vl)
+      SZ.v sz == AP.length (array_of' vl)
     )))))
     (Seq.length (serialize s x) <= AP.length (AP.array_of va) /\
       AP.array_perm (AP.array_of va) == full_perm)
@@ -77,11 +77,11 @@ let write_constant_size
   (#p: parser k t)
   (#s: serializer p)
   (w: exact_writer s)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
 : Pure (writer s)
     (requires (
       k.parser_kind_high == Some k.parser_kind_low /\
-      k.parser_kind_low == SZ.size_v sz
+      k.parser_kind_low == SZ.v sz
     ))
     (ensures (fun _ -> True))
 = fun x a ->

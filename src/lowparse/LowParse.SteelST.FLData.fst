@@ -6,7 +6,7 @@ open Steel.ST.GenElim
 
 module AP = LowParse.SteelST.ArrayPtr
 module R = Steel.ST.Reference
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 [@CMacro]
 let validator_error_wrong_size = 3ul
@@ -24,13 +24,13 @@ let validate_fldata_gen
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
-  (sz32: SZ.size_t)
-: Tot (validator (parse_fldata p (SZ.size_v sz32)))
+  (sz32: SZ.t)
+: Tot (validator (parse_fldata p (SZ.v sz32)))
 = fun #va a len err ->
-  if len `SZ.size_lt` sz32
+  if len `SZ.lt` sz32
   then begin
       R.write err validator_error_not_enough_data;
-      return (SZ.zero_size <: SZ.size_t)
+      return (0sz <: SZ.t)
   end else begin
       let ar = AP.split a sz32 in
       let _ = gen_elim () in
@@ -40,7 +40,7 @@ let validate_fldata_gen
       let _ = gen_elim () in
       let verr = R.read err in
       assertf (R.pts_to err full_perm verr `star` AP.arrayptr a va); // FIXME: WHY WHY WHY?
-      if verr = 0ul // returns STT SZ.size_t (R.pts_to err full_perm verr `star` AP.arrayptr a va) (validator_post (parse_fldata p sz) va a len err)
+      if verr = 0ul // returns STT SZ.t (R.pts_to err full_perm verr `star` AP.arrayptr a va) (validator_post (parse_fldata p sz) va a len err)
       then begin
           if s1 <> sz32
           then begin
@@ -62,15 +62,15 @@ let validate_fldata_consumes_all
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
-  (sz32: SZ.size_t)
-: Pure (validator (parse_fldata p (SZ.size_v sz32)))
+  (sz32: SZ.t)
+: Pure (validator (parse_fldata p (SZ.v sz32)))
     (requires (k.parser_kind_subkind == Some ParserConsumesAll))
     (ensures (fun _ -> True))
 = fun #va a len err ->
-  if len `SZ.size_lt` sz32
+  if len `SZ.lt` sz32
   then begin
       R.write err validator_error_not_enough_data;
-      return (SZ.zero_size <: SZ.size_t)
+      return (0sz <: SZ.t)
   end else begin
       let ar = AP.split a sz32 in
       let _ = gen_elim () in
@@ -90,8 +90,8 @@ let validate_fldata
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
-  (sz32: SZ.size_t)
-: Tot (validator (parse_fldata p (SZ.size_v sz32)))
+  (sz32: SZ.t)
+: Tot (validator (parse_fldata p (SZ.v sz32)))
 = if k.parser_kind_subkind = Some ParserConsumesAll
   then validate_fldata_consumes_all v sz32
   else validate_fldata_gen v sz32
@@ -103,8 +103,8 @@ let validate_fldata_strong
   (#p: parser k t)
   (s: serializer p)
   (v: validator p)
-  (sz32: SZ.size_t)
-: Tot (validator (parse_fldata_strong s (SZ.size_v sz32)))
+  (sz32: SZ.t)
+: Tot (validator (parse_fldata_strong s (SZ.v sz32)))
 = fun #va a len err ->
   let res = validate_fldata v sz32 a len err in
   let _ = gen_elim () in
@@ -115,9 +115,9 @@ let jump_fldata
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
-  (sz32: SZ.size_t)
-: Tot (jumper (parse_fldata p (SZ.size_v sz32)))
-= jump_constant_size (parse_fldata p (SZ.size_v sz32)) sz32
+  (sz32: SZ.t)
+: Tot (jumper (parse_fldata p (SZ.v sz32)))
+= jump_constant_size (parse_fldata p (SZ.v sz32)) sz32
 
 inline_for_extraction
 let jump_fldata_strong
@@ -125,9 +125,9 @@ let jump_fldata_strong
   (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-  (sz32: SZ.size_t)
-: Tot (jumper (parse_fldata_strong s (SZ.size_v sz32)))
-= jump_constant_size (parse_fldata_strong s (SZ.size_v sz32)) sz32
+  (sz32: SZ.t)
+: Tot (jumper (parse_fldata_strong s (SZ.v sz32)))
+= jump_constant_size (parse_fldata_strong s (SZ.v sz32)) sz32
 
 let intro_fldata
   (#opened: _)

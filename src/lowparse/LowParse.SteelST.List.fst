@@ -28,12 +28,12 @@ let list_iter_consumes
   ))
   (#va: _)
   (a: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
   (init: t')
 : ST t'
     (aparse_list p a va `star` state init [])
     (fun res -> state res va.contents)
-    (SZ.size_v len == length_opt va.array /\
+    (SZ.v len == length_opt va.array /\
       k.parser_kind_subkind == Some ParserStrong
     )
     (fun res -> res == List.Tot.fold_left (Ghost.reveal phi) init va.contents)

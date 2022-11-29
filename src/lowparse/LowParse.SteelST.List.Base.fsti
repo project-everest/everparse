@@ -4,7 +4,7 @@ include LowParse.SteelST.Validate
 include LowParse.SteelST.Access
 
 module AP = LowParse.SteelST.ArrayPtr
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 module U32 = FStar.UInt32
 module R = Steel.ST.Reference
 module GR = Steel.ST.GhostReference
@@ -171,11 +171,11 @@ val validate_list_total_constant_size
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
 : Pure (validator (parse_list p))
     (requires (
       k.parser_kind_low > 0 /\
-      k.parser_kind_low == SZ.size_v sz /\
+      k.parser_kind_low == SZ.v sz /\
       k.parser_kind_high == Some k.parser_kind_low /\
       k.parser_kind_metadata == Some ParserKindMetadataTotal
     ))
@@ -456,7 +456,7 @@ val elim_cons_opt_with_length
   (#va1: v k t)
   (#va2: v _ _)
   (a: byte_array)
-  (len1: SZ.size_t)
+  (len1: SZ.t)
   (a2: Ghost.erased byte_array)
 : ST byte_array
     (aparse p a va1 `star` aparse (parse_list p) a2 va2)
@@ -472,7 +472,7 @@ val elim_cons_opt_with_length
     ))))
     (k.parser_kind_subkind == Some ParserStrong /\
       AP.adjacent (array_of' va1) (array_of' va2) /\
-      SZ.size_v len1 == AP.length (array_of va1)
+      SZ.v len1 == AP.length (array_of va1)
     )
     (fun _ -> True)
 

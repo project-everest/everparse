@@ -20,7 +20,7 @@ let list_iter_gen_prop
   (cont: _)
 : Tot prop
 = 
-    SZ.size_v len == length_opt va.array /\
+    SZ.v len == length_opt va.array /\
     accu == List.Tot.fold_left phi init l /\
     l0 == l `List.Tot.append` va.contents /\
     cont == Cons? va.contents /\
@@ -46,7 +46,7 @@ let list_iter_gen_inv0
   (l0: list t)
   (afull: option (AP.array byte))
   (pa: R.ref byte_array)
-  (plen: R.ref SZ.size_t)
+  (plen: R.ref SZ.t)
   (paccu: R.ref t')
   (pcont: R.ref bool)
   (cont: bool)
@@ -73,7 +73,7 @@ let list_iter_gen_inv
   (l0: list t)
   (afull: option (AP.array byte))
   (pa: R.ref byte_array)
-  (plen: R.ref SZ.size_t)
+  (plen: R.ref SZ.t)
   (paccu: R.ref t')
   (pcont: R.ref bool)
   (cont: bool)
@@ -122,7 +122,7 @@ let list_iter_gen_body
   (init: t')
   (afull: Ghost.erased (option (AP.array byte)))
   (pa: R.ref byte_array)
-  (plen: R.ref SZ.size_t)
+  (plen: R.ref SZ.t)
   (paccu: R.ref t')
   (pcont: R.ref bool)
   ()
@@ -151,7 +151,7 @@ let list_iter_gen_body
       let accu' = f _ a al accu l in
       let _ = gen_elim () in
       let len = R.read plen in
-      let len' = len `SZ.size_sub` alen in
+      let len' = len `SZ.sub` alen in
       let al' = vpattern_erased (fun al' -> state al' _ _) in
       list_append_cons_r l va_.contents vq.contents;
       list_fold_left_snoc phi init l va_.contents;
@@ -164,7 +164,7 @@ let list_iter_gen_body
       R.write plen len';
       R.write pa a';
       R.write paccu accu';
-      R.write pcont (len' <> SZ.zero_size);
+      R.write pcont (len' <> 0sz);
       list_iter_gen_inv_intro p phi enable_arrays state init va.contents afull pa plen paccu pcont _;
       return ()
 
@@ -215,11 +215,11 @@ let list_iter_gen_with
   ))))))
   (#va: _)
   (a: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
   (al: Ghost.erased (option (AP.array byte)))
   (init: t')
   (pa: R.ref byte_array)
-  (plen: R.ref SZ.size_t)
+  (plen: R.ref SZ.t)
   (paccu: R.ref t')
   (pcont: R.ref bool)
 : ST t'
@@ -227,7 +227,7 @@ let list_iter_gen_with
       R.pts_to pa full_perm a `star`
       R.pts_to plen full_perm len `star`
       R.pts_to paccu full_perm init `star`
-      R.pts_to pcont full_perm (len <> SZ.zero_size)
+      R.pts_to pcont full_perm (len <> 0sz)
     )
     (fun res -> exists_ (fun al' ->
       state al' res va.contents `star` pure (
@@ -238,7 +238,7 @@ let list_iter_gen_with
       exists_ (R.pts_to paccu full_perm) `star`
       exists_ (R.pts_to pcont full_perm)
     )
-    (SZ.size_v len == length_opt va.array /\
+    (SZ.v len == length_opt va.array /\
       k.parser_kind_subkind == Some ParserStrong /\
       (Ghost.reveal enable_arrays ==> (Some? al /\ adjacent_opt (Some?.v al) va.array))
     )
@@ -279,7 +279,7 @@ let list_iter_gen
   with_local a (fun pa ->
   with_local len (fun plen ->
   with_local init (fun paccu ->
-  with_local (len <> SZ.zero_size) (fun pcont ->
+  with_local (len <> 0sz) (fun pcont ->
     list_iter_gen_with j phi enable_arrays state f a len al init pa plen paccu pcont 
   ))))
 

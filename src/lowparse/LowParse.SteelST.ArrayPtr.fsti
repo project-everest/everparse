@@ -2,7 +2,7 @@ module LowParse.SteelST.ArrayPtr
 
 open Steel.Memory
 open Steel.FractionalPermission
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 open Steel.ST.GenElim
 
 inline_for_extraction
@@ -16,13 +16,13 @@ val array
 val len
   (#t: Type0)
   (x: array t)
-: GTot SZ.size_t
+: GTot SZ.t
 
 let length
   (#t: Type0)
   (x: array t)
 : GTot nat
-= SZ.size_v (len x)
+= SZ.v (len x)
 
 val array_perm
   (#t: Type)
@@ -113,47 +113,47 @@ let seq_slice
   (ensures (fun _ -> True))
 = Seq.slice s i j
 
-val gsplit (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
+val gsplit (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.t)
   : STGhost (Ghost.erased (t a)) opened
           (arrayptr x value)
           (fun res -> exists_ (fun vl -> exists_ (fun vr ->
             arrayptr x vl `star` arrayptr res vr `star` pure (
-            SZ.size_v i <= length (array_of value) /\
+            SZ.v i <= length (array_of value) /\
             merge_into (array_of vl) (array_of vr) (array_of value) /\
-            contents_of' vl == seq_slice (contents_of' value) 0 (SZ.size_v i) /\
-            length (array_of vl) == SZ.size_v i /\
-            length (array_of vr) == length (array_of value) - SZ.size_v i /\
-            contents_of' vr == seq_slice (contents_of' value) (SZ.size_v i) (length (array_of value)) /\
+            contents_of' vl == seq_slice (contents_of' value) 0 (SZ.v i) /\
+            length (array_of vl) == SZ.v i /\
+            length (array_of vr) == length (array_of value) - SZ.v i /\
+            contents_of' vr == seq_slice (contents_of' value) (SZ.v i) (length (array_of value)) /\
             contents_of' value == contents_of' vl `Seq.append` contents_of' vr /\
-            (SZ.size_v i == 0 ==> Ghost.reveal res == x)
+            (SZ.v i == 0 ==> Ghost.reveal res == x)
           ))))
-          (SZ.size_v i <= length (array_of value))
+          (SZ.v i <= length (array_of value))
           (fun _ -> True)
 
 inline_for_extraction
-val split' (#opened: _) (#a:Type) (#vl #vr: v a) (x: t a) (i: SZ.size_t) (x': Ghost.erased (t a))
+val split' (#opened: _) (#a:Type) (#vl #vr: v a) (x: t a) (i: SZ.t) (x': Ghost.erased (t a))
   : STAtomicBase (t a) false opened Unobservable
           (arrayptr x vl `star` arrayptr x' vr)
           (fun res -> arrayptr x vl `star` arrayptr res vr)
-          (adjacent (array_of vl) (array_of vr) /\ SZ.size_v i == length (array_of vl))
+          (adjacent (array_of vl) (array_of vr) /\ SZ.v i == length (array_of vl))
           (fun res -> res == Ghost.reveal x')
 
 inline_for_extraction
-let split (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
+let split (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.t)
   : STAtomicBase (t a) false opened Unobservable
           (arrayptr x value)
           (fun res -> exists_ (fun vl -> exists_ (fun vr ->
             arrayptr x vl `star` arrayptr res vr `star` pure (
-            SZ.size_v i <= length (array_of value) /\
+            SZ.v i <= length (array_of value) /\
             merge_into (array_of vl) (array_of vr) (array_of value) /\
-            contents_of' vl == seq_slice (contents_of' value) 0 (SZ.size_v i) /\
-            length (array_of vl) == SZ.size_v i /\
-            length (array_of vr) == length (array_of value) - SZ.size_v i /\
-            contents_of' vr == seq_slice (contents_of' value) (SZ.size_v i) (length (array_of value)) /\
+            contents_of' vl == seq_slice (contents_of' value) 0 (SZ.v i) /\
+            length (array_of vl) == SZ.v i /\
+            length (array_of vr) == length (array_of value) - SZ.v i /\
+            contents_of' vr == seq_slice (contents_of' value) (SZ.v i) (length (array_of value)) /\
             contents_of' value == contents_of' vl `Seq.append` contents_of' vr /\
-            (SZ.size_v i == 0 ==> res == x)
+            (SZ.v i == 0 ==> res == x)
           ))))
-          (SZ.size_v i <= length (array_of value))
+          (SZ.v i <= length (array_of value))
           (fun _ -> True)
 = let gres = gsplit x i in
   let _ = gen_elim () in
@@ -161,26 +161,26 @@ let split (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.size_t)
   res
 
 inline_for_extraction
-val index (#a:Type) (#value: v a) (r: t a) (i: SZ.size_t)
+val index (#a:Type) (#value: v a) (r: t a) (i: SZ.t)
   : ST a
              (arrayptr r value)
              (fun y -> arrayptr r value)
-             (SZ.size_v i < length (array_of value))
+             (SZ.v i < length (array_of value))
              (fun y ->
-               SZ.size_v i < length (array_of value) /\
-               y == Seq.index (contents_of' value) (SZ.size_v i)
+               SZ.v i < length (array_of value) /\
+               y == Seq.index (contents_of' value) (SZ.v i)
              )
 
 inline_for_extraction
-val upd (#a:Type) (#value: v a) (r: t a) (i:SZ.size_t) (x:a)
+val upd (#a:Type) (#value: v a) (r: t a) (i:SZ.t) (x:a)
   : ST (v a)
              (arrayptr r value)
              (fun value' -> arrayptr r value')
-             (SZ.size_v i < length (array_of value) /\ array_perm (array_of value) == full_perm)
+             (SZ.v i < length (array_of value) /\ array_perm (array_of value) == full_perm)
              (fun value'->
-               SZ.size_v i < length (array_of value) /\
+               SZ.v i < length (array_of value) /\
                array_of value' == array_of value /\
-               contents_of' value' == Seq.upd (contents_of' value) (SZ.size_v i) x
+               contents_of' value' == Seq.upd (contents_of' value) (SZ.v i) x
              )
 
 val set_array_perm
@@ -248,4 +248,3 @@ val gather
       contents_of' res == contents_of x2 /\
       array_of res == set_array_perm (array_of x1) (array_perm (array_of x1) `Steel.FractionalPermission.sum_perm` array_perm (array_of x2))
     )
-

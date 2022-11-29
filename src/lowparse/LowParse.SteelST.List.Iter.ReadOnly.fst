@@ -57,12 +57,12 @@ let list_iter
   ))
   (#va: v parse_list_kind (list t))
   (a: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
   (init: t')
 : ST t'
     (aparse (parse_list p) a va `star` state init [])
     (fun res -> aparse (parse_list p) a va `star` state res va.contents)
-    (SZ.size_v len == AP.length (array_of va) /\
+    (SZ.v len == AP.length (array_of va) /\
       k.parser_kind_subkind == Some ParserStrong
     )
     (fun res -> res == List.Tot.fold_left (Ghost.reveal phi) init va.contents)
@@ -119,17 +119,17 @@ let list_iter_opt
   ))
   (#va: _)
   (a: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
   (init: t')
 : ST t'
     (aparse_list p a va `star` state init [])
     (fun res -> aparse_list p a va `star` state res va.contents)
-    (SZ.size_v len == length_opt va.array /\
+    (SZ.v len == length_opt va.array /\
       k.parser_kind_subkind == Some ParserStrong
     )
     (fun res -> res == List.Tot.fold_left (Ghost.reveal phi) init va.contents)
 = let _ = ghost_is_cons_opt p a in
-  if len = SZ.zero_size
+  if len = 0sz
   then begin
     rewrite (state _ _) (state init va.contents);
     return init

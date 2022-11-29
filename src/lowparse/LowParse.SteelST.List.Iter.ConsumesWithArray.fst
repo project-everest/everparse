@@ -12,7 +12,7 @@ let list_iter_consumes_with_array
       merge_opt_into al va.array al' /\
       res == List.Tot.fold_left (Ghost.reveal phi) init va.contents      
     )))
-    (SZ.size_v len == length_opt va.array /\
+    (SZ.v len == length_opt va.array /\
       k.parser_kind_subkind == Some ParserStrong /\
       adjacent_opt al va.array
     )

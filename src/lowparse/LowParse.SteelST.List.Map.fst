@@ -18,7 +18,7 @@ let list_map_inplace_le_opt_prop
   (wout: _)
 : Tot prop
 =
-    SZ.size_v len == AP.length (array_of' wl) /\
+    SZ.v len == AP.length (array_of' wl) /\
     AP.merge_into (array_of' wl) (AP.array_of wout) al /\
     wl.contents == List.Tot.map phi l
 
@@ -31,7 +31,7 @@ let list_map_inplace_le_opt_state0
   (phi: Ghost.erased (t -> t'))
   (out0: byte_array)
   (pout: R.ref byte_array)
-  (plen: R.ref SZ.size_t)
+  (plen: R.ref SZ.t)
   (al: AP.array byte)
   (_: unit)
   (l: list t)
@@ -52,7 +52,7 @@ let list_map_inplace_le_opt_state
   (phi: Ghost.erased (t -> t'))
   (out0: byte_array)
   (pout: R.ref byte_array)
-  (plen: R.ref SZ.size_t)
+  (plen: R.ref SZ.t)
   (al: AP.array byte)
   (q: unit)
   (l: list t)
@@ -77,35 +77,35 @@ let list_map_inplace_le_opt
     (a: byte_array) ->
     (vout: AP.v byte { AP.adjacent (AP.array_of vout) (array_of' va) }) -> // TODO: add write permissions
     (out: byte_array) ->
-    STT SZ.size_t
+    STT SZ.t
       (aparse p a va `star` AP.arrayptr out vout)
       (fun res -> exists_ (fun res' -> exists_ (fun vres' -> exists_ (fun (vout': v _ _) ->
         aparse p' out vout' `star` AP.arrayptr res' vres' `star` pure (
-        SZ.size_v res == AP.length (array_of vout') /\
-        SZ.size_v res > 0 /\
+        SZ.v res == AP.length (array_of vout') /\
+        SZ.v res > 0 /\
         AP.merge_into (array_of' vout') (AP.array_of vres') (AP.merge (AP.array_of vout) (array_of' va)) /\
         vout'.contents == Ghost.reveal phi va.contents
       )))))
   ))
   (#va: _)
   (a: byte_array)
-  (len: SZ.size_t { SZ.size_v len == length_opt va.array })
+  (len: SZ.t { SZ.v len == length_opt va.array })
   (#vout: _)
   (out: byte_array { adjacent_opt (AP.array_of vout) va.array })  // TODO: add write permissions
-: STT SZ.size_t
+: STT SZ.t
     (aparse_list p a va `star` AP.arrayptr out vout)
     (fun res -> exists_ (fun res' -> exists_ (fun vres' -> exists_ (fun (vout': v _ _) ->
       aparse (parse_list p') out vout' `star` AP.arrayptr res' vres' `star` pure (
-      SZ.size_v res == AP.length (array_of' vout') /\
+      SZ.v res == AP.length (array_of' vout') /\
       AP.merge_into (array_of' vout') (AP.array_of vres') (merge_opt (AP.array_of vout) va.array) /\
       vout'.contents == List.Tot.map phi va.contents
     )))))
 = let al0 = AP.array_of vout in
   let afull = merge_opt al0 va.array in
-  let out1 = AP.split out SZ.zero_size in
+  let out1 = AP.split out 0sz in
   let _ = gen_elim () in
   let _ = intro_nil p' out in
-  with_local SZ.zero_size (fun plen ->
+  with_local 0sz (fun plen ->
   with_local out1 (fun pout ->
   noop ();
   rewrite
@@ -126,7 +126,7 @@ let list_map_inplace_le_opt
       let len1 = f va1 a1 _ out1 in
       let _ = gen_elim () in
       let len = R.read plen in
-      let len' = SZ.size_add len len1 in
+      let len' = SZ.add len len1 in
       R.write plen len';
       let _ = elim_aparse p' out1 in
       let out2 = AP.split' out1 len1 _ in
@@ -175,26 +175,26 @@ let list_map_inplace_le
     (a: byte_array) ->
     (vout: AP.v byte { AP.adjacent (AP.array_of vout) (array_of' va) }) -> // TODO: add write permissions
     (out: byte_array) ->
-    STT SZ.size_t
+    STT SZ.t
       (aparse p a va `star` AP.arrayptr out vout)
       (fun res -> exists_ (fun res' -> exists_ (fun vres' -> exists_ (fun (vout': v _ _) ->
         aparse p' out vout' `star` AP.arrayptr res' vres' `star` pure (
-        SZ.size_v res == AP.length (array_of vout') /\
-        SZ.size_v res > 0 /\
+        SZ.v res == AP.length (array_of vout') /\
+        SZ.v res > 0 /\
         AP.merge_into (array_of' vout') (AP.array_of vres') (AP.merge (AP.array_of vout) (array_of' va)) /\
         vout'.contents == Ghost.reveal phi va.contents
       )))))
   ))
   (#va: _)
   (a: byte_array)
-  (len: SZ.size_t { SZ.size_v len == AP.length (array_of' va) })
+  (len: SZ.t { SZ.v len == AP.length (array_of' va) })
   (#vout: _)
   (out: byte_array { AP.adjacent (AP.array_of vout) (array_of' va) })  // TODO: add write permissions
-: STT SZ.size_t
+: STT SZ.t
     (aparse (parse_list p) a va `star` AP.arrayptr out vout)
     (fun res -> exists_ (fun res' -> exists_ (fun vres' -> exists_ (fun (vout': v _ _) ->
       aparse (parse_list p') out vout' `star` AP.arrayptr res' vres' `star` pure (
-      SZ.size_v res == AP.length (array_of' vout') /\
+      SZ.v res == AP.length (array_of' vout') /\
       AP.merge_into (array_of' vout') (AP.array_of vres') (AP.merge (AP.array_of vout) (array_of' va)) /\
       vout'.contents == List.Tot.map phi va.contents
     )))))
@@ -261,11 +261,11 @@ let list_map_inplace_eq
   ))
   (#va: v _ _)
   (a: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
 : ST (v _ _)
     (aparse (parse_list p) a va)
     (fun va' -> aparse (parse_list p') a va')
-    (SZ.size_v len == AP.length (array_of' va))  // TODO: add write permissions
+    (SZ.v len == AP.length (array_of' va))  // TODO: add write permissions
     (fun va' ->
       array_of' va' == array_of' va /\
       va'.contents == List.Tot.map phi va.contents
@@ -338,17 +338,17 @@ let list_map_inplace_eq_opt
   ))
   (#va: _)
   (a: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
 : ST _
     (aparse_list p a va)
     (fun va' -> aparse_list p' a va')
-    (SZ.size_v len == length_opt va.array)  // TODO: add write permissions
+    (SZ.v len == length_opt va.array)  // TODO: add write permissions
     (fun va' ->
       va'.array == va.array /\
       va'.contents == List.Tot.map phi va.contents
     )
 = let _ = ghost_is_cons_opt p a in
-  if len = SZ.zero_size
+  if len = 0sz
   then begin
     elim_aparse_list_nil p a _;
     intro_aparse_list_nil p' a

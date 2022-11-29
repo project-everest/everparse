@@ -2,7 +2,7 @@ module LowParse.SteelST.Access
 include LowParse.SteelST.Parse
 
 module AP = LowParse.SteelST.ArrayPtr
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 open Steel.ST.GenElim
 
@@ -15,7 +15,7 @@ let jumper
 =
   (#va: AP.v byte) ->
   (a: byte_array) ->
-  ST SZ.size_t
+  ST SZ.t
     (AP.arrayptr a va)
     (fun res -> AP.arrayptr a va)
     (Some? (parse p (AP.contents_of va)))
@@ -23,7 +23,7 @@ let jumper
       match parse p (AP.contents_of' va) with
       | None -> False
       | Some (_, consumed) ->
-        SZ.size_v res == consumed
+        SZ.v res == consumed
 )
 
 inline_for_extraction
@@ -34,12 +34,12 @@ let hop_arrayptr_aparse
   (#va1: _)
   (#va2: _)
   (a1: byte_array)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
   (a2: Ghost.erased byte_array)
 : ST byte_array
     (AP.arrayptr a1 va1 `star` aparse p a2 va2)
     (fun res -> AP.arrayptr a1 va1 `star` aparse p res va2)
-    (AP.adjacent (AP.array_of va1) (array_of va2) /\ SZ.size_v sz == AP.length (AP.array_of va1))
+    (AP.adjacent (AP.array_of va1) (array_of va2) /\ SZ.v sz == AP.length (AP.array_of va1))
     (fun res -> res == Ghost.reveal a2)
 = let _ = elim_aparse p a2 in
   let res = AP.split' a1 sz a2 in
@@ -56,13 +56,13 @@ let hop_aparse_arrayptr_with_size
   (#va1: _)
   (#va2: _)
   (a1: byte_array)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
   (a2: Ghost.erased byte_array)
 : ST byte_array
     (aparse p a1 va1 `star` AP.arrayptr a2 va2)
     (fun res -> aparse p a1 va1 `star` AP.arrayptr res va2)
     (AP.adjacent (array_of va1) (AP.array_of va2) /\
-      SZ.size_v sz == AP.length (array_of va1))
+      SZ.v sz == AP.length (array_of va1))
     (fun res -> res == Ghost.reveal a2)
 = let _ = elim_aparse p a1 in
   let res = AP.split' a1 sz a2 in
@@ -82,13 +82,13 @@ let hop_aparse_aparse_with_size
   (#va1: _)
   (#va2: _)
   (a1: byte_array)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
   (a2: Ghost.erased byte_array)
 : ST byte_array
     (aparse p1 a1 va1 `star` aparse p2 a2 va2)
     (fun res -> aparse p1 a1 va1 `star` aparse p2 res va2)
     (AP.adjacent (array_of va1) (array_of va2) /\
-      SZ.size_v sz == AP.length (array_of va1))
+      SZ.v sz == AP.length (array_of va1))
     (fun res -> res == Ghost.reveal a2)
 = let _ = elim_aparse p2 a2 in
   let res = hop_aparse_arrayptr_with_size p1 a1 sz a2 in
@@ -101,11 +101,11 @@ let jump_constant_size
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
 : Pure (jumper p)
     (requires (
       k.parser_kind_high == Some k.parser_kind_low /\
-      SZ.size_v sz == k.parser_kind_low
+      SZ.v sz == k.parser_kind_low
     ))
     (ensures (fun _ -> True))
 =
@@ -122,11 +122,11 @@ let get_parsed_size
   (#vp: v k t)
   (j: jumper p)
   (a: byte_array)
-: ST SZ.size_t
+: ST SZ.t
     (aparse p a vp)
     (fun res -> aparse p a vp)
     True
-    (fun res -> SZ.size_v res == AP.length (array_of vp))
+    (fun res -> SZ.v res == AP.length (array_of vp))
 =
   let _ = elim_aparse p a in
   let res = j a in
@@ -209,8 +209,8 @@ let ghost_peek_strong
     )
     (fun _ -> True)
 =
-  let sz = SZ.int_to_size_t (snd (Some?.v (parse' p (AP.contents_of' va))) <: nat) in
-  parse_strong_prefix p (AP.contents_of' va) (AP.seq_slice (AP.contents_of' va) 0 (SZ.size_v sz));
+  let sz = SZ.uint_to_t (snd (Some?.v (parse' p (AP.contents_of' va))) <: nat) in
+  parse_strong_prefix p (AP.contents_of' va) (AP.seq_slice (AP.contents_of' va) 0 (SZ.v sz));
   let res = AP.gsplit a sz in
   let _ = gen_elim () in
   let _ = intro_aparse p a in
@@ -223,14 +223,14 @@ let peek_strong_with_size
   (#va: AP.v byte)
   (p: parser k t)
   (a: byte_array)
-  (sz: SZ.size_t)
+  (sz: SZ.t)
 : ST (byte_array)
     (AP.arrayptr a va)
     (fun res -> exists_ (fun vp -> aparse p a vp `star` exists_ (fun vres -> AP.arrayptr res vres `star` pure (
       let consumed = AP.length (array_of vp) in
       AP.merge_into (array_of vp) (AP.array_of vres) (AP.array_of va) /\
       consumed <= AP.length (AP.array_of va) /\
-      consumed == SZ.size_v sz /\
+      consumed == SZ.v sz /\
       AP.contents_of' vres == AP.seq_slice (AP.contents_of' va) consumed (AP.length (AP.array_of va)) /\
       parse' p (AP.contents_of' va) == Some (vp.contents, consumed) /\
       parse' p (AP.seq_slice (AP.contents_of' va) 0 consumed) == Some (vp.contents, consumed)
@@ -238,7 +238,7 @@ let peek_strong_with_size
     (k.parser_kind_subkind == Some ParserStrong /\
       begin match parse' p (AP.contents_of' va) with
       | None -> False
-      | Some (_, consumed) -> (consumed <: nat) == SZ.size_v sz
+      | Some (_, consumed) -> (consumed <: nat) == SZ.v sz
       end
     )
     (fun _ -> True)

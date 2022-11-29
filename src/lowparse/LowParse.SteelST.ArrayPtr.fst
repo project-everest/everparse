@@ -1,6 +1,5 @@
 module LowParse.SteelST.ArrayPtr
 module SA = Steel.ST.Array
-module U32 = FStar.UInt32
 
 let t elt = SA.ptr elt
 
@@ -9,10 +8,10 @@ noeq
 type array elt = {
   array_ptr: SA.array elt;
   array_perm: Steel.FractionalPermission.perm;
-  array_base_len: (len: U32.t { U32.v len == SA.base_len (SA.base (SA.ptr_of array_ptr)) });
+  array_base_len: (len: SZ.t { SZ.v len == SA.base_len (SA.base (SA.ptr_of array_ptr)) });
 }
 
-let len x = SZ.mk_size_t (U32.uint_to_t (SA.length x.array_ptr))
+let len x = SZ.uint_to_t (SA.length x.array_ptr)
 
 let array_perm x = x.array_perm
 
@@ -72,29 +71,28 @@ let join #_ #a #vl #vr al ar =
 let gsplit #_ #_ #v x i =
   rewrite (arrayptr x v) (arrayptr0 x v);
   let _ = gen_elim () in
-  let i' = SZ.uint32_of_size_t i (U32.uint_to_t (SZ.size_v i)) in
-  let _ = SA.ghost_split _ i' in
+  let _ = SA.ghost_split _ i in
   let _ = gen_elim () in
   let vl_array = {
-    array_ptr = SA.split_l v.v_array.array_ptr i';
+    array_ptr = SA.split_l v.v_array.array_ptr i;
     array_perm = v.v_array.array_perm;
     array_base_len = v.v_array.array_base_len;
   }
   in
   let vl = {
     v_array = vl_array;
-    v_contents = Seq.slice v.v_contents 0 (U32.v i');
+    v_contents = Seq.slice v.v_contents 0 (SZ.v i);
   }
   in
   let vr_array = {
-    array_ptr = SA.split_r v.v_array.array_ptr i';
+    array_ptr = SA.split_r v.v_array.array_ptr i;
     array_perm = v.v_array.array_perm;
     array_base_len = v.v_array.array_base_len;
   }
   in
   let vr = {
     v_array = vr_array;
-    v_contents = Seq.slice v.v_contents (U32.v i') (Seq.length v.v_contents);
+    v_contents = Seq.slice v.v_contents (SZ.v i) (Seq.length v.v_contents);
   }
   in
   let res = Ghost.hide (SA.ptr_of vr_array.array_ptr) in
@@ -109,8 +107,7 @@ let split' #_ #_ #vl #vr x i x' =
   rewrite (arrayptr x vl) (arrayptr0 x vl);
   rewrite (arrayptr x' vr) (arrayptr0 x' vr);
   let _ = gen_elim () in
-  let i' = SZ.uint32_of_size_t i (U32.uint_to_t (SZ.size_v i)) in
-  let res = SA.ptr_shift x i' in
+  let res = SA.ptr_shift x i in
   SA.ptr_base_offset_inj res x';
   rewrite (arrayptr0 x vl) (arrayptr x vl);
   rewrite (arrayptr0 res vr) (arrayptr res vr);
@@ -121,7 +118,7 @@ let index #_ #v r i =
   let _ = gen_elim () in
   let a = (| r, Ghost.hide (SA.length v.v_array.array_ptr) |) in
   rewrite (arrayptr1 v) (SA.pts_to a v.v_array.array_perm v.v_contents);
-  let res = SA.index a (SZ.uint32_of_size_t i (U32.uint_to_t (SZ.size_v i))) in
+  let res = SA.index a i in
   rewrite (SA.pts_to _ _ _) (arrayptr1 v);
   rewrite (arrayptr0 r v) (arrayptr r v);
   return res
@@ -131,8 +128,7 @@ let upd #elt #v r i x =
   let _ = gen_elim () in
   let a = (| r, Ghost.hide (SA.length v.v_array.array_ptr) |) in
   rewrite (arrayptr1 v) (SA.pts_to a full_perm v.v_contents);
-  let i' = SZ.uint32_of_size_t i (U32.uint_to_t (SZ.size_v i)) in
-  SA.upd a i' x;
+  SA.upd a i x;
   let s' = vpattern_replace_erased (fun s -> SA.pts_to _ _ s) in
   let res = {
     v_array = v.v_array;

@@ -2,7 +2,7 @@ module LowParse.SteelST.List.Iter.WithInterrupt
 include LowParse.SteelST.List.Base
 
 module AP = LowParse.SteelST.ArrayPtr
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 open Steel.ST.Util
 
@@ -32,11 +32,11 @@ val list_iter_with_interrupt
   ))  
   (#v0: v parse_list_kind (list t))
   (bin: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
 : ST bool
     (aparse (parse_list p) bin v0 `star` state true [])
     (fun res -> aparse (parse_list p) bin v0 `star` state res v0.contents)
-    (SZ.size_v len == AP.length (array_of v0) /\
+    (SZ.v len == AP.length (array_of v0) /\
       k.parser_kind_subkind == Some ParserStrong
     )
     (fun _ -> True)

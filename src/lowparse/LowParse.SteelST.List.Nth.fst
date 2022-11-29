@@ -10,27 +10,27 @@ let list_split_state_prop0
   k
   (#t: Type)
   (va0: v parse_list_kind (list t))
-  (i: SZ.size_t)
+  (i: SZ.t)
   (cont: bool)
-  (n: SZ.size_t)
+  (n: SZ.t)
   (vl vr: v parse_list_kind (list t))
 : Tot prop
 =
   AP.merge_into (array_of' vl) (array_of' vr) (array_of' va0) /\
-  List.Tot.length vl.contents == SZ.size_v n /\
-  SZ.size_v n <= SZ.size_v i /\
+  List.Tot.length vl.contents == SZ.v n /\
+  SZ.v n <= SZ.v i /\
   k.parser_kind_subkind == Some ParserStrong /\
-  SZ.size_v i <= List.Tot.length va0.contents /\
-  (cont == (SZ.size_v n < SZ.size_v i)) /\
+  SZ.v i <= List.Tot.length va0.contents /\
+  (cont == (SZ.v n < SZ.v i)) /\
   va0.contents == List.Tot.append vl.contents vr.contents
 
 let list_split_state_prop
   k
   (#t: Type)
   (va0: v parse_list_kind (list t))
-  (i: SZ.size_t)
+  (i: SZ.t)
   (cont: bool)
-  (n: SZ.size_t)
+  (n: SZ.t)
   (vl vr: v parse_list_kind (list t))
 : Tot prop
 =
@@ -42,11 +42,11 @@ let list_split_state1
   (#t: Type)
   (p: parser k t)
   (a0: byte_array)
-  (bn: R.ref SZ.size_t)
+  (bn: R.ref SZ.t)
   (be: R.ref byte_array)
   (bcont: R.ref bool)
   (cont: bool)
-  (n: SZ.size_t)
+  (n: SZ.t)
   (vl: v parse_list_kind (list t))
   (e: byte_array)
   (vr: v parse_list_kind (list t))
@@ -65,13 +65,13 @@ let list_split_state0
   (p: parser k t)
   (a0: byte_array)
   (va0: v parse_list_kind (list t))
-  (i: SZ.size_t)
-  (bn: R.ref SZ.size_t)
+  (i: SZ.t)
+  (bn: R.ref SZ.t)
   (be: R.ref byte_array)
   (bcont: R.ref bool)
   (cont: bool)
 : Tot vprop
-= exists_ (fun (n: SZ.size_t) -> exists_ (fun (vl: v parse_list_kind (list t)) -> exists_ (fun (e: byte_array) -> exists_ (fun (vr: v parse_list_kind (list t)) ->
+= exists_ (fun (n: SZ.t) -> exists_ (fun (vl: v parse_list_kind (list t)) -> exists_ (fun (e: byte_array) -> exists_ (fun (vr: v parse_list_kind (list t)) ->
   R.pts_to bn full_perm n `star`
   aparse (parse_list p) a0 vl `star`
   R.pts_to be full_perm e `star`
@@ -89,8 +89,8 @@ let list_split_state
   (p: parser k t)
   (a0: byte_array)
   (va0: v parse_list_kind (list t))
-  (i: SZ.size_t)
-  (bn: R.ref SZ.size_t)
+  (i: SZ.t)
+  (bn: R.ref SZ.t)
   (be: R.ref byte_array)
   (bcont: R.ref bool)
   (cont: bool)
@@ -104,12 +104,12 @@ let list_split_state_intro
   (p: parser k t)
   (a0: byte_array)
   (va0: v parse_list_kind (list t))
-  (i: SZ.size_t)
-  (bn: R.ref SZ.size_t)
+  (i: SZ.t)
+  (bn: R.ref SZ.t)
   (be: R.ref byte_array)
   (bcont: R.ref bool)
   (cont: bool)
-  (n: SZ.size_t)
+  (n: SZ.t)
   (vl: v parse_list_kind (list t))
   (e: byte_array)
   (vr: v parse_list_kind (list t))
@@ -141,8 +141,8 @@ let list_split_test
   (p: parser k t)
   (a0: byte_array)
   (va0: v parse_list_kind (list t))
-  (i: SZ.size_t)
-  (bn: R.ref SZ.size_t)
+  (i: SZ.t)
+  (bn: R.ref SZ.t)
   (be: R.ref byte_array)
   (bcont: R.ref bool)
   ()
@@ -174,8 +174,8 @@ let list_split_body
   (j: jumper p)
   (a0: byte_array)
   (va0: v parse_list_kind (list t))
-  (i: SZ.size_t)
-  (bn: R.ref SZ.size_t)
+  (i: SZ.t)
+  (bn: R.ref SZ.t)
   (be: R.ref byte_array)
   (bcont: R.ref bool)
   ()
@@ -204,8 +204,8 @@ let list_split_body
   noop ();
   let va' = list_append p a0 e in
   let n = R.read bn in
-  let n' = SZ.size_add n SZ.one_size in
-  let cont' = (n' `SZ.size_lt` i) in
+  let n' = SZ.add n 1sz in
+  let cont' = (n' `SZ.lt` i) in
   R.write bn n';
   R.write bcont cont';
   R.write be e';
@@ -225,34 +225,34 @@ let list_split
   (j: jumper p)
   (#va0: v _ _)
   (a0: byte_array)
-  (i: SZ.size_t)
+  (i: SZ.t)
 : ST byte_array
     (aparse (parse_list p) a0 va0)
     (fun e -> exists_ (fun (vl: v _ _) -> exists_ (fun (vr: v _ _) ->
       aparse (parse_list p) a0 vl `star`
       aparse (parse_list p) e vr  `star`
       pure (
-        List.Tot.length vl.contents == SZ.size_v i /\
+        List.Tot.length vl.contents == SZ.v i /\
         va0.contents == vl.contents `List.Tot.append` vr.contents /\
         AP.merge_into (array_of' vl) (array_of' vr) (array_of' va0)
       )
     )))
     (k.parser_kind_subkind == Some ParserStrong /\
-      SZ.size_v i <= List.Tot.length va0.contents
+      SZ.v i <= List.Tot.length va0.contents
     )
     (fun _ -> True)
 = let _ = elim_aparse (parse_list p) a0 in
-  let e = AP.split a0 SZ.zero_size in
+  let e = AP.split a0 0sz in
   let _ = gen_elim () in
   let va1 = intro_nil p a0 in
   let ve0 : v _ _ = intro_aparse (parse_list p) e in
   List.Tot.append_nil_l ve0.contents;
-  let cont = SZ.zero_size `SZ.size_lt` i in
+  let cont = 0sz `SZ.lt` i in
   with_local cont (fun bcont ->
-  with_local SZ.zero_size (fun bn ->
+  with_local 0sz (fun bn ->
   with_local e (fun be ->
     noop ();
-    list_split_state_intro p a0 va0 i bn be bcont cont SZ.zero_size va1 e ve0;
+    list_split_state_intro p a0 va0 i bn be bcont cont 0sz va1 e ve0;
     L.while_loop
       (list_split_state p a0 va0 i bn be bcont)
       (list_split_test p a0 va0 i bn be bcont)
@@ -296,7 +296,7 @@ let list_nth
   (j: jumper p)
   (#va0: v _ _)
   (a0: byte_array)
-  (i: SZ.size_t)
+  (i: SZ.t)
 : ST byte_array
     (aparse (parse_list p) a0 va0)
     (fun e -> exists_ (fun a -> exists_ (fun (vl: v _ _) -> exists_ (fun (ve: v _ _) -> exists_ (fun (vr: v _ _) ->
@@ -308,7 +308,7 @@ let list_nth
     ))))))
     (
       k.parser_kind_subkind == Some ParserStrong /\
-      SZ.size_v i < List.Tot.length va0.contents
+      SZ.v i < List.Tot.length va0.contents
     )
     (fun _ -> True)
 =
@@ -341,7 +341,7 @@ let list_nth_restore
   (#p: parser k t)
   (a0: byte_array)
   (va0: v _ _)
-  (i: SZ.size_t)
+  (i: SZ.t)
   (e: byte_array)
   (a: byte_array)
 : STGhost unit opened

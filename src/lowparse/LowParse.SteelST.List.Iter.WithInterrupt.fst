@@ -7,14 +7,14 @@ open Steel.ST.GenElim
 let list_iter_with_interrupt_prop
   (#t: Type)
   (v0 vbin vcur: v parse_list_kind (list t))
-  (sz: SZ.size_t)
+  (sz: SZ.t)
   (cont: bool)
   (loop_cont: bool)
 : Tot prop
 = AP.merge_into (array_of' vbin) (array_of' vcur) (array_of' v0) /\
   v0.contents == List.Tot.append vbin.contents vcur.contents /\
-  SZ.size_v sz == AP.length (array_of' vcur) /\
-  loop_cont == (SZ.size_v sz > 0 && cont)
+  SZ.v sz == AP.length (array_of' vcur) /\
+  loop_cont == (SZ.v sz > 0 && cont)
 
 [@@__reduce__]
 let list_iter_with_interrupt_inv0
@@ -25,7 +25,7 @@ let list_iter_with_interrupt_inv0
   (v0: v parse_list_kind (list t))
   (bin: byte_array)
   (bcur: R.ref byte_array)
-  (bsz: R.ref SZ.size_t)
+  (bsz: R.ref SZ.t)
   (bcont: R.ref bool)
   (bloop_cont: R.ref bool)
   (loop_cont: bool)
@@ -51,7 +51,7 @@ let list_iter_with_interrupt_inv
   (v0: v parse_list_kind (list t))
   (bin: byte_array)
   (bcur: R.ref byte_array)
-  (bsz: R.ref SZ.size_t)
+  (bsz: R.ref SZ.t)
   (bcont: R.ref bool)
   (bloop_cont: R.ref bool)
   (loop_cont: bool)
@@ -132,7 +132,7 @@ let list_iter_with_interrupt_close
   (v0: v parse_list_kind (list t))
   (bin: byte_array)
   (bcur: R.ref byte_array)
-  (bsz: R.ref SZ.size_t)
+  (bsz: R.ref SZ.t)
   (bcont: R.ref bool)
   (bloop_cont: R.ref bool)
 : STGhost (Ghost.erased bool) opened
@@ -185,7 +185,7 @@ let list_iter_with_interrupt_test
   (v0: v parse_list_kind (list t))
   (bin: byte_array)
   (bcur: R.ref byte_array)
-  (bsz: R.ref SZ.size_t)
+  (bsz: R.ref SZ.t)
   (bcont: R.ref bool)
   (bloop_cont: R.ref bool)
   ()
@@ -236,7 +236,7 @@ let list_iter_with_interrupt_body
   (v0: v parse_list_kind (list t))
   (bin: byte_array)
   (bcur: R.ref byte_array)
-  (bsz: R.ref SZ.size_t)
+  (bsz: R.ref SZ.t)
   (bcont: R.ref bool)
   (bloop_cont: R.ref bool)
   (_: squash (
@@ -255,7 +255,7 @@ let list_iter_with_interrupt_body
   let cur = R.read bcur in
   vpattern_rewrite (fun cur -> R.pts_to bcur full_perm cur `star` aparse _ cur _) cur;
   let vcur = vpattern_replace (aparse _ cur) in
-  assert (SZ.size_v sz == AP.length (array_of' vcur));
+  assert (SZ.v sz == AP.length (array_of' vcur));
   let _ = ghost_is_cons p cur in
   let gcur' = ghost_elim_cons p cur in
   let _ = gen_elim () in
@@ -264,7 +264,7 @@ let list_iter_with_interrupt_body
   let vcur1 = vpattern (aparse p cur) in
   let vcur' : v parse_list_kind (list t) = vpattern (aparse (parse_list p) cur') in
 //  assert (AP.merge_into (array_of' vcur1) (array_of' vcur') (array_of' vcur));
-  int_sub_intro (SZ.size_v cur_sz) (AP.length (array_of' vcur')) (SZ.size_v sz);
+  int_sub_intro (SZ.v cur_sz) (AP.length (array_of' vcur')) (SZ.v sz);
   vpattern_rewrite (fun st -> state st _) true;
   let cont' = f_true _ cur _ in
   let vcur = intro_singleton _ cur in
@@ -274,10 +274,10 @@ let list_iter_with_interrupt_body
     (state _ _)
     (state cont' vbin'.contents);
   R.write bcur cur';
-  let sz' = sz `SZ.size_sub` cur_sz in
+  let sz' = sz `SZ.sub` cur_sz in
   R.write bsz sz';
   R.write bcont cont';
-  let loop_cont' = SZ.size_lt SZ.zero_size sz' && cont' in
+  let loop_cont' = SZ.lt 0sz sz' && cont' in
   R.write bloop_cont loop_cont';
   rewrite
     (list_iter_with_interrupt_inv0 p state v0 bin bcur bsz bcont bloop_cont loop_cont')
@@ -312,20 +312,20 @@ let list_iter_with_interrupt
   ))  
   (#v0: v parse_list_kind (list t))
   (bin: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
 : ST bool
     (aparse (parse_list p) bin v0 `star` state true [])
     (fun res -> aparse (parse_list p) bin v0 `star` state res v0.contents)
-    (SZ.size_v len == AP.length (array_of v0) /\
+    (SZ.v len == AP.length (array_of v0) /\
       k.parser_kind_subkind == Some ParserStrong
     )
     (fun _ -> True)
 = let _ = elim_aparse (parse_list p) bin in
-  let cur = AP.split bin SZ.zero_size in
+  let cur = AP.split bin 0sz in
   let _ = gen_elim () in
   let vbin = intro_nil p bin in
   let vcur = intro_aparse (parse_list p) cur in
-  let loop_cont = SZ.zero_size `SZ.size_lt` len in
+  let loop_cont = 0sz `SZ.lt` len in
   with_local cur (fun bcur ->
   with_local len (fun bsz ->
   with_local loop_cont (fun bloop_cont ->

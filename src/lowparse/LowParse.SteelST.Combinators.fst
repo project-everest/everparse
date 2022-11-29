@@ -7,7 +7,7 @@ open Steel.ST.GenElim
 
 module AP = LowParse.SteelST.ArrayPtr
 module R = Steel.ST.Reference
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 #set-options "--ide_id_info_off"
 
@@ -128,11 +128,11 @@ let validate_pair
     then begin
       let ar = AP.split a s1 in
       let _ = gen_elim () in
-      let len2 = len `SZ.size_sub` s1 in
+      let len2 = len `SZ.sub` s1 in
       let s2 = v2 ar len2 err in
       let _ = gen_elim () in
       let aj = AP.join a ar in
-      let sz = s1 `SZ.size_add` s2 in
+      let sz = s1 `SZ.add` s2 in
       noop ();
       return sz
     end
@@ -157,7 +157,7 @@ let jump_pair
     let s2 = v2 ar in
     let _ = gen_elim () in
     let _ = AP.join a ar in
-    return (s1 `SZ.size_add` s2)
+    return (s1 `SZ.add` s2)
 
 #pop-options
 
@@ -489,7 +489,7 @@ let validate_fail
 : Tot (validator (fail_parser k t))
 = fun _ _ err ->
     R.write err validator_error_constraint_failed;
-    return SZ.zero_size
+    return 0sz
 
 inline_for_extraction
 let jump_fail
@@ -498,7 +498,7 @@ let jump_fail
   (sq: squash (fail_parser_kind_precond k))
 : Tot (jumper (fail_parser k t))
 = fun a ->
-    return SZ.zero_size // by contradiction
+    return 0sz // by contradiction
 
 #push-options "--z3rlimit 16"
 #restart-solver
@@ -666,10 +666,10 @@ let validate_filter_and_then
       return len1
     end else begin
       noop ();
-      let len2 = v2 x a2 (len `SZ.size_sub` len1) err in
+      let len2 = v2 x a2 (len `SZ.sub` len1) err in
       let _ = gen_elim () in
       unpeek_strong a va a2;
-      let len' = len1 `SZ.size_add` len2 in
+      let len' = len1 `SZ.add` len2 in
       noop ();
       return len'
     end
@@ -703,7 +703,7 @@ let jump_filter_and_then
   let len2 = v2 x a2 in
   let _ = gen_elim () in
   unpeek_strong a va a2;
-  return (len1 `SZ.size_add` len2)
+  return (len1 `SZ.add` len2)
 
 [@@__reduce__]
 let exists_and_then_payload0
@@ -903,11 +903,11 @@ let validate_tagged_union
       unpeek_strong a va ar;
       let ar = AP.split a s1 in
       let _ = gen_elim () in
-      let len2 = len `SZ.size_sub` s1 in
-      let s2 = v tag ar (len `SZ.size_sub` s1) err in
+      let len2 = len `SZ.sub` s1 in
+      let s2 = v tag ar (len `SZ.sub` s1) err in
       let _ = gen_elim () in
       let _ = AP.join a ar in
-      let len' = s1 `SZ.size_add` s2 in
+      let len' = s1 `SZ.add` s2 in
       noop ();
       return len'
     end
@@ -945,7 +945,7 @@ let jump_tagged_union
     let s2 = v tag ar in
     let _ = gen_elim () in
     let _ = AP.join a ar in
-    return (s1 `SZ.size_add` s2)
+    return (s1 `SZ.add` s2)
 
 #pop-options
 
@@ -1221,12 +1221,12 @@ let hop_dtuple2_tag_with_size
   (#k: Ghost.erased parser_kind)
   (#data_t: tag_t -> Type)
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
-  #y #y1 (a1: byte_array) (sz1: SZ.size_t) (a2: Ghost.erased byte_array)
+  #y #y1 (a1: byte_array) (sz1: SZ.t) (a2: Ghost.erased byte_array)
 : ST byte_array
     (aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2)
     (fun a2' -> aparse pt a1 y1 `star` exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2')
     (kt.parser_kind_subkind == Some ParserStrong /\
-      SZ.size_v sz1 == AP.length (array_of' y1))
+      SZ.v sz1 == AP.length (array_of' y1))
     (fun _ -> True)
 = assert (
     (exists_dtuple2_payload kt p y (array_of' y1) y1.contents a1 a2) ==

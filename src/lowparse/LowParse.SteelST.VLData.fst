@@ -5,7 +5,7 @@ include LowParse.SteelST.BoundedInt
 include LowParse.Spec.VLData
 
 module U32 = FStar.UInt32
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 module AP = LowParse.SteelST.ArrayPtr
 
 open Steel.ST.GenElim
@@ -20,7 +20,7 @@ let validate_vldata_payload
   (v: validator p)
   (i: bounded_integer sz { f i == true } )
 : Tot (validator (parse_vldata_payload sz f p i))
-= coerce _ (validate_weaken (parse_vldata_payload_kind sz k) (validate_fldata v (SZ.mk_size_t i)) ())
+= coerce _ (validate_weaken (parse_vldata_payload_kind sz k) (validate_fldata v (SZ.uint16_to_sizet (FStar.Int.Cast.uint32_to_uint16 i))) ())
 
 inline_for_extraction
 let validate_vldata_gen
@@ -53,7 +53,7 @@ let jump_vldata_payload
   (p: parser k t)
   (i: bounded_integer sz { f i == true } )
 : Tot (jumper (parse_vldata_payload sz f p i))
-= jump_weaken (parse_vldata_payload_kind sz k) (jump_fldata p (SZ.mk_size_t i)) ()
+= coerce _ (jump_weaken (parse_vldata_payload_kind sz k) (jump_fldata p (SZ.uint16_to_sizet (FStar.Int.Cast.uint32_to_uint16 i))) ())
 
 inline_for_extraction
 let jump_vldata_gen

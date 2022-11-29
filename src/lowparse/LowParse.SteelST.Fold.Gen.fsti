@@ -9,7 +9,7 @@ open LowParse.Spec.VLGen
 
 module AP = LowParse.SteelST.ArrayPtr
 module LP = LowParse.Spec.Base
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 open LowParse.SteelST.Validate
 open LowParse.SteelST.Access
@@ -205,7 +205,7 @@ inline_for_extraction
 let size_of
   (ar: AP.array byte)
 : Tot Type
-= (s: SZ.size_t { SZ.size_v s == AP.length ar })
+= (s: SZ.t { SZ.v s == AP.length ar })
 
 inline_for_extraction
 [@@noextract_to "krml"]
@@ -516,15 +516,15 @@ val impl_for
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (p: parser k t)
-  (from: SZ.size_t) (to: SZ.size_t)
-  (f: Ghost.erased ((x: nat { SZ.size_v from <= x /\ x < SZ.size_v to }) -> fold_t state_t t unit inv inv))
-  (prf: (x: nat { SZ.size_v from <= x /\ x < SZ.size_v to }) -> fold_state_inc cl (Ghost.reveal f x))
-  (fi: (x: SZ.size_t { SZ.size_v from <= SZ.size_v x /\ SZ.size_v x < SZ.size_v to }) -> fold_impl_t cl p false (Ghost.reveal f (SZ.size_v x)))
+  (from: SZ.t) (to: SZ.t)
+  (f: Ghost.erased ((x: nat { SZ.v from <= x /\ x < SZ.v to }) -> fold_t state_t t unit inv inv))
+  (prf: (x: nat { SZ.v from <= x /\ x < SZ.v to }) -> fold_state_inc cl (Ghost.reveal f x))
+  (fi: (x: SZ.t { SZ.v from <= SZ.v x /\ SZ.v x < SZ.v to }) -> fold_impl_t cl p false (Ghost.reveal f (SZ.v x)))
   (with_size: bool)
   (wc: with_ll_state_ptr_t u#_ u#_ u#_ u#_ u#0 cl inv) // same
   (wl: (load_ll_state_ptr_t u#_ u#_ u#_ u#_ u#0 cl inv))
   (ws: store_ll_state_ptr_t cl inv)
-: Tot (fold_impl_t cl p with_size (fold_for inv (SZ.size_v from) (SZ.size_v to) f))
+: Tot (fold_impl_t cl p with_size (fold_for inv (SZ.v from) (SZ.v to) f))
 
 [@@__reduce__]
 let parse_nlist0
@@ -577,19 +577,21 @@ val elim_nlist
       (vb.contents <: list t) == vb'.contents
     )
 
-let size_v_injective : squash (synth_injective SZ.size_v) = ()
+let size_v (x: SZ.t) : GTot nat = SZ.v x
+
+let size_v_injective : squash (synth_injective size_v) = ()
 
 let parse_size_prefixed
   (#st: Type)
   (#sk: parser_kind)
   (sp: parser sk st)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (sz: (st -> SZ.t) { synth_injective sz })
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
 : Tot (parser (sk `and_then_kind` parse_vlgen_alt_payload_kind) t)
 = parse_vlgen_alt
-    ((sp `parse_synth` sz) `parse_synth` (SZ.size_v))
+    ((sp `parse_synth` sz) `parse_synth` size_v)
     p
 
 inline_for_extraction
@@ -599,11 +601,11 @@ val validate_size_prefixed
   (#sp: parser sk st)
   (sv: validator sp)
   (sr: leaf_reader sp)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (sz: (st -> SZ.t) { synth_injective sz })
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
-  (v: ((s: SZ.size_t) -> validator (parse_fldata p (SZ.size_v s))))
+  (v: ((s: SZ.t) -> validator (parse_fldata p (SZ.v s))))
 : Pure (validator (parse_size_prefixed sp sz p)) 
     (requires (sk.parser_kind_subkind == Some ParserStrong))
     (ensures (fun _ -> True))
@@ -615,7 +617,7 @@ val jump_size_prefixed
   (#sp: parser sk st)
   (sv: jumper sp)
   (sr: leaf_reader sp)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (sz: (st -> SZ.t) { synth_injective sz })
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -628,7 +630,7 @@ val intro_parse_size_prefixed
   (#st: Type)
   (#sk: Ghost.erased parser_kind)
   (sp: parser sk st)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (sz: (st -> SZ.t) { synth_injective sz })
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -642,7 +644,7 @@ val intro_parse_size_prefixed
     (fun vbs' -> aparse (parse_size_prefixed sp sz p) bs vbs')
     (sk.parser_kind_subkind == Some ParserStrong /\
       AP.adjacent (array_of' vbs) (array_of' vb) /\
-      SZ.size_v vbs.contents == AP.length (array_of' vb))
+      SZ.v vbs.contents == AP.length (array_of' vb))
     (fun vbs' ->
       AP.merge_into (array_of' vbs) (array_of' vb) (array_of' vbs') /\
       vbs'.contents == vb.contents
@@ -653,7 +655,7 @@ val elim_parse_size_prefixed
   (#st: Type)
   (#sk: Ghost.erased parser_kind)
   (sp: parser sk st)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (sz: (st -> SZ.t) { synth_injective sz })
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (p: parser k t)
@@ -665,7 +667,7 @@ val elim_parse_size_prefixed
       aparse (parse_synth sp sz) b vb' `star`
       aparse p bl vbl `star` pure (
       AP.merge_into (array_of' vb') (array_of' vbl) (array_of' vb) /\
-      SZ.size_v vb'.contents == AP.length (array_of' vbl) /\
+      SZ.v vb'.contents == AP.length (array_of' vbl) /\
       vbl.contents == vb.contents
     ))))
     (sk.parser_kind_subkind == Some ParserStrong)
@@ -683,7 +685,7 @@ val impl_size_prefixed
   (#sp: parser sk st)
   (sj: jumper sp)
   (sr: leaf_reader sp)
-  (sz: (st -> SZ.size_t) { synth_injective sz })
+  (sz: (st -> SZ.t) { synth_injective sz })
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
   (#p: parser k t)
@@ -708,12 +710,12 @@ val impl_list_index
   (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (jp: jumper p)
-  (n: SZ.size_t)
-  (idx: (i: SZ.size_t { SZ.size_v i < SZ.size_v n }))
+  (n: SZ.t)
+  (idx: (i: SZ.t { SZ.v i < SZ.v n }))
   (f: Ghost.erased (fold_t state_t t unit inv inv))
   (fi: fold_impl_t cl p false f)
   (with_size: bool)
-: Pure (fold_impl_t cl (parse_nlist (SZ.size_v n) p) with_size (fold_list_index inv (SZ.size_v n) (SZ.size_v idx) f))
+: Pure (fold_impl_t cl (parse_nlist (SZ.v n) p) with_size (fold_list_index inv (SZ.v n) (SZ.v idx) f))
     (requires  k.parser_kind_subkind == Some ParserStrong)
     (ensures (fun _ -> True))
 
@@ -732,11 +734,11 @@ val impl_list_index_of
   (f: Ghost.erased (fold_t state_t t unit inv inv))
   (fi: fold_impl_t cl p false f)
   (with_size: bool)
-  (n: SZ.size_t)
-  (idx: Ghost.erased ((i: nat { i < SZ.size_v n }) -> Tot (i: nat { i < SZ.size_v n })))
-  (idx' : (i: SZ.size_t) -> Pure SZ.size_t (requires SZ.size_v i < SZ.size_v n) (ensures fun j -> SZ.size_v j == Ghost.reveal idx (SZ.size_v i)))
-  (j: SZ.size_t {SZ.size_v j < SZ.size_v n})
-: Pure (fold_impl_t cl (parse_nlist (SZ.size_v n) p) with_size (fold_list_index_of inv f (SZ.size_v n) idx (SZ.size_v j)))
+  (n: SZ.t)
+  (idx: Ghost.erased ((i: nat { i < SZ.v n }) -> Tot (i: nat { i < SZ.v n })))
+  (idx' : (i: SZ.t) -> Pure SZ.t (requires SZ.v i < SZ.v n) (ensures fun j -> SZ.v j == Ghost.reveal idx (SZ.v i)))
+  (j: SZ.t {SZ.v j < SZ.v n})
+: Pure (fold_impl_t cl (parse_nlist (SZ.v n) p) with_size (fold_list_index_of inv f (SZ.v n) idx (SZ.v j)))
     (requires  k.parser_kind_subkind == Some ParserStrong)
     (ensures (fun _ -> True))
 
@@ -966,7 +968,7 @@ val validate_TSizePrefixed
   (#type_of_scalar: (scalar_t -> Type))
   (p_of_s: ((s: scalar_t) -> scalar_ops (type_of_scalar s)))
   (s: scalar_t)
-  (sz: (type_of_scalar s -> SZ.size_t) {synth_injective sz})
+  (sz: (type_of_scalar s -> SZ.t) {synth_injective sz})
   (#ne: bool)
   (#pr: bool)
   (t: typ type_of_scalar ne pr)
@@ -1085,7 +1087,7 @@ let rec jumper_of_typ
         )
         ()
       )
-  | TUnit -> jump_constant_size parse_empty SZ.zero_size
+  | TUnit -> jump_constant_size parse_empty 0sz
   | TFalse ne pr -> jump_fail _ _ ()
 
 [@@specialize]

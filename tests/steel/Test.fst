@@ -3,7 +3,7 @@ module Test
 open Steel.ST.GenElim
 
 module A = LowParse.SteelST.ArrayPtr
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 module R = Steel.ST.Reference
 
 open LowParse.SteelST.Int
@@ -120,7 +120,7 @@ let p_of_s (s: scalar_t) : G.scalar_ops (type_of_scalar s) =
            G.scalar_parser = weaken (G.pkind true false) parse_bool;
            G.scalar_validator = validate_weaken _ validate_bool ();
            G.scalar_reader = read_weaken _ read_bool;
-           G.scalar_jumper = jump_weaken _ (jump_constant_size parse_bool SZ.one_size) ();
+           G.scalar_jumper = jump_weaken _ (jump_constant_size parse_bool 1sz) ();
          }
 
 noextract
@@ -182,27 +182,32 @@ let test_print_choice
       )
     )
 
+inline_for_extraction
+noextract
+let mk_size_t (sq: squash SZ.fits_u32) (x: U32.t) : Tot SZ.t = SZ.uint32_to_sizet x
+
 noextract
 [@@G.specialize]
 let test_print_list
   (#t: G.typ type_of_scalar true false)
+  (sq: squash SZ.fits_u32)
   (p: G.prog type_of_scalar P.state_t P.action_t t unit () ())
-: Tot (G.prog type_of_scalar P.state_t P.action_t (G.TSizePrefixed U32 SZ.mk_size_t (G.TList t)) unit () ())
+: Tot (G.prog type_of_scalar P.state_t P.action_t (G.TSizePrefixed U32 (mk_size_t sq) (G.TList t)) unit () ())
 = G.PBind
     (G.PAction (P.PrintString "list:["))
     (fun _ -> G.PBind
-      (G.PSizePrefixed U32 SZ.mk_size_t (G.PList _ p))
+      (G.PSizePrefixed U32 (mk_size_t sq) (G.PList _ p))
       (fun _ -> G.PAction (P.PrintString "];"))
     )
 
 noextract
 [@@G.specialize]
-let prog_test_pretty_print : G.prog type_of_scalar P.state_t P.action_t _ unit () () =
+let prog_test_pretty_print (sq: squash SZ.fits_u32) : G.prog type_of_scalar P.state_t P.action_t _ unit () () =
   G.PPair
     test_print_u8
     (fun _ ->
       test_print_choice
-        (test_print_list test_print_u8)
+        (test_print_list sq test_print_u8)
         test_print_u8
     )
 
@@ -211,44 +216,44 @@ module T = FStar.Tactics
 inline_for_extraction
 noextract
 [@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
-let specialize_impl_test_pretty_print0 =
-  G.impl p_of_s P.a_cl P.ptr_cl prog_test_pretty_print
+let specialize_impl_test_pretty_print0 (sq: squash SZ.fits_u32) =
+  G.impl p_of_s P.a_cl P.ptr_cl (prog_test_pretty_print sq)
 
 noextract
-let typ_of_test_pretty_print =
-  G.typ_of_prog prog_test_pretty_print
+let typ_of_test_pretty_print (sq: squash SZ.fits_u32) =
+  G.typ_of_prog (prog_test_pretty_print sq)
 
 noextract
-let type_of_test_pretty_print =
-  G.type_of_typ (G.typ_of_prog prog_test_pretty_print)
+let type_of_test_pretty_print (sq: squash SZ.fits_u32) =
+  G.type_of_typ (G.typ_of_prog (prog_test_pretty_print sq))
 
 noextract
-let parser_of_test_pretty_print : parser (G.pkind true false) type_of_test_pretty_print =
-  G.parser_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)
+let parser_of_test_pretty_print (sq: squash SZ.fits_u32) : parser (G.pkind true false) (type_of_test_pretty_print sq) =
+  G.parser_of_typ p_of_s (G.typ_of_prog (prog_test_pretty_print sq))
 
 noextract
-let sem_of_test_pretty_print : G.fold_t P.state_t type_of_test_pretty_print unit () () =
-  G.sem P.action_sem prog_test_pretty_print
+let sem_of_test_pretty_print (sq: squash SZ.fits_u32) : G.fold_t P.state_t (type_of_test_pretty_print sq) unit () () =
+  G.sem P.action_sem (prog_test_pretty_print sq)
 
 inline_for_extraction
 noextract
-let specialize_impl_test_pretty_print : G.fold_impl_t P.cl parser_of_test_pretty_print false sem_of_test_pretty_print =
-  specialize_impl_test_pretty_print0
+let specialize_impl_test_pretty_print (sq: squash SZ.fits_u32) : G.fold_impl_t P.cl (parser_of_test_pretty_print sq) false (sem_of_test_pretty_print sq) =
+  specialize_impl_test_pretty_print0 sq
 
-let test_pretty_print =
+let test_pretty_print (sq: squash SZ.fits_u32) =
   G.extract_impl_fold_no_failure
     P.no_fail
-    specialize_impl_test_pretty_print
+    (specialize_impl_test_pretty_print sq)
     P.mk_ll_state
 
 [@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
 inline_for_extraction
 noextract
-let validate_test_pretty_print0 =
-  G.validator_of_typ p_of_s (G.typ_of_prog prog_test_pretty_print)
+let validate_test_pretty_print0 (sq: squash SZ.fits_u32) =
+  G.validator_of_typ p_of_s (G.typ_of_prog (prog_test_pretty_print sq))
 
-let validate_test_pretty_print : validator parser_of_test_pretty_print =
-  validate_test_pretty_print0
+let validate_test_pretty_print (sq: squash SZ.fits_u32) : validator (parser_of_test_pretty_print sq) =
+  validate_test_pretty_print0 sq
 
 #push-options "--z3rlimit 64"
 #restart-solver
@@ -256,19 +261,20 @@ let validate_test_pretty_print : validator parser_of_test_pretty_print =
 let full_test_pretty_print
   (#vb: A.v byte)
   (b: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
 : ST C.exit_code (A.arrayptr b vb) (fun _ -> A.arrayptr b vb)
-    (A.length (A.array_of vb) == SZ.size_v len)
+    (A.length (A.array_of vb) == SZ.v len)
     (fun _ -> True)
-= with_local 0ul (fun perr ->
-    let sz = validate_test_pretty_print b len perr in
+= let sq = Steel.ST.Array.intro_fits_u32 () in
+  with_local 0ul (fun perr ->
+    let sz = validate_test_pretty_print sq b len perr in
     let _ = gen_elim () in
     let err = read_replace perr in
     if err = 0ul
     then begin
-      let _ = ghost_peek_strong parser_of_test_pretty_print b in
+      let _ = ghost_peek_strong (parser_of_test_pretty_print sq) b in
       let _ = gen_elim () in
-      let _ = test_pretty_print _ b () () in
+      let _ = test_pretty_print sq _ b () () in
       let _ = gen_elim () in
       rewrite (P.cl.ll_state_match _ _) emp;
       unpeek_strong b _ _;
@@ -340,7 +346,7 @@ let test_write1 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
 // FIXME: WHY WHY WHY do I need those i0, i1, etc. annotations to typecheck this program? Without them, F* will blow up, increasing memory consumption and not returning
 noextract
 [@@G.specialize]
-let test_write2 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) _ unit (W.initial_index type_of_scalar) _
+let test_write2 (sq: squash SZ.fits_u32) : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) _ unit (W.initial_index type_of_scalar) _
 = let i0 = W.initial_index type_of_scalar in
   G.PPair
     (G.PScalar i0 U32)
@@ -367,17 +373,17 @@ let test_write2 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                 G.PBind
                 (G.PAction (W.ACons i4 (G.TScalar U32) ()))
                 (fun _ -> 
-                  let i6 = W.i_size_prefixed i5 U32 SZ.mk_size_t (G.TList (G.TScalar U32)) () in
+                  let i6 = W.i_size_prefixed i5 U32 (mk_size_t sq) (G.TList (G.TScalar U32)) () in
                   G.PBind
                   (G.PAction
                     (W.ASizePrefixed i5
-                      U32 SZ.mk_size_t
-                      (fun x -> x `SZ.size_le` SZ.mk_size_t 4294967295ul)
-                      (fun x -> SZ.to_u32 x)
+                      U32 (mk_size_t sq)
+                      (fun x -> x `SZ.lte` mk_size_t sq 4294967295ul)
+                      (magic ()) // TODO: no cast back from size_t, use specific writer instead
                       (G.TList (G.TScalar U32))
                       ()
                   ))
-                  (fun _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParse (G.TSizePrefixed U32 SZ.mk_size_t (G.TList (G.TScalar U32)))]) ()))
+                  (fun _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParse (G.TSizePrefixed U32 (mk_size_t sq) (G.TList (G.TScalar U32)))]) ()))
                 )
               )
             )
@@ -388,7 +394,7 @@ let test_write2 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
 
 noextract
 [@@G.specialize]
-let test_write3 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) _ unit (W.initial_index type_of_scalar) _
+let test_write3 (sq: squash SZ.fits_u32) : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) _ unit (W.initial_index type_of_scalar) _
 =
   let i0 = W.initial_index type_of_scalar in
   G.PPair
@@ -414,13 +420,13 @@ let test_write3 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                   G.pbind
                   (G.PAction
                     (W.ASizePrefixed i5
-                      U32 SZ.mk_size_t
-                      (fun x -> x `SZ.size_le` SZ.mk_size_t 4294967295ul)
-                      (fun x -> SZ.to_u32 x)
+                      U32 (mk_size_t sq)
+                      (fun x -> x `SZ.lte` mk_size_t sq 4294967295ul)
+                      (magic ()) // TODO: no cast back from size_t, use specific writer instead
                       (G.TList (G.TScalar U32))
                       ()
                   ))
-                  (fun (i6: W.state_i type_of_scalar) _ _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParse (G.TSizePrefixed U32 SZ.mk_size_t (G.TList (G.TScalar U32)))]) ()))
+                  (fun (i6: W.state_i type_of_scalar) _ _ -> G.PAction (W.AWeaken i6 (W.index_with_trivial_postcond [W.IParse (G.TSizePrefixed U32 (mk_size_t sq) (G.TList (G.TScalar U32)))]) ()))
                 )
               )
             )
@@ -435,18 +441,18 @@ let w_of_s
   (s: scalar_t)
 : Tot (W.r_to_l_write_t (p_of_s s).scalar_parser)
 = match s with
-  | U8 -> coerce _ (W.r_to_l_write_rewrite (W.r_to_l_write_constant_size write_u8 SZ.one_size) (p_of_s s).scalar_parser)
-  | U32 -> coerce _ (W.r_to_l_write_rewrite (W.r_to_l_write_constant_size write_u32 (SZ.mk_size_t 4ul)) (p_of_s s).scalar_parser)
-  | Bool -> coerce _ (W.r_to_l_write_rewrite (W.r_to_l_write_constant_size write_bool SZ.one_size) (p_of_s s).scalar_parser)
+  | U8 -> coerce _ (W.r_to_l_write_rewrite (W.r_to_l_write_constant_size write_u8 1sz) (p_of_s s).scalar_parser)
+  | U32 -> coerce _ (W.r_to_l_write_rewrite (W.r_to_l_write_constant_size write_u32 4sz) (p_of_s s).scalar_parser)
+  | Bool -> coerce _ (W.r_to_l_write_rewrite (W.r_to_l_write_constant_size write_bool 1sz) (p_of_s s).scalar_parser)
 
 inline_for_extraction noextract
 [@@T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
-let specialize_test_write3 b b_sz a =
-  G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz a) (W.ptr_cl p_of_s b b_sz a) test_write3
+let specialize_test_write3 (sq: squash SZ.fits_u32) b b_sz a =
+  G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz a) (W.ptr_cl p_of_s b b_sz a) (test_write3 sq)
 
-let extract_test_write3 vb b b_sz =
+let extract_test_write3 (sq: squash SZ.fits_u32) vb b b_sz =
   G.extract_impl_fold_unit
-    (specialize_test_write3 b b_sz (A.array_of vb))
+    (specialize_test_write3 sq b b_sz (A.array_of vb))
     (W.mk_initial_state p_of_s vb b b_sz)
 
 noextract
@@ -460,10 +466,11 @@ let tchoice = G.TChoice #_ #type_of_scalar
 noextract
 [@@G.specialize]
 let test_write4_if_true
+  (sq32: squash SZ.fits_u32)
   (b: bool)
   (sq: squash (b == true))
 : Tot (G.typ type_of_scalar true false)
-= G.TSizePrefixed U32 SZ.mk_size_t (G.TList (G.TScalar U8))
+= G.TSizePrefixed U32 (mk_size_t sq32) (G.TList (G.TScalar U8))
 
 noextract
 [@@G.specialize]
@@ -476,9 +483,10 @@ let test_write4_if_false
 noextract
 [@@G.specialize]
 let test_write4_choice_payload
+  (sq32: squash SZ.fits_u32)
   (b: bool)
 : Tot (G.typ type_of_scalar true false)
-= tif b (test_write4_if_true b) (test_write4_if_false b)
+= tif b (test_write4_if_true sq32 b) (test_write4_if_false b)
 
 // #push-options "--debug Test --debug_level Norm"
 
@@ -488,7 +496,7 @@ let test_write4_choice_payload
 noextract
 [@@G.specialize;
   T.postprocess_with (fun _ -> T.norm [delta_attr [`%G.specialize]; iota; zeta; primops]; T.trefl())]
-let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) G.TUnit unit (W.initial_index type_of_scalar) _
+let test_write4 (sq: squash SZ.fits_u32) : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t type_of_scalar) G.TUnit unit (W.initial_index type_of_scalar) _
 =
   let i0 = W.initial_index type_of_scalar in
     (G.pbind
@@ -507,17 +515,17 @@ let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                   (G.PAction (W.ACons i6 (G.TScalar U8) ()))
                   (fun (i7: W.state_i type_of_scalar) _ _ -> G.pbind
                     (G.PAction (W.ASizePrefixed i7
-                      U32 SZ.mk_size_t
-                      (fun x -> x `SZ.size_le` SZ.mk_size_t 4294967295ul)
-                      (fun x -> SZ.to_u32 x)
+                      U32 (mk_size_t sq)
+                      (fun x -> x `SZ.lte` SZ.uint32_to_sizet 4294967295ul)
+                      (magic ()) // TODO: no cast back from size_t, use specific writer instead
                       (G.TList (G.TScalar U8))
                       ()
                     ))
                     (fun (i8: W.state_i type_of_scalar) _ _ -> G.pbind
                       (G.PAction (W.AIf i8
-                        (G.TSizePrefixed U32 SZ.mk_size_t (G.TList (G.TScalar U8)))
+                        (G.TSizePrefixed U32 (mk_size_t sq) (G.TList (G.TScalar U8)))
                         true
-                        (test_write4_if_true true)
+                        (test_write4_if_true sq true)
                         (test_write4_if_false true)
                         ()
                       ))
@@ -528,10 +536,10 @@ let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                             W.AChoice i10
                             Bool
                             (tif true
-                              (test_write4_if_true true)
+                              (test_write4_if_true sq true)
                               (test_write4_if_false true)
                             )
-                            test_write4_choice_payload
+                            (test_write4_choice_payload sq)
                             ()
                           ))
                           (fun (i11: W.state_i type_of_scalar) _ _ -> G.pbind
@@ -539,7 +547,7 @@ let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                             (fun (i12: W.state_i type_of_scalar) _ _ -> G.pbind
                               (G.PAction (W.APair i12
                                 (G.TScalar U8)
-                                (tchoice Bool test_write4_choice_payload)
+                                (tchoice Bool (test_write4_choice_payload sq))
                                 ()
                               ))
                               (fun (i13: W.state_i type_of_scalar) _ _ ->
@@ -547,7 +555,7 @@ let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
                                   (W.index_with_trivial_postcond [W.IParse
                                     (G.TPair
                                       (G.TScalar U8)
-                                      (tchoice Bool test_write4_choice_payload)
+                                      (tchoice Bool (test_write4_choice_payload sq))
                                     )
                                   ])
                                   ()
@@ -570,9 +578,9 @@ let test_write4 : G.prog type_of_scalar (W.state_t type_of_scalar) (W.action_t t
 #pop-options
 
 [@@normalize_for_extraction [delta_attr [`%G.specialize]; iota; zeta; primops]]
-let extract_test_write4 vb b b_sz =
+let extract_test_write4 (sq: squash SZ.fits_u32) vb b b_sz =
   G.extract_impl_fold_unit
-    (G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz (A.array_of vb)) (W.ptr_cl p_of_s b b_sz (A.array_of vb)) test_write4)
+    (G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz (A.array_of vb)) (W.ptr_cl p_of_s b b_sz (A.array_of vb)) (test_write4 sq))
     (W.mk_initial_state p_of_s vb b b_sz)
 
 inline_for_extraction noextract
@@ -594,11 +602,11 @@ noextract
 let iter_max
   (#va: _)
   (a: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
 : ST U16.t
     (aparse (parse_list parse_u16) a va)
     (fun _ -> aparse (parse_list parse_u16) a va)
-    (SZ.size_v len == A.length (array_of' va))
+    (SZ.v len == A.length (array_of' va))
     (fun _ -> True)
 =
     rewrite emp (state _ _);
@@ -618,13 +626,14 @@ let iter_max
 #push-options "--z3rlimit 64"
 #restart-solver
 
-let test (a: byte_array) (#va: _) (len: SZ.size_t)
+let test (a: byte_array) (#va: _) (len: SZ.t)
 : ST U16.t
   (A.arrayptr a va)
   (fun _ -> A.arrayptr a va)
-  (SZ.size_v len == A.length (A.array_of va))
+  (SZ.v len == A.length (A.array_of va))
   (fun _ -> True)
-= with_local 0ul (fun perr ->
+= let sq = Steel.ST.Array.intro_fits_u32 () in
+  with_local 0ul (fun perr ->
   let sz = validate_p a len perr in
   let _ = gen_elim () in
   let err = R.read perr in
@@ -636,7 +645,7 @@ let test (a: byte_array) (#va: _) (len: SZ.size_t)
     let _ = gen_elim () in
     let acsz = read_bounded_integer _ a in
     let ac = hop_aparse_aparse (jump_bounded_integer 1) _ a gac in
-    let res = iter_max ac (SZ.mk_size_t acsz) in
+    let res = iter_max ac (mk_size_t sq acsz) in
     let _ = intro_vldata_gen 1 (unconstrained_bounded_integer 1) _ a ac in
     unpeek_strong a va ar;
     return res

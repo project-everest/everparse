@@ -5,7 +5,7 @@ open Steel.ST.GenElim
 module AP = LowParse.SteelST.ArrayPtr
 module U8 = FStar.UInt8
 module E = LowParse.Endianness
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 inline_for_extraction
 noextract
@@ -17,16 +17,16 @@ let be_to_n_t
 : Tot Type
 = (x: AP.t U8.t) ->
   (#v: _) ->
-  (pos: SZ.size_t) ->
+  (pos: SZ.t) ->
   ST t
     (AP.arrayptr x v)
     (fun _ -> AP.arrayptr x v)
     (requires (
-      SZ.size_v pos == len /\
+      SZ.v pos == len /\
       len <= AP.length (AP.array_of v)
     ))
     (ensures (fun res ->
-      SZ.size_v pos == len /\
+      SZ.v pos == len /\
       len <= AP.length (AP.array_of v) /\
       u.v res == E.be_to_n (Seq.slice (AP.contents_of v) 0 len)
     ))
@@ -56,7 +56,7 @@ let be_to_n_1
   noop ();
   E.reveal_be_to_n (Seq.slice (AP.contents_of v) 0 1);
   E.reveal_be_to_n (Seq.slice (AP.contents_of v) 0 0);
-  let last = AP.index x SZ.zero_size in
+  let last = AP.index x 0sz in
   return (u.from_byte last)
 
 inline_for_extraction
@@ -75,7 +75,7 @@ let be_to_n_S
   pow2_le_compat (8 * tot) (8 * (len + 1));
   pow2_le_compat (8 * (len + 1)) (8 * len);
   pow2_plus (8 * len) 8;
-  let pos' = pos `SZ.size_sub` SZ.one_size in
+  let pos' = pos `SZ.sub` 1sz in
   let last = AP.index x pos' in
   let n = ih x pos' in
   let blast = u.from_byte last in
@@ -115,17 +115,17 @@ let n_to_be_t
 = (n: t) ->
   (x: AP.t U8.t) ->
   (#v: AP.v U8.t) ->
-  (pos: SZ.size_t) ->
+  (pos: SZ.t) ->
   ST (AP.v U8.t)
     (AP.arrayptr x v)
     (fun v' -> AP.arrayptr x v')
-    (SZ.size_v pos == len /\
+    (SZ.v pos == len /\
       len <= AP.length (AP.array_of v) /\
       AP.array_perm (AP.array_of v) == full_perm /\
       u.v n < pow2 (8 * len)
     )
     (fun v' ->
-      SZ.size_v pos == len /\
+      SZ.v pos == len /\
       len <= AP.length (AP.array_of v) /\
       AP.array_of v' == AP.array_of v /\
       u.v n < pow2 (8 * len) /\
@@ -154,7 +154,7 @@ let n_to_be_1
   E.reveal_n_to_be 1 (u.v n);
   E.reveal_n_to_be 0 (u.v n / pow2 8);
   let n' = u.to_byte n in
-  let v' = AP.upd x SZ.zero_size n' in
+  let v' = AP.upd x 0sz n' in
   return v'
 
 inline_for_extraction
@@ -170,7 +170,7 @@ let n_to_be_S
   reveal_n_to_be (len + 1) (u.v n);
   let lo = u.to_byte n in
   let hi = u.div256 n in
-  let pos' = pos `SZ.size_sub` SZ.one_size in
+  let pos' = pos `SZ.sub` 1sz in
   let _ = ih hi x pos' in
   let v' = AP.upd x pos' lo in
   return v'

@@ -3,7 +3,7 @@ include LowParse.SteelST.List.Base
 
 module AP = LowParse.SteelST.ArrayPtr
 module P = Steel.FractionalPermission
-module SZ = LowParse.Steel.StdInt
+module SZ = FStar.SizeT
 
 open Steel.ST.Util
 
@@ -46,7 +46,7 @@ val list_iter_gen
   ))))))
   (#va: _)
   (a: byte_array)
-  (len: SZ.size_t)
+  (len: SZ.t)
   (al: Ghost.erased (option (AP.array byte)))
   (init: t')
 : ST t'
@@ -55,7 +55,7 @@ val list_iter_gen
       state al' res va.contents `star` pure (
       list_iter_gen_post phi enable_arrays al al' va init res
     )))
-    (SZ.size_v len == length_opt va.array /\
+    (SZ.v len == length_opt va.array /\
       k.parser_kind_subkind == Some ParserStrong /\
       (Ghost.reveal enable_arrays ==> (Some? al /\ adjacent_opt (Some?.v al) va.array))
     )
