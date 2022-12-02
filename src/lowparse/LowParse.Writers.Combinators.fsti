@@ -296,8 +296,7 @@ let parse_vldata_intro_ho
     )
     inv
 =
-  let int_size = log256 max in
-  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  start (parse_bounded_integer (log256 max)) (write_bounded_integer (log256 max)) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vldata_intro _ _ _
 
@@ -324,8 +323,7 @@ let parse_vldata_intro_ho'
     )
     inv
 =
-  let int_size = log256 max in
-  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  start (parse_bounded_integer (log256 max)) (write_bounded_integer (log256 max)) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vldata_intro _ _ _
 
@@ -338,7 +336,7 @@ let parse_vldata_intro_frame
   (max: U32.t { U32.v min <= U32.v max /\ U32.v max > 0 })
 : Write unit ((frame `parse_pair` parse_bounded_integer (log256 (max))) `parse_pair` p) (frame `parse_pair` parse_vldata p min max) (fun (_, vin) -> U32.v min <= size p vin /\ size p vin <= U32.v max) (fun ((fr, _), vin) _ (fr', vout) -> fr == fr' /\ (vin <: Parser?.t p) == (vout <: Parser?.t p)) inv
 = valid_rewrite _ _ _ _ _ (valid_rewrite_parse_pair_assoc_1 _ _ _);
-  frame2 _ _ _ _ _ _ _ _ (fun _ -> parse_vldata_intro p min max)
+  frame2 _ _ _ _ _ _ _ inv (fun _ -> parse_vldata_intro p min max)
 
 let parse_vldata_intro_weak_spec
   (p: parser)
@@ -402,8 +400,7 @@ let parse_vldata_intro_weak_ho
     )
     inv
 =
-  let int_size = log256 max in
-  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  start (parse_bounded_integer (log256 max)) (write_bounded_integer (log256 max)) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vldata_intro_weak _ _ _
 
@@ -428,8 +425,7 @@ let parse_vldata_intro_weak_ho'
     )
     inv
 =
-  let int_size = log256 max in
-  start (parse_bounded_integer int_size) (write_bounded_integer int_size) 0ul;
+  start (parse_bounded_integer (log256 max)) (write_bounded_integer (log256 max)) 0ul;
   frame _ _ _ _ _ _ _ (fun _ -> recast_writer _ _ _ _ _ _ _ f);
   parse_vldata_intro_weak _ _ _
 
@@ -443,7 +439,7 @@ let parse_vldata_intro_weak_frame
 : EWrite unit ((frame `parse_pair` parse_bounded_integer (log256 (max))) `parse_pair` p) (frame `parse_pair` parse_vldata p min max) (fun _ -> True) (fun ((fr, _), vin) _ (fr', vout) -> fr == fr' /\ (vin <: Parser?.t p) == (vout <: Parser?.t p)) (fun (_, vin) -> ~ (U32.v min <= size p vin /\ size p vin <= U32.v max)) inv
 = 
   valid_rewrite _ _ _ _ _ (valid_rewrite_parse_pair_assoc_1 _ _ _);
-  frame2 _ _ _ _ _ _ _ _ (fun _ -> parse_vldata_intro_weak p min max)
+  frame2 _ _ _ _ _ _ _ inv (fun _ -> parse_vldata_intro_weak p min max)
 
 let parse_vldata_recast_spec
   (p: parser)
@@ -897,6 +893,7 @@ let parse_vllist_snoc_spec
     (fun _ -> False)
   )
 = fun (l, x) ->
+  assert (parse_vllist_pred p min max (L.snoc (l, x)));
   Correct ((), L.snoc ((l <: list (Parser?.t p)), x))
 
 inline_for_extraction
@@ -1003,6 +1000,7 @@ let parse_vllist_snoc_weak_spec
   let sz = list_size p l + size p x in
   if U32.v min <= sz && sz <= U32.v max
   then begin
+    assert (parse_vllist_pred p min max (L.snoc (l, x)));
     Correct ((), L.snoc ((l <: list (Parser?.t p)), x))
   end else
     Error "parse_vllist_snoc_weak: out of bounds"
@@ -1487,8 +1485,7 @@ let list_map'
     (fun lin _ lout -> (lout <: list (Parser?.t p2)) == (lin <: list (Parser?.t p2)) `L.append` L.map (Ghost.reveal f) (deref_list_spec l))
     (fun lin -> list_size p2 lin + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l)) > U32.v max)
     inv
-=
-  let lin0 = get_state () in
+= let lin0 = get_state () in
   let _ = do_while
     #inv
     #(parse_vllist p2 min max)
@@ -1496,6 +1493,8 @@ let list_map'
     (fun lin l1 cond ->
       lin0 `L.append` L.map (Ghost.reveal f) (deref_list_spec l) ==
       lin  `L.append` L.map (Ghost.reveal f) (deref_list_spec l1) /\
+      (list_size p2 lin0 + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l)) ==
+       list_size p2 lin + list_size p2 (L.map (Ghost.reveal f) (deref_list_spec l1))) /\
       (cond == false ==> deref_list_spec l1 == [])
     )
     (fun _ l1 -> L.length (deref_list_spec l1))

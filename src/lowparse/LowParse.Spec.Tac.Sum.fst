@@ -111,6 +111,10 @@ let rec maybe_enum_destr_t'_tac () : T.Tac unit =
     if tl2_fun `T.is_fvar` (`%Nil)
     then begin
       T.apply (`maybe_enum_destr_nil);
+      ignore (T.repeat (fun _ ->
+                        if List.length (T.goals ()) = 0
+                        then T.fail "Done"
+                        else (T.compute (); T.smt ())));
       T.qed ()
     end
     else T.fail "Unknown shape for l2"
@@ -118,6 +122,7 @@ let rec maybe_enum_destr_t'_tac () : T.Tac unit =
 
 noextract
 let maybe_enum_destr_t_tac () : T.Tac unit =
+  T.set_guard_policy T.Goal;
   let (goal_fun, _) = T.app_head_tail (T.cur_goal ()) in
   let _ = T.tassert (goal_fun `T.is_fvar` (`%maybe_enum_destr_t)) in
   T.apply (`maybe_enum_destr_t_intro);
@@ -138,6 +143,10 @@ let rec dep_maybe_enum_destr_t'_tac () : T.Tac unit =
     if tl2_fun `T.is_fvar` (`%Nil)
     then begin
       T.apply (`dep_maybe_enum_destr_nil);
+      ignore (T.repeat (fun _ ->
+                        if List.length (T.goals ()) = 0
+                        then T.fail "Done"
+                        else (T.compute (); T.smt ())));
       T.qed ()
     end
     else T.fail "Unknown shape for l2"
@@ -145,8 +154,8 @@ let rec dep_maybe_enum_destr_t'_tac () : T.Tac unit =
 
 noextract
 let dep_maybe_enum_destr_t_tac () : T.Tac unit =
+  T.set_guard_policy T.Goal;
   let (goal_fun, _) = T.app_head_tail (T.cur_goal ()) in
   let _ = T.tassert (goal_fun `T.is_fvar` (`%dep_maybe_enum_destr_t)) in
   T.apply (`dep_maybe_enum_destr_t_intro);
   dep_maybe_enum_destr_t'_tac ()
-
