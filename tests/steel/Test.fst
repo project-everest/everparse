@@ -450,6 +450,7 @@ inline_for_extraction noextract
 let specialize_test_write3 (sq: squash SZ.fits_u32) b b_sz a =
   G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz a) (W.ptr_cl p_of_s b b_sz a) (test_write3 sq)
 
+noextract
 let extract_test_write3 (sq: squash SZ.fits_u32) vb b b_sz =
   G.extract_impl_fold_unit
     (specialize_test_write3 sq b b_sz (A.array_of vb))
@@ -578,6 +579,7 @@ let test_write4 (sq: squash SZ.fits_u32) : G.prog type_of_scalar (W.state_t type
 #pop-options
 
 [@@normalize_for_extraction [delta_attr [`%G.specialize]; iota; zeta; primops]]
+noextract
 let extract_test_write4 (sq: squash SZ.fits_u32) vb b b_sz =
   G.extract_impl_fold_unit
     (G.impl p_of_s (W.a_cl p_of_s w_of_s b b_sz (A.array_of vb)) (W.ptr_cl p_of_s b b_sz (A.array_of vb)) (test_write4 sq))

@@ -29,7 +29,7 @@ KRML = $(KRML_HOME)/krml \
 
 QD_FILES = $(wildcard *.fst *.fsti)
 
-all: depend verify test
+all: depend verify extract
 
 $(CACHE_DIR)/%$(CHECKED_EXT):
 	$(FSTAR) $(OTHERFLAGS) $<
