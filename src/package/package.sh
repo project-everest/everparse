@@ -95,7 +95,7 @@ print_date_utc_of_iso_hr() {
 }
 
 if [[ -z "$everparse_version" ]] ; then
-    everparse_version=$(cat $EVERPARSE_HOME/version.txt)
+    everparse_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
     everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
     if everparse_commit=$(git show --no-patch --format=%h) ; then
         if [[ $everparse_commit != $everparse_last_version ]] ; then
