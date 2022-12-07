@@ -77,7 +77,7 @@ gh="gh$exe -R ${EVERPARSE_RELEASE_ORG}/${EVERPARSE_RELEASE_REPO}"
 function upload_archive () {
     archive="$1"
     if ! $gh release view $everparse_version ; then
-        $gh release create --generate-notes --target $branchname $everparse_version $archive
+        $gh release create --prerelease --generate-notes --target $branchname $everparse_version $archive
     else
         $gh release upload $everparse_version $archive
     fi
