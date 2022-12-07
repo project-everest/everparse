@@ -49,6 +49,7 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
     git commit -m "Release $everparse_version"
     git tag $everparse_version
 fi
+export everparse_version
 #strip the v
 export everparse_nuget_version=${everparse_version:1}
 
