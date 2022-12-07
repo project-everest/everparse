@@ -34,12 +34,12 @@ fi
 remote="https://${GH_TOKEN}@github.com/${EVERPARSE_RELEASE_ORG}/${EVERPARSE_RELEASE_REPO}.git"
 
 branchname=$(git rev-parse --abbrev-ref HEAD)
-git diff --staged --exit-code
-git diff --exit-code
+git diff --staged --exit-code --ignore-cr-at-eol
+git diff --exit-code --ignore-cr-at-eol
 git fetch $remote --tags
 git pull $remote $branchname --ff-only
 
-everparse_version=$(cat $EVERPARSE_HOME/version.txt)
+everparse_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
 if [[ $everparse_commit != $everparse_last_version ]] ; then
