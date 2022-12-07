@@ -145,6 +145,13 @@ write_everest_env_dest_file () {
   write_to_env_dest_file "$str"
 }
 
+write_gh_env_dest_file () {
+  str="
+    # This line automatically added by $0
+    export PATH=$(pwd)/gh/bin:\$PATH"
+  write_to_env_dest_file "$str"
+}
+
 cygsetup="setup-x86_64.exe"
 cygsetup_args="--no-desktop --no-shortcuts --no-startmenu --wait --quiet-mode"
 # Find Cygwin's setup utility, or download it from the internet.
@@ -485,6 +492,30 @@ OCAML
     fi
   fi
 
+  echo "Checking for gh (GitHub CLI)"
+  if [[ -z "$everparse_do_release" ]] ; then
+      echo "Check skipped, not releasing"
+  elif command -v gh >/dev/null 2>&1 ; then
+      echo "... gh found in PATH"
+  else
+      red "ERROR: gh (GitHub CLI) not found in PATH"
+      if is_windows ; then
+          gh_version=2.20.2
+          magenta "Do you want to download gh $gh_version ?"
+          prompt_yes true "exit 1"
+          if ! [[ -d gh ]] ; then
+              gh_zip=gh_${gh_version}_windows_amd64.zip
+              wget "https://github.com/cli/cli/releases/download/v${gh_version}/${gh_zip}"
+              unzip -d gh $gh_zip
+          fi
+          chmod +x gh/bin/gh.exe
+          write_gh_env_dest_file
+      else
+          red "Please install it following https://github.com/cli/cli#installation"
+          exit 1
+      fi
+  fi
+
   echo
   magenta "Remember to run source \"$EVEREST_ENV_DEST_FILE\" if it was modified!"
   local xpwd=""
@@ -540,7 +571,7 @@ set_opt () {
 # ------------------------------------------------------------------------------
 
 OPTIONS=j:k
-LONGOPTS=yes,windows,openssl,opt,admit,no-vale-archive
+LONGOPTS=yes,release,windows,openssl,opt,admit,no-vale-archive
 
 # Temporarily stores output to check for errors
 # --alternative allows long options to start with a single '-'
@@ -568,6 +599,11 @@ while true; do
 
         -yes|--yes)
             make_non_interactive
+            shift
+            ;;
+
+        (-release|--release)
+            everparse_do_release=1
             shift
             ;;
 

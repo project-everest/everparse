@@ -10,8 +10,9 @@ if [[ -z "$EVERPARSE_HOME" ]] ; then
     export EVERPARSE_HOME=$PWD
 fi
 
-if [[ -z "$SATS_TOKEN" ]] ; then
-    echo Missing environment variable: SATS_TOKEN
+# Necessary for gh to authenticate to GitHub
+if [[ -z "$GH_TOKEN" ]] ; then
+    echo Missing environment variable: GH_TOKEN
     exit 1
 fi
 
@@ -24,7 +25,13 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
-remote=https://${SATS_TOKEN}@github.com/project-everest/everparse.git
+if [[ -z "$EVERPARSE_RELEASE_ORG" ]] ; then
+    EVERPARSE_RELEASE_ORG=project-everest
+fi
+if [[ -z "$EVERPARSE_RELEASE_REPO" ]] ; then
+    EVERPARSE_RELEASE_REPO=everparse
+fi
+remote="https://${GH_TOKEN}@github.com/${EVERPARSE_RELEASE_ORG}/${EVERPARSE_RELEASE_REPO}.git"
 
 branchname=$(git rev-parse --abbrev-ref HEAD)
 git diff --staged --exit-code
@@ -58,17 +65,21 @@ else
     ext=.tar.gz
 fi
 
+if $is_windows ; then
+    exe=.exe
+else
+    exe=
+fi
+
+gh="gh$exe -R ${EVERPARSE_RELEASE_ORG}/${EVERPARSE_RELEASE_REPO}"
+
 function upload_archive () {
     archive="$1"
-
-    docker build \
-       -t everparse-release:$everparse_version \
-       -f src/package/Dockerfile.release \
-       --build-arg SATS_FILE=$archive \
-       --build-arg SATS_TAG=$everparse_version \
-       --build-arg SATS_COMMITISH=$branchname \
-       --build-arg SATS_TOKEN=$SATS_TOKEN \
-       .
+    if ! $gh release view $everparse_version ; then
+        $gh release create --generate-notes --target $branchname $everparse_version $archive
+    else
+        $gh release upload $everparse_version $archive
+    fi
 }
 
 upload_archive everparse_"$everparse_version"_"$OS"_"$platform""$ext"
