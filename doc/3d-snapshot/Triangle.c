@@ -8,7 +8,7 @@ static inline uint64_t
 ValidatePoint(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -43,7 +43,7 @@ ValidatePoint(
   }
   else
   {
-    Err("_point",
+    ErrorHandlerFn("_point",
       "x",
       EverParseErrorReasonOfResult(positionAfterPoint),
       EverParseGetValidatorErrorKind(positionAfterPoint),
@@ -75,7 +75,7 @@ ValidatePoint(
   {
     return positionAfterPoint0;
   }
-  Err("_point",
+  ErrorHandlerFn("_point",
     "y",
     EverParseErrorReasonOfResult(positionAfterPoint0),
     EverParseGetValidatorErrorKind(positionAfterPoint0),
@@ -89,7 +89,7 @@ uint64_t
 TriangleValidateTriangle(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -104,7 +104,8 @@ TriangleValidateTriangle(
 )
 {
   /* Validating field a */
-  uint64_t positionAfterTriangle = ValidatePoint(Ctxt, Err, Input, InputLength, StartPosition);
+  uint64_t
+  positionAfterTriangle = ValidatePoint(Ctxt, ErrorHandlerFn, Input, InputLength, StartPosition);
   uint64_t positionAftera;
   if (EverParseIsSuccess(positionAfterTriangle))
   {
@@ -112,7 +113,7 @@ TriangleValidateTriangle(
   }
   else
   {
-    Err("_triangle",
+    ErrorHandlerFn("_triangle",
       "a",
       EverParseErrorReasonOfResult(positionAfterTriangle),
       EverParseGetValidatorErrorKind(positionAfterTriangle),
@@ -126,7 +127,13 @@ TriangleValidateTriangle(
     return positionAftera;
   }
   /* Validating field b */
-  uint64_t positionAfterTriangle0 = ValidatePoint(Ctxt, Err, Input, InputLength, positionAftera);
+  uint64_t
+  positionAfterTriangle0 =
+    ValidatePoint(Ctxt,
+      ErrorHandlerFn,
+      Input,
+      InputLength,
+      positionAftera);
   uint64_t positionAfterb;
   if (EverParseIsSuccess(positionAfterTriangle0))
   {
@@ -134,7 +141,7 @@ TriangleValidateTriangle(
   }
   else
   {
-    Err("_triangle",
+    ErrorHandlerFn("_triangle",
       "b",
       EverParseErrorReasonOfResult(positionAfterTriangle0),
       EverParseGetValidatorErrorKind(positionAfterTriangle0),
@@ -148,12 +155,18 @@ TriangleValidateTriangle(
     return positionAfterb;
   }
   /* Validating field c */
-  uint64_t positionAfterTriangle1 = ValidatePoint(Ctxt, Err, Input, InputLength, positionAfterb);
+  uint64_t
+  positionAfterTriangle1 =
+    ValidatePoint(Ctxt,
+      ErrorHandlerFn,
+      Input,
+      InputLength,
+      positionAfterb);
   if (EverParseIsSuccess(positionAfterTriangle1))
   {
     return positionAfterTriangle1;
   }
-  Err("_triangle",
+  ErrorHandlerFn("_triangle",
     "c",
     EverParseErrorReasonOfResult(positionAfterTriangle1),
     EverParseGetValidatorErrorKind(positionAfterTriangle1),

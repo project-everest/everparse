@@ -8,7 +8,7 @@ uint64_t
 EnumConstraintValidateEnumConstraint(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -97,7 +97,7 @@ EnumConstraintValidateEnumConstraint(
       }
       else
       {
-        Err("_enum_constraint",
+        ErrorHandlerFn("_enum_constraint",
           "x.refinement",
           EverParseErrorReasonOfResult(positionAfterEnumConstraint0),
           EverParseGetValidatorErrorKind(positionAfterEnumConstraint0),
@@ -112,7 +112,7 @@ EnumConstraintValidateEnumConstraint(
   {
     return positionAfterEnumConstraint;
   }
-  Err("_enum_constraint",
+  ErrorHandlerFn("_enum_constraint",
     "none",
     EverParseErrorReasonOfResult(positionAfterEnumConstraint),
     EverParseGetValidatorErrorKind(positionAfterEnumConstraint),

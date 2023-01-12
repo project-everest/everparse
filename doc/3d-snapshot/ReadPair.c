@@ -10,7 +10,7 @@ ReadPairValidatePair(
   uint32_t *Y,
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -65,7 +65,7 @@ ReadPairValidatePair(
   }
   else
   {
-    Err("_Pair",
+    ErrorHandlerFn("_Pair",
       "first",
       EverParseErrorReasonOfResult(positionAfterPair),
       EverParseGetValidatorErrorKind(positionAfterPair),
@@ -116,7 +116,7 @@ ReadPairValidatePair(
   {
     return positionAfterPair0;
   }
-  Err("_Pair",
+  ErrorHandlerFn("_Pair",
     "second",
     EverParseErrorReasonOfResult(positionAfterPair0),
     EverParseGetValidatorErrorKind(positionAfterPair0),

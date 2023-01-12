@@ -8,7 +8,7 @@ uint64_t
 BaseValidateUlong(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -39,7 +39,7 @@ BaseValidateUlong(
   {
     return positionAfterUlong;
   }
-  Err("___ULONG",
+  ErrorHandlerFn("___ULONG",
     "missing",
     EverParseErrorReasonOfResult(positionAfterUlong),
     EverParseGetValidatorErrorKind(positionAfterUlong),
@@ -53,7 +53,7 @@ uint64_t
 BaseValidatePair(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -88,7 +88,7 @@ BaseValidatePair(
   }
   else
   {
-    Err("_Pair",
+    ErrorHandlerFn("_Pair",
       "first",
       EverParseErrorReasonOfResult(positionAfterPair),
       EverParseGetValidatorErrorKind(positionAfterPair),
@@ -120,7 +120,7 @@ BaseValidatePair(
   {
     return positionAfterPair0;
   }
-  Err("_Pair",
+  ErrorHandlerFn("_Pair",
     "second",
     EverParseErrorReasonOfResult(positionAfterPair0),
     EverParseGetValidatorErrorKind(positionAfterPair0),

@@ -9,7 +9,7 @@ ValidateIntPayload(
   uint32_t Size,
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -43,7 +43,7 @@ ValidateIntPayload(
     {
       return positionAfterIntPayload;
     }
-    Err("_int_payload",
+    ErrorHandlerFn("_int_payload",
       "value8",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
       EverParseGetValidatorErrorKind(positionAfterIntPayload),
@@ -72,7 +72,7 @@ ValidateIntPayload(
     {
       return positionAfterIntPayload;
     }
-    Err("_int_payload",
+    ErrorHandlerFn("_int_payload",
       "value16",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
       EverParseGetValidatorErrorKind(positionAfterIntPayload),
@@ -101,7 +101,7 @@ ValidateIntPayload(
     {
       return positionAfterIntPayload;
     }
-    Err("_int_payload",
+    ErrorHandlerFn("_int_payload",
       "value32",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
       EverParseGetValidatorErrorKind(positionAfterIntPayload),
@@ -118,7 +118,7 @@ ValidateIntPayload(
   {
     return positionAfterIntPayload;
   }
-  Err("_int_payload",
+  ErrorHandlerFn("_int_payload",
     "_x_2",
     EverParseErrorReasonOfResult(positionAfterIntPayload),
     EverParseGetValidatorErrorKind(positionAfterIntPayload),
@@ -132,7 +132,7 @@ uint64_t
 TaggedUnionValidateInteger(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -166,7 +166,7 @@ TaggedUnionValidateInteger(
   }
   else
   {
-    Err("_integer",
+    ErrorHandlerFn("_integer",
       "size",
       EverParseErrorReasonOfResult(positionAfterInteger),
       EverParseGetValidatorErrorKind(positionAfterInteger),
@@ -185,7 +185,7 @@ TaggedUnionValidateInteger(
   positionAfterInteger0 =
     ValidateIntPayload(size,
       Ctxt,
-      Err,
+      ErrorHandlerFn,
       Input,
       InputLength,
       positionAftersize);
@@ -193,7 +193,7 @@ TaggedUnionValidateInteger(
   {
     return positionAfterInteger0;
   }
-  Err("_integer",
+  ErrorHandlerFn("_integer",
     "payload",
     EverParseErrorReasonOfResult(positionAfterInteger0),
     EverParseGetValidatorErrorKind(positionAfterInteger0),

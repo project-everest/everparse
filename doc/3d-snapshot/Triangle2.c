@@ -8,7 +8,7 @@ static inline uint64_t
 ValidatePoint(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -43,7 +43,7 @@ ValidatePoint(
   }
   else
   {
-    Err("_point",
+    ErrorHandlerFn("_point",
       "x",
       EverParseErrorReasonOfResult(positionAfterPoint),
       EverParseGetValidatorErrorKind(positionAfterPoint),
@@ -75,7 +75,7 @@ ValidatePoint(
   {
     return positionAfterPoint0;
   }
-  Err("_point",
+  ErrorHandlerFn("_point",
     "y",
     EverParseErrorReasonOfResult(positionAfterPoint0),
     EverParseGetValidatorErrorKind(positionAfterPoint0),
@@ -89,7 +89,7 @@ uint64_t
 Triangle2ValidateTriangle(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -134,7 +134,7 @@ Triangle2ValidateTriangle(
         uint64_t
         positionAfterTriangle =
           ValidatePoint(Ctxt,
-            Err,
+            ErrorHandlerFn,
             truncatedInput,
             truncatedInputLength,
             position);
@@ -145,7 +145,7 @@ Triangle2ValidateTriangle(
         }
         else
         {
-          Err("_triangle",
+          ErrorHandlerFn("_triangle",
             "corners.element",
             EverParseErrorReasonOfResult(positionAfterTriangle),
             EverParseGetValidatorErrorKind(positionAfterTriangle),
@@ -169,7 +169,7 @@ Triangle2ValidateTriangle(
   {
     return positionAfterTriangle;
   }
-  Err("_triangle",
+  ErrorHandlerFn("_triangle",
     "corners",
     EverParseErrorReasonOfResult(positionAfterTriangle),
     EverParseGetValidatorErrorKind(positionAfterTriangle),

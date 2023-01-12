@@ -8,7 +8,7 @@ static inline uint64_t
 ValidatePoint(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -43,7 +43,7 @@ ValidatePoint(
   }
   else
   {
-    Err("_point",
+    ErrorHandlerFn("_point",
       "x",
       EverParseErrorReasonOfResult(positionAfterPoint),
       EverParseGetValidatorErrorKind(positionAfterPoint),
@@ -75,7 +75,7 @@ ValidatePoint(
   {
     return positionAfterPoint0;
   }
-  Err("_point",
+  ErrorHandlerFn("_point",
     "y",
     EverParseErrorReasonOfResult(positionAfterPoint0),
     EverParseGetValidatorErrorKind(positionAfterPoint0),
@@ -89,7 +89,7 @@ uint64_t
 ColoredPointValidateColoredPoint1(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -124,7 +124,7 @@ ColoredPointValidateColoredPoint1(
   }
   else
   {
-    Err("_coloredPoint1",
+    ErrorHandlerFn("_coloredPoint1",
       "color",
       EverParseErrorReasonOfResult(positionAfterColoredPoint1),
       EverParseGetValidatorErrorKind(positionAfterColoredPoint1),
@@ -140,12 +140,17 @@ ColoredPointValidateColoredPoint1(
   }
   /* Validating field pt */
   uint64_t
-  positionAfterColoredPoint10 = ValidatePoint(Ctxt, Err, Input, InputLength, positionAftercolor);
+  positionAfterColoredPoint10 =
+    ValidatePoint(Ctxt,
+      ErrorHandlerFn,
+      Input,
+      InputLength,
+      positionAftercolor);
   if (EverParseIsSuccess(positionAfterColoredPoint10))
   {
     return positionAfterColoredPoint10;
   }
-  Err("_coloredPoint1",
+  ErrorHandlerFn("_coloredPoint1",
     "pt",
     EverParseErrorReasonOfResult(positionAfterColoredPoint10),
     EverParseGetValidatorErrorKind(positionAfterColoredPoint10),
@@ -159,7 +164,7 @@ uint64_t
 ColoredPointValidateColoredPoint2(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -175,7 +180,12 @@ ColoredPointValidateColoredPoint2(
 {
   /* Validating field pt */
   uint64_t
-  positionAfterColoredPoint2 = ValidatePoint(Ctxt, Err, Input, InputLength, StartPosition);
+  positionAfterColoredPoint2 =
+    ValidatePoint(Ctxt,
+      ErrorHandlerFn,
+      Input,
+      InputLength,
+      StartPosition);
   uint64_t positionAfterpt;
   if (EverParseIsSuccess(positionAfterColoredPoint2))
   {
@@ -183,7 +193,7 @@ ColoredPointValidateColoredPoint2(
   }
   else
   {
-    Err("_coloredPoint2",
+    ErrorHandlerFn("_coloredPoint2",
       "pt",
       EverParseErrorReasonOfResult(positionAfterColoredPoint2),
       EverParseGetValidatorErrorKind(positionAfterColoredPoint2),
@@ -214,7 +224,7 @@ ColoredPointValidateColoredPoint2(
   {
     return positionAfterColoredPoint20;
   }
-  Err("_coloredPoint2",
+  ErrorHandlerFn("_coloredPoint2",
     "color",
     EverParseErrorReasonOfResult(positionAfterColoredPoint20),
     EverParseGetValidatorErrorKind(positionAfterColoredPoint20),

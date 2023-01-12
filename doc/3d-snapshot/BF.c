@@ -8,7 +8,7 @@ uint64_t
 BfValidateDummy(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -31,7 +31,7 @@ BfValidateDummy(
   }
   else
   {
-    Err("_dummy",
+    ErrorHandlerFn("_dummy",
       "emp1",
       EverParseErrorReasonOfResult(positionAfterDummy),
       EverParseGetValidatorErrorKind(positionAfterDummy),
@@ -51,7 +51,7 @@ BfValidateDummy(
   {
     return positionAfterDummy0;
   }
-  Err("_dummy",
+  ErrorHandlerFn("_dummy",
     "emp2",
     EverParseErrorReasonOfResult(positionAfterDummy0),
     EverParseGetValidatorErrorKind(positionAfterDummy0),
