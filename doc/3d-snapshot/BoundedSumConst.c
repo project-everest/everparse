@@ -8,7 +8,7 @@ uint64_t
 BoundedSumConstValidateBoundedSum(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -42,7 +42,7 @@ BoundedSumConstValidateBoundedSum(
   }
   else
   {
-    Err("_boundedSum",
+    ErrorHandlerFn("_boundedSum",
       "left",
       EverParseErrorReasonOfResult(positionAfterBoundedSum),
       EverParseGetValidatorErrorKind(positionAfterBoundedSum),
@@ -94,7 +94,7 @@ BoundedSumConstValidateBoundedSum(
   {
     return positionAfterBoundedSum0;
   }
-  Err("_boundedSum",
+  ErrorHandlerFn("_boundedSum",
     "right.refinement",
     EverParseErrorReasonOfResult(positionAfterBoundedSum0),
     EverParseGetValidatorErrorKind(positionAfterBoundedSum0),

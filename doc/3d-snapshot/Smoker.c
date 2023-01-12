@@ -8,7 +8,7 @@ uint64_t
 SmokerValidateSmoker(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -73,7 +73,7 @@ SmokerValidateSmoker(
       }
       else
       {
-        Err("_smoker",
+        ErrorHandlerFn("_smoker",
           "cigarettesConsumed",
           EverParseErrorReasonOfResult(positionAfterSmoker0),
           EverParseGetValidatorErrorKind(positionAfterSmoker0),
@@ -89,7 +89,7 @@ SmokerValidateSmoker(
   {
     return positionAfterSmoker;
   }
-  Err("_smoker",
+  ErrorHandlerFn("_smoker",
     "none",
     EverParseErrorReasonOfResult(positionAfterSmoker),
     EverParseGetValidatorErrorKind(positionAfterSmoker),

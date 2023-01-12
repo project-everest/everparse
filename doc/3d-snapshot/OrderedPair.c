@@ -8,7 +8,7 @@ uint64_t
 OrderedPairValidateOrderedPair(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -42,7 +42,7 @@ OrderedPairValidateOrderedPair(
   }
   else
   {
-    Err("_orderedPair",
+    ErrorHandlerFn("_orderedPair",
       "lesser",
       EverParseErrorReasonOfResult(positionAfterOrderedPair),
       EverParseGetValidatorErrorKind(positionAfterOrderedPair),
@@ -90,7 +90,7 @@ OrderedPairValidateOrderedPair(
   {
     return positionAfterOrderedPair0;
   }
-  Err("_orderedPair",
+  ErrorHandlerFn("_orderedPair",
     "greater.refinement",
     EverParseErrorReasonOfResult(positionAfterOrderedPair0),
     EverParseGetValidatorErrorKind(positionAfterOrderedPair0),

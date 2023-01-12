@@ -17,7 +17,7 @@ uint64_t
 PointArch3264ValidatePoint(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,

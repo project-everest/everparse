@@ -9,7 +9,7 @@ GetFieldPtrValidateT(
   uint8_t **Out,
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -67,7 +67,7 @@ GetFieldPtrValidateT(
         }
         else
         {
-          Err("_T",
+          ErrorHandlerFn("_T",
             "f1.element",
             EverParseErrorReasonOfResult(positionAfterT),
             EverParseGetValidatorErrorKind(positionAfterT),
@@ -95,7 +95,7 @@ GetFieldPtrValidateT(
   }
   else
   {
-    Err("_T",
+    ErrorHandlerFn("_T",
       "f1",
       EverParseErrorReasonOfResult(positionAfterT),
       EverParseGetValidatorErrorKind(positionAfterT),
@@ -152,7 +152,7 @@ GetFieldPtrValidateT(
         }
         else
         {
-          Err("_T",
+          ErrorHandlerFn("_T",
             "f2.base.element",
             EverParseErrorReasonOfResult(positionAfterT),
             EverParseGetValidatorErrorKind(positionAfterT),
@@ -180,7 +180,7 @@ GetFieldPtrValidateT(
   }
   else
   {
-    Err("_T",
+    ErrorHandlerFn("_T",
       "f2.base",
       EverParseErrorReasonOfResult(positionAfterT0),
       EverParseGetValidatorErrorKind(positionAfterT0),
@@ -214,7 +214,7 @@ GetFieldPtrValidateT(
   {
     return positionAfterT1;
   }
-  Err("_T",
+  ErrorHandlerFn("_T",
     "f2",
     EverParseErrorReasonOfResult(positionAfterT1),
     EverParseGetValidatorErrorKind(positionAfterT1),

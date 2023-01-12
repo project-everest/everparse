@@ -8,7 +8,7 @@ uint64_t
 ColorValidateColoredPoint(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
@@ -63,7 +63,7 @@ ColorValidateColoredPoint(
   }
   else
   {
-    Err("_coloredPoint",
+    ErrorHandlerFn("_coloredPoint",
       "col.refinement",
       EverParseErrorReasonOfResult(positionAfterColoredPoint),
       EverParseGetValidatorErrorKind(positionAfterColoredPoint),
@@ -97,7 +97,7 @@ ColorValidateColoredPoint(
   }
   else
   {
-    Err("_coloredPoint",
+    ErrorHandlerFn("_coloredPoint",
       "x",
       EverParseErrorReasonOfResult(positionAfterColoredPoint0),
       EverParseGetValidatorErrorKind(positionAfterColoredPoint0),
@@ -129,7 +129,7 @@ ColorValidateColoredPoint(
   {
     return positionAfterColoredPoint1;
   }
-  Err("_coloredPoint",
+  ErrorHandlerFn("_coloredPoint",
     "y",
     EverParseErrorReasonOfResult(positionAfterColoredPoint1),
     EverParseGetValidatorErrorKind(positionAfterColoredPoint1),

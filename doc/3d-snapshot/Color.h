@@ -31,7 +31,7 @@ uint64_t
 ColorValidateColoredPoint(
   uint8_t *Ctxt,
   void
-  (*Err)(
+  (*ErrorHandlerFn)(
     EverParseString x0,
     EverParseString x1,
     EverParseString x2,
