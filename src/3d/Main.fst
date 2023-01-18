@@ -157,10 +157,19 @@ let emit_fstar_code_for_interpreter (en:env)
         InterpreterTarget.print_decls en modul itds
     in
 
+    let has_external_types = has_output_types tds || has_extern_types tds in
+
+    if has_external_types
+    then begin
+      let external_types_fsti_file =
+        open_write_file
+          (Printf.sprintf "%s/%s.ExternalTypes.fsti" (Options.get_output_dir ()) modul) in
+      FStar.IO.write_string external_types_fsti_file (Target.print_external_types_fstar_interpreter modul tds);
+      FStar.IO.close_write_file external_types_fsti_file
+    end;
+
     let has_external_api =
-      has_output_types tds ||
       has_out_exprs tds ||
-      has_extern_types tds ||
       has_extern_functions tds in
 
     if has_external_api
@@ -256,14 +265,17 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
    *   then emit output type definitions in M_OutputTypesDefs.h
    *)
 
-  if (has_output_types || has_out_exprs) && emit_output_types_defs
+  if emit_output_types_defs
   then begin
-    let output_types_defs_file = open_write_file
-      (Printf.sprintf "%s/%s_OutputTypesDefs.h"
-         (Options.get_output_dir ())
-         modul) in
-    FStar.IO.write_string output_types_defs_file (Target.print_output_types_defs modul t_decls);
-    FStar.IO.close_write_file output_types_defs_file;
+    if has_output_types
+    then begin
+      let output_types_defs_file = open_write_file
+        (Printf.sprintf "%s/%s_OutputTypesDefs.h"
+           (Options.get_output_dir ())
+           modul) in
+      FStar.IO.write_string output_types_defs_file (Target.print_output_types_defs modul t_decls);
+      FStar.IO.close_write_file output_types_defs_file
+    end;
 
     (*
      * Optimization: If the module has no extern types,
@@ -301,20 +313,20 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
     end
   end;
 
-  (*
-   * Optimization: If M only has extern functions, and no types,
-   *   then the external typedefs file is trivially empty
-   *)
+  // (*
+  //  * Optimization: If M only has extern functions, and no types,
+  //  *   then the external typedefs file is trivially empty
+  //  *)
 
-  if has_extern_fns && not (has_out_exprs || has_extern_types)
-  then begin
-    let extern_typedefs_file = open_write_file
-      (Printf.sprintf "%s/%s_ExternalTypedefs.h"
-        (Options.get_output_dir ())
-        modul) in
-    FStar.IO.write_string extern_typedefs_file "\n";
-    FStar.IO.close_write_file extern_typedefs_file
-  end;
+  // if has_extern_fns && not (has_out_exprs || has_extern_types)
+  // then begin
+  //   let extern_typedefs_file = open_write_file
+  //     (Printf.sprintf "%s/%s_ExternalTypedefs.h"
+  //       (Options.get_output_dir ())
+  //       modul) in
+  //   FStar.IO.write_string extern_typedefs_file "\n";
+  //   FStar.IO.close_write_file extern_typedefs_file
+  // end;
 
   if has_out_exprs
   then begin

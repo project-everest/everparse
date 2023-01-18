@@ -341,7 +341,7 @@ let print_output_type (qual:bool) (t:typ) : ML string =
   if qual 
   then match mopt with
        | None -> i
-       | Some m -> Printf.sprintf "%s.ExternalAPI.%s" m i
+       | Some m -> Printf.sprintf "%s.ExternalTypes.%s" m i
   else i
 
 let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
@@ -954,6 +954,9 @@ let print_decl_signature (mname:string) (d:decl) : ML string =
   | Extern_type _
   | Extern_fn _ _ _ -> ""
 
+let has_output_types (ds:list decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Output_type? d) ds
+
 let has_output_type_exprs (ds:list decl) : bool =
   List.Tot.existsb (fun (d, _) -> Output_type_expr? d) ds
 
@@ -1275,7 +1278,7 @@ let print_c_entry (modul: string)
              (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" dep)
              signatures_output_typ_deps) in
     let self =
-      if has_output_type_exprs ds || has_extern_types ds
+      if has_output_types ds || has_extern_types ds
       then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
       else "" in
     Printf.sprintf "%s\n%s\n\n" deps self in
@@ -1552,7 +1555,7 @@ let print_external_api_fstar (modul:string) (ds:decls) : ML string =
     modul
     s
 
-let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
+let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
@@ -1561,6 +1564,25 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
       Printf.sprintf "%s%s"
         (print_output_type_val tbl t)
         (print_output_type_val tbl (T_pointer t))
+    | Extern_type i ->
+      Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
+    | _ -> "")) in
+   Printf.sprintf
+    "module %s.ExternalTypes\n\n\
+     open EverParse3d.Prelude\n\
+     open EverParse3d.Actions.All\n\n%s"
+     modul
+    s
+
+let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
+  let tbl = H.create 10 in
+  let s = String.concat "" (ds |> List.map (fun d ->
+    match fst d with
+    // | Output_type ot ->
+    //   let t = T_app ot.out_typ_names.typedef_name A.KindOutput [] in
+    //   Printf.sprintf "%s%s"
+    //     (print_output_type_val tbl t)
+    //     (print_output_type_val tbl (T_pointer t))
     | Output_type_expr oe is_get ->
       Printf.sprintf "%s"
         // (print_output_type_val tbl oe.oe_bt)
@@ -1576,12 +1598,20 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
           (print_ident i)
           (print_typ modul t))))
     | _ -> "")) in
+
+   let external_types_include =
+     if has_output_types ds || has_extern_types ds
+     then Printf.sprintf "include %s.ExternalTypes\n\n" modul
+     else "" in
+
    Printf.sprintf
     "module %s.ExternalAPI\n\n\
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
+     %s\n\
      noextract val output_loc : eloc\n\n%s"
-     modul
+    modul
+    external_types_include
     s
 
 //
@@ -1612,15 +1642,22 @@ let print_out_exprs_c modul (ds:decls) : ML string =
     else
       String.concat ""
         (List.map (fun s -> FStar.Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" s) deps) in
+
+  let self_external_typedef_include =
+    if has_output_types ds
+    then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" modul
+    else "" in
+
+
   (Printf.sprintf
      "#include<stdint.h>\n\n\
       %s\
-      #include \"%s_ExternalTypedefs.h\"\n\n\
+      %s\
       #if defined(__cplusplus)\n\
       extern \"C\" {\n\
       #endif\n\n"
      dep_includes
-     modul)
+     self_external_typedef_include)
   ^
   (String.concat "" (ds |> List.map (fun d ->
      match fst d with
