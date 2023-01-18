@@ -1090,6 +1090,15 @@ let error_code_macros =
     #define EVERPARSE_ERROR_CONSTRAINT_FAILED 6uL\n\
     #define EVERPARSE_ERROR_UNEXPECTED_PADDING 7uL\n"
 
+let rec get_output_typ_dep (modul:string) (t:typ) : ML (option string) =
+  match t with
+  | T_app {v={modul_name=None}} _ _ -> None
+  | T_app {v={modul_name=Some m}} _ _ ->
+    if m = modul then None
+    else Some m
+  | T_pointer t -> get_output_typ_dep modul t
+  | _ -> failwith "get_typ_deps: unexpected output type"
+
 let print_c_entry (modul: string)
                   (env: global_env)
                   (ds:list decl)
@@ -1228,6 +1237,20 @@ let print_c_entry (modul: string)
     signature ^";",
     impl
   in
+
+  let signatures_output_typ_deps =
+    List.fold_left (fun deps (d, _) ->
+      match d with
+      | Type_decl d ->
+        if d.decl_name.td_entrypoint
+        then let params = d.decl_name.td_params in
+             List.fold_left (fun deps (_, t) ->
+               match get_output_typ_dep modul t with
+               | Some dep -> if List.mem dep deps then deps else deps@[dep]
+               | _ -> deps) deps params
+        else deps
+      | _ -> deps) [] ds in
+               
   let signatures, impls =
     List.split
       (List.collect
@@ -1240,6 +1263,23 @@ let print_c_entry (modul: string)
           | _ -> [])
         ds)
   in
+
+  let external_defs_includes =
+    let deps =
+      if List.length signatures_output_typ_deps = 0
+      then ""
+      else
+        String.concat
+          ""
+          (List.map
+             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" dep)
+             signatures_output_typ_deps) in
+    let self =
+      if has_output_types ds || has_extern_types ds
+      then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
+      else "" in
+    Printf.sprintf "%s\n%s\n\n" deps self in
+
   let header =
     Printf.sprintf
       "#include \"EverParseEndianness.h\"\n\
@@ -1253,9 +1293,7 @@ let print_c_entry (modul: string)
        }\n\
        #endif\n"
       error_code_macros
-      (if has_output_types ds || has_extern_types ds
-       then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
-       else "")
+      external_defs_includes
       (signatures |> String.concat "\n\n")
   in
   let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
@@ -1553,15 +1591,6 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
 //   so that they can be added in the M_OutputTypes.c file
 //
 let get_out_exprs_deps (modul:string) (ds:decls) : ML (list string) =
-  let rec get_typ_deps (t:typ) : ML (option string) =
-    match t with
-    | T_app {v={modul_name=None}} _ _ -> None
-    | T_app {v={modul_name=Some m}} _ _ ->
-      if m = modul then None
-      else Some m
-    | T_pointer t -> get_typ_deps t
-    | _ -> failwith "get_typ_deps: unexpected output type" in
-
   let maybe_add_dep (deps:list string) (s:option string) : list string =
     match s with
     | None -> deps
@@ -1570,8 +1599,8 @@ let get_out_exprs_deps (modul:string) (ds:decls) : ML (list string) =
   List.fold_left (fun deps (d, _) ->
     match d with
     | Output_type_expr oe _ ->
-      maybe_add_dep (maybe_add_dep deps (get_typ_deps oe.oe_bt))
-                    (get_typ_deps oe.oe_t)
+      maybe_add_dep (maybe_add_dep deps (get_output_typ_dep modul oe.oe_bt))
+                    (get_output_typ_dep modul oe.oe_t)
     | _ -> deps) [] ds
 
 let print_out_exprs_c modul (ds:decls) : ML string =

@@ -5,7 +5,7 @@
 //   UINT32BE th {:act *third = th; };
 // } WIRE_TRIPLE;
 
-export
+entrypoint
 typedef struct _PAIR (mutable AA::OPAIR *pair)
 {
   UINT32 fst {:act pair->fst = fst; };

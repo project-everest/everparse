@@ -1,4 +1,4 @@
-export
+entrypoint
 typedef struct _TRIPLE (mutable AA::OTRIPLE *p)
 {
   UINT32 fst {:act p->fst = fst; };
