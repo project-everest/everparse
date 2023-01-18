@@ -330,7 +330,7 @@ let print_output_type (qual:bool) (t:typ) : ML string =
   let rec aux (t:typ)
     : ML (option string & string)
     = match t with
-      | T_app id _ _ -> 
+      | T_app id _ _ ->
         id.v.modul_name, print_ident id
       | T_pointer t ->
         let m, i = aux t in
@@ -1485,10 +1485,15 @@ let print_external_api_fstar (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
+    | Output_type ot ->
+      let t = T_app ot.out_typ_names.typedef_name A.KindOutput [] in
+      Printf.sprintf "%s%s"
+        (print_output_type_val tbl t)
+        (print_output_type_val tbl (T_pointer t))
     | Output_type_expr oe is_get ->
-      Printf.sprintf "%s%s%s"
-        (print_output_type_val tbl oe.oe_bt)
-        (print_output_type_val tbl oe.oe_t)
+      Printf.sprintf "%s"
+        // (print_output_type_val tbl oe.oe_bt)
+        // (print_output_type_val tbl oe.oe_t)
         (if not is_get then print_out_expr_set_fstar tbl modul oe
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
@@ -1513,10 +1518,15 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
+    | Output_type ot ->
+      let t = T_app ot.out_typ_names.typedef_name A.KindOutput [] in
+      Printf.sprintf "%s%s"
+        (print_output_type_val tbl t)
+        (print_output_type_val tbl (T_pointer t))
     | Output_type_expr oe is_get ->
-      Printf.sprintf "%s%s%s"
-        (print_output_type_val tbl oe.oe_bt)
-        (print_output_type_val tbl oe.oe_t)
+      Printf.sprintf "%s"
+        // (print_output_type_val tbl oe.oe_bt)
+        // (print_output_type_val tbl oe.oe_t)
         (if not is_get then print_out_expr_set_fstar tbl modul oe
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
@@ -1536,14 +1546,51 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      modul
     s
 
+//
+// When printing output expressions in C,
+//   the output types may be coming from some other module
+// This function gets all the dependencies from output expressions
+//   so that they can be added in the M_OutputTypes.c file
+//
+let get_out_exprs_deps (modul:string) (ds:decls) : ML (list string) =
+  let rec get_typ_deps (t:typ) : ML (option string) =
+    match t with
+    | T_app {v={modul_name=None}} _ _ -> None
+    | T_app {v={modul_name=Some m}} _ _ ->
+      if m = modul then None
+      else Some m
+    | T_pointer t -> get_typ_deps t
+    | _ -> failwith "get_typ_deps: unexpected output type" in
+
+  let maybe_add_dep (deps:list string) (s:option string) : list string =
+    match s with
+    | None -> deps
+    | Some s -> if List.mem s deps then deps else deps@[s] in
+
+  List.fold_left (fun deps (d, _) ->
+    match d with
+    | Output_type_expr oe _ ->
+      maybe_add_dep (maybe_add_dep deps (get_typ_deps oe.oe_bt))
+                    (get_typ_deps oe.oe_t)
+    | _ -> deps) [] ds
+
 let print_out_exprs_c modul (ds:decls) : ML string =
   let tbl = H.create 10 in
+  let deps = get_out_exprs_deps modul ds in
+  let dep_includes =
+    if List.length deps = 0
+    then ""
+    else
+      String.concat ""
+        (List.map (fun s -> FStar.Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" s) deps) in
   (Printf.sprintf
      "#include<stdint.h>\n\n\
+      %s\
       #include \"%s_ExternalTypedefs.h\"\n\n\
       #if defined(__cplusplus)\n\
       extern \"C\" {\n\
       #endif\n\n"
+     dep_includes
      modul)
   ^
   (String.concat "" (ds |> List.map (fun d ->

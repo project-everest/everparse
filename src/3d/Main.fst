@@ -133,6 +133,9 @@ let translate_module (en:env) (mname:string) (fn:string)
   static_asserts,
   en
 
+let has_output_types (t_decls:list Target.decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Target.Output_type? d) t_decls
+
 let has_out_exprs (t_decls:list Target.decl) : bool =
   List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
 
@@ -155,6 +158,7 @@ let emit_fstar_code_for_interpreter (en:env)
     in
 
     let has_external_api =
+      has_output_types tds ||
       has_out_exprs tds ||
       has_extern_types tds ||
       has_extern_functions tds in
@@ -241,6 +245,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file h_file
   end;
 
+  let has_output_types = has_output_types t_decls in
   let has_out_exprs = has_out_exprs t_decls in
   let has_extern_types = has_extern_types t_decls in
   let has_extern_fns = has_extern_functions t_decls in
@@ -251,7 +256,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
    *   then emit output type definitions in M_OutputTypesDefs.h
    *)
 
-  if has_out_exprs && emit_output_types_defs
+  if (has_output_types || has_out_exprs) && emit_output_types_defs
   then begin
     let output_types_defs_file = open_write_file
       (Printf.sprintf "%s/%s_OutputTypesDefs.h"

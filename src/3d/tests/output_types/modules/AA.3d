@@ -1,17 +1,23 @@
 export
-typedef UINT32 U32;
-
 output
-typedef struct _PAIR {
-  U32 fst;
-  U32 snd;
-} PAIR;
-
+typedef struct _OPAIR {
+  UINT32 fst;
+  UINT32 snd;
+} OPAIR;
 
 export
-typedef struct _WIRE_PAIR(mutable PAIR *out)
-{
-  UINT32BE fst {:act out->fst = fst; };
-  UINT32BE snd {:act out->snd = snd; };
-//  PAIR junk; // Crashes on this
-} WIRE_PAIR;
+output
+typedef struct _OTRIPLE {
+  UINT32 fst;
+  UINT32 snd;
+  UINT32 thd;
+} OTRIPLE;
+
+
+/* export */
+/* typedef struct _WIRE_PAIR(mutable PAIR *out) */
+/* { */
+/*   UINT32BE fst {:act out->fst = fst; }; */
+/*   UINT32BE snd {:act out->snd = snd; }; */
+/* //  PAIR junk; // Crashes on this */
+/* } WIRE_PAIR; */

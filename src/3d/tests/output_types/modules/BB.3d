@@ -6,11 +6,8 @@
 // } WIRE_TRIPLE;
 
 export
-typedef struct _ANOTHER_WIRE_TRIPLE(mutable AA::PAIR *pair,
-                                    mutable UINT32 *third)
+typedef struct _PAIR (mutable AA::OPAIR *pair)
 {
-  AA::U32 fst;
-  UINT32BE snd
-  {:act pair->snd = snd; };
-  UINT32BE th;
-} ANOTHER_WIRE_TRIPLE;
+  UINT32 fst {:act pair->fst = fst; };
+  UINT32 snd {:act pair->snd = snd; };
+} PAIR;
