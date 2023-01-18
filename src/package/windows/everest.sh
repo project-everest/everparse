@@ -225,23 +225,12 @@ parse_z3_version () {
 # The functions that implement the main actions
 # ------------------------------------------------------------------------------
 
-compile_z3 () {
-    if ! [[ -d z3-source ]] ; then
-        try_git_clone "git@github.com:Z3Prover/Z3.git" "https://github.com/Z3Prover/z3.git" z3-source
-    fi
+use_our_z3 () {
     local z3_dir=$(realpath $PWD)/z3
-    (
-        cd z3-source
-        git checkout Z3-4.8.5
-        if is_windows ; then
-            CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar python scripts/mk_make.py --prefix="$z3_dir"
-        else
-            python scripts/mk_make.py --prefix="$z3_dir"
-        fi
-    )
-    $MAKE -C z3-source/build $make_opts
-    rm -rf z3
-    $MAKE -C z3-source/build install
+    if ! PATH="$z3_dir/bin:$PATH" which z3 >/dev/null 2>&1 ; then
+        red "Z3 has not been compiled yet, abort"
+        exit 1
+    fi
     magenta "Automatically customize $EVEREST_ENV_DEST_FILE with the z3 path? [Yn]"
     prompt_yes "write_z3_env_dest_file z3" true
 }
@@ -252,8 +241,8 @@ do_update_z3 () {
   local new_z3=4.8.5
   if [[ $new_z3 != $current_z3 ]]; then
     red "This is not z3 $current_z3"
-    magenta "Compile z3 from sources? [Yn]"
-    prompt_yes compile_z3 false
+    magenta "Use our existing z3? [Yn]"
+    prompt_yes use_our_z3 false
   fi
 }
 
