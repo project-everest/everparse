@@ -57,6 +57,14 @@ $ProgressPreference = 'SilentlyContinue'
 # Switch to this script's directory
 Push-Location -ErrorAction Stop -LiteralPath $PSScriptRoot
 
+# Build z3 with Visual Studio
+$Error.Clear()
+cmd.exe /c .\build-z3.cmd
+if (-not $?) {
+    $Error
+    exit 1
+}
+
 $Error.Clear()
 Write-Host "Install Cygwin with git"
 Invoke-WebRequest "https://www.cygwin.com/setup-x86_64.exe" -outfile "cygwinsetup.exe"
