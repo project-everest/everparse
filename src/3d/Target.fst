@@ -954,7 +954,7 @@ let print_decl_signature (mname:string) (d:decl) : ML string =
   | Extern_type _
   | Extern_fn _ _ _ -> ""
 
-let has_output_types (ds:list decl) : bool =
+let has_output_type_exprs (ds:list decl) : bool =
   List.Tot.existsb (fun (d, _) -> Output_type_expr? d) ds
 
 let has_extern_types (ds:list decl) : bool =
@@ -964,7 +964,7 @@ let has_extern_functions (ds:list decl) : bool =
   List.Tot.existsb (fun (d, _) -> Extern_fn? d) ds
 
 let external_api_include (modul:string) (ds:list decl) : string =
-  if has_output_types ds || has_extern_types ds || has_extern_functions ds
+  if has_output_type_exprs ds || has_extern_types ds || has_extern_functions ds
   then Printf.sprintf "open %s.ExternalAPI\n\n" modul
   else ""
 
@@ -1275,7 +1275,7 @@ let print_c_entry (modul: string)
              (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" dep)
              signatures_output_typ_deps) in
     let self =
-      if has_output_types ds || has_extern_types ds
+      if has_output_type_exprs ds || has_extern_types ds
       then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
       else "" in
     Printf.sprintf "%s\n%s\n\n" deps self in
