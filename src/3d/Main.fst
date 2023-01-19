@@ -285,7 +285,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
      * So generate M_ExteralTypedefs.h, with #include of M_OutputTypesDefs.h
      *)
 
-    if not has_extern_types
+    if has_output_types && not has_extern_types
     then begin
       let extern_typedefs_file = open_write_file
         (Printf.sprintf "%s/%s_ExternalTypedefs.h"
