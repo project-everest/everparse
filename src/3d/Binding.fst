@@ -1778,6 +1778,19 @@ let get_exported_decls ge mname =
          then k::exported_decls, private_decls
          else exported_decls, k::private_decls) ge.ge_h ([], [])
 
-let finish_module ge mname e_and_p =
-  e_and_p |> snd |> List.iter (H.remove ge.ge_h);
+let finish_module ge mname =
+  let remove_private_decls (tbl:H.t ident' 'a) (f:'a -> decl) : ML unit =
+    let pvt_decls = H.fold (fun k v idents ->
+      if not (k.modul_name = Some mname)
+      then idents
+      else let d = f v in
+           if d.d_exported
+           then idents
+           else k::idents) tbl [] in
+    List.iter (H.remove tbl) pvt_decls in
+
+  remove_private_decls ge.ge_h (fun (d, _) -> d);
+  remove_private_decls ge.ge_out_t (fun d -> d);
+  remove_private_decls ge.ge_extern_t (fun d -> d);
+  remove_private_decls ge.ge_extern_fn (fun d -> d);
   ge

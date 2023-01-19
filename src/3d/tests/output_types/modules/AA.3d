@@ -12,12 +12,3 @@ typedef struct _OTRIPLE {
   UINT32 snd;
   UINT32 thd;
 } OTRIPLE;
-
-
-/* export */
-/* typedef struct _WIRE_PAIR(mutable PAIR *out) */
-/* { */
-/*   UINT32BE fst {:act out->fst = fst; }; */
-/*   UINT32BE snd {:act out->snd = snd; }; */
-/* //  PAIR junk; // Crashes on this */
-/* } WIRE_PAIR; */

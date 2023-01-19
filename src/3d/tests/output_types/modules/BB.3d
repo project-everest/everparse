@@ -1,10 +1,3 @@
-// export
-// typedef struct _WIRE_TRIPLE(mutable AA::PAIR *pair, mutable UINT32 *third)
-// {
-//   AA::WIRE_PAIR(pair) fst_snd;
-//   UINT32BE th {:act *third = th; };
-// } WIRE_TRIPLE;
-
 entrypoint
 typedef struct _PAIR (mutable AA::OPAIR *pair)
 {

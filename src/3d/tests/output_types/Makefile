@@ -3,7 +3,10 @@ export EVERPARSE_HOME
 EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe
 SOURCE_FILES=TPoint.3d AnonStruct.3d AnonUnion.3d
 
-all: basic interpret
+all: basic interpret modules
+
+modules:
+	+$(MAKE) -C modules
 
 basic: $(SOURCE_FILES) basic.out
 	$(EVERPARSE_CMD) --batch TPoint.3d --odir basic.out

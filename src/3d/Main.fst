@@ -374,7 +374,7 @@ let process_file (en:env)
   TypeSizes.finish_module en.typesizes_env modul ds;
 
   { en with 
-    binding_env = Binding.finish_module en.binding_env modul ds;
+    binding_env = Binding.finish_module en.binding_env modul;
     translate_env = 
       en.translate_env;
   }
