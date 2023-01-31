@@ -252,9 +252,9 @@ let produce_h_rules
 let produce_output_types_o_rule
   (g:Deps.dep_graph)
   (modul:string)
-: list rule_t
+: FStar.All.ML (list rule_t)
 =
-  if Deps.has_output_types g modul
+  if Deps.has_out_exprs g modul
   then
     let h = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "h" in
     let c = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "c" in
@@ -265,7 +265,9 @@ let produce_output_types_o_rule
       from = [c; h; defs];
       to = o;
       args = Printf.sprintf "-o %s %s" o c; }]
-  else []
+  else
+    let _ = FStar.IO.print_string (Printf.sprintf "%s has no output types\n" modul) in
+    []
     
 let produce_o_rule
   (modul: string)
@@ -348,7 +350,7 @@ let produce_makefile
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule g) all_modules `List.Tot.append`
       List.Tot.concatMap (produce_static_assertions_o_rule g) all_modules `List.Tot.append`
-      List.Tot.concatMap (produce_output_types_o_rule g) all_modules `List.Tot.append`
+      List.concatMap (produce_output_types_o_rule g) all_modules `List.Tot.append`
       List.Tot.map produce_o_rule all_modules
     ) `List.Tot.append`
     List.concatMap (produce_fst_rules g clang_format) all_files `List.Tot.append`

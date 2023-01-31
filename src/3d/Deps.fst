@@ -15,6 +15,7 @@ type dep_graph = {
   modules_with_entrypoint: list string;
   modules_with_static_assertions: list string;
   modules_with_output_types: list string;
+  modules_with_out_exprs: list string;
   modules_with_extern_types: list string;
   modules_with_extern_functions: list string
 }
@@ -60,6 +61,7 @@ type scan_deps_t = {
   sd_has_entrypoint: bool;
   sd_has_static_assertions: bool;
   sd_has_output_types: bool;
+  sd_has_out_exprs: bool;
   sd_has_extern_types: bool;
   sd_has_extern_functions: bool
 }
@@ -198,6 +200,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
   let has_output_types (ds:list decl) : bool =
     List.Tot.existsb (fun d -> OutputType? d.d_decl.v) ds in
 
+  let has_out_exprs (ds:list decl) : bool =
+    List.Tot.existsb decl_has_out_expr ds in
+
   let has_extern_types (ds:list decl) : bool =
     List.Tot.existsb (fun d -> ExternType? d.d_decl.v) ds in
 
@@ -209,6 +214,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     sd_has_entrypoint = has_entrypoint;
     sd_has_static_assertions = has_static_assertions;
     sd_has_output_types = has_output_types decls;
+    sd_has_out_exprs = has_out_exprs decls;
     sd_has_extern_types = has_extern_types decls;
     sd_has_extern_functions = has_extern_functions decls;
   }
@@ -223,6 +229,7 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
          sd_deps = deps;
          sd_has_static_assertions = has_static_assertions;
          sd_has_output_types = has_output_types;
+         sd_has_out_exprs = has_out_exprs;
          sd_has_extern_types = has_extern_types;
          sd_has_extern_functions = has_extern_functions} =
       scan_deps (Options.get_file_name (OS.concat dirname mname))
@@ -236,6 +243,7 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
       modules_with_entrypoint = (if has_entrypoint then mname :: g.modules_with_entrypoint else g.modules_with_entrypoint);
       modules_with_static_assertions = (if has_static_assertions then mname :: g.modules_with_static_assertions else g.modules_with_static_assertions);
       modules_with_output_types = (if has_output_types then mname::g.modules_with_output_types else g.modules_with_output_types);
+      modules_with_out_exprs = (if has_out_exprs then mname::g.modules_with_out_exprs else g.modules_with_out_exprs);
       modules_with_extern_types = (if has_extern_types then mname::g.modules_with_extern_types else g.modules_with_extern_types);
       modules_with_extern_functions = (if has_extern_functions then mname::g.modules_with_extern_functions else g.modules_with_extern_functions);
     }
@@ -249,6 +257,7 @@ let build_dep_graph_from_list files =
     modules_with_entrypoint = [];
     modules_with_static_assertions = [];
     modules_with_output_types = [];
+    modules_with_out_exprs = [];
     modules_with_extern_types = [];
     modules_with_extern_functions = []
   }
@@ -285,6 +294,8 @@ let has_entrypoint g m = List.Tot.mem m g.modules_with_entrypoint
 let has_static_assertions g m = List.Tot.mem m g.modules_with_static_assertions
 
 let has_output_types g m = List.Tot.mem m g.modules_with_output_types
+
+let has_out_exprs g m = List.Tot.mem m g.modules_with_out_exprs
 
 let has_extern_types g m = List.Tot.mem m g.modules_with_extern_types
 

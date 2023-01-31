@@ -581,6 +581,103 @@ let is_entrypoint d = match d.d_decl.v with
     has_entrypoint (names.typedef_attributes)
   | _ -> false
 
+(** Determine if there are output type expressions: which cases in
+   TranslateForInterpreter introduce the Output_type_expr constructor?
+   *)
+
+/// Matches translate_action_assignment, translate_action_field_ptr_after
+let out_expr_is_out_type_expr (lhs: out_expr) : Tot bool =
+  match lhs.out_expr_node.v with
+  | OE_star ({out_expr_node = {v=OE_id i}}) -> false
+  | _ -> true
+
+/// Matches translate_atomic_action
+let atomic_action_has_out_expr (a: atomic_action) : Tot bool =
+  match a with
+  | Action_field_ptr_after _ write_to
+  | Action_assignment write_to _
+    -> out_expr_is_out_type_expr write_to
+  | _ -> false
+
+/// Matches translate_action
+let rec action_has_out_expr (a: action) : Tot bool =
+  match a.v with
+  | Atomic_action a -> atomic_action_has_out_expr a
+  | Action_seq hd tl ->
+    if atomic_action_has_out_expr hd
+    then true
+    else action_has_out_expr tl
+  | Action_ite _ then_ (Some else_) ->
+    if action_has_out_expr then_
+    then true
+    else action_has_out_expr else_
+  | Action_ite _ then_ None ->
+    action_has_out_expr then_
+  | Action_let _ a k ->
+    if atomic_action_has_out_expr a
+    then true
+    else action_has_out_expr k
+  | Action_act a ->
+    action_has_out_expr a
+
+let field_action_has_out_expr 
+  (f: option (action & bool))
+: Tot bool
+= match f with
+  | None -> false
+  | Some (a, _) -> action_has_out_expr a
+
+/// Matches translate_atomic_field
+let atomic_field_has_out_expr (f: atomic_field) : Tot bool =
+  let sf = f.v in
+  field_action_has_out_expr sf.field_action
+
+/// Matches field_as_grouped_fields
+let rec field_has_out_expr (f: field) : Tot bool =
+  match f.v with
+  | AtomicField af ->
+    atomic_field_has_out_expr af
+  | RecordField fs _ ->
+    record_has_out_expr fs
+  | SwitchCaseField sw _ ->
+    switch_case_has_out_expr sw
+
+and record_has_out_expr (fs: record) : Tot bool =
+  match fs with
+  | [] -> false
+  | f :: fs' ->
+    if field_has_out_expr f
+    then true
+    else record_has_out_expr fs'
+
+and switch_case_has_out_expr (sw: switch_case) : Tot bool =
+  let (_, c) = sw in
+  cases_have_out_expr c
+
+and cases_have_out_expr (cs: list case) : Tot bool =
+  match cs with
+  | [] -> false
+  | c :: cs ->
+    if case_has_out_expr c
+    then true
+    else cases_have_out_expr cs
+
+and case_has_out_expr (c: case) : Tot bool =
+  match c with
+  | Case _ f
+  | DefaultCase f
+    ->
+    field_has_out_expr f
+
+/// Matches parse_field
+let decl_has_out_expr (d: decl) : Tot bool =
+  match d.d_decl.v with
+  | Record _ _ _ ast_fields ->
+    record_has_out_expr ast_fields
+  | CaseType _ _ switch_case ->
+    switch_case_has_out_expr switch_case
+  | _ -> false
+
 (** Equality on expressions and types **)
 
 /// eq_expr partially decides equality on expressions, by requiring
