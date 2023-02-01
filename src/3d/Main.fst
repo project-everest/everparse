@@ -170,6 +170,7 @@ let emit_fstar_code_for_interpreter (en:env)
 
     let has_external_api =
       has_out_exprs tds ||
+      has_extern_types tds || // FIXME: I added this to fix discrepancy with GenMakefile, does this make sense?
       has_extern_functions tds in
 
     if has_external_api
@@ -472,6 +473,7 @@ let go () : ML unit =
     GenMakefile.write_makefile
       t
       input_stream_binding
+      (Options.get_emit_output_types_defs ())
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())
       cmd_line_files

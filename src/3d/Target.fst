@@ -978,12 +978,11 @@ let print_decls (modul: string) (ds:list decl) =
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
      %s\
-     include %s.Types\n\n\
+     \n\n\
      #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
      %s"
      modul
      (external_api_include modul ds)
-     modul
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n"
        (ds |> List.map (print_decl_for_validators modul)
            |> List.filter (fun s -> s <> "")))
@@ -1014,11 +1013,10 @@ let print_decls_signature (mname: string) (ds:list decl) =
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
      %s\
-     include %s.Types\n\n\
+     \n\n\
      %s"
      mname
      (external_api_include mname ds)
-     mname
      (String.concat "\n" (ds |> List.map (print_decl_signature mname) |> List.filter (fun s -> s <> "")))
   in
   // let dummy =
