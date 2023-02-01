@@ -3,10 +3,13 @@ export EVERPARSE_HOME
 EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe
 SOURCE_FILES=TPoint.3d AnonStruct.3d AnonUnion.3d
 
-all: basic interpret modules
+all: basic interpret modules modules_batch
 
 modules:
-	+$(MAKE) -C modules
+	+$(MAKE) -C $@
+
+modules_batch:
+	+$(MAKE) -C $@
 
 basic: $(SOURCE_FILES) basic.out
 	$(EVERPARSE_CMD) --batch TPoint.3d --odir basic.out
@@ -47,4 +50,4 @@ FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 %.out:
 	mkdir -p $@
 
-.PHONY: all basic interpret
+.PHONY: all basic interpret modules modules_batch
