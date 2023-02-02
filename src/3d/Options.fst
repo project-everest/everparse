@@ -307,7 +307,7 @@ let display_usage_1 (options: ref (list cmd_option)) : ML unit =
       let m = cmd_option_name x in
       let desc = cmd_option_description x in
       let argdesc = cmd_option_arg_desc x in
-      let argdesc = if argdesc = "" then "" else Printf.sprintf "<%s>" argdesc in
+      let argdesc = if argdesc = "" then "" else Printf.sprintf " <%s>" argdesc in
       let negate = if CmdOption? x then Printf.sprintf " (opposite is --%s)" (negate_name m) else "" in
       let visible = not (m `string_starts_with` "__") in
       if visible then FStar.IO.print_string (Printf.sprintf "--%s%s%s\n\t%s\n" m argdesc negate desc)
