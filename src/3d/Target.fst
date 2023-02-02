@@ -1307,6 +1307,8 @@ let print_c_entry (modul: string)
       input_stream_include
       header
   in
+  let add_includes = Options.make_includes () in
+  let header = Printf.sprintf "%s%s" add_includes header in
   let error_callback_proto =
     if HashingOptions.InputStreamBuffer? input_stream_binding
     then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
@@ -1337,6 +1339,7 @@ let print_c_entry (modul: string)
         input_stream_include
         impl
   in
+  let impl = Printf.sprintf "%s%s" add_includes impl in
   header,
   impl
 
@@ -1648,12 +1651,13 @@ let print_out_exprs_c modul (ds:decls) : ML string =
 
 
   (Printf.sprintf
-     "#include<stdint.h>\n\n\
+     "%s#include<stdint.h>\n\n\
       %s\
       %s\
       #if defined(__cplusplus)\n\
       extern \"C\" {\n\
       #endif\n\n"
+     (Options.make_includes ())
      dep_includes
      self_external_typedef_include)
   ^
@@ -1715,7 +1719,7 @@ let print_output_types_defs (modul:string) (ds:decls) : ML string =
      #if defined(__cplusplus)\n\
      extern \"C\" {\n\
      #endif\n\n\n\
-     %s\n\n\n\
+     %s%s\n\n\n\
      #if defined(__cplusplus)\n\
      }\n\
      #endif\n\n\
@@ -1724,5 +1728,6 @@ let print_output_types_defs (modul:string) (ds:decls) : ML string =
 
     modul
     modul
+    (Options.make_includes ())
     defs
     modul

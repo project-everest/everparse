@@ -224,7 +224,6 @@ let emit_fstar_code_for_interpreter (en:env)
 
     ()
    
-
 let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
                     (static_asserts:StaticAssertions.static_asserts)
                     (emit_output_types_defs:bool)
@@ -243,6 +242,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
         (Printf.sprintf "%s/%sWrapper.c"
           (Options.get_output_dir())
           modul) in
+          
     FStar.IO.write_string c_file wrapper_impl;
     FStar.IO.close_write_file c_file;
 
@@ -299,7 +299,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
            #if defined(__cplusplus)\n\
            extern \"C\" {\n\
            #endif\n\n\n\
-           #include \"%s_OutputTypesDefs.h\"\n\n\
+           %s#include \"%s_OutputTypesDefs.h\"\n\n\
            #if defined(__cplusplus)\n\
            }\n\
            #endif\n\n\
@@ -308,6 +308,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
 
           modul
           modul
+          (Options.make_includes ())
           modul
           modul);
       FStar.IO.close_write_file extern_typedefs_file
@@ -423,6 +424,7 @@ let produce_and_postprocess_c
   let dep_files_and_modules = List.filter (fun (_, m) -> m <> modul) dep_files_and_modules in
   Batch.produce_and_postprocess_one_c
     (Options.get_input_stream_binding ())
+    (Options.get_add_include ())
     (Options.get_clang_format ())
     (Options.get_clang_format_executable ())
     out_dir
@@ -519,6 +521,7 @@ let go () : ML unit =
   then
   let _ = Batch.postprocess_fst
         input_stream_binding
+        (Options.get_add_include ())
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
         (Options.get_skip_c_makefiles ())

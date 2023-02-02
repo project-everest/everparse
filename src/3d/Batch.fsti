@@ -36,6 +36,7 @@ val copy_clang_format
 
 val produce_and_postprocess_one_c
   (_: input_stream_binding_t)
+  (add_include: list string)
   (clang_format: bool)
   (clang_format_executable: string)
   (out_dir: string)
@@ -54,6 +55,7 @@ val postprocess_wrappers
 
 val postprocess_fst
   (_: input_stream_binding_t)
+  (add_include: list string)
   (clang_format: bool)
   (clang_format_executable: string)
   (skip_c_makefiles: bool)
