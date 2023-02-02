@@ -34,10 +34,8 @@ nswamy, protz, taramana 5-Feb-2020
 
 #  include <windef.h>
 
-typedef const char * EverParseString;
-typedef EverParseString PrimsString;
-typedef EverParseString EVERPARSE_STRING;
-typedef PrimsString PRIMS_STRING;
+typedef const char * EVERPARSE_STRING;
+typedef EVERPARSE_STRING PRIMS_STRING;
 
 #ifndef KRML_HOST_PRINTF
 #  include <stdio.h>
