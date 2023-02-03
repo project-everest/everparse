@@ -264,8 +264,7 @@ let krml_args input_stream_binding add_include skip_c_makefiles out_dir files_an
 
   let external_types_lib_args modul =  
     if has_external_types modul
-    then ["-library"; Printf.sprintf "%s.ExternalTypes" modul;
-           "-hand-written"; Printf.sprintf "%s.ExternalTypes" modul]
+    then ["-drop"; Printf.sprintf "%s.ExternalTypes" modul]
     else [] in
   
   let external_api_lib_args modul =  
