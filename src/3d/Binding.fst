@@ -165,10 +165,10 @@ let remove_local (e:env) (i:ident) : ML unit =
 
 let resolve_record_case_output_extern_type_name (env:env) (i:ident) =
   match H.try_find (global_env_of_env env).ge_out_t i.v with
-  | Some ({d_decl={v=OutputType ({out_typ_names=names})}}) -> names.typedef_name
+  | Some ({d_decl={v=OutputType ({out_typ_names=names})}}) -> names.typedef_abbrev
   | _ ->
     (match H.try_find (global_env_of_env env).ge_extern_t i.v with
-     | Some ({d_decl={v=ExternType td_names}}) -> td_names.typedef_name
+     | Some ({d_decl={v=ExternType td_names}}) -> td_names.typedef_abbrev
      | _ ->
        (match lookup env i with
         | Inr ({d_decl={v=Record names _ _ _}}, _)

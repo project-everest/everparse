@@ -1057,6 +1057,8 @@ let pascal_case name : ML string =
   then name
   else String.uppercase (String.sub name 0 1) ^ String.sub name 1 (String.length name - 1)
 
+let uppercase (name:string) : string = String.uppercase name
+
 let rec print_as_c_type (t:typ) : ML string =
     let open Ast in
     match t with
@@ -1077,7 +1079,7 @@ let rec print_as_c_type (t:typ) : ML string =
     | T_app {v={name=x}} KindSpec [] ->
           x
     | T_app {v={name=x}} _ [] ->
-          pascal_case x
+          uppercase x
     | _ ->
          "__UNKNOWN__"
 
@@ -1112,10 +1114,10 @@ let print_c_entry (modul: string)
                               const char *reason,\n\t\
                               uint64_t error_code,\n\t\
                               uint8_t *context,\n\t\
-                              EverParseInputBuffer input,\n\t\
+                              EVERPARSE_INPUT_BUFFER input,\n\t\
                               uint64_t start_pos)\n\
           {\n\t\
-            EverParseErrorFrame *frame = (EverParseErrorFrame*)context;\n\t\
+            EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;\n\t\
             EverParseDefaultErrorHandler(\n\t\t\
               typename_s,\n\t\t\
               fieldname,\n\t\t\
@@ -1131,7 +1133,7 @@ let print_c_entry (modul: string)
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
    let wrapped_call_buffer name params =
      Printf.sprintf
-       "EverParseErrorFrame frame;\n\t\
+       "EVERPARSE_ERROR_FRAME frame;\n\t\
        frame.filled = FALSE;\n\t\
        %s\
        uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t\
@@ -1145,21 +1147,21 @@ let print_c_entry (modul: string)
        }\n\t\
        return TRUE;"
        (if is_input_stream_buffer then ""
-        else "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t")
+        else "EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t")
        name
        params
        modul
    in
    let wrapped_call_stream name params =
      Printf.sprintf
-       "EverParseErrorFrame frame =\n\t\
+       "EVERPARSE_ERROR_FRAME frame =\n\t\
              { .filled = FALSE,\n\t\
                .typename_s = \"UNKNOWN\",\n\t\
                .fieldname =  \"UNKNOWN\",\n\t\
                .reason =   \"UNKNOWN\",\n\t\
                .error_code = 0uL\n\
              };\n\
-       EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t\
+       EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t\
        uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
        uint64_t parsedSize = EverParseGetValidatorErrorPos(result);\n\
        if (EverParseIsError(result))\n\t\
@@ -1528,7 +1530,7 @@ let print_external_api_fstar (modul:string) (ds:decls) : ML string =
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
     | Output_type ot ->
-      let t = T_app ot.out_typ_names.typedef_name A.KindOutput [] in
+      let t = T_app ot.out_typ_names.typedef_abbrev A.KindOutput [] in
       Printf.sprintf "%s%s"
         (print_output_type_val tbl t)
         (print_output_type_val tbl (T_pointer t))
@@ -1561,7 +1563,7 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
     | Output_type ot ->
-      let t = T_app ot.out_typ_names.typedef_name A.KindOutput [] in
+      let t = T_app ot.out_typ_names.typedef_abbrev A.KindOutput [] in
       Printf.sprintf "%s%s"
         (print_output_type_val tbl t)
         (print_output_type_val tbl (T_pointer t))
@@ -1702,9 +1704,9 @@ let print_out_typ (ot:A.out_typ) : ML string =
   Printf.sprintf
     "\ntypedef %s %s {\n%s\n} %s;\n"
     (if ot.out_typ_is_union then "union" else "struct")
-    (pascal_case (A.ident_name ot.out_typ_names.typedef_name))
+    (uppercase (A.ident_name ot.out_typ_names.typedef_name))
     (print_output_types_fields ot.out_typ_fields)
-    (pascal_case (A.ident_name ot.out_typ_names.typedef_name))
+    (uppercase (A.ident_name ot.out_typ_names.typedef_abbrev))
 
 let print_output_types_defs (modul:string) (ds:decls) : ML string =
   let defs =

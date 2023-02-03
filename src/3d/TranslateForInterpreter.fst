@@ -1406,7 +1406,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
 
   | OutputType out_t -> [with_comments (T.Output_type out_t) false []]  //No decl for output type specifications
 
-  | ExternType tdnames -> [with_comments (T.Extern_type tdnames.typedef_name) false []]
+  | ExternType tdnames -> [with_comments (T.Extern_type tdnames.typedef_abbrev) false []]
 
   | ExternFn f ret params ->
     let ret, ds = translate_typ ret in

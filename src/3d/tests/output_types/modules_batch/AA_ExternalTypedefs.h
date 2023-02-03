@@ -5,16 +5,16 @@
 extern "C" {
 #endif
 
-typedef struct _Opair {
+typedef struct _OPAIR {
   uint32_t fst;
   uint32_t snd;
-} Opair;
+} OPAIR;
 
-typedef struct _Otriple {
+typedef struct _OTRIPLE {
   uint32_t fst;
   uint32_t snd;
   uint32_t thd;
-} Otriple;
+} OTRIPLE;
 
 #if defined(__cplusplus)
 }
