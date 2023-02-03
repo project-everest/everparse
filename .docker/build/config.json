@@ -30,6 +30,6 @@
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
         "hacl_version" : "origin/main",
-        "karamel_version" : "origin/taramana_erase_hand_written_types"
+        "karamel_version" : "origin/master"
     }
 }
