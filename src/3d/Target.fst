@@ -1394,7 +1394,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
               Printf.sprintf "\n\nval %s : Type0\n\n" s
             | T_pointer bt ->
               let bs = print_output_type_val tbl bt in
-              bs ^ (Printf.sprintf "\n\ntype %s = bpointer %s\n\n" s (print_output_type false bt))
+              bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = bpointer %s\n\n" s (print_output_type false bt))
   else ""
 
 // let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
