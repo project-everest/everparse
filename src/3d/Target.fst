@@ -1268,6 +1268,7 @@ let print_c_entry (modul: string)
   in
 
   let external_defs_includes =
+    if not (Options.get_emit_output_types_defs ()) then "" else
     let deps =
       if List.length signatures_output_typ_deps = 0
       then ""
@@ -1639,15 +1640,16 @@ let get_out_exprs_deps (modul:string) (ds:decls) : ML (list string) =
 let print_out_exprs_c modul (ds:decls) : ML string =
   let tbl = H.create 10 in
   let deps = get_out_exprs_deps modul ds in
+  let emit_output_types_defs = Options.get_emit_output_types_defs () in
   let dep_includes =
-    if List.length deps = 0
+    if List.length deps = 0 || not emit_output_types_defs
     then ""
     else
       String.concat ""
         (List.map (fun s -> FStar.Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" s) deps) in
 
   let self_external_typedef_include =
-    if has_output_types ds
+    if has_output_types ds && emit_output_types_defs
     then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" modul
     else "" in
 

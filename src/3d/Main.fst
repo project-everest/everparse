@@ -424,6 +424,7 @@ let produce_and_postprocess_c
   let dep_files_and_modules = List.filter (fun (_, m) -> m <> modul) dep_files_and_modules in
   Batch.produce_and_postprocess_one_c
     (Options.get_input_stream_binding ())
+    (Options.get_emit_output_types_defs ())
     (Options.get_add_include ())
     (Options.get_clang_format ())
     (Options.get_clang_format_executable ())
@@ -521,6 +522,7 @@ let go () : ML unit =
   then
   let _ = Batch.postprocess_fst
         input_stream_binding
+        (Options.get_emit_output_types_defs ())
         (Options.get_add_include ())
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())

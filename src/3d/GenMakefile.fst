@@ -228,10 +228,11 @@ let produce_nop_rule
   }
 
 let maybe_external_typedefs_h
+  (emit_output_types_defs: bool)
   (g:Deps.dep_graph)
   (modul: string)
 : Tot (list string)
-= if Deps.has_output_types g modul && not (Deps.has_extern_types g modul)
+= if (Deps.has_output_types g modul && not (Deps.has_extern_types g modul)) && emit_output_types_defs
   then [mk_filename (Printf.sprintf "%s_ExternalTypedefs" modul) "h"]
   else []
 
@@ -349,11 +350,12 @@ let maybe_krml_generated_h
   maybe_external_api_h g m
 
 let maybe_h
+  (emit_output_types_defs: bool)
   (g: Deps.dep_graph)
   (m: string)
 : Tot (list string)
 = maybe_krml_generated_h g m `List.Tot.append`
-  maybe_external_typedefs_h g m
+  maybe_external_typedefs_h emit_output_types_defs g m
 
 let produce_h_rules
   (g: Deps.dep_graph)
@@ -388,6 +390,7 @@ let produce_h_rules
   ) all_files
 
 let produce_output_types_o_rule
+  (emit_output_types_defs: bool)
   (g:Deps.dep_graph)
   (modul:string)
 : FStar.All.ML (list rule_t)
@@ -398,7 +401,7 @@ let produce_output_types_o_rule
     let o = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "o" in
     [{
       ty = CC;
-      from = c :: maybe_external_typedefs_h g modul;
+      from = c :: maybe_external_typedefs_h emit_output_types_defs g modul;
       to = o;
       args = Printf.sprintf "-o %s %s" o c; }]
   else
@@ -487,7 +490,7 @@ let produce_makefile
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule g) all_modules `List.Tot.append`
       List.Tot.concatMap (produce_static_assertions_o_rule g) all_modules `List.Tot.append`
-      List.concatMap (produce_output_types_o_rule g) all_modules `List.Tot.append`
+      List.concatMap (produce_output_types_o_rule emit_output_types_defs g) all_modules `List.Tot.append`
       List.Tot.map produce_o_rule all_modules
     ) `List.Tot.append`
     List.concatMap (produce_fst_rules emit_output_types_defs g clang_format) all_files `List.Tot.append`
@@ -536,7 +539,7 @@ let write_gnu_makefile
       else []
       end `List.Tot.append`
       begin if ext = "h"
-      then List.concatMap (fun f -> let m = Options.get_module_name f in maybe_h g m) all_files
+      then List.concatMap (fun f -> let m = Options.get_module_name f in maybe_h emit_output_types_defs g m) all_files
       else []
       end `List.Tot.append`
       List.map (fun f -> mk_filename (Options.get_module_name f) ext) all_files
