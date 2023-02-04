@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 typedef struct _OPAIR {
   uint32_t fst;
   uint32_t snd;
