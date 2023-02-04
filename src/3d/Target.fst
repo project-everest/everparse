@@ -1179,7 +1179,7 @@ let print_c_entry (modul: string)
    let print_one_validator (d:type_decl) : ML (string & string) =
     let params = 
       d.decl_name.td_params @
-      (if is_input_stream_buffer then [] else [mk_param "_extra" "EverParseExtraT"])
+      (if is_input_stream_buffer then [] else [mk_param "_extra" "EVERPARSE_EXTRA_T"])
     in
     let print_params (ps:list param) : ML string =
       let params =
@@ -1219,7 +1219,7 @@ let print_c_entry (modul: string)
       then Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
              wrapper_name
             (print_params params)
-      else Printf.sprintf "uint64_t %s(%sEverParseInputStreamBase base)"
+      else Printf.sprintf "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base)"
              wrapper_name
              (print_params params)
     in
