@@ -294,7 +294,7 @@ let produce_fst_rules
     end `List.Tot.append`
     begin
       if Deps.has_static_assertions g modul
-      then [mk_filename (Printf.sprintf "%s_StaticAssertions" modul) "c"]
+      then [mk_filename (Printf.sprintf "%sStaticAssertions" modul) "c"]
       else []
     end
   in
