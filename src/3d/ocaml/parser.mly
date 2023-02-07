@@ -509,12 +509,14 @@ decl_no_range:
     { ExternFn (i, ret, ps) }
 
 block_comment_opt:
-  |                 { None }
-  | c=BLOCK_COMMENT { Some c }
+  |                 {
+                      let _ = Ast.comments_buffer.flush () in
+                      None
+                    }
+  | c=BLOCK_COMMENT {  let _ = Ast.comments_buffer.flush () in Some c }
 
 decl:
   | c=block_comment_opt isexported=exported d=decl_no_range {
-      let _ = Ast.comments_buffer.flush () in
       let r = mk_pos ($startpos(d)), mk_pos ($startpos(d)) in
       match c with
       | Some c -> mk_decl d r [c] isexported
