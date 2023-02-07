@@ -228,6 +228,8 @@ let remove_fst_and_krml_files
       Printf.sprintf "%s.fst.checked" root_name;
       Printf.sprintf "%s.fsti.checked" root_name;
       Printf.sprintf "%s_Types.krml" root_name;
+      Printf.sprintf "%s_ExternalAPI.krml" root_name;
+      Printf.sprintf "%s_ExternalTypes.krml" root_name;
       Printf.sprintf "%s.krml" root_name;
     ]
 
