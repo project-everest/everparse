@@ -43,6 +43,7 @@ KRML_EXTERN = $(KRML_HOME)/krml \
 	  -static-header 'EverParse3d.Prelude.StaticHeader,LowParse.Low.Base,EverParse3d.ErrorCode,EverParse3d.InputStream.Extern.Type' \
 	  -no-prefix LowParse.Slice \
 	  -no-prefix LowParse.Low.BoundedInt \
+	  -fmicrosoft \
 	  -fextern-c
 
 KRML_STATIC = $(KRML_EXTERN) \

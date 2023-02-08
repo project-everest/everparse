@@ -9,19 +9,19 @@ struct es_cell {
   struct es_cell * next;
 };
 
-struct EverParseInputStreamBase_s {
+struct EVERPARSE_INPUT_STREAM_BASE_s {
   struct es_cell * head;
 };
 
-typedef struct EverParseInputStreamBase_s * EverParseInputStreamBase;
+typedef struct EVERPARSE_INPUT_STREAM_BASE_s * EVERPARSE_INPUT_STREAM_BASE;
 
-EverParseInputStreamBase EverParseCreate();
+EVERPARSE_INPUT_STREAM_BASE EverParseCreate();
 
-int EverParsePush(EverParseInputStreamBase x, uint8_t * buf, uint64_t len);
+int EverParsePush(EVERPARSE_INPUT_STREAM_BASE x, uint8_t * buf, uint64_t len);
 
 // dummy types, they are not used
-typedef int EverParseExtraT;
+typedef int EVERPARSE_EXTRA_T;
 
-void EverParseHandleError(EverParseExtraT _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason, uint64_t error_code);
-void EverParseRetreat(EverParseExtraT _dummy, EverParseInputStreamBase base, uint64_t parsedSize);
+void EverParseHandleError(EVERPARSE_EXTRA_T _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason, uint64_t error_code);
+void EverParseRetreat(EVERPARSE_EXTRA_T _dummy, EVERPARSE_INPUT_STREAM_BASE base, uint64_t parsedSize);
 #endif // __EVERPARSESTREAM

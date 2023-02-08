@@ -9,7 +9,6 @@ module LBF = LowParse.BitFields
 ////////////////////////////////////////////////////////////////////////////////
 // Bit fields
 ////////////////////////////////////////////////////////////////////////////////
-[@CInline]
 let get_bitfield8
   (value:U8.t)
   (bitsFrom:U32.t{U32.v bitsFrom < 8})
@@ -21,21 +20,18 @@ let get_bitfield8
   let op2 = op1 `U8.shift_right` ((8ul `U32.sub` bitsTo) `U32.add` bitsFrom) in
   op2
 
-[@CInline]
 let get_bitfield16 (value:U16.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 16})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 16})
    : i:U16.t{FStar.UInt.size (U16.v i) (U32.v bitsTo - U32.v bitsFrom)}
    = LBF.uint16.LBF.get_bitfield_gen value bitsFrom bitsTo
 
-[@CInline]
 let get_bitfield32 (value:U32.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 32})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 32})
    : i:U32.t{FStar.UInt.size (U32.v i) (U32.v bitsTo - U32.v bitsFrom)}
    = LBF.uint32.LBF.get_bitfield_gen value bitsFrom bitsTo
 
-[@CInline]
 let get_bitfield64 (value:U64.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 64})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 64})

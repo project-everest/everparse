@@ -438,6 +438,7 @@ val output_base_var (lhs:output_expr) : ML A.ident
  *)
  
 val print_external_api_fstar (modul:string) (ds:decls) : ML string
+val print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
 val print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string
 val print_out_exprs_c (modul:string) (ds:decls) : ML string
 val print_output_types_defs (modul:string) (ds:decls) : ML string
