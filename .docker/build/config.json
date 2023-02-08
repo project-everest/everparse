@@ -30,6 +30,6 @@
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
         "hacl_version" : "origin/main",
-        "karamel_version" : "origin/protz_microsoft_type_names"
+        "karamel_version" : "origin/master"
     }
 }
