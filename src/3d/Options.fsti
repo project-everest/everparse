@@ -56,4 +56,8 @@ val get_emit_output_types_defs : unit -> ML bool
 
 val get_config_file : unit -> ML (option string)
 
+val get_add_include : unit -> ML (list string)
+
+val make_includes : unit -> ML string
+
 val config_module_name : unit -> ML (option string)

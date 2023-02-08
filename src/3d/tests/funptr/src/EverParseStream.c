@@ -1,8 +1,8 @@
 #include "EverParseStream.h"
 #include <stdlib.h>
 
-EverParseInputStreamBase EverParseCreate() {
-  EverParseInputStreamBase res = malloc(sizeof(struct EverParseInputStreamBase_s));
+EVERPARSE_INPUT_STREAM_BASE EverParseCreate() {
+  EVERPARSE_INPUT_STREAM_BASE res = malloc(sizeof(struct EVERPARSE_INPUT_STREAM_BASE_s));
   if (res == NULL) {
     return NULL;
   }
@@ -10,7 +10,7 @@ EverParseInputStreamBase EverParseCreate() {
   return res;
 }
 
-int EverParsePush(EverParseInputStreamBase const x, uint8_t * const buf, uint64_t const len) {
+int EverParsePush(EVERPARSE_INPUT_STREAM_BASE const x, uint8_t * const buf, uint64_t const len) {
   struct es_cell * cell = malloc(sizeof(struct es_cell));
   if (cell == NULL)
     return 0;

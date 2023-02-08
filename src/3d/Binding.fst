@@ -165,10 +165,10 @@ let remove_local (e:env) (i:ident) : ML unit =
 
 let resolve_record_case_output_extern_type_name (env:env) (i:ident) =
   match H.try_find (global_env_of_env env).ge_out_t i.v with
-  | Some ({d_decl={v=OutputType ({out_typ_names=names})}}) -> names.typedef_name
+  | Some ({d_decl={v=OutputType ({out_typ_names=names})}}) -> names.typedef_abbrev
   | _ ->
     (match H.try_find (global_env_of_env env).ge_extern_t i.v with
-     | Some ({d_decl={v=ExternType td_names}}) -> td_names.typedef_name
+     | Some ({d_decl={v=ExternType td_names}}) -> td_names.typedef_abbrev
      | _ ->
        (match lookup env i with
         | Inr ({d_decl={v=Record names _ _ _}}, _)
@@ -1778,6 +1778,19 @@ let get_exported_decls ge mname =
          then k::exported_decls, private_decls
          else exported_decls, k::private_decls) ge.ge_h ([], [])
 
-let finish_module ge mname e_and_p =
-  e_and_p |> snd |> List.iter (H.remove ge.ge_h);
+let finish_module ge mname =
+  let remove_private_decls (tbl:H.t ident' 'a) (f:'a -> decl) : ML unit =
+    let pvt_decls = H.fold (fun k v idents ->
+      if not (k.modul_name = Some mname)
+      then idents
+      else let d = f v in
+           if d.d_exported
+           then idents
+           else k::idents) tbl [] in
+    List.iter (H.remove tbl) pvt_decls in
+
+  remove_private_decls ge.ge_h (fun (d, _) -> d);
+  remove_private_decls ge.ge_out_t (fun d -> d);
+  remove_private_decls ge.ge_extern_t (fun d -> d);
+  remove_private_decls ge.ge_extern_fn (fun d -> d);
   ge

@@ -35,6 +35,7 @@ val bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env)
 //val add_field_error_code_decls (ge: env) : ML (list decl)
 
 val initial_global_env (_:unit) : ML global_env
+// DOES NOT return exported output types/extern types/extern functions
 val get_exported_decls (ge:global_env) (mname:string) : ML (list ident' & list ident')  //exported, private
-val finish_module (ge:global_env) (mname:string) (e_and_p:list ident' & list ident')
+val finish_module (ge:global_env) (mname:string)
   : ML global_env

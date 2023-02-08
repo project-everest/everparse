@@ -33,8 +33,8 @@ extern "C" {
 #include <string.h>
 #include <stdint.h>
 
-typedef const char * EverParseString;
-typedef EverParseString PrimsString;
+typedef const char * EVERPARSE_STRING;
+typedef EVERPARSE_STRING PRIMS_STRING;
 
 #ifndef KRML_HOST_PRINTF
 #  include <stdio.h>

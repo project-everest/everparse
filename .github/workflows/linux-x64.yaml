@@ -32,9 +32,16 @@ jobs:
             fi
             docker tag $ci_docker_image_tag everparse:local-commit-$GITHUB_SHA
           fi
+          docker run $ci_docker_image_tag /bin/bash -c 'cat $EVERPARSE_HOME/log.txt' > log.txt
           $ci_docker_status
         env:
           DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
+      - name: Archive build log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: log
+          path: log.txt
       - name: Compute elapsed time
         if: ${{ always() }}
         run: |

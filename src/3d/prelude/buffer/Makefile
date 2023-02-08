@@ -38,6 +38,7 @@ EverParse.h: EverParse.rsp
 	  -static-header 'EverParse3d.Prelude.StaticHeader,LowParse.Low.Base,EverParse3d.ErrorCode,EverParse3d.InputStream.\*' \
 	  -no-prefix LowParse.Slice \
 	  -no-prefix LowParse.Low.BoundedInt \
+	  -fmicrosoft \
 	  -fextern-c \
 	  @$^
 	test '!' -e EverParse.c

@@ -2,16 +2,14 @@
 
 #include "Triangle.h"
 
-
-
 static inline uint64_t
 ValidatePoint(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -90,9 +88,9 @@ TriangleValidateTriangle(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,

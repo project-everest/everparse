@@ -2,16 +2,14 @@
 
 #include "Derived.h"
 
-
-
 uint64_t
 DerivedValidateTriple(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -22,7 +20,7 @@ DerivedValidateTriple(
   uint64_t StartPosition
 )
 {
-  /* SNIPPET_START: Triple */
+  /* Validating field pair */
   uint64_t
   positionAfterTriple = BaseValidatePair(Ctxt, ErrorHandlerFn, Input, InputLength, StartPosition);
   uint64_t positionAfterpair;
@@ -78,9 +76,9 @@ DerivedValidateQuad(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
