@@ -21,7 +21,7 @@ GetFieldPtrValidateT(
   uint64_t StartPosition
 )
 {
-  /* SNIPPET_START: GetFieldPtr.T */
+  /* Validating field f1 */
   BOOLEAN hasEnoughBytes0 = (uint64_t)(uint32_t)(uint8_t)10U <= (InputLength - StartPosition);
   uint64_t positionAfterT;
   if (!hasEnoughBytes0)

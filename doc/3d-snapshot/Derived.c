@@ -20,7 +20,7 @@ DerivedValidateTriple(
   uint64_t StartPosition
 )
 {
-  /* SNIPPET_START: Triple */
+  /* Validating field pair */
   uint64_t
   positionAfterTriple = BaseValidatePair(Ctxt, ErrorHandlerFn, Input, InputLength, StartPosition);
   uint64_t positionAfterpair;
