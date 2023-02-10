@@ -22,7 +22,7 @@ FSTAR_OPTIONS = --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
 		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi
 
-FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
+FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error --ugly $(FSTAR_OPTIONS)
 
 HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
