@@ -109,8 +109,14 @@ make_everparse() {
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
     if [[ -z "$FSTAR_HOME" ]] ; then
-        [[ -d FStar ]] || git clone https://github.com/FStarLang/FStar
-        export FSTAR_HOME=$(fixpath $PWD/FStar)
+        if [[ -d FStar ]] ; then
+            export FSTAR_HOME=$(fixpath $PWD/FStar)
+        elif find_fstar="$(which fstar.exe)" ; then
+            export FSTAR_HOME=$(fixpath "$(dirname $find_fstar)"/..)
+        else
+            git clone https://github.com/FStarLang/FStar
+            export FSTAR_HOME=$(fixpath $PWD/FStar)
+        fi
     else
         export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
     fi
@@ -133,7 +139,10 @@ make_everparse() {
 
     # Rebuild F* and KaRaMeL
     export OTHERFLAGS='--admit_smt_queries true'
-    $MAKE -C "$FSTAR_HOME" "$@"
+    if [[ -f "$FSTAR_HOME/Makefile" ]] ; then
+        # assume F* source tree
+        $MAKE -C "$FSTAR_HOME" "$@"
+    fi
     if [[ -z "$fstar_commit_id" ]] ; then
         fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
         fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
@@ -235,9 +244,18 @@ make_everparse() {
     fi
 
     # Copy F*
-    $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/
-    $cp -r $FSTAR_HOME/bin/fstar-tactics-lib everparse/bin/
-    $cp -r $FSTAR_HOME/ulib everparse/
+    if [[ -d $FSTAR_HOME/ulib ]] ; then
+      # we have a F* source tree
+      # TODO: create some `install-minimal` rule in the F* Makefile
+      everparse_package_dir="$(pwd)/everparse"
+      (cd $FSTAR_HOME/ocaml && dune install --prefix="$everparse_package_dir")
+      PREFIX="$everparse_package_dir" $MAKE -C $FSTAR_HOME/ulib install
+    else
+      # we have a F* binary package, or opam package
+      $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/
+      mkdir everparse/lib
+      $cp -r $FSTAR_HOME/lib/fstar everparse/lib/fstar
+    fi
 
     # Copy KaRaMeL
     $cp $KRML_HOME/Karamel.native everparse/bin/krml$exe
@@ -278,7 +296,14 @@ make_everparse() {
     
     # licenses
     mkdir -p everparse/licenses
-    $cp $FSTAR_HOME/LICENSE everparse/licenses/FStar
+    if [[ -f $FSTAR_HOME/LICENSE ]] ; then
+        # F* license found in the source tree
+        $cp $FSTAR_HOME/LICENSE everparse/licenses/FStar
+    else
+        # F* license not found, download it from GitHub
+        # TODO: have F* install its license
+        wget --output-document=everparse/licenses/FStar https://raw.githubusercontent/FStarLang/FStar/master/LICENSE
+    fi
     $cp $KRML_HOME/LICENSE everparse/licenses/KaRaMeL
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
