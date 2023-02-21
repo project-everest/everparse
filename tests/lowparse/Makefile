@@ -5,23 +5,23 @@ LOWPARSE_HOME ?= ../../src/lowparse
 FSTAR_OUT_DIR?=.fstar-out
 
 ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
+  FSTAR_EXE:=$(shell which fstar.exe)
   ifneq ($(.SHELLSTATUS),0)
     FSTAR_HOME=../../../FStar
   endif
 endif
 ifdef FSTAR_HOME
-  FSTAR_EXE=$(FSTAR_HOME)/bin/fstar.exe
+  FSTAR_EXE:=$(FSTAR_HOME)/bin/fstar.exe
 endif
 
 ifndef KRML_HOME
-  KRMLLIB=$(shell ocamlfind query karamel)
+  KRMLLIB:=$(shell ocamlfind query karamel)
   ifneq ($(.SHELLSTATUS),0)
     KRML_HOME=../../../karamel
   endif
 endif
 ifdef KRML_HOME
-  KRMLLIB=$(KRML_HOME)/krmllib
+  KRMLLIB:=$(KRML_HOME)/krmllib
   KRML_EXE=$(KRML_HOME)/krml
 else
   KRML_EXE=krml

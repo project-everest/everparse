@@ -1,7 +1,20 @@
 ROOT=Main.fst
-FSTAR_HOME?=$(realpath ../../../FStar)
-KRML_HOME?=$(realpath ../../../karamel)
+
 EVERPARSE_HOME=$(realpath ../..)
+
+ifndef FSTAR_HOME
+  FSTAR_EXE=$(shell which fstar.exe)
+  ifeq ($(FSTAR_EXE),)
+    # fstar.exe not found in PATH, assuming Everest source tree
+    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
+  else
+    # fstar.exe found in PATH, assuming directory ending with /bin
+    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
+  endif
+endif
+export FSTAR_HOME
+
+export KRML_HOME?=$(realpath ../../../karamel)
 
 INCLUDE_PATHS=
 OTHERFLAGS?=
