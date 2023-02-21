@@ -4,7 +4,7 @@
     "BaseContainerIsEverestImage" : true,
     "BaseContainerImageName" : "fstar",
     "BaseContainerImageTagOrCommitId": "latest",
-    "BranchName" : "_taramana_dune",
+    "BranchName" : "master",
     "GithubCommitUrl" : "https://github.com/FStarLang/FStar/commit",
     "OnDemandBuildDefinition" : "FStar\\FStar-{agentOS}",
 
@@ -30,6 +30,6 @@
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
         "hacl_version" : "origin/main",
-        "karamel_version" : "origin/taramana_fstar_dune"
+        "karamel_version" : "origin/master"
     }
 }
