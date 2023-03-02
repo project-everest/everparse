@@ -17,23 +17,13 @@ else
 endif
 export OCAMLPATH
 
-all: $(filter-out %~,$(wildcard *.ml*)) dune
+all: $(filter-out %~,$(wildcard *.ml*))
 	dune build
 
 clean-local:
-	rm -rf _build *~ dune dune.tmp
+	rm -rf _build *~
 
 clean: clean-local
 	rm -rf generated
 
 .PHONY: all clean clean-local
-
-ifdef NO_EVERCRYPT
-dune_cpp_defines=-DNO_EVERCRYPT
-else
-dune_cpp_defines=
-endif
-
-dune: dune.tmpl
-	cpp -P $(dune_cpp_defines) < $< > $@.tmp
-	mv $@.tmp $@

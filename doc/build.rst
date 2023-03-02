@@ -139,22 +139,12 @@ sources, you can build a binary package:
 
      This process is fully automatic. In particular, it automatically
      downloads a binary release of z3, and downloads and builds F\*,
-     KaRaMeL and EverCrypt.
+     and KaRaMeL.
 
      .. note::
 
         z3 is downloaded only for Windows or Linux. On other platforms, you need to have Z3 4.8.5
         reachable from your PATH. You will most likely need to compile it from `its sources <https://github.com/z3prover/z3/tree/Z3-4.8.5>`_.
-
-     .. note::
-
-        If you encounter a linking issue when building ``3d.exe``,
-        then it may be due to EverCrypt not supported on your platform
-        (e.g. FreeBSD.) As a workaround, you can set the
-        ``NO_EVERCRYPT`` environment variable to any nonzero value, to
-        use `ocaml-sha <https://opam.ocaml.org/packages/sha/>`_
-        instead of EverCrypt. In that case, ``ocaml-sha`` will be
-        automatically installed while building EverParse.
 
 
    * ``make package``
@@ -209,7 +199,7 @@ fetch and build EverParse sources:
 3. Run ``./everest -j 1 FStar make karamel make`` to
    build F\* and KaRaMeL. The ``-j`` option introduces a
    parallelism factor. You can also speed up the build by skipping
-   F\*, KaRaMeL and EverCrypt library proofs by setting the
+   F\* and KaRaMeL library proofs by setting the
    ``OTHERFLAGS`` environment variable to ``"--admit_smt_queries
    true"``.
 
@@ -221,37 +211,11 @@ fetch and build EverParse sources:
       to run ``eval $(opam env)`` (as instructed during ``opam init``
       or ``./everest opam``), or log out and back in.
 
-4. Run ``make -C hacl-star/dist/gcc-compatible install-ocaml`` to
-   build and install EverCrypt (needed for hash checking with
-   ``--check_hashes``, etc.)
-
-   .. note::
-
-      In fact, this step builds and installs the ``hacl-star-raw`` and
-      ``hacl-star`` OCaml packages. If, at this point, you get an
-      error of the form "hacl-star-raw already installed" or
-      "hacl-star already installed", it means that either package is
-      already present because of an earlier compilation, so you can
-      remove it, using ``ocamlfind remove hacl-star-raw``
-      and/or ``ocamlfind remove hacl-star``, and try again.
-
-   .. note::
-
-      Even if you manage to build EverCrypt at this stage, you may
-      still encounter a linking issue when building ``3d.exe`` later,
-      maybe due to EverCrypt not supported on your platform
-      (e.g. FreeBSD.) As a workaround, you can set the
-      ``NO_EVERCRYPT`` environment variable to any nonzero value, to
-      use `ocaml-sha <https://opam.ocaml.org/packages/sha/>`_ instead
-      of EverCrypt. In that case, you first need to run ``opam install
-      ocaml-sha`` to install that package beforehand.
-
-
-5. Set the ``FSTAR_HOME`` environment variable to the ``FStar``
+4. Set the ``FSTAR_HOME`` environment variable to the ``FStar``
    subdirectory of your Everest clone, which contains a clone of the
    latest F\*.
 
-6. Set the ``KRML_HOME`` environment variable to the ``karamel``
+5. Set the ``KRML_HOME`` environment variable to the ``karamel``
    subdirectory of your Everest clone, which contains a clone of the
    latest KaRaMeL.
 
@@ -261,16 +225,16 @@ fetch and build EverParse sources:
       already know how to build them, then you can skip steps 1 to 5
       and set the environment variables accordingly.)
 
-7. Everest contains a clone of the EverParse sources in the
+6. Everest contains a clone of the EverParse sources in the
    ``quackyducky`` subdirectory. You can work from
    there. Alternatively, you can `clone it yourself
    <https://github.com/project-everest/everparse>`_
    anywhere else.
 
-8. Set the ``EVERPARSE_HOME`` environment variable to your EverParse clone
+7. Set the ``EVERPARSE_HOME`` environment variable to your EverParse clone
    as you chose it.
 
-9. Then, once you are all set up in your EverParse clone, you can
+8. Then, once you are all set up in your EverParse clone, you can
    build EverParse by ``make``. Then, the EverParse/3d executable will
    be located at ``bin/3d.exe``.
 

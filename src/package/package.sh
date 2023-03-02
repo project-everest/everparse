@@ -150,33 +150,8 @@ make_everparse() {
     $MAKE -C "$KRML_HOME" "$@" minimal
     $MAKE -C "$KRML_HOME/krmllib" "$@" verify-all
 
-    # Build the hacl-star package if not available
-    if [[ -z "$NO_EVERCRYPT" ]] && ! ocamlfind query hacl-star ; then
-        mkdir -p ocaml-packages
-        export OCAMLFIND_DESTDIR=$(fixpath "$PWD/ocaml-packages")
-        if $is_windows ; then
-            export OCAMLPATH="$OCAMLFIND_DESTDIR;$OCAMLPATH"
-        else
-            export OCAMLPATH="$OCAMLFIND_DESTDIR:$OCAMLPATH"
-        fi
-        if [[ -z $HACL_HOME ]] ; then
-            [[ -d hacl-star ]] || git clone https://github.com/hacl-star/hacl-star
-            HACL_HOME=$(fixpath $PWD/hacl-star)
-        else
-            HACL_HOME=$(fixpath "$HACL_HOME")
-        fi
-        if ! ocamlfind query hacl-star-raw ; then
-            (cd $HACL_HOME/dist/gcc-compatible ; ./configure --disable-bzero)
-            $MAKE -C $HACL_HOME/dist/gcc-compatible "$@"
-            $MAKE -C $HACL_HOME/dist/gcc-compatible install-hacl-star-raw
-        fi
-        if ! ocamlfind query hacl-star ; then
-            (cd $HACL_HOME/bindings/ocaml ; dune build ; dune install)
-        fi
-    fi
-
-    # Install ocaml-sha if EverCrypt is disabled
-    if [[ -n "$NO_EVERCRYPT" ]] && ! ocamlfind query sha ; then
+    # Install ocaml-sha if not found
+    if ! ocamlfind query sha ; then
         opam install --yes sha
     fi
 
@@ -190,31 +165,9 @@ make_everparse() {
         $cp $LIBGMP10_DLL everparse/bin/
         $cp $Z3_DIR/*.exe everparse/bin/
 	find $Z3_DIR/.. -name *.dll -exec cp {} everparse/bin \;
-        if [[ -z "$NO_EVERCRYPT" ]] ; then
-            for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
-                libevercrypt_dll=$f/libevercrypt.dll
-                if [[ -f $libevercrypt_dll ]] ; then
-                    break
-                fi
-                unset libevercrypt_dll
-            done
-            [[ -n $libevercrypt_dll ]]
-            $cp $libevercrypt_dll everparse/bin/
-        fi
         # copy libffi-6 in all cases (ocaml-sha also seems to need it)
         $cp $(which libffi-6.dll) everparse/bin/
     else
-        if [[ -z "$NO_EVERCRYPT" ]] ; then
-            for f in $(ocamlfind printconf destdir)/stublibs $(cat $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
-                libevercrypt_so=$f/libevercrypt.so
-                if [[ -f $libevercrypt_so ]] ; then
-                    break
-                fi
-                unset libevercrypt_so
-            done
-            [[ -n $libevercrypt_so ]]
-            $cp $libevercrypt_so everparse/bin/
-        fi
         {
             # Locate libffi
             {
@@ -307,9 +260,6 @@ make_everparse() {
     $cp $KRML_HOME/LICENSE everparse/licenses/KaRaMeL
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
-    if [[ -z "$NO_EVERCRYPT" ]] ; then
-        wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/hacl-star/hacl-star/main/LICENSE
-    fi
     wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
     if $is_windows ; then
         wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT

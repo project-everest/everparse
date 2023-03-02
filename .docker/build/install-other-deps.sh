@@ -3,4 +3,4 @@
 set -e
 set -x
 
-opam install hex re ctypes
+opam install hex re ctypes sha

@@ -519,8 +519,6 @@ OCAML
     magenta "Note: you *may* want to export FSTAR_HOME=${xpwd}/FStar"
   [ -n "${KRML_HOME}" ] || \
     magenta "Note: you *may* want to export KRML_HOME=${xpwd}/karamel"
-  [ -n "${HACL_HOME}" ] || \
-    magenta "Note: you *may* want to export HACL_HOME=${xpwd}/hacl-star"
 }
 
 symlink_clone_warned=false
