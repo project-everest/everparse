@@ -15,7 +15,6 @@ module B = LowStar.Buffer
 module BY = FStar.Bytes
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
-module LWP = LowParse.Writers.Combinators
 
 
 type boolean =
@@ -46,7 +45,6 @@ val boolean_validator: LL.validator boolean_parser
 
 let boolean_jumper: LL.jumper boolean_parser = LL.jump_constant_size boolean_parser 1ul ()
 
-inline_for_extraction noextract let lwp_boolean = LWP.make_parser boolean_parser boolean_serializer boolean_jumper
 val boolean_reader: LL.leaf_reader boolean_parser
 
 val boolean_writer: LL.leaf_writer_strong boolean_serializer

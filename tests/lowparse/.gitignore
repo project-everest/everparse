@@ -19,5 +19,4 @@ ExampleMono
 ExamplePair
 ExampleConstInt32le
 ExampleDepLen
-ExampleWriters
 .fstar-out

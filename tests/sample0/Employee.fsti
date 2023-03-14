@@ -15,7 +15,6 @@ module B = LowStar.Buffer
 module BY = FStar.Bytes
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
-module LWP = LowParse.Writers.Combinators
 
 
 (* Type of field name*)
@@ -46,7 +45,6 @@ val employee_validator: LL.validator employee_parser
 
 val employee_jumper: LL.jumper employee_parser
 
-inline_for_extraction noextract let lwp_employee = LWP.make_parser employee_parser employee_serializer employee_jumper
 val employee_bytesize_eqn (x: employee) : Lemma (employee_bytesize x == (employee_name_bytesize (x.name)) + 2) [SMTPat (employee_bytesize x)]
 
 noextract let clens_employee_name : LL.clens employee employee_name = {
@@ -63,13 +61,9 @@ val gaccessor_employee_name : LL.gaccessor employee_parser employee_name_parser 
 
 val accessor_employee_name : LL.accessor gaccessor_employee_name
 
-inline_for_extraction noextract let lwp_accessor_employee_name  : LWP.access_t lwp_employee lwp_employee_name (accessor_employee_name ) = LWP.access _ _ _
-
 val gaccessor_employee_salary : LL.gaccessor employee_parser LPI.parse_u16 clens_employee_salary
 
 val accessor_employee_salary : LL.accessor gaccessor_employee_salary
-
-inline_for_extraction noextract let lwp_accessor_employee_salary  : LWP.access_t lwp_employee LWP.parse_u16 (accessor_employee_salary ) = LWP.access _ _ _
 
 val employee_valid (h:HS.mem) (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos0:U32.t) : Lemma
   (requires (
