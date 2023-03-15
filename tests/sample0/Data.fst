@@ -15,7 +15,6 @@ module B = LowStar.Buffer
 module BY = FStar.Bytes
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
-module LWP = LowParse.Writers.Instances
 
 #reset-options "--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2"
 

@@ -40,7 +40,7 @@ LOW_LEVEL=$(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c
 
 MY_KRML=$(KRML_EXE) -bundle 'LowParse.\*'  -add-include '"krml/internal/compat.h"'
 
-EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair ExampleDepLen ExampleConstInt32le #ExampleWriters
+EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair ExampleDepLen ExampleConstInt32le
 
 NOEXTRACT_EXAMPLES=ExamplePair
 ROOT_FILES=$(addprefix LowParse, $(addsuffix .fst, $(EXAMPLES)))
@@ -102,8 +102,6 @@ ExampleMono: KRML_ARGS=
 ExamplePair: KRML_ARGS=
 ExampleDepLen: KRML_ARGS=
 ExampleConstInt32le: KRML_ARGS=
-
-#ExampleWriters: KRML_ARGS=$(LOW_LEVEL)
 
 .PHONY: all verify-all clean extract-all $(EXAMPLES) %.fst-in %.fsti-in
 
