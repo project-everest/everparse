@@ -1,3 +1,4 @@
+module Z = FStar_BigInt
 module H = BatHashtbl
 type ('key, 'value) t = ('key, 'value) H.t
 

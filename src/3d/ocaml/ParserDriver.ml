@@ -1,3 +1,4 @@
+module Z = FStar_BigInt
 open Lexing
 
 let print_position outx lexbuf =
@@ -21,4 +22,4 @@ let parse filename =
     Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf;
     exit 1
 
-let int_of_string x = Z.of_string x
+let int_of_string x = Z.big_int_of_string x

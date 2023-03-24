@@ -1,4 +1,5 @@
 %{
+  module Z = FStar_BigInt
   open FStar_Pervasives
   open Lexing
   open Ast
@@ -28,7 +29,7 @@
   let parse_int_and_type r (s:string) : Z.t * string * integer_type =
       let r = mk_pos r, mk_pos r in
       let s', t = parse_int_suffix s in
-      let i = Z.of_string s' in
+      let i = Z.big_int_of_string s' in
       let t' = smallest_integer_type_of r i in
       let t = match t with
               | None -> t'
@@ -255,7 +256,7 @@ array_annot:
   | LBRACK_STRING_AT_MOST e=expr RBRACK { FieldString (Some e) }
 
 bitwidth:
-  | COLON i=INT { Inl (with_range (Z.of_string i) $startpos(i)) }
+  | COLON i=INT { Inl (with_range (Z.big_int_of_string i) $startpos(i)) }
 
 field_action:
   | LBRACE_ONSUCCESS a=action RBRACE { a, false }
@@ -442,7 +443,7 @@ action:
 
 enum_case:
   | i=IDENT            { i, None }
-  | i=IDENT EQ j=INT   { i, Some (Inl (Z.of_string j)) }
+  | i=IDENT EQ j=INT   { i, Some (Inl (Z.big_int_of_string j)) }
   | i=IDENT EQ j=IDENT { i, Some (Inr j) }
 
 exported:
@@ -458,7 +459,7 @@ typedef_pointer_name_opt:
   | COMMA STAR k=IDENT { Some k }
 
 out_field_bitwidth_opt:
-  | COLON i=INT  { Some (Z.of_string i) }
+  | COLON i=INT  { Some (Z.big_int_of_string i) }
   |              { None   }
 
 out_field:

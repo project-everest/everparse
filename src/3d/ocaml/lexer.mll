@@ -4,6 +4,7 @@ open Parser
 open Ast
 module Option  = BatOption
 module H = BatHashtbl
+module Z = FStar_BigInt
 
 let mk_pos (l:Lexing.position) =
     let open Lexing in
