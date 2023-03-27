@@ -3,6 +3,7 @@ on:
   push:
     branches-ignore:
     - _**
+    - taramana_steel
   pull_request:
   workflow_dispatch:
 jobs:
