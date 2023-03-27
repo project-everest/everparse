@@ -2,16 +2,14 @@
 
 #include "HelloWorld.h"
 
-
-
 uint64_t
 HelloWorldValidatePoint(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -43,7 +41,7 @@ HelloWorldValidatePoint(
   }
   else
   {
-    Err("_point",
+    ErrorHandlerFn("_point",
       "x",
       EverParseErrorReasonOfResult(positionAfterPoint),
       EverParseGetValidatorErrorKind(positionAfterPoint),
@@ -75,7 +73,7 @@ HelloWorldValidatePoint(
   {
     return positionAfterPoint0;
   }
-  Err("_point",
+  ErrorHandlerFn("_point",
     "y",
     EverParseErrorReasonOfResult(positionAfterPoint0),
     EverParseGetValidatorErrorKind(positionAfterPoint0),

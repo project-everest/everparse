@@ -1,23 +1,15 @@
 (include_subdirs unqualified)
 
-#ifdef NO_EVERCRYPT
 (dirs * \ evercrypt)
-#else
-(dirs * \ sha)
-#endif
 
 (executable
   (name Main)
   (libraries
     batteries
     menhirLib
-    fstarlib
+    fstar.lib
     process
-#ifdef NO_EVERCRYPT
     sha
-#else
-    hacl-star
-#endif
     yojson
     ppx_deriving_yojson.runtime
     re

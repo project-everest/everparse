@@ -45,6 +45,7 @@ let vstring = valid_string always_valid
 (* NOTE: default arguments here MUST be set to false, [] or None *)
 
 let arg0 : ref (option vstring) = alloc None
+let add_include : ref (list vstring) = alloc []
 let batch : ref bool = alloc false
 let clang_format : ref bool = alloc false
 let clang_format_executable : ref (option vstring) = alloc None
@@ -306,7 +307,7 @@ let display_usage_1 (options: ref (list cmd_option)) : ML unit =
       let m = cmd_option_name x in
       let desc = cmd_option_description x in
       let argdesc = cmd_option_arg_desc x in
-      let argdesc = if argdesc = "" then "" else Printf.sprintf "<%s>" argdesc in
+      let argdesc = if argdesc = "" then "" else Printf.sprintf " <%s>" argdesc in
       let negate = if CmdOption? x then Printf.sprintf " (opposite is --%s)" (negate_name m) else "" in
       let visible = not (m `string_starts_with` "__") in
       if visible then FStar.IO.print_string (Printf.sprintf "--%s%s%s\n\t%s\n" m argdesc negate desc)
@@ -320,6 +321,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
   let display_usage () = display_usage_1 options in
   let compute_options = compute_current_options options in
   options := [
+    CmdOption "add_include" (OptList "<include.h>|\"include.h\"" always_valid add_include) "Prepend #include ... to generated .c/.h files" [];
     CmdOption "batch" (OptBool batch) "Verify the generated F* code and extract C code" [];
     CmdOption "check_hashes" (OptStringOption "weak|strong|inplace" valid_check_hashes check_hashes) "Check hashes" ["batch"];
     CmdOption "check_inplace_hash" (OptList "file.3d=file.h" always_valid inplace_hashes) "Check hashes stored in one .h/.c file" [];
@@ -483,6 +485,21 @@ let get_config_file () =
   match !config_file with
   | None -> None
   | Some s -> Some s
+
+let get_add_include () =
+  !add_include
+
+let make_includes () =
+  let incs = get_add_include () in
+  List.Tot.fold_left
+    (fun accu inc ->
+      Printf.sprintf
+        "%s#include %s\n"
+        accu
+        inc
+    )
+    ""
+    incs
 
 let config_module_name () =
   match !config_file with

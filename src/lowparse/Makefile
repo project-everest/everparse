@@ -7,23 +7,23 @@
 all: verify-all
 
 ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
+  FSTAR_EXE:=$(shell which fstar.exe)
   ifneq ($(.SHELLSTATUS),0)
     FSTAR_HOME=$(realpath ../../../FStar)
   endif
 endif
 ifdef FSTAR_HOME
-  FSTAR_EXE=$(FSTAR_HOME)/bin/fstar.exe
+  FSTAR_EXE:=$(FSTAR_HOME)/bin/fstar.exe
 endif
 
 ifndef KRML_HOME
-  KRMLLIB=$(shell ocamlfind query karamel)
+  KRMLLIB:=$(shell ocamlfind query karamel)
   ifneq ($(.SHELLSTATUS),0)
     KRML_HOME=$(realpath ../../../karamel)
   endif
 endif
 ifdef KRML_HOME
-  KRMLLIB=$(KRML_HOME)/krmllib
+  KRMLLIB:=$(KRML_HOME)/krmllib
 endif
 INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 

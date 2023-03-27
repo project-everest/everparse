@@ -2,16 +2,14 @@
 
 #include "EnumConstraint.h"
 
-
-
 uint64_t
 EnumConstraintValidateEnumConstraint(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -97,7 +95,7 @@ EnumConstraintValidateEnumConstraint(
       }
       else
       {
-        Err("_enum_constraint",
+        ErrorHandlerFn("_enum_constraint",
           "x.refinement",
           EverParseErrorReasonOfResult(positionAfterEnumConstraint0),
           EverParseGetValidatorErrorKind(positionAfterEnumConstraint0),
@@ -112,7 +110,7 @@ EnumConstraintValidateEnumConstraint(
   {
     return positionAfterEnumConstraint;
   }
-  Err("_enum_constraint",
+  ErrorHandlerFn("_enum_constraint",
     "none",
     EverParseErrorReasonOfResult(positionAfterEnumConstraint),
     EverParseGetValidatorErrorKind(positionAfterEnumConstraint),

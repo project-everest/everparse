@@ -122,12 +122,17 @@ let pretty_print_source_module
       (file, modul)
     : unit
   =
+  let external_types_fsti_file = filename_concat out_dir (Printf.sprintf "%s.ExternalTypes.fsti" modul) in
   let external_api_fsti_file = filename_concat out_dir (Printf.sprintf "%s.ExternalAPI.fsti" modul) in
   let fst_file = filename_concat out_dir (Printf.sprintf "%s.fst" modul) in
   let types_fst_file = filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul) in
   let fsti_file = Printf.sprintf "%si" fst_file in
   let all_files =
-    List.filter file_exists [external_api_fsti_file; types_fst_file; fsti_file; fst_file] in
+    List.filter file_exists [external_types_fsti_file;
+                             external_api_fsti_file;
+                             types_fst_file;
+                             fsti_file;
+                             fst_file] in
   List.iter (pretty_print_source_file input_stream_binding out_dir) all_files
 
 let pretty_print_source_modules
@@ -143,6 +148,9 @@ let verify_and_extract_module
       (file, modul)
     : unit
   =
+  let external_types_fsti_file =
+    filename_concat out_dir (Printf.sprintf "%s.ExternalTypes.fsti" modul)
+  in
   let external_api_fsti_file =
     filename_concat out_dir (Printf.sprintf "%s.ExternalAPI.fsti" modul)
   in
@@ -155,8 +163,12 @@ let verify_and_extract_module
   let fsti_file = 
       Printf.sprintf "%si" fst_file
   in
-  let all_files = [external_api_fsti_file; types_fst_file; fsti_file; fst_file] in
-  let all_extract_files = [external_api_fsti_file; types_fst_file; fst_file] in  
+  let all_files = [external_types_fsti_file;
+                   external_api_fsti_file;
+                   types_fst_file;
+                   fsti_file;
+                   fst_file] in
+  let all_extract_files = [external_types_fsti_file; external_api_fsti_file; types_fst_file; fst_file] in  
   let all_files, all_extract_files = 
     match Deps.get_config () with
     | None -> all_files, all_extract_files
@@ -205,15 +217,19 @@ let remove_fst_and_krml_files
   =
   let root_name = filename_concat out_dir modul in
   List.iter remove_if_exists [
+      Printf.sprintf "%s.ExternalTypes.fsti" root_name;
       Printf.sprintf "%s.ExternalAPI.fsti" root_name;
       Printf.sprintf "%s.Types.fst" root_name;
       Printf.sprintf "%s.fst" root_name;
       Printf.sprintf "%s.fsti" root_name;
+      Printf.sprintf "%s.ExternalTypes.fsti.checked" root_name;
       Printf.sprintf "%s.ExternalAPI.fsti.checked" root_name;
       Printf.sprintf "%s.Types.fst.checked" root_name;
       Printf.sprintf "%s.fst.checked" root_name;
       Printf.sprintf "%s.fsti.checked" root_name;
       Printf.sprintf "%s_Types.krml" root_name;
+      Printf.sprintf "%s_ExternalAPI.krml" root_name;
+      Printf.sprintf "%s_ExternalTypes.krml" root_name;
       Printf.sprintf "%s.krml" root_name;
     ]
 
@@ -221,7 +237,10 @@ let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*"
 
 let fstar_krmllib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
 
-let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
+let krml_args input_stream_binding emit_output_types_defs add_include skip_c_makefiles out_dir files_and_modules =
+  let has_external_types modul =
+    file_exists (filename_concat out_dir (Printf.sprintf "%s.ExternalTypes.fsti" modul)) in
+
   let has_external_api modul =
     file_exists (filename_concat out_dir (Printf.sprintf "%s.ExternalAPI.fsti" modul)) in
 
@@ -235,23 +254,37 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
     else []
   in
 
+  let external_types_krml modul =
+    if has_external_types modul
+    then [filename_concat out_dir (Printf.sprintf "%s_ExternalTypes.krml" modul)]
+    else [] in
+
   let external_api_krml modul =
     if has_external_api modul
     then [filename_concat out_dir (Printf.sprintf "%s_ExternalAPI.krml" modul)]
     else [] in
 
+  let external_types_lib_args modul =
+    []
+  in
+  
   let external_api_lib_args modul =  
     if has_external_api modul
     then ["-library"; Printf.sprintf "%s.ExternalAPI" modul]
     else [] in
 
+  let external_types_prefix_args modul =
+    if has_external_types modul
+    then ["-no-prefix"; Printf.sprintf "%s.ExternalTypes" modul]
+    else [] in
+  
   let external_api_prefix_args modul =
     if has_external_api modul
     then ["-no-prefix"; Printf.sprintf "%s.ExternalAPI" modul]
     else [] in
 
   let external_typedefs_include_args modul =
-    if has_external_api modul
+    if has_external_types modul && emit_output_types_defs
     then ["-add-include"; Printf.sprintf "\"%s_ExternalTypedefs.h\"" modul]
     else [] in
 
@@ -259,7 +292,7 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
                      (fun accu (_, modul) ->
                        let l =
                          (types_krml modul)@
-			 (external_api_krml modul)@(filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
+			 (external_types_krml modul)@(external_api_krml modul)@(filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
                                                     accu)
                        in
 
@@ -284,14 +317,33 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
     | None -> krml_files
     | Some m -> filename_concat out_dir (Printf.sprintf "%s.krml" m) :: krml_files
   in
+  let external_types_lib_args = List.fold_left (fun accu (_, modul) ->
+                                    accu @ (external_types_lib_args modul)) [] files_and_modules in
   let external_api_lib_args = List.fold_left (fun accu (_, modul) ->
                                   accu @ (external_api_lib_args modul)) [] files_and_modules in
+  let external_types_no_prefix_args = List.fold_left (fun accu (_, modul) ->
+                                  accu @ (external_types_prefix_args modul)) [] files_and_modules in
   let external_api_no_prefix_args = List.fold_left (fun accu (_, modul) ->
                                   accu @ (external_api_prefix_args modul)) [] files_and_modules in
   let external_typedefs_include_args = List.fold_left (fun accu (_, modul) ->
                                            accu @ (external_typedefs_include_args modul)) [] files_and_modules in
 
   let krml_files = List.rev krml_files in
+  let add_include_opt = "-add-early-include" in
+  let krml_add_includes =
+    List.fold_left
+      (fun accu inc ->
+        add_include_opt :: inc ::
+          List.fold_left
+            (fun accu (_, modul) ->
+              add_include_opt :: Printf.sprintf "%s.c:%s" modul inc :: accu
+            )
+            accu
+            files_and_modules
+      )
+      (krml_args0 @ krml_files)
+      (List.rev add_include)
+  in
   let krml_args =
     "-tmpdir" :: out_dir ::
       "-skip-compilation" ::
@@ -308,7 +360,12 @@ let krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules =
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
-                                    external_api_lib_args @ external_api_no_prefix_args @ external_typedefs_include_args @ krml_args0 @ krml_files
+                                    external_types_lib_args @
+                                    external_api_lib_args @
+                                    external_types_no_prefix_args @
+                                    external_api_no_prefix_args @
+                                    external_typedefs_include_args @
+                                    krml_add_includes
   in
   let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
   let krml_args =
@@ -364,13 +421,15 @@ let call_krml files_and_modules_cleanup out_dir krml_args =
 
 let produce_c_files
       input_stream_binding
+      (emit_output_types_defs: bool)
+      (add_include: string list)
       (skip_c_makefiles: bool)
       (cleanup: bool)
       (out_dir: string)
       (files_and_modules: (string * string) list)
     : unit
   =
-  let krml_args = krml_args input_stream_binding skip_c_makefiles out_dir files_and_modules in
+  let krml_args = krml_args input_stream_binding emit_output_types_defs add_include skip_c_makefiles out_dir files_and_modules in
   (* if M.Types exists, then bundle M.Types.krml and EverParse into M *)
   let krml_args =
     let files_and_modules_with_types =
@@ -390,13 +449,15 @@ let produce_c_files
 
 let produce_one_c_file
       input_stream_binding
+      (emit_output_types_defs: bool)
+      (add_include: string list)
       (out_dir: string)
       (file: string)
       (modul: string)
       (dep_files_and_modules: (string * string) list)
     : unit
   =
-  let krml_args = krml_args input_stream_binding true out_dir ((file, modul) :: dep_files_and_modules) in
+  let krml_args = krml_args input_stream_binding emit_output_types_defs add_include true out_dir ((file, modul) :: dep_files_and_modules) in
   let krml_args =
     krml_args@
       List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ [
@@ -687,6 +748,8 @@ let postprocess_c
 
 let produce_and_postprocess_c
       input_stream_binding
+      (emit_output_types_defs: bool)
+      (add_include: string list)
       (clang_format: bool)
       (clang_format_executable: string)
       (skip_c_makefiles: bool)
@@ -699,7 +762,7 @@ let produce_and_postprocess_c
   =
   let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the C files *)
-  produce_c_files input_stream_binding skip_c_makefiles cleanup out_dir files_and_modules;
+  produce_c_files input_stream_binding emit_output_types_defs add_include skip_c_makefiles cleanup out_dir files_and_modules;
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
   (* postprocess the produced C files *)
@@ -707,6 +770,8 @@ let produce_and_postprocess_c
 
 let produce_and_postprocess_one_c
       input_stream_binding
+      (emit_output_types_defs: bool)
+      (add_include: string list)
       (clang_format: bool)
       (clang_format_executable: string)
       (out_dir: string)
@@ -717,7 +782,7 @@ let produce_and_postprocess_one_c
   =
   let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the .c and .h file *)
-  produce_one_c_file input_stream_binding out_dir file modul dep_files_and_modules;
+  produce_one_c_file input_stream_binding emit_output_types_defs add_include out_dir file modul dep_files_and_modules;
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
   (* postprocess the produced .c and .h files for this module *)
@@ -735,6 +800,8 @@ let postprocess_wrappers
 
 let postprocess_fst
       input_stream_binding
+      (emit_output_types_defs: bool)
+      (add_include: string list)
       (clang_format: bool)
       (clang_format_executable: string)
       (skip_c_makefiles: bool)
@@ -749,7 +816,7 @@ let postprocess_fst
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module input_stream_binding out_dir) files_and_modules;
   (* produce the .c and .h files and format them *)
-  produce_and_postprocess_c input_stream_binding clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+  produce_and_postprocess_c input_stream_binding emit_output_types_defs add_include clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let check_all_hashes
       (ch: check_hashes_t)

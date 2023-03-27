@@ -2,17 +2,15 @@
 
 #include "GetFieldPtr.h"
 
-
-
 uint64_t
 GetFieldPtrValidateT(
   uint8_t **Out,
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -23,7 +21,7 @@ GetFieldPtrValidateT(
   uint64_t StartPosition
 )
 {
-  /* SNIPPET_START: GetFieldPtr.T */
+  /* Validating field f1 */
   BOOLEAN hasEnoughBytes0 = (uint64_t)(uint32_t)(uint8_t)10U <= (InputLength - StartPosition);
   uint64_t positionAfterT;
   if (!hasEnoughBytes0)
@@ -67,7 +65,7 @@ GetFieldPtrValidateT(
         }
         else
         {
-          Err("_T",
+          ErrorHandlerFn("_T",
             "f1.element",
             EverParseErrorReasonOfResult(positionAfterT),
             EverParseGetValidatorErrorKind(positionAfterT),
@@ -95,7 +93,7 @@ GetFieldPtrValidateT(
   }
   else
   {
-    Err("_T",
+    ErrorHandlerFn("_T",
       "f1",
       EverParseErrorReasonOfResult(positionAfterT),
       EverParseGetValidatorErrorKind(positionAfterT),
@@ -152,7 +150,7 @@ GetFieldPtrValidateT(
         }
         else
         {
-          Err("_T",
+          ErrorHandlerFn("_T",
             "f2.base.element",
             EverParseErrorReasonOfResult(positionAfterT),
             EverParseGetValidatorErrorKind(positionAfterT),
@@ -180,7 +178,7 @@ GetFieldPtrValidateT(
   }
   else
   {
-    Err("_T",
+    ErrorHandlerFn("_T",
       "f2.base",
       EverParseErrorReasonOfResult(positionAfterT0),
       EverParseGetValidatorErrorKind(positionAfterT0),
@@ -214,7 +212,7 @@ GetFieldPtrValidateT(
   {
     return positionAfterT1;
   }
-  Err("_T",
+  ErrorHandlerFn("_T",
     "f2",
     EverParseErrorReasonOfResult(positionAfterT1),
     EverParseGetValidatorErrorKind(positionAfterT1),

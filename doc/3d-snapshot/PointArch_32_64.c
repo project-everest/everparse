@@ -2,16 +2,14 @@
 
 #include "PointArch_32_64.h"
 
-
-
 static inline uint64_t
 ValidateInt(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -42,7 +40,7 @@ ValidateInt(
     {
       return positionAfterInt;
     }
-    Err("_INT",
+    ErrorHandlerFn("_INT",
       "x",
       EverParseErrorReasonOfResult(positionAfterInt),
       EverParseGetValidatorErrorKind(positionAfterInt),
@@ -71,7 +69,7 @@ ValidateInt(
     {
       return positionAfterInt;
     }
-    Err("_INT",
+    ErrorHandlerFn("_INT",
       "x",
       EverParseErrorReasonOfResult(positionAfterInt),
       EverParseGetValidatorErrorKind(positionAfterInt),
@@ -87,10 +85,10 @@ uint64_t
 PointArch3264ValidatePoint(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -102,7 +100,8 @@ PointArch3264ValidatePoint(
 )
 {
   /* Validating field x */
-  uint64_t positionAfterPoint = ValidateInt(Ctxt, Err, Input, InputLength, StartPosition);
+  uint64_t
+  positionAfterPoint = ValidateInt(Ctxt, ErrorHandlerFn, Input, InputLength, StartPosition);
   uint64_t positionAfterx;
   if (EverParseIsSuccess(positionAfterPoint))
   {
@@ -110,7 +109,7 @@ PointArch3264ValidatePoint(
   }
   else
   {
-    Err("_POINT",
+    ErrorHandlerFn("_POINT",
       "x",
       EverParseErrorReasonOfResult(positionAfterPoint),
       EverParseGetValidatorErrorKind(positionAfterPoint),
@@ -124,12 +123,13 @@ PointArch3264ValidatePoint(
     return positionAfterx;
   }
   /* Validating field y */
-  uint64_t positionAfterPoint0 = ValidateInt(Ctxt, Err, Input, InputLength, positionAfterx);
+  uint64_t
+  positionAfterPoint0 = ValidateInt(Ctxt, ErrorHandlerFn, Input, InputLength, positionAfterx);
   if (EverParseIsSuccess(positionAfterPoint0))
   {
     return positionAfterPoint0;
   }
-  Err("_POINT",
+  ErrorHandlerFn("_POINT",
     "y",
     EverParseErrorReasonOfResult(positionAfterPoint0),
     EverParseGetValidatorErrorKind(positionAfterPoint0),

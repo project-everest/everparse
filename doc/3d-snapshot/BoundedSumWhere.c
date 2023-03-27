@@ -2,17 +2,15 @@
 
 #include "BoundedSumWhere.h"
 
-
-
 uint64_t
 BoundedSumWhereValidateBoundedSum(
   uint32_t Bound,
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -60,7 +58,7 @@ BoundedSumWhereValidateBoundedSum(
       }
       else
       {
-        Err("_boundedSum",
+        ErrorHandlerFn("_boundedSum",
           "left",
           EverParseErrorReasonOfResult(positionAfterBoundedSum0),
           EverParseGetValidatorErrorKind(positionAfterBoundedSum0),
@@ -113,7 +111,7 @@ BoundedSumWhereValidateBoundedSum(
         }
         else
         {
-          Err("_boundedSum",
+          ErrorHandlerFn("_boundedSum",
             "right.refinement",
             EverParseErrorReasonOfResult(positionAfterBoundedSum0),
             EverParseGetValidatorErrorKind(positionAfterBoundedSum0),
@@ -129,7 +127,7 @@ BoundedSumWhereValidateBoundedSum(
   {
     return positionAfterBoundedSum;
   }
-  Err("_boundedSum",
+  ErrorHandlerFn("_boundedSum",
     "none",
     EverParseErrorReasonOfResult(positionAfterBoundedSum),
     EverParseGetValidatorErrorKind(positionAfterBoundedSum),

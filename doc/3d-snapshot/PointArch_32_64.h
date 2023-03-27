@@ -7,20 +7,17 @@
 extern "C" {
 #endif
 
-
-
-
-
 #include "arch_flags.h"
 #include "EverParse.h"
+
 uint64_t
 PointArch3264ValidatePoint(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,

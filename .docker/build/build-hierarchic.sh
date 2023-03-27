@@ -18,4 +18,6 @@ sed -i -E "s|^EVERPARSE_HOME=.*||" ~/.bashrc
 rootPath=$(pwd)
 result_file="result.txt"
 status_file="status.txt"
-exec_build $target
+
+out_file="log.txt"
+{ { { { { { exec_build ; } 3>&1 1>&2 2>&3 ; } | sed -u 's!^![STDERR]!' ; } 3>&1 1>&2 2>&3 ; } | sed -u 's!^![STDOUT]!' ; } 2>&1 ; } | awk '{ print strftime("[%Y-%m-%d %H:%M:%S]"), $0 }' | tee $out_file

@@ -2,16 +2,14 @@
 
 #include "BF.h"
 
-
-
 uint64_t
 BfValidateDummy(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -31,7 +29,7 @@ BfValidateDummy(
   }
   else
   {
-    Err("_dummy",
+    ErrorHandlerFn("_dummy",
       "emp1",
       EverParseErrorReasonOfResult(positionAfterDummy),
       EverParseGetValidatorErrorKind(positionAfterDummy),
@@ -51,7 +49,7 @@ BfValidateDummy(
   {
     return positionAfterDummy0;
   }
-  Err("_dummy",
+  ErrorHandlerFn("_dummy",
     "emp2",
     EverParseErrorReasonOfResult(positionAfterDummy0),
     EverParseGetValidatorErrorKind(positionAfterDummy0),

@@ -7,11 +7,8 @@
 extern "C" {
 #endif
 
-
-
-
-
 #include "EverParse.h"
+
 #define TAGGEDUNION_SIZE8 ((uint8_t)8U)
 
 #define TAGGEDUNION_SIZE16 ((uint8_t)16U)
@@ -22,10 +19,10 @@ uint64_t
 TaggedUnionValidateInteger(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,

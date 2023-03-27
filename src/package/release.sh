@@ -10,8 +10,9 @@ if [[ -z "$EVERPARSE_HOME" ]] ; then
     export EVERPARSE_HOME=$PWD
 fi
 
-if [[ -z "$SATS_TOKEN" ]] ; then
-    echo Missing environment variable: SATS_TOKEN
+# Necessary for gh to authenticate to GitHub
+if [[ -z "$GH_TOKEN" ]] ; then
+    echo Missing environment variable: GH_TOKEN
     exit 1
 fi
 
@@ -24,15 +25,21 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
-remote=https://${SATS_TOKEN}@github.com/project-everest/everparse.git
+if [[ -z "$EVERPARSE_RELEASE_ORG" ]] ; then
+    EVERPARSE_RELEASE_ORG=project-everest
+fi
+if [[ -z "$EVERPARSE_RELEASE_REPO" ]] ; then
+    EVERPARSE_RELEASE_REPO=everparse
+fi
+remote="https://${GH_TOKEN}@github.com/${EVERPARSE_RELEASE_ORG}/${EVERPARSE_RELEASE_REPO}.git"
 
 branchname=$(git rev-parse --abbrev-ref HEAD)
-git diff --staged --exit-code
-git diff --exit-code
+git diff --staged --exit-code --ignore-cr-at-eol
+git diff --exit-code --ignore-cr-at-eol
 git fetch $remote --tags
 git pull $remote $branchname --ff-only
 
-everparse_version=$(cat $EVERPARSE_HOME/version.txt)
+everparse_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
 if [[ $everparse_commit != $everparse_last_version ]] ; then
@@ -42,6 +49,7 @@ if [[ $everparse_commit != $everparse_last_version ]] ; then
     git commit -m "Release $everparse_version"
     git tag $everparse_version
 fi
+export everparse_version
 #strip the v
 export everparse_nuget_version=${everparse_version:1}
 
@@ -58,17 +66,21 @@ else
     ext=.tar.gz
 fi
 
+if $is_windows ; then
+    exe=.exe
+else
+    exe=
+fi
+
+gh="gh$exe -R ${EVERPARSE_RELEASE_ORG}/${EVERPARSE_RELEASE_REPO}"
+
 function upload_archive () {
     archive="$1"
-
-    docker build \
-       -t everparse-release:$everparse_version \
-       -f src/package/Dockerfile.release \
-       --build-arg SATS_FILE=$archive \
-       --build-arg SATS_TAG=$everparse_version \
-       --build-arg SATS_COMMITISH=$branchname \
-       --build-arg SATS_TOKEN=$SATS_TOKEN \
-       .
+    if ! $gh release view $everparse_version ; then
+        $gh release create --prerelease --generate-notes --target $branchname $everparse_version $archive
+    else
+        $gh release upload $everparse_version $archive
+    fi
 }
 
 upload_archive everparse_"$everparse_version"_"$OS"_"$platform""$ext"

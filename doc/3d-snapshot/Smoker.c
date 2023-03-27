@@ -2,16 +2,14 @@
 
 #include "Smoker.h"
 
-
-
 uint64_t
 SmokerValidateSmoker(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
     uint64_t x3,
     uint8_t *x4,
     uint8_t *x5,
@@ -73,7 +71,7 @@ SmokerValidateSmoker(
       }
       else
       {
-        Err("_smoker",
+        ErrorHandlerFn("_smoker",
           "cigarettesConsumed",
           EverParseErrorReasonOfResult(positionAfterSmoker0),
           EverParseGetValidatorErrorKind(positionAfterSmoker0),
@@ -89,7 +87,7 @@ SmokerValidateSmoker(
   {
     return positionAfterSmoker;
   }
-  Err("_smoker",
+  ErrorHandlerFn("_smoker",
     "none",
     EverParseErrorReasonOfResult(positionAfterSmoker),
     EverParseGetValidatorErrorKind(positionAfterSmoker),
