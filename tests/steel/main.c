@@ -35,8 +35,6 @@ int test_read () {
 #define output_length 9
 
 int test_write () {
-  return 6;
-/*
   uint8_t dummy_input = 42;
   uint8_t output[output_length] = {0};
   uint32_t output_sz = output_length;
@@ -52,7 +50,6 @@ int test_write () {
     return 9;
   close(file);
   return 0;
-*/
 }
 
 int main (int argc, char* argv[]) {
