@@ -42,9 +42,19 @@ include .depend
 
 spec: $(addsuffix .checked,$(wildcard LowParse.Spec*.fst) $(wildcard LowParse.Spec*.fsti))
 
-steel: $(addsuffix .checked,$(wildcard LowParse.Steel*.fst) $(wildcard LowParse.Steel*.fsti))
+steel: steel_array steel_c_array $(addsuffix .checked,$(wildcard LowParse.Steel*.fst) $(wildcard LowParse.Steel*.fsti))
 
-lowparse: $(ALL_CHECKED_FILES)
+steel_array: LowParse.SteelST.ArrayPtr.fsti.checked steel_array/LowParse.SteelST.ArrayPtr.fst
+	+$(MAKE) -C $@
+
+ifdef STEEL_C
+steel_c_array: LowParse.SteelST.ArrayPtr.fsti.checked steel_c_array/LowParse.SteelST.ArrayPtr.fst
+	+$(MAKE) -C $@
+else
+steel_c_array:
+endif
+
+lowparse: steel $(ALL_CHECKED_FILES)
 
 verify-all: lowparse
 
@@ -62,7 +72,7 @@ $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test lowparse spec steel
+.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test lowparse spec steel steel_array steel_c_array
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
