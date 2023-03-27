@@ -37,7 +37,7 @@ int test_read () {
 int test_write () {
   uint8_t dummy_input = 42;
   uint8_t output[output_length] = {0};
-  uint32_t output_sz = output_length;
+  size_t output_sz = output_length;
   if (! (extract_test_write4 (output, &output_sz, &dummy_input)))
     return 6;
   if (output_sz)
