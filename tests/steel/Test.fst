@@ -379,7 +379,7 @@ let test_write2 (sq: squash SZ.fits_u32) : G.prog type_of_scalar (W.state_t type
                     (W.ASizePrefixed i5
                       U32 (mk_size_t sq)
                       (fun x -> x `SZ.lte` mk_size_t sq 4294967295ul)
-                      (magic ()) // TODO: no cast back from size_t, use specific writer instead
+                      (fun x -> SZ.sizet_to_uint32 x)
                       (G.TList (G.TScalar U32))
                       ()
                   ))
@@ -422,7 +422,7 @@ let test_write3 (sq: squash SZ.fits_u32) : G.prog type_of_scalar (W.state_t type
                     (W.ASizePrefixed i5
                       U32 (mk_size_t sq)
                       (fun x -> x `SZ.lte` mk_size_t sq 4294967295ul)
-                      (magic ()) // TODO: no cast back from size_t, use specific writer instead
+                      (fun x -> SZ.sizet_to_uint32 x)
                       (G.TList (G.TScalar U32))
                       ()
                   ))
@@ -517,7 +517,7 @@ let test_write4 (sq: squash SZ.fits_u32) : G.prog type_of_scalar (W.state_t type
                     (G.PAction (W.ASizePrefixed i7
                       U32 (mk_size_t sq)
                       (fun x -> x `SZ.lte` SZ.uint32_to_sizet 4294967295ul)
-                      (magic ()) // TODO: no cast back from size_t, use specific writer instead
+                      (fun x -> SZ.sizet_to_uint32 x)
                       (G.TList (G.TScalar U8))
                       ()
                     ))
