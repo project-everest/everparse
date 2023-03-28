@@ -359,6 +359,7 @@ let assumption = A.ident * typ
 type decl_attributes = {
   is_hoisted: bool;
   is_exported: bool;
+  is_if_def: bool;
   should_inline: bool;
   comments: list string;
 }
@@ -437,6 +438,7 @@ val output_base_var (lhs:output_expr) : ML A.ident
  *)
  
 val print_external_api_fstar (modul:string) (ds:decls) : ML string
+val print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
 val print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string
 val print_out_exprs_c (modul:string) (ds:decls) : ML string
 val print_output_types_defs (modul:string) (ds:decls) : ML string

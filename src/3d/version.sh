@@ -2,7 +2,7 @@
 
 set -e
 
-everparse_last_version=$(cat "$EVERPARSE_HOME/version.txt")
+everparse_last_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
 
 get_everparse_version() {
     (

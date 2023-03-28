@@ -145,6 +145,13 @@ write_everest_env_dest_file () {
   write_to_env_dest_file "$str"
 }
 
+write_gh_env_dest_file () {
+  str="
+    # This line automatically added by $0
+    export PATH=$(pwd)/gh/bin:\$PATH"
+  write_to_env_dest_file "$str"
+}
+
 cygsetup="setup-x86_64.exe"
 cygsetup_args="--no-desktop --no-shortcuts --no-startmenu --wait --quiet-mode"
 # Find Cygwin's setup utility, or download it from the internet.
@@ -218,23 +225,12 @@ parse_z3_version () {
 # The functions that implement the main actions
 # ------------------------------------------------------------------------------
 
-compile_z3 () {
-    if ! [[ -d z3-source ]] ; then
-        try_git_clone "git@github.com:Z3Prover/Z3.git" "https://github.com/Z3Prover/z3.git" z3-source
-    fi
+use_our_z3 () {
     local z3_dir=$(realpath $PWD)/z3
-    (
-        cd z3-source
-        git checkout Z3-4.8.5
-        if is_windows ; then
-            CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar python scripts/mk_make.py --prefix="$z3_dir"
-        else
-            python scripts/mk_make.py --prefix="$z3_dir"
-        fi
-    )
-    $MAKE -C z3-source/build $make_opts
-    rm -f z3
-    $MAKE -C z3-source/build install
+    if ! PATH="$z3_dir/bin:$PATH" which z3 >/dev/null 2>&1 ; then
+        red "Z3 has not been compiled yet, abort"
+        exit 1
+    fi
     magenta "Automatically customize $EVEREST_ENV_DEST_FILE with the z3 path? [Yn]"
     prompt_yes "write_z3_env_dest_file z3" true
 }
@@ -245,8 +241,8 @@ do_update_z3 () {
   local new_z3=4.8.5
   if [[ $new_z3 != $current_z3 ]]; then
     red "This is not z3 $current_z3"
-    magenta "Compile z3 from sources? [Yn]"
-    prompt_yes compile_z3 false
+    magenta "Use our existing z3? [Yn]"
+    prompt_yes use_our_z3 false
   fi
 }
 
@@ -485,6 +481,30 @@ OCAML
     fi
   fi
 
+  echo "Checking for gh (GitHub CLI)"
+  if [[ -z "$everparse_do_release" ]] ; then
+      echo "Check skipped, not releasing"
+  elif command -v gh >/dev/null 2>&1 ; then
+      echo "... gh found in PATH"
+  else
+      red "ERROR: gh (GitHub CLI) not found in PATH"
+      if is_windows ; then
+          gh_version=2.20.2
+          magenta "Do you want to download gh $gh_version ?"
+          prompt_yes true "exit 1"
+          if ! [[ -d gh ]] ; then
+              gh_zip=gh_${gh_version}_windows_amd64.zip
+              wget "https://github.com/cli/cli/releases/download/v${gh_version}/${gh_zip}"
+              unzip -d gh $gh_zip
+          fi
+          chmod +x gh/bin/gh.exe
+          write_gh_env_dest_file
+      else
+          red "Please install it following https://github.com/cli/cli#installation"
+          exit 1
+      fi
+  fi
+
   echo
   magenta "Remember to run source \"$EVEREST_ENV_DEST_FILE\" if it was modified!"
   local xpwd=""
@@ -499,8 +519,6 @@ OCAML
     magenta "Note: you *may* want to export FSTAR_HOME=${xpwd}/FStar"
   [ -n "${KRML_HOME}" ] || \
     magenta "Note: you *may* want to export KRML_HOME=${xpwd}/karamel"
-  [ -n "${HACL_HOME}" ] || \
-    magenta "Note: you *may* want to export HACL_HOME=${xpwd}/hacl-star"
 }
 
 symlink_clone_warned=false
@@ -540,7 +558,7 @@ set_opt () {
 # ------------------------------------------------------------------------------
 
 OPTIONS=j:k
-LONGOPTS=yes,windows,openssl,opt,admit,no-vale-archive
+LONGOPTS=yes,release,windows,openssl,opt,admit,no-vale-archive
 
 # Temporarily stores output to check for errors
 # --alternative allows long options to start with a single '-'
@@ -568,6 +586,11 @@ while true; do
 
         -yes|--yes)
             make_non_interactive
+            shift
+            ;;
+
+        (-release|--release)
+            everparse_do_release=1
             shift
             ;;
 

@@ -95,7 +95,7 @@ print_date_utc_of_iso_hr() {
 }
 
 if [[ -z "$everparse_version" ]] ; then
-    everparse_version=$(cat $EVERPARSE_HOME/version.txt)
+    everparse_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
     everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
     if everparse_commit=$(git show --no-patch --format=%h) ; then
         if [[ $everparse_commit != $everparse_last_version ]] ; then
@@ -109,8 +109,14 @@ make_everparse() {
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
     if [[ -z "$FSTAR_HOME" ]] ; then
-        [[ -d FStar ]] || git clone https://github.com/FStarLang/FStar
-        export FSTAR_HOME=$(fixpath $PWD/FStar)
+        if [[ -d FStar ]] ; then
+            export FSTAR_HOME=$(fixpath $PWD/FStar)
+        elif find_fstar="$(which fstar.exe)" ; then
+            export FSTAR_HOME=$(fixpath "$(dirname $find_fstar)"/..)
+        else
+            git clone https://github.com/FStarLang/FStar
+            export FSTAR_HOME=$(fixpath $PWD/FStar)
+        fi
     else
         export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
     fi
@@ -133,7 +139,10 @@ make_everparse() {
 
     # Rebuild F* and KaRaMeL
     export OTHERFLAGS='--admit_smt_queries true'
-    $MAKE -C "$FSTAR_HOME" "$@"
+    if [[ -f "$FSTAR_HOME/Makefile" ]] ; then
+        # assume F* source tree
+        $MAKE -C "$FSTAR_HOME" "$@"
+    fi
     if [[ -z "$fstar_commit_id" ]] ; then
         fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
         fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
@@ -141,33 +150,8 @@ make_everparse() {
     $MAKE -C "$KRML_HOME" "$@" minimal
     $MAKE -C "$KRML_HOME/krmllib" "$@" verify-all
 
-    # Build the hacl-star package if not available
-    if [[ -z "$NO_EVERCRYPT" ]] && ! ocamlfind query hacl-star ; then
-        mkdir -p ocaml-packages
-        export OCAMLFIND_DESTDIR=$(fixpath "$PWD/ocaml-packages")
-        if $is_windows ; then
-            export OCAMLPATH="$OCAMLFIND_DESTDIR;$OCAMLPATH"
-        else
-            export OCAMLPATH="$OCAMLFIND_DESTDIR:$OCAMLPATH"
-        fi
-        if [[ -z $HACL_HOME ]] ; then
-            [[ -d hacl-star ]] || git clone https://github.com/hacl-star/hacl-star
-            HACL_HOME=$(fixpath $PWD/hacl-star)
-        else
-            HACL_HOME=$(fixpath "$HACL_HOME")
-        fi
-        if ! ocamlfind query hacl-star-raw ; then
-            (cd $HACL_HOME/dist/gcc-compatible ; ./configure --disable-bzero)
-            $MAKE -C $HACL_HOME/dist/gcc-compatible "$@"
-            $MAKE -C $HACL_HOME/dist/gcc-compatible install-hacl-star-raw
-        fi
-        if ! ocamlfind query hacl-star ; then
-            (cd $HACL_HOME/bindings/ocaml ; dune build ; dune install)
-        fi
-    fi
-
-    # Install ocaml-sha if EverCrypt is disabled
-    if [[ -n "$NO_EVERCRYPT" ]] && ! ocamlfind query sha ; then
+    # Install ocaml-sha if not found
+    if ! ocamlfind query sha ; then
         opam install --yes sha
     fi
 
@@ -181,31 +165,9 @@ make_everparse() {
         $cp $LIBGMP10_DLL everparse/bin/
         $cp $Z3_DIR/*.exe everparse/bin/
 	find $Z3_DIR/.. -name *.dll -exec cp {} everparse/bin \;
-        if [[ -z "$NO_EVERCRYPT" ]] ; then
-            for f in $(ocamlfind printconf destdir)/stublibs $($SED 's![\t\v\f \r\n]*$!!' < $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
-                libevercrypt_dll=$f/libevercrypt.dll
-                if [[ -f $libevercrypt_dll ]] ; then
-                    break
-                fi
-                unset libevercrypt_dll
-            done
-            [[ -n $libevercrypt_dll ]]
-            $cp $libevercrypt_dll everparse/bin/
-        fi
         # copy libffi-6 in all cases (ocaml-sha also seems to need it)
         $cp $(which libffi-6.dll) everparse/bin/
     else
-        if [[ -z "$NO_EVERCRYPT" ]] ; then
-            for f in $(ocamlfind printconf destdir)/stublibs $(cat $(ocamlfind printconf ldconf)) $(ocamlfind query hacl-star-raw) ; do
-                libevercrypt_so=$f/libevercrypt.so
-                if [[ -f $libevercrypt_so ]] ; then
-                    break
-                fi
-                unset libevercrypt_so
-            done
-            [[ -n $libevercrypt_so ]]
-            $cp $libevercrypt_so everparse/bin/
-        fi
         {
             # Locate libffi
             {
@@ -235,9 +197,18 @@ make_everparse() {
     fi
 
     # Copy F*
-    $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/
-    $cp -r $FSTAR_HOME/bin/fstar-tactics-lib everparse/bin/
-    $cp -r $FSTAR_HOME/ulib everparse/
+    if [[ -d $FSTAR_HOME/ulib ]] ; then
+      # we have a F* source tree
+      # TODO: create some `install-minimal` rule in the F* Makefile
+      everparse_package_dir=$(fixpath "$(pwd)/everparse")
+      (cd $FSTAR_HOME/ocaml && dune install --prefix="$everparse_package_dir")
+      PREFIX="$everparse_package_dir" $MAKE -C $FSTAR_HOME/ulib install
+    else
+      # we have a F* binary package, or opam package
+      $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/
+      mkdir everparse/lib
+      $cp -r $FSTAR_HOME/lib/fstar everparse/lib/fstar
+    fi
 
     # Copy KaRaMeL
     $cp $KRML_HOME/Karamel.native everparse/bin/krml$exe
@@ -278,13 +249,17 @@ make_everparse() {
     
     # licenses
     mkdir -p everparse/licenses
-    $cp $FSTAR_HOME/LICENSE everparse/licenses/FStar
+    if [[ -f $FSTAR_HOME/LICENSE ]] ; then
+        # F* license found in the source tree
+        $cp $FSTAR_HOME/LICENSE everparse/licenses/FStar
+    else
+        # F* license not found, download it from GitHub
+        # TODO: have F* install its license
+        wget --output-document=everparse/licenses/FStar https://raw.githubusercontent/FStarLang/FStar/master/LICENSE
+    fi
     $cp $KRML_HOME/LICENSE everparse/licenses/KaRaMeL
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
-    if [[ -z "$NO_EVERCRYPT" ]] ; then
-        wget --output-document=everparse/licenses/EverCrypt https://raw.githubusercontent.com/hacl-star/hacl-star/main/LICENSE
-    fi
     wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
     if $is_windows ; then
         wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT

@@ -17,27 +17,6 @@ function export_home() {
     fi
 }
 
-function fetch_hacl() {
-    if [ ! -d hacl-star ]; then
-        git clone https://github.com/hacl-star/hacl-star hacl-star
-    fi
-
-    cd hacl-star
-    git fetch origin
-    local ref=$(jq -c -r '.RepoVersions["hacl_version"]' "$rootPath/.docker/build/config.json" )
-    echo Switching to 'HACL*' $ref
-    git reset --hard $ref
-    cd ..
-    export_home HACL "$(pwd)/hacl-star"
-}
-
-function fetch_and_make_hacl() {
-    fetch_hacl
-    make -C hacl-star/dist/gcc-compatible -j $threads
-    make -C hacl-star/dist/gcc-compatible install-hacl-star-raw
-    (cd hacl-star/bindings/ocaml && dune build @install && dune install)
-}
-
 # Nightly build: verify miTLS parsers
 # (necessary since miTLS builds check them with "--admit_smt_queries true")
 function fetch_mitls() {
@@ -102,7 +81,6 @@ function build_and_test_quackyducky() {
     rebuild_doc &&
     # Test EverParse proper
     fetch_and_make_karamel &&
-    fetch_and_make_hacl &&
     make -j $threads -k ci &&
     # Build incrementality test
     pushd tests/sample && {

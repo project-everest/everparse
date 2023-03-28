@@ -57,6 +57,7 @@ let rec parser_kind_eq k k' =
 
 let default_attrs = {
     is_hoisted = false;
+    is_if_def = false;
     is_exported = false;
     should_inline = false;
     comments = []
@@ -329,7 +330,7 @@ let print_output_type (qual:bool) (t:typ) : ML string =
   let rec aux (t:typ)
     : ML (option string & string)
     = match t with
-      | T_app id _ _ -> 
+      | T_app id _ _ ->
         id.v.modul_name, print_ident id
       | T_pointer t ->
         let m, i = aux t in
@@ -340,7 +341,7 @@ let print_output_type (qual:bool) (t:typ) : ML string =
   if qual 
   then match mopt with
        | None -> i
-       | Some m -> Printf.sprintf "%s.ExternalAPI.%s" m i
+       | Some m -> Printf.sprintf "%s.ExternalTypes.%s" m i
   else i
 
 let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
@@ -804,7 +805,8 @@ let print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
 let print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string =
   match fst d with
   | Assumption (x, t) ->
-    Printf.sprintf "assume\nval %s : %s\n\n"
+    Printf.sprintf "%sassume\nval %s : %s\n\n"
+      (if (snd d).is_if_def then "[@@ CIfDef ]\n" else "")
       (print_ident x)      
       (print_typ mname t) 
 
@@ -953,6 +955,9 @@ let print_decl_signature (mname:string) (d:decl) : ML string =
   | Extern_fn _ _ _ -> ""
 
 let has_output_types (ds:list decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Output_type? d) ds
+
+let has_output_type_exprs (ds:list decl) : bool =
   List.Tot.existsb (fun (d, _) -> Output_type_expr? d) ds
 
 let has_extern_types (ds:list decl) : bool =
@@ -962,7 +967,7 @@ let has_extern_functions (ds:list decl) : bool =
   List.Tot.existsb (fun (d, _) -> Extern_fn? d) ds
 
 let external_api_include (modul:string) (ds:list decl) : string =
-  if has_output_types ds || has_extern_types ds || has_extern_functions ds
+  if has_output_type_exprs ds || has_extern_types ds || has_extern_functions ds
   then Printf.sprintf "open %s.ExternalAPI\n\n" modul
   else ""
 
@@ -973,12 +978,11 @@ let print_decls (modul: string) (ds:list decl) =
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
      %s\
-     include %s.Types\n\n\
+     \n\n\
      #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
      %s"
      modul
      (external_api_include modul ds)
-     modul
      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n"
        (ds |> List.map (print_decl_for_validators modul)
            |> List.filter (fun s -> s <> "")))
@@ -1009,11 +1013,10 @@ let print_decls_signature (mname: string) (ds:list decl) =
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
      %s\
-     include %s.Types\n\n\
+     \n\n\
      %s"
      mname
      (external_api_include mname ds)
-     mname
      (String.concat "\n" (ds |> List.map (print_decl_signature mname) |> List.filter (fun s -> s <> "")))
   in
   // let dummy =
@@ -1054,6 +1057,8 @@ let pascal_case name : ML string =
   then name
   else String.uppercase (String.sub name 0 1) ^ String.sub name 1 (String.length name - 1)
 
+let uppercase (name:string) : string = String.uppercase name
+
 let rec print_as_c_type (t:typ) : ML string =
     let open Ast in
     match t with
@@ -1074,9 +1079,28 @@ let rec print_as_c_type (t:typ) : ML string =
     | T_app {v={name=x}} KindSpec [] ->
           x
     | T_app {v={name=x}} _ [] ->
-          pascal_case x
+          uppercase x
     | _ ->
          "__UNKNOWN__"
+
+let error_code_macros = 
+   //To be kept consistent with EverParse3d.ErrorCode.error_reason_of_result
+   "#define EVERPARSE_ERROR_GENERIC 1uL\n\
+    #define EVERPARSE_ERROR_NOT_ENOUGH_DATA 2uL\n\
+    #define EVERPARSE_ERROR_IMPOSSIBLE 3uL\n\
+    #define EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE 4uL\n\
+    #define EVERPARSE_ERROR_ACTION_FAILED 5uL\n\
+    #define EVERPARSE_ERROR_CONSTRAINT_FAILED 6uL\n\
+    #define EVERPARSE_ERROR_UNEXPECTED_PADDING 7uL\n"
+
+let rec get_output_typ_dep (modul:string) (t:typ) : ML (option string) =
+  match t with
+  | T_app {v={modul_name=None}} _ _ -> None
+  | T_app {v={modul_name=Some m}} _ _ ->
+    if m = modul then None
+    else Some m
+  | T_pointer t -> get_output_typ_dep modul t
+  | _ -> failwith "get_typ_deps: unexpected output type"
 
 let print_c_entry (modul: string)
                   (env: global_env)
@@ -1088,15 +1112,17 @@ let print_c_entry (modul: string)
                               const char *typename_s,\n\t\
                               const char *fieldname,\n\t\
                               const char *reason,\n\t\
+                              uint64_t error_code,\n\t\
                               uint8_t *context,\n\t\
-                              EverParseInputBuffer input,\n\t\
+                              EVERPARSE_INPUT_BUFFER input,\n\t\
                               uint64_t start_pos)\n\
           {\n\t\
-            EverParseErrorFrame *frame = (EverParseErrorFrame*)context;\n\t\
+            EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;\n\t\
             EverParseDefaultErrorHandler(\n\t\t\
               typename_s,\n\t\t\
               fieldname,\n\t\t\
               reason,\n\t\t\
+              error_code,\n\t\t\
               frame,\n\t\t\
               input,\n\t\t\
               start_pos\n\t\
@@ -1107,7 +1133,7 @@ let print_c_entry (modul: string)
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
    let wrapped_call_buffer name params =
      Printf.sprintf
-       "EverParseErrorFrame frame;\n\t\
+       "EVERPARSE_ERROR_FRAME frame;\n\t\
        frame.filled = FALSE;\n\t\
        %s\
        uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t\
@@ -1121,25 +1147,26 @@ let print_c_entry (modul: string)
        }\n\t\
        return TRUE;"
        (if is_input_stream_buffer then ""
-        else "EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t")
+        else "EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t")
        name
        params
        modul
    in
    let wrapped_call_stream name params =
      Printf.sprintf
-       "EverParseErrorFrame frame =\n\t\
+       "EVERPARSE_ERROR_FRAME frame =\n\t\
              { .filled = FALSE,\n\t\
                .typename_s = \"UNKNOWN\",\n\t\
                .fieldname =  \"UNKNOWN\",\n\t\
-               .reason =   \"UNKNOWN\"\n\t\t\
+               .reason =   \"UNKNOWN\",\n\t\
+               .error_code = 0uL\n\
              };\n\
-       EverParseInputBuffer input = EverParseMakeInputBuffer(base);\n\t\
+       EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t\
        uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
        uint64_t parsedSize = EverParseGetValidatorErrorPos(result);\n\
        if (EverParseIsError(result))\n\t\
        {\n\t\t\
-           EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+           EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
        }\n\t\
        EverParseRetreat(_extra, base, parsedSize);\n\
        return parsedSize;"
@@ -1152,7 +1179,7 @@ let print_c_entry (modul: string)
    let print_one_validator (d:type_decl) : ML (string & string) =
     let params = 
       d.decl_name.td_params @
-      (if is_input_stream_buffer then [] else [mk_param "_extra" "EverParseExtraT"])
+      (if is_input_stream_buffer then [] else [mk_param "_extra" "EVERPARSE_EXTRA_T"])
     in
     let print_params (ps:list param) : ML string =
       let params =
@@ -1192,7 +1219,7 @@ let print_c_entry (modul: string)
       then Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
              wrapper_name
             (print_params params)
-      else Printf.sprintf "uint64_t %s(%sEverParseInputStreamBase base)"
+      else Printf.sprintf "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base)"
              wrapper_name
              (print_params params)
     in
@@ -1213,6 +1240,20 @@ let print_c_entry (modul: string)
     signature ^";",
     impl
   in
+
+  let signatures_output_typ_deps =
+    List.fold_left (fun deps (d, _) ->
+      match d with
+      | Type_decl d ->
+        if d.decl_name.td_entrypoint
+        then let params = d.decl_name.td_params in
+             List.fold_left (fun deps (_, t) ->
+               match get_output_typ_dep modul t with
+               | Some dep -> if List.mem dep deps then deps else deps@[dep]
+               | _ -> deps) deps params
+        else deps
+      | _ -> deps) [] ds in
+               
   let signatures, impls =
     List.split
       (List.collect
@@ -1225,9 +1266,28 @@ let print_c_entry (modul: string)
           | _ -> [])
         ds)
   in
+
+  let external_defs_includes =
+    if not (Options.get_emit_output_types_defs ()) then "" else
+    let deps =
+      if List.length signatures_output_typ_deps = 0
+      then ""
+      else
+        String.concat
+          ""
+          (List.map
+             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" dep)
+             signatures_output_typ_deps) in
+    let self =
+      if has_output_types ds || has_extern_types ds
+      then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
+      else "" in
+    Printf.sprintf "%s\n%s\n\n" deps self in
+
   let header =
     Printf.sprintf
       "#include \"EverParseEndianness.h\"\n\
+       %s\n\
        %s\
        #ifdef __cplusplus\n\
        extern \"C\" {\n\
@@ -1236,9 +1296,8 @@ let print_c_entry (modul: string)
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
-      (if has_output_types ds || has_extern_types ds
-       then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
-       else "")
+      error_code_macros
+      external_defs_includes
       (signatures |> String.concat "\n\n")
   in
   let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
@@ -1251,6 +1310,8 @@ let print_c_entry (modul: string)
       input_stream_include
       header
   in
+  let add_includes = Options.make_includes () in
+  let header = Printf.sprintf "%s%s" add_includes header in
   let error_callback_proto =
     if HashingOptions.InputStreamBuffer? input_stream_binding
     then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
@@ -1281,6 +1342,7 @@ let print_c_entry (modul: string)
         input_stream_include
         impl
   in
+  let impl = Printf.sprintf "%s%s" add_includes impl in
   header,
   impl
 
@@ -1333,7 +1395,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
               Printf.sprintf "\n\nval %s : Type0\n\n" s
             | T_pointer bt ->
               let bs = print_output_type_val tbl bt in
-              bs ^ (Printf.sprintf "\n\ntype %s = bpointer %s\n\n" s (print_output_type false bt))
+              bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = bpointer %s\n\n" s (print_output_type false bt))
   else ""
 
 // let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
@@ -1468,10 +1530,15 @@ let print_external_api_fstar (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
+    | Output_type ot ->
+      let t = T_app ot.out_typ_names.typedef_abbrev A.KindOutput [] in
+      Printf.sprintf "%s%s"
+        (print_output_type_val tbl t)
+        (print_output_type_val tbl (T_pointer t))
     | Output_type_expr oe is_get ->
-      Printf.sprintf "%s%s%s"
-        (print_output_type_val tbl oe.oe_bt)
-        (print_output_type_val tbl oe.oe_t)
+      Printf.sprintf "%s"
+        // (print_output_type_val tbl oe.oe_bt)
+        // (print_output_type_val tbl oe.oe_t)
         (if not is_get then print_out_expr_set_fstar tbl modul oe
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
@@ -1492,14 +1559,38 @@ let print_external_api_fstar (modul:string) (ds:decls) : ML string =
     modul
     s
 
+let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string =
+  let tbl = H.create 10 in
+  let s = String.concat "" (ds |> List.map (fun d ->
+    match fst d with
+    | Output_type ot ->
+      let t = T_app ot.out_typ_names.typedef_abbrev A.KindOutput [] in
+      Printf.sprintf "%s%s"
+        (print_output_type_val tbl t)
+        (print_output_type_val tbl (T_pointer t))
+    | Extern_type i ->
+      Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
+    | _ -> "")) in
+   Printf.sprintf
+    "module %s.ExternalTypes\n\n\
+     open EverParse3d.Prelude\n\
+     open EverParse3d.Actions.All\n\n%s"
+     modul
+    s
+
 let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
+    // | Output_type ot ->
+    //   let t = T_app ot.out_typ_names.typedef_name A.KindOutput [] in
+    //   Printf.sprintf "%s%s"
+    //     (print_output_type_val tbl t)
+    //     (print_output_type_val tbl (T_pointer t))
     | Output_type_expr oe is_get ->
-      Printf.sprintf "%s%s%s"
-        (print_output_type_val tbl oe.oe_bt)
-        (print_output_type_val tbl oe.oe_t)
+      Printf.sprintf "%s"
+        // (print_output_type_val tbl oe.oe_bt)
+        // (print_output_type_val tbl oe.oe_t)
         (if not is_get then print_out_expr_set_fstar tbl modul oe
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
@@ -1511,23 +1602,68 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
           (print_ident i)
           (print_typ modul t))))
     | _ -> "")) in
+
+   let external_types_include =
+     if has_output_types ds || has_extern_types ds
+     then Printf.sprintf "include %s.ExternalTypes\n\n" modul
+     else "" in
+
    Printf.sprintf
     "module %s.ExternalAPI\n\n\
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
+     %s\n\
      noextract val output_loc : eloc\n\n%s"
-     modul
+    modul
+    external_types_include
     s
+
+//
+// When printing output expressions in C,
+//   the output types may be coming from some other module
+// This function gets all the dependencies from output expressions
+//   so that they can be added in the M_OutputTypes.c file
+//
+let get_out_exprs_deps (modul:string) (ds:decls) : ML (list string) =
+  let maybe_add_dep (deps:list string) (s:option string) : list string =
+    match s with
+    | None -> deps
+    | Some s -> if List.mem s deps then deps else deps@[s] in
+
+  List.fold_left (fun deps (d, _) ->
+    match d with
+    | Output_type_expr oe _ ->
+      maybe_add_dep (maybe_add_dep deps (get_output_typ_dep modul oe.oe_bt))
+                    (get_output_typ_dep modul oe.oe_t)
+    | _ -> deps) [] ds
 
 let print_out_exprs_c modul (ds:decls) : ML string =
   let tbl = H.create 10 in
+  let deps = get_out_exprs_deps modul ds in
+  let emit_output_types_defs = Options.get_emit_output_types_defs () in
+  let dep_includes =
+    if List.length deps = 0 || not emit_output_types_defs
+    then ""
+    else
+      String.concat ""
+        (List.map (fun s -> FStar.Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" s) deps) in
+
+  let self_external_typedef_include =
+    if has_output_types ds && emit_output_types_defs
+    then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" modul
+    else "" in
+
+
   (Printf.sprintf
-     "#include<stdint.h>\n\n\
-      #include \"%s_ExternalTypedefs.h\"\n\n\
+     "%s#include<stdint.h>\n\n\
+      %s\
+      %s\
       #if defined(__cplusplus)\n\
       extern \"C\" {\n\
       #endif\n\n"
-     modul)
+     (Options.make_includes ())
+     dep_includes
+     self_external_typedef_include)
   ^
   (String.concat "" (ds |> List.map (fun d ->
      match fst d with
@@ -1570,9 +1706,9 @@ let print_out_typ (ot:A.out_typ) : ML string =
   Printf.sprintf
     "\ntypedef %s %s {\n%s\n} %s;\n"
     (if ot.out_typ_is_union then "union" else "struct")
-    (pascal_case (A.ident_name ot.out_typ_names.typedef_name))
+    (uppercase (A.ident_name ot.out_typ_names.typedef_name))
     (print_output_types_fields ot.out_typ_fields)
-    (pascal_case (A.ident_name ot.out_typ_names.typedef_name))
+    (uppercase (A.ident_name ot.out_typ_names.typedef_abbrev))
 
 let print_output_types_defs (modul:string) (ds:decls) : ML string =
   let defs =
@@ -1587,7 +1723,7 @@ let print_output_types_defs (modul:string) (ds:decls) : ML string =
      #if defined(__cplusplus)\n\
      extern \"C\" {\n\
      #endif\n\n\n\
-     %s\n\n\n\
+     %s%s\n\n\n\
      #if defined(__cplusplus)\n\
      }\n\
      #endif\n\n\
@@ -1596,5 +1732,6 @@ let print_output_types_defs (modul:string) (ds:decls) : ML string =
 
     modul
     modul
+    (Options.make_includes ())
     defs
     modul

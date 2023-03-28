@@ -2,20 +2,19 @@
 
 #include "BoundedSum.h"
 
-
-
 uint64_t
 BoundedSumValidateBoundedSum(
   uint32_t Bound,
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -42,9 +41,10 @@ BoundedSumValidateBoundedSum(
   }
   else
   {
-    Err("_boundedSum",
+    ErrorHandlerFn("_boundedSum",
       "left",
       EverParseErrorReasonOfResult(positionAfterBoundedSum),
+      EverParseGetValidatorErrorKind(positionAfterBoundedSum),
       Ctxt,
       Input,
       StartPosition);
@@ -89,9 +89,10 @@ BoundedSumValidateBoundedSum(
   {
     return positionAfterBoundedSum0;
   }
-  Err("_boundedSum",
+  ErrorHandlerFn("_boundedSum",
     "right.refinement",
     EverParseErrorReasonOfResult(positionAfterBoundedSum0),
+    EverParseGetValidatorErrorKind(positionAfterBoundedSum0),
     Ctxt,
     Input,
     positionAfterleft);
@@ -102,13 +103,14 @@ uint64_t
 BoundedSumValidateMySum(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -135,9 +137,10 @@ BoundedSumValidateMySum(
   }
   else
   {
-    Err("mySum",
+    ErrorHandlerFn("mySum",
       "bound",
       EverParseErrorReasonOfResult(positionAftermySum),
+      EverParseGetValidatorErrorKind(positionAftermySum),
       Ctxt,
       Input,
       StartPosition);
@@ -153,7 +156,7 @@ BoundedSumValidateMySum(
   positionAftermySum0 =
     BoundedSumValidateBoundedSum(bound,
       Ctxt,
-      Err,
+      ErrorHandlerFn,
       Input,
       InputLength,
       positionAfterbound);
@@ -161,9 +164,10 @@ BoundedSumValidateMySum(
   {
     return positionAftermySum0;
   }
-  Err("mySum",
+  ErrorHandlerFn("mySum",
     "sum",
     EverParseErrorReasonOfResult(positionAftermySum0),
+    EverParseGetValidatorErrorKind(positionAftermySum0),
     Ctxt,
     Input,
     positionAfterbound);

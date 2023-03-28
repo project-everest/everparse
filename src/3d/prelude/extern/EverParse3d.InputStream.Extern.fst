@@ -21,7 +21,6 @@ let len_all
   then x.Aux.length
   else Aux.len_all x.Aux.base
 
-unfold
 let live
   (x: t)
   (m: HS.mem)
@@ -220,8 +219,7 @@ let read
 
 #pop-options
 
-#restart-solver
-#push-options "--z3rlimit 64 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactics -FStar.Reflection -FStar.Seq.Properties.slice_slice'"
+#push-options "--z3rlimit 64 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --split_queries"
 inline_for_extraction
 noextract
 let peep

@@ -2,21 +2,20 @@
 
 #include "ReadPair.h"
 
-
-
 uint64_t
 ReadPairValidatePair(
   uint32_t *X,
   uint32_t *Y,
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -64,9 +63,10 @@ ReadPairValidatePair(
   }
   else
   {
-    Err("_Pair",
+    ErrorHandlerFn("_Pair",
       "first",
       EverParseErrorReasonOfResult(positionAfterPair),
+      EverParseGetValidatorErrorKind(positionAfterPair),
       Ctxt,
       Input,
       StartPosition);
@@ -114,9 +114,10 @@ ReadPairValidatePair(
   {
     return positionAfterPair0;
   }
-  Err("_Pair",
+  ErrorHandlerFn("_Pair",
     "second",
     EverParseErrorReasonOfResult(positionAfterPair0),
+    EverParseGetValidatorErrorKind(positionAfterPair0),
     Ctxt,
     Input,
     positionAfterfirst);

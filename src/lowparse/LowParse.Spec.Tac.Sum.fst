@@ -68,15 +68,15 @@ let synth_case_recip_pre_tac
 noextract
 let rec dep_enum_destr_tac () : T.Tac unit =
   let (goal_fun, goal_arg) = T.app_head_tail (T.cur_goal ()) in
-  let _ = T.tassert (goal_fun `T.term_eq` (`dep_enum_destr)) in
+  let _ = T.tassert (goal_fun `T.is_fvar` (`%dep_enum_destr)) in
   match goal_arg with
   | [_; _; (te, _); _] ->
     let (te_fun, te_arg) = T.app_head_tail (T.norm_term [delta; iota; zeta] te) in
-    let _ = T.tassert (te_fun `T.term_eq` (`Cons)) in
+    let _ = T.tassert (te_fun `T.is_fvar` (`%Cons)) in
     begin match te_arg with
     | [_; _; (tl, _)] ->
       let (tl_fun, _) = T.app_head_tail tl in
-      if tl_fun `T.term_eq` (`Cons)
+      if tl_fun `T.is_fvar` (`%Cons)
       then begin
         T.apply (`dep_enum_destr_cons);
         T.iseq [
@@ -85,7 +85,7 @@ let rec dep_enum_destr_tac () : T.Tac unit =
         ];
         T.qed ()
       end
-      else if tl_fun `T.term_eq` (`Nil)
+      else if tl_fun `T.is_fvar` (`%Nil)
       then begin
         T.apply (`dep_enum_destr_cons_nil);
         T.trivial ();
@@ -99,18 +99,22 @@ let rec dep_enum_destr_tac () : T.Tac unit =
 noextract
 let rec maybe_enum_destr_t'_tac () : T.Tac unit =
   let (goal_fun, goal_arg) = T.app_head_tail (T.cur_goal ()) in
-  let _ = T.tassert (goal_fun `T.term_eq` (`maybe_enum_destr_t')) in
+  let _ = T.tassert (goal_fun `T.is_fvar` (`%maybe_enum_destr_t')) in
   match goal_arg with
   | [_; _; _; _; (tl1, _); (tl2, _); _] ->
     let (tl2_fun, _) = T.app_head_tail (T.norm_term [delta; iota; zeta] tl2) in
-    if tl2_fun `T.term_eq` (`Cons)
+    if tl2_fun `T.is_fvar` (`%Cons)
     then begin
       T.apply (`maybe_enum_destr_cons);
       maybe_enum_destr_t'_tac ()
     end else
-    if tl2_fun `T.term_eq` (`Nil)
+    if tl2_fun `T.is_fvar` (`%Nil)
     then begin
       T.apply (`maybe_enum_destr_nil);
+      ignore (T.repeat (fun _ ->
+                        if List.length (T.goals ()) = 0
+                        then T.fail "Done"
+                        else (T.compute (); T.smt ())));
       T.qed ()
     end
     else T.fail "Unknown shape for l2"
@@ -118,26 +122,31 @@ let rec maybe_enum_destr_t'_tac () : T.Tac unit =
 
 noextract
 let maybe_enum_destr_t_tac () : T.Tac unit =
+  T.set_guard_policy T.Goal;
   let (goal_fun, _) = T.app_head_tail (T.cur_goal ()) in
-  let _ = T.tassert (goal_fun `T.term_eq` (`maybe_enum_destr_t)) in
+  let _ = T.tassert (goal_fun `T.is_fvar` (`%maybe_enum_destr_t)) in
   T.apply (`maybe_enum_destr_t_intro);
   maybe_enum_destr_t'_tac ()
 
 noextract
 let rec dep_maybe_enum_destr_t'_tac () : T.Tac unit =
   let (goal_fun, goal_arg) = T.app_head_tail (T.cur_goal ()) in
-  let _ = T.tassert (goal_fun `T.term_eq` (`dep_maybe_enum_destr_t')) in
+  let _ = T.tassert (goal_fun `T.is_fvar` (`%dep_maybe_enum_destr_t')) in
   match goal_arg with
   | [_; _; _; _; (tl1, _); (tl2, _); _] ->
     let (tl2_fun, _) = T.app_head_tail (T.norm_term [delta; iota; zeta] tl2) in
-    if tl2_fun `T.term_eq` (`Cons)
+    if tl2_fun `T.is_fvar` (`%Cons)
     then begin
       T.apply (`dep_maybe_enum_destr_cons);
       dep_maybe_enum_destr_t'_tac ()
     end else
-    if tl2_fun `T.term_eq` (`Nil)
+    if tl2_fun `T.is_fvar` (`%Nil)
     then begin
       T.apply (`dep_maybe_enum_destr_nil);
+      ignore (T.repeat (fun _ ->
+                        if List.length (T.goals ()) = 0
+                        then T.fail "Done"
+                        else (T.compute (); T.smt ())));
       T.qed ()
     end
     else T.fail "Unknown shape for l2"
@@ -145,8 +154,8 @@ let rec dep_maybe_enum_destr_t'_tac () : T.Tac unit =
 
 noextract
 let dep_maybe_enum_destr_t_tac () : T.Tac unit =
+  T.set_guard_policy T.Goal;
   let (goal_fun, _) = T.app_head_tail (T.cur_goal ()) in
-  let _ = T.tassert (goal_fun `T.term_eq` (`dep_maybe_enum_destr_t)) in
+  let _ = T.tassert (goal_fun `T.is_fvar` (`%dep_maybe_enum_destr_t)) in
   T.apply (`dep_maybe_enum_destr_t_intro);
   dep_maybe_enum_destr_t'_tac ()
-

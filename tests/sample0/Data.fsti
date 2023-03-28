@@ -15,7 +15,6 @@ module B = LowStar.Buffer
 module BY = FStar.Bytes
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
-module LWP = LowParse.Writers.Combinators
 
 open Boolean
 
@@ -47,7 +46,6 @@ val data_validator: LL.validator data_parser
 
 val data_jumper: LL.jumper data_parser
 
-inline_for_extraction noextract let lwp_data = LWP.make_parser data_parser data_serializer data_jumper
 val data_reader : LL.leaf_reader data_parser
 
 val data_lserializer: LL.serializer32 data_serializer
@@ -66,8 +64,6 @@ val data_gaccessor_tag : LL.gaccessor data_parser boolean_parser data_clens_tag
 
 val data_accessor_tag : LL.accessor data_gaccessor_tag
 
-inline_for_extraction noextract let lwp_data_accessor_tag  : LWP.access_t lwp_data lwp_boolean (data_accessor_tag ) = LWP.access _ _ _
-
 val data_bytesize_eqn_TRUE (x: U32.t) : Lemma (data_bytesize (Payloads_TRUE x) == 1 + 4) [SMTPat (data_bytesize (Payloads_TRUE x))]
 
 val data_bytesize_eqn_FALSE (x: U16.t) : Lemma (data_bytesize (Payloads_FALSE x) == 1 + 2) [SMTPat (data_bytesize (Payloads_FALSE x))]
@@ -81,8 +77,6 @@ val data_gaccessor_TRUE : LL.gaccessor data_parser LPI.parse_u32 data_clens_TRUE
 
 val data_accessor_TRUE : LL.accessor data_gaccessor_TRUE
 
-inline_for_extraction noextract let lwp_data_accessor_TRUE  : LWP.access_t lwp_data LWP.parse_u32 (data_accessor_TRUE ) = LWP.access _ _ _
-
 noextract let data_clens_FALSE : LL.clens data U16.t = {
   LL.clens_cond = (fun (x: data) -> tag_of_data x == FALSE);
   LL.clens_get = (fun (x: data) -> (match x with Payloads_FALSE y -> y) <: (Ghost U16.t (requires (tag_of_data x == FALSE)) (ensures (fun y -> True))));
@@ -91,8 +85,6 @@ noextract let data_clens_FALSE : LL.clens data U16.t = {
 val data_gaccessor_FALSE : LL.gaccessor data_parser LPI.parse_u16 data_clens_FALSE
 
 val data_accessor_FALSE : LL.accessor data_gaccessor_FALSE
-
-inline_for_extraction noextract let lwp_data_accessor_FALSE  : LWP.access_t lwp_data LWP.parse_u16 (data_accessor_FALSE ) = LWP.access _ _ _
 
 val finalize_data_TRUE (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack unit
   (requires (fun h ->

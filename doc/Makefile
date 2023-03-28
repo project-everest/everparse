@@ -4,13 +4,27 @@
 all: html 3d
 
 export EVERPARSE_HOME?=$(realpath ..)
-export FSTAR_HOME?=$(realpath $(EVERPARSE_HOME)/../FStar)
+
+ifndef FSTAR_HOME
+  FSTAR_EXE=$(shell which fstar.exe)
+  ifeq ($(FSTAR_EXE),)
+    # fstar.exe not found in PATH, assuming Everest source tree
+    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
+  else
+    # fstar.exe found in PATH, assuming directory ending with /bin
+    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
+  endif
+  export FSTAR_HOME
+endif
+
 export KRML_HOME?=$(realpath $(EVERPARSE_HOME)/../karamel)
 
 3D=$(EVERPARSE_HOME)/bin/3d.exe
 3D_EXCLUDE=ConstColor.3d
-3D_FILES=$(filter-out $(3D_EXCLUDE),$(wildcard *.3d))
-3D_MODULES=$(basename $(3D_FILES))
+3D_CONFIG=Arch.3d.config
+3D_FILES_WITH_CONFIG=PointArch_32_64.3d
+3D_FILES=$(filter-out $(3D_EXCLUDE) $(3D_FILES_WITH_CONFIG),$(wildcard *.3d))
+3D_MODULES=$(basename $(3D_FILES) $(3D_FILES_WITH_CONFIG))
 3D_MODULES_AND_WRAPPERS=$(3D_MODULES) $(addsuffix Wrapper,$(3D_MODULES))
 3D_C_AND_H_FILES=$(filter-out BaseWrapper.c BaseWrapper.h,$(addsuffix .c,$(3D_MODULES_AND_WRAPPERS)) $(addsuffix .h,$(3D_MODULES_AND_WRAPPERS)))
 3D_DIFF=$(addsuffix .diff,$(3D_C_AND_H_FILES))
@@ -43,12 +57,14 @@ help:
 3d-do-tests:
 	mkdir -p out
 	$(3D) --odir out --batch $(3D_FILES)
+	$(3D) --odir out --batch $(3D_FILES_WITH_CONFIG) --config $(3D_CONFIG)
 	cp $(AUX_HEADERS) out
 	+$(MAKE) -C out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 
 3d-do-interpreter-tests:
 	mkdir -p interpret.out
 	$(3D) --odir interpret.out --batch $(3D_FILES) --interpret
+	$(3D) --odir interpret.out --batch $(3D_FILES_WITH_CONFIG) --config $(3D_CONFIG) --interpret
 	cp $(AUX_HEADERS) interpret.out
 	+$(MAKE) -C interpret.out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 

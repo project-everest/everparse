@@ -2,7 +2,7 @@
 #include "EverParseStream.h"
 #include <stdlib.h>
 
-BOOLEAN EverParseHas(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n) {
+BOOLEAN EverParseHas(EVERPARSE_EXTRA_T const _unused, EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
   if (n == 0)
     return TRUE;
   struct es_cell *head = x->head;
@@ -16,7 +16,7 @@ BOOLEAN EverParseHas(EverParseExtraT const _unused, EverParseInputStreamBase con
   return FALSE;
 }
 
-uint8_t *EverParseRead(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst) {
+uint8_t *EverParseRead(EVERPARSE_EXTRA_T const _unused, EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n, uint8_t * const dst) {
   /** assumes EverParseHas n */
   if (n == 0)
     return dst;
@@ -48,7 +48,7 @@ uint8_t *EverParseRead(EverParseExtraT const _unused, EverParseInputStreamBase c
   return dst;
 }
 
-void EverParseSkip(EverParseExtraT const _unused, EverParseInputStreamBase const x, uint64_t n) {
+void EverParseSkip(EVERPARSE_EXTRA_T const _unused, EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
   /** assumes EverParseHas n */
   if (n == 0)
     return;
@@ -72,7 +72,7 @@ void EverParseSkip(EverParseExtraT const _unused, EverParseInputStreamBase const
   }
 }
 
-uint64_t EverParseEmpty(EverParseExtraT const _unused, EverParseInputStreamBase const x) {
+uint64_t EverParseEmpty(EVERPARSE_EXTRA_T const _unused, EVERPARSE_INPUT_STREAM_BASE const x) {
   uint64_t res = 0;
   struct es_cell *head = x->head;
   while (head != NULL) {
@@ -83,8 +83,8 @@ uint64_t EverParseEmpty(EverParseExtraT const _unused, EverParseInputStreamBase 
   return res;
 }
 
-EverParseInputStreamBase EverParseCreate() {
-  EverParseInputStreamBase res = malloc(sizeof(struct EverParseInputStreamBase_s));
+EVERPARSE_INPUT_STREAM_BASE EverParseCreate() {
+  EVERPARSE_INPUT_STREAM_BASE res = malloc(sizeof(struct EVERPARSE_INPUT_STREAM_BASE_s));
   if (res == NULL) {
     return NULL;
   }
@@ -92,7 +92,7 @@ EverParseInputStreamBase EverParseCreate() {
   return res;
 }
 
-int EverParsePush(EverParseInputStreamBase const x, uint8_t * const buf, uint64_t const len) {
+int EverParsePush(EVERPARSE_INPUT_STREAM_BASE const x, uint8_t * const buf, uint64_t const len) {
   struct es_cell * cell = malloc(sizeof(struct es_cell));
   if (cell == NULL)
     return 0;
@@ -104,11 +104,11 @@ int EverParsePush(EverParseInputStreamBase const x, uint8_t * const buf, uint64_
 }
 
 
-void EverParseHandleError(EverParseExtraT _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason)
+void EverParseHandleError(EVERPARSE_EXTRA_T _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason, uint64_t error_code)
 {
   printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", typename, fieldname, reason);
 }
 
-void EverParseRetreat(EverParseExtraT _dummy, EverParseInputStreamBase base, uint64_t parsedSize)
+void EverParseRetreat(EVERPARSE_EXTRA_T _dummy, EVERPARSE_INPUT_STREAM_BASE base, uint64_t parsedSize)
 {
 }

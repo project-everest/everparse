@@ -15,6 +15,7 @@ type dep_graph = {
   modules_with_entrypoint: list string;
   modules_with_static_assertions: list string;
   modules_with_output_types: list string;
+  modules_with_out_exprs: list string;
   modules_with_extern_types: list string;
   modules_with_extern_functions: list string
 }
@@ -60,6 +61,7 @@ type scan_deps_t = {
   sd_has_entrypoint: bool;
   sd_has_static_assertions: bool;
   sd_has_output_types: bool;
+  sd_has_out_exprs: bool;
   sd_has_extern_types: bool;
   sd_has_extern_functions: bool
 }
@@ -97,6 +99,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Constant _ -> []
     | Identifier i -> maybe_dep i
     | This -> []
+    | Static e -> deps_of_expr e
     | App _op args -> List.collect deps_of_expr args in
 
   let deps_of_typ_param (p:typ_param) : ML (list string) =
@@ -146,19 +149,25 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | FieldArrayQualified (e, _) -> deps_of_expr e
     | FieldString eopt -> deps_of_opt deps_of_expr eopt in
 
-  let deps_of_struct_field (sf:struct_field) : ML (list string) =
-    (deps_of_typ sf.field_type)@
-    (deps_of_field_array_t sf.field_array_opt)@
-    (deps_of_opt deps_of_expr sf.field_constraint)@
-    (deps_of_opt deps_of_field_bitwidth_t sf.field_bitwidth)@
-    (deps_of_opt (fun (a, _) -> deps_of_action a) sf.field_action) in
+  let deps_of_atomic_field (af:atomic_field) : ML (list string) =
+      let af = af.v in
+      (deps_of_typ af.field_type)@
+      (deps_of_field_array_t af.field_array_opt)@
+      (deps_of_opt deps_of_expr af.field_constraint)@
+      (deps_of_opt deps_of_field_bitwidth_t af.field_bitwidth)@
+      (deps_of_opt (fun (a, _) -> deps_of_action a) af.field_action) in
 
-  let deps_of_case (c:case) : ML (list string) =
+  let rec deps_of_field (f:field) : ML (list string) = 
+    match f.v with
+    | AtomicField af -> deps_of_atomic_field af
+    | RecordField fs _ -> List.collect deps_of_field fs
+    | SwitchCaseField swc _ -> deps_of_switch_case swc
+  and deps_of_case (c:case) : ML (list string) =
     match c with
-    | Case e f -> (deps_of_expr e)@(deps_of_struct_field f.v)
-    | DefaultCase f -> deps_of_struct_field f.v in
-
-  let deps_of_switch_case (sc:switch_case) : ML (list string) =
+    | Case e f -> (deps_of_expr e)@(deps_of_field f)
+    | DefaultCase f -> deps_of_field f
+    
+  and deps_of_switch_case (sc:switch_case) : ML (list string) =
     let e, l = sc in
     (deps_of_expr e)@(List.collect deps_of_case l) in
 
@@ -179,7 +188,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Record _ params wopt flds ->
       (deps_of_params params)@
       (deps_of_opt deps_of_expr wopt)@
-      (List.collect (fun f -> deps_of_struct_field f.v) flds)
+      (List.collect deps_of_field flds)
     | CaseType _ params sc ->
       (deps_of_params params)@
       (deps_of_switch_case sc)
@@ -190,6 +199,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
 
   let has_output_types (ds:list decl) : bool =
     List.Tot.existsb (fun d -> OutputType? d.d_decl.v) ds in
+
+  let has_out_exprs (ds:list decl) : bool =
+    List.Tot.existsb decl_has_out_expr ds in
 
   let has_extern_types (ds:list decl) : bool =
     List.Tot.existsb (fun d -> ExternType? d.d_decl.v) ds in
@@ -202,6 +214,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     sd_has_entrypoint = has_entrypoint;
     sd_has_static_assertions = has_static_assertions;
     sd_has_output_types = has_output_types decls;
+    sd_has_out_exprs = has_out_exprs decls;
     sd_has_extern_types = has_extern_types decls;
     sd_has_extern_functions = has_extern_functions decls;
   }
@@ -216,6 +229,7 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
          sd_deps = deps;
          sd_has_static_assertions = has_static_assertions;
          sd_has_output_types = has_output_types;
+         sd_has_out_exprs = has_out_exprs;
          sd_has_extern_types = has_extern_types;
          sd_has_extern_functions = has_extern_functions} =
       scan_deps (Options.get_file_name (OS.concat dirname mname))
@@ -229,6 +243,7 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
       modules_with_entrypoint = (if has_entrypoint then mname :: g.modules_with_entrypoint else g.modules_with_entrypoint);
       modules_with_static_assertions = (if has_static_assertions then mname :: g.modules_with_static_assertions else g.modules_with_static_assertions);
       modules_with_output_types = (if has_output_types then mname::g.modules_with_output_types else g.modules_with_output_types);
+      modules_with_out_exprs = (if has_out_exprs then mname::g.modules_with_out_exprs else g.modules_with_out_exprs);
       modules_with_extern_types = (if has_extern_types then mname::g.modules_with_extern_types else g.modules_with_extern_types);
       modules_with_extern_functions = (if has_extern_functions then mname::g.modules_with_extern_functions else g.modules_with_extern_functions);
     }
@@ -242,6 +257,7 @@ let build_dep_graph_from_list files =
     modules_with_entrypoint = [];
     modules_with_static_assertions = [];
     modules_with_output_types = [];
+    modules_with_out_exprs = [];
     modules_with_extern_types = [];
     modules_with_extern_functions = []
   }
@@ -279,7 +295,47 @@ let has_static_assertions g m = List.Tot.mem m g.modules_with_static_assertions
 
 let has_output_types g m = List.Tot.mem m g.modules_with_output_types
 
+let has_out_exprs g m = List.Tot.mem m g.modules_with_out_exprs
+
 let has_extern_types g m = List.Tot.mem m g.modules_with_extern_types
 
 let has_extern_functions g m = List.Tot.mem m g.modules_with_extern_functions
 
+
+#push-options "--warn_error -272"
+let parsed_config : ref (option (Config.config & string)) = ST.alloc None
+#pop-options
+
+let parse_config () =
+  match Options.get_config_file () with
+  | None -> None
+  | Some fn -> 
+    let module_name = Options.config_module_name () in
+    if None? module_name then failwith "Impossible"
+    else if not (OS.file_exists fn)
+    then raise (Error ("Unable to file configuration file: " ^ fn))
+    else 
+      let s = 
+        try OS.file_contents fn
+        with
+        | _ -> raise (Error ("Unable to read configuration file: "^fn))
+      in
+      match JSON.config_of_json s with
+      | Pervasives.Inl c -> Some (c, Some?.v module_name)
+      | Pervasives.Inr err -> 
+        let msg = 
+          Printf.sprintf "Unable to parse configuration: %s\n\
+                          A sample configuration is shown below:\n\
+                          %s"
+                          err
+                          (JSON.config_to_json { compile_time_flags = { flags = ["FLAG1"; "FLAG2"; "FLAG3"];
+                                                                        include_file = "flags.h" }}) in
+        raise (Error msg)
+
+let get_config () = 
+  match !parsed_config with
+  | Some c -> Some c
+  | None ->
+    let copt = parse_config () in
+    parsed_config := copt;
+    copt

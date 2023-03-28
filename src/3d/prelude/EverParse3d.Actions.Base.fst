@@ -134,9 +134,11 @@ let valid
   Some? (LP.parse p (I.get_remaining sl h))
 
 inline_for_extraction
-let error_handler = typename:string ->
-                    fieldname:string ->
-                    error_reason:string ->
+let error_handler = 
+    typename:string ->
+    fieldname:string ->
+    error_reason:string ->
+    error_code:U64.t ->
     ctxt: app_ctxt ->
     sl: input_buffer_t ->
     pos: LPE.pos_t ->
@@ -160,7 +162,7 @@ inline_for_extraction noextract
 let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
   (# [tcresolve ()] I.extra_t #input_buffer_t) ->
   (ctxt: app_ctxt) ->
-  (err : error_handler) ->
+  (error_handler_fn : error_handler) ->
   (sl: input_buffer_t) ->
   (len: I.tlen sl) ->
   (pos: LPE.pos_t) ->
@@ -198,7 +200,7 @@ let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv
 let validate_with_action_t p inv l allow_reading = validate_with_action_t' p inv l allow_reading
 
 let validate_eta v =
-  fun ctxt err sl pos -> v ctxt err sl pos
+  fun ctxt error_handler_fn sl pos -> v ctxt error_handler_fn sl pos
 
 let act_with_comment
   s res a
@@ -242,11 +244,11 @@ let validate_with_success_action' (name: string) #nz #wk (#k1:parser_kind nz wk)
                          (v1:validate_with_action_t p1 inv1 l1 false)
                          (#inv2:_) (#l2:eloc) #b (a:action p1 inv2 l2 b bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h0 = HST.get () in
     [@(rename_let ("positionAfter" ^ name))]
-    let pos1 = v1 ctxt err input input_length pos0 in
+    let pos1 = v1 ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h0 h1;
     if LPE.is_success pos1
@@ -266,9 +268,9 @@ noextract
 let validate_drop_true
    (#k:LP.parser_kind) (#t:Type) (#p:LP.parser k t) (#inv:slice_inv) (#l:eloc) (v: validate_with_action_t' p inv l true)
 : Tot (validate_with_action_t' p inv l false)
-= fun ctxt err input input_length start_position ->
+= fun ctxt error_handler_fn input input_length start_position ->
   [@inline_let] let pos = start_position in
-  let res = v ctxt err input input_length pos in
+  let res = v ctxt error_handler_fn input input_length pos in
   I.skip_if_success input pos res;
   res
 
@@ -298,24 +300,24 @@ let validate_with_error_handler (typename:string)
                                 (#ar:_)
                                 (v1:validate_with_action_t p1 inv1 l1 ar)
   : validate_with_action_t p1 inv1 l1 ar
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h0 = HST.get () in
     [@(rename_let ("positionAfter" ^ typename))]
-    let pos1 = v1 ctxt err input input_length pos0 in
+    let pos1 = v1 ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h0 h1;
     if LPE.is_success pos1
     then pos1
     else (
-         err typename fieldname (LPE.error_reason_of_result pos1) ctxt input pos0;
+         error_handler_fn typename fieldname (LPE.error_reason_of_result pos1) (LPE.get_validator_error_kind pos1) ctxt input pos0;
          pos1
     )
 
 inline_for_extraction noextract
 let validate_ret
   : validate_with_action_t (parse_ret ()) true_inv eloc_none true
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     start_position
 
 #push-options "--z3rlimit 32"
@@ -330,19 +332,19 @@ let validate_pair
        #nz2 #wk2 (#k2:parser_kind nz2 wk2) #t2 (#p2:parser k2 t2)
        (#inv2:_) (#l2:eloc) (#ar2:_) (v2:validate_with_action_t p2 inv2 l2 ar2)
   : validate_with_action_t (p1 `parse_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos = start_position in
     let h = HST.get () in
     LPC.nondep_then_eq p1 p2 (I.get_remaining input h);
     [@(rename_let ("positionAfter" ^ name1))]
-    let pos1 = validate_drop v1 ctxt err input input_length pos in
+    let pos1 = validate_drop v1 ctxt error_handler_fn input input_length pos in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h1;
     if LPE.is_error pos1
     then
       pos1
     else
-      validate_drop v2 ctxt err input input_length pos1
+      validate_drop v2 ctxt error_handler_fn input input_length pos1
 
 inline_for_extraction noextract
 let validate_dep_pair
@@ -352,12 +354,12 @@ let validate_dep_pair
       #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t (p1 `parse_dep_pair` p2) (conj_inv inv1 inv2) (l1 `eloc_union` l2) false)
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
       [@inline_let] let pos = start_position in
       let h = HST.get () in
       LPC.parse_dtuple2_eq p1 p2 (I.get_remaining input h);
       [@(rename_let ("positionAfter" ^ name1))]
-      let pos1 = v1 ctxt err input input_length pos in
+      let pos1 = v1 ctxt error_handler_fn input input_length pos in
       let h1 = HST.get() in
       if LPE.is_error pos1
       then begin
@@ -368,7 +370,7 @@ let validate_dep_pair
         let x = r1 input pos in
         let h15 = HST.get () in
         let _ = modifies_address_liveness_insensitive_unused_in h h15 in
-        validate_drop (v2 x) ctxt err input input_length pos1
+        validate_drop (v2 x) ctxt error_handler_fn input input_length pos1
 
 #pop-options
 
@@ -390,12 +392,12 @@ let validate_dep_pair_with_refinement_and_action'
              (l1 `eloc_union` (l1' `eloc_union` l2))
              false)
   =
-  fun ctxt err input input_length startPosition ->
+  fun ctxt error_handler_fn input input_length startPosition ->
       let h0 = HST.get () in
       LPC.parse_dtuple2_eq' #_ #_ (p1 `LPC.parse_filter` f) #_ #t2 p2 (I.get_remaining input h0);
       LPC.parse_filter_eq p1 f (I.get_remaining input h0);
       [@(rename_let ("positionAfter" ^ name1))]
-      let res = v1 ctxt err input input_length startPosition in
+      let res = v1 ctxt error_handler_fn input input_length startPosition in
       let h1 = HST.get() in
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if LPE.is_error res
@@ -421,7 +423,7 @@ let validate_dep_pair_with_refinement_and_action'
              else begin
                let h15 = HST.get () in
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
-               validate_drop (v2 field_value) ctxt err input input_length res1
+               validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
              end
         end
       end
@@ -446,7 +448,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
            k1.parser_kind_metadata == Some ParserKindMetadataTotal
          ))
          (ensures (fun _ -> True))
-  = fun ctxt err input input_length startPosition ->
+  = fun ctxt error_handler_fn input input_length startPosition ->
       let h0 = HST.get () in
       LPC.parse_dtuple2_eq' #_ #_ (p1 `LPC.parse_filter` f) #_ #t2 p2 (I.get_remaining input h0);
       LPC.parse_filter_eq p1 f (I.get_remaining input h0);
@@ -469,7 +471,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
              else begin
                let h15 = HST.get () in
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
-               validate_drop (v2 field_value) ctxt err input input_length res1
+               validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
              end
         end
 
@@ -509,10 +511,10 @@ let validate_dep_pair_with_action
              (conj_inv inv1 (conj_inv inv1' inv2))
              (l1 `eloc_union` (l1' `eloc_union` l2))
              false)
-  = fun ctxt err input input_length startPosition ->
+  = fun ctxt error_handler_fn input input_length startPosition ->
       let h0 = HST.get () in
       LPC.parse_dtuple2_eq' #_ #_ p1 #_ #t2 p2 (I.get_remaining input h0);
-      let res = v1 ctxt err input input_length startPosition in
+      let res = v1 ctxt error_handler_fn input input_length startPosition in
       let h1 = HST.get() in
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if LPE.is_error res
@@ -529,7 +531,7 @@ let validate_dep_pair_with_action
         if not action_result
         then LPE.set_validator_error_pos LPE.validator_error_action_failed res //action failed
         else
-               validate_drop (v2 field_value) ctxt err input input_length res
+               validate_drop (v2 field_value) ctxt error_handler_fn input input_length res
       end
 
 inline_for_extraction noextract
@@ -545,12 +547,12 @@ let validate_dep_pair_with_refinement'
              (conj_inv inv1 inv2)
              (l1 `eloc_union` l2)
              false)
-  = fun ctxt err input input_length startPosition ->
+  = fun ctxt error_handler_fn input input_length startPosition ->
       let h0 = HST.get () in
       LPC.parse_dtuple2_eq' #_ #_ (p1 `LPC.parse_filter` f) #_ #t2 p2 (I.get_remaining input h0);
       LPC.parse_filter_eq p1 f (I.get_remaining input h0);
       [@(rename_let ("positionAfter" ^ name1))]
-      let res = v1 ctxt err input input_length startPosition in
+      let res = v1 ctxt error_handler_fn input input_length startPosition in
       let h1 = HST.get() in
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if LPE.is_error res
@@ -575,7 +577,7 @@ let validate_dep_pair_with_refinement'
              // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
              let h15 = HST.get () in
              let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
-             validate_drop (v2 field_value) ctxt err input input_length res1
+             validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
         end
 
 inline_for_extraction noextract
@@ -597,7 +599,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
            k1.parser_kind_metadata == Some ParserKindMetadataTotal
          ))
          (ensures (fun _ -> True))
-  = fun ctxt err input input_length startPosition ->
+  = fun ctxt error_handler_fn input input_length startPosition ->
       let h0 = HST.get () in
       LPC.parse_dtuple2_eq' #_ #_ (p1 `LPC.parse_filter` f) #_ #t2 p2 (I.get_remaining input h0);
       LPC.parse_filter_eq p1 f (I.get_remaining input h0);
@@ -620,7 +622,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
              // assert (valid_pos (p1 `(LPC.parse_filter #k1 #t1)` f) h0 input (uint64_to_uint32 pos) (uint64_to_uint32 res));
              let h15 = HST.get () in
              let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
-             validate_drop (v2 field_value) ctxt err input input_length res1
+             validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
         end
 
 inline_for_extraction noextract
@@ -650,12 +652,12 @@ let validate_filter (name: string) #nz (#k:parser_kind nz _) (#t:_) (#p:parser k
                     #inv #l (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
   : Tot (validate_with_action_t #nz #WeakKindStrongPrefix (p `LPC.parse_filter` f) inv l false)
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos = start_position in
     let h = HST.get () in
     LPC.parse_filter_eq p f (I.get_remaining input h);
     [@(rename_let ("positionAfter" ^ name))]
-    let res = v ctxt err input input_length pos in
+    let res = v ctxt error_handler_fn input input_length pos in
     let h1 = HST.get () in
     if LPE.is_error res
     then res
@@ -677,12 +679,12 @@ let validate_filter_with_action
                     (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
                     (#b:bool) #inva (#la:eloc) (a: t -> action #nz #WeakKindStrongPrefix #(filter_kind k) #_ (p `LPC.parse_filter` f) inva la b bool)
   : Tot (validate_with_action_t #nz #WeakKindStrongPrefix (p `LPC.parse_filter` f) (conj_inv inv inva) (eloc_union l la) false)
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h = HST.get () in
     LPC.parse_filter_eq p f (I.get_remaining input h);
     [@(rename_let ("positionAfter" ^ name))]
-    let res = v ctxt err input input_length pos0 in
+    let res = v ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     if LPE.is_error res
     then res
@@ -710,11 +712,11 @@ let validate_with_dep_action
                     (r:leaf_reader p)
                     (#b:bool) #inva (#la:eloc) (a: t -> action p inva la b bool)
   : Tot (validate_with_action_t #nz p (conj_inv inv inva) (eloc_union l la) false)
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h = HST.get () in
     [@(rename_let ("positionAfter" ^ name))]
-    let res = v ctxt err input input_length pos0 in
+    let res = v ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     if LPE.is_error res
     then res
@@ -733,8 +735,8 @@ let validate_weaken #nz #wk (#k:parser_kind nz wk) #t (#p:parser k t)
                     #inv #l #ar (v:validate_with_action_t p inv l ar)
                     #nz' #wk' (k':parser_kind nz' wk'{k' `is_weaker_than` k})
   : Tot (validate_with_action_t (parse_weaken p k') inv l ar)
-  = fun ctxt err input input_length start_position ->
-    v ctxt err input input_length start_position
+  = fun ctxt error_handler_fn input input_length start_position ->
+    v ctxt error_handler_fn input input_length start_position
 
 
 /// Parser: weakening kinds
@@ -763,10 +765,10 @@ let validate_impos ()
 noextract inline_for_extraction
 let validate_ite
   e p1 v1 p2 v2
-  = fun ctxt err input input_len start_position ->
+  = fun ctxt error_handler_fn input input_len start_position ->
       if e 
-      then validate_drop (v1 ()) ctxt err input input_len start_position
-      else validate_drop (v2 ()) ctxt err input input_len start_position
+      then validate_drop (v1 ()) ctxt error_handler_fn input input_len start_position
+      else validate_drop (v2 ()) ctxt error_handler_fn input input_len start_position
 
 module LPLL = LowParse.Spec.List
 
@@ -831,7 +833,7 @@ let validate_list_body
   (v: validate_with_action_t' p inv l ar)
   (g0 g1: Ghost.erased HS.mem)
   (ctxt:app_ctxt)
-  (err:error_handler)
+  (error_handler_fn:error_handler)
   (sl: input_buffer_t)
   (sl_len: I.tlen sl)
   (bres: pointer U64.t)
@@ -850,7 +852,7 @@ let validate_list_body
   else begin
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in (Ghost.reveal g0) h1;
-    let result = validate_drop v ctxt err sl sl_len position in
+    let result = validate_drop v ctxt error_handler_fn sl sl_len position in
     upd bres 0ul result;
     LPE.is_error result
   end
@@ -865,7 +867,7 @@ let validate_list'
   #inv #l #ar
   (v: validate_with_action_t' p inv l ar)
   (ctxt: app_ctxt)
-  (err: error_handler)
+  (error_handler_fn: error_handler)
   (sl: input_buffer_t)
   (sl_len: I.tlen sl)
   (pos: LPE.pos_t)
@@ -908,7 +910,7 @@ let validate_list'
   let h1 = HST.get () in
   let g1 = Ghost.hide h1 in
   I.live_not_unused_in sl h0;
-  C.Loops.do_while (validate_list_inv p inv l g0 g1 ctxt sl result) (fun _ -> validate_list_body v g0 g1 ctxt err sl sl_len result);
+  C.Loops.do_while (validate_list_inv p inv l g0 g1 ctxt sl result) (fun _ -> validate_list_body v g0 g1 ctxt error_handler_fn sl sl_len result);
   let finalResult = index result 0ul in
   let h2 = HST.get () in
   HST.pop_frame ();
@@ -926,8 +928,8 @@ let validate_list
   #inv #l #ar
   (v: validate_with_action_t' p inv l ar)
 : Tot (validate_with_action_t' (LowParse.Spec.List.parse_list p) inv l false)
-= fun ctxt err input input_length start_position ->
-  validate_list' v ctxt err input input_length start_position
+= fun ctxt error_handler_fn input input_length start_position ->
+  validate_list' v ctxt error_handler_fn input input_length start_position
 
 #push-options "--z3rlimit 32"
 #restart-solver
@@ -944,7 +946,7 @@ let validate_fldata_consumes_all
   #inv #l #ar
   (v: validate_with_action_t' p inv l ar  { k.LP.parser_kind_subkind == Some LP.ParserConsumesAll })
 : Tot (validate_with_action_t' (LowParse.Spec.FLData.parse_fldata p (U32.v n)) inv l false)
-= fun ctxt err input input_length start_position ->
+= fun ctxt error_handler_fn input input_length start_position ->
   [@inline_let] let pos = start_position in
   let h = HST.get () in
   LPLF.parse_fldata_consumes_all_correct p (U32.v n) (I.get_remaining input h);
@@ -960,7 +962,7 @@ let validate_fldata_consumes_all
     modifies_address_liveness_insensitive_unused_in h h2;
     I.is_prefix_of_prop truncatedInput input h2;
     assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n));
-    let res = validate_drop v ctxt err truncatedInput truncatedInputLength pos in
+    let res = validate_drop v ctxt error_handler_fn truncatedInput truncatedInputLength pos in
     let h3 = HST.get () in
     I.is_prefix_of_prop truncatedInput input h3;
     res
@@ -981,7 +983,7 @@ let validate_fldata
   #inv #l #ar
   (v: validate_with_action_t' p inv l ar)
 : Tot (validate_with_action_t' (LowParse.Spec.FLData.parse_fldata p (U32.v n)) inv l false)
-= fun ctxt err input input_length start_position ->
+= fun ctxt error_handler_fn input input_length start_position ->
   [@inline_let] let pos = start_position in
   let h = HST.get () in
   let hasEnoughBytes = I.has input input_length pos (Cast.uint32_to_uint64 n) in
@@ -996,7 +998,7 @@ let validate_fldata
     modifies_address_liveness_insensitive_unused_in h h2;
     I.is_prefix_of_prop truncatedInput input h2;
     assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n));
-    let res = validate_drop v ctxt err truncatedInput truncatedInputLength pos in
+    let res = validate_drop v ctxt error_handler_fn truncatedInput truncatedInputLength pos in
     let h3 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h3;
     I.is_prefix_of_prop truncatedInput input h3;
@@ -1044,7 +1046,7 @@ let validate_total_constant_size_no_read'
   })
   inv l
 : Tot (validate_with_action_t' p inv l true)
-= fun ctxt err input input_length start_position ->
+= fun ctxt error_handler_fn input input_length start_position ->
   [@inline_let] let pos = start_position in
   let h = HST.get () in
   LP.parser_kind_prop_equiv k p; 
@@ -1101,7 +1103,7 @@ let validate_nlist_constant_size_mod_ko (n:U32.t) (#wk: _) (#k:parser_kind true 
   ))
   (ensures (fun _ -> True))
 = 
-  (fun ctxt err input input_length start_position ->
+  (fun ctxt error_handler_fn input input_length start_position ->
      [@inline_let] let pos = start_position in
      let h = FStar.HyperStack.ST.get () in
      [@inline_let]
@@ -1132,10 +1134,10 @@ let validate_nlist_total_constant_size' (n:U32.t) #wk (#k:parser_kind true wk) #
     k.parser_kind_low < 4294967296
   ))
   (ensures (fun _ -> True))
-= fun ctxt err input start_position -> // n is not an integer constant, so we need to eta-expand and swap fun and if
+= fun ctxt error_handler_fn input start_position -> // n is not an integer constant, so we need to eta-expand and swap fun and if
   if n `U32.rem` U32.uint_to_t k.LP.parser_kind_low = 0ul
-  then validate_nlist_total_constant_size_mod_ok n p inv l ctxt err input start_position
-  else validate_nlist_constant_size_mod_ko n p inv l ctxt err input start_position
+  then validate_nlist_total_constant_size_mod_ok n p inv l ctxt error_handler_fn input start_position
+  else validate_nlist_constant_size_mod_ko n p inv l ctxt error_handler_fn input start_position
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size (n_is_const: bool) (n:U32.t) #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t) inv l
@@ -1195,7 +1197,7 @@ noextract inline_for_extraction
 let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_at_most n p) inv l false)
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos = start_position in
     let h = HST.get () in
     let hasBytes = I.has input input_length pos (Cast.uint32_to_uint64 n) in
@@ -1212,7 +1214,7 @@ let validate_t_at_most (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parse
       let _ = I.is_prefix_of_prop truncatedInput input h2 in
       let _ = assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n)) in
       [@inline_let] let _ = LPC.nondep_then_eq p parse_all_bytes (I.get_remaining truncatedInput h2) in
-      let result = validate_drop v ctxt err truncatedInput truncatedInputLength pos in
+      let result = validate_drop v ctxt error_handler_fn truncatedInput truncatedInputLength pos in
       let h3 = HST.get () in
       let _ = I.is_prefix_of_prop truncatedInput input h3 in
       if LPE.is_error result
@@ -1234,7 +1236,7 @@ noextract inline_for_extraction
 let validate_t_exact (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
                        (#inv:_) (#l:_) (#ar:_) (v:validate_with_action_t p inv l ar)
   : Tot (validate_with_action_t (parse_t_exact n p) inv l false)
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos = start_position in
     let h = HST.get () in
     let hasBytes = I.has input input_length pos (Cast.uint32_to_uint64 n) in
@@ -1251,7 +1253,7 @@ let validate_t_exact (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser 
       let _ = I.is_prefix_of_prop truncatedInput input h2 in
       let _ = assert (I.get_remaining truncatedInput h2 `Seq.equal` Seq.slice (I.get_remaining input h) 0 (U32.v n)) in
       [@inline_let] let _ = LPC.nondep_then_eq p parse_all_bytes (I.get_remaining truncatedInput h2) in
-      let result = validate_drop v ctxt err truncatedInput truncatedInputLength pos in
+      let result = validate_drop v ctxt error_handler_fn truncatedInput truncatedInputLength pos in
       let h3 = HST.get () in
       let _ = I.is_prefix_of_prop truncatedInput input h3 in
       if LPE.is_error result
@@ -1273,9 +1275,9 @@ let validate_with_comment (c:string)
                           #nz #wk (#k:parser_kind nz wk) #t (#p:parser k t)
                           #inv #l #ar (v:validate_with_action_t p inv l ar)
   : validate_with_action_t p inv l ar
-  = fun ctxt err input input_length start_position ->
+  = fun ctxt error_handler_fn input input_length start_position ->
     LowParse.Low.Base.comment c;
-    v ctxt err input input_length start_position
+    v ctxt error_handler_fn input input_length start_position
 
 inline_for_extraction noextract
 let validate_weaken_inv_loc #nz #wk (#k:parser_kind nz wk) #t (#p:parser k t)
@@ -1500,7 +1502,7 @@ let validate_list_up_to_body
   (v: validator p)
   (r: leaf_reader p)
   (ctxt:app_ctxt)
-  (err:error_handler)
+  (error_handler_fn:error_handler)
   (sl: input_buffer_t)
   (sl_len: I.tlen sl)
   (h0: HS.mem)
@@ -1517,7 +1519,7 @@ let validate_list_up_to_body
   let h = HST.get () in
   LUT.parse_list_up_to_eq (cond_string_up_to terminator) p prf (I.get_remaining sl h);
   let position = !* bres in
-  let result = v ctxt err sl sl_len position in
+  let result = v ctxt error_handler_fn sl sl_len position in
   B.upd bres 0ul result;
   if LPE.is_error result
   then begin
@@ -1539,7 +1541,7 @@ let validate_list_up_to
   (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
 : Tot (validate_with_action_t #true #WeakKindStrongPrefix (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) true_inv eloc_none false)
 =
-  fun ctxt err sl sl_len pos ->
+  fun ctxt error_handler_fn sl sl_len pos ->
   let h0 = HST.get () in
   HST.push_frame ();
   let h1 = HST.get () in
@@ -1549,7 +1551,7 @@ let validate_list_up_to
   I.live_not_unused_in sl h0;
   C.Loops.do_while
     (validate_list_up_to_inv p terminator prf ctxt sl h2 bres)
-    (fun _ -> validate_list_up_to_body terminator prf v r ctxt err sl sl_len h2 bres)
+    (fun _ -> validate_list_up_to_body terminator prf v r ctxt error_handler_fn sl sl_len h2 bres)
     ;
   let result = B.index bres 0ul in
   HST.pop_frame ();

@@ -19,6 +19,10 @@ val has_static_assertions (g: dep_graph) (modul: string) : Tot bool
 
 val has_output_types (g:dep_graph) (modul:string) : bool
 
+val has_out_exprs (g:dep_graph) (modul:string) : bool
+
 val has_extern_types (g:dep_graph) (modul:string) : bool
 
 val has_extern_functions (g:dep_graph) (modul:string) : bool
+
+val get_config (_:unit) : ML (option (Config.config & string))

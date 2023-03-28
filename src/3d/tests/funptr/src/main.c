@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static BOOLEAN _EverParseHas(EverParseInputStreamBase const x, uint64_t n) {
+static BOOLEAN _EverParseHas(EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
   if (n == 0)
     return TRUE;
   struct es_cell *head = x->head;
@@ -17,7 +17,7 @@ static BOOLEAN _EverParseHas(EverParseInputStreamBase const x, uint64_t n) {
   return FALSE;
 }
 
-static uint8_t *_EverParseRead(EverParseInputStreamBase const x, uint64_t n, uint8_t * const dst) {
+static uint8_t *_EverParseRead(EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n, uint8_t * const dst) {
   /** assumes EverParseHas n */
   if (n == 0)
     return dst;
@@ -49,7 +49,7 @@ static uint8_t *_EverParseRead(EverParseInputStreamBase const x, uint64_t n, uin
   return dst;
 }
 
-static void _EverParseSkip(EverParseInputStreamBase const x, uint64_t n) {
+static void _EverParseSkip(EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
   /** assumes EverParseHas n */
   if (n == 0)
     return;
@@ -73,7 +73,7 @@ static void _EverParseSkip(EverParseInputStreamBase const x, uint64_t n) {
   }
 }
 
-static uint64_t _EverParseEmpty(EverParseInputStreamBase const x) {
+static uint64_t _EverParseEmpty(EVERPARSE_INPUT_STREAM_BASE const x) {
   uint64_t res = 0;
   struct es_cell *head = x->head;
   while (head != NULL) {
@@ -84,20 +84,20 @@ static uint64_t _EverParseEmpty(EverParseInputStreamBase const x) {
   return res;
 }
 
-void _EverParseRetreat(EverParseInputStreamBase const x, uint64_t n) {
+void _EverParseRetreat(EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
   printf("Warning, no retreat");
 }
 
 // This function is declared in the generated TestWrapper.c, but not
 // defined. It is the callback function called if the validator for
 // Test.T fails.
-void _EverParseError(void *status, uint64_t position, const char *StructName, const char *FieldName, const char *Reason) {
+void _EverParseError(void *status, uint64_t position, const char *StructName, const char *FieldName, const char *Reason, uint64_t error_code) {
   printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", StructName, FieldName, Reason);
   *((BOOLEAN*)status) = FALSE;
 }
 
-EverParseExtraT makeExtraT(void *ctx) {
-  EverParseExtraT out = {
+EVERPARSE_EXTRA_T makeExtraT(void *ctx) {
+  EVERPARSE_EXTRA_T out = {
       .has = &_EverParseHas,
       .read = &_EverParseRead,
       .skip = &_EverParseSkip,
@@ -112,7 +112,7 @@ EverParseExtraT makeExtraT(void *ctx) {
 
 int test(uint32_t chunkSize, uint32_t numChunks) {
   uint8_t *chunk = calloc(chunkSize, sizeof(uint8_t));
-  EverParseInputStreamBase testStream = EverParseCreate();
+  EVERPARSE_INPUT_STREAM_BASE testStream = EverParseCreate();
   BOOLEAN status = TRUE;
   uint32_t i = numChunks;
   if (chunk != NULL) {
@@ -120,7 +120,7 @@ int test(uint32_t chunkSize, uint32_t numChunks) {
       while (i-- > 0) {
         EverParsePush(testStream, chunk, chunkSize);
       }
-      EverParseExtraT ex = makeExtraT(&status);
+      EVERPARSE_EXTRA_T ex = makeExtraT(&status);
       uint64_t bytesRead = TestCheckPoint(ex, testStream);
       if (status) {
         printf("Validation succeeded (chunk_size=%u, n_chunks=%u), read %u bytes\n", chunkSize, numChunks, bytesRead);

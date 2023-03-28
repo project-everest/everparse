@@ -19,10 +19,8 @@ let validator_max_length : (u: U64.t { 4 <= U64.v u /\ U64.v u == pow2 pos_width
   normalize_term_spec x;
   normalize_term x
 
-[@ CInline ]
 let is_error (positionOrError: U64.t) : Tot bool = positionOrError `U64.gt` validator_max_length
 
-[@ CInline ]
 let is_success (positionOrError: U64.t) : Tot bool = positionOrError `U64.lte` validator_max_length
 
 inline_for_extraction
@@ -72,7 +70,6 @@ let get_validator_error_field_set_validator_error_field
   (get_validator_error_field (set_validator_error_field x lo hi code) lo hi == code)
 = ()
 
-[@ CInline ]
 let set_validator_error_pos (error: validator_error) (position: pos_t) : Tot validator_error =
   [@inline_let]
   let res =
@@ -90,16 +87,13 @@ let set_validator_error_pos (error: validator_error) (position: pos_t) : Tot val
 
 #pop-options
 
-[@ CInline ]
 let get_validator_error_pos (x: U64.t) : Tot pos_t =
   (BF.uint64.BF.get_bitfield x 0 pos_width)
 
-[@ CInline ]
 let set_validator_error_kind (error: U64.t) (code: U64.t { 0 < U64.v code /\ U64.v code < normalize_term (pow2 error_width) }) : Tot validator_error =
   normalize_term_spec (pow2 error_width);
   set_validator_error_field error 0 error_width code
 
-[@ CInline ]
 let get_validator_error_kind (error: U64.t) : Tot (code: U64.t { 0 <= U64.v code /\ U64.v code < normalize_term (pow2 error_width) }) =
   normalize_term_spec (pow2 error_width);
   get_validator_error_field error 0 error_width
@@ -154,7 +148,6 @@ let error_reason_of_result (code:U64.t) : string =
   | 7uL -> "unexpected padding"
   | _ -> "unspecified"
 
-[@ CInline ]
 let check_constraint_ok (ok:bool) (position: pos_t): Tot U64.t =
       if ok
       then position
@@ -166,7 +159,6 @@ let check_constraint_ok (ok:bool) (position: pos_t): Tot U64.t =
 
 module U32 = FStar.UInt32
 
-[@ CInline ]
 let is_range_okay (size offset access_size:U32.t)
   : bool
   = let open U32 in
@@ -182,4 +174,5 @@ type error_frame = {
   typename_s: string;
   fieldname: string;
   reason: string;
+  error_code: U64.t
 }

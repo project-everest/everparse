@@ -7,7 +7,7 @@ ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 
 # Dependencies (opam packages)
-RUN eval $(opam env) && .docker/build/install-other-deps.sh
+RUN sudo apt-get update && eval $(opam env) && .docker/build/install-other-deps.sh
 
 # CI dependencies: sphinx (for the docs)
 # sudo pip3 because of https://bugs.launchpad.net/ubuntu/+source/bash/+bug/1588562

@@ -9,7 +9,7 @@ void ExternVectorEverParseError(const char *StructName, const char *FieldName, c
   return;
 }
 
-void Push (Vec *vec, uint32_t x, uint32_t y)
+void Push (VEC *vec, uint32_t x, uint32_t y)
 {
   if(vec->max == vec->cur) {
     return;
@@ -20,12 +20,12 @@ void Push (Vec *vec, uint32_t x, uint32_t y)
   }
 }
 
-Vec *Alloc ()
+VEC *Alloc ()
 {
-  Vec *vec = (Vec *) malloc(sizeof(Vec));
+  VEC *vec = (VEC *) malloc(sizeof(VEC));
   vec->max = 2;
   vec->cur = 0;
-  vec->arr = (Point *) malloc(sizeof(Point) * 2);
+  vec->arr = (POINT *) malloc(sizeof(POINT) * 2);
   return vec;
 }
 
@@ -41,7 +41,7 @@ int main ()
   arr[4] = 4;
   arr[5] = 5;
 
-  Vec *vec = Alloc();
+  VEC *vec = Alloc();
   
   BOOLEAN b = ExternVectorCheckT(vec, (uint8_t *) data, sizeof(uint8_t) + sizeof(uint32_t) * 6);
   if(b &&

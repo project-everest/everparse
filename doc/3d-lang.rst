@@ -508,6 +508,60 @@ Restrictions
 
 * Actions cannot be associated with bit fields.
 
+Generating code with for several compile-time configurations
+------------------------------------------------------------
+
+Sometimes one wants to write a single format specification to
+accommodate several compile-time configurations, e.g., to support
+multiple architectures. 3D offers some limited support for decorating
+a specification with compile-time conditionals familiar to C
+programmmers, e.g., ``#if`` and ``#else``, and to generate C code
+while preserving these C preprocessor directives.
+
+For example, the listing below shows an integer type that can either
+be represented using 64 bits (if ``ARCH64`` is true) or 32 bits.
+
+.. literalinclude:: PointArch_32_64.3d
+    :language: c
+
+To compile such a file using 3D, we also need to provide a
+``.3d.config`` file that declares all the compile-time flags used in
+the specification and mentions a C header file in which to find
+definitions for those flags. Here is a sample config file:
+
+.. literalinclude:: Arch.3d.config
+
+Then, one can invoke ``3d.exe --config Arch.3d.config
+PointArch_32_64.3d --batch``, which produces the following C code as
+output.
+
+In the header file ``PointArch_32_64.h``, we see an include for
+the header file mentioned in the config:
+
+.. code-block:: c
+
+   #include "arch_flags.h"
+
+In the generated C file, ``PointArch_32_64.c``, we see the code below,
+with the suitable preprocessor directives protecting the two variants
+of the the ``Int`` type declared in the source 3d file.
+
+.. code-block:: c
+
+   static inline uint64_t
+   ValidateInt(...) {
+   {
+      #if ARCH64
+      /* Validating field x */
+      /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
+      ...
+      #else
+      /* Validating field x */
+      /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+      ...
+      #endif
+   }
+
 Checking 3d types for correspondence with existing C types
 ----------------------------------------------------------
 
@@ -654,6 +708,7 @@ An error handling callback is a C procedure with the following signature:
     const char *TypeName,
     const char *FieldName,
     const char *ErrorReason,
+    uint64_t ErrorCode,
     uint8_t *Context,
     uint32_t Length,
     uint8_t *Base,
@@ -693,16 +748,16 @@ the following arguments:
 
   * The ``FieldName`` argument is name of the field ``f``
 
-  * The ``ErrorReason`` argument is one of the following:
-
-    - "generic error"
-    - "not enough data"
-    - "impossible"
-    - "list size not multiple of element size"
-    - "action failed"
-    - "constraint failed"
-    - "unexpected padding"
-    - "unspecified"
+  * The ``ErrorReason`` and ``ErrorCode`` arguments are related and can be one of the following pairs:
+    
+    - "generic error", ``EVERPARSE_ERROR_GENERIC`` (1uL)
+    - "not enough data", ``EVERPARSE_ERROR_NOT_ENOUGH_DATA`` (2uL)
+    - "impossible", ``EVERPARSE_ERROR_IMPOSSIBLE`` (3uL)
+    - "list size not multiple of element size", ``EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE`` (4uL)
+    - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (5uL)
+    - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (6uL)
+    - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (7uL)
+    - "unspecified", with the ``ErrorCode > 7uL``
 
   * The ``Context`` argument is the user-provided ``Context`` pointer
     
@@ -1060,7 +1115,8 @@ implementation of
    void TcpEverParseError(
         const char *TypeName,
         const char *FieldName,
-        const char *Reason);
+        const char *Reason,
+        uint64_t ErrorCode)
                 
 
 This can be instantiated with a procedure to, say, log an error.

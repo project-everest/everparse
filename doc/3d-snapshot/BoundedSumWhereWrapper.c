@@ -8,15 +8,17 @@ void DefaultErrorHandler(
 	const char *typename_s,
 	const char *fieldname,
 	const char *reason,
+	uint64_t error_code,
 	uint8_t *context,
-	EverParseInputBuffer input,
+	EVERPARSE_INPUT_BUFFER input,
 	uint64_t start_pos)
 {
-	EverParseErrorFrame *frame = (EverParseErrorFrame*)context;
+	EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;
 	EverParseDefaultErrorHandler(
 		typename_s,
 		fieldname,
 		reason,
+		error_code,
 		frame,
 		input,
 		start_pos
@@ -24,7 +26,7 @@ void DefaultErrorHandler(
 }
 
 BOOLEAN BoundedSumWhereCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
-	EverParseErrorFrame frame;
+	EVERPARSE_ERROR_FRAME frame;
 	frame.filled = FALSE;
 	uint64_t result = BoundedSumWhereValidateBoundedSum(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))

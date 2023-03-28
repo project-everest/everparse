@@ -89,4 +89,5 @@ let print_static_asserts (sas:static_asserts)
         |> List.map (fun sa -> Printf.sprintf "C_ASSERT(sizeof(%s) == %d);" (ident_to_string sa.type_name) sa.size)
         |> String.concat "\n"
     in
+    Options.make_includes () ^
     includes ^ "\n" ^ sizeof_assertions

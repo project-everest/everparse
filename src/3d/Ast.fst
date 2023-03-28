@@ -258,6 +258,7 @@ noeq
 type expr' =
   | Constant of constant
   | Identifier of ident
+  | Static of expr //the guard of a #if; must be made from compile-time constants only
   | This
   | App : op -> list expr -> expr'
 
@@ -437,7 +438,7 @@ type field_array_t =
 
 [@@ PpxDerivingYoJson ]
 noeq
-type struct_field = {
+type atomic_field' = {
   field_dependence:bool;   //computed; whether or not the rest of the struct depends on this field
   field_ident:ident;       //name of the field
   field_type:typ;          //type of the field
@@ -447,17 +448,23 @@ type struct_field = {
   field_action:option (action & bool); //boo indicates if the action depends on the field value
 }
 
-[@@ PpxDerivingYoJson ]
-let field = with_meta_t struct_field
+and atomic_field = with_meta_t atomic_field'
 
-[@@ PpxDerivingYoJson ]
-noeq
-type case =
+and field' =
+  | AtomicField of atomic_field
+  | RecordField : record -> ident -> field'
+  | SwitchCaseField : switch_case -> ident -> field'
+
+and field = with_meta_t field'
+
+and record = list field
+
+and case =
   | Case : expr -> field -> case
   | DefaultCase : field -> case
 
-[@@ PpxDerivingYoJson ]
-let switch_case = expr & list case
+and switch_case = expr & list case
+
 
 [@@ PpxDerivingYoJson ]
 type attribute =
@@ -520,7 +527,7 @@ type decl' =
   | Define: ident -> option typ -> constant -> decl'
   | TypeAbbrev: typ -> ident -> decl'
   | Enum: typ -> ident -> list enum_case -> decl'
-  | Record: names:typedef_names -> params:list param -> where:option expr -> fields:list field -> decl'
+  | Record: names:typedef_names -> params:list param -> where:option expr -> fields:record -> decl'
   | CaseType: typedef_names -> list param -> switch_case -> decl'
 
   | OutputType : out_typ -> decl'
@@ -572,6 +579,103 @@ let is_entrypoint d = match d.d_decl.v with
   | Record names _ _ _
   | CaseType names _ _ ->
     has_entrypoint (names.typedef_attributes)
+  | _ -> false
+
+(** Determine if there are output type expressions: which cases in
+   TranslateForInterpreter introduce the Output_type_expr constructor?
+   *)
+
+/// Matches translate_action_assignment, translate_action_field_ptr_after
+let out_expr_is_out_type_expr (lhs: out_expr) : Tot bool =
+  match lhs.out_expr_node.v with
+  | OE_star ({out_expr_node = {v=OE_id i}}) -> false
+  | _ -> true
+
+/// Matches translate_atomic_action
+let atomic_action_has_out_expr (a: atomic_action) : Tot bool =
+  match a with
+  | Action_field_ptr_after _ write_to
+  | Action_assignment write_to _
+    -> out_expr_is_out_type_expr write_to
+  | _ -> false
+
+/// Matches translate_action
+let rec action_has_out_expr (a: action) : Tot bool =
+  match a.v with
+  | Atomic_action a -> atomic_action_has_out_expr a
+  | Action_seq hd tl ->
+    if atomic_action_has_out_expr hd
+    then true
+    else action_has_out_expr tl
+  | Action_ite _ then_ (Some else_) ->
+    if action_has_out_expr then_
+    then true
+    else action_has_out_expr else_
+  | Action_ite _ then_ None ->
+    action_has_out_expr then_
+  | Action_let _ a k ->
+    if atomic_action_has_out_expr a
+    then true
+    else action_has_out_expr k
+  | Action_act a ->
+    action_has_out_expr a
+
+let field_action_has_out_expr 
+  (f: option (action & bool))
+: Tot bool
+= match f with
+  | None -> false
+  | Some (a, _) -> action_has_out_expr a
+
+/// Matches translate_atomic_field
+let atomic_field_has_out_expr (f: atomic_field) : Tot bool =
+  let sf = f.v in
+  field_action_has_out_expr sf.field_action
+
+/// Matches field_as_grouped_fields
+let rec field_has_out_expr (f: field) : Tot bool =
+  match f.v with
+  | AtomicField af ->
+    atomic_field_has_out_expr af
+  | RecordField fs _ ->
+    record_has_out_expr fs
+  | SwitchCaseField sw _ ->
+    switch_case_has_out_expr sw
+
+and record_has_out_expr (fs: record) : Tot bool =
+  match fs with
+  | [] -> false
+  | f :: fs' ->
+    if field_has_out_expr f
+    then true
+    else record_has_out_expr fs'
+
+and switch_case_has_out_expr (sw: switch_case) : Tot bool =
+  let (_, c) = sw in
+  cases_have_out_expr c
+
+and cases_have_out_expr (cs: list case) : Tot bool =
+  match cs with
+  | [] -> false
+  | c :: cs ->
+    if case_has_out_expr c
+    then true
+    else cases_have_out_expr cs
+
+and case_has_out_expr (c: case) : Tot bool =
+  match c with
+  | Case _ f
+  | DefaultCase f
+    ->
+    field_has_out_expr f
+
+/// Matches parse_field
+let decl_has_out_expr (d: decl) : Tot bool =
+  match d.d_decl.v with
+  | Record _ _ _ ast_fields ->
+    record_has_out_expr ast_fields
+  | CaseType _ _ switch_case ->
+    switch_case_has_out_expr switch_case
   | _ -> false
 
 (** Equality on expressions and types **)
@@ -644,6 +748,18 @@ let tuint16 = mk_prim_t "UINT16"
 let tuint32 = mk_prim_t "UINT32"
 let tuint64 = mk_prim_t "UINT64"
 let tunknown = mk_prim_t "?"
+let unit_atomic_field rng = 
+    let dummy_identifier = with_range (to_ident' "_empty_") rng in
+    let f = {
+         field_dependence=false;
+         field_ident=dummy_identifier;
+         field_type=tunit;
+         field_array_opt=FieldScalar;
+         field_constraint=None;
+         field_bitwidth=None;
+         field_action=None
+        } in
+    with_range f rng
 
 let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
   match o with
@@ -668,6 +784,7 @@ let rec subst_expr (s:subst) (e:expr) : ML expr =
   | Constant _
   | This -> e
   | Identifier i -> apply s i
+  | Static e -> { e with v = Static (subst_expr s e) }
   | App op es -> {e with v = App op (List.map (subst_expr s) es)}
 let subst_atomic_action (s:subst) (aa:atomic_action) : ML atomic_action =
   match aa with
@@ -702,7 +819,12 @@ let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   | FieldScalar -> f
   | FieldArrayQualified (e, q) -> FieldArrayQualified (subst_expr s e, q)
   | FieldString sz -> FieldString (map_opt (subst_expr s) sz)
-let subst_field (s:subst) (f:field) : ML field =
+let rec subst_field (s:subst) (ff:field) : ML field =
+  match ff.v with
+  | AtomicField f -> {ff with v = AtomicField (subst_atomic_field s f)}
+  | RecordField f i -> {ff with v = RecordField (subst_record s f) i}
+  | SwitchCaseField f i -> {ff with v = SwitchCaseField (subst_switch_case s f) i}
+and subst_atomic_field (s:subst) (f:atomic_field) : ML atomic_field =
   let sf = f.v in
   let a =
     match sf.field_action with
@@ -716,12 +838,14 @@ let subst_field (s:subst) (f:field) : ML field =
       field_constraint = map_opt (subst_expr s) sf.field_constraint;
       field_action = a
   } in
-  { f with v = sf }
-let subst_case (s:subst) (c:case) : ML case =
+  { f with v = sf }  
+and subst_record (s:subst) (f:record) : ML record   
+  = List.map (subst_field s) f
+and subst_case (s:subst) (c:case) : ML case =
   match c with
   | Case e f -> Case (subst_expr s e) (subst_field s f)
   | DefaultCase f -> DefaultCase (subst_field s f)
-let subst_switch_case (s:subst) (sc:switch_case) : ML switch_case =
+and subst_switch_case (s:subst) (sc:switch_case) : ML switch_case =
   subst_expr s (fst sc), List.map (subst_case s) (snd sc)
 let subst_params (s:subst) (p:list param) : ML (list param) =
   List.map (fun (t, i, q) -> subst_typ s t, i, q) p
@@ -803,6 +927,8 @@ let rec print_expr (e:expr) : Tot string =
     print_ident i
   | This ->
     "this"
+  | Static e -> 
+    Printf.sprintf "static(%s)" (print_expr e)
   | App Eq [e1; e2] ->
     Printf.sprintf "(%s = %s)" (print_expr e1) (print_expr e2)
   | App And [e1; e2] ->
@@ -908,7 +1034,22 @@ let print_bitfield (bf:option field_bitwidth_t) =
      (print_typ a.bitfield_type)
      a.bitfield_from a.bitfield_to
 
-let print_field (f:field) : ML string =
+let rec print_field (f:field) : ML string =
+  let field = 
+    match f.v with
+    | AtomicField f -> print_atomic_field f
+    | RecordField f i -> Printf.sprintf "%s %s" (print_record f) i.v.name
+    | SwitchCaseField f i -> Printf.sprintf "%s %s" (print_switch_case f) i.v. name
+  in
+  match f.comments with 
+  | [] -> field
+  | comms -> Printf.sprintf "//%s\n%s" (String.concat "; " comms) field
+  
+and print_record (f:record) : ML string = 
+  List.map print_field f |>
+  String.concat ";\n"
+
+and print_atomic_field (f:atomic_field) : ML string =
   let print_array eq : Tot string =
     match eq with
     | FieldScalar -> ""
@@ -931,7 +1072,7 @@ let print_field (f:field) : ML string =
       (print_array sf.field_array_opt)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
 
-let print_switch_case (s:switch_case) : ML string =
+and print_switch_case (s:switch_case) : ML string =
   let head, cases = s in
   let print_case (c:case) : ML string =
     match c with
@@ -1020,3 +1161,11 @@ let weak_kind_glb (w1 w2: weak_kind) : Tot weak_kind =
   if w1 = w2
   then w1
   else WeakKindWeak
+
+
+let field_tag_equal (f0 f1:field) = 
+  match f0.v, f1.v with
+  | AtomicField _, AtomicField _
+  | RecordField _ _, RecordField _ _
+  | SwitchCaseField _ _, SwitchCaseField _ _ -> true
+  | _ -> false

@@ -133,6 +133,9 @@ let translate_module (en:env) (mname:string) (fn:string)
   static_asserts,
   en
 
+let has_output_types (t_decls:list Target.decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Target.Output_type? d) t_decls
+
 let has_out_exprs (t_decls:list Target.decl) : bool =
   List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
 
@@ -154,9 +157,20 @@ let emit_fstar_code_for_interpreter (en:env)
         InterpreterTarget.print_decls en modul itds
     in
 
+    let has_external_types = has_output_types tds || has_extern_types tds in
+
+    if has_external_types
+    then begin
+      let external_types_fsti_file =
+        open_write_file
+          (Printf.sprintf "%s/%s.ExternalTypes.fsti" (Options.get_output_dir ()) modul) in
+      FStar.IO.write_string external_types_fsti_file (Target.print_external_types_fstar_interpreter modul tds);
+      FStar.IO.close_write_file external_types_fsti_file
+    end;
+
     let has_external_api =
       has_out_exprs tds ||
-      has_extern_types tds ||
+      has_extern_types tds || // FIXME: I added this to fix discrepancy with GenMakefile, does this make sense?
       has_extern_functions tds in
 
     if has_external_api
@@ -209,7 +223,7 @@ let emit_fstar_code_for_interpreter (en:env)
     FStar.IO.close_write_file fsti_file;
 
     ()
-
+   
 let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
                     (static_asserts:StaticAssertions.static_asserts)
                     (emit_output_types_defs:bool)
@@ -228,6 +242,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
         (Printf.sprintf "%s/%sWrapper.c"
           (Options.get_output_dir())
           modul) in
+          
     FStar.IO.write_string c_file wrapper_impl;
     FStar.IO.close_write_file c_file;
 
@@ -240,6 +255,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file h_file
   end;
 
+  let has_output_types = has_output_types t_decls in
   let has_out_exprs = has_out_exprs t_decls in
   let has_extern_types = has_extern_types t_decls in
   let has_extern_fns = has_extern_functions t_decls in
@@ -250,14 +266,17 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
    *   then emit output type definitions in M_OutputTypesDefs.h
    *)
 
-  if has_out_exprs && emit_output_types_defs
+  if emit_output_types_defs
   then begin
-    let output_types_defs_file = open_write_file
-      (Printf.sprintf "%s/%s_OutputTypesDefs.h"
-         (Options.get_output_dir ())
-         modul) in
-    FStar.IO.write_string output_types_defs_file (Target.print_output_types_defs modul t_decls);
-    FStar.IO.close_write_file output_types_defs_file;
+    if has_output_types
+    then begin
+      let output_types_defs_file = open_write_file
+        (Printf.sprintf "%s/%s_OutputTypesDefs.h"
+           (Options.get_output_dir ())
+           modul) in
+      FStar.IO.write_string output_types_defs_file (Target.print_output_types_defs modul t_decls);
+      FStar.IO.close_write_file output_types_defs_file
+    end;
 
     (*
      * Optimization: If the module has no extern types,
@@ -267,7 +286,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
      * So generate M_ExteralTypedefs.h, with #include of M_OutputTypesDefs.h
      *)
 
-    if not has_extern_types
+    if has_output_types && not has_extern_types
     then begin
       let extern_typedefs_file = open_write_file
         (Printf.sprintf "%s/%s_ExternalTypedefs.h"
@@ -280,7 +299,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
            #if defined(__cplusplus)\n\
            extern \"C\" {\n\
            #endif\n\n\n\
-           #include \"%s_OutputTypesDefs.h\"\n\n\
+           %s#include \"%s_OutputTypesDefs.h\"\n\n\
            #if defined(__cplusplus)\n\
            }\n\
            #endif\n\n\
@@ -289,26 +308,27 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
 
           modul
           modul
+          (Options.make_includes ())
           modul
           modul);
       FStar.IO.close_write_file extern_typedefs_file
     end
   end;
 
-  (*
-   * Optimization: If M only has extern functions, and no types,
-   *   then the external typedefs file is trivially empty
-   *)
+  // (*
+  //  * Optimization: If M only has extern functions, and no types,
+  //  *   then the external typedefs file is trivially empty
+  //  *)
 
-  if has_extern_fns && not (has_out_exprs || has_extern_types)
-  then begin
-    let extern_typedefs_file = open_write_file
-      (Printf.sprintf "%s/%s_ExternalTypedefs.h"
-        (Options.get_output_dir ())
-        modul) in
-    FStar.IO.write_string extern_typedefs_file "\n";
-    FStar.IO.close_write_file extern_typedefs_file
-  end;
+  // if has_extern_fns && not (has_out_exprs || has_extern_types)
+  // then begin
+  //   let extern_typedefs_file = open_write_file
+  //     (Printf.sprintf "%s/%s_ExternalTypedefs.h"
+  //       (Options.get_output_dir ())
+  //       modul) in
+  //   FStar.IO.write_string extern_typedefs_file "\n";
+  //   FStar.IO.close_write_file extern_typedefs_file
+  // end;
 
   if has_out_exprs
   then begin
@@ -356,10 +376,25 @@ let process_file (en:env)
   TypeSizes.finish_module en.typesizes_env modul ds;
 
   { en with 
-    binding_env = Binding.finish_module en.binding_env modul ds;
+    binding_env = Binding.finish_module en.binding_env modul;
     translate_env = 
       en.translate_env;
   }
+
+let emit_config_as_fstar_module ()
+  : ML unit
+  = match Deps.get_config () with
+    | Some (cfg, config_module_name) ->
+      let fst_file_contents = Config.emit_config_as_fstar_module config_module_name cfg in
+      let fst_file =
+        open_write_file
+          (Printf.sprintf "%s/%s.fst"
+            (Options.get_output_dir())
+            config_module_name) in
+      FStar.IO.write_string fst_file fst_file_contents;
+      FStar.IO.close_write_file fst_file
+    | _ -> ()
+      
 
 let process_files (files_and_modules:list (string & string))
                   (emit_fstar:string -> ML bool)
@@ -371,11 +406,12 @@ let process_files (files_and_modules:list (string & string))
                     (List.map fst files_and_modules |> String.concat " "));
   let all_modules = List.map snd files_and_modules in
   let env = initial_env () in
+  if Options.get_batch() then emit_config_as_fstar_module();
   files_and_modules
   |> List.fold_left (fun env (fn, modul) ->
                     process_file env fn modul (emit_fstar modul) emit_output_types_defs all_modules) env
   |> ignore
-
+  
 let produce_and_postprocess_c
   (out_dir: string)
   (file: string)
@@ -388,6 +424,8 @@ let produce_and_postprocess_c
   let dep_files_and_modules = List.filter (fun (_, m) -> m <> modul) dep_files_and_modules in
   Batch.produce_and_postprocess_one_c
     (Options.get_input_stream_binding ())
+    (Options.get_emit_output_types_defs ())
+    (Options.get_add_include ())
     (Options.get_clang_format ())
     (Options.get_clang_format_executable ())
     out_dir
@@ -398,12 +436,19 @@ let produce_and_postprocess_c
 let go () : ML unit =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
   let cmd_line_files = Options.parse_cmd_line() in
+  let cfg_opt = Deps.get_config () in
   (* Special mode: --check_inplace_hashes *)
   let inplace_hashes = Options.get_check_inplace_hashes () in
   if Cons? inplace_hashes
   then Batch.check_inplace_hashes inplace_hashes
   else
   let micro_step = Options.get_micro_step () in
+  if micro_step = Some HashingOptions.MicroStepEmitConfig
+  then (
+    emit_config_as_fstar_module ();
+    exit 0
+  )
+  else
   if micro_step = Some HashingOptions.MicroStepCopyClangFormat
   then
   (* Special mode: --__micro_step copy_clang_format *)
@@ -431,6 +476,7 @@ let go () : ML unit =
     GenMakefile.write_makefile
       t
       input_stream_binding
+      (Options.get_emit_output_types_defs ())
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())
       cmd_line_files
@@ -476,6 +522,8 @@ let go () : ML unit =
   then
   let _ = Batch.postprocess_fst
         input_stream_binding
+        (Options.get_emit_output_types_defs ())
+        (Options.get_add_include ())
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
         (Options.get_skip_c_makefiles ())

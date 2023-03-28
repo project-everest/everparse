@@ -16,7 +16,7 @@ int main(void) {
   uint8_t *test = calloc(testSize, sizeof(uint8_t));
   uint8_t *out = NULL;
   if (test != NULL) {
-    EverParseInputStreamBase testStream = EverParseCreate();
+    EVERPARSE_INPUT_STREAM_BASE testStream = EverParseCreate();
     if (testStream != NULL) {
       EverParsePush(testStream, test, testSize);
       EverParsePush(testStream, test, testSize);

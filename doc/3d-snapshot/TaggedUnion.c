@@ -2,20 +2,19 @@
 
 #include "TaggedUnion.h"
 
-
-
 static inline uint64_t
 ValidateIntPayload(
   uint32_t Size,
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLen,
@@ -42,9 +41,10 @@ ValidateIntPayload(
     {
       return positionAfterIntPayload;
     }
-    Err("_int_payload",
-      "missing",
+    ErrorHandlerFn("_int_payload",
+      "value8",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
+      EverParseGetValidatorErrorKind(positionAfterIntPayload),
       Ctxt,
       Input,
       StartPosition);
@@ -70,9 +70,10 @@ ValidateIntPayload(
     {
       return positionAfterIntPayload;
     }
-    Err("_int_payload",
-      "missing",
+    ErrorHandlerFn("_int_payload",
+      "value16",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
+      EverParseGetValidatorErrorKind(positionAfterIntPayload),
       Ctxt,
       Input,
       StartPosition);
@@ -98,9 +99,10 @@ ValidateIntPayload(
     {
       return positionAfterIntPayload;
     }
-    Err("_int_payload",
-      "missing",
+    ErrorHandlerFn("_int_payload",
+      "value32",
       EverParseErrorReasonOfResult(positionAfterIntPayload),
+      EverParseGetValidatorErrorKind(positionAfterIntPayload),
       Ctxt,
       Input,
       StartPosition);
@@ -114,9 +116,10 @@ ValidateIntPayload(
   {
     return positionAfterIntPayload;
   }
-  Err("_int_payload",
-    "missing",
+  ErrorHandlerFn("_int_payload",
+    "_x_2",
     EverParseErrorReasonOfResult(positionAfterIntPayload),
+    EverParseGetValidatorErrorKind(positionAfterIntPayload),
     Ctxt,
     Input,
     StartPosition);
@@ -127,13 +130,14 @@ uint64_t
 TaggedUnionValidateInteger(
   uint8_t *Ctxt,
   void
-  (*Err)(
-    EverParseString x0,
-    EverParseString x1,
-    EverParseString x2,
-    uint8_t *x3,
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
     uint8_t *x4,
-    uint64_t x5
+    uint8_t *x5,
+    uint64_t x6
   ),
   uint8_t *Input,
   uint64_t InputLength,
@@ -160,9 +164,10 @@ TaggedUnionValidateInteger(
   }
   else
   {
-    Err("_integer",
+    ErrorHandlerFn("_integer",
       "size",
       EverParseErrorReasonOfResult(positionAfterInteger),
+      EverParseGetValidatorErrorKind(positionAfterInteger),
       Ctxt,
       Input,
       StartPosition);
@@ -178,7 +183,7 @@ TaggedUnionValidateInteger(
   positionAfterInteger0 =
     ValidateIntPayload(size,
       Ctxt,
-      Err,
+      ErrorHandlerFn,
       Input,
       InputLength,
       positionAftersize);
@@ -186,9 +191,10 @@ TaggedUnionValidateInteger(
   {
     return positionAfterInteger0;
   }
-  Err("_integer",
+  ErrorHandlerFn("_integer",
     "payload",
     EverParseErrorReasonOfResult(positionAfterInteger0),
+    EverParseGetValidatorErrorKind(positionAfterInteger0),
     Ctxt,
     Input,
     positionAftersize);
