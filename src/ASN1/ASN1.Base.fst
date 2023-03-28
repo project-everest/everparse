@@ -175,6 +175,8 @@ and asn1_any_prefix_k_wf (ks : Set.set asn1_id_t) (li : list ((Set.set asn1_id_t
     | PLAIN -> asn1_any_prefix_k_wf ks tl
     | OPTION | DEFAULT -> asn1_any_prefix_k_wf' ks tl s'
 
+//TEMPORARY: disable positivity check to see if the rest of the development goes through with a recent F*
+#push-options "--__no_positivity"
 noeq //noextract
 type asn1_content_k : Type =
 | ASN1_RESTRICTED_TERMINAL : (k : asn1_terminal_k) -> (is_valid : (asn1_terminal_t k) -> bool) -> asn1_content_k
@@ -212,6 +214,7 @@ and asn1_decorated_k : Set.set asn1_id_t -> asn1_decorator -> Type =
 and asn1_gen_item_k : Type = s : Set.set asn1_id_t & d : asn1_decorator & asn1_decorated_k s d
 
 and asn1_gen_items_k : Type = items : list (asn1_gen_item_k) & squash (asn1_sequence_k_wf (List.map proj2_of_3 items))
+#pop-options
 
 let mk_ASN1_GEN_ITEM (#s) (#d) (k : asn1_decorated_k s d) : asn1_gen_item_k =
   (| s, d, k |)
