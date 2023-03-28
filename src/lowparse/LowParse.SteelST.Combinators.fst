@@ -163,7 +163,8 @@ let jump_pair
 
 let g_split_pair
   #opened
-  #k1 #t1 (p1: parser k1 t1)
+  #k1 (#t1: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (p1: parser k1 t1)
   #k2 #t2 (p2: parser k2 t2)
   #y (a: byte_array)
 : STGhost (Ghost.erased (byte_array)) opened
@@ -209,7 +210,8 @@ let split_pair'
 inline_for_extraction
 let split_pair
   (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (j1: jumper p1)
-  (#k2: Ghost.erased parser_kind) #t2 (p2: parser k2 t2)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (p2: parser k2 t2)
   #y (a: byte_array)
 : ST (byte_array)
     (aparse (p1 `nondep_then` p2) a y)
@@ -269,7 +271,8 @@ let clens_fst
 inline_for_extraction
 let with_pair_fst
   (#k1: Ghost.erased parser_kind) #t1 (p1: parser k1 t1)
-  (#k2: Ghost.erased parser_kind) #t2 (p2: parser k2 t2)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (p2: parser k2 t2)
 : Pure (accessor (p1 `nondep_then` p2) p1 (clens_fst _ _))
     (k1.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
@@ -405,7 +408,7 @@ let read_synth'
 inline_for_extraction
 let write_synth
   (#k: parser_kind)
-  (#t1: Type)
+  (#t1: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (#p: parser k t1)
   (#s: serializer p)
   (w: writer s)
@@ -505,7 +508,8 @@ let jump_fail
 
 inline_for_extraction
 let validate_filter
-  (#k: Ghost.erased parser_kind) #t (#p: parser k t) (v: validator p) (r: leaf_reader p)
+  (#k: Ghost.erased parser_kind) (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#p: parser k t) (v: validator p) (r: leaf_reader p)
   (f: t -> GTot bool)
   (f' : ((x: t) -> Tot (y: bool { y == f x } )))
 : Pure (validator (p  `parse_filter` f))
@@ -603,7 +607,7 @@ let read_filter
 inline_for_extraction
 let write_filter
   (#k: parser_kind)
-  (#t: Type)
+  (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (#p: parser k t)
   (#s: serializer p)
   (w: writer s)
@@ -743,7 +747,7 @@ let exists_and_then_payload
 let ghost_split_and_then
   (#opened: _)
   (#k1: parser_kind)
-  (#t1: Type)
+  (#t1: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (p1: parser k1 t1)
   (#k2: parser_kind)
   (#t2: Type)
@@ -772,7 +776,7 @@ let split_and_then
   (#p1: parser k1 t1)
   (j1: jumper p1)
   (#k2: Ghost.erased parser_kind)
-  (#t2: Type)
+  (#t2: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (p2: (t1 -> parser k2 t2))
   (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
   (#va: _)
@@ -799,7 +803,7 @@ let ghost_and_then_tag
   (#t1: Type)
   (p1: parser k1 t1)
   (#k2: parser_kind)
-  (#t2: Type)
+  (#t2: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (p2: (t1 -> parser k2 t2))
   (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
   #y #y1 (a1: byte_array) (a2: byte_array)
@@ -878,7 +882,7 @@ let intro_and_then
 inline_for_extraction
 let validate_tagged_union
   (#kt: Ghost.erased parser_kind)
-  (#tag_t: Type)
+  (#tag_t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (#pt: parser kt tag_t)
   (vt: validator pt)
   (rt: leaf_reader pt)
@@ -920,7 +924,7 @@ let validate_tagged_union
 inline_for_extraction
 let jump_tagged_union
   (#kt: Ghost.erased parser_kind)
-  (#tag_t: Type)
+  (#tag_t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (#pt: parser kt tag_t)
   (vt: jumper pt)
   (rt: leaf_reader pt)
@@ -989,7 +993,7 @@ let exists_tagged_union_payload
 let ghost_split_tagged_union
   (#opened: _)
   (#kt: parser_kind)
-  (#tag_t: Type)
+  (#tag_t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (pt: parser kt tag_t)
   (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
@@ -1018,7 +1022,7 @@ let split_tagged_union
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (jt: jumper pt)
-  (#data_t: Type)
+  (#data_t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: Ghost.erased parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -1046,7 +1050,7 @@ let ghost_tagged_union_tag
   (#kt: parser_kind)
   (#tag_t: Type)
   (pt: parser kt tag_t)
-  (#data_t: Type)
+  (#data_t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
@@ -1219,7 +1223,7 @@ let hop_dtuple2_tag_with_size
   (#tag_t: Type)
   (pt: parser kt tag_t)
   (#k: Ghost.erased parser_kind)
-  (#data_t: tag_t -> Type)
+  (#data_t: tag_t -> Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (p: (t: tag_t) -> Tot (parser k (data_t t)))
   #y #y1 (a1: byte_array) (sz1: SZ.t) (a2: Ghost.erased byte_array)
 : ST byte_array

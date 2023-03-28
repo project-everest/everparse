@@ -488,7 +488,7 @@ let elim_impl_for_inv_aux_false
   #state_i #state_t #ll_state #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
-  (#t: Type)
+  (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (from0: SZ.t) (to: SZ.t)
   (f: Ghost.erased ((x: nat { SZ.v from0 <= x /\ x < SZ.v to }) -> fold_t state_t t unit inv inv))
   (l: t)
@@ -593,7 +593,8 @@ let impl_for_inv
 
 inline_for_extraction
 let impl_for_test
-  #state_i #state_t #ll_state #ll_state_ptr
+  #state_i #state_t (#ll_state: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: Ghost.erased parser_kind)
@@ -647,7 +648,8 @@ let rec fold_for_snoc
 
 inline_for_extraction
 let impl_for_body
-  #state_i #state_t #ll_state #ll_state_ptr
+  #state_i #state_t (#ll_state: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: Ghost.erased parser_kind)
@@ -796,7 +798,8 @@ let elim_impl_for_inv_aux_false_strong
 
 inline_for_extraction
 let impl_for_post
-  #state_i #state_t #ll_state #ll_state_ptr
+  #state_i #state_t (#ll_state: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: Ghost.erased parser_kind)
@@ -875,7 +878,7 @@ let impl_for
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: Ghost.erased parser_kind)
-  (#t: Type)
+  (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (p: parser k t)
   (from: SZ.t) (to: SZ.t)
   (f: Ghost.erased ((x: nat { SZ.v from <= x /\ x < SZ.v to }) -> fold_t state_t t unit inv inv))
@@ -1497,7 +1500,9 @@ let impl_list_hole_inv
 
 inline_for_extraction
 let impl_list_post_true
-  #state_i #state_t #ll_state #ll_state_ptr
+  #state_i (#state_t: _ -> Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#ll_state: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
@@ -1548,7 +1553,9 @@ let impl_list_post_true
 
 inline_for_extraction
 let impl_list_post_false
-  #state_i #state_t #ll_state #ll_state_ptr
+  #state_i (#state_t: _ -> Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#ll_state: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
@@ -1624,7 +1631,9 @@ let fold_list_snoc
 
 inline_for_extraction
 let impl_list_body_false
-  #state_i #state_t #ll_state #ll_state_ptr
+  #state_i (#state_t: _ -> Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#ll_state: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)
@@ -1654,7 +1663,9 @@ let impl_list_body_false
 
 inline_for_extraction
 let impl_list_body_true
-  #state_i #state_t #ll_state #ll_state_ptr
+  #state_i (#state_t: _ -> Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#ll_state: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  #ll_state_ptr
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#t: Type)

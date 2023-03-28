@@ -1676,7 +1676,7 @@ let r_to_l_write_t
 let r_to_l_write_post_rewrite
   (#opened: _)
   (#k: parser_kind)
-  (#t: Type)
+  (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (p: parser k t)
   (#k': parser_kind)
   (p': parser k' t)

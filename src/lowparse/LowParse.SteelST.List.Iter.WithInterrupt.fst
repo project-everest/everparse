@@ -179,7 +179,7 @@ let list_iter_with_interrupt_close
 inline_for_extraction
 let list_iter_with_interrupt_test
   (#k: Ghost.erased parser_kind)
-  (#t: Type)
+  (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (p: parser k t)
   (state: bool -> list t -> vprop)
   (v0: v parse_list_kind (list t))

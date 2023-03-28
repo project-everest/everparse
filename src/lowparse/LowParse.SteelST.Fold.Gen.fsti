@@ -514,7 +514,7 @@ val impl_for
   (cl: low_level_state state_i state_t ll_state ll_state_ptr)
   (inv: state_i)
   (#k: Ghost.erased parser_kind)
-  (#t: Type)
+  (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (p: parser k t)
   (from: SZ.t) (to: SZ.t)
   (f: Ghost.erased ((x: nat { SZ.v from <= x /\ x < SZ.v to }) -> fold_t state_t t unit inv inv))
