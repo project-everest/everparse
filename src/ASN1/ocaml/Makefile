@@ -1,4 +1,4 @@
-export OCAMLPATH += $(FSTAR_HOME)/bin
+export OCAMLPATH += $(FSTAR_HOME)/lib
 
 all:
 	dune build

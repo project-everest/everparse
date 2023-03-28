@@ -4,7 +4,7 @@
   (name ASN1_Parser)
   (libraries
     batteries
-    fstarlib
+    fstar.lib
     process
     yojson
     ppx_deriving_yojson.runtime
