@@ -131,16 +131,16 @@ val gsplit (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.t)
           (fun _ -> True)
 
 inline_for_extraction
-val split' (#opened: _) (#a:Type) (#vl #vr: v a) (x: t a) (i: SZ.t) (x': Ghost.erased (t a))
-  : STAtomicBase (t a) false opened Unobservable
+val split' (#a:Type) (#vl #vr: v a) (x: t a) (i: SZ.t) (x': Ghost.erased (t a))
+  : ST (t a)
           (arrayptr x vl `star` arrayptr x' vr)
           (fun res -> arrayptr x vl `star` arrayptr res vr)
           (adjacent (array_of vl) (array_of vr) /\ SZ.v i == length (array_of vl))
           (fun res -> res == Ghost.reveal x')
 
 inline_for_extraction
-let split (#opened: _) (#a:Type) (#value: v a) (x: t a) (i:SZ.t)
-  : STAtomicBase (t a) false opened Unobservable
+let split (#a:Type) (#value: v a) (x: t a) (i:SZ.t)
+  : ST (t a)
           (arrayptr x value)
           (fun res -> exists_ (fun vl -> exists_ (fun vr ->
             arrayptr x vl `star` arrayptr res vr `star` pure (

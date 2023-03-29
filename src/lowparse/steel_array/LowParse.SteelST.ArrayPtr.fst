@@ -103,7 +103,7 @@ let gsplit #_ #_ #v x i =
   rewrite (arrayptr0 res vr) (arrayptr res vr);
   res
 
-let split' #_ #_ #vl #vr x i x' =
+let split' #_ #vl #vr x i x' =
   rewrite (arrayptr x vl) (arrayptr0 x vl);
   rewrite (arrayptr x' vr) (arrayptr0 x' vr);
   let _ = gen_elim () in
