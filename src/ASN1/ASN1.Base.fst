@@ -132,7 +132,10 @@ type asn1_decorator : Type =
 | OPTION
 | DEFAULT
 
-let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) * asn1_decorator)) (s : Set.set asn1_id_t) : Type =
+let id_dec = Set.set asn1_id_t & asn1_decorator
+let id_decs = list id_dec
+
+let rec asn1_sequence_k_wf' (li : id_decs) (s : Set.set asn1_id_t) : Type =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -142,7 +145,7 @@ let rec asn1_sequence_k_wf' (li : list ((Set.set asn1_id_t) * asn1_decorator)) (
     | PLAIN -> asn1_sequence_k_wf tl
     | _ -> asn1_sequence_k_wf' tl (Set.union s s'))
 
-and asn1_sequence_k_wf (li : list ((Set.set asn1_id_t) * asn1_decorator)) : Type =
+and asn1_sequence_k_wf (li : id_decs) : Type =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -156,7 +159,7 @@ let my_as_set l = Set.as_set l
 let proj2_of_3 (#a #b : Type) (#c : a -> b -> Type) (x : dtuple3 a (fun _ -> b) c) : a * b = 
   let (| xa, xb, _ |) = x in (xa, xb)
 
-let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : list ((Set.set asn1_id_t) * asn1_decorator)) (s : Set.set asn1_id_t) : Type =
+let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : id_decs) (s : Set.set asn1_id_t) : Type =
   match li with
   | [] -> Set.disjoint s ks
   | hd :: tl ->
@@ -166,7 +169,7 @@ let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : list ((Set.set asn1
     | PLAIN -> asn1_any_prefix_k_wf ks tl
     | OPTION | DEFAULT -> asn1_any_prefix_k_wf' ks tl (Set.union s s'))
 
-and asn1_any_prefix_k_wf (ks : Set.set asn1_id_t) (li : list ((Set.set asn1_id_t) * asn1_decorator)) : Type =
+and asn1_any_prefix_k_wf (ks : Set.set asn1_id_t) (li : id_decs) : Type =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -175,23 +178,23 @@ and asn1_any_prefix_k_wf (ks : Set.set asn1_id_t) (li : list ((Set.set asn1_id_t
     | PLAIN -> asn1_any_prefix_k_wf ks tl
     | OPTION | DEFAULT -> asn1_any_prefix_k_wf' ks tl s'
 
-//TEMPORARY: disable positivity check to see if the rest of the development goes through with a recent F*
-#push-options "--__no_positivity"
 noeq //noextract
 type asn1_content_k : Type =
 | ASN1_RESTRICTED_TERMINAL : (k : asn1_terminal_k) -> (is_valid : (asn1_terminal_t k) -> bool) -> asn1_content_k
 | ASN1_TERMINAL : asn1_terminal_k -> asn1_content_k
-| ASN1_SEQUENCE : asn1_gen_items_k -> asn1_content_k
+| ASN1_SEQUENCE : asn1_gen_items_lk -> asn1_content_k
 | ASN1_SEQUENCE_OF : #s : _ -> asn1_k s -> asn1_content_k
 //| ASN1_SET : #s : _ -> asn1_set_k s -> asn1_content_k
 | ASN1_SET_OF : #s : _ -> asn1_k s -> asn1_content_k
 | ASN1_PREFIXED : #s : _ -> asn1_k s -> asn1_content_k
-| ASN1_ANY_DEFINED_BY : prefix : list asn1_gen_item_k ->
+| ASN1_ANY_DEFINED_BY :
+             id_decs_prefix : id_decs ->
+             prefix:asn1_gen_items_l id_decs_prefix ->
              id : asn1_id_t ->
              key_k : asn1_terminal_k ->
-             supported : list ((asn1_terminal_t key_k) * asn1_gen_items_k) -> 
-             fallback : option asn1_gen_items_k ->
-             pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton id) (List.map proj2_of_3 prefix)) ->
+             supported : list (asn1_terminal_t key_k * asn1_gen_items_lk) -> 
+             fallback : option asn1_gen_items_lk ->
+             pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton id) id_decs_prefix) ->
              pf_sup : squash (List.noRepeats (List.map fst supported)) -> 
              asn1_content_k
 
@@ -211,13 +214,48 @@ and asn1_decorated_k : Set.set asn1_id_t -> asn1_decorator -> Type =
 | ASN1_DEFAULT_RESTRICTED_TERMINAL : id : asn1_id_t -> #k : asn1_terminal_k -> is_valid : ((asn1_terminal_t k) -> bool) -> 
                                      defaultv : asn1_terminal_t k {is_valid defaultv = true} -> asn1_decorated_k (Set.singleton id) DEFAULT
 
-and asn1_gen_item_k : Type = s : Set.set asn1_id_t & d : asn1_decorator & asn1_decorated_k s d
 
-and asn1_gen_items_k : Type = items : list (asn1_gen_item_k) & squash (asn1_sequence_k_wf (List.map proj2_of_3 items))
-#pop-options
+and asn1_gen_items_l : id_decs -> Type0 = 
+  | ASN1_GEN_ITEMS_NIL : asn1_gen_items_l []
+  | ASN1_GEN_ITEMS_CONS : s:Set.set asn1_id_t -> d:asn1_decorator -> asn1_decorated_k s d -> 
+                          tl:id_decs -> asn1_gen_items_l tl -> asn1_gen_items_l ((s, d)::tl)
+
+and asn1_gen_items_lk : Type = (id_decs:id_decs { asn1_sequence_k_wf id_decs } & asn1_gen_items_l id_decs)
+
+
+let asn1_gen_item_k : Type = s : Set.set asn1_id_t & d : asn1_decorator & asn1_decorated_k s d
+
+let asn1_gen_items_k : Type = items : list (asn1_gen_item_k) & squash (asn1_sequence_k_wf (List.map proj2_of_3 items))
+
 
 let mk_ASN1_GEN_ITEM (#s) (#d) (k : asn1_decorated_k s d) : asn1_gen_item_k =
   (| s, d, k |)
+
+(* Conversions to go between asn1_gen_items_lk and asn1_get_items_k *)
+let rec l_as_list (#i:id_decs) (l:asn1_gen_items_l i)
+  : r:list asn1_gen_item_k { List.map proj2_of_3 r == i }
+  = match l with
+    | ASN1_GEN_ITEMS_NIL -> []
+    | ASN1_GEN_ITEMS_CONS s d dd _ tl ->
+      (| s, d, dd |) :: l_as_list tl
+
+let lk_as_k (lk:asn1_gen_items_lk)
+  : asn1_gen_items_k
+  = let (| ids, l |) = lk in
+    (| l_as_list l, () |)
+
+let rec list_as_l (l:list asn1_gen_item_k)
+  : asn1_gen_items_l (List.map proj2_of_3 l)
+  = match l with
+    | [] -> ASN1_GEN_ITEMS_NIL
+    | hd::tl ->
+      let (| i, d, dd |) = hd in
+      ASN1_GEN_ITEMS_CONS i d dd _ (list_as_l tl)
+
+let k_as_lk (k:asn1_gen_items_k)
+  : asn1_gen_items_lk
+  = let (| l, _ |) = k in
+    (| _, list_as_l l |)
 
 type default_tv (#a : eqtype) (v : a) =
 | Default : default_tv v
@@ -286,23 +324,23 @@ let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
   match k with
   | ASN1_RESTRICTED_TERMINAL k' is_valid -> parse_filter_refine is_valid
   | ASN1_TERMINAL k' -> asn1_terminal_t k'
-  | ASN1_SEQUENCE gitems -> asn1_sequence_t (dfst gitems)
+  | ASN1_SEQUENCE gitems -> asn1_sequence_t_core (dsnd gitems)
   | ASN1_SEQUENCE_OF k' ->  non_empty_list (asn1_t k')
   | ASN1_SET_OF k' -> non_empty_list (asn1_t k') 
   | ASN1_PREFIXED k' -> asn1_t k'
-  | ASN1_ANY_DEFINED_BY prefix id key_k ls ofb pf_wf pf_sup -> 
+  | ASN1_ANY_DEFINED_BY id_decs_prefix prefix id key_k ls ofb pf_wf pf_sup -> 
     let suffix_t =
       (match ofb with
-      | None -> make_gen_choice_type (asn1_any_t (asn1_terminal_t key_k) ls)
-      | Some fb -> make_gen_choice_type_with_fallback (asn1_any_t (asn1_terminal_t key_k) ls) (asn1_sequence_t (dfst fb))) in
-    asn1_sequence_any_t prefix suffix_t
+      | None -> make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) ls)
+      | Some fb -> make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core (dsnd fb))) in
+    asn1_sequence_any_t_core prefix suffix_t
 
-and asn1_any_t (t : eqtype) (ls : list (t * asn1_gen_items_k)) : Tot (list (t & Type)) (decreases ls) =
+and asn1_any_t_core (t : eqtype) (ls : list (t * asn1_gen_items_lk)) : Tot (list (t & Type)) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
     let (x, y) = h in
-    (x, asn1_sequence_t (dfst y)) :: (asn1_any_t t tl)
+    (x, asn1_sequence_t_core (dsnd y)) :: asn1_any_t_core t tl
 
 and asn1_lc_t (lc : list (asn1_id_t & asn1_content_k)) : Tot (list (asn1_id_t & Type)) (decreases lc) =
   match lc with
@@ -317,27 +355,114 @@ and asn1_t (#s : _) (k : asn1_k s) : Tot Type (decreases k) =
   | ASN1_CHOICE_ILC lc pf -> make_gen_choice_type (asn1_lc_t lc)
   | ASN1_ANY_ILC -> asn1_id_t & asn1_octetstring_t
 
-and asn1_decorated_t (item : asn1_gen_item_k) : Tot Type =
-  match item with
-  | (| _, _, dk |) -> match dk with
-                    | ASN1_PLAIN_ILC k -> asn1_t k
-                    | ASN1_OPTION_ILC k -> (option (asn1_t k)) 
-                    | ASN1_DEFAULT_TERMINAL id defv -> (default_tv defv)
-                    | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k is_valid defv -> default_tv #(parse_filter_refine is_valid) defv
+and asn1_decorated_t_core #s #d (dk:asn1_decorated_k s d) : Tot Type  (decreases dk) =
+  match dk with
+  | ASN1_PLAIN_ILC k -> asn1_t k
+  | ASN1_OPTION_ILC k -> option (asn1_t k)
+  | ASN1_DEFAULT_TERMINAL id defv -> default_tv defv
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k is_valid defv -> default_tv #(parse_filter_refine is_valid) defv
 
-and asn1_sequence_t (items : list asn1_gen_item_k) : Tot Type (decreases items) =
+and asn1_sequence_t_core #id_decs (items:asn1_gen_items_l id_decs) : Tot Type (decreases items) =
+  match items with
+  | ASN1_GEN_ITEMS_NIL -> unit
+  | ASN1_GEN_ITEMS_CONS s d dd _ ASN1_GEN_ITEMS_NIL ->
+    asn1_decorated_t_core dd
+  | ASN1_GEN_ITEMS_CONS s d dd _ tl ->
+    asn1_decorated_t_core dd & asn1_sequence_t_core tl
+
+and asn1_sequence_any_t_core #id_decs (items : asn1_gen_items_l id_decs) (suffix_t : Type) : Tot Type (decreases items) =
+  match items with
+  | ASN1_GEN_ITEMS_NIL -> suffix_t
+  | ASN1_GEN_ITEMS_CONS s d dd _ ASN1_GEN_ITEMS_NIL ->
+    asn1_decorated_t_core dd & suffix_t
+  | ASN1_GEN_ITEMS_CONS s d dd _ tl ->
+    asn1_decorated_t_core dd & asn1_sequence_any_t_core tl suffix_t
+
+(* It may be convenient to use these alternative but equivalent formulations in the rest of the development *)
+let asn1_decorated_t (i:asn1_gen_item_k) : Type =
+  let (| _, _, dk |) = i in
+  asn1_decorated_t_core dk
+
+let rec asn1_sequence_t (items:list asn1_gen_item_k) =
   match items with
   | [] -> unit
-  | [hd] -> (asn1_decorated_t hd)
-  | hd :: tl -> 
-    (asn1_decorated_t hd) & (asn1_sequence_t tl)
+  | [hd] ->
+    asn1_decorated_t hd
+  | hd::tl -> 
+    asn1_decorated_t hd & asn1_sequence_t tl
 
-and asn1_sequence_any_t (items : list asn1_gen_item_k) (suffix_t : Type) : Tot Type (decreases items) =
+let rec asn1_sequence_t_core_equiv #id_decs (items:asn1_gen_items_l id_decs)
+  : Lemma (ensures asn1_sequence_t_core items == asn1_sequence_t (l_as_list items))
+          (decreases items)
+  = match items with
+    | ASN1_GEN_ITEMS_NIL -> ()
+    | ASN1_GEN_ITEMS_CONS _ _ _ _ tl ->
+      asn1_sequence_t_core_equiv tl
+
+let rec asn1_sequence_t_core_equiv' (items:list asn1_gen_item_k)
+  : Lemma (ensures asn1_sequence_t_core (list_as_l items) == asn1_sequence_t items)
+          (decreases items)
+  = match items with
+    | [] -> ()
+    | hd::tl -> asn1_sequence_t_core_equiv' tl
+
+
+let rec asn1_any_t (t : eqtype) (ls : list (t * asn1_gen_items_k)) : Tot (list (t & Type)) (decreases ls) =
+  match ls with
+  | [] -> [] 
+  | h :: tl -> 
+    let (x, y) = h in
+    (x, asn1_sequence_t (dfst y)) :: asn1_any_t _ tl
+
+let t_lk_as_t_k #t (ls:list (t & asn1_gen_items_lk))
+  : list (t & asn1_gen_items_k)
+  = List.map (fun (t, lk) -> t, lk_as_k lk) ls
+
+let t_k_as_t_lk #t (ls:list (t & asn1_gen_items_k))
+  : list (t & asn1_gen_items_lk)
+  = List.map (fun (t, k) -> t, k_as_lk k) ls
+
+let rec asn1_any_t_equiv (#t:eqtype) (ls:list (t & asn1_gen_items_lk))
+  : Lemma (ensures asn1_any_t_core t ls == asn1_any_t t (t_lk_as_t_k ls))
+   = match ls with
+     | [] -> ()
+     | hd::tl ->
+       let x,y = hd in
+       asn1_any_t_equiv tl; asn1_sequence_t_core_equiv (dsnd y)
+
+let rec asn1_any_t_equiv' (#t:eqtype) (ls:list (t & asn1_gen_items_k))
+  : Lemma (ensures asn1_any_t_core t (t_k_as_t_lk ls) == asn1_any_t t ls)
+   = match ls with
+     | [] -> ()
+     | hd::tl ->
+       let x,y = hd in
+       asn1_any_t_equiv' tl; asn1_sequence_t_core_equiv' (dfst y)
+
+
+let rec asn1_sequence_any_t (items : list asn1_gen_item_k) (suffix_t : Type) : Tot Type (decreases items) =
   match items with
   | [] -> suffix_t
-  | [hd] -> (asn1_decorated_t hd) & suffix_t
-  | hd :: tl -> 
-    (asn1_decorated_t hd) & (asn1_sequence_any_t tl suffix_t)
+  | [hd] -> asn1_decorated_t hd & suffix_t
+  | hd :: tl ->
+    asn1_decorated_t hd & asn1_sequence_any_t tl suffix_t
+
+let rec asn1_sequence_any_t_equiv #id_decs (items : asn1_gen_items_l id_decs) (suffix_t : Type)
+  : Lemma (ensures asn1_sequence_any_t_core items suffix_t ==
+                   asn1_sequence_any_t (l_as_list items) suffix_t)
+          (decreases items)
+  = match items with
+    | ASN1_GEN_ITEMS_NIL -> ()
+    | ASN1_GEN_ITEMS_CONS s d dd _ tl ->
+      asn1_sequence_any_t_equiv tl suffix_t
+
+
+let rec asn1_sequence_any_t_equiv' (items : list asn1_gen_item_k) (suffix_t : Type)
+  : Lemma (ensures asn1_sequence_any_t_core (list_as_l items) suffix_t ==
+                   asn1_sequence_any_t items suffix_t)
+          (decreases items)
+  = match items with
+    | [] -> ()
+    | hd::tl -> asn1_sequence_any_t_equiv' tl suffix_t
 
 type asn1_length_u32_t = U32.t
 
