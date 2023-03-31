@@ -186,6 +186,35 @@ let parse_nlist_eq
     nondep_then_eq p (parse_nlist' (n - 1) p) b
   end
 
+let rec parse_nlist_fuel_ext
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: (nat -> parser k t))
+  (fuel: nat)
+  (fuel': nat { fuel <= fuel' })
+  (prf: (
+    (b: bytes { Seq.length b < fuel }) ->
+    Lemma
+    (parse (p fuel) b == parse (p fuel') b)
+  ))
+  (b: bytes { Seq.length b < fuel })
+: Lemma
+  (ensures (parse (parse_nlist n (p fuel)) b == parse (parse_nlist n (p fuel')) b))
+  (decreases n)
+= parse_nlist_eq n (p fuel) b;
+  parse_nlist_eq n (p fuel') b;
+  if n = 0
+  then ()
+  else begin
+    prf b;
+    match parse (p fuel) b with
+    | None -> ()
+    | Some (_, consumed) ->
+      let b' = Seq.slice b consumed (Seq.length b) in
+      parse_nlist_fuel_ext (n - 1) p fuel fuel' prf b'
+  end
+
 let rec serialize_nlist'
   (n: nat)
   (#k: parser_kind)
