@@ -186,7 +186,36 @@ let parse_nlist_eq
     nondep_then_eq p (parse_nlist' (n - 1) p) b
   end
 
-let rec parse_nlist_fuel_ext
+let rec parse_nlist_ext
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: (parser k t))
+  (#k': parser_kind)
+  (p' : parser k' t)
+  (b: bytes)
+  (prf: (
+    (b': bytes { Seq.length b' <= Seq.length b }) ->
+    Lemma
+    (parse p b' == parse p' b')
+  ))
+: Lemma
+  (ensures (parse (parse_nlist n p) b == parse (parse_nlist n p') b))
+  (decreases n)
+= parse_nlist_eq n p b;
+  parse_nlist_eq n p' b;
+  if n = 0
+  then ()
+  else begin
+    prf b;
+    match parse p b with
+    | None -> ()
+    | Some (_, consumed) ->
+      let b' = Seq.slice b consumed (Seq.length b) in
+      parse_nlist_ext (n - 1) p p' b' prf
+  end
+
+let parse_nlist_fuel_ext
   (n: nat)
   (#k: parser_kind)
   (#t: Type)
@@ -201,19 +230,7 @@ let rec parse_nlist_fuel_ext
   (b: bytes { Seq.length b < fuel })
 : Lemma
   (ensures (parse (parse_nlist n (p fuel)) b == parse (parse_nlist n (p fuel')) b))
-  (decreases n)
-= parse_nlist_eq n (p fuel) b;
-  parse_nlist_eq n (p fuel') b;
-  if n = 0
-  then ()
-  else begin
-    prf b;
-    match parse (p fuel) b with
-    | None -> ()
-    | Some (_, consumed) ->
-      let b' = Seq.slice b consumed (Seq.length b) in
-      parse_nlist_fuel_ext (n - 1) p fuel fuel' prf b'
-  end
+= parse_nlist_ext n (p fuel) (p fuel') b prf
 
 let rec serialize_nlist'
   (n: nat)

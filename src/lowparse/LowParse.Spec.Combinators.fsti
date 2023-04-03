@@ -1251,6 +1251,33 @@ val parse_dtuple2_eq
   | _ -> None
   ))
 
+let parse_dtuple2_ext_r
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type))
+  (p2: (x: t1) -> parser k2 (t2 x))
+  (#k2': parser_kind)
+  (p2': (x: t1) -> parser k2' (t2 x))
+  (input: bytes)
+  (prf: (
+    (tag: t1) ->
+    (b: bytes { k1.parser_kind_low + Seq.length b <= Seq.length input }) ->
+    Lemma
+    (parse (p2 tag) b == parse (p2' tag) b)
+  ))
+: Lemma
+  (parse (parse_dtuple2 p1 p2) input == parse (parse_dtuple2 p1 p2') input)
+= parse_dtuple2_eq p1 p2 input;
+  parse_dtuple2_eq p1 p2' input;
+  match parse p1 input with
+  | None -> ()
+  | Some (tag, consumed) ->
+    parser_kind_prop_equiv k1 p1;
+    let input' = Seq.slice input consumed (Seq.length input) in
+    prf tag input'
+
 let parse_dtuple2_fuel_ext_r_consumes_l
   (#k1: parser_kind)
   (#t1: Type)
@@ -1269,14 +1296,7 @@ let parse_dtuple2_fuel_ext_r_consumes_l
   (input: bytes { Seq.length input <= fuel })
 : Lemma
   (parse (parse_dtuple2 p1 (p2 fuel)) input == parse (parse_dtuple2 p1 (p2 fuel')) input)
-= parse_dtuple2_eq p1 (p2 fuel) input;
-  parse_dtuple2_eq p1 (p2 fuel') input;
-  match parse p1 input with
-  | None -> ()
-  | Some (tag, consumed) ->
-    parser_kind_prop_equiv k1 p1;
-    let input' = Seq.slice input consumed (Seq.length input) in
-    prf tag input'
+= parse_dtuple2_ext_r p1 (p2 fuel) (p2 fuel') input prf
 
 let bare_parse_dtuple2
   (#k1: parser_kind)
@@ -1399,6 +1419,32 @@ let nondep_then_ext_l
 = nondep_then_eq p1 p2 b;
   nondep_then_eq p1' p2 b
 
+let nondep_then_ext_r
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (#k2': parser_kind)
+  (p2': parser k2' t2)
+  (b: bytes)
+  (prf: (
+    (b': bytes { k1.parser_kind_low + Seq.length b' <= Seq.length b }) ->
+    Lemma
+    (parse p2 b' == parse p2' b')
+  ))
+: Lemma
+  (parse (p1 `nondep_then` p2) b == parse (p1 `nondep_then` p2') b)
+= nondep_then_eq p1 p2 b;
+  nondep_then_eq p1 p2' b;
+  match parse p1 b with
+  | None -> ()
+  | Some (_, consumed1) ->
+    parser_kind_prop_equiv k1 p1;
+    let b' = Seq.slice b consumed1 (Seq.length b) in
+    prf b'
+
 let nondep_then_fuel_ext_r
   (#k1: parser_kind)
   (#t1: Type)
@@ -1416,13 +1462,7 @@ let nondep_then_fuel_ext_r
   (b: bytes { Seq.length b < fuel })
 : Lemma
   (parse (p1 `nondep_then` p2 fuel) b == parse (p1 `nondep_then` p2 fuel') b)
-= nondep_then_eq p1 (p2 fuel) b;
-  nondep_then_eq p1 (p2 fuel') b;
-  match parse p1 b with
-  | None -> ()
-  | Some (_, consumed1) ->
-    let b' = Seq.slice b consumed1 (Seq.length b) in
-    prf b'
+= nondep_then_ext_r p1 (p2 fuel) (p2 fuel') b prf
 
 val tot_nondep_then
   (#k1: parser_kind)
