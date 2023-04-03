@@ -164,10 +164,10 @@ type raw_data_item
 = | Simple: (v: simple_value) -> raw_data_item
   | UInt64: (v: U64.t) -> raw_data_item
   | NegInt64: (minus_one_minus_v: U64.t) -> raw_data_item
-  | ByteString: (v: Seq.seq byte) -> raw_data_item
-  | TextString: (v: Seq.seq byte) -> raw_data_item // Setion 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
-  | Array: (v: list raw_data_item) -> raw_data_item
-  | Map: (v: list (raw_data_item & raw_data_item)) -> raw_data_item
+  | ByteString: (v: Seq.seq byte { FStar.UInt.fits (Seq.length v) U64.n }) -> raw_data_item
+  | TextString: (v: Seq.seq byte { FStar.UInt.fits (Seq.length v) U64.n }) -> raw_data_item // Setion 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
+  | Array: (v: list raw_data_item { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
+  | Map: (v: list (raw_data_item & raw_data_item) { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
   | Tagged: (tag: U64.t) -> (v: raw_data_item) -> raw_data_item
 //  | Float: (v: Float.float) -> raw_data_item // TODO
 
@@ -297,36 +297,59 @@ let rec parse_raw_data_item_fuel
   then fail_parser _ _
   else parse_raw_data_item_aux (parse_raw_data_item_fuel (fuel - 1))
 
-let parse_content_fuel_ext
-  (fuel: nat)
-  (fuel': nat { fuel <= fuel' })
-  (prf: (
-    (b: bytes { Seq.length b < fuel }) ->
-    Lemma
-    (parse (parse_raw_data_item_fuel fuel) b == parse (parse_raw_data_item_fuel fuel') b)
-  ))
+let parse_content_ext
+  (p: parser parse_raw_data_item_kind raw_data_item)
+  (p': parser parse_raw_data_item_kind raw_data_item)
   (h: header)
-  (input: bytes { Seq.length input < fuel })
+  (input: bytes)
+  (prf: (
+    (b: bytes { Seq.length b <= Seq.length input }) ->
+    Lemma
+    (parse p b == parse p' b)
+  ))
 : Lemma
-  (parse (parse_content (parse_raw_data_item_fuel fuel) h) input == parse (parse_content (parse_raw_data_item_fuel fuel') h) input)
+  (parse (parse_content p h) input == parse (parse_content p' h) input)
 = match h with
   | (| b, long_arg |) ->
     match b with
     | (major_type, _) ->
       if major_type = 4uy
       then
-        parse_nlist_fuel_ext (U64.v (argument_as_uint64 b long_arg)) parse_raw_data_item_fuel fuel fuel' prf input
+        parse_nlist_ext (U64.v (argument_as_uint64 b long_arg)) p p' input prf
       else if major_type = 5uy
       then
-        parse_nlist_fuel_ext (U64.v (argument_as_uint64 b long_arg)) (fun fuel -> parse_raw_data_item_fuel fuel `nondep_then` parse_raw_data_item_fuel fuel) fuel fuel'
-          (fun input ->
-            nondep_then_ext_l (parse_raw_data_item_fuel fuel) (parse_raw_data_item_fuel fuel') (parse_raw_data_item_fuel fuel) input (prf input);
-            nondep_then_fuel_ext_r (parse_raw_data_item_fuel fuel') parse_raw_data_item_fuel fuel fuel' prf input
+        parse_nlist_ext (U64.v (argument_as_uint64 b long_arg)) (p `nondep_then` p) (p' `nondep_then` p') input
+          (fun input' ->
+            nondep_then_ext_l p p' p input' (prf input');
+            nondep_then_ext_r p' p p' input' prf
           )
-          input
       else if major_type = 6uy
       then prf input
       else ()
+
+let parse_raw_data_item_aux_ext
+  (p p': parser parse_raw_data_item_kind raw_data_item)
+  (input: bytes)
+  (prf:
+    (input' : bytes { Seq.length input' < Seq.length input }) -> // IMPORTANT: lt, not leq, to make induction work
+    Lemma
+    (parse p input' == parse p' input')
+  )
+: Lemma
+  (parse (parse_raw_data_item_aux p) input == parse (parse_raw_data_item_aux p') input)
+= parse_synth_ext
+    (parse_dtuple2 parse_header (parse_content p))
+    (parse_dtuple2 parse_header (parse_content p'))
+    synth_raw_data_item
+    input
+    (
+      parse_dtuple2_ext_r
+        parse_header
+        (parse_content p)
+        (parse_content p')
+        input
+        (fun h input -> parse_content_ext p p' h input prf)
+    )
 
 let rec parse_raw_data_item_fuel_ext_gen
   (fuel: nat)
@@ -335,19 +358,12 @@ let rec parse_raw_data_item_fuel_ext_gen
 : Lemma
   (ensures (parse (parse_raw_data_item_fuel fuel) input == parse (parse_raw_data_item_fuel fuel') input))
   (decreases fuel)
-= parse_synth_ext
-    (parse_dtuple2 parse_header (parse_content (parse_raw_data_item_fuel (fuel - 1))))
-    (parse_dtuple2 parse_header (parse_content (parse_raw_data_item_fuel (fuel' - 1))))
-    synth_raw_data_item
+= parse_raw_data_item_aux_ext
+    (parse_raw_data_item_fuel (fuel - 1))
+    (parse_raw_data_item_fuel (fuel' - 1))
     input
-    (
-      parse_dtuple2_fuel_ext_r_consumes_l
-        parse_header
-        (fun fuel -> parse_content (parse_raw_data_item_fuel fuel))
-        (fuel - 1)
-        (fuel' - 1)
-        (parse_content_fuel_ext (fuel - 1) (fuel' - 1) (parse_raw_data_item_fuel_ext_gen (fuel - 1) (fuel' - 1)))
-        input
+    (fun input' ->
+      parse_raw_data_item_fuel_ext_gen (fuel - 1) (fuel' - 1) input'
     )
 
 let closure
@@ -365,35 +381,475 @@ let parse_raw_data_item_fuel_ext
 let parse_raw_data_item : parser parse_raw_data_item_kind raw_data_item =
   close_by_fuel parse_raw_data_item_fuel closure parse_raw_data_item_fuel_ext
 
-(*
-// Ordering of map keys (Section 4.2)
+let parse_raw_data_item_eq
+  (b: bytes)
+: Lemma
+  (parse parse_raw_data_item b == parse (parse_raw_data_item_aux parse_raw_data_item) b)
+= let c = closure b in
+  let p = parse_raw_data_item_fuel (c - 1) in
+  assert (parse parse_raw_data_item b == parse (parse_raw_data_item_aux p) b);
+  parse_raw_data_item_aux_ext p parse_raw_data_item b (fun input' -> // here hypothesis Seq.length input' < Seq.length input is used
+    parse_raw_data_item_fuel_ext (c - 1) input'
+  )
 
-let rec forall_list
+(* 
+
+  A raw data item ends with zero or more raw data items, but a raw
+  data item does not contain a raw data item followed by something
+  that is not a raw data item. In other words, parse_raw_data_item can
+  be rewritten as:
+
+  p `parse_dtuple2` (fun x -> parse_nlist (f x) parse_raw_data_item) `parse_synth` g
+
+  where p contains no recursive call to parse_raw_data_item. Then, in
+  that case, a validator or jumper can be implemented as a loop
+  counting the number of raw data items left to parse.
+  
+*)
+
+let leaf_content
+  (h: header)
+: Tot Type
+= match h with
+  | (| b, long_arg |) ->
+    match b with
+    | (major_type, _) ->
+      if major_type = 2uy || major_type = 3uy
+      then Seq.lseq byte (U64.v (argument_as_uint64 b long_arg))
+      else unit
+
+let parse_leaf_content
+  (h: header)
+: parser parse_content_kind (leaf_content h)
+= match h with
+  | (| b, long_arg |) ->
+    match b with
+    | (major_type, _) ->
+      if major_type = 2uy || major_type = 3uy
+      then weaken _ (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
+      else weaken _ parse_empty
+
+let leaf = dtuple2 header leaf_content
+
+let parse_leaf : parser _ leaf = parse_header `parse_dtuple2` parse_leaf_content
+
+let remaining_data_items
+  (l: leaf)
+: Tot nat
+= match l with
+  | (| (| b, long_arg |), _ |) ->
+    match b with
+    | (major_type, _) ->
+      if major_type = 4uy
+      then
+        U64.v (argument_as_uint64 b long_arg)
+      else if major_type = 5uy
+      then
+        let count = U64.v (argument_as_uint64 b long_arg) in
+        count + count
+      else if major_type = 6uy
+      then 1
+      else 0
+
+let content_alt
+  (l: leaf)
+: Tot Type
+= nlist (remaining_data_items l) raw_data_item
+
+let parse_content_alt
+  (l: leaf)
+: Tot (parser parse_content_kind (content_alt l))
+= weaken _ (parse_nlist (remaining_data_items l) parse_raw_data_item)
+
+let raw_data_item_alt = dtuple2 leaf content_alt
+
+let parse_raw_data_item_alt : parser parse_raw_data_item_kind raw_data_item_alt =
+  parse_dtuple2 parse_leaf parse_content_alt
+
+let rec pair_list_of_list
+  (t: Type)
+  (nb_pairs: nat)
+  (x: nlist (nb_pairs + nb_pairs) t)
+: Tot (nlist nb_pairs (t & t))
+= match x with
+  | [] -> []
+  | a :: b :: q -> (a, b) :: pair_list_of_list t (nb_pairs - 1) q
+
+let rec list_of_pair_list
+  (t: Type)
+  (nb_pairs: nat)
+  (x: nlist nb_pairs (t & t))
+: Tot (nlist (nb_pairs + nb_pairs) t)
+= match x with
+  | [] -> []
+  | (a, b) :: q -> a :: b :: list_of_pair_list t (nb_pairs - 1) q
+
+let rec list_of_pair_list_of_list
+  (#t: Type)
+  (nb_pairs: nat)
+  (x: nlist (nb_pairs + nb_pairs) t)
+: Lemma
+  (list_of_pair_list t nb_pairs (pair_list_of_list t nb_pairs x) == x)
+= match x with
+  | [] -> ()
+  | _ :: _ :: q -> list_of_pair_list_of_list (nb_pairs - 1) q
+
+let rec pair_list_of_list_of_pair_list
+  (#t: Type)
+  (nb_pairs: nat)
+  (x: nlist nb_pairs (t & t))
+: Lemma
+  (pair_list_of_list t nb_pairs (list_of_pair_list t nb_pairs x) == x)
+= match x with
+  | [] -> ()
+  | _ :: q -> pair_list_of_list_of_pair_list (nb_pairs - 1) q
+
+let pair_list_of_list_inj
+  (t: Type)
+  (nb_pairs: nat)
+  (x1 x2: nlist (nb_pairs + nb_pairs) t)
+: Lemma
+  (pair_list_of_list t nb_pairs x1 == pair_list_of_list t nb_pairs x2 ==> x1 == x2)
+= list_of_pair_list_of_list nb_pairs x1; 
+  list_of_pair_list_of_list nb_pairs x2
+
+let synth_injective_pair_list_of_list
+  (t: Type)
+  (nb_pairs: nat)
+: Lemma
+  (synth_injective (pair_list_of_list t nb_pairs))
+= Classical.forall_intro (list_of_pair_list_of_list #t nb_pairs)
+
+let synth_injective_pair_list_of_list_pat
+  (t: Type)
+  (nb_pairs: nat)
+: Lemma
+  (synth_injective (pair_list_of_list t nb_pairs))
+  [SMTPat (pair_list_of_list t nb_pairs)]
+= synth_injective_pair_list_of_list t nb_pairs
+
+let synth_inverse_pair_list_of_list
+  (t: Type)
+  (nb_pairs: nat)
+: Lemma
+  (synth_inverse (pair_list_of_list t nb_pairs) (list_of_pair_list t nb_pairs))
+//  [SMTPat (pair_list_of_list t nb_pairs)]
+= Classical.forall_intro (pair_list_of_list_of_pair_list #t nb_pairs)
+
+let synth_injective_list_of_pair_list
+  (t: Type)
+  (nb_pairs: nat)
+: Lemma
+  (synth_injective (list_of_pair_list t nb_pairs))
+  [SMTPat (list_of_pair_list t nb_pairs)]
+= Classical.forall_intro (pair_list_of_list_of_pair_list #t nb_pairs)
+
+let synth_inverse_list_of_pair_list
+  (t: Type)
+  (nb_pairs: nat)
+: Lemma
+  (synth_inverse (list_of_pair_list t nb_pairs) (pair_list_of_list t nb_pairs))
+  [SMTPat (list_of_pair_list t nb_pairs)]
+= Classical.forall_intro (list_of_pair_list_of_list #t nb_pairs)
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let rec parse_pair_list_as_list
+  (#t: Type)
+  (#k: parser_kind)
+  (p: parser k t)
+  (nb_pairs: nat)
+  (input: bytes)
+: Lemma
+  (ensures (
+    match parse (parse_nlist nb_pairs (p `nondep_then` p)) input, parse (parse_nlist (nb_pairs + nb_pairs) p) input with
+    | None, None -> True
+    | Some (l, consumed), Some (l', consumed') ->
+      consumed == consumed' /\
+      l == pair_list_of_list t nb_pairs l'
+    | _ -> False
+  ))
+  (decreases nb_pairs)
+= parse_nlist_eq nb_pairs (p `nondep_then` p) input;
+  parse_nlist_eq (nb_pairs + nb_pairs) p input;
+  if nb_pairs = 0
+  then ()
+  else begin
+    nondep_then_eq p p input;
+    assert (nb_pairs + nb_pairs - 1 - 1 == (nb_pairs - 1) + (nb_pairs - 1));
+    match parse p input with
+    | None -> ()
+    | Some (x1, consumed1) ->
+      let input2 = Seq.slice input consumed1 (Seq.length input) in
+      parse_nlist_eq (nb_pairs + nb_pairs - 1) p input2;
+      match parse p input2 with
+      | None -> ()
+      | Some (x2, consumed2) ->
+        let input3 = Seq.slice input2 consumed2 (Seq.length input2) in
+        parse_pair_list_as_list p (nb_pairs - 1) input3;
+        // FIXME: WHY WHY WHY do I need all of these?
+        assert (Some? (parse (parse_nlist nb_pairs (p `nondep_then` p)) input) == Some? (parse (parse_nlist (nb_pairs - 1) (p `nondep_then` p)) input3));
+        assert (Some? (parse (parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (parse_nlist (nb_pairs + nb_pairs - 1 - 1) p) input3));
+        assert (Some? (parse (parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3));
+        assert (Some? (parse (parse_nlist (nb_pairs - 1) (p `nondep_then` p)) input3) == Some? (parse (parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3))
+  end
+
+#pop-options
+
+let synth_raw_data_item'_from_alt
+  (x: raw_data_item_alt)
+: Tot raw_data_item'
+= match x with
+  | (| l , c |) ->
+    match l with
+    | (| h, lc |) ->
+      match h with
+      | (| b, long_arg |) ->
+        match b with
+        | (major_type, _) ->
+          if major_type = 4uy
+          then (| h, c |)
+          else if major_type = 5uy
+          then (| h, pair_list_of_list _ (U64.v (argument_as_uint64 b long_arg)) c |)
+          else if major_type = 6uy
+          then (| h, List.Tot.hd c |)
+          else (| h, lc |)
+
+#push-options "--ifuel 3"
+#restart-solver
+
+let synth_raw_data_item'_from_alt_injective : squash (synth_injective synth_raw_data_item'_from_alt) =
+  Classical.forall_intro_3 (pair_list_of_list_inj raw_data_item)
+
+#pop-options
+
+let synth_raw_data_item_from_alt
+  (x: raw_data_item_alt)
+: Tot raw_data_item
+= synth_raw_data_item (synth_raw_data_item'_from_alt x)
+
+#restart-solver
+
+let synth_raw_data_item_from_alt_injective : squash (synth_injective synth_raw_data_item_from_alt) = ()
+
+let parse_nlist_zero
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: bytes)
+: Lemma (
+  parse (parse_nlist 0 p) b == Some ([], 0)
+)
+= parse_nlist_eq 0 p b
+
+let parse_nlist_one
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: bytes)
+: Lemma (
+  parse (parse_nlist 1 p) b == (match parse p b with
+  | None -> None
+  | Some (x, consumed) -> Some ([x], consumed)
+  )
+)
+= parse_nlist_eq 1 p b
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+let parse_raw_data_item_alt_correct
+  (b: bytes)
+: Lemma
+  (parse parse_raw_data_item b == parse (parse_raw_data_item_alt `parse_synth` synth_raw_data_item_from_alt) b)
+= parse_raw_data_item_eq b;
+  parse_synth_eq (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item b;
+  parse_dtuple2_eq parse_header (parse_content parse_raw_data_item) b;
+  parse_synth_eq parse_raw_data_item_alt synth_raw_data_item_from_alt b;
+  parse_dtuple2_eq parse_leaf parse_content_alt b;
+  parse_dtuple2_eq parse_header parse_leaf_content b;
+  match parse parse_header b with
+  | None -> ()
+  | Some _ ->
+    Classical.forall_intro (parse_nlist_zero parse_raw_data_item);
+    Classical.forall_intro (parse_nlist_one parse_raw_data_item);
+    Classical.forall_intro_2 (parse_pair_list_as_list parse_raw_data_item)
+
+#pop-options
+
+(* Serialization *)
+
+let major_type_t = bitfield uint8 3
+let additional_info_t = bitfield uint8 5
+
+let get_major_type
+  (d: raw_data_item)
+: Tot major_type_t
+= match d with
+  | Simple _ -> 7uy
+  | UInt64 _ -> 0uy
+  | NegInt64 _ -> 1uy
+  | ByteString _ -> 2uy
+  | TextString _ -> 3uy
+  | Array _ -> 4uy
+  | Map _ -> 5uy
+  | Tagged _ _ -> 6uy
+
+inline_for_extraction
+let mk_initial_byte
+  (t: major_type_t)
+  (x: additional_info_t)
+: Pure initial_byte
+    (requires (initial_byte_wf (t, (x, ()))))
+    (ensures (fun _ -> True))
+= (t, (x, ()))
+
+let uint64_as_argument
+  (t: major_type_t)
+  (x: U64.t)
+: Pure (b: initial_byte & long_argument b)
+    (requires (t `U8.lt` 7uy))
+    (ensures (fun y ->
+      let (| b, arg |) = y in
+      let (major_type', _) = b in
+      t == major_type' /\
+      argument_as_uint64 b arg = x
+    ))
+= if x `U64.lt` 24uL
+  then (| mk_initial_byte t (Cast.uint64_to_uint8 x), () |)
+  else if x `U64.lt` 256uL
+  then (| mk_initial_byte t 24uy, Cast.uint64_to_uint8 x |)
+  else if x `U64.lt` 65536uL
+  then (| mk_initial_byte t 25uy, Cast.uint64_to_uint16 x |)
+  else if x `U64.lt` 4294967296uL
+  then (| mk_initial_byte t 26uy, Cast.uint64_to_uint32 x |)
+  else (| mk_initial_byte t 27uy, x |)
+
+let simple_value_as_argument
+  (x: simple_value)
+: Pure (b: initial_byte & long_argument b)
+    (requires True)
+    (ensures (fun y ->
+      let (| b, arg |) = y in
+      let (major_type, (additional_info, _)) = b in
+      major_type = 7uy /\
+      additional_info `U8.lte` 24uy /\
+      argument_as_simple_value b arg == x
+    ))
+= if x `U8.lt` 24uy
+  then (| mk_initial_byte 7uy x, () |)
+  else (| mk_initial_byte 7uy 24uy, x |)
+
+let synth_raw_data_item_recip
+  (x: raw_data_item)
+: Tot raw_data_item'
+= match x with
+  | Simple v ->
+    (| simple_value_as_argument v, () |)
+  | UInt64 v ->
+    (| uint64_as_argument 0uy v, () |)
+  | NegInt64 v ->
+    (| uint64_as_argument 1uy v, () |)
+  | ByteString v ->
+    let len = U64.uint_to_t (Seq.length v) in
+    (| uint64_as_argument 2uy len, v |)
+  | TextString v ->
+    let len = U64.uint_to_t (Seq.length v) in
+    (| uint64_as_argument 3uy len, v |)
+  | Array v ->
+    let len = U64.uint_to_t (List.Tot.length v) in
+    (| uint64_as_argument 4uy len, v |)
+  | Map v ->
+    let len = U64.uint_to_t (List.Tot.length v) in
+    (| uint64_as_argument 5uy len, v |)
+  | Tagged tag v ->
+    (| uint64_as_argument 6uy tag, v |)
+
+let synth_raw_data_item_recip_inverse : squash (synth_inverse synth_raw_data_item synth_raw_data_item_recip) = ()
+
+let rec fold_left_list
+  (#t: Type)
+  (l: list t)
+  (#t': Type)
+  (p: t' -> (x: t { x << l }) -> t')
+  (init: t')
+: Tot t'
+= match l with
+  | [] -> init
+  | a :: q -> fold_left_list q p (p init a)
+
+let forall_list_f
+  (#t: Type)
+  (l: Ghost.erased (list t))
+  (p: (x: t { x << Ghost.reveal l }) -> bool)
+  (init: bool)
+  (a: t { a << Ghost.reveal l })
+: Tot bool
+= init && p a
+
+let forall_list
   (#t: Type)
   (l: list t)
   (p: (x: t { x << l }) -> bool)
 : Tot bool
-= match l with
-  | [] -> true
-  | a :: q -> p a && forall_list q p
+= fold_left_list l (forall_list_f l p) true
 
-let rec forall_list_fst
+let forall_list_fst_f
+  (#t1 #t2: Type)
+  (l: list (t1 & t2))
+  (p: (x: t1 { x << l }) -> bool)
+  (init: bool)
+  (a: (t1 & t2) { a << Ghost.reveal l })
+: Tot bool
+= let (a, _) = a in
+  init && p a
+
+let forall_list_fst
   (#t1 #t2: Type)
   (l: list (t1 & t2))
   (p: (x: t1 { x << l }) -> bool)
 : Tot bool
-= match l with
-  | [] -> true
-  | (a, _) :: q -> p a && forall_list_fst q p
+= fold_left_list l (forall_list_fst_f l p) true
 
-let rec forall_list_snd
+let forall_list_snd_f
+  (#t1 #t2: Type)
+  (l: list (t1 & t2))
+  (p: (x: t2 { x << l }) -> bool)
+  (init: bool)
+  (a: (t1 & t2) { a << Ghost.reveal l })
+: Tot bool
+= let (_, a) = a in
+  init && p a
+
+let forall_list_snd
   (#t1 #t2: Type)
   (l: list (t1 & t2))
   (p: (x: t2 { x << l }) -> bool)
 : Tot bool
-= match l with
-  | [] -> true
-  | (_, a) :: q -> p a && forall_list_snd q p
+= fold_left_list l (forall_list_snd_f l p) true
+
+let rec raw_data_item_has_level
+  (n: nat)
+  (d: raw_data_item)
+: Tot bool
+= match d with
+  | Array v ->
+    n > 0 &&
+    forall_list v (raw_data_item_has_level (n - 1))
+  | Map v ->
+    n > 0 &&
+    forall_list_fst v (raw_data_item_has_level (n - 1)) &&
+    forall_list_snd v (raw_data_item_has_level (n - 1))
+  | Tagged _ v ->
+    n > 0 &&
+    raw_data_item_has_level (n - 1) v
+  | _ -> true
+
+
+
+(*
+// Ordering of map keys (Section 4.2)
 
 let rec data_item_wf (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
 = match x with
