@@ -741,6 +741,36 @@ let simple_value_as_argument
   then (| mk_initial_byte 7uy x, () |)
   else (| mk_initial_byte 7uy 24uy, x |)
 
+let serialize_initial_byte : serializer parse_initial_byte =
+  serialize_filter
+    (serialize_bitsum'
+      initial_byte_desc
+      serialize_u8
+    )
+    initial_byte_wf
+
+let serialize_long_argument
+  (b: initial_byte)
+: Tot (serializer (parse_long_argument b))
+= match b with
+  | (major_type, (additional_info, _)) ->
+    if additional_info = 24uy
+    then
+      if major_type = 7uy
+      then
+        serialize_weaken _ (serialize_filter serialize_u8 simple_value_long_argument_wf)
+      else serialize_weaken _ (serialize_filter serialize_u8 uint8_wf)
+    else if additional_info = 25uy
+    then serialize_weaken _ (serialize_filter serialize_u16 uint16_wf)
+    else if additional_info = 26uy
+    then serialize_weaken _ (serialize_filter serialize_u32 uint32_wf)
+    else if additional_info = 27uy
+    then serialize_weaken _ (serialize_filter serialize_u64 uint64_wf)
+    else serialize_weaken _ serialize_empty
+
+let serialize_header : serializer parse_header =
+  serialize_dtuple2 serialize_initial_byte serialize_long_argument
+
 let synth_raw_data_item_recip
   (x: raw_data_item)
 : Tot raw_data_item'
@@ -768,6 +798,57 @@ let synth_raw_data_item_recip
 
 let synth_raw_data_item_recip_inverse : squash (synth_inverse synth_raw_data_item synth_raw_data_item_recip) = ()
 
+let synth_raw_data_item'_from_alt_recip
+  (x: raw_data_item')
+: Tot raw_data_item_alt
+= match x with
+  | (| h, c |) ->
+    match h with
+    | (| b, long_arg |) ->
+      match b with
+      | (major_type, _) ->
+        if major_type = 4uy
+        then (| (| h, () |), c |)
+        else if major_type = 5uy
+        then (| (| h, () |), list_of_pair_list _ (U64.v (argument_as_uint64 b long_arg)) c |)
+        else if major_type = 6uy
+        then (| (| h, () |), [c] |)
+        else (| (| h, c |), [] |)
+
+#push-options "--ifuel 3"
+#restart-solver
+
+let synth_raw_data_item'_from_alt_inverse : squash (synth_inverse synth_raw_data_item'_from_alt synth_raw_data_item'_from_alt_recip ) =
+  Classical.forall_intro_2 (pair_list_of_list_of_pair_list #raw_data_item)
+
+#pop-options
+
+let synth_raw_data_item_from_alt_recip
+  (x: raw_data_item)
+: Tot raw_data_item_alt
+= synth_raw_data_item'_from_alt_recip (synth_raw_data_item_recip x)
+
+#restart-solver
+
+let synth_raw_data_item_from_alt_inverse : squash (synth_inverse synth_raw_data_item_from_alt synth_raw_data_item_from_alt_recip) = ()
+
+let serialize_leaf_content
+  (h: header)
+: Tot (serializer (parse_leaf_content h))
+= match h with
+  | (| b, long_arg |) ->
+    match b with
+    | (major_type, _) ->
+      if major_type = 2uy || major_type = 3uy
+      then serialize_weaken _ (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
+      else serialize_weaken _ serialize_empty
+
+let serialize_leaf : serializer parse_leaf =
+  serialize_dtuple2 serialize_header serialize_leaf_content
+
+(* Construction of the serializer, by "step indexing" over the "level"
+   (in fact the depth) of the raw data item. *)
+
 let rec fold_left_list
   (#t: Type)
   (l: list t)
@@ -779,12 +860,93 @@ let rec fold_left_list
   | [] -> init
   | a :: q -> fold_left_list q p (p init a)
 
+let rec fold_left_list_ext
+  (#t: Type)
+  (l: list t)
+  (#t': Type)
+  (p1: t' -> (x: t { x << l }) -> t')
+  (p2: t' -> (x: t { x << l }) -> t')
+  (prf:
+    (accu: t') ->
+    (x: t { x << l }) ->
+    Lemma
+    (p1 accu x == p2 accu x)
+  )
+  (init: t')
+: Lemma
+  (ensures (fold_left_list l p1 init == fold_left_list l p2 init))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    prf init a;
+    let accu' = p1 init a in
+    fold_left_list_ext q p1 p2 prf accu'
+
+let acc_level
+  (#t0: Type)
+  (l: t0)
+  (#t: Type)
+  (level: (x: t { x << l }) -> nat)
+  (accu: nat)
+  (x: t { x << l })
+: Tot nat
+= let n = level x in
+  if n > accu then n else accu
+
+let acc_level_pair
+  (#t0: Type)
+  (l: t0)
+  (#t: Type)
+  (level: (x: t { x << l }) -> nat)
+  (accu: nat)
+  (x: (t & t) { x << l })
+= let (x1, x2) = x in
+  acc_level l level (acc_level l level accu x1) x2
+
+let rec level
+  (d: raw_data_item)
+: Tot nat
+= match d with
+  | Array v ->
+    let v : list raw_data_item = v in
+    1 + fold_left_list v (acc_level v level) 0
+  | Map v ->
+    let v : list (raw_data_item & raw_data_item) = v in
+    1 + fold_left_list v (acc_level_pair v level) 0
+  | Tagged _ v -> 1 + level v
+  | _ -> 0
+
+let rec fold_left_list_acc_level_ge_accu
+  (v: list raw_data_item)
+  (accu: nat)
+: Lemma
+  (ensures (fold_left_list v (acc_level v level) accu >= accu))
+= match v with
+  | [] -> ()
+  | a :: q ->
+    let accu' = acc_level v level accu a in
+    fold_left_list_ext q (acc_level v level) (acc_level q level) (fun _ _ -> ()) accu';
+    fold_left_list_acc_level_ge_accu q accu'
+
+let rec fold_left_list_acc_level_pair_ge_accu
+  (v: list (raw_data_item & raw_data_item))
+  (accu: nat)
+: Lemma
+  (ensures (fold_left_list v (acc_level_pair v level) accu >= accu))
+= match v with
+  | [] -> ()
+  | a :: q ->
+    let accu' = acc_level_pair v level accu a in
+    fold_left_list_ext q (acc_level_pair v level) (acc_level_pair q level) (fun _ _ -> ()) accu';
+    fold_left_list_acc_level_pair_ge_accu q accu'
+
 let forall_list_f
   (#t: Type)
-  (l: Ghost.erased (list t))
-  (p: (x: t { x << Ghost.reveal l }) -> bool)
+  (l: list t)
+  (p: (x: t { x << l }) -> bool)
   (init: bool)
-  (a: t { a << Ghost.reveal l })
+  (a: t { a << l })
 : Tot bool
 = init && p a
 
@@ -795,58 +957,397 @@ let forall_list
 : Tot bool
 = fold_left_list l (forall_list_f l p) true
 
-let forall_list_fst_f
-  (#t1 #t2: Type)
-  (l: list (t1 & t2))
-  (p: (x: t1 { x << l }) -> bool)
+let forall_list_ext
+  (#t: Type)
+  (l: list t)
+  (p1: (x: t { x << l }) -> bool)
+  (p2: (x: t { x << l }) -> bool)
+  (prf:
+    (x: t { x << l }) ->
+    Lemma
+    (p1 x == p2 x)
+  )
+: Lemma
+  (forall_list l p1 == forall_list l p2)
+= fold_left_list_ext l (forall_list_f l p1) (forall_list_f l p2) (fun _ x -> prf x) true
+
+let rec fold_left_list_forall_list_aux
+  (#t: Type)
+  (l: list t)
+  (p: (x: t { x << l }) -> bool)
   (init: bool)
-  (a: (t1 & t2) { a << Ghost.reveal l })
-: Tot bool
-= let (a, _) = a in
-  init && p a
+: Lemma
+  (ensures (fold_left_list l (forall_list_f l p) init ==
+    (init && fold_left_list l (forall_list_f l p) true)
+  ))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    fold_left_list_ext q (forall_list_f l p) (forall_list_f q p) (fun _ _ -> ()) (init && p a);
+    fold_left_list_ext q (forall_list_f l p) (forall_list_f q p) (fun _ _ -> ()) true;
+    fold_left_list_forall_list_aux q p (init && p a)
 
-let forall_list_fst
-  (#t1 #t2: Type)
-  (l: list (t1 & t2))
-  (p: (x: t1 { x << l }) -> bool)
-: Tot bool
-= fold_left_list l (forall_list_fst_f l p) true
+let forall_list_cons'
+  (#t: Type)
+  (l: list t)
+  (a: t)
+  (q: list t)
+  (p: (x: t { x << a :: q }) -> bool)
+: Lemma
+  (requires (
+    l == a :: q
+  ))
+  (ensures (
+    a << a :: q /\
+    q << a :: q /\
+    forall_list (a :: q) p == (p a && forall_list q p)
+  ))
+  (decreases l)
+= match l with
+  | _ :: _ ->
+  assert (a << a :: q);
+  assert (q << a :: q);
+  fold_left_list_ext q (forall_list_f (a :: q) p) (forall_list_f q p) (fun _ _ -> ()) (p a);
+  fold_left_list_forall_list_aux q p (p a)
 
-let forall_list_snd_f
-  (#t1 #t2: Type)
-  (l: list (t1 & t2))
-  (p: (x: t2 { x << l }) -> bool)
-  (init: bool)
-  (a: (t1 & t2) { a << Ghost.reveal l })
-: Tot bool
-= let (_, a) = a in
-  init && p a
+let forall_list_cons
+  (#t: Type)
+  (a: t)
+  (q: list t)
+  (p: (x: t { x << a :: q }) -> bool)
+: Lemma
+  (ensures (
+    a << a :: q /\
+    q << a :: q /\
+    forall_list (a :: q) p == (p a && forall_list q p)
+  ))
+= forall_list_cons' (a :: q) a q p
 
-let forall_list_snd
-  (#t1 #t2: Type)
-  (l: list (t1 & t2))
-  (p: (x: t2 { x << l }) -> bool)
-: Tot bool
-= fold_left_list l (forall_list_snd_f l p) true
-
-let rec raw_data_item_has_level
+let raw_data_item_has_level
   (n: nat)
   (d: raw_data_item)
 : Tot bool
-= match d with
-  | Array v ->
-    n > 0 &&
-    forall_list v (raw_data_item_has_level (n - 1))
-  | Map v ->
-    n > 0 &&
-    forall_list_fst v (raw_data_item_has_level (n - 1)) &&
-    forall_list_snd v (raw_data_item_has_level (n - 1))
-  | Tagged _ v ->
-    n > 0 &&
-    raw_data_item_has_level (n - 1) v
-  | _ -> true
+= level d <= n
 
+let raw_data_item_pair_has_level
+  (n: nat)
+  (d: (raw_data_item & raw_data_item))
+: Tot bool
+= let (d1, d2) = d in
+  raw_data_item_has_level n d1 &&
+  raw_data_item_has_level n d2
 
+let rec fold_left_list_has_level_gen
+  (n: nat)
+  (v: list raw_data_item)
+  (accu: nat)
+: Lemma
+  (requires (n >= fold_left_list v (acc_level v level) accu))
+  (ensures (forall_list v (raw_data_item_has_level n)))
+  (decreases v)
+= match v with
+  | [] -> ()
+  | a :: q ->
+    let accu' = acc_level v level accu a in
+    forall_list_cons a q (raw_data_item_has_level n);
+    fold_left_list_ext q (acc_level v level) (acc_level q level) (fun _ _ -> ()) accu';
+    fold_left_list_acc_level_ge_accu q accu';
+    fold_left_list_has_level_gen n q accu'
+
+let fold_left_list_has_level
+  (v: list raw_data_item)
+  (accu: nat)
+: Lemma
+  (forall_list v (raw_data_item_has_level (fold_left_list v (acc_level v level) accu)))
+= fold_left_list_has_level_gen (fold_left_list v (acc_level v level) accu) v accu
+
+let rec fold_left_list_pair_has_level_gen
+  (n: nat)
+  (v: list (raw_data_item & raw_data_item))
+  (accu: nat)
+: Lemma
+  (requires (n >= fold_left_list v (acc_level_pair v level) accu))
+  (ensures (forall_list v (raw_data_item_pair_has_level n)))
+  (decreases v)
+= match v with
+  | [] -> ()
+  | a :: q ->
+    let accu' = acc_level_pair v level accu a in
+    forall_list_cons a q (raw_data_item_pair_has_level n);
+    fold_left_list_ext q (acc_level_pair v level) (acc_level_pair q level) (fun _ _ -> ()) accu';
+    fold_left_list_acc_level_pair_ge_accu q accu';
+    fold_left_list_pair_has_level_gen n q accu'
+
+let fold_left_list_pair_has_level
+  (v: list (raw_data_item & raw_data_item))
+  (accu: nat)
+: Lemma
+  (forall_list v (raw_data_item_pair_has_level (fold_left_list v (acc_level_pair v level) accu)))
+= fold_left_list_pair_has_level_gen (fold_left_list v (acc_level_pair v level) accu) v accu
+
+let rec fold_left_list_acc_level_list_of_pair_list
+  (n: nat)
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (forall_list v (raw_data_item_pair_has_level n)))
+  (ensures (forall_list (list_of_pair_list raw_data_item (List.Tot.length v) v) (raw_data_item_has_level n)))
+  (decreases v)
+= match v with
+  | [] -> ()
+  | (a1, a2) :: q ->
+    forall_list_cons (a1, a2) q (raw_data_item_pair_has_level n);
+    let q' = list_of_pair_list raw_data_item (List.Tot.length q) q in
+    forall_list_cons a1 (a2 :: q') (raw_data_item_has_level n);
+    forall_list_cons a2 q' (raw_data_item_has_level n);
+    fold_left_list_acc_level_list_of_pair_list n q
+
+let raw_data_item_list_has_pred_level (n: nat) (l: list raw_data_item) : bool = if n = 0 then Nil? l else forall_list l (raw_data_item_has_level (n - 1))
+
+let raw_data_item_alt_has_pred_level
+  (n: nat)
+  (x: raw_data_item_alt)
+: Tot bool
+= raw_data_item_list_has_pred_level n (dsnd x)
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let synth_raw_data_item_from_alt_recip_list_has_pred_level
+  (n: nat)
+  (x: parse_filter_refine (raw_data_item_has_level n))
+: Lemma
+  (raw_data_item_alt_has_pred_level n (synth_raw_data_item_from_alt_recip x))
+= match x with
+  | Array l ->
+    let l : list raw_data_item = l in
+    assert_norm (level x == 1 + fold_left_list l (acc_level l level) 0);
+    fold_left_list_has_level_gen (n - 1) l 0
+  | Map l ->
+    let l : list (raw_data_item & raw_data_item) = l in
+    assert_norm (level x == 1 + fold_left_list l (acc_level_pair l level) 0);
+    fold_left_list_pair_has_level_gen (n - 1) l 0;
+    assert (dsnd (synth_raw_data_item_from_alt_recip x) == list_of_pair_list raw_data_item (List.Tot.length l) l);
+    fold_left_list_acc_level_list_of_pair_list (n - 1) l;
+    assert (raw_data_item_list_has_pred_level n (dsnd (synth_raw_data_item_from_alt_recip x)))
+  | _ -> ()
+
+#pop-options
+
+#restart-solver
+
+let mk_serialize_raw_data_item_with_level
+  (n: nat)
+  (s: serializer (parse_filter parse_raw_data_item_alt (raw_data_item_alt_has_pred_level n)))
+: Tot (serializer (parse_filter parse_raw_data_item (raw_data_item_has_level n)))
+= 
+  let s'
+    (x: parse_filter_refine (raw_data_item_has_level n))
+  : GTot bytes
+  = synth_raw_data_item_from_alt_recip_list_has_pred_level n x;
+    s (synth_raw_data_item_from_alt_recip x)
+  in
+  let prf
+    (x: parse_filter_refine (raw_data_item_has_level n))
+  : Lemma
+    (let b = s' x in
+      parse (parse_filter parse_raw_data_item (raw_data_item_has_level n)) b == Some (x, Seq.length b)
+    )
+  = let b = s' x in
+    synth_raw_data_item_from_alt_recip_list_has_pred_level n x;
+    parse_filter_eq parse_raw_data_item_alt (raw_data_item_alt_has_pred_level n) b;
+    parse_filter_eq parse_raw_data_item (raw_data_item_has_level n) b;
+    parse_raw_data_item_alt_correct b;
+    parse_synth_eq parse_raw_data_item_alt synth_raw_data_item_from_alt b
+  in
+  Classical.forall_intro prf;
+  s'
+
+let bare_serialize_raw_data_item_list_has_pred_level_zero (len: nat) : bare_serializer (parse_filter_refine #(nlist len raw_data_item) (raw_data_item_list_has_pred_level 0)) =
+  fun _ -> Seq.empty
+
+let serialize_raw_data_item_list_has_pred_level_zero (n: nat { n == 0 }) (len: nat) : serializer (parse_nlist len parse_raw_data_item `parse_filter` raw_data_item_list_has_pred_level n) =
+  let prf
+    (x: parse_filter_refine #(nlist len raw_data_item) (raw_data_item_list_has_pred_level n))
+  : Lemma
+    (let b = bare_serialize_raw_data_item_list_has_pred_level_zero len x in
+      parse (parse_nlist len parse_raw_data_item `parse_filter` raw_data_item_list_has_pred_level n) b == Some (x, Seq.length b))
+  =
+    assert (Nil? x);
+    let res : bytes = Seq.empty in
+    parse_filter_eq (parse_nlist len parse_raw_data_item) (raw_data_item_list_has_pred_level n) res;
+    parse_nlist_zero parse_raw_data_item res
+  in
+  Classical.forall_intro prf;
+  bare_serialize_raw_data_item_list_has_pred_level_zero len
+
+#restart-solver
+
+let rec serialize_raw_data_item_list_has_pred_level_pos
+  (n: pos)
+  (s: serializer (parse_filter parse_raw_data_item (raw_data_item_has_level (n - 1))))
+  (len: nat)
+: Tot (serializer (parse_nlist len parse_raw_data_item `parse_filter` raw_data_item_list_has_pred_level n))
+  (decreases len)
+= let s'
+    (l: parse_filter_refine #(nlist len raw_data_item) (raw_data_item_list_has_pred_level n))
+  : GTot bytes
+  = match l with
+    | [] -> Seq.empty
+    | a :: q ->
+      forall_list_cons a q (raw_data_item_has_level (n - 1));
+      s a `Seq.append` serialize_raw_data_item_list_has_pred_level_pos n s (len - 1) q
+  in
+  let prf
+    (l: parse_filter_refine #(nlist len raw_data_item) (raw_data_item_list_has_pred_level n))
+  : Lemma
+    (let b = s' l in
+      parse (parse_nlist len parse_raw_data_item `parse_filter` raw_data_item_list_has_pred_level n) b == Some (l, Seq.length b)
+    )
+  = let b = s' l in
+    parse_filter_eq (parse_nlist len parse_raw_data_item) (raw_data_item_list_has_pred_level n) b;
+    parse_nlist_eq len parse_raw_data_item b;
+    match l with
+    | [] -> ()
+    | a :: q ->
+      forall_list_cons a q (raw_data_item_has_level (n - 1));
+      parse_filter_eq parse_raw_data_item (raw_data_item_has_level (n - 1)) (s a);
+      let b' = serialize_raw_data_item_list_has_pred_level_pos n s (len - 1) q in
+      assert_norm (s' (a :: q) == s a `Seq.append` b');
+      assert (parse parse_raw_data_item (s a) == Some (a, Seq.length (s a)));
+      let (b1, b2) = Seq.split_eq b (Seq.length (s a)) in
+      Seq.lemma_append_inj b1 b2 (s a) b';
+      parse_strong_prefix parse_raw_data_item (s a) b;
+      parse_filter_eq (parse_nlist (len - 1) parse_raw_data_item) (raw_data_item_list_has_pred_level n) b'
+  in
+  Classical.forall_intro prf;
+  s'
+
+#restart-solver
+
+let mk_serialize_raw_data_item_alt_with_level
+  (n: nat)
+  (s: ((l: leaf) -> serializer (weaken parse_content_kind (parse_nlist (remaining_data_items l) parse_raw_data_item `parse_filter` raw_data_item_list_has_pred_level n))))
+: Tot (serializer (parse_filter parse_raw_data_item_alt (raw_data_item_alt_has_pred_level n)))
+= let s1 = serialize_dtuple2 #_ #leaf #parse_leaf serialize_leaf s in
+  let s'
+    (x: parse_filter_refine (raw_data_item_alt_has_pred_level n))
+  = let (| l, c |) = x in
+    s1 (| l, c |)
+  in
+  let prf
+    (x: parse_filter_refine (raw_data_item_alt_has_pred_level n))
+  : Lemma
+    (let b = s' x in
+      parse (parse_filter parse_raw_data_item_alt (raw_data_item_alt_has_pred_level n)) b == Some (x, Seq.length b)
+    )
+  = let b = s' x in
+    parse_filter_eq parse_raw_data_item_alt (raw_data_item_alt_has_pred_level n) b;
+    parse_dtuple2_eq parse_leaf parse_content_alt b;
+    parse_dtuple2_eq parse_leaf (fun l -> weaken parse_content_kind (parse_nlist (remaining_data_items l) parse_raw_data_item `parse_filter` raw_data_item_list_has_pred_level n)) b;
+    let Some (l, consumed) = parse parse_leaf b in
+    let b' = Seq.slice b consumed (Seq.length b) in
+    parse_filter_eq (parse_nlist (remaining_data_items l) parse_raw_data_item) (raw_data_item_list_has_pred_level n) b'
+  in
+  Classical.forall_intro prf;
+  s'
+
+let rec serialize_raw_data_item_with_level
+  (n: nat)
+: Tot (serializer (parse_filter parse_raw_data_item (raw_data_item_has_level n)))
+= mk_serialize_raw_data_item_with_level
+    n
+    (mk_serialize_raw_data_item_alt_with_level
+      n
+      (fun l ->
+        let len = remaining_data_items l in
+        serialize_weaken _
+        (
+          if n = 0
+          then serialize_raw_data_item_list_has_pred_level_zero n len
+          else serialize_raw_data_item_list_has_pred_level_pos n (serialize_raw_data_item_with_level (n - 1)) len
+        )
+      )
+    )
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let serialize_raw_data_item : serializer parse_raw_data_item =
+  let s' (x: raw_data_item) : GTot bytes =
+    serialize_raw_data_item_with_level (level x) x
+  in
+  let prf
+    (x: raw_data_item)
+  : Lemma
+    (let b = s' x in
+      parse parse_raw_data_item b == Some (x, Seq.length b)
+    )
+  = parse_filter_eq parse_raw_data_item (raw_data_item_has_level (level x)) (s' x)
+  in
+  Classical.forall_intro prf;
+  s'
+
+#pop-options
+
+(* Serialization equations to prove the functional correctness of implementations *)
+
+let serialize_content
+  (h: header)
+: Tot (serializer (parse_content parse_raw_data_item h))
+= match h with
+  | (| b, long_arg |) ->
+    match b with
+    | (major_type, _) ->
+      if major_type = 2uy || major_type = 3uy
+      then serialize_weaken _ (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
+      else if major_type = 4uy
+      then serialize_weaken _ (serialize_nlist (U64.v (argument_as_uint64 b long_arg)) serialize_raw_data_item)
+      else if major_type = 5uy
+      then serialize_weaken _ (serialize_nlist (U64.v (argument_as_uint64 b long_arg)) (serialize_raw_data_item `serialize_nondep_then` serialize_raw_data_item))
+      else if major_type = 6uy
+      then serialize_weaken _ serialize_raw_data_item
+      else serialize_weaken _ serialize_empty
+
+let serialize_raw_data_item_aux : serializer (parse_raw_data_item_aux parse_raw_data_item) =
+  serialize_synth
+    _
+    synth_raw_data_item
+    (serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item_recip
+    ()
+
+let serialize_raw_data_item_aux_correct
+  (x: raw_data_item)
+: Lemma
+  (serialize serialize_raw_data_item x == serialize serialize_raw_data_item_aux x)
+= Classical.forall_intro parse_raw_data_item_eq;
+  let s' = serialize_ext parse_raw_data_item serialize_raw_data_item (parse_raw_data_item_aux parse_raw_data_item) in
+  serializer_unique (parse_raw_data_item_aux parse_raw_data_item) serialize_raw_data_item_aux s' x
+
+let serialize_content_alt
+  (l: leaf)
+: Tot (serializer (parse_content_alt l))
+= serialize_weaken _ (serialize_nlist (remaining_data_items l) serialize_raw_data_item)
+
+let serialize_raw_data_item_alt : serializer parse_raw_data_item_alt =
+  serialize_dtuple2 serialize_leaf serialize_content_alt
+
+let serialize_raw_data_item_alt_synth : serializer (parse_raw_data_item_alt `parse_synth` synth_raw_data_item_from_alt) =
+  serialize_synth
+    _
+    synth_raw_data_item_from_alt
+    serialize_raw_data_item_alt
+    synth_raw_data_item_from_alt_recip
+    ()
+
+let serialize_raw_data_item_alt_synth_correct
+  (x: raw_data_item)
+: Lemma
+  (serialize serialize_raw_data_item x == serialize serialize_raw_data_item_alt_synth x)
+= Classical.forall_intro parse_raw_data_item_alt_correct;
+  let s' = serialize_ext parse_raw_data_item serialize_raw_data_item (parse_raw_data_item_alt `parse_synth` synth_raw_data_item_from_alt) in
+  serializer_unique (parse_raw_data_item_alt `parse_synth` synth_raw_data_item_from_alt) serialize_raw_data_item_alt_synth s' x
 
 (*
 // Ordering of map keys (Section 4.2)
