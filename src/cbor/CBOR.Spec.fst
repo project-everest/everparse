@@ -856,27 +856,6 @@ let serialize_leaf : serializer parse_leaf =
 
 open LowParse.WellFounded
 
-let acc_level
-  (#t0: Type)
-  (l: t0)
-  (#t: Type)
-  (level: (x: t { x << l }) -> nat)
-  (accu: nat)
-  (x: t { x << l })
-: Tot nat
-= let n = level x in
-  if n > accu then n else accu
-
-let acc_level_pair
-  (#t0: Type)
-  (l: t0)
-  (#t: Type)
-  (level: (x: t { x << l }) -> nat)
-  (accu: nat)
-  (x: (t & t) { x << l })
-= let (x1, x2) = x in
-  acc_level l level (acc_level l level accu x1) x2
-
 let rec level
   (d: raw_data_item)
 : Tot nat
@@ -890,88 +869,11 @@ let rec level
   | Tagged _ v -> 1 + level v
   | _ -> 0
 
-let rec fold_left_list_acc_level_ge_accu
-  (v: list raw_data_item)
-  (accu: nat)
-: Lemma
-  (ensures (fold_left_list v (acc_level v level) accu >= accu))
-= match v with
-  | [] -> ()
-  | a :: q ->
-    let accu' = acc_level v level accu a in
-    fold_left_list_ext q (acc_level v level) (acc_level q level) (fun _ _ -> ()) accu';
-    fold_left_list_acc_level_ge_accu q accu'
-
-let rec fold_left_list_acc_level_pair_ge_accu
-  (v: list (raw_data_item & raw_data_item))
-  (accu: nat)
-: Lemma
-  (ensures (fold_left_list v (acc_level_pair v level) accu >= accu))
-= match v with
-  | [] -> ()
-  | a :: q ->
-    let accu' = acc_level_pair v level accu a in
-    fold_left_list_ext q (acc_level_pair v level) (acc_level_pair q level) (fun _ _ -> ()) accu';
-    fold_left_list_acc_level_pair_ge_accu q accu'
-
 unfold
 let raw_data_item_has_level = has_level level
 
-let raw_data_item_pair_has_level
-  (n: nat)
-  (d: (raw_data_item & raw_data_item))
-: Tot bool
-= let (d1, d2) = d in
-  raw_data_item_has_level n d1 &&
-  raw_data_item_has_level n d2
-
-let rec fold_left_list_has_level_gen
-  (n: nat)
-  (v: list raw_data_item)
-  (accu: nat)
-: Lemma
-  (requires (n >= fold_left_list v (acc_level v level) accu))
-  (ensures (forall_list v (raw_data_item_has_level n)))
-  (decreases v)
-= match v with
-  | [] -> ()
-  | a :: q ->
-    let accu' = acc_level v level accu a in
-    forall_list_cons a q (raw_data_item_has_level n);
-    fold_left_list_ext q (acc_level v level) (acc_level q level) (fun _ _ -> ()) accu';
-    fold_left_list_acc_level_ge_accu q accu';
-    fold_left_list_has_level_gen n q accu'
-
-let fold_left_list_has_level
-  (v: list raw_data_item)
-  (accu: nat)
-: Lemma
-  (forall_list v (raw_data_item_has_level (fold_left_list v (acc_level v level) accu)))
-= fold_left_list_has_level_gen (fold_left_list v (acc_level v level) accu) v accu
-
-let rec fold_left_list_pair_has_level_gen
-  (n: nat)
-  (v: list (raw_data_item & raw_data_item))
-  (accu: nat)
-: Lemma
-  (requires (n >= fold_left_list v (acc_level_pair v level) accu))
-  (ensures (forall_list v (raw_data_item_pair_has_level n)))
-  (decreases v)
-= match v with
-  | [] -> ()
-  | a :: q ->
-    let accu' = acc_level_pair v level accu a in
-    forall_list_cons a q (raw_data_item_pair_has_level n);
-    fold_left_list_ext q (acc_level_pair v level) (acc_level_pair q level) (fun _ _ -> ()) accu';
-    fold_left_list_acc_level_pair_ge_accu q accu';
-    fold_left_list_pair_has_level_gen n q accu'
-
-let fold_left_list_pair_has_level
-  (v: list (raw_data_item & raw_data_item))
-  (accu: nat)
-: Lemma
-  (forall_list v (raw_data_item_pair_has_level (fold_left_list v (acc_level_pair v level) accu)))
-= fold_left_list_pair_has_level_gen (fold_left_list v (acc_level_pair v level) accu) v accu
+unfold
+let raw_data_item_pair_has_level = pair_has_level level
 
 let rec fold_left_list_acc_level_list_of_pair_list
   (n: nat)
@@ -1005,12 +907,12 @@ let synth_raw_data_item_from_alt_recip_list_has_pred_level
   | Array l ->
     let l : list raw_data_item = l in
     assert_norm (level x == 1 + fold_left_list l (acc_level l level) 0);
-    fold_left_list_has_level_gen (n - 1) l 0;
+    fold_left_list_has_level_gen level (n - 1) l 0;
     assert (list_has_pred_level level n (dsnd (synth_raw_data_item_from_alt_recip x)))
   | Map l ->
     let l : list (raw_data_item & raw_data_item) = l in
     assert_norm (level x == 1 + fold_left_list l (acc_level_pair l level) 0);
-    fold_left_list_pair_has_level_gen (n - 1) l 0;
+    fold_left_list_pair_has_level_gen level (n - 1) l 0;
     assert (dsnd (synth_raw_data_item_from_alt_recip x) == list_of_pair_list raw_data_item (List.Tot.length l) l);
     fold_left_list_acc_level_list_of_pair_list (n - 1) l;
     assert (list_has_pred_level level n (dsnd (synth_raw_data_item_from_alt_recip x)))
