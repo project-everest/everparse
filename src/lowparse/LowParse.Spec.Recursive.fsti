@@ -80,14 +80,6 @@ val parse_recursive_eq
 : Lemma
   (parse (parse_recursive p) b == parse (parse_recursive_aux p (parse_recursive p)) b)
 
-let has_level
-  (#t: Type)
-  (level: (t -> nat))
-  (n: nat)
-  (d: t)
-: Tot bool
-= level d <= n
-
 let list_has_pred_level
   (#t: Type)
   (level: (t -> nat))

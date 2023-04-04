@@ -141,3 +141,128 @@ let rec forall_list_implies
     forall_list_cons a q p2;
     prf a;
     forall_list_implies q p1 p2 prf
+
+(* Combinators to compute with levels *)
+
+let acc_level
+  (#t0: Type)
+  (l: t0)
+  (#t: Type)
+  (level: (x: t { x << l }) -> nat)
+  (accu: nat)
+  (x: t { x << l })
+: Tot nat
+= let n = level x in
+  if n > accu then n else accu
+
+let acc_level_pair
+  (#t0: Type)
+  (l: t0)
+  (#t: Type)
+  (level: (x: t { x << l }) -> nat)
+  (accu: nat)
+  (x: (t & t) { x << l })
+= let (x1, x2) = x in
+  acc_level l level (acc_level l level accu x1) x2
+
+let rec fold_left_list_acc_level_ge_accu
+  (#t: Type)
+  (v: list t)
+  (level: (x: t { x << v }) -> nat)
+  (accu: nat)
+: Lemma
+  (ensures (fold_left_list v (acc_level v level) accu >= accu))
+= match v with
+  | [] -> ()
+  | a :: q ->
+    let accu' = acc_level v level accu a in
+    fold_left_list_ext q (acc_level v level) (acc_level q level) (fun _ _ -> ()) accu';
+    fold_left_list_acc_level_ge_accu q level accu'
+
+let rec fold_left_list_acc_level_pair_ge_accu
+  (#t: Type)
+  (v: list (t & t))
+  (level: (x: t { x << v }) -> nat)
+  (accu: nat)
+: Lemma
+  (ensures (fold_left_list v (acc_level_pair v level) accu >= accu))
+= match v with
+  | [] -> ()
+  | a :: q ->
+    let accu' = acc_level_pair v level accu a in
+    fold_left_list_ext q (acc_level_pair v level) (acc_level_pair q level) (fun _ _ -> ()) accu';
+    fold_left_list_acc_level_pair_ge_accu q level accu'
+
+let has_level
+  (#t: Type)
+  (level: (t -> nat))
+  (n: nat)
+  (d: t)
+: Tot bool
+= level d <= n
+
+let pair_has_level
+  (#t: Type)
+  (level: (t -> nat))
+  (n: nat)
+  (d: (t & t))
+: Tot bool
+= let (d1, d2) = d in
+  has_level level n d1 &&
+  has_level level n d2
+
+let rec fold_left_list_has_level_gen
+  (#t: Type)
+  (level: (t -> nat))
+  (n: nat)
+  (v: list t)
+  (accu: nat)
+: Lemma
+  (requires (n >= fold_left_list v (acc_level v level) accu))
+  (ensures (forall_list v (has_level level n)))
+  (decreases v)
+= match v with
+  | [] -> ()
+  | a :: q ->
+    let accu' = acc_level v level accu a in
+    forall_list_cons a q (has_level level n);
+    fold_left_list_ext q (acc_level v level) (acc_level q level) (fun _ _ -> ()) accu';
+    fold_left_list_acc_level_ge_accu q level accu';
+    fold_left_list_has_level_gen level n q accu'
+
+let fold_left_list_has_level
+  (#t: Type)
+  (level: t -> nat)
+  (v: list t)
+  (accu: nat)
+: Lemma
+  (forall_list v (has_level level (fold_left_list v (acc_level v level) accu)))
+= fold_left_list_has_level_gen level (fold_left_list v (acc_level v level) accu) v accu
+
+let rec fold_left_list_pair_has_level_gen
+  (#t: Type)
+  (level: t -> nat)
+  (n: nat)
+  (v: list (t & t))
+  (accu: nat)
+: Lemma
+  (requires (n >= fold_left_list v (acc_level_pair v level) accu))
+  (ensures (forall_list v (pair_has_level level n)))
+  (decreases v)
+= match v with
+  | [] -> ()
+  | a :: q ->
+    let accu' = acc_level_pair v level accu a in
+    forall_list_cons a q (pair_has_level level n);
+    fold_left_list_ext q (acc_level_pair v level) (acc_level_pair q level) (fun _ _ -> ()) accu';
+    fold_left_list_acc_level_pair_ge_accu q level accu';
+    fold_left_list_pair_has_level_gen level n q accu'
+
+let fold_left_list_pair_has_level
+  (#t: Type)
+  (level: t -> nat)
+  (v: list (t & t))
+  (accu: nat)
+: Lemma
+  (forall_list v (pair_has_level level (fold_left_list v (acc_level_pair v level) accu)))
+= fold_left_list_pair_has_level_gen level (fold_left_list v (acc_level_pair v level) accu) v accu
