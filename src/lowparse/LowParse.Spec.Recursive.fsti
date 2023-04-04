@@ -4,6 +4,21 @@ open LowParse.Spec.Combinators
 open LowParse.Spec.VCList
 open LowParse.WellFounded
 
+let parse_recursive_payload_t
+  (t: Type)
+  (header: Type)
+  (count: (header -> nat))
+  (h: header)
+: Tot Type
+= nlist (count h) t
+
+let parse_recursive_alt_t
+  (t: Type)
+  (header: Type)
+  (count: (header -> nat))
+: Tot Type
+= dtuple2 header (parse_recursive_payload_t t header count)
+
 [@@(noextract_to "krml")]
 inline_for_extraction
 noeq
@@ -13,7 +28,7 @@ type parse_recursive_param = {
   parse_header_kind: (k: parser_kind { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 });
   parse_header: parser parse_header_kind header;
   count: (header -> nat);
-  synth_: ((h: header & nlist (count h) t) -> t);
+  synth_: (parse_recursive_alt_t t header count -> t);
   synth_inj: squash (synth_injective synth_);
 }
 
@@ -40,20 +55,20 @@ let parse_recursive_payload
   (p: parse_recursive_param)
   (ih: parser (parse_recursive_kind p.parse_header_kind) p.t)
   (h: p.header)
-: Tot (parser parse_recursive_payload_kind (nlist (p.count h) p.t))
+: Tot (parser parse_recursive_payload_kind (parse_recursive_payload_t p.t p.header p.count h))
 = weaken parse_recursive_payload_kind (parse_nlist (p.count h) ih)
 
 let parse_recursive_alt
   (p: parse_recursive_param)
   (ih: parser (parse_recursive_kind p.parse_header_kind) p.t)
+: Tot (parser _ (parse_recursive_alt_t p.t p.header p.count))
 = p.parse_header `parse_dtuple2` parse_recursive_payload p ih
 
 let parse_recursive_aux
   (p: parse_recursive_param)
   (ih: parser (parse_recursive_kind p.parse_header_kind) p.t)
 : Tot (parser (parse_recursive_kind p.parse_header_kind) p.t)
-= p.synth_inj;
-  weaken _ (parse_recursive_alt p ih `parse_synth` p.synth_)
+= weaken _ (parse_recursive_alt p ih `parse_synth` p.synth_)
 
 val parse_recursive
   (p: parse_recursive_param)
@@ -86,7 +101,7 @@ inline_for_extraction
 noeq
 type serialize_recursive_param (p: parse_recursive_param) = {
   serialize_header: serializer p.parse_header;
-  synth_recip: (p.t -> (h: p.header & nlist (p.count h) p.t));
+  synth_recip: (p.t -> (parse_recursive_alt_t p.t p.header p.count));
   synth_inv: squash (synth_inverse p.synth_ synth_recip);
   level: (p.t -> nat);
   level_correct: (x: p.t) -> (n: nat) -> Lemma (requires (has_level level n x)) (ensures ( (list_has_pred_level level n (dsnd (synth_recip x)))));
@@ -97,21 +112,28 @@ val serialize_recursive
   (sp: serialize_recursive_param pp)
 : Tot (serializer (parse_recursive pp))
 
+let serialize_recursive_payload
+  (#p: parse_recursive_param)
+  (sp: serialize_recursive_param p)
+  (h: p.header)
+: Tot (serializer (parse_recursive_payload p (parse_recursive p) h))
+= serialize_weaken _
+    (serialize_nlist
+      (p.count h)
+      (serialize_recursive sp)
+    )
+
 let serialize_recursive_aux
   (#pp: parse_recursive_param)
   (sp: serialize_recursive_param pp)
 : Tot (serializer (parse_recursive_aux pp (parse_recursive pp)))
 =
-  pp.synth_inj;
-  sp.synth_inv;
   serialize_weaken _
     (serialize_synth _
       pp.synth_
       (serialize_dtuple2
         sp.serialize_header
-        (fun h -> serialize_weaken _
-          (serialize_nlist (pp.count h) (serialize_recursive sp))
-        )
+        (serialize_recursive_payload sp)
       )
       sp.synth_recip
       ()
