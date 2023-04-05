@@ -4,6 +4,8 @@ open LowParse.Spec.Combinators
 open LowParse.Spec.VCList
 open LowParse.WellFounded
 
+module Seq = FStar.Seq
+
 let parse_recursive_payload_t
   (t: Type)
   (header: Type)
@@ -79,6 +81,24 @@ val parse_recursive_eq
   (b: bytes)
 : Lemma
   (parse (parse_recursive p) b == parse (parse_recursive_aux p (parse_recursive p)) b)
+
+let parse_recursive_eq'
+  (p: parse_recursive_param)
+  (b: bytes)
+: Lemma
+  (parse (parse_recursive p) b == begin match parse p.parse_header b with
+  | None -> None
+  | Some (h, consumed1) ->
+    let b2 = Seq.slice b consumed1 (Seq.length b) in
+    match parse (parse_nlist (p.count h) (parse_recursive p)) b2 with
+    | None -> None
+    | Some (l, consumed2) ->
+      Some (p.synth_ (| h, l |), consumed1 + consumed2)
+  end
+  )
+= parse_recursive_eq p b;
+  parse_synth_eq (parse_recursive_alt p (parse_recursive p)) p.synth_ b;
+  parse_dtuple2_eq p.parse_header (parse_recursive_payload p (parse_recursive p)) b
 
 let list_has_pred_level
   (#t: Type)

@@ -232,6 +232,49 @@ let parse_nlist_fuel_ext
   (ensures (parse (parse_nlist n (p fuel)) b == parse (parse_nlist n (p fuel')) b))
 = parse_nlist_ext n (p fuel) (p fuel') b prf
 
+let parse_nlist_zero
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: bytes)
+: Lemma (
+  parse (parse_nlist 0 p) b == Some ([], 0)
+)
+= parse_nlist_eq 0 p b
+
+let parse_nlist_one
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: bytes)
+: Lemma (
+  parse (parse_nlist 1 p) b == (match parse p b with
+  | None -> None
+  | Some (x, consumed) -> Some ([x], consumed)
+  )
+)
+= parse_nlist_eq 1 p b
+
+val parse_nlist_sum
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n1 n2: nat)
+  (b: bytes)
+: Lemma
+  (ensures (parse (parse_nlist (n1 + n2) p) b ==
+    begin match parse (parse_nlist n1 p) b with
+    | None -> None
+    | Some (l1, consumed1) ->
+      let b2 = Seq.slice b consumed1 (Seq.length b) in
+      match parse (parse_nlist n2 p) b2 with
+      | None -> None
+      | Some (l2, consumed2) ->
+        List.Tot.append_length l1 l2;
+        Some (l1 `List.Tot.append` l2, consumed1 + consumed2)
+    end
+  ))
+
 let rec serialize_nlist'
   (n: nat)
   (#k: parser_kind)
