@@ -187,6 +187,23 @@ let parse'
 
 #set-options "--ide_id_info_off"
 
+let ghost_peek_strong_post
+  (#k: parser_kind)
+  (#t: Type)
+  (va: AP.v byte)
+  (p: parser k t)
+  (res: Ghost.erased byte_array)
+  (vp: v k t)
+  (vres: AP.v byte)
+: GTot prop
+=
+      let consumed = AP.length (array_of vp) in
+      AP.merge_into (array_of vp) (AP.array_of vres) (AP.array_of va) /\
+      consumed <= AP.length (AP.array_of va) /\
+      AP.contents_of' vres == AP.seq_slice (AP.contents_of' va) consumed (AP.length (AP.array_of va)) /\
+      parse' p (AP.contents_of' va) == Some (vp.contents, consumed) /\
+      parse' p (AP.seq_slice (AP.contents_of' va) 0 consumed) == Some (vp.contents, consumed)
+
 let ghost_peek_strong
   (#opened: _)
   (#k: parser_kind)
@@ -197,12 +214,7 @@ let ghost_peek_strong
 : STGhost (Ghost.erased (byte_array)) opened
     (AP.arrayptr a va)
     (fun res -> exists_ (fun vp -> aparse p a vp `star` exists_ (fun vres -> AP.arrayptr res vres `star` pure (
-      let consumed = AP.length (array_of vp) in
-      AP.merge_into (array_of vp) (AP.array_of vres) (AP.array_of va) /\
-      consumed <= AP.length (AP.array_of va) /\
-      AP.contents_of' vres == AP.seq_slice (AP.contents_of' va) consumed (AP.length (AP.array_of va)) /\
-      parse' p (AP.contents_of' va) == Some (vp.contents, consumed) /\
-      parse' p (AP.seq_slice (AP.contents_of' va) 0 consumed) == Some (vp.contents, consumed)
+      ghost_peek_strong_post va p res vp vres
     )) )  )
     (k.parser_kind_subkind == Some ParserStrong /\
     Some? (parse' p (AP.contents_of' va))
