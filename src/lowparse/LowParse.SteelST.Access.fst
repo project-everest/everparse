@@ -6,6 +6,19 @@ module SZ = FStar.SizeT
 
 open Steel.ST.GenElim
 
+let jumper_post
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (va: AP.v byte)
+  (res: SZ.t)
+: GTot prop
+=
+      match parse p (AP.contents_of' va) with
+      | None -> False
+      | Some (_, consumed) ->
+        SZ.v res == consumed
+
 inline_for_extraction
 let jumper
   (#k: parser_kind)
@@ -19,12 +32,7 @@ let jumper
     (AP.arrayptr a va)
     (fun res -> AP.arrayptr a va)
     (Some? (parse p (AP.contents_of va)))
-    (fun res -> 
-      match parse p (AP.contents_of' va) with
-      | None -> False
-      | Some (_, consumed) ->
-        SZ.v res == consumed
-)
+    (fun res -> jumper_post p va res)
 
 inline_for_extraction
 let hop_arrayptr_aparse
@@ -320,6 +328,22 @@ let unpeek_strong'
   noop ();
   va
 
+let unpeek_strong_pre
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (vp: v k t)
+  (vres: AP.v byte)
+  (va: AP.v byte)
+: GTot prop
+=
+      let consumed = AP.length (array_of vp) in
+      k.parser_kind_subkind == Some ParserStrong /\
+      AP.merge_into (array_of vp) (AP.array_of vres) (AP.array_of va) /\
+      consumed <= AP.length (AP.array_of va) /\
+      parse' p (AP.contents_of' va) == Some (vp.contents, consumed) /\
+      AP.contents_of' vres == AP.seq_slice (AP.contents_of' va) consumed (AP.length (AP.array_of va))
+
 let unpeek_strong
   (#opened: _)
   (#k: parser_kind)
@@ -333,14 +357,7 @@ let unpeek_strong
 : STGhost unit opened
     (aparse p a vp `star` AP.arrayptr res vres)
     (fun _ -> AP.arrayptr a va)
-    (
-      let consumed = AP.length (array_of vp) in
-      k.parser_kind_subkind == Some ParserStrong /\
-      AP.merge_into (array_of vp) (AP.array_of vres) (AP.array_of va) /\
-      consumed <= AP.length (AP.array_of va) /\
-      parse' p (AP.contents_of' va) == Some (vp.contents, consumed) /\
-      AP.contents_of' vres == AP.seq_slice (AP.contents_of' va) consumed (AP.length (AP.array_of va))
-    )
+    (unpeek_strong_pre p vp vres va)
     (fun _ -> True)
 = let va' = unpeek_strong' a res in
   parse_injective p (AP.contents_of' va) (AP.contents_of' va');
@@ -384,6 +401,66 @@ let leaf_reader
     (fun _ -> aparse p a va)
     True
     (fun res -> res == va.contents)
+
+inline_for_extraction
+let cps_reader
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot Type
+= (#va: _) ->
+  (a: byte_array) ->
+  (pre: vprop) ->
+  (t': Type) ->
+  (post: (t' -> vprop)) ->
+  (f: (
+    (v: t) ->
+    ST t'
+      (aparse p a va `star` pre)
+      post
+      (v == va.contents)
+      (fun _ -> True)
+  )) ->
+  STT t'
+    (aparse p a va `star` pre)
+    post
+
+inline_for_extraction
+let cps_reader_of_leaf_reader
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (r: leaf_reader p)
+: Tot (cps_reader p)
+= fun #va a pre t' post f ->
+    let v = r #va a in
+    f v
+
+inline_for_extraction
+let unframe_cps_reader
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (r: cps_reader p)
+  (#va: _)
+  (a: byte_array)
+  (pre: vprop)
+  (t': Type)
+  (post: (t' -> vprop))
+  (f: (
+    (v: t) ->
+    ST t'
+      (aparse p a va `star` pre)
+      post
+      (v == va.contents)
+      (fun _ -> True)
+  ))
+: STF t'
+    (aparse p a va `star` pre)
+    post
+    True
+    (fun _ -> True)
+= r a pre t' post f
 
 (* Accessors *)
 

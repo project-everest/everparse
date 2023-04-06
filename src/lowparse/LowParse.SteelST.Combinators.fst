@@ -96,6 +96,22 @@ let jump_weaken
 = rewrite_jumper v2 (LowParse.Spec.Base.weaken k1 p2)
 
 inline_for_extraction
+let cps_read_weaken
+  (#k: Ghost.erased parser_kind)
+  (k': Ghost.erased parser_kind { k' `is_weaker_than` k })
+  (#t: Type)
+  (#p: parser k t)
+  (r: cps_reader p)
+: Tot (cps_reader (LowParse.Spec.Base.weaken k' p))
+= fun #va a pre t' post f ->
+  let _ = rewrite_aparse a p in
+  r a pre t' post (fun v ->
+    let _ = rewrite_aparse a (LowParse.Spec.Base.weaken k' p) in
+    vpattern_rewrite (aparse (LowParse.Spec.Base.weaken k' p) a) va;
+    f v
+  )
+
+inline_for_extraction
 let read_weaken
   (#k: Ghost.erased parser_kind)
   (k': Ghost.erased parser_kind { k' `is_weaker_than` k })
@@ -383,6 +399,28 @@ let elim_synth
   intro_aparse p1 a
 
 inline_for_extraction
+let cps_read_synth_cont
+  (#t: Type)
+  (y: t)
+: Tot Type
+= (pre: vprop) -> (t': Type) -> (post: (t' -> vprop)) -> (phi: ((y': t { y' == y }) -> STT t' pre post)) -> STT t' pre post
+
+inline_for_extraction
+let cps_read_synth
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (r: cps_reader p1)
+  #t2 (f2: t1 -> GTot t2)
+  (f2': (x: t1) -> cps_read_synth_cont (f2 x))
+  (sq: squash (synth_injective f2))
+: Tot (cps_reader (p1 `parse_synth` f2))
+= fun #va a pre t' post f ->
+  let _ = elim_synth p1 f2 a () in
+  r a pre t' post (fun r1 ->
+    let _ = intro_synth p1 f2 a () in
+    vpattern_rewrite (aparse (p1 `parse_synth` f2) a) va;
+    f2' r1 (aparse (p1 `parse_synth` f2) a va `star` pre) _ post (fun y -> f y)
+  )
+
+inline_for_extraction
 let read_synth
   (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
   #t2 (f2: t1 -> GTot t2)
@@ -507,9 +545,9 @@ let jump_fail
 #restart-solver
 
 inline_for_extraction
-let validate_filter
+let validate_filter_with_cps_reader
   (#k: Ghost.erased parser_kind) (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
-  (#p: parser k t) (v: validator p) (r: leaf_reader p)
+  (#p: parser k t) (v: validator p) (r: cps_reader p)
   (f: t -> GTot bool)
   (f' : ((x: t) -> Tot (y: bool { y == f x } )))
 : Pure (validator (p  `parse_filter` f))
@@ -525,25 +563,37 @@ let validate_filter
     then begin
       let ar = ghost_peek_strong p a in
       let _ = gen_elim () in
-      let v = r a in
-      unpeek_strong a va ar;
-      if not (f' v)
-      then begin
-        noop ();
-        R.write err validator_error_constraint_failed;
-        noop ();
-        return sz
-      end else begin
-        noop ();
-        assert_ (R.pts_to err full_perm _);
-        return sz
-      end
+      unframe_cps_reader r a _ _ _ (fun v ->
+        unpeek_strong a va ar;
+        if not (f' v)
+        then begin
+          noop ();
+          R.write err validator_error_constraint_failed;
+          noop ();
+          return sz
+        end else begin
+          noop ();
+          assert_ (R.pts_to err full_perm _);
+          return sz
+        end
+      )
     end else begin
       noop ();
       return sz
     end
 
 #pop-options
+
+inline_for_extraction
+let validate_filter
+  (#k: Ghost.erased parser_kind) (#t: Type)
+  (#p: parser k t) (v: validator p) (r: leaf_reader p)
+  (f: t -> GTot bool)
+  (f' : ((x: t) -> Tot (y: bool { y == f x } )))
+: Pure (validator (p  `parse_filter` f))
+    (requires (k.parser_kind_subkind == Some ParserStrong))
+    (ensures (fun _ -> True))
+= validate_filter_with_cps_reader v (cps_reader_of_leaf_reader r) f f'
 
 inline_for_extraction
 let jump_filter
@@ -593,6 +643,19 @@ let elim_filter
   intro_aparse p1 a
 
 inline_for_extraction
+let cps_read_filter
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (r: cps_reader p1)
+  (f2: (t1 -> GTot bool))
+: Tot (cps_reader (parse_filter p1 f2))
+= fun #va a pre t' post f ->
+  let _ = elim_filter p1 f2 a in
+  r a pre t' post (fun res ->
+    let _ = intro_filter p1 f2 a in
+    vpattern_rewrite (aparse (parse_filter p1 f2) a) va;
+    f res
+  )
+
+inline_for_extraction
 let read_filter
   (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (r: leaf_reader p1)
   (f2: (t1 -> GTot bool))
@@ -636,12 +699,12 @@ let exact_write_filter
 #restart-solver
 
 inline_for_extraction
-let validate_filter_and_then
+let validate_filter_and_then_with_cps_reader
   (#k1: Ghost.erased parser_kind)
   (#t1: Type)
   (#p1: parser k1 t1)
   (v1: validator p1)
-  (p1': leaf_reader p1)
+  (p1': cps_reader p1)
   (f: (t1 -> GTot bool))
   (f' : ((x: t1) -> Tot (y: bool { y == f x } )))
   (#k2: parser_kind)
@@ -661,26 +724,82 @@ let validate_filter_and_then
     noop ();
     let a2 = peek_strong_with_size p1 a len1 in
     let _ = gen_elim () in
-    let x = p1' a in
-    if not (f' x)
-    then begin
-      noop ();
-      unpeek_strong a va a2;
-      R.write err validator_error_constraint_failed;
-      return len1
-    end else begin
-      noop ();
-      let len2 = v2 x a2 (len `SZ.sub` len1) err in
-      let _ = gen_elim () in
-      unpeek_strong a va a2;
-      let len' = len1 `SZ.add` len2 in
-      noop ();
-      return len'
-    end
+    unframe_cps_reader p1' a _ _ _ (fun x ->
+      if not (f' x)
+      then begin
+        noop ();
+        unpeek_strong a va a2;
+        R.write err validator_error_constraint_failed;
+        return len1
+      end else begin
+        noop ();
+        let len2 = v2 x a2 (len `SZ.sub` len1) err in
+        let _ = gen_elim () in
+        unpeek_strong a va a2;
+        let len' = len1 `SZ.add` len2 in
+        noop ();
+        return len'
+      end
+    )
   end else begin
     noop ();
     return len1
   end
+
+inline_for_extraction
+let validate_filter_and_then
+  (#k1: Ghost.erased parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (v1: validator p1)
+  (p1': leaf_reader p1)
+  (f: (t1 -> GTot bool))
+  (f' : ((x: t1) -> Tot (y: bool { y == f x } )))
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: ((x: t1 { f x == true} ) -> parser k2 t2))
+  (v2: ((x1: t1 { f x1 == true } ) -> validator (p2 x1)))
+  (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
+: Tot (validator (parse_filter p1 f `and_then` p2))
+= validate_filter_and_then_with_cps_reader v1 (cps_reader_of_leaf_reader p1') f f' v2 u
+
+#restart-solver
+
+inline_for_extraction
+let jump_filter_and_then_with_cps_reader
+  (#k1: Ghost.erased parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (v1: jumper p1)
+  (p1': cps_reader p1)
+  (f: (t1 -> GTot bool))
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: ((x: t1 { f x == true} ) -> parser k2 t2))
+  (v2: ((x1: t1 { f x1 == true } ) -> jumper (p2 x1)))
+  (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
+: Tot (jumper (parse_filter p1 f `and_then` p2))
+= fun #va a ->
+  and_then_eq (parse_filter p1 f) p2 (AP.contents_of' va);
+  parse_filter_eq p1 f (AP.contents_of' va);
+  let len1 = v1 a in
+  let _ = gen_elim () in
+  let a2 = peek_strong_with_size p1 a len1 in
+  let _ = gen_elim () in
+  let res = unframe_cps_reader p1' a _ _
+    (fun res ->
+      AP.arrayptr a va `star`
+      pure (jumper_post (parse_filter p1 f `and_then` p2) va res)
+    )
+    (fun x ->
+      let len2 = v2 x a2 in
+      let _ = gen_elim () in
+      unpeek_strong a va a2;
+      return (len1 `SZ.add` len2)
+    )
+  in
+  elim_pure _;
+  return res
 
 inline_for_extraction
 let jump_filter_and_then
@@ -696,18 +815,7 @@ let jump_filter_and_then
   (v2: ((x1: t1 { f x1 == true } ) -> jumper (p2 x1)))
   (u: squash (and_then_cases_injective p2 /\ k1.parser_kind_subkind == Some ParserStrong))
 : Tot (jumper (parse_filter p1 f `and_then` p2))
-= fun #va a ->
-  and_then_eq (parse_filter p1 f) p2 (AP.contents_of' va);
-  parse_filter_eq p1 f (AP.contents_of' va);
-  let len1 = v1 a in
-  let _ = gen_elim () in
-  let a2 = peek_strong_with_size p1 a len1 in
-  let _ = gen_elim () in
-  let x = p1' a in
-  let len2 = v2 x a2 in
-  let _ = gen_elim () in
-  unpeek_strong a va a2;
-  return (len1 `SZ.add` len2)
+= jump_filter_and_then_with_cps_reader v1 (cps_reader_of_leaf_reader p1') f v2 u
 
 [@@__reduce__]
 let exists_and_then_payload0
@@ -880,12 +988,12 @@ let intro_and_then
 #restart-solver
 
 inline_for_extraction
-let validate_tagged_union
+let validate_tagged_union_with_cps_reader
   (#kt: Ghost.erased parser_kind)
   (#tag_t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (#pt: parser kt tag_t)
   (vt: validator pt)
-  (rt: leaf_reader pt)
+  (rt: cps_reader pt)
   (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: Ghost.erased parser_kind)
@@ -903,17 +1011,18 @@ let validate_tagged_union
     then begin
       let ar = ghost_peek_strong pt a in
       let _ = gen_elim () in
-      let tag = rt a in
-      unpeek_strong a va ar;
-      let ar = AP.split a s1 in
-      let _ = gen_elim () in
-      let len2 = len `SZ.sub` s1 in
-      let s2 = v tag ar (len `SZ.sub` s1) err in
-      let _ = gen_elim () in
-      let _ = AP.join a ar in
-      let len' = s1 `SZ.add` s2 in
-      noop ();
-      return len'
+      unframe_cps_reader rt a _ _ _ (fun tag ->
+        unpeek_strong a va ar;
+        let ar = AP.split a s1 in
+        let _ = gen_elim () in
+        let len2 = len `SZ.sub` s1 in
+        let s2 = v tag ar (len `SZ.sub` s1) err in
+        let _ = gen_elim () in
+        let _ = AP.join a ar in
+        let len' = s1 `SZ.add` s2 in
+        noop ();
+        return len'
+      )
     end
     else
     begin
@@ -922,12 +1031,29 @@ let validate_tagged_union
     end
 
 inline_for_extraction
-let jump_tagged_union
+let validate_tagged_union
+  (#kt: Ghost.erased parser_kind)
+  (#tag_t: Type)
+  (#pt: parser kt tag_t)
+  (vt: validator pt)
+  (rt: leaf_reader pt)
+  (#data_t: Type)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: Ghost.erased parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (v: (t: tag_t) -> Tot (validator (p t)))
+: Pure (validator (parse_tagged_union pt tag_of_data p))
+    (requires (kt.parser_kind_subkind == Some ParserStrong))
+    (ensures (fun _ -> True))
+= validate_tagged_union_with_cps_reader vt (cps_reader_of_leaf_reader rt) tag_of_data p v
+
+inline_for_extraction
+let jump_tagged_union_with_cps_reader
   (#kt: Ghost.erased parser_kind)
   (#tag_t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (#pt: parser kt tag_t)
   (vt: jumper pt)
-  (rt: leaf_reader pt)
+  (rt: cps_reader pt)
   (#data_t: Type)
   (tag_of_data: (data_t -> GTot tag_t))
   (#k: Ghost.erased parser_kind)
@@ -942,14 +1068,40 @@ let jump_tagged_union
     let _ = gen_elim () in
     let ar = ghost_peek_strong pt a in
     let _ = gen_elim () in
-    let tag = rt a in
-    unpeek_strong a va ar;
-    let ar = AP.split a s1 in
-    let _ = gen_elim () in
-    let s2 = v tag ar in
-    let _ = gen_elim () in
-    let _ = AP.join a ar in
-    return (s1 `SZ.add` s2)
+    let res = unframe_cps_reader rt a _ _
+      (fun res ->
+        AP.arrayptr a va `star`
+        pure (jumper_post (parse_tagged_union pt tag_of_data p) va res)
+      )
+      (fun tag ->
+        unpeek_strong a va ar;
+        let ar = AP.split a s1 in
+        let _ = gen_elim () in
+        let s2 = v tag ar in
+        let _ = gen_elim () in
+        let _ = AP.join a ar in
+        return (s1 `SZ.add` s2)
+      )
+    in
+    elim_pure _;
+    return res
+
+inline_for_extraction
+let jump_tagged_union
+  (#kt: Ghost.erased parser_kind)
+  (#tag_t: Type)
+  (#pt: parser kt tag_t)
+  (vt: jumper pt)
+  (rt: leaf_reader pt)
+  (#data_t: Type)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: Ghost.erased parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (v: (t: tag_t) -> Tot (jumper (p t)))
+: Pure (jumper (parse_tagged_union pt tag_of_data p))
+    (requires (kt.parser_kind_subkind == Some ParserStrong))
+    (ensures (fun _ -> True))
+= jump_tagged_union_with_cps_reader vt (cps_reader_of_leaf_reader rt) tag_of_data p v
 
 #pop-options
 
@@ -1126,6 +1278,27 @@ let intro_tagged_union
   intro_aparse (parse_tagged_union pt tag_of_data p) a1
 
 inline_for_extraction
+let validate_dtuple2_with_cps_reader
+  (#kt: Ghost.erased parser_kind)
+  (#tag_t: Type)
+  (#pt: parser kt tag_t)
+  (vt: validator pt)
+  (rt: cps_reader pt)
+  (#k: Ghost.erased parser_kind)
+  (#data_t: tag_t -> Type)
+  (p: (t: tag_t) -> Tot (parser k (data_t t)))
+  (v: (t: tag_t) -> Tot (validator (p t)))
+: Pure (validator (parse_dtuple2 pt p))
+    (requires (kt.parser_kind_subkind == Some ParserStrong))
+    (ensures (fun _ -> True))
+= validate_tagged_union_with_cps_reader
+    vt
+    rt
+    dfst
+    (fun x -> parse_synth (p x) (synth_dtuple2 x))
+    (fun x -> validate_synth (v x) (synth_dtuple2 x) ())
+
+inline_for_extraction
 let validate_dtuple2
   (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
@@ -1145,6 +1318,27 @@ let validate_dtuple2
     dfst
     (fun x -> parse_synth (p x) (synth_dtuple2 x))
     (fun x -> validate_synth (v x) (synth_dtuple2 x) ())
+
+inline_for_extraction
+let jump_dtuple2_with_cps_reader
+  (#kt: Ghost.erased parser_kind)
+  (#tag_t: Type)
+  (#pt: parser kt tag_t)
+  (vt: jumper pt)
+  (rt: cps_reader pt)
+  (#k: Ghost.erased parser_kind)
+  (#data_t: tag_t -> Type)
+  (p: (t: tag_t) -> Tot (parser k (data_t t)))
+  (v: (t: tag_t) -> Tot (jumper (p t)))
+: Pure (jumper (parse_dtuple2 pt p))
+    (requires (kt.parser_kind_subkind == Some ParserStrong))
+    (ensures (fun _ -> True))
+= jump_tagged_union_with_cps_reader
+    vt
+    rt
+    dfst
+    (fun x -> parse_synth (p x) (synth_dtuple2 x))
+    (fun x -> jump_synth (v x) (synth_dtuple2 x) ())
 
 inline_for_extraction
 let jump_dtuple2
