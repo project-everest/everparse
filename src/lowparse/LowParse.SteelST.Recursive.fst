@@ -164,7 +164,7 @@ let vpattern_rewrite_with_squash
     (fun _ -> p x2)
 = vpattern_rewrite p x2
 
-#push-options "--z3rlimit 32 --fuel 3 --ifuel 6 --query_stats"
+#push-options "--z3rlimit 64 --fuel 3 --ifuel 6 --query_stats"
 #restart-solver
 
 inline_for_extraction
