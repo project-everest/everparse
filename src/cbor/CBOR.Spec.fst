@@ -17,6 +17,11 @@ let initial_byte_desc : bitsum' uint8 8 =
   BitField 3 (BitField 5 (BitStop ()))
 
 inline_for_extraction
+let filter_initial_byte : filter_bitsum'_t initial_byte_desc =
+  norm [delta_attr [`%filter_bitsum'_t_attr]; iota; zeta; primops]
+    (mk_filter_bitsum'_t' initial_byte_desc)
+
+inline_for_extraction
 let destr_initial_byte : destr_bitsum'_t initial_byte_desc =
   norm [delta_attr [`%filter_bitsum'_t_attr]; iota; zeta; primops]
     (mk_destr_bitsum'_t initial_byte_desc)
@@ -119,6 +124,7 @@ let header = dtuple2 initial_byte long_argument
 
 module Cast = FStar.Int.Cast
 
+inline_for_extraction
 let argument_as_uint64
   (b: initial_byte)
   (x: long_argument b)
@@ -145,6 +151,7 @@ let simple_value_wf
 
 let simple_value = parse_filter_refine simple_value_wf
 
+inline_for_extraction
 let argument_as_simple_value
   (b: initial_byte)
   (x: long_argument b)
