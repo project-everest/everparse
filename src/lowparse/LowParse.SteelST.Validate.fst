@@ -93,3 +93,17 @@ let validate_total_constant_size
       R.write err validator_error_not_enough_data;
       return 0sz
     end
+
+inline_for_extraction
+let ifthenelse_validate
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (cond: bool)
+  (vtrue: (squash (cond == true) -> Tot (validator p)))
+  (vfalse: (squash (cond == false) -> Tot (validator p)))
+: Tot (validator p)
+= fun a len err ->
+  if cond
+  then vtrue () a len err
+  else vfalse () a len err

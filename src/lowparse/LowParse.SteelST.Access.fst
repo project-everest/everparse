@@ -35,6 +35,20 @@ let jumper
     (fun res -> jumper_post p va res)
 
 inline_for_extraction
+let ifthenelse_jump
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (cond: bool)
+  (vtrue: (squash (cond == true) -> Tot (jumper p)))
+  (vfalse: (squash (cond == false) -> Tot (jumper p)))
+: Tot (jumper p)
+= fun a ->
+  if cond
+  then vtrue () a
+  else vfalse () a
+
+inline_for_extraction
 let hop_arrayptr_aparse
   (#k: Ghost.erased parser_kind)
   (#t: Type)

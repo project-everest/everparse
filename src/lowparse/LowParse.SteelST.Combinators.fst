@@ -126,6 +126,9 @@ let read_weaken
   vpattern_rewrite (aparse (LowParse.Spec.Base.weaken k' p) a) va;
   return res
 
+inline_for_extraction
+let read_empty : leaf_reader parse_empty = fun _ -> return ()
+
 #push-options "--z3rlimit 24"
 #restart-solver
 
