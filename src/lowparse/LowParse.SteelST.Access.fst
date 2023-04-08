@@ -417,6 +417,20 @@ let leaf_reader
     (fun res -> res == va.contents)
 
 inline_for_extraction
+let ifthenelse_read
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> Tot (leaf_reader p)))
+  (iffalse: (squash (cond == false) -> Tot (leaf_reader p)))
+: Tot (leaf_reader p)
+= fun a ->
+    if cond
+    then iftrue () a
+    else iffalse () a
+
+inline_for_extraction
 let cps_reader
   (#k: parser_kind)
   (#t: Type)
@@ -438,6 +452,20 @@ let cps_reader
   STT t'
     (aparse p a va `star` pre)
     post
+
+inline_for_extraction
+let ifthenelse_cps_read
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> Tot (cps_reader p)))
+  (iffalse: (squash (cond == false) -> Tot (cps_reader p)))
+: Tot (cps_reader p)
+= fun a pre t post ->
+    if cond
+    then iftrue () a pre t post
+    else iffalse () a pre t post
 
 inline_for_extraction
 let cps_reader_of_leaf_reader

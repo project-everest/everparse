@@ -127,6 +127,28 @@ let read_weaken
   return res
 
 inline_for_extraction
+let rewrite_reader
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (r1: leaf_reader p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+: Pure (leaf_reader p2)
+    (requires (
+      t1 == t2 /\
+      (forall (b: bytes) . parse p1 b == parse p2 b)
+    ))
+    (ensures (fun _ -> True))
+= fun #va a ->
+    let _ = rewrite_aparse a p1 in
+    let res = r1 a in
+    let _ = rewrite_aparse a p2 in
+    vpattern_rewrite (aparse p2 a) va;
+    return res
+
+inline_for_extraction
 let read_empty : leaf_reader parse_empty = fun _ -> return ()
 
 #push-options "--z3rlimit 24"
@@ -1541,6 +1563,34 @@ let intro_dtuple2
   let _ = intro_synth (p tag) (synth_dtuple2 tag) a2 () in
   let _ = intro_tagged_union pt dfst (fun x -> parse_synth (p x) (synth_dtuple2 x)) a1 a2 in
   rewrite_aparse a1 (parse_dtuple2 pt p)
+
+inline_for_extraction
+let cps_read_dtuple2
+  (#kt: Ghost.erased parser_kind)
+  (#tag_t: Type)
+  (#pt: parser kt tag_t)
+  (rt: cps_reader pt)
+  (j: jumper pt)
+  (#k: Ghost.erased parser_kind)
+  (#data_t: tag_t -> Type)
+  (p: (t: tag_t) -> Tot (parser k (data_t t)))
+  (v: (t: tag_t) -> Tot (cps_reader (p t)))
+: Pure (cps_reader (parse_dtuple2 pt p))
+    (requires (kt.parser_kind_subkind == Some ParserStrong))
+    (ensures (fun _ -> True))
+= fun #va a pre t post phi ->
+    let ar = split_dtuple2 j p a in
+    let _ = gen_elim () in
+    let _ = ghost_dtuple2_tag pt p a ar in
+    let _ = gen_elim () in
+    unframe_cps_reader rt a _ _ _ (fun tag ->
+      let _ = rewrite_aparse ar (p tag) in
+      unframe_cps_reader (v tag) ar _ _ _ (fun v ->
+        let _ = intro_dtuple2 pt p a ar in
+        vpattern_rewrite (aparse _ a) va;
+        phi (| tag, v |)
+      )
+    )
 
 let intro_parse_strict
   (#opened: _)
