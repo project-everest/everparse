@@ -191,3 +191,65 @@ let read_long_argument0
   | LongArgCase26 -> read_weaken _ (read_filter read_u32 uint32_wf) 
   | LongArgCase27 -> read_weaken _ (read_filter read_u64 uint64_wf)
   | LongArgCaseOther -> read_weaken _ read_empty
+
+inline_for_extraction
+let read_long_argument
+  (b: initial_byte)
+: Tot (leaf_reader (parse_long_argument b))
+= match b with
+  | (major_type, (additional_info, _)) ->  
+    rewrite_reader
+      (destr_long_argument_case
+        (fun c -> leaf_reader (parse_long_argument0 c))
+        (fun _ -> ifthenelse_read)
+        read_long_argument0
+        major_type
+        additional_info
+      )
+      _
+
+inline_for_extraction
+let read_header : cps_reader parse_header =
+  cps_read_dtuple2
+    read_initial_byte
+    jump_initial_byte
+    _
+    (fun b -> cps_reader_of_leaf_reader (read_long_argument b))
+
+module Cast = FStar.Int.Cast
+module U64 = FStar.UInt64
+
+inline_for_extraction
+let mk_argument_as_uint64
+  (b: initial_byte)
+: (long_arg: long_argument b) ->
+  Tot (x: U64.t { x == argument_as_uint64 b long_arg })
+= match b with
+  | (major_type, (additional_info, _)) ->
+    destr_long_argument_case
+      (fun c ->
+        (prf: squash (c == get_long_argument_case major_type additional_info)) ->
+        (long_arg: long_argument0 c) ->
+        (x: U64.t { x == argument_as_uint64 b long_arg })
+      )
+      (fun c cond iftrue iffalse prf long_arg ->
+        if cond
+        then iftrue () prf long_arg
+        else iffalse () prf long_arg
+      )
+      (fun c prf long_arg ->
+        match c with
+        | LongArgCase24Subcase7 -> Cast.uint8_to_uint64 long_arg
+        | LongArgCase24Other -> Cast.uint8_to_uint64 long_arg
+        | LongArgCase25 -> Cast.uint16_to_uint64 long_arg
+        | LongArgCase26 -> Cast.uint32_to_uint64 long_arg
+        | LongArgCase27 -> long_arg
+        | LongArgCaseOther -> Cast.uint8_to_uint64 additional_info
+      )
+      major_type
+      additional_info
+      ()
+
+(* Not sure that extracts properly. We'll probably need to forbid those "ifthenelse" types
+   and use a single sum type with a per-case refinement instead.
+*)
