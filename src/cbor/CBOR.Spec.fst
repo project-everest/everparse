@@ -101,25 +101,41 @@ let simple_value_long_argument_wf // 3.3: "an encoder MUST NOT issue two-byte se
 : Tot bool
 = 32uy `U8.lte` x
 
-let long_argument
-  (b: initial_byte)
-: Tot Type
-= match b with
-  | (major_type, (additional_info, _)) ->
-    if additional_info = 24uy
-    then
-      if major_type = 7uy
-      then parse_filter_refine simple_value_long_argument_wf
-      else parse_filter_refine uint8_wf
-    else if additional_info = 25uy
-    then parse_filter_refine uint16_wf
-    else if additional_info = 26uy
-    then parse_filter_refine uint32_wf
-    else if additional_info = 27uy
-    then parse_filter_refine uint64_wf
-    else unit
+let major_type_t = bitfield uint8 3
+let additional_info_t = bitfield uint8 5
 
-noextract
+inline_for_extraction
+type long_argument
+  (b: initial_byte)
+= | LongArgumentSimpleValue:
+      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == 24uy /\ major_type == 7uy)) ->
+      (v: parse_filter_refine simple_value_long_argument_wf) ->
+      long_argument b
+  | LongArgumentU8:
+      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == 24uy /\ ~ (major_type == 7uy))) ->
+      (v: parse_filter_refine uint8_wf) ->
+      long_argument b
+  | LongArgumentU16:
+      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == 25uy)) ->
+      (v: parse_filter_refine uint16_wf) ->
+      long_argument b
+  | LongArgumentU32:
+      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == 26uy)) ->
+      (v: parse_filter_refine uint32_wf) ->
+      long_argument b
+  | LongArgumentU64:
+      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == 27uy)) ->
+      (v: parse_filter_refine uint64_wf) ->
+      long_argument b
+  | LongArgumentOther:
+      (a: additional_info_t) ->
+      (prf: squash (let (major_type, (additional_info, _)) = b in
+        a == additional_info /\ (
+        ~ (additional_info == 24uy \/ additional_info == 25uy \/ additional_info == 26uy \/ additional_info == 27uy)
+      ))) ->
+      (v: unit) -> // constructors are synth functions, hence this unit argument
+      long_argument b
+
 let header = dtuple2 initial_byte long_argument
 
 module Cast = FStar.Int.Cast
@@ -129,20 +145,18 @@ let argument_as_uint64
   (b: initial_byte)
   (x: long_argument b)
 : Tot U64.t
-= match b with
-  | (major_type, (additional_info, _)) ->
-    if additional_info `U8.lt` 24uy
-    then Cast.uint8_to_uint64 additional_info
-    else if additional_info = 24uy
-    then Cast.uint8_to_uint64 x
-    else if additional_info = 25uy
-    then Cast.uint16_to_uint64 x
-    else if additional_info = 26uy
-    then Cast.uint32_to_uint64 x
-    else begin
-      assert (additional_info = 27uy);
-      x
-    end
+= match x with
+  | LongArgumentSimpleValue _ v
+  | LongArgumentU8 _ v ->
+    Cast.uint8_to_uint64 v
+  | LongArgumentU16 _ v ->
+    Cast.uint16_to_uint64 v
+  | LongArgumentU32 _ v ->
+    Cast.uint32_to_uint64 v
+  | LongArgumentU64 _ v ->
+    v
+  | LongArgumentOther v _ _ ->
+    Cast.uint8_to_uint64 v
 
 let simple_value_wf
   (x: U8.t)
@@ -158,11 +172,10 @@ let argument_as_simple_value
 : Pure simple_value
     (requires (let (major_type, (additional_info, _)) = b in major_type = 7uy /\ additional_info `U8.lte` 24uy))
     (ensures (fun _ -> True))
-= match b with
-  | (major_type, (additional_info, _)) ->
-    if additional_info `U8.lt` 24uy
-    then additional_info
-    else x
+= match x with
+  | LongArgumentOther v _ _
+  | LongArgumentSimpleValue _ v ->
+    v
 
 (* Raw data items, disregarding ordering of map entries *)
 
@@ -246,15 +259,15 @@ let parse_long_argument
     if additional_info = 24uy
     then
       if major_type = 7uy
-      then weaken _ (parse_filter parse_u8 simple_value_long_argument_wf)
-      else weaken _ (parse_filter parse_u8 uint8_wf)
+      then weaken _ (parse_filter parse_u8 simple_value_long_argument_wf `parse_synth` LongArgumentSimpleValue ())
+      else weaken _ (parse_filter parse_u8 uint8_wf `parse_synth` LongArgumentU8 ())
     else if additional_info = 25uy
-    then weaken _ (parse_filter parse_u16 uint16_wf)
+    then weaken _ (parse_filter parse_u16 uint16_wf `parse_synth` LongArgumentU16 ())
     else if additional_info = 26uy
-    then weaken _ (parse_filter parse_u32 uint32_wf)
+    then weaken _ (parse_filter parse_u32 uint32_wf `parse_synth` LongArgumentU32 ())
     else if additional_info = 27uy
-    then weaken _ (parse_filter parse_u64 uint64_wf)
-    else weaken _ parse_empty
+    then weaken _ (parse_filter parse_u64 uint64_wf `parse_synth` LongArgumentU64 ())
+    else weaken _ (parse_empty `parse_synth` LongArgumentOther additional_info ())
 
 let parse_header : parser _ header =
   parse_dtuple2 parse_initial_byte parse_long_argument
@@ -304,103 +317,6 @@ let rec parse_raw_data_item_fuel
   then fail_parser _ _
   else parse_raw_data_item_aux (parse_raw_data_item_fuel (fuel - 1))
 
-(*
-let parse_content_ext
-  (p: parser parse_raw_data_item_kind raw_data_item)
-  (p': parser parse_raw_data_item_kind raw_data_item)
-  (h: header)
-  (input: bytes)
-  (prf: (
-    (b: bytes { Seq.length b <= Seq.length input }) ->
-    Lemma
-    (parse p b == parse p' b)
-  ))
-: Lemma
-  (parse (parse_content p h) input == parse (parse_content p' h) input)
-= match h with
-  | (| b, long_arg |) ->
-    match b with
-    | (major_type, _) ->
-      if major_type = 4uy
-      then
-        parse_nlist_ext (U64.v (argument_as_uint64 b long_arg)) p p' input prf
-      else if major_type = 5uy
-      then
-        parse_nlist_ext (U64.v (argument_as_uint64 b long_arg)) (p `nondep_then` p) (p' `nondep_then` p') input
-          (fun input' ->
-            nondep_then_ext_l p p' p input' (prf input');
-            nondep_then_ext_r p' p p' input' prf
-          )
-      else if major_type = 6uy
-      then prf input
-      else ()
-
-let parse_raw_data_item_aux_ext
-  (p p': parser parse_raw_data_item_kind raw_data_item)
-  (input: bytes)
-  (prf:
-    (input' : bytes { Seq.length input' < Seq.length input }) -> // IMPORTANT: lt, not leq, to make induction work
-    Lemma
-    (parse p input' == parse p' input')
-  )
-: Lemma
-  (parse (parse_raw_data_item_aux p) input == parse (parse_raw_data_item_aux p') input)
-= parse_synth_ext
-    (parse_dtuple2 parse_header (parse_content p))
-    (parse_dtuple2 parse_header (parse_content p'))
-    synth_raw_data_item
-    input
-    (
-      parse_dtuple2_ext_r
-        parse_header
-        (parse_content p)
-        (parse_content p')
-        input
-        (fun h input -> parse_content_ext p p' h input prf)
-    )
-
-let rec parse_raw_data_item_fuel_ext_gen
-  (fuel: nat)
-  (fuel': nat { fuel <= fuel' })
-  (input: bytes { Seq.length input < fuel })
-: Lemma
-  (ensures (parse (parse_raw_data_item_fuel fuel) input == parse (parse_raw_data_item_fuel fuel') input))
-  (decreases fuel)
-= parse_raw_data_item_aux_ext
-    (parse_raw_data_item_fuel (fuel - 1))
-    (parse_raw_data_item_fuel (fuel' - 1))
-    input
-    (fun input' ->
-      parse_raw_data_item_fuel_ext_gen (fuel - 1) (fuel' - 1) input'
-    )
-
-let closure
-  (b: bytes)
-: Tot (n: nat { Seq.length b < n })
-= Seq.length b + 1
-
-let parse_raw_data_item_fuel_ext
-  (fuel: nat)
-  (input: bytes { Seq.length input < fuel })
-: Lemma
-  (ensures (parse (parse_raw_data_item_fuel fuel) input == parse (parse_raw_data_item_fuel (closure input)) input))
-= parse_raw_data_item_fuel_ext_gen (closure input) fuel input
-
-let parse_raw_data_item : parser parse_raw_data_item_kind raw_data_item =
-  close_by_fuel parse_raw_data_item_fuel closure parse_raw_data_item_fuel_ext
-
-let parse_raw_data_item_eq
-  (b: bytes)
-: Lemma
-  (parse parse_raw_data_item b == parse (parse_raw_data_item_aux parse_raw_data_item) b)
-= let c = closure b in
-  let p = parse_raw_data_item_fuel (c - 1) in
-  assert (parse parse_raw_data_item b == parse (parse_raw_data_item_aux p) b);
-  parse_raw_data_item_aux_ext p parse_raw_data_item b (fun input' -> // here hypothesis Seq.length input' < Seq.length input is used
-    parse_raw_data_item_fuel_ext (c - 1) input'
-  )
-*)
-
 (* 
 
   A raw data item ends with zero or more raw data items, but a raw
@@ -416,16 +332,24 @@ let parse_raw_data_item_eq
   
 *)
 
-let leaf_content
+let leaf_content_seq_cond
   (h: header)
-: Tot Type
-= match h with
-  | (| b, long_arg |) ->
-    match b with
-    | (major_type, _) ->
-      if major_type = 2uy || major_type = 3uy
-      then Seq.lseq byte (U64.v (argument_as_uint64 b long_arg))
-      else unit
+: GTot prop
+= 
+      let (| (major_type, _), _ |) = h in
+      major_type == 2uy \/ major_type == 3uy
+
+inline_for_extraction
+type leaf_content
+  (h: header)
+= | LeafContentSeq:
+    (prf: squash (leaf_content_seq_cond h)) ->
+    (v: Seq.lseq byte (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) ->
+    leaf_content h
+  | LeafContentEmpty:
+    (prf: squash (~ (leaf_content_seq_cond h))) ->
+    (v: unit) ->
+    leaf_content h
 
 let parse_leaf_content
   (h: header)
@@ -435,8 +359,8 @@ let parse_leaf_content
     match b with
     | (major_type, _) ->
       if major_type = 2uy || major_type = 3uy
-      then weaken _ (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
-      else weaken _ parse_empty
+      then weaken _ (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `parse_synth` LeafContentSeq ())
+      else weaken _ (parse_empty `parse_synth` LeafContentEmpty ())
 
 let leaf = dtuple2 header leaf_content
 
@@ -612,7 +536,9 @@ let synth_raw_data_item'_from_alt
           then (| h, pair_list_of_list _ (U64.v (argument_as_uint64 b long_arg)) c |)
           else if major_type = 6uy
           then (| h, List.Tot.hd c |)
-          else (| h, lc |)
+          else if major_type = 2uy || major_type = 3uy
+          then (| h, LeafContentSeq?.v lc |)
+          else (| h, () |)
 
 #push-options "--ifuel 3"
 #restart-solver
@@ -667,7 +593,7 @@ let parse_nlist_one
 )
 = parse_nlist_eq 1 p b
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64 --ifuel 6"
 #restart-solver
 
 let parse_raw_data_item_eq
@@ -686,14 +612,29 @@ let parse_raw_data_item_eq
   | Some _ ->
     Classical.forall_intro (parse_nlist_zero parse_raw_data_item);
     Classical.forall_intro (parse_nlist_one parse_raw_data_item);
+    let prf_seq
+      (h: header)
+      (prf: squash (leaf_content_seq_cond h))
+      (b: bytes)
+    : Lemma
+      (parse_synth (parse_lseq_bytes (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) (LeafContentSeq #h prf) b == parse_synth' (parse_lseq_bytes (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) (LeafContentSeq #h prf) b)
+    = parse_synth_eq (parse_lseq_bytes (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) (LeafContentSeq #h prf) b
+    in
+    Classical.forall_intro_3 prf_seq;
+    let prf_empty
+      (h: header)
+      (prf: squash (~ (leaf_content_seq_cond h)))
+      (b: bytes)
+    : Lemma
+      (parse_synth parse_empty (LeafContentEmpty #h prf) b == parse_synth' parse_empty (LeafContentEmpty #h prf) b)
+    = parse_synth_eq parse_empty (LeafContentEmpty #h prf) b
+    in
+    Classical.forall_intro_3 prf_empty;
     Classical.forall_intro_2 (parse_pair_list_as_list parse_raw_data_item)
 
 #pop-options
 
 (* Serialization *)
-
-let major_type_t = bitfield uint8 3
-let additional_info_t = bitfield uint8 5
 
 let get_major_type
   (d: raw_data_item)
@@ -720,7 +661,7 @@ let mk_initial_byte
 let uint64_as_argument
   (t: major_type_t)
   (x: U64.t)
-: Pure (b: initial_byte & long_argument b)
+: Pure header
     (requires (t `U8.lt` 7uy))
     (ensures (fun y ->
       let (| b, arg |) = y in
@@ -729,18 +670,18 @@ let uint64_as_argument
       argument_as_uint64 b arg = x
     ))
 = if x `U64.lt` 24uL
-  then (| mk_initial_byte t (Cast.uint64_to_uint8 x), () |)
+  then (| mk_initial_byte t (Cast.uint64_to_uint8 x), LongArgumentOther (Cast.uint64_to_uint8 x) () () |)
   else if x `U64.lt` 256uL
-  then (| mk_initial_byte t 24uy, Cast.uint64_to_uint8 x |)
+  then (| mk_initial_byte t 24uy, LongArgumentU8 () (Cast.uint64_to_uint8 x) |)
   else if x `U64.lt` 65536uL
-  then (| mk_initial_byte t 25uy, Cast.uint64_to_uint16 x |)
+  then (| mk_initial_byte t 25uy, LongArgumentU16 () (Cast.uint64_to_uint16 x) |)
   else if x `U64.lt` 4294967296uL
-  then (| mk_initial_byte t 26uy, Cast.uint64_to_uint32 x |)
-  else (| mk_initial_byte t 27uy, x |)
+  then (| mk_initial_byte t 26uy, LongArgumentU32 () (Cast.uint64_to_uint32 x) |)
+  else (| mk_initial_byte t 27uy, LongArgumentU64 () x |)
 
 let simple_value_as_argument
   (x: simple_value)
-: Pure (b: initial_byte & long_argument b)
+: Pure header
     (requires True)
     (ensures (fun y ->
       let (| b, arg |) = y in
@@ -750,8 +691,8 @@ let simple_value_as_argument
       argument_as_simple_value b arg == x
     ))
 = if x `U8.lt` 24uy
-  then (| mk_initial_byte 7uy x, () |)
-  else (| mk_initial_byte 7uy 24uy, x |)
+  then (| mk_initial_byte 7uy x, LongArgumentOther x () () |)
+  else (| mk_initial_byte 7uy 24uy, LongArgumentSimpleValue () x |)
 
 let serialize_initial_byte : serializer parse_initial_byte =
   serialize_filter
@@ -770,15 +711,15 @@ let serialize_long_argument
     then
       if major_type = 7uy
       then
-        serialize_weaken _ (serialize_filter serialize_u8 simple_value_long_argument_wf)
-      else serialize_weaken _ (serialize_filter serialize_u8 uint8_wf)
+        serialize_weaken _ (serialize_synth _ (LongArgumentSimpleValue ()) (serialize_filter serialize_u8 simple_value_long_argument_wf) LongArgumentSimpleValue?.v ())
+      else serialize_weaken _ (serialize_synth _ (LongArgumentU8 ()) (serialize_filter serialize_u8 uint8_wf) LongArgumentU8?.v ())
     else if additional_info = 25uy
-    then serialize_weaken _ (serialize_filter serialize_u16 uint16_wf)
+    then serialize_weaken _ (serialize_synth _ (LongArgumentU16 ()) (serialize_filter serialize_u16 uint16_wf) LongArgumentU16?.v ())
     else if additional_info = 26uy
-    then serialize_weaken _ (serialize_filter serialize_u32 uint32_wf)
+    then serialize_weaken _ (serialize_synth _ (LongArgumentU32 ()) (serialize_filter serialize_u32 uint32_wf) LongArgumentU32?.v ())
     else if additional_info = 27uy
-    then serialize_weaken _ (serialize_filter serialize_u64 uint64_wf)
-    else serialize_weaken _ serialize_empty
+    then serialize_weaken _ (serialize_synth _ (LongArgumentU64 ()) (serialize_filter serialize_u64 uint64_wf) LongArgumentU64?.v ())
+    else serialize_weaken _ (serialize_synth _ (LongArgumentOther additional_info ()) serialize_empty LongArgumentOther?.v ())
 
 let serialize_header : serializer parse_header =
   serialize_dtuple2 serialize_initial_byte serialize_long_argument
@@ -820,12 +761,14 @@ let synth_raw_data_item'_from_alt_recip
       match b with
       | (major_type, _) ->
         if major_type = 4uy
-        then (| (| h, () |), c |)
+        then (| (| h, LeafContentEmpty () () |), c |)
         else if major_type = 5uy
-        then (| (| h, () |), list_of_pair_list _ (U64.v (argument_as_uint64 b long_arg)) c |)
+        then (| (| h, LeafContentEmpty () () |), list_of_pair_list _ (U64.v (argument_as_uint64 b long_arg)) c |)
         else if major_type = 6uy
-        then (| (| h, () |), [c] |)
-        else (| (| h, c |), [] |)
+        then (| (| h, LeafContentEmpty () () |), [c] |)
+        else if major_type = 2uy || major_type = 3uy
+        then (| (| h, LeafContentSeq () c |), [] |)
+        else (| (| h, LeafContentEmpty () () |), [] |)
 
 #push-options "--ifuel 3"
 #restart-solver
@@ -852,8 +795,8 @@ let serialize_leaf_content
     match b with
     | (major_type, _) ->
       if major_type = 2uy || major_type = 3uy
-      then serialize_weaken _ (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
-      else serialize_weaken _ serialize_empty
+      then serialize_weaken _ (serialize_synth _ (LeafContentSeq ()) (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) LeafContentSeq?.v ())
+      else serialize_weaken _ (serialize_synth _ (LeafContentEmpty ()) serialize_empty LeafContentEmpty?.v ())
 
 let serialize_leaf : serializer parse_leaf =
   serialize_dtuple2 serialize_header serialize_leaf_content

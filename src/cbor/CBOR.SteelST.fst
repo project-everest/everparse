@@ -41,6 +41,7 @@ let read_initial_byte : cps_reader parse_initial_byte =
     )
     initial_byte_wf
 
+(*
 noeq
 type long_argument_case = | LongArgCase24Subcase7 | LongArgCase24Other | LongArgCase25 | LongArgCase26 | LongArgCase27 | LongArgCaseOther
 
