@@ -63,10 +63,24 @@ let validate_and_read
     (fun _ -> True)
 
 inline_for_extraction
-let validator_of_validate_and_read  
-  (#k: parser_kind)
+let ifthenelse_validate_and_read
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (#p: parser k t)
+  (cond: bool)
+  (vtrue: (squash (cond == true) -> Tot (validate_and_read p)))
+  (vfalse: (squash (cond == false) -> Tot (validate_and_read p)))
+: Tot (validate_and_read p)
+= fun a len pre t' post fsuccess ffailure ->
+  if cond
+  then vtrue () a len pre t' post fsuccess ffailure
+  else vfalse () a len pre t' post fsuccess ffailure
+
+inline_for_extraction
+let validator_of_validate_and_read  
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
   (vr: validate_and_read p)
 : Pure (validator p)
     (requires (k.parser_kind_subkind == Some ParserStrong))
@@ -91,7 +105,7 @@ let validator_of_validate_and_read
 
 inline_for_extraction
 let mk_validate_and_read
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (v: validator p)
@@ -149,10 +163,24 @@ let read_and_jump
     post
 
 inline_for_extraction
-let jumper_of_read_and_jump
-  (#k: parser_kind)
+let ifthenelse_read_and_jump
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (#p: parser k t)
+  (cond: bool)
+  (vtrue: (squash (cond == true) -> Tot (read_and_jump p)))
+  (vfalse: (squash (cond == false) -> Tot (read_and_jump p)))
+: Tot (read_and_jump p)
+= fun a pre t' post f ->
+  if cond
+  then vtrue () a pre t' post f
+  else vfalse () a pre t' post f
+
+inline_for_extraction
+let jumper_of_read_and_jump
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
   (vr: read_and_jump p)
 : Pure (jumper p)
     (requires (k.parser_kind_subkind == Some ParserStrong))
@@ -182,9 +210,9 @@ let jumper_of_read_and_jump
 
 inline_for_extraction
 let cps_reader_of_read_and_jump
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (#p: parser k t)
   (vr: read_and_jump p)
 : Pure (cps_reader p)
     (requires (k.parser_kind_subkind == Some ParserStrong))
@@ -198,7 +226,7 @@ let cps_reader_of_read_and_jump
 
 inline_for_extraction
 let mk_read_and_jump
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (r: cps_reader p)
