@@ -2,6 +2,7 @@ module LowParse.SteelST.Combinators
 include LowParse.Spec.Combinators
 include LowParse.SteelST.Validate
 include LowParse.SteelST.Access
+include LowParse.SteelST.ValidateAndRead
 include LowParse.SteelST.Write
 open Steel.ST.GenElim
 
@@ -55,6 +56,40 @@ let validate_weaken
 = rewrite_validator v2 (LowParse.Spec.Base.weaken k1 p2)
 
 inline_for_extraction
+let rewrite_validate_and_read
+  (#k1: Ghost.erased parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (v1: validate_and_read p1)
+  (#k2: Ghost.erased parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+: Pure (validate_and_read p2)
+    (requires (
+      t1 == t2 /\
+      (forall b . parse p1 b == parse p2 b)
+    ))
+    (ensures (fun _ -> True))
+= fun a len pre t' post fsuccess ffailure ->
+    v1 a len pre t' post
+      (fun lenl w a' ->
+        let _ = rewrite_aparse a p2 in
+        fsuccess lenl w a'
+      )
+      (fun e -> ffailure e)
+
+inline_for_extraction
+let validate_and_read_weaken
+  (k1: Ghost.erased parser_kind)
+  (#k2: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p2: parser k2 t)
+  (v2: validate_and_read p2)
+  (_: squash (k1 `is_weaker_than` k2))
+: Tot (validate_and_read (LowParse.Spec.Base.weaken k1 p2))
+= rewrite_validate_and_read v2 (LowParse.Spec.Base.weaken k1 p2)
+
+inline_for_extraction
 let rewrite_jumper
   (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (v1: jumper p1)
   (#k2: Ghost.erased parser_kind) (#t2: Type) (p2: parser k2 t2)
@@ -94,6 +129,41 @@ let jump_weaken
   (_: squash (k1 `is_weaker_than` k2))
 : Tot (jumper (LowParse.Spec.Base.weaken k1 p2))
 = rewrite_jumper v2 (LowParse.Spec.Base.weaken k1 p2)
+
+inline_for_extraction
+let rewrite_read_and_jump
+  (#k1: Ghost.erased parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (v1: read_and_jump p1)
+  (#k2: Ghost.erased parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+: Pure (read_and_jump p2)
+    (requires (
+      t1 == t2 /\
+      (forall b . parse p1 b == parse p2 b)
+    ))
+    (ensures (fun _ -> True))
+= fun #va a pre t' post f ->
+    let _ = rewrite_aparse a p1 in
+    v1 a pre t' post
+      (fun lenl w ->
+        let _ = rewrite_aparse a p2 in
+        vpattern_rewrite (aparse p2 a) va;
+        f lenl w
+      )
+
+inline_for_extraction
+let read_and_jump_weaken
+  (k1: Ghost.erased parser_kind)
+  (#k2: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p2: parser k2 t)
+  (v2: read_and_jump p2)
+  (_: squash (k1 `is_weaker_than` k2))
+: Tot (read_and_jump (LowParse.Spec.Base.weaken k1 p2))
+= rewrite_read_and_jump v2 (LowParse.Spec.Base.weaken k1 p2)
 
 inline_for_extraction
 let cps_read_weaken
