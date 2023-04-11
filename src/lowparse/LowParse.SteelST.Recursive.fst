@@ -167,20 +167,40 @@ let vpattern_rewrite_with_squash
 #push-options "--z3rlimit 64 --fuel 3 --ifuel 6 --query_stats"
 #restart-solver
 
+let validate_recursive_step_count_post
+  (p: parse_recursive_param)
+  (va: v p.parse_header_kind p.header)
+  (bound: SZ.t)
+  (res: SZ.t)
+  (err: U32.t)
+: GTot prop
+= if err = 0ul
+  then SZ.v res == p.count va.contents
+  else (p.count va.contents > SZ.v bound) == true
+
+inline_for_extraction
+let validate_recursive_step_count
+  (p: parse_recursive_param)
+: Tot Type
+=
+    (#va: v p.parse_header_kind p.header) ->
+    (a: byte_array) ->
+    (bound: SZ.t) ->
+    (perr: R.ref U32.t) ->
+    STT SZ.t
+      (aparse p.parse_header a va `star` R.pts_to perr full_perm 0ul)
+      (fun res -> aparse p.parse_header a va `star`
+        exists_ (fun err ->
+          R.pts_to perr full_perm err `star`
+          pure (validate_recursive_step_count_post p va bound res err)
+      ))
+
 inline_for_extraction
 let validate_recursive_step
   (p: parse_recursive_param)
   (n0: Ghost.erased nat)
   (w: validator p.parse_header)
-  (count: (
-    (#va: v p.parse_header_kind p.header) ->
-    (a: byte_array) ->
-    ST SZ.t
-      (aparse p.parse_header a va)
-      (fun _ -> aparse p.parse_header a va)
-      True
-      (fun res -> SZ.v res == p.count va.contents)
-  ))
+  (count: validate_recursive_step_count p)
   (v0: AP.v byte)
   (a0: byte_array)
   (len0: SZ.t { SZ.v len0 == AP.length (AP.array_of v0) })
@@ -245,27 +265,44 @@ let validate_recursive_step
               let _ = elim_exists () in
               let _ = elim_exists () in
               let _ = elim_pure _ in
-              let n' = count a in
+              let vl = vpattern_replace (aparse _ a) in
               let vr' = vpattern_replace (AP.arrayptr a') in
-              parse_nlist_sum (parse_recursive p) (SZ.v n') (SZ.v n - 1) (AP.contents_of vr');
-              parser_kind_prop_equiv (parse_nlist_kind (SZ.v n' + (SZ.v n - 1)) (parse_recursive_kind p.parse_header_kind)) (parse_nlist (SZ.v n' + (SZ.v n - 1)) (parse_recursive p));
-              mul_pos_gt (SZ.v n' + (SZ.v n - 1)) p.parse_header_kind.parser_kind_low;
+              parse_nlist_sum (parse_recursive p) (p.count vl.contents) (SZ.v n - 1) (AP.contents_of vr');
+              parser_kind_prop_equiv (parse_nlist_kind (p.count vl.contents + (SZ.v n - 1)) (parse_recursive_kind p.parse_header_kind)) (parse_nlist (p.count vl.contents + (SZ.v n - 1)) (parse_recursive p));
+              mul_pos_gt (p.count vl.contents + (SZ.v n - 1)) p.parse_header_kind.parser_kind_low;
+              Seq.lemma_split (AP.contents_of vr) (SZ.v consumed1);
+              let rem = len `SZ.sub` n in  // no overflow in this subtraction by virtue of the test above
+              let n' = count a rem perr in
+              let _ = gen_elim () in
+              let err = read_replace perr in
               let vr2 = elim_aparse _ a in
               parse_injective p.parse_header (Seq.slice (AP.contents_of vr) 0 (SZ.v consumed1)) (AP.contents_of vr2);
-              Seq.lemma_split (AP.contents_of vr) (SZ.v consumed1);
-              noop ();
-              if (n' `SZ.gt` (len `SZ.sub` n)) // no overflow in this subtraction by virtue of the test above
+              let overflow =
+                if err = 0ul
+                then (n' `SZ.gt` rem)
+                else true
+              in
+              if overflow
               then (
                   noop ();
                   parser_kind_prop_equiv p.parse_header_kind p.parse_header;
-                  let _ : squash ((SZ.v n' + (SZ.v n - 1) > AP.length (AP.array_of vr')) == true) = () in
+                  let _ : squash ((p.count vl.contents + (SZ.v n - 1) > AP.length (AP.array_of vr')) == true) = () in
                   let _ : squash (parse (parse_nlist (SZ.v n) (parse_recursive p)) (AP.contents_of vr) == None) = () in
                   noop ();
                   let vr3 = AP.join a a' in
                   vpattern_rewrite_with_squash (AP.arrayptr a) vr ();
-                  R.write perr validate_recursive_error_not_enough_data; 
+                  if err = 0ul returns STT unit (R.pts_to perr full_perm err) (fun _ -> exists_ (fun err' -> R.pts_to perr full_perm err' `star` pure (~ (err' == 0ul))))
+                  then begin
+                    R.write perr validate_recursive_error_not_enough_data;
+                    return ()
+                  end else begin
+                    noop ();
+                    return ()
+                  end;
+                  let _ = elim_exists () in
+                  elim_pure _;
                   r_flip pcont;
-                  intro_validate_recursive_invariant p n0 v0 a0 perr pconsumed pn pcont false #_ #a #vr #validate_recursive_error_not_enough_data #consumed #n ();
+                  intro_validate_recursive_invariant p n0 v0 a0 perr pconsumed pn pcont false #_ #a #vr #_ #consumed #n ();
                   return ()
                 )
               else (
@@ -316,15 +353,7 @@ let validate_nlist_recursive
   (p: parse_recursive_param)
   (n: SZ.t)
   (w: validator p.parse_header)
-  (count: (
-    (#va: v p.parse_header_kind p.header) ->
-    (a: byte_array) ->
-    ST SZ.t
-      (aparse p.parse_header a va)
-      (fun _ -> aparse p.parse_header a va)
-      True
-      (fun res -> SZ.v res == p.count va.contents)
-  ))
+  (count: validate_recursive_step_count p)
 : Tot (validator (parse_nlist (SZ.v n) (parse_recursive p)))
 = fun #va0 a0 len perr ->
   let n0 = Ghost.hide (SZ.v n) in
@@ -360,15 +389,7 @@ inline_for_extraction
 let validate_recursive
   (p: parse_recursive_param)
   (w: validator p.parse_header)
-  (count: (
-    (#va: v p.parse_header_kind p.header) ->
-    (a: byte_array) ->
-    ST SZ.t
-      (aparse p.parse_header a va)
-      (fun _ -> aparse p.parse_header a va)
-      True
-      (fun res -> SZ.v res == p.count va.contents)
-  ))
+  (count: validate_recursive_step_count p)
 : Tot (validator (parse_recursive p))
 = fun #va0 a0 len perr ->
   parse_nlist_one (parse_recursive p) (AP.contents_of va0);
