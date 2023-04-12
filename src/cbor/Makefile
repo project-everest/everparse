@@ -35,10 +35,6 @@ ifdef STEEL_C
 STEEL_C_PATH=$(FSTAR_HOME)/examples/steel/arraystructs/my_fstar
 FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_c_array --include $(STEEL_C_PATH)/lib/steel_c --load ExtractSteelC
 MY_FSTAR=$(STEEL_C_PATH)/lib/steel_c/ExtractSteelC.cmxs
-
-$(MY_FSTAR):
-	+$(MAKE) -C $(STEEL_C_PATH)
-
 else
 FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_array
 MY_FSTAR=
