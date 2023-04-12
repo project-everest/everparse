@@ -44,7 +44,7 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: lowparse-test quackyducky-test 3d-test
+test: all lowparse-test quackyducky-test 3d-test
 
 ci: test
 
