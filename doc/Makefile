@@ -43,7 +43,7 @@ BUILDDIR      = _build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile test all 3d clean 3d-do-tests 3d-do-interpreter-tests %.diff 3d-snapshot 3d-ci %.diff-nobuild
+.PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot 3d-ci %.diff-nobuild
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
@@ -60,13 +60,6 @@ help:
 	$(3D) --odir out --batch $(3D_FILES_WITH_CONFIG) --config $(3D_CONFIG)
 	cp $(AUX_HEADERS) out
 	+$(MAKE) -C out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
-
-3d-do-interpreter-tests:
-	mkdir -p interpret.out
-	$(3D) --odir interpret.out --batch $(3D_FILES) --interpret
-	$(3D) --odir interpret.out --batch $(3D_FILES_WITH_CONFIG) --config $(3D_CONFIG) --interpret
-	cp $(AUX_HEADERS) interpret.out
-	+$(MAKE) -C interpret.out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 
 $(3D_OUT): out/%: 3d-do-tests
 
