@@ -23,11 +23,6 @@ lowparse-unit-test: lowparse
 3d-doc-test: 3d
 	+$(MAKE) -C doc 3d
 
-3d-doc-ci: 3d
-	+$(MAKE) -C doc 3d-ci
-
-3d-ci: 3d-unit-test 3d-doc-ci
-
 3d-test: 3d-unit-test 3d-doc-test
 
 lowparse-bitfields-test: lowparse
@@ -52,9 +47,9 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: lowparse-test quackyducky-test 3d-test
+test: all lowparse-test quackyducky-test 3d-test
 
-ci: lowparse-test quackyducky-test 3d-ci
+ci: test
 
 clean-3d:
 	+$(MAKE) -C src/3d clean
@@ -68,7 +63,7 @@ clean-quackyducky:
 clean: clean-3d clean-lowparse clean-quackyducky
 	rm -rf bin
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test steel-unit-test release everparse 3d-unit-test 3d-doc-test 3d-doc-ci 3d-ci ci clean-3d clean-lowparse clean-quackyducky
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test steel-unit-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky
 
 release:
 	+src/package/release.sh
