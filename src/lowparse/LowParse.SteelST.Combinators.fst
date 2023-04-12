@@ -219,6 +219,14 @@ let rewrite_reader
     return res
 
 inline_for_extraction
+let validate_empty : validator parse_empty =
+  validate_total_constant_size parse_empty 0sz
+
+inline_for_extraction
+let jump_empty : jumper parse_empty
+= jump_constant_size parse_empty 0sz
+
+inline_for_extraction
 let read_empty : leaf_reader parse_empty = fun _ -> return ()
 
 #push-options "--z3rlimit 24"
@@ -520,6 +528,19 @@ let validate_and_read_synth
       (fun e -> ffailure e)
 
 inline_for_extraction
+let validate_and_read_synth'
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (v: validate_and_read p1)
+  #t2 (f2: t1 -> Tot t2)
+
+  (sq: squash (synth_injective f2))
+: Tot (validate_and_read (p1 `parse_synth` f2))
+= validate_and_read_synth
+    v
+    f2
+    (fun x pre t' post phi -> phi (f2 x))
+    ()
+
+inline_for_extraction
 let read_and_jump_synth
   (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (v: read_and_jump p1)
   #t2 (f2: t1 -> GTot t2)
@@ -533,6 +554,18 @@ let read_and_jump_synth
         let _ = intro_synth p1 f2 a () in
         f2' v (aparse (p1 `parse_synth` f2) a va `star` pre) t' post (fun v' -> f sz v')
       )
+
+inline_for_extraction
+let read_and_jump_synth'
+  (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (v: read_and_jump p1)
+  #t2 (f2: t1 -> Tot t2)
+  (sq: squash (synth_injective f2))
+: Tot (read_and_jump (p1 `parse_synth` f2))
+= read_and_jump_synth
+    v
+    f2
+    (fun x pre t' post phi -> phi (f2 x))
+    ()
 
 inline_for_extraction
 let cps_read_synth
