@@ -91,6 +91,7 @@ let validate_total_constant_size
     end
     else begin
       R.write err validator_error_not_enough_data;
+      noop ();
       return 0sz
     end
 
