@@ -20,15 +20,19 @@ FSTAR_OPTIONS := --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked
 		--include $(LOWPARSE_HOME) \
 		--include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --cmi
 
+ifneq (,$(STEEL_HOME))
+FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
+endif
+
 FSTAR_EXE=$(FSTAR_HOME)/bin/fstar.exe
 
 ifdef STEEL_C
-STEEL_C_PATH=$(FSTAR_HOME)/examples/steel/arraystructs/my_fstar
-FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_c_array --include $(STEEL_C_PATH)/lib/steel_c --load ExtractSteelC
-MY_FSTAR=$(STEEL_C_PATH)/lib/steel_c/ExtractSteelC.cmxs
+ifeq (,$(STEEL_HOME))
+	$(error "Please set STEEL_HOME to the root/prefix directory of your Steel installation.")
+endif
+FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_c_array
 else
 FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_array
-MY_FSTAR=
 endif
 
 FSTAR = $(FSTAR_EXE) --trace_error $(FSTAR_OPTIONS)
@@ -53,7 +57,7 @@ krml/%.krml:
 	$(FSTAR) --codegen krml $(patsubst %$(CHECKED_EXT),%,$(notdir $<)) --extract_module $(basename $(patsubst %$(CHECKED_EXT),%,$(notdir $<))) --warn_error '@241'
 	@touch $@
 
-$(DEPEND_FILE): $(QD_FILES) Makefile $(MY_FSTAR)
+$(DEPEND_FILE): $(QD_FILES) Makefile
 	$(FSTAR) --dep full --extract '*,-Steel,+Steel.Loops,+Steel.ST.HigherArray,-FStar.NMST,-FStar.NMSTTotal,-FStar.MST,-FStar.MSTTotal,-LowParse.SteelST.Fold,-FStar.Monotonic.Heap' $(QD_FILES) Test.fst > $@.tmp
 	mv $@.tmp $@
 

@@ -2,26 +2,25 @@
 
 ARG ocaml_version=4.12
 FROM ocaml/opam:ubuntu-ocaml-$ocaml_version
-
-ADD --chown=opam:opam ./ $HOME/everparse/
-WORKDIR $HOME/everparse
-
-# CI dependencies: jq (to identify F* branch)
-RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends jq
-
-# Dependencies (F*, Karamel and opam packages)
-ENV FSTAR_HOME=$HOME/FStar
-ENV KRML_HOME=$HOME/karamel
-ENV FSTAR_BRANCH=john_ml_steel_c
-RUN eval $(opam env) && .docker/build/install-deps.sh
-# Compile SteelC extraction plugin
-RUN eval $(opam env) && make -j 24 -C $FSTAR_HOME/examples/steel/arraystructs/my_fstar
-
-# CI proper
 ARG CI_THREADS=24
 
+# Install F* and Karamel from the Karamel CI install script
+# FIXME: the `opam depext` command should be unnecessary with opam 2.1
+ENV FSTAR_HOME=$HOME/FStar
+ENV KRML_HOME=$HOME/karamel
+RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
+    jq \
+    && git clone --branch taramana_no_steel https://github.com/FStarLang/karamel $KRML_HOME && \
+    eval $(opam env) && $KRML_HOME/.docker/build/install-deps.sh && \
+    env OTHERFLAGS='--admit_smt_queries true' make -C $KRML_HOME -j $CI_THREADS
+
+# Clone and build Steel
+ENV STEEL_HOME=$HOME/steel
+RUN git clone https://github.com/tahina-pro/steel-draft $STEEL_HOME && \
+    eval $(opam env) && env OTHERFLAGS='--admit_smt_queries true' make -k -j $CI_THREADS -C $STEEL_HOME
+
+# CI proper
+ADD --chown=opam:opam ./ $HOME/everparse/
+WORKDIR $HOME/everparse
 ENV STEEL_C=1
 RUN eval $(opam env) && make -j $CI_THREADS steel-unit-test
-
-WORKDIR $HOME
-ENV EVERPARSE_HOME=$HOME/everparse

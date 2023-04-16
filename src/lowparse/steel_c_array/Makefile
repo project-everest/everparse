@@ -29,6 +29,10 @@ INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj --include ..
 
 ALREADY_CACHED = --already_cached *,-LowParse.SteelST.ArrayPtr
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
+ifeq (,$(STEEL_HOME))
+	$(error "Please set STEEL_HOME to the root/prefix directory of your Steel installation.")
+endif
+FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
 
 LOWPARSE_FILES=LowParse.SteelST.ArrayPtr.fst
 

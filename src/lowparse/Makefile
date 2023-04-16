@@ -29,6 +29,9 @@ INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 
 ALREADY_CACHED = --already_cached *,-LowParse
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
+ifneq (,$(STEEL_HOME))
+FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
+endif
 
 LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
 
