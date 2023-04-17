@@ -194,6 +194,11 @@ val read____UINT8 : reader parse____UINT8
 
 // Big-endian (or "network order")
 
+/// UINT8BE
+let ___UINT8BE : eqtype = FStar.UInt8.t
+val parse____UINT8BE : parser kind____UINT8BE ___UINT8BE
+val read____UINT8BE : reader parse____UINT8BE
+
 /// UInt16BE
 let ___UINT16BE : eqtype = U16.t
 val parse____UINT16BE : parser kind____UINT16BE ___UINT16BE

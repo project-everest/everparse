@@ -116,6 +116,11 @@ let kind____UINT8
   = LowParse.Spec.Int.parse_u8_kind
 
 inline_for_extraction noextract
+let kind____UINT8BE
+  : parser_kind true WeakKindStrongPrefix
+  = LowParse.Spec.BoundedInt.parse_u8_kind
+
+inline_for_extraction noextract
 let kind____UINT16BE
   : parser_kind true WeakKindStrongPrefix
   = LowParse.Spec.BoundedInt.parse_u16_kind

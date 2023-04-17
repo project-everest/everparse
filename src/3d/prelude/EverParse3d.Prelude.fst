@@ -280,6 +280,10 @@ let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.p
 let parse____UINT8 = LowParse.Spec.Int.parse_u8
 let read____UINT8 = LowParse.Low.Int.read_u8
 
+/// UINT8BE
+let parse____UINT8BE = LowParse.Spec.Int.parse_u8
+let read____UINT8BE = LowParse.Low.Int.read_u8
+
 /// UInt16BE
 let parse____UINT16BE = LowParse.Spec.Int.parse_u16
 let read____UINT16BE = LowParse.Low.Int.read_u16

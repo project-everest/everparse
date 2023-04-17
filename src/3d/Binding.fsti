@@ -31,6 +31,7 @@ val parser_weak_kind  (env:global_env) (id:ident) : ML (option weak_kind)
 val unfold_typ_abbrev_only (_:env) (t:typ) : ML typ
 val update_typ_abbrev (_:env) (id:ident) (t:typ) : ML unit
 val size_of_integral_typ (_:env) (_:typ) (_:range) : ML int
+val bit_order_of_integral_typ (_:env) (_:typ) (_:range) : ML bitfield_bit_order
 val bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env)
 //val add_field_error_code_decls (ge: env) : ML (list decl)
 

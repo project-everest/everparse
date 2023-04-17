@@ -64,6 +64,7 @@ type itype =
   | UInt16
   | UInt32
   | UInt64
+  | UInt8BE
   | UInt16BE
   | UInt32BE
   | UInt64BE
@@ -80,6 +81,7 @@ let itype_as_type (i:itype)
     | UInt16 -> P.___UINT16
     | UInt32 -> P.___UINT32
     | UInt64 -> P.___UINT64
+    | UInt8BE -> P.___UINT8BE
     | UInt16BE -> P.___UINT16BE
     | UInt32BE -> P.___UINT32BE
     | UInt64BE -> P.___UINT64BE
@@ -114,6 +116,7 @@ let parser_kind_of_itype (i:itype)
     | UInt16 -> P.kind____UINT16
     | UInt32 -> P.kind____UINT32
     | UInt64 -> P.kind____UINT64
+    | UInt8BE -> P.kind____UINT8BE
     | UInt16BE -> P.kind____UINT16BE
     | UInt32BE -> P.kind____UINT32BE
     | UInt64BE -> P.kind____UINT64BE
@@ -129,6 +132,7 @@ let itype_as_parser (i:itype)
     | UInt16 -> P.parse____UINT16
     | UInt32 -> P.parse____UINT32
     | UInt64 -> P.parse____UINT64
+    | UInt8BE -> P.parse____UINT8BE
     | UInt16BE -> P.parse____UINT16BE
     | UInt32BE -> P.parse____UINT32BE
     | UInt64BE -> P.parse____UINT64BE
@@ -153,6 +157,7 @@ let itype_as_leaf_reader (i:itype { allow_reader_of_itype i })
     | UInt16 -> A.read____UINT16
     | UInt32 -> A.read____UINT32
     | UInt64 -> A.read____UINT64
+    | UInt8BE -> A.read____UINT8BE
     | UInt16BE -> A.read____UINT16BE
     | UInt32BE -> A.read____UINT32BE
     | UInt64BE -> A.read____UINT64BE
@@ -168,6 +173,7 @@ let itype_as_validator (i:itype)
     | UInt16 -> A.validate____UINT16
     | UInt32 -> A.validate____UINT32
     | UInt64 -> A.validate____UINT64
+    | UInt8BE -> A.validate____UINT8BE
     | UInt16BE -> A.validate____UINT16BE
     | UInt32BE -> A.validate____UINT32BE
     | UInt64BE -> A.validate____UINT64BE

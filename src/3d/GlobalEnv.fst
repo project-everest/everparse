@@ -36,6 +36,7 @@ module H = Hashtable
 type decl_attributes = {
   may_fail:bool;
   integral:option integer_type;
+  bit_order: (bit_order: option bitfield_bit_order { Some? bit_order ==> Some? integral });
   has_reader:bool;
   parser_weak_kind:weak_kind;
   parser_kind_nz:option bool

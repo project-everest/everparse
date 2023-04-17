@@ -9,6 +9,9 @@ module LBF = LowParse.BitFields
 ////////////////////////////////////////////////////////////////////////////////
 // Bit fields
 ////////////////////////////////////////////////////////////////////////////////
+
+// The get_bitfield operators are least significant bit first by default
+// following MSVC (https://learn.microsoft.com/en-us/cpp/c-language/c-bit-fields)
 let get_bitfield8
   (value:U8.t)
   (bitsFrom:U32.t{U32.v bitsFrom < 8})
@@ -37,3 +40,30 @@ let get_bitfield64 (value:U64.t)
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 64})
    : i:U64.t{FStar.UInt.size (U64.v i) (U32.v bitsTo - U32.v bitsFrom)}
    = LBF.uint64.LBF.get_bitfield_gen value bitsFrom bitsTo
+
+// Most significant bit first variants:
+
+let get_bitfield8_msb_first
+  (value:U8.t)
+  (bitsFrom:U32.t{U32.v bitsFrom < 8})
+  (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 8})
+: Tot (i:U8.t{FStar.UInt.size (U8.v i) (U32.v bitsTo - U32.v bitsFrom)})
+= get_bitfield8 value (8ul `U32.sub` bitsTo) (8ul `U32.sub` bitsFrom)
+
+let get_bitfield16_msb_first (value:U16.t)
+                   (bitsFrom:U32.t{U32.v bitsFrom < 16})
+                   (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 16})
+   : i:U16.t{FStar.UInt.size (U16.v i) (U32.v bitsTo - U32.v bitsFrom)}
+   = get_bitfield16 value (16ul `U32.sub` bitsTo) (16ul `U32.sub` bitsFrom)
+
+let get_bitfield32_msb_first (value:U32.t)
+                   (bitsFrom:U32.t{U32.v bitsFrom < 32})
+                   (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 32})
+   : i:U32.t{FStar.UInt.size (U32.v i) (U32.v bitsTo - U32.v bitsFrom)}
+   = get_bitfield32 value (32ul `U32.sub` bitsTo) (32ul `U32.sub` bitsFrom)
+
+let get_bitfield64_msb_first (value:U64.t)
+                   (bitsFrom:U32.t{U32.v bitsFrom < 64})
+                   (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 64})
+   : i:U64.t{FStar.UInt.size (U64.v i) (U32.v bitsTo - U32.v bitsFrom)}
+   = get_bitfield64 value (64ul `U32.sub` bitsTo) (64ul `U32.sub` bitsFrom)
