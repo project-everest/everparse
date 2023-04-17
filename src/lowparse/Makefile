@@ -47,6 +47,9 @@ spec: $(addsuffix .checked,$(wildcard LowParse.Spec*.fst) $(wildcard LowParse.Sp
 
 steel: steel_array steel_c_array $(addsuffix .checked,$(wildcard LowParse.Steel*.fst) $(wildcard LowParse.Steel*.fsti))
 
+.PHONY: no-fold
+no-fold: $(filter-out LowParse.SteelST.Fold.%,$(ALL_CHECKED_FILES)) steel_array steel_c_array
+
 steel_array: LowParse.SteelST.ArrayPtr.fsti.checked steel_array/LowParse.SteelST.ArrayPtr.fst
 	+$(MAKE) -C $@
 
