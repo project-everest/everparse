@@ -215,7 +215,7 @@ let int_sub_intro (a b c: nat) : Lemma
   ))
 = ()
 
-#push-options "--z3rlimit 256 --split_queries --z3cliopt smt.arith.nl=false"
+#push-options "--z3rlimit 256 --split_queries always --z3cliopt smt.arith.nl=false"
 #restart-solver
 
 inline_for_extraction
