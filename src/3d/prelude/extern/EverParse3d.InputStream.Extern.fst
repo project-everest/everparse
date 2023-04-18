@@ -219,7 +219,7 @@ let read
 
 #pop-options
 
-#push-options "--z3rlimit 128 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --split_queries"
+#push-options "--z3rlimit 128 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --split_queries always"
 inline_for_extraction
 noextract
 let peep
