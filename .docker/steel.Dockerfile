@@ -16,7 +16,7 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
 
 # Clone and build Steel
 ENV STEEL_HOME=$HOME/steel
-RUN git clone https://github.com/tahina-pro/steel-draft $STEEL_HOME && \
+RUN git clone https://github.com/FStarLang/steel $STEEL_HOME && \
     eval $(opam env) && env OTHERFLAGS='--admit_smt_queries true' make -k -j $CI_THREADS -C $STEEL_HOME
 
 # CI proper
