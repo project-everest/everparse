@@ -397,3 +397,264 @@ let validate_recursive
   let _ = gen_elim () in
   noop ();
   return res
+
+unfold
+let jump_recursive_prop_invariant0
+  (p: parse_recursive_param)
+  (n0: Ghost.erased nat)
+  (v0: AP.v byte)
+  (consumed: SZ.t) 
+  (n: SZ.t)
+  (vl: AP.v byte)
+  (vr: AP.v byte)
+  (cont: bool)
+: GTot prop
+= AP.merge_into (AP.array_of vl) (AP.array_of vr) (AP.array_of v0) /\
+  (AP.contents_of vl `Seq.append` AP.contents_of vr) `Seq.equal` AP.contents_of v0 /\
+  SZ.v consumed == AP.length (AP.array_of vl) /\
+  begin if cont
+  then
+    begin match parse (parse_nlist n0 (parse_recursive p)) (AP.contents_of v0), parse (parse_nlist (SZ.v n) (parse_recursive p)) (AP.contents_of vr) with
+    | Some (_, consumed1), Some (_, consumed2) -> SZ.v consumed + consumed2 == consumed1
+    | _ -> False
+    end
+  else
+    jumper_post (parse_nlist n0 (parse_recursive p)) v0 consumed
+  end
+
+let jump_recursive_prop_invariant
+  (p: parse_recursive_param)
+  (n0: Ghost.erased nat)
+  (v0: AP.v byte)
+  (consumed: SZ.t) 
+  (n: SZ.t)
+  (vl: AP.v byte)
+  (vr: AP.v byte)
+  (cont: bool)
+: GTot prop
+= jump_recursive_prop_invariant0 p n0 v0 consumed n vl vr cont
+
+[@@__reduce__]
+let jump_recursive_invariant0
+  (p: parse_recursive_param)
+  (n0: Ghost.erased nat)
+  (v0: AP.v byte)
+  (a0: byte_array)
+  (pconsumed: R.ref SZ.t)
+  (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
+  (cont: bool)
+: Tot vprop
+= exists_ (fun vl -> exists_ (fun a -> exists_ (fun vr -> exists_ (fun consumed -> exists_ (fun n ->
+    AP.arrayptr a0 vl `star`
+    AP.arrayptr a vr `star`
+    R.pts_to pconsumed full_perm consumed `star`
+    R.pts_to pn full_perm n `star`
+    R.pts_to pcont full_perm cont `star`
+    pure (jump_recursive_prop_invariant p n0 v0 consumed n vl vr cont)
+  )))))
+
+let jump_recursive_invariant
+  (p: parse_recursive_param)
+  (n0: Ghost.erased nat)
+  (v0: AP.v byte)
+  (a0: byte_array)
+  (pconsumed: R.ref SZ.t)
+  (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
+  (cont: bool)
+: Tot vprop
+= jump_recursive_invariant0 p n0 v0 a0 pconsumed pn pcont cont
+
+let intro_jump_recursive_invariant
+  (#opened: _)
+  (p: parse_recursive_param)
+  (n0: Ghost.erased nat)
+  (v0: AP.v byte)
+  (a0: byte_array)
+  (pconsumed: R.ref SZ.t)
+  (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
+  (cont: bool)
+  (#vl: AP.v byte)
+  (#a: byte_array)
+  (#vr: AP.v byte)
+  (#consumed: SZ.t)
+  (#n: SZ.t)
+  (_: squash (jump_recursive_prop_invariant0 p n0 v0 consumed n vl vr cont))
+: STGhostT unit opened
+    (AP.arrayptr a0 vl `star`
+    AP.arrayptr a vr `star`
+    R.pts_to pconsumed full_perm consumed `star`
+    R.pts_to pn full_perm n `star`
+    R.pts_to pcont full_perm cont)
+    (fun _ -> jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont cont)
+= noop ();
+  rewrite
+    (jump_recursive_invariant0 p n0 v0 a0 pconsumed pn pcont cont)
+    (jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont cont)
+
+inline_for_extraction
+let jump_recursive_step_count
+  (p: parse_recursive_param)
+: Tot Type
+=
+    (#va: v p.parse_header_kind p.header) ->
+    (a: byte_array) ->
+    (bound: Ghost.erased SZ.t) ->
+    ST SZ.t
+      (aparse p.parse_header a va)
+      (fun res -> aparse p.parse_header a va)
+      (p.count va.contents <= SZ.v bound)
+      (fun res ->
+        SZ.v res == p.count va.contents
+      )
+
+#push-options "--z3rlimit 64 --fuel 3 --ifuel 6 --query_stats"
+#restart-solver
+
+inline_for_extraction
+let jump_recursive_step
+  (p: parse_recursive_param)
+  (n0: Ghost.erased nat)
+  (w: jumper p.parse_header)
+  (count: jump_recursive_step_count p)
+  (v0: AP.v byte)
+  (a0: byte_array)
+  (pconsumed: R.ref SZ.t)
+  (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
+  ()
+: STT unit
+    (jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont true)
+    (fun _ -> exists_ (jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont))
+= let len0 = Ghost.hide (AP.len (AP.array_of v0)) in
+  rewrite
+    (jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont true)
+    (jump_recursive_invariant0 p n0 v0 a0 pconsumed pn pcont true);
+  let _ = gen_elim () in
+  let n = read_replace pn in
+  let vr = vpattern_replace (fun vr -> AP.arrayptr a0 _ `star` AP.arrayptr _ vr) in
+  parse_nlist_eq (SZ.v n) (parse_recursive p) (AP.contents_of vr);
+  if (n = 0sz)
+  then (
+      r_flip pcont;
+      rewrite
+        (jump_recursive_invariant0 p n0 v0 a0 pconsumed pn pcont false)
+        (jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont false);
+      noop ();
+      return ()
+    )
+  else (    
+      let consumed = read_replace pconsumed in
+      let len = Ghost.hide (len0 `SZ.sub` consumed) in
+      parser_kind_prop_equiv (parse_nlist_kind (SZ.v n) (parse_recursive_kind p.parse_header_kind)) (parse_nlist (SZ.v n) (parse_recursive p));
+      mul_pos_gt (SZ.v n) p.parse_header_kind.parser_kind_low;
+      let a = AP.split' a0 consumed _ in
+      parse_recursive_eq' p (AP.contents_of vr);
+      let consumed1 = w a in
+      let _ = gen_elim () in
+      let a' = ghost_peek_strong p.parse_header a in
+//            let _ = gen_elim () in // FIXME: WHY WHY WHY does this fail?
+      let _ = elim_exists () in
+      let _ = elim_exists () in
+      let _ = elim_pure _ in
+      let vl = vpattern_replace (aparse _ a) in
+      let vr' = vpattern_replace (AP.arrayptr a') in
+      parse_nlist_sum (parse_recursive p) (p.count vl.contents) (SZ.v n - 1) (AP.contents_of vr');
+      parser_kind_prop_equiv (parse_nlist_kind (p.count vl.contents + (SZ.v n - 1)) (parse_recursive_kind p.parse_header_kind)) (parse_nlist (p.count vl.contents + (SZ.v n - 1)) (parse_recursive p));
+      mul_pos_gt (p.count vl.contents + (SZ.v n - 1)) p.parse_header_kind.parser_kind_low;
+      Seq.lemma_split (AP.contents_of vr) (SZ.v consumed1);
+      let rem = Ghost.hide (len `SZ.sub` n) in  // no overflow in this subtraction by virtue of the test above
+      let n' = count a rem in
+      let vr2 = elim_aparse _ a in
+      parse_injective p.parse_header (Seq.slice (AP.contents_of vr) 0 (SZ.v consumed1)) (AP.contents_of vr2);
+      R.write pn (n' `SZ.add` (n `SZ.sub` 1sz));
+      R.write pconsumed (consumed `SZ.add` consumed1);
+      let _ = AP.join a0 a in
+      intro_jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont true #_ #a' ();
+      return ()
+    )
+
+#pop-options
+
+inline_for_extraction
+let jump_recursive_test
+  (p: parse_recursive_param)
+  (n0: Ghost.erased nat)
+  (v0: AP.v byte)
+  (a0: byte_array)
+  (pconsumed: R.ref SZ.t)
+  (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
+  ()
+: STT bool
+    (exists_ (jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont))
+    (fun cont -> jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont cont)
+= 
+  let gcont = elim_exists () in
+  rewrite
+    (jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont gcont)
+    (jump_recursive_invariant0 p n0 v0 a0 pconsumed pn pcont gcont);
+  let _ = gen_elim () in
+  let cont = R.read pcont in
+  rewrite
+    (jump_recursive_invariant0 p n0 v0 a0 pconsumed pn pcont gcont)
+    (jump_recursive_invariant p n0 v0 a0 pconsumed pn pcont cont);
+  return cont
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+inline_for_extraction
+let jump_nlist_recursive
+  (p: parse_recursive_param)
+  (n: SZ.t)
+  (w: jumper p.parse_header)
+  (count: jump_recursive_step_count p)
+: Tot (jumper (parse_nlist (SZ.v n) (parse_recursive p)))
+= fun #va0 a0 ->
+  let n0 = Ghost.hide (SZ.v n) in
+  let _ = AP.gsplit a0 0sz in
+  let _ = gen_elim () in
+  let res =
+    R.with_local 0sz (fun pconsumed ->
+    R.with_local n (fun pn ->
+    R.with_local true (fun pcont ->
+      noop ();
+      rewrite
+        (jump_recursive_invariant0 p n0 va0 a0 pconsumed pn pcont true)
+        (jump_recursive_invariant p n0 va0 a0 pconsumed pn pcont true);
+      Steel.ST.Loops.while_loop
+        (jump_recursive_invariant p n0 va0 a0 pconsumed pn pcont)
+        (jump_recursive_test p n0 va0 a0 pconsumed pn pcont)
+        (jump_recursive_step p n0 w count va0 a0 pconsumed pn pcont)
+        ;
+      rewrite
+        (jump_recursive_invariant p n0 va0 a0 pconsumed pn pcont false)
+        (jump_recursive_invariant0 p n0 va0 a0 pconsumed pn pcont false);
+      let _ = gen_elim () in
+      let _ = AP.join a0 _ in
+      vpattern_rewrite (AP.arrayptr a0) va0;
+      let res = R.read pconsumed in
+      noop ();
+      return res
+    )))
+  in
+  elim_pure (jumper_post (parse_nlist (SZ.v n) (parse_recursive p)) va0 res);
+  return res
+
+#pop-options
+
+inline_for_extraction
+let jump_recursive
+  (p: parse_recursive_param)
+  (w: jumper p.parse_header)
+  (count: jump_recursive_step_count p)
+: Tot (jumper (parse_recursive p))
+= fun #va0 a0 ->
+  parse_nlist_one (parse_recursive p) (AP.contents_of va0);
+  let res = jump_nlist_recursive p 1sz w count #va0 a0 in
+  let _ = gen_elim () in
+  noop ();
+  return res
