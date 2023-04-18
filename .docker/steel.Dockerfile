@@ -4,6 +4,8 @@ ARG ocaml_version=4.12
 FROM ocaml/opam:ubuntu-ocaml-$ocaml_version
 ARG CI_THREADS=24
 
+ADD --chown=opam:opam ./ $HOME/everparse/
+
 # Install F* and Karamel from the Karamel CI install script
 # FIXME: the `opam depext` command should be unnecessary with opam 2.1
 ENV FSTAR_HOME=$HOME/FStar
@@ -20,7 +22,6 @@ RUN git clone https://github.com/FStarLang/steel $STEEL_HOME && \
     eval $(opam env) && env OTHERFLAGS='--admit_smt_queries true' make -k -j $CI_THREADS -C $STEEL_HOME
 
 # CI proper
-ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 ENV STEEL_C=1
 RUN eval $(opam env) && make -j $CI_THREADS steel-unit-test
