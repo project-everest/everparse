@@ -164,9 +164,6 @@ let vpattern_rewrite_with_squash
     (fun _ -> p x2)
 = vpattern_rewrite p x2
 
-#push-options "--z3rlimit 64 --fuel 3 --ifuel 6 --query_stats"
-#restart-solver
-
 let validate_recursive_step_count_post
   (p: parse_recursive_param)
   (va: v p.parse_header_kind p.header)
@@ -194,6 +191,9 @@ let validate_recursive_step_count
           R.pts_to perr full_perm err `star`
           pure (validate_recursive_step_count_post p va bound res err)
       ))
+
+#push-options "--z3rlimit 128 --fuel 3 --ifuel 6 --query_stats"
+#restart-solver
 
 inline_for_extraction
 let validate_recursive_step
