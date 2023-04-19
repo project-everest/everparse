@@ -502,3 +502,72 @@ let validate_raw_data_item
 = fun a len err ->
     let sq = Steel.ST.HigherArray.intro_fits_u64 () in
     validate_raw_data_item' sq a len err
+
+inline_for_extraction
+noextract
+let jump_count_remaining_data_items
+  (sq: squash SZ.fits_u64)
+: Tot (jump_recursive_step_count parse_raw_data_item_param)
+= fun #va a bound ->
+    let _ = rewrite_aparse a (parse_dtuple2 parse_header parse_leaf_content) in
+    let ar = ghost_split_dtuple2 parse_header parse_leaf_content a in
+    let _ = gen_elim () in
+    let _ = ghost_dtuple2_tag parse_header parse_leaf_content a ar in
+    let _ = gen_elim () in
+    let res = jump_header
+      a
+      (aparse _ ar _)
+      SZ.t
+      (fun res ->
+        aparse parse_raw_data_item_param.parse_header a va `star`
+        pure (SZ.v res == parse_raw_data_item_param.count va.contents)
+      )
+      (fun _ l ->
+        let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
+        let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
+        match l with
+        | (| b, long_arg |) ->
+          match b with
+          | (major_type, _) ->
+            if major_type = 4uy
+            then begin
+              noop ();
+              return (SZ.uint64_to_sizet (argument_as_uint64 b long_arg))
+            end
+            else if major_type = 5uy
+            then begin
+              let count = SZ.uint64_to_sizet (argument_as_uint64 b long_arg) in
+              let count' = count `SZ.add` count in
+              noop ();
+              return count'
+            end
+            else if major_type = 6uy
+            then begin
+              noop ();
+              return 1sz
+            end
+            else begin
+              noop ();
+              return 0sz
+            end
+      )
+    in
+    elim_pure _;
+    return res
+
+inline_for_extraction
+noextract
+let jump_raw_data_item'
+  (sq: squash SZ.fits_u64)
+: Tot (jumper parse_raw_data_item)
+=
+    jump_recursive
+      parse_raw_data_item_param
+      (jump_leaf ())
+      (jump_count_remaining_data_items ())
+
+let jump_raw_data_item
+: jumper parse_raw_data_item
+= fun a ->
+    let sq = Steel.ST.HigherArray.intro_fits_u64 () in
+    jump_raw_data_item' sq a
