@@ -26,6 +26,38 @@ let validator_prop
   | _ -> False
   end
 
+[@@__reduce__]
+let validator_post
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: AP.v byte)
+  (a: byte_array)
+  (err: R.ref U32.t)
+  (res: SZ.t)
+: Tot vprop
+= AP.arrayptr a b `star` exists_ (fun v_err ->
+      R.pts_to err full_perm v_err `star`
+      pure (validator_prop p b v_err res)
+  )
+
+let intro_validator_post
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: AP.v byte)
+  (a: byte_array)
+  (err: R.ref U32.t)
+  (#v_err: _)
+  (res: SZ.t)
+  (_: squash (validator_prop p b v_err res))
+: STGhostT unit opened
+    (AP.arrayptr a b `star` R.pts_to err full_perm v_err)
+    (fun _ -> validator_post p b a err res)
+= noop ();
+  noop ()
+
 inline_for_extraction
 let validator
   (#k: parser_kind)
@@ -39,10 +71,7 @@ let validator
   (err: R.ref U32.t) ->
   ST SZ.t
     (AP.arrayptr a b `star` R.pts_to err full_perm 0ul)
-    (fun res -> AP.arrayptr a b `star` exists_ (fun v_err ->
-      R.pts_to err full_perm v_err `star`
-      pure (validator_prop p b v_err res)
-    ))
+    (validator_post p b a err)
     (SZ.v len == AP.length (AP.array_of b))
     (fun _ -> True)
 
@@ -108,3 +137,22 @@ let ifthenelse_validate
   if cond
   then vtrue () a len err
   else vfalse () a len err
+
+inline_for_extraction
+let r_write_if
+  (#t: Type)
+  (cond: bool)
+  (r: R.ref t)
+  (#v: Ghost.erased t)
+  (v' : t)
+: STT unit
+    (R.pts_to r full_perm v)
+    (fun _ -> R.pts_to r full_perm (if cond then v' else v))
+= if cond
+  then begin
+    R.write r v';
+    noop ()
+  end else begin
+    noop ();
+    noop ()
+  end

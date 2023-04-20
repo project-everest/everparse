@@ -820,6 +820,47 @@ let elim_filter
   intro_aparse p1 a
 
 inline_for_extraction
+let validate_filter_gen
+  (#k: Ghost.erased parser_kind) (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#p: parser k t) (w: validator p)
+  (f: t -> GTot bool)
+  (f' : (
+    (#va: v k t) ->
+    (a: byte_array) ->
+    ST bool
+      (aparse p a va)
+      (fun _ -> aparse p a va)
+      True
+      (fun res -> res == f va.contents)
+  ))
+: Pure (validator (p  `parse_filter` f))
+    (requires (k.parser_kind_subkind == Some ParserStrong))
+    (ensures (fun _ -> True))
+= fun #va a len perr ->
+    parse_filter_eq p f (AP.contents_of va);
+    let consumed = w a len perr in
+    let _ = gen_elim () in
+    let err = R.read perr in
+    if err <> 0ul
+    then begin
+      noop ();
+      noop ();
+      return consumed
+    end else begin
+      noop ();
+      let ar = ghost_peek_strong p a in
+      let _ = gen_elim () in
+      let vl = elim_aparse p a in
+      parse_injective p (AP.contents_of va) (AP.contents_of vl);
+      parse_filter_eq p f (AP.contents_of vl);
+      let _ = intro_aparse p a in
+      let cond = f' a in
+      unpeek_strong a va _;
+      r_write_if (not cond) perr validator_error_constraint_failed;
+      return consumed
+    end
+
+inline_for_extraction
 let read_and_jump_filter
   (#k1: Ghost.erased parser_kind) #t1 (#p1: parser k1 t1) (v1: read_and_jump p1)
   (f2: t1 -> GTot bool)

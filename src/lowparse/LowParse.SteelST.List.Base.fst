@@ -230,14 +230,8 @@ let validate_list_total_constant_size
 = fun #b a len err ->
   valid_list_total_constant_size p (AP.contents_of b);
   parser_kind_prop_equiv parse_list_kind (parse_list p);
-  if len `SZ.rem` sz = 0sz
-  then begin
-    noop ();
-    return len
-  end else begin
-    R.write err validator_error_not_enough_data;
-    return 0sz
-  end
+  r_write_if (len `SZ.rem` sz <> 0sz) err validator_error_not_enough_data;
+  return len
 
 let validate_list_pred
   (#k: parser_kind)
