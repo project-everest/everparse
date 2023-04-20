@@ -147,6 +147,28 @@ let elim_aparse
   noop (); // FIXME: WHY WHY WHY?
   va
 
+let elim_aparse_with_serializer
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (#vp: v k t)
+  (#p: parser k t)
+  (s: serializer p)
+  (a: byte_array)
+: STGhost (AP.v byte) opened
+    (aparse p a vp)
+    (fun va -> AP.arrayptr a va)
+    True
+    (fun va ->
+      AP.array_of va == array_of vp /\
+      arrayptr_parse p va == Some vp /\
+      serialize s vp.contents == AP.contents_of va
+    )
+= let res = elim_aparse p a in
+  parse_injective p (AP.contents_of res) (serialize s vp.contents);
+  noop ();
+  res
+
 let rewrite_aparse
   (#opened: _)
   (#k1: parser_kind)
