@@ -53,6 +53,100 @@ let rec parse_nlist_sum
 
 #pop-options
 
+let rec parse_nlist_parse_list
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: nat)
+  (b: bytes)
+: Lemma
+  (requires (
+    Some? (parse (parse_nlist n p) b) /\
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_low > 0
+  ))
+  (ensures (
+    match parse (parse_nlist n p) b with
+    | Some (l, consumed) ->
+      let b' = Seq.slice b 0 consumed in
+      parse (parse_list p) b' == Some (l, consumed)
+    | _ -> False
+  ))
+  (decreases n)
+= let Some (_, consumed) = parse (parse_nlist n p) b in
+  let bl = Seq.slice b 0 consumed in
+  parse_nlist_eq n p b;
+  parse_list_eq p bl;
+  if n = 0
+  then ()
+  else begin
+    parser_kind_prop_equiv k p;
+    let Some (_, consumed) = parse p b in
+    parse_strong_prefix p b bl;
+    let b' = Seq.slice b consumed (Seq.length b) in
+    let Some (_, consumed') = parse (parse_nlist (n - 1) p) b' in
+    let bl' = Seq.slice b' 0 consumed' in
+    assert (bl' `Seq.equal` Seq.slice bl consumed (Seq.length bl));
+    parse_nlist_parse_list p (n - 1) b'
+  end
+
+let rec parse_nlist_parse_list_full
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: nat)
+  (b: bytes)
+: Lemma
+  (requires (
+    Some? (parse (parse_nlist n p) b) /\
+    (let Some (_, consumed) = parse (parse_nlist n p) b in consumed == Seq.length b) /\
+    k.parser_kind_low > 0
+  ))
+  (ensures (
+    match parse (parse_nlist n p) b with
+    | Some (l, consumed) ->
+      parse (parse_list p) b == Some (l, consumed)
+    | _ -> False
+  ))
+  (decreases n)
+= let Some (_, consumed) = parse (parse_nlist n p) b in
+  parse_nlist_eq n p b;
+  parse_list_eq p b;
+  if n = 0
+  then ()
+  else begin
+    parser_kind_prop_equiv k p;
+    let Some (_, consumed) = parse p b in
+    let b' = Seq.slice b consumed (Seq.length b) in
+    let Some (_, consumed') = parse (parse_nlist (n - 1) p) b' in
+    parse_nlist_parse_list_full p (n - 1) b'
+  end
+
+let rec parse_list_parse_nlist
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: bytes)
+: Lemma
+  (requires (Some? (parse (parse_list p) b)))
+  (ensures (
+    match parse (parse_list p) b with
+    | Some (l, consumed) ->
+      parse (parse_nlist (List.Tot.length l) p) b == Some (l, consumed)
+    | _ -> False
+  ))
+  (decreases (Seq.length b))
+= parse_list_eq p b;
+  let Some (l, _) = parse (parse_list p) b in
+  parse_nlist_eq (List.Tot.length l) p b;
+  if Seq.length b = 0
+  then ()
+  else begin
+    let Some (_, consumed) = parse p b in
+    let b' = Seq.slice b consumed (Seq.length b) in
+    parse_list_parse_nlist p b'
+  end    
+
 let serialize_nlist
   (n: nat)
   (#k: parser_kind)

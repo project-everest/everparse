@@ -118,7 +118,9 @@ inline_for_extraction
 let parse_nlist_kind
   (n: nat)
   (k: parser_kind)
-: Tot (k' : parser_kind { k' == parse_nlist_kind' n k })
+: Pure parser_kind
+    (requires True)
+    (ensures (fun k' -> k' == parse_nlist_kind' n k))
 = [@inline_let] let _ =
     parse_nlist_kind_low n k;
     parse_nlist_kind_high n k;
@@ -155,7 +157,9 @@ val parse_nlist
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-: Tot (y: parser (parse_nlist_kind n k) (nlist n t) { y == parse_nlist' n p } )
+: Pure (parser (parse_nlist_kind n k) (nlist n t))
+    (requires True)
+    (ensures (fun y -> y == parse_nlist' n p))
 
 let parse_nlist_eq
   (n: nat)
@@ -273,6 +277,59 @@ val parse_nlist_sum
         List.Tot.append_length l1 l2;
         Some (l1 `List.Tot.append` l2, consumed1 + consumed2)
     end
+  ))
+
+val parse_nlist_parse_list
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: nat)
+  (b: bytes)
+: Lemma
+  (requires (
+    Some? (parse (parse_nlist n p) b) /\
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_low > 0
+  ))
+  (ensures (
+    match parse (parse_nlist n p) b with
+    | Some (l, consumed) ->
+      let b' = Seq.slice b 0 consumed in
+      parse (parse_list p) b' == Some (l, consumed)
+    | _ -> False
+  ))
+
+val parse_nlist_parse_list_full
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: nat)
+  (b: bytes)
+: Lemma
+  (requires (
+    Some? (parse (parse_nlist n p) b) /\
+    (let Some (_, consumed) = parse (parse_nlist n p) b in consumed == Seq.length b) /\
+    k.parser_kind_low > 0
+  ))
+  (ensures (
+    match parse (parse_nlist n p) b with
+    | Some (l, consumed) ->
+      parse (parse_list p) b == Some (l, consumed)
+    | _ -> False
+  ))
+
+val parse_list_parse_nlist
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (b: bytes)
+: Lemma
+  (requires (Some? (parse (parse_list p) b)))
+  (ensures (
+    match parse (parse_list p) b with
+    | Some (l, consumed) ->
+      parse (parse_nlist (List.Tot.length l) p) b == Some (l, consumed)
+    | _ -> False
   ))
 
 let rec serialize_nlist'
