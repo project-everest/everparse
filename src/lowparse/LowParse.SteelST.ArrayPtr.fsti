@@ -69,6 +69,16 @@ val merge
   (requires (adjacent x1 x2))
   (ensures (fun y -> length y == length x1 + length x2 /\ array_perm y == array_perm x1 /\ array_perm y == array_perm x2))
 
+let adjacent_sizes_fit
+  (#t: Type0)
+  (x1 x2: array t)
+: Lemma
+  (requires (adjacent x1 x2))
+  (ensures (SZ.fits (length x1 + length x2)))
+  [SMTPat (adjacent x1 x2)]
+= let _ = merge x1 x2 in
+  ()
+
 let merge_into
   (#t: Type0)
   (x1 x2 y: array t)
