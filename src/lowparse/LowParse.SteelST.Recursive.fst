@@ -1072,6 +1072,22 @@ let get_children_synth
 = let y = s.synth_recip (p.synth_ x) in
   assert (p.synth_ x == p.synth_ y)
 
+inline_for_extraction
+let fold_recursive_step_t
+  (#p: parse_recursive_param u#0 u#0) // gen_elim universe issue
+  (s: serialize_recursive_param p)
+  (#t: Type0) // gen_elim universe issue
+  (fold: fold_recursive_t s t)
+  (state: t -> vprop)
+: Tot Type
+=
+  (x: Ghost.erased t) ->
+  (a: byte_array) ->
+  (va: v (parse_recursive_kind p.parse_header_kind) p.t) ->
+  STT unit
+    (aparse (parse_recursive p) a va `star` state x)
+    (fun _ -> aparse (parse_recursive p) a va `star` state (fold.step x va.contents))
+
 #push-options "--z3rlimit 128 --fuel 3 --ifuel 6 --query_stats --split_queries always --z3cliopt smt.arith.nl=false"
 
 #restart-solver
@@ -1091,14 +1107,7 @@ let fold_recursive_step
   (fold: fold_recursive_t s t)
   (init: Ghost.erased t)
   (state: t -> vprop)
-  (step: (
-    (x: Ghost.erased t) ->
-    (a: byte_array) ->
-    (va: v (parse_recursive_kind p.parse_header_kind) p.t) ->
-    STT unit
-      (aparse (parse_recursive p) a va `star` state x)
-      (fun _ -> aparse (parse_recursive p) a va `star` state (fold.step x va.contents))
-  ))
+  (step: fold_recursive_step_t s fold state)
   (_: unit)
 : STT unit
     (fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state true)
@@ -1269,14 +1278,7 @@ let fold_recursive_nlist
   (fold: fold_recursive_t s t)
   (init: Ghost.erased t)
   (state: t -> vprop)
-  (step: (
-    (x: Ghost.erased t) ->
-    (a: byte_array) ->
-    (va: v (parse_recursive_kind p.parse_header_kind) p.t) ->
-    STT unit
-      (aparse (parse_recursive p) a va `star` state x)
-      (fun _ -> aparse (parse_recursive p) a va `star` state (fold.step x va.contents))
-  ))
+  (step: fold_recursive_step_t s fold state)
   (f_continue: fold_recursive_continue_t s fold state)
 : STT unit
     (aparse (parse_nlist (SZ.v n0) (parse_recursive p)) a0 va0 `star` state init)
@@ -1336,14 +1338,7 @@ let fold_recursive
   (fold: fold_recursive_t s t)
   (init: Ghost.erased t)
   (state: t -> vprop)
-  (step: (
-    (x: Ghost.erased t) ->
-    (a: byte_array) ->
-    (va: v (parse_recursive_kind p.parse_header_kind) p.t) ->
-    STT unit
-      (aparse (parse_recursive p) a va `star` state x)
-      (fun _ -> aparse (parse_recursive p) a va `star` state (fold.step x va.contents))
-  ))
+  (step: fold_recursive_step_t s fold state)
   (f_continue: fold_recursive_continue_t s fold state)
 : STT unit
     (aparse (parse_recursive p) a0 va0 `star` state init)
@@ -1358,3 +1353,150 @@ let fold_recursive
   let _ = NL.elim_nlist_one (parse_recursive p) (SZ.v n0) a0 in
   vpattern_rewrite (aparse _ a0) _;
   vpattern_rewrite state _
+
+[@@erasable]
+noeq
+type pred_recursive_t
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+: Type
+= {
+    base: (p.t -> bool);
+    pred: (p.t -> bool);
+    prf: (
+      (x: p.t) ->
+      Lemma
+      (pred x == (base x && List.Tot.for_all pred (get_children s x)))
+    );
+  }
+
+let fold_of_pred_recursive
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (pred: pred_recursive_t s)
+: Tot (fold_recursive_t s bool)
+= let base = pred.base in
+  let pr = pred.pred in
+  {
+    step = LowParse.WellFounded.forall_list_f_weak base;
+    fold = LowParse.WellFounded.forall_list_f_weak pr;
+    prf = (fun aux x ->
+      pred.prf x;
+      LowParse.WellFounded.for_all_fold_left_aux pr (aux && base x) (get_children s x)
+    );
+  }
+
+inline_for_extraction
+let pred_recursive_base_t
+  (#p: parse_recursive_param u#0 u#0) // gen_elim universe issue
+  (s: serialize_recursive_param p)
+  (base: Ghost.erased (p.t -> bool))
+: Tot Type
+=
+  (a: byte_array) ->
+  (va: v (parse_recursive_kind p.parse_header_kind) p.t) ->
+  ST bool
+    (aparse (parse_recursive p) a va)
+    (fun _ -> aparse (parse_recursive p) a va)
+    True
+    (fun res -> res == Ghost.reveal base va.contents)
+
+inline_for_extraction
+let pred_recursive_step
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (pred: pred_recursive_t s)
+  (base: pred_recursive_base_t s pred.base)
+  (pv: R.ref bool)
+: Tot (fold_recursive_step_t s (fold_of_pred_recursive s pred) (R.pts_to pv full_perm))
+= fun x a va ->
+    let res = R.read pv in
+    if res
+    then begin
+      let res = base a va in
+      R.write pv res;
+      vpattern_rewrite (R.pts_to pv full_perm) _
+    end else begin
+      noop ();
+      vpattern_rewrite (R.pts_to pv full_perm) _
+    end
+
+inline_for_extraction
+let pred_recursive_continue
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (pred: pred_recursive_t s)
+  (pv: R.ref bool)
+: Tot (fold_recursive_continue_t s (fold_of_pred_recursive s pred) (R.pts_to pv full_perm))
+= fun x n va a ->
+    let cont = read_replace pv in
+    LowParse.WellFounded.for_all_fold_left_aux pred.pred cont va.contents;
+    noop ();
+    return cont
+
+inline_for_extraction
+let intro_refinement
+  (#t: Type)
+  (p: (t ->  prop))
+  (x: t)
+: Pure (x: t { p x })
+    (requires (p x))
+    (ensures (fun _ -> True))
+= x
+
+inline_for_extraction
+let pred_recursive_nlist
+  (#p: parse_recursive_param u#0 u#0) // gen_elim universe issue
+  (s: serialize_recursive_param p)
+  (w: jumper p.parse_header)
+  (count: jump_recursive_step_count p)
+  (a0: byte_array)
+  (n0: SZ.t)
+  (#va0: v (parse_nlist_kind (SZ.v n0) (parse_recursive_kind p.parse_header_kind)) (nlist (SZ.v n0) p.t))
+  (pred: pred_recursive_t s)
+  (base: pred_recursive_base_t s pred.base)
+: ST bool
+    (aparse (parse_nlist (SZ.v n0) (parse_recursive p)) a0 va0)
+    (fun _ -> aparse (parse_nlist (SZ.v n0) (parse_recursive p)) a0 va0)
+    True
+    (fun res -> res == List.Tot.for_all pred.pred va0.contents)
+= LowParse.WellFounded.for_all_fold_left pred.pred va0.contents;
+  let res : (res: bool { res == List.Tot.for_all pred.pred va0.contents }) = R.with_local true (fun pres ->
+    fold_recursive_nlist
+      s w count
+      a0 n0
+      (fold_of_pred_recursive s pred)
+      true
+      (R.pts_to pres full_perm)
+      (pred_recursive_step s pred base pres)
+      (pred_recursive_continue s pred pres)
+      ;
+    let res = read_replace pres in
+    noop ();
+    return (intro_refinement (fun res -> res == List.Tot.for_all pred.pred va0.contents) res)
+  )
+  in
+  return res
+
+inline_for_extraction
+let pred_recursive
+  (#p: parse_recursive_param u#0 u#0) // gen_elim universe issue
+  (s: serialize_recursive_param p)
+  (w: jumper p.parse_header)
+  (count: jump_recursive_step_count p)
+  (a0: byte_array)
+  (#va0: v (parse_recursive_kind p.parse_header_kind) p.t)
+  (pred: pred_recursive_t s)
+  (base: pred_recursive_base_t s pred.base)
+: ST bool
+    (aparse (parse_recursive p) a0 va0)
+    (fun _ -> aparse (parse_recursive p) a0 va0)
+    True
+    (fun res -> res == pred.pred va0.contents)
+= [@@inline_let]
+  let n0 = 1sz in
+  let _ = NL.intro_nlist_one (parse_recursive p) a0 (SZ.v n0) in
+  let res = pred_recursive_nlist s w count a0 n0 pred base in
+  let _ = NL.elim_nlist_one (parse_recursive p) (SZ.v n0) a0 in
+  vpattern_rewrite (aparse _ a0) _;
+  return res
