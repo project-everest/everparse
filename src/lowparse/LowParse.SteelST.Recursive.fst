@@ -894,9 +894,14 @@ let fold_recursive_invariant_prop0
 : GTot prop
 =
       (exists (x: fold_recursive_restore_t p a0 n0 va0 (AP.contents_of vl) (SZ.v n) va.contents) . True) /\
-      List.Tot.fold_left fold.fold init va0.contents == List.Tot.fold_left fold.fold x va.contents /\
       AP.merge_into (AP.array_of vl) (array_of' va) (array_of' va0) /\
-      cont == (n <> 0sz)
+      begin if cont
+      then
+        List.Tot.fold_left fold.fold init va0.contents == List.Tot.fold_left fold.fold x va.contents /\
+        n <> 0sz
+      else
+        List.Tot.fold_left fold.fold init va0.contents == x
+      end
 
 let fold_recursive_invariant_prop
   (#p: parse_recursive_param)
@@ -924,6 +929,7 @@ let fold_recursive_invariant0
   (va0: v (parse_nlist_kind n0 (parse_recursive_kind p.parse_header_kind)) (nlist n0 p.t))
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
   (#t: Type)
   (fold: fold_recursive_t s t)
   (init: t)
@@ -936,6 +942,7 @@ let fold_recursive_invariant0
     R.pts_to pn full_perm n `star`
     q x `star`
     aparse (parse_nlist (SZ.v n) (parse_recursive p)) a va `star`
+    R.pts_to pcont full_perm cont `star`
     pure (fold_recursive_invariant_prop s a0 n0 va0 fold init cont vl n va x)
   )))))
 
@@ -947,13 +954,14 @@ let fold_recursive_invariant
   (va0: v (parse_nlist_kind n0 (parse_recursive_kind p.parse_header_kind)) (nlist n0 p.t))
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
   (#t: Type)
   (fold: fold_recursive_t s t)
   (init: t)
   (q: t -> vprop)
   (cont: bool)
 : Tot vprop
-= fold_recursive_invariant0 s a0 n0 va0 pa pn fold init q cont
+= fold_recursive_invariant0 s a0 n0 va0 pa pn pcont fold init q cont
 
 let intro_fold_recursive_invariant
   (#opened: _)
@@ -964,6 +972,7 @@ let intro_fold_recursive_invariant
   (va0: v (parse_nlist_kind n0 (parse_recursive_kind p.parse_header_kind)) (nlist n0 p.t))
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
   (#t: Type)
   (fold: fold_recursive_t s t)
   (init: t)
@@ -979,15 +988,16 @@ let intro_fold_recursive_invariant
       AP.arrayptr a0 vl `star`
       R.pts_to pn full_perm n `star`
       q x `star`
-      aparse (parse_nlist (SZ.v n) (parse_recursive p)) a va
+      aparse (parse_nlist (SZ.v n) (parse_recursive p)) a va `star`
+      R.pts_to pcont full_perm cont
     )
-    (fun _ -> fold_recursive_invariant s a0 n0 va0 pa pn fold init q cont)
+    (fun _ -> fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init q cont)
     (fold_recursive_invariant_prop0 s a0 n0 va0 fold init cont vl n va x)
     (fun _ -> True)
 = noop ();
   rewrite
-    (fold_recursive_invariant0 s a0 n0 va0 pa pn fold init q cont)
-    (fold_recursive_invariant s a0 n0 va0 pa pn fold init q cont)
+    (fold_recursive_invariant0 s a0 n0 va0 pa pn pcont fold init q cont)
+    (fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init q cont)
 
 inline_for_extraction
 let size_add_fits
@@ -1076,6 +1086,7 @@ let fold_recursive_step
   (va0: v (parse_nlist_kind n0 (parse_recursive_kind p.parse_header_kind)) (nlist n0 p.t))
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
   (#t: Type0) // gen_elim universe issue
   (fold: fold_recursive_t s t)
   (init: Ghost.erased t)
@@ -1090,11 +1101,11 @@ let fold_recursive_step
   ))
   (_: unit)
 : STT unit
-    (fold_recursive_invariant s a0 n0 va0 pa pn fold init state true)
-    (fun _ -> exists_ (fold_recursive_invariant s a0 n0 va0 pa pn fold init state))
+    (fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state true)
+    (fun _ -> exists_ (fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state))
 = rewrite_with_tactic
-    (fold_recursive_invariant s a0 n0 va0 pa pn fold init state true)
-    (fold_recursive_invariant0 s a0 n0 va0 pa pn fold init state true);
+    (fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state true)
+    (fold_recursive_invariant0 s a0 n0 va0 pa pn pcont fold init state true);
   let _ = gen_elim () in
   let n = read_replace pn in
   let n_pred = n `SZ.sub` 1sz in
@@ -1149,11 +1160,47 @@ let fold_recursive_step
     elim_exists_fold_recursive_restore p a0 n0 va0 _ (SZ.v n) _ a
   );
   noop ();
-  intro_fold_recursive_invariant s a0 n0 va0 pa pn fold init state (n' <> 0sz) a2 vl' n' vr _;
+  R.write pcont (n' <> 0sz);
+  intro_fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state _ a2 vl' n' vr _;
   noop ()
 
 #pop-options
 
+let fold_recursive_continue_post
+  (#p: parse_recursive_param u#0 u#0) // gen_elim universe issue
+  (s: serialize_recursive_param p)
+  (#t: Type0) // gen_elim universe issue
+  (fold: fold_recursive_t s t)
+  (x: t)
+  (n: SZ.t)
+  (va: v (parse_nlist_kind (SZ.v n) (parse_recursive_kind p.parse_header_kind)) (nlist (SZ.v n) p.t))
+  (x' : t)
+  (res: bool)
+: GTot prop
+= x' == (if res then x else List.Tot.fold_left fold.fold (Ghost.reveal x) va.contents)
+
+inline_for_extraction
+let fold_recursive_continue_t
+  (#p: parse_recursive_param u#0 u#0) // gen_elim universe issue
+  (s: serialize_recursive_param p)
+  (#t: Type0) // gen_elim universe issue
+  (fold: fold_recursive_t s t)
+  (state: t -> vprop)
+: Tot Type
+= (x: Ghost.erased t) ->
+  (n: SZ.t) ->
+  (va: v (parse_nlist_kind (SZ.v n) (parse_recursive_kind p.parse_header_kind)) (nlist (SZ.v n) p.t)) ->
+  (a: byte_array) ->
+  STT bool
+    (aparse (parse_nlist (SZ.v n) (parse_recursive p)) a va `star` state x)
+    (fun res ->
+       aparse (parse_nlist (SZ.v n) (parse_recursive p)) a va `star`
+       exists_ (fun x' -> state x' `star` pure (fold_recursive_continue_post s fold x n va x' res))
+    )
+
+#push-options "--z3rlimit 16"
+
+#restart-solver
 inline_for_extraction
 let fold_recursive_test
   (#p: parse_recursive_param u#0 u#0) // gen_elim universe issue
@@ -1163,25 +1210,48 @@ let fold_recursive_test
   (va0: v (parse_nlist_kind n0 (parse_recursive_kind p.parse_header_kind)) (nlist n0 p.t))
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
+  (pcont: R.ref bool)
   (#t: Type0) // gen_elim universe issue
   (fold: fold_recursive_t s t)
   (init: Ghost.erased t)
   (state: t -> vprop)
+  (f_continue: fold_recursive_continue_t s fold state)
   (_: unit)
 : STT bool
-    (exists_ (fold_recursive_invariant s a0 n0 va0 pa pn fold init state))
-    (fun res -> fold_recursive_invariant s a0 n0 va0 pa pn fold init state res)
+    (exists_ (fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state))
+    (fun res -> fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state res)
 = let gres = elim_exists () in
   rewrite
-    (fold_recursive_invariant s a0 n0 va0 pa pn fold init state _)
-    (fold_recursive_invariant0 s a0 n0 va0 pa pn fold init state gres);
+    (fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state _)
+    (fold_recursive_invariant0 s a0 n0 va0 pa pn pcont fold init state gres);
   let _ = gen_elim () in
-  let n = R.read pn in
-  [@@inline_let]
-  let res = n <> 0sz in
-  noop ();
-  intro_fold_recursive_invariant s a0 n0 va0 pa pn fold init state res _ _ _ _ _;
-  return res
+  let cont = read_replace pcont in
+  if cont
+  then begin
+    let n = read_replace pn in
+    let a = read_replace pa in
+    vpattern_rewrite (fun a -> aparse _ a _) a;
+    let _ = rewrite_aparse a (parse_nlist (SZ.v n) (parse_recursive p)) in
+    let cont' = f_continue _ n _ a in
+    let _ = gen_elim () in
+    if cont'
+    then begin
+      noop ();
+      intro_fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state cont _ _ _ _ _;
+      return cont
+    end else begin
+      R.write pcont false;
+      noop ();
+      intro_fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state false _ _ _ _ _;
+      return false
+    end
+  end else begin
+    noop ();
+    intro_fold_recursive_invariant s a0 n0 va0 pa pn pcont fold init state cont _ _ _ _ _;
+    return cont
+  end
+
+#pop-options
 
 #push-options "--z3rlimit 16  --fuel 3 --ifuel 6 --query_stats --split_queries always --z3cliopt smt.arith.nl=false"
 
@@ -1207,6 +1277,7 @@ let fold_recursive_nlist
       (aparse (parse_recursive p) a va `star` state x)
       (fun _ -> aparse (parse_recursive p) a va `star` state (fold.step x va.contents))
   ))
+  (f_continue: fold_recursive_continue_t s fold state)
 : STT unit
     (aparse (parse_nlist (SZ.v n0) (parse_recursive p)) a0 va0 `star` state init)
     (fun res ->
@@ -1235,20 +1306,21 @@ let fold_recursive_nlist
   noop ();
   R.with_local a (fun pa ->
   R.with_local n0 (fun pn ->
-    intro_fold_recursive_invariant s a0 (SZ.v n0) va0 pa pn fold init state (n0 <> 0sz) _ _ _ _ _;
+  R.with_local (n0 <> 0sz) (fun pcont ->
+    intro_fold_recursive_invariant s a0 (SZ.v n0) va0 pa pn pcont fold init state (n0 <> 0sz) _ _ _ _ _;
     Steel.ST.Loops.while_loop
-      (fold_recursive_invariant s a0 (SZ.v n0) va0 pa pn fold init state)
-      (fold_recursive_test s a0 (SZ.v n0) va0 pa pn fold init state)
-      (fold_recursive_step s w count a0 (SZ.v n0) va0 pa pn fold init state step)
+      (fold_recursive_invariant s a0 (SZ.v n0) va0 pa pn pcont fold init state)
+      (fold_recursive_test s a0 (SZ.v n0) va0 pa pn pcont fold init state f_continue)
+      (fold_recursive_step s w count a0 (SZ.v n0) va0 pa pn pcont fold init state step)
       ;
     rewrite
-      (fold_recursive_invariant s a0 (SZ.v n0) va0 pa pn fold init state false)
-      (fold_recursive_invariant0 s a0 (SZ.v n0) va0 pa pn fold init state false);
+      (fold_recursive_invariant s a0 (SZ.v n0) va0 pa pn pcont fold init state false)
+      (fold_recursive_invariant0 s a0 (SZ.v n0) va0 pa pn pcont fold init state false);
     let _ = gen_elim () in
     elim_exists_fold_recursive_restore p a0 (SZ.v n0) va0 _ _ _ _;
     vpattern_rewrite state _;
     noop ()
-  ))
+  )))
 
 #pop-options
 
@@ -1272,6 +1344,7 @@ let fold_recursive
       (aparse (parse_recursive p) a va `star` state x)
       (fun _ -> aparse (parse_recursive p) a va `star` state (fold.step x va.contents))
   ))
+  (f_continue: fold_recursive_continue_t s fold state)
 : STT unit
     (aparse (parse_recursive p) a0 va0 `star` state init)
     (fun res ->
@@ -1281,7 +1354,7 @@ let fold_recursive
 = [@@inline_let]
   let n0 = 1sz in
   let _ = NL.intro_nlist_one (parse_recursive p) a0 (SZ.v n0) in
-  fold_recursive_nlist s w count a0 n0 fold init state step;
+  fold_recursive_nlist s w count a0 n0 fold init state step f_continue;
   let _ = NL.elim_nlist_one (parse_recursive p) (SZ.v n0) a0 in
   vpattern_rewrite (aparse _ a0) _;
   vpattern_rewrite state _
