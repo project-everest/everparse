@@ -187,6 +187,48 @@ let elim_nlist_cons
 
 #pop-options
 
+let intro_nlist_one
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (#va: v k t)
+  (a: byte_array)
+  (n: nat)
+: STGhost (v (parse_nlist_kind n k) (nlist n t)) opened
+    (aparse p a va)
+    (fun va' -> aparse (parse_nlist n p) a va')
+    (n == 1)
+    (fun va' ->
+      array_of' va' == array_of' va /\
+      va'.contents == [va.contents]
+    )
+= let vb = elim_aparse p a in
+  parse_nlist_one p (AP.contents_of vb);
+  noop ();
+  intro_aparse (parse_nlist n p) a
+
+let elim_nlist_one
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (n: nat)
+  (#va: v (parse_nlist_kind n k) (nlist n t))
+  (a: byte_array)
+: STGhost (v k t) opened
+    (aparse (parse_nlist n p) a va)
+    (fun va' -> aparse p a va')
+    (n == 1)
+    (fun va' ->
+      array_of' va' == array_of' va /\
+      va.contents == [va'.contents]
+    )
+= let vb = elim_aparse (parse_nlist n p) a in
+  parse_nlist_one p (AP.contents_of vb);
+  noop ();
+  intro_aparse p a
+
 let rec intro_nlist_sum
   (#opened: _)
   (#k: parser_kind)
