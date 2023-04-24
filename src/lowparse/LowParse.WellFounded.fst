@@ -34,6 +34,19 @@ let rec fold_left_list_ext
     let accu' = p1 init a in
     fold_left_list_ext q p1 p2 prf accu'
 
+let rec fold_left_list_correct
+  (#t: Type)
+  (#t': Type)
+  (p: t' -> t -> t')
+  (l: list t)
+  (init: t')
+: Lemma
+  (ensures (fold_left_list l p init == List.Tot.fold_left p init l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> fold_left_list_correct p q (p init a)
+
 let forall_list_f
   (#t: Type)
   (l: list t)
@@ -116,6 +129,48 @@ let forall_list_cons
     forall_list (a :: q) p == (p a && forall_list q p)
   ))
 = forall_list_cons' (a :: q) a q p
+
+let rec forall_list_correct
+  (#t: Type)
+  (p: t -> bool)
+  (l: list t)
+: Lemma
+  (ensures (forall_list l p == List.Tot.for_all p l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    forall_list_cons a q p;
+    forall_list_correct p q
+
+let forall_list_f_weak
+  (#t: Type)
+  (p: t -> bool)
+  (init: bool)
+  (a: t)
+: Tot bool
+= init && p a
+
+let rec for_all_fold_left_aux
+  (#t: Type)
+  (p: t -> bool)
+  (init: bool)
+  (l: list t)
+: Lemma
+  (ensures ((init && List.Tot.for_all p l) == List.Tot.fold_left (forall_list_f_weak p) init l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    for_all_fold_left_aux p (init && p a) q
+
+let for_all_fold_left
+  (#t: Type)
+  (p: t -> bool)
+  (l: list t)
+: Lemma
+  (ensures (List.Tot.for_all p l == List.Tot.fold_left (forall_list_f_weak p) true l))
+= for_all_fold_left_aux p true l
 
 #restart-solver
 
