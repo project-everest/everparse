@@ -104,7 +104,6 @@ let intro_nlist_cons
     (aparse p a1 va1 `star` aparse (parse_nlist n p) a2 va2)
     (fun va -> aparse (parse_nlist n' p) a1 va)
     (k.parser_kind_subkind == Some ParserStrong /\
-      k.parser_kind_low > 0 /\
       AP.adjacent (array_of va1) (array_of va2) /\
       n' == n + 1
     )
@@ -113,9 +112,14 @@ let intro_nlist_cons
       AP.merge_into (array_of' va1) (array_of' va2) (array_of' va) /\
       va.contents == va1.contents :: va2.contents
     )
-= let _ = aparse_nlist_aparse_list p n a2 in
-  let _ = intro_cons p a1 a2 in
-  aparse_list_aparse_nlist p n' a1
+= let vb1 = elim_aparse _ a1 in
+  let vb2 = elim_aparse _ a2 in
+  let vb = AP.join a1 a2 in
+  parse_strong_prefix p (AP.contents_of vb1) (AP.contents_of vb);
+  parse_nlist_eq n' p (AP.contents_of vb);
+  assert (AP.contents_of vb2 `Seq.equal` Seq.slice (AP.contents_of vb) (AP.length (AP.array_of vb1)) (AP.length (AP.array_of vb)));
+  noop ();
+  intro_aparse (parse_nlist n' p) a1
 
 let list_length_cons
   (#t: Type)
@@ -147,8 +151,7 @@ let elim_nlist_cons_post
 =
       n == n_pred + 1 /\
       AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
-      va.contents == va1.contents :: va2.contents /\
-      AP.length (array_of va1) > 0
+      va.contents == va1.contents :: va2.contents
 
 #push-options "--z3rlimit 32 --z3cliopt smt.arith.nl=false"
 
@@ -171,17 +174,14 @@ let elim_nlist_cons
     ))))
     (Cons? va.contents /\
       n == n_pred + 1 /\
-      k.parser_kind_low > 0 /\
       k.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
-= let _ = aparse_nlist_aparse_list p n a in
-  let a2 = ghost_elim_cons p a in
+= let vb = elim_aparse _ a in
+  parse_nlist_eq n p (AP.contents_of vb);
+  let a2 = ghost_peek_strong p a in
   let _ = gen_elim () in
   let va1 = vpattern_replace (aparse p a) in
-  let va2 = vpattern_replace (aparse (parse_list p) a2) in
-  list_length_cons_n va1.contents va2.contents n n_pred; 
-  noop ();
-  let _ = aparse_list_aparse_nlist p n_pred a2 in
+  let va2 = intro_aparse (parse_nlist n_pred p) a2 in
   noop ();
   a2
 
@@ -245,7 +245,6 @@ let rec intro_nlist_sum
     (aparse (parse_nlist n1 p) a1 va1 `star` aparse (parse_nlist n2 p) a2 va2)
     (fun va' -> aparse (parse_nlist n p) a1 va')
     (AP.adjacent (array_of' va1) (array_of' va2) /\
-      k.parser_kind_low > 0 /\
       n == n1 + n2 /\
       k.parser_kind_subkind == Some ParserStrong
     )
@@ -304,7 +303,7 @@ let rec elim_nlist_sum
       aparse (parse_nlist n1 p) a va1 `star` aparse (parse_nlist n2 p) ar va2 `star`
       pure (elim_nlist_sum_post t k n n1 n2 va1 va2 va)
     )))
-    (k.parser_kind_low > 0 /\
+    (
       n == n1 + n2 /\
       k.parser_kind_subkind == Some ParserStrong
     )
@@ -345,3 +344,4 @@ let aparse_nlist_count_le_size
   (requires (k.parser_kind_low > 0))
   (ensures (n <= AP.length (array_of' va)))
 = ()
+
