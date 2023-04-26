@@ -129,7 +129,7 @@ let namespace_of_integer_type =
 
 let print_range (r:A.range) : string =
   let open A in
-  Printf.sprintf "(Prims.mk_range \"%s\" %d %d %d %d)"
+  Printf.sprintf "(FStar.Range.mk_range \"%s\" %d %d %d %d)"
     (fst r).filename
     (fst r).line
     (fst r).col
