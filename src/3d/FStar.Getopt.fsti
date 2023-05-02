@@ -16,7 +16,7 @@
 module FStar.Getopt
 open FStar.ST
 open FStar.All
-open FStar.BaseTypes
+open FStar.Char
 
 val noshort : char
 val nolong : string

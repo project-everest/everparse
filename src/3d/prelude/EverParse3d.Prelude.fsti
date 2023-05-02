@@ -16,6 +16,7 @@
 module EverParse3d.Prelude
 include EverParse3d.Prelude.StaticHeader
 include EverParse3d.Kinds
+open FStar.Range
 module U8 = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
@@ -258,28 +259,28 @@ let max_int_sizes
 
 (*** UInt8 operations ***)
 unfold noextract
-let u8_add (r:Prims.range) (x y:UInt8.t)
+let u8_add (r:range) (x y:UInt8.t)
   : Pure UInt8.t
       (requires labeled r "Cannot verify u8 addition" (UInt.size (UInt8.v x + UInt8.v y) UInt8.n))
       (ensures fun z -> UInt8.v z == UInt8.v x + UInt8.v y)
   = UInt8.add x y
 
 unfold noextract
-let u8_sub (r:Prims.range) (x y:UInt8.t)
+let u8_sub (r:range) (x y:UInt8.t)
   : Pure UInt8.t
       (requires labeled r "Cannot verify u8 subtraction" (UInt.size (UInt8.v x - UInt8.v y) UInt8.n))
       (ensures fun z -> UInt8.v z == UInt8.v x - UInt8.v y)
   = UInt8.sub x y
 
 unfold noextract
-let u8_mul (r:Prims.range) (x y:UInt8.t)
+let u8_mul (r:range) (x y:UInt8.t)
   : Pure UInt8.t
       (requires labeled r "Cannot verify u8 multiplication" (UInt.size (UInt8.v x `Prims.op_Multiply` UInt8.v y) UInt8.n))
       (ensures fun z -> UInt8.v z == UInt8.v x `Prims.op_Multiply` UInt8.v y)
   = UInt8.mul x y
 
 unfold noextract
-let u8_div (r:Prims.range) (x y:UInt8.t)
+let u8_div (r:range) (x y:UInt8.t)
   : Pure UInt8.t
       (requires labeled r "Cannot verify u8 division" (UInt8.v y =!= 0))
       (ensures fun z -> UInt8.v z == UInt8.v x / UInt8.v y)
@@ -287,7 +288,7 @@ let u8_div (r:Prims.range) (x y:UInt8.t)
 
 (** Euclidean remainder *)
 unfold noextract
-let u8_rem (r:Prims.range) (x y:UInt8.t)
+let u8_rem (r:range) (x y:UInt8.t)
   : Pure UInt8.t
       (requires labeled r "Cannot verify u8 remainder" (UInt8.v y =!= 0))
       (ensures (fun z -> FStar.UInt.mod (UInt8.v x) (UInt8.v y) == UInt8.v z))
@@ -295,7 +296,7 @@ let u8_rem (r:Prims.range) (x y:UInt8.t)
 
 (** Bitwise logical conjunction *)
 unfold noextract
-let u8_logand (r:Prims.range) (x:UInt8.t) (y:UInt8.t)
+let u8_logand (r:range) (x:UInt8.t) (y:UInt8.t)
   : Pure UInt8.t
     (requires True)
     (ensures (fun z -> UInt8.v x `UInt.logand` UInt8.v y == UInt8.v z))
@@ -303,7 +304,7 @@ let u8_logand (r:Prims.range) (x:UInt8.t) (y:UInt8.t)
 
 (** Bitwise logical exclusive-or *)
 unfold noextract
-let u8_logxor (r:Prims.range) (x:UInt8.t) (y:UInt8.t)
+let u8_logxor (r:range) (x:UInt8.t) (y:UInt8.t)
   : Pure UInt8.t
     (requires True)
     (ensures (fun z -> UInt8.v x `UInt.logxor` UInt8.v y == UInt8.v z))
@@ -311,7 +312,7 @@ let u8_logxor (r:Prims.range) (x:UInt8.t) (y:UInt8.t)
 
 (** Bitwise logical disjunction *)
 unfold noextract
-let u8_logor (r:Prims.range) (x:UInt8.t) (y:UInt8.t)
+let u8_logor (r:range) (x:UInt8.t) (y:UInt8.t)
   : Pure UInt8.t
     (requires True)
     (ensures (fun z -> UInt8.v x `UInt.logor` UInt8.v y == UInt8.v z))
@@ -319,7 +320,7 @@ let u8_logor (r:Prims.range) (x:UInt8.t) (y:UInt8.t)
 
 (** Bitwise logical negation *)
 unfold noextract
-let u8_lognot (r:Prims.range) (x:UInt8.t)
+let u8_lognot (r:range) (x:UInt8.t)
   : Pure UInt8.t
     (requires True)
     (ensures (fun z -> UInt.lognot (UInt8.v x) == UInt8.v z))
@@ -327,7 +328,7 @@ let u8_lognot (r:Prims.range) (x:UInt8.t)
 
 (** Shift right with zero fill, shifting at most the integer width *)
 unfold noextract
-let u8_shift_right (r:Prims.range) (a:UInt8.t) (s:UInt32.t)
+let u8_shift_right (r:range) (a:UInt8.t) (s:UInt32.t)
   : Pure UInt8.t
     (requires labeled r "Cannot verify u8 shift right" (UInt32.v s < UInt8.n))
     (ensures (fun c -> FStar.UInt.shift_right (UInt8.v a) (UInt32.v s) = UInt8.v c))
@@ -335,7 +336,7 @@ let u8_shift_right (r:Prims.range) (a:UInt8.t) (s:UInt32.t)
 
 (** Shift left with zero fill, shifting at most the integer width *)
 unfold noextract
-let u8_shift_left (r:Prims.range) (a:UInt8.t) (s:UInt32.t)
+let u8_shift_left (r:range) (a:UInt8.t) (s:UInt32.t)
   : Pure UInt8.t
     (requires labeled r "Cannot verify u8 shift left" (UInt32.v s < UInt8.n))
     (ensures (fun c -> FStar.UInt.shift_left (UInt8.v a) (UInt32.v s) = UInt8.v c))
@@ -344,28 +345,28 @@ let u8_shift_left (r:Prims.range) (a:UInt8.t) (s:UInt32.t)
 (*** UInt16 operations ***)
 
 unfold noextract
-let u16_add (r:Prims.range) (x y:UInt16.t)
+let u16_add (r:range) (x y:UInt16.t)
   : Pure UInt16.t
       (requires labeled r "Cannot verify u16 addition" (UInt.size (UInt16.v x + UInt16.v y) UInt16.n))
       (ensures fun z -> UInt16.v z == UInt16.v x + UInt16.v y)
   = UInt16.add x y
 
 unfold noextract
-let u16_sub (r:Prims.range) (x y:UInt16.t)
+let u16_sub (r:range) (x y:UInt16.t)
   : Pure UInt16.t
       (requires labeled r "Cannot verify u16 subtraction" (UInt.size (UInt16.v x - UInt16.v y) UInt16.n))
       (ensures fun z -> UInt16.v z == UInt16.v x - UInt16.v y)
   = UInt16.sub x y
 
 unfold noextract
-let u16_mul (r:Prims.range) (x y:UInt16.t)
+let u16_mul (r:range) (x y:UInt16.t)
   : Pure UInt16.t
       (requires labeled r "Cannot verify u16 multiplication" (UInt.size (UInt16.v x `Prims.op_Multiply` UInt16.v y) UInt16.n))
       (ensures fun z -> UInt16.v z == UInt16.v x `Prims.op_Multiply` UInt16.v y)
   = UInt16.mul x y
 
 unfold noextract
-let u16_div (r:Prims.range) (x y:UInt16.t)
+let u16_div (r:range) (x y:UInt16.t)
   : Pure UInt16.t
       (requires labeled r "Cannot verify u16 division" (UInt16.v y =!= 0))
       (ensures fun z -> UInt16.v z == UInt16.v x / UInt16.v y)
@@ -373,7 +374,7 @@ let u16_div (r:Prims.range) (x y:UInt16.t)
 
 (** Euclidean remainder *)
 unfold noextract
-let u16_rem (r:Prims.range) (x y:UInt16.t)
+let u16_rem (r:range) (x y:UInt16.t)
   : Pure UInt16.t
       (requires labeled r "Cannot verify u16 remainder" (UInt16.v y =!= 0))
       (ensures (fun z -> FStar.UInt.mod (UInt16.v x) (UInt16.v y) == UInt16.v z))
@@ -381,7 +382,7 @@ let u16_rem (r:Prims.range) (x y:UInt16.t)
 
 (** Bitwise logical conjunction *)
 unfold noextract
-let u16_logand (r:Prims.range) (x:UInt16.t) (y:UInt16.t)
+let u16_logand (r:range) (x:UInt16.t) (y:UInt16.t)
   : Pure UInt16.t
     (requires True)
     (ensures (fun z -> UInt16.v x `UInt.logand` UInt16.v y == UInt16.v z))
@@ -389,7 +390,7 @@ let u16_logand (r:Prims.range) (x:UInt16.t) (y:UInt16.t)
 
 (** Bitwise logical exclusive-or *)
 unfold noextract
-let u16_logxor (r:Prims.range) (x:UInt16.t) (y:UInt16.t)
+let u16_logxor (r:range) (x:UInt16.t) (y:UInt16.t)
   : Pure UInt16.t
     (requires True)
     (ensures (fun z -> UInt16.v x `UInt.logxor` UInt16.v y == UInt16.v z))
@@ -397,7 +398,7 @@ let u16_logxor (r:Prims.range) (x:UInt16.t) (y:UInt16.t)
 
 (** Bitwise logical disjunction *)
 unfold noextract
-let u16_logor (r:Prims.range) (x:UInt16.t) (y:UInt16.t)
+let u16_logor (r:range) (x:UInt16.t) (y:UInt16.t)
   : Pure UInt16.t
     (requires True)
     (ensures (fun z -> UInt16.v x `UInt.logor` UInt16.v y == UInt16.v z))
@@ -405,7 +406,7 @@ let u16_logor (r:Prims.range) (x:UInt16.t) (y:UInt16.t)
 
 (** Bitwise logical negation *)
 unfold noextract
-let u16_lognot (r:Prims.range) (x:UInt16.t)
+let u16_lognot (r:range) (x:UInt16.t)
   : Pure UInt16.t
     (requires True)
     (ensures (fun z -> UInt.lognot (UInt16.v x) == UInt16.v z))
@@ -413,7 +414,7 @@ let u16_lognot (r:Prims.range) (x:UInt16.t)
 
 (** Shift right with zero fill, shifting at most the integer width *)
 unfold noextract
-let u16_shift_right (r:Prims.range) (a:UInt16.t) (s:UInt32.t)
+let u16_shift_right (r:range) (a:UInt16.t) (s:UInt32.t)
   : Pure UInt16.t
     (requires labeled r "Cannot verify u16 shift right" (UInt32.v s < UInt16.n))
     (ensures (fun c -> FStar.UInt.shift_right (UInt16.v a) (UInt32.v s) = UInt16.v c))
@@ -421,7 +422,7 @@ let u16_shift_right (r:Prims.range) (a:UInt16.t) (s:UInt32.t)
 
 (** Shift left with zero fill, shifting at most the integer width *)
 unfold noextract
-let u16_shift_left (r:Prims.range) (a:UInt16.t) (s:UInt32.t)
+let u16_shift_left (r:range) (a:UInt16.t) (s:UInt32.t)
   : Pure UInt16.t
     (requires labeled r "Cannot verify u16 shift left" (UInt32.v s < UInt16.n))
     (ensures (fun c -> FStar.UInt.shift_left (UInt16.v a) (UInt32.v s) = UInt16.v c))
@@ -431,28 +432,28 @@ let u16_shift_left (r:Prims.range) (a:UInt16.t) (s:UInt32.t)
 
 
 unfold noextract
-let u32_add (r:Prims.range) (x y:UInt32.t)
+let u32_add (r:range) (x y:UInt32.t)
   : Pure UInt32.t
       (requires labeled r "Cannot verify u32 addition" (UInt.size (UInt32.v x + UInt32.v y) UInt32.n))
       (ensures fun z -> UInt32.v z == UInt32.v x + UInt32.v y)
   = UInt32.add x y
 
 unfold noextract
-let u32_sub (r:Prims.range) (x y:UInt32.t)
+let u32_sub (r:range) (x y:UInt32.t)
   : Pure UInt32.t
       (requires labeled r "Cannot verify u32 subtraction" (UInt.size (UInt32.v x - UInt32.v y) UInt32.n))
       (ensures fun z -> UInt32.v z == UInt32.v x - UInt32.v y)
   = UInt32.sub x y
 
 unfold noextract
-let u32_mul (r:Prims.range) (x y:UInt32.t)
+let u32_mul (r:range) (x y:UInt32.t)
   : Pure UInt32.t
       (requires labeled r "Cannot verify u32 multiplication" (UInt.size (UInt32.v x `Prims.op_Multiply` UInt32.v y) UInt32.n))
       (ensures fun z -> UInt32.v z == UInt32.v x `Prims.op_Multiply` UInt32.v y)
   = UInt32.mul x y
 
 unfold noextract
-let u32_div (r:Prims.range) (x y:UInt32.t)
+let u32_div (r:range) (x y:UInt32.t)
   : Pure UInt32.t
       (requires labeled r "Cannot verify u32 division" (UInt32.v y =!= 0))
       (ensures fun z -> UInt32.v z == UInt32.v x / UInt32.v y)
@@ -460,7 +461,7 @@ let u32_div (r:Prims.range) (x y:UInt32.t)
 
 (** Euclidean remainder *)
 unfold noextract
-let u32_rem (r:Prims.range) (x y:UInt32.t)
+let u32_rem (r:range) (x y:UInt32.t)
   : Pure UInt32.t
       (requires labeled r "Cannot verify u32 remainder" (UInt32.v y =!= 0))
       (ensures (fun z -> FStar.UInt.mod (UInt32.v x) (UInt32.v y) == UInt32.v z))
@@ -468,7 +469,7 @@ let u32_rem (r:Prims.range) (x y:UInt32.t)
 
 (** Bitwise logical conjunction *)
 unfold noextract
-let u32_logand (r:Prims.range) (x:UInt32.t) (y:UInt32.t)
+let u32_logand (r:range) (x:UInt32.t) (y:UInt32.t)
   : Pure UInt32.t
     (requires True)
     (ensures (fun z -> UInt32.v x `UInt.logand` UInt32.v y == UInt32.v z))
@@ -476,7 +477,7 @@ let u32_logand (r:Prims.range) (x:UInt32.t) (y:UInt32.t)
 
 (** Bitwise logical exclusive-or *)
 unfold noextract
-let u32_logxor (r:Prims.range) (x:UInt32.t) (y:UInt32.t)
+let u32_logxor (r:range) (x:UInt32.t) (y:UInt32.t)
   : Pure UInt32.t
     (requires True)
     (ensures (fun z -> UInt32.v x `UInt.logxor` UInt32.v y == UInt32.v z))
@@ -484,7 +485,7 @@ let u32_logxor (r:Prims.range) (x:UInt32.t) (y:UInt32.t)
 
 (** Bitwise logical disjunction *)
 unfold noextract
-let u32_logor (r:Prims.range) (x:UInt32.t) (y:UInt32.t)
+let u32_logor (r:range) (x:UInt32.t) (y:UInt32.t)
   : Pure UInt32.t
     (requires True)
     (ensures (fun z -> UInt32.v x `UInt.logor` UInt32.v y == UInt32.v z))
@@ -492,7 +493,7 @@ let u32_logor (r:Prims.range) (x:UInt32.t) (y:UInt32.t)
 
 (** Bitwise logical negation *)
 unfold noextract
-let u32_lognot (r:Prims.range) (x:UInt32.t)
+let u32_lognot (r:range) (x:UInt32.t)
   : Pure UInt32.t
     (requires True)
     (ensures (fun z -> UInt.lognot (UInt32.v x) == UInt32.v z))
@@ -500,7 +501,7 @@ let u32_lognot (r:Prims.range) (x:UInt32.t)
 
 (** Shift right with zero fill, shifting at most the integer width *)
 unfold noextract
-let u32_shift_right (r:Prims.range) (a:UInt32.t) (s:UInt32.t)
+let u32_shift_right (r:range) (a:UInt32.t) (s:UInt32.t)
   : Pure UInt32.t
     (requires labeled r "Cannot verify u32 shift right" (UInt32.v s < UInt32.n))
     (ensures (fun c -> FStar.UInt.shift_right (UInt32.v a) (UInt32.v s) = UInt32.v c))
@@ -508,7 +509,7 @@ let u32_shift_right (r:Prims.range) (a:UInt32.t) (s:UInt32.t)
 
 (** Shift left with zero fill, shifting at most the integer width *)
 unfold noextract
-let u32_shift_left (r:Prims.range) (a:UInt32.t) (s:UInt32.t)
+let u32_shift_left (r:range) (a:UInt32.t) (s:UInt32.t)
   : Pure UInt32.t
     (requires labeled r "Cannot verify u32 shift left" (UInt32.v s < UInt32.n))
     (ensures (fun c -> FStar.UInt.shift_left (UInt32.v a) (UInt32.v s) = UInt32.v c))
@@ -517,28 +518,28 @@ let u32_shift_left (r:Prims.range) (a:UInt32.t) (s:UInt32.t)
 (*** UInt64 operators ***)
 
 unfold noextract
-let u64_add (r:Prims.range) (x y:UInt64.t)
+let u64_add (r:range) (x y:UInt64.t)
   : Pure UInt64.t
       (requires labeled r "Cannot verify u64 addition" (UInt.size (UInt64.v x + UInt64.v y) UInt64.n))
       (ensures fun z -> UInt64.v z == UInt64.v x + UInt64.v y)
   = UInt64.add x y
 
 unfold noextract
-let u64_sub (r:Prims.range) (x y:UInt64.t)
+let u64_sub (r:range) (x y:UInt64.t)
   : Pure UInt64.t
       (requires labeled r "Cannot verify u64 subtraction" (UInt.size (UInt64.v x - UInt64.v y) UInt64.n))
       (ensures fun z -> UInt64.v z == UInt64.v x - UInt64.v y)
   = UInt64.sub x y
 
 unfold noextract
-let u64_mul (r:Prims.range) (x y:UInt64.t)
+let u64_mul (r:range) (x y:UInt64.t)
   : Pure UInt64.t
       (requires labeled r "Cannot verify u64 multiplication" (UInt.size (UInt64.v x `Prims.op_Multiply` UInt64.v y) UInt64.n))
       (ensures fun z -> UInt64.v z == UInt64.v x `Prims.op_Multiply` UInt64.v y)
   = UInt64.mul x y
 
 unfold noextract
-let u64_div (r:Prims.range) (x y:UInt64.t)
+let u64_div (r:range) (x y:UInt64.t)
   : Pure UInt64.t
       (requires labeled r "Cannot verify u64 division" (UInt64.v y =!= 0))
       (ensures fun z -> UInt64.v z == UInt64.v x / UInt64.v y)
@@ -546,7 +547,7 @@ let u64_div (r:Prims.range) (x y:UInt64.t)
 
 (** Euclidean remainder *)
 unfold noextract
-let u64_rem (r:Prims.range) (x y:UInt64.t)
+let u64_rem (r:range) (x y:UInt64.t)
   : Pure UInt64.t
       (requires labeled r "Cannot verify u64 remainder" (UInt64.v y =!= 0))
       (ensures (fun z -> FStar.UInt.mod (UInt64.v x) (UInt64.v y) == UInt64.v z))
@@ -554,7 +555,7 @@ let u64_rem (r:Prims.range) (x y:UInt64.t)
 
 (** Bitwise logical conjunction *)
 unfold noextract
-let u64_logand (r:Prims.range) (x:UInt64.t) (y:UInt64.t)
+let u64_logand (r:range) (x:UInt64.t) (y:UInt64.t)
   : Pure UInt64.t
     (requires True)
     (ensures (fun z -> UInt64.v x `UInt.logand` UInt64.v y == UInt64.v z))
@@ -562,7 +563,7 @@ let u64_logand (r:Prims.range) (x:UInt64.t) (y:UInt64.t)
 
 (** Bitwise logical exclusive-or *)
 unfold noextract
-let u64_logxor (r:Prims.range) (x:UInt64.t) (y:UInt64.t)
+let u64_logxor (r:range) (x:UInt64.t) (y:UInt64.t)
   : Pure UInt64.t
     (requires True)
     (ensures (fun z -> UInt64.v x `UInt.logxor` UInt64.v y == UInt64.v z))
@@ -570,7 +571,7 @@ let u64_logxor (r:Prims.range) (x:UInt64.t) (y:UInt64.t)
 
 (** Bitwise logical disjunction *)
 unfold noextract
-let u64_logor (r:Prims.range) (x:UInt64.t) (y:UInt64.t)
+let u64_logor (r:range) (x:UInt64.t) (y:UInt64.t)
   : Pure UInt64.t
     (requires True)
     (ensures (fun z -> UInt64.v x `UInt.logor` UInt64.v y == UInt64.v z))
@@ -578,7 +579,7 @@ let u64_logor (r:Prims.range) (x:UInt64.t) (y:UInt64.t)
 
 (** Bitwise logical negation *)
 unfold noextract
-let u64_lognot (r:Prims.range) (x:UInt64.t)
+let u64_lognot (r:range) (x:UInt64.t)
   : Pure UInt64.t
     (requires True)
     (ensures (fun z -> UInt.lognot (UInt64.v x) == UInt64.v z))
@@ -586,7 +587,7 @@ let u64_lognot (r:Prims.range) (x:UInt64.t)
 
 (** Shift right with zero fill, shifting at most the integer width *)
 unfold noextract
-let u64_shift_right (r:Prims.range) (a:UInt64.t) (s:UInt32.t)
+let u64_shift_right (r:range) (a:UInt64.t) (s:UInt32.t)
   : Pure UInt64.t
     (requires labeled r "Cannot verify u64 shift right" (UInt32.v s < UInt64.n))
     (ensures (fun c -> FStar.UInt.shift_right (UInt64.v a) (UInt32.v s) = UInt64.v c))
@@ -594,7 +595,7 @@ let u64_shift_right (r:Prims.range) (a:UInt64.t) (s:UInt32.t)
 
 (** Shift left with zero fill, shifting at most the integer width *)
 unfold noextract
-let u64_shift_left (r:Prims.range) (a:UInt64.t) (s:UInt32.t)
+let u64_shift_left (r:range) (a:UInt64.t) (s:UInt32.t)
   : Pure UInt64.t
     (requires labeled r "Cannot verify u64 shift left" (UInt32.v s < UInt64.n))
     (ensures (fun c -> FStar.UInt.shift_left (UInt64.v a) (UInt32.v s) = UInt64.v c))
