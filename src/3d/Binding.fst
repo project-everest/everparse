@@ -268,6 +268,14 @@ let tag_of_integral_typ env (t:typ) : ML (option _) =
     | Inr (_, Inl attrs) -> attrs.integral
     | _ -> None
 
+let tag_and_bit_order_of_integral_typ env (t:typ) : ML (tag_and_bit_order: (option integer_type & option bitfield_bit_order) { Some? (snd tag_and_bit_order) ==> Some? (fst tag_and_bit_order) }) =
+  match t.v with
+  | Pointer _ -> None, None
+  | Type_app hd _ _ ->
+    match lookup env hd with
+    | Inr (_, Inl attrs) -> attrs.integral, attrs.bit_order
+    | _ -> None, None
+
 let has_reader (env:global_env) (id:ident) : ML bool =
   match H.try_find env.ge_h id.v with
   | Some (_, Inl attrs) -> attrs.has_reader
@@ -354,6 +362,17 @@ let size_of_integral_typ (env:env) (t:typ) r
     | Some UInt16 -> 2
     | Some UInt32 -> 4
     | Some UInt64 -> 8
+
+let bit_order_of_integral_typ (env:env) (t:typ) r
+  : ML bitfield_bit_order
+  = let t = unfold_typ_abbrev_and_enum env t in
+    if not (typ_is_integral env t)
+    then error (Printf.sprintf "Expected and integral type, got %s"
+                                                (print_typ t))
+               r;
+    match tag_and_bit_order_of_integral_typ env t with
+    | _, None -> failwith "Impossible"
+    | _, Some order -> order
 
 let eq_typ env t1 t2 =
   if Ast.eq_typ t1 t2 then true
@@ -875,7 +894,7 @@ and check_expr (env:env) (e:expr)
           else
             w (App IfThenElse [e1;e2;e3]), t2
 
-        | BitFieldOf n ->
+        | BitFieldOf n order ->
           let base_size = size_of_integral_typ env t1 e1.range in
           let size = 8 * base_size in
           if n <> size
@@ -884,14 +903,14 @@ and check_expr (env:env) (e:expr)
                    n size (print_expr e1))
                  e1.range;
           begin
-          match e2.v, e2.v with
+          match e2.v, e3.v with
           | Constant (Int UInt32 from), (Constant (Int UInt32 to)) ->
             if not
                (from <= size
             && from <= to
             && to <= size)
             then error "bitfield-of expresssions is out of bounds" e.range;
-            w (App (BitFieldOf n) [e1; e2; e3]), t1
+            w (App (BitFieldOf n order) [e1; e2; e3]), t1
           | _ ->
            error "bitfield-of with non-32-bit-consant indices" e.range
           end
@@ -1467,7 +1486,7 @@ let elaborate_bit_fields env (fields:list field)
 
 let allowed_base_types_as_output_types = [
   "UINT8"; "UINT16"; "UINT32"; "UINT64";
-  "UINT16BE"; "UINT32BE"; "UINT64BE";
+  "UINT8BE"; "UINT16BE"; "UINT32BE"; "UINT64BE";
   "PUINT8";
   "Bool"
 ]
@@ -1575,6 +1594,7 @@ let elaborate_record_decl (e:global_env)
     let attrs = {
         may_fail = false; //only its fields may fail; not the struct itself
         integral = None;
+        bit_order = None;
         has_reader = false;
         parser_weak_kind = weak_kind_of_record env fields;
         parser_kind_nz = None
@@ -1627,10 +1647,12 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
       | None -> failwith (Printf.sprintf "Weak kind not found for type %s" (print_typ t))
       | Some wk -> wk
     in
+    let integral, bit_order = tag_and_bit_order_of_integral_typ env t in
     let attrs =
       {
         may_fail = parser_may_fail env t;
-        integral = tag_of_integral_typ env t;
+        integral = integral;
+        bit_order = bit_order;
         has_reader = typ_has_reader env t;
         parser_weak_kind = wk;
         parser_kind_nz = None
@@ -1651,10 +1673,13 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
                    (print_typ t)
                    (print_typ t'))
                  d.d_decl.range);
+    let integral = typ_as_integer_type t in
+    let bit_order = bit_order_of_typ t in
     let attrs =
       {
         may_fail = true;
-        integral = Some (typ_as_integer_type t);
+        integral = Some integral;
+        bit_order = Some bit_order;
         has_reader = false; //it's a refinement, so you can't read it again because of double fetches
         parser_weak_kind = WeakKindStrongPrefix;
         parser_kind_nz = None
@@ -1675,6 +1700,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     let attrs = {
       may_fail = false;
       integral = None;
+      bit_order = None;
       has_reader = false;
       parser_weak_kind = wk;
       parser_kind_nz = None
@@ -1724,19 +1750,20 @@ let initial_global_env () =
     mk_decl (Record td_name [] None []) dummy_range [] true
   in
   let _type_names =
-    [ ("unit",     { may_fail = false; integral = None; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some false});
-      ("Bool",     { may_fail = true;  integral = None; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT8",    { may_fail = true;  integral = Some UInt8 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
-      ("UINT16",   { may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
-      ("UINT32",   { may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT64",   { may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT16BE",   { may_fail = true;  integral = Some UInt16 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
-      ("UINT32BE",   { may_fail = true;  integral = Some UInt32 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT64BE",   { may_fail = true;  integral = Some UInt64 ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("field_id", { may_fail = true;  integral = Some UInt32 ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("all_bytes", { may_fail = false;  integral = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
-      ("all_zeros", { may_fail = true;  integral = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
-      ("PUINT8",   { may_fail = true;  integral = None ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true})]
+    [ ("unit",     { may_fail = false; integral = None; bit_order = None; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some false});
+      ("Bool",     { may_fail = true;  integral = None; bit_order = None; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("UINT8",    { may_fail = true;  integral = Some UInt8 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
+      ("UINT16",   { may_fail = true;  integral = Some UInt16 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
+      ("UINT32",   { may_fail = true;  integral = Some UInt32 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("UINT64",   { may_fail = true;  integral = Some UInt64 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("UINT8BE",   { may_fail = true;  integral = Some UInt8 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
+      ("UINT16BE",   { may_fail = true;  integral = Some UInt16 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
+      ("UINT32BE",   { may_fail = true;  integral = Some UInt32 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("UINT64BE",   { may_fail = true;  integral = Some UInt64 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("field_id", { may_fail = true;  integral = Some UInt32 ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
+      ("all_bytes", { may_fail = false;  integral = None ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
+      ("all_zeros", { may_fail = true;  integral = None ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
+      ("PUINT8",   { may_fail = true;  integral = None ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true})]
     |> List.iter (fun (i, attrs) ->
       let i = with_dummy_range (to_ident' i) in
       add_global e i (nullary_decl i) (Inl attrs))

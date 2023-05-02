@@ -68,6 +68,7 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
   = let id, typ, fields = f in
     let size = B.size_of_integral_typ env typ typ.range in
     let bitsize = 8 * size in
+    let order = B.bit_order_of_integral_typ env typ typ.range in
     let field_id = with_range (to_ident' (Printf.sprintf "__bitfield_%d" id)) dummy_range in
     let id = with_range (Identifier field_id) field_id.range in
     let mk_e (e:expr') :expr = with_range e field_id.range in
@@ -104,7 +105,7 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
           in
           let bf_exp =
             App
-              (BitFieldOf bitsize)
+              (BitFieldOf bitsize order)
               [id;
               mk_e (Constant (Int UInt32 (bitfield_attrs f).bitfield_from));
               mk_e (Constant (Int UInt32 (bitfield_attrs f).bitfield_to))]

@@ -3,6 +3,9 @@ module U = FStar.UInt
 
 type ubitfield (tot: nat) (sz: nat) = (x: U.uint_t tot { x < pow2 sz })
 
+// IMPORTANT: these bitfield operators are defined in a least
+// significant bit (LSB) first fashion.
+
 val get_bitfield 
   (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi /\ hi <= tot})
 : Tot (ubitfield tot (hi - lo))

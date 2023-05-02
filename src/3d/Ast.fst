@@ -192,22 +192,53 @@ let integer_type_lub (t1 t2: integer_type) : Tot integer_type =
 let integer_type_leq (t1 t2: integer_type) : bool =
   integer_type_lub t1 t2 = t2
 
-let maybe_as_integer_typ (i:ident) : ML (option integer_type) =
+let maybe_as_integer_typ (i:ident) : Tot (option integer_type) =
   if i.v.modul_name <> None
   then None
   else
     match i.v.name with
-    | "UINT8" -> UInt8 |> Some
-    | "UINT16" -> UInt16 |> Some
-    | "UINT32" -> UInt32 |> Some
-    | "UINT64" -> UInt64 |> Some
-    | "UINT16BE" -> UInt16 |> Some
-    | "UINT32BE" -> UInt32 |> Some
-    | "UINT64BE" -> UInt64 |> Some
+    | "UINT8" -> Some UInt8
+    | "UINT16" -> Some UInt16
+    | "UINT32" -> Some UInt32
+    | "UINT64" -> Some UInt64
+    | "UINT8BE" -> Some UInt8
+    | "UINT16BE" -> Some UInt16
+    | "UINT32BE" -> Some UInt32
+    | "UINT64BE" -> Some UInt64
     | _ -> None
 
 let as_integer_typ (i:ident) : ML integer_type =
   match maybe_as_integer_typ i with
+  | None -> error ("Unknown integer type: " ^ ident_to_string i) i.range
+  | Some t -> t
+
+/// Bit order for bitfields
+[@@ PpxDerivingYoJson ]
+type bitfield_bit_order =
+  | LSBFirst (* Least-significant bit first (MSVC default) *)
+  | MSBFirst (* Most-significant bit first (necessary for many IETF protocols) *)
+
+let maybe_bit_order_of (i:ident) : Pure (option bitfield_bit_order)
+  (requires True)
+  (ensures (fun y ->
+    Some? y == Some? (maybe_as_integer_typ i)
+  ))
+= if i.v.modul_name <> None
+  then None
+  else
+    match i.v.name with
+    | "UINT8" -> Some LSBFirst
+    | "UINT16" -> Some LSBFirst
+    | "UINT32" -> Some LSBFirst
+    | "UINT64" -> Some LSBFirst
+    | "UINT8BE" -> Some MSBFirst
+    | "UINT16BE" -> Some MSBFirst
+    | "UINT32BE" -> Some MSBFirst
+    | "UINT64BE" -> Some MSBFirst
+    | _ -> None
+
+let bit_order_of (i:ident) : ML bitfield_bit_order =
+  match maybe_bit_order_of i with
   | None -> error ("Unknown integer type: " ^ ident_to_string i) i.range
   | Some t -> t
 
@@ -243,7 +274,7 @@ type op =
   | LE of option integer_type
   | GE of option integer_type
   | IfThenElse
-  | BitFieldOf of int //BitFieldOf_n(i, from, to); the integer is the size of i in bits
+  | BitFieldOf: sz: int -> order: bitfield_bit_order -> op //BitFieldOf_n(i, from, to); the integer is the size of i in bits
   | SizeOf
   | Cast : from:option integer_type -> to:integer_type -> op
   | Ext of string
@@ -892,6 +923,10 @@ let print_integer_type = function
   | UInt32 -> "UINT32"
   | UInt64 -> "UINT64"
 
+let print_bitfield_bit_order = function
+  | LSBFirst -> "LSBFirst"
+  | MSBFirst -> "MSBFirst"
+
 let print_op = function
   | Eq -> "="
   | Neq -> "!="
@@ -914,7 +949,7 @@ let print_op = function
   | LE _ -> "<="
   | GE _ -> ">="
   | IfThenElse -> "ifthenelse"
-  | BitFieldOf i -> Printf.sprintf "bitfield_of(%d)" i
+  | BitFieldOf i o -> Printf.sprintf "bitfield_of(%d, %s)" i (print_bitfield_bit_order o)
   | SizeOf -> "sizeof"
   | Cast _ t -> "(" ^ print_integer_type t ^ ")"
   | Ext s -> s
@@ -1000,6 +1035,11 @@ let rec print_typ t : ML string =
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with
   | Type_app i _k [] -> as_integer_typ i
+  | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
+
+let bit_order_of_typ (t:typ) : ML bitfield_bit_order =
+  match t.v with
+  | Type_app i _k [] -> bit_order_of i
   | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
 
 let print_qual = function

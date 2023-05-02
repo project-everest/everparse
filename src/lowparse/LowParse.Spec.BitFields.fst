@@ -5,6 +5,9 @@ include LowParse.BitFields
 
 module BF = LowParse.BitFields
 
+// IMPORTANT: these bitfield operators are defined in a least
+// significant bit (LSB) first fashion.
+
 let rec valid_bitfield_bounds (lo: nat) (hi: nat { lo <= hi }) (l: list nat) : Tot bool (decreases l) =
   match l with
   | [] -> true
