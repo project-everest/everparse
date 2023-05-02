@@ -6,8 +6,17 @@ export EVERPARSE_HOME
 KRML_HOME ?= $(realpath ../../../../karamel)
 export KRML_HOME
 
-FSTAR_HOME ?= $(realpath ../../../../FStar)
-export FSTAR_HOME
+ifndef FSTAR_HOME
+  FSTAR_EXE=$(shell which fstar.exe)
+  ifeq ($(FSTAR_EXE),)
+    # fstar.exe not found in PATH, assuming Everest source tree
+    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
+  else
+    # fstar.exe found in PATH, assuming directory ending with /bin
+    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
+  endif
+  export FSTAR_HOME
+endif
 
 INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
 

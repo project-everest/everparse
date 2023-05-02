@@ -45,6 +45,7 @@ let initial_senv () =
        ("UINT16",   (Fixed 2,  Some 2));
        ("UINT32",   (Fixed 4,  Some 4));
        ("UINT64",   (Fixed 8,  Some 8));
+       ("UINT8BE",   (Fixed 1,  Some 1));
        ("UINT16BE",   (Fixed 2,  Some 2));
        ("UINT32BE",   (Fixed 4,  Some 4));
        ("UINT64BE",   (Fixed 8,  Some 8));

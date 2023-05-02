@@ -64,13 +64,13 @@
 entrypoint
 typedef struct _IPV6_HEADER
 {
-  UINT32 Version : 4
+  UINT32BE Version : 4
   {
     Version == IPV6_VERSION
   };
-  UINT32 TrafficClass:8;
-  UINT32 FlowLabel:20;
-  UINT16 PayloadLength;
+  UINT32BE TrafficClass:8;
+  UINT32BE FlowLabel:20;
+  UINT16BE PayloadLength;
   UINT8 NextHeader;
   UINT8 HopLimit;
   UINT8 SourceAddress[16];

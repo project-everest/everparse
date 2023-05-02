@@ -29,6 +29,7 @@ type itype =
   | UInt16
   | UInt32
   | UInt64
+  | UInt8BE
   | UInt16BE
   | UInt32BE
   | UInt64BE
@@ -250,6 +251,7 @@ let itype_of_ident (hd:A.ident)
     | "UINT16" -> Some UInt16
     | "UINT32" -> Some UInt32
     | "UINT64" -> Some UInt64
+    | "UINT8BE" -> Some UInt8BE
     | "UINT16BE" -> Some UInt16BE
     | "UINT32BE" -> Some UInt32BE
     | "UINT64BE" -> Some UInt64BE
@@ -534,6 +536,7 @@ let print_ityp (i:itype) =
   | UInt16 -> "UInt16"
   | UInt32 -> "UInt32"
   | UInt64 -> "UInt64"
+  | UInt8BE -> "UInt8BE"
   | UInt16BE -> "UInt16BE"
   | UInt32BE -> "UInt32BE"
   | UInt64BE -> "UInt64BE"

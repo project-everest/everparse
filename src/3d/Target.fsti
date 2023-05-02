@@ -43,7 +43,7 @@ type op =
   | LE of A.integer_type
   | GE of A.integer_type
   | IfThenElse
-  | BitFieldOf of int //BitFieldOf(i, from, to)
+  | BitFieldOf: size: int -> order: A.bitfield_bit_order -> op //BitFieldOf(i, from, to)
   | Cast : from:A.integer_type -> to:A.integer_type -> op
   | Ext of string
 

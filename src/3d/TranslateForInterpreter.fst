@@ -283,7 +283,7 @@ let translate_op : A.op -> ML T.op =
   | LE topt -> T.LE (force_topt topt)
   | GE topt -> T.GE (force_topt topt)
   | IfThenElse -> T.IfThenElse
-  | BitFieldOf i -> T.BitFieldOf i
+  | BitFieldOf i order -> T.BitFieldOf i order
   | Cast (Some from) to -> T.Cast from to
   | Ext s -> T.Ext s
   | Cast None _

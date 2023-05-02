@@ -10,7 +10,7 @@ cd ../../..
 # This config is necessary if everparse was cloned with non-Cygwin git
 git config --global --add safe.directory $(pwd)
 # Revert the submodules back to a clean working copy
-submodules="FStar karamel hacl-star"
+submodules="FStar karamel"
 rm -rf $submodules
 git checkout $submodules
 git submodule update --init

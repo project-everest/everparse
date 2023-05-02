@@ -15,7 +15,6 @@ module B = LowStar.Buffer
 module BY = FStar.Bytes
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
-module LWP = LowParse.Writers.Combinators
 
 
 inline_for_extraction noextract let min_len = 1
@@ -42,7 +41,6 @@ val employee_name_validator: LL.validator employee_name_parser
 
 val employee_name_jumper: LL.jumper employee_name_parser
 
-inline_for_extraction noextract let lwp_employee_name = LWP.make_parser employee_name_parser employee_name_serializer employee_name_jumper
 val employee_name_bytesize_eqn (x: employee_name) : Lemma (employee_name_bytesize x == 1 + BY.length x) [SMTPat (employee_name_bytesize x)]
 
 val employee_name_length (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : HST.Stack U32.t

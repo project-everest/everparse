@@ -1,13 +1,13 @@
 # This Dockerfile should be run from the root EverParse directory
 
 ARG ocaml_version=4.12
-FROM ocaml/opam:ubuntu-ocaml-$ocaml_version
+FROM ocaml/opam:ubuntu-22.04-ocaml-$ocaml_version
 
 ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 
 # CI dependencies: jq (to identify F* branch)
-RUN sudo apt-get install -y --no-install-recommends jq
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends jq
 
 # Dependencies (F*, Karamel and opam packages)
 ENV FSTAR_HOME=$HOME/FStar

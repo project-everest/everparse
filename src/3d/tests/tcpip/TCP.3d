@@ -41,12 +41,12 @@
 
 */
 
-typedef UINT16 PORT;
-typedef UINT32 SEQ_NUMBER;
-typedef UINT32 ACK_NUMBER;
-typedef UINT16 WINDOW;
-typedef UINT16 CHECK_SUM;
-typedef UINT16 URGENT_PTR;
+typedef UINT16BE PORT;
+typedef UINT32BE SEQ_NUMBER;
+typedef UINT32BE ACK_NUMBER;
+typedef UINT16BE WINDOW;
+typedef UINT16BE CHECK_SUM;
+typedef UINT16BE URGENT_PTR;
 
 #define OPTION_KIND_END_OF_OPTION_LIST 0x00
 #define OPTION_KIND_NO_OPERATION 0x01
@@ -113,7 +113,7 @@ where MaxSegSizeAllowed
   {
     Length == 4
   };
-  UINT16 MaxSegSize
+  UINT16BE MaxSegSize
   {:act
     OptRx->MSS_CLAMP = MaxSegSize;
   };
@@ -127,8 +127,8 @@ where TimeStampAllowed
   {
     Length == 10
   };
-  UINT32       Tsval;
-  UINT32       Tsecr
+  UINT32BE     Tsval;
+  UINT32BE     Tsecr
   {:act
     OptRx->SAW_TSTAMP = 1;
     OptRx->RCV_TSVAL = Tsval;
@@ -239,29 +239,29 @@ typedef struct _TCP_HEADER(UINT32 SegmentLength,
   PORT            DestinationPort;
   SEQ_NUMBER      SeqNumber;
   ACK_NUMBER      AckNumber;
-  UINT16          DataOffset:4
+  UINT16BE        DataOffset:4
   { //DataOffset is in units of 32 bit words
     sizeof(this) == 20 && //Sanity check: static size in bytes of this type, excluding the variable length elements, is 20
     sizeof(this) <= DataOffset * 4 && //DataOffset points after the static fields
     DataOffset * 4 <= SegmentLength
   };
-  UINT16          Reserved:3
+  UINT16BE        Reserved:3
   {
     Reserved == 0 //Reserved bytes are unused
   };
-  UINT16          NS:1;
-  UINT16          CWR:1;
-  UINT16          ECE:1;
-  UINT16          URG:1;
-  UINT16          ACK:1
+  UINT16BE        NS:1;
+  UINT16BE        CWR:1;
+  UINT16BE        ECE:1;
+  UINT16BE        URG:1;
+  UINT16BE        ACK:1
   {
       AckNumber == 0 ||
       ACK == 1 //AckNumber can only be set if the ACK flag is set
   } ;
-  UINT16          PSH:1;
-  UINT16          RST:1;
-  UINT16          SYN:1;
-  UINT16          FIN:1;
+  UINT16BE        PSH:1;
+  UINT16BE        RST:1;
+  UINT16BE        SYN:1;
+  UINT16BE        FIN:1;
   WINDOW          Window;
   CHECK_SUM       CheckSum;
   URGENT_PTR      UrgentPointer
