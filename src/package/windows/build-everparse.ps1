@@ -118,7 +118,7 @@ $Env:EVERPARSE_RELEASE_REPO = $OldReleaseRepo
 
 $Error.Clear()
 Write-Host "remove our copy of Cygwin"
-Remove-Item -Recurse -Force -Path $Global:cygwinRoot
+cmd /c rmdir /s /q $Global:cygwinRoot
 if (-not $?) {
     $Error
     exit 1
