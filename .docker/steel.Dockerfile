@@ -13,7 +13,7 @@ ENV KRML_HOME=$HOME/karamel
 RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
     jq \
     && git clone --branch taramana_no_steel https://github.com/FStarLang/karamel $KRML_HOME && \
-    eval $(opam env) && $KRML_HOME/.docker/build/install-deps.sh && \
+    eval $(opam env) && env FSTAR_BRANCH=taramana_no_steel $KRML_HOME/.docker/build/install-deps.sh && \
     env OTHERFLAGS='--admit_smt_queries true' make -C $KRML_HOME -j $CI_THREADS
 
 # Clone and build Steel
