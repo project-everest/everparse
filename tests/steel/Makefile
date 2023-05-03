@@ -15,22 +15,19 @@ CHECKED_EXT=.checked
 FSTAR_OPTIONS := --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
 		--already_cached '*,-Test' \
 		--include $(FSTAR_HOME)/ulib/.cache \
-		--include $(FSTAR_HOME)/ulib \
-		--include $(FSTAR_HOME)/ulib/experimental \
 		--include $(LOWPARSE_HOME) \
 		--include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --cmi
 
-ifneq (,$(STEEL_HOME))
-FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
+ifeq (,$(STEEL_HOME))
+	$(error "Please set STEEL_HOME to the root/prefix directory of your Steel installation.")
 endif
+
+FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel --load_cmxs steel
 
 FSTAR_EXE=$(FSTAR_HOME)/bin/fstar.exe
 
 ifdef STEEL_C
-ifeq (,$(STEEL_HOME))
-	$(error "Please set STEEL_HOME to the root/prefix directory of your Steel installation.")
-endif
-FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_c_array
+FSTAR_OPTIONS +=  --include $(STEEL_HOME)/lib/steel/c --include $(LOWPARSE_HOME)/steel_c_array
 else
 FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_array
 endif

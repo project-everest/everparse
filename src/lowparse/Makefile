@@ -33,31 +33,37 @@ ifneq (,$(STEEL_HOME))
 FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
 endif
 
-LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
+LOWPARSE_FILES := $(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
+
+ifeq (,$(STEEL_HOME))
+LOWPARSE_FILES := $(filter-out LowParse.Steel%,$(LOWPARSE_FILES))
+endif
 
 clean:
-	rm -rf *.checked *.source .depend
+	rm -rf *.checked *.source .depend .depend.tmp
 
 .depend: $(LOWPARSE_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@.tmp
+	mv $@.tmp $@
 
 include .depend
 
-spec: $(addsuffix .checked,$(wildcard LowParse.Spec*.fst) $(wildcard LowParse.Spec*.fsti))
-
-steel: steel_array steel_c_array $(addsuffix .checked,$(wildcard LowParse.Steel*.fst) $(wildcard LowParse.Steel*.fsti))
-
 .PHONY: no-fold
-no-fold: $(filter-out LowParse.SteelST.Fold.%,$(ALL_CHECKED_FILES)) steel_array steel_c_array
+
+ifeq (,$(STEEL_HOME))
+steel:
+no-fold:
+else
 
 steel_array: LowParse.SteelST.ArrayPtr.fsti.checked steel_array/LowParse.SteelST.ArrayPtr.fst
 	+$(MAKE) -C $@
 
-ifdef STEEL_C
 steel_c_array: LowParse.SteelST.ArrayPtr.fsti.checked steel_c_array/LowParse.SteelST.ArrayPtr.fst
 	+$(MAKE) -C $@
-else
-steel_c_array:
+
+steel: steel_array steel_c_array $(filter LowParse.Steel%,$(ALL_CHECKED_FILES))
+no-fold: $(filter-out LowParse.SteelST.Fold.%,$(ALL_CHECKED_FILES)) steel_array steel_c_array
+
 endif
 
 lowparse: steel $(ALL_CHECKED_FILES)

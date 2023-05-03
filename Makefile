@@ -28,10 +28,14 @@ lowparse-unit-test: lowparse
 lowparse-bitfields-test: lowparse
 	+$(MAKE) -C tests/bitfields
 
+ifeq (,$(STEEL_HOME))
+steel-unit-test:
+else
 steel-unit-test: lowparse
 	+$(MAKE) -C tests/steel
+endif
 
-lowparse-test: lowparse-unit-test lowparse-bitfields-test steel-unit-test
+lowparse-test: lowparse-unit-test lowparse-bitfields-test
 
 quackyducky-unit-test: gen-test lowparse
 	+$(MAKE) -C tests/unit
@@ -47,7 +51,7 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: all lowparse-test quackyducky-test 3d-test
+test: all lowparse-test quackyducky-test 3d-test steel-unit-test
 
 ci: test
 
