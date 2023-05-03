@@ -10,6 +10,7 @@ branchname=$2
 build_home="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . "$build_home"/build_funs.sh
 . "$build_home"/install-krml-funs.sh
+. "$build_home"/install-steel-funs.sh
 
 # Clear EVERPARSE_HOME, which was set by F*'s build
 unset EVERPARSE_HOME

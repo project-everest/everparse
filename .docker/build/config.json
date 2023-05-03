@@ -29,6 +29,7 @@
 
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
+        "steel_version": "origin/main",
         "karamel_version" : "origin/master"
     }
 }

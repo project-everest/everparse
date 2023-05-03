@@ -81,6 +81,7 @@ function build_and_test_quackyducky() {
     rebuild_doc &&
     # Test EverParse proper
     fetch_and_make_karamel &&
+    fetch_and_make_steel &&
     make -j $threads -k ci &&
     # Build incrementality test
     pushd tests/sample && {
