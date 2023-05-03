@@ -121,6 +121,29 @@ let intro_nlist_cons
   noop ();
   intro_aparse (parse_nlist n' p) a1
 
+let intro_nlist_cons_with
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (n': nat)
+  (p: parser k t)
+  (n: nat)
+  (#va1: v _ _)
+  (#va2: v _ _)
+  (a1 a2: byte_array)
+  (va: v (parse_nlist_kind n' k) (nlist n' t))
+: STGhost unit opened
+    (aparse p a1 va1 `star` aparse (parse_nlist n p) a2 va2)
+    (fun _ -> aparse (parse_nlist n' p) a1 va)
+    (k.parser_kind_subkind == Some ParserStrong /\
+      AP.merge_into (array_of' va1) (array_of' va2) (array_of' va) /\
+      va.contents == va1.contents :: va2.contents /\
+      n' == n + 1
+    )
+    (fun _ -> True)
+= let _ = intro_nlist_cons n' p n a1 a2 in
+  vpattern_rewrite (aparse _ a1) va
+
 let list_length_cons
   (#t: Type)
   (a: t)

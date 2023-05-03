@@ -338,3 +338,531 @@ let nlist_sorted
   end else begin
     nlist_sorted_nonempty j f_order n0 va0 a0
   end
+
+(* Lexicographic order *)
+
+let rec lex_compare
+  (#t: Type)
+  (compare: t -> t -> int)
+  (l1 l2: list t)
+: Tot int
+  (decreases l1)
+= match l1, l2 with
+  | [], [] -> 0
+  | [], _ -> -1
+  | a1 :: q1, [] -> 1
+  | a1 :: q1, a2 :: q2 ->
+    let c = compare a1 a2 in
+    if c = 0
+    then lex_compare compare q1 q2
+    else c
+
+let rec lex_compare_equal
+  (#t: Type)
+  (compare: t -> t -> int)
+  (compare_equal: (
+    (x: t) ->
+    (y: t) ->
+    Lemma
+    (compare x y == 0 <==> x == y)
+  ))
+  (l1: list t)
+  (l2: list t)
+: Lemma
+  (ensures (lex_compare compare l1 l2 == 0 <==> l1 == l2))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | a1 :: q1 ->
+    match l2 with
+    | [] -> ()
+    | a2 :: q2 ->
+      compare_equal a1 a2;
+      lex_compare_equal compare compare_equal q1 q2
+
+let rec lex_compare_trans
+  (#t: Type)
+  (compare: t -> t -> int)
+  (compare_equal: (
+    (x: t) ->
+    (y: t) ->
+    Lemma
+    (compare x y == 0 <==> x == y)
+  ))
+  (compare_trans: (
+    (x: t) ->
+    (y: t) ->
+    (z: t) ->
+    Lemma
+    (requires (compare x y < 0 /\ compare y z < 0))
+    (ensures (compare x z < 0))
+  ))
+  (l1: list t)
+  (l2: list t)
+  (l3: list t)
+: Lemma
+  (requires (lex_compare compare l1 l2 < 0 /\ lex_compare compare l2 l3 < 0))
+  (ensures (lex_compare compare l1 l3 < 0))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | a1 :: q1 ->
+    let a2 :: q2 = l2 in
+    let a3 :: q3 = l3 in
+    compare_equal a1 a2;
+    compare_equal a2 a3;
+    compare_equal a1 a3;
+    if compare a1 a2 = 0 && compare a2 a3 = 0
+    then lex_compare_trans compare compare_equal compare_trans q1 q2 q3
+    else if compare a1 a2 < 0 && compare a2 a3 < 0
+    then compare_trans a1 a2 a3
+    else ()
+
+module I16 = FStar.Int16
+
+let nlist_lex_compare_invariant_prop
+  (k: parser_kind)
+  (t: Type)
+  (compare: t -> t -> int)
+  (na0: nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (nb0: nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (nan: nat)
+  (va: v (parse_nlist_kind nan k) (nlist nan t))
+  (na: SZ.t)
+  (nbn: nat)
+  (vb: v (parse_nlist_kind nbn k) (nlist nbn t))
+  (nb: SZ.t)
+  (res: I16.t)
+  (a ga b gb: byte_array)
+  (cont: bool)
+: GTot prop
+= nan == SZ.v na /\
+  nbn == SZ.v nb /\
+  cont == ((res = 0s) && SZ.v na > 0 && SZ.v nb > 0) /\
+  lex_compare compare va0.contents vb0.contents == (if cont then lex_compare compare va.contents vb.contents else I16.v res) /\
+  (cont == true ==> (a == ga /\ b == gb)) /\
+  k.parser_kind_subkind == Some ParserStrong
+
+[@@__reduce__]
+let nlist_lex_compare_invariant_body
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (compare: t -> t -> int)
+  (na0: nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (a0: byte_array)
+  (nb0: nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (b0: byte_array)
+  (pa: R.ref byte_array)
+  (pb: R.ref byte_array)
+  (pna: R.ref SZ.t)
+  (pnb: R.ref SZ.t)
+  (pres: R.ref I16.t)
+  (nan: nat)
+  (va: v (parse_nlist_kind nan k) (nlist nan t))
+  (na: SZ.t)
+  (nbn: nat)
+  (vb: v (parse_nlist_kind nbn k) (nlist nbn t))
+  (nb: SZ.t)
+  (res: I16.t)
+  (a ga b gb: byte_array)
+  (cont: bool)
+: Tot vprop
+=   nlist_iterator p na0 va0 a0 nan va `star`
+    nlist_iterator p nb0 vb0 b0 nbn vb `star`
+    R.pts_to pa full_perm a `star` aparse (parse_nlist nan p) ga va `star` R.pts_to pna full_perm na `star`
+    R.pts_to pb full_perm b `star` aparse (parse_nlist nbn p) gb vb `star` R.pts_to pnb full_perm nb `star`
+    R.pts_to pres full_perm res
+
+[@@erasable]
+noeq
+type nlist_lex_compare_invariant_t
+  (k: parser_kind)
+  (t: Type)
+= {
+  na: SZ.t;
+  va: v (parse_nlist_kind (SZ.v na) k) (nlist (SZ.v na) t);
+  nb: SZ.t;
+  vb: v (parse_nlist_kind (SZ.v nb) k) (nlist (SZ.v nb) t);
+  res: I16.t;
+  a: byte_array;
+  ga: byte_array;
+  b: byte_array;
+  gb: byte_array;
+}
+
+[@@__reduce__]
+let nlist_lex_compare_invariant1
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (compare: t -> t -> int)
+  (na0: nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (a0: byte_array)
+  (nb0: nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (b0: byte_array)
+  (pa: R.ref byte_array)
+  (pb: R.ref byte_array)
+  (pna: R.ref SZ.t)
+  (pnb: R.ref SZ.t)
+  (pres: R.ref I16.t)
+  (cont: bool)
+  (w: nlist_lex_compare_invariant_t k t)
+: Tot vprop
+= nlist_lex_compare_invariant_body p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres (SZ.v w.na) w.va w.na (SZ.v w.nb) w.vb w.nb w.res w.a w.ga w.b w.gb cont
+
+let nlist_lex_compare_invariant_prop1
+  (k: parser_kind)
+  (t: Type)
+  (compare: t -> t -> int)
+  (na0: nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (nb0: nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (w: nlist_lex_compare_invariant_t k t)
+  (cont: bool)
+: GTot prop
+= nlist_lex_compare_invariant_prop k t compare na0 va0 nb0 vb0 (SZ.v w.na) w.va w.na (SZ.v w.nb) w.vb w.nb w.res w.a w.ga w.b w.gb cont
+
+[@@__reduce__]
+let nlist_lex_compare_invariant0
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (compare: t -> t -> int)
+  (na0: nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (a0: byte_array)
+  (nb0: nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (b0: byte_array)
+  (pa: R.ref byte_array)
+  (pb: R.ref byte_array)
+  (pna: R.ref SZ.t)
+  (pnb: R.ref SZ.t)
+  (pres: R.ref I16.t)
+  (cont: bool)
+: Tot vprop
+= exists_ (fun w -> nlist_lex_compare_invariant1 p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres cont w `star` 
+    pure (nlist_lex_compare_invariant_prop1 k t compare na0 va0 nb0 vb0 w cont)
+  )
+
+let nlist_lex_compare_invariant
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (compare: t -> t -> int)
+  (na0: nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (a0: byte_array)
+  (nb0: nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (b0: byte_array)
+  (pa: R.ref byte_array)
+  (pb: R.ref byte_array)
+  (pna: R.ref SZ.t)
+  (pnb: R.ref SZ.t)
+  (pres: R.ref I16.t)
+  (cont: bool)
+: Tot vprop
+= nlist_lex_compare_invariant0 p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres cont
+
+let intro_nlist_lex_compare_invariant
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (compare: t -> t -> int)
+  (na0: nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (a0: byte_array)
+  (nb0: nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (b0: byte_array)
+  (pa: R.ref byte_array)
+  (pb: R.ref byte_array)
+  (pna: R.ref SZ.t)
+  (pnb: R.ref SZ.t)
+  (pres: R.ref I16.t)
+  (#nan: nat)
+  (#va: v (parse_nlist_kind nan k) (nlist nan t))
+  (#na: SZ.t)
+  (#nbn: nat)
+  (#vb: v (parse_nlist_kind nbn k) (nlist nbn t))
+  (#nb: SZ.t)
+  (#res: I16.t)
+  (#a ga #b gb: byte_array)
+  (cont: bool)
+: STGhost unit opened
+    (nlist_lex_compare_invariant_body p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres nan va na nbn vb nb res a ga b gb cont)
+    (fun _ -> nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres cont)
+    (nlist_lex_compare_invariant_prop k t compare na0 va0 nb0 vb0 nan va na nbn vb nb res a ga b gb cont)
+    (fun _ -> True)
+= let w : nlist_lex_compare_invariant_t k t = {
+    na = na;
+    va = va;
+    nb = nb;
+    vb = vb;
+    res = res;
+    a = a;
+    ga = ga;
+    b = b;
+    gb = gb;
+  }
+  in
+  noop ();
+  rewrite
+    (nlist_lex_compare_invariant_body p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres nan va na nbn vb nb res a ga b gb cont)
+    (nlist_lex_compare_invariant1 p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres cont w)
+  ;
+  rewrite
+    (nlist_lex_compare_invariant0 p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres cont)
+    (nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres cont)
+
+let elim_nlist_lex_compare_invariant
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (compare: t -> t -> int)
+  (na0: nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (a0: byte_array)
+  (nb0: nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (b0: byte_array)
+  (pa: R.ref byte_array)
+  (pb: R.ref byte_array)
+  (pna: R.ref SZ.t)
+  (pnb: R.ref SZ.t)
+  (pres: R.ref I16.t)
+  (cont: bool)
+: STGhost (nlist_lex_compare_invariant_t k t) opened
+    (nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres cont)
+    (fun w -> nlist_lex_compare_invariant1 p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres cont w)
+    True
+    (fun w -> nlist_lex_compare_invariant_prop1 k t compare na0 va0 nb0 vb0 w cont)
+= let w = elim_exists () in
+  let _ = gen_elim () in
+  w
+
+inline_for_extraction
+let compare_impl
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (compare: Ghost.erased (t -> t -> int))
+: Tot Type
+= 
+  (#va1: v k t) ->
+  (#va2: v k t) ->
+  (a1: byte_array) ->
+  (a2: byte_array) ->
+  ST I16.t
+    (aparse p a1 va1 `star` aparse p a2 va2)
+    (fun _ -> aparse p a1 va1 `star` aparse p a2 va2)
+    True
+    (fun res -> I16.v res == Ghost.reveal compare va1.contents va2.contents)
+
+#push-options "--z3rlimit 16 --split_queries always --fuel 3 --ifuel 6 --query_stats"
+
+#restart-solver
+inline_for_extraction
+let nlist_lex_compare_body
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0) // gen_elim universe issue
+  (#p: parser k t)
+  (j: jumper p)
+  (compare: Ghost.erased (t -> t -> int))
+  (f_compare: compare_impl p compare)
+  (na0: Ghost.erased nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (a0: Ghost.erased byte_array)
+  (nb0: Ghost.erased nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (b0: Ghost.erased byte_array)
+  (pa: R.ref byte_array)
+  (pb: R.ref byte_array)
+  (pna: R.ref SZ.t)
+  (pnb: R.ref SZ.t)
+  (pres: R.ref I16.t)
+  ()
+: STT unit
+   (nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres true)
+   (fun _ -> exists_ (nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres))
+= let w = elim_nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres true in
+  let a = R.read pa in
+  vpattern_rewrite #_ #_ #w.ga (fun a -> aparse _ a _) a;
+  let na = R.read pna in
+  let na' = na `SZ.sub` 1sz in
+  let a' = elim_nlist_cons _ _ (SZ.v na') a in
+  let _ = gen_elim () in
+  let va' = vpattern_replace (aparse _ a') in
+  let b = R.read pb in
+  vpattern_rewrite #_ #_ #w.gb (fun a -> aparse _ a _) b;
+  let nb = R.read pnb in
+  let nb' = nb `SZ.sub` 1sz in
+  let b' = elim_nlist_cons _ _ (SZ.v nb') b in
+  let _ = gen_elim () in
+  let vb' = vpattern_replace (aparse _ b') in
+  let comp = f_compare a b in
+  if comp <> 0s
+  then begin
+    R.write pres comp;
+    intro_nlist_cons_with (SZ.v w.na) p _ a a' w.va;
+    intro_nlist_cons_with (SZ.v w.nb) p _ b b' w.vb;
+    intro_nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres a b false;
+    return ()
+  end else begin
+    R.write pna na';
+    R.write pnb nb';
+    if na' = 0sz
+    then begin
+      r_write_if (nb' <> 0sz) pres (-1s);
+      nlist_iterator_next p a0 a va';
+      nlist_iterator_next p b0 b vb';
+      intro_nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres a' b' false;
+      return ()
+    end else if nb' = 0sz
+    then begin
+      R.write pres 1s;
+      nlist_iterator_next p a0 a va';
+      nlist_iterator_next p b0 b vb';
+      intro_nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres a' b' false;
+      return ()
+    end else begin
+      let a' = hop_aparse_aparse j _ a a' in
+      R.write pa a';
+      let b' = hop_aparse_aparse j _ b b' in
+      R.write pb b';
+      nlist_iterator_next p a0 a va';
+      nlist_iterator_next p b0 b vb';
+      intro_nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres a' b' true;
+      return ()
+    end
+  end
+
+inline_for_extraction
+let nlist_lex_compare_test
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0) // gen_elim universe issue
+  (p: parser k t)
+  (compare: Ghost.erased (t -> t -> int))
+  (na0: Ghost.erased nat)
+  (va0: v (parse_nlist_kind na0 k) (nlist na0 t))
+  (a0: Ghost.erased byte_array)
+  (nb0: Ghost.erased nat)
+  (vb0: v (parse_nlist_kind nb0 k) (nlist nb0 t))
+  (b0: Ghost.erased byte_array)
+  (pa: R.ref byte_array)
+  (pb: R.ref byte_array)
+  (pna: R.ref SZ.t)
+  (pnb: R.ref SZ.t)
+  (pres: R.ref I16.t)
+  ()
+: STT bool
+   (exists_ (nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres))
+   (fun cont -> nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres cont)
+= let gcont = elim_exists () in
+  let w = elim_nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres gcont in
+  let res = R.read pres in
+  let na = R.read pna in
+  let nb = R.read pnb in
+  let cont = ((res = 0s) && (na `SZ.gt` 0sz) && (nb `SZ.gt` 0sz)) in
+  noop ();
+  intro_nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres w.ga w.gb cont;
+  return cont
+
+inline_for_extraction
+let nlist_lex_compare_nonempty
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0) // gen_elim universe issue
+  (#p: parser k t)
+  (j: jumper p)
+  (compare: Ghost.erased (t -> t -> int))
+  (f_compare: compare_impl p compare)
+  (na0: SZ.t)
+  (#va0: v (parse_nlist_kind (SZ.v na0) k) (nlist (SZ.v na0) t))
+  (a0: byte_array)
+  (nb0: SZ.t)
+  (#vb0: v (parse_nlist_kind (SZ.v nb0) k) (nlist (SZ.v nb0) t))
+  (b0: byte_array)
+: ST I16.t
+    (aparse (parse_nlist (SZ.v na0) p) a0 va0 `star` aparse (parse_nlist (SZ.v nb0) p) b0 vb0)
+    (fun _ -> aparse (parse_nlist (SZ.v na0) p) a0 va0 `star` aparse (parse_nlist (SZ.v nb0) p) b0 vb0)
+    (SZ.v na0 > 0 /\ SZ.v nb0 > 0 /\
+      k.parser_kind_subkind == Some ParserStrong
+    )
+    (fun res -> I16.v res == lex_compare compare va0.contents vb0.contents)
+= let res : (res: I16.t { I16.v res == lex_compare compare va0.contents vb0.contents }) =
+    let a = nlist_iterator_begin p #(SZ.v na0) #va0 a0 in
+    let _ = gen_elim () in
+    let b = nlist_iterator_begin p #(SZ.v nb0) #vb0 b0 in
+    let _ = gen_elim () in
+    R.with_local a (fun pa ->
+    R.with_local b (fun pb ->
+    R.with_local na0 (fun pna ->
+    R.with_local nb0 (fun pnb ->
+    R.with_local 0s (fun pres ->
+      noop ();
+      intro_nlist_lex_compare_invariant p compare (SZ.v na0) va0 a0 (SZ.v nb0) vb0 b0 pa pb pna pnb pres a b true;
+      Steel.ST.Loops.while_loop
+        (nlist_lex_compare_invariant p compare (SZ.v na0) va0 a0 (SZ.v nb0) vb0 b0 pa pb pna pnb pres)
+        (nlist_lex_compare_test p compare (SZ.v na0) va0 a0 (SZ.v nb0) vb0 b0 pa pb pna pnb pres)
+        (nlist_lex_compare_body j compare f_compare (SZ.v na0) va0 a0 (SZ.v nb0) vb0 b0 pa pb pna pnb pres);
+      let w = elim_nlist_lex_compare_invariant p compare (SZ.v na0) va0 a0 (SZ.v nb0) vb0 b0 pa pb pna pnb pres false in
+      let res = R.read pres in
+      nlist_iterator_end p #(SZ.v na0) #va0 #(SZ.v w.na) #(w.va) a0 w.ga;
+      nlist_iterator_end p #(SZ.v nb0) #vb0 #(SZ.v w.nb) #(w.vb) b0 w.gb;
+      return (intro_refinement (fun res -> I16.v res == lex_compare compare va0.contents vb0.contents) res)
+    )))))
+  in
+  return res
+
+inline_for_extraction
+let nlist_lex_compare
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0) // gen_elim universe issue
+  (#p: parser k t)
+  (j: jumper p)
+  (compare: Ghost.erased (t -> t -> int))
+  (f_compare: compare_impl p compare)
+  (na0: SZ.t)
+  (#va0: v (parse_nlist_kind (SZ.v na0) k) (nlist (SZ.v na0) t))
+  (a0: byte_array)
+  (nb0: SZ.t)
+  (#vb0: v (parse_nlist_kind (SZ.v nb0) k) (nlist (SZ.v nb0) t))
+  (b0: byte_array)
+: ST I16.t
+    (aparse (parse_nlist (SZ.v na0) p) a0 va0 `star` aparse (parse_nlist (SZ.v nb0) p) b0 vb0)
+    (fun _ -> aparse (parse_nlist (SZ.v na0) p) a0 va0 `star` aparse (parse_nlist (SZ.v nb0) p) b0 vb0)
+    (
+      k.parser_kind_subkind == Some ParserStrong
+    )
+    (fun res -> I16.v res == lex_compare compare va0.contents vb0.contents)
+= if na0 = 0sz
+  then
+    if nb0 = 0sz
+    then return 0s
+    else return (-1s)
+  else if nb0 = 0sz
+  then return 1s
+  else return (nlist_lex_compare_nonempty j compare f_compare na0 a0 nb0 b0)
+
+#pop-options
+
+(*
+let length_first_lex_order
+  (#t: eqtype)
+  (order: t -> t -> bool) // assumed strict and total
+  (l1 l2: list t)
+: Tot bool
+= if List.Tot.length l1 = List.Tot.length l2
+  then lex_order order l1 l2
+  else List.Tot.length l1 < List.Tot.length l2
