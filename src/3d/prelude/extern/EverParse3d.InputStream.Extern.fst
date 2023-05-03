@@ -219,7 +219,8 @@ let read
 
 #pop-options
 
-#push-options "--z3rlimit 128 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --split_queries always"
+#push-options "--z3rlimit 128 --fuel 0 --ifuel 2 --z3cliopt smt.arith.nl=false --split_queries always"
+#restart-solver
 inline_for_extraction
 noextract
 let peep
@@ -264,6 +265,15 @@ let peep
   in
   let h2 = HST.get () in
   assert (B.modifies B.loc_none h0 h2);
+  assert ((~ (B.g_is_null dst)) ==>
+          Seq.length (get_remaining x h0) >= U64.v n);
+  assert ((~ (B.g_is_null dst)) ==>
+          (Seq.length (get_remaining x h0) >= U64.v n /\
+           B.live h2 dst));
+  assert ((~ (B.g_is_null dst)) ==>
+          (Seq.length (get_remaining x h0) >= U64.v n /\
+           B.live h2 dst /\
+           B.as_seq h2 dst `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n)));
   assert ((~ (B.g_is_null dst)) ==>
           (Seq.length (get_remaining x h0) >= U64.v n /\
            B.as_seq h2 dst `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n) /\
