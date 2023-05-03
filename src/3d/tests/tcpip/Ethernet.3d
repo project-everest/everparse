@@ -53,12 +53,12 @@ typedef struct _MAC_ADDRESS
 typedef struct _VLAN_ETHTYPE(mutable UINT16* VlanTagOut,
                              mutable UINT16* EthTypeOut)
 {
-  UINT16 VlanTag
+  UINT16BE VlanTag
   {:on-success
       *VlanTagOut = VlanTag;
        return true; 
   };
-  UINT16 EthType
+  UINT16BE EthType
   {:on-success
       *EthTypeOut = EthType;
        return true;
@@ -129,7 +129,7 @@ typedef struct _ETHERNET_FRAME(mutable Bool* Dot1QOut,
 {
   MAC_ADDRESS Destination;
   MAC_ADDRESS Source;
-  UINT16 EthTypeOrDot1Q;
+  UINT16BE EthTypeOrDot1Q;
   VLAN_ETHTYPE_OR_EMPTY(EthTypeOrDot1Q,
                         Dot1QOut,
                         VlanTagOut,

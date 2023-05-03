@@ -171,7 +171,10 @@ and are implicitly promoted to the underlying integer type, ``UINT32``
 in this case, although the 3d verifier is aware of suitable bounds on
 the types, e.g., that ``0 <= x < 64``.
 
-3d implements C's rules for packing bit fields. For instance,
+For types ``UINT8``. ``UINT16``, ``UINT32`` and ``UINT64``, 3d
+implements `MSVC's rules for packing bit fields
+<https://learn.microsoft.com/en-us/cpp/c-language/c-bit-fields>`_:
+least-significant bit first. For instance:
 
 .. literalinclude:: BF.3d
     :language: c
@@ -181,18 +184,26 @@ the types, e.g., that ``0 <= x < 64``.
 In ``BF2``, although ``x``, ``y`` and ``z`` cumulatively consume only
 26 bits, the layout of ``BF2`` is actually as shown below, consuming
 40 bits, since a given field must be represented within the bounds of
-a single underlying type---we have 10 unused bits after ``x`` and 4
-unused bits after ``y``.
+a single underlying type---we have 10 unused bits before ``x`` and 4
+unused bits before ``y``.
 
 .. code-block:: c
+
+   counting from most-significant bits to least-significant bits:
 
     0                   1                   2                   3                   4
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-   |     x     |       Unused      |           y           |Unused |        z      |
-   |           |                   |                       |       |               |
+   |      Unused       |     x     | Unused|           y           |        z      |
+   |                   |           |       |                       |               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-                
+
+EverParse version 2023.04.17 and beyond encode bitfields with
+big-endian integer types ``UINT16BE``, ``UINT32BE`` and ``UINT64BE``
+with the most-significant bit (MSB) first, which is necessary for many
+IETF network protocols ("network byte order".) Those versions of
+EverParse introduce the integer type ``UINT8BE`` to read a 8-bit
+bitfield as MSB-first.
 
 Constants and Enumerations
 --------------------------

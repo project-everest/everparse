@@ -211,7 +211,7 @@ make_everparse() {
     fi
 
     # Copy KaRaMeL
-    $cp $KRML_HOME/Karamel.native everparse/bin/krml$exe
+    $cp -L $KRML_HOME/krml everparse/bin/krml$exe
     $cp -r $KRML_HOME/krmllib everparse/
     $cp -r $KRML_HOME/include everparse/
     $cp -r $KRML_HOME/misc everparse/

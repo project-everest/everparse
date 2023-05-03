@@ -91,6 +91,10 @@ val kind____UINT8
   : parser_kind true WeakKindStrongPrefix
 
 inline_for_extraction noextract
+val kind____UINT8BE
+  : parser_kind true WeakKindStrongPrefix
+
+inline_for_extraction noextract
 val kind____UINT16BE
   : parser_kind true WeakKindStrongPrefix
 

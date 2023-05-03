@@ -129,7 +129,7 @@ let namespace_of_integer_type =
 
 let print_range (r:A.range) : string =
   let open A in
-  Printf.sprintf "(Prims.mk_range \"%s\" %d %d %d %d)"
+  Printf.sprintf "(FStar.Range.mk_range \"%s\" %d %d %d %d)"
     (fst r).filename
     (fst r).line
     (fst r).col
@@ -216,6 +216,13 @@ let is_infix =
   | Or -> true
   | _ -> false
 
+// Bitfield operators from EverParse3d.Prelude.StaticHeader are least
+// significant bit first by default, following MSVC
+// (https://learn.microsoft.com/en-us/cpp/c-language/c-bit-fields)
+let print_bitfield_bit_order = function
+  | A.LSBFirst -> ""
+  | A.MSBFirst -> "_msb_first"
+
 let print_op_with_range ropt o =
   match o with
   | Eq -> "="
@@ -239,7 +246,7 @@ let print_op_with_range ropt o =
   | LE t -> Printf.sprintf "FStar.%s.lte" (namespace_of_integer_type t)
   | GE t -> Printf.sprintf "FStar.%s.gte" (namespace_of_integer_type t)
   | IfThenElse -> "ite"
-  | BitFieldOf i -> Printf.sprintf "get_bitfield%d" i
+  | BitFieldOf i order -> Printf.sprintf "get_bitfield%d%s" i (print_bitfield_bit_order order)
   | Cast from to ->
     let tfrom = print_integer_type from in
     let tto = print_integer_type to in
@@ -276,10 +283,10 @@ let rec print_expr (mname:string) (e:expr) : ML string =
     Printf.sprintf
       "(if %s then %s else %s)"
       (print_expr mname e1) (print_expr mname e2) (print_expr mname e3)
-  | App (BitFieldOf i) [e1;e2;e3] ->
+  | App (BitFieldOf i order) [e1;e2;e3] ->
     Printf.sprintf
       "(%s %s %s %s)"
-      (print_op (BitFieldOf i))
+      (print_op (BitFieldOf i order))
       (print_expr mname e1) (print_expr mname e2) (print_expr mname e3)
   | App op [] ->
     print_op op

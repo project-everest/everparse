@@ -4,6 +4,9 @@ include LowParse.BitFields
 
 module L = FStar.List.Tot
 
+// IMPORTANT: these bitfield operators are defined in a MOST
+// significant bit (MSB) first fashion.
+
 noeq
 type bitsum'
   (#tot: pos)

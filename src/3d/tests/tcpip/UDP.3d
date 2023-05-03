@@ -20,8 +20,8 @@
 entrypoint
 typedef struct _UDP_Header
 {
-  UINT16 SourcePort;
-  UINT16 DestinationPort;
-  UINT16 Length;
-  UINT16 CheckSum;
+  UINT16BE SourcePort;
+  UINT16BE DestinationPort;
+  UINT16BE Length;
+  UINT16BE CheckSum;
 } UDP_HEADER;

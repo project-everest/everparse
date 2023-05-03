@@ -48,8 +48,8 @@ let krml out_dir =
         let target = Filename.temp_file ~temp_dir:out_dir "krml" ".exe" in
         begin
           (* Here, Windows cannot even read symlinks *)
-          let dir' = filename_concat (filename_concat dir "_build") "src" in
-          let candidate = aux true [(dir', "Karamel.native")] in
+          let dir' = filename_concat (filename_concat (filename_concat dir "src") "_build") "default" in
+          let candidate = aux true [(dir', "Karamel.exe")] in
           copy candidate target
         end;
         (true, target)

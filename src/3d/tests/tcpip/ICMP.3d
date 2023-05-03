@@ -27,7 +27,7 @@ UINT8 enum DESTINATION_UNREACHABLE_CODE
 typedef struct _IP_HEADER_AND_DATAGRAM
 {
     IPV4::IPV4_HEADER    IpHeader;
-    UINT64               IpData;
+    UINT64BE             IpData;
 } IP_HEADER_AND_DATAGRAM;
 
 
@@ -46,7 +46,7 @@ typedef struct _UNUSED_BYTES (UINT32 len)
 typedef struct _DESTINATION_UNREACHABLE_MESSAGE
 {
      DESTINATION_UNREACHABLE_CODE        Code;
-     UINT16                              Checksum;
+     UINT16BE                            Checksum;
      UNUSED_BYTES(32)                    Unused;
      IP_HEADER_AND_DATAGRAM              OriginalMsg;
 } DESTINATION_UNREACHABLE_MESSAGE;
@@ -62,7 +62,7 @@ UINT8 enum TIME_EXCEEDED_CODE
 typedef struct _TIME_EXCEEDED_MESSAGE
 {
     TIME_EXCEEDED_CODE        Code;
-    UINT16                    Checksum;
+    UINT16BE                  Checksum;
     UNUSED_BYTES(32)          Unused;
     IP_HEADER_AND_DATAGRAM    OriginalMsg;
 } TIME_EXCEEDED_MESSAGE;
@@ -74,7 +74,7 @@ typedef struct _PARAMETER_PROBLEM_MESSAGE
     {
         Code == 0
     };
-    UINT16                    Checksum;
+    UINT16BE                  Checksum;
     UINT8                     Pointer;  //Valid only if code is 0, is there something to check?
     UNUSED_BYTES(24)          Unused;
     IP_HEADER_AND_DATAGRAM    OriginalMsg;
@@ -87,7 +87,7 @@ typedef struct _SOURCE_QUENCH_MESSAGE
     {
         Code == 0
     };
-    UINT16                    Checksum;
+    UINT16BE                  Checksum;
     UNUSED_BYTES(32)          Unused;
     IP_HEADER_AND_DATAGRAM    OriginalMsg;
 } SOURCE_QUENCH_MESSAGE;
@@ -104,8 +104,8 @@ UINT8 enum REDIRECT_CODE
 typedef struct _REDIRECT_MESSAGE
 {
     REDIRECT_CODE             Code;
-    UINT16                    Checksum;
-    UINT32                    GatewayInternetAddress;
+    UINT16BE                  Checksum;
+    UINT32BE                  GatewayInternetAddress;
     IP_HEADER_AND_DATAGRAM    OriginalMsg;
 } REDIRECT_MESSAGE;
 
@@ -117,9 +117,9 @@ where (len >= sizeof (this))
     {
         Code == 0
     };
-    UINT16                    Checksum;
-    UINT16                    Identifier;
-    UINT16                    SequenceNumber;
+    UINT16BE                  Checksum;
+    UINT16BE                  Identifier;
+    UINT16BE                  SequenceNumber;
     UINT8                     Data[:byte-size len - sizeof (this)];  //TODO: get an opinion on this
 } ECHO_OR_ECHO_REPLY_MESSAGE;
 
@@ -130,12 +130,12 @@ typedef struct _TIMESTAMP_OR_TIMESTAMP_REPLY_MESSAGE
     {
         Code == 0
     };
-    UINT16                    Checksum;
-    UINT16                    Identifier;
-    UINT16                    SequenceNumber;
-    UINT32                    OriginalTimeStamp;
-    UINT32                    ReceiveTimeStamp;
-    UINT32                    TransmitTimeStamp;
+    UINT16BE                  Checksum;
+    UINT16BE                  Identifier;
+    UINT16BE                  SequenceNumber;
+    UINT32BE                  OriginalTimeStamp;
+    UINT32BE                  ReceiveTimeStamp;
+    UINT32BE                  TransmitTimeStamp;
 } TIMESTAMP_OR_TIMESTAMP_REPLY_MESSAGE;
 
 
@@ -145,9 +145,9 @@ typedef struct _INFORMATION_REQUEST_OR_INFORMATION_REPLY_MESSAGE
     {
         Code == 0
     };
-    UINT16                    Checksum;
-    UINT16                    Identifier;
-    UINT16                    SequenceNumber;
+    UINT16BE                  Checksum;
+    UINT16BE                  Identifier;
+    UINT16BE                  SequenceNumber;
 } INFORMATION_REQUEST_OR_INFORMATION_REPLY_MESSAGE;
     
 

@@ -1347,6 +1347,18 @@ let read____UINT8
 = lift_reader _ LowParse.Low.Int.read_u8 1ul 1uL
 
 inline_for_extraction noextract
+let validate____UINT8BE
+  : validator parse____UINT8BE
+  = validate_with_comment
+      "Checking that we have enough space for a UINT8BE, i.e., 1 byte"
+      (validate_total_constant_size_no_read parse____UINT8BE 1uL () _ _)
+
+inline_for_extraction noextract
+let read____UINT8BE
+  : leaf_reader parse____UINT8BE
+= lift_reader _ LowParse.Low.Int.read_u8 1ul 1uL
+
+inline_for_extraction noextract
 let validate____UINT16BE
   : validator parse____UINT16BE
   = validate_with_comment
