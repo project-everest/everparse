@@ -238,8 +238,8 @@ let peep
       B.modifies B.loc_none h h' /\
       ((~ (B.g_is_null dst')) ==> (
         Seq.length (get_remaining x h) >= U64.v n /\
-        B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
         B.live h' dst' /\
+        B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
         footprint x `B.loc_includes` B.loc_buffer dst'
       ))
     ))
@@ -256,8 +256,8 @@ let peep
                                 B.modifies B.loc_none h h' /\
                                 ((~ (B.g_is_null dst')) ==> (
                                   Seq.length (get_remaining x h) >= U64.v n /\
-                                  B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
                                   B.live h' dst' /\
+                                  B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
                                   footprint x `B.loc_includes` B.loc_buffer dst'))))
     then Aux.peep x.Aux.base n
     else B.null
@@ -275,8 +275,8 @@ let peep
            B.as_seq h2 dst `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n)));
   assert ((~ (B.g_is_null dst)) ==>
           (Seq.length (get_remaining x h0) >= U64.v n /\
-           B.as_seq h2 dst `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n) /\
            B.live h2 dst /\
+           B.as_seq h2 dst `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n) /\
            footprint x `B.loc_includes` B.loc_buffer dst));
   dst
 
