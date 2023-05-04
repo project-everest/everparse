@@ -857,12 +857,67 @@ let nlist_lex_compare
 
 #pop-options
 
-(*
+let lex_order
+  (#t: Type)
+  (compare: t -> t -> int)
+  (l1 l2: list t)
+: Tot bool
+= lex_compare compare l1 l2 < 0
+
+inline_for_extraction
+let nlist_lex_order
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0) // gen_elim universe issue
+  (#p: parser k t)
+  (j: jumper p)
+  (compare: Ghost.erased (t -> t -> int))
+  (f_compare: compare_impl p compare)
+  (na0: SZ.t)
+  (#va0: v (parse_nlist_kind (SZ.v na0) k) (nlist (SZ.v na0) t))
+  (a0: byte_array)
+  (nb0: SZ.t)
+  (#vb0: v (parse_nlist_kind (SZ.v nb0) k) (nlist (SZ.v nb0) t))
+  (b0: byte_array)
+: ST bool
+    (aparse (parse_nlist (SZ.v na0) p) a0 va0 `star` aparse (parse_nlist (SZ.v nb0) p) b0 vb0)
+    (fun _ -> aparse (parse_nlist (SZ.v na0) p) a0 va0 `star` aparse (parse_nlist (SZ.v nb0) p) b0 vb0)
+    (
+      k.parser_kind_subkind == Some ParserStrong
+    )
+    (fun res -> res == lex_order compare va0.contents vb0.contents)
+= let comp = nlist_lex_compare j compare f_compare na0 a0 nb0 b0 in
+  return (comp `I16.lt` 0s)
+
 let length_first_lex_order
-  (#t: eqtype)
-  (order: t -> t -> bool) // assumed strict and total
+  (#t: Type)
+  (compare: t -> t -> int)
   (l1 l2: list t)
 : Tot bool
 = if List.Tot.length l1 = List.Tot.length l2
-  then lex_order order l1 l2
+  then lex_order compare l1 l2
   else List.Tot.length l1 < List.Tot.length l2
+
+inline_for_extraction
+let nlist_length_first_lex_order
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0) // gen_elim universe issue
+  (#p: parser k t)
+  (j: jumper p)
+  (compare: Ghost.erased (t -> t -> int))
+  (f_compare: compare_impl p compare)
+  (na0: SZ.t)
+  (#va0: v (parse_nlist_kind (SZ.v na0) k) (nlist (SZ.v na0) t))
+  (a0: byte_array)
+  (nb0: SZ.t)
+  (#vb0: v (parse_nlist_kind (SZ.v nb0) k) (nlist (SZ.v nb0) t))
+  (b0: byte_array)
+: ST bool
+    (aparse (parse_nlist (SZ.v na0) p) a0 va0 `star` aparse (parse_nlist (SZ.v nb0) p) b0 vb0)
+    (fun _ -> aparse (parse_nlist (SZ.v na0) p) a0 va0 `star` aparse (parse_nlist (SZ.v nb0) p) b0 vb0)
+    (
+      k.parser_kind_subkind == Some ParserStrong
+    )
+    (fun res -> res == length_first_lex_order compare va0.contents vb0.contents)
+= if na0 = nb0
+  then nlist_lex_order j compare f_compare na0 a0 nb0 b0
+  else return (na0 `SZ.lt` nb0)
