@@ -35,6 +35,9 @@ steel-unit-test: lowparse
 	+$(MAKE) -C tests/steel
 endif
 
+.PHONY: steel-test
+steel-test: steel-unit-test
+
 lowparse-test: lowparse-unit-test lowparse-bitfields-test
 
 quackyducky-unit-test: gen-test lowparse
@@ -51,7 +54,7 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: all lowparse-test quackyducky-test 3d-test steel-unit-test
+test: all lowparse-test quackyducky-test 3d-test steel-test
 
 ci: test
 
