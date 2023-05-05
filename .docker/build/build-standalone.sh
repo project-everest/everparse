@@ -16,6 +16,12 @@ function fetch_and_make_karamel() {
     true
 }
 
+function fetch_and_make_steel() {
+    # steel is already supposed to have been built and fetched before
+    # (e.g. by install-deps.sh)
+    true
+}
+
 rootPath=$(pwd)
 result_file="result.txt"
 status_file="status.txt"
