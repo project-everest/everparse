@@ -470,7 +470,7 @@ let synth_inverse_list_of_pair_list
   [SMTPat (list_of_pair_list t nb_pairs)]
 = Classical.forall_intro (list_of_pair_list_of_list #t nb_pairs)
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 #restart-solver
 
 let rec parse_pair_list_as_list
