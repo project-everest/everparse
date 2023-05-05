@@ -157,3 +157,92 @@ val serialize_recursive_eq
   (x: pp.t)
 : Lemma
   (serialize (serialize_recursive sp) x == serialize (serialize_recursive_aux sp) x)
+
+let get_children
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (x: p.t)
+: Tot (list p.t)
+= dsnd (s.synth_recip x)
+
+[@@erasable]
+noeq
+type fold_recursive_t
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (t: Type)
+: Type
+= {
+    step: (t -> p.t -> t);
+    fold: (t -> p.t -> t);
+    prf: (
+      (init: t) ->
+      (x: p.t) ->
+      Lemma
+      (fold init x ==
+        List.Tot.fold_left
+          fold
+          (step init x)
+          (get_children s x) 
+      )
+    );
+  }
+
+let list_fold_left_append
+  (#a #b: Type)
+  (f: a -> b -> Tot a)
+  (l1 l2: list b)
+  (x: a)
+: Tot (squash (List.Tot.fold_left f x (l1 `List.Tot.append` l2) == List.Tot.fold_left f (List.Tot.fold_left f x l1) l2))
+= List.Tot.fold_left_append f l1 l2
+
+let fold_recursive_cons_eq
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (#t: Type)
+  (fold: fold_recursive_t s t)
+  (init: t)
+  (hd: p.t)
+  (tl: list p.t)
+  (l': list p.t)
+: Lemma
+  (requires (
+    l' == List.Tot.append (get_children s hd) tl
+  ))
+  (ensures (
+    List.Tot.fold_left fold.fold init (hd :: tl) == List.Tot.fold_left fold.fold (fold.step init hd) l'
+  ))
+= fold.prf init hd;
+  list_fold_left_append fold.fold (get_children s hd) tl (fold.step init hd)
+
+[@@erasable]
+noeq
+type pred_recursive_t
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+: Type
+= {
+    base: (p.t -> bool);
+    pred: (p.t -> bool);
+    prf: (
+      (x: p.t) ->
+      Lemma
+      (pred x == (base x && List.Tot.for_all pred (get_children s x)))
+    );
+  }
+
+let fold_of_pred_recursive
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (pred: pred_recursive_t s)
+: Tot (fold_recursive_t s bool)
+= let base = pred.base in
+  let pr = pred.pred in
+  {
+    step = LowParse.WellFounded.forall_list_f_weak base;
+    fold = LowParse.WellFounded.forall_list_f_weak pr;
+    prf = (fun aux x ->
+      pred.prf x;
+      LowParse.WellFounded.for_all_fold_left_aux pr (aux && base x) (get_children s x)
+    );
+  }
