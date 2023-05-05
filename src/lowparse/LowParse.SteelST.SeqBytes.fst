@@ -136,25 +136,15 @@ let rec seq_all_bytes_from_nlist_byte
 module I16 = FStar.Int16
 
 inline_for_extraction
-let byte_compare (x y: byte) : Tot I16.t =
-  if x = y
-  then 0s
-  else if x `FStar.UInt8.lt` y
-  then -1s
-  else 1s
-
-let byte_compare_int (x y: byte) : Tot int =
-  I16.v (byte_compare x y)
-
-inline_for_extraction
-let byte_compare_impl : NL.compare_impl I.parse_u8 byte_compare_int =
+let byte_compare_impl : NL.compare_impl I.parse_u8 byte_compare =
   fun a1 a2 ->
     let x1 = I.read_u8 a1 in
     let x2 = I.read_u8 a2 in
-    return (byte_compare x1 x2)
-
-let bytes_lex_order (x y: bytes) : Tot bool =
-  NL.lex_order byte_compare_int (Seq.seq_to_list x) (Seq.seq_to_list y)
+    if x1 = x2
+    then return 0s
+    else if x1 `FStar.UInt8.lt` x2
+    then return (-1s)
+    else return 1s
 
 inline_for_extraction
 let byte_array_lex_order
@@ -175,7 +165,7 @@ let byte_array_lex_order
   let _ = seq_all_bytes_to_nlist_byte (SZ.v na0) a0 in
   let _ = intro_seq_all_bytes b0 in
   let _ = seq_all_bytes_to_nlist_byte (SZ.v nb0) b0 in
-  let res = NL.nlist_lex_order I.jump_u8 byte_compare_int byte_compare_impl na0 a0 nb0 b0 in
+  let res = NL.nlist_lex_order I.jump_u8 byte_compare byte_compare_impl na0 a0 nb0 b0 in
   let _ = seq_all_bytes_from_nlist_byte (SZ.v nb0) b0 in
   let _ = elim_seq_all_bytes b0 in
   vpattern_rewrite (AP.arrayptr b0) vb0;
@@ -183,9 +173,6 @@ let byte_array_lex_order
   let _ = elim_seq_all_bytes a0 in
   vpattern_rewrite (AP.arrayptr a0) va0;
   return res
-
-let bytes_length_first_lex_order (x y: bytes) : Tot bool =
-  NL.length_first_lex_order byte_compare_int (Seq.seq_to_list x) (Seq.seq_to_list y)
 
 inline_for_extraction
 let byte_array_length_first_lex_order
@@ -206,7 +193,7 @@ let byte_array_length_first_lex_order
   let _ = seq_all_bytes_to_nlist_byte (SZ.v na0) a0 in
   let _ = intro_seq_all_bytes b0 in
   let _ = seq_all_bytes_to_nlist_byte (SZ.v nb0) b0 in
-  let res = NL.nlist_length_first_lex_order I.jump_u8 byte_compare_int byte_compare_impl na0 a0 nb0 b0 in
+  let res = NL.nlist_length_first_lex_order I.jump_u8 byte_compare byte_compare_impl na0 a0 nb0 b0 in
   let _ = seq_all_bytes_from_nlist_byte (SZ.v nb0) b0 in
   let _ = elim_seq_all_bytes b0 in
   vpattern_rewrite (AP.arrayptr b0) vb0;

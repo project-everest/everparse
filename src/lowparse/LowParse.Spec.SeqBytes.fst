@@ -157,6 +157,21 @@ let serialize_lseq_bytes
 = serialize_lseq_bytes_correct sz;
   serialize_lseq_bytes' sz
 
+module S = LowParse.Spec.Sorted
+
+let byte_compare (x y: byte) : Tot int =
+  if x = y
+  then 0
+  else if x `FStar.UInt8.lt` y
+  then -1
+  else 1
+
+let bytes_lex_order (x y: bytes) : Tot bool =
+  S.lex_order byte_compare (Seq.seq_to_list x) (Seq.seq_to_list y)
+
+let bytes_length_first_lex_order (x y: bytes) : Tot bool =
+  S.length_first_lex_order byte_compare (Seq.seq_to_list x) (Seq.seq_to_list y)
+
 (*
 
 let serialize_bounded_seq_vlbytes_upd
