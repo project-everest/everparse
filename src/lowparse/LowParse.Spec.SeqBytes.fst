@@ -169,8 +169,52 @@ let byte_compare (x y: byte) : Tot int =
 let bytes_lex_order (x y: bytes) : Tot bool =
   S.lex_order byte_compare (Seq.seq_to_list x) (Seq.seq_to_list y)
 
+let bytes_lex_order_irrefl
+  (x y: bytes)
+: Lemma
+  (requires (bytes_lex_order x y))
+  (ensures (~ (x == y)))
+= S.lex_order_irrefl byte_compare (fun _ _ -> ()) (Seq.seq_to_list x) (Seq.seq_to_list y)
+
+let bytes_lex_order_trans
+  (x y z: bytes)
+: Lemma
+  (requires (bytes_lex_order x y /\ bytes_lex_order y z))
+  (ensures (bytes_lex_order x z))
+= S.lex_order_trans byte_compare (fun _ _ -> ()) (fun _ _ _ -> ()) (Seq.seq_to_list x) (Seq.seq_to_list y) (Seq.seq_to_list z)
+
+let bytes_lex_order_total
+  (x y: bytes)
+: Lemma
+  (ensures (x == y \/ bytes_lex_order x y \/ bytes_lex_order y x))
+= Seq.lemma_seq_list_bij x;
+  Seq.lemma_seq_list_bij y;
+  S.lex_order_total byte_compare (fun _ _ -> ()) (fun _ _ -> ()) (Seq.seq_to_list x) (Seq.seq_to_list y)
+
 let bytes_length_first_lex_order (x y: bytes) : Tot bool =
   S.length_first_lex_order byte_compare (Seq.seq_to_list x) (Seq.seq_to_list y)
+
+let bytes_length_first_lex_order_irrefl
+  (x y: bytes)
+: Lemma
+  (requires (bytes_length_first_lex_order x y))
+  (ensures (~ (x == y)))
+= S.length_first_lex_order_irrefl byte_compare (fun _ _ -> ()) (Seq.seq_to_list x) (Seq.seq_to_list y)
+
+let bytes_length_first_lex_order_trans
+  (x y z: bytes)
+: Lemma
+  (requires (bytes_length_first_lex_order x y /\ bytes_length_first_lex_order y z))
+  (ensures (bytes_length_first_lex_order x z))
+= S.length_first_lex_order_trans byte_compare (fun _ _ -> ()) (fun _ _ _ -> ()) (Seq.seq_to_list x) (Seq.seq_to_list y) (Seq.seq_to_list z)
+
+let bytes_length_first_lex_order_total
+  (x y: bytes)
+: Lemma
+  (ensures (x == y \/ bytes_length_first_lex_order x y \/ bytes_length_first_lex_order y x))
+= Seq.lemma_seq_list_bij x;
+  Seq.lemma_seq_list_bij y;
+  S.length_first_lex_order_total byte_compare (fun _ _ -> ()) (fun _ _ -> ()) (Seq.seq_to_list x) (Seq.seq_to_list y)
 
 (*
 
