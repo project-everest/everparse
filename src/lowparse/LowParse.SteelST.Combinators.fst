@@ -1854,6 +1854,31 @@ let ghost_dtuple2_tag
   let _ = rewrite_aparse a2 (p gtag) in
   gtag
 
+let ghost_split_dtuple2_full
+  (#opened: _)
+  (#kt: parser_kind)
+  (#tag_t: Type)
+  (pt: parser kt tag_t)
+  (#k: parser_kind)
+  (#data_t: tag_t -> Type)
+  (p: (t: tag_t) -> Tot (parser k (data_t t)))
+  (#y: v (and_then_kind kt k) (dtuple2 tag_t data_t)) (a1: byte_array)
+: STGhost (Ghost.erased byte_array) opened
+    (aparse (parse_dtuple2 pt p) a1 y)
+    (fun a2 -> exists_ (fun y1 -> aparse pt a1 y1 `star` exists_ (fun tag -> exists_ (fun y2 -> aparse (p tag) a2 y2 `star` pure (
+      AP.merge_into (array_of' y1) (array_of' y2) (array_of' y) /\
+      y1.contents == tag /\
+      y.contents == (| tag, y2.contents |)
+    )))))
+    (kt.parser_kind_subkind == Some ParserStrong)
+    (fun _ -> True)
+= let a2 = ghost_split_tagged_union pt _ _ a1 in
+  let _ = gen_elim () in
+  let tag = ghost_dtuple2_tag pt p a1 a2 in
+  let _ = gen_elim () in
+  noop ();
+  a2
+
 inline_for_extraction
 let read_dtuple2_tag
   (#kt: Ghost.erased parser_kind)
