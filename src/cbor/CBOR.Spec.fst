@@ -918,15 +918,344 @@ let serialize_raw_data_item_aux_correct
   let s' = serialize_ext parse_raw_data_item serialize_raw_data_item (parse_raw_data_item_aux parse_raw_data_item) in
   serializer_unique (parse_raw_data_item_aux parse_raw_data_item) serialize_raw_data_item_aux s' x
 
-(*
 // Ordering of map keys (Section 4.2)
+
+let holds_on_pair
+  (#t0: Type)
+  (bound: t0)
+  (#t: Type)
+  (pred: ((x: t { x << bound }) -> bool))
+  (x: (t & t) { x << bound })
+: Tot bool
+= let (x1, x2) = x in
+  pred x1 && pred x2
+
+let map_entry_order
+  (#key: Type)
+  (key_order: (key -> key -> bool))
+  (value: Type)
+  (m1: (key & value))
+  (m2: (key & value))
+: Tot bool
+= key_order (fst m1) (fst m2)
+
+let rec list_ghost_assoc
+  (#key: Type)
+  (#value: Type)
+  (k: key)
+  (m: list (key & value))
+: GTot (option value)
+  (decreases m)
+= match m with
+  | [] -> None
+  | (k', v') :: m' ->
+    if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
+    then Some v'
+    else list_ghost_assoc k m'
+
+let rec list_ghost_assoc_eq
+  (#key: eqtype)
+  (#value: Type)
+  (k: key)
+  (m: list (key & value))
+: Lemma
+  (ensures (list_ghost_assoc k m == List.Tot.assoc k m))
+= match m with
+  | [] -> ()
+  | (k', v') :: m' ->
+    if k = k'
+    then ()
+    else list_ghost_assoc_eq k m'
+
+let rec map_entry_order_assoc_order_none
+  (#key: Type)
+  (key_order: (key -> key -> bool))
+  (key_order_irrefl: (
+    (k1: key) ->
+    (k2: key) ->
+    Lemma
+    (requires (key_order k1 k2))
+    (ensures (~ (k1 == k2)))
+  ))
+  (key_order_trans: (
+    (k1: key) ->
+    (k2: key) ->
+    (k3: key) ->
+    Lemma
+    (requires (key_order k1 k2 /\ key_order k2 k3))
+    (ensures (key_order k1 k3))
+  ))
+  (#value: Type)
+  (k: key)
+  (v: value)
+  (m: list (key & value))
+  (k': key)
+: Lemma
+  (requires (key_order k' k /\ List.Tot.sorted (map_entry_order key_order _) ((k, v) :: m)))
+  (ensures (list_ghost_assoc k' ((k, v) :: m) == None))
+  (decreases m)
+= key_order_irrefl k' k;
+  match m with
+  | [] -> ()
+  | (k2, v2) :: m2 ->
+    key_order_trans k' k k2;
+    map_entry_order_assoc_order_none key_order key_order_irrefl key_order_trans k2 v2 m2 k'
+
+let map_entry_order_assoc_tail_none
+  (#key: Type)
+  (key_order: (key -> key -> bool))
+  (key_order_irrefl: (
+    (k1: key) ->
+    (k2: key) ->
+    Lemma
+    (requires (key_order k1 k2))
+    (ensures (~ (k1 == k2)))
+  ))
+  (key_order_trans: (
+    (k1: key) ->
+    (k2: key) ->
+    (k3: key) ->
+    Lemma
+    (requires (key_order k1 k2 /\ key_order k2 k3))
+    (ensures (key_order k1 k3))
+  ))
+  (#value: Type)
+  (k: key)
+  (v: value)
+  (m: list (key & value))
+: Lemma
+  (requires (List.Tot.sorted (map_entry_order key_order _) ((k, v) :: m)))
+  (ensures list_ghost_assoc k m == None)
+  (decreases m)
+= match m with
+  | [] -> ()
+  | (k', v') :: m' ->
+    map_entry_order_assoc_order_none key_order key_order_irrefl key_order_trans k' v' m' k
+
+let rec map_entry_order_assoc_ext
+  (#key: Type)
+  (key_order: (key -> key -> bool))
+  (key_order_irrefl: (
+    (k1: key) ->
+    (k2: key) ->
+    Lemma
+    (requires (key_order k1 k2))
+    (ensures (~ (k1 == k2)))
+  ))
+  (key_order_trans: (
+    (k1: key) ->
+    (k2: key) ->
+    (k3: key) ->
+    Lemma
+    (requires (key_order k1 k2 /\ key_order k2 k3))
+    (ensures (key_order k1 k3))
+  ))
+  (key_order_total: (
+    (k1: key) ->
+    (k2: key) ->
+    Lemma
+    (k1 == k2 \/ key_order k1 k2 \/ key_order k2 k1)
+  ))
+  (#value: Type)
+  (m1 m2: list (key & value))
+  (ext: (
+    (k: key) ->
+    Lemma
+    (list_ghost_assoc k m1 == list_ghost_assoc k m2)
+  ))
+: Lemma
+  (requires (List.Tot.sorted (map_entry_order key_order _) m1 /\ List.Tot.sorted (map_entry_order key_order _) m2))
+  (ensures (m1 == m2))
+  (decreases (List.Tot.length m1 + List.Tot.length m2))
+= match m1, m2 with
+  | [], [] -> ()
+  | [], (k, _) :: _
+  | (k, _) :: _, [] -> ext k
+  | (k1, v1) :: m1', (k2, v2) :: m2' ->
+    key_order_total k1 k2;
+    ext k1;
+    ext k2;
+    if FStar.StrongExcludedMiddle.strong_excluded_middle (k1 == k2)
+    then begin
+      map_entry_order_assoc_tail_none key_order key_order_irrefl key_order_trans k1 v1 m1';
+      map_entry_order_assoc_tail_none key_order key_order_irrefl key_order_trans k2 v2 m2';
+      map_entry_order_assoc_ext key_order key_order_irrefl key_order_trans key_order_total m1' m2' (fun k -> ext k)
+    end
+    else if key_order k1 k2
+    then map_entry_order_assoc_order_none key_order key_order_irrefl key_order_trans k2 v2 m2' k1
+    else map_entry_order_assoc_order_none key_order key_order_irrefl key_order_trans k1 v1 m1' k2
 
 let rec data_item_wf (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
 = match x with
   | Array l -> forall_list l (data_item_wf order)
-  | Map l -> forall_list_fst l (data_item_wf order) && forall_list_snd l (data_item_wf order) &&
-      FStar.List.Tot.sorted order (FStar.List.Tot.map fst l)
+  | Map l ->
+    let l : list (raw_data_item & raw_data_item) = l in // IMPORTANT to remove the refinement on the type of the `bound` arg to holds_on_pair
+    FStar.List.Tot.sorted (map_entry_order order _) l &&
+    forall_list l (holds_on_pair l (data_item_wf order))
   | Tagged _ v -> data_item_wf order v
   | _ -> true
 
-let data_item (order: (raw_data_item -> raw_data_item -> bool)) = (d: raw_data_item { data_item_wf order d })
+let data_item (order: (raw_data_item -> raw_data_item -> bool)) = parse_filter_refine (data_item_wf order)
+
+let parse_data_item
+  (order: (raw_data_item -> raw_data_item -> bool))
+: Tot (parser parse_raw_data_item_kind (data_item order))
+= parse_raw_data_item `parse_filter` data_item_wf order
+
+let serialize_data_item
+  (order: (raw_data_item -> raw_data_item -> bool))
+: Tot (serializer (parse_data_item order))
+= serialize_raw_data_item `serialize_filter` data_item_wf order
+
+let rec forall_list_holds_on_pair_list_of_pair_list'
+  (#t: Type)
+  (pred: t -> bool)
+  (l: list (t & t))
+  (phi: (x: (t & t) { x << l }) -> bool)
+  (prf: (
+    (x: (t & t) { x << l }) ->
+    Lemma
+    (phi x == holds_on_pair l pred x)
+  ))
+: Lemma
+  (ensures (forall_list l phi == forall_list (list_of_pair_list _ (List.Tot.length l) l) pred))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | (x1, x2) :: q ->
+    forall_list_cons (x1, x2) q phi;
+    prf (x1, x2);
+    forall_list_holds_on_pair_list_of_pair_list' pred q phi prf;
+    let q' = list_of_pair_list _ (List.Tot.length q) q in
+    forall_list_cons x2 q' pred;
+    forall_list_cons x1 (x2 :: q') pred
+
+let forall_list_holds_on_pair_list_of_pair_list
+  (#t: Type)
+  (pred: t -> bool)
+  (l: list (t & t))
+: Tot (squash (forall_list l (holds_on_pair l pred) == forall_list (list_of_pair_list _ (List.Tot.length l) l) pred))
+= forall_list_holds_on_pair_list_of_pair_list' pred l (holds_on_pair l pred) (fun _ -> ())
+
+let data_item_wf_head (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
+= match x with
+  | Map l ->
+      FStar.List.Tot.sorted (map_entry_order order _) l
+  | _ -> true
+
+#push-options "--z3rlimit 16"
+
+#restart-solver
+let data_item_wf_eq
+  (order: (raw_data_item -> raw_data_item -> bool))
+  (x: raw_data_item)
+: Lemma
+  (data_item_wf order x == (data_item_wf_head order x && List.Tot.for_all (data_item_wf order) (get_children serialize_raw_data_item_param x)))
+= match x with
+  | Array l ->
+    assert_norm (data_item_wf order (Array l) == forall_list l (data_item_wf order));
+    forall_list_correct (data_item_wf order) l
+  | Map l ->
+    let l : list (raw_data_item & raw_data_item) = l in
+    assert_norm (data_item_wf order (Map l) == (
+      data_item_wf_head order (Map l) &&
+      forall_list l (holds_on_pair l (data_item_wf order))
+    ));
+    forall_list_holds_on_pair_list_of_pair_list (data_item_wf order) l;
+    forall_list_correct (data_item_wf order) (list_of_pair_list _ (List.Tot.length l) l)
+  | _ -> ()
+
+#pop-options
+
+let data_item_wf_pred (order: (raw_data_item -> raw_data_item -> bool)) : pred_recursive_t serialize_raw_data_item_param = {
+  base = data_item_wf_head order;
+  pred = data_item_wf order;
+  prf = data_item_wf_eq order;
+}
+
+(* 4.2.1 Deterministically encoded CBOR: The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. *)
+
+let deterministically_encoded_cbor_map_key_order'
+  (k1 k2: raw_data_item)
+: GTot bool
+= LowParse.Spec.SeqBytes.bytes_lex_order (serialize_raw_data_item k1) (serialize_raw_data_item k2)
+
+let deterministically_encoded_cbor_map_key_order : Ghost.erased (raw_data_item -> raw_data_item -> bool) = Ghost.hide (FStar.Ghost.Pull.pull (fun x -> FStar.Ghost.Pull.pull (deterministically_encoded_cbor_map_key_order' x)))
+
+let deterministically_encoded_cbor_map_key_order_irrefl
+  (x y: raw_data_item)
+: Lemma
+  (requires (Ghost.reveal deterministically_encoded_cbor_map_key_order x y))
+  (ensures (~ (x == y)))
+= LowParse.Spec.SeqBytes.bytes_lex_order_irrefl (serialize_raw_data_item x) (serialize_raw_data_item y)
+
+let deterministically_encoded_cbor_map_key_order_trans
+  (x y z: raw_data_item)
+: Lemma
+  (requires (Ghost.reveal deterministically_encoded_cbor_map_key_order x y /\ Ghost.reveal deterministically_encoded_cbor_map_key_order y z))
+  (ensures (Ghost.reveal deterministically_encoded_cbor_map_key_order x z))
+= LowParse.Spec.SeqBytes.bytes_lex_order_trans (serialize_raw_data_item x) (serialize_raw_data_item y) (serialize_raw_data_item z)
+
+let deterministically_encoded_cbor_map_key_order_total
+  (x y: raw_data_item)
+: Lemma
+  (ensures (x == y \/ Ghost.reveal deterministically_encoded_cbor_map_key_order x y \/ Ghost.reveal deterministically_encoded_cbor_map_key_order y x))
+= Classical.move_requires (serializer_injective _ serialize_raw_data_item x) y;
+  LowParse.Spec.SeqBytes.bytes_lex_order_total (serialize_raw_data_item x) (serialize_raw_data_item y)
+
+let deterministically_encoded_cbor_map_key_order_assoc_ext :
+  (m1: list (raw_data_item & raw_data_item)) ->
+  (m2: list (raw_data_item & raw_data_item)) ->
+  (ext: (
+    (k: raw_data_item) ->
+    Lemma
+    (list_ghost_assoc k m1 == list_ghost_assoc k m2)
+  )) ->
+  Lemma
+  (requires (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m1 /\ List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m2))
+  (ensures (m1 == m2))
+= map_entry_order_assoc_ext deterministically_encoded_cbor_map_key_order deterministically_encoded_cbor_map_key_order_irrefl deterministically_encoded_cbor_map_key_order_trans deterministically_encoded_cbor_map_key_order_total
+
+(* 4.2.3 Length-First Map Key Ordering (a.k.a. "Canonical CBOR", RFC 7049 Section 3.9) *)
+
+let canonical_cbor_map_key_order'
+  (k1 k2: raw_data_item)
+: GTot bool
+= LowParse.Spec.SeqBytes.bytes_length_first_lex_order (serialize_raw_data_item k1) (serialize_raw_data_item k2)
+
+let canonical_cbor_map_key_order : Ghost.erased (raw_data_item -> raw_data_item -> bool) = Ghost.hide (FStar.Ghost.Pull.pull (fun x -> FStar.Ghost.Pull.pull (canonical_cbor_map_key_order' x)))
+
+let canonical_cbor_map_key_order_irrefl
+  (x y: raw_data_item)
+: Lemma
+  (requires (Ghost.reveal canonical_cbor_map_key_order x y))
+  (ensures (~ (x == y)))
+= LowParse.Spec.SeqBytes.bytes_length_first_lex_order_irrefl (serialize_raw_data_item x) (serialize_raw_data_item y)
+
+let canonical_cbor_map_key_order_trans
+  (x y z: raw_data_item)
+: Lemma
+  (requires (Ghost.reveal canonical_cbor_map_key_order x y /\ Ghost.reveal canonical_cbor_map_key_order y z))
+  (ensures (Ghost.reveal canonical_cbor_map_key_order x z))
+= LowParse.Spec.SeqBytes.bytes_length_first_lex_order_trans (serialize_raw_data_item x) (serialize_raw_data_item y) (serialize_raw_data_item z)
+
+let canonical_cbor_map_key_order_total
+  (x y: raw_data_item)
+: Lemma
+  (ensures (x == y \/ Ghost.reveal canonical_cbor_map_key_order x y \/ Ghost.reveal canonical_cbor_map_key_order y x))
+= Classical.move_requires (serializer_injective _ serialize_raw_data_item x) y;
+  LowParse.Spec.SeqBytes.bytes_length_first_lex_order_total (serialize_raw_data_item x) (serialize_raw_data_item y)
+
+let canonical_cbor_map_key_order_assoc_ext :
+  (m1: list (raw_data_item & raw_data_item)) ->
+  (m2: list (raw_data_item & raw_data_item)) ->
+  (ext: (
+    (k: raw_data_item) ->
+    Lemma
+    (list_ghost_assoc k m1 == list_ghost_assoc k m2)
+  )) ->
+  Lemma
+  (requires (List.Tot.sorted (map_entry_order canonical_cbor_map_key_order _) m1 /\ List.Tot.sorted (map_entry_order canonical_cbor_map_key_order _) m2))
+  (ensures (m1 == m2))
+= map_entry_order_assoc_ext canonical_cbor_map_key_order canonical_cbor_map_key_order_irrefl canonical_cbor_map_key_order_trans canonical_cbor_map_key_order_total
+
