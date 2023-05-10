@@ -1,6 +1,8 @@
 module LowParse.SLow.BoundedInt
 
 open LowParse.SLow.Combinators
+#set-options "--split_queries no"
+#set-options "--z3rlimit 20"
 
 module Seq = FStar.Seq
 module U8  = FStar.UInt8
@@ -374,6 +376,9 @@ let serialize32_bounded_int32_le'
     (fun x -> x)
     ()
 
+#push-options "--z3rlimit 40"
+#restart-solver // somehow needed
+
 let serialize32_bounded_int32_le_1
   min max
 = serialize32_bounded_int32_le' min max 1ul
@@ -397,3 +402,5 @@ let parse32_bounded_int32_le_fixed_size
 let serialize32_bounded_int32_le_fixed_size
   min32 max32
 = serialize32_filter serialize32_u32_le (in_bounds (U32.v min32) (U32.v max32))
+
+#pop-options
