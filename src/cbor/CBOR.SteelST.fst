@@ -3,8 +3,11 @@ include CBOR.Spec
 open LowParse.SteelST.Combinators
 open LowParse.SteelST.Recursive
 open LowParse.SteelST.BitSum
-open LowParse.SteelST.Int
 open LowParse.SteelST.ValidateAndRead
+
+module I = LowParse.SteelST.Int
+
+let read_u8 = I.read_u8
 
 #set-options "--print_universes"
 
@@ -16,7 +19,7 @@ let validate_initial_byte : validate_and_read parse_initial_byte =
       filter_initial_byte
       destr_initial_byte
       (mk_validate_and_read
-        validate_u8
+        I.validate_u8
         (cps_reader_of_leaf_reader read_u8)
       )
     )
@@ -29,7 +32,7 @@ let jump_initial_byte : jumper parse_initial_byte =
   jump_filter
     (jump_bitsum'
       initial_byte_desc
-      jump_u8
+      I.jump_u8
     )
     initial_byte_wf
 
@@ -41,7 +44,7 @@ let read_and_jump_initial_byte : read_and_jump parse_initial_byte =
       destr_initial_byte
       (mk_read_and_jump
         (cps_reader_of_leaf_reader read_u8)
-        jump_u8
+        I.jump_u8
       )
     )
     initial_byte_wf
@@ -55,6 +58,10 @@ let read_initial_byte : cps_reader parse_initial_byte =
       (cps_reader_of_leaf_reader read_u8)
     )
     initial_byte_wf
+
+let read_u16 = I.read_u16
+let read_u32 = I.read_u32
+let read_u64 = I.read_u64
 
 inline_for_extraction
 noextract
@@ -73,7 +80,7 @@ let validate_long_argument
               (strong_parser_kind 0 8 None)
               (validate_and_read_synth'
                 (validate_filter_and_read
-                  (mk_validate_and_read validate_u8 (cps_reader_of_leaf_reader read_u8))
+                  (mk_validate_and_read I.validate_u8 (cps_reader_of_leaf_reader read_u8))
                   simple_value_long_argument_wf
                   (fun x -> simple_value_long_argument_wf x)
                 )
@@ -90,7 +97,7 @@ let validate_long_argument
               (strong_parser_kind 0 8 None)
               (validate_and_read_synth'
                 (validate_filter_and_read
-                  (mk_validate_and_read validate_u8 (cps_reader_of_leaf_reader read_u8))
+                  (mk_validate_and_read I.validate_u8 (cps_reader_of_leaf_reader read_u8))
                   uint8_wf
                   (fun x -> uint8_wf x)
                 )
@@ -110,7 +117,7 @@ let validate_long_argument
               (strong_parser_kind 0 8 None)
               (validate_and_read_synth'
                 (validate_filter_and_read
-                  (mk_validate_and_read validate_u16 (cps_reader_of_leaf_reader read_u16))
+                  (mk_validate_and_read I.validate_u16 (cps_reader_of_leaf_reader read_u16))
                   uint16_wf
                   (fun x -> uint16_wf x)
                 )
@@ -129,7 +136,7 @@ let validate_long_argument
                 (strong_parser_kind 0 8 None)
                 (validate_and_read_synth'
                   (validate_filter_and_read
-                    (mk_validate_and_read validate_u32 (cps_reader_of_leaf_reader read_u32))
+                    (mk_validate_and_read I.validate_u32 (cps_reader_of_leaf_reader read_u32))
                     uint32_wf
                     (fun x -> uint32_wf x)
                   )
@@ -148,7 +155,7 @@ let validate_long_argument
                   (strong_parser_kind 0 8 None)
                   (validate_and_read_synth'
                     (validate_filter_and_read
-                      (mk_validate_and_read validate_u64 (cps_reader_of_leaf_reader read_u64))
+                      (mk_validate_and_read I.validate_u64 (cps_reader_of_leaf_reader read_u64))
                       uint64_wf
                       (fun x -> uint64_wf x)
                     )
@@ -193,7 +200,7 @@ let jump_long_argument
               (strong_parser_kind 0 8 None)
               (read_and_jump_synth'
                 (read_and_jump_filter
-                  (mk_read_and_jump (cps_reader_of_leaf_reader read_u8) jump_u8)
+                  (mk_read_and_jump (cps_reader_of_leaf_reader read_u8) I.jump_u8)
                   simple_value_long_argument_wf
                 )
                 (LongArgumentSimpleValue #b ())
@@ -209,7 +216,7 @@ let jump_long_argument
               (strong_parser_kind 0 8 None)
               (read_and_jump_synth'
                 (read_and_jump_filter
-                  (mk_read_and_jump (cps_reader_of_leaf_reader read_u8) jump_u8)
+                  (mk_read_and_jump (cps_reader_of_leaf_reader read_u8) I.jump_u8)
                   uint8_wf
                 )
                 (LongArgumentU8 #b ())
@@ -228,7 +235,7 @@ let jump_long_argument
               (strong_parser_kind 0 8 None)
               (read_and_jump_synth'
                 (read_and_jump_filter
-                  (mk_read_and_jump (cps_reader_of_leaf_reader read_u16) jump_u16)
+                  (mk_read_and_jump (cps_reader_of_leaf_reader read_u16) I.jump_u16)
                   uint16_wf
                 )
                 (LongArgumentU16 #b ())
@@ -246,7 +253,7 @@ let jump_long_argument
                 (strong_parser_kind 0 8 None)
                 (read_and_jump_synth'
                   (read_and_jump_filter
-                    (mk_read_and_jump (cps_reader_of_leaf_reader read_u32) jump_u32)
+                    (mk_read_and_jump (cps_reader_of_leaf_reader read_u32) I.jump_u32)
                     uint32_wf
                   )
                   (LongArgumentU32 #b ())
@@ -264,7 +271,7 @@ let jump_long_argument
                   (strong_parser_kind 0 8 None)
                   (read_and_jump_synth'
                     (read_and_jump_filter
-                      (mk_read_and_jump (cps_reader_of_leaf_reader read_u64) jump_u64)
+                      (mk_read_and_jump (cps_reader_of_leaf_reader read_u64) I.jump_u64)
                       uint64_wf
                     )
                     (LongArgumentU64 #b ())
@@ -298,8 +305,11 @@ let validate_header : validate_and_read parse_header =
 
 inline_for_extraction
 noextract
-let jump_header : read_and_jump parse_header =
+let read_and_jump_header : read_and_jump parse_header =
   read_and_jump_dtuple2 read_and_jump_initial_byte _ jump_long_argument
+
+let jump_header : jumper parse_header =
+  jumper_of_read_and_jump read_and_jump_header
 
 module SZ = FStar.SizeT
 
@@ -403,13 +413,19 @@ let validate_leaf
 
 inline_for_extraction
 noextract
-let jump_leaf
+let jump_leaf'
   (sq: squash SZ.fits_u64)
 : Tot (jumper parse_leaf) =
   jump_dtuple2_and_read_tag
-    jump_header
+    read_and_jump_header
     _
     (jump_leaf_content ())
+
+let jump_leaf
+: jumper parse_leaf
+= fun a ->
+    let sq = Steel.ST.HigherArray.intro_fits_u64 () in
+    jump_leaf' sq a
 
 (* FIXME: the current design of validate_recursive independently
    validates a leaf content before asking the number of expected
@@ -422,69 +438,179 @@ open Steel.ST.GenElim
 
 module R = Steel.ST.Reference
 
-inline_for_extraction
+let get_major_type_synth_raw_data_item
+  (x: raw_data_item')
+: Lemma
+  (get_major_type (synth_raw_data_item x) == (match x with (| (| (major_type, _), _ |), _ |) -> major_type))
+= assert_norm (pow2 3 == 8)
+
+#set-options "--ide_id_info_off"
+
+#push-options "--z3rlimit 16 --split_queries always"
+
 noextract
+let get_header_major_type
+  (h: header)
+: Tot major_type_t
+= let (| (major_type, _), _ |) = h in
+  major_type
+
+let read_header_major_type
+  (#va: v (get_parser_kind parse_header) header)
+  (a: byte_array)
+: ST byte
+    (aparse parse_header a va)
+    (fun _ -> aparse parse_header a va)
+    True
+    (fun res ->
+      res == get_header_major_type va.contents
+    )
+= let _ = rewrite_aparse a (parse_dtuple2 parse_initial_byte parse_long_argument) in
+  let a_long = ghost_split_dtuple2_full _ _ a in
+  let _ = gen_elim () in
+  let res = read_initial_byte a (aparse _ a_long _) byte (fun res -> aparse parse_header a va `star` pure (
+    res == get_header_major_type va.contents
+  )) (fun (major_type, _) ->
+    let _ = intro_dtuple2 parse_initial_byte parse_long_argument a a_long in
+    let _ = rewrite_aparse a parse_header in
+    vpattern_rewrite (aparse _ a) va;
+    return major_type
+  )
+  in
+  let _ = elim_pure _ in
+  return res
+
+#restart-solver
+let read_major_type
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST byte
+    (aparse parse_raw_data_item a va)
+    (fun _ -> aparse parse_raw_data_item a va)
+    True
+    (fun res -> res == get_major_type va.contents)
+= Classical.forall_intro parse_raw_data_item_eq;
+  let _ = rewrite_aparse a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
+  let va1 = elim_synth _ _ a () in // (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
+  get_major_type_synth_raw_data_item va1.contents;
+  let a_content = ghost_split_dtuple2_full _ _ a in // parse_header (parse_content parse_raw_data_item) a in
+  let _ = gen_elim () in
+  let res = read_header_major_type a in
+  let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a_content in
+  let _ = intro_synth (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
+  let _ = rewrite_aparse a parse_raw_data_item in
+  vpattern_rewrite (aparse parse_raw_data_item a) va;
+  return res
+
+noextract
+let get_header_argument_as_uint64
+  (h: header)
+: Tot UInt64.t
+= let (| b, l |) = h in
+  argument_as_uint64 b l
+
+let read_header_argument_as_uint64
+  (#va: v (get_parser_kind parse_header) header)
+  (a: byte_array)
+: ST UInt64.t
+    (aparse parse_header a va)
+    (fun _ -> aparse parse_header a va)
+    True
+    (fun res ->
+      res == get_header_argument_as_uint64 va.contents
+    )
+= let res = read_and_jump_header a emp UInt64.t (fun res -> aparse parse_header a va `star` pure (
+      res == get_header_argument_as_uint64 va.contents
+  )) (fun _ (| b, x |) ->
+    noop ();
+    return (argument_as_uint64 b x)
+  )
+  in
+  let _ = elim_pure _ in
+  return res
+
+let read_argument_as_uint64
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST UInt64.t
+    (aparse parse_raw_data_item a va)
+    (fun _ -> aparse parse_raw_data_item a va)
+    True
+    (fun res ->
+      let (| (| b, x |), _ |) = synth_raw_data_item_recip va.contents in
+      res == argument_as_uint64 b x
+    )
+= Classical.forall_intro parse_raw_data_item_eq;
+  let _ = rewrite_aparse a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
+  let va1 = elim_synth _ _ a () in // (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
+  let a_content = ghost_split_dtuple2_full _ _ a in // parse_header (parse_content parse_raw_data_item) a in
+  let _ = gen_elim () in
+  let res = read_header_argument_as_uint64 a in
+  let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a_content in
+  let _ = intro_synth (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
+  let _ = rewrite_aparse a parse_raw_data_item in
+  vpattern_rewrite (aparse parse_raw_data_item a) va;
+  return res
+
 let count_remaining_data_items
-  (sq: squash SZ.fits_u64)
-: Tot (validate_recursive_step_count parse_raw_data_item_param)
+: (validate_recursive_step_count parse_raw_data_item_param)
 = fun #va a bound perr ->
-    let _ = rewrite_aparse a (parse_dtuple2 parse_header parse_leaf_content) in
-    let ar = ghost_split_dtuple2 parse_header parse_leaf_content a in
+    let sq = Steel.ST.HigherArray.intro_fits_u64 () in
+    let _ = rewrite_aparse a parse_leaf in
+    let ar = ghost_split_dtuple2_full parse_header parse_leaf_content a in
     let _ = gen_elim () in
-    let _ = ghost_dtuple2_tag parse_header parse_leaf_content a ar in
-    let _ = gen_elim () in
-    jump_header
-      a
-      (aparse _ ar _ `star` R.pts_to perr _ _)
-      SZ.t
-      (fun res ->
-        aparse parse_raw_data_item_param.parse_header a va `star`
-        exists_ (fun err ->
-          R.pts_to perr full_perm err `star`
-          pure (validate_recursive_step_count_post parse_raw_data_item_param va bound res err)
-      ))
-      (fun _ l ->
-        let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
-        let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
-        match l with
-        | (| b, long_arg |) ->
-          match b with
-          | (major_type, _) ->
-            if major_type = 4uy
-            then begin
-              noop ();
-              return (SZ.uint64_to_sizet (argument_as_uint64 b long_arg))
-            end
-            else if major_type = 5uy
-            then begin
-              let count = SZ.uint64_to_sizet (argument_as_uint64 b long_arg) in
-              let overflow =
-                if count `SZ.gt` bound
-                then true
-                else count `SZ.gt` (bound `SZ.sub` count)
-              in
-              if overflow
-              then begin
-                R.write perr validator_error_not_enough_data;
-                return 0sz
-              end
-              else begin
-//                SZ.fits_lte (SZ.v count + SZ.v count) (SZ.v bound);
-                let count' = count `SZ.add` count in
-                noop ();
-                return count'
-              end
-            end
-            else if major_type = 6uy
-            then begin
-              noop ();
-              return 1sz
-            end
-            else begin
-              noop ();
-              return 0sz
-            end
-      )
+    let major_type = read_header_major_type a in
+    if major_type = 4uy
+    then begin
+      let arg = read_header_argument_as_uint64 a in
+      let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
+      let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
+      vpattern_rewrite (aparse _ a) va;
+      let res = SZ.uint64_to_sizet arg in
+      noop ();
+      return res
+    end
+    else if major_type = 5uy
+    then begin
+      let arg = read_header_argument_as_uint64 a in
+      let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
+      let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
+      vpattern_rewrite (aparse _ a) va;
+      let half = SZ.uint64_to_sizet arg in
+      let overflow =
+        if half `SZ.gt` bound
+        then true
+        else (bound `SZ.sub` half) `SZ.lt` half
+      in
+      if overflow
+      then begin
+        R.write perr validator_error_not_enough_data;
+        noop ();
+        return 0sz
+      end else begin
+        [@@inline_let]
+        let res = size_add_fits half half bound () in
+        noop ();
+        return res
+      end
+    end
+    else begin
+      let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
+      let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
+      vpattern_rewrite (aparse _ a) va;
+      noop ();
+      if major_type = 6uy
+      then begin
+        noop ();
+        noop ();
+        return 1sz
+      end
+      else begin
+        noop ();
+        noop ();
+        return 0sz
+      end
+    end
 
 inline_for_extraction
 noextract
@@ -495,7 +621,7 @@ let validate_raw_data_item'
     validate_recursive
       parse_raw_data_item_param
       (validate_leaf ())
-      (count_remaining_data_items ())
+      (count_remaining_data_items)
 
 let validate_raw_data_item
 : validator parse_raw_data_item
@@ -503,74 +629,61 @@ let validate_raw_data_item
     let sq = Steel.ST.HigherArray.intro_fits_u64 () in
     validate_raw_data_item' sq a len err
 
-inline_for_extraction
-noextract
 let jump_count_remaining_data_items
-  (sq: squash SZ.fits_u64)
-: Tot (jump_recursive_step_count parse_raw_data_item_param)
+: (jump_recursive_step_count parse_raw_data_item_param)
 = fun #va a bound ->
-    let _ = rewrite_aparse a (parse_dtuple2 parse_header parse_leaf_content) in
-    let ar = ghost_split_dtuple2 parse_header parse_leaf_content a in
+    let sq = Steel.ST.HigherArray.intro_fits_u64 () in
+    let _ = rewrite_aparse a parse_leaf in
+    let ar = ghost_split_dtuple2_full parse_header parse_leaf_content a in
     let _ = gen_elim () in
-    let _ = ghost_dtuple2_tag parse_header parse_leaf_content a ar in
-    let _ = gen_elim () in
-    let res = jump_header
-      a
-      (aparse _ ar _)
-      SZ.t
-      (fun res ->
-        aparse parse_raw_data_item_param.parse_header a va `star`
-        pure (SZ.v res == parse_raw_data_item_param.count va.contents)
-      )
-      (fun _ l ->
-        let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
-        let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
-        match l with
-        | (| b, long_arg |) ->
-          match b with
-          | (major_type, _) ->
-            if major_type = 4uy
-            then begin
-              noop ();
-              return (SZ.uint64_to_sizet (argument_as_uint64 b long_arg))
-            end
-            else if major_type = 5uy
-            then begin
-              let count = SZ.uint64_to_sizet (argument_as_uint64 b long_arg) in
-              let count' = count `SZ.add` count in
-              noop ();
-              return count'
-            end
-            else if major_type = 6uy
-            then begin
-              noop ();
-              return 1sz
-            end
-            else begin
-              noop ();
-              return 0sz
-            end
-      )
-    in
-    elim_pure _;
-    return res
-
-inline_for_extraction
-noextract
-let jump_raw_data_item'
-  (sq: squash SZ.fits_u64)
-: Tot (jumper parse_raw_data_item)
-=
-    jump_recursive
-      parse_raw_data_item_param
-      (jump_leaf ())
-      (jump_count_remaining_data_items ())
+    let major_type = read_header_major_type a in
+    if major_type = 4uy
+    then begin
+      let arg = read_header_argument_as_uint64 a in
+      let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
+      let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
+      vpattern_rewrite (aparse _ a) va;
+      let res = SZ.uint64_to_sizet arg in
+      noop ();
+      return res
+    end
+    else if major_type = 5uy
+    then begin
+      let arg = read_header_argument_as_uint64 a in
+      let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
+      let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
+      vpattern_rewrite (aparse _ a) va;
+      let half = SZ.uint64_to_sizet arg in
+      [@@inline_let]
+      let res = size_add_fits half half bound () in
+      noop ();
+      return res
+    end
+    else begin
+      let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
+      let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
+      vpattern_rewrite (aparse _ a) va;
+      noop ();
+      if major_type = 6uy
+      then begin
+        noop ();
+        noop ();
+        return 1sz
+      end
+      else begin
+        noop ();
+        noop ();
+        return 0sz
+      end
+    end
 
 let jump_raw_data_item
 : jumper parse_raw_data_item
-= fun a ->
-    let sq = Steel.ST.HigherArray.intro_fits_u64 () in
-    jump_raw_data_item' sq a
+=
+    jump_recursive
+      parse_raw_data_item_param
+      (jump_leaf)
+      (jump_count_remaining_data_items)
 
 (* 4.2 Ordering of map keys *)
 
@@ -602,81 +715,6 @@ let map_entry_order_impl
     let _ = merge_pair pkey pvalue a2 av2 in
     vpattern_rewrite (aparse _ a2) va2;
     return res
-
-let get_major_type_synth_raw_data_item
-  (x: raw_data_item')
-: Lemma
-  (get_major_type (synth_raw_data_item x) == (match x with (| (| (major_type, _), _ |), _ |) -> major_type))
-= assert_norm (pow2 3 == 8)
-
-#push-options "--z3rlimit 16 --split_queries always"
-
-#restart-solver
-let read_major_type
-  (#va: v parse_raw_data_item_kind raw_data_item)
-  (a: byte_array)
-: ST byte
-    (aparse parse_raw_data_item a va)
-    (fun _ -> aparse parse_raw_data_item a va)
-    True
-    (fun res -> res == get_major_type va.contents)
-= Classical.forall_intro parse_raw_data_item_eq;
-  let _ = rewrite_aparse a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
-  let va1 = elim_synth _ _ a () in // (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
-  get_major_type_synth_raw_data_item va1.contents;
-  let a_content = ghost_split_dtuple2_full _ _ a in // parse_header (parse_content parse_raw_data_item) a in
-  let _ = gen_elim () in
-  let _ = rewrite_aparse a (parse_dtuple2 parse_initial_byte parse_long_argument) in
-  let a_long = ghost_split_dtuple2_full _ _ a in
-  let _ = gen_elim () in
-  let res = read_initial_byte a (aparse _ a_content _ `star` aparse _ a_long _) byte (fun res -> aparse parse_raw_data_item a va `star` pure (res == get_major_type va.contents)) (fun (major_type, _) ->
-    let res = major_type in
-    let _ = intro_dtuple2 parse_initial_byte parse_long_argument a a_long in
-    let _ = rewrite_aparse a parse_header in
-    let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a_content in
-    noop ();
-    let _ = intro_synth (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
-    let _ = rewrite_aparse a parse_raw_data_item in
-    noop ();
-    vpattern_rewrite (aparse parse_raw_data_item a) va;
-    return res
-  )
-  in
-  let _ = elim_pure _ in
-  return res
-
-let read_argument_as_uint64
-  (#va: v parse_raw_data_item_kind raw_data_item)
-  (a: byte_array)
-: ST UInt64.t
-    (aparse parse_raw_data_item a va)
-    (fun _ -> aparse parse_raw_data_item a va)
-    True
-    (fun res ->
-      let (| (| b, x |), _ |) = synth_raw_data_item_recip va.contents in
-      res == argument_as_uint64 b x
-    )
-= Classical.forall_intro parse_raw_data_item_eq;
-  let _ = rewrite_aparse a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
-  let va1 = elim_synth _ _ a () in // (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
-  let a_content = ghost_split_dtuple2_full _ _ a in // parse_header (parse_content parse_raw_data_item) a in
-  let _ = gen_elim () in
-  let res = jump_header a (aparse _ a_content _) UInt64.t (fun res -> aparse parse_raw_data_item a va `star` pure (
-      let (| (| b, x |), _ |) = synth_raw_data_item_recip va.contents in
-      res == argument_as_uint64 b x
-  )) (fun _ (| b, x |) ->
-    let res = argument_as_uint64 b x in
-    let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a_content in
-    noop ();
-    let _ = intro_synth (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
-    let _ = rewrite_aparse a parse_raw_data_item in
-    noop ();
-    vpattern_rewrite (aparse parse_raw_data_item a) va;
-    return res
-  )
-  in
-  let _ = elim_pure _ in
-  return res
 
 module AP = LowParse.SteelST.ArrayPtr
 
@@ -796,7 +834,7 @@ let check_data_item_wf_head
     let n = SZ.uint64_to_sizet n64 in
     let gac = get_raw_data_item_payload_map a in
     let _ = gen_elim () in
-    let ac = hop_aparse_aparse (jumper_of_read_and_jump jump_header) _ a gac in
+    let ac = hop_aparse_aparse jump_header _ a gac in
     let _ = rewrite_aparse ac (NL.parse_nlist (SZ.v n) (parse_raw_data_item `nondep_then` parse_raw_data_item)) in
     let res = NL.nlist_sorted
       (jump_pair jump_raw_data_item jump_raw_data_item)
@@ -828,8 +866,8 @@ let validate_data_item'
         rewrite (aparse _ a _) (aparse (parse_recursive parse_raw_data_item_param) a va);
         let res = pred_recursive
           serialize_raw_data_item_param
-          (jump_leaf sq)
-          (jump_count_remaining_data_items sq)
+          (jump_leaf)
+          (jump_count_remaining_data_items)
           a
           (data_item_wf_pred order)
           (check_data_item_wf_head order_impl sq)
