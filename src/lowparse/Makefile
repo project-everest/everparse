@@ -48,11 +48,8 @@ clean:
 
 include .depend
 
-.PHONY: no-fold
-
 ifeq (,$(STEEL_HOME))
 steel:
-no-fold:
 else
 
 steel_array: LowParse.SteelST.ArrayPtr.fsti.checked steel_array/LowParse.SteelST.ArrayPtr.fst
@@ -62,7 +59,6 @@ steel_c_array: LowParse.SteelST.ArrayPtr.fsti.checked steel_c_array/LowParse.Ste
 	+$(MAKE) -C $@
 
 steel: steel_array steel_c_array $(filter LowParse.Steel%,$(ALL_CHECKED_FILES))
-no-fold: $(filter-out LowParse.SteelST.Fold.%,$(ALL_CHECKED_FILES)) steel_array steel_c_array
 
 endif
 
