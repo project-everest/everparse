@@ -834,8 +834,6 @@ let gaccessor_clens_sum_payload_injective
   parse_injective (parse_sum t p pc) sl sl' ;
   parse_injective p sl sl'
 
-#pop-options
-
 let gaccessor_clens_sum_payload_no_lookahead
   (t: sum)
   (#kt: parser_kind)
@@ -855,6 +853,8 @@ let gaccessor_clens_sum_payload_no_lookahead
   parse_sum_eq'' t p pc sl' ;
   parse_strong_prefix (parse_sum t p pc) sl sl' ;
   parse_injective p sl sl'
+
+#pop-options
 
 let gaccessor_clens_sum_payload
   (t: sum)
