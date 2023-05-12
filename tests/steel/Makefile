@@ -1,3 +1,8 @@
-all:
+TARGETS := unit
 
-.PHONY: all
+all: $(TARGETS)
+
+$(TARGETS): %:
+	+$(MAKE) -C $@
+
+.PHONY: all $(TARGETS)

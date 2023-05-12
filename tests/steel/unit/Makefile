@@ -1,0 +1,86 @@
+all: depend verify test
+
+FSTAR_HOME ?= ../../../../FStar
+LOWPARSE_HOME ?= ../../../src/lowparse
+KRML_HOME ?= ../../../../karamel
+
+export FSTAR_HOME
+export LOWPARSE_HOME
+export KRML_HOME
+
+DEPEND_FILE=.depend
+CACHE_DIR=cache
+CHECKED_EXT=.checked
+
+FSTAR_OPTIONS := --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
+		--already_cached '*,-Test' \
+		--include $(FSTAR_HOME)/ulib/.cache \
+		--include $(LOWPARSE_HOME) \
+		--include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --cmi
+
+ifeq (,$(STEEL_HOME))
+	$(error "Please set STEEL_HOME to the root/prefix directory of your Steel installation.")
+endif
+
+FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel --load_cmxs steel
+
+FSTAR_EXE=$(FSTAR_HOME)/bin/fstar.exe
+
+ifdef STEEL_C
+FSTAR_OPTIONS +=  --include $(STEEL_HOME)/lib/steel/c --include $(LOWPARSE_HOME)/steel_c_array
+else
+FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_array
+endif
+
+FSTAR = $(FSTAR_EXE) --trace_error $(FSTAR_OPTIONS)
+
+HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
+
+KRML = $(KRML_HOME)/krml \
+	 -ccopt "-Ofast" \
+	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
+	 -tmpdir out \
+	 -bundle 'Test=Steel.\*,C,LowStar.\*,LowParse.\*' \
+	 $(HEADERS) \
+	 -no-prefix Test \
+	 -skip-linking -skip-makefiles \
+	 -warn-error '@2'
+
+QD_FILES = $(wildcard *.fst *.fsti)
+
+$(CACHE_DIR)/%$(CHECKED_EXT):
+	$(FSTAR) $(OTHERFLAGS) $<
+	@touch $@
+
+krml/%.krml:
+	$(FSTAR) --codegen krml $(patsubst %$(CHECKED_EXT),%,$(notdir $<)) --extract_module $(basename $(patsubst %$(CHECKED_EXT),%,$(notdir $<))) --warn_error '@241'
+	@touch $@
+
+$(DEPEND_FILE): $(QD_FILES) Makefile
+	$(FSTAR) --dep full --extract '*,-Steel,+Steel.Loops,+Steel.ST.HigherArray,-FStar.NMST,-FStar.NMSTTotal,-FStar.MST,-FStar.MSTTotal,-FStar.Monotonic.Heap' $(QD_FILES) Test.fst > $@.tmp
+	mv $@.tmp $@
+
+depend: $(DEPEND_FILE)
+
+-include $(DEPEND_FILE)
+
+verify: $(patsubst %,$(CACHE_DIR)/%$(CHECKED_EXT),$(QD_FILES))
+	echo $*
+
+ALL_KRML_FILES := $(filter-out krml/prims.krml,$(ALL_KRML_FILES))
+
+Test.c: $(ALL_KRML_FILES)
+	-@mkdir out
+	$(KRML) $^
+
+extract: Test.c
+
+test: extract
+
+%.fst-in %.fsti-in:
+	@echo $(FSTAR_OPTIONS)
+
+clean:
+	-rm -rf cache cache.lax .depend .depend.tmp .depend.lax out krml *.o
+
+.PHONY: all depend verify extract clean build test
