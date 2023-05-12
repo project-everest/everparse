@@ -1,48 +1,25 @@
 module LowParse.SteelST.List.Iterator
-open Steel.ST.GenElim
+include LowParse.SteelST.List.Base
+include LowParse.SteelST.Parse
+open Steel.ST.Util
 
-let list_iterator_prop
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (va0: v parse_list_kind (list t))
-  (a0: byte_array)
-  (va: v parse_list_kind (list t))
-  (vl: v parse_list_kind (list t))
-: GTot prop
-=
-      k.parser_kind_subkind == Some ParserStrong /\
-      AP.merge_into (array_of vl) (array_of va) (array_of va0) /\
-      va0.contents == List.Tot.append vl.contents va.contents
+module AP = LowParse.SteelST.ArrayPtr
+module SZ = FStar.SizeT
+module R = Steel.ST.Reference
 
-[@@__reduce__]
-let list_iterator0
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (va0: v parse_list_kind (list t))
-  (a0: byte_array)
-  (va: v parse_list_kind (list t))
-: Tot vprop
-= exists_ (fun vl ->
-    aparse (parse_list p) a0 vl `star`
-    pure (list_iterator_prop p va0 a0 va vl)
-  )
-
-let list_iterator
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (va0: v parse_list_kind (list t))
-  (a0: byte_array)
-  (va: v parse_list_kind (list t))
-: Tot vprop
-= list_iterator0 p va0 a0 va
-
-let list_iterator_parser_kind
-  (#opened: _)
+val list_iterator
   (#k: parser_kind)
   (#t: Type0) // gen_elim universe issue
+  (p: parser k t)
+  (va0: v parse_list_kind (list t))
+  (a0: byte_array)
+  (va: v parse_list_kind (list t))
+: Tot vprop
+
+val list_iterator_parser_kind
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
   (p: parser k t)
   (va0: v parse_list_kind (list t))
   (a0: byte_array)
@@ -54,17 +31,9 @@ let list_iterator_parser_kind
     (fun _ ->
       k.parser_kind_subkind == Some ParserStrong
     )
-= rewrite
-    (list_iterator p va0 a0 va)
-    (list_iterator0 p va0 a0 va);
-  let _ = gen_elim () in
-  noop ();
-  rewrite
-    (list_iterator0 p va0 a0 va)
-    (list_iterator p va0 a0 va)
 
 inline_for_extraction
-let list_iterator_begin
+val list_iterator_begin
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
@@ -81,17 +50,8 @@ let list_iterator_begin
     ))
     (k.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
-= let _ = elim_aparse (parse_list p) a0 in
-  let a = AP.split a0 0sz in
-  let _ = gen_elim () in
-  let _ = intro_nil p a0 in
-  let va = intro_aparse (parse_list p) a in
-  rewrite
-    (list_iterator0 p va0 a0 va)
-    (list_iterator p va0 a0 va);
-  return a
 
-let list_iterator_end
+val list_iterator_end
   (#opened: _)
   (#k: parser_kind)
   (#t: Type)
@@ -105,14 +65,8 @@ let list_iterator_end
       aparse (parse_list p) a va)
     (fun _ ->
       aparse (parse_list p) a0 va0)
-= rewrite
-    (list_iterator p va0 a0 va)
-    (list_iterator0 p va0 a0 va);
-  let _ = gen_elim () in
-  let _ = list_append p a0 a in
-  vpattern_rewrite (aparse _ _) va0
 
-let list_iterator_append
+val list_iterator_append
   (#opened: _)
   (#k: parser_kind)
   (#t: Type)
@@ -132,19 +86,8 @@ let list_iterator_append
       va.contents == va1.contents `List.Tot.append` va2.contents
     )
     (fun _ -> True)
-= rewrite
-    (list_iterator p va0 a0 va)
-    (list_iterator0 p va0 a0 va);
-  let _ = gen_elim () in
-  let va = vpattern_replace (aparse _ a0) in
-  List.Tot.append_assoc va.contents va1.contents va2.contents;
-  noop ();
-  let _ = list_append p a0 a1 in
-  rewrite
-    (list_iterator0 p va0 a0 va2)
-    (list_iterator p va0 a0 va2)
 
-let list_iterator_next
+val list_iterator_next
   (#opened: _)
   (#k: parser_kind)
   (#t: Type)
@@ -165,36 +108,17 @@ let list_iterator_next
       va.contents == va1.contents :: va2.contents
     )
     (fun _ -> True)
-= list_iterator_parser_kind p va0 a0 va;
-  let _ = intro_singleton p a1 in
-  list_iterator_append p a0 a1 va2
 
-[@@__reduce__]
-let list_slice0
+val list_slice
   (#k: parser_kind)
-  (#t: Type)
+  (#t: Type0) // gen_elim universe issue
   (p: parser k t)
   (psz: R.ref SZ.t)
   (a: byte_array)
   (va: v parse_list_kind (list t))
 : Tot vprop
-= aparse (parse_list p) a va `star`
-  R.pts_to psz full_perm (AP.len (array_of va)) `star`
-  pure (
-    k.parser_kind_subkind == Some ParserStrong
-  )
 
-let list_slice
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (psz: R.ref SZ.t)
-  (a: byte_array)
-  (va: v parse_list_kind (list t))
-: Tot vprop
-= list_slice0 p psz a va
-
-let intro_list_slice
+val intro_list_slice
   (#opened: _)
   (#k: parser_kind)
   (#t: Type)
@@ -210,10 +134,8 @@ let intro_list_slice
     (k.parser_kind_subkind == Some ParserStrong /\
       SZ.v sz == AP.length (array_of va))
     (fun _ -> True)
-= noop ();
-  rewrite (list_slice0 p psz a va) (list_slice p psz a va)
 
-let elim_list_slice
+val elim_list_slice
   (#opened: _)
   (#k: parser_kind)
   (#t: Type)
@@ -228,7 +150,3 @@ let elim_list_slice
     True
     (fun _ -> k.parser_kind_subkind == Some ParserStrong
     )
-= rewrite (list_slice p psz a va) (list_slice0 p psz a va);
-  let _ = gen_elim () in
-  noop ()
-
