@@ -16,7 +16,6 @@ let list_iterator_prop
 : GTot prop
 =
       k.parser_kind_subkind == Some ParserStrong /\
-      k.parser_kind_low > 0 /\
       AP.merge_into (array_of vl) (array_of va) (array_of va0) /\
       va0.contents == List.Tot.append vl.contents va.contents
 
@@ -57,8 +56,7 @@ let list_iterator_parser_kind
     (fun _ -> list_iterator p va0 a0 va)
     True
     (fun _ ->
-      k.parser_kind_subkind == Some ParserStrong /\
-      k.parser_kind_low > 0
+      k.parser_kind_subkind == Some ParserStrong
     )
 = rewrite
     (list_iterator p va0 a0 va)
@@ -85,8 +83,7 @@ let list_iterator_begin
         va0.contents == va.contents
       )
     ))
-    (k.parser_kind_subkind == Some ParserStrong /\
-      k.parser_kind_low > 0)
+    (k.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
 = let _ = elim_aparse (parse_list p) a0 in
   let a = AP.split a0 0sz in
@@ -171,6 +168,7 @@ let list_iterator_next
     (fun a ->
       list_iterator p va0 a0 va2)
     (AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
+      AP.length (array_of va1) > 0 /\
       va.contents == va1.contents :: va2.contents
     )
     (fun _ -> True)
@@ -193,8 +191,7 @@ let list_slice0
 = aparse (parse_list p) a va `star`
   R.pts_to psz full_perm (AP.len (array_of va)) `star`
   pure (
-    k.parser_kind_subkind == Some ParserStrong /\
-    k.parser_kind_low > 0
+    k.parser_kind_subkind == Some ParserStrong
   )
 
 let list_slice
@@ -221,7 +218,6 @@ let intro_list_slice
       R.pts_to psz full_perm sz)
     (fun _ -> list_slice p psz a va)
     (k.parser_kind_subkind == Some ParserStrong /\
-      k.parser_kind_low > 0 /\
       SZ.v sz == AP.length (array_of va))
     (fun _ -> True)
 = noop ();
@@ -240,8 +236,7 @@ let elim_list_slice
     (fun _ -> aparse (parse_list p) a va `star`
       R.pts_to psz full_perm (AP.len (array_of va)))
     True
-    (fun _ -> k.parser_kind_subkind == Some ParserStrong /\
-      k.parser_kind_low > 0
+    (fun _ -> k.parser_kind_subkind == Some ParserStrong
     )
 = rewrite (list_slice p psz a va) (list_slice0 p psz a va);
   let _ = gen_elim () in
