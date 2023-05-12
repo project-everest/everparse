@@ -365,6 +365,7 @@ let serialize32_bounded_integer_le_1
 let write_bounded_integer_le_1
 = leaf_writer_strong_of_serializer32 serialize32_bounded_integer_le_1 ()
 
+#push-options "--z3rlimit 20"
 let serialize32_bounded_integer_le_2
 = fun x #rrel #rel b pos ->
   bounded_integer_prop_equiv 2 x;
@@ -375,6 +376,7 @@ let serialize32_bounded_integer_le_2
   let h' = HST.get () in
   LE.store_post_modifies b (U32.v pos) 2 (fun s -> E.le_to_n s == U16.v x') h h';
   2ul
+#pop-options
 
 let write_bounded_integer_le_2 = leaf_writer_strong_of_serializer32 serialize32_bounded_integer_le_2 ()
 
