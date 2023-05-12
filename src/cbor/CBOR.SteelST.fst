@@ -438,15 +438,15 @@ open Steel.ST.GenElim
 
 module R = Steel.ST.Reference
 
+#set-options "--ide_id_info_off"
+
+#push-options "--z3rlimit 16 --split_queries always"
+
 let get_major_type_synth_raw_data_item
   (x: raw_data_item')
 : Lemma
   (get_major_type (synth_raw_data_item x) == (match x with (| (| (major_type, _), _ |), _ |) -> major_type))
 = assert_norm (pow2 3 == 8)
-
-#set-options "--ide_id_info_off"
-
-#push-options "--z3rlimit 16 --split_queries always"
 
 noextract
 let get_header_major_type
