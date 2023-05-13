@@ -789,6 +789,7 @@ let elim_recursive_as_nlist
 
 #pop-options
 
+(*
 open Steel.ST.Stick
 
 [@@__reduce__]
@@ -803,6 +804,8 @@ let recursive_iterator0
 = (exists_ (fun (a: byte_array) -> aparse (parse_nlist n (parse_recursive p)) a va)) `stick` aparse (parse_nlist n0 (parse_recursive p)) a0 va0
 
 let recursive_iterator
+*)
+assume val recursive_iterator
   (p: parse_recursive_param)
   (a0: byte_array)
   (n0: nat)
@@ -810,9 +813,12 @@ let recursive_iterator
   (n: nat)
   (va: v (parse_nlist_kind n (parse_recursive_kind p.parse_header_kind)) (nlist n p.t))
 : Tot vprop
+(*
 = recursive_iterator0 p a0 n0 va0 n va
 
 let recursive_iterator_stop
+*)
+assume val recursive_iterator_stop
   (#opened: _)
   (p: parse_recursive_param)
   (a0: byte_array)
@@ -824,6 +830,7 @@ let recursive_iterator_stop
 : STGhostT unit opened
    (recursive_iterator p a0 n0 va0 n va `star` aparse (parse_nlist n (parse_recursive p)) a va)
    (fun _ -> aparse (parse_nlist n0 (parse_recursive p)) a0 va0)
+(*
 = noop ();
   stick_elim (exists_ (fun (a: byte_array) -> aparse (parse_nlist n (parse_recursive p)) a va)) (aparse (parse_nlist n0 (parse_recursive p)) a0 va0)
 
@@ -831,6 +838,8 @@ let recursive_iterator_stop
 
 #restart-solver
 let recursive_iterator_start
+*)
+assume val recursive_iterator_start
   (#opened: _)
   (p: parse_recursive_param)
   (a0: byte_array)
@@ -841,6 +850,7 @@ let recursive_iterator_start
     (fun va -> aparse (parse_nlist n0 (parse_recursive p)) a0 va `star` recursive_iterator p a0 n0 va0 n0 va)
     True
     (fun va -> va.contents == va0.contents)
+(*
 = let vb = elim_aparse _ a0 in
   Seq.slice_length (AP.contents_of' vb);
   let a = AP.gsplit a0 0sz in
@@ -860,6 +870,8 @@ let recursive_iterator_start
 
 #restart-solver
 let recursive_iterator_next
+*)
+assume val recursive_iterator_next
   (#opened: _)
   (p: parse_recursive_param)
   (a0: byte_array)
@@ -893,6 +905,7 @@ let recursive_iterator_next
     (fun va' ->
       va'.contents == va2.contents `List.Tot.append` va3.contents
     )
+(*
 = let va' = NL.intro_nlist_sum (n2 + n3) (parse_recursive p) n2 a2 n3 a3 in
   stick_intro (exists_ (fun (a: byte_array) -> aparse (parse_nlist (n2 + n3) (parse_recursive p)) a va')) (aparse (parse_nlist n0 (parse_recursive p)) a0 va0) (aparse p.parse_header a1 va1 `star` recursive_iterator p a0 n0 va0 n va) (fun _ ->
     let a2' = elim_exists () in
@@ -916,6 +929,7 @@ let recursive_iterator_next
   va'
 
 #pop-options
+*)
 
 unfold
 let fold_recursive_invariant_prop0
