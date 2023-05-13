@@ -1,19 +1,51 @@
 module LowParse.SteelST.List.Iterator
 open Steel.ST.GenElim
 
-let list_iterator_prop
+let list_iterator_strong_prop
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (va0: v parse_list_kind (list t))
   (a0: byte_array)
+  (l: list t)
   (va: v parse_list_kind (list t))
   (vl: v parse_list_kind (list t))
 : GTot prop
 =
       k.parser_kind_subkind == Some ParserStrong /\
       AP.merge_into (array_of vl) (array_of va) (array_of va0) /\
+      l == vl.contents /\
       va0.contents == List.Tot.append vl.contents va.contents
+
+[@@__reduce__]
+let list_iterator_strong0
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (va0: v parse_list_kind (list t))
+  (a0: byte_array)
+  (l: list t)
+  (va: v parse_list_kind (list t))
+: Tot vprop
+= exists_ (fun vl ->
+    aparse (parse_list p) a0 vl `star`
+    pure (list_iterator_strong_prop p va0 a0 l va vl)
+  )
+
+let list_iterator_strong
+  p va0 a0 l va
+= list_iterator_strong0 p va0 a0 l va
+
+let list_iterator_strong_facts
+  p va0 a0 l va
+= rewrite
+    (list_iterator_strong p va0 a0 l va)
+    (list_iterator_strong0 p va0 a0 l va);
+  let _ = gen_elim () in
+  noop ();
+  rewrite
+    (list_iterator_strong0 p va0 a0 l va)
+    (list_iterator_strong p va0 a0 l va)
 
 [@@__reduce__]
 let list_iterator0
@@ -24,9 +56,8 @@ let list_iterator0
   (a0: byte_array)
   (va: v parse_list_kind (list t))
 : Tot vprop
-= exists_ (fun vl ->
-    aparse (parse_list p) a0 vl `star`
-    pure (list_iterator_prop p va0 a0 va vl)
+= exists_ (fun l ->
+    list_iterator_strong p va0 a0 l va
   )
 
 let list_iterator
@@ -39,31 +70,18 @@ let list_iterator
 : Tot vprop
 = list_iterator0 p va0 a0 va
 
-let list_iterator_parser_kind
-  (#opened: _)
-  (#k: parser_kind)
-  (#t: Type0) // gen_elim universe issue
-  (p: parser k t)
-  (va0: v parse_list_kind (list t))
-  (a0: byte_array)
-  (va: v parse_list_kind (list t))
-: STGhost unit opened
-    (list_iterator p va0 a0 va)
-    (fun _ -> list_iterator p va0 a0 va)
-    True
-    (fun _ ->
-      k.parser_kind_subkind == Some ParserStrong
-    )
-= rewrite
-    (list_iterator p va0 a0 va)
-    (list_iterator0 p va0 a0 va);
-  let _ = gen_elim () in
-  noop ();
+let list_iterator_of_list_iterator_strong
+  p va0 a0 l va
+= noop ();
   rewrite
     (list_iterator0 p va0 a0 va)
     (list_iterator p va0 a0 va)
 
-let list_iterator_begin
+let list_iterator_strong_of_list_iterator
+  p va0 a0 va
+= elim_exists ()
+
+let list_iterator_strong_begin
   p #va0 a0
 = let _ = elim_aparse (parse_list p) a0 in
   let a = AP.gsplit a0 0sz in
@@ -72,87 +90,39 @@ let list_iterator_begin
   let va = intro_aparse (parse_list p) a in
   rewrite (aparse _ a _) (aparse (parse_list p) a0 va);
   rewrite
-    (list_iterator0 p va0 a0 va)
-    (list_iterator p va0 a0 va);
+    (list_iterator_strong0 p va0 a0 [] va)
+    (list_iterator_strong p va0 a0 [] va);
   va
 
-let list_iterator_end
-  (#opened: _)
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (#va0: v parse_list_kind (list t))
-  (#va: v parse_list_kind (list t))
-  (a0: byte_array)
-  (a: byte_array)
-: STGhostT unit opened
-    (list_iterator p va0 a0 va `star`
-      aparse (parse_list p) a va)
-    (fun _ ->
-      aparse (parse_list p) a0 va0)
+let list_iterator_strong_end
+  p #va0 #va a0 l a
 = rewrite
-    (list_iterator p va0 a0 va)
-    (list_iterator0 p va0 a0 va);
+    (list_iterator_strong p va0 a0 l va)
+    (list_iterator_strong0 p va0 a0 l va);
   let _ = gen_elim () in
   let _ = list_append p a0 a in
   vpattern_rewrite (aparse _ _) va0
 
-let list_iterator_append
-  (#opened: _)
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (#va0: v parse_list_kind (list t))
-  (#va: v parse_list_kind (list t))
-  (#va1: v parse_list_kind (list t))
-  (a0: byte_array)
-  (a1: byte_array)
-  (va2: v parse_list_kind (list t))
-: STGhost unit opened
-    (list_iterator p va0 a0 va `star`
-      aparse (parse_list p) a1 va1)
-    (fun a ->
-      list_iterator p va0 a0 va2)
-    (AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
-      va.contents == va1.contents `List.Tot.append` va2.contents
-    )
-    (fun _ -> True)
+let list_iterator_strong_append
+  p #va0 #va #va1 a0 l a1 va2
 = rewrite
-    (list_iterator p va0 a0 va)
-    (list_iterator0 p va0 a0 va);
+    (list_iterator_strong p va0 a0 l va)
+    (list_iterator_strong0 p va0 a0 l va);
   let _ = gen_elim () in
   let va = vpattern_replace (aparse _ a0) in
   List.Tot.append_assoc va.contents va1.contents va2.contents;
   noop ();
   let _ = list_append p a0 a1 in
   rewrite
-    (list_iterator0 p va0 a0 va2)
-    (list_iterator p va0 a0 va2)
+    (list_iterator_strong0 p va0 a0 (l `List.Tot.append` va1.contents) va2)
+    (list_iterator_strong p va0 a0 (l `List.Tot.append` va1.contents) va2)
 
-let list_iterator_next
-  (#opened: _)
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (#va0: v parse_list_kind (list t))
-  (#va: v parse_list_kind (list t))
-  (#va1: v k t)
-  (a0: byte_array)
-  (a1: byte_array)
-  (va2: v parse_list_kind (list t))
-: STGhost unit opened
-    (list_iterator p va0 a0 va `star`
-      aparse p a1 va1)
-    (fun a ->
-      list_iterator p va0 a0 va2)
-    (AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
-      AP.length (array_of va1) > 0 /\
-      va.contents == va1.contents :: va2.contents
-    )
-    (fun _ -> True)
-= list_iterator_parser_kind p va0 a0 va;
+let list_iterator_strong_next
+  p #va0 #va #va1 a0 l a1 va2
+= list_iterator_strong_facts p va0 a0 l va;
   let _ = intro_singleton p a1 in
-  list_iterator_append p a0 a1 va2
+  list_iterator_strong_append p a0 l a1 va2;
+  vpattern_rewrite (fun l -> list_iterator_strong _ _ _ l _) (l `List.Tot.append` [va1.contents])
 
 [@@__reduce__]
 let list_slice0
