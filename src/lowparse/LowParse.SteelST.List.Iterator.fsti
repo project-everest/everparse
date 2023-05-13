@@ -102,7 +102,9 @@ val list_iterator_strong_begin
       list_iterator_strong p va0 a0 [] va
     )
     (k.parser_kind_subkind == Some ParserStrong)
-    (fun va -> va0.contents == va.contents)
+    (fun va -> va0.contents == va.contents /\
+      AP.length (array_of' va0) == AP.length (array_of va)
+    )
 
 let list_iterator_begin
   (#opened: _)
@@ -118,7 +120,9 @@ let list_iterator_begin
       list_iterator p va0 a0 va
     )
     (k.parser_kind_subkind == Some ParserStrong)
-    (fun va -> va0.contents == va.contents)
+    (fun va -> va0.contents == va.contents /\
+      AP.length (array_of' va0) == AP.length (array_of va)
+    )
 = let va = list_iterator_strong_begin p a0 in
   list_iterator_of_list_iterator_strong _ _ _ _ _;
   va
