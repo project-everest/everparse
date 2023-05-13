@@ -32,24 +32,21 @@ val list_iterator_parser_kind
       k.parser_kind_subkind == Some ParserStrong
     )
 
-inline_for_extraction
 val list_iterator_begin
+  (#opened: _)
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
   (#va0: v parse_list_kind (list t))
   (a0: byte_array)
-: ST byte_array
+: STGhost (v parse_list_kind (list t)) opened
     (aparse (parse_list p) a0 va0)
-    (fun a -> exists_ (fun va ->
-      aparse (parse_list p) a va `star`
-      list_iterator p va0 a0 va `star`
-      pure (
-        va0.contents == va.contents
-      )
-    ))
+    (fun va ->
+      aparse (parse_list p) a0 va `star`
+      list_iterator p va0 a0 va
+    )
     (k.parser_kind_subkind == Some ParserStrong)
-    (fun _ -> True)
+    (fun va -> va0.contents == va.contents)
 
 val list_iterator_end
   (#opened: _)

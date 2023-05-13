@@ -63,33 +63,18 @@ let list_iterator_parser_kind
     (list_iterator0 p va0 a0 va)
     (list_iterator p va0 a0 va)
 
-inline_for_extraction
 let list_iterator_begin
-  (#k: parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (#va0: v parse_list_kind (list t))
-  (a0: byte_array)
-: ST byte_array
-    (aparse (parse_list p) a0 va0)
-    (fun a -> exists_ (fun va ->
-      aparse (parse_list p) a va `star`
-      list_iterator p va0 a0 va `star`
-      pure (
-        va0.contents == va.contents
-      )
-    ))
-    (k.parser_kind_subkind == Some ParserStrong)
-    (fun _ -> True)
+  p #va0 a0
 = let _ = elim_aparse (parse_list p) a0 in
-  let a = AP.split a0 0sz in
+  let a = AP.gsplit a0 0sz in
   let _ = gen_elim () in
   let _ = intro_nil p a0 in
   let va = intro_aparse (parse_list p) a in
+  rewrite (aparse _ a _) (aparse (parse_list p) a0 va);
   rewrite
     (list_iterator0 p va0 a0 va)
     (list_iterator p va0 a0 va);
-  return a
+  va
 
 let list_iterator_end
   (#opened: _)
