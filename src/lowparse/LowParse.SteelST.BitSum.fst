@@ -1,6 +1,7 @@
 module LowParse.SteelST.BitSum
 include LowParse.Spec.BitSum
 include LowParse.SteelST.ValidateAndRead
+include LowParse.SteelST.Write
 include LowParse.SteelST.Combinators
 
 inline_for_extraction
@@ -125,3 +126,27 @@ let read_bitsum'
         (fun k pre t' post phi -> phi k)
     )
     ()
+
+inline_for_extraction
+let write_bitsum'
+  (#t: eqtype)
+  (#tot: pos)
+  (#cl: uint_t tot t)
+  (#b: bitsum' cl tot)
+  (sr: synth_bitsum'_recip_t b)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: writer s)
+: Tot (writer (serialize_bitsum' b s))
+= fun x a ->
+    serialize_bitsum'_eq b s x;
+    synth_bitsum'_injective b;
+    synth_bitsum'_recip_inverse b;
+    Steel.ST.Util.noop ();
+    let res = w (sr x) a in
+    let _ = Steel.ST.GenElim.gen_elim () in
+    let _ = intro_filter _ (filter_bitsum' b) a in
+    let _ = intro_synth _ (synth_bitsum' b) a () in
+    let _ = rewrite_aparse a (parse_bitsum' b p) in
+    Steel.ST.Util.return res
