@@ -51,7 +51,7 @@ let exact_writer
 
 inline_for_extraction
 let exact_write
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (#p: parser k t)
   (#s: serializer p)
@@ -72,7 +72,7 @@ let exact_write
 
 inline_for_extraction
 let write_constant_size
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
