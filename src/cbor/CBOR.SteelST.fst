@@ -4,8 +4,10 @@ open LowParse.SteelST.Combinators
 open LowParse.SteelST.Recursive
 open LowParse.SteelST.BitSum
 open LowParse.SteelST.ValidateAndRead
+open Steel.ST.GenElim
 
 module I = LowParse.SteelST.Int
+module AP = LowParse.SteelST.ArrayPtr
 
 let read_u8 = I.read_u8
 
@@ -434,8 +436,6 @@ let jump_leaf
    the whole leaf is read, which we don't want here (we have byte
    strings.) *)
 
-open Steel.ST.GenElim
-
 module R = Steel.ST.Reference
 
 #set-options "--ide_id_info_off"
@@ -720,8 +720,6 @@ let map_entry_order_impl
     let _ = merge_pair pkey pvalue a2 av2 in
     vpattern_rewrite (aparse _ a2) va2;
     return res
-
-module AP = LowParse.SteelST.ArrayPtr
 
 #restart-solver
 unfold
@@ -1021,8 +1019,38 @@ let read_neg_int64
     (fun res -> va.contents == NegInt64 res)
 = read_argument_as_uint64 a
 
+
+let write_u8 = I.write_u8
+
+let write_initial_byte
+  (t: major_type_t)
+  (x: additional_info_t)
+  (sq: squash (
+    initial_byte_wf (t, (x, ()))
+  ))
+  (#va: AP.v byte)
+  (a: byte_array)
+: ST (v (get_parser_kind parse_initial_byte) initial_byte)
+    (AP.arrayptr a va)
+    (fun va' ->
+      aparse parse_initial_byte a va'
+    )
+    (AP.length (AP.array_of va) == 1 /\
+      AP.array_perm (AP.array_of va) == full_perm
+    )
+    (fun va' -> 
+       array_of' va' == AP.array_of va /\
+       va'.contents == mk_initial_byte t x
+    )
+= let _ = exact_write (write_bitsum' mk_synth_initial_byte (write_constant_size write_u8 1sz)) (mk_initial_byte t x) a in
+  let _ = intro_filter _ initial_byte_wf a in
+  rewrite_aparse a parse_initial_byte
+
 inline_for_extraction
 noextract
-let mk_synth_initial_byte : synth_bitsum'_recip_t initial_byte_desc =
-  norm [delta_attr [`%filter_bitsum'_t_attr]; iota; zeta; primops]
-    (mk_synth_bitsum'_recip initial_byte_desc)
+let write_initial_byte'
+: exact_writer serialize_initial_byte
+= fun x a ->
+  match x with
+  | (major_type, (additional_info, _)) ->
+    write_initial_byte major_type additional_info () a

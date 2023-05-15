@@ -26,6 +26,29 @@ let destr_initial_byte : destr_bitsum'_t initial_byte_desc =
   norm [delta_attr [`%filter_bitsum'_t_attr]; iota; zeta; primops]
     (mk_destr_bitsum'_t initial_byte_desc)
 
+inline_for_extraction
+let _cut_eq
+  (#t: Type)
+  (x y: t)
+  (sq: squash (x == y))
+: Tot t
+= y
+
+inline_for_extraction
+let mk_synth_initial_byte : synth_bitsum'_recip_t initial_byte_desc =
+  _ by (
+    FStar.Tactics.apply (`(_cut_eq (mk_synth_bitsum'_recip initial_byte_desc)));
+    FStar.Tactics.norm [delta_attr [`%filter_bitsum'_t_attr]; iota; zeta; primops];
+    FStar.Tactics.trefl ()
+  )
+
+(* // FIXME: WHY WHY WHY does the following not fully normalize? Probably some interaction between `norm` and `inline_for_extraction`
+inline_for_extraction
+let mk_synth_initial_byte : synth_bitsum'_recip_t initial_byte_desc =
+  norm [delta_attr [`%filter_bitsum'_t_attr]; iota; zeta; primops]
+    (mk_synth_bitsum'_recip initial_byte_desc)
+*)
+
 module U8 = FStar.UInt8
 
 inline_for_extraction
