@@ -446,6 +446,7 @@ let get_major_type_synth_raw_data_item
   (x: raw_data_item')
 : Lemma
   (get_major_type (synth_raw_data_item x) == (match x with (| (| (major_type, _), _ |), _ |) -> major_type))
+  [SMTPat (synth_raw_data_item x)]
 = assert_norm (pow2 3 == 8)
 
 noextract
@@ -480,6 +481,11 @@ let read_header_major_type
   let _ = elim_pure _ in
   return res
 
+let get_raw_data_item_header
+  (x: raw_data_item)
+: GTot header
+= dfst (synth_raw_data_item_recip x)
+
 #restart-solver
 let read_major_type
   (#va: v parse_raw_data_item_kind raw_data_item)
@@ -492,7 +498,6 @@ let read_major_type
 = Classical.forall_intro parse_raw_data_item_eq;
   let _ = rewrite_aparse a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
   let va1 = elim_synth _ _ a () in // (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
-  get_major_type_synth_raw_data_item va1.contents;
   let a_content = ghost_split_dtuple2_full _ _ a in // parse_header (parse_content parse_raw_data_item) a in
   let _ = gen_elim () in
   let res = read_header_major_type a in
@@ -932,3 +937,92 @@ let jump_data_item
 = jump_filter
     jump_raw_data_item
     (data_item_wf order)
+
+module U8 = FStar.UInt8
+
+let get_header_argument_as_simple_value_precond
+  (h: header)
+: GTot prop
+=
+      let (| b, x |) = h in
+      let (major_type, (additional_info, _)) = b in
+      major_type = 7uy /\ additional_info `U8.lte` 24uy
+
+let get_header_argument_as_simple_value
+  (h: header)
+: Ghost simple_value
+  (requires (get_header_argument_as_simple_value_precond h))
+  (ensures (fun _ -> True))
+= let (| b, x |) = h in
+  argument_as_simple_value b x
+
+let read_header_argument_as_simple_value
+  (#va: v (get_parser_kind parse_header) header)
+  (a: byte_array)
+: ST simple_value
+    (aparse parse_header a va)
+    (fun _ -> aparse parse_header a va)
+    (get_header_argument_as_simple_value_precond va.contents)
+    (fun res -> 
+      let (| b, x |) = va.contents in
+      let (major_type, (additional_info, _)) = b in
+      major_type = 7uy /\ additional_info `U8.lte` 24uy /\
+      res == argument_as_simple_value b x
+    )
+= let res = read_and_jump_header a emp simple_value (fun res -> aparse parse_header a va `star` pure (
+      res == get_header_argument_as_simple_value va.contents
+  )) (fun _ (| b, x |) ->
+    noop ();
+    return (argument_as_simple_value b x)
+  )
+  in
+  let _ = elim_pure _ in
+  return res
+
+let read_simple_value
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST simple_value
+    (aparse parse_raw_data_item a va)
+    (fun _ -> aparse parse_raw_data_item a va)
+    (Simple? va.contents)
+    (fun res -> va.contents == Simple res)
+= Classical.forall_intro parse_raw_data_item_eq;
+  let _ = rewrite_aparse a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
+  let va1 = elim_synth _ _ a () in
+  let a_content = ghost_split_dtuple2_full _ _ a in // parse_header (parse_content parse_raw_data_item) a in
+  let _ = gen_elim () in
+  let res = read_header_argument_as_simple_value a in
+  let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a_content in
+  let _ = intro_synth (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
+  let _ = rewrite_aparse a parse_raw_data_item in
+  vpattern_rewrite (aparse parse_raw_data_item a) va;
+  return res
+
+module U64 = FStar.UInt64
+
+let read_uint64
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST U64.t
+    (aparse parse_raw_data_item a va)
+    (fun _ -> aparse parse_raw_data_item a va)
+    (UInt64? va.contents)
+    (fun res -> va.contents == UInt64 res)
+= read_argument_as_uint64 a
+
+let read_neg_int64
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST U64.t
+    (aparse parse_raw_data_item a va)
+    (fun _ -> aparse parse_raw_data_item a va)
+    (NegInt64? va.contents)
+    (fun res -> va.contents == NegInt64 res)
+= read_argument_as_uint64 a
+
+inline_for_extraction
+noextract
+let mk_synth_initial_byte : synth_bitsum'_recip_t initial_byte_desc =
+  norm [delta_attr [`%filter_bitsum'_t_attr]; iota; zeta; primops]
+    (mk_synth_bitsum'_recip initial_byte_desc)
