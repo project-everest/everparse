@@ -91,3 +91,154 @@ let write_constant_size
   return sz
 
 #pop-options
+
+(* Right-to-left writing *)
+
+module W = LowParse.SteelST.R2LOutput
+
+[@@__reduce__]
+let maybe_r2l_write_true
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (out: W.t)
+  (vout: AP.array byte)
+  (v: t)
+: Tot vprop
+=   exists_ (fun vl -> exists_ (fun a -> exists_ (fun va ->
+      W.vp out vl `star`
+      aparse p a va `star`
+      pure (
+        AP.merge_into vl (array_of' va) vout /\
+        AP.array_perm (array_of' va) == full_perm /\
+        va.contents == v
+    ))))
+
+[@@__reduce__]
+let maybe_r2l_write_false
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (out: W.t)
+  (vout: AP.array byte)
+  (v: t)
+: Tot vprop
+=   W.vp out vout `star`
+    pure ((Seq.length (serialize s v) > AP.length vout) == true)
+
+let maybe_r2l_write
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (out: W.t)
+  (vout: AP.array byte)
+  (v: t)
+  (success: bool)
+: Tot vprop
+= if success
+  then maybe_r2l_write_true p out vout v
+  else maybe_r2l_write_false s out vout v
+
+inline_for_extraction
+let r2l_writer
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+: Tot Type
+= (v: t) ->
+  (#vout: AP.array byte) ->
+  (out: W.t) ->
+  STT bool
+    (W.vp out vout)
+    (fun res -> maybe_r2l_write s out vout v res)
+
+inline_for_extraction
+let r2l_write_constant_size
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: exact_writer s)
+  (sz: SZ.t)
+: Pure (r2l_writer s)
+    (requires (
+      k.parser_kind_high == Some k.parser_kind_low /\
+      k.parser_kind_low == SZ.v sz
+    ))
+    (ensures (fun _ -> True))
+= fun x #vout out ->
+  serialize_length s x;
+  let len = W.len out in
+  if sz `SZ.lte` len
+  then begin
+    let a = W.split out sz in
+    let _ = gen_elim () in
+    let _ = w x a in
+    rewrite
+      (maybe_r2l_write_true p out vout x)
+      (maybe_r2l_write s out vout x true);
+    return true
+  end else begin
+    noop ();
+    rewrite
+      (maybe_r2l_write_false s out vout x)
+      (maybe_r2l_write s out vout x false);
+    return false
+  end
+
+inline_for_extraction
+let r2l_write_success
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (#v: Ghost.erased t)
+  (#vout: AP.array byte)
+  (#success: Ghost.erased bool)
+  (out: W.t)
+: ST byte_array
+    (maybe_r2l_write s out vout v success)
+    (fun a ->
+      exists_ (fun vl -> exists_ (fun va ->
+        W.vp out vl `star`
+        aparse p a va `star`
+        pure (
+          AP.merge_into vl (array_of' va) vout /\
+          AP.array_perm (array_of' va) == full_perm /\
+          va.contents == Ghost.reveal v
+    ))))
+    (Ghost.reveal success == true)
+    (fun _ -> True)
+= rewrite
+    (maybe_r2l_write s out vout v success)
+    (maybe_r2l_write_true p out vout v);
+  let _ = gen_elim () in
+  let _ = elim_aparse p _ in
+  let a = W.hop out _ in
+  let _ = gen_elim () in
+  let _ = intro_aparse p a in
+  return a
+
+let r2l_write_failure
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (#v: t)
+  (#vout: AP.array byte)
+  (#success: bool)
+  (out: W.t)
+: STGhost unit opened
+    (maybe_r2l_write s out vout v success)
+    (fun a -> W.vp out vout)
+    (Ghost.reveal success == false)
+    (fun _ -> Seq.length (serialize s v) > AP.length vout)
+= rewrite
+    (maybe_r2l_write s out vout v success)
+    (maybe_r2l_write_false s out vout v);
+  let _ = gen_elim () in
+  noop ()
