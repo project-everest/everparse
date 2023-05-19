@@ -620,7 +620,7 @@ let read_synth'
 
 inline_for_extraction
 let write_synth
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t1: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (#p: parser k t1)
   (#s: serializer p)
@@ -644,7 +644,7 @@ let write_synth
 
 inline_for_extraction
 let write_synth'
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t1: Type)
   (#p: parser k t1)
   (#s: serializer p)
@@ -660,7 +660,7 @@ let write_synth'
 
 inline_for_extraction
 let exact_write_synth
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t1: Type)
   (#p: parser k t1)
   (#s: serializer p)
@@ -682,7 +682,7 @@ let exact_write_synth
 
 inline_for_extraction
 let exact_write_synth'
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t1: Type)
   (#p: parser k t1)
   (#s: serializer p)
@@ -744,7 +744,7 @@ let maybe_r2l_write_synth
 
 inline_for_extraction
 let r2l_write_synth
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t1: Type)
   (#p: parser k t1)
   (#s: serializer p)
@@ -767,7 +767,7 @@ let r2l_write_synth
 
 inline_for_extraction
 let r2l_write_synth'
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t1: Type)
   (#p: parser k t1)
   (#s: serializer p)
@@ -1045,7 +1045,7 @@ let read_filter
 
 inline_for_extraction
 let write_filter
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
   (#p: parser k t)
   (#s: serializer p)
@@ -1060,7 +1060,7 @@ let write_filter
 
 inline_for_extraction
 let exact_write_filter
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
