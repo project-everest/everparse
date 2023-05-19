@@ -635,6 +635,7 @@ let write_synth
 : Tot (writer (serialize_synth p f12 s f21 ()))
 = fun x a ->
   serialize_synth_eq p f12 s f21 () x;
+  [@@inline_let]
   let y = f21' x in
   let sz = w y a in
   let _ = gen_elim () in
@@ -674,6 +675,7 @@ let exact_write_synth
 : Tot (exact_writer (serialize_synth p f12 s f21 ()))
 = fun x a ->
   serialize_synth_eq p f12 s f21 () x;
+  [@@inline_let]
   let y = f21' x in
   let _ = w y a in
   intro_synth p f12 a ()
