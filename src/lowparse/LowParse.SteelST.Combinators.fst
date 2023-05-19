@@ -696,6 +696,146 @@ let exact_write_synth'
 : Tot (exact_writer (serialize_synth p f12 s f21 ()))
 = exact_write_synth w f12 f21 (fun x -> f21 x) ()
 
+module W = LowParse.SteelST.R2LOutput
+
+let maybe_r2l_write_synth
+  (#opened: _)
+  (#k: parser_kind)
+  (#t1: Type)
+  (#p: parser k t1)
+  (s: serializer p)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> GTot t1))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+  (v2: t2)
+  (v1: t1)
+  (#vout: AP.array byte)
+  (out: W.t)
+  (res: bool)
+: STGhost unit opened
+    (maybe_r2l_write s out vout v1 res)
+    (fun _ -> maybe_r2l_write (serialize_synth p f12 s f21 ()) out vout v2 res)
+    (v1 == f21 v2)
+    (fun _ -> True)
+= serialize_synth_eq p f12 s f21 () v2;
+  if res
+  then begin
+    rewrite
+      (maybe_r2l_write s out vout v1 res)
+      (maybe_r2l_write_true p out vout v1);
+    let _ = gen_elim () in
+    let a = vpattern_replace (fun a -> aparse _ a _) in
+    let _ = intro_synth p f12 a () in
+    rewrite
+      (maybe_r2l_write_true (parse_synth p f12) out vout (f12 v1))
+      (maybe_r2l_write (serialize_synth p f12 s f21 ()) out vout v2 res)
+  end else begin
+    rewrite
+      (maybe_r2l_write s out vout v1 res)
+      (maybe_r2l_write_false s out vout v1);
+    let _ = gen_elim () in
+    rewrite
+      (maybe_r2l_write_false (serialize_synth p f12 s f21 ()) out vout (f12 v1))
+      (maybe_r2l_write (serialize_synth p f12 s f21 ()) out vout v2 res)
+  end
+
+inline_for_extraction
+let r2l_write_synth
+  (#k: parser_kind)
+  (#t1: Type)
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: r2l_writer s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> GTot t1))
+  (f21': ((x: t2) -> Tot (y: t1 { y == f21 x })))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (r2l_writer (serialize_synth p f12 s f21 ()))
+= fun x a ->
+  serialize_synth_eq p f12 s f21 () x;
+  [@@inline_let]
+  let y = f21' x in
+  let res = w y a in
+  maybe_r2l_write_synth s f12 f21 () x y a res;
+  return res
+
+inline_for_extraction
+let r2l_write_synth'
+  (#k: parser_kind)
+  (#t1: Type)
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: r2l_writer s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> Tot t1))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (r2l_writer (serialize_synth p f12 s f21 ()))
+= r2l_write_synth w f12 f21 (fun x -> f21 x) ()
+
+let rewrite_maybe_r2l_write
+  (#opened: _)
+  (#k1: parser_kind) (#t1: Type) (#p1: parser k1 t1) (s1: serializer p1)
+  (#k2: parser_kind) (#t2: Type) (#p2: parser k2 t2) (s2: serializer p2)
+  (v2: t2)
+  (v1: t1)
+  (#vout: AP.array byte)
+  (out: W.t)
+  (res: bool)
+: STGhost unit opened
+    (maybe_r2l_write s1 out vout v1 res)
+    (fun _ -> maybe_r2l_write s2 out vout v2 res)
+    (
+      t1 == t2 /\
+      (forall bytes . parse p1 bytes == parse p2 bytes) /\
+      v1 == v2
+    )
+    (fun _ -> True)
+= serializer_unique p2 s2 (serialize_ext p1 s1 p2) v2;
+  if res
+  then begin
+    rewrite
+      (maybe_r2l_write s1 out vout v1 res)
+      (maybe_r2l_write_true p1 out vout v1);
+    let _ = gen_elim () in
+    let a = vpattern_replace (fun a -> aparse _ a _) in
+    let _ = rewrite_aparse a p2 in
+    rewrite
+      (maybe_r2l_write_true p2 out vout v2)
+      (maybe_r2l_write s2 out vout v2 res)
+  end else begin
+    rewrite
+      (maybe_r2l_write s1 out vout v1 res)
+      (maybe_r2l_write_false s1 out vout v1);
+    let _ = gen_elim () in
+    rewrite
+      (maybe_r2l_write_false s2 out vout v2)
+      (maybe_r2l_write s2 out vout v2 res)
+  end
+
+inline_for_extraction
+let rewrite_r2l_writer
+  (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (#s1: serializer p1) (w1: r2l_writer s1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type) (#p2: parser k2 t2) (s2: serializer p2)
+: Pure (r2l_writer s2)
+  (requires (
+      t1 == t2 /\
+      (forall bytes . parse p1 bytes == parse p2 bytes)
+  ))
+  (ensures (fun _ -> True))
+= fun x a ->
+    let res = w1 x a in
+    rewrite_maybe_r2l_write s1 s2 x x a res;
+    return res
+
 [@CMacro]
 let validator_error_constraint_failed  = 2ul
 

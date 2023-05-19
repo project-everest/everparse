@@ -190,6 +190,21 @@ let r2l_write_constant_size
   end
 
 inline_for_extraction
+let ifthenelse_r2l_writer
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> Tot (r2l_writer s)))
+  (iffalse: (squash (cond == false) -> Tot (r2l_writer s)))
+: Tot (r2l_writer s)
+= fun x a ->
+    if cond
+    then iftrue () x a
+    else iffalse () x a
+
+inline_for_extraction
 let r2l_write_success
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
