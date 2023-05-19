@@ -142,6 +142,20 @@ let maybe_r2l_write
   else maybe_r2l_write_false s out vout v
 
 inline_for_extraction
+let r2l_writer_for
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (v: t)
+: Tot Type
+= (#vout: AP.array byte) ->
+  (out: W.t) ->
+  STT bool
+    (W.vp out vout)
+    (fun res -> maybe_r2l_write s out vout v res)
+
+inline_for_extraction
 let r2l_writer
   (#k: parser_kind)
   (#t: Type)
@@ -149,11 +163,7 @@ let r2l_writer
   (s: serializer p)
 : Tot Type
 = (v: t) ->
-  (#vout: AP.array byte) ->
-  (out: W.t) ->
-  STT bool
-    (W.vp out vout)
-    (fun res -> maybe_r2l_write s out vout v res)
+  r2l_writer_for s v
 
 let intro_r2l_write_success
   (#opened: _)
@@ -230,6 +240,22 @@ let r2l_write_constant_size
   end
 
 inline_for_extraction
+let ifthenelse_r2l_writer_for
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (v: Ghost.erased t)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> Tot (r2l_writer_for s v)))
+  (iffalse: (squash (cond == false) -> Tot (r2l_writer_for s v)))
+: Tot (r2l_writer_for s v)
+= fun a ->
+    if cond
+    then iftrue () a
+    else iffalse () a
+
+inline_for_extraction
 let ifthenelse_r2l_writer
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
@@ -239,10 +265,7 @@ let ifthenelse_r2l_writer
   (iftrue: (squash (cond == true) -> Tot (r2l_writer s)))
   (iffalse: (squash (cond == false) -> Tot (r2l_writer s)))
 : Tot (r2l_writer s)
-= fun x a ->
-    if cond
-    then iftrue () x a
-    else iffalse () x a
+= fun v -> ifthenelse_r2l_writer_for s v cond (fun _ -> iftrue () v) (fun _ -> iffalse () v)
 
 inline_for_extraction
 let ghost_elim_r2l_write_success
