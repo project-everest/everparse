@@ -836,6 +836,13 @@ let rewrite_r2l_writer
     rewrite_maybe_r2l_write s1 s2 x x a res;
     return res
 
+inline_for_extraction
+let r2l_write_weaken
+  (k1: Ghost.erased parser_kind) (#k2: Ghost.erased parser_kind) (#t: Type) (#p2: parser k2 t) (#s2: serializer p2) (w2: r2l_writer s2)
+  (_: squash (k1 `is_weaker_than` k2))
+: Tot (r2l_writer (serialize_weaken k1 s2))
+= rewrite_r2l_writer w2 (serialize_weaken k1 s2)
+
 [@CMacro]
 let validator_error_constraint_failed  = 2ul
 
@@ -857,6 +864,17 @@ let jump_fail
 : Tot (jumper (fail_parser k t))
 = fun a ->
     return 0sz // by contradiction
+
+inline_for_extraction
+let exact_write_fail
+  (k: Ghost.erased parser_kind)
+  (t: Type)
+  (sq: squash (fail_parser_kind_precond k))
+  (prf: (x: t) -> Lemma False)
+: Tot (exact_writer (fail_serializer k t prf)) =
+  fun x a ->
+    prf x;
+    intro_aparse (fail_parser k t) a // by contradiction
 
 #push-options "--z3rlimit 16"
 #restart-solver
@@ -1070,6 +1088,56 @@ let exact_write_filter
 = fun x a ->
   let _ = w x a in
   intro_filter p f a
+
+let maybe_r2l_write_filter
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (f: (t -> GTot bool))
+  (v: parse_filter_refine f)
+  (#vout: AP.array byte)
+  (out: W.t)
+  (res: bool)
+: STGhostT unit opened
+    (maybe_r2l_write s out vout v res)
+    (fun _ -> maybe_r2l_write (serialize_filter s f) out vout v res)
+= if res
+  then begin
+    rewrite
+      (maybe_r2l_write s out vout v res)
+      (maybe_r2l_write_true p out vout v);
+    let _ = gen_elim () in
+    let a = vpattern_replace (fun a -> aparse _ a _) in
+    let _ = intro_filter p f a in
+    rewrite
+      (maybe_r2l_write_true (parse_filter p f) out vout v)
+      (maybe_r2l_write (serialize_filter s f) out vout v res)
+  end else begin
+    rewrite
+      (maybe_r2l_write s out vout v res)
+      (maybe_r2l_write_false s out vout v);
+    let _ = gen_elim () in
+    rewrite
+      (maybe_r2l_write_false (serialize_filter s f) out vout v)
+      (maybe_r2l_write (serialize_filter s f) out vout v res)
+  end
+
+inline_for_extraction
+let r2l_write_filter
+  (#opened: _)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: r2l_writer s)
+  (f: (t -> GTot bool))
+: Tot (r2l_writer (serialize_filter s f))
+= fun x a ->
+    let res = w x a in
+    maybe_r2l_write_filter s f x a res;
+    return res
 
 #push-options "--z3rlimit 32 --query_stats"
 #restart-solver
