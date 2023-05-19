@@ -723,20 +723,14 @@ let maybe_r2l_write_synth
 = serialize_synth_eq p f12 s f21 () v2;
   if res
   then begin
-    rewrite
-      (maybe_r2l_write s out vout v1 res)
-      (maybe_r2l_write_true p out vout v1);
+    let a = ghost_elim_r2l_write_success _ _ in
     let _ = gen_elim () in
-    let a = vpattern_replace (fun a -> aparse _ a _) in
     let _ = intro_synth p f12 a () in
     rewrite
       (maybe_r2l_write_true (parse_synth p f12) out vout (f12 v1))
       (maybe_r2l_write (serialize_synth p f12 s f21 ()) out vout v2 res)
   end else begin
-    rewrite
-      (maybe_r2l_write s out vout v1 res)
-      (maybe_r2l_write_false s out vout v1);
-    let _ = gen_elim () in
+    elim_r2l_write_failure _ _;
     rewrite
       (maybe_r2l_write_false (serialize_synth p f12 s f21 ()) out vout (f12 v1))
       (maybe_r2l_write (serialize_synth p f12 s f21 ()) out vout v2 res)
@@ -802,23 +796,15 @@ let rewrite_maybe_r2l_write
 = serializer_unique p2 s2 (serialize_ext p1 s1 p2) v2;
   if res
   then begin
-    rewrite
-      (maybe_r2l_write s1 out vout v1 res)
-      (maybe_r2l_write_true p1 out vout v1);
+    let a = ghost_elim_r2l_write_success _ _ in
     let _ = gen_elim () in
-    let a = vpattern_replace (fun a -> aparse _ a _) in
     let _ = rewrite_aparse a p2 in
-    rewrite
-      (maybe_r2l_write_true p2 out vout v2)
-      (maybe_r2l_write s2 out vout v2 res)
+    intro_r2l_write_success s2 out vout v2 _ _ _;
+    vpattern_rewrite (maybe_r2l_write _ _ _ _) res
   end else begin
-    rewrite
-      (maybe_r2l_write s1 out vout v1 res)
-      (maybe_r2l_write_false s1 out vout v1);
-    let _ = gen_elim () in
-    rewrite
-      (maybe_r2l_write_false s2 out vout v2)
-      (maybe_r2l_write s2 out vout v2 res)
+    elim_r2l_write_failure _ _;
+    intro_r2l_write_failure s2 out vout v2;
+    vpattern_rewrite (maybe_r2l_write _ _ _ _) res
   end
 
 inline_for_extraction
@@ -1105,23 +1091,15 @@ let maybe_r2l_write_filter
     (fun _ -> maybe_r2l_write (serialize_filter s f) out vout v res)
 = if res
   then begin
-    rewrite
-      (maybe_r2l_write s out vout v res)
-      (maybe_r2l_write_true p out vout v);
+    let a = ghost_elim_r2l_write_success _ _ in
     let _ = gen_elim () in
-    let a = vpattern_replace (fun a -> aparse _ a _) in
     let _ = intro_filter p f a in
-    rewrite
-      (maybe_r2l_write_true (parse_filter p f) out vout v)
-      (maybe_r2l_write (serialize_filter s f) out vout v res)
+    intro_r2l_write_success (serialize_filter s f) out vout v _ _ _;
+    vpattern_rewrite (maybe_r2l_write _ _ _ _) res
   end else begin
-    rewrite
-      (maybe_r2l_write s out vout v res)
-      (maybe_r2l_write_false s out vout v);
-    let _ = gen_elim () in
-    rewrite
-      (maybe_r2l_write_false (serialize_filter s f) out vout v)
-      (maybe_r2l_write (serialize_filter s f) out vout v res)
+    elim_r2l_write_failure _ _;
+    intro_r2l_write_failure (serialize_filter s f) out vout v;
+    vpattern_rewrite (maybe_r2l_write _ _ _ _) res
   end
 
 inline_for_extraction
