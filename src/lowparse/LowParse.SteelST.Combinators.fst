@@ -229,6 +229,10 @@ let jump_empty : jumper parse_empty
 inline_for_extraction
 let read_empty : leaf_reader parse_empty = fun _ -> return ()
 
+inline_for_extraction
+let exact_write_empty : exact_writer serialize_empty =
+  fun _ a -> intro_aparse parse_empty a
+
 #push-options "--z3rlimit 24"
 #restart-solver
 
