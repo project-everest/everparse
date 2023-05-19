@@ -56,7 +56,7 @@ val split
     (fun _ -> True)
 
 inline_for_extraction
-val merge
+val revert
   (#vx: _)
   (x: t)
   (y: Ghost.erased (AP.t byte))
@@ -66,11 +66,48 @@ val merge
     (vp x vx `star` AP.arrayptr y vy)
     (fun res -> vp x res)
     (AP.adjacent vx (AP.array_of vy) /\
-      AP.len (AP.array_of vy) == len
+      SZ.v len == AP.length vx + AP.length (AP.array_of vy)
     )
     (fun res ->
       AP.merge_into vx (AP.array_of vy) res
     )
+
+inline_for_extraction
+let revert_with
+  (#vx: _)
+  (x: t)
+  (y: Ghost.erased (AP.t byte))
+  (a: AP.array byte)
+  (#vy: _)
+  (len: SZ.t)
+: ST unit
+    (vp x vx `star` AP.arrayptr y vy)
+    (fun res -> vp x a)
+    (AP.merge_into vx (AP.array_of vy) a /\
+      len == AP.len a
+    )
+    (fun _ -> True)
+= let _ = revert x y len in
+  vpattern_rewrite (vp x) a
+
+inline_for_extraction
+let merge
+  (#vx: _)
+  (x: t)
+  (y: Ghost.erased (AP.t byte))
+  (#vy: _)
+  (sz: SZ.t)
+: ST (AP.array byte)
+    (vp x vx `star` AP.arrayptr y vy)
+    (fun res -> vp x res)
+    (AP.adjacent vx (AP.array_of vy) /\
+      AP.len (AP.array_of vy) == sz
+    )
+    (fun res ->
+      AP.merge_into vx (AP.array_of vy) res
+    )
+= let len_before = len x in
+  revert x y (len_before `SZ.add` sz)
 
 inline_for_extraction
 val hop

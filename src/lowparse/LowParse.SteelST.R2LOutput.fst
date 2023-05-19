@@ -69,17 +69,15 @@ let split
     (vp x (AP.array_of vx'));
   return res
 
-let merge
+let revert
   #vx x y len
 =
   rewrite
     (vp x vx)
     (vp0 x vx);
   let _ = gen_elim () in
-  let xlen = P.read x.len in
-  let xlen' = xlen `SZ.add` len in
-  P.write x.len xlen';
   let vx' = AP.join x.ptr y in
+  P.write x.len len;
   noop ();
   rewrite
     (vp0 x (AP.array_of vx'))
