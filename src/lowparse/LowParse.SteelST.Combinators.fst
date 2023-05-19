@@ -2204,6 +2204,56 @@ let cps_read_dtuple2
       )
     )
 
+#push-options "--z3rlimit 16"
+#restart-solver
+
+inline_for_extraction
+let r2l_write_dtuple2
+  (#kt: Ghost.erased parser_kind)
+  (#tag_t: Type)
+  (#pt: parser kt tag_t)
+  (#st: serializer pt)
+  (wt: r2l_writer st { kt.parser_kind_subkind == Some ParserStrong })
+  (#k: Ghost.erased parser_kind)
+  (#data_t: tag_t -> Type)
+  (#p: (t: tag_t) -> Tot (parser k (data_t t)))
+  (#s: (t: tag_t) -> Tot (serializer (p t)))
+  (w: (t: tag_t) -> Tot (r2l_writer (s t)))
+: Tot (r2l_writer (serialize_dtuple2 st s))
+= fun x #vout out ->
+  match x with
+  | (| tag, payload |) ->
+    serialize_dtuple2_eq st s x;
+    let len = W.len out in
+    let wrote_payload = w tag payload out in
+    if wrote_payload
+    then begin
+      let ar = ghost_elim_r2l_write_success _ _ in
+      let _ = gen_elim () in
+      let res = wt tag out in
+      if res
+      then begin
+        let al = ghost_elim_r2l_write_success _ _ in
+        let _ = gen_elim () in
+        let _ = intro_dtuple2 pt p al ar in
+        intro_r2l_write_success (serialize_dtuple2 st s) out vout x _ _ _;
+        return true
+      end else begin
+        elim_r2l_write_failure _ _;
+        let _ = elim_aparse_with_serializer (s tag) ar in
+        W.revert_with out ar vout len;
+        noop ();
+        intro_r2l_write_failure (serialize_dtuple2 st s) out vout x;
+        return false
+      end
+    end else begin
+      elim_r2l_write_failure _ _;
+      intro_r2l_write_failure (serialize_dtuple2 st s) out vout x;
+      return false
+    end
+
+#pop-options
+
 let intro_parse_strict
   (#opened: _)
   (#k: parser_kind)
