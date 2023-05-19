@@ -1104,7 +1104,6 @@ let maybe_r2l_write_filter
 
 inline_for_extraction
 let r2l_write_filter
-  (#opened: _)
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
