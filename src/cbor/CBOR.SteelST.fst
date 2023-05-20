@@ -936,15 +936,68 @@ let jump_data_item
     jump_raw_data_item
     (data_item_wf order)
 
+(* Readers and accessors *)
+
 module U8 = FStar.UInt8
+
+let get_header_argument_as_simple_value_initial_byte_precond
+  (b: initial_byte)
+: GTot bool
+= 
+  let (major_type, (additional_info, _)) = b in
+  major_type = 7uy && additional_info `U8.lte` 24uy
+
+(* Here we only retain the two cases for simple values. Otherwise, if
+   we use the general-purpose jump_long_argument, F* extracts to
+   `match B with A -> ...` with mismatching constructors, which neither F*
+   nor Karamel eliminate as dead code.
+ *)
+
+inline_for_extraction
+noextract
+let jump_long_argument_as_simple_value
+  (b: parse_filter_refine get_header_argument_as_simple_value_initial_byte_precond)
+: Tot (read_and_jump (parse_long_argument b))
+= match b with
+  | (major_type, (additional_info, _)) ->
+    ifthenelse_read_and_jump
+      (additional_info = 24uy)
+      (fun _ ->
+         rewrite_read_and_jump
+           (read_and_jump_weaken
+             (strong_parser_kind 0 8 None)
+             (read_and_jump_synth'
+               (read_and_jump_filter
+                 (mk_read_and_jump (cps_reader_of_leaf_reader read_u8) I.jump_u8)
+                 simple_value_long_argument_wf
+               )
+               (LongArgumentSimpleValue #b ())
+               ()
+             )
+             ()
+           )
+           (parse_long_argument b)
+      )
+      (fun _ ->
+         rewrite_read_and_jump
+           (read_and_jump_weaken
+             (strong_parser_kind 0 8 None)
+             (read_and_jump_synth'
+               (mk_read_and_jump (cps_reader_of_leaf_reader read_empty) jump_empty)
+               (LongArgumentOther #b additional_info ())
+               ()
+             )
+             ()
+           )
+           (parse_long_argument b)
+      )
 
 let get_header_argument_as_simple_value_precond
   (h: header)
-: GTot prop
+: GTot bool
 =
       let (| b, x |) = h in
-      let (major_type, (additional_info, _)) = b in
-      major_type = 7uy /\ additional_info `U8.lte` 24uy
+      get_header_argument_as_simple_value_initial_byte_precond b
 
 let get_header_argument_as_simple_value
   (h: header)
@@ -954,7 +1007,8 @@ let get_header_argument_as_simple_value
 = let (| b, x |) = h in
   argument_as_simple_value b x
 
-(* // FIXME: extraction
+inline_for_extraction
+noextract
 let read_header_argument_as_simple_value
   (#va: v (get_parser_kind parse_header) header)
   (a: byte_array)
@@ -968,14 +1022,30 @@ let read_header_argument_as_simple_value
       major_type = 7uy /\ additional_info `U8.lte` 24uy /\
       res == argument_as_simple_value b x
     )
-= let res = read_and_jump_header a emp simple_value (fun res -> aparse parse_header a va `star` pure (
+= rewrite (aparse parse_header a va) (aparse (parse_dtuple2 parse_initial_byte parse_long_argument) a va);
+  let _ = intro_dtuple2_filter_tag parse_initial_byte get_header_argument_as_simple_value_initial_byte_precond parse_long_argument a in
+  let res = read_and_jump_dtuple2
+    (read_and_jump_filter read_and_jump_initial_byte get_header_argument_as_simple_value_initial_byte_precond)
+    parse_long_argument
+    jump_long_argument_as_simple_value
+    a
+    emp
+    simple_value
+    (fun res -> aparse parse_header a va `star` pure (
+      get_header_argument_as_simple_value_precond va.contents == true /\
       res == get_header_argument_as_simple_value va.contents
-  )) (fun _ (| b, x |) ->
-    return (argument_as_simple_value b x)
-  )
+    ))
+    (fun _ (| b, x |) ->
+      let _ = elim_dtuple2_filter_tag parse_initial_byte get_header_argument_as_simple_value_initial_byte_precond parse_long_argument a in
+      rewrite (aparse (parse_dtuple2 parse_initial_byte parse_long_argument) a _) (aparse parse_header a va);
+      return (argument_as_simple_value b x)
+    )
   in
   let _ = elim_pure _ in
   return res
+
+#push-options "--z3rlimit 16"
+#restart-solver
 
 let read_simple_value
   (#va: v parse_raw_data_item_kind raw_data_item)
@@ -996,7 +1066,8 @@ let read_simple_value
   let _ = rewrite_aparse a parse_raw_data_item in
   vpattern_rewrite (aparse parse_raw_data_item a) va;
   return res
-*)
+
+#pop-options
 
 module U64 = FStar.UInt64
 
@@ -1020,6 +1091,7 @@ let read_neg_int64
     (fun res -> va.contents == NegInt64 res)
 = read_argument_as_uint64 a
 
+(* Writers *)
 
 let write_u8 = I.write_u8
 
