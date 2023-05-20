@@ -1067,127 +1067,118 @@ let write_u64 = I.write_u64
 
 #push-options "--z3rlimit 16"
 
-// FIXME: extraction
+(* In fact, I can follow the structure of the type instead. Indeed, the
+   data constructors for long_argument do follow the structure of the ifthenelse
+   in the parser or the serializer: each branch of the match corresponds to exactly 
+   one branch of the ifthenelse.
+*)
 #restart-solver
 inline_for_extraction
 noextract
 let write_long_argument
   (b: initial_byte)
-: Tot (r2l_writer (serialize_long_argument b))
-= match b with
-  | (major_type, (additional_info, _)) ->
-    ifthenelse_r2l_writer _ (additional_info = 24uy)
-      (fun _iftrue ->
-        ifthenelse_r2l_writer _ (major_type = 7uy)
-          (fun _iftrue ->
-            rewrite_r2l_writer
-              #_ #(long_argument b)
-              (r2l_write_weaken parse_long_argument_kind
-                (r2l_write_synth'
-                  (r2l_write_filter
-                    (r2l_write_constant_size write_u8 1sz)
-                    simple_value_long_argument_wf
-                  )
-                  (LongArgumentSimpleValue ())
-                  LongArgumentSimpleValue?.v
-                  ()
-                )
-                ()
-              )
-              (serialize_long_argument b)
+  (a: long_argument b)
+: Tot (r2l_writer_for (serialize_long_argument b) a)
+= match a with
+  | LongArgumentSimpleValue _ _ ->
+    rewrite_r2l_writer
+      #_ #(long_argument b)
+      (r2l_write_weaken parse_long_argument_kind
+        (r2l_write_synth'
+          (r2l_write_filter
+            (r2l_write_constant_size write_u8 1sz)
+            simple_value_long_argument_wf
           )
-          (fun _iffalse ->
-            rewrite_r2l_writer
-              #_ #(long_argument b)
-              (r2l_write_weaken parse_long_argument_kind
-                (r2l_write_synth'
-                  (r2l_write_filter
-                    (r2l_write_constant_size write_u8 1sz)
-                    uint8_wf
-                  )
-                  (LongArgumentU8 ())
-                  LongArgumentU8?.v
-                  ()
-                )
-                ()
-              )
-              (serialize_long_argument b)
-          )
-      )
-      (fun _iffalse ->
-        ifthenelse_r2l_writer _ (additional_info = 25uy)
-          (fun _iftrue ->
-            rewrite_r2l_writer
-              #_ #(long_argument b)
-              (r2l_write_weaken parse_long_argument_kind
-                (r2l_write_synth'
-                  (r2l_write_filter
-                    (r2l_write_constant_size write_u16 2sz)
-                    uint16_wf
-                  )
-                  (LongArgumentU16 ())
-                  LongArgumentU16?.v
-                  ()
-                )
-                ()
-              )
-              (serialize_long_argument b)
-          )
-          (fun _iffalse ->
-            ifthenelse_r2l_writer _ (additional_info = 26uy)
-              (fun _iftrue ->
-                rewrite_r2l_writer
-                  #_ #(long_argument b)
-                  (r2l_write_weaken parse_long_argument_kind
-                    (r2l_write_synth'
-                      (r2l_write_filter
-                        (r2l_write_constant_size write_u32 4sz)
-                        uint32_wf
-                      )
-                      (LongArgumentU32 ())
-                      LongArgumentU32?.v
-                      ()
-                    )
-                    ()
-                  )
-                  (serialize_long_argument b)
-              )
-              (fun _iffalse ->
-              ifthenelse_r2l_writer _ (additional_info = 27uy)
-                (fun _iftrue ->
-                  rewrite_r2l_writer
-                    #_ #(long_argument b)
-                    (r2l_write_weaken parse_long_argument_kind
-                      (r2l_write_synth'
-                        (r2l_write_filter
-                          (r2l_write_constant_size write_u64 8sz)
-                          uint64_wf
-                        )
-                        (LongArgumentU64 ())
-                        LongArgumentU64?.v
-                        ()
-                      )
-                      ()
-                    )
-                    (serialize_long_argument b)
-                )
-                (fun _iffalse ->
-                  rewrite_r2l_writer
-                    #_ #(long_argument b)
-                    (r2l_write_weaken parse_long_argument_kind
-                      (r2l_write_synth'
-                        (r2l_write_constant_size exact_write_empty 0sz)
-                        (LongArgumentOther additional_info ())
-                        LongArgumentOther?.v
-                        ()
-                      )
-                      ()
-                    )
-                    (serialize_long_argument b)
-                )
-            )
-          )
+          (LongArgumentSimpleValue ())
+          LongArgumentSimpleValue?.v
+          ()
         )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU8 _ _ ->
+    rewrite_r2l_writer
+      #_ #(long_argument b)
+      (r2l_write_weaken parse_long_argument_kind
+        (r2l_write_synth'
+          (r2l_write_filter
+            (r2l_write_constant_size write_u8 1sz)
+            uint8_wf
+          )
+          (LongArgumentU8 ())
+          LongArgumentU8?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU16 _ _ ->
+    rewrite_r2l_writer
+      #_ #(long_argument b)
+      (r2l_write_weaken parse_long_argument_kind
+        (r2l_write_synth'
+          (r2l_write_filter
+            (r2l_write_constant_size write_u16 2sz)
+            uint16_wf
+          )
+          (LongArgumentU16 ())
+          LongArgumentU16?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU32 _ _ ->
+    rewrite_r2l_writer
+      #_ #(long_argument b)
+      (r2l_write_weaken parse_long_argument_kind
+        (r2l_write_synth'
+          (r2l_write_filter
+            (r2l_write_constant_size write_u32 4sz)
+            uint32_wf
+          )
+          (LongArgumentU32 ())
+          LongArgumentU32?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU64 _ _ ->
+    rewrite_r2l_writer
+      #_ #(long_argument b)
+      (r2l_write_weaken parse_long_argument_kind
+        (r2l_write_synth'
+          (r2l_write_filter
+            (r2l_write_constant_size write_u64 8sz)
+            uint64_wf
+          )
+          (LongArgumentU64 ())
+          LongArgumentU64?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentOther additional_info _ _ ->
+    rewrite_r2l_writer
+      #_ #(long_argument b)
+      (r2l_write_weaken parse_long_argument_kind
+        (r2l_write_synth'
+          (r2l_write_constant_size exact_write_empty 0sz)
+          (LongArgumentOther additional_info ())
+          LongArgumentOther?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
 
 #pop-options
 
