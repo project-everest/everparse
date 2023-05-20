@@ -66,7 +66,8 @@ KRML = $(KRML_HOME)/krml \
 	 -tmpdir out \
 	 -bundle 'CBOR.SteelST=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*' \
 	 -skip-linking \
-	 -warn-error '@2'
+	 $(KRML_OPTS) \
+	 -warn-error '@2@4'
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<

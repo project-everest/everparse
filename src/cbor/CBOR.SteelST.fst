@@ -954,6 +954,7 @@ let get_header_argument_as_simple_value
 = let (| b, x |) = h in
   argument_as_simple_value b x
 
+(* // FIXME: extraction
 let read_header_argument_as_simple_value
   (#va: v (get_parser_kind parse_header) header)
   (a: byte_array)
@@ -970,7 +971,6 @@ let read_header_argument_as_simple_value
 = let res = read_and_jump_header a emp simple_value (fun res -> aparse parse_header a va `star` pure (
       res == get_header_argument_as_simple_value va.contents
   )) (fun _ (| b, x |) ->
-    noop ();
     return (argument_as_simple_value b x)
   )
   in
@@ -996,6 +996,7 @@ let read_simple_value
   let _ = rewrite_aparse a parse_raw_data_item in
   vpattern_rewrite (aparse parse_raw_data_item a) va;
   return res
+*)
 
 module U64 = FStar.UInt64
 
@@ -1054,3 +1055,188 @@ let write_initial_byte'
   match x with
   | (major_type, (additional_info, _)) ->
     write_initial_byte major_type additional_info () a
+
+module Cast = FStar.Int.Cast
+
+noextract
+let parse_long_argument_kind = strong_parser_kind 0 8 None
+
+let write_u16 = I.write_u16
+let write_u32 = I.write_u32
+let write_u64 = I.write_u64
+
+#push-options "--z3rlimit 16"
+
+// FIXME: extraction
+#restart-solver
+inline_for_extraction
+noextract
+let write_long_argument
+  (b: initial_byte)
+: Tot (r2l_writer (serialize_long_argument b))
+= match b with
+  | (major_type, (additional_info, _)) ->
+    ifthenelse_r2l_writer _ (additional_info = 24uy)
+      (fun _iftrue ->
+        ifthenelse_r2l_writer _ (major_type = 7uy)
+          (fun _iftrue ->
+            rewrite_r2l_writer
+              #_ #(long_argument b)
+              (r2l_write_weaken parse_long_argument_kind
+                (r2l_write_synth'
+                  (r2l_write_filter
+                    (r2l_write_constant_size write_u8 1sz)
+                    simple_value_long_argument_wf
+                  )
+                  (LongArgumentSimpleValue ())
+                  LongArgumentSimpleValue?.v
+                  ()
+                )
+                ()
+              )
+              (serialize_long_argument b)
+          )
+          (fun _iffalse ->
+            rewrite_r2l_writer
+              #_ #(long_argument b)
+              (r2l_write_weaken parse_long_argument_kind
+                (r2l_write_synth'
+                  (r2l_write_filter
+                    (r2l_write_constant_size write_u8 1sz)
+                    uint8_wf
+                  )
+                  (LongArgumentU8 ())
+                  LongArgumentU8?.v
+                  ()
+                )
+                ()
+              )
+              (serialize_long_argument b)
+          )
+      )
+      (fun _iffalse ->
+        ifthenelse_r2l_writer _ (additional_info = 25uy)
+          (fun _iftrue ->
+            rewrite_r2l_writer
+              #_ #(long_argument b)
+              (r2l_write_weaken parse_long_argument_kind
+                (r2l_write_synth'
+                  (r2l_write_filter
+                    (r2l_write_constant_size write_u16 2sz)
+                    uint16_wf
+                  )
+                  (LongArgumentU16 ())
+                  LongArgumentU16?.v
+                  ()
+                )
+                ()
+              )
+              (serialize_long_argument b)
+          )
+          (fun _iffalse ->
+            ifthenelse_r2l_writer _ (additional_info = 26uy)
+              (fun _iftrue ->
+                rewrite_r2l_writer
+                  #_ #(long_argument b)
+                  (r2l_write_weaken parse_long_argument_kind
+                    (r2l_write_synth'
+                      (r2l_write_filter
+                        (r2l_write_constant_size write_u32 4sz)
+                        uint32_wf
+                      )
+                      (LongArgumentU32 ())
+                      LongArgumentU32?.v
+                      ()
+                    )
+                    ()
+                  )
+                  (serialize_long_argument b)
+              )
+              (fun _iffalse ->
+              ifthenelse_r2l_writer _ (additional_info = 27uy)
+                (fun _iftrue ->
+                  rewrite_r2l_writer
+                    #_ #(long_argument b)
+                    (r2l_write_weaken parse_long_argument_kind
+                      (r2l_write_synth'
+                        (r2l_write_filter
+                          (r2l_write_constant_size write_u64 8sz)
+                          uint64_wf
+                        )
+                        (LongArgumentU64 ())
+                        LongArgumentU64?.v
+                        ()
+                      )
+                      ()
+                    )
+                    (serialize_long_argument b)
+                )
+                (fun _iffalse ->
+                  rewrite_r2l_writer
+                    #_ #(long_argument b)
+                    (r2l_write_weaken parse_long_argument_kind
+                      (r2l_write_synth'
+                        (r2l_write_constant_size exact_write_empty 0sz)
+                        (LongArgumentOther additional_info ())
+                        LongArgumentOther?.v
+                        ()
+                      )
+                      ()
+                    )
+                    (serialize_long_argument b)
+                )
+            )
+          )
+        )
+
+#pop-options
+
+inline_for_extraction
+noextract
+let write_header : r2l_writer serialize_header
+=
+  r2l_write_dtuple2
+    (r2l_write_constant_size write_initial_byte' 1sz)
+    write_long_argument
+
+inline_for_extraction
+noextract
+let cps_uint64_as_argument
+  (t': Type)
+  (t'_ifthenelse: if_combinator_weak t')
+  (ty: major_type_t { ty `U8.lt` 7uy })
+  (x: U64.t)
+  (k: (h: header) -> Pure t'
+    (requires (h == uint64_as_argument ty x))
+    (ensures (fun _ -> True))
+  )
+: Tot t'
+= t'_ifthenelse (x `U64.lt` 24uL)
+    (fun _ -> k (| mk_initial_byte ty (Cast.uint64_to_uint8 x), LongArgumentOther (Cast.uint64_to_uint8 x) () () |))
+    (fun _ -> t'_ifthenelse (x `U64.lt` 256uL)
+      (fun _ -> k (| mk_initial_byte ty 24uy, LongArgumentU8 () (Cast.uint64_to_uint8 x) |))
+      (fun _ -> t'_ifthenelse (x `U64.lt` 65536uL)
+        (fun _ -> k (| mk_initial_byte ty 25uy, LongArgumentU16 () (Cast.uint64_to_uint16 x) |))
+        (fun _ -> t'_ifthenelse (x `U64.lt` 4294967296uL)
+          (fun _ -> k (| mk_initial_byte ty 26uy, LongArgumentU32 () (Cast.uint64_to_uint32 x) |))
+          (fun _ -> k (| mk_initial_byte ty 27uy, LongArgumentU64 () x |))
+        )
+      )
+    )
+
+let write_uint64_as_argument
+  (ty: major_type_t { ty `U8.lt` 7uy })
+  (x: U64.t)
+: Tot (r2l_writer_for serialize_header (uint64_as_argument ty x))
+= cps_uint64_as_argument
+    (r2l_writer_for serialize_header (uint64_as_argument ty x))
+    (ifthenelse_r2l_writer_for serialize_header (uint64_as_argument ty x))
+    ty
+    x
+    (fun h out ->
+      let res = write_header h out in
+      vpattern_rewrite
+        (fun v -> maybe_r2l_write serialize_header out _ v _)
+        (uint64_as_argument ty x);
+      return res
+    )

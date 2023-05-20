@@ -128,6 +128,7 @@ let major_type_t = bitfield uint8 3
 let additional_info_t = bitfield uint8 5
 
 inline_for_extraction
+noextract
 type long_argument
   (b: initial_byte)
 = | LongArgumentSimpleValue:
