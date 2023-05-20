@@ -2253,6 +2253,58 @@ let r2l_write_dtuple2
 
 #pop-options
 
+let intro_dtuple2_filter_tag
+  (#opened: _)
+  (#kt: parser_kind)
+  (#tag_t: Type)
+  (pt: parser kt tag_t)
+  (f: tag_t -> GTot bool)
+  (#k: parser_kind)
+  (#data_t: tag_t -> Type)
+  (p: (t: tag_t) -> Tot (parser k (data_t t)))
+  (#va: v (and_then_kind kt k) (dtuple2 tag_t data_t))
+  (a: byte_array)
+: STGhost (v (and_then_kind (parse_filter_kind kt) k) (dtuple2 (parse_filter_refine f) data_t)) opened
+    (aparse (parse_dtuple2 pt p) a va)
+    (fun va' -> aparse (parse_dtuple2 (parse_filter pt f) p) a va')
+    (f (dfst va.contents) == true /\
+      kt.parser_kind_subkind == Some ParserStrong
+    )
+    (fun va' ->
+      array_of' va' == array_of' va /\
+      dfst va.contents == dfst va'.contents /\
+      dsnd va.contents == dsnd va'.contents
+    )
+= let ar = ghost_split_dtuple2_full pt p a in
+  let _ = gen_elim () in
+  let _ = intro_filter _ f a in
+  intro_dtuple2 (parse_filter pt f) p a ar
+
+let elim_dtuple2_filter_tag
+  (#opened: _)
+  (#kt: parser_kind)
+  (#tag_t: Type)
+  (pt: parser kt tag_t)
+  (f: tag_t -> GTot bool)
+  (#k: parser_kind)
+  (#data_t: tag_t -> Type)
+  (p: (t: tag_t) -> Tot (parser k (data_t t)))
+  (#va': v (and_then_kind (parse_filter_kind kt) k) (dtuple2 (parse_filter_refine f) data_t))
+  (a: byte_array)
+: STGhost (v (and_then_kind kt k) (dtuple2 tag_t data_t)) opened
+    (aparse (parse_dtuple2 (parse_filter pt f) p) a va')
+    (fun va -> aparse (parse_dtuple2 pt p) a va)
+    (kt.parser_kind_subkind == Some ParserStrong)
+    (fun va ->
+      array_of' va' == array_of' va /\
+      dfst va.contents == dfst va'.contents /\
+      dsnd va.contents == dsnd va'.contents
+    )
+= let ar = ghost_split_dtuple2_full (parse_filter pt f) p a in
+  let _ = gen_elim () in
+  let _ = elim_filter _ f a in
+  intro_dtuple2 pt p a ar
+
 let intro_parse_strict
   (#opened: _)
   (#k: parser_kind)
