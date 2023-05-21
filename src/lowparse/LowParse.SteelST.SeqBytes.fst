@@ -55,6 +55,48 @@ let seq_all_bytes_length
   let _ = intro_seq_all_bytes a in
   vpattern_rewrite (aparse _ a) va
 
+inline_for_extraction
+let validate_lseq_bytes
+  (sz: SZ.t)
+: Tot (validator (parse_lseq_bytes (SZ.v sz)))
+= validate_total_constant_size _ sz
+
+inline_for_extraction
+let jump_lseq_bytes
+  (sz: SZ.t)
+: Tot (jumper (parse_lseq_bytes (SZ.v sz)))
+= jump_constant_size _ sz
+
+let intro_lseq_bytes
+  (#opened: _)
+  (n: nat)
+  (#va: _)
+  (a: byte_array)
+: STGhost (v (total_constant_size_parser_kind n) (Seq.lseq byte n)) opened
+    (AP.arrayptr a va)
+    (fun va' -> aparse (parse_lseq_bytes n) a va')
+    (n == AP.length (AP.array_of va))
+    (fun va' ->
+      array_of' va' == AP.array_of va /\
+      va'.contents == AP.contents_of va
+    )
+= intro_aparse (parse_lseq_bytes n) a
+
+let elim_lseq_bytes
+  (#opened: _)
+  (n: nat)
+  (#va': v (total_constant_size_parser_kind n) (Seq.lseq byte n))
+  (a: byte_array)
+: STGhost (AP.v byte) opened
+    (aparse (parse_lseq_bytes n) a va')
+    (fun va -> AP.arrayptr a va)
+    True
+    (fun va ->
+      array_of' va' == AP.array_of va /\
+      va'.contents == AP.contents_of va
+    )
+= elim_aparse (parse_lseq_bytes n) a
+
 (* Sequences as lists *)
 
 module I = LowParse.SteelST.Int
