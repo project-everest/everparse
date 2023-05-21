@@ -238,3 +238,112 @@ let gather_aparse
   let y2 = elim_aparse p a in
   let y = AP.gather #_ #_ #y1 #y2 a in
   intro_aparse p a
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let aparse_split_zero_r
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#va: v k t)
+  (a: byte_array)
+: STGhostT (Ghost.erased byte_array) opened
+    (aparse p a va)
+    (fun a' -> exists_ (fun vl -> exists_ (fun vr ->
+      aparse p a vl `star`
+      AP.arrayptr a' vr `star`
+      pure (
+        AP.length (AP.array_of vr) == 0 /\
+        va.contents == vl.contents /\
+        AP.merge_into (array_of vl) (AP.array_of vr) (array_of va)
+    ))))
+= let va' = elim_aparse p a in
+  let a' = AP.gsplit a (AP.len (array_of va)) in
+  let _ = gen_elim () in
+  let vl' = vpattern_replace (AP.arrayptr a) in
+  assert (AP.contents_of vl' `Seq.equal` AP.contents_of va');
+  let _ = intro_aparse p a in
+  noop ();
+  a'
+
+#restart-solver
+let aparse_split_zero_l
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#va: v k t)
+  (a: byte_array)
+: STGhostT unit opened
+    (aparse p a va)
+    (fun _ -> exists_ (fun vl -> exists_ (fun vr ->
+      aparse p a vr `star`
+      AP.arrayptr a vl `star`
+      pure (
+        AP.length (AP.array_of vl) == 0 /\
+        va.contents == vr.contents /\
+        AP.merge_into (AP.array_of vl) (array_of vr) (array_of va)
+    ))))
+= let va' = elim_aparse p a in
+  let a' = AP.gsplit a 0sz in
+  let _ = gen_elim () in
+  let vr' = vpattern_replace (AP.arrayptr a') in
+  assert (AP.contents_of vr' `Seq.equal` AP.contents_of va');
+  let _ = intro_aparse p a' in
+  let _ = vpattern_replace (AP.arrayptr _) in
+  vpattern_rewrite (fun a' -> aparse _ a' _) a;
+  noop ();
+  ()
+
+let aparse_join_zero_r
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#vl: v k t)
+  (#vr: _)
+  (al ar: byte_array)
+: STGhost (v k t) opened
+    (aparse p al vl `star` AP.arrayptr ar vr)
+    (fun va' -> aparse p al va')
+    (AP.adjacent (array_of vl) (AP.array_of vr) /\
+      AP.length (AP.array_of vr) == 0
+    )
+    (fun va' ->
+      AP.merge_into (array_of vl) (AP.array_of vr) (array_of va') /\
+      va'.contents == vl.contents
+    )
+= let vl' = elim_aparse p al in
+  let va' = AP.join al ar in
+  assert (AP.contents_of vl' `Seq.equal` AP.contents_of va');
+  noop ();
+  intro_aparse p al
+
+#restart-solver
+let aparse_join_zero_l
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#vl: _)
+  (#vr: v k t)
+  (al ar: byte_array)
+: STGhost (v k t) opened
+    (AP.arrayptr al vl `star` aparse p ar vr)
+    (fun va' -> aparse p al va')
+    (AP.adjacent (AP.array_of vl) (array_of vr) /\
+      AP.length (AP.array_of vl) == 0
+    )
+    (fun va' ->
+      AP.merge_into (AP.array_of vl) (array_of vr) (array_of va') /\
+      va'.contents == vr.contents
+    )
+= let vr' = elim_aparse p ar in
+  let va' = AP.join al ar in
+  assert (AP.contents_of vr' `Seq.equal` AP.contents_of va');
+  noop ();
+  intro_aparse p al
+
+#pop-options
