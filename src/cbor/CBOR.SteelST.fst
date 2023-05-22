@@ -4,6 +4,7 @@ open LowParse.SteelST.Combinators
 open LowParse.SteelST.Recursive
 open LowParse.SteelST.BitSum
 open LowParse.SteelST.ValidateAndRead
+open LowParse.SteelST.SeqBytes
 open Steel.ST.GenElim
 
 module I = LowParse.SteelST.Int
@@ -317,13 +318,6 @@ module SZ = FStar.SizeT
 
 inline_for_extraction
 noextract
-let validate_lseq_bytes
-  (sz: SZ.t)
-: Tot (validator (LowParse.Spec.SeqBytes.parse_lseq_bytes (SZ.v sz)))
-= validate_total_constant_size _ sz
-
-inline_for_extraction
-noextract
 let validate_leaf_content
   (sq: squash SZ.fits_u64)
   (h: header)
@@ -358,13 +352,6 @@ let validate_leaf_content
           )
           (parse_leaf_content h)
         )
-
-inline_for_extraction
-noextract
-let jump_lseq_bytes
-  (sz: SZ.t)
-: Tot (jumper (LowParse.Spec.SeqBytes.parse_lseq_bytes (SZ.v sz)))
-= jump_constant_size _ sz
 
 inline_for_extraction
 noextract
