@@ -1693,3 +1693,250 @@ let focus_byte_string
 
 
 #pop-options
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let intro_raw_data_item_text_string
+  (#opened: _)
+  (#vh: v (get_parser_kind parse_header) header)
+  (ah: byte_array)
+  (#vp: _)
+  (ap: byte_array)
+: STGhost (v parse_raw_data_item_kind raw_data_item) opened
+    (aparse parse_header ah vh `star` AP.arrayptr ap vp)
+    (fun v' -> aparse parse_raw_data_item ah v')
+    (
+      let (| b, arg |) = vh.contents in
+      let (major_type, _) = b in
+      major_type == 3uy /\
+      AP.adjacent (array_of vh) (AP.array_of vp) /\
+      U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp)
+    )
+    (fun v' ->
+      let (| b, arg |) = vh.contents in
+      AP.merge_into (array_of vh) (AP.array_of vp) (array_of v') /\
+      U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp) /\
+      v'.contents == TextString (AP.contents_of vp)
+    )
+=
+  let (| b, arg |) = vh.contents in
+  let _ = intro_lseq_bytes (U64.v (argument_as_uint64 b arg)) ap in
+  let _ = rewrite_aparse ap (parse_content parse_raw_data_item vh.contents) in
+  let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) ah ap in
+  let _ = intro_synth _ synth_raw_data_item ah () in
+  Classical.forall_intro parse_raw_data_item_eq;
+  noop ();
+  rewrite_aparse ah parse_raw_data_item
+
+let ghost_focus_text_string_post
+  (va: v parse_raw_data_item_kind raw_data_item)
+  (vp: AP.v byte)
+: GTot prop
+=
+        FStar.UInt.fits (Seq.length (AP.contents_of vp)) U64.n /\
+        va.contents == TextString (AP.contents_of vp)
+
+let finalize_raw_data_item_text_string_failure
+  (vout: AP.array byte)
+  (vp: AP.v byte)
+: GTot prop
+= 
+  FStar.UInt.fits (Seq.length (AP.contents_of vp)) U64.n /\
+  Seq.length (serialize serialize_raw_data_item (TextString (AP.contents_of vp))) > AP.length vout + AP.length (AP.array_of vp)
+
+[@@__reduce__]
+let finalize_raw_data_item_text_string_post
+  (vout: AP.array byte)
+  (out: W.t)
+  (vp: AP.v byte)
+  (ap: byte_array)
+  (res: bool)
+: Tot vprop
+=
+      ifthenelse_vprop
+        res
+        (fun _ -> exists_ (fun vout' -> exists_ (fun a -> exists_ (fun va ->
+          aparse parse_raw_data_item a va `star`
+          W.vp out vout' `star`
+          pure (
+            AP.adjacent vout (AP.array_of vp) /\
+            AP.merge_into vout' (array_of va) (AP.merge vout (AP.array_of vp)) /\
+            ghost_focus_text_string_post va vp
+        )))))
+        (fun _ ->
+          pure (finalize_raw_data_item_text_string_failure vout vp) `star`
+          W.vp out vout `star` AP.arrayptr ap vp
+        )
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+let maybe_finalize_raw_data_item_text_string
+  (#opened: _)
+  (#vout: _)
+  (out: W.t)
+  (#vp: _)
+  (ap: byte_array)
+  (len: U64.t)
+  (res: bool)
+: STGhost unit opened
+    (maybe_r2l_write serialize_header out vout (uint64_as_argument 3uy len) res `star`
+      AP.arrayptr ap vp
+    )
+    (fun _ ->
+      finalize_raw_data_item_text_string_post vout out vp ap res
+    )
+    (U64.v len == AP.length (AP.array_of vp) /\
+      AP.adjacent vout (AP.array_of vp)
+    )
+    (fun _ -> True)
+=
+  if res
+  then begin
+      let ah = ghost_elim_r2l_write_success serialize_header out in
+      let _ = gen_elim () in
+      let _ = intro_raw_data_item_text_string ah ap in
+      noop ();
+      intro_ifthenelse_vprop_true res _ _ ()
+    end else begin
+      elim_r2l_write_failure serialize_header out;
+      serialize_raw_data_item_aux_correct (TextString (AP.contents_of vp));
+      serialize_synth_eq _ synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip () (TextString (AP.contents_of vp));
+      serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument 3uy len, AP.contents_of vp |);
+      noop ();
+      intro_ifthenelse_vprop_false res _ _ ()
+    end
+
+#pop-options
+
+let finalize_raw_data_item_text_string
+  (#vout: _)
+  (out: W.t)
+  (#vp: _)
+  (ap: Ghost.erased byte_array)
+  (len: U64.t)
+: ST bool
+    (W.vp out vout `star` AP.arrayptr ap vp)
+    (fun res -> finalize_raw_data_item_text_string_post vout out vp ap res)
+    (U64.v len == AP.length (AP.array_of vp) /\
+      AP.adjacent vout (AP.array_of vp)
+    )
+    (fun _ -> True)
+= let res = write_uint64_as_argument 3uy len out in
+  maybe_finalize_raw_data_item_text_string out ap len res;
+  return res
+
+let elim_raw_data_item_text_string_post
+  (va: v parse_raw_data_item_kind raw_data_item)
+  (vh: v (get_parser_kind parse_header) header)
+  (vp: AP.v byte)
+: GTot prop
+= 
+      let (| b, arg |) = vh.contents in
+      let (major_type, _) = b in
+      major_type == 3uy /\
+      AP.merge_into (array_of vh) (AP.array_of vp) (array_of va) /\
+      U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp) /\
+      va.contents == TextString (AP.contents_of vp)
+
+let elim_raw_data_item_text_string
+  (#opened: _)
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: STGhost (Ghost.erased byte_array) opened
+    (aparse parse_raw_data_item a va)
+    (fun a' -> exists_ (fun (vh: v (get_parser_kind parse_header) header) -> exists_ (fun vp ->
+      aparse parse_header a vh `star`
+      AP.arrayptr a' vp `star`
+      pure (elim_raw_data_item_text_string_post va vh vp)
+    )))
+    (TextString? va.contents)
+    (fun _ -> True)
+= 
+  Classical.forall_intro parse_raw_data_item_eq;
+  noop ();
+  let _ = rewrite_aparse a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
+  let _ = elim_synth _ _ a () in
+  let a' = ghost_split_dtuple2_full _ _ a in
+  let _ = gen_elim () in
+  let vh = vpattern_replace (aparse _ a) in
+  let (| b, arg |) = vh.contents in
+  let _ = rewrite_aparse a' (parse_lseq_bytes (U64.v (argument_as_uint64 b arg))) in
+  let _ = elim_lseq_bytes _ a' in
+  noop ();
+  a'
+
+(*
+let ghost_focus_text_string_strong
+  (#opened: _)
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: STGhost (Ghost.erased byte_array) opened
+    (aparse parse_raw_data_item a va)
+    (fun a' -> exists_ (fun vp ->
+      AP.arrayptr a' vp `star`
+      pure (ghost_focus_text_string_post va vp) `star`
+      (forall_ (fun vp' ->
+        (AP.arrayptr a' vp' `star` pure (AP.array_of vp' == AP.array_of vp))
+        `implies_`
+        (exists_ (fun va' -> aparse parse_raw_data_item a va' `star` pure (
+          AP.length (AP.array_of vp') < 4294967296 /\
+          array_of va' == array_of va /\
+          va'.contents == TextString (AP.contents_of vp')
+      )))))
+    ))
+    (TextString? va.contents)
+    (fun _ -> True)
+= ...
+*)
+
+let ghost_focus_text_string
+  (#opened: _)
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: STGhost (Ghost.erased byte_array) opened
+    (aparse parse_raw_data_item a va)
+    (fun a' -> exists_ (fun vp ->
+      AP.arrayptr a' vp `star`
+      pure (
+        ghost_focus_text_string_post va vp
+      ) `star`
+      (AP.arrayptr a' vp `implies_` aparse parse_raw_data_item a va)
+    ))
+    (TextString? va.contents)
+    (fun _ -> True)
+= let a' = elim_raw_data_item_text_string a in
+  let _ = gen_elim () in
+  intro_implies (AP.arrayptr a' _) (aparse parse_raw_data_item a va) (aparse _ a _) (fun _ ->
+    let _ = intro_raw_data_item_text_string a a' in
+    vpattern_rewrite (aparse _ a) va
+  );
+  noop ();
+  a'
+
+let focus_text_string
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST byte_array
+    (aparse parse_raw_data_item a va)
+    (fun a' -> exists_ (fun vp ->
+      AP.arrayptr a' vp `star`
+      pure (
+        ghost_focus_text_string_post va vp
+      ) `star`
+      (AP.arrayptr a' vp `implies_` aparse parse_raw_data_item a va)
+    ))
+    (TextString? va.contents)
+    (fun _ -> True)
+= let _ = elim_raw_data_item_text_string a in
+  let _ = gen_elim () in
+  let a' = hop_aparse_arrayptr jump_header _ _ in
+  intro_implies (AP.arrayptr a' _) (aparse parse_raw_data_item a va) (aparse _ a _) (fun _ ->
+    let _ = intro_raw_data_item_text_string a a' in
+    vpattern_rewrite (aparse _ a) va
+  );
+  noop ();
+  return a'
+
+#pop-options
