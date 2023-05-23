@@ -78,34 +78,18 @@ let nlist_iterator_parser_kind
     (nlist_iterator0 p n0 va0 a0 n va)
     (nlist_iterator p n0 va0 a0 n va)
 
-inline_for_extraction
 let nlist_iterator_begin
-  (#k: Ghost.erased parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (#n0: Ghost.erased nat)
-  (#va0: v (parse_nlist_kind n0 k) (nlist n0 t))
-  (a0: byte_array)
-: ST byte_array
-    (aparse (parse_nlist n0 p) a0 va0)
-    (fun a -> exists_ (fun va ->
-      aparse (parse_nlist n0 p) a va `star`
-      nlist_iterator p n0 va0 a0 n0 va `star`
-      pure (
-        va0.contents == va.contents
-      )
-    ))
-    (k.parser_kind_subkind == Some ParserStrong)
-    (fun _ -> True)
+  #_ #k #t p #n0 #va0 a0
 = let _ = elim_aparse (parse_nlist n0 p) a0 in
-  let a = AP.split a0 0sz in
+  let a = AP.gsplit a0 0sz in
   let _ = gen_elim () in
   let _ = intro_nlist_nil (n0 - n0) p a0 in
-  let va = intro_aparse (parse_nlist n0 p) a in
+  vpattern_rewrite (fun a -> AP.arrayptr a _) a0;
+  let va = intro_aparse (parse_nlist n0 p) a0 in
   rewrite
     (nlist_iterator0 p n0 va0 a0 n0 va)
     (nlist_iterator p n0 va0 a0 n0 va);
-  return a
+  _
 
 #push-options "--z3rlimit 16"
 

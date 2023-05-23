@@ -32,25 +32,24 @@ val nlist_iterator_parser_kind
       k.parser_kind_subkind == Some ParserStrong
     )
 
-inline_for_extraction
 val nlist_iterator_begin
-  (#k: Ghost.erased parser_kind)
+  (#opened: _)
+  (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (#n0: Ghost.erased nat)
+  (#n0: nat)
   (#va0: v (parse_nlist_kind n0 k) (nlist n0 t))
   (a0: byte_array)
-: ST byte_array
+: STGhost (v (parse_nlist_kind n0 k) (nlist n0 t)) opened
     (aparse (parse_nlist n0 p) a0 va0)
-    (fun a -> exists_ (fun va ->
-      aparse (parse_nlist n0 p) a va `star`
-      nlist_iterator p n0 va0 a0 n0 va `star`
-      pure (
-        va0.contents == va.contents
-      )
-    ))
+    (fun va ->
+      aparse (parse_nlist n0 p) a0 va `star`
+      nlist_iterator p n0 va0 a0 n0 va
+    )
     (k.parser_kind_subkind == Some ParserStrong)
-    (fun _ -> True)
+    (fun va ->
+      va0.contents == va.contents
+    )
 
 val nlist_iterator_end
   (#opened: _)

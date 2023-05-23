@@ -289,14 +289,13 @@ let nlist_sorted_nonempty
     )
     (fun res -> res == List.Tot.sorted order va0.contents)
 =
-  let a = nlist_iterator_begin p #(SZ.v n0) a0 in
-  let _ = gen_elim () in
+  let _ = nlist_iterator_begin p #(SZ.v n0) a0 in
   let n2 = n0 `SZ.sub` 1sz in
-  let a2 = elim_nlist_cons p (SZ.v n0) (SZ.v n2) a in
+  let a2 = elim_nlist_cons p (SZ.v n0) (SZ.v n2) a0 in
   let _ = gen_elim () in
   noop ();
   let res : (res: bool { res == List.Tot.sorted order va0.contents }) =
-    R.with_local a (fun pa ->
+    R.with_local a0 (fun pa ->
     R.with_local n2 (fun pn2 ->
     R.with_local true (fun pres ->
       intro_nlist_sorted_invariant p order (SZ.v n0) va0 a0 pa pn2 pres true;
@@ -723,17 +722,15 @@ let nlist_lex_compare_nonempty
     )
     (fun res -> I16.v res == lex_compare compare va0.contents vb0.contents)
 = let res : (res: I16.t { I16.v res == lex_compare compare va0.contents vb0.contents }) =
-    let a = nlist_iterator_begin p #(SZ.v na0) #va0 a0 in
-    let _ = gen_elim () in
-    let b = nlist_iterator_begin p #(SZ.v nb0) #vb0 b0 in
-    let _ = gen_elim () in
-    R.with_local a (fun pa ->
-    R.with_local b (fun pb ->
+    let _ = nlist_iterator_begin p #(SZ.v na0) #va0 a0 in
+    let _ = nlist_iterator_begin p #(SZ.v nb0) #vb0 b0 in
+    R.with_local a0 (fun pa ->
+    R.with_local b0 (fun pb ->
     R.with_local na0 (fun pna ->
     R.with_local nb0 (fun pnb ->
     R.with_local 0s (fun pres ->
       noop ();
-      intro_nlist_lex_compare_invariant p compare (SZ.v na0) va0 a0 (SZ.v nb0) vb0 b0 pa pb pna pnb pres a b true;
+      intro_nlist_lex_compare_invariant p compare (SZ.v na0) va0 a0 (SZ.v nb0) vb0 b0 pa pb pna pnb pres a0 b0 true;
       Steel.ST.Loops.while_loop
         (nlist_lex_compare_invariant p compare (SZ.v na0) va0 a0 (SZ.v nb0) vb0 b0 pa pb pna pnb pres)
         (nlist_lex_compare_test p compare (SZ.v na0) va0 a0 (SZ.v nb0) vb0 b0 pa pb pna pnb pres)
