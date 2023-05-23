@@ -1257,6 +1257,86 @@ let write_header : r2l_writer serialize_header
 
 inline_for_extraction
 noextract
+let cps_simple_value_as_argument
+  (t': Type)
+  (t'_ifthenelse: if_combinator_weak t')
+  (x: simple_value)
+  (k: (h: header) -> Pure t'
+    (requires (h == simple_value_as_argument x))
+    (ensures (fun _ -> True))
+  )
+: Tot t'
+= t'_ifthenelse (x `U8.lte` max_simple_value_additional_info)
+    (fun _then -> k (| mk_initial_byte major_type_simple_value x, LongArgumentOther x () () |))
+    (fun _else -> k (| mk_initial_byte major_type_simple_value additional_info_long_argument_8_bits, LongArgumentSimpleValue () x |))
+
+inline_for_extraction
+noextract
+let write_simple_value_as_argument
+  (x: simple_value)
+: Tot (r2l_writer_for serialize_header (simple_value_as_argument x))
+= cps_simple_value_as_argument
+    (r2l_writer_for serialize_header (simple_value_as_argument x))
+    (ifthenelse_r2l_writer_for serialize_header (simple_value_as_argument x))
+    x
+    (fun h out ->
+      let res = write_header h out in
+      vpattern_rewrite
+        (fun v -> maybe_r2l_write serialize_header out _ v _)
+        (simple_value_as_argument x);
+      return res
+    )
+
+#push-options "--z3rlimit 32 --split_queries always"
+#restart-solver
+
+module W = LowParse.SteelST.R2LOutput
+
+let maybe_r2l_write_simple_value
+  (#opened: _)
+  (x: simple_value)
+  (#vout: _)
+  (out: W.t)
+  (success: bool)
+: STGhostT unit opened
+   (maybe_r2l_write serialize_header out vout (simple_value_as_argument x) success)
+   (fun _ -> maybe_r2l_write serialize_raw_data_item out vout (Simple x) success)
+= if success
+  then begin
+    let a = ghost_elim_r2l_write_success serialize_header out in
+    let _ = gen_elim () in
+    let a' = aparse_split_zero_r parse_header a in
+    let _ = gen_elim () in
+    let _ = intro_aparse parse_empty a' in
+    let _ = rewrite_aparse a' (parse_content parse_raw_data_item (simple_value_as_argument x)) in
+    let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a' in
+    Classical.forall_intro parse_raw_data_item_eq;
+    let _ = intro_synth _ synth_raw_data_item a () in
+    let _ = rewrite_aparse a parse_raw_data_item in
+    intro_r2l_write_success serialize_raw_data_item out vout (Simple x) _ _ _;
+    vpattern_rewrite (maybe_r2l_write serialize_raw_data_item out vout (Simple x)) success
+  end else begin
+    elim_r2l_write_failure serialize_header out;
+    serialize_raw_data_item_aux_correct (Simple x);
+    serialize_synth_eq (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip () (Simple x);
+    serialize_dtuple2_eq serialize_header serialize_content (| simple_value_as_argument x, () |);
+    noop ();
+    intro_r2l_write_failure serialize_raw_data_item out vout (Simple x);
+    vpattern_rewrite (maybe_r2l_write serialize_raw_data_item out vout (Simple x)) success
+  end
+
+#pop-options
+
+let write_simple_value
+  (x: simple_value)
+: Tot (r2l_writer_for serialize_raw_data_item (Simple x))
+= fun out ->
+    let res = write_simple_value_as_argument x out in
+    maybe_r2l_write_simple_value x out res;
+    return res
+
+inline_for_extraction
+noextract
 let cps_uint64_as_argument
   (t': Type)
   (t'_ifthenelse: if_combinator_weak t')
@@ -1296,8 +1376,6 @@ let write_uint64_as_argument
         (uint64_as_argument ty x);
       return res
     )
-
-module W = LowParse.SteelST.R2LOutput
 
 #push-options "--z3rlimit 32 --split_queries always"
 #restart-solver
