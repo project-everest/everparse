@@ -74,9 +74,9 @@ let validate_long_argument
 = match b with
   | (major_type, (additional_info, _)) ->
     ifthenelse_validate_and_read
-      (additional_info = 24uy)
+      (additional_info = additional_info_long_argument_8_bits)
       (fun _ -> ifthenelse_validate_and_read
-        (major_type = 7uy)
+        (major_type = major_type_simple_value)
         (fun _ ->
           rewrite_validate_and_read
             (validate_and_read_weaken
@@ -113,7 +113,7 @@ let validate_long_argument
         )
       )
       (fun _ -> ifthenelse_validate_and_read
-        (additional_info = 25uy)
+        (additional_info = additional_info_long_argument_16_bits)
         (fun _ ->
           rewrite_validate_and_read
             (validate_and_read_weaken
@@ -132,7 +132,7 @@ let validate_long_argument
             (parse_long_argument b)
         )
         (fun _ -> ifthenelse_validate_and_read
-          (additional_info = 26uy)
+          (additional_info = additional_info_long_argument_32_bits)
           (fun _ ->
             rewrite_validate_and_read
               (validate_and_read_weaken
@@ -151,7 +151,7 @@ let validate_long_argument
               (parse_long_argument b)
           )
           (fun _ -> ifthenelse_validate_and_read
-            (additional_info = 27uy)
+            (additional_info = additional_info_long_argument_64_bits)
             (fun _ ->
               rewrite_validate_and_read
                 (validate_and_read_weaken
@@ -194,9 +194,9 @@ let jump_long_argument
 = match b with
   | (major_type, (additional_info, _)) ->
     ifthenelse_read_and_jump
-      (additional_info = 24uy)
+      (additional_info = additional_info_long_argument_8_bits)
       (fun _ -> ifthenelse_read_and_jump
-        (major_type = 7uy)
+        (major_type = major_type_simple_value)
         (fun _ ->
           rewrite_read_and_jump
             (read_and_jump_weaken
@@ -231,7 +231,7 @@ let jump_long_argument
         )
       )
       (fun _ -> ifthenelse_read_and_jump
-        (additional_info = 25uy)
+        (additional_info = additional_info_long_argument_16_bits)
         (fun _ ->
           rewrite_read_and_jump
             (read_and_jump_weaken
@@ -249,7 +249,7 @@ let jump_long_argument
             (parse_long_argument b)
         )
         (fun _ -> ifthenelse_read_and_jump
-          (additional_info = 26uy)
+          (additional_info = additional_info_long_argument_32_bits)
           (fun _ ->
             rewrite_read_and_jump
               (read_and_jump_weaken
@@ -267,7 +267,7 @@ let jump_long_argument
               (parse_long_argument b)
           )
           (fun _ -> ifthenelse_read_and_jump
-            (additional_info = 27uy)
+            (additional_info = additional_info_long_argument_64_bits)
             (fun _ ->
               rewrite_read_and_jump
                 (read_and_jump_weaken
@@ -327,7 +327,7 @@ let validate_leaf_content
     match b with
     | (major_type, _) ->
       ifthenelse_validate
-        (major_type = 2uy || major_type = 3uy)
+        (major_type = major_type_byte_string || major_type = major_type_text_string)
         (fun _ -> rewrite_validator
           (validate_weaken
             parse_content_kind
@@ -364,7 +364,7 @@ let jump_leaf_content
     match b with
     | (major_type, _) ->
       ifthenelse_jump
-        (major_type = 2uy || major_type = 3uy)
+        (major_type = major_type_byte_string || major_type = major_type_text_string)
         (fun _ -> rewrite_jumper
           (jump_weaken
             parse_content_kind
@@ -552,7 +552,7 @@ let count_remaining_data_items
     let ar = ghost_split_dtuple2_full parse_header parse_leaf_content a in
     let _ = gen_elim () in
     let major_type = read_header_major_type a in
-    if major_type = 4uy
+    if major_type = major_type_array
     then begin
       let arg = read_header_argument_as_uint64 a in
       let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
@@ -562,7 +562,7 @@ let count_remaining_data_items
       noop ();
       return res
     end
-    else if major_type = 5uy
+    else if major_type = major_type_map
     then begin
       let arg = read_header_argument_as_uint64 a in
       let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
@@ -591,7 +591,7 @@ let count_remaining_data_items
       let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
       vpattern_rewrite (aparse _ a) va;
       noop ();
-      if major_type = 6uy
+      if major_type = major_type_tagged
       then begin
         noop ();
         noop ();
@@ -629,7 +629,7 @@ let jump_count_remaining_data_items
     let ar = ghost_split_dtuple2_full parse_header parse_leaf_content a in
     let _ = gen_elim () in
     let major_type = read_header_major_type a in
-    if major_type = 4uy
+    if major_type = major_type_array
     then begin
       let arg = read_header_argument_as_uint64 a in
       let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
@@ -639,7 +639,7 @@ let jump_count_remaining_data_items
       noop ();
       return res
     end
-    else if major_type = 5uy
+    else if major_type = major_type_map
     then begin
       let arg = read_header_argument_as_uint64 a in
       let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
@@ -656,7 +656,7 @@ let jump_count_remaining_data_items
       let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
       vpattern_rewrite (aparse _ a) va;
       noop ();
-      if major_type = 6uy
+      if major_type = major_type_tagged
       then begin
         noop ();
         noop ();
@@ -776,6 +776,10 @@ let get_raw_data_item_payload_map
   noop ();
   a'
 
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
 let intro_raw_data_item_map
   (#opened: _)
   (#vh: v (get_parser_kind parse_header) header)
@@ -807,6 +811,8 @@ let intro_raw_data_item_map
   let _ = intro_synth (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item h () in 
   rewrite_aparse h parse_raw_data_item
 
+#pop-options
+
 #restart-solver
 inline_for_extraction
 noextract
@@ -818,7 +824,7 @@ let check_data_item_wf_head
 = fun a va ->
   rewrite (aparse _ a _) (aparse parse_raw_data_item a va);
   let major_type = read_major_type a in
-  if major_type = 5uy
+  if major_type = major_type_map
   then begin
     let n64 = read_argument_as_uint64 a in
     let n = SZ.uint64_to_sizet n64 in
@@ -932,7 +938,7 @@ let get_header_argument_as_simple_value_initial_byte_precond
 : GTot bool
 = 
   let (major_type, (additional_info, _)) = b in
-  major_type = 7uy && additional_info `U8.lte` 24uy
+  major_type = major_type_simple_value && additional_info `U8.lte` additional_info_long_argument_8_bits
 
 (* Here we only retain the two cases for simple values. Otherwise, if
    we use the general-purpose jump_long_argument, F* extracts to
@@ -948,7 +954,7 @@ let jump_long_argument_as_simple_value
 = match b with
   | (major_type, (additional_info, _)) ->
     ifthenelse_read_and_jump
-      (additional_info = 24uy)
+      (additional_info = additional_info_long_argument_8_bits)
       (fun _ ->
          rewrite_read_and_jump
            (read_and_jump_weaken
@@ -1006,7 +1012,7 @@ let read_header_argument_as_simple_value
     (fun res -> 
       let (| b, x |) = va.contents in
       let (major_type, (additional_info, _)) = b in
-      major_type = 7uy /\ additional_info `U8.lte` 24uy /\
+      major_type = major_type_simple_value /\ additional_info `U8.lte` additional_info_long_argument_8_bits /\
       res == argument_as_simple_value b x
     )
 = rewrite (aparse parse_header a va) (aparse (parse_dtuple2 parse_initial_byte parse_long_argument) a va);
@@ -1254,28 +1260,28 @@ noextract
 let cps_uint64_as_argument
   (t': Type)
   (t'_ifthenelse: if_combinator_weak t')
-  (ty: major_type_t { ty `U8.lt` 7uy })
+  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
   (x: U64.t)
   (k: (h: header) -> Pure t'
     (requires (h == uint64_as_argument ty x))
     (ensures (fun _ -> True))
   )
 : Tot t'
-= t'_ifthenelse (x `U64.lt` 24uL)
+= t'_ifthenelse (x `U64.lt` min_deterministic_uint8_as_uint64)
     (fun _ -> k (| mk_initial_byte ty (Cast.uint64_to_uint8 x), LongArgumentOther (Cast.uint64_to_uint8 x) () () |))
-    (fun _ -> t'_ifthenelse (x `U64.lt` 256uL)
-      (fun _ -> k (| mk_initial_byte ty 24uy, LongArgumentU8 () (Cast.uint64_to_uint8 x) |))
-      (fun _ -> t'_ifthenelse (x `U64.lt` 65536uL)
-        (fun _ -> k (| mk_initial_byte ty 25uy, LongArgumentU16 () (Cast.uint64_to_uint16 x) |))
-        (fun _ -> t'_ifthenelse (x `U64.lt` 4294967296uL)
-          (fun _ -> k (| mk_initial_byte ty 26uy, LongArgumentU32 () (Cast.uint64_to_uint32 x) |))
-          (fun _ -> k (| mk_initial_byte ty 27uy, LongArgumentU64 () x |))
+    (fun _ -> t'_ifthenelse (x `U64.lt` min_deterministic_uint16_as_uint64)
+      (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_8_bits, LongArgumentU8 () (Cast.uint64_to_uint8 x) |))
+      (fun _ -> t'_ifthenelse (x `U64.lt` min_deterministic_uint32_as_uint64)
+        (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_16_bits, LongArgumentU16 () (Cast.uint64_to_uint16 x) |))
+        (fun _ -> t'_ifthenelse (x `U64.lt` min_deterministic_uint64)
+          (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_32_bits, LongArgumentU32 () (Cast.uint64_to_uint32 x) |))
+          (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_64_bits, LongArgumentU64 () x |))
         )
       )
     )
 
 let write_uint64_as_argument
-  (ty: major_type_t { ty `U8.lt` 7uy })
+  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
   (x: U64.t)
 : Tot (r2l_writer_for serialize_header (uint64_as_argument ty x))
 = cps_uint64_as_argument
@@ -1303,7 +1309,7 @@ let maybe_r2l_write_uint64
   (out: W.t)
   (success: bool)
 : STGhostT unit opened
-   (maybe_r2l_write serialize_header out vout (uint64_as_argument 0uy x) success)
+   (maybe_r2l_write serialize_header out vout (uint64_as_argument major_type_uint64 x) success)
    (fun _ -> maybe_r2l_write serialize_raw_data_item out vout (UInt64 x) success)
 = if success
   then begin
@@ -1312,7 +1318,7 @@ let maybe_r2l_write_uint64
     let a' = aparse_split_zero_r parse_header a in
     let _ = gen_elim () in
     let _ = intro_aparse parse_empty a' in
-    let _ = rewrite_aparse a' (parse_content parse_raw_data_item (uint64_as_argument 0uy x)) in
+    let _ = rewrite_aparse a' (parse_content parse_raw_data_item (uint64_as_argument major_type_uint64 x)) in
     let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a' in
     Classical.forall_intro parse_raw_data_item_eq;
     let _ = intro_synth _ synth_raw_data_item a () in
@@ -1323,7 +1329,7 @@ let maybe_r2l_write_uint64
     elim_r2l_write_failure serialize_header out;
     serialize_raw_data_item_aux_correct (UInt64 x);
     serialize_synth_eq (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip () (UInt64 x);
-    serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument 0uy x, () |);
+    serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument major_type_uint64 x, () |);
     noop ();
     intro_r2l_write_failure serialize_raw_data_item out vout (UInt64 x);
     vpattern_rewrite (maybe_r2l_write serialize_raw_data_item out vout (UInt64 x)) success
@@ -1335,7 +1341,7 @@ let write_uint64
   (x: U64.t)
 : Tot (r2l_writer_for serialize_raw_data_item (UInt64 x))
 = fun out ->
-    let res = write_uint64_as_argument 0uy x out in
+    let res = write_uint64_as_argument major_type_uint64 x out in
     maybe_r2l_write_uint64 x out res;
     return res
 
@@ -1349,7 +1355,7 @@ let maybe_r2l_write_neg_int64
   (out: W.t)
   (success: bool)
 : STGhostT unit opened
-   (maybe_r2l_write serialize_header out vout (uint64_as_argument 1uy x) success)
+   (maybe_r2l_write serialize_header out vout (uint64_as_argument major_type_neg_int64 x) success)
    (fun _ -> maybe_r2l_write serialize_raw_data_item out vout (NegInt64 x) success)
 = if success
   then begin
@@ -1358,7 +1364,7 @@ let maybe_r2l_write_neg_int64
     let a' = aparse_split_zero_r parse_header a in
     let _ = gen_elim () in
     let _ = intro_aparse parse_empty a' in
-    let _ = rewrite_aparse a' (parse_content parse_raw_data_item (uint64_as_argument 1uy x)) in
+    let _ = rewrite_aparse a' (parse_content parse_raw_data_item (uint64_as_argument major_type_neg_int64 x)) in
     let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a' in
     Classical.forall_intro parse_raw_data_item_eq;
     let _ = intro_synth _ synth_raw_data_item a () in
@@ -1369,7 +1375,7 @@ let maybe_r2l_write_neg_int64
     elim_r2l_write_failure serialize_header out;
     serialize_raw_data_item_aux_correct (NegInt64 x);
     serialize_synth_eq (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip () (NegInt64 x);
-    serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument 1uy x, () |);
+    serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument major_type_neg_int64 x, () |);
     noop ();
     intro_r2l_write_failure serialize_raw_data_item out vout (NegInt64 x);
     vpattern_rewrite (maybe_r2l_write serialize_raw_data_item out vout (NegInt64 x)) success
@@ -1381,7 +1387,7 @@ let write_neg_int64
   (x: U64.t)
 : Tot (r2l_writer_for serialize_raw_data_item (NegInt64 x))
 = fun out ->
-    let res = write_uint64_as_argument 1uy x out in
+    let res = write_uint64_as_argument major_type_neg_int64 x out in
     maybe_r2l_write_neg_int64 x out res;
     return res
 
@@ -1461,7 +1467,7 @@ let intro_raw_data_item_byte_string
     (
       let (| b, arg |) = vh.contents in
       let (major_type, _) = b in
-      major_type == 2uy /\
+      major_type == major_type_byte_string /\
       AP.adjacent (array_of vh) (AP.array_of vp) /\
       U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp)
     )
@@ -1533,7 +1539,7 @@ let maybe_finalize_raw_data_item_byte_string
   (len: U64.t)
   (res: bool)
 : STGhost unit opened
-    (maybe_r2l_write serialize_header out vout (uint64_as_argument 2uy len) res `star`
+    (maybe_r2l_write serialize_header out vout (uint64_as_argument major_type_byte_string len) res `star`
       AP.arrayptr ap vp
     )
     (fun _ ->
@@ -1555,7 +1561,7 @@ let maybe_finalize_raw_data_item_byte_string
       elim_r2l_write_failure serialize_header out;
       serialize_raw_data_item_aux_correct (ByteString (AP.contents_of vp));
       serialize_synth_eq _ synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip () (ByteString (AP.contents_of vp));
-      serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument 2uy len, AP.contents_of vp |);
+      serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument major_type_byte_string len, AP.contents_of vp |);
       noop ();
       intro_ifthenelse_vprop_false res _ _ ()
     end
@@ -1575,7 +1581,7 @@ let finalize_raw_data_item_byte_string
       AP.adjacent vout (AP.array_of vp)
     )
     (fun _ -> True)
-= let res = write_uint64_as_argument 2uy len out in
+= let res = write_uint64_as_argument major_type_byte_string len out in
   maybe_finalize_raw_data_item_byte_string out ap len res;
   return res
 
@@ -1587,7 +1593,7 @@ let elim_raw_data_item_byte_string_post
 = 
       let (| b, arg |) = vh.contents in
       let (major_type, _) = b in
-      major_type == 2uy /\
+      major_type == major_type_byte_string /\
       AP.merge_into (array_of vh) (AP.array_of vp) (array_of va) /\
       U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp) /\
       va.contents == ByteString (AP.contents_of vp)
@@ -1709,7 +1715,7 @@ let intro_raw_data_item_text_string
     (
       let (| b, arg |) = vh.contents in
       let (major_type, _) = b in
-      major_type == 3uy /\
+      major_type == major_type_text_string /\
       AP.adjacent (array_of vh) (AP.array_of vp) /\
       U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp)
     )
@@ -1781,7 +1787,7 @@ let maybe_finalize_raw_data_item_text_string
   (len: U64.t)
   (res: bool)
 : STGhost unit opened
-    (maybe_r2l_write serialize_header out vout (uint64_as_argument 3uy len) res `star`
+    (maybe_r2l_write serialize_header out vout (uint64_as_argument major_type_text_string len) res `star`
       AP.arrayptr ap vp
     )
     (fun _ ->
@@ -1803,7 +1809,7 @@ let maybe_finalize_raw_data_item_text_string
       elim_r2l_write_failure serialize_header out;
       serialize_raw_data_item_aux_correct (TextString (AP.contents_of vp));
       serialize_synth_eq _ synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip () (TextString (AP.contents_of vp));
-      serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument 3uy len, AP.contents_of vp |);
+      serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument major_type_text_string len, AP.contents_of vp |);
       noop ();
       intro_ifthenelse_vprop_false res _ _ ()
     end
@@ -1823,7 +1829,7 @@ let finalize_raw_data_item_text_string
       AP.adjacent vout (AP.array_of vp)
     )
     (fun _ -> True)
-= let res = write_uint64_as_argument 3uy len out in
+= let res = write_uint64_as_argument major_type_text_string len out in
   maybe_finalize_raw_data_item_text_string out ap len res;
   return res
 
@@ -1835,7 +1841,7 @@ let elim_raw_data_item_text_string_post
 = 
       let (| b, arg |) = vh.contents in
       let (major_type, _) = b in
-      major_type == 3uy /\
+      major_type == major_type_text_string /\
       AP.merge_into (array_of vh) (AP.array_of vp) (array_of va) /\
       U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp) /\
       va.contents == TextString (AP.contents_of vp)
