@@ -1,11 +1,11 @@
 module LowParse.SteelST.Assoc
-include LowParse.SteelST.VCList
+include LowParse.SteelST.VCList.Sorted
 include LowParse.SteelST.Combinators
 include LowParse.Spec.Assoc
 open Steel.ST.GenElim
 
+module AP = LowParse.SteelST.ArrayPtr
 module SZ = FStar.SizeT
-module Iter = LowParse.SteelST.VCList.Iterator 
 module R = Steel.ST.Reference
 
 [@@__reduce__]
@@ -146,6 +146,24 @@ let elim_nlist_assoc_post_failure
   let _ = gen_elim () in
   noop ()
 
+let nlist_assoc_invariant_aux_continue_prop
+  (#kkey: parser_kind)
+  (#tkey: Type)
+  (#kvalue: parser_kind)
+  (#tvalue: Type)
+  (key: tkey)
+  (order: option (tkey -> tkey -> bool))
+  (n0: nat)
+  (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
+  (n: nat)
+  (va: v (parse_nlist_kind n (and_then_kind kkey kvalue)) (nlist n (tkey & tvalue)))
+: GTot prop
+= list_ghost_assoc key va0.contents == list_ghost_assoc key va.contents /\
+  begin match order with
+  | None -> True
+  | Some order -> List.Tot.sorted (map_entry_order order tvalue) va.contents
+  end
+
 [@@__reduce__]
 let nlist_assoc_invariant_aux_continue
   (#kkey: parser_kind)
@@ -156,6 +174,7 @@ let nlist_assoc_invariant_aux_continue
   (pvalue: parser kvalue tvalue)
   (key: tkey)
   (rkey: vprop)
+  (order: option (tkey -> tkey -> bool))
   (n0: nat)
   (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
   (a0: byte_array)
@@ -166,9 +185,18 @@ let nlist_assoc_invariant_aux_continue
   exists_ (fun a -> exists_ (fun va ->
     R.pts_to pa full_perm a `star`
     aparse (parse_nlist n (pkey `nondep_then` pvalue)) a va `star`
-    Iter.nlist_iterator (pkey `nondep_then` pvalue) n0 va0 a0 n va `star`
-    pure (list_ghost_assoc key va0.contents == list_ghost_assoc key va.contents)
+    nlist_iterator (pkey `nondep_then` pvalue) n0 va0 a0 n va `star`
+    pure (nlist_assoc_invariant_aux_continue_prop key order n0 va0 n va)
   ))
+
+[@@CMacro]
+let nlist_assoc_in_progress : byte = 0uy
+
+[@@CMacro]
+let nlist_assoc_success : byte = 1uy
+
+[@@CMacro]
+let nlist_assoc_failure : byte = 2uy
 
 let nlist_assoc_invariant_aux
   (#kkey: parser_kind)
@@ -179,16 +207,17 @@ let nlist_assoc_invariant_aux
   (pvalue: parser kvalue tvalue)
   (key: tkey)
   (rkey: vprop)
+  (order: option (tkey -> tkey -> bool))
   (n0: nat)
   (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
   (a0: byte_array)
   (pa: R.ref byte_array)
   (n: nat)
-  (res: bool)
+  (res: byte)
 : Tot vprop
-= if res
-  then nlist_assoc_post_success pkey pvalue key rkey n0 va0 a0 pa
-  else nlist_assoc_invariant_aux_continue pkey pvalue key rkey n0 va0 a0 pa n
+= if res = nlist_assoc_in_progress
+  then nlist_assoc_invariant_aux_continue pkey pvalue key rkey order n0 va0 a0 pa n
+  else nlist_assoc_post pkey pvalue key rkey n0 va0 a0 pa (res = nlist_assoc_success)
 
 [@@__reduce__]
 let nlist_assoc_invariant0
@@ -200,19 +229,20 @@ let nlist_assoc_invariant0
   (pvalue: parser kvalue tvalue)
   (key: tkey)
   (rkey: vprop)
+  (order: option (tkey -> tkey -> bool))
   (n0: nat)
   (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
   (a0: byte_array)
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
-  (pres: R.ref bool)
+  (pres: R.ref byte)
   (cont: bool)
 : Tot vprop
 = exists_ (fun n -> exists_ (fun res ->
     R.pts_to pn full_perm n `star`
     R.pts_to pres full_perm res `star`
-    nlist_assoc_invariant_aux pkey pvalue key rkey n0 va0 a0 pa (SZ.v n) res `star`
-    pure (cont == not (n = 0sz || res))
+    nlist_assoc_invariant_aux pkey pvalue key rkey order n0 va0 a0 pa (SZ.v n) res `star`
+    pure (cont == (n <> 0sz && res = nlist_assoc_in_progress))
   ))
 
 let nlist_assoc_invariant
@@ -224,14 +254,15 @@ let nlist_assoc_invariant
   (pvalue: parser kvalue tvalue)
   (key: tkey)
   (rkey: vprop)
+  (order: option (tkey -> tkey -> bool))
   (n0: nat)
   (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
   (a0: byte_array)
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
-  (pres: R.ref bool)
+  (pres: R.ref byte)
   (cont: bool)
-= nlist_assoc_invariant0 pkey pvalue key rkey n0 va0 a0 pa pn pres cont
+= nlist_assoc_invariant0 pkey pvalue key rkey order n0 va0 a0 pa pn pres cont
 
 let intro_nlist_assoc_invariant
   (#opened: _)
@@ -243,12 +274,13 @@ let intro_nlist_assoc_invariant
   (pvalue: parser kvalue tvalue)
   (key: tkey)
   (rkey: vprop)
+  (order: option (tkey -> tkey -> bool))
   (n0: nat)
   (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
   (a0: byte_array)
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
-  (pres: R.ref bool)
+  (pres: R.ref byte)
   (cont: bool)
   (n: _)
   (res: _)
@@ -256,15 +288,15 @@ let intro_nlist_assoc_invariant
   (
     R.pts_to pn full_perm n `star`
     R.pts_to pres full_perm res `star`
-    nlist_assoc_invariant_aux pkey pvalue key rkey n0 va0 a0 pa (SZ.v n) res
+    nlist_assoc_invariant_aux pkey pvalue key rkey order n0 va0 a0 pa (SZ.v n) res
   )
-  (fun _ -> nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres cont)
-  (cont == not (n = 0sz || res))
+  (fun _ -> nlist_assoc_invariant pkey pvalue key rkey order n0 va0 a0 pa pn pres cont)
+  (cont == (n <> 0sz && res = nlist_assoc_in_progress))
   (fun _ -> True)
 = noop ();
   rewrite
-    (nlist_assoc_invariant0 pkey pvalue key rkey n0 va0 a0 pa pn pres cont)
-    (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres cont)
+    (nlist_assoc_invariant0 pkey pvalue key rkey order n0 va0 a0 pa pn pres cont)
+    (nlist_assoc_invariant pkey pvalue key rkey order n0 va0 a0 pa pn pres cont)
 
 inline_for_extraction
 let nlist_assoc_invariant_test
@@ -276,35 +308,34 @@ let nlist_assoc_invariant_test
   (pvalue: parser kvalue tvalue)
   (key: Ghost.erased tkey)
   (rkey: vprop)
+  (order: Ghost.erased (option (tkey -> tkey -> bool)))
   (n0: Ghost.erased nat)
   (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
   (a0: byte_array)
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
-  (pres: R.ref bool)
+  (pres: R.ref byte)
   ()
 : STT bool
-    (exists_ (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres))
-    (fun cont -> nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres cont)
+    (exists_ (nlist_assoc_invariant pkey pvalue key rkey order n0 va0 a0 pa pn pres))
+    (fun cont -> nlist_assoc_invariant pkey pvalue key rkey order n0 va0 a0 pa pn pres cont)
 = let gcont = elim_exists () in
   rewrite
-    (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres gcont)
-    (nlist_assoc_invariant0 pkey pvalue key rkey n0 va0 a0 pa pn pres gcont);
+    (nlist_assoc_invariant pkey pvalue key rkey order n0 va0 a0 pa pn pres gcont)
+    (nlist_assoc_invariant0 pkey pvalue key rkey order n0 va0 a0 pa pn pres gcont);
   let _ = gen_elim () in
   let n = R.read pn in
   let res = R.read pres in
   [@@inline_let]
-  let cont = not (n = 0sz || res) in
+  let cont = (n <> 0sz && res = nlist_assoc_in_progress) in
   noop ();
   rewrite
-    (nlist_assoc_invariant0 pkey pvalue key rkey n0 va0 a0 pa pn pres cont)
-    (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres cont);
+    (nlist_assoc_invariant0 pkey pvalue key rkey order n0 va0 a0 pa pn pres cont)
+    (nlist_assoc_invariant pkey pvalue key rkey order n0 va0 a0 pa pn pres cont);
   return cont
 
-module AP = LowParse.SteelST.ArrayPtr
-
 inline_for_extraction
-let nlist_assoc_compare_keys
+let nlist_assoc_eq_keys
   (#kkey: Ghost.erased parser_kind)
   (#tkey: Type)
   (pkey: parser kkey tkey)
@@ -335,31 +366,31 @@ let nlist_assoc_invariant_step
   (jump_value: jumper pvalue)
   (#key: Ghost.erased tkey)
   (#rkey: vprop)
-  (compare_keys: nlist_assoc_compare_keys pkey key rkey)
+  (compare_keys: nlist_assoc_eq_keys pkey key rkey)
   (n0: Ghost.erased nat)
   (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
   (a0: byte_array)
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
-  (pres: R.ref bool)
+  (pres: R.ref byte)
   (_: unit)
 : STT unit
-    (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres true)
-    (fun _ -> exists_ (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres))
+    (nlist_assoc_invariant pkey pvalue key rkey None n0 va0 a0 pa pn pres true)
+    (fun _ -> exists_ (nlist_assoc_invariant pkey pvalue key rkey None n0 va0 a0 pa pn pres))
 = rewrite
-    (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres true)
-    (nlist_assoc_invariant0 pkey pvalue key rkey n0 va0 a0 pa pn pres true);
+    (nlist_assoc_invariant pkey pvalue key rkey None n0 va0 a0 pa pn pres true)
+    (nlist_assoc_invariant0 pkey pvalue key rkey None n0 va0 a0 pa pn pres true);
   let _ = gen_elim () in
   let n = read_replace pn in
   let n_pred = n `SZ.sub` 1sz in
   rewrite
-    (nlist_assoc_invariant_aux pkey pvalue key rkey n0 va0 a0 pa _ _)
-    (nlist_assoc_invariant_aux_continue pkey pvalue key rkey n0 va0 a0 pa (SZ.v n));
+    (nlist_assoc_invariant_aux pkey pvalue key rkey None n0 va0 a0 pa _ _)
+    (nlist_assoc_invariant_aux_continue pkey pvalue key rkey None n0 va0 a0 pa (SZ.v n));
   let _ = gen_elim () in
   let a = read_replace pa in
   vpattern_rewrite (fun a -> aparse _ a _) a;
-  let va = vpattern_replace (fun va -> aparse _ a va `star` Iter.nlist_iterator (pkey `nondep_then` pvalue) (n0) va0 a0 (SZ.v n) va) in
-  Iter.nlist_iterator_parser_kind _ _ _ _ _ _;
+  let va = vpattern_replace (fun va -> aparse _ a va `star` nlist_iterator (pkey `nondep_then` pvalue) (n0) va0 a0 (SZ.v n) va) in
+  nlist_iterator_parser_kind _ _ _ _ _ _;
   let ga' = elim_nlist_cons _ (SZ.v n) (SZ.v n_pred) a in
   let _ = gen_elim () in
   let gav = g_split_pair pkey pvalue a in
@@ -370,24 +401,24 @@ let nlist_assoc_invariant_step
   if res
   then begin
     R.write pa av;
-    R.write pres true;
+    R.write pres nlist_assoc_success;
     let vav = vpattern_replace (aparse pvalue av) in
     intro_implies
       (aparse pvalue av vav)
       (aparse (parse_nlist (n0) (pkey `nondep_then` pvalue)) a0 va0)
-      (aparse pkey a _ `star` aparse _ ga' _ `star` Iter.nlist_iterator (pkey `nondep_then` pvalue) (n0) va0 a0 (SZ.v n) va)
+      (aparse pkey a _ `star` aparse _ ga' _ `star` nlist_iterator (pkey `nondep_then` pvalue) (n0) va0 a0 (SZ.v n) va)
       (fun _ ->
         let _ = merge_pair pkey pvalue a av in
         let _ = intro_nlist_cons (SZ.v n) (pkey `nondep_then` pvalue) (SZ.v n_pred) a ga' in
         vpattern_rewrite (aparse _ a) va;
-        Iter.nlist_iterator_end _ _ _
+        nlist_iterator_end _ _ _
       );
     rewrite
       (nlist_assoc_post_success pkey pvalue key rkey (n0) va0 a0 pa)
-      (nlist_assoc_invariant_aux pkey pvalue key rkey n0 va0 a0 pa (SZ.v n) true);
+      (nlist_assoc_invariant_aux pkey pvalue key rkey None n0 va0 a0 pa (SZ.v n) nlist_assoc_success);
     rewrite
-      (nlist_assoc_invariant0 pkey pvalue key rkey n0 va0 a0 pa pn pres false)
-      (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres false);
+      (nlist_assoc_invariant0 pkey pvalue key rkey None n0 va0 a0 pa pn pres false)
+      (nlist_assoc_invariant pkey pvalue key rkey None n0 va0 a0 pa pn pres false);
     return ()
   end else begin
     let a' = hop_aparse_aparse jump_value (parse_nlist (SZ.v n_pred) (pkey `nondep_then` pvalue)) av ga' in
@@ -395,12 +426,12 @@ let nlist_assoc_invariant_step
     R.write pn n_pred;
     let va' = vpattern_replace (aparse _ a') in
     let _ = merge_pair pkey pvalue a av in
-    Iter.nlist_iterator_next (pkey `nondep_then` pvalue) #n0 #va0 a0 a #(SZ.v n_pred) va';
+    nlist_iterator_next (pkey `nondep_then` pvalue) #n0 #va0 a0 a #(SZ.v n_pred) va';
     noop ();
     rewrite
-      (nlist_assoc_invariant_aux_continue pkey pvalue key rkey n0 va0 a0 pa (SZ.v n_pred))
-      (nlist_assoc_invariant_aux pkey pvalue key rkey n0 va0 a0 pa (SZ.v n_pred) false);
-    intro_nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres (n_pred <> 0sz) _ _;
+      (nlist_assoc_invariant_aux_continue pkey pvalue key rkey None n0 va0 a0 pa (SZ.v n_pred))
+      (nlist_assoc_invariant_aux pkey pvalue key rkey None n0 va0 a0 pa (SZ.v n_pred) nlist_assoc_in_progress);
+    intro_nlist_assoc_invariant pkey pvalue key rkey None n0 va0 a0 pa pn pres (n_pred <> 0sz) _ _;
     return ()
   end
 
@@ -419,42 +450,43 @@ let nlist_assoc_invariant_end
   (pvalue: parser kvalue tvalue)
   (key: tkey)
   (rkey: vprop)
+  (order: (option (tkey -> tkey -> bool)))
   (n0: nat)
   (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
   (a0: byte_array)
   (pa: R.ref byte_array)
   (pn: R.ref SZ.t)
-  (pres: R.ref bool)
-: STGhostT (Ghost.erased bool) opened
-    (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres false)
+  (pres: R.ref byte)
+: STGhostT (Ghost.erased byte) opened
+    (nlist_assoc_invariant pkey pvalue key rkey order n0 va0 a0 pa pn pres false)
     (fun res ->
       R.pts_to pres full_perm res `star`
-      nlist_assoc_post pkey pvalue key rkey n0 va0 a0 pa res `star`
+      nlist_assoc_post pkey pvalue key rkey n0 va0 a0 pa (Ghost.reveal res = nlist_assoc_success) `star`
       exists_ (R.pts_to pn full_perm)
     )
 = rewrite
-    (nlist_assoc_invariant pkey pvalue key rkey n0 va0 a0 pa pn pres false)
-    (nlist_assoc_invariant0 pkey pvalue key rkey n0 va0 a0 pa pn pres false);
+    (nlist_assoc_invariant pkey pvalue key rkey order n0 va0 a0 pa pn pres false)
+    (nlist_assoc_invariant0 pkey pvalue key rkey order n0 va0 a0 pa pn pres false);
   let _ = gen_elim () in
   let n = vpattern (R.pts_to pn _) in
   let res = vpattern_replace_erased (R.pts_to pres _) in
-  if res // this test is ghost, that's why we need this separate ghost function
+  if Ghost.reveal res = nlist_assoc_in_progress // this test is ghost, that's why we need this separate ghost function
   then begin
     rewrite
-      (nlist_assoc_invariant_aux pkey pvalue key rkey n0 va0 a0 pa _ _)
-      (nlist_assoc_post pkey pvalue key rkey n0 va0 a0 pa res);
+      (nlist_assoc_invariant_aux pkey pvalue key rkey order n0 va0 a0 pa _ _)
+      (nlist_assoc_invariant_aux_continue pkey pvalue key rkey order n0 va0 a0 pa (SZ.v n));
+    let _ = gen_elim () in
+    nlist_iterator_end (pkey `nondep_then` pvalue) a0 _;
+    noop ();
+    rewrite
+      (nlist_assoc_post_failure pkey pvalue key rkey n0 va0 a0 pa)
+      (nlist_assoc_post pkey pvalue key rkey n0 va0 a0 pa (Ghost.reveal res = nlist_assoc_success));
     noop ();
     res
   end else begin
     rewrite
-      (nlist_assoc_invariant_aux pkey pvalue key rkey n0 va0 a0 pa _ _)
-      (nlist_assoc_invariant_aux_continue pkey pvalue key rkey n0 va0 a0 pa (SZ.v n));
-    let _ = gen_elim () in
-    Iter.nlist_iterator_end (pkey `nondep_then` pvalue) a0 _;
-    noop ();
-    rewrite
-      (nlist_assoc_post_failure pkey pvalue key rkey n0 va0 a0 pa)
-      (nlist_assoc_post pkey pvalue key rkey n0 va0 a0 pa res);
+      (nlist_assoc_invariant_aux pkey pvalue key rkey order n0 va0 a0 pa _ _)
+      (nlist_assoc_post pkey pvalue key rkey n0 va0 a0 pa (Ghost.reveal res = nlist_assoc_success));
     noop ();
     res
   end
@@ -473,7 +505,7 @@ let nlist_assoc
   (jump_value: jumper pvalue)
   (#key: Ghost.erased tkey)
   (#rkey: vprop)
-  (compare_keys: nlist_assoc_compare_keys pkey key rkey)
+  (compare_keys: nlist_assoc_eq_keys pkey key rkey)
   (n0: SZ.t)
   (#va0: v (parse_nlist_kind (SZ.v n0) (and_then_kind kkey kvalue)) (nlist (SZ.v n0) (tkey & tvalue)))
   (a0: byte_array)
@@ -492,27 +524,29 @@ let nlist_assoc
     (fun _ -> True)
 = let _ = gen_elim () in
   R.write pa a0;
-  let _ = Iter.nlist_iterator_begin (pkey `nondep_then` pvalue) #(SZ.v n0) a0 in
+  let _ = nlist_iterator_begin (pkey `nondep_then` pvalue) #(SZ.v n0) a0 in
   with_local n0 (fun pn ->
-    with_local false (fun pres ->
+    with_local nlist_assoc_in_progress (fun pres ->
       noop ();
       rewrite
-        (nlist_assoc_invariant_aux_continue pkey pvalue key rkey (SZ.v n0) va0 a0 pa (SZ.v n0))
-        (nlist_assoc_invariant_aux pkey pvalue key rkey (SZ.v n0) va0 a0 pa (SZ.v n0) false);
+        (nlist_assoc_invariant_aux_continue pkey pvalue key rkey None (SZ.v n0) va0 a0 pa (SZ.v n0))
+        (nlist_assoc_invariant_aux pkey pvalue key rkey None (SZ.v n0) va0 a0 pa (SZ.v n0) nlist_assoc_in_progress);
       rewrite
-        (nlist_assoc_invariant0 pkey pvalue key rkey (SZ.v n0) va0 a0 pa pn pres (n0 <> 0sz))
-        (nlist_assoc_invariant pkey pvalue key rkey (SZ.v n0) va0 a0 pa pn pres (n0 <> 0sz));
+        (nlist_assoc_invariant0 pkey pvalue key rkey None (SZ.v n0) va0 a0 pa pn pres (n0 <> 0sz))
+        (nlist_assoc_invariant pkey pvalue key rkey None (SZ.v n0) va0 a0 pa pn pres (n0 <> 0sz));
       Steel.ST.Loops.while_loop
-        (nlist_assoc_invariant pkey pvalue key rkey (SZ.v n0) va0 a0 pa pn pres)
-        (nlist_assoc_invariant_test pkey pvalue key rkey (SZ.v n0) va0 a0 pa pn pres)
+        (nlist_assoc_invariant pkey pvalue key rkey None (SZ.v n0) va0 a0 pa pn pres)
+        (nlist_assoc_invariant_test pkey pvalue key rkey None (SZ.v n0) va0 a0 pa pn pres)
         (nlist_assoc_invariant_step jump_key jump_value compare_keys (SZ.v n0) va0 a0 pa pn pres);
-      let _ = nlist_assoc_invariant_end pkey pvalue key rkey (SZ.v n0) va0 a0 pa pn pres in
+      let _ = nlist_assoc_invariant_end pkey pvalue key rkey None (SZ.v n0) va0 a0 pa pn pres in
       let _ = gen_elim () in
       let res = R.read pres in
-      vpattern_rewrite (nlist_assoc_post pkey pvalue key rkey (SZ.v n0) va0 a0 pa) res;
+      vpattern_rewrite (nlist_assoc_post pkey pvalue key rkey (SZ.v n0) va0 a0 pa) (res = nlist_assoc_success);
       noop ();
-      return res
+      return (res = nlist_assoc_success)
   ))
+
+(* Default key comparison by directly comparing their byte arrays, since EverParse parsers are always injective *)
 
 let eq_byte_arrays_equal_size_invariant_prop
   (n0: SZ.t)
@@ -632,14 +666,14 @@ let eq_byte_arrays
   else return false
 
 inline_for_extraction
-let nlist_assoc_default_compare_keys
+let nlist_assoc_default_eq_keys
   (#kkey: Ghost.erased parser_kind)
   (#tkey: Type)
   (pkey: parser kkey tkey)
   (va: v kkey tkey)
   (a: byte_array)
   (sz: SZ.t)
-: Pure (nlist_assoc_compare_keys pkey va.contents (aparse pkey a va))
+: Pure (nlist_assoc_eq_keys pkey va.contents (aparse pkey a va))
     (requires AP.len (array_of' va) == sz)
     (fun _ -> True)
 = fun #va' a' sz' ->
@@ -653,3 +687,7 @@ let nlist_assoc_default_compare_keys
   vpattern_rewrite (aparse _ a) va;
   vpattern_rewrite (aparse _ a') va';
   return res
+
+(* If we know that the list of keys is sorted with a transitive order, then we can interrupt the search as soon as the key in the map is (strictly) greater than the key we are looking for. *)
+
+
