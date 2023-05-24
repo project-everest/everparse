@@ -1,6 +1,7 @@
 module CBOR.SteelST
 include CBOR.Spec
 open LowParse.SteelST.Combinators
+open LowParse.SteelST.Assoc
 open LowParse.SteelST.Recursive
 open LowParse.SteelST.BitSum
 open LowParse.SteelST.ValidateAndRead
