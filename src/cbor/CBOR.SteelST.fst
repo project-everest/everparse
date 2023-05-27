@@ -938,13 +938,6 @@ let jump_data_item
 
 module U8 = FStar.UInt8
 
-let get_header_argument_as_simple_value_initial_byte_precond
-  (b: initial_byte)
-: GTot bool
-= 
-  let (major_type, (additional_info, _)) = b in
-  major_type = major_type_simple_value && additional_info `U8.lte` additional_info_long_argument_8_bits
-
 (* Here we only retain the two cases for simple values. Otherwise, if
    we use the general-purpose jump_long_argument, F* extracts to
    `match B with A -> ...` with mismatching constructors, which neither F*
@@ -1135,7 +1128,7 @@ let write_u16 = I.write_u16
 let write_u32 = I.write_u32
 let write_u64 = I.write_u64
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 64 --ifuel 8"
 
 (* In fact, I can follow the structure of the type instead. Indeed, the
    data constructors for long_argument do follow the structure of the ifthenelse
@@ -1535,6 +1528,16 @@ let elim_ifthenelse_vprop_false
     (ifthenelse_vprop cond vtrue vfalse)
     (vfalse ())
 
+let intro_raw_data_item_byte_string_pre
+  (vh:  v (get_parser_kind parse_header) header)
+  (vp: AP.v byte)
+: GTot prop
+= let (| b, arg |) = vh.contents in
+  let (major_type, _) = b in
+  major_type == major_type_byte_string /\
+  AP.adjacent (array_of vh) (AP.array_of vp) /\
+  U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp)
+
 #push-options "--z3rlimit 16"
 #restart-solver
 
@@ -1547,13 +1550,7 @@ let intro_raw_data_item_byte_string
 : STGhost (v parse_raw_data_item_kind raw_data_item) opened
     (aparse parse_header ah vh `star` AP.arrayptr ap vp)
     (fun v' -> aparse parse_raw_data_item ah v')
-    (
-      let (| b, arg |) = vh.contents in
-      let (major_type, _) = b in
-      major_type == major_type_byte_string /\
-      AP.adjacent (array_of vh) (AP.array_of vp) /\
-      U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp)
-    )
+    (intro_raw_data_item_byte_string_pre vh vp)
     (fun v' ->
       let (| b, arg |) = vh.contents in
       AP.merge_into (array_of vh) (AP.array_of vp) (array_of v') /\
@@ -1732,6 +1729,11 @@ let ghost_focus_byte_string_strong
 = ...
 *)
 
+#pop-options
+
+#push-options "--z3rlimit 32 --query_stats --ifuel 8"
+
+#restart-solver
 let ghost_focus_byte_string
   (#opened: _)
   (#va: v parse_raw_data_item_kind raw_data_item)
@@ -1756,6 +1758,7 @@ let ghost_focus_byte_string
   noop ();
   a'
 
+#restart-solver
 let focus_byte_string
   (#va: v parse_raw_data_item_kind raw_data_item)
   (a: byte_array)
@@ -1780,8 +1783,18 @@ let focus_byte_string
   noop ();
   return a'
 
-
 #pop-options
+
+let intro_raw_data_item_text_string_pre
+  (vh:  v (get_parser_kind parse_header) header)
+  (vp: AP.v byte)
+: GTot prop
+= 
+      let (| b, arg |) = vh.contents in
+      let (major_type, _) = b in
+      major_type == major_type_text_string /\
+      AP.adjacent (array_of vh) (AP.array_of vp) /\
+      U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp)
 
 #push-options "--z3rlimit 16"
 #restart-solver
@@ -1795,13 +1808,7 @@ let intro_raw_data_item_text_string
 : STGhost (v parse_raw_data_item_kind raw_data_item) opened
     (aparse parse_header ah vh `star` AP.arrayptr ap vp)
     (fun v' -> aparse parse_raw_data_item ah v')
-    (
-      let (| b, arg |) = vh.contents in
-      let (major_type, _) = b in
-      major_type == major_type_text_string /\
-      AP.adjacent (array_of vh) (AP.array_of vp) /\
-      U64.v (argument_as_uint64 b arg) == Seq.length (AP.contents_of vp)
-    )
+    (intro_raw_data_item_text_string_pre vh vp)
     (fun v' ->
       let (| b, arg |) = vh.contents in
       AP.merge_into (array_of vh) (AP.array_of vp) (array_of v') /\

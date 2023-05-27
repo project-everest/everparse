@@ -165,36 +165,72 @@ let simple_value_long_argument_wf // 3.3: "an encoder MUST NOT issue two-byte se
 : Tot bool
 = min_simple_value_long_argument `U8.lte` x
 
+let long_argument_simple_value_prop
+  (b: initial_byte)
+: GTot prop
+= let (major_type, (additional_info, _)) = b in
+  additional_info == additional_info_long_argument_8_bits /\ major_type == major_type_simple_value
+
+let long_argument_u8_prop
+  (b: initial_byte)
+: GTot prop
+= let (major_type, (additional_info, _)) = b in
+  additional_info == additional_info_long_argument_8_bits /\ ~ (major_type == major_type_simple_value)
+
+let long_argument_u16_prop
+  (b: initial_byte)
+: GTot prop
+= let (major_type, (additional_info, _)) = b in
+  additional_info == additional_info_long_argument_16_bits
+
+let long_argument_u32_prop
+  (b: initial_byte)
+: GTot prop
+= let (major_type, (additional_info, _)) = b in
+  additional_info == additional_info_long_argument_32_bits
+
+let long_argument_u64_prop
+  (b: initial_byte)
+: GTot prop
+= let (major_type, (additional_info, _)) = b in
+  additional_info == additional_info_long_argument_64_bits
+
+let long_argument_other_prop
+  (b: initial_byte)
+  (a: additional_info_t)
+: GTot prop
+= let (major_type, (additional_info, _)) = b in
+  a == additional_info /\ (
+    ~ (additional_info == additional_info_long_argument_8_bits \/ additional_info == additional_info_long_argument_16_bits \/ additional_info == additional_info_long_argument_32_bits \/ additional_info == additional_info_long_argument_64_bits)
+  )
+
 inline_for_extraction
 noextract
 type long_argument
   (b: initial_byte)
 = | LongArgumentSimpleValue:
-      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == additional_info_long_argument_8_bits /\ major_type == major_type_simple_value)) ->
+      (prf: squash (long_argument_simple_value_prop b)) ->
       (v: parse_filter_refine simple_value_long_argument_wf) ->
       long_argument b
   | LongArgumentU8:
-      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == additional_info_long_argument_8_bits /\ ~ (major_type == major_type_simple_value))) ->
+      (prf: squash (long_argument_u8_prop b)) ->
       (v: parse_filter_refine uint8_wf) ->
       long_argument b
   | LongArgumentU16:
-      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == additional_info_long_argument_16_bits)) ->
+      (prf: squash (long_argument_u16_prop b)) ->
       (v: parse_filter_refine uint16_wf) ->
       long_argument b
   | LongArgumentU32:
-      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == additional_info_long_argument_32_bits)) ->
+      (prf: squash (long_argument_u32_prop b)) ->
       (v: parse_filter_refine uint32_wf) ->
       long_argument b
   | LongArgumentU64:
-      (prf: squash (let (major_type, (additional_info, _)) = b in additional_info == additional_info_long_argument_64_bits)) ->
+      (prf: squash (long_argument_u64_prop b)) ->
       (v: parse_filter_refine uint64_wf) ->
       long_argument b
   | LongArgumentOther:
       (a: additional_info_t) ->
-      (prf: squash (let (major_type, (additional_info, _)) = b in
-        a == additional_info /\ (
-        ~ (additional_info == additional_info_long_argument_8_bits \/ additional_info == additional_info_long_argument_16_bits \/ additional_info == additional_info_long_argument_32_bits \/ additional_info == additional_info_long_argument_64_bits)
-      ))) ->
+      (prf: squash (long_argument_other_prop b a)) ->
       (v: unit) -> // constructors are synth functions, hence this unit argument
       long_argument b
 
@@ -234,12 +270,19 @@ let simple_value = parse_filter_refine simple_value_wf
 [@@CMacro]
 let additional_info_simple_value_max : additional_info_t = 24uy
 
+let get_header_argument_as_simple_value_initial_byte_precond
+  (b: initial_byte)
+: GTot bool
+= 
+  let (major_type, (additional_info, _)) = b in
+  major_type = major_type_simple_value && additional_info `U8.lte` additional_info_simple_value_max
+
 inline_for_extraction
 let argument_as_simple_value
   (b: initial_byte)
   (x: long_argument b)
 : Pure simple_value
-    (requires (let (major_type, (additional_info, _)) = b in major_type = major_type_simple_value /\ additional_info `U8.lte` additional_info_simple_value_max))
+    (requires (get_header_argument_as_simple_value_initial_byte_precond b))
     (ensures (fun _ -> True))
 = match x with
   | LongArgumentOther v _ _
@@ -854,7 +897,12 @@ let synth_raw_data_item_recip
   | Tagged tag v ->
     (| uint64_as_argument major_type_tagged tag, v |)
 
+#push-options "--z3rlimit 16"
+
+#restart-solver
 let synth_raw_data_item_recip_inverse : squash (synth_inverse synth_raw_data_item synth_raw_data_item_recip) = ()
+
+#pop-options
 
 let synth_raw_data_item'_from_alt_recip
   (x: raw_data_item')
