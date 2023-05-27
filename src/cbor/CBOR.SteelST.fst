@@ -850,15 +850,13 @@ let check_data_item_wf_head
 
 inline_for_extraction
 noextract
-let validate_data_item'
-  (#order: Ghost.erased (raw_data_item -> raw_data_item -> bool))
-  (order_impl: NL.order_impl parse_raw_data_item order)
-  (sq: squash (SZ.fits_u64))
-: Tot (validator (parse_data_item order))
-= rewrite_validator
-    (validate_filter_gen
+let validate_raw_data_item_filter
+  (#p: Ghost.erased (raw_data_item -> bool))
+  (p_impl: pred_recursive_base_t serialize_raw_data_item_param p)
+: Tot (validator (parse_filter parse_raw_data_item (holds_on_raw_data_item p)))
+=   (validate_filter_gen
       validate_raw_data_item
-      (data_item_wf order)
+      (holds_on_raw_data_item p)
       (fun #va a ->
         rewrite (aparse _ a _) (aparse (parse_recursive parse_raw_data_item_param) a va);
         let res = pred_recursive
@@ -866,17 +864,17 @@ let validate_data_item'
           (jump_leaf)
           (jump_count_remaining_data_items)
           a
-          (data_item_wf_pred order)
-          (check_data_item_wf_head order_impl sq)
+          (holds_on_raw_data_item_pred p)
+          (coerce _ p_impl)
         in
         rewrite (aparse _ a _) (aparse parse_raw_data_item a va);
         return res
       )
     )
-    (parse_data_item order)
 
-#pop-options
+#push-options "--z3rlimit 16"
 
+#restart-solver
 inline_for_extraction
 noextract
 let validate_data_item
@@ -885,7 +883,13 @@ let validate_data_item
 : Tot (validator (parse_data_item order))
 = fun a len err ->
     let sq = Steel.ST.HigherArray.intro_fits_u64 () in
-    validate_data_item' order_impl sq a len err
+    rewrite_validator
+      (validate_raw_data_item_filter
+        (check_data_item_wf_head order_impl sq))
+      (parse_data_item order)
+      a len err
+
+#pop-options
 
 let deterministically_encoded_cbor_map_key_order_impl
 : NL.order_impl parse_raw_data_item deterministically_encoded_cbor_map_key_order

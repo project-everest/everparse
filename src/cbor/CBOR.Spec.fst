@@ -1025,7 +1025,7 @@ let serialize_raw_data_item_aux_correct
 
 // Ordering of map keys (Section 4.2)
 
-let holds_on_pair
+let holds_on_pair_bounded
   (#t0: Type)
   (bound: t0)
   (#t: Type)
@@ -1035,15 +1035,103 @@ let holds_on_pair
 = let (x1, x2) = x in
   pred x1 && pred x2
 
-let rec data_item_wf (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
-= match x with
-  | Array l -> forall_list l (data_item_wf order)
+let rec holds_on_raw_data_item
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Tot bool
+= p x &&
+  begin match x with
+  | Array l -> forall_list l (holds_on_raw_data_item p)
   | Map l ->
-    let l : list (raw_data_item & raw_data_item) = l in // IMPORTANT to remove the refinement on the type of the `bound` arg to holds_on_pair
-    FStar.List.Tot.sorted (map_entry_order order _) l &&
-    forall_list l (holds_on_pair l (data_item_wf order))
-  | Tagged _ v -> data_item_wf order v
+    let l : list (raw_data_item & raw_data_item) = l in // IMPORTANT to remove the refinement on the type of the `bound` arg to holds_on_pair_bounded
+    forall_list l (holds_on_pair_bounded l (holds_on_raw_data_item p))
+  | Tagged _ v -> holds_on_raw_data_item p v
   | _ -> true
+  end
+
+let holds_on_pair
+  (#t: Type)
+  (pred: (t -> bool))
+  (x: (t & t))
+: Tot bool
+= let (x1, x2) = x in
+  pred x1 && pred x2
+
+let holds_on_raw_data_item'
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Tot bool
+= p x &&
+  begin match x with
+  | Array l -> List.Tot.for_all (holds_on_raw_data_item p) l
+  | Map l ->
+    List.Tot.for_all (holds_on_pair (holds_on_raw_data_item p)) l
+  | Tagged _ v -> holds_on_raw_data_item p v
+  | _ -> true
+  end
+
+#push-options "--z3rlimit 16"
+
+#restart-solver
+let holds_on_raw_data_item_eq
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Lemma
+  (holds_on_raw_data_item p x == holds_on_raw_data_item' p x)
+= match x with
+  | Array l ->
+    assert_norm (holds_on_raw_data_item p (Array l) == (p (Array l) && forall_list l (holds_on_raw_data_item p)));
+    forall_list_correct (holds_on_raw_data_item p) l
+  | Map l ->
+    let l : list (raw_data_item & raw_data_item) = l in
+    assert_norm (holds_on_raw_data_item p (Map l) == (p (Map l) && forall_list l (holds_on_pair_bounded l (holds_on_raw_data_item p))));
+    forall_list_correct (holds_on_pair (holds_on_raw_data_item p)) l;
+    forall_list_ext l (holds_on_pair (holds_on_raw_data_item p)) (holds_on_pair_bounded l (holds_on_raw_data_item p)) (fun _ -> ())
+  | _ -> ()
+
+#pop-options
+
+let rec list_for_all_holds_on_pair_list_of_pair_list
+  (#t: Type)
+  (pred: t -> bool)
+  (l: list (t & t))
+: Lemma
+  (List.Tot.for_all (holds_on_pair pred) l == List.Tot.for_all pred (list_of_pair_list _ (List.Tot.length l) l))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_for_all_holds_on_pair_list_of_pair_list pred q
+
+#push-options "--z3rlimit 16"
+
+#restart-solver
+let holds_on_raw_data_item_eq_recursive
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Lemma
+  (holds_on_raw_data_item p x == (p x && List.Tot.for_all (holds_on_raw_data_item p) (get_children serialize_raw_data_item_param x)))
+= holds_on_raw_data_item_eq p x;
+  match x with
+  | Map l ->
+    let l : list (raw_data_item & raw_data_item) = l in
+    list_for_all_holds_on_pair_list_of_pair_list (holds_on_raw_data_item p) l
+  | _ -> ()
+
+#pop-options
+
+let holds_on_raw_data_item_pred (p: (raw_data_item -> bool)) : pred_recursive_t serialize_raw_data_item_param = {
+  base = p;
+  pred = holds_on_raw_data_item p;
+  prf = holds_on_raw_data_item_eq_recursive p;
+}
+
+let data_item_wf_head (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
+= match x with
+  | Map l ->
+      FStar.List.Tot.sorted (map_entry_order order _) l
+  | _ -> true
+
+let data_item_wf (order: (raw_data_item -> raw_data_item -> bool)) : Tot (raw_data_item -> bool)
+= holds_on_raw_data_item (data_item_wf_head order)
 
 let data_item (order: (raw_data_item -> raw_data_item -> bool)) = parse_filter_refine (data_item_wf order)
 
@@ -1057,71 +1145,15 @@ let serialize_data_item
 : Tot (serializer (parse_data_item order))
 = serialize_raw_data_item `serialize_filter` data_item_wf order
 
-let rec forall_list_holds_on_pair_list_of_pair_list'
-  (#t: Type)
-  (pred: t -> bool)
-  (l: list (t & t))
-  (phi: (x: (t & t) { x << l }) -> bool)
-  (prf: (
-    (x: (t & t) { x << l }) ->
-    Lemma
-    (phi x == holds_on_pair l pred x)
-  ))
-: Lemma
-  (ensures (forall_list l phi == forall_list (list_of_pair_list _ (List.Tot.length l) l) pred))
-  (decreases l)
-= match l with
-  | [] -> ()
-  | (x1, x2) :: q ->
-    forall_list_cons (x1, x2) q phi;
-    prf (x1, x2);
-    forall_list_holds_on_pair_list_of_pair_list' pred q phi prf;
-    let q' = list_of_pair_list _ (List.Tot.length q) q in
-    forall_list_cons x2 q' pred;
-    forall_list_cons x1 (x2 :: q') pred
-
-let forall_list_holds_on_pair_list_of_pair_list
-  (#t: Type)
-  (pred: t -> bool)
-  (l: list (t & t))
-: Tot (squash (forall_list l (holds_on_pair l pred) == forall_list (list_of_pair_list _ (List.Tot.length l) l) pred))
-= forall_list_holds_on_pair_list_of_pair_list' pred l (holds_on_pair l pred) (fun _ -> ())
-
-let data_item_wf_head (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
-= match x with
-  | Map l ->
-      FStar.List.Tot.sorted (map_entry_order order _) l
-  | _ -> true
-
-#push-options "--z3rlimit 16"
-
-#restart-solver
 let data_item_wf_eq
   (order: (raw_data_item -> raw_data_item -> bool))
   (x: raw_data_item)
 : Lemma
   (data_item_wf order x == (data_item_wf_head order x && List.Tot.for_all (data_item_wf order) (get_children serialize_raw_data_item_param x)))
-= match x with
-  | Array l ->
-    assert_norm (data_item_wf order (Array l) == forall_list l (data_item_wf order));
-    forall_list_correct (data_item_wf order) l
-  | Map l ->
-    let l : list (raw_data_item & raw_data_item) = l in
-    assert_norm (data_item_wf order (Map l) == (
-      data_item_wf_head order (Map l) &&
-      forall_list l (holds_on_pair l (data_item_wf order))
-    ));
-    forall_list_holds_on_pair_list_of_pair_list (data_item_wf order) l;
-    forall_list_correct (data_item_wf order) (list_of_pair_list _ (List.Tot.length l) l)
-  | _ -> ()
+= holds_on_raw_data_item_eq_recursive (data_item_wf_head order) x
 
-#pop-options
-
-let data_item_wf_pred (order: (raw_data_item -> raw_data_item -> bool)) : pred_recursive_t serialize_raw_data_item_param = {
-  base = data_item_wf_head order;
-  pred = data_item_wf order;
-  prf = data_item_wf_eq order;
-}
+let data_item_wf_pred (order: (raw_data_item -> raw_data_item -> bool)) : pred_recursive_t serialize_raw_data_item_param =
+  holds_on_raw_data_item_pred (data_item_wf_head order)
 
 (* 4.2.1 Deterministically encoded CBOR: The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. *)
 
