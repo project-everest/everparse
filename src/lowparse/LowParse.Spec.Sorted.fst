@@ -183,6 +183,63 @@ let rec lex_order_total
         else ()
       end
 
+let rec lex_compare_append
+  (#t: Type)
+  (compare: t -> t -> int)
+  (l1 l2: list t)
+  (l1' l2': list t)
+: Lemma
+  (requires (lex_compare compare l1 l2 < 0 /\ List.Tot.length l1 == List.Tot.length l2))
+  (ensures (lex_compare compare (List.Tot.append l1 l1') (List.Tot.append l2 l2') < 0))
+  (decreases l1)
+= match l1, l2 with
+  | a1 :: q1, a2 :: q2 ->
+    let c = compare a1 a2 in
+    if c = 0
+    then lex_compare_append compare q1 q2 l1' l2'
+    else ()
+
+let rec lex_compare_append_recip
+  (#t: Type)
+  (compare: t -> t -> int)
+  (l1 l2: list t)
+  (l1' l2': list t)
+: Lemma
+  (requires (
+    lex_compare compare (List.Tot.append l1 l1') (List.Tot.append l2 l2') < 0 /\
+    List.Tot.length l1 == List.Tot.length l2
+  ))
+  (ensures (
+    lex_compare compare l1 l2 <= 0
+  ))
+  (decreases l1)
+= match l1, l2 with
+  | [], _ -> ()
+  | a1 :: q1, a2 :: q2 ->
+    if compare a1 a2 = 0
+    then lex_compare_append_recip compare q1 q2 l1' l2'
+    else ()
+
+let rec lex_compare_prefix
+  (#t: Type)
+  (compare: t -> t -> int)
+  (compare_equal: (
+    (x: t) ->
+    (y: t) ->
+    Lemma
+    (compare x y == 0 <==> x == y)
+  ))
+  (l: list t)
+  (l1 l2: list t)
+: Lemma
+  (ensures (lex_compare compare (List.Tot.append l l1) (List.Tot.append l l2) == lex_compare compare l1 l2))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    compare_equal a a;
+    lex_compare_prefix compare compare_equal q l1 l2
+
 let length_first_lex_order
   (#t: Type)
   (compare: t -> t -> int)
