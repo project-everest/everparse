@@ -291,23 +291,33 @@ let argument_as_simple_value
 
 (* Raw data items, disregarding ordering of map entries *)
 
-noeq
-type raw_data_item
-= | Simple: (v: simple_value) -> raw_data_item
-  | UInt64: (v: U64.t) -> raw_data_item
-  | NegInt64: (minus_one_minus_v: U64.t) -> raw_data_item
-  | ByteString: (v: Seq.seq byte { FStar.UInt.fits (Seq.length v) U64.n }) -> raw_data_item
-  | TextString: (v: Seq.seq byte { FStar.UInt.fits (Seq.length v) U64.n }) -> raw_data_item // Setion 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
-  | Array: (v: list raw_data_item { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
-  | Map: (v: list (raw_data_item & raw_data_item) { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
-  | Tagged: (tag: U64.t) -> (v: raw_data_item) -> raw_data_item
-//  | Float: (v: Float.float) -> raw_data_item // TODO
+[@@CMacro]
+let major_type_uint64 : major_type_t = 0uy
+
+[@@CMacro]
+let major_type_neg_int64 : major_type_t = 1uy
+
+inline_for_extraction
+let major_type_uint64_or_neg_int64 : eqtype = (x: major_type_t { x == major_type_uint64 \/ x == major_type_neg_int64 })
 
 [@@CMacro]
 let major_type_byte_string : major_type_t = 2uy
 
 [@@CMacro]
 let major_type_text_string : major_type_t = 3uy
+
+inline_for_extraction
+let major_type_byte_string_or_text_string : eqtype = (x: major_type_t { x == major_type_byte_string \/ x == major_type_text_string })
+
+noeq
+type raw_data_item
+= | Simple: (v: simple_value) -> raw_data_item
+  | Int64: (typ: major_type_uint64_or_neg_int64) -> (v: U64.t) -> raw_data_item
+  | String: (typ: major_type_byte_string_or_text_string) -> (v: Seq.seq byte { FStar.UInt.fits (Seq.length v) U64.n }) -> raw_data_item // Section 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
+  | Array: (v: list raw_data_item { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
+  | Map: (v: list (raw_data_item & raw_data_item) { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
+  | Tagged: (tag: U64.t) -> (v: raw_data_item) -> raw_data_item
+//  | Float: (v: Float.float) -> raw_data_item // TODO
 
 [@@CMacro]
 let major_type_array : major_type_t = 4uy
@@ -337,12 +347,6 @@ let content
 
 let raw_data_item' = dtuple2 header content
 
-[@@CMacro]
-let major_type_uint64 : major_type_t = 0uy
-
-[@@CMacro]
-let major_type_neg_int64 : major_type_t = 1uy
-
 let synth_raw_data_item'
   (h: header)
   (c: content h)
@@ -351,14 +355,10 @@ let synth_raw_data_item'
   | (| b, long_arg |) ->
     match b with
     | (major_type, _) ->
-      if major_type = major_type_uint64
-      then UInt64 (argument_as_uint64 b long_arg)
-      else if major_type = major_type_neg_int64
-      then NegInt64 (argument_as_uint64 b long_arg)
-      else if major_type = major_type_byte_string
-      then ByteString c
-      else if major_type = major_type_text_string
-      then TextString c
+      if major_type = major_type_uint64 || major_type = major_type_neg_int64
+      then Int64 major_type (argument_as_uint64 b long_arg)
+      else if major_type = major_type_byte_string || major_type = major_type_text_string
+      then String major_type c
       else if major_type = major_type_array
       then Array c
       else if major_type = major_type_map
@@ -774,10 +774,8 @@ let get_major_type
 : Tot major_type_t
 = match d with
   | Simple _ -> major_type_simple_value
-  | UInt64 _ -> major_type_uint64
-  | NegInt64 _ -> major_type_neg_int64
-  | ByteString _ -> major_type_byte_string
-  | TextString _ -> major_type_text_string
+  | Int64 m _ -> m
+  | String m _ -> m
   | Array _ -> major_type_array
   | Map _ -> major_type_map
   | Tagged _ _ -> major_type_tagged
@@ -878,16 +876,11 @@ let synth_raw_data_item_recip
 = match x with
   | Simple v ->
     (| simple_value_as_argument v, () |)
-  | UInt64 v ->
-    (| uint64_as_argument major_type_uint64 v, () |)
-  | NegInt64 v ->
-    (| uint64_as_argument major_type_neg_int64 v, () |)
-  | ByteString v ->
+  | Int64 m v ->
+    (| uint64_as_argument m v, () |)
+  | String m v ->
     let len = U64.uint_to_t (Seq.length v) in
-    (| uint64_as_argument major_type_byte_string len, v |)
-  | TextString v ->
-    let len = U64.uint_to_t (Seq.length v) in
-    (| uint64_as_argument major_type_text_string len, v |)
+    (| uint64_as_argument m len, v |)
   | Array v ->
     let len = U64.uint_to_t (List.Tot.length v) in
     (| uint64_as_argument major_type_array len, v |)
