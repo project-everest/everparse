@@ -166,6 +166,9 @@ let byte_compare (x y: byte) : Tot int =
   then -1
   else 1
 
+let bytes_lex_compare (x y: bytes) : Tot int =
+  S.lex_compare byte_compare (Seq.seq_to_list x) (Seq.seq_to_list y)
+
 let bytes_lex_order (x y: bytes) : Tot bool =
   S.lex_order byte_compare (Seq.seq_to_list x) (Seq.seq_to_list y)
 

@@ -189,6 +189,34 @@ let byte_compare_impl : NL.compare_impl I.parse_u8 byte_compare =
     else return 1s
 
 inline_for_extraction
+let byte_array_lex_compare
+  (na0: SZ.t)
+  (#va0: AP.v byte)
+  (a0: byte_array)
+  (nb0: SZ.t)
+  (#vb0: AP.v byte)
+  (b0: byte_array)
+: ST I16.t
+    (AP.arrayptr a0 va0 `star` AP.arrayptr b0 vb0)
+    (fun _ -> AP.arrayptr a0 va0 `star` AP.arrayptr b0 vb0)
+    (SZ.v na0 == AP.length (AP.array_of va0) /\ SZ.v nb0 == AP.length (AP.array_of vb0))
+    (fun res -> I16.v res == bytes_lex_compare (AP.contents_of va0) (AP.contents_of vb0))
+= Seq.lemma_seq_list_bij (AP.contents_of va0);
+  Seq.lemma_seq_list_bij (AP.contents_of vb0);
+  let _ = intro_seq_all_bytes a0 in
+  let _ = seq_all_bytes_to_nlist_byte (SZ.v na0) a0 in
+  let _ = intro_seq_all_bytes b0 in
+  let _ = seq_all_bytes_to_nlist_byte (SZ.v nb0) b0 in
+  let res = NL.nlist_lex_compare I.jump_u8 byte_compare byte_compare_impl na0 a0 nb0 b0 in
+  let _ = seq_all_bytes_from_nlist_byte (SZ.v nb0) b0 in
+  let _ = elim_seq_all_bytes b0 in
+  vpattern_rewrite (AP.arrayptr b0) vb0;
+  let _ = seq_all_bytes_from_nlist_byte (SZ.v na0) a0 in
+  let _ = elim_seq_all_bytes a0 in
+  vpattern_rewrite (AP.arrayptr a0) va0;
+  return res
+
+inline_for_extraction
 let byte_array_lex_order
   (na0: SZ.t)
   (#va0: AP.v byte)
@@ -201,20 +229,8 @@ let byte_array_lex_order
     (fun _ -> AP.arrayptr a0 va0 `star` AP.arrayptr b0 vb0)
     (SZ.v na0 == AP.length (AP.array_of va0) /\ SZ.v nb0 == AP.length (AP.array_of vb0))
     (fun res -> res == bytes_lex_order (AP.contents_of va0) (AP.contents_of vb0))
-= Seq.lemma_seq_list_bij (AP.contents_of va0);
-  Seq.lemma_seq_list_bij (AP.contents_of vb0);
-  let _ = intro_seq_all_bytes a0 in
-  let _ = seq_all_bytes_to_nlist_byte (SZ.v na0) a0 in
-  let _ = intro_seq_all_bytes b0 in
-  let _ = seq_all_bytes_to_nlist_byte (SZ.v nb0) b0 in
-  let res = NL.nlist_lex_order I.jump_u8 byte_compare byte_compare_impl na0 a0 nb0 b0 in
-  let _ = seq_all_bytes_from_nlist_byte (SZ.v nb0) b0 in
-  let _ = elim_seq_all_bytes b0 in
-  vpattern_rewrite (AP.arrayptr b0) vb0;
-  let _ = seq_all_bytes_from_nlist_byte (SZ.v na0) a0 in
-  let _ = elim_seq_all_bytes a0 in
-  vpattern_rewrite (AP.arrayptr a0) va0;
-  return res
+= let comp = byte_array_lex_compare na0 a0 nb0 b0 in
+  return (comp `I16.lt` 0s)
 
 inline_for_extraction
 let byte_array_length_first_lex_order
