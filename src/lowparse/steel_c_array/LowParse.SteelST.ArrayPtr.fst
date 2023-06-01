@@ -184,7 +184,10 @@ let index #t #v r i =
   let res = STC.read p in
   let _ = STC.unarray_cell a i p in
   drop (STC.has_array_cell _ _ _);
-  rewrite (STC.array_pts_to _ _) (arrayptr1 v s);
+  let s' : Ghost.erased _ = vpattern_replace (STC.array_pts_to a) in
+  assert (s' `Seq.equal` Ghost.reveal s);
+  noop ();
+  rewrite (STC.array_pts_to a s') (arrayptr1 v s);
   rewrite (arrayptr0 r v) (arrayptr r v);
   return res
 
