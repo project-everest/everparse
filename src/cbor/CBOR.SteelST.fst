@@ -1758,3 +1758,228 @@ let focus_string
   return a'
 
 #pop-options
+
+(* Comparisons with unserialized values *)
+
+let get_uint64_as_initial_byte
+  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (x: U64.t)
+: Tot U8.t
+= cps_uint64_as_argument
+    U8.t
+    (fun cond iftrue iffalse -> if cond then iftrue () else iffalse ())
+    ty
+    x
+    (fun h -> match h with (| b, _ |) -> mk_synth_initial_byte b)
+
+let get_uint64_as_initial_byte_header_correct
+  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (x: U64.t)
+: Lemma
+  (get_uint64_as_initial_byte ty x == Seq.index (serialize serialize_header (uint64_as_argument ty x)) 0)
+= let h = uint64_as_argument ty x in
+  serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h;
+  let (| b, _ |) = h in
+  serialize_bitsum'_eq
+    initial_byte_desc
+    serialize_u8
+    b;
+  serialize_u8_spec (synth_bitsum'_recip initial_byte_desc b)
+
+let get_major_type_synth_raw_data_item_recip
+  (x: raw_data_item)
+: Lemma
+  (get_major_type x == get_header_major_type (dfst (synth_raw_data_item_recip x)))
+= ()
+  
+module I16 = FStar.Int16
+
+let byte_compare_pure_impl (x y: byte) : Pure I16.t
+  (requires True)
+  (ensures (fun res -> I16.v res == byte_compare x y))
+= if x = y
+  then 0s
+  else if x `FStar.UInt8.lt` y
+  then -1s
+  else 1s
+
+let serialize_weaken_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (k' : parser_kind)
+  (#p: parser k t)
+  (s: serializer p { k' `is_weaker_than` k })
+  (x: t)
+: Lemma
+  (serialize (serialize_weaken k' s) x == serialize s x)
+= ()
+
+#push-options "--z3rlimit 64 --query_stats --ifuel 8 --fuel 8"
+
+module U16 = FStar.UInt16
+module U32 = FStar.UInt32
+module U64 = FStar.UInt64
+
+#restart-solver
+let lex_compare_with_header_correct
+  (ty1: major_type_t { ty1 `U8.lt` major_type_simple_value })
+  (x1: U64.t)
+  (ty2: major_type_t { ty2 `U8.lt` major_type_simple_value })
+  (x2: U64.t)
+: Lemma
+  (requires (
+    get_uint64_as_initial_byte ty1 x1 == get_uint64_as_initial_byte ty2 x2
+  ))
+  (ensures (
+    ty1 == ty2 /\
+    (bytes_lex_compare (serialize serialize_header (uint64_as_argument ty1 x1)) (serialize serialize_header (uint64_as_argument ty2 x2)) < 0 <==> x1 `U64.lt` x2)
+  ))
+= let h1 = uint64_as_argument ty1 x1 in
+  let h2 = uint64_as_argument ty2 x2 in
+  let (| b1, l1 |) = h1 in
+  let (| b2, l2 |) = h2 in
+  let b1' = synth_bitsum'_recip initial_byte_desc b1 in
+  let b2' = synth_bitsum'_recip initial_byte_desc b2 in
+  assert (get_uint64_as_initial_byte ty1 x1 == b1');
+  assert (get_uint64_as_initial_byte ty2 x2 == b2');
+  assert (b1' == b2');
+  assert (synth_bitsum' initial_byte_desc b1' == b1);
+  assert (synth_bitsum' initial_byte_desc b2' == b2);
+  assert (b1 == b2);
+  assert (ty1 == ty2);
+  let (_, (a1, _)) = b1 in
+  let (_, (a2, _)) = b2 in
+  assert (a1 == a2);
+  assert (serialize serialize_initial_byte b1 `Seq.equal` serialize serialize_initial_byte b2);
+  serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h1;
+  serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h2;
+  LowParse.Spec.Endianness.seq_to_list_append (serialize serialize_initial_byte b1) (serialize (serialize_long_argument b1) l1);
+  LowParse.Spec.Endianness.seq_to_list_append (serialize serialize_initial_byte b2) (serialize (serialize_long_argument b2) l2);
+  lex_compare_prefix byte_compare (fun _ _ -> ()) (Seq.seq_to_list (serialize serialize_initial_byte b1)) (Seq.seq_to_list (serialize (serialize_long_argument b1) l1)) (Seq.seq_to_list (serialize (serialize_long_argument b2) l2));
+  if a1 = additional_info_long_argument_8_bits
+  then begin
+    let p1' : parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.weaken parse_long_argument_kind (parse_synth (parse_filter parse_u8 uint8_wf) (LongArgumentU8 #b1 ())) in
+    assert (parse_long_argument b1 == p1');
+    let s1_pre = serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentU8 #b1 ()) (serialize_filter serialize_u8 uint8_wf) LongArgumentU8?.v () in
+    let s1' : serializer p1' = serialize_weaken parse_long_argument_kind s1_pre in
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
+    assert (serialize s1' l1 == serialize s1_pre l1);
+    serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentU8 #b1 ()) (serialize_filter serialize_u8 uint8_wf) LongArgumentU8?.v () l1;
+    serialize_u8_spec_be (LongArgumentU8?.v l1);
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l2;
+    assert (serialize s1' l2 == serialize s1_pre l2);
+    serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentU8 #b1 ()) (serialize_filter serialize_u8 uint8_wf) LongArgumentU8?.v () l2;
+    serialize_u8_spec_be (LongArgumentU8?.v l2);
+    LowParse.Spec.Endianness.big_endian_lex_compare 1 byte_compare (fun _ _ -> ()) (fun _ _ -> ()) (U8.v (LongArgumentU8?.v l1)) (U8.v (LongArgumentU8?.v l2))
+  end
+  else if a1 = additional_info_long_argument_16_bits
+  then begin
+    let p1' : parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.weaken parse_long_argument_kind (parse_synth (parse_filter parse_u16 uint16_wf) (LongArgumentU16 #b1 ())) in
+    assert (parse_long_argument b1 == p1');
+    let s1_pre = serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentU16 #b1 ()) (serialize_filter serialize_u16 uint16_wf) LongArgumentU16?.v () in
+    let s1' : serializer p1' = serialize_weaken parse_long_argument_kind s1_pre in
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
+    assert (serialize s1' l1 == serialize s1_pre l1);
+    serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentU16 #b1 ()) (serialize_filter serialize_u16 uint16_wf) LongArgumentU16?.v () l1;
+    serialize_u16_spec_be (LongArgumentU16?.v l1);
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l2;
+    assert (serialize s1' l2 == serialize s1_pre l2);
+    serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentU16 #b1 ()) (serialize_filter serialize_u16 uint16_wf) LongArgumentU16?.v () l2;
+    serialize_u16_spec_be (LongArgumentU16?.v l2);
+    LowParse.Spec.Endianness.big_endian_lex_compare 2 byte_compare (fun _ _ -> ()) (fun _ _ -> ()) (U16.v (LongArgumentU16?.v l1)) (U16.v (LongArgumentU16?.v l2))
+  end
+  else if a1 = additional_info_long_argument_32_bits
+  then begin
+    let p1' : parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.weaken parse_long_argument_kind (parse_synth (parse_filter parse_u32 uint32_wf) (LongArgumentU32 #b1 ())) in
+    assert (parse_long_argument b1 == p1');
+    let s1_pre = serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentU32 #b1 ()) (serialize_filter serialize_u32 uint32_wf) LongArgumentU32?.v () in
+    let s1' : serializer p1' = serialize_weaken parse_long_argument_kind s1_pre in
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
+    assert (serialize s1' l1 == serialize s1_pre l1);
+    serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentU32 #b1 ()) (serialize_filter serialize_u32 uint32_wf) LongArgumentU32?.v () l1;
+    serialize_u32_spec_be (LongArgumentU32?.v l1);
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l2;
+    assert (serialize s1' l2 == serialize s1_pre l2);
+    serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentU32 #b1 ()) (serialize_filter serialize_u32 uint32_wf) LongArgumentU32?.v () l2;
+    serialize_u32_spec_be (LongArgumentU32?.v l2);
+    LowParse.Spec.Endianness.big_endian_lex_compare 4 byte_compare (fun _ _ -> ()) (fun _ _ -> ()) (U32.v (LongArgumentU32?.v l1)) (U32.v (LongArgumentU32?.v l2))
+  end
+  else if a1 = additional_info_long_argument_64_bits
+  then begin
+    let p1' : parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.weaken parse_long_argument_kind (parse_synth (parse_filter parse_u64 uint64_wf) (LongArgumentU64 #b1 ())) in
+    assert (parse_long_argument b1 == p1');
+    let s1_pre = serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentU64 #b1 ()) (serialize_filter serialize_u64 uint64_wf) LongArgumentU64?.v () in
+    let s1' : serializer p1' = serialize_weaken parse_long_argument_kind s1_pre in
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
+    assert (serialize s1' l1 == serialize s1_pre l1);
+    serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentU64 #b1 ()) (serialize_filter serialize_u64 uint64_wf) LongArgumentU64?.v () l1;
+    serialize_u64_spec_be (LongArgumentU64?.v l1);
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l2;
+    assert (serialize s1' l2 == serialize s1_pre l2);
+    serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentU64 #b1 ()) (serialize_filter serialize_u64 uint64_wf) LongArgumentU64?.v () l2;
+    serialize_u64_spec_be (LongArgumentU64?.v l2);
+    LowParse.Spec.Endianness.big_endian_lex_compare 8 byte_compare (fun _ _ -> ()) (fun _ _ -> ()) (U64.v (LongArgumentU64?.v l1)) (U64.v (LongArgumentU64?.v l2))
+  end
+  else begin
+    let p1' : parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.weaken parse_long_argument_kind (parse_synth parse_empty (LongArgumentOther #b1 a1 ())) in
+    assert (parse_long_argument b1 == p1');
+    let s1_pre = serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentOther #b1 a1 ()) serialize_empty LongArgumentOther?.v () in
+    let s1' : serializer p1' = serialize_weaken parse_long_argument_kind s1_pre in
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
+    assert (serialize s1' l1 == serialize s1_pre l1);
+    assert (serialize s1' l1 `Seq.equal` Seq.empty);
+    assert (serialize (serialize_long_argument b1) l1 == Seq.empty);
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l2;
+    assert (serialize s1' l2 == serialize s1_pre l2);
+    assert (serialize s1' l2 `Seq.equal` Seq.empty);
+    assert (serialize (serialize_long_argument b2) l2 == Seq.empty)
+  end
+
+#pop-options
+
+#push-options "--z3rlimit 16"
+
+#restart-solver
+let lex_compare_with_header
+  (ty: Ghost.erased major_type_t { ty `U8.lt` major_type_simple_value })
+  (x: U64.t)
+  (b: U8.t)
+  (#vh: v (get_parser_kind parse_header) header)
+  (a: byte_array)
+: ST I16.t
+    (aparse parse_header a vh)
+    (fun _ -> aparse parse_header a vh)
+    (b == get_uint64_as_initial_byte ty x /\
+      (let (| (ty', _), _ |) = vh.contents in ty' `U8.lt` major_type_simple_value) // FIXME: remove this hypothesis
+    )
+    (fun i ->
+      let s0 = serialize serialize_header (uint64_as_argument ty x) in
+      let s = serialize serialize_header vh.contents in
+      if I16.v i < 0
+      then bytes_lex_order s0 s
+      else if I16.v i = 0
+      then s0 == s
+      else bytes_lex_order s s0
+    )
+= get_uint64_as_initial_byte_header_correct ty x;
+  let _ = elim_aparse_with_serializer serialize_header a in
+  let first_byte = AP.index a 0sz in
+  let _ = intro_aparse parse_header a in
+  vpattern_rewrite (aparse _ a) vh;
+  let compare_first_byte = byte_compare_pure_impl b first_byte in
+  if compare_first_byte <> 0s
+  then begin
+    noop ();
+    return compare_first_byte
+  end else begin
+    let x' = read_header_argument_as_uint64 a in
+    let b' : Ghost.erased initial_byte = dfst vh.contents in
+    let ty' : Ghost.erased major_type_t = let (ty', _) = Ghost.reveal b' in ty' in
+    assert (vh.contents == uint64_as_argument ty' x');
+    get_uint64_as_initial_byte_header_correct ty' x';
+    lex_compare_with_header_correct ty x ty' x';
+    lex_compare_with_header_correct ty' x' ty x;
+    return (if x `U64.lt` x' then -1s else if x' `U64.lt` x then 1s else 0s)
+  end
+
+#pop-options
