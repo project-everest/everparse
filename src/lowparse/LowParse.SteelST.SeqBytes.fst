@@ -179,7 +179,7 @@ module I16 = FStar.Int16
 
 inline_for_extraction
 let byte_compare_impl : NL.compare_impl I.parse_u8 byte_compare =
-  fun a1 a2 ->
+  fun a1 _ a2 _ ->
     let x1 = I.read_u8 a1 in
     let x2 = I.read_u8 a2 in
     if x1 = x2
@@ -200,7 +200,7 @@ let byte_array_lex_compare
     (AP.arrayptr a0 va0 `star` AP.arrayptr b0 vb0)
     (fun _ -> AP.arrayptr a0 va0 `star` AP.arrayptr b0 vb0)
     (SZ.v na0 == AP.length (AP.array_of va0) /\ SZ.v nb0 == AP.length (AP.array_of vb0))
-    (fun res -> I16.v res == bytes_lex_compare (AP.contents_of va0) (AP.contents_of vb0))
+    (fun res -> I16.v res `NL.same_sign` bytes_lex_compare (AP.contents_of va0) (AP.contents_of vb0))
 = Seq.lemma_seq_list_bij (AP.contents_of va0);
   Seq.lemma_seq_list_bij (AP.contents_of vb0);
   let _ = intro_seq_all_bytes a0 in

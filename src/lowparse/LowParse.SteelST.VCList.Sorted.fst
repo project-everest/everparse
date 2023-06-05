@@ -101,7 +101,7 @@ let nlist_sorted_invariant
 
 #set-options "--ide_id_info_off"
 
-let intro_nlist_sorted_invariant
+val intro_nlist_sorted_invariant
   (#opened: _)
   (#k: parser_kind)
   (#t: Type)
@@ -137,6 +137,28 @@ let intro_nlist_sorted_invariant
   (n == SZ.v n2 + 1 /\
     nlist_sorted_invariant_prop k t order n0 va0 n2 va va1 va2 res cont)
   (fun _ -> True)
+
+let intro_nlist_sorted_invariant
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (order: t -> t -> bool)
+  (n0: nat)
+  (va0: v (parse_nlist_kind n0 k) (nlist n0 t))
+  (a0: byte_array)
+  (pa: R.ref byte_array)
+  (pn2: R.ref SZ.t)
+  (pres: R.ref bool)
+  (#n: nat)
+  (#va: v (parse_nlist_kind n k) (nlist n t))
+  (#va1: v k t)
+  (#n2: SZ.t)
+  (#va2: v (parse_nlist_kind (SZ.v n2) k) (nlist (SZ.v n2) t))
+  (#a: byte_array)
+  (#a2: byte_array)
+  (#res: bool)
+  (cont: bool)
 = let w = {
     n2 = n2;
     a = a;
@@ -341,6 +363,12 @@ let nlist_sorted
 
 module I16 = FStar.Int16
 
+let same_sign
+  (x1 x2: int)
+: GTot prop
+= (x1 == 0 <==> x2 == 0) /\
+  (x1 < 0 <==> x2 < 0)
+
 let nlist_lex_compare_invariant_prop
   (k: parser_kind)
   (t: Type)
@@ -362,7 +390,7 @@ let nlist_lex_compare_invariant_prop
 = nan == SZ.v na /\
   nbn == SZ.v nb /\
   cont == ((res = 0s) && SZ.v na > 0 && SZ.v nb > 0) /\
-  lex_compare compare va0.contents vb0.contents == (if cont then lex_compare compare va.contents vb.contents else I16.v res) /\
+  same_sign (lex_compare compare va0.contents vb0.contents) (if cont then lex_compare compare va.contents vb.contents else I16.v res) /\
   (cont == true ==> (a == ga /\ b == gb)) /\
   k.parser_kind_subkind == Some ParserStrong
 
@@ -574,6 +602,26 @@ let elim_nlist_lex_compare_invariant
   w
 
 inline_for_extraction
+let compare_impl_with
+  (#kkey: Ghost.erased parser_kind)
+  (#tkey: Type)
+  (pkey: parser kkey tkey)
+  (key_compare: Ghost.erased (tkey -> tkey -> int))
+  (key: Ghost.erased tkey)
+  (rkey: vprop)
+: Tot Type
+= (#va: v kkey tkey) ->
+  (a: byte_array) ->
+  (sz: SZ.t) ->
+  ST I16.t
+    (rkey `star` aparse pkey a va)
+    (fun _ -> rkey `star` aparse pkey a va)
+    (SZ.v sz == AP.length (array_of va))
+    (fun res ->
+      same_sign (I16.v res) (Ghost.reveal key_compare key va.contents)
+    )
+
+inline_for_extraction
 let compare_impl
   (#k: Ghost.erased parser_kind)
   (#t: Type)
@@ -582,14 +630,11 @@ let compare_impl
 : Tot Type
 = 
   (#va1: v k t) ->
-  (#va2: v k t) ->
   (a1: byte_array) ->
-  (a2: byte_array) ->
-  ST I16.t
-    (aparse p a1 va1 `star` aparse p a2 va2)
-    (fun _ -> aparse p a1 va1 `star` aparse p a2 va2)
-    True
-    (fun res -> I16.v res == Ghost.reveal compare va1.contents va2.contents)
+  (sz1: SZ.t) ->
+  Pure (compare_impl_with p compare va1.contents (aparse p a1 va1))
+    (SZ.v sz1 == AP.length (array_of va1))
+    (fun _ -> True)
 
 #push-options "--z3rlimit 16 --split_queries always --fuel 3 --ifuel 6 --query_stats"
 
@@ -624,6 +669,7 @@ let nlist_lex_compare_body
   let na' = na `SZ.sub` 1sz in
   let a' = elim_nlist_cons _ _ (SZ.v na') a in
   let _ = gen_elim () in
+  let a_sz = get_parsed_size j a in
   let va' = vpattern_replace (aparse _ a') in
   let b = R.read pb in
   vpattern_rewrite #_ #_ #w.gb (fun a -> aparse _ a _) b;
@@ -631,8 +677,9 @@ let nlist_lex_compare_body
   let nb' = nb `SZ.sub` 1sz in
   let b' = elim_nlist_cons _ _ (SZ.v nb') b in
   let _ = gen_elim () in
+  let b_sz = get_parsed_size j b in
   let vb' = vpattern_replace (aparse _ b') in
-  let comp = f_compare a b in
+  let comp = f_compare a a_sz b b_sz in
   if comp <> 0s
   then begin
     R.write pres comp;
@@ -658,9 +705,9 @@ let nlist_lex_compare_body
       intro_nlist_lex_compare_invariant p compare na0 va0 a0 nb0 vb0 b0 pa pb pna pnb pres a' b' false;
       return ()
     end else begin
-      let a' = hop_aparse_aparse j _ a a' in
+      let a' = hop_aparse_aparse_with_size _ _ a a_sz a' in
       R.write pa a';
-      let b' = hop_aparse_aparse j _ b b' in
+      let b' = hop_aparse_aparse_with_size _ _ b b_sz b' in
       R.write pb b';
       nlist_iterator_next p a0 a va';
       nlist_iterator_next p b0 b vb';
@@ -720,8 +767,8 @@ let nlist_lex_compare_nonempty
     (SZ.v na0 > 0 /\ SZ.v nb0 > 0 /\
       k.parser_kind_subkind == Some ParserStrong
     )
-    (fun res -> I16.v res == lex_compare compare va0.contents vb0.contents)
-= let res : (res: I16.t { I16.v res == lex_compare compare va0.contents vb0.contents }) =
+    (fun res -> I16.v res `same_sign` lex_compare compare va0.contents vb0.contents)
+= let res : (res: I16.t { I16.v res `same_sign` lex_compare compare va0.contents vb0.contents }) =
     let _ = nlist_iterator_begin p #(SZ.v na0) #va0 a0 in
     let _ = nlist_iterator_begin p #(SZ.v nb0) #vb0 b0 in
     R.with_local a0 (fun pa ->
@@ -739,7 +786,7 @@ let nlist_lex_compare_nonempty
       let res = R.read pres in
       nlist_iterator_end p #(SZ.v na0) #va0 #(SZ.v w.na) #(w.va) a0 w.ga;
       nlist_iterator_end p #(SZ.v nb0) #vb0 #(SZ.v w.nb) #(w.vb) b0 w.gb;
-      return (intro_refinement (fun res -> I16.v res == lex_compare compare va0.contents vb0.contents) res)
+      return (intro_refinement (fun res -> I16.v res `same_sign` lex_compare compare va0.contents vb0.contents) res)
     )))))
   in
   return res
@@ -764,7 +811,7 @@ let nlist_lex_compare
     (
       k.parser_kind_subkind == Some ParserStrong
     )
-    (fun res -> I16.v res == lex_compare compare va0.contents vb0.contents)
+    (fun res -> I16.v res `same_sign` lex_compare compare va0.contents vb0.contents)
 = if na0 = 0sz
   then
     if nb0 = 0sz

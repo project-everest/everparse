@@ -692,27 +692,6 @@ let nlist_assoc_default_eq_keys
 
 module I16 = FStar.Int16
 
-inline_for_extraction
-let nlist_assoc_compare_keys
-  (#kkey: Ghost.erased parser_kind)
-  (#tkey: Type)
-  (pkey: parser kkey tkey)
-  (key_order: Ghost.erased (tkey -> tkey -> bool))
-  (key: Ghost.erased tkey)
-  (rkey: vprop)
-: Tot Type
-= (#va: v kkey tkey) ->
-  (a: byte_array) ->
-  (sz: SZ.t) ->
-  ST I16.t
-    (rkey `star` aparse pkey a va)
-    (fun _ -> rkey `star` aparse pkey a va)
-    (SZ.v sz == AP.length (array_of va))
-    (fun res -> 
-      (res = 0s <==> Ghost.reveal key == va.contents) /\
-      (res `I16.lt` 0s <==> Ghost.reveal key_order key va.contents)
-    )
-
 #push-options "--z3rlimit 32 --split_queries always"
 
 #restart-solver
@@ -728,8 +707,7 @@ let nlist_assoc_sorted_step
   (jump_value: jumper pvalue)
   (#key: Ghost.erased tkey)
   (#rkey: vprop)
-  (#key_order: Ghost.erased (tkey -> tkey -> bool))
-  (compare_keys: nlist_assoc_compare_keys pkey key_order key rkey)
+  (key_order: Ghost.erased (tkey -> tkey -> bool))
   (key_order_irrefl: (
     (k1: tkey) ->
     (k2: tkey) ->
@@ -744,6 +722,20 @@ let nlist_assoc_sorted_step
     Lemma
     (requires (Ghost.reveal key_order k1 k2 /\ Ghost.reveal key_order k2 k3))
     (ensures (Ghost.reveal key_order k1 k3))
+  ))
+  (#key_compare: Ghost.erased (tkey -> tkey -> int))
+  (compare_keys: compare_impl_with pkey key_compare key rkey)
+  (key_compare_lt: (
+    (k1: tkey) ->
+    (k2: tkey) ->
+    Lemma
+    (Ghost.reveal key_compare k1 k2 < 0 <==> Ghost.reveal key_order k1 k2 == true)
+  ))
+  (key_compare_eq: (
+    (k1: tkey) ->
+    (k2: tkey) ->
+    Lemma
+    (Ghost.reveal key_compare k1 k2 == 0 <==> k1 == k2)
   ))
   (n0: Ghost.erased nat)
   (va0: v (parse_nlist_kind n0 (and_then_kind kkey kvalue)) (nlist n0 (tkey & tvalue)))
@@ -775,6 +767,8 @@ let nlist_assoc_sorted_step
   let _ = gen_elim () in
   let key_size = get_parsed_size jump_key a in
   let av = hop_aparse_aparse_with_size pkey pvalue a key_size gav in
+  let vak = vpattern (aparse pkey a) in
+  key_compare_eq key vak.contents;
   let res = compare_keys a key_size in
   if res = 0s
   then begin
@@ -800,7 +794,7 @@ let nlist_assoc_sorted_step
     return ()
   end else if res `I16.lt` 0s
   then begin
-    let vak = vpattern (aparse pkey a) in
+    key_compare_lt key vak.contents;
     let vav = vpattern (aparse pvalue av) in
     let va' : v _ (nlist (SZ.v n_pred) _) = vpattern_replace (aparse (parse_nlist (SZ.v n_pred) (pkey `nondep_then` pvalue)) ga') in
     map_entry_order_assoc_order_none key_order key_order_irrefl key_order_trans vak.contents vav.contents va'.contents (Ghost.reveal key);
@@ -845,8 +839,7 @@ let nlist_assoc_sorted
   (jump_value: jumper pvalue)
   (#key: Ghost.erased tkey)
   (#rkey: vprop)
-  (#key_order: Ghost.erased (tkey -> tkey -> bool))
-  (compare_keys: nlist_assoc_compare_keys pkey key_order key rkey)
+  (key_order: Ghost.erased (tkey -> tkey -> bool))
   (key_order_irrefl: (
     (k1: tkey) ->
     (k2: tkey) ->
@@ -861,6 +854,20 @@ let nlist_assoc_sorted
     Lemma
     (requires (Ghost.reveal key_order k1 k2 /\ Ghost.reveal key_order k2 k3))
     (ensures (Ghost.reveal key_order k1 k3))
+  ))
+  (#key_compare: Ghost.erased (tkey -> tkey -> int))
+  (compare_keys: compare_impl_with pkey key_compare key rkey)
+  (key_compare_lt: (
+    (k1: tkey) ->
+    (k2: tkey) ->
+    Lemma
+    (Ghost.reveal key_compare k1 k2 < 0 <==> Ghost.reveal key_order k1 k2 == true)
+  ))
+  (key_compare_eq: (
+    (k1: tkey) ->
+    (k2: tkey) ->
+    Lemma
+    (Ghost.reveal key_compare k1 k2 == 0 <==> k1 == k2)
   ))
   (n0: SZ.t)
   (#va0: v (parse_nlist_kind (SZ.v n0) (and_then_kind kkey kvalue)) (nlist (SZ.v n0) (tkey & tvalue)))
@@ -894,7 +901,7 @@ let nlist_assoc_sorted
       Steel.ST.Loops.while_loop
         (nlist_assoc_invariant pkey pvalue key rkey (Some (Ghost.reveal key_order)) (SZ.v n0) va0 a0 pa pn pres)
         (nlist_assoc_invariant_test pkey pvalue key rkey (Some (Ghost.reveal key_order)) (SZ.v n0) va0 a0 pa pn pres)
-        (nlist_assoc_sorted_step jump_key jump_value compare_keys key_order_irrefl key_order_trans (SZ.v n0) va0 a0 pa pn pres);
+        (nlist_assoc_sorted_step jump_key jump_value key_order key_order_irrefl key_order_trans compare_keys key_compare_lt key_compare_eq (SZ.v n0) va0 a0 pa pn pres);
       let _ = nlist_assoc_invariant_end pkey pvalue key rkey (Some (Ghost.reveal key_order)) (SZ.v n0) va0 a0 pa pn pres in
       let _ = gen_elim () in
       let res = R.read pres in
