@@ -28,7 +28,7 @@ endif
 INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj --include ..
 
 # This list should be in sync with ../Makefile:STEEL_FUNCTOR_BASES
-STEEL_FUNCTOR_BASES ?= ArrayPtr
+STEEL_FUNCTOR_BASES ?= ArrayPtr R2LOutput
 STEEL_FUNCTOR_MODULES = $(addprefix LowParse.SteelST.,$(STEEL_FUNCTOR_BASES))
 STEEL_FUNCTOR_FSTS = $(addsuffix .fst,$(STEEL_FUNCTOR_MODULES))
 

@@ -52,7 +52,7 @@ ifeq (,$(STEEL_HOME))
 steel:
 else
 
-STEEL_FUNCTOR_BASES=ArrayPtr
+STEEL_FUNCTOR_BASES=ArrayPtr R2LOutput
 STEEL_FUNCTOR_FSTS=$(addsuffix .fst,$(addprefix LowParse.SteelST.,$(STEEL_FUNCTOR_BASES)))
 STEEL_FUNCTOR_FSTI_CHECKEDS=$(addsuffix i.checked,$(STEEL_FUNCTOR_FSTS))
 
