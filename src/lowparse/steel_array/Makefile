@@ -27,20 +27,27 @@ ifdef KRML_HOME
 endif
 INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj --include ..
 
-ALREADY_CACHED = --already_cached *,-LowParse.SteelST.ArrayPtr
+# This list should be in sync with ../Makefile:STEEL_FUNCTOR_BASES
+STEEL_FUNCTOR_BASES ?= ArrayPtr
+STEEL_FUNCTOR_MODULES = $(addprefix LowParse.SteelST.,$(STEEL_FUNCTOR_BASES))
+STEEL_FUNCTOR_FSTS = $(addsuffix .fst,$(STEEL_FUNCTOR_MODULES))
+
+# Not sure if this works well. F* only expects at most 1 --already_cached. If --already_cached '*,' is moved upfront, then it will take precedence and F* will fail.
+# ALREADY_CACHED = $(addprefix --already_cached -,$(STEEL_FUNCTOR_MODULES)) --already_cached '*,'
+# Not sure if this works on Windows, though
+ALREADY_CACHED = --already_cached "*, $(addprefix -,$(STEEL_FUNCTOR_MODULES))"
+
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
 ifeq (,$(STEEL_HOME))
 	$(error "Please set STEEL_HOME to the root/prefix directory of your Steel installation.")
 endif
 FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
 
-LOWPARSE_FILES=LowParse.SteelST.ArrayPtr.fst
-
 clean:
 	rm -rf *.checked *.source .depend
 
-.depend: $(LOWPARSE_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@
+.depend: $(STEEL_FUNCTOR_FSTS)
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(STEEL_FUNCTOR_FSTS) > $@
 
 include .depend
 

@@ -52,13 +52,17 @@ ifeq (,$(STEEL_HOME))
 steel:
 else
 
-steel_array: LowParse.SteelST.ArrayPtr.fsti.checked steel_array/LowParse.SteelST.ArrayPtr.fst
+STEEL_FUNCTOR_BASES=ArrayPtr
+STEEL_FUNCTOR_FSTS=$(addsuffix .fst,$(addprefix LowParse.SteelST.,$(STEEL_FUNCTOR_BASES)))
+STEEL_FUNCTOR_FSTI_CHECKEDS=$(addsuffix i.checked,$(STEEL_FUNCTOR_FSTS))
+
+STEEL_FUNCTOR_VARIANTS=steel_array steel_c_array
+.PHONY: $(STEEL_FUNCTOR_VARIANTS)
+
+$(STEEL_FUNCTOR_VARIANTS): %: $(STEEL_FUNCTOR_FSTI_CHECKEDS) $(addprefix %/,$(STEEL_FUNCTOR_FSTS))
 	+$(MAKE) -C $@
 
-steel_c_array: LowParse.SteelST.ArrayPtr.fsti.checked steel_c_array/LowParse.SteelST.ArrayPtr.fst
-	+$(MAKE) -C $@
-
-steel: steel_array steel_c_array $(filter LowParse.Steel%,$(ALL_CHECKED_FILES))
+steel: $(STEEL_FUNCTOR_VARIANTS) $(filter LowParse.Steel%,$(ALL_CHECKED_FILES))
 
 endif
 
@@ -80,7 +84,7 @@ $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test lowparse spec steel steel_array steel_c_array
+.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test lowparse spec steel
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
