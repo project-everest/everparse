@@ -384,9 +384,12 @@ let synth_raw_data_item_injective : squash (synth_injective synth_raw_data_item)
 let parse_initial_byte : parser _ initial_byte =
   parse_filter (parse_bitsum' initial_byte_desc parse_u8) initial_byte_wf
 
+noextract
+let parse_long_argument_kind = strong_parser_kind 0 8 None
+
 let parse_long_argument
   (b: initial_byte)
-: Tot (parser (strong_parser_kind 0 8 None) (long_argument b))
+: Tot (parser parse_long_argument_kind (long_argument b))
 = match b with
   | (major_type, (additional_info, _)) ->
     if additional_info = additional_info_long_argument_8_bits
@@ -726,7 +729,7 @@ let parse_nlist_one
 )
 = parse_nlist_eq 1 p b
 
-#push-options "--z3rlimit 64 --ifuel 6"
+#push-options "--z3rlimit 64 --ifuel 8"
 #restart-solver
 
 let parse_raw_data_item_eq
@@ -1063,6 +1066,127 @@ let serialize_raw_data_item_aux_correct
 = Classical.forall_intro parse_raw_data_item_eq;
   let s' = serialize_ext parse_raw_data_item serialize_raw_data_item (parse_raw_data_item_aux parse_raw_data_item) in
   serializer_unique (parse_raw_data_item_aux parse_raw_data_item) serialize_raw_data_item_aux s' x
+
+// Some lemmas about the initial byte
+
+let get_major_type_synth_raw_data_item
+  (x: raw_data_item')
+: Lemma
+  (get_major_type (synth_raw_data_item x) == (match x with (| (| (major_type, _), _ |), _ |) -> major_type))
+  [SMTPat (synth_raw_data_item x)]
+= assert_norm (pow2 3 == 8)
+
+let get_raw_data_item_header
+  (x: raw_data_item)
+: GTot header
+= dfst (synth_raw_data_item_recip x)
+
+noextract
+let get_header_major_type
+  (h: header)
+: Tot major_type_t
+= let (| (major_type, _), _ |) = h in
+  major_type
+
+noextract
+let get_header_argument_as_uint64
+  (h: header)
+: Tot UInt64.t
+= let (| b, l |) = h in
+  argument_as_uint64 b l
+
+inline_for_extraction
+noextract
+let cps_simple_value_as_argument
+  (t': Type)
+  (t'_ifthenelse: if_combinator_weak t')
+  (x: simple_value)
+  (k: (h: header) -> Pure t'
+    (requires (h == simple_value_as_argument x))
+    (ensures (fun _ -> True))
+  )
+: Tot t'
+= t'_ifthenelse (x `U8.lte` max_simple_value_additional_info)
+    (fun _then -> k (| mk_initial_byte major_type_simple_value x, LongArgumentOther x () () |))
+    (fun _else -> k (| mk_initial_byte major_type_simple_value additional_info_long_argument_8_bits, LongArgumentSimpleValue () x |))
+
+inline_for_extraction
+noextract
+let cps_uint64_as_argument
+  (t': Type)
+  (t'_ifthenelse: if_combinator_weak t')
+  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (x: U64.t)
+  (k: (h: header) -> Pure t'
+    (requires (h == uint64_as_argument ty x))
+    (ensures (fun _ -> True))
+  )
+: Tot t'
+= t'_ifthenelse (x `U64.lt` min_deterministic_uint8_as_uint64)
+    (fun _ -> k (| mk_initial_byte ty (Cast.uint64_to_uint8 x), LongArgumentOther (Cast.uint64_to_uint8 x) () () |))
+    (fun _ -> t'_ifthenelse (x `U64.lt` min_deterministic_uint16_as_uint64)
+      (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_8_bits, LongArgumentU8 () (Cast.uint64_to_uint8 x) |))
+      (fun _ -> t'_ifthenelse (x `U64.lt` min_deterministic_uint32_as_uint64)
+        (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_16_bits, LongArgumentU16 () (Cast.uint64_to_uint16 x) |))
+        (fun _ -> t'_ifthenelse (x `U64.lt` min_deterministic_uint64)
+          (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_32_bits, LongArgumentU32 () (Cast.uint64_to_uint32 x) |))
+          (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_64_bits, LongArgumentU64 () x |))
+        )
+      )
+    )
+
+
+let get_uint64_as_initial_byte
+  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (x: U64.t)
+: Tot U8.t
+= cps_uint64_as_argument
+    U8.t
+    (fun cond iftrue iffalse -> if cond then iftrue () else iffalse ())
+    ty
+    x
+    (fun h -> match h with (| b, _ |) -> mk_synth_initial_byte b)
+
+let get_initial_byte_header_correct
+  (h: header)
+: Lemma
+  (mk_synth_initial_byte (dfst h) == Seq.index (serialize serialize_header h) 0)
+= serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h;
+  let (| b, _ |) = h in
+  serialize_bitsum'_eq
+    initial_byte_desc
+    serialize_u8
+    b;
+  serialize_u8_spec (synth_bitsum'_recip initial_byte_desc b)
+
+let get_initial_byte_header_inj
+  (h1 h2: header)
+: Lemma
+  (requires (Seq.index (serialize serialize_header h1) 0 == Seq.index (serialize serialize_header h2) 0))
+  (ensures (dfst h1 == dfst h2))
+=
+  let (| b1, l1 |) = h1 in
+  let (| b2, l2 |) = h2 in
+  let b1' = synth_bitsum'_recip initial_byte_desc b1 in
+  let b2' = synth_bitsum'_recip initial_byte_desc b2 in
+  get_initial_byte_header_correct h1;
+  get_initial_byte_header_correct h2;
+  assert (synth_bitsum' initial_byte_desc b1' == b1);
+  assert (synth_bitsum' initial_byte_desc b2' == b2)
+
+let get_uint64_as_initial_byte_header_correct
+  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (x: U64.t)
+: Lemma
+  (get_uint64_as_initial_byte ty x == Seq.index (serialize serialize_header (uint64_as_argument ty x)) 0)
+= let h = uint64_as_argument ty x in
+  get_initial_byte_header_correct h
+
+let get_major_type_synth_raw_data_item_recip
+  (x: raw_data_item)
+: Lemma
+  (get_major_type x == get_header_major_type (dfst (synth_raw_data_item_recip x)))
+= ()
 
 // Ordering of map keys (Section 4.2)
 
