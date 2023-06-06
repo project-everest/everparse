@@ -241,6 +241,7 @@ let maybe_r2l_write_simple_value
 
 #pop-options
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 let write_simple_value
   (x: simple_value)
 : Tot (r2l_writer_for serialize_raw_data_item (Simple x))
@@ -305,6 +306,7 @@ let maybe_r2l_write_int64
 
 #pop-options
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 let write_int64
   (m: major_type_uint64_or_neg_int64)
   (x: U64.t)
@@ -399,6 +401,7 @@ let maybe_finalize_raw_data_item_string
 
 #pop-options
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 let finalize_raw_data_item_string
   (m: major_type_byte_string_or_text_string)
   (#vout: _)

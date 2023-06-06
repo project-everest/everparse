@@ -28,6 +28,7 @@ val jump_header : jumper parse_header
 val jump_leaf
 : jumper parse_leaf
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 val read_major_type
   (#va: v parse_raw_data_item_kind raw_data_item)
   (a: byte_array)
@@ -60,11 +61,13 @@ val read_argument_as_uint64
       res == argument_as_uint64 b x
     )
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 val validate_raw_data_item
 : validator parse_raw_data_item
 
 val jump_count_remaining_data_items
 : (jump_recursive_step_count parse_raw_data_item_param)
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 val jump_raw_data_item
 : jumper parse_raw_data_item

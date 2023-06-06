@@ -243,9 +243,14 @@ let canonical_cbor_map_key_order_impl
     vpattern_rewrite (aparse _ a2) va2;
     return res
 
-let validate_canonical_cbor_data_item
+let validate_canonical_cbor_data_item0
 : validator (parse_data_item canonical_cbor_map_key_order)
 = validate_data_item canonical_cbor_map_key_order_impl
+
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
+let validate_canonical_cbor_data_item
+: validator (parse_data_item canonical_cbor_map_key_order)
+= fun a len perr -> validate_canonical_cbor_data_item0 a len perr
 
 let jump_data_item
   (order: Ghost.erased (raw_data_item -> raw_data_item -> bool))

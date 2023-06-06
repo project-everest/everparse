@@ -30,6 +30,7 @@ module Cast = FStar.Int.Cast
    nor Karamel eliminate as dead code.
  *)
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 val read_simple_value
   (#va: v parse_raw_data_item_kind raw_data_item)
   (a: byte_array)
@@ -39,6 +40,7 @@ val read_simple_value
     (Simple? va.contents)
     (fun res -> va.contents == Simple res)
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 val read_int64
   (#va: v parse_raw_data_item_kind raw_data_item)
   (a: byte_array)
@@ -92,6 +94,7 @@ let ghost_focus_string_post
         | _ -> False
         end
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 val focus_string
   (#va: v parse_raw_data_item_kind raw_data_item)
   (a: byte_array)

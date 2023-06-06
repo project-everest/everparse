@@ -555,8 +555,6 @@ let count_remaining_data_items
       end
     end
 
-inline_for_extraction
-noextract
 let validate_raw_data_item'
   (sq: squash SZ.fits_u64)
 : Tot (validator parse_raw_data_item)
@@ -620,12 +618,16 @@ let jump_count_remaining_data_items
       end
     end
 
-let jump_raw_data_item
+let jump_raw_data_item'
 : jumper parse_raw_data_item
 =
     jump_recursive
       parse_raw_data_item_param
       (jump_leaf)
       (jump_count_remaining_data_items)
+
+let jump_raw_data_item
+= fun a ->
+    jump_raw_data_item' a
 
 #pop-options
