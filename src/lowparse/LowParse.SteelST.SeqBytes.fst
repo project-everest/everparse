@@ -182,11 +182,7 @@ let byte_compare_impl : NL.compare_impl I.parse_u8 byte_compare =
   fun a1 _ a2 _ ->
     let x1 = I.read_u8 a1 in
     let x2 = I.read_u8 a2 in
-    if x1 = x2
-    then return 0s
-    else if x1 `FStar.UInt8.lt` x2
-    then return (-1s)
-    else return 1s
+    return (FStar.Int.Cast.uint8_to_int16 x1 `I16.sub` FStar.Int.Cast.uint8_to_int16 x2)
 
 inline_for_extraction
 let byte_array_lex_compare
