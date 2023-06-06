@@ -64,7 +64,7 @@ KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out \
-	 -bundle 'CBOR.SteelST=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*' \
+	 -bundle 'CBOR.SteelST+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' \
 	 -skip-linking \
 	 $(KRML_OPTS) \
 	 -warn-error '@2@4'

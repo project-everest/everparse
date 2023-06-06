@@ -1,4 +1,5 @@
 module CBOR.Spec
+include CBOR.Spec.Constants
 open LowParse.Spec
 open LowParse.Spec.BitSum
 open LowParse.Spec.Recursive
@@ -53,13 +54,7 @@ let mk_synth_initial_byte : synth_bitsum'_recip_t initial_byte_desc =
 module U8 = FStar.UInt8
 
 inline_for_extraction
-let major_type_t = bitfield uint8 3
-
-inline_for_extraction
 let additional_info_t = bitfield uint8 5
-
-[@@CMacro]
-let major_type_simple_value : major_type_t = 7uy
 
 [@@CMacro]
 let additional_info_long_argument_8_bits : additional_info_t = 24uy
@@ -291,24 +286,6 @@ let argument_as_simple_value
 
 (* Raw data items, disregarding ordering of map entries *)
 
-[@@CMacro]
-let major_type_uint64 : major_type_t = 0uy
-
-[@@CMacro]
-let major_type_neg_int64 : major_type_t = 1uy
-
-inline_for_extraction
-let major_type_uint64_or_neg_int64 : eqtype = (x: major_type_t { x == major_type_uint64 \/ x == major_type_neg_int64 })
-
-[@@CMacro]
-let major_type_byte_string : major_type_t = 2uy
-
-[@@CMacro]
-let major_type_text_string : major_type_t = 3uy
-
-inline_for_extraction
-let major_type_byte_string_or_text_string : eqtype = (x: major_type_t { x == major_type_byte_string \/ x == major_type_text_string })
-
 noeq
 type raw_data_item
 = | Simple: (v: simple_value) -> raw_data_item
@@ -318,15 +295,6 @@ type raw_data_item
   | Map: (v: list (raw_data_item & raw_data_item) { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
   | Tagged: (tag: U64.t) -> (v: raw_data_item) -> raw_data_item
 //  | Float: (v: Float.float) -> raw_data_item // TODO
-
-[@@CMacro]
-let major_type_array : major_type_t = 4uy
-
-[@@CMacro]
-let major_type_map : major_type_t = 5uy
-
-[@@CMacro]
-let major_type_tagged : major_type_t = 6uy
 
 let content
   (h: header)
