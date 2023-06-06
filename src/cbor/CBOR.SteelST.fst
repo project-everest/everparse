@@ -1796,12 +1796,8 @@ module I16 = FStar.Int16
 
 let byte_compare_pure_impl (x y: byte) : Pure I16.t
   (requires True)
-  (ensures (fun res -> I16.v res == byte_compare x y))
-= if x = y
-  then 0s
-  else if x `FStar.UInt8.lt` y
-  then -1s
-  else 1s
+  (ensures (fun res -> I16.v res `NL.same_sign` byte_compare x y))
+= FStar.Int.Cast.uint8_to_int16 x `I16.sub` FStar.Int.Cast.uint8_to_int16 y
 
 let serialize_weaken_eq
   (#k: parser_kind)
