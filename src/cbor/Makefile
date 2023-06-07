@@ -4,7 +4,7 @@
 # of rebuilding them. This Makefile assumes that everything else from
 # the F* standard library and KRMLLib is already built (and fails otherwise)
 
-all: verify-all extract
+all: verify-all test
 
 ifndef FSTAR_HOME
   FSTAR_EXE:=$(shell which fstar.exe)
@@ -46,7 +46,7 @@ FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS)
 LOWPARSE_FILES=$(wildcard *.fst *.fsti)
 
 clean:
-	rm -rf *.checked *.source .depend .depend.tmp out *.krml
+	rm -rf *.checked *.source .depend .depend.tmp out *.krml *.o
 
 .depend: $(LOWPARSE_FILES)
 	$(FSTAR) --dep full $(LOWPARSE_FILES) > $@.tmp
@@ -76,7 +76,10 @@ $(ALL_CHECKED_FILES): %.checked:
 extract: $(ALL_KRML_FILES)
 	$(KRML) $(ALL_KRML_FILES)
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in lowparse extract
+test: extract
+	$(CC) -Wall -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I out -c cbor_unverified.c
+
+.PHONY: all verify-all clean %.fst-in %.fsti-in lowparse extract test
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
