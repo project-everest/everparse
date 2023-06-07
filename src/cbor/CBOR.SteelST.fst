@@ -2,10 +2,12 @@ module CBOR.SteelST
 
 let validate_raw_data_item = CBOR.SteelST.Validate.validate_raw_data_item
 let jump_raw_data_item = CBOR.SteelST.Validate.jump_raw_data_item
+let jump_header = CBOR.SteelST.Validate.jump_header
 
 let validate_canonical_cbor_data_item = CBOR.SteelST.Map.validate_canonical_cbor_data_item
 
 let read_major_type #va = CBOR.SteelST.Validate.read_major_type #va
+let read_argument_as_uint64 #va = CBOR.SteelST.Validate.read_argument_as_uint64 #va
 let read_int64 #va = CBOR.SteelST.Read.read_int64 #va
 let read_simple_value #va = CBOR.SteelST.Read.read_simple_value #va
 let focus_string #va = CBOR.SteelST.Read.focus_string #va

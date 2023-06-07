@@ -23,6 +23,7 @@ inline_for_extraction
 noextract
 val read_and_jump_initial_byte : read_and_jump parse_initial_byte
 
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
 val jump_header : jumper parse_header
 
 val jump_leaf
@@ -49,10 +50,12 @@ val read_header_argument_as_uint64
       res == get_header_argument_as_uint64 va.contents
     )
 
-val read_argument_as_uint64
-  (#va: v parse_raw_data_item_kind raw_data_item)
-  (a: byte_array)
-: ST UInt64.t
+inline_for_extraction
+noextract
+let read_argument_as_uint64_t =
+  (#va: v parse_raw_data_item_kind raw_data_item) ->
+  (a: byte_array) ->
+  ST UInt64.t
     (aparse parse_raw_data_item a va)
     (fun _ -> aparse parse_raw_data_item a va)
     True
@@ -60,6 +63,9 @@ val read_argument_as_uint64
       let (| (| b, x |), _ |) = synth_raw_data_item_recip va.contents in
       res == argument_as_uint64 b x
     )
+
+inline_for_extraction // necessary for the reexport into CBOR.SteelST
+val read_argument_as_uint64 : read_argument_as_uint64_t
 
 inline_for_extraction // necessary for the reexport into CBOR.SteelST
 val validate_raw_data_item

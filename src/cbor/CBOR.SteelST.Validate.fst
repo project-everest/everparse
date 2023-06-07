@@ -293,8 +293,11 @@ noextract
 let read_and_jump_header : read_and_jump parse_header =
   read_and_jump_dtuple2 read_and_jump_initial_byte _ jump_long_argument
 
-let jump_header : jumper parse_header =
+let jump_header' : jumper parse_header =
   jumper_of_read_and_jump read_and_jump_header
+
+let jump_header : jumper parse_header =
+  fun a -> jump_header' a
 
 inline_for_extraction
 noextract
@@ -472,18 +475,8 @@ let read_header_argument_as_uint64
   let _ = elim_pure _ in
   return res
 
-let read_argument_as_uint64
-  (#va: v parse_raw_data_item_kind raw_data_item)
-  (a: byte_array)
-: ST UInt64.t
-    (aparse parse_raw_data_item a va)
-    (fun _ -> aparse parse_raw_data_item a va)
-    True
-    (fun res ->
-      let (| (| b, x |), _ |) = synth_raw_data_item_recip va.contents in
-      res == argument_as_uint64 b x
-    )
-= Classical.forall_intro parse_raw_data_item_eq;
+let read_argument_as_uint64' : read_argument_as_uint64_t = fun #va a ->
+  Classical.forall_intro parse_raw_data_item_eq;
   let _ = rewrite_aparse a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
   let va1 = elim_synth _ _ a () in // (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item a () in
   let a_content = ghost_split_dtuple2_full _ _ a in // parse_header (parse_content parse_raw_data_item) a in
@@ -494,6 +487,9 @@ let read_argument_as_uint64
   let _ = rewrite_aparse a parse_raw_data_item in
   vpattern_rewrite (aparse parse_raw_data_item a) va;
   return res
+
+let read_argument_as_uint64 =
+  fun a -> read_argument_as_uint64' a
 
 let count_remaining_data_items
 : (validate_recursive_step_count parse_raw_data_item_param)
