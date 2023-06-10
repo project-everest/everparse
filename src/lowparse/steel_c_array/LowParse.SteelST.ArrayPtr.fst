@@ -155,8 +155,11 @@ let stc_array_ref_split
     )
 = rewrite (STC.array_pts_to aa s) (STC.array_pts_to (| al, len |) s);
   let res = STC.array_ref_split al len i in
+  let _ = gen_elim () in
   vpattern_rewrite (fun a -> STC.array_pts_to a _ `star` STC.array_pts_to (STC.array_split_r _ _) _) aal;
   vpattern_rewrite (fun a -> STC.array_pts_to aal _ `star` STC.array_pts_to a _) aar;
+  vpattern_rewrite (STC.array_pts_to aal) _;
+  vpattern_rewrite (STC.array_pts_to aar) _;
   return res
 
 let split' #elt #vl #vr x i x' =
