@@ -1,9 +1,9 @@
 module LowParse.SteelST.ArrayPtrSwap
-include LowParse.SteelST.ArrayPtrSwap.Gen
 open Steel.ST.GenElim
 
 module SZ = FStar.SizeT
 module AP = LowParse.SteelST.ArrayPtr
+module Gen = Steel.ST.GenArraySwap
 
 let arrayptr_pts_to_prop
   (#t: Type)
@@ -21,7 +21,7 @@ let arrayptr_pts_to0
   (#t: Type)
   (a: AP.t t)
   (a0: AP.array t)
-: Tot (array_pts_to_t t)
+: Tot (Gen.array_pts_to_t t)
 = fun s -> exists_ (fun v ->
     AP.arrayptr a v `star`
     pure (arrayptr_pts_to_prop a0 s v)
@@ -31,7 +31,7 @@ let arrayptr_pts_to
   (#t: Type)
   (a: AP.t t)
   (a0: AP.array t)
-: Tot (array_pts_to_t t)
+: Tot (Gen.array_pts_to_t t)
 = arrayptr_pts_to0 a a0
 
 inline_for_extraction
@@ -39,7 +39,7 @@ let arrayptr_index
   (#t: Type)
   (a: AP.t t)
   (a0: AP.array t)
-: Tot (array_index_t (arrayptr_pts_to a a0))
+: Tot (Gen.array_index_t (arrayptr_pts_to a a0))
 = fun s n i ->
     rewrite (arrayptr_pts_to a a0 s) (arrayptr_pts_to0 a a0 s);
     let _ = gen_elim () in
@@ -52,7 +52,7 @@ let arrayptr_upd
   (#t: Type)
   (a: AP.t t)
   (a0: AP.array t)
-: Tot (array_upd_t (arrayptr_pts_to a a0))
+: Tot (Gen.array_upd_t (arrayptr_pts_to a a0))
 = fun s n i x ->
     rewrite (arrayptr_pts_to a a0 s) (arrayptr_pts_to0 a a0 s);
     let _ = gen_elim () in
@@ -88,7 +88,7 @@ let arrayptr_swap
   let a0 : AP.array t = AP.array_of v in
   noop ();
   rewrite (arrayptr_pts_to0 a a0 s0) (arrayptr_pts_to a a0 s0);
-  let s = array_swap_gen (arrayptr_index a a0) (arrayptr_upd a a0) s0 n l in
+  let s = Gen.array_swap_gen (arrayptr_index a a0) (arrayptr_upd a a0) s0 n l in
   rewrite (arrayptr_pts_to a a0 s) (arrayptr_pts_to0 a a0 s);
   let _ = gen_elim () in
   return _
