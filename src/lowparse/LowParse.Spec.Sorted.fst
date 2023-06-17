@@ -312,3 +312,115 @@ let length_first_lex_order_total
 = if List.Tot.length x = List.Tot.length y
   then lex_order_total compare compare_equal compare_antisym x y
   else ()
+
+let same_sign
+  (x1 x2: int)
+: GTot prop
+= (x1 == 0 <==> x2 == 0) /\
+  (x1 < 0 <==> x2 < 0)
+
+let weak_compare_for
+  (#t: Type)
+  (order: t -> t -> bool)
+: Tot Type
+= (x: t) ->
+  (y: t) ->
+  Pure int
+    (requires True)
+    (ensures (fun z ->
+      (z < 0 <==> order x y) /\
+      (z > 0 <==> order y x)
+    ))
+
+let weak_compare_for_antisym
+  (#t: Type)
+  (#order: t -> t -> bool)
+  (w: weak_compare_for order)
+  (x: t)
+  (y: t)
+: Lemma
+  (~ (order x y /\ order y x))
+= let z = w x y in
+  ()
+
+let weak_compare_for_irrefl
+  (#t: Type)
+  (#order: t -> t -> bool)
+  (w: weak_compare_for order)
+  (x: t)
+: Lemma
+  (~ (order x x))
+= let z = w x x in
+  ()
+
+let weak_compare_for_sign
+  (#t: Type)
+  (#order: t -> t -> bool)
+  (w: weak_compare_for order)
+  (x: t)
+  (y: t)
+: Lemma
+  (same_sign (w x y) (- w y x))
+= ()
+
+let rec insert
+  (#t: Type)
+  (#order: t -> t -> bool)
+  (w: weak_compare_for order)
+  (x: t)
+  (l: list t)
+: Tot (option (list t))
+  (decreases l)
+= match l with
+  | [] -> Some [x]
+  | a :: q ->
+    let c = w x a in
+    if c = 0
+    then None
+    else if c < 0
+    then Some (x :: a :: q)
+    else match insert w x q with
+    | None -> None
+    | Some l' -> Some (a :: l')
+
+let rec insert_sorted
+  (#t: Type)
+  (#order: t -> t -> bool)
+  (w: weak_compare_for order)
+  (x: t)
+  (l: list t)
+: Lemma
+  (requires (List.Tot.sorted order l))
+  (ensures (match insert w x l with
+  | None -> True
+  | Some l' -> List.Tot.sorted order l'
+  ))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    if w x a > 0
+    then insert_sorted w x q
+    else ()
+
+let compare_for
+  (#t: Type)
+  (order: t -> t -> bool)
+: Tot Type
+= (x: t) ->
+  (y: t) ->
+  Pure int
+    (requires True)
+    (ensures (fun z ->
+      (z < 0 <==> order x y) /\
+      (z > 0 <==> order x y) /\
+      (z == 0 <==> x == y)
+    ))
+
+let compare_for_is_subtype_of_weak_compare_for
+  (#t: Type)
+  (#order: t -> t -> bool)
+  (c: compare_for order)
+: Tot unit
+= let wc : weak_compare_for order = c in
+  ()

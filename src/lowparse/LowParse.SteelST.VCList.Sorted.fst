@@ -3,6 +3,7 @@ include LowParse.SteelST.VCList.Iterator
 include LowParse.Spec.Sorted
 
 module AP = LowParse.SteelST.ArrayPtr
+module Swap = LowParse.SteelST.Swap
 module R = Steel.ST.Reference
 module SZ = FStar.SizeT
 
@@ -363,11 +364,790 @@ let nlist_sorted
 
 module I16 = FStar.Int16
 
-let same_sign
-  (x1 x2: int)
-: GTot prop
-= (x1 == 0 <==> x2 == 0) /\
-  (x1 < 0 <==> x2 < 0)
+inline_for_extraction
+let compare_impl_with
+  (#kkey: Ghost.erased parser_kind)
+  (#tkey: Type)
+  (pkey: parser kkey tkey)
+  (key_compare: Ghost.erased (tkey -> tkey -> int))
+  (key: Ghost.erased tkey)
+  (rkey: vprop)
+: Tot Type
+= (#va: v kkey tkey) ->
+  (a: byte_array) ->
+  (sz: SZ.t) ->
+  ST I16.t
+    (rkey `star` aparse pkey a va)
+    (fun _ -> rkey `star` aparse pkey a va)
+    (SZ.v sz == AP.length (array_of va))
+    (fun res ->
+      same_sign (I16.v res) (Ghost.reveal key_compare key va.contents)
+    )
+
+inline_for_extraction
+let compare_impl
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (compare: Ghost.erased (t -> t -> int))
+: Tot Type
+= 
+  (#va1: v k t) ->
+  (a1: byte_array) ->
+  (sz1: SZ.t) ->
+  Pure (compare_impl_with p compare va1.contents (aparse p a1 va1))
+    (SZ.v sz1 == AP.length (array_of va1))
+    (fun _ -> True)
+
+(* Inserting an element into a sorted list, when this element is immediately adjacent to the left of the list *)
+
+[@@__reduce__]
+let nlist_insert_post_true
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+: Tot vprop
+= exists_ (fun (va: v (parse_nlist_kind (SZ.v nr + 1) k) (nlist (SZ.v nr + 1) t)) ->
+    aparse (parse_nlist (SZ.v nr + 1) p) al va `star`
+    pure (
+      AP.merge_into (array_of vl) (array_of vr) (array_of va) /\
+      insert compare vl.contents vr.contents == Some va.contents
+    )
+  )
+
+[@@__reduce__]
+let nlist_insert_post_false
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+: Tot vprop
+= aparse p al vl `star`
+  aparse (parse_nlist (SZ.v nr) p) ar vr `star`
+  pure (insert compare vl.contents vr.contents == None)
+
+let nlist_insert_post
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (res: bool)
+: Tot vprop
+= if res
+  then nlist_insert_post_true p compare al vl ar nr vr
+  else nlist_insert_post_false p compare al vl ar nr vr
+
+let nlist_insert_post_some
+  (#opened: _)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (res: bool)
+: STGhost (v (parse_nlist_kind (SZ.v nr + 1) k) (nlist (SZ.v nr + 1) t)) opened
+    (nlist_insert_post p compare al vl ar nr vr res)
+    (fun va ->
+      aparse (parse_nlist (SZ.v nr + 1) p) al va
+    )
+    (
+      Some? (insert compare vl.contents vr.contents)
+    )
+    (fun va ->
+      AP.merge_into (array_of vl) (array_of vr) (array_of va) /\
+      insert compare vl.contents vr.contents == Some va.contents
+    )
+= if res
+  then begin
+    rewrite
+      (nlist_insert_post p compare al vl ar nr vr _)
+      (nlist_insert_post_true p compare al vl ar nr vr);
+    let _ = gen_elim () in
+    let va = vpattern_replace (aparse (parse_nlist (SZ.v nr + 1) p) al) in
+    va
+  end else begin
+    rewrite
+      (nlist_insert_post p compare al vl ar nr vr _)
+      (nlist_insert_post_false p compare al vl ar nr vr);
+    let _ = gen_elim () in
+    let va : v (parse_nlist_kind (SZ.v nr + 1) k) (nlist (SZ.v nr + 1) t) = false_elim () in
+    rewrite // by contradiction
+      (nlist_insert_post_false p compare al vl ar nr vr)
+      (aparse (parse_nlist (SZ.v nr + 1) p) al va);
+    va
+  end
+
+[@@CMacro]
+let nlist_insert_in_progress : byte = 0uy
+
+[@@CMacro]
+let nlist_insert_success : byte = 1uy
+
+[@@CMacro]
+let nlist_insert_failure : byte = 2uy
+
+[@@erasable]
+noeq
+type nlist_insert_invariant_body_in_progress_t
+  (k: parser_kind)
+  (t: Type)
+= {
+    nrl: nat;
+    szrl: SZ.t;
+    nrr: SZ.t;
+    vrl: v (parse_nlist_kind nrl k) (nlist nrl t);
+    arr: byte_array;
+    vrr: v (parse_nlist_kind (SZ.v nrr) k) (nlist (SZ.v nrr) t);
+  }
+
+[@@__reduce__]
+let nlist_insert_invariant_body_in_progress_body
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+  (nrl: nat)
+  (szrl: SZ.t)
+  (nrr: SZ.t)
+  (vrl: v (parse_nlist_kind nrl k) (nlist nrl t))
+  (arr: byte_array)
+  (vrr: v (parse_nlist_kind (SZ.v nrr) k) (nlist (SZ.v nrr) t))
+: Tot vprop
+= aparse p al vl `star`
+  aparse (parse_nlist nrl p) ar vrl `star`
+  R.pts_to pszrl full_perm szrl `star`
+  R.pts_to pnrr full_perm nrr `star`
+  R.pts_to parr full_perm arr `star`
+  aparse (parse_nlist (SZ.v nrr) p) arr vrr
+
+let nlist_insert_invariant_body_in_progress_prop
+  (k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (vl: v k t)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (szrl: SZ.t)
+  (nrl: nat)
+  (nrr: SZ.t)
+  (vrl: v (parse_nlist_kind nrl k) (nlist nrl t))
+  (vrr: v (parse_nlist_kind (SZ.v nrr) k) (nlist (SZ.v nrr) t))
+: Tot prop
+=
+  SZ.v szrl == AP.length (array_of vrl) /\
+  nrl + SZ.v nrr == SZ.v nr /\
+  AP.merge_into (array_of vrl) (array_of vrr) (array_of vr) /\
+  (vr.contents <: list t) == List.Tot.append vrl.contents vrr.contents /\
+  begin match insert compare vl.contents vr.contents, insert compare vl.contents vrr.contents with
+  | None, None -> True
+  | Some l, Some lr -> l == List.Tot.append vrl.contents lr
+  | _ -> False
+  end
+
+[@@__reduce__]
+let nlist_insert_invariant_body_in_progress0
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+: Tot vprop
+= exists_ (fun w ->
+    nlist_insert_invariant_body_in_progress_body p al vl ar pszrl pnrr parr w.nrl w.szrl w.nrr w.vrl w.arr w.vrr `star`
+    pure (nlist_insert_invariant_body_in_progress_prop k compare vl nr vr w.szrl w.nrl w.nrr w.vrl w.vrr)
+  )
+
+let nlist_insert_invariant_body_in_progress
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+: Tot vprop
+= nlist_insert_invariant_body_in_progress0 p compare al vl ar nr vr pszrl pnrr parr
+
+let intro_nlist_insert_invariant_body_in_progress
+  (#opened: _)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+  (nrl: nat)
+  (szrl: SZ.t)
+  (nrr: SZ.t)
+  (vrl: v (parse_nlist_kind nrl k) (nlist nrl t))
+  (arr: byte_array)
+  (vrr: v (parse_nlist_kind (SZ.v nrr) k) (nlist (SZ.v nrr) t))
+: STGhost unit opened
+    (nlist_insert_invariant_body_in_progress_body p al vl ar pszrl pnrr parr nrl szrl nrr vrl arr vrr)
+    (fun _ -> nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr)
+    (nlist_insert_invariant_body_in_progress_prop k compare vl nr vr szrl nrl nrr vrl vrr)
+    (fun _ -> True)
+= let w = {
+    nrl = nrl;
+    szrl = szrl;
+    nrr = nrr;
+    vrl = vrl;
+    arr = arr;
+    vrr = vrr;
+  }
+  in
+  rewrite
+    (nlist_insert_invariant_body_in_progress_body p al vl ar pszrl pnrr parr nrl szrl nrr vrl arr vrr)
+    (nlist_insert_invariant_body_in_progress_body p al vl ar pszrl pnrr parr w.nrl w.szrl w.nrr w.vrl w.arr w.vrr);
+  rewrite
+    (nlist_insert_invariant_body_in_progress0 p compare al vl ar nr vr pszrl pnrr parr)
+    (nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr)
+
+let elim_nlist_insert_invariant_body_in_progress
+  (#opened: _)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+: STGhost (Ghost.erased (nlist_insert_invariant_body_in_progress_t k t)) opened
+    (nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr)
+    (fun w -> nlist_insert_invariant_body_in_progress_body p al vl ar pszrl pnrr parr w.nrl w.szrl w.nrr w.vrl w.arr w.vrr)
+    True
+    (fun w -> nlist_insert_invariant_body_in_progress_prop k compare vl nr vr w.szrl w.nrl w.nrr w.vrl w.vrr)
+= let w = elim_exists () in
+  let _ = gen_elim () in
+  w
+
+[@@__reduce__]
+let nlist_insert_invariant_body_end
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+  (state: byte)
+: Tot vprop
+= exists_ (R.pts_to pszrl full_perm) `star`
+  exists_ (R.pts_to pnrr full_perm) `star`
+  exists_ (R.pts_to parr full_perm) `star`
+  nlist_insert_post p compare al vl ar nr vr (state = nlist_insert_success)
+
+let nlist_insert_invariant_body
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+  (state: byte)
+: Tot vprop
+= if state = nlist_insert_in_progress
+  then nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr
+  else nlist_insert_invariant_body_end p compare al vl ar nr vr pszrl pnrr parr state
+
+[@@__reduce__]
+let nlist_insert_invariant0
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+  (pstate: R.ref byte)
+  (b: bool)
+: Tot vprop
+= exists_ (fun state -> 
+    R.pts_to pstate full_perm state `star`
+    nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr state `star`
+    pure (b == (state = nlist_insert_in_progress))
+  )
+
+let nlist_insert_invariant
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+  (pstate: R.ref byte)
+  (b: bool)
+: Tot vprop
+= nlist_insert_invariant0 p compare al vl ar nr vr pszrl pnrr parr pstate b
+
+let intro_nlist_insert_invariant
+  (#opened: _)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+  (pstate: R.ref byte)
+  (b: bool)
+  (state: byte)
+: STGhost unit opened
+    (R.pts_to pstate full_perm state `star`
+      nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr state)
+    (fun _ -> nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate b)
+    (b == (state = nlist_insert_in_progress))
+    (fun _ -> True)
+= noop ();
+  rewrite
+    (nlist_insert_invariant0 p compare al vl ar nr vr pszrl pnrr parr pstate b)
+    (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate b)
+
+let elim_nlist_insert_invariant
+  (#opened: _)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (al: byte_array)
+  (vl: v k t)
+  (ar: byte_array)
+  (nr: SZ.t)
+  (vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+  (pstate: R.ref byte)
+  (b: bool)
+: STGhost (Ghost.erased byte) opened
+    (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate b)
+    (fun state -> R.pts_to pstate full_perm state `star`
+      nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr state)
+    True
+    (fun state -> b == (Ghost.reveal state = nlist_insert_in_progress))
+= rewrite
+    (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate b)
+    (nlist_insert_invariant0 p compare al vl ar nr vr pszrl pnrr parr pstate b);
+  let _ = gen_elim () in
+  _
+
+inline_for_extraction
+let size_add_le
+  (s1 s2: SZ.t)
+  (bound: Ghost.erased SZ.t)
+  (sq: squash (SZ.v s1 + SZ.v s2 <= SZ.v bound))
+: Tot SZ.t
+= SZ.add s1 s2
+
+#push-options "--z3rlimit 64"
+
+#restart-solver
+inline_for_extraction
+let nlist_insert_with_size_body
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (comp: compare_impl p (Ghost.reveal compare))
+  (#vl: v k t)
+  (szl: SZ.t)
+  (al: byte_array)
+  (nr: SZ.t)
+  (#vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (ar: byte_array)
+  (sq: squash (
+    k.parser_kind_subkind == Some ParserStrong /\
+    AP.adjacent (array_of vl) (array_of vr) /\
+    AP.array_perm (array_of vl) == full_perm /\
+    SZ.v szl == AP.length (array_of vl)
+  ))
+  (pszrl: R.ref SZ.t)
+  (pnrr: R.ref SZ.t)
+  (parr: R.ref byte_array)
+  (pstate: R.ref byte)
+  ()
+: STT unit
+    (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate true)
+    (fun _ -> exists_ (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate))
+=
+  let _ = elim_nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate true in
+  rewrite
+    (nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr _)
+    (nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr);
+  let w = elim_nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr in
+  let nrr = R.read pnrr in
+  let szrl = R.read pszrl in
+  if nrr = 0sz
+  then begin
+    List.Tot.append_l_nil w.vrl.contents;
+    let _ = elim_nlist_nil (SZ.v w.nrr) p w.arr in
+    let _ = aparse_join_zero_r _ ar w.arr in
+    rewrite (aparse _ ar _) (aparse (parse_nlist (SZ.v nr) p) ar vr);
+    let ar' = Swap.swap_parsed_with_sizes al szl ar szrl in
+    let _ = gen_elim () in
+    let _ = intro_nlist_one p ar' 1 in
+    let _ = intro_nlist_sum (SZ.v nr + 1) p _ al _ ar' in
+    R.write pstate nlist_insert_success;
+    rewrite
+      (nlist_insert_post_true p compare al vl ar nr vr)
+      (nlist_insert_post p compare al vl ar nr vr (nlist_insert_success = nlist_insert_success));
+    rewrite
+      (nlist_insert_invariant_body_end p compare al vl ar nr vr pszrl pnrr parr nlist_insert_success)
+      (nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr nlist_insert_success);
+    noop ();
+    intro_nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate false _;
+    return ()
+  end else begin
+    [@@inline_let]
+    let nrr' = nrr `SZ.sub` 1sz in
+    let arr = R.read parr in
+    vpattern_rewrite #_ #_ #w.arr (fun arr -> aparse _ arr _) arr;
+    let garr' = elim_nlist_cons p (SZ.v w.nrr) (SZ.v nrr') arr in
+    let _ = gen_elim () in
+    let szrr_hd = get_parsed_size j arr in
+    let c = comp al szl arr szrr_hd in
+    if c `I16.lt` 0s
+    then begin
+      let _ = intro_nlist_cons (SZ.v w.nrr) p _ arr garr' in
+      let ar' = Swap.swap_parsed_with_sizes al szl ar szrl in
+      let _ = gen_elim () in
+      let _ = intro_nlist_cons (SZ.v w.nrr + 1) p _ ar' arr in
+      let _ = intro_nlist_sum (SZ.v nr + 1) p _ al _ ar' in
+      R.write pstate nlist_insert_success;
+      rewrite
+        (nlist_insert_post_true p compare al vl ar nr vr)
+        (nlist_insert_post p compare al vl ar nr vr (nlist_insert_success = nlist_insert_success));
+      rewrite
+        (nlist_insert_invariant_body_end p compare al vl ar nr vr pszrl pnrr parr nlist_insert_success)
+        (nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr nlist_insert_success);
+      noop ();
+      intro_nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate false _;
+      return ()
+    end else if c = 0s
+    then begin
+      let _ = intro_nlist_cons (SZ.v w.nrr) p _ arr garr' in
+      let _ = intro_nlist_sum (SZ.v nr) p _ ar _ arr in
+      vpattern_rewrite (aparse _ ar) vr;
+      R.write pstate nlist_insert_failure;
+      rewrite
+        (nlist_insert_post_false p compare al vl ar nr vr)
+        (nlist_insert_post p compare al vl ar nr vr (nlist_insert_failure = nlist_insert_success));
+      rewrite
+        (nlist_insert_invariant_body_end p compare al vl ar nr vr pszrl pnrr parr nlist_insert_failure)
+        (nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr nlist_insert_failure);
+      noop ();
+      intro_nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate false _;
+      return ()
+    end else begin
+      R.write pnrr nrr';
+      let szrl = R.read pszrl in
+      let arr' = hop_aparse_aparse_with_size _ _ arr szrr_hd garr' in
+      R.write parr arr';
+      let vrr_as_list = intro_nlist_one p arr 1 in
+      let nrl' : Ghost.erased nat = Ghost.hide (w.nrl + 1) in
+      let vrl' = intro_nlist_sum nrl' p _ ar _ arr in
+      let sq_sz : squash (SZ.v szrl + SZ.v szrr_hd <= SZ.v (AP.len (array_of vrl'))) =
+        assert (SZ.v szrl + SZ.v szrr_hd == SZ.v (AP.len (array_of vrl')))
+      in
+      noop ();
+      [@@inline_let]
+      let szrl' = size_add_le szrl szrr_hd (AP.len (array_of vrl')) sq_sz in
+      R.write pszrl szrl';
+      let vrr' : v (parse_nlist_kind (SZ.v nrr') k) (nlist (SZ.v nrr') t) = vpattern_replace (aparse (parse_nlist (SZ.v nrr') p) arr') in
+      [@@inline_let]
+      let prf
+        ()
+      : Lemma
+        (match insert compare vl.contents vr.contents, insert compare vl.contents vrr'.contents with
+        | None, None -> True
+        | Some l, Some l' -> l == List.Tot.append vrl'.contents l'
+        | _ -> False
+        )
+      = match insert compare vl.contents vrr'.contents with
+        | None -> ()
+        | Some l' -> List.Tot.append_assoc w.vrl.contents vrr_as_list.contents l'
+      in
+      prf ();
+      List.Tot.append_assoc w.vrl.contents vrr_as_list.contents vrr'.contents;
+      noop ();
+      intro_nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr nrl' szrl' nrr' vrl' arr' vrr';
+      rewrite
+        (nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr)
+        (nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr nlist_insert_in_progress);
+      noop ();
+      intro_nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate true nlist_insert_in_progress;
+      return ()
+    end
+  end
+
+#pop-options
+
+inline_for_extraction
+let nlist_insert_with_size
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (compare_impl: compare_impl p (Ghost.reveal compare))
+  (#vl: v k t)
+  (szl: SZ.t)
+  (al: byte_array)
+  (nr: SZ.t)
+  (#vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (ar: byte_array)
+: ST bool
+    (aparse p al vl `star`
+      aparse (parse_nlist (SZ.v nr) p) ar vr
+    )
+    (fun res -> nlist_insert_post p compare al vl ar nr vr res)
+    (
+      k.parser_kind_subkind == Some ParserStrong /\
+      AP.adjacent (array_of vl) (array_of vr) /\
+      AP.array_perm (array_of vl) == full_perm /\
+      SZ.v szl == AP.length (array_of vl)
+    )
+    (fun _ -> True)
+= aparse_split_zero_l _ ar;
+  let _ = gen_elim () in
+  let vrr = vpattern_replace (aparse _ ar) in
+  let vrl = intro_nlist_nil 0 p ar in
+  R.with_local nlist_insert_in_progress (fun pstate ->
+  R.with_local nr (fun pnrr ->
+  R.with_local ar (fun parr ->
+  R.with_local 0sz (fun pszrl ->
+    intro_nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr 0 _ _ _ _ _;
+    rewrite
+      (nlist_insert_invariant_body_in_progress p compare al vl ar nr vr pszrl pnrr parr)
+      (nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr nlist_insert_in_progress);
+    rewrite
+      (nlist_insert_invariant0 p compare al vl ar nr vr pszrl pnrr parr pstate true) 
+      (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate true);
+    Steel.ST.Loops.while_loop
+      (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate)
+      (fun _ ->
+        let gb = elim_exists () in
+        rewrite
+          (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate _) 
+          (nlist_insert_invariant0 p compare al vl ar nr vr pszrl pnrr parr pstate gb);
+        let _ = gen_elim () in
+        let state = R.read pstate in
+        [@@inline_let]
+        let res = state = nlist_insert_in_progress in
+        noop ();
+        rewrite
+          (nlist_insert_invariant0 p compare al vl ar nr vr pszrl pnrr parr pstate res)
+          (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate res);
+        return res
+      )
+      (nlist_insert_with_size_body j compare compare_impl szl al nr ar () pszrl pnrr parr pstate);
+    rewrite
+      (nlist_insert_invariant p compare al vl ar nr vr pszrl pnrr parr pstate false) 
+      (nlist_insert_invariant0 p compare al vl ar nr vr pszrl pnrr parr pstate false);
+    let _ = gen_elim () in
+    let state = R.read pstate in
+    [@@inline_let]
+    let res = state = nlist_insert_success in
+    rewrite
+      (nlist_insert_invariant_body p compare al vl ar nr vr pszrl pnrr parr _)
+      (nlist_insert_invariant_body_end p compare al vl ar nr vr pszrl pnrr parr state);
+    vpattern_rewrite (nlist_insert_post p compare al vl ar nr vr) res;
+    noop ();
+    return res
+  ))))
+
+inline_for_extraction
+let nlist_insert
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (compare_impl: compare_impl p (Ghost.reveal compare))
+  (#vl: v k t)
+  (al: byte_array)
+  (nr: SZ.t)
+  (#vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (ar: byte_array)
+: ST bool
+    (aparse p al vl `star`
+      aparse (parse_nlist (SZ.v nr) p) ar vr
+    )
+    (fun res -> nlist_insert_post p compare al vl ar nr vr res)
+    (
+      k.parser_kind_subkind == Some ParserStrong /\
+      AP.adjacent (array_of vl) (array_of vr) /\
+      AP.array_perm (array_of vl) == full_perm
+    )
+    (fun _ -> True)
+= let szl = get_parsed_size j al in
+  nlist_insert_with_size j compare compare_impl szl al nr ar
+
+inline_for_extraction
+let nlist_insert_some_with_size
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (compare_impl: compare_impl p (Ghost.reveal compare))
+  (#vl: v k t)
+  (szl: SZ.t)
+  (al: byte_array)
+  (nr: SZ.t)
+  (#vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (ar: byte_array)
+: ST (v (parse_nlist_kind (SZ.v nr + 1) k) (nlist (SZ.v nr + 1) t))
+    (aparse p al vl `star`
+      aparse (parse_nlist (SZ.v nr) p) ar vr
+    )
+    (fun va ->
+      aparse (parse_nlist (SZ.v nr + 1) p) al va
+    )
+    (
+      AP.adjacent (array_of vl) (array_of vr) /\
+      k.parser_kind_subkind == Some ParserStrong /\
+      AP.array_perm (array_of vl) == full_perm /\
+      SZ.v szl == AP.length (array_of vl) /\
+      Some? (insert compare vl.contents vr.contents)
+    )
+    (fun va ->
+      AP.merge_into (array_of vl) (array_of vr) (array_of va) /\
+      insert compare vl.contents vr.contents == Some va.contents
+    )
+= let _ = nlist_insert_with_size j compare compare_impl szl al nr ar in
+  nlist_insert_post_some _ _ _ _ _ _ _ _
+
+inline_for_extraction
+let nlist_insert_some
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (j: jumper p)
+  (#order: Ghost.erased (t -> t -> bool))
+  (compare: Ghost.erased (weak_compare_for order))
+  (compare_impl: compare_impl p (Ghost.reveal compare))
+  (#vl: v k t)
+  (al: byte_array)
+  (nr: SZ.t)
+  (#vr: v (parse_nlist_kind (SZ.v nr) k) (nlist (SZ.v nr) t))
+  (ar: byte_array)
+: ST (v (parse_nlist_kind (SZ.v nr + 1) k) (nlist (SZ.v nr + 1) t))
+    (aparse p al vl `star`
+      aparse (parse_nlist (SZ.v nr) p) ar vr
+    )
+    (fun va ->
+      aparse (parse_nlist (SZ.v nr + 1) p) al va
+    )
+    (
+      AP.adjacent (array_of vl) (array_of vr) /\
+      k.parser_kind_subkind == Some ParserStrong /\
+      AP.array_perm (array_of vl) == full_perm /\
+      Some? (insert compare vl.contents vr.contents)
+    )
+    (fun va ->
+      AP.merge_into (array_of vl) (array_of vr) (array_of va) /\
+      insert compare vl.contents vr.contents == Some va.contents
+    )
+= let szl = get_parsed_size j al in
+  nlist_insert_some_with_size j compare compare_impl szl al nr ar
+
+(* Lexicographic ordering *)
 
 let nlist_lex_compare_invariant_prop
   (k: parser_kind)
@@ -600,41 +1380,6 @@ let elim_nlist_lex_compare_invariant
 = let w = elim_exists () in
   let _ = gen_elim () in
   w
-
-inline_for_extraction
-let compare_impl_with
-  (#kkey: Ghost.erased parser_kind)
-  (#tkey: Type)
-  (pkey: parser kkey tkey)
-  (key_compare: Ghost.erased (tkey -> tkey -> int))
-  (key: Ghost.erased tkey)
-  (rkey: vprop)
-: Tot Type
-= (#va: v kkey tkey) ->
-  (a: byte_array) ->
-  (sz: SZ.t) ->
-  ST I16.t
-    (rkey `star` aparse pkey a va)
-    (fun _ -> rkey `star` aparse pkey a va)
-    (SZ.v sz == AP.length (array_of va))
-    (fun res ->
-      same_sign (I16.v res) (Ghost.reveal key_compare key va.contents)
-    )
-
-inline_for_extraction
-let compare_impl
-  (#k: Ghost.erased parser_kind)
-  (#t: Type)
-  (p: parser k t)
-  (compare: Ghost.erased (t -> t -> int))
-: Tot Type
-= 
-  (#va1: v k t) ->
-  (a1: byte_array) ->
-  (sz1: SZ.t) ->
-  Pure (compare_impl_with p compare va1.contents (aparse p a1 va1))
-    (SZ.v sz1 == AP.length (array_of va1))
-    (fun _ -> True)
 
 #push-options "--z3rlimit 16 --split_queries always --fuel 3 --ifuel 6 --query_stats"
 

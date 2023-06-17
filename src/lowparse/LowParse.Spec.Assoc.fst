@@ -1,6 +1,7 @@
 module LowParse.Spec.Assoc
 include LowParse.Spec.Combinators
 include LowParse.Spec.List
+include LowParse.Spec.Sorted
 
 (* Association lists *)
 
@@ -186,3 +187,52 @@ let rec map_entry_order_assoc_ext
     else if key_order k1 k2
     then map_entry_order_assoc_order_none key_order key_order_irrefl key_order_trans k2 v2 m2' k1
     else map_entry_order_assoc_order_none key_order key_order_irrefl key_order_trans k1 v1 m1' k2
+
+let map_entry_weak_compare
+  (#key: Type)
+  (#key_order: key -> key -> bool)
+  (w: weak_compare_for key_order)
+  (value: Type)
+: Tot (weak_compare_for (map_entry_order key_order value))
+= fun (k1, _) (k2, _) -> w k1 k2
+
+let rec map_entry_insert_none
+  (#key: Type)
+  (#key_order: key -> key -> bool)
+  (c: compare_for key_order)
+  (#value: Type)
+  (k: key)
+  (v: value)
+  (a: list (key & value))
+: Lemma
+  (ensures (None? (insert (map_entry_weak_compare #_ #key_order c value) (k, v) a) == Some? (list_ghost_assoc k a)))
+  (decreases a)
+= match a with
+  | [] -> ()
+  | (k', _) :: a' ->
+    if c k k' > 0
+    then map_entry_insert_none c k v a'
+    else ()
+
+let rec map_entry_insert_some
+  (#key: Type)
+  (#key_order: key -> key -> bool)
+  (w: weak_compare_for key_order)
+  (#value: Type)
+  (k: key)
+  (v: value)
+  (a: list (key & value))
+  (a': list (key & value))
+  (k': key)
+: Lemma
+  (requires (insert (map_entry_weak_compare w value) (k, v) a == Some a'))
+  (ensures (list_ghost_assoc k' a' == (if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k') then Some v else list_ghost_assoc k' a)))
+  (decreases a)
+= match a with
+  | [] -> ()
+  | (k1, _) :: a1 ->
+    if w k k1 > 0 && not (FStar.StrongExcludedMiddle.strong_excluded_middle (k1 == k'))
+    then
+      let Some a1' = insert (map_entry_weak_compare w value) (k, v) a1 in
+      map_entry_insert_some w k v a1 a1' k'
+    else ()
