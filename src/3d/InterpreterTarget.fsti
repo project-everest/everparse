@@ -157,7 +157,19 @@ type typ : Type =
       terminator:expr ->
       typ
 
-val decl : Type0
+val inv_eloc : Type0
+noeq
+type type_decl = {
+  name : T.typedef_name;
+  typ : typ;
+  kind : T.parser_kind;
+  inv_eloc : inv_eloc;
+  allow_reading: bool;
+  attrs : T.decl_attributes;
+  enum_typ: option (t:T.typ {T.T_refine? t })
+}
+let not_type_decl = (d: T.decl { ~ (T.Type_decl? (fst d)) })
+let decl : Type0 = either not_type_decl type_decl
 val env : Type0
 
 val create_env (_:unit) : ML env

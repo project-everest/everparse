@@ -47,17 +47,6 @@ let inv_eloc_nil = Inv_true, Eloc_none, On_success false
 let inv_eloc_union (i, e, b) (i', e', b') = Inv_conj i i', Eloc_union e e', On_success_union b b'
 let inv_eloc_name hd args = Inv_name hd args, Eloc_name hd args, On_success_named hd args
 
-noeq
-type type_decl = {
-  name : T.typedef_name;
-  typ : typ;
-  kind : T.parser_kind;
-  inv_eloc : inv_eloc;
-  allow_reading: bool;
-  attrs : T.decl_attributes;
-  enum_typ: option (t:T.typ {T.T_refine? t })
-}
-let decl = either T.decl type_decl
 let env = H.t A.ident' type_decl
 let create_env (_:unit) : ML env = H.create 100
 
@@ -389,7 +378,7 @@ let translate_decls (en:env) (ds:T.decls)
             H.insert en td.name.td_name.v td;
             Inr td
         | d ->
-          Inl d)
+          Inl (d <: not_type_decl))
       ds
 
 let print_ityp (i:itype) =
