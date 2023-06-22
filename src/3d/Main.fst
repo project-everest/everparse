@@ -411,7 +411,51 @@ let process_files (files_and_modules:list (string & string))
   |> List.fold_left (fun env (fn, modul) ->
                     process_file env fn modul (emit_fstar modul) emit_output_types_defs all_modules) env
   |> ignore
-  
+
+let process_file_for_z3
+                 (en:env)
+                 (fn:string)
+                 (modul:string)
+                 (out: string -> ML unit)
+  : ML env =
+  let t_decls, interpreter_decls_opt, static_asserts, en =
+      translate_module en modul fn
+  in
+  begin match interpreter_decls_opt with
+  | None -> failwith "process_file_for_z3: no interpreter decls left"
+  | Some i -> Z3TestGen.produce_decls i out
+  end;
+
+  let ds = Binding.get_exported_decls en.binding_env modul in
+  TypeSizes.finish_module en.typesizes_env modul ds;
+
+  { en with 
+    binding_env = Binding.finish_module en.binding_env modul;
+    translate_env = 
+      en.translate_env;
+  }
+
+let process_files_for_z3
+                  (files_and_modules:list (string & string))
+                  (out: string -> ML unit)
+  : ML unit =
+  out Z3TestGen.prelude;
+  IO.print_string 
+    (Printf.sprintf ";; Processing files: %s\n"
+                    (List.map fst files_and_modules |> String.concat " "));
+  let all_modules = List.map snd files_and_modules in
+  let env = initial_env () in
+  files_and_modules
+  |> List.fold_left (fun env (fn, modul) ->
+                    process_file_for_z3 env fn modul out) env
+  |> ignore;
+  out Z3TestGen.interlude
+
+let produce_z3
+  (files_and_modules:list (string & string))
+: ML unit
+= process_files_for_z3 files_and_modules FStar.IO.print_string
+
 let produce_and_postprocess_c
   (out_dir: string)
   (file: string)
@@ -501,6 +545,10 @@ let go () : ML unit =
   let check_hashes = Options.get_check_hashes () in
   if Some? check_hashes
   then Batch.check_all_hashes (Some?.v check_hashes) out_dir all_files_and_modules
+  else
+  (* Special mode: --emit_smt_encoding *)
+  if Options.get_emit_smt_encoding ()
+  then produce_z3 all_files_and_modules
   else
   (* Default mode: process .3d files *)
   let should_emit_fstar_code : string -> ML bool =

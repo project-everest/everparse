@@ -113,6 +113,8 @@ let input_stream_include : ref (option vstring) = alloc None
 
 let emit_output_types_defs : ref bool = alloc true
 
+let emit_smt_encoding : ref bool = alloc false
+
 noeq
 type cmd_option_kind =
   | OptBool:
@@ -330,6 +332,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and krml-args.rsp (--batch only)" [];
     CmdOption "config" (OptStringOption "config file" check_config_file_name config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
+    CmdOption "emit_smt_encoding" (OptBool emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
     CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
@@ -505,3 +508,6 @@ let config_module_name () =
   match !config_file with
   | None -> None
   | Some s -> Some (strip_suffix (OS.basename s) ".3d.config")
+
+let get_emit_smt_encoding () =
+  !emit_smt_encoding
