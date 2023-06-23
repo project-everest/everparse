@@ -13,6 +13,8 @@ let rec parse_seq_int_expr = function
     List.concat_map parse_seq_int_expr l
   | Sexplib.Sexp.List [Sexplib.Sexp.Atom "seq.unit"; Sexplib.Sexp.Atom n] ->
     [Prims.parse_int n]
+  | Sexplib.Sexp.List [Sexplib.Sexp.Atom "as"; Sexplib.Sexp.Atom "seq.empty"; _] ->
+    []
   | _ -> failwith "parse_seq_int_expr: unrecognized function call"
 
 let parse_witness = function

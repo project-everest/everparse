@@ -403,48 +403,80 @@ let write_prog_to_file (filename: string) (l: list I.decl) : ML unit =
 
 (* Ask Z3 for test witnesses *)
 
-let mk_get_first_witness (name1: string) (name2: string) : string =
-  Printf.sprintf
-"
-(push)
-(assert (and (= (seq.len (%s witness)) 1) (= (seq.len (%s witness)) 0)))
-(check-sat)
-"
-  name1
-  name2
-
 let read_witness (z3: Z3.z3) =
   Lisp.read_witness_from z3.from_z3
 
-let mk_want_another_witness letbinding p =
+let rec want_witnesses (z3: Z3.z3) (mk_want_another_witness: string -> string) i : ML unit =
+  z3.to_z3 "(check-sat)\n";
+  let status = z3.from_z3 () in
+  if status = "sat" then begin
+    z3.to_z3 "(get-value (witness))\n";
+    let (letbinding, _) = read_witness z3 in
+    if i <= 1
+    then ()
+    else begin
+      z3.to_z3 (mk_want_another_witness letbinding);
+      want_witnesses z3 mk_want_another_witness (i - 1)
+    end
+  end
+
+let witnesses_for (z3: Z3.z3) mk_get_first_witness mk_want_another_witness nbwitnesses =
+  z3.to_z3 "(push)\n";
+  z3.to_z3 mk_get_first_witness;
+  want_witnesses z3 mk_want_another_witness nbwitnesses;
+  z3.to_z3 "(pop)\n"
+
+let mk_get_first_positive_test_witness (name1: string) : string =
+  Printf.sprintf
+"
+(assert (= (seq.len (%s witness)) 1))
+"
+  name1
+
+let mk_want_another_positive_witness p letbinding =
   Printf.sprintf
 "(assert (not (= (seq.extract witness 0 (seq.nth (%s witness) 0)) (let %s (seq.extract witness 0 (seq.nth (%s witness) 0))))))
- (check-sat)
 "
   p
   letbinding
   p
 
-let rec want_other_witnesses (z3: Z3.z3) p i : ML unit =
-  let status = z3.from_z3 () in
-  if status = "sat" then begin
-    z3.to_z3 "(get-value (witness))\n";
-    let (letbinding, _) = read_witness z3 in
-    if i <= 0
-    then ()
-    else begin
-      z3.to_z3 (mk_want_another_witness letbinding p);
-      want_other_witnesses z3 p (i - 1)
-    end
-  end
+let mk_get_first_negative_test_witness (name1: string) : string =
+  Printf.sprintf
+"
+(assert (= (seq.len (%s witness)) 0))
+"
+  name1
 
-let witnesses_for (z3: Z3.z3) name1 name2 extra =
+let mk_want_another_distinct_witness letbinding =
+  Printf.sprintf
+"(assert (not (= witness (let %s witness))))
+"
+  letbinding
+
+let do_test (z3: Z3.z3) (name1: string) (nbwitnesses: int) =
+  FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
+  witnesses_for z3 (mk_get_first_positive_test_witness name1) (mk_want_another_positive_witness name1) nbwitnesses;
+  FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
+  witnesses_for z3 (mk_get_first_negative_test_witness name1) mk_want_another_distinct_witness nbwitnesses
+
+let mk_get_first_diff_test_witness (name1: string) (name2: string) : string =
+  Printf.sprintf
+"
+(assert (and (= (seq.len (%s witness)) 1) (= (seq.len (%s witness)) 0)))
+"
+  name1
+  name2
+
+let do_diff_test_for (z3: Z3.z3) name1 name2 nbwitnesses =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  z3.to_z3 (mk_get_first_witness name1 name2);
-  want_other_witnesses z3 name1 extra;
-  z3.to_z3 "(pop)\n"
+  witnesses_for z3 (mk_get_first_diff_test_witness name1 name2) (mk_want_another_positive_witness name1) nbwitnesses
 
-let diff_test (p1: parser not_reading) name1 (p2: parser not_reading) name2 extra =
+let do_diff_test (z3: Z3.z3) name1 name2 nbwitnesses =
+  do_diff_test_for z3 name1 name2 nbwitnesses;
+  do_diff_test_for z3 name2 name1 nbwitnesses
+
+let diff_test (p1: parser not_reading) name1 (p2: parser not_reading) name2 nbwitnesses =
   let buf : ref string = alloc "" in
   let out x : ML unit = buf := Printf.sprintf "%s%s" !buf x in
   let name1 = (p1 name1 empty_binders false out).call in
@@ -453,6 +485,5 @@ let diff_test (p1: parser not_reading) name1 (p2: parser not_reading) name2 extr
     z3.to_z3 prelude;
     z3.to_z3 !buf;
     z3.to_z3 interlude;
-    witnesses_for z3 name1 name2 extra;
-    witnesses_for z3 name2 name1 extra
+    do_diff_test z3 name1 name2 nbwitnesses
   )

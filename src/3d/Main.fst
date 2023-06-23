@@ -456,6 +456,16 @@ let produce_z3
 : ML unit
 = process_files_for_z3 files_and_modules FStar.IO.print_string
 
+let produce_z3_and_test
+  (files_and_modules:list (string & string))
+  (name: string)
+: ML unit
+= let nbwitnesses = Options.get_z3_witnesses () in
+  Z3.with_z3 (fun z3 ->
+    process_files_for_z3 files_and_modules z3.to_z3;
+    Z3TestGen.do_test z3 name nbwitnesses
+  )
+
 let produce_and_postprocess_c
   (out_dir: string)
   (file: string)
@@ -549,6 +559,11 @@ let go () : ML unit =
   (* Special mode: --emit_smt_encoding *)
   if Options.get_emit_smt_encoding ()
   then produce_z3 all_files_and_modules
+  else
+  (* Special mode: --z3_test *)
+  let z3_test = Options.get_z3_test () in
+  if Some? z3_test
+  then produce_z3_and_test all_files_and_modules (Some?.v z3_test)
   else
   (* Default mode: process .3d files *)
   let should_emit_fstar_code : string -> ML bool =

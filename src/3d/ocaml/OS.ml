@@ -120,3 +120,5 @@ let file_contents f =
   let s = really_input_string ic l in
   close_in ic;
   s
+
+let int_of_string x = Z.of_string x
