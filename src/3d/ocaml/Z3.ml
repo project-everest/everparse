@@ -1,11 +1,11 @@
 open Z3_Base
 
-let tee ch s =
-  print_string s;
+let tee debug ch s =
+  if debug then print_string s;
   output_string ch s;
   flush ch
 
-let with_z3 (f: (z3 -> 'a)) : 'a =
+let with_z3 (debug: bool) (f: (z3 -> 'a)) : 'a =
   let (ch_from_z3, ch_to_z3) as ch_z3 = Unix.open_process "z3 -in" in
   let valid = ref true in
   let is_from = ref true in
@@ -13,11 +13,11 @@ let with_z3 (f: (z3 -> 'a)) : 'a =
     if !valid then begin
       if not !is_from
       then begin
-        print_endline ";; From z3";
+        if debug then print_endline ";; From z3";
         is_from := true
       end;
       let s = input_line ch_from_z3 in
-      print_endline s;
+      if debug then print_endline s;
       s
     end
     else ""
@@ -26,10 +26,10 @@ let with_z3 (f: (z3 -> 'a)) : 'a =
     if !valid then begin
       if !is_from
       then begin
-        print_endline ";; To z3";
+        if debug then print_endline ";; To z3";
         is_from := false
       end;
-      tee ch_to_z3 s
+      tee debug ch_to_z3 s
     end
   in
   let z3 = {

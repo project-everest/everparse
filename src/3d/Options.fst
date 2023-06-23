@@ -528,3 +528,5 @@ let get_z3_witnesses () =
     let n = OS.int_of_string s in
     if n < 1 then 1 else n
   with _ -> 1
+
+let get_debug _ = !debug

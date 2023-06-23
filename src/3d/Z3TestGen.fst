@@ -481,7 +481,7 @@ let diff_test (p1: parser not_reading) name1 (p2: parser not_reading) name2 nbwi
   let out x : ML unit = buf := Printf.sprintf "%s%s" !buf x in
   let name1 = (p1 name1 empty_binders false out).call in
   let name2 = (p2 name2 empty_binders false out).call in
-  Z3.with_z3 (fun z3 ->
+  Z3.with_z3 true (fun z3 ->
     z3.to_z3 prelude;
     z3.to_z3 !buf;
     z3.to_z3 interlude;

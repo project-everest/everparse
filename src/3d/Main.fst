@@ -461,7 +461,7 @@ let produce_z3_and_test
   (name: string)
 : ML unit
 = let nbwitnesses = Options.get_z3_witnesses () in
-  Z3.with_z3 (fun z3 ->
+  Z3.with_z3 (Options.get_debug ()) (fun z3 ->
     process_files_for_z3 files_and_modules z3.to_z3;
     Z3TestGen.do_test z3 name nbwitnesses
   )

@@ -4,5 +4,6 @@ open FStar.All
 
 val with_z3
   (#a: Type)
+  (debug: bool)
   (f: (z3 -> ML a))
 : ML a
