@@ -419,6 +419,15 @@ let rec want_witnesses (z3: Z3.z3) (mk_want_another_witness: string -> string) i
       want_witnesses z3 mk_want_another_witness (i - 1)
     end
   end
+  else begin
+    FStar.IO.print_string
+      begin
+        if status = "unsat"
+        then";; unsat: no more witnesses"
+        else Printf.sprintf ";; %s: z3 gave up" status
+      end;
+    FStar.IO.print_newline ()
+  end
 
 let witnesses_for (z3: Z3.z3) mk_get_first_witness mk_want_another_witness nbwitnesses =
   z3.to_z3 "(push)\n";

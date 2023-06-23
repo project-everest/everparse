@@ -466,6 +466,17 @@ let produce_z3_and_test
     Z3TestGen.do_test z3 name nbwitnesses
   )
 
+let produce_z3_and_diff_test
+  (files_and_modules:list (string & string))
+  (names: (string & string))
+: ML unit
+= let (name1, name2) = names in
+  let nbwitnesses = Options.get_z3_witnesses () in
+  Z3.with_z3 (Options.get_debug ()) (fun z3 ->
+    process_files_for_z3 files_and_modules z3.to_z3;
+    Z3TestGen.do_diff_test z3 name1 name2 nbwitnesses
+  )
+
 let produce_and_postprocess_c
   (out_dir: string)
   (file: string)
@@ -564,6 +575,11 @@ let go () : ML unit =
   let z3_test = Options.get_z3_test () in
   if Some? z3_test
   then produce_z3_and_test all_files_and_modules (Some?.v z3_test)
+  else
+  (* Special mode: --z3_diff_test *)
+  let z3_diff_test = Options.get_z3_diff_test () in
+  if Some? z3_diff_test
+  then produce_z3_and_diff_test all_files_and_modules (Some?.v z3_diff_test)
   else
   (* Default mode: process .3d files *)
   let should_emit_fstar_code : string -> ML bool =
