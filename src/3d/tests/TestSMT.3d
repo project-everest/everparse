@@ -1,11 +1,11 @@
 entrypoint
 typedef struct test1 {
   UINT8 x { x >= 12 };
-  UINT8 y { x + y <= 28 };
+  UINT8 y { (UINT16)x + (UINT16)y <= 28 };
 } test1_t;
 
 entrypoint
 typedef struct test2 {
   UINT8 x { x >= 10 };
-  UINT8 y { x + y <= 30 };
+  UINT8 y { (UINT16)x + (UINT16)y <= 30 };
 } test2_t;
