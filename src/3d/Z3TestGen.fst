@@ -15,14 +15,191 @@ let prelude : string =
 )
 
 (define-fun parse-u8 ((x (Seq Int))) (Seq (Pair Int Int))
-  (if (= (seq.len x) 0)
+  (if (< (seq.len x) 1)
     (as seq.empty (Seq (Pair Int Int)))
     (seq.unit (mk-pair (seq.nth x 0) 1))
   )
 )
 
+(define-fun parse-u16-be ((x (Seq Int))) (Seq (Pair Int Int))
+  (if (< (seq.len x) 2)
+    (as seq.empty (Seq (Pair Int Int)))
+    (seq.unit 
+      (mk-pair
+        (+ (seq.nth x 1)
+          (* 256
+            (seq.nth x 0)
+          )
+        )
+        2
+      )
+    )
+  )
+)
+
+(define-fun parse-u16-le ((x (Seq Int))) (Seq (Pair Int Int))
+  (if (< (seq.len x) 2)
+    (as seq.empty (Seq (Pair Int Int)))
+    (seq.unit 
+      (mk-pair
+        (+ (seq.nth x 0)
+          (* 256
+            (seq.nth x 1)
+          )
+        )
+        2
+      )
+    )
+  )
+)
+
+(define-fun parse-u32-be ((x (Seq Int))) (Seq (Pair Int Int))
+  (if (< (seq.len x) 4)
+    (as seq.empty (Seq (Pair Int Int)))
+    (seq.unit 
+      (mk-pair
+        (+ (seq.nth x 3)
+          (* 256
+            (+ (seq.nth x 2)
+              (* 256
+                (+ (seq.nth x 1)
+                  (* 256
+                    (seq.nth x 0)
+                  )
+                )
+              )
+            )
+          )
+        )
+        4
+      )
+    )
+  )
+)
+
+(define-fun parse-u32-le ((x (Seq Int))) (Seq (Pair Int Int))
+  (if (< (seq.len x) 4)
+    (as seq.empty (Seq (Pair Int Int)))
+    (seq.unit 
+      (mk-pair
+        (+ (seq.nth x 0)
+          (* 256
+            (+ (seq.nth x 1)
+              (* 256
+                (+ (seq.nth x 2)
+                  (* 256
+                    (seq.nth x 3)
+                  )
+                )
+              )
+            )
+          )
+        )
+        4
+      )
+    )
+  )
+)
+
+(define-fun parse-u64-be ((x (Seq Int))) (Seq (Pair Int Int))
+  (if (< (seq.len x) 8)
+    (as seq.empty (Seq (Pair Int Int)))
+    (seq.unit 
+      (mk-pair
+        (+ (seq.nth x 7)
+          (* 256
+            (+ (seq.nth x 6)
+              (* 256
+                (+ (seq.nth x 5)
+                  (* 256
+                    (+ (seq.nth x 4)
+                      (* 256
+                        (+ (seq.nth x 3)
+                          (* 256
+                            (+ (seq.nth x 2)
+                              (* 256
+                                (+ (seq.nth x 1)
+                                  (* 256
+                                    (seq.nth x 0)
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        8
+      )
+    )
+  )
+)
+
+(define-fun parse-u64-le ((x (Seq Int))) (Seq (Pair Int Int))
+  (if (< (seq.len x) 8)
+    (as seq.empty (Seq (Pair Int Int)))
+    (seq.unit 
+      (mk-pair
+        (+ (seq.nth x 0)
+          (* 256
+            (+ (seq.nth x 1)
+              (* 256
+                (+ (seq.nth x 2)
+                  (* 256
+                    (+ (seq.nth x 3)
+                      (* 256
+                        (+ (seq.nth x 4)
+                          (* 256
+                            (+ (seq.nth x 5)
+                              (* 256
+                                (+ (seq.nth x 6)
+                                  (* 256
+                                    (seq.nth x 7)
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        8
+      )
+    )
+  )
+)
+
 (define-fun parse-false ((x (Seq Int))) (Seq Int)
   (as seq.empty (Seq Int))
+)
+
+(define-fun parse-all-bytes ((x (Seq Int))) (Seq Int)
+  (seq.unit (seq.len x))
+)
+
+(define-fun parse-all-zeros ((x (Seq Int))) (Seq Int)
+  (if
+    (forall ((i Int))
+      (if (and (<= 0 i) (< i (seq.len x)))
+        (= (seq.nth x i) 0)
+        true
+      )
+    )
+    (seq.unit (seq.len x))
+    (as seq.empty (Seq Int))
+  )
 )
 "
 
@@ -114,47 +291,36 @@ let unsupported_parser (a: Type) : Tot (parser a) =
 let parse_u8 : parser reading =
   fun _ _ _ _ -> { call = "parse-u8" }
 
-let parse_itype = function
+let parse_u16_be : parser reading =
+  fun _ _ _ _ -> { call = "parse-u16-be" }
+
+let parse_u16_le : parser reading =
+  fun _ _ _ _ -> { call = "parse-u16-le" }
+
+let parse_u32_be : parser reading =
+  fun _ _ _ _ -> { call = "parse-u32-be" }
+
+let parse_u32_le : parser reading =
+  fun _ _ _ _ -> { call = "parse-u32-le" }
+
+let parse_u64_be : parser reading =
+  fun _ _ _ _ -> { call = "parse-u64-be" }
+
+let parse_u64_le : parser reading =
+  fun _ _ _ _ -> { call = "parse-u64-le" }
+
+let parse_empty : parser reading =
+  fun _ _ _ _ -> { call = "parse-empty" }
+
+let parse_readable_itype (i: I.readable_itype) = match i with
   | I.UInt8 | I.UInt8BE -> parse_u8
-  | _ -> unsupported_parser _
-
-let parse_app
-  (hd: A.ident)
-  (args: list I.expr)
-: Tot (parser reading)
-= fun _ _ _ _ -> { call = mk_app (ident_to_string hd) (mk_args args) }
-
-let parse_dtyp
-  (d: I.dtyp)
-: Tot (parser reading)
-= match d with
-  | I.DT_IType i -> parse_itype i
-  | I.DT_App hd args -> parse_app hd args
-
-let mk_toplevel_parser
-  (name: string)
-  (binders: string)
-  (body: string)
-: string
-= let input = Printf.sprintf "%s-input" name in
-"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
-   ("^body^" "^input^")
- )
-"
-
-let maybe_toplevel_parser (p: parser not_reading) : parser not_reading =
-  fun name binders is_toplevel out ->
-    if is_toplevel
-    then begin
-      let name' = Printf.sprintf "%s-body" name in
-      let body = p name' binders false out in
-      out (mk_toplevel_parser name binders.bind body.call);
-      { call = mk_function_call name binders }
-    end
-    else p name binders false out
-
-let parse_false : parser not_reading =
-  maybe_toplevel_parser (fun _ _ _ _ -> { call = "parse-false" })
+  | I.UInt16 -> parse_u16_le
+  | I.UInt16BE -> parse_u16_be
+  | I.UInt32 -> parse_u32_le
+  | I.UInt32BE -> parse_u32_be
+  | I.UInt64 -> parse_u64_le
+  | I.UInt64BE -> parse_u64_be
+  | I.Unit -> parse_empty
 
 let mk_wrap_parser
   (name: string)
@@ -180,8 +346,75 @@ let wrap_parser (p: parser reading) : parser not_reading =
     out (mk_wrap_parser name binders.bind body.call);
     { call = mk_function_call name binders }
 
+let mk_toplevel_parser
+  (name: string)
+  (binders: string)
+  (body: string)
+: string
+= let input = Printf.sprintf "%s-input" name in
+"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
+   ("^body^" "^input^")
+ )
+"
+
+let maybe_toplevel_parser (p: parser not_reading) : parser not_reading =
+  fun name binders is_toplevel out ->
+    if is_toplevel
+    then begin
+      let name' = Printf.sprintf "%s-body" name in
+      let body = p name' binders false out in
+      out (mk_toplevel_parser name binders.bind body.call);
+      { call = mk_function_call name binders }
+    end
+    else p name binders false out
+
+let parse_all_bytes : parser not_reading =
+  maybe_toplevel_parser (fun _ _ _ _ -> { call = "parse-all-bytes" })
+
+let parse_all_zeros : parser not_reading =
+  maybe_toplevel_parser (fun _ _ _ _ -> { call = "parse-all-zeros" })
+
+let parse_itype  : I.itype -> parser not_reading = function
+  | I.AllBytes -> parse_all_bytes
+  | I.AllZeros -> parse_all_zeros
+  | i -> wrap_parser (parse_readable_itype i)
+
+let mk_app_without_paren id args =
+  mk_args_aux (ident_to_string id) args
+  
+let parse_readable_app
+  (hd: A.ident)
+  (args: list I.expr)
+: Tot (parser reading)
+= fun _ _ _ _ -> { call = mk_app_without_paren hd args }
+
+let parse_readable_dtyp
+  (d: I.readable_dtyp)
+: Tot (parser reading)
+= match d with
+  | I.DT_IType i -> parse_readable_itype i
+  | I.DT_App _ hd args -> parse_readable_app hd args
+
+let parse_not_readable_app
+  (hd: A.ident)
+  (args: list I.expr)
+: Tot (parser not_reading)
+= fun _ _ _ _ -> { call = mk_app_without_paren hd args }
+
+let parse_dtyp
+  (d: I.dtyp)
+: Tot (parser not_reading)
+= if I.allow_reader_of_dtyp d
+  then wrap_parser (parse_readable_dtyp d)
+  else match d with
+    | I.DT_IType i -> parse_itype i
+    | I.DT_App _ hd args -> parse_not_readable_app hd args
+
+let parse_false : parser not_reading =
+  maybe_toplevel_parser (fun _ _ _ _ -> { call = "parse-false" })
+
 let parse_denoted (d: I.dtyp) : parser not_reading =
-  wrap_parser (parse_dtyp d)
+  parse_dtyp d
 
 let mk_parse_pair
   (name: string)
@@ -269,9 +502,6 @@ let parse_dep_pair_with_refinement (tag: parser reading) (cond_binder: A.ident) 
 let parse_dep_pair (tag: parser reading) (new_binder: A.ident) (payload: parser not_reading) : parser not_reading =
   parse_dep_pair_with_refinement tag new_binder (fun _ -> "true") new_binder payload
 
-let parse_empty : parser reading =
-  fun _ _ _ _ -> { call = "parse-empty" }
-
 let parse_refine (tag: parser reading) (cond_binder: A.ident) (cond: unit -> ML string) : parser not_reading =
   parse_dep_pair_with_refinement tag cond_binder cond cond_binder (wrap_parser parse_empty)
 
@@ -303,14 +533,14 @@ let parse_ifthenelse (cond: unit -> ML string) (pthen: parser not_reading) (pels
 let rec parse_typ : I.typ -> parser not_reading = function
   | I.T_false _ -> parse_false
   | I.T_denoted _ d
-  | I.T_with_dep_action _ d _ -> wrap_parser (parse_dtyp d)
+  | I.T_with_dep_action _ d _ -> parse_denoted d
   | I.T_pair _ t1 t2 -> parse_pair (parse_typ t1) (parse_typ t2)
   | I.T_dep_pair _ t1 (lam, t2)
-  | I.T_dep_pair_with_action _ t1 (lam, t2) _ -> parse_dep_pair (parse_dtyp t1) lam (parse_typ t2)
+  | I.T_dep_pair_with_action _ t1 (lam, t2) _ -> parse_dep_pair (parse_readable_dtyp t1) lam (parse_typ t2)
   | I.T_refine _ base (lam, cond)
-  | I.T_refine_with_action _ base (lam, cond) _ -> parse_refine (parse_dtyp base) lam (fun _ -> mk_expr cond)
+  | I.T_refine_with_action _ base (lam, cond) _ -> parse_refine (parse_readable_dtyp base) lam (fun _ -> mk_expr cond)
   | I.T_dep_pair_with_refinement _ base (lam_cond, cond) (lam_k, k)
-  | I.T_dep_pair_with_refinement_and_action _ base (lam_cond, cond) (lam_k, k) _ -> parse_dep_pair_with_refinement (parse_dtyp base) lam_cond (fun _ -> mk_expr cond) lam_k (parse_typ k)
+  | I.T_dep_pair_with_refinement_and_action _ base (lam_cond, cond) (lam_k, k) _ -> parse_dep_pair_with_refinement (parse_readable_dtyp base) lam_cond (fun _ -> mk_expr cond) lam_k (parse_typ k)
   | I.T_if_else cond t1 t2 -> parse_ifthenelse (fun _ -> mk_expr cond) (parse_typ t1) (parse_typ t2)
   | I.T_with_action _ base _
   | I.T_with_comment _ base _ -> parse_typ base

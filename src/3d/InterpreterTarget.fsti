@@ -35,15 +35,32 @@ type itype =
   | AllBytes
   | AllZeros
 
+let allow_reader_of_itype (i:itype)
+  : bool
+  = match i with
+    | AllBytes
+    | AllZeros -> false
+    | _ -> true
+
+let readable_itype = (i: itype { allow_reader_of_itype i == true })
+
 noeq
 type dtyp : Type =
   | DT_IType:
       i:itype -> dtyp
 
   | DT_App:
+      readable: bool ->
       hd:A.ident ->
       args:list expr ->
       dtyp
+
+let allow_reader_of_dtyp (d: dtyp) : Tot bool =
+  match d with
+  | DT_IType i -> allow_reader_of_itype i
+  | DT_App readable _ _ -> readable
+
+let readable_dtyp = (d: dtyp { allow_reader_of_dtyp d == true })
 
 let non_empty_string = s:string { s <> "" }
 
@@ -70,40 +87,40 @@ type typ : Type =
 
   | T_dep_pair:
       fn:non_empty_string ->
-      t1:dtyp ->
+      t1:readable_dtyp ->
       t2:lam typ ->
       typ
 
   | T_refine:
       fn:non_empty_string ->
-      base:dtyp ->
+      base:readable_dtyp ->
       refinement:lam expr ->
       typ
 
   | T_refine_with_action:
       fn:non_empty_string ->
-      base:dtyp ->
+      base:readable_dtyp ->
       refinement:lam expr ->
       a:lam action ->
       typ
 
   | T_dep_pair_with_refinement:
       fn:non_empty_string ->
-      base:dtyp ->
+      base:readable_dtyp ->
       refinement:lam expr ->
       k:lam typ ->
       typ
 
   | T_dep_pair_with_action:
       fn:non_empty_string ->
-      base:dtyp ->
+      base:readable_dtyp ->
       k:lam typ ->
       a:lam action ->
       typ
 
   | T_dep_pair_with_refinement_and_action:
       fn:non_empty_string ->
-      base:dtyp ->
+      base:readable_dtyp ->
       refinement:lam expr ->
       k:lam typ ->
       a:lam action ->
@@ -123,7 +140,7 @@ type typ : Type =
 
   | T_with_dep_action:
       fn:non_empty_string ->
-      head:dtyp ->
+      head:readable_dtyp ->
       act:lam action ->
       typ
 
@@ -153,7 +170,7 @@ type typ : Type =
 
   | T_string:
       fn:non_empty_string ->
-      element_type:dtyp ->
+      element_type:readable_dtyp ->
       terminator:expr ->
       typ
 
