@@ -573,6 +573,55 @@ let parse_at_most
 : Tot (parser not_reading)
 = parse_exact size (parse_pair body parse_all_bytes)
 
+let mk_parse_list
+  (name: string)
+  (rec_call: string)
+  (binders: string)
+  (body: string)
+: string
+= let input = Printf.sprintf "%s-input" name in
+  let hd = Printf.sprintf "%s-hd" name in
+  let consumed = Printf.sprintf "%s-consumed" name in
+  let tl = Printf.sprintf "%s-tl" name in
+"(define-fun-rec "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
+  (if (= (seq.len "^input^") 0)
+    (seq.unit 0)
+    (let (("^hd^" ("^body^" "^input^")))
+      (if (= (seq.len "^hd^") 0)
+        (as seq.empty (Seq Int))
+        (let (("^consumed^ "(seq.nth "^hd^" 0)))
+          (if (= "^consumed^" 0)
+            (as seq.empty (Seq Int))
+            (let (("^tl^" ("^rec_call^" (seq.extract "^input^" 0 "^consumed^"))))
+              (if (= (seq.len "^tl^") 0)
+                (as seq.empty (Seq Int))
+                (seq.unit (+ "^consumed^" (seq.nth "^tl^" 0)))
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)
+"
+
+let parse_list
+  (body: parser not_reading)
+: Tot (parser not_reading)
+= fun name binders _ out ->
+    let rec_call = mk_function_call name binders in
+    let body_name = Printf.sprintf "%s-body" name in
+    let body = body body_name binders false out in
+    out (mk_parse_list name rec_call binders.bind body.call);
+    { call = rec_call }
+
+let parse_nlist
+  (size: unit -> ML string)
+  (body: parser not_reading)
+: Tot (parser not_reading)
+= parse_exact size (parse_list body)
+
 let rec parse_typ : I.typ -> parser not_reading = function
   | I.T_false _ -> parse_false
   | I.T_denoted _ d
@@ -590,7 +639,7 @@ let rec parse_typ : I.typ -> parser not_reading = function
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
   | I.T_string _ _ _ -> unsupported_parser "T_string" _
-  | I.T_nlist _ _ _ -> unsupported_parser "T_nlist" _
+  | I.T_nlist _ size body -> parse_nlist (fun _ -> mk_expr size) (parse_typ body)
 
 let smt_type_of_typ (t: T.typ) : Tot string =
   "Int" (* TODO: support more cases, such as booleans *)
