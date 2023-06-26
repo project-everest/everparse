@@ -399,7 +399,7 @@ let parse_not_readable_app
   (hd: A.ident)
   (args: list I.expr)
 : Tot (parser not_reading)
-= fun _ _ _ _ -> { call = mk_app_without_paren hd args }
+= maybe_toplevel_parser (fun _ _ _ _ -> { call = mk_app_without_paren hd args })
 
 let parse_dtyp
   (d: I.dtyp)
