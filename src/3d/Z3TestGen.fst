@@ -285,8 +285,8 @@ type parser (a: Type) =
   (* out *) (string -> ML unit) ->
   ML a
 
-let unsupported_parser (a: Type) : Tot (parser a) =
-  fun _ _ _ _ -> failwith "unsupported parser"
+let unsupported_parser (s: string) (a: Type) : Tot (parser a) =
+  fun _ _ _ _ -> failwith (Printf.sprintf "unsupported parser: %s" s)
 
 let parse_u8 : parser reading =
   fun _ _ _ _ -> { call = "parse-u8" }
@@ -426,22 +426,22 @@ let mk_parse_pair
   let tmp_has_fst = Printf.sprintf "%s-tmp-has-fst" name in
   let tmp_fst = Printf.sprintf "%s-tmp-fst" name in
   let tmp_snd_result = Printf.sprintf "%s-tmp-snd-result" name in
-"(define-fun "^name^" ("^binders^input^" (Seq Int))) (Seq Int)
+"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
    (let (("^tmp_has_fst^" ("^fst^" "^input^")))
      (if (= (seq.len "^tmp_has_fst^") 0)
        (as seq.empty (Seq Int))
        (let (("^tmp_fst^" (seq.nth "^tmp_has_fst^" 0)))
          (let (("^tmp_snd_result^" ("^snd^" (seq.extract "^input^" "^tmp_fst^" (- (seq.len "^input^") "^tmp_fst^")))))
-             (if (= (seq.len "^tmp_snd_result^") 0)
-               (as seq.empty (Seq Int))
-               (seq.unit (+ "^tmp_fst^" (seq.nth "^tmp_snd_result^" 0)))
-             )
+           (if (= (seq.len "^tmp_snd_result^") 0)
+             (as seq.empty (Seq Int))
+             (seq.unit (+ "^tmp_fst^" (seq.nth "^tmp_snd_result^" 0)))
            )
          )
        )
      )
    )
- )"
+ )
+"
 
 let parse_pair (fst: parser not_reading) (snd: parser not_reading) : parser not_reading =
   fun name binders _ out ->
@@ -530,6 +530,49 @@ let parse_ifthenelse (cond: unit -> ML string) (pthen: parser not_reading) (pels
     out (mk_parse_ifthenelse name binders.bind (cond ()) body_then.call body_else.call);
     { call = mk_function_call name binders }
 
+let mk_parse_exact
+  (name: string)
+  (binders: string)
+  (body: string)
+  (size: string)
+: string
+= let input = Printf.sprintf "%s-input" name in
+  let sz = Printf.sprintf "%s-size" name in
+  let res = Printf.sprintf "%s-res" name in
+"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
+  (let (("^sz^" "^size^"))
+    (if (< (seq.len "^input^") "^sz^")
+      (as seq.empty (Seq Int))
+      (let (("^res^" ("^body^" (seq.extract "^input^" 0 "^sz^"))))
+        (if (= (seq.len "^res^") 0)
+          (as seq.empty (Seq Int))
+          (if (= (seq.nth "^res^" 0) "^sz^")
+            "^res^"
+            (as seq.empty (Seq Int))
+          )
+        )
+      )
+    )
+  )
+)
+"
+
+let parse_exact
+  (size: unit -> ML string)
+  (body: parser not_reading)
+: Tot (parser not_reading)
+= fun name binders _ out ->
+    let body_name = Printf.sprintf "%s-body" name in
+    let body = body body_name binders false out in
+    out (mk_parse_exact name binders.bind body.call (size ()));
+    { call = mk_function_call name binders }
+
+let parse_at_most
+  (size: unit -> ML string)
+  (body: parser not_reading)
+: Tot (parser not_reading)
+= parse_exact size (parse_pair body parse_all_bytes)
+
 let rec parse_typ : I.typ -> parser not_reading = function
   | I.T_false _ -> parse_false
   | I.T_denoted _ d
@@ -544,7 +587,10 @@ let rec parse_typ : I.typ -> parser not_reading = function
   | I.T_if_else cond t1 t2 -> parse_ifthenelse (fun _ -> mk_expr cond) (parse_typ t1) (parse_typ t2)
   | I.T_with_action _ base _
   | I.T_with_comment _ base _ -> parse_typ base
-  | _ -> unsupported_parser _
+  | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
+  | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
+  | I.T_string _ _ _ -> unsupported_parser "T_string" _
+  | I.T_nlist _ _ _ -> unsupported_parser "T_nlist" _
 
 let smt_type_of_typ (t: T.typ) : Tot string =
   "Int" (* TODO: support more cases, such as booleans *)
