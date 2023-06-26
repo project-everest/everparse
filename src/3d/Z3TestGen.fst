@@ -206,7 +206,7 @@ let prelude : string =
 let mk_constant = function
   | A.Unit -> "0"
   | A.Int _ x -> string_of_int x
-  | A.XInt _ x -> x
+  | A.XInt _ x -> string_of_int (OS.int_of_string x)
   | A.Bool true -> "true"
   | A.Bool false -> "false"
 
