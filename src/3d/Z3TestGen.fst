@@ -452,6 +452,13 @@ let parse_pair (fst: parser not_reading) (snd: parser not_reading) : parser not_
     out (mk_parse_pair name binders.bind body_fst.call body_snd.call);
     { call = mk_function_call name binders }
 
+let parse_square (p: parser not_reading) : parser not_reading =
+  fun name binders _ out ->
+    let body_name = Printf.sprintf "%s-snd" name in
+    let body = p body_name binders false out in
+    out (mk_parse_pair name binders.bind body.call body.call);
+    { call = mk_function_call name binders }
+
 let mk_parse_dep_pair_with_refinement
   (name: string)
   (binders: string)
@@ -572,6 +579,51 @@ let parse_at_most
   (body: parser not_reading)
 : Tot (parser not_reading)
 = parse_exact size (parse_pair body parse_all_bytes)
+
+let mk_parse_list_one
+  (name: string)
+  (binders: string)
+  (p: string)
+: string
+= let input = Printf.sprintf "%s-input" name in
+  let res = Printf.sprintf "%s-res" name in
+"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
+  (if (= (seq.len "^input^") 0)
+    (seq.unit 0)
+    (let (("^res^" ("^p^" "^input^")))
+      (if (= (seq.len "^res^") 0)
+        (as seq.empty (Seq Int))
+        (if (= (seq.nth "^res^" 0) 0)
+          (as seq.empty (Seq Int))
+          "^res^"
+        )
+      )
+    )
+  )
+)
+"
+
+let parse_list_one
+  (body: parser not_reading)
+: Tot (parser not_reading)
+= fun name binders _ out ->
+    let body_name = Printf.sprintf "%s-body" name in
+    let body = body body_name binders false out in
+    out (mk_parse_list_one name binders.bind body.call);
+    { call = mk_function_call name binders }
+
+let rec parse_list_bounded'
+  (body: parser not_reading)
+  (logn: nat)
+: Tot (parser not_reading)
+  (decreases logn)
+= if logn = 0
+  then parse_list_one body
+  else
+    let logn' = logn - 1 in
+    parse_square (parse_list_bounded' body logn')
+
+let parse_list_bounded body = parse_list_bounded' body 3 // 64
 
 let mk_parse_list
   (name: string)
