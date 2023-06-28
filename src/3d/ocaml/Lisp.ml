@@ -39,3 +39,6 @@ let parse_int (name: string) = function
 let read_int_from (from: unit -> string) (name: string) =
   let (letbinding, sexp) = read_lisp_from from in
   (letbinding, parse_int name sexp)
+
+let read_any_from (from: unit -> string) : string =
+  fst (read_lisp_from from)

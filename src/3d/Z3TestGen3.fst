@@ -1,210 +1,73 @@
-module Z3TestGen
-include Z3TestGen3
-
-(*
+module Z3TestGen3
 module Printf = FStar.Printf
 open FStar.All
+open FStar.Mul
 
 module A = Ast
 module T = Target
 module I = InterpreterTarget
 
+let mk_parse_int
+  (endianness: string)
+  (byte_size: nat)
+: Tot string
+= let bit_size = 8 * byte_size in
+  let s_byte_size = string_of_int byte_size in
+"
+(define-fun parse-u"^string_of_int bit_size^"-"^endianness^" ((x State)) Result
+  (let ((size (input-size x)))
+    (if (< size "^s_byte_size^")
+      (mk-result 0 (mk-state -1 (output-choices x)))
+      (let ((choice (choose size)))
+        (if (and (<= 0 choice) (< choice "^string_of_int (pow2 bit_size)^"))
+          (mk-result choice (mk-state (- size "^s_byte_size^") (seq.++ (output-choices x) (seq.unit ("^endianness^" "^s_byte_size^" choice)))))
+          (mk-result 0 (mk-state -1 (output-choices x)))
+        )
+      )
+    )
+  )
+)
+"
+
 let prelude : string =
 "
-(declare-datatypes (T1 T2) ((Pair (mk-pair (first T1) (second T2)))))
+(declare-datatypes ((TraceItem 0))
+  (((LE (le-size Int) (le-value Int)) (BE (be-size Int) (be-value Int)) (AllBytes (byte-size Int)) (AllZeros (zero-size Int))))
+)
+(declare-datatypes () ((State (mk-state (input-size Int) (output-choices (Seq TraceItem))))))
+(declare-datatypes () ((Result (mk-result (return-value Int) (after-state State)))))
 
-(define-fun parse-empty ((x (Seq Int))) (Seq (Pair Int Int))
-  (seq.unit (mk-pair 0 0))
+(define-fun parse-empty ((x State)) Result
+  (mk-result 0 x)
 )
 
-(define-fun parse-u8 ((x (Seq Int))) (Seq (Pair Int Int))
-  (if (< (seq.len x) 1)
-    (as seq.empty (Seq (Pair Int Int)))
-    (seq.unit (mk-pair (seq.nth x 0) 1))
+(declare-fun choose (Int) Int)
+
+(define-fun parse-false ((x State)) State
+  (mk-state -1 (output-choices x))
+)
+
+(define-fun parse-all-bytes ((x State)) State
+  (if (< (input-size x) 0)
+    x
+    (mk-state 0 (seq.++ (output-choices x) (seq.unit (AllBytes (input-size x)))))
   )
 )
 
-(define-fun parse-u16-be ((x (Seq Int))) (Seq (Pair Int Int))
-  (if (< (seq.len x) 2)
-    (as seq.empty (Seq (Pair Int Int)))
-    (seq.unit 
-      (mk-pair
-        (+ (seq.nth x 1)
-          (* 256
-            (seq.nth x 0)
-          )
-        )
-        2
-      )
-    )
-  )
-)
-
-(define-fun parse-u16-le ((x (Seq Int))) (Seq (Pair Int Int))
-  (if (< (seq.len x) 2)
-    (as seq.empty (Seq (Pair Int Int)))
-    (seq.unit 
-      (mk-pair
-        (+ (seq.nth x 0)
-          (* 256
-            (seq.nth x 1)
-          )
-        )
-        2
-      )
-    )
-  )
-)
-
-(define-fun parse-u32-be ((x (Seq Int))) (Seq (Pair Int Int))
-  (if (< (seq.len x) 4)
-    (as seq.empty (Seq (Pair Int Int)))
-    (seq.unit 
-      (mk-pair
-        (+ (seq.nth x 3)
-          (* 256
-            (+ (seq.nth x 2)
-              (* 256
-                (+ (seq.nth x 1)
-                  (* 256
-                    (seq.nth x 0)
-                  )
-                )
-              )
-            )
-          )
-        )
-        4
-      )
-    )
-  )
-)
-
-(define-fun parse-u32-le ((x (Seq Int))) (Seq (Pair Int Int))
-  (if (< (seq.len x) 4)
-    (as seq.empty (Seq (Pair Int Int)))
-    (seq.unit 
-      (mk-pair
-        (+ (seq.nth x 0)
-          (* 256
-            (+ (seq.nth x 1)
-              (* 256
-                (+ (seq.nth x 2)
-                  (* 256
-                    (seq.nth x 3)
-                  )
-                )
-              )
-            )
-          )
-        )
-        4
-      )
-    )
-  )
-)
-
-(define-fun parse-u64-be ((x (Seq Int))) (Seq (Pair Int Int))
-  (if (< (seq.len x) 8)
-    (as seq.empty (Seq (Pair Int Int)))
-    (seq.unit 
-      (mk-pair
-        (+ (seq.nth x 7)
-          (* 256
-            (+ (seq.nth x 6)
-              (* 256
-                (+ (seq.nth x 5)
-                  (* 256
-                    (+ (seq.nth x 4)
-                      (* 256
-                        (+ (seq.nth x 3)
-                          (* 256
-                            (+ (seq.nth x 2)
-                              (* 256
-                                (+ (seq.nth x 1)
-                                  (* 256
-                                    (seq.nth x 0)
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-        8
-      )
-    )
-  )
-)
-
-(define-fun parse-u64-le ((x (Seq Int))) (Seq (Pair Int Int))
-  (if (< (seq.len x) 8)
-    (as seq.empty (Seq (Pair Int Int)))
-    (seq.unit 
-      (mk-pair
-        (+ (seq.nth x 0)
-          (* 256
-            (+ (seq.nth x 1)
-              (* 256
-                (+ (seq.nth x 2)
-                  (* 256
-                    (+ (seq.nth x 3)
-                      (* 256
-                        (+ (seq.nth x 4)
-                          (* 256
-                            (+ (seq.nth x 5)
-                              (* 256
-                                (+ (seq.nth x 6)
-                                  (* 256
-                                    (seq.nth x 7)
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-        8
-      )
-    )
-  )
-)
-
-(define-fun parse-false ((x (Seq Int))) (Seq Int)
-  (as seq.empty (Seq Int))
-)
-
-(define-fun parse-all-bytes ((x (Seq Int))) (Seq Int)
-  (seq.unit (seq.len x))
-)
-
-(define-fun parse-all-zeros ((x (Seq Int))) (Seq Int)
-  (if
-    (forall ((i Int))
-      (if (and (<= 0 i) (< i (seq.len x)))
-        (= (seq.nth x i) 0)
-        true
-      )
-    )
-    (seq.unit (seq.len x))
-    (as seq.empty (Seq Int))
+(define-fun parse-all-zeros ((x State)) State
+  (if (< (input-size x) 0)
+    x
+    (mk-state 0 (seq.++ (output-choices x) (seq.unit (AllZeros (input-size x)))))
   )
 )
 "
+^ mk_parse_int "BE" 1
+^ mk_parse_int "BE" 2
+^ mk_parse_int "BE" 4
+^ mk_parse_int "BE" 8
+^ mk_parse_int "LE" 2
+^ mk_parse_int "LE" 4
+^ mk_parse_int "LE" 8
 
 let mk_constant = function
   | A.Unit -> "0"
@@ -291,39 +154,23 @@ type parser (a: Type) =
 let unsupported_parser (s: string) (a: Type) : Tot (parser a) =
   fun _ _ _ _ -> failwith (Printf.sprintf "unsupported parser: %s" s)
 
-let parse_u8 : parser reading =
-  fun _ _ _ _ -> { call = "parse-u8" }
+let leaf_reading_parser (name: string) : parser reading =
+  fun _ _ _ _ -> { call = name }
 
-let parse_u16_be : parser reading =
-  fun _ _ _ _ -> { call = "parse-u16-be" }
+let readable_itype_parser_suffix (i: I.itype) : Tot string = match i with
+  | I.UInt8 | I.UInt8BE -> "u8-BE"
+  | I.UInt16 -> "u16-LE"
+  | I.UInt16BE -> "u16-BE"
+  | I.UInt32 -> "u32-LE"
+  | I.UInt32BE -> "u32-BE"
+  | I.UInt64 -> "u64-LE"
+  | I.UInt64BE -> "u64-BE"
+  | I.Unit -> "empty"
+  | I.AllBytes -> "all-bytes"
+  | I.AllZeros -> "all-zeros"
 
-let parse_u16_le : parser reading =
-  fun _ _ _ _ -> { call = "parse-u16-le" }
-
-let parse_u32_be : parser reading =
-  fun _ _ _ _ -> { call = "parse-u32-be" }
-
-let parse_u32_le : parser reading =
-  fun _ _ _ _ -> { call = "parse-u32-le" }
-
-let parse_u64_be : parser reading =
-  fun _ _ _ _ -> { call = "parse-u64-be" }
-
-let parse_u64_le : parser reading =
-  fun _ _ _ _ -> { call = "parse-u64-le" }
-
-let parse_empty : parser reading =
-  fun _ _ _ _ -> { call = "parse-empty" }
-
-let parse_readable_itype (i: I.readable_itype) = match i with
-  | I.UInt8 | I.UInt8BE -> parse_u8
-  | I.UInt16 -> parse_u16_le
-  | I.UInt16BE -> parse_u16_be
-  | I.UInt32 -> parse_u32_le
-  | I.UInt32BE -> parse_u32_be
-  | I.UInt64 -> parse_u64_le
-  | I.UInt64BE -> parse_u64_be
-  | I.Unit -> parse_empty
+let parse_readable_itype (i: I.readable_itype) : Tot (parser reading) =
+  leaf_reading_parser ("parse-" ^ readable_itype_parser_suffix i)
 
 let mk_wrap_parser
   (name: string)
@@ -332,13 +179,8 @@ let mk_wrap_parser
 : string
 = let input = Printf.sprintf "%s-input" name in
   let tmp = Printf.sprintf "%s-tmp" name in
-"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
-   (let (("^tmp^" ("^body^" "^input^")))
-     (if (= (seq.len "^tmp^") 0)
-       (as seq.empty (Seq Int))
-       (seq.unit (second (seq.nth "^tmp^" 0)))
-     )
-   )
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
+   (after-state ("^body^" "^input^"))
  )
 "
 
@@ -355,7 +197,7 @@ let mk_toplevel_parser
   (body: string)
 : string
 = let input = Printf.sprintf "%s-input" name in
-"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
    ("^body^" "^input^")
  )
 "
@@ -426,21 +268,12 @@ let mk_parse_pair
   (snd: string)
 : string
 = let input = Printf.sprintf "%s-input" name in
-  let tmp_has_fst = Printf.sprintf "%s-tmp-has-fst" name in
-  let tmp_fst = Printf.sprintf "%s-tmp-fst" name in
-  let tmp_snd_result = Printf.sprintf "%s-tmp-snd-result" name in
-"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
-   (let (("^tmp_has_fst^" ("^fst^" "^input^")))
-     (if (= (seq.len "^tmp_has_fst^") 0)
-       (as seq.empty (Seq Int))
-       (let (("^tmp_fst^" (seq.nth "^tmp_has_fst^" 0)))
-         (let (("^tmp_snd_result^" ("^snd^" (seq.extract "^input^" "^tmp_fst^" (- (seq.len "^input^") "^tmp_fst^")))))
-           (if (= (seq.len "^tmp_snd_result^") 0)
-             (as seq.empty (Seq Int))
-             (seq.unit (+ "^tmp_fst^" (seq.nth "^tmp_snd_result^" 0)))
-           )
-         )
-       )
+  let tmp = Printf.sprintf "%s-tmp" name in
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
+   (let (("^tmp^" ("^fst^" "^input^")))
+     (if (< (input-size "^tmp^") 0)
+       "^tmp^"
+       ("^snd^" "^tmp^")
      )
    )
  )
@@ -472,29 +305,21 @@ let mk_parse_dep_pair_with_refinement
   (dsnd: string) (* already contains the new argument *)
 : string
 = let input = Printf.sprintf "%s-input" name in
-  let tmp_has_tag = Printf.sprintf "%s-tmp-has-tag" name in
-  let tmp_tag_result = Printf.sprintf "%s-tmp-tag-result" name in
-  let tmp_payload = Printf.sprintf "%s-tmp-payload" name in
-"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
-   (let (("^tmp_has_tag^" ("^dfst^" "^input^")))
-     (if (= (seq.len "^tmp_has_tag^") 0)
-       (as seq.empty (Seq Int))
-       (let (("^tmp_tag_result^" (seq.nth "^tmp_has_tag^" 0)))
-         (if (let (("^cond_binder_name^" (first "^tmp_tag_result^"))) "^cond^")
-           (let (("^dsnd_binder_name^" (first "^tmp_tag_result^")))
-             (let (("^tmp_payload^" ("^dsnd^" (seq.extract "^input^" (second "^tmp_tag_result^") (- (seq.len "^input^") (second "^tmp_tag_result^"))))))
-               (if (= (seq.len "^tmp_payload^") 0)
-                 (as seq.empty (Seq Int))
-                 (seq.unit (+ (second "^tmp_tag_result^") (seq.nth "^tmp_payload^" 0)))
-               )
-             )
-           )
-           (as seq.empty (Seq Int))
+  let tmp = Printf.sprintf "%s-tmp" name in
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
+   (let (("^tmp^" ("^dfst^" "^input^")))
+     (if (< (input-size (after-state "^tmp^")) 0)
+       (after-state "^tmp^")
+       (if (let (("^cond_binder_name^" (return-value "^tmp^"))) "^cond^")
+         (let (("^dsnd_binder_name^" (return-value "^tmp^")))
+           ("^dsnd^" (after-state "^tmp^"))
          )
+         (mk-state -1 (output-choices (after-state "^tmp^")))
        )
      )
    )
- )"
+ )
+"
 
 let parse_dep_pair_with_refinement_gen (tag: parser reading) (cond_binder: string) (cond: unit -> ML string) (payload_binder: string) (payload: parser not_reading) : parser not_reading =
   fun name binders _ out ->
@@ -513,7 +338,7 @@ let parse_dep_pair (tag: parser reading) (new_binder: A.ident) (payload: parser 
   parse_dep_pair_with_refinement tag new_binder (fun _ -> "true") new_binder payload
 
 let parse_refine (tag: parser reading) (cond_binder: A.ident) (cond: unit -> ML string) : parser not_reading =
-  parse_dep_pair_with_refinement tag cond_binder cond cond_binder (wrap_parser parse_empty)
+  parse_dep_pair_with_refinement tag cond_binder cond cond_binder (parse_itype I.Unit)
 
 let mk_parse_ifthenelse
   (name: string)
@@ -523,7 +348,7 @@ let mk_parse_ifthenelse
   (f_else: string)
 : string
 = let input = Printf.sprintf "%s-input" name in
-"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
    (if "^cond^"
      ("^f_then^" "^input^")
      ("^f_else^" "^input^")
@@ -549,17 +374,17 @@ let mk_parse_exact
 = let input = Printf.sprintf "%s-input" name in
   let sz = Printf.sprintf "%s-size" name in
   let res = Printf.sprintf "%s-res" name in
-"(define-fun "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
   (let (("^sz^" "^size^"))
-    (if (< (seq.len "^input^") "^sz^")
-      (as seq.empty (Seq Int))
-      (let (("^res^" ("^body^" (seq.extract "^input^" 0 "^sz^"))))
-        (if (= (seq.len "^res^") 0)
-          (as seq.empty (Seq Int))
-          (if (= (seq.nth "^res^" 0) "^sz^")
-            "^res^"
-            (as seq.empty (Seq Int))
+    (if (< (input-size "^input^") "^sz^")
+      (mk-state -1 (output-choices "^input^"))
+      (let (("^res^" ("^body^" (mk-state "^sz^" (output-choices "^input^")))))
+        (mk-state
+          (if (= (input-size "^res^") 0)
+            (- (input-size "^input^") "^sz^")
+            -1
           )
+          (output-choices "^res^")
         )
       )
     )
@@ -583,6 +408,7 @@ let parse_at_most
 : Tot (parser not_reading)
 = parse_exact size (parse_pair body parse_all_bytes)
 
+(*
 let mk_parse_list_one
   (name: string)
   (binders: string)
@@ -627,6 +453,7 @@ let rec parse_list_bounded'
     parse_square (parse_list_bounded' body logn')
 
 let parse_list_bounded body = parse_list_bounded' body 3 // 64
+*)
 
 let mk_parse_list
   (name: string)
@@ -635,28 +462,10 @@ let mk_parse_list
   (body: string)
 : string
 = let input = Printf.sprintf "%s-input" name in
-  let hd = Printf.sprintf "%s-hd" name in
-  let consumed = Printf.sprintf "%s-consumed" name in
-  let tl = Printf.sprintf "%s-tl" name in
-"(define-fun-rec "^name^" ("^binders^"("^input^" (Seq Int))) (Seq Int)
-  (if (= (seq.len "^input^") 0)
-    (seq.unit 0)
-    (let (("^hd^" ("^body^" "^input^")))
-      (if (= (seq.len "^hd^") 0)
-        (as seq.empty (Seq Int))
-        (let (("^consumed^ "(seq.nth "^hd^" 0)))
-          (if (= "^consumed^" 0)
-            (as seq.empty (Seq Int))
-            (let (("^tl^" ("^rec_call^" (seq.extract "^input^" 0 "^consumed^"))))
-              (if (= (seq.len "^tl^") 0)
-                (as seq.empty (Seq Int))
-                (seq.unit (+ "^consumed^" (seq.nth "^tl^" 0)))
-              )
-            )
-          )
-        )
-      )
-    )
+"(define-fun-rec "^name^" ("^binders^"("^input^" State)) State
+  (if (<= (input-size "^input^") 0)
+    "^input^"
+    ("^rec_call^" ("^body^" "^input^"))
   )
 )
 "
@@ -747,15 +556,8 @@ let produce_decls (l: list I.decl) (out: string -> ML unit) : ML unit =
 
 let interlude =
 "
-(declare-const witness (Seq Int))
-(assert (forall ((j Int))
-  (if (and (<= 0 j) (< j (seq.len witness)))
-    (let ((witnessj (seq.nth witness j)))
-      (and (<= 0 witnessj) (< witnessj 256))
-    )
-    true
-  )
-))
+(declare-const initial-input-size Int)
+(define-fun initial-state () State (mk-state initial-input-size (as seq.empty (Seq TraceItem))))
 "
 
 let produce_prog (l: list I.decl) (out: string -> ML unit) : ML unit =
@@ -783,15 +585,12 @@ let write_prog_to_file (filename: string) (l: list I.decl) : ML unit =
 
 (* Ask Z3 for test witnesses *)
 
-let read_witness (z3: Z3.z3) =
-  Lisp.read_witness_from z3.from_z3
-
 let rec want_witnesses (z3: Z3.z3) (mk_want_another_witness: string -> string) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
     z3.to_z3 "(get-value (witness))\n";
-    let (letbinding, _) = read_witness z3 in
+    let letbinding = Lisp.read_any_from z3.from_z3 in
     if i <= 1
     then ()
     else begin
@@ -818,34 +617,35 @@ let witnesses_for (z3: Z3.z3) mk_get_first_witness mk_want_another_witness nbwit
 let mk_get_first_positive_test_witness (name1: string) : string =
   Printf.sprintf
 "
-(assert (= (seq.len (%s witness)) 1))
-"
-  name1
-
-let mk_want_another_positive_witness p letbinding =
-  Printf.sprintf
-"(assert (not (= (seq.extract witness 0 (seq.nth (%s witness) 0)) (let %s (seq.extract witness 0 (seq.nth (%s witness) 0))))))
-"
-  p
-  letbinding
-  p
-
-let mk_get_first_negative_test_witness (name1: string) : string =
-  Printf.sprintf
-"
-(assert (= (seq.len (%s witness)) 0))
+(define-fun witness () State (%s initial-state))
+(assert (>= (input-size witness) 0))
 "
   name1
 
 let mk_want_another_distinct_witness letbinding =
   Printf.sprintf
-"(assert (not (= witness (let %s witness))))
+"(assert (not (= (output-choices witness) (let %s (output-choices witness)))))
 "
   letbinding
 
+(*
+let mk_get_first_negative_test_witness (name1: string) : string =
+  Printf.sprintf
+"
+(define-fun witness () State (%s initial-state))
+(assert (< (input-size witness) 0))
+"
+  name1
+*)
+
 let do_test (z3: Z3.z3) (name1: string) (nbwitnesses: int) =
   FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-  witnesses_for z3 (mk_get_first_positive_test_witness name1) (mk_want_another_positive_witness name1) nbwitnesses;
+  witnesses_for z3 (mk_get_first_positive_test_witness name1) (mk_want_another_distinct_witness) nbwitnesses
+
+let do_diff_test (z3: Z3.z3) (name1 name2: string) (nbwitnesses: int) : ML unit =
+  ()
+
+(*  
   FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
   witnesses_for z3 (mk_get_first_negative_test_witness name1) mk_want_another_distinct_witness nbwitnesses
 
