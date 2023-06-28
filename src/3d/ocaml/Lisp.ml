@@ -29,3 +29,13 @@ let read_witness_from (from: unit -> string) =
   List.iter (fun i -> print_string (Prims.to_string i); print_string "; ") witness;
   print_endline "]";
   (letbinding, FStar_Seq_Properties.seq_of_list witness)
+
+let parse_int (name: string) = function
+  | Sexplib.Sexp.List [Sexplib.Sexp.List [Sexplib.Sexp.Atom name'; Sexplib.Sexp.Atom n]]
+    when name = name' ->
+    Prims.parse_int n
+  | _ -> failwith ("parse_int: "^name^" not found")
+
+let read_int_from (from: unit -> string) (name: string) =
+  let (letbinding, sexp) = read_lisp_from from in
+  (letbinding, parse_int name sexp)
