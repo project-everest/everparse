@@ -188,6 +188,62 @@ let prelude : string =
   )
 )
 
+(define-fun get-bitfield8-lsb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (let ((subBitsTo (- 8 bitsTo)))
+    (let ((op1 (bvshl ((_ int2bv 8) value) ((_ int2bv 8) subBitsTo))))
+      (let ((op2 (bvlshr op1 ((_ int2bv 8) (+ subBitsTo bitsFrom)))))
+        (bv2int op2)
+      )
+    )
+  )
+)
+
+(define-fun get-bitfield16-lsb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (let ((subBitsTo (- 16 bitsTo)))
+    (let ((op1 (bvshl ((_ int2bv 16) value) ((_ int2bv 16) subBitsTo))))
+      (let ((op2 (bvlshr op1 ((_ int2bv 16) (+ subBitsTo bitsFrom)))))
+        (bv2int op2)
+      )
+    )
+  )
+)
+
+(define-fun get-bitfield32-lsb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (let ((subBitsTo (- 32 bitsTo)))
+    (let ((op1 (bvshl ((_ int2bv 32) value) ((_ int2bv 32) subBitsTo))))
+      (let ((op2 (bvlshr op1 ((_ int2bv 32) (+ subBitsTo bitsFrom)))))
+        (bv2int op2)
+      )
+    )
+  )
+)
+
+(define-fun get-bitfield64-lsb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (let ((subBitsTo (- 64 bitsTo)))
+    (let ((op1 (bvshl ((_ int2bv 64) value) ((_ int2bv 64) subBitsTo))))
+      (let ((op2 (bvlshr op1 ((_ int2bv 64) (+ subBitsTo bitsFrom)))))
+        (bv2int op2)
+      )
+    )
+  )
+)
+
+(define-fun get-bitfield8-msb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (get-bitfield8-lsb value (- 8 bitsTo) (- 8 bitsFrom))
+)
+
+(define-fun get-bitfield16-msb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (get-bitfield16-lsb value (- 16 bitsTo) (- 16 bitsFrom))
+)
+
+(define-fun get-bitfield32-msb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (get-bitfield32-lsb value (- 32 bitsTo) (- 32 bitsFrom))
+)
+
+(define-fun get-bitfield64-msb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (get-bitfield64-lsb value (- 64 bitsTo) (- 64 bitsFrom))
+)
+
 (declare-const initial-input-size Int)
 (define-fun initial-state () State (mk-state initial-input-size 0))
 
@@ -199,7 +255,6 @@ let prelude : string =
     )
   )
 )
-
 "
 
 let mk_constant = function
@@ -259,14 +314,12 @@ let mk_op : T.op -> option string -> ML string = function
   | T.BitwiseNot a -> mk_bitwise_not a
   | T.ShiftLeft _ -> mk_bitwise_op "bvshl"
   | T.ShiftRight _ -> mk_bitwise_op "bvlshr"
-//  | T.ShiftLeft _ -> (fun _ -> failwith "mk_op: ill-formed TShiftLeft")
-//  | T.ShiftRight _ -> (fun _ -> failwith "mk_op: ill-formed TShiftRight")
   | T.LT _ -> mk_app "<"
   | T.GT _ -> mk_app ">"
   | T.LE _ -> mk_app "<="
   | T.GE _ -> mk_app ">="
   | T.IfThenElse -> mk_app "if"
-  | T.BitFieldOf _ _ -> (fun _ -> failwith "mk_op: BitfieldOf: not supported")
+  | T.BitFieldOf size order -> mk_app (Printf.sprintf "get-bitfield%d-%ssb" size (match order with A.LSBFirst -> "l" | A.MSBFirst -> "m"))
   | T.Cast _ _ -> assert_some (* casts allowed only if they are proven not to lose precision *)
   | T.Ext s -> mk_app s
 
