@@ -231,6 +231,17 @@ let is_bitwise_op (x: T.op) : Tot (option A.integer_type) =
 let mk_bitwise_op (op: string) (bitvec_args: option string) : ML string =
   mk_app "bv2int" (Some (mk_app op bitvec_args))
 
+let integer_type_bit_size = function
+| A.UInt8 -> 8
+| A.UInt16 -> 16
+| A.UInt32 -> 32
+| A.UInt64 -> 64
+
+let mk_bitwise_not (a: A.integer_type) (bitvec_arg: option string) : ML string =
+  match bitvec_arg with
+  | None -> failwith "ill-formed bitwise_not"
+  | Some arg -> "(bv2int (bvxor "^arg^" #b"^String.make (integer_type_bit_size a) '1'^"))"
+
 let mk_op : T.op -> option string -> ML string = function
   | T.Eq -> mk_app "="
   | T.Neq -> (fun s -> mk_app "not" (Some (mk_app "=" s)))
@@ -245,7 +256,7 @@ let mk_op : T.op -> option string -> ML string = function
   | T.BitwiseAnd _ -> mk_bitwise_op "bvand"
   | T.BitwiseXor _ -> mk_bitwise_op "bvxor"
   | T.BitwiseOr _ -> mk_bitwise_op "bvor"
-  | T.BitwiseNot _ -> mk_bitwise_op "bvnot"
+  | T.BitwiseNot a -> mk_bitwise_not a
   | T.ShiftLeft _ -> mk_bitwise_op "bvshl"
   | T.ShiftRight _ -> mk_bitwise_op "bvlshr"
 //  | T.ShiftLeft _ -> (fun _ -> failwith "mk_op: ill-formed TShiftLeft")
@@ -258,12 +269,6 @@ let mk_op : T.op -> option string -> ML string = function
   | T.BitFieldOf _ _ -> (fun _ -> failwith "mk_op: BitfieldOf: not supported")
   | T.Cast _ _ -> assert_some (* casts allowed only if they are proven not to lose precision *)
   | T.Ext s -> mk_app s
-
-let integer_type_bit_size = function
-| A.UInt8 -> 8
-| A.UInt16 -> 16
-| A.UInt32 -> 32
-| A.UInt64 -> 64
 
 let ident_to_string = A.ident_to_string
 
