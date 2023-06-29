@@ -448,8 +448,7 @@ let process_files_for_z3
   files_and_modules
   |> List.fold_left (fun env (fn, modul) ->
                     process_file_for_z3 env fn modul out) env
-  |> ignore;
-  out Z3TestGen.interlude
+  |> ignore
 
 let produce_z3
   (files_and_modules:list (string & string))

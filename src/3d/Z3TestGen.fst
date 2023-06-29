@@ -1,4 +1,4 @@
-module Z3TestGen3
+module Z3TestGen
 module Printf = FStar.Printf
 open FStar.All
 open FStar.Mul
@@ -801,6 +801,3 @@ let diff_test (p1: parser not_reading) name1 (p2: parser not_reading) name2 nbwi
     z3.to_z3 !buf;
     do_diff_test z3 name1 name2 nbwitnesses
   )
-
-(* needed by Main.process_files_for_z3 *)
-let interlude = ""
