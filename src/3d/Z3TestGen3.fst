@@ -7,34 +7,9 @@ module A = Ast
 module T = Target
 module I = InterpreterTarget
 
-let mk_parse_int
-  (endianness: string)
-  (byte_size: nat)
-: Tot string
-= let bit_size = 8 * byte_size in
-  let s_byte_size = string_of_int byte_size in
-"
-(define-fun parse-u"^string_of_int bit_size^"-"^endianness^" ((x State)) Result
-  (let ((size (input-size x)))
-    (if (< size "^s_byte_size^")
-      (mk-result 0 (mk-state -1 (output-choices x)))
-      (let ((choice (choose size)))
-        (if (and (<= 0 choice) (< choice "^string_of_int (pow2 bit_size)^"))
-          (mk-result choice (mk-state (- size "^s_byte_size^") (seq.++ (output-choices x) (seq.unit ("^endianness^" "^s_byte_size^" choice)))))
-          (mk-result 0 (mk-state -1 (output-choices x)))
-        )
-      )
-    )
-  )
-)
-"
-
 let prelude : string =
 "
-(declare-datatypes ((TraceItem 0))
-  (((LE (le-size Int) (le-value Int)) (BE (be-size Int) (be-value Int)) (AllBytes (byte-size Int)) (AllZeros (zero-size Int))))
-)
-(declare-datatypes () ((State (mk-state (input-size Int) (output-choices (Seq TraceItem))))))
+(declare-datatypes () ((State (mk-state (input-size Int) (choice-index Int)))))
 (declare-datatypes () ((Result (mk-result (return-value Int) (after-state State)))))
 
 (define-fun parse-empty ((x State)) Result
@@ -42,32 +17,190 @@ let prelude : string =
 )
 
 (declare-fun choose (Int) Int)
+(assert (forall ((i Int))
+  (and (<= 0 (choose i)) (< (choose i) 256))
+))
 
 (define-fun parse-false ((x State)) State
-  (mk-state -1 (output-choices x))
+  (mk-state -1 (choice-index x))
 )
 
 (define-fun parse-all-bytes ((x State)) State
-  (if (< (input-size x) 0)
+  (if (<= (input-size x) 0)
     x
-    (mk-state 0 (seq.++ (output-choices x) (seq.unit (AllBytes (input-size x)))))
+    (mk-state 0 (+ (choice-index x) (input-size x)))
   )
 )
 
 (define-fun parse-all-zeros ((x State)) State
-  (if (< (input-size x) 0)
+  (if (<= (input-size x) 0)
     x
-    (mk-state 0 (seq.++ (output-choices x) (seq.unit (AllZeros (input-size x)))))
+    (mk-state
+      (if
+        (forall ((j Int))
+          (if (and (<= 0 j) (< j (input-size x)))
+            (= (choose (+ (choice-index x) j)) 0)
+            true
+          )
+        )
+        0
+        -1
+      )
+      (+ (choice-index x) (input-size x))
+    )
   )
 )
+
+(define-fun parse-u8 ((x State)) Result
+  (mk-result
+    (choose (choice-index x))
+    (mk-state (- (input-size x) 1) (+ (choice-index x) 1))
+  )
+)
+
+(define-fun parse-u16-be ((x State)) Result
+  (mk-result
+    (+ (choose (+ 1 (choice-index x)))
+      (* 256
+        (choose (+ 0 (choice-index x)))
+      )
+    )
+    (mk-state (- (input-size x) 2) (+ (choice-index x) 2))
+  )
+)
+
+(define-fun parse-u16-le ((x State)) Result
+  (mk-result
+    (+ (choose (+ 0 (choice-index x)))
+      (* 256
+        (choose (+ 1 (choice-index x)))
+      )
+    )
+    (mk-state (- (input-size x) 2) (+ (choice-index x) 2))
+  )
+)
+
+(define-fun parse-u32-be ((x State)) Result
+  (mk-result
+    (+ (choose (+ 3 (choice-index x)))
+      (* 256
+        (+ (choose (+ 2 (choice-index x)))
+          (* 256
+            (+ (choose (+ 1 (choice-index x)))
+              (* 256
+                (choose (+ 0 (choice-index x)))
+              )
+            )
+          )
+        )
+      )
+    )
+    (mk-state (- (input-size x) 4) (+ (choice-index x) 4))
+  )
+)
+
+(define-fun parse-u32-le ((x State)) Result
+  (mk-result
+    (+ (choose (+ 0 (choice-index x)))
+      (* 256
+        (+ (choose (+ 1 (choice-index x)))
+          (* 256
+            (+ (choose (+ 2 (choice-index x)))
+              (* 256
+                (choose (+ 3 (choice-index x)))
+              )
+            )
+          )
+        )
+      )
+    )
+    (mk-state (- (input-size x) 4) (+ (choice-index x) 4))
+  )
+)
+
+(define-fun parse-u64-be ((x State)) Result
+  (mk-result
+    (+ (choose (+ 7 (choice-index x)))
+      (* 256
+        (+ (choose (+ 6 (choice-index x)))
+          (* 256
+            (+ (choose (+ 5 (choice-index x)))
+              (* 256
+                (+ (choose (+ 4 (choice-index x)))
+                  (* 256
+                    (+ (choose (+ 3 (choice-index x)))
+                      (* 256
+                        (+ (choose (+ 2 (choice-index x)))
+                          (* 256
+                            (+ (choose (+ 1 (choice-index x)))
+                              (* 256
+                                (choose (+ 0 (choice-index x)))
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (mk-state (- (input-size x) 8) (+ (choice-index x) 8))
+  )
+)
+
+(define-fun parse-u64-le ((x State)) Result
+  (mk-result
+    (+ (choose (+ 0 (choice-index x)))
+      (* 256
+        (+ (choose (+ 1 (choice-index x)))
+          (* 256
+            (+ (choose (+ 2 (choice-index x)))
+              (* 256
+                (+ (choose (+ 3 (choice-index x)))
+                  (* 256
+                    (+ (choose (+ 4 (choice-index x)))
+                      (* 256
+                        (+ (choose (+ 5 (choice-index x)))
+                          (* 256
+                            (+ (choose (+ 6 (choice-index x)))
+                              (* 256
+                                (choose (+ 7 (choice-index x)))
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (mk-state (- (input-size x) 8) (+ (choice-index x) 8))
+  )
+)
+
+(declare-const initial-input-size Int)
+(define-fun initial-state () State (mk-state initial-input-size 0))
+
+(define-fun-rec extract-witness ((size Int)) (Seq Int)
+  (if (<= size 0)
+    (as seq.empty (Seq Int))
+    (let ((new-size (- size 1)))
+      (seq.++ (extract-witness new-size) (seq.unit (choose new-size)))
+    )
+  )
+)
+
 "
-^ mk_parse_int "BE" 1
-^ mk_parse_int "BE" 2
-^ mk_parse_int "BE" 4
-^ mk_parse_int "BE" 8
-^ mk_parse_int "LE" 2
-^ mk_parse_int "LE" 4
-^ mk_parse_int "LE" 8
 
 let mk_constant = function
   | A.Unit -> "0"
@@ -158,13 +291,13 @@ let leaf_reading_parser (name: string) : parser reading =
   fun _ _ _ _ -> { call = name }
 
 let readable_itype_parser_suffix (i: I.itype) : Tot string = match i with
-  | I.UInt8 | I.UInt8BE -> "u8-BE"
-  | I.UInt16 -> "u16-LE"
-  | I.UInt16BE -> "u16-BE"
-  | I.UInt32 -> "u32-LE"
-  | I.UInt32BE -> "u32-BE"
-  | I.UInt64 -> "u64-LE"
-  | I.UInt64BE -> "u64-BE"
+  | I.UInt8 | I.UInt8BE -> "u8"
+  | I.UInt16 -> "u16-le"
+  | I.UInt16BE -> "u16-be"
+  | I.UInt32 -> "u32-le"
+  | I.UInt32BE -> "u32-be"
+  | I.UInt64 -> "u64-le"
+  | I.UInt64BE -> "u64-be"
   | I.Unit -> "empty"
   | I.AllBytes -> "all-bytes"
   | I.AllZeros -> "all-zeros"
@@ -314,7 +447,7 @@ let mk_parse_dep_pair_with_refinement
          (let (("^dsnd_binder_name^" (return-value "^tmp^")))
            ("^dsnd^" (after-state "^tmp^"))
          )
-         (mk-state -1 (output-choices (after-state "^tmp^")))
+         (mk-state -1 (choice-index (after-state "^tmp^")))
        )
      )
    )
@@ -377,14 +510,14 @@ let mk_parse_exact
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
   (let (("^sz^" "^size^"))
     (if (< (input-size "^input^") "^sz^")
-      (mk-state -1 (output-choices "^input^"))
-      (let (("^res^" ("^body^" (mk-state "^sz^" (output-choices "^input^")))))
+      (mk-state -1 (choice-index "^input^"))
+      (let (("^res^" ("^body^" (mk-state "^sz^" (choice-index "^input^")))))
         (mk-state
           (if (= (input-size "^res^") 0)
             (- (input-size "^input^") "^sz^")
             -1
           )
-          (output-choices "^res^")
+          (choice-index "^res^")
         )
       )
     )
@@ -554,16 +687,9 @@ let produce_decl (a: I.decl) : (out: string -> ML unit) -> ML unit =
 let produce_decls (l: list I.decl) (out: string -> ML unit) : ML unit =
   List.iter (fun a -> produce_decl a out) l
 
-let interlude =
-"
-(declare-const initial-input-size Int)
-(define-fun initial-state () State (mk-state initial-input-size (as seq.empty (Seq TraceItem))))
-"
-
 let produce_prog (l: list I.decl) (out: string -> ML unit) : ML unit =
   out prelude;
-  produce_decls l out;
-  out interlude
+  produce_decls l out
 
 (* Produce the SMT2 encoding of the parser spec *)
 
@@ -585,12 +711,15 @@ let write_prog_to_file (filename: string) (l: list I.decl) : ML unit =
 
 (* Ask Z3 for test witnesses *)
 
+let read_witness (z3: Z3.z3) =
+  Lisp.read_witness_from z3.from_z3
+
 let rec want_witnesses (z3: Z3.z3) (mk_want_another_witness: string -> string) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
     z3.to_z3 "(get-value (witness))\n";
-    let letbinding = Lisp.read_any_from z3.from_z3 in
+    let (letbinding, _) = read_witness z3 in
     if i <= 1
     then ()
     else begin
@@ -617,49 +746,46 @@ let witnesses_for (z3: Z3.z3) mk_get_first_witness mk_want_another_witness nbwit
 let mk_get_first_positive_test_witness (name1: string) : string =
   Printf.sprintf
 "
-(define-fun witness () State (%s initial-state))
-(assert (>= (input-size witness) 0))
+(define-fun state-witness () State (%s initial-state))
+(assert (>= (input-size state-witness) 0))
+(define-fun witness () (Seq Int) (extract-witness (choice-index state-witness)))
 "
   name1
 
 let mk_want_another_distinct_witness letbinding =
   Printf.sprintf
-"(assert (not (= (output-choices witness) (let %s (output-choices witness)))))
+"(assert (not (= witness (let %s witness))))
 "
   letbinding
 
-(*
 let mk_get_first_negative_test_witness (name1: string) : string =
   Printf.sprintf
 "
-(define-fun witness () State (%s initial-state))
-(assert (< (input-size witness) 0))
+(assert (>= initial-input-size 0))
+(define-fun state-witness () State (%s initial-state))
+(assert (< (input-size state-witness) 0))
+(define-fun witness () (Seq Int) (extract-witness (choice-index state-witness)))
 "
   name1
-*)
 
 let do_test (z3: Z3.z3) (name1: string) (nbwitnesses: int) =
   FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-  witnesses_for z3 (mk_get_first_positive_test_witness name1) (mk_want_another_distinct_witness) nbwitnesses
-
-let do_diff_test (z3: Z3.z3) (name1 name2: string) (nbwitnesses: int) : ML unit =
-  ()
-
-(*  
+  witnesses_for z3 (mk_get_first_positive_test_witness name1) mk_want_another_distinct_witness nbwitnesses;
   FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
   witnesses_for z3 (mk_get_first_negative_test_witness name1) mk_want_another_distinct_witness nbwitnesses
 
 let mk_get_first_diff_test_witness (name1: string) (name2: string) : string =
   Printf.sprintf
 "
-(assert (and (= (seq.len (%s witness)) 1) (= (seq.len (%s witness)) 0)))
+%s
+(assert (< (input-size (%s initial-state)) 0))
 "
-  name1
+  (mk_get_first_positive_test_witness name1)
   name2
 
 let do_diff_test_for (z3: Z3.z3) name1 name2 nbwitnesses =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for z3 (mk_get_first_diff_test_witness name1 name2) (mk_want_another_positive_witness name1) nbwitnesses
+  witnesses_for z3 (mk_get_first_diff_test_witness name1 name2) mk_want_another_distinct_witness nbwitnesses
 
 let do_diff_test (z3: Z3.z3) name1 name2 nbwitnesses =
   do_diff_test_for z3 name1 name2 nbwitnesses;
@@ -673,6 +799,8 @@ let diff_test (p1: parser not_reading) name1 (p2: parser not_reading) name2 nbwi
   Z3.with_z3 true (fun z3 ->
     z3.to_z3 prelude;
     z3.to_z3 !buf;
-    z3.to_z3 interlude;
     do_diff_test z3 name1 name2 nbwitnesses
   )
+
+(* needed by Main.process_files_for_z3 *)
+let interlude = ""
