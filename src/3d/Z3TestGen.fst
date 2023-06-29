@@ -188,60 +188,28 @@ let prelude : string =
   )
 )
 
-(define-fun get-bitfield8-lsb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
-  (let ((subBitsTo (- 8 bitsTo)))
-    (let ((op1 (bvshl ((_ int2bv 8) value) ((_ int2bv 8) subBitsTo))))
-      (let ((op2 (bvlshr op1 ((_ int2bv 8) (+ subBitsTo bitsFrom)))))
-        (bv2int op2)
-      )
-    )
+(define-fun-rec int-shift-left ((value Int) (amount Int)) Int
+  (if (<= amount 0)
+    value
+    (int-shift-left (* value 2) (- amount 1))
   )
 )
 
-(define-fun get-bitfield16-lsb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
-  (let ((subBitsTo (- 16 bitsTo)))
-    (let ((op1 (bvshl ((_ int2bv 16) value) ((_ int2bv 16) subBitsTo))))
-      (let ((op2 (bvlshr op1 ((_ int2bv 16) (+ subBitsTo bitsFrom)))))
-        (bv2int op2)
-      )
-    )
+(define-fun-rec int-shift-right ((value Int) (amount Int)) Int
+  (if (<= amount 0)
+    value
+    (int-shift-right (div value 2) (- amount 1))
   )
 )
 
-(define-fun get-bitfield32-lsb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
-  (let ((subBitsTo (- 32 bitsTo)))
-    (let ((op1 (bvshl ((_ int2bv 32) value) ((_ int2bv 32) subBitsTo))))
-      (let ((op2 (bvlshr op1 ((_ int2bv 32) (+ subBitsTo bitsFrom)))))
-        (bv2int op2)
-      )
-    )
+(define-fun get-bitfield-lsb ((nbBits Int) (value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (let ((subBitsTo (- nbBits bitsTo)))
+    (int-shift-right (int-shift-left value subBitsTo) (+ subBitsTo bitsFrom))
   )
 )
 
-(define-fun get-bitfield64-lsb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
-  (let ((subBitsTo (- 64 bitsTo)))
-    (let ((op1 (bvshl ((_ int2bv 64) value) ((_ int2bv 64) subBitsTo))))
-      (let ((op2 (bvlshr op1 ((_ int2bv 64) (+ subBitsTo bitsFrom)))))
-        (bv2int op2)
-      )
-    )
-  )
-)
-
-(define-fun get-bitfield8-msb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
-  (get-bitfield8-lsb value (- 8 bitsTo) (- 8 bitsFrom))
-)
-
-(define-fun get-bitfield16-msb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
-  (get-bitfield16-lsb value (- 16 bitsTo) (- 16 bitsFrom))
-)
-
-(define-fun get-bitfield32-msb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
-  (get-bitfield32-lsb value (- 32 bitsTo) (- 32 bitsFrom))
-)
-
-(define-fun get-bitfield64-msb ((value Int) (bitsFrom Int) (bitsTo Int)) Int
-  (get-bitfield64-lsb value (- 64 bitsTo) (- 64 bitsFrom))
+(define-fun get-bitfield-msb ((nbBits Int) (value Int) (bitsFrom Int) (bitsTo Int)) Int
+  (get-bitfield-lsb nbBits value (- nbBits bitsTo) (- nbBits bitsFrom))
 )
 
 (declare-const initial-input-size Int)
@@ -319,7 +287,7 @@ let mk_op : T.op -> option string -> ML string = function
   | T.LE _ -> mk_app "<="
   | T.GE _ -> mk_app ">="
   | T.IfThenElse -> mk_app "if"
-  | T.BitFieldOf size order -> mk_app (Printf.sprintf "get-bitfield%d-%ssb" size (match order with A.LSBFirst -> "l" | A.MSBFirst -> "m"))
+  | T.BitFieldOf size order -> (fun arg -> Printf.sprintf "(get-bitfield-%ssb %d %s)" (match order with A.LSBFirst -> "l" | A.MSBFirst -> "m") size (assert_some arg))
   | T.Cast _ _ -> assert_some (* casts allowed only if they are proven not to lose precision *)
   | T.Ext s -> mk_app s
 
