@@ -714,16 +714,16 @@ let write_prog_to_file (filename: string) (l: list I.decl) : ML unit =
 let read_witness (z3: Z3.z3) =
   Lisp.read_witness_from z3.from_z3
 
-let rec want_witnesses (z3: Z3.z3) (mk_want_another_witness: string -> string) i : ML unit =
+let rec want_witnesses (z3: Z3.z3) (mk_want_another_witness: Seq.seq int -> string) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
     z3.to_z3 "(get-value (witness))\n";
-    let (letbinding, _) = read_witness z3 in
+    let (_, witness) = read_witness z3 in
     if i <= 1
     then ()
     else begin
-      z3.to_z3 (mk_want_another_witness letbinding);
+      z3.to_z3 (mk_want_another_witness witness);
       want_witnesses z3 mk_want_another_witness (i - 1)
     end
   end
@@ -752,11 +752,17 @@ let mk_get_first_positive_test_witness (name1: string) : string =
 "
   name1
 
-let mk_want_another_distinct_witness letbinding =
+let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
+  (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
+= if i >= Seq.length witness
+  then accu
+  else mk_choose_conj witness ("(and (= (choose "^string_of_int i^") "^string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
+
+let mk_want_another_distinct_witness witness =
   Printf.sprintf
-"(assert (not (= witness (let %s witness))))
+"(assert (not %s))
 "
-  letbinding
+  (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0)
 
 let mk_get_first_negative_test_witness (name1: string) : string =
   Printf.sprintf
