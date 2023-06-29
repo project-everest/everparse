@@ -217,6 +217,20 @@ let assert_some = function
   | None -> failwith "assert_some"
   | Some x -> x
 
+let is_bitwise_op (x: T.op) : Tot (option A.integer_type) =
+  match x with
+  | T.BitwiseAnd a
+  | T.BitwiseXor a
+  | T.BitwiseOr a
+  | T.BitwiseNot a
+  | T.ShiftLeft a
+  | T.ShiftRight a
+  -> Some a
+  | _ -> None
+
+let mk_bitwise_op (op: string) (bitvec_args: option string) : ML string =
+  mk_app "bv2int" (Some (mk_app op bitvec_args))
+
 let mk_op : T.op -> option string -> ML string = function
   | T.Eq -> mk_app "="
   | T.Neq -> (fun s -> mk_app "not" (Some (mk_app "=" s)))
@@ -226,32 +240,54 @@ let mk_op : T.op -> option string -> ML string = function
   | T.Plus _ -> mk_app "+"
   | T.Minus _ -> mk_app "-"
   | T.Mul _ -> mk_app "*"
-  | T.Division _ -> mk_app "/"
-  | T.Remainder _ -> mk_app "%"
+  | T.Division _ -> mk_app "div"
+  | T.Remainder _ -> mk_app "mod"
+  | T.BitwiseAnd _ -> mk_bitwise_op "bvand"
+  | T.BitwiseXor _ -> mk_bitwise_op "bvxor"
+  | T.BitwiseOr _ -> mk_bitwise_op "bvor"
+  | T.BitwiseNot _ -> mk_bitwise_op "bvnot"
+  | T.ShiftLeft _ -> mk_bitwise_op "bvshl"
+  | T.ShiftRight _ -> mk_bitwise_op "bvlshr"
+//  | T.ShiftLeft _ -> (fun _ -> failwith "mk_op: ill-formed TShiftLeft")
+//  | T.ShiftRight _ -> (fun _ -> failwith "mk_op: ill-formed TShiftRight")
   | T.LT _ -> mk_app "<"
   | T.GT _ -> mk_app ">"
   | T.LE _ -> mk_app "<="
   | T.GE _ -> mk_app ">="
   | T.IfThenElse -> mk_app "if"
+  | T.BitFieldOf _ _ -> (fun _ -> failwith "mk_op: BitfieldOf: not supported")
   | T.Cast _ _ -> assert_some (* casts allowed only if they are proven not to lose precision *)
   | T.Ext s -> mk_app s
-  | _ -> fun _ -> failwith "mk_op: not supported"
+
+let integer_type_bit_size = function
+| A.UInt8 -> 8
+| A.UInt16 -> 16
+| A.UInt32 -> 32
+| A.UInt64 -> 64
 
 let ident_to_string = A.ident_to_string
+
+let mk_bitwise_arg (t: A.integer_type) (arg: string) : Tot string =
+  mk_app ("(_ int2bv "^string_of_int (integer_type_bit_size t)^")") (Some arg)
+
+let mk_maybe_bitwise_arg (t: option A.integer_type) (arg: string) : Tot string =
+  match t with
+  | None -> arg
+  | Some t -> mk_bitwise_arg t arg
 
 let rec mk_expr (e: T.expr) : ML string = match fst e with
   | T.Constant c -> mk_constant c
   | T.Identifier i -> ident_to_string i
-  | T.App hd args -> mk_op hd (mk_args args)
+  | T.App hd args -> mk_op hd (mk_args (is_bitwise_op hd) args)
   | _ -> failwith "mk_expr: not supported"
 
-and mk_args_aux accu : (list T.expr -> ML string) = function
+and mk_args_aux (is_bitwise_op: option A.integer_type) accu : (list T.expr -> ML string) = function
   | [] -> accu
-  | a :: q -> mk_args_aux (Printf.sprintf "%s %s" accu (mk_expr a)) q
+  | a :: q -> mk_args_aux is_bitwise_op (Printf.sprintf "%s %s" accu (mk_maybe_bitwise_arg is_bitwise_op (mk_expr a))) q
 
-and mk_args (l: list T.expr) : ML (option string) = match l with
+and mk_args (is_bitwise_op: option A.integer_type) (l: list T.expr) : ML (option string) = match l with
   | [] -> None
-  | a :: q -> Some (mk_args_aux (mk_expr a) q)
+  | a :: q -> Some (mk_args_aux is_bitwise_op (mk_maybe_bitwise_arg is_bitwise_op (mk_expr a)) q)
 
 type reading = { call: string }
 type not_reading = { call: string }
@@ -358,7 +394,7 @@ let parse_itype  : I.itype -> parser not_reading = function
   | i -> wrap_parser (parse_readable_itype i)
 
 let mk_app_without_paren id args =
-  mk_args_aux (ident_to_string id) args
+  mk_args_aux None (ident_to_string id) args
   
 let parse_readable_app
   (hd: A.ident)
