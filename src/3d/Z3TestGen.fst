@@ -9,6 +9,7 @@ module I = InterpreterTarget
 
 let prelude : string =
 "
+(set-option :produce-models true)
 (declare-datatypes () ((State (mk-state (input-size Int) (choice-index Int)))))
 (declare-datatypes () ((Result (mk-result (return-value Int) (after-state State)))))
 
@@ -809,8 +810,12 @@ let mk_get_first_positive_test_witness (name1: string) : string =
   Printf.sprintf
 "
 (define-fun state-witness () State (%s initial-state))
-(assert (>= (input-size state-witness) 0))
-(define-fun witness () (Seq Int) (extract-witness (choice-index state-witness)))
+(define-fun state-witness-input-size () Int (input-size state-witness))
+(declare-fun state-witness-is-valid () Bool)
+(assert (= state-witness-is-valid (>= state-witness-input-size 0)))
+(assert (= state-witness-is-valid true))
+(declare-fun witness () (Seq Int))
+(assert (= witness (extract-witness (choice-index state-witness))))
 "
   name1
 
@@ -831,8 +836,11 @@ let mk_get_first_negative_test_witness (name1: string) : string =
 "
 (assert (>= initial-input-size 0))
 (define-fun state-witness () State (%s initial-state))
-(assert (< (input-size state-witness) 0))
-(define-fun witness () (Seq Int) (extract-witness (choice-index state-witness)))
+(declare-fun state-witness-is-invalid () Bool)
+(assert (= state-witness-is-invalid (< (input-size state-witness) 0)))
+(assert (= state-witness-is-invalid true))
+(declare-fun witness () (Seq Int))
+(assert (= witness (extract-witness (choice-index state-witness))))
 "
   name1
 
