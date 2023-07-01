@@ -33,10 +33,10 @@ ifeq (,$(STEEL_HOME))
 endif
 
 ALREADY_CACHED = --already_cached *,-CBOR
-FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED) --cmi --include $(STEEL_HOME)/lib/steel --load_cmxs steel
+FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED) --cmi --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
 
 ifneq (,$(STEEL_C))
-  FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel/c --include $(LOWPARSE_HOME)/steel_c_array
+  FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_c_array
 else
   FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_array
 endif
@@ -64,7 +64,7 @@ KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out \
-	 -bundle 'CBOR.SteelST+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' \
+	 -bundle 'CBOR.SteelC+CBOR.SteelST+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' \
 	 -skip-linking \
 	 $(KRML_OPTS) \
 	 -warn-error '@2@4'
