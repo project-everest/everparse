@@ -12,4 +12,5 @@ val read_int_from
 
 val read_any_from
   (from: (unit -> ML string))
+  (name: string)
 : ML string

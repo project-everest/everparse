@@ -413,47 +413,48 @@ let process_files (files_and_modules:list (string & string))
   |> ignore
 
 let process_file_for_z3
-                 (en:env)
+                 (en_accu:(env & Z3TestGen.prog))
                  (fn:string)
                  (modul:string)
                  (out: string -> ML unit)
-  : ML env =
+  : ML (env & Z3TestGen.prog) =
+  let (en, accu) = en_accu in
   let t_decls, interpreter_decls_opt, static_asserts, en =
       translate_module en modul fn
   in
-  begin match interpreter_decls_opt with
+  let accu = match interpreter_decls_opt with
   | None -> failwith "process_file_for_z3: no interpreter decls left"
-  | Some i -> Z3TestGen.produce_decls i out
-  end;
+  | Some i -> Z3TestGen.produce_decls out accu i
+  in
 
   let ds = Binding.get_exported_decls en.binding_env modul in
   TypeSizes.finish_module en.typesizes_env modul ds;
 
-  { en with 
+  ({ en with 
     binding_env = Binding.finish_module en.binding_env modul;
     translate_env = 
       en.translate_env;
-  }
+  }, accu)
 
 let process_files_for_z3
                   (files_and_modules:list (string & string))
                   (out: string -> ML unit)
-  : ML unit =
+  : ML Z3TestGen.prog =
   out Z3TestGen.prelude;
   IO.print_string 
     (Printf.sprintf ";; Processing files: %s\n"
                     (List.map fst files_and_modules |> String.concat " "));
   let all_modules = List.map snd files_and_modules in
-  let env = initial_env () in
+  let env : (env & Z3TestGen.prog)  = initial_env (), [] in
   files_and_modules
   |> List.fold_left (fun env (fn, modul) ->
                     process_file_for_z3 env fn modul out) env
-  |> ignore
+  |> snd
 
 let produce_z3
   (files_and_modules:list (string & string))
 : ML unit
-= process_files_for_z3 files_and_modules FStar.IO.print_string
+= ignore (process_files_for_z3 files_and_modules FStar.IO.print_string)
 
 let produce_z3_and_test
   (files_and_modules:list (string & string))
@@ -461,8 +462,8 @@ let produce_z3_and_test
 : ML unit
 = let nbwitnesses = Options.get_z3_witnesses () in
   Z3.with_z3 (Options.get_debug ()) (fun z3 ->
-    process_files_for_z3 files_and_modules z3.to_z3;
-    Z3TestGen.do_test z3 name nbwitnesses
+    let prog = process_files_for_z3 files_and_modules z3.to_z3 in
+    Z3TestGen.do_test z3 prog name nbwitnesses
   )
 
 let produce_z3_and_diff_test
@@ -472,8 +473,8 @@ let produce_z3_and_diff_test
 = let (name1, name2) = names in
   let nbwitnesses = Options.get_z3_witnesses () in
   Z3.with_z3 (Options.get_debug ()) (fun z3 ->
-    process_files_for_z3 files_and_modules z3.to_z3;
-    Z3TestGen.do_diff_test z3 name1 name2 nbwitnesses
+    let prog = process_files_for_z3 files_and_modules z3.to_z3 in
+    Z3TestGen.do_diff_test z3 prog name1 name2 nbwitnesses
   )
 
 let produce_and_postprocess_c

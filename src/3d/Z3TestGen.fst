@@ -701,8 +701,32 @@ let rec parse_typ : I.typ -> parser not_reading = function
   | I.T_string _ _ _ -> unsupported_parser "T_string" _
   | I.T_nlist _ size body -> parse_nlist (fun _ -> mk_expr size) (parse_typ body)
 
+type arg_type =
+| ArgInt of A.integer_type
+| ArgBool
+| ArgPointer
+
+let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
+  match t with
+  | T.T_pointer _
+  | T.T_app _ A.KindOutput _
+  | T.T_app _ A.KindExtern _
+  | T.T_app {v = {modul_name = None; name = "PUINT8"}} _ _
+    -> Some ArgPointer
+  | T.T_app {v = {modul_name = None; name = "Bool"}} _ _
+    -> Some ArgBool
+  | T.T_app i _ _
+    ->
+    begin match A.maybe_as_integer_typ i with
+    | Some t -> Some (ArgInt t)
+    | None -> None
+    end
+  | _ -> None
+
 let smt_type_of_typ (t: T.typ) : Tot string =
-  "Int" (* TODO: support more cases, such as booleans *)
+  match arg_type_of_typ t with
+  | Some ArgBool -> "Bool"
+  | _ -> "Int"
 
 let rec binders_of_params = function
 | [] -> empty_binders
@@ -737,27 +761,23 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   | T.Extern_fn _ _ _
   -> ()
 
-let produce_type_decl (a: I.type_decl) (out: string -> ML unit) : ML unit =
+let prog = list (string & list arg_type)
+
+let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : ML prog =
   let binders = binders_of_params a.name.td_params in
-  let _ = parse_typ a.typ (ident_to_string a.name.td_name) binders true out in
-  ()
+  let name = ident_to_string a.name.td_name in
+  let _ = parse_typ a.typ name binders true out in
+  (name, List.map (fun (i, ty) -> match arg_type_of_typ ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params) :: accu
 
-let produce_decl (a: I.decl) : (out: string -> ML unit) -> ML unit =
+let produce_decl (out: string -> ML unit) (accu: prog) (a: I.decl) : ML prog =
   match a with
-  | Inl a -> produce_not_type_decl a
-  | Inr a -> produce_type_decl a
+  | Inl a -> produce_not_type_decl a out; accu
+  | Inr a -> produce_type_decl out accu a
 
-let produce_decls (l: list I.decl) (out: string -> ML unit) : ML unit =
-  List.iter (fun a -> produce_decl a out) l
-
-let produce_prog (l: list I.decl) (out: string -> ML unit) : ML unit =
-  out prelude;
-  produce_decls l out
+let produce_decls (out: string -> ML unit) (accu: prog) (l: list I.decl) : ML prog =
+  List.fold_left (produce_decl out) accu l
 
 (* Produce the SMT2 encoding of the parser spec *)
-
-let print_prog (l: list I.decl) =
-  produce_prog l FStar.IO.print_string
 
 let with_out_file
   (#a: Type)
@@ -769,25 +789,52 @@ let with_out_file
   FStar.IO.close_write_file fd;
   res
 
-let write_prog_to_file (filename: string) (l: list I.decl) : ML unit =
-  with_out_file filename (produce_prog l)
-
 (* Ask Z3 for test witnesses *)
 
 let read_witness (z3: Z3.z3) =
   Lisp.read_witness_from z3.from_z3
 
-let rec want_witnesses (z3: Z3.z3) (mk_want_another_witness: Seq.seq int -> string) i : ML unit =
+let rec read_witness_args (z3: Z3.z3) (accu: list string) (n: nat) : ML (list string) =
+  if n = 0
+  then accu
+  else begin
+    let n' = n - 1 in
+    z3.to_z3 (Printf.sprintf "(get-value (arg-%d))\n" n');
+    let arg = Lisp.read_any_from z3.from_z3 (Printf.sprintf "arg-%d" n') in
+    read_witness_args z3 (arg :: accu) n'
+  end
+
+let print_witness (witness: Seq.seq int) : ML unit =
+  FStar.IO.print_string " produced witness: [";
+  List.iter (fun i -> FStar.IO.print_string (string_of_int i); FStar.IO.print_string "; ") (Seq.seq_to_list witness);
+  FStar.IO.print_string "]\n"
+
+let rec mk_witness_call (accu: string) (l: list arg_type) (args: list string) : Tot string (decreases l) =
+  match l, args with
+  | ArgPointer :: q, _ -> mk_witness_call (Printf.sprintf "%s 0" accu) q args
+  | _ :: ql, a :: qargs -> mk_witness_call (Printf.sprintf "%s %s" accu a) ql qargs
+  | _ -> Printf.sprintf "(%s)" accu
+
+let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq int) (args: list string) : ML unit =
+  FStar.IO.print_string ";; call ";
+  FStar.IO.print_string (mk_witness_call name l args);
+  print_witness witness
+
+let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer -> false | _ -> true) l)
+
+let rec want_witnesses (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (mk_want_another_witness: Seq.seq int -> list string -> Tot string) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
     z3.to_z3 "(get-value (witness))\n";
     let (_, witness) = read_witness z3 in
+    let witness_args = read_witness_args z3 [] nargs in
+    print_witness_and_call name l witness witness_args;
     if i <= 1
     then ()
     else begin
-      z3.to_z3 (mk_want_another_witness witness);
-      want_witnesses z3 mk_want_another_witness (i - 1)
+      z3.to_z3 (mk_want_another_witness witness witness_args);
+      want_witnesses z3 name l nargs mk_want_another_witness (i - 1)
     end
   end
   else begin
@@ -800,24 +847,42 @@ let rec want_witnesses (z3: Z3.z3) (mk_want_another_witness: Seq.seq int -> stri
     FStar.IO.print_newline ()
   end
 
-let witnesses_for (z3: Z3.z3) mk_get_first_witness mk_want_another_witness nbwitnesses =
+let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness mk_want_another_witness nbwitnesses =
   z3.to_z3 "(push)\n";
   z3.to_z3 mk_get_first_witness;
-  want_witnesses z3 mk_want_another_witness nbwitnesses;
+  want_witnesses z3 name l nargs mk_want_another_witness nbwitnesses;
   z3.to_z3 "(pop)\n"
 
-let mk_get_first_positive_test_witness (name1: string) : string =
-  Printf.sprintf
-"
+let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
+  match l with
+  | [] -> accu
+  | ArgPointer :: q -> mk_call_args (Printf.sprintf "%s 0" accu) i q
+  | _ :: q -> mk_call_args (Printf.sprintf "%s arg-%d" accu i) (i + 1) q
+
+let rec mk_assert_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
+  match l with
+  | [] -> accu
+  | ArgPointer :: q -> mk_assert_args accu i q
+  | ArgBool :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Bool)\n" accu i) (i + 1) q
+  | ArgInt it :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Int)\n(assert (and (<= 0 arg-%d) (< arg-%d %d)))\n" accu i i i (pow2 (integer_type_bit_size it))) (i + 1) q
+
+let mk_get_witness (name: string) (l: list arg_type) : string =
+Printf.sprintf "
+%s
 (define-fun state-witness () State (%s initial-state))
 (define-fun state-witness-input-size () Int (input-size state-witness))
-(declare-fun state-witness-is-valid () Bool)
-(assert (= state-witness-is-valid (>= state-witness-input-size 0)))
-(assert (= state-witness-is-valid true))
 (declare-fun witness () (Seq Int))
 (assert (= witness (extract-witness (choice-index state-witness))))
 "
-  name1
+  (mk_assert_args "" 0 l)
+  (mk_call_args name 0 l)
+
+let mk_get_first_positive_test_witness (name: string) (l: list arg_type) : string =
+  mk_get_witness name l ^ "
+(declare-fun state-witness-is-valid () Bool)
+(assert (= state-witness-is-valid (>= state-witness-input-size 0)))
+(assert (= state-witness-is-valid true))
+"
 
 let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
   (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
@@ -825,55 +890,58 @@ let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot stri
   then accu
   else mk_choose_conj witness ("(and (= (choose "^string_of_int i^") "^string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
 
-let mk_want_another_distinct_witness witness =
+let rec mk_arg_conj (accu: string) (i: nat) (l: list string) : Tot string (decreases l) =
+  match l with
+  | [] -> accu
+  | arg :: q ->
+    mk_arg_conj (Printf.sprintf "(and %s (= arg-%d %s))" accu i arg) (i + 1) q
+
+let mk_want_another_distinct_witness witness witness_args : Tot string =
   Printf.sprintf
 "(assert (not %s))
 "
-  (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0)
+  (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
 
-let mk_get_first_negative_test_witness (name1: string) : string =
-  Printf.sprintf
+let mk_get_first_negative_test_witness (name: string) (l: list arg_type) : string =
+  mk_get_witness name l ^
 "
 (assert (>= initial-input-size 0))
-(define-fun state-witness () State (%s initial-state))
 (declare-fun state-witness-is-invalid () Bool)
 (assert (= state-witness-is-invalid (< (input-size state-witness) 0)))
 (assert (= state-witness-is-invalid true))
-(declare-fun witness () (Seq Int))
-(assert (= witness (extract-witness (choice-index state-witness))))
 "
-  name1
 
-let do_test (z3: Z3.z3) (name1: string) (nbwitnesses: int) =
+let do_test (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) : ML unit =
+  let args = List.assoc name1 prog in
+  if None? args
+  then failwith (Printf.sprintf "do_test: parser %s not found" name1);
+  let args = Some?.v args in
+  let nargs = count_args args in
   FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-  witnesses_for z3 (mk_get_first_positive_test_witness name1) mk_want_another_distinct_witness nbwitnesses;
+  witnesses_for z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses;
   FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-  witnesses_for z3 (mk_get_first_negative_test_witness name1) mk_want_another_distinct_witness nbwitnesses
+  witnesses_for z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
 
-let mk_get_first_diff_test_witness (name1: string) (name2: string) : string =
+let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: string) : string =
   Printf.sprintf
 "
 %s
 (assert (< (input-size (%s initial-state)) 0))
 "
-  (mk_get_first_positive_test_witness name1)
-  name2
+  (mk_get_first_positive_test_witness name1 l)
+  (mk_call_args name2 0 l)
 
-let do_diff_test_for (z3: Z3.z3) name1 name2 nbwitnesses =
+let do_diff_test_for (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
+  let args = List.assoc name1 prog in
+  if None? args
+  then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
+  let args = Some?.v args in
+  if List.assoc name2 prog <> Some args
+  then failwith (Printf.sprintf "do_diff_test: parsers %s and %s do not have the same arg types" name1 name2);
+  let nargs = count_args args in
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for z3 (mk_get_first_diff_test_witness name1 name2) mk_want_another_distinct_witness nbwitnesses
+  witnesses_for z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
 
-let do_diff_test (z3: Z3.z3) name1 name2 nbwitnesses =
-  do_diff_test_for z3 name1 name2 nbwitnesses;
-  do_diff_test_for z3 name2 name1 nbwitnesses
-
-let diff_test (p1: parser not_reading) name1 (p2: parser not_reading) name2 nbwitnesses =
-  let buf : ref string = alloc "" in
-  let out x : ML unit = buf := Printf.sprintf "%s%s" !buf x in
-  let name1 = (p1 name1 empty_binders false out).call in
-  let name2 = (p2 name2 empty_binders false out).call in
-  Z3.with_z3 true (fun z3 ->
-    z3.to_z3 prelude;
-    z3.to_z3 !buf;
-    do_diff_test z3 name1 name2 nbwitnesses
-  )
+let do_diff_test (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
+  do_diff_test_for z3 prog name1 name2 nbwitnesses;
+  do_diff_test_for z3 prog name2 name1 nbwitnesses
