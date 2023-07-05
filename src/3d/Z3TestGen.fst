@@ -189,26 +189,19 @@ let prelude : string =
   )
 )
 
-(define-fun-rec int-shift-left ((value Int) (amount Int)) Int
+(define-fun-rec pow-2 ((amount Int)) Int
   (if (<= amount 0)
-    value
-    (int-shift-left (* value 2) (- amount 1))
+    1
+    (* 2 (pow-2 (- amount 1)))
   )
 )
 
-(define-fun-rec int-shift-right ((value Int) (amount Int)) Int
-  (if (<= amount 0)
-    value
-    (int-shift-right (div value 2) (- amount 1))
-  )
-)
-
+;; see LowParse.BitFields.get_bitfield_eq
 (define-fun get-bitfield-lsb ((nbBits Int) (value Int) (bitsFrom Int) (bitsTo Int)) Int
-  (let ((subBitsTo (- nbBits bitsTo)))
-    (int-shift-right (int-shift-left value subBitsTo) (+ subBitsTo bitsFrom))
-  )
+  (mod (div value (pow-2 bitsFrom)) (pow-2 (- bitsTo bitsFrom)))
 )
 
+;; see EverParse3d.Prelude.StaticHeader
 (define-fun get-bitfield-msb ((nbBits Int) (value Int) (bitsFrom Int) (bitsTo Int)) Int
   (get-bitfield-lsb nbBits value (- nbBits bitsTo) (- nbBits bitsFrom))
 )
