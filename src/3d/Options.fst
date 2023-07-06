@@ -119,6 +119,15 @@ let z3_diff_test: ref (option (valid_string valid_equate_types)) = alloc None
 
 let z3_test : ref (option vstring) = alloc None
 
+let valid_z3_test_mode : string -> Tot bool = function
+| "pos"
+| "neg"
+| "all"
+-> true
+| _ -> false
+
+let z3_test_mode : ref (option (valid_string valid_z3_test_mode)) = alloc None
+
 let z3_witnesses : ref (option vstring) = alloc None
 
 noeq
@@ -354,7 +363,8 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdFStarOption (let open FStar.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
     CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types z3_diff_test) "produce differential tests for two parsers" [];
-    CmdOption "z3_test" (OptStringOption "parser name" always_valid z3_test) "produce positive and negative test cases for a given parser" [];
+    CmdOption "z3_test" (OptStringOption "parser name" always_valid z3_test) "produce positive and/or negative test cases for a given parser" [];
+    CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
     CmdOption "z3_witnesses" (OptStringOption "nb" always_valid z3_witnesses) "ask for nb distinct test witnesses" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
     CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|emit_config" valid_micro_step micro_step) "micro step" [];
@@ -522,6 +532,20 @@ let get_emit_smt_encoding () =
   !emit_smt_encoding
 
 let get_z3_test () = !z3_test
+
+let get_z3_pos_test () =
+  match !z3_test with
+  | None -> false
+  | _ -> match !z3_test_mode with
+  | Some "neg" -> false
+  | _ -> true
+
+let get_z3_neg_test () =
+  match !z3_test with
+  | None -> false
+  | _ -> match !z3_test_mode with
+  | Some "pos" -> false
+  | _ -> true
 
 let get_z3_witnesses () =
   match !z3_witnesses with

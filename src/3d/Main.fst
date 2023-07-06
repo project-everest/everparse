@@ -463,7 +463,7 @@ let produce_z3_and_test
 = let nbwitnesses = Options.get_z3_witnesses () in
   Z3.with_z3 (Options.get_debug ()) (fun z3 ->
     let prog = process_files_for_z3 files_and_modules z3.to_z3 in
-    Z3TestGen.do_test z3 prog name nbwitnesses
+    Z3TestGen.do_test z3 prog name nbwitnesses (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
 
 let produce_z3_and_diff_test

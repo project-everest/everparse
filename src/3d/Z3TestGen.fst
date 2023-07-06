@@ -904,16 +904,22 @@ let mk_get_first_negative_test_witness (name: string) (l: list arg_type) : strin
 (assert (= state-witness-is-invalid true))
 "
 
-let do_test (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) : ML unit =
+let do_test (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
   let args = Some?.v args in
   let nargs = count_args args in
-  FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-  witnesses_for z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses;
-  FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-  witnesses_for z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+  if pos
+  then begin
+    FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
+    witnesses_for z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+  end;
+  if neg
+  then begin
+    FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
+    witnesses_for z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+  end
 
 let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: string) : string =
   Printf.sprintf
