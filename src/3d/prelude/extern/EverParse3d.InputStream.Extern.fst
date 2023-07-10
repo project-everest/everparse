@@ -219,7 +219,7 @@ let read
 
 #pop-options
 
-#push-options "--z3rlimit 128 --fuel 0 --ifuel 2 --z3cliopt smt.arith.nl=false --split_queries always"
+#push-options "--z3rlimit 20 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactics -FStar.Reflection' --split_queries no"
 #restart-solver
 inline_for_extraction
 noextract
@@ -237,7 +237,7 @@ let peep
       let s = get_remaining x h in
       B.modifies B.loc_none h h' /\
       ((~ (B.g_is_null dst')) ==> (
-        Seq.length (get_remaining x h) >= U64.v n /\
+        Seq.length s >= U64.v n /\
         B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
         B.live h' dst' /\
         footprint x `B.loc_includes` B.loc_buffer dst'
@@ -256,7 +256,7 @@ let peep
                                 let s = get_remaining x h in
                                 B.modifies B.loc_none h h' /\
                                 ((~ (B.g_is_null dst')) ==> (
-                                  Seq.length (get_remaining x h) >= U64.v n /\
+                                  Seq.length s >= U64.v n /\
                                   B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
                                   B.live h' dst' /\
                                   footprint x `B.loc_includes` B.loc_buffer dst'))))
@@ -265,22 +265,10 @@ let peep
   in
   let h2 = HST.get () in
   assert (B.modifies B.loc_none h0 h2);
-  assert ((~ (B.g_is_null dst)) ==>
-          Seq.length (get_remaining x h0) >= U64.v n);
-  assert ((~ (B.g_is_null dst)) ==>
-          (Seq.length (get_remaining x h0) >= U64.v n /\
-           B.live h2 dst));
-  assert ((~ (B.g_is_null dst)) ==>
-          (Seq.length (get_remaining x h0) >= U64.v n /\
-           B.live h2 dst /\
-           B.as_seq h2 dst `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n)));
-  assert ((~ (B.g_is_null dst)) ==>
-          (Seq.length (get_remaining x h0) >= U64.v n /\
-           B.as_seq h2 dst `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n) /\
-           B.live h2 dst /\
-           footprint x `B.loc_includes` B.loc_buffer dst));
+  B.modifies_buffer_elim x.Aux.position B.loc_none h0 h1;
+  assert (get_remaining x h1 == get_remaining x h0);
+  assert (get_read x h1 == get_read x h0);
   dst
-
 #pop-options
 
 inline_for_extraction
