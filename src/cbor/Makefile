@@ -43,7 +43,13 @@ endif
 
 FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS)
 
-LOWPARSE_FILES=$(wildcard *.fst *.fsti)
+ALL_LOWPARSE_FILES=$(wildcard *.fst *.fsti)
+
+ifdef STEEL_C_EXTRA
+LOWPARSE_FILES = $(ALL_LOWPARSE_FILES)
+else
+LOWPARSE_FILES = $(filter-out CBOR.SteelC.%,$(ALL_LOWPARSE_FILES))
+endif
 
 clean:
 	rm -rf *.checked *.source .depend .depend.tmp out *.krml *.o
@@ -60,11 +66,19 @@ verify-all: $(ALL_CHECKED_FILES)
 	$(FSTAR) --codegen krml $(patsubst %.checked,%,$(notdir $<)) --extract_module $(basename $(patsubst %.checked,%,$(notdir $<))) --warn_error '@241'
 	@touch $@
 
+KRML_DEFAULT_BUNDLE = CBOR.SteelST+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]
+
+ifdef STEEL_C_EXTRA
+KRML_BUNDLE = 'CBOR.SteelC+$(KRML_DEFAULT_BUNDLE)'
+else
+KRML_BUNDLE = '$(KRML_DEFAULT_BUNDLE)'
+endif
+
 KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out \
-	 -bundle 'CBOR.SteelC+CBOR.SteelST+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' \
+	 -bundle $(KRML_BUNDLE) \
 	 -skip-linking \
 	 $(KRML_OPTS) \
 	 -warn-error '@2@4'
