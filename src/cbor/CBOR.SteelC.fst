@@ -376,6 +376,10 @@ let test (#s: Ghost.erased cbor_case) (p: C.ref cbor_case_td)
   C.write ps 1729uL;
   Cu.ununion_field p "cbor_case_int64" ps;
   drop (Cu.has_union_field p "cbor_case_int64" _);
+  let ps = Cu.union_field0 p "cbor_case_int64" (C.scalar U64.t) in
+  C.write ps 42uL;
+  Cu.ununion_field p "cbor_case_int64" ps;
+  drop (Cu.has_union_field p "cbor_case_int64" _);
   let s' = vpattern_replace (C.pts_to p) in
   Cu.full_union cbor_case_union_def (Ghost.reveal s') "cbor_case_int64"; // FIXME: find a better pattern for that lemma
   return _
