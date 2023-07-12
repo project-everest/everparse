@@ -45,13 +45,20 @@ let right (x:either 'a 'b)
     | Inr x -> x
     | _ -> failwith "Expected right"
 
-let parse_check_and_desugar (en:env) (mname:string) (fn:string)
+type prune_actions = | PruneActions
+type opt_prune_actions = option prune_actions
+
+let parse_check_and_desugar (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
         StaticAssertions.static_asserts &
         env) =
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
-  let decls, refinement = parse_prog fn in
-
+  let decls, refinement =
+    let p = parse_prog fn in
+    if pa = Some PruneActions
+    then prog_prune_actions p
+    else p
+  in
 
   Options.debug_print_string "=============After parsing=============\n";
   Options.debug_print_string (print_decls decls);
@@ -109,14 +116,14 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   static_asserts,
   en
   
-let translate_module (en:env) (mname:string) (fn:string)
+let translate_module (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
   : ML (list Target.decl &
         option (list InterpreterTarget.decl) &
         StaticAssertions.static_asserts &
         env) =
 
   let decls, static_asserts, en = 
-      parse_check_and_desugar en mname fn
+      parse_check_and_desugar pa en mname fn
   in      
       
   let t_decls, i_decls, tenv = 
@@ -358,7 +365,7 @@ let process_file (en:env)
   : ML env =
   
   let t_decls, interpreter_decls_opt, static_asserts, en =
-      translate_module en modul fn
+      translate_module None en modul fn
   in
   if emit_fstar 
   then (
@@ -420,7 +427,7 @@ let process_file_for_z3
   : ML (env & Z3TestGen.prog) =
   let (en, accu) = en_accu in
   let t_decls, interpreter_decls_opt, static_asserts, en =
-      translate_module en modul fn
+      translate_module (Some PruneActions) en modul fn
   in
   let accu = match interpreter_decls_opt with
   | None -> failwith "process_file_for_z3: no interpreter decls left"

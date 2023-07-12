@@ -675,19 +675,40 @@ let parse_nlist
 : Tot (parser not_reading)
 = parse_exact size (parse_list body)
 
-let rec parse_typ : I.typ -> parser not_reading = function
+let rec type_has_actions = function
+  | I.T_with_dep_action _ _ _
+  | I.T_dep_pair_with_action _ _ _ _
+  | I.T_refine_with_action _ _ _ _
+  | I.T_dep_pair_with_refinement_and_action _ _ _ _ _
+  | I.T_with_action _ _ _
+    -> true
+  | I.T_false _
+  | I.T_denoted _ _
+  | I.T_refine _ _ _
+  | I.T_string _ _ _
+    -> false
+  | I.T_if_else _ t1 t2
+  | I.T_pair _ t1 t2 ->
+    type_has_actions t1 || type_has_actions t2
+  | I.T_at_most _ _ t
+  | I.T_exact _ _ t
+  | I.T_nlist _ _ t
+  | I.T_with_comment _ t _
+  | I.T_dep_pair_with_refinement _ _ _ (_, t)
+  | I.T_dep_pair _ _ (_, t) ->
+    type_has_actions t
+
+let rec parse_typ (t : I.typ) : Pure (parser not_reading)
+  (requires (type_has_actions t == false))
+  (ensures (fun _ -> True))
+= match t with
   | I.T_false _ -> parse_false
-  | I.T_denoted _ d
-  | I.T_with_dep_action _ d _ -> parse_denoted d
+  | I.T_denoted _ d -> parse_denoted d
   | I.T_pair _ t1 t2 -> parse_pair (parse_typ t1) (parse_typ t2)
-  | I.T_dep_pair _ t1 (lam, t2)
-  | I.T_dep_pair_with_action _ t1 (lam, t2) _ -> parse_dep_pair (parse_readable_dtyp t1) lam (parse_typ t2)
-  | I.T_refine _ base (lam, cond)
-  | I.T_refine_with_action _ base (lam, cond) _ -> parse_refine (parse_readable_dtyp base) lam (fun _ -> mk_expr cond)
-  | I.T_dep_pair_with_refinement _ base (lam_cond, cond) (lam_k, k)
-  | I.T_dep_pair_with_refinement_and_action _ base (lam_cond, cond) (lam_k, k) _ -> parse_dep_pair_with_refinement (parse_readable_dtyp base) lam_cond (fun _ -> mk_expr cond) lam_k (parse_typ k)
+  | I.T_dep_pair _ t1 (lam, t2) -> parse_dep_pair (parse_readable_dtyp t1) lam (parse_typ t2)
+  | I.T_refine _ base (lam, cond) -> parse_refine (parse_readable_dtyp base) lam (fun _ -> mk_expr cond)
+  | I.T_dep_pair_with_refinement _ base (lam_cond, cond) (lam_k, k) -> parse_dep_pair_with_refinement (parse_readable_dtyp base) lam_cond (fun _ -> mk_expr cond) lam_k (parse_typ k)
   | I.T_if_else cond t1 t2 -> parse_ifthenelse (fun _ -> mk_expr cond) (parse_typ t1) (parse_typ t2)
-  | I.T_with_action _ base _
   | I.T_with_comment _ base _ -> parse_typ base
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
@@ -759,6 +780,7 @@ let prog = list (string & list arg_type)
 let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : ML prog =
   let binders = binders_of_params a.name.td_params in
   let name = ident_to_string a.name.td_name in
+  if type_has_actions a.typ then failwith (Printf.sprintf "produce_type_decl: %s still has some actions" name);
   let _ = parse_typ a.typ name binders true out in
   (name, List.map (fun (i, ty) -> match arg_type_of_typ ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params) :: accu
 
