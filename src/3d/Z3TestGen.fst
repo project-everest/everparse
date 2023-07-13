@@ -804,6 +804,14 @@ let with_out_file
   FStar.IO.close_write_file fd;
   res
 
+let with_option_out_file
+  (#a: Type)
+  (name: option string)
+: Tot ((body: ((string -> ML unit) -> ML a)) -> ML a)
+= match name with
+  | Some name -> with_out_file name
+  | None -> (fun body -> body (fun _ -> ()))
+
 (* Ask Z3 for test witnesses *)
 
 let read_witness (z3: Z3.z3) =
@@ -1047,13 +1055,13 @@ let mk_get_first_negative_test_witness (name: string) (l: list arg_type) : strin
 (assert (= state-witness-is-invalid true))
 "
 
-let do_test (out_file: string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
+let do_test (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
   let args = Some?.v args in
   let modul, wrapper_name = module_and_wrapper_name name1 in
-  let nargs = count_args args in with_out_file out_file (fun cout ->
+  let nargs = count_args args in with_option_out_file out_file (fun cout ->
   cout "#include <stdio.h>
 #include \"";
   cout modul;
@@ -1088,7 +1096,7 @@ let do_diff_test_for (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 na
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
   witnesses_for (print_diff_witness_as_c cout wrapper_name1 wrapper_name2 args) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
 
-let do_diff_test (out_file: string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
+let do_diff_test (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
@@ -1098,7 +1106,7 @@ let do_diff_test (out_file: string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitne
   let nargs = count_args args in
   let modul1, wrapper_name1 = module_and_wrapper_name name1 in
   let modul2, wrapper_name2 = module_and_wrapper_name name2 in
-  with_out_file out_file (fun cout ->
+  with_option_out_file out_file (fun cout ->
   cout "#include <stdio.h>
 #include \"";
   cout modul1;

@@ -514,7 +514,7 @@ let with_z3_thread_or
 let produce_z3_and_test_gen
   (batch: bool)
   (out_dir: string)
-  (do_test: string -> int -> Z3TestGen.prog -> Z3.z3 -> ML unit)
+  (do_test: option string -> int -> Z3TestGen.prog -> Z3.z3 -> ML unit)
 : Tot process_files_t
 = fun
   (files_and_modules:list (string & string))
@@ -526,7 +526,7 @@ let produce_z3_and_test_gen
   let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
   with_z3_thread_or batch out_dir (Options.get_debug ()) (fun z3 ->
     z3.to_z3 !buf;
-    do_test (OS.concat out_dir "testcases.c") nbwitnesses prog z3
+    do_test (if batch then Some (OS.concat out_dir "testcases.c") else None) nbwitnesses prog z3
   )
 
 let produce_z3_and_test
@@ -535,7 +535,7 @@ let produce_z3_and_test
   (name: string)
 : Tot process_files_t
 = produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
-    Z3TestGen.do_test (OS.concat out_dir "testcases.c") z3 prog name nbwitnesses (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
+    Z3TestGen.do_test out_file z3 prog name nbwitnesses (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
 
 let produce_z3_and_diff_test
@@ -546,7 +546,7 @@ let produce_z3_and_diff_test
 =
   let (name1, name2) = names in
   produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
-    Z3TestGen.do_diff_test (OS.concat out_dir "testcases.c") z3 prog name1 name2 nbwitnesses
+    Z3TestGen.do_diff_test out_file z3 prog name1 name2 nbwitnesses
   )
 
 let produce_and_postprocess_c
