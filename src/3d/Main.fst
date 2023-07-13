@@ -506,7 +506,14 @@ let produce_z3_and_test
     Z3TestGen.do_test (OS.concat out_dir "testcases.c") z3 prog name nbwitnesses (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
   in
-  (fun _ -> Z3.wait_for_z3_thread thr)
+  (fun _ ->
+    Z3.wait_for_z3_thread thr;
+    if not (Options.get_skip_c_makefiles ())
+    then begin
+      OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"];
+      OS.run_cmd (OS.concat out_dir "test.exe") []
+    end
+  )
 
 let produce_z3_and_diff_test
   (files_and_modules:list (string & string))

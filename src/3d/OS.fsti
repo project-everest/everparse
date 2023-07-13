@@ -16,6 +16,10 @@ val remove_extension: string -> Tot string
 
 val extension: string -> Tot string
 
+(* Run a command *)
+val run_cmd: string -> list string -> FStar.All.ML unit
+
+(* Probe a file *)
 
 val file_exists: string -> FStar.All.ML bool
 
