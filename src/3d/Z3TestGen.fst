@@ -675,6 +675,39 @@ let parse_nlist
 : Tot (parser not_reading)
 = parse_exact size (parse_list body)
 
+let mk_parse_string
+  (name: string)
+  (rec_call: string)
+  (binders: string)
+  (body: string)
+  (terminator: string)
+: string
+= let input = Printf.sprintf "%s-input" name in
+  let tmp = Printf.sprintf "%s-tmp" name in
+"(define-fun-rec "^name^" ("^binders^"("^input^" State)) State
+  (let (("^tmp^" ("^body^" "^input^")))
+    (if (< (choice-index (after-state "^tmp^")) 0)
+      (mk-state -1 (choice-index (after-state "^tmp^")))
+      (if (= (return-value "^tmp^") "^terminator^")
+        (after-state "^tmp^")
+        ("^rec_call^" (after-state "^tmp^"))
+      )
+    )
+  )
+)
+"
+
+let parse_string
+  (body: parser reading)
+  (terminator: (unit -> ML string))
+: Tot (parser not_reading)
+= fun name binders _ out ->
+    let rec_call = mk_function_call name binders in
+    let body_name = Printf.sprintf "%s-body" name in
+    let body = body body_name binders false out in
+    out (mk_parse_string name rec_call binders.bind body.call (terminator ()));
+    { call = rec_call }
+
 let rec type_has_actions = function
   | I.T_with_dep_action _ _ _
   | I.T_dep_pair_with_action _ _ _ _
@@ -712,7 +745,7 @@ let rec parse_typ (t : I.typ) : Pure (parser not_reading)
   | I.T_with_comment _ base _ -> parse_typ base
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
-  | I.T_string _ _ _ -> unsupported_parser "T_string" _
+  | I.T_string _ elt terminator -> parse_string (parse_readable_dtyp elt) (fun _ -> mk_expr terminator)
   | I.T_nlist _ size body -> parse_nlist (fun _ -> mk_expr size) (parse_typ body)
 
 type arg_type =
