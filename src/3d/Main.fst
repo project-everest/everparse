@@ -231,7 +231,8 @@ let emit_fstar_code_for_interpreter (en:env)
 
     ()
    
-let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
+let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
+                    (en:env) (modul:string) (t_decls:list Target.decl)
                     (static_asserts:StaticAssertions.static_asserts)
                     (emit_output_types_defs:bool)
   : ML unit =
@@ -242,7 +243,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
     | Type_decl td -> td.decl_name.td_entrypoint
     | _ -> false) t_decls |> Some?
   then begin
-    let wrapper_header, wrapper_impl = Target.print_c_entry modul en.binding_env t_decls in
+    let wrapper_header, wrapper_impl = Target.print_c_entry produce_ep_error modul en.binding_env t_decls in
 
     let c_file =
       open_write_file
@@ -357,6 +358,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
   end
 
 let process_file_gen
+                 (produce_ep_error: Target.opt_produce_everparse_error)
                  (pa: opt_prune_actions)
                  (en:env)
                  (fn:string)
@@ -377,7 +379,7 @@ let process_file_gen
       | Some tds ->
         emit_fstar_code_for_interpreter en modul t_decls tds all_modules
     );
-    emit_entrypoint en modul t_decls static_asserts emit_output_types_defs
+    emit_entrypoint produce_ep_error en modul t_decls static_asserts emit_output_types_defs
   )
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
 
@@ -398,7 +400,7 @@ let process_file
                  (emit_output_types_defs: bool)
                  (all_modules:list string)
   : ML env =
-  fst (process_file_gen None en fn modul emit_fstar emit_output_types_defs all_modules)
+  fst (process_file_gen None None en fn modul emit_fstar emit_output_types_defs all_modules)
 
 let emit_config_as_fstar_module ()
   : ML unit
@@ -460,7 +462,7 @@ let process_file_for_z3
                  (all_modules:list string)
   : ML (env & Z3TestGen.prog) =
   let (en, accu) = en_accu in
-  let (en, interpreter_decls_opt) = process_file_gen (Some PruneActions) en fn modul emit_fstar emit_output_types_defs all_modules in
+  let (en, interpreter_decls_opt) = process_file_gen (Some Target.ProduceEverParseError) (Some PruneActions) en fn modul emit_fstar emit_output_types_defs all_modules in
   let accu = match interpreter_decls_opt with
   | None -> failwith "process_file_for_z3: no interpreter decls left"
   | Some i -> Z3TestGen.produce_decls out accu i

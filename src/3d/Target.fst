@@ -1118,7 +1118,9 @@ let wrapper_name
     fn
   |> pascal_case
 
-let print_c_entry (modul: string)
+let print_c_entry
+                  (produce_everparse_error: opt_produce_everparse_error)
+                  (modul: string)
                   (env: global_env)
                   (ds:list decl)
     : ML (string & string)
@@ -1325,8 +1327,9 @@ let print_c_entry (modul: string)
   let header = Printf.sprintf "%s%s" add_includes header in
   let error_callback_proto =
     if HashingOptions.InputStreamBuffer? input_stream_binding
-    then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
+    then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason)%s"
                          modul
+                         (if produce_everparse_error = Some ProduceEverParseError then "{}" else ";")
     else ""
   in
   let impl =
