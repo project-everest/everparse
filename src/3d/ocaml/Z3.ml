@@ -41,3 +41,18 @@ let with_z3 (debug: bool) (f: (z3 -> 'a)) : 'a =
   valid := false;
   let _ = Unix.close_process ch_z3 in
   res
+
+type z3_thread = int
+
+let with_z3_thread (debug: bool) (f: (z3 -> unit)) : z3_thread =
+  let pid = Unix.fork () in
+  if pid = 0
+  then begin
+    with_z3 debug f;
+    exit 0
+  end
+  else pid
+
+let wait_for_z3_thread pid =
+  print_endline "Waiting for Z3...";
+  ignore (Unix.waitpid [] pid)

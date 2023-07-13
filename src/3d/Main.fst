@@ -438,7 +438,7 @@ let process_files_t =
   (files_and_modules:list (string & string)) ->
   (emit_fstar:string -> ML bool) ->
   (emit_output_types_defs:bool) ->
-  ML unit
+  ML (unit -> ML unit)
   
 let process_files : process_files_t = fun files_and_modules emit_fstar emit_output_types_defs ->
   process_files_gen
@@ -447,7 +447,8 @@ let process_files : process_files_t = fun files_and_modules emit_fstar emit_outp
     (Some emit_fstar)
     emit_output_types_defs
     process_file
-  |> ignore
+  |> ignore;
+  (fun _ -> ())
 
 let process_file_for_z3
                  (out: string -> ML unit)
@@ -495,10 +496,14 @@ let produce_z3_and_test
   (emit_output_types_defs:bool)
 ->
   let nbwitnesses = Options.get_z3_witnesses () in
-  Z3.with_z3 (Options.get_debug ()) (fun z3 ->
-    let prog = process_files_for_z3 z3.to_z3 files_and_modules (Some emit_fstar) emit_output_types_defs in
+  let buf : ref string = alloc "" in
+  let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (Some emit_fstar) emit_output_types_defs in
+  let thr = Z3.with_z3_thread (Options.get_debug ()) (fun z3 ->
+    z3.to_z3 !buf;
     Z3TestGen.do_test z3 prog name nbwitnesses (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
+  in
+  (fun _ -> Z3.wait_for_z3_thread thr)
 
 let produce_z3_and_diff_test
   (files_and_modules:list (string & string))
@@ -623,7 +628,7 @@ let go () : ML unit =
     then produce_z3_and_test (Some?.v z3_test)
     else process_files
   in
-  process all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ());
+  let finalize = process all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ()) in
   (* we need to pretty-print source modules in all cases, regardless of --batch,
      because of the Makefile scenario
    *)
@@ -633,6 +638,7 @@ let go () : ML unit =
   Batch.pretty_print_source_modules input_stream_binding out_dir
     (List.filter (fun (_, m) -> should_emit_fstar_code m) all_files_and_modules);
   (* Sub-mode of the default mode: --batch *)
+  let _ =
   if Options.get_batch ()
   then
   let _ = Batch.postprocess_fst
@@ -656,6 +662,8 @@ let go () : ML unit =
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
         out_dir all_files_and_modules
+  in
+  finalize ()
 
 #push-options "--warn_error -272" //top-level effects are okay
 #push-options "--admit_smt_queries true" //explicitly not handling all exceptions, so that we can meaningful backtraces
