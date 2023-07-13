@@ -82,6 +82,7 @@ function build_and_test_quackyducky() {
     # Test EverParse proper
     fetch_and_make_karamel &&
     make -j $threads -k ci &&
+    make -j $threads -k package-noversion &&
     # Build incrementality test
     pushd tests/sample && {
         {
