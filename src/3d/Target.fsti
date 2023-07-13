@@ -420,6 +420,7 @@ val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML strin
 val print_decls (modul: string) (ds:list decl) : ML string
 val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string
+val wrapper_name (modul: string) (fn: string) : ML string
 val print_c_entry (modul: string) (env: global_env) (ds:list decl)
   : ML (string & string)
 

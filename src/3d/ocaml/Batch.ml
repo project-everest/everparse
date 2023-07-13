@@ -313,6 +313,11 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
                      files_and_modules
   in
   let krml_files =
+    if (not skip_c_makefiles) && Sys.file_exists (filename_concat out_dir "testcases.c")
+    then "testcases.c" :: krml_files
+    else krml_files
+  in
+  let krml_files =
     match Options.config_module_name () with
     | None -> krml_files
     | Some m -> filename_concat out_dir (Printf.sprintf "%s.krml" m) :: krml_files

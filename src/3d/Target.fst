@@ -1109,6 +1109,15 @@ let rec get_output_typ_dep (modul:string) (t:typ) : ML (option string) =
   | T_pointer t -> get_output_typ_dep modul t
   | _ -> failwith "get_typ_deps: unexpected output type"
 
+let wrapper_name
+  (modul: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_check_%s"
+    modul
+    fn
+  |> pascal_case
+
 let print_c_entry (modul: string)
                   (env: global_env)
                   (ds:list decl)
@@ -1215,12 +1224,7 @@ let print_c_entry (modul: string)
        | [] -> params
        | _ -> params ^ ", "
     in
-    let wrapper_name =
-      Printf.sprintf "%s_check_%s"
-        modul
-        d.decl_name.td_name.A.v.A.name
-      |> pascal_case
-    in
+    let wrapper_name = wrapper_name modul d.decl_name.td_name.A.v.A.name in
     let signature =
       if is_input_stream_buffer 
       then Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"

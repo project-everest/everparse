@@ -819,6 +819,69 @@ let rec read_witness_args (z3: Z3.z3) (accu: list string) (n: nat) : ML (list st
     read_witness_args z3 (arg :: accu) n'
   end
 
+let module_and_wrapper_name
+  (s: string)
+: ML (string & string)
+= match String.split ['.'] s with
+  | [modul; fn] -> modul, Target.wrapper_name modul fn
+  | _ -> failwith "Z3TestGen.wrapper_name"
+
+let rec print_witness_args_as_c
+  (out: (string -> ML unit))
+  (l: list arg_type) (args: list string)
+: ML unit
+= match l, args with
+  | ArgPointer :: q, _ ->
+    out "NULL, ";
+    print_witness_args_as_c out q args
+  | _ :: ql, a :: qargs ->
+    out a;
+    out ", ";
+    print_witness_args_as_c out ql qargs
+  | _ -> ()
+
+let print_witness_call_as_c
+  (out: (string -> ML unit))
+  (positive: bool)
+  (wrapper_name: string)
+  (arg_types: list arg_type)
+  (witness_length: nat)
+  (args: list string)
+: ML unit
+=
+  out "  if (";
+  if positive then out "!";
+  out wrapper_name;
+  out "(";
+  print_witness_args_as_c out arg_types args;
+  out "witness, ";
+  out (string_of_int witness_length);
+  out "))\n";
+  out "    return 1;\n"
+
+let print_witness_as_c
+  (out: (string -> ML unit))
+  (positive: bool)
+  (wrapper_name: string)
+  (arg_types: list arg_type)
+  (witness: Seq.seq int)
+  (args: list string)
+: ML unit
+= let len = Seq.length witness in
+  out "{\n";
+  out "  uint8_t witness[";
+  out (string_of_int len);
+  out "] = {";
+  begin match Seq.seq_to_list witness with
+  | [] -> ()
+  | a :: q ->
+    out (string_of_int a);
+    List.iter (fun i -> out ", "; out (string_of_int i)) q
+  end;
+  out "};\n";
+  print_witness_call_as_c out positive wrapper_name arg_types len args;
+  out "};\n"
+
 let print_witness (witness: Seq.seq int) : ML unit =
   FStar.IO.print_string " produced witness: [";
   List.iter (fun i -> FStar.IO.print_string (string_of_int i); FStar.IO.print_string "; ") (Seq.seq_to_list witness);
@@ -837,7 +900,7 @@ let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq i
 
 let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer -> false | _ -> true) l)
 
-let rec want_witnesses (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (mk_want_another_witness: Seq.seq int -> list string -> Tot string) i : ML unit =
+let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (mk_want_another_witness: Seq.seq int -> list string -> Tot string) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
@@ -845,11 +908,12 @@ let rec want_witnesses (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat
     let (_, witness) = read_witness z3 in
     let witness_args = read_witness_args z3 [] nargs in
     print_witness_and_call name l witness witness_args;
+    print_test_case witness witness_args;
     if i <= 1
     then ()
     else begin
       z3.to_z3 (mk_want_another_witness witness witness_args);
-      want_witnesses z3 name l nargs mk_want_another_witness (i - 1)
+      want_witnesses print_test_case z3 name l nargs mk_want_another_witness (i - 1)
     end
   end
   else begin
@@ -862,10 +926,10 @@ let rec want_witnesses (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat
     FStar.IO.print_newline ()
   end
 
-let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness mk_want_another_witness nbwitnesses =
+let witnesses_for (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness mk_want_another_witness nbwitnesses =
   z3.to_z3 "(push)\n";
   z3.to_z3 mk_get_first_witness;
-  want_witnesses z3 name l nargs mk_want_another_witness nbwitnesses;
+  want_witnesses print_test_case z3 name l nargs mk_want_another_witness nbwitnesses;
   z3.to_z3 "(pop)\n"
 
 let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
@@ -931,17 +995,27 @@ let do_test (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bo
   if None? args
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
   let args = Some?.v args in
-  let nargs = count_args args in
+  let modul, wrapper_name = module_and_wrapper_name name1 in
+  let nargs = count_args args in with_out_file "testcases.c" (fun cout ->
+  cout "#include \"";
+  cout modul;
+  cout "Wrapper.h\"
+  int main(void) {
+";
   if pos
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-    witnesses_for z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+    witnesses_for (print_witness_as_c cout true wrapper_name args) z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
   end;
   if neg
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-    witnesses_for z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
-  end
+    witnesses_for (print_witness_as_c cout false wrapper_name args) z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+  end;
+  cout "  return 0;
+  }
+"
+  )
 
 let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: string) : string =
   Printf.sprintf
@@ -961,7 +1035,7 @@ let do_diff_test_for (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
   then failwith (Printf.sprintf "do_diff_test: parsers %s and %s do not have the same arg types" name1 name2);
   let nargs = count_args args in
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
+  witnesses_for (fun _ _ -> ()) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
 
 let do_diff_test (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
   do_diff_test_for z3 prog name1 name2 nbwitnesses;
