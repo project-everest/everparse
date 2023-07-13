@@ -440,7 +440,7 @@ let process_files_t =
   (files_and_modules:list (string & string)) ->
   (emit_fstar:string -> ML bool) ->
   (emit_output_types_defs:bool) ->
-  ML (unit -> ML unit)
+  ML (option (unit -> ML unit))
   
 let process_files : process_files_t = fun files_and_modules emit_fstar emit_output_types_defs ->
   process_files_gen
@@ -450,7 +450,7 @@ let process_files : process_files_t = fun files_and_modules emit_fstar emit_outp
     emit_output_types_defs
     process_file
   |> ignore;
-  (fun _ -> ())
+  (Some (fun _ -> ()))
 
 let process_file_for_z3
                  (out: string -> ML unit)
@@ -489,7 +489,30 @@ let produce_z3
 : ML unit
 = ignore (process_files_for_z3 FStar.IO.print_string files_and_modules None false)
 
+let with_z3_thread_or
+  (batch: bool)
+  (out_dir: string)
+  (debug: bool)
+  (f: (Z3.z3 -> ML unit))
+: ML (option (unit -> ML unit))
+= if batch
+  then
+    let thr = Z3.with_z3_thread debug f in
+    Some (fun _ ->
+      Z3.wait_for_z3_thread thr;
+      if not (Options.get_skip_c_makefiles ())
+      then begin
+        OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"];
+        OS.run_cmd (OS.concat out_dir "test.exe") []
+      end
+    )
+  else begin
+    Z3.with_z3 debug f;
+    None
+  end
+
 let produce_z3_and_test
+  (batch: bool)
   (out_dir: string)
   (name: string)
 : Tot process_files_t
@@ -500,19 +523,10 @@ let produce_z3_and_test
 ->
   let nbwitnesses = Options.get_z3_witnesses () in
   let buf : ref string = alloc "" in
-  let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (Some emit_fstar) emit_output_types_defs in
-  let thr = Z3.with_z3_thread (Options.get_debug ()) (fun z3 ->
+  let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
+  with_z3_thread_or batch out_dir (Options.get_debug ()) (fun z3 ->
     z3.to_z3 !buf;
     Z3TestGen.do_test (OS.concat out_dir "testcases.c") z3 prog name nbwitnesses (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
-  )
-  in
-  (fun _ ->
-    Z3.wait_for_z3_thread thr;
-    if not (Options.get_skip_c_makefiles ())
-    then begin
-      OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"];
-      OS.run_cmd (OS.concat out_dir "test.exe") []
-    end
   )
 
 let produce_z3_and_diff_test
@@ -626,19 +640,21 @@ let go () : ML unit =
   then produce_z3_and_diff_test all_files_and_modules (Some?.v z3_diff_test)
   else
   (* Default mode: process .3d files *)
+  let batch = Options.get_batch () in
   let should_emit_fstar_code : string -> ML bool =
     let cmd_line_modules = List.map Options.get_module_name cmd_line_files in
     fun modul ->
-      let b = Options.get_batch () in
-      b || List.Tot.mem modul cmd_line_modules in
+      batch || List.Tot.mem modul cmd_line_modules in
   let process : process_files_t =
     (* Special mode: --z3_test *)
     let z3_test = Options.get_z3_test () in
     if Some? z3_test
-    then produce_z3_and_test out_dir (Some?.v z3_test)
+    then produce_z3_and_test batch out_dir (Some?.v z3_test)
     else process_files
   in
-  let finalize = process all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ()) in
+  match process all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ()) with
+  | None -> ()
+  | Some finalize ->
   (* we need to pretty-print source modules in all cases, regardless of --batch,
      because of the Makefile scenario
    *)
@@ -649,7 +665,7 @@ let go () : ML unit =
     (List.filter (fun (_, m) -> should_emit_fstar_code m) all_files_and_modules);
   (* Sub-mode of the default mode: --batch *)
   let _ =
-  if Options.get_batch ()
+  if batch
   then
   let _ = Batch.postprocess_fst
         input_stream_binding
