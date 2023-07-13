@@ -511,10 +511,10 @@ let with_z3_thread_or
     None
   end
 
-let produce_z3_and_test
+let produce_z3_and_test_gen
   (batch: bool)
   (out_dir: string)
-  (name: string)
+  (do_test: string -> int -> Z3TestGen.prog -> Z3.z3 -> ML unit)
 : Tot process_files_t
 = fun
   (files_and_modules:list (string & string))
@@ -526,18 +526,27 @@ let produce_z3_and_test
   let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
   with_z3_thread_or batch out_dir (Options.get_debug ()) (fun z3 ->
     z3.to_z3 !buf;
+    do_test (OS.concat out_dir "testcases.c") nbwitnesses prog z3
+  )
+
+let produce_z3_and_test
+  (batch: bool)
+  (out_dir: string)
+  (name: string)
+: Tot process_files_t
+= produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
     Z3TestGen.do_test (OS.concat out_dir "testcases.c") z3 prog name nbwitnesses (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
 
 let produce_z3_and_diff_test
-  (files_and_modules:list (string & string))
+  (batch: bool)
+  (out_dir: string)
   (names: (string & string))
-: ML unit
-= let (name1, name2) = names in
-  let nbwitnesses = Options.get_z3_witnesses () in
-  Z3.with_z3 (Options.get_debug ()) (fun z3 ->
-    let prog = process_files_for_z3 z3.to_z3 files_and_modules None false in
-    Z3TestGen.do_diff_test z3 prog name1 name2 nbwitnesses
+: Tot process_files_t
+=
+  let (name1, name2) = names in
+  produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
+    Z3TestGen.do_diff_test (OS.concat out_dir "testcases.c") z3 prog name1 name2 nbwitnesses
   )
 
 let produce_and_postprocess_c
@@ -634,11 +643,6 @@ let go () : ML unit =
   if Options.get_emit_smt_encoding ()
   then produce_z3 all_files_and_modules
   else
-  (* Special mode: --z3_diff_test *)
-  let z3_diff_test = Options.get_z3_diff_test () in
-  if Some? z3_diff_test
-  then produce_z3_and_diff_test all_files_and_modules (Some?.v z3_diff_test)
-  else
   (* Default mode: process .3d files *)
   let batch = Options.get_batch () in
   let should_emit_fstar_code : string -> ML bool =
@@ -646,6 +650,11 @@ let go () : ML unit =
     fun modul ->
       batch || List.Tot.mem modul cmd_line_modules in
   let process : process_files_t =
+    (* Special mode: --z3_diff_test *)
+    let z3_diff_test = Options.get_z3_diff_test () in
+    if Some? z3_diff_test
+    then produce_z3_and_diff_test batch out_dir (Some?.v z3_diff_test)
+    else
     (* Special mode: --z3_test *)
     let z3_test = Options.get_z3_test () in
     if Some? z3_test

@@ -864,17 +864,20 @@ let print_witness_call_as_c
   (args: list string)
 : ML unit
 =
-  out "  printf(\"  ";
-  print_witness_call_as_c_aux out wrapper_name arg_types witness_length args;
-  out " // \");
-  BOOLEAN result = ";
+  out "
+  {
+    BOOLEAN result = ";
   print_witness_call_as_c_aux out wrapper_name arg_types witness_length args;
   out "
-  if (result) printf (\"ACCEPTED\\n\\n\"); else printf (\"REJECTED\\n\\n\");
-  if (";
+    printf(\"  ";
+  print_witness_call_as_c_aux out wrapper_name arg_types witness_length args;
+  out " // \");
+    if (result) printf (\"ACCEPTED\\n\\n\"); else printf (\"REJECTED\\n\\n\");
+    if (";
   if positive then out "!";
   out "result)
       return 1;
+  };
 "
 
 let print_witness_as_c_aux
@@ -894,13 +897,10 @@ let print_witness_as_c_aux
   end;
   out "};"
 
-let print_witness_as_c
+let print_witness_as_c_gen
   (out: (string -> ML unit))
-  (positive: bool)
-  (wrapper_name: string)
-  (arg_types: list arg_type)
   (witness: Seq.seq int)
-  (args: list string)
+  (f: (len: int { len == Seq.length witness }) -> ML unit)
 : ML unit
 = let len = Seq.length witness in
   out "{\n";
@@ -910,9 +910,34 @@ let print_witness_as_c
   print_witness_as_c_aux out witness len;
   out "\\n\");
 ";
-  print_witness_call_as_c out positive wrapper_name arg_types len args;
+  f len;
   out "};
 "
+
+let print_witness_as_c
+  (out: (string -> ML unit))
+  (positive: bool)
+  (wrapper_name: string)
+  (arg_types: list arg_type)
+  (witness: Seq.seq int)
+  (args: list string)
+: ML unit
+= print_witness_as_c_gen out witness (fun len ->
+    print_witness_call_as_c out positive wrapper_name arg_types len args
+  )
+
+let print_diff_witness_as_c
+  (out: (string -> ML unit))
+  (wrapper_name1: string)
+  (wrapper_name2: string)
+  (arg_types: list arg_type)
+  (witness: Seq.seq int)
+  (args: list string)
+: ML unit
+= print_witness_as_c_gen out witness (fun len ->
+    print_witness_call_as_c out true wrapper_name1 arg_types len args;
+    print_witness_call_as_c out false wrapper_name2 arg_types len args
+  )
 
 let print_witness (witness: Seq.seq int) : ML unit =
   FStar.IO.print_string " produced witness: [";
@@ -1059,7 +1084,11 @@ let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: st
   (mk_get_first_positive_test_witness name1 l)
   (mk_call_args name2 0 l)
 
-let do_diff_test_for (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
+let do_diff_test_for (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) wrapper_name1 wrapper_name2 nbwitnesses =
+  FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
+  witnesses_for (print_diff_witness_as_c cout wrapper_name1 wrapper_name2 args) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
+
+let do_diff_test (out_file: string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
@@ -1067,9 +1096,21 @@ let do_diff_test_for (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
   if List.assoc name2 prog <> Some args
   then failwith (Printf.sprintf "do_diff_test: parsers %s and %s do not have the same arg types" name1 name2);
   let nargs = count_args args in
-  FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for (fun _ _ -> ()) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
-
-let do_diff_test (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
-  do_diff_test_for z3 prog name1 name2 nbwitnesses;
-  do_diff_test_for z3 prog name2 name1 nbwitnesses
+  let modul1, wrapper_name1 = module_and_wrapper_name name1 in
+  let modul2, wrapper_name2 = module_and_wrapper_name name2 in
+  with_out_file out_file (fun cout ->
+  cout "#include <stdio.h>
+#include \"";
+  cout modul1;
+  cout "Wrapper.h\"
+#include \"";
+  cout modul2;
+  cout "Wrapper.h\"
+  int main(void) {
+";
+  do_diff_test_for cout z3 prog name1 name2 args nargs wrapper_name1 wrapper_name2 nbwitnesses;
+  do_diff_test_for cout z3 prog name2 name1 args nargs wrapper_name2 wrapper_name1 nbwitnesses;
+  cout "  return 0;
+  }
+"
+)
