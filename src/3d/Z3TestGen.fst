@@ -990,13 +990,13 @@ let mk_get_first_negative_test_witness (name: string) (l: list arg_type) : strin
 (assert (= state-witness-is-invalid true))
 "
 
-let do_test (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
+let do_test (out_file: string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
   let args = Some?.v args in
   let modul, wrapper_name = module_and_wrapper_name name1 in
-  let nargs = count_args args in with_out_file "testcases.c" (fun cout ->
+  let nargs = count_args args in with_out_file out_file (fun cout ->
   cout "#include \"";
   cout modul;
   cout "Wrapper.h\"

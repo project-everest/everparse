@@ -490,6 +490,7 @@ let produce_z3
 = ignore (process_files_for_z3 FStar.IO.print_string files_and_modules None false)
 
 let produce_z3_and_test
+  (out_dir: string)
   (name: string)
 : Tot process_files_t
 = fun
@@ -502,7 +503,7 @@ let produce_z3_and_test
   let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (Some emit_fstar) emit_output_types_defs in
   let thr = Z3.with_z3_thread (Options.get_debug ()) (fun z3 ->
     z3.to_z3 !buf;
-    Z3TestGen.do_test z3 prog name nbwitnesses (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
+    Z3TestGen.do_test (OS.concat out_dir "testcases.c") z3 prog name nbwitnesses (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
   in
   (fun _ -> Z3.wait_for_z3_thread thr)
@@ -627,7 +628,7 @@ let go () : ML unit =
     (* Special mode: --z3_test *)
     let z3_test = Options.get_z3_test () in
     if Some? z3_test
-    then produce_z3_and_test (Some?.v z3_test)
+    then produce_z3_and_test out_dir (Some?.v z3_test)
     else process_files
   in
   let finalize = process all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ()) in
