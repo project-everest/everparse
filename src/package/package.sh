@@ -246,7 +246,17 @@ make_everparse() {
     if $is_windows ; then
         wget --output-document=everparse/bin/clang-format.exe https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe
     fi
-    
+
+    # Download and unzip the latest z3 for test case generation purposes
+    if ! $is_windows ; then
+        z3_latest=z3-4.12.2
+        z3_latest_arch=$z3_latest-x64-glibc-2.31
+        z3_latest_zip=$z3_latest_arch.zip
+        wget https://github.com/Z3Prover/z3/releases/download/$z3_latest/$z3_latest_zip
+        unzip $z3_latest_zip
+        mv $z3_latest_arch everparse/z3-latest
+    fi
+
     # licenses
     mkdir -p everparse/licenses
     if [[ -f $FSTAR_HOME/LICENSE ]] ; then
