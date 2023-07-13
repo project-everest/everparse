@@ -840,6 +840,21 @@ let rec print_witness_args_as_c
     print_witness_args_as_c out ql qargs
   | _ -> ()
 
+let print_witness_call_as_c_aux
+  (out: (string -> ML unit))
+  (wrapper_name: string)
+  (arg_types: list arg_type)
+  (witness_length: nat)
+  (args: list string)
+: ML unit
+=
+  out wrapper_name;
+  out "(";
+  print_witness_args_as_c out arg_types args;
+  out "witness, ";
+  out (string_of_int witness_length);
+  out ");"
+
 let print_witness_call_as_c
   (out: (string -> ML unit))
   (positive: bool)
@@ -849,15 +864,35 @@ let print_witness_call_as_c
   (args: list string)
 : ML unit
 =
-  out "  if (";
+  out "  printf(\"  ";
+  print_witness_call_as_c_aux out wrapper_name arg_types witness_length args;
+  out " // \");
+  BOOLEAN result = ";
+  print_witness_call_as_c_aux out wrapper_name arg_types witness_length args;
+  out "
+  if (result) printf (\"ACCEPTED\\n\\n\"); else printf (\"REJECTED\\n\\n\");
+  if (";
   if positive then out "!";
-  out wrapper_name;
-  out "(";
-  print_witness_args_as_c out arg_types args;
-  out "witness, ";
-  out (string_of_int witness_length);
-  out "))\n";
-  out "    return 1;\n"
+  out "result)
+      return 1;
+"
+
+let print_witness_as_c_aux
+  (out: (string -> ML unit))
+  (witness: Seq.seq int)
+  (len: int { len == Seq.length witness })
+: ML unit
+=
+  out "  uint8_t witness[";
+  out (string_of_int len);
+  out "] = {";
+  begin match Seq.seq_to_list witness with
+  | [] -> ()
+  | a :: q ->
+    out (string_of_int a);
+    List.iter (fun i -> out ", "; out (string_of_int i)) q
+  end;
+  out "};"
 
 let print_witness_as_c
   (out: (string -> ML unit))
@@ -869,18 +904,15 @@ let print_witness_as_c
 : ML unit
 = let len = Seq.length witness in
   out "{\n";
-  out "  uint8_t witness[";
-  out (string_of_int len);
-  out "] = {";
-  begin match Seq.seq_to_list witness with
-  | [] -> ()
-  | a :: q ->
-    out (string_of_int a);
-    List.iter (fun i -> out ", "; out (string_of_int i)) q
-  end;
-  out "};\n";
+  print_witness_as_c_aux out witness len;
+  out "
+  printf(\"";
+  print_witness_as_c_aux out witness len;
+  out "\\n\");
+";
   print_witness_call_as_c out positive wrapper_name arg_types len args;
-  out "};\n"
+  out "};
+"
 
 let print_witness (witness: Seq.seq int) : ML unit =
   FStar.IO.print_string " produced witness: [";
@@ -997,7 +1029,8 @@ let do_test (out_file: string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitne
   let args = Some?.v args in
   let modul, wrapper_name = module_and_wrapper_name name1 in
   let nargs = count_args args in with_out_file out_file (fun cout ->
-  cout "#include \"";
+  cout "#include <stdio.h>
+#include \"";
   cout modul;
   cout "Wrapper.h\"
   int main(void) {
