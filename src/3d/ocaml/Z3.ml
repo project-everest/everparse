@@ -6,7 +6,7 @@ let tee debug ch s =
   flush ch
 
 let with_z3 (debug: bool) (f: (z3 -> 'a)) : 'a =
-  let (ch_from_z3, ch_to_z3) as ch_z3 = Unix.open_process "z3 -in" in
+  let (ch_from_z3, ch_to_z3) as ch_z3 = Unix.open_process (Printf.sprintf "%s -in" (Options.get_z3_executable ())) in
   let valid = ref true in
   let is_from = ref true in
   let from_z3 () : string =
