@@ -101,6 +101,9 @@ let rec list_iter_with_interrupt_close_false
     list_iter_with_interrupt_close_false p state f_false _ bin cur' _ _
   end
 
+#pop-options
+
+#push-options "--z3rlimit 32"
 #restart-solver
 
 let list_iter_with_interrupt_close
@@ -158,6 +161,9 @@ let list_iter_with_interrupt_close
     cont
   end
 
+#pop-options
+
+#push-options "--z3rlimit 16"
 #restart-solver
 
 inline_for_extraction
