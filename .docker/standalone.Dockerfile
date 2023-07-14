@@ -7,7 +7,10 @@ ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 
 # CI dependencies: jq (to identify F* branch)
-RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends jq
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+    jq \
+    wget \
+    && true
 
 # Dependencies (F*, Karamel and opam packages)
 ENV FSTAR_HOME=$HOME/FStar
