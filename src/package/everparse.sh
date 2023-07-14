@@ -2,6 +2,7 @@
 set -e
 unset CDPATH
 export EVERPARSE_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+(cd "$EVERPARSE_HOME/bin" ; chmod +x * ) || true
 export FSTAR_HOME="$EVERPARSE_HOME"
 export KRML_HOME="$EVERPARSE_HOME"
 export PATH="$EVERPARSE_HOME/bin:$PATH" # because of z3
