@@ -34,7 +34,8 @@ jobs:
           fi
           docker run $ci_docker_image_tag /bin/bash -c 'cat $EVERPARSE_HOME/log.txt' > log.txt
           docker run $ci_docker_image_tag /bin/bash -c 'cat $EVERPARSE_HOME/everparse.tar.gz || true' > everparse.tar.gz
-          tar xf everparse.tar.gz
+          mkdir -p everparse
+          (cd everparse && tar xf everparse.tar.gz)
           $ci_docker_status
         env:
           DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
@@ -48,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: everparse
-          path: everparse
+          path: everparse/everparse
       - name: Compute elapsed time
         if: ${{ always() }}
         run: |
