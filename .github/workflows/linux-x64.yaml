@@ -35,6 +35,7 @@ jobs:
           docker run $ci_docker_image_tag /bin/bash -c 'cat $EVERPARSE_HOME/log.txt' > log.txt
           docker run $ci_docker_image_tag /bin/bash -c 'cat $EVERPARSE_HOME/everparse.tar.gz || true' > everparse.tar.gz
           mkdir -p everparse
+          mv everparse.tar.gz everparse/
           (cd everparse && tar xf everparse.tar.gz)
           $ci_docker_status
         env:
