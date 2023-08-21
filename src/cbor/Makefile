@@ -63,6 +63,7 @@ verify-all: $(ALL_CHECKED_FILES)
 KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
+	 -I $(STEEL_HOME)/include/steel -add-include '"steel_c.h"' \
 	 -tmpdir out \
 	 -bundle 'CBOR.SteelC+CBOR.SteelST+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' \
 	 -skip-linking \
@@ -77,7 +78,7 @@ extract: $(ALL_KRML_FILES)
 	$(KRML) $(ALL_KRML_FILES)
 
 test: extract
-	$(CC) -Wall -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I out -c cbor_unverified.c
+	$(CC) -Wall -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I $(STEEL_HOME)/include/steel -I out -c cbor_unverified.c
 
 .PHONY: all verify-all clean %.fst-in %.fsti-in lowparse extract test
 
