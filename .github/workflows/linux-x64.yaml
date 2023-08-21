@@ -21,7 +21,7 @@ jobs:
           echo "CI_SLACK_CHANNEL=$(jq -c -r '.NotificationChannel' .docker/build/config.json)" >> $GITHUB_ENV
       - name: Determine the build flavor
         run: |
-          if docker image inspect fstar:local-branch-$FSTAR_BRANCH ; then echo CI_FLAVOR=hierarchic >> $GITHUB_ENV ; else echo CI_FLAVOR=standalone >> $GITHUB_ENV ; fi
+          echo CI_FLAVOR=standalone >> $GITHUB_ENV
       - name: Build Everparse and its dependencies
         run: |
           ci_docker_image_tag=everparse:local-run-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT
