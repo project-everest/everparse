@@ -829,6 +829,13 @@ let size_add_le
 : Tot SZ.t
 = SZ.add s1 s2
 
+let compare_spec_of_weak_compare_for
+  (#t: Type)
+  (#order: t -> t -> bool)
+  (f: weak_compare_for order)
+: Tot (t -> t -> int)
+= f
+
 #push-options "--z3rlimit 64"
 
 #restart-solver
@@ -840,7 +847,7 @@ let nlist_insert_with_size_body
   (j: jumper p)
   (#order: Ghost.erased (t -> t -> bool))
   (compare: Ghost.erased (weak_compare_for order))
-  (comp: compare_impl p (Ghost.reveal compare))
+  (comp: compare_impl p (compare_spec_of_weak_compare_for (Ghost.reveal compare)))
   (#vl: v k t)
   (szl: SZ.t)
   (al: byte_array)
@@ -982,7 +989,7 @@ let nlist_insert_with_size
   (j: jumper p)
   (#order: Ghost.erased (t -> t -> bool))
   (compare: Ghost.erased (weak_compare_for order))
-  (compare_impl: compare_impl p (Ghost.reveal compare))
+  (compare_impl: compare_impl p (compare_spec_of_weak_compare_for (Ghost.reveal compare)))
   (#vl: v k t)
   (szl: SZ.t)
   (al: byte_array)
@@ -1057,7 +1064,7 @@ let nlist_insert
   (j: jumper p)
   (#order: Ghost.erased (t -> t -> bool))
   (compare: Ghost.erased (weak_compare_for order))
-  (compare_impl: compare_impl p (Ghost.reveal compare))
+  (compare_impl: compare_impl p (compare_spec_of_weak_compare_for (Ghost.reveal compare)))
   (#vl: v k t)
   (al: byte_array)
   (nr: SZ.t)
@@ -1085,7 +1092,7 @@ let nlist_insert_some_with_size
   (j: jumper p)
   (#order: Ghost.erased (t -> t -> bool))
   (compare: Ghost.erased (weak_compare_for order))
-  (compare_impl: compare_impl p (Ghost.reveal compare))
+  (compare_impl: compare_impl p (compare_spec_of_weak_compare_for (Ghost.reveal compare)))
   (#vl: v k t)
   (szl: SZ.t)
   (al: byte_array)
@@ -1121,7 +1128,7 @@ let nlist_insert_some
   (j: jumper p)
   (#order: Ghost.erased (t -> t -> bool))
   (compare: Ghost.erased (weak_compare_for order))
-  (compare_impl: compare_impl p (Ghost.reveal compare))
+  (compare_impl: compare_impl p (compare_spec_of_weak_compare_for (Ghost.reveal compare)))
   (#vl: v k t)
   (al: byte_array)
   (nr: SZ.t)
