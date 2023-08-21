@@ -7,6 +7,8 @@ ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 
 # Dependencies (opam packages)
+ENV KRML_HOME=$HOME/everparse/karamel
+ENV STEEL_HOME=$HOME/everparse/steel
 RUN sudo apt-get update && eval $(opam env) && .docker/build/install-other-deps.sh
 
 # CI dependencies: sphinx (for the docs)
@@ -21,5 +23,4 @@ ARG CI_BRANCH=master
 RUN --mount=type=secret,id=DZOMO_GITHUB_TOKEN eval $(opam env) && DZOMO_GITHUB_TOKEN=$(sudo cat /run/secrets/DZOMO_GITHUB_TOKEN) .docker/build/build-hierarchic.sh $CI_THREADS $CI_BRANCH
 
 WORKDIR $HOME
-ENV KRML_HOME $HOME/everparse/karamel
 ENV EVERPARSE_HOME $HOME/everparse
