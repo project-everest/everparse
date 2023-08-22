@@ -1,6 +1,6 @@
 module CBOR.SteelC
 
-module Cbor = CBOR.Spec
+module Cbor = CBOR.SteelST
 module F = Steel.ST.C.Types.Fields
 module C = Steel.ST.C.Types
 module U64 = FStar.UInt64
@@ -518,7 +518,7 @@ let read_valid_cbor_from_buffer
     (alen == LPA.len (LPS.array_of va) /\
       C.full cbor_td c
     )
-    (fun _ -> True)
+    (fun c' -> C.full cbor_td c')
 =
   let ptype = C.struct_field1 _ tgt cbor_type (C.scalar cbor_type_t) (_ by (F.norm_fields ())) (_ by (F.norm_fields ())) in
   C.write ptype cbor_type_serialized;
@@ -536,3 +536,87 @@ let read_valid_cbor_from_buffer
   let c' = vpattern_replace (C.pts_to tgt) in
   raw_data_item_match_intro_serialized c' va.contents a va;
   return c'
+
+let cbor_int64_type_some
+  (#opened: _)
+  (c: cbor)
+  (va: Cbor.raw_data_item)
+: STGhost unit opened
+    (raw_data_item_match c va)
+    (fun _ -> raw_data_item_match c va)
+    (Cbor.Int64? va)
+    (fun _ -> Some? (C.get_scalar_value (C.struct_get_field c cbor_type)))
+= if C.get_scalar_value (C.struct_get_field c cbor_type) = Some cbor_type_serialized
+  then
+    noop ()
+  else begin
+    rewrite
+      (raw_data_item_match c va)
+      (raw_data_item_match_int64_0 c va);
+    let _ = Steel.ST.GenElim.gen_elim () in
+    rewrite
+      (raw_data_item_match_int64_0 c va)
+      (raw_data_item_match c va)
+  end
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let read_cbor_int64
+  (#va: Ghost.erased Cbor.raw_data_item)
+  (#c: Ghost.erased cbor)
+  (x: C.ref cbor_td)
+: ST (Ghost.erased cbor)
+    (C.pts_to x c
+      `star` raw_data_item_match (Ghost.reveal c) va
+    )
+    (fun c' ->
+      C.pts_to x c'
+      `star` raw_data_item_match (Ghost.reveal c') va
+    )
+    (Cbor.Int64? va /\
+      C.full cbor_td (Ghost.reveal c)
+    )
+    (fun c' ->
+      C.full cbor_td (Ghost.reveal c')
+    )
+= cbor_int64_type_some c va;
+  let ptyp = C.struct_field x cbor_type () in
+  let typ : cbor_type_t = C.read ptyp in
+  if (typ <: U8.t) = cbor_type_serialized
+  then begin
+    rewrite
+      (raw_data_item_match c va)
+      (raw_data_item_match_serialized0 c va);
+    let _ = Steel.ST.GenElim.gen_elim () in
+    let payload1 = C.struct_field x cbor_payload () in
+    let v1 = vpattern_replace (C.pts_to payload1) in
+    let _ : squash (C.union_get_case (Ghost.reveal v1) == Some cbor_case_serialized) = () in
+    let payload2 = C.union_field payload1 cbor_case_serialized () in
+    let pa = C.struct_field payload2 cbor_serialized_payload () in
+    let a = C.read pa in
+    let _ = C.unstruct_field_and_drop payload2 cbor_serialized_payload pa in
+    vpattern_rewrite (fun a -> LPS.aparse _ a _) a;
+    let ty = Cbor.read_major_type a in
+    let v = Cbor.read_int64 a in
+    let _ = C.ununion_field_and_drop payload1 cbor_case_serialized payload2 in
+    let payload2' = C.union_switch_field payload1 cbor_case_int64 () in
+    C.write payload2' v;
+    let _ = C.ununion_field_and_drop payload1 cbor_case_int64 payload2' in
+    let _ = C.unstruct_field_and_drop x cbor_payload payload1 in
+    C.write ptyp ty;
+    let c' = C.unstruct_field_and_drop x cbor_type ptyp in
+    drop (LPS.aparse _ _ _);
+    rewrite
+      (raw_data_item_match_int64_0 c' va)
+      (raw_data_item_match c' va);
+    return c'
+  end else begin
+    let c' = C.unstruct_field_and_drop x cbor_type ptyp in
+    assert (C.struct_eq c c');
+    vpattern_rewrite (C.pts_to x) c;
+    noop ();
+    return c
+  end
+
+#pop-options

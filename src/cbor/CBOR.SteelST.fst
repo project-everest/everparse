@@ -1,4 +1,5 @@
 module CBOR.SteelST
+include CBOR.Spec
 
 let validate_raw_data_item = CBOR.SteelST.Validate.validate_raw_data_item
 let jump_raw_data_item = CBOR.SteelST.Validate.jump_raw_data_item
