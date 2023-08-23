@@ -24,7 +24,7 @@ let cbor_string_byte_length : F.field_t cbor_string_fields = "byte_length"
 noextract inline_for_extraction [@@ F.norm_field_attr]
 let cbor_string_payload : F.field_t cbor_string_fields = "payload"
 
-let cbor_string = C.struct_t "" cbor_string_fields
+let cbor_string = C.struct_t "CBOR.SteelC.cbor_string" cbor_string_fields
 
 noextract
 let cbor_string_td : C.typedef cbor_string = C.struct0 _ _ _
@@ -44,7 +44,7 @@ let cbor_serialized_byte_size : F.field_t cbor_serialized_fields = "byte_size"
 noextract inline_for_extraction [@@ F.norm_field_attr]
 let cbor_serialized_payload : F.field_t cbor_serialized_fields = "payload"
 
-let cbor_serialized = C.struct_t "" cbor_serialized_fields
+let cbor_serialized = C.struct_t "CBOR.SteelC.cbor_serialized" cbor_serialized_fields
 
 noextract
 let cbor_serialized_td : C.typedef cbor_serialized = C.struct0 _ _ _
@@ -64,7 +64,7 @@ let cbor_tagged_tag : F.field_t cbor_tagged_fields = "tag"
 noextract inline_for_extraction [@@ F.norm_field_attr]
 let cbor_tagged_payload : F.field_t cbor_tagged_fields = "payload"
 
-let cbor_tagged = C.struct_t "" cbor_tagged_fields
+let cbor_tagged = C.struct_t "CBOR.SteelC.cbor_tagged" cbor_tagged_fields
 
 noextract
 let cbor_tagged_td : C.typedef cbor_tagged = C.struct0 _ _ _
@@ -84,7 +84,7 @@ let cbor_array_count : F.field_t cbor_array_fields = "count"
 noextract inline_for_extraction [@@ F.norm_field_attr]
 let cbor_array_payload : F.field_t cbor_array_fields = "payload"
 
-let cbor_array = C.struct_t "" cbor_array_fields
+let cbor_array = C.struct_t "CBOR.SteelC.cbor_array" cbor_array_fields
 
 noextract
 let cbor_array_td : C.typedef cbor_array = C.struct0 _ _ _
@@ -104,7 +104,7 @@ let cbor_map_entry_count : F.field_t cbor_map_fields = "entry_count"
 noextract inline_for_extraction [@@ F.norm_field_attr]
 let cbor_map_payload : F.field_t cbor_map_fields = "payload"
 
-let cbor_map = C.struct_t "" cbor_map_fields
+let cbor_map = C.struct_t "CBOR.SteelC.cbor_map" cbor_map_fields
 
 noextract
 let cbor_map_td : C.typedef cbor_map = C.struct0 _ _ _
@@ -144,7 +144,7 @@ let cbor_case_simple_value : F.field_t cbor_case_fields = "case_simple_value"
 noextract inline_for_extraction [@@ F.norm_field_attr]
 let cbor_case_serialized : F.field_t cbor_case_fields = "case_serialized"
 
-let cbor_case = C.union_t "" cbor_case_fields
+let cbor_case = C.union_t "CBOR.SteelC.cbor_case" cbor_case_fields
 
 noextract
 let cbor_case_td : C.typedef cbor_case = C.union0 _ _ _
@@ -175,7 +175,7 @@ let cbor_type : F.field_t cbor_fields = "type"
 noextract inline_for_extraction [@@ F.norm_field_attr]
 let cbor_payload : F.field_t cbor_fields = "payload"
 
-let cbor = C.struct_t "" cbor_fields
+let cbor = C.struct_t "CBOR.SteelC.cbor" cbor_fields
 
 noextract
 let cbor_td : C.typedef cbor = C.struct0 _ _ _
@@ -195,7 +195,7 @@ let cbor_pair_fst : F.field_t cbor_pair_fields = "fst"
 noextract inline_for_extraction [@@ F.norm_field_attr]
 let cbor_pair_snd : F.field_t cbor_pair_fields = "snd"
 
-let cbor_pair = C.struct_t "" cbor_pair_fields
+let cbor_pair = C.struct_t "CBOR.SteelC.cbor_pair" cbor_pair_fields
 
 noextract
 let cbor_pair_td : C.typedef cbor_pair = C.struct0 _ _ _
