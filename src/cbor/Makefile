@@ -49,7 +49,7 @@ clean:
 	rm -rf *.checked *.source .depend .depend.tmp out *.krml *.o
 
 .depend: $(LOWPARSE_FILES)
-	$(FSTAR) --dep full $(LOWPARSE_FILES) > $@.tmp
+	$(FSTAR) --dep full $(LOWPARSE_FILES) --extract 'krml:*,-FStar.Tactics' > $@.tmp
 	mv $@.tmp $@
 
 include .depend
