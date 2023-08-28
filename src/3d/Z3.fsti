@@ -5,6 +5,7 @@ open FStar.All
 val with_z3
   (#a: Type)
   (debug: bool)
+  (transcript: option string)
   (f: (z3 -> ML a))
 : ML a
 
@@ -12,6 +13,7 @@ val z3_thread : Type0
 
 val with_z3_thread
   (debug: bool)
+  (transcript: option string)
   (f: (z3 -> ML unit))
 : ML z3_thread
 

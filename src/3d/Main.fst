@@ -493,11 +493,12 @@ let with_z3_thread_or
   (batch: bool)
   (out_dir: string)
   (debug: bool)
+  (transcript: option string)
   (f: (Z3.z3 -> ML unit))
 : ML (option (unit -> ML unit))
 = if batch
   then
-    let thr = Z3.with_z3_thread debug f in
+    let thr = Z3.with_z3_thread debug transcript f in
     Some (fun _ ->
       Z3.wait_for_z3_thread thr;
       if not (Options.get_skip_c_makefiles ())
@@ -507,7 +508,7 @@ let with_z3_thread_or
       end
     )
   else begin
-    Z3.with_z3 debug f;
+    Z3.with_z3 debug transcript f;
     None
   end
 
@@ -524,7 +525,7 @@ let produce_z3_and_test_gen
   let nbwitnesses = Options.get_z3_witnesses () in
   let buf : ref string = alloc "" in
   let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
-  with_z3_thread_or batch out_dir (Options.get_debug ()) (fun z3 ->
+  with_z3_thread_or batch out_dir (Options.get_debug ()) (Options.get_save_z3_transcript ()) (fun z3 ->
     z3.to_z3 !buf;
     do_test (if batch then Some (OS.concat out_dir "testcases.c") else None) nbwitnesses prog z3
   )

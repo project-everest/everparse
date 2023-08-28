@@ -58,6 +58,7 @@ let json : ref bool = alloc false
 let no_copy_everparse_h : ref bool = alloc false
 let output_dir : ref (option vstring) = alloc None
 let save_hashes : ref bool = alloc false
+let save_z3_transcript: ref (option vstring) = alloc None
 let skip_c_makefiles : ref bool = alloc false
 let skip_deps: ref bool = alloc false
 let skip_o_rules: ref bool = alloc false
@@ -360,6 +361,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile" [];
     CmdOption "odir" (OptStringOption "output directory" always_valid output_dir) "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory" [];
     CmdOption "save_hashes" (OptBool save_hashes) "Save hashes" [];
+    CmdOption "save_z3_transcript" (OptStringOption "some file name" always_valid save_z3_transcript) "Save the Z3 transcript (input and output) to a file" [];
     CmdOption "skip_c_makefiles" (OptBool skip_c_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
     CmdOption "skip_o_rules" (OptBool skip_o_rules) "With --makefile, do not generate rules for .o files" [];
     CmdFStarOption (let open FStar.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
@@ -570,3 +572,5 @@ let get_z3_executable () =
   match !z3_executable with
   | None -> "z3"
   | Some z3 -> z3
+
+let get_save_z3_transcript () = !save_z3_transcript
