@@ -71,10 +71,16 @@ let ifthenelse_validate_and_read
   (vtrue: (squash (cond == true) -> Tot (validate_and_read p)))
   (vfalse: (squash (cond == false) -> Tot (validate_and_read p)))
 : Tot (validate_and_read p)
-= fun a len pre t' post fsuccess ffailure ->
+= fun #b a len pre t' post fsuccess ffailure ->
   if cond
-  then vtrue () a len pre t' post fsuccess ffailure
-  else vfalse () a len pre t' post fsuccess ffailure
+  then
+    [@@inline_let]
+    let v : validate_and_read p = vtrue () in
+    v #b a len pre t' post fsuccess ffailure
+  else
+    [@@inline_let]
+    let v : validate_and_read p = vfalse () in
+    v #b a len pre t' post fsuccess ffailure
 
 inline_for_extraction
 let validator_of_validate_and_read  
