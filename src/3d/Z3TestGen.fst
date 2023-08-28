@@ -207,16 +207,9 @@ let prelude : string =
 )
 
 (declare-const initial-input-size Int)
+(assert (>= initial-input-size 0))
 (define-fun initial-state () State (mk-state initial-input-size 0))
 
-(define-fun-rec extract-witness ((size Int)) (Seq Int)
-  (if (<= size 0)
-    (as seq.empty (Seq Int))
-    (let ((new-size (- size 1)))
-      (seq.++ (extract-witness new-size) (seq.unit (choose new-size)))
-    )
-  )
-)
 "
 
 let mk_constant = function
@@ -847,8 +840,19 @@ let with_option_out_file
 
 (* Ask Z3 for test witnesses *)
 
-let read_witness (z3: Z3.z3) =
-  Lisp.read_witness_from z3.from_z3
+let read_witness (z3: Z3.z3) : ML (Seq.seq int) =
+  z3.to_z3 "(get-value (state-witness-size))\n";
+  let (_, witness_size) = Lisp.read_int_from z3.from_z3 "state-witness-size" in
+  let rec aux (accu: Seq.seq int) (remaining: int) : ML (Seq.seq int) =
+    if remaining <= 0
+    then accu
+    else
+      let index = remaining - 1 in
+      let _ = z3.to_z3 (Printf.sprintf "(eval (choose %d))\n" index) in
+      let v = Lisp.read_bare_int_from z3.from_z3 in
+      aux (Seq.cons v accu) index
+  in
+  aux Seq.empty witness_size
 
 let rec read_witness_args (z3: Z3.z3) (accu: list string) (n: nat) : ML (list string) =
   if n = 0
@@ -1002,8 +1006,7 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
-    z3.to_z3 "(get-value (witness))\n";
-    let (_, witness) = read_witness z3 in
+    let witness = read_witness z3 in
     let witness_args = read_witness_args z3 [] nargs in
     print_witness_and_call name l witness witness_args;
     print_test_case witness witness_args;
@@ -1048,17 +1051,16 @@ Printf.sprintf "
 %s
 (define-fun state-witness () State (%s initial-state))
 (define-fun state-witness-input-size () Int (input-size state-witness))
-(declare-fun witness () (Seq Int))
-(assert (= witness (extract-witness (choice-index state-witness))))
+(declare-fun state-witness-size () Int)
+(assert (<= state-witness-size (choice-index state-witness)))
+(assert (>= state-witness-size (choice-index state-witness)))
 "
   (mk_assert_args "" 0 l)
   (mk_call_args name 0 l)
 
 let mk_get_first_positive_test_witness (name: string) (l: list arg_type) : string =
   mk_get_witness name l ^ "
-(declare-fun state-witness-is-valid () Bool)
-(assert (= state-witness-is-valid (>= state-witness-input-size 0)))
-(assert (= state-witness-is-valid true))
+(assert (>= state-witness-input-size 0))
 "
 
 let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
@@ -1082,10 +1084,7 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
 let mk_get_first_negative_test_witness (name: string) (l: list arg_type) : string =
   mk_get_witness name l ^
 "
-(assert (>= initial-input-size 0))
-(declare-fun state-witness-is-invalid () Bool)
-(assert (= state-witness-is-invalid (< (input-size state-witness) 0)))
-(assert (= state-witness-is-invalid true))
+(assert (< state-witness-input-size 0))
 "
 
 let do_test (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =

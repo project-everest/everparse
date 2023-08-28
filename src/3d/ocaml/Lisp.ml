@@ -22,11 +22,6 @@ let parse_witness = function
     parse_seq_int_expr w
   | _ -> failwith "parse_witness: unrecognized witness"
 
-let read_witness_from (from: unit -> string) =
-  let (letbinding, sexp) = read_lisp_from from in
-  let witness = parse_witness sexp in
-  (letbinding, FStar_Seq_Properties.seq_of_list witness)
-
 let parse_any (name: string) = function
   | Sexplib.Sexp.List [Sexplib.Sexp.List [Sexplib.Sexp.Atom name'; Sexplib.Sexp.Atom n]]
     when name = name' ->
@@ -38,6 +33,9 @@ let parse_int (name: string) sexp = Prims.parse_int (parse_any name sexp)
 let read_int_from (from: unit -> string) (name: string) =
   let (letbinding, sexp) = read_lisp_from from in
   (letbinding, parse_int name sexp)
+
+let read_bare_int_from (from: unit -> string) =
+  Prims.parse_int (from ())
 
 let read_any_from (from: unit -> string) (name: string) : string =
   parse_any name (snd (read_lisp_from from))
