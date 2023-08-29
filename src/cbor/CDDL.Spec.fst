@@ -123,6 +123,11 @@ let rec array_group3_zero_or_more' (a: array_group3) (l: list Cbor.raw_data_item
     then Some l
     else array_group3_zero_or_more' a l'
 
+let array_group3_zero_or_more : array_group3 -> array_group3 = array_group3_zero_or_more'
+
+let array_group3_one_or_more (a: array_group3) : array_group3 =
+  a `array_group3_concat` array_group3_zero_or_more a
+
 let array_group3_zero_or_one (a: array_group3) : Tot array_group3 = fun l ->
   match a l with
   | None -> Some l
