@@ -7,6 +7,7 @@ module U64 = FStar.UInt64
 
 let typ = (Cbor.raw_data_item -> GTot bool) // GTot needed because of the .cbor control (staged serialization)
 let t_choice (t1 t2: typ) : typ = (fun x -> t1 x || t2 x)
+let t_always_false = (fun _ -> false)
 
 // Recursive type (needed by COSE Section 5.1 "Recipient")
 let rec rec_typ' (f: (typ -> typ)) (t: Cbor.raw_data_item) : GTot bool (decreases t) =
@@ -102,6 +103,7 @@ let t_array2 (a: array_group2) : typ = fun x ->
 // Greedy semantics (Appendix A?)
 
 let array_group3 = list Cbor.raw_data_item -> GTot (option (list Cbor.raw_data_item))
+let array_group3_always_false : array_group3 = fun _ -> None
 let array_group3_empty : array_group3 = Some
 let array_group3_concat (a1 a3: array_group3) : array_group3 =
   (fun l ->

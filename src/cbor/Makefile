@@ -32,7 +32,7 @@ ifeq (,$(STEEL_HOME))
 	$(error "Please set STEEL_HOME to the root/prefix directory of your Steel installation.")
 endif
 
-ALREADY_CACHED = --already_cached *,-CBOR,-CDDL,-COSE
+ALREADY_CACHED = --already_cached *,-CBOR,-CDDL,-COSE,-DPE.Messages
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED) --cmi --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
 
 ifneq (,$(STEEL_C))
@@ -49,7 +49,7 @@ clean:
 	rm -rf *.checked *.source .depend .depend.tmp out *.krml *.o
 
 .depend: $(LOWPARSE_FILES)
-	$(FSTAR) --dep full $(LOWPARSE_FILES) --extract 'krml:*,-FStar.Tactics,-CDDL.Spec,-COSE.Spec' > $@.tmp
+	$(FSTAR) --dep full $(LOWPARSE_FILES) --extract 'krml:*,-FStar.Tactics,-CDDL.Spec,-COSE.Spec,-DPE.Messages.Spec' > $@.tmp
 	mv $@.tmp $@
 
 include .depend
