@@ -145,6 +145,7 @@ let _pd_attribute_string = ()
 
 module T = FStar.Tactics
 
+[@@noextract_to "krml"]
 let t_create_choice_from_gen (attr: T.term) (f: T.term -> T.term -> T.term) : T.Tac T.term =
   let e = T.cur_env () in
   let l = T.lookup_attr attr e in
@@ -157,6 +158,7 @@ let t_create_choice_from_gen (attr: T.term) (f: T.term -> T.term -> T.term) : T.
   in
   aux (`Cddl.t_always_false) l
 
+[@@noextract_to "krml"]
 let create_uint_choice_from (attr: T.term) : T.Tac unit =
   T.exact (t_create_choice_from_gen attr (fun accu t ->
     T.mk_e_app (`Cddl.t_choice) [
@@ -526,6 +528,7 @@ let destroy_context_context_handle = 1uL
 
 // Section 5.9.4: summary
 
+[@@noextract_to "krml"]
 let create_choice_from (attr: T.term) : T.Tac unit =
   T.exact (t_create_choice_from_gen attr (fun accu t ->
     T.mk_e_app (`Cddl.t_choice) [

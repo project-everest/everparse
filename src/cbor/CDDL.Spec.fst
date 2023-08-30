@@ -65,17 +65,22 @@ let t_array1 (a: array_group1) : typ = fun x ->
 
 let nat_up_to (n: nat) : eqtype = (i: nat { i <= n })
 
+[@@noextract_to "krml"]
 let array_group2 = ((l: Seq.seq Cbor.raw_data_item) -> (i: nat_up_to (Seq.length l)) -> list (nat_up_to (Seq.length l)))
+[@@noextract_to "krml"]
 let array_group2_empty : array_group2 = (fun _ i -> [i])
+[@@noextract_to "krml"]
 let array_group2_concat (a1 a2: array_group2) : array_group2 =
   (fun l i1 ->
     let res1 = a1 l i1 in
     List.Tot.concatMap (fun (i2: nat_up_to (Seq.length l)) -> a2 l i2) res1
   )
 
+[@@noextract_to "krml"]
 let array_group2_choice (a1 a2: array_group2) : array_group2 =
   fun l i -> a1 l i `List.Tot.append` a2 l i
 
+[@@noextract_to "krml"]
 let rec array_group2_zero_or_more' (a: array_group2) (l: Seq.seq Cbor.raw_data_item) (i: nat_up_to (Seq.length l)) : Tot (list (nat_up_to (Seq.length l))) (decreases (Seq.length l - i)) =
   i :: begin
     let r1 = a l i in
@@ -88,12 +93,14 @@ let rec array_group2_zero_or_more' (a: array_group2) (l: Seq.seq Cbor.raw_data_i
   end
 
 (*
+[@@noextract_to "krml"]
 let array_group2_item (t: typ) : array_group2 = fun l i ->
   if i = Seq.length l then [] else
   if t (Seq.index l i) then [i + 1] else
   []
 *)
 
+[@@noextract_to "krml"]
 let t_array2 (a: array_group2) : typ = fun x ->
   Cbor.Array? x &&
   begin let l = Cbor.Array?.v x in
@@ -157,6 +164,7 @@ let matches_map_group_entry
 : GTot bool
 = (fst ge) (fst x) && (snd ge) (snd x)
 
+[@@erasable]
 noeq
 type map_group = {
   one: list map_group_entry;
