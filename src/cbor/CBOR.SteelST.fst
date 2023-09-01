@@ -1,6 +1,8 @@
 module CBOR.SteelST
 include CBOR.Spec
 
+module DummyArray = CBOR.SteelST.Array // for dependencies only
+
 let validate_raw_data_item = CBOR.SteelST.Validate.validate_raw_data_item
 let jump_raw_data_item = CBOR.SteelST.Validate.jump_raw_data_item
 let jump_header = CBOR.SteelST.Validate.jump_header

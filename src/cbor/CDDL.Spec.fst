@@ -10,8 +10,16 @@ let t_choice (t1 t2: typ) : typ = (fun x -> t1 x || t2 x)
 let t_always_false = (fun _ -> false)
 
 // Recursive type (needed by COSE Section 5.1 "Recipient")
-let rec rec_typ' (f: (typ -> typ)) (t: Cbor.raw_data_item) : GTot bool (decreases t) =
-  f (fun t' -> if FStar.StrongExcludedMiddle.strong_excluded_middle (t' << t) then rec_typ' f t' else false) t
+
+let rec_typ'_rec
+  (f: (typ -> typ)) (t: Cbor.raw_data_item)
+  (rec_typ': ((t': Cbor.raw_data_item { Seq.length (Cbor.serialize_raw_data_item t') < Seq.length (Cbor.serialize_raw_data_item t) }) -> GTot bool))
+  (t': Cbor.raw_data_item)
+: GTot bool
+= if Seq.length (Cbor.serialize_raw_data_item t') < Seq.length (Cbor.serialize_raw_data_item t) then rec_typ' t' else false
+
+let rec rec_typ' (f: (typ -> typ)) (t: Cbor.raw_data_item) : GTot bool (decreases (Seq.length (Cbor.serialize_raw_data_item t))) =
+  f (rec_typ'_rec f t (rec_typ' f)) t
 
 let rec_typ : (typ -> typ) -> typ = rec_typ'
 
@@ -27,12 +35,20 @@ let bytes = bstr
 let tstr : typ = (fun x -> Cbor.String? x && Cbor.String?.typ x = Cbor.major_type_text_string)
 let text = tstr
 
-let t_false : typ = (fun x -> Cbor.Simple? x && Cbor.Simple?.v x = 20uy)
-let t_true : typ = (fun x -> Cbor.Simple? x && Cbor.Simple?.v x = 21uy)
+let simple_value_false : Cbor.simple_value = 20uy
+let simple_value_true : Cbor.simple_value = 21uy
+let simple_value_nil : Cbor.simple_value = 22uy
+let simple_value_undefined : Cbor.simple_value = 23uy
+
+let t_simple_value_literal (s: Cbor.simple_value) : typ =
+  (fun x -> Cbor.Simple? x && Cbor.Simple?.v x = s)
+
+let t_false : typ = t_simple_value_literal simple_value_false
+let t_true : typ = t_simple_value_literal simple_value_true
 let t_bool : typ = t_choice t_false t_true
-let t_nil : typ = (fun x -> Cbor.Simple? x && Cbor.Simple?.v x = 22uy)
+let t_nil : typ = t_simple_value_literal simple_value_nil
 let t_null : typ = t_nil
-let t_undefined : typ = (fun x -> Cbor.Simple? x && Cbor.Simple?.v x = 23uy)
+let t_undefined : typ = t_simple_value_literal simple_value_undefined
 
 let t_uint_literal (v: U64.t) : typ = (fun x ->
   uint x &&
@@ -137,10 +153,8 @@ let array_group3_zero_or_more : array_group3 -> array_group3 = array_group3_zero
 let array_group3_one_or_more (a: array_group3) : array_group3 =
   a `array_group3_concat` array_group3_zero_or_more a
 
-let array_group3_zero_or_one (a: array_group3) : Tot array_group3 = fun l ->
-  match a l with
-  | None -> Some l
-  | Some l' -> Some l'
+let array_group3_zero_or_one (a: array_group3) : Tot array_group3 =
+  a `array_group3_choice` array_group3_empty
 
 let array_group3_item (t: typ) : array_group3 = fun l ->
   match l with
