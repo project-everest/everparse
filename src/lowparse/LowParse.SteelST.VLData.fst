@@ -17,10 +17,10 @@ let validate_vldata_payload
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (v: validator p)
+  (v: validator p { SZ.fits_u32 } )
   (i: bounded_integer sz { f i == true } )
 : Tot (validator (parse_vldata_payload sz f p i))
-= coerce _ (validate_weaken (parse_vldata_payload_kind sz k) (validate_fldata v (SZ.uint16_to_sizet (FStar.Int.Cast.uint32_to_uint16 i))) ())
+= coerce _ (validate_weaken (parse_vldata_payload_kind sz k) (validate_fldata v (SZ.uint32_to_sizet i)) ())
 
 inline_for_extraction
 let validate_vldata_gen
@@ -30,7 +30,7 @@ let validate_vldata_gen
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
-  (v: validator p)
+  (v: validator p { SZ.fits_u32 } )
 : Tot (validator (parse_vldata_gen sz f p))
 = parse_vldata_gen_eq_def sz f p;
   coerce _ (
@@ -50,10 +50,10 @@ let jump_vldata_payload
   (f: ((x: bounded_integer sz) -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (p: parser k t { SZ.fits_u32 } )
   (i: bounded_integer sz { f i == true } )
 : Tot (jumper (parse_vldata_payload sz f p i))
-= coerce _ (jump_weaken (parse_vldata_payload_kind sz k) (jump_fldata p (SZ.uint16_to_sizet (FStar.Int.Cast.uint32_to_uint16 i))) ())
+= coerce _ (jump_weaken (parse_vldata_payload_kind sz k) (jump_fldata p (SZ.uint32_to_sizet (i))) ())
 
 inline_for_extraction
 let jump_vldata_gen
@@ -61,7 +61,7 @@ let jump_vldata_gen
   (f: ((x: bounded_integer sz) -> GTot bool))
   (#k: parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (p: parser k t { SZ.fits_u32 } )
 : Tot (jumper (parse_vldata_gen sz f p))
 = parse_vldata_gen_eq_def sz f p;
   rewrite_jumper
