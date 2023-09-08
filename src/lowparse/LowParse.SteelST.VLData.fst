@@ -11,6 +11,17 @@ module AP = LowParse.SteelST.ArrayPtr
 open Steel.ST.GenElim
 
 inline_for_extraction
+let validate_with_fits_u32
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (v: (squash (SZ.fits_u32) -> validator p))
+: Tot (validator p)
+= fun a len err ->
+    let sq = Steel.ST.Array.intro_fits_u32 () in
+    v sq a len err
+
+inline_for_extraction
 let validate_vldata_payload
   (sz: integer_size)
   (f: ((x: bounded_integer sz) -> GTot bool))
