@@ -879,8 +879,9 @@ let rec print_witness_args_as_c
   | ArgPointer :: q, _ ->
     out "NULL, ";
     print_witness_args_as_c out q args
-  | _ :: ql, a :: qargs ->
+  | ty :: ql, a :: qargs ->
     out a;
+    (if ArgInt? ty then out "U" else ());
     out ", ";
     print_witness_args_as_c out ql qargs
   | _ -> ()
