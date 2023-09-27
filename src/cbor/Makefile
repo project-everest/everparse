@@ -63,7 +63,6 @@ verify-all: $(ALL_CHECKED_FILES)
 KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
-	 -I $(STEEL_HOME)/include/steel -add-include '"steel_c.h"' \
 	 -tmpdir out \
 	 -bundle 'CBOR.SteelC+CBOR.SteelST+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' \
 	 -skip-linking \
