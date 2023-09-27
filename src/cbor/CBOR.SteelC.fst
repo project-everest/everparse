@@ -322,7 +322,7 @@ let raw_data_item_match_tagged_prop
   C.union_get_case payload == Some cbor_case_tagged /\
   begin let payload = C.union_get_field payload cbor_case_tagged in
     C.struct_get_field payload cbor_tagged_tag == C.mk_scalar tag /\
-    C.struct_get_field payload cbor_tagged_payload == C.mk_scalar a
+    C.struct_get_field payload cbor_tagged_payload == C.mk_scalar (C.ghost_void_ptr_of_ptr_gen a)
   end
 
 [@@__reduce__]
