@@ -62,7 +62,7 @@ and cbor =
 | CBOR_Case_Simple_value of Cbor.simple_value
 | CBOR_Case_Serialized of cbor_serialized
 
-let dummy_cbor : cbor = CBOR_Case_Int64 ({ typ = Cbor.major_type_uint64; value = 0uL })
+let dummy_cbor : cbor = CBOR_Case_Simple_value 0uy
 
 let raw_data_item_match_serialized_prop
   (c: cbor)
