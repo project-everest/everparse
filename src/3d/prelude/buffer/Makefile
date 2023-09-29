@@ -24,7 +24,7 @@ ROOT=$(wildcard *.fst) $(wildcard *.fsti)
 ALREADY_CACHED=--already_cached '*,-EverParse3d.Actions.All,-EverParse3d.InputStream.All,-EverParse3d.InputStream.Buffer,-EverParse3d.Actions.BackendFlag,-EverParse3d.Actions.BackendFlagValue,-EverParse3d.Readable,-EverParse3d.InputBuffer'
 
 .depend: $(ROOT)
-	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract '* -Prims' > $@.tmp
+	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'krml:*,-Prims,-FStar.Tactics' > $@.tmp
 	mv $@.tmp $@
 
 -include .depend
