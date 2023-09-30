@@ -330,19 +330,6 @@ let maybe_seq_cbor_uncons
   then (dummy_cbor, c)
   else (Seq.index c 0, Seq.slice c 1 (Seq.length c))
 
-let rewrite_with_implies
-  (#opened: _)
-  (p q: vprop)
-: STGhost unit opened
-    p
-    (fun _ -> q `star` (q `implies_` p))
-    (p == q)
-    (fun _ -> True)
-= rewrite p q;
-  intro_implies q p emp (fun _ ->
-    rewrite q p
-  )
-
 #push-options "--z3rlimit 16"
 #restart-solver
 
@@ -456,64 +443,6 @@ let raw_data_item_array_match0_cons_intro
         (raw_data_item_array_match0 c v)
       )
     )
-
-let implies_emp_l
-  (#opened: _)
-  (p: vprop)
-: STGhostT unit opened
-    p
-    (fun _ -> emp `implies_` p)
-= intro_implies emp p p (fun _ -> noop ())
-
-let implies_with_tactic
-  (#opened: _)
-  (p q: vprop)
-: STGhost unit opened
-    emp
-    (fun _ -> p `implies_` q)
-    (requires FStar.Tactics.with_tactic init_resolve_tac (squash (p `equiv` q)))
-    (ensures fun _ -> True)
-= intro_implies p q emp (fun _ -> rewrite_equiv p q)
-
-let implies_concl_l
-  (#opened: _)
-  (p q r: vprop)
-: STGhostT unit opened
-    (p `star` (q `implies_` r))
-    (fun _ -> q `implies_` (p `star` r))
-= implies_with_tactic q (emp `star` q);
-  implies_emp_l p;
-  implies_join emp p q r;
-  implies_trans q (emp `star` q) (p `star` r)
-
-let implies_concl_r
-  (#opened: _)
-  (q r p: vprop)
-: STGhostT unit opened
-    (p `star` (q `implies_` r))
-    (fun _ -> q `implies_` (r `star` p))
-= implies_concl_l p q r;
-  implies_with_tactic (p `star` r) (r `star` p);
-  implies_trans q (p `star` r) (r `star` p)
-
-let implies_reg_l
-  (#opened: _)
-  (p q r: vprop)
-: STGhostT unit opened
-    (q `implies_` r)
-    (fun _ -> (p `star` q) `implies_` (p `star` r))
-= implies_with_tactic p p;
-  implies_join p p q r
-
-let implies_reg_r
-  (#opened: _)
-  (q r: vprop)
-  (p: vprop)
-: STGhostT unit opened
-    (q `implies_` r)
-    (fun _ -> (q `star` p) `implies_` (r `star` p))
-= implies_with_tactic p p;
-  implies_join q r p p
 
 let rec raw_data_item_array_match_append_strong
   (#opened: _)

@@ -487,14 +487,6 @@ let elim_impl_array_group3_zero_or_more_inv
     (impl_array_group3_zero_or_more_inv_body g gn ga gl pn pl pres w.n w.al w.l w.res);
   w
 
-let implies_refl
-  (#opened: _)
-  (p: vprop)
-: STGhostT unit opened
-    emp
-    (fun _ -> p `implies_` p)
-= intro_implies p p emp (fun _ -> noop ())
-
 #pop-options
 
 #push-options "--z3rlimit 32"
