@@ -105,7 +105,6 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
   produce-binary:
-    needs: build
     runs-on: [self-hosted, linux, X64]
     steps:
       - name: Record initial timestamp
