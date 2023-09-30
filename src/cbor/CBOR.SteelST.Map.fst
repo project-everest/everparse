@@ -168,6 +168,16 @@ let check_data_item_wf_head
 
 #pop-options
 
+unfold
+inline_for_extraction
+let coerce_squash
+  (t2: Type)
+  (#t1: Type)
+  (x: t1)
+  (sq: squash (t1 == t2))
+: Tot t2
+= (x <: t2)
+
 inline_for_extraction
 noextract
 let validate_raw_data_item_filter
@@ -185,7 +195,7 @@ let validate_raw_data_item_filter
           (jump_count_remaining_data_items)
           a
           (holds_on_raw_data_item_pred p)
-          (coerce _ p_impl)
+          (coerce_squash _ p_impl (_ by (FStar.Tactics.trefl ())))
         in
         rewrite (aparse _ a _) (aparse parse_raw_data_item a va);
         return res
