@@ -1109,7 +1109,18 @@ let rec get_output_typ_dep (modul:string) (t:typ) : ML (option string) =
   | T_pointer t -> get_output_typ_dep modul t
   | _ -> failwith "get_typ_deps: unexpected output type"
 
-let print_c_entry (modul: string)
+let wrapper_name
+  (modul: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_check_%s"
+    modul
+    fn
+  |> pascal_case
+
+let print_c_entry
+                  (produce_everparse_error: opt_produce_everparse_error)
+                  (modul: string)
                   (env: global_env)
                   (ds:list decl)
     : ML (string & string)
@@ -1215,12 +1226,7 @@ let print_c_entry (modul: string)
        | [] -> params
        | _ -> params ^ ", "
     in
-    let wrapper_name =
-      Printf.sprintf "%s_check_%s"
-        modul
-        d.decl_name.td_name.A.v.A.name
-      |> pascal_case
-    in
+    let wrapper_name = wrapper_name modul d.decl_name.td_name.A.v.A.name in
     let signature =
       if is_input_stream_buffer 
       then Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
@@ -1321,8 +1327,9 @@ let print_c_entry (modul: string)
   let header = Printf.sprintf "%s%s" add_includes header in
   let error_callback_proto =
     if HashingOptions.InputStreamBuffer? input_stream_binding
-    then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason);"
+    then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason)%s"
                          modul
+                         (if produce_everparse_error = Some ProduceEverParseError then "{}" else ";")
     else ""
   in
   let impl =

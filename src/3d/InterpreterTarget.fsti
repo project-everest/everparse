@@ -19,8 +19,174 @@ open FStar.All
 module A = Ast
 module T = Target
 open Binding
+let expr = T.expr
+let action = T.action
+let lam a = A.ident & a
+type itype =
+  | UInt8
+  | UInt16
+  | UInt32
+  | UInt64
+  | UInt8BE
+  | UInt16BE
+  | UInt32BE
+  | UInt64BE
+  | Unit
+  | AllBytes
+  | AllZeros
 
-val decl : Type0
+let allow_reader_of_itype (i:itype)
+  : bool
+  = match i with
+    | AllBytes
+    | AllZeros -> false
+    | _ -> true
+
+let readable_itype = (i: itype { allow_reader_of_itype i == true })
+
+noeq
+type dtyp : Type =
+  | DT_IType:
+      i:itype -> dtyp
+
+  | DT_App:
+      readable: bool ->
+      hd:A.ident ->
+      args:list expr ->
+      dtyp
+
+let allow_reader_of_dtyp (d: dtyp) : Tot bool =
+  match d with
+  | DT_IType i -> allow_reader_of_itype i
+  | DT_App readable _ _ -> readable
+
+let readable_dtyp = (d: dtyp { allow_reader_of_dtyp d == true })
+
+let non_empty_string = s:string { s <> "" }
+
+let nes (s:string)
+  : non_empty_string
+  = if s = "" then "missing" else s
+
+noeq
+type typ : Type =
+  | T_false:
+      fn:non_empty_string ->
+      typ
+
+  | T_denoted:
+      fn:non_empty_string ->
+      d:dtyp ->
+      typ
+
+  | T_pair:
+      fn:non_empty_string ->
+      t1:typ ->
+      t2:typ ->
+      typ
+
+  | T_dep_pair:
+      fn:non_empty_string ->
+      t1:readable_dtyp ->
+      t2:lam typ ->
+      typ
+
+  | T_refine:
+      fn:non_empty_string ->
+      base:readable_dtyp ->
+      refinement:lam expr ->
+      typ
+
+  | T_refine_with_action:
+      fn:non_empty_string ->
+      base:readable_dtyp ->
+      refinement:lam expr ->
+      a:lam action ->
+      typ
+
+  | T_dep_pair_with_refinement:
+      fn:non_empty_string ->
+      base:readable_dtyp ->
+      refinement:lam expr ->
+      k:lam typ ->
+      typ
+
+  | T_dep_pair_with_action:
+      fn:non_empty_string ->
+      base:readable_dtyp ->
+      k:lam typ ->
+      a:lam action ->
+      typ
+
+  | T_dep_pair_with_refinement_and_action:
+      fn:non_empty_string ->
+      base:readable_dtyp ->
+      refinement:lam expr ->
+      k:lam typ ->
+      a:lam action ->
+      typ
+
+  | T_if_else:
+      b:expr ->
+      t1:typ ->
+      t2:typ ->
+      typ
+
+  | T_with_action:
+      fn:non_empty_string ->
+      base:typ ->
+      act:action ->
+      typ
+
+  | T_with_dep_action:
+      fn:non_empty_string ->
+      head:readable_dtyp ->
+      act:lam action ->
+      typ
+
+  | T_with_comment:
+      fn:non_empty_string ->
+      t:typ ->
+      c:string ->
+      typ
+
+  | T_nlist:
+      fn:non_empty_string ->
+      n:expr ->
+      t:typ ->
+      typ
+
+  | T_at_most:
+      fn:non_empty_string ->
+      n:expr ->
+      t:typ ->
+      typ
+
+  | T_exact:
+      fn:non_empty_string ->
+      n:expr ->
+      t:typ ->
+      typ
+
+  | T_string:
+      fn:non_empty_string ->
+      element_type:readable_dtyp ->
+      terminator:expr ->
+      typ
+
+val inv_eloc : Type0
+noeq
+type type_decl = {
+  name : T.typedef_name;
+  typ : typ;
+  kind : T.parser_kind;
+  inv_eloc : inv_eloc;
+  allow_reading: bool;
+  attrs : T.decl_attributes;
+  enum_typ: option (t:T.typ {T.T_refine? t })
+}
+let not_type_decl = (d: T.decl { ~ (T.Type_decl? (fst d)) })
+let decl : Type0 = either not_type_decl type_decl
 val env : Type0
 
 val create_env (_:unit) : ML env

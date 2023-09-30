@@ -58,6 +58,7 @@ let json : ref bool = alloc false
 let no_copy_everparse_h : ref bool = alloc false
 let output_dir : ref (option vstring) = alloc None
 let save_hashes : ref bool = alloc false
+let save_z3_transcript: ref (option vstring) = alloc None
 let skip_c_makefiles : ref bool = alloc false
 let skip_deps: ref bool = alloc false
 let skip_o_rules: ref bool = alloc false
@@ -112,6 +113,25 @@ let input_stream_binding : ref (option (valid_string valid_input_stream_binding)
 let input_stream_include : ref (option vstring) = alloc None
 
 let emit_output_types_defs : ref bool = alloc true
+
+let emit_smt_encoding : ref bool = alloc false
+
+let z3_diff_test: ref (option (valid_string valid_equate_types)) = alloc None
+
+let z3_test : ref (option vstring) = alloc None
+
+let valid_z3_test_mode : string -> Tot bool = function
+| "pos"
+| "neg"
+| "all"
+-> true
+| _ -> false
+
+let z3_test_mode : ref (option (valid_string valid_z3_test_mode)) = alloc None
+
+let z3_witnesses : ref (option vstring) = alloc None
+
+let z3_executable : ref (option vstring) = alloc None
 
 noeq
 type cmd_option_kind =
@@ -330,6 +350,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and krml-args.rsp (--batch only)" [];
     CmdOption "config" (OptStringOption "config file" check_config_file_name config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
+    CmdOption "emit_smt_encoding" (OptBool emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
     CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
@@ -340,10 +361,16 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile" [];
     CmdOption "odir" (OptStringOption "output directory" always_valid output_dir) "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory" [];
     CmdOption "save_hashes" (OptBool save_hashes) "Save hashes" [];
+    CmdOption "save_z3_transcript" (OptStringOption "some file name" always_valid save_z3_transcript) "Save the Z3 transcript (input and output) to a file" [];
     CmdOption "skip_c_makefiles" (OptBool skip_c_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
     CmdOption "skip_o_rules" (OptBool skip_o_rules) "With --makefile, do not generate rules for .o files" [];
     CmdFStarOption (let open FStar.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
+    CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types z3_diff_test) "produce differential tests for two parsers" [];
+    CmdOption "z3_executable" (OptStringOption "path/to/z3" always_valid z3_executable) "z3 executable for test case generation (default `z3`; does not affect verification of generated F* code)" [];
+    CmdOption "z3_test" (OptStringOption "parser name" always_valid z3_test) "produce positive and/or negative test cases for a given parser" [];
+    CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
+    CmdOption "z3_witnesses" (OptStringOption "nb" always_valid z3_witnesses) "ask for nb distinct test witnesses" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
     CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|emit_config" valid_micro_step micro_step) "micro step" [];
     CmdOption "__produce_c_from_existing_krml" (OptBool produce_c_from_existing_krml) "produce C from .krml files" [];
@@ -505,3 +532,45 @@ let config_module_name () =
   match !config_file with
   | None -> None
   | Some s -> Some (strip_suffix (OS.basename s) ".3d.config")
+
+let get_emit_smt_encoding () =
+  !emit_smt_encoding
+
+let get_z3_test () = !z3_test
+
+let get_z3_pos_test () =
+  match !z3_test with
+  | None -> false
+  | _ -> match !z3_test_mode with
+  | Some "neg" -> false
+  | _ -> true
+
+let get_z3_neg_test () =
+  match !z3_test with
+  | None -> false
+  | _ -> match !z3_test_mode with
+  | Some "pos" -> false
+  | _ -> true
+
+let get_z3_witnesses () =
+  match !z3_witnesses with
+  | None -> 1
+  | Some s ->
+  try
+    let n = OS.int_of_string s in
+    if n < 1 then 1 else n
+  with _ -> 1
+
+let get_debug _ = !debug
+
+let get_z3_diff_test _ =
+  match !z3_diff_test with
+  | None -> None
+  | Some s -> let [p1; p2] = String.split [','] s in Some (p1, p2)
+
+let get_z3_executable () =
+  match !z3_executable with
+  | None -> "z3"
+  | Some z3 -> z3
+
+let get_save_z3_transcript () = !save_z3_transcript

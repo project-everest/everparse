@@ -21,144 +21,6 @@ module A = Ast
 module T = Target
 module H = Hashtable
 
-let expr = T.expr
-let action = T.action
-let lam a = A.ident & a
-type itype =
-  | UInt8
-  | UInt16
-  | UInt32
-  | UInt64
-  | UInt8BE
-  | UInt16BE
-  | UInt32BE
-  | UInt64BE
-  | Unit
-  | AllBytes
-  | AllZeros
-
-noeq
-type dtyp : Type =
-  | DT_IType:
-      i:itype -> dtyp
-
-  | DT_App:
-      hd:A.ident ->
-      args:list expr ->
-      dtyp
-
-let non_empty_string = s:string { s <> "" }
-
-let nes (s:string)
-  : non_empty_string
-  = if s = "" then "missing" else s
-
-noeq
-type typ : Type =
-  | T_false:
-      fn:non_empty_string ->
-      typ
-
-  | T_denoted:
-      fn:non_empty_string ->
-      d:dtyp ->
-      typ
-
-  | T_pair:
-      fn:non_empty_string ->
-      t1:typ ->
-      t2:typ ->
-      typ
-
-  | T_dep_pair:
-      fn:non_empty_string ->
-      t1:dtyp ->
-      t2:lam typ ->
-      typ
-
-  | T_refine:
-      fn:non_empty_string ->
-      base:dtyp ->
-      refinement:lam expr ->
-      typ
-
-  | T_refine_with_action:
-      fn:non_empty_string ->
-      base:dtyp ->
-      refinement:lam expr ->
-      a:lam action ->
-      typ
-
-  | T_dep_pair_with_refinement:
-      fn:non_empty_string ->
-      base:dtyp ->
-      refinement:lam expr ->
-      k:lam typ ->
-      typ
-
-  | T_dep_pair_with_action:
-      fn:non_empty_string ->
-      base:dtyp ->
-      k:lam typ ->
-      a:lam action ->
-      typ
-
-  | T_dep_pair_with_refinement_and_action:
-      fn:non_empty_string ->
-      base:dtyp ->
-      refinement:lam expr ->
-      k:lam typ ->
-      a:lam action ->
-      typ
-
-  | T_if_else:
-      b:expr ->
-      t1:typ ->
-      t2:typ ->
-      typ
-
-  | T_with_action:
-      fn:non_empty_string ->
-      base:typ ->
-      act:action ->
-      typ
-
-  | T_with_dep_action:
-      fn:non_empty_string ->
-      head:dtyp ->
-      act:lam action ->
-      typ
-
-  | T_with_comment:
-      fn:non_empty_string ->
-      t:typ ->
-      c:string ->
-      typ
-
-  | T_nlist:
-      fn:non_empty_string ->
-      n:expr ->
-      t:typ ->
-      typ
-
-  | T_at_most:
-      fn:non_empty_string ->
-      n:expr ->
-      t:typ ->
-      typ
-
-  | T_exact:
-      fn:non_empty_string ->
-      n:expr ->
-      t:typ ->
-      typ
-
-  | T_string:
-      fn:non_empty_string ->
-      element_type:dtyp ->
-      terminator:expr ->
-      typ
-
 noeq
 type inv =
   | Inv_true : inv
@@ -185,17 +47,6 @@ let inv_eloc_nil = Inv_true, Eloc_none, On_success false
 let inv_eloc_union (i, e, b) (i', e', b') = Inv_conj i i', Eloc_union e e', On_success_union b b'
 let inv_eloc_name hd args = Inv_name hd args, Eloc_name hd args, On_success_named hd args
 
-noeq
-type type_decl = {
-  name : T.typedef_name;
-  typ : typ;
-  kind : T.parser_kind;
-  inv_eloc : inv_eloc;
-  allow_reading: bool;
-  attrs : T.decl_attributes;
-  enum_typ: option (t:T.typ {T.T_refine? t })
-}
-let decl = either T.decl type_decl
 let env = H.t A.ident' type_decl
 let create_env (_:unit) : ML env = H.create 100
 
@@ -260,14 +111,18 @@ let itype_of_ident (hd:A.ident)
     | "all_zeros" -> Some AllZeros
     | _ -> None
 
-let dtyp_of_app (hd:A.ident) (args:list T.index)
+let dtyp_of_app (en: env) (hd:A.ident) (args:list T.index)
   : ML dtyp
   = match itype_of_ident hd, args with
     | Some i, [] ->
       DT_IType i
 
     | _ ->
-      DT_App hd
+      let readable = match H.try_find en hd.v with
+      | None -> failwith "type not found"
+      | Some td -> td.allow_reading
+      in
+      DT_App readable hd
         (List.map
           (function Inl _ -> failwith "Unexpected type application"
                   | Inr e -> e)
@@ -342,12 +197,12 @@ let rec inv_eloc_of_parser (en:env) (p:T.parser)
       inv_eloc_nil
 
     | T.Parse_app hd args ->
-      let dt = dtyp_of_app hd args in
+      let dt = dtyp_of_app en hd args in
       begin
       match dt with
       | DT_IType _ ->
         inv_eloc_nil
-      | DT_App hd args ->
+      | DT_App _ hd args ->
         let td =
           match H.try_find en hd.v with
           | Some td -> td
@@ -389,13 +244,14 @@ let rec inv_eloc_of_parser (en:env) (p:T.parser)
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
 
-let rec typ_of_parser (p:T.parser)
-  : ML typ
+let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
+= let rec typ_of_parser (p:T.parser)
+    : ML typ
   = let rec dtyp_of_parser (p:T.parser)
       : ML dtyp
       = match p.p_parser with
         | T.Parse_app hd args ->
-          dtyp_of_app hd args
+          dtyp_of_app en hd args
 
         | T.Parse_weaken_left p _
         | T.Parse_weaken_right p _
@@ -435,40 +291,80 @@ let rec typ_of_parser (p:T.parser)
 
     | T.Parse_dep_pair _ p k ->
       let i, k = as_lam k in
-      T_dep_pair (nes p.p_fieldname)
-                 (dtyp_of_parser p)
-                 (i, typ_of_parser k)
+      let d = dtyp_of_parser p in
+      if allow_reader_of_dtyp d
+      then
+        T_dep_pair (nes p.p_fieldname)
+                   d
+                   (i, typ_of_parser k)
+      else
+        failwith "typ_of_parser: Parse_dep_pair: tag not readable"
 
     | T.Parse_dep_pair_with_refinement _ p r k ->
       let i, r = as_lam r in
       let j, k = as_lam k in
-      T_dep_pair_with_refinement fn (dtyp_of_parser p) (i, r) (j, typ_of_parser k)
+      let d = dtyp_of_parser p in
+      if allow_reader_of_dtyp d
+      then
+        T_dep_pair_with_refinement fn d (i, r) (j, typ_of_parser k)
+      else
+        failwith "typ_of_parser: Parse_dep_pair_with_refinement: tag not readable"
 
     | T.Parse_dep_pair_with_action p a k ->
       let (i, k) = as_lam k in
-      T_dep_pair_with_action fn (dtyp_of_parser p) (i, typ_of_parser k) (as_lam a)
+      let d = dtyp_of_parser p in
+      if allow_reader_of_dtyp d
+      then
+        T_dep_pair_with_action fn d (i, typ_of_parser k) (as_lam a)
+      else
+        failwith "typ_of_parser: Parse_dep_pair_with_action: tag not readable"
 
     | T.Parse_dep_pair_with_refinement_and_action _ p r a k ->
       let a = as_lam a in
       let (i, k) = as_lam k in
       let r = as_lam r in
-      T_dep_pair_with_refinement_and_action fn (dtyp_of_parser p) r (i, typ_of_parser k) a
+      let d = dtyp_of_parser p in
+      if allow_reader_of_dtyp d
+      then
+        T_dep_pair_with_refinement_and_action fn d r (i, typ_of_parser k) a
+      else
+        failwith "typ_of_parser: Parse_dep_pair_with_refinement_and_action: tag not readable"
 
     | T.Parse_with_action _ p a ->
       T_with_action fn (typ_of_parser p) a
 
     | T.Parse_with_dep_action _ p a ->
       let a = as_lam a in
-      T_with_dep_action fn (dtyp_of_parser p) a
+      let d = dtyp_of_parser p in
+      if allow_reader_of_dtyp d
+      then
+        T_with_dep_action fn d a
+      else
+        failwith "typ_of_parser: Parse_with_dep_action: tag not readable"
 
     | T.Parse_string p z ->
-      T_string fn (dtyp_of_parser p) z
+      let d = dtyp_of_parser p in
+      if allow_reader_of_dtyp d
+      then
+        T_string fn d z
+      else
+        failwith "typ_of_parser: Parse_string: element not readable"
 
     | T.Parse_refinement _ p f ->
-      T_refine fn (dtyp_of_parser p) (as_lam f)
+      let d = dtyp_of_parser p in
+      if allow_reader_of_dtyp d
+      then
+        T_refine fn d (as_lam f)
+      else
+        failwith "typ_of_parser: Parse_refinement: element not readable"
 
     | T.Parse_refinement_with_action _ p f a ->
-      T_refine_with_action fn (dtyp_of_parser p) (as_lam f) (as_lam a)
+      let d = dtyp_of_parser p in
+      if allow_reader_of_dtyp d
+      then
+        T_refine_with_action fn d (as_lam f) (as_lam a)
+      else
+        failwith "typ_of_parser: Parse_refinement_with_action: element not readable"
 
     | T.Parse_weaken_left p _
     | T.Parse_weaken_right p _ ->
@@ -477,21 +373,20 @@ let rec typ_of_parser (p:T.parser)
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
 
-let rec allow_reading_of_typ (en:env) (t:typ)
-  : ML bool
+in typ_of_parser
+
+let rec allow_reading_of_typ (t:typ)
+  : Tot bool
   =
   match t with
   | T_with_comment _ t _ ->
-    allow_reading_of_typ en t
+    allow_reading_of_typ t
 
   | T_denoted _ dt ->
     begin
     match dt with
-    | DT_IType _ -> true
-    | DT_App hd _ ->
-      match H.try_find en hd.v with
-      | None -> failwith "type not found"
-      | Some td -> td.allow_reading
+    | DT_IType i -> allow_reader_of_itype i
+    | DT_App readable _ _ -> readable
     end
 
   | _ -> false
@@ -502,8 +397,8 @@ let translate_decls (en:env) (ds:T.decls)
         (fun d ->
           match d with
           | (T.Type_decl td, attrs) ->
-            let t = typ_of_parser td.decl_parser in
-            let ar = allow_reading_of_typ en t in
+            let t = typ_of_parser en td.decl_parser in
+            let ar = allow_reading_of_typ t in
             let refined =
               if td.decl_is_enum
               then match td.decl_typ with
@@ -516,7 +411,7 @@ let translate_decls (en:env) (ds:T.decls)
             in
             let td =
               { name = td.decl_name;
-                typ = typ_of_parser td.decl_parser;
+                typ = typ_of_parser en td.decl_parser;
                 kind = td.decl_parser.p_kind;
                 inv_eloc = inv_eloc_of_parser en td.decl_parser;
                 allow_reading = ar;
@@ -527,7 +422,7 @@ let translate_decls (en:env) (ds:T.decls)
             H.insert en td.name.td_name.v td;
             Inr td
         | d ->
-          Inl d)
+          Inl (d <: not_type_decl))
       ds
 
 let print_ityp (i:itype) =
@@ -558,7 +453,7 @@ let print_dtyp (mname:string) (dt:dtyp) =
   | DT_IType i ->
     Printf.sprintf "(DT_IType %s)" (print_ityp i)
 
-  | DT_App hd args ->
+  | DT_App _ hd args ->
     Printf.sprintf "(%s %s)"
       (print_derived_name mname "dtyp" hd)
       (List.map (T.print_expr mname) args |> String.concat " ")
