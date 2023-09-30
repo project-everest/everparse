@@ -73,14 +73,17 @@ let ifthenelse_validate_and_read
 : Tot (validate_and_read p)
 = fun #b a len pre t' post fsuccess ffailure ->
   if cond
-  then
+  then begin
     [@@inline_let]
     let v : validate_and_read p = vtrue () in
+    noop ();
     v #b a len pre t' post fsuccess ffailure
-  else
+  end else begin
     [@@inline_let]
     let v : validate_and_read p = vfalse () in
+    noop ();
     v #b a len pre t' post fsuccess ffailure
+  end
 
 inline_for_extraction
 let validator_of_validate_and_read  
