@@ -244,16 +244,6 @@ let impl_array_group3
         impl_array_group3_post g l.contents res.l.contents res.res
     )
 
-let rewrite_with_implies
-  (#opened: _)
-  (p q: vprop)
-: STGhost unit opened
-    p (fun _ -> q `star` (q `implies_` p))
-    (p == q)
-    (fun _ -> True)
-= rewrite p q;
-  intro_implies q p emp (fun _ -> rewrite q p)
-
 inline_for_extraction [@@noextract_to "krml"]
 let impl_array_group3_always_false : impl_array_group3 array_group3_always_false
 = fun #gn #ga #gl pn pl pres ->
@@ -633,75 +623,6 @@ let ghost_focus_nlist
   w
 
 #pop-options
-
-let vpattern_rewrite_with_implies
-  (#opened: _)
-  (#a: Type)
-  (#x1: a)
-  (p: a -> vprop)
-  (x2: a)
-: STGhost unit opened
-    (p x1)
-    (fun _ -> p x2 `star` (p x2 `implies_` p x1))
-    (x1 == x2)
-    (fun _ -> True)
-= rewrite_with_implies (p x1) (p x2)
-
-inline_for_extraction
-let hop_aparse_aparse_with_implies
-  (#k1: Ghost.erased parser_kind)
-  (#t1: Type)
-  (#p1: parser k1 t1)
-  (j1: jumper p1)
-  (#k2: Ghost.erased parser_kind)
-  (#t2: _)
-  (p2: parser k2 t2)
-  (#va1: _)
-  (#va2: _)
-  (a1: byte_array)
-  (a2: Ghost.erased byte_array)
-: ST byte_array
-    (aparse p1 a1 va1 `star` aparse p2 a2 va2)
-    (fun res -> aparse p1 a1 va1 `star` aparse p2 res va2 `star` (aparse p2 res va2 `implies_` aparse p2 a2 va2))
-    (AP.adjacent (array_of va1) (array_of va2))
-    (fun res -> res == Ghost.reveal a2)
-= let res = hop_aparse_aparse j1 p2 a1 a2 in
-  intro_implies
-    (aparse p2 res va2)
-    (aparse p2 a2 va2)
-    emp
-    (fun _ -> vpattern_rewrite (fun res -> aparse _ res _) a2);
-  return res
-
-let rewrite_aparse_with_implies
-  (#opened: _)
-  (#k1: parser_kind)
-  (#t1: Type)
-  (#p1: parser k1 t1)
-  (#y1: v k1 t1)
-  (a: byte_array)
-  (#k2: parser_kind)
-  (#t2: Type)
-  (p2: parser k2 t2)
-: STGhost (v k2 t2) opened
-    (aparse p1 a y1)
-    (fun y2 -> aparse p2 a y2 `star` (aparse p2 a y2 `implies_` aparse p1 a y1))
-    (t1 == t2 /\ (forall bytes . parse p1 bytes == parse p2 bytes))
-    (fun y2 ->
-      t1 == t2 /\
-      array_of' y1 == array_of' y2 /\
-      y1.contents == y2.contents
-    )
-= let y2 = rewrite_aparse a p2 in
-  intro_implies
-    (aparse p2 a y2)
-    (aparse p1 a y1)
-    emp
-    (fun _ ->
-      let _ = rewrite_aparse a p1 in
-      vpattern_rewrite (aparse _ a) y1
-    );
-  y2
 
 #push-options "--z3rlimit 32"
 #restart-solver

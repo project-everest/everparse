@@ -1128,49 +1128,6 @@ assume val read_cbor_array_payload
       )
     )
 
-let rewrite_aparse_with_implies
-  (#opened: _)
-  (#k1: LPS.parser_kind)
-  (#t1: Type)
-  (#p1: LPS.parser k1 t1)
-  (#y1: LPS.v k1 t1)
-  (a: LPS.byte_array)
-  (#k2: LPS.parser_kind)
-  (#t2: Type)
-  (p2: LPS.parser k2 t2)
-: STGhost (LPS.v k2 t2) opened
-    (LPS.aparse p1 a y1)
-    (fun y2 -> LPS.aparse p2 a y2 `star` (LPS.aparse p2 a y2 `implies_` LPS.aparse p1 a y1))
-    (t1 == t2 /\ (forall bytes . LPS.parse p1 bytes == LPS.parse p2 bytes))
-    (fun y2 ->
-      t1 == t2 /\
-      LPS.array_of' y1 == LPS.array_of' y2 /\
-      y1.contents == y2.contents
-    )
-= let y2 = LPS.rewrite_aparse a p2 in
-  intro_implies
-    (LPS.aparse p2 a y2)
-    (LPS.aparse p1 a y1)
-    emp
-    (fun _ ->
-      let _ = LPS.rewrite_aparse a p1 in
-      vpattern_rewrite (LPS.aparse _ a) y1
-    );
-  y2
-
-let vpattern_rewrite_with_implies
-  (#opened: _)
-  (#a: Type)
-  (#x1: a)
-  (p: a -> vprop)
-  (x2: a)
-: STGhost unit opened
-    (p x1)
-    (fun _ -> p x2 `star` (p x2 `implies_` p x1))
-    (x1 == x2)
-    (fun _ -> True)
-= rewrite_with_implies (p x1) (p x2)
-
 [@@__reduce__]
 let read_cbor_array_post_success
   (c: cbor_array)
@@ -1303,7 +1260,7 @@ let read_cbor_array
           rewrite
             (array_pts_to_or_null a0 _)
             (A.pts_to a0 full_perm (Seq.create (U64.v len) dummy_cbor));
-          let vl = rewrite_aparse_with_implies
+          let vl = LPS.rewrite_aparse_with_implies
             w.a
             (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item)
           in
