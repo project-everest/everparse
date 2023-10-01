@@ -90,6 +90,8 @@ let elim_nlist_nil
   noop ();
   va'
 
+#push-options "--z3rlimit 16"
+
 let intro_nlist_cons
   (#opened: _)
   (#k: parser_kind)
@@ -120,6 +122,8 @@ let intro_nlist_cons
   assert (AP.contents_of vb2 `Seq.equal` Seq.slice (AP.contents_of vb) (AP.length (AP.array_of vb1)) (AP.length (AP.array_of vb)));
   noop ();
   intro_aparse (parse_nlist n' p) a1
+
+#pop-options
 
 let intro_nlist_cons_with
   (#opened: _)
