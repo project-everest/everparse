@@ -191,6 +191,36 @@ let rewrite_aparse
 = let _ = elim_aparse p1 a in
   intro_aparse p2 a
 
+let rewrite_aparse_with_implies
+  (#opened: _)
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#y1: v k1 t1)
+  (a: byte_array)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+: STGhost (v k2 t2) opened
+    (aparse p1 a y1)
+    (fun y2 -> aparse p2 a y2 `star` (aparse p2 a y2 `implies_` aparse p1 a y1))
+    (t1 == t2 /\ (forall bytes . parse p1 bytes == parse p2 bytes))
+    (fun y2 ->
+      t1 == t2 /\
+      array_of' y1 == array_of' y2 /\
+      y1.contents == y2.contents
+    )
+= let y2 = rewrite_aparse a p2 in
+  intro_implies
+    (aparse p2 a y2)
+    (aparse p1 a y1)
+    emp
+    (fun _ ->
+      let _ = rewrite_aparse a p1 in
+      vpattern_rewrite (aparse _ a) y1
+    );
+  y2
+
 let share_aparse
   (#opened: _)
   (#k: parser_kind)
@@ -347,3 +377,4 @@ let aparse_join_zero_l
   intro_aparse p al
 
 #pop-options
+
