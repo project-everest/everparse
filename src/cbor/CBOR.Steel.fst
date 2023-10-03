@@ -1,4 +1,5 @@
 module CBOR.Steel
+open Steel.ST.OnRange
 open Steel.ST.GenElim
 
 module Cbor = CBOR.SteelST
@@ -1308,3 +1309,139 @@ let read_cbor_array
           return res
         end
       ))
+
+let raw_data_item_seq_match_item
+  (c: Seq.seq cbor)
+  (l: Seq.seq (option Cbor.raw_data_item))
+  (i: nat)
+: Tot vprop
+= if i < Seq.length c && Seq.length c = Seq.length l
+  then
+    match Seq.index l i with
+    | None -> emp
+    | Some v -> raw_data_item_match (Seq.index c i) v
+  else
+    pure (squash False)
+
+let raw_data_item_seq_match_item_tail
+  (c: Seq.seq cbor)
+  (l: Seq.seq (option Cbor.raw_data_item))
+  (delta: nat)
+  (i: nat)
+: Lemma
+  (requires (
+    Seq.length c == Seq.length l /\
+    i + delta <= Seq.length c
+  ))
+  (ensures (
+    raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i ==
+      raw_data_item_seq_match_item c l (i + delta)
+  ))
+= ()
+
+let raw_data_item_seq_match
+  (c: Seq.seq cbor)
+  (l: Seq.seq (option Cbor.raw_data_item))
+  (i j: nat)
+: Tot vprop
+= if Seq.length c = Seq.length l && j <= Seq.length c
+  then on_range (raw_data_item_seq_match_item c l) i j
+  else pure (squash False)
+
+let raw_data_item_seq_match_tail_elim
+  (#opened: _)
+  (c: Seq.seq cbor)
+  (l: Seq.seq (option Cbor.raw_data_item))
+  (delta: nat {
+    delta <= Seq.length c /\
+    delta <= Seq.length l
+  })
+  (i j: nat)
+: STGhostT unit opened
+    (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i j)
+    (fun _ -> raw_data_item_seq_match c l (i + delta) (j + delta))
+= if Seq.length c = Seq.length l && j <= Seq.length c - delta
+  then begin
+    rewrite
+      (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i j)
+      (on_range (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l))) i j);
+    on_range_le
+      (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)))
+      i j;
+    on_range_weaken_and_shift
+      (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)))
+      (raw_data_item_seq_match_item c l)
+      delta
+      i j
+      (fun k ->
+        raw_data_item_seq_match_item_tail c l delta k;
+        rewrite
+          (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) k)
+          (raw_data_item_seq_match_item c l (k + delta))
+      )
+      (i + delta) (j + delta);
+    rewrite
+      (on_range (raw_data_item_seq_match_item c l) (i + delta) (j + delta))
+      (raw_data_item_seq_match c l (i + delta) (j + delta))
+  end else begin
+    rewrite
+      (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i j)
+      (pure (squash False));
+    let _ = gen_elim () in
+    rewrite
+      emp
+      (raw_data_item_seq_match c l (i + delta) (j + delta)) // by contradiction
+  end
+
+let raw_data_item_seq_match_tail_intro
+  (#opened: _)
+  (c: Seq.seq cbor)
+  (l: Seq.seq (option Cbor.raw_data_item))
+  (delta: nat {
+    delta <= Seq.length c /\
+    delta <= Seq.length l
+  })
+  (i: nat {
+    delta <= i
+  })
+  (j: nat)
+: STGhostT (squash (i <= j)) opened
+    (raw_data_item_seq_match c l i j)
+    (fun _ -> raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (i - delta) (j - delta))
+= if Seq.length c = Seq.length l && j <= Seq.length c
+  then begin
+    rewrite
+      (raw_data_item_seq_match c l i j)
+      (on_range (raw_data_item_seq_match_item c l) i j);
+    on_range_le
+      (raw_data_item_seq_match_item c l)
+      i j;
+    let res : squash (i <= j) = () in
+    on_range_weaken_and_shift
+      (raw_data_item_seq_match_item c l)
+      (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)))
+      (0 - delta)
+      i j
+      (fun k ->
+        raw_data_item_seq_match_item_tail c l delta (k - delta);
+        rewrite
+          (raw_data_item_seq_match_item c l k)
+          (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (k + (0 - delta)))
+      )
+      (i - delta) (j - delta);
+    rewrite
+      (on_range (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l))) (i - delta) (j - delta))
+      (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (i - delta) (j - delta));
+    res
+  end else begin
+    rewrite
+      (raw_data_item_seq_match c l i j)
+      (pure (squash False));
+    let _ = gen_elim () in
+    let res : squash (i <= j) = () in
+    rewrite
+      emp
+      (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (i - delta) (j - delta)); // by contradiction
+    res
+  end
+
