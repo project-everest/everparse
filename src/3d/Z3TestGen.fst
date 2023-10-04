@@ -1023,6 +1023,12 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
       begin
         if status = "unsat"
         then";; unsat: no more witnesses"
+        else if status = "unknown"
+        then begin
+          z3.to_z3 "(get-info :reason-unknown)";
+          let msg = z3.from_z3 () in
+          Printf.sprintf ";; unknown: %s" msg
+        end
         else Printf.sprintf ";; %s: z3 gave up" status
       end;
     FStar.IO.print_newline ()
