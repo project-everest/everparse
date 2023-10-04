@@ -220,31 +220,6 @@ let raw_data_item_match_map0
     )
   ))
 
-[@@__reduce__]
-let raw_data_item_array_match_nil0
-  (c: Seq.seq cbor)
-: Tot vprop
-= pure (c `Seq.equal` Seq.empty)
-
-[@@__reduce__]
-let raw_data_item_array_match_cons0
-  (c: Seq.seq cbor)
-  (l: list Cbor.raw_data_item { Cons? l })
-  (raw_data_item_match: (cbor -> (v': Cbor.raw_data_item { v' << l }) -> vprop))
-  (raw_data_item_array_match: (Seq.seq cbor -> (v': list Cbor.raw_data_item { v' << l }) -> vprop))
-: Tot vprop
-= exists_ (fun (c1: cbor) -> exists_ (fun (c2: Seq.seq cbor) ->
-    raw_data_item_match c1 (List.Tot.hd l) `star`
-    raw_data_item_array_match c2 (List.Tot.tl l) `star`
-    pure (c `Seq.equal` Seq.cons c1 c2)
-  ))
-
-[@@__reduce__]
-let raw_data_item_map_match_nil0
-  (c: Seq.seq cbor_map_entry)
-: Tot vprop
-= pure (c `Seq.equal` Seq.empty)
-
 noextract
 let fstp (#a1 #a2: Type) (x: (a1 & a2)) : Tot a1 = fst x
 
@@ -252,20 +227,72 @@ noextract
 let sndp (#a1 #a2: Type) (x: (a1 & a2)) : Tot a2 = snd x
 
 [@@__reduce__]
-let raw_data_item_map_match_cons0
-  (c: Seq.seq cbor_map_entry)
-  (l: list (Cbor.raw_data_item & Cbor.raw_data_item) { Cons? l })
-  (raw_data_item_match: (cbor -> (v': Cbor.raw_data_item { v' << l }) -> vprop))
-  (raw_data_item_map_match: (Seq.seq cbor_map_entry -> (v': list (Cbor.raw_data_item & Cbor.raw_data_item) { v' << l }) -> vprop))
+let raw_data_item_map_entry_match1
+  (c1: cbor_map_entry)
+  (v1: (Cbor.raw_data_item & Cbor.raw_data_item))
+  (raw_data_item_match: (cbor -> (v': Cbor.raw_data_item { v' << v1 }) -> vprop))
 : Tot vprop
-= exists_ (fun (c1: cbor_map_entry) -> exists_ (fun (c2: Seq.seq cbor_map_entry) ->
-    raw_data_item_match c1.key (fstp (List.Tot.hd l)) `star`
-    raw_data_item_match c1.value (sndp (List.Tot.hd l)) `star`
-    raw_data_item_map_match c2 (List.Tot.tl l) `star`
+= raw_data_item_match c1.key (fstp v1) `star`
+  raw_data_item_match c1.value (sndp v1)
+
+let raw_data_item_map_entry_match0
+  (l: list (Cbor.raw_data_item & Cbor.raw_data_item))
+  (raw_data_item_match: (cbor -> (v': Cbor.raw_data_item { v' << l }) -> vprop))
+  (c1: cbor_map_entry)
+  (v1: (Cbor.raw_data_item & Cbor.raw_data_item) { v1 << l })
+: Tot vprop
+= raw_data_item_map_entry_match1 c1 v1 raw_data_item_match
+
+[@@__reduce__]
+let seq_list_match_nil0
+  (#t: Type)
+  (c: Seq.seq t)
+: Tot vprop
+= pure (c `Seq.equal` Seq.empty)
+
+[@@__reduce__]
+let seq_list_match_cons0
+  (#t #t': Type)
+  (c: Seq.seq t)
+  (l: list t' { Cons? l })
+  (raw_data_item_match: (t -> (v': t' { v' << l }) -> vprop))
+  (raw_data_item_array_match: (Seq.seq t -> (v': list t') -> (raw_data_item_match: (t -> (v'': t' { v'' << v' }) -> vprop) { v' << l }) ->
+vprop))
+: Tot vprop
+= exists_ (fun (c1: t) -> exists_ (fun (c2: Seq.seq t) ->
+    raw_data_item_match c1 (List.Tot.hd l) `star`
+    raw_data_item_array_match c2 (List.Tot.tl l) raw_data_item_match `star`
     pure (c `Seq.equal` Seq.cons c1 c2)
   ))
 
-let rec raw_data_item_match0
+let rec seq_list_match
+  (#t #t': Type)
+  (c: Seq.seq t)
+  (v: list t')
+  (raw_data_item_match: (t -> (v': t' { v' << v }) -> vprop))
+: Tot vprop
+  (decreases v)
+= if Nil? v
+  then seq_list_match_nil0 c
+  else seq_list_match_cons0 c v raw_data_item_match seq_list_match
+
+let seq_list_match_cons_eq
+  (#t #t': Type)
+  (c: Seq.seq t)
+  (v: list t')
+  (raw_data_item_match: (t -> (v': t' { v' << v }) -> vprop))
+: Lemma
+  (requires (Cons? v))
+  (ensures (
+    seq_list_match c v raw_data_item_match ==
+    seq_list_match_cons0 c v raw_data_item_match seq_list_match
+  ))
+= let a :: q = v in
+  assert_norm (seq_list_match c (a :: q) raw_data_item_match ==
+    seq_list_match_cons0 c (a :: q) raw_data_item_match seq_list_match
+  )
+
+let rec raw_data_item_match
   (c: cbor)
   (v: Cbor.raw_data_item)
 : Tot vprop
@@ -275,267 +302,553 @@ let rec raw_data_item_match0
   | CBOR_Case_Simple_value _, Cbor.Simple _ -> raw_data_item_match_simple_value0 c v
   | CBOR_Case_Int64 _, Cbor.Int64 _ _ -> raw_data_item_match_int0 c v
   | CBOR_Case_String _, Cbor.String _ _ -> raw_data_item_match_string0 c v
-  | CBOR_Case_Array _, Cbor.Array _ -> raw_data_item_match_array0 c v raw_data_item_array_match0
-  | CBOR_Case_Map _, Cbor.Map _ -> raw_data_item_match_map0 c v raw_data_item_map_match0
-  | CBOR_Case_Tagged _, Cbor.Tagged _ _ -> raw_data_item_match_tagged0 c v raw_data_item_match0
+  | CBOR_Case_Array _, Cbor.Array _ -> raw_data_item_match_array0 c v raw_data_item_array_match
+  | CBOR_Case_Map _, Cbor.Map _ -> raw_data_item_match_map0 c v raw_data_item_map_match
+  | CBOR_Case_Tagged _, Cbor.Tagged _ _ -> raw_data_item_match_tagged0 c v raw_data_item_match
   | _ -> pure False
 
-and raw_data_item_array_match0
+and raw_data_item_array_match
   (c: Seq.seq cbor)
   (v: list Cbor.raw_data_item)
 : Tot vprop
   (decreases v)
-= if Nil? v
-  then raw_data_item_array_match_nil0 c
-  else raw_data_item_array_match_cons0 c v raw_data_item_match0 raw_data_item_array_match0
+= seq_list_match c v raw_data_item_match
 
-and raw_data_item_map_match0
+and raw_data_item_map_match
   (c: Seq.seq cbor_map_entry)
   (v: list (Cbor.raw_data_item & Cbor.raw_data_item))
 : Tot vprop
   (decreases v)
-= if Nil? v
-  then raw_data_item_map_match_nil0 c
-  else raw_data_item_map_match_cons0 c v raw_data_item_match0 raw_data_item_map_match0
-
-// irreducible
-let raw_data_item_match : (phi: (
-  (c: cbor) ->
-  (v: Cbor.raw_data_item) ->
-  Tot vprop
-) {phi == raw_data_item_match0}
-) = raw_data_item_match0
-
-let raw_data_item_match_eq : squash (raw_data_item_match == raw_data_item_match0) = ()
-
-let raw_data_item_array_match0_cons_eq
-  (c: Seq.seq cbor)
-  (v: list Cbor.raw_data_item)
-: Lemma
-  (requires (Cons? v))
-  (ensures (raw_data_item_array_match0 c v == raw_data_item_array_match_cons0 c v raw_data_item_match raw_data_item_array_match0))
-= let (a :: q) = v in
-  assert_norm (raw_data_item_array_match0 c (a :: q) == raw_data_item_array_match_cons0 c (a :: q) raw_data_item_match0 raw_data_item_array_match0)
+= seq_list_match c v (raw_data_item_map_entry_match0 v raw_data_item_match)
 
 #set-options "--ide_id_info_off"
 
-irreducible
-let maybe_seq_cbor_uncons
-  (c: Seq.seq cbor)
-: Ghost (cbor & Seq.seq cbor)
-    (requires True)
-    (ensures (fun (hd, tl) ->
-      Seq.length c > 0 ==> c `Seq.equal` Seq.cons hd tl
-    ))
-= if Seq.length c = 0
-  then (dummy_cbor, c)
-  else (Seq.index c 0, Seq.slice c 1 (Seq.length c))
-
-#push-options "--z3rlimit 16"
-#restart-solver
-
-let list_cons_is_cons
+let rec list_index_append_cons
   (#t: Type)
-  (v: list t)
+  (l1: list t)
+  (a: t)
+  (l2: list t)
+: Lemma
+  (ensures (let l = l1 `List.Tot.append` (a :: l2) in
+    let n1 = List.Tot.length l1 in
+    n1 < List.Tot.length l /\
+    List.Tot.index l n1 == a
+  ))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | a1 :: l1' -> list_index_append_cons l1' a l2
+
+let rec list_index_map
+  (#t1 #t2: Type)
+  (f: (t1 -> t2))
+  (l1: list t1)
+  (i: nat {i < List.Tot.length l1})
+: Lemma
+  (ensures (let l2 = List.Tot.map f l1 in
+    List.Tot.length l1 == List.Tot.length l2 /\
+    List.Tot.index l2 i == f (List.Tot.index l1 i)
+  ))
+  [SMTPat (List.Tot.index (List.Tot.map f l1) i)]
+= let a :: l1' = l1 in
+  if i = 0
+  then ()
+  else list_index_map f l1' (i - 1)
+
+let seq_of_list_eq_init_index
+  (#t: Type)
+  (l: list t)
+: Lemma
+  (Seq.seq_of_list l `Seq.equal` Seq.init (List.Tot.length l) (List.Tot.index l))
+= () // thanks to Seq.lemma_seq_of_list_index
+
+let seq_of_list_tail
+  (#t: Type)
   (a: t)
   (q: list t)
-  (sq: squash (v == a :: q))
-: Tot (squash (Cons? v))
+: Lemma
+  (Seq.tail (Seq.seq_of_list (a :: q)) == Seq.seq_of_list q)
+= Seq.lemma_seq_of_list_induction (a :: q)
+
+let seq_seq_match_item
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: Seq.seq t2)
+  (i: nat)
+: Tot vprop
+= if i < Seq.length c && i < Seq.length l
+  then
+    p (Seq.index c i) (Seq.index l i)
+  else
+    pure (squash False)
+
+let seq_seq_match_item_tail
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: Seq.seq t2)
+  (delta: nat)
+  (i: nat)
+: Lemma
+  (requires (
+    i + delta <= Seq.length c /\
+    i + delta <= Seq.length l
+  ))
+  (ensures (
+    seq_seq_match_item p (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i ==
+      seq_seq_match_item p c l (i + delta)
+  ))
 = ()
 
-let raw_data_item_array_match0_cons_elim
-  (#opened: _)
-  (c: Seq.seq cbor)
-  (hd: cbor)
-  (tl: Seq.seq cbor)
-  (v: list Cbor.raw_data_item)
-  (a: Cbor.raw_data_item)
-  (q: list Cbor.raw_data_item)
-: STGhost unit opened
-    (raw_data_item_array_match0 c v)
-    (fun _ ->
-      raw_data_item_match hd a `star` raw_data_item_array_match0 tl q `star` (
-        (raw_data_item_match hd a `star` raw_data_item_array_match0 tl q) `implies_`
-        raw_data_item_array_match0 c v
-    ))
-    (v == a :: q /\
-      (Seq.length c > 0 ==> c `Seq.equal` Seq.cons hd tl)
-    )
-    (fun _ ->
-      c `Seq.equal` Seq.cons hd tl
-    )
-= let _v_cons : squash (Cons? v) = list_cons_is_cons v a q () in
-  raw_data_item_array_match0_cons_eq c v;
-  noop ();
-  rewrite_with_implies
-    (raw_data_item_array_match0 c v)
-    (raw_data_item_array_match_cons0 c v raw_data_item_match raw_data_item_array_match0);
-  let _ = gen_elim () in
-  let hd' = vpattern (fun hd -> raw_data_item_match hd _) in
-  let tl' = vpattern (fun tl -> raw_data_item_array_match0 tl _) in
-  Seq.lemma_cons_inj hd hd' tl tl';
-  noop ();
-  rewrite_with_implies
-    (raw_data_item_match _ (List.Tot.hd v))
-    (raw_data_item_match hd a);
-  rewrite_with_implies
-    (raw_data_item_array_match0 _ (List.Tot.tl v))
-    (raw_data_item_array_match0 tl q);
-  implies_join
-    (raw_data_item_match hd a)
-    (raw_data_item_match _ (List.Tot.hd v))
-    (raw_data_item_array_match0 tl q)    
-    (raw_data_item_array_match0 _ (List.Tot.tl v));
-  intro_implies
-    (raw_data_item_match hd a `star` raw_data_item_array_match0 tl q)
-    (raw_data_item_array_match_cons0 c v raw_data_item_match raw_data_item_array_match0)
-    ((raw_data_item_match hd a `star` raw_data_item_array_match0 tl q) `implies_`
-      (raw_data_item_match _ (List.Tot.hd v) `star` raw_data_item_array_match0 _ (List.Tot.tl v))
-    )
-    (fun _ ->
-      elim_implies
-        (raw_data_item_match hd a `star` raw_data_item_array_match0 tl q)
-        (raw_data_item_match _ (List.Tot.hd v) `star` raw_data_item_array_match0 _ (List.Tot.tl v));
-      noop ()
-    );
-  implies_trans
-    (raw_data_item_match hd a `star` raw_data_item_array_match0 tl q)
-    (raw_data_item_array_match_cons0 c v raw_data_item_match raw_data_item_array_match0)    
-    (raw_data_item_array_match0 c v)
+[@@__reduce__]
+let seq_seq_match
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: Seq.seq t2)
+  (i j: nat)
+: Tot vprop
+= on_range (seq_seq_match_item p c l) i j
 
-#pop-options
-
-let raw_data_item_array_match0_cons_intro
+let seq_seq_match_tail_elim
+  (#t1 #t2: Type)
   (#opened: _)
-  (c: Seq.seq cbor)
-  (hd: cbor)
-  (tl: Seq.seq cbor)
-  (v: list Cbor.raw_data_item)
-  (a: Cbor.raw_data_item)
-  (q: list Cbor.raw_data_item)
-: STGhost unit opened
-    (raw_data_item_match hd a `star` raw_data_item_array_match0 tl q)
-    (fun _ ->
-      raw_data_item_array_match0 c v `star`
-      (raw_data_item_array_match0 c v `implies_`
-        (raw_data_item_match hd a `star` raw_data_item_array_match0 tl q)
-      )
-    )
-    (v == a :: q /\
-      c `Seq.equal` Seq.cons hd tl
-    )
-    (fun _ -> True)
-= let _v_cons : squash (Cons? v) = list_cons_is_cons v a q () in
-  raw_data_item_array_match0_cons_eq c v;
-  noop ();
-  vpattern_rewrite (raw_data_item_match hd) (List.Tot.hd v);
-  vpattern_rewrite (raw_data_item_array_match0 tl) (List.Tot.tl v);
-  rewrite
-    (raw_data_item_array_match_cons0 c v raw_data_item_match raw_data_item_array_match0)
-    (raw_data_item_array_match0 c v);
-  intro_implies
-    (raw_data_item_array_match0 c v)
-    (raw_data_item_match hd a `star` raw_data_item_array_match0 tl q)
-    emp
-    (fun _ ->
-      raw_data_item_array_match0_cons_elim c hd tl v a q;
-      drop (
-        (raw_data_item_match hd a `star` raw_data_item_array_match0 tl q) `implies_`
-        (raw_data_item_array_match0 c v)
-      )
-    )
-
-let rec raw_data_item_array_match_append_strong
-  (#opened: _)
-  (c1 c2: Seq.seq cbor)
-  (v1 v2: list Cbor.raw_data_item)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: Seq.seq (t2))
+  (delta: nat {
+    delta <= Seq.length c /\
+    delta <= Seq.length l
+  })
+  (i j: nat)
 : STGhostT unit opened
-    (raw_data_item_array_match0 c1 v1 `star` raw_data_item_array_match0 c2 v2)
-    (fun _ -> raw_data_item_array_match0 (c1 `Seq.append` c2) (v1 `List.Tot.append` v2) `star`
-      (raw_data_item_array_match0 (c1 `Seq.append` c2) (v1 `List.Tot.append` v2) `implies_` (
-        raw_data_item_array_match0 c1 v1 `star` raw_data_item_array_match0 c2 v2
-    )))
-    (decreases v1)
-= match v1 with
-  | [] ->
-    Seq.append_empty_l c2;
-    rewrite_with_implies
-      (raw_data_item_array_match0 c1 v1)
-      (raw_data_item_array_match_nil0 c1);
-    let _ = gen_elim () in
-    rewrite_with_implies
-      (raw_data_item_array_match0 c2 v2)
-      (raw_data_item_array_match0 (c1 `Seq.append` c2) (v1 `List.Tot.append` v2));
-    elim_implies
-      (raw_data_item_array_match_nil0 c1)
-      (raw_data_item_array_match0 c1 v1);
-    implies_concl_l
-      (raw_data_item_array_match0 c1 v1)
-      (raw_data_item_array_match0 (c1 `Seq.append` c2) (v1 `List.Tot.append` v2))
-      (raw_data_item_array_match0 c2 v2)
-  | a1 :: v1' ->
-    let (b1, c1') = maybe_seq_cbor_uncons c1 in
-    noop ();
-    raw_data_item_array_match0_cons_elim
-      c1 b1 c1'
-      v1 a1 v1';
-    raw_data_item_array_match_append_strong c1' c2 v1' v2;
-    raw_data_item_array_match0_cons_intro
-      (c1 `Seq.append` c2) b1 (c1' `Seq.append` c2)
-      (v1 `List.Tot.append` v2) a1 (v1' `List.Tot.append` v2);
-    implies_reg_r
-      (raw_data_item_match b1 a1 `star` raw_data_item_array_match0 c1' v1')
-      (raw_data_item_array_match0 c1 v1)
-      (raw_data_item_array_match0 c2 v2);
-    implies_reg_l
-      (raw_data_item_match b1 a1)
-      (raw_data_item_array_match0 (c1' `Seq.append` c2) (v1' `List.Tot.append` v2))
-      (raw_data_item_array_match0 c1' v1' `star` raw_data_item_array_match0 c2 v2);
-    implies_with_tactic
-      (raw_data_item_match b1 a1 `star` (raw_data_item_array_match0 c1' v1' `star` raw_data_item_array_match0 c2 v2))
-      ((raw_data_item_match b1 a1 `star` raw_data_item_array_match0 c1' v1') `star` raw_data_item_array_match0 c2 v2);
-    implies_trans
-      (raw_data_item_array_match0 (c1 `Seq.append` c2) (v1 `List.Tot.append` v2))
-      (raw_data_item_match b1 a1 `star` raw_data_item_array_match0 (c1' `Seq.append` c2) (v1' `List.Tot.append` v2))
-      (raw_data_item_match b1 a1 `star` (raw_data_item_array_match0 c1' v1' `star` raw_data_item_array_match0 c2 v2));
-    implies_trans
-      (raw_data_item_array_match0 (c1 `Seq.append` c2) (v1 `List.Tot.append` v2))
-      (raw_data_item_match b1 a1 `star` (raw_data_item_array_match0 c1' v1' `star` raw_data_item_array_match0 c2 v2))
-      ((raw_data_item_match b1 a1 `star` raw_data_item_array_match0 c1' v1') `star` raw_data_item_array_match0 c2 v2);
-    implies_trans
-      (raw_data_item_array_match0 (c1 `Seq.append` c2) (v1 `List.Tot.append` v2))
-      ((raw_data_item_match b1 a1 `star` raw_data_item_array_match0 c1' v1') `star` raw_data_item_array_match0 c2 v2)
-      (raw_data_item_array_match0 c1 v1 `star` raw_data_item_array_match0 c2 v2)
-
-let raw_data_item_array_match0_singleton_intro
-  (#opened: _)
-  (c: Seq.seq cbor)
-  (b: cbor)
-  (v: list Cbor.raw_data_item)
-  (a: Cbor.raw_data_item)
-: STGhost unit opened
-    (raw_data_item_match b a)
-    (fun _ -> raw_data_item_array_match0 c v `star` (raw_data_item_array_match0 c v `implies_` raw_data_item_match b a))
-    (c `Seq.equal` Seq.create 1 b /\
-      v == [a]
+    (seq_seq_match p (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i j)
+    (fun _ -> seq_seq_match p c l (i + delta) (j + delta))
+= on_range_le (seq_seq_match_item p _ _) _ _;
+  on_range_weaken_and_shift
+    (seq_seq_match_item p (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)))
+    (seq_seq_match_item p c l)
+    delta
+    i j
+    (fun k ->
+       if k < Seq.length c - delta && k < Seq.length l - delta
+       then begin
+         seq_seq_match_item_tail p c l delta k;
+         rewrite
+           (seq_seq_match_item p (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) k)
+           (seq_seq_match_item p c l (k + delta))
+       end else begin
+         rewrite
+           (seq_seq_match_item p (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) k)
+           (pure (squash False));
+         let _ = gen_elim () in
+         rewrite
+           emp
+           (seq_seq_match_item p c l (k + delta)) // by contradiction
+       end
     )
+    (i + delta) (j + delta)
+
+let seq_seq_match_tail_intro
+  (#t1 #t2: Type)
+  (#opened: _)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: Seq.seq t2)
+  (delta: nat {
+    delta <= Seq.length c /\
+    delta <= Seq.length l
+  })
+  (i: nat {
+    delta <= i
+  })
+  (j: nat)
+: STGhostT (squash (i <= j)) opened
+    (seq_seq_match p c l i j)
+    (fun _ -> seq_seq_match p (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (i - delta) (j - delta))
+= on_range_le (seq_seq_match_item p _ _) _ _;
+  on_range_weaken_and_shift
+    (seq_seq_match_item p c l)
+    (seq_seq_match_item p (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)))
+    (0 - delta)
+    i j
+    (fun k ->
+      if k < Seq.length c && k < Seq.length l
+      then begin
+        seq_seq_match_item_tail p c l delta (k - delta);
+        rewrite
+          (seq_seq_match_item p c l k)
+          (seq_seq_match_item p (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (k + (0 - delta)))
+      end else begin
+        rewrite
+          (seq_seq_match_item p c l k)
+          (pure (squash False));
+        let _ = gen_elim () in
+        rewrite
+          emp
+          (seq_seq_match_item p (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (k + (0 - delta))) // by contradiction
+      end
+    )
+    (i - delta) (j - delta)
+
+let seq_seq_match_length
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (s1: Seq.seq t1)
+  (s2: Seq.seq t2)
+  (i j: nat)
+: STGhost unit opened
+    (seq_seq_match p s1 s2 i j)
+    (fun _ -> seq_seq_match p s1 s2 i j)
+    True
+    (fun _ -> i <= j /\ (i == j \/ (j <= Seq.length s1 /\ j <= Seq.length s2)))
+= on_range_le (seq_seq_match_item p s1 s2) i j;
+  if i = j
+  then noop ()
+  else begin
+    let j' = j - 1 in
+    if j' < Seq.length s1 && j' < Seq.length s2
+    then noop ()
+    else begin
+      on_range_unsnoc
+        (seq_seq_match_item p s1 s2)
+        i j' j;
+      rewrite
+        (seq_seq_match_item p _ _ _)
+        (pure (squash False));
+      let _ = gen_elim () in
+      rewrite
+        (seq_seq_match p s1 s2 i j')
+        (seq_seq_match p s1 s2 i j) // by contradiction
+    end
+  end
+
+let seq_seq_match_weaken
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p p': t1 -> t2 -> vprop)
+  (w: ((x1: t1) -> (x2: t2) -> STGhostT unit opened
+    (p x1 x2) (fun _ -> p' x1 x2)
+  ))
+  (c1 c1': Seq.seq t1)
+  (c2 c2': Seq.seq t2)
+  (i j: nat)
+: STGhost unit opened
+    (seq_seq_match p c1 c2 i j)
+    (fun _ -> seq_seq_match p' c1' c2' i j)
+    (i <= j /\ (i == j \/ (
+      j <= Seq.length c1 /\ j <= Seq.length c2 /\
+      j <= Seq.length c1' /\ j <= Seq.length c2' /\
+      Seq.slice c1 i j `Seq.equal` Seq.slice c1' i j /\
+      Seq.slice c2 i j `Seq.equal` Seq.slice c2' i j
+    )))
     (fun _ -> True)
-= noop ();
-  rewrite
-    (raw_data_item_array_match_nil0 Seq.empty)
-    (raw_data_item_array_match0 Seq.empty []);
-  raw_data_item_array_match0_cons_intro c b Seq.empty v a [];
-  intro_implies
-    (raw_data_item_match b a `star` raw_data_item_array_match0 Seq.empty [])
-    (raw_data_item_match b a)
+=
+  on_range_weaken
+    (seq_seq_match_item p c1 c2)
+    (seq_seq_match_item p' c1' c2')
+    i j
+    (fun k ->
+       rewrite (seq_seq_match_item p c1 c2 k) (p (Seq.index (Seq.slice c1 i j) (k - i)) (Seq.index (Seq.slice c2 i j) (k - i)));
+       w _ _;
+       rewrite (p' _ _) (seq_seq_match_item p' c1' c2' k)
+    )
+
+let rec seq_seq_match_seq_list_match
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: list t2)
+: STGhost unit opened
+    (seq_seq_match p c (Seq.seq_of_list l) 0 (List.Tot.length l))
+    (fun _ -> seq_list_match c l p)
+    (Seq.length c == List.Tot.length l)
+    (fun _ -> True)
+    (decreases l)
+= match l with
+  | [] ->
+    drop (seq_seq_match p _ _ _ _);
+    rewrite
+      (seq_list_match_nil0 c)
+      (seq_list_match c l p)
+  | a :: q ->
+    Seq.lemma_seq_of_list_induction (a :: q);
+    seq_list_match_cons_eq c l p;
+    on_range_uncons
+      (seq_seq_match_item p _ _)
+      _ 1 _;
+    rewrite
+      (seq_seq_match_item p _ _ _)
+      (p (Seq.head c) (List.Tot.hd l));
+    let _ = seq_seq_match_tail_intro
+      p _ _ 1 _ _
+    in
+    rewrite
+      (seq_seq_match p _ _ _ _)
+      (seq_seq_match p (Seq.tail c) (Seq.seq_of_list (List.Tot.tl l)) 0 (List.Tot.length (List.Tot.tl l)));
+    seq_seq_match_seq_list_match p _ (List.Tot.tl l);
+    rewrite
+      (seq_list_match_cons0 c l p seq_list_match)
+      (seq_list_match c l p)
+
+let rec seq_list_match_seq_seq_match
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: list t2)
+: STGhost unit opened
+    (seq_list_match c l p)
+    (fun _ -> seq_seq_match p c (Seq.seq_of_list l) 0 (List.Tot.length l))
+    True
+    (fun _ -> Seq.length c == List.Tot.length l)
+    (decreases l)
+= match l with
+  | [] ->
+    rewrite
+      (seq_list_match c l p)
+      (seq_list_match_nil0 c);
+    let _ = gen_elim () in
+    on_range_empty
+      (seq_seq_match_item p c (Seq.seq_of_list l))
+      0
+      (List.Tot.length l)
+  | a :: q ->
+    let _l_nonempty : squash (Cons? l) = () in
+    Seq.lemma_seq_of_list_induction (a :: q);
+    seq_list_match_cons_eq c l p;
+    noop ();
+    rewrite
+      (seq_list_match c l p)
+      (seq_list_match_cons0 c l p seq_list_match);
+    let _ = gen_elim () in
+    let a' = vpattern (fun a' -> p a' _) in
+    let c' = vpattern (fun c' -> seq_list_match c' _ _) in
+    Seq.lemma_cons_inj (Seq.head c) a' (Seq.tail c) c';
+    assert (a' == Seq.head c);
+    assert (c' == Seq.tail c);
+    noop ();
+    seq_list_match_seq_seq_match p _ _;
+    rewrite
+      (seq_seq_match p _ _ _ _)
+      (seq_seq_match p (Seq.slice c 1 (Seq.length c)) (Seq.slice (Seq.seq_of_list l) 1 (Seq.length (Seq.seq_of_list l))) 0 (List.Tot.length (List.Tot.tl l)));
+    let _ = seq_seq_match_tail_elim
+      p c (Seq.seq_of_list l) 1 0 (List.Tot.length (List.Tot.tl l))
+    in
+    rewrite
+      (seq_seq_match p _ _ _ _)
+      (seq_seq_match p c (Seq.seq_of_list l) 1 (List.Tot.length l));
+    rewrite
+      (p _ _)
+      (seq_seq_match_item p c (Seq.seq_of_list l) 0);
+    on_range_cons
+      (seq_seq_match_item p _ _)
+      0 1 (List.Tot.length l)
+
+let seq_map (#t1 #t2: Type) (f: t1 -> t2) (s: Seq.seq t1) : Tot (Seq.seq t2) =
+  Seq.init (Seq.length s) (fun i -> f (Seq.index s i))
+
+let rec seq_map_seq_of_list (#t1 #t2: Type) (f: t1 -> t2) (l: list t1) : Lemma
+  (seq_map f (Seq.seq_of_list l) `Seq.equal` Seq.seq_of_list (List.Tot.map f l))
+= match l with
+  | [] -> ()
+  | a :: q -> seq_map_seq_of_list f q
+
+let item_match_option
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (x1: t1)
+  (x2: option t2)
+: Tot vprop
+= match x2 with
+  | None -> emp
+  | Some x2' -> p x1 x2'
+
+let seq_seq_match_item_match_option_elim
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (s1: Seq.seq t1)
+  (s2: Seq.seq t2)
+  (i j: nat)
+: STGhostT unit opened
+    (seq_seq_match (item_match_option p) s1 (seq_map Some s2) i j)
+    (fun _ -> seq_seq_match p s1 s2 i j)
+= on_range_weaken
+    (seq_seq_match_item (item_match_option p) s1 (seq_map Some s2))
+    (seq_seq_match_item p s1 s2)
+    i j
+    (fun k ->
+      rewrite
+        (seq_seq_match_item (item_match_option p) s1 (seq_map Some s2) k)
+        (seq_seq_match_item p s1 s2 k)
+    )
+
+let seq_seq_match_item_match_option_intro
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (s1: Seq.seq t1)
+  (s2: Seq.seq t2)
+  (i j: nat)
+: STGhostT unit opened
+    (seq_seq_match p s1 s2 i j)
+    (fun _ -> seq_seq_match (item_match_option p) s1 (seq_map Some s2) i j)
+= on_range_weaken
+    (seq_seq_match_item p s1 s2)
+    (seq_seq_match_item (item_match_option p) s1 (seq_map Some s2))
+    i j
+    (fun k ->
+      rewrite
+        (seq_seq_match_item p s1 s2 k)
+        (seq_seq_match_item (item_match_option p) s1 (seq_map Some s2) k)
+    )
+
+let rec seq_seq_match_item_match_option_init
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (s: Seq.seq t1)
+: STGhostT unit opened
     emp
-    (fun _ ->
-      drop (raw_data_item_array_match0 Seq.empty [])
-    );
-  implies_trans
-    (raw_data_item_array_match0 c v)
-    (raw_data_item_match b a `star` raw_data_item_array_match0 Seq.empty [])
-    (raw_data_item_match b a)
+    (fun _ -> seq_seq_match (item_match_option p) s (Seq.create (Seq.length s) None) 0 (Seq.length s))
+    (decreases (Seq.length s))
+= if Seq.length s = 0
+  then
+    on_range_empty (seq_seq_match_item (item_match_option p) s (Seq.create (Seq.length s) None)) 0 (Seq.length s)
+  else begin
+    seq_seq_match_item_match_option_init p (Seq.tail s);
+    on_range_weaken_and_shift
+      (seq_seq_match_item (item_match_option p) (Seq.tail s) (Seq.create (Seq.length (Seq.tail s)) None))
+      (seq_seq_match_item (item_match_option p) s (Seq.create (Seq.length s) None))
+      1
+      0
+      (Seq.length (Seq.tail s))
+      (fun k ->
+        rewrite
+          (seq_seq_match_item (item_match_option p) (Seq.tail s) (Seq.create (Seq.length (Seq.tail s)) None) k)
+          (seq_seq_match_item (item_match_option p) s (Seq.create (Seq.length s) None) (k + 1))
+      )
+      1
+      (Seq.length s);
+    rewrite
+      emp
+      (seq_seq_match_item (item_match_option p) s (Seq.create (Seq.length s) None) 0);
+    on_range_cons
+      (seq_seq_match_item (item_match_option p) s (Seq.create (Seq.length s) None))
+      0
+      1
+      (Seq.length s)
+  end
+
+let seq_seq_match_upd
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (s1: Seq.seq t1)
+  (s2: Seq.seq t2)
+  (i j: nat)
+  (k: nat {
+    i <= j /\ j < k
+  })
+  (x1: t1)
+  (x2: t2)
+: STGhostT (squash (j < Seq.length s1 /\ j < Seq.length s2)) opened
+    (seq_seq_match p s1 s2 i k `star` p x1 x2)
+    (fun _ -> 
+      seq_seq_match p (Seq.upd s1 j x1) (Seq.upd s2 j x2) i k
+    )
+= seq_seq_match_length p s1 s2 i k;
+  on_range_get
+    (seq_seq_match_item p s1 s2)
+    i j (j + 1) k;
+  let res : squash (j < Seq.length s1 /\ j < Seq.length s2) = () in
+  drop (seq_seq_match_item p s1 s2 j);
+  rewrite
+    (p x1 x2)
+    (seq_seq_match_item p (Seq.upd s1 j x1) (Seq.upd s2 j x2) j);
+  seq_seq_match_weaken
+    p p (fun _ _ -> noop ())
+    s1 (Seq.upd s1 j x1)
+    s2 (Seq.upd s2 j x2)
+    i j;
+  seq_seq_match_weaken
+    p p (fun _ _ -> noop ())
+    s1 (Seq.upd s1 j x1)
+    s2 (Seq.upd s2 j x2)
+    (j + 1) k;
+  on_range_put
+    (seq_seq_match_item p (Seq.upd s1 j x1) (Seq.upd s2 j x2))
+    i j j (j + 1) k;
+  res
+    
+let seq_seq_match_item_match_option_upd
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (s1: Seq.seq t1)
+  (s2: Seq.seq (option t2))
+  (i j: nat)
+  (k: nat {
+    i <= j /\ j < k
+  })
+  (x1: t1)
+  (x2: t2)
+: STGhostT (squash (j < Seq.length s1 /\ j < Seq.length s2)) opened
+    (seq_seq_match (item_match_option p) s1 s2 i k `star` p x1 x2)
+    (fun _ -> 
+      seq_seq_match (item_match_option p) (Seq.upd s1 j x1) (Seq.upd s2 j (Some x2)) i k
+    )
+= rewrite
+    (p x1 x2)
+    (item_match_option p x1 (Some x2));
+  seq_seq_match_upd (item_match_option p) s1 s2 i j k x1 (Some x2)
+
+let seq_seq_match_item_match_option_index
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (s1: Seq.seq t1)
+  (s2: Seq.seq (option t2))
+  (i j: nat)
+  (k: nat {
+    i <= j /\ j < k /\
+    (j < Seq.length s2 ==> Some? (Seq.index s2 j))
+  })
+: STGhostT (squash (j < Seq.length s1 /\ j < Seq.length s2 /\ Some? (Seq.index s2 j))) opened
+    (seq_seq_match (item_match_option p) s1 s2 i k)
+    (fun _ -> 
+      seq_seq_match (item_match_option p) s1 (Seq.upd s2 j None) i k `star`
+      p (Seq.index s1 j) (Some?.v (Seq.index s2 j))
+    )
+= seq_seq_match_length (item_match_option p) s1 s2 i k;
+  on_range_get
+    (seq_seq_match_item (item_match_option p) s1 s2)
+    i j (j + 1) k;
+  let res : squash (j < Seq.length s1 /\ j < Seq.length s2 /\ Some? (Seq.index s2 j)) = () in
+  rewrite
+    (seq_seq_match_item (item_match_option p) s1 s2 j)
+    (p (Seq.index s1 j) (Some?.v (Seq.index s2 j)));
+  rewrite
+    emp
+    (seq_seq_match_item (item_match_option p) s1 (Seq.upd s2 j None) j);
+  seq_seq_match_weaken
+    (item_match_option p) (item_match_option p) (fun _ _ -> noop ())
+    s1 s1
+    s2 (Seq.upd s2 j None)
+    i j;
+  seq_seq_match_weaken
+    (item_match_option p) (item_match_option p) (fun _ _ -> noop ())
+    s1 s1
+    s2 (Seq.upd s2 j None)
+    (j + 1) k;
+  on_range_put
+    (seq_seq_match_item (item_match_option p) s1 (Seq.upd s2 j None))
+    i j j (j + 1) k;
+  res
 
 let raw_data_item_match_get_case
   (#opened: _)
@@ -580,7 +893,7 @@ let raw_data_item_match_array_intro
   })
 : STGhostT unit opened
     (A.pts_to a full_perm c' `star`
-      raw_data_item_array_match0 c' v')
+      raw_data_item_array_match c' v')
     (fun _ ->
       raw_data_item_match
         (CBOR_Case_Array ({
@@ -599,7 +912,7 @@ let raw_data_item_match_array_intro
         footprint = c';
       }))
       (Cbor.Array v')
-      raw_data_item_array_match0
+      raw_data_item_array_match
     )
     (raw_data_item_match _ _)
 
@@ -611,7 +924,7 @@ let raw_data_item_match_array_elim
     (raw_data_item_match (CBOR_Case_Array a) v)
     (fun _ ->
       A.pts_to a.payload full_perm a.footprint `star`
-      raw_data_item_array_match0 a.footprint (Cbor.Array?.v v)
+      raw_data_item_array_match a.footprint (Cbor.Array?.v v)
     )
     True
     (fun _ -> U64.v a.count == List.Tot.length (Cbor.Array?.v v))
@@ -621,10 +934,10 @@ let raw_data_item_match_array_elim
   vpattern_rewrite (raw_data_item_match _) (Cbor.Array v');
   rewrite_with_tactic
     (raw_data_item_match _ _)
-    (raw_data_item_match_array0 (CBOR_Case_Array a) (Cbor.Array v') raw_data_item_array_match0);
+    (raw_data_item_match_array0 (CBOR_Case_Array a) (Cbor.Array v') raw_data_item_array_match);
   let _ = gen_elim () in
   rewrite (A.pts_to _ _ _) (A.pts_to a.payload full_perm a.footprint);
-  rewrite (raw_data_item_array_match0 _ _) (raw_data_item_array_match0 a.footprint (Cbor.Array?.v v));
+  rewrite (raw_data_item_array_match _ _) (raw_data_item_array_match a.footprint (Cbor.Array?.v v));
   sq
 
 let constr_cbor_array
@@ -636,12 +949,12 @@ let constr_cbor_array
   })
 : ST cbor
     (A.pts_to a full_perm c' `star`
-      raw_data_item_array_match0 c' v')
+      raw_data_item_array_match c' v')
     (fun res ->
       raw_data_item_match res (Cbor.Array v') `star`
       (raw_data_item_match res (Cbor.Array v') `implies_`
         (A.pts_to a full_perm c' `star`
-          raw_data_item_array_match0 c' v')
+          raw_data_item_array_match c' v')
       )
     )
     True
@@ -666,14 +979,14 @@ let constr_cbor_array
   intro_implies
     (raw_data_item_match res (Cbor.Array v'))
     (A.pts_to a full_perm c' `star`
-      raw_data_item_array_match0 c' v'
+      raw_data_item_array_match c' v'
     )
     emp
     (fun _ ->
       rewrite (raw_data_item_match _ _) (raw_data_item_match (CBOR_Case_Array ares) (Cbor.Array v'));
       let _ = raw_data_item_match_array_elim _ _ in
       rewrite (A.pts_to _ _ _) (A.pts_to a full_perm c');
-      rewrite (raw_data_item_array_match0 _ _) (raw_data_item_array_match0 c' v')
+      rewrite (raw_data_item_array_match _ _) (raw_data_item_array_match c' v')
     );
   return res
 
@@ -692,9 +1005,9 @@ let destr_cbor_array
     (raw_data_item_match a v)
     (fun res ->
       A.pts_to res.payload full_perm res.footprint `star`
-      raw_data_item_array_match0 res.footprint (maybe_cbor_array v) `star`
+      raw_data_item_array_match res.footprint (maybe_cbor_array v) `star`
       ((A.pts_to res.payload full_perm res.footprint `star`
-        raw_data_item_array_match0 res.footprint (maybe_cbor_array v)) `implies_`
+        raw_data_item_array_match res.footprint (maybe_cbor_array v)) `implies_`
         raw_data_item_match a v
       )
     )
@@ -710,10 +1023,10 @@ let destr_cbor_array
     (fun a -> raw_data_item_match a _)
     (CBOR_Case_Array res);
   let _ = raw_data_item_match_array_elim _ _ in
-  vpattern_rewrite (raw_data_item_array_match0 _) (maybe_cbor_array v);
+  vpattern_rewrite (raw_data_item_array_match _) (maybe_cbor_array v);
   intro_implies
     (A.pts_to res.payload full_perm res.footprint `star`
-      raw_data_item_array_match0 res.footprint (maybe_cbor_array v))
+      raw_data_item_array_match res.footprint (maybe_cbor_array v))
     (raw_data_item_match a v)
     emp
     (fun _ ->
@@ -1097,10 +1410,10 @@ let read_cbor_array_payload_invariant
     A.pts_to a1 full_perm s1 `star`
     R.pts_to pa2 full_perm a2 `star`
     A.pts_to a2 full_perm s2 `star`
-    raw_data_item_array_match0 s1 l1 `star`
+    raw_data_item_array_match s1 l1 `star`
     R.pts_to pr full_perm r `star`
     LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr `star`
-    ((raw_data_item_array_match0 s1 l1 `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr) `implies_`
+    ((raw_data_item_array_match s1 l1 `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr) `implies_`
       LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) l0 vl0) `star`
     R.pts_to pn full_perm n `star`
     pure (
@@ -1123,8 +1436,8 @@ assume val read_cbor_array_payload
     )
     (fun res ->
       A.pts_to a0 full_perm res `star`
-      raw_data_item_array_match0 res vl0.contents `star`
-      (raw_data_item_array_match0 res vl0.contents `implies_`
+      raw_data_item_array_match res vl0.contents `star`
+      (raw_data_item_array_match res vl0.contents `implies_`
         LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v n0) Cbor.parse_raw_data_item) l0 vl0
       )
     )
@@ -1279,169 +1592,33 @@ let read_cbor_array
             (raw_data_item_match input obj);
           let va = read_cbor_array_payload len vl a a0 in
           implies_trans
-            (raw_data_item_array_match0 va vl.contents)
+            (raw_data_item_array_match va vl.contents)
             (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item) a _)
             (raw_data_item_match input obj);
           let res = constr_cbor_array a0 len in
           vpattern_rewrite
-            (fun ar -> raw_data_item_match _ ar `star` (raw_data_item_match _ ar `implies_` (A.pts_to _ _ _ `star` raw_data_item_array_match0 _ _)))
+            (fun ar -> raw_data_item_match _ ar `star` (raw_data_item_match _ ar `implies_` (A.pts_to _ _ _ `star` raw_data_item_array_match _ _)))
             obj;
           intro_implies
-            (A.pts_to a0 full_perm va `star` raw_data_item_array_match0 va vl.contents)
-            (raw_data_item_array_match0 va vl.contents `star` read_cbor_array_post input res)
+            (A.pts_to a0 full_perm va `star` raw_data_item_array_match va vl.contents)
+            (raw_data_item_array_match va vl.contents `star` read_cbor_array_post input res)
             emp
             (fun _ ->
               vpattern_rewrite (fun a0 -> A.pts_to a0 _ _) (CBOR_Case_Array?._0 res).payload;
               rewrite (read_cbor_array_post_success (CBOR_Case_Array?._0 res)) (read_cbor_array_post input res)
             );
           implies_reg_r
-            (raw_data_item_array_match0 va vl.contents)
+            (raw_data_item_array_match va vl.contents)
             (raw_data_item_match input obj)
             (read_cbor_array_post input res);
           implies_trans
             (raw_data_item_match res obj)
-            (A.pts_to a0 full_perm va `star` raw_data_item_array_match0 va vl.contents)
-            (raw_data_item_array_match0 va vl.contents `star` read_cbor_array_post input res);
+            (A.pts_to a0 full_perm va `star` raw_data_item_array_match va vl.contents)
+            (raw_data_item_array_match va vl.contents `star` read_cbor_array_post input res);
           implies_trans
             (raw_data_item_match res obj)
-            (raw_data_item_array_match0 va vl.contents `star` read_cbor_array_post input res)
+            (raw_data_item_array_match va vl.contents `star` read_cbor_array_post input res)
             (raw_data_item_match input obj `star` read_cbor_array_post input res);
           return res
         end
       ))
-
-let raw_data_item_seq_match_item
-  (c: Seq.seq cbor)
-  (l: Seq.seq (option Cbor.raw_data_item))
-  (i: nat)
-: Tot vprop
-= if i < Seq.length c && Seq.length c = Seq.length l
-  then
-    match Seq.index l i with
-    | None -> emp
-    | Some v -> raw_data_item_match (Seq.index c i) v
-  else
-    pure (squash False)
-
-let raw_data_item_seq_match_item_tail
-  (c: Seq.seq cbor)
-  (l: Seq.seq (option Cbor.raw_data_item))
-  (delta: nat)
-  (i: nat)
-: Lemma
-  (requires (
-    Seq.length c == Seq.length l /\
-    i + delta <= Seq.length c
-  ))
-  (ensures (
-    raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i ==
-      raw_data_item_seq_match_item c l (i + delta)
-  ))
-= ()
-
-let raw_data_item_seq_match
-  (c: Seq.seq cbor)
-  (l: Seq.seq (option Cbor.raw_data_item))
-  (i j: nat)
-: Tot vprop
-= if Seq.length c = Seq.length l && j <= Seq.length c
-  then on_range (raw_data_item_seq_match_item c l) i j
-  else pure (squash False)
-
-let raw_data_item_seq_match_tail_elim
-  (#opened: _)
-  (c: Seq.seq cbor)
-  (l: Seq.seq (option Cbor.raw_data_item))
-  (delta: nat {
-    delta <= Seq.length c /\
-    delta <= Seq.length l
-  })
-  (i j: nat)
-: STGhostT unit opened
-    (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i j)
-    (fun _ -> raw_data_item_seq_match c l (i + delta) (j + delta))
-= if Seq.length c = Seq.length l && j <= Seq.length c - delta
-  then begin
-    rewrite
-      (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i j)
-      (on_range (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l))) i j);
-    on_range_le
-      (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)))
-      i j;
-    on_range_weaken_and_shift
-      (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)))
-      (raw_data_item_seq_match_item c l)
-      delta
-      i j
-      (fun k ->
-        raw_data_item_seq_match_item_tail c l delta k;
-        rewrite
-          (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) k)
-          (raw_data_item_seq_match_item c l (k + delta))
-      )
-      (i + delta) (j + delta);
-    rewrite
-      (on_range (raw_data_item_seq_match_item c l) (i + delta) (j + delta))
-      (raw_data_item_seq_match c l (i + delta) (j + delta))
-  end else begin
-    rewrite
-      (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) i j)
-      (pure (squash False));
-    let _ = gen_elim () in
-    rewrite
-      emp
-      (raw_data_item_seq_match c l (i + delta) (j + delta)) // by contradiction
-  end
-
-let raw_data_item_seq_match_tail_intro
-  (#opened: _)
-  (c: Seq.seq cbor)
-  (l: Seq.seq (option Cbor.raw_data_item))
-  (delta: nat {
-    delta <= Seq.length c /\
-    delta <= Seq.length l
-  })
-  (i: nat {
-    delta <= i
-  })
-  (j: nat)
-: STGhostT (squash (i <= j)) opened
-    (raw_data_item_seq_match c l i j)
-    (fun _ -> raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (i - delta) (j - delta))
-= if Seq.length c = Seq.length l && j <= Seq.length c
-  then begin
-    rewrite
-      (raw_data_item_seq_match c l i j)
-      (on_range (raw_data_item_seq_match_item c l) i j);
-    on_range_le
-      (raw_data_item_seq_match_item c l)
-      i j;
-    let res : squash (i <= j) = () in
-    on_range_weaken_and_shift
-      (raw_data_item_seq_match_item c l)
-      (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)))
-      (0 - delta)
-      i j
-      (fun k ->
-        raw_data_item_seq_match_item_tail c l delta (k - delta);
-        rewrite
-          (raw_data_item_seq_match_item c l k)
-          (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (k + (0 - delta)))
-      )
-      (i - delta) (j - delta);
-    rewrite
-      (on_range (raw_data_item_seq_match_item (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l))) (i - delta) (j - delta))
-      (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (i - delta) (j - delta));
-    res
-  end else begin
-    rewrite
-      (raw_data_item_seq_match c l i j)
-      (pure (squash False));
-    let _ = gen_elim () in
-    let res : squash (i <= j) = () in
-    rewrite
-      emp
-      (raw_data_item_seq_match (Seq.slice c delta (Seq.length c)) (Seq.slice l delta (Seq.length l)) (i - delta) (j - delta)); // by contradiction
-    res
-  end
-
