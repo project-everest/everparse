@@ -1134,7 +1134,10 @@ let do_diff_test (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 
   if None? args
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
   let args = Some?.v args in
-  if List.assoc name2 prog <> Some args
+  let args2 = List.assoc name2 prog in
+  if None? args2
+  then failwith (Printf.sprintf "do_diff_test: parser %s not found" name2);
+  if args2 <> Some args
   then failwith (Printf.sprintf "do_diff_test: parsers %s and %s do not have the same arg types" name1 name2);
   let nargs = count_args args in
   let modul1, wrapper_name1 = module_and_wrapper_name name1 in
