@@ -1398,31 +1398,34 @@ let constr_cbor_string
     (LPA.arrayptr a va);
   return c'
 
+module GR = Steel.ST.GhostReference
+
 let read_cbor_array_payload_invariant
+  (n0: U64.t)
   (vl0: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
   (l0: LPS.byte_array)
   (a0: A.array cbor)
   (pn: R.ref U64.t)
-  (pa2: R.ref (A.array cbor))
+  (pl1: GR.ref (list Cbor.raw_data_item))
   (pr: R.ref LPS.byte_array)
+  (cont: bool)
 : Tot vprop
-= exists_ (fun a1 -> exists_ (fun a2 -> exists_ (fun s1 -> exists_ (fun s2 -> exists_ (fun l1 -> exists_ (fun r -> exists_ (fun vr -> exists_ (fun n ->
-    A.pts_to a1 full_perm s1 `star`
-    R.pts_to pa2 full_perm a2 `star`
-    A.pts_to a2 full_perm s2 `star`
-    raw_data_item_array_match s1 l1 `star`
-    R.pts_to pr full_perm r `star`
-    LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr `star`
-    ((raw_data_item_array_match s1 l1 `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr) `implies_`
-      LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) l0 vl0) `star`
+= exists_ (fun s -> exists_ (fun l1 -> exists_ (fun r -> exists_ (fun vr -> exists_ (fun n ->
+    A.pts_to a0 full_perm s `star`
+    GR.pts_to pl1 full_perm l1 `star`
     R.pts_to pn full_perm n `star`
+    R.pts_to pr full_perm r `star`
+    seq_seq_match raw_data_item_match s (Seq.seq_of_list vl0.contents) 0 (U64.v n) `star`
+    LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr `star`
+    ((seq_seq_match raw_data_item_match s (Seq.seq_of_list vl0.contents) 0 (U64.v n) `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr) `implies_`
+      LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) l0 vl0) `star`
     pure (
-      A.adjacent a1 a2 /\
-      A.merge_into a1 a2 a0 /\
-      U64.v n == List.Tot.length vr.LPS.contents /\
-      U64.v n == Seq.length s2 /\
-      List.Tot.append l1 vr.LPS.contents == vl0.LPS.contents
-  )))))))))
+      U64.v n0 == List.Tot.length vl0.contents /\
+      U64.v n == List.Tot.length l1 /\
+      Seq.length s == U64.v n0 /\
+      List.Tot.append l1 vr.LPS.contents == vl0.LPS.contents /\
+      (cont == (U64.v n < U64.v n0))
+  ))))))
 
 assume val read_cbor_array_payload
   (n0: U64.t)
