@@ -556,6 +556,42 @@ let seq_seq_match_weaken
        rewrite (p' _ _) (seq_seq_match_item p' c1' c2' k)
     )
 
+let seq_seq_match_weaken_with_implies
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (c1 c1': Seq.seq t1)
+  (c2 c2': Seq.seq t2)
+  (i j: nat)
+: STGhost unit opened
+    (seq_seq_match p c1 c2 i j)
+    (fun _ -> seq_seq_match p c1' c2' i j `star`
+      (seq_seq_match p c1' c2' i j `implies_` seq_seq_match p c1 c2 i j)
+    )
+    (i <= j /\ (i == j \/ (
+      j <= Seq.length c1 /\ j <= Seq.length c2 /\
+      j <= Seq.length c1' /\ j <= Seq.length c2' /\
+      Seq.slice c1 i j `Seq.equal` Seq.slice c1' i j /\
+      Seq.slice c2 i j `Seq.equal` Seq.slice c2' i j
+    )))
+    (fun _ -> True)
+= seq_seq_match_weaken
+    p p (fun _ _ -> noop ())
+    c1 c1'
+    c2 c2'
+    i j;
+  intro_implies
+    (seq_seq_match p c1' c2' i j)
+    (seq_seq_match p c1 c2 i j)
+    emp
+    (fun _ ->
+      seq_seq_match_weaken
+        p p (fun _ _ -> noop ())
+        c1' c1
+        c2' c2
+        i j
+    )
+
 let rec seq_seq_match_seq_list_match
   (#opened: _)
   (#t1 #t2: Type)
