@@ -37,6 +37,10 @@ nswamy, protz, taramana 5-Feb-2020
 typedef const char * EVERPARSE_STRING;
 typedef EVERPARSE_STRING PRIMS_STRING;
 
+#ifndef KRML_HOST_IGNORE
+#  define KRML_HOST_IGNORE(x) (void)(x);
+#endif
+
 #ifndef KRML_HOST_PRINTF
 #  include <stdio.h>
 #  define KRML_HOST_PRINTF printf
