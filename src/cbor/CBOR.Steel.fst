@@ -1436,6 +1436,93 @@ let constr_cbor_string
 
 module GR = Steel.ST.GhostReference
 
+noextract
+unfold
+let read_cbor_array_payload_invariant_prop0
+  (n0: U64.t)
+  (vl0: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (cont: bool)
+  (s: Seq.seq cbor)
+  (l1: list Cbor.raw_data_item)
+  (vr: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (n: U64.t)
+  (n': nat)
+: Tot prop
+=
+      SZ.fits_u64 /\
+      U64.v n0 == List.Tot.length vl0.contents /\
+      U64.v n == List.Tot.length l1 /\
+      Seq.length s == U64.v n0 /\
+      List.Tot.append l1 vr.LPS.contents == vl0.LPS.contents /\
+      n' == U64.v n /\
+      (cont == true <==> (U64.v n < U64.v n0))
+
+noextract
+let read_cbor_array_payload_invariant_prop
+  (n0: U64.t)
+  (vl0: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (cont: bool)
+  (s: Seq.seq cbor)
+  (l1: list Cbor.raw_data_item)
+  (vr: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (n: U64.t)
+  (n': nat)
+: Tot prop
+= read_cbor_array_payload_invariant_prop0 n0 vl0 cont s l1 vr n n'
+
+[@@__reduce__]
+let read_cbor_array_payload_invariant_body0
+  (n0: U64.t)
+  (vl0: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (l0: LPS.byte_array)
+  (a0: A.array cbor)
+  (pn: R.ref U64.t)
+  (pl1: GR.ref (list Cbor.raw_data_item))
+  (pr: R.ref LPS.byte_array)
+  (s: Seq.seq cbor)
+  (l1: list Cbor.raw_data_item)
+  (r: LPS.byte_array)
+  (vr: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (n: U64.t)
+  (n': nat)
+: Tot vprop
+=
+    A.pts_to a0 full_perm s `star`
+    GR.pts_to pl1 full_perm l1 `star`
+    R.pts_to pn full_perm n `star`
+    R.pts_to pr full_perm r `star`
+    seq_seq_match raw_data_item_match s (Seq.seq_of_list vl0.contents) 0 n' `star`
+    LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr `star`
+    ((seq_seq_match raw_data_item_match s (Seq.seq_of_list vl0.contents) 0 n' `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr) `implies_`
+      LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) l0 vl0)
+
+[@@erasable]
+noeq
+type read_cbor_array_payload_invariant_t = {
+  s: Seq.seq cbor;
+  l1: list Cbor.raw_data_item;
+  r: LPS.byte_array;
+  vr: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item);
+  n: U64.t;
+  n': nat;
+}
+
+[@@__reduce__]
+let read_cbor_array_payload_invariant0
+  (n0: U64.t)
+  (vl0: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (l0: LPS.byte_array)
+  (a0: A.array cbor)
+  (pn: R.ref U64.t)
+  (pl1: GR.ref (list Cbor.raw_data_item))
+  (pr: R.ref LPS.byte_array)
+  (cont: bool)
+: Tot vprop
+= exists_ (fun w ->
+    read_cbor_array_payload_invariant_body0 n0 vl0 l0 a0 pn pl1 pr w.s w.l1 w.r w.vr w.n w.n' `star`
+    pure (read_cbor_array_payload_invariant_prop n0 vl0 cont w.s w.l1 w.vr w.n w.n')
+  )
+
 let read_cbor_array_payload_invariant
   (n0: U64.t)
   (vl0: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
@@ -1446,22 +1533,224 @@ let read_cbor_array_payload_invariant
   (pr: R.ref LPS.byte_array)
   (cont: bool)
 : Tot vprop
-= exists_ (fun s -> exists_ (fun l1 -> exists_ (fun r -> exists_ (fun vr -> exists_ (fun n ->
-    A.pts_to a0 full_perm s `star`
-    GR.pts_to pl1 full_perm l1 `star`
-    R.pts_to pn full_perm n `star`
-    R.pts_to pr full_perm r `star`
-    seq_seq_match raw_data_item_match s (Seq.seq_of_list vl0.contents) 0 (U64.v n) `star`
-    LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr `star`
-    ((seq_seq_match raw_data_item_match s (Seq.seq_of_list vl0.contents) 0 (U64.v n) `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r vr) `implies_`
-      LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) l0 vl0) `star`
-    pure (
-      U64.v n0 == List.Tot.length vl0.contents /\
-      U64.v n == List.Tot.length l1 /\
-      Seq.length s == U64.v n0 /\
-      List.Tot.append l1 vr.LPS.contents == vl0.LPS.contents /\
-      (cont == (U64.v n < U64.v n0))
-  ))))))
+= read_cbor_array_payload_invariant0 n0 vl0 l0 a0 pn pl1 pr cont
+
+[@@__reduce__]
+let intro_read_cbor_array_payload_invariant
+  (#opened: _)
+  (n0: U64.t)
+  (vl0: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (l0: LPS.byte_array)
+  (a0: A.array cbor)
+  (pn: R.ref U64.t)
+  (pl1: GR.ref (list Cbor.raw_data_item))
+  (pr: R.ref LPS.byte_array)
+  (cont: bool)
+  (s: Seq.seq cbor)
+  (l1: list Cbor.raw_data_item)
+  (r: LPS.byte_array)
+  (vr: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (n: U64.t)
+  (n': nat)
+: STGhost unit opened
+    (read_cbor_array_payload_invariant_body0 n0 vl0 l0 a0 pn pl1 pr s l1 r vr n n')
+    (fun _ -> read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr cont)
+    (read_cbor_array_payload_invariant_prop0 n0 vl0 cont s l1 vr n n')
+    (fun _ -> True)
+= let w : read_cbor_array_payload_invariant_t = {
+    s = s;
+    l1 = l1;
+    r = r;
+    vr = vr;
+    n = n;
+    n' = n';
+  }
+  in
+  rewrite
+    (read_cbor_array_payload_invariant_body0 n0 vl0 l0 a0 pn pl1 pr s l1 r vr n n')
+    (read_cbor_array_payload_invariant_body0 n0 vl0 l0 a0 pn pl1 pr w.s w.l1 w.r w.vr w.n w.n');
+  rewrite
+    (read_cbor_array_payload_invariant0 n0 vl0 l0 a0 pn pl1 pr cont)  
+    (read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr cont)  
+
+let elim_read_cbor_array_payload_invariant
+  (#opened: _)
+  (n0: U64.t)
+  (vl0: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (l0: LPS.byte_array)
+  (a0: A.array cbor)
+  (pn: R.ref U64.t)
+  (pl1: GR.ref (list Cbor.raw_data_item))
+  (pr: R.ref LPS.byte_array)
+  (cont: bool)
+: STGhost read_cbor_array_payload_invariant_t opened
+    (read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr cont)
+    (fun w -> read_cbor_array_payload_invariant_body0 n0 vl0 l0 a0 pn pl1 pr w.s w.l1 w.r w.vr w.n w.n')
+    True
+    (fun w -> read_cbor_array_payload_invariant_prop n0 vl0 cont w.s w.l1 w.vr w.n w.n')
+= rewrite
+    (read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr cont)
+    (read_cbor_array_payload_invariant0 n0 vl0 l0 a0 pn pl1 pr cont);
+  let _ = gen_elim () in
+  vpattern_replace (fun w -> read_cbor_array_payload_invariant_body0 n0 vl0 l0 a0 pn pl1 pr w.s w.l1 w.r w.vr w.n w.n')
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+inline_for_extraction
+let list_elim_cons_with_implies_and_size
+  (#k: Ghost.erased LPS.parser_kind)
+  (#t: Type0)
+  (#p: LPS.parser k t)
+  (j: LPS.jumper p)
+  (#va: _)
+  (a: LPS.byte_array)
+  (#dummy_sz: Ghost.erased SZ.t)
+  (psz: R.ref SZ.t)
+  (sq: squash (Cons? va.LPS.contents))
+: ST LPS.byte_array
+    (LPS.aparse (LowParse.Spec.List.parse_list p) a va `star` R.pts_to psz full_perm dummy_sz)
+    (fun a2 -> exists_ (fun va1 -> exists_ (fun va2 -> exists_ (fun sz ->
+      LPS.aparse p a va1 `star`
+      LPS.aparse (LowParse.Spec.List.parse_list p) a2 va2 `star`
+      R.pts_to psz full_perm sz `star`
+      ((LPS.aparse p a va1 `star` LPS.aparse (LowParse.Spec.List.parse_list p) a2 va2) `implies_`
+        LPS.aparse (LowParse.Spec.List.parse_list p) a va) `star`
+      pure (
+        sz == LPA.len (LPS.array_of va1) /\
+        va.contents == va1.LPS.contents :: va2.LPS.contents
+    )))))
+    (k.LPS.parser_kind_subkind == Some LPS.ParserStrong)
+    (fun _ -> True)
+= let ga2 = LowParse.SteelST.List.Base.ghost_elim_cons p a in
+  let _ = gen_elim () in
+  let sz = LPS.get_parsed_size j a in
+  R.write psz sz;
+  let a2 = LPS.hop_aparse_aparse_with_size _ _ a sz ga2 in
+  intro_implies
+    (LPS.aparse p a _ `star` LPS.aparse (LowParse.Spec.List.parse_list p) a2 _)
+    (LPS.aparse (LowParse.Spec.List.parse_list p) a va)
+    emp
+    (fun _ ->
+      let _ = LowParse.SteelST.List.Base.intro_cons p a a2 in
+      vpattern_rewrite (LPS.aparse (LowParse.Spec.List.parse_list p) a) va
+    );
+  return a2
+
+#pop-options
+
+let list_append_length_lt
+  (#t: Type)
+  (l0: list t)
+  (n0: U64.t)
+  (sq0': squash (U64.v n0 == List.Tot.length l0))
+  (l1: list t)
+  (n: U64.t)
+  (sq1': squash (U64.v n == List.Tot.length l1))
+  (l2: list t)
+  (sq0: squash (l1 `List.Tot.append` l2 == l0))
+  (sq1: squash (U64.v n < U64.v n0))
+: Tot (squash (Cons? l2))
+= List.Tot.append_length l1 l2
+
+let implies_trans_cut
+  (#opened: _)
+  (p q1 q2 r2 r3: vprop)
+: STGhostT unit opened
+    ((p @==> (q1 `star` q2)) `star` ((q2 `star` r2) @==> r3))
+    (fun _ -> (p `star` r2) @==> (q1 `star` r3))
+= implies_with_tactic ((q1 `star` q2) `star` r2) (q1 `star` (q2 `star` r2));
+  implies_reg_r p (q1 `star` q2) r2;
+  implies_trans (p `star` r2) ((q1 `star` q2) `star` r2) (q1 `star` (q2 `star` r2));
+  implies_reg_l q1 (q2 `star` r2) r3;
+  implies_trans (p `star` r2) (q1 `star` (q2 `star` r2)) (q1 `star` r3)
+
+#push-options "--split_queries always --z3cliopt smt.arith.nl=false --z3rlimit 64"
+#restart-solver
+
+inline_for_extraction noextract let
+read_cbor_array_payload_body
+  (n0: U64.t)
+  (vl0: LPS.v LowParse.Spec.List.parse_list_kind (list Cbor.raw_data_item))
+  (l0: LPS.byte_array)
+  (a0: A.array cbor)
+  (pn: R.ref U64.t)
+  (pl1: GR.ref (list Cbor.raw_data_item))
+  (pr: R.ref LPS.byte_array)
+: STT unit
+    (read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr true)
+    (fun _ -> exists_ (read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr))
+= let w = elim_read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr true in // +6
+  A.pts_to_length a0 _;
+  let vr_cons: squash (Cons? w.vr.LPS.contents) = list_append_length_lt vl0.LPS.contents n0 () w.l1 w.n () w.vr.LPS.contents () () in
+  let r = R.read pr in
+  vpattern_rewrite_with_implies (fun r -> LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r _) r; // +5
+  R.with_local 0sz (fun psz ->
+    let r' = list_elim_cons_with_implies_and_size Cbor.jump_raw_data_item r psz vr_cons in // +4
+    let _ = gen_elim () in
+    let v1 = vpattern (LPS.aparse Cbor.parse_raw_data_item r) in
+    let vr' = vpattern (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) r') in
+    List.Tot.append_assoc w.l1 [v1.LPS.contents] vr'.LPS.contents;
+    List.Tot.append_length w.l1 [v1.LPS.contents];
+    list_index_append_cons w.l1 v1.LPS.contents vr'.LPS.contents;
+    let l1' = Ghost.hide (w.l1 `List.Tot.append` [v1.LPS.contents]) in
+    noop ();
+    GR.write pl1 l1';
+    R.write pr r';
+    let n = R.read pn in
+    let n_as_sz = SZ.uint64_to_sizet n in
+    let n' = n `U64.add` 1uL in
+    let n'_as_nat : Ghost.erased nat = U64.v n' in
+    R.write pn n';
+    let sz = R.read psz in
+    let c = read_valid_cbor_from_buffer_with_size_strong r sz in // +3
+    A.upd a0 n_as_sz c;
+    let s' = vpattern_replace_erased (A.pts_to a0 full_perm) in
+    seq_seq_match_weaken_with_implies // +2
+      raw_data_item_match _ s' _ (Seq.seq_of_list vl0.LPS.contents) _ _;
+    rewrite_with_implies // +1
+      (raw_data_item_match c _)
+      (seq_seq_match_item raw_data_item_match s' (Seq.seq_of_list vl0.LPS.contents) (U64.v n));
+    on_range_snoc_with_implies // +0
+      (seq_seq_match_item raw_data_item_match s' (Seq.seq_of_list vl0.LPS.contents))
+      _ _ (U64.v n) n'_as_nat;
+    (* BEGIN FIXME: this should be automated away *)
+    implies_trans_r2 // -0 -1
+      (seq_seq_match raw_data_item_match s' (Seq.seq_of_list vl0.LPS.contents) 0 n'_as_nat)
+      (seq_seq_match raw_data_item_match _ _ _ _)
+      (seq_seq_match_item raw_data_item_match _ _ _)
+      (raw_data_item_match c _);
+    implies_trans_l2 // -2
+      (seq_seq_match raw_data_item_match s' (Seq.seq_of_list vl0.LPS.contents) 0 n'_as_nat)
+      (seq_seq_match raw_data_item_match _ _ _ _)
+      (raw_data_item_match c _)
+      (seq_seq_match raw_data_item_match _ _ _ _);
+    implies_trans_r2 // -3
+      (seq_seq_match raw_data_item_match s' (Seq.seq_of_list vl0.LPS.contents) 0 n'_as_nat)
+      (seq_seq_match raw_data_item_match _ _ _ _)
+      (raw_data_item_match c _)
+      (LPS.aparse Cbor.parse_raw_data_item _ _);
+    implies_trans_cut // -4
+      (seq_seq_match raw_data_item_match s' (Seq.seq_of_list vl0.LPS.contents) 0 n'_as_nat) // p
+      (seq_seq_match raw_data_item_match _ _ _ _) // q1
+      (LPS.aparse Cbor.parse_raw_data_item _ _) // q2
+      (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _) // r2
+      (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _); // r3
+    implies_trans_r2 // -5
+      (seq_seq_match raw_data_item_match s' (Seq.seq_of_list vl0.LPS.contents) 0 n'_as_nat `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _)
+      (seq_seq_match raw_data_item_match _ _ _ _)
+      (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _)
+      (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _);
+    implies_trans // -6
+      (seq_seq_match raw_data_item_match s' (Seq.seq_of_list vl0.LPS.contents) 0 n'_as_nat `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _)
+      (seq_seq_match raw_data_item_match _ _ _ _ `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _)
+      (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _);
+    (* END FIXME *)
+    intro_read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr (n' `U64.lt` n0) _ _ _ _ _ _;
+    return ()
+  )
+
+#pop-options
 
 assume val read_cbor_array_payload
   (n0: U64.t)
