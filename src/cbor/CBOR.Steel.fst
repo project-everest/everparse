@@ -684,6 +684,42 @@ let rec seq_list_match_seq_seq_match
       (seq_seq_match_item p _ _)
       0 1 (List.Tot.length l)
 
+let seq_seq_match_seq_list_match_with_implies
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: list t2)
+: STGhost unit opened
+    (seq_seq_match p c (Seq.seq_of_list l) 0 (List.Tot.length l))
+    (fun _ -> seq_list_match c l p `star` (seq_list_match c l p `implies_` seq_seq_match p c (Seq.seq_of_list l) 0 (List.Tot.length l)))
+    (Seq.length c == List.Tot.length l)
+    (fun _ -> True)
+= seq_seq_match_seq_list_match p c l;
+  intro_implies
+    (seq_list_match c l p)
+    (seq_seq_match p c (Seq.seq_of_list l) 0 (List.Tot.length l))
+    emp
+    (fun _ -> seq_list_match_seq_seq_match p c l)
+
+let seq_list_match_seq_seq_match_with_implies
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: list t2)
+: STGhost unit opened
+    (seq_list_match c l p)
+    (fun _ -> seq_seq_match p c (Seq.seq_of_list l) 0 (List.Tot.length l) `star` (seq_seq_match p c (Seq.seq_of_list l) 0 (List.Tot.length l) `implies_` seq_list_match c l p))
+    True
+    (fun _ -> Seq.length c == List.Tot.length l)
+= seq_list_match_seq_seq_match p c l;
+  intro_implies
+    (seq_seq_match p c (Seq.seq_of_list l) 0 (List.Tot.length l))
+    (seq_list_match c l p)
+    emp
+    (fun _ -> seq_seq_match_seq_list_match p c l)
+
 let seq_map (#t1 #t2: Type) (f: t1 -> t2) (s: Seq.seq t1) : Tot (Seq.seq t2) =
   Seq.init (Seq.length s) (fun i -> f (Seq.index s i))
 
@@ -1677,6 +1713,7 @@ read_cbor_array_payload_body
   (pn: R.ref U64.t)
   (pl1: GR.ref (list Cbor.raw_data_item))
   (pr: R.ref LPS.byte_array)
+  (_: unit)
 : STT unit
     (read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr true)
     (fun _ -> exists_ (read_cbor_array_payload_invariant n0 vl0 l0 a0 pn pl1 pr))
@@ -1752,13 +1789,26 @@ read_cbor_array_payload_body
 
 #pop-options
 
-assume val read_cbor_array_payload
+let rewrite_with_implies_with_tactic
+  (#opened: _)
+  (p q: vprop)
+: STGhost unit opened
+    p
+    (fun _ -> q `star` (q @==> p))
+    (requires FStar.Tactics.with_tactic init_resolve_tac (squash (p `equiv` q)))
+    (fun _ -> True)
+= rewrite_equiv p q;
+  intro_implies q p emp (fun _ ->
+    rewrite_equiv q p
+  )
+
+let read_cbor_array_payload
   (n0: U64.t)
   (vl0: LPS.v (LowParse.Spec.VCList.parse_nlist_kind (U64.v n0) Cbor.parse_raw_data_item_kind) (LowParse.Spec.VCList.nlist (U64.v n0) Cbor.raw_data_item))
   (l0: LPS.byte_array)
   (#va0: Ghost.erased (Seq.seq cbor))
   (a0: A.array cbor)
-: STT (Ghost.erased (Seq.seq cbor))
+: ST (Ghost.erased (Seq.seq cbor))
     (A.pts_to a0 full_perm va0 `star`
       LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v n0) Cbor.parse_raw_data_item) l0 vl0
     )
@@ -1769,6 +1819,70 @@ assume val read_cbor_array_payload
         LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v n0) Cbor.parse_raw_data_item) l0 vl0
       )
     )
+    (A.length a0 == U64.v n0)
+    (fun _ -> True)
+= A.pts_to_length a0 _;
+  let _ = A.intro_fits_u64 () in
+  let vl = LowParse.SteelST.VCList.aparse_nlist_aparse_list_with_implies Cbor.parse_raw_data_item (U64.v n0) l0 in
+  on_range_empty
+    (seq_seq_match_item raw_data_item_match va0 (Seq.seq_of_list vl.contents))
+    0 0;
+  intro_implies
+    (seq_seq_match raw_data_item_match va0 (Seq.seq_of_list vl.contents) 0 0 `star`
+      LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) l0 vl)
+    (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) l0 vl)
+    emp
+    (fun _ -> drop (seq_seq_match raw_data_item_match _ _ _ _));
+  R.with_local 0uL (fun pn ->
+  GR.with_local [] (fun (pl1: GR.ref (list Cbor.raw_data_item)) ->
+  R.with_local l0 (fun pr ->
+    intro_read_cbor_array_payload_invariant n0 vl l0 a0 pn pl1 pr (0uL `U64.lt` n0) _ _ _ _ _ _;
+    Steel.ST.Loops.while_loop
+      (read_cbor_array_payload_invariant n0 vl l0 a0 pn pl1 pr)
+      (fun _ ->
+        let gcont = elim_exists () in
+        let _ = elim_read_cbor_array_payload_invariant n0 vl l0 a0 pn pl1 pr gcont in
+        let n = R.read pn in
+        [@@inline_let]
+        let cont = n `U64.lt` n0 in
+        intro_read_cbor_array_payload_invariant n0 vl l0 a0 pn pl1 pr cont _ _ _ _ _ _;
+        return cont
+      )
+      (read_cbor_array_payload_body n0 vl l0 a0 pn pl1 pr);
+    let w = elim_read_cbor_array_payload_invariant n0 vl l0 a0 pn pl1 pr false in
+    List.Tot.append_length w.l1 w.vr.contents;
+    assert (Nil? w.vr.contents);
+    List.Tot.append_l_nil w.l1;
+    A.pts_to_length a0 _;
+    rewrite_with_implies
+      (seq_seq_match raw_data_item_match _ _ _ _)
+      (seq_seq_match raw_data_item_match w.s (Seq.seq_of_list vl0.contents) 0 (List.Tot.length vl0.contents));
+    seq_seq_match_seq_list_match_with_implies raw_data_item_match _ vl0.contents;
+    implies_trans
+      (seq_list_match w.s _ raw_data_item_match)
+      (seq_seq_match raw_data_item_match _ _ _ _)
+      (seq_seq_match raw_data_item_match _ _ _ _);
+    rewrite_with_implies_with_tactic
+      (seq_list_match w.s _ raw_data_item_match)
+      (raw_data_item_array_match w.s vl0.contents);
+    implies_trans
+      (raw_data_item_array_match w.s vl0.contents)
+      (seq_list_match w.s _ raw_data_item_match)
+      (seq_seq_match raw_data_item_match _ _ _ _);
+    implies_concl_r
+      (raw_data_item_array_match w.s vl0.contents)
+      (seq_seq_match raw_data_item_match _ _ _ _)
+      (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _);
+    implies_trans
+      (raw_data_item_array_match w.s vl0.contents)
+      (seq_seq_match raw_data_item_match _ _ _ _ `star` LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _)
+      (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _);
+    implies_trans
+      (raw_data_item_array_match w.s vl0.contents)
+      (LPS.aparse (LowParse.Spec.List.parse_list Cbor.parse_raw_data_item) _ _)
+      (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v n0) Cbor.parse_raw_data_item) l0 vl0);
+    return (Ghost.hide w.s)
+  )))
 
 [@@__reduce__]
 let read_cbor_array_post_success
