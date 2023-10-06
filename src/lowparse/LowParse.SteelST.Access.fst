@@ -223,6 +223,33 @@ let hop_aparse_aparse_with_implies
     (fun _ -> vpattern_rewrite (fun res -> aparse _ res _) a2);
   return res
 
+inline_for_extraction
+let hop_aparse_aparse_with_size_with_implies
+  (#k1: Ghost.erased parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind)
+  (#t2: _)
+  (p2: parser k2 t2)
+  (#va1: _)
+  (#va2: _)
+  (a1: byte_array)
+  (sz: SZ.t)
+  (a2: Ghost.erased byte_array)
+: ST byte_array
+    (aparse p1 a1 va1 `star` aparse p2 a2 va2)
+    (fun res -> aparse p1 a1 va1 `star` aparse p2 res va2 `star` (aparse p2 res va2 `implies_` aparse p2 a2 va2))
+    (AP.adjacent (array_of va1) (array_of va2) /\
+      SZ.v sz == AP.length (array_of va1))
+    (fun res -> res == Ghost.reveal a2)
+= let res = hop_aparse_aparse_with_size p1 p2 a1 sz a2 in
+  intro_implies
+    (aparse p2 res va2)
+    (aparse p2 a2 va2)
+    emp
+    (fun _ -> vpattern_rewrite (fun res -> aparse _ res _) a2);
+  return res
+
 let parse'
   (#a: Type)
   (#k: parser_kind)

@@ -81,6 +81,28 @@ val ghost_elim_cons
     (Cons? va.contents /\ k.parser_kind_subkind == Some ParserStrong)
     (fun _ -> True)
 
+val ghost_elim_cons_with_implies
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (#va: _)
+  (a: byte_array)
+: STGhost (Ghost.erased byte_array) opened
+    (aparse (parse_list p) a va)
+    (fun a2 -> exists_ (fun va1 -> exists_ (fun va2 ->
+      aparse p a va1 `star`
+      aparse (parse_list p) a2 va2 `star`
+      ((aparse p a va1 `star`
+      aparse (parse_list p) a2 va2) `implies_` aparse (parse_list p) a va) `star`
+      pure (
+      AP.merge_into (array_of va1) (array_of va2) (array_of va) /\
+      va.contents == va1.contents :: va2.contents /\
+      AP.length (array_of va1) > 0
+    ))))
+    (Cons? va.contents /\ k.parser_kind_subkind == Some ParserStrong)
+    (fun _ -> True)
+
 inline_for_extraction
 val elim_cons
   (#k: Ghost.erased parser_kind)

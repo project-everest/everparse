@@ -82,6 +82,21 @@ let ghost_elim_cons
 
 #push-options "--z3rlimit 16"
 
+let ghost_elim_cons_with_implies
+  #opened #k #t p #va a
+= let a2 = ghost_elim_cons p a in
+  let _ = gen_elim () in
+  intro_implies
+    (aparse p a _ `star` aparse (parse_list p) a2 _)
+    (aparse (parse_list p) a va)
+    emp
+    (fun _ ->
+      let _ = intro_cons p a a2 in
+      vpattern_rewrite (aparse (parse_list p) a) va
+    );
+  noop ();
+  a2
+
 inline_for_extraction
 let elim_cons
   (#k: Ghost.erased parser_kind)
