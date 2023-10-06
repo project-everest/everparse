@@ -46,6 +46,32 @@ let aparse_list_aparse_nlist
   parse_list_parse_nlist p (AP.contents_of b);
   intro_aparse _ a
 
+let aparse_nlist_aparse_list_with_implies
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: nat)
+  (#va: v (parse_nlist_kind n k) (nlist n t))
+  (a: byte_array)
+: STGhost (v parse_list_kind (list t)) opened
+    (aparse (parse_nlist n p) a va)
+    (fun va' -> aparse (parse_list p) a va' `star` (aparse (parse_list p) a va' `implies_` aparse (parse_nlist n p) a va))
+    (k.parser_kind_low > 0)
+    (fun va' ->
+      va'.contents == (va.contents <: list t)
+    )
+= let va' = aparse_nlist_aparse_list p n a in
+  intro_implies
+    (aparse (parse_list p) a va')
+    (aparse (parse_nlist n p) a va)
+    emp
+    (fun _ ->
+      let _ = aparse_list_aparse_nlist p n a in
+      vpattern_rewrite (aparse (parse_nlist n p) a) va
+    );
+  va'
+
 let intro_nlist_nil
   (#opened: _)
   (#k: parser_kind)
