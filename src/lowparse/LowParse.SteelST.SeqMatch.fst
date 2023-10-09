@@ -878,24 +878,6 @@ let list_append_length_lt
 : Tot (squash (Cons? l2))
 = List.Tot.append_length l1 l2
 
-let implies_trans_l1
-  (#opened: _)
-  (p q1 q2 r: vprop)
-: STGhostT unit opened
-    ((p @==> q1) `star` ((q1 `star` q2) @==> r))
-    (fun _ -> (p `star` q2) @==> r)
-= implies_reg_r p q1 q2;
-  implies_trans (p `star` q2) (q1 `star` q2) r
-
-let implies_trans_r1
-  (#opened: _)
-  (q1 p q2 r: vprop)
-: STGhostT unit opened
-    ((p @==> q2) `star` ((q1 `star` q2) @==> r))
-    (fun _ -> (q1 `star` p) @==> r)
-= implies_reg_l q1 p q2;
-  implies_trans (q1 `star` p) (q1 `star` q2) r
-
 let implies_trans_cut
   (#opened: _)
   (p q1 q2 r2 r3: vprop)
