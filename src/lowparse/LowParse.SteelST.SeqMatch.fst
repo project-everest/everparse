@@ -4,10 +4,12 @@ open Steel.ST.OnRange
 open Steel.ST.GenElim
 
 module Seq = FStar.Seq
+module GR = Steel.ST.GhostReference
 module R = Steel.ST.Reference
 module A = Steel.ST.Array
 module AP = LowParse.SteelST.ArrayPtr
 module SZ = FStar.SizeT
+module W = LowParse.SteelST.L2ROutput
 
 (* `seq_list_match` describes how to match a sequence of low-level
 values (the low-level contents of an array) with a list of high-level
@@ -470,6 +472,55 @@ let seq_list_match_seq_seq_match_with_implies
     emp
     (fun _ -> seq_seq_match_seq_list_match p c l)
 
+let seq_list_match_length
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (c: Seq.seq t1)
+  (l: list t2)
+: STGhost unit opened
+    (seq_list_match c l p)
+    (fun _ -> seq_list_match c l p)
+    True
+    (fun _ -> Seq.length c == List.Tot.length l)
+= seq_list_match_seq_seq_match_with_implies p c l;
+  seq_seq_match_length p _ _ _ _;
+  elim_implies
+    (seq_seq_match p _ _ _ _)
+    (seq_list_match c l p)
+
+let seq_list_match_index
+  (#opened: _)
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> vprop)
+  (s1: Seq.seq t1)
+  (s2: list t2)
+  (i: nat)
+: STGhost (squash (i < Seq.length s1 /\ List.Tot.length s2 == Seq.length s1)) opened
+    (seq_list_match s1 s2 p)
+    (fun _ ->
+      p (Seq.index s1 i) (List.Tot.index s2 i) `star`
+      (p (Seq.index s1 i) (List.Tot.index s2 i) `implies_`
+        seq_list_match s1 s2 p)
+    )
+    (i < Seq.length s1 \/ i < List.Tot.length s2)
+    (fun _ -> True)
+= seq_list_match_seq_seq_match_with_implies p s1 s2;
+  let res : squash (i < Seq.length s1 /\ List.Tot.length s2 == Seq.length s1) = () in
+  on_range_focus (seq_seq_match_item p s1 (Seq.seq_of_list s2)) 0 i (List.Tot.length s2);
+  rewrite_with_implies
+    (seq_seq_match_item p _ _ _)
+    (p (Seq.index s1 i) (List.Tot.index s2 i));
+  implies_trans
+    (p (Seq.index s1 i) (List.Tot.index s2 i))
+    (seq_seq_match_item p _ _ _)
+    (seq_seq_match p s1 (Seq.seq_of_list s2) 0 (List.Tot.length s2));
+  implies_trans
+    (p (Seq.index s1 i) (List.Tot.index s2 i))
+    (seq_seq_match p s1 (Seq.seq_of_list s2) 0 (List.Tot.length s2))
+    (seq_list_match s1 s2 p);
+  res
+
 (* Random array access
 
 Since `seq_list_match` is defined recursively on the list of
@@ -681,6 +732,255 @@ let seq_seq_match_item_match_option_index
     (seq_seq_match_item (item_match_option p) s1 (Seq.upd s2 j None))
     i j j (j + 1) k;
   res
+
+(* Computing the serialized list size *)
+
+[@@__reduce__]
+let array_payload_as_list_size_invariant0
+  (#t: Type)
+  (#t': Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (n0: SZ.t)
+  (va: Ghost.erased (Seq.seq t))
+  (vl: Ghost.erased (list t'))
+  (a0: A.array t)
+  (pi: perm)
+  (sz: SZ.t)
+  (perr: R.ref bool)
+  (pl1 pl2: GR.ref (list t'))
+  (pn: R.ref SZ.t)
+  (psz: R.ref SZ.t)
+  (cont: bool)
+: Tot vprop
+= A.pts_to a0 pi va `star`
+  seq_list_match va vl item_match `star`
+  exists_ (fun l1 -> exists_ (fun l2 -> exists_ (fun n -> exists_ (fun err -> exists_ (fun sz' ->
+    GR.pts_to pl1 full_perm l1 `star`
+    GR.pts_to pl2 full_perm l2 `star`
+    R.pts_to pn full_perm n `star`
+    R.pts_to perr full_perm err `star`
+    R.pts_to psz full_perm sz' `star`
+    pure (
+      SZ.v n0 == List.Tot.length vl /\
+      Ghost.reveal vl == l1 `List.Tot.append` l2 /\
+      List.Tot.length l1 == SZ.v n /\
+      SZ.v sz' + Seq.length (serialize (serialize_list _ s) l1) == SZ.v sz /\
+      (err == true ==> Seq.length (serialize (serialize_list _ s) vl) > SZ.v sz) /\
+      (cont == (not err && SZ.v n < SZ.v n0))
+  ))))))
+
+let array_payload_as_list_size_invariant
+  (#t: Type)
+  (#t': Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (n0: SZ.t)
+  (va: Ghost.erased (Seq.seq t))
+  (vl: Ghost.erased (list t'))
+  (a0: A.array t)
+  (pi: perm)
+  (sz: SZ.t)
+  (perr: R.ref bool)
+  (pl1 pl2: GR.ref (list t'))
+  (pn: R.ref SZ.t)
+  (psz: R.ref SZ.t)
+  (cont: bool)
+: Tot vprop
+= array_payload_as_list_size_invariant0 s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz cont
+
+let item_size_post
+  (#t': Type)
+  (#k: parser_kind)
+  (#p: parser k t')
+  (s: serializer p)
+  (y: t')
+  (sz: SZ.t)
+  (err: bool)
+  (res: SZ.t)
+: Tot prop
+=
+  let len = Seq.length (serialize s y) in
+  if err then len > SZ.v sz else SZ.v res + len == SZ.v sz
+
+#push-options "--split_queries always --z3cliopt smt.arith.nl=false --z3rlimit 256"
+#restart-solver
+
+inline_for_extraction
+let array_payload_as_list_size_body
+  (#t: Type0)
+  (#t': Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (size: (
+    (x: t) ->
+    (y: Ghost.erased t') ->
+    (sz: SZ.t) ->
+    (perr: R.ref bool) ->
+    STT SZ.t
+      (R.pts_to perr full_perm false `star` item_match x y)
+      (fun res -> item_match x y `star` exists_ (fun err -> R.pts_to perr full_perm err `star` pure (
+        item_size_post s y sz err res
+      )))
+  ))
+  (n0: SZ.t)
+  (va: Ghost.erased (Seq.seq t))
+  (vl: Ghost.erased (list t'))
+  (a0: A.array t)
+  (pi: perm)
+  (sz: SZ.t)
+  (perr: R.ref bool)
+  (pl1 pl2: GR.ref (list t'))
+  (pn: R.ref SZ.t)
+  (psz: R.ref SZ.t)
+  ()
+: STT unit
+    (array_payload_as_list_size_invariant s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz true)
+    (fun _ -> exists_ (array_payload_as_list_size_invariant s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz))
+= 
+  rewrite
+    (array_payload_as_list_size_invariant s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz true)
+    (array_payload_as_list_size_invariant0 s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz true);
+  let _ = gen_elim () in
+  A.pts_to_length a0 _;
+  seq_list_match_length item_match _ _;
+  let n = R.read pn in
+  [@@inline_let]
+  let n' = SZ.add n 1sz in
+  let l1 = GR.read pl1 in
+  let l2 = GR.read pl2 in
+  List.Tot.append_length l1 l2;
+  serialize_list_append _ s l1 l2;
+  let _ : squash (Cons? l2) = () in
+  list_index_append_cons l1 (List.Tot.hd l2) (List.Tot.tl l2);
+  List.Tot.append_assoc l1 [List.Tot.hd l2] (List.Tot.tl l2);
+  serialize_list_cons _ s (List.Tot.hd l2) (List.Tot.tl l2);
+  serialize_list_singleton _ s (List.Tot.hd l2);
+  serialize_list_append _ s l1 [List.Tot.hd l2];
+  noop ();
+  let x = A.index a0 n in
+  let _ = seq_list_match_index item_match _ _ (SZ.v n) in
+  vpattern_rewrite_with_implies (fun x -> item_match x _) x;
+  implies_trans
+    (item_match _ _)
+    (item_match _ _)
+    (seq_list_match _ _ item_match);
+  vpattern_rewrite (R.pts_to perr full_perm) false;
+  let sz1 = R.read psz in
+  let sz2 = size _ _ sz1 perr in
+  let _ = gen_elim () in
+  elim_implies
+    (item_match x (List.Tot.index vl (SZ.v n)))
+    (seq_list_match va vl item_match);
+  let err = R.read perr in
+  r_write_if (not err) pn n';
+  r_write_if (not err) psz sz2;
+  GR.write pl1 (if err then l1 else l1 `List.Tot.append` [List.Tot.hd l2]);
+  GR.write pl2 (if err then l2 else List.Tot.tl l2);
+  rewrite
+    (array_payload_as_list_size_invariant0 s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz (not err && SZ.v n' < SZ.v n0))
+    (array_payload_as_list_size_invariant s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz (not err && SZ.v n' < SZ.v n0));
+  noop ();
+  return ()
+
+#pop-options
+
+#push-options "--split_queries always --z3cliopt smt.arith.nl=false --z3rlimit 64"
+#restart-solver
+
+inline_for_extraction
+let array_payload_as_list_size
+  (#t: Type)
+  (#t': Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (size: (
+    (x: t) ->
+    (y: Ghost.erased t') ->
+    (sz: SZ.t) ->
+    (perr: R.ref bool) ->
+    STT SZ.t
+      (R.pts_to perr full_perm false `star` item_match x y)
+      (fun res -> item_match x y `star` exists_ (fun err -> R.pts_to perr full_perm err `star` pure (
+        let len = Seq.length (serialize s y) in
+        if err then len > SZ.v sz else SZ.v res + len == SZ.v sz
+      )))
+  ))
+  (n0: SZ.t)
+  (#va: Ghost.erased (Seq.seq t))
+  (#vl: Ghost.erased (list t'))
+  (#pi: perm)
+  (a0: A.array t)
+  (sz: SZ.t)
+  (perr: R.ref bool)
+: ST SZ.t
+    (R.pts_to perr full_perm false `star` A.pts_to a0 pi va `star` seq_list_match va vl item_match)
+    (fun res -> A.pts_to a0 pi va `star` seq_list_match va vl item_match `star` exists_ (fun err -> R.pts_to perr full_perm err `star` pure (
+      let len = Seq.length (serialize (serialize_list p s) vl) in
+      if err then len > SZ.v sz else SZ.v res + len == SZ.v sz
+    )))
+    (SZ.v n0 == A.length a0)
+    (fun _ -> True)
+= A.pts_to_length a0 _;
+  seq_list_match_length item_match _ _;
+  GR.with_local [] (fun (pl1: GR.ref (list t')) ->
+  GR.with_local (Ghost.reveal vl) (fun (pl2: GR.ref (list t')) ->
+  R.with_local 0sz (fun pn ->
+  R.with_local sz (fun psz ->
+    serialize_list_nil _ s;
+    noop ();
+    rewrite
+      (array_payload_as_list_size_invariant0 s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz (0 < SZ.v n0))
+      (array_payload_as_list_size_invariant s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz (0 < SZ.v n0));
+    Steel.ST.Loops.while_loop
+      (array_payload_as_list_size_invariant s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz)
+      (fun _ ->
+        let gcont = elim_exists () in
+        rewrite
+          (array_payload_as_list_size_invariant s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz gcont)
+          (array_payload_as_list_size_invariant0 s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz gcont);
+        let _ = gen_elim () in
+        let n = R.read pn in
+        let err = R.read perr in
+        [@@inline_let]
+        let cont = not err && n `SZ.lt` n0 in
+        noop ();
+        rewrite
+          (array_payload_as_list_size_invariant0 s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz cont)
+          (array_payload_as_list_size_invariant s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz cont);
+        return cont
+      )
+      (array_payload_as_list_size_body s item_match size n0 va vl a0 pi sz perr pl1 pl2 pn psz);
+    rewrite
+      (array_payload_as_list_size_invariant s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz false)
+      (array_payload_as_list_size_invariant0 s item_match n0 va vl a0 pi sz perr pl1 pl2 pn psz false);
+    let _ = gen_elim () in
+    let l1 = GR.read pl1 in
+    let l2 = GR.read pl2 in
+    let sz' = R.read psz in
+    List.Tot.append_length l1 l2;
+    List.Tot.append_l_nil l1;
+    noop ();
+    return sz'
+  ))))
+
+#pop-options
 
 (* Parsing into an array
 
