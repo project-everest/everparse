@@ -72,15 +72,15 @@ noextract
 let write_long_argument
   (b: initial_byte)
   (a: long_argument b)
-: Tot (r2l_writer_for (serialize_long_argument b) a)
+: Tot (maybe_r2l_writer_for (serialize_long_argument b) a)
 = match a with
   | LongArgumentSimpleValue _ _ ->
-    rewrite_r2l_writer
+    rewrite_maybe_r2l_writer
       #_ #(long_argument b)
-      (r2l_write_weaken parse_long_argument_kind
-        (r2l_write_synth'
-          (r2l_write_filter
-            (r2l_write_constant_size write_u8 1sz)
+      (maybe_r2l_write_weaken parse_long_argument_kind
+        (maybe_r2l_write_synth'
+          (maybe_r2l_write_filter
+            (maybe_r2l_write_constant_size write_u8 1sz)
             simple_value_long_argument_wf
           )
           (LongArgumentSimpleValue ())
@@ -92,12 +92,12 @@ let write_long_argument
       (serialize_long_argument b)
       a
   | LongArgumentU8 _ _ ->
-    rewrite_r2l_writer
+    rewrite_maybe_r2l_writer
       #_ #(long_argument b)
-      (r2l_write_weaken parse_long_argument_kind
-        (r2l_write_synth'
-          (r2l_write_filter
-            (r2l_write_constant_size write_u8 1sz)
+      (maybe_r2l_write_weaken parse_long_argument_kind
+        (maybe_r2l_write_synth'
+          (maybe_r2l_write_filter
+            (maybe_r2l_write_constant_size write_u8 1sz)
             uint8_wf
           )
           (LongArgumentU8 ())
@@ -109,12 +109,12 @@ let write_long_argument
       (serialize_long_argument b)
       a
   | LongArgumentU16 _ _ ->
-    rewrite_r2l_writer
+    rewrite_maybe_r2l_writer
       #_ #(long_argument b)
-      (r2l_write_weaken parse_long_argument_kind
-        (r2l_write_synth'
-          (r2l_write_filter
-            (r2l_write_constant_size write_u16 2sz)
+      (maybe_r2l_write_weaken parse_long_argument_kind
+        (maybe_r2l_write_synth'
+          (maybe_r2l_write_filter
+            (maybe_r2l_write_constant_size write_u16 2sz)
             uint16_wf
           )
           (LongArgumentU16 ())
@@ -126,12 +126,12 @@ let write_long_argument
       (serialize_long_argument b)
       a
   | LongArgumentU32 _ _ ->
-    rewrite_r2l_writer
+    rewrite_maybe_r2l_writer
       #_ #(long_argument b)
-      (r2l_write_weaken parse_long_argument_kind
-        (r2l_write_synth'
-          (r2l_write_filter
-            (r2l_write_constant_size write_u32 4sz)
+      (maybe_r2l_write_weaken parse_long_argument_kind
+        (maybe_r2l_write_synth'
+          (maybe_r2l_write_filter
+            (maybe_r2l_write_constant_size write_u32 4sz)
             uint32_wf
           )
           (LongArgumentU32 ())
@@ -143,12 +143,12 @@ let write_long_argument
       (serialize_long_argument b)
       a
   | LongArgumentU64 _ _ ->
-    rewrite_r2l_writer
+    rewrite_maybe_r2l_writer
       #_ #(long_argument b)
-      (r2l_write_weaken parse_long_argument_kind
-        (r2l_write_synth'
-          (r2l_write_filter
-            (r2l_write_constant_size write_u64 8sz)
+      (maybe_r2l_write_weaken parse_long_argument_kind
+        (maybe_r2l_write_synth'
+          (maybe_r2l_write_filter
+            (maybe_r2l_write_constant_size write_u64 8sz)
             uint64_wf
           )
           (LongArgumentU64 ())
@@ -160,11 +160,11 @@ let write_long_argument
       (serialize_long_argument b)
       a
   | LongArgumentOther additional_info _ _ ->
-    rewrite_r2l_writer
+    rewrite_maybe_r2l_writer
       #_ #(long_argument b)
-      (r2l_write_weaken parse_long_argument_kind
-        (r2l_write_synth'
-          (r2l_write_constant_size exact_write_empty 0sz)
+      (maybe_r2l_write_weaken parse_long_argument_kind
+        (maybe_r2l_write_synth'
+          (maybe_r2l_write_constant_size exact_write_empty 0sz)
           (LongArgumentOther additional_info ())
           LongArgumentOther?.v
           ()
@@ -178,20 +178,20 @@ let write_long_argument
 
 inline_for_extraction
 noextract
-let write_header : r2l_writer serialize_header
+let write_header : maybe_r2l_writer serialize_header
 =
-  r2l_write_dtuple2
-    (r2l_write_constant_size write_initial_byte' 1sz)
+  maybe_r2l_write_dtuple2
+    (maybe_r2l_write_constant_size write_initial_byte' 1sz)
     write_long_argument
 
 inline_for_extraction
 noextract
 let write_simple_value_as_argument
   (x: simple_value)
-: Tot (r2l_writer_for serialize_header (simple_value_as_argument x))
+: Tot (maybe_r2l_writer_for serialize_header (simple_value_as_argument x))
 = cps_simple_value_as_argument
-    (r2l_writer_for serialize_header (simple_value_as_argument x))
-    (ifthenelse_r2l_writer_for serialize_header (simple_value_as_argument x))
+    (maybe_r2l_writer_for serialize_header (simple_value_as_argument x))
+    (ifthenelse_maybe_r2l_writer_for serialize_header (simple_value_as_argument x))
     x
     (fun h out ->
       let res = write_header h out in
@@ -217,7 +217,7 @@ let maybe_r2l_write_simple_value
    (fun _ -> maybe_r2l_write serialize_raw_data_item out vout (Simple x) success)
 = if success
   then begin
-    let a = ghost_elim_r2l_write_success serialize_header out in
+    let a = ghost_elim_maybe_r2l_write_success serialize_header out in
     let _ = gen_elim () in
     let a' = aparse_split_zero_r parse_header a in
     let _ = gen_elim () in
@@ -227,15 +227,15 @@ let maybe_r2l_write_simple_value
     Classical.forall_intro parse_raw_data_item_eq;
     let _ = intro_synth _ synth_raw_data_item a () in
     let _ = rewrite_aparse a parse_raw_data_item in
-    intro_r2l_write_success serialize_raw_data_item out vout (Simple x) _ _ _;
+    intro_maybe_r2l_write_success serialize_raw_data_item out vout (Simple x) _ _ _;
     vpattern_rewrite (maybe_r2l_write serialize_raw_data_item out vout (Simple x)) success
   end else begin
-    elim_r2l_write_failure serialize_header out;
+    elim_maybe_r2l_write_failure serialize_header out;
     serialize_raw_data_item_aux_correct (Simple x);
     serialize_synth_eq (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip () (Simple x);
     serialize_dtuple2_eq serialize_header serialize_content (| simple_value_as_argument x, () |);
     noop ();
-    intro_r2l_write_failure serialize_raw_data_item out vout (Simple x);
+    intro_maybe_r2l_write_failure serialize_raw_data_item out vout (Simple x);
     vpattern_rewrite (maybe_r2l_write serialize_raw_data_item out vout (Simple x)) success
   end
 
@@ -244,7 +244,7 @@ let maybe_r2l_write_simple_value
 inline_for_extraction // necessary for the reexport into CBOR.SteelST
 let write_simple_value
   (x: simple_value)
-: Tot (r2l_writer_for serialize_raw_data_item (Simple x))
+: Tot (maybe_r2l_writer_for serialize_raw_data_item (Simple x))
 = fun out ->
     let res = write_simple_value_as_argument x out in
     maybe_r2l_write_simple_value x out res;
@@ -253,10 +253,10 @@ let write_simple_value
 let write_uint64_as_argument
   (ty: major_type_t { ty `U8.lt` major_type_simple_value })
   (x: U64.t)
-: Tot (r2l_writer_for serialize_header (uint64_as_argument ty x))
+: Tot (maybe_r2l_writer_for serialize_header (uint64_as_argument ty x))
 = cps_uint64_as_argument
-    (r2l_writer_for serialize_header (uint64_as_argument ty x))
-    (ifthenelse_r2l_writer_for serialize_header (uint64_as_argument ty x))
+    (maybe_r2l_writer_for serialize_header (uint64_as_argument ty x))
+    (ifthenelse_maybe_r2l_writer_for serialize_header (uint64_as_argument ty x))
     ty
     x
     (fun h out ->
@@ -282,7 +282,7 @@ let maybe_r2l_write_int64
    (fun _ -> maybe_r2l_write serialize_raw_data_item out vout (Int64 m x) success)
 = if success
   then begin
-    let a = ghost_elim_r2l_write_success serialize_header out in
+    let a = ghost_elim_maybe_r2l_write_success serialize_header out in
     let _ = gen_elim () in
     let a' = aparse_split_zero_r parse_header a in
     let _ = gen_elim () in
@@ -292,15 +292,15 @@ let maybe_r2l_write_int64
     Classical.forall_intro parse_raw_data_item_eq;
     let _ = intro_synth _ synth_raw_data_item a () in
     let _ = rewrite_aparse a parse_raw_data_item in
-    intro_r2l_write_success serialize_raw_data_item out vout (Int64 m x) _ _ _;
+    intro_maybe_r2l_write_success serialize_raw_data_item out vout (Int64 m x) _ _ _;
     vpattern_rewrite (maybe_r2l_write serialize_raw_data_item out vout (Int64 m x)) success
   end else begin
-    elim_r2l_write_failure serialize_header out;
+    elim_maybe_r2l_write_failure serialize_header out;
     serialize_raw_data_item_aux_correct (Int64 m x);
     serialize_synth_eq (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip () (Int64 m x);
     serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument m x, () |);
     noop ();
-    intro_r2l_write_failure serialize_raw_data_item out vout (Int64 m x);
+    intro_maybe_r2l_write_failure serialize_raw_data_item out vout (Int64 m x);
     vpattern_rewrite (maybe_r2l_write serialize_raw_data_item out vout (Int64 m x)) success
   end
 
@@ -310,7 +310,7 @@ inline_for_extraction // necessary for the reexport into CBOR.SteelST
 let write_int64
   (m: major_type_uint64_or_neg_int64)
   (x: U64.t)
-: Tot (r2l_writer_for serialize_raw_data_item (Int64 m x))
+: Tot (maybe_r2l_writer_for serialize_raw_data_item (Int64 m x))
 = fun out ->
     let res = write_uint64_as_argument m x out in
     maybe_r2l_write_int64 m x out res;
@@ -385,13 +385,13 @@ let maybe_finalize_raw_data_item_string
 =
   if res
   then begin
-      let ah = ghost_elim_r2l_write_success serialize_header out in
+      let ah = ghost_elim_maybe_r2l_write_success serialize_header out in
       let _ = gen_elim () in
       let _ = intro_raw_data_item_string m ah ap in
       noop ();
       intro_ifthenelse_vprop_true res _ _ ()
     end else begin
-      elim_r2l_write_failure serialize_header out;
+      elim_maybe_r2l_write_failure serialize_header out;
       serialize_raw_data_item_aux_correct (String m (AP.contents_of vp));
       serialize_synth_eq _ synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip () (String m (AP.contents_of vp));
       serialize_dtuple2_eq serialize_header serialize_content (| uint64_as_argument m len, AP.contents_of vp |);
