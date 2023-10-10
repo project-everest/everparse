@@ -1,6 +1,7 @@
 module LowParse.SteelST.Write
 module AP = LowParse.SteelST.ArrayPtr
 module SZ = FStar.SizeT
+module R = Steel.ST.Reference
 
 open Steel.ST.GenElim
 
@@ -91,6 +92,73 @@ let write_constant_size
   return sz
 
 #pop-options
+
+(* Computing the serialization size for a given value. Since the size_t type is overflow-prone, the function needs to take a size bound as argument, and returns the difference between the bound and the serialization size of the value. The function also needs to take a reference to record overflow. *)
+
+noextract
+let size_comp_for_post
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: t)
+  (sz: SZ.t)
+  (res: SZ.t)
+  (err: bool)
+: Tot prop
+= let len = Seq.length (serialize s x) in
+  if err then len > SZ.v sz else SZ.v res + len == SZ.v sz
+
+inline_for_extraction
+let size_comp_for
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: t)
+: Tot Type
+= (sz: SZ.t) ->
+  (perr: R.ref bool) ->
+  STT SZ.t
+    (R.pts_to perr full_perm false)
+    (fun res -> exists_ (fun err ->
+      R.pts_to perr full_perm err `star`
+      pure (size_comp_for_post s x sz res err)
+    ))
+
+inline_for_extraction
+let size_comp
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+= (x: t) ->
+  size_comp_for s x
+
+inline_for_extraction
+let size_comp_constant_size
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t)
+: Pure (size_comp s)
+    (requires (
+      k.parser_kind_high == Some k.parser_kind_low /\
+      k.parser_kind_low == SZ.v sz
+    ))
+    (ensures (fun _ -> True))
+= fun x sz' perr ->
+  if sz' `SZ.lt` sz
+  then begin
+    R.write perr true;
+    return sz' // dummy
+  end else begin
+    [@@inline_let]
+    let rem = sz' `SZ.sub` sz in
+    noop ();
+    return rem
+  end
 
 (* Right-to-left writing *)
 
