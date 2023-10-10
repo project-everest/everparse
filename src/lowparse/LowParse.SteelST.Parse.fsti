@@ -169,6 +169,23 @@ let elim_aparse_with_serializer
   noop ();
   res
 
+let aparse_serialized_length
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (#vp: v k t)
+  (#p: parser k t)
+  (s: serializer p)
+  (a: byte_array)
+: STGhost unit opened
+    (aparse p a vp)
+    (fun _ -> aparse p a vp)
+    True
+    (fun _ -> AP.length (array_of vp) == Seq.length (serialize s vp.contents))
+= let _ = elim_aparse_with_serializer s a in
+  let _ = intro_aparse p a in
+  vpattern_rewrite (aparse p a) vp
+
 let rewrite_aparse
   (#opened: _)
   (#k1: parser_kind)
