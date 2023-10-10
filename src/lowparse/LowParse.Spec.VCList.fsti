@@ -382,6 +382,26 @@ let serialize_nlist_cons
 = serialize_synth_eq _ (synth_nlist n) (serialize_nondep_then s (serialize_nlist' n s)) (synth_nlist_recip n) () (a :: q);
   serialize_nondep_then_eq s (serialize_nlist' n s) (a, q)
 
+let rec serialize_nlist_serialize_list
+  (#k: parser_kind)
+  (#t: Type)
+  (n: nat)
+  (#p: parser k t)
+  (s: serializer p { serialize_list_precond k } )
+  (l: nlist n t)
+: Lemma
+  (serialize (serialize_nlist n s) l == serialize (serialize_list _ s) l)
+= if n = 0
+  then begin
+    serialize_nlist_nil p s;
+    serialize_list_nil p s
+  end else begin
+    let a :: q = l in
+    serialize_nlist_serialize_list (n - 1) s q;
+    serialize_nlist_cons (n - 1) s a q;
+    serialize_list_cons p s a q
+  end
+
 (* variable-count lists proper *)
 
 let bounded_count_prop
