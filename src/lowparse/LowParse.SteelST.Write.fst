@@ -137,6 +137,47 @@ let size_comp
   size_comp_for s x
 
 inline_for_extraction
+let size_comp_gen_for
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t)
+  (x: Ghost.erased t)
+: Pure (size_comp_for s x)
+    (requires (
+      Seq.length (serialize s x) == SZ.v sz
+    ))
+    (ensures (fun _ -> True))
+= fun sz' perr ->
+  if sz' `SZ.lt` sz
+  then begin
+    R.write perr true;
+    return sz' // dummy
+  end else begin
+    [@@inline_let]
+    let rem = sz' `SZ.sub` sz in
+    noop ();
+    return rem
+  end
+
+inline_for_extraction
+let size_comp_constant_size_for
+  (#k: Ghost.erased parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t)
+  (x: Ghost.erased t)
+: Pure (size_comp_for s x)
+    (requires (
+      k.parser_kind_high == Some k.parser_kind_low /\
+      k.parser_kind_low == SZ.v sz
+    ))
+    (ensures (fun _ -> True))
+= size_comp_gen_for s sz x
+
+inline_for_extraction
 let size_comp_constant_size
   (#k: Ghost.erased parser_kind)
   (#t: Type)
@@ -149,17 +190,7 @@ let size_comp_constant_size
       k.parser_kind_low == SZ.v sz
     ))
     (ensures (fun _ -> True))
-= fun x sz' perr ->
-  if sz' `SZ.lt` sz
-  then begin
-    R.write perr true;
-    return sz' // dummy
-  end else begin
-    [@@inline_let]
-    let rem = sz' `SZ.sub` sz in
-    noop ();
-    return rem
-  end
+= fun x -> size_comp_constant_size_for s sz x
 
 inline_for_extraction
 let ifthenelse_size_comp_for
