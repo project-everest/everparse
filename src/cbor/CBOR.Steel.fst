@@ -913,13 +913,10 @@ let array_pts_to_or_null
   then emp
   else A.pts_to a full_perm v
 
-inline_for_extraction
-noextract
-let array_alloc
-  (#t: Type)
-  (init: t)
+assume val cbor_array_alloc
+  (init: cbor)
   (n: SZ.t)
-: ST (A.array t)
+: ST (A.array cbor)
     emp
     (fun res -> array_pts_to_or_null res (Seq.create (SZ.v n) init))
     True
@@ -928,12 +925,6 @@ let array_alloc
       then True
       else A.length res == SZ.v n /\ A.is_full_array res
     )
-= let res = A.alloc init n in
-  A.pts_to_not_null res _;
-  rewrite
-    (A.pts_to res full_perm (Seq.create (SZ.v n) init))
-    (array_pts_to_or_null res (Seq.create (SZ.v n) init));
-  return res
 
 let read_cbor_array
   (#obj: Ghost.erased Cbor.raw_data_item)
@@ -984,7 +975,7 @@ let read_cbor_array
           (raw_data_item_match input obj);
         let len = R.read plen in
         let _ = A.intro_fits_u64 () in
-        let a0 = array_alloc dummy_cbor (SZ.uint64_to_sizet len) in
+        let a0 = cbor_array_alloc dummy_cbor (SZ.uint64_to_sizet len) in
         if (A.is_null a0)
         then begin
           noop ();
