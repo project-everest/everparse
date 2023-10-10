@@ -982,6 +982,359 @@ let array_payload_as_list_size
 
 #pop-options
 
+(* Serializing an array into a large enough left-to-right output buffer *)
+
+[@@__reduce__]
+let l2r_write_array_payload_as_list_invariant0
+  (#t: Type)
+  (#t': Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (n0: SZ.t)
+  (va: Ghost.erased (Seq.seq t))
+  (vl: Ghost.erased (list t'))
+  (a0: A.array t)
+  (pi: perm)
+  (out0: byte_array)
+  (vout: AP.array byte)
+  (out: W.t)
+  (pl2: GR.ref (list t'))
+  (pn: R.ref SZ.t)
+  (cont: bool)
+: Tot vprop
+= A.pts_to a0 pi va `star`
+  seq_list_match va vl item_match `star`
+  exists_ (fun vl1 -> exists_ (fun va2 -> exists_ (fun l2 -> exists_ (fun n ->
+    aparse (parse_list p) out0 vl1 `star`
+    W.vp out va2 `star`
+    GR.pts_to pl2 full_perm l2 `star`
+    R.pts_to pn full_perm n `star`
+    pure (
+      SZ.v n0 == List.Tot.length vl /\
+      Ghost.reveal vl == vl1.contents `List.Tot.append` l2 /\
+      List.Tot.length vl1.contents == SZ.v n /\
+      AP.merge_into (array_of vl1) va2 vout /\
+      Seq.length (serialize (serialize_list _ s) l2) <= AP.length va2 /\
+      (cont == (SZ.v n < SZ.v n0))
+  )))))
+
+let l2r_write_array_payload_as_list_invariant
+  (#t: Type)
+  (#t': Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (n0: SZ.t)
+  (va: Ghost.erased (Seq.seq t))
+  (vl: Ghost.erased (list t'))
+  (a0: A.array t)
+  (pi: perm)
+  (out0: byte_array)
+  (vout: AP.array byte)
+  (out: W.t)
+  (pl2: GR.ref (list t'))
+  (pn: R.ref SZ.t)
+  (cont: bool)
+: Tot vprop
+= l2r_write_array_payload_as_list_invariant0 s item_match n0 va vl a0 pi out0 vout out pl2 pn cont
+
+#push-options "--split_queries always --z3cliopt smt.arith.nl=false --z3rlimit 256"
+#restart-solver
+
+inline_for_extraction
+let l2r_write_array_payload_as_list_body
+  (#t: Type)
+  (#t': Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (write: (
+    (x: t) ->
+    (y: Ghost.erased t') ->
+    (#vout: AP.array byte) ->
+    (out: W.t) ->
+    ST byte_array
+      (item_match x y `star` W.vp out vout)
+      (fun res -> item_match x y `star` exists_ (fun vres -> exists_ (fun vout' ->
+        aparse p res vres `star`
+        W.vp out vout' `star`
+        pure (
+          AP.merge_into (array_of vres) vout' vout /\
+          Ghost.reveal y == vres.contents
+      ))))
+      (Seq.length (serialize s y) <= AP.length vout)
+      (fun _ -> True)
+  ))
+  (n0: SZ.t)
+  (va: Ghost.erased (Seq.seq t))
+  (vl: Ghost.erased (list t'))
+  (a0: A.array t)
+  (pi: perm)
+  (out0: byte_array)
+  (vout: AP.array byte)
+  (out: W.t)
+  (pl2: GR.ref (list t'))
+  (pn: R.ref SZ.t)
+  ()
+: STT unit
+    (l2r_write_array_payload_as_list_invariant s item_match n0 va vl a0 pi out0 vout out pl2 pn true)
+    (fun _ -> exists_ (l2r_write_array_payload_as_list_invariant s item_match n0 va vl a0 pi out0 vout out pl2 pn))
+= rewrite
+    (l2r_write_array_payload_as_list_invariant s item_match n0 va vl a0 pi out0 vout out pl2 pn true)
+    (l2r_write_array_payload_as_list_invariant0 s item_match n0 va vl a0 pi out0 vout out pl2 pn true);
+  let _ = gen_elim () in
+  A.pts_to_length a0 _;
+  seq_list_match_length item_match _ _;
+  let vl1 = vpattern (aparse (parse_list p) out0) in
+  let l2 = GR.read pl2 in
+  List.Tot.append_length vl1.contents l2;
+  let _ : squash (Cons? l2) = () in
+  list_index_append_cons vl1.contents (List.Tot.hd l2) (List.Tot.tl l2);
+  List.Tot.append_assoc vl1.contents [List.Tot.hd l2] (List.Tot.tl l2);
+  serialize_list_cons _ s (List.Tot.hd l2) (List.Tot.tl l2);
+  noop ();
+  let n = R.read pn in
+  [@@inline_let]
+  let n' = n `SZ.add` 1sz in
+  let x = A.index a0 n in
+  let _ = seq_list_match_index item_match _ _ (SZ.v n) in
+  vpattern_rewrite_with_implies (fun x -> item_match x _) x;
+  implies_trans
+    (item_match _ _)
+    (item_match _ _)
+    (seq_list_match _ _ item_match);
+  let out1 = write x _ out in
+  let _ = gen_elim () in
+  elim_implies
+    (item_match x (List.Tot.index vl (SZ.v n)))
+    (seq_list_match va vl item_match);
+  aparse_serialized_length s out1;
+  let _ = intro_singleton p out1 in
+  let _ = list_append p out0 out1 in
+  R.write pn n';
+  GR.write pl2 (List.Tot.tl l2);
+  rewrite
+    (l2r_write_array_payload_as_list_invariant0 s item_match n0 va vl a0 pi out0 vout out pl2 pn (SZ.v n' < SZ.v n0))
+    (l2r_write_array_payload_as_list_invariant s item_match n0 va vl a0 pi out0 vout out pl2 pn (SZ.v n' < SZ.v n0));
+  return ()
+
+#pop-options
+
+#push-options "--split_queries always --z3cliopt smt.arith.nl=false --z3rlimit 64"
+#restart-solver
+
+inline_for_extraction
+let l2r_write_array_payload_as_list
+  (#t: Type)
+  (#t': Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (write: (
+    (x: t) ->
+    (y: Ghost.erased t') ->
+    (#vout: AP.array byte) ->
+    (out: W.t) ->
+    ST byte_array
+      (item_match x y `star` W.vp out vout)
+      (fun res -> item_match x y `star` exists_ (fun vres -> exists_ (fun vout' ->
+        aparse p res vres `star`
+        W.vp out vout' `star`
+        pure (
+          AP.merge_into (array_of vres) vout' vout /\
+          Ghost.reveal y == vres.contents
+      ))))
+      (Seq.length (serialize s y) <= AP.length vout)
+      (fun _ -> True)
+  ))
+  (n0: SZ.t)
+  (#va: Ghost.erased (Seq.seq t))
+  (#vl: Ghost.erased (list t'))
+  (#pi: perm)
+  (a0: A.array t)
+  (#vout: AP.array byte)
+  (out: W.t)
+: ST byte_array
+    (A.pts_to a0 pi va `star`
+      seq_list_match va vl item_match `star`
+      W.vp out vout
+    )
+    (fun res ->
+      A.pts_to a0 pi va `star`
+      seq_list_match va vl item_match `star`
+      exists_ (fun vres -> exists_ (fun vout' ->
+        aparse (parse_list p) res vres `star`
+        W.vp out vout' `star`
+        pure (
+          AP.merge_into (array_of vres) vout' vout /\
+          Ghost.reveal vl == vres.contents
+    ))))
+    (Seq.length (serialize (serialize_list _ s) vl) <= AP.length vout /\
+      SZ.v n0 == A.length a0
+    )
+    (fun _ -> True)
+= A.pts_to_length a0 _;
+  seq_list_match_length item_match _ _;
+  let out0 = W.split out 0sz in
+  let _ = gen_elim () in
+  let _ = intro_nil p out0 in
+  GR.with_local (Ghost.reveal vl) (fun pl2 ->
+  R.with_local 0sz (fun pn ->
+    noop ();
+    rewrite
+      (l2r_write_array_payload_as_list_invariant0 s item_match n0 va vl a0 pi out0 vout out pl2 pn (0 < SZ.v n0))
+      (l2r_write_array_payload_as_list_invariant s item_match n0 va vl a0 pi out0 vout out pl2 pn (0 < SZ.v n0));
+    Steel.ST.Loops.while_loop
+      (l2r_write_array_payload_as_list_invariant s item_match n0 va vl a0 pi out0 vout out pl2 pn)
+      (fun _ ->
+        let gcont = elim_exists () in
+        rewrite
+          (l2r_write_array_payload_as_list_invariant s item_match n0 va vl a0 pi out0 vout out pl2 pn gcont)
+          (l2r_write_array_payload_as_list_invariant0 s item_match n0 va vl a0 pi out0 vout out pl2 pn gcont);
+        let _ = gen_elim () in
+        let n = R.read pn in
+        [@@inline_let]
+        let cont = n `SZ.lt` n0 in
+        noop ();
+        rewrite
+          (l2r_write_array_payload_as_list_invariant0 s item_match n0 va vl a0 pi out0 vout out pl2 pn cont)
+          (l2r_write_array_payload_as_list_invariant s item_match n0 va vl a0 pi out0 vout out pl2 pn cont);
+        return cont
+      )
+      (l2r_write_array_payload_as_list_body s item_match write n0 va vl a0 pi out0 vout out pl2 pn);
+    rewrite
+      (l2r_write_array_payload_as_list_invariant s item_match n0 va vl a0 pi out0 vout out pl2 pn false)
+      (l2r_write_array_payload_as_list_invariant0 s item_match n0 va vl a0 pi out0 vout out pl2 pn false);
+    let _ = gen_elim () in
+    let vl1 = vpattern (aparse (parse_list p) out0) in
+    let l2 = GR.read pl2 in
+    List.Tot.append_length vl1.contents l2;
+    assert (Nil? l2);
+    List.Tot.append_l_nil vl1.contents;
+    noop ();
+    return out0
+  ))
+
+#pop-options
+
+inline_for_extraction
+let array_payload_as_nlist_size
+  (#t: Type)
+  (#t': Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (size: (
+    (x: t) ->
+    (y: Ghost.erased t') ->
+    (sz: SZ.t) ->
+    (perr: R.ref bool) ->
+    STT SZ.t
+      (R.pts_to perr full_perm false `star` item_match x y)
+      (fun res -> item_match x y `star` exists_ (fun err -> R.pts_to perr full_perm err `star` pure (
+        let len = Seq.length (serialize s y) in
+        if err then len > SZ.v sz else SZ.v res + len == SZ.v sz
+      )))
+  ))
+  (#va: Ghost.erased (Seq.seq t))
+  (#vl: Ghost.erased (list t'))
+  (n0: SZ.t {
+    SZ.v n0 == List.Tot.length vl
+  })
+  (#pi: perm)
+  (a0: A.array t)
+  (sz: SZ.t)
+  (perr: R.ref bool)
+: STT SZ.t
+    (R.pts_to perr full_perm false `star` A.pts_to a0 pi va `star` seq_list_match va vl item_match)
+    (fun res -> A.pts_to a0 pi va `star` seq_list_match va vl item_match `star` exists_ (fun err -> R.pts_to perr full_perm err `star` pure (
+      let len = Seq.length (serialize (serialize_nlist (SZ.v n0) s) vl) in
+      if err then len > SZ.v sz else SZ.v res + len == SZ.v sz
+    )))
+= serialize_nlist_serialize_list (SZ.v n0) s vl;
+  seq_list_match_length item_match _ _;
+  A.pts_to_length a0 _;
+  let res = array_payload_as_list_size s item_match size n0 a0 sz perr in
+  let _ = gen_elim () in
+  return res
+
+inline_for_extraction
+let l2r_write_array_payload_as_nlist
+  (#t: Type)
+  (#t': Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t')
+  (s: serializer p {
+    serialize_list_precond k
+  })
+  (item_match: t -> t' -> vprop)
+  (write: (
+    (x: t) ->
+    (y: Ghost.erased t') ->
+    (#vout: AP.array byte) ->
+    (out: W.t) ->
+    ST byte_array
+      (item_match x y `star` W.vp out vout)
+      (fun res -> item_match x y `star` exists_ (fun vres -> exists_ (fun vout' ->
+        aparse p res vres `star`
+        W.vp out vout' `star`
+        pure (
+          AP.merge_into (array_of vres) vout' vout /\
+          Ghost.reveal y == vres.contents
+      ))))
+      (Seq.length (serialize s y) <= AP.length vout)
+      (fun _ -> True)
+  ))
+  (#va: Ghost.erased (Seq.seq t))
+  (#vl: Ghost.erased (list t'))
+  (#pi: perm)
+  (n0: SZ.t)
+  (a0: A.array t)
+  (#vout: AP.array byte)
+  (out: W.t)
+: ST byte_array
+    (A.pts_to a0 pi va `star`
+      seq_list_match va vl item_match `star`
+      W.vp out vout
+    )
+    (fun res ->
+      A.pts_to a0 pi va `star`
+      seq_list_match va vl item_match `star`
+      exists_ (fun vres -> exists_ (fun vout' ->
+        aparse (parse_nlist (SZ.v n0) p) res vres `star`
+        W.vp out vout' `star`
+        pure (
+          AP.merge_into (array_of vres) vout' vout /\
+          Ghost.reveal vl == vres.contents
+    ))))
+    (SZ.v n0 == List.Tot.length vl /\
+      Seq.length (serialize (serialize_nlist (SZ.v n0) s) vl) <= AP.length vout
+    )
+    (fun _ -> True)
+= serialize_nlist_serialize_list (SZ.v n0) s vl;
+  seq_list_match_length item_match _ _;
+  A.pts_to_length a0 _;
+  let res = l2r_write_array_payload_as_list s item_match write n0 a0 out in
+  let _ = gen_elim () in
+  let _ = aparse_list_aparse_nlist p (SZ.v n0) res in
+  return res
+
 (* Parsing into an array
 
 While this implementation also works if the low-level value type is a pointer type, the resulting C code may not be idiomatic. Also, it assumes that the parsing function for elements always succeeds (e.g. in the case of an array of pointers, `alloc` never returns NULL.)
