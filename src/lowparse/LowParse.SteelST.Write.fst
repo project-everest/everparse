@@ -210,7 +210,7 @@ let maybe_r2l_write
   else maybe_r2l_write_false s out vout v
 
 inline_for_extraction
-let r2l_writer_for
+let maybe_r2l_writer_for
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -224,16 +224,16 @@ let r2l_writer_for
     (fun res -> maybe_r2l_write s out vout v res)
 
 inline_for_extraction
-let r2l_writer
+let maybe_r2l_writer
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (s: serializer p)
 : Tot Type
 = (v: t) ->
-  r2l_writer_for s v
+  maybe_r2l_writer_for s v
 
-let intro_r2l_write_success
+let intro_maybe_r2l_write_success
   (#opened: _)
   (#k: parser_kind)
   (#t: Type)
@@ -259,7 +259,7 @@ let intro_r2l_write_success
     (maybe_r2l_write_true p out vout v)
     (maybe_r2l_write s out vout v true)
 
-let intro_r2l_write_failure
+let intro_maybe_r2l_write_failure
   (#opened: _)
   (#k: parser_kind)
   (#t: Type)
@@ -279,14 +279,14 @@ let intro_r2l_write_failure
     (maybe_r2l_write s out vout v false)
 
 inline_for_extraction
-let r2l_write_constant_size
+let maybe_r2l_write_constant_size
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
   (w: exact_writer s)
   (sz: SZ.t)
-: Pure (r2l_writer s)
+: Pure (maybe_r2l_writer s)
     (requires (
       k.parser_kind_high == Some k.parser_kind_low /\
       k.parser_kind_low == SZ.v sz
@@ -300,43 +300,43 @@ let r2l_write_constant_size
     let a = W.split out sz in
     let _ = gen_elim () in
     let _ = w x a in
-    intro_r2l_write_success s out vout x _ _ _;
+    intro_maybe_r2l_write_success s out vout x _ _ _;
     return true
   end else begin
-    intro_r2l_write_failure s out vout x;
+    intro_maybe_r2l_write_failure s out vout x;
     return false
   end
 
 inline_for_extraction
-let ifthenelse_r2l_writer_for
+let ifthenelse_maybe_r2l_writer_for
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
   (v: Ghost.erased t)
   (cond: bool)
-  (iftrue: (squash (cond == true) -> Tot (r2l_writer_for s v)))
-  (iffalse: (squash (cond == false) -> Tot (r2l_writer_for s v)))
-: Tot (r2l_writer_for s v)
+  (iftrue: (squash (cond == true) -> Tot (maybe_r2l_writer_for s v)))
+  (iffalse: (squash (cond == false) -> Tot (maybe_r2l_writer_for s v)))
+: Tot (maybe_r2l_writer_for s v)
 = fun a ->
     if cond
     then iftrue () a
     else iffalse () a
 
 inline_for_extraction
-let ifthenelse_r2l_writer
+let ifthenelse_maybe_r2l_writer
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
   (cond: bool)
-  (iftrue: (squash (cond == true) -> Tot (r2l_writer s)))
-  (iffalse: (squash (cond == false) -> Tot (r2l_writer s)))
-: Tot (r2l_writer s)
-= fun v -> ifthenelse_r2l_writer_for s v cond (fun _ -> iftrue () v) (fun _ -> iffalse () v)
+  (iftrue: (squash (cond == true) -> Tot (maybe_r2l_writer s)))
+  (iffalse: (squash (cond == false) -> Tot (maybe_r2l_writer s)))
+: Tot (maybe_r2l_writer s)
+= fun v -> ifthenelse_maybe_r2l_writer_for s v cond (fun _ -> iftrue () v) (fun _ -> iffalse () v)
 
 inline_for_extraction
-let ghost_elim_r2l_write_success
+let ghost_elim_maybe_r2l_write_success
   (#opened: _)
   (#k: parser_kind)
   (#t: Type0)
@@ -366,7 +366,7 @@ let ghost_elim_r2l_write_success
   _
 
 inline_for_extraction
-let elim_r2l_write_success
+let elim_maybe_r2l_write_success
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -388,7 +388,7 @@ let elim_r2l_write_success
     ))))
     (Ghost.reveal success == true)
     (fun _ -> True)
-= let _ = ghost_elim_r2l_write_success s out in
+= let _ = ghost_elim_maybe_r2l_write_success s out in
   let _ = gen_elim () in
   let _ = elim_aparse p _ in
   let a = W.hop out _ in
@@ -396,7 +396,7 @@ let elim_r2l_write_success
   let _ = intro_aparse p a in
   return a
 
-let elim_r2l_write_failure
+let elim_maybe_r2l_write_failure
   (#opened: _)
   (#k: parser_kind)
   (#t: Type0)

@@ -698,7 +698,7 @@ let exact_write_synth'
 
 module W = LowParse.SteelST.R2LOutput
 
-let maybe_r2l_write_synth
+let maybe_r2l_write_synth_aux
   (#opened: _)
   (#k: parser_kind)
   (#t1: Type)
@@ -723,26 +723,26 @@ let maybe_r2l_write_synth
 = serialize_synth_eq p f12 s f21 () v2;
   if res
   then begin
-    let a = ghost_elim_r2l_write_success _ _ in
+    let a = ghost_elim_maybe_r2l_write_success _ _ in
     let _ = gen_elim () in
     let _ = intro_synth p f12 a () in
     rewrite
       (maybe_r2l_write_true (parse_synth p f12) out vout (f12 v1))
       (maybe_r2l_write (serialize_synth p f12 s f21 ()) out vout v2 res)
   end else begin
-    elim_r2l_write_failure _ _;
+    elim_maybe_r2l_write_failure _ _;
     rewrite
       (maybe_r2l_write_false (serialize_synth p f12 s f21 ()) out vout (f12 v1))
       (maybe_r2l_write (serialize_synth p f12 s f21 ()) out vout v2 res)
   end
 
 inline_for_extraction
-let r2l_write_synth
+let maybe_r2l_write_synth
   (#k: Ghost.erased parser_kind)
   (#t1: Type)
   (#p: parser k t1)
   (#s: serializer p)
-  (w: r2l_writer s)
+  (w: maybe_r2l_writer s)
   #t2 (f12: t1 -> GTot t2)
   (f21: (t2 -> GTot t1))
   (f21': ((x: t2) -> Tot (y: t1 { y == f21 x })))
@@ -750,30 +750,30 @@ let r2l_write_synth
     synth_injective f12 /\
     synth_inverse f12 f21
   ))
-: Tot (r2l_writer (serialize_synth p f12 s f21 ()))
+: Tot (maybe_r2l_writer (serialize_synth p f12 s f21 ()))
 = fun x a ->
   serialize_synth_eq p f12 s f21 () x;
   [@@inline_let]
   let y = f21' x in
   let res = w y a in
-  maybe_r2l_write_synth s f12 f21 () x y a res;
+  maybe_r2l_write_synth_aux s f12 f21 () x y a res;
   return res
 
 inline_for_extraction
-let r2l_write_synth'
+let maybe_r2l_write_synth'
   (#k: Ghost.erased parser_kind)
   (#t1: Type)
   (#p: parser k t1)
   (#s: serializer p)
-  (w: r2l_writer s)
+  (w: maybe_r2l_writer s)
   #t2 (f12: t1 -> GTot t2)
   (f21: (t2 -> Tot t1))
   (sq: squash (
     synth_injective f12 /\
     synth_inverse f12 f21
   ))
-: Tot (r2l_writer (serialize_synth p f12 s f21 ()))
-= r2l_write_synth w f12 f21 (fun x -> f21 x) ()
+: Tot (maybe_r2l_writer (serialize_synth p f12 s f21 ()))
+= maybe_r2l_write_synth w f12 f21 (fun x -> f21 x) ()
 
 let rewrite_maybe_r2l_write
   (#opened: _)
@@ -796,22 +796,22 @@ let rewrite_maybe_r2l_write
 = serializer_unique p2 s2 (serialize_ext p1 s1 p2) v2;
   if res
   then begin
-    let a = ghost_elim_r2l_write_success _ _ in
+    let a = ghost_elim_maybe_r2l_write_success _ _ in
     let _ = gen_elim () in
     let _ = rewrite_aparse a p2 in
-    intro_r2l_write_success s2 out vout v2 _ _ _;
+    intro_maybe_r2l_write_success s2 out vout v2 _ _ _;
     vpattern_rewrite (maybe_r2l_write _ _ _ _) res
   end else begin
-    elim_r2l_write_failure _ _;
-    intro_r2l_write_failure s2 out vout v2;
+    elim_maybe_r2l_write_failure _ _;
+    intro_maybe_r2l_write_failure s2 out vout v2;
     vpattern_rewrite (maybe_r2l_write _ _ _ _) res
   end
 
 inline_for_extraction
-let rewrite_r2l_writer
-  (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (#s1: serializer p1) (w1: r2l_writer s1)
+let rewrite_maybe_r2l_writer
+  (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (#s1: serializer p1) (w1: maybe_r2l_writer s1)
   (#k2: Ghost.erased parser_kind) (#t2: Type) (#p2: parser k2 t2) (s2: serializer p2)
-: Pure (r2l_writer s2)
+: Pure (maybe_r2l_writer s2)
   (requires (
       t1 == t2 /\
       (forall bytes . parse p1 bytes == parse p2 bytes)
@@ -823,11 +823,11 @@ let rewrite_r2l_writer
     return res
 
 inline_for_extraction
-let r2l_write_weaken
-  (k1: Ghost.erased parser_kind) (#k2: Ghost.erased parser_kind) (#t: Type) (#p2: parser k2 t) (#s2: serializer p2) (w2: r2l_writer s2)
+let maybe_r2l_write_weaken
+  (k1: Ghost.erased parser_kind) (#k2: Ghost.erased parser_kind) (#t: Type) (#p2: parser k2 t) (#s2: serializer p2) (w2: maybe_r2l_writer s2)
   (_: squash (k1 `is_weaker_than` k2))
-: Tot (r2l_writer (serialize_weaken k1 s2))
-= rewrite_r2l_writer w2 (serialize_weaken k1 s2)
+: Tot (maybe_r2l_writer (serialize_weaken k1 s2))
+= rewrite_maybe_r2l_writer w2 (serialize_weaken k1 s2)
 
 [@CMacro]
 let validator_error_constraint_failed  = 2ul
@@ -1075,7 +1075,7 @@ let exact_write_filter
   let _ = w x a in
   intro_filter p f a
 
-let maybe_r2l_write_filter
+let maybe_r2l_write_filter_aux
   (#opened: _)
   (#k: parser_kind)
   (#t: Type)
@@ -1091,29 +1091,29 @@ let maybe_r2l_write_filter
     (fun _ -> maybe_r2l_write (serialize_filter s f) out vout v res)
 = if res
   then begin
-    let a = ghost_elim_r2l_write_success _ _ in
+    let a = ghost_elim_maybe_r2l_write_success _ _ in
     let _ = gen_elim () in
     let _ = intro_filter p f a in
-    intro_r2l_write_success (serialize_filter s f) out vout v _ _ _;
+    intro_maybe_r2l_write_success (serialize_filter s f) out vout v _ _ _;
     vpattern_rewrite (maybe_r2l_write _ _ _ _) res
   end else begin
-    elim_r2l_write_failure _ _;
-    intro_r2l_write_failure (serialize_filter s f) out vout v;
+    elim_maybe_r2l_write_failure _ _;
+    intro_maybe_r2l_write_failure (serialize_filter s f) out vout v;
     vpattern_rewrite (maybe_r2l_write _ _ _ _) res
   end
 
 inline_for_extraction
-let r2l_write_filter
+let maybe_r2l_write_filter
   (#k: Ghost.erased parser_kind)
   (#t: Type)
   (#p: parser k t)
   (#s: serializer p)
-  (w: r2l_writer s)
+  (w: maybe_r2l_writer s)
   (f: (t -> GTot bool))
-: Tot (r2l_writer (serialize_filter s f))
+: Tot (maybe_r2l_writer (serialize_filter s f))
 = fun x a ->
     let res = w x a in
-    maybe_r2l_write_filter s f x a res;
+    maybe_r2l_write_filter_aux s f x a res;
     return res
 
 #push-options "--z3rlimit 32 --query_stats"
@@ -2207,18 +2207,18 @@ let cps_read_dtuple2
 #restart-solver
 
 inline_for_extraction
-let r2l_write_dtuple2
+let maybe_r2l_write_dtuple2
   (#kt: Ghost.erased parser_kind)
   (#tag_t: Type)
   (#pt: parser kt tag_t)
   (#st: serializer pt)
-  (wt: r2l_writer st { kt.parser_kind_subkind == Some ParserStrong })
+  (wt: maybe_r2l_writer st { kt.parser_kind_subkind == Some ParserStrong })
   (#k: Ghost.erased parser_kind)
   (#data_t: tag_t -> Type)
   (#p: (t: tag_t) -> Tot (parser k (data_t t)))
   (#s: (t: tag_t) -> Tot (serializer (p t)))
-  (w: (t: tag_t) -> Tot (r2l_writer (s t)))
-: Tot (r2l_writer (serialize_dtuple2 st s))
+  (w: (t: tag_t) -> Tot (maybe_r2l_writer (s t)))
+: Tot (maybe_r2l_writer (serialize_dtuple2 st s))
 = fun x #vout out ->
   match x with
   | (| tag, payload |) ->
@@ -2227,27 +2227,27 @@ let r2l_write_dtuple2
     let wrote_payload = w tag payload out in
     if wrote_payload
     then begin
-      let ar = ghost_elim_r2l_write_success _ _ in
+      let ar = ghost_elim_maybe_r2l_write_success _ _ in
       let _ = gen_elim () in
       let res = wt tag out in
       if res
       then begin
-        let al = ghost_elim_r2l_write_success _ _ in
+        let al = ghost_elim_maybe_r2l_write_success _ _ in
         let _ = gen_elim () in
         let _ = intro_dtuple2 pt p al ar in
-        intro_r2l_write_success (serialize_dtuple2 st s) out vout x _ _ _;
+        intro_maybe_r2l_write_success (serialize_dtuple2 st s) out vout x _ _ _;
         return true
       end else begin
-        elim_r2l_write_failure _ _;
+        elim_maybe_r2l_write_failure _ _;
         let _ = elim_aparse_with_serializer (s tag) ar in
         W.revert_with out ar vout len;
         noop ();
-        intro_r2l_write_failure (serialize_dtuple2 st s) out vout x;
+        intro_maybe_r2l_write_failure (serialize_dtuple2 st s) out vout x;
         return false
       end
     end else begin
-      elim_r2l_write_failure _ _;
-      intro_r2l_write_failure (serialize_dtuple2 st s) out vout x;
+      elim_maybe_r2l_write_failure _ _;
+      intro_maybe_r2l_write_failure (serialize_dtuple2 st s) out vout x;
       return false
     end
 
