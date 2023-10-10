@@ -161,6 +161,34 @@ let size_comp_constant_size
     return rem
   end
 
+inline_for_extraction
+let ifthenelse_size_comp_for
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (v: Ghost.erased t)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> Tot (size_comp_for s v)))
+  (iffalse: (squash (cond == false) -> Tot (size_comp_for s v)))
+: Tot (size_comp_for s v)
+= fun sz perr ->
+    if cond
+    then iftrue () sz perr
+    else iffalse () sz perr
+
+inline_for_extraction
+let ifthenelse_size_comp
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> Tot (size_comp s)))
+  (iffalse: (squash (cond == false) -> Tot (size_comp s)))
+: Tot (size_comp s)
+= fun v -> ifthenelse_size_comp_for s v cond (fun _ -> iftrue () v) (fun _ -> iffalse () v)
+
 (* Left-to-right writing *)
 
 module LW = LowParse.SteelST.L2ROutput
