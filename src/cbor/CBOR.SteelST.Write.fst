@@ -174,6 +174,220 @@ let write_long_argument
       (serialize_long_argument b)
       a
 
+inline_for_extraction
+noextract
+let size_comp_long_argument
+  (b: initial_byte)
+  (a: long_argument b)
+: Tot (size_comp_for (serialize_long_argument b) a)
+= match a with
+  | LongArgumentSimpleValue _ _ ->
+    rewrite_size_comp
+      #_ #(long_argument b)
+      (size_comp_weaken parse_long_argument_kind
+        (size_comp_synth'
+          (size_comp_filter
+            (size_comp_constant_size serialize_u8 1sz)
+            simple_value_long_argument_wf
+          )
+          (LongArgumentSimpleValue ())
+          LongArgumentSimpleValue?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU8 _ _ ->
+    rewrite_size_comp
+      #_ #(long_argument b)
+      (size_comp_weaken parse_long_argument_kind
+        (size_comp_synth'
+          (size_comp_filter
+            (size_comp_constant_size serialize_u8 1sz)
+            uint8_wf
+          )
+          (LongArgumentU8 ())
+          LongArgumentU8?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU16 _ _ ->
+    rewrite_size_comp
+      #_ #(long_argument b)
+      (size_comp_weaken parse_long_argument_kind
+        (size_comp_synth'
+          (size_comp_filter
+            (size_comp_constant_size serialize_u16 2sz)
+            uint16_wf
+          )
+          (LongArgumentU16 ())
+          LongArgumentU16?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU32 _ _ ->
+    rewrite_size_comp
+      #_ #(long_argument b)
+      (size_comp_weaken parse_long_argument_kind
+        (size_comp_synth'
+          (size_comp_filter
+            (size_comp_constant_size serialize_u32 4sz)
+            uint32_wf
+          )
+          (LongArgumentU32 ())
+          LongArgumentU32?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU64 _ _ ->
+    rewrite_size_comp
+      #_ #(long_argument b)
+      (size_comp_weaken parse_long_argument_kind
+        (size_comp_synth'
+          (size_comp_filter
+            (size_comp_constant_size serialize_u64 8sz)
+            uint64_wf
+          )
+          (LongArgumentU64 ())
+          LongArgumentU64?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentOther additional_info _ _ ->
+    rewrite_size_comp
+      #_ #(long_argument b)
+      (size_comp_weaken parse_long_argument_kind
+        (size_comp_synth'
+          (size_comp_constant_size serialize_empty 0sz)
+          (LongArgumentOther additional_info ())
+          LongArgumentOther?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+
+inline_for_extraction
+noextract
+let l2r_write_long_argument
+  (b: initial_byte)
+  (a: long_argument b)
+: Tot (l2r_writer_for (serialize_long_argument b) a)
+= match a with
+  | LongArgumentSimpleValue _ _ ->
+    rewrite_l2r_writer
+      #_ #(long_argument b)
+      (l2r_write_weaken parse_long_argument_kind
+        (l2r_write_synth'
+          (l2r_write_filter
+            (l2r_write_constant_size write_u8 1sz)
+            simple_value_long_argument_wf
+          )
+          (LongArgumentSimpleValue ())
+          LongArgumentSimpleValue?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU8 _ _ ->
+    rewrite_l2r_writer
+      #_ #(long_argument b)
+      (l2r_write_weaken parse_long_argument_kind
+        (l2r_write_synth'
+          (l2r_write_filter
+            (l2r_write_constant_size write_u8 1sz)
+            uint8_wf
+          )
+          (LongArgumentU8 ())
+          LongArgumentU8?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU16 _ _ ->
+    rewrite_l2r_writer
+      #_ #(long_argument b)
+      (l2r_write_weaken parse_long_argument_kind
+        (l2r_write_synth'
+          (l2r_write_filter
+            (l2r_write_constant_size write_u16 2sz)
+            uint16_wf
+          )
+          (LongArgumentU16 ())
+          LongArgumentU16?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU32 _ _ ->
+    rewrite_l2r_writer
+      #_ #(long_argument b)
+      (l2r_write_weaken parse_long_argument_kind
+        (l2r_write_synth'
+          (l2r_write_filter
+            (l2r_write_constant_size write_u32 4sz)
+            uint32_wf
+          )
+          (LongArgumentU32 ())
+          LongArgumentU32?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentU64 _ _ ->
+    rewrite_l2r_writer
+      #_ #(long_argument b)
+      (l2r_write_weaken parse_long_argument_kind
+        (l2r_write_synth'
+          (l2r_write_filter
+            (l2r_write_constant_size write_u64 8sz)
+            uint64_wf
+          )
+          (LongArgumentU64 ())
+          LongArgumentU64?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+  | LongArgumentOther additional_info _ _ ->
+    rewrite_l2r_writer
+      #_ #(long_argument b)
+      (l2r_write_weaken parse_long_argument_kind
+        (l2r_write_synth'
+          (l2r_write_constant_size exact_write_empty 0sz)
+          (LongArgumentOther additional_info ())
+          LongArgumentOther?.v
+          ()
+        )
+        ()
+      )
+      (serialize_long_argument b)
+      a
+
 #pop-options
 
 inline_for_extraction
@@ -183,6 +397,22 @@ let write_header : maybe_r2l_writer serialize_header
   maybe_r2l_write_dtuple2
     (maybe_r2l_write_constant_size write_initial_byte' 1sz)
     write_long_argument
+
+inline_for_extraction
+noextract
+let size_comp_header : size_comp serialize_header
+=
+  size_comp_dtuple2
+    (size_comp_constant_size serialize_initial_byte 1sz)
+    size_comp_long_argument
+
+inline_for_extraction
+noextract
+let l2r_write_header : l2r_writer serialize_header
+=
+  l2r_write_dtuple2
+    (l2r_write_constant_size write_initial_byte' 1sz)
+    l2r_write_long_argument
 
 inline_for_extraction
 noextract
@@ -198,6 +428,36 @@ let write_simple_value_as_argument
       vpattern_rewrite
         (fun v -> maybe_r2l_write serialize_header out _ v _)
         (simple_value_as_argument x);
+      return res
+    )
+
+inline_for_extraction
+noextract
+let size_comp_simple_value_as_argument
+  (x: simple_value)
+: Tot (size_comp_for serialize_header (simple_value_as_argument x))
+= cps_simple_value_as_argument
+    (size_comp_for serialize_header (simple_value_as_argument x))
+    (ifthenelse_size_comp_for serialize_header (simple_value_as_argument x))
+    x
+    (fun h sz perr ->
+      let res = size_comp_header h sz perr in
+      let _ = gen_elim () in
+      return res
+    )
+
+inline_for_extraction
+noextract
+let l2r_write_simple_value_as_argument
+  (x: simple_value)
+: Tot (l2r_writer_for serialize_header (simple_value_as_argument x))
+= cps_simple_value_as_argument
+    (l2r_writer_for serialize_header (simple_value_as_argument x))
+    (ifthenelse_l2r_writer_for serialize_header (simple_value_as_argument x))
+    x
+    (fun h out ->
+      let res = l2r_write_header h out in
+      let _ = gen_elim () in
       return res
     )
 
@@ -266,6 +526,245 @@ let write_uint64_as_argument
         (uint64_as_argument ty x);
       return res
     )
+
+inline_for_extraction
+noextract
+let size_comp_simple_value_header
+  (x: simple_value)
+: Tot (size_comp_for serialize_header (simple_value_as_argument x))
+= cps_simple_value_as_argument
+    (size_comp_for serialize_header (simple_value_as_argument x))
+    (ifthenelse_size_comp_for serialize_header (simple_value_as_argument x))
+    x
+    (fun k -> coerce _ (size_comp_header k))
+
+inline_for_extraction
+let size_comp_simple_value
+  (x: simple_value)
+: Tot (size_comp_for serialize_raw_data_item (Simple x))
+= Classical.forall_intro parse_raw_data_item_eq;
+  rewrite_size_comp_for
+    serialize_raw_data_item_aux
+    (Simple x)
+    (coerce _ (size_comp_synth_for
+      (serialize_dtuple2 serialize_header serialize_content)
+      synth_raw_data_item
+      synth_raw_data_item_recip
+      (Simple x)
+      (| simple_value_as_argument x, () |)
+      (size_comp_dtuple2_for
+        serialize_header
+        serialize_content
+        (| simple_value_as_argument x, () |)
+        (simple_value_as_argument x)
+        ()
+        (size_comp_simple_value_header x)
+        (coerce _ (size_comp_weaken
+          parse_content_kind
+          (size_comp_constant_size serialize_empty 0sz)
+          ()
+          ()
+        ))
+      )
+      ()
+    ))
+    _
+
+inline_for_extraction
+noextract
+let l2r_write_simple_value_header
+  (x: simple_value)
+: Tot (l2r_writer_for serialize_header (simple_value_as_argument x))
+= cps_simple_value_as_argument
+    (l2r_writer_for serialize_header (simple_value_as_argument x))
+    (ifthenelse_l2r_writer_for serialize_header (simple_value_as_argument x))
+    x
+    (fun k -> coerce _ (l2r_write_header k))
+
+#push-options "--z3rlimit 32 --split_queries always"
+#restart-solver
+
+inline_for_extraction
+let l2r_write_simple_value
+  (x: simple_value)
+: Tot (l2r_writer_for serialize_raw_data_item (Simple x))
+= Classical.forall_intro parse_raw_data_item_eq;
+  rewrite_l2r_writer_for
+    serialize_raw_data_item_aux
+    (Simple x)
+    (coerce _ (l2r_write_synth_for
+      (serialize_dtuple2 serialize_header serialize_content)
+      synth_raw_data_item
+      synth_raw_data_item_recip
+      (Simple x)
+      (| simple_value_as_argument x, () |)
+      (l2r_write_dtuple2_for
+        serialize_header
+        serialize_content
+        (| simple_value_as_argument x, () |)
+        (simple_value_as_argument x)
+        ()
+        (l2r_write_simple_value_header x)
+        (coerce _ (l2r_write_weaken
+          parse_content_kind
+          (l2r_write_constant_size exact_write_empty 0sz)
+          ()
+          ()
+        ))
+      )
+      ()
+    ))
+    serialize_raw_data_item
+
+#pop-options
+
+inline_for_extraction
+noextract
+let size_comp_uint64_header
+  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (x: U64.t)
+: Tot (size_comp_for serialize_header (uint64_as_argument ty x))
+= cps_uint64_as_argument
+    (size_comp_for serialize_header (uint64_as_argument ty x))
+    (ifthenelse_size_comp_for serialize_header (uint64_as_argument ty x))
+    ty
+    x
+    (fun k -> coerce _ (size_comp_header k))
+
+inline_for_extraction
+let size_comp_int64
+  (ty: major_type_uint64_or_neg_int64)
+  (x: U64.t)
+: Tot (size_comp_for serialize_raw_data_item (Int64 ty x))
+= Classical.forall_intro parse_raw_data_item_eq;
+  rewrite_size_comp_for
+    serialize_raw_data_item_aux
+    (Int64 ty x)
+    (coerce _ (size_comp_synth_for
+      (serialize_dtuple2 serialize_header serialize_content)
+      synth_raw_data_item
+      synth_raw_data_item_recip
+      (Int64 ty x)
+      (| uint64_as_argument ty x, () |)
+      (size_comp_dtuple2_for
+        serialize_header
+        serialize_content
+        (| uint64_as_argument ty x, () |)
+        (uint64_as_argument ty x)
+        ()
+        (size_comp_uint64_header ty x)
+        (coerce _ (size_comp_weaken
+          parse_content_kind
+          (size_comp_constant_size serialize_empty 0sz)
+          ()
+          ()
+        ))
+      )
+      ()
+    ))
+    _
+
+#push-options "--z3rlimit 32 --split_queries always"
+#restart-solver
+
+inline_for_extraction
+let size_comp_string
+  (ty: major_type_byte_string_or_text_string)
+  (x: U64.t)
+  (v: Ghost.erased (Seq.seq byte) { Seq.length v == U64.v x /\ SZ.fits_u64 })
+: Tot (size_comp_for serialize_raw_data_item (String ty (Ghost.reveal v)))
+= Classical.forall_intro parse_raw_data_item_eq;
+  rewrite_size_comp_for
+    serialize_raw_data_item_aux
+    (Ghost.hide (String ty (Ghost.reveal v)))
+    (coerce _ 
+      (size_comp_synth_for
+        (serialize_dtuple2 serialize_header serialize_content)
+        synth_raw_data_item
+        synth_raw_data_item_recip
+        (Ghost.hide (String ty (Ghost.reveal v)))
+        (Ghost.hide (| uint64_as_argument ty x, Ghost.reveal v |))
+        (size_comp_dtuple2_for
+          serialize_header
+          serialize_content
+          (Ghost.hide (| uint64_as_argument ty x, Ghost.reveal v |))
+          (Ghost.hide (uint64_as_argument ty x))
+          (Ghost.hide (Ghost.reveal v))
+          (size_comp_uint64_header ty x)
+          (coerce _ (rewrite_size_comp_for
+            (serialize_weaken parse_content_kind (serialize_lseq_bytes (U64.v x)))
+            (Ghost.hide (Ghost.reveal v))
+            (size_comp_weaken_for
+              parse_content_kind
+              (serialize_lseq_bytes (U64.v x))
+              (Ghost.hide (Ghost.reveal v))
+              (size_comp_constant_size_for
+                (serialize_lseq_bytes (U64.v x))
+                (SZ.uint64_to_sizet x)
+                (Ghost.hide (Ghost.reveal v))
+              )
+              ()
+            )
+            (serialize_content (uint64_as_argument ty x))
+          ))
+        )
+        ()
+      )
+    )
+    _
+
+#pop-options
+
+inline_for_extraction
+noextract
+let l2r_write_uint64_header
+  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (x: U64.t)
+: Tot (l2r_writer_for serialize_header (uint64_as_argument ty x))
+= cps_uint64_as_argument
+    (l2r_writer_for serialize_header (uint64_as_argument ty x))
+    (ifthenelse_l2r_writer_for serialize_header (uint64_as_argument ty x))
+    ty
+    x
+    (fun k -> coerce _ (l2r_write_header k))
+
+#push-options "--z3rlimit 32 --split_queries always"
+#restart-solver
+
+inline_for_extraction
+let l2r_write_int64
+  (ty: major_type_uint64_or_neg_int64)
+  (x: U64.t)
+: Tot (l2r_writer_for serialize_raw_data_item (Int64 ty x))
+= Classical.forall_intro parse_raw_data_item_eq;
+  rewrite_l2r_writer_for
+    serialize_raw_data_item_aux
+    (Int64 ty x)
+    (coerce _ (l2r_write_synth_for
+      (serialize_dtuple2 serialize_header serialize_content)
+      synth_raw_data_item
+      synth_raw_data_item_recip
+      (Int64 ty x)
+      (| uint64_as_argument ty x, () |)
+      (l2r_write_dtuple2_for
+        serialize_header
+        serialize_content
+        (| uint64_as_argument ty x, () |)
+        (uint64_as_argument ty x)
+        ()
+        (l2r_write_uint64_header ty x)
+        (coerce _ (l2r_write_weaken
+          parse_content_kind
+          (l2r_write_constant_size exact_write_empty 0sz)
+          ()
+          ()
+        ))
+      )
+      ()
+    ))
+    serialize_raw_data_item
+
+#pop-options
 
 #push-options "--z3rlimit 32 --split_queries always"
 #restart-solver
