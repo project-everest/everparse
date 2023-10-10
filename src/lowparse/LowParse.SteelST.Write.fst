@@ -7,6 +7,7 @@ open Steel.ST.GenElim
 
 include LowParse.SteelST.Parse
 
+// DEPRECATED: use l2r_writer instead
 inline_for_extraction
 let writer
   (#k: parser_kind)
@@ -159,6 +160,89 @@ let size_comp_constant_size
     noop ();
     return rem
   end
+
+(* Left-to-right writing *)
+
+module LW = LowParse.SteelST.L2ROutput
+
+inline_for_extraction
+let l2r_writer_for
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (v: t)
+: Tot Type
+= (#vout: AP.array byte) ->
+  (out: LW.t) ->
+  ST byte_array
+    (LW.vp out vout)
+    (fun res -> exists_ (fun vres -> exists_ (fun vout' ->
+      aparse p res vres `star`
+      LW.vp out vout' `star`
+      pure (
+        AP.merge_into (array_of vres) vout' vout /\
+        vres.contents == v
+    ))))
+    (Seq.length (serialize s v) <= AP.length vout)
+    (fun _ -> True)
+
+inline_for_extraction
+let l2r_writer
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+= (v: t) ->
+  l2r_writer_for s v
+
+inline_for_extraction
+let l2r_write_constant_size
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: exact_writer s)
+  (sz: SZ.t)
+: Pure (l2r_writer s)
+    (requires (
+      k.parser_kind_high == Some k.parser_kind_low /\
+      k.parser_kind_low == SZ.v sz
+    ))
+    (ensures (fun _ -> True))
+= fun v out ->
+    let res = LW.split out sz in
+    let _ = gen_elim () in
+    let _ = w v res in
+    return res
+
+inline_for_extraction
+let ifthenelse_l2r_writer_for
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (v: Ghost.erased t)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> Tot (l2r_writer_for s v)))
+  (iffalse: (squash (cond == false) -> Tot (l2r_writer_for s v)))
+: Tot (l2r_writer_for s v)
+= fun out ->
+    if cond
+    then iftrue () out
+    else iffalse () out
+
+inline_for_extraction
+let ifthenelse_l2r_writer
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> Tot (l2r_writer s)))
+  (iffalse: (squash (cond == false) -> Tot (l2r_writer s)))
+: Tot (l2r_writer s)
+= fun v -> ifthenelse_l2r_writer_for s v cond (fun _ -> iftrue () v) (fun _ -> iffalse () v)
 
 (* Right-to-left writing *)
 
