@@ -829,6 +829,134 @@ let maybe_r2l_write_weaken
 : Tot (maybe_r2l_writer (serialize_weaken k1 s2))
 = rewrite_maybe_r2l_writer w2 (serialize_weaken k1 s2)
 
+inline_for_extraction
+let size_comp_synth
+  (#k: Ghost.erased parser_kind)
+  (#t1: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: size_comp s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> GTot t1))
+  (f21': ((x: t2) -> Tot (y: t1 { y == f21 x })))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (size_comp (serialize_synth p f12 s f21 ()))
+= fun x sz perr ->
+  serialize_synth_eq p f12 s f21 () x;
+  [@@inline_let]
+  let y = f21' x in
+  let sz' = w y sz perr in
+  let _ = gen_elim () in
+  return sz'
+
+inline_for_extraction
+let size_comp_synth'
+  (#k: Ghost.erased parser_kind)
+  (#t1: Type)
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: size_comp s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> Tot t1))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (size_comp (serialize_synth p f12 s f21 ()))
+= size_comp_synth w f12 f21 (fun x -> f21 x) ()
+
+inline_for_extraction
+let rewrite_size_comp
+  (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (#s1: serializer p1) (w1: size_comp s1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type) (#p2: parser k2 t2) (s2: serializer p2)
+: Pure (size_comp s2)
+  (requires (
+      t1 == t2 /\
+      (forall bytes . parse p1 bytes == parse p2 bytes)
+  ))
+  (ensures (fun _ -> True))
+= fun x sz perr ->
+    serializer_unique p2 s2 (serialize_ext p1 s1 p2) x;
+    noop ();
+    let res = w1 x sz perr in
+    let _ = gen_elim () in
+    return res
+
+inline_for_extraction
+let size_comp_weaken
+  (k1: Ghost.erased parser_kind) (#k2: Ghost.erased parser_kind) (#t: Type) (#p2: parser k2 t) (#s2: serializer p2) (w2: size_comp s2)
+  (_: squash (k1 `is_weaker_than` k2))
+: Tot (size_comp (serialize_weaken k1 s2))
+= rewrite_size_comp w2 (serialize_weaken k1 s2)
+
+inline_for_extraction
+let l2r_write_synth
+  (#k: Ghost.erased parser_kind)
+  (#t1: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: l2r_writer s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> GTot t1))
+  (f21': ((x: t2) -> Tot (y: t1 { y == f21 x })))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (l2r_writer (serialize_synth p f12 s f21 ()))
+= fun x a ->
+  serialize_synth_eq p f12 s f21 () x;
+  [@@inline_let]
+  let y = f21' x in
+  let res = w y a in
+  let _ = gen_elim () in
+  let _ = intro_synth p f12 res () in
+  return res
+
+inline_for_extraction
+let l2r_write_synth'
+  (#k: Ghost.erased parser_kind)
+  (#t1: Type)
+  (#p: parser k t1)
+  (#s: serializer p)
+  (w: l2r_writer s)
+  #t2 (f12: t1 -> GTot t2)
+  (f21: (t2 -> Tot t1))
+  (sq: squash (
+    synth_injective f12 /\
+    synth_inverse f12 f21
+  ))
+: Tot (l2r_writer (serialize_synth p f12 s f21 ()))
+= l2r_write_synth w f12 f21 (fun x -> f21 x) ()
+
+inline_for_extraction
+let rewrite_l2r_writer
+  (#k1: Ghost.erased parser_kind) (#t1: Type) (#p1: parser k1 t1) (#s1: serializer p1) (w1: l2r_writer s1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type) (#p2: parser k2 t2) (s2: serializer p2)
+: Pure (l2r_writer s2)
+  (requires (
+      t1 == t2 /\
+      (forall bytes . parse p1 bytes == parse p2 bytes)
+  ))
+  (ensures (fun _ -> True))
+= fun x out ->
+    serializer_unique p2 s2 (serialize_ext p1 s1 p2) x;
+    noop ();
+    let res = w1 x out in
+    let _ = gen_elim () in
+    let _ = rewrite_aparse res p2 in
+    return res
+
+inline_for_extraction
+let l2r_write_weaken
+  (k1: Ghost.erased parser_kind) (#k2: Ghost.erased parser_kind) (#t: Type) (#p2: parser k2 t) (#s2: serializer p2) (w2: l2r_writer s2)
+  (_: squash (k1 `is_weaker_than` k2))
+: Tot (l2r_writer (serialize_weaken k1 s2))
+= rewrite_l2r_writer w2 (serialize_weaken k1 s2)
+
 [@CMacro]
 let validator_error_constraint_failed  = 2ul
 
@@ -1115,6 +1243,35 @@ let maybe_r2l_write_filter
     let res = w x a in
     maybe_r2l_write_filter_aux s f x a res;
     return res
+
+inline_for_extraction
+let size_comp_filter
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: size_comp s)
+  (f: (t -> GTot bool))
+: Tot (size_comp (serialize_filter s f))
+= fun x sz perr ->
+  let res = w x sz perr in
+  let _ = gen_elim () in
+  return res
+
+inline_for_extraction
+let l2r_write_filter
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: l2r_writer s)
+  (f: (t -> GTot bool))
+: Tot (l2r_writer (serialize_filter s f))
+= fun x a ->
+  let res = w x a in
+  let _ = gen_elim () in
+  let _ = intro_filter p f res in
+  return res
 
 #push-options "--z3rlimit 32 --query_stats"
 #restart-solver
@@ -2250,6 +2407,63 @@ let maybe_r2l_write_dtuple2
       intro_maybe_r2l_write_failure (serialize_dtuple2 st s) out vout x;
       return false
     end
+
+inline_for_extraction
+let size_comp_dtuple2
+  (#kt: Ghost.erased parser_kind)
+  (#tag_t: Type)
+  (#pt: parser kt tag_t)
+  (#st: serializer pt)
+  (wt: size_comp st { kt.parser_kind_subkind == Some ParserStrong })
+  (#k: Ghost.erased parser_kind)
+  (#data_t: tag_t -> Type)
+  (#p: (t: tag_t) -> Tot (parser k (data_t t)))
+  (#s: (t: tag_t) -> Tot (serializer (p t)))
+  (w: (t: tag_t) -> Tot (size_comp (s t)))
+: Tot (size_comp (serialize_dtuple2 st s))
+= fun x sz perr ->
+  match x with
+  | (| tag, payload |) ->
+    serialize_dtuple2_eq st s x;
+    let sz1 = wt tag sz perr in
+    let _ = gen_elim () in
+    let err = R.read perr in
+    if err
+    then begin
+      noop ();
+      noop ();
+      return sz1
+    end else begin
+      vpattern_rewrite (R.pts_to perr _) false;
+      let sz2 = w tag payload sz1 perr in
+      let _ = gen_elim () in
+      return sz2
+    end
+
+inline_for_extraction
+let l2r_write_dtuple2
+  (#kt: Ghost.erased parser_kind)
+  (#tag_t: Type)
+  (#pt: parser kt tag_t)
+  (#st: serializer pt)
+  (wt: l2r_writer st { kt.parser_kind_subkind == Some ParserStrong })
+  (#k: Ghost.erased parser_kind)
+  (#data_t: tag_t -> Type)
+  (#p: (t: tag_t) -> Tot (parser k (data_t t)))
+  (#s: (t: tag_t) -> Tot (serializer (p t)))
+  (w: (t: tag_t) -> Tot (l2r_writer (s t)))
+: Tot (l2r_writer (serialize_dtuple2 st s))
+= fun x #vout out ->
+  match x with
+  | (| tag, payload |) ->
+    serialize_dtuple2_eq st s x;
+    let res = wt tag out in
+    let _ = gen_elim () in
+    aparse_serialized_length st res;
+    let res_pl = w tag payload out in
+    let _ = gen_elim () in
+    let _ = intro_dtuple2 pt p res res_pl in
+    return res
 
 #pop-options
 
