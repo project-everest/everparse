@@ -227,6 +227,24 @@ val set_array_perm_adjacent
   ))
   [SMTPat (adjacent (set_array_perm a1 p) (set_array_perm a2 p))]
 
+inline_for_extraction
+val copy
+  (#elt: Type)
+  (#vin #vout: v elt)
+  (ain aout: t elt)
+  (len: SZ.t)
+: ST (v elt)
+    (arrayptr ain vin `star` arrayptr aout vout)
+    (fun vout' -> arrayptr ain vin `star` arrayptr aout vout')
+    (SZ.v len == length (array_of vin) /\
+      SZ.v len == length (array_of vout) /\
+      array_perm (array_of vout) == full_perm
+    )
+    (fun vout' ->
+      array_of vout' == array_of vout /\
+      contents_of' vout' == contents_of' vin
+    )
+
 val share
   (#opened: _)
   (#elt: Type)

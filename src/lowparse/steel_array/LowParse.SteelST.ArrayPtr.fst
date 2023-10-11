@@ -176,6 +176,30 @@ let set_array_perm_adjacent
   ))
 = ()
 
+let copy
+  #elt #vin #vout ain aout len
+=
+  rewrite (arrayptr ain vin) (arrayptr0 ain vin);
+  let _ = gen_elim () in
+  let ain0 = (| ain, Ghost.hide (SA.length vin.v_array.array_ptr) |) in
+  rewrite (arrayptr1 vin) (SA.pts_to ain0 vin.v_array.array_perm vin.v_contents);
+  rewrite (arrayptr aout vout) (arrayptr0 aout vout);
+  let _ = gen_elim () in
+  let aout0 = (| aout, Ghost.hide (SA.length vout.v_array.array_ptr) |) in
+  rewrite (arrayptr1 vout) (SA.pts_to aout0 full_perm vout.v_contents);
+  SA.memcpy ain0 aout0 len;
+  rewrite (SA.pts_to ain0 vin.v_array.array_perm vin.v_contents) (arrayptr1 vin);
+  rewrite (arrayptr0 ain vin) (arrayptr ain vin);
+  let s' = vpattern_replace_erased (fun s -> SA.pts_to _ _ s) in
+  let res = {
+    v_array = vout.v_array;
+    v_contents = s';
+  }
+  in
+  rewrite (SA.pts_to _ _ _) (arrayptr1 res);
+  rewrite (arrayptr0 aout res) (arrayptr aout res);
+  return res
+
 #set-options "--ide_id_info_off"
 
 let share

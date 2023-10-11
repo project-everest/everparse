@@ -251,6 +251,33 @@ let set_array_perm_adjacent
   ))
 = ()
 
+let copy
+  #elt #vin #vout ain aout len_
+=
+  rewrite (arrayptr ain vin) (arrayptr0 ain vin);
+  let _ = gen_elim () in
+  [@@inline_let]
+  let ain0 : STC.array (STC.scalar elt) = (| ain, Ghost.hide (len vin.v_array) |) in
+  let sin : Ghost.erased _ = vpattern (STC.array_pts_to _) in
+  vpattern_rewrite (fun a -> STC.array_pts_to a _) ain0;
+  vpattern_rewrite (STC.array_pts_to ain0) (Ghost.hide (STC.mk_fraction_seq (STC.scalar elt) (mk_full_scalar_seq vin.v_contents) vin.v_array.array_perm));
+  rewrite (arrayptr aout vout) (arrayptr0 aout vout);
+  let _ = gen_elim () in
+  [@@inline_let]
+  let aout0 : STC.array (STC.scalar elt) = (| aout, Ghost.hide (len vout.v_array) |) in
+  vpattern_rewrite (fun a -> STC.array_pts_to ain0 _ `star` STC.array_pts_to a _) aout0;
+  STC.array_memcpy ain0 aout0 len_;
+  rewrite (STC.array_pts_to ain0 _) (arrayptr1 vin sin);
+  rewrite (arrayptr0 ain vin) (arrayptr ain vin);
+  let res = {
+    v_array = vout.v_array;
+    v_contents = vin.v_contents;
+  }
+  in
+  rewrite (STC.array_pts_to _ _) (arrayptr1 res (mk_full_scalar_seq vin.v_contents));
+  rewrite (arrayptr0 aout res) (arrayptr aout res);
+  return res
+
 #set-options "--ide_id_info_off"
 
 let share
