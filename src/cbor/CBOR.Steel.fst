@@ -781,6 +781,77 @@ let destr_cbor_string
   );
   return c'
 
+module LW = LowParse.SteelST.L2ROutput
+
+noextract
+unfold
+let l2r_write_cbor_post
+  (va: Ghost.erased Cbor.raw_data_item)
+  (vout: LPA.array LPS.byte)
+  (vres: LPS.v Cbor.parse_raw_data_item_kind Cbor.raw_data_item)
+  (vout': LPA.array LPS.byte)
+: Tot prop
+=  
+       LPA.merge_into (LPS.array_of vres) vout' vout /\
+       vres.LPS.contents == Ghost.reveal va
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+let l2r_write_cbor_string
+  (#va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor {Cbor.String? va})
+  (#vout: LPA.array LPS.byte)
+  (out: LW.t)
+: ST LPS.byte_array
+    (raw_data_item_match c (Ghost.reveal va) `star`
+      LW.vp out vout
+    )
+    (fun res -> exists_ (fun vres -> exists_ (fun vout' ->
+      raw_data_item_match c (Ghost.reveal va) `star`
+      LPS.aparse Cbor.parse_raw_data_item res vres `star`
+      LW.vp out vout' `star`
+      pure (
+        l2r_write_cbor_post va vout vres vout'
+    ))))
+    (Seq.length (LPS.serialize Cbor.serialize_raw_data_item va) <= LPA.length vout)
+    (fun _ -> True)
+= let _ = A.intro_fits_u64 () in
+  Classical.forall_intro Cbor.parse_raw_data_item_eq;
+  Cbor.serialize_raw_data_item_aux_correct va;
+  LPS.serialize_synth_eq _ Cbor.synth_raw_data_item (LPS.serialize_dtuple2 Cbor.serialize_header Cbor.serialize_content) Cbor.synth_raw_data_item_recip () (Ghost.reveal va);
+  LPS.serialize_dtuple2_eq Cbor.serialize_header Cbor.serialize_content (Cbor.synth_raw_data_item_recip va);
+  noop ();
+  let c' = destr_cbor_string c in
+  let _ = gen_elim () in
+  let res = Cbor.l2r_write_uint64_header c'.typ c'.byte_length out in
+  let _ = gen_elim () in
+  let vh = vpattern_replace (LPS.aparse Cbor.parse_header res) in
+  LPS.aparse_serialized_length Cbor.serialize_header res;
+  let len = SZ.uint64_to_sizet c'.byte_length in
+  let res_pl = LW.split out len in
+  let _ = gen_elim () in
+  let vout' = vpattern_replace (LW.vp out) in
+  let _ = LPA.copy c'.payload res_pl len in
+  let _ = LowParse.SteelST.SeqBytes.intro_lseq_bytes (U64.v c'.byte_length) res_pl in
+  let _ = LPS.rewrite_aparse res_pl (Cbor.parse_content Cbor.parse_raw_data_item vh.LPS.contents) in
+  let _ = LowParse.SteelST.Combinators.intro_dtuple2 Cbor.parse_header (Cbor.parse_content Cbor.parse_raw_data_item) res res_pl in
+  let _ = LowParse.SteelST.Combinators.intro_synth (LPS.parse_dtuple2 Cbor.parse_header (Cbor.parse_content Cbor.parse_raw_data_item)) Cbor.synth_raw_data_item res () in
+  let vres = LPS.rewrite_aparse res Cbor.parse_raw_data_item in
+  elim_implies
+    (LPA.arrayptr c'.payload _)
+    (raw_data_item_match c (Ghost.reveal va));
+  intro_exists vout' (fun vout' -> // FIXME: WHY WHY WHY?
+      raw_data_item_match c (Ghost.reveal va) `star`
+      LPS.aparse Cbor.parse_raw_data_item res vres `star`
+      LW.vp out vout' `star`
+      pure (
+        l2r_write_cbor_post va vout vres vout'
+    ));
+  return res
+
+#pop-options
+
 let constr_cbor_string
   (#va: LPA.v LPS.byte)
   (typ: Cbor.major_type_byte_string_or_text_string)
