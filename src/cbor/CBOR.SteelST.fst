@@ -1,4 +1,4 @@
-module CBOR.Steel
+module CBOR.SteelST
 open Steel.ST.OnRange
 open Steel.ST.GenElim
 
