@@ -66,7 +66,7 @@ KRML = $(KRML_HOME)/krml \
 	 -tmpdir out \
 	 -skip-linking \
 	 $(KRML_OPTS) \
-	 -warn-error '@2@4'
+	 -warn-error '@2@4@15'
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<

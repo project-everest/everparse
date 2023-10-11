@@ -325,6 +325,7 @@ let impl_array_group3_choice
       i2 #gn #ga #gl pn pl pres
     end
 
+[@@noextract_to "krml"]
 let impl_array_group3_res_strong
   (g: array_group3)
   (l: list Cbor.raw_data_item)
@@ -333,6 +334,7 @@ let impl_array_group3_res_strong
 
 module GR = Steel.ST.GhostReference
 
+[@@noextract_to "krml"]
 unfold
 let impl_array_group3_zero_or_more_inv_prop_gen
   (g: array_group3)
@@ -348,6 +350,7 @@ let impl_array_group3_zero_or_more_inv_prop_gen
   else impl_array_group3_post (array_group3_zero_or_more g) gl wl wres
   end
 
+[@@noextract_to "krml"]
 let impl_array_group3_zero_or_more_inv_prop
   (g: array_group3)
   (gn: Ghost.erased U64.t)
@@ -720,6 +723,7 @@ let impl_t_array3
       return false
     end
 
+[@@noextract_to "krml"]
 let rec sieve_list
   (l: list map_group_entry)
   (l': list bool { List.Tot.length l' == List.Tot.length l })

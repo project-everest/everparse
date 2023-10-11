@@ -5,9 +5,10 @@ module U64 = FStar.UInt64
 
 // Concise Data Definition Language (RFC 8610)
 
+[@@noextract_to "krml"]
 let typ = (Cbor.raw_data_item -> GTot bool) // GTot needed because of the .cbor control (staged serialization)
 let t_choice (t1 t2: typ) : typ = (fun x -> t1 x || t2 x)
-let t_always_false = (fun _ -> false)
+let t_always_false : typ = (fun _ -> false)
 
 // Recursive type (needed by COSE Section 5.1 "Recipient")
 
@@ -35,9 +36,13 @@ let bytes = bstr
 let tstr : typ = (fun x -> Cbor.String? x && Cbor.String?.typ x = Cbor.major_type_text_string)
 let text = tstr
 
+[@@CMacro]
 let simple_value_false : Cbor.simple_value = 20uy
+[@@CMacro]
 let simple_value_true : Cbor.simple_value = 21uy
+[@@CMacro]
 let simple_value_nil : Cbor.simple_value = 22uy
+[@@CMacro]
 let simple_value_undefined : Cbor.simple_value = 23uy
 
 let t_simple_value_literal (s: Cbor.simple_value) : typ =
@@ -60,6 +65,7 @@ let t_uint_literal (v: U64.t) : typ = (fun x ->
 // Groups in array context (Section 3.4)
 // General semantics, which would imply backtracking
 
+[@@erasable; noextract_to "krml"]
 let array_group1 = ((list Cbor.raw_data_item -> GTot bool) -> list Cbor.raw_data_item -> GTot bool)
 let array_group1_empty : array_group1 = fun k -> k
 let array_group1_concat (a1 a2: array_group1) : array_group1 = fun k -> a1 (a2 k)
@@ -79,6 +85,7 @@ let t_array1 (a: array_group1) : typ = fun x ->
   Cbor.Array? x &&
   a Nil? (Cbor.Array?.v x) 
 
+[@@noextract_to "krml"]
 let nat_up_to (n: nat) : eqtype = (i: nat { i <= n })
 
 [@@noextract_to "krml"]
@@ -125,6 +132,7 @@ let t_array2 (a: array_group2) : typ = fun x ->
 
 // Greedy semantics (Appendix A?)
 
+[@@erasable; noextract_to "krml"]
 let array_group3 = list Cbor.raw_data_item -> GTot (option (list Cbor.raw_data_item))
 let array_group3_always_false : array_group3 = fun _ -> None
 let array_group3_empty : array_group3 = Some
@@ -170,13 +178,15 @@ let t_array3 (a: array_group3) : typ = fun x ->
 
 // Groups in map context (Section 3.5)
 
-let map_group_entry = (typ & typ)
+[@@erasable]
+noeq
+type map_group_entry = | MapGroupEntry: (fst: typ) -> (snd: typ) -> map_group_entry
 
 let matches_map_group_entry
   (ge: map_group_entry)
   (x: (Cbor.raw_data_item & Cbor.raw_data_item))
 : GTot bool
-= (fst ge) (fst x) && (snd ge) (snd x)
+= ge.fst (fst x) && ge.snd (snd x)
 
 [@@erasable]
 noeq
@@ -194,7 +204,7 @@ let map_group_empty : map_group = {
 
 // Section 3.5.4: Cut
 let cut_map_group_entry (key: typ) (ge: map_group_entry) : map_group_entry =
-  (fun x -> fst ge x && not (key x)), snd ge
+  (fun x -> ge.fst x && not (key x)) `MapGroupEntry` ge.snd
 
 let cut_map_group (key: typ) (g: map_group) : map_group = {
   one = List.Tot.map (cut_map_group_entry key) g.one;
@@ -204,7 +214,7 @@ let cut_map_group (key: typ) (g: map_group) : map_group = {
 
 let maybe_cut_map_group (ge: map_group_entry) (cut: bool) (g: map_group) : map_group =
   if cut
-  then cut_map_group (fst ge) g
+  then cut_map_group (ge.fst) g
   else g
 
 let map_group_cons_one (ge: map_group_entry) (cut: bool) (g: map_group) : map_group =
