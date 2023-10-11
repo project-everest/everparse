@@ -2,7 +2,7 @@ module CBOR.Steel
 open Steel.ST.OnRange
 open Steel.ST.GenElim
 
-module Cbor = CBOR.SteelST
+module Cbor = CBOR.SteelST.Raw
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT

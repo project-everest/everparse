@@ -1,6 +1,6 @@
 module CBOR.SteelC
 
-module Cbor = CBOR.SteelST
+module Cbor = CBOR.SteelST.Raw
 module F = Steel.ST.C.Types.Fields
 module C = Steel.ST.C.Types
 module U64 = FStar.UInt64

@@ -59,7 +59,7 @@ struct cbor_pair {
 uint8_t cbor_get_type (struct cbor *elt) {
   uint8_t ty = elt->cbor_type;
   if (ty == CBOR_TYPE_SERIALIZED)
-    return CBOR_SteelST_read_major_type(elt->cbor_payload.cbor_case_serialized.cbor_serialized_payload);
+    return CBOR_SteelST_Raw_read_major_type(elt->cbor_payload.cbor_case_serialized.cbor_serialized_payload);
   else
     return ty;
 }
@@ -67,7 +67,7 @@ uint8_t cbor_get_type (struct cbor *elt) {
 uint64_t cbor_read_int64 (struct cbor *elt) {
   switch (elt->cbor_type) {
   case CBOR_TYPE_SERIALIZED:
-    return CBOR_SteelST_read_int64(elt->cbor_payload.cbor_case_serialized.cbor_serialized_payload);
+    return CBOR_SteelST_Raw_read_int64(elt->cbor_payload.cbor_case_serialized.cbor_serialized_payload);
   case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_UINT64:
     return elt->cbor_payload.cbor_case_uint64;
   case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_NEG_INT64:
@@ -85,7 +85,7 @@ void preload_cbor_with_size (uint8_t *src, size_t src_size, struct cbor *dst) {
 
 bool validate_cbor (uint8_t *input, size_t len, struct cbor* elt) {
   uint32_t error = 0;
-  CBOR_SteelST_validate_raw_data_item(input, len, &error);
+  CBOR_SteelST_Raw_validate_raw_data_item(input, len, &error);
   bool res = error != 0;
   if (res)
     preload_cbor_with_size (input, len, elt);
@@ -93,7 +93,7 @@ bool validate_cbor (uint8_t *input, size_t len, struct cbor* elt) {
 }
 
 void preload_cbor (uint8_t **src, struct cbor *dst) {
-  size_t src_size = CBOR_SteelST_jump_raw_data_item(*src);
+  size_t src_size = CBOR_SteelST_Raw_jump_raw_data_item(*src);
   preload_cbor_with_size(*src, src_size, dst);
   *src += src_size;
 }
@@ -102,44 +102,44 @@ void load_cbor (struct cbor* elt) {
   if (elt->cbor_type != CBOR_TYPE_SERIALIZED)
     return;
   uint8_t *payload = elt->cbor_payload.cbor_case_serialized.cbor_serialized_payload;
-  uint8_t typ = CBOR_SteelST_read_major_type(payload);
+  uint8_t typ = CBOR_SteelST_Raw_read_major_type(payload);
   switch (typ) {
   case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_UINT64:
     {
       elt->cbor_type = typ;
-      elt->cbor_payload.cbor_case_uint64 = CBOR_SteelST_read_int64(payload);
+      elt->cbor_payload.cbor_case_uint64 = CBOR_SteelST_Raw_read_int64(payload);
       return;
     }
   case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_NEG_INT64:
     {
       elt->cbor_type = typ;
-      elt->cbor_payload.cbor_case_neg_int64 = CBOR_SteelST_read_int64(payload);
+      elt->cbor_payload.cbor_case_neg_int64 = CBOR_SteelST_Raw_read_int64(payload);
       return;
     }
   case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_BYTE_STRING:
     {
       elt->cbor_type = typ;
-      elt->cbor_payload.cbor_case_byte_string.cbor_string_byte_length = CBOR_SteelST_read_argument_as_uint64(payload);
-      elt->cbor_payload.cbor_case_byte_string.cbor_string_payload = CBOR_SteelST_focus_string(payload);
+      elt->cbor_payload.cbor_case_byte_string.cbor_string_byte_length = CBOR_SteelST_Raw_read_argument_as_uint64(payload);
+      elt->cbor_payload.cbor_case_byte_string.cbor_string_payload = CBOR_SteelST_Raw_focus_string(payload);
       return;
     }
   case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_TEXT_STRING:
     {
       elt->cbor_type = typ;
-      elt->cbor_payload.cbor_case_text_string.cbor_string_byte_length = CBOR_SteelST_read_argument_as_uint64(payload);
-      elt->cbor_payload.cbor_case_text_string.cbor_string_payload = CBOR_SteelST_focus_string(payload);
+      elt->cbor_payload.cbor_case_text_string.cbor_string_byte_length = CBOR_SteelST_Raw_read_argument_as_uint64(payload);
+      elt->cbor_payload.cbor_case_text_string.cbor_string_payload = CBOR_SteelST_Raw_focus_string(payload);
       return;
     }
   case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_ARRAY:
     {
-      uint64_t count = CBOR_SteelST_read_argument_as_uint64(payload);
+      uint64_t count = CBOR_SteelST_Raw_read_argument_as_uint64(payload);
       struct cbor *array = calloc(count, sizeof(struct cbor));
       if (array == NULL)
         return;
       elt->cbor_type = typ;
       elt->cbor_payload.cbor_case_array.cbor_array_count = count;
       elt->cbor_payload.cbor_case_array.cbor_array_payload = array;
-      payload += CBOR_SteelST_jump_header(payload);
+      payload += CBOR_SteelST_Raw_jump_header(payload);
       for (uint64_t i = 0; i < count; ++i) {
         preload_cbor(&payload, array);
         ++array;
@@ -148,14 +148,14 @@ void load_cbor (struct cbor* elt) {
     }
   case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_MAP:
     {
-      uint64_t count = CBOR_SteelST_read_argument_as_uint64(payload);
+      uint64_t count = CBOR_SteelST_Raw_read_argument_as_uint64(payload);
       struct cbor_pair *map = calloc(count, sizeof(struct cbor_pair));
       if (map == NULL)
         return;
       elt->cbor_type = typ;
       elt->cbor_payload.cbor_case_map.cbor_map_entry_count = count;
       elt->cbor_payload.cbor_case_map.cbor_map_payload = map;
-      payload += CBOR_SteelST_jump_header(payload);
+      payload += CBOR_SteelST_Raw_jump_header(payload);
       for (uint64_t i = 0; i < count; ++i) {
         preload_cbor(&payload, &(map->cbor_pair_key));
         preload_cbor(&payload, &(map->cbor_pair_value));
@@ -168,18 +168,18 @@ void load_cbor (struct cbor* elt) {
       struct cbor *elt = malloc(sizeof(struct cbor));
       if (elt == NULL)
         return;
-      uint64_t tag = CBOR_SteelST_read_argument_as_uint64(payload);
+      uint64_t tag = CBOR_SteelST_Raw_read_argument_as_uint64(payload);
       elt->cbor_type = typ;
       elt->cbor_payload.cbor_case_tagged.cbor_tagged_tag = tag;
       elt->cbor_payload.cbor_case_tagged.cbor_tagged_payload = elt;
-      payload += CBOR_SteelST_jump_header(payload);
+      payload += CBOR_SteelST_Raw_jump_header(payload);
       preload_cbor(&payload, elt);
       return;
     }
   case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_SIMPLE_VALUE:
     {
       elt->cbor_type = typ;
-      elt->cbor_payload.cbor_case_simple_value = CBOR_SteelST_read_simple_value(payload);
+      elt->cbor_payload.cbor_case_simple_value = CBOR_SteelST_Raw_read_simple_value(payload);
       return;
     }
   }

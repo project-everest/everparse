@@ -1,5 +1,7 @@
-module CBOR.SteelST
+module CBOR.SteelST.Raw
 include CBOR.Spec
+
+// A "raw" API to parse and serialize CBOR objects without a data type
 
 module DummyArray = CBOR.SteelST.Array // for dependencies only
 
