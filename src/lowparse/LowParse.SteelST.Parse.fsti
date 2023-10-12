@@ -124,6 +124,26 @@ let intro_aparse
   rewrite (aparse0 p a vp) (aparse p a vp); 
   vp
 
+let intro_aparse_with_serializer
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (#va: AP.v byte)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: Ghost.erased t)
+  (a: byte_array)
+: STGhost (v k t) opened
+    (AP.arrayptr a va)
+    (fun vp -> aparse p a vp)
+    (serialize s x == AP.contents_of va)
+    (fun vp ->
+      AP.array_of va == array_of vp /\
+      vp.contents == Ghost.reveal x /\
+      arrayptr_parse p va == Some vp
+    )
+= intro_aparse p a
+
 #set-options "--ide_id_info_off"
 
 let elim_aparse
@@ -168,6 +188,34 @@ let elim_aparse_with_serializer
   parse_injective p (AP.contents_of res) (serialize s vp.contents);
   noop ();
   res
+
+let elim_aparse_with_implies
+  (#opened: _)
+  (#k: parser_kind)
+  (#t: Type)
+  (#vp: v k t)
+  (p: parser k t)
+  (a: byte_array)
+: STGhost (AP.v byte) opened
+    (aparse p a vp)
+    (fun va -> AP.arrayptr a va `star`
+      (AP.arrayptr a va `implies_` aparse p a vp)
+    )
+    True
+    (fun va ->
+      AP.array_of va == array_of vp /\
+      arrayptr_parse p va == Some vp
+    )
+= let va = elim_aparse p a in
+  intro_implies
+    (AP.arrayptr a va)
+    (aparse p a vp)
+    emp
+    (fun _ ->
+      let _ = intro_aparse p a in
+      vpattern_rewrite (aparse p a) vp
+    );
+  va
 
 let aparse_serialized_length
   (#opened: _)
