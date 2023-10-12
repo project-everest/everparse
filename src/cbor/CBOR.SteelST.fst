@@ -1526,7 +1526,7 @@ let destr_cbor_tagged
     );
   return res
 
-#push-options "--split_queries always"
+#push-options "--z3rlimit 64"
 #restart-solver
 
 let serialize_cbor_tagged_eq
@@ -1547,11 +1547,6 @@ let serialize_cbor_tagged_eq
     ()
     c;
   LPS.serialize_dtuple2_eq Cbor.serialize_header Cbor.serialize_content (Cbor.synth_raw_data_item_recip c)
-
-#pop-options
-
-#push-options "--z3rlimit 64"
-#restart-solver
 
 inline_for_extraction
 noextract

@@ -1,5 +1,5 @@
 module CBOR.Spec
-include CBOR.Spec.Constants
+include CBOR.Spec.Type
 open LowParse.Spec
 open LowParse.Spec.BitSum
 open LowParse.Spec.Recursive
@@ -151,9 +151,6 @@ let uint64_wf
 : Tot bool
 = min_deterministic_uint64 `U64.lte` x
 
-[@@CMacro]
-let min_simple_value_long_argument = 32uy
-
 inline_for_extraction
 let simple_value_long_argument_wf // 3.3: "an encoder MUST NOT issue two-byte sequences that start with 0xf8 and continue with a byte less than 0x20"
   (x: U8.t)
@@ -252,17 +249,6 @@ let argument_as_uint64
     Cast.uint8_to_uint64 v
 
 [@@CMacro]
-let max_simple_value_additional_info = 23uy
-
-inline_for_extraction
-let simple_value_wf
-  (x: U8.t)
-: Tot bool
-= x `U8.lte` max_simple_value_additional_info || min_simple_value_long_argument `U8.lte` x
-
-let simple_value = parse_filter_refine simple_value_wf
-
-[@@CMacro]
 let additional_info_simple_value_max : additional_info_t = 24uy
 
 let get_header_argument_as_simple_value_initial_byte_precond
@@ -285,16 +271,6 @@ let argument_as_simple_value
     v
 
 (* Raw data items, disregarding ordering of map entries *)
-
-noeq
-type raw_data_item
-= | Simple: (v: simple_value) -> raw_data_item
-  | Int64: (typ: major_type_uint64_or_neg_int64) -> (v: U64.t) -> raw_data_item
-  | String: (typ: major_type_byte_string_or_text_string) -> (v: Seq.seq byte { FStar.UInt.fits (Seq.length v) U64.n }) -> raw_data_item // Section 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
-  | Array: (v: list raw_data_item { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
-  | Map: (v: list (raw_data_item & raw_data_item) { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
-  | Tagged: (tag: U64.t) -> (v: raw_data_item) -> raw_data_item
-//  | Float: (v: Float.float) -> raw_data_item // TODO
 
 let content
   (h: header)
@@ -344,7 +320,7 @@ let synth_raw_data_item
   | (| h, c |) ->
     synth_raw_data_item' h c
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 #restart-solver
 let synth_raw_data_item_injective : squash (synth_injective synth_raw_data_item) = ()
 #pop-options
