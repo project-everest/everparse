@@ -53,6 +53,7 @@ and cbor_map_entry = {
 and cbor_map = {
   entry_count: U64.t;
   payload: A.array cbor_map_entry;
+  footprint: Ghost.erased (Seq.seq cbor_map_entry);
 }
 
 and cbor =
@@ -205,10 +206,12 @@ let raw_data_item_match_map_prop
   (c: cbor)
   (v: Cbor.raw_data_item)
   (a: A.array cbor_map_entry)
+  (s: Seq.seq cbor_map_entry)
 : GTot prop
 = match c, v with
   | CBOR_Case_Map c, Cbor.Map l ->
     U64.v c.entry_count == List.Tot.length l /\
+    Ghost.reveal c.footprint == s /\
     c.payload == a
   | _ -> False
 
@@ -222,7 +225,7 @@ let raw_data_item_match_map0
     A.pts_to a full_perm c' `star`
     raw_data_item_map_match c' (Cbor.Map?.v v) `star`
     pure (
-      raw_data_item_match_map_prop c v a
+      raw_data_item_match_map_prop c v a c'
     )
   ))
 
@@ -241,7 +244,15 @@ let raw_data_item_map_entry_match1
 = raw_data_item_match c1.key (fstp v1) `star`
   raw_data_item_match c1.value (sndp v1)
 
+[@@__reduce__]
 let raw_data_item_map_entry_match0
+  (raw_data_item_match: (cbor -> Cbor.raw_data_item -> vprop))
+  (c1: cbor_map_entry)
+  (v1: (Cbor.raw_data_item & Cbor.raw_data_item))
+: Tot vprop
+= raw_data_item_map_entry_match1 c1 v1 raw_data_item_match
+
+let raw_data_item_map_entry_match
   (l: list (Cbor.raw_data_item & Cbor.raw_data_item))
   (raw_data_item_match: (cbor -> (v': Cbor.raw_data_item { v' << l }) -> vprop))
   (c1: cbor_map_entry)
@@ -276,7 +287,7 @@ and raw_data_item_map_match
   (v: list (Cbor.raw_data_item & Cbor.raw_data_item))
 : Tot vprop
   (decreases v)
-= LPS.seq_list_match c v (raw_data_item_map_entry_match0 v raw_data_item_match)
+= LPS.seq_list_match c v (raw_data_item_map_entry_match v raw_data_item_match)
 
 #set-options "--ide_id_info_off"
 
@@ -1673,9 +1684,157 @@ let l2r_writer_for_tagged
 
 #pop-options
 
-assume
+[@@__reduce__]
+let maybe_cbor_map
+  (v: Cbor.raw_data_item)
+: GTot (list (Cbor.raw_data_item & Cbor.raw_data_item))
+= match v with
+  | Cbor.Map l -> l
+  | _ -> []
+
+let destr_cbor_map
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+: ST cbor_map
+    (raw_data_item_match a v)
+    (fun res ->
+      A.pts_to res.payload full_perm res.footprint `star`
+      LPS.seq_list_match res.footprint (maybe_cbor_map v) (raw_data_item_map_entry_match0 raw_data_item_match) `star`
+      ((A.pts_to res.payload full_perm res.footprint `star`
+        LPS.seq_list_match res.footprint (maybe_cbor_map v) (raw_data_item_map_entry_match0 raw_data_item_match)) `implies_`
+        raw_data_item_match a v
+      )
+    )
+    (CBOR_Case_Map? a)
+    (fun res ->
+      a == CBOR_Case_Map res /\
+      Cbor.Map? v /\
+      U64.v res.entry_count == List.Tot.length (Cbor.Map?.v v)
+    )
+= raw_data_item_match_get_case _;
+  let sq : squash (Cbor.Map? v) = () in
+  let CBOR_Case_Map res = a in
+  rewrite_with_implies
+    (raw_data_item_match _ _)
+    (raw_data_item_match (CBOR_Case_Map res) (Cbor.Map (maybe_cbor_map v)));
+  rewrite_with_implies_with_tactic
+    (raw_data_item_match (CBOR_Case_Map res) (Cbor.Map (maybe_cbor_map v)))
+    (raw_data_item_match_map0 (CBOR_Case_Map res) (Cbor.Map (maybe_cbor_map v)) raw_data_item_map_match);
+  implies_trans
+    (raw_data_item_match_map0 (CBOR_Case_Map res) (Cbor.Map (maybe_cbor_map v)) raw_data_item_map_match)
+    (raw_data_item_match (CBOR_Case_Map res) (Cbor.Map (maybe_cbor_map v)))
+    (raw_data_item_match _ _);
+  let _ = gen_elim () in
+  rewrite
+    (A.pts_to _ _ _)
+    (A.pts_to res.payload full_perm res.footprint);
+  rewrite
+    (raw_data_item_map_match _ _)
+    (raw_data_item_map_match res.footprint (maybe_cbor_map v));
+  rewrite_with_tactic
+    (raw_data_item_map_match res.footprint (maybe_cbor_map v))
+    (LPS.seq_list_match res.footprint (maybe_cbor_map v) (raw_data_item_map_entry_match (maybe_cbor_map v) raw_data_item_match));
+  LPS.seq_list_match_weaken
+    res.footprint (maybe_cbor_map v)
+    (raw_data_item_map_entry_match (maybe_cbor_map v) raw_data_item_match)
+    (raw_data_item_map_entry_match0 raw_data_item_match)
+    (fun x y ->
+      rewrite
+        (raw_data_item_map_entry_match (maybe_cbor_map v) raw_data_item_match x y)
+        (raw_data_item_map_entry_match0 raw_data_item_match x y)
+    );
+  intro_implies
+    (A.pts_to res.payload full_perm res.footprint `star`
+      LPS.seq_list_match res.footprint (maybe_cbor_map v) (raw_data_item_map_entry_match0 raw_data_item_match))
+    (raw_data_item_match a v)
+    (raw_data_item_match_map0 (CBOR_Case_Map res) (Cbor.Map (maybe_cbor_map v)) raw_data_item_map_match `implies_`
+      raw_data_item_match a v)
+    (fun _ ->
+      LPS.seq_list_match_weaken
+        res.footprint (maybe_cbor_map v)
+        (raw_data_item_map_entry_match0 raw_data_item_match)
+        (raw_data_item_map_entry_match (maybe_cbor_map v) raw_data_item_match)
+        (fun x y ->
+          rewrite
+            (raw_data_item_map_entry_match0 raw_data_item_match x y)
+            (raw_data_item_map_entry_match (maybe_cbor_map v) raw_data_item_match x y)
+        );
+      rewrite_with_tactic
+        (LPS.seq_list_match res.footprint (maybe_cbor_map v) (raw_data_item_map_entry_match (maybe_cbor_map v) raw_data_item_match))
+        (raw_data_item_map_match res.footprint (maybe_cbor_map v));
+      rewrite
+        (raw_data_item_map_match res.footprint (maybe_cbor_map v)) 
+        (raw_data_item_map_match res.footprint (Cbor.Map?.v (Cbor.Map (maybe_cbor_map v))));
+      elim_implies
+        (raw_data_item_match_map0 _ _ raw_data_item_map_match)
+        (raw_data_item_match a v)
+    );
+  return res
+
+inline_for_extraction
 noextract
-val size_comp_for_map
+let size_comp_for_map_entry
+  (size:
+    (va: Ghost.erased Cbor.raw_data_item) ->
+    (c: cbor) ->
+    cbor_size_comp_for va c
+  )
+  (va: Ghost.erased (Cbor.raw_data_item & Cbor.raw_data_item))
+  (c: cbor_map_entry)
+  (sz: SZ.t)
+  (perr: R.ref bool)
+: STT SZ.t
+    (raw_data_item_map_entry_match0 raw_data_item_match c (Ghost.reveal va) `star`
+      R.pts_to perr full_perm false
+    )
+    (fun res ->
+      raw_data_item_map_entry_match0 raw_data_item_match c (Ghost.reveal va) `star`
+      exists_ (fun err ->
+        R.pts_to perr full_perm err `star`
+        pure (LowParse.SteelST.Write.size_comp_for_post (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item) va sz res err)
+    ))
+= LPS.serialize_nondep_then_eq Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item va;
+  let sz1 = size _ c.key sz perr in
+  let _ = gen_elim () in
+  let err = R.read perr in
+  if err
+  then begin
+    noop ();
+    noop ();
+    return sz1
+  end else begin
+    noop ();
+    let sz2 = size _ c.value sz1 perr in
+    let _ = gen_elim () in
+    noop ();
+    return sz2
+  end
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+let serialize_cbor_map_eq
+  (c: Cbor.raw_data_item { Cbor.Map? c })
+: Lemma
+  (
+    let s0 = LPS.serialize Cbor.serialize_raw_data_item c in
+    let s1 = LPS.serialize Cbor.serialize_header (Cbor.uint64_as_argument Cbor.major_type_map (U64.uint_to_t (List.Tot.length (Cbor.Map?.v c)))) in
+    let s2 = LPS.serialize (LPS.serialize_nlist (List.Tot.length (Cbor.Map?.v c)) (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item)) (Cbor.Map?.v c) in
+    s0 == s1 `Seq.append` s2 /\ Seq.length s0 == Seq.length s1 + Seq.length s2
+  )
+= Cbor.serialize_raw_data_item_aux_correct c;
+  LPS.serialize_synth_eq
+    _
+    Cbor.synth_raw_data_item
+    (LPS.serialize_dtuple2 Cbor.serialize_header Cbor.serialize_content)
+    Cbor.synth_raw_data_item_recip
+    ()
+    c;
+  LPS.serialize_dtuple2_eq Cbor.serialize_header Cbor.serialize_content (Cbor.synth_raw_data_item_recip c)
+
+inline_for_extraction
+noextract
+let size_comp_for_map
   (size:
     (va: Ghost.erased Cbor.raw_data_item) ->
     (c: cbor) ->
@@ -1684,10 +1843,126 @@ val size_comp_for_map
   (va: Ghost.erased Cbor.raw_data_item)
   (c: cbor {CBOR_Case_Map? c})
 : Tot (cbor_size_comp_for va c)
+= fun sz perr ->
+    let _ = A.intro_fits_u64 () in
+    raw_data_item_match_get_case c;
+    let _ : squash (Cbor.Map? va) = () in
+    serialize_cbor_map_eq va;
+    let c' = destr_cbor_map c in
+    let l = Ghost.hide (maybe_cbor_map va) in
+    assert (Ghost.reveal l == Cbor.Map?.v va);
+    rewrite_with_implies
+      (LPS.seq_list_match c'.footprint _ (raw_data_item_map_entry_match0 raw_data_item_match))
+      (LPS.seq_list_match c'.footprint l (raw_data_item_map_entry_match0 raw_data_item_match));
+    implies_trans_r1
+      (A.pts_to _ _ _)
+      (LPS.seq_list_match c'.footprint l (raw_data_item_map_entry_match0 raw_data_item_match))
+      (LPS.seq_list_match c'.footprint _ (raw_data_item_map_entry_match0 raw_data_item_match))
+      (raw_data_item_match _ _);
+    LPS.seq_list_match_length (raw_data_item_map_entry_match0 raw_data_item_match) _ _;
+    A.pts_to_length _ _;
+    let sz1 = CBOR.SteelST.Write.size_comp_uint64_header Cbor.major_type_map c'.entry_count sz perr in
+    let _ = gen_elim () in
+    let err1 = R.read perr in
+    if err1
+    then begin
+      noop ();
+      elim_implies
+        (A.pts_to _ _ _ `star` LPS.seq_list_match c'.footprint l (raw_data_item_map_entry_match0 raw_data_item_match))
+        (raw_data_item_match _ _);
+      return sz1
+    end else begin
+      noop ();
+      let sz2 = LPS.array_payload_as_nlist_size
+        (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item)
+        (raw_data_item_map_entry_match0 raw_data_item_match)
+        (fun x y sz perr ->
+          let res = size_comp_for_map_entry size y x sz perr in
+          let _ = gen_elim () in
+          return res
+        )
+        #c'.footprint
+        #l
+        (SZ.uint64_to_sizet c'.entry_count)
+        c'.payload
+        sz1
+        perr
+      in
+      let _ = gen_elim () in
+      elim_implies
+        (A.pts_to _ _ _ `star` LPS.seq_list_match c'.footprint l (raw_data_item_map_entry_match0 raw_data_item_match))
+        (raw_data_item_match _ _);
+      return sz2
+    end
 
-assume
 noextract
-val l2r_writer_for_map
+unfold
+let l2r_write_map_entry_post
+  (va: Ghost.erased (Cbor.raw_data_item & Cbor.raw_data_item))
+  (vout: LPA.array LPS.byte)
+  (vres: LPS.v (LPS.and_then_kind Cbor.parse_raw_data_item_kind Cbor.parse_raw_data_item_kind) (Cbor.raw_data_item & Cbor.raw_data_item))
+  (vout': LPA.array LPS.byte)
+: Tot prop
+=  
+       LPA.merge_into (LPS.array_of vres) vout' vout /\
+       vres.LPS.contents == Ghost.reveal va
+
+[@@__reduce__]
+let l2r_writer_for_map_entry_post
+  (va: Ghost.erased (Cbor.raw_data_item & Cbor.raw_data_item))
+  (c: cbor_map_entry)
+  (vout: LPA.array LPS.byte)
+  (out: LW.t)
+  (res: LPS.byte_array)
+  (vres: LPS.v (LPS.and_then_kind Cbor.parse_raw_data_item_kind Cbor.parse_raw_data_item_kind) (Cbor.raw_data_item & Cbor.raw_data_item))
+  (vout': LPA.array LPS.byte)
+: Tot vprop
+=
+  raw_data_item_map_entry_match0 raw_data_item_match c (Ghost.reveal va) `star`
+  LPS.aparse (LPS.nondep_then Cbor.parse_raw_data_item Cbor.parse_raw_data_item) res vres `star`
+  LW.vp out vout' `star`
+  pure (
+    l2r_write_map_entry_post va vout vres vout'
+  )
+
+inline_for_extraction
+noextract
+let l2r_writer_for_map_entry
+  (write:
+    (va: Ghost.erased Cbor.raw_data_item) ->
+    (c: cbor) ->
+    cbor_l2r_writer_for va c
+  )
+  (va: Ghost.erased (Cbor.raw_data_item & Cbor.raw_data_item))
+  (c: cbor_map_entry)
+  (#vout: LPA.array LPS.byte)
+  (out: LW.t)
+: ST LPS.byte_array
+    (raw_data_item_map_entry_match0 raw_data_item_match c (Ghost.reveal va) `star`
+      LW.vp out vout
+    )
+    (fun res -> exists_ (fun vres -> exists_ (fun vout' ->
+      l2r_writer_for_map_entry_post va c vout out res vres vout'
+    )))
+    (Seq.length (LPS.serialize (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item) va) <= LPA.length vout)
+    (fun _ -> True)
+= LPS.serialize_nondep_then_eq Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item va;
+  noop ();
+  let res = write _ c.key out in
+  let _ = gen_elim () in
+  let _ = LPS.elim_aparse_with_serializer Cbor.serialize_raw_data_item res in
+  let res_pl = write _ c.value out in
+  let _ = gen_elim () in
+  let vout' = vpattern_replace (LW.vp out) in
+  let _ = LPS.elim_aparse_with_serializer Cbor.serialize_raw_data_item res_pl in
+  let _ = LPA.join res res_pl in
+  let vres = LPS.intro_aparse_with_serializer (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item) va res in
+  assert_ (l2r_writer_for_map_entry_post va c vout out res vres vout');
+  return res
+
+inline_for_extraction
+noextract
+let l2r_writer_for_map
   (write:
     (va: Ghost.erased Cbor.raw_data_item) ->
     (c: cbor) ->
@@ -1696,8 +1971,55 @@ val l2r_writer_for_map
   (va: Ghost.erased Cbor.raw_data_item)
   (c: cbor {CBOR_Case_Map? c})
 : Tot (cbor_l2r_writer_for va c)
+= fun #vout out ->
+    let _ = A.intro_fits_u64 () in
+    raw_data_item_match_get_case c;
+    let _ : squash (Cbor.Map? va) = () in
+    serialize_cbor_map_eq va;
+    let c' = destr_cbor_map c in
+    let l = Ghost.hide (maybe_cbor_map va) in
+    assert (Ghost.reveal l == Cbor.Map?.v va);
+    rewrite_with_implies
+      (LPS.seq_list_match c'.footprint _ (raw_data_item_map_entry_match0 raw_data_item_match))
+      (LPS.seq_list_match c'.footprint l (raw_data_item_map_entry_match0 raw_data_item_match));
+    implies_trans_r1
+      (A.pts_to _ _ _)
+      (LPS.seq_list_match c'.footprint l (raw_data_item_map_entry_match0 raw_data_item_match))
+      (LPS.seq_list_match c'.footprint _ (raw_data_item_map_entry_match0 raw_data_item_match))
+      (raw_data_item_match _ _);
+    LPS.seq_list_match_length (raw_data_item_map_entry_match0 raw_data_item_match) _ _;
+    A.pts_to_length _ _;
+    let res = CBOR.SteelST.Write.l2r_write_uint64_header Cbor.major_type_map c'.entry_count out in
+    let _ = gen_elim () in
+    let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
+    let res_pl = LPS.l2r_write_array_payload_as_nlist
+      (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item)
+      (raw_data_item_map_entry_match0 raw_data_item_match)
+      (fun x y out ->
+         let res = l2r_writer_for_map_entry write y x out in
+         let _ = gen_elim () in
+         return res
+      )
+      #c'.footprint
+      #l
+      (SZ.uint64_to_sizet c'.entry_count)
+      c'.payload
+      out
+    in
+    let _ = gen_elim () in
+    let vout' = vpattern_replace (LW.vp out) in
+    let _ = LPS.elim_aparse_with_serializer (LPS.serialize_nlist (SZ.v (SZ.uint64_to_sizet c'.entry_count)) (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item)) res_pl in
+    let _ = LPA.join res res_pl in
+    let _ = gen_elim () in
+    let vres = intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
+    elim_implies
+      (A.pts_to _ _ _ `star` LPS.seq_list_match c'.footprint l (raw_data_item_map_entry_match0 raw_data_item_match))
+      (raw_data_item_match _ _);
+    assert_ (cbor_l2r_writer_for_post va c vout out res vres vout'); // FIXME: WHY WHY WHY?
+    return res
 
-noextract
+#pop-options
+
 let rec cbor_size_comp
   (va: Ghost.erased Cbor.raw_data_item)
   (c: cbor)
