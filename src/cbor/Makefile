@@ -80,10 +80,14 @@ extract-steel: $(filter-out CBOR_SteelC%,$(ALL_KRML_FILES))
 
 extract: extract-steelc extract-steel
 
-test: extract
+test-steel: extract-steel
 	$(CC) -Wall -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I $(STEEL_HOME)/include/steel -I out -c cbor_unverified.c
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in lowparse extract-steel extract-steelc extract test
+test-steelc: extract-steelc
+
+test: test-steel test-steelc
+
+.PHONY: all verify-all clean %.fst-in %.fsti-in lowparse extract-steel extract-steelc extract test-steel test-steelc test
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
