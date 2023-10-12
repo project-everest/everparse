@@ -107,6 +107,7 @@ let split' #_ #vl #vr x i x' =
   rewrite (arrayptr x vl) (arrayptr0 x vl);
   rewrite (arrayptr x' vr) (arrayptr0 x' vr);
   let _ = gen_elim () in
+  [@@inline_let]
   let res = SA.ptr_shift x i in
   SA.ptr_base_offset_inj res x';
   rewrite (arrayptr0 x vl) (arrayptr x vl);
@@ -116,6 +117,7 @@ let split' #_ #vl #vr x i x' =
 let index #_ #v r i =
   rewrite (arrayptr r v) (arrayptr0 r v);
   let _ = gen_elim () in
+  [@@inline_let]
   let a = (| r, Ghost.hide (SA.length v.v_array.array_ptr) |) in
   rewrite (arrayptr1 v) (SA.pts_to a v.v_array.array_perm v.v_contents);
   let res = SA.index a i in
@@ -126,6 +128,7 @@ let index #_ #v r i =
 let upd #elt #v r i x =
   rewrite (arrayptr r v) (arrayptr0 r v);
   let _ = gen_elim () in
+  [@@inline_let]
   let a = (| r, Ghost.hide (SA.length v.v_array.array_ptr) |) in
   rewrite (arrayptr1 v) (SA.pts_to a full_perm v.v_contents);
   SA.upd a i x;
@@ -181,10 +184,12 @@ let copy
 =
   rewrite (arrayptr ain vin) (arrayptr0 ain vin);
   let _ = gen_elim () in
+  [@@inline_let]
   let ain0 = (| ain, Ghost.hide (SA.length vin.v_array.array_ptr) |) in
   rewrite (arrayptr1 vin) (SA.pts_to ain0 vin.v_array.array_perm vin.v_contents);
   rewrite (arrayptr aout vout) (arrayptr0 aout vout);
   let _ = gen_elim () in
+  [@@inline_let]
   let aout0 = (| aout, Ghost.hide (SA.length vout.v_array.array_ptr) |) in
   rewrite (arrayptr1 vout) (SA.pts_to aout0 full_perm vout.v_contents);
   SA.memcpy ain0 aout0 len;
