@@ -672,34 +672,6 @@ let size_comp_for_serialized
       return res
     end
 
-let elim_aparse_with_implies
-  (#opened: _)
-  (#k: LPS.parser_kind)
-  (#t: Type)
-  (#vp: LPS.v k t)
-  (p: LPS.parser k t)
-  (a: LPS.byte_array)
-: STGhost (LPA.v LPS.byte) opened
-    (LPS.aparse p a vp)
-    (fun va -> LPA.arrayptr a va `star`
-      (LPA.arrayptr a va `implies_` LPS.aparse p a vp)
-    )
-    True
-    (fun va ->
-      LPA.array_of va == LPS.array_of vp /\
-      LPS.arrayptr_parse p va == Some vp
-    )
-= let va = LPS.elim_aparse p a in
-  intro_implies
-    (LPA.arrayptr a va)
-    (LPS.aparse p a vp)
-    emp
-    (fun _ ->
-      let _ = LPS.intro_aparse p a in
-      vpattern_rewrite (LPS.aparse p a) vp
-    );
-  va
-
 let l2r_writer_for_serialized
   (#va: Ghost.erased Cbor.raw_data_item)
   (c: cbor {CBOR_Case_Serialized? c})
@@ -708,7 +680,7 @@ let l2r_writer_for_serialized
     let c' = destr_cbor_serialized c in
     let _ = gen_elim () in
     LPS.aparse_serialized_length Cbor.serialize_raw_data_item _;
-    let _ = elim_aparse_with_implies Cbor.parse_raw_data_item c'.payload in
+    let _ = LPS.elim_aparse_with_implies Cbor.parse_raw_data_item c'.payload in
     implies_trans
       (LPA.arrayptr c'.payload _)
       (LPS.aparse Cbor.parse_raw_data_item _ _)
@@ -1358,26 +1330,6 @@ let serialize_cbor_array_eq
 
 #pop-options
 
-let intro_aparse_with_serializer
-  (#opened: _)
-  (#k: LPS.parser_kind)
-  (#t: Type)
-  (#va: LPA.v LPS.byte)
-  (#p: LPS.parser k t)
-  (s: LPS.serializer p)
-  (x: Ghost.erased t)
-  (a: LPS.byte_array)
-: STGhost (LPS.v k t) opened
-    (LPA.arrayptr a va)
-    (fun vp -> LPS.aparse p a vp)
-    (LPS.serialize s x == LPA.contents_of va)
-    (fun vp ->
-      LPA.array_of va == LPS.array_of vp /\
-      vp.LPS.contents == Ghost.reveal x /\
-      LPS.arrayptr_parse p va == Some vp
-    )
-= LPS.intro_aparse p a
-
 #push-options "--z3rlimit 64"
 #restart-solver
 
@@ -1497,7 +1449,7 @@ let l2r_writer_for_array
     let _ = LPS.elim_aparse_with_serializer (LPS.serialize_nlist (SZ.v (SZ.uint64_to_sizet c'.count)) Cbor.serialize_raw_data_item) res_pl in
     let _ = LPA.join res res_pl in
     let _ = gen_elim () in
-    let vres = intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
+    let vres = LPS.intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
     elim_implies
       (A.pts_to _ _ _ `star` LPS.seq_list_match c'.footprint l raw_data_item_match)
       (raw_data_item_match _ _);
@@ -1671,7 +1623,7 @@ let l2r_writer_for_tagged
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer Cbor.serialize_raw_data_item res_pl in
     let _ = LPA.join res res_pl in
-    let vres = intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
+    let vres = LPS.intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
     let vout' = vpattern_replace (LW.vp out) in
     elim_implies
       (raw_data_item_match pl _)
@@ -2011,7 +1963,7 @@ let l2r_writer_for_map
     let _ = LPS.elim_aparse_with_serializer (LPS.serialize_nlist (SZ.v (SZ.uint64_to_sizet c'.entry_count)) (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item)) res_pl in
     let _ = LPA.join res res_pl in
     let _ = gen_elim () in
-    let vres = intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
+    let vres = LPS.intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
     elim_implies
       (A.pts_to _ _ _ `star` LPS.seq_list_match c'.footprint l (raw_data_item_map_entry_match0 raw_data_item_match))
       (raw_data_item_match _ _);
