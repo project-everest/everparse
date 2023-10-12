@@ -1,6 +1,6 @@
-module CBOR.SteelST.Map
-include CBOR.SteelST.Base
-open CBOR.SteelST.Validate
+module CBOR.SteelST.Raw.Map
+include CBOR.SteelST.Raw.Base
+open CBOR.SteelST.Raw.Validate
 open LowParse.SteelST.Combinators
 open LowParse.SteelST.Assoc
 open LowParse.SteelST.Recursive

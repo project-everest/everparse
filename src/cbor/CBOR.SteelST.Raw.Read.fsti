@@ -1,5 +1,5 @@
-module CBOR.SteelST.Read
-include CBOR.SteelST.Base
+module CBOR.SteelST.Raw.Read
+include CBOR.SteelST.Raw.Base
 open LowParse.SteelST.Combinators
 open LowParse.SteelST.Assoc
 open LowParse.SteelST.Recursive

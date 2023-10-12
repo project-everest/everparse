@@ -766,7 +766,7 @@ let size_comp_for_int64
 : Tot (cbor_size_comp_for va c)
 = fun sz perr ->
     let c' = read_cbor_int64 c in
-    let res = CBOR.SteelST.Write.size_comp_int64 c'.typ c'.value sz perr in
+    let res = CBOR.SteelST.Raw.Write.size_comp_int64 c'.typ c'.value sz perr in
     let _ = gen_elim () in
     return res
 
@@ -776,7 +776,7 @@ let l2r_writer_for_int64
 : Tot (cbor_l2r_writer_for va c)
 = fun out ->
     let c' = read_cbor_int64 c in
-    let res = CBOR.SteelST.Write.l2r_write_int64 c'.typ c'.value out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_int64 c'.typ c'.value out in
     let _ = gen_elim () in
     return res
 
@@ -857,7 +857,7 @@ let size_comp_for_simple_value
 : Tot (cbor_size_comp_for va c)
 = fun sz perr ->
     let c' = read_cbor_simple_value c in
-    let res = CBOR.SteelST.Write.size_comp_simple_value c' sz perr in
+    let res = CBOR.SteelST.Raw.Write.size_comp_simple_value c' sz perr in
     let _ = gen_elim () in
     return res
 
@@ -867,7 +867,7 @@ let l2r_writer_for_simple_value
 : Tot (cbor_l2r_writer_for va c)
 = fun out ->
     let c' = read_cbor_simple_value c in
-    let res = CBOR.SteelST.Write.l2r_write_simple_value c' out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_simple_value c' out in
     let _ = gen_elim () in
     return res
 
@@ -1004,7 +1004,7 @@ let size_comp_for_string
     let _ = A.intro_fits_u64 () in
     let c' = destr_cbor_string c in
     let _ = gen_elim () in
-    let res = CBOR.SteelST.Write.size_comp_string c'.typ c'.byte_length (Cbor.String?.v va) sz perr in
+    let res = CBOR.SteelST.Raw.Write.size_comp_string c'.typ c'.byte_length (Cbor.String?.v va) sz perr in
     let _ = gen_elim () in
     elim_implies
       (LPA.arrayptr _ _)
@@ -1024,7 +1024,7 @@ let l2r_write_cbor_string
   noop ();
   let c' = destr_cbor_string c in
   let _ = gen_elim () in
-  let res = CBOR.SteelST.Write.l2r_write_uint64_header c'.typ c'.byte_length out in
+  let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header c'.typ c'.byte_length out in
   let _ = gen_elim () in
   let vh = vpattern_replace (LPS.aparse Cbor.parse_header res) in
   LPS.aparse_serialized_length Cbor.serialize_header res;
@@ -1233,7 +1233,7 @@ let read_cbor_array
         (raw_data_item_match input obj);
       R.with_local 0uL (fun plen ->
       R.with_local s.payload (fun pa ->
-        let w = CBOR.SteelST.Array.focus_array plen pa s.payload in
+        let w = CBOR.SteelST.Raw.Array.focus_array plen pa s.payload in
         implies_trans
           (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v w.n) Cbor.parse_raw_data_item) w.a _)
           (LPS.aparse Cbor.parse_raw_data_item s.payload _)
@@ -1362,7 +1362,7 @@ let size_comp_for_array
       (raw_data_item_match _ _);
     LPS.seq_list_match_length raw_data_item_match _ _;
     A.pts_to_length _ _;
-    let sz1 = CBOR.SteelST.Write.size_comp_uint64_header Cbor.major_type_array c'.count sz perr in
+    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_array c'.count sz perr in
     let _ = gen_elim () in
     let err1 = R.read perr in
     if err1
@@ -1427,7 +1427,7 @@ let l2r_writer_for_array
       (raw_data_item_match _ _);
     LPS.seq_list_match_length raw_data_item_match _ _;
     A.pts_to_length _ _;
-    let res = CBOR.SteelST.Write.l2r_write_uint64_header Cbor.major_type_array c'.count out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_array c'.count out in
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
     let res_pl = LPS.l2r_write_array_payload_as_nlist
@@ -1569,7 +1569,7 @@ let size_comp_for_tagged
     let _ : squash (Cbor.Tagged? va) = () in
     serialize_cbor_tagged_eq va;
     let c' = destr_cbor_tagged c in
-    let sz1 = CBOR.SteelST.Write.size_comp_uint64_header Cbor.major_type_tagged c'.tag sz perr in
+    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_tagged c'.tag sz perr in
     let _ = gen_elim () in
     let err1 = R.read perr in
     if err1
@@ -1612,7 +1612,7 @@ let l2r_writer_for_tagged
     let _ : squash (Cbor.Tagged? va) = () in
     serialize_cbor_tagged_eq va;
     let c' = destr_cbor_tagged c in
-    let res = CBOR.SteelST.Write.l2r_write_uint64_header Cbor.major_type_tagged c'.tag out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_tagged c'.tag out in
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
     let pl = R.read c'.payload in
@@ -1813,7 +1813,7 @@ let size_comp_for_map
       (raw_data_item_match _ _);
     LPS.seq_list_match_length (raw_data_item_map_entry_match0 raw_data_item_match) _ _;
     A.pts_to_length _ _;
-    let sz1 = CBOR.SteelST.Write.size_comp_uint64_header Cbor.major_type_map c'.entry_count sz perr in
+    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_map c'.entry_count sz perr in
     let _ = gen_elim () in
     let err1 = R.read perr in
     if err1
@@ -1941,7 +1941,7 @@ let l2r_writer_for_map
       (raw_data_item_match _ _);
     LPS.seq_list_match_length (raw_data_item_map_entry_match0 raw_data_item_match) _ _;
     A.pts_to_length _ _;
-    let res = CBOR.SteelST.Write.l2r_write_uint64_header Cbor.major_type_map c'.entry_count out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_map c'.entry_count out in
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
     let res_pl = LPS.l2r_write_array_payload_as_nlist

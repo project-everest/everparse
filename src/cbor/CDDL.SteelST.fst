@@ -65,7 +65,7 @@ let impl_typ_of_impl_typ_with_size
   (i: impl_typ_with_size t)
 : Tot (impl_typ t)
 = fun a ->
-    let sz = get_serialized_size Cbor.serialize_raw_data_item CBOR.SteelST.Validate.jump_raw_data_item a in
+    let sz = get_serialized_size Cbor.serialize_raw_data_item CBOR.SteelST.Raw.Validate.jump_raw_data_item a in
     i a sz
 
 inline_for_extraction [@@noextract_to "krml"]
@@ -109,13 +109,13 @@ let impl_any: impl_typ any = (fun _ -> return true)
 inline_for_extraction [@@noextract_to "krml"]
 let impl_uint : impl_typ uint
 = fun a ->
-    let mt = CBOR.SteelST.Validate.read_major_type a in
+    let mt = CBOR.SteelST.Raw.Validate.read_major_type a in
     return (mt = Cbor.major_type_uint64)
 
 inline_for_extraction [@@noextract_to "krml"]
 let impl_nint : impl_typ nint
 = fun a ->
-    let mt = CBOR.SteelST.Validate.read_major_type a in
+    let mt = CBOR.SteelST.Raw.Validate.read_major_type a in
     return (mt = Cbor.major_type_neg_int64)
 
 inline_for_extraction [@@noextract_to "krml"]
@@ -125,7 +125,7 @@ let impl_t_int : impl_typ t_int
 inline_for_extraction [@@noextract_to "krml"]
 let impl_bstr : impl_typ bstr
 = fun a ->
-    let mt = CBOR.SteelST.Validate.read_major_type a in
+    let mt = CBOR.SteelST.Raw.Validate.read_major_type a in
     return (mt = Cbor.major_type_byte_string)
 
 inline_for_extraction [@@noextract_to "krml"]
@@ -134,7 +134,7 @@ let impl_bytes : impl_typ CDDL.Spec.bytes = impl_bstr
 inline_for_extraction [@@noextract_to "krml"]
 let impl_tstr : impl_typ tstr
 = fun a ->
-    let mt = CBOR.SteelST.Validate.read_major_type a in
+    let mt = CBOR.SteelST.Raw.Validate.read_major_type a in
     return (mt = Cbor.major_type_text_string)
 
 inline_for_extraction [@@noextract_to "krml"]
@@ -143,10 +143,10 @@ let impl_text : impl_typ text = impl_tstr
 inline_for_extraction [@@noextract_to "krml"]
 let impl_t_simple_value_literal (s: Cbor.simple_value) : impl_typ (t_simple_value_literal s)
 = fun a ->
-    let mt = CBOR.SteelST.Validate.read_major_type a in
+    let mt = CBOR.SteelST.Raw.Validate.read_major_type a in
     if mt = Cbor.major_type_simple_value
     then begin
-      let sv = CBOR.SteelST.Read.read_simple_value a in
+      let sv = CBOR.SteelST.Raw.Read.read_simple_value a in
       return (sv = s)
     end else begin
       return false
@@ -181,10 +181,10 @@ module U64 = FStar.UInt64
 inline_for_extraction [@@noextract_to "krml"]
 let impl_t_uint_literal (s: U64.t) : impl_typ (t_uint_literal s)
 = fun a ->
-    let mt = CBOR.SteelST.Validate.read_major_type a in
+    let mt = CBOR.SteelST.Raw.Validate.read_major_type a in
     if mt = Cbor.major_type_uint64
     then begin
-      let sv = CBOR.SteelST.Read.read_int64 a in
+      let sv = CBOR.SteelST.Raw.Read.read_int64 a in
       return (sv = s)
     end else begin
       return false
@@ -696,7 +696,7 @@ let impl_t_array3
   (i: impl_array_group3 g)
 : Tot (impl_typ (t_array3 g))
 = fun #va a ->
-    let mt = CBOR.SteelST.Validate.read_major_type a in
+    let mt = CBOR.SteelST.Raw.Validate.read_major_type a in
     if mt = Cbor.major_type_array
     then begin
       noop ();
@@ -704,7 +704,7 @@ let impl_t_array3
         R.with_local 0uL (fun pn ->
         R.with_local a (fun pa ->
         R.with_local false (fun pres ->
-          let wl = CBOR.SteelST.Array.focus_array pn pa a in
+          let wl = CBOR.SteelST.Raw.Array.focus_array pn pa a in
           let wi = i pn pa pres in
           let res0 = R.read pres in
           let n = R.read pn in

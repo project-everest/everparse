@@ -1,6 +1,6 @@
-module CBOR.SteelST.Write
-include CBOR.SteelST.Base
-open CBOR.SteelST.Read
+module CBOR.SteelST.Raw.Write
+include CBOR.SteelST.Raw.Base
+open CBOR.SteelST.Raw.Read
 open LowParse.SteelST.Combinators
 open LowParse.SteelST.Assoc
 open LowParse.SteelST.Recursive

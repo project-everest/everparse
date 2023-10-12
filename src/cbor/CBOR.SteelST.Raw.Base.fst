@@ -1,4 +1,4 @@
-module CBOR.SteelST.Base
+module CBOR.SteelST.Raw.Base
 include CBOR.Spec
 open LowParse.SteelST.Combinators
 open Steel.ST.GenElim

@@ -1,5 +1,5 @@
-module CBOR.SteelST.Read
-open CBOR.SteelST.Validate
+module CBOR.SteelST.Raw.Read
+open CBOR.SteelST.Raw.Validate
 
 inline_for_extraction
 noextract

@@ -1,6 +1,6 @@
-module CBOR.SteelST.Array
-include CBOR.SteelST.Base
-open CBOR.SteelST.Validate
+module CBOR.SteelST.Raw.Array
+include CBOR.SteelST.Raw.Base
+open CBOR.SteelST.Raw.Validate
 open LowParse.SteelST.Combinators
 open LowParse.SteelST.Recursive
 open LowParse.SteelST.BitSum

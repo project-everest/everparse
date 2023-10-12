@@ -1,4 +1,4 @@
-module CBOR.SteelST.Validate
+module CBOR.SteelST.Raw.Validate
 
 inline_for_extraction
 noextract

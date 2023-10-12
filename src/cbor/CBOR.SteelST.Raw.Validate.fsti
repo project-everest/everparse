@@ -1,5 +1,5 @@
-module CBOR.SteelST.Validate
-include CBOR.SteelST.Base
+module CBOR.SteelST.Raw.Validate
+include CBOR.SteelST.Raw.Base
 open LowParse.SteelST.Combinators
 open LowParse.SteelST.Assoc
 open LowParse.SteelST.Recursive
