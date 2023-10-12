@@ -66,6 +66,43 @@ let seq_list_match_cons_eq
     seq_list_match_cons0 c (a :: q) item_match seq_list_match
   )
 
+// this one cannot be proven with seq_seq_match because of the << refinement in the type of item_match
+let rec seq_list_match_weaken
+  (#opened: _)
+  (#t #t': Type)
+  (c: Seq.seq t)
+  (v: list t')
+  (item_match1 item_match2: (t -> (v': t' { v' << v }) -> vprop))
+  (prf: (
+    (#opened: _) ->
+    (c': t) ->
+    (v': t' { v' << v }) ->
+    STGhostT unit opened
+      (item_match1 c' v')
+      (fun _ -> item_match2 c' v')
+  ))
+: STGhostT unit opened
+    (seq_list_match c v item_match1)
+    (fun _ -> seq_list_match c v item_match2)
+    (decreases v)
+= if Nil? v
+  then
+    rewrite (seq_list_match c v item_match1) (seq_list_match c v item_match2)
+  else begin
+    let _ : squash (Cons? v) = () in
+    seq_list_match_cons_eq c v item_match1;
+    seq_list_match_cons_eq c v item_match2;
+    rewrite
+      (seq_list_match c v item_match1)
+      (seq_list_match_cons0 c v item_match1 seq_list_match);
+    let _ = gen_elim () in
+    prf _ _;
+    seq_list_match_weaken _ (List.Tot.tl v) item_match1 item_match2 prf;
+    rewrite
+      (seq_list_match_cons0 c v item_match2 seq_list_match)
+      (seq_list_match c v item_match2)
+  end
+
 (* `seq_seq_match` describes how to match a sequence of low-level
 values (the low-level contents of an array) with a sequence of high-level
 values. Contrary to `seq_list_match`, `seq_seq_match` is not meant to be usable within
