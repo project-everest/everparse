@@ -1024,7 +1024,7 @@ let l2r_write_cbor_string
   noop ();
   let c' = destr_cbor_string c in
   let _ = gen_elim () in
-  let res = Cbor.l2r_write_uint64_header c'.typ c'.byte_length out in
+  let res = CBOR.SteelST.Write.l2r_write_uint64_header c'.typ c'.byte_length out in
   let _ = gen_elim () in
   let vh = vpattern_replace (LPS.aparse Cbor.parse_header res) in
   LPS.aparse_serialized_length Cbor.serialize_header res;

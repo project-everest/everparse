@@ -538,7 +538,6 @@ let size_comp_simple_value_header
     x
     (fun k -> coerce _ (size_comp_header k))
 
-inline_for_extraction
 let size_comp_simple_value
   (x: simple_value)
 : Tot (size_comp_for serialize_raw_data_item (Simple x))
@@ -584,7 +583,6 @@ let l2r_write_simple_value_header
 #push-options "--z3rlimit 32 --split_queries always"
 #restart-solver
 
-inline_for_extraction
 let l2r_write_simple_value
   (x: simple_value)
 : Tot (l2r_writer_for serialize_raw_data_item (Simple x))
@@ -618,8 +616,6 @@ let l2r_write_simple_value
 
 #pop-options
 
-inline_for_extraction
-noextract
 let size_comp_uint64_header
   (ty: major_type_t { ty `U8.lt` major_type_simple_value })
   (x: U64.t)
@@ -631,7 +627,6 @@ let size_comp_uint64_header
     x
     (fun k -> coerce _ (size_comp_header k))
 
-inline_for_extraction
 let size_comp_int64
   (ty: major_type_uint64_or_neg_int64)
   (x: U64.t)
@@ -667,7 +662,6 @@ let size_comp_int64
 #push-options "--z3rlimit 32 --split_queries always"
 #restart-solver
 
-inline_for_extraction
 let size_comp_string
   (ty: major_type_byte_string_or_text_string)
   (x: U64.t)
@@ -715,8 +709,6 @@ let size_comp_string
 
 #pop-options
 
-inline_for_extraction
-noextract
 let l2r_write_uint64_header
   (ty: major_type_t { ty `U8.lt` major_type_simple_value })
   (x: U64.t)
@@ -731,7 +723,6 @@ let l2r_write_uint64_header
 #push-options "--z3rlimit 32 --split_queries always"
 #restart-solver
 
-inline_for_extraction
 let l2r_write_int64
   (ty: major_type_uint64_or_neg_int64)
   (x: U64.t)

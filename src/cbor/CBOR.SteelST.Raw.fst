@@ -20,5 +20,3 @@ let focus_string #va = CBOR.SteelST.Read.focus_string #va
 let write_simple_value = CBOR.SteelST.Write.write_simple_value
 let write_int64 = CBOR.SteelST.Write.write_int64
 let finalize_raw_data_item_string = CBOR.SteelST.Write.finalize_raw_data_item_string
-
-let l2r_write_uint64_header = CBOR.SteelST.Write.l2r_write_uint64_header
