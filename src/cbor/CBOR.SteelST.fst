@@ -36,6 +36,7 @@ noeq
 type cbor_tagged = {
   tag: U64.t;
   payload: R.ref cbor;
+  footprint: Ghost.erased cbor;
 }
 
 and cbor_array = {
@@ -145,28 +146,33 @@ let raw_data_item_match_string0
     pure (raw_data_item_match_string_prop c v a w)
   ))
 
+unfold
 let raw_data_item_match_tagged_prop
   (c: cbor)
   (v: Cbor.raw_data_item)
   (a: R.ref cbor)
+  (c': cbor)
+  (v': Cbor.raw_data_item)
 : Tot prop
 = match v, c with
-  | Cbor.Tagged tag _, CBOR_Case_Tagged c ->
+  | Cbor.Tagged tag v2, CBOR_Case_Tagged c ->
     c.tag == tag /\
+    Ghost.reveal c.footprint == c' /\
+    v2 == v' /\
     c.payload == a
   | _ -> False
 
 [@@__reduce__]
 let raw_data_item_match_tagged0
   (c: cbor)
-  (v: Cbor.raw_data_item { Cbor.Tagged? v })
+  (v: Cbor.raw_data_item)
   (raw_data_item_match: (cbor -> (v': Cbor.raw_data_item { v' << v }) -> vprop))
 : Tot vprop
-= exists_ (fun a -> exists_ (fun c' ->
+= exists_ (fun a -> exists_ (fun c' -> exists_ (fun v' ->
     R.pts_to a full_perm c' `star`
-    raw_data_item_match c' (Cbor.Tagged?.v v) `star`
-    pure (raw_data_item_match_tagged_prop c v a)
-  ))
+    raw_data_item_match c' v' `star`
+    pure (raw_data_item_match_tagged_prop c v a c' v')
+  )))
 
 let raw_data_item_match_array_prop
   (c: cbor)
@@ -306,6 +312,9 @@ let raw_data_item_match_get_case
       rewrite (raw_data_item_match c v) (pure False);
       let _ = gen_elim () in
       rewrite emp (raw_data_item_match c v)
+
+let dummy_raw_data_item : Ghost.erased Cbor.raw_data_item =
+  Cbor.Int64 Cbor.major_type_uint64 0uL
 
 let raw_data_item_match_array_intro
   (#opened: _)
@@ -1004,6 +1013,21 @@ let destr_cbor_string
 #push-options "--z3rlimit 64"
 #restart-solver
 
+let size_comp_for_string
+  (va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor { Cbor.String? va })
+: Tot (cbor_size_comp_for va c)
+= fun sz perr ->
+    let _ = A.intro_fits_u64 () in
+    let c' = destr_cbor_string c in
+    let _ = gen_elim () in
+    let res = CBOR.SteelST.Write.size_comp_string c'.typ c'.byte_length (Cbor.String?.v va) sz perr in
+    let _ = gen_elim () in
+    elim_implies
+      (LPA.arrayptr _ _)
+      (raw_data_item_match _ _);
+    return res
+
 let l2r_write_cbor_string
   (va: Ghost.erased Cbor.raw_data_item)
   (c: cbor {Cbor.String? va})
@@ -1354,7 +1378,7 @@ let size_comp_for_array
     (c: cbor) ->
     cbor_size_comp_for va c
   )
-  (#va: Ghost.erased Cbor.raw_data_item)
+  (va: Ghost.erased Cbor.raw_data_item)
   (c: cbor {CBOR_Case_Array? c})
 : Tot (cbor_size_comp_for va c)
 = fun sz perr ->
@@ -1419,7 +1443,7 @@ let l2r_writer_for_array
     (c: cbor) ->
     cbor_l2r_writer_for va c
   )
-  (#va: Ghost.erased Cbor.raw_data_item)
+  (va: Ghost.erased Cbor.raw_data_item)
   (c: cbor {CBOR_Case_Array? c})
 : Tot (cbor_l2r_writer_for va c)
 = fun #vout out ->
@@ -1470,3 +1494,232 @@ let l2r_writer_for_array
     return res
 
 #pop-options
+
+[@@__reduce__]
+let maybe_cbor_tagged_tag
+  (v: Cbor.raw_data_item)
+: GTot U64.t
+= match v with
+  | Cbor.Tagged t _ -> t
+  | _ -> 0uL // dummy
+
+[@@__reduce__]
+let maybe_cbor_tagged_payload
+  (v: Cbor.raw_data_item)
+: GTot Cbor.raw_data_item
+= match v with
+  | Cbor.Tagged _ l -> l
+  | _ -> dummy_raw_data_item
+
+let destr_cbor_tagged
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+: ST cbor_tagged
+    (raw_data_item_match a v)
+    (fun res ->
+      R.pts_to res.payload full_perm res.footprint `star`
+      raw_data_item_match res.footprint (maybe_cbor_tagged_payload v) `star`
+      ((R.pts_to res.payload full_perm res.footprint `star`
+        raw_data_item_match res.footprint (maybe_cbor_tagged_payload v)) `implies_`
+        raw_data_item_match a v
+      )
+    )
+    (CBOR_Case_Tagged? a)
+    (fun res ->
+      a == CBOR_Case_Tagged res /\
+      Cbor.Tagged? v /\
+      res.tag == Cbor.Tagged?.tag v
+    )
+= raw_data_item_match_get_case _;
+  let _ : squash (Cbor.Tagged? v) = () in
+  let g_tag = Ghost.hide (Cbor.Tagged?.tag v) in
+  let g_payload = Ghost.hide (Cbor.Tagged?.v v) in
+  let CBOR_Case_Tagged res = a in
+  rewrite_with_implies
+    (raw_data_item_match a v)
+    (raw_data_item_match (CBOR_Case_Tagged res) (Cbor.Tagged g_tag g_payload));
+  rewrite_with_implies_with_tactic
+    (raw_data_item_match (CBOR_Case_Tagged res) (Cbor.Tagged g_tag g_payload))
+    (raw_data_item_match_tagged0 (CBOR_Case_Tagged res) (Cbor.Tagged g_tag g_payload) raw_data_item_match);
+  implies_trans
+    (raw_data_item_match_tagged0 (CBOR_Case_Tagged res) (Cbor.Tagged g_tag g_payload) raw_data_item_match)
+    (raw_data_item_match (CBOR_Case_Tagged res) (Cbor.Tagged g_tag g_payload))
+    (raw_data_item_match a v);
+  let _ = gen_elim () in
+  let _ : squash (res.tag == Ghost.reveal g_tag) = () in
+  let _ : squash (maybe_cbor_tagged_payload v == Ghost.reveal g_payload) = () in
+  let _ : squash (Ghost.reveal g_payload << Cbor.Tagged g_tag g_payload) = () in // FIXME: WHY WHY WHY?
+  rewrite (R.pts_to _ _ _) (R.pts_to res.payload full_perm res.footprint);
+  rewrite (raw_data_item_match _ _) (raw_data_item_match res.footprint (maybe_cbor_tagged_payload v));
+  intro_implies
+    (R.pts_to res.payload full_perm res.footprint `star`
+      raw_data_item_match res.footprint (maybe_cbor_tagged_payload v))
+    (raw_data_item_match a v)
+    (raw_data_item_match_tagged0 _ _ raw_data_item_match `implies_` raw_data_item_match a _)
+    (fun _ ->
+      elim_implies
+        (raw_data_item_match_tagged0 (CBOR_Case_Tagged res) (Cbor.Tagged g_tag g_payload) raw_data_item_match)
+        (raw_data_item_match a _)
+    );
+  return res
+
+#push-options "--split_queries always"
+#restart-solver
+
+let serialize_cbor_tagged_eq
+  (c: Cbor.raw_data_item { Cbor.Tagged? c })
+: Lemma
+  (
+    let s0 = LPS.serialize Cbor.serialize_raw_data_item c in
+    let s1 = LPS.serialize Cbor.serialize_header (Cbor.uint64_as_argument Cbor.major_type_tagged (Cbor.Tagged?.tag c)) in
+    let s2 = LPS.serialize Cbor.serialize_raw_data_item (Cbor.Tagged?.v c) in
+    s0 == s1 `Seq.append` s2 /\ Seq.length s0 == Seq.length s1 + Seq.length s2
+  )
+= Cbor.serialize_raw_data_item_aux_correct c;
+  LPS.serialize_synth_eq
+    _
+    Cbor.synth_raw_data_item
+    (LPS.serialize_dtuple2 Cbor.serialize_header Cbor.serialize_content)
+    Cbor.synth_raw_data_item_recip
+    ()
+    c;
+  LPS.serialize_dtuple2_eq Cbor.serialize_header Cbor.serialize_content (Cbor.synth_raw_data_item_recip c)
+
+#pop-options
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+inline_for_extraction
+noextract
+let size_comp_for_tagged
+  (size:
+    (va: Ghost.erased Cbor.raw_data_item) ->
+    (c: cbor) ->
+    cbor_size_comp_for va c
+  )
+  (va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor {CBOR_Case_Tagged? c})
+: Tot (cbor_size_comp_for va c)
+= fun sz perr ->
+    raw_data_item_match_get_case c;
+    let _ : squash (Cbor.Tagged? va) = () in
+    serialize_cbor_tagged_eq va;
+    let c' = destr_cbor_tagged c in
+    let sz1 = CBOR.SteelST.Write.size_comp_uint64_header Cbor.major_type_tagged c'.tag sz perr in
+    let _ = gen_elim () in
+    let err1 = R.read perr in
+    if err1
+    then begin
+      noop ();
+      elim_implies
+        (R.pts_to _ _ _ `star` raw_data_item_match _ _)
+        (raw_data_item_match _ _);
+      return sz1
+    end else begin
+      noop ();
+      let pl = R.read c'.payload in
+      vpattern_rewrite_with_implies
+        (fun pl -> raw_data_item_match pl _)
+        pl;
+      let sz2 = size _ pl sz1 perr in
+      let _ = gen_elim () in
+      elim_implies
+        (raw_data_item_match pl _)
+        (raw_data_item_match _ _);
+      elim_implies
+        (R.pts_to _ _ _ `star` raw_data_item_match _ _)
+        (raw_data_item_match _ _);
+      return sz2
+    end
+
+inline_for_extraction
+noextract
+let l2r_writer_for_tagged
+  (write:
+    (va: Ghost.erased Cbor.raw_data_item) ->
+    (c: cbor) ->
+    cbor_l2r_writer_for va c
+  )
+  (#va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor {CBOR_Case_Tagged? c})
+: Tot (cbor_l2r_writer_for va c)
+= fun #vout out ->
+    raw_data_item_match_get_case c;
+    let _ : squash (Cbor.Tagged? va) = () in
+    serialize_cbor_tagged_eq va;
+    let c' = destr_cbor_tagged c in
+    let res = CBOR.SteelST.Write.l2r_write_uint64_header Cbor.major_type_tagged c'.tag out in
+    let _ = gen_elim () in
+    let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
+    let pl = R.read c'.payload in
+    vpattern_rewrite_with_implies
+      (fun pl -> raw_data_item_match pl _)
+      pl;
+    let res_pl = write _ pl out in
+    let _ = gen_elim () in
+    let _ = LPS.elim_aparse_with_serializer Cbor.serialize_raw_data_item res_pl in
+    let _ = LPA.join res res_pl in
+    let vres = intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
+    let vout' = vpattern_replace (LW.vp out) in
+    elim_implies
+      (raw_data_item_match pl _)
+      (raw_data_item_match _ _);
+    elim_implies
+      (R.pts_to _ _ _ `star` raw_data_item_match _ _)
+      (raw_data_item_match _ _);
+    assert_ (cbor_l2r_writer_for_post va c vout out res vres vout'); // FIXME: WHY WHY WHY?
+    return res
+
+#pop-options
+
+assume
+noextract
+val size_comp_for_map
+  (size:
+    (va: Ghost.erased Cbor.raw_data_item) ->
+    (c: cbor) ->
+    cbor_size_comp_for va c
+  )
+  (va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor {CBOR_Case_Map? c})
+: Tot (cbor_size_comp_for va c)
+
+assume
+noextract
+val l2r_writer_for_map
+  (write:
+    (va: Ghost.erased Cbor.raw_data_item) ->
+    (c: cbor) ->
+    cbor_l2r_writer_for va c
+  )
+  (va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor {CBOR_Case_Map? c})
+: Tot (cbor_l2r_writer_for va c)
+
+noextract
+let rec cbor_size_comp
+  (va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor)
+  (sz: SZ.t)
+  (perr: R.ref bool)
+: STT SZ.t // FIXME: WHY WHY WHY do I need to expand the type annotation to avoid the termination check?
+    (raw_data_item_match c (Ghost.reveal va) `star`
+      R.pts_to perr full_perm false
+    )
+    (fun res ->
+      raw_data_item_match c (Ghost.reveal va) `star`
+      exists_ (fun err ->
+        R.pts_to perr full_perm err `star`
+        pure (LowParse.SteelST.Write.size_comp_for_post Cbor.serialize_raw_data_item va sz res err)
+    ))
+=
+  raw_data_item_match_get_case c;
+  match c with
+  | CBOR_Case_Int64 _ -> size_comp_for_int64 va c sz perr
+  | CBOR_Case_Simple_value _ -> size_comp_for_simple_value va c sz perr
+  | CBOR_Case_String _ -> size_comp_for_string va c sz perr
+  | CBOR_Case_Tagged _ -> size_comp_for_tagged cbor_size_comp va c sz perr
+  | CBOR_Case_Array _ -> size_comp_for_array cbor_size_comp va c sz perr
+  | CBOR_Case_Map _ -> size_comp_for_map cbor_size_comp va c sz perr
+  | _ -> size_comp_for_serialized c sz perr
