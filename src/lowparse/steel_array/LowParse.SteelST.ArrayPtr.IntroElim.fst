@@ -5,6 +5,10 @@ let steel_array_of_array
   a
 = a.array_ptr
 
+let steel_array_of_array_adjacent
+  a1 a2
+= ()
+
 let mk_array
   a p
 = Mkarray a p

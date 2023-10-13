@@ -8,7 +8,19 @@ module SZ = FStar.SizeT
 val steel_array_of_array
   (#elt: Type)
   (a: array elt)
-: GTot (SA.array elt)
+: Ghost (SA.array elt)
+    (requires True)
+    (ensures (fun a' -> SA.length a' == length a))
+
+val steel_array_of_array_adjacent
+  (#elt: Type)
+  (a1 a2: array elt)
+: Lemma
+  (requires (adjacent a1 a2))
+  (ensures (
+    SA.adjacent (steel_array_of_array a1) (steel_array_of_array a2) /\
+    steel_array_of_array (merge a1 a2) == SA.merge (steel_array_of_array a1) (steel_array_of_array a2)
+  ))
 
 val mk_array
   (#elt: Type)
