@@ -8,8 +8,12 @@ noeq
 type array elt = {
   array_ptr: SA.array elt;
   array_perm: Steel.FractionalPermission.perm;
-  array_base_len: (len: SZ.t { SZ.v len == SA.base_len (SA.base (SA.ptr_of array_ptr)) });
 }
+
+let array_length_fits (#elt: Type) (x: array elt) : Lemma
+  (SZ.fits (SA.length x.array_ptr))
+  [SMTPat x.array_ptr]
+= SA.length_fits x.array_ptr
 
 let len x = SZ.uint_to_t (SA.length x.array_ptr)
 
@@ -46,7 +50,6 @@ let adjacent x1 x2 =
 let merge x1 x2 = {
   array_ptr = SA.merge x1.array_ptr x2.array_ptr;
   array_perm = x1.array_perm;
-  array_base_len = x1.array_base_len;
 }
 
 let merge_assoc x1 x2 x3 =
@@ -76,7 +79,6 @@ let gsplit #_ #_ #v x i =
   let vl_array = {
     array_ptr = SA.split_l v.v_array.array_ptr i;
     array_perm = v.v_array.array_perm;
-    array_base_len = v.v_array.array_base_len;
   }
   in
   let vl = {
@@ -87,7 +89,6 @@ let gsplit #_ #_ #v x i =
   let vr_array = {
     array_ptr = SA.split_r v.v_array.array_ptr i;
     array_perm = v.v_array.array_perm;
-    array_base_len = v.v_array.array_base_len;
   }
   in
   let vr = {
