@@ -4,7 +4,7 @@ include CBOR.Spec.Constants
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 
-(* Raw data items, disregarding ordering of map entries *)
+(* Simple values *)
 
 [@@CMacro]
 let min_simple_value_long_argument = 32uy
@@ -13,13 +13,20 @@ let min_simple_value_long_argument = 32uy
 let max_simple_value_additional_info = 23uy
 
 inline_for_extraction
+noextract
 let simple_value_wf
   (x: U8.t)
 : Tot bool
 = x `U8.lte` max_simple_value_additional_info || min_simple_value_long_argument `U8.lte` x
 
-let simple_value = LowParse.Spec.Combinators.parse_filter_refine simple_value_wf
+inline_for_extraction
+noextract
+let simple_value : eqtype =
+  (x: U8.t { simple_value_wf x == true } )
 
+(* Raw data items, disregarding ordering of map entries *)
+
+noextract
 noeq
 type raw_data_item
 = | Simple: (v: simple_value) -> raw_data_item

@@ -1,9 +1,10 @@
 module CBOR.Spec.Constants
-open LowParse.Spec.BitSum
+
+module U8 = FStar.UInt8
 
 inline_for_extraction
 noextract
-let major_type_t = bitfield uint8 3
+let major_type_t : eqtype = (x: U8.t { U8.v x < pow2 3 })
 
 [@@CMacro]
 let major_type_simple_value : major_type_t = 7uy

@@ -673,7 +673,9 @@ let parse_nlist_one
 )
 = parse_nlist_eq 1 p b
 
-#push-options "--z3rlimit 64 --ifuel 8"
+let _ : squash (simple_value == parse_filter_refine simple_value_wf) = assert_norm (simple_value == parse_filter_refine simple_value_wf)
+
+#push-options "--z3rlimit 128 --ifuel 8"
 #restart-solver
 
 let parse_raw_data_item_eq
@@ -726,6 +728,10 @@ let get_major_type
   | Array _ -> major_type_array
   | Map _ -> major_type_map
   | Tagged _ _ -> major_type_tagged
+
+let _ : squash (major_type_t == bitfield uint8 3) =
+  assert_norm (major_type_t == bitfield_refine 8 U8.v 3);
+  uint8_v_eq_fn ()
 
 inline_for_extraction
 let mk_initial_byte
