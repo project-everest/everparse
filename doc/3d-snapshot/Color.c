@@ -22,11 +22,11 @@ ColorValidateColoredPoint(
 {
   /* Validating field col */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (uint64_t)4U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAftercol_refinement;
   if (hasBytes0)
   {
-    positionAftercol_refinement = StartPosition + (uint64_t)4U;
+    positionAftercol_refinement = StartPosition + 4ULL;
   }
   else
   {
@@ -76,11 +76,11 @@ ColorValidateColoredPoint(
   }
   /* Validating field x */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes1 = (uint64_t)4U <= (InputLength - positionAftercol_refinement0);
+  BOOLEAN hasBytes1 = 4ULL <= (InputLength - positionAftercol_refinement0);
   uint64_t positionAfterColoredPoint0;
   if (hasBytes1)
   {
-    positionAfterColoredPoint0 = positionAftercol_refinement0 + (uint64_t)4U;
+    positionAfterColoredPoint0 = positionAftercol_refinement0 + 4ULL;
   }
   else
   {
@@ -111,11 +111,11 @@ ColorValidateColoredPoint(
   }
   /* Validating field y */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - positionAfterx);
+  BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfterx);
   uint64_t positionAfterColoredPoint1;
   if (hasBytes)
   {
-    positionAfterColoredPoint1 = positionAfterx + (uint64_t)4U;
+    positionAfterColoredPoint1 = positionAfterx + 4ULL;
   }
   else
   {
