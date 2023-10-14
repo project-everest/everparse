@@ -6,10 +6,11 @@ module Cbor = CBOR.SteelST.Raw
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
-module LPA = LowParse.SteelST.ArrayPtr
+module LPA = LowParse.SteelST.ArrayPtr.IntroElim
 module LPS = LowParse.SteelST.SeqMatch
 module R = Steel.ST.Reference
 module A = Steel.ST.Array
+module LW = LowParse.SteelST.L2ROutput.IntroElim
 
 noeq
 type cbor_int = {
@@ -21,8 +22,8 @@ noeq
 type cbor_string = {
   typ: Cbor.major_type_byte_string_or_text_string;
   byte_length: U64.t;
-  payload: LPS.byte_array;
-  footprint: LPA.array LPS.byte;
+  payload: A.array U8.t;
+  permission: perm;
 }
 
 noeq
@@ -126,14 +127,15 @@ let raw_data_item_match_int0
 let raw_data_item_match_string_prop
   (c: cbor)
   (v: Cbor.raw_data_item)
-  (a: LPS.byte_array)
-  (w: LPA.v LPS.byte)
+  (a: A.array U8.t)
+  (p: perm)
+  (w: Seq.seq U8.t)
 : Tot prop
 = match c with
   | CBOR_Case_String c ->
-    U64.v c.byte_length == LPA.length (LPA.array_of w) /\
-    v == Cbor.String c.typ (LPA.contents_of w) /\
-    c.footprint == LPA.array_of w /\
+    U64.v c.byte_length == Seq.length w /\
+    v == Cbor.String c.typ w /\
+    c.permission == p /\
     c.payload == a
   | _ -> False
 
@@ -142,10 +144,10 @@ let raw_data_item_match_string0
   (c: cbor)
   (v: Cbor.raw_data_item)
 : Tot vprop
-= exists_ (fun a -> exists_ (fun w ->
-    LPA.arrayptr a w `star`
-    pure (raw_data_item_match_string_prop c v a w)
-  ))
+= exists_ (fun a -> exists_ (fun p -> exists_ (fun w ->
+    A.pts_to a p w `star`
+    pure (raw_data_item_match_string_prop c v a p w)
+  )))
 
 unfold
 let raw_data_item_match_tagged_prop
@@ -580,8 +582,6 @@ let destr_cbor_serialized
     (raw_data_item_match c va);
   return c'
 
-module LW = LowParse.SteelST.L2ROutput
-
 inline_for_extraction
 noextract
 let cbor_size_comp_for
@@ -913,26 +913,33 @@ let destr_cbor_string'
     let va' = vpattern_replace (LPS.aparse Cbor.parse_raw_data_item _) in
     let typ = Cbor.read_major_type cs.payload in
     let len = Cbor.read_argument_as_uint64 cs.payload in
-    let payload = Cbor.focus_string cs.payload in
+    let lpayload = Cbor.focus_string cs.payload in
     let _ = gen_elim () in
-    let vpl : LPA.v LPS.byte = vpattern_replace (fun vpl -> LPA.arrayptr payload vpl `star` (LPA.arrayptr payload vpl `implies_` LPS.aparse Cbor.parse_raw_data_item cs.payload va')) in
+    let payload = LPA.elim_arrayptr_with_implies lpayload in
+    let _ = gen_elim () in
+    implies_trans
+      (A.pts_to _ _ _)
+      (LPA.arrayptr _ _)
+      (LPS.aparse Cbor.parse_raw_data_item _ _);
+    let vpl = vpattern_replace_erased (fun vpl -> A.pts_to payload _ vpl `star` (A.pts_to payload _ vpl `implies_` LPS.aparse Cbor.parse_raw_data_item cs.payload va')) in
+    let vperm = vpattern_replace (fun vperm -> A.pts_to payload vperm _ `star` (A.pts_to payload vperm _ `implies_` LPS.aparse Cbor.parse_raw_data_item cs.payload va')) in
     let c' : cbor_string = {
       typ = typ;
       byte_length = len;
       payload = payload;
-      footprint = LPA.array_of vpl;
+      permission = vperm;
     }
     in
     noop ();
     intro_implies
       (raw_data_item_match_string0 (CBOR_Case_String c') (Ghost.reveal va))
       (raw_data_item_match_serialized0 c (Ghost.reveal va))
-      (LPA.arrayptr payload vpl `implies_` LPS.aparse Cbor.parse_raw_data_item cs.payload va')
+      (A.pts_to payload vperm vpl `implies_` LPS.aparse Cbor.parse_raw_data_item cs.payload va')
       (fun _ ->
         let _ = gen_elim () in
-        rewrite (LPA.arrayptr _ _) (LPA.arrayptr payload vpl);
+        rewrite (A.pts_to _ _ _) (A.pts_to payload vperm vpl);
         elim_implies
-          (LPA.arrayptr payload vpl)
+          (A.pts_to payload vperm vpl)
           (LPS.aparse Cbor.parse_raw_data_item cs.payload va');
         noop ()
       );
@@ -955,40 +962,43 @@ let destr_cbor_string
 : STT cbor_string
     (raw_data_item_match c (Ghost.reveal va))
     (fun c' -> exists_ (fun vc' ->
-      LPA.arrayptr c'.payload vc' `star`
-      (LPA.arrayptr c'.payload vc' `implies_` raw_data_item_match c (Ghost.reveal va)) `star`
+      A.pts_to c'.payload c'.permission vc' `star`
+      (A.pts_to c'.payload c'.permission vc' `implies_` raw_data_item_match c (Ghost.reveal va)) `star`
       pure (
-        U64.v c'.byte_length == Seq.length (LPA.contents_of' vc') /\
-        Ghost.reveal va == Cbor.String c'.typ (LPA.contents_of vc')
+        U64.v c'.byte_length == Seq.length vc' /\
+        c'.typ == Cbor.String?.typ va /\
+        vc' == Cbor.String?.v va
     )))
 = let c' = destr_cbor_string' c in
   rewrite_with_implies
     (raw_data_item_match (CBOR_Case_String c') (Ghost.reveal va))
     (raw_data_item_match_string0 (CBOR_Case_String c') (Ghost.reveal va));
   let _ = gen_elim () in
-  vpattern_rewrite (fun a -> LPA.arrayptr a _) c'.payload;
-  let vc' = vpattern_replace (LPA.arrayptr _) in
+  vpattern_rewrite (fun a -> A.pts_to a _ _) c'.payload;
+  vpattern_rewrite (fun p -> A.pts_to _ p _) c'.permission;
+  let vc' = vpattern_replace_erased (A.pts_to _ _) in
   intro_implies
-    (LPA.arrayptr c'.payload vc')
+    (A.pts_to c'.payload c'.permission vc')
     (raw_data_item_match_string0 (CBOR_Case_String c') (Ghost.reveal va))
-    (pure (raw_data_item_match_string_prop (CBOR_Case_String c') (Ghost.reveal va) c'.payload vc')) // FIXME: WHY WHY WHY?
+    (pure (raw_data_item_match_string_prop (CBOR_Case_String c') (Ghost.reveal va) c'.payload c'.permission vc')) // FIXME: WHY WHY WHY?
     (fun _ ->
       noop ()
     );
   implies_trans
-    (LPA.arrayptr c'.payload vc')
+    (A.pts_to c'.payload c'.permission vc')
     (raw_data_item_match_string0 (CBOR_Case_String c') (Ghost.reveal va))
     (raw_data_item_match (CBOR_Case_String c') (Ghost.reveal va));
   implies_trans
-    (LPA.arrayptr c'.payload vc')
+    (A.pts_to c'.payload c'.permission vc')
     (raw_data_item_match (CBOR_Case_String c') (Ghost.reveal va))
     (raw_data_item_match c (Ghost.reveal va));
-  intro_exists vc' (fun vc' -> // FIXME: WHY WHY WHY?
-    LPA.arrayptr c'.payload vc' `star`
-      (LPA.arrayptr c'.payload vc' `implies_` raw_data_item_match c (Ghost.reveal va)) `star`
+  intro_exists (Ghost.reveal vc') (fun vc' -> // FIXME: WHY WHY WHY?
+    A.pts_to c'.payload c'.permission vc' `star`
+      (A.pts_to c'.payload c'.permission vc' `implies_` raw_data_item_match c (Ghost.reveal va)) `star`
       pure (
-        U64.v c'.byte_length == Seq.length (LPA.contents_of' vc') /\
-        Ghost.reveal va == Cbor.String c'.typ (LPA.contents_of vc')
+        U64.v c'.byte_length == Seq.length vc' /\
+        c'.typ == Cbor.String?.typ va /\
+        vc' == Cbor.String?.v va
     )  
   );
   return c'
@@ -1007,9 +1017,27 @@ let size_comp_for_string
     let res = CBOR.SteelST.Raw.Write.size_comp_string c'.typ c'.byte_length (Cbor.String?.v va) sz perr in
     let _ = gen_elim () in
     elim_implies
-      (LPA.arrayptr _ _)
+      (A.pts_to _ _ _)
       (raw_data_item_match _ _);
     return res
+
+let serialize_cbor_string_eq
+  (c: Cbor.raw_data_item { Cbor.String? c })
+: Lemma
+  (
+    let s0 = LPS.serialize Cbor.serialize_raw_data_item c in
+    let s1 = LPS.serialize Cbor.serialize_header (Cbor.uint64_as_argument (Cbor.String?.typ c) (U64.uint_to_t (Seq.length (Cbor.String?.v c)))) in
+    s0 == s1 `Seq.append` Cbor.String?.v c
+  )
+= Cbor.serialize_raw_data_item_aux_correct c;
+  LPS.serialize_synth_eq
+    _
+    Cbor.synth_raw_data_item
+    (LPS.serialize_dtuple2 Cbor.serialize_header Cbor.serialize_content)
+    Cbor.synth_raw_data_item_recip
+    ()
+    c;
+  LPS.serialize_dtuple2_eq Cbor.serialize_header Cbor.serialize_content (Cbor.synth_raw_data_item_recip c)
 
 let l2r_write_cbor_string
   (va: Ghost.erased Cbor.raw_data_item)
@@ -1017,29 +1045,32 @@ let l2r_write_cbor_string
 : Tot (cbor_l2r_writer_for va c)
 = fun #vout out ->
   let _ = A.intro_fits_u64 () in
-  Classical.forall_intro Cbor.parse_raw_data_item_eq;
-  Cbor.serialize_raw_data_item_aux_correct va;
-  LPS.serialize_synth_eq _ Cbor.synth_raw_data_item (LPS.serialize_dtuple2 Cbor.serialize_header Cbor.serialize_content) Cbor.synth_raw_data_item_recip () (Ghost.reveal va);
-  LPS.serialize_dtuple2_eq Cbor.serialize_header Cbor.serialize_content (Cbor.synth_raw_data_item_recip va);
+  serialize_cbor_string_eq va;
   noop ();
   let c' = destr_cbor_string c in
   let _ = gen_elim () in
   let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header c'.typ c'.byte_length out in
   let _ = gen_elim () in
-  let vh = vpattern_replace (LPS.aparse Cbor.parse_header res) in
-  LPS.aparse_serialized_length Cbor.serialize_header res;
+  let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
   let len = SZ.uint64_to_sizet c'.byte_length in
   let res_pl = LW.split out len in
   let _ = gen_elim () in
   let vout' = vpattern_replace (LW.vp out) in
-  let _ = LPA.copy c'.payload res_pl len in
-  let _ = LowParse.SteelST.SeqBytes.intro_lseq_bytes (U64.v c'.byte_length) res_pl in
-  let _ = LPS.rewrite_aparse res_pl (Cbor.parse_content Cbor.parse_raw_data_item vh.LPS.contents) in
-  let _ = LowParse.SteelST.Combinators.intro_dtuple2 Cbor.parse_header (Cbor.parse_content Cbor.parse_raw_data_item) res res_pl in
-  let _ = LowParse.SteelST.Combinators.intro_synth (LPS.parse_dtuple2 Cbor.parse_header (Cbor.parse_content Cbor.parse_raw_data_item)) Cbor.synth_raw_data_item res () in
-  let vres = LPS.rewrite_aparse res Cbor.parse_raw_data_item in
+  let vres_pl = vpattern (LPA.arrayptr res_pl) in
+  let res_pl_a = LPA.elim_arrayptr res_pl in
+  vpattern_rewrite (fun p -> A.pts_to res_pl_a p _) full_perm;
+  A.pts_to_length c'.payload _;
+  A.pts_to_length res_pl_a _;
+  let _ = A.memcpy c'.payload res_pl_a len in
+  let res_pl = LPA.intro_arrayptr res_pl_a in
+  let _ = gen_elim () in
+  let vres_pl' = vpattern (LPA.arrayptr res_pl) in
+  LPA.array_equal (LPA.array_of vres_pl) (LPA.array_of vres_pl');
+  noop ();
+  let _ = LPA.join res res_pl in
+  let vres = LPS.intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
   elim_implies
-    (LPA.arrayptr c'.payload _)
+    (A.pts_to _ _ _)
     (raw_data_item_match c (Ghost.reveal va));
   assert_ (cbor_l2r_writer_for_post va c vout out res vres vout'); // FIXME: WHY WHY WHY?
   return res
@@ -1047,18 +1078,19 @@ let l2r_write_cbor_string
 #pop-options
 
 let constr_cbor_string
-  (#va: LPA.v LPS.byte)
+  (#va: Ghost.erased (Seq.seq U8.t))
+  (#p: perm)
   (typ: Cbor.major_type_byte_string_or_text_string)
-  (a: LPS.byte_array)
+  (a: A.array U8.t)
   (len: U64.t {
-    U64.v len == Seq.length (LPA.contents_of va)
+    U64.v len == Seq.length va
   })
 : STT cbor
-    (LPA.arrayptr a va)
+    (A.pts_to a p va)
     (fun c' ->
-      raw_data_item_match c' (Cbor.String typ (LPA.contents_of va)) `star`
-      (raw_data_item_match c' (Cbor.String typ (LPA.contents_of va)) `implies_`
-        LPA.arrayptr a va
+      raw_data_item_match c' (Cbor.String typ va) `star`
+      (raw_data_item_match c' (Cbor.String typ va) `implies_`
+        A.pts_to a p va
       )
     )
 = [@@inline_let]
@@ -1066,25 +1098,25 @@ let constr_cbor_string
     typ = typ;
     payload = a;
     byte_length = len;
-    footprint = LPA.array_of va;
+    permission = p;
   })
   in
   noop ();
   rewrite_with_implies
-    (raw_data_item_match_string0 c' (Cbor.String typ (LPA.contents_of va)))
-    (raw_data_item_match c' (Cbor.String typ (LPA.contents_of va)));
+    (raw_data_item_match_string0 c' (Cbor.String typ va))
+    (raw_data_item_match c' (Cbor.String typ va));
   intro_implies
-    (raw_data_item_match_string0 c' (Cbor.String typ (LPA.contents_of va)))
-    (LPA.arrayptr a va)
+    (raw_data_item_match_string0 c' (Cbor.String typ va))
+    (A.pts_to a p va)
     emp
     (fun _ ->
       let _ = gen_elim () in
-      rewrite (LPA.arrayptr _ _) (LPA.arrayptr a va)
+      rewrite (A.pts_to _ _ _) (A.pts_to a p va)
     );
   implies_trans
-    (raw_data_item_match c' (Cbor.String typ (LPA.contents_of va)))
-    (raw_data_item_match_string0 c' (Cbor.String typ (LPA.contents_of va)))
-    (LPA.arrayptr a va);
+    (raw_data_item_match c' (Cbor.String typ (va)))
+    (raw_data_item_match_string0 c' (Cbor.String typ (va)))
+    (A.pts_to a p va);
   return c'
 
 inline_for_extraction
