@@ -29,7 +29,7 @@ BoundedSumWhereValidateBoundedSum(
   }
   else
   {
-    BOOLEAN noneConstraintIsOk = Bound <= (uint32_t)(uint16_t)1729U;
+    BOOLEAN noneConstraintIsOk = Bound <= (uint32_t)1729U;
     uint64_t
     positionAfternone1 = EverParseCheckConstraintOk(noneConstraintIsOk, positionAfternone);
     if (EverParseIsError(positionAfternone1))
@@ -39,11 +39,11 @@ BoundedSumWhereValidateBoundedSum(
     else
     {
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      BOOLEAN hasBytes0 = (uint64_t)4U <= (InputLength - positionAfternone1);
+      BOOLEAN hasBytes0 = 4ULL <= (InputLength - positionAfternone1);
       uint64_t positionAfterBoundedSum0;
       if (hasBytes0)
       {
-        positionAfterBoundedSum0 = positionAfternone1 + (uint64_t)4U;
+        positionAfterBoundedSum0 = positionAfternone1 + 4ULL;
       }
       else
       {
@@ -76,11 +76,11 @@ BoundedSumWhereValidateBoundedSum(
         uint32_t left = Load32Le(Input + (uint32_t)positionAfternone1);
         /* Validating field right */
         /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-        BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - positionAfterleft);
+        BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfterleft);
         uint64_t positionAfterright_refinement;
         if (hasBytes)
         {
-          positionAfterright_refinement = positionAfterleft + (uint64_t)4U;
+          positionAfterright_refinement = positionAfterleft + 4ULL;
         }
         else
         {

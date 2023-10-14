@@ -21,11 +21,11 @@ EnumConstraintValidateEnumConstraint(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (uint64_t)4U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAfternone;
   if (hasBytes0)
   {
-    positionAfternone = StartPosition + (uint64_t)4U;
+    positionAfternone = StartPosition + 4ULL;
   }
   else
   {
@@ -57,11 +57,11 @@ EnumConstraintValidateEnumConstraint(
     {
       /* Validating field x */
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - positionAfternone1);
+      BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfternone1);
       uint64_t positionAfterx_refinement;
       if (hasBytes)
       {
-        positionAfterx_refinement = positionAfternone1 + (uint64_t)4U;
+        positionAfterx_refinement = positionAfternone1 + 4ULL;
       }
       else
       {
@@ -80,10 +80,7 @@ EnumConstraintValidateEnumConstraint(
         uint32_t x_refinement = Load32Le(Input + (uint32_t)positionAfternone1);
         /* start: checking constraint */
         BOOLEAN
-        x_refinementConstraintIsOk =
-          x_refinement
-          == (uint32_t)(uint8_t)0U
-          || none == ENUMCONSTRAINT_GREEN;
+        x_refinementConstraintIsOk = x_refinement == (uint32_t)0U || none == ENUMCONSTRAINT_GREEN;
         /* end: checking constraint */
         positionAfterEnumConstraint0 =
           EverParseCheckConstraintOk(x_refinementConstraintIsOk,
