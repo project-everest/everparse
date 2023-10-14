@@ -251,14 +251,18 @@ make_everparse() {
         wget --output-document=everparse/bin/clang-format.exe https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe
     fi
 
-    # Download and unzip the latest z3 for test case generation purposes
+    # Download and build the latest z3 for test case generation purposes
     if ! $is_windows ; then
-        z3_latest=z3-4.12.2
-        z3_latest_arch=$z3_latest-x64-glibc-2.31
-        z3_latest_zip=$z3_latest_arch.zip
-        wget https://github.com/Z3Prover/z3/releases/download/$z3_latest/$z3_latest_zip
-        unzip $z3_latest_zip
-        mv $z3_latest_arch everparse/z3-latest
+        if ! [[ -d z3-latest ]] ; then
+            git clone https://github.com/Z3Prover/z3 z3-latest
+        fi
+        z3_latest_dir="$PWD/everparse/z3-latest"
+        mkdir -p "$z3_latest_dir"
+        pushd z3-latest
+        python scripts/mk_make.py --prefix="$z3_latest_dir"
+        $MAKE -C build "$@"
+        $MAKE -C build install "$@"
+        popd
     fi
 
     # licenses

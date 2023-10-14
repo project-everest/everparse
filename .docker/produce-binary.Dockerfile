@@ -10,6 +10,7 @@ WORKDIR $HOME/everparse
 RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     jq \
     wget \
+    python-is-python3 \
     && true
 
 # Dependencies (F*, Karamel and opam packages)

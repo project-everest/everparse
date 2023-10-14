@@ -24,11 +24,11 @@ ValidateInt(
   {
     /* Validating field x */
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    BOOLEAN hasBytes = (uint64_t)8U <= (InputLen - StartPosition);
+    BOOLEAN hasBytes = 8ULL <= (InputLen - StartPosition);
     uint64_t positionAfterInt;
     if (hasBytes)
     {
-      positionAfterInt = StartPosition + (uint64_t)8U;
+      positionAfterInt = StartPosition + 8ULL;
     }
     else
     {
@@ -53,11 +53,11 @@ ValidateInt(
   {
     /* Validating field x */
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    BOOLEAN hasBytes = (uint64_t)4U <= (InputLen - StartPosition);
+    BOOLEAN hasBytes = 4ULL <= (InputLen - StartPosition);
     uint64_t positionAfterInt;
     if (hasBytes)
     {
-      positionAfterInt = StartPosition + (uint64_t)4U;
+      positionAfterInt = StartPosition + 4ULL;
     }
     else
     {
