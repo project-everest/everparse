@@ -2049,3 +2049,118 @@ let rec cbor_l2r_write
   | CBOR_Case_Array _ -> l2r_writer_for_array cbor_l2r_write va c out
   | CBOR_Case_Map _ -> l2r_writer_for_map cbor_l2r_write va c out
   | _ -> l2r_writer_for_serialized c out
+
+let serialize_cbor
+  (c: Cbor.raw_data_item)
+: GTot (Seq.seq U8.t)
+= LPS.serialize Cbor.serialize_raw_data_item c
+
+let serialize_cbor_inj
+  (c1 c2: Cbor.raw_data_item)
+: Lemma
+  (requires (serialize_cbor c1 == serialize_cbor c2))
+  (ensures (c1 == c2))
+= LPS.serializer_injective _ Cbor.serialize_raw_data_item c1 c2
+
+let serialize_cbor_nonempty
+  (c: Cbor.raw_data_item)
+: Lemma
+  (Seq.length (serialize_cbor c) > 0)
+= ()
+
+noextract
+let write_cbor_postcond
+  (va: Cbor.raw_data_item)
+  (out: A.array U8.t)
+  (vout': Seq.seq U8.t)
+  (res: SZ.t)
+: Tot prop
+= let s = serialize_cbor va in
+  Seq.length vout' == A.length out /\
+  (res = 0sz <==> Seq.length s > Seq.length vout') /\
+  (res <> 0sz ==> (
+    SZ.v res == Seq.length s /\
+    Seq.slice vout' 0 (Seq.length s) `Seq.equal` s
+  ))
+
+[@@__reduce__]
+let write_cbor_post
+  (va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor)
+  (vout: Ghost.erased (Seq.seq U8.t))
+  (out: A.array U8.t)
+  (res: SZ.t)
+  (vout': Seq.seq U8.t)
+: Tot vprop
+= 
+  A.pts_to out full_perm vout' `star`
+  pure (write_cbor_postcond va out vout' res)
+
+inline_for_extraction
+noextract
+let steel_ifthenelse
+  (cond: bool)
+  (#pre: vprop)
+  (#ret_t: Type)
+  (#post: ret_t -> vprop)
+  (body_true: (squash (cond == true)) ->
+    STT ret_t
+    (pre)
+    (fun v -> post v)
+  )
+  (body_false: (squash (cond == false)) ->
+    STT ret_t
+    (pre)
+    (fun v -> post v)
+  )
+: STF ret_t pre post True (fun _ -> True)
+= if cond then body_true () else body_false ()
+
+let write_cbor
+  (#va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor)
+  (#vout: Ghost.erased (Seq.seq U8.t))
+  (out: A.array U8.t)
+  (sz: SZ.t)
+: ST SZ.t
+    (raw_data_item_match c (Ghost.reveal va) `star`
+      A.pts_to out full_perm vout
+    )
+    (fun res -> 
+      raw_data_item_match c (Ghost.reveal va) `star`
+      exists_ (write_cbor_post va c vout out res)
+    )
+    (SZ.v sz == A.length out)
+    (fun _ -> True)
+= A.pts_to_length out _;
+  R.with_local false (fun perr ->
+    let sz' = cbor_size_comp va c sz perr in
+    let _ = gen_elim () in
+    let err = R.read perr in
+    if err
+    then begin
+      noop ();
+      noop ();
+      return 0sz
+    end else begin
+      noop ();
+      let a = LPA.intro_arrayptr out in
+      let _ = gen_elim () in
+      let va' = vpattern_replace (LPA.arrayptr a) in
+      R.with_local sz (fun psz ->
+      R.with_local a (fun pa ->
+        let res = sz `SZ.sub` sz' in
+        let w = LW.intro_vp #_ #_ #a pa psz in
+        let lhs = cbor_l2r_write va c w in
+        let _ = gen_elim () in
+        let rhs = LW.elim_vp w in
+        let _ = gen_elim () in
+        let _ = LPS.elim_aparse_with_serializer Cbor.serialize_raw_data_item lhs in
+        let _ = LPA.join lhs rhs in
+        let _ = LPA.elim_arrayptr lhs in
+        let vout' = vpattern_replace_erased (A.pts_to _ _) in
+        rewrite (A.pts_to _ _ _) (A.pts_to out full_perm vout');
+        return res
+      ))
+    end
+  )
