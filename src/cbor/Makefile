@@ -72,22 +72,27 @@ $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-extract-steelc: $(filter-out CBOR_Steel.krml COSE_% CDDL_% DPE_%,$(ALL_KRML_FILES))
+extract-steelc: $(filter-out COSE_% CDDL_% DPE_%,$(ALL_KRML_FILES))
 	$(KRML) -bundle 'CBOR.SteelC+CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORSteelC]' $^
 
-extract-steel: $(filter-out CBOR_SteelC%,$(ALL_KRML_FILES))
-	$(KRML) -bundle 'CBOR.SteelST+CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' $^
+extract-steel-raw: $(filter-out CBOR_SteelC% CBOR_SteelST.krml,$(ALL_KRML_FILES))
+	$(KRML) -bundle 'CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORRaw]' $^
 
-extract: extract-steelc extract-steel
+extract-steel: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelC%,$(ALL_KRML_FILES))
+	$(KRML) -bundle 'CBOR.SteelST+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' $^
+
+extract: extract-steelc extract-steel extract-steel-raw
+
+test-steel-raw: extract-steel-raw
+	$(CC) -Wall -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I $(STEEL_HOME)/include/steel -I out -c cbor_unverified.c
 
 test-steel: extract-steel
-	$(CC) -Wall -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I $(STEEL_HOME)/include/steel -I out -c cbor_unverified.c
 
 test-steelc: extract-steelc
 
 test: test-steel test-steelc
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in lowparse extract-steel extract-steelc extract test-steel test-steelc test
+.PHONY: all verify-all clean %.fst-in %.fsti-in lowparse extract-steel extract-steelc extract test-steel test-steelc test extract-steel-raw test-steel-raw
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)

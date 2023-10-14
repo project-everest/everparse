@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <stdint.h>
-#include "CBOR.h"
+#include "CBORRaw.h"
 
 struct cbor;
 
