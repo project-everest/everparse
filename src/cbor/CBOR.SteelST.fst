@@ -2024,3 +2024,28 @@ let rec cbor_size_comp
   | CBOR_Case_Array _ -> size_comp_for_array cbor_size_comp va c sz perr
   | CBOR_Case_Map _ -> size_comp_for_map cbor_size_comp va c sz perr
   | _ -> size_comp_for_serialized c sz perr
+
+let rec cbor_l2r_write
+  (va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor)
+  (#vout: LPA.array LPS.byte)
+  (out: LW.t)
+: ST LPS.byte_array // FIXME: WHY WHY WHY do I need to expand the type annotation to avoid the termination check?
+    (raw_data_item_match c (Ghost.reveal va) `star`
+      LW.vp out vout
+    )
+    (fun res -> exists_ (fun (vres: LPS.v Cbor.parse_raw_data_item_kind Cbor.raw_data_item) -> exists_ (fun (vout': LPA.array LPS.byte) ->
+      cbor_l2r_writer_for_post va c vout out res vres vout'
+    )))
+    (Seq.length (LPS.serialize Cbor.serialize_raw_data_item va) <= LPA.length vout)
+    (fun _ -> True)
+=
+  raw_data_item_match_get_case c;
+  match c with
+  | CBOR_Case_Int64 _ -> l2r_writer_for_int64 va c out
+  | CBOR_Case_Simple_value _ -> l2r_writer_for_simple_value va c out
+  | CBOR_Case_String _ -> l2r_write_cbor_string va c out
+  | CBOR_Case_Tagged _ -> l2r_writer_for_tagged cbor_l2r_write c out
+  | CBOR_Case_Array _ -> l2r_writer_for_array cbor_l2r_write va c out
+  | CBOR_Case_Map _ -> l2r_writer_for_map cbor_l2r_write va c out
+  | _ -> l2r_writer_for_serialized c out
