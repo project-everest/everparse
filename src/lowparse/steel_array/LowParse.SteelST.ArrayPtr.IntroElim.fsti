@@ -33,6 +33,23 @@ val mk_array
       array_perm y == p
     ))
 
+val array_equal
+  (#elt: Type)
+  (a1 a2: array elt)
+: Lemma
+  (requires (
+    steel_array_of_array a1 == steel_array_of_array a2 /\
+    array_perm a1 == array_perm a2
+  ))
+  (ensures (a1 == a2))
+
+let mk_array_idem
+  (#elt: Type)
+  (a: array elt)
+: Lemma
+  (a == mk_array (steel_array_of_array a) (array_perm a))
+= array_equal a (mk_array (steel_array_of_array a) (array_perm a))
+
 inline_for_extraction
 val intro_arrayptr_with_implies
   (#elt: Type)

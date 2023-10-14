@@ -13,6 +13,10 @@ let mk_array
   a p
 = Mkarray a p
 
+let array_equal
+  a1 a2
+= ()
+
 inline_for_extraction
 let intro_arrayptr_with_implies
   #elt #p #va a
