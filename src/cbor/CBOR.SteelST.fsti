@@ -7,6 +7,9 @@ module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module R = Steel.ST.Reference
 module A = Steel.ST.Array
+module SM = Steel.ST.SeqMatch
+
+(* The C datatype for CBOR objects *)
 
 noeq
 type cbor_int = {
@@ -73,10 +76,70 @@ inline_for_extraction
 noextract
 let dummy_cbor : cbor = CBOR_Case_Simple_value 0uy
 
+(* Relating a CBOR C object with a CBOR high-level value *)
+
+noextract
+let fstp (#a1 #a2: Type) (x: (a1 & a2)) : Tot a1 = fst x
+
+noextract
+let sndp (#a1 #a2: Type) (x: (a1 & a2)) : Tot a2 = snd x
+
+[@@__reduce__]
+let raw_data_item_map_entry_match1
+  (c1: cbor_map_entry)
+  (v1: (Cbor.raw_data_item & Cbor.raw_data_item))
+  (raw_data_item_match: (cbor -> (v': Cbor.raw_data_item { v' << v1 }) -> vprop))
+: Tot vprop
+= raw_data_item_match c1.cbor_map_entry_key (fstp v1) `star`
+  raw_data_item_match c1.cbor_map_entry_value (sndp v1)
+
 val raw_data_item_match
   (c: cbor)
   (v: Cbor.raw_data_item)
 : Tot vprop
+
+let raw_data_item_array_match
+  (c: Seq.seq cbor)
+  (v: list Cbor.raw_data_item)
+: Tot vprop
+  (decreases v)
+= SM.seq_list_match c v raw_data_item_match
+
+[@@__reduce__]
+let raw_data_item_map_entry_match
+  (c1: cbor_map_entry)
+  (v1: (Cbor.raw_data_item & Cbor.raw_data_item))
+: Tot vprop
+= raw_data_item_map_entry_match1 c1 v1 raw_data_item_match
+
+let raw_data_item_map_match
+  (c: Seq.seq cbor_map_entry)
+  (v: list (Cbor.raw_data_item & Cbor.raw_data_item))
+: Tot vprop
+  (decreases v)
+= SM.seq_list_match c v raw_data_item_map_entry_match
+
+val raw_data_item_match_get_case
+  (#opened: _)
+  (#v: Cbor.raw_data_item)
+  (c: cbor)
+: STGhost unit opened
+    (raw_data_item_match c v)
+    (fun _ -> raw_data_item_match c v)
+    True
+    (fun _ -> match c, v with
+    | CBOR_Case_Serialized _, _
+    | CBOR_Case_Array _, Cbor.Array _
+    | CBOR_Case_Int64 _, Cbor.Int64 _ _
+    | CBOR_Case_Map _, Cbor.Map _
+    | CBOR_Case_Simple_value _, Cbor.Simple _
+    | CBOR_Case_String _, Cbor.String _ _
+    | CBOR_Case_Tagged _, Cbor.Tagged _ _
+      -> True
+    | _ -> False
+    )
+
+(* Data format specification *)
 
 val serialize_cbor
   (c: Cbor.raw_data_item)
@@ -93,6 +156,8 @@ val serialize_cbor_nonempty
   (c: Cbor.raw_data_item)
 : Lemma
   (Seq.length (serialize_cbor c) > 0)
+
+(* Parsing *)
 
 noeq
 type read_cbor_success_t = {
@@ -165,6 +230,201 @@ val read_cbor
     (fun res -> read_cbor_post a p va res)
     (SZ.v sz == Seq.length va \/ SZ.v sz == A.length a)
     (fun _ -> True)
+
+(* Destructors and constructors *)
+
+val destr_cbor_int64
+  (#va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor)
+: ST cbor_int
+    (raw_data_item_match c (Ghost.reveal va))
+    (fun _ -> raw_data_item_match c (Ghost.reveal va))
+    (Cbor.Int64? (Ghost.reveal va))
+    (fun c' ->
+      Ghost.reveal va == Cbor.Int64 c'.cbor_int_type c'.cbor_int_value
+    )
+
+val constr_cbor_int64
+  (ty: Cbor.major_type_uint64_or_neg_int64)
+  (value: U64.t)
+: ST cbor
+    emp
+    (fun c -> raw_data_item_match c (Cbor.Int64 ty value))
+    True
+    (fun c -> c == CBOR_Case_Int64 ({ cbor_int_type = ty; cbor_int_value = value }))
+
+val destr_cbor_simple_value
+  (#va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor)
+: ST Cbor.simple_value
+    (raw_data_item_match c (Ghost.reveal va))
+    (fun c' ->
+      raw_data_item_match c (Ghost.reveal va)
+    )
+    (Cbor.Simple? (Ghost.reveal va))
+    (fun c' -> Ghost.reveal va == Cbor.Simple c')
+
+val constr_cbor_simple_value
+  (value: Cbor.simple_value)
+: ST cbor
+    emp
+    (fun c -> raw_data_item_match c (Cbor.Simple value))
+    True
+    (fun c -> c == CBOR_Case_Simple_value value)
+
+val destr_cbor_string
+  (#va: Ghost.erased Cbor.raw_data_item)
+  (c: cbor {Cbor.String? va})
+: STT cbor_string
+    (raw_data_item_match c (Ghost.reveal va))
+    (fun c' -> exists_ (fun vc' ->
+      A.pts_to c'.cbor_string_payload c'.permission vc' `star`
+      (A.pts_to c'.cbor_string_payload c'.permission vc' `implies_` raw_data_item_match c (Ghost.reveal va)) `star`
+      pure (
+        U64.v c'.cbor_string_length == Seq.length vc' /\
+        c'.cbor_string_type == Cbor.String?.typ va /\
+        vc' == Cbor.String?.v va
+    )))
+
+val constr_cbor_string
+  (#va: Ghost.erased (Seq.seq U8.t))
+  (#p: perm)
+  (typ: Cbor.major_type_byte_string_or_text_string)
+  (a: A.array U8.t)
+  (len: U64.t {
+    U64.v len == Seq.length va
+  })
+: STT cbor
+    (A.pts_to a p va)
+    (fun c' ->
+      raw_data_item_match c' (Cbor.String typ va) `star`
+      (raw_data_item_match c' (Cbor.String typ va) `implies_`
+        A.pts_to a p va
+      )
+    )
+
+val constr_cbor_array
+  (#c': Ghost.erased (Seq.seq cbor))
+  (#v': Ghost.erased (list Cbor.raw_data_item))
+  (a: A.array cbor)
+  (len: U64.t {
+    U64.v len == List.Tot.length v'
+  })
+: ST cbor
+    (A.pts_to a full_perm c' `star`
+      raw_data_item_array_match c' v')
+    (fun res ->
+      raw_data_item_match res (Cbor.Array v') `star`
+      (raw_data_item_match res (Cbor.Array v') `implies_`
+        (A.pts_to a full_perm c' `star`
+          raw_data_item_array_match c' v')
+      )
+    )
+    True
+    (fun res ->
+      res == CBOR_Case_Array ({
+        cbor_array_payload = a;
+        cbor_array_length = len;
+        footprint = c';
+      })
+    )
+
+[@@__reduce__]
+let maybe_cbor_array
+  (v: Cbor.raw_data_item)
+: GTot (list Cbor.raw_data_item)
+= match v with
+  | Cbor.Array l -> l
+  | _ -> []
+
+val destr_cbor_array
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+: ST cbor_array
+    (raw_data_item_match a v)
+    (fun res ->
+      A.pts_to res.cbor_array_payload full_perm res.footprint `star`
+      raw_data_item_array_match res.footprint (maybe_cbor_array v) `star`
+      ((A.pts_to res.cbor_array_payload full_perm res.footprint `star`
+        raw_data_item_array_match res.footprint (maybe_cbor_array v)) `implies_`
+        raw_data_item_match a v
+      )
+    )
+    (CBOR_Case_Array? a)
+    (fun res ->
+      a == CBOR_Case_Array res /\
+      Cbor.Array? v /\
+      U64.v res.cbor_array_length == List.Tot.length (Cbor.Array?.v v)
+    )
+
+[@@__reduce__]
+let maybe_cbor_tagged_tag
+  (v: Cbor.raw_data_item)
+: GTot U64.t
+= match v with
+  | Cbor.Tagged t _ -> t
+  | _ -> 0uL // dummy
+
+let dummy_raw_data_item : Ghost.erased Cbor.raw_data_item =
+  Cbor.Int64 Cbor.major_type_uint64 0uL
+
+[@@__reduce__]
+let maybe_cbor_tagged_payload
+  (v: Cbor.raw_data_item)
+: GTot Cbor.raw_data_item
+= match v with
+  | Cbor.Tagged _ l -> l
+  | _ -> dummy_raw_data_item
+
+val destr_cbor_tagged
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+: ST cbor_tagged
+    (raw_data_item_match a v)
+    (fun res ->
+      R.pts_to res.cbor_tagged_payload full_perm res.footprint `star`
+      raw_data_item_match res.footprint (maybe_cbor_tagged_payload v) `star`
+      ((R.pts_to res.cbor_tagged_payload full_perm res.footprint `star`
+        raw_data_item_match res.footprint (maybe_cbor_tagged_payload v)) `implies_`
+        raw_data_item_match a v
+      )
+    )
+    (CBOR_Case_Tagged? a)
+    (fun res ->
+      a == CBOR_Case_Tagged res /\
+      Cbor.Tagged? v /\
+      res.cbor_tagged_tag == Cbor.Tagged?.tag v
+    )
+
+[@@__reduce__]
+let maybe_cbor_map
+  (v: Cbor.raw_data_item)
+: GTot (list (Cbor.raw_data_item & Cbor.raw_data_item))
+= match v with
+  | Cbor.Map l -> l
+  | _ -> []
+
+val destr_cbor_map
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+: ST cbor_map
+    (raw_data_item_match a v)
+    (fun res ->
+      A.pts_to res.cbor_map_payload full_perm res.footprint `star`
+      SM.seq_list_match res.footprint (maybe_cbor_map v) raw_data_item_map_entry_match `star`
+      ((A.pts_to res.cbor_map_payload full_perm res.footprint `star`
+        SM.seq_list_match res.footprint (maybe_cbor_map v) raw_data_item_map_entry_match) `implies_`
+        raw_data_item_match a v
+      )
+    )
+    (CBOR_Case_Map? a)
+    (fun res ->
+      a == CBOR_Case_Map res /\
+      Cbor.Map? v /\
+      U64.v res.cbor_map_length == List.Tot.length (Cbor.Map?.v v)
+    )
+
+(* Serialization *)
 
 noextract
 let write_cbor_postcond
