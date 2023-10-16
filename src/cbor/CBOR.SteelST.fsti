@@ -424,6 +424,15 @@ val destr_cbor_map
       U64.v res.cbor_map_length == List.Tot.length (Cbor.Map?.v v)
     )
 
+val cbor_get_major_type
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+: ST Cbor.major_type_t
+    (raw_data_item_match a v)
+    (fun _ -> raw_data_item_match a v)
+    True
+    (fun res -> res == Cbor.get_major_type v)
+
 (* Serialization *)
 
 noextract

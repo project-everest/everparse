@@ -36,3 +36,15 @@ type raw_data_item
   | Map: (v: list (raw_data_item & raw_data_item) { FStar.UInt.fits (List.Tot.length v) U64.n }) -> raw_data_item
   | Tagged: (tag: U64.t) -> (v: raw_data_item) -> raw_data_item
 //  | Float: (v: Float.float) -> raw_data_item // TODO
+
+noextract
+let get_major_type
+  (d: raw_data_item)
+: Tot major_type_t
+= match d with
+  | Simple _ -> major_type_simple_value
+  | Int64 m _ -> m
+  | String m _ -> m
+  | Array _ -> major_type_array
+  | Map _ -> major_type_map
+  | Tagged _ _ -> major_type_tagged

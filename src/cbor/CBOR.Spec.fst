@@ -718,17 +718,6 @@ let parse_raw_data_item_eq
 
 (* Serialization *)
 
-let get_major_type
-  (d: raw_data_item)
-: Tot major_type_t
-= match d with
-  | Simple _ -> major_type_simple_value
-  | Int64 m _ -> m
-  | String m _ -> m
-  | Array _ -> major_type_array
-  | Map _ -> major_type_map
-  | Tagged _ _ -> major_type_tagged
-
 let _ : squash (major_type_t == bitfield uint8 3) =
   assert_norm (major_type_t == bitfield_refine 8 U8.v 3);
   uint8_v_eq_fn ()

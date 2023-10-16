@@ -1953,6 +1953,37 @@ let l2r_writer_for_map
 
 #pop-options
 
+let cbor_get_major_type
+  #v a
+= raw_data_item_match_get_case a;
+  match a with
+  | CBOR_Case_Map _ ->
+    noop ();
+    return Cbor.major_type_map
+  | CBOR_Case_Array _ ->
+    noop ();
+    return Cbor.major_type_array
+  | CBOR_Case_Tagged _ ->
+    noop ();
+    return Cbor.major_type_tagged
+  | CBOR_Case_Simple_value _ ->
+    noop ();
+    return Cbor.major_type_simple_value
+  | CBOR_Case_String _ ->
+    let s = destr_cbor_string a in
+    let _ = gen_elim () in
+    elim_implies (A.pts_to _ _ _) (raw_data_item_match _ _);
+    return s.cbor_string_type
+  | CBOR_Case_Int64 _ ->
+    let i = destr_cbor_int64 a in
+    return i.cbor_int_type
+  | _ ->
+    let s = destr_cbor_serialized a in
+    let _ = gen_elim () in
+    let res = Cbor.read_major_type s.cbor_serialized_payload in
+    elim_implies (LPS.aparse Cbor.parse_raw_data_item _ _) (raw_data_item_match _ _);
+    return res
+
 let rec cbor_size_comp
   (va: Ghost.erased Cbor.raw_data_item)
   (c: cbor)
