@@ -10,16 +10,16 @@ module A = Steel.ST.Array
 
 noeq
 type cbor_int = {
-  typ: Cbor.major_type_uint64_or_neg_int64;
-  value: U64.t;
+  cbor_int_type: Cbor.major_type_uint64_or_neg_int64;
+  cbor_int_value: U64.t;
 }
 
 noeq
 type cbor_string = {
-  typ: Cbor.major_type_byte_string_or_text_string;
-  byte_length: U64.t;
-  payload: A.array U8.t;
-  permission: perm;
+  cbor_string_type: Cbor.major_type_byte_string_or_text_string;
+  cbor_string_length: U64.t;
+  cbor_string_payload: A.array U8.t;
+  permission: perm; // ghost
 }
 
 inline_for_extraction
@@ -31,33 +31,33 @@ val cbor_serialized_footprint_t: Type0
 
 noeq
 type cbor_serialized = {
-  byte_size: SZ.t;
-  payload: cbor_serialized_payload_t;
-  footprint: cbor_serialized_footprint_t;
+  cbor_serialized_size: SZ.t;
+  cbor_serialized_payload: cbor_serialized_payload_t;
+  footprint: cbor_serialized_footprint_t; // ghost
 }
 
 noeq
 type cbor_tagged = {
-  tag: U64.t;
-  payload: R.ref cbor;
-  footprint: Ghost.erased cbor;
+  cbor_tagged_tag: U64.t;
+  cbor_tagged_payload: R.ref cbor;
+  footprint: Ghost.erased cbor; // ghost
 }
 
 and cbor_array = {
-  count: U64.t;
-  payload: A.array cbor;
-  footprint: Ghost.erased (Seq.seq cbor);
+  cbor_array_length: U64.t;
+  cbor_array_payload: A.array cbor;
+  footprint: Ghost.erased (Seq.seq cbor); // ghost
 }
 
 and cbor_map_entry = {
-  key: cbor;
-  value: cbor;
+  cbor_map_entry_key: cbor;
+  cbor_map_entry_value: cbor;
 }
 
 and cbor_map = {
-  entry_count: U64.t;
-  payload: A.array cbor_map_entry;
-  footprint: Ghost.erased (Seq.seq cbor_map_entry);
+  cbor_map_length: U64.t;
+  cbor_map_payload: A.array cbor_map_entry;
+  footprint: Ghost.erased (Seq.seq cbor_map_entry); // ghost
 }
 
 and cbor =

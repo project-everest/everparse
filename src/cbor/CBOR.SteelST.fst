@@ -18,8 +18,8 @@ let raw_data_item_match_serialized_prop
 : GTot prop
 = match c with
   | CBOR_Case_Serialized c ->
-    c.byte_size == LPA.len (LPS.array_of w) /\
-    c.payload == a /\
+    c.cbor_serialized_size == LPA.len (LPS.array_of w) /\
+    c.cbor_serialized_payload == a /\
     c.footprint == LPS.array_of w /\
     w.LPS.contents == v
   | _ -> False
@@ -56,7 +56,7 @@ let raw_data_item_match_int_prop
   (v: Cbor.raw_data_item)
 : GTot prop
 = match c with
-  | CBOR_Case_Int64 c -> v == Cbor.Int64 c.typ c.value
+  | CBOR_Case_Int64 c -> v == Cbor.Int64 c.cbor_int_type c.cbor_int_value
   | _ -> False
 
 [@@__reduce__]
@@ -75,10 +75,10 @@ let raw_data_item_match_string_prop
 : Tot prop
 = match c with
   | CBOR_Case_String c ->
-    U64.v c.byte_length == Seq.length w /\
-    v == Cbor.String c.typ w /\
+    U64.v c.cbor_string_length == Seq.length w /\
+    v == Cbor.String c.cbor_string_type w /\
     c.permission == p /\
-    c.payload == a
+    c.cbor_string_payload == a
   | _ -> False
 
 [@@__reduce__]
@@ -101,10 +101,10 @@ let raw_data_item_match_tagged_prop
 : Tot prop
 = match v, c with
   | Cbor.Tagged tag v2, CBOR_Case_Tagged c ->
-    c.tag == tag /\
+    c.cbor_tagged_tag == tag /\
     Ghost.reveal c.footprint == c' /\
     v2 == v' /\
-    c.payload == a
+    c.cbor_tagged_payload == a
   | _ -> False
 
 [@@__reduce__]
@@ -127,9 +127,9 @@ let raw_data_item_match_array_prop
 : GTot prop
 = match c, v with
   | CBOR_Case_Array c, Cbor.Array l ->
-    U64.v c.count == List.Tot.length l /\
+    U64.v c.cbor_array_length == List.Tot.length l /\
     Ghost.reveal c.footprint == s /\
-    c.payload == a
+    c.cbor_array_payload == a
   | _ -> False
 
 [@@__reduce__]
@@ -154,9 +154,9 @@ let raw_data_item_match_map_prop
 : GTot prop
 = match c, v with
   | CBOR_Case_Map c, Cbor.Map l ->
-    U64.v c.entry_count == List.Tot.length l /\
+    U64.v c.cbor_map_length == List.Tot.length l /\
     Ghost.reveal c.footprint == s /\
-    c.payload == a
+    c.cbor_map_payload == a
   | _ -> False
 
 [@@__reduce__]
@@ -185,8 +185,8 @@ let raw_data_item_map_entry_match1
   (v1: (Cbor.raw_data_item & Cbor.raw_data_item))
   (raw_data_item_match: (cbor -> (v': Cbor.raw_data_item { v' << v1 }) -> vprop))
 : Tot vprop
-= raw_data_item_match c1.key (fstp v1) `star`
-  raw_data_item_match c1.value (sndp v1)
+= raw_data_item_match c1.cbor_map_entry_key (fstp v1) `star`
+  raw_data_item_match c1.cbor_map_entry_value (sndp v1)
 
 [@@__reduce__]
 let raw_data_item_map_entry_match0
@@ -285,8 +285,8 @@ let raw_data_item_match_array_intro
     (fun _ ->
       raw_data_item_match
         (CBOR_Case_Array ({
-          count = len;
-          payload = a;
+          cbor_array_length = len;
+          cbor_array_payload = a;
           footprint = c';
         }))
         (Cbor.Array v')
@@ -295,8 +295,8 @@ let raw_data_item_match_array_intro
   rewrite_with_tactic
     (raw_data_item_match_array0
       (CBOR_Case_Array ({
-        count = len;
-        payload = a;
+        cbor_array_length = len;
+        cbor_array_payload = a;
         footprint = c';
       }))
       (Cbor.Array v')
@@ -311,11 +311,11 @@ let raw_data_item_match_array_elim
 : STGhost (squash (Cbor.Array? v)) opened
     (raw_data_item_match (CBOR_Case_Array a) v)
     (fun _ ->
-      A.pts_to a.payload full_perm a.footprint `star`
+      A.pts_to a.cbor_array_payload full_perm a.footprint `star`
       raw_data_item_array_match a.footprint (Cbor.Array?.v v)
     )
     True
-    (fun _ -> U64.v a.count == List.Tot.length (Cbor.Array?.v v))
+    (fun _ -> U64.v a.cbor_array_length == List.Tot.length (Cbor.Array?.v v))
 = raw_data_item_match_get_case _;
   let sq : squash (Cbor.Array? v) = () in
   let Cbor.Array v' = v in
@@ -324,7 +324,7 @@ let raw_data_item_match_array_elim
     (raw_data_item_match _ _)
     (raw_data_item_match_array0 (CBOR_Case_Array a) (Cbor.Array v') raw_data_item_array_match);
   let _ = gen_elim () in
-  rewrite (A.pts_to _ _ _) (A.pts_to a.payload full_perm a.footprint);
+  rewrite (A.pts_to _ _ _) (A.pts_to a.cbor_array_payload full_perm a.footprint);
   rewrite (raw_data_item_array_match _ _) (raw_data_item_array_match a.footprint (Cbor.Array?.v v));
   sq
 
@@ -348,15 +348,15 @@ let constr_cbor_array
     True
     (fun res ->
       res == CBOR_Case_Array ({
-        payload = a;
-        count = len;
+        cbor_array_payload = a;
+        cbor_array_length = len;
         footprint = c';
       })
     )
 = [@@inline_let]
   let ares : cbor_array = {
-    count = len;
-    payload = a;
+    cbor_array_length = len;
+    cbor_array_payload = a;
     footprint = c';
   }
   in
@@ -392,9 +392,9 @@ let destr_cbor_array
 : ST cbor_array
     (raw_data_item_match a v)
     (fun res ->
-      A.pts_to res.payload full_perm res.footprint `star`
+      A.pts_to res.cbor_array_payload full_perm res.footprint `star`
       raw_data_item_array_match res.footprint (maybe_cbor_array v) `star`
-      ((A.pts_to res.payload full_perm res.footprint `star`
+      ((A.pts_to res.cbor_array_payload full_perm res.footprint `star`
         raw_data_item_array_match res.footprint (maybe_cbor_array v)) `implies_`
         raw_data_item_match a v
       )
@@ -403,7 +403,7 @@ let destr_cbor_array
     (fun res ->
       a == CBOR_Case_Array res /\
       Cbor.Array? v /\
-      U64.v res.count == List.Tot.length (Cbor.Array?.v v)
+      U64.v res.cbor_array_length == List.Tot.length (Cbor.Array?.v v)
     )
 = raw_data_item_match_get_case _;
   let CBOR_Case_Array res = a in
@@ -413,12 +413,12 @@ let destr_cbor_array
   let _ = raw_data_item_match_array_elim _ _ in
   vpattern_rewrite (raw_data_item_array_match _) (maybe_cbor_array v);
   intro_implies
-    (A.pts_to res.payload full_perm res.footprint `star`
+    (A.pts_to res.cbor_array_payload full_perm res.footprint `star`
       raw_data_item_array_match res.footprint (maybe_cbor_array v))
     (raw_data_item_match a v)
     emp
     (fun _ ->
-      raw_data_item_match_array_intro _ res.count;
+      raw_data_item_match_array_intro _ res.cbor_array_length;
       rewrite (raw_data_item_match _ _) (raw_data_item_match _ _)
     );
   return res
@@ -437,8 +437,8 @@ let read_valid_cbor_from_buffer_with_size_strong
     (fun c' -> CBOR_Case_Serialized? c')
 = [@@inline_let]
   let c_pl : cbor_serialized = ({
-    byte_size = alen;
-    payload = a;
+    cbor_serialized_size = alen;
+    cbor_serialized_payload = a;
     footprint = LPS.array_of va;
   })
   in
@@ -494,13 +494,13 @@ let destr_cbor_serialized
 : ST cbor_serialized
     (raw_data_item_match c va)
     (fun c' -> exists_ (fun vc ->
-      LPS.aparse Cbor.parse_raw_data_item c'.payload vc `star`
-      (LPS.aparse Cbor.parse_raw_data_item c'.payload vc `implies_`
+      LPS.aparse Cbor.parse_raw_data_item c'.cbor_serialized_payload vc `star`
+      (LPS.aparse Cbor.parse_raw_data_item c'.cbor_serialized_payload vc `implies_`
         raw_data_item_match c va
       ) `star`
       pure (
         vc.LPS.contents == Ghost.reveal va /\
-        LPA.length (LPS.array_of vc) == SZ.v c'.byte_size
+        LPA.length (LPS.array_of vc) == SZ.v c'.cbor_serialized_size
     )))
     (CBOR_Case_Serialized? c)
     (fun _ -> True)
@@ -510,16 +510,16 @@ let destr_cbor_serialized
     (raw_data_item_match_serialized0 (CBOR_Case_Serialized c') va);
   let _ = gen_elim () in
   let vc = vpattern_replace (LPS.aparse Cbor.parse_raw_data_item _) in
-  vpattern_rewrite (fun a -> LPS.aparse Cbor.parse_raw_data_item a _) c'.payload;
+  vpattern_rewrite (fun a -> LPS.aparse Cbor.parse_raw_data_item a _) c'.cbor_serialized_payload;
   intro_implies
-    (LPS.aparse Cbor.parse_raw_data_item c'.payload vc)
+    (LPS.aparse Cbor.parse_raw_data_item c'.cbor_serialized_payload vc)
     (raw_data_item_match_serialized0 (CBOR_Case_Serialized c') va)
     emp
     (fun _ ->
       noop (); noop () // FIXME: WHY WHY WHY do I need an explicit bind here?
     );
   implies_trans
-    (LPS.aparse Cbor.parse_raw_data_item c'.payload vc)
+    (LPS.aparse Cbor.parse_raw_data_item c'.cbor_serialized_payload vc)
     (raw_data_item_match_serialized0 (CBOR_Case_Serialized c') va)
     (raw_data_item_match c va);
   return c'
@@ -724,14 +724,14 @@ let size_comp_for_serialized
     elim_implies
       (LPS.aparse Cbor.parse_raw_data_item _ _)
       (raw_data_item_match _ _);
-    if c'.byte_size `SZ.gt` sz
+    if c'.cbor_serialized_size `SZ.gt` sz
     then begin
       noop ();
       R.write perr true;
       return sz
     end else begin
       [@@inline_let]
-      let res = sz `SZ.sub` c'.byte_size in
+      let res = sz `SZ.sub` c'.cbor_serialized_size in
       noop ();
       return res
     end
@@ -744,18 +744,18 @@ let l2r_writer_for_serialized
     let c' = destr_cbor_serialized c in
     let _ = gen_elim () in
     LPS.aparse_serialized_length Cbor.serialize_raw_data_item _;
-    let _ = LPS.elim_aparse_with_implies Cbor.parse_raw_data_item c'.payload in
+    let _ = LPS.elim_aparse_with_implies Cbor.parse_raw_data_item c'.cbor_serialized_payload in
     implies_trans
-      (LPA.arrayptr c'.payload _)
+      (LPA.arrayptr c'.cbor_serialized_payload _)
       (LPS.aparse Cbor.parse_raw_data_item _ _)
       (raw_data_item_match _ _);
-    let res = LW.split out c'.byte_size in
+    let res = LW.split out c'.cbor_serialized_size in
     let _ = gen_elim () in
     let vout' = vpattern_replace (LW.vp out) in
-    let _ = LPA.copy c'.payload res c'.byte_size in
+    let _ = LPA.copy c'.cbor_serialized_payload res c'.cbor_serialized_size in
     let vres = LPS.intro_aparse Cbor.parse_raw_data_item res in
     elim_implies
-      (LPA.arrayptr c'.payload _)
+      (LPA.arrayptr c'.cbor_serialized_payload _)
       (raw_data_item_match _ _);
     assert_ (cbor_l2r_writer_for_post va c vout out res vres vout'); // FIXME: WHY WHY WHY?
     return res
@@ -768,7 +768,7 @@ let read_cbor_int64
     (fun _ -> raw_data_item_match c (Ghost.reveal va))
     (Cbor.Int64? (Ghost.reveal va))
     (fun c' ->
-      Ghost.reveal va == Cbor.Int64 c'.typ c'.value
+      Ghost.reveal va == Cbor.Int64 c'.cbor_int_type c'.cbor_int_value
     )
 = raw_data_item_match_get_case c;
   match c with
@@ -786,12 +786,12 @@ let read_cbor_int64
       (raw_data_item_match c (Ghost.reveal va))
       (raw_data_item_match_serialized0 c (Ghost.reveal va));
     let _ = gen_elim () in
-    vpattern_rewrite (fun a -> LPS.aparse Cbor.parse_raw_data_item a _) cs.payload;
-    let typ = Cbor.read_major_type cs.payload in
-    let value = Cbor.read_int64 cs.payload in
+    vpattern_rewrite (fun a -> LPS.aparse Cbor.parse_raw_data_item a _) cs.cbor_serialized_payload;
+    let typ = Cbor.read_major_type cs.cbor_serialized_payload in
+    let value = Cbor.read_int64 cs.cbor_serialized_payload in
     let c' : cbor_int = {
-      typ = typ;
-      value = value;
+      cbor_int_type = typ;
+      cbor_int_value = value;
     }
     in
     noop ();
@@ -811,7 +811,7 @@ let destr_cbor_int64
     )
     (Cbor.Int64? (Ghost.reveal va))
     (fun c' ->
-      Ghost.reveal va == Cbor.Int64 c'.typ c'.value
+      Ghost.reveal va == Cbor.Int64 c'.cbor_int_type c'.cbor_int_value
     )
 = let c' = read_cbor_int64 c in
   rewrite
@@ -830,7 +830,7 @@ let size_comp_for_int64
 : Tot (cbor_size_comp_for va c)
 = fun sz perr ->
     let c' = read_cbor_int64 c in
-    let res = CBOR.SteelST.Raw.Write.size_comp_int64 c'.typ c'.value sz perr in
+    let res = CBOR.SteelST.Raw.Write.size_comp_int64 c'.cbor_int_type c'.cbor_int_value sz perr in
     let _ = gen_elim () in
     return res
 
@@ -840,7 +840,7 @@ let l2r_writer_for_int64
 : Tot (cbor_l2r_writer_for va c)
 = fun out ->
     let c' = read_cbor_int64 c in
-    let res = CBOR.SteelST.Raw.Write.l2r_write_int64 c'.typ c'.value out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_int64 c'.cbor_int_type c'.cbor_int_value out in
     let _ = gen_elim () in
     return res
 
@@ -851,9 +851,9 @@ let constr_cbor_int64
     emp
     (fun c -> raw_data_item_match c (Cbor.Int64 ty value))
     True
-    (fun c -> c == CBOR_Case_Int64 ({ typ = ty; value = value }))
+    (fun c -> c == CBOR_Case_Int64 ({ cbor_int_type = ty; cbor_int_value = value }))
 = [@@inline_let]
-  let c = CBOR_Case_Int64 ({ typ = ty; value = value }) in
+  let c = CBOR_Case_Int64 ({ cbor_int_type = ty; cbor_int_value = value }) in
   noop ();
   rewrite
     (raw_data_item_match_int0 c (Cbor.Int64 ty value))
@@ -886,8 +886,8 @@ let read_cbor_simple_value
       (raw_data_item_match c (Ghost.reveal va))
       (raw_data_item_match_serialized0 c (Ghost.reveal va));
     let _ = gen_elim () in
-    vpattern_rewrite (fun a -> LPS.aparse Cbor.parse_raw_data_item a _) cs.payload;
-    let c' = Cbor.read_simple_value cs.payload in
+    vpattern_rewrite (fun a -> LPS.aparse Cbor.parse_raw_data_item a _) cs.cbor_serialized_payload;
+    let c' = Cbor.read_simple_value cs.cbor_serialized_payload in
     elim_implies
       (raw_data_item_match_serialized0 c (Ghost.reveal va))
       (raw_data_item_match c (Ghost.reveal va));
@@ -973,11 +973,11 @@ let destr_cbor_string'
       (raw_data_item_match c (Ghost.reveal va))
       (raw_data_item_match_serialized0 c (Ghost.reveal va));
     let _ = gen_elim () in
-    vpattern_rewrite (fun a -> LPS.aparse Cbor.parse_raw_data_item a _) cs.payload;
+    vpattern_rewrite (fun a -> LPS.aparse Cbor.parse_raw_data_item a _) cs.cbor_serialized_payload;
     let va' = vpattern_replace (LPS.aparse Cbor.parse_raw_data_item _) in
-    let typ = Cbor.read_major_type cs.payload in
-    let len = Cbor.read_argument_as_uint64 cs.payload in
-    let lpayload = Cbor.focus_string cs.payload in
+    let typ = Cbor.read_major_type cs.cbor_serialized_payload in
+    let len = Cbor.read_argument_as_uint64 cs.cbor_serialized_payload in
+    let lpayload = Cbor.focus_string cs.cbor_serialized_payload in
     let _ = gen_elim () in
     let payload = LPA.elim_arrayptr_with_implies lpayload in
     let _ = gen_elim () in
@@ -985,12 +985,12 @@ let destr_cbor_string'
       (A.pts_to _ _ _)
       (LPA.arrayptr _ _)
       (LPS.aparse Cbor.parse_raw_data_item _ _);
-    let vpl = vpattern_replace_erased (fun vpl -> A.pts_to payload _ vpl `star` (A.pts_to payload _ vpl `implies_` LPS.aparse Cbor.parse_raw_data_item cs.payload va')) in
-    let vperm = vpattern_replace (fun vperm -> A.pts_to payload vperm _ `star` (A.pts_to payload vperm _ `implies_` LPS.aparse Cbor.parse_raw_data_item cs.payload va')) in
+    let vpl = vpattern_replace_erased (fun vpl -> A.pts_to payload _ vpl `star` (A.pts_to payload _ vpl `implies_` LPS.aparse Cbor.parse_raw_data_item cs.cbor_serialized_payload va')) in
+    let vperm = vpattern_replace (fun vperm -> A.pts_to payload vperm _ `star` (A.pts_to payload vperm _ `implies_` LPS.aparse Cbor.parse_raw_data_item cs.cbor_serialized_payload va')) in
     let c' : cbor_string = {
-      typ = typ;
-      byte_length = len;
-      payload = payload;
+      cbor_string_type = typ;
+      cbor_string_length = len;
+      cbor_string_payload = payload;
       permission = vperm;
     }
     in
@@ -998,13 +998,13 @@ let destr_cbor_string'
     intro_implies
       (raw_data_item_match_string0 (CBOR_Case_String c') (Ghost.reveal va))
       (raw_data_item_match_serialized0 c (Ghost.reveal va))
-      (A.pts_to payload vperm vpl `implies_` LPS.aparse Cbor.parse_raw_data_item cs.payload va')
+      (A.pts_to payload vperm vpl `implies_` LPS.aparse Cbor.parse_raw_data_item cs.cbor_serialized_payload va')
       (fun _ ->
         let _ = gen_elim () in
         rewrite (A.pts_to _ _ _) (A.pts_to payload vperm vpl);
         elim_implies
           (A.pts_to payload vperm vpl)
-          (LPS.aparse Cbor.parse_raw_data_item cs.payload va');
+          (LPS.aparse Cbor.parse_raw_data_item cs.cbor_serialized_payload va');
         noop ()
       );
     rewrite_with_implies
@@ -1026,11 +1026,11 @@ let destr_cbor_string
 : STT cbor_string
     (raw_data_item_match c (Ghost.reveal va))
     (fun c' -> exists_ (fun vc' ->
-      A.pts_to c'.payload c'.permission vc' `star`
-      (A.pts_to c'.payload c'.permission vc' `implies_` raw_data_item_match c (Ghost.reveal va)) `star`
+      A.pts_to c'.cbor_string_payload c'.permission vc' `star`
+      (A.pts_to c'.cbor_string_payload c'.permission vc' `implies_` raw_data_item_match c (Ghost.reveal va)) `star`
       pure (
-        U64.v c'.byte_length == Seq.length vc' /\
-        c'.typ == Cbor.String?.typ va /\
+        U64.v c'.cbor_string_length == Seq.length vc' /\
+        c'.cbor_string_type == Cbor.String?.typ va /\
         vc' == Cbor.String?.v va
     )))
 = let c' = destr_cbor_string' c in
@@ -1038,30 +1038,30 @@ let destr_cbor_string
     (raw_data_item_match (CBOR_Case_String c') (Ghost.reveal va))
     (raw_data_item_match_string0 (CBOR_Case_String c') (Ghost.reveal va));
   let _ = gen_elim () in
-  vpattern_rewrite (fun a -> A.pts_to a _ _) c'.payload;
+  vpattern_rewrite (fun a -> A.pts_to a _ _) c'.cbor_string_payload;
   vpattern_rewrite (fun p -> A.pts_to _ p _) c'.permission;
   let vc' = vpattern_replace_erased (A.pts_to _ _) in
   intro_implies
-    (A.pts_to c'.payload c'.permission vc')
+    (A.pts_to c'.cbor_string_payload c'.permission vc')
     (raw_data_item_match_string0 (CBOR_Case_String c') (Ghost.reveal va))
-    (pure (raw_data_item_match_string_prop (CBOR_Case_String c') (Ghost.reveal va) c'.payload c'.permission vc')) // FIXME: WHY WHY WHY?
+    (pure (raw_data_item_match_string_prop (CBOR_Case_String c') (Ghost.reveal va) c'.cbor_string_payload c'.permission vc')) // FIXME: WHY WHY WHY?
     (fun _ ->
       noop ()
     );
   implies_trans
-    (A.pts_to c'.payload c'.permission vc')
+    (A.pts_to c'.cbor_string_payload c'.permission vc')
     (raw_data_item_match_string0 (CBOR_Case_String c') (Ghost.reveal va))
     (raw_data_item_match (CBOR_Case_String c') (Ghost.reveal va));
   implies_trans
-    (A.pts_to c'.payload c'.permission vc')
+    (A.pts_to c'.cbor_string_payload c'.permission vc')
     (raw_data_item_match (CBOR_Case_String c') (Ghost.reveal va))
     (raw_data_item_match c (Ghost.reveal va));
   intro_exists (Ghost.reveal vc') (fun vc' -> // FIXME: WHY WHY WHY?
-    A.pts_to c'.payload c'.permission vc' `star`
-      (A.pts_to c'.payload c'.permission vc' `implies_` raw_data_item_match c (Ghost.reveal va)) `star`
+    A.pts_to c'.cbor_string_payload c'.permission vc' `star`
+      (A.pts_to c'.cbor_string_payload c'.permission vc' `implies_` raw_data_item_match c (Ghost.reveal va)) `star`
       pure (
-        U64.v c'.byte_length == Seq.length vc' /\
-        c'.typ == Cbor.String?.typ va /\
+        U64.v c'.cbor_string_length == Seq.length vc' /\
+        c'.cbor_string_type == Cbor.String?.typ va /\
         vc' == Cbor.String?.v va
     )  
   );
@@ -1078,7 +1078,7 @@ let size_comp_for_string
     let _ = A.intro_fits_u64 () in
     let c' = destr_cbor_string c in
     let _ = gen_elim () in
-    let res = CBOR.SteelST.Raw.Write.size_comp_string c'.typ c'.byte_length (Cbor.String?.v va) sz perr in
+    let res = CBOR.SteelST.Raw.Write.size_comp_string c'.cbor_string_type c'.cbor_string_length (Cbor.String?.v va) sz perr in
     let _ = gen_elim () in
     elim_implies
       (A.pts_to _ _ _)
@@ -1113,19 +1113,19 @@ let l2r_write_cbor_string
   noop ();
   let c' = destr_cbor_string c in
   let _ = gen_elim () in
-  let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header c'.typ c'.byte_length out in
+  let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header c'.cbor_string_type c'.cbor_string_length out in
   let _ = gen_elim () in
   let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
-  let len = SZ.uint64_to_sizet c'.byte_length in
+  let len = SZ.uint64_to_sizet c'.cbor_string_length in
   let res_pl = LW.split out len in
   let _ = gen_elim () in
   let vout' = vpattern_replace (LW.vp out) in
   let vres_pl = vpattern (LPA.arrayptr res_pl) in
   let res_pl_a = LPA.elim_arrayptr res_pl in
   vpattern_rewrite (fun p -> A.pts_to res_pl_a p _) full_perm;
-  A.pts_to_length c'.payload _;
+  A.pts_to_length c'.cbor_string_payload _;
   A.pts_to_length res_pl_a _;
-  let _ = A.memcpy c'.payload res_pl_a len in
+  let _ = A.memcpy c'.cbor_string_payload res_pl_a len in
   let res_pl = LPA.intro_arrayptr res_pl_a in
   let _ = gen_elim () in
   let vres_pl' = vpattern (LPA.arrayptr res_pl) in
@@ -1159,9 +1159,9 @@ let constr_cbor_string
     )
 = [@@inline_let]
   let c' = CBOR_Case_String ({
-    typ = typ;
-    payload = a;
-    byte_length = len;
+    cbor_string_type = typ;
+    cbor_string_payload = a;
+    cbor_string_length = len;
     permission = p;
   })
   in
@@ -1234,9 +1234,9 @@ let read_cbor_array_payload
 let read_cbor_array_post_success
   (c: cbor_array)
 : Tot vprop
-= exists_ (A.pts_to c.payload full_perm) `star`
+= exists_ (A.pts_to c.cbor_array_payload full_perm) `star`
   pure (
-    A.is_full_array c.payload
+    A.is_full_array c.cbor_array_payload
   )
 
 let read_cbor_array_post
@@ -1310,29 +1310,29 @@ let read_cbor_array
       let _ = gen_elim () in
       vpattern_rewrite_with_implies
         (fun a -> LPS.aparse Cbor.parse_raw_data_item a _)
-        s.payload;
+        s.cbor_serialized_payload;
       intro_implies
-        (LPS.aparse Cbor.parse_raw_data_item s.payload _)
+        (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _)
         (raw_data_item_match_serialized0 input obj)
-        (LPS.aparse Cbor.parse_raw_data_item s.payload _ `implies_`
+        (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _ `implies_`
           LPS.aparse Cbor.parse_raw_data_item _ _
         )
         (fun _ ->
           elim_implies
-            (LPS.aparse Cbor.parse_raw_data_item s.payload _)
+            (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _)
             (LPS.aparse Cbor.parse_raw_data_item _ _);
           noop ()
         );
       implies_trans
-        (LPS.aparse Cbor.parse_raw_data_item s.payload _)
+        (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _)
         (raw_data_item_match_serialized0 input obj)
         (raw_data_item_match input obj);
       R.with_local 0uL (fun plen ->
-      R.with_local s.payload (fun pa ->
-        let w = CBOR.SteelST.Raw.Array.focus_array plen pa s.payload in
+      R.with_local s.cbor_serialized_payload (fun pa ->
+        let w = CBOR.SteelST.Raw.Array.focus_array plen pa s.cbor_serialized_payload in
         implies_trans
           (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v w.n) Cbor.parse_raw_data_item) w.a _)
-          (LPS.aparse Cbor.parse_raw_data_item s.payload _)
+          (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _)
           (raw_data_item_match input obj);
         let len = R.read plen in
         let _ = A.intro_fits_u64 () in
@@ -1383,7 +1383,7 @@ let read_cbor_array
             (raw_data_item_array_match va vl.contents `star` read_cbor_array_post input res)
             emp
             (fun _ ->
-              vpattern_rewrite (fun a0 -> A.pts_to a0 _ _) (CBOR_Case_Array?._0 res).payload;
+              vpattern_rewrite (fun a0 -> A.pts_to a0 _ _) (CBOR_Case_Array?._0 res).cbor_array_payload;
               rewrite (read_cbor_array_post_success (CBOR_Case_Array?._0 res)) (read_cbor_array_post input res)
             );
           implies_reg_r
@@ -1458,7 +1458,7 @@ let size_comp_for_array
       (raw_data_item_match _ _);
     LPS.seq_list_match_length raw_data_item_match _ _;
     A.pts_to_length _ _;
-    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_array c'.count sz perr in
+    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_array c'.cbor_array_length sz perr in
     let _ = gen_elim () in
     let err1 = R.read perr in
     if err1
@@ -1480,8 +1480,8 @@ let size_comp_for_array
         )
         #c'.footprint
         #l
-        (SZ.uint64_to_sizet c'.count)
-        c'.payload
+        (SZ.uint64_to_sizet c'.cbor_array_length)
+        c'.cbor_array_payload
         sz1
         perr
       in
@@ -1523,7 +1523,7 @@ let l2r_writer_for_array
       (raw_data_item_match _ _);
     LPS.seq_list_match_length raw_data_item_match _ _;
     A.pts_to_length _ _;
-    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_array c'.count out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_array c'.cbor_array_length out in
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
     let res_pl = LPS.l2r_write_array_payload_as_nlist
@@ -1536,13 +1536,13 @@ let l2r_writer_for_array
       )
       #c'.footprint
       #l
-      (SZ.uint64_to_sizet c'.count)
-      c'.payload
+      (SZ.uint64_to_sizet c'.cbor_array_length)
+      c'.cbor_array_payload
       out
     in
     let _ = gen_elim () in
     let vout' = vpattern_replace (LW.vp out) in
-    let _ = LPS.elim_aparse_with_serializer (LPS.serialize_nlist (SZ.v (SZ.uint64_to_sizet c'.count)) Cbor.serialize_raw_data_item) res_pl in
+    let _ = LPS.elim_aparse_with_serializer (LPS.serialize_nlist (SZ.v (SZ.uint64_to_sizet c'.cbor_array_length)) Cbor.serialize_raw_data_item) res_pl in
     let _ = LPA.join res res_pl in
     let _ = gen_elim () in
     let vres = LPS.intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
@@ -1576,9 +1576,9 @@ let destr_cbor_tagged
 : ST cbor_tagged
     (raw_data_item_match a v)
     (fun res ->
-      R.pts_to res.payload full_perm res.footprint `star`
+      R.pts_to res.cbor_tagged_payload full_perm res.footprint `star`
       raw_data_item_match res.footprint (maybe_cbor_tagged_payload v) `star`
-      ((R.pts_to res.payload full_perm res.footprint `star`
+      ((R.pts_to res.cbor_tagged_payload full_perm res.footprint `star`
         raw_data_item_match res.footprint (maybe_cbor_tagged_payload v)) `implies_`
         raw_data_item_match a v
       )
@@ -1587,7 +1587,7 @@ let destr_cbor_tagged
     (fun res ->
       a == CBOR_Case_Tagged res /\
       Cbor.Tagged? v /\
-      res.tag == Cbor.Tagged?.tag v
+      res.cbor_tagged_tag == Cbor.Tagged?.tag v
     )
 = raw_data_item_match_get_case _;
   let _ : squash (Cbor.Tagged? v) = () in
@@ -1605,13 +1605,13 @@ let destr_cbor_tagged
     (raw_data_item_match (CBOR_Case_Tagged res) (Cbor.Tagged g_tag g_payload))
     (raw_data_item_match a v);
   let _ = gen_elim () in
-  let _ : squash (res.tag == Ghost.reveal g_tag) = () in
+  let _ : squash (res.cbor_tagged_tag == Ghost.reveal g_tag) = () in
   let _ : squash (maybe_cbor_tagged_payload v == Ghost.reveal g_payload) = () in
   let _ : squash (Ghost.reveal g_payload << Cbor.Tagged g_tag g_payload) = () in // FIXME: WHY WHY WHY?
-  rewrite (R.pts_to _ _ _) (R.pts_to res.payload full_perm res.footprint);
+  rewrite (R.pts_to _ _ _) (R.pts_to res.cbor_tagged_payload full_perm res.footprint);
   rewrite (raw_data_item_match _ _) (raw_data_item_match res.footprint (maybe_cbor_tagged_payload v));
   intro_implies
-    (R.pts_to res.payload full_perm res.footprint `star`
+    (R.pts_to res.cbor_tagged_payload full_perm res.footprint `star`
       raw_data_item_match res.footprint (maybe_cbor_tagged_payload v))
     (raw_data_item_match a v)
     (raw_data_item_match_tagged0 _ _ raw_data_item_match `implies_` raw_data_item_match a _)
@@ -1660,7 +1660,7 @@ let size_comp_for_tagged
     let _ : squash (Cbor.Tagged? va) = () in
     serialize_cbor_tagged_eq va;
     let c' = destr_cbor_tagged c in
-    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_tagged c'.tag sz perr in
+    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_tagged c'.cbor_tagged_tag sz perr in
     let _ = gen_elim () in
     let err1 = R.read perr in
     if err1
@@ -1672,7 +1672,7 @@ let size_comp_for_tagged
       return sz1
     end else begin
       noop ();
-      let pl = R.read c'.payload in
+      let pl = R.read c'.cbor_tagged_payload in
       vpattern_rewrite_with_implies
         (fun pl -> raw_data_item_match pl _)
         pl;
@@ -1703,10 +1703,10 @@ let l2r_writer_for_tagged
     let _ : squash (Cbor.Tagged? va) = () in
     serialize_cbor_tagged_eq va;
     let c' = destr_cbor_tagged c in
-    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_tagged c'.tag out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_tagged c'.cbor_tagged_tag out in
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
-    let pl = R.read c'.payload in
+    let pl = R.read c'.cbor_tagged_payload in
     vpattern_rewrite_with_implies
       (fun pl -> raw_data_item_match pl _)
       pl;
@@ -1741,9 +1741,9 @@ let destr_cbor_map
 : ST cbor_map
     (raw_data_item_match a v)
     (fun res ->
-      A.pts_to res.payload full_perm res.footprint `star`
+      A.pts_to res.cbor_map_payload full_perm res.footprint `star`
       LPS.seq_list_match res.footprint (maybe_cbor_map v) (raw_data_item_map_entry_match0 raw_data_item_match) `star`
-      ((A.pts_to res.payload full_perm res.footprint `star`
+      ((A.pts_to res.cbor_map_payload full_perm res.footprint `star`
         LPS.seq_list_match res.footprint (maybe_cbor_map v) (raw_data_item_map_entry_match0 raw_data_item_match)) `implies_`
         raw_data_item_match a v
       )
@@ -1752,7 +1752,7 @@ let destr_cbor_map
     (fun res ->
       a == CBOR_Case_Map res /\
       Cbor.Map? v /\
-      U64.v res.entry_count == List.Tot.length (Cbor.Map?.v v)
+      U64.v res.cbor_map_length == List.Tot.length (Cbor.Map?.v v)
     )
 = raw_data_item_match_get_case _;
   let sq : squash (Cbor.Map? v) = () in
@@ -1770,7 +1770,7 @@ let destr_cbor_map
   let _ = gen_elim () in
   rewrite
     (A.pts_to _ _ _)
-    (A.pts_to res.payload full_perm res.footprint);
+    (A.pts_to res.cbor_map_payload full_perm res.footprint);
   rewrite
     (raw_data_item_map_match _ _)
     (raw_data_item_map_match res.footprint (maybe_cbor_map v));
@@ -1787,7 +1787,7 @@ let destr_cbor_map
         (raw_data_item_map_entry_match0 raw_data_item_match x y)
     );
   intro_implies
-    (A.pts_to res.payload full_perm res.footprint `star`
+    (A.pts_to res.cbor_map_payload full_perm res.footprint `star`
       LPS.seq_list_match res.footprint (maybe_cbor_map v) (raw_data_item_map_entry_match0 raw_data_item_match))
     (raw_data_item_match a v)
     (raw_data_item_match_map0 (CBOR_Case_Map res) (Cbor.Map (maybe_cbor_map v)) raw_data_item_map_match `implies_`
@@ -1837,7 +1837,7 @@ let size_comp_for_map_entry
         pure (LowParse.SteelST.Write.size_comp_for_post (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item) va sz res err)
     ))
 = LPS.serialize_nondep_then_eq Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item va;
-  let sz1 = size _ c.key sz perr in
+  let sz1 = size _ c.cbor_map_entry_key sz perr in
   let _ = gen_elim () in
   let err = R.read perr in
   if err
@@ -1847,7 +1847,7 @@ let size_comp_for_map_entry
     return sz1
   end else begin
     noop ();
-    let sz2 = size _ c.value sz1 perr in
+    let sz2 = size _ c.cbor_map_entry_value sz1 perr in
     let _ = gen_elim () in
     noop ();
     return sz2
@@ -1904,7 +1904,7 @@ let size_comp_for_map
       (raw_data_item_match _ _);
     LPS.seq_list_match_length (raw_data_item_map_entry_match0 raw_data_item_match) _ _;
     A.pts_to_length _ _;
-    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_map c'.entry_count sz perr in
+    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_map c'.cbor_map_length sz perr in
     let _ = gen_elim () in
     let err1 = R.read perr in
     if err1
@@ -1926,8 +1926,8 @@ let size_comp_for_map
         )
         #c'.footprint
         #l
-        (SZ.uint64_to_sizet c'.entry_count)
-        c'.payload
+        (SZ.uint64_to_sizet c'.cbor_map_length)
+        c'.cbor_map_payload
         sz1
         perr
       in
@@ -1991,10 +1991,10 @@ let l2r_writer_for_map_entry
     (fun _ -> True)
 = LPS.serialize_nondep_then_eq Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item va;
   noop ();
-  let res = write _ c.key out in
+  let res = write _ c.cbor_map_entry_key out in
   let _ = gen_elim () in
   let _ = LPS.elim_aparse_with_serializer Cbor.serialize_raw_data_item res in
-  let res_pl = write _ c.value out in
+  let res_pl = write _ c.cbor_map_entry_value out in
   let _ = gen_elim () in
   let vout' = vpattern_replace (LW.vp out) in
   let _ = LPS.elim_aparse_with_serializer Cbor.serialize_raw_data_item res_pl in
@@ -2032,7 +2032,7 @@ let l2r_writer_for_map
       (raw_data_item_match _ _);
     LPS.seq_list_match_length (raw_data_item_map_entry_match0 raw_data_item_match) _ _;
     A.pts_to_length _ _;
-    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_map c'.entry_count out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_map c'.cbor_map_length out in
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer Cbor.serialize_header res in
     let res_pl = LPS.l2r_write_array_payload_as_nlist
@@ -2045,13 +2045,13 @@ let l2r_writer_for_map
       )
       #c'.footprint
       #l
-      (SZ.uint64_to_sizet c'.entry_count)
-      c'.payload
+      (SZ.uint64_to_sizet c'.cbor_map_length)
+      c'.cbor_map_payload
       out
     in
     let _ = gen_elim () in
     let vout' = vpattern_replace (LW.vp out) in
-    let _ = LPS.elim_aparse_with_serializer (LPS.serialize_nlist (SZ.v (SZ.uint64_to_sizet c'.entry_count)) (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item)) res_pl in
+    let _ = LPS.elim_aparse_with_serializer (LPS.serialize_nlist (SZ.v (SZ.uint64_to_sizet c'.cbor_map_length)) (LPS.serialize_nondep_then Cbor.serialize_raw_data_item Cbor.serialize_raw_data_item)) res_pl in
     let _ = LPA.join res res_pl in
     let _ = gen_elim () in
     let vres = LPS.intro_aparse_with_serializer Cbor.serialize_raw_data_item va res in
