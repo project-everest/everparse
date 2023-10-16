@@ -505,6 +505,33 @@ let elim_synth
   parse_synth_eq p1 f2 (AP.contents_of' va');
   intro_aparse p1 a
 
+let elim_synth_with_implies
+  #opened
+  #k1 #t1 (p1: parser k1 t1)
+  #t2 (f2: t1 -> GTot t2)
+  #va2 (a: byte_array)
+  (sq: squash (synth_injective f2))
+: STGhost (v k1 t1) opened
+    (aparse (p1 `parse_synth` f2) a va2)
+    (fun va -> aparse p1 a va `star`
+      (aparse p1 a va `implies_` aparse (p1 `parse_synth` f2) a va2)
+    )
+    True
+    (fun va ->
+      array_of va2 == array_of va /\
+      va2.contents == f2 (va.contents)
+    )
+= let va = elim_synth p1 f2 a sq in
+  intro_implies
+    (aparse p1 a va)
+    (aparse (p1 `parse_synth` f2) a va2)
+    emp
+    (fun _ ->
+      let _ = intro_synth p1 f2 a () in
+      vpattern_rewrite (aparse (p1 `parse_synth` f2) a) va2
+    );
+  va
+
 inline_for_extraction
 let cps_read_synth_cont
   (#t: Type)
