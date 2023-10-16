@@ -41,6 +41,10 @@ typedef EVERPARSE_STRING PRIMS_STRING;
 #  define KRML_MAYBE_UNUSED_VAR(x) (void)(x)
 #endif
 
+#ifndef KRML_HOST_IGNORE
+#  define KRML_HOST_IGNORE(x) (void)(x)
+#endif
+
 #ifndef KRML_HOST_PRINTF
 #  include <stdio.h>
 #  define KRML_HOST_PRINTF printf
