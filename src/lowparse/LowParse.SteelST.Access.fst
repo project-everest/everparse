@@ -434,6 +434,47 @@ let unpeek_strong
     (AP.arrayptr a va')
     (AP.arrayptr a va)
 
+inline_for_extraction
+let peek_strong_with_size_with_implies
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0) // FIXME: if the universe is left out, then F* master will determine universe 0, but F* #2349 cannot, since gen_elim now allows universes 0 and 1. So let's stay at universe 0 for now.
+  (#va: AP.v byte)
+  (p: parser k t)
+  (a: byte_array)
+  (sz: SZ.t)
+: ST (byte_array)
+    (AP.arrayptr a va)
+    (fun res -> exists_ (fun vp -> aparse p a vp `star` exists_ (fun vres -> AP.arrayptr res vres `star`
+      ((aparse p a vp `star` AP.arrayptr res vres) `implies_` AP.arrayptr a va) `star`
+    pure (
+      let consumed = AP.length (array_of vp) in
+      AP.merge_into (array_of vp) (AP.array_of vres) (AP.array_of va) /\
+      consumed <= AP.length (AP.array_of va) /\
+      consumed == SZ.v sz /\
+      AP.contents_of' vres == AP.seq_slice (AP.contents_of' va) consumed (AP.length (AP.array_of va)) /\
+      parse' p (AP.contents_of' va) == Some (vp.contents, consumed) /\
+      parse' p (AP.seq_slice (AP.contents_of' va) 0 consumed) == Some (vp.contents, consumed)
+    )) )  )
+    (k.parser_kind_subkind == Some ParserStrong /\
+      begin match parse' p (AP.contents_of' va) with
+      | None -> False
+      | Some (_, consumed) -> (consumed <: nat) == SZ.v sz
+      end
+    )
+    (fun _ -> True)
+= let res = peek_strong_with_size p a sz in
+  let _ = gen_elim () in
+  let vp = vpattern_replace (aparse p a) in
+  let vres = vpattern_replace (AP.arrayptr res) in
+  intro_implies
+    (aparse p a vp `star` AP.arrayptr res vres)
+    (AP.arrayptr a va)
+    emp
+    (fun _ -> 
+      unpeek_strong a va res 
+    );
+  return res
+
 let peek_consumes_all
   (#opened: _)
   (#k: parser_kind)
