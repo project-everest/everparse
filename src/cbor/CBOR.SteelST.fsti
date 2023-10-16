@@ -24,7 +24,7 @@ type cbor_string = {
 
 inline_for_extraction
 noextract
-val cbor_serialized_payload_t: Type0
+val cbor_serialized_payload_t: Type0 // extracted as uint8_t*
 
 [@@erasable]
 val cbor_serialized_footprint_t: Type0
@@ -84,14 +84,87 @@ val serialize_cbor
 
 val serialize_cbor_inj
   (c1 c2: Cbor.raw_data_item)
+  (s1 s2: Seq.seq U8.t)
 : Lemma
-  (requires (serialize_cbor c1 == serialize_cbor c2))
-  (ensures (c1 == c2))
+  (requires (serialize_cbor c1 `Seq.append` s1 == serialize_cbor c2 `Seq.append` s2))
+  (ensures (c1 == c2 /\ s1 == s2))
 
 val serialize_cbor_nonempty
   (c: Cbor.raw_data_item)
 : Lemma
   (Seq.length (serialize_cbor c) > 0)
+
+noeq
+type read_cbor_success_t = {
+  read_cbor_payload: cbor;
+  read_cbor_remainder: A.array U8.t;
+  read_cbor_remainder_length: SZ.t;
+}
+
+noeq
+type read_cbor_t =
+| ParseError
+| ParseSuccess of read_cbor_success_t
+
+noextract
+let read_cbor_success_postcond
+  (va: Ghost.erased (Seq.seq U8.t))
+  (c: read_cbor_success_t)
+  (v: Cbor.raw_data_item)
+  (rem: Seq.seq U8.t)
+: Tot prop
+= SZ.v c.read_cbor_remainder_length == Seq.length rem /\
+  va `Seq.equal` (serialize_cbor v `Seq.append` rem)
+
+[@@__reduce__]
+let read_cbor_success_post
+  (a: A.array U8.t)
+  (p: perm)
+  (va: Ghost.erased (Seq.seq U8.t))
+  (c: read_cbor_success_t)
+: Tot vprop
+= exists_ (fun v -> exists_ (fun rem ->
+    raw_data_item_match c.read_cbor_payload v `star`
+    A.pts_to c.read_cbor_remainder p rem `star`
+    ((raw_data_item_match c.read_cbor_payload v `star` A.pts_to c.read_cbor_remainder p rem) `implies_`
+      A.pts_to a p va) `star`
+    pure (read_cbor_success_postcond va c v rem)
+  ))
+
+noextract
+let read_cbor_error_postcond
+  (va: Ghost.erased (Seq.seq U8.t))
+: Tot prop
+= forall v . ~ (serialize_cbor v == Seq.slice va 0 (min (Seq.length (serialize_cbor v)) (Seq.length va)))
+
+[@@__reduce__]
+let read_cbor_error_post
+  (a: A.array U8.t)
+  (p: perm)
+  (va: Ghost.erased (Seq.seq U8.t))
+: Tot vprop
+= A.pts_to a p va `star` pure (read_cbor_error_postcond va)
+
+let read_cbor_post
+  (a: A.array U8.t)
+  (p: perm)
+  (va: Ghost.erased (Seq.seq U8.t))
+  (res: read_cbor_t)
+: Tot vprop
+= match res with
+  | ParseError -> read_cbor_error_post a p va
+  | ParseSuccess c -> read_cbor_success_post a p va c
+
+val read_cbor
+  (#va: Ghost.erased (Seq.seq U8.t))
+  (#p: perm)
+  (a: A.array U8.t)
+  (sz: SZ.t)
+: ST read_cbor_t
+    (A.pts_to a p va)
+    (fun res -> read_cbor_post a p va res)
+    (SZ.v sz == Seq.length va \/ SZ.v sz == A.length a)
+    (fun _ -> True)
 
 noextract
 let write_cbor_postcond

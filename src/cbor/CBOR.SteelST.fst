@@ -524,6 +524,128 @@ let destr_cbor_serialized
     (raw_data_item_match c va);
   return c'
 
+let serialize_cbor
+  c
+= LPS.serialize Cbor.serialize_raw_data_item c
+
+let serialize_cbor_inj
+  c1 c2 s1 s2
+= LPS.parse_strong_prefix Cbor.parse_raw_data_item (serialize_cbor c1) (serialize_cbor c1 `Seq.append` s1);
+  LPS.parse_strong_prefix Cbor.parse_raw_data_item (serialize_cbor c2) (serialize_cbor c2 `Seq.append` s2);
+  LPS.serializer_injective _ Cbor.serialize_raw_data_item c1 c2;
+  Seq.lemma_append_inj (serialize_cbor c1) s1 (serialize_cbor c2) s2
+
+let serialize_cbor_nonempty
+  c
+= ()
+
+let serialize_cbor_error
+  (x: Seq.seq U8.t)
+: Lemma
+  (requires (LPS.parse Cbor.parse_raw_data_item x == None))
+  (ensures (read_cbor_error_postcond x))
+= let prf
+    (v: Cbor.raw_data_item)
+  : Lemma
+    (requires (serialize_cbor v == Seq.slice x 0 (min (Seq.length (serialize_cbor v)) (Seq.length x))))
+    (ensures False)
+  = assert (Seq.length (serialize_cbor v) <= Seq.length x);
+    Seq.lemma_split x (Seq.length (serialize_cbor v));
+    LPS.parse_strong_prefix Cbor.parse_raw_data_item (serialize_cbor v) x
+  in
+  Classical.forall_intro (Classical.move_requires prf)
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+let read_cbor
+  #va #p a sz
+= A.pts_to_length a _;
+  let a' = LPA.intro_arrayptr_with_implies a in
+  let _ = gen_elim () in
+  let va' = vpattern (LPA.arrayptr a') in
+  vpattern_rewrite_with_implies (LPA.arrayptr a') va';
+  implies_trans
+    (LPA.arrayptr a' va')
+    (LPA.arrayptr a' _)
+    (A.pts_to a p va);
+  R.with_local 0ul (fun perr ->
+    let sz' = Cbor.validate_raw_data_item a' sz perr in
+    let _ = gen_elim () in
+    let err = R.read perr in
+    if err = 0ul
+    then begin
+      noop ();
+      LPS.parsed_data_is_serialize Cbor.serialize_raw_data_item va;
+      let rem' = LPS.peek_strong_with_size_with_implies Cbor.parse_raw_data_item a' sz' in
+      let _ = gen_elim () in
+      implies_trans
+        (LPS.aparse Cbor.parse_raw_data_item a' _ `star` LPA.arrayptr rem' _)
+        (LPA.arrayptr a' _)
+        (A.pts_to a p va);
+      let vpl = vpattern (LPS.aparse Cbor.parse_raw_data_item a') in
+      let vrem = vpattern (LPA.arrayptr rem') in
+      let rem = LPA.elim_arrayptr_with_implies rem' in
+      A.pts_to_length rem _;
+      vpattern_rewrite_with_implies (fun p -> A.pts_to rem p _) p;
+      implies_trans
+        (A.pts_to rem p _)
+        (A.pts_to rem _ _)
+        (LPA.arrayptr rem' _);
+      implies_trans_r1 
+        (LPS.aparse Cbor.parse_raw_data_item a' _)
+        (A.pts_to rem p _)
+        (LPA.arrayptr rem' _)
+        (A.pts_to a p va);
+      let c = read_valid_cbor_from_buffer_with_size_strong a' sz' in
+      implies_trans_l1
+        (raw_data_item_match c _)
+        (LPS.aparse Cbor.parse_raw_data_item a' _)
+        (A.pts_to rem p _)
+        (A.pts_to a p va);
+      [@@inline_let]
+      let res = {
+        read_cbor_payload = c;
+        read_cbor_remainder = rem;
+        read_cbor_remainder_length = sz `SZ.sub` sz';
+      }
+      in
+      vpattern_rewrite_with_implies
+        (fun c -> raw_data_item_match c _)
+        res.read_cbor_payload;
+      implies_trans_l1
+        (raw_data_item_match res.read_cbor_payload _)
+        (raw_data_item_match c _)
+        (A.pts_to rem p _)
+        (A.pts_to a p va);
+      vpattern_rewrite_with_implies
+        (fun rem -> A.pts_to rem p _)
+        res.read_cbor_remainder;
+      implies_trans_r1
+        (raw_data_item_match res.read_cbor_payload _)
+        (A.pts_to res.read_cbor_remainder _ _)
+        (A.pts_to rem _ _)
+        (A.pts_to a p va);
+      rewrite
+        (read_cbor_success_post a p va res)
+        (read_cbor_post a p va (ParseSuccess res));
+      return (ParseSuccess res)
+    end else begin
+      noop ();
+      serialize_cbor_error va;
+      noop ();
+      elim_implies
+        (LPA.arrayptr a' va')
+        (A.pts_to a p va);
+      rewrite
+        (read_cbor_error_post a p va)
+        (read_cbor_post a p va ParseError);
+      return ParseError
+    end
+  )
+
+#pop-options
+
 inline_for_extraction
 noextract
 let cbor_size_comp_for
@@ -1991,24 +2113,6 @@ let rec cbor_l2r_write
   | CBOR_Case_Array _ -> l2r_writer_for_array cbor_l2r_write va c out
   | CBOR_Case_Map _ -> l2r_writer_for_map cbor_l2r_write va c out
   | _ -> l2r_writer_for_serialized c out
-
-let serialize_cbor
-  (c: Cbor.raw_data_item)
-: GTot (Seq.seq U8.t)
-= LPS.serialize Cbor.serialize_raw_data_item c
-
-let serialize_cbor_inj
-  (c1 c2: Cbor.raw_data_item)
-: Lemma
-  (requires (serialize_cbor c1 == serialize_cbor c2))
-  (ensures (c1 == c2))
-= LPS.serializer_injective _ Cbor.serialize_raw_data_item c1 c2
-
-let serialize_cbor_nonempty
-  (c: Cbor.raw_data_item)
-: Lemma
-  (Seq.length (serialize_cbor c) > 0)
-= ()
 
 let write_cbor
   (#va: Ghost.erased Cbor.raw_data_item)
