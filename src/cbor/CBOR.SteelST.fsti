@@ -241,7 +241,8 @@ val destr_cbor_int64
     (fun _ -> raw_data_item_match c (Ghost.reveal va))
     (Cbor.Int64? (Ghost.reveal va))
     (fun c' ->
-      Ghost.reveal va == Cbor.Int64 c'.cbor_int_type c'.cbor_int_value
+      Ghost.reveal va == Cbor.Int64 c'.cbor_int_type c'.cbor_int_value /\
+      (CBOR_Case_Int64? c ==> c == CBOR_Case_Int64 c')
     )
 
 val constr_cbor_int64
@@ -262,7 +263,10 @@ val destr_cbor_simple_value
       raw_data_item_match c (Ghost.reveal va)
     )
     (Cbor.Simple? (Ghost.reveal va))
-    (fun c' -> Ghost.reveal va == Cbor.Simple c')
+    (fun c' ->
+      Ghost.reveal va == Cbor.Simple c' /\
+      (CBOR_Case_Simple_value? c ==> c == CBOR_Case_Simple_value c')
+    )
 
 val constr_cbor_simple_value
   (value: Cbor.simple_value)
@@ -294,7 +298,7 @@ val constr_cbor_string
   (len: U64.t {
     U64.v len == Seq.length va
   })
-: STT cbor
+: ST cbor
     (A.pts_to a p va)
     (fun c' ->
       raw_data_item_match c' (Cbor.String typ va) `star`
@@ -302,6 +306,13 @@ val constr_cbor_string
         A.pts_to a p va
       )
     )
+    True
+    (fun c' -> c' == CBOR_Case_String ({
+      cbor_string_type = typ;
+      cbor_string_length = len;
+      cbor_string_payload = a;
+      permission = p;
+    }))
 
 val constr_cbor_array
   (#c': Ghost.erased (Seq.seq cbor))
@@ -355,6 +366,53 @@ val destr_cbor_array
       a == CBOR_Case_Array res /\
       Cbor.Array? v /\
       U64.v res.cbor_array_length == List.Tot.length (Cbor.Array?.v v)
+    )
+
+val cbor_array_length
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+: ST U64.t
+    (raw_data_item_match a v)
+    (fun _ -> raw_data_item_match a v)
+    (Cbor.Array? v)
+    (fun res ->
+      Cbor.Array? v /\
+      U64.v res == List.Tot.length (Cbor.Array?.v v)
+    )
+
+val read_cbor_array
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+  (#vdest: Ghost.erased (Seq.seq cbor))
+  (dest: A.array cbor) // it is the user's responsibility to allocate the array properly
+  (len: U64.t)
+: ST cbor_array
+    (raw_data_item_match a v `star`
+      A.pts_to dest full_perm vdest
+    )
+    (fun res ->
+      A.pts_to res.cbor_array_payload full_perm res.footprint `star`
+      raw_data_item_array_match res.footprint (maybe_cbor_array v) `star`
+      ((A.pts_to res.cbor_array_payload full_perm res.footprint `star`
+        raw_data_item_array_match res.footprint (maybe_cbor_array v)) `implies_` (
+        raw_data_item_match a v `star`
+        (exists_ (A.pts_to dest full_perm))
+      ))
+    )
+    (Cbor.Array? v /\
+      (U64.v len == A.length dest \/ U64.v len == Seq.length vdest) /\
+      U64.v len == List.Tot.length (Cbor.Array?.v v)
+    )
+    (fun res ->
+      Cbor.Array? v /\
+      res.cbor_array_length == len /\
+      U64.v len == A.length dest /\
+      U64.v len == A.length res.cbor_array_payload /\
+      U64.v len == Seq.length res.footprint /\
+      (if CBOR_Case_Array? a
+      then a == CBOR_Case_Array res
+      else res.cbor_array_payload == dest
+      )
     )
 
 [@@__reduce__]

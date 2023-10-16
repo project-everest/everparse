@@ -583,15 +583,7 @@ let l2r_writer_for_serialized
     return res
 
 let destr_cbor_int64
-  (#va: Ghost.erased Cbor.raw_data_item)
-  (c: cbor)
-: ST cbor_int
-    (raw_data_item_match c (Ghost.reveal va))
-    (fun _ -> raw_data_item_match c (Ghost.reveal va))
-    (Cbor.Int64? (Ghost.reveal va))
-    (fun c' ->
-      Ghost.reveal va == Cbor.Int64 c'.cbor_int_type c'.cbor_int_value
-    )
+  #va c
 = raw_data_item_match_get_case c;
   match c with
   | CBOR_Case_Int64 c' ->
@@ -659,15 +651,7 @@ let constr_cbor_int64
   return c
 
 let destr_cbor_simple_value
-  (#va: Ghost.erased Cbor.raw_data_item)
-  (c: cbor)
-: ST Cbor.simple_value
-    (raw_data_item_match c (Ghost.reveal va))
-    (fun c' ->
-      raw_data_item_match c (Ghost.reveal va)
-    )
-    (Cbor.Simple? (Ghost.reveal va))
-    (fun c' -> Ghost.reveal va == Cbor.Simple c')
+  #va c
 = raw_data_item_match_get_case c;
   match c with
   | CBOR_Case_Simple_value c' ->
@@ -918,21 +902,7 @@ let l2r_write_cbor_string
 #pop-options
 
 let constr_cbor_string
-  (#va: Ghost.erased (Seq.seq U8.t))
-  (#p: perm)
-  (typ: Cbor.major_type_byte_string_or_text_string)
-  (a: A.array U8.t)
-  (len: U64.t {
-    U64.v len == Seq.length va
-  })
-: STT cbor
-    (A.pts_to a p va)
-    (fun c' ->
-      raw_data_item_match c' (Cbor.String typ va) `star`
-      (raw_data_item_match c' (Cbor.String typ va) `implies_`
-        A.pts_to a p va
-      )
-    )
+  #va #p typ a len
 = [@@inline_let]
   let c' = CBOR_Case_String ({
     cbor_string_type = typ;
@@ -1067,24 +1037,7 @@ let constr_cbor_array
   return res
 
 let destr_cbor_array
-  (#v: Ghost.erased Cbor.raw_data_item)
-  (a: cbor)
-: ST cbor_array
-    (raw_data_item_match a v)
-    (fun res ->
-      A.pts_to res.cbor_array_payload full_perm res.footprint `star`
-      raw_data_item_array_match res.footprint (maybe_cbor_array v) `star`
-      ((A.pts_to res.cbor_array_payload full_perm res.footprint `star`
-        raw_data_item_array_match res.footprint (maybe_cbor_array v)) `implies_`
-        raw_data_item_match a v
-      )
-    )
-    (CBOR_Case_Array? a)
-    (fun res ->
-      a == CBOR_Case_Array res /\
-      Cbor.Array? v /\
-      U64.v res.cbor_array_length == List.Tot.length (Cbor.Array?.v v)
-    )
+  #v a
 = raw_data_item_match_get_case _;
   let CBOR_Case_Array res = a in
   vpattern_rewrite
@@ -1102,6 +1055,25 @@ let destr_cbor_array
       rewrite (raw_data_item_match _ _) (raw_data_item_match _ _)
     );
   return res
+
+let cbor_array_length
+  #v a
+= raw_data_item_match_get_case a;
+  match a with
+  | CBOR_Case_Array _ ->
+    let a' = destr_cbor_array a in
+    elim_implies
+      (A.pts_to _ _ _ `star` raw_data_item_array_match _ _)
+      (raw_data_item_match _ _);
+    return a'.cbor_array_length
+  | _ ->
+    let s = destr_cbor_serialized a in
+    let _ = gen_elim () in
+    let res = Cbor.read_argument_as_uint64 s.cbor_serialized_payload in
+    elim_implies
+      (LPS.aparse Cbor.parse_raw_data_item _ _)
+      (raw_data_item_match _ _);
+    return res
 
 inline_for_extraction
 noextract
@@ -1150,177 +1122,78 @@ let read_cbor_array_payload
     (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v n0) Cbor.parse_raw_data_item) l0 vl0);
   return res
 
-[@@__reduce__]
-let read_cbor_array_post_success
-  (c: cbor_array)
-: Tot vprop
-= exists_ (A.pts_to c.cbor_array_payload full_perm) `star`
-  pure (
-    A.is_full_array c.cbor_array_payload
-  )
-
-let read_cbor_array_post
-  (input: cbor)
-  (res: cbor)
-: Tot vprop
-= if CBOR_Case_Serialized? input && CBOR_Case_Array? res
-  then read_cbor_array_post_success (CBOR_Case_Array?._0 res)
-  else emp
-
-inline_for_extraction
-noextract
-let read_cbor_array_noop
-  (#obj: Ghost.erased Cbor.raw_data_item)
-  (input: cbor)
-: STT cbor
-    (raw_data_item_match input obj)
-    (fun res ->
-      raw_data_item_match res obj `star`
-      (raw_data_item_match res obj `implies_`
-        (raw_data_item_match input obj `star` read_cbor_array_post input res)
-      )
-    )
-= implies_with_tactic (raw_data_item_match input obj) (raw_data_item_match input obj);
-  rewrite emp (read_cbor_array_post input input);
-  implies_concl_r (raw_data_item_match input obj) (raw_data_item_match input obj) (read_cbor_array_post input input);
-  return input
-
-let array_pts_to_or_null
-  (#t: Type)
-  (a: A.array t)
-  (v: Seq.seq t)
-: Tot vprop
-= if A.is_null a
-  then emp
-  else A.pts_to a full_perm v
-
-assume val cbor_array_alloc
-  (init: cbor)
-  (n: SZ.t)
-: ST (A.array cbor)
-    emp
-    (fun res -> array_pts_to_or_null res (Seq.create (SZ.v n) init))
-    True
-    (fun res ->
-      if A.is_null res
-      then True
-      else A.length res == SZ.v n /\ A.is_full_array res
-    )
+#push-options "--z3rlimit 64"
+#restart-solver
 
 let read_cbor_array
-  (#obj: Ghost.erased Cbor.raw_data_item)
-  (input: cbor)
-: ST cbor
-    (raw_data_item_match input obj)
-    (fun res ->
-      raw_data_item_match res obj `star`
-      (raw_data_item_match res obj `implies_`
-        (raw_data_item_match input obj `star` read_cbor_array_post input res)
-      )
-    )
-    (Cbor.Array? obj)
-    (fun _ -> True)
-= raw_data_item_match_get_case input;
+  #obj input a0 len
+= 
+  A.pts_to_length a0 _;
+  raw_data_item_match_get_case input;
   match input with
-  | CBOR_Case_Array _ -> read_cbor_array_noop input
-  | CBOR_Case_Serialized s ->
-      rewrite_with_implies
-        (raw_data_item_match input obj)
-        (raw_data_item_match_serialized0 input obj);
-      let _ = gen_elim () in
-      vpattern_rewrite_with_implies
-        (fun a -> LPS.aparse Cbor.parse_raw_data_item a _)
-        s.cbor_serialized_payload;
-      intro_implies
-        (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _)
-        (raw_data_item_match_serialized0 input obj)
-        (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _ `implies_`
-          LPS.aparse Cbor.parse_raw_data_item _ _
-        )
-        (fun _ ->
-          elim_implies
-            (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _)
-            (LPS.aparse Cbor.parse_raw_data_item _ _);
-          noop ()
-        );
-      implies_trans
-        (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _)
-        (raw_data_item_match_serialized0 input obj)
-        (raw_data_item_match input obj);
-      R.with_local 0uL (fun plen ->
-      R.with_local s.cbor_serialized_payload (fun pa ->
-        let w = CBOR.SteelST.Raw.Array.focus_array plen pa s.cbor_serialized_payload in
-        implies_trans
-          (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v w.n) Cbor.parse_raw_data_item) w.a _)
-          (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _)
-          (raw_data_item_match input obj);
-        let len = R.read plen in
-        let _ = A.intro_fits_u64 () in
-        let a0 = cbor_array_alloc dummy_cbor (SZ.uint64_to_sizet len) in
-        if (A.is_null a0)
-        then begin
-          noop ();
-          rewrite
-            (array_pts_to_or_null a0 _)
-            emp;
-          elim_implies
-            (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v w.n) Cbor.parse_raw_data_item) w.a _)
-            (raw_data_item_match input obj);
-          let res = read_cbor_array_noop input in
-          return res
-        end else begin
-          noop ();
-          rewrite
-            (array_pts_to_or_null a0 _)
-            (A.pts_to a0 full_perm (Seq.create (U64.v len) dummy_cbor));
-          let vl = LPS.rewrite_aparse_with_implies
-            w.a
-            (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item)
-          in
-          let a = R.read pa in
-          vpattern_rewrite_with_implies
-            (fun a -> LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item) a _)
-            a;
-          implies_trans
-            (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item) a _)
-            (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item) _ _)
-            (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v w.n) Cbor.parse_raw_data_item) _ _);
-          implies_trans
-            (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item) a _)
-            (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v w.n) Cbor.parse_raw_data_item) _ _)
-            (raw_data_item_match input obj);
-          let va = read_cbor_array_payload len vl a a0 in
-          implies_trans
-            (raw_data_item_array_match va vl.contents)
-            (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item) a _)
-            (raw_data_item_match input obj);
-          let res = constr_cbor_array a0 len in
-          vpattern_rewrite
-            (fun ar -> raw_data_item_match _ ar `star` (raw_data_item_match _ ar `implies_` (A.pts_to _ _ _ `star` raw_data_item_array_match _ _)))
-            obj;
-          intro_implies
-            (A.pts_to a0 full_perm va `star` raw_data_item_array_match va vl.contents)
-            (raw_data_item_array_match va vl.contents `star` read_cbor_array_post input res)
-            emp
-            (fun _ ->
-              vpattern_rewrite (fun a0 -> A.pts_to a0 _ _) (CBOR_Case_Array?._0 res).cbor_array_payload;
-              rewrite (read_cbor_array_post_success (CBOR_Case_Array?._0 res)) (read_cbor_array_post input res)
-            );
-          implies_reg_r
-            (raw_data_item_array_match va vl.contents)
-            (raw_data_item_match input obj)
-            (read_cbor_array_post input res);
-          implies_trans
-            (raw_data_item_match res obj)
-            (A.pts_to a0 full_perm va `star` raw_data_item_array_match va vl.contents)
-            (raw_data_item_array_match va vl.contents `star` read_cbor_array_post input res);
-          implies_trans
-            (raw_data_item_match res obj)
-            (raw_data_item_array_match va vl.contents `star` read_cbor_array_post input res)
-            (raw_data_item_match input obj `star` read_cbor_array_post input res);
-          return res
-        end
-      ))
+  | CBOR_Case_Array _ ->
+    let res = destr_cbor_array input in
+    A.pts_to_length res.cbor_array_payload _;
+    SM.seq_list_match_length raw_data_item_match res.footprint (maybe_cbor_array obj);
+    implies_concl_r
+      (A.pts_to _ _ _ `star` raw_data_item_array_match _ _)
+      (raw_data_item_match _ _)
+      (exists_ (A.pts_to a0 full_perm));
+    return res
+  | _ ->
+    let s = destr_cbor_serialized input in
+    let _ = gen_elim () in
+    let a = CBOR.SteelST.Raw.Array.focus_array_with_ghost_length (U64.v len) s.cbor_serialized_payload in
+    let _ = gen_elim () in
+    implies_trans
+      (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item) a _)
+      (LPS.aparse Cbor.parse_raw_data_item s.cbor_serialized_payload _)
+      (raw_data_item_match input _);
+    let _ = A.intro_fits_u64 () in
+    let va = read_cbor_array_payload len _ a a0 in
+    implies_trans
+      (raw_data_item_array_match va _)
+      (LPS.aparse (LowParse.Spec.VCList.parse_nlist (U64.v len) Cbor.parse_raw_data_item) a _)
+      (raw_data_item_match input _);
+    [@@inline_let]
+    let res = {
+      cbor_array_length = len;
+      cbor_array_payload = a0;
+      footprint = va;
+    }
+    in
+    rewrite_with_implies
+      (raw_data_item_array_match _ _)
+      (raw_data_item_array_match res.footprint (maybe_cbor_array obj));
+    SM.seq_list_match_length raw_data_item_match res.footprint (maybe_cbor_array obj);
+    implies_trans
+      (raw_data_item_array_match res.footprint (maybe_cbor_array obj))
+      (raw_data_item_array_match _ _)
+      (raw_data_item_match input _);
+    rewrite_with_implies
+      (A.pts_to _ _ _)
+      (A.pts_to res.cbor_array_payload full_perm res.footprint);
+    intro_implies
+      (A.pts_to a0 full_perm va)
+      (exists_ (A.pts_to a0 full_perm))
+      emp
+      (fun _ -> noop ());
+    implies_trans
+      (A.pts_to _ _ _)
+      (A.pts_to _ _ _)
+      (exists_ (A.pts_to _ _));
+    implies_join
+      (A.pts_to _ _ _)
+      (exists_ (A.pts_to _ _))
+      (raw_data_item_array_match _ _)
+      (raw_data_item_match _ _);
+    implies_swap_r
+      (A.pts_to _ _ _ `star` raw_data_item_array_match _ _)
+      (exists_ (A.pts_to _ _))
+      (raw_data_item_match _ _);
+    return res
+
+#pop-options
 
 #push-options "--split_queries always"
 #restart-solver

@@ -94,6 +94,49 @@ let intro_raw_data_item_array
 
 #pop-options
 
+#push-options "--z3rlimit 16"
+
+#restart-solver
+
+let focus_array_with_ghost_length_post
+  (n: nat)
+  (va: v parse_raw_data_item_kind raw_data_item)
+  (vres: v (NL.parse_nlist_kind n parse_raw_data_item_kind) (NL.nlist n raw_data_item))
+: Tot prop
+= Array? va.contents /\
+  Array?.v va.contents == vres.contents
+
+let focus_array_with_ghost_length
+  (n: Ghost.erased nat)
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST byte_array
+    (aparse parse_raw_data_item a va)
+    (fun res -> exists_ (fun vres ->
+      aparse (NL.parse_nlist n parse_raw_data_item) res vres `star`
+      (aparse (NL.parse_nlist n parse_raw_data_item) res vres `implies_`
+        aparse parse_raw_data_item a va
+      ) `star` pure (
+      focus_array_with_ghost_length_post n va vres
+    )))
+    (Array? va.contents /\
+      Ghost.reveal n == List.Tot.length (Array?.v va.contents)
+    )
+    (fun _ -> True)
+= let ga' = get_raw_data_item_payload_array a in
+  let _ = gen_elim () in
+  let gl = rewrite_aparse ga' (NL.parse_nlist n parse_raw_data_item) in
+  let a' = hop_aparse_aparse jump_header _ a ga' in
+  intro_implies
+    (aparse (NL.parse_nlist n parse_raw_data_item) a' _)
+    (aparse parse_raw_data_item a va)
+    (aparse parse_header a _)
+    (fun _ ->
+      let _ = intro_raw_data_item_array a a' in
+      vpattern_rewrite (aparse parse_raw_data_item a) va
+    );
+  return a'
+
 [@@erasable]
 noeq
 type focus_array_res = {
@@ -101,10 +144,6 @@ type focus_array_res = {
   l: v (NL.parse_nlist_kind (U64.v n) parse_raw_data_item_kind) (NL.nlist (U64.v n) raw_data_item);
   a: byte_array;
 }
-
-#push-options "--z3rlimit 16"
-
-#restart-solver
 
 let focus_array
   (#n': Ghost.erased U64.t)
