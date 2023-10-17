@@ -534,6 +534,32 @@ val destr_cbor_map
       U64.v res.cbor_map_length == List.Tot.length (Cbor.Map?.v v)
     )
 
+val constr_cbor_map
+  (#c': Ghost.erased (Seq.seq cbor_map_entry))
+  (#v': Ghost.erased (list (Cbor.raw_data_item & Cbor.raw_data_item)))
+  (a: A.array cbor_map_entry)
+  (len: U64.t {
+    U64.v len == List.Tot.length v'
+  })
+: ST cbor
+    (A.pts_to a full_perm c' `star`
+      raw_data_item_map_match c' v')
+    (fun res ->
+      raw_data_item_match res (Cbor.Map v') `star`
+      (raw_data_item_match res (Cbor.Map v') `implies_`
+        (A.pts_to a full_perm c' `star`
+          raw_data_item_map_match c' v')
+      )
+    )
+    True
+    (fun res ->
+      res == CBOR_Case_Map ({
+        cbor_map_payload = a;
+        cbor_map_length = len;
+        footprint = c';
+      })
+    )
+
 val cbor_get_major_type
   (#v: Ghost.erased Cbor.raw_data_item)
   (a: cbor)

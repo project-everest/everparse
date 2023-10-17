@@ -1734,6 +1734,65 @@ let size_comp_for_map_entry
     return sz2
   end
 
+let constr_cbor_map
+  #c' #v' a len
+= [@@inline_let]
+  let ares : cbor_map = {
+    cbor_map_length = len;
+    cbor_map_payload = a;
+    footprint = c';
+  }
+  in
+  [@@inline_let]
+  let res = CBOR_Case_Map ares in
+  noop ();
+  SM.seq_list_match_weaken
+    c' v'
+    raw_data_item_map_entry_match
+    (raw_data_item_map_entry_match' v' raw_data_item_match)
+    (fun x y ->
+      rewrite
+        (raw_data_item_map_entry_match x y)
+        (raw_data_item_map_entry_match' v' raw_data_item_match x y)
+    );
+  rewrite_with_implies_with_tactic
+    (raw_data_item_match_map0 (CBOR_Case_Map ares) (Cbor.Map v') raw_data_item_map_match')
+    (raw_data_item_match (CBOR_Case_Map ares) (Cbor.Map v'));
+  rewrite_with_implies
+    (raw_data_item_match (CBOR_Case_Map ares) (Cbor.Map v'))
+    (raw_data_item_match res (Cbor.Map v'));
+  implies_trans
+    (raw_data_item_match res (Cbor.Map v'))
+    (raw_data_item_match (CBOR_Case_Map ares) (Cbor.Map v'))
+    (raw_data_item_match_map0 (CBOR_Case_Map ares) (Cbor.Map v') raw_data_item_map_match');
+  intro_implies
+    (raw_data_item_match_map0 (CBOR_Case_Map ares) (Cbor.Map v') raw_data_item_map_match')
+    (A.pts_to a full_perm c' `star` raw_data_item_map_match c' v')
+    emp
+    (fun _ ->
+      let _ = gen_elim () in
+      rewrite
+        (A.pts_to _ _ _)
+        (A.pts_to a full_perm c');
+      rewrite
+        (raw_data_item_map_match' _ _)
+        (raw_data_item_map_match' c' v');
+      SM.seq_list_match_weaken
+        c' v'
+        (raw_data_item_map_entry_match' v' raw_data_item_match)
+        raw_data_item_map_entry_match
+        (fun x y ->
+          rewrite
+            (raw_data_item_map_entry_match' v' raw_data_item_match x y)
+            (raw_data_item_map_entry_match x y)
+        )
+    );
+  implies_trans
+    (raw_data_item_match res (Cbor.Map v'))
+    (raw_data_item_match_map0 (CBOR_Case_Map ares) (Cbor.Map v') raw_data_item_map_match')
+    (A.pts_to a full_perm c' `star` raw_data_item_map_match c' v');
+  return res
+
 #push-options "--z3rlimit 64"
 #restart-solver
 
