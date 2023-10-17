@@ -5,7 +5,7 @@ include LowParse.SteelST.List.Base
 module AP = LowParse.SteelST.ArrayPtr
 module SZ = FStar.SizeT
 
-open Steel.ST.Util
+open Steel.ST.GenElim
 
 /// Placeholder for a pattern to record the tail of a list_nth to restore the list
 let list_nth_tail
@@ -81,3 +81,33 @@ val list_nth_restore
     (fun _ -> aparse (parse_list p) a0 va0)
     (list_nth_post k va0 i vl ve vr)
     (fun _ -> True)
+
+inline_for_extraction
+let list_nth_with_implies
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (j: jumper p)
+  (#va0: v _ _)
+  (a0: byte_array)
+  (i: SZ.t {
+    k.parser_kind_subkind == Some ParserStrong /\
+    SZ.v i < List.Tot.length va0.contents
+  })
+: STT byte_array
+    (aparse (parse_list p) a0 va0)
+    (fun e -> exists_ (fun (ve: v _ _) ->
+      aparse p e ve `star`
+      (aparse p e ve `implies_` aparse (parse_list p) a0 va0) `star`
+      pure (ve.contents == List.Tot.index va0.contents (SZ.v i))
+    ))
+= let res = list_nth j a0 i in
+  let _ = gen_elim () in
+  intro_implies
+    (aparse p res _)
+    (aparse (parse_list p) a0 va0)
+    (aparse (parse_list p) a0 _ `star` aparse (parse_list p) _ _)
+    (fun _ ->
+      list_nth_restore a0 va0 i res _
+    );
+  return res
