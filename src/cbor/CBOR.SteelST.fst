@@ -1399,8 +1399,126 @@ let destr_cbor_tagged
     );
   return res
 
+let constr_cbor_tagged
+  #c' #v' tag a
+= [@@inline_let]
+  let res_tg = {
+    cbor_tagged_tag = tag;
+    cbor_tagged_payload = a;
+    footprint = c';
+  }
+  in
+  [@@inline_let]
+  let prf () : squash (Ghost.reveal v' << Cbor.Tagged tag v') =
+    let w = Cbor.Tagged tag v' in
+    match w with
+    | Cbor.Tagged _ v_ -> assert (v_ << w)
+  in
+  [@@inline_let]
+  let _ = prf () in
+  noop ();
+  rewrite_with_implies_with_tactic
+    (raw_data_item_match_tagged0 (CBOR_Case_Tagged res_tg) (Cbor.Tagged tag v') raw_data_item_match)
+    (raw_data_item_match (CBOR_Case_Tagged res_tg) (Cbor.Tagged tag v'));
+  intro_implies
+    (raw_data_item_match_tagged0 (CBOR_Case_Tagged res_tg) (Cbor.Tagged tag v') raw_data_item_match)
+    (R.pts_to a full_perm c' `star`
+      raw_data_item_match c' v')
+    emp
+    (fun _ ->
+      let _ = gen_elim () in
+      rewrite
+        (R.pts_to _ _ _)
+        (R.pts_to a full_perm c');
+      rewrite
+        (raw_data_item_match _ _)
+        (raw_data_item_match c' v')
+    );
+  implies_trans
+    (raw_data_item_match (CBOR_Case_Tagged res_tg) (Cbor.Tagged tag v'))
+    (raw_data_item_match_tagged0 (CBOR_Case_Tagged res_tg) (Cbor.Tagged tag v') raw_data_item_match)
+    (R.pts_to a full_perm c' `star`
+      raw_data_item_match c' v');
+  [@@inline_let]
+  let res = CBOR_Case_Tagged res_tg in
+  rewrite_with_implies
+    (raw_data_item_match (CBOR_Case_Tagged res_tg) (Cbor.Tagged tag v'))
+    (raw_data_item_match res (Cbor.Tagged tag v'));
+  implies_trans
+    (raw_data_item_match res (Cbor.Tagged tag v'))
+    (raw_data_item_match (CBOR_Case_Tagged res_tg) (Cbor.Tagged tag v'))
+    (R.pts_to a full_perm c' `star`
+      raw_data_item_match c' v');
+  return res
+
 #push-options "--z3rlimit 64"
 #restart-solver
+
+let read_cbor_tagged
+  #v a #vdest dest
+=
+  raw_data_item_match_get_case a;
+  match a with
+  | CBOR_Case_Tagged _ ->
+    let res = destr_cbor_tagged a in
+    implies_concl_r
+      (R.pts_to _ _ _ `star` raw_data_item_match _ _)
+      (raw_data_item_match _ _)
+      (exists_ (R.pts_to dest full_perm));
+    return res
+  | _ ->
+    let s = destr_cbor_serialized a in
+    let _ = gen_elim () in
+    let tag = CBOR.SteelST.Raw.read_argument_as_uint64 s.cbor_serialized_payload in
+    let s' = CBOR.SteelST.Raw.Read.focus_tagged s.cbor_serialized_payload in
+    let _ = gen_elim () in
+    implies_trans
+      (LPS.aparse Cbor.parse_raw_data_item _ _)
+      (LPS.aparse Cbor.parse_raw_data_item _ _)
+      (raw_data_item_match _ _);
+    let sz = LPS.get_parsed_size Cbor.jump_raw_data_item s' in
+    let pl = read_valid_cbor_from_buffer_with_size_strong s' sz in
+    implies_trans
+      (raw_data_item_match _ _)
+      (LPS.aparse Cbor.parse_raw_data_item _ _)
+      (raw_data_item_match _ _);
+    R.write dest pl;
+    intro_implies
+      (R.pts_to dest full_perm pl)
+      (exists_ (R.pts_to dest full_perm))
+      emp
+      (fun _ -> noop ());
+    [@@inline_let]
+    let res = {
+      cbor_tagged_tag = tag;
+      cbor_tagged_payload = dest;
+      footprint = pl;
+    }
+    in
+    rewrite_with_implies
+      (R.pts_to _ _ _)
+      (R.pts_to res.cbor_tagged_payload full_perm res.footprint);
+    implies_trans
+      (R.pts_to res.cbor_tagged_payload full_perm res.footprint)
+      (R.pts_to _ _ _)
+      (exists_ (R.pts_to dest full_perm));
+    rewrite_with_implies
+      (raw_data_item_match _ _)
+      (raw_data_item_match res.footprint (maybe_cbor_tagged_payload v));
+    implies_trans
+      (raw_data_item_match res.footprint (maybe_cbor_tagged_payload v))
+      (raw_data_item_match _ _)
+      (raw_data_item_match a v);
+    implies_join
+      (R.pts_to _ _ _)
+      (exists_ (R.pts_to dest full_perm))
+      (raw_data_item_match _ _)
+      (raw_data_item_match _ _);
+    implies_swap_r
+      (R.pts_to _ _ _ `star` raw_data_item_match _ _)
+      (exists_ (R.pts_to dest full_perm))
+      (raw_data_item_match _ _);
+    return res
 
 let serialize_cbor_tagged_eq
   (c: Cbor.raw_data_item { Cbor.Tagged? c })

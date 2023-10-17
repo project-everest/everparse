@@ -134,6 +134,52 @@ let read_int64
 #push-options "--z3rlimit 16"
 #restart-solver
 
+let focus_tagged
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST byte_array
+    (aparse parse_raw_data_item a va)
+    (fun a' -> exists_ (fun va' ->
+      aparse parse_raw_data_item a' va' `star`
+      (aparse parse_raw_data_item a' va' `implies_`
+        aparse parse_raw_data_item a va) `star`
+      pure (focus_tagged_postcond va va')
+    ))
+    (Tagged? va.contents)
+    (fun _ -> True)
+= 
+  Classical.forall_intro parse_raw_data_item_eq;
+  noop ();
+  let va1 = rewrite_aparse_with_implies a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
+  let va2 = elim_synth_with_implies _ _ a () in
+  implies_trans
+    (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) a va2)
+    (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) a va1)
+    (aparse parse_raw_data_item a va);
+  let ga' = ghost_split_dtuple2_full _ _ a in
+  let _ = gen_elim () in
+  let vh = vpattern_replace (aparse _ a) in
+  let vc = rewrite_aparse ga' (parse_content parse_raw_data_item vh.contents) in
+  let a' = hop_aparse_aparse jump_header (parse_content parse_raw_data_item vh.contents) a ga' in
+  intro_implies
+    (aparse (parse_content parse_raw_data_item vh.contents) a' vc)
+    (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) a va2)
+    (aparse parse_header a vh)
+    (fun _ ->
+      let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a' in
+      vpattern_rewrite (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) a) va2
+    );
+  implies_trans
+    (aparse (parse_content parse_raw_data_item vh.contents) a' vc)
+    (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) a va2)
+    (aparse parse_raw_data_item a va);
+  let _ = rewrite_aparse_with_implies a' parse_raw_data_item in
+  implies_trans
+    (aparse parse_raw_data_item a' _)
+    (aparse (parse_content parse_raw_data_item vh.contents) a' vc)
+    (aparse parse_raw_data_item a va);
+  return a'
+
 let intro_raw_data_item_string
   (#opened: _)
   (m: major_type_byte_string_or_text_string)

@@ -454,6 +454,58 @@ val destr_cbor_tagged
       res.cbor_tagged_tag == Cbor.Tagged?.tag v
     )
 
+val constr_cbor_tagged
+  (#c': Ghost.erased (cbor))
+  (#v': Ghost.erased (Cbor.raw_data_item))
+  (tag: U64.t)
+  (a: R.ref cbor)
+: ST cbor
+    (R.pts_to a full_perm c' `star`
+      raw_data_item_match c' v')
+    (fun res ->
+      raw_data_item_match res (Cbor.Tagged tag v') `star`
+      (raw_data_item_match res (Cbor.Tagged tag v') `implies_`
+        (R.pts_to a full_perm c' `star`
+          raw_data_item_match c' v')
+      )
+    )
+    True
+    (fun res ->
+      res == CBOR_Case_Tagged ({
+        cbor_tagged_tag = tag;
+        cbor_tagged_payload = a;
+        footprint = c';
+      })
+    )
+
+val read_cbor_tagged
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+  (#vdest: Ghost.erased (cbor))
+  (dest: R.ref cbor) // it is the user's responsibility to allocate the reference properly (maybe on the stack)
+: ST cbor_tagged
+    (raw_data_item_match a v `star`
+      R.pts_to dest full_perm vdest
+    )
+    (fun res ->
+      R.pts_to res.cbor_tagged_payload full_perm res.footprint `star`
+      raw_data_item_match res.footprint (maybe_cbor_tagged_payload v) `star`
+      ((R.pts_to res.cbor_tagged_payload full_perm res.footprint `star`
+        raw_data_item_match res.footprint (maybe_cbor_tagged_payload v)) `implies_` (
+        raw_data_item_match a v `star`
+        (exists_ (R.pts_to dest full_perm))
+      ))
+    )
+    (Cbor.Tagged? v)
+    (fun res ->
+      Cbor.Tagged? v /\
+      Cbor.Tagged?.tag v == res.cbor_tagged_tag /\
+      (if CBOR_Case_Tagged? a
+      then a == CBOR_Case_Tagged res
+      else res.cbor_tagged_payload == dest
+      )
+    )
+
 [@@__reduce__]
 let maybe_cbor_map
   (v: Cbor.raw_data_item)

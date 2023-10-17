@@ -54,6 +54,27 @@ val read_int64
       | _ -> False
     )
 
+noextract
+let focus_tagged_postcond
+  (va va': v parse_raw_data_item_kind raw_data_item)
+: Tot prop
+= Tagged? va.contents /\
+  va'.contents == Tagged?.v va.contents
+
+val focus_tagged
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST byte_array
+    (aparse parse_raw_data_item a va)
+    (fun a' -> exists_ (fun va' ->
+      aparse parse_raw_data_item a' va' `star`
+      (aparse parse_raw_data_item a' va' `implies_`
+        aparse parse_raw_data_item a va) `star`
+      pure (focus_tagged_postcond va va')
+    ))
+    (Tagged? va.contents)
+    (fun _ -> True)
+
 let intro_raw_data_item_string_pre
   (m: major_type_byte_string_or_text_string)
   (vh:  v (get_parser_kind parse_header) header)
