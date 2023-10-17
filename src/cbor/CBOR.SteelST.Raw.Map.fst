@@ -132,6 +132,65 @@ let intro_raw_data_item_map
   let _ = intro_synth (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item h () in 
   rewrite_aparse h parse_raw_data_item
 
+noextract
+let focus_map_postcond
+  (va: v parse_raw_data_item_kind raw_data_item)
+  (n: nat)
+  (va': v (NL.parse_nlist_kind n (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)) (NL.nlist n (raw_data_item & raw_data_item)))
+: Tot prop
+= Map? va.contents /\
+  va'.contents == Map?.v va.contents
+
+let focus_map_with_ghost_length
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+  (n: Ghost.erased nat)
+: ST byte_array
+    (aparse parse_raw_data_item a va)
+    (fun a' -> exists_ (fun va' ->
+      aparse (NL.parse_nlist n (parse_raw_data_item `nondep_then` parse_raw_data_item)) a' va' `star`
+
+      (aparse (NL.parse_nlist n (parse_raw_data_item `nondep_then` parse_raw_data_item)) a' va' `implies_`
+        aparse parse_raw_data_item a va) `star`
+      pure (focus_map_postcond va n va')
+    ))
+    (Map? va.contents /\
+      Ghost.reveal n == List.Tot.length (Map?.v va.contents)
+    )
+    (fun _ -> True)
+= 
+  Classical.forall_intro parse_raw_data_item_eq;
+  noop ();
+  let va1 = rewrite_aparse_with_implies a (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) in
+  let va2 = elim_synth_with_implies _ _ a () in
+  implies_trans
+    (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) a va2)
+    (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item) `parse_synth` synth_raw_data_item) a va1)
+    (aparse parse_raw_data_item a va);
+  let ga' = ghost_split_dtuple2_full _ _ a in
+  let _ = gen_elim () in
+  let vh = vpattern_replace (aparse _ a) in
+  let vc = rewrite_aparse ga' (parse_content parse_raw_data_item vh.contents) in
+  let a' = hop_aparse_aparse jump_header (parse_content parse_raw_data_item vh.contents) a ga' in
+  intro_implies
+    (aparse (parse_content parse_raw_data_item vh.contents) a' vc)
+    (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) a va2)
+    (aparse parse_header a vh)
+    (fun _ ->
+      let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) a a' in
+      vpattern_rewrite (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) a) va2
+    );
+  implies_trans
+    (aparse (parse_content parse_raw_data_item vh.contents) a' vc)
+    (aparse (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) a va2)
+    (aparse parse_raw_data_item a va);
+  let _ = rewrite_aparse_with_implies a' (NL.parse_nlist n (parse_raw_data_item `nondep_then` parse_raw_data_item)) in
+  implies_trans
+    (aparse (NL.parse_nlist n (parse_raw_data_item `nondep_then` parse_raw_data_item)) a' _)
+    (aparse (parse_content parse_raw_data_item vh.contents) a' vc)
+    (aparse parse_raw_data_item a va);
+  return a'
+
 #restart-solver
 inline_for_extraction
 noextract

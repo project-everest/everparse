@@ -569,6 +569,78 @@ val cbor_get_major_type
     True
     (fun res -> res == Cbor.get_major_type v)
 
+val cbor_is_equal
+  (#v1: Ghost.erased Cbor.raw_data_item)
+  (a1: cbor)
+  (#v2: Ghost.erased Cbor.raw_data_item)
+  (a2: cbor)
+: ST bool
+    (raw_data_item_match a1 v1 `star` raw_data_item_match a2 v2)
+    (fun _ -> raw_data_item_match a1 v1 `star` raw_data_item_match a2 v2)
+    True
+    (fun res -> (~ (Cbor.Tagged? v1 \/ Cbor.Array? v1 \/ Cbor.Map? v1)) ==> (res == true <==> v1 == v2)) // TODO: underspecified for tagged, arrays and maps, complete those missing cases
+
+noeq
+type cbor_map_get_t =
+| Found of cbor
+| NotFound
+
+let rec list_ghost_assoc
+  (#key: Type)
+  (#value: Type)
+  (k: key)
+  (m: list (key & value))
+: GTot (option value)
+  (decreases m)
+= match m with
+  | [] -> None
+  | (k', v') :: m' ->
+    if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
+    then Some v'
+    else list_ghost_assoc k m'
+
+[@@__reduce__]
+let cbor_map_get_post_not_found
+  (vkey: Cbor.raw_data_item)
+  (vmap: Cbor.raw_data_item { Cbor.Map? vmap })
+  (map: cbor)
+: Tot vprop
+= raw_data_item_match map vmap `star` pure (list_ghost_assoc vkey (Cbor.Map?.v vmap) == None)
+
+[@@__reduce__]
+let cbor_map_get_post_found
+  (vkey: Cbor.raw_data_item)
+  (vmap: Cbor.raw_data_item { Cbor.Map? vmap })
+  (map: cbor)
+  (value: cbor)
+: Tot vprop
+= exists_ (fun vvalue ->
+    raw_data_item_match value vvalue `star`
+    (raw_data_item_match value vvalue `implies_` raw_data_item_match map vmap) `star`
+    pure (list_ghost_assoc vkey (Cbor.Map?.v vmap) == Some vvalue)
+  )
+
+let cbor_map_get_post
+  (vkey: Cbor.raw_data_item)
+  (vmap: Cbor.raw_data_item)
+  (map: cbor { Cbor.Map? vmap })
+  (res: cbor_map_get_t)
+: Tot vprop
+= match res with
+  | NotFound -> cbor_map_get_post_not_found vkey vmap map
+  | Found value -> cbor_map_get_post_found vkey vmap map value
+
+val cbor_map_get
+  (#vkey: Ghost.erased Cbor.raw_data_item)
+  (key: cbor)
+  (#vmap: Ghost.erased Cbor.raw_data_item)
+  (map: cbor { Cbor.Map? vmap })
+: ST cbor_map_get_t
+    (raw_data_item_match key vkey `star` raw_data_item_match map vmap)
+    (fun res -> raw_data_item_match key vkey `star` cbor_map_get_post vkey vmap map res)
+    (~ (Cbor.Tagged? vkey \/ Cbor.Array? vkey \/ Cbor.Map? vkey))
+    (fun res -> Found? res == Some? (list_ghost_assoc (Ghost.reveal vkey) (Cbor.Map?.v vmap)))
+
 (* Serialization *)
 
 noextract

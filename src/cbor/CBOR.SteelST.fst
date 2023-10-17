@@ -2034,6 +2034,198 @@ let cbor_get_major_type
     elim_implies (LPS.aparse Cbor.parse_raw_data_item _ _) (raw_data_item_match _ _);
     return res
 
+let cbor_is_equal
+  #v1 a1 #v2 a2
+=
+  let _ = A.intro_fits_u64 () in
+  let type1 = cbor_get_major_type a1 in
+  let type2 = cbor_get_major_type a2 in
+  if type1 <> type2
+  then begin
+    noop ();
+    return false
+  end
+  else begin
+    if type1 = Cbor.major_type_uint64 || type1 = Cbor.major_type_neg_int64
+    then begin
+      let i1 = destr_cbor_int64 a1 in
+      let i2 = destr_cbor_int64 a2 in
+      return (i1.cbor_int_value = i2.cbor_int_value)
+    end
+    else if type1 = Cbor.major_type_simple_value
+    then begin
+      let i1 = destr_cbor_simple_value a1 in
+      let i2 = destr_cbor_simple_value a2 in
+      return (i1 = i2)
+    end
+    else if type1 = Cbor.major_type_byte_string || type1 = Cbor.major_type_text_string
+    then begin
+      let s1 = destr_cbor_string a1 in
+      let _ = gen_elim () in
+      let s2 = destr_cbor_string a2 in
+      let _ = gen_elim () in
+      let t1 = LPA.intro_arrayptr_with_implies s1.cbor_string_payload in
+      let _ = gen_elim () in
+      let t2 = LPA.intro_arrayptr_with_implies s2.cbor_string_payload in
+      let _ = gen_elim () in
+      let res = LowParse.SteelST.Assoc.eq_byte_arrays t1 (SZ.uint64_to_sizet s1.cbor_string_length) t2 (SZ.uint64_to_sizet s2.cbor_string_length) in
+      elim_implies (LPA.arrayptr t1 _) (A.pts_to _ _ _);
+      elim_implies (LPA.arrayptr t2 _) (A.pts_to _ _ _);
+      elim_implies (A.pts_to s1.cbor_string_payload _ _) (raw_data_item_match _ _);
+      elim_implies (A.pts_to s2.cbor_string_payload _ _) (raw_data_item_match _ _);
+      return res
+    end
+    else begin
+      // TODO: tagged, arrays and maps
+      noop ();
+      return false
+    end
+  end
+
+assume val cbor_map_get_case_map
+  (#vkey: Ghost.erased Cbor.raw_data_item)
+  (key: cbor)
+  (#vmap: Ghost.erased Cbor.raw_data_item)
+  (map: cbor { Cbor.Map? vmap })
+: ST cbor_map_get_t
+    (raw_data_item_match key vkey `star` raw_data_item_match map vmap)
+    (fun res -> raw_data_item_match key vkey `star` cbor_map_get_post vkey vmap map res)
+    (~ (Cbor.Tagged? vkey \/ Cbor.Array? vkey \/ Cbor.Map? vkey) /\
+      CBOR_Case_Map? map
+    )
+    (fun res -> Found? res == Some? (list_ghost_assoc (Ghost.reveal vkey) (Cbor.Map?.v vmap)))
+
+let rec list_ghost_assoc_eq
+  (#key #value: Type)
+  (k: key)
+  (m: list (key & value))
+: Lemma
+  (list_ghost_assoc k m == LowParse.Spec.Assoc.list_ghost_assoc k m)
+  [SMTPat (list_ghost_assoc k m)]
+= match m with
+  | [] -> ()
+  | (k', _) :: m' ->
+    if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
+    then ()
+    else list_ghost_assoc_eq k m'
+
+let mk_cbor_nlist_assoc_eq_keys
+  (vkey: Ghost.erased Cbor.raw_data_item)
+  (key: cbor {
+    ~ (Cbor.Tagged? vkey \/ Cbor.Array? vkey \/ Cbor.Map? vkey)
+  })
+: Tot (LowParse.SteelST.Assoc.nlist_assoc_eq_keys Cbor.parse_raw_data_item (Ghost.reveal vkey) (raw_data_item_match key vkey))
+= fun #va a sz ->
+    let x = read_valid_cbor_from_buffer_with_size_strong a sz in
+    let res = cbor_is_equal key x in
+    elim_implies
+      (raw_data_item_match x _)
+      (LPS.aparse Cbor.parse_raw_data_item _ _);
+    return res
+
+let cbor_map_get_case_serialized
+  (#vkey: Ghost.erased Cbor.raw_data_item)
+  (key: cbor)
+  (#vmap: Ghost.erased Cbor.raw_data_item)
+  (map: cbor { Cbor.Map? vmap })
+: ST cbor_map_get_t
+    (raw_data_item_match key vkey `star` raw_data_item_match map vmap)
+    (fun res ->
+      raw_data_item_match key vkey `star` cbor_map_get_post vkey vmap map res `star` 
+      pure (Found? res == Some? (list_ghost_assoc (Ghost.reveal vkey) (Cbor.Map?.v vmap)))
+    )
+    (~ (Cbor.Tagged? vkey \/ Cbor.Array? vkey \/ Cbor.Map? vkey) /\
+      CBOR_Case_Serialized? map
+    )
+    (fun _ -> True)
+= let _ = A.intro_fits_u64 () in
+  let s = destr_cbor_serialized map in
+  let _ = gen_elim () in
+  let len64 = Cbor.read_argument_as_uint64 s.cbor_serialized_payload in
+  let len = SZ.uint64_to_sizet len64 in
+  let m = CBOR.SteelST.Raw.Map.focus_map_with_ghost_length s.cbor_serialized_payload (SZ.v len) in
+  let _ = gen_elim () in
+  implies_trans
+    (LPS.aparse (LPS.parse_nlist (SZ.v len) (LPS.nondep_then Cbor.parse_raw_data_item Cbor.parse_raw_data_item)) _ _)
+    (LPS.aparse Cbor.parse_raw_data_item _ _)
+    (raw_data_item_match map vmap);
+  let vm = vpattern (LPS.aparse (LPS.parse_nlist (SZ.v len) (LPS.nondep_then Cbor.parse_raw_data_item Cbor.parse_raw_data_item)) _) in
+  vpattern_rewrite_with_implies
+    (LPS.aparse (LPS.parse_nlist (SZ.v len) (LPS.nondep_then Cbor.parse_raw_data_item Cbor.parse_raw_data_item)) _)
+    vm;
+  implies_trans
+    (LPS.aparse (LPS.parse_nlist (SZ.v len) (LPS.nondep_then Cbor.parse_raw_data_item Cbor.parse_raw_data_item)) _ _)
+    (LPS.aparse (LPS.parse_nlist (SZ.v len) (LPS.nondep_then Cbor.parse_raw_data_item Cbor.parse_raw_data_item)) _ _)
+    (raw_data_item_match map vmap);
+  R.with_local m (fun pa ->
+    noop ();
+    let found = LowParse.SteelST.Assoc.nlist_assoc
+      Cbor.jump_raw_data_item
+      Cbor.jump_raw_data_item
+      #vkey
+      #(raw_data_item_match key vkey)
+      (mk_cbor_nlist_assoc_eq_keys vkey key)
+      len
+      m
+      pa
+    in
+    if found
+    then begin
+      noop ();
+      rewrite
+        (LowParse.SteelST.Assoc.nlist_assoc_post Cbor.parse_raw_data_item Cbor.parse_raw_data_item vkey (raw_data_item_match key vkey) (SZ.v len) vm m pa found)
+        (LowParse.SteelST.Assoc.nlist_assoc_post_success Cbor.parse_raw_data_item Cbor.parse_raw_data_item vkey (raw_data_item_match key vkey) (SZ.v len) vm m pa);
+      let _ = gen_elim () in
+      implies_trans
+        (LPS.aparse Cbor.parse_raw_data_item _ _)
+        (LPS.aparse (LPS.parse_nlist (SZ.v len) (LPS.nondep_then Cbor.parse_raw_data_item Cbor.parse_raw_data_item)) _ _)
+        (raw_data_item_match map vmap);
+      let a = R.read pa in
+      vpattern_rewrite_with_implies
+        (fun a -> LPS.aparse Cbor.parse_raw_data_item a _)
+        a;
+      implies_trans
+        (LPS.aparse Cbor.parse_raw_data_item _ _)
+        (LPS.aparse Cbor.parse_raw_data_item _ _)
+        (raw_data_item_match map vmap);
+      let sz = LPS.get_parsed_size Cbor.jump_raw_data_item a in
+      let res_succ = read_valid_cbor_from_buffer_with_size_strong a sz in
+      implies_trans
+        (raw_data_item_match res_succ _)
+        (LPS.aparse Cbor.parse_raw_data_item _ _)
+        (raw_data_item_match map vmap);
+      rewrite
+        (cbor_map_get_post_found vkey vmap map res_succ)
+        (cbor_map_get_post vkey vmap map (Found res_succ));
+      return (Found res_succ)
+    end else begin
+      noop ();
+      rewrite
+        (LowParse.SteelST.Assoc.nlist_assoc_post Cbor.parse_raw_data_item Cbor.parse_raw_data_item vkey (raw_data_item_match key vkey) (SZ.v len) vm m pa found)
+        (LowParse.SteelST.Assoc.nlist_assoc_post_failure Cbor.parse_raw_data_item Cbor.parse_raw_data_item vkey (raw_data_item_match key vkey) (SZ.v len) vm m pa);
+      let _ = gen_elim () in
+      elim_implies
+        (LPS.aparse (LPS.parse_nlist (SZ.v len) (LPS.nondep_then Cbor.parse_raw_data_item Cbor.parse_raw_data_item)) _ _)
+        (raw_data_item_match map vmap);
+      rewrite
+        (cbor_map_get_post_not_found vkey vmap map)
+        (cbor_map_get_post vkey vmap map NotFound);
+      return NotFound
+    end
+  )
+
+let cbor_map_get
+  #vkey key #vmap map
+= raw_data_item_match_get_case map;
+  match map with
+  | CBOR_Case_Map _ ->
+    let res = cbor_map_get_case_map key map in
+    return res
+  | _ ->
+    let res = cbor_map_get_case_serialized key map in
+    let _ = gen_elim () in
+    return res
+
 let rec cbor_size_comp
   (va: Ghost.erased Cbor.raw_data_item)
   (c: cbor)
