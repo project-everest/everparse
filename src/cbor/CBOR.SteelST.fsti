@@ -380,6 +380,21 @@ val cbor_array_length
       U64.v res == List.Tot.length (Cbor.Array?.v v)
     )
 
+val cbor_array_index
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+  (i: SZ.t {
+    Cbor.Array? v /\
+    SZ.v i < List.Tot.length (Cbor.Array?.v v)
+  })
+: STT cbor
+    (raw_data_item_match a v)
+    (fun a' ->
+      raw_data_item_match a' (List.Tot.index (Cbor.Array?.v v) (SZ.v i)) `star`
+      (raw_data_item_match a' (List.Tot.index (Cbor.Array?.v v) (SZ.v i)) `implies_`
+        raw_data_item_match a v)
+    )
+
 val read_cbor_array
   (#v: Ghost.erased Cbor.raw_data_item)
   (a: cbor)

@@ -1075,6 +1075,118 @@ let cbor_array_length
       (raw_data_item_match _ _);
     return res
 
+let cbor_array_index_case_array
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+  (i: SZ.t {
+    Cbor.Array? v /\
+    SZ.v i < List.Tot.length (Cbor.Array?.v v) /\
+    CBOR_Case_Array? a
+  })
+: STT cbor
+    (raw_data_item_match a v)
+    (fun a' ->
+      raw_data_item_match a' (List.Tot.index (Cbor.Array?.v v) (SZ.v i)) `star`
+      (raw_data_item_match a' (List.Tot.index (Cbor.Array?.v v) (SZ.v i)) `implies_`
+        raw_data_item_match a v)
+    )
+= raw_data_item_match_get_case a;
+  noop ();
+  let ar = destr_cbor_array a in
+  A.pts_to_length ar.cbor_array_payload _;
+  SM.seq_list_match_length raw_data_item_match ar.footprint (maybe_cbor_array v);
+  let res = A.index ar.cbor_array_payload i in
+  intro_implies
+    (raw_data_item_array_match ar.footprint (maybe_cbor_array v))
+    (raw_data_item_match a v)
+    (A.pts_to _ _ _ `star`
+      ((A.pts_to _ _ _ `star` raw_data_item_array_match _ _) `implies_` raw_data_item_match _ _)
+    )
+    (fun _ ->
+       elim_implies
+       (A.pts_to _ _ _ `star` raw_data_item_array_match _ _)
+       (raw_data_item_match _ _)
+    );
+  rewrite_with_implies
+    (raw_data_item_array_match ar.footprint (maybe_cbor_array v))
+    (SM.seq_list_match ar.footprint (maybe_cbor_array v) raw_data_item_match);
+  implies_trans
+    (SM.seq_list_match ar.footprint (maybe_cbor_array v) raw_data_item_match)
+    (raw_data_item_array_match ar.footprint (maybe_cbor_array v))
+    (raw_data_item_match a v);
+  let _ = SM.seq_list_match_index raw_data_item_match ar.footprint (maybe_cbor_array v) (SZ.v i) in
+  implies_trans
+    (raw_data_item_match (Seq.index ar.footprint (SZ.v i)) (List.Tot.index (maybe_cbor_array v) (SZ.v i)))
+    (SM.seq_list_match ar.footprint (maybe_cbor_array v) raw_data_item_match)
+    (raw_data_item_match a v);
+  rewrite_with_implies
+    (raw_data_item_match (Seq.index ar.footprint (SZ.v i)) (List.Tot.index (maybe_cbor_array v) (SZ.v i)))
+    (raw_data_item_match res (List.Tot.index (Cbor.Array?.v v) (SZ.v i)));
+  implies_trans
+    (raw_data_item_match res (List.Tot.index (Cbor.Array?.v v) (SZ.v i)))
+    (raw_data_item_match (Seq.index ar.footprint (SZ.v i)) (List.Tot.index (maybe_cbor_array v) (SZ.v i)))
+    (raw_data_item_match a v);
+  return res
+
+let cbor_array_index_case_serialized
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+  (i: SZ.t {
+    Cbor.Array? v /\
+    SZ.v i < List.Tot.length (Cbor.Array?.v v) /\
+    CBOR_Case_Serialized? a
+  })
+: STT cbor
+    (raw_data_item_match a v)
+    (fun a' ->
+      raw_data_item_match a' (List.Tot.index (Cbor.Array?.v v) (SZ.v i)) `star`
+      (raw_data_item_match a' (List.Tot.index (Cbor.Array?.v v) (SZ.v i)) `implies_`
+        raw_data_item_match a v)
+    )
+= let s = destr_cbor_serialized a in
+  let _ = gen_elim () in
+  let n = Ghost.hide (List.Tot.length (Cbor.Array?.v v)) in
+  let a = CBOR.SteelST.Raw.Array.focus_array_with_ghost_length n s.cbor_serialized_payload in
+  let _ = gen_elim () in
+  implies_trans
+    (LPS.aparse (LPS.parse_nlist n Cbor.parse_raw_data_item) _ _)
+    (LPS.aparse Cbor.parse_raw_data_item _ _)
+    (raw_data_item_match _ _);
+  let _ = LPS.aparse_nlist_aparse_list_with_implies Cbor.parse_raw_data_item n a in
+  implies_trans
+    (LPS.aparse (LPS.parse_list Cbor.parse_raw_data_item) _ _)
+    (LPS.aparse (LPS.parse_nlist n Cbor.parse_raw_data_item) _ _)
+    (raw_data_item_match _ _);
+  let elt = LowParse.SteelST.List.Nth.list_nth_with_implies Cbor.jump_raw_data_item a i in
+  let _ = gen_elim () in
+  implies_trans
+    (LPS.aparse Cbor.parse_raw_data_item _ _)
+    (LPS.aparse (LPS.parse_list Cbor.parse_raw_data_item) _ _)
+    (raw_data_item_match _ _);
+  let sz = LPS.get_parsed_size Cbor.jump_raw_data_item elt in
+  let res = read_valid_cbor_from_buffer_with_size_strong elt sz in
+  implies_trans
+    (raw_data_item_match res _)
+    (LPS.aparse Cbor.parse_raw_data_item _ _)
+    (raw_data_item_match _ _);
+  vpattern_rewrite_with_implies
+    (raw_data_item_match res)
+    (List.Tot.index (Cbor.Array?.v v) (SZ.v i));
+  implies_trans
+    (raw_data_item_match res _)
+    (raw_data_item_match res _)
+    (raw_data_item_match _ _);
+  return res
+    
+let cbor_array_index
+  a i
+= raw_data_item_match_get_case a;
+  match a with
+  | CBOR_Case_Array _ ->
+    return (cbor_array_index_case_array a i)
+  | _ ->
+    return (cbor_array_index_case_serialized a i)
+
 inline_for_extraction
 noextract
 let read_cbor_array_payload
