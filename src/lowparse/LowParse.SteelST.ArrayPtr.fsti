@@ -57,6 +57,40 @@ val arrayptr
   ([@@@smt_fallback] value: v a)
 : Tot vprop
 
+inline_for_extraction
+val null (#elt: Type u#0) : Tot (t elt)
+
+val arrayptr_not_null
+  (#opened: _)
+  (#a: Type0)
+  (#value: v a)
+  (r: t a)
+: STGhost unit opened
+    (arrayptr r value)
+    (fun _ -> arrayptr r value)
+    True
+    (fun _ -> ~ (r == null))
+
+let arrayptr_or_null
+  (#a: Type0)
+  (r: t a)
+  ([@@@smt_fallback] value: v a)
+: Tot vprop
+= if FStar.StrongExcludedMiddle.strong_excluded_middle (r == null)
+  then emp
+  else arrayptr r value
+
+inline_for_extraction
+val is_null
+  (#a: Type0)
+  (#value: v a)
+  (r: t a)
+: ST bool
+    (arrayptr_or_null r value)
+    (fun _ -> arrayptr_or_null r value)
+    True
+    (fun res -> res == true <==> r == null)
+
 val adjacent
   (#t: Type0)
   (x1 x2: array t)

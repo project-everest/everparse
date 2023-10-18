@@ -50,7 +50,75 @@ let arrayptr0 (#elt: _) (r: t elt) (v: v elt) : Tot vprop =
   ))
 
 let arrayptr r v = arrayptr0 r v
-    
+
+let null #elt = STC.null_array_ptr _
+
+let arrayptr_not_null
+  #_ #elt #v x
+= rewrite (arrayptr x v) (arrayptr0 x v);
+  let _ = gen_elim () in
+  rewrite (arrayptr0 x v) (arrayptr x v)
+
+let arrayptr_or_null_elim
+  (#opened: _)
+  (#a: Type0)
+  (#value: v a)
+  (r: t a)
+: STGhostT (STC.array_len_t r) opened
+    (arrayptr_or_null r value)
+    (fun len ->
+      exists_ (fun s ->
+        STC.array_pts_to_or_null (| r, len |) s `star`
+        (STC.array_pts_to_or_null (| r, len |) s `implies_` arrayptr_or_null r value)
+    ))
+= if STC.g_array_ptr_is_null r
+  then begin
+    noop ();
+    let len : STC.array_len_t r = 0sz in
+    rewrite_with_implies
+      (arrayptr_or_null r value)
+      (STC.array_pts_to_or_null (| r, len |) Seq.empty);
+    len
+  end else begin
+    noop ();
+    rewrite_with_implies
+      (arrayptr_or_null r value)
+      (arrayptr0 r value);
+    let _ = gen_elim () in
+    let s = vpattern_replace (STC.array_pts_to _) in
+    let len : STC.array_len_t r = STC.array_len_of value.v_array.array_ptr in
+    let _ : squash (value.v_array.array_ptr == (| r, len |)) =
+      assert_norm ((| r, len |) == STC.mk_array r len)
+    in
+    rewrite_with_implies
+      (STC.array_pts_to value.v_array.array_ptr s)
+      (STC.array_pts_to_or_null (| r, len |) s);
+    intro_implies
+      (STC.array_pts_to value.v_array.array_ptr s)
+      (arrayptr0 r value)
+      emp
+      (fun _ -> noop (); noop ());
+    implies_trans
+      (STC.array_pts_to_or_null (| r, len |) s)
+      (STC.array_pts_to value.v_array.array_ptr s)
+      (arrayptr0 r value);
+    implies_trans
+      (STC.array_pts_to_or_null (| r, len |) s)
+      (arrayptr0 r value)
+      (arrayptr_or_null r value);
+    len
+  end
+
+let is_null
+  #elt #v x
+= let len = arrayptr_or_null_elim x in
+  let _ = gen_elim () in
+  let res = STC.array_ptr_is_null _ _ in
+  elim_implies
+    (STC.array_pts_to_or_null _ _)
+    (arrayptr_or_null _ _);
+  return res
+
 let adjacent x1 x2 =
   x1.array_perm == x2.array_perm /\
   STC.array_ptr_of x2.array_ptr == STC.array_ref_shift (STC.array_ptr_of x1.array_ptr) (len x1)

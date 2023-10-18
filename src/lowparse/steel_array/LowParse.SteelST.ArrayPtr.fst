@@ -42,7 +42,20 @@ let arrayptr0 (#elt: _) (r: t elt) (v: v elt) : Tot vprop =
   )
 
 let arrayptr r v = arrayptr0 r v
-    
+
+let null #elt = SA.null_ptr elt
+
+let arrayptr_not_null
+  #_ #elt #v x
+= rewrite (arrayptr x v) (arrayptr0 x v);
+  let _ = gen_elim () in
+  SA.pts_to_not_null _ _;
+  rewrite (arrayptr0 x v) (arrayptr x v)
+
+let is_null
+  #elt #v x
+= return (SA.is_null_ptr x)
+
 let adjacent x1 x2 =
   x1.array_perm == x2.array_perm /\
   SA.adjacent x1.array_ptr x2.array_ptr
