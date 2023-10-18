@@ -29,6 +29,6 @@
 
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
-        "karamel_version" : "origin/protz_ignore_ifdef"
+        "karamel_version" : "origin/master"
     }
 }
