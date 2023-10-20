@@ -1,5 +1,5 @@
 module CDDL.Spec
-module Cbor = CBOR.Spec.Format
+module Cbor = CBOR.Spec
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 
@@ -14,12 +14,12 @@ let t_always_false : typ = (fun _ -> false)
 
 let rec_typ'_rec
   (f: (typ -> typ)) (t: Cbor.raw_data_item)
-  (rec_typ': ((t': Cbor.raw_data_item { Seq.length (Cbor.serialize_raw_data_item t') < Seq.length (Cbor.serialize_raw_data_item t) }) -> GTot bool))
+  (rec_typ': ((t': Cbor.raw_data_item { Seq.length (Cbor.serialize_cbor t') < Seq.length (Cbor.serialize_cbor t) }) -> GTot bool))
   (t': Cbor.raw_data_item)
 : GTot bool
-= if Seq.length (Cbor.serialize_raw_data_item t') < Seq.length (Cbor.serialize_raw_data_item t) then rec_typ' t' else false
+= if Seq.length (Cbor.serialize_cbor t') < Seq.length (Cbor.serialize_cbor t) then rec_typ' t' else false
 
-let rec rec_typ' (f: (typ -> typ)) (t: Cbor.raw_data_item) : GTot bool (decreases (Seq.length (Cbor.serialize_raw_data_item t))) =
+let rec rec_typ' (f: (typ -> typ)) (t: Cbor.raw_data_item) : GTot bool (decreases (Seq.length (Cbor.serialize_cbor t))) =
   f (rec_typ'_rec f t (rec_typ' f)) t
 
 let rec_typ : (typ -> typ) -> typ = rec_typ'
@@ -307,15 +307,13 @@ let uint_size (sz: nat) : typ = fun x ->
 // Section 3.7.2: Control .cbor
 // We parameterize over the CBOR order on which the CBOR parser depends
 
-module LP = LowParse.Spec.Base
-
 let bstr_cbor
   (data_item_order: (Cbor.raw_data_item -> Cbor.raw_data_item -> bool))
   (ty: typ)
 : typ = fun x ->
   Cbor.String? x &&
   Cbor.String?.typ x = Cbor.major_type_byte_string &&
-  begin match LP.parse (Cbor.parse_data_item data_item_order) (Cbor.String?.v x) with
-  | None -> false
-  | Some (x', _) -> ty x'
-  end
+  FStar.StrongExcludedMiddle.strong_excluded_middle (
+    exists y . Cbor.serialize_cbor y == Cbor.String?.v x /\
+    Cbor.data_item_wf data_item_order y
+  )

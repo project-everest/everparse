@@ -17,3 +17,5 @@ let serialize_cbor_inj
 let serialize_cbor_nonempty
   c
 = ()
+
+let deterministically_encoded_cbor_map_key_order = CBOR.Spec.Format.deterministically_encoded_cbor_map_key_order

@@ -20,3 +20,7 @@ val serialize_cbor_nonempty
   (c: raw_data_item)
 : Lemma
   (Seq.length (serialize_cbor c) > 0)
+
+(* 4.2.1 Deterministically encoded CBOR: The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. *)
+
+val deterministically_encoded_cbor_map_key_order : Ghost.erased (raw_data_item -> raw_data_item -> bool)
