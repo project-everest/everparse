@@ -395,6 +395,69 @@ val cbor_array_index
         raw_data_item_match a v)
     )
 
+noeq
+type cbor_array_iterator_payload_t =
+| CBOR_Array_Iterator_Payload_Array:
+    payload: A.array cbor ->
+    footprint: Ghost.erased (Seq.seq cbor) ->
+    cbor_array_iterator_payload_t
+| CBOR_Array_Iterator_Payload_Serialized:
+    payload: cbor_serialized_payload_t ->
+    footprint: cbor_serialized_footprint_t ->
+    cbor_array_iterator_payload_t
+
+// NOTE: this type could be made abstract (with val and
+// CAbstractStruct, and then hiding cbor_array_iterator_payload_t
+// altogether), but then, users couldn't allocate on stack
+noeq
+type cbor_array_iterator_t = {
+  cbor_array_iterator_length: U64.t;
+  cbor_array_iterator_payload: cbor_array_iterator_payload_t;
+}
+
+val dummy_cbor_array_iterator: cbor_array_iterator_t
+
+val cbor_array_iterator_match
+  (i: cbor_array_iterator_t)
+  (l: list Cbor.raw_data_item)
+: Tot vprop
+
+val cbor_array_iterator_init
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor { Cbor.Array? v })
+: STT cbor_array_iterator_t
+    (raw_data_item_match a v)
+    (fun i ->
+      cbor_array_iterator_match i (Cbor.Array?.v v) `star`
+      (cbor_array_iterator_match i (Cbor.Array?.v v) `implies_`
+        raw_data_item_match a v)
+    )
+
+val cbor_array_iterator_is_done
+  (#l: Ghost.erased (list Cbor.raw_data_item))
+  (i: cbor_array_iterator_t)
+: ST bool
+    (cbor_array_iterator_match i l)
+    (fun _ -> cbor_array_iterator_match i l)
+    True
+    (fun res -> res == Nil? l)
+
+val cbor_array_iterator_next
+  (#l: Ghost.erased (list Cbor.raw_data_item))
+  (#i: Ghost.erased cbor_array_iterator_t)
+  (pi: R.ref cbor_array_iterator_t { Cons? l })
+: STT cbor
+    (R.pts_to pi full_perm i `star` cbor_array_iterator_match i l)
+    (fun c -> exists_ (fun i' ->
+      R.pts_to pi full_perm i' `star`
+      raw_data_item_match c (List.Tot.hd l) `star`
+      cbor_array_iterator_match i' (List.Tot.tl l) `star`
+      ((raw_data_item_match c (List.Tot.hd l) `star`
+        cbor_array_iterator_match i' (List.Tot.tl l)) `implies_`
+        cbor_array_iterator_match i l
+      )
+    ))
+
 val read_cbor_array
   (#v: Ghost.erased Cbor.raw_data_item)
   (a: cbor)

@@ -1187,6 +1187,450 @@ let cbor_array_index
   | _ ->
     return (cbor_array_index_case_serialized a i)
 
+[@@inline_let]
+let dummy_cbor_array_iterator = {
+  cbor_array_iterator_length = 0uL;
+  cbor_array_iterator_payload = CBOR_Array_Iterator_Payload_Array A.null Seq.empty;
+}
+
+[@@__reduce__]
+let cbor_array_iterator_match_array
+  (c: cbor_array_iterator_t)
+  (l: list Cbor.raw_data_item)
+: Tot vprop
+= exists_ (fun a -> exists_ (fun fp ->
+    A.pts_to a full_perm fp `star`
+    raw_data_item_array_match fp l `star`
+    pure (
+      U64.v c.cbor_array_iterator_length == List.Tot.length l /\
+      c.cbor_array_iterator_payload == CBOR_Array_Iterator_Payload_Array a (Ghost.hide fp)
+  )))
+
+let cbor_array_iterator_match_serialized_prop
+  (c: cbor_array_iterator_t)
+  (l: list Cbor.raw_data_item)
+  (a: LPS.byte_array)
+  (fp: LPS.v (LPS.parse_nlist_kind (U64.v c.cbor_array_iterator_length) Cbor.parse_raw_data_item_kind) (LPS.nlist (U64.v c.cbor_array_iterator_length) Cbor.raw_data_item))
+: Tot prop
+= 
+  fp.LPS.contents == l /\
+  c.cbor_array_iterator_payload == CBOR_Array_Iterator_Payload_Serialized a (LPS.array_of fp)
+
+[@@__reduce__]
+let cbor_array_iterator_match_serialized
+  (c: cbor_array_iterator_t)
+  (l: list Cbor.raw_data_item)
+: Tot vprop
+= exists_ (fun a -> exists_ (fun fp ->
+    LPS.aparse (LPS.parse_nlist (U64.v c.cbor_array_iterator_length) Cbor.parse_raw_data_item) a fp `star`
+    pure (cbor_array_iterator_match_serialized_prop c l a fp)
+  ))
+
+let cbor_array_iterator_match
+  c l
+= match c.cbor_array_iterator_payload with
+  | CBOR_Array_Iterator_Payload_Array _ _ -> cbor_array_iterator_match_array c l
+  | _ -> cbor_array_iterator_match_serialized c l
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let cbor_array_iterator_match_length
+  (#opened: _)
+  (#l: Ghost.erased (list Cbor.raw_data_item))
+  (i: cbor_array_iterator_t)
+: STGhost unit opened
+    (cbor_array_iterator_match i l)
+    (fun _ -> cbor_array_iterator_match i l)
+    True
+    (fun _ -> U64.v i.cbor_array_iterator_length == List.Tot.length l)
+= match i.cbor_array_iterator_payload with
+  | CBOR_Array_Iterator_Payload_Array _ _ ->
+    rewrite
+      (cbor_array_iterator_match i l)
+      (cbor_array_iterator_match_array i l);
+    let _ = gen_elim () in
+    rewrite
+      (cbor_array_iterator_match_array i l)
+      (cbor_array_iterator_match i l)
+  | CBOR_Array_Iterator_Payload_Serialized _ _ ->
+    rewrite
+      (cbor_array_iterator_match i l)
+      (cbor_array_iterator_match_serialized i l);
+    let _ = gen_elim () in
+    rewrite
+      (cbor_array_iterator_match_serialized i l)
+      (cbor_array_iterator_match i l)
+
+#pop-options
+
+let cbor_array_iterator_init_array
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor { Cbor.Array? v /\ CBOR_Case_Array? a })
+: STT cbor_array_iterator_t
+    (raw_data_item_match a v)
+    (fun i ->
+      cbor_array_iterator_match i (Cbor.Array?.v v) `star`
+      (cbor_array_iterator_match i (Cbor.Array?.v v) `implies_`
+        raw_data_item_match a v)
+    )
+= let len = cbor_array_length a in
+  let ar = destr_cbor_array a in
+  let res = {
+    cbor_array_iterator_length = len;
+    cbor_array_iterator_payload = CBOR_Array_Iterator_Payload_Array ar.cbor_array_payload ar.footprint;
+  }
+  in
+  noop ();
+  rewrite_with_implies
+    (cbor_array_iterator_match_array res (maybe_cbor_array v))
+    (cbor_array_iterator_match res (Cbor.Array?.v v));
+  intro_implies
+    (cbor_array_iterator_match_array res (maybe_cbor_array v))
+    (A.pts_to ar.cbor_array_payload full_perm ar.footprint `star`
+      raw_data_item_array_match ar.footprint (maybe_cbor_array v)
+    )
+    emp
+    (fun _ ->
+      let _ = gen_elim () in
+      rewrite
+        (A.pts_to _ _ _)
+        (A.pts_to ar.cbor_array_payload full_perm ar.footprint);
+      rewrite
+        (raw_data_item_array_match _ _)
+        (raw_data_item_array_match ar.footprint (maybe_cbor_array v))
+    );
+  implies_trans
+    (cbor_array_iterator_match_array res (maybe_cbor_array v))
+    (A.pts_to ar.cbor_array_payload full_perm ar.footprint `star`
+      raw_data_item_array_match ar.footprint (maybe_cbor_array v)
+    )
+    (raw_data_item_match a v);
+  implies_trans
+    (cbor_array_iterator_match res (Cbor.Array?.v v))
+    (cbor_array_iterator_match_array res (maybe_cbor_array v))
+    (raw_data_item_match a v);
+  return res
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+let cbor_array_iterator_init_serialized
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor { Cbor.Array? v /\ CBOR_Case_Serialized? a })
+: STT cbor_array_iterator_t
+    (raw_data_item_match a v)
+    (fun i ->
+      cbor_array_iterator_match i (Cbor.Array?.v v) `star`
+      (cbor_array_iterator_match i (Cbor.Array?.v v) `implies_`
+        raw_data_item_match a v)
+    )
+= let len = cbor_array_length a in
+  let s = destr_cbor_serialized a in
+  let _ = gen_elim () in
+  let ar = CBOR.SteelST.Raw.Array.focus_array_with_ghost_length (U64.v len) s.cbor_serialized_payload in
+  let _ = gen_elim () in
+  implies_trans
+    (LPS.aparse (LPS.parse_nlist (U64.v len) Cbor.parse_raw_data_item) _ _)
+    (LPS.aparse Cbor.parse_raw_data_item _ _)
+    (raw_data_item_match a v);
+  let var0 = vpattern (LPS.aparse (LPS.parse_nlist (U64.v len) Cbor.parse_raw_data_item) _) in
+  [@@inline_let]
+  let res = {
+    cbor_array_iterator_length = len;
+    cbor_array_iterator_payload = CBOR_Array_Iterator_Payload_Serialized ar (LPS.array_of var0);
+  }
+  in
+  let var = LPS.rewrite_aparse_with_implies ar (LPS.parse_nlist (U64.v res.cbor_array_iterator_length) Cbor.parse_raw_data_item) in
+  implies_trans
+    (LPS.aparse (LPS.parse_nlist (U64.v res.cbor_array_iterator_length) Cbor.parse_raw_data_item) ar var)
+    (LPS.aparse (LPS.parse_nlist (U64.v len) Cbor.parse_raw_data_item) _ _)
+    (raw_data_item_match a v);
+  rewrite_with_implies
+    (cbor_array_iterator_match_serialized res (Cbor.Array?.v v))
+    (cbor_array_iterator_match res (Cbor.Array?.v v));
+  intro_implies
+    (cbor_array_iterator_match_serialized res (Cbor.Array?.v v))
+    (LPS.aparse (LPS.parse_nlist (U64.v res.cbor_array_iterator_length) Cbor.parse_raw_data_item) ar var)
+    emp
+    (fun _ ->
+      let _ = gen_elim () in
+      rewrite
+        (LPS.aparse (LPS.parse_nlist (U64.v res.cbor_array_iterator_length) Cbor.parse_raw_data_item) _ _)
+        (LPS.aparse (LPS.parse_nlist (U64.v res.cbor_array_iterator_length) Cbor.parse_raw_data_item) ar var)
+    );
+  implies_trans
+    (cbor_array_iterator_match res (Cbor.Array?.v v))
+    (cbor_array_iterator_match_serialized res (Cbor.Array?.v v))
+    (LPS.aparse (LPS.parse_nlist (U64.v res.cbor_array_iterator_length) Cbor.parse_raw_data_item) ar var);
+  implies_trans
+    (cbor_array_iterator_match res (Cbor.Array?.v v))
+    (LPS.aparse (LPS.parse_nlist (U64.v res.cbor_array_iterator_length) Cbor.parse_raw_data_item) ar var)
+    (raw_data_item_match a v);
+  return res
+
+#pop-options
+
+let cbor_array_iterator_init
+  a
+= raw_data_item_match_get_case a;
+  match a with
+  | CBOR_Case_Array _ ->
+    return (cbor_array_iterator_init_array a)
+  | _ ->
+    return (cbor_array_iterator_init_serialized a)
+
+let cbor_array_iterator_is_done
+  i
+= cbor_array_iterator_match_length i;
+  return (i.cbor_array_iterator_length = 0uL)
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+let cbor_array_iterator_next_array
+  (#l: Ghost.erased (list Cbor.raw_data_item))
+  (#i1 #i2: Ghost.erased cbor_array_iterator_t)
+  (i: cbor_array_iterator_t { i == Ghost.reveal i2 })
+  (pi: R.ref cbor_array_iterator_t { Cons? l /\ CBOR_Array_Iterator_Payload_Array? i.cbor_array_iterator_payload })
+: STT cbor
+    (R.pts_to pi full_perm i1 `star` cbor_array_iterator_match i2 l)
+    (fun c -> exists_ (fun i' ->
+      R.pts_to pi full_perm i' `star`
+      raw_data_item_match c (List.Tot.hd l) `star`
+      cbor_array_iterator_match i' (List.Tot.tl l) `star`
+      ((raw_data_item_match c (List.Tot.hd l) `star`
+        cbor_array_iterator_match i' (List.Tot.tl l)) `implies_`
+        cbor_array_iterator_match i2 l
+      )
+    ))
+= rewrite_with_implies
+    (cbor_array_iterator_match _ l)
+    (cbor_array_iterator_match_array i l);
+  let _ = gen_elim () in
+  let a = CBOR_Array_Iterator_Payload_Array?.payload i.cbor_array_iterator_payload in
+  let fp : Ghost.erased _ = CBOR_Array_Iterator_Payload_Array?.footprint i.cbor_array_iterator_payload in
+  rewrite
+    (A.pts_to _ full_perm _)
+    (A.pts_to a full_perm fp);
+  rewrite
+    (raw_data_item_array_match _ _)
+    (raw_data_item_array_match fp l);
+  intro_implies
+    (A.pts_to a full_perm fp `star` raw_data_item_array_match fp l)
+    (cbor_array_iterator_match_array i l)
+    emp
+    (fun _ -> noop (); noop ());
+  implies_trans
+    (A.pts_to a full_perm fp `star` raw_data_item_array_match fp l)
+    (cbor_array_iterator_match_array i l)
+    (cbor_array_iterator_match _ l);
+  let len' = i.cbor_array_iterator_length `U64.sub` 1uL in
+  SM.seq_list_match_cons_eq  fp l raw_data_item_match;
+  Seq.seq_of_list_tl l;
+  SM.seq_list_match_length raw_data_item_match _ _;
+  A.pts_to_length _ _;
+  rewrite_with_implies
+    (raw_data_item_array_match fp l)
+    (SM.seq_list_match_cons0 fp l raw_data_item_match SM.seq_list_match);
+  implies_trans_r1
+    (A.pts_to _ _ _)
+    (SM.seq_list_match_cons0 fp l raw_data_item_match SM.seq_list_match)
+    (raw_data_item_array_match fp l)
+    (cbor_array_iterator_match _ _);
+  let _ = gen_elim () in
+  let res = A.index a 0sz in
+  vpattern_rewrite (fun c1 -> raw_data_item_match c1 _) res;
+  let c2 = vpattern_replace_erased (fun c2 -> SM.seq_list_match c2 (List.Tot.tl l) raw_data_item_match) in
+  Seq.lemma_cons_inj (Seq.head fp) res (Seq.tail fp) c2;
+  intro_implies
+    (raw_data_item_match res (List.Tot.hd l) `star` SM.seq_list_match c2 (List.Tot.tl l) raw_data_item_match)
+    (SM.seq_list_match_cons0 fp l raw_data_item_match SM.seq_list_match)
+    emp
+    (fun _ -> noop (); noop ());
+  rewrite_with_implies
+    (SM.seq_list_match c2 (List.Tot.tl l) raw_data_item_match)
+    (raw_data_item_array_match c2 (List.Tot.tl l));
+  implies_trans_r1
+    (raw_data_item_match res (List.Tot.hd l))
+    (raw_data_item_array_match c2 (List.Tot.tl l))
+    (SM.seq_list_match c2 (List.Tot.tl l) raw_data_item_match)
+    (SM.seq_list_match_cons0 fp l raw_data_item_match SM.seq_list_match);
+  let _ = A.ghost_split a 1sz in
+  let ar' = A.split_r a 1sz in
+  rewrite (A.pts_to (A.split_r _ _) _ _) (A.pts_to ar' full_perm (Ghost.reveal c2));
+  intro_implies
+    (A.pts_to ar' full_perm c2)
+    (A.pts_to a full_perm fp)
+    (A.pts_to (A.split_l _ _) _ _)
+    (fun _ ->
+      let _ = A.ghost_join (A.split_l _ _) ar' () in
+      rewrite
+        (A.pts_to _ _ _)
+        (A.pts_to a full_perm fp)
+    );
+  implies_trans_l1
+    (A.pts_to ar' full_perm c2)
+    (A.pts_to a full_perm fp)
+    (SM.seq_list_match_cons0 fp l raw_data_item_match SM.seq_list_match)
+    (cbor_array_iterator_match _ l);
+  implies_trans_r1
+    (A.pts_to ar' full_perm c2)
+    (raw_data_item_match res (List.Tot.hd l) `star` raw_data_item_array_match c2 (List.Tot.tl l))
+    (SM.seq_list_match_cons0 fp l raw_data_item_match SM.seq_list_match)
+    (cbor_array_iterator_match _ l);
+  implies_with_tactic
+    (raw_data_item_match res (List.Tot.hd l) `star` (A.pts_to ar' full_perm c2 `star` raw_data_item_array_match c2 (List.Tot.tl l)))
+    (A.pts_to ar' full_perm c2 `star` (raw_data_item_match res (List.Tot.hd l) `star` raw_data_item_array_match c2 (List.Tot.tl l)));
+  implies_trans
+    (raw_data_item_match res (List.Tot.hd l) `star` (A.pts_to ar' full_perm c2 `star` raw_data_item_array_match c2 (List.Tot.tl l)))
+    (A.pts_to ar' full_perm c2 `star` (raw_data_item_match res (List.Tot.hd l) `star` raw_data_item_array_match c2 (List.Tot.tl l)))
+    (cbor_array_iterator_match _ l);
+  let i' = {
+    cbor_array_iterator_length = len';
+    cbor_array_iterator_payload = CBOR_Array_Iterator_Payload_Array ar' c2;
+  }
+  in
+  R.write pi i';
+  rewrite_with_implies
+    (cbor_array_iterator_match_array i' (List.Tot.tl l))
+    (cbor_array_iterator_match i' (List.Tot.tl l));
+  intro_implies
+    (cbor_array_iterator_match_array i' (List.Tot.tl l))
+    (A.pts_to ar' full_perm c2 `star` raw_data_item_array_match c2 (List.Tot.tl l))
+    emp
+    (fun _ ->
+      let _ = gen_elim () in
+      rewrite (A.pts_to _ _ _) (A.pts_to ar' full_perm c2);
+      rewrite (raw_data_item_array_match _ _) (raw_data_item_array_match c2 (List.Tot.tl l))
+    );
+  implies_trans
+    (cbor_array_iterator_match i' (List.Tot.tl l))
+    (cbor_array_iterator_match_array i' (List.Tot.tl l))
+    (A.pts_to ar' full_perm c2 `star` raw_data_item_array_match c2 (List.Tot.tl l));
+  implies_trans_r1
+    (raw_data_item_match res (List.Tot.hd l))
+    (cbor_array_iterator_match i' (List.Tot.tl l))
+    (A.pts_to ar' full_perm c2 `star` raw_data_item_array_match c2 (List.Tot.tl l))
+    (cbor_array_iterator_match _ l);
+  return res
+
+let cbor_array_iterator_next_serialized
+  (#l: Ghost.erased (list Cbor.raw_data_item))
+  (#i1 #i2: Ghost.erased cbor_array_iterator_t)
+  (i: cbor_array_iterator_t { i == Ghost.reveal i2 })
+  (pi: R.ref cbor_array_iterator_t { Cons? l /\ CBOR_Array_Iterator_Payload_Serialized? i.cbor_array_iterator_payload })
+: STT cbor
+    (R.pts_to pi full_perm i1 `star` cbor_array_iterator_match i2 l)
+    (fun c -> exists_ (fun i' ->
+      R.pts_to pi full_perm i' `star`
+      raw_data_item_match c (List.Tot.hd l) `star`
+      cbor_array_iterator_match i' (List.Tot.tl l) `star`
+      ((raw_data_item_match c (List.Tot.hd l) `star`
+        cbor_array_iterator_match i' (List.Tot.tl l)) `implies_`
+        cbor_array_iterator_match i2 l
+      )
+    ))
+= rewrite_with_implies
+    (cbor_array_iterator_match _ l)
+    (cbor_array_iterator_match_serialized i l);
+  let _ = gen_elim () in
+  let a = CBOR_Array_Iterator_Payload_Serialized?.payload i.cbor_array_iterator_payload in
+  let va = vpattern_replace (LPS.aparse (LPS.parse_nlist (U64.v i.cbor_array_iterator_length) Cbor.parse_raw_data_item) _) in
+  vpattern_rewrite (fun a -> LPS.aparse (LPS.parse_nlist (U64.v i.cbor_array_iterator_length) Cbor.parse_raw_data_item) a _) a;
+  intro_implies
+    (LPS.aparse (LPS.parse_nlist (U64.v i.cbor_array_iterator_length) Cbor.parse_raw_data_item) a va)
+    (cbor_array_iterator_match_serialized i l)
+    emp
+    (fun _ -> noop (); noop ());
+  implies_trans
+    (LPS.aparse (LPS.parse_nlist (U64.v i.cbor_array_iterator_length) Cbor.parse_raw_data_item) a va)
+    (cbor_array_iterator_match_serialized i l)
+    (cbor_array_iterator_match i2 l);
+  let len' = i.cbor_array_iterator_length `U64.sub` 1uL in
+  let ga' = LPS.elim_nlist_cons
+    Cbor.parse_raw_data_item
+    (U64.v i.cbor_array_iterator_length)
+    (U64.v len')
+    a
+  in
+  let _ = gen_elim () in
+  let vl = vpattern_replace (LPS.aparse Cbor.parse_raw_data_item a) in
+  let sz = LPS.get_parsed_size Cbor.jump_raw_data_item a in
+  let a' = LPS.hop_aparse_aparse_with_size Cbor.parse_raw_data_item (LPS.parse_nlist (U64.v len') Cbor.parse_raw_data_item) a sz ga' in
+  let va1 = vpattern_replace (LPS.aparse (LPS.parse_nlist (U64.v len') Cbor.parse_raw_data_item) a') in
+  intro_implies
+    (LPS.aparse Cbor.parse_raw_data_item a vl `star` LPS.aparse (LPS.parse_nlist (U64.v len') Cbor.parse_raw_data_item) a' va1)
+    (LPS.aparse (LPS.parse_nlist (U64.v i.cbor_array_iterator_length) Cbor.parse_raw_data_item) a va)
+    emp
+    (fun _ ->
+      let _ = LPS.intro_nlist_cons (U64.v i.cbor_array_iterator_length) Cbor.parse_raw_data_item (U64.v len') a a' in
+      vpattern_rewrite
+        (LPS.aparse (LPS.parse_nlist (U64.v i.cbor_array_iterator_length) Cbor.parse_raw_data_item) a)
+        va
+    );
+  implies_trans
+    (LPS.aparse Cbor.parse_raw_data_item a vl `star` LPS.aparse (LPS.parse_nlist (U64.v len') Cbor.parse_raw_data_item) a' va1)
+    (LPS.aparse (LPS.parse_nlist (U64.v i.cbor_array_iterator_length) Cbor.parse_raw_data_item) a va)
+    (cbor_array_iterator_match i2 l);
+  let res = read_valid_cbor_from_buffer_with_size_strong a sz in
+  vpattern_rewrite_with_implies (raw_data_item_match res) (List.Tot.hd l);
+  implies_trans
+    (raw_data_item_match res (List.Tot.hd l))
+    (raw_data_item_match res _)
+    (LPS.aparse Cbor.parse_raw_data_item a vl);
+  implies_trans_l1
+    (raw_data_item_match res (List.Tot.hd l))
+    (LPS.aparse Cbor.parse_raw_data_item a vl)
+    (LPS.aparse (LPS.parse_nlist (U64.v len') Cbor.parse_raw_data_item) a' va1)
+    (cbor_array_iterator_match i2 l);
+  let i' = {
+    cbor_array_iterator_length = len';
+    cbor_array_iterator_payload = CBOR_Array_Iterator_Payload_Serialized a' (LPS.array_of va1);
+  }
+  in
+  R.write pi i';
+  let va' = LPS.rewrite_aparse_with_implies a' (LPS.parse_nlist (U64.v i'.cbor_array_iterator_length) Cbor.parse_raw_data_item) in
+  implies_trans_r1
+    (raw_data_item_match res (List.Tot.hd l))
+    (LPS.aparse (LPS.parse_nlist (U64.v i'.cbor_array_iterator_length) Cbor.parse_raw_data_item) a' va')
+    (LPS.aparse (LPS.parse_nlist (U64.v len') Cbor.parse_raw_data_item) a' va1)
+    (cbor_array_iterator_match i2 l);
+  rewrite_with_implies
+    (cbor_array_iterator_match_serialized i' (List.Tot.tl l))
+    (cbor_array_iterator_match i' (List.Tot.tl l));
+  intro_implies
+    (cbor_array_iterator_match_serialized i' (List.Tot.tl l))
+    (LPS.aparse (LPS.parse_nlist (U64.v i'.cbor_array_iterator_length) Cbor.parse_raw_data_item) a' va')
+    emp
+    (fun _ ->
+      let _ = gen_elim () in
+      rewrite
+        (LPS.aparse (LPS.parse_nlist (U64.v i'.cbor_array_iterator_length) Cbor.parse_raw_data_item) _ _)
+        (LPS.aparse (LPS.parse_nlist (U64.v i'.cbor_array_iterator_length) Cbor.parse_raw_data_item) a' va')
+    );
+  implies_trans
+    (cbor_array_iterator_match i' (List.Tot.tl l))
+    (cbor_array_iterator_match_serialized i' (List.Tot.tl l))
+    (LPS.aparse (LPS.parse_nlist (U64.v i'.cbor_array_iterator_length) Cbor.parse_raw_data_item) a' va');
+  implies_trans_r1
+    (raw_data_item_match res (List.Tot.hd l))
+    (cbor_array_iterator_match i' (List.Tot.tl l))
+    (LPS.aparse (LPS.parse_nlist (U64.v i'.cbor_array_iterator_length) Cbor.parse_raw_data_item) a' va')
+    (cbor_array_iterator_match i2 l);
+  return res
+
+#pop-options
+
+let cbor_array_iterator_next
+  pi
+= let i = R.read pi in
+  match i.cbor_array_iterator_payload with
+  | CBOR_Array_Iterator_Payload_Array _ _ ->
+    return (cbor_array_iterator_next_array i pi)
+  | _ ->
+    return (cbor_array_iterator_next_serialized i pi)
+
 inline_for_extraction
 noextract
 let read_cbor_array_payload
