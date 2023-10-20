@@ -1,5 +1,5 @@
 module CBOR.SteelST.Raw.Base
-include CBOR.Spec
+include CBOR.Spec.Format
 open LowParse.SteelST.Combinators
 open Steel.ST.GenElim
 

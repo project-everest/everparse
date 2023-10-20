@@ -1,4 +1,4 @@
-module CBOR.Spec
+module CBOR.Spec.Format
 include CBOR.Spec.Type
 open LowParse.Spec
 open LowParse.Spec.BitSum

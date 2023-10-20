@@ -1,5 +1,5 @@
 module CDDL.Spec
-module Cbor = CBOR.Spec
+module Cbor = CBOR.Spec.Format
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 

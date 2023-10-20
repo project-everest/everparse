@@ -1,5 +1,5 @@
 module CBOR.SteelST.Raw
-include CBOR.Spec
+include CBOR.Spec.Format
 
 // A "raw" API to parse and serialize CBOR objects without a data type
 

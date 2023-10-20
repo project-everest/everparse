@@ -1,6 +1,6 @@
 module DPE.Messages.Spec
 module Cddl = CDDL.Spec
-module Cbor = CBOR.Spec
+module Cbor = CBOR.Spec.Format
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 
