@@ -1,7 +1,7 @@
 module CBOR.SteelST
 open Steel.ST.Util
 
-module Cbor = CBOR.Spec.Type
+module Cbor = CBOR.Spec
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
@@ -139,24 +139,6 @@ val raw_data_item_match_get_case
     | _ -> False
     )
 
-(* Data format specification *)
-
-val serialize_cbor
-  (c: Cbor.raw_data_item)
-: GTot (Seq.seq U8.t)
-
-val serialize_cbor_inj
-  (c1 c2: Cbor.raw_data_item)
-  (s1 s2: Seq.seq U8.t)
-: Lemma
-  (requires (serialize_cbor c1 `Seq.append` s1 == serialize_cbor c2 `Seq.append` s2))
-  (ensures (c1 == c2 /\ s1 == s2))
-
-val serialize_cbor_nonempty
-  (c: Cbor.raw_data_item)
-: Lemma
-  (Seq.length (serialize_cbor c) > 0)
-
 (* Parsing *)
 
 noeq
@@ -179,7 +161,7 @@ let read_cbor_success_postcond
   (rem: Seq.seq U8.t)
 : Tot prop
 = SZ.v c.read_cbor_remainder_length == Seq.length rem /\
-  va `Seq.equal` (serialize_cbor v `Seq.append` rem)
+  va `Seq.equal` (Cbor.serialize_cbor v `Seq.append` rem)
 
 [@@__reduce__]
 let read_cbor_success_post
@@ -200,7 +182,7 @@ noextract
 let read_cbor_error_postcond
   (va: Ghost.erased (Seq.seq U8.t))
 : Tot prop
-= forall v . ~ (serialize_cbor v == Seq.slice va 0 (min (Seq.length (serialize_cbor v)) (Seq.length va)))
+= forall v . ~ (Cbor.serialize_cbor v == Seq.slice va 0 (min (Seq.length (Cbor.serialize_cbor v)) (Seq.length va)))
 
 [@@__reduce__]
 let read_cbor_error_post
@@ -728,7 +710,7 @@ let write_cbor_postcond
   (vout': Seq.seq U8.t)
   (res: SZ.t)
 : Tot prop
-= let s = serialize_cbor va in
+= let s = Cbor.serialize_cbor va in
   Seq.length vout' == A.length out /\
   (res = 0sz <==> Seq.length s > Seq.length vout') /\
   (res <> 0sz ==> (

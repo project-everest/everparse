@@ -1,6 +1,7 @@
 module CBOR.SteelST
 open Steel.ST.OnRange
 open Steel.ST.GenElim
+friend CBOR.Spec // for serialize_cbor
 
 module CborST = CBOR.SteelST.Raw
 module LPA = LowParse.SteelST.ArrayPtr.IntroElim
@@ -346,21 +347,6 @@ let destr_cbor_serialized
     (raw_data_item_match c va);
   return c'
 
-let serialize_cbor
-  c
-= LPS.serialize CborST.serialize_raw_data_item c
-
-let serialize_cbor_inj
-  c1 c2 s1 s2
-= LPS.parse_strong_prefix CborST.parse_raw_data_item (serialize_cbor c1) (serialize_cbor c1 `Seq.append` s1);
-  LPS.parse_strong_prefix CborST.parse_raw_data_item (serialize_cbor c2) (serialize_cbor c2 `Seq.append` s2);
-  LPS.serializer_injective _ CborST.serialize_raw_data_item c1 c2;
-  Seq.lemma_append_inj (serialize_cbor c1) s1 (serialize_cbor c2) s2
-
-let serialize_cbor_nonempty
-  c
-= ()
-
 let serialize_cbor_error
   (x: Seq.seq U8.t)
 : Lemma
@@ -369,11 +355,11 @@ let serialize_cbor_error
 = let prf
     (v: Cbor.raw_data_item)
   : Lemma
-    (requires (serialize_cbor v == Seq.slice x 0 (min (Seq.length (serialize_cbor v)) (Seq.length x))))
+    (requires (Cbor.serialize_cbor v == Seq.slice x 0 (min (Seq.length (Cbor.serialize_cbor v)) (Seq.length x))))
     (ensures False)
-  = assert (Seq.length (serialize_cbor v) <= Seq.length x);
-    Seq.lemma_split x (Seq.length (serialize_cbor v));
-    LPS.parse_strong_prefix CborST.parse_raw_data_item (serialize_cbor v) x
+  = assert (Seq.length (Cbor.serialize_cbor v) <= Seq.length x);
+    Seq.lemma_split x (Seq.length (Cbor.serialize_cbor v));
+    LPS.parse_strong_prefix CborST.parse_raw_data_item (Cbor.serialize_cbor v) x
   in
   Classical.forall_intro (Classical.move_requires prf)
 
