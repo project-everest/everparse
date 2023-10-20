@@ -36,8 +36,12 @@ extern "C" {
 typedef const char * EVERPARSE_STRING;
 typedef EVERPARSE_STRING PRIMS_STRING;
 
+#ifndef KRML_MAYBE_UNUSED_VAR
+#  define KRML_MAYBE_UNUSED_VAR(x) (void)(x)
+#endif
+
 #ifndef KRML_HOST_IGNORE
-#  define KRML_HOST_IGNORE(x) (void)(x);
+#  define KRML_HOST_IGNORE(x) (void)(x)
 #endif
 
 #ifndef KRML_HOST_PRINTF
