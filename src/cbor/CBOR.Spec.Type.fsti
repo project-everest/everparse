@@ -83,3 +83,27 @@ val holds_on_raw_data_item_eq
   (x: raw_data_item)
 : Lemma
   (holds_on_raw_data_item p x == holds_on_raw_data_item' p x)
+
+noextract
+let map_entry_order
+  (#key: Type)
+  (key_order: (key -> key -> bool))
+  (value: Type)
+  (m1: (key & value))
+  (m2: (key & value))
+: Tot bool
+= key_order (fst m1) (fst m2)
+
+noextract
+let data_item_wf_head (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
+= match x with
+  | Map l ->
+      FStar.List.Tot.sorted (map_entry_order order _) l
+  | _ -> true
+
+noextract
+let data_item_wf (order: (raw_data_item -> raw_data_item -> bool)) : Tot (raw_data_item -> bool)
+= holds_on_raw_data_item (data_item_wf_head order)
+
+let data_item (order: (raw_data_item -> raw_data_item -> bool)) =
+  (x: raw_data_item { data_item_wf order x == true })

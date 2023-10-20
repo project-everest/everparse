@@ -1162,16 +1162,21 @@ let holds_on_raw_data_item_pred (p: (raw_data_item -> bool)) : pred_recursive_t 
   prf = holds_on_raw_data_item_eq_recursive p;
 }
 
-let data_item_wf_head (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
-= match x with
-  | Map l ->
-      FStar.List.Tot.sorted (map_entry_order order _) l
-  | _ -> true
+let data_item_eq
+  (order: (raw_data_item -> raw_data_item -> bool))
+: Lemma
+  (data_item order == parse_filter_refine (data_item_wf order))
+  [SMTPat (data_item order)]
+= assert_norm (data_item order == parse_filter_refine (data_item_wf order))
 
-let data_item_wf (order: (raw_data_item -> raw_data_item -> bool)) : Tot (raw_data_item -> bool)
-= holds_on_raw_data_item (data_item_wf_head order)
-
-let data_item (order: (raw_data_item -> raw_data_item -> bool)) = parse_filter_refine (data_item_wf order)
+let map_entry_order_eq
+  (#key: Type)
+  (key_order: (key -> key -> bool))
+  (value: Type)
+: Lemma
+  (CBOR.Spec.Type.map_entry_order key_order value == LowParse.Spec.Assoc.map_entry_order key_order value)
+  [SMTPat (CBOR.Spec.Type.map_entry_order key_order value)]
+= assert_norm (CBOR.Spec.Type.map_entry_order key_order value == LowParse.Spec.Assoc.map_entry_order key_order value)
 
 let parse_data_item
   (order: (raw_data_item -> raw_data_item -> bool))
