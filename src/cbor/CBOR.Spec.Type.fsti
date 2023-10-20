@@ -48,3 +48,38 @@ let get_major_type
   | Array _ -> major_type_array
   | Map _ -> major_type_map
   | Tagged _ _ -> major_type_tagged
+
+noextract
+val holds_on_raw_data_item
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Tot bool
+
+noextract
+let holds_on_pair
+  (#t: Type)
+  (pred: (t -> bool))
+  (x: (t & t))
+: Tot bool
+= let (x1, x2) = x in
+  pred x1 && pred x2
+
+noextract
+let holds_on_raw_data_item'
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Tot bool
+= p x &&
+  begin match x with
+  | Array l -> List.Tot.for_all (holds_on_raw_data_item p) l
+  | Map l ->
+    List.Tot.for_all (holds_on_pair (holds_on_raw_data_item p)) l
+  | Tagged _ v -> holds_on_raw_data_item p v
+  | _ -> true
+  end
+
+val holds_on_raw_data_item_eq
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Lemma
+  (holds_on_raw_data_item p x == holds_on_raw_data_item' p x)
