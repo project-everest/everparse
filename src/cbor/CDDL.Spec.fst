@@ -208,17 +208,21 @@ let array_group3_one_or_more #b (a: array_group3 b) : array_group3 b =
 let array_group3_zero_or_one #b (a: array_group3 b) : Tot (array_group3 b) =
   a `array_group3_choice` array_group3_empty
 
-let array_group3_item (b: Cbor.raw_data_item) (t: bounded_typ b) : array_group3 b = fun l ->
+let array_group3_item (#b: Cbor.raw_data_item) (t: bounded_typ b) : array_group3 b = fun l ->
   match l with
   | [] -> None
   | a :: q -> if t a then Some q else None
 
-let t_array3 (#b: Cbor.raw_data_item) (a: array_group3 b) : bounded_typ b = fun x ->
-  Cbor.Array? x &&
-  begin match a (Cbor.Array?.v x) with
-  | Some l -> Nil? l
+let match_array_group3 (#b: Cbor.raw_data_item) (a: array_group3 b)
+  (l: list Cbor.raw_data_item {l << b})
+: GTot bool
+= match a l with
+  | Some l' -> Nil? l
   | _ -> false
-  end
+
+let t_array3_bounded (#b: Cbor.raw_data_item) (a: array_group3 b) : bounded_typ b = fun x ->
+  Cbor.Array? x &&
+  match_array_group3 a (Cbor.Array?.v x)
 
 // Recursive type (needed by COSE Section 5.1 "Recipient")
 
@@ -236,10 +240,12 @@ let rec t_array3_rec
   (decreases x)
 =
   Cbor.Array? x &&
-  begin match phi x (t_array3_rec phi) (Cbor.Array?.v x) with
-  | Some l -> Nil? l
-  | _ -> false
-  end
+  match_array_group3 (phi x (t_array3_rec phi)) (Cbor.Array?.v x)
+
+let t_array3
+  (phi: (b: Cbor.raw_data_item) -> array_group3 b)
+: Tot typ
+= t_array3_rec (fun b _ -> phi b)
 
 // Groups in map context (Section 3.5)
 
@@ -350,7 +356,7 @@ let rec matches_map_group
 // 2.1 specifies "names that turn into the map key text string"
 let name_as_text_string (s: Seq.seq U8.t) : typ = (fun x -> tstr x && Cbor.String?.v x = s)
 
-let t_map (#b: Cbor.raw_data_item) (m: map_group b) : bounded_typ b = fun x ->
+let t_map_bounded (#b: Cbor.raw_data_item) (m: map_group b) : bounded_typ b = fun x ->
   Cbor.Map? x &&
   matches_map_group m (Cbor.Map?.v x)
 
@@ -362,9 +368,14 @@ let rec t_map_rec
 = Cbor.Map? x &&
   matches_map_group (phi x (t_map_rec phi)) (Cbor.Map?.v x)
 
+let t_map
+  (phi: (b: Cbor.raw_data_item) -> map_group b)
+: Tot typ
+= t_map_rec (fun b _ -> phi b)
+
 // Section 3.6: Tags
 
-let t_tag (#b: Cbor.raw_data_item) (tag: U64.t) (t: bounded_typ b) : bounded_typ b = fun x ->
+let t_tag_bounded (#b: Cbor.raw_data_item) (tag: U64.t) (t: bounded_typ b) : bounded_typ b = fun x ->
   Cbor.Tagged? x &&
   Cbor.Tagged?.tag x = tag &&
   t (Cbor.Tagged?.v x)
@@ -379,6 +390,12 @@ let rec t_tag_rec
   Cbor.Tagged?.tag x = tag &&
   phi x (t_tag_rec tag phi) (Cbor.Tagged?.v x)
 
+let t_tag
+  (tag: U64.t)
+  (phi: (b: Cbor.raw_data_item) -> bounded_typ b)
+: Tot typ
+= t_tag_rec tag (fun b _ -> phi b)
+
 // Multi-purpose recursive combinator, to allow disjunctions between destructors
 
 let rec multi_rec
@@ -392,10 +409,7 @@ let rec multi_rec
 = phi_base x ||
   begin match x with
   | Cbor.Array v ->
-    begin match phi_array x (multi_rec phi_base phi_array phi_map phi_tag) v with
-    | Some [] -> true
-    | _ -> false
-    end
+    match_array_group3 (phi_array x (multi_rec phi_base phi_array phi_map phi_tag)) v
   | Cbor.Map v ->
     matches_map_group (phi_map x (multi_rec phi_base phi_array phi_map phi_tag)) v
   | Cbor.Tagged tag v ->
