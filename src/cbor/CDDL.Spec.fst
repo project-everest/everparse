@@ -7,22 +7,10 @@ module U64 = FStar.UInt64
 
 [@@noextract_to "krml"]
 let typ = (Cbor.raw_data_item -> GTot bool) // GTot needed because of the .cbor control (staged serialization)
+let bounded_typ (e: Cbor.raw_data_item) = ((e': Cbor.raw_data_item { e' << e }) -> GTot bool)
 let t_choice (t1 t2: typ) : typ = (fun x -> t1 x || t2 x)
+let t_bounded_choice (e: Cbor.raw_data_item) (t1 t2: bounded_typ e) : bounded_typ e = (fun x -> t1 x || t2 x)
 let t_always_false : typ = (fun _ -> false)
-
-// Recursive type (needed by COSE Section 5.1 "Recipient")
-
-let rec_typ'_rec
-  (f: (typ -> typ)) (t: Cbor.raw_data_item)
-  (rec_typ': ((t': Cbor.raw_data_item { Seq.length (Cbor.serialize_cbor t') < Seq.length (Cbor.serialize_cbor t) }) -> GTot bool))
-  (t': Cbor.raw_data_item)
-: GTot bool
-= if Seq.length (Cbor.serialize_cbor t') < Seq.length (Cbor.serialize_cbor t) then rec_typ' t' else false
-
-let rec rec_typ' (f: (typ -> typ)) (t: Cbor.raw_data_item) : GTot bool (decreases (Seq.length (Cbor.serialize_cbor t))) =
-  f (rec_typ'_rec f t (rec_typ' f)) t
-
-let rec_typ : (typ -> typ) -> typ = rec_typ'
 
 // Appendix D
 let any : typ = (fun _ -> true)
@@ -132,23 +120,79 @@ let t_array2 (a: array_group2) : typ = fun x ->
 
 // Greedy semantics (Appendix A?)
 
+let list_is_suffix_of
+  (#t: Type)
+  (small large: list t)
+: Tot prop
+= exists prefix . large == prefix `List.Tot.append` small
+
+let list_is_suffix_of_refl
+  (#t: Type)
+  (l: list t)
+: Lemma
+  (l `list_is_suffix_of` l)
+  [SMTPat (l `list_is_suffix_of` l)]
+= assert (l == [] `List.Tot.append` l)
+
+let rec list_nil_precedes
+  (#t: Type)
+  (l: list t)
+: Lemma
+  (Nil #t == l \/ Nil #t << l)
+= match l with
+  | [] -> ()
+  | a :: q -> list_nil_precedes q
+
+let rec list_is_suffix_of_precedes
+  (#t0 #t: Type)
+  (v0: t0)
+  (small large: list t)
+: Lemma
+  (requires (
+    large << v0 /\
+    small `list_is_suffix_of` large
+  ))
+  (ensures (
+    small << v0
+  ))
+  (decreases (List.Tot.length large))
+  [SMTPat [small << v0]; SMTPat [small `list_is_suffix_of` large]]
+= if Nil? small
+  then list_nil_precedes large
+  else begin
+    let prefix = FStar.IndefiniteDescription.indefinite_description_ghost (list t) (fun prefix -> large == prefix `List.Tot.append` small) in
+    List.Tot.append_length prefix small;
+    if List.Tot.length small = List.Tot.length large
+    then ()
+    else list_is_suffix_of_precedes v0 small (List.Tot.tl large)
+  end
+
 [@@erasable; noextract_to "krml"]
-let array_group3 = list Cbor.raw_data_item -> GTot (option (list Cbor.raw_data_item))
-let array_group3_always_false : array_group3 = fun _ -> None
-let array_group3_empty : array_group3 = Some
-let array_group3_concat (a1 a3: array_group3) : array_group3 =
+let array_group3 (bound: Cbor.raw_data_item) = (l: list Cbor.raw_data_item { l << bound }) -> Ghost (option (list Cbor.raw_data_item))
+  (requires True)
+  (ensures (fun l' -> match l' with
+  | None -> True
+  | Some l' -> l' << bound
+  ))
+let array_group3_always_false #b : array_group3 b = fun _ -> None
+let array_group3_empty #b : array_group3 b = fun x -> Some x
+let array_group3_concat #b (a1 a3: array_group3 b) : array_group3 b =
   (fun l ->
     match a1 l with
     | None -> None
     | Some l3 -> a3 l3
   )
 
-let array_group3_choice (a1 a3: array_group3) : array_group3 =
+let array_group3_choice #b (a1 a3: array_group3 b) : array_group3 b =
   fun l -> match a1 l with
     | None -> a3 l
     | Some l3 -> Some l3
 
-let rec array_group3_zero_or_more' (a: array_group3) (l: list Cbor.raw_data_item) : GTot (option (list Cbor.raw_data_item)) (decreases (List.Tot.length l)) =
+let rec array_group3_zero_or_more' #b (a: array_group3 b) (l: list Cbor.raw_data_item { l << b }) : Ghost (option (list Cbor.raw_data_item))
+  (requires True)
+  (ensures (fun l' -> match l' with None -> True | Some l' -> l' << b))
+  (decreases (List.Tot.length l))
+=
   match a l with
   | None -> Some l
   | Some l' ->
@@ -156,22 +200,43 @@ let rec array_group3_zero_or_more' (a: array_group3) (l: list Cbor.raw_data_item
     then Some l
     else array_group3_zero_or_more' a l'
 
-let array_group3_zero_or_more : array_group3 -> array_group3 = array_group3_zero_or_more'
+let array_group3_zero_or_more #b : array_group3 b -> array_group3 b = array_group3_zero_or_more'
 
-let array_group3_one_or_more (a: array_group3) : array_group3 =
+let array_group3_one_or_more #b (a: array_group3 b) : array_group3 b =
   a `array_group3_concat` array_group3_zero_or_more a
 
-let array_group3_zero_or_one (a: array_group3) : Tot array_group3 =
+let array_group3_zero_or_one #b (a: array_group3 b) : Tot (array_group3 b) =
   a `array_group3_choice` array_group3_empty
 
-let array_group3_item (t: typ) : array_group3 = fun l ->
+let array_group3_item (b: Cbor.raw_data_item) (t: bounded_typ b) : array_group3 b = fun l ->
   match l with
   | [] -> None
   | a :: q -> if t a then Some q else None
 
-let t_array3 (a: array_group3) : typ = fun x ->
+let t_array3 (#b: Cbor.raw_data_item) (a: array_group3 b) : bounded_typ b = fun x ->
   Cbor.Array? x &&
   begin match a (Cbor.Array?.v x) with
+  | Some l -> Nil? l
+  | _ -> false
+  end
+
+// Recursive type (needed by COSE Section 5.1 "Recipient")
+
+// Inspiring from Barthe et al., Type-Based Termination with Sized
+// Products (CSL 2008): we allow recursion only at the level of
+// destructors. In other words, instead of having a generic recursion
+// combinator, we provide a recursion-enabled version only for each
+// destructor combinator. We need to annotate it with a bound b (akin
+// to the "size" annotation in a sized type.)
+
+let rec t_array3_rec
+  (phi: (b: Cbor.raw_data_item) -> (bounded_typ b -> array_group3 b))
+  (x: Cbor.raw_data_item)
+: GTot bool
+  (decreases x)
+=
+  Cbor.Array? x &&
+  begin match phi x (t_array3_rec phi) (Cbor.Array?.v x) with
   | Some l -> Nil? l
   | _ -> false
   end
@@ -180,66 +245,68 @@ let t_array3 (a: array_group3) : typ = fun x ->
 
 [@@erasable]
 noeq
-type map_group_entry = | MapGroupEntry: (fst: typ) -> (snd: typ) -> map_group_entry
+type map_group_entry (b: Cbor.raw_data_item) = | MapGroupEntry: (fst: bounded_typ b) -> (snd: bounded_typ b) -> map_group_entry b
 
 let matches_map_group_entry
-  (ge: map_group_entry)
-  (x: (Cbor.raw_data_item & Cbor.raw_data_item))
+  (#b: Cbor.raw_data_item)
+  (ge: map_group_entry b)
+  (x: (Cbor.raw_data_item & Cbor.raw_data_item) { x << b })
 : GTot bool
 = ge.fst (fst x) && ge.snd (snd x)
 
 [@@erasable]
 noeq
-type map_group = {
-  one: list map_group_entry;
-  zero_or_one: list map_group_entry;
-  zero_or_more: list map_group_entry;
+type map_group (b: Cbor.raw_data_item) = {
+  one: list (map_group_entry b);
+  zero_or_one: list (map_group_entry b);
+  zero_or_more: list (map_group_entry b);
 }
 
-let map_group_empty : map_group = {
+let map_group_empty #b : map_group b = {
   one = [];
   zero_or_one = [];
   zero_or_more = [];
 }
 
 // Section 3.5.4: Cut
-let cut_map_group_entry (key: typ) (ge: map_group_entry) : map_group_entry =
+let cut_map_group_entry #b (key: bounded_typ b) (ge: map_group_entry b) : map_group_entry b =
   (fun x -> ge.fst x && not (key x)) `MapGroupEntry` ge.snd
 
-let cut_map_group (key: typ) (g: map_group) : map_group = {
+let cut_map_group #b (key: bounded_typ b) (g: map_group b) : map_group b = {
   one = List.Tot.map (cut_map_group_entry key) g.one;
   zero_or_one = List.Tot.map (cut_map_group_entry key) g.zero_or_one;
   zero_or_more = List.Tot.map (cut_map_group_entry key) g.zero_or_more;
 }
 
-let maybe_cut_map_group (ge: map_group_entry) (cut: bool) (g: map_group) : map_group =
+let maybe_cut_map_group #b (ge: map_group_entry b) (cut: bool) (g: map_group b) : map_group b =
   if cut
   then cut_map_group (ge.fst) g
   else g
 
-let map_group_cons_one (ge: map_group_entry) (cut: bool) (g: map_group) : map_group =
+let map_group_cons_one #b (ge: map_group_entry b) (cut: bool) (g: map_group b) : map_group b =
   let g = maybe_cut_map_group ge cut g in {
     g with
     one = ge :: g.one;
   }
 
-let map_group_cons_zero_or_one (ge: map_group_entry) (cut: bool) (g: map_group) : map_group =
+let map_group_cons_zero_or_one #b (ge: map_group_entry b) (cut: bool) (g: map_group b) : map_group b =
   let g = maybe_cut_map_group ge cut g in {
     g with
     zero_or_one = ge :: g.zero_or_one;
   }
 
-let map_group_cons_zero_or_more (ge: map_group_entry) (cut: bool) (g: map_group) : map_group =
+let map_group_cons_zero_or_more #b (ge: map_group_entry b) (cut: bool) (g: map_group b) : map_group b =
   let g = maybe_cut_map_group ge cut g in {
     g with
     zero_or_more = ge :: g.zero_or_more;
 }
 
 let rec matches_list_map_group_entry'
-  (x: (Cbor.raw_data_item & Cbor.raw_data_item))
-  (unmatched: list map_group_entry)
-  (l: list map_group_entry)
-: GTot (option (list map_group_entry))
+  (#b: Cbor.raw_data_item)
+  (x: (Cbor.raw_data_item & Cbor.raw_data_item) { x << b })
+  (unmatched: list (map_group_entry b))
+  (l: list (map_group_entry b))
+: GTot (option (list (map_group_entry b)))
   (decreases l)
 = match l with
   | [] -> None
@@ -249,9 +316,10 @@ let rec matches_list_map_group_entry'
     else matches_list_map_group_entry' x (a :: unmatched) q
 
 let matches_list_map_group_entry
-  (x: (Cbor.raw_data_item & Cbor.raw_data_item))
-  (l: list map_group_entry)
-: GTot (option (list map_group_entry))
+  (#b: Cbor.raw_data_item)
+  (x: (Cbor.raw_data_item & Cbor.raw_data_item) { x << b })
+  (l: list (map_group_entry b))
+: GTot (option (list (map_group_entry b)))
 = matches_list_map_group_entry' x [] l
 
 let rec ghost_list_exists (#a: Type) (f: (a -> GTot bool)) (l: list a): GTot bool = match l with
@@ -259,8 +327,9 @@ let rec ghost_list_exists (#a: Type) (f: (a -> GTot bool)) (l: list a): GTot boo
  | hd::tl -> if f hd then true else ghost_list_exists f tl
 
 let rec matches_map_group
-  (m: map_group)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item))
+  (#b: Cbor.raw_data_item)
+  (m: map_group b)
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) {x << b })
 : GTot bool
   (decreases x)
 = match x with
@@ -281,18 +350,36 @@ let rec matches_map_group
 // 2.1 specifies "names that turn into the map key text string"
 let name_as_text_string (s: Seq.seq U8.t) : typ = (fun x -> tstr x && Cbor.String?.v x = s)
 
-let t_map (m: map_group) : typ = fun x ->
+let t_map (#b: Cbor.raw_data_item) (m: map_group b) : bounded_typ b = fun x ->
   Cbor.Map? x &&
   matches_map_group m (Cbor.Map?.v x)
 
+let rec t_map_rec
+  (phi: (b: Cbor.raw_data_item) -> (bounded_typ b -> map_group b))
+  (x: Cbor.raw_data_item)
+: GTot bool
+  (decreases x)
+= Cbor.Map? x &&
+  matches_map_group (phi x (t_map_rec phi)) (Cbor.Map?.v x)
+
 // Section 3.6: Tags
 
-let t_tag (tag: U64.t) (t: typ) : typ = fun x ->
+let t_tag (#b: Cbor.raw_data_item) (tag: U64.t) (t: bounded_typ b) : bounded_typ b = fun x ->
   Cbor.Tagged? x &&
   Cbor.Tagged?.tag x = tag &&
   t (Cbor.Tagged?.v x)
 
-// Section 3.7.1: Control .size
+let rec t_tag_rec
+  (tag: U64.t)
+  (phi: (b: Cbor.raw_data_item) -> (bounded_typ b -> bounded_typ b))
+  (x: Cbor.raw_data_item)
+: GTot bool
+  (decreases x)
+= Cbor.Tagged? x &&
+  Cbor.Tagged?.tag x = tag &&
+  phi x (t_tag_rec tag phi) (Cbor.Tagged?.v x)
+
+// Section 3.8.1: Control .size
 
 let str_size (ty: Cbor.major_type_byte_string_or_text_string) (sz: nat) : typ = fun x ->
   Cbor.String? x &&
@@ -304,16 +391,17 @@ let uint_size (sz: nat) : typ = fun x ->
   Cbor.Int64?.typ x = Cbor.major_type_uint64 &&
   U64.v (Cbor.Int64?.v x) < pow2 sz
 
-// Section 3.7.2: Control .cbor
+// Section 3.8.4: Control .cbor
 // We parameterize over the CBOR order on which the CBOR parser depends
 
 let bstr_cbor
   (data_item_order: (Cbor.raw_data_item -> Cbor.raw_data_item -> bool))
-  (ty: typ)
+  (ty: typ) // TODO: enable recursion for this construct? If so, we need to replace << with some serialization size
 : typ = fun x ->
   Cbor.String? x &&
   Cbor.String?.typ x = Cbor.major_type_byte_string &&
   FStar.StrongExcludedMiddle.strong_excluded_middle (
     exists y . Cbor.serialize_cbor y == Cbor.String?.v x /\
-    Cbor.data_item_wf data_item_order y
+    Cbor.data_item_wf data_item_order y /\
+    ty y == true
   )
