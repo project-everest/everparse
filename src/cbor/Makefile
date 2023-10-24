@@ -90,7 +90,7 @@ test-steel: extract-steel
 
 test-steelc: extract-steelc
 
-test: test-steel test-steelc
+test: test-steel test-steelc test-steel-raw
 
 .PHONY: all verify-all clean %.fst-in %.fsti-in lowparse extract-steel extract-steelc extract test-steel test-steelc test extract-steel-raw test-steel-raw
 
