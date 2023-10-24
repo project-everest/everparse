@@ -75,7 +75,7 @@ $(ALL_CHECKED_FILES): %.checked:
 extract-steelc: $(filter-out COSE_% CDDL_% DPE_%,$(ALL_KRML_FILES))
 	$(KRML) -bundle 'CBOR.SteelC+CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORSteelC]' $^
 
-extract-steel-raw: $(filter-out CBOR_SteelC% CBOR_SteelST.krml,$(ALL_KRML_FILES))
+extract-steel-raw: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelC% CBOR_SteelST.krml,$(ALL_KRML_FILES))
 	$(KRML) -bundle 'CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORRaw]' $^
 
 extract-steel: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelC%,$(ALL_KRML_FILES))
