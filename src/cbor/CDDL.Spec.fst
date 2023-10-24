@@ -379,6 +379,30 @@ let rec t_tag_rec
   Cbor.Tagged?.tag x = tag &&
   phi x (t_tag_rec tag phi) (Cbor.Tagged?.v x)
 
+// Multi-purpose recursive combinator, to allow disjunctions between destructors
+
+let rec multi_rec
+  (phi_base: typ)
+  (phi_array: (b: Cbor.raw_data_item) -> bounded_typ b -> array_group3 b)
+  (phi_map: (b: Cbor.raw_data_item) -> bounded_typ b -> map_group b)
+  (phi_tag: U64.t -> (b: Cbor.raw_data_item) -> bounded_typ b -> bounded_typ b)
+  (x: Cbor.raw_data_item)
+: GTot bool
+  (decreases x)
+= phi_base x ||
+  begin match x with
+  | Cbor.Array v ->
+    begin match phi_array x (multi_rec phi_base phi_array phi_map phi_tag) v with
+    | Some [] -> true
+    | _ -> false
+    end
+  | Cbor.Map v ->
+    matches_map_group (phi_map x (multi_rec phi_base phi_array phi_map phi_tag)) v
+  | Cbor.Tagged tag v ->
+    phi_tag tag x (multi_rec phi_base phi_array phi_map phi_tag) v
+  | _ -> false
+  end
+
 // Section 3.8.1: Control .size
 
 let str_size (ty: Cbor.major_type_byte_string_or_text_string) (sz: nat) : typ = fun x ->
