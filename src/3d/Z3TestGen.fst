@@ -871,6 +871,13 @@ let module_and_wrapper_name
   | [modul; fn] -> modul, Target.wrapper_name modul fn
   | _ -> failwith "Z3TestGen.wrapper_name"
 
+let module_and_validator_name
+  (s: string)
+: ML (string & string)
+= match String.split ['.'] s with
+  | [modul; fn] -> modul, Target.validator_name modul fn
+  | _ -> failwith "Z3TestGen.validator_name"
+
 let rec print_witness_args_as_c
   (out: (string -> ML unit))
   (l: list arg_type) (args: list string)
@@ -1197,7 +1204,7 @@ unsigned long long "^arg_var^" = 0;
 
 let test_checker_c
   (modul: string)
-  (wrapper_name: string)
+  (validator_name: string)
   (params: list arg_type)
 : Tot string
 =
@@ -1205,13 +1212,33 @@ let test_checker_c
   let nb_cmd_and_args_s = string_of_int nb_cmd_and_args in
   let nb_args_s = string_of_int (nb_cmd_and_args - 1) in
   "
-#include \""^modul^"Wrapper.h\"
+#include \""^modul^".h\"
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
+
+static void TestErrorHandler (
+  const char *typename_s,
+  const char *fieldname,
+  const char *reason,
+  uint64_t error_code,
+  uint8_t *context,
+  EVERPARSE_INPUT_BUFFER input,
+  uint64_t start_pos
+) {
+  (void) error_code;
+  (void) input;
+  if (*context) {
+    printf(\"Reached from position %ld: type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
+  } else {
+    printf(\"Parsing failed at position %ld: type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
+    *context = 1;
+  }
+}
+
 int main(int argc, char** argv) {
   if (argc < "^nb_cmd_and_args_s^") {
     printf(\"Wrong number of arguments, expected "^nb_args_s^", got %d\\n\", argc);
@@ -1244,10 +1271,11 @@ int main(int argc, char** argv) {
   }
   uint8_t * buf = (uint8_t *) vbuf;
   printf(\"Read %ld bytes from %s\\n\", len, filename);
-  BOOLEAN result = "^wrapper_name^"("^call_args_lhs^"buf, len);
+  uint8_t context = 0;
+  uint64_t result = "^validator_name^"("^call_args_lhs^"&context, &TestErrorHandler, buf, len, 0);
   munmap(vbuf, len);
   close(testfile);
-  if (! result) {
+  if (EverParseIsError(result)) {
     printf(\"Witness from %s REJECTED\\n\", filename);
     return 1;
   };
@@ -1261,7 +1289,7 @@ let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : M
   if None? args
   then failwith (Printf.sprintf "produce_test_checker_exe: parser %s not found" name1);
   let args = Some?.v args in
-  let modul, wrapper_name = module_and_wrapper_name name1 in
+  let modul, validator_name = module_and_validator_name name1 in
   with_out_file out_file (fun cout ->
-    cout (test_checker_c modul wrapper_name args)
+    cout (test_checker_c modul validator_name args)
   )

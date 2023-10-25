@@ -421,6 +421,7 @@ val print_decls (modul: string) (ds:list decl) : ML string
 val print_types_decls (modul: string) (ds:list decl) : ML string
 val print_decls_signature (modul: string) (ds:list decl) : ML string
 val wrapper_name (modul: string) (fn: string) : ML string
+val validator_name (modul: string) (fn: string) : ML string
 type produce_everparse_error = | ProduceEverParseError
 type opt_produce_everparse_error = option produce_everparse_error
 val print_c_entry (_: opt_produce_everparse_error) (modul: string) (env: global_env) (ds:list decl)
