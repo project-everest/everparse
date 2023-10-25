@@ -1329,7 +1329,7 @@ let print_c_entry
     if HashingOptions.InputStreamBuffer? input_stream_binding
     then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason)%s"
                          modul
-                         (if produce_everparse_error = Some ProduceEverParseError then "{}" else ";")
+                         (if produce_everparse_error = Some ProduceEverParseError then "{(void) StructName; (void) FieldName; (void) Reason;}" else ";")
     else ""
   in
   let impl =
