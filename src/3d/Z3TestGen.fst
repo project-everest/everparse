@@ -1164,3 +1164,104 @@ let do_diff_test (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 
   }
 "
 )
+
+
+let test_exe_mk_arg
+  (accu: (int & string & string & string))
+  (p: arg_type)
+: Tot (int & string & string & string)
+= let (cur_arg, read_args, call_args_lhs, call_args_rhs) = accu in
+  let cur_arg_s = string_of_int cur_arg in
+  let arg_var = "arg" ^ cur_arg_s in
+  let cur_arg' = cur_arg + 1 in
+  let read_args' = read_args ^
+  begin match p with
+  | ArgInt _ -> "
+  unsigned long long "^arg_var^" = strtoull(argv["^cur_arg_s^"], NULL, 0);
+"
+  | ArgBool -> "
+  BOOLEAN "^arg_var^" = (strcmp(argv["^cur_arg_s^"], \"true\") == 0);
+  if (! ("^arg_var^" || strcmp(argv["^cur_arg_s^"], \"false\") == 0)) {
+    printf(\"Argument %d must be true or false, got %s\\n\", "^cur_arg_s^", argv["^cur_arg_s^"]);
+    return 1;
+  }
+"
+  | _ -> "
+unsigned long long "^arg_var^" = 0;
+"
+  end
+  in
+  let call_args_lhs' = call_args_lhs ^ arg_var ^ ", " in
+  let call_args_rhs' = call_args_lhs ^ ", " ^ arg_var in
+  (cur_arg', read_args', call_args_lhs', call_args_rhs')
+
+let test_checker_c
+  (modul: string)
+  (wrapper_name: string)
+  (params: list arg_type)
+: Tot string
+=
+  let (nb_cmd_and_args, read_args, call_args_lhs, call_args_rhs) = List.Tot.fold_left test_exe_mk_arg (2, "", "", "") params in
+  let nb_cmd_and_args_s = string_of_int nb_cmd_and_args in
+  let nb_args_s = string_of_int (nb_cmd_and_args - 1) in
+  "
+#include \""^modul^"Wrapper.h\"
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <stdlib.h>
+int main(int argc, char** argv) {
+  if (argc < "^nb_cmd_and_args_s^") {
+    printf(\"Wrong number of arguments, expected "^nb_args_s^", got %d\\n\", argc);
+    return 2;
+  }
+  char * filename = argv[1];
+"^read_args^"
+  int testfile = open(filename, O_RDONLY);
+  if (testfile == -1) {
+    printf(\"File %s does not exist\\n\", filename);
+    return 2;
+  }
+  struct stat statbuf;
+  if (fstat(testfile, &statbuf)) {
+    close(testfile);
+    printf(\"Cannot detect file size for %s\\n\", filename);
+    return 2;
+  }
+  off_t len = statbuf.st_size;
+  if (len > 4294967295) {
+    printf(\"File is too large. EverParse/3D only supports data up to 4 GB\");
+    return 2;
+  }
+  void * vbuf =
+    mmap(NULL, len, PROT_READ, MAP_PRIVATE, testfile, 0);
+  if (vbuf == MAP_FAILED) {
+    close(testfile);
+    printf(\"Cannot read %ld bytes from %s\\n\", len, filename);
+    return 2;
+  }
+  uint8_t * buf = (uint8_t *) vbuf;
+  printf(\"Read %ld bytes from %s\\n\", len, filename);
+  BOOLEAN result = "^wrapper_name^"("^call_args_lhs^"buf, len);
+  munmap(vbuf, len);
+  close(testfile);
+  if (! result) {
+    printf(\"Witness from %s REJECTED\\n\", filename);
+    return 1;
+  };
+  printf(\"Witness from %s ACCEPTED\\n\", filename);
+  return 0;
+}
+"
+
+let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : ML unit =
+  let args = List.assoc name1 prog in
+  if None? args
+  then failwith (Printf.sprintf "produce_test_checker_exe: parser %s not found" name1);
+  let args = Some?.v args in
+  let modul, wrapper_name = module_and_wrapper_name name1 in
+  with_out_file out_file (fun cout ->
+    cout (test_checker_c modul wrapper_name args)
+  )

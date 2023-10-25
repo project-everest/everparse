@@ -489,6 +489,25 @@ let produce_z3
 : ML unit
 = ignore (process_files_for_z3 FStar.IO.print_string files_and_modules None false)
 
+let build_test_exe
+  (out_dir: string)
+: ML unit
+=
+  if not (Options.get_skip_c_makefiles ())
+  then begin
+    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"]
+  end
+
+let build_and_run_test_exe
+  (out_dir: string)
+: ML unit
+=
+  if not (Options.get_skip_c_makefiles ())
+  then begin
+    build_test_exe out_dir;
+    OS.run_cmd (OS.concat out_dir "test.exe") []
+  end
+
 let with_z3_thread_or
   (batch: bool)
   (out_dir: string)
@@ -501,11 +520,7 @@ let with_z3_thread_or
     let thr = Z3.with_z3_thread debug transcript f in
     Some (fun _ ->
       Z3.wait_for_z3_thread thr;
-      if not (Options.get_skip_c_makefiles ())
-      then begin
-        OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"];
-        OS.run_cmd (OS.concat out_dir "test.exe") []
-      end
+      build_and_run_test_exe out_dir
     )
   else begin
     Z3.with_z3 debug transcript f;
@@ -548,6 +563,23 @@ let produce_z3_and_diff_test
   let (name1, name2) = names in
   produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
     Z3TestGen.do_diff_test out_file z3 prog name1 name2 nbwitnesses
+  )
+
+let produce_test_checker_exe
+  (batch: bool)
+  (out_dir: string)
+  (name1: string)
+: Tot process_files_t
+= fun
+  (files_and_modules:list (string & string))
+  (emit_fstar:string -> ML bool)
+  (emit_output_types_defs:bool)
+->
+  let prog = process_files_for_z3 (fun _ -> ()) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
+  Z3TestGen.produce_test_checker_exe (OS.concat out_dir "testcases.c") prog name1;
+  Some (fun _ ->
+    if batch then
+    build_test_exe out_dir
   )
 
 let produce_and_postprocess_c
@@ -651,6 +683,11 @@ let go () : ML unit =
     fun modul ->
       batch || List.Tot.mem modul cmd_line_modules in
   let process : process_files_t =
+    (* Special mode: --test_checker *)
+    let test_checker = Options.get_test_checker () in
+    if Some? test_checker
+    then produce_test_checker_exe batch out_dir (Some?.v test_checker)
+    else
     (* Special mode: --z3_diff_test *)
     let z3_diff_test = Options.get_z3_diff_test () in
     if Some? z3_diff_test

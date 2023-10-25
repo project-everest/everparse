@@ -77,3 +77,5 @@ val get_debug: unit -> ML bool
 val get_z3_diff_test: unit -> ML (option (string & string))
 
 val get_save_z3_transcript: unit -> ML (option string)
+
+val get_test_checker: unit -> ML (option string)
