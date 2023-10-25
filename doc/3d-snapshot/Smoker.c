@@ -22,47 +22,46 @@ SmokerValidateSmoker(
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
-  uint64_t positionAfternone;
+  uint64_t positionAfterage;
   if (hasBytes0)
   {
-    positionAfternone = StartPosition + 4ULL;
+    positionAfterage = StartPosition + 4ULL;
   }
   else
   {
-    positionAfternone =
+    positionAfterage =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
   uint64_t positionAfterSmoker;
-  if (EverParseIsError(positionAfternone))
+  if (EverParseIsError(positionAfterage))
   {
-    positionAfterSmoker = positionAfternone;
+    positionAfterSmoker = positionAfterage;
   }
   else
   {
-    uint32_t none = Load32Le(Input + (uint32_t)StartPosition);
-    BOOLEAN noneConstraintIsOk = none >= (uint32_t)21U;
-    uint64_t
-    positionAfternone1 = EverParseCheckConstraintOk(noneConstraintIsOk, positionAfternone);
-    if (EverParseIsError(positionAfternone1))
+    uint32_t age = Load32Le(Input + (uint32_t)StartPosition);
+    BOOLEAN ageConstraintIsOk = age >= (uint32_t)21U;
+    uint64_t positionAfterage1 = EverParseCheckConstraintOk(ageConstraintIsOk, positionAfterage);
+    if (EverParseIsError(positionAfterage1))
     {
-      positionAfterSmoker = positionAfternone1;
+      positionAfterSmoker = positionAfterage1;
     }
     else
     {
       /* Validating field cigarettesConsumed */
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      BOOLEAN hasBytes = 1ULL <= (InputLength - positionAfternone1);
+      BOOLEAN hasBytes = 1ULL <= (InputLength - positionAfterage1);
       uint64_t positionAfterSmoker0;
       if (hasBytes)
       {
-        positionAfterSmoker0 = positionAfternone1 + 1ULL;
+        positionAfterSmoker0 = positionAfterage1 + 1ULL;
       }
       else
       {
         positionAfterSmoker0 =
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-            positionAfternone1);
+            positionAfterage1);
       }
       uint64_t res;
       if (EverParseIsSuccess(positionAfterSmoker0))
@@ -77,7 +76,7 @@ SmokerValidateSmoker(
           EverParseGetValidatorErrorKind(positionAfterSmoker0),
           Ctxt,
           Input,
-          positionAfternone1);
+          positionAfterage1);
         res = positionAfterSmoker0;
       }
       positionAfterSmoker = res;
@@ -88,7 +87,7 @@ SmokerValidateSmoker(
     return positionAfterSmoker;
   }
   ErrorHandlerFn("_smoker",
-    "none",
+    "age",
     EverParseErrorReasonOfResult(positionAfterSmoker),
     EverParseGetValidatorErrorKind(positionAfterSmoker),
     Ctxt,
