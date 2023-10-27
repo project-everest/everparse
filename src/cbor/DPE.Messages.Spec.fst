@@ -826,10 +826,13 @@ let command_message = Cddl.t_array3 (
   Cddl.array_group3_item (* input_args *) input_args
 )
 
+#push-options "--z3rlimit 32"
+#restart-solver
 let _ : squash (command_message `Cddl.typ_equiv` Cddl.t_array3 (
   Cddl.array_group3_item command_id `Cddl.array_group3_concat`
   Cddl.array_group3_item (Cddl.t_map default_args_group)
 )) = ()
+#pop-options
 
 let response_message = Cddl.t_array3 (
   Cddl.array_group3_item (* error_code *) error_code `Cddl.array_group3_concat`

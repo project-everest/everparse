@@ -102,10 +102,10 @@ let cose_sign1_tagged = Cddl.t_tag tag_cose_sign1 ( cose_sign1)
 // Section 4.4
 
 [@@noextract_to "krml"]
-assume val s_Signature : Seq.seq U8.t // "Signature"
+assume val s_Signature : Cddl.string64 // "Signature"
 
 [@@noextract_to "krml"]
-assume val s_Signature1 : Seq.seq U8.t // "Signature1"
+assume val s_Signature1 : Cddl.string64 // "Signature1"
 
 let sig_structure = Cddl.t_array3 (
   Cddl.array_group3_item (* context *) (Cddl.name_as_text_string s_Signature `Cddl.t_choice` Cddl.name_as_text_string s_Signature1) `Cddl.array_group3_concat`
@@ -143,19 +143,19 @@ let cose_encrypt0_tagged = Cddl.t_tag tag_cose_encrypt0 ( cose_encrypt0)
 // Section 5.3
 
 [@@noextract_to "krml"]
-assume val s_Encrypt: Seq.seq U8.t // "Encrypt"
+assume val s_Encrypt: Cddl.string64 // "Encrypt"
 
 [@@noextract_to "krml"]
-assume val s_Encrypt0: Seq.seq U8.t // "Encrypt0"
+assume val s_Encrypt0: Cddl.string64 // "Encrypt0"
 
 [@@noextract_to "krml"]
-assume val s_Enc_Recipient: Seq.seq U8.t // "Enc_Recipient"
+assume val s_Enc_Recipient: Cddl.string64 // "Enc_Recipient"
 
 [@@noextract_to "krml"]
-assume val s_Mac_Recipient: Seq.seq U8.t // "Mac_Recipient"
+assume val s_Mac_Recipient: Cddl.string64 // "Mac_Recipient"
 
 [@@noextract_to "krml"]
-assume val s_Rec_Recipient: Seq.seq U8.t // "Rec_Recipient"
+assume val s_Rec_Recipient: Cddl.string64 // "Rec_Recipient"
 
 let enc_structure = Cddl.t_array3 (
   Cddl.array_group3_item (* context *) (Cddl.name_as_text_string s_Encrypt `Cddl.t_choice` Cddl.name_as_text_string s_Encrypt0 `Cddl.t_choice` Cddl.name_as_text_string s_Enc_Recipient `Cddl.t_choice` Cddl.name_as_text_string s_Mac_Recipient `Cddl.t_choice` Cddl.name_as_text_string s_Rec_Recipient) `Cddl.array_group3_concat`
@@ -187,10 +187,10 @@ let cose_mac0_tagged = Cddl.t_tag tag_cose_mac0 ( cose_mac0)
 // Section 6.3
 
 [@@noextract_to "krml"]
-assume val s_MAC: Seq.seq U8.t // "MAC"
+assume val s_MAC: Cddl.string64 // "MAC"
 
 [@@noextract_to "krml"]
-assume val s_MAC0: Seq.seq U8.t // "MAC0"
+assume val s_MAC0: Cddl.string64 // "MAC0"
 
 let mac_structure = Cddl.t_array3 (
   Cddl.array_group3_item (* context *) (Cddl.name_as_text_string s_MAC `Cddl.t_choice` Cddl.name_as_text_string s_MAC0) `Cddl.array_group3_concat`
