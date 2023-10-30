@@ -25,6 +25,19 @@ val serialize_cbor_nonempty
 
 val deterministically_encoded_cbor_map_key_order : Ghost.erased (raw_data_item -> raw_data_item -> bool)
 
+val deterministically_encoded_cbor_map_key_order_irrefl
+  (x: raw_data_item)
+: Lemma
+  (Ghost.reveal deterministically_encoded_cbor_map_key_order x x == false)
+  [SMTPat (Ghost.reveal deterministically_encoded_cbor_map_key_order x x)]
+
+val deterministically_encoded_cbor_map_key_order_trans
+  (x y z: raw_data_item)
+: Lemma
+  (requires (Ghost.reveal deterministically_encoded_cbor_map_key_order x y == true /\ Ghost.reveal deterministically_encoded_cbor_map_key_order y z == true))
+  (ensures (Ghost.reveal deterministically_encoded_cbor_map_key_order x z == true))
+  [SMTPat (Ghost.reveal deterministically_encoded_cbor_map_key_order x y); SMTPat (Ghost.reveal deterministically_encoded_cbor_map_key_order y z)]
+
 let rec list_ghost_assoc
   (#key: Type)
   (#value: Type)

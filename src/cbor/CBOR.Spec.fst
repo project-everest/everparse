@@ -20,6 +20,14 @@ let serialize_cbor_nonempty
 
 let deterministically_encoded_cbor_map_key_order = CBOR.Spec.Format.deterministically_encoded_cbor_map_key_order
 
+let deterministically_encoded_cbor_map_key_order_irrefl
+  x
+= Classical.move_requires (CBOR.Spec.Format.deterministically_encoded_cbor_map_key_order_irrefl x) x
+
+let deterministically_encoded_cbor_map_key_order_trans
+  x y z
+= CBOR.Spec.Format.deterministically_encoded_cbor_map_key_order_trans x y z
+
 let rec list_ghost_assoc_eq
   (#key #value: Type)
   (k: key)
