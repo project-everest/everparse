@@ -2635,21 +2635,7 @@ assume val cbor_map_get_case_map
     (~ (Cbor.Tagged? vkey \/ Cbor.Array? vkey \/ Cbor.Map? vkey) /\
       CBOR_Case_Map? map
     )
-    (fun res -> Found? res == Some? (list_ghost_assoc (Ghost.reveal vkey) (Cbor.Map?.v vmap)))
-
-let rec list_ghost_assoc_eq
-  (#key #value: Type)
-  (k: key)
-  (m: list (key & value))
-: Lemma
-  (list_ghost_assoc k m == LowParse.Spec.Assoc.list_ghost_assoc k m)
-  [SMTPat (list_ghost_assoc k m)]
-= match m with
-  | [] -> ()
-  | (k', _) :: m' ->
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
-    then ()
-    else list_ghost_assoc_eq k m'
+    (fun res -> Found? res == Some? (Cbor.list_ghost_assoc (Ghost.reveal vkey) (Cbor.Map?.v vmap)))
 
 let mk_cbor_nlist_assoc_eq_keys
   (vkey: Ghost.erased Cbor.raw_data_item)
@@ -2674,7 +2660,7 @@ let cbor_map_get_case_serialized
     (raw_data_item_match key vkey `star` raw_data_item_match map vmap)
     (fun res ->
       raw_data_item_match key vkey `star` cbor_map_get_post vkey vmap map res `star` 
-      pure (Found? res == Some? (list_ghost_assoc (Ghost.reveal vkey) (Cbor.Map?.v vmap)))
+      pure (Found? res == Some? (Cbor.list_ghost_assoc (Ghost.reveal vkey) (Cbor.Map?.v vmap)))
     )
     (~ (Cbor.Tagged? vkey \/ Cbor.Array? vkey \/ Cbor.Map? vkey) /\
       CBOR_Case_Serialized? map

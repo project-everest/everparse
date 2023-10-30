@@ -645,27 +645,13 @@ type cbor_map_get_t =
 | Found of cbor
 | NotFound
 
-let rec list_ghost_assoc
-  (#key: Type)
-  (#value: Type)
-  (k: key)
-  (m: list (key & value))
-: GTot (option value)
-  (decreases m)
-= match m with
-  | [] -> None
-  | (k', v') :: m' ->
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
-    then Some v'
-    else list_ghost_assoc k m'
-
 [@@__reduce__]
 let cbor_map_get_post_not_found
   (vkey: Cbor.raw_data_item)
   (vmap: Cbor.raw_data_item { Cbor.Map? vmap })
   (map: cbor)
 : Tot vprop
-= raw_data_item_match map vmap `star` pure (list_ghost_assoc vkey (Cbor.Map?.v vmap) == None)
+= raw_data_item_match map vmap `star` pure (Cbor.list_ghost_assoc vkey (Cbor.Map?.v vmap) == None)
 
 [@@__reduce__]
 let cbor_map_get_post_found
@@ -677,7 +663,7 @@ let cbor_map_get_post_found
 = exists_ (fun vvalue ->
     raw_data_item_match value vvalue `star`
     (raw_data_item_match value vvalue `implies_` raw_data_item_match map vmap) `star`
-    pure (list_ghost_assoc vkey (Cbor.Map?.v vmap) == Some vvalue)
+    pure (Cbor.list_ghost_assoc vkey (Cbor.Map?.v vmap) == Some vvalue)
   )
 
 let cbor_map_get_post
@@ -699,7 +685,7 @@ val cbor_map_get
     (raw_data_item_match key vkey `star` raw_data_item_match map vmap)
     (fun res -> raw_data_item_match key vkey `star` cbor_map_get_post vkey vmap map res)
     (~ (Cbor.Tagged? vkey \/ Cbor.Array? vkey \/ Cbor.Map? vkey))
-    (fun res -> Found? res == Some? (list_ghost_assoc (Ghost.reveal vkey) (Cbor.Map?.v vmap)))
+    (fun res -> Found? res == Some? (Cbor.list_ghost_assoc (Ghost.reveal vkey) (Cbor.Map?.v vmap)))
 
 (* Serialization *)
 
