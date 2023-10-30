@@ -326,10 +326,35 @@ let rec t_array3_rec
 noeq
 type map_group_entry (b: option Cbor.raw_data_item) = | MapGroupEntry: (fst: bounded_typ_gen b) -> (snd: bounded_typ_gen b) -> map_group_entry b
 
+module Pull = FStar.Ghost.Pull
+
+noextract
+let opt_map_entry_bounded'
+  (b: option Cbor.raw_data_item)
+  (x: (Cbor.raw_data_item & Cbor.raw_data_item))
+: GTot bool
+= FStar.StrongExcludedMiddle.strong_excluded_middle (opt_precedes x b)
+
+let opt_map_entry_bounded
+  (b: option Cbor.raw_data_item)
+: GTot ((Cbor.raw_data_item & Cbor.raw_data_item) -> bool)
+= Pull.pull (opt_map_entry_bounded' b)
+
+let rec opt_precedes_map_for_all_opt_map_entry_bounded
+  (b: option Cbor.raw_data_item)
+  (l: list (Cbor.raw_data_item & Cbor.raw_data_item))
+: Lemma
+  (requires (opt_precedes l b))
+  (ensures (List.Tot.for_all (opt_map_entry_bounded b) l))
+  [SMTPat (List.Tot.for_all (opt_map_entry_bounded b) l)]
+= match l with
+  | [] -> ()
+  | _ :: q -> opt_precedes_map_for_all_opt_map_entry_bounded b q
+
 let matches_map_group_entry
   (#b: option Cbor.raw_data_item)
   (ge: map_group_entry b)
-  (x: (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (x: (Cbor.raw_data_item & Cbor.raw_data_item) { opt_map_entry_bounded b x == true })
 : GTot bool
 = ge.fst (fst x) && ge.snd (snd x)
 
@@ -407,22 +432,24 @@ let restricted_map_entry_index
   (g: map_group b)
 = (x: map_group_entry_index g { ~ (ZeroOrMore? x) })
 
-let rec list_index_precedes
+let rec list_index_for_all
   (#t: Type)
+  (p: t -> bool)
   (l: list t)
   (i: bounded_nat (List.Tot.length l))
 : Lemma
-  (List.Tot.index l i << l)
-  [SMTPat (List.Tot.index l i)]
+  (requires (List.Tot.for_all p l == true))
+  (ensures (p (List.Tot.index l i) == true))
+  [SMTPat (List.Tot.for_all p l); SMTPat (List.Tot.index l i)]
 = if i = 0
   then ()
-  else list_index_precedes (List.Tot.tl l) (i - 1)
+  else list_index_for_all p (List.Tot.tl l) (i - 1)
 
 [@@erasable]
 noeq
 type matches_map_group_t
   (#b: option Cbor.raw_data_item)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   (mg: map_group b)
 = {
     f: (bounded_nat (List.Tot.length x) -> map_group_entry_index mg);
@@ -445,14 +472,14 @@ type matches_map_group_t
 noextract
 let matches_map_group_prop_partial
   (#b: option Cbor.raw_data_item)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   (mg: map_group b)
 : Tot prop
 = exists (prf: matches_map_group_t x mg) . True
 
 let matches_map_group_prop_partial_intro
   (#b: option Cbor.raw_data_item)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   (mg: map_group b)
   (prf: matches_map_group_t x mg)
 : Lemma
@@ -462,7 +489,7 @@ let matches_map_group_prop_partial_intro
 noextract
 let matches_map_group_proof_is_final
   (#b: option Cbor.raw_data_item)
-  (#x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (#x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   (#mg: map_group b)
   (prf: matches_map_group_t x mg)
 : Tot prop
@@ -471,14 +498,14 @@ let matches_map_group_proof_is_final
 noextract
 let matches_map_group_prop
   (#b: option Cbor.raw_data_item)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   (mg: map_group b)
 : Tot prop
 = exists (prf: matches_map_group_t x mg) . matches_map_group_proof_is_final prf
 
 let matches_map_group_prop_weaken
   (#b: option Cbor.raw_data_item)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   (mg: map_group b)
 : Lemma
   (requires (matches_map_group_prop x mg))
@@ -488,7 +515,6 @@ let matches_map_group_prop_weaken
 let matches_map_group_prop_empty
   (b: option Cbor.raw_data_item)
 : Lemma
-  (requires (opt_precedes ([] <: list (Cbor.raw_data_item & Cbor.raw_data_item)) b))
   (ensures (matches_map_group_prop [] (map_group_empty #b)))
 = let prf : matches_map_group_t #b [] map_group_empty = {
     f = (fun x -> false_elim ());
@@ -501,7 +527,7 @@ let matches_map_group_prop_empty
 
 let matches_map_group_prop_no_one
   (#b: option Cbor.raw_data_item)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   (mg: map_group b)
 : Lemma
   (requires (Nil? mg.one /\ matches_map_group_prop_partial x mg))
@@ -511,7 +537,7 @@ let matches_map_group_prop_no_one
 let matches_map_group
   (#b: option Cbor.raw_data_item)
   (m: map_group b)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) {opt_precedes x b })
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) {List.Tot.for_all (opt_map_entry_bounded b) x })
 : GTot bool
 = FStar.StrongExcludedMiddle.strong_excluded_middle (matches_map_group_prop x m)
 
@@ -554,8 +580,6 @@ let map_group_ignore_restricted_entries
       one = [];
       zero_or_one = [];
   }
-
-module Pull = FStar.Ghost.Pull
 
 noextract
 let rec list_find_index
@@ -710,7 +734,7 @@ let map_group_included_zero_or_more
 let map_group_included_zero_or_more_prf
   #b
   (small large: map_group b)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   (prf: matches_map_group_t x small)
 : Pure (matches_map_group_t x large)
     (requires (map_group_included_zero_or_more small large))
@@ -733,7 +757,7 @@ let map_group_included_zero_or_more_correct
   (requires (map_group_included_zero_or_more small large))
   (ensures (is_sub_map_group_of small large))
 = let phi
-    (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+    (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   : Lemma
     (requires (
       matches_map_group_prop x small
@@ -819,7 +843,7 @@ let rec list_ghost_forall2_index
 let map_group_included_pointwise_prf
   #b
   (small large: map_group b)
-  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   (prf: matches_map_group_t x small)
 : Pure (matches_map_group_t x large)
     (requires (map_group_included_pointwise small large))
@@ -855,7 +879,7 @@ let map_group_included_pointwise_correct
   (requires (map_group_included_pointwise small large))
   (ensures (is_sub_map_group_of small large))
 = let phi
-    (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { opt_precedes x b })
+    (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
   : Lemma
     (requires (
       matches_map_group_prop x small
