@@ -424,3 +424,19 @@ let compare_for_is_subtype_of_weak_compare_for
 : Tot unit
 = let wc : weak_compare_for order = c in
   ()
+
+module Seq = FStar.Seq
+
+let rec seq_to_list_append
+  (#t: Type)
+  (s1 s2: Seq.seq t)
+: Lemma
+  (ensures (Seq.seq_to_list (s1 `Seq.append` s2) == Seq.seq_to_list s1 `List.Tot.append` Seq.seq_to_list s2))
+  (decreases (Seq.length s1))
+= if Seq.length s1 = 0
+  then begin
+    assert ((s1 `Seq.append` s2) `Seq.equal` s2)
+  end else begin
+    assert (Seq.slice (s1 `Seq.append` s2) 1 (Seq.length (s1 `Seq.append` s2)) `Seq.equal` (Seq.slice s1 1 (Seq.length s1) `Seq.append` s2));
+    seq_to_list_append (Seq.slice s1 1 (Seq.length s1)) s2
+  end

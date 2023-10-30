@@ -194,6 +194,88 @@ let bytes_lex_order_total
   Seq.lemma_seq_list_bij y;
   S.lex_order_total byte_compare (fun _ _ -> ()) (fun _ _ -> ()) (Seq.seq_to_list x) (Seq.seq_to_list y)
 
+let bytes_lex_compare_append
+  (l1 l2: bytes)
+  (l1' l2': bytes)
+: Lemma
+  (requires (
+    bytes_lex_compare l1 l2 < 0 /\
+    Seq.length l1 == Seq.length l2
+  ))
+  (ensures (
+    bytes_lex_compare (Seq.append l1 l1') (Seq.append l2 l2') < 0
+  ))
+= S.seq_to_list_append l1 l1';
+  S.seq_to_list_append l2 l2';
+  S.lex_compare_append byte_compare (Seq.seq_to_list l1) (Seq.seq_to_list l2) (Seq.seq_to_list l1') (Seq.seq_to_list l2')
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+let rec bytes_lex_order_prefix_or_append
+  (l1 l2: bytes)
+  (suff1 suff2: bytes)
+: Lemma
+  (requires (bytes_lex_order l1 l2 == true))
+  (ensures (
+    (Seq.length l1 <= Seq.length l2 /\ Seq.slice l2 0 (Seq.length l1) `Seq.equal` l1) \/
+    bytes_lex_order (l1 `Seq.append` suff1) (l2 `Seq.append` suff2) == true
+  ))
+  (decreases (Seq.length l1))
+= if Seq.length l1 = 0
+  then ()
+  else begin
+    Seq.lemma_split l1 1;
+    Seq.lemma_split l2 1;
+    let h1 = Seq.slice l1 0 1 in
+    let t1 = Seq.slice l1 1 (Seq.length l1) in
+    Seq.append_assoc h1 t1 suff1;
+    let h2 = Seq.slice l2 0 1 in
+    let t2 = Seq.slice l2 1 (Seq.length l2) in
+    Seq.append_assoc h2 t2 suff2;
+    if Seq.index l1 0 `FStar.UInt8.lt` Seq.index l2 0
+    then
+      bytes_lex_compare_append h1 h2 (t1 `Seq.append` suff1) (t2 `Seq.append` suff2)
+    else begin
+      assert (Seq.index l1 0 = Seq.index l2 0);
+      S.seq_to_list_append l1 suff1;
+      S.seq_to_list_append l2 suff2;
+      S.seq_to_list_append t1 suff1;
+      S.seq_to_list_append t2 suff2;
+      bytes_lex_order_prefix_or_append t1 t2 suff1 suff2;
+      ()
+    end
+  end
+
+#pop-options
+
+let bytes_lex_order_serialize_strong_prefix
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (l1 l2: t)
+  (suff1 suff2: bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    bytes_lex_order (serialize s l1) (serialize s l2) == true
+  ))
+  (ensures (
+    bytes_lex_order (serialize s l1 `Seq.append` suff1) (serialize s l2 `Seq.append` suff2) == true
+  ))
+= let s1 = serialize s l1 in
+  let s2 = serialize s l2 in
+  bytes_lex_order_prefix_or_append s1 s2 suff1 suff2;
+  if Seq.length s1 <= Seq.length s2 && Seq.slice s2 0 (Seq.length s1) = s1
+  then begin
+    Seq.lemma_split s2 (Seq.length s1);
+    Seq.append_empty_r s2;
+    serialize_strong_prefix s l1 l2 (Seq.slice s2 (Seq.length s1) (Seq.length s2)) Seq.empty;
+    bytes_lex_order_irrefl (serialize s l1) (serialize s l2)
+  end else
+    ()
+
 let bytes_length_first_lex_order (x y: bytes) : Tot bool =
   S.length_first_lex_order byte_compare (Seq.seq_to_list x) (Seq.seq_to_list y)
 
