@@ -366,8 +366,20 @@ let serialize_cbor_error
 #push-options "--z3rlimit 64"
 #restart-solver
 
-let read_cbor
-  #va #p a sz
+let read_cbor'
+  (#va: Ghost.erased (Seq.seq U8.t))
+  (#p: perm)
+  (a: A.array U8.t)
+  (sz: SZ.t)
+: ST read_cbor_t
+    (A.pts_to a p va)
+    (fun res -> read_cbor_post a p va res)
+    (SZ.v sz == Seq.length va \/ SZ.v sz == A.length a)
+    (fun res ->
+      match res with
+      | ParseError -> True
+      | ParseSuccess r -> CBOR_Case_Serialized? r.read_cbor_payload
+    )
 = A.pts_to_length a _;
   let a' = LPA.intro_arrayptr_with_implies a in
   let _ = gen_elim () in
@@ -377,7 +389,11 @@ let read_cbor
     (LPA.arrayptr a' va')
     (LPA.arrayptr a' _)
     (A.pts_to a p va);
-  R.with_local 0ul (fun perr ->
+  let res = R.with_local 0ul #_ #(res: read_cbor_t {
+      match res with
+      | ParseError -> True
+      | ParseSuccess r -> CBOR_Case_Serialized? r.read_cbor_payload
+  }) (fun perr ->
     let sz' = CborST.validate_raw_data_item a' sz perr in
     let _ = gen_elim () in
     let err = R.read perr in
@@ -451,8 +467,90 @@ let read_cbor
       return ParseError
     end
   )
+  in
+  return res
 
 #pop-options
+
+let read_cbor
+  #va #p a sz
+= read_cbor' a sz
+
+let serialize_deterministically_encoded_cbor_error
+  (x: Seq.seq U8.t)
+  (c: read_cbor_success_t)
+  (v0: Cbor.raw_data_item)
+  (rem: Seq.seq U8.t)
+: Lemma
+  (requires (
+    read_cbor_success_postcond x c v0 rem /\
+    Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order v0 == false
+  ))
+  (ensures (read_deterministically_encoded_cbor_error_postcond x))
+=   LPS.parse_strong_prefix CborST.parse_raw_data_item (Cbor.serialize_cbor v0) x;
+    let prf
+      (v: Cbor.raw_data_item)
+    : Lemma
+      (requires (Cbor.serialize_cbor v == Seq.slice x 0 (min (Seq.length (Cbor.serialize_cbor v)) (Seq.length x))))
+      (ensures Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order v == false)
+    = let s = Cbor.serialize_cbor v in
+      assert (Seq.length s <= Seq.length x);
+      Seq.lemma_split x (Seq.length s);
+      LPS.parse_strong_prefix CborST.parse_raw_data_item (Cbor.serialize_cbor v) x
+    in
+    Classical.forall_intro (Classical.move_requires prf)
+
+let read_deterministically_encoded_cbor
+  #va #p a sz
+= A.pts_to_length a _;
+  let _ = A.intro_fits_u64 () in
+  let res = read_cbor' a sz in
+  if ParseError? res
+  then begin
+    rewrite
+      (read_cbor_post a p va res)
+      (read_cbor_error_post a p va);
+    let _ = gen_elim () in
+    rewrite
+      (read_deterministically_encoded_cbor_error_post a p va)
+      (read_deterministically_encoded_cbor_post a p va res);
+    return res
+  end else begin
+    let r = ParseSuccess?._0 res in
+    rewrite
+      (read_cbor_post a p va res)
+      (read_cbor_success_post a p va r);
+    let _ = gen_elim () in
+    let s = destr_cbor_serialized r.read_cbor_payload in
+    let _ = gen_elim () in
+    let test = CBOR.SteelST.Raw.Map.check_raw_data_item
+      (CBOR.SteelST.Raw.Map.check_data_item_wf_head CBOR.SteelST.Raw.Map.deterministically_encoded_cbor_map_key_order_impl ())
+      s.cbor_serialized_payload
+    in
+    elim_implies
+      (LPS.aparse CborST.parse_raw_data_item _ _)
+      (raw_data_item_match _ _);
+    if test
+    then begin
+      noop ();
+      noop (); // FIXME: WHY WHY WHY do I need that many noop()s ?
+      rewrite
+        (read_deterministically_encoded_cbor_success_post a p va r)
+        (read_deterministically_encoded_cbor_post a p va res);
+      return res
+    end else begin
+      let v = vpattern_erased (raw_data_item_match _) in
+      let rem = vpattern_erased (A.pts_to _ _) in
+      serialize_deterministically_encoded_cbor_error va r v rem;
+      elim_implies
+        (raw_data_item_match _ _ `star` A.pts_to _ _ _)
+        (A.pts_to a p va);
+      rewrite
+        (read_deterministically_encoded_cbor_error_post a p va)
+        (read_deterministically_encoded_cbor_post a p va ParseError);
+      return ParseError
+    end
+  end
 
 inline_for_extraction
 noextract

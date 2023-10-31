@@ -239,6 +239,31 @@ let coerce_squash
 
 inline_for_extraction
 noextract
+let check_raw_data_item
+  (#p: Ghost.erased (raw_data_item -> bool))
+  (p_impl: pred_recursive_base_t serialize_raw_data_item_param p)
+  (#va: v parse_raw_data_item_kind raw_data_item)
+  (a: byte_array)
+: ST bool
+    (aparse parse_raw_data_item a va)
+    (fun _ -> aparse parse_raw_data_item a va)
+    True
+    (fun res -> res == holds_on_raw_data_item p va.contents)
+= 
+  rewrite (aparse _ a _) (aparse (parse_recursive parse_raw_data_item_param) a va);
+  let res = pred_recursive
+    serialize_raw_data_item_param
+    (jump_leaf)
+    (jump_count_remaining_data_items)
+    a
+    (holds_on_raw_data_item_pred p)
+    (coerce_squash _ p_impl (_ by (FStar.Tactics.trefl ())))
+  in
+  rewrite (aparse _ a _) (aparse parse_raw_data_item a va);
+  return res
+
+inline_for_extraction
+noextract
 let validate_raw_data_item_filter
   (#p: Ghost.erased (raw_data_item -> bool))
   (p_impl: pred_recursive_base_t serialize_raw_data_item_param p)
@@ -247,17 +272,7 @@ let validate_raw_data_item_filter
       validate_raw_data_item
       (holds_on_raw_data_item p)
       (fun #va a ->
-        rewrite (aparse _ a _) (aparse (parse_recursive parse_raw_data_item_param) a va);
-        let res = pred_recursive
-          serialize_raw_data_item_param
-          (jump_leaf)
-          (jump_count_remaining_data_items)
-          a
-          (holds_on_raw_data_item_pred p)
-          (coerce_squash _ p_impl (_ by (FStar.Tactics.trefl ())))
-        in
-        rewrite (aparse _ a _) (aparse parse_raw_data_item a va);
-        return res
+        check_raw_data_item p_impl a
       )
     )
 
