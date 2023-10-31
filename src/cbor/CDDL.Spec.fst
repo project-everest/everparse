@@ -3,21 +3,30 @@ module CDDL.Spec
 noextract
 let bounded_nat (bound: nat) = (x: nat { x < bound })
 
+let map_group_restricted_entry_list
+  #b
+  (g: map_group b)
+  (one: bool)
+: GTot (list (map_group_entry b))
+= if one then g.one else g.zero_or_one
+
 [@@erasable]
 noeq
 type map_group_entry_index
   #b
   (g: map_group b)
 =
-| One of bounded_nat (List.Tot.length g.one)
-| ZeroOrOne of bounded_nat (List.Tot.length g.zero_or_one)
+| Restricted:
+  one: bool ->
+  v: bounded_nat (List.Tot.length (map_group_restricted_entry_list g one)) ->
+  map_group_entry_index g
 | ZeroOrMore of bounded_nat (List.Tot.length g.zero_or_more)
 
 noextract
 let restricted_map_entry_index
   #b
   (g: map_group b)
-= (x: map_group_entry_index g { ~ (ZeroOrMore? x) })
+= (x: map_group_entry_index g { Restricted? x })
 
 let rec list_index_for_all
   (#t: Type)
@@ -43,8 +52,7 @@ type matches_map_group_t
     g: (restricted_map_entry_index mg -> GTot (option (bounded_nat (List.Tot.length x))));
     prf_f: ((i: bounded_nat (List.Tot.length x)) -> Lemma
       begin match f i with
-      | One j -> matches_map_group_entry (List.Tot.index mg.one j) (List.Tot.index x i) /\ g (f i) == Some i
-      | ZeroOrOne j -> matches_map_group_entry (List.Tot.index mg.zero_or_one j) (List.Tot.index x i) /\ g (f i) == Some i
+      | Restricted one j -> matches_map_group_entry (List.Tot.index (map_group_restricted_entry_list mg one) j) (List.Tot.index x i) /\ g (f i) == Some i
       | ZeroOrMore j -> matches_map_group_entry (List.Tot.index mg.zero_or_more j) (List.Tot.index x i)
       end
     );
@@ -80,7 +88,7 @@ let matches_map_group_proof_is_final
   (#mg: map_group b)
   (prf: matches_map_group_t x mg)
 : Tot prop
-= (forall (j: bounded_nat (List.Tot.length mg.one)) . Some? (prf.g (One j)))
+= (forall (j: bounded_nat (List.Tot.length mg.one)) . Some? (prf.g (Restricted true j)))
 
 noextract
 let matches_map_group_prop
@@ -340,8 +348,7 @@ let map_group_included_zero_or_more_prf
     (ensures (fun _ -> True))
 = {
     f = (fun i -> match prf.f i with
-      | One j -> ZeroOrMore (list_ghost_forall_exists_find_index is_sub_map_group_entry_of small.one large.zero_or_more j)
-      | ZeroOrOne j -> ZeroOrMore (list_ghost_forall_exists_find_index is_sub_map_group_entry_of small.zero_or_one large.zero_or_more j)
+      | Restricted one j -> ZeroOrMore (list_ghost_forall_exists_find_index is_sub_map_group_entry_of (map_group_restricted_entry_list small one) large.zero_or_more j)
       | ZeroOrMore j -> ZeroOrMore (list_ghost_forall_exists_find_index is_sub_map_group_entry_of small.zero_or_more large.zero_or_more j)
     );
     g = (fun _ -> None);
@@ -393,24 +400,22 @@ let map_group_included_pointwise_prf
     (ensures (fun _ -> True))
 = {
     f = (fun i -> match prf.f i with
-      | One j -> One (j <: bounded_nat (List.Tot.length large.one))
-      | ZeroOrOne j -> ZeroOrOne (j <: bounded_nat (List.Tot.length large.zero_or_one))
+      | Restricted one j -> Restricted one (j <: bounded_nat (List.Tot.length (map_group_restricted_entry_list large one)))
       | ZeroOrMore j -> ZeroOrMore (j <: bounded_nat (List.Tot.length large.zero_or_more))
     );
     g = (fun x ->
     let y = match x with
-      | One j -> prf.g (One (j <: bounded_nat (List.Tot.length small.one)))
-      | ZeroOrOne j -> prf.g (ZeroOrOne (j <: bounded_nat (List.Tot.length small.zero_or_one)))
+      | Restricted one j -> prf.g (Restricted one (j <: bounded_nat (List.Tot.length (map_group_restricted_entry_list small one))))
+      | ZeroOrMore j -> prf.g (ZeroOrMore (j <: bounded_nat (List.Tot.length small.zero_or_more)))
     in
     match y with
     | None -> None
     | Some i -> Some i
     );
     prf_f = (fun i -> prf.prf_f i);
-    prf_g = (fun i -> prf.prf_g 
-      begin match i with
-      | One j -> One (j <: bounded_nat (List.Tot.length small.one))
-      | ZeroOrOne j -> ZeroOrOne (j <: bounded_nat (List.Tot.length small.zero_or_one))
+    prf_g = (fun i -> prf.prf_g
+      begin let Restricted one j = i in
+        Restricted one (j <: bounded_nat (List.Tot.length (map_group_restricted_entry_list small one)))
       end
     );
   }
@@ -448,7 +453,7 @@ let rec list_index_map
   then ()
   else list_index_map f (List.Tot.tl l) (i - 1)
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 let matches_map_group_map_group_cons_zero_or_one_none_intro
    #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
@@ -461,22 +466,22 @@ let matches_map_group_map_group_cons_zero_or_one_none_intro
   let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
   {
     f = (fun (i: bounded_nat (List.Tot.length x)) -> match prf.f i with
-      | One j -> One (j <: bounded_nat (List.Tot.length g'.one))
-      | ZeroOrOne j -> ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one))
+      | Restricted true j -> Restricted true (j <: bounded_nat (List.Tot.length g'.one))
+      | Restricted false j -> Restricted false (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one))
       | ZeroOrMore j -> ZeroOrMore (j <: bounded_nat (List.Tot.length g'.zero_or_more))
     );
     g = (fun (j: restricted_map_entry_index g') ->
       match j with
-      | One j -> prf.g (One (j <: bounded_nat (List.Tot.length g.one)))
-      | ZeroOrOne j -> if j = 0 then None else prf.g (ZeroOrOne (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one)))
+      | Restricted true j -> prf.g (Restricted true (j <: bounded_nat (List.Tot.length g.one)))
+      | Restricted false j -> if j = 0 then None else prf.g (Restricted false (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one)))
     );
     prf_f = (fun (i: bounded_nat (List.Tot.length x)) ->
       prf.prf_f i
     );
     prf_g = (fun (j: restricted_map_entry_index g') ->
       match j with
-      | One j -> prf.prf_g (One (j <: bounded_nat (List.Tot.length g.one)))
-      | ZeroOrOne j -> if j = 0 then () else prf.prf_g (ZeroOrOne (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one)))
+      | Restricted true j -> prf.prf_g (Restricted true (j <: bounded_nat (List.Tot.length g.one)))
+      | Restricted false j -> if j = 0 then () else prf.prf_g (Restricted false (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one)))
     );
   }
 
@@ -491,24 +496,24 @@ let matches_map_group_map_group_cons_zero_or_one_none_elim
   let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
   {
     f = (fun (i: bounded_nat (List.Tot.length x)) -> match prf.f i with
-      | One j -> One (j <: bounded_nat (List.Tot.length g.one))
-      | ZeroOrOne j ->
+      | Restricted true j -> Restricted true (j <: bounded_nat (List.Tot.length g.one))
+      | Restricted false j ->
         prf.prf_f i; assert (j <> 0);
-        ZeroOrOne (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one))
+        Restricted false (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one))
       | ZeroOrMore j -> ZeroOrMore (j <: bounded_nat (List.Tot.length g.zero_or_more))
     );
     g = (fun (j: restricted_map_entry_index g) ->
       match j with
-      | One j -> prf.g (One (j <: bounded_nat (List.Tot.length g'.one)))
-      | ZeroOrOne j -> prf.g (ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one)))
+      | Restricted true j -> prf.g (Restricted true (j <: bounded_nat (List.Tot.length g'.one)))
+      | Restricted false j -> prf.g (Restricted false (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one)))
     );
     prf_f = (fun (i: bounded_nat (List.Tot.length x)) ->
       prf.prf_f i
     );
     prf_g = (fun (j: restricted_map_entry_index g) ->
       match j with
-      | One j -> prf.prf_g (One (j <: bounded_nat (List.Tot.length g'.one)))
-      | ZeroOrOne j -> prf.prf_g (ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one)))
+      | Restricted true j -> prf.prf_g (Restricted true (j <: bounded_nat (List.Tot.length g'.one)))
+      | Restricted false j -> prf.prf_g (Restricted false (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one)))
     );
   }
 
@@ -611,11 +616,28 @@ let list_ghost_assoc_index_no_repeats_recip
   let i0 = list_ghost_assoc_index k l in
   list_ghost_assoc_index_no_repeats k l (if i < i0 then i else i + 1)
 
-let matches_map_group_map_group_cons_zero_or_one_some_ty
-   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+let map_group_cons_restricted #b (ge: map_group_entry b) (one: bool) (g: map_group b) : map_group b =
+  if one
+  then map_group_cons_one ge true g
+  else map_group_cons_zero_or_one ge true g
+
+let map_group_restricted_entry_list_map_group_cons_restricted #b (ge: map_group_entry b) (one: bool) (g: map_group b) (one': bool) : Lemma
+  (map_group_restricted_entry_list (map_group_cons_restricted #b ge one g) one' == (
+    if one' = one
+    then ge :: List.Tot.map (cut_map_group_entry ge.fst) (map_group_restricted_entry_list g one')
+    else List.Tot.map (cut_map_group_entry ge.fst) (map_group_restricted_entry_list g one')
+  ))
+//  [SMTPat (map_group_restricted_entry_list (map_group_cons_restricted #b ge one g) one')]
+= ()
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+let matches_map_group_map_group_cons_restricted_some_ty
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (one: bool) (g: map_group b)
    (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
 : Lemma
-  (requires (Some? (Cbor.list_ghost_assoc k x) /\ matches_map_group (map_group_cons_zero_or_one (map_group_entry_for k ty) true g) x))
+  (requires (Some? (Cbor.list_ghost_assoc k x) /\ matches_map_group (map_group_cons_restricted (map_group_entry_for k ty) one g) x))
   (ensures (
     begin match Cbor.list_ghost_assoc k x with
     | None -> False
@@ -623,19 +645,17 @@ let matches_map_group_map_group_cons_zero_or_one_some_ty
     end
   ))
 = list_ghost_assoc_for_all (opt_map_entry_bounded b) k x;
-  let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
+  let g' = map_group_cons_restricted (map_group_entry_for k ty) one g in
   let prf = FStar.IndefiniteDescription.indefinite_description_ghost _ (fun (prf: matches_map_group_t x g') -> matches_map_group_proof_is_final prf) in
   let i = list_ghost_assoc_index k x in
-  prf.prf_f i
+  prf.prf_f i;
+  ()
 
-#push-options "--z3rlimit 32"
-#restart-solver
-
-let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_intro
-   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+let matches_map_group_map_group_cons_restricted_some_no_repeats_intro
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (one: bool) (g: map_group b)
    (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
    (prf: matches_map_group_t (List.Tot.filter (map_key_neq _ k) x) g)
-: Pure (matches_map_group_t x (map_group_cons_zero_or_one (map_group_entry_for k ty) true g))
+: Pure (matches_map_group_t x (map_group_cons_restricted (map_group_entry_for k ty) one g))
   (requires (
     List.Tot.no_repeats_p (List.Tot.map fst x) /\
     begin match Cbor.list_ghost_assoc k x with
@@ -645,33 +665,31 @@ let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_intro
   ))
   (ensures (fun _ -> True))
 = list_ghost_assoc_for_all (opt_map_entry_bounded b) k x;
-  let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
+  let g' = map_group_cons_restricted (map_group_entry_for k ty) one g in
   list_length_filter_map_key_neq_no_repeats k x;
   let i0 = list_ghost_assoc_index k x in
   {
     f = (fun i ->
       list_ghost_assoc_index_no_repeats k x i;
       if i = i0
-      then ZeroOrOne 0
+      then Restricted one 0
       else begin
         let i' : bounded_nat (List.Tot.length (List.Tot.filter (map_key_neq _ k) x)) =
           if i < i0 then i else i - 1
         in
+        prf.prf_f i';
         match prf.f i' with
-        | One j -> One (j <: bounded_nat (List.Tot.length g'.one))
-        | ZeroOrOne j -> ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one))
+        | Restricted one' j -> Restricted one' ((if one = one' then j + 1 else j) <: bounded_nat (List.Tot.length (map_group_restricted_entry_list g' one')))
         | ZeroOrMore j -> ZeroOrMore (j <: bounded_nat (List.Tot.length g'.zero_or_more))
       end
     );
     g = (fun j' ->
       if match j' with
-      | ZeroOrOne j' -> j' = 0
-      | _ -> false
+      | Restricted one' j' -> one = one' && j' = 0
       then Some i0
       else
         let j = match j' with
-        | ZeroOrOne j' -> ZeroOrOne (j' - 1 <: bounded_nat (List.Tot.length g.zero_or_one))
-        | One j' -> One (j' <: bounded_nat (List.Tot.length g.one))
+        | Restricted one' j' -> Restricted one' ((if one = one' then j' - 1 else j') <: bounded_nat (List.Tot.length (map_group_restricted_entry_list g one')))
         in
         match prf.g j with
         | None -> None
@@ -694,13 +712,11 @@ let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_intro
     );
     prf_g = (fun j' ->
       if match j' with
-      | ZeroOrOne j' -> j' = 0
-      | _ -> false
+      | Restricted one' j' -> one = one' && j' = 0
       then ()
       else
         let j = match j' with
-        | ZeroOrOne j' -> ZeroOrOne (j' - 1 <: bounded_nat (List.Tot.length g.zero_or_one))
-        | One j' -> One (j' <: bounded_nat (List.Tot.length g.one))
+        | Restricted one' j' -> Restricted one' ((if one = one' then j' - 1 else j') <: bounded_nat (List.Tot.length (map_group_restricted_entry_list g one')))
         in
         prf.prf_g j
     );
@@ -708,13 +724,13 @@ let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_intro
 
 #pop-options
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 128"
 #restart-solver
 
-let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_elim
-   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+let matches_map_group_map_group_cons_restricted_some_no_repeats_elim
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (one: bool) (g: map_group b)
    (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
-   (prf: matches_map_group_t x (map_group_cons_zero_or_one (map_group_entry_for k ty) true g))
+   (prf: matches_map_group_t x (map_group_cons_restricted (map_group_entry_for k ty) one g))
 : Pure (matches_map_group_t (List.Tot.filter (map_key_neq _ k) x) g)
   (requires (
     List.Tot.no_repeats_p (List.Tot.map fst x) /\
@@ -727,7 +743,7 @@ let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_elim
     matches_map_group_proof_is_final prf ==> matches_map_group_proof_is_final prf'
   ))
 = list_ghost_assoc_for_all (opt_map_entry_bounded b) k x;
-  let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
+  let g' = map_group_cons_restricted (map_group_entry_for k ty) one g in
   list_length_filter_map_key_neq_no_repeats k x;
   let i0 = list_ghost_assoc_index k x in
   {
@@ -736,28 +752,25 @@ let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_elim
       let i : bounded_nat (List.Tot.length x) =
         if i' < i0 then i' else i' + 1
       in
+      prf.prf_f i;
       match prf.f i with
-      | One j -> One (j <: bounded_nat (List.Tot.length g.one))
-      | ZeroOrOne j ->
-        prf.prf_f i;
-        ZeroOrOne (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one))
+      | Restricted one' j -> Restricted one' ((if one = one' then j - 1 else j) <: bounded_nat (List.Tot.length (map_group_restricted_entry_list g one')))
       | ZeroOrMore j -> ZeroOrMore (j <: bounded_nat (List.Tot.length g.zero_or_more))
     );
     g = (fun j ->
       let j' = match j with
-      | ZeroOrOne j -> ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one))
-      | One j -> One (j <: bounded_nat (List.Tot.length g'.one))
+      | Restricted one' j -> Restricted one' ((if one = one' then j + 1 else j) <: bounded_nat (List.Tot.length (map_group_restricted_entry_list g' one')))
       in
       match prf.g j' with
       | None -> None
       | Some i ->
         list_ghost_assoc_index_no_repeats k x i;
-        if i = i0 && ZeroOrOne? j
+        if i = i0 && not (Restricted?.one j)
         then None
         else begin
           prf.prf_g j';
           prf.prf_f i;
-          assert (One? j ==> i <> i0);
+          assert (Restricted?.one j ==> i <> i0);
           let i' : bounded_nat (List.Tot.length (List.Tot.filter (map_key_neq _ k) x)) = 
             if i < i0 then i else i - 1
           in
@@ -773,8 +786,7 @@ let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_elim
     );
     prf_g = (fun j ->
       let j' = match j with
-      | ZeroOrOne j -> ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one))
-      | One j -> One (j <: bounded_nat (List.Tot.length g'.one))
+      | Restricted one' j -> Restricted one' ((if one = one' then j + 1 else j) <: bounded_nat (List.Tot.length (map_group_restricted_entry_list g' one')))
       in
       prf.prf_g j';
       match prf.g j' with
@@ -808,13 +820,13 @@ let matches_map_group_map_group_cons_zero_or_one_no_repeats
       (fun prf -> matches_map_group_map_group_cons_zero_or_one_none_intro k ty g x prf)
       (fun prf -> matches_map_group_map_group_cons_zero_or_one_none_elim k ty g x prf)
   | Some y ->
-    Classical.move_requires (matches_map_group_map_group_cons_zero_or_one_some_ty k ty g) x;
+    Classical.move_requires (matches_map_group_map_group_cons_restricted_some_ty k ty false g) x;
     if ty y
     then
       let x' = List.Tot.filter (map_key_neq _ k) x in
       matches_map_group_conv g x' (map_group_cons_zero_or_one (map_group_entry_for k ty) true g) x
-        (fun prf -> matches_map_group_map_group_cons_zero_or_one_some_no_repeats_intro k ty g x prf)
-        (fun prf -> matches_map_group_map_group_cons_zero_or_one_some_no_repeats_elim k ty g x prf)
+        (fun prf -> matches_map_group_map_group_cons_restricted_some_no_repeats_intro k ty false g x prf)
+        (fun prf -> matches_map_group_map_group_cons_restricted_some_no_repeats_elim k ty false g x prf)
     else ()
 
 let matches_map_group_map_group_cons_one_none
@@ -828,8 +840,8 @@ let matches_map_group_map_group_cons_one_none
   then begin
     list_assoc_none_for_all_map_key_neq k x;
     let prf = FStar.IndefiniteDescription.indefinite_description_ghost (matches_map_group_t x g') (fun (prf: matches_map_group_t x g') -> matches_map_group_proof_is_final prf) in
-    let Some i = prf.g (One 0) in
-    prf.prf_g (One 0);
+    let Some i = prf.g (Restricted true 0) in
+    prf.prf_g (Restricted true 0);
     prf.prf_f i
   end
   else ()
@@ -852,4 +864,12 @@ let matches_map_group_map_group_cons_one_no_repeats
   ))
 = match Cbor.list_ghost_assoc k x with
   | None -> matches_map_group_map_group_cons_one_none k ty g x
-  | Some y -> assume False
+  | Some y ->
+    Classical.move_requires (matches_map_group_map_group_cons_restricted_some_ty k ty true g) x;
+    if ty y
+    then
+      let x' = List.Tot.filter (map_key_neq _ k) x in
+      matches_map_group_conv g x' (map_group_cons_one (map_group_entry_for k ty) true g) x
+        (fun prf -> matches_map_group_map_group_cons_restricted_some_no_repeats_intro k ty true g x prf)
+        (fun prf -> matches_map_group_map_group_cons_restricted_some_no_repeats_elim k ty true g x prf)
+    else ()
