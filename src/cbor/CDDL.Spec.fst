@@ -512,7 +512,7 @@ let matches_map_group_prop_weaken
   (ensures (matches_map_group_prop_partial x mg))
 = ()
 
-let matches_map_group_prop_empty
+let matches_map_group_prop_empty_intro
   (b: option Cbor.raw_data_item)
 : Lemma
   (ensures (matches_map_group_prop [] (map_group_empty #b)))
@@ -524,6 +524,19 @@ let matches_map_group_prop_empty
   }
   in
   assert (exists (prf: matches_map_group_t #b [] map_group_empty) . matches_map_group_proof_is_final prf)
+
+let matches_map_group_prop_empty_elim
+  (b: option Cbor.raw_data_item)
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+: Lemma
+  (requires (matches_map_group_prop x (map_group_empty #b)))
+  (ensures (Nil? x))
+= if Nil? x
+  then ()
+  else
+    let prf = FStar.IndefiniteDescription.indefinite_description_ghost (matches_map_group_t x (map_group_empty #b)) (fun prf -> matches_map_group_proof_is_final #b #x #(map_group_empty #b) prf) in
+    let _ = prf.f 0 in
+    ()
 
 let matches_map_group_prop_no_one
   (#b: option Cbor.raw_data_item)
@@ -540,6 +553,52 @@ let matches_map_group
   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) {List.Tot.for_all (opt_map_entry_bounded b) x })
 : GTot bool
 = FStar.StrongExcludedMiddle.strong_excluded_middle (matches_map_group_prop x m)
+
+let matches_map_group_conv
+  (#b: option Cbor.raw_data_item)
+  (m1: map_group b)
+  (x1: list (Cbor.raw_data_item & Cbor.raw_data_item) {List.Tot.for_all (opt_map_entry_bounded b) x1 })
+  (m2: map_group b)
+  (x2: list (Cbor.raw_data_item & Cbor.raw_data_item) {List.Tot.for_all (opt_map_entry_bounded b) x2 })
+  (f12: (
+    (prf1: matches_map_group_t x1 m1) ->
+    Pure (matches_map_group_t x2 m2)
+    (requires (matches_map_group_proof_is_final prf1))
+    (ensures (fun prf2 -> matches_map_group_proof_is_final prf2))
+  ))
+  (f21: (
+    (prf2: matches_map_group_t x2 m2) ->
+    Pure (matches_map_group_t x1 m1)
+    (requires (matches_map_group_proof_is_final prf2))
+    (ensures (fun prf1 -> matches_map_group_proof_is_final prf1))
+  ))
+: Lemma
+  (matches_map_group m1 x1 == matches_map_group m2 x2)
+= let phi12
+    (prf1: matches_map_group_t x1 m1)
+  : Lemma
+    (requires (matches_map_group_proof_is_final prf1))
+    (ensures (matches_map_group_prop x2 m2))
+  = assert (matches_map_group_proof_is_final (f12 prf1))
+  in
+  let phi21
+    (prf2: matches_map_group_t x2 m2)
+  : Lemma
+    (requires (matches_map_group_proof_is_final prf2))
+    (ensures (matches_map_group_prop x1 m1))
+  = assert (matches_map_group_proof_is_final (f21 prf2))
+  in
+  Classical.forall_intro (fun x -> Classical.move_requires phi12 x);
+  Classical.forall_intro (fun x -> Classical.move_requires phi21 x)
+
+let matches_map_group_empty
+  (b: option Cbor.raw_data_item)
+  (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+: Lemma
+  (ensures (matches_map_group (map_group_empty #b) x == Nil? x))
+  [SMTPat (matches_map_group (map_group_empty #b) x)]
+= Classical.move_requires (matches_map_group_prop_empty_elim b) x;
+  matches_map_group_prop_empty_intro b
 
 (* Inclusion and equivalence proofs for map groups. Those are meant as the main proof devices for matches_map_group *)
 
@@ -927,6 +986,491 @@ let cut_map_group_sub
   list_ghost_forall2_map_l is_sub_map_group_entry_of (cut_map_group_entry key) mg.zero_or_one;
   list_ghost_forall2_map_l is_sub_map_group_entry_of (cut_map_group_entry key) mg.zero_or_more;
   map_group_included_pointwise_correct (cut_map_group key mg) mg
+
+(* Proving matches_map_group for sorted maps and map groups where key constraints specify whole elements *)
+
+let rec list_for_all_filter_invariant
+  (#t: Type)
+  (p: t -> bool)
+  (f: t -> bool)
+  (l: list t)
+: Lemma
+  (requires (List.Tot.for_all p l == true))
+  (ensures (List.Tot.for_all p (List.Tot.filter f l) == true))
+  [SMTPat (List.Tot.for_all p (List.Tot.filter f l))]
+= match l with
+  | [] -> ()
+  | _ :: q -> list_for_all_filter_invariant p f q
+
+let map_key_neq'
+  (#t1 t2: Type)
+  (k: t1)
+  (x: (t1 & t2))
+: GTot bool
+= FStar.StrongExcludedMiddle.strong_excluded_middle (~ (fst x == k))
+
+let map_key_neq
+  (#t1 t2: Type)
+  (k: t1)
+: GTot ((t1 & t2) -> bool)
+= Pull.pull (map_key_neq' t2 k)
+
+let map_group_entry_for
+  #b
+  (k: Cbor.raw_data_item)
+  (ty: bounded_typ_gen b)
+: Tot (map_group_entry b)
+= MapGroupEntry (coerce_to_bounded_typ _ (t_literal k)) ty
+
+let rec list_ghost_assoc_for_all
+  (#key: Type)
+  (#value: Type)
+  (p: (key & value) -> bool)
+  (k: key)
+  (m: list (key & value))
+: Lemma
+  (requires (List.Tot.for_all p m == true))
+  (ensures (match Cbor.list_ghost_assoc k m with
+  | None -> True
+  | Some y -> p (k, y)
+  ))
+  (decreases m)
+  [SMTPat (List.Tot.for_all p m); SMTPat (Cbor.list_ghost_assoc k m)]
+= match m with
+  | [] -> ()
+  | (k', _) :: m' ->
+    if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
+    then ()
+    else list_ghost_assoc_for_all p k m'
+
+let rec list_assoc_none_for_all_map_key_neq
+  (k: Cbor.raw_data_item)
+  (l: list (Cbor.raw_data_item & Cbor.raw_data_item))
+: Lemma
+  (requires (None? (Cbor.list_ghost_assoc k l)))
+  (ensures (List.Tot.for_all (map_key_neq _ k) l == true))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_assoc_none_for_all_map_key_neq k q
+
+let rec list_index_map
+  (#t1 #t2: Type)
+  (f: t1 -> t2)
+  (l: list t1)
+  (i: bounded_nat (List.Tot.length l))
+: Lemma
+  (List.Tot.index (List.Tot.map f l) i == f (List.Tot.index l i))
+  [SMTPat (List.Tot.index (List.Tot.map f l) i)]
+= if i = 0
+  then ()
+  else list_index_map f (List.Tot.tl l) (i - 1)
+
+#push-options "--z3rlimit 16"
+
+let matches_map_group_map_group_cons_zero_or_one_none_intro
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+   (prf: matches_map_group_t x g)
+: Pure (matches_map_group_t x (map_group_cons_zero_or_one (map_group_entry_for k ty) true g))
+    (requires (None? (Cbor.list_ghost_assoc k x)))
+    (ensures (fun _ -> True))
+= list_assoc_none_for_all_map_key_neq k x;
+  let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
+  {
+    f = (fun (i: bounded_nat (List.Tot.length x)) -> match prf.f i with
+      | One j -> One (j <: bounded_nat (List.Tot.length g'.one))
+      | ZeroOrOne j -> ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one))
+      | ZeroOrMore j -> ZeroOrMore (j <: bounded_nat (List.Tot.length g'.zero_or_more))
+    );
+    g = (fun (j: restricted_map_entry_index g') ->
+      match j with
+      | One j -> prf.g (One (j <: bounded_nat (List.Tot.length g.one)))
+      | ZeroOrOne j -> if j = 0 then None else prf.g (ZeroOrOne (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one)))
+    );
+    prf_f = (fun (i: bounded_nat (List.Tot.length x)) ->
+      prf.prf_f i
+    );
+    prf_g = (fun (j: restricted_map_entry_index g') ->
+      match j with
+      | One j -> prf.prf_g (One (j <: bounded_nat (List.Tot.length g.one)))
+      | ZeroOrOne j -> if j = 0 then () else prf.prf_g (ZeroOrOne (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one)))
+    );
+  }
+
+let matches_map_group_map_group_cons_zero_or_one_none_elim
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+   (prf: matches_map_group_t x (map_group_cons_zero_or_one (map_group_entry_for k ty) true g))
+: Pure (matches_map_group_t x g)
+    (requires (None? (Cbor.list_ghost_assoc k x)))
+    (ensures (fun _ -> True))
+= list_assoc_none_for_all_map_key_neq k x;
+  let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
+  {
+    f = (fun (i: bounded_nat (List.Tot.length x)) -> match prf.f i with
+      | One j -> One (j <: bounded_nat (List.Tot.length g.one))
+      | ZeroOrOne j ->
+        prf.prf_f i; assert (j <> 0);
+        ZeroOrOne (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one))
+      | ZeroOrMore j -> ZeroOrMore (j <: bounded_nat (List.Tot.length g.zero_or_more))
+    );
+    g = (fun (j: restricted_map_entry_index g) ->
+      match j with
+      | One j -> prf.g (One (j <: bounded_nat (List.Tot.length g'.one)))
+      | ZeroOrOne j -> prf.g (ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one)))
+    );
+    prf_f = (fun (i: bounded_nat (List.Tot.length x)) ->
+      prf.prf_f i
+    );
+    prf_g = (fun (j: restricted_map_entry_index g) ->
+      match j with
+      | One j -> prf.prf_g (One (j <: bounded_nat (List.Tot.length g'.one)))
+      | ZeroOrOne j -> prf.prf_g (ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one)))
+    );
+  }
+
+#pop-options
+
+let rec list_ghost_assoc_index
+  (#t1 #t2: Type)
+  (k: t1)
+  (l: list (t1 & t2))
+: Ghost (bounded_nat (List.Tot.length l))
+  (requires (Some? (Cbor.list_ghost_assoc k l)))
+  (ensures (fun i ->
+    match Cbor.list_ghost_assoc k l with
+    | Some v -> List.Tot.index l i == (k, v)
+    | _ -> False
+  ))
+= let (k', _) :: l' = l in
+  if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
+  then 0
+  else 1 + list_ghost_assoc_index k l'
+
+let rec list_filter_map_key_neq_not_memP
+  (#t1 #t2: Type)
+  (k: t1)
+  (l: list (t1 & t2))
+: Lemma
+  (requires (
+    (~ (List.Tot.memP k (List.Tot.map fst l)))
+  ))
+  (ensures (
+    List.Tot.filter (map_key_neq _ k) l == l
+  ))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_filter_map_key_neq_not_memP k q
+
+let rec list_length_filter_map_key_neq_no_repeats
+  (#t1 #t2: Type)
+  (k: t1)
+  (l: list (t1 & t2))
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst l)
+  ))
+  (ensures (
+    List.Tot.length l == (if Some? (Cbor.list_ghost_assoc k l) then 1 else 0) + List.Tot.length (List.Tot.filter (map_key_neq _ k) l)
+  ))
+  [SMTPat [List.Tot.length (List.Tot.filter (map_key_neq _ k) l)]]
+= match l with
+  | [] -> ()
+  | (k', _) :: l' ->
+    if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
+    then list_filter_map_key_neq_not_memP k l'
+    else list_length_filter_map_key_neq_no_repeats k l'
+
+let rec list_ghost_assoc_index_no_repeats
+  (#t1 #t2: Type)
+  (k: t1)
+  (l: list (t1 & t2))
+  (i: bounded_nat (List.Tot.length l))
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst l) /\
+    Some? (Cbor.list_ghost_assoc k l)
+  ))
+  (ensures (
+    Some? (Cbor.list_ghost_assoc k l) /\ (
+    let i0 = list_ghost_assoc_index k l in
+    let Some v = Cbor.list_ghost_assoc k l in
+    let l' = List.Tot.filter (map_key_neq _ k) l in
+    List.Tot.length l == 1 + List.Tot.length l' /\
+    List.Tot.index l i == (if i = i0 then (k, v) else List.Tot.index l' (if i < i0 then i else i - 1))
+  )))
+= list_length_filter_map_key_neq_no_repeats k l;
+  let (k', v') :: l' = l in
+  if i = 0
+  then ()
+  else if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
+  then list_filter_map_key_neq_not_memP k l'
+  else list_ghost_assoc_index_no_repeats k l' (i - 1)
+
+let list_ghost_assoc_index_no_repeats_recip
+  (#t1 #t2: Type)
+  (k: t1)
+  (l: list (t1 & t2))
+  (i: bounded_nat (List.Tot.length (List.Tot.filter (map_key_neq _ k) l)))
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst l) /\
+    Some? (Cbor.list_ghost_assoc k l)
+  ))
+  (ensures (
+    Some? (Cbor.list_ghost_assoc k l) /\ (
+    let i0 = list_ghost_assoc_index k l in
+    let l' = List.Tot.filter (map_key_neq _ k) l in
+    List.Tot.length l == 1 + List.Tot.length l' /\
+    List.Tot.index l' i == List.Tot.index l (if i < i0 then i else i + 1)
+  )))
+= list_length_filter_map_key_neq_no_repeats k l;
+  let i0 = list_ghost_assoc_index k l in
+  list_ghost_assoc_index_no_repeats k l (if i < i0 then i else i + 1)
+
+let matches_map_group_map_group_cons_zero_or_one_some_ty
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+: Lemma
+  (requires (Some? (Cbor.list_ghost_assoc k x) /\ matches_map_group (map_group_cons_zero_or_one (map_group_entry_for k ty) true g) x))
+  (ensures (
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> False
+    | Some y -> opt_precedes y b /\ ty y
+    end
+  ))
+= list_ghost_assoc_for_all (opt_map_entry_bounded b) k x;
+  let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
+  let prf = FStar.IndefiniteDescription.indefinite_description_ghost _ (fun (prf: matches_map_group_t x g') -> matches_map_group_proof_is_final prf) in
+  let i = list_ghost_assoc_index k x in
+  prf.prf_f i
+
+#push-options "--z3rlimit 32"
+#restart-solver
+
+let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_intro
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+   (prf: matches_map_group_t (List.Tot.filter (map_key_neq _ k) x) g)
+: Pure (matches_map_group_t x (map_group_cons_zero_or_one (map_group_entry_for k ty) true g))
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst x) /\
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> False
+    | Some y -> opt_precedes y b ==> ty y
+    end
+  ))
+  (ensures (fun _ -> True))
+= list_ghost_assoc_for_all (opt_map_entry_bounded b) k x;
+  let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
+  list_length_filter_map_key_neq_no_repeats k x;
+  let i0 = list_ghost_assoc_index k x in
+  {
+    f = (fun i ->
+      list_ghost_assoc_index_no_repeats k x i;
+      if i = i0
+      then ZeroOrOne 0
+      else begin
+        let i' : bounded_nat (List.Tot.length (List.Tot.filter (map_key_neq _ k) x)) =
+          if i < i0 then i else i - 1
+        in
+        match prf.f i' with
+        | One j -> One (j <: bounded_nat (List.Tot.length g'.one))
+        | ZeroOrOne j -> ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one))
+        | ZeroOrMore j -> ZeroOrMore (j <: bounded_nat (List.Tot.length g'.zero_or_more))
+      end
+    );
+    g = (fun j' ->
+      if match j' with
+      | ZeroOrOne j' -> j' = 0
+      | _ -> false
+      then Some i0
+      else
+        let j = match j' with
+        | ZeroOrOne j' -> ZeroOrOne (j' - 1 <: bounded_nat (List.Tot.length g.zero_or_one))
+        | One j' -> One (j' <: bounded_nat (List.Tot.length g.one))
+        in
+        match prf.g j with
+        | None -> None
+        | Some i' ->
+          list_ghost_assoc_index_no_repeats_recip k x i';
+          let i : bounded_nat (List.Tot.length x) = if i' < i0 then i' else i' + 1 in
+          Some i
+    );
+    prf_f = (fun i ->
+      list_ghost_assoc_index_no_repeats k x i;
+      if i = i0
+      then ()
+      else begin
+        let i' : bounded_nat (List.Tot.length (List.Tot.filter (map_key_neq _ k) x)) =
+          if i < i0 then i else i - 1
+        in
+        prf.prf_f i';
+        ()
+      end
+    );
+    prf_g = (fun j' ->
+      if match j' with
+      | ZeroOrOne j' -> j' = 0
+      | _ -> false
+      then ()
+      else
+        let j = match j' with
+        | ZeroOrOne j' -> ZeroOrOne (j' - 1 <: bounded_nat (List.Tot.length g.zero_or_one))
+        | One j' -> One (j' <: bounded_nat (List.Tot.length g.one))
+        in
+        prf.prf_g j
+    );
+  }
+
+#pop-options
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+let matches_map_group_map_group_cons_zero_or_one_some_no_repeats_elim
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+   (prf: matches_map_group_t x (map_group_cons_zero_or_one (map_group_entry_for k ty) true g))
+: Pure (matches_map_group_t (List.Tot.filter (map_key_neq _ k) x) g)
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst x) /\
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> False
+    | Some y -> opt_precedes y b ==> ty y
+    end
+  ))
+  (ensures (fun prf' ->
+    matches_map_group_proof_is_final prf ==> matches_map_group_proof_is_final prf'
+  ))
+= list_ghost_assoc_for_all (opt_map_entry_bounded b) k x;
+  let g' = map_group_cons_zero_or_one (map_group_entry_for k ty) true g in
+  list_length_filter_map_key_neq_no_repeats k x;
+  let i0 = list_ghost_assoc_index k x in
+  {
+    f = (fun i' ->
+      list_ghost_assoc_index_no_repeats_recip k x i';
+      let i : bounded_nat (List.Tot.length x) =
+        if i' < i0 then i' else i' + 1
+      in
+      match prf.f i with
+      | One j -> One (j <: bounded_nat (List.Tot.length g.one))
+      | ZeroOrOne j ->
+        prf.prf_f i;
+        ZeroOrOne (j - 1 <: bounded_nat (List.Tot.length g.zero_or_one))
+      | ZeroOrMore j -> ZeroOrMore (j <: bounded_nat (List.Tot.length g.zero_or_more))
+    );
+    g = (fun j ->
+      let j' = match j with
+      | ZeroOrOne j -> ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one))
+      | One j -> One (j <: bounded_nat (List.Tot.length g'.one))
+      in
+      match prf.g j' with
+      | None -> None
+      | Some i ->
+        list_ghost_assoc_index_no_repeats k x i;
+        if i = i0 && ZeroOrOne? j
+        then None
+        else begin
+          prf.prf_g j';
+          prf.prf_f i;
+          assert (One? j ==> i <> i0);
+          let i' : bounded_nat (List.Tot.length (List.Tot.filter (map_key_neq _ k) x)) = 
+            if i < i0 then i else i - 1
+          in
+          Some i'
+        end
+      );
+    prf_f = (fun i' ->
+      list_ghost_assoc_index_no_repeats_recip k x i';
+      let i : bounded_nat (List.Tot.length x) =
+        if i' < i0 then i' else i' + 1
+      in
+      prf.prf_f i
+    );
+    prf_g = (fun j ->
+      let j' = match j with
+      | ZeroOrOne j -> ZeroOrOne (j + 1 <: bounded_nat (List.Tot.length g'.zero_or_one))
+      | One j -> One (j <: bounded_nat (List.Tot.length g'.one))
+      in
+      prf.prf_g j';
+      match prf.g j' with
+      | None -> ()
+      | Some i -> prf.prf_f i
+    );
+  }
+
+#pop-options
+
+let matches_map_group_map_group_cons_zero_or_one_no_repeats
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+: Lemma
+  (requires (List.Tot.no_repeats_p (List.Tot.map fst x)))
+  (ensures (
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> True
+    | Some y -> opt_precedes y b
+    end /\
+    matches_map_group (map_group_cons_zero_or_one (map_group_entry_for k ty) true g) x ==
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> matches_map_group g x
+    | Some y -> ty y && matches_map_group g (List.Tot.filter (map_key_neq _ k) x)
+    end
+  ))
+= list_ghost_assoc_for_all (opt_map_entry_bounded b) k x;
+  match Cbor.list_ghost_assoc k x with
+  | None ->
+    matches_map_group_conv g x (map_group_cons_zero_or_one (map_group_entry_for k ty) true g) x
+      (fun prf -> matches_map_group_map_group_cons_zero_or_one_none_intro k ty g x prf)
+      (fun prf -> matches_map_group_map_group_cons_zero_or_one_none_elim k ty g x prf)
+  | Some y ->
+    Classical.move_requires (matches_map_group_map_group_cons_zero_or_one_some_ty k ty g) x;
+    if ty y
+    then
+      let x' = List.Tot.filter (map_key_neq _ k) x in
+      matches_map_group_conv g x' (map_group_cons_zero_or_one (map_group_entry_for k ty) true g) x
+        (fun prf -> matches_map_group_map_group_cons_zero_or_one_some_no_repeats_intro k ty g x prf)
+        (fun prf -> matches_map_group_map_group_cons_zero_or_one_some_no_repeats_elim k ty g x prf)
+    else ()
+
+let matches_map_group_map_group_cons_one_none
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+: Lemma
+  (requires (None? (Cbor.list_ghost_assoc k x)))
+  (ensures (matches_map_group (map_group_cons_one (map_group_entry_for k ty) true g) x == false))
+= let g' = map_group_cons_one (map_group_entry_for k ty) true g in
+  if matches_map_group g' x 
+  then begin
+    list_assoc_none_for_all_map_key_neq k x;
+    let prf = FStar.IndefiniteDescription.indefinite_description_ghost (matches_map_group_t x g') (fun (prf: matches_map_group_t x g') -> matches_map_group_proof_is_final prf) in
+    let Some i = prf.g (One 0) in
+    prf.prf_g (One 0);
+    prf.prf_f i
+  end
+  else ()
+
+let matches_map_group_map_group_cons_one_no_repeats
+   #b (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+: Lemma
+  (requires (List.Tot.no_repeats_p (List.Tot.map fst x)))
+  (ensures (
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> True
+    | Some y -> opt_precedes y b
+    end /\
+    matches_map_group (map_group_cons_one (map_group_entry_for k ty) true g) x ==
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> false
+    | Some y -> ty y && matches_map_group g (List.Tot.filter (map_key_neq _ k) x)
+    end
+  ))
+= match Cbor.list_ghost_assoc k x with
+  | None -> matches_map_group_map_group_cons_one_none k ty g x
+  | Some y -> assume False
+  
 
 // 2.1 specifies "names that turn into the map key text string"
 
