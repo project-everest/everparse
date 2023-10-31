@@ -697,6 +697,42 @@ val matches_map_group_map_group_cons_one_no_repeats
     end
   ))
 
+val matches_map_group_map_group_cons_zero_or_one_deterministically_encoded_cbor_map_key_order
+   (#b: _) (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+: Lemma
+  (requires (List.Tot.sorted (Cbor.map_entry_order Cbor.deterministically_encoded_cbor_map_key_order _) x))
+  (ensures (
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> True
+    | Some y -> opt_precedes y b /\ List.Tot.sorted (Cbor.map_entry_order Cbor.deterministically_encoded_cbor_map_key_order _) (List.Tot.filter (map_key_neq _ k) x)
+    end /\
+    matches_map_group (map_group_cons_zero_or_one (map_group_entry_for k ty) true g) x ==
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> matches_map_group g x
+    | Some y -> ty y && matches_map_group g (List.Tot.filter (map_key_neq _ k) x)
+    end
+  ))
+  [SMTPat (matches_map_group (map_group_cons_zero_or_one (map_group_entry_for k ty) true g) x)]
+
+val matches_map_group_map_group_cons_one_deterministically_encoded_cbor_map_key_order
+   (#b: _) (k: Cbor.raw_data_item) (ty: bounded_typ_gen b) (g: map_group b)
+   (x: list (Cbor.raw_data_item & Cbor.raw_data_item) { List.Tot.for_all (opt_map_entry_bounded b) x })
+: Lemma
+  (requires (List.Tot.sorted (Cbor.map_entry_order Cbor.deterministically_encoded_cbor_map_key_order _) x))
+  (ensures (
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> True
+    | Some y -> opt_precedes y b /\ List.Tot.sorted (Cbor.map_entry_order Cbor.deterministically_encoded_cbor_map_key_order _) (List.Tot.filter (map_key_neq _ k) x)
+    end /\
+    matches_map_group (map_group_cons_one (map_group_entry_for k ty) true g) x ==
+    begin match Cbor.list_ghost_assoc k x with
+    | None -> false
+    | Some y -> ty y && matches_map_group g (List.Tot.filter (map_key_neq _ k) x)
+    end
+  ))
+  [SMTPat (matches_map_group (map_group_cons_one (map_group_entry_for k ty) true g) x)]
+
 // 2.1 specifies "names that turn into the map key text string"
 
 noextract
