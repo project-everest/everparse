@@ -1242,32 +1242,32 @@ static void TestErrorHandler (
 int main(int argc, char** argv) {
   if (argc < "^nb_cmd_and_args_s^") {
     printf(\"Wrong number of arguments, expected "^nb_args_s^", got %d\\n\", argc);
-    return 2;
+    return 3;
   }
   char * filename = argv[1];
 "^read_args^"
   int testfile = open(filename, O_RDONLY);
   if (testfile == -1) {
     printf(\"File %s does not exist\\n\", filename);
-    return 2;
+    return 3;
   }
   struct stat statbuf;
   if (fstat(testfile, &statbuf)) {
     close(testfile);
     printf(\"Cannot detect file size for %s\\n\", filename);
-    return 2;
+    return 3;
   }
   off_t len = statbuf.st_size;
   if (len > 4294967295) {
     printf(\"File is too large. EverParse/3D only supports data up to 4 GB\");
-    return 2;
+    return 3;
   }
   void * vbuf =
     mmap(NULL, len, PROT_READ, MAP_PRIVATE, testfile, 0);
   if (vbuf == MAP_FAILED) {
     close(testfile);
     printf(\"Cannot read %ld bytes from %s\\n\", len, filename);
-    return 2;
+    return 3;
   }
   uint8_t * buf = (uint8_t *) vbuf;
   printf(\"Read %ld bytes from %s\\n\", len, filename);
@@ -1276,9 +1276,13 @@ int main(int argc, char** argv) {
   munmap(vbuf, len);
   close(testfile);
   if (EverParseIsError(result)) {
-    printf(\"Witness from %s REJECTED\\n\", filename);
-    return 1;
+    printf(\"Witness from %s REJECTED because validator failed\\n\", filename);
+    return 2;
   };
+  if (result != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
+    printf(\"Witness from %s REJECTED because validator only consumed %ld out of %ld bytes\\n\", filename, result, len);
+    return 1;
+  }
   printf(\"Witness from %s ACCEPTED\\n\", filename);
   return 0;
 }
