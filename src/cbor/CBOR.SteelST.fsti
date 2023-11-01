@@ -182,7 +182,7 @@ noextract
 let read_cbor_error_postcond
   (va: Ghost.erased (Seq.seq U8.t))
 : Tot prop
-= forall v . ~ (Cbor.serialize_cbor v == Seq.slice va 0 (min (Seq.length (Cbor.serialize_cbor v)) (Seq.length va)))
+= forall v suff . ~ (Ghost.reveal va == Cbor.serialize_cbor v `Seq.append` suff)
 
 [@@__reduce__]
 let read_cbor_error_post
@@ -242,7 +242,7 @@ noextract
 let read_deterministically_encoded_cbor_error_postcond
   (va: Ghost.erased (Seq.seq U8.t))
 : Tot prop
-= forall v . Cbor.serialize_cbor v == Seq.slice va 0 (min (Seq.length (Cbor.serialize_cbor v)) (Seq.length va)) ==> Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order v == false
+= forall v suff . Ghost.reveal va == Cbor.serialize_cbor v `Seq.append` suff ==> Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order v == false
 
 [@@__reduce__]
 let read_deterministically_encoded_cbor_error_post

@@ -354,14 +354,13 @@ let serialize_cbor_error
   (ensures (read_cbor_error_postcond x))
 = let prf
     (v: Cbor.raw_data_item)
+    (suff: Seq.seq U8.t)
   : Lemma
-    (requires (Cbor.serialize_cbor v == Seq.slice x 0 (min (Seq.length (Cbor.serialize_cbor v)) (Seq.length x))))
+    (requires (x == Cbor.serialize_cbor v `Seq.append` suff))
     (ensures False)
-  = assert (Seq.length (Cbor.serialize_cbor v) <= Seq.length x);
-    Seq.lemma_split x (Seq.length (Cbor.serialize_cbor v));
-    LPS.parse_strong_prefix CborST.parse_raw_data_item (Cbor.serialize_cbor v) x
+  = LPS.parse_strong_prefix CborST.parse_raw_data_item (Cbor.serialize_cbor v) x
   in
-  Classical.forall_intro (Classical.move_requires prf)
+  Classical.forall_intro_2 (fun v suff -> Classical.move_requires (prf v) suff)
 
 #push-options "--z3rlimit 64"
 #restart-solver
@@ -487,18 +486,7 @@ let serialize_deterministically_encoded_cbor_error
     Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order v0 == false
   ))
   (ensures (read_deterministically_encoded_cbor_error_postcond x))
-=   LPS.parse_strong_prefix CborST.parse_raw_data_item (Cbor.serialize_cbor v0) x;
-    let prf
-      (v: Cbor.raw_data_item)
-    : Lemma
-      (requires (Cbor.serialize_cbor v == Seq.slice x 0 (min (Seq.length (Cbor.serialize_cbor v)) (Seq.length x))))
-      (ensures Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order v == false)
-    = let s = Cbor.serialize_cbor v in
-      assert (Seq.length s <= Seq.length x);
-      Seq.lemma_split x (Seq.length s);
-      LPS.parse_strong_prefix CborST.parse_raw_data_item (Cbor.serialize_cbor v) x
-    in
-    Classical.forall_intro (Classical.move_requires prf)
+= Cbor.serialize_cbor_with_test_correct v0 rem (fun c' _ -> Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order c' == true)
 
 let read_deterministically_encoded_cbor
   #va #p a sz
