@@ -495,7 +495,7 @@ let build_test_exe
 =
   if not (Options.get_skip_c_makefiles ())
   then begin
-    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"]
+    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
   end
 
 let build_and_run_test_exe
