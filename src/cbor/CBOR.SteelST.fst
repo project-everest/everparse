@@ -9,11 +9,93 @@ module LPS = LowParse.SteelST.SeqMatch
 module LW = LowParse.SteelST.L2ROutput.IntroElim
 module GR = Steel.ST.GhostReference
 
+inline_for_extraction
+noextract
 let cbor_serialized_payload_t = LPS.byte_array
+
+inline_for_extraction
+noextract
 let cbor_serialized_footprint_t = LPA.array LPS.byte
 
+noeq
+type cbor_serialized = {
+  cbor_serialized_size: SZ.t;
+  cbor_serialized_payload: cbor_serialized_payload_t;
+  footprint: cbor_serialized_footprint_t; // ghost
+}
+
+inline_for_extraction
+noextract
 let cbor_footprint_t = GR.ref unit
-let dummy_cbor_footprint = magic ()
+let dummy_cbor_footprint : cbor_footprint_t = magic ()
+
+
+noeq
+type cbor_tagged0 = {
+  cbor_tagged0_tag: U64.t;
+  cbor_tagged0_payload: R.ref cbor;
+  footprint: Ghost.erased cbor;
+}
+
+and cbor_array = {
+  cbor_array_length: U64.t;
+  cbor_array_payload: A.array cbor;
+  footprint: Ghost.erased (Seq.seq cbor);
+}
+
+and cbor_map_entry = {
+  cbor_map_entry_key: cbor;
+  cbor_map_entry_value: cbor;
+}
+
+and cbor_map = {
+  cbor_map_length: U64.t;
+  cbor_map_payload: A.array cbor_map_entry;
+  footprint: Ghost.erased (Seq.seq cbor_map_entry);
+}
+
+and cbor =
+| CBOR_Case_Int64:
+  v: cbor_int ->
+  self_footprint: cbor_footprint_t ->
+  cbor
+| CBOR_Case_String:
+  v: cbor_string ->
+  self_footprint: cbor_footprint_t ->
+  permission: perm ->
+  cbor
+| CBOR_Case_Tagged:
+  v: cbor_tagged0 ->
+  cbor
+| CBOR_Case_Array:
+  v: cbor_array ->
+  self_footprint: cbor_footprint_t ->
+  cbor
+| CBOR_Case_Map:
+  v: cbor_map ->
+  self_footprint: cbor_footprint_t ->
+  cbor
+| CBOR_Case_Simple_value:
+  v: Cbor.simple_value ->
+  self_footprint: cbor_footprint_t ->
+  cbor
+| CBOR_Case_Serialized:
+  v: cbor_serialized ->
+  self_footprint: cbor_footprint_t ->
+  cbor
+
+let dummy_cbor : cbor = CBOR_Case_Simple_value 0uy dummy_cbor_footprint
+
+let cbor_map_entry_key = Mkcbor_map_entry?.cbor_map_entry_key
+let cbor_map_entry_value = Mkcbor_map_entry?.cbor_map_entry_value
+
+let cbor_map_entry_key_value_inj
+  m1 m2
+= ()
+
+let mk_cbor_map_entry
+  k v
+= Mkcbor_map_entry k v
 
 let prod_perm
   (p1 p2: perm)
@@ -1438,6 +1520,27 @@ let cbor_array_index
   | _ ->
     return (cbor_array_index_case_serialized a i)
 
+noeq
+type cbor_array_iterator_payload_t =
+| CBOR_Array_Iterator_Payload_Array:
+    payload: A.array cbor ->
+    footprint: Ghost.erased (Seq.seq cbor) ->
+    cbor_array_iterator_payload_t
+| CBOR_Array_Iterator_Payload_Serialized:
+    payload: cbor_serialized_payload_t ->
+    footprint: cbor_serialized_footprint_t ->
+    cbor_array_iterator_payload_t
+
+// NOTE: this type could be made abstract (with val and
+// CAbstractStruct, and then hiding cbor_array_iterator_payload_t
+// altogether), but then, users couldn't allocate on stack
+noeq
+type cbor_array_iterator_t = {
+  cbor_array_iterator_length: U64.t;
+  cbor_array_iterator_payload: cbor_array_iterator_payload_t;
+  footprint: cbor_footprint_t;
+}
+
 [@@inline_let]
 let dummy_cbor_array_iterator = {
   cbor_array_iterator_length = 0uL;
@@ -2605,7 +2708,7 @@ let size_comp_for_map_entry
         pure (LowParse.SteelST.Write.size_comp_for_post (LPS.serialize_nondep_then CborST.serialize_raw_data_item CborST.serialize_raw_data_item) va sz res err)
     ))
 = LPS.serialize_nondep_then_eq CborST.serialize_raw_data_item CborST.serialize_raw_data_item va;
-  let sz1 = size _ c.cbor_map_entry_key sz perr in
+  let sz1 = size _ (cbor_map_entry_key c) sz perr in
   let _ = gen_elim () in
   let err = R.read perr in
   if err
@@ -2615,7 +2718,7 @@ let size_comp_for_map_entry
     return sz1
   end else begin
     noop ();
-    let sz2 = size _ c.cbor_map_entry_value sz1 perr in
+    let sz2 = size _ (cbor_map_entry_value c) sz1 perr in
     let _ = gen_elim () in
     noop ();
     return sz2
@@ -2822,10 +2925,10 @@ let l2r_writer_for_map_entry
     (fun _ -> True)
 = LPS.serialize_nondep_then_eq CborST.serialize_raw_data_item CborST.serialize_raw_data_item va;
   noop ();
-  let res = write _ c.cbor_map_entry_key out in
+  let res = write _ (cbor_map_entry_key c) out in
   let _ = gen_elim () in
   let _ = LPS.elim_aparse_with_serializer CborST.serialize_raw_data_item res in
-  let res_pl = write _ c.cbor_map_entry_value out in
+  let res_pl = write _ (cbor_map_entry_value c) out in
   let _ = gen_elim () in
   let vout' = vpattern_replace (LW.vp out) in
   let _ = LPS.elim_aparse_with_serializer CborST.serialize_raw_data_item res_pl in

@@ -24,82 +24,48 @@ type cbor_string = {
   cbor_string_payload: A.array U8.t;
 }
 
-inline_for_extraction
-noextract
-val cbor_serialized_payload_t: Type0 // extracted as uint8_t*
+val cbor_map_entry: Type0
 
-[@@erasable]
-val cbor_serialized_footprint_t: Type0
-
-noeq
-type cbor_serialized = {
-  cbor_serialized_size: SZ.t;
-  cbor_serialized_payload: cbor_serialized_payload_t;
-  footprint: cbor_serialized_footprint_t; // ghost
-}
-
-[@@erasable]
-val cbor_footprint_t: Type0
-
-noeq
-type cbor_tagged0 = {
-  cbor_tagged0_tag: U64.t;
-  cbor_tagged0_payload: R.ref cbor;
-  footprint: Ghost.erased cbor;
-}
-
-and cbor_array = {
-  cbor_array_length: U64.t;
-  cbor_array_payload: A.array cbor;
-  footprint: Ghost.erased (Seq.seq cbor);
-}
-
-and cbor_map_entry = {
-  cbor_map_entry_key: cbor;
-  cbor_map_entry_value: cbor;
-}
-
-and cbor_map = {
-  cbor_map_length: U64.t;
-  cbor_map_payload: A.array cbor_map_entry;
-  footprint: Ghost.erased (Seq.seq cbor_map_entry);
-}
-
-and cbor =
-| CBOR_Case_Int64:
-  v: cbor_int ->
-  self_footprint: cbor_footprint_t ->
-  cbor
-| CBOR_Case_String:
-  v: cbor_string ->
-  self_footprint: cbor_footprint_t ->
-  permission: perm ->
-  cbor
-| CBOR_Case_Tagged:
-  v: cbor_tagged0 ->
-  cbor
-| CBOR_Case_Array:
-  v: cbor_array ->
-  self_footprint: cbor_footprint_t ->
-  cbor
-| CBOR_Case_Map:
-  v: cbor_map ->
-  self_footprint: cbor_footprint_t ->
-  cbor
-| CBOR_Case_Simple_value:
-  v: Cbor.simple_value ->
-  self_footprint: cbor_footprint_t ->
-  cbor
-| CBOR_Case_Serialized:
-  v: cbor_serialized ->
-  self_footprint: cbor_footprint_t ->
-  cbor
-
-val dummy_cbor_footprint: cbor_footprint_t
+val cbor: Type0
 
 inline_for_extraction
 noextract
-let dummy_cbor : cbor = CBOR_Case_Simple_value 0uy dummy_cbor_footprint
+val dummy_cbor : cbor
+
+inline_for_extraction
+noextract
+val cbor_map_entry_key: cbor_map_entry -> cbor
+
+inline_for_extraction
+noextract
+val cbor_map_entry_value: cbor_map_entry -> cbor
+
+val cbor_map_entry_key_value_inj
+  (m1 m2: cbor_map_entry)
+: Lemma
+  (requires (
+    cbor_map_entry_key m1 == cbor_map_entry_key m2 /\
+    cbor_map_entry_value m1 == cbor_map_entry_value m2
+  ))
+  (ensures (m1 == m2))
+  [SMTPatOr [
+    [SMTPat (cbor_map_entry_key m1); SMTPat (cbor_map_entry_key m2)];
+    [SMTPat (cbor_map_entry_key m1); SMTPat (cbor_map_entry_value m2)];
+    [SMTPat (cbor_map_entry_value m1); SMTPat (cbor_map_entry_key m2)];
+    [SMTPat (cbor_map_entry_value m1); SMTPat (cbor_map_entry_value m2)];
+  ]]
+
+inline_for_extraction
+noextract
+val mk_cbor_map_entry
+  (key: cbor)
+  (value: cbor)
+: Pure cbor_map_entry
+  (requires True)
+  (ensures (fun res ->
+    cbor_map_entry_key res == key /\
+    cbor_map_entry_value res == value
+  ))
 
 (* Relating a CBOR C object with a CBOR high-level value *)
 
@@ -115,8 +81,8 @@ let raw_data_item_map_entry_match1
   (v1: (Cbor.raw_data_item & Cbor.raw_data_item))
   (raw_data_item_match: (cbor -> (v': Cbor.raw_data_item { v' << v1 }) -> vprop))
 : Tot vprop
-= raw_data_item_match c1.cbor_map_entry_key (fstp v1) `star`
-  raw_data_item_match c1.cbor_map_entry_value (sndp v1)
+= raw_data_item_match (cbor_map_entry_key c1) (fstp v1) `star`
+  raw_data_item_match (cbor_map_entry_value c1) (sndp v1)
 
 val raw_data_item_match
   (p: perm)
@@ -410,26 +376,7 @@ val cbor_array_index
         raw_data_item_match p a v)
     )
 
-noeq
-type cbor_array_iterator_payload_t =
-| CBOR_Array_Iterator_Payload_Array:
-    payload: A.array cbor ->
-    footprint: Ghost.erased (Seq.seq cbor) ->
-    cbor_array_iterator_payload_t
-| CBOR_Array_Iterator_Payload_Serialized:
-    payload: cbor_serialized_payload_t ->
-    footprint: cbor_serialized_footprint_t ->
-    cbor_array_iterator_payload_t
-
-// NOTE: this type could be made abstract (with val and
-// CAbstractStruct, and then hiding cbor_array_iterator_payload_t
-// altogether), but then, users couldn't allocate on stack
-noeq
-type cbor_array_iterator_t = {
-  cbor_array_iterator_length: U64.t;
-  cbor_array_iterator_payload: cbor_array_iterator_payload_t;
-  footprint: cbor_footprint_t;
-}
+val cbor_array_iterator_t: Type0
 
 val dummy_cbor_array_iterator: cbor_array_iterator_t
 
