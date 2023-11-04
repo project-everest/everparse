@@ -27,7 +27,7 @@ type cbor_serialized = {
 inline_for_extraction
 noextract
 let cbor_footprint_t = GR.ref unit
-let dummy_cbor_footprint : cbor_footprint_t = magic ()
+let dummy_cbor_footprint : cbor_footprint_t = GR.dummy_ref _
 
 
 noeq
@@ -374,14 +374,6 @@ let raw_data_item_match_get_case
       let _ = gen_elim () in
       rewrite emp (raw_data_item_match p c v)
 
-assume
-val ref_pts_to_perm (#a: _) (#u: _) (#p: _) (#v: _) (r: R.ref a)
-  : STGhost unit u
-      (R.pts_to r p v)
-      (fun _ -> R.pts_to r p v)
-      True
-      (fun _ -> p `lesser_equal_perm` full_perm)
-
 let raw_data_item_match_perm_le_full_perm
   (#opened: _)
   (#p: perm)
@@ -464,7 +456,7 @@ let raw_data_item_match_perm_le_full_perm
         (raw_data_item_match p c v)
         (raw_data_item_match_tagged0 p c v (raw_data_item_match p));
       let _ = gen_elim () in
-      ref_pts_to_perm _;
+      R.pts_to_perm _;
       rewrite
         (raw_data_item_match_tagged0 p c v (raw_data_item_match p))
         (raw_data_item_match p c v)
@@ -489,20 +481,6 @@ let diff_perm
   ))
 = MkPerm ((let open FStar.Real in ( -. )) high.v low.v)
 
-assume
-val gref_share_gen
-  (#t: Type)
-  (#opened: _)
-  (#p: perm)
-  (#v: t)
-  (r: GR.ref t)
-  (p1 p2: perm)
-: STGhost unit opened
-    (GR.pts_to r p v)
-    (fun _ -> GR.pts_to r p1 v `star` GR.pts_to r p2 v)
-    (p == p1 `sum_perm` p2)
-    (fun _ -> True)
-
 let gref_lower_perm
   (#t: Type)
   (#opened: _)
@@ -524,7 +502,7 @@ let gref_lower_perm
       low
   else begin
     let diff = diff_perm high low in
-    gref_share_gen r low diff;
+    GR.share_gen r low diff;
     intro_implies
       (GR.pts_to r low v)
       (GR.pts_to r high v)
@@ -1545,7 +1523,7 @@ type cbor_array_iterator_t = {
 let dummy_cbor_array_iterator = {
   cbor_array_iterator_length = 0uL;
   cbor_array_iterator_payload = CBOR_Array_Iterator_Payload_Array A.null Seq.empty;
-  footprint = magic ();
+  footprint = dummy_cbor_footprint;
 }
 
 [@@__reduce__]
@@ -2386,28 +2364,6 @@ let destr_cbor_tagged0
         (raw_data_item_match p a _)
     );
   return res
-
-let implies_consumes_l
-  (#opened: _)
-  (p q r: vprop)
-: STGhostT unit opened
-    (p `star` ((p `star` q) `implies_` r))
-    (fun _ -> q `implies_` r)
-= intro_implies
-    q
-    r
-    (p `star` ((p `star` q) `implies_` r))
-    (fun _ -> elim_implies (p `star` q) r)
-
-let implies_consumes_r
-  (#opened: _)
-  (p q r: vprop)
-: STGhostT unit opened
-    (q `star` ((p `star` q) `implies_` r))
-    (fun _ -> p `implies_` r)
-= implies_with_tactic (q `star` p) (p `star` q);
-  implies_trans (q `star` p) (p `star` q) r;
-  implies_consumes_l q p r
 
 #push-options "--z3rlimit 64"
 #restart-solver
