@@ -514,14 +514,6 @@ val constr_cbor_tagged
       )
     )
 
-[@@__reduce__]
-let maybe_cbor_map
-  (v: Cbor.raw_data_item)
-: GTot (list (Cbor.raw_data_item & Cbor.raw_data_item))
-= match v with
-  | Cbor.Map l -> l
-  | _ -> []
-
 val constr_cbor_map
   (#c': Ghost.erased (Seq.seq cbor_map_entry))
   (#v': Ghost.erased (list (Cbor.raw_data_item & Cbor.raw_data_item)))
@@ -662,3 +654,14 @@ val write_cbor
     )
     (SZ.v sz == A.length out)
     (fun _ -> True)
+
+val cbor_gather
+  (#opened: _)
+  (c: cbor)
+  (v1 v2: Cbor.raw_data_item)
+  (p1 p2: perm)
+: STGhost unit opened
+    (raw_data_item_match p1 c v1 `star` raw_data_item_match p2 c v2)
+    (fun _ -> raw_data_item_match (p1 `sum_perm` p2) c v1)
+    True
+    (fun _ -> v1 == v2)
