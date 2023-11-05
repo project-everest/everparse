@@ -3627,3 +3627,217 @@ let rec cbor_gather
       (CBOR_Case_Map?.v c).footprint
       (maybe_cbor_map v1)
       (CBOR_Case_Map?.self_footprint c)
+
+let rec seq_list_match_share
+  (#opened: _)
+  (#t #t': Type)
+  (p p1 p2: t -> t' -> vprop)
+  (s: Seq.seq t)
+  (l: list t')
+  (prf: (
+    (#opened: _) ->
+    (x: t) ->
+    (x': t' { x' << l }) ->
+    STGhostT unit opened
+      (p x x')
+      (fun _ -> p1 x x' `star` p2 x x')
+  ))
+: STGhostT unit opened
+    (SM.seq_list_match s l p)
+    (fun _ -> SM.seq_list_match s l p1 `star` SM.seq_list_match s l p2)
+    (decreases l)
+= if Nil? l
+  then begin
+    rewrite
+      (SM.seq_list_match s l p)
+      (SM.seq_list_match_nil0 s);
+    let _ = gen_elim () in
+    rewrite
+      (SM.seq_list_match_nil0 s)
+      (SM.seq_list_match s l p1);
+    rewrite
+      (SM.seq_list_match_nil0 s)
+      (SM.seq_list_match s l p2)
+  end else begin
+    SM.seq_list_match_cons_eq s l p1;
+    SM.seq_list_match_cons_eq s l p2;
+    SM.seq_list_match_cons_eq s l p;
+    noop ();
+    rewrite
+      (SM.seq_list_match s l p)
+      (SM.seq_list_match_cons0 s l p SM.seq_list_match);
+    let _ = gen_elim () in
+    prf _ _;
+    seq_list_match_share p p1 p2 _ _ prf;
+    rewrite
+      (SM.seq_list_match_cons0 s l p1 SM.seq_list_match)
+      (SM.seq_list_match s l p1);
+    rewrite
+      (SM.seq_list_match_cons0 s l p2 SM.seq_list_match)
+      (SM.seq_list_match s l p2)
+  end
+
+let rec cbor_share
+  (#opened: _)
+  (c: cbor)
+  (v1: Cbor.raw_data_item)
+  (p p1 p2: perm)
+: STGhost unit opened
+    (raw_data_item_match p c v1)
+    (fun _ -> raw_data_item_match p1 c v1 `star` raw_data_item_match p2 c v1)
+    (p == p1 `sum_perm` p2)
+    (fun _ -> True)
+    (decreases v1)
+= raw_data_item_match_get_case #_ #p #v1 c;
+  match c with
+  
+  | CBOR_Case_Serialized s fp ->
+    rewrite
+      (raw_data_item_match p c v1)
+      (raw_data_item_match_serialized0 p c v1);
+    let _ = gen_elim () in
+    GR.share_gen _ p1 p2;
+    let w = LPS.share_aparse CborST.parse_raw_data_item _ (p1 `prod_perm` LPA.array_perm s.footprint) (p2 `prod_perm` LPA.array_perm s.footprint) in
+    let _ = gen_elim () in
+    begin
+      noop ();
+      rewrite
+        (raw_data_item_match_serialized0 p1 c v1)
+        (raw_data_item_match p1 c v1)
+    end <: STGhostT unit opened (LPS.aparse CborST.parse_raw_data_item _ (fstp w) `star` GR.pts_to _ p1 ()) (fun _ -> raw_data_item_match p1 c v1);
+    rewrite
+      (raw_data_item_match_serialized0 p2 c v1)
+      (raw_data_item_match p2 c v1)
+
+  | CBOR_Case_Simple_value v fp ->
+    rewrite
+      (raw_data_item_match p c v1)
+      (raw_data_item_match_simple_value0 p c v1);
+    let _ = gen_elim () in
+    GR.share_gen _ p1 p2;
+    rewrite
+      (raw_data_item_match_simple_value0 p1 c v1)
+      (raw_data_item_match p1 c v1);
+    rewrite
+      (raw_data_item_match_simple_value0 p2 c v1)
+      (raw_data_item_match p2 c v1)
+
+  | CBOR_Case_Int64 v fp ->
+    rewrite
+      (raw_data_item_match p c v1)
+      (raw_data_item_match_int0 p c v1);
+    let _ = gen_elim () in
+    GR.share_gen _ p1 p2;
+    rewrite
+      (raw_data_item_match_int0 p1 c v1)
+      (raw_data_item_match p1 c v1);
+    rewrite
+      (raw_data_item_match_int0 p2 c v1)
+      (raw_data_item_match p2 c v1)
+
+  | CBOR_Case_String v fp p' ->
+    rewrite
+      (raw_data_item_match p c v1)
+      (raw_data_item_match_string0 p c v1);
+    let _ = gen_elim () in
+    GR.share_gen _ p1 p2;
+    A.share _ _ (p1 `prod_perm` p') (p2 `prod_perm` p');
+    begin
+      noop ();
+      rewrite
+        (raw_data_item_match_string0 p1 c v1)
+        (raw_data_item_match p1 c v1)
+    end <: STGhostT unit opened (A.pts_to _ (p1 `prod_perm` p') _ `star` GR.pts_to _ p1 _) (fun _ -> raw_data_item_match p1 c v1);
+    rewrite
+      (raw_data_item_match_string0 p2 c v1)
+      (raw_data_item_match p2 c v1)
+
+  | CBOR_Case_Tagged v ->
+    let Cbor.Tagged tg1 v1' = v1 in
+    assert_norm (
+      raw_data_item_match p1 (CBOR_Case_Tagged v) (Cbor.Tagged tg1 v1') ==
+      raw_data_item_match_tagged0 p1 (CBOR_Case_Tagged v) (Cbor.Tagged tg1 v1') (raw_data_item_match p1)
+    );
+    assert_norm (
+      raw_data_item_match p2 (CBOR_Case_Tagged v) (Cbor.Tagged tg1 v1') ==
+      raw_data_item_match_tagged0 p2 (CBOR_Case_Tagged v) (Cbor.Tagged tg1 v1') (raw_data_item_match p2)
+    );
+    assert_norm (
+      raw_data_item_match p (CBOR_Case_Tagged v) (Cbor.Tagged tg1 v1') ==
+      raw_data_item_match_tagged0 p (CBOR_Case_Tagged v) (Cbor.Tagged tg1 v1') (raw_data_item_match p)
+    );
+    rewrite
+      (raw_data_item_match p c v1)
+      (raw_data_item_match_tagged0 p c v1 (raw_data_item_match p));
+    let _ = gen_elim () in
+    R.share_gen _ p1 p2;
+    cbor_share _ _ _ p1 p2;
+    rewrite
+      (raw_data_item_match_tagged0 p1 c v1 (raw_data_item_match p1))
+      (raw_data_item_match p1 c v1);
+    rewrite
+      (raw_data_item_match_tagged0 p2 c v1 (raw_data_item_match p2))
+      (raw_data_item_match p2 c v1)
+
+  | CBOR_Case_Array v fp ->
+    let Cbor.Array v1' = v1 in
+    assert_norm
+      (raw_data_item_match p1 (CBOR_Case_Array v fp) (Cbor.Array v1') ==
+        raw_data_item_match_array0 p1 (CBOR_Case_Array v fp) (Cbor.Array v1') (raw_data_item_array_match p1)
+      );
+    assert_norm
+      (raw_data_item_match p (CBOR_Case_Array v fp) (Cbor.Array v1') ==
+        raw_data_item_match_array0 p (CBOR_Case_Array v fp) (Cbor.Array v1') (raw_data_item_array_match p)
+      );
+    assert_norm
+      (raw_data_item_match p2 (CBOR_Case_Array v fp) (Cbor.Array v1') ==
+        raw_data_item_match_array0 p2 (CBOR_Case_Array v fp) (Cbor.Array v1') (raw_data_item_array_match p2)
+      );
+    noop ();
+    rewrite
+      (raw_data_item_match p c v1)
+      (raw_data_item_match_array0 p c v1 (raw_data_item_array_match p));
+    let _ = gen_elim () in
+    vpattern_rewrite (A.pts_to _ _) (Ghost.reveal v.footprint);
+    rewrite (raw_data_item_array_match _ _ _) (SM.seq_list_match v.footprint (Cbor.Array?.v v1) (raw_data_item_match p));
+    GR.share_gen _ p1 p2;
+    A.share _ _ p1 p2;
+    seq_list_match_share
+      (raw_data_item_match p)
+      (raw_data_item_match p1)
+      (raw_data_item_match p2)
+      v.footprint
+      (Cbor.Array?.v v1)
+      (fun x x1' ->
+        cbor_share x x1' p p1 p2
+      );
+    rewrite
+      (SM.seq_list_match v.footprint (Cbor.Array?.v v1) (raw_data_item_match p1))
+      (raw_data_item_array_match p1 v.footprint (Cbor.Array?.v v1));
+    rewrite
+      (raw_data_item_match_array0 p1 c v1 (raw_data_item_array_match p1))
+      (raw_data_item_match p1 c v1);
+    rewrite
+      (SM.seq_list_match v.footprint (Cbor.Array?.v v1) (raw_data_item_match p2))
+      (raw_data_item_array_match p2 v.footprint (Cbor.Array?.v v1));
+    rewrite
+      (raw_data_item_match_array0 p2 c v1 (raw_data_item_array_match p2))
+      (raw_data_item_match p2 c v1)
+
+  | CBOR_Case_Map _ _ ->
+    let _ : squash (Cbor.Map? v1) = () in
+    destr_cbor_map' c;
+    GR.share_gen _ p1 p2;
+    A.share _ _ p1 p2;
+    seq_list_match_share
+      (raw_data_item_map_entry_match p)
+      (raw_data_item_map_entry_match p1)
+      (raw_data_item_map_entry_match p2)
+      _
+      _
+      (fun x x1' ->
+        cbor_share (cbor_map_entry_key x) (fstp x1') p p1 p2;
+        cbor_share (cbor_map_entry_value x) (sndp x1') p p1 p2
+      );
+    constr_cbor_map' p1 c v1 _ _ _ _;
+    constr_cbor_map' p2 c v1 _ _ _ _

@@ -665,3 +665,14 @@ val cbor_gather
     (fun _ -> raw_data_item_match (p1 `sum_perm` p2) c v1)
     True
     (fun _ -> v1 == v2)
+
+val cbor_share
+  (#opened: _)
+  (c: cbor)
+  (v1: Cbor.raw_data_item)
+  (p p1 p2: perm)
+: STGhost unit opened
+    (raw_data_item_match p c v1)
+    (fun _ -> raw_data_item_match p1 c v1 `star` raw_data_item_match p2 c v1)
+    (p == p1 `sum_perm` p2)
+    (fun _ -> True)
