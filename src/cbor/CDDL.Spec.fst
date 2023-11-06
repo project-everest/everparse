@@ -41,6 +41,23 @@ let rec list_index_for_all
   then ()
   else list_index_for_all p (List.Tot.tl l) (i - 1)
 
+let rec list_for_all_index
+  (#t: Type)
+  (p: t -> bool)
+  (l: list t)
+  (prf: (
+    (i: bounded_nat (List.Tot.length l)) ->
+    Lemma
+    (ensures (p (List.Tot.index l i) == true))
+  ))
+: Lemma
+  (List.Tot.for_all p l == true)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    prf 0;
+    list_for_all_index p q (fun i -> prf (i + 1))
+
 [@@erasable]
 noeq
 type matches_map_group_t
@@ -256,6 +273,40 @@ let rec list_index_append_cons
 = match l1 with
   | [] -> ()
   | b :: q -> list_index_append_cons q a l2
+
+let matches_map_group_no_restricted
+  #b g x
+= let prf1 () : Lemma
+    (requires (matches_map_group g x))
+    (ensures (list_ghost_forall_exists matches_map_group_entry' x g.zero_or_more))
+  = let prf = FStar.IndefiniteDescription.indefinite_description_ghost (matches_map_group_t x g) (fun prf -> matches_map_group_proof_is_final prf) in
+    list_for_all_index
+      (list_ghost_forall_exists_body matches_map_group_entry' g.zero_or_more)
+      x
+      (fun i ->
+        let ZeroOrMore j = prf.f i in
+        prf.prf_f i;
+        list_exists_index_intro (pull_rel matches_map_group_entry' (List.Tot.index x i)) g.zero_or_more j
+      )
+  in
+  let prf2 () : Lemma
+    (requires (list_ghost_forall_exists matches_map_group_entry' x g.zero_or_more
+    ))
+    (ensures (matches_map_group g x))
+  = let prf : matches_map_group_t x g = {
+      f = (fun i ->
+        let j = list_ghost_forall_exists_find_index matches_map_group_entry' x g.zero_or_more i in
+        ZeroOrMore j
+      );
+      g = (fun _ -> None);
+      prf_f = (fun i -> ());
+      prf_g = (fun _ -> ());
+    }
+    in
+    assert (matches_map_group_proof_is_final prf)
+  in
+  Classical.move_requires prf1 ();
+  Classical.move_requires prf2 ()
 
 let rec list_ghost_forall2_refl
   (#t: Type)
