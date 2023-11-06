@@ -532,6 +532,68 @@ val constr_cbor_map
       )
     )
 
+val cbor_map_length
+  (#p: perm)
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor)
+: ST U64.t
+    (raw_data_item_match p a v)
+    (fun _ -> raw_data_item_match p a v)
+    (Cbor.Map? v)
+    (fun res ->
+      Cbor.Map? v /\
+      U64.v res == List.Tot.length (Cbor.Map?.v v)
+    )
+
+val cbor_map_iterator_t: Type0
+
+val dummy_cbor_map_iterator: cbor_map_iterator_t
+
+val cbor_map_iterator_match
+  (p: perm)
+  (i: cbor_map_iterator_t)
+  (l: list (Cbor.raw_data_item & Cbor.raw_data_item))
+: Tot vprop
+
+val cbor_map_iterator_init
+  (#p: perm)
+  (#v: Ghost.erased Cbor.raw_data_item)
+  (a: cbor { Cbor.Map? v })
+: STT cbor_map_iterator_t
+    (raw_data_item_match p a v)
+    (fun i ->
+      cbor_map_iterator_match p i (Cbor.Map?.v v) `star`
+      (cbor_map_iterator_match p i (Cbor.Map?.v v) `implies_`
+        raw_data_item_match p a v)
+    )
+
+val cbor_map_iterator_is_done
+  (#p: perm)
+  (#l: Ghost.erased (list (Cbor.raw_data_item & Cbor.raw_data_item)))
+  (i: cbor_map_iterator_t)
+: ST bool
+    (cbor_map_iterator_match p i l)
+    (fun _ -> cbor_map_iterator_match p i l)
+    True
+    (fun res -> res == Nil? l)
+
+val cbor_map_iterator_next
+  (#p: perm)
+  (#l: Ghost.erased (list (Cbor.raw_data_item & Cbor.raw_data_item)))
+  (#i: Ghost.erased cbor_map_iterator_t)
+  (pi: R.ref cbor_map_iterator_t { Cons? l })
+: STT cbor_map_entry
+    (R.pts_to pi full_perm i `star` cbor_map_iterator_match p i l)
+    (fun c -> exists_ (fun i' ->
+      R.pts_to pi full_perm i' `star`
+      raw_data_item_map_entry_match p c (List.Tot.hd l) `star`
+      cbor_map_iterator_match p i' (List.Tot.tl l) `star`
+      ((raw_data_item_map_entry_match p c (List.Tot.hd l) `star`
+        cbor_map_iterator_match p i' (List.Tot.tl l)) `implies_`
+        cbor_map_iterator_match p i l
+      )
+    ))
+
 val cbor_get_major_type
   (#p: perm)
   (#v: Ghost.erased Cbor.raw_data_item)
