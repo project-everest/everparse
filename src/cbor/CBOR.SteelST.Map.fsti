@@ -1,5 +1,5 @@
 module CBOR.SteelST.Map
-include CBOR.SteelST.Type
+include CBOR.SteelST.Map.Base
 open Steel.ST.Util
 
 module Cbor = CBOR.Spec
@@ -27,29 +27,6 @@ val constr_cbor_map
           raw_data_item_map_match full_perm c' v')
       )
     )
-
-val cbor_map_length
-  (#p: perm)
-  (#v: Ghost.erased Cbor.raw_data_item)
-  (a: cbor)
-: ST U64.t
-    (raw_data_item_match p a v)
-    (fun _ -> raw_data_item_match p a v)
-    (Cbor.Map? v)
-    (fun res ->
-      Cbor.Map? v /\
-      U64.v res == List.Tot.length (Cbor.Map?.v v)
-    )
-
-val cbor_map_iterator_t: Type0
-
-val dummy_cbor_map_iterator: cbor_map_iterator_t
-
-val cbor_map_iterator_match
-  (p: perm)
-  (i: cbor_map_iterator_t)
-  (l: list (Cbor.raw_data_item & Cbor.raw_data_item))
-: Tot vprop
 
 val cbor_map_iterator_init
   (#p: perm)
