@@ -26,19 +26,20 @@ ifdef KRML_HOME
   KRMLLIB:=$(KRML_HOME)/krmllib
 endif
 LOWPARSE_HOME=../lowparse
-INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj --include $(LOWPARSE_HOME)
+INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 
-ifeq (,$(STEEL_HOME))
-	$(error "Please set STEEL_HOME to the root/prefix directory of your Steel installation.")
+ifndef STEEL_HOME
+  STEEL_HOME=$(realpath ../../../steel)
 endif
+INCLUDE_PATHS=$(LOWPARSE_HOME) $(LOWPARSE_HOME)/steel
 
 ALREADY_CACHED = --already_cached *,-CBOR,-CDDL,-COSE,-DPE.Messages
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED) --cmi --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
 
 ifneq (,$(STEEL_C))
-  FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_c_array
+  FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel/steel_c_array
 else
-  FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_array
+  FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel/steel_array
 endif
 
 FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS)
