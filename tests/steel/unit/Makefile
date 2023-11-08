@@ -16,6 +16,7 @@ FSTAR_OPTIONS := --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked
 		--already_cached '*,-Test' \
 		--include $(FSTAR_HOME)/ulib/.cache \
 		--include $(LOWPARSE_HOME) \
+		--include $(LOWPARSE_HOME)/steel \
 		--include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --cmi
 
 ifeq (,$(STEEL_HOME))
@@ -27,9 +28,9 @@ FSTAR_OPTIONS += --include $(STEEL_HOME)/lib/steel --load_cmxs steel
 FSTAR_EXE=$(FSTAR_HOME)/bin/fstar.exe
 
 ifdef STEEL_C
-FSTAR_OPTIONS +=  --include $(STEEL_HOME)/lib/steel/c --include $(LOWPARSE_HOME)/steel_c_array
+FSTAR_OPTIONS +=  --include $(STEEL_HOME)/lib/steel/c --include $(LOWPARSE_HOME)/steel/steel_c_array
 else
-FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel_array
+FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel/steel_array
 endif
 
 FSTAR = $(FSTAR_EXE) --trace_error $(FSTAR_OPTIONS)

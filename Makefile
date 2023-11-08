@@ -28,12 +28,12 @@ lowparse-unit-test: lowparse
 lowparse-bitfields-test: lowparse
 	+$(MAKE) -C tests/bitfields
 
-ifeq (,$(STEEL_HOME))
-steel-unit-test:
-else
-steel-unit-test: lowparse
+.PHONY: steel
+steel: lowparse
+	+$(MAKE) -C src/lowparse/steel
+
+steel-unit-test: steel
 	+$(MAKE) -C tests/steel
-endif
 
 .PHONY: steel-test
 steel-test: steel-unit-test
