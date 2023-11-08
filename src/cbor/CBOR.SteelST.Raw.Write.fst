@@ -1,28 +1,6 @@
 module CBOR.SteelST.Raw.Write
-include CBOR.SteelST.Raw.Base
-open CBOR.SteelST.Raw.Read
-open LowParse.SteelST.Combinators
-open LowParse.SteelST.Assoc
-open LowParse.SteelST.Recursive
-open LowParse.SteelST.BitSum
-open LowParse.SteelST.ValidateAndRead
-open LowParse.SteelST.SeqBytes
-open Steel.ST.GenElim
-
-module R = Steel.ST.Reference
-module AP = LowParse.SteelST.ArrayPtr
-module SZ = FStar.SizeT
-module R = Steel.ST.Reference
-module NL = LowParse.SteelST.VCList.Sorted
-module SB = LowParse.SteelST.SeqBytes
-module U8 = FStar.UInt8
-module Cast = FStar.Int.Cast
-module I16 = FStar.Int16
-module U64 = FStar.UInt64
 
 #set-options "--print_universes"
-
-#set-options "--ide_id_info_off"
 
 (* Writers *)
 
@@ -464,8 +442,6 @@ let l2r_write_simple_value_as_argument
 #push-options "--z3rlimit 32 --split_queries always"
 #restart-solver
 
-module W = LowParse.SteelST.R2LOutput
-
 let maybe_r2l_write_simple_value
   (#opened: _)
   (x: simple_value)
@@ -805,49 +781,6 @@ let write_int64
     let res = write_uint64_as_argument m x out in
     maybe_r2l_write_int64 m x out res;
     return res
-
-let finalize_raw_data_item_string_post_prop
-  (m: major_type_byte_string_or_text_string)
-  (va: v parse_raw_data_item_kind raw_data_item)
-  (vp: AP.v byte)
-: GTot prop
-=
-        FStar.UInt.fits (Seq.length (AP.contents_of vp)) U64.n /\
-        va.contents == String m (AP.contents_of vp)
-
-let finalize_raw_data_item_string_failure
-  (m: major_type_byte_string_or_text_string)
-  (vout: AP.array byte)
-  (vp: AP.v byte)
-: GTot prop
-= 
-  FStar.UInt.fits (Seq.length (AP.contents_of vp)) U64.n /\
-  Seq.length (serialize serialize_raw_data_item (String m (AP.contents_of vp))) > AP.length vout + AP.length (AP.array_of vp)
-
-[@@__reduce__]
-let finalize_raw_data_item_string_post
-  (m: major_type_byte_string_or_text_string)
-  (vout: AP.array byte)
-  (out: W.t)
-  (vp: AP.v byte)
-  (ap: byte_array)
-  (res: bool)
-: Tot vprop
-=
-      ifthenelse_vprop
-        res
-        (fun _ -> exists_ (fun vout' -> exists_ (fun a -> exists_ (fun va ->
-          aparse parse_raw_data_item a va `star`
-          W.vp out vout' `star`
-          pure (
-            AP.adjacent vout (AP.array_of vp) /\
-            AP.merge_into vout' (array_of va) (AP.merge vout (AP.array_of vp)) /\
-            finalize_raw_data_item_string_post_prop m va vp
-        )))))
-        (fun _ ->
-          pure (finalize_raw_data_item_string_failure m vout vp) `star`
-          W.vp out vout `star` AP.arrayptr ap vp
-        )
 
 #push-options "--z3rlimit 32"
 #restart-solver

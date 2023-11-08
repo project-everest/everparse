@@ -1,36 +1,4 @@
 module CBOR.SteelST.Raw.Array
-include CBOR.SteelST.Raw.Base
-open CBOR.SteelST.Raw.Validate
-open LowParse.SteelST.Combinators
-open LowParse.SteelST.Recursive
-open LowParse.SteelST.BitSum
-open LowParse.SteelST.ValidateAndRead
-open Steel.ST.GenElim
-
-module AP = LowParse.SteelST.ArrayPtr
-module SZ = FStar.SizeT
-module R = Steel.ST.Reference
-module NL = LowParse.SteelST.VCList.Sorted
-module U8 = FStar.UInt8
-module U64 = FStar.UInt64
-
-#restart-solver
-unfold
-let get_raw_data_item_payload_array_post
-  (va: v parse_raw_data_item_kind raw_data_item)
-  (vh: v (get_parser_kind parse_header) header)
-  (n: nat)
-  (vc: v (NL.parse_nlist_kind n parse_raw_data_item_kind) (NL.nlist n raw_data_item))
-: GTot prop
-=
-        let (| h, c |) = synth_raw_data_item_recip va.contents in
-        let (| b, x |) = h in
-        // order of the following conjuncts matters for typechecking
-        vh.contents == h /\
-        n == UInt64.v (argument_as_uint64 b x) /\
-        va.contents == Array vc.contents /\
-        vc.contents == c /\
-        AP.merge_into (array_of' vh) (array_of' vc) (array_of va)
 
 let get_raw_data_item_payload_array
   (#opened: _)
@@ -98,14 +66,6 @@ let intro_raw_data_item_array
 
 #restart-solver
 
-let focus_array_with_ghost_length_post
-  (n: nat)
-  (va: v parse_raw_data_item_kind raw_data_item)
-  (vres: v (NL.parse_nlist_kind n parse_raw_data_item_kind) (NL.nlist n raw_data_item))
-: Tot prop
-= Array? va.contents /\
-  Array?.v va.contents == vres.contents
-
 let focus_array_with_ghost_length
   (n: Ghost.erased nat)
   (#va: v parse_raw_data_item_kind raw_data_item)
@@ -136,14 +96,6 @@ let focus_array_with_ghost_length
       vpattern_rewrite (aparse parse_raw_data_item a) va
     );
   return a'
-
-[@@erasable]
-noeq
-type focus_array_res = {
-  n: U64.t;
-  l: v (NL.parse_nlist_kind (U64.v n) parse_raw_data_item_kind) (NL.nlist (U64.v n) raw_data_item);
-  a: byte_array;
-}
 
 let focus_array
   (#n': Ghost.erased U64.t)

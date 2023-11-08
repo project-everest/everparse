@@ -1,29 +1,6 @@
 module CBOR.SteelST.Raw.Map
-include CBOR.SteelST.Raw.Base
-open CBOR.SteelST.Raw.Validate
-open LowParse.SteelST.Combinators
-open LowParse.SteelST.Assoc
-open LowParse.SteelST.Recursive
-open LowParse.SteelST.BitSum
-open LowParse.SteelST.ValidateAndRead
-open LowParse.SteelST.SeqBytes
-open Steel.ST.GenElim
-
-module AP = LowParse.SteelST.ArrayPtr
-module SZ = FStar.SizeT
-module R = Steel.ST.Reference
-module NL = LowParse.SteelST.VCList.Sorted
-module SB = LowParse.SteelST.SeqBytes
-module U8 = FStar.UInt8
-module Cast = FStar.Int.Cast
-module I16 = FStar.Int16
-module U16 = FStar.UInt16
-module U32 = FStar.UInt32
-module U64 = FStar.UInt64
 
 #set-options "--print_universes"
-
-#set-options "--ide_id_info_off"
 
 (* 4.2 Ordering of map keys *)
 
@@ -54,23 +31,6 @@ let map_entry_order_impl
     return res
 
 #restart-solver
-unfold
-let get_raw_data_item_payload_map_post
-  (va: v parse_raw_data_item_kind raw_data_item)
-  (vh: v (get_parser_kind parse_header) header)
-  (n: nat)
-  (vc: v (NL.parse_nlist_kind n (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)) (NL.nlist n (raw_data_item & raw_data_item)))
-: GTot prop
-=
-        let (| h, c |) = synth_raw_data_item_recip va.contents in
-        let (| b, x |) = h in
-        // order of the following conjuncts matters for typechecking
-        vh.contents == h /\
-        n == UInt64.v (argument_as_uint64 b x) /\
-        va.contents == Map vc.contents /\
-        vc.contents == c /\
-        AP.merge_into (array_of' vh) (array_of' vc) (array_of va)
-
 let get_raw_data_item_payload_map
   (#opened: _)
   (#va: v parse_raw_data_item_kind raw_data_item)
@@ -131,15 +91,6 @@ let intro_raw_data_item_map
   let _ = intro_dtuple2 parse_header (parse_content parse_raw_data_item) h c in
   let _ = intro_synth (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item h () in 
   rewrite_aparse h parse_raw_data_item
-
-noextract
-let focus_map_postcond
-  (va: v parse_raw_data_item_kind raw_data_item)
-  (n: nat)
-  (va': v (NL.parse_nlist_kind n (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)) (NL.nlist n (raw_data_item & raw_data_item)))
-: Tot prop
-= Map? va.contents /\
-  va'.contents == Map?.v va.contents
 
 let focus_map_with_ghost_length
   (#va: v parse_raw_data_item_kind raw_data_item)
